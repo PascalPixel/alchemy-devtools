@@ -1672,7 +1672,7 @@ mod tests {
     #[test]
     fn heat_expansions_preprocess_edition_branches_and_keep_regions() {
 
-        let source = "#include \"edition.h\"\n#if EDITION_INTERNATIONAL\nextern int selected;\n#endif\nint F(int x) {\n#if EDITION_INTERNATIONAL\nx += selected;\n#else\nx += unavailable;\n#endif\nPERM_RANDOMIZE(x += PERM_GENERAL(3, 7);)\nPERM_IGNORE(x *= 2;)\nreturn x;\n}\n";
+        let source = "#include \"edition.h\"\n#if LANGUAGE != LANGUAGE_JAPANESE\nextern int selected;\n#endif\nint F(int x) {\n#if LANGUAGE != LANGUAGE_JAPANESE\nx += selected;\n#else\nx += unavailable;\n#endif\nPERM_RANDOMIZE(x += PERM_GENERAL(3, 7);)\nPERM_IGNORE(x *= 2;)\nreturn x;\n}\n";
         let work = tempfile::tempdir().unwrap();
         let mut problem = test_problem(&work.path().join("draft/08000000.c"), source, vec![], Some("F"));
         problem.symbol = Some("F".into());
