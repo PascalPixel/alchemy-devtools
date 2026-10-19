@@ -69,36 +69,12 @@ pub fn input_name(built: &str) -> Result<String, String> {
     })
 }
 
-/// The file a recipe's table names beside its `input`, or under common/.
-/// Tables name files by their stems, which double as symbol names in upper
-/// case; the files themselves are lower case.
+/// The file a recipe's table names, relative to its `input`'s folder
+/// (`../MAP_000/GRID_METATILE` reaches a neighbouring map's file). Tables
+/// name files by their stems, which double as symbol names in upper case; the
+/// files themselves are lower case.
 pub fn sibling_path(input: &std::path::Path, name: &str) -> Result<std::path::PathBuf, String> {
-    let name = &name.to_ascii_lowercase();
-    let Some(shared) = name.strip_prefix("common/") else {
-        return Ok(input.with_file_name(name));
-    };
-    if shared
-        .split('/')
-        .any(|part| part.is_empty() || part == ".." || part == "." || part.contains('\\'))
-    {
-        return Err(format!("{name} names no file in COMMON"));
-    }
-    let (games, folder) = input
-        .parent()
-        .and_then(|folder| {
-            let text = folder.to_str()?;
-            let at = text
-                .find("/src/")
-                .or_else(|| text.ends_with("/src").then(|| text.len() - 4))?;
-            let games = std::path::Path::new(&text[..at]).parent()?;
-            Some((games.to_path_buf(), text[at + 1..].to_owned()))
-        })
-        .ok_or_else(|| format!("{} lies under no game's SRC", input.display()))?;
-    Ok(if shared.contains('/') {
-        games.join("common/src").join(shared)
-    } else {
-        games.join("common").join(folder).join(shared)
-    })
+    Ok(input.with_file_name(name.to_ascii_lowercase()))
 }
 
 pub fn build_file(built: &str, input: &[u8]) -> Result<Vec<u8>, String> {

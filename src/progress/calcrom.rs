@@ -20,6 +20,8 @@ pub(crate) const LANGUAGES: [&str; 6] = ["ja", "en", "de", "es", "fr", "it"];
 /// One game's DONE parts, summed over its six editions.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct GameDone {
+    /// Code from the tree both games once shared: none since each game owns
+    /// its copy, kept so the measurements already stored still read.
     pub common_asm: i64,
     pub common_c: i64,
     /// Assembly from the game's folder, with the stubs and the library.
@@ -187,11 +189,10 @@ fn tally(root: &Path, map: &str, overlay: bool, tally: &mut Tally) {
                 tally.counted.library += size;
             }
             Some(stem) if games => {
-                let common = stem.starts_with("games/common/");
                 if root.join(format!("{stem}.c")).is_file() {
-                    *if common { &mut done.common_c } else { &mut done.game_c } += size;
+                    done.game_c += size;
                 } else {
-                    *if common { &mut done.common_asm } else { &mut done.game_asm } += size;
+                    done.game_asm += size;
                     if stub(stem) {
                         done.veneers += size;
                     }

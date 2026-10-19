@@ -351,7 +351,7 @@ impl Bank {
     ) -> Result<(Data, Data), String> {
         let name = &record.name;
         let png = match self.pictures.get(&record.files) {
-            Some(picture) => sibling(&format!("common/{picture}.png"))?,
+            Some(picture) => sibling(&format!("{picture}.png"))?,
             None => sibling(&format!("{}.png", record.files))?,
         };
         let image =

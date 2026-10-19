@@ -70,12 +70,22 @@ pub enum CompilerFamily {
 }
 
 /// The Makefile's SOUND_C, FLASH_C and ARM_C.
-const SOUND_C: &[&str] = &["games/common/src/sound/sound.c", "games/common/src/sound/tables.c", "games/tbs/src/sound/engine.c"];
+const SOUND_C: &[&str] = &[
+    "games/tbs/src/sound/audio.c",
+    "games/tbs/src/sound/tables.c",
+    "games/tbs/src/sound/engine.c",
+    "games/tla/src/sound/sound.c",
+    "games/tla/src/sound/tables.c",
+];
 const FLASH_C: &[&str] = &[
-    "games/common/src/system/save/flash.c",
-    "games/common/src/system/save/sst.c",
-    "games/common/src/system/save/atmel.c",
-    "games/common/src/system/save/program_flash_sector.c",
+    "games/tbs/src/system/save/flash.c",
+    "games/tbs/src/system/save/sst.c",
+    "games/tbs/src/system/save/atmel.c",
+    "games/tbs/src/system/save/program_flash_sector.c",
+    "games/tla/src/system/save/flash.c",
+    "games/tla/src/system/save/sst.c",
+    "games/tla/src/system/save/atmel.c",
+    "games/tla/src/system/save/program_flash_sector.c",
 ];
 const ARM_C: &[&str] = &[
     "games/tbs/src/window/glyph_arm.c",
@@ -106,11 +116,15 @@ pub fn family_for_source(_target: CompilerTarget, source: &str) -> CompilerFamil
     }
 }
 
-const COMMON_MODULES: [&str; 8] = ["battle", "field", "game", "graphics", "lib", "menu", "sound", "system"];
+const INCLUDE_MODULES: [&str; 8] = ["battle", "field", "game", "graphics", "lib", "menu", "sound", "system"];
 
 fn includes(target: CompilerTarget) -> Vec<String> {
     let mut flags = vec![format!("-I{}/games/{}/include", root().display(), target.as_str())];
-    flags.extend(COMMON_MODULES.iter().map(|module| format!("-I{}/games/common/include/{module}", root().display())));
+    flags.extend(
+        INCLUDE_MODULES
+            .iter()
+            .map(|module| format!("-I{}/games/{}/include/{module}", root().display(), target.as_str())),
+    );
     flags
 }
 
