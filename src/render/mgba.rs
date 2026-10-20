@@ -34,6 +34,7 @@ extern "C" {
     fn alchemy_mgba_recolour(machine: *mut c_void, entries: *const u16, count: u32, table: *const u16);
     fn alchemy_mgba_state_size(machine: *mut c_void) -> usize;
     fn alchemy_mgba_layer(machine: *mut c_void, layer: u32, shown: bool);
+    fn alchemy_mgba_bus_write16(machine: *mut c_void, address: u32, value: u16);
     fn alchemy_mgba_save_state(machine: *mut c_void, state: *mut u8) -> bool;
     fn alchemy_mgba_load_state(machine: *mut c_void, state: *const u8) -> bool;
 }
@@ -103,6 +104,11 @@ impl<'rom> Gba<'rom> {
 
     pub fn write16(&mut self, address: u32, value: u16) {
         unsafe { alchemy_mgba_write(self.machine.as_ptr(), address, 2, value.into()) }
+    }
+
+    /// Stores a halfword through the bus, so an I/O register takes it.
+    pub fn io_write16(&mut self, address: u32, value: u16) {
+        unsafe { alchemy_mgba_bus_write16(self.machine.as_ptr(), address, value) }
     }
 
     pub fn write32(&mut self, address: u32, value: u32) {

@@ -225,3 +225,10 @@ bool alchemy_mgba_load_state(struct AlchemyMachine *m, const void *state) {
 void alchemy_mgba_layer(struct AlchemyMachine *m, unsigned layer, bool shown) {
   m->core->enableVideoLayer(m->core, layer, shown);
 }
+
+// Stores a halfword as the processor would, so an I/O register's write
+// takes effect (rawWrite16 only changes the memory behind it).
+void alchemy_mgba_bus_write16(struct AlchemyMachine *m, uint32_t address,
+                              uint16_t value) {
+  m->core->busWrite16(m->core, address, value);
+}

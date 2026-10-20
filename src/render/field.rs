@@ -271,6 +271,12 @@ impl<'rom> Field<'rom> {
         self.gba.read16(address)
     }
 
+
+    /// Stores a halfword into an I/O register, as the processor would.
+    pub fn io_write16(&mut self, address: u32, value: u16) {
+        self.gba.io_write16(address, value);
+    }
+
     /// Calls the game function at `target` from the next Field_ProcessStep
     /// entry, with the followed point at (x, z) (16.16 pixels), and runs
     /// until it has returned.
@@ -466,6 +472,11 @@ impl<'rom> Field<'rom> {
             }
         }
         Ok(())
+    }
+
+    /// Holds `keys` (KEYINPUT bits) from the next frame until changed.
+    pub fn hold(&mut self, keys: u32) {
+        self.t.keys = keys;
     }
 
     pub fn press(&mut self, frames: u32) -> Result<(), String> {

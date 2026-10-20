@@ -14,6 +14,8 @@ mod field;
 #[cfg(feature = "render")]
 mod front;
 #[cfg(feature = "render")]
+mod guide;
+#[cfg(feature = "render")]
 mod mgba;
 #[cfg(feature = "render")]
 mod places;
@@ -67,6 +69,7 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         Some("psynergy") => psynergy(&arguments[1..]),
         Some(kind @ ("place" | "event")) => scenes(kind, &arguments[1..]),
         Some("story") => story_pictures(&arguments[1..]),
+        Some("guide") => guide_pictures(&arguments[1..]),
         Some("-h" | "--help") => {
             println!("{COMMANDS}");
             Ok(())
@@ -631,6 +634,75 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
         }
     }
     for (file, bytes, what) in &front.written {
+        eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
+    }
+    if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
+}
+
+const GUIDE_USAGE: &str = "usage: alchemy-devtools render guide --flags flags.tsv [--only NAME]... [--out DIR] [--edition tbs-en]
+Plays a built ☀️ edition (make tbs-en) with the pad held as a player would,
+for the folder guides, and writes into DIR (default out/EDITION/guide):
+  walk       walk-run.gif: Vale, walking right, then running back with B
+  snow       snow.gif: Imil, the leader's footprints in the snow
+  layers     layers.gif: Vale built up layer by layer, BG3 to BG1
+  world-map  world-map-walk.gif: the world map's perspective view, walking
+--only picks some; flags.tsv is the story tools' flag names.";
+
+fn guide_pictures(arguments: &[String]) -> Result<(), String> {
+    let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
+    let mut arguments = arguments.iter();
+    while let Some(argument) = arguments.next() {
+        let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{GUIDE_USAGE}"));
+        match argument.as_str() {
+            "-h" | "--help" => {
+                println!("{GUIDE_USAGE}");
+                return Ok(());
+            }
+            "--only" => only.push(value("--only")?),
+            "--out" => out = Some(PathBuf::from(value("--out")?)),
+            "--edition" => edition = value("--edition")?,
+            "--flags" => flags_tsv = Some(PathBuf::from(value("--flags")?)),
+            other => return Err(format!("unexpected argument {other:?}\n{GUIDE_USAGE}")),
+        }
+    }
+    let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{GUIDE_USAGE}"))?)?;
+    let root = crate::compile::root();
+    let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("guide"));
+    play_guide(&root, &edition, &only, &flags, &out)
+}
+
+#[cfg(not(feature = "render"))]
+fn play_guide(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Result<(), String> {
+    Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
+}
+
+#[cfg(feature = "render")]
+fn play_guide(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
+    let build = root.join("out").join(edition);
+    let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
+    let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+    let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
+    note_modified(root, edition, &rom);
+    let symbols = field::Symbols::find(&map)?;
+    std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new() };
+    let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
+    let mut failed = Vec::new();
+    for name in ["walk", "snow", "layers", "world-map"] {
+        if wanted(name) {
+            let result = match name {
+                "walk" => guide.walk(),
+                "snow" => guide.snow(),
+                "layers" => guide.layers(),
+                _ => guide.world_map(),
+            };
+            if let Err(e) = result {
+                eprintln!("{name}: {e}");
+                failed.push(name);
+            }
+        }
+    }
+    for (file, bytes, what) in &guide.written {
         eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
     }
     if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
