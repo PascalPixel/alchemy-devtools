@@ -12,6 +12,7 @@ mod packer;
 mod permute;
 mod process;
 mod progress;
+mod render;
 mod show;
 mod targets;
 mod thumb;
@@ -22,7 +23,8 @@ Run any command with --help for its options.
   diff      a C draft against the listing it would replace
   packer    the residue after resource streams and the resources that left it
   permute   search rewrites and PERM macro choices of a draft toward differ 0
-  progress  DONE code and data in each edition, from the linker maps"#;
+  progress  DONE code and data in each edition, from the linker maps
+  render    battle Psynergy from a built edition, as GIFs (feature render)"#;
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
@@ -36,6 +38,7 @@ fn main() -> ExitCode {
         "packer" => result(packer::run(rest)),
         "permute" => result(permute::run(rest)),
         "progress" => result(progress::run(rest)),
+        "render" => result(render::run(rest)),
         "-h" | "--help" => {
             println!("{USAGE}");
             ExitCode::SUCCESS

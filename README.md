@@ -33,6 +33,20 @@ ALCHEMY_ROOT=/path/to/alchemy cargo test --locked --workspace
 
 The tests use Alchemy's bootstrapped compilers and ARM binutils. Current binutils are needed: older releases print some ARM instructions differently. CI uses Rust 1.98.1.
 
+## Battle pictures
+
+`render psynergy` plays battle Psynergy in a built ☀️ edition and writes each cast as a looping GIF of the whole screen at 30 frames a second, with an `index.tsv` of ability, name, caster, target and frames. It runs the ROM in [libmgba](https://mgba.io), linked through a small C shim, so it is behind the `render` feature: install mGBA's library and headers (Homebrew: `brew install mgba`; `MGBA_PREFIX` names another prefix), then
+
+```sh
+cargo build --locked --release --features render --manifest-path alchemy-devtools/Cargo.toml
+make tbs-en
+alchemy-devtools/target/release/alchemy-devtools render psynergy --all --list
+alchemy-devtools/target/release/alchemy-devtools render psynergy --all --out DIR
+alchemy-devtools/target/release/alchemy-devtools render psynergy --ability Flare --backdrop studio.png --verbose
+```
+
+The run boots the build, enters Camelot's battle test menu and steers the battle at function entries named by the linker map. The battlefield shows a grey gradient drawn by the GBA as its backdrop colour, or a picture composed with the GBA's blend weights from two runs; windows are drawn grey. `render psynergy --help` gives the casters, targets and setup. The ROM is only read; never publish it or anything copied from it.
+
 ## Progress publication
 
 Stage source changes before `make land` or `make progress`. Measurement checks that the working source matches the index, records its tree and both report digests, and preserves the original measurement time when the same tree is measured again. Alchemy's pre-push hook uploads the reports and receipt for the pushed main revision.
