@@ -294,7 +294,7 @@ const COMMANDS: &str = "usage: alchemy-devtools render psynergy|place|event [opt
 Run any of them with --help for its options.";
 
 const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene N|NAME]... [--all]
-         --places places.tsv --events events.tsv --flags flags.tsv
+         --places places.tsv --events events.tsv --flags flags.tsv [--messages messages.tsv]
          [--event NAME]... [--out DIR] [--edition tbs-en]
 Plays a built ☀️ edition (make tbs-en) under libmgba from a new game's
 defaults straight into each scene, and writes PNG files at the GBA's size
@@ -319,7 +319,13 @@ its required flags set and the ones it needs clear cleared, from the first
 of its scenes that holds the trigger and the first entrance whose camera box
 holds it, with the leader moved beside it: the first page that waits for
 the button as DIR/<scene>/events/<event>.png and the next up to four as
-<event>-2.png and on.
+<event>-2.png and on. The event is recorded to its end (at most 20 seconds),
+each page held 45 frames; an event that moves (more than a few frames of
+motion away from its message windows) also gets <event>.gif when it is under
+10 seconds, and <event>_<k>.gif for each stretch with motion between its
+messages k and k + 1 (split at a scene change or a pause, at most 15
+seconds, ending with the next message typed), listed with the messages
+before and after (their symbols from messages.tsv).
 
 Needs the `render` feature: cargo build --release --features render, with
 libmgba and its headers installed (MGBA_PREFIX names their prefix).";
@@ -333,6 +339,7 @@ struct SceneOptions {
     places_tsv: Option<PathBuf>,
     events_tsv: Option<PathBuf>,
     flags_tsv: Option<PathBuf>,
+    messages_tsv: Option<PathBuf>,
 }
 
 fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
@@ -345,6 +352,7 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
         places_tsv: None,
         events_tsv: None,
         flags_tsv: None,
+        messages_tsv: None,
     };
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
@@ -363,6 +371,7 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             "--places" => o.places_tsv = Some(PathBuf::from(value("--places")?)),
             "--events" => o.events_tsv = Some(PathBuf::from(value("--events")?)),
             "--flags" => o.flags_tsv = Some(PathBuf::from(value("--flags")?)),
+            "--messages" => o.messages_tsv = Some(PathBuf::from(value("--messages")?)),
             other => return Err(format!("unexpected argument {other:?}\n{SCENES_USAGE}")),
         }
     }
@@ -396,7 +405,11 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     };
     let root = crate::compile::root();
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
-    play_scenes(root, &o.edition, kind, &chosen, &events, &flags, &out)
+    let messages = match &o.messages_tsv {
+        Some(path) => story::read_messages(path)?,
+        None => Default::default(),
+    };
+    play_scenes(root, &o.edition, kind, &chosen, &events, &flags, &messages, &out)
 }
 
 #[cfg(not(feature = "render"))]
@@ -407,6 +420,7 @@ fn play_scenes(
     _: &[&story::Scene],
     _: &[story::Event],
     _: &story::Flags,
+    _: &std::collections::HashMap<u32, String>,
     _: &Path,
 ) -> Result<(), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
@@ -420,6 +434,7 @@ fn play_scenes(
     chosen: &[&story::Scene],
     events: &[story::Event],
     flags: &story::Flags,
+    messages: &std::collections::HashMap<u32, String>,
     out: &Path,
 ) -> Result<(), String> {
     let started = std::time::Instant::now();
@@ -432,22 +447,63 @@ fn play_scenes(
     note_modified(root, edition, &rom);
     let symbols = field::Symbols::find(&map)?;
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    let mut context = places::Context {
-        rom: &rom,
-        symbols: &symbols,
-        flags,
-        events,
-        out: out.to_path_buf(),
-        rows: Vec::new(),
-        skipped: Vec::new(),
-        bytes: 0,
-        images: 0,
-    };
-    if kind == "place" {
-        for scene in chosen {
-            eprintln!("{} {} ({})", scene.number, scene.name(), scene.area);
-            context.place(scene);
+    // Work in parallel, a scene (place) or the scenes of one overlay
+    // (event, whose rows list those scenes) to each job; each job runs its
+    // own machines.
+    let jobs: Vec<Vec<&story::Scene>> = if kind == "place" {
+        chosen.iter().map(|s| vec![*s]).collect()
+    } else {
+        let mut by_file: BTreeMap<&str, Vec<&story::Scene>> = BTreeMap::new();
+        for s in chosen {
+            by_file.entry(s.file.as_str()).or_default().push(*s);
         }
+        by_file.into_values().collect()
+    };
+    let queue = std::sync::Mutex::new(jobs.into_iter());
+    let results = std::sync::Mutex::new(Vec::new());
+    let workers = std::thread::available_parallelism().map_or(4, |n| n.get().saturating_sub(2).clamp(1, 12));
+    std::thread::scope(|scope| {
+        for _ in 0..workers {
+            scope.spawn(|| loop {
+                let Some(job) = queue.lock().unwrap().next() else {
+                    break;
+                };
+                let mut context = places::Context {
+                    rom: &rom,
+                    symbols: &symbols,
+                    flags,
+                    events,
+                    out: out.to_path_buf(),
+                    rows: Vec::new(),
+                    skipped: Vec::new(),
+                    bytes: 0,
+                    images: 0,
+                    gifs: 0,
+                    gif_bytes: 0,
+                    messages,
+                };
+                if kind == "place" {
+                    for scene in &job {
+                        context.place(scene);
+                    }
+                } else {
+                    context.events(&job);
+                }
+                eprintln!("{}: {} images", job.iter().map(|s| s.name()).collect::<Vec<_>>().join(", "), context.images);
+                results.lock().unwrap().push((context.rows, context.skipped, context.bytes, context.images, context.gifs, context.gif_bytes));
+            });
+        }
+    });
+    let (mut rows, mut skipped, mut bytes, mut images, mut gifs, mut gif_bytes) = (Vec::new(), Vec::new(), 0, 0, 0, 0);
+    for (r, s, b, i, g, gb) in results.into_inner().unwrap() {
+        rows.extend(r);
+        skipped.extend(s);
+        bytes += b;
+        images += i;
+        gifs += g;
+        gif_bytes += gb;
+    }
+    if kind == "place" {
         let candidates = places::variant_candidates(events, flags);
         let mut text = String::from("scene\tnumber\tflags\n");
         for (number, list) in &candidates {
@@ -456,10 +512,8 @@ fn play_scenes(
         }
         let path = out.join("variant-flags.tsv");
         std::fs::write(&path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
-    } else {
-        context.events(chosen);
     }
-    places::write_index(out, &context.rows)?;
+    places::write_index(out, &rows)?;
     let path = out.join("skipped.tsv");
     // The lines already there for other scenes and things are kept.
     let mut lines: BTreeMap<(String, String), String> = BTreeMap::new();
@@ -469,7 +523,7 @@ fn play_scenes(
             lines.insert((scene.to_string(), what.to_string()), line.to_string());
         }
     }
-    for s in &context.skipped {
+    for s in &skipped {
         lines.insert((s.scene.clone(), s.what.clone()), format!("{}\t{}\t{}", s.scene, s.what, s.reason));
     }
     let mut text = String::from("scene\twhat\treason\n");
@@ -479,10 +533,12 @@ fn play_scenes(
     }
     std::fs::write(&path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
     eprintln!(
-        "{} images, {} KiB, {} left out, in {:.0} s, in {}",
-        context.images,
-        context.bytes.div_ceil(1024),
-        context.skipped.len(),
+        "{} images ({} GIFs, {} KiB), {} KiB, {} left out, in {:.0} s, in {}",
+        images,
+        gifs,
+        gif_bytes.div_ceil(1024),
+        bytes.div_ceil(1024),
+        skipped.len(),
         started.elapsed().as_secs_f64(),
         out.display()
     );

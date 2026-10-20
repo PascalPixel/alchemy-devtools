@@ -47,7 +47,7 @@ struct AlchemyMachine {
 };
 
 // The open machines, so the scanline hook finds its own from the renderer.
-static struct AlchemyMachine *gMachines;
+static _Thread_local struct AlchemyMachine *gMachines;
 
 static void QuietLog(struct mLogger *logger, int category,
                      enum mLogLevel level, const char *format, va_list args) {

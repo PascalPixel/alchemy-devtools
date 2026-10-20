@@ -205,6 +205,8 @@ pub struct Field<'rom> {
     s: &'rom Symbols,
     t: Track,
     setup: Setup,
+    /// Frames kept while an event is recorded.
+    recorded: Option<Vec<EventFrame>>,
 }
 
 impl<'rom> Field<'rom> {
@@ -237,7 +239,7 @@ impl<'rom> Field<'rom> {
             calling: false,
             call_saved: [0; 5],
         };
-        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone() };
+        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None };
         while !field.t.applied {
             field.tick()?;
         }
@@ -432,6 +434,20 @@ impl<'rom> Field<'rom> {
         }
         if pc == s.dismiss {
             self.t.last_dismiss = self.t.frame;
+        }
+        if frame_done && self.recorded.is_some() {
+            let text = self.t.frame - self.t.last_typing <= 2
+                || (self.t.last_dismiss > 0 && self.t.frame - self.t.last_dismiss <= 2)
+                || self.t.choice_return != 0;
+            let frame = EventFrame {
+                picture: self.gba.picture(),
+                text,
+                message: self.t.last_message,
+                scene: self.gba.read16(s.game_state + GS_SCENE),
+            };
+            if let Some(frames) = self.recorded.as_mut() {
+                frames.push(frame);
+            }
         }
         if frame_done {
             self.gba.set_keys(self.t.keys);
@@ -676,8 +692,10 @@ impl<'rom> Field<'rom> {
         }
     }
 
-    /// Plays an event from `entered` with the leader at `start`, and keeps up
-    /// to `max_pages` pages.
+    /// Plays an event from `entered` with the leader at `start`. Keeps up to
+    /// `max_pages` pages as stills; with `record`, also every frame up to the
+    /// event's end or `cap` frames, holding each page PAGE_HOLD frames so a
+    /// GIF shows it.
     pub fn event(
         &mut self,
         entered: &Saved,
@@ -685,7 +703,8 @@ impl<'rom> Field<'rom> {
         start: (i32, i32, u32),
         messages: &[u32],
         max_pages: usize,
-    ) -> Result<Vec<Page>, String> {
+        record: Option<usize>,
+    ) -> Result<EventRun, String> {
         self.load(entered);
         let gs = self.s.game_state;
         self.gba.write32(gs + GS_X, fx(start.0) as u32);
@@ -693,6 +712,9 @@ impl<'rom> Field<'rom> {
         self.gba.write32(gs + GS_HEADING, start.2);
         self.until_control()?;
         self.frames(SETTLE)?;
+        if record.is_some() {
+            self.recorded = Some(Vec::new());
+        }
         match trigger {
             Trigger::Talk(_) | Trigger::Search(_) => self.press(2)?,
             Trigger::Psynergy(ability, _) => {
@@ -701,15 +723,27 @@ impl<'rom> Field<'rom> {
             }
             Trigger::Touch(_) => {}
         }
+        let hold = if record.is_some() { PAGE_HOLD } else { 3 };
         let trigger_frame = self.t.frame;
         let steps_at_start = self.t.steps;
         let mut pages = Vec::new();
         let (mut wait_start, mut press_frame, mut quiet_start) = (0, 0, self.t.frame);
         let mut captured = false;
+        let mut pressed = false;
         let mut since = 0;
         let mut message = None;
         let mut seen_message = 0;
-        while pages.len() < max_pages {
+        let mut capped = false;
+        loop {
+            if record.is_none() && pages.len() >= max_pages {
+                break;
+            }
+            if let (Some(cap), Some(frames)) = (record, &self.recorded) {
+                if frames.len() >= cap {
+                    capped = true;
+                    break;
+                }
+            }
             self.frames(1)?;
             since += 1;
             if self.t.last_message != seen_message {
@@ -723,13 +757,19 @@ impl<'rom> Field<'rom> {
                 quiet_start = self.t.frame;
                 if wait_start == 0 {
                     wait_start = self.t.frame;
+                    pressed = false;
                 }
                 if !captured && self.t.frame - wait_start >= 3 {
-                    pages.push(Page { image: self.screen(), message });
+                    if pages.len() < max_pages {
+                        pages.push(Page { image: self.screen(), message });
+                    }
                     captured = true;
+                }
+                if captured && !pressed && self.t.frame - wait_start >= hold {
+                    pressed = true;
                     press_frame = self.t.frame;
                     self.press(3)?;
-                } else if captured && self.t.frame - press_frame >= 30 {
+                } else if pressed && self.t.frame - press_frame >= 30 {
                     press_frame = self.t.frame;
                     self.press(3)?;
                 }
@@ -739,8 +779,10 @@ impl<'rom> Field<'rom> {
             // and answer with A (the cursor starts on Yes).
             if self.t.choice_return != 0 {
                 quiet_start = self.t.frame;
-                if self.t.frame - self.t.choice_frame == 20 {
+                if self.t.frame - self.t.choice_frame == 20 && pages.len() < max_pages {
                     pages.push(Page { image: self.screen(), message });
+                }
+                if self.t.frame - self.t.choice_frame == 20.max(hold) {
                     self.press(3)?;
                 }
                 continue;
@@ -764,8 +806,30 @@ impl<'rom> Field<'rom> {
                 break;
             }
         }
-        Ok(pages)
+        let frames = self.recorded.take().unwrap_or_default();
+        Ok(EventRun { pages, frames, capped })
     }
+}
+
+/// Frames a page is held before A while an event is recorded.
+const PAGE_HOLD: u32 = 45;
+
+/// One recorded frame of an event and what the game was doing.
+pub struct EventFrame {
+    pub picture: Vec<u16>,
+    /// Text being typed, a page waiting or a choice open.
+    pub text: bool,
+    /// The message last looked up.
+    pub message: u32,
+    pub scene: u16,
+}
+
+/// What an event left: its pages and, when recorded, its frames.
+pub struct EventRun {
+    pub pages: Vec<Page>,
+    pub frames: Vec<EventFrame>,
+    /// Whether the recording stopped at its cap.
+    pub capped: bool,
 }
 
 /// Whether box `b` (pixels, -1 sides taking the header's, 16.16) holds the

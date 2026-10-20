@@ -54,6 +54,8 @@ alchemy-devtools/target/release/alchemy-devtools render place --all --places pla
 alchemy-devtools/target/release/alchemy-devtools render event --scene Bilibin1 --places places.tsv --events events.tsv --flags flags.tsv --out DIR
 ```
 
+Moving events also get GIFs: the whole event when it is short, and a segment for each stretch between two of its messages, which the index ties to the messages before and after it. `render story --flags flags.tsv` makes the front page's pictures: the title, Vale's farewell, the world map cut where Venus Lighthouse lights, and the world map laid flat. `render psynergy --djinn --summons` casts the Djinn and summons.
+
 `DIR/index.tsv` lists every image; `DIR/skipped.tsv` what was left out and why, and `render place` writes `DIR/variant-flags.tsv`, the story flags each scene's initialization tests, for further variants.
 
 ## Progress publication

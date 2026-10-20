@@ -321,3 +321,19 @@ mod tests {
         assert_eq!(scene(None).slug(), "scene-31");
     }
 }
+
+/// Message numbers to their symbols (messages.tsv's number and symbol
+/// columns), leaving out the placeholder `message`.
+pub fn read_messages(path: &Path) -> Result<HashMap<u32, String>, String> {
+    let tsv = Tsv::read(path)?;
+    let (number, symbol) = (tsv.column("number")?, tsv.column("symbol")?);
+    Ok(tsv
+        .rows
+        .iter()
+        .filter_map(|row| {
+            let n = tsv.get(row, number).trim().parse().ok()?;
+            let s = tsv.get(row, symbol);
+            (s.starts_with("Msg")).then(|| (n, s.to_string()))
+        })
+        .collect())
+}

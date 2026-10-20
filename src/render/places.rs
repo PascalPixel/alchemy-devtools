@@ -2,7 +2,7 @@
 //! a map of each of its rooms, story-state variants, and the message pages
 //! of its events, as PNG files at the GBA's own size, with an index.
 
-use super::field::{box_holds, Entrance, Field, Image, Saved, Setup, Symbols, SETTLE};
+use super::field::{box_holds, Entrance, EventFrame, EventRun, Field, Image, Saved, Setup, Symbols, SETTLE};
 use super::story::{Event, Flags, Scene, Trigger};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
@@ -34,6 +34,7 @@ fn is_story_flag(name: &str, flags: &Flags) -> bool {
 }
 
 /// One line of the index.
+#[derive(Default)]
 pub struct Row {
     pub scene: String,
     pub number: u16,
@@ -46,14 +47,22 @@ pub struct Row {
     pub message: String,
     pub messages: String,
     pub file: String,
+    /// A segment's number: the messages before it.
+    pub segment: Option<usize>,
+    /// A GIF's message before and after it, number and symbol.
+    pub after: String,
+    pub before: String,
+    /// A GIF's frames at 30 a second.
+    pub frames: usize,
 }
 
-const INDEX_HEADER: &str = "scene\tnumber\tarea\tvariant\tkind\tentrance\tevent\tpage\tmessage\tmessages\tfile";
+const INDEX_HEADER: &str =
+    "scene\tnumber\tarea\tvariant\tkind\tentrance\tevent\tpage\tsegment\tmessage\tafter\tbefore\tframes\tmessages\tfile";
 
 impl Row {
     fn line(&self) -> String {
         format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             self.scene,
             self.number,
             self.area,
@@ -62,7 +71,11 @@ impl Row {
             self.entrance,
             self.event,
             if self.page > 0 { self.page.to_string() } else { String::new() },
+            self.segment.map(|s| s.to_string()).unwrap_or_default(),
             self.message,
+            self.after,
+            self.before,
+            if self.frames > 0 { self.frames.to_string() } else { String::new() },
             self.messages,
             self.file
         )
@@ -137,6 +150,10 @@ pub struct Context<'a> {
     pub skipped: Vec<Skip>,
     pub bytes: u64,
     pub images: usize,
+    pub gifs: usize,
+    pub gif_bytes: u64,
+    /// Message numbers to their symbols (messages.tsv), for the segments.
+    pub messages: &'a HashMap<u32, String>,
 }
 
 /// Whether a scene is a place: not the title, the clear-data screen or the
@@ -240,6 +257,7 @@ impl Context<'_> {
                     message: String::new(),
                     messages: String::new(),
                     file,
+                    ..Row::default()
                 };
                 if i == 0 {
                     let file = format!("{folder}/entrance.png");
@@ -510,18 +528,18 @@ impl Context<'_> {
                 }
             };
             p.placement += 1;
-            let pages = match field.event(&entered, p.trigger, start, &p.event.messages, MAX_PAGES) {
-                Ok(pages) if pages.is_empty() => {
+            let run = match field.event(&entered, p.trigger, start, &p.event.messages, MAX_PAGES, Some(EVENT_CAP)) {
+                Ok(run) if run.pages.is_empty() => {
                     p.error = "no page waited for the button".to_string();
                     continue;
                 }
-                Ok(pages) => pages,
+                Ok(run) => run,
                 Err(e) => {
                     p.error = e;
                     continue;
                 }
             };
-            p.done = true;
+            let pages = &run.pages;
             let event = p.event;
             let base = file_name(&event.name);
             let count = names.entry((scene.number, base.clone())).or_default();
@@ -547,8 +565,11 @@ impl Context<'_> {
                     message: page.message.map(|m| format!("{m:05}")).unwrap_or_default(),
                     messages: messages.clone(),
                     file,
+                    ..Row::default()
                 });
             }
+            p.done = true;
+            self.event_gifs(scene, setup, &event.name, &base, &messages, &run)?;
         }
         Ok(())
     }
@@ -593,5 +614,182 @@ mod tests {
     fn event_names_become_file_names() {
         assert_eq!(file_name("Event_InspectWell"), "Event_InspectWell");
         assert_eq!(file_name("gXianInteriors_Events[65]"), "gXianInteriors_Events-65");
+    }
+}
+
+/// An event's recording stops at 20 seconds.
+const EVENT_CAP: usize = 1200;
+/// A whole-event GIF is kept for an event under 10 seconds.
+const WHOLE_EVENT: usize = 600;
+/// A segment stops at 15 seconds.
+const SEGMENT_CAP: usize = 900;
+/// A frame moves when this many pixels change from the one before.
+const MOVED_PIXELS: usize = 64;
+/// Frames of motion that make an event or a segment worth a GIF.
+const MOTION: usize = 20;
+/// A pause this long splits a segment.
+const PAUSE: usize = 90;
+/// Frames of the next message kept at a segment's end: its typing and part
+/// of its hold.
+const MESSAGE_TAIL: usize = 90;
+
+fn moved(a: &EventFrame, b: &EventFrame) -> bool {
+    a.picture.iter().zip(&b.picture).filter(|(x, y)| x != y).count() >= MOVED_PIXELS
+}
+
+/// Frames a message window takes to open or close, around its text.
+const WINDOW: usize = 12;
+
+/// The frames that move, leaving out those within WINDOW of text, where
+/// only a message window opens or closes.
+fn motion_frames(frames: &[EventFrame]) -> Vec<bool> {
+    let mut near = vec![false; frames.len()];
+    for (i, f) in frames.iter().enumerate().filter(|(_, f)| f.text) {
+        let _ = f;
+        for n in near.iter_mut().take((i + WINDOW + 1).min(frames.len())).skip(i.saturating_sub(WINDOW)) {
+            *n = true;
+        }
+    }
+    (0..frames.len()).map(|i| i > 0 && !near[i] && moved(&frames[i - 1], &frames[i])).collect()
+}
+
+/// A stretch of an event between two of its messages.
+struct Segment {
+    /// The messages shown before it.
+    index: usize,
+    range: std::ops::Range<usize>,
+    after: Option<u32>,
+    before: Option<u32>,
+}
+
+/// The stretches of an event with motion between its messages: each run of
+/// frames with no text, split at a scene change or a pause, ending with the
+/// next message typed.
+fn segments(frames: &[EventFrame]) -> Vec<Segment> {
+    let moving = motion_frames(frames);
+    let mut out = Vec::new();
+    let mut texts = 0;
+    let mut i = 0;
+    while i < frames.len() {
+        if frames[i].text {
+            // A run of text is one message shown (or more, back to back).
+            while i < frames.len() && frames[i].text {
+                i += 1;
+            }
+            texts += 1;
+            continue;
+        }
+        let start = i;
+        while i < frames.len() && !frames[i].text {
+            i += 1;
+        }
+        // Split the run at scene changes and long pauses.
+        let mut pieces = Vec::new();
+        let mut piece_start = start;
+        let mut still = 0;
+        for j in start + 1..i {
+            let change = frames[j].scene != frames[j - 1].scene;
+            still = if moved(&frames[j - 1], &frames[j]) { 0 } else { still + 1 };
+            if change || still == PAUSE {
+                pieces.push(piece_start..j);
+                piece_start = j;
+                still = 0;
+            }
+        }
+        pieces.push(piece_start..i);
+        let last = pieces.len() - 1;
+        for (n, piece) in pieces.into_iter().enumerate() {
+            let motion = (piece.start..piece.end).filter(|&j| moving[j]).count();
+            // The stretch after the last message, until the field loop runs
+            // again, needs more: the actors there turn back and wander.
+            let tail = i >= frames.len();
+            if motion < if tail { 3 * MOTION } else { MOTION } {
+                continue;
+            }
+            let mut end = piece.end;
+            if n == last {
+                // The next message, typed and held a moment.
+                while end < frames.len() && end < piece.end + MESSAGE_TAIL && frames[end].text {
+                    end += 1;
+                }
+            }
+            let end = end.min(piece.start + SEGMENT_CAP);
+            let after = (start > 0).then(|| frames[start - 1].message);
+            let before = (i < frames.len()).then(|| frames[(i + 5).min(frames.len() - 1)].message);
+            out.push(Segment { index: texts, range: piece.start..end, after, before });
+        }
+    }
+    out
+}
+
+impl Context<'_> {
+    /// An event's GIFs, when it moves: the whole event when it is short, and
+    /// a GIF of each stretch with motion between its messages.
+    fn event_gifs(
+        &mut self,
+        scene: &Scene,
+        setup: &Setup,
+        name: &str,
+        base: &str,
+        messages: &str,
+        run: &EventRun,
+    ) -> Result<(), String> {
+        let frames = &run.frames;
+        let motion = motion_frames(frames).iter().filter(|&&m| m).count();
+        if motion < MOTION {
+            return Ok(());
+        }
+        let label = |m: Option<u32>| match m {
+            Some(m) if m > 0 => match self.messages.get(&m) {
+                Some(symbol) => format!("{m:05} {symbol}"),
+                None => format!("{m:05}"),
+            },
+            _ => String::new(),
+        };
+        let row = |kind, segment, after: String, before: String, count: usize, file: String| Row {
+            scene: scene.slug(),
+            number: scene.number,
+            area: scene.area.clone(),
+            kind,
+            entrance: setup.entrance as i16,
+            event: name.to_string(),
+            segment,
+            after,
+            before,
+            frames: count,
+            messages: messages.to_string(),
+            file,
+            ..Row::default()
+        };
+        let mut rows = Vec::new();
+        if frames.len() < WHOLE_EVENT && !run.capped {
+            let file = format!("{}/events/{base}.gif", scene.slug());
+            let written = self.gif(&file, frames)?;
+            rows.push(row("event-gif", None, String::new(), String::new(), written, file));
+        }
+        if run.capped {
+            self.skip(scene, &format!("event {name}"), format!("its GIFs stop at {} seconds", EVENT_CAP / 60));
+        }
+        for s in segments(frames) {
+            let file = format!("{}/events/{base}_{}.gif", scene.slug(), s.index);
+            let written = self.gif(&file, &frames[s.range.clone()])?;
+            rows.push(row("event-segment", Some(s.index), label(s.after), label(s.before), written, file));
+        }
+        self.rows.extend(rows);
+        Ok(())
+    }
+
+    fn gif(&mut self, file: &str, frames: &[EventFrame]) -> Result<usize, String> {
+        let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.picture.iter().map(|&c| super::animation::rgb(c)).collect()).collect();
+        let path = self.out.join(file);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let written = super::animation::write(&path, &rgb, super::mgba::WIDTH)?;
+        self.bytes += written.bytes;
+        self.images += 1;
+        self.gifs += 1;
+        self.gif_bytes += written.bytes;
+        Ok(written.frames)
     }
 }
