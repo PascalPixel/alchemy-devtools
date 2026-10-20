@@ -137,7 +137,7 @@ pub const DELETE: u64 = 100;
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Score {
     pub weighted: u64,
-    /// `psynergy diff`'s count: listing + draft - 2 * common.
+    /// `alchemy-devtools diff`'s count: listing + draft - 2 * common.
     pub differ: usize,
     pub regalloc: usize,
     pub stack: u64,

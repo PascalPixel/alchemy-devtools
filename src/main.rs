@@ -1,4 +1,4 @@
-//! psynergy: the matching aids and the progress count. The ROMs build from
+//! alchemy-devtools: the matching aids and the progress count. The ROMs build from
 //! the Makefile alone; nothing here takes part in a build.
 
 use std::process::ExitCode;
@@ -16,7 +16,7 @@ mod show;
 mod targets;
 mod thumb;
 
-const USAGE: &str = r#"usage: psynergy <command> [args]
+const USAGE: &str = r#"usage: alchemy-devtools <command> [args]
 Run any command with --help for its options.
 
   diff      a C draft against the listing it would replace
@@ -41,7 +41,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         _ => {
-            eprintln!("unknown psynergy command: {command}\n{USAGE}");
+            eprintln!("unknown alchemy-devtools command: {command}\n{USAGE}");
             ExitCode::from(2)
         }
     }

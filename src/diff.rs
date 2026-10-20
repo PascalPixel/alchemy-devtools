@@ -6,8 +6,8 @@ use crate::ld_map::{Map, Placed, ROM};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-const USAGE: &str = r#"usage: psynergy diff DRAFT.c [ADDRESS[,ADDRESS...]] [--game tbs|tla] [--edition EDITION] [--arm] [--rtl] [--heat] [--show]
-       psynergy diff OVERLAY_DRAFT.c [--overlay resource_XXX] [--symbol NAME] [--edition EDITION] [--rtl] [--show]
+const USAGE: &str = r#"usage: alchemy-devtools diff DRAFT.c [ADDRESS[,ADDRESS...]] [--game tbs|tla] [--edition EDITION] [--arm] [--rtl] [--heat] [--show]
+       alchemy-devtools diff OVERLAY_DRAFT.c [--overlay resource_XXX] [--symbol NAME] [--edition EDITION] [--rtl] [--show]
 Compiles DRAFT.c for --edition (default: the game's English edition) with
 the build's own compiler and options, then compares its instructions with
 listing objects out/EDITION/obj/recon/<game>/raw/ADDRESS.o (build the
@@ -391,7 +391,7 @@ fn source_location(line: &str) -> Option<(String, u32)> {
 }
 
 /// Run a draft plan (ending in assembly) once more with -g on its compile
-/// step, for analysis only, and disassemble with agscc's DWARF 2 line
+/// step, for analysis only, and disassemble with alchemy-gcc's DWARF 2 line
 /// table: each instruction and its line in the file named `file_name`, or
 /// None for code from another file (a header's inline helper).
 pub(crate) fn located(steps: &[Vec<String>], object: &Path, symbol: Option<&str>, file_name: &str) -> Result<Vec<(String, Option<u32>)>, String> {
@@ -742,7 +742,7 @@ fn refuse_perm_macros(draft: &Path) -> Result<(), String> {
     let text = std::fs::read_to_string(draft).map_err(|e| format!("{}: {e}", draft.display()))?;
     if crate::permute::perm::has_macros(&text) {
         return Err(format!(
-            "{}: the draft uses PERM macros, which only psynergy permute expands; diff a best-N.c it wrote, or remove the macros",
+            "{}: the draft uses PERM macros, which only alchemy-devtools permute expands; diff a best-N.c it wrote, or remove the macros",
             draft.display()
         ));
     }
@@ -1265,7 +1265,7 @@ mod tests {
         let draft = work.path().join("08000000.c");
         std::fs::write(&draft, "int f(void) { return PERM_ONEOF(1, 2); }\n").unwrap();
         let error = run(&[draft.to_string_lossy().into_owned()]).unwrap_err();
-        assert!(error.contains("PERM macros") && error.contains("psynergy permute"), "{error}");
+        assert!(error.contains("PERM macros") && error.contains("alchemy-devtools permute"), "{error}");
         std::fs::write(&draft, "/* PERM_ONEOF(1, 2) was tried */\nint f(void) { return 1; }\n").unwrap();
         assert!(refuse_perm_macros(&draft).is_ok());
     }

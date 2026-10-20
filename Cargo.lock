@@ -231,7 +231,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "psynergy"
+name = "alchemy-devtools"
 version = "0.1.0"
 dependencies = [
  "ags",

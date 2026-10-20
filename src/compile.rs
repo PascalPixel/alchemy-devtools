@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-/// Locate the checkout at runtime, including when Psynergy is a submodule.
+/// Locate the checkout at runtime, including when Alchemy Devtools is a submodule.
 fn checkout_root(folder: &Path) -> Option<PathBuf> {
     folder.ancestors().find(|folder| {
         folder.join("rom.sha1").is_file()
@@ -13,7 +13,7 @@ fn checkout_root(folder: &Path) -> Option<PathBuf> {
     }).map(Path::to_path_buf)
 }
 
-/// A standalone Psynergy checkout can target Alchemy through ALCHEMY_ROOT.
+/// A standalone Alchemy Devtools checkout can target Alchemy through ALCHEMY_ROOT.
 pub fn root() -> &'static Path {
     static ROOT: OnceLock<PathBuf> = OnceLock::new();
     ROOT.get_or_init(|| {
@@ -22,7 +22,7 @@ pub fn root() -> &'static Path {
         if let Some(found) = folder.as_deref().and_then(checkout_root) {
             return found.canonicalize().unwrap_or(found);
         }
-        eprintln!("psynergy: run inside an Alchemy checkout or set ALCHEMY_ROOT to its path");
+        eprintln!("alchemy-devtools: run inside an Alchemy checkout or set ALCHEMY_ROOT to its path");
         std::process::exit(1)
     })
 }
@@ -38,7 +38,7 @@ mod checkout_tests {
         std::fs::create_dir(root.join("games")).unwrap();
         std::fs::write(root.join("rom.sha1"), "").unwrap();
         std::fs::write(root.join("Makefile"), "").unwrap();
-        let nested = root.join("psynergy/src");
+        let nested = root.join("alchemy-devtools/src");
         std::fs::create_dir_all(&nested).unwrap();
         assert_eq!(checkout_root(&nested).as_deref(), Some(root));
         std::fs::remove_file(root.join("rom.sha1")).unwrap();

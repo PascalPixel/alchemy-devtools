@@ -16,7 +16,7 @@ pub(crate) mod raster;
 use calcrom::{Game, GameDone};
 use std::path::Path;
 
-const USAGE: &str = "usage: psynergy progress [--publish MEASUREMENT DIRECTORY | --upload COMMIT REMOTE | --pre-push REMOTE]
+const USAGE: &str = "usage: alchemy-devtools progress [--publish MEASUREMENT DIRECTORY | --upload COMMIT REMOTE | --pre-push REMOTE]
 With no option, counts DONE code and data in each edition built and matching
 rom.sha1 (make compare-editions), prints a line for each, and writes the
 measurement and decomp.dev's report under out/reports/decomp; a game without

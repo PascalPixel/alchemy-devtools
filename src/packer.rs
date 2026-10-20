@@ -8,7 +8,7 @@
 use crate::ld_map::{self, Map, Placed};
 use std::path::Path;
 
-const USAGE: &str = "usage: psynergy packer EDITION [--rows]
+const USAGE: &str = "usage: alchemy-devtools packer EDITION [--rows]
 For each scaffold piece of EDITION's built image (make EDITION) that places
 the 1-3 bytes between a resource stream's end and the next resource, prints
 its address, size, whether it is the whole piece or its head, its bytes, the

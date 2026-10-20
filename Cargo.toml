@@ -1,5 +1,5 @@
 [package]
-name = "psynergy"
+name = "alchemy-devtools"
 version.workspace = true
 edition.workspace = true
 
@@ -17,7 +17,7 @@ sha1 = "0.10"
 lang-c = "=0.15.1"
 
 [[bin]]
-name = "psynergy"
+name = "alchemy-devtools"
 path = "src/main.rs"
 
 [workspace]

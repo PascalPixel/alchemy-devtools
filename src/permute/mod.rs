@@ -37,12 +37,12 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use types::Env;
 
-const USAGE: &str = r#"usage: psynergy permute DRAFT.c [ADDRESS[,ADDRESS...]] [--edition EDITION] [--minutes N] [--jobs J] [--seed S] [--function NAME] [--overlay resource_XXX] [--iterations N] [--heat] [--prefix] [--arm] [--stack-diffs] [--ignore-branch-targets] [--keep-prob P] [--stop-on-zero]
+const USAGE: &str = r#"usage: alchemy-devtools permute DRAFT.c [ADDRESS[,ADDRESS...]] [--edition EDITION] [--minutes N] [--jobs J] [--seed S] [--function NAME] [--overlay resource_XXX] [--iterations N] [--heat] [--prefix] [--arm] [--stack-diffs] [--ignore-branch-targets] [--keep-prob P] [--stop-on-zero]
 Searches source variations of DRAFT.c until its code matches the
-listing psynergy diff compares it with (ADDRESS defaults to the file name;
-build the edition first). Each candidate compiles with psynergy diff's steps
+listing alchemy-devtools diff compares it with (ADDRESS defaults to the file name;
+build the edition first). Each candidate compiles with alchemy-devtools diff's steps
 in its job's own directory under out/permute/STEM/, and scores two ways:
-differ, psynergy diff's count, and a weighted score. The weighted score aligns
+differ, alchemy-devtools diff's count, and a weighted score. The weighted score aligns
 mnemonics with difflib, then charges 5 per differing
 operand, 1 per differing branch target, 60 per exactly reordered row and
 100 per insertion or deletion. Stack offsets, branch targets and trailing nops are ignored
@@ -110,8 +110,8 @@ enabled, then weighted score and differ. --only-if-below N requires a weighted
 score strictly below N.
 --no-context-output trims source.c before the first target function occurrence.
 --overlay resource_XXX with --function NAME compares an overlay's linked
-function against the reference ROM's decoded stream, as psynergy diff does.
---arm compiles each candidate as psynergy diff --arm does:
+function against the reference ROM's decoded stream, as alchemy-devtools diff does.
+--arm compiles each candidate as alchemy-devtools diff --arm does:
 through the game ARM route (GAME_ARM_SOURCES): stock GCC 2.95.2."#;
 
 struct Options {
@@ -269,7 +269,7 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
     Ok(Options { draft, addresses, game, target, minutes, jobs, seed, rng_seed, perm_seed, function, overlay, iterations, arm, heat, prefix, score_options, keep_prob, stop_on_zero, output })
 }
 
-/// One job's scratch: its candidate file and psynergy diff's steps for it.
+/// One job's scratch: its candidate file and alchemy-devtools diff's steps for it.
 struct Job {
     candidate: PathBuf,
     object: PathBuf,
@@ -691,7 +691,7 @@ fn execute(mut problem: Problem, options: &Options, scaffold: Option<String>, ou
 }
 
 /// The base's heat on its printed function: its text compiled once more
-/// with -g, its rows charged to lines as `psynergy diff --heat` charges them.
+/// with -g, its rows charged to lines as `alchemy-devtools diff --heat` charges them.
 fn aim_at(problem: &Problem, setup: &Job, base_state: &State, base_text: &str) -> Result<Option<aim::Aim>, String> {
     let Some((_, _, function)) = &base_state.parsed else { return Ok(None) };
     let printed = base_state.expanded.restore(&function.print());
@@ -1305,7 +1305,7 @@ fn write_best(problem: &Problem, base: &Found, found: &[Best], output: &Path) ->
         let spelling = if entry.respelled { "" } else { "\n   Its rewrites do not carry into the draft's lines: this is the permuter's printed source." };
         let review = if kinds.iter().any(|k| matches!(k, Kind::Full(_))) { "\n   Source hypothesis: review type and behavior changes, and tag compiler-steering devices under S2 before adoption." } else { "" };
         let header = format!(
-            "/* psynergy permute {}: {}; draft {}.\n   Job {}, iteration {}; rewrites: {} (minimized from {}: {}).{spelling}{fakematch}{review} */\n",
+            "/* alchemy-devtools permute {}: {}; draft {}.\n   Job {}, iteration {}; rewrites: {} (minimized from {}: {}).{spelling}{fakematch}{review} */\n",
             problem.stem,
             best.score.summary_with(problem.prefix),
             base.score.summary_with(problem.prefix),
@@ -1995,7 +1995,7 @@ mod tests {
 
         let work = tempfile::tempdir().unwrap();
         let target = decomp_target(Some("tbs-en")).unwrap();
-        // The listing: one spelling, compiled as psynergy diff compiles drafts.
+        // The listing: one spelling, compiled as alchemy-devtools diff compiles drafts.
         let reference = work.path().join("reference/08000000.c");
         let object = work.path().join("reference/obj/08000000.o");
         std::fs::create_dir_all(object.parent().unwrap()).unwrap();
