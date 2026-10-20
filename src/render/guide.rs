@@ -5,7 +5,7 @@
 
 use super::animation;
 use super::field::{Field, Setup, Symbols};
-use super::mgba::WIDTH;
+use super::mgba::{HEIGHT, WIDTH};
 use super::story::Flags;
 use std::path::Path;
 
@@ -118,4 +118,121 @@ impl<'a> Guide<'a> {
         field.io_write16(DISPCNT, shown);
         self.gif("layers.gif", &frames, "BG3, then BG2, the sprites and BG1 added over it")
     }
+
+    /// Vale's layers pulled apart in 3D: the scene as the game shows it,
+    /// then BG3, BG2, the sprites and BG1 drawn as sheets, turned and spread
+    /// one behind the other, then flat again. Each sheet is captured alone
+    /// over KEY, the colour that marks its empty pixels.
+    pub fn exploded(&mut self) -> Result<(), String> {
+        let mut field = self.enter(VALE)?;
+        let shown = field.read16(DISPCNT);
+        let saved = field.save();
+        let mut sheets = Vec::new();
+        for bits in [0x800u16, 0x400, 0x1000, 0x200] {
+            field.load(&saved);
+            field.io_write16(DISPCNT, (shown & !LAYER_BITS) | bits);
+            field.set_backdrop(KEY);
+            field.frames(2)?;
+            sheets.push(field.picture().iter().map(|&c| (c != KEY).then(|| animation::rgb(c))).collect::<Vec<_>>());
+        }
+        // Frames at 60 a second: flat, apart, held, together, flat.
+        let mut spread = Vec::new();
+        spread.extend(std::iter::repeat_n(0.0, 50));
+        spread.extend((0..60).map(|i| ease(i as f64 / 59.0)));
+        spread.extend(std::iter::repeat_n(1.0, 120));
+        spread.extend((0..60).map(|i| ease(1.0 - i as f64 / 59.0)));
+        spread.extend(std::iter::repeat_n(0.0, 20));
+        let frames: Vec<Vec<u32>> = spread.iter().map(|&e| draw_sheets(&sheets, e)).collect();
+        let written = animation::write(&self.out.join("layers-3d.gif"), &frames, CANVAS.0)?;
+        self.written.push(("layers-3d.gif".to_string(), written.bytes, format!("Vale's layers pulled apart; {} frames", written.frames)));
+        Ok(())
+    }
+}
+
+/// The colour an empty pixel of a sheet is drawn in: full magenta, which no
+/// map tile here uses.
+const KEY: u16 = 0x7c1f;
+/// The exploded view's picture, its background and the sheets' tint and edge.
+const CANVAS: (usize, usize) = (520, 400);
+const BACKGROUND: u32 = 0x10_10_14;
+const EDGE: u32 = 0xb0_b8_c8;
+const SHEET: u32 = 0x30_36_44;
+/// How far apart the sheets end (pixels of a sheet), and the turn and tilt
+/// they end at.
+const GAP: f64 = 70.0;
+const YAW: f64 = -38.0;
+const PITCH: f64 = 14.0;
+/// The camera's distance and the picture's scale at the sheets' plane.
+const DISTANCE: f64 = 700.0;
+const SCALE: f64 = 1.5;
+
+fn ease(t: f64) -> f64 {
+    t * t * (3.0 - 2.0 * t)
+}
+
+fn mix(a: u32, b: u32, share: f64) -> u32 {
+    let channel = |s: u32| {
+        let (x, y) = (f64::from((a >> s) & 0xff), f64::from((b >> s) & 0xff));
+        ((x + (y - x) * share).round() as u32) << s
+    };
+    channel(16) | channel(8) | channel(0)
+}
+
+/// Rotates `p` by the turn about the vertical axis, then the tilt about the
+/// horizontal one.
+fn rotate(p: [f64; 3], yaw: f64, pitch: f64) -> [f64; 3] {
+    let (sy, cy) = yaw.sin_cos();
+    let (sp, cp) = pitch.sin_cos();
+    let x = p[0] * cy + p[2] * sy;
+    let z = -p[0] * sy + p[2] * cy;
+    [x, p[1] * cp - z * sp, p[1] * sp + z * cp]
+}
+
+fn det(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
+    a[0] * (b[1] * c[2] - b[2] * c[1]) - b[0] * (a[1] * c[2] - a[2] * c[1]) + c[0] * (a[1] * b[2] - a[2] * b[1])
+}
+
+/// One frame of the exploded view with the sheets `e` of the way apart
+/// (0 flat, 1 apart), the first sheet at the back, drawn back to front.
+fn draw_sheets(sheets: &[Vec<Option<u32>>], e: f64) -> Vec<u32> {
+    let (w, h) = CANVAS;
+    let mut canvas = vec![BACKGROUND; w * h];
+    let (yaw, pitch) = ((YAW * e).to_radians(), (PITCH * e).to_radians());
+    let focal = DISTANCE * SCALE;
+    let (cx, cy) = (w as f64 / 2.0, h as f64 / 2.0);
+    let n = sheets.len() as f64;
+    let eu = rotate([1.0, 0.0, 0.0], yaw, pitch);
+    let ev = rotate([0.0, 1.0, 0.0], yaw, pitch);
+    for (i, sheet) in sheets.iter().enumerate() {
+        let depth = ((n - 1.0) / 2.0 - i as f64) * GAP * e;
+        let p0 = rotate([-(WIDTH as f64) / 2.0, -(HEIGHT as f64) / 2.0, depth], yaw, pitch);
+        // Camera at (0, 0, -DISTANCE): solve camera + t ray = p0 + a eu + b ev.
+        let rhs = [-p0[0], -p0[1], -DISTANCE - p0[2]];
+        for y in 0..h {
+            for x in 0..w {
+                let ray = [(x as f64 + 0.5 - cx) / focal, (y as f64 + 0.5 - cy) / focal, 1.0];
+                let back = [-ray[0], -ray[1], -ray[2]];
+                let d = det(eu, ev, back);
+                if d.abs() < 1e-9 {
+                    continue;
+                }
+                let a = det(rhs, ev, back) / d;
+                let b = det(eu, rhs, back) / d;
+                if !(0.0..WIDTH as f64).contains(&a) || !(0.0..HEIGHT as f64).contains(&b) {
+                    continue;
+                }
+                let at = &mut canvas[y * w + x];
+                let near_edge = a < 1.0 || b < 1.0 || a > WIDTH as f64 - 1.0 || b > HEIGHT as f64 - 1.0;
+                if near_edge && e > 0.02 {
+                    *at = mix(*at, EDGE, e);
+                    continue;
+                }
+                match sheet[b as usize * WIDTH + a as usize] {
+                    Some(c) => *at = c,
+                    None => *at = mix(*at, SHEET, 0.45 * e),
+                }
+            }
+        }
+    }
+    canvas
 }

@@ -272,6 +272,12 @@ impl<'rom> Field<'rom> {
     }
 
 
+    /// Draws every line from now on over `colour` (BGR555) where nothing else
+    /// is drawn; the game's palette keeps its own colour 0.
+    pub fn set_backdrop(&mut self, colour: u16) {
+        self.gba.set_backdrop(&[colour; HEIGHT]);
+    }
+
     /// Stores a halfword into an I/O register, as the processor would.
     pub fn io_write16(&mut self, address: u32, value: u16) {
         self.gba.io_write16(address, value);

@@ -645,6 +645,7 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
   walk       walk-run.gif: Vale, walking right, then running back with B
   snow       snow.gif: Imil, the leader's footprints in the snow
   layers     layers.gif: Vale built up layer by layer, BG3 to BG1
+  layers-3d  layers-3d.gif: Vale's layers pulled apart into sheets in 3D
   world-map  world-map-walk.gif: the world map's perspective view, walking
 --only picks some; flags.tsv is the story tools' flag names.";
 
@@ -688,12 +689,13 @@ fn play_guide(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new() };
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     let mut failed = Vec::new();
-    for name in ["walk", "snow", "layers", "world-map"] {
+    for name in ["walk", "snow", "layers", "layers-3d", "world-map"] {
         if wanted(name) {
             let result = match name {
                 "walk" => guide.walk(),
                 "snow" => guide.snow(),
                 "layers" => guide.layers(),
+                "layers-3d" => guide.exploded(),
                 _ => guide.world_map(),
             };
             if let Err(e) = result {
