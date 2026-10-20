@@ -2,6 +2,7 @@
 //! (calcrom), the report decomp.dev reads, and the figures CI draws.
 
 pub(crate) mod boxtree;
+pub(crate) mod archive;
 pub(crate) mod calcrom;
 pub(crate) mod decomp;
 pub(crate) mod figure;
@@ -16,15 +17,17 @@ pub(crate) mod raster;
 use calcrom::{Game, GameDone};
 use std::path::Path;
 
-const USAGE: &str = "usage: alchemy-devtools progress [--publish MEASUREMENT DIRECTORY | --upload COMMIT REMOTE | --pre-push REMOTE]
+const USAGE: &str = "usage: alchemy-devtools progress [--publish ARCHIVE COMMIT DIRECTORY | --upload COMMIT REMOTE | --pre-push REMOTE]
 With no option, counts DONE code and data in each edition built and matching
 rom.sha1 (make compare-editions), prints a line for each, and writes the
 measurement and decomp.dev's report under out/reports/decomp; a game without
 all six editions is pending. --upload sends that measurement to the
 decomp-reports release for COMMIT, when REMOTE is this repository's;
---pre-push does so for each commit git pushes to main.
---publish is CI's: it records a measurement in DIRECTORY's history.tsv and
-draws both progress figures there.";
+--pre-push does so for the tip git pushes to main.
+Stage source changes before measuring: the receipt must describe the source
+the build actually read. --publish is CI's: it rebuilds history from ARCHIVE's
+immutable baseline and accepted receipts, admits COMMIT after its successful
+build, and draws both figures in DIRECTORY. Measurement dates are UTC.";
 
 fn read(path: &Path) -> Result<String, String> {
     std::fs::read(path)
@@ -144,6 +147,14 @@ fn parse_measurement(text: &str) -> Result<[Option<GameDone>; 2], String> {
         if values.len() != width {
             return Err(format!("measurement row has the wrong width: {line}"));
         }
+        let code = values[..4].iter().map(|value| *value as i128).sum::<i128>();
+        if values.iter().any(|value| *value < 0)
+            || values[4] == 0
+            || code > values[4] as i128
+            || values[5] as i128 > values[0] as i128 + values[2] as i128
+        {
+            return Err(format!("measurement row has impossible code: {line}"));
+        }
         let (data, data_total) = (values.get(6).copied().unwrap_or_default(), values.get(7).copied().unwrap_or_default());
         if data < 0 || data > data_total {
             return Err(format!("measurement row has impossible data: {line}"));
@@ -165,27 +176,8 @@ fn parse_measurement(text: &str) -> Result<[Option<GameDone>; 2], String> {
     Ok(games)
 }
 
-fn publish_figures(root: &Path, measurement: &Path, directory: &Path) -> Result<String, String> {
-    let [sun, anchor] = parse_measurement(&read(measurement)?)?;
-    let path = directory.join("history.tsv");
-    let mut history = history::load_file(&path)?;
-    let hour = history::this_hour();
-    let today = hour[..10].to_string();
-    history::record(&mut history, &today, sun, anchor);
-    history::record_hour(&mut history, &hour, sun, anchor);
-    history::mark_drawn(&mut history, &today);
-    write(&path, &history::text(&history))?;
-    let letters = letters::Letters::face();
-    let chart = figure::chart(&letters, &history::as_drawn(&history));
-    let map = figure::map(&letters, root);
-    for (name, canvas) in [(figure::CHART, chart), (figure::MAP, map)] {
-        std::fs::write(directory.join(name), canvas.png(letters::FIGURE_SCALE, &today)?)
-            .map_err(|error| format!("{name}: {error}"))?;
-    }
-    Ok(format!("published {} figures={},{}", status_line(sun, anchor), figure::CHART, figure::MAP))
-}
-
 fn measure(root: &Path) -> Result<String, String> {
+    let tree = publish::source_tree(root)?;
     let games = std::thread::scope(|scope| {
         ["tbs", "tla"]
             .map(|game| scope.spawn(move || calcrom::measure_game(root, game)))
@@ -198,12 +190,12 @@ fn measure(root: &Path) -> Result<String, String> {
         .map_err(|error| format!("{}: {error}", publish::MEASUREMENT))?;
     write(&path, &measurement_text(sun, anchor))?;
     if sun.is_some() && anchor.is_some() {
-        publish::prepare(root)?;
+        publish::prepare(root, &tree)?;
     }
     Ok(format!("{}measured {} {decomp} measurement={}", lines(&games), status_line(sun, anchor), publish::MEASUREMENT))
 }
 
-/// The pre-push hook: each commit pushed to main carries its measurement,
+/// The pre-push hook: the tip pushed to main carries its measurement,
 /// uploaded from the lines git writes on the hook's input (C3).
 fn pre_push(root: &Path, remote: &str) -> Result<(), String> {
     let mut input = String::new();
@@ -224,8 +216,8 @@ pub(crate) fn run(argv: &[String]) -> Result<(), String> {
     let line = match argv {
         [flag] if flag == "-h" || flag == "--help" => USAGE.to_string(),
         [] => measure(root)?,
-        [flag, measurement, directory] if flag == "--publish" => {
-            publish_figures(root, Path::new(measurement), Path::new(directory))?
+        [flag, archive, commit, directory] if flag == "--publish" => {
+            archive::publish(root, Path::new(archive), commit, Path::new(directory))?
         }
         [flag, commit, remote] if flag == "--upload" => {
             publish::upload(root, commit, remote)?;
@@ -290,6 +282,9 @@ mod tests {
         assert!(parse_measurement(&format!("{text}tbs\t1\t2\t3\t4\t100\t1\t0\t0\n")).is_err());
         assert!(parse_measurement(&format!("{text}tla\t1\t2\n")).is_err());
         assert!(parse_measurement(&text.replace("\t7\t9", "\t9\t7")).is_err());
+        assert!(parse_measurement(&text.replace("\t100\t", "\t0\t")).is_err());
+        assert!(parse_measurement(&text.replace("\t100\t", "\t5\t")).is_err());
+        assert!(parse_measurement(&text.replace("tbs\t1\t", "tbs\t-1\t")).is_err());
         // A code-only measurement from before DONE data still reads.
         let old = "game\tcommon_asm\tcommon_c\tgame_asm\tgame_c\texecutable\tveneers\n\
                    tla\t1\t2\t3\t4\t100\t1\n";

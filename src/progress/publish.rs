@@ -2,6 +2,7 @@ use super::decomp::REPORT;
 use sha2::{Digest, Sha256};
 use std::path::Path;
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) const MEASUREMENT: &str = "out/reports/decomp/measurement.tsv";
 
@@ -9,10 +10,11 @@ const REPO: &str = "PascalPixel/alchemy";
 const RELEASE: &str = "decomp-reports";
 const RECEIPT: &str = "out/reports/decomp/publication.tsv";
 const STALE: &str =
-    "progress measurement is stale or missing: run make land before committing main";
+    "progress measurement is stale or missing: stage all source changes, then run make land";
 const ASSETS: [(&str, &str); 2] = [(REPORT, "pb"), (MEASUREMENT, "tsv")];
+const HEADER: &str = "version\ttree\tmeasured_at\tpb_sha256\ttsv_sha256";
 
-fn command(root: &Path, program: &str, arguments: &[&str]) -> Result<String, String> {
+pub(super) fn command(root: &Path, program: &str, arguments: &[&str]) -> Result<String, String> {
     let output = Command::new(program)
         .args(arguments)
         .current_dir(root)
@@ -27,17 +29,57 @@ fn command(root: &Path, program: &str, arguments: &[&str]) -> Result<String, Str
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-fn digest(bytes: &[u8]) -> String {
+pub(super) fn digest(bytes: &[u8]) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes))
 }
 
-fn receipt(tree: &str, files: &[Vec<u8>]) -> String {
+fn receipt(tree: &str, measured_at: u64, files: &[Vec<u8>]) -> String {
     let digests = files.iter().map(|bytes| digest(bytes)).collect::<Vec<_>>();
-    format!("{tree}\t{}\n", digests.join("\t"))
+    format!(
+        "{HEADER}\n1\t{tree}\t{measured_at}\t{}\n",
+        digests.join("\t")
+    )
 }
 
-fn valid_id(id: &str) -> bool {
-    id.len() == 40 && id.bytes().all(|b| b.is_ascii_hexdigit())
+pub(super) fn valid_id(id: &str) -> bool {
+    id.len() == 40
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
+/// A receipt names the staged source tree and both report digests. Its time
+/// survives remeasurement of identical inputs, uploads and CI retries.
+pub(super) fn verify(saved: &str, tree: &str, files: &[Vec<u8>]) -> Result<u64, String> {
+    let fields: Vec<_> = saved
+        .lines()
+        .nth(1)
+        .unwrap_or_default()
+        .split('\t')
+        .collect();
+    let measured_at = fields
+        .get(2)
+        .and_then(|value| value.parse::<u64>().ok())
+        .filter(|value| (1..=253_402_300_799).contains(value))
+        .ok_or(STALE)?;
+    if !valid_id(tree) || files.len() != 2 || saved != receipt(tree, measured_at, files) {
+        return Err(STALE.into());
+    }
+    Ok(measured_at)
+}
+
+/// Builds read the working tree, so an index-only fingerprint is insufficient.
+/// Staged changes are allowed; unstaged and untracked source must be resolved.
+pub(super) fn source_tree(root: &Path) -> Result<String, String> {
+    command(
+        root,
+        "git",
+        &["diff", "--exit-code", "--ignore-submodules=none"],
+    )?;
+    if !command(root, "git", &["ls-files", "--others", "--exclude-standard"])?.is_empty() {
+        return Err("untracked source: stage or ignore it before measuring progress".into());
+    }
+    command(root, "git", &["write-tree"])
 }
 
 fn canonical_remote(remote: &str) -> bool {
@@ -58,21 +100,32 @@ fn read_assets(root: &Path) -> Result<Vec<Vec<u8>>, String> {
         .collect()
 }
 
-pub(crate) fn prepare(root: &Path) -> Result<(), String> {
-    let tree = command(root, "git", &["write-tree"])?;
+pub(crate) fn prepare(root: &Path, expected_tree: &str) -> Result<(), String> {
+    let tree = source_tree(root)?;
+    if tree != expected_tree {
+        return Err("source changed while progress was being measured".into());
+    }
     let files = read_assets(root)?;
-    std::fs::write(root.join(RECEIPT), receipt(&tree, &files))
+    let measured_at = std::fs::read_to_string(root.join(RECEIPT))
+        .ok()
+        .and_then(|saved| verify(&saved, &tree, &files).ok())
+        .unwrap_or(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_secs(),
+        );
+    std::fs::write(root.join(RECEIPT), receipt(&tree, measured_at, &files))
         .map_err(|error| error.to_string())?;
     println!("progress measurement prepared for source tree {tree}");
     Ok(())
 }
 
 fn prepared(root: &Path, tree: &str) -> Result<Vec<Vec<u8>>, String> {
-    let files = read_assets(root)?;
+    let mut files = read_assets(root)?;
     let saved = std::fs::read_to_string(root.join(RECEIPT)).map_err(|_| STALE.to_string())?;
-    if !valid_id(tree) || saved != receipt(tree, &files) {
-        return Err(STALE.into());
-    }
+    verify(&saved, tree, &files)?;
+    files.push(saved.into_bytes());
     Ok(files)
 }
 
@@ -112,7 +165,7 @@ pub(crate) fn upload(root: &Path, commit: &str, remote: &str) -> Result<(), Stri
     let files = prepared(root, &tree)?;
     let directory = root.join("out/reports/decomp/upload");
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
-    for ((_, extension), bytes) in ASSETS.iter().zip(&files) {
+    for (extension, bytes) in ["pb", "tsv", "receipt.tsv"].iter().zip(&files) {
         let name = format!("{commit}.{extension}");
         if !needs_upload(&remote_digest(root, &name)?, bytes)? {
             continue;
@@ -137,4 +190,63 @@ pub(crate) fn upload(root: &Path, commit: &str, remote: &str) -> Result<(), Stri
     }
     println!("progress measurement uploaded for {commit}; CI publishes it after the push");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn receipt_binds_both_reports_tree_and_time() {
+        let tree = "0123456789012345678901234567890123456789";
+        let files = vec![b"protobuf".to_vec(), b"measurement".to_vec()];
+        let saved = receipt(tree, 1_792_497_600, &files);
+        assert_eq!(verify(&saved, tree, &files).unwrap(), 1_792_497_600);
+        assert!(verify(&saved, "1123456789012345678901234567890123456789", &files).is_err());
+        assert!(verify(&saved, tree, &[b"changed".to_vec(), files[1].clone()]).is_err());
+        assert!(verify(&saved, tree, &[files[0].clone(), b"changed".to_vec()]).is_err());
+        assert!(verify(&(saved.clone() + "extra\n"), tree, &files).is_err());
+        assert!(verify(&saved.replace("1792497600", "0"), tree, &files).is_err());
+        assert!(!needs_upload(&digest(&files[0]), &files[0]).unwrap());
+        assert!(needs_upload(&digest(&files[0]), &files[1]).is_err());
+    }
+
+    #[test]
+    fn measurement_requires_working_source_to_equal_the_index() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        command(root, "git", &["init", "--quiet"]).unwrap();
+        std::fs::write(root.join("source.c"), "staged\n").unwrap();
+        command(root, "git", &["add", "source.c"]).unwrap();
+        assert!(source_tree(root).is_ok());
+        std::fs::write(root.join("source.c"), "unstaged\n").unwrap();
+        assert!(source_tree(root).is_err());
+        command(root, "git", &["add", "source.c"]).unwrap();
+        assert!(source_tree(root).is_ok());
+        std::fs::write(root.join("extra.c"), "untracked\n").unwrap();
+        assert!(source_tree(root).is_err());
+    }
+
+    #[test]
+    fn identical_remeasurement_keeps_its_first_timestamp() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        command(root, "git", &["init", "--quiet"]).unwrap();
+        std::fs::write(root.join(".gitignore"), "out/\n").unwrap();
+        command(root, "git", &["add", ".gitignore"]).unwrap();
+        let tree = source_tree(root).unwrap();
+        for (path, _) in ASSETS {
+            let path = root.join(path);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, b"report").unwrap();
+        }
+        let first = receipt(&tree, 1_792_497_600, &read_assets(root).unwrap());
+        std::fs::write(root.join(RECEIPT), &first).unwrap();
+        prepare(root, &tree).unwrap();
+        assert_eq!(std::fs::read_to_string(root.join(RECEIPT)).unwrap(), first);
+        assert_eq!(prepared(root, &tree).unwrap().len(), 3);
+        std::fs::write(root.join(MEASUREMENT), b"changed").unwrap();
+        assert!(prepared(root, &tree).is_err());
+        assert!(prepare(root, "0123456789012345678901234567890123456789").is_err());
+    }
 }

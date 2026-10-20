@@ -463,12 +463,10 @@ pub(crate) fn mark_drawn(history: &mut History, date: &str) {
     );
 }
 
-pub(crate) fn this_hour() -> String {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |elapsed| elapsed.as_secs() as libc::time_t);
+pub(crate) fn utc_hour(timestamp: u64) -> String {
+    let now = timestamp as libc::time_t;
     let mut tm: libc::tm = unsafe { std::mem::zeroed() };
-    unsafe { libc::localtime_r(&now, &mut tm) };
+    unsafe { libc::gmtime_r(&now, &mut tm) };
     format!(
         "{:04}-{:02}-{:02}T{:02}",
         tm.tm_year + 1900,
@@ -688,7 +686,8 @@ mod tests {
         );
         assert_eq!(previous("2026-03-01").as_deref(), Some("2026-02-28"));
         assert_eq!(previous("2026-09-01").as_deref(), Some("2026-08-31"));
-        assert_eq!(this_hour().len(), 13);
+        assert_eq!(utc_hour(0), "1970-01-01T00");
+        assert_eq!(utc_hour(1_792_497_600), "2026-10-20T12");
     }
 
     #[test]
