@@ -42,10 +42,10 @@ cargo build --locked --release --features render --manifest-path alchemy-devtool
 make tbs-en
 alchemy-devtools/target/release/alchemy-devtools render psynergy --all --list
 alchemy-devtools/target/release/alchemy-devtools render psynergy --all --out DIR
-alchemy-devtools/target/release/alchemy-devtools render psynergy --ability Flare --backdrop studio.png --verbose
+alchemy-devtools/target/release/alchemy-devtools render psynergy --ability Flare --backdrop backdrop.png --verbose
 ```
 
-The run boots the build, enters Camelot's battle test menu and steers the battle at function entries named by the linker map. The battlefield shows a grey gradient drawn by the GBA as its backdrop colour, or a picture composed with the GBA's blend weights from two runs; windows are drawn grey. `render psynergy --help` gives the casters, targets and setup. The ROM is only read; never publish it or anything copied from it.
+The run boots the build, enters Camelot's battle test menu and steers the battle at function entries named by the linker map. `--backdrop` picks the battlefield: a grey gradient drawn as the GBA's backdrop colour (the default), the battle's own background (`game`), or a 256 by 120 PNG, a battle backdrop's size, put in the background's place in its own format, which the game then draws, scrolls, darkens and blends itself. Windows are drawn grey. Recording starts at the cast's message, after the camera's turn from the command view. `render psynergy --help` gives the casters, targets and setup. The ROM is only read; never publish it or anything copied from it.
 
 ## Progress publication
 

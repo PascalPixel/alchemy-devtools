@@ -1,10 +1,10 @@
 //! Frames to a looping GIF: every second frame of the GBA's 60 for 30 a
-//! second, at the GBA's own size, over one palette for the file. A cast over
-//! the gradient shows a few hundred to a few thousand of the GBA's colours;
-//! up to 255 of them are kept exactly, and past that a median cut picks the
-//! palette. After the first frame each frame holds only the rectangle that
-//! changed, unchanged pixels in it transparent, and a frame the same as the
-//! last lengthens it.
+//! second, at the GBA's own size, over one palette for the file. A cast
+//! shows a few hundred to a few thousand of the GBA's colours; up to 255 of
+//! them are kept exactly, and past that a median cut picks the palette.
+//! After the first frame each frame holds only the rectangle that changed,
+//! unchanged pixels in it transparent, and a frame the same as the last
+//! lengthens it.
 
 use std::collections::HashMap;
 use std::path::Path;

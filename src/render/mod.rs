@@ -18,35 +18,40 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 const USAGE: &str = "usage: alchemy-devtools render psynergy [--ability N|NAME]... [--all] [--list]
-         [--out DIR] [--edition tbs-en] [--backdrop gradient|PICTURE.png] [--verbose]
+         [--out DIR] [--edition tbs-en] [--backdrop gradient|game|PICTURE.png] [--verbose]
 Plays battle Psynergy in a built ☀️ edition (make tbs-en) under libmgba and
 writes each cast as DIR/<ability>.gif: the whole 240 by 160 screen at 30
-frames a second, looping. DIR/index.tsv lists each file's ability id, name,
-caster, target and frames at 30 a second. DIR defaults to
-out/EDITION/psynergy. --all casts every ability usable in battle that the
-party learns (classes.tsv and the items that teach one), and lists the rest
-with why they are left out; --ability casts one by id or English name.
---list prints the casts instead of playing them; --verbose prints each run's
-setup: the party, the units' classes and the sprites BattleObjMake picks.
+frames a second, looping, from the cast's message to the next round. DIR/index.tsv
+lists each file's ability id, name, caster, target and frames at 30 a
+second. DIR defaults to out/EDITION/psynergy. --all casts every ability usable
+in battle that the party learns (classes.tsv and the items that teach one),
+and lists the rest with why they are left out; --ability casts one by id or
+English name. --list prints the casts instead of playing them; --verbose
+prints each run's setup: the party, the units' classes and the sprites
+BattleObjMake picks.
 
-The battle background is cleared. The battlefield shows a grey gradient,
-one grey a line drawn by the GBA as its backdrop colour, or with --backdrop a
-PNG scaled to cover the battlefield's 240 by 136 pixels: each cast is then
-played over black and over grey and composed with the GBA's blend weights.
-The windows are drawn grey at their colours' lightness.
+--backdrop sets the battlefield behind the fighters: `gradient` (the default)
+clears the battle background and draws a grey a line as the GBA's backdrop
+colour; `game` keeps the battle's own background; a 256 by 120 PNG, a
+battle backdrop's size, takes the background's place in its own format (128
+colours in BG palettes 6 to 13, 256-colour tiles), and the game draws,
+scrolls, darkens and blends it as its own. The windows are drawn grey at
+their colours' lightness.
 
 The caster follows the element: Venus Isaac, Mercury Mia, Mars Jenna for
 her own Flare Psynergy and Garet for the rest, Jupiter Ivan: the four from
 debug party preset 0, at level 35 with their grown-up sprites, and Jenna as
-the debug menu leaves her. Offensive Psynergy strikes the opposed element's character
-(Venus and Jupiter, Mars and Mercury), copied onto the enemy side as a link
-battle copies the opponent's party, with 999 HP; one that reaches past its
-aim strikes three. Healing and support go to that character as the caster's
-ally, in a battle against a Vermin; Revive's ally starts downed. A caster
-short of PP is given enough, and foes facing instant death enough luck.
+the debug menu leaves her. Offensive Psynergy strikes the opposed element's
+character (Venus and Jupiter, Mars and Mercury), copied onto the enemy side
+as a link battle copies the opponent's party, with 999 HP; one that reaches
+past its aim strikes three. Healing and support go to that character as the
+caster's ally, in a battle against a Vermin: hurt for healing, downed for
+Revive, poisoned for Cure Poison, deluded for Restore. A caster short of PP
+is given enough, and foes facing instant death enough luck.
 
 Needs the `render` feature: cargo build --release --features render, with
 libmgba and its headers installed (MGBA_PREFIX names their prefix).";
+
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
     match arguments.first().map(String::as_str) {
@@ -188,7 +193,7 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<Vec<Row
     use sha1::{Digest, Sha1};
 
     let edition = &o.edition;
-    let backdrop = backdrop::Backdrop::parse(&o.backdrop)?;
+    let scene = backdrop::scene(&o.backdrop)?;
     let build = root.join("out").join(edition);
     let map_path = build.join(format!("{edition}.map"));
     let rom_path = build.join(format!("{edition}.gba"));
@@ -206,16 +211,9 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<Vec<Row
     for cast in casts {
         let a = &cast.ability;
         let failed = |e: String| format!("{} ({}): {e}", a.name, a.id);
-        let mut runs = Vec::new();
-        for lines in backdrop.runs() {
-            runs.push(battle::record(&rom, &symbols, cast, &lines, o.verbose && runs.is_empty()).map_err(failed)?);
-        }
-        let count = runs[0].frames.len();
-        if runs.iter().any(|r| r.frames.len() != count) {
-            return Err(failed("the runs over each backdrop differ in length".to_string()));
-        }
+        let recording = battle::record(&rom, &symbols, cast, &scene, o.verbose).map_err(failed)?;
         let frames: Vec<Vec<u32>> =
-            (0..count).map(|i| backdrop.compose(&runs.iter().map(|r| &r.frames[i]).collect::<Vec<_>>())).collect();
+            recording.frames.iter().map(|f| f.iter().map(|&c| animation::rgb(c)).collect()).collect();
         let file = format!("{}.gif", cast.slug);
         let written = animation::write(&out.join(&file), &frames, mgba::WIDTH)?;
         total += written.bytes;
@@ -229,7 +227,7 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<Vec<Row
             written.stored,
             written.colours,
             written.bytes.div_ceil(1024),
-            if runs[0].battle_over { ", the battle ended" } else { "" }
+            if recording.battle_over { ", the battle ended" } else { "" }
         );
         rows.push(Row {
             id: a.id,

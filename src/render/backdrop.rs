@@ -1,88 +1,130 @@
-//! What the battlefield shows behind the fighters. The GBA's backdrop is
-//! one colour a line, so the gradient is drawn by the GBA itself, one grey
-//! per line. A picture needs a colour per pixel: the cast is played twice,
-//! over black and over grey 16, which differ only where the backdrop shows,
-//! by 16 times its weight in the GBA's blend (the second target's EVB/16, or
-//! 1 - EVY/16 under a brightness fade). Each pixel is then the black run's
-//! plus that weight of the picture's, the GBA's own arithmetic in eight bits.
+//! What the battlefield shows behind the fighters: the battle's own
+//! background, a grey gradient, or a picture of the game's backdrop size
+//! (256 by 120) put in place of the battle's own, in its format. The game
+//! then draws, scrolls and blends the picture itself.
 
-use super::animation::rgb;
-use super::battle::{gradient, grey, STRIP};
-use super::mgba::{HEIGHT, WIDTH};
+use super::battle::{gradient, Background, Scene};
+use std::collections::HashMap;
 use std::path::Path;
+
+/// A battle backdrop's size (games/tbs/src/graphics/backdrop).
+pub const WIDTH: usize = 256;
+pub const HEIGHT: usize = 120;
+/// The colours of a backdrop's palette, BG palettes 6 to 13.
+const COLOURS: usize = 128;
+/// The first BG palette entry the picture's pixels name (palette 6).
+const FIRST_ENTRY: u8 = 96;
 
 /// The gradient's grey at the top and the bottom, in five-bit levels (206
 /// and 74 of 255).
 const TOP: u16 = 25;
 const BOTTOM: u16 = 9;
-/// The grey the second run of a picture is played over.
-const GREY: u16 = 16;
 
-pub enum Backdrop {
-    Gradient,
-    /// The battlefield's 240 by 136 pixels, 0xRRGGBB.
-    Picture(Vec<u32>),
-}
-
-impl Backdrop {
-    /// `gradient`, or a PNG scaled to cover the battlefield and centred.
-    pub fn parse(value: &str) -> Result<Backdrop, String> {
-        if value == "gradient" {
-            return Ok(Backdrop::Gradient);
-        }
-        let (w, h, pixels) = read_png(Path::new(value))?;
-        Ok(Backdrop::Picture(cover(w, h, &pixels, WIDTH, STRIP)))
-    }
-
-    /// The backdrop lines of each run.
-    pub fn runs(&self) -> Vec<[u16; HEIGHT]> {
-        match self {
-            Backdrop::Gradient => vec![gradient(TOP, BOTTOM)],
-            Backdrop::Picture(_) => [0, GREY]
-                .iter()
-                .map(|&level| {
-                    let mut lines = [0; HEIGHT];
-                    lines[..STRIP].fill(grey(level));
-                    lines
-                })
-                .collect(),
-        }
-    }
-
-    /// One frame from the runs' frames, as 0xRRGGBB.
-    pub fn compose(&self, frames: &[&Vec<u16>]) -> Vec<u32> {
-        match self {
-            Backdrop::Gradient => frames[0].iter().map(|&c| rgb(c)).collect(),
-            Backdrop::Picture(picture) => compose(frames[0], frames[1], picture),
+/// `game`, `gradient`, or the path of a 256 by 120 PNG.
+pub fn scene(value: &str) -> Result<Scene, String> {
+    match value {
+        "game" => Ok(Scene::Game),
+        "gradient" => Ok(Scene::Lines(gradient(TOP, BOTTOM))),
+        path => {
+            let (w, h, pixels) = read_png(Path::new(path))?;
+            if (w, h) != (WIDTH, HEIGHT) {
+                return Err(format!("{path}: {w} by {h}; a battle backdrop is {WIDTH} by {HEIGHT}"));
+            }
+            Ok(Scene::Picture(background(&pixels)))
         }
     }
 }
 
-fn five(c: u16, k: u32) -> i32 {
-    i32::from((c >> (5 * k)) & 31)
+/// A picture (0xRRGGBB) as a battle background: its colours reduced to 128
+/// BGR555 colours, and its pixels as BattleBackground_Load leaves them in
+/// VRAM: 8 by 8 tiles in rows of 32, a byte a pixel naming a colour of BG
+/// palettes 6 to 13 (a backdrop PNG's index plus 96, as the Suhalla Gate
+/// backdrop decodes).
+pub fn background(pixels: &[u32]) -> Background {
+    let five: Vec<u16> = pixels.iter().map(|&c| bgr555(c)).collect();
+    let mut counts: HashMap<u16, u64> = HashMap::new();
+    for &c in &five {
+        *counts.entry(c).or_default() += 1;
+    }
+    let mut histogram: Vec<(u16, u64)> = counts.into_iter().collect();
+    histogram.sort_unstable();
+    let mut palette: Vec<u16> =
+        if histogram.len() <= COLOURS { histogram.iter().map(|&(c, _)| c).collect() } else { median_cut(&histogram, COLOURS) };
+    let index: HashMap<u16, u8> = histogram.iter().map(|&(c, _)| (c, nearest(&palette, c))).collect();
+    let mut vram = Vec::with_capacity(WIDTH * HEIGHT);
+    for tile in 0..WIDTH * HEIGHT / 64 {
+        let (tx, ty) = (tile % (WIDTH / 8), tile / (WIDTH / 8));
+        for y in 0..8 {
+            for x in 0..8 {
+                vram.push(FIRST_ENTRY + index[&five[(ty * 8 + y) * WIDTH + tx * 8 + x]]);
+            }
+        }
+    }
+    palette.resize(COLOURS, 0);
+    Background { vram, palette }
 }
 
-/// The black run's pixels plus the picture by each pixel's backdrop weight;
-/// the message strip keeps the black run's.
-fn compose(black: &[u16], grey: &[u16], picture: &[u32]) -> Vec<u32> {
-    black
+/// 0xRRGGBB to BGR555: the nearest eighth of each channel, as the build's
+/// palettes take a channel that is a multiple of eight (ags-graphics).
+fn bgr555(c: u32) -> u16 {
+    let five = |shift: u32| ((((c >> shift) & 0xff) + 4) >> 3).min(31) as u16;
+    five(16) | five(8) << 5 | five(0) << 10
+}
+
+fn channels(c: u16) -> [i32; 3] {
+    [i32::from(c & 31), i32::from((c >> 5) & 31), i32::from((c >> 10) & 31)]
+}
+
+fn nearest(palette: &[u16], c: u16) -> u8 {
+    let target = channels(c);
+    let distance = |p: u16| channels(p).iter().zip(target).map(|(a, b)| (a - b) * (a - b)).sum::<i32>();
+    palette.iter().enumerate().min_by_key(|(_, &p)| distance(p)).map_or(0, |(i, _)| i as u8)
+}
+
+/// At most `limit` colours for a histogram: the box with the most pixels is
+/// split along its widest channel at its weighted median, each box standing
+/// for its weighted mean.
+fn median_cut(histogram: &[(u16, u64)], limit: usize) -> Vec<u16> {
+    let weight = |b: &[(u16, u64)]| b.iter().map(|&(_, n)| n).sum::<u64>();
+    let mut boxes: Vec<Vec<(u16, u64)>> = vec![histogram.to_vec()];
+    while boxes.len() < limit {
+        let Some((at, _)) =
+            boxes.iter().enumerate().filter(|(_, b)| b.len() > 1).max_by_key(|(_, b)| weight(b))
+        else {
+            break;
+        };
+        let mut b = boxes.swap_remove(at);
+        let spread = |k: usize| {
+            let values = b.iter().map(|&(c, _)| channels(c)[k]);
+            values.clone().max().unwrap_or(0) - values.min().unwrap_or(0)
+        };
+        let k = (0..3).max_by_key(|&k| spread(k)).unwrap_or(0);
+        b.sort_by_key(|&(c, _)| channels(c)[k]);
+        let total = weight(&b);
+        let mut seen = 0;
+        let mut split = b.len() - 1;
+        for (i, &(_, n)) in b.iter().enumerate() {
+            seen += n;
+            if seen * 2 >= total {
+                split = (i + 1).clamp(1, b.len() - 1);
+                break;
+            }
+        }
+        let rest = b.split_off(split);
+        boxes.push(b);
+        boxes.push(rest);
+    }
+    let mut palette: Vec<u16> = boxes
         .iter()
-        .zip(grey)
-        .enumerate()
-        .map(|(i, (&b, &g))| {
-            let base = rgb(b);
-            if i >= WIDTH * STRIP {
-                return base;
-            }
-            let weight = (0..3).map(|k| five(g, k) - five(b, k)).max().unwrap_or(0).clamp(0, GREY as i32) as u32;
-            let mut out = 0;
-            for shift in [16, 8, 0] {
-                let value = (base >> shift & 0xff) + ((picture[i] >> shift & 0xff) * weight + 8) / 16;
-                out |= value.min(255) << shift;
-            }
-            out
+        .map(|b| {
+            let total = weight(b).max(1);
+            let mean = |k: usize| (b.iter().map(|&(c, n)| channels(c)[k] as u64 * n).sum::<u64>() + total / 2) / total;
+            (mean(0) | mean(1) << 5 | mean(2) << 10) as u16
         })
-        .collect()
+        .collect();
+    palette.sort_unstable();
+    palette.dedup();
+    palette
 }
 
 /// A PNG's width, height and pixels as 0xRRGGBB.
@@ -105,58 +147,36 @@ fn read_png(path: &Path) -> Result<(usize, usize, Vec<u32>), String> {
     Ok((info.width as usize, info.height as usize, pixels))
 }
 
-/// A picture scaled to cover `width` by `height`, centred, sampled
-/// bilinearly.
-fn cover(w: usize, h: usize, pixels: &[u32], width: usize, height: usize) -> Vec<u32> {
-    let scale = (width as f64 / w as f64).max(height as f64 / h as f64);
-    let (ox, oy) = ((w as f64 - width as f64 / scale) / 2.0, (h as f64 - height as f64 / scale) / 2.0);
-    let at = |x: usize, y: usize, shift: u32| f64::from(pixels[y.min(h - 1) * w + x.min(w - 1)] >> shift & 0xff);
-    let mut out = Vec::with_capacity(width * height);
-    for y in 0..height {
-        let sy = ((y as f64 + 0.5) / scale + oy - 0.5).max(0.0);
-        let (y0, fy) = (sy.floor() as usize, sy.fract());
-        for x in 0..width {
-            let sx = ((x as f64 + 0.5) / scale + ox - 0.5).max(0.0);
-            let (x0, fx) = (sx.floor() as usize, sx.fract());
-            let mut colour = 0;
-            for shift in [16, 8, 0] {
-                let top = at(x0, y0, shift) * (1.0 - fx) + at(x0 + 1, y0, shift) * fx;
-                let bottom = at(x0, y0 + 1, shift) * (1.0 - fx) + at(x0 + 1, y0 + 1, shift) * fx;
-                colour |= ((top * (1.0 - fy) + bottom * fy).round() as u32).min(255) << shift;
-            }
-            out.push(colour);
-        }
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn a_picture_covers_and_centres() {
-        // Four columns of two rows, wider than a square: the middle two
-        // columns cover it.
-        let pixels = [0x000000, 0x404040, 0x808080, 0xc0c0c0, 0x000000, 0x404040, 0x808080, 0xc0c0c0];
-        let out = cover(4, 2, &pixels, 2, 2);
-        assert_eq!(out, vec![0x404040, 0x808080, 0x404040, 0x808080]);
+    fn channels_round_to_five_bits() {
+        assert_eq!(bgr555(0xffffff), 0x7fff);
+        assert_eq!(bgr555(0xff0000), 0x001f);
+        assert_eq!(bgr555(0x000000), 0);
     }
 
     #[test]
-    fn the_picture_shows_by_the_backdrop_weight() {
-        let picture = vec![0xff8000; WIDTH * STRIP];
-        let mut black = vec![0u16; WIDTH * HEIGHT];
-        let mut over = vec![grey(16); WIDTH * HEIGHT];
-        // Pixel 1: a sprite, the same over both. Pixel 2: half blended.
-        black[1] = 0x001f;
-        over[1] = 0x001f;
-        black[2] = grey(4);
-        over[2] = grey(12);
-        let out = compose(&black, &over, &picture);
-        assert_eq!(out[0], 0xff8000);
-        assert_eq!(out[1], 0xff0000);
-        assert_eq!(out[2], 0xa16121);
-        assert_eq!(out[WIDTH * STRIP], 0);
+    fn a_picture_names_palettes_6_to_13() {
+        let mut pixels = vec![0x000000; WIDTH * HEIGHT];
+        pixels[1] = 0xffffff;
+        let b = background(&pixels);
+        assert_eq!(b.palette.len(), COLOURS);
+        assert_eq!((b.vram[0], b.vram[1]), (FIRST_ENTRY, FIRST_ENTRY + 1));
+        // Pixel (0, 8) begins the second row of tiles.
+        let mut pixels = vec![0x000000; WIDTH * HEIGHT];
+        pixels[8 * WIDTH] = 0xffffff;
+        let b = background(&pixels);
+        assert_eq!(b.vram[32 * 64], FIRST_ENTRY + 1);
+        assert_eq!((b.palette[0], b.palette[1]), (0, 0x7fff));
+    }
+
+    #[test]
+    fn many_colours_reduce_to_the_palette() {
+        let pixels: Vec<u32> = (0..WIDTH * HEIGHT).map(|i| (i as u32 % 256) * 0x010101 + (i as u32 / 256) * 0x10000).collect();
+        let b = background(&pixels);
+        assert!(b.vram.iter().all(|&v| (FIRST_ENTRY..FIRST_ENTRY + COLOURS as u8).contains(&v)));
     }
 }

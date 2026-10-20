@@ -3,14 +3,16 @@
 //! title, and steers the battle it starts through RAM and registers at a few
 //! function entries named by the linker map: the party, characters copied
 //! onto the enemy side as a link battle does, the action the command menu
-//! returns, and no enemy action. It keeps every frame from the action's
-//! dispatch to the next round's command phase or the battle's end.
+//! returns, and no enemy action. It keeps every frame from the cast's
+//! message, once the camera has left the command view, to the next round's
+//! command phase or the battle's end.
 //!
-//! The battle background's picture is cleared, so BG1 and BG2 show the
-//! backdrop, and each line is drawn over a backdrop colour of the caller's;
-//! the GBA blends effects with it as it would with its own. The windows are
-//! drawn in greys of their colours' lightness. Both are changes to the
-//! picture alone: the game's palette RAM keeps its own colours.
+//! The battlefield shows the battle's own background, another picture put
+//! in its place as BattleBackground_Load would leave it (which the game then
+//! draws, scrolls, darkens and blends itself), or no picture and a backdrop
+//! colour for each line. The windows are drawn in greys of their colours'
+//! lightness. The backdrop colours and the greys change the picture alone:
+//! the game's palette RAM keeps its own colours.
 
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, LR};
 use super::plan::{self, Aim, Ally, Cast};
@@ -66,7 +68,12 @@ const FIRST_ENEMY_UNIT: u32 = 128;
 const ENEMY_UNITS: u32 = 6;
 const WORK_PARTY_UNITS: u32 = 0x58;
 const WORK_ENEMY_IDS: u32 = 0x66;
+const WORK_PALETTE: u32 = 0x544;
 const WORK_BACKGROUND: u32 = 0x648;
+/// BG palettes 6 to 13, the battle background's (BATTLE_BG_PALETTE).
+const BATTLE_BG_PALETTE: u32 = 0x0500_00c0;
+/// BattleBackground_Load's darkening step, BACKGROUND_LEVEL_STEP.
+const LEVEL_STEP: i32 = 1092;
 /// gBattleWork->events.phase; PLAY_ADVANCE (5) shows the playback arrow.
 const WORK_EVENT_PHASE: u32 = 0x800;
 const PLAY_ADVANCE: u32 = 5;
@@ -132,6 +139,7 @@ pub struct Symbols {
     opponents: u32,
     dispatch: u32,
     wait_advance: u32,
+    message: u32,
     battle_over: u32,
     battle_work: u32,
     game_state: u32,
@@ -157,6 +165,7 @@ impl Symbols {
             opponents: at("BattlePres_BuildOpponentEntries")?,
             dispatch: at("BattlePresentation_DispatchAction")?,
             wait_advance: at("BattlePresentation_WaitForAdvance")?,
+            message: at("UiText_ShowMessageAndWaitCore")?,
             battle_over: at("Battle_ClearSerialTransferPayload")?,
             battle_work: at("gBattleWork")?,
             game_state: at("gGameState")?,
@@ -191,9 +200,27 @@ enum Phase {
     Played,
 }
 
-/// Plays `cast` on `rom` over the backdrop `lines` and returns its frames;
-/// `log` prints each step of the setup.
-pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, lines: &[u16; HEIGHT], log: bool) -> Result<Recording, String> {
+/// What the battlefield shows behind the fighters.
+pub enum Scene {
+    /// The battle's own background.
+    Game,
+    /// No picture: each line over its own backdrop colour, BGR555.
+    Lines([u16; HEIGHT]),
+    /// Another picture in place of the battle's own.
+    Picture(Background),
+}
+
+/// A battle background as BattleBackground_Load leaves it: the picture's
+/// 256-colour pixels in character blocks 2 and 3, and its 128 colours, which
+/// BattleWork.palette keeps and BG palettes 6 to 13 show.
+pub struct Background {
+    pub vram: Vec<u8>,
+    pub palette: Vec<u16>,
+}
+
+/// Plays `cast` on `rom` with the battlefield showing `scene` and returns its
+/// frames; `log` prints each step of the setup.
+pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool) -> Result<Recording, String> {
     let mut gba = Gba::new(rom)?;
     let s = symbols;
     let owner = |id: u8| s.game_state + STATE_OWNERS + u32::from(id) * UNIT_SIZE;
@@ -211,6 +238,7 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, lines: &[u16; HEIGHT],
     let mut frame = 0;
     let mut background_return = 0;
     let mut background_id = 0;
+    let mut background_level = 0;
     let mut obj_return = 0;
     let mut obj_actor = 0;
     let mut obj_unit = 0;
@@ -219,6 +247,7 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, lines: &[u16; HEIGHT],
     let mut tail: Option<u32> = None;
     let mut prompt_frames = 0;
     let mut battle_over = false;
+    let mut recording = false;
     let mut frames = Vec::new();
 
     loop {
@@ -285,19 +314,44 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, lines: &[u16; HEIGHT],
                     ),
                 );
             }
-            gba.set_backdrop(lines);
+            if let Scene::Lines(lines) = scene {
+                gba.set_backdrop(lines);
+            }
             gba.set_recolour(&windows, &greys());
             phase = Phase::Battle;
         } else if phase >= Phase::Battle && pc == s.background && background_return == 0 {
             background_return = gba.register(LR) & !1;
             background_id = gba.register(1);
+            background_level = gba.register(2) as i32;
         } else if background_return != 0 && pc == background_return {
-            // Only the battle's own background is cleared: some effects load
-            // a sky of their own.
+            // Only the battle's own background changes: some effects load a
+            // sky of their own.
             let work = gba.read32(s.battle_work);
             if background_id == u32::from(gba.read16(work + WORK_BACKGROUND)) {
-                for a in PICTURE.step_by(4) {
-                    gba.write32(a, 0);
+                say(frame, format!("BattleBackground_Load({background_id:#x}, level {background_level}) returned"));
+                match scene {
+                    Scene::Game => {}
+                    Scene::Lines(_) => {
+                        for a in PICTURE.step_by(4) {
+                            gba.write32(a, 0);
+                        }
+                    }
+                    Scene::Picture(picture) => {
+                        for (a, word) in PICTURE.step_by(4).zip(picture.vram.chunks(4)) {
+                            gba.write32(a, u32::from_le_bytes([word[0], word[1], word[2], word[3]]));
+                        }
+                        for (i, &c) in picture.palette.iter().enumerate() {
+                            gba.write16(work + WORK_PALETTE + 2 * i as u32, c);
+                        }
+                        // As BattleBackground_Load darkens it, unless the
+                        // level is negative.
+                        if background_level >= 0 {
+                            let brightness = 0x10000 - background_level * LEVEL_STEP;
+                            for (i, &c) in picture.palette.iter().enumerate() {
+                                gba.write16(BATTLE_BG_PALETTE + 2 * i as u32, scale_colour(c, brightness));
+                            }
+                        }
+                    }
                 }
             }
             background_return = 0;
@@ -386,9 +440,14 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, lines: &[u16; HEIGHT],
             // The enemies' actions: none.
             gba.return_now(0);
         } else if phase == Phase::Commanded && pc == s.dispatch {
-            say(frame, "BattlePresentation_DispatchAction: recording".to_string());
+            say(frame, "BattlePresentation_DispatchAction".to_string());
             dispatch_return = gba.register(LR) & !1;
             phase = Phase::Playing;
+        } else if phase == Phase::Playing && pc == s.message && !recording {
+            // The plan shows `<unit> casts <ability>!` (BattleCommand_BuildPlan)
+            // once the camera has turned from the command view to the cast's.
+            say(frame, "the cast's message: recording".to_string());
+            recording = true;
         } else if phase >= Phase::Intro && pc == s.wait_advance && wait_return == 0 {
             wait_return = gba.register(LR) & !1;
         } else if wait_return != 0 && pc == wait_return {
@@ -405,7 +464,7 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, lines: &[u16; HEIGHT],
         if !frame_done {
             continue;
         }
-        if phase >= Phase::Playing {
+        if recording {
             frames.push(gba.picture());
             if let Some(t) = tail.as_mut() {
                 *t += 1;
@@ -437,6 +496,15 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, lines: &[u16; HEIGHT],
     }
     say(frame, format!("{} frames", frames.len()));
     Ok(Recording { frames, battle_over })
+}
+
+/// A colour with each channel scaled by `scale` (16.16, at most 1), as
+/// Graphics_ScaleRgb555Clamped scales it.
+fn scale_colour(c: u16, scale: i32) -> u16 {
+    let scale = scale.min(0x10000) as u32;
+    let c = u32::from(c);
+    let channel = |mask: u32| ((c & mask) * scale >> 16) & mask;
+    (channel(0x1f) | channel(0x3e0) | channel(0x7c00)) as u16
 }
 
 /// The place of `unit` in a unit list ended by BATTLE_UNIT_LIST_END.
