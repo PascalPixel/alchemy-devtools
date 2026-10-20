@@ -15,7 +15,7 @@
 //! the game's palette RAM keeps its own colours.
 
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, LR};
-use super::plan::{self, Aim, Ally, Cast};
+use super::plan::{self, Aim, Ally, Cast, Command};
 use crate::ld_map::Map;
 
 /// formatn.tsv row 1: one Vermin, a fixed formation (the first enemy in the
@@ -23,6 +23,17 @@ use crate::ld_map::Map;
 const ENCOUNTER: u32 = 1;
 /// The command, enum BattleCommand's CMD_PSYNERGY.
 const CMD_PSYNERGY: u16 = 1;
+const CMD_DJINN: u16 = 5;
+const CMD_SUMMON: u16 = 6;
+/// Frames kept at most: 25 seconds, for the longest summons.
+const MAX_RECORDED: usize = 1500;
+/// The party's Djinn recovery list, gGameState + 12 (Djinn_GetRecoveryTable
+/// is gGameState + 4; its list follows 8 bytes on): 64 four-byte entries
+/// (element, index, owner, turns), then the count.
+const STATE_RECOVERY_LIST: u32 = 0x0c;
+const RECOVERY_COUNT: u32 = 0x100;
+const UNIT_DJINN_ACTIVE: u32 = 0x108;
+const UNIT_DJINN_ACTIVE_COUNTS: u32 = 0x11c;
 /// HP of each foe, so every cast leaves it standing.
 const FOE_HP: u16 = 999;
 /// Luck of a foe facing instant death: half of it comes off the effect's
@@ -181,6 +192,8 @@ pub struct Recording {
     pub frames: Vec<Vec<u16>>,
     /// Whether the action ended the battle.
     pub battle_over: bool,
+    /// Whether the recording stopped at MAX_RECORDED.
+    pub capped: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -248,6 +261,7 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
     let mut prompt_frames = 0;
     let mut battle_over = false;
     let mut recording = false;
+    let mut capped = false;
     let mut frames = Vec::new();
 
     loop {
@@ -280,6 +294,29 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             if gba.read16(unit + UNIT_PP) < u16::from(cast.ability.pp_cost) {
                 for field in [UNIT_BASE_PP, UNIT_MAX_PP, UNIT_PP] {
                     gba.write16(unit + field, CASTER_PP);
+                }
+            }
+            // A summon's Djinn go on standby: the caster's first `count` of
+            // the element leave its Set Djinn (Djinn_Deactivate) and join the
+            // party's recovery list with turns -1 (DjinnRecovery_AddStandby).
+            if let Command::Summon { element, count, .. } = cast.command {
+                let (e, list) = (u32::from(element), s.game_state + STATE_RECOVERY_LIST);
+                for index in 0..u32::from(count) {
+                    let active = unit + UNIT_DJINN_ACTIVE + 4 * e;
+                    let bits = gba.read32(active);
+                    if bits & 1 << index == 0 {
+                        continue;
+                    }
+                    gba.write32(active, bits & !(1 << index));
+                    let counted = gba.read8(unit + UNIT_DJINN_ACTIVE_COUNTS + e);
+                    gba.write8(unit + UNIT_DJINN_ACTIVE_COUNTS + e, counted.saturating_sub(1));
+                    let n = gba.read32(list + RECOVERY_COUNT);
+                    let entry = list + 4 * n;
+                    gba.write8(entry, element);
+                    gba.write8(entry + 1, index as u8);
+                    gba.write8(entry + 2, caster);
+                    gba.write8(entry + 3, 0xff);
+                    gba.write32(list + RECOVERY_COUNT, n + 1);
                 }
             }
             if let Some(&ally) = cast.party.get(1) {
@@ -429,7 +466,12 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                 Aim::Ally => PLACE_PARTY + place_of(&gba, work + WORK_PARTY_UNITS, cast.party[1].into())?,
             };
             let agility = gba.read16(owner(caster) + UNIT_AGILITY);
-            let fields = [caster.into(), 0, agility, CMD_PSYNERGY, cast.ability.id, place, cast.ability.range.into(), 0];
+            let (command, parameter) = match cast.command {
+                Command::Psynergy => (CMD_PSYNERGY, cast.ability.id),
+                Command::Djinni { element, index } => (CMD_DJINN, u16::from(element) << 8 | u16::from(index)),
+                Command::Summon { row, .. } => (CMD_SUMMON, u16::from(row)),
+            };
+            let fields = [caster.into(), 0, agility, command, parameter, place, cast.ability.range.into(), 0];
             for (i, value) in fields.into_iter().enumerate() {
                 gba.write16(record + 2 * i as u32, value);
             }
@@ -466,6 +508,10 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
         }
         if recording {
             frames.push(gba.picture());
+            if frames.len() >= MAX_RECORDED {
+                capped = true;
+                break;
+            }
             if let Some(t) = tail.as_mut() {
                 *t += 1;
                 if *t > 1 {
@@ -495,7 +541,7 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
         }
     }
     say(frame, format!("{} frames", frames.len()));
-    Ok(Recording { frames, battle_over })
+    Ok(Recording { frames, battle_over, capped })
 }
 
 /// A colour with each channel scaled by `scale` (16.16, at most 1), as

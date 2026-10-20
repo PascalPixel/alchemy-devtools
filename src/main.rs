@@ -24,7 +24,7 @@ Run any command with --help for its options.
   packer    the residue after resource streams and the resources that left it
   permute   search rewrites and PERM macro choices of a draft toward differ 0
   progress  DONE code and data in each edition, from the linker maps
-  render    battle Psynergy from a built edition, as GIFs (feature render)"#;
+  render    pictures of a built edition: Psynergy, places and events (feature render)"#;
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();

@@ -32,6 +32,10 @@ extern "C" {
     fn alchemy_mgba_pixels(machine: *const c_void) -> *const u32;
     fn alchemy_mgba_backdrop(machine: *mut c_void, lines: *const u16);
     fn alchemy_mgba_recolour(machine: *mut c_void, entries: *const u16, count: u32, table: *const u16);
+    fn alchemy_mgba_state_size(machine: *mut c_void) -> usize;
+    fn alchemy_mgba_layer(machine: *mut c_void, layer: u32, shown: bool);
+    fn alchemy_mgba_save_state(machine: *mut c_void, state: *mut u8) -> bool;
+    fn alchemy_mgba_load_state(machine: *mut c_void, state: *const u8) -> bool;
 }
 
 pub const LR: u32 = 14;
@@ -129,6 +133,35 @@ impl<'rom> Gba<'rom> {
     pub fn set_recolour(&mut self, entries: &[u16], table: &[u16]) {
         assert_eq!(table.len(), 0x8000);
         unsafe { alchemy_mgba_recolour(self.machine.as_ptr(), entries.as_ptr(), entries.len() as u32, table.as_ptr()) }
+    }
+}
+
+impl Gba<'_> {
+    /// The machine's whole state, to load again later.
+    pub fn save(&mut self) -> Vec<u8> {
+        let size = unsafe { alchemy_mgba_state_size(self.machine.as_ptr()) };
+        let mut state = vec![0; size];
+        let saved = unsafe { alchemy_mgba_save_state(self.machine.as_ptr(), state.as_mut_ptr()) };
+        assert!(saved, "libmgba could not save the machine");
+        state
+    }
+
+    /// Returns the machine to a state `save` took.
+    pub fn load(&mut self, state: &[u8]) {
+        let loaded = unsafe { alchemy_mgba_load_state(self.machine.as_ptr(), state.as_ptr()) };
+        assert!(loaded, "libmgba could not load the machine");
+    }
+
+    /// Shows or hides a layer in the picture (0 to 3 the backgrounds, 4 the
+    /// sprites); the game's registers are unchanged.
+    pub fn show_layer(&mut self, layer: u32, shown: bool) {
+        unsafe { alchemy_mgba_layer(self.machine.as_ptr(), layer, shown) }
+    }
+
+    /// The last picture drawn, as 0xRRGGBB.
+    pub fn picture_rgb(&self) -> Vec<u32> {
+        let pixels = unsafe { std::slice::from_raw_parts(alchemy_mgba_pixels(self.machine.as_ptr()), WIDTH * HEIGHT) };
+        pixels.iter().map(|&c| (c & 0xff) << 16 | (c & 0xff00) | (c >> 16) & 0xff).collect()
     }
 }
 

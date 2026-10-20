@@ -37,6 +37,9 @@ const KIND_HEAL_HP: u8 = 1;
 const EFFECT_CURE_POISON: u8 = 3;
 const EFFECT_RESTORE: u8 = 4;
 const EFFECT_REVIVE: u8 = 5;
+/// Quartz and Dew.
+const EFFECT_REVIVE_HALF: u8 = 56;
+const EFFECT_REVIVE_80: u8 = 57;
 const EFFECT_INSTANT_DEATH: u8 = 27;
 
 /// BattleAct.targetMode.
@@ -126,6 +129,17 @@ pub enum Ally {
     Deluded,
 }
 
+/// The command the caster gives.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Command {
+    Psynergy,
+    /// A Djinni Set on the caster: its element and its index in it.
+    Djinni { element: u8, index: u8 },
+    /// A summon, by its row of summons.tsv, with `count` Djinn of
+    /// `element` on standby.
+    Summon { row: u8, element: u8, count: u8 },
+}
+
 /// Where the cast is aimed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Aim {
@@ -139,6 +153,7 @@ pub enum Aim {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Cast {
     pub ability: Ability,
+    pub command: Command,
     pub preset: u8,
     /// The party, the caster first.
     pub party: Vec<u8>,
@@ -320,6 +335,7 @@ impl Tables {
         let enemy_columns: Vec<String> = (0..8).map(|k| format!("action{k}")).collect();
         let enemy = self.enemies.values(&enemy_columns)?;
         let mut casts = Vec::new();
+        let mut specials = Vec::new();
         let mut skipped = Vec::new();
         for ability in abilities.into_iter().filter(Ability::usable_in_battle) {
             let id = ability.id;
@@ -340,6 +356,26 @@ impl Tables {
             } else {
                 Some(Skip::Other)
             };
+            // A Djinni Set on its element's Adept, or a summon with its Djinn
+            // on standby.
+            let special = match skip {
+                Some(Skip::Djinni) => id.checked_sub(DJINN_FIRST).and_then(|n| {
+                    let mut c = cast(ability.clone(), false)?;
+                    c.command =
+                        Command::Djinni { element: (n / DJINN_PER_ELEMENT) as u8, index: (n % DJINN_PER_ELEMENT) as u8 };
+                    Some(c)
+                }),
+                Some(Skip::Summon) => self.summon_row(id).and_then(|(row, element, count)| {
+                    let mut c = cast(ability.clone(), false)?;
+                    c.command = Command::Summon { row, element, count };
+                    Some(c)
+                }),
+                _ => None,
+            };
+            if let Some(c) = special {
+                specials.push(c);
+                continue;
+            }
             match skip {
                 Some(skip) => skipped.push((ability, skip)),
                 None => match cast(ability.clone(), jenna.contains(&id)) {
@@ -349,9 +385,32 @@ impl Tables {
             }
         }
         name_files(&mut casts);
+        // Djinn and summons keep their names unless a Psynergy has them.
+        for c in &mut specials {
+            if casts.iter().any(|p| p.slug == c.slug) {
+                let kind = if matches!(c.command, Command::Summon { .. }) { "summon" } else { "djinni" };
+                c.slug = format!("{}-{kind}", c.slug);
+            }
+        }
+        casts.extend(specials);
         Ok(Plan { casts, skipped })
     }
+
+    /// A summon's row of summons.tsv, and the one element and count of Djinn
+    /// it needs.
+    fn summon_row(&self, id: u16) -> Option<(u8, u8, u8)> {
+        let ability = self.summons.column("ability").ok()?;
+        let row = (0..self.summons.rows.len()).find(|&r| self.summons.number(r, ability).ok() == Some(i64::from(id)))?;
+        (0..4u8).find_map(|e| {
+            let n = self.summons.number(row, self.summons.column(&format!("djinn{e}")).ok()?).ok()?;
+            (n > 0).then_some((row as u8, e, n as u8))
+        })
+    }
 }
+
+/// A Djinni's ability id: 300 + 20 x element + index (djinn.tsv).
+const DJINN_FIRST: u16 = 300;
+const DJINN_PER_ELEMENT: u16 = 20;
 
 /// The caster by element, and the opposed element's character as the
 /// target: Venus against Jupiter, Mars against Mercury. Jenna casts what her
@@ -381,14 +440,14 @@ pub fn cast(ability: Ability, jenna_casts: bool) -> Option<Cast> {
     };
     let ally = match (aim, ability.effect) {
         (Aim::Foe, _) => Ally::Healthy,
-        (_, EFFECT_REVIVE) => Ally::Downed,
+        (_, EFFECT_REVIVE | EFFECT_REVIVE_HALF | EFFECT_REVIVE_80) => Ally::Downed,
         (_, EFFECT_CURE_POISON) => Ally::Poisoned,
         (_, EFFECT_RESTORE) => Ally::Deluded,
         _ if ability.kind() == KIND_HEAL_HP => Ally::Hurt,
         _ => Ally::Healthy,
     };
     let lucky_foes = ability.effect == EFFECT_INSTANT_DEATH;
-    Some(Cast { slug: slug(&ability.name), ability, preset, party, foes, aim, ally, lucky_foes })
+    Some(Cast { slug: slug(&ability.name), ability, command: Command::Psynergy, preset, party, foes, aim, ally, lucky_foes })
 }
 
 /// The file name of an English ability name: lowercase letters and digits,

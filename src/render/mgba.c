@@ -206,3 +206,22 @@ void alchemy_mgba_recolour(struct AlchemyMachine *m, const uint16_t *entries,
     memcpy(m->table, table, sizeof m->table);
   }
 }
+
+// The size of a saved machine state, and saving and loading one.
+size_t alchemy_mgba_state_size(struct AlchemyMachine *m) {
+  return m->core->stateSize(m->core);
+}
+
+bool alchemy_mgba_save_state(struct AlchemyMachine *m, void *state) {
+  return m->core->saveState(m->core, state);
+}
+
+bool alchemy_mgba_load_state(struct AlchemyMachine *m, const void *state) {
+  return m->core->loadState(m->core, state);
+}
+
+// Shows or hides a layer in the picture: 0 to 3 the backgrounds, 4 the
+// sprites. The game's registers are unchanged.
+void alchemy_mgba_layer(struct AlchemyMachine *m, unsigned layer, bool shown) {
+  m->core->enableVideoLayer(m->core, layer, shown);
+}
