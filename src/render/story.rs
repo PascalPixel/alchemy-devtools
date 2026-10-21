@@ -189,6 +189,8 @@ pub struct Event {
     pub tests: Vec<String>,
     /// The flags the event sets, by name.
     pub sets: Vec<String>,
+    /// The flags the event clears, by name.
+    pub clears: Vec<String>,
     pub messages: Vec<u32>,
 }
 
@@ -317,6 +319,7 @@ pub fn read_events(path: &Path) -> Result<Vec<Event>, String> {
     let (scenes, event, trigger, condition, requires, tests, messages) =
         (scenes?, event?, trigger?, condition?, requires?, tests?, messages?);
     let sets = tsv.column("sets").ok();
+    let clears = tsv.column("clears").ok();
     Ok(tsv
         .rows
         .iter()
@@ -333,6 +336,7 @@ pub fn read_events(path: &Path) -> Result<Vec<Event>, String> {
                 trigger_text,
                 tests: flag_names(tsv.get(row, tests)),
                 sets: sets.map(|c| flag_names(tsv.get(row, c))).unwrap_or_default(),
+                clears: clears.map(|c| flag_names(tsv.get(row, c))).unwrap_or_default(),
                 messages: tsv.get(row, messages).split(',').filter_map(|m| m.trim().parse().ok()).collect(),
             }
         })

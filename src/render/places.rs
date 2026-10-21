@@ -1,4 +1,4 @@
-//! `render place` and `render event`: the photo of a scene's main entrance,
+//! `render place` and `render eis_story_flag(t, flags)ent`: the photo of a scene's main entrance,
 //! a map of each of its rooms, story-state variants, and the message pages
 //! of its events, as PNG files at the GBA's own size, with an index.
 
@@ -7,7 +7,7 @@ use super::field::{
     EVENT_TOUCH, SETTLE,
 };
 use super::story::{parse_trigger, Alternative, Event, Flags, Scene, Trigger, MOVE};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 /// Pages kept of each event.
@@ -15,9 +15,10 @@ const MAX_PAGES: usize = 4;
 /// Frames a gauge takes to slide off the screen.
 const HUD_FRAMES: u32 = 30;
 
-/// A story state shown as its own set of pictures: scenes whose
-/// initialization tests `flag` are shown with it clear (`clear`, the new
-/// game's) and set (`set`).
+/// A story flag whose moments have names of their own: scenes whose
+/// initialization tests `flag` are shown at the new game's state as
+/// `clear` (DIR/<scene>_<clear>/, not DIR/<scene>/), and the moment that sets
+/// it is `set`.
 struct Variant {
     flag: &'static str,
     clear: &'static str,
@@ -25,6 +26,160 @@ struct Variant {
 }
 
 const VARIANTS: [Variant; 1] = [Variant { flag: "FLAG_KOLIMA_CURSE_LIFTED", clear: "cursed", set: "cured" }];
+
+/// Story moments drawn for one scene at most, besides its new game's state.
+pub const MAX_MOMENTS: usize = 12;
+
+/// A story state a scene is drawn in besides the new game's: the flag whose
+/// setting brings it about, and every flag set and cleared by then.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Moment {
+    pub flag: String,
+    pub set: Vec<String>,
+    pub clear: Vec<String>,
+}
+
+/// A moment's name, from the flag that brings it about: its name in
+/// flags.tsv without `FLAG_`, lowercase, with hyphens
+/// (`vale-storm-saw-river-rescue`), or a Variant's own name.
+pub fn moment_label(flag: &str) -> String {
+    if let Some(v) = VARIANTS.iter().find(|v| v.flag == flag) {
+        return v.set.to_string();
+    }
+    match flag.strip_prefix("FLAG_") {
+        Some(name) => name.to_ascii_lowercase().replace('_', "-"),
+        None => format!("flag-{}", flag.to_ascii_lowercase()),
+    }
+}
+
+/// The moments of a scene's story, in story order: `candidates` are the
+/// story flags its initialization tests (in the order it tests them), `own`
+/// those its initialization sets itself, `number` each flag's number.
+///
+/// The order comes from the events' own conditions. An event that needs A
+/// set to set B puts A before B; one that needs A clear to set B puts B
+/// before A, unless some event clears A again (the stormy night's
+/// FLAG_VALE_STORM is set and then cleared, so needing it clear says
+/// nothing about when). Among flags those leave free, the scene's own
+/// arrival comes first; a flag that would end a period waits while another
+/// flag tied to that period by some condition can still come (the night
+/// goes on before the party leaves Vale); then comes a flag that follows
+/// from the last one by needing it set, then the lower number, which the
+/// game gives roughly in story order.
+///
+/// Each moment adds its flag to the ones before it. A flag some event clears
+/// is ended, cleared again, by a later flag whose setting needs it clear, or
+/// that no event's condition ever sees set together with it while some sees
+/// it set with the later flag clear (the storm is over once the party has
+/// left).
+pub fn story_moments(candidates: &[String], own: &[String], events: &[Event], number: &dyn Fn(&str) -> Option<u16>) -> Vec<Moment> {
+    let interval: HashSet<&str> = events.iter().flat_map(|e| e.clears.iter().map(String::as_str)).collect();
+    // before[a] holds the flags a comes before; follows[a] those set only
+    // once a is set.
+    let mut before: HashMap<&str, Vec<&str>> = HashMap::new();
+    let mut follows: HashMap<&str, Vec<&str>> = HashMap::new();
+    for e in events {
+        for b in &e.sets {
+            for alternative in &e.alternatives {
+                for (a, on) in &alternative.conditions {
+                    if a == b {
+                        continue;
+                    }
+                    if *on {
+                        before.entry(a).or_default().push(b);
+                        follows.entry(a).or_default().push(b);
+                    } else if !interval.contains(a.as_str()) {
+                        before.entry(b).or_default().push(a);
+                    }
+                }
+            }
+        }
+    }
+    let reach = |graph: &HashMap<&str, Vec<&str>>, from: &str| -> HashSet<String> {
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut queue = vec![from.to_string()];
+        while let Some(f) = queue.pop() {
+            for &n in graph.get(f.as_str()).map(Vec::as_slice).unwrap_or(&[]) {
+                if seen.insert(n.to_string()) {
+                    queue.push(n.to_string());
+                }
+            }
+        }
+        seen
+    };
+    let mut flags: Vec<&String> = Vec::new();
+    for c in candidates {
+        if !flags.contains(&c) && number(c).is_some() {
+            flags.push(c);
+        }
+    }
+    let after: Vec<HashSet<String>> = flags.iter().map(|f| reach(&before, f)).collect();
+    let next: Vec<HashSet<String>> = flags.iter().map(|f| reach(&follows, f)).collect();
+    // a must come before b: b is after a, and a is not after b.
+    let precedes = |a: usize, b: usize| after[a].contains(flags[b].as_str()) && !after[b].contains(flags[a].as_str());
+    // The flags tied to a by any condition, either way round: its chapter.
+    let mut either: HashMap<&str, Vec<&str>> = HashMap::new();
+    for (&a, list) in &before {
+        for &b in list {
+            either.entry(a).or_default().push(b);
+            either.entry(b).or_default().push(a);
+        }
+    }
+    // Whether some event's condition sees a set with b clear, and none sees
+    // them both set. An event that sets b says nothing: it needs b clear
+    // only because it has not happened yet.
+    let exclusive = |a: &str, b: &str| {
+        let conditions =
+            || events.iter().filter(|e| !e.sets.iter().any(|s| s == b)).flat_map(|e| e.alternatives.iter().map(|alt| &alt.conditions));
+        let has = |c: &Vec<(String, bool)>, name: &str, on: bool| c.iter().any(|(n, o)| n == name && *o == on);
+        conditions().any(|c| has(c, a, true) && has(c, b, false)) && !conditions().any(|c| has(c, a, true) && has(c, b, true))
+    };
+    // The flags of `set` that setting b ends.
+    let ends = |set: &[String], b: &str| -> Vec<String> {
+        let needs_clear = |a: &str| {
+            events
+                .iter()
+                .filter(|e| e.sets.iter().any(|s| s == b))
+                .any(|e| e.alternatives.iter().any(|alt| alt.conditions.iter().any(|(n, on)| n == a && !*on)))
+        };
+        set.iter().filter(|a| interval.contains(a.as_str()) && (needs_clear(a) || exclusive(a, b))).cloned().collect()
+    };
+    let mut out = Vec::new();
+    let (mut set, mut clear): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
+    let mut last: Option<usize> = None;
+    let mut left: Vec<usize> = (0..flags.len()).collect();
+    while !left.is_empty() {
+        let ready: Vec<usize> = left.iter().copied().filter(|&b| !left.iter().any(|&a| a != b && precedes(a, b))).collect();
+        let ready = if ready.is_empty() { left.clone() } else { ready };
+        // A flag that ends a period waits while another flag of that
+        // period's chapter can still come first.
+        let ending: Vec<(usize, Vec<String>)> = ready.iter().map(|&i| (i, ends(&set, flags[i]))).collect();
+        let chapter: HashSet<String> = ending.iter().flat_map(|(_, e)| e.iter().flat_map(|a| reach(&either, a))).collect();
+        let waits = |i: usize| {
+            let mine = &ending.iter().find(|(j, _)| *j == i).unwrap().1;
+            !mine.is_empty() && ending.iter().any(|(j, e)| *j != i && e.is_empty() && chapter.contains(flags[*j].as_str()))
+        };
+        let key = |&i: &usize| {
+            let follows_last = last.is_some_and(|l| next[l].contains(flags[i].as_str()));
+            (!own.contains(flags[i]), waits(i), !follows_last, number(flags[i]), i)
+        };
+        let pick = *ready.iter().min_by_key(|i| key(i)).unwrap();
+        left.retain(|&i| i != pick);
+        last = Some(pick);
+        let b = flags[pick].as_str();
+        let ended = ends(&set, b);
+        set.retain(|a| !ended.contains(a));
+        for a in ended {
+            if !clear.contains(&a) {
+                clear.push(a);
+            }
+        }
+        clear.retain(|a| a != b);
+        set.push(b.to_string());
+        out.push(Moment { flag: b.to_string(), set: set.clone(), clear: clear.clone() });
+    }
+    out
+}
 
 /// Flags a scene's initialization tests that are no story state: the
 /// party's kept position and the scene's own temporary flags.
@@ -168,6 +323,11 @@ pub struct Context<'a> {
     /// Each scene's functions by name, from its overlay's ELF: an event
     /// named by its function is told by its row's result.
     pub functions: &'a HashMap<u16, HashMap<String, u32>>,
+    /// Story moments drawn (besides the new game's state), the scenes that
+    /// have any, and the scenes that had more than MAX_MOMENTS.
+    pub moments: usize,
+    pub moment_scenes: usize,
+    pub capped: usize,
 }
 
 /// Whether a scene is a place: not the title, the clear-data screen or the
@@ -206,39 +366,100 @@ impl Context<'_> {
         Ok((entrances, field.header()))
     }
 
-    /// The variants a scene is shown in: (label, flags set, flags cleared).
-    fn variants(&self, scene: &Scene) -> Vec<(String, Vec<u16>, Vec<u16>)> {
-        let mut out = Vec::new();
+    /// The states a scene is drawn in: the new game's first, then each
+    /// moment of its story (story_moments), as (label, the index's variant
+    /// column, flags set, flags cleared). The new game's label is empty, or
+    /// a Variant's `clear` name when the scene tests its flag.
+    fn states(&self, scene: &Scene) -> Vec<(String, String, Vec<u16>, Vec<u16>)> {
         let name = scene.symbol.as_deref();
-        for v in &VARIANTS {
-            let tested = self.events.iter().any(|e| {
-                e.scenes.contains(&scene.number) && e.trigger_text.starts_with("entry") && e.tests.iter().any(|t| t == v.flag)
-            });
-            if let (true, Some(flag)) = (tested, self.flags.resolve(v.flag, name)) {
-                out.push((v.clear.to_string(), Vec::new(), vec![flag]));
-                out.push((v.set.to_string(), vec![flag], Vec::new()));
+        let entry: Vec<&Event> =
+            self.events.iter().filter(|e| e.scenes.contains(&scene.number) && e.trigger_text.starts_with("entry")).collect();
+        let mut candidates: Vec<String> = Vec::new();
+        let mut own: Vec<String> = Vec::new();
+        for e in &entry {
+            // A flag flags.tsv leaves unnamed (0xfd0) names no moment.
+            for t in e.tests.iter().filter(|t| is_story_flag(t, self.flags) && !t.starts_with("0x")) {
+                if !candidates.contains(t) {
+                    candidates.push(t.clone());
+                }
             }
+            own.extend(e.sets.iter().cloned());
         }
-        if out.is_empty() {
-            out.push((String::new(), Vec::new(), Vec::new()));
+        let resolve = |n: &str| self.flags.resolve(n, name);
+        let numbers = |names: &[String]| -> Vec<u16> { names.iter().filter_map(|n| resolve(n)).collect() };
+        let mut out = Vec::new();
+        match VARIANTS.iter().find(|v| candidates.iter().any(|c| c == v.flag)) {
+            Some(v) => out.push((v.clear.to_string(), v.clear.to_string(), Vec::new(), resolve(v.flag).into_iter().collect())),
+            None => out.push((String::new(), String::new(), Vec::new(), Vec::new())),
+        }
+        let (storm, child) = (resolve("FLAG_VALE_STORM"), resolve("FLAG_CHILDHOOD"));
+        for m in story_moments(&candidates, &own, self.events, &resolve) {
+            let label = moment_label(&m.flag);
+            let mut column = format!("{label}: {}", m.set.join(", "));
+            if !m.clear.is_empty() {
+                column.push_str(&format!("; clear {}", m.clear.join(", ")));
+            }
+            let (mut set, mut clear) = (numbers(&m.set), numbers(&m.clear));
+            // The stormy night is the prologue, when Isaac and Garet are
+            // children (as alternative_flags has it); once it is over they
+            // are grown.
+            if let (Some(storm), Some(child)) = (storm, child) {
+                if set.contains(&storm) || name == Some("ValeStorm") {
+                    set.push(child);
+                } else if clear.contains(&storm) {
+                    clear.push(child);
+                }
+            }
+            out.push((label, column, set, clear));
         }
         out
     }
 
-    /// The entrance photo and a map of each room, for each variant.
+    /// The entrance photo and a map of each room, at the new game's state
+    /// and at each moment of the scene's story that changes what a room
+    /// shows (Field::signature) from every state drawn before it; only the
+    /// rooms it changes are drawn. At most MAX_MOMENTS moments are drawn.
     pub fn place(&mut self, scene: &Scene) {
         if let Err(reason) = is_place(scene) {
             self.skip(scene, "place", reason);
             return;
         }
-        for (variant, set, clear) in self.variants(scene) {
-            if let Err(e) = self.place_variant(scene, &variant, &set, &clear) {
-                self.skip(scene, &format!("place {variant}"), e);
+        let states = self.states(scene);
+        let mut seen: HashMap<i16, Vec<Vec<i32>>> = HashMap::new();
+        let mut drawn = 0;
+        for (i, (label, column, set, clear)) in states.iter().enumerate() {
+            if i > 0 && drawn == MAX_MOMENTS {
+                let rest: Vec<&str> = states[i..].iter().map(|s| s.0.as_str()).collect();
+                self.skip(scene, "place moments", format!("hit the cap of {MAX_MOMENTS} moments; not tried: {}", rest.join(", ")));
+                self.capped += 1;
+                break;
             }
+            match self.place_variant(scene, label, column, set, clear, i == 0, &mut seen) {
+                Ok(true) if i > 0 => drawn += 1,
+                Ok(_) => {}
+                Err(e) => self.skip(scene, &format!("place {label}"), e),
+            }
+        }
+        if drawn > 0 {
+            self.moments += drawn;
+            self.moment_scenes += 1;
         }
     }
 
-    fn place_variant(&mut self, scene: &Scene, variant: &str, set: &[u16], clear: &[u16]) -> Result<(), String> {
+    /// Draws one state of a scene; the new game's (`all`) in every room, a
+    /// moment only in the rooms whose signature no state before it had.
+    /// Whether it drew anything.
+    #[allow(clippy::too_many_arguments)]
+    fn place_variant(
+        &mut self,
+        scene: &Scene,
+        variant: &str,
+        column: &str,
+        set: &[u16],
+        clear: &[u16],
+        all: bool,
+        seen: &mut HashMap<i16, Vec<Vec<i32>>>,
+    ) -> Result<bool, String> {
         let (entrances, _) = self.entrances(scene, set, clear)?;
         let folder = if variant.is_empty() { scene.slug() } else { format!("{}_{variant}", scene.slug()) };
         // A room is a camera box; the first entrance that has it names it.
@@ -249,6 +470,7 @@ impl Context<'_> {
             }
         }
         let mut named: HashMap<i16, usize> = HashMap::new();
+        let mut wrote = false;
         for (i, room) in rooms.iter().enumerate() {
             let mut set = set.to_vec();
             if room.required_flag >= 0 {
@@ -259,11 +481,20 @@ impl Context<'_> {
                 let mut field = Field::enter(self.rom, self.symbols, &setup)?;
                 field.until_control()?;
                 field.frames(SETTLE)?;
+                let signature = field.signature();
+                let earlier = seen.entry(room.number).or_default();
+                let new = !earlier.contains(&signature);
+                if new {
+                    earlier.push(signature);
+                }
+                if !all && !new {
+                    return Ok(());
+                }
                 let row = |kind, file: String| Row {
                     scene: scene.slug(),
                     number: scene.number,
                     area: scene.area.clone(),
-                    variant: variant.to_string(),
+                    variant: column.to_string(),
                     kind,
                     entrance: room.number,
                     event: String::new(),
@@ -277,6 +508,7 @@ impl Context<'_> {
                     let file = format!("{folder}/entrance.png");
                     self.write(&field.screen(), &file)?;
                     self.rows.push(row("entrance", file));
+                    wrote = true;
                 }
                 if scene.map == "world" {
                     return Ok(());
@@ -296,16 +528,17 @@ impl Context<'_> {
                 let file = format!("{folder}/map-{}{suffix}.png", room.number);
                 self.write(&image, &file)?;
                 self.rows.push(row("map", file));
+                wrote = true;
                 Ok(())
             })();
             if let Err(e) = result {
                 self.skip(scene, &format!("{folder} room of entrance {}", room.number), e);
             }
         }
-        if scene.map == "world" {
+        if all && scene.map == "world" {
             self.skip(scene, "maps", "the perspective world map has no layered map to stitch".to_string());
         }
-        Ok(())
+        Ok(wrote)
     }
 }
 
@@ -646,6 +879,8 @@ impl Context<'_> {
     /// scene's events set.
     fn extra_flags(&self, first: &Scene, set: &[u16], clear: &[u16]) -> Vec<u16> {
         let mut names: Vec<String> = variant_candidates(self.events, self.flags).remove(&first.number).unwrap_or_default();
+        // A named variant's flag is tried only where an event sets it.
+        names.retain(|n| !VARIANTS.iter().any(|v| v.flag == n));
         for e in self.events.iter().filter(|e| e.scenes.contains(&first.number)) {
             for s in e.sets.iter().filter(|s| is_story_flag(s, self.flags)) {
                 if !names.contains(s) {
@@ -999,8 +1234,8 @@ fn file_name(name: &str) -> String {
     out.trim_matches('-').to_string()
 }
 
-/// The scenes whose initialization tests story flags not yet shown as
-/// variants, with those flags.
+/// The scenes whose initialization tests story flags, with those flags in
+/// the order it tests them.
 pub fn variant_candidates(events: &[Event], flags: &Flags) -> BTreeMap<u16, Vec<String>> {
     let mut out: BTreeMap<u16, Vec<String>> = BTreeMap::new();
     for e in events.iter().filter(|e| e.trigger_text.starts_with("entry")) {
@@ -1035,6 +1270,7 @@ mod tests {
             alternatives: vec![Alternative { trigger: Ok(trigger), conditions: Vec::new() }],
             tests: Vec::new(),
             sets: Vec::new(),
+            clears: Vec::new(),
             messages: vec![message],
         };
         let rocks = [row("MsgValeRockCannotBeMoved", 3, Trigger::Talk(11), 4385), row("MsgValeRockCannotBeMoved", 3, Trigger::Talk(12), 4385)];
@@ -1046,6 +1282,76 @@ mod tests {
         assert_eq!(merged[0].messages, vec![4385]);
         assert_eq!(merged[1].scenes, vec![40, 42]);
         assert_eq!(merged[1].messages, vec![1, 2]);
+    }
+
+    #[test]
+    fn moments_are_named_by_their_flags() {
+        assert_eq!(moment_label("FLAG_VALE_STORM_SAW_RIVER_RESCUE"), "vale-storm-saw-river-rescue");
+        assert_eq!(moment_label("FLAG_KOLIMA_CURSE_LIFTED"), "cured");
+    }
+
+    /// An event that sets `sets` and clears `clears` when `conditions` hold.
+    fn setter(sets: &[&str], conditions: &[(&str, bool)], clears: &[&str]) -> Event {
+        let names = |list: &[&str]| list.iter().map(|s| s.to_string()).collect::<Vec<String>>();
+        Event {
+            scenes: vec![3],
+            name: String::new(),
+            trigger_text: String::new(),
+            alternatives: vec![Alternative {
+                trigger: Ok(Trigger::Touch(1)),
+                conditions: conditions.iter().map(|(n, on)| (n.to_string(), *on)).collect(),
+            }],
+            tests: Vec::new(),
+            sets: names(sets),
+            clears: names(clears),
+            messages: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn moments_follow_the_story_and_end_the_night() {
+        // The stormy night, numbered as flags.h numbers it, tested by the
+        // scene in its own order (the later riverbank state first).
+        let numbers: HashMap<&str, u16> = [
+            ("STORM", 0x834),
+            ("ROCK", 0x830),
+            ("JOINED", 0x837),
+            ("GATHERING", 0x841),
+            ("LEFT", 0x842),
+            ("RESCUE", 0x83a),
+            ("AID", 0x840),
+            ("PARTY_LEFT", 0x815),
+        ]
+        .into_iter()
+        .collect();
+        let events = vec![
+            setter(&["STORM"], &[], &[]),
+            setter(&[], &[], &["STORM"]),
+            setter(&["ROCK"], &[], &[]),
+            setter(&["JOINED"], &[("GATHERING", false), ("JOINED", false)], &[]),
+            setter(&["RESCUE"], &[("RESCUE", false)], &[]),
+            setter(&["AID"], &[("STORM", true), ("PARTY_LEFT", false)], &[]),
+            setter(&["GATHERING"], &[("AID", true)], &[]),
+            setter(&["LEFT"], &[("GATHERING", true), ("LEFT", false)], &[]),
+            setter(&["PARTY_LEFT"], &[], &[]),
+            // A villager who speaks only while the storm is on, before the
+            // party leaves.
+            setter(&[], &[("STORM", true), ("PARTY_LEFT", false)], &[]),
+        ];
+        let names = |list: &[&str]| list.iter().map(|s| s.to_string()).collect::<Vec<String>>();
+        let candidates = names(&["STORM", "ROCK", "JOINED", "GATHERING", "LEFT", "RESCUE", "PARTY_LEFT"]);
+        let number = |n: &str| numbers.get(n).copied();
+        let moments = story_moments(&candidates, &[], &events, &number);
+        let order: Vec<&str> = moments.iter().map(|m| m.flag.as_str()).collect();
+        assert_eq!(order, ["ROCK", "STORM", "JOINED", "RESCUE", "GATHERING", "LEFT", "PARTY_LEFT"]);
+        assert_eq!(moments[5].set, names(&["ROCK", "STORM", "JOINED", "RESCUE", "GATHERING", "LEFT"]));
+        assert!(moments[5].clear.is_empty());
+        // Leaving Vale ends the night: no condition sees the storm with it.
+        assert_eq!(moments[6].set, names(&["ROCK", "JOINED", "RESCUE", "GATHERING", "LEFT", "PARTY_LEFT"]));
+        assert_eq!(moments[6].clear, names(&["STORM"]));
+        // The scene's own arrival comes first.
+        let moments = story_moments(&candidates, &names(&["STORM"]), &events, &number);
+        assert_eq!(moments[0].flag, "STORM");
     }
 
     #[test]

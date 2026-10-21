@@ -313,9 +313,21 @@ place: the main entrance's photo once the player has control
 (entrance.png; the main entrance is the table's first, which the scene
 falls back to), and a map of each room, one camera box of the scene's
 entrances, named by the first entrance that reaches it (map-<entrance>.png),
-stitched from one moment with the leader hidden. A scene whose
-initialization tests FLAG_KOLIMA_CURSE_LIFTED is shown cursed and cured,
-in DIR/<scene>_cursed/ and DIR/<scene>_cured/.
+stitched from one moment with the leader hidden. Then the same at each
+moment of the scene's story: each sets one more of the named story flags
+its initialization tests, in the order the events' conditions give, so
+each is a state the player could see (the stormy night's fallen rocks,
+Garet joining, the Boulder falling, Felix in the river), with a period
+cleared once a later flag shows it over (FLAG_VALE_STORM once the party
+has left Vale). A moment draws only the rooms whose placed actors or
+map cells differ from every state drawn before, into
+DIR/<scene>_<moment>/, the moment named by its flag without FLAG_,
+lowercase with hyphens (vale-storm_vale-storm-saw-river-rescue/); one
+that changes nothing is dropped, and at most 12 are drawn a scene
+(skipped.tsv names the rest). A scene whose initialization tests
+FLAG_KOLIMA_CURSE_LIFTED is drawn cursed at the new game's state, in
+DIR/<scene>_cursed/, and cured at that moment, in DIR/<scene>_cured/.
+index.tsv's variant column gives each moment's name and flags.
 
 event: every talk, search, touch and Psynergy-on-actor event of the scenes
 (--event names some; rows of one name are one event), each played once,
@@ -515,6 +527,9 @@ fn play_scenes(
                     only,
                     cleared: Vec::new(),
                     functions: &functions,
+                    moments: 0,
+                    moment_scenes: 0,
+                    capped: 0,
                 };
                 if kind == "place" {
                     for scene in &job {
@@ -524,13 +539,26 @@ fn play_scenes(
                     context.events(&job);
                 }
                 eprintln!("{}: {} images", job.iter().map(|s| s.name()).collect::<Vec<_>>().join(", "), context.images);
-                results.lock().unwrap().push((context.rows, context.skipped, context.bytes, context.images, context.gifs, context.gif_bytes, context.cleared));
+                results.lock().unwrap().push((
+                    context.rows,
+                    context.skipped,
+                    context.bytes,
+                    context.images,
+                    context.gifs,
+                    context.gif_bytes,
+                    context.cleared,
+                    [context.moments, context.moment_scenes, context.capped],
+                ));
             });
         }
     });
     let (mut rows, mut skipped, mut bytes, mut images, mut gifs, mut gif_bytes) = (Vec::new(), Vec::new(), 0, 0, 0, 0);
     let mut cleared = Vec::new();
-    for (r, s, b, i, g, gb, c) in results.into_inner().unwrap() {
+    let mut moments = [0usize; 3];
+    for (r, s, b, i, g, gb, c, m) in results.into_inner().unwrap() {
+        for (total, n) in moments.iter_mut().zip(m) {
+            *total += n;
+        }
         cleared.extend(c);
         rows.extend(r);
         skipped.extend(s);
@@ -540,6 +568,13 @@ fn play_scenes(
         gif_bytes += gb;
     }
     if kind == "place" {
+        eprintln!(
+            "{} story moments drawn in {} scenes; {} scenes hit the cap of {} moments (skipped.tsv)",
+            moments[0],
+            moments[1],
+            moments[2],
+            places::MAX_MOMENTS
+        );
         let candidates = places::variant_candidates(events, flags);
         let mut text = String::from("scene\tnumber\tflags\n");
         for (number, list) in &candidates {

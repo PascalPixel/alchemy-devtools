@@ -77,6 +77,12 @@ const OBJ_TERRAIN_ID: u32 = 0x22;
 const OBJ_VELOCITY: u32 = 0x24;
 /// 1: one sprite; 2: a group; 0: no sprite, which the camera skips.
 const OBJ_KIND: u32 = 0x54;
+/// The struct AnimationObject (kind 1) or the four of a group (kind 2).
+const OBJ_SPRITE: u32 = 0x50;
+/// struct AnimationObject's entries, its four layers, and the colour mode
+/// (param) of struct AnimationEntry, whose first halfword is its sprite id.
+const ANIM_ENTRIES: u32 = 0x28;
+const ANIM_ENTRY_PARAM: u32 = 0x05;
 const OVERLAY_ENTRANCES: u32 = 0x0c;
 const ENTRANCE_SIZE: u32 = 24;
 /// The map cells' grid: 128 by 128 words, the collision code in byte 2.
@@ -814,6 +820,48 @@ impl<'rom> Field<'rom> {
                 }
             }
         }
+        out
+    }
+
+    /// The sprites actor object `object` draws, as each animation layer's
+    /// sprite id and colour mode: a villager turned into a tree keeps its
+    /// place and changes these.
+    fn sprite_ids(&self, object: u32) -> Vec<i32> {
+        let kind = self.gba.read8(object + OBJ_KIND) & 15;
+        let first = self.gba.read32(object + OBJ_SPRITE);
+        let sprites: Vec<u32> = match kind {
+            1 => vec![first],
+            2 if first != 0 => (0..4).map(|i| self.gba.read32(first + 4 * i)).collect(),
+            _ => Vec::new(),
+        };
+        let mut out = Vec::new();
+        for sprite in sprites.into_iter().filter(|&s| s != 0) {
+            for i in 0..4 {
+                let entry = self.gba.read32(sprite + ANIM_ENTRIES + 4 * i);
+                if entry != 0 {
+                    out.push(i32::from(self.gba.read16(entry) as i16));
+                    out.push(i32::from(self.gba.read8(entry + ANIM_ENTRY_PARAM)));
+                }
+            }
+        }
+        out
+    }
+
+    /// What the scene shows now that story flags can change: each placed
+    /// actor on stage (its place, map layer and sprites) and every cell's
+    /// word (pictures and collision). Two story states that give a room the
+    /// same signature look the same in its map.
+    pub fn signature(&self) -> Vec<i32> {
+        let mut out = Vec::new();
+        for id in FIRST_PLACED..FIELD_ACTOR_COUNT as u16 {
+            if let Ok(a) = self.present(id) {
+                let sprites = self.sprite_ids(self.actor_object(id));
+                out.extend([i32::from(id), a.x, a.z, i32::from(a.layer), sprites.len() as i32]);
+                out.extend(sprites);
+            }
+        }
+        out.push(-1);
+        out.extend(self.cell_codes());
         out
     }
 
