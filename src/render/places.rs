@@ -592,7 +592,7 @@ struct Played {
 /// event played without recording left the player in control, for the
 /// events that only another event makes playable.
 #[derive(Default)]
-struct Job {
+pub struct Job {
     scans: HashMap<ScanKey, Result<Scan, String>>,
     ends: HashMap<(String, Vec<u16>, Vec<u16>), Option<(Setup, Saved)>>,
 }
@@ -602,6 +602,37 @@ struct Job {
 /// another event could need.
 fn is_message_row(name: &str) -> bool {
     name.starts_with("Msg") || name.contains('[') || name.chars().next().is_some_and(|c| c.is_ascii_digit())
+}
+
+/// The events `render event` plays for one overlay's scenes, in its order:
+/// the rows that list one of them (and one of `only`'s, when it names
+/// any), of the names `wanted` gives, merged by name.
+pub fn job_events(events: &[Event], wanted: &[String], only: &[u16], scenes: &[&Scene]) -> Vec<Event> {
+    let numbers: Vec<u16> = scenes.iter().map(|s| s.number).collect();
+    let rows: Vec<&Event> = events
+        .iter()
+        .filter(|e| wanted.is_empty() || wanted.iter().any(|w| *w == e.name))
+        .filter(|e| e.scenes.iter().any(|n| numbers.contains(n)))
+        .filter(|e| only.is_empty() || e.scenes.iter().any(|n| only.contains(n)))
+        .collect();
+    merge_rows(&rows)
+}
+
+/// Every event of a scene played afresh: what an earlier run wrote for it
+/// goes first, so an event renamed since, or one that no longer plays,
+/// keeps no picture. Returns skipped.tsv's `event *` lines to clear.
+pub fn clear_events(out: &Path, scenes: &[&Scene], wanted: &[String], only: &[u16]) -> Vec<(String, String)> {
+    let mut cleared = Vec::new();
+    if wanted.is_empty() {
+        for scene in scenes.iter().filter(|s| only.is_empty() || only.contains(&s.number)) {
+            let folder = out.join(scene.slug()).join("events");
+            if folder.is_dir() {
+                let _ = std::fs::remove_dir_all(&folder);
+            }
+            cleared.push((scene.name(), "event *".to_string()));
+        }
+    }
+    cleared
 }
 
 /// The rows of `events` that share a name, as one event: the eight rocks of
@@ -800,28 +831,15 @@ impl Context<'_> {
     /// what it needs another event leaves) is tried once each other event
     /// of the scene has played.
     pub fn events(&mut self, scenes: &[&Scene]) {
-        let mut job = Job::default();
-        let numbers: Vec<u16> = scenes.iter().map(|s| s.number).collect();
-        let rows: Vec<&Event> = self
-            .events
-            .iter()
-            .filter(|e| self.wanted.is_empty() || self.wanted.iter().any(|w| *w == e.name))
-            .filter(|e| e.scenes.iter().any(|n| numbers.contains(n)))
-            .filter(|e| self.only.is_empty() || e.scenes.iter().any(|n| self.only.contains(n)))
-            .collect();
-        // Every event of a scene played afresh: what an earlier run wrote for
-        // it goes first, so an event renamed since, or one that no longer
-        // plays, keeps no picture.
-        if self.wanted.is_empty() {
-            for scene in scenes.iter().filter(|s| self.only.is_empty() || self.only.contains(&s.number)) {
-                let folder = self.out.join(scene.slug()).join("events");
-                if folder.is_dir() {
-                    let _ = std::fs::remove_dir_all(&folder);
-                }
-                self.cleared.push((scene.name(), "event *".to_string()));
-            }
-        }
-        for event in merge_rows(&rows) {
+        self.cleared.extend(clear_events(&self.out, scenes, self.wanted, self.only));
+        self.play_events(scenes, None, &mut Job::default());
+    }
+
+    /// Plays the events `events` would for these scenes (one overlay's),
+    /// or only the one named, keeping what it finds in `job` for the next
+    /// events of the same scenes. The old pictures are not cleared first.
+    pub fn play_events(&mut self, scenes: &[&Scene], name: Option<&str>, job: &mut Job) {
+        for event in job_events(self.events, self.wanted, self.only, scenes).into_iter().filter(|e| name.is_none_or(|n| e.name == n)) {
             let candidates: Vec<&Scene> = scenes.iter().copied().filter(|s| event.scenes.contains(&s.number)).collect();
             let Some(&first) = candidates.first() else {
                 continue;
@@ -831,7 +849,7 @@ impl Context<'_> {
             for scene in &candidates {
                 self.remove_event_files(scene, &event.name);
             }
-            match self.play_event(&event, &candidates, &mut job, Some(EVENT_LIMIT as usize), None) {
+            match self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None) {
                 Ok(played) => {
                     let scene = candidates.iter().find(|s| s.number == played.setup.scene).copied().unwrap_or(first);
                     for s in &candidates {

@@ -1,26 +1,34 @@
-//! --jobs: a render's work split across child processes of this binary,
-//! each with its own libmgba machines. The parent gives each child its share
-//! by key (`--share`, repeated) and a part file (`--part`) to write what it
-//! recorded into instead of index.tsv and skipped.tsv; the parent then joins
-//! the parts and writes those files as a run in one process would.
+//! --jobs: a render's work shared out among child processes of this binary,
+//! each with its own libmgba machines. The parent starts N children with
+//! `--child` and keeps a queue of the work's pieces, by key, the costliest
+//! first; each child is handed the next key whenever it finishes one, so
+//! one long piece does not hold the others back. A child sends back what it
+//! recorded for each piece instead of writing index.tsv and skipped.tsv,
+//! and the parent writes those files as a run in one process would.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::collections::VecDeque;
+use std::io::{BufRead, BufReader, Write};
+use std::process::{Command, Stdio};
+use std::sync::Mutex;
 
-/// What --jobs and the child's own options asked for.
-#[derive(Default)]
+/// A line a child prints to its standard output: one of its records, the
+/// failure of a piece, or the end of a piece.
+const RECORD: &str = "\x1falchemy-render\trecord\t";
+const FAILED: &str = "\x1falchemy-render\tfailed\t";
+const DONE: &str = "\x1falchemy-render\tdone";
+
+/// What --jobs asked for.
 pub struct Jobs {
     /// Child processes to run; 1 renders in this process.
     pub count: usize,
-    /// In a child, the file its records go to.
-    pub part: Option<PathBuf>,
-    /// In a child, the keys of its share of the work.
-    pub share: Vec<String>,
+    /// Whether this process is a child, reading its pieces' keys from its
+    /// standard input.
+    pub child: bool,
 }
 
 impl Jobs {
     pub fn new() -> Jobs {
-        Jobs { count: std::thread::available_parallelism().map_or(1, |n| n.get()), ..Jobs::default() }
+        Jobs { count: std::thread::available_parallelism().map_or(1, |n| n.get()), child: false }
     }
 
     /// Reads one of the job options, or says it is not one.
@@ -30,96 +38,125 @@ impl Jobs {
                 let text = value("--jobs")?;
                 self.count = text.parse().ok().filter(|&n| n > 0).ok_or_else(|| format!("--jobs {text:?}: a number of processes, 1 or more"))?;
             }
-            "--part" => self.part = Some(PathBuf::from(value("--part")?)),
-            "--share" => self.share.push(value("--share")?),
+            "--child" => self.child = true,
             _ => return Ok(false),
         }
         Ok(true)
     }
 
-    /// Whether this process is a child, given a share of the work.
-    pub fn child(&self) -> bool {
-        self.part.is_some()
-    }
-
-    /// Whether to split `items` things to do across children.
-    pub fn split(&self, items: usize) -> bool {
-        !self.child() && self.count > 1 && items > 1
+    /// Whether to share `pieces` pieces of work out among children.
+    pub fn split(&self, pieces: usize) -> bool {
+        !self.child && self.count > 1 && pieces > 1
     }
 }
 
-/// Deals weighted keys to at most `n` groups, the heaviest first, each onto
-/// the group with the least work so far; a group keeps its keys in the order
-/// they were given.
-pub fn deal(items: &[(String, u64)], n: usize) -> Vec<Vec<String>> {
-    let mut order: Vec<usize> = (0..items.len()).collect();
-    order.sort_by(|&a, &b| items[b].1.cmp(&items[a].1).then(a.cmp(&b)));
-    let mut groups: Vec<(u64, Vec<usize>)> = vec![(0, Vec::new()); n.min(items.len()).max(1)];
-    for i in order {
-        let lightest = (0..groups.len()).min_by_key(|&g| (groups[g].0, g)).unwrap();
-        groups[lightest].0 += items[i].1;
-        groups[lightest].1.push(i);
-    }
-    groups
-        .into_iter()
-        .filter(|(_, members)| !members.is_empty())
-        .map(|(_, mut members)| {
-            members.sort_unstable();
-            members.into_iter().map(|i| items[i].0.clone()).collect()
-        })
-        .collect()
+/// What the children sent back: every record, and a line for each piece
+/// that failed or was never played.
+pub struct Joined {
+    pub records: Vec<String>,
+    pub failed: Vec<String>,
 }
 
-/// Runs `render <command> <arguments>` once for each group, all at once,
-/// each with `--jobs 1`, its keys and its own part file, and returns the
-/// parts' records in group order, with a line for each child that failed.
-pub fn run(command: &str, arguments: &[String], groups: &[Vec<String>]) -> Result<(Vec<Vec<String>>, Vec<String>), String> {
+/// Runs `render <command> <arguments> --jobs 1 --child` up to `count`
+/// times at once and hands out `pieces` (each a key and its estimated
+/// cost), the costliest first, to whichever child is free.
+pub fn run(command: &str, arguments: &[String], pieces: &[(String, u64)], count: usize) -> Result<Joined, String> {
     let exe = std::env::current_exe().map_err(|e| format!("cannot find this program to run its children: {e}"))?;
-    let dir = std::env::temp_dir();
+    let mut order: Vec<&(String, u64)> = pieces.iter().collect();
+    order.sort_by(|a, b| b.1.cmp(&a.1));
+    let queue = Mutex::new(order.into_iter().map(|(key, _)| key.clone()).collect::<VecDeque<String>>());
+    let joined = Mutex::new(Joined { records: Vec::new(), failed: Vec::new() });
     let mut children = Vec::new();
-    for (i, keys) in groups.iter().enumerate() {
-        let part = dir.join(format!("alchemy-devtools-render-{}-{i}.part", std::process::id()));
-        let _ = std::fs::remove_file(&part);
-        let mut child = Command::new(&exe);
-        child.arg("render").arg(command).args(arguments).args(["--jobs", "1"]).arg("--part").arg(&part);
-        for key in keys {
-            child.arg("--share").arg(key);
-        }
-        let process = child.spawn().map_err(|e| format!("cannot start {}: {e}", exe.display()))?;
-        children.push((process, part, keys));
+    for _ in 0..count.min(pieces.len()) {
+        let child = Command::new(&exe)
+            .arg("render")
+            .arg(command)
+            .args(arguments)
+            .args(["--jobs", "1", "--child"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("cannot start {}: {e}", exe.display()))?;
+        children.push(child);
     }
-    let mut parts = Vec::new();
-    let mut failed = Vec::new();
-    for (mut process, part, keys) in children {
-        let status = process.wait().map_err(|e| format!("cannot wait for a child: {e}"))?;
-        let records = read_part(&part);
-        let _ = std::fs::remove_file(&part);
-        match records {
-            Ok(records) if status.success() => parts.push(records),
+    std::thread::scope(|scope| {
+        for mut child in children {
+            let (queue, joined) = (&queue, &joined);
+            scope.spawn(move || {
+                let mut input = child.stdin.take().expect("piped");
+                let mut output = BufReader::new(child.stdout.take().expect("piped"));
+                let mut records = Vec::new();
+                let mut failed = Vec::new();
+                'pieces: loop {
+                    let Some(key) = queue.lock().unwrap().pop_front() else {
+                        break;
+                    };
+                    if writeln!(input, "{}", escape(&key)).and_then(|()| input.flush()).is_err() {
+                        failed.push(format!("{key}: its process had stopped"));
+                        break;
+                    }
+                    loop {
+                        let mut line = String::new();
+                        if output.read_line(&mut line).unwrap_or(0) == 0 {
+                            failed.push(format!("{key}: its process stopped"));
+                            break 'pieces;
+                        }
+                        let line = line.trim_end_matches('\n');
+                        if line == DONE {
+                            break;
+                        } else if let Some(record) = line.strip_prefix(RECORD) {
+                            records.push(unescape(record));
+                        } else if let Some(failure) = line.strip_prefix(FAILED) {
+                            failed.push(unescape(failure));
+                        } else {
+                            println!("{line}");
+                        }
+                    }
+                }
+                drop(input);
+                match child.wait() {
+                    Ok(status) if !status.success() => failed.push(format!("a child process {status}")),
+                    Err(e) => failed.push(format!("a child process: {e}")),
+                    Ok(_) => {}
+                }
+                let mut joined = joined.lock().unwrap();
+                joined.records.extend(records);
+                joined.failed.extend(failed);
+            });
+        }
+    });
+    let mut joined = joined.into_inner().unwrap();
+    for key in queue.into_inner().unwrap() {
+        joined.failed.push(format!("{key}: not played, every child process had stopped"));
+    }
+    Ok(joined)
+}
+
+/// A child's side: plays each key its standard input gives with `piece`,
+/// and prints what it recorded, or why it failed, then that it is done.
+pub fn serve(mut piece: impl FnMut(&str) -> Result<Vec<String>, String>) -> Result<(), String> {
+    let error = |e: std::io::Error| format!("the parent process is gone: {e}");
+    for line in std::io::stdin().lock().lines() {
+        let key = unescape(&line.map_err(error)?);
+        let result = piece(&key);
+        let mut out = std::io::stdout().lock();
+        match result {
             Ok(records) => {
-                failed.push(format!("the child for {} {status}", keys.join(", ")));
-                parts.push(records);
+                for record in records {
+                    writeln!(out, "{RECORD}{}", escape(&record)).map_err(error)?;
+                }
             }
-            Err(e) => failed.push(format!("the child for {} {status}: {e}", keys.join(", "))),
+            Err(e) => writeln!(out, "{FAILED}{}", escape(&format!("{key}: {e}"))).map_err(error)?,
         }
+        writeln!(out, "{DONE}").map_err(error)?;
+        out.flush().map_err(error)?;
     }
-    Ok((parts, failed))
+    Ok(())
 }
 
-/// Writes a child's records, one a line, a record's own line breaks and
-/// backslashes escaped.
-pub fn write_part(path: &Path, records: &[String]) -> Result<(), String> {
-    let mut text = String::new();
-    for record in records {
-        text.push_str(&record.replace('\\', "\\\\").replace('\n', "\\n"));
-        text.push('\n');
-    }
-    std::fs::write(path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))
-}
-
-fn read_part(path: &Path) -> Result<Vec<String>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("no part {}: {e}", path.display()))?;
-    Ok(text.lines().map(unescape).collect())
+/// A record on one line: its own line breaks and backslashes escaped.
+fn escape(record: &str) -> String {
+    record.replace('\\', "\\\\").replace('\n', "\\n")
 }
 
 fn unescape(line: &str) -> String {
@@ -144,19 +181,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn deals_the_heaviest_first_to_the_lightest() {
-        let items: Vec<(String, u64)> = [("a", 5), ("b", 1), ("c", 4), ("d", 3), ("e", 1)].iter().map(|&(k, w)| (k.to_string(), w)).collect();
-        assert_eq!(deal(&items, 2), vec![vec!["a", "b", "e"], vec!["c", "d"]]);
-        assert_eq!(deal(&items, 9).len(), 5);
-        assert_eq!(deal(&items, 1), vec![vec!["a", "b", "c", "d", "e"]]);
-    }
-
-    #[test]
     fn escapes_records() {
         for record in ["plain\ttab", "two\nlines", "back\\slash\\n", "end\\"] {
-            let escaped = record.replace('\\', "\\\\").replace('\n', "\\n");
-            assert!(!escaped.contains('\n'));
-            assert_eq!(unescape(&escaped), record);
+            assert!(!escape(record).contains('\n'));
+            assert_eq!(unescape(&escape(record)), record);
         }
     }
 }

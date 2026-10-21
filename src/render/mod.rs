@@ -46,9 +46,10 @@ BattleObjMake picks. --unlearned lets --ability name one no party list teaches,
 or one only enemies use (Fusion Dragon's Outer Space and Dragon Driver),
 cast by its element's character like the rest.
 
---jobs N splits the casts across N processes of this program, each with its
-own libmgba (default: the number of CPUs; 1 plays them here), and joins
-their rows into one index.tsv, the same as one process writes.
+--jobs N runs N processes of this program, each with its own libmgba
+(default: the number of CPUs; 1 plays them here), hands each the next
+cast as it finishes one, summons and Djinn first, and joins their rows
+into one index.tsv, the same as one process writes.
 
 --backdrop sets the battlefield behind the fighters: `gradient` (the default)
 clears the battle background and draws a grey a line as the GBA's backdrop
@@ -199,10 +200,7 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
             .collect();
         plan.casts.extend(extra);
     }
-    let mut casts = select(&plan, &o)?;
-    if o.jobs.child() {
-        casts.retain(|c| o.jobs.share.contains(&c.slug));
-    }
+    let casts = select(&plan, &o)?;
     if o.list {
         println!("ability\tname\telement\tcaster\ttarget\tparty\tfoes\tfile");
         for c in &casts {
@@ -220,7 +218,7 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
             );
         }
     }
-    if o.all && !o.jobs.child() {
+    if o.all && !o.jobs.child {
         for (a, skip) in &plan.skipped {
             eprintln!("left out: {}\t{}\t{}", a.id, a.name, skip.reason());
         }
@@ -231,12 +229,29 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
     }
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("psynergy"));
     std::fs::create_dir_all(&out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+    if o.jobs.child {
+        // One cast a piece, by its file's name.
+        return jobs::serve(|slug| {
+            let cast = casts.iter().copied().find(|c| c.slug == slug).ok_or_else(|| format!("no cast {slug}"))?;
+            let (rows, total) = play(root, &o, &[cast], &out)?;
+            let mut records: Vec<String> = rows.iter().map(|r| format!("row\t{}\t{}", r.id, r.line)).collect();
+            records.push(format!("bytes\t{total}"));
+            Ok(records)
+        });
+    }
     if o.jobs.split(casts.len()) {
-        let items: Vec<(String, u64)> = casts.iter().map(|c| (c.slug.clone(), 1)).collect();
-        let groups = jobs::deal(&items, o.jobs.count);
-        let (parts, failed) = jobs::run("psynergy", arguments, &groups)?;
+        // A summon plays longest, then a Djinni.
+        let pieces: Vec<(String, u64)> = casts
+            .iter()
+            .map(|c| (c.slug.clone(), match c.command {
+                Command::Summon { .. } => 3,
+                Command::Djinni { .. } => 2,
+                Command::Psynergy => 1,
+            }))
+            .collect();
+        let joined = jobs::run("psynergy", arguments, &pieces, o.jobs.count)?;
         let (mut rows, mut total) = (Vec::new(), 0);
-        for record in parts.iter().flatten() {
+        for record in &joined.records {
             match record.split_once('\t') {
                 Some(("row", line)) => {
                     if let Some((id, line)) = line.split_once('\t').and_then(|(id, line)| Some((id.parse().ok()?, line))) {
@@ -247,16 +262,12 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
                 _ => {}
             }
         }
-        eprintln!("{} files, {} KiB, in {}, from {} processes", rows.len(), total.div_ceil(1024), out.display(), groups.len());
+        eprintln!("{} files, {} KiB, in {}, from {} processes", rows.len(), total.div_ceil(1024), out.display(), o.jobs.count.min(pieces.len()));
         write_index(&out.join("index.tsv"), rows)?;
-        return if failed.is_empty() { Ok(()) } else { Err(failed.join("\n")) };
+        return if joined.failed.is_empty() { Ok(()) } else { Err(joined.failed.join("\n")) };
     }
     let (rows, total) = play(root, &o, &casts, &out)?;
-    if let Some(part) = &o.jobs.part {
-        let mut records: Vec<String> = rows.iter().map(|r| format!("row\t{}\t{}", r.id, r.line)).collect();
-        records.push(format!("bytes\t{total}"));
-        return jobs::write_part(part, &records);
-    }
+    eprintln!("{} files, {} KiB, in {}", rows.len(), total.div_ceil(1024), out.display());
     write_index(&out.join("index.tsv"), rows)
 }
 
@@ -318,7 +329,6 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<(Vec<Ro
             ) + "\t",
         });
     }
-    eprintln!("{} files, {} KiB, in {}", rows.len(), total.div_ceil(1024), out.display());
     Ok((rows, total))
 }
 
@@ -412,12 +422,15 @@ ends as the next scene starts loading, and an event that runs past three
 minutes gets no GIF, noted in skipped.tsv. --messages is accepted and not
 read.
 
---jobs N splits the work across N processes of this program, each with its
-own libmgba (default: the number of CPUs; 1 plays it all here): scenes for
-place, each weighed by its story moments, and for event the scenes of one
-overlay together, weighed by their events, since an event plays at every
-scene its row lists. The parent joins their index.tsv, skipped.tsv and
-variant-flags.tsv lines into the files one process would write.
+--jobs N runs N processes of this program, each with its own libmgba
+(default: the number of CPUs; 1 plays it all here), and hands each the
+next piece of work as it finishes one, the costliest first: a scene for
+place, weighed by its story moments, and for event one event of an
+overlay, played against all of the overlay's scenes as one process would,
+weighed by its triggers, the scenes it may play at and the frames its
+pictures took in an earlier run's index.tsv. The scenes' old event
+pictures are cleared first. The parent joins their index.tsv, skipped.tsv
+and variant-flags.tsv lines into the files one process would write.
 
 
 Needs the `render` feature: cargo build --release --features render, with
@@ -501,15 +514,11 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     // scenes (the other floors of Mercury Lighthouse) come too; only the
     // events of the scenes asked for are played.
     let only: Vec<u16> = if kind == "event" && !o.all && !o.scenes.is_empty() { chosen.iter().map(|s| s.number).collect() } else { Vec::new() };
-    let mut chosen: Vec<&story::Scene> = if kind == "event" {
+    let chosen: Vec<&story::Scene> = if kind == "event" {
         scene_rows.iter().filter(|s| chosen.iter().any(|c| c.file == s.file)).collect()
     } else {
         chosen
     };
-    // A child keeps its share: its scenes, or for events its overlays.
-    if o.jobs.child() {
-        chosen.retain(|s| o.jobs.share.contains(&share_key(kind, s)));
-    }
     let root = crate::compile::root();
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
     let request = SceneRequest { kind, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags };
@@ -527,10 +536,11 @@ struct SceneRequest<'a> {
     flags: &'a story::Flags,
 }
 
-/// The key of a scene's share of the work: the scene itself for places,
-/// its overlay's source for events, whose rows bring the overlay's other
-/// scenes along.
-fn share_key(kind: &str, scene: &story::Scene) -> String {
+/// What a scene's work is part of: the scene itself for places, its
+/// overlay's source for events, whose rows bring the overlay's other scenes
+/// along.
+#[cfg(feature = "render")]
+fn unit_key(kind: &str, scene: &story::Scene) -> String {
     if kind == "place" { scene.number.to_string() } else { scene.file.clone() }
 }
 
@@ -612,19 +622,19 @@ impl Outcome {
     }
 }
 
-/// Plays the scenes asked for, in this process or split across --jobs
+/// Plays the scenes asked for, in this process or shared out among --jobs
 /// children, and writes index.tsv, skipped.tsv and for places
-/// variant-flags.tsv; a child writes its part instead.
+/// variant-flags.tsv; a child plays the pieces it is handed instead.
 #[cfg(feature = "render")]
 fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &jobs::Jobs, arguments: &[String]) -> Result<(), String> {
     let started = std::time::Instant::now();
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    // A place's work is a scene, an event's the scenes of one overlay
-    // (an event plays at every scene its row lists).
+    // A place's work is a scene, an event's the scenes of one overlay (an
+    // event plays at every scene its row lists).
     let mut units: BTreeMap<String, Vec<&story::Scene>> = BTreeMap::new();
     let mut order = Vec::new();
     for s in r.chosen {
-        let key = share_key(r.kind, s);
+        let key = unit_key(r.kind, s);
         if !units.contains_key(&key) {
             order.push(key.clone());
         }
@@ -633,45 +643,60 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
     if r.kind == "event" {
         order.sort();
     }
+    if jobs.child {
+        // A piece is a scene by number, or an overlay's event by its source
+        // and name; the overlay's scans are kept for its next events.
+        let machines = Machines::load(root, edition, r.chosen, false)?;
+        let mut kept: std::collections::HashMap<String, places::Job> = std::collections::HashMap::new();
+        return jobs::serve(|key| {
+            let mut context = machines.context(r, out);
+            if r.kind == "place" {
+                let scene = r.chosen.iter().find(|s| s.number.to_string() == key).ok_or_else(|| format!("no scene {key}"))?;
+                context.place(scene);
+                eprintln!("{}: {} images", scene.name(), context.images);
+            } else {
+                let (file, name) = key.split_once('\t').ok_or_else(|| format!("no event {key:?}"))?;
+                let scenes = units.get(file).ok_or_else(|| format!("no overlay {file}"))?;
+                context.play_events(scenes, Some(name), kept.entry(file.to_string()).or_default());
+                eprintln!("{name}: {} images", context.images);
+            }
+            let mut piece = Outcome::default();
+            piece.add(context);
+            Ok(piece.records())
+        });
+    }
     let candidates = places::variant_candidates(r.events, r.flags);
     let mut outcome = Outcome::default();
     let mut failed = Vec::new();
     let mut processes = 1;
-    if jobs.split(order.len()) {
-        // Each child gets about as much work: a place its story moments, an
-        // overlay its events.
-        let items: Vec<(String, u64)> = order
-            .iter()
-            .map(|key| {
-                let scenes = &units[key];
-                let weight = if r.kind == "place" {
-                    candidates.get(&scenes[0].number).map_or(0, |list| list.len().min(places::MAX_MOMENTS))
-                } else {
-                    r.events
-                        .iter()
-                        .filter(|e| r.wanted.is_empty() || r.wanted.iter().any(|w| *w == e.name))
-                        .filter(|e| e.scenes.iter().any(|n| scenes.iter().any(|s| s.number == *n)))
-                        .filter(|e| r.only.is_empty() || e.scenes.iter().any(|n| r.only.contains(n)))
-                        .count()
-                };
-                (key.clone(), 1 + weight as u64)
-            })
-            .collect();
-        let groups = jobs::deal(&items, jobs.count);
-        processes = groups.len();
+    let pieces: Vec<(String, u64)> = if jobs.count > 1 { scene_pieces(r, &units, &order, &candidates, out) } else { Vec::new() };
+    if jobs.split(pieces.len()) {
+        if r.kind == "event" {
+            for key in &order {
+                outcome.cleared.extend(places::clear_events(out, &units[key], r.wanted, r.only));
+            }
+        }
         let rom_path = root.join("out").join(edition).join(format!("{edition}.gba"));
         let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
         note_modified(root, edition, &rom);
-        let (parts, f) = jobs::run(r.kind, arguments, &groups)?;
-        for part in &parts {
-            outcome.read(part);
-        }
-        failed = f;
+        processes = jobs.count.min(pieces.len());
+        let joined = jobs::run(r.kind, arguments, &pieces, jobs.count)?;
+        outcome.read(&joined.records);
+        failed = joined.failed;
     } else {
-        let jobs_in_order: Vec<Vec<&story::Scene>> = order.iter().map(|key| units[key].clone()).collect();
-        record_scenes(root, edition, r, &jobs_in_order, out, jobs.child(), &mut outcome)?;
-        if let Some(part) = &jobs.part {
-            return jobs::write_part(part, &outcome.records());
+        let machines = Machines::load(root, edition, r.chosen, true)?;
+        for key in &order {
+            let job = &units[key];
+            let mut context = machines.context(r, out);
+            if r.kind == "place" {
+                for scene in job {
+                    context.place(scene);
+                }
+            } else {
+                context.events(job);
+            }
+            eprintln!("{}: {} images", job.iter().map(|s| s.name()).collect::<Vec<_>>().join(", "), context.images);
+            outcome.add(context);
         }
     }
     if r.kind == "place" {
@@ -732,47 +757,50 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
     if failed.is_empty() { Ok(()) } else { Err(failed.join("\n")) }
 }
 
-/// Plays each job (a scene, or the scenes of one overlay) in turn in this
-/// process, each with its own machines.
+/// What every scene's machines are made from: the ROM, the field's symbols
+/// from the linker map, and each scene's functions by name, from its
+/// overlay's ELF in the build (an event named by its function is told from
+/// the other rows of its trigger by that function's address).
 #[cfg(feature = "render")]
-fn record_scenes(
-    root: &Path,
-    edition: &str,
-    r: &SceneRequest,
-    jobs: &[Vec<&story::Scene>],
-    out: &Path,
-    child: bool,
-    outcome: &mut Outcome,
-) -> Result<(), String> {
-    let build = root.join("out").join(edition);
-    let map_path = build.join(format!("{edition}.map"));
-    let rom_path = build.join(format!("{edition}.gba"));
-    let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
-    let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
-    let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
-    if !child {
-        note_modified(root, edition, &rom);
+struct Machines {
+    rom: Vec<u8>,
+    symbols: field::Symbols,
+    functions: std::collections::HashMap<u16, std::collections::HashMap<String, u32>>,
+}
+
+#[cfg(feature = "render")]
+impl Machines {
+    fn load(root: &Path, edition: &str, chosen: &[&story::Scene], note: bool) -> Result<Machines, String> {
+        let build = root.join("out").join(edition);
+        let map_path = build.join(format!("{edition}.map"));
+        let rom_path = build.join(format!("{edition}.gba"));
+        let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
+        let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+        let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
+        if note {
+            note_modified(root, edition, &rom);
+        }
+        let symbols = field::Symbols::find(&map)?;
+        let mut functions = std::collections::HashMap::new();
+        for s in chosen {
+            let Some(id) = s.overlay else {
+                continue;
+            };
+            let path = build.join("overlays").join(format!("resource_{id:03x}.elf"));
+            let Some(elf) = std::fs::read(&path).ok().and_then(|data| crate::elf::Elf::parse(&data).ok()) else {
+                continue;
+            };
+            let named = elf.symbols.iter().filter(|y| y.kind == 2 && !y.name.is_empty()).map(|y| (y.name.clone(), y.value & !1)).collect();
+            functions.insert(s.number, named);
+        }
+        Ok(Machines { rom, symbols, functions })
     }
-    let symbols = field::Symbols::find(&map)?;
-    // Each scene's functions by name, from its overlay's ELF in the build:
-    // an event named by its function is told from the other rows of its
-    // trigger by that function's address.
-    let mut functions: std::collections::HashMap<u16, std::collections::HashMap<String, u32>> = std::collections::HashMap::new();
-    for s in r.chosen {
-        let Some(id) = s.overlay else {
-            continue;
-        };
-        let path = build.join("overlays").join(format!("resource_{id:03x}.elf"));
-        let Some(elf) = std::fs::read(&path).ok().and_then(|data| crate::elf::Elf::parse(&data).ok()) else {
-            continue;
-        };
-        let named = elf.symbols.iter().filter(|y| y.kind == 2 && !y.name.is_empty()).map(|y| (y.name.clone(), y.value & !1)).collect();
-        functions.insert(s.number, named);
-    }
-    for job in jobs {
-        let mut context = places::Context {
-            rom: &rom,
-            symbols: &symbols,
+
+    /// A fresh context for one piece of work.
+    fn context<'a>(&'a self, r: &'a SceneRequest, out: &Path) -> places::Context<'a> {
+        places::Context {
+            rom: &self.rom,
+            symbols: &self.symbols,
             flags: r.flags,
             events: r.events,
             out: out.to_path_buf(),
@@ -785,22 +813,59 @@ fn record_scenes(
             wanted: r.wanted,
             only: r.only,
             cleared: Vec::new(),
-            functions: &functions,
+            functions: &self.functions,
             moments: 0,
             moment_scenes: 0,
             capped: 0,
-        };
-        if r.kind == "place" {
-            for scene in job {
-                context.place(scene);
-            }
-        } else {
-            context.events(job);
         }
-        eprintln!("{}: {} images", job.iter().map(|s| s.name()).collect::<Vec<_>>().join(", "), context.images);
-        outcome.add(context);
     }
-    Ok(())
+}
+
+/// The pieces --jobs hands out, each with its estimated cost in frames: a
+/// place's scene by its story moments, and each event of an overlay by its
+/// triggers times the scenes it may play at, plus the frames its pictures
+/// took in the index an earlier run left in `out`.
+#[cfg(feature = "render")]
+fn scene_pieces(
+    r: &SceneRequest,
+    units: &BTreeMap<String, Vec<&story::Scene>>,
+    order: &[String],
+    candidates: &BTreeMap<u16, Vec<String>>,
+    out: &Path,
+) -> Vec<(String, u64)> {
+    const ATTEMPT: u64 = 600;
+    if r.kind == "place" {
+        return order
+            .iter()
+            .map(|key| {
+                let moments = candidates.get(&units[key][0].number).map_or(0, |list| list.len().min(places::MAX_MOMENTS));
+                (key.clone(), ATTEMPT * (1 + moments as u64))
+            })
+            .collect();
+    }
+    // index.tsv's frames by scene number and event.
+    let mut frames: std::collections::HashMap<(u16, String), u64> = std::collections::HashMap::new();
+    for line in std::fs::read_to_string(out.join("index.tsv")).unwrap_or_default().lines().skip(1) {
+        let fields: Vec<&str> = line.split('\t').collect();
+        if let (Some(number), Some(event), Some(n)) = (fields.get(1), fields.get(6), fields.get(12)) {
+            if let (Ok(number), Ok(n)) = (number.parse(), n.parse::<u64>()) {
+                *frames.entry((number, event.to_string())).or_default() += n;
+            }
+        }
+    }
+    let mut pieces = Vec::new();
+    for key in order {
+        let scenes = &units[key];
+        for event in places::job_events(r.events, r.wanted, r.only, scenes) {
+            let at: Vec<u16> = scenes.iter().map(|s| s.number).filter(|n| event.scenes.contains(n)).collect();
+            if at.is_empty() {
+                continue;
+            }
+            let before: u64 = at.iter().map(|&n| frames.get(&(n, event.name.clone())).copied().unwrap_or(0)).sum();
+            pieces.push((format!("{key}\t{}", event.name), ATTEMPT * (event.alternatives.len().max(1) * at.len()) as u64 + before));
+        }
+    }
+    pieces
 }
 
 /// Says so when the built ROM is not the one rom.sha1 names: a modified
@@ -925,9 +990,10 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
   world-map-picture
               world-map-picture.gif: the world map's still picture (R)
   overlay     overlay.gif: walking into the Sanctum beside the overlay area
---only picks some; flags.tsv is the story tools' flag names. --jobs N plays the
-modes, and field-psynergy's casts one by one, in N processes of this program
-(default: the number of CPUs; 1 plays them here), joining their index.tsv rows.";
+--only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
+modes, and field-psynergy's casts one by one, to N processes of this program
+as each finishes one (default: the number of CPUs; 1 plays them here),
+joining their index.tsv rows.";
 
 
 fn guide_pictures(arguments: &[String]) -> Result<(), String> {
@@ -998,15 +1064,14 @@ fn play_guide(
     let mut failed: Vec<String> = Vec::new();
     let mut children_failed = Vec::new();
     if jobs.split(units.len()) {
-        let items: Vec<(String, u64)> = units.iter().map(|u| (u.clone(), 1)).collect();
-        let groups = jobs::deal(&items, jobs.count);
+        let pieces: Vec<(String, u64)> = units.iter().map(|u| (u.clone(), 1)).collect();
         let rom = std::fs::read(root.join("out").join(edition).join(format!("{edition}.gba")))
             .map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
         note_modified(root, edition, &rom);
         std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-        let (parts, f) = jobs::run("guide", arguments, &groups)?;
-        children_failed = f;
-        for record in parts.iter().flatten() {
+        let joined = jobs::run("guide", arguments, &pieces, jobs.count)?;
+        children_failed = joined.failed;
+        for record in &joined.records {
             match record.split_once('\t') {
                 Some(("written", rest)) => {
                     let fields: Vec<&str> = rest.splitn(3, '\t').collect();
@@ -1027,45 +1092,40 @@ fn play_guide(
         let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
         let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
         let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
-        if !jobs.child() {
+        if !jobs.child {
             note_modified(root, edition, &rom);
         }
         let symbols = field::Symbols::find(&map)?;
         std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
         let preset = map.symbol("DebugParty_LoadPreset").map_or(0, |(_, a)| a & !1);
         let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new(), preset };
-        // A child plays the modes and casts of its share.
-        let mine = |unit: &str| !jobs.child() || jobs.share.iter().any(|s| s == unit);
-        let child_casts: Vec<String> =
-            jobs.share.iter().filter_map(|s| s.strip_prefix(FIELD_CAST_KEY)).map(str::to_string).collect();
-        for &name in guide::MODES {
-            if !wanted(name) {
-                continue;
-            }
-            let result = if name == "field-psynergy" && jobs.child() {
-                if child_casts.is_empty() {
-                    continue;
+        if jobs.child {
+            // A piece is a mode, or one of field-psynergy's casts.
+            return jobs::serve(|unit| {
+                let (name, these) = match unit.strip_prefix(FIELD_CAST_KEY) {
+                    Some(cast) => ("field-psynergy", vec![cast.to_string()]),
+                    None => (unit, casts.to_vec()),
+                };
+                let mut records = Vec::new();
+                if let Err(e) = guide.run(name, &these) {
+                    eprintln!("{name}: {e}");
+                    records.push(format!("failed\t{name}"));
                 }
-                guide.run(name, &child_casts)
-            } else if mine(name) {
-                guide.run(name, casts)
-            } else {
-                continue;
-            };
-            if let Err(e) = result {
-                eprintln!("{name}: {e}");
-                failed.push(name.to_string());
+                records.extend(std::mem::take(&mut guide.written).iter().map(|(file, bytes, what)| format!("written\t{file}\t{bytes}\t{what}")));
+                records.extend(std::mem::take(&mut guide.casts).iter().map(|line| format!("cast\t{line}")));
+                Ok(records)
+            });
+        }
+        for &name in guide::MODES {
+            if wanted(name) {
+                if let Err(e) = guide.run(name, casts) {
+                    eprintln!("{name}: {e}");
+                    failed.push(name.to_string());
+                }
             }
         }
         written = guide.written;
         rows = guide.casts;
-        if let Some(part) = &jobs.part {
-            let mut records: Vec<String> =
-                written.iter().map(|(file, bytes, what)| format!("written\t{file}\t{bytes}\t{what}")).collect();
-            records.extend(rows.iter().map(|line| format!("cast\t{line}")));
-            records.extend(failed.iter().map(|name| format!("failed\t{name}")));
-            return jobs::write_part(part, &records);
-        }
     }
     for (file, bytes, what) in &written {
         eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
