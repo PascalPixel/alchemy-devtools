@@ -218,7 +218,7 @@ const INDEX_HEADER: &str =
     "scene\tnumber\tarea\tvariant\tkind\tentrance\tevent\tpage\tsegment\tmessage\tafter\tbefore\tframes\tmessages\tfile";
 
 impl Row {
-    fn line(&self) -> String {
+    pub fn line(&self) -> String {
         format!(
             "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             self.scene,
@@ -242,7 +242,7 @@ impl Row {
 
 /// Writes `rows` into index.tsv, keeping the lines already there for other
 /// files that are still there, sorted by file.
-pub fn write_index(out: &Path, rows: &[Row]) -> Result<(), String> {
+pub fn write_index(out: &Path, rows: &[(String, String)]) -> Result<(), String> {
     let path = out.join("index.tsv");
     let mut lines: BTreeMap<String, String> = BTreeMap::new();
     if let Ok(text) = std::fs::read_to_string(&path) {
@@ -254,8 +254,8 @@ pub fn write_index(out: &Path, rows: &[Row]) -> Result<(), String> {
             }
         }
     }
-    for row in rows {
-        lines.insert(row.file.clone(), row.line());
+    for (file, line) in rows {
+        lines.insert(file.clone(), line.clone());
     }
     let mut text = format!("{INDEX_HEADER}\n");
     for line in lines.values() {

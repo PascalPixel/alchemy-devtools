@@ -60,6 +60,8 @@ A scene's story moments come from the named story flags its initialization tests
 
 `DIR/index.tsv` lists every image, a moment's with its name and flags in the variant column (`vale-storm-garet-left: FLAG_..., FLAG_...; clear ...`); `DIR/skipped.tsv` what was left out and why, and `render place` writes `DIR/variant-flags.tsv`, the story flags each scene's initialization tests.
 
+`render psynergy`, `render place`, `render event` and `render guide` take `--jobs N` (by default the number of CPUs) and split their work across N processes of the same program, each running its own libmgba: the casts, the scenes, the overlays, or the guide's modes with `field-psynergy`'s casts one by one. Events go by overlay because an event plays at every scene its row lists and a scene's overlay brings its sibling scenes along, so one overlay's scenes always share a process. Each process gets about the same amount of work, a scene weighed by its story moments and an overlay by its events. The command itself plays nothing and joins what its children recorded into one `index.tsv`, `skipped.tsv` and `variant-flags.tsv`, which come out the same as `--jobs 1` writes them in one process; only the timing lines on standard error differ.
+
 ## Progress publication
 
 Stage source changes before `make land` or `make progress`. Measurement checks that the working source matches the index, records its tree and both report digests, and preserves the original measurement time when the same tree is measured again. Alchemy's pre-push hook uploads the reports and receipt for the pushed main revision.

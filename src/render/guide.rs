@@ -477,6 +477,17 @@ impl<'a> Guide<'a> {
 }
 
 
+/// The field Psynergy `field-psynergy` casts, each once, in its order.
+pub fn field_cast_names() -> Vec<&'static str> {
+    let mut names: Vec<&str> = Vec::new();
+    for cast in FIELD_CASTS {
+        if !names.contains(&cast.name) {
+            names.push(cast.name);
+        }
+    }
+    names
+}
+
 /// Every mode, in the order `render guide` plays them.
 pub const MODES: &[&str] = &[
     "walk", "snow", "layers", "layers-3d", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",

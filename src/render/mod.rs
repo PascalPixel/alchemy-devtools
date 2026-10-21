@@ -17,6 +17,7 @@ mod front;
 mod guide;
 #[cfg(feature = "render")]
 mod guide_more;
+mod jobs;
 #[cfg(feature = "render")]
 mod mgba;
 #[cfg(feature = "render")]
@@ -31,7 +32,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 const USAGE: &str = "usage: alchemy-devtools render psynergy [--ability N|NAME]... [--all] [--djinn] [--summons] [--list] [--unlearned]
-         [--out DIR] [--edition tbs-en] [--backdrop gradient|game|PICTURE.png] [--verbose]
+         [--out DIR] [--edition tbs-en] [--backdrop gradient|game|PICTURE.png] [--verbose] [--jobs N]
 Plays battle Psynergy in a built ☀️ edition (make tbs-en) under libmgba and
 writes each cast as DIR/<ability>.gif: the whole 240 by 160 screen at 30
 frames a second, looping, from the cast's message to the next round. DIR/index.tsv
@@ -44,6 +45,10 @@ prints each run's setup: the party, the units' classes and the sprites
 BattleObjMake picks. --unlearned lets --ability name one no party list teaches,
 or one only enemies use (Fusion Dragon's Outer Space and Dragon Driver),
 cast by its element's character like the rest.
+
+--jobs N splits the casts across N processes of this program, each with its
+own libmgba (default: the number of CPUs; 1 plays them here), and joins
+their rows into one index.tsv, the same as one process writes.
 
 --backdrop sets the battlefield behind the fighters: `gradient` (the default)
 clears the battle background and draws a grey a line as the GBA's backdrop
@@ -93,6 +98,7 @@ struct Options {
     out: Option<PathBuf>,
     edition: String,
     backdrop: String,
+    jobs: jobs::Jobs,
 }
 
 fn options(arguments: &[String]) -> Result<Option<Options>, String> {
@@ -107,6 +113,7 @@ fn options(arguments: &[String]) -> Result<Option<Options>, String> {
         out: None,
         edition: "tbs-en".to_string(),
         backdrop: "gradient".to_string(),
+        jobs: jobs::Jobs::new(),
     };
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
@@ -126,7 +133,11 @@ fn options(arguments: &[String]) -> Result<Option<Options>, String> {
             "--out" => o.out = Some(PathBuf::from(value("--out")?)),
             "--edition" => o.edition = value("--edition")?,
             "--backdrop" => o.backdrop = value("--backdrop")?,
-            other => return Err(format!("unexpected argument {other:?}\n{USAGE}")),
+            other => {
+                if !o.jobs.option(other, &mut value)? {
+                    return Err(format!("unexpected argument {other:?}\n{USAGE}"));
+                }
+            }
         }
     }
     if o.abilities.is_empty() && !o.all && !o.djinn && !o.summons {
@@ -188,7 +199,10 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
             .collect();
         plan.casts.extend(extra);
     }
-    let casts = select(&plan, &o)?;
+    let mut casts = select(&plan, &o)?;
+    if o.jobs.child() {
+        casts.retain(|c| o.jobs.share.contains(&c.slug));
+    }
     if o.list {
         println!("ability\tname\telement\tcaster\ttarget\tparty\tfoes\tfile");
         for c in &casts {
@@ -206,7 +220,7 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
             );
         }
     }
-    if o.all {
+    if o.all && !o.jobs.child() {
         for (a, skip) in &plan.skipped {
             eprintln!("left out: {}\t{}\t{}", a.id, a.name, skip.reason());
         }
@@ -217,7 +231,32 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
     }
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("psynergy"));
     std::fs::create_dir_all(&out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    let rows = play(root, &o, &casts, &out)?;
+    if o.jobs.split(casts.len()) {
+        let items: Vec<(String, u64)> = casts.iter().map(|c| (c.slug.clone(), 1)).collect();
+        let groups = jobs::deal(&items, o.jobs.count);
+        let (parts, failed) = jobs::run("psynergy", arguments, &groups)?;
+        let (mut rows, mut total) = (Vec::new(), 0);
+        for record in parts.iter().flatten() {
+            match record.split_once('\t') {
+                Some(("row", line)) => {
+                    if let Some((id, line)) = line.split_once('\t').and_then(|(id, line)| Some((id.parse().ok()?, line))) {
+                        rows.push(Row { id, line: line.to_string() });
+                    }
+                }
+                Some(("bytes", n)) => total += n.parse::<u64>().unwrap_or(0),
+                _ => {}
+            }
+        }
+        eprintln!("{} files, {} KiB, in {}, from {} processes", rows.len(), total.div_ceil(1024), out.display(), groups.len());
+        write_index(&out.join("index.tsv"), rows)?;
+        return if failed.is_empty() { Ok(()) } else { Err(failed.join("\n")) };
+    }
+    let (rows, total) = play(root, &o, &casts, &out)?;
+    if let Some(part) = &o.jobs.part {
+        let mut records: Vec<String> = rows.iter().map(|r| format!("row\t{}\t{}", r.id, r.line)).collect();
+        records.push(format!("bytes\t{total}"));
+        return jobs::write_part(part, &records);
+    }
     write_index(&out.join("index.tsv"), rows)
 }
 
@@ -228,12 +267,12 @@ struct Row {
 }
 
 #[cfg(not(feature = "render"))]
-fn play(_: &Path, _: &Options, _: &[&Cast], _: &Path) -> Result<Vec<Row>, String> {
+fn play(_: &Path, _: &Options, _: &[&Cast], _: &Path) -> Result<(Vec<Row>, u64), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
 }
 
 #[cfg(feature = "render")]
-fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<Vec<Row>, String> {
+fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<(Vec<Row>, u64), String> {
     let edition = &o.edition;
     let scene = backdrop::scene(&o.backdrop)?;
     let build = root.join("out").join(edition);
@@ -280,7 +319,7 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<Vec<Row
         });
     }
     eprintln!("{} files, {} KiB, in {}", rows.len(), total.div_ceil(1024), out.display());
-    Ok(rows)
+    Ok((rows, total))
 }
 
 /// A field cast's row also names the scene it is cast in; a battle cast's
@@ -319,7 +358,7 @@ Run any of them with --help for its options.";
 
 const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene N|NAME]... [--all]
          --places places.tsv --events events.tsv --flags flags.tsv [--messages messages.tsv]
-         [--event NAME]... [--out DIR] [--edition tbs-en]
+         [--event NAME]... [--out DIR] [--edition tbs-en] [--jobs N]
 Plays a built ☀️ edition (make tbs-en) under libmgba from a new game's
 defaults straight into each scene, and writes PNG files at the GBA's size
 into DIR/<scene>/ (DIR defaults to out/EDITION/places), with DIR/index.tsv
@@ -373,6 +412,13 @@ ends as the next scene starts loading, and an event that runs past three
 minutes gets no GIF, noted in skipped.tsv. --messages is accepted and not
 read.
 
+--jobs N splits the work across N processes of this program, each with its
+own libmgba (default: the number of CPUs; 1 plays it all here): scenes for
+place, each weighed by its story moments, and for event the scenes of one
+overlay together, weighed by their events, since an event plays at every
+scene its row lists. The parent joins their index.tsv, skipped.tsv and
+variant-flags.tsv lines into the files one process would write.
+
 
 Needs the `render` feature: cargo build --release --features render, with
 libmgba and its headers installed (MGBA_PREFIX names their prefix).";
@@ -386,6 +432,7 @@ struct SceneOptions {
     places_tsv: Option<PathBuf>,
     events_tsv: Option<PathBuf>,
     flags_tsv: Option<PathBuf>,
+    jobs: jobs::Jobs,
 }
 
 fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
@@ -398,11 +445,12 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
         places_tsv: None,
         events_tsv: None,
         flags_tsv: None,
+        jobs: jobs::Jobs::new(),
     };
-    let mut arguments = arguments.iter();
-    while let Some(argument) = arguments.next() {
+    let mut options = arguments.iter();
+    while let Some(argument) = options.next() {
         let mut value =
-            |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{SCENES_USAGE}"));
+            |name: &str| options.next().cloned().ok_or_else(|| format!("{name} needs a value\n{SCENES_USAGE}"));
         match argument.as_str() {
             "-h" | "--help" => {
                 println!("{SCENES_USAGE}");
@@ -419,7 +467,11 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             "--messages" => {
                 value("--messages")?;
             }
-            other => return Err(format!("unexpected argument {other:?}\n{SCENES_USAGE}")),
+            other => {
+                if !o.jobs.option(other, &mut value)? {
+                    return Err(format!("unexpected argument {other:?}\n{SCENES_USAGE}"));
+                }
+            }
         }
     }
     crate::targets::parse_decomp_target(&o.edition)?;
@@ -449,163 +501,196 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     // scenes (the other floors of Mercury Lighthouse) come too; only the
     // events of the scenes asked for are played.
     let only: Vec<u16> = if kind == "event" && !o.all && !o.scenes.is_empty() { chosen.iter().map(|s| s.number).collect() } else { Vec::new() };
-    let chosen: Vec<&story::Scene> = if kind == "event" {
+    let mut chosen: Vec<&story::Scene> = if kind == "event" {
         scene_rows.iter().filter(|s| chosen.iter().any(|c| c.file == s.file)).collect()
     } else {
         chosen
     };
+    // A child keeps its share: its scenes, or for events its overlays.
+    if o.jobs.child() {
+        chosen.retain(|s| o.jobs.share.contains(&share_key(kind, s)));
+    }
     let root = crate::compile::root();
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
-    play_scenes(root, &o.edition, kind, &chosen, &only, &events, &o.events, &flags, &out)
+    let request = SceneRequest { kind, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags };
+    play_scenes(root, &o.edition, &request, &out, &o.jobs, arguments)
+}
+
+/// What one `render place` or `render event` plays.
+#[cfg_attr(not(feature = "render"), allow(dead_code))]
+struct SceneRequest<'a> {
+    kind: &'a str,
+    chosen: &'a [&'a story::Scene],
+    only: &'a [u16],
+    events: &'a [story::Event],
+    wanted: &'a [String],
+    flags: &'a story::Flags,
+}
+
+/// The key of a scene's share of the work: the scene itself for places,
+/// its overlay's source for events, whose rows bring the overlay's other
+/// scenes along.
+fn share_key(kind: &str, scene: &story::Scene) -> String {
+    if kind == "place" { scene.number.to_string() } else { scene.file.clone() }
 }
 
 #[cfg(not(feature = "render"))]
-fn play_scenes(
-    _: &Path,
-    _: &str,
-    _: &str,
-    _: &[&story::Scene],
-    _: &[u16],
-    _: &[story::Event],
-    _: &[String],
-    _: &story::Flags,
-    _: &Path,
-) -> Result<(), String> {
+fn play_scenes(_: &Path, _: &str, _: &SceneRequest, _: &Path, _: &jobs::Jobs, _: &[String]) -> Result<(), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
 }
 
+/// What a run of `render place` or `render event` recorded, before it is
+/// written into index.tsv and skipped.tsv: a child's part, or the sum of
+/// them.
 #[cfg(feature = "render")]
-fn play_scenes(
-    root: &Path,
-    edition: &str,
-    kind: &str,
-    chosen: &[&story::Scene],
-    only: &[u16],
-    events: &[story::Event],
-    wanted: &[String],
-    flags: &story::Flags,
-    out: &Path,
-) -> Result<(), String> {
-    let started = std::time::Instant::now();
-    let build = root.join("out").join(edition);
-    let map_path = build.join(format!("{edition}.map"));
-    let rom_path = build.join(format!("{edition}.gba"));
-    let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
-    let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
-    let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
-    note_modified(root, edition, &rom);
-    let symbols = field::Symbols::find(&map)?;
-    // Each scene's functions by name, from its overlay's ELF in the build:
-    // an event named by its function is told from the other rows of its
-    // trigger by that function's address.
-    let mut functions: std::collections::HashMap<u16, std::collections::HashMap<String, u32>> = std::collections::HashMap::new();
-    for s in chosen {
-        let Some(id) = s.overlay else {
-            continue;
-        };
-        let path = build.join("overlays").join(format!("resource_{id:03x}.elf"));
-        let Some(elf) = std::fs::read(&path).ok().and_then(|data| crate::elf::Elf::parse(&data).ok()) else {
-            continue;
-        };
-        let named = elf.symbols.iter().filter(|y| y.kind == 2 && !y.name.is_empty()).map(|y| (y.name.clone(), y.value & !1)).collect();
-        functions.insert(s.number, named);
-    }
-    std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    // Work in parallel, a scene (place) or the scenes of one overlay
-    // (event, whose rows list those scenes) to each job; each job runs its
-    // own machines.
-    let jobs: Vec<Vec<&story::Scene>> = if kind == "place" {
-        chosen.iter().map(|s| vec![*s]).collect()
-    } else {
-        let mut by_file: BTreeMap<&str, Vec<&story::Scene>> = BTreeMap::new();
-        for s in chosen {
-            by_file.entry(s.file.as_str()).or_default().push(*s);
-        }
-        by_file.into_values().collect()
-    };
-    let queue = std::sync::Mutex::new(jobs.into_iter());
-    let results = std::sync::Mutex::new(Vec::new());
-    let workers = std::thread::available_parallelism().map_or(4, |n| n.get().saturating_sub(2).clamp(1, 12));
-    std::thread::scope(|scope| {
-        for _ in 0..workers {
-            scope.spawn(|| loop {
-                let Some(job) = queue.lock().unwrap().next() else {
-                    break;
-                };
-                let mut context = places::Context {
-                    rom: &rom,
-                    symbols: &symbols,
-                    flags,
-                    events,
-                    out: out.to_path_buf(),
-                    rows: Vec::new(),
-                    skipped: Vec::new(),
-                    bytes: 0,
-                    images: 0,
-                    gifs: 0,
-                    gif_bytes: 0,
-                    wanted,
-                    only,
-                    cleared: Vec::new(),
-                    functions: &functions,
-                    moments: 0,
-                    moment_scenes: 0,
-                    capped: 0,
-                };
-                if kind == "place" {
-                    for scene in &job {
-                        context.place(scene);
-                    }
-                } else {
-                    context.events(&job);
-                }
-                eprintln!("{}: {} images", job.iter().map(|s| s.name()).collect::<Vec<_>>().join(", "), context.images);
-                results.lock().unwrap().push((
-                    context.rows,
-                    context.skipped,
-                    context.bytes,
-                    context.images,
-                    context.gifs,
-                    context.gif_bytes,
-                    context.cleared,
-                    [context.moments, context.moment_scenes, context.capped],
-                ));
-            });
-        }
-    });
-    let (mut rows, mut skipped, mut bytes, mut images, mut gifs, mut gif_bytes) = (Vec::new(), Vec::new(), 0, 0, 0, 0);
-    let mut cleared = Vec::new();
-    let mut moments = [0usize; 3];
-    for (r, s, b, i, g, gb, c, m) in results.into_inner().unwrap() {
-        for (total, n) in moments.iter_mut().zip(m) {
+#[derive(Default)]
+struct Outcome {
+    /// index.tsv's lines, by file.
+    rows: Vec<(String, String)>,
+    skipped: Vec<places::Skip>,
+    cleared: Vec<(String, String)>,
+    bytes: u64,
+    images: usize,
+    gifs: usize,
+    gif_bytes: u64,
+    /// Story moments drawn, the scenes with any, the scenes capped.
+    moments: [usize; 3],
+}
+
+#[cfg(feature = "render")]
+impl Outcome {
+    fn add(&mut self, context: places::Context) {
+        self.rows.extend(context.rows.iter().map(|r| (r.file.clone(), r.line())));
+        self.skipped.extend(context.skipped);
+        self.cleared.extend(context.cleared);
+        self.bytes += context.bytes;
+        self.images += context.images;
+        self.gifs += context.gifs;
+        self.gif_bytes += context.gif_bytes;
+        for (total, n) in self.moments.iter_mut().zip([context.moments, context.moment_scenes, context.capped]) {
             *total += n;
         }
-        cleared.extend(c);
-        rows.extend(r);
-        skipped.extend(s);
-        bytes += b;
-        images += i;
-        gifs += g;
-        gif_bytes += gb;
     }
-    if kind == "place" {
+
+    /// The part file's records: `row`, `skip`, `clear` and one `count`.
+    fn records(&self) -> Vec<String> {
+        let mut records: Vec<String> = self.rows.iter().map(|(_, line)| format!("row\t{line}")).collect();
+        records.extend(self.skipped.iter().map(|s| format!("skip\t{}\t{}\t{}", s.scene, s.what, s.reason)));
+        records.extend(self.cleared.iter().map(|(scene, what)| format!("clear\t{scene}\t{what}")));
+        let [m, s, c] = self.moments;
+        records.push(format!("count\t{}\t{}\t{}\t{}\t{m}\t{s}\t{c}", self.bytes, self.images, self.gifs, self.gif_bytes));
+        records
+    }
+
+    fn read(&mut self, records: &[String]) {
+        for record in records {
+            let fields: Vec<&str> = record.splitn(4, '\t').collect();
+            match fields[..] {
+                ["row", ..] => {
+                    let line = &record["row\t".len()..];
+                    self.rows.push((line.rsplit('\t').next().unwrap_or_default().to_string(), line.to_string()));
+                }
+                ["skip", scene, what, reason] => {
+                    self.skipped.push(places::Skip { scene: scene.to_string(), what: what.to_string(), reason: reason.to_string() })
+                }
+                ["clear", scene, what] => self.cleared.push((scene.to_string(), what.to_string())),
+                ["count", ..] => {
+                    let n: Vec<u64> = record.split('\t').skip(1).map(|n| n.parse().unwrap_or(0)).collect();
+                    if let [bytes, images, gifs, gif_bytes, m, s, c] = n[..] {
+                        self.bytes += bytes;
+                        self.images += images as usize;
+                        self.gifs += gifs as usize;
+                        self.gif_bytes += gif_bytes;
+                        for (total, n) in self.moments.iter_mut().zip([m, s, c]) {
+                            *total += n as usize;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+/// Plays the scenes asked for, in this process or split across --jobs
+/// children, and writes index.tsv, skipped.tsv and for places
+/// variant-flags.tsv; a child writes its part instead.
+#[cfg(feature = "render")]
+fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &jobs::Jobs, arguments: &[String]) -> Result<(), String> {
+    let started = std::time::Instant::now();
+    std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+    // A place's work is a scene, an event's the scenes of one overlay
+    // (an event plays at every scene its row lists).
+    let mut units: BTreeMap<String, Vec<&story::Scene>> = BTreeMap::new();
+    let mut order = Vec::new();
+    for s in r.chosen {
+        let key = share_key(r.kind, s);
+        if !units.contains_key(&key) {
+            order.push(key.clone());
+        }
+        units.entry(key).or_default().push(*s);
+    }
+    if r.kind == "event" {
+        order.sort();
+    }
+    let candidates = places::variant_candidates(r.events, r.flags);
+    let mut outcome = Outcome::default();
+    let mut failed = Vec::new();
+    let mut processes = 1;
+    if jobs.split(order.len()) {
+        // Each child gets about as much work: a place its story moments, an
+        // overlay its events.
+        let items: Vec<(String, u64)> = order
+            .iter()
+            .map(|key| {
+                let scenes = &units[key];
+                let weight = if r.kind == "place" {
+                    candidates.get(&scenes[0].number).map_or(0, |list| list.len().min(places::MAX_MOMENTS))
+                } else {
+                    r.events
+                        .iter()
+                        .filter(|e| r.wanted.is_empty() || r.wanted.iter().any(|w| *w == e.name))
+                        .filter(|e| e.scenes.iter().any(|n| scenes.iter().any(|s| s.number == *n)))
+                        .filter(|e| r.only.is_empty() || e.scenes.iter().any(|n| r.only.contains(n)))
+                        .count()
+                };
+                (key.clone(), 1 + weight as u64)
+            })
+            .collect();
+        let groups = jobs::deal(&items, jobs.count);
+        processes = groups.len();
+        let rom_path = root.join("out").join(edition).join(format!("{edition}.gba"));
+        let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
+        note_modified(root, edition, &rom);
+        let (parts, f) = jobs::run(r.kind, arguments, &groups)?;
+        for part in &parts {
+            outcome.read(part);
+        }
+        failed = f;
+    } else {
+        let jobs_in_order: Vec<Vec<&story::Scene>> = order.iter().map(|key| units[key].clone()).collect();
+        record_scenes(root, edition, r, &jobs_in_order, out, jobs.child(), &mut outcome)?;
+        if let Some(part) = &jobs.part {
+            return jobs::write_part(part, &outcome.records());
+        }
+    }
+    if r.kind == "place" {
         eprintln!(
             "{} story moments drawn in {} scenes; {} scenes hit the cap of {} moments (skipped.tsv)",
-            moments[0],
-            moments[1],
-            moments[2],
+            outcome.moments[0],
+            outcome.moments[1],
+            outcome.moments[2],
             places::MAX_MOMENTS
         );
-        let candidates = places::variant_candidates(events, flags);
         let mut text = String::from("scene\tnumber\tflags\n");
         for (number, list) in &candidates {
-            let name = chosen.iter().find(|s| s.number == *number).map_or_else(|| format!("#{number}"), |s| s.name());
+            let name = r.chosen.iter().find(|s| s.number == *number).map_or_else(|| format!("#{number}"), |s| s.name());
             text.push_str(&format!("{name}\t{number}\t{}\n", list.join(", ")));
         }
         let path = out.join("variant-flags.tsv");
         std::fs::write(&path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
     }
-    places::write_index(out, &rows)?;
+    places::write_index(out, &outcome.rows)?;
     let path = out.join("skipped.tsv");
     // The lines already there for other scenes and things are kept.
     let mut lines: BTreeMap<(String, String), String> = BTreeMap::new();
@@ -617,14 +702,14 @@ fn play_scenes(
     }
     // What played this time is no longer left out; a scene whose events
     // were all played again keeps none of its old event lines.
-    for (scene, what) in &cleared {
+    for (scene, what) in &outcome.cleared {
         if what == "event *" {
             lines.retain(|(s, w), _| s != scene || !w.starts_with("event "));
         } else {
             lines.remove(&(scene.clone(), what.clone()));
         }
     }
-    for s in &skipped {
+    for s in &outcome.skipped {
         lines.insert((s.scene.clone(), s.what.clone()), format!("{}\t{}\t{}", s.scene, s.what, s.reason));
     }
     let mut text = String::from("scene\twhat\treason\n");
@@ -634,15 +719,87 @@ fn play_scenes(
     }
     std::fs::write(&path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
     eprintln!(
-        "{} images ({} GIFs, {} KiB), {} KiB, {} left out, in {:.0} s, in {}",
-        images,
-        gifs,
-        gif_bytes.div_ceil(1024),
-        bytes.div_ceil(1024),
-        skipped.len(),
+        "{} images ({} GIFs, {} KiB), {} KiB, {} left out, in {:.0} s from {processes} process{}, in {}",
+        outcome.images,
+        outcome.gifs,
+        outcome.gif_bytes.div_ceil(1024),
+        outcome.bytes.div_ceil(1024),
+        outcome.skipped.len(),
         started.elapsed().as_secs_f64(),
+        if processes == 1 { "" } else { "es" },
         out.display()
     );
+    if failed.is_empty() { Ok(()) } else { Err(failed.join("\n")) }
+}
+
+/// Plays each job (a scene, or the scenes of one overlay) in turn in this
+/// process, each with its own machines.
+#[cfg(feature = "render")]
+fn record_scenes(
+    root: &Path,
+    edition: &str,
+    r: &SceneRequest,
+    jobs: &[Vec<&story::Scene>],
+    out: &Path,
+    child: bool,
+    outcome: &mut Outcome,
+) -> Result<(), String> {
+    let build = root.join("out").join(edition);
+    let map_path = build.join(format!("{edition}.map"));
+    let rom_path = build.join(format!("{edition}.gba"));
+    let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
+    let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+    let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
+    if !child {
+        note_modified(root, edition, &rom);
+    }
+    let symbols = field::Symbols::find(&map)?;
+    // Each scene's functions by name, from its overlay's ELF in the build:
+    // an event named by its function is told from the other rows of its
+    // trigger by that function's address.
+    let mut functions: std::collections::HashMap<u16, std::collections::HashMap<String, u32>> = std::collections::HashMap::new();
+    for s in r.chosen {
+        let Some(id) = s.overlay else {
+            continue;
+        };
+        let path = build.join("overlays").join(format!("resource_{id:03x}.elf"));
+        let Some(elf) = std::fs::read(&path).ok().and_then(|data| crate::elf::Elf::parse(&data).ok()) else {
+            continue;
+        };
+        let named = elf.symbols.iter().filter(|y| y.kind == 2 && !y.name.is_empty()).map(|y| (y.name.clone(), y.value & !1)).collect();
+        functions.insert(s.number, named);
+    }
+    for job in jobs {
+        let mut context = places::Context {
+            rom: &rom,
+            symbols: &symbols,
+            flags: r.flags,
+            events: r.events,
+            out: out.to_path_buf(),
+            rows: Vec::new(),
+            skipped: Vec::new(),
+            bytes: 0,
+            images: 0,
+            gifs: 0,
+            gif_bytes: 0,
+            wanted: r.wanted,
+            only: r.only,
+            cleared: Vec::new(),
+            functions: &functions,
+            moments: 0,
+            moment_scenes: 0,
+            capped: 0,
+        };
+        if r.kind == "place" {
+            for scene in job {
+                context.place(scene);
+            }
+        } else {
+            context.events(job);
+        }
+        eprintln!("{}: {} images", job.iter().map(|s| s.name()).collect::<Vec<_>>().join(", "), context.images);
+        outcome.add(context);
+    }
     Ok(())
 }
 
@@ -738,7 +895,7 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
 }
 
 const GUIDE_USAGE: &str = "usage: alchemy-devtools render guide --flags flags.tsv [--only NAME]... [--cast NAME]...
-         [--out DIR] [--edition tbs-en]
+         [--out DIR] [--edition tbs-en] [--jobs N]
 Plays a built ☀️ edition (make tbs-en) with the pad held as a player would,
 for the folder guides, and writes into DIR (default out/EDITION/guide):
   walk        walk-run.gif: Vale, walking right, then running back with B
@@ -768,15 +925,18 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
   world-map-picture
               world-map-picture.gif: the world map's still picture (R)
   overlay     overlay.gif: walking into the Sanctum beside the overlay area
---only picks some; flags.tsv is the story tools' flag names.";
+--only picks some; flags.tsv is the story tools' flag names. --jobs N plays the
+modes, and field-psynergy's casts one by one, in N processes of this program
+(default: the number of CPUs; 1 plays them here), joining their index.tsv rows.";
 
 
 fn guide_pictures(arguments: &[String]) -> Result<(), String> {
     let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
     let mut casts = Vec::new();
-    let mut arguments = arguments.iter();
-    while let Some(argument) = arguments.next() {
-        let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{GUIDE_USAGE}"));
+    let mut jobs = jobs::Jobs::new();
+    let mut options = arguments.iter();
+    while let Some(argument) = options.next() {
+        let mut value = |name: &str| options.next().cloned().ok_or_else(|| format!("{name} needs a value\n{GUIDE_USAGE}"));
         match argument.as_str() {
             "-h" | "--help" => {
                 println!("{GUIDE_USAGE}");
@@ -787,48 +947,136 @@ fn guide_pictures(arguments: &[String]) -> Result<(), String> {
             "--out" => out = Some(PathBuf::from(value("--out")?)),
             "--edition" => edition = value("--edition")?,
             "--flags" => flags_tsv = Some(PathBuf::from(value("--flags")?)),
-            other => return Err(format!("unexpected argument {other:?}\n{GUIDE_USAGE}")),
+            other => {
+                if !jobs.option(other, &mut value)? {
+                    return Err(format!("unexpected argument {other:?}\n{GUIDE_USAGE}"));
+                }
+            }
         }
     }
     let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{GUIDE_USAGE}"))?)?;
     let root = crate::compile::root();
     let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("guide"));
-    play_guide(root, &edition, &only, &casts, &flags, &out)
+    play_guide(root, &edition, &only, &casts, &flags, &out, &jobs, arguments)
 }
 
 #[cfg(not(feature = "render"))]
-fn play_guide(_: &Path, _: &str, _: &[String], _: &[String], _: &story::Flags, _: &Path) -> Result<(), String> {
+#[allow(clippy::too_many_arguments)]
+fn play_guide(_: &Path, _: &str, _: &[String], _: &[String], _: &story::Flags, _: &Path, _: &jobs::Jobs, _: &[String]) -> Result<(), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
 }
 
+/// The prefix of a share key that names one field Psynergy cast.
 #[cfg(feature = "render")]
-fn play_guide(root: &Path, edition: &str, only: &[String], casts: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
-    let build = root.join("out").join(edition);
-    let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
-    let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
-    let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
-    note_modified(root, edition, &rom);
-    let symbols = field::Symbols::find(&map)?;
-    std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    let preset = map.symbol("DebugParty_LoadPreset").map_or(0, |(_, a)| a & !1);
-    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new(), preset };
+const FIELD_CAST_KEY: &str = "field-psynergy=";
+
+#[cfg(feature = "render")]
+#[allow(clippy::too_many_arguments)]
+fn play_guide(
+    root: &Path,
+    edition: &str,
+    only: &[String],
+    casts: &[String],
+    flags: &story::Flags,
+    out: &Path,
+    jobs: &jobs::Jobs,
+    arguments: &[String],
+) -> Result<(), String> {
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
-    let mut failed = Vec::new();
-    for &name in guide::MODES {
-        if wanted(name) {
-            let result = guide.run(name, casts);
-            if let Err(e) = result {
-                eprintln!("{name}: {e}");
-                failed.push(name);
-            }
+    // The work in pieces: each mode, and field-psynergy's casts one by one.
+    let mut units: Vec<String> = Vec::new();
+    for &name in guide::MODES.iter().filter(|&&name| wanted(name)) {
+        if name == "field-psynergy" {
+            let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
+            units.extend(guide::field_cast_names().into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
+        } else {
+            units.push(name.to_string());
         }
     }
-    for (file, bytes, what) in &guide.written {
+    let mut written: Vec<(String, u64, String)> = Vec::new();
+    let mut rows: Vec<String> = Vec::new();
+    let mut failed: Vec<String> = Vec::new();
+    let mut children_failed = Vec::new();
+    if jobs.split(units.len()) {
+        let items: Vec<(String, u64)> = units.iter().map(|u| (u.clone(), 1)).collect();
+        let groups = jobs::deal(&items, jobs.count);
+        let rom = std::fs::read(root.join("out").join(edition).join(format!("{edition}.gba")))
+            .map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
+        note_modified(root, edition, &rom);
+        std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+        let (parts, f) = jobs::run("guide", arguments, &groups)?;
+        children_failed = f;
+        for record in parts.iter().flatten() {
+            match record.split_once('\t') {
+                Some(("written", rest)) => {
+                    let fields: Vec<&str> = rest.splitn(3, '\t').collect();
+                    if let [file, bytes, what] = fields[..] {
+                        written.push((file.to_string(), bytes.parse().unwrap_or(0), what.to_string()));
+                    }
+                }
+                Some(("cast", line)) => rows.push(line.to_string()),
+                Some(("failed", name)) => failed.push(name.to_string()),
+                _ => {}
+            }
+        }
+        // Failures in the order the modes play.
+        failed.sort_by_key(|name| guide::MODES.iter().position(|m| m == name));
+        failed.dedup();
+    } else {
+        let build = root.join("out").join(edition);
+        let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
+        let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+        let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
+        if !jobs.child() {
+            note_modified(root, edition, &rom);
+        }
+        let symbols = field::Symbols::find(&map)?;
+        std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+        let preset = map.symbol("DebugParty_LoadPreset").map_or(0, |(_, a)| a & !1);
+        let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new(), preset };
+        // A child plays the modes and casts of its share.
+        let mine = |unit: &str| !jobs.child() || jobs.share.iter().any(|s| s == unit);
+        let child_casts: Vec<String> =
+            jobs.share.iter().filter_map(|s| s.strip_prefix(FIELD_CAST_KEY)).map(str::to_string).collect();
+        for &name in guide::MODES {
+            if !wanted(name) {
+                continue;
+            }
+            let result = if name == "field-psynergy" && jobs.child() {
+                if child_casts.is_empty() {
+                    continue;
+                }
+                guide.run(name, &child_casts)
+            } else if mine(name) {
+                guide.run(name, casts)
+            } else {
+                continue;
+            };
+            if let Err(e) = result {
+                eprintln!("{name}: {e}");
+                failed.push(name.to_string());
+            }
+        }
+        written = guide.written;
+        rows = guide.casts;
+        if let Some(part) = &jobs.part {
+            let mut records: Vec<String> =
+                written.iter().map(|(file, bytes, what)| format!("written\t{file}\t{bytes}\t{what}")).collect();
+            records.extend(rows.iter().map(|line| format!("cast\t{line}")));
+            records.extend(failed.iter().map(|name| format!("failed\t{name}")));
+            return jobs::write_part(part, &records);
+        }
+    }
+    for (file, bytes, what) in &written {
         eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
     }
-    if !guide.casts.is_empty() {
-        let rows = guide.casts.iter().filter_map(|line| Some(Row { id: line.split('\t').next()?.parse().ok()?, line: line.clone() })).collect();
+    if !rows.is_empty() {
+        let rows = rows.iter().filter_map(|line| Some(Row { id: line.split('\t').next()?.parse().ok()?, line: line.clone() })).collect();
         write_index(&out.join("index.tsv"), rows)?;
     }
-    if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
+    let mut problems = children_failed;
+    if !failed.is_empty() {
+        problems.insert(0, format!("{} failed", failed.join(", ")));
+    }
+    if problems.is_empty() { Ok(()) } else { Err(problems.join("\n")) }
 }
