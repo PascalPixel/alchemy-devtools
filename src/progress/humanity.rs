@@ -94,6 +94,9 @@ pub struct Report {
     pub places: Vec<(String, String)>,
     /// The provenance checks, when the game has its English text.
     pub provenance: Option<Analysis>,
+    /// Object-like macros whose value is a number or a simple sum, for the
+    /// tables' first numbers (`ENEMY_CLASS_FIRST`).
+    pub macro_values: HashMap<String, i64>,
     function_bodies: HashMap<String, Group>,
     table_bodies: HashMap<String, Group>,
 }
@@ -265,6 +268,61 @@ pub fn is_magic(literal: &str) -> bool {
     digits.parse::<u64>().is_ok_and(|value| value >= 10)
 }
 
+/// A C integer literal's value, suffixes aside.
+fn literal(text: &str) -> Option<i64> {
+    let digits = text.trim_end_matches(['u', 'U', 'l', 'L']);
+    match digits.strip_prefix("0x").or_else(|| digits.strip_prefix("0X")) {
+        Some(hex) => i64::from_str_radix(hex, 16).ok(),
+        None if digits.len() > 1 && digits.starts_with('0') => i64::from_str_radix(&digits[1..], 8).ok(),
+        None => digits.parse().ok(),
+    }
+}
+
+/// The value of an enumerator's or macro's tokens, when they are numbers and
+/// known names joined by `+`, `-`, `|`, `*` and `<<` in parentheses or not;
+/// anything else (a cast, a call) is unknown.
+fn evaluate(words: &[&str], lookup: &dyn Fn(&str) -> Option<i64>) -> Option<i64> {
+    fn sum(words: &[&str], at: &mut usize, lookup: &dyn Fn(&str) -> Option<i64>) -> Option<i64> {
+        let mut value = product(words, at, lookup)?;
+        while let Some(&op) = words.get(*at).filter(|w| matches!(**w, "+" | "-" | "|")) {
+            *at += 1;
+            let right = product(words, at, lookup)?;
+            value = match op {
+                "+" => value.checked_add(right)?,
+                "-" => value.checked_sub(right)?,
+                _ => value | right,
+            };
+        }
+        Some(value)
+    }
+    fn product(words: &[&str], at: &mut usize, lookup: &dyn Fn(&str) -> Option<i64>) -> Option<i64> {
+        let mut value = factor(words, at, lookup)?;
+        while let Some(&op) = words.get(*at).filter(|w| matches!(**w, "*" | "<<")) {
+            *at += 1;
+            let right = factor(words, at, lookup)?;
+            value = if op == "*" { value.checked_mul(right)? } else { value.checked_shl(u32::try_from(right).ok()?)? };
+        }
+        Some(value)
+    }
+    fn factor(words: &[&str], at: &mut usize, lookup: &dyn Fn(&str) -> Option<i64>) -> Option<i64> {
+        let word = *words.get(*at)?;
+        *at += 1;
+        match word {
+            "(" => {
+                let value = sum(words, at, lookup)?;
+                (words.get(*at) == Some(&")")).then(|| *at += 1)?;
+                Some(value)
+            }
+            "-" => factor(words, at, lookup)?.checked_neg(),
+            _ if word.starts_with(|c: char| c.is_ascii_digit()) => literal(word),
+            _ => lookup(word),
+        }
+    }
+    let mut at = 0;
+    let value = sum(words, &mut at, lookup)?;
+    (at == words.len()).then_some(value)
+}
+
 fn is_keyword(text: &str) -> bool {
     KEYWORDS.contains(&text)
 }
@@ -376,16 +434,25 @@ struct Walk<'r, 'a> {
     enum_docs: HashMap<usize, String>,
     /// Game-thing names this file has defined.
     defined: BTreeSet<String>,
+    /// Each enum's tag and the value its next enumerator takes, by its brace.
+    enum_next: HashMap<usize, (Option<String>, Option<i64>)>,
+    /// This file's enumerators with known values.
+    enum_values: HashMap<String, i64>,
 }
+
+/// An enumerator's tag and value, where known.
+type Enumerated = (Option<String>, Option<i64>);
 
 impl<'r, 'a> Walk<'r, 'a> {
     /// Keep a definition whose name may name a game thing, once per file.
-    fn thing(&mut self, name: &str, origin: Origin, line: usize, own: String, context: String) {
+    fn thing(&mut self, name: &str, origin: Origin, line: usize, own: String, context: String, enumerated: Enumerated) {
         let Some(kind) = provenance::kind(name, self.file, origin) else { return };
         if !self.defined.insert(name.to_string()) {
             return;
         }
-        self.report.things.push(Thing { name: name.to_string(), kind, file: self.file.to_string(), line, own, context });
+        let (tag, value) = enumerated;
+        let file = self.file.to_string();
+        self.report.things.push(Thing { name: name.to_string(), kind, file, line, own, context, tag, value });
     }
 
     /// An enumerator at `at`: its own comment and notes, up to its `,` or `}`.
@@ -410,7 +477,23 @@ impl<'r, 'a> Walk<'r, 'a> {
         let context = self.open.last().and_then(|open| self.enum_docs.get(open)).cloned().unwrap_or_default();
         let token = &self.code.tokens[at];
         let (name, line) = (token.text, token.line);
-        self.thing(name, Origin::Enumerator, line, own, context);
+        // Its value: what follows `=`, or one past the enumerator before it.
+        let (tag, next) = self.open.last().and_then(|open| self.enum_next.get(open)).cloned().unwrap_or_default();
+        let value = if self.code.tokens.get(at + 1).is_some_and(|t| t.text == "=") {
+            let last = if self.code.text(end) == "," { end } else { end + 1 };
+            let words: Vec<&str> = (at + 2..last).map(|t| self.code.text(t)).collect();
+            let (values, macros) = (&self.enum_values, &self.report.macro_values);
+            evaluate(&words, &|name| values.get(name).or_else(|| macros.get(name)).copied())
+        } else {
+            next
+        };
+        if let Some(value) = value {
+            self.enum_values.insert(name.to_string(), value);
+        }
+        if let Some(&open) = self.open.last() {
+            self.enum_next.insert(open, (tag.clone(), value.map(|value| value + 1)));
+        }
+        self.thing(name, Origin::Enumerator, line, own, context, (tag, value));
     }
 
     fn name(&mut self, name: &str, line: usize) {
@@ -515,7 +598,14 @@ impl<'r, 'a> Walk<'r, 'a> {
                     let documented = self.code.doc_before[start] || (start..=end).any(|at| self.code.doc_after[at]);
                     self.macros.entry(name.text.to_string()).or_insert((false, line)).0 |= documented;
                     let own = self.code.doc_text[start].clone() + &self.code.notes(start, end);
-                    self.thing(name.text, Origin::Macro, line, own, String::new());
+                    self.thing(name.text, Origin::Macro, line, own, String::new(), (None, None));
+                    if !function_like {
+                        let words: Vec<&str> = (start + 3..end).map(|t| self.code.text(t)).collect();
+                        let macros = &self.report.macro_values;
+                        if let Some(value) = evaluate(&words, &|name| macros.get(name).copied()) {
+                            self.report.macro_values.insert(name.text.to_string(), value);
+                        }
+                    }
                 }
             }
             _ => {}
@@ -583,6 +673,13 @@ impl<'r, 'a> Walk<'r, 'a> {
                         if let Some(&first) = self.statement.first() {
                             self.enum_docs.insert(at, self.code.doc_text[first].clone());
                         }
+                        // `enum Tag {`.
+                        let tag = prev2
+                            .filter(|&p| self.code.text(p) == "enum")
+                            .and(prev)
+                            .filter(|&p| self.code.tokens[p].kind == Kind::Ident)
+                            .map(|p| self.code.text(p).to_string());
+                        self.enum_next.insert(at, (tag, Some(0)));
                     }
                     self.stack.push(kind);
                     self.open.push(at);
@@ -676,7 +773,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 self.report.declare(true, &name, file, line, documented, true);
                 self.duplicate(true, open, &name);
                 let own = self.code.doc_text[first].clone();
-                self.thing(&name, Origin::Function, line, own, String::new());
+                self.thing(&name, Origin::Function, line, own, String::new(), (None, None));
             }
             return;
         }
@@ -702,7 +799,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 // (`extern char SceneId_Vale;`) where it is declared.
                 if defined || provenance::kind(&name, file, Origin::Global) != Some("global") {
                     let own = self.code.doc_text[first].clone() + &self.code.notes(last, last);
-                    self.thing(&name, Origin::Global, line, own, String::new());
+                    self.thing(&name, Origin::Global, line, own, String::new(), (None, None));
                 }
                 if let Some(&(open, _)) = opened.iter().find(|(_, kind)| *kind == Brace::Init) {
                     self.duplicate(false, open, &name);
@@ -835,6 +932,8 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         macros: BTreeMap::new(),
         enum_docs: HashMap::new(),
         defined: BTreeSet::new(),
+        enum_next: HashMap::new(),
+        enum_values: HashMap::new(),
     };
     walk.walk();
 }
@@ -863,15 +962,23 @@ impl Report {
         // A scene id is declared once for the game, wherever it is repeated.
         let mut scenes = BTreeSet::new();
         self.things.retain(|thing| thing.kind != "scene" || scenes.insert(thing.name.clone()));
-        let analysis = provenance::analyze(&self.things, &self.places, text);
+        let analysis = provenance::analyze(&self.things, &self.places, text, &self.macro_values);
         for row in &analysis.rows {
             let (file, line, name) = (&row.thing.file, row.thing.line, &row.thing.name);
             if let Some(evidence) = &row.evidence {
                 self.note("provenance_names", file, line, name);
-                self.note(evidence.metric(), file, line, name);
+                match evidence {
+                    provenance::Evidence::Mismatch { game, .. } => {
+                        self.note(evidence.metric(), file, line, &format!("{name}\t{game}"))
+                    }
+                    _ => self.note(evidence.metric(), file, line, name),
+                }
             }
             if !row.words.is_empty() {
                 self.note("unused_word_name", file, line, name);
+            }
+            if !row.door_words.is_empty() {
+                self.note("door_word_link", file, line, &format!("{name}\t{}", row.door_words.join(",")));
             }
         }
         self.provenance = Some(analysis);
@@ -960,19 +1067,25 @@ const ROWS: &[(&str, &str)] = &[
     ("duplicate_table_copies", "  copies past the first"),
     ("provenance_names", "game-thing names"),
     ("provenance_verified", "  verified by a ★ line"),
+    ("provenance_table", "  verified by table"),
+    ("provenance_rooms", "  verified by rooms"),
+    ("provenance_table_mismatch", "  table name differs"),
     ("provenance_unstarred", "  evidence line without its ★"),
     ("provenance_failed", "  evidence line failing check"),
     ("provenance_prose", "  evidence in prose only"),
     ("provenance_none", "  no evidence"),
     ("unused_words", "words the game never uses"),
     ("unused_word_name", "  names using them"),
+    ("door_words", "door words unresolved"),
+    ("door_word_link", "  links using them"),
 ];
 
 /// Metrics whose top files are listed.
 const LISTED: &[&str] = &[
     "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "goto", "if_language", "if_patch",
     "if_in_function", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
-    "undocumented_global", "provenance_none", "provenance_prose", "unused_word_name",
+    "undocumented_global", "provenance_none", "provenance_prose", "provenance_table_mismatch", "unused_word_name",
+    "door_word_link",
 ];
 
 impl Report {
@@ -987,6 +1100,7 @@ impl Report {
             "duplicate_table" => self.table_groups.len() as u64,
             "duplicate_table_copies" => Report::copies(&self.table_groups) as u64,
             "unused_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.words.len() as u64),
+            "door_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.door_words.len() as u64),
             _ => self.total(metric),
         }
     }
@@ -1037,6 +1151,9 @@ pub fn tsv(games: &[(&str, &Report)]) -> String {
         }
         for (word, rows) in report.provenance.iter().flat_map(|analysis| analysis.words.iter()).take(TOP) {
             let _ = writeln!(text, "{game}\tunused_word\t{word}\t{}", rows.len());
+        }
+        for (word, rows) in report.provenance.iter().flat_map(|analysis| analysis.door_words.iter()).take(TOP) {
+            let _ = writeln!(text, "{game}\tdoor_word\t{word}\t{}", rows.len());
         }
     }
     text
@@ -1103,6 +1220,12 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
                     let _ = writeln!(text, "  {:>6}  {word}  {}", rows.len(), analysis.rows[rows[0]].thing.name);
                 }
             }
+            if let Some(analysis) = report.provenance.as_ref().filter(|analysis| !analysis.door_words.is_empty()) {
+                let _ = writeln!(text, "{game} door_word (links, first):");
+                for (word, rows) in analysis.door_words.iter().take(top) {
+                    let _ = writeln!(text, "  {:>6}  {word}  {}", rows.len(), analysis.rows[rows[0]].thing.name);
+                }
+            }
         }
     }
     text
@@ -1113,11 +1236,12 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
 pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
     let mut text = String::new();
     for (game, report) in games {
-        if metric == "provenance" || metric == "unused_word" {
+        if metric == "provenance" || metric == "unused_word" || metric == "door_word" {
             let Some(analysis) = &report.provenance else { continue };
-            if metric == "unused_word" {
-                // Each flagged word, how many names use it and where.
-                for (word, rows) in &analysis.words {
+            if metric != "provenance" {
+                // Each flagged or unresolved word, how many names use it and where.
+                let words = if metric == "unused_word" { &analysis.words } else { &analysis.door_words };
+                for (word, rows) in words {
                     let uses: Vec<String> = rows
                         .iter()
                         .map(|&at| {
@@ -1136,7 +1260,10 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
                 }
                 let thing = &row.thing;
                 let words = if row.words.is_empty() { "-".to_string() } else { row.words.join(",") };
-                let evidence = row.evidence.as_ref().map_or("-".to_string(), |evidence| evidence.describe());
+                let mut evidence = row.evidence.as_ref().map_or("-".to_string(), |evidence| evidence.describe());
+                if !row.door_words.is_empty() {
+                    let _ = write!(evidence, "; door: {}", row.door_words.join(","));
+                }
                 let _ = writeln!(text, "{game}\t{}\t{}\t{}:{}\t{words}\t{evidence}", thing.name, thing.kind, thing.file, thing.line);
             }
             continue;
@@ -1414,5 +1541,57 @@ mod provenance_tests {
         let tsv = tsv(&[("tbs", &report)]);
         assert!(tsv.contains("tbs\tunused_word\twarehouse\t3\n"));
         assert!(game(files).provenance.is_none(), "no text, no check");
+    }
+
+    #[test]
+    fn enumerator_values_and_table_names() {
+        let words = |text: &str| text.split(' ').map(str::to_string).collect::<Vec<_>>();
+        let lookup = |name: &str| (name == "FIRST").then_some(8);
+        let value = |text: &str| evaluate(&words(text).iter().map(String::as_str).collect::<Vec<_>>(), &lookup);
+        assert_eq!(value("0x1a"), Some(26));
+        assert_eq!(value("( FIRST + 2 ) * 3"), Some(30));
+        assert_eq!(value("1 << 4 | 1"), Some(17));
+        assert_eq!(value("- 1"), Some(-1));
+        assert_eq!(value("( u8 ) 3"), None, "a cast is unknown");
+        assert_eq!(value("FIRST +"), None);
+        let po = concat!(
+            "msgctxt \"MsgEnemyName\"\nmsgid \"00655\"\nmsgstr \"???\"\n\n",
+            "msgctxt \"message\"\nmsgid \"00656\"\nmsgstr \"Vermin\"\n\n",
+            "msgctxt \"message\"\nmsgid \"00657\"\nmsgstr \"Vermin\"\n\n",
+            "msgctxt \"message\"\nmsgid \"00658\"\nmsgstr \"Mad Vermin\"\n",
+        );
+        let text = GameText::parse(po, None);
+        let header = concat!(
+            "/// The first class id.\n#define ENEMY_CLASS_FIRST 8\n",
+            "/// Classes.\nenum EnemyClassId {\n",
+            "  ENEMY_VERMIN = ENEMY_CLASS_FIRST + 1,\n  ENEMY_VERMIN_2,\n  ENEMY_RAT = 0xb, ///< a rat\n};\n",
+            "enum { ENEMY_NOT_IN_A_TABLE = 9 };\n",
+        );
+        let report = game_with_text([("games/tbs/include/enemy_ids.h", header)], Some(&text));
+        let values: Vec<(Option<&str>, Option<i64>)> =
+            report.things.iter().map(|thing| (thing.tag.as_deref(), thing.value)).collect();
+        assert_eq!(values, [(None, None), (Some("EnemyClassId"), Some(9)), (Some("EnemyClassId"), Some(10)), (Some("EnemyClassId"), Some(11)), (None, Some(9))]);
+        assert_eq!(report.macro_values.get("ENEMY_CLASS_FIRST"), Some(&8));
+        assert_eq!(report.value("provenance_table"), 2, "ENEMY_VERMIN and ENEMY_VERMIN_2");
+        assert_eq!(report.value("provenance_table_mismatch"), 1);
+        assert_eq!(list(&[("tbs", &report)], "provenance_table_mismatch"), "tbs\tgames/tbs/include/enemy_ids.h:7\tENEMY_RAT\tMad Vermin\n");
+        let worklist = list(&[("tbs", &report)], "provenance");
+        assert!(worklist.contains("\tENEMY_VERMIN_2\tenemy\tgames/tbs/include/enemy_ids.h:6\tenemy\ttable MsgEnemyName+2 numbered\n"), "{worklist}");
+    }
+
+    #[test]
+    fn door_words_in_the_report() {
+        let po = "msgctxt \"MsgDebugEntryName\"\nmsgid \"00001\"\nmsgstr \"Tolbi\"\n";
+        let text = GameText::parse(po, Some(1));
+        let ids = "/// ★ Named from its area name: Tolbi\nextern char SceneId_Tolbi;\n";
+        let links = "enum {\n  TOLBI_FROM_WORLD_MAP_NORTH = 1,\n  TOLBI_FROM_HOUSE = 2,\n  TOLBI_TO_HOUSE = 3,\n};\n";
+        let files = [("games/tbs/include/scene_ids.h", ids), ("games/tbs/include/scene_links.h", links)];
+        let report = game_with_text(files, Some(&text));
+        assert_eq!(report.value("provenance_rooms"), 0, "WORLD_MAP is no scene here");
+        assert_eq!((report.value("door_words"), report.value("door_word_link")), (3, 3), "world, map and house; north is a door word");
+        assert_eq!(list(&[("tbs", &report)], "door_word").lines().next(), Some("tbs\thouse\t2\tTOLBI_FROM_HOUSE games/tbs/include/scene_links.h:3; TOLBI_TO_HOUSE games/tbs/include/scene_links.h:4"));
+        let worklist = list(&[("tbs", &report)], "provenance");
+        assert!(worklist.contains("\tTOLBI_TO_HOUSE\tlink\tgames/tbs/include/scene_links.h:4\tto,house\tnone; door: house\n"), "{worklist}");
+        assert!(tsv(&[("tbs", &report)]).contains("tbs\tdoor_word\thouse\t2\n"));
     }
 }
