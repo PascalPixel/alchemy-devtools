@@ -427,16 +427,14 @@ impl Context<'_> {
                 continue;
             };
             let label = format!("event {}", event.name);
-            let trigger = match (&event.trigger, event.messages.is_empty()) {
-                (_, true) => {
-                    self.skip(first, &label, "no message".to_string());
-                    continue;
-                }
-                (Err(reason), _) => {
+            // An event with no message (a push, a door) plays too: its GIF
+            // runs until the field loop takes over again.
+            let trigger = match &event.trigger {
+                Err(reason) => {
                     self.skip(first, &label, reason.clone());
                     continue;
                 }
-                (Ok(t), _) => *t,
+                Ok(t) => *t,
             };
             let (mut set, mut clear) = (Vec::new(), Vec::new());
             let mut unknown = None;
@@ -579,14 +577,14 @@ impl Context<'_> {
             };
             p.placement += 1;
             let run = match field.event(&entered, p.trigger, start, &p.event.messages, MAX_PAGES, Some(EVENT_CAP)) {
-                Ok(run) if run.pages.is_empty() => {
+                Ok(run) if run.pages.is_empty() && !p.event.messages.is_empty() => {
                     p.error = "no page waited for the button".to_string();
                     continue;
                 }
                 // Another event played (a search of what stood there, or
                 // someone else's talk): none of this event's messages showed.
                 // Try the next place around the actor, then the next entrance.
-                Ok(run) if !run.pages.iter().any(|page| page.message.is_some()) => {
+                Ok(run) if !p.event.messages.is_empty() && !run.pages.iter().any(|page| page.message.is_some()) => {
                     p.error = "another event played instead".to_string();
                     continue;
                 }
