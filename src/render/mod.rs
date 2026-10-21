@@ -16,6 +16,8 @@ mod front;
 #[cfg(feature = "render")]
 mod guide;
 #[cfg(feature = "render")]
+mod guide_more;
+#[cfg(feature = "render")]
 mod mgba;
 #[cfg(feature = "render")]
 mod places;
@@ -735,15 +737,39 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
 }
 
-const GUIDE_USAGE: &str = "usage: alchemy-devtools render guide --flags flags.tsv [--only NAME]... [--out DIR] [--edition tbs-en]
+const GUIDE_USAGE: &str = "usage: alchemy-devtools render guide --flags flags.tsv [--only NAME]... [--cast NAME]...
+         [--out DIR] [--edition tbs-en]
 Plays a built ☀️ edition (make tbs-en) with the pad held as a player would,
 for the folder guides, and writes into DIR (default out/EDITION/guide):
-  walk       walk-run.gif: Vale, walking right, then running back with B
-  snow       snow.gif: Imil, the leader's footprints in the snow
-  layers     layers.gif: Vale built up layer by layer, BG3 to BG1
-  layers-3d  layers-3d.gif: Vale's layers pulled apart into sheets in 3D
-  world-map  world-map-walk.gif: the world map's perspective view, walking
+  walk        walk-run.gif: Vale, walking right, then running back with B
+  snow        snow.gif: Imil, the leader's footprints in the snow
+  layers      layers.gif: Vale built up layer by layer, BG3 to BG1
+  layers-3d   layers-3d.gif: Vale's layers pulled apart into sheets in 3D
+  world-map   world-map-walk.gif: the world map's perspective view, walking
+  menus, menu-start, items, boot
+              the field menu, Start closing it, the Item screen, power-on
+  field-psynergy
+              <name>.gif for Reveal, Move, Avoid, Mind Read, Catch, Retreat,
+              Force, Lift, Carry, Cloak and Halt, each cast where a scene
+              answers it, with their rows in DIR/index.tsv (--cast picks some)
+  talk        talk.gif and window-open.png: a villager's message window
+  djinn-room  djinn-room.gif: Flint given out in the Djinn test room
+  shop, inn   shop.gif and inn.gif: Bilibin's item shop and inn
+  menu-psynergy
+              menu-psynergy.gif: Move chosen from the menu, then cast
+  credits     credits.gif and credits-layers.png: the credits' crossfade
+  sleep       sleep.gif: L and R held until the screen turns white
+  oam         oam.png: a frame's sprite list entries outlined
+  vram        vram.png: video memory as tiles, and the palettes
+  cells       cells.png: a screen's ground cells, collision and heights
+  grid        grid.png: a map's whole cell grid and its layers' windows
+  random-battle
+              random-battle.gif: walking until a random battle opens
+  world-map-picture
+              world-map-picture.gif: the world map's still picture (R)
+  overlay     overlay.gif: walking into the Sanctum beside the overlay area
 --only picks some; flags.tsv is the story tools' flag names.";
+
 
 fn guide_pictures(arguments: &[String]) -> Result<(), String> {
     let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
@@ -784,7 +810,8 @@ fn play_guide(root: &Path, edition: &str, only: &[String], casts: &[String], fla
     note_modified(root, edition, &rom);
     let symbols = field::Symbols::find(&map)?;
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new() };
+    let preset = map.symbol("DebugParty_LoadPreset").map_or(0, |(_, a)| a & !1);
+    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new(), preset };
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     let mut failed = Vec::new();
     for &name in guide::MODES {

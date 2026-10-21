@@ -41,6 +41,9 @@ pub struct Guide<'a> {
     pub written: Vec<(String, u64, String)>,
     /// Rows of the abilities' index.tsv for the field casts recorded.
     pub casts: Vec<String>,
+    /// DebugParty_LoadPreset, which gives the party a debug preset's levels
+    /// and Psynergy.
+    pub preset: u32,
 }
 
 impl<'a> Guide<'a> {
@@ -69,7 +72,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Holds `keys` for `frames` frames, keeping each picture.
-    fn hold(field: &mut Field, keys: u32, frames: u32, out: &mut Vec<Vec<u16>>) -> Result<(), String> {
+    pub(super) fn hold(field: &mut Field, keys: u32, frames: u32, out: &mut Vec<Vec<u16>>) -> Result<(), String> {
         field.hold(keys);
         for _ in 0..frames {
             field.frames(1)?;
@@ -298,8 +301,8 @@ fn draw_sheets(sheets: &[Vec<Option<u32>>], e: f64) -> Vec<u32> {
 /// A field Psynergy recorded for the abilities' index: its ability id, the
 /// scene it is cast in (scene, entrance), what it is cast at (an actor, or
 /// none for one cast on the area), where the leader stands for an area
-/// cast (pixels, facing), the flags to set, and the frames kept after the
-/// player has control again.
+/// cast (pixels, facing), and the frames kept after the player has control
+/// again.
 struct FieldCast {
     id: u16,
     name: &'static str,
@@ -308,11 +311,7 @@ struct FieldCast {
     actor: Option<u16>,
     target: &'static str,
     stand: Option<(i32, i32, u32)>,
-    set: &'static [&'static str],
     tail: u32,
-    /// Keys held after the tail, each for its frames: Carry's A to drop
-    /// what it holds.
-    after: &'static [(u32, u32)],
 }
 
 /// Facings, 1/65536 turns.
@@ -321,26 +320,19 @@ const FACE_EAST: u32 = 0x0000;
 
 /// Where each field Psynergy that had no recording is cast: on the thing
 /// its scene's event answers, or in the room whose event it changes.
-/// A Psynergy listed more than once is cast at the first place that works.
+/// A Psynergy may be listed more than once, at places tried in turn.
 const FIELD_CASTS: &[FieldCast] = &[
-    FieldCast { id: 144, name: "Reveal", place: (94, 1), scene: "Vale Cave", actor: None, target: "the hidden floor", stand: Some((248, 280, FACE_NORTH)), set: &[], tail: 600, after: &[] },
-    FieldCast { id: 140, name: "Move", place: (4, 1), scene: "Vale", actor: Some(20), target: "a stone pillar", stand: None, set: &[], tail: 40, after: &[] },
-    FieldCast { id: 150, name: "Avoid", place: (27, 0), scene: "Goma Cave", actor: None, target: "the party", stand: None, set: &[], tail: 30, after: &[] },
-    FieldCast { id: 141, name: "Mind Read", place: (4, 1), scene: "Vale", actor: Some(18), target: "Garet's sister", stand: None, set: &[], tail: 20, after: &[] },
-    FieldCast { id: 148, name: "Catch", place: (4, 1), scene: "Vale", actor: Some(26), target: "a Nut", stand: None, set: &[], tail: 30, after: &[] },
-    FieldCast { id: 149, name: "Retreat", place: (27, 0), scene: "Goma Cave", actor: None, target: "the party", stand: None, set: &[], tail: 240, after: &[] },
-    FieldCast { id: 142, name: "Force", place: (72, 0), scene: "Xian", actor: Some(21), target: "the training tree", stand: None, set: &[], tail: 30, after: &[] },
-    FieldCast { id: 143, name: "Lift", place: (158, 0), scene: "Gondowan Cave", actor: Some(11), target: "a boulder", stand: None, set: &[], tail: 30, after: &[] },
-    FieldCast { id: 147, name: "Carry", place: (177, 0), scene: "Babi Lighthouse", actor: Some(12), target: "a stone pillar", stand: None, set: &[], tail: 30, after: &[] },
-    FieldCast { id: 147, name: "Carry", place: (183, 0), scene: "Venus Lighthouse", actor: Some(11), target: "a stone pillar", stand: None, set: &[], tail: 30, after: &[] },
-    FieldCast { id: 147, name: "Carry", place: (173, 0), scene: "Tunnel Ruins", actor: Some(13), target: "a stone block", stand: None, set: &[], tail: 60, after: &[] },
-    FieldCast { id: 147, name: "Carry", place: (186, 0), scene: "Venus Lighthouse", actor: Some(10), target: "a stone pillar", stand: None, set: &[], tail: 30, after: &[] },
-    FieldCast { id: 147, name: "Carry", place: (121, 0), scene: "Crossbone Isle", actor: Some(8), target: "a stone pillar", stand: None, set: &[], tail: 30, after: &[] },
-    FieldCast { id: 146, name: "Cloak", place: (159, 0), scene: "Lunpa Fortress", actor: None, target: "the party", stand: None, set: &[], tail: 120, after: &[] },
-    FieldCast { id: 145, name: "Halt", place: (94, 5), scene: "Vale Cave", actor: Some(8), target: "Kite", stand: Some((792, 256, FACE_NORTH)), set: &[], tail: 60, after: &[] },
-    FieldCast { id: 145, name: "Halt", place: (144, 0), scene: "Colosso", actor: Some(31), target: "the lift operator", stand: None, set: &[], tail: 60, after: &[] },
-    FieldCast { id: 145, name: "Halt", place: (117, 0), scene: "Crossbone Isle", actor: Some(8), target: "a pursuer", stand: None, set: &[], tail: 60, after: &[] },
-    FieldCast { id: 145, name: "Halt", place: (4, 1), scene: "Vale", actor: None, target: "the villagers", stand: None, set: &[], tail: 60, after: &[] },
+    FieldCast { id: 144, name: "Reveal", place: (94, 1), scene: "Vale Cave", actor: None, target: "the hidden floor", stand: Some((248, 280, FACE_NORTH)), tail: 600 },
+    FieldCast { id: 140, name: "Move", place: (4, 1), scene: "Vale", actor: Some(20), target: "a stone pillar", stand: None, tail: 40 },
+    FieldCast { id: 150, name: "Avoid", place: (27, 0), scene: "Goma Cave", actor: None, target: "the party", stand: None, tail: 30 },
+    FieldCast { id: 141, name: "Mind Read", place: (4, 1), scene: "Vale", actor: Some(18), target: "Garet's sister", stand: None, tail: 20 },
+    FieldCast { id: 148, name: "Catch", place: (4, 1), scene: "Vale", actor: Some(26), target: "a Nut", stand: None, tail: 30 },
+    FieldCast { id: 149, name: "Retreat", place: (27, 0), scene: "Goma Cave", actor: None, target: "the party", stand: None, tail: 240 },
+    FieldCast { id: 142, name: "Force", place: (72, 0), scene: "Xian", actor: Some(21), target: "the training tree", stand: None, tail: 30 },
+    FieldCast { id: 143, name: "Lift", place: (158, 0), scene: "Gondowan Cave", actor: Some(11), target: "a boulder", stand: None, tail: 30 },
+    FieldCast { id: 147, name: "Carry", place: (173, 0), scene: "Tunnel Ruins", actor: Some(13), target: "a stone block", stand: None, tail: 60 },
+    FieldCast { id: 146, name: "Cloak", place: (159, 0), scene: "Lunpa Fortress", actor: None, target: "the party", stand: None, tail: 120 },
+    FieldCast { id: 145, name: "Halt", place: (94, 5), scene: "Vale Cave", actor: Some(8), target: "Kite", stand: Some((792, 256, FACE_NORTH)), tail: 60 },
 ];
 
 /// The longest a field cast is recorded, at 60 frames a second.
@@ -350,15 +342,15 @@ const CAST_FRAMES: usize = 1800;
 /// control, and the moment Scene_ApplyEntrance placed the party, from which
 /// an event starts with the leader already at its spot and the camera on
 /// him.
-struct Entered<'a> {
-    field: Field<'a>,
-    placed: Saved,
+pub struct Entered<'a> {
+    pub field: Field<'a>,
+    pub placed: Saved,
 }
 
 impl<'a> Guide<'a> {
     /// Enters a scene as `enter` does, with `set` set as well, keeping the
     /// moment the party was placed.
-    fn enter_with(&self, place: (u16, u16), set: &[&str]) -> Result<Entered<'a>, String> {
+    pub(super) fn enter_with(&self, place: (u16, u16), set: &[&str]) -> Result<Entered<'a>, String> {
         let mut flags = vec![self.flag("FLAG_PARTY_LEFT_VALE")?];
         for name in set {
             flags.push(self.flag(name)?);
@@ -377,7 +369,7 @@ impl<'a> Guide<'a> {
     /// Field::spots gives in turn until one shows something, and keeps every
     /// frame from just before it to the player's control again, then `tail`
     /// frames more.
-    fn record_trigger(entered: &mut Entered, trigger: Trigger, spot: Option<Spot>, tail: u32, after: &[(u32, u32)]) -> Result<Vec<Vec<u16>>, String> {
+    pub(super) fn record_trigger(entered: &mut Entered, trigger: Trigger, spot: Option<Spot>, tail: u32) -> Result<Vec<Vec<u16>>, String> {
         let field = &mut entered.field;
         let spots = match spot {
             Some(s) => vec![s],
@@ -391,9 +383,6 @@ impl<'a> Guide<'a> {
                     for _ in 0..tail {
                         field.frames(1)?;
                         frames.push(field.picture());
-                    }
-                    for &(keys, n) in after {
-                        Self::hold(field, keys, n, &mut frames)?;
                     }
                     return Ok(frames);
                 }
@@ -415,11 +404,11 @@ impl<'a> Guide<'a> {
     /// actor the leader cannot reach from there, from each entrance whose
     /// room holds the actor.
     fn record_cast(&self, cast: &FieldCast) -> Result<Vec<Vec<u16>>, String> {
-        let mut entered = self.enter_with(cast.place, cast.set)?;
+        let mut entered = self.enter_with(cast.place, &[])?;
         let trigger = Trigger::Psynergy(cast.id, cast.actor.unwrap_or(0));
         if let (Some(_), Some(stand)) = (cast.actor, cast.stand) {
             let spot = Self::spot_at(&mut entered.field, stand)?;
-            return Self::record_trigger(&mut entered, trigger, Some(spot), cast.tail, cast.after);
+            return Self::record_trigger(&mut entered, trigger, Some(spot), cast.tail);
         }
         let Some(id) = cast.actor else {
             let stand = match cast.stand {
@@ -430,9 +419,9 @@ impl<'a> Guide<'a> {
                 }
             };
             let spot = Self::spot_at(&mut entered.field, stand)?;
-            return Self::record_trigger(&mut entered, trigger, Some(spot), cast.tail, cast.after);
+            return Self::record_trigger(&mut entered, trigger, Some(spot), cast.tail);
         };
-        let first = match Self::record_trigger(&mut entered, trigger, None, cast.tail, cast.after) {
+        let first = match Self::record_trigger(&mut entered, trigger, None, cast.tail) {
             Ok(frames) => return Ok(frames),
             Err(e) => e,
         };
@@ -446,10 +435,10 @@ impl<'a> Guide<'a> {
             .map(|e| e.number as u16)
             .collect();
         for entrance in others {
-            let Ok(mut entered) = self.enter_with((cast.place.0, entrance), cast.set) else {
+            let Ok(mut entered) = self.enter_with((cast.place.0, entrance), &[]) else {
                 continue;
             };
-            if let Ok(frames) = Self::record_trigger(&mut entered, trigger, None, cast.tail, cast.after) {
+            if let Ok(frames) = Self::record_trigger(&mut entered, trigger, None, cast.tail) {
                 return Ok(frames);
             }
         }
@@ -489,7 +478,10 @@ impl<'a> Guide<'a> {
 
 
 /// Every mode, in the order `render guide` plays them.
-pub const MODES: &[&str] = &["walk", "snow", "layers", "layers-3d", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy"];
+pub const MODES: &[&str] = &[
+    "walk", "snow", "layers", "layers-3d", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
+    "inn", "menu-psynergy", "credits", "sleep", "oam", "vram", "cells", "grid", "random-battle", "world-map-picture", "overlay",
+];
 
 impl Guide<'_> {
     /// Plays one mode; `casts` picks field Psynergy by name.
@@ -505,6 +497,20 @@ impl Guide<'_> {
             "boot" => self.boot(),
             "items" => self.items(),
             "field-psynergy" => self.field_psynergy(casts),
+            "talk" => self.talk(),
+            "djinn-room" => self.djinn_room(),
+            "shop" => self.shop(),
+            "inn" => self.inn(),
+            "menu-psynergy" => self.menu_psynergy(),
+            "credits" => self.credits(),
+            "sleep" => self.sleep(),
+            "oam" => self.oam(),
+            "vram" => self.vram(),
+            "cells" => self.cells(),
+            "grid" => self.grid(),
+            "random-battle" => self.random_battle(),
+            "world-map-picture" => self.world_map_picture(),
+            "overlay" => self.overlay(),
             _ => Err(format!("no mode {name}")),
         }
     }

@@ -41,6 +41,7 @@ use std::collections::HashMap;
 /// struct GameState (game_state.h), struct MapScrollWork (map_scroll.h),
 /// struct FieldWork (field_runtime.h), struct SceneEntries and the object
 /// slots' offsets.
+const GS_COINS: u32 = 0x10;
 const GS_SCENE: u32 = 0x1c0;
 const GS_ENTRANCE: u32 = 0x1c2;
 /// x, y and z: three s32 in a row, 16.16 pixels.
@@ -400,16 +401,6 @@ impl<'rom> Field<'rom> {
         self.gba.read32(address)
     }
 
-    pub fn write16(&mut self, address: u32, value: u16) {
-        self.gba.write16(address, value);
-    }
-
-    /// Whether the field loop stepped in the last frame: the player has
-    /// control.
-    pub fn stepping(&self) -> bool {
-        self.t.step_frame + 1 >= self.t.frame
-    }
-
     /// The map's view: the screen's top left on the map, in pixels.
     pub fn view(&self) -> (i32, i32) {
         let work = self.map_work();
@@ -421,17 +412,33 @@ impl<'rom> Field<'rom> {
         self.actor(self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16)
     }
 
-    /// Asks the field for a Psynergy, as the menu does (FieldWork.command).
-    pub fn request_psynergy(&mut self, ability: u16) {
-        let work = self.gba.read32(self.s.field_work);
-        self.gba.write16(work + FIELD_COMMAND, ability);
+    /// Enters again from `placed` (as Scene_ApplyEntrance placed the party)
+    /// with the leader at `spot`, and runs until the player has control and
+    /// the camera has settled on him, as an event's start does.
+    pub fn stand(&mut self, placed: &Saved, spot: &Spot) -> Result<(), String> {
+        self.load(placed);
+        let gs = self.s.game_state;
+        self.gba.write32(gs + GS_X, fx(spot.x) as u32);
+        self.gba.write32(gs + GS_Y, spot.height as u32);
+        self.gba.write32(gs + GS_Z, fx(spot.z) as u32);
+        self.gba.write32(gs + GS_HEADING, spot.facing);
+        self.gba.write16(gs + GS_TURN, u16::from(spot.layer));
+        self.until_control()?;
+        self.put_leader(spot);
+        self.frames(SETTLE)
     }
 
-    /// Shows or hides a layer in the picture (0 to 3 the backgrounds, 4 the
-    /// sprites); the game's registers are unchanged.
-    pub fn show_layer(&mut self, layer: u32, shown: bool) {
-        self.gba.show_layer(layer, shown);
+    /// Calls the Thumb function at `target` with `args` between two steps of
+    /// the field loop and returns its r0 (DebugParty_LoadPreset).
+    pub fn run_function(&mut self, target: u32, args: [u32; 4]) -> Result<u32, String> {
+        self.eval(target, args)
     }
+
+    /// Gives the party `coins` (GameState.coins).
+    pub fn set_coins(&mut self, coins: u32) {
+        self.gba.write32(self.s.game_state + GS_COINS, coins);
+    }
+
 
 
     /// Draws every line from now on over `colour` (BGR555) where nothing else
@@ -1034,7 +1041,7 @@ impl<'rom> Field<'rom> {
         self.gba.set_register(LR, self.s.step | 1);
         self.gba.branch(target & !1);
         let mut returned = false;
-        for _ in 0..200_000 {
+        for _ in 0..4_000_000 {
             if self.gba.step().pc == self.s.step {
                 returned = true;
                 break;
