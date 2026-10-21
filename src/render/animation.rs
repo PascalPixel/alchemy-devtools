@@ -36,12 +36,23 @@ fn channels(c: u32) -> [i32; 3] {
 
 /// Writes `frames` (0xRRGGBB, `width` pixels a row) to `path`.
 pub fn write(path: &Path, frames: &[Vec<u32>], width: usize) -> Result<Written, String> {
-    let shown: Vec<&Vec<u32>> = frames.iter().step_by(STRIDE).collect();
+    encode(path, &frames.iter().step_by(STRIDE).collect::<Vec<_>>(), width)
+}
+
+/// Writes `frames` (BGR555, as the GBA draws them) to `path`, widening only
+/// the frames shown.
+pub fn write_bgr555(path: &Path, frames: &[&[u16]], width: usize) -> Result<Written, String> {
+    let shown: Vec<Vec<u32>> = frames.iter().step_by(STRIDE).map(|f| f.iter().map(|&c| rgb(c)).collect()).collect();
+    encode(path, &shown.iter().collect::<Vec<_>>(), width)
+}
+
+/// Writes the frames shown, at 30 a second.
+fn encode(path: &Path, shown: &[&Vec<u32>], width: usize) -> Result<Written, String> {
     let first = shown.first().ok_or("no frames")?;
     let height = first.len() / width;
 
     let mut counts: HashMap<u32, u64> = HashMap::new();
-    for frame in &shown {
+    for frame in shown {
         for &c in frame.iter() {
             *counts.entry(c).or_default() += 1;
         }

@@ -43,7 +43,11 @@ pub const LR: u32 = 14;
 
 /// The KEYINPUT bits.
 pub const KEY_A: u32 = 1;
+pub const KEY_RIGHT: u32 = 0x10;
+pub const KEY_LEFT: u32 = 0x20;
+pub const KEY_UP: u32 = 0x40;
 pub const KEY_DOWN: u32 = 0x80;
+pub const SP: u32 = 13;
 
 /// A powered-on GBA running `rom`, which it borrows for its lifetime.
 pub struct Gba<'rom> {

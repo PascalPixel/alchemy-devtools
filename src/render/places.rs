@@ -2,8 +2,8 @@
 //! a map of each of its rooms, story-state variants, and the message pages
 //! of its events, as PNG files at the GBA's own size, with an index.
 
-use super::field::{box_holds, Entrance, EventFrame, EventRun, Field, Image, Saved, Setup, Symbols, SETTLE};
-use super::story::{Event, Flags, Scene, Trigger};
+use super::field::{box_holds, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, EVENT_LIMIT, SETTLE};
+use super::story::{Alternative, Event, Flags, Scene, Trigger};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
@@ -152,8 +152,11 @@ pub struct Context<'a> {
     pub images: usize,
     pub gifs: usize,
     pub gif_bytes: u64,
-    /// Message numbers to their symbols (messages.tsv), for the segments.
-    pub messages: &'a HashMap<u32, String>,
+    /// The events to play, by name; none for every event of the scenes.
+    pub wanted: &'a [String],
+    /// The scenes and things of skipped.tsv that played this time, whose
+    /// old lines go.
+    pub cleared: Vec<(String, String)>,
 }
 
 /// Whether a scene is a place: not the title, the clear-data screen or the
@@ -298,40 +301,49 @@ impl Context<'_> {
 /// The places an event is tried at: scenes and entrances whose camera box
 /// holds the trigger, in the event's scene order.
 const MAX_PLACES: usize = 3;
-
-/// An event to play, and how far its attempts have got.
-struct Pending<'e> {
-    event: &'e Event,
-    trigger: Trigger,
-    set: Vec<u16>,
-    clear: Vec<u16>,
-    /// Scene and entrance pairs that hold the trigger.
-    places: Vec<(u16, Entrance)>,
-    /// The place and the leader's placement tried next.
-    place: usize,
-    placement: usize,
-    error: String,
-    done: bool,
-    /// The scenes that hold the event, its own flags, and the story flags
-    /// its scene's setup tests, tried one at a time when every place fails:
-    /// a setup may put the actor somewhere else, or nowhere, by a flag the
-    /// event's row never names (Kyle at the river once the rescue is seen).
-    scenes: Vec<u16>,
-    base: Vec<u16>,
-    extras: Vec<u16>,
-    extra: usize,
-}
+/// Spots tried around one trigger at one place.
+const MAX_SPOTS: usize = 8;
 
 /// What a scene shows with given flags, entered by an entrance: its
-/// entrances, the header's bounds and where its triggers are.
+/// entrances, the header's bounds, where its triggers are, and why each
+/// actor it has but does not show is off stage.
 struct Scan {
     entrances: Vec<Entrance>,
     header: [i32; 4],
     actors: HashMap<u16, (i32, i32)>,
+    absent: HashMap<u16, String>,
     cells: HashMap<u16, (i32, i32)>,
 }
 
 type ScanKey = (u16, u16, Vec<u16>, Vec<u16>);
+
+/// Why an event could not be played, and whether it was because its actor
+/// was never on stage, which another event of the scene may change.
+struct Failure {
+    reason: String,
+    absent: bool,
+}
+
+impl Failure {
+    fn new(reason: String) -> Failure {
+        Failure { reason, absent: false }
+    }
+}
+
+/// An event played: where, and what it left.
+struct Played {
+    setup: Setup,
+    run: EventRun,
+}
+
+/// What one job keeps between its events: the scans, and the moment each
+/// event played without recording left the player in control, for the
+/// events whose actor only another event puts on stage.
+#[derive(Default)]
+struct Job {
+    scans: HashMap<ScanKey, Result<Scan, String>>,
+    ends: HashMap<(String, Vec<u16>, Vec<u16>), Option<(Setup, Saved)>>,
+}
 
 impl Context<'_> {
     fn scan(&self, scene: u16, entrance: u16, set: &[u16], clear: &[u16]) -> Result<Scan, String> {
@@ -341,9 +353,20 @@ impl Context<'_> {
         let header = field.header();
         field.until_control()?;
         field.frames(SETTLE)?;
-        let actors = (0..66u16).filter_map(|id| field.actor(id).map(|p| (id, p))).collect();
+        let mut actors = HashMap::new();
+        let mut absent = HashMap::new();
+        for id in 0..66u16 {
+            match field.present(id) {
+                Ok(a) => {
+                    actors.insert(id, (a.x, a.z));
+                }
+                Err(e) => {
+                    absent.insert(id, e);
+                }
+            }
+        }
         let cells = (1..256u16).filter_map(|code| field.cell_with_code(code).map(|p| (code, p))).collect();
-        Ok(Scan { entrances, header, actors, cells })
+        Ok(Scan { entrances, header, actors, absent, cells })
     }
 
     /// The scene and entrance pairs where `trigger` stands, scanning the
@@ -356,9 +379,10 @@ impl Context<'_> {
         set: &[u16],
         clear: &[u16],
         scans: &mut HashMap<ScanKey, Result<Scan, String>>,
-    ) -> Result<Vec<(u16, Entrance)>, String> {
+    ) -> Result<Vec<(u16, Entrance)>, Failure> {
         let mut out = Vec::new();
         let mut error = None;
+        let mut absent = None;
         for scene in scenes.iter().filter(|s| is_place(s).is_ok()) {
             let mut entrance = 0u16;
             let mut tried: Vec<[i16; 4]> = Vec::new();
@@ -376,7 +400,12 @@ impl Context<'_> {
                     }
                 };
                 let at = match trigger {
-                    Trigger::Talk(a) | Trigger::Psynergy(_, a) => scan.actors.get(&a),
+                    Trigger::Talk(a) | Trigger::Psynergy(_, a) => {
+                        if let Some(why) = scan.absent.get(&a) {
+                            absent.get_or_insert_with(|| why.clone());
+                        }
+                        scan.actors.get(&a)
+                    }
                     Trigger::Search(c) | Trigger::Touch(c) => scan.cells.get(&c),
                 };
                 if let Some(&(x, z)) = at {
@@ -406,226 +435,302 @@ impl Context<'_> {
             }
         }
         if out.is_empty() {
-            return Err(error.unwrap_or_else(|| "the trigger is in none of its scenes".to_string()));
+            if let Some(why) = absent {
+                return Err(Failure { reason: why, absent: true });
+            }
+            let missing = match trigger {
+                Trigger::Search(c) | Trigger::Touch(c) => format!("no cell of its scenes holds code {c}"),
+                Trigger::Talk(a) | Trigger::Psynergy(_, a) => format!("none of its scenes has actor {a}"),
+            };
+            return Err(Failure::new(error.unwrap_or(missing)));
         }
         Ok(out)
     }
 
-    /// The message pages of every playable event of `scenes`. Each event is
-    /// tried at each of its places with each placement of the leader until a
-    /// page waits; every round plays the next attempt of each event still
-    /// waiting, grouped by where they start.
+    /// Plays every chosen event of `scenes` and writes its pages and one GIF
+    /// of the whole event. Each event is tried by each of its triggers in
+    /// turn, with its flags and then with each story flag its scene's setup
+    /// tests or its scene's events set added one at a time, at each place
+    /// that holds the trigger, from each spot around it, until it plays; an
+    /// event whose actor is never on stage when the scene is entered is
+    /// tried once each other event of the scene has played.
     pub fn events(&mut self, scenes: &[&Scene]) {
-        let by_number: HashMap<u16, &Scene> = scenes.iter().map(|s| (s.number, *s)).collect();
-        let setup_flags = variant_candidates(self.events, self.flags);
-        let mut scans: HashMap<ScanKey, Result<Scan, String>> = HashMap::new();
-        let mut pending: Vec<Pending> = Vec::new();
+        let mut job = Job::default();
         let events = self.events;
+        let mut done: Vec<(Vec<u16>, &str)> = Vec::new();
         for event in events {
-            let candidates: Vec<&Scene> = event.scenes.iter().filter_map(|n| by_number.get(n).copied()).collect();
+            if !self.wanted.is_empty() && !self.wanted.iter().any(|w| *w == event.name) {
+                continue;
+            }
+            let candidates: Vec<&Scene> = scenes.iter().copied().filter(|s| event.scenes.contains(&s.number)).collect();
             let Some(&first) = candidates.first() else {
                 continue;
             };
-            let label = format!("event {}", event.name);
-            // An event with no message (a push, a door) plays too: its GIF
-            // runs until the field loop takes over again.
-            let trigger = match &event.trigger {
-                Err(reason) => {
-                    self.skip(first, &label, reason.clone());
-                    continue;
-                }
-                Ok(t) => *t,
-            };
-            let (mut set, mut clear) = (Vec::new(), Vec::new());
-            let mut unknown = None;
-            for (name, on) in &event.conditions {
-                match self.flags.resolve(name, first.symbol.as_deref()) {
-                    Some(flag) => {
-                        set.retain(|&f| f != flag);
-                        clear.retain(|&f| f != flag);
-                        if *on { &mut set } else { &mut clear }.push(flag);
-                    }
-                    None => unknown = Some(name.clone()),
-                }
-            }
-            if let Some(name) = unknown {
-                self.skip(first, &label, format!("unknown flag {name}"));
+            // Rows of one scene with the same name are one event.
+            if done.contains(&(event.scenes.clone(), event.name.as_str())) {
                 continue;
             }
-            // The stormy night is the prologue: Isaac and Garet are children
-            // then, and the party's sprites follow FLAG_CHILDHOOD
-            // (Party_RemapCharacterIdByFlags).
-            if let (Some(storm), Some(child)) = (self.flags.resolve("FLAG_VALE_STORM", None), self.flags.resolve("FLAG_CHILDHOOD", None)) {
-                if (set.contains(&storm) || first.symbol.as_deref() == Some("ValeStorm")) && !set.contains(&child) {
-                    clear.retain(|&f| f != child);
-                    set.push(child);
-                }
-            }
-            set.sort_unstable();
-            clear.sort_unstable();
-            let extras: Vec<u16> = setup_flags
-                .get(&first.number)
-                .map(|names| {
-                    names.iter().filter_map(|n| self.flags.resolve(n, first.symbol.as_deref())).filter(|f| !set.contains(f) && !clear.contains(f)).collect()
-                })
-                .unwrap_or_default();
-            let (places, error) = match self.places(&candidates, trigger, &set, &clear, &mut scans) {
-                Ok(places) => (places, String::new()),
-                Err(e) => (Vec::new(), e),
-            };
-            pending.push(Pending {
-                event,
-                trigger,
-                base: set.clone(),
-                set,
-                clear,
-                places,
-                place: 0,
-                placement: 0,
-                error,
-                done: false,
-                scenes: candidates.iter().map(|s| s.number).collect(),
-                extras,
-                extra: 0,
-            });
-        }
-        let mut names: HashMap<(u16, String), usize> = HashMap::new();
-        loop {
-            // An event out of places tries its scene's next story flag.
-            for i in 0..pending.len() {
-                while !pending[i].done && pending[i].place >= pending[i].places.len() && pending[i].extra < pending[i].extras.len() {
-                    let p = &mut pending[i];
-                    let mut set = p.base.clone();
-                    set.push(p.extras[p.extra]);
-                    set.sort_unstable();
-                    p.extra += 1;
-                    let (trigger, clear) = (p.trigger, p.clear.clone());
-                    let scenes_of: Vec<&Scene> = p.scenes.iter().filter_map(|n| by_number.get(n).copied()).collect();
-                    match self.places(&scenes_of, trigger, &set, &clear, &mut scans) {
-                        Ok(places) => {
-                            let p = &mut pending[i];
-                            p.set = set;
-                            p.places = places;
-                            p.place = 0;
-                            p.placement = 0;
-                        }
-                        Err(e) => pending[i].error = e,
+            done.push((event.scenes.clone(), event.name.as_str()));
+            let label = format!("event {}", event.name);
+            match self.play_event(event, &candidates, &mut job, Some(EVENT_LIMIT as usize), None) {
+                Ok(played) => {
+                    let scene = candidates.iter().find(|s| s.number == played.setup.scene).copied().unwrap_or(first);
+                    for s in &candidates {
+                        self.cleared.push((s.name(), label.clone()));
+                    }
+                    if let Err(e) = self.write_event(scene, played.setup.entrance as i16, event, &played.run) {
+                        self.skip(scene, &label, e);
+                    } else if played.run.capped {
+                        let limit = EVENT_LIMIT / 60;
+                        self.skip(scene, &label, format!("its GIF stops at {limit} seconds, before the player has control again"));
                     }
                 }
+                Err(e) => self.skip(first, &label, e.reason),
             }
-            let mut groups: BTreeMap<Setup, Vec<usize>> = BTreeMap::new();
-            for (i, p) in pending.iter().enumerate().filter(|(_, p)| !p.done && p.place < p.places.len()) {
-                let (scene, entrance) = p.places[p.place];
-                let mut set = p.set.clone();
-                if entrance.required_flag >= 0 && !set.contains(&(entrance.required_flag as u16)) {
-                    set.push(entrance.required_flag as u16);
-                    set.sort_unstable();
-                }
-                let setup = Setup { scene, entrance: entrance.number as u16, set, clear: p.clear.clone() };
-                groups.entry(setup).or_default().push(i);
-            }
-            if groups.is_empty() {
-                break;
-            }
-            for (setup, members) in groups {
-                let scene = by_number[&setup.scene];
-                if let Err(e) = self.play_group(scene, &setup, &members, &mut pending, &mut names) {
-                    for &i in &members {
-                        let p = &mut pending[i];
-                        p.error = e.clone();
-                        p.place += 1;
-                        p.placement = 0;
-                    }
-                }
-            }
-        }
-        for p in pending.iter().filter(|p| !p.done) {
-            let scene = by_number[&p.places[0].0];
-            self.skip(scene, &format!("event {}", p.event.name), p.error.clone());
         }
     }
 
-    fn play_group(
-        &mut self,
-        scene: &Scene,
-        setup: &Setup,
-        members: &[usize],
-        pending: &mut [Pending],
-        names: &mut HashMap<(u16, String), usize>,
-    ) -> Result<(), String> {
+    /// The flags an alternative sets and clears, with the stormy night's
+    /// childhood.
+    fn alternative_flags(&self, alternative: &Alternative, first: &Scene) -> Result<(Vec<u16>, Vec<u16>), String> {
+        let (mut set, mut clear) = (Vec::new(), Vec::new());
+        for (name, on) in &alternative.conditions {
+            let flag = self.flags.resolve(name, first.symbol.as_deref()).ok_or_else(|| format!("unknown flag {name}"))?;
+            set.retain(|&f| f != flag);
+            clear.retain(|&f| f != flag);
+            if *on { &mut set } else { &mut clear }.push(flag);
+        }
+        // The stormy night is the prologue: Isaac and Garet are children
+        // then, and the party's sprites follow FLAG_CHILDHOOD
+        // (Party_RemapCharacterIdByFlags).
+        if let (Some(storm), Some(child)) = (self.flags.resolve("FLAG_VALE_STORM", None), self.flags.resolve("FLAG_CHILDHOOD", None)) {
+            if (set.contains(&storm) || first.symbol.as_deref() == Some("ValeStorm")) && !set.contains(&child) {
+                clear.retain(|&f| f != child);
+                set.push(child);
+            }
+        }
+        set.sort_unstable();
+        clear.sort_unstable();
+        Ok((set, clear))
+    }
+
+    /// The story flags tried one at a time when an event's own do not put
+    /// its trigger on stage: those its scene's setup tests, then those its
+    /// scene's events set.
+    fn extra_flags(&self, first: &Scene, set: &[u16], clear: &[u16]) -> Vec<u16> {
+        let mut names: Vec<String> = variant_candidates(self.events, self.flags).remove(&first.number).unwrap_or_default();
+        for e in self.events.iter().filter(|e| e.scenes.contains(&first.number)) {
+            for s in e.sets.iter().filter(|s| is_story_flag(s, self.flags)) {
+                if !names.contains(s) {
+                    names.push(s.clone());
+                }
+            }
+        }
+        let mut out = Vec::new();
+        for f in names.iter().filter_map(|n| self.flags.resolve(n, first.symbol.as_deref())) {
+            if !set.contains(&f) && !clear.contains(&f) && !out.contains(&f) {
+                out.push(f);
+            }
+        }
+        out
+    }
+
+    fn play_event(
+        &self,
+        event: &Event,
+        scenes: &[&Scene],
+        job: &mut Job,
+        record: Option<usize>,
+        within: Option<(&[u16], &[u16])>,
+    ) -> Result<Played, Failure> {
+        let first = scenes[0];
+        let mut failure: Option<Failure> = None;
+        let mut absent: Option<(Trigger, Vec<u16>, Vec<u16>)> = None;
+        // A run that ran no script (a hop with nothing to land on), kept
+        // in case another place, flag or event makes it play.
+        let mut fallback: Option<Played> = None;
+        for alternative in &event.alternatives {
+            let trigger = match &alternative.trigger {
+                Ok(t) => *t,
+                Err(e) => {
+                    failure.get_or_insert_with(|| Failure::new(e.clone()));
+                    continue;
+                }
+            };
+            let (mut set, mut clear) = match self.alternative_flags(alternative, first) {
+                Ok(flags) => flags,
+                Err(e) => {
+                    failure.get_or_insert_with(|| Failure::new(e));
+                    continue;
+                }
+            };
+            // Played on the way to another event, by that event's flags.
+            if let Some((with_set, with_clear)) = within {
+                set.retain(|f| !with_clear.contains(f));
+                clear.retain(|f| !with_set.contains(f));
+                set.extend(with_set.iter().filter(|f| !set.contains(f)).collect::<Vec<_>>());
+                clear.extend(with_clear.iter().filter(|f| !clear.contains(f)).collect::<Vec<_>>());
+                set.sort_unstable();
+                clear.sort_unstable();
+            }
+            // On the way to another event, only by its own flags.
+            let extras = if within.is_some() { Vec::new() } else { self.extra_flags(first, &set, &clear) };
+            let flag_sets = std::iter::once(set.clone()).chain(extras.iter().map(|&f| {
+                let mut s = set.clone();
+                s.push(f);
+                s.sort_unstable();
+                s
+            }));
+            let mut on_stage = false;
+            for flags in flag_sets {
+                let places = match self.places(scenes, trigger, &flags, &clear, &mut job.scans) {
+                    Ok(places) => places,
+                    Err(f) => {
+                        // A story flag that puts nothing on stage says less
+                        // than the event's own flags did.
+                        if failure.is_none() || flags == set {
+                            failure = Some(f);
+                        }
+                        continue;
+                    }
+                };
+                on_stage = true;
+                for (scene, entrance) in places {
+                    let mut set = flags.clone();
+                    if entrance.required_flag >= 0 && !set.contains(&(entrance.required_flag as u16)) {
+                        set.push(entrance.required_flag as u16);
+                        set.sort_unstable();
+                    }
+                    let setup = Setup { scene, entrance: entrance.number as u16, set, clear: clear.clone() };
+                    match self.play_at(&setup, None, trigger, &event.messages, record) {
+                        Ok(run) if run.instant => {
+                            if fallback.is_none() {
+                                fallback = Some(Played { setup, run });
+                                absent.get_or_insert((trigger, flags.clone(), clear.clone()));
+                            }
+                        }
+                        Ok(run) => return Ok(Played { setup, run }),
+                        Err(e) => failure = Some(Failure::new(e)),
+                    }
+                }
+            }
+            if !on_stage && matches!(trigger, Trigger::Talk(_) | Trigger::Psynergy(..)) {
+                absent.get_or_insert((trigger, set.clone(), clear.clone()));
+            }
+        }
+        let mut failure = failure.unwrap_or_else(|| Failure::new("the row has no trigger".to_string()));
+        // The actor only comes on stage during another event, or the event
+        // only plays after one: play each of the scene's other events and
+        // try from where it leaves the player.
+        if let (None, Some((trigger, set, clear))) = (within, absent) {
+            for other in self.events.iter().filter(|e| e.scenes.contains(&first.number) && e.name != event.name && !e.name.contains('[') && e.trigger().is_ok()) {
+                let key = (other.name.clone(), set.clone(), clear.clone());
+                if !job.ends.contains_key(&key) {
+                    let end = self.play_event(other, scenes, job, None, Some((&set, &clear))).ok().and_then(|p| p.run.end.map(|end| (p.setup, end)));
+                    job.ends.insert(key.clone(), end);
+                }
+                let Some((setup, end)) = &job.ends[&key] else {
+                    continue;
+                };
+                match self.play_at(setup, Some(end), trigger, &event.messages, record) {
+                    Ok(run) if run.instant => {}
+                    Ok(run) => return Ok(Played { setup: setup.clone(), run }),
+                    Err(e) if !e.contains("off stage") && !e.contains("no actor") && !e.contains("no sprite") => {
+                        failure = Failure::new(format!("after {}: {e}", other.name));
+                    }
+                    Err(_) => {}
+                }
+            }
+            if failure.absent {
+                failure.reason = format!("{}, when the scene is entered and after each of its other events", failure.reason);
+            }
+        }
+        fallback.ok_or(failure)
+    }
+
+    /// Plays an event at one place, from each spot around its trigger until
+    /// one counts: it began there, and when it has messages, one of them
+    /// showed. `after` is a moment of the scene to start from instead of
+    /// its entrance.
+    fn play_at(&self, setup: &Setup, after: Option<&Saved>, trigger: Trigger, messages: &[u32], record: Option<usize>) -> Result<EventRun, String> {
         let mut field = Field::enter(self.rom, self.symbols, setup)?;
         let entered: Saved = field.save();
-        field.until_control()?;
-        field.frames(SETTLE)?;
-        let starts: Vec<Option<Result<(i32, i32, u32), String>>> =
-            members.iter().map(|&i| field.plan(pending[i].trigger, pending[i].placement)).collect();
-        for (&i, start) in members.iter().zip(starts) {
-            let p = &mut pending[i];
-            let start = match start {
-                Some(Ok(s)) => s,
-                Some(Err(e)) => {
-                    p.error = e;
-                    p.place += 1;
-                    p.placement = 0;
-                    continue;
-                }
-                None => {
-                    p.place += 1;
-                    p.placement = 0;
-                    continue;
-                }
-            };
-            p.placement += 1;
-            let run = match field.event(&entered, p.trigger, start, &p.event.messages, MAX_PAGES, Some(EVENT_CAP)) {
-                Ok(run) if run.pages.is_empty() && !p.event.messages.is_empty() => {
-                    p.error = "no page waited for the button".to_string();
-                    continue;
-                }
-                // Another event played (a search of what stood there, or
-                // someone else's talk): none of this event's messages showed.
-                // Try the next place around the actor, then the next entrance.
-                Ok(run) if !p.event.messages.is_empty() && !run.pages.iter().any(|page| page.message.is_some()) => {
-                    p.error = "another event played instead".to_string();
-                    continue;
-                }
-                Ok(run) => run,
-                Err(e) => {
-                    p.error = e;
-                    continue;
-                }
-            };
-            let pages = &run.pages;
-            let event = p.event;
-            let base = file_name(&event.name);
-            let count = names.entry((scene.number, base.clone())).or_default();
-            *count += 1;
-            let base = if *count > 1 { format!("{base}~{count}") } else { base };
-            let messages = event.messages.iter().map(|m| format!("{m:05}")).collect::<Vec<_>>().join(", ");
-            for (k, page) in pages.iter().enumerate() {
-                let file = if k == 0 {
-                    format!("{}/events/{base}.png", scene.slug())
-                } else {
-                    format!("{}/events/{base}-{}.png", scene.slug(), k + 1)
-                };
-                self.write(&page.image, &file)?;
-                self.rows.push(Row {
-                    scene: scene.slug(),
-                    number: scene.number,
-                    area: scene.area.clone(),
-                    variant: String::new(),
-                    kind: "event",
-                    entrance: setup.entrance as i16,
-                    event: event.name.clone(),
-                    page: k + 1,
-                    message: page.message.map(|m| format!("{m:05}")).unwrap_or_default(),
-                    messages: messages.clone(),
-                    file,
-                    ..Row::default()
-                });
+        match after {
+            Some(saved) => field.load(saved),
+            None => {
+                field.until_control()?;
+                field.frames(SETTLE)?;
             }
-            p.done = true;
-            self.event_gifs(scene, setup, &event.name, &base, &messages, &run)?;
         }
+        let spots = field.spots(trigger)?;
+        let mut error = String::new();
+        let mut instant = None;
+        for spot in spots.iter().take(MAX_SPOTS) {
+            let start = match after {
+                Some(saved) => Start::InControl(saved),
+                None => Start::Entered(&entered),
+            };
+            match field.event(start, trigger, spot, messages, MAX_PAGES, record) {
+                Ok(run) if !messages.is_empty() && run.pages.is_empty() => error = "the event played but no page of its messages waited for the button".to_string(),
+                // A row of the same trigger whose condition held played
+                // instead: none of this event's messages showed.
+                Ok(run) if !messages.is_empty() && !run.pages.iter().any(|page| page.message.is_some()) => {
+                    error = "another event played instead".to_string();
+                }
+                // A run that ran no script is kept in case no spot does
+                // better.
+                Ok(run) if run.instant => {
+                    instant.get_or_insert(run);
+                }
+                Ok(run) => return Ok(run),
+                Err(e) => error = e,
+            }
+        }
+        instant.ok_or(error)
+    }
+
+    /// An event's pages and its GIF.
+    fn write_event(&mut self, scene: &Scene, entrance: i16, event: &Event, run: &EventRun) -> Result<(), String> {
+        let base = file_name(&event.name);
+        let messages = event.messages.iter().map(|m| format!("{m:05}")).collect::<Vec<_>>().join(", ");
+        for (k, page) in run.pages.iter().enumerate() {
+            let file = if k == 0 {
+                format!("{}/events/{base}.png", scene.slug())
+            } else {
+                format!("{}/events/{base}-{}.png", scene.slug(), k + 1)
+            };
+            self.write(&page.image, &file)?;
+            self.rows.push(Row {
+                scene: scene.slug(),
+                number: scene.number,
+                area: scene.area.clone(),
+                kind: "event",
+                entrance,
+                event: event.name.clone(),
+                page: k + 1,
+                message: page.message.map(|m| format!("{m:05}")).unwrap_or_default(),
+                messages: messages.clone(),
+                file,
+                ..Row::default()
+            });
+        }
+        if run.frames.is_empty() {
+            return Err("no frame was recorded".to_string());
+        }
+        let file = format!("{}/events/{base}.gif", scene.slug());
+        let written = self.gif(&file, &run.frames)?;
+        self.rows.push(Row {
+            scene: scene.slug(),
+            number: scene.number,
+            area: scene.area.clone(),
+            kind: "event-gif",
+            entrance,
+            event: event.name.clone(),
+            frames: written,
+            messages,
+            file,
+            ..Row::default()
+        });
         Ok(())
     }
 }
@@ -672,71 +777,14 @@ mod tests {
     }
 }
 
-/// An event's recording stops at 20 seconds.
-const EVENT_CAP: usize = 1200;
-/// Frames of an event's first message kept at its GIF's end: its typing
-/// and part of its hold.
-const MESSAGE_TAIL: usize = 90;
-
-/// An event's GIF stops at 10 seconds.
-const START_CAP: usize = 600;
-
-/// How an event starts: from its first frame through its first message,
-/// typed and held a moment, or the first START_CAP frames when no message
-/// shows by then.
-fn start_frames(frames: &[EventFrame]) -> std::ops::Range<usize> {
-    let end = match frames.iter().position(|f| f.text) {
-        Some(first) => {
-            let mut end = first;
-            while end < frames.len() && frames[end].text && end < first + MESSAGE_TAIL {
-                end += 1;
-            }
-            end
-        }
-        None => frames.len(),
-    };
-    0..end.min(START_CAP).max(1.min(frames.len()))
-}
-
 impl Context<'_> {
-    /// An event's GIF: how it starts, for every event that plays.
-    fn event_gifs(
-        &mut self,
-        scene: &Scene,
-        setup: &Setup,
-        name: &str,
-        base: &str,
-        messages: &str,
-        run: &EventRun,
-    ) -> Result<(), String> {
-        let frames = &run.frames;
-        if frames.is_empty() {
-            return Ok(());
-        }
-        let file = format!("{}/events/{base}.gif", scene.slug());
-        let written = self.gif(&file, &frames[start_frames(frames)])?;
-        self.rows.push(Row {
-            scene: scene.slug(),
-            number: scene.number,
-            area: scene.area.clone(),
-            kind: "event-gif",
-            entrance: setup.entrance as i16,
-            event: name.to_string(),
-            frames: written,
-            messages: messages.to_string(),
-            file,
-            ..Row::default()
-        });
-        Ok(())
-    }
-
-    fn gif(&mut self, file: &str, frames: &[EventFrame]) -> Result<usize, String> {
-        let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.picture.iter().map(|&c| super::animation::rgb(c)).collect()).collect();
+    fn gif(&mut self, file: &str, frames: &[Vec<u16>]) -> Result<usize, String> {
         let path = self.out.join(file);
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
-        let written = super::animation::write(&path, &rgb, super::mgba::WIDTH)?;
+        let pictures: Vec<&[u16]> = frames.iter().map(Vec::as_slice).collect();
+        let written = super::animation::write_bgr555(&path, &pictures, super::mgba::WIDTH)?;
         self.bytes += written.bytes;
         self.images += 1;
         self.gifs += 1;

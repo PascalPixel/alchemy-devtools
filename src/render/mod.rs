@@ -317,18 +317,23 @@ stitched from one moment with the leader hidden. A scene whose
 initialization tests FLAG_KOLIMA_CURSE_LIFTED is shown cursed and cured,
 in DIR/<scene>_cursed/ and DIR/<scene>_cured/.
 
-event: each talk, search, touch and Psynergy-on-actor event with a message,
-its required flags set and the ones it needs clear cleared, from the first
-of its scenes that holds the trigger and the first entrance whose camera box
-holds it, with the leader moved beside it: the first page that waits for
-the button as DIR/<scene>/events/<event>.png and the next up to four as
-<event>-2.png and on. The event is recorded to its end (at most 20 seconds),
-each page held 45 frames; an event that moves (more than a few frames of
-motion away from its message windows) also gets <event>.gif when it is under
-10 seconds, and <event>_<k>.gif for each stretch with motion between its
-messages k and k + 1 (split at a scene change or a pause, at most 15
-seconds, ending with the next message typed), listed with the messages
-before and after (their symbols from messages.tsv).
+event: every talk, search, touch and Psynergy-on-actor event of the scenes
+(--event names some), each played once, from just before its trigger until
+the player has control again, as DIR/<scene>/events/<event>.gif, with its
+first four pages that wait for the button as <event>.png, <event>-2.png and
+on. The leader stands where the player would to start it: beside the actor,
+on its map layer and level with it, facing it; a cell from the cell it
+searches; or a cell from the cell it touches, walking onto it, or on the
+cell pushing the way its row needs. An event counts only when the field
+loop dispatches it, at the leader's spot, and, when it has messages, one
+of them shows. Each of its triggers is tried in turn, with the flags its
+row needs, then with each story flag its scene's setup tests or its
+scene's events set; an actor that is off stage then (at the map's origin,
+outside the map or with no sprite), or an event that runs no script, is
+tried again after each of the scene's other events. Pages are held 45
+frames; an exit ends as the next scene starts loading, and a GIF stops at
+90 seconds, noted in skipped.tsv. --messages is accepted and not read.
+
 
 Needs the `render` feature: cargo build --release --features render, with
 libmgba and its headers installed (MGBA_PREFIX names their prefix).";
@@ -342,7 +347,6 @@ struct SceneOptions {
     places_tsv: Option<PathBuf>,
     events_tsv: Option<PathBuf>,
     flags_tsv: Option<PathBuf>,
-    messages_tsv: Option<PathBuf>,
 }
 
 fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
@@ -355,7 +359,6 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
         places_tsv: None,
         events_tsv: None,
         flags_tsv: None,
-        messages_tsv: None,
     };
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
@@ -374,7 +377,9 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             "--places" => o.places_tsv = Some(PathBuf::from(value("--places")?)),
             "--events" => o.events_tsv = Some(PathBuf::from(value("--events")?)),
             "--flags" => o.flags_tsv = Some(PathBuf::from(value("--flags")?)),
-            "--messages" => o.messages_tsv = Some(PathBuf::from(value("--messages")?)),
+            "--messages" => {
+                value("--messages")?;
+            }
             other => return Err(format!("unexpected argument {other:?}\n{SCENES_USAGE}")),
         }
     }
@@ -401,20 +406,9 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
                 || (o.scenes.is_empty() && !o.events.is_empty())
         })
         .collect();
-    let events: Vec<story::Event> = if o.events.is_empty() {
-        events
-    } else {
-        // The scenes' setups stay too: the flags they test are the ones an
-        // event's actor may need to be in place (places::variant_candidates).
-        events.into_iter().filter(|e| o.events.iter().any(|w| *w == e.name) || e.trigger_text.starts_with("entry")).collect()
-    };
     let root = crate::compile::root();
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
-    let messages = match &o.messages_tsv {
-        Some(path) => story::read_messages(path)?,
-        None => Default::default(),
-    };
-    play_scenes(root, &o.edition, kind, &chosen, &events, &flags, &messages, &out)
+    play_scenes(root, &o.edition, kind, &chosen, &events, &o.events, &flags, &out)
 }
 
 #[cfg(not(feature = "render"))]
@@ -424,8 +418,8 @@ fn play_scenes(
     _: &str,
     _: &[&story::Scene],
     _: &[story::Event],
+    _: &[String],
     _: &story::Flags,
-    _: &std::collections::HashMap<u32, String>,
     _: &Path,
 ) -> Result<(), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
@@ -438,8 +432,8 @@ fn play_scenes(
     kind: &str,
     chosen: &[&story::Scene],
     events: &[story::Event],
+    wanted: &[String],
     flags: &story::Flags,
-    messages: &std::collections::HashMap<u32, String>,
     out: &Path,
 ) -> Result<(), String> {
     let started = std::time::Instant::now();
@@ -485,7 +479,8 @@ fn play_scenes(
                     images: 0,
                     gifs: 0,
                     gif_bytes: 0,
-                    messages,
+                    wanted,
+                    cleared: Vec::new(),
                 };
                 if kind == "place" {
                     for scene in &job {
@@ -495,12 +490,14 @@ fn play_scenes(
                     context.events(&job);
                 }
                 eprintln!("{}: {} images", job.iter().map(|s| s.name()).collect::<Vec<_>>().join(", "), context.images);
-                results.lock().unwrap().push((context.rows, context.skipped, context.bytes, context.images, context.gifs, context.gif_bytes));
+                results.lock().unwrap().push((context.rows, context.skipped, context.bytes, context.images, context.gifs, context.gif_bytes, context.cleared));
             });
         }
     });
     let (mut rows, mut skipped, mut bytes, mut images, mut gifs, mut gif_bytes) = (Vec::new(), Vec::new(), 0, 0, 0, 0);
-    for (r, s, b, i, g, gb) in results.into_inner().unwrap() {
+    let mut cleared = Vec::new();
+    for (r, s, b, i, g, gb, c) in results.into_inner().unwrap() {
+        cleared.extend(c);
         rows.extend(r);
         skipped.extend(s);
         bytes += b;
@@ -527,6 +524,10 @@ fn play_scenes(
         if let (Some(scene), Some(what)) = (fields.next(), fields.next()) {
             lines.insert((scene.to_string(), what.to_string()), line.to_string());
         }
+    }
+    // What played this time is no longer left out.
+    for key in &cleared {
+        lines.remove(key);
     }
     for s in &skipped {
         lines.insert((s.scene.clone(), s.what.clone()), format!("{}\t{}\t{}", s.scene, s.what, s.reason));

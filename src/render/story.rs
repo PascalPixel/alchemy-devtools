@@ -174,14 +174,31 @@ pub struct Event {
     pub name: String,
     /// The row's trigger column as written.
     pub trigger_text: String,
-    /// The first trigger, or why the row has none to play.
-    pub trigger: Result<Trigger, String>,
-    /// The conditions on the first trigger and the event's own: flag names
-    /// and whether each must be set.
-    pub conditions: Vec<(String, bool)>,
+    /// The ways the event starts, in the row's order: each trigger with the
+    /// conditions on it and the event's own (flag names and whether each
+    /// must be set), or why it cannot be played. A trigger the condition
+    /// column lists more than once (`search 70: ... | search 70: ...`) is
+    /// one alternative for each.
+    pub alternatives: Vec<Alternative>,
     /// The flags the event tests, by name.
     pub tests: Vec<String>,
+    /// The flags the event sets, by name.
+    pub sets: Vec<String>,
     pub messages: Vec<u32>,
+}
+
+/// One way an event starts.
+#[derive(Debug, Clone)]
+pub struct Alternative {
+    pub trigger: Result<Trigger, String>,
+    pub conditions: Vec<(String, bool)>,
+}
+
+impl Event {
+    /// The first alternative's trigger, or why the row has none.
+    pub fn trigger(&self) -> Result<Trigger, String> {
+        self.alternatives.first().map_or_else(|| Err("the row has no trigger".to_string()), |a| a.trigger.clone())
+    }
 }
 
 /// Field Psynergy by the name a trigger gives it, and its ability id
@@ -243,23 +260,58 @@ fn parse_conditions(text: &str) -> Vec<(String, bool)> {
         .collect()
 }
 
+/// The ways a row's event starts: each trigger of the trigger column (`touch
+/// 20; touch 21`), with the conditions the condition column gives it
+/// (`touch 20: FLAG_A set | touch 21: FLAG_A clear`; a condition with no
+/// trigger before it is the first trigger's) and the row's own.
+fn alternatives(triggers: &str, condition: &str, requires: &str) -> Vec<Alternative> {
+    let own = parse_conditions(requires);
+    let segments: Vec<(Option<&str>, &str)> = condition
+        .split(" | ")
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| match s.split_once(": ") {
+            Some((t, c)) => (Some(t.trim()), c),
+            None => (None, s),
+        })
+        .collect();
+    let mut out = Vec::new();
+    for (i, text) in triggers.split(';').map(str::trim).filter(|t| !t.is_empty()).enumerate() {
+        let trigger = parse_trigger(text);
+        let mine: Vec<&str> =
+            segments.iter().filter(|(t, _)| *t == Some(text) || (t.is_none() && i == 0)).map(|(_, c)| *c).collect();
+        let with = |extra: &str| {
+            let mut conditions = own.clone();
+            conditions.extend(parse_conditions(extra));
+            Alternative { trigger: trigger.clone(), conditions }
+        };
+        if mine.is_empty() {
+            out.push(with(""));
+        }
+        out.extend(mine.into_iter().map(with));
+    }
+    if out.is_empty() {
+        out.push(Alternative { trigger: parse_trigger(triggers), conditions: own });
+    }
+    out
+}
+
+/// A list of flags, `FLAG_A:set, FLAG_B` or `FLAG_A, FLAG_B`, as names.
+fn flag_names(text: &str) -> Vec<String> {
+    text.split(',').filter_map(|t| t.trim().split(':').next()).filter(|t| !t.is_empty()).map(str::to_string).collect()
+}
+
 pub fn read_events(path: &Path) -> Result<Vec<Event>, String> {
     let tsv = Tsv::read(path)?;
     let [scenes, event, trigger, condition, requires, tests, messages] =
         ["scenes", "event", "trigger", "condition", "requires", "tests", "messages"].map(|c| tsv.column(c));
     let (scenes, event, trigger, condition, requires, tests, messages) =
         (scenes?, event?, trigger?, condition?, requires?, tests?, messages?);
+    let sets = tsv.column("sets").ok();
     Ok(tsv
         .rows
         .iter()
         .map(|row| {
             let trigger_text = tsv.get(row, trigger).to_string();
-            // The condition column holds the event table's condition, per
-            // trigger when there are several (`touch 20: ... | touch 21: ...`).
-            let first_condition = tsv.get(row, condition).split(" | ").next().unwrap_or("");
-            let first_condition = first_condition.split_once(": ").map_or(first_condition, |(_, c)| c);
-            let mut conditions = parse_conditions(tsv.get(row, requires));
-            conditions.extend(parse_conditions(first_condition));
             Event {
                 scenes: tsv
                     .get(row, scenes)
@@ -267,16 +319,10 @@ pub fn read_events(path: &Path) -> Result<Vec<Event>, String> {
                     .filter_map(|s| s.split_whitespace().next()?.parse().ok())
                     .collect(),
                 name: tsv.get(row, event).to_string(),
-                trigger: parse_trigger(&trigger_text),
+                alternatives: alternatives(&trigger_text, tsv.get(row, condition), tsv.get(row, requires)),
                 trigger_text,
-                conditions,
-                tests: tsv
-                    .get(row, tests)
-                    .split(',')
-                    .filter_map(|t| t.trim().split(':').next())
-                    .filter(|t| !t.is_empty())
-                    .map(str::to_string)
-                    .collect(),
+                tests: flag_names(tsv.get(row, tests)),
+                sets: sets.map(|c| flag_names(tsv.get(row, c))).unwrap_or_default(),
                 messages: tsv.get(row, messages).split(',').filter_map(|m| m.trim().parse().ok()).collect(),
             }
         })
@@ -296,6 +342,22 @@ mod tests {
         assert_eq!(parse_trigger("force on ACTOR_PILLAR=12"), Ok(Trigger::Psynergy(0x8e, 12)));
         assert!(parse_trigger("move on ACTOR_BLOCK=19").is_err());
         assert!(parse_trigger("entry initialize").is_err());
+    }
+
+    #[test]
+    fn each_trigger_is_an_alternative_with_its_conditions() {
+        let alts = alternatives("touch 20; touch 21", "touch 20: FLAG_A set | touch 21: FLAG_A clear", "FLAG_B clear");
+        assert_eq!(alts.len(), 2);
+        assert_eq!(alts[0].trigger, Ok(Trigger::Touch(20)));
+        assert_eq!(alts[0].conditions, vec![("FLAG_B".to_string(), false), ("FLAG_A".to_string(), true)]);
+        assert_eq!(alts[1].trigger, Ok(Trigger::Touch(21)));
+        assert_eq!(alts[1].conditions, vec![("FLAG_B".to_string(), false), ("FLAG_A".to_string(), false)]);
+        // A condition with no trigger before it is the first trigger's.
+        let alts = alternatives("talk 9; mind read on 9", "FLAG_C set", "");
+        assert_eq!(alts[0].conditions, vec![("FLAG_C".to_string(), true)]);
+        assert!(alts[1].conditions.is_empty());
+        // One trigger listed under several conditions is one alternative each.
+        assert_eq!(alternatives("search 70", "search 70: FLAG_D set | search 70: FLAG_D clear", "").len(), 2);
     }
 
     #[test]
@@ -322,18 +384,3 @@ mod tests {
     }
 }
 
-/// Message numbers to their symbols (messages.tsv's number and symbol
-/// columns), leaving out the placeholder `message`.
-pub fn read_messages(path: &Path) -> Result<HashMap<u32, String>, String> {
-    let tsv = Tsv::read(path)?;
-    let (number, symbol) = (tsv.column("number")?, tsv.column("symbol")?);
-    Ok(tsv
-        .rows
-        .iter()
-        .filter_map(|row| {
-            let n = tsv.get(row, number).trim().parse().ok()?;
-            let s = tsv.get(row, symbol);
-            (s.starts_with("Msg")).then(|| (n, s.to_string()))
-        })
-        .collect())
-}
