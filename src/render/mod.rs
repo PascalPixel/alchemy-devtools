@@ -318,21 +318,27 @@ initialization tests FLAG_KOLIMA_CURSE_LIFTED is shown cursed and cured,
 in DIR/<scene>_cursed/ and DIR/<scene>_cured/.
 
 event: every talk, search, touch and Psynergy-on-actor event of the scenes
-(--event names some), each played once, from just before its trigger until
-the player has control again, as DIR/<scene>/events/<event>.gif, with its
-first four pages that wait for the button as <event>.png, <event>-2.png and
-on. The leader stands where the player would to start it: beside the actor,
-on its map layer and level with it, facing it; a cell from the cell it
-searches; or a cell from the cell it touches, walking onto it, or on the
-cell pushing the way its row needs. An event counts only when the field
-loop dispatches it, at the leader's spot, and, when it has messages, one
-of them shows. Each of its triggers is tried in turn, with the flags its
-row needs, then with each story flag its scene's setup tests or its
-scene's events set; an actor that is off stage then (at the map's origin,
-outside the map or with no sprite), or an event that runs no script, is
-tried again after each of the scene's other events. Pages are held 45
-frames; an exit ends as the next scene starts loading, and a GIF stops at
-90 seconds, noted in skipped.tsv. --messages is accepted and not read.
+(--event names some; rows of one name are one event), each played once,
+from just before its trigger until the player has control again, as
+DIR/<scene>/events/<event>.gif, with its first four pages that wait for
+the button as <event>.png, <event>-2.png and on. An event plays at any
+scene its row lists, so a scene's overlay brings its other scenes along.
+The leader stands where the player would to start it, on ground he could
+walk to from where he enters, in the room the camera shows: beside the
+actor, on its map layer and level with it, facing it; facing the cell it
+searches from any of eight ways; a cell from the cell it touches, walking
+onto it, or on the cell pushing the way its row needs. Move is steered
+with the d-pad once cast. An event counts only when the field loop
+dispatches it at the leader's spot, it runs a script, and it shows
+itself: one of its messages when it has messages, else (a touch, a Move)
+something that moves, leaves, fights or changes the map. Each of its
+triggers is tried in turn, by the entrances whose events answer it, with
+the flags its row needs, then with each story flag its scene's setup
+tests or its scene's events set; one that does not play is tried again
+after each of the scene's other events. Pages are held 45 frames; an exit
+ends as the next scene starts loading, and an event that runs past three
+minutes gets no GIF, noted in skipped.tsv. --messages is accepted and not
+read.
 
 
 Needs the `render` feature: cargo build --release --features render, with
@@ -406,9 +412,18 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
                 || (o.scenes.is_empty() && !o.events.is_empty())
         })
         .collect();
+    // An event plays at any scene its row lists, so each overlay's other
+    // scenes (the other floors of Mercury Lighthouse) come too; only the
+    // events of the scenes asked for are played.
+    let only: Vec<u16> = if kind == "event" && !o.all && !o.scenes.is_empty() { chosen.iter().map(|s| s.number).collect() } else { Vec::new() };
+    let chosen: Vec<&story::Scene> = if kind == "event" {
+        scene_rows.iter().filter(|s| chosen.iter().any(|c| c.file == s.file)).collect()
+    } else {
+        chosen
+    };
     let root = crate::compile::root();
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
-    play_scenes(root, &o.edition, kind, &chosen, &events, &o.events, &flags, &out)
+    play_scenes(root, &o.edition, kind, &chosen, &only, &events, &o.events, &flags, &out)
 }
 
 #[cfg(not(feature = "render"))]
@@ -417,6 +432,7 @@ fn play_scenes(
     _: &str,
     _: &str,
     _: &[&story::Scene],
+    _: &[u16],
     _: &[story::Event],
     _: &[String],
     _: &story::Flags,
@@ -431,6 +447,7 @@ fn play_scenes(
     edition: &str,
     kind: &str,
     chosen: &[&story::Scene],
+    only: &[u16],
     events: &[story::Event],
     wanted: &[String],
     flags: &story::Flags,
@@ -480,6 +497,7 @@ fn play_scenes(
                     gifs: 0,
                     gif_bytes: 0,
                     wanted,
+                    only,
                     cleared: Vec::new(),
                 };
                 if kind == "place" {

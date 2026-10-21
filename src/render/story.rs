@@ -201,9 +201,14 @@ impl Event {
     }
 }
 
+/// Move's ability id: the one field Psynergy steered with the d-pad once it
+/// is cast (BattleFx_SteerPushedTarget).
+pub const MOVE: u16 = 0x8c;
+
 /// Field Psynergy by the name a trigger gives it, and its ability id
-/// (actions.tsv). Move needs a direction held after the cast.
-const PSYNERGY: [(&str, u16); 11] = [
+/// (actions.tsv).
+const PSYNERGY: [(&str, u16); 12] = [
+    ("move", MOVE),
     ("mind read", 0x8d),
     ("force", 0x8e),
     ("frost", 0x18),
@@ -234,9 +239,6 @@ pub fn parse_trigger(text: &str) -> Result<Trigger, String> {
     }
     if let Some(rest) = first.strip_prefix("touch ") {
         return target(rest).map(Trigger::Touch).ok_or_else(bad);
-    }
-    if first.starts_with("move on ") {
-        return Err("Move needs a direction held after the cast".to_string());
     }
     for (name, ability) in PSYNERGY {
         if let Some(rest) = first.strip_prefix(&format!("{name} on ")) {
@@ -340,7 +342,7 @@ mod tests {
         assert_eq!(parse_trigger("search 208"), Ok(Trigger::Search(208)));
         assert_eq!(parse_trigger("mind read on 8"), Ok(Trigger::Psynergy(0x8d, 8)));
         assert_eq!(parse_trigger("force on ACTOR_PILLAR=12"), Ok(Trigger::Psynergy(0x8e, 12)));
-        assert!(parse_trigger("move on ACTOR_BLOCK=19").is_err());
+        assert_eq!(parse_trigger("move on ACTOR_BLOCK=19"), Ok(Trigger::Psynergy(MOVE, 19)));
         assert!(parse_trigger("entry initialize").is_err());
     }
 

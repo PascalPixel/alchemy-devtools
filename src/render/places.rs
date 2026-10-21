@@ -2,8 +2,11 @@
 //! a map of each of its rooms, story-state variants, and the message pages
 //! of its events, as PNG files at the GBA's own size, with an index.
 
-use super::field::{box_holds, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, EVENT_LIMIT, SETTLE};
-use super::story::{Alternative, Event, Flags, Scene, Trigger};
+use super::field::{
+    box_holds, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, EVENT_EXIT, EVENT_LIMIT, EVENT_PSYNERGY, EVENT_SEARCH, EVENT_TALK,
+    EVENT_TOUCH, SETTLE,
+};
+use super::story::{parse_trigger, Alternative, Event, Flags, Scene, Trigger, MOVE};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
@@ -154,6 +157,9 @@ pub struct Context<'a> {
     pub gif_bytes: u64,
     /// The events to play, by name; none for every event of the scenes.
     pub wanted: &'a [String],
+    /// The scenes asked for: an event is played when it lists one of them,
+    /// at any scene of the job it lists. None for every scene of the job.
+    pub only: &'a [u16],
     /// The scenes and things of skipped.tsv that played this time, whose
     /// old lines go.
     pub cleared: Vec<(String, String)>,
@@ -299,10 +305,16 @@ impl Context<'_> {
 }
 
 /// The places an event is tried at: scenes and entrances whose camera box
-/// holds the trigger, in the event's scene order.
-const MAX_PLACES: usize = 3;
+/// holds the trigger, in the event's scene order, and at most so many in one
+/// scene.
+const MAX_PLACES: usize = 4;
+const PLACES_PER_SCENE: usize = 3;
+/// Entrances of one scene scanned for a trigger at most.
+const MAX_ENTRANCES: usize = 24;
 /// Spots tried around one trigger at one place.
 const MAX_SPOTS: usize = 8;
+/// Triggers of an event retried after each of its scene's other events.
+const MAX_RETRIED: usize = 2;
 
 /// What a scene shows with given flags, entered by an entrance: its
 /// entrances, the header's bounds, where its triggers are, and why each
@@ -312,7 +324,9 @@ struct Scan {
     header: [i32; 4],
     actors: HashMap<u16, (i32, i32)>,
     absent: HashMap<u16, String>,
-    cells: HashMap<u16, (i32, i32)>,
+    cells: HashMap<u16, Vec<(u8, i32, i32)>>,
+    /// The triggers its event table answers, as (kind, target).
+    triggers: Vec<(u8, u16)>,
 }
 
 type ScanKey = (u16, u16, Vec<u16>, Vec<u16>);
@@ -338,11 +352,50 @@ struct Played {
 
 /// What one job keeps between its events: the scans, and the moment each
 /// event played without recording left the player in control, for the
-/// events whose actor only another event puts on stage.
+/// events that only another event makes playable.
 #[derive(Default)]
 struct Job {
     scans: HashMap<ScanKey, Result<Scan, String>>,
     ends: HashMap<(String, Vec<u16>, Vec<u16>), Option<(Setup, Saved)>>,
+}
+
+/// Whether an event is a row of a scene's event table that only shows a
+/// message, named by it (MsgValeRockCannotBeMoved): it changes nothing
+/// another event could need.
+fn is_message_row(name: &str) -> bool {
+    name.starts_with("Msg") || name.contains('[') || name.chars().next().is_some_and(|c| c.is_ascii_digit())
+}
+
+/// The rows of `events` that share a name, as one event: the eight rocks of
+/// the stormy night are one event with eight triggers, and a helper two
+/// scenes include is one event of both.
+fn merge_rows(events: &[&Event]) -> Vec<Event> {
+    let mut out: Vec<Event> = Vec::new();
+    for event in events {
+        let Some(group) = out.iter_mut().find(|g| g.name == event.name) else {
+            out.push((*event).clone());
+            continue;
+        };
+        for s in &event.scenes {
+            if !group.scenes.contains(s) {
+                group.scenes.push(*s);
+            }
+        }
+        group.alternatives.extend(event.alternatives.iter().cloned());
+        for (list, more) in [(&mut group.tests, &event.tests), (&mut group.sets, &event.sets)] {
+            for t in more {
+                if !list.contains(t) {
+                    list.push(t.clone());
+                }
+            }
+        }
+        for m in &event.messages {
+            if !group.messages.contains(m) {
+                group.messages.push(*m);
+            }
+        }
+    }
+    out
 }
 
 impl Context<'_> {
@@ -365,13 +418,29 @@ impl Context<'_> {
                 }
             }
         }
-        let cells = (1..256u16).filter_map(|code| field.cell_with_code(code).map(|p| (code, p))).collect();
-        Ok(Scan { entrances, header, actors, absent, cells })
+        let cells = field.cells_by_code();
+        let triggers = field.triggers();
+        Ok(Scan { entrances, header, actors, absent, cells, triggers })
+    }
+
+    /// The scan of a scene entered by an entrance with given flags, made
+    /// once.
+    fn scanned<'s>(
+        &self,
+        scans: &'s mut HashMap<ScanKey, Result<Scan, String>>,
+        scene: u16,
+        entrance: u16,
+        set: &[u16],
+        clear: &[u16],
+    ) -> &'s Result<Scan, String> {
+        scans.entry((scene, entrance, set.to_vec(), clear.to_vec())).or_insert_with(|| self.scan(scene, entrance, set, clear))
     }
 
     /// The scene and entrance pairs where `trigger` stands, scanning the
     /// scene by its first entrance and then by the first entrance of each of
-    /// its other rooms.
+    /// its other rooms. Each place is the room holding the trigger (an actor,
+    /// or one of the cells with its code), entered by the entrance nearest
+    /// it, from which the leader can most likely walk to it.
     fn places(
         &self,
         scenes: &[&Scene],
@@ -383,54 +452,81 @@ impl Context<'_> {
         let mut out = Vec::new();
         let mut error = None;
         let mut absent = None;
+        // Where the trigger stands in a scan: the actor, or the cells with
+        // its code (the ground layer's for a search).
+        let at = |scan: &Scan| -> Vec<(i32, i32)> {
+            let centre = |&(_, cx, cz): &(u8, i32, i32)| (cx * 16 + 8, cz * 16 + 8);
+            match trigger {
+                Trigger::Talk(a) | Trigger::Psynergy(_, a) => scan.actors.get(&a).copied().into_iter().collect(),
+                Trigger::Search(c) => scan.cells.get(&c).map_or_else(Vec::new, |v| v.iter().filter(|c| c.0 == 0).map(centre).collect()),
+                Trigger::Touch(c) => scan.cells.get(&c).map_or_else(Vec::new, |v| v.iter().map(centre).collect()),
+            }
+        };
+        // Whether the event table a scan's entrance gives answers the
+        // trigger.
+        let answers = |scan: &Scan| match trigger {
+            Trigger::Talk(a) => scan.triggers.contains(&(EVENT_TALK, a)),
+            Trigger::Search(c) => scan.triggers.contains(&(EVENT_SEARCH, c)),
+            Trigger::Touch(c) => scan.triggers.contains(&(EVENT_TOUCH, c)) || scan.triggers.contains(&(EVENT_EXIT, c)),
+            Trigger::Psynergy(..) => scan.triggers.iter().any(|t| t.0 == EVENT_PSYNERGY),
+        };
         for scene in scenes.iter().filter(|s| is_place(s).is_ok()) {
-            let mut entrance = 0u16;
-            let mut tried: Vec<[i16; 4]> = Vec::new();
-            loop {
-                let key = (scene.number, entrance, set.to_vec(), clear.to_vec());
-                if !scans.contains_key(&key) {
-                    let scan = self.scan(scene.number, entrance, set, clear);
-                    scans.insert(key.clone(), scan);
+            let first = match self.scanned(scans, scene.number, 0, set, clear) {
+                Ok(scan) => scan,
+                Err(e) => {
+                    error.get_or_insert_with(|| format!("{}: {e}", scene.name()));
+                    continue;
                 }
-                let scan = match &scans[&key] {
+            };
+            let header = first.header;
+            let entrances: Vec<Entrance> = first.entrances.iter().filter(|e| e.number >= 0).copied().collect();
+            let first_at = at(first);
+            // The entrances to try, best first: those whose room holds the
+            // trigger as the scene is entered by its first, nearest it
+            // first (a room's entrances may give it different events, as
+            // the loft's do in Vault); then the first of each other room.
+            let mut near: Vec<(i32, Entrance)> = Vec::new();
+            for (x, z) in first_at {
+                for e in entrances.iter().filter(|e| box_holds(e.camera, header, x, z)) {
+                    near.push(((i32::from(e.x) - x).pow(2) + (i32::from(e.z) - z).pow(2), *e));
+                }
+            }
+            near.sort_by_key(|(d, _)| *d);
+            let mut order: Vec<Entrance> = near.into_iter().map(|(_, e)| e).collect();
+            for e in &entrances {
+                if !order.iter().any(|o| o.camera == e.camera) {
+                    order.push(*e);
+                }
+            }
+            let mut tried: Vec<i16> = Vec::new();
+            let mut found = 0;
+            for e in order {
+                if tried.contains(&e.number) || found >= PLACES_PER_SCENE || tried.len() >= MAX_ENTRANCES {
+                    continue;
+                }
+                tried.push(e.number);
+                let scan = match self.scanned(scans, scene.number, e.number as u16, set, clear) {
                     Ok(scan) => scan,
-                    Err(e) => {
-                        error.get_or_insert_with(|| format!("{}: {e}", scene.name()));
-                        break;
+                    Err(why) => {
+                        error.get_or_insert_with(|| format!("{}: {why}", scene.name()));
+                        continue;
                     }
                 };
-                let at = match trigger {
-                    Trigger::Talk(a) | Trigger::Psynergy(_, a) => {
-                        if let Some(why) = scan.absent.get(&a) {
-                            absent.get_or_insert_with(|| why.clone());
-                        }
-                        scan.actors.get(&a)
+                if let Trigger::Talk(a) | Trigger::Psynergy(_, a) = trigger {
+                    if let Some(why) = scan.absent.get(&a) {
+                        absent.get_or_insert_with(|| why.clone());
                     }
-                    Trigger::Search(c) | Trigger::Touch(c) => scan.cells.get(&c),
-                };
-                if let Some(&(x, z)) = at {
-                    let holder = scan
-                        .entrances
-                        .iter()
-                        .find(|e| box_holds(e.camera, scan.header, x, z))
-                        .or_else(|| scan.entrances.first());
-                    if let Some(&e) = holder {
-                        out.push((scene.number, e));
-                    }
-                    break;
                 }
-                // Not there by this entrance: try the next room's.
-                tried.push(scan.entrances.iter().find(|e| e.number as u16 == entrance).map_or([-1; 4], |e| e.camera));
-                let next = scan.entrances.iter().find(|e| !tried.contains(&e.camera) && e.number >= 0);
-                match next {
-                    Some(e) => {
-                        tried.push(e.camera);
-                        entrance = e.number as u16;
-                    }
-                    None => break,
+                // Entered here, the scene must show the trigger in this
+                // entrance's room and answer it.
+                let here = at(scan);
+                if answers(scan) && here.iter().any(|&(x, z)| box_holds(e.camera, scan.header, x, z)) {
+                    out.push((scene.number, e));
+                    found += 1;
                 }
             }
             if out.len() >= MAX_PLACES {
+                out.truncate(MAX_PLACES);
                 break;
             }
         }
@@ -438,9 +534,12 @@ impl Context<'_> {
             if let Some(why) = absent {
                 return Err(Failure { reason: why, absent: true });
             }
+            let names = scenes.iter().map(|s| s.name()).collect::<Vec<_>>().join(", ");
             let missing = match trigger {
-                Trigger::Search(c) | Trigger::Touch(c) => format!("no cell of its scenes holds code {c}"),
-                Trigger::Talk(a) | Trigger::Psynergy(_, a) => format!("none of its scenes has actor {a}"),
+                Trigger::Search(c) => format!("no entrance of {names} leads to a room with a ground-layer cell with code {c} that its events search"),
+                Trigger::Touch(c) => format!("no entrance of {names} leads to a room with a cell with code {c} that its events answer"),
+                Trigger::Talk(a) => format!("no entrance of {names} leads to a room with actor {a} that its events talk to"),
+                Trigger::Psynergy(_, a) => format!("no entrance of {names} leads to a room with actor {a} and a Psynergy event"),
             };
             return Err(Failure::new(error.unwrap_or(missing)));
         }
@@ -448,41 +547,42 @@ impl Context<'_> {
     }
 
     /// Plays every chosen event of `scenes` and writes its pages and one GIF
-    /// of the whole event. Each event is tried by each of its triggers in
-    /// turn, with its flags and then with each story flag its scene's setup
-    /// tests or its scene's events set added one at a time, at each place
-    /// that holds the trigger, from each spot around it, until it plays; an
-    /// event whose actor is never on stage when the scene is entered is
-    /// tried once each other event of the scene has played.
+    /// of the whole event. Rows of the scenes with the same name are one
+    /// event. Each event is tried by each of its triggers in turn, with its
+    /// flags and then with each story flag its scene's setup tests or its
+    /// scene's events set added one at a time, at each place that holds the
+    /// trigger, from each spot around it, until it plays; an event that does
+    /// not play when the scene is entered (its actor is not on stage yet, or
+    /// what it needs another event leaves) is tried once each other event
+    /// of the scene has played.
     pub fn events(&mut self, scenes: &[&Scene]) {
         let mut job = Job::default();
-        let events = self.events;
-        let mut done: Vec<(Vec<u16>, &str)> = Vec::new();
-        for event in events {
-            if !self.wanted.is_empty() && !self.wanted.iter().any(|w| *w == event.name) {
-                continue;
-            }
+        let numbers: Vec<u16> = scenes.iter().map(|s| s.number).collect();
+        let rows: Vec<&Event> = self
+            .events
+            .iter()
+            .filter(|e| self.wanted.is_empty() || self.wanted.iter().any(|w| *w == e.name))
+            .filter(|e| e.scenes.iter().any(|n| numbers.contains(n)))
+            .filter(|e| self.only.is_empty() || e.scenes.iter().any(|n| self.only.contains(n)))
+            .collect();
+        for event in merge_rows(&rows) {
             let candidates: Vec<&Scene> = scenes.iter().copied().filter(|s| event.scenes.contains(&s.number)).collect();
             let Some(&first) = candidates.first() else {
                 continue;
             };
-            // Rows of one scene with the same name are one event.
-            if done.contains(&(event.scenes.clone(), event.name.as_str())) {
-                continue;
-            }
-            done.push((event.scenes.clone(), event.name.as_str()));
             let label = format!("event {}", event.name);
-            match self.play_event(event, &candidates, &mut job, Some(EVENT_LIMIT as usize), None) {
+            match self.play_event(&event, &candidates, &mut job, Some(EVENT_LIMIT as usize), None) {
                 Ok(played) => {
                     let scene = candidates.iter().find(|s| s.number == played.setup.scene).copied().unwrap_or(first);
                     for s in &candidates {
                         self.cleared.push((s.name(), label.clone()));
                     }
-                    if let Err(e) = self.write_event(scene, played.setup.entrance as i16, event, &played.run) {
-                        self.skip(scene, &label, e);
-                    } else if played.run.capped {
+                    // A GIF shows the whole event or is not written.
+                    if played.run.capped {
                         let limit = EVENT_LIMIT / 60;
-                        self.skip(scene, &label, format!("its GIF stops at {limit} seconds, before the player has control again"));
+                        self.skip(scene, &label, format!("it runs past {limit} seconds without the player having control again"));
+                    } else if let Err(e) = self.write_event(scene, played.setup.entrance as i16, &event, &played.run) {
+                        self.skip(scene, &label, e);
                     }
                 }
                 Err(e) => self.skip(first, &label, e.reason),
@@ -544,11 +644,14 @@ impl Context<'_> {
         within: Option<(&[u16], &[u16])>,
     ) -> Result<Played, Failure> {
         let first = scenes[0];
+        // On the way to another event, any run that leaves the player in
+        // control will do; an event shown must show itself.
+        let strict = within.is_none();
         let mut failure: Option<Failure> = None;
-        let mut absent: Option<(Trigger, Vec<u16>, Vec<u16>)> = None;
-        // A run that ran no script (a hop with nothing to land on), kept
-        // in case another place, flag or event makes it play.
-        let mut fallback: Option<Played> = None;
+        // The triggers to try again after the scene's other events, with
+        // their flags: those that found a place first.
+        let mut retry: Vec<(Trigger, Vec<u16>, Vec<u16>)> = Vec::new();
+        let mut unplaced: Vec<(Trigger, Vec<u16>, Vec<u16>)> = Vec::new();
         for alternative in &event.alternatives {
             let trigger = match &alternative.trigger {
                 Ok(t) => *t,
@@ -581,7 +684,7 @@ impl Context<'_> {
                 s.sort_unstable();
                 s
             }));
-            let mut on_stage = false;
+            let mut placed = false;
             for flags in flag_sets {
                 let places = match self.places(scenes, trigger, &flags, &clear, &mut job.scans) {
                     Ok(places) => places,
@@ -594,7 +697,7 @@ impl Context<'_> {
                         continue;
                     }
                 };
-                on_stage = true;
+                placed = true;
                 for (scene, entrance) in places {
                     let mut set = flags.clone();
                     if entrance.required_flag >= 0 && !set.contains(&(entrance.required_flag as u16)) {
@@ -602,57 +705,77 @@ impl Context<'_> {
                         set.sort_unstable();
                     }
                     let setup = Setup { scene, entrance: entrance.number as u16, set, clear: clear.clone() };
-                    match self.play_at(&setup, None, trigger, &event.messages, record) {
-                        Ok(run) if run.instant => {
-                            if fallback.is_none() {
-                                fallback = Some(Played { setup, run });
-                                absent.get_or_insert((trigger, flags.clone(), clear.clone()));
-                            }
-                        }
+                    match self.play_at(&setup, None, trigger, event, record, strict) {
                         Ok(run) => return Ok(Played { setup, run }),
                         Err(e) => failure = Some(Failure::new(e)),
                     }
                 }
             }
-            if !on_stage && matches!(trigger, Trigger::Talk(_) | Trigger::Psynergy(..)) {
-                absent.get_or_insert((trigger, set.clone(), clear.clone()));
-            }
+            let entry = (trigger, set.clone(), clear.clone());
+            if placed { &mut retry } else { &mut unplaced }.push(entry);
         }
         let mut failure = failure.unwrap_or_else(|| Failure::new("the row has no trigger".to_string()));
-        // The actor only comes on stage during another event, or the event
-        // only plays after one: play each of the scene's other events and
-        // try from where it leaves the player.
-        if let (None, Some((trigger, set, clear))) = (within, absent) {
-            for other in self.events.iter().filter(|e| e.scenes.contains(&first.number) && e.name != event.name && !e.name.contains('[') && e.trigger().is_ok()) {
-                let key = (other.name.clone(), set.clone(), clear.clone());
-                if !job.ends.contains_key(&key) {
-                    let end = self.play_event(other, scenes, job, None, Some((&set, &clear))).ok().and_then(|p| p.run.end.map(|end| (p.setup, end)));
-                    job.ends.insert(key.clone(), end);
-                }
-                let Some((setup, end)) = &job.ends[&key] else {
-                    continue;
-                };
-                match self.play_at(setup, Some(end), trigger, &event.messages, record) {
-                    Ok(run) if run.instant => {}
-                    Ok(run) => return Ok(Played { setup: setup.clone(), run }),
-                    Err(e) if !e.contains("off stage") && !e.contains("no actor") && !e.contains("no sprite") => {
-                        failure = Failure::new(format!("after {}: {e}", other.name));
+        // The event does not play as the scene is entered: its actor only
+        // comes on stage during another event, or what it needs (a log
+        // pushed into place, a flag) another event leaves. Play each of the
+        // scene's other events and try from where it leaves the player.
+        retry.extend(unplaced);
+        retry.dedup_by_key(|r| r.0);
+        retry.truncate(MAX_RETRIED);
+        if within.is_none() && !retry.is_empty() {
+            let mut seen: Vec<&str> = Vec::new();
+            let others = self.events.iter().filter(|e| {
+                let fresh = !seen.contains(&e.name.as_str());
+                seen.push(e.name.as_str());
+                fresh
+                    && e.scenes.contains(&first.number)
+                    && e.name != event.name
+                    && !is_message_row(&e.name)
+                    && e.trigger().is_ok()
+                    // What another event can change for this one: who is on
+                    // stage, a flag, or what a touch or a cast moves.
+                    && (failure.absent || !e.sets.is_empty() || matches!(e.trigger(), Ok(Trigger::Touch(_) | Trigger::Psynergy(..))))
+            });
+            let others: Vec<&Event> = others.collect();
+            let mut tried_after = 0;
+            for other in others {
+                for (trigger, set, clear) in &retry {
+                    let key = (other.name.clone(), set.clone(), clear.clone());
+                    if !job.ends.contains_key(&key) {
+                        let end = self.play_event(other, scenes, job, None, Some((set, clear))).ok().and_then(|p| p.run.end.map(|end| (p.setup, end)));
+                        job.ends.insert(key.clone(), end);
                     }
-                    Err(_) => {}
+                    let Some((setup, end)) = &job.ends[&key] else {
+                        continue;
+                    };
+                    tried_after += 1;
+                    match self.play_at(setup, Some(end), *trigger, event, record, strict) {
+                        Ok(run) => return Ok(Played { setup: setup.clone(), run }),
+                        Err(e) if failure.absent && (e.contains("off stage") || e.contains("no actor") || e.contains("no sprite")) => {}
+                        Err(e) if failure.absent => failure = Failure::new(format!("after {}: {e}", other.name)),
+                        Err(_) => {}
+                    }
                 }
             }
-            if failure.absent {
-                failure.reason = format!("{}, when the scene is entered and after each of its other events", failure.reason);
-            }
+            failure.reason = if failure.absent {
+                format!("{}, when the scene is entered and after each of its other events", failure.reason)
+            } else if tried_after > 0 {
+                format!("{}; nor after any of the scene's other events", failure.reason)
+            } else {
+                failure.reason
+            };
         }
-        fallback.ok_or(failure)
+        Err(failure)
     }
 
     /// Plays an event at one place, from each spot around its trigger until
-    /// one counts: it began there, and when it has messages, one of them
-    /// showed. `after` is a moment of the scene to start from instead of
-    /// its entrance.
-    fn play_at(&self, setup: &Setup, after: Option<&Saved>, trigger: Trigger, messages: &[u32], record: Option<usize>) -> Result<EventRun, String> {
+    /// one counts: it began there, ran a script, and showed itself (one of
+    /// its messages when it has messages; a touch or a Move with none moved
+    /// something, left, fought or changed the map). `after` is a moment of
+    /// the scene to start from instead of its entrance. Unless `strict`, any
+    /// run that began counts.
+    fn play_at(&self, setup: &Setup, after: Option<&Saved>, trigger: Trigger, event: &Event, record: Option<usize>, strict: bool) -> Result<EventRun, String> {
+        let messages = &event.messages;
         let mut field = Field::enter(self.rom, self.symbols, setup)?;
         let entered: Saved = field.save();
         match after {
@@ -664,29 +787,61 @@ impl Context<'_> {
         }
         let spots = field.spots(trigger)?;
         let mut error = String::new();
-        let mut instant = None;
+        let silent = matches!(trigger, Trigger::Touch(_) | Trigger::Psynergy(MOVE, _));
         for spot in spots.iter().take(MAX_SPOTS) {
             let start = match after {
                 Some(saved) => Start::InControl(saved),
                 None => Start::Entered(&entered),
             };
             match field.event(start, trigger, spot, messages, MAX_PAGES, record) {
-                Ok(run) if !messages.is_empty() && run.pages.is_empty() => error = "the event played but no page of its messages waited for the button".to_string(),
+                Ok(run) if !strict => return Ok(run),
+                Ok(run) if !messages.is_empty() && run.pages.is_empty() => {
+                    error = match run.seen {
+                        Some(m) => format!("message {m:05}, not one of its own, showed and none of its own waited for the button"),
+                        None => "it began, but no message waited for the button".to_string(),
+                    }
+                }
                 // A row of the same trigger whose condition held played
                 // instead: none of this event's messages showed.
-                Ok(run) if !messages.is_empty() && !run.pages.iter().any(|page| page.message.is_some()) => {
-                    error = "another event played instead".to_string();
+                Ok(run) if run.rows > 1 && !messages.is_empty() && !run.pages.iter().any(|page| page.message.is_some()) => {
+                    let shown = run.seen.map_or(String::new(), |m| format!(" (message {m:05}{})", self.shows(m, setup.scene)));
+                    error = format!("another row for its trigger played instead{shown}");
                 }
-                // A run that ran no script is kept in case no spot does
-                // better.
-                Ok(run) if run.instant => {
-                    instant.get_or_insert(run);
+                Ok(run) if run.instant => error = "its dispatch returned at once from every spot: it ran no script".to_string(),
+                Ok(run) if silent && messages.is_empty() && !run.shown => {
+                    error = "it ran, but nothing moved, showed or changed from any spot".to_string();
                 }
                 Ok(run) => return Ok(run),
-                Err(e) => error = e,
+                Err(e) => error = self.name_other(e, setup.scene),
             }
         }
-        instant.ok_or(error)
+        Err(error)
+    }
+
+    /// `, which <event> shows` for message `m` of a scene, when an event
+    /// lists it.
+    fn shows(&self, m: u32, scene: u16) -> String {
+        self.events
+            .iter()
+            .find(|e| e.scenes.contains(&scene) && e.messages.contains(&m))
+            .map_or(String::new(), |e| format!(", which {} shows", e.name))
+    }
+
+    /// An error naming another event's trigger (`another event began (talk
+    /// 18)`) with that event's name, when the scene has one for it.
+    fn name_other(&self, e: String, scene: u16) -> String {
+        let Some(rest) = e.strip_prefix("another event began (") else {
+            return e;
+        };
+        let inner = rest.trim_end_matches(')');
+        let trigger = parse_trigger(inner).ok();
+        let other = trigger.and_then(|t| {
+            self.events.iter().find(|ev| ev.scenes.contains(&scene) && ev.alternatives.iter().any(|a| a.trigger.as_ref().ok() == Some(&t)))
+        });
+        match other {
+            Some(ev) => format!("{} began first ({inner})", ev.name),
+            None => e,
+        }
     }
 
     /// An event's pages and its GIF.
@@ -774,6 +929,35 @@ mod tests {
     fn event_names_become_file_names() {
         assert_eq!(file_name("Event_InspectWell"), "Event_InspectWell");
         assert_eq!(file_name("gXianInteriors_Events[65]"), "gXianInteriors_Events-65");
+    }
+
+    #[test]
+    fn rows_of_one_name_are_one_event() {
+        let row = |name: &str, scene: u16, trigger: Trigger, message: u32| Event {
+            scenes: vec![scene],
+            name: name.to_string(),
+            trigger_text: String::new(),
+            alternatives: vec![Alternative { trigger: Ok(trigger), conditions: Vec::new() }],
+            tests: Vec::new(),
+            sets: Vec::new(),
+            messages: vec![message],
+        };
+        let rocks = [row("MsgValeRockCannotBeMoved", 3, Trigger::Talk(11), 4385), row("MsgValeRockCannotBeMoved", 3, Trigger::Talk(12), 4385)];
+        let hops = [row("KolimaForest_HopEast", 40, Trigger::Touch(11), 1), row("KolimaForest_HopEast", 42, Trigger::Touch(11), 2)];
+        let all: Vec<&Event> = rocks.iter().chain(hops.iter()).collect();
+        let merged = merge_rows(&all);
+        assert_eq!(merged.len(), 2);
+        assert_eq!(merged[0].alternatives.len(), 2);
+        assert_eq!(merged[0].messages, vec![4385]);
+        assert_eq!(merged[1].scenes, vec![40, 42]);
+        assert_eq!(merged[1].messages, vec![1, 2]);
+    }
+
+    #[test]
+    fn message_rows_are_told_from_functions() {
+        assert!(is_message_row("MsgValeRockCannotBeMoved"));
+        assert!(is_message_row("gValeStorm_Events[26]"));
+        assert!(!is_message_row("Event_PushPillar"));
     }
 }
 

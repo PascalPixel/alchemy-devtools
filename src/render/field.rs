@@ -19,7 +19,8 @@
 //! it: beside the actor it talks to, on its map layer and level with it, or
 //! a step from the cell it touches or searches, on the ground there
 //! (Map_GetTerrainHeight, run in the machine between two steps of the field
-//! loop). Then A (talk, search), a field Psynergy request (FieldWork.command)
+//! loop), and always on ground he could walk to from where he entered, in
+//! the room the camera shows (Field::reach). Then A (talk, search), a field Psynergy request (FieldWork.command)
 //! or walking onto the cell (touch) starts it, and the field loop's own
 //! dispatch (Scene_TalkToActor, Scene_RunTouchOrExit, Field_SearchTile,
 //! Field_UsePsynergy) shows which event began. Each message page is kept once
@@ -28,8 +29,9 @@
 //! The event is over when the field loop steps again with nothing to read.
 
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, LR, SP, WIDTH};
-use super::story::Trigger;
+use super::story::{Trigger, MOVE};
 use crate::ld_map::Map;
+use std::collections::HashMap;
 
 /// struct GameState (game_state.h), struct MapScrollWork (map_scroll.h),
 /// struct FieldWork (field_runtime.h), struct SceneEntries and the object
@@ -78,11 +80,20 @@ const GRID: i32 = 128;
 /// leader pushes against, and the wall.
 const CELL_EVENT_LAST: i32 = 239;
 const CELL_LEDGE: i32 = 252;
+const CELL_CLIMB: i32 = 253;
+const CELL_JUMP: i32 = 254;
 const CELL_WALL: i32 = 255;
+/// North, east, south and west: a cell's step, the heading that faces that
+/// way and the direction key that walks it.
+const STEP: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
+const FACING: [u32; 4] = [0xc000, 0x0000, 0x4000, 0x8000];
+const KEYS: [u32; 4] = [KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT];
 /// Map_CheckObjectStep's limits: ground up to 8 pixels higher or 12 lower
 /// is a step the leader can take.
 const STEP_UP: i32 = 8 << 16;
 const STEP_DOWN: i32 = 12 << 16;
+/// The furthest a ledge, a climb or a jump is taken to drop the leader.
+const JUMP_DROP: i32 = 96 << 16;
 /// struct SceneEvent: its control word (kind in the low four bits, a facing
 /// in bits 15..12 with EVENT_TOUCH_FACING), its target and its result.
 const EVENT_ROW_SIZE: u32 = 12;
@@ -700,6 +711,11 @@ impl<'rom> Field<'rom> {
         Ok(actor)
     }
 
+    /// The actors on stage other than the party, with their places (pixels).
+    fn stage(&self) -> Vec<(u16, i32, i32)> {
+        (FIRST_PLACED..FIELD_ACTOR_COUNT as u16).filter_map(|id| self.present(id).ok().map(|a| (id, a.x, a.z))).collect()
+    }
+
     /// The collision code of cell (cx, cz) of map layer `layer` (its window
     /// onto the cell grid), or -1 off the grid.
     pub fn cell(&self, layer: u8, cx: i32, cz: i32) -> i32 {
@@ -728,10 +744,56 @@ impl<'rom> Field<'rom> {
         out
     }
 
-    /// The first cell holding collision code `code`, as its centre in
-    /// pixels.
-    pub fn cell_with_code(&self, code: u16) -> Option<(i32, i32)> {
-        self.cells_with_code(code).first().map(|&(_, cx, cz)| (cx * 16 + 8, cz * 16 + 8))
+    /// The cells within the header's bounds holding each of the scene's
+    /// event codes, with their layer, in layers and rows.
+    pub fn cells_by_code(&self) -> HashMap<u16, Vec<(u8, i32, i32)>> {
+        let h = self.t.header;
+        let (x0, z0, x1, z1) = (h[0] >> 20, h[1] >> 20, (h[2] + 0xfffff) >> 20, (h[3] + 0xfffff) >> 20);
+        let mut out: HashMap<u16, Vec<(u8, i32, i32)>> = HashMap::new();
+        for layer in 0..3u8 {
+            for cz in z0..z1 {
+                for cx in x0..x1 {
+                    let code = self.cell(layer, cx, cz);
+                    if (1..=CELL_EVENT_LAST).contains(&code) {
+                        out.entry(code as u16).or_default().push((layer, cx, cz));
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// Every cell's collision code within the header's bounds, layer by
+    /// layer and row by row.
+    fn cell_codes(&self) -> Vec<i32> {
+        let h = self.t.header;
+        let (x0, z0, x1, z1) = (h[0] >> 20, h[1] >> 20, (h[2] + 0xfffff) >> 20, (h[3] + 0xfffff) >> 20);
+        let mut out = Vec::new();
+        for layer in 0..3u8 {
+            for cz in z0..z1 {
+                for cx in x0..x1 {
+                    out.push(self.cell(layer, cx, cz));
+                }
+            }
+        }
+        out
+    }
+
+    /// The triggers the scene's event table answers now, as (kind, target):
+    /// the table the scene gives for the entrance it was entered by (the
+    /// loft's own in Vault's houses).
+    pub fn triggers(&self) -> Vec<(u8, u16)> {
+        let work = self.gba.read32(self.s.field_work);
+        let mut a = if work == 0 { 0 } else { self.gba.read32(work + FIELD_EVENTS) };
+        let mut out = Vec::new();
+        for _ in 0..1024 {
+            if a == 0 || self.gba.read32(a) == u32::MAX {
+                break;
+            }
+            out.push(((self.gba.read32(a) & 15) as u8, u16::from(self.gba.read8(a + 4))));
+            a += EVENT_ROW_SIZE;
+        }
+        out
     }
 
     /// The scene's event rows for `kind` and `target`, in table order.
@@ -767,19 +829,33 @@ impl<'rom> Field<'rom> {
         if condition as u16 & 0x1000 != 0 { set } else { !set }
     }
 
-    /// Makes the row showing one of `messages` the one the trigger finds:
-    /// each row before it for the same trigger whose condition holds is
-    /// turned off by its flag, as it is once its own event has been seen
-    /// (Garet's family's scene before the line Mind Read hears after it).
+    /// Makes the event's row the one the trigger finds: each row before it
+    /// for the same trigger whose condition holds is turned off by its flag,
+    /// as it is once its own event has been seen (Garet's family's scene
+    /// before the line Mind Read hears after it; the loose rock before the
+    /// roofer's rescue in Vault). The event's row is the one that shows one
+    /// of `messages`, else the first whose condition the run's own flags
+    /// meet, else the first with none; a flag the run sets or clears itself
+    /// is left alone.
     fn unshadow(&mut self, kind: u8, target: u16, messages: &[u32]) {
         let rows = self.event_rows(kind, target);
-        let Some(ours) = rows.iter().position(|r| r.result < 0x10000 && messages.contains(&r.result)) else {
+        let flag = |c: i16| c as u16 & 0xfff;
+        let own = |c: i16| {
+            c != -1 && if c as u16 & 0x1000 != 0 { self.setup.set.contains(&flag(c)) } else { self.setup.clear.contains(&flag(c)) }
+        };
+        let ours = rows
+            .iter()
+            .position(|r| r.result < 0x10000 && messages.contains(&r.result))
+            .or_else(|| rows.iter().position(|r| own(r.condition)))
+            .or_else(|| rows.iter().position(|r| r.condition == -1));
+        let Some(ours) = ours else {
             return;
         };
-        for row in &rows[..ours] {
-            if row.condition != -1 && self.condition_holds(row.condition) {
-                self.set_flag(row.condition as u16 & 0xfff, row.condition as u16 & 0x1000 == 0);
-            }
+        let mine = |c: i16| self.setup.set.contains(&flag(c)) || self.setup.clear.contains(&flag(c));
+        let off: Vec<i16> =
+            rows[..ours].iter().map(|r| r.condition).filter(|&c| c != -1 && !mine(c) && self.condition_holds(c)).collect();
+        for c in off {
+            self.set_flag(flag(c), c as u16 & 0x1000 == 0);
         }
     }
 
@@ -873,25 +949,141 @@ impl<'rom> Field<'rom> {
     }
 
     /// Whether the leader can stand on a cell with collision code `code`
-    /// without starting anything: open ground or encounter ground.
+    /// without starting anything: open ground, encounter ground, or a ledge
+    /// or jump cell, which does nothing until he pushes on from it.
     fn standable(code: i32) -> bool {
-        code >= 0 && code != CELL_WALL && !(1..=CELL_EVENT_LAST).contains(&code) && code < CELL_LEDGE
+        code >= 0 && code != CELL_WALL && code != CELL_CLIMB && !(1..=CELL_EVENT_LAST).contains(&code)
     }
 
     /// Whether standing on a cell with collision code `code` starts nothing:
     /// open ground, or a code of the scene's events that no touch or exit
-    /// row answers.
+    /// row answers while the flags are as they are (a warning given once).
     fn quiet(&self, code: i32) -> bool {
-        Self::standable(code)
-            || ((1..=CELL_EVENT_LAST).contains(&code)
-                && self.event_rows(EVENT_TOUCH, code as u16).is_empty()
-                && self.event_rows(EVENT_EXIT, code as u16).is_empty())
+        let idle = |kind| self.event_rows(kind, code as u16).iter().all(|r| !self.condition_holds(r.condition));
+        Self::standable(code) || ((1..=CELL_EVENT_LAST).contains(&code) && idle(EVENT_TOUCH) && idle(EVENT_EXIT))
     }
 
     /// Whether (x, z) pixels lie within the map's bounds, `margin` pixels in.
     fn inside(&self, x: i32, z: i32, margin: i32) -> bool {
         let h = self.t.header;
         x >= (h[0] >> 16) + margin && x < (h[2] >> 16) - margin && z >= (h[1] >> 16) + margin && z < (h[3] >> 16) - margin
+    }
+
+    /// The room the run entered: its entrance's camera box in pixels, the
+    /// header's sides where the entrance gives none. The camera never leaves
+    /// it, so a leader outside it is off the screen.
+    fn room(&self) -> [i32; 4] {
+        let entrances = self.entrances();
+        let entrance = entrances.iter().find(|e| e.number as u16 == self.setup.entrance).or_else(|| entrances.first());
+        let h = self.t.header;
+        let side = |i: usize| match entrance {
+            Some(e) if e.camera[i] != -1 => i32::from(e.camera[i]),
+            _ => h[i] >> 16,
+        };
+        [side(0), side(1), side(2), side(3)]
+    }
+
+    /// Whether the leader can walk from cell `a` into the next cell the way
+    /// `d` (an index of STEP) on map layer `layer`, as FieldObject_UpdatePlayerControl
+    /// lets him: Map_CheckObjectStep passes the ground 8 pixels ahead of him
+    /// all the way.
+    fn passable(&mut self, layer: u8, a: (i32, i32), d: usize) -> Result<bool, String> {
+        // The player control tests the ground 8 pixels ahead of the leader
+        // against his own: walking from a's centre to b's, every point 4
+        // pixels apart is a step from the one 8 pixels behind it.
+        let (dx, dz) = STEP[d];
+        let mut heights = [0; 5];
+        for (i, h) in heights.iter_mut().enumerate() {
+            let along = 4 * i as i32;
+            *h = self.ground(layer, a.0 * 16 + 8 + dx * along, a.1 * 16 + 8 + dz * along)?;
+        }
+        Ok((0..3).all(|i| (-STEP_DOWN..=STEP_UP).contains(&(heights[i + 2] - heights[i]))))
+    }
+
+    /// The cells the leader can walk to from where he stands, on his layer,
+    /// within his room: across open ground, encounter ground and event
+    /// cells, down ledges, along climbs and over jumps, never through a wall
+    /// or a break in the ground higher than a step.
+    pub fn reach(&mut self) -> Result<Reach, String> {
+        let selected = self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16;
+        let leader = self.actor(selected).ok_or("the scene has no leader")?;
+        let layer = leader.layer.min(2);
+        let room = self.room();
+        let h = self.t.header;
+        let lo = |i: usize| (room[i].max(h[i] >> 16)) >> 4;
+        let hi = |i: usize| (room[i].min(h[i] >> 16) + 15) >> 4;
+        let (x0, z0, x1, z1) = (lo(0), lo(1), hi(2), hi(3));
+        let within = |c: (i32, i32)| c.0 >= x0 && c.0 < x1 && c.1 >= z0 && c.1 < z1 && (0..GRID).contains(&c.0) && (0..GRID).contains(&c.1);
+        let mut cells = vec![false; (GRID * GRID) as usize];
+        let index = |c: (i32, i32)| (c.1 * GRID + c.0) as usize;
+        let start = (leader.x >> 4, leader.z >> 4);
+        let mut queue = std::collections::VecDeque::new();
+        if within(start) {
+            cells[index(start)] = true;
+            queue.push_back(start);
+        }
+        while let Some(c) = queue.pop_front() {
+            let here = self.cell(layer, c.0, c.1);
+            for d in 0..4 {
+                let n = (c.0 + STEP[d].0, c.1 + STEP[d].1);
+                if !within(n) {
+                    continue;
+                }
+                let code = self.cell(layer, n.0, n.1);
+                if !cells[index(n)] && code >= 0 && code != CELL_WALL && self.passable(layer, c, d)? {
+                    cells[index(n)] = true;
+                    queue.push_back(n);
+                }
+                // Standing on a ledge, a climb or a jump cell and pushing on
+                // (Field_RunPushTileEvent) takes him over what is ahead: down
+                // a ledge with Down held, up or down a climb, across a jump
+                // (Field_TryJumpForward: over a wall or a drop, never ground
+                // more than a step higher, onto ground within a step). He
+                // lands on the first cell beyond that is ground, no more
+                // than JUMP_DROP below where he took off; a climb goes up as
+                // far.
+                let way = match here {
+                    CELL_LEDGE => d == 2,
+                    CELL_CLIMB => d == 0 || d == 2,
+                    CELL_JUMP => true,
+                    _ => false,
+                };
+                if !way {
+                    continue;
+                }
+                let from = self.ground(layer, c.0 * 16 + 8, c.1 * 16 + 8)?;
+                let (reach_cells, up) = match here {
+                    CELL_JUMP => (2..=2, STEP_UP),
+                    CELL_LEDGE => (1..=4, STEP_UP),
+                    _ => (1..=8, JUMP_DROP),
+                };
+                if here == CELL_JUMP {
+                    let over = self.ground(layer, n.0 * 16 + 8, n.1 * 16 + 8)?;
+                    if code != CELL_WALL && over - from > STEP_UP {
+                        continue;
+                    }
+                }
+                for k in reach_cells {
+                    let m = (c.0 + STEP[d].0 * k, c.1 + STEP[d].1 * k);
+                    let beyond = self.cell(layer, m.0, m.1);
+                    if !within(m) || beyond < 0 {
+                        break;
+                    }
+                    if beyond == CELL_WALL || (beyond == here && here != CELL_JUMP) {
+                        continue;
+                    }
+                    let rise = self.ground(layer, m.0 * 16 + 8, m.1 * 16 + 8)? - from;
+                    if (-JUMP_DROP..=up).contains(&rise) {
+                        if !cells[index(m)] {
+                            cells[index(m)] = true;
+                            queue.push_back(m);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        Ok(Reach { layer, cells, room })
     }
 
     /// The map of `box` (16.16 pixels) from the moment `settled`, the leader
@@ -966,20 +1158,30 @@ impl<'rom> Field<'rom> {
     }
 
     /// Where the leader can stand to start `trigger`, best first, or why
-    /// there is nowhere: beside the actor (20 pixels south, west, east or
-    /// north of it, then 34, across a counter) on its layer and level with
-    /// it, facing it; a cell from a search cell, facing it; a cell from a
-    /// touch cell, to walk onto it, the way its row faces first. Every spot
-    /// is open ground within the map, a step the leader could take from the
-    /// target's ground, with the ground's height there.
+    /// there is nowhere. Every spot is one he could walk to in his room
+    /// (Field::reach), within the map, on ground that starts nothing, with
+    /// the ground's height there. Beside an actor he talks to or casts on, he
+    /// stands level with it within the reach (20 pixels south, west, east or
+    /// north of it, then the diagonals and further, across a counter), facing
+    /// it, and spots where another actor is the nearer target come last. A
+    /// cell he searches is 16 pixels ahead of him, any of eight ways. A cell
+    /// he touches he walks onto from a step away, the way its row faces
+    /// first; one he pushes against he pushes from the cell itself, toward
+    /// an actor beyond it first (a statue, a log), then a wall. Move's spots
+    /// each come with the d-pad direction that pushes the actor: away from
+    /// the leader first, then either side, then toward him.
     pub fn spots(&mut self, trigger: Trigger) -> Result<Vec<Spot>, String> {
-        // North, east, south and west.
-        const FACING: [u32; 4] = [0xc000, 0x0000, 0x4000, 0x8000];
-        const STEP: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
-        const KEYS: [u32; 4] = [KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT];
         const SIDES: [usize; 4] = [2, 3, 1, 0];
         let step = |rise: i32| (-STEP_DOWN..=STEP_UP).contains(&rise);
+        let reach = self.reach()?;
+        // The actors on stage other than the party, which a talk or a cast
+        // may find first and a push may roll.
+        let others: Vec<(u16, Actor)> =
+            (FIRST_PLACED..FIELD_ACTOR_COUNT as u16).filter_map(|id| self.present(id).ok().map(|a| (id, a))).collect();
         let mut out = Vec::new();
+        let mut later = Vec::new();
+        // Spots dropped because the leader cannot walk there.
+        let mut unreached = 0;
         match trigger {
             Trigger::Psynergy(ability, id) => {
                 // Field_FindNearbyPsynergyTarget: the actor within the
@@ -987,26 +1189,38 @@ impl<'rom> Field<'rom> {
                 // with his facing rounded to a quarter turn.
                 let (range, height) = psynergy_reach(ability);
                 let actor = self.present(id)?;
-                let mut later = Vec::new();
                 let distances: Vec<i32> = [20, range - 4, range / 2 + 4].into_iter().filter(|&d| d > 8 && d < range).collect();
                 for &distance in &distances {
                     for side in SIDES {
                         let (x, z) = (actor.x + STEP[side].0 * distance, actor.z + STEP[side].1 * distance);
                         let code = self.cell(actor.layer, x >> 4, z >> 4);
-                        if !self.inside(x, z, 8) || code < 0 || code == CELL_WALL || code >= CELL_LEDGE {
+                        if !self.inside(x, z, 8) || code < 0 || code == CELL_WALL || code == CELL_CLIMB {
+                            continue;
+                        }
+                        if !reach.holds(actor.layer, x, z) {
+                            unreached += 1;
                             continue;
                         }
                         let ground = self.ground(actor.layer, x, z)?;
                         if (actor.y - ground).abs() > height {
                             continue;
                         }
-                        let spot = Spot { x, z, layer: actor.layer, height: ground, facing: FACING[(side + 2) & 3], walk: 0, cell: None };
-                        if self.quiet(code) { &mut out } else { &mut later }.push(spot);
+                        let toward = (side + 2) & 3;
+                        let pushes: Vec<u32> =
+                            if ability == MOVE { [toward, (toward + 1) & 3, (toward + 3) & 3, side].map(|d| KEYS[d]).to_vec() } else { vec![0] };
+                        let first = self.quiet(code) && !nearer(&others, id, &actor, x, z, FACING[toward], range, 0x1800);
+                        for walk in pushes {
+                            let spot = Spot { x, z, layer: actor.layer, height: ground, facing: FACING[toward], walk, cell: None };
+                            if first { &mut out } else { &mut later }.push(spot);
+                        }
                     }
                 }
                 out.extend(later);
                 if out.is_empty() {
-                    return Err(format!("no ground within reach of actor {id} at ({}, {})", actor.x, actor.z));
+                    return Err(match unreached {
+                        0 => format!("the ground within reach of actor {id} at ({}, {}) is walled, or more than {} pixels above or below it", actor.x, actor.z, height >> 16),
+                        _ => format!("the leader cannot walk to any ground within reach of actor {id} at ({}, {})", actor.x, actor.z),
+                    });
                 }
             }
             Trigger::Talk(id) => {
@@ -1015,7 +1229,6 @@ impl<'rom> Field<'rom> {
                 // Open ground comes first; ground with a code of the scene's
                 // events, which would start its own event first, last.
                 let actor = self.present(id)?;
-                let mut later = Vec::new();
                 for distance in [20, 28, 34] {
                     for (dx, dz) in AROUND {
                         let (x, z) = if dx != 0 && dz != 0 {
@@ -1024,7 +1237,11 @@ impl<'rom> Field<'rom> {
                             (actor.x + dx * distance, actor.z + dz * distance)
                         };
                         let code = self.cell(actor.layer, x >> 4, z >> 4);
-                        if !self.inside(x, z, 8) || code < 0 || code == CELL_WALL || code >= CELL_LEDGE {
+                        if !self.inside(x, z, 8) || code < 0 || code == CELL_WALL || code == CELL_CLIMB {
+                            continue;
+                        }
+                        if !reach.holds(actor.layer, x, z) {
+                            unreached += 1;
                             continue;
                         }
                         let ground = self.ground(actor.layer, x, z)?;
@@ -1033,39 +1250,58 @@ impl<'rom> Field<'rom> {
                         }
                         let facing = facing_toward(actor.x - x, actor.z - z);
                         let spot = Spot { x, z, layer: actor.layer, height: ground, facing, walk: 0, cell: None };
-                        if self.quiet(code) { &mut out } else { &mut later }.push(spot);
+                        let first = self.quiet(code) && !nearer(&others, id, &actor, x, z, facing, 41, 0x2fff);
+                        if first { &mut out } else { &mut later }.push(spot);
                     }
                 }
                 out.extend(later);
                 if out.is_empty() {
-                    return Err(format!("no ground beside actor {id} at ({}, {}) is level with it", actor.x, actor.z));
+                    return Err(match unreached {
+                        0 => format!("no ground beside actor {id} at ({}, {}) is level with it", actor.x, actor.z),
+                        _ => format!("the leader cannot walk to the ground beside actor {id} at ({}, {})", actor.x, actor.z),
+                    });
                 }
             }
             Trigger::Search(code) => {
                 // The leader searches the ground layer's cell 16 pixels ahead
-                // (Object_GetTriggerTileAheadOfCurrent); a jar or the like
-                // counts up to 64 pixels above his ground.
-                let cells: Vec<_> = self.cells_with_code(code).into_iter().filter(|c| c.0 == 0).take(8).collect();
+                // of him, whichever way he faces
+                // (Object_GetTriggerTileAheadOfCurrent). He stands on his own
+                // layer, level with the cell or up to 64 pixels below it (a
+                // jar on a shelf).
+                let cells: Vec<_> = self.cells_with_code(code).into_iter().filter(|c| c.0 == 0).collect();
                 if cells.is_empty() {
                     return Err(format!("no ground-layer cell holds code {code}"));
                 }
-                for (layer, cx, cz) in cells {
-                    let target = self.ground(layer, cx * 16 + 8, cz * 16 + 8)?;
-                    for side in SIDES {
-                        let (nx, nz) = (cx + STEP[side].0, cz + STEP[side].1);
-                        let (x, z) = (nx * 16 + 8, nz * 16 + 8);
-                        if !self.inside(x, z, 0) || !self.quiet(self.cell(layer, nx, nz)) {
+                let layer = reach.layer;
+                // From the cell to the leader: south, west, east and north,
+                // then the diagonals; 16 pixels, or 11 each way.
+                const BACK: [(i32, i32); 8] = [(0, 16), (-16, 0), (16, 0), (0, -16), (-11, 11), (11, 11), (-11, -11), (11, -11)];
+                for (_, cx, cz) in cells {
+                    let (tx, tz) = (cx * 16 + 8, cz * 16 + 8);
+                    let target = self.ground(layer, tx, tz)?;
+                    for (bx, bz) in BACK {
+                        let (x, z) = (tx + bx, tz + bz);
+                        if !self.inside(x, z, 0) || !self.quiet(self.cell(layer, x >> 4, z >> 4)) {
+                            continue;
+                        }
+                        if !reach.holds(layer, x, z) {
+                            unreached += 1;
                             continue;
                         }
                         let ground = self.ground(layer, x, z)?;
                         if (-STEP_DOWN..=64 << 16).contains(&(target - ground)) {
-                            let facing = FACING[(side + 2) & 3];
-                            out.push(Spot { x, z, layer, height: ground, facing, walk: 0, cell: Some((cx, cz)) });
+                            let facing = facing_toward(-bx, -bz);
+                            let spot = Spot { x, z, layer, height: ground, facing, walk: 0, cell: Some((cx, cz)) };
+                            if bx == 0 || bz == 0 { &mut out } else { &mut later }.push(spot);
                         }
                     }
                 }
+                out.extend(later);
                 if out.is_empty() {
-                    return Err(format!("no open ground beside a cell with code {code}"));
+                    return Err(match unreached {
+                        0 => format!("no open ground faces a cell with code {code}"),
+                        _ => format!("the leader cannot walk to any ground facing a cell with code {code}"),
+                    });
                 }
             }
             Trigger::Touch(code) => {
@@ -1080,50 +1316,61 @@ impl<'rom> Field<'rom> {
                 if let Some(f) = facing {
                     ways.sort_by_key(|&d| (FACING[d] as u16).wrapping_sub(f as u16).wrapping_add(0x1fff) > 0x3ffe);
                 }
-                let cells: Vec<_> = self.cells_with_code(code).into_iter().take(32).collect();
+                let cells = self.cells_with_code(code);
                 if cells.is_empty() {
                     return Err(format!("no cell holds code {code}"));
                 }
                 // Pushes go toward what lies in the next cell first: an
-                // actor (a statue, a crate), then a wall.
-                let held: Vec<(i32, i32)> =
-                    (FIRST_PLACED..FIELD_ACTOR_COUNT as u16).filter_map(|id| self.present(id).ok()).map(|a| (a.x >> 4, a.z >> 4)).collect();
-                let mut pushed: Vec<(u8, Spot)> = Vec::new();
+                // actor (a statue, a crate, a log whose footprint covers
+                // it), then a wall.
+                let mut pushed: Vec<(i32, Spot)> = Vec::new();
                 let mut walked = Vec::new();
                 for (layer, cx, cz) in cells {
                     let (tx, tz) = (cx * 16 + 8, cz * 16 + 8);
+                    if !reach.holds(layer, tx, tz) && !STEP.iter().any(|s| reach.holds(layer, tx - s.0 * 16, tz - s.1 * 16)) {
+                        unreached += 1;
+                        continue;
+                    }
                     let target = self.ground(layer, tx, tz)?;
-                    if pushing && self.inside(tx, tz, 0) {
+                    if pushing && self.inside(tx, tz, 0) && reach.holds(layer, tx, tz) {
                         let pushes = if facing.is_some() { &ways[..1] } else { &ways[..] };
                         for &d in pushes {
-                            let next = (cx + STEP[d].0, cz + STEP[d].1);
-                            let rank = if held.contains(&next) {
+                            let (nx, nz) = (tx + STEP[d].0 * 16, tz + STEP[d].1 * 16);
+                            let near = others.iter().map(|(_, a)| (a.x - nx).abs().max((a.z - nz).abs())).min().unwrap_or(i32::MAX);
+                            let rank = if near <= 12 {
                                 0
-                            } else if self.cell(layer, next.0, next.1) == CELL_WALL {
+                            } else if near <= 24 {
                                 1
-                            } else {
+                            } else if self.cell(layer, nx >> 4, nz >> 4) == CELL_WALL {
                                 2
+                            } else {
+                                3
                             };
                             pushed.push((rank, Spot { x: tx, z: tz, layer, height: target, facing: FACING[d], walk: KEYS[d], cell: Some((cx, cz)) }));
                         }
                     }
-                    for &d in &ways {
-                        let (nx, nz) = (cx - STEP[d].0, cz - STEP[d].1);
-                        let (x, z) = (nx * 16 + 8, nz * 16 + 8);
-                        if !self.inside(x, z, 0) || !self.quiet(self.cell(layer, nx, nz)) {
+                    for (rank, &d) in ways.iter().enumerate() {
+                        let rank = if facing.is_some() { rank } else { 0 };
+                        let (x, z) = (tx - STEP[d].0 * 16, tz - STEP[d].1 * 16);
+                        if !self.inside(x, z, 0) || !self.quiet(self.cell(layer, x >> 4, z >> 4)) || !reach.holds(layer, x, z) {
                             continue;
                         }
                         let ground = self.ground(layer, x, z)?;
-                        if step(target - ground) {
-                            walked.push(Spot { x, z, layer, height: ground, facing: FACING[d], walk: KEYS[d], cell: Some((cx, cz)) });
+                        if self.passable(layer, (x >> 4, z >> 4), d)? {
+                            walked.push((rank, Spot { x, z, layer, height: ground, facing: FACING[d], walk: KEYS[d], cell: Some((cx, cz)) }));
                         }
                     }
                 }
                 pushed.sort_by_key(|(rank, _)| *rank);
+                // The way the row faces first, then spots in the open.
+                walked.sort_by_key(|(rank, s)| (*rank, std::cmp::Reverse(reach.open(s.layer, s.x, s.z))));
                 out.extend(pushed.into_iter().map(|(_, spot)| spot));
-                out.extend(walked);
+                out.extend(walked.into_iter().map(|(_, spot)| spot));
                 if out.is_empty() {
-                    return Err(format!("no open ground a step from a cell with code {code}"));
+                    return Err(match unreached {
+                        0 => format!("no open ground a step from a cell with code {code}"),
+                        _ => format!("the leader cannot walk to a cell with code {code} or a step from one"),
+                    });
                 }
             }
         }
@@ -1145,7 +1392,11 @@ impl<'rom> Field<'rom> {
         max_pages: usize,
         record: Option<usize>,
     ) -> Result<EventRun, String> {
-        match start {
+        // The actors on stage as the leader is put at the spot: those still
+        // in place when the trigger comes are watched for the event moving
+        // them; those that move on their own meanwhile (a sparkle, a
+        // wanderer) are not.
+        let early = match start {
             Start::Entered(saved) => {
                 self.load(saved);
                 let gs = self.s.game_state;
@@ -1156,14 +1407,18 @@ impl<'rom> Field<'rom> {
                 self.gba.write16(gs + GS_TURN, u16::from(spot.layer));
                 self.until_control()?;
                 self.put_leader(spot);
+                let early = self.stage();
                 self.frames(SETTLE)?;
+                early
             }
             Start::InControl(saved) => {
                 self.load(saved);
                 self.put_leader(spot);
+                let early = self.stage();
                 self.frames(SETTLE_MOVED)?;
+                early
             }
-        }
+        };
         self.check_leader(spot)?;
         if record.is_some() {
             self.recorded = Some(Vec::new());
@@ -1183,6 +1438,7 @@ impl<'rom> Field<'rom> {
         // The dispatch it starts: Field_UsePsynergy takes the Psynergy, not
         // the actor.
         let want = (kind, (kind != EVENT_PSYNERGY).then_some(u32::from(target)));
+        let rows = self.event_rows(kind, target).len();
         self.unshadow(kind, target, messages);
         match trigger {
             Trigger::Talk(_) | Trigger::Search(_) => self.press(2)?,
@@ -1193,6 +1449,21 @@ impl<'rom> Field<'rom> {
             Trigger::Touch(_) => self.hold(spot.walk),
         }
         let hold = if record.is_some() { PAGE_HOLD } else { 3 };
+        // What is on stage as the trigger comes, to tell whether the event
+        // moved anything: the actors' places and the map's cells.
+        let watched: Vec<(u16, i32, i32)> = self.stage().into_iter().filter(|a| early.contains(a)).collect();
+        let cells_before = self.cell_codes();
+        let mut moved = false;
+        let mut fought = false;
+        // Where the leader was when the event began, to see him jump or be
+        // led away.
+        let mut leader_from: Option<Actor> = None;
+        // Move is steered once it is cast: the spot's direction is held
+        // until the actor starts to move.
+        let mut steer = match trigger {
+            Trigger::Psynergy(MOVE, id) if spot.walk != 0 => self.actor(id).map(|a| (id, a.x, a.z)),
+            _ => None,
+        };
         let mut began: Option<u32> = None;
         // The frame the dispatch that began the event returned.
         let mut returned: Option<u32> = None;
@@ -1205,6 +1476,9 @@ impl<'rom> Field<'rom> {
         let mut pressed = false;
         let mut message = None;
         let mut seen_message = 0;
+        // The first message shown once the event began that is not one of
+        // its own.
+        let mut foreign = None;
         let mut capped = false;
         loop {
             if record.is_none() && pages.len() >= max_pages {
@@ -1226,6 +1500,8 @@ impl<'rom> Field<'rom> {
                 seen_message = self.t.last_message;
                 if messages.contains(&seen_message) {
                     message = Some(seen_message);
+                } else if began.is_some() && seen_message < 0x10000 {
+                    foreign.get_or_insert(seen_message);
                 }
             }
             let Some(b) = began else {
@@ -1244,16 +1520,39 @@ impl<'rom> Field<'rom> {
                     }
                     began = Some(frame);
                     returned = (self.t.dispatch_return == 0).then_some(self.t.dispatch_end);
-                    self.hold(0);
+                    self.hold(if steer.is_some() { spot.walk } else { 0 });
+                    leader_from = self.actor(self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16);
                     quiet_start = self.t.frame;
                 } else if self.t.frame - trigger_frame > START_FRAMES {
                     self.hold(0);
-                    return Err("the event did not start".to_string());
+                    let how = match trigger {
+                        Trigger::Talk(_) | Trigger::Search(_) => "pressing A",
+                        Trigger::Touch(_) => "walking onto the cell",
+                        Trigger::Psynergy(..) => "the cast",
+                    };
+                    return Err(format!("{how} from ({}, {}) started nothing in {} frames", spot.x, spot.z, START_FRAMES));
                 }
                 continue;
             };
             if returned.is_none() && self.t.dispatch_return == 0 {
                 returned = Some(self.t.dispatch_end);
+            }
+            if !moved {
+                let shifted = |a: Option<Actor>, x: i32, z: i32, by: i32| a.is_some_and(|a| (a.x - x).abs().max((a.z - z).abs()) >= by);
+                moved = watched.iter().any(|&(id, x, z)| shifted(self.actor(id), x, z, 4));
+                if let Some(from) = leader_from {
+                    let now = self.actor(self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16);
+                    moved |= shifted(now, from.x, from.z, 20) || now.is_some_and(|a| (a.y - from.y).abs() >= 6 << 16);
+                }
+            }
+            fought |= self.scene() == SCENE_BATTLE;
+            if let Some((id, x, z)) = steer {
+                // The hand waits for the d-pad; A would end the cast.
+                quiet_start = self.t.frame;
+                if self.actor(id).is_some_and(|a| a.x != x || a.z != z) || self.t.frame - b > 300 {
+                    self.hold(0);
+                    steer = None;
+                }
             }
             if self.t.step_frame + 2 < self.t.frame {
                 paused = true;
@@ -1327,7 +1626,8 @@ impl<'rom> Field<'rom> {
         // field loop stepping on, ran no script: it showed nothing, or
         // nothing it could show from here.
         let instant = began.is_some() && returned == began && !left && !paused;
-        Ok(EventRun { pages, frames, capped, end, instant })
+        let shown = !pages.is_empty() || left || fought || moved || (!left && self.cell_codes() != cells_before);
+        Ok(EventRun { pages, frames, capped, end, instant, shown, seen: foreign, rows })
     }
 }
 
@@ -1344,11 +1644,25 @@ fn psynergy_reach(ability: u16) -> (i32, i32) {
         0x94 => (48, 48 << 16),
         // Douse: 32, 64 high.
         0x21 => (32, 64 << 16),
-        // Whirlwind and Halt: 32.
-        0x4e | 0x91 => (32, 8 << 16),
+        // Move, Whirlwind and Halt: 32.
+        MOVE | 0x4e | 0x91 => (32, 8 << 16),
         // Frost, Growth, Lift, Carry and Cloak: 16.
         _ => (16, 8 << 16),
     }
+}
+
+/// Whether an actor other than `id` would be found before `target` from
+/// (x, z) facing `facing` (1/65536 turns): nearer, within `range` pixels,
+/// and ahead within `cone` unless it is 11 pixels away or closer.
+#[allow(clippy::too_many_arguments)]
+fn nearer(others: &[(u16, Actor)], id: u16, target: &Actor, x: i32, z: i32, facing: u32, range: i32, cone: i32) -> bool {
+    let distance = |a: &Actor| f64::from((a.x - x).pow(2) + (a.z - z).pow(2)).sqrt() as i32;
+    let own = distance(target);
+    others.iter().any(|(o, a)| {
+        let d = distance(a);
+        let ahead = || (facing_toward(a.x - x, a.z - z).wrapping_sub(facing) as u16 as i16 as i32).abs() < cone;
+        *o != id && d < own && d < range && (d <= 11 || ahead())
+    })
 }
 
 /// Around an actor: south, west, east and north, then the diagonals.
@@ -1397,6 +1711,45 @@ pub struct Actor {
     pub drawn: bool,
 }
 
+/// Where the leader can walk in his room (Field::reach).
+pub struct Reach {
+    /// The map layer he walks on.
+    pub layer: u8,
+    /// GRID by GRID cells, row by row.
+    cells: Vec<bool>,
+    /// The room's camera box, pixels.
+    room: [i32; 4],
+}
+
+impl Reach {
+    /// Whether the leader can stand at (x, z) pixels on map layer `layer`
+    /// and be seen: inside the room, 8 pixels from its sides, on a cell he
+    /// can walk to. On another layer than his, which no walk reaches, only
+    /// the room is known.
+    pub fn holds(&self, layer: u8, x: i32, z: i32) -> bool {
+        let r = self.room;
+        if x < r[0] + 8 || x >= r[2] - 8 || z < r[1] + 8 || z >= r[3] - 8 {
+            return false;
+        }
+        if layer != self.layer {
+            return true;
+        }
+        let (cx, cz) = (x >> 4, z >> 4);
+        (0..GRID).contains(&cx) && (0..GRID).contains(&cz) && self.cells[(cz * GRID + cx) as usize]
+    }
+
+    /// How many of the eight cells around (x, z) pixels he can walk to: a
+    /// spot in the open (8) shows him better than one on the side of a
+    /// stair or the edge of a cliff.
+    pub fn open(&self, layer: u8, x: i32, z: i32) -> usize {
+        if layer != self.layer {
+            return 8;
+        }
+        let (cx, cz) = (x >> 4, z >> 4);
+        AROUND.iter().filter(|(dx, dz)| self.holds(layer, (cx + dx) * 16 + 8, (cz + dz) * 16 + 8)).count()
+    }
+}
+
 /// Where the leader stands to start an event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Spot {
@@ -1427,9 +1780,9 @@ pub enum Start<'a> {
 
 /// Frames a page is held before A while an event is recorded.
 const PAGE_HOLD: u32 = 45;
-/// Frames an event may run, 90 seconds: the longest scripted scenes seen,
-/// the stormy night at the river, run 77.
-pub const EVENT_LIMIT: u32 = 5400;
+/// Frames an event may run, three minutes: the longest scripted scenes seen,
+/// the stormy night at the river and Ivan joining in Vault, run under two.
+pub const EVENT_LIMIT: u32 = 10800;
 
 /// What an event left: its pages, when recorded its frames, and the moment
 /// the player had control again, when that was in the same scene.
@@ -1442,6 +1795,16 @@ pub struct EventRun {
     /// Whether the event ran no script: its dispatch returned in the frame
     /// it began.
     pub instant: bool,
+    /// Whether anything showed: a page, an exit, a battle, an actor moved
+    /// (the leader jumping or led 20 pixels away included), or the map's
+    /// cells changed.
+    pub shown: bool,
+    /// The first message the event showed that is not one of its own.
+    pub seen: Option<u32>,
+    /// How many rows of the scene's event table answer the trigger: with
+    /// one, a page none of the event's messages is on is still its own (a
+    /// branch the story tools did not follow, a found item's line).
+    pub rows: usize,
     pub end: Option<Saved>,
 }
 
