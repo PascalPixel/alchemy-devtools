@@ -3,7 +3,7 @@
 //! of its events, as PNG files at the GBA's own size, with an index.
 
 use super::field::{
-    box_holds, result_key, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, EVENT_EXIT, EVENT_LIMIT, EVENT_PSYNERGY, EVENT_SEARCH, EVENT_TALK,
+    box_holds, result_key, stands_in, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, EVENT_EXIT, EVENT_LIMIT, EVENT_PSYNERGY, EVENT_SEARCH, EVENT_TALK,
     EVENT_TOUCH, SETTLE,
 };
 use super::story::{parse_trigger, Alternative, Event, Flags, Scene, Trigger, MOVE};
@@ -490,7 +490,7 @@ impl Context<'_> {
         let folder = if variant.is_empty() { scene.slug() } else { format!("{}_{variant}", scene.slug()) };
         // A room is a camera box; the first entrance that has it names it.
         let mut rooms: Vec<Entrance> = Vec::new();
-        for e in &entrances {
+        for e in entrances.iter().filter(|e| !stands_in(e, &entrances)) {
             if !rooms.iter().any(|r| r.camera == e.camera) {
                 rooms.push(*e);
             }
@@ -553,6 +553,10 @@ impl Context<'_> {
                 let suffix = if *count > 1 { format!("-{count}") } else { String::new() };
                 let file = format!("{folder}/map-{}{suffix}.png", room.number);
                 self.write(&image, &file)?;
+                let edges = field.uniform_edges(bounds);
+                if !edges.is_empty() {
+                    self.skip(scene, &format!("{file} (kept)"), format!("its {} edge is one cell repeated, as the grid beyond a map is", edges.join(", ")));
+                }
                 self.rows.push(row("map", file));
                 wrote = true;
                 Ok(())
@@ -790,7 +794,7 @@ impl Context<'_> {
                 }
             };
             let header = first.header;
-            let entrances: Vec<Entrance> = first.entrances.iter().filter(|e| e.number >= 0).copied().collect();
+            let entrances: Vec<Entrance> = first.entrances.iter().filter(|e| e.number >= 0 && !stands_in(e, &first.entrances)).copied().collect();
             let first_at = at(first);
             // The entrances to try, best first: those whose room holds the
             // trigger as the scene is entered by its first, nearest it

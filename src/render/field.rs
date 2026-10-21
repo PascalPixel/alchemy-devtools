@@ -1096,6 +1096,30 @@ impl<'rom> Field<'rom> {
         out
     }
 
+    /// The sides of box `b` (16.16 pixels) whose outermost row or column of
+    /// cells holds one cell over and over in all three layers: what the cell
+    /// grid beyond a map's own extent shows (top, bottom, left, right).
+    pub fn uniform_edges(&self, b: [i32; 4]) -> Vec<&'static str> {
+        let (x0, z0, x1, z1) = (b[0] >> 20, b[1] >> 20, ((b[2] + 0xfffff) >> 20) - 1, ((b[3] + 0xfffff) >> 20) - 1);
+        if x1 <= x0 || z1 <= z0 {
+            return Vec::new();
+        }
+        let word = |x: i32, z: i32| [0u8, 1, 2].map(|l| self.cell_word(l, x, z));
+        let same = |cells: Vec<(i32, i32)>| cells.windows(2).all(|w| word(w[0].0, w[0].1) == word(w[1].0, w[1].1));
+        let mut out = Vec::new();
+        for (name, cells) in [
+            ("top", (x0..=x1).map(|x| (x, z0)).collect::<Vec<_>>()),
+            ("bottom", (x0..=x1).map(|x| (x, z1)).collect()),
+            ("left", (z0..=z1).map(|z| (x0, z)).collect()),
+            ("right", (z0..=z1).map(|z| (x1, z)).collect()),
+        ] {
+            if same(cells) {
+                out.push(name);
+            }
+        }
+        out
+    }
+
     /// The sprites actor object `object` draws, as each animation layer's
     /// sprite id and colour mode: a villager turned into a tree keeps its
     /// place and changes these.
@@ -2059,6 +2083,8 @@ impl<'rom> Field<'rom> {
         // Where in the recording a battle the event starts began, and whether
         // the party lost it.
         let mut battle_start = 0;
+        let room = self.room();
+        let mut beyond = false;
         let mut defeated = false;
         // Where the leader was when the event began, to see him jump or be
         // led away.
@@ -2188,6 +2214,15 @@ impl<'rom> Field<'rom> {
                     let now = self.actor(self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16);
                     moved |= shifted(now, from.x, from.z, 20) || now.is_some_and(|a| (a.y - from.y).abs() >= 6 << 16);
                 }
+            }
+            // The camera showing past the room's box: what lies there is
+            // the cell grid beyond the map, never meant to be seen.
+            if !beyond && arrival.is_none() && self.scene() == self.setup.scene && !self.world() {
+                let (vx, vy) = self.view();
+                let r = room;
+                let wide = r[2] - r[0] >= WIDTH as i32;
+                let tall = r[3] - r[1] >= HEIGHT as i32;
+                beyond = (wide && (vx < r[0] || vx + WIDTH as i32 > r[2])) || (tall && (vy < r[1] || vy + HEIGHT as i32 > r[3]));
             }
             if !fought && self.scene() == SCENE_BATTLE {
                 battle_start = self.recorded.as_ref().map_or(0, Vec::len);
@@ -2320,6 +2355,10 @@ impl<'rom> Field<'rom> {
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
             let moved_now: Vec<_> = watched.iter().filter_map(|&(id, x, z)| self.actor(id).map(|a| (id, a.x - x, a.z - z))).filter(|m| m.1 != 0 || m.2 != 0).collect();
             eprintln!("    spot ({}, {}) layer {} walk {:#x}: began {began:?} ran {:#x} pages {} left {left} fought {fought} moved {moved} {moved_now:?} cells {} leader {:?}", spot.x, spot.z, spot.layer, spot.walk, self.t.ran, pages.len(), self.cell_codes() != cells_before, leader_from.map(|f| (f.x, f.z)));
+        }
+        if beyond {
+            let past = "the camera shows past the room's box, where the map has no ground".to_string();
+            note = Some(note.map_or(past.clone(), |n| format!("{n}; {past}")));
         }
         if self.unwalked {
             let placed = "the leader starts where the walk from the entrance does not reach, since what opens the way there is not played first".to_string();
@@ -2650,6 +2689,19 @@ pub struct EventRun {
     /// Why a recorded arrival stopped before the player had control: a
     /// battle began, or it ran past ARRIVAL_LIMIT.
     pub note: Option<String>,
+}
+
+/// Whether entrance `e` only stands in for a room another entrance gives
+/// its camera box: it gives none itself (the scene's default entrance, which
+/// no exit leads to), and its place lies in another's box. Entered by it,
+/// the camera takes the header's bounds, wider than the room, and shows the
+/// cell grid beyond the map (Alpine Crossing's teal and orange fill).
+pub fn stands_in(e: &Entrance, all: &[Entrance]) -> bool {
+    let inside = |o: &Entrance| {
+        let c = o.camera;
+        c.iter().all(|&s| s != -1) && (c[0]..c[2]).contains(&e.x) && (c[1]..c[3]).contains(&e.z)
+    };
+    e.camera.iter().all(|&s| s == -1) && all.iter().any(|o| o.number != e.number && inside(o))
 }
 
 /// Whether box `b` (pixels, -1 sides taking the header's, 16.16) holds the

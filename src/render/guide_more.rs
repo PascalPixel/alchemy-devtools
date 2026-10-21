@@ -22,10 +22,9 @@ const KEY_L: u32 = 0x200;
 /// The places the pictures are made in (scene, entrance).
 const VALE: (u16, u16) = (4, 1);
 const WORLD_MAP: (u16, u16) = (2, 1);
-/// Goma Cave's pillar room as its first entrance (the scene's default, on the
-/// ledge above the room) shows it, for the cell pictures; the random battle
-/// picks a room entrance of its own.
-const GOMA_CAVE: (u16, u16) = (27, 0);
+/// Goma Cave's pillar room, entered from the pond to its south (its default
+/// entrance stands in for it with the header's wider bounds).
+const GOMA_CAVE: (u16, u16) = (27, 5);
 /// Bilibin's item shop and inn, rooms of BilibinInteriors (scene_links.h).
 const BILIBIN_ITEM_SHOP: (u16, u16) = (31, 5);
 const BILIBIN_INN: (u16, u16) = (31, 6);
