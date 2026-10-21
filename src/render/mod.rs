@@ -404,7 +404,9 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     let events: Vec<story::Event> = if o.events.is_empty() {
         events
     } else {
-        events.into_iter().filter(|e| o.events.iter().any(|w| *w == e.name)).collect()
+        // The scenes' setups stay too: the flags they test are the ones an
+        // event's actor may need to be in place (places::variant_candidates).
+        events.into_iter().filter(|e| o.events.iter().any(|w| *w == e.name) || e.trigger_text.starts_with("entry")).collect()
     };
     let root = crate::compile::root();
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
