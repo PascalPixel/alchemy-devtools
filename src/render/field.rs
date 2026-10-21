@@ -283,6 +283,9 @@ struct Track {
     dispatch_end: u32,
     /// How many times a layered map has started loading.
     loads: u32,
+    /// How many times Scene_ApplyEntrance has placed the party: once each
+    /// scene the field runs, the world map included.
+    entries: u32,
     /// The first of the watched event functions (Field::watch) the CPU
     /// entered since the last dispatch, 0 for none.
     ran: u32,
@@ -362,6 +365,7 @@ impl<'rom> Field<'rom> {
             dispatch_result: None,
             dispatch_end: 0,
             loads: 0,
+            entries: 0,
             ran: 0,
             own_ran: false,
         };
@@ -534,6 +538,9 @@ impl<'rom> Field<'rom> {
         }
         if pc == s.load_layered {
             self.t.loads += 1;
+        }
+        if pc == s.apply_entrance {
+            self.t.entries += 1;
         }
         if pc == s.load_layered && self.t.load_return == 0 {
             self.t.load_return = lr(&self.gba);
@@ -1631,7 +1638,15 @@ impl<'rom> Field<'rom> {
         self.t.dispatched = None;
         let trigger_frame = self.t.frame;
         let loads = self.t.loads;
+        let entries = self.t.entries;
         let mut left = false;
+        // The scene the party is placed in next, when it is placed again
+        // before any battle (a staircase to another entrance of the same
+        // scene included), and, while recorded, the frame it began loading
+        // another scene: the arrival is followed from there.
+        let mut leads_to: Option<u16> = None;
+        let mut arrival: Option<u32> = None;
+        let mut note = None;
         let (kind, target) = match trigger {
             Trigger::Talk(id) => (EVENT_TALK, id),
             Trigger::Search(code) => (EVENT_SEARCH, code),
@@ -1713,16 +1728,42 @@ impl<'rom> Field<'rom> {
                 break;
             }
             let length = self.t.frame - trigger_frame;
-            if self.recorded.as_ref().map_or(length as usize, |f| f.len()) >= cap {
+            if arrival.is_none() && self.recorded.as_ref().map_or(length as usize, |f| f.len()) >= cap {
                 capped = true;
                 break;
             }
             self.frames(1)?;
-            // An exit: the event is over once the scene it leads to starts
-            // loading its map.
-            if self.t.loads > loads && self.scene() != self.setup.scene && self.scene() != SCENE_BATTLE {
+            if let Some(at) = arrival {
+                match self.arrive(at, hold, &mut wait_start, &mut press_frame, &mut quiet_start)? {
+                    Arrival::Going => continue,
+                    Arrival::InControl => {
+                        // The scene it leads to, held a moment once it is
+                        // all on screen.
+                        self.frames(ARRIVAL_HOLD)?;
+                        break;
+                    }
+                    Arrival::Ended(why) => {
+                        note = Some(why);
+                        break;
+                    }
+                }
+            }
+            if self.t.entries > entries && leads_to.is_none() && !fought && self.scene() != SCENE_BATTLE {
+                leads_to = Some(self.scene());
+            }
+            // An exit: once the scene it leads to starts loading its map (a
+            // layered map) or placing the party (the world map), the event
+            // has left. Unrecorded, it is over; recorded, the arrival is
+            // followed until the player has control there.
+            if (self.t.loads > loads || self.t.entries > entries) && self.scene() != self.setup.scene && self.scene() != SCENE_BATTLE {
                 left = true;
-                break;
+                leads_to = Some(self.scene());
+                if record.is_none() {
+                    break;
+                }
+                arrival = Some(self.t.frame);
+                (wait_start, press_frame, quiet_start) = (0, 0, self.t.frame);
+                continue;
             }
             if self.t.last_message != seen_message {
                 seen_message = self.t.last_message;
@@ -1866,7 +1907,10 @@ impl<'rom> Field<'rom> {
             }
         }
         self.hold(0);
-        let frames = self.recorded.take().unwrap_or_default();
+        let mut frames = self.recorded.take().unwrap_or_default();
+        if leads_to.is_some() {
+            frames = shorten_blanks(frames, BLANK_KEEP);
+        }
         self.watch.clear();
         let ran = (self.t.ran != 0).then_some(self.t.ran);
         let own_ran = self.t.own_ran;
@@ -1882,8 +1926,92 @@ impl<'rom> Field<'rom> {
             let moved_now: Vec<_> = watched.iter().filter_map(|&(id, x, z)| self.actor(id).map(|a| (id, a.x - x, a.z - z))).filter(|m| m.1 != 0 || m.2 != 0).collect();
             eprintln!("    spot ({}, {}) layer {} walk {:#x}: began {began:?} ran {:#x} pages {} left {left} fought {fought} moved {moved} {moved_now:?} cells {} leader {:?}", spot.x, spot.z, spot.layer, spot.walk, self.t.ran, pages.len(), self.cell_codes() != cells_before, leader_from.map(|f| (f.x, f.z)));
         }
-        Ok(EventRun { pages, frames, capped, end, instant, shown, seen: foreign, rows, ran, own_ran })
+        Ok(EventRun { pages, frames, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note })
     }
+
+    /// One frame of an exit's arrival in the scene it leads to, which began
+    /// loading at frame `at`: its pages are read and answered as the event's
+    /// are (none is kept), until the field loop has stepped CONTROL_FRAMES
+    /// in a row with nothing to read, as at a scene's start.
+    fn arrive(&mut self, at: u32, hold: u32, wait_start: &mut u32, press_frame: &mut u32, quiet_start: &mut u32) -> Result<Arrival, String> {
+        let frame = self.t.frame;
+        if self.scene() == SCENE_BATTLE {
+            return Ok(Arrival::Ended("ends as a battle begins".to_string()));
+        }
+        if frame - at >= ARRIVAL_LIMIT {
+            return Ok(Arrival::Ended(format!("the arrival runs past {} seconds; the recording ends there", ARRIVAL_LIMIT / 60)));
+        }
+        if self.t.last_dismiss > at && frame - self.t.last_dismiss <= 2 {
+            *quiet_start = frame;
+            if *wait_start == 0 {
+                *wait_start = frame;
+                *press_frame = 0;
+            }
+            if *press_frame == 0 && frame - *wait_start >= hold {
+                *press_frame = frame;
+                self.press(3)?;
+            } else if *press_frame != 0 && frame - *press_frame >= 30 {
+                *press_frame = frame;
+                self.press(3)?;
+            }
+            return Ok(Arrival::Going);
+        }
+        *wait_start = 0;
+        if self.t.choice_return != 0 {
+            *quiet_start = frame;
+            if frame - self.t.choice_frame == 20.max(hold) {
+                self.press(3)?;
+            }
+            return Ok(Arrival::Going);
+        }
+        let typing = frame - self.t.last_typing <= 2;
+        if typing {
+            *quiet_start = frame;
+        }
+        let run = self.t.stepping_since.max(at + 1);
+        if !typing && self.t.step_frame + 1 >= frame && frame >= run + CONTROL_FRAMES {
+            return Ok(Arrival::InControl);
+        }
+        if frame - *quiet_start >= 120 && self.t.step_frame + 1 < frame {
+            self.press(3)?;
+            *quiet_start = frame;
+        }
+        Ok(Arrival::Going)
+    }
+}
+
+/// How an exit's arrival goes on (Field::arrive).
+enum Arrival {
+    Going,
+    InControl,
+    /// Stopped before the player had control, and why.
+    Ended(String),
+}
+
+/// Frames an exit's arrival is followed from the moment the next scene
+/// starts loading, ten seconds; an arrival cutscene longer than that ends
+/// there.
+const ARRIVAL_LIMIT: u32 = 600;
+/// Frames the scene an exit leads to is held once the player has control
+/// there.
+const ARRIVAL_HOLD: u32 = 30;
+/// Frames of a blank screen (one colour all over: the fade's black, a
+/// load) kept in a row in an exit's recording.
+const BLANK_KEEP: usize = 8;
+
+/// `frames` with each run of blank frames, one colour all over, cut to its
+/// first `keep`, so an exit's GIF does not sit on black while the next
+/// scene loads.
+fn shorten_blanks(frames: Vec<Vec<u16>>, keep: usize) -> Vec<Vec<u16>> {
+    let blank = |f: &[u16]| f.first().is_some_and(|&c| f.iter().all(|&p| p == c));
+    let mut run = 0;
+    frames
+        .into_iter()
+        .filter(|f| {
+            run = if blank(f) { run + 1 } else { 0 };
+            run <= keep
+        })
+        .collect()
 }
 
 /// A field Psynergy's reach by its ability id: its range
@@ -2094,6 +2222,13 @@ pub struct EventRun {
     /// pushes the pillar beside it).
     pub own_ran: bool,
     pub end: Option<Saved>,
+    /// The scene the event placed the party in next, before any battle:
+    /// the scene an exit leads to (recorded until the player has control
+    /// there), or this scene for a staircase to another of its entrances.
+    pub leads_to: Option<u16>,
+    /// Why a recorded arrival stopped before the player had control: a
+    /// battle began, or it ran past ARRIVAL_LIMIT.
+    pub note: Option<String>,
 }
 
 /// Whether box `b` (pixels, -1 sides taking the header's, 16.16) holds the
@@ -2141,5 +2276,16 @@ mod tests {
         assert!(box_holds([-1, -1, -1, -1], header, 500, 10));
         assert!(!box_holds([0, 0, 240, 160], header, 300, 10));
         assert!(box_holds([256, -1, -1, -1], header, 300, 10));
+    }
+
+    #[test]
+    fn an_exit_keeps_only_the_start_of_each_blank_run() {
+        let (black, white, picture) = (vec![0u16; 4], vec![0x7fffu16; 4], vec![1u16, 2, 3, 4]);
+        let mut frames = vec![picture.clone()];
+        frames.extend(std::iter::repeat_n(black.clone(), 5));
+        frames.push(picture.clone());
+        frames.extend(std::iter::repeat_n(white.clone(), 3));
+        let kept = shorten_blanks(frames, 2);
+        assert_eq!(kept, vec![picture.clone(), black.clone(), black, picture, white.clone(), white]);
     }
 }

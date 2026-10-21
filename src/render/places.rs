@@ -212,15 +212,20 @@ pub struct Row {
     pub before: String,
     /// A GIF's frames at 30 a second.
     pub frames: usize,
+    /// An event GIF's destination: the scene it leads to, by its SceneId
+    /// symbol (`SceneId_WorldMap`, `#N` for an unnamed row).
+    pub leads_to: String,
+    /// Why an exit's recording ends before the player has control there.
+    pub note: String,
 }
 
 const INDEX_HEADER: &str =
-    "scene\tnumber\tarea\tvariant\tkind\tentrance\tevent\tpage\tsegment\tmessage\tafter\tbefore\tframes\tmessages\tfile";
+    "scene\tnumber\tarea\tvariant\tkind\tentrance\tevent\tpage\tsegment\tmessage\tafter\tbefore\tframes\tleads_to\tnote\tmessages\tfile";
 
 impl Row {
     pub fn line(&self) -> String {
         format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             self.scene,
             self.number,
             self.area,
@@ -234,10 +239,23 @@ impl Row {
             self.after,
             self.before,
             if self.frames > 0 { self.frames.to_string() } else { String::new() },
+            self.leads_to,
+            self.note,
             self.messages,
             self.file
         )
     }
+}
+
+/// A line of an index written with `header` in INDEX_HEADER's columns: one
+/// an earlier version wrote gets its columns by name, empty where it had
+/// none.
+fn same_columns(header: &str, line: &str) -> String {
+    if header == INDEX_HEADER {
+        return line.to_string();
+    }
+    let old: HashMap<&str, &str> = header.split('\t').zip(line.split('\t')).collect();
+    INDEX_HEADER.split('\t').map(|k| old.get(k).copied().unwrap_or_default()).collect::<Vec<_>>().join("\t")
 }
 
 /// Writes `rows` into index.tsv, keeping the lines already there for other
@@ -246,10 +264,12 @@ pub fn write_index(out: &Path, rows: &[(String, String)]) -> Result<(), String> 
     let path = out.join("index.tsv");
     let mut lines: BTreeMap<String, String> = BTreeMap::new();
     if let Ok(text) = std::fs::read_to_string(&path) {
-        for line in text.lines().skip(1) {
+        let mut text = text.lines();
+        let header = text.next().unwrap_or_default();
+        for line in text {
             if let Some(file) = line.rsplit('\t').next() {
                 if out.join(file).is_file() {
-                    lines.insert(file.to_string(), line.to_string());
+                    lines.insert(file.to_string(), same_columns(header, line));
                 }
             }
         }
@@ -302,6 +322,8 @@ pub struct Skip {
 
 pub struct Context<'a> {
     pub rom: &'a [u8],
+    /// Every scene of the table, to name the scene an exit leads to.
+    pub scenes: &'a [Scene],
     pub symbols: &'a Symbols,
     pub flags: &'a Flags,
     pub events: &'a [Event],
@@ -1222,6 +1244,10 @@ impl Context<'_> {
         }
         let file = format!("{}/events/{base}.gif", scene.slug());
         let written = self.gif(&file, &run.frames)?;
+        let leads_to = run.leads_to.map(|n| match self.scenes.iter().find(|s| s.number == n).and_then(|s| s.symbol.as_deref()) {
+            Some(symbol) => format!("SceneId_{symbol}"),
+            None => format!("#{n}"),
+        });
         self.rows.push(Row {
             scene: scene.slug(),
             number: scene.number,
@@ -1230,6 +1256,8 @@ impl Context<'_> {
             entrance,
             event: event.name.clone(),
             frames: written,
+            leads_to: leads_to.unwrap_or_default(),
+            note: run.note.clone().unwrap_or_default(),
             messages,
             file,
             ..Row::default()
@@ -1272,6 +1300,14 @@ pub fn variant_candidates(events: &[Event], flags: &Flags) -> BTreeMap<u16, Vec<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_older_index_keeps_its_columns_by_name() {
+        let old = "scene\tnumber\tarea\tvariant\tkind\tentrance\tevent\tpage\tsegment\tmessage\tafter\tbefore\tframes\tmessages\tfile";
+        let line = same_columns(old, "vale\t4\tVale\t\tevent-gif\t0\tEvent_X\t\t\t\t\t\t90\t00001\tvale/events/Event_X.gif");
+        assert_eq!(line, "vale\t4\tVale\t\tevent-gif\t0\tEvent_X\t\t\t\t\t\t90\t\t\t00001\tvale/events/Event_X.gif");
+        assert_eq!(same_columns(INDEX_HEADER, "a\tb"), "a\tb");
+    }
 
     #[test]
     fn event_names_become_file_names() {

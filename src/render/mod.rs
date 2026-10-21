@@ -373,7 +373,8 @@ Plays a built ☀️ edition (make tbs-en) under libmgba from a new game's
 defaults straight into each scene, and writes PNG files at the GBA's size
 into DIR/<scene>/ (DIR defaults to out/EDITION/places), with DIR/index.tsv
 listing every image (scene, number, area, variant, kind, entrance, event,
-page, the page's message, the event's messages, file) and DIR/skipped.tsv
+page, the page's message, frames, leads_to, note, the event's messages,
+file) and DIR/skipped.tsv
 what was left out and why. --all takes every scene but the title, the
 clear-data screen and the debug test rooms. The tables are the story tools'
 places.tsv (scenes), events.tsv (each event's trigger, flags and messages)
@@ -417,10 +418,17 @@ something that moves, leaves, fights or changes the map. Each of its
 triggers is tried in turn, by the entrances whose events answer it, with
 the flags its row needs, then with each story flag its scene's setup
 tests or its scene's events set; one that does not play is tried again
-after each of the scene's other events. Pages are held 45 frames; an exit
-ends as the next scene starts loading, and an event that runs past three
-minutes gets no GIF, noted in skipped.tsv. --messages is accepted and not
-read.
+after each of the scene's other events. Pages are held 45 frames. An exit
+is followed into the scene it leads to: the fade out, the load, that
+scene's arrival (its pages answered, none kept) and its fade in, until the
+player has control there as at a scene's start and half a second more,
+with each run of a blank screen cut to its first 8 frames so the GIF
+never sits on black. An arrival is followed for at most 10 seconds from
+the load; one that runs longer, or that begins a battle, ends there, and
+index.tsv's note column says so. index.tsv's leads_to column names the scene an event places the
+party in next by its SceneId symbol (its own scene for a staircase to
+another of its entrances). An event that runs past three minutes gets no
+GIF, noted in skipped.tsv. --messages is accepted and not read.
 
 --jobs N runs N processes of this program, each with its own libmgba
 (default: the number of CPUs; 1 plays it all here), and hands each the
@@ -521,7 +529,7 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     };
     let root = crate::compile::root();
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
-    let request = SceneRequest { kind, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags };
+    let request = SceneRequest { kind, scenes: &scene_rows, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags };
     play_scenes(root, &o.edition, &request, &out, &o.jobs, arguments)
 }
 
@@ -529,6 +537,8 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 struct SceneRequest<'a> {
     kind: &'a str,
+    /// Every scene of the table, to name the scene an exit leads to.
+    scenes: &'a [story::Scene],
     chosen: &'a [&'a story::Scene],
     only: &'a [u16],
     events: &'a [story::Event],
@@ -800,6 +810,7 @@ impl Machines {
     fn context<'a>(&'a self, r: &'a SceneRequest, out: &Path) -> places::Context<'a> {
         places::Context {
             rom: &self.rom,
+            scenes: r.scenes,
             symbols: &self.symbols,
             flags: r.flags,
             events: r.events,
