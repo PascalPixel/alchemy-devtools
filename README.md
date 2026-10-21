@@ -66,6 +66,31 @@ Stage source changes before `make land` or `make progress`. Measurement checks t
 
 After the public build passes, CI uses `progress --publish ARCHIVE COMMIT DIRECTORY` to verify the receipt and reconstruct history from its immutable baseline and accepted ancestor measurements. It writes the two figures, history, source revision and accepted receipt. Dates come from the measurement, in UTC, so retrying publication does not move a measurement to today. Alchemy's `.github/README.md` describes the release archive and separate docs deployment.
 
+## Humanization report
+
+Matching made the C byte-identical; humanizing makes it readable (Alchemy's S3), and `progress --humanity` gives that work numbers that should fall the way DONE rose. It reads only the source, so it needs no built edition:
+
+```sh
+alchemy-devtools/target/release/alchemy-devtools progress --humanity
+alchemy-devtools/target/release/alchemy-devtools progress --humanity --top 10
+alchemy-devtools/target/release/alchemy-devtools progress --humanity --list undocumented_function
+```
+
+It counts the C and headers git tracks under each game's `src` and `include`, so nothing the build generates, and a header written in assembly (`ed_asm.h`) is skipped. The Broken Seal and The Lost Age are counted separately. The table goes to the terminal; `out/reports/humanity.tsv` has the columns `game`, `metric`, `scope` and `count`, with a `total` row for every metric and then the ten files leading each count (for `long_file` the count is the file's lines; for the duplicate groups the scope lists every copy and the count is the body's length in tokens). `--top N` prints those lists too, and `--list METRIC` prints every counted thing of one metric with its file and line, which is the worklist for a humanizing pass.
+
+The counts come from a small lexer, never the preprocessor, so the rules are deliberately simple:
+
+- **Magic numbers** (`magic_code`) are hex literals from `0x10` and decimal literals from 10 inside function bodies and function-like macros. Comments and strings never count. Numbers that are data by nature don't count as code: initializer lists (`= { ... }`, counted apart as `magic_table`), enum values, object-like `#define` bodies (which name their number), struct and union bodies (field sizes and bit widths), array sizes and anything else outside functions, and sizes written as `(w * h)` from two literals. `magic_argument` is the part of `magic_code` that stands alone as an argument or list element (`Actor_WalkTo(ACTOR_PARTY_LEADER, 257, 420)`), mostly script coordinates and waits.
+- **Placeholder names** (`placeholder`, with the distinct names as `placeholder_names`) start with `unk`, `Unk`, `gUnk`, `sUnk` or `unknown`, contain `Unk` as a word (`Battle_UnkFlags`), `_unk` or `_UNK`, are an address name (`sub_`, `func_`, `data_`, `loc_`, `off_`, `byte_`, `word_`, `dword_`, `D_` or `nullsub` with hex) or `field_` with hex, carry a ROM or RAM address (`_08012345`), or are an unproven sound (`SE_138`, `MUS_017`). Every use outside comments and strings counts, field names included.
+- **Numbered names** (`numbered`, `numbered_names`) end in a run of digits that stands for a meaning not yet found: `ColosseumFinal1`, `Event_LeaveByExit10`, `ACTOR_8`, `arg0`. A name doesn't count when it is a placeholder; a register or convention (`REG_` names, `FLAG_SCENE_TEMP_xx` and `FLAG_PLACE_TEMP_xx`, names starting `__`); a one-letter stem (`x1`, `r0`); a width after a word with no underscore (`Random16`, `Dma_Fill32`, `vu16`); or when the word before the digits is hardware or convention: `BG`, `DMA`, `TM`, `Timer`, `Win`, `OBJ`, `OAM`, `TGT`, `MODE`, `FIFO`, `Sound`, `SND`, `CH`, `Key`, `SIO`, `Joy`, `IRQ`, `attr`, `PATCH`, `Tan`, `Vec`, `Vector`, `LZ`, `UTF`, `CRC`, `SHA`, `Base`, `RGB` and `VRAM`.
+- **Devices** are the `FAKEMATCH(<kind>)` tags of S2's seven kinds, counted from comments (`fakematch_wrapper` and so on; `fakematch` sums them), and `goto` counts every `goto` statement. In The Broken Seal both may only fall.
+- **Edition tests** count each `#if`, `#elif`, `#ifdef` and `#ifndef` that tests `LANGUAGE` (`if_language`), a patch level such as `TBS_PATCH_1` (`if_patch`), or an edition name such as `TBS_EDITION_EN` (`if_edition_name`, which S3 keeps out of C; `edition.h` and `version.h`, where edition names become those values, are left out). `if_in_function` counts those tests written inside a function body, where S3 wants only code whose shape differs.
+- **Undocumented declarations** have no `///` (or `/**`) comment right before them and no `///<` note after them on the same line. A function or global counts once, at its definition if it has one, and is documented when any of its declarations is, so a prototype documented in its header covers the definition. Structs and enums count at each definition; an anonymous enum is documented by a note on its first constant. Macros count once per file and name, leaving out header guards (names ending `_H`).
+- **Long files** are those over 3,000 lines, S3's size for writing an object as parts.
+- **Duplicates** group function bodies of at least 24 tokens that are identical once every identifier and string is replaced by a placeholder, and table initializers of at least 16 tokens that are identical token for token (names kept, so tables only group when they hold the same data). `duplicate_function` and `duplicate_table` count the groups, and the `_copies` rows the copies past the first in each.
+
+`#if` branches are each read, and the brace depth is taken from the first branch at `#endif`, so a declaration that opens differently by edition doesn't upset the rest of the file. None of these figures counts toward DONE.
+
 ## Source
 
 `src/` holds the reconstruction commands. `ags/` holds the asset readers and the earlier Rust encoders used for inspection and comparisons with Alchemy's C encoders. These are outside Alchemy's ROM build.

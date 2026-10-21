@@ -1,0 +1,1135 @@
+//! The humanization report: numbers for the work of making the matched C
+//! readable (S3), meant to fall the way DONE rose. Each game's tracked C and
+//! headers under `src` and `include` are lexed (never preprocessed) and
+//! counted by simple rules the README sets out: magic numbers, placeholder
+//! and numbered names, compiler-steering devices, edition tests, undocumented
+//! declarations, long files and duplicated code. Nothing here counts toward
+//! DONE (C2); the figures are for people.
+
+use super::clex::{self, Kind, Token};
+use regex::Regex;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::fmt::Write as _;
+use std::path::Path;
+use std::sync::OnceLock;
+
+pub const REPORT: &str = "out/reports/humanity.tsv";
+
+/// S2's devices, in its order.
+pub const DEVICES: [&str; 7] = ["wrapper", "volatile", "temporary", "dead", "one-pass", "barrier", "pin"];
+
+/// A function body this many tokens long or more takes part in the duplicate search.
+const FUNCTION_TOKENS: usize = 24;
+/// A table initializer this many tokens long or more takes part in the duplicate search.
+const TABLE_TOKENS: usize = 16;
+/// Files longer than this are listed (S3's split threshold).
+const LONG_FILE: usize = 3000;
+/// How many files and groups each top list keeps in the TSV.
+const TOP: usize = 10;
+
+const KEYWORDS: &[&str] = &[
+    "auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern",
+    "float", "for", "goto", "if", "inline", "int", "long", "register", "return", "short", "signed", "sizeof",
+    "static", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile", "while", "asm", "__asm__",
+    "__attribute__", "__inline__", "__volatile__", "typeof", "__typeof__", "_Bool", "__extension__", "defined",
+];
+
+/// Word stems before a digit run that name hardware or a convention, not a
+/// meaning still to find: `BG2`, `Dma3`, `TM0`, `DISPCNT_MODE_1`, `TBS_PATCH_1`.
+const NUMBERED_STEMS: &[&str] = &[
+    "bg", "dma", "tm", "timer", "win", "obj", "oam", "tgt", "mode", "fifo", "sound", "snd", "ch", "key", "sio",
+    "joy", "irq", "attr", "patch", "tan", "vec", "vector", "lz", "utf", "crc", "sha", "base", "rgb", "vram",
+];
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Brace {
+    /// An initializer list, `= { ... }`: table data.
+    Init,
+    Enum,
+    /// A struct or union body: field layout.
+    Struct,
+    /// A function body.
+    Func,
+    /// Any other block inside a function.
+    Block,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Group {
+    pub tokens: usize,
+    /// `path:name` of each copy.
+    pub members: Vec<String>,
+}
+
+#[derive(Default)]
+struct Declared {
+    documented: bool,
+    line: usize,
+    /// Where it is defined, else where it is first declared.
+    file: String,
+    defined: bool,
+}
+
+/// One game's counts.
+#[derive(Default)]
+pub struct Report {
+    pub files: usize,
+    pub lines: usize,
+    /// metric -> file -> count.
+    pub tallies: BTreeMap<String, BTreeMap<String, u64>>,
+    /// Distinct placeholder and numbered names.
+    pub names: BTreeMap<&'static str, BTreeSet<String>>,
+    pub long_files: Vec<(String, usize)>,
+    pub function_groups: Vec<Group>,
+    pub table_groups: Vec<Group>,
+    /// Each counted thing, for `--list`.
+    pub items: Vec<Item>,
+    functions: BTreeMap<String, Declared>,
+    globals: BTreeMap<String, Declared>,
+    function_bodies: HashMap<String, Group>,
+    table_bodies: HashMap<String, Group>,
+}
+
+/// One counted thing: where it is and what it is.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Item {
+    pub metric: String,
+    pub file: String,
+    pub line: usize,
+    pub what: String,
+}
+
+impl Report {
+    fn add(&mut self, metric: &str, file: &str, count: u64) {
+        if count > 0 {
+            *self.tallies.entry(metric.to_string()).or_default().entry(file.to_string()).or_default() += count;
+        }
+    }
+
+    fn note(&mut self, metric: &str, file: &str, line: usize, what: &str) {
+        self.add(metric, file, 1);
+        self.items.push(Item { metric: metric.to_string(), file: file.to_string(), line, what: what.to_string() });
+    }
+
+    pub fn total(&self, metric: &str) -> u64 {
+        self.tallies.get(metric).map_or(0, |files| files.values().sum())
+    }
+
+    /// The files with the most of a metric, most first.
+    pub fn top(&self, metric: &str, count: usize) -> Vec<(&str, u64)> {
+        let mut files: Vec<(&str, u64)> =
+            self.tallies.get(metric).map_or(Vec::new(), |files| files.iter().map(|(f, n)| (f.as_str(), *n)).collect());
+        files.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+        files.truncate(count);
+        files
+    }
+
+    pub fn distinct(&self, kind: &str) -> usize {
+        self.names.get(kind).map_or(0, BTreeSet::len)
+    }
+
+    fn declare(&mut self, function: bool, name: &str, file: &str, line: usize, documented: bool, defined: bool) {
+        let map = if function { &mut self.functions } else { &mut self.globals };
+        let entry = map.entry(name.to_string()).or_insert_with(|| Declared { file: file.to_string(), line, ..Declared::default() });
+        entry.documented |= documented;
+        if defined && !entry.defined {
+            entry.defined = true;
+            entry.file = file.to_string();
+            entry.line = line;
+        }
+    }
+
+    /// Settle what needs the whole game: documentation across declarations,
+    /// and the duplicate groups.
+    fn finish(&mut self) {
+        for (function, kind) in [(true, "undocumented_function"), (false, "undocumented_global")] {
+            let missing: Vec<(String, usize, String)> = (if function { &self.functions } else { &self.globals })
+                .iter()
+                .filter(|(_, declared)| !declared.documented)
+                .map(|(name, declared)| (declared.file.clone(), declared.line, name.clone()))
+                .collect();
+            for (file, line, name) in missing {
+                self.note(kind, &file, line, &name);
+            }
+        }
+        let groups = |bodies: &mut HashMap<String, Group>| {
+            let mut groups: Vec<Group> = bodies.drain().map(|(_, group)| group).filter(|g| g.members.len() > 1).collect();
+            for group in &mut groups {
+                group.members.sort();
+            }
+            groups.sort_by(|a, b| {
+                (b.tokens * (b.members.len() - 1)).cmp(&(a.tokens * (a.members.len() - 1))).then(a.members.cmp(&b.members))
+            });
+            groups
+        };
+        self.function_groups = groups(&mut self.function_bodies);
+        self.table_groups = groups(&mut self.table_bodies);
+        self.long_files.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    }
+
+    /// Copies past the first in each group.
+    pub fn copies(groups: &[Group]) -> usize {
+        groups.iter().map(|group| group.members.len() - 1).sum()
+    }
+}
+
+fn regexes() -> &'static [Regex; 3] {
+    static SET: OnceLock<[Regex; 3]> = OnceLock::new();
+    SET.get_or_init(|| {
+        [
+            // Placeholders.
+            Regex::new(concat!(
+                r"^(?:[gs]?(?:unk|Unk|UNK)(?:nown)?(?:$|[_0-9A-Z]))",
+                r"|^(?:sub|func|Func|data|loc|off|byte|word|dword|nullsub|D)_[0-9A-Fa-f]{2,}",
+                r"|^field_[0-9A-Fa-f]+",
+                r"|[_a-z0-9]Unk(?:nown)?(?:$|[_0-9A-Z])|_unk(?:$|[_0-9])|_UNK(?:$|[_0-9])",
+                r"|_0[23689][0-9A-Fa-f]{6}(?:$|_)",
+                r"|^(?:SE|MUS)_[0-9]+$|^nullsub",
+            ))
+            .unwrap(),
+            // Conventions that keep their number: temporary flags, registers and
+            // the compiler library (`__divsi3`).
+            Regex::new(r"^FLAG_(?:SCENE|PLACE)_TEMP_[0-9A-F]+$|^REG_|^__").unwrap(),
+            // Edition names, which belong in linker scripts and assembly.
+            Regex::new(r"^(?:TBS|TLA)_EDITION_[A-Z]+$").unwrap(),
+        ]
+    })
+}
+
+/// `unk_14`, `sub_08012345`, `gUnknown_0203`, `field_1C`, `SE_138`: a name
+/// that says it is not known yet.
+pub fn is_placeholder(name: &str) -> bool {
+    regexes()[0].is_match(name)
+}
+
+/// The last word of a name: `Script` in `gEffectScript`, `BG` in `BLDCNT_TGT1_BG`.
+fn last_word(text: &str) -> &str {
+    let text = text.trim_end_matches('_');
+    let segment = &text[text.rfind('_').map_or(0, |at| at + 1)..];
+    let bytes = segment.as_bytes();
+    // Camel case: from the last capital that follows a small letter or digit.
+    let mut start = 0;
+    for at in 1..bytes.len() {
+        if bytes[at].is_ascii_uppercase() && (bytes[at - 1].is_ascii_lowercase() || bytes[at - 1].is_ascii_digit()) {
+            start = at;
+        }
+    }
+    &segment[start..]
+}
+
+/// A name that carries a number in place of a meaning: `ColosseumFinal1`,
+/// `Event_LeaveByExit10`, `ACTOR_8`. Placeholders, hardware and convention
+/// names (`BG2`, `Dma3`, `REG_DMA3`, `u16`, `Random16`, `FLAG_SCENE_TEMP_01`)
+/// are not.
+pub fn is_numbered(name: &str) -> bool {
+    let stem_end = name.trim_end_matches(|c: char| c.is_ascii_digit()).len();
+    if stem_end == name.len() || stem_end == 0 || is_placeholder(name) || regexes()[1].is_match(name) {
+        return false;
+    }
+    let (before, digits) = name.split_at(stem_end);
+    let separated = before.ends_with('_');
+    let mut rest = before;
+    let mut stem = last_word(rest);
+    // Skip number segments: `Q` in `Q_8_8`.
+    while !stem.is_empty() && stem.bytes().all(|b| b.is_ascii_digit()) {
+        rest = rest.trim_end_matches('_');
+        rest = &rest[..rest.len() - stem.len()];
+        stem = last_word(rest);
+    }
+    let stem = stem.trim_end_matches(|c: char| c.is_ascii_digit());
+    if stem.len() <= 1 || (!separated && matches!(digits, "8" | "16" | "32" | "64")) {
+        return false;
+    }
+    let lower = stem.to_ascii_lowercase();
+    // A width after a type stem: `vu16`, `bool8`.
+    if matches!(lower.as_str(), "u" | "s" | "vu" | "vs" | "f" | "bool" | "int" | "uint" | "intptr") {
+        return false;
+    }
+    !NUMBERED_STEMS.contains(&lower.as_str())
+}
+
+/// A number that wants a name: hex from 0x10, decimal from 10.
+pub fn is_magic(literal: &str) -> bool {
+    let digits = literal.trim_end_matches(['u', 'U', 'l', 'L']);
+    if let Some(hex) = digits.strip_prefix("0x").or_else(|| digits.strip_prefix("0X")) {
+        return u64::from_str_radix(hex, 16).is_ok_and(|value| value >= 0x10);
+    }
+    digits.parse::<u64>().is_ok_and(|value| value >= 10)
+}
+
+fn is_keyword(text: &str) -> bool {
+    KEYWORDS.contains(&text)
+}
+
+/// A name written in capitals, as macros are: `UNUSED`, `ALIGNED`.
+fn is_macro_name(text: &str) -> bool {
+    text.bytes().any(|b| b.is_ascii_uppercase()) && !text.bytes().any(|b| b.is_ascii_lowercase())
+}
+
+/// One file's tokens with what the counts need around them.
+struct Code<'a> {
+    tokens: Vec<Token<'a>>,
+    /// The comment right before each token is documentation.
+    doc_before: Vec<bool>,
+    /// A trailing `///<` note follows each token on its line.
+    doc_after: Vec<bool>,
+}
+
+impl<'a> Code<'a> {
+    fn new(text: &'a str) -> (Code<'a>, Vec<Token<'a>>) {
+        let all = clex::lex(text);
+        let (mut tokens, mut comments, mut doc_before, mut doc_after) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        let mut pending_doc = false;
+        for token in all {
+            if token.kind == Kind::Comment {
+                if clex::is_trailing_doc(token.text) {
+                    if let (Some(last), Some(flag)) = (tokens.last(), doc_after.last_mut()) {
+                        let last: &Token = last;
+                        *flag |= last.line == token.line;
+                    }
+                    pending_doc = false;
+                } else {
+                    pending_doc = clex::is_doc(token.text) && !token.pp;
+                }
+                comments.push(token);
+                continue;
+            }
+            doc_before.push(pending_doc);
+            doc_after.push(false);
+            if token.kind != Kind::PpEnd {
+                pending_doc = false;
+            }
+            tokens.push(token);
+        }
+        (Code { tokens, doc_before, doc_after }, comments)
+    }
+
+    fn text(&self, at: usize) -> &'a str {
+        self.tokens[at].text
+    }
+}
+
+/// Where a `{` was opened and closed, and what it holds.
+struct Opened {
+    kind: Brace,
+    close: usize,
+}
+
+/// The kinds of the open braces and where each opened.
+type Snapshot = (Vec<Brace>, Vec<usize>);
+
+struct Walk<'r, 'a> {
+    report: &'r mut Report,
+    file: &'a str,
+    code: Code<'a>,
+    stack: Vec<Brace>,
+    /// For each `#if`: the open braces at it and at the end of its first branch.
+    conditions: Vec<(Snapshot, Option<Snapshot>)>,
+    /// `[` depth outside every brace: a declaration's array size.
+    square: i32,
+    statement: Vec<usize>,
+    braces: HashMap<usize, Opened>,
+    open: Vec<usize>,
+    /// Each macro name: documented at any definition, and its first line.
+    macros: BTreeMap<String, (bool, usize)>,
+}
+
+impl<'r, 'a> Walk<'r, 'a> {
+    fn name(&mut self, name: &str, line: usize) {
+        if is_keyword(name) {
+            return;
+        }
+        for (kind, test) in [("placeholder", is_placeholder as fn(&str) -> bool), ("numbered", is_numbered)] {
+            if test(name) {
+                self.report.note(kind, self.file, line, name);
+                self.report.names.entry(kind).or_default().insert(name.to_string());
+            }
+        }
+    }
+
+    /// `(w * h)` written with literals.
+    fn is_size(&self, at: usize) -> bool {
+        let text = |offset: isize| {
+            let index = at as isize + offset;
+            (index >= 0 && (index as usize) < self.code.tokens.len()).then(|| &self.code.tokens[index as usize])
+        };
+        let is = |offset: isize, value: &str| text(offset).is_some_and(|t| t.text == value);
+        let number = |offset: isize| text(offset).is_some_and(|t| t.kind == Kind::Number);
+        (is(-1, "(") && is(1, "*") && number(2) && is(3, ")")) || (is(-3, "(") && number(-2) && is(-1, "*") && is(1, ")"))
+    }
+
+    fn number(&mut self, at: usize, function_macro: Option<bool>) {
+        if !is_magic(self.code.text(at)) || self.is_size(at) {
+            return;
+        }
+        let metric = match function_macro {
+            // An object-like macro names its number; other directives test editions.
+            Some(false) => return,
+            Some(true) => "magic_code",
+            None => match self.stack.last() {
+                Some(Brace::Init) => "magic_table",
+                Some(Brace::Func | Brace::Block) => "magic_code",
+                // Enum values, field layout and declarations outside functions.
+                _ => return,
+            },
+        };
+        let line = self.code.tokens[at].line;
+        let literal = self.code.text(at);
+        self.report.note(metric, self.file, line, literal);
+        if metric == "magic_code" && self.is_argument(at) {
+            self.report.note("magic_argument", self.file, line, literal);
+        }
+    }
+
+    /// A literal standing alone between `(` or `,` and `,` or `)`: an argument or list element.
+    fn is_argument(&self, at: usize) -> bool {
+        let before = at.checked_sub(1).map_or("", |at| self.code.text(at));
+        let after = self.code.tokens.get(at + 1).map_or("", |t| t.text);
+        matches!(before, "(" | ",") && matches!(after, ")" | ",")
+    }
+
+    fn directive(&mut self, start: usize, end: usize) {
+        let tokens: Vec<Token<'a>> = self.code.tokens[start + 1..end].to_vec();
+        let Some(word) = tokens.first().map(|t| t.text) else { return };
+        let idents: Vec<&'a str> = tokens.iter().filter(|t| t.kind == Kind::Ident).map(|t| t.text).collect();
+        let line = self.code.tokens[start].line;
+        let condition = tokens.iter().map(|t| t.text).filter(|t| !t.starts_with("/")).collect::<Vec<_>>().join(" ");
+        match word {
+            "include" | "include_next" | "error" | "warning" | "pragma" | "line" => return,
+            "if" | "ifdef" | "ifndef" | "elif" => {
+                if word == "elif" {
+                    self.branch();
+                } else {
+                    self.conditions.push(((self.stack.clone(), self.open.clone()), None));
+                }
+                let language = idents.contains(&"LANGUAGE");
+                let patch = idents.iter().any(|i| i.contains("_PATCH_") && (i.starts_with("TBS_") || i.starts_with("TLA_")));
+                // `edition.h` and `version.h` are where edition names become LANGUAGE and
+                // the patch levels (S3).
+                let bridge = self.file.ends_with("edition.h") || self.file.ends_with("version.h");
+                let edition = !bridge && idents.iter().any(|i| regexes()[2].is_match(i));
+                for (metric, hit) in [("if_language", language), ("if_patch", patch), ("if_edition_name", edition)] {
+                    if hit {
+                        self.report.note(metric, self.file, line, &condition);
+                    }
+                }
+                if (language || patch || edition) && self.stack.contains(&Brace::Func) {
+                    self.report.note("if_in_function", self.file, line, &condition);
+                }
+            }
+            "else" => self.branch(),
+            "endif" => {
+                if let Some((_, Some((stack, open)))) = self.conditions.pop() {
+                    self.stack = stack;
+                    self.open = open;
+                }
+            }
+            "define" => {
+                let Some(name) = tokens.get(1).filter(|t| t.kind == Kind::Ident) else { return };
+                let function_like = tokens.get(2).is_some_and(|t| t.text == "(" && t.glued);
+                for at in start + 3..end {
+                    if self.code.tokens[at].kind == Kind::Number {
+                        self.number(at, Some(function_like));
+                    }
+                }
+                let guard = name.text.ends_with("_H") || name.text.ends_with("_H_");
+                if !guard {
+                    let documented = self.code.doc_before[start] || (start..=end).any(|at| self.code.doc_after[at]);
+                    self.macros.entry(name.text.to_string()).or_insert((false, line)).0 |= documented;
+                }
+            }
+            _ => {}
+        }
+        for ident in idents.iter().skip(1) {
+            self.name(ident, line);
+        }
+    }
+
+    fn branch(&mut self) {
+        if let Some(((stack, open), first)) = self.conditions.last_mut() {
+            first.get_or_insert_with(|| (self.stack.clone(), self.open.clone()));
+            self.stack = stack.clone();
+            self.open = open.clone();
+        }
+    }
+
+    fn brace_kind(&self, prev: Option<usize>, prev2: Option<usize>) -> Brace {
+        let text = |at: Option<usize>| at.map_or("", |at| self.code.text(at));
+        let ident = |at: Option<usize>| at.is_some_and(|at| self.code.tokens[at].kind == Kind::Ident);
+        let tagged = |words: &[&str]| words.contains(&text(prev)) || (ident(prev) && words.contains(&text(prev2)));
+        match self.stack.last() {
+            Some(Brace::Init) => Brace::Init,
+            _ if text(prev) == "=" => Brace::Init,
+            _ if tagged(&["enum"]) => Brace::Enum,
+            _ if tagged(&["struct", "union"]) => Brace::Struct,
+            None if text(prev) == ")" => Brace::Func,
+            _ => Brace::Block,
+        }
+    }
+
+    fn walk(&mut self) {
+        let (mut prev, mut prev2) = (None, None);
+        let mut at = 0;
+        while at < self.code.tokens.len() {
+            let token = self.code.tokens[at].clone();
+            if token.kind == Kind::PpStart {
+                let end = (at..self.code.tokens.len()).find(|&e| self.code.tokens[e].kind == Kind::PpEnd).unwrap_or(self.code.tokens.len() - 1);
+                self.directive(at, end);
+                at = end + 1;
+                continue;
+            }
+            if self.stack.is_empty() {
+                self.statement.push(at);
+            }
+            match (token.kind, token.text) {
+                (Kind::Ident, "goto") => self.report.note("goto", self.file, token.line, "goto"),
+                (Kind::Ident, name) => self.name(name, token.line),
+                (Kind::Number, _) if self.stack.is_empty() && self.square > 0 => {}
+                (Kind::Number, _) => self.number(at, None),
+                (_, "[") if self.stack.is_empty() => self.square += 1,
+                (_, "]") if self.stack.is_empty() => self.square -= 1,
+                (_, "{") => {
+                    let kind = self.brace_kind(prev, prev2);
+                    self.stack.push(kind);
+                    self.open.push(at);
+                    self.braces.insert(at, Opened { kind, close: at });
+                }
+                (_, "}") => {
+                    self.stack.pop();
+                    if let Some(open) = self.open.pop() {
+                        if let Some(opened) = self.braces.get_mut(&open) {
+                            opened.close = at;
+                        }
+                        if self.stack.is_empty() {
+                            self.statement.push(at);
+                            if self.braces[&open].kind == Brace::Func {
+                                self.declaration();
+                            }
+                        }
+                    }
+                }
+                (_, ";") if self.stack.is_empty() => self.declaration(),
+                _ => {}
+            }
+            prev2 = prev;
+            prev = Some(at);
+            at += 1;
+        }
+        if !self.statement.is_empty() {
+            self.declaration();
+        }
+        let file = self.file;
+        for (name, (documented, line)) in std::mem::take(&mut self.macros) {
+            if !documented {
+                self.report.note("undocumented_macro", file, line, &name);
+            }
+        }
+    }
+
+    /// Normalized tokens between a brace pair, for the duplicate search.
+    fn body(&self, open: usize, keep_names: bool) -> (String, usize) {
+        let close = self.braces[&open].close;
+        let mut key = String::new();
+        let mut count = 0;
+        for token in &self.code.tokens[open + 1..close] {
+            if token.pp {
+                continue;
+            }
+            let text = match token.kind {
+                Kind::Ident if !keep_names && !is_keyword(token.text) => "$",
+                Kind::Str if !keep_names => "\"",
+                _ => token.text,
+            };
+            key.push_str(text);
+            key.push('\u{1f}');
+            count += 1;
+        }
+        (key, count)
+    }
+
+    fn duplicate(&mut self, function: bool, open: usize, name: &str) {
+        let (key, tokens) = self.body(open, !function);
+        if tokens < if function { FUNCTION_TOKENS } else { TABLE_TOKENS } {
+            return;
+        }
+        let bodies = if function { &mut self.report.function_bodies } else { &mut self.report.table_bodies };
+        let group = bodies.entry(key).or_insert_with(|| Group { tokens, members: Vec::new() });
+        group.members.push(format!("{}:{name}", self.file));
+    }
+
+    /// One statement outside every brace: a function, prototype, global,
+    /// struct, enum or typedef.
+    fn declaration(&mut self) {
+        let statement = std::mem::take(&mut self.statement);
+        let (Some(&first), Some(&last)) = (statement.first(), statement.last()) else { return };
+        let documented = self.code.doc_before[first] || self.code.doc_after[last];
+        let opened: Vec<(usize, Brace)> =
+            statement.iter().filter_map(|&at| self.braces.get(&at).map(|opened| (at, opened.kind))).collect();
+        let file = self.file;
+        let lead = self.code.text(first);
+        let second_last = statement.len().checked_sub(2).map_or("", |at| self.code.text(statement[at]));
+        if matches!(lead, "asm" | "__asm__") {
+            return;
+        }
+        let line = self.code.tokens[first].line;
+        if lead == "typedef" {
+            self.types(&opened, second_last, line, documented);
+            return;
+        }
+        if let Some(&(open, _)) = opened.iter().find(|(_, kind)| *kind == Brace::Func) {
+            if let Some(Declarator::Function(name)) = self.declarator(&statement) {
+                let name = name.to_string();
+                self.report.declare(true, &name, file, line, documented, true);
+                self.duplicate(true, open, &name);
+            }
+            return;
+        }
+        self.types(&opened, "", line, documented);
+        // A bare definition (`struct S { ... };`) or forward declaration (`struct S;`).
+        let after_body = opened.iter().find(|(_, kind)| matches!(kind, Brace::Struct | Brace::Enum)).and_then(|(open, _)| {
+            let close = self.braces[open].close;
+            statement.iter().position(|&at| at == close).and_then(|at| statement.get(at + 1)).map(|&at| self.code.text(at))
+        });
+        if matches!(lead, "struct" | "union" | "enum") && (matches!(after_body, Some(";" | "__attribute__")) || statement.len() == 3) {
+            return;
+        }
+        let defined = lead != "extern";
+        match self.declarator(&statement) {
+            Some(Declarator::Function(name)) => {
+                let name = name.to_string();
+                self.report.declare(true, &name, file, line, documented, false);
+            }
+            Some(Declarator::Global(name)) => {
+                let name = name.to_string();
+                self.report.declare(false, &name, file, line, documented, defined);
+                if let Some(&(open, _)) = opened.iter().find(|(_, kind)| *kind == Brace::Init) {
+                    self.duplicate(false, open, &name);
+                }
+            }
+            None => {}
+        }
+    }
+
+    /// The structs and enums a statement defines, named by their tag or else
+    /// their typedef name.
+    fn types(&mut self, opened: &[(usize, Brace)], typedef: &str, line: usize, documented: bool) {
+        if documented {
+            return;
+        }
+        for &(open, kind) in opened {
+            let metric = match kind {
+                Brace::Struct => "undocumented_struct",
+                Brace::Enum => "undocumented_enum",
+                _ => continue,
+            };
+            let tag = open.checked_sub(1).map(|at| &self.code.tokens[at]).filter(|t| t.kind == Kind::Ident && !is_keyword(t.text));
+            // An anonymous enum of constants is documented by its first constant's note.
+            if kind == Brace::Enum && tag.is_none() && typedef.is_empty() && self.code.doc_before.get(open + 1) == Some(&true) {
+                continue;
+            }
+            let name = tag.map_or(if typedef.is_empty() { "(anonymous)" } else { typedef }, |t| t.text);
+            self.report.note(metric, self.file, line, name);
+        }
+    }
+
+    /// The name a statement declares, read from its tokens outside braces.
+    fn declarator(&self, statement: &[usize]) -> Option<Declarator<'a>> {
+        let tokens: Vec<&Token<'a>> = statement.iter().map(|&at| &self.code.tokens[at]).collect();
+        let mut depth = 0;
+        let mut last_name = None;
+        let mut index = 0;
+        while index < tokens.len() {
+            let token = tokens[index];
+            match token.text {
+                "(" if depth == 0 => {
+                    let before = index.checked_sub(1).map(|at| tokens[at]);
+                    let after = tokens.get(index + 1).map(|t| t.text);
+                    if after == Some("*") {
+                        // `void (*gHandler)(void)`: a pointer to functions.
+                        return tokens[index + 1..]
+                            .iter()
+                            .find(|t| t.kind == Kind::Ident && !is_keyword(t.text))
+                            .map(|t| Declarator::Global(t.text));
+                    }
+                    match before {
+                        Some(name) if name.kind == Kind::Ident && !is_keyword(name.text) && !is_macro_name(name.text) => {
+                            return Some(Declarator::Function(name.text));
+                        }
+                        _ => depth += 1,
+                    }
+                }
+                "(" => depth += 1,
+                ")" => depth -= 1,
+                "[" | "=" | ";" | "," | ":" | "{" if depth == 0 => break,
+                // A capitalized name is a macro only when it is invoked: `ALIGNED(4)`.
+                _ if depth == 0
+                    && token.kind == Kind::Ident
+                    && !is_keyword(token.text)
+                    && !(is_macro_name(token.text) && tokens.get(index + 1).is_some_and(|t| t.text == "(")) =>
+                {
+                    last_name = Some(token.text);
+                }
+                _ => {}
+            }
+            index += 1;
+        }
+        last_name.map(Declarator::Global)
+    }
+}
+
+enum Declarator<'a> {
+    Function(&'a str),
+    Global(&'a str),
+}
+
+/// Count one file into its game's report.
+/// A header written in assembly (`ed_asm.h`) is not counted.
+pub fn file(report: &mut Report, path: &str, text: &str) {
+    let (code, comments) = Code::new(text);
+    if code.tokens.first().is_some_and(|t| t.text == ".") {
+        return;
+    }
+    report.files += 1;
+    let lines = text.lines().count();
+    report.lines += lines;
+    if lines > LONG_FILE {
+        report.long_files.push((path.to_string(), lines));
+    }
+    static TAG: OnceLock<Regex> = OnceLock::new();
+    let tag = TAG.get_or_init(|| Regex::new(r"FAKEMATCH\(([a-z-]+)\)").unwrap());
+    for comment in &comments {
+        for capture in tag.captures_iter(comment.text) {
+            if DEVICES.contains(&&capture[1]) {
+                report.note(&format!("fakematch_{}", &capture[1]), path, comment.line, &capture[1]);
+            }
+        }
+    }
+    let mut walk = Walk {
+        report,
+        file: path,
+        code,
+        stack: Vec::new(),
+        conditions: Vec::new(),
+        square: 0,
+        statement: Vec::new(),
+        braces: HashMap::new(),
+        open: Vec::new(),
+        macros: BTreeMap::new(),
+    };
+    walk.walk();
+}
+
+/// Count a game from `(path, text)` pairs.
+pub fn game<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>) -> Report {
+    let mut report = Report::default();
+    for (path, text) in files {
+        file(&mut report, path, text);
+    }
+    report.finish();
+    report
+}
+
+/// The tracked C and headers of a game, never build output.
+fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
+    let output = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["ls-files", "-z", "--"])
+        .arg(format!("games/{game}/src"))
+        .arg(format!("games/{game}/include"))
+        .output()
+        .map_err(|error| format!("cannot run git: {error}"))?;
+    if !output.status.success() {
+        return Err(format!("git ls-files failed: {}", String::from_utf8_lossy(&output.stderr).trim()));
+    }
+    let mut files = Vec::new();
+    for path in String::from_utf8_lossy(&output.stdout).split('\0') {
+        if path.ends_with(".c") || path.ends_with(".h") {
+            let bytes = std::fs::read(root.join(path)).map_err(|error| format!("cannot read {path}: {error}"))?;
+            files.push((path.to_string(), String::from_utf8_lossy(&bytes).into_owned()));
+        }
+    }
+    Ok(files)
+}
+
+/// The rows of the summary, as `(metric, label)`; a metric's TSV total is its value.
+const ROWS: &[(&str, &str)] = &[
+    ("magic_code", "magic numbers in code"),
+    ("magic_argument", "  of those, lone arguments"),
+    ("magic_table", "numbers in table data"),
+    ("placeholder_names", "placeholder names"),
+    ("placeholder", "  their uses"),
+    ("numbered_names", "numbered names"),
+    ("numbered", "  their uses"),
+    ("fakematch", "FAKEMATCH devices"),
+    ("fakematch_wrapper", "  wrapper"),
+    ("fakematch_volatile", "  volatile"),
+    ("fakematch_temporary", "  temporary"),
+    ("fakematch_dead", "  dead"),
+    ("fakematch_one-pass", "  one-pass"),
+    ("fakematch_barrier", "  barrier"),
+    ("fakematch_pin", "  pin"),
+    ("goto", "goto"),
+    ("if_language", "#if on LANGUAGE"),
+    ("if_patch", "#if on a patch level"),
+    ("if_edition_name", "#if on an edition name"),
+    ("if_in_function", "  of those inside functions"),
+    ("undocumented_function", "functions without ///"),
+    ("undocumented_struct", "structs without ///"),
+    ("undocumented_enum", "enums without ///"),
+    ("undocumented_macro", "macros without ///"),
+    ("undocumented_global", "globals without ///"),
+    ("long_file", "files over 3,000 lines"),
+    ("duplicate_function", "duplicate function groups"),
+    ("duplicate_function_copies", "  copies past the first"),
+    ("duplicate_table", "duplicate table groups"),
+    ("duplicate_table_copies", "  copies past the first"),
+];
+
+/// Metrics whose top files are listed.
+const LISTED: &[&str] = &[
+    "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "goto", "if_language", "if_patch",
+    "if_in_function", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
+    "undocumented_global",
+];
+
+impl Report {
+    pub fn value(&self, metric: &str) -> u64 {
+        match metric {
+            "placeholder_names" => self.distinct("placeholder") as u64,
+            "numbered_names" => self.distinct("numbered") as u64,
+            "fakematch" => DEVICES.iter().map(|kind| self.total(&format!("fakematch_{kind}"))).sum(),
+            "long_file" => self.long_files.len() as u64,
+            "duplicate_function" => self.function_groups.len() as u64,
+            "duplicate_function_copies" => Report::copies(&self.function_groups) as u64,
+            "duplicate_table" => self.table_groups.len() as u64,
+            "duplicate_table_copies" => Report::copies(&self.table_groups) as u64,
+            _ => self.total(metric),
+        }
+    }
+
+    /// FAKEMATCH devices summed per file.
+    fn fakematch_files(&self) -> BTreeMap<String, u64> {
+        let mut files = BTreeMap::new();
+        for kind in DEVICES {
+            for (file, count) in self.tallies.get(&format!("fakematch_{kind}")).into_iter().flatten() {
+                *files.entry(file.clone()).or_default() += count;
+            }
+        }
+        files
+    }
+
+    fn top_of(&self, metric: &str, count: usize) -> Vec<(String, u64)> {
+        if metric == "fakematch" {
+            let mut files: Vec<(String, u64)> = self.fakematch_files().into_iter().collect();
+            files.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+            files.truncate(count);
+            return files;
+        }
+        self.top(metric, count).into_iter().map(|(file, n)| (file.to_string(), n)).collect()
+    }
+}
+
+/// The TSV: each metric's total, then its top files and groups.
+pub fn tsv(games: &[(&str, &Report)]) -> String {
+    let mut text = String::from("game\tmetric\tscope\tcount\n");
+    for (game, report) in games {
+        let _ = writeln!(text, "{game}\tfiles\ttotal\t{}", report.files);
+        let _ = writeln!(text, "{game}\tlines\ttotal\t{}", report.lines);
+        for (metric, _) in ROWS {
+            let _ = writeln!(text, "{game}\t{metric}\ttotal\t{}", report.value(metric));
+        }
+        for metric in LISTED {
+            for (file, count) in report.top_of(metric, TOP) {
+                let _ = writeln!(text, "{game}\t{metric}\t{file}\t{count}");
+            }
+        }
+        for (file, lines) in report.long_files.iter().take(TOP) {
+            let _ = writeln!(text, "{game}\tlong_file\t{file}\t{lines}");
+        }
+        for (metric, groups) in [("duplicate_function", &report.function_groups), ("duplicate_table", &report.table_groups)] {
+            for group in groups.iter().take(TOP) {
+                let _ = writeln!(text, "{game}\t{metric}\t{}\t{}", group.members.join(" "), group.tokens);
+            }
+        }
+    }
+    text
+}
+
+/// The short table `make progress` prints, and with `top` each metric's
+/// leading files.
+pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
+    let mut text = String::from("Humanization");
+    for (game, _) in games {
+        let _ = write!(text, "{:>10}", game);
+    }
+    text.push('\n');
+    let _ = write!(text, "  {:<30}", "files (lines)");
+    for (_, report) in games {
+        let _ = write!(text, "{:>10}", super::commas(report.files as i64));
+    }
+    text.push('\n');
+    let _ = write!(text, "  {:<30}", "");
+    for (_, report) in games {
+        let _ = write!(text, "{:>10}", format!("({})", super::commas(report.lines as i64)));
+    }
+    text.push('\n');
+    for (metric, label) in ROWS {
+        let _ = write!(text, "  {label:<30}");
+        for (_, report) in games {
+            let _ = write!(text, "{:>10}", super::commas(report.value(metric) as i64));
+        }
+        text.push('\n');
+    }
+    if top > 0 {
+        for (game, report) in games {
+            for metric in LISTED {
+                let files = report.top_of(metric, top);
+                if files.is_empty() {
+                    continue;
+                }
+                let _ = writeln!(text, "{game} {metric}:");
+                for (file, count) in files {
+                    let _ = writeln!(text, "  {:>6}  {file}", super::commas(count as i64));
+                }
+            }
+            if !report.long_files.is_empty() {
+                let _ = writeln!(text, "{game} long_file:");
+                for (file, lines) in report.long_files.iter().take(top) {
+                    let _ = writeln!(text, "  {:>6}  {file}", super::commas(*lines as i64));
+                }
+            }
+            for (metric, groups) in [("duplicate_function", &report.function_groups), ("duplicate_table", &report.table_groups)] {
+                if groups.is_empty() {
+                    continue;
+                }
+                let _ = writeln!(text, "{game} {metric} (tokens, copies):");
+                for group in groups.iter().take(top) {
+                    let more = group.members.len().saturating_sub(3);
+                    let shown = group.members[..group.members.len() - more].join(" ");
+                    let more = if more > 0 { format!(" and {more} more") } else { String::new() };
+                    let _ = writeln!(text, "  {:>6} x{}  {shown}{more}", group.tokens, group.members.len());
+                }
+            }
+        }
+    }
+    text
+}
+
+/// Every counted thing of one metric (`fakematch` takes each device kind),
+/// one line each: game, `file:line`, what.
+pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
+    let mut text = String::new();
+    for (game, report) in games {
+        for item in &report.items {
+            if item.metric == metric || (metric == "fakematch" && item.metric.starts_with("fakematch_")) {
+                let _ = writeln!(text, "{game}\t{}:{}\t{}", item.file, item.line, item.what);
+            }
+        }
+    }
+    text
+}
+
+/// `progress --humanity [--top N] [--list METRIC]`: count both games, write
+/// the TSV and return the table, or with `list` that metric's items.
+pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, String> {
+    let reports = std::thread::scope(|scope| {
+        ["tbs", "tla"]
+            .map(|game| {
+                scope.spawn(move || {
+                    sources(root, game).map(|files| self::game(files.iter().map(|(p, t)| (p.as_str(), t.as_str()))))
+                })
+            })
+            .map(|thread| thread.join().expect("humanity thread"))
+    });
+    let [sun, anchor] = reports;
+    let (sun, anchor) = (sun?, anchor?);
+    let games = [("☀️ tbs", &sun), ("⚓️ tla", &anchor)];
+    let path = root.join(REPORT);
+    std::fs::create_dir_all(path.parent().expect("report directory")).map_err(|error| format!("{REPORT}: {error}"))?;
+    super::write(&path, &tsv(&[("tbs", &sun), ("tla", &anchor)]))?;
+    if let Some(metric) = metric {
+        return Ok(list(&[("tbs", &sun), ("tla", &anchor)], metric).trim_end().to_string());
+    }
+    Ok(format!("{}humanity={REPORT}", summary(&games, top)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn one(text: &str) -> Report {
+        game([("f.c", text)])
+    }
+
+    #[test]
+    fn magic_numbers_in_code_and_tables() {
+        let report = one(concat!(
+            "#define LIMIT 0x40\n",
+            "#define SCALE(x) ((x) * 12)\n",
+            "enum { KIND_A = 20, KIND_B };\n",
+            "struct S { u8 unk[0x20]; u32 bits : 12; };\n",
+            "static const u8 sTable[16] = { 1, 0x30, { 40, 9 } };\n",
+            "u8 sBuf[(16 * 32)];\n",
+            "void F(int x) {\n",
+            "    int a[] = { 99 };\n",
+            "    if (x == 0x10 || x == 9 || x == 0x0F) { x = 100; } // 55\n",
+            "    G(\"77\", (8 * 8), 1000u);\n",
+            "}\n",
+        ));
+        // 0x10, 100, 1000u and SCALE's 12; 8 * 8 is a size.
+        assert_eq!(report.total("magic_code"), 4);
+        assert_eq!(report.total("magic_argument"), 1, "1000u");
+        // 0x30, 40 and the local table's 99.
+        assert_eq!(report.total("magic_table"), 3);
+    }
+
+    #[test]
+    fn placeholder_and_numbered_names() {
+        for name in ["unk_14", "unk14", "unkC", "gUnk_0203", "gUnknown_0203", "sub_08012345", "field_1C", "Foo_Unk"]
+        {
+            assert!(is_placeholder(name), "{name}");
+        }
+        assert!(is_placeholder("SE_138") && is_placeholder("Battle_08012345") && is_placeholder("UnkThing"));
+        for name in ["Unkempt", "Unknowable", "Trunk", "FunkyUnkle", "SE_JUMP"] {
+            assert!(!is_placeholder(name), "{name}");
+        }
+        for name in ["ColosseumFinal1", "Event_LeaveByExit10", "ACTOR_8", "gEffectScript0", "VenusLighthouse2", "arg0"] {
+            assert!(is_numbered(name), "{name}");
+        }
+        for name in [
+            "u8", "vu16", "s32", "BG2", "Bg2", "Dma3", "REG_DMA3", "Random16", "Dma_Fill32", "MulQ16", "Q_8_8",
+            "FLAG_SCENE_TEMP_01", "TBS_PATCH_1", "DISPCNT_MODE_1", "BLDCNT_TGT1_BG2", "x1", "ArcTan2", "attr2",
+            "Vector3", "unk_14", "MapCell", "SE_138", "FLAG_SCENE_TEMP_0E", "__divsi3", "rgb555", "OBJ_VRAM0",
+        ] {
+            assert!(!is_numbered(name), "{name}");
+        }
+        let report = one("void ColosseumFinal1(void) { unk_14 = ColosseumFinal1 + gUnk_0203; } // unk_99 Exit10\n");
+        assert_eq!((report.distinct("placeholder"), report.total("placeholder")), (2, 2));
+        assert_eq!((report.distinct("numbered"), report.total("numbered")), (1, 2));
+    }
+
+    #[test]
+    fn devices_goto_and_edition_tests() {
+        let report = one(concat!(
+            "#if TBS_PATCH_1\n",
+            "int a;\n",
+            "#elif (LANGUAGE == LANGUAGE_GERMAN)\n",
+            "int a;\n",
+            "#endif\n",
+            "#ifdef UBFIX\n",
+            "#endif\n",
+            "void F(void) {\n",
+            "    /* FAKEMATCH(wrapper): kept; as plain, 2 of 9 instructions differ in tbs-en. */\n",
+            "    // FAKEMATCH(dead): kept. FAKEMATCH(<kind>) is the form.\n",
+            "#if LANGUAGE != LANGUAGE_JAPANESE && TBS_PATCH_2\n",
+            "    goto done;\n",
+            "#endif\n",
+            "done:;\n",
+            "}\n",
+        ));
+        assert_eq!((report.total("fakematch_wrapper"), report.total("fakematch_dead"), report.value("fakematch")), (1, 1, 2));
+        assert_eq!(report.total("goto"), 1);
+        assert_eq!((report.total("if_language"), report.total("if_patch")), (2, 2));
+        assert_eq!(report.total("if_in_function"), 1);
+    }
+
+    #[test]
+    fn declarations_without_documentation() {
+        let header = concat!(
+            "#ifndef ALCHEMY_F_H\n",
+            "#define ALCHEMY_F_H\n",
+            "/// Documented in its header.\n",
+            "void Documented(void);\n",
+            "void Plain(void);\n",
+            "extern u8 gTable[]; ///< Noted.\n",
+            "extern u8 gBare;\n",
+            "/// A macro.\n",
+            "#define NAMED 1\n",
+            "#define BARE 2\n",
+            "#define NOTED 3 ///< Noted.\n",
+            "typedef struct Pair { u8 a; } Pair;\n",
+            "/// Kinds.\n",
+            "enum Kind { KIND_A };\n",
+            "enum { LOOSE_A };\n",
+            "enum {\n    /// Noted at its first constant.\n    NOTED_A,\n};\n",
+            "struct Forward;\n",
+            "void (*gHandler)(void);\n",
+            "struct Packed { u8 a : 2; } __attribute__((packed));\n",
+            "extern s16 CAPITAL_TABLE[] ALIGNED(4);\n",
+            "#endif\n",
+        );
+        let source = concat!(
+            "void Documented(void) {}\n",
+            "void Plain(void) {}\n",
+            "/// Its own.\n",
+            "static void Local(void) {}\n",
+            "UNUSED static int Helper(int x) { return x; }\n",
+            "u8 gTable[] = { 1, 2 };\n",
+            "u8 gBare;\n",
+        );
+        let report = game([("f.h", header), ("f.c", source)]);
+        assert_eq!(report.total("undocumented_function"), 2, "Plain and Helper");
+        assert_eq!(report.total("undocumented_global"), 3, "gBare, gHandler and CAPITAL_TABLE");
+        assert_eq!(report.total("undocumented_macro"), 1, "BARE");
+        assert_eq!(report.total("undocumented_struct"), 2);
+        assert_eq!(report.total("undocumented_enum"), 1);
+        assert_eq!(report.top("undocumented_function", 5), vec![("f.c", 2)]);
+    }
+
+    #[test]
+    fn duplicates_long_files_and_report() {
+        let body = "{ int i; for (i = 0; i < 4; i++) { gA[i] = Load(i) + 3; Store(gB, i); } }\n";
+        let renamed = body.replace("gA", "gC").replace("Load", "Fetch");
+        let table = "= { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };\n";
+        let first = format!("void Alpha(void) {body}void Beta(void) {renamed}void Gamma(void) {{ int i; }}\nconst u8 gT1[] {table}");
+        let second = format!("const u8 gT2[] {table}{}", "\n".repeat(3001));
+        let report = game([("a.c", first.as_str()), ("b.c", second.as_str())]);
+        assert_eq!(report.function_groups.len(), 1);
+        assert_eq!(report.function_groups[0].members, vec!["a.c:Alpha", "a.c:Beta"]);
+        assert_eq!(report.table_groups.len(), 1);
+        assert_eq!(report.table_groups[0].members, vec!["a.c:gT1", "b.c:gT2"]);
+        assert_eq!(report.long_files, vec![("b.c".to_string(), 3002)]);
+        let tsv = tsv(&[("tbs", &report)]);
+        assert!(tsv.starts_with("game\tmetric\tscope\tcount\ntbs\tfiles\ttotal\t2\n"));
+        assert!(tsv.contains("tbs\tduplicate_function\ttotal\t1\n"));
+        assert!(tsv.contains("tbs\tduplicate_function\ta.c:Alpha a.c:Beta\t"));
+        assert!(tsv.contains("tbs\tlong_file\tb.c\t3002\n"));
+        let table = summary(&[("tbs", &report)], 0);
+        assert!(table.contains("files over 3,000 lines") && table.lines().count() == ROWS.len() + 3);
+    }
+
+    #[test]
+    fn divergent_branches_keep_the_brace_depth() {
+        let report = one(concat!(
+            "#if TBS_PATCH_1\n",
+            "const u8 gA[] = {\n",
+            "#else\n",
+            "const u8 gA[] = { 0,\n",
+            "#endif\n",
+            "    50 };\n",
+            "void F(void) { x = 50; }\n",
+        ));
+        assert_eq!((report.total("magic_table"), report.total("magic_code")), (1, 1));
+    }
+}
+
+#[cfg(test)]
+mod listing_tests {
+    use super::*;
+
+    #[test]
+    fn items_list_where_each_count_is() {
+        let report = game([
+            ("tbs_edition.h", "#if defined(TBS_EDITION_EN)\n#endif\n"),
+            ("ed_asm.h", "\t.set EDITION_INTERNATIONAL, 0\n\t.ifdef TBS_EDITION_JA\n"),
+            ("f.c", "#ifdef TBS_EDITION_EN\n#endif\nvoid Run(void) {\n  x = 0x40; // FAKEMATCH(pin): kept\n}\n"),
+        ]);
+        assert_eq!(report.total("if_edition_name"), 1, "only outside edition.h");
+        assert_eq!(report.files, 2, "an assembly header is not C");
+        let listed = list(&[("tbs", &report)], "magic_code");
+        assert_eq!(listed, "tbs\tf.c:4\t0x40\n");
+        assert_eq!(list(&[("tbs", &report)], "fakematch"), "tbs\tf.c:4\tpin\n");
+        assert_eq!(list(&[("tbs", &report)], "undocumented_function"), "tbs\tf.c:3\tRun\n");
+    }
+}

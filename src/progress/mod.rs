@@ -4,9 +4,11 @@
 pub(crate) mod boxtree;
 pub(crate) mod archive;
 pub(crate) mod calcrom;
+pub(crate) mod clex;
 pub(crate) mod decomp;
 pub(crate) mod figure;
 pub(crate) mod history;
+pub(crate) mod humanity;
 pub(crate) mod jsnum;
 pub(crate) mod letters;
 pub(crate) mod model;
@@ -17,7 +19,7 @@ pub(crate) mod raster;
 use calcrom::{Game, GameDone};
 use std::path::Path;
 
-const USAGE: &str = "usage: alchemy-devtools progress [--publish ARCHIVE COMMIT DIRECTORY | --upload COMMIT REMOTE | --pre-push REMOTE]
+const USAGE: &str = "usage: alchemy-devtools progress [--publish ARCHIVE COMMIT DIRECTORY | --upload COMMIT REMOTE | --pre-push REMOTE | --humanity [--top N] [--list METRIC]]
 With no option, counts DONE code and data in each edition built and matching
 rom.sha1 (make compare-editions), prints a line for each, and writes the
 measurement and decomp.dev's report under out/reports/decomp; a game without
@@ -27,7 +29,11 @@ decomp-reports release for COMMIT, when REMOTE is this repository's;
 Stage source changes before measuring: the receipt must describe the source
 the build actually read. --publish is CI's: it rebuilds history from ARCHIVE's
 immutable baseline and accepted receipts, admits COMMIT after its successful
-build, and draws both figures in DIRECTORY. Measurement dates are UTC.";
+build, and draws both figures in DIRECTORY. Measurement dates are UTC.
+--humanity counts what is left to humanize in each game's tracked C and
+headers, from the source alone (README), prints a table and writes
+out/reports/humanity.tsv; --top N also lists the N files leading each count,
+and --list METRIC prints each counted thing of one TSV metric instead.";
 
 fn read(path: &Path) -> Result<String, String> {
     std::fs::read(path)
@@ -195,6 +201,21 @@ fn measure(root: &Path) -> Result<String, String> {
     Ok(format!("{}measured {} {decomp} measurement={}", lines(&games), status_line(sun, anchor), publish::MEASUREMENT))
 }
 
+/// `--humanity`'s options: `--top N` and `--list METRIC`.
+fn humanity_options(root: &Path, options: &[String]) -> Result<String, String> {
+    let (mut top, mut metric) = (0, None);
+    let mut options = options.iter();
+    while let Some(option) = options.next() {
+        let value = options.next().ok_or_else(|| format!("{option} takes a value\n{USAGE}"))?;
+        match option.as_str() {
+            "--top" => top = value.parse().map_err(|_| format!("--top takes a number, not {value}"))?,
+            "--list" => metric = Some(value.as_str()),
+            _ => return Err(format!("unrecognized --humanity option: {option}\n{USAGE}")),
+        }
+    }
+    humanity::run(root, top, metric)
+}
+
 /// The pre-push hook: the tip pushed to main carries its measurement,
 /// uploaded from the lines git writes on the hook's input (C3).
 fn pre_push(root: &Path, remote: &str) -> Result<(), String> {
@@ -223,6 +244,7 @@ pub(crate) fn run(argv: &[String]) -> Result<(), String> {
             publish::upload(root, commit, remote)?;
             String::new()
         }
+        [flag, options @ ..] if flag == "--humanity" => humanity_options(root, options)?,
         [flag, remote] if flag == "--pre-push" => {
             pre_push(root, remote)?;
             String::new()
