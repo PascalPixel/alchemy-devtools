@@ -586,7 +586,11 @@ impl<'r, 'a> Walk<'r, 'a> {
         }
         self.types(&opened, "", line, documented);
         // A bare definition (`struct S { ... };`) or forward declaration (`struct S;`).
-        if matches!(lead, "struct" | "union" | "enum") && (second_last == "}" || statement.len() == 3) {
+        let after_body = opened.iter().find(|(_, kind)| matches!(kind, Brace::Struct | Brace::Enum)).and_then(|(open, _)| {
+            let close = self.braces[open].close;
+            statement.iter().position(|&at| at == close).and_then(|at| statement.get(at + 1)).map(|&at| self.code.text(at))
+        });
+        if matches!(lead, "struct" | "union" | "enum") && (matches!(after_body, Some(";" | "__attribute__")) || statement.len() == 3) {
             return;
         }
         let defined = lead != "extern";
@@ -657,7 +661,12 @@ impl<'r, 'a> Walk<'r, 'a> {
                 "(" => depth += 1,
                 ")" => depth -= 1,
                 "[" | "=" | ";" | "," | ":" | "{" if depth == 0 => break,
-                _ if depth == 0 && token.kind == Kind::Ident && !is_keyword(token.text) && !is_macro_name(token.text) => {
+                // A capitalized name is a macro only when it is invoked: `ALIGNED(4)`.
+                _ if depth == 0
+                    && token.kind == Kind::Ident
+                    && !is_keyword(token.text)
+                    && !(is_macro_name(token.text) && tokens.get(index + 1).is_some_and(|t| t.text == "(")) =>
+                {
                     last_name = Some(token.text);
                 }
                 _ => {}
@@ -674,14 +683,18 @@ enum Declarator<'a> {
 }
 
 /// Count one file into its game's report.
+/// A header written in assembly (`ed_asm.h`) is not counted.
 pub fn file(report: &mut Report, path: &str, text: &str) {
+    let (code, comments) = Code::new(text);
+    if code.tokens.first().is_some_and(|t| t.text == ".") {
+        return;
+    }
     report.files += 1;
     let lines = text.lines().count();
     report.lines += lines;
     if lines > LONG_FILE {
         report.long_files.push((path.to_string(), lines));
     }
-    let (code, comments) = Code::new(text);
     static TAG: OnceLock<Regex> = OnceLock::new();
     let tag = TAG.get_or_init(|| Regex::new(r"FAKEMATCH\(([a-z-]+)\)").unwrap());
     for comment in &comments {
@@ -1042,6 +1055,8 @@ mod tests {
             "enum {\n    /// Noted at its first constant.\n    NOTED_A,\n};\n",
             "struct Forward;\n",
             "void (*gHandler)(void);\n",
+            "struct Packed { u8 a : 2; } __attribute__((packed));\n",
+            "extern s16 CAPITAL_TABLE[] ALIGNED(4);\n",
             "#endif\n",
         );
         let source = concat!(
@@ -1055,9 +1070,9 @@ mod tests {
         );
         let report = game([("f.h", header), ("f.c", source)]);
         assert_eq!(report.total("undocumented_function"), 2, "Plain and Helper");
-        assert_eq!(report.total("undocumented_global"), 2, "gBare and gHandler");
+        assert_eq!(report.total("undocumented_global"), 3, "gBare, gHandler and CAPITAL_TABLE");
         assert_eq!(report.total("undocumented_macro"), 1, "BARE");
-        assert_eq!(report.total("undocumented_struct"), 1);
+        assert_eq!(report.total("undocumented_struct"), 2);
         assert_eq!(report.total("undocumented_enum"), 1);
         assert_eq!(report.top("undocumented_function", 5), vec![("f.c", 2)]);
     }
@@ -1107,9 +1122,11 @@ mod listing_tests {
     fn items_list_where_each_count_is() {
         let report = game([
             ("tbs_edition.h", "#if defined(TBS_EDITION_EN)\n#endif\n"),
+            ("ed_asm.h", "\t.set EDITION_INTERNATIONAL, 0\n\t.ifdef TBS_EDITION_JA\n"),
             ("f.c", "#ifdef TBS_EDITION_EN\n#endif\nvoid Run(void) {\n  x = 0x40; // FAKEMATCH(pin): kept\n}\n"),
         ]);
         assert_eq!(report.total("if_edition_name"), 1, "only outside edition.h");
+        assert_eq!(report.files, 2, "an assembly header is not C");
         let listed = list(&[("tbs", &report)], "magic_code");
         assert_eq!(listed, "tbs\tf.c:4\t0x40\n");
         assert_eq!(list(&[("tbs", &report)], "fakematch"), "tbs\tf.c:4\tpin\n");
