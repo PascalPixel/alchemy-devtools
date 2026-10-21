@@ -124,6 +124,13 @@ impl<'a> Guide<'a> {
         self.walk_path(VALE, &path, "menus.gif", "the field menu, its icons and the Status screen")
     }
 
+    /// The Item screen: Isaac's items, one chosen, and the status panel
+    /// showing his stats with it equipped, as `items.gif`.
+    pub fn items(&mut self) -> Result<(), String> {
+        let path = [(0, 20), (KEY_A, 4), (0, 40), (KEY_RIGHT, 4), (0, 30), (KEY_A, 4), (0, 40), (KEY_A, 4), (0, 40), (KEY_RIGHT, 4), (0, 30), (KEY_A, 4), (0, 60), (KEY_DOWN, 4), (0, 60)];
+        self.walk_path(VALE, &path, "items.gif", "the Item screen and an item's stats")
+    }
+
     /// The game from power-on with no key pressed and no save file: the
     /// Nintendo and Camelot logos, then the Golden Sun logo, which a new
     /// game follows with name entry, as `boot.gif`. BOOT_FRAMES ends it on

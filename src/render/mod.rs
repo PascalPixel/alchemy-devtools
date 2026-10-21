@@ -689,14 +689,14 @@ fn play_guide(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new() };
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     let mut failed = Vec::new();
-    for name in ["walk", "snow", "layers", "layers-3d", "world-map", "menus", "menu-start", "boot"] {
+    for name in ["walk", "snow", "layers", "layers-3d", "world-map", "menus", "menu-start", "boot", "items"] {
         if wanted(name) {
             let result = match name {
                 "walk" => guide.walk(),
                 "snow" => guide.snow(),
                 "layers" => guide.layers(),
                 "layers-3d" => guide.exploded(),
-                "menus" => guide.menus(),                "menu-start" => guide.menu_start(),                "boot" => guide.boot(),
+                "menus" => guide.menus(),                "menu-start" => guide.menu_start(),                "boot" => guide.boot(),                "items" => guide.items(),
                 _ => guide.world_map(),
             };
             if let Err(e) = result {
