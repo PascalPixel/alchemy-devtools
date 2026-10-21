@@ -34,7 +34,7 @@
 //! moving (a pushed pillar) still moves.
 
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, LR, SP, WIDTH};
-use super::story::{Trigger, MOVE};
+use super::story::{Trigger, CARRY, MOVE};
 use crate::ld_map::Map;
 use std::collections::HashMap;
 
@@ -394,6 +394,43 @@ impl<'rom> Field<'rom> {
 
     pub fn read16(&self, address: u32) -> u16 {
         self.gba.read16(address)
+    }
+
+    pub fn read32(&self, address: u32) -> u32 {
+        self.gba.read32(address)
+    }
+
+    pub fn write16(&mut self, address: u32, value: u16) {
+        self.gba.write16(address, value);
+    }
+
+    /// Whether the field loop stepped in the last frame: the player has
+    /// control.
+    pub fn stepping(&self) -> bool {
+        self.t.step_frame + 1 >= self.t.frame
+    }
+
+    /// The map's view: the screen's top left on the map, in pixels.
+    pub fn view(&self) -> (i32, i32) {
+        let work = self.map_work();
+        (self.gba.read32(work + MAP_VIEW_X) as i32 >> 16, self.gba.read32(work + MAP_VIEW_Y) as i32 >> 16)
+    }
+
+    /// The leader as he is now.
+    pub fn leader(&self) -> Option<Actor> {
+        self.actor(self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16)
+    }
+
+    /// Asks the field for a Psynergy, as the menu does (FieldWork.command).
+    pub fn request_psynergy(&mut self, ability: u16) {
+        let work = self.gba.read32(self.s.field_work);
+        self.gba.write16(work + FIELD_COMMAND, ability);
+    }
+
+    /// Shows or hides a layer in the picture (0 to 3 the backgrounds, 4 the
+    /// sprites); the game's registers are unchanged.
+    pub fn show_layer(&mut self, layer: u32, shown: bool) {
+        self.gba.show_layer(layer, shown);
     }
 
 
@@ -761,7 +798,7 @@ impl<'rom> Field<'rom> {
 
     /// The whole word of cell (cx, cz) of map layer `layer`: its picture
     /// (metatile), its collision code and its ground; 0 off the grid.
-    fn cell_word(&self, layer: u8, cx: i32, cz: i32) -> i32 {
+    pub fn cell_word(&self, layer: u8, cx: i32, cz: i32) -> i32 {
         if !(0..GRID).contains(&cx) || !(0..GRID).contains(&cz) || layer > 2 {
             return 0;
         }
@@ -1309,8 +1346,8 @@ impl<'rom> Field<'rom> {
     /// cell he searches is 16 pixels ahead of him, any of eight ways. A cell
     /// he touches he walks onto from a step away, the way its row faces
     /// first; one he pushes against he pushes from the cell itself, toward
-    /// an actor beyond it first (a statue, a log), then a wall. Move's spots
-    /// each come with the d-pad direction that pushes the actor: away from
+    /// an actor beyond it first (a statue, a log), then a wall. Move's and
+    /// Carry's spots each come with the d-pad direction that pushes the actor: away from
     /// the leader first, then either side, then toward him.
     pub fn spots(&mut self, trigger: Trigger) -> Result<Vec<Spot>, String> {
         const SIDES: [usize; 4] = [2, 3, 1, 0];
@@ -1354,7 +1391,7 @@ impl<'rom> Field<'rom> {
                             }
                             let toward = (side + 2) & 3;
                             let pushes: Vec<u32> =
-                                if ability == MOVE { [toward, (toward + 1) & 3, (toward + 3) & 3, side].map(|d| KEYS[d]).to_vec() } else { vec![0] };
+                                if ability == MOVE || ability == CARRY { [toward, (toward + 1) & 3, (toward + 3) & 3, side].map(|d| KEYS[d]).to_vec() } else { vec![0] };
                             let first = self.quiet(code) && !nearer(&others, id, &actor, x, z, FACING[toward], range, 0x1800);
                             for walk in pushes {
                                 let spot = Spot { x, z, layer, height: ground, facing: FACING[toward], walk, cell: None };
@@ -1629,10 +1666,11 @@ impl<'rom> Field<'rom> {
         // Where the leader was when the event began, to see him jump or be
         // led away.
         let mut leader_from: Option<Actor> = None;
-        // Move is steered once it is cast: the spot's direction is held
-        // until the actor starts to move.
+        // Move and Carry are steered once cast: the spot's direction is held
+        // until the actor starts to move (a carried one is then dropped with
+        // A, once nothing has happened for a while).
         let mut steer = match trigger {
-            Trigger::Psynergy(MOVE, id) if spot.walk != 0 => self.actor(id).map(|a| (id, a.x, a.z)),
+            Trigger::Psynergy(MOVE | CARRY, id) if spot.walk != 0 => self.actor(id).map(|a| (id, a.x, a.z)),
             _ => None,
         };
         let mut began: Option<u32> = None;

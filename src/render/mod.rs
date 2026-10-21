@@ -24,11 +24,11 @@ mod plan;
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 mod story;
 
-use plan::{Cast, Command, Plan, Tables};
+use plan::{Cast, Command, Plan, Skip, Tables};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-const USAGE: &str = "usage: alchemy-devtools render psynergy [--ability N|NAME]... [--all] [--djinn] [--summons] [--list]
+const USAGE: &str = "usage: alchemy-devtools render psynergy [--ability N|NAME]... [--all] [--djinn] [--summons] [--list] [--unlearned]
          [--out DIR] [--edition tbs-en] [--backdrop gradient|game|PICTURE.png] [--verbose]
 Plays battle Psynergy in a built ☀️ edition (make tbs-en) under libmgba and
 writes each cast as DIR/<ability>.gif: the whole 240 by 160 screen at 30
@@ -39,7 +39,9 @@ in battle that the party learns (classes.tsv and the items that teach one),
 and lists the rest with why they are left out; --ability casts one by id or
 English name. --list prints the casts instead of playing them; --verbose
 prints each run's setup: the party, the units' classes and the sprites
-BattleObjMake picks.
+BattleObjMake picks. --unlearned lets --ability name one no party list teaches,
+or one only enemies use (Fusion Dragon's Outer Space and Dragon Driver),
+cast by its element's character like the rest.
 
 --backdrop sets the battlefield behind the fighters: `gradient` (the default)
 clears the battle background and draws a grey a line as the GBA's backdrop
@@ -84,6 +86,7 @@ struct Options {
     djinn: bool,
     summons: bool,
     list: bool,
+    unlearned: bool,
     verbose: bool,
     out: Option<PathBuf>,
     edition: String,
@@ -97,6 +100,7 @@ fn options(arguments: &[String]) -> Result<Option<Options>, String> {
         djinn: false,
         summons: false,
         list: false,
+        unlearned: false,
         verbose: false,
         out: None,
         edition: "tbs-en".to_string(),
@@ -115,6 +119,7 @@ fn options(arguments: &[String]) -> Result<Option<Options>, String> {
             "--djinn" => o.djinn = true,
             "--summons" => o.summons = true,
             "--list" => o.list = true,
+            "--unlearned" => o.unlearned = true,
             "--verbose" => o.verbose = true,
             "--out" => o.out = Some(PathBuf::from(value("--out")?)),
             "--edition" => o.edition = value("--edition")?,
@@ -168,7 +173,19 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
         return Ok(());
     };
     let root = crate::compile::root();
-    let plan = Tables::read(root)?.plan()?;
+    let mut plan = Tables::read(root)?.plan()?;
+    if o.unlearned {
+        // Abilities no party list teaches, and those only enemies use, cast
+        // by their element's character as the others are.
+        let wanted = |a: &plan::Ability| o.abilities.iter().any(|w| w.parse::<u16>().ok() == Some(a.id) || a.name.eq_ignore_ascii_case(w));
+        let extra: Vec<Cast> = plan
+            .skipped
+            .iter()
+            .filter(|(a, skip)| matches!(skip, Skip::Other | Skip::Enemy) && wanted(a))
+            .filter_map(|(a, _)| plan::cast(a.clone(), false))
+            .collect();
+        plan.casts.extend(extra);
+    }
     let casts = select(&plan, &o)?;
     if o.list {
         println!("ability\tname\telement\tcaster\ttarget\tparty\tfoes\tfile");
@@ -257,14 +274,16 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<Vec<Row
                 plan::character_name(cast.caster()),
                 cast.target_name(),
                 written.frames
-            ),
+            ) + "\t",
         });
     }
     eprintln!("{} files, {} KiB, in {}", rows.len(), total.div_ceil(1024), out.display());
     Ok(rows)
 }
 
-const INDEX_HEADER: &str = "ability\tname\tcaster\ttarget\tframes\tfile";
+/// A field cast's row also names the scene it is cast in; a battle cast's
+/// scene is empty.
+const INDEX_HEADER: &str = "ability\tname\tcaster\ttarget\tframes\tfile\tscene";
 
 /// Writes `rows` into index.tsv, keeping the rows already there for other
 /// abilities, in id order.
@@ -728,6 +747,7 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
 
 fn guide_pictures(arguments: &[String]) -> Result<(), String> {
     let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
+    let mut casts = Vec::new();
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
         let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{GUIDE_USAGE}"));
@@ -736,6 +756,7 @@ fn guide_pictures(arguments: &[String]) -> Result<(), String> {
                 println!("{GUIDE_USAGE}");
                 return Ok(());
             }
+            "--cast" => casts.push(value("--cast")?),
             "--only" => only.push(value("--only")?),
             "--out" => out = Some(PathBuf::from(value("--out")?)),
             "--edition" => edition = value("--edition")?,
@@ -746,16 +767,16 @@ fn guide_pictures(arguments: &[String]) -> Result<(), String> {
     let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{GUIDE_USAGE}"))?)?;
     let root = crate::compile::root();
     let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("guide"));
-    play_guide(&root, &edition, &only, &flags, &out)
+    play_guide(root, &edition, &only, &casts, &flags, &out)
 }
 
 #[cfg(not(feature = "render"))]
-fn play_guide(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Result<(), String> {
+fn play_guide(_: &Path, _: &str, _: &[String], _: &[String], _: &story::Flags, _: &Path) -> Result<(), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
 }
 
 #[cfg(feature = "render")]
-fn play_guide(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
+fn play_guide(root: &Path, edition: &str, only: &[String], casts: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
     let build = root.join("out").join(edition);
     let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
     let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
@@ -763,19 +784,12 @@ fn play_guide(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     note_modified(root, edition, &rom);
     let symbols = field::Symbols::find(&map)?;
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new() };
+    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new() };
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     let mut failed = Vec::new();
-    for name in ["walk", "snow", "layers", "layers-3d", "world-map", "menus", "menu-start", "boot", "items"] {
+    for &name in guide::MODES {
         if wanted(name) {
-            let result = match name {
-                "walk" => guide.walk(),
-                "snow" => guide.snow(),
-                "layers" => guide.layers(),
-                "layers-3d" => guide.exploded(),
-                "menus" => guide.menus(),                "menu-start" => guide.menu_start(),                "boot" => guide.boot(),                "items" => guide.items(),
-                _ => guide.world_map(),
-            };
+            let result = guide.run(name, casts);
             if let Err(e) = result {
                 eprintln!("{name}: {e}");
                 failed.push(name);
@@ -784,6 +798,10 @@ fn play_guide(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     }
     for (file, bytes, what) in &guide.written {
         eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
+    }
+    if !guide.casts.is_empty() {
+        let rows = guide.casts.iter().filter_map(|line| Some(Row { id: line.split('\t').next()?.parse().ok()?, line: line.clone() })).collect();
+        write_index(&out.join("index.tsv"), rows)?;
     }
     if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
 }
