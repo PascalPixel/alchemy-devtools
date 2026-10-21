@@ -21,6 +21,8 @@ mod jobs;
 #[cfg(feature = "render")]
 mod mgba;
 #[cfg(feature = "render")]
+mod party;
+#[cfg(feature = "render")]
 mod places;
 mod plan;
 // Read only by the feature's commands; without it they say how to build them.
@@ -790,7 +792,8 @@ impl Machines {
         if note {
             note_modified(root, edition, &rom);
         }
-        let symbols = field::Symbols::find(&map)?;
+        let mut symbols = field::Symbols::find(&map)?;
+        symbols.read_defeat(&build.join(format!("{edition}.elf")))?;
         let mut functions = std::collections::HashMap::new();
         for s in chosen {
             let Some(id) = s.overlay else {
@@ -1109,8 +1112,7 @@ fn play_guide(
         }
         let symbols = field::Symbols::find(&map)?;
         std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-        let preset = map.symbol("DebugParty_LoadPreset").map_or(0, |(_, a)| a & !1);
-        let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new(), preset };
+        let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new() };
         if jobs.child {
             // A piece is a mode, or one of field-psynergy's casts.
             return jobs::serve(|unit| {

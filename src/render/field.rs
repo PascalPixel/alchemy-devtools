@@ -34,6 +34,7 @@
 //! moving (a pushed pillar) still moves.
 
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, LR, SP, WIDTH};
+use super::party::{chapter, order};
 use super::story::{Trigger, CARRY, MOVE};
 use crate::ld_map::Map;
 use std::collections::HashMap;
@@ -143,6 +144,8 @@ pub const EVENT_SEARCH: u8 = 3;
 pub const EVENT_PSYNERGY: u8 = 5;
 /// No random encounters while set (flags.h).
 const FLAG_NO_ENCOUNTERS: u16 = 0x160;
+/// struct BattleUnit's actionSlots, four bytes each.
+const UNIT_ACTION_SLOTS: u32 = 0x58;
 /// Palette RAM, 1 KB.
 const PALETTE_RAM: u32 = 0x0500_0000;
 /// The scene number of a battle (SCENE_BATTLE).
@@ -195,6 +198,12 @@ pub struct Symbols {
     map_blocks: u32,
     map_collision: u32,
     map_cell_buffer: u32,
+    preset: u32,
+    restore: u32,
+    unit_get: u32,
+    /// The messages a battle the party loses ends with (MsgGoesDownInDefeat,
+    /// MsgPartyDefeated), from the edition's ELF.
+    defeat: Vec<u32>,
     talk: u32,
     touch: u32,
     search: u32,
@@ -207,6 +216,15 @@ pub struct Symbols {
 }
 
 impl Symbols {
+    /// Reads the defeat messages' numbers, absolute symbols the linker map
+    /// leaves out, from the edition's ELF at `elf`.
+    pub fn read_defeat(&mut self, elf: &std::path::Path) -> Result<(), String> {
+        let data = std::fs::read(elf).map_err(|e| format!("cannot read {}: {e}", elf.display()))?;
+        let elf = crate::elf::Elf::parse(&data)?;
+        self.defeat = elf.symbols.iter().filter(|y| y.name == "MsgGoesDownInDefeat" || y.name == "MsgPartyDefeated").map(|y| y.value).collect();
+        Ok(())
+    }
+
     pub fn find(map: &Map) -> Result<Symbols, String> {
         let at = |name: &str| map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"));
         Ok(Symbols {
@@ -228,6 +246,10 @@ impl Symbols {
             map_blocks: at("gMapBlocks")?,
             map_collision: at("gMapCollision")?,
             map_cell_buffer: at("gMapCellBuffer")?,
+            preset: at("DebugParty_LoadPreset")?,
+            restore: at("Party_RestoreHpPp")?,
+            unit_get: at("UnitGet")?,
+            defeat: Vec::new(),
             talk: at("Scene_TalkToActor")?,
             touch: at("Scene_RunTouchOrExit")?,
             search: at("Field_SearchTile")?,
@@ -327,6 +349,11 @@ struct Track {
     ran: u32,
     /// Whether one of the event's own functions (Field::own) has run since.
     own_ran: bool,
+    /// The calls that set up the scene's party (Field::party_calls) made
+    /// so far at PaletteGlow_Update's entry, and r0 to r3 and lr kept
+    /// meanwhile.
+    party_calls: u8,
+    party_saved: [u32; 5],
 }
 
 /// A saved moment: the machine and the run's state.
@@ -412,6 +439,8 @@ impl<'rom> Field<'rom> {
             entries: 0,
             ran: 0,
             own_ran: false,
+            party_calls: 0,
+            party_saved: [0; 5],
         };
         let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false };
         while !field.t.applied {
@@ -476,10 +505,12 @@ impl<'rom> Field<'rom> {
         self.frames(SETTLE)
     }
 
-    /// Calls the Thumb function at `target` with `args` between two steps of
-    /// the field loop and returns its r0 (DebugParty_LoadPreset).
-    pub fn run_function(&mut self, target: u32, args: [u32; 4]) -> Result<u32, String> {
-        self.eval(target, args)
+    /// The abilities character `owner` has, in the order of their slots
+    /// (struct BattleUnit's actionSlots, an action id in each low 14 bits),
+    /// as the field menu lists them.
+    pub fn abilities(&mut self, owner: u8) -> Result<Vec<u16>, String> {
+        let unit = self.eval(self.s.unit_get, [u32::from(owner), 0, 0, 0])?;
+        Ok((0..32).map(|i| self.gba.read16(unit + UNIT_ACTION_SLOTS + 4 * i) & 0x3fff).filter(|&a| a != 0).collect())
     }
 
     /// Gives the party `coins` (GameState.coins).
@@ -556,6 +587,65 @@ impl<'rom> Field<'rom> {
         self.gba.picture()
     }
 
+    /// The calls that give the scene's chapter its party (party.rs) before
+    /// the scene loads: Camelot's debug preset, then every member's HP and PP
+    /// restored (Party_RestoreHpPp).
+    fn party_calls(&self) -> Vec<(u32, u32)> {
+        match chapter(self.setup.scene).and_then(|c| c.preset) {
+            Some(preset) => vec![(self.s.preset, preset), (self.s.restore, 1)],
+            None => Vec::new(),
+        }
+    }
+
+    /// At PaletteGlow_Update's entry, while a new game is set up: makes the
+    /// next of the party's calls, returning to that entry, or, once all are
+    /// made, puts back the registers the first found. Whether it called.
+    fn party_call(&mut self) -> bool {
+        let calls = self.party_calls();
+        let done = usize::from(self.t.party_calls);
+        if done == 0 && !calls.is_empty() {
+            for i in 0..4 {
+                self.t.party_saved[i] = self.gba.register(i as u32);
+            }
+            self.t.party_saved[4] = self.gba.register(LR);
+        }
+        if done < calls.len() {
+            let (target, r0) = calls[done];
+            self.t.party_calls += 1;
+            self.gba.set_register(0, r0);
+            self.gba.set_register(LR, self.s.glow | 1);
+            self.gba.branch(target);
+            return true;
+        }
+        if done > 0 && done == calls.len() {
+            for (i, &v) in self.t.party_saved.iter().enumerate().take(4) {
+                self.gba.set_register(i as u32, v);
+            }
+            self.gba.set_register(LR, self.t.party_saved[4]);
+            self.t.party_calls += 1;
+        }
+        false
+    }
+
+    /// Lists the party (gGameState.activeOwners) as the party flags have it
+    /// now, the chapter's members first (party::order); before the run's
+    /// flags decide, the chapter's members are the party flags.
+    fn list_party(&mut self) {
+        let Some(chapter) = chapter(self.setup.scene) else {
+            return;
+        };
+        if self.t.phase == Phase::Defaults {
+            let bits = chapter.members.iter().fold(0u8, |b, &o| b | 1 << o);
+            self.gba.write8(self.s.flag_bytes, bits);
+            self.apply_flags();
+        }
+        let flags = self.gba.read8(self.s.flag_bytes);
+        let party = order(chapter.members, flags);
+        for (i, &owner) in party.iter().enumerate() {
+            self.gba.write8(self.s.game_state + GS_ACTIVE_OWNERS + i as u32, owner);
+        }
+    }
+
     fn apply_flags(&mut self) {
         for f in self.setup.set.clone() {
             self.set_flag(f, true);
@@ -583,10 +673,13 @@ impl<'rom> Field<'rom> {
             // calls PaletteGlow_UpdateFar.
             self.t.init_return = 0;
             self.t.phase = Phase::Defaults;
+        } else if self.t.phase == Phase::Defaults && pc == s.glow && self.party_call() {
+            return Ok(frame_done);
         } else if self.t.phase == Phase::Defaults && pc == s.glow {
             self.gba.write16(s.game_state + GS_SCENE, self.setup.scene);
             self.gba.write16(s.game_state + GS_ENTRANCE, self.setup.entrance);
             self.apply_flags();
+            self.list_party();
             self.t.phase = Phase::Loading;
         }
         if pc == s.load_layered {
@@ -619,6 +712,7 @@ impl<'rom> Field<'rom> {
             // loading may have cleared some of them, so they are set again.
             self.t.apply_return = 0;
             self.apply_flags();
+            self.list_party();
             self.t.applied = true;
             self.t.phase = Phase::Entered;
         }
@@ -1962,6 +2056,10 @@ impl<'rom> Field<'rom> {
         let palette_before = self.palette();
         let mut moved = false;
         let mut fought = false;
+        // Where in the recording a battle the event starts began, and whether
+        // the party lost it.
+        let mut battle_start = 0;
+        let mut defeated = false;
         // Where the leader was when the event began, to see him jump or be
         // led away.
         let mut leader_from: Option<Actor> = None;
@@ -2091,7 +2189,16 @@ impl<'rom> Field<'rom> {
                     moved |= shifted(now, from.x, from.z, 20) || now.is_some_and(|a| (a.y - from.y).abs() >= 6 << 16);
                 }
             }
+            if !fought && self.scene() == SCENE_BATTLE {
+                battle_start = self.recorded.as_ref().map_or(0, Vec::len);
+            }
             fought |= self.scene() == SCENE_BATTLE;
+            // The party lost: no scene of the game scripts that, so the
+            // recording ends as the battle begins.
+            if self.scene() == SCENE_BATTLE && self.s.defeat.contains(&self.t.last_message) {
+                defeated = true;
+                break;
+            }
             let now = place(self);
             if now != places {
                 places = now;
@@ -2185,13 +2292,22 @@ impl<'rom> Field<'rom> {
         }
         self.hold(0);
         let mut frames = self.recorded.take().unwrap_or_default();
+        // A battle the recording cannot hold to its end (a boss fought by A
+        // alone) is shown to its opening, as is one the party lost.
+        let unfinished = capped && fought && self.scene() == SCENE_BATTLE;
+        if defeated || unfinished {
+            frames.truncate(battle_start + BATTLE_OPENING);
+            capped = false;
+            let why = if defeated { "the party, as strong as the story has it here, lost it" } else { "fought by A alone, it runs past the recording's length" };
+            note = Some(format!("the recording ends as the battle begins: {why}"));
+        }
         if leads_to.is_some() {
             frames = shorten_blanks(frames, BLANK_KEEP);
         }
         self.watch.clear();
         let ran = (self.t.ran != 0).then_some(self.t.ran);
         let own_ran = self.t.own_ran;
-        let end = (!capped && !left && self.scene() == self.setup.scene).then(|| self.save());
+        let end = (!capped && !left && !defeated && !unfinished && self.scene() == self.setup.scene).then(|| self.save());
         // An event whose dispatch returned in the frame it began, with the
         // field loop stepping on, ran no script: it showed nothing, or
         // nothing it could show from here.
@@ -2487,6 +2603,10 @@ pub enum Start<'a> {
     /// moved to the spot.
     InControl(&'a Saved),
 }
+
+/// Frames of a battle kept when the party loses it: its opening, the
+/// enemies appearing.
+const BATTLE_OPENING: usize = 150;
 
 /// Frames a page is held before A while an event is recorded.
 const PAGE_HOLD: u32 = 45;

@@ -58,6 +58,41 @@ Moving events also get GIFs: the whole event when it is short, and a segment for
 
 A door or any other event that leaves its scene is recorded on into the scene it leads to, so its GIF doesn't stop on a black screen: the fade out, the load, the new scene's arrival with its lines answered and its fade in, until the player has control there, tested the same way as at a scene's start, and then half a second more. A blank screen (one colour all over, as during the fade's black and the load) is cut to its first 8 frames each time it appears. The arrival is followed for at most 10 seconds from the load, so a long arrival cutscene (Kraden showing the party into Sol Sanctum) ends at that point, and so does one that begins a battle; `index.tsv`'s `note` column says which. Its `leads_to` column names the scene the event placed the party in next by its SceneId symbol (`SceneId_WorldMap`), the event's own scene for a staircase to another of its entrances, so a caption can say where a door leads.
 
+### Which party plays each scene?
+
+A new game's defaults are Isaac alone at level 1, so every scene would otherwise show him, a child's sprite and 40 HP, wherever he is. `render place`, `render event` and `render guide` instead give each scene the party the player has there, set before the scene loads (`src/render/party.rs`). The rule comes from Camelot's own evidence: the debug party presets (`DebugParty_LoadPreset`, `games/tbs/src/battle/presets.tsv`), whose rows 10 to 70 follow the story's party. They run from Isaac, Garet and Jenna at levels 1 and 2 (Sol Sanctum), Isaac and Garet at 3, Ivan joining at 4 and 5, three members from 6 to 9, Mia joining at 10, four from 11 to 17, Isaac alone at 18 and 19 (the Colosso) and four again from 20 to 33, each with the Djinn, Psynergy and equipment the preset gives. Each stretch of scenes, in story order by scene number, names its members as they joined and the preset whose level fits where it falls between those joins:
+
+| Scenes | Members | Preset (level) |
+| --- | --- | --- |
+| the stormy night | Isaac, Garet as children | a new game's level 1 |
+| Vale | Isaac, Garet | 10 (1) |
+| Sol Sanctum, Mt. Aleph | Isaac, Garet, Jenna | 11 (2) |
+| the world map, Vault | Isaac, Garet | 12 (3) |
+| Goma Cave, Vault revisited | Isaac, Garet, Ivan | 14 (5) |
+| Bilibin and its barricade | Isaac, Garet, Ivan | 20 (6) |
+| Kolima, its forest, Tret, the caves by Vale and Vault | Isaac, Garet, Ivan | 21 (7) |
+| Bilibin Cave, Imil | Isaac, Garet, Ivan | 23 (9) |
+| Mercury Lighthouse | the four | 25 (10) |
+| Fuchin Temple | the four | 30 (11) |
+| Mogall Forest, Xian, Alpine Crossing | the four | 32 (12) |
+| Altin, Altin Peak | the four | 34 (14) |
+| Lama Temple, Lamakan Desert | the four | 40 (15) |
+| Kalay, its docks, Hammet's palace | the four | 42 (16) |
+| the Tolbi-bound Ship, Tolbi Docks | the four | 43 (17) |
+| Tolbi, Babi's palace | the four | 51 (18) |
+| the Colosso | Isaac | 53 (19) |
+| Altmiller Cave, Gondowan Passage | the four | 60 (20) |
+| Kalay Tunnel, Gondowan Cave | the four | 61 (20) |
+| Lunpa, its fortress, West Lunpa Cave | the four | 63 (22) |
+| the Suhalla Desert to the Tunnel Ruins | the four | 64 (23) |
+| Babi Lighthouse, Lalivero, the Lemurian Ship | the four | 65 (24) |
+| Crossbone Isle | the four | 67 (26) |
+| Venus Lighthouse | the four | 69 (29) |
+
+A preset's member the stretch doesn't name is left out, every member's HP and PP are restored (`Party_RestoreHpPp`), and then the run's own flags decide the party flags an event needs (`FLAG_IN_PARTY`: Ivan before or after he joins in Vault, Garet before he joins on the stormy night), so the party is listed again from those flags, the stretch's members first. Child sprites come only from FLAG_CHILDHOOD, which only the stormy night sets. The table is an estimate placed on Camelot's presets; an area's encounter levels (`encounter.tsv`, `enemies.tsv`) are the next evidence to check it against.
+
+A battle an event starts is fought by A (Fight, then each member's first command) with no random battle breaking in (FLAG_NO_ENCOUNTERS). If the party loses it, which no scene of the game scripts, or the battle runs past the recording's three minutes (a boss fought by A alone), the GIF ends as the battle begins, its first five seconds kept, and `index.tsv`'s `note` says so: no recording shows the party wiped out.
+
 A scene's story moments come from the named story flags its initialization tests. Each moment sets one more of them, in the order the events' own conditions give (a flag an event needs set comes first; one it needs clear comes after, unless some event clears it again, like the stormy night's FLAG_VALE_STORM), so each is a state the player could see: Vale on the stormy night goes from the fallen rocks to Garet joining, the Boulder falling, Felix in the river with his parents at the bank, the gathering at the river and Garet leaving. A period some event ends is cleared once a later flag shows it over (the storm, once the party has left Vale), and the prologue's FLAG_CHILDHOOD follows FLAG_VALE_STORM. A moment draws only the rooms whose placed actors (place, map layer and sprites) or map cells differ from every state drawn before, and a moment that changes nothing is dropped. It goes in `DIR/<scene>_<moment>/`, named by its flag without `FLAG_`, lowercase with hyphens (`vale-storm_vale-storm-saw-river-rescue/map-0.png`); a scene that tests FLAG_KOLIMA_CURSE_LIFTED is drawn cursed at the new game's state (`<scene>_cursed/`) and cured at that moment (`<scene>_cured/`). A scene draws at most 12 moments, and skipped.tsv names those left past the cap.
 
 `DIR/index.tsv` lists every image, a moment's with its name and flags in the variant column (`vale-storm-garet-left: FLAG_..., FLAG_...; clear ...`); `DIR/skipped.tsv` what was left out and why, and `render place` writes `DIR/variant-flags.tsv`, the story flags each scene's initialization tests.

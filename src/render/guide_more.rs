@@ -22,6 +22,9 @@ const KEY_L: u32 = 0x200;
 /// The places the pictures are made in (scene, entrance).
 const VALE: (u16, u16) = (4, 1);
 const WORLD_MAP: (u16, u16) = (2, 1);
+/// Goma Cave's pillar room as its first entrance (the scene's default, on the
+/// ledge above the room) shows it, for the cell pictures; the random battle
+/// picks a room entrance of its own.
 const GOMA_CAVE: (u16, u16) = (27, 0);
 /// Bilibin's item shop and inn, rooms of BilibinInteriors (scene_links.h).
 const BILIBIN_ITEM_SHOP: (u16, u16) = (31, 5);
@@ -215,17 +218,6 @@ impl<'a> Guide<'a> {
         Err(first)
     }
 
-    /// Gives the party debug preset 0: the four at level 35 with their
-    /// Psynergy, as the battle recordings have them.
-    fn grown(&self, field: &mut Field) -> Result<(), String> {
-        if self.preset == 0 {
-            return Err("the map has no DebugParty_LoadPreset".to_string());
-        }
-        field.run_function(self.preset, [0; 4])?;
-        field.set_party(&[0, 1, 2, 3]);
-        Ok(())
-    }
-
     /// Holds each step's keys in turn from the moment the leader stands
     /// ready, keeping every frame.
     fn press_path(field: &mut Field, path: &[(u32, u32)]) -> Result<Vec<Vec<u16>>, String> {
@@ -312,10 +304,10 @@ impl<'a> Guide<'a> {
     /// closes and the field casts it, as `menu-psynergy.gif`.
     pub fn menu_psynergy(&mut self) -> Result<(), String> {
         let (mut entered, spot) = self.stand_where(VALE, Trigger::Psynergy(MOVE, VALE_PILLAR), VALE_PILLAR, |s| s.walk == KEY_RIGHT)?;
-        self.grown(&mut entered.field)?;
-        // The menu, Psynergy, Isaac, then Move, fifth in his list.
+        // The menu, Psynergy, Isaac, then Move where it is in his list.
+        let at = entered.field.abilities(0)?.iter().position(|&a| a == MOVE).ok_or("Isaac has no Move here")?;
         let mut path = vec![(0, 20), (KEY_A, 3), (0, 50), (KEY_A, 3), (0, 50), (KEY_A, 3), (0, 50)];
-        for _ in 0..4 {
+        for _ in 0..at {
             path.extend([(KEY_DOWN, 3), (0, 15)]);
         }
         path.extend([(0, 20), (KEY_A, 3), (0, 100), (spot.walk, 60), (0, 200)]);
@@ -647,29 +639,37 @@ impl<'a> Guide<'a> {
     /// Walking back and forth in Goma Cave until a random battle starts, and
     /// the battle's opening, as `random-battle.gif`.
     pub fn random_battle(&mut self) -> Result<(), String> {
-        let mut entered = self.enter_with(GOMA_CAVE, &[])?;
-        let field = &mut entered.field;
-        let mut frames = Vec::new();
-        let mut at = None;
-        for step in 0..60 {
-            let keys = if step % 2 == 0 { KEY_LEFT | KEY_B } else { KEY_RIGHT | KEY_B };
-            field.hold(keys);
-            for _ in 0..40 {
-                field.frames(1)?;
-                frames.push(field.picture());
-                if at.is_none() && field.scene() == SCENE_BATTLE {
-                    at = Some(frames.len());
+        // Each entrance of the room and each way from it: the straight run of
+        // ground the field's collision lets the leader walk (Field::reach),
+        // tried there and back once; the one the camera shows him on best
+        // (the least of the dark around him, where a cave draws nothing)
+        // and then the longest is walked until a battle comes.
+        let mut best: Option<(u32, i32, u16, Stretch)> = None;
+        for entrance in 1..=6u16 {
+            for across in [true, false] {
+                let Ok(mut entered) = self.enter_with((GOMA_CAVE.0, entrance), &[]) else {
+                    continue;
+                };
+                let Ok(stretch) = Self::open_stretch(&mut entered.field, across) else {
+                    continue;
+                };
+                let length = stretch.ends[1] - stretch.ends[0];
+                if length < 64 {
+                    continue;
                 }
-                if at.is_some() {
-                    break;
+                let mut frames = Vec::new();
+                let mut dark = 0;
+                Self::walk_stretch(&mut entered.field, &stretch, 2, &mut frames, &mut dark)?;
+                if best.as_ref().is_none_or(|b| (dark, -length) < (b.0, -b.1)) {
+                    best = Some((dark, length, entrance, stretch));
                 }
-            }
-            if at.is_some() {
-                break;
             }
         }
-        field.hold(0);
-        let at = at.ok_or("no battle came")?;
+        let (_, _, entrance, stretch) = best.ok_or("no entrance of Goma Cave has open ground to walk")?;
+        let mut entered = self.enter_with((GOMA_CAVE.0, entrance), &[])?;
+        let field = &mut entered.field;
+        let mut frames = Vec::new();
+        let at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0)?.ok_or("no battle came")?;
         for _ in 0..240 {
             field.frames(1)?;
             frames.push(field.picture());
@@ -677,6 +677,68 @@ impl<'a> Guide<'a> {
         // From two seconds of walking before the battle began.
         let start = at.saturating_sub(180);
         self.guide_gif("random-battle.gif", &frames[start..], "a random battle in Goma Cave")
+    }
+
+    /// Walks the leader `legs` times from one end of `stretch` to the other
+    /// with the d-pad (B held), each leg until he reaches its end or
+    /// something stops him, keeping every frame; `dark` keeps the most of
+    /// the 32 by 32 pixels around him that were black in any frame. Returns
+    /// the frame a battle began, if one did.
+    fn walk_stretch(field: &mut Field, stretch: &Stretch, legs: u32, frames: &mut Vec<Vec<u16>>, dark: &mut u32) -> Result<Option<usize>, String> {
+        let mut way = 1;
+        for _ in 0..legs {
+            field.hold(stretch.keys[way] | KEY_B);
+            let mut still = 0;
+            let mut last = field.leader().map(|a| (a.x, a.z));
+            for _ in 0..400 {
+                field.frames(1)?;
+                let picture = field.picture();
+                if field.scene() == SCENE_BATTLE {
+                    frames.push(picture);
+                    field.hold(0);
+                    return Ok(Some(frames.len()));
+                }
+                let now = field.leader();
+                if let Some(a) = now {
+                    let (vx, vy) = field.view();
+                    let (sx, sy) = (a.x - vx, a.z - vy - 16);
+                    let black = (sy - 16..sy + 16)
+                        .flat_map(|y| (sx - 16..sx + 16).map(move |x| (x, y)))
+                        .filter(|&(x, y)| (0..WIDTH as i32).contains(&x) && (0..HEIGHT as i32).contains(&y))
+                        .filter(|&(x, y)| { let c = picture[y as usize * WIDTH + x as usize]; (0..3).all(|i| (c >> (5 * i)) & 31 < 4) })
+                        .count() as u32;
+                    *dark = (*dark).max(black);
+                }
+                frames.push(picture);
+                let now = now.map(|a| (a.x, a.z));
+                still = if now == last { still + 1 } else { 0 };
+                last = now;
+                let along = now.map_or(0, |(x, z)| if stretch.across { x } else { z });
+                if still >= 6 || (way == 1 && along >= stretch.ends[1]) || (way == 0 && along <= stretch.ends[0]) {
+                    break;
+                }
+            }
+            way = 1 - way;
+        }
+        field.hold(0);
+        Ok(None)
+    }
+
+    /// The straight run of ground through the leader's cell that he can
+    /// walk (Field::reach), crossing no exit, across (x) or down (z).
+    fn open_stretch(field: &mut Field, across: bool) -> Result<Stretch, String> {
+        let reach = field.reach(None)?;
+        let leader = field.leader().ok_or("the scene has no leader")?;
+        let (cx, cz) = (leader.x >> 4, leader.z >> 4);
+        let layer = reach.layer;
+        let run = |dx: i32, dz: i32| (1..64).take_while(|k| reach.holds(layer, (cx + dx * k) * 16 + 8, (cz + dz * k) * 16 + 8)).count() as i32;
+        // The ends' centres, a cell short of each end.
+        let ends = |less: i32, more: i32, at: i32| [(at - less + 1) * 16 + 8, (at + more - 1) * 16 + 8];
+        Ok(if across {
+            Stretch { across: true, ends: ends(run(-1, 0), run(1, 0), cx), keys: [KEY_LEFT, KEY_RIGHT] }
+        } else {
+            Stretch { across: false, ends: ends(run(0, -1), run(0, 1), cz), keys: [KEY_UP, KEY_DOWN] }
+        })
     }
 
     /// The world map's still picture: R, the cursor moved over the map, L
@@ -723,4 +785,12 @@ impl<'a> Guide<'a> {
         Ok(())
     }
 
+}
+
+/// A straight run of walkable ground (Guide::open_stretch): along x or z,
+/// its two ends in pixels, and the keys that walk toward each.
+struct Stretch {
+    across: bool,
+    ends: [i32; 2],
+    keys: [u32; 2],
 }

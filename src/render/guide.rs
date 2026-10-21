@@ -41,9 +41,6 @@ pub struct Guide<'a> {
     pub written: Vec<(String, u64, String)>,
     /// Rows of the abilities' index.tsv for the field casts recorded.
     pub casts: Vec<String>,
-    /// DebugParty_LoadPreset, which gives the party a debug preset's levels
-    /// and Psynergy.
-    pub preset: u32,
 }
 
 impl<'a> Guide<'a> {
@@ -58,14 +55,13 @@ impl<'a> Guide<'a> {
         Ok(())
     }
 
-    /// Enters a scene after the party has left Vale, with Isaac, Garet, Ivan
-    /// and Mia, and runs until the player has control.
+    /// Enters a scene after the party has left Vale, with the party the
+    /// story has there (party.rs), and runs until the player has control.
     fn enter(&self, (scene, entrance): (u16, u16)) -> Result<Field<'a>, String> {
         let set = vec![self.flag("FLAG_PARTY_LEFT_VALE")?];
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
         let setup = Setup { scene, entrance, set, clear };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
-        field.set_party(&[0, 1, 2, 3]);
         field.until_control()?;
         field.frames(20)?;
         Ok(field)
@@ -324,10 +320,10 @@ const FACE_EAST: u32 = 0x0000;
 const FIELD_CASTS: &[FieldCast] = &[
     FieldCast { id: 144, name: "Reveal", place: (94, 1), scene: "Vale Cave", actor: None, target: "the hidden floor", stand: Some((248, 280, FACE_NORTH)), tail: 600 },
     FieldCast { id: 140, name: "Move", place: (4, 1), scene: "Vale", actor: Some(20), target: "a stone pillar", stand: None, tail: 40 },
-    FieldCast { id: 150, name: "Avoid", place: (27, 0), scene: "Goma Cave", actor: None, target: "the party", stand: None, tail: 30 },
+    FieldCast { id: 150, name: "Avoid", place: (27, 5), scene: "Goma Cave", actor: None, target: "the party", stand: None, tail: 30 },
     FieldCast { id: 141, name: "Mind Read", place: (4, 1), scene: "Vale", actor: Some(18), target: "Garet's sister", stand: None, tail: 20 },
     FieldCast { id: 148, name: "Catch", place: (4, 1), scene: "Vale", actor: Some(26), target: "a Nut", stand: None, tail: 30 },
-    FieldCast { id: 149, name: "Retreat", place: (27, 0), scene: "Goma Cave", actor: None, target: "the party", stand: None, tail: 240 },
+    FieldCast { id: 149, name: "Retreat", place: (27, 5), scene: "Goma Cave", actor: None, target: "the party", stand: None, tail: 240 },
     FieldCast { id: 142, name: "Force", place: (72, 0), scene: "Xian", actor: Some(21), target: "the training tree", stand: None, tail: 30 },
     FieldCast { id: 143, name: "Lift", place: (158, 0), scene: "Gondowan Cave", actor: Some(11), target: "a boulder", stand: None, tail: 30 },
     FieldCast { id: 147, name: "Carry", place: (173, 0), scene: "Tunnel Ruins", actor: Some(13), target: "a stone block", stand: None, tail: 60 },
@@ -358,7 +354,6 @@ impl<'a> Guide<'a> {
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
         let setup = Setup { scene: place.0, entrance: place.1, set: flags, clear };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
-        field.set_party(&[0, 1, 2, 3]);
         let placed = field.save();
         field.until_control()?;
         field.frames(20)?;
