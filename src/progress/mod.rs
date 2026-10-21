@@ -10,6 +10,7 @@ pub(crate) mod figure;
 pub(crate) mod history;
 pub(crate) mod humanity;
 pub(crate) mod jsnum;
+pub(crate) mod provenance;
 pub(crate) mod letters;
 pub(crate) mod model;
 pub(crate) mod palette;
@@ -33,7 +34,9 @@ build, and draws both figures in DIRECTORY. Measurement dates are UTC.
 --humanity counts what is left to humanize in each game's tracked C and
 headers, from the source alone (README), prints a table and writes
 out/reports/humanity.tsv; --top N also lists the N files leading each count,
-and --list METRIC prints each counted thing of one TSV metric instead.";
+and --list METRIC prints each counted thing of one TSV metric instead
+(--list provenance is the name provenance worklist, --list unused_word the
+words the game's text never uses).";
 
 fn read(path: &Path) -> Result<String, String> {
     std::fs::read(path)

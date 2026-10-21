@@ -3,10 +3,12 @@
 //! headers under `src` and `include` are lexed (never preprocessed) and
 //! counted by simple rules the README sets out: magic numbers, placeholder
 //! and numbered names, compiler-steering devices, edition tests, undocumented
-//! declarations, long files and duplicated code. Nothing here counts toward
-//! DONE (C2); the figures are for people.
+//! declarations, long files, duplicated code and, with the game's English
+//! text, where the names of game things come from (`provenance`). Nothing
+//! here counts toward DONE (C2); the figures are for people.
 
 use super::clex::{self, Kind, Token};
+use super::provenance::{self, Analysis, GameText, Origin, Thing};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::Write as _;
@@ -86,6 +88,12 @@ pub struct Report {
     pub items: Vec<Item>,
     functions: BTreeMap<String, Declared>,
     globals: BTreeMap<String, Declared>,
+    /// Definitions that may name game things, for the provenance checks.
+    pub things: Vec<Thing>,
+    /// Each scene overlay's opening comment, raw: its place list.
+    pub places: Vec<(String, String)>,
+    /// The provenance checks, when the game has its English text.
+    pub provenance: Option<Analysis>,
     function_bodies: HashMap<String, Group>,
     table_bodies: HashMap<String, Group>,
 }
@@ -273,35 +281,67 @@ struct Code<'a> {
     doc_before: Vec<bool>,
     /// A trailing `///<` note follows each token on its line.
     doc_after: Vec<bool>,
+    /// The documentation comments right before each token, raw.
+    doc_text: Vec<String>,
+    /// The `///<` notes after each token, its continuation lines included, raw.
+    trailing_text: Vec<String>,
 }
 
 impl<'a> Code<'a> {
     fn new(text: &'a str) -> (Code<'a>, Vec<Token<'a>>) {
         let all = clex::lex(text);
         let (mut tokens, mut comments, mut doc_before, mut doc_after) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        let (mut doc_text, mut trailing_text) = (Vec::new(), Vec::<String>::new());
         let mut pending_doc = false;
+        let mut pending_text = String::new();
+        // The last comment was a `///<` note kept with the last token.
+        let mut trailing_open = false;
         for token in all {
             if token.kind == Kind::Comment {
                 if clex::is_trailing_doc(token.text) {
-                    if let (Some(last), Some(flag)) = (tokens.last(), doc_after.last_mut()) {
+                    if let (Some(last), Some(flag), Some(note)) = (tokens.last(), doc_after.last_mut(), trailing_text.last_mut()) {
                         let last: &Token = last;
                         *flag |= last.line == token.line;
+                        if last.line == token.line || trailing_open {
+                            note.push_str(token.text);
+                            note.push('\n');
+                            trailing_open = true;
+                        }
                     }
                     pending_doc = false;
+                    pending_text.clear();
                 } else {
-                    pending_doc = clex::is_doc(token.text) && !token.pp;
+                    let doc = clex::is_doc(token.text) && !token.pp;
+                    if !doc || !pending_doc {
+                        pending_text.clear();
+                    }
+                    if doc {
+                        pending_text.push_str(token.text);
+                        pending_text.push('\n');
+                    }
+                    pending_doc = doc;
+                    trailing_open = false;
                 }
                 comments.push(token);
                 continue;
             }
             doc_before.push(pending_doc);
             doc_after.push(false);
+            doc_text.push(if pending_doc { pending_text.clone() } else { String::new() });
+            trailing_text.push(String::new());
+            trailing_open = false;
             if token.kind != Kind::PpEnd {
                 pending_doc = false;
+                pending_text.clear();
             }
             tokens.push(token);
         }
-        (Code { tokens, doc_before, doc_after }, comments)
+        (Code { tokens, doc_before, doc_after, doc_text, trailing_text }, comments)
+    }
+
+    /// The `///<` notes after the tokens from `start` to `end`.
+    fn notes(&self, start: usize, end: usize) -> String {
+        self.trailing_text[start..=end.min(self.tokens.len() - 1)].concat()
     }
 
     fn text(&self, at: usize) -> &'a str {
@@ -332,9 +372,47 @@ struct Walk<'r, 'a> {
     open: Vec<usize>,
     /// Each macro name: documented at any definition, and its first line.
     macros: BTreeMap<String, (bool, usize)>,
+    /// The comment of each enum, by its opening brace.
+    enum_docs: HashMap<usize, String>,
+    /// Game-thing names this file has defined.
+    defined: BTreeSet<String>,
 }
 
 impl<'r, 'a> Walk<'r, 'a> {
+    /// Keep a definition whose name may name a game thing, once per file.
+    fn thing(&mut self, name: &str, origin: Origin, line: usize, own: String, context: String) {
+        let Some(kind) = provenance::kind(name, self.file, origin) else { return };
+        if !self.defined.insert(name.to_string()) {
+            return;
+        }
+        self.report.things.push(Thing { name: name.to_string(), kind, file: self.file.to_string(), line, own, context });
+    }
+
+    /// An enumerator at `at`: its own comment and notes, up to its `,` or `}`.
+    fn enumerator(&mut self, at: usize) {
+        let mut depth = 0;
+        let mut end = at;
+        while end + 1 < self.code.tokens.len() {
+            let text = self.code.text(end + 1);
+            match text {
+                "(" => depth += 1,
+                ")" => depth -= 1,
+                "," if depth == 0 => {
+                    end += 1;
+                    break;
+                }
+                "}" if depth == 0 => break,
+                _ => {}
+            }
+            end += 1;
+        }
+        let own = self.code.doc_text[at].clone() + &self.code.notes(at, end);
+        let context = self.open.last().and_then(|open| self.enum_docs.get(open)).cloned().unwrap_or_default();
+        let token = &self.code.tokens[at];
+        let (name, line) = (token.text, token.line);
+        self.thing(name, Origin::Enumerator, line, own, context);
+    }
+
     fn name(&mut self, name: &str, line: usize) {
         if is_keyword(name) {
             return;
@@ -436,6 +514,8 @@ impl<'r, 'a> Walk<'r, 'a> {
                 if !guard {
                     let documented = self.code.doc_before[start] || (start..=end).any(|at| self.code.doc_after[at]);
                     self.macros.entry(name.text.to_string()).or_insert((false, line)).0 |= documented;
+                    let own = self.code.doc_text[start].clone() + &self.code.notes(start, end);
+                    self.thing(name.text, Origin::Macro, line, own, String::new());
                 }
             }
             _ => {}
@@ -483,13 +563,27 @@ impl<'r, 'a> Walk<'r, 'a> {
             }
             match (token.kind, token.text) {
                 (Kind::Ident, "goto") => self.report.note("goto", self.file, token.line, "goto"),
-                (Kind::Ident, name) => self.name(name, token.line),
+                (Kind::Ident, name) => {
+                    self.name(name, token.line);
+                    let after = self.code.tokens.get(at + 1).map_or("", |t| t.text);
+                    if self.stack.last() == Some(&Brace::Enum)
+                        && matches!(prev.map(|p| self.code.text(p)), Some("{" | ","))
+                        && matches!(after, "=" | "," | "}")
+                    {
+                        self.enumerator(at);
+                    }
+                }
                 (Kind::Number, _) if self.stack.is_empty() && self.square > 0 => {}
                 (Kind::Number, _) => self.number(at, None),
                 (_, "[") if self.stack.is_empty() => self.square += 1,
                 (_, "]") if self.stack.is_empty() => self.square -= 1,
                 (_, "{") => {
                     let kind = self.brace_kind(prev, prev2);
+                    if kind == Brace::Enum && self.stack.is_empty() {
+                        if let Some(&first) = self.statement.first() {
+                            self.enum_docs.insert(at, self.code.doc_text[first].clone());
+                        }
+                    }
                     self.stack.push(kind);
                     self.open.push(at);
                     self.braces.insert(at, Opened { kind, close: at });
@@ -581,6 +675,8 @@ impl<'r, 'a> Walk<'r, 'a> {
                 let name = name.to_string();
                 self.report.declare(true, &name, file, line, documented, true);
                 self.duplicate(true, open, &name);
+                let own = self.code.doc_text[first].clone();
+                self.thing(&name, Origin::Function, line, own, String::new());
             }
             return;
         }
@@ -602,6 +698,12 @@ impl<'r, 'a> Walk<'r, 'a> {
             Some(Declarator::Global(name)) => {
                 let name = name.to_string();
                 self.report.declare(false, &name, file, line, documented, defined);
+                // A mechanism's table counts where it is defined; a game thing
+                // (`extern char SceneId_Vale;`) where it is declared.
+                if defined || provenance::kind(&name, file, Origin::Global) != Some("global") {
+                    let own = self.code.doc_text[first].clone() + &self.code.notes(last, last);
+                    self.thing(&name, Origin::Global, line, own, String::new());
+                }
                 if let Some(&(open, _)) = opened.iter().find(|(_, kind)| *kind == Brace::Init) {
                     self.duplicate(false, open, &name);
                 }
@@ -697,6 +799,22 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
     }
     static TAG: OnceLock<Regex> = OnceLock::new();
     let tag = TAG.get_or_init(|| Regex::new(r"FAKEMATCH\(([a-z-]+)\)").unwrap());
+    if path.contains("/src/scene/") {
+        if let Some(opening) = comments.iter().find(|c| clex::is_doc(c.text) && c.text.contains("@file")) {
+            // The whole `///` block that holds `@file`.
+            let block: Vec<&str> = comments
+                .iter()
+                .skip_while(|c| c.line < opening.line)
+                .scan(opening.line, |next, c| {
+                    (c.line == *next && clex::is_doc(c.text)).then(|| {
+                        *next += 1;
+                        c.text
+                    })
+                })
+                .collect();
+            report.places.push((path.to_string(), block.join("\n")));
+        }
+    }
     for comment in &comments {
         for capture in tag.captures_iter(comment.text) {
             if DEVICES.contains(&&capture[1]) {
@@ -715,18 +833,74 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         braces: HashMap::new(),
         open: Vec::new(),
         macros: BTreeMap::new(),
+        enum_docs: HashMap::new(),
+        defined: BTreeSet::new(),
     };
     walk.walk();
 }
 
 /// Count a game from `(path, text)` pairs.
+#[cfg(test)]
 pub fn game<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>) -> Report {
+    game_with_text(files, None)
+}
+
+/// Count a game, and with its English text check its names' provenance.
+pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, text: Option<&GameText>) -> Report {
     let mut report = Report::default();
     for (path, text) in files {
         file(&mut report, path, text);
     }
     report.finish();
+    if let Some(text) = text.filter(|text| !text.is_empty()) {
+        report.check_provenance(text);
+    }
     report
+}
+
+impl Report {
+    fn check_provenance(&mut self, text: &GameText) {
+        // A scene id is declared once for the game, wherever it is repeated.
+        let mut scenes = BTreeSet::new();
+        self.things.retain(|thing| thing.kind != "scene" || scenes.insert(thing.name.clone()));
+        let analysis = provenance::analyze(&self.things, &self.places, text);
+        for row in &analysis.rows {
+            let (file, line, name) = (&row.thing.file, row.thing.line, &row.thing.name);
+            if let Some(evidence) = &row.evidence {
+                self.note("provenance_names", file, line, name);
+                self.note(evidence.metric(), file, line, name);
+            }
+            if !row.words.is_empty() {
+                self.note("unused_word_name", file, line, name);
+            }
+        }
+        self.provenance = Some(analysis);
+    }
+}
+
+/// How many area names `gScene_AreaNameRules` reads: its highest name index
+/// plus one, from `scene_rules.s`.
+pub fn area_count(rules: &str) -> Option<usize> {
+    rules
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("scene_name ") || line.starts_with("group_name "))
+        .filter_map(|line| line.split(',').nth(2)?.split('@').next()?.trim().parse::<usize>().ok())
+        .max()
+        .map(|max| max + 1)
+}
+
+/// A game's English text, if git tracks one.
+fn game_text(root: &Path, game: &str) -> Option<GameText> {
+    let path = format!("games/{game}/text/en.po");
+    let tracked = std::process::Command::new("git").arg("-C").arg(root).args(["ls-files", "--"]).arg(&path).output().ok()?;
+    if tracked.stdout.is_empty() {
+        return None;
+    }
+    let po = std::fs::read(root.join(&path)).ok()?;
+    let rules = std::fs::read(root.join(format!("games/{game}/src/object/scene_rules.s"))).ok();
+    let areas = rules.and_then(|rules| area_count(&String::from_utf8_lossy(&rules)));
+    Some(GameText::parse(&String::from_utf8_lossy(&po), areas))
 }
 
 /// The tracked C and headers of a game, never build output.
@@ -784,13 +958,21 @@ const ROWS: &[(&str, &str)] = &[
     ("duplicate_function_copies", "  copies past the first"),
     ("duplicate_table", "duplicate table groups"),
     ("duplicate_table_copies", "  copies past the first"),
+    ("provenance_names", "game-thing names"),
+    ("provenance_verified", "  verified by a ★ line"),
+    ("provenance_unstarred", "  evidence line without its ★"),
+    ("provenance_failed", "  evidence line failing check"),
+    ("provenance_prose", "  evidence in prose only"),
+    ("provenance_none", "  no evidence"),
+    ("unused_words", "words the game never uses"),
+    ("unused_word_name", "  names using them"),
 ];
 
 /// Metrics whose top files are listed.
 const LISTED: &[&str] = &[
     "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "goto", "if_language", "if_patch",
     "if_in_function", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
-    "undocumented_global",
+    "undocumented_global", "provenance_none", "provenance_prose", "unused_word_name",
 ];
 
 impl Report {
@@ -804,6 +986,7 @@ impl Report {
             "duplicate_function_copies" => Report::copies(&self.function_groups) as u64,
             "duplicate_table" => self.table_groups.len() as u64,
             "duplicate_table_copies" => Report::copies(&self.table_groups) as u64,
+            "unused_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.words.len() as u64),
             _ => self.total(metric),
         }
     }
@@ -851,6 +1034,9 @@ pub fn tsv(games: &[(&str, &Report)]) -> String {
             for group in groups.iter().take(TOP) {
                 let _ = writeln!(text, "{game}\t{metric}\t{}\t{}", group.members.join(" "), group.tokens);
             }
+        }
+        for (word, rows) in report.provenance.iter().flat_map(|analysis| analysis.words.iter()).take(TOP) {
+            let _ = writeln!(text, "{game}\tunused_word\t{word}\t{}", rows.len());
         }
     }
     text
@@ -911,6 +1097,12 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
                     let _ = writeln!(text, "  {:>6} x{}  {shown}{more}", group.tokens, group.members.len());
                 }
             }
+            if let Some(analysis) = report.provenance.as_ref().filter(|analysis| !analysis.words.is_empty()) {
+                let _ = writeln!(text, "{game} unused_word (names, first):");
+                for (word, rows) in analysis.words.iter().take(top) {
+                    let _ = writeln!(text, "  {:>6}  {word}  {}", rows.len(), analysis.rows[rows[0]].thing.name);
+                }
+            }
         }
     }
     text
@@ -921,6 +1113,34 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
 pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
     let mut text = String::new();
     for (game, report) in games {
+        if metric == "provenance" || metric == "unused_word" {
+            let Some(analysis) = &report.provenance else { continue };
+            if metric == "unused_word" {
+                // Each flagged word, how many names use it and where.
+                for (word, rows) in &analysis.words {
+                    let uses: Vec<String> = rows
+                        .iter()
+                        .map(|&at| {
+                            let thing = &analysis.rows[at].thing;
+                            format!("{} {}:{}", thing.name, thing.file, thing.line)
+                        })
+                        .collect();
+                    let _ = writeln!(text, "{game}\t{word}\t{}\t{}", rows.len(), uses.join("; "));
+                }
+                continue;
+            }
+            // The worklist: game things, and mechanisms whose words the game never uses.
+            for row in &analysis.rows {
+                if row.evidence.is_none() && row.words.is_empty() {
+                    continue;
+                }
+                let thing = &row.thing;
+                let words = if row.words.is_empty() { "-".to_string() } else { row.words.join(",") };
+                let evidence = row.evidence.as_ref().map_or("-".to_string(), |evidence| evidence.describe());
+                let _ = writeln!(text, "{game}\t{}\t{}\t{}:{}\t{words}\t{evidence}", thing.name, thing.kind, thing.file, thing.line);
+            }
+            continue;
+        }
         for item in &report.items {
             if item.metric == metric || (metric == "fakematch" && item.metric.starts_with("fakematch_")) {
                 let _ = writeln!(text, "{game}\t{}:{}\t{}", item.file, item.line, item.what);
@@ -937,7 +1157,9 @@ pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, Stri
         ["tbs", "tla"]
             .map(|game| {
                 scope.spawn(move || {
-                    sources(root, game).map(|files| self::game(files.iter().map(|(p, t)| (p.as_str(), t.as_str()))))
+                    let text = game_text(root, game);
+                    sources(root, game)
+                        .map(|files| game_with_text(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref()))
                 })
             })
             .map(|thread| thread.join().expect("humanity thread"))
@@ -1131,5 +1353,66 @@ mod listing_tests {
         assert_eq!(listed, "tbs\tf.c:4\t0x40\n");
         assert_eq!(list(&[("tbs", &report)], "fakematch"), "tbs\tf.c:4\tpin\n");
         assert_eq!(list(&[("tbs", &report)], "undocumented_function"), "tbs\tf.c:3\tRun\n");
+    }
+}
+
+#[cfg(test)]
+mod provenance_tests {
+    use super::*;
+
+    #[test]
+    fn names_of_game_things_and_their_evidence() {
+        let po = concat!(
+            "msgctxt \"MsgSign\"\nmsgid \"00001\"\nmsgstr \"McCoy's Hidden Treasury\"\n\n",
+            "msgctxt \"MsgDebugEntryName\"\nmsgid \"00002\"\nmsgstr \"Bilibin\"\n\n",
+            "msgctxt \"message\"\nmsgid \"00003\"\nmsgstr \"Bilibin Barricade\"\n",
+        );
+        let text = GameText::parse(po, area_count("\tgroup_name 0, -1, 0\n\tscene_name Bilibin, -1, 1\n"));
+        let ids = "/// @file\n/// Scenes.\n\n/// ★ Named from its area name: Bilibin\nextern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
+        let flags = "/// ★ Named from the game: \"Hidden Treasury\" (MsgSign)\n#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_SCENE_TEMP_01 0x200\n#define FLAG_WAREHOUSE_SEEN 0x11 ///< Named from the game: \"Hidden Treasury\" (MsgSign)\n";
+        let scene = concat!(
+            "/// @file\n/// Bilibin and the Bilibin Barricade.\n///\n/// ACTOR_GUARD stands by `Bilibin Barricade`.\n",
+            "#include \"x.h\"\n",
+            "/// Its actors.\n",
+            "enum {\n",
+            "  ACTOR_GUARD, ///< the guard\n",
+            "  ACTOR_PILLAR_APPROACH = 3, ///< a stack of crates;\n",
+            "                          ///< Named from what the player sees: crates (its render)\n",
+            "  /// A man.\n  ACTOR_MAN,\n",
+            "};\n",
+            "/// Runs the treasury.\n",
+            "void Bilibin_UpdateWarehouse(void) { ACTOR_MAN; }\n",
+            "static const u8 gBilibinTreasury[] = { 1 };\n",
+        );
+        let files = [
+            ("games/tbs/include/scene_ids.h", ids),
+            ("games/tbs/include/flags.h", flags),
+            ("games/tbs/src/scene/bilibin.c", scene),
+        ];
+        let report = game_with_text(files, Some(&text));
+        let names: Vec<&str> = report.things.iter().map(|thing| thing.name.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "SceneId_Bilibin", "SceneId_BilibinWarehouse", "FLAG_TREASURY_OPEN", "FLAG_WAREHOUSE_SEEN", "ACTOR_GUARD",
+                "ACTOR_PILLAR_APPROACH", "ACTOR_MAN", "Bilibin_UpdateWarehouse", "gBilibinTreasury",
+            ]
+        );
+        assert_eq!(report.value("provenance_names"), 7);
+        assert_eq!(report.value("provenance_verified"), 2, "SceneId_Bilibin and FLAG_TREASURY_OPEN");
+        assert_eq!(report.value("provenance_unstarred"), 2, "FLAG_WAREHOUSE_SEEN and ACTOR_PILLAR_APPROACH");
+        assert_eq!(report.value("provenance_prose"), 1, "ACTOR_GUARD, from its place paragraph");
+        assert_eq!(report.value("provenance_none"), 2, "SceneId_BilibinWarehouse and ACTOR_MAN");
+        assert_eq!(report.value("unused_words"), 7, "warehouse, open, seen, guard, pillar, approach and man");
+        let words = list(&[("tbs", &report)], "unused_word");
+        assert!(words.starts_with("tbs\twarehouse\t3\tSceneId_BilibinWarehouse games/tbs/include/scene_ids.h:6; "), "{words}");
+        let worklist = list(&[("tbs", &report)], "provenance");
+        assert!(worklist.contains("tbs\tACTOR_PILLAR_APPROACH\tactor\tgames/tbs/src/scene/bilibin.c:9\tpillar,approach\tunstarred render\n"), "{worklist}");
+        assert!(worklist.contains("tbs\tBilibin_UpdateWarehouse\tfunction\tgames/tbs/src/scene/bilibin.c:15\twarehouse\t-\n"));
+        assert!(!worklist.contains("gBilibinTreasury"), "a mechanism whose words the game uses is not work");
+        assert_eq!(list(&[("tbs", &report)], "provenance_none").lines().count(), 2);
+        let tsv = tsv(&[("tbs", &report)]);
+        assert!(tsv.contains("tbs\tunused_word\twarehouse\t3\n"));
+        assert!(game(files).provenance.is_none(), "no text, no check");
     }
 }
