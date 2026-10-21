@@ -3,7 +3,7 @@
 //! of its events, as PNG files at the GBA's own size, with an index.
 
 use super::field::{
-    box_holds, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, EVENT_EXIT, EVENT_LIMIT, EVENT_PSYNERGY, EVENT_SEARCH, EVENT_TALK,
+    box_holds, result_key, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, EVENT_EXIT, EVENT_LIMIT, EVENT_PSYNERGY, EVENT_SEARCH, EVENT_TALK,
     EVENT_TOUCH, SETTLE,
 };
 use super::story::{parse_trigger, Alternative, Event, Flags, Scene, Trigger, MOVE};
@@ -86,14 +86,16 @@ impl Row {
 }
 
 /// Writes `rows` into index.tsv, keeping the lines already there for other
-/// files, sorted by file.
+/// files that are still there, sorted by file.
 pub fn write_index(out: &Path, rows: &[Row]) -> Result<(), String> {
     let path = out.join("index.tsv");
     let mut lines: BTreeMap<String, String> = BTreeMap::new();
     if let Ok(text) = std::fs::read_to_string(&path) {
         for line in text.lines().skip(1) {
             if let Some(file) = line.rsplit('\t').next() {
-                lines.insert(file.to_string(), line.to_string());
+                if out.join(file).is_file() {
+                    lines.insert(file.to_string(), line.to_string());
+                }
             }
         }
     }
@@ -161,8 +163,11 @@ pub struct Context<'a> {
     /// at any scene of the job it lists. None for every scene of the job.
     pub only: &'a [u16],
     /// The scenes and things of skipped.tsv that played this time, whose
-    /// old lines go.
+    /// old lines go. `event *` is every event of the scene, all played again.
     pub cleared: Vec<(String, String)>,
+    /// Each scene's functions by name, from its overlay's ELF: an event
+    /// named by its function is told by its row's result.
+    pub functions: &'a HashMap<u16, HashMap<String, u32>>,
 }
 
 /// Whether a scene is a place: not the title, the clear-data screen or the
@@ -325,8 +330,8 @@ struct Scan {
     actors: HashMap<u16, (i32, i32)>,
     absent: HashMap<u16, String>,
     cells: HashMap<u16, Vec<(u8, i32, i32)>>,
-    /// The triggers its event table answers, as (kind, target).
-    triggers: Vec<(u8, u16)>,
+    /// The rows of its event table, as (kind, target, result).
+    triggers: Vec<(u8, u16, u32)>,
 }
 
 type ScanKey = (u16, u16, Vec<u16>, Vec<u16>);
@@ -445,6 +450,7 @@ impl Context<'_> {
         &self,
         scenes: &[&Scene],
         trigger: Trigger,
+        event: &Event,
         set: &[u16],
         clear: &[u16],
         scans: &mut HashMap<ScanKey, Result<Scan, String>>,
@@ -463,14 +469,19 @@ impl Context<'_> {
             }
         };
         // Whether the event table a scan's entrance gives answers the
-        // trigger.
-        let answers = |scan: &Scan| match trigger {
-            Trigger::Talk(a) => scan.triggers.contains(&(EVENT_TALK, a)),
-            Trigger::Search(c) => scan.triggers.contains(&(EVENT_SEARCH, c)),
-            Trigger::Touch(c) => scan.triggers.contains(&(EVENT_TOUCH, c)) || scan.triggers.contains(&(EVENT_EXIT, c)),
-            Trigger::Psynergy(..) => scan.triggers.iter().any(|t| t.0 == EVENT_PSYNERGY),
+        // trigger with the event's own row, when its row is known.
+        let answers = |scan: &Scan, own: &[u32]| {
+            let row = |kind: u8, target: u16| scan.triggers.iter().any(|&(k, t, r)| k == kind && t == target && (own.is_empty() || own.contains(&r)));
+            match trigger {
+                Trigger::Talk(a) => row(EVENT_TALK, a),
+                Trigger::Search(c) => row(EVENT_SEARCH, c),
+                Trigger::Touch(c) => row(EVENT_TOUCH, c) || (own.is_empty() && row(EVENT_EXIT, c)),
+                Trigger::Psynergy(..) if own.is_empty() => scan.triggers.iter().any(|t| t.0 == EVENT_PSYNERGY),
+                Trigger::Psynergy(_, a) => row(EVENT_PSYNERGY, a),
+            }
         };
         for scene in scenes.iter().filter(|s| is_place(s).is_ok()) {
+            let own = self.own(event, scene.number);
             let first = match self.scanned(scans, scene.number, 0, set, clear) {
                 Ok(scan) => scan,
                 Err(e) => {
@@ -520,7 +531,7 @@ impl Context<'_> {
                 // Entered here, the scene must show the trigger in this
                 // entrance's room and answer it.
                 let here = at(scan);
-                if answers(scan) && here.iter().any(|&(x, z)| box_holds(e.camera, scan.header, x, z)) {
+                if answers(scan, &own) && here.iter().any(|&(x, z)| box_holds(e.camera, scan.header, x, z)) {
                     out.push((scene.number, e));
                     found += 1;
                 }
@@ -565,12 +576,28 @@ impl Context<'_> {
             .filter(|e| e.scenes.iter().any(|n| numbers.contains(n)))
             .filter(|e| self.only.is_empty() || e.scenes.iter().any(|n| self.only.contains(n)))
             .collect();
+        // Every event of a scene played afresh: what an earlier run wrote for
+        // it goes first, so an event renamed since, or one that no longer
+        // plays, keeps no picture.
+        if self.wanted.is_empty() {
+            for scene in scenes.iter().filter(|s| self.only.is_empty() || self.only.contains(&s.number)) {
+                let folder = self.out.join(scene.slug()).join("events");
+                if folder.is_dir() {
+                    let _ = std::fs::remove_dir_all(&folder);
+                }
+                self.cleared.push((scene.name(), "event *".to_string()));
+            }
+        }
         for event in merge_rows(&rows) {
             let candidates: Vec<&Scene> = scenes.iter().copied().filter(|s| event.scenes.contains(&s.number)).collect();
             let Some(&first) = candidates.first() else {
                 continue;
             };
             let label = format!("event {}", event.name);
+            // An event played again keeps none of its old pages.
+            for scene in &candidates {
+                self.remove_event_files(scene, &event.name);
+            }
             match self.play_event(&event, &candidates, &mut job, Some(EVENT_LIMIT as usize), None) {
                 Ok(played) => {
                     let scene = candidates.iter().find(|s| s.number == played.setup.scene).copied().unwrap_or(first);
@@ -686,7 +713,7 @@ impl Context<'_> {
             }));
             let mut placed = false;
             for flags in flag_sets {
-                let places = match self.places(scenes, trigger, &flags, &clear, &mut job.scans) {
+                let places = match self.places(scenes, trigger, event, &flags, &clear, &mut job.scans) {
                     Ok(places) => places,
                     Err(f) => {
                         // A story flag that puts nothing on stage says less
@@ -733,8 +760,9 @@ impl Context<'_> {
                     && !is_message_row(&e.name)
                     && e.trigger().is_ok()
                     // What another event can change for this one: who is on
-                    // stage, a flag, or what a touch or a cast moves.
-                    && (failure.absent || !e.sets.is_empty() || matches!(e.trigger(), Ok(Trigger::Touch(_) | Trigger::Psynergy(..))))
+                    // stage, a flag, or what a touch, a cast or a search moves
+                    // (a floodgate's switch lowering the river).
+                    && (failure.absent || !e.sets.is_empty() || matches!(e.trigger(), Ok(Trigger::Touch(_) | Trigger::Psynergy(..) | Trigger::Search(_))))
             });
             let others: Vec<&Event> = others.collect();
             let mut tried_after = 0;
@@ -776,6 +804,9 @@ impl Context<'_> {
     /// run that began counts.
     fn play_at(&self, setup: &Setup, after: Option<&Saved>, trigger: Trigger, event: &Event, record: Option<usize>, strict: bool) -> Result<EventRun, String> {
         let messages = &event.messages;
+        let own = self.own(event, setup.scene);
+        let own_function = own.iter().copied().find(|&r| r >= 0x10000);
+        let message_row = !own.is_empty() && own_function.is_none();
         let mut field = Field::enter(self.rom, self.symbols, setup)?;
         let entered: Saved = field.save();
         match after {
@@ -793,8 +824,26 @@ impl Context<'_> {
                 Some(saved) => Start::InControl(saved),
                 None => Start::Entered(&entered),
             };
-            match field.event(start, trigger, spot, messages, MAX_PAGES, record) {
+            match field.event(start, trigger, spot, &own, messages, MAX_PAGES, record) {
                 Ok(run) if !strict => return Ok(run),
+                // Another row for the trigger ran its function: the actor
+                // with this id in another room, or a later part of the story.
+                Ok(run) if own_function.is_some() && !run.own_ran => {
+                    error = match run.ran {
+                        Some(r) => format!("{} ran instead of its own function", self.name_of(setup.scene, r)),
+                        None => "its own function never ran".to_string(),
+                    };
+                }
+                Ok(run) if message_row && !run.pages.iter().any(|page| page.message.is_some_and(|m| own.contains(&m))) => {
+                    let shown = run.seen.map_or(String::new(), |m| format!(": message {m:05}{} showed", self.shows(m, setup.scene)));
+                    error = format!("its message never waited for the button{shown}");
+                }
+                // A message only another event lists showed, and none of
+                // this event's own: that event's row ran.
+                Ok(run) if own_function.is_none() && !run.pages.iter().any(|page| page.message.is_some()) && run.seen.is_some_and(|m| self.listed_elsewhere(m, setup.scene, event)) => {
+                    let m = run.seen.unwrap_or_default();
+                    error = format!("message {m:05}{} showed instead of its own", self.shows(m, setup.scene));
+                }
                 Ok(run) if !messages.is_empty() && run.pages.is_empty() => {
                     error = match run.seen {
                         Some(m) => format!("message {m:05}, not one of its own, showed and none of its own waited for the button"),
@@ -807,7 +856,7 @@ impl Context<'_> {
                     let shown = run.seen.map_or(String::new(), |m| format!(" (message {m:05}{})", self.shows(m, setup.scene)));
                     error = format!("another row for its trigger played instead{shown}");
                 }
-                Ok(run) if run.instant => error = "its dispatch returned at once from every spot: it ran no script".to_string(),
+                Ok(run) if run.instant && !run.shown => error = "its dispatch returned at once from every spot: it ran no script".to_string(),
                 Ok(run) if silent && messages.is_empty() && !run.shown => {
                     error = "it ran, but nothing moved, showed or changed from any spot".to_string();
                 }
@@ -816,6 +865,33 @@ impl Context<'_> {
             }
         }
         Err(error)
+    }
+
+    /// The results of an event's own row in scene `scene`, as the table
+    /// holds them (field::result_key): the function it is named by, from
+    /// the overlay's symbols, or for a message row the message it shows.
+    /// None when neither is known.
+    fn own(&self, event: &Event, scene: u16) -> Vec<u32> {
+        if let Some(&address) = self.functions.get(&scene).and_then(|f| f.get(&event.name)) {
+            return vec![result_key(address)];
+        }
+        if is_message_row(&event.name) && event.messages.len() == 1 {
+            return event.messages.clone();
+        }
+        Vec::new()
+    }
+
+    /// The function at `address` in scene `scene`, by name.
+    fn name_of(&self, scene: u16, address: u32) -> String {
+        self.functions
+            .get(&scene)
+            .and_then(|f| f.iter().find(|(_, &a)| result_key(a) == address))
+            .map_or_else(|| format!("the function at {address:#x}"), |(n, _)| n.clone())
+    }
+
+    /// Whether message `m` is one only other events of the scene list.
+    fn listed_elsewhere(&self, m: u32, scene: u16, event: &Event) -> bool {
+        !event.messages.contains(&m) && self.events.iter().any(|e| e.scenes.contains(&scene) && e.name != event.name && e.messages.contains(&m))
     }
 
     /// `, which <event> shows` for message `m` of a scene, when an event
@@ -841,6 +917,25 @@ impl Context<'_> {
         match other {
             Some(ev) => format!("{} began first ({inner})", ev.name),
             None => e,
+        }
+    }
+
+    /// Removes an event's GIF and pages from a scene's folder.
+    fn remove_event_files(&self, scene: &Scene, name: &str) {
+        let base = file_name(name);
+        let folder = self.out.join(scene.slug()).join("events");
+        let Ok(entries) = std::fs::read_dir(&folder) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let file = entry.file_name().to_string_lossy().into_owned();
+            let Some(stem) = file.strip_suffix(".gif").or_else(|| file.strip_suffix(".png")) else {
+                continue;
+            };
+            let page = stem.strip_prefix(base.as_str()).and_then(|r| r.strip_prefix('-')).is_some_and(|n| n.parse::<u32>().is_ok());
+            if stem == base || page {
+                let _ = std::fs::remove_file(entry.path());
+            }
         }
     }
 

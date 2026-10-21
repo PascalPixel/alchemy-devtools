@@ -21,6 +21,9 @@ pub struct Scene {
     pub area: String,
     /// The map folder, or `world` for the perspective world map.
     pub map: String,
+    /// The overlay resource that holds its code (places.tsv's overlayId),
+    /// when the table gives it.
+    pub overlay: Option<u16>,
 }
 
 impl Scene {
@@ -82,6 +85,7 @@ pub fn read_scenes(path: &Path) -> Result<Vec<Scene>, String> {
     let [number, symbol, file, area, map] =
         ["sceneNumber", "sceneSymbol", "overlayFile", "areaNames", "map"].map(|c| tsv.column(c));
     let (number, symbol, file, area, map) = (number?, symbol?, file?, area?, map?);
+    let overlay = tsv.column("overlayId").ok();
     tsv.rows
         .iter()
         .map(|row| {
@@ -92,6 +96,7 @@ pub fn read_scenes(path: &Path) -> Result<Vec<Scene>, String> {
                 file: tsv.get(row, file).to_string(),
                 area: tsv.get(row, area).to_string(),
                 map: tsv.get(row, map).to_string(),
+                overlay: overlay.and_then(|c| u16::from_str_radix(tsv.get(row, c).trim_start_matches("0x"), 16).ok()),
             })
         })
         .collect()
@@ -207,7 +212,7 @@ pub const MOVE: u16 = 0x8c;
 
 /// Field Psynergy by the name a trigger gives it, and its ability id
 /// (actions.tsv).
-const PSYNERGY: [(&str, u16); 12] = [
+const PSYNERGY: [(&str, u16); 13] = [
     ("move", MOVE),
     ("mind read", 0x8d),
     ("force", 0x8e),
@@ -220,6 +225,7 @@ const PSYNERGY: [(&str, u16); 12] = [
     ("halt", 0x91),
     ("carry", 0x93),
     ("cloak", 0x92),
+    ("ply", 0x5d),
 ];
 
 /// The number after a trigger word: `12` or `ACTOR_NAME=12`.
@@ -242,7 +248,9 @@ pub fn parse_trigger(text: &str) -> Result<Trigger, String> {
     }
     for (name, ability) in PSYNERGY {
         if let Some(rest) = first.strip_prefix(&format!("{name} on ")) {
-            return target(rest).map(|actor| Trigger::Psynergy(ability, actor)).ok_or_else(bad);
+            // The row's trigger keeps its actor in bits 7..0; bit 10 has the
+            // event play the effect itself (`mind read on 1027`, Mia).
+            return target(rest).map(|actor| Trigger::Psynergy(ability, actor & 0xff)).ok_or_else(bad);
         }
     }
     Err(format!("{first:?} is not a talk, search, touch or Psynergy-on-actor trigger"))
@@ -343,6 +351,8 @@ mod tests {
         assert_eq!(parse_trigger("mind read on 8"), Ok(Trigger::Psynergy(0x8d, 8)));
         assert_eq!(parse_trigger("force on ACTOR_PILLAR=12"), Ok(Trigger::Psynergy(0x8e, 12)));
         assert_eq!(parse_trigger("move on ACTOR_BLOCK=19"), Ok(Trigger::Psynergy(MOVE, 19)));
+        assert_eq!(parse_trigger("mind read on 1027"), Ok(Trigger::Psynergy(0x8d, 3)));
+        assert_eq!(parse_trigger("ply on ACTOR_WATERFALL_STATUE=12"), Ok(Trigger::Psynergy(0x5d, 12)));
         assert!(parse_trigger("entry initialize").is_err());
     }
 
@@ -379,6 +389,7 @@ mod tests {
             file: String::new(),
             area: String::new(),
             map: String::new(),
+            overlay: None,
         };
         assert_eq!(scene(Some("KolimaForestBridge")).slug(), "kolima-forest-bridge");
         assert_eq!(scene(Some("Bilibin1")).slug(), "bilibin1");

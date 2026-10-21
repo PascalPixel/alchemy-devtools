@@ -462,6 +462,21 @@ fn play_scenes(
     let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
     note_modified(root, edition, &rom);
     let symbols = field::Symbols::find(&map)?;
+    // Each scene's functions by name, from its overlay's ELF in the build:
+    // an event named by its function is told from the other rows of its
+    // trigger by that function's address.
+    let mut functions: std::collections::HashMap<u16, std::collections::HashMap<String, u32>> = std::collections::HashMap::new();
+    for s in chosen {
+        let Some(id) = s.overlay else {
+            continue;
+        };
+        let path = build.join("overlays").join(format!("resource_{id:03x}.elf"));
+        let Some(elf) = std::fs::read(&path).ok().and_then(|data| crate::elf::Elf::parse(&data).ok()) else {
+            continue;
+        };
+        let named = elf.symbols.iter().filter(|y| y.kind == 2 && !y.name.is_empty()).map(|y| (y.name.clone(), y.value & !1)).collect();
+        functions.insert(s.number, named);
+    }
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
     // Work in parallel, a scene (place) or the scenes of one overlay
     // (event, whose rows list those scenes) to each job; each job runs its
@@ -499,6 +514,7 @@ fn play_scenes(
                     wanted,
                     only,
                     cleared: Vec::new(),
+                    functions: &functions,
                 };
                 if kind == "place" {
                     for scene in &job {
@@ -543,9 +559,14 @@ fn play_scenes(
             lines.insert((scene.to_string(), what.to_string()), line.to_string());
         }
     }
-    // What played this time is no longer left out.
-    for key in &cleared {
-        lines.remove(key);
+    // What played this time is no longer left out; a scene whose events
+    // were all played again keeps none of its old event lines.
+    for (scene, what) in &cleared {
+        if what == "event *" {
+            lines.retain(|(s, w), _| s != scene || !w.starts_with("event "));
+        } else {
+            lines.remove(&(scene.clone(), what.clone()));
+        }
     }
     for s in &skipped {
         lines.insert((s.scene.clone(), s.what.clone()), format!("{}\t{}\t{}", s.scene, s.what, s.reason));
