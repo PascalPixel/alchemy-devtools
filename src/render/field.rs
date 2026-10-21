@@ -84,6 +84,30 @@ const OBJ_SPRITE: u32 = 0x50;
 /// (param) of struct AnimationEntry, whose first halfword is its sprite id.
 const ANIM_ENTRIES: u32 = 0x28;
 const ANIM_ENTRY_PARAM: u32 = 0x05;
+/// FieldWork.mode (an enum ObjectSystemMode) and its world map mode.
+const FIELD_MODE: u32 = 0x19e;
+const MODE_WORLD_MAP: u16 = 3;
+/// The world map (struct PerspectiveWork, which gMapWork points to there):
+/// 16 by 16 tiles of 16 by 16 cells, each cell 32 pixels square, so 8192
+/// pixels each way. tileIds names the tile at each place, and Ram_MapBlocks
+/// (gMapBlocks) holds the 2 by 2 tiles around the party, 32 cells to a row,
+/// the collision code in byte 2 as on a layered map (Field_ProcessStep's
+/// step test reads it there).
+const PERSPECTIVE_TILE_IDS: u32 = 0x138;
+const PERSPECTIVE_QUARTER_TILES: u32 = 0x338;
+const WORLD_TILES: i32 = 16;
+const WORLD_TILE_CELLS: i32 = 16;
+const WORLD_CELL: i32 = 32;
+const WORLD_CELLS: i32 = WORLD_TILES * WORLD_TILE_CELLS;
+/// GetWorldMapCollision's value where neither layer has one, and the
+/// values the party walks on (CheckWorldMapWalkable).
+const WORLD_COLLISION_DEFAULT: u32 = 7;
+/// The world map's touch for walking into one of its actors, a place:
+/// this plus the actor (CONTACT_TRIGGER_BASE).
+const WORLD_CONTACT_BASE: u16 = 100;
+const WORLD_WALKABLE: std::ops::RangeInclusive<u32> = 5..=12;
+/// The second layer's tiles follow the first's 320 (Map_UpdateCurrentTileBlock).
+const WORLD_LAYER_TILES: u32 = 320;
 const OVERLAY_ENTRANCES: u32 = 0x0c;
 const ENTRANCE_SIZE: u32 = 24;
 /// The map cells' grid: 128 by 128 words, the collision code in byte 2.
@@ -117,6 +141,10 @@ pub const EVENT_EXIT: u8 = 1;
 pub const EVENT_TOUCH: u8 = 2;
 pub const EVENT_SEARCH: u8 = 3;
 pub const EVENT_PSYNERGY: u8 = 5;
+/// No random encounters while set (flags.h).
+const FLAG_NO_ENCOUNTERS: u16 = 0x160;
+/// Palette RAM, 1 KB.
+const PALETTE_RAM: u32 = 0x0500_0000;
 /// The scene number of a battle (SCENE_BATTLE).
 const SCENE_BATTLE: u16 = 0x1fe;
 
@@ -163,6 +191,10 @@ pub struct Symbols {
     choice: u32,
     lookup: u32,
     terrain_height: u32,
+    write_cell_tile: u32,
+    map_blocks: u32,
+    map_collision: u32,
+    map_cell_buffer: u32,
     talk: u32,
     touch: u32,
     search: u32,
@@ -192,6 +224,10 @@ impl Symbols {
             choice: at("Menu_RunConfirmSelection")?,
             lookup: at("UiText_LookupMessage")?,
             terrain_height: at("Map_GetTerrainHeight")?,
+            write_cell_tile: at("Map_WriteLayerCellTile")?,
+            map_blocks: at("gMapBlocks")?,
+            map_collision: at("gMapCollision")?,
+            map_cell_buffer: at("gMapCellBuffer")?,
             talk: at("Scene_TalkToActor")?,
             touch: at("Scene_RunTouchOrExit")?,
             search: at("Field_SearchTile")?,
@@ -326,6 +362,14 @@ pub struct Field<'rom> {
     watch: Vec<u32>,
     /// The event's own functions among them.
     own: Vec<u32>,
+    /// The world map's cell words, WORLD_CELLS by WORLD_CELLS in rows, once
+    /// read (Field::read_world).
+    world_cells: Option<Vec<u32>>,
+    /// Whether, when the leader can walk to no spot for a trigger, a spot he
+    /// cannot walk to will do (Field::spots), and whether the last spots
+    /// were such.
+    pub relaxed: bool,
+    unwalked: bool,
 }
 
 impl<'rom> Field<'rom> {
@@ -369,7 +413,7 @@ impl<'rom> Field<'rom> {
             ran: 0,
             own_ran: false,
         };
-        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new() };
+        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false };
         while !field.t.applied {
             field.tick()?;
         }
@@ -496,6 +540,15 @@ impl<'rom> Field<'rom> {
     /// The message last looked up.
     pub fn last_message(&self) -> u32 {
         self.t.last_message
+    }
+
+    /// The colours of palette RAM, backgrounds' and sprites', and the
+    /// blending registers (REG_BLDCNT, REG_BLDALPHA, REG_BLDY): what the
+    /// screen's colours come from besides its pictures.
+    fn palette(&self) -> Vec<u32> {
+        let mut out: Vec<u32> = (0..256).map(|i| self.gba.read32(PALETTE_RAM + 4 * i)).collect();
+        out.extend([0x50, 0x52, 0x54].map(|r| u32::from(self.gba.read16(0x0400_0000 + r))));
+        out
     }
 
     /// The last picture, BGR555.
@@ -729,9 +782,68 @@ impl<'rom> Field<'rom> {
         [0, 1, 2, 3].map(|i| self.gba.read32(work + MAP_BOUNDS + 4 * i) as i32)
     }
 
-    /// The map header's scroll bounds, 16.16 pixels.
+    /// The map header's scroll bounds, 16.16 pixels; the whole world on the
+    /// world map, which loads no layered map.
     pub fn header(&self) -> [i32; 4] {
+        if self.world() {
+            return [0, 0, fx(WORLD_CELLS * WORLD_CELL), fx(WORLD_CELLS * WORLD_CELL)];
+        }
         self.t.header
+    }
+
+    /// Whether the field runs the world map (FieldWork.mode).
+    pub fn world(&self) -> bool {
+        let work = self.gba.read32(self.s.field_work);
+        work != 0 && self.gba.read16(work + FIELD_MODE) == MODE_WORLD_MAP
+    }
+
+    /// The side of a map cell in pixels: 16, or the world map's 32.
+    pub fn cell_size(&self) -> i32 {
+        if self.world() { WORLD_CELL } else { 16 }
+    }
+
+    /// The collision code of the cell under (x, z) pixels on map layer
+    /// `layer`.
+    pub fn code_at(&self, layer: u8, x: i32, z: i32) -> i32 {
+        let size = self.cell_size();
+        self.cell(layer, x.div_euclid(size), z.div_euclid(size))
+    }
+
+    /// Reads every cell of the world map's two layers once: each of its
+    /// tiles is unpacked into the party's block buffer as
+    /// Map_UpdateCurrentTileBlock does it (Map_WriteLayerCellTile, the second
+    /// layer's tiles WORLD_LAYER_TILES on) and read back, and the machine is
+    /// then put back as it was.
+    fn read_world(&mut self) -> Result<(), String> {
+        if self.world_cells.is_some() || !self.world() {
+            return Ok(());
+        }
+        let saved = self.save();
+        let work = self.map_work();
+        let mut cells = vec![0u32; (2 * WORLD_CELLS * WORLD_CELLS) as usize];
+        for layer in 0..2 {
+            for ty in 0..WORLD_TILES {
+                for tx in 0..WORLD_TILES {
+                    let id = u32::from(self.gba.read16(work + PERSPECTIVE_TILE_IDS + 2 * (ty * WORLD_TILES + tx) as u32));
+                    let tile = id + layer as u32 * WORLD_LAYER_TILES;
+                    // The quarter forgets its tile, so it is unpacked again.
+                    let quarter = ((layer * 2 + (ty & 1)) * 2 + (tx & 1)) as u32;
+                    self.gba.write16(work + PERSPECTIVE_QUARTER_TILES + 2 * quarter, 0xffff);
+                    self.eval(self.s.write_cell_tile, [layer as u32, tx as u32, ty as u32, tile])?;
+                    let base = self.s.map_blocks + ((((layer * 2 + (ty & 1)) * 32 + (tx & 1)) << 6) as u32);
+                    for r in 0..WORLD_TILE_CELLS {
+                        for c in 0..WORLD_TILE_CELLS {
+                            let word = self.gba.read32(base + (r * 128 + c * 4) as u32);
+                            let at = (layer * WORLD_CELLS + ty * WORLD_TILE_CELLS + r) * WORLD_CELLS + tx * WORLD_TILE_CELLS + c;
+                            cells[at as usize] = word;
+                        }
+                    }
+                }
+            }
+        }
+        self.load(&saved);
+        self.world_cells = Some(cells);
+        Ok(())
     }
 
     /// The scene's entrance table, up to its end (entrance -1).
@@ -777,19 +889,22 @@ impl<'rom> Field<'rom> {
 
     /// Actor `id` when it is on stage: placed away from the map's origin,
     /// where scenes keep the actors they do not show, within the map's
-    /// bounds, and drawn; else why not.
+    /// bounds, and drawn (on the world map, wherever the party is); else why
+    /// not.
     pub fn present(&self, id: u16) -> Result<Actor, String> {
         let Some(actor) = self.actor(id) else {
             return Err(format!("the scene has no actor {id}"));
         };
-        let h = self.t.header;
+        let h = self.header();
         if actor.x == 0 && actor.z == 0 {
             return Err(format!("actor {id} is off stage, at the map's origin"));
         }
         if actor.x < h[0] >> 16 || actor.x >= h[2] >> 16 || actor.z < h[1] >> 16 || actor.z >= h[3] >> 16 {
             return Err(format!("actor {id} is off stage, at ({}, {}) outside the map", actor.x, actor.z));
         }
-        if !actor.drawn {
+        // The world map draws only the actors near the party
+        // (WorldMap_UpdateLocationContacts).
+        if !actor.drawn && !self.world() {
             return Err(format!("actor {id} has no sprite"));
         }
         Ok(actor)
@@ -801,13 +916,28 @@ impl<'rom> Field<'rom> {
     }
 
     /// The collision code of cell (cx, cz) of map layer `layer` (its window
-    /// onto the cell grid), or -1 off the grid.
+    /// onto the cell grid), or -1 off the grid. On the world map the cell is
+    /// one of its 32-pixel cells, and only its ground layer has codes.
     pub fn cell(&self, layer: u8, cx: i32, cz: i32) -> i32 {
+        if self.world() {
+            return if layer == 0 { (self.world_word(0, cx, cz) >> 16) as i32 & 0xff } else { -1 };
+        }
         if !(0..GRID).contains(&cx) || !(0..GRID).contains(&cz) || layer > 2 {
             return -1;
         }
         let cells = self.gba.read32(self.map_work() + MAP_LAYER_CELLS + MAP_LAYER_SIZE * u32::from(layer));
         i32::from(self.gba.read8(cells + (((cx + (cz << 7)) << 2) + 2) as u32))
+    }
+
+    /// The word of cell (cx, cz) of the world map's layer `layer` (0 or 1):
+    /// from the whole map once it has been read, else from the blocks around
+    /// the party.
+    fn world_word(&self, layer: i32, cx: i32, cz: i32) -> u32 {
+        let (cx, cz) = (cx.rem_euclid(WORLD_CELLS), cz.rem_euclid(WORLD_CELLS));
+        match &self.world_cells {
+            Some(cells) => cells[((layer * WORLD_CELLS + cz) * WORLD_CELLS + cx) as usize],
+            None => self.gba.read32(self.s.map_blocks + ((layer << 12) + (((cx & 31) + ((cz & 31) << 5)) << 2)) as u32),
+        }
     }
 
     /// The whole word of cell (cx, cz) of map layer `layer`: its picture
@@ -820,47 +950,45 @@ impl<'rom> Field<'rom> {
         self.gba.read32(cells + ((cx + (cz << 7)) << 2) as u32) as i32
     }
 
-    /// The cells (within the header's bounds, in rows) holding collision
-    /// code `code` in any of the three layers, with their layer.
-    pub fn cells_with_code(&self, code: u16) -> Vec<(u8, i32, i32)> {
+    /// The cells within the header's bounds, by layer and row, as (layer,
+    /// cx, cz); the world map's ground cells, read whole first.
+    fn all_cells(&mut self) -> Result<Vec<(u8, i32, i32)>, String> {
+        if self.world() {
+            self.read_world()?;
+            return Ok((0..WORLD_CELLS).flat_map(|cz| (0..WORLD_CELLS).map(move |cx| (0, cx, cz))).collect());
+        }
         let h = self.t.header;
         let (x0, z0, x1, z1) = (h[0] >> 20, h[1] >> 20, (h[2] + 0xfffff) >> 20, (h[3] + 0xfffff) >> 20);
-        let mut out = Vec::new();
-        for layer in 0..3u8 {
-            for cz in z0..z1 {
-                for cx in x0..x1 {
-                    if self.cell(layer, cx, cz) == i32::from(code) {
-                        out.push((layer, cx, cz));
-                    }
-                }
-            }
-        }
-        out
+        Ok((0..3u8).flat_map(|layer| (z0..z1).flat_map(move |cz| (x0..x1).map(move |cx| (layer, cx, cz)))).collect())
+    }
+
+    /// The cells (within the header's bounds, in rows) holding collision
+    /// code `code` in any of the three layers, with their layer.
+    pub fn cells_with_code(&mut self, code: u16) -> Result<Vec<(u8, i32, i32)>, String> {
+        Ok(self.all_cells()?.into_iter().filter(|&(layer, cx, cz)| self.cell(layer, cx, cz) == i32::from(code)).collect())
     }
 
     /// The cells within the header's bounds holding each of the scene's
     /// event codes, with their layer, in layers and rows.
-    pub fn cells_by_code(&self) -> HashMap<u16, Vec<(u8, i32, i32)>> {
-        let h = self.t.header;
-        let (x0, z0, x1, z1) = (h[0] >> 20, h[1] >> 20, (h[2] + 0xfffff) >> 20, (h[3] + 0xfffff) >> 20);
+    pub fn cells_by_code(&mut self) -> Result<HashMap<u16, Vec<(u8, i32, i32)>>, String> {
         let mut out: HashMap<u16, Vec<(u8, i32, i32)>> = HashMap::new();
-        for layer in 0..3u8 {
-            for cz in z0..z1 {
-                for cx in x0..x1 {
-                    let code = self.cell(layer, cx, cz);
-                    if (1..=CELL_EVENT_LAST).contains(&code) {
-                        out.entry(code as u16).or_default().push((layer, cx, cz));
-                    }
-                }
+        for (layer, cx, cz) in self.all_cells()? {
+            let code = self.cell(layer, cx, cz);
+            if (1..=CELL_EVENT_LAST).contains(&code) {
+                out.entry(code as u16).or_default().push((layer, cx, cz));
             }
         }
-        out
+        Ok(out)
     }
 
     /// Every cell's word within the header's bounds, layer by layer and row
     /// by row: what an event changes in the map, its pictures (a floor
-    /// switch sinking) or its collision (a gate opening).
+    /// switch sinking) or its collision (a gate opening). None on the world
+    /// map, whose blocks change as the party walks.
     fn cell_codes(&self) -> Vec<i32> {
+        if self.world() {
+            return Vec::new();
+        }
         let h = self.t.header;
         let (x0, z0, x1, z1) = (h[0] >> 20, h[1] >> 20, (h[2] + 0xfffff) >> 20, (h[3] + 0xfffff) >> 20);
         let mut out = Vec::new();
@@ -985,7 +1113,7 @@ impl<'rom> Field<'rom> {
         let ours = rows
             .iter()
             .position(|r| own.contains(&result_key(r.result)))
-            .or_else(|| rows.iter().position(|r| r.result < 0x10000 && messages.contains(&r.result)))
+            .or_else(|| rows.iter().position(|r| result_key(r.result) < 0x10000 && messages.contains(&result_key(r.result))))
             .or_else(|| rows.iter().position(|r| met(r.condition)))
             .or_else(|| rows.iter().position(|r| r.condition == -1));
         let Some(ours) = ours else {
@@ -1067,6 +1195,10 @@ impl<'rom> Field<'rom> {
     /// The ground's height (16.16 pixels) at (x, z) pixels on map layer
     /// `layer`, as Map_GetTerrainHeight gives it.
     pub fn ground(&mut self, layer: u8, x: i32, z: i32) -> Result<i32, String> {
+        // The world map is flat: the party walks at height 0.
+        if self.world() {
+            return Ok(0);
+        }
         Ok(self.eval(self.s.terrain_height, [u32::from(layer), fx(x) as u32, fx(z) as u32, 0])? as i32)
     }
 
@@ -1142,7 +1274,7 @@ impl<'rom> Field<'rom> {
 
     /// Whether (x, z) pixels lie within the map's bounds, `margin` pixels in.
     fn inside(&self, x: i32, z: i32, margin: i32) -> bool {
-        let h = self.t.header;
+        let h = self.header();
         x >= (h[0] >> 16) + margin && x < (h[2] >> 16) - margin && z >= (h[1] >> 16) + margin && z < (h[3] >> 16) - margin
     }
 
@@ -1152,7 +1284,7 @@ impl<'rom> Field<'rom> {
     fn room(&self) -> [i32; 4] {
         let entrances = self.entrances();
         let entrance = entrances.iter().find(|e| e.number as u16 == self.setup.entrance).or_else(|| entrances.first());
-        let h = self.t.header;
+        let h = self.header();
         let side = |i: usize| match entrance {
             Some(e) if e.camera[i] != -1 => i32::from(e.camera[i]),
             _ => h[i] >> 16,
@@ -1165,6 +1297,10 @@ impl<'rom> Field<'rom> {
     /// lets him: Map_CheckObjectStep passes the ground 8 pixels ahead of him
     /// all the way.
     fn passable(&mut self, layer: u8, a: (i32, i32), d: usize) -> Result<bool, String> {
+        if self.world() {
+            let (dx, dz) = STEP[d];
+            return Ok([8, 16].iter().all(|along| self.world_walkable(a.0 * 16 + 8 + dx * along, a.1 * 16 + 8 + dz * along)));
+        }
         // The player control tests the ground 8 pixels ahead of the leader
         // against his own: walking from a's centre to b's, every point 4
         // pixels apart is a step from the one 8 pixels behind it.
@@ -1185,6 +1321,9 @@ impl<'rom> Field<'rom> {
     pub fn reach(&mut self, target: Option<u16>) -> Result<Reach, String> {
         let selected = self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16;
         let leader = self.actor(selected).ok_or("the scene has no leader")?;
+        if self.world() {
+            return self.reach_world(&leader, target);
+        }
         let layer = leader.layer.min(2);
         let room = self.room();
         let h = self.t.header;
@@ -1276,7 +1415,71 @@ impl<'rom> Field<'rom> {
                 }
             }
         }
-        Ok(Reach { layer, cells, room, stops })
+        Ok(Reach { layer, cells, room, stops, origin: (0, 0), width: GRID })
+    }
+
+    /// The world map's collision value at (x, z) pixels, as
+    /// GetWorldMapCollision reads it: 4-bit values in 16-pixel squares, from
+    /// the upper layer where it has one, else the lower, else
+    /// WORLD_MAP_COLLISION_DEFAULT. The game reads each square's collision
+    /// tile from the BG maps Map_WriteLayerCellTile draws around the party (a
+    /// cell's block in gMapCellBuffer gives its four squares' tiles, top two
+    /// first); here it comes from the cells of the whole map.
+    fn world_collision(&self, x: i32, z: i32) -> u32 {
+        let (hx, hz) = (x >> 1, z >> 1);
+        let offset = ((((hz >> 1) & 3) << 1) + ((hx >> 2) & 1)) as u32;
+        let square = (((z >> 4) & 1) * 2 + ((x >> 4) & 1)) as u32;
+        for (layer, tiles) in [(1, 0x800), (0, 0)] {
+            let block = self.world_word(layer, x.div_euclid(WORLD_CELL), z.div_euclid(WORLD_CELL)) & 0xffff;
+            let number = u32::from(self.gba.read8(self.s.map_cell_buffer + block * 4 + square));
+            let packed = self.gba.read8(self.s.map_collision + tiles + number * 8 + offset);
+            let value = if hx & 2 != 0 { packed >> 4 } else { packed & 15 };
+            if value != 0 {
+                return u32::from(value);
+            }
+        }
+        WORLD_COLLISION_DEFAULT
+    }
+
+    /// Whether the party can walk at (x, z) pixels on the world map
+    /// (CheckWorldMapWalkable).
+    fn world_walkable(&self, x: i32, z: i32) -> bool {
+        WORLD_WALKABLE.contains(&self.world_collision(x, z))
+    }
+
+    /// The world map's Field::reach: the 16-pixel squares whose ground the
+    /// world map's collision lets the leader walk to from where he stands,
+    /// crossing no exit's cell nor one with code `target`.
+    fn reach_world(&mut self, leader: &Actor, target: Option<u16>) -> Result<Reach, String> {
+        self.read_world()?;
+        let width = WORLD_CELLS * WORLD_CELL / 16;
+        let origin = (0, 0);
+        let mut cells = vec![false; (width * width) as usize];
+        let index = |c: (i32, i32)| ((c.1 - origin.1) * width + c.0 - origin.0) as usize;
+        let within = |c: (i32, i32)| (0..width).contains(&(c.0 - origin.0)) && (0..width).contains(&(c.1 - origin.1));
+        let start = (leader.x >> 4, leader.z >> 4);
+        let mut queue = std::collections::VecDeque::from([start]);
+        cells[index(start)] = true;
+        let mut crossed: HashMap<i32, bool> = HashMap::new();
+        let mut stops = Vec::new();
+        while let Some(c) = queue.pop_front() {
+            let here = self.code_at(0, c.0 * 16 + 8, c.1 * 16 + 8);
+            if c != start && !*crossed.entry(here).or_insert_with(|| self.crossable(here, target)) {
+                if !stops.contains(&here) {
+                    stops.push(here);
+                }
+                continue;
+            }
+            for d in 0..4 {
+                let n = (c.0 + STEP[d].0, c.1 + STEP[d].1);
+                if within(n) && !cells[index(n)] && self.passable(0, c, d)? {
+                    cells[index(n)] = true;
+                    queue.push_back(n);
+                }
+            }
+        }
+        let h = self.header();
+        Ok(Reach { layer: 0, cells, room: [h[0] >> 16, h[1] >> 16, h[2] >> 16, h[3] >> 16], stops, origin, width })
     }
 
     /// The map of `box` (16.16 pixels) from the moment `settled`, the leader
@@ -1363,13 +1566,31 @@ impl<'rom> Field<'rom> {
     /// an actor beyond it first (a statue, a log), then a wall. Move's and
     /// Carry's spots each come with the d-pad direction that pushes the actor: away from
     /// the leader first, then either side, then toward him.
+    ///
+    /// With `relaxed`, when the leader can walk to none of them (what opens
+    /// the way is another event's, a log floated or a pillar pushed, that the
+    /// run does not play first), the spots are those he could stand on
+    /// anywhere in his room, and the event's recording says so.
     pub fn spots(&mut self, trigger: Trigger) -> Result<Vec<Spot>, String> {
-        const SIDES: [usize; 4] = [2, 3, 1, 0];
-        let step = |rise: i32| (-STEP_DOWN..=STEP_UP).contains(&rise);
+        self.unwalked = false;
         let reach = self.reach(match trigger {
             Trigger::Touch(code) => Some(code),
             _ => None,
         })?;
+        match self.spots_in(trigger, &reach) {
+            Err(e) if self.relaxed && e.contains("cannot walk") => {
+                let anywhere = reach.anywhere();
+                let spots = self.spots_in(trigger, &anywhere).map_err(|_| e)?;
+                self.unwalked = true;
+                Ok(spots)
+            }
+            spots => spots,
+        }
+    }
+
+    fn spots_in(&mut self, trigger: Trigger, reach: &Reach) -> Result<Vec<Spot>, String> {
+        const SIDES: [usize; 4] = [2, 3, 1, 0];
+        let step = |rise: i32| (-STEP_DOWN..=STEP_UP).contains(&rise);
         // The actors on stage other than the party, which a talk or a cast
         // may find first and a push may roll.
         let others: Vec<(u16, Actor)> =
@@ -1391,7 +1612,7 @@ impl<'rom> Field<'rom> {
                     for &distance in &distances {
                         for side in SIDES {
                             let (x, z) = (actor.x + STEP[side].0 * distance, actor.z + STEP[side].1 * distance);
-                            let code = self.cell(layer, x >> 4, z >> 4);
+                            let code = self.code_at(layer, x, z);
                             if !self.inside(x, z, 8) || code < 0 || code == CELL_WALL || code == CELL_CLIMB {
                                 continue;
                             }
@@ -1438,7 +1659,7 @@ impl<'rom> Field<'rom> {
                             } else {
                                 (actor.x + dx * distance, actor.z + dz * distance)
                             };
-                            let code = self.cell(layer, x >> 4, z >> 4);
+                            let code = self.code_at(layer, x, z);
                             if !self.inside(x, z, 8) || code < 0 || code == CELL_WALL || code == CELL_CLIMB {
                                 continue;
                             }
@@ -1472,7 +1693,8 @@ impl<'rom> Field<'rom> {
                 // (Object_GetTriggerTileAheadOfCurrent). He stands on his own
                 // layer, level with the cell or up to 64 pixels below it (a
                 // jar on a shelf).
-                let cells: Vec<_> = self.cells_with_code(code).into_iter().filter(|c| c.0 == 0).collect();
+                let cells: Vec<_> = self.cells_with_code(code)?.into_iter().filter(|c| c.0 == 0).collect();
+                let size = self.cell_size();
                 if cells.is_empty() {
                     return Err(format!("no ground-layer cell holds code {code}"));
                 }
@@ -1481,11 +1703,11 @@ impl<'rom> Field<'rom> {
                 // then the diagonals; 16 pixels, or 11 each way.
                 const BACK: [(i32, i32); 8] = [(0, 16), (-16, 0), (16, 0), (0, -16), (-11, 11), (11, 11), (-11, -11), (11, -11)];
                 for (_, cx, cz) in cells {
-                    let (tx, tz) = (cx * 16 + 8, cz * 16 + 8);
+                    let (tx, tz) = (cx * size + size / 2, cz * size + size / 2);
                     let target = self.ground(layer, tx, tz)?;
                     for (bx, bz) in BACK {
                         let (x, z) = (tx + bx, tz + bz);
-                        if !self.inside(x, z, 0) || !self.quiet(self.cell(layer, x >> 4, z >> 4)) {
+                        if !self.inside(x, z, 0) || !self.quiet(self.code_at(layer, x, z)) {
                             continue;
                         }
                         if !reach.holds(layer, x, z) {
@@ -1520,7 +1742,13 @@ impl<'rom> Field<'rom> {
                 if let Some(f) = facing {
                     ways.sort_by_key(|&d| (FACING[d] as u16).wrapping_sub(f as u16).wrapping_add(0x1fff) > 0x3ffe);
                 }
-                let cells = self.cells_with_code(code);
+                let cells = self.cells_with_code(code)?;
+                let size = self.cell_size();
+                // The world map's places are actors the leader walks into
+                // (WorldMap_UpdateLocationContacts), not cells.
+                if cells.is_empty() && self.world() && code >= WORLD_CONTACT_BASE {
+                    return self.contact_spots(code - WORLD_CONTACT_BASE, reach);
+                }
                 if cells.is_empty() {
                     return Err(format!("no cell holds code {code}"));
                 }
@@ -1530,8 +1758,8 @@ impl<'rom> Field<'rom> {
                 let mut pushed: Vec<(i32, Spot)> = Vec::new();
                 let mut walked = Vec::new();
                 for (layer, cx, cz) in cells {
-                    let (tx, tz) = (cx * 16 + 8, cz * 16 + 8);
-                    if !reach.holds(layer, tx, tz) && !STEP.iter().any(|s| reach.holds(layer, tx - s.0 * 16, tz - s.1 * 16)) {
+                    let (tx, tz) = (cx * size + size / 2, cz * size + size / 2);
+                    if !reach.holds(layer, tx, tz) && !STEP.iter().any(|s| reach.holds(layer, tx - s.0 * size, tz - s.1 * size)) {
                         unreached += 1;
                         continue;
                     }
@@ -1545,7 +1773,7 @@ impl<'rom> Field<'rom> {
                                 0
                             } else if near <= 24 {
                                 1
-                            } else if self.cell(layer, nx >> 4, nz >> 4) == CELL_WALL {
+                            } else if self.code_at(layer, nx, nz) == CELL_WALL {
                                 2
                             } else {
                                 3
@@ -1555,8 +1783,8 @@ impl<'rom> Field<'rom> {
                     }
                     for (rank, &d) in ways.iter().enumerate() {
                         let rank = if facing.is_some() { rank } else { 0 };
-                        let (x, z) = (tx - STEP[d].0 * 16, tz - STEP[d].1 * 16);
-                        if !self.inside(x, z, 0) || !self.quiet(self.cell(layer, x >> 4, z >> 4)) || !reach.holds(layer, x, z) {
+                        let (x, z) = (tx - STEP[d].0 * size, tz - STEP[d].1 * size);
+                        if !self.inside(x, z, 0) || !self.quiet(self.code_at(layer, x, z)) || !reach.holds(layer, x, z) {
                             continue;
                         }
                         let ground = self.ground(layer, x, z)?;
@@ -1579,6 +1807,51 @@ impl<'rom> Field<'rom> {
                     });
                 }
             }
+        }
+        Ok(out)
+    }
+
+    /// Where the leader stands to walk into world map actor `id`, a place:
+    /// a little way south, west, east or north of it, walking toward it,
+    /// nearer first. WorldMap_UpdateLocationContacts raises the place's
+    /// touch (WORLD_CONTACT_BASE + its actor) once he is close enough.
+    fn contact_spots(&mut self, id: u16, reach: &Reach) -> Result<Vec<Spot>, String> {
+        let actor = self.present(id)?;
+        let mut out = Vec::new();
+        let mut unreached = 0;
+        // South, west, east and north of it, then the diagonals, which the
+        // world map's d-pad walks too (gWorldMap_KeyHeadings); only where
+        // the way to it is ground he walks on.
+        for distance in [48, 64, 96] {
+            for (dx, dz) in AROUND {
+                let along = if dx != 0 && dz != 0 { distance * 707 / 1000 } else { distance };
+                let (x, z) = (actor.x + dx * along, actor.z + dz * along);
+                if !self.inside(x, z, 8) || !self.quiet(self.code_at(0, x, z)) {
+                    continue;
+                }
+                if !reach.holds(0, x, z) {
+                    unreached += 1;
+                    continue;
+                }
+                let open = (0..along / 8).all(|k| self.world_walkable(x - dx * 8 * k, z - dz * 8 * k));
+                if !open {
+                    continue;
+                }
+                let key = |d: i32, less: u32, more: u32| match d {
+                    1 => less,
+                    -1 => more,
+                    _ => 0,
+                };
+                // Toward the actor: against the side it lies on.
+                let walk = key(dx, KEY_LEFT, KEY_RIGHT) | key(dz, KEY_UP, KEY_DOWN);
+                out.push(Spot { x, z, layer: 0, height: 0, facing: facing_toward(-dx, -dz), walk, cell: None });
+            }
+        }
+        if out.is_empty() {
+            return Err(match unreached {
+                0 => format!("no open ground lies beside world map actor {id} at ({}, {})", actor.x, actor.z),
+                _ => format!("the leader cannot walk to the ground beside world map actor {id} at ({}, {}){}", actor.x, actor.z, reach.crossing()),
+            });
         }
         Ok(out)
     }
@@ -1665,6 +1938,9 @@ impl<'rom> Field<'rom> {
         // have changed a flag the run set (Mercury Lighthouse marks its floor
         // switches pressed as it is entered).
         self.apply_flags();
+        // No random battle breaks into the event: a battle shown is one the
+        // event starts (FLAG_NO_ENCOUNTERS).
+        self.set_flag(FLAG_NO_ENCOUNTERS, true);
         self.unshadow(kind, target, own, messages)?;
         self.watch = table.iter().map(|r| result_key(r.result)).filter(|&r| r >= 0x10000).collect();
         self.t.ran = 0;
@@ -1683,6 +1959,7 @@ impl<'rom> Field<'rom> {
         // moved anything: the actors' places and the map's cells.
         let watched: Vec<(u16, i32, i32)> = self.stage().into_iter().filter(|a| early.contains(a)).collect();
         let cells_before = self.cell_codes();
+        let palette_before = self.palette();
         let mut moved = false;
         let mut fought = false;
         // Where the leader was when the event began, to see him jump or be
@@ -1919,12 +2196,18 @@ impl<'rom> Field<'rom> {
         // field loop stepping on, ran no script: it showed nothing, or
         // nothing it could show from here.
         let instant = began.is_some() && returned == began && !left && !paused;
-        let shown = !pages.is_empty() || left || fought || moved || (!left && self.cell_codes() != cells_before);
+        // Colours the event changed and left changed show too: a cave
+        // darkening as the party goes deeper (Altmiller Cave's blend).
+        let shown = !pages.is_empty() || left || fought || moved || (!left && (self.cell_codes() != cells_before || self.palette() != palette_before));
         // ALCHEMY_RENDER_DEBUG prints what each try did, to see why a spot
         // was refused.
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
             let moved_now: Vec<_> = watched.iter().filter_map(|&(id, x, z)| self.actor(id).map(|a| (id, a.x - x, a.z - z))).filter(|m| m.1 != 0 || m.2 != 0).collect();
             eprintln!("    spot ({}, {}) layer {} walk {:#x}: began {began:?} ran {:#x} pages {} left {left} fought {fought} moved {moved} {moved_now:?} cells {} leader {:?}", spot.x, spot.z, spot.layer, spot.walk, self.t.ran, pages.len(), self.cell_codes() != cells_before, leader_from.map(|f| (f.x, f.z)));
+        }
+        if self.unwalked {
+            let placed = "the leader starts where the walk from the entrance does not reach, since what opens the way there is not played first".to_string();
+            note = Some(note.map_or(placed.clone(), |n| format!("{placed}; {n}")));
         }
         Ok(EventRun { pages, frames, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note })
     }
@@ -2078,10 +2361,21 @@ fn kind_name(kind: u8) -> &'static str {
 }
 
 /// A row's result as the renderer compares it: an event function's address
-/// without its Thumb bit, else the value itself (a message number).
+/// without its Thumb bit, else the message it shows (a message number, or a
+/// found message, FIND_MESSAGE's 0x00400000 with its number).
 pub fn result_key(result: u32) -> u32 {
-    if result >= 0x10000 { result & !1 } else { result }
+    if result >> 16 == FIND_MESSAGE >> 16 {
+        result & 0xffff
+    } else if result >= 0x10000 {
+        result & !1
+    } else {
+        result
+    }
 }
+
+/// FIND_MESSAGE (field_scene.h): a row's result that shows a message as
+/// something found.
+const FIND_MESSAGE: u32 = 0x0040_0000;
 
 /// A row of the scene's event table (struct SceneEvent).
 #[derive(Debug, Clone, Copy)]
@@ -2112,8 +2406,10 @@ pub struct Actor {
 pub struct Reach {
     /// The map layer he walks on.
     pub layer: u8,
-    /// GRID by GRID cells, row by row.
+    /// `width` by `width` 16-pixel cells, row by row, from cell `origin`.
     cells: Vec<bool>,
+    origin: (i32, i32),
+    width: i32,
     /// The room's camera box, pixels.
     room: [i32; 4],
     /// The codes of the cells the walk reached but did not cross: exits,
@@ -2134,8 +2430,8 @@ impl Reach {
         if layer != self.layer {
             return true;
         }
-        let (cx, cz) = (x >> 4, z >> 4);
-        (0..GRID).contains(&cx) && (0..GRID).contains(&cz) && self.cells[(cz * GRID + cx) as usize]
+        let (cx, cz) = ((x >> 4) - self.origin.0, (z >> 4) - self.origin.1);
+        (0..self.width).contains(&cx) && (0..self.width).contains(&cz) && self.cells[(cz * self.width + cx) as usize]
     }
 
     /// ` without crossing an exit or a cell of the touch itself (codes 1, 26)`
@@ -2145,6 +2441,11 @@ impl Reach {
             0 => String::new(),
             _ => format!(" without crossing an exit or a cell of the touch itself (codes {})", self.stops.iter().map(i32::to_string).collect::<Vec<_>>().join(", ")),
         }
+    }
+
+    /// The same room with every cell taken as one he can walk to.
+    pub fn anywhere(&self) -> Reach {
+        Reach { layer: self.layer, cells: vec![true; self.cells.len()], room: self.room, stops: Vec::new(), origin: self.origin, width: self.width }
     }
 
     /// How many of the eight cells around (x, z) pixels he can walk to: a
@@ -2262,6 +2563,7 @@ mod tests {
     fn rows_are_told_by_their_function_or_message() {
         assert_eq!(result_key(0x0200_9349), 0x0200_9348);
         assert_eq!(result_key(4804), 4804);
+        assert_eq!(result_key(0x0040_29c5), 10693);
     }
 
     #[test]

@@ -828,6 +828,7 @@ impl Machines {
             moments: 0,
             moment_scenes: 0,
             capped: 0,
+            relaxed: std::cell::Cell::new(false),
         }
     }
 }

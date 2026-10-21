@@ -174,7 +174,7 @@ impl Symbols {
             background: at("BattleBackground_Load")?,
             build: at("BattlePresentation_BuildActions")?,
             commands: at("Battle_CollectPartyCommands")?,
-            opponents: at("BattlePres_BuildOpponentEntries")?,
+            opponents: at("BattlePresentation_BuildOpponentEntries").or_else(|_| at("BattlePres_BuildOpponentEntries"))?,
             dispatch: at("BattlePresentation_DispatchAction")?,
             wait_advance: at("BattlePresentation_WaitForAdvance")?,
             message: at("UiText_ShowMessageAndWaitCore")?,

@@ -350,6 +350,10 @@ pub struct Context<'a> {
     pub moments: usize,
     pub moment_scenes: usize,
     pub capped: usize,
+    /// Whether the events played now may start the leader where he cannot
+    /// walk (Field::relaxed): an event no walkable spot plays is tried once
+    /// more that way.
+    pub relaxed: std::cell::Cell<bool>,
 }
 
 /// Whether a scene is a place: not the title, the clear-data screen or the
@@ -585,6 +589,8 @@ struct Scan {
     actors: HashMap<u16, (i32, i32)>,
     absent: HashMap<u16, String>,
     cells: HashMap<u16, Vec<(u8, i32, i32)>>,
+    /// The side of its cells in pixels: 16, or the world map's 32.
+    size: i32,
     /// The rows of its event table, as (kind, target, result).
     triggers: Vec<(u8, u16, u32)>,
 }
@@ -709,9 +715,15 @@ impl Context<'_> {
                 }
             }
         }
-        let cells = field.cells_by_code();
+        let cells = field.cells_by_code()?;
         let triggers = field.triggers();
-        Ok(Scan { entrances, header, actors, absent, cells, triggers })
+        if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+            let mut codes: Vec<_> = cells.iter().map(|(c, v)| (*c, v.len(), v[0])).collect();
+            codes.sort();
+            eprintln!("    scan {scene} entrance {entrance} set {set:?}: world {} cells {codes:?} triggers {:?} entrances {:?}", field.world(), triggers.iter().filter(|t| t.0 == 3).collect::<Vec<_>>(), entrances.iter().map(|e| (e.number, e.camera)).collect::<Vec<_>>());
+        }
+        let size = field.cell_size();
+        Ok(Scan { entrances, header, actors, absent, cells, size, triggers })
     }
 
     /// The scan of a scene entered by an entrance with given flags, made
@@ -747,10 +759,12 @@ impl Context<'_> {
         // Where the trigger stands in a scan: the actor, or the cells with
         // its code (the ground layer's for a search).
         let at = |scan: &Scan| -> Vec<(i32, i32)> {
-            let centre = |&(_, cx, cz): &(u8, i32, i32)| (cx * 16 + 8, cz * 16 + 8);
+            let centre = |&(_, cx, cz): &(u8, i32, i32)| (cx * scan.size + scan.size / 2, cz * scan.size + scan.size / 2);
             match trigger {
                 Trigger::Talk(a) | Trigger::Psynergy(_, a) => scan.actors.get(&a).copied().into_iter().collect(),
                 Trigger::Search(c) => scan.cells.get(&c).map_or_else(Vec::new, |v| v.iter().filter(|c| c.0 == 0).map(centre).collect()),
+                // A world map place is an actor the leader walks into.
+                Trigger::Touch(c) if scan.size == 32 && c >= 100 && !scan.cells.contains_key(&c) => scan.actors.get(&(c - 100)).copied().into_iter().collect(),
                 Trigger::Touch(c) => scan.cells.get(&c).map_or_else(Vec::new, |v| v.iter().map(centre).collect()),
             }
         };
@@ -871,7 +885,16 @@ impl Context<'_> {
             for scene in &candidates {
                 self.remove_event_files(scene, &event.name);
             }
-            match self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None) {
+            let mut played = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
+            if played.as_ref().is_err_and(|f| f.reason.contains("cannot walk")) {
+                self.relaxed.set(true);
+                let relaxed = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
+                self.relaxed.set(false);
+                if relaxed.is_ok() {
+                    played = relaxed;
+                }
+            }
+            match played {
                 Ok(played) => {
                     let scene = candidates.iter().find(|s| s.number == played.setup.scene).copied().unwrap_or(first);
                     for s in &candidates {
@@ -937,6 +960,23 @@ impl Context<'_> {
         out
     }
 
+    /// `set` with every story flag the scene's other events set that the
+    /// event neither sets itself nor needs clear, when that adds more than
+    /// one flag (one alone extra_flags tries).
+    fn story_so_far(&self, first: &Scene, event: &Event, set: &[u16], clear: &[u16]) -> Option<Vec<u16>> {
+        let own: Vec<u16> = event.sets.iter().filter_map(|n| self.flags.resolve(n, first.symbol.as_deref())).collect();
+        let mut out = set.to_vec();
+        for e in self.events.iter().filter(|e| e.scenes.contains(&first.number) && e.name != event.name) {
+            for f in e.sets.iter().filter(|s| is_story_flag(s, self.flags)).filter_map(|n| self.flags.resolve(n, first.symbol.as_deref())) {
+                if !out.contains(&f) && !clear.contains(&f) && !own.contains(&f) {
+                    out.push(f);
+                }
+            }
+        }
+        out.sort_unstable();
+        (out.len() > set.len() + 1).then_some(out)
+    }
+
     fn play_event(
         &self,
         event: &Event,
@@ -980,12 +1020,18 @@ impl Context<'_> {
             }
             // On the way to another event, only by its own flags.
             let extras = if within.is_some() { Vec::new() } else { self.extra_flags(first, &set, &clear) };
-            let flag_sets = std::iter::once(set.clone()).chain(extras.iter().map(|&f| {
-                let mut s = set.clone();
-                s.push(f);
-                s.sort_unstable();
-                s
-            }));
+            // Last, every story flag the scene's other events set, all at
+            // once: a room some events open in turn (the crossings each
+            // Elemental Star bagged opens to the next pedestal).
+            let together = if within.is_some() { None } else { self.story_so_far(first, event, &set, &clear) };
+            let flag_sets = std::iter::once(set.clone())
+                .chain(extras.iter().map(|&f| {
+                    let mut s = set.clone();
+                    s.push(f);
+                    s.sort_unstable();
+                    s
+                }))
+                .chain(together);
             let mut placed = false;
             for flags in flag_sets {
                 let places = match self.places(scenes, trigger, event, &flags, &clear, &mut job.scans) {
@@ -1083,6 +1129,7 @@ impl Context<'_> {
         let own_function = own.iter().copied().find(|&r| r >= 0x10000);
         let message_row = !own.is_empty() && own_function.is_none();
         let mut field = Field::enter(self.rom, self.symbols, setup)?;
+        field.relaxed = self.relaxed.get();
         let entered: Saved = field.save();
         match after {
             Some(saved) => field.load(saved),
