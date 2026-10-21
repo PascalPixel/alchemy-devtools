@@ -10,7 +10,9 @@ use super::story::Flags;
 use std::path::Path;
 
 /// KEYINPUT bits.
+const KEY_A: u32 = 0x1;
 const KEY_B: u32 = 0x2;
+const KEY_START: u32 = 0x8;
 const KEY_RIGHT: u32 = 0x10;
 const KEY_LEFT: u32 = 0x20;
 const KEY_UP: u32 = 0x40;
@@ -26,6 +28,10 @@ const VALE: (u16, u16) = (4, 1);
 const IMIL: (u16, u16) = (50, 0);
 /// The world map as the party first leaves Vale (scene 2, entrance 1).
 const WORLD_MAP: (u16, u16) = (2, 1);
+/// The title overlay as the game starts it at power-on (scene 0, entrance 2).
+const POWER_ON: (u16, u16) = (0, 2);
+/// Frames from the first one not black to the Golden Sun logo held.
+const BOOT_FRAMES: usize = 420;
 
 pub struct Guide<'a> {
     pub rom: &'a [u8],
@@ -93,6 +99,49 @@ impl<'a> Guide<'a> {
     pub fn snow(&mut self) -> Result<(), String> {
         let path = [(KEY_DOWN, 40), (KEY_RIGHT, 50), (KEY_UP, 40), (0, 60)];
         self.walk_path(IMIL, &path, "snow.gif", "walking through Imil's snow")
+    }
+
+    /// The field menu: opened with A in Vale, moved along its icons and
+    /// into the Status screen and back out, as `menus.gif`.
+    pub fn menus(&mut self) -> Result<(), String> {
+        let path = [
+            (0, 20),
+            (KEY_A, 4),
+            (0, 50),
+            (KEY_RIGHT, 4),
+            (0, 30),
+            (KEY_RIGHT, 4),
+            (0, 30),
+            (KEY_A, 4),
+            (0, 40),
+            (KEY_A, 4),
+            (0, 150),
+            (KEY_B, 4),
+            (0, 40),
+            (KEY_B, 4),
+            (0, 40),
+        ];
+        self.walk_path(VALE, &path, "menus.gif", "the field menu, its icons and the Status screen")
+    }
+
+    /// The game from power-on with no key pressed and no save file: the
+    /// Nintendo and Camelot logos, then the Golden Sun logo, which a new
+    /// game follows with name entry, as `boot.gif`. BOOT_FRAMES ends it on
+    /// the logo.
+    pub fn boot(&mut self) -> Result<(), String> {
+        let setup = Setup { scene: POWER_ON.0, entrance: POWER_ON.1, set: Vec::new(), clear: Vec::new() };
+        let mut field = Field::enter(self.rom, self.symbols, &setup)?;
+        let mut frames = Vec::new();
+        Self::hold(&mut field, 0, 900, &mut frames)?;
+        let first = frames.iter().position(|f| f.iter().any(|&c| c & 0x7fff != 0)).unwrap_or(0);
+        let end = (first + BOOT_FRAMES).min(frames.len());
+        self.gif("boot.gif", &frames[first..end], "the game from power-on: the Nintendo, Camelot and Golden Sun logos")
+    }
+
+    /// Start pressed two screens deep: every screen closes at once.
+    pub fn menu_start(&mut self) -> Result<(), String> {
+        let path = [(0, 20), (KEY_A, 4), (0, 50), (KEY_A, 4), (0, 50), (KEY_A, 4), (0, 60), (KEY_START, 4), (0, 60)];
+        self.walk_path(VALE, &path, "menu-start.gif", "Start closing the Psynergy screen and the field menu at once")
     }
 
     /// The world map's perspective view as the party walks and runs.
