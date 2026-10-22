@@ -303,7 +303,7 @@ impl<'a> Guide<'a> {
             }
         }));
         // Talk to her, and play until the script has run its last call.
-        let (w, hgt) = (2 * WIDTH + 16 + 560, 2 * HEIGHT + 8);
+        let (w, hgt) = (WIDTH + 16 + 560, 330);
         let mut frames = Vec::new();
         let mut current: Option<usize> = None;
         let mut waited = vec![0u32; calls.len()];
@@ -338,8 +338,8 @@ impl<'a> Guide<'a> {
                 field.hold(0);
             }
             let mut c = canvas(w, hgt, BACK);
-            paste(&mut c, &screen(&field.picture()), 4, 4, 2);
-            let x = (2 * WIDTH + 16) as i32;
+            paste(&mut c, &screen(&field.picture()), 4, 4, 1);
+            let x = (WIDTH + 16) as i32;
             text(&mut c, x, 6, &format!("{EVENT}:"), HEAD, None, 2);
             for (i, line) in shown.iter().enumerate() {
                 let y = 26 + 36 * i as i32;
@@ -536,9 +536,9 @@ impl<'a> Guide<'a> {
         self.guide_png("overlay-common.png", &image, "two Colosso match overlays a byte to a pixel, the code both carry from common/ tinted")
     }
 
-    /// The register write queue through the first four frames of the title
+    /// The register write queue through the first three frames of the title
     /// intro's palette fade, as `io-write-queue.png`: the queue's 32 slots
-    /// down the side and the scanlines along the bottom, four frames of
+    /// down the side and the scanlines along the bottom, three frames of
     /// 228 lines (160 drawn, then 68 of VBlank), each slot a bar from the
     /// line its entry was pushed to the line IoWriteQueue_FlushPending
     /// emptied it, coloured and labelled by what the entry does. The count
@@ -574,7 +574,7 @@ impl<'a> Guide<'a> {
         // From the VBlank before the frame PaletteFade_Start ran in: its
         // pushes so far are kept in `already`.
         let already = field.read16(queue);
-        let changes = field.watch_halfwords(&[queue, 0x0400_0006], 4)?;
+        let changes = field.watch_halfwords(&[queue, 0x0400_0006], 3)?;
         field.probe = None;
         let flushes = flushes.borrow();
         // Each slot's bars: (first line, last line, entry), lines counted
@@ -611,66 +611,56 @@ impl<'a> Guide<'a> {
         if flushed < 2 {
             return Err(format!("only {flushed} flushes were seen"));
         }
-        let px = 2i32;
-        let (left, top) = (40i32, 36i32);
-        let row = 16i32;
-        let width = left + px * line + 16;
-        let height = top + 32 * row + 90;
+        // The slots any entry used, and one row more to stand for the rest.
+        let used = bars.iter().map(|b| b.0).max().unwrap_or(0) + 1;
+        let (left, top, row) = (96i32, 40i32, 30i32);
+        let width = left + line + 16;
+        let height = top + row * (used as i32 + 1) + 88;
         let mut image = canvas(width as usize, height as usize, BACK);
         // VBlank bands: VCOUNT 160 to 227.
         for x in 0..line {
             let vcount = (first_line + x).rem_euclid(LINES);
-            let shade = if vcount >= 160 { 0x34_30_40 } else { 0x26_28_30 };
-            for y in top..top + 32 * row {
-                for dx in 0..px {
-                    image.pixels[(y * width + left + px * x + dx) as usize] = shade;
-                }
+            let shade = if vcount >= 160 { 0x3a_34_48 } else { 0x26_28_30 };
+            for y in top..top + row * used as i32 {
+                image.pixels[(y * width + left + x) as usize] = shade;
             }
             if vcount == 160 {
-                text(&mut image, left + px * x + 2, top - 14, "VBLANK", DIM, None, 2);
+                text(&mut image, left + x + 3, top - 18, "VBLANK", DIM, None, 2);
             }
         }
-        for slot in 0..32 {
-            text(&mut image, 4, top + row * slot + 1, &format!("{slot:>2}"), DIM, None, 2);
+        for slot in 0..used {
+            text(&mut image, 4, top + row * slot as i32 + 8, &format!("SLOT {slot}"), DIM, None, 2);
         }
-        for &(slot, from, to, (value, address, control)) in &bars {
+        text(&mut image, 4, top + row * used as i32 + 8, &format!("SLOTS {used} TO 31: NEVER USED HERE"), DIM, None, 2);
+        for &(slot, from, to, (_, address, control)) in &bars {
             let (colour, label) = match (address, control >> 16 & 3) {
-                (0x0500_0000, 0) => (0x60_b0_ff, format!("DMA {:#X} TO BG COLOURS", value)),
-                (0x0500_0200, 0) => (0xff_90_60, format!("DMA {:#X} TO SPRITE COLOURS", value)),
-                (_, 0) => (0xa0_a0_a0, format!("DMA TO {address:#X}")),
-                (0x0400_0000, w) if w != 0 => (0x70_e0_80, format!("WRITE {value:#06X} TO DISPCNT")),
-                (_, _) => (0xd0_d0_70, format!("WRITE TO {address:#X}")),
+                (0x0500_0000, 0) => (0x60_b0_ff, "DMA: BACKGROUND COLOURS"),
+                (0x0500_0200, 0) => (0xff_90_60, "DMA: SPRITE COLOURS"),
+                (0x0400_0000, w) if w != 0 => (0x70_e0_80, "WRITE: DISPCNT"),
+                _ => (0xa0_a0_a0, "OTHER"),
             };
             let y = top + row * slot as i32;
-            for yy in y + 1..y + row - 1 {
-                for x in left + px * from..left + px * to {
+            for yy in y + 2..y + row - 2 {
+                for x in left + from..left + to {
                     image.pixels[(yy * width + x) as usize] = colour;
                 }
             }
-            let _ = label;
-        }
-        // Labels to the right of where each bar starts, for the first frame.
-        for &(slot, from, to, (value, address, control)) in bars.iter() {
-            let label = match (address, control >> 16 & 3) {
-                (0x0500_0000, 0) => "DMA: BACKGROUND COLOURS".to_string(),
-                (0x0500_0200, 0) => "DMA: SPRITE COLOURS".to_string(),
-                (0x0400_0000, _) => format!("DISPCNT = {value:#06X}"),
-                _ => format!("{address:#X}"),
-            };
             // As much of the label as fits in the bar.
-            let fits = ((px * (to - from) - 4) / 8).max(0) as usize;
+            let fits = ((to - from - 4) / 8).max(0) as usize;
             let label: String = label.chars().take(fits).collect();
-            text(&mut image, left + px * from + 2, top + row * slot as i32 + 1, &label, BACK, None, 2);
+            text(&mut image, left + from + 2, y + 8, &label, BACK, None, 2);
         }
         for &x in &empties {
-            outline(&mut image, left + px * x, top - 4, 1, 32 * row + 8, MARK);
+            for d in 0..2 {
+                outline(&mut image, left + x + d, top - 4, 1, row * used as i32 + 8, MARK);
+            }
         }
-        let y = top + 32 * row + 12;
-        text(&mut image, left, y, "THE QUEUE'S 32 SLOTS, OVER FOUR FRAMES OF THE TITLE INTRO, 2 PIXELS A SCANLINE", DIM, None, 2);
-        text(&mut image, left, y + 18, "A BAR RUNS FROM THE LINE ITS ENTRY WAS PUSHED TO THE LINE THE QUEUE WAS EMPTIED (YELLOW)", DIM, None, 2);
-        text(&mut image, left, y + 36, "BLUE: DMA TO THE BACKGROUND COLOURS, ORANGE: TO THE SPRITE COLOURS, GREEN: A WRITE TO DISPCNT", DIM, None, 2);
-        let _ = mix;
-        self.guide_png("io-write-queue.png", &image, "the register write queue filling through four frames of the title intro and emptied at each VBlank")
+        let y = top + row * (used as i32 + 1) + 8;
+        text(&mut image, 4, y, "THREE FRAMES OF THE TITLE INTRO, A PIXEL A SCANLINE.", INK, None, 2);
+        text(&mut image, 4, y + 18, "A BAR STARTS WHERE ITS ENTRY IS PUSHED AND ENDS AT THE", INK, None, 2);
+        text(&mut image, 4, y + 36, "YELLOW LINE, THE VBLANK THAT CARRIES IT OUT AND EMPTIES THE QUEUE.", INK, None, 2);
+        text(&mut image, 4, y + 54, "BLUE AND ORANGE: THE FADE'S COLOURS, GREEN: A REGISTER WRITE.", INK, None, 2);
+        self.guide_png("io-write-queue.png", &image, "the register write queue filling through three frames of the title intro and emptied at each VBlank")
     }
 
     /// The resource directory's rows drawn against the ROM, as
@@ -1157,22 +1147,29 @@ impl<'a> Guide<'a> {
         let (sw, sh) = spans[0];
         let x1 = (0..3).map(|l| windows[l].0 + sw).max().unwrap_or(0);
         let z1 = (0..3).map(|l| windows[l].1 + sh).max().unwrap_or(0);
-        // Left: half size, cells dimmed but the placeholders.
-        let (lw, lh) = ((x1 * 8) as usize, (z1 * 8) as usize);
-        let (zx, zz, zw, zh) = (windows[0].0, windows[0].1, 16, 10);
+        // An example: the first placeholder whose block a later cell uses
+        // again by number, and that later cell.
+        let (first, later) = (0..raw.len())
+            .filter(|&i| raw[i] & 0xfff == PLACEHOLDER && blocks[i] > 0 && i as i32 / GRID >= 6)
+            .find_map(|i| (i + 3 * GRID as usize..raw.len()).find(|&j| raw[j] & 0xfff == blocks[i]).map(|j| (i, j)))
+            .ok_or("no placeholder's block is used again")?;
+        let n = blocks[first];
+        // Left: a quarter size, cells dimmed but the placeholders.
+        const Q: usize = 4;
+        let (lw, lh) = (x1 as usize * Q, z1 as usize * Q);
         let right_x = 8 + lw + 16;
-        let (w, h) = (right_x + (zw * 32) as usize + 8, (8 + lh.max((zh * 32) as usize + 60) + 40).max(8 + lh + 40));
+        let (w, h) = (right_x + 400, 8 + lh.max(240) + 50);
         let mut image = canvas(w, h, BACK);
         for y in 0..lh {
             for x in 0..lw {
-                let (cx, cz) = (x as i32 / 8, y as i32 / 8);
+                let (cx, cz) = ((x / Q) as i32, (y / Q) as i32);
                 let i = (cx + cz * GRID) as usize;
                 let inside = (0..3).any(|l| cx >= windows[l].0 && cx < windows[l].0 + sw && cz >= windows[l].1 && cz < windows[l].1 + sh);
-                let mut c = grid.pixels[2 * y * grid.width + 2 * x];
+                let mut c = grid.pixels[(16 / Q) * y * grid.width + (16 / Q) * x];
                 if !inside {
                     c = BACK;
                 } else if raw[i] & 0xfff == PLACEHOLDER {
-                    c = mix(c, MARK, 0.6);
+                    c = mix(c, MARK, 0.7);
                 } else {
                     c = mix(c, 0, 0.6);
                 }
@@ -1180,31 +1177,38 @@ impl<'a> Guide<'a> {
             }
         }
         for l in 0..3 {
-            outline(&mut image, 8 + windows[l].0 * 8, 8 + windows[l].1 * 8, sw * 8, sh * 8, DIM);
+            outline(&mut image, 8 + windows[l].0 * Q as i32, 8 + windows[l].1 * Q as i32, sw * Q as i32, sh * Q as i32, DIM);
+            text(&mut image, 10 + windows[l].0 * Q as i32, 10 + windows[l].1 * Q as i32, ["GROUND", "MIDDLE", "OVERHEAD"][l], INK, Some(0x20_22_28), 1);
         }
-        // Right: the first cells of the ground window, twice size, numbered.
-        for cz in 0..zh {
-            for cx in 0..zw {
-                let (gx, gz) = (zx + cx, zz + cz);
-                let i = (gx + gz * GRID) as usize;
-                let (ox, oy) = (right_x + (cx * 32) as usize, 8 + (cz * 32) as usize);
-                for y in 0..32 {
-                    for x in 0..32 {
-                        let c = grid.pixels[(gz as usize * 16 + y / 2) * grid.width + gx as usize * 16 + x / 2];
-                        image.pixels[(oy + y) * w + ox + x] = mix(c, 0, 0.35);
-                    }
-                }
-                let first = raw[i] & 0xfff == PLACEHOLDER;
-                outline(&mut image, ox as i32, oy as i32, 32, 32, if first { MARK } else { 0x40_40_48 });
-                let n = blocks[i].to_string();
-                text(&mut image, ox as i32 + 1, oy as i32 + 9, &n, if first { 0x10_10_10 } else { INK }, Some(if first { MARK } else { 0x20_22_28 }), 2);
+        // The two example cells: ringed on the grid, and six times their size
+        // on the right with what the conversion does to them.
+        let examples = [(first, 0xff_ff_ff, "THE FIRST USE OF A PICTURE", vec!["STORED AS 4095, A PLACEHOLDER.".to_string(), "TILE_CONVERTMAP GIVES IT THE".to_string(), format!("NEXT BLOCK NUMBER, {n}: COUNTING"), "FROM 0, THE BLOCKS GO IN THE".to_string(), "ORDER THE GRID FIRST USES THEM.".to_string()]),
+            (later, 0x50_d0_ff, "A LATER USE OF IT", vec![format!("ALREADY STORED AS BLOCK {n},"), "AND KEPT AS IT IS.".to_string()])];
+        let mut y = 8i32;
+        for (cell, colour, title, lines) in &examples {
+            let (cx, cz) = ((*cell as i32) % GRID, (*cell as i32) / GRID);
+            for d in 0..2 {
+                outline(&mut image, 8 + cx * Q as i32 - 3 - d, 8 + cz * Q as i32 - 3 - d, Q as i32 + 6 + 2 * d, Q as i32 + 6 + 2 * d, *colour);
             }
+            for py in 0..96usize {
+                for px in 0..96usize {
+                    let c = grid.pixels[(cz as usize * 16 + py / 6) * grid.width + cx as usize * 16 + px / 6];
+                    image.pixels[(y as usize + py) * w + right_x + px] = c;
+                }
+            }
+            for d in 0..2 {
+                outline(&mut image, right_x as i32 - 1 - d, y - 1 - d, 98 + 2 * d, 98 + 2 * d, *colour);
+            }
+            text(&mut image, right_x as i32 + 106, y, title, *colour, None, 2);
+            for (k, line) in lines.iter().enumerate() {
+                text(&mut image, right_x as i32 + 106, y + 20 + 16 * k as i32, line, INK, None, 2);
+            }
+            y += 120;
         }
-        let y = (8 + zh * 32 + 8) as i32;
-        text(&mut image, right_x as i32, y, "THE GROUND WINDOW'S FIRST 16 BY 10 CELLS:", HEAD, None, 2);
-        text(&mut image, right_x as i32, y + 16, "YELLOW, A PLACEHOLDER (4095) AND THE NUMBER", DIM, None, 2);
-        text(&mut image, right_x as i32, y + 32, "TILE_CONVERTMAP GAVE IT, WHITE A LATER USE", DIM, None, 2);
-        text(&mut image, 8, (8 + lh + 8) as i32, &format!("GOMA CAVE: {placeholders} PLACEHOLDERS, {} BLOCKS", blocks.iter().copied().max().unwrap_or(0) + 1), HEAD, None, 2);
+        let blocks_used = blocks.iter().copied().max().unwrap_or(0) + 1;
+        let y = (8 + lh.max(240) + 8) as i32;
+        text(&mut image, 8, y, &format!("GOMA CAVE\x27S THREE LAYER WINDOWS, THE {placeholders} PLACEHOLDERS IN YELLOW."), INK, None, 2);
+        text(&mut image, 8, y + 18, &format!("ONE PLACEHOLDER FOR EACH OF THE MAP\x27S {blocks_used} BLOCKS, AT ITS FIRST USE."), INK, None, 2);
         self.guide_png("placeholders.png", &image, "Goma Cave's grid with each block's first use, the placeholder Tile_ConvertMap numbers")
     }
 
@@ -1274,76 +1278,65 @@ impl<'a> Guide<'a> {
             for d in 0..2 {
                 outline(&mut image, x - d, y - d, 16 + 2 * d, 16 + 2 * d, colour);
             }
-            text(&mut image, x - 2, y - 16, &id.to_string(), 0x10_10_10, Some(colour), 2);
+            // What each chest holds, from the scenes' event rows (SEARCH_CHEST
+            // with FIND_COINS or FIND_ITEM, crossbone_isle_keys.c), staggered
+            // so that neighbours' labels clear each other; the marker's id
+            // small under its cell.
+            let what = match id { 100 => "333 COINS", 101 => "FAIRY RING", 102 => "COOKIE", 103 => "SMOKE BOMB", 104 => "666 COINS", 105 => "WATER OF LIFE", 106 => "ELIXIR", 107 => "DEMON AXE", _ => "?" };
+            let lift = if id % 2 == 1 { 36 } else { 18 };
+            let w = text(&mut image, -100, -100, what, 0, None, 2);
+            let lx = (x + 8 - w / 2).clamp(2, image.width as i32 - w - 2);
+            text(&mut image, lx, y - lift, what, 0x10_10_10, Some(colour), 2);
+            text(&mut image, x + 1, y + 18, &id.to_string(), colour, None, 1);
         }
         let mut y = (y1 - y0) as i32 + 20;
         for (n, &(_, name, colour)) in SCENES.iter().enumerate() {
             let ids: Vec<String> = placed.iter().filter(|p| p.1 == n).map(|p| p.0.to_string()).collect();
-            text(&mut image, 8, y, &format!("{name} PLACES {}", ids.join(", ")), colour, None, 2);
+            text(&mut image, 8, y, &format!("{name} PLACES THE CHESTS OF MARKERS {}", ids.join(", ")), colour, None, 2);
             y += 18;
         }
-        text(&mut image, 8, y, &format!("THE MAP'S MARKER LIST HOLDS {} MARKERS", list.len()), DIM, None, 2);
-        text(&mut image, 8, y + 18, "107 IS PLACED, THEN MOVED TO 0, 0 BY THE SCENE UNTIL THE PILLAR", DIM, None, 2);
-        text(&mut image, 8, y + 36, "CARRYING ITS CHEST REACHES THE LADDER", DIM, None, 2);
+        text(&mut image, 8, y, &format!("THE MAP'S LIST HOLDS {} MARKERS, EACH LABELLED BY WHAT ITS CHEST HOLDS", list.len()), DIM, None, 2);
+        text(&mut image, 8, y + 18, "THE DEMON AXE'S MARKER (107) IS PLACED, THEN MOVED TO 0, 0 BY THE", DIM, None, 2);
+        text(&mut image, 8, y + 36, "SCENE UNTIL THE STONE PILLAR CARRYING ITS CHEST REACHES THE LADDER", DIM, None, 2);
         self.guide_png("markers.png", &image, "the markers of the map Crossbone Isle's two rooms share, and which scene places each")
     }
 
     /// The world map's squares unpacked around the party, as
-    /// `world-map-squares.gif`: the party leaves Vale and travels south and
-    /// then east with L held (4 pixels a frame); beside the screen, the
-    /// world's 16 by 16 squares of 16 by 16 cells, each cell coloured by its
-    /// collision code (read whole once, as Field::read_world unpacks every
-    /// square), with the 2 by 2 squares Map_UpdateCurrentTileBlock unpacks
-    /// around the followed point outlined, each labelled with the quarter of
-    /// the block buffer it fills and the square's number there
-    /// (PerspectiveWork.quarterTiles), checked against the square the
-    /// point's position and the tileIds table give.
+    /// `world-map-squares.gif`: the party runs south and east from the world
+    /// map's entrance 3, south of Vale, with FLAG_NO_ENCOUNTERS set; beside
+    /// the screen, 5 by 4 of the world's 512-pixel squares, each drawn from
+    /// the ground layer's block buffer while it is unpacked there
+    /// (Map_WriteLayerCellTile's quarters of Ram_MapBlocks: a cell word's
+    /// low halfword picks a block of four tile numbers in Ram_MapCellBuffer,
+    /// each drawn as the mean colour of its 256-colour tile in `BG3`'s char
+    /// block, where the ground layer's screen map is). The 2 by 2 squares unpacked now are bright and outlined,
+    /// those unpacked earlier dim, the rest black; each frame the quarters'
+    /// squares (PerspectiveWork.quarterTiles) are checked against the squares
+    /// the followed point's place and the tileIds table give.
     pub fn world_map_squares(&mut self) -> Result<(), String> {
-        const WORLD_MAP: (u16, u16) = (2, 1);
+        const WORLD_MAP: (u16, u16) = (2, 3);
         const SQUARES: i32 = 16;
         const CELLS: i32 = 16;
-        const SQUARE_PIXELS: i32 = 512;
-        const DOT: i32 = 2;
-        // FLAG_NO_ENCOUNTERS, so no random battle stops the walk.
-        let mut entered = self.enter_with((WORLD_MAP.0, 3), &["FLAG_NO_ENCOUNTERS"])?;
+        const PX: i32 = 6;
+        const SIDE: i32 = CELLS * PX;
+        const VALE_EXIT: (i32, i32) = (5680, 1226);
+        let mut entered = self.enter_with(WORLD_MAP, &["FLAG_NO_ENCOUNTERS"])?;
         let field = &mut entered.field;
-        // Reads every square once and puts the machine back.
-        field.cells_with_code(0)?;
-        let side = (SQUARES * CELLS * DOT) as usize;
-        let mut world = canvas(side, side, 0);
-        // Each of the 16 by 16 places grey where tileIds gives it the square
-        // of its own number, violet where it gives another.
-        let work = field.map_work();
-        let ids: Vec<u16> = (0..(SQUARES * SQUARES) as u32).map(|i| field.read16(work + 0x138 + 2 * i)).collect();
-        for cz in 0..SQUARES * CELLS {
-            for cx in 0..SQUARES * CELLS {
-                let place = ((cz / CELLS) * SQUARES + cx / CELLS) as usize;
-                let colour = if usize::from(ids[place]) == place { 0x3a_3c_44 } else { 0x70_48_90 };
-                for d in 0..(DOT * DOT) as usize {
-                    let (x, y) = ((cx * DOT) as usize + d % DOT as usize, (cz * DOT) as usize + d / DOT as usize);
-                    world.pixels[y * side + x] = colour;
-                }
-            }
-        }
-        for s in 0..=SQUARES {
-            let p = (s * CELLS * DOT) as usize;
-            for i in 0..side {
-                if p < side {
-                    world.pixels[p * side + i] = 0x50_50_58;
-                    world.pixels[i * side + p] = 0x50_50_58;
-                }
-            }
-        }
-        for (i, id) in ids.iter().enumerate() {
-            let (x, y) = ((i as i32 % SQUARES) * CELLS * DOT, (i as i32 / SQUARES) * CELLS * DOT);
-            text(&mut world, x + 2, y + 2, &id.to_string(), INK, None, 1);
-        }
-        let (wx, wy) = (8 + WIDTH + 16, 8usize);
-        let (w, h) = (wx + side + 8, (wy + side + 8).max(8 + HEIGHT + 120));
+        let colours = super::guide_more::palettes(field);
+        let char_base = 0x0600_0000 + u32::from((field.read16(0x0400_000e) >> 2) & 3) * 0x4000;
+        let mut tile_means: std::collections::HashMap<u32, u32> = std::collections::HashMap::new();
+        let place_of = |field: &Field| {
+            let origin = field.read32(field.map_work());
+            let (px, pz) = (field.read32(origin) as i32, field.read32(origin + 8) as i32);
+            ((px - 0x0100_0000) >> 25, (pz - 0x0140_0000) >> 25, px >> 16, pz >> 16)
+        };
+        let (q0x, q0z, _, _) = place_of(field);
+        let (wx0, wz0, ww, wh) = (q0x - 1, q0z - 1, 5, 4);
+        // Each square's picture once it has been unpacked.
+        let mut drawn: std::collections::HashMap<(i32, i32), Image> = std::collections::HashMap::new();
+        let (mx, my) = (8 + WIDTH + 16, 8usize);
+        let (w, h) = (mx + (ww * SIDE) as usize + 8, 8 + (wh * SIDE) as usize + 8);
         let mut frames = Vec::new();
-        let mut seen = Vec::new();
-        // Running, B held, each way in turn for up to 240 frames, or until
-        // something stops the party for 8.
         let ways = [KEY_DOWN, KEY_RIGHT, KEY_DOWN, KEY_RIGHT, KEY_UP];
         for (leg, &way) in ways.iter().enumerate() {
             let keys = KEY_B | way;
@@ -1351,71 +1344,110 @@ impl<'a> Guide<'a> {
             let (mut last, mut still) = (field.leader().map(|a| (a.x, a.z)), 0);
             for f in 0..240u32 {
                 field.frames(1)?;
+                if field.scene() != WORLD_MAP.0 {
+                    return Err(format!("the walk left the world map for scene {}", field.scene()));
+                }
                 let now = field.leader().map(|a| (a.x, a.z));
                 still = if now == last { still + 1 } else { 0 };
                 last = now;
                 if still >= 8 && leg > 0 {
                     break;
                 }
-                if field.scene() != WORLD_MAP.0 {
-                    return Err(format!("the walk left the world map for scene {}", field.scene()));
-                }
                 if f % 6 != 0 {
                     continue;
                 }
                 let work = field.map_work();
-                let origin = field.read32(work);
-                let (px, pz) = (field.read32(origin) as i32, field.read32(origin + 8) as i32);
-                let (qx, qz) = ((px - 0x0100_0000) >> 25, (pz - 0x0140_0000) >> 25);
-                let mut c = canvas(w, h, BACK);
-                paste(&mut c, &screen(&field.picture()), 8, 8, 1);
-                paste(&mut c, &world, wx, wy, 1);
+                let (qx, qz, px, pz) = place_of(field);
+                let mut now_places = Vec::new();
                 for row in 0..2 {
                     for col in 0..2 {
                         let (sx, sz) = ((qx + col).rem_euclid(SQUARES), (qz + row).rem_euclid(SQUARES));
                         let id = field.read16(work + 0x138 + 2 * (sz * SQUARES + sx) as u32);
-                        let quarter = ((sz & 1) * 2 + (sx & 1)) as u32;
-                        let shown = field.read16(work + 0x338 + 2 * quarter);
+                        let (bx, by) = ((sx & 1) as u32, (sz & 1) as u32);
+                        let shown = field.read16(work + 0x338 + 2 * (by * 2 + bx));
                         if shown != id {
-                            return Err(format!("quarter {quarter} shows square {shown}, not {id} at {sx}, {sz}"));
+                            return Err(format!("the quarter for {sx}, {sz} shows square {shown}, not {id}"));
                         }
-                        if !seen.contains(&(sx, sz)) {
-                            seen.push((sx, sz));
+                        // The square as the ground layer's buffer holds it.
+                        let mut pic = canvas(SIDE as usize, SIDE as usize, 0);
+                        for r in 0..CELLS as u32 {
+                            for c in 0..CELLS as u32 {
+                                let word = field.read32(0x0202_0000 + by * 2048 + bx * 64 + r * 128 + c * 4);
+                                let block = word & 0xffff;
+                                for t in 0..4u32 {
+                                    let tile = u32::from(field.read8(0x0201_0000 + block * 4 + t));
+                                    let mean = *tile_means.entry(tile).or_insert_with(|| {
+                                        let mut sum = [0u32; 3];
+                                        for p in 0..64 {
+                                            let c = colours[usize::from(field.read8(char_base + tile * 64 + p))];
+                                            for (k, s) in sum.iter_mut().enumerate() {
+                                                *s += (c >> (16 - 8 * k)) & 0xff;
+                                            }
+                                        }
+                                        (sum[0] / 64) << 16 | (sum[1] / 64) << 8 | sum[2] / 64
+                                    });
+                                    let (tx, ty) = (c as usize * PX as usize + (t as usize % 2) * 3, r as usize * PX as usize + (t as usize / 2) * 3);
+                                    for d in 0..9 {
+                                        pic.pixels[(ty + d / 3) * SIDE as usize + tx + d % 3] = mean;
+                                    }
+                                }
+                            }
                         }
-                        let (x, y) = (wx as i32 + sx * CELLS * DOT, wy as i32 + sz * CELLS * DOT);
-                        for d in 0..2 {
-                            outline(&mut c, x + d, y + d, CELLS * DOT - 2 * d, CELLS * DOT - 2 * d, MARK);
-                        }
-                        text(&mut c, x + 3, y + 3, &id.to_string(), 0x10_10_10, Some(MARK), 1);
-                        text(&mut c, x + 3, y + 12, &format!("Q{quarter}"), 0x10_10_10, Some(MARK), 1);
+                        drawn.insert((sx, sz), pic);
+                        now_places.push((sx, sz));
                     }
                 }
-                let (dx, dz) = (wx as i32 + px / (SQUARE_PIXELS / CELLS) / 0x10000 * DOT, wy as i32 + pz / (SQUARE_PIXELS / CELLS) / 0x10000 * DOT);
-                outline(&mut c, dx - 2, dz - 2, 5, 5, 0xff_ff_ff);
-                let mut y = (8 + HEIGHT + 12) as i32;
-                text(&mut c, 8, y, "UNPACKED NOW,", HEAD, None, 2);
-                y += 16;
-                text(&mut c, 8, y, "QUARTER: SQUARE", HEAD, None, 2);
-                for q in 0..4u32 {
-                    y += 16;
-                    let a = field.read16(work + 0x338 + 2 * q);
-                    let b = field.read16(work + 0x338 + 2 * (q + 4));
-                    text(&mut c, 8, y, &format!("Q{q}: {a:>3}, {b:>3}"), INK, None, 2);
+                let mut c = canvas(w, h, BACK);
+                paste(&mut c, &screen(&field.picture()), 8, 8, 1);
+                for (&(sx, sz), pic) in &drawn {
+                    let (gx, gz) = (sx - wx0, sz - wz0);
+                    if !(0..ww).contains(&gx) || !(0..wh).contains(&gz) {
+                        continue;
+                    }
+                    let lit = now_places.contains(&(sx, sz));
+                    let (ox, oy) = (mx + (gx * SIDE) as usize, my + (gz * SIDE) as usize);
+                    for y in 0..SIDE as usize {
+                        for x in 0..SIDE as usize {
+                            let p = pic.pixels[y * SIDE as usize + x];
+                            c.pixels[(oy + y) * w + ox + x] = if lit { p } else { mix(p, 0x20_22_28, 0.6) };
+                        }
+                    }
                 }
-                text(&mut c, 8, y + 20, "GROUND LAYER, THEN", DIM, None, 2);
-                text(&mut c, 8, y + 36, "THE SECOND (+320)", DIM, None, 2);
+                for gz in 0..=wh {
+                    outline(&mut c, mx as i32, my as i32 + gz * SIDE, ww * SIDE, 1, 0x40_42_4a);
+                }
+                for gx in 0..=ww {
+                    outline(&mut c, mx as i32 + gx * SIDE, my as i32, 1, wh * SIDE, 0x40_42_4a);
+                }
+                let (bx0, bz0) = ((qx - wx0) * SIDE, (qz - wz0) * SIDE);
+                for d in 0..3 {
+                    outline(&mut c, mx as i32 + bx0 - d, my as i32 + bz0 - d, 2 * SIDE + 2 * d, 2 * SIDE + 2 * d, MARK);
+                }
+                // The party, and Vale's door, at their places.
+                let at = |x: i32, z: i32| (mx as i32 + (x - wx0 * 512) * PX / 32, my as i32 + (z - wz0 * 512) * PX / 32);
+                let (dx, dz) = at(px, pz);
+                outline(&mut c, dx - 3, dz - 3, 7, 7, 0xff_ff_ff);
+                let (vx, vz) = at(VALE_EXIT.0, VALE_EXIT.1);
+                outline(&mut c, vx - 2, vz - 2, 5, 5, 0xff_60_60);
+                text(&mut c, vx + 5, vz - 6, "VALE", 0xff_ff_ff, Some(0x80_30_30), 2);
+                let mut y = (8 + HEIGHT + 12) as i32;
+                for (line, colour) in [("YELLOW: THE 2 BY 2", MARK), ("SQUARES UNPACKED NOW", MARK), ("AROUND THE PARTY", MARK), ("(WHITE SQUARE)", INK), ("", INK), ("DIM: UNPACKED BEFORE", DIM), ("BLACK: NOT YET", DIM), ("", INK), ("A SQUARE IS 16 BY 16", INK), ("CELLS, 512 PIXELS", INK), ("ACROSS", INK)] {
+                    text(&mut c, 8, y, line, colour, None, 2);
+                    y += 16;
+                }
                 frames.push(c.pixels.clone());
                 frames.push(c.pixels);
             }
         }
         field.hold(0);
         let written = animation::write(&self.out.join("world-map-squares.gif"), &frames, w)?;
-        if seen.len() < 6 {
-            return Err(format!("only {} squares were unpacked: {seen:?}", seen.len()));
+        if drawn.len() < 6 {
+            return Err(format!("only {} squares were unpacked", drawn.len()));
         }
         self.written.push(("world-map-squares.gif".to_string(), written.bytes, format!("the world map's squares unpacked around the party; {} frames", written.frames)));
         Ok(())
     }
+
 
     /// The Azart match's recorded path over its course, as `colosso-path.png`:
     /// the course stitched from the match's tour of it, `opponent_path_a.tsv`
