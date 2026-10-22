@@ -174,6 +174,17 @@ const SLIDE_FRAMES: u32 = 240;
 /// cell and pushing against what is beyond it.
 const START_FRAMES: u32 = 180;
 
+use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
+
+/// For `render probe heap`: the heap's work (gWorkSlot, 0 while off), the
+/// functions at whose entry it is read besides each frame's end (MemFree,
+/// Runtime_ReleaseHeapBlock, Runtime_InitializeHeap: just before a pool's
+/// next address falls), and the highest next addresses read.
+pub static HEAP_WORK: AtomicU32 = AtomicU32::new(0);
+pub static HEAP_PCS: [AtomicU32; 3] = [AtomicU32::new(1), AtomicU32::new(1), AtomicU32::new(1)];
+pub static HEAP_IWRAM_HIGH: AtomicU32 = AtomicU32::new(0);
+pub static HEAP_EWRAM_HIGH: AtomicU32 = AtomicU32::new(0);
+
 fn fx(px: i32) -> i32 {
     px << 16
 }
@@ -397,9 +408,26 @@ pub struct Field<'rom> {
     /// were such.
     pub relaxed: bool,
     unwalked: bool,
+    /// For `render probe`: the addresses whose entry calls `probe` (with the
+    /// machine, the address and the frame), which also runs at each frame's
+    /// end (address 0); and the functions made to return at once, with r0.
+    pub probe_pcs: Vec<u32>,
+    pub probe: Option<Box<dyn FnMut(&Gba<'rom>, u32, u32) + 'rom>>,
+    pub returns: Vec<(u32, u32)>,
+    /// Words written as the CPU reaches an address: (address, where, value).
+    pub pokes: Vec<(u32, u32, u32)>,
 }
 
 impl<'rom> Field<'rom> {
+    pub fn write32(&mut self, address: u32, value: u32) {
+        self.gba.write32(address, value);
+    }
+
+    /// Actor `id`'s object's address, 0 for none.
+    pub fn actor_address(&self, id: u16) -> u32 {
+        self.actor_object(id)
+    }
+
     /// Boots the ROM and runs until Scene_ApplyEntrance has placed the party.
     pub fn enter(rom: &'rom [u8], s: &'rom Symbols, setup: &Setup) -> Result<Field<'rom>, String> {
         let t = Track {
@@ -442,7 +470,7 @@ impl<'rom> Field<'rom> {
             party_calls: 0,
             party_saved: [0; 5],
         };
-        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false };
+        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new() };
         while !field.t.applied {
             field.tick()?;
         }
@@ -718,6 +746,35 @@ impl<'rom> Field<'rom> {
         }
         if pc == s.notice {
             self.gba.return_now(0);
+        }
+        if (frame_done || self.probe_pcs.contains(&pc)) && self.probe.is_some() {
+            let mut probe = self.probe.take().unwrap();
+            probe(&self.gba, if self.probe_pcs.contains(&pc) { pc } else { 0 }, self.t.frame);
+            if frame_done && self.probe_pcs.contains(&pc) {
+                probe(&self.gba, 0, self.t.frame);
+            }
+            self.probe = Some(probe);
+        }
+        for i in 0..self.pokes.len() {
+            let (at, address, value) = self.pokes[i];
+            if at == pc {
+                self.gba.write32(address, value);
+            }
+        }
+        let heap = HEAP_WORK.load(Relaxed);
+        if heap != 0 && (frame_done || HEAP_PCS.iter().any(|p| p.load(Relaxed) == pc)) {
+            let ew = self.gba.read32(heap);
+            let iw = self.gba.read32(heap + 4);
+            if (0x0300_0000..0x0300_8000).contains(&iw) && iw > HEAP_IWRAM_HIGH.load(Relaxed) {
+                HEAP_IWRAM_HIGH.store(iw, Relaxed);
+            }
+            if (0x0200_0000..0x0204_0000).contains(&ew) && ew > HEAP_EWRAM_HIGH.load(Relaxed) {
+                HEAP_EWRAM_HIGH.store(ew, Relaxed);
+            }
+        }
+        if let Some(&(_, r0)) = self.returns.iter().find(|(a, _)| *a == pc) {
+            self.gba.return_now(r0);
+            return Ok(frame_done);
         }
         if pc == s.step && self.t.calling {
             for (i, &v) in self.t.call_saved.iter().enumerate().take(4) {
@@ -1123,7 +1180,7 @@ impl<'rom> Field<'rom> {
     /// The sprites actor object `object` draws, as each animation layer's
     /// sprite id and colour mode: a villager turned into a tree keeps its
     /// place and changes these.
-    fn sprite_ids(&self, object: u32) -> Vec<i32> {
+    pub fn sprite_ids(&self, object: u32) -> Vec<i32> {
         let kind = self.gba.read8(object + OBJ_KIND) & 15;
         let first = self.gba.read32(object + OBJ_SPRITE);
         let sprites: Vec<u32> = match kind {

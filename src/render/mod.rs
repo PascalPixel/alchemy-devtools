@@ -24,6 +24,8 @@ mod mgba;
 mod party;
 #[cfg(feature = "render")]
 mod places;
+#[cfg(feature = "render")]
+mod probe;
 mod plan;
 // Read only by the feature's commands; without it they say how to build them.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
@@ -82,6 +84,7 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         Some(kind @ ("place" | "event")) => scenes(kind, &arguments[1..]),
         Some("story") => story_pictures(&arguments[1..]),
         Some("guide") => guide_pictures(&arguments[1..]),
+        Some("probe") => probe_command(&arguments[1..]),
         Some("-h" | "--help") => {
             println!("{COMMANDS}");
             Ok(())
@@ -929,6 +932,56 @@ fn story_pictures(arguments: &[String]) -> Result<(), String> {
     let root = crate::compile::root();
     let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("story"));
     play_story(root, &edition, &only, &flags, &out)
+}
+
+const PROBE_USAGE: &str = "usage: alchemy-devtools render probe --flags flags.tsv --only NAME... [--out DIR] [--edition tbs-en]
+Plays a built ☀️ edition and prints what it reads for open questions only the
+running game settles.";
+
+fn probe_command(arguments: &[String]) -> Result<(), String> {
+    let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
+    let mut arguments = arguments.iter();
+    while let Some(argument) = arguments.next() {
+        let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{PROBE_USAGE}"));
+        match argument.as_str() {
+            "--only" => only.push(value("--only")?),
+            "--out" => out = Some(PathBuf::from(value("--out")?)),
+            "--edition" => edition = value("--edition")?,
+            "--flags" => flags_tsv = Some(PathBuf::from(value("--flags")?)),
+            other => return Err(format!("unexpected argument {other:?}\n{PROBE_USAGE}")),
+        }
+    }
+    let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{PROBE_USAGE}"))?)?;
+    let root = crate::compile::root();
+    let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("probe"));
+    play_probe(root, &edition, &only, &flags, &out)
+}
+
+#[cfg(not(feature = "render"))]
+fn play_probe(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Result<(), String> {
+    Err("alchemy-devtools was built without the render feature".to_string())
+}
+
+#[cfg(feature = "render")]
+fn play_probe(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
+    let build = root.join("out").join(edition);
+    let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
+    let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+    let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
+    let symbols = field::Symbols::find(&map)?;
+    std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new() };
+    let mut failed = Vec::new();
+    for name in probe::PROBES.iter().filter(|p| only.is_empty() || only.iter().any(|o| o == *p)) {
+        if let Err(e) = guide.probe(name, &map) {
+            eprintln!("{name}: {e}");
+            failed.push(*name);
+        }
+    }
+    for (file, bytes, what) in &guide.written {
+        eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
+    }
+    if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
 }
 
 #[cfg(not(feature = "render"))]
