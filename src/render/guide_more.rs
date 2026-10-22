@@ -47,6 +47,8 @@ const SCENE_BATTLE: u16 = 0x1fe;
 /// Frames from a battle's start until its command menu is up and the
 /// battle is still.
 const BATTLE_SETTLE_FRAMES: u32 = 300;
+/// Frames walked south on the world map before its picture is taken.
+const WORLD_MAP_SETTLE_FRAMES: u32 = 50;
 
 /// Memory: video RAM (backgrounds, then sprites from OBJ_VRAM), palette RAM,
 /// OAM, the display registers, the overlay area and the map's cells and
@@ -653,6 +655,27 @@ impl<'a> Guide<'a> {
         // From two seconds of walking before the battle began.
         let start = at.saturating_sub(180);
         self.guide_gif("random-battle.gif", &frames[start..], "a random battle in Goma Cave")
+    }
+
+    /// The world map pulled apart like Vale's layers, as `world-map-layers-3d.gif`:
+    /// the tilted ground, which the HBlank DMA rescales line by line, apart
+    /// from the sprites and windows drawn flat over it.
+    pub fn world_map_exploded(&mut self) -> Result<(), String> {
+        let mut entered = self.enter_with(WORLD_MAP, &[])?;
+        let field = &mut entered.field;
+        // A short walk south first, as world-map-walk.gif does, so the view
+        // is the tilted one the player walks in.
+        field.hold(KEY_DOWN);
+        field.frames(WORLD_MAP_SETTLE_FRAMES)?;
+        field.hold(0);
+        field.frames(2)?;
+        let layers = super::guide::stacking(field);
+        let sheets = super::guide::layer_sheets(field, &layers)?;
+        let frames = super::guide::spread_frames(&sheets);
+        let written = animation::write(&self.out.join("world-map-layers-3d.gif"), &frames, super::guide::CANVAS.0)?;
+        let order: Vec<String> = layers.iter().map(|&n| if n == 4 { "sprites".to_string() } else { format!("BG{n}") }).collect();
+        self.written.push(("world-map-layers-3d.gif".to_string(), written.bytes, format!("the world map's layers pulled apart, back to front {}; {} frames", order.join(", "), written.frames)));
+        Ok(())
     }
 
     /// A random battle in Goma Cave pulled apart like Vale's layers, once the

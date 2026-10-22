@@ -485,7 +485,7 @@ pub fn field_cast_names() -> Vec<&'static str> {
 
 /// Every mode, in the order `render guide` plays them.
 pub const MODES: &[&str] = &[
-    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
+    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
     "inn", "menu-psynergy", "credits", "sleep", "oam", "vram", "cells", "grid", "random-battle", "world-map-picture", "overlay",
 ];
 
@@ -498,6 +498,7 @@ impl Guide<'_> {
             "layers" => self.layers(),
             "layers-3d" => self.exploded(),
             "battle-layers-3d" => self.battle_exploded(),
+            "world-map-layers-3d" => self.world_map_exploded(),
             "world-map" => self.world_map(),
             "menus" => self.menus(),
             "menu-start" => self.menu_start(),
@@ -527,12 +528,21 @@ impl Guide<'_> {
 /// a lower priority (BGxCNT bits 1..0, an OAM entry's attribute 2 bits
 /// 11..10) is nearer, sprites are nearer than a background of the same
 /// priority, and of two backgrounds the lower-numbered is nearer. The
-/// sprites take the priority most of the shown entries use. Layers are
+/// sprites take the priority most of the shown entries use, and only the
+/// backgrounds the display mode has count. Layers are
 /// numbered by their DISPCNT bit: 0 to 3 the backgrounds, 4 the sprites.
 pub(super) fn stacking(field: &Field) -> Vec<u32> {
     let shown = field.read16(DISPCNT);
     let mut layers: Vec<(u16, u8, u32)> = Vec::new();
-    for bg in 0..4u32 {
+    // Mode 0 has four text backgrounds, mode 1 BG0 to BG2, mode 2 only the
+    // affine BG2 and BG3.
+    let modes = match shown & 7 {
+        0 => 0..4u32,
+        1 => 0..3,
+        2 => 2..4,
+        _ => 2..3,
+    };
+    for bg in modes {
         if shown & (0x100 << bg) != 0 {
             layers.push((field.read16(BG0CNT + 2 * bg) & 3, 1, bg));
         }
