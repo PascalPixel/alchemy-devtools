@@ -1179,6 +1179,16 @@ impl<'rom> Field<'rom> {
         self.gba.read32(cells + ((cx + (cz << 7)) << 2) as u32) as i32
     }
 
+    /// The terrain kind of cell (cx, cz) of map layer `layer` (enum
+    /// TerrainKind, the low four bits of its shape's first byte) and its
+    /// first height sample in pixels, which is the height everywhere in a
+    /// TERRAIN_FLAT cell.
+    pub fn shape(&self, layer: u8, cx: i32, cz: i32) -> (u8, i32) {
+        let shape = (self.cell_word(layer, cx, cz) as u32) >> 24;
+        let at = self.s.map_collision + 4 * shape;
+        (self.gba.read8(at) & 15, i32::from(self.gba.read8(at + 1) as i8) * 8)
+    }
+
     /// The cells within the header's bounds, by layer and row, as (layer,
     /// cx, cz); the world map's ground cells, read whole first.
     fn all_cells(&mut self) -> Result<Vec<(u8, i32, i32)>, String> {

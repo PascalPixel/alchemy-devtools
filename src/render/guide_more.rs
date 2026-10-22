@@ -579,62 +579,93 @@ impl<'a> Guide<'a> {
         self.guide_png("vram.png", &out, "Vale's video memory as tiles, and its palettes")
     }
 
-    /// The map cells under one screen of Goma Cave: the screen, and the same
-    /// screen with each ground cell's collision drawn over it (walls red,
-    /// the scene's event cells yellow, the codes every map shares blue) and
-    /// a line wherever the ground's height changes between two cells, as
-    /// `cells.png`.
+    /// The ground under one screen of Goma Cave, as `cells.png`: the screen,
+    /// and the same screen with the ground of the layer the leader follows
+    /// drawn over it pixel by pixel at its place on the map. The leader's
+    /// layer shows on a background that scrolls with the view, and a layer's
+    /// cells pointer already starts at its window into the grid, so map and
+    /// screen pixels match. Ground more than a step above the leader's
+    /// (Map_CheckObjectStep's 8 pixels) is red and more than 12 below it
+    /// purple, a `MAP_CELL_WALL` cell magenta, the scene's event cells yellow
+    /// and the codes every map shares blue; a white line runs wherever the ground's height changes. Goma Cave
+    /// walls its floor with rims of ground 32 pixels high, often cut on a
+    /// cell's diagonal, rather than with wall codes, so heights are read for
+    /// every pixel (Map_GetTerrainHeight) where a cell isn't flat.
     pub fn cells(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(GOMA_CAVE, &[])?;
         let field = &mut entered.field;
         Self::press_path(field, &[(0, 10)])?;
         let plain = screen(&field.picture());
-        let mut drawn = Image { width: WIDTH, height: HEIGHT, pixels: plain.pixels.clone() };
-        let (vx, vy) = field.view();
-        let layer = field.leader().map_or(0, |l| l.layer.min(2));
-        // A cell's ground is drawn its height above its place on the map, as
-        // the actors standing on it are: rows below the screen can show.
-        let (cx0, cz0) = (vx.div_euclid(16), vy.div_euclid(16));
-        let rows = cz0..=cz0 + 16;
-        let mut heights = std::collections::HashMap::new();
-        for cz in rows.clone() {
-            for cx in cx0..=cx0 + 15 {
-                heights.insert((cx, cz), field.ground(layer, cx * 16 + 8, cz * 16 + 8)? >> 16);
-            }
-        }
-        for cz in rows.clone() {
-            for cx in cx0..=cx0 + 15 {
-                let h = heights[&(cx, cz)];
-                let tint = match field.cell(layer, cx, cz) {
-                    255 => Some(0xe0_20_20),
-                    1..=239 => Some(0xf0_d0_20),
-                    240..=254 => Some(0x30_80_f0),
-                    _ => None,
-                };
-                let (sx, sy) = (cx * 16 - vx, cz * 16 - vy - h);
-                for y in sy.max(0)..(sy + 16).min(HEIGHT as i32) {
-                    for x in sx.max(0)..(sx + 16).min(WIDTH as i32) {
-                        let at = &mut drawn.pixels[y as usize * WIDTH + x as usize];
-                        *at = match tint {
-                            Some(t) => mix(*at, t, 0.5),
-                            None => mix(*at, 0x30_30_30, 0.15),
-                        };
-                    }
-                }
-                outline(&mut drawn, sx, sy, 16, 16, 0x50_50_50);
-                // A white edge where the ground behind is at another height.
-                if heights.get(&(cx, cz - 1)).is_some_and(|&b| b != h) {
-                    outline(&mut drawn, sx, sy, 16, 2, 0xff_ff_ff);
-                }
-                if heights.get(&(cx - 1, cz)).is_some_and(|&l| l != h) {
-                    outline(&mut drawn, sx, sy, 2, 16, 0xff_ff_ff);
-                }
-            }
-        }
+        let drawn = Self::ground_overlay(field, &plain)?;
         let mut out = canvas(4 * WIDTH + 12, 2 * HEIGHT + 8, 0xffffff);
         paste(&mut out, &plain, 4, 4, 2);
         paste(&mut out, &drawn, 8 + 2 * WIDTH, 4, 2);
-        self.guide_png("cells.png", &out, "one screen of Goma Cave and its ground cells")
+        self.guide_png("cells.png", &out, "one screen of Goma Cave and its ground")
+    }
+
+    /// `plain`, the screen as it is now, with the ground of the leader's
+    /// layer drawn over it as `cells` describes.
+    fn ground_overlay(field: &mut Field, plain: &Image) -> Result<Image, String> {
+        let mut drawn = Image { width: WIDTH, height: HEIGHT, pixels: plain.pixels.clone() };
+        let (vx, vy) = field.view();
+        let leader = field.leader().ok_or("no leader")?;
+        let layer = leader.layer.min(2);
+        let floor = field.ground(layer, leader.x, leader.z)? >> 16;
+        let (w, h) = (WIDTH as i32, HEIGHT as i32);
+        // Each screen pixel's ground height and collision code.
+        let mut height = vec![0i32; WIDTH * HEIGHT];
+        let mut code = vec![0i32; WIDTH * HEIGHT];
+        for cz in vy.div_euclid(16)..=(vy + h - 1).div_euclid(16) {
+            for cx in vx.div_euclid(16)..=(vx + w - 1).div_euclid(16) {
+                let (kind, flat) = field.shape(layer, cx, cz);
+                let c = field.cell(layer, cx, cz);
+                for py in 0..16 {
+                    for px in 0..16 {
+                        let (sx, sy) = (cx * 16 + px - vx, cz * 16 + py - vy);
+                        if !(0..w).contains(&sx) || !(0..h).contains(&sy) {
+                            continue;
+                        }
+                        let ground = if kind == 0 { flat } else { field.ground(layer, cx * 16 + px, cz * 16 + py)? >> 16 };
+                        let at = (sy * w + sx) as usize;
+                        height[at] = ground;
+                        code[at] = c;
+                    }
+                }
+            }
+        }
+        for sy in 0..h {
+            for sx in 0..w {
+                let at = (sy * w + sx) as usize;
+                let tint = match code[at] {
+                    255 => Some(0xe0_30_e0),
+                    1..=239 => Some(0xf0_d0_20),
+                    240..=254 => Some(0x30_80_f0),
+                    _ if height[at] - floor > 8 => Some(0xf0_30_30),
+                    _ if height[at] - floor < -12 => Some(0x80_40_e0),
+                    _ => None,
+                };
+                let pixel = &mut drawn.pixels[at];
+                *pixel = match tint {
+                    Some(t) => mix(*pixel, t, 0.55),
+                    None => mix(*pixel, 0x30_30_30, 0.15),
+                };
+                // The cells' grid, faintly.
+                if (sx + vx) % 16 == 0 || (sy + vy) % 16 == 0 {
+                    *pixel = mix(*pixel, 0x50_50_50, 0.6);
+                }
+            }
+        }
+        for sy in 0..h {
+            for sx in 0..w {
+                let at = (sy * w + sx) as usize;
+                let right = sx + 1 < w && height[at + 1] != height[at];
+                let below = sy + 1 < h && height[at + WIDTH] != height[at];
+                if right || below {
+                    drawn.pixels[at] = 0xff_ff_ff;
+                }
+            }
+        }
+        Ok(drawn)
     }
 
     /// The whole cell grid of the map Goma Cave stands on, each cell drawn
