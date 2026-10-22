@@ -96,9 +96,10 @@ impl<'a> Guide<'a> {
     }
 
     /// Imil's snow, where the leader's footprints stay a moment, each a
-    /// field object of its own.
+    /// field object of its own: west across the open snow below the houses
+    /// and then south, clear of the trees, so the trail stays in view.
     pub fn snow(&mut self) -> Result<(), String> {
-        let path = [(KEY_DOWN, 40), (KEY_RIGHT, 50), (KEY_UP, 40), (0, 60)];
+        let path = [(KEY_LEFT, 45), (KEY_DOWN, 45), (0, 70)];
         self.walk_path(IMIL, &path, "snow.gif", "walking through Imil's snow")
     }
 
