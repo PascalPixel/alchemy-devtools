@@ -18,6 +18,8 @@ mod guide;
 #[cfg(feature = "render")]
 mod guide_apart;
 #[cfg(feature = "render")]
+mod guide_battle;
+#[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
 mod guide_places;
@@ -1114,6 +1116,23 @@ also reads out/tbs-ja, make tbs-ja):
   item-picker       item-picker.gif: a Nut given with every bag full
   menu-slot         menu-slot.png: the menu work slot as a counter and as the
                     Item screen read it
+Pictures for the battle guide's rules (guide_battle.rs):
+  enemy-actions     enemy-actions.png: a Gryphon's eight actions, the
+                    weights its strategy picks them by and the place each
+                    of the 256 rolls takes
+  first-strikes     first-strikes.png: a random encounter opened with a first
+                    strike and with a surprise, through the first round
+  element-multiplier
+                    element-multiplier.png: gElement_PowerResistCurve as its
+                    line, with Quake's and an attack's targets on it
+  plan-rolls        plan-rolls.png: a miss, a critical hit and a triple blow
+                    beside the plan's rolls
+  staging           staging.gif: Quake under each outcome, PLAN_SHOW_CAST to
+                    PLAN_SHOW_FULL_SCREEN
+  added-effects     added-effects.png: Impair, Delude and Guard's stages and
+                    counters over nine rounds
+  after-target      after-target.png: a sleeper woken by Quake, and a haunted
+                    caster's evil spirit taking its share
 Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
   vale-opening, vale-gate-display, vale-shops-sleep, vale-kraden-rockslide,

@@ -538,6 +538,13 @@ pub const MODES: &[&str] = &[
     "sanctum",
     "item-picker",
     "menu-slot",
+    "enemy-actions",
+    "first-strikes",
+    "element-multiplier",
+    "plan-rolls",
+    "staging",
+    "added-effects",
+    "after-target",
 ];
 
 impl Guide<'_> {
@@ -623,6 +630,13 @@ impl Guide<'_> {
             "sanctum" => self.sanctum_members(),
             "item-picker" => self.item_picker(),
             "menu-slot" => self.shop_menu_slot(),
+            "enemy-actions" => self.enemy_actions(),
+            "first-strikes" => self.first_strikes(),
+            "element-multiplier" => self.element_multiplier(),
+            "plan-rolls" => self.plan_rolls(),
+            "staging" => self.staging(),
+            "added-effects" => self.added_effects(),
+            "after-target" => self.after_target(),
             _ => Err(format!("no mode {name}")),
         }
     }
