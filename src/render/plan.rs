@@ -173,10 +173,16 @@ impl Cast {
         self.party[0]
     }
 
+    /// The aimed foe's index in `foes`: the middle one, so that a range
+    /// reaches the foes beside it.
+    pub fn target_foe(&self) -> usize {
+        self.foes.len() / 2
+    }
+
     pub fn target_name(&self) -> &'static str {
         match self.aim {
             Aim::Foe if self.foes.is_empty() => "the enemy",
-            Aim::Foe => character_name(self.foes[0]),
+            Aim::Foe => character_name(self.foes[self.target_foe()]),
             Aim::Ally => character_name(self.party[1]),
         }
     }
@@ -415,7 +421,7 @@ const DJINN_PER_ELEMENT: u16 = 20;
 /// The caster by element, and the opposed element's character as the
 /// target: Venus against Jupiter, Mars against Mercury. Jenna casts what her
 /// class teaches and Garet the rest of Mars. An offensive cast that reaches
-/// past its aim meets three foes, the target in the middle; healing and
+/// past its aim meets three foes, the target in the middle of the line; healing and
 /// support go to the target as the caster's ally, hurt for healing, downed
 /// for Revive, poisoned for Cure Poison and deluded for Restore. Foes facing
 /// instant death are made lucky, so they stand.
@@ -432,7 +438,10 @@ pub fn cast(ability: Ability, jenna_casts: bool) -> Option<Cast> {
     let (party, foes, aim) = if ability.target_mode == TARGET_FOES {
         let mut foes = vec![opposed];
         if ability.range != 1 {
-            foes.extend(FOUR.iter().copied().filter(|&o| o != caster && o != opposed).take(2));
+            // The target goes in the middle of the line, so a range reaches
+            // the foes on both sides of it.
+            let mut others = FOUR.iter().copied().filter(|&o| o != caster && o != opposed).take(2);
+            foes = [others.next(), Some(opposed), others.next()].into_iter().flatten().collect();
         }
         (vec![caster], foes, Aim::Foe)
     } else {
@@ -508,7 +517,7 @@ mod tests {
     fn casters_and_targets_follow_the_elements() {
         let rows = abilities(ACTIONS).unwrap();
         let quake = cast(rows[3].clone(), false).unwrap();
-        assert_eq!((quake.party.clone(), quake.foes.clone(), quake.aim), (vec![ISAAC], vec![IVAN, GARET, MIA], Aim::Foe));
+        assert_eq!((quake.party.clone(), quake.foes.clone(), quake.aim), (vec![ISAAC], vec![GARET, IVAN, MIA], Aim::Foe));
         let ply = cast(rows[4].clone(), false).unwrap();
         assert_eq!((ply.party.clone(), ply.foes.clone(), ply.aim), (vec![MIA, GARET], vec![], Aim::Ally));
         assert_eq!(ply.target_name(), "Garet");

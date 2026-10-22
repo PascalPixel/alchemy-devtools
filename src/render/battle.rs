@@ -463,7 +463,7 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             let record = gba.register(0);
             let work = gba.read32(s.battle_work);
             let place = match cast.aim {
-                Aim::Foe => PLACE_ENEMY + place_of(&gba, work + WORK_ENEMY_IDS, FIRST_ENEMY_UNIT as u16)?,
+                Aim::Foe => PLACE_ENEMY + place_of(&gba, work + WORK_ENEMY_IDS, FIRST_ENEMY_UNIT as u16 + cast.target_foe() as u16)?,
                 Aim::Ally => PLACE_PARTY + place_of(&gba, work + WORK_PARTY_UNITS, cast.party[1].into())?,
             };
             let agility = gba.read16(owner(caster) + UNIT_AGILITY);
