@@ -135,6 +135,9 @@ fn read_story_scenes(path: &Path, tsv: &Tsv) -> Result<Vec<Scene>, String> {
 
 /// Flag names to numbers: flags.tsv's names, global and by scene.
 pub struct Flags {
+    /// The directory flags.tsv was read from, where the story tools write
+    /// their other tables.
+    pub dir: std::path::PathBuf,
     global: HashMap<String, u16>,
     scoped: HashMap<(String, String), u16>,
 }
@@ -161,7 +164,7 @@ impl Flags {
                 }
             }
         }
-        Ok(Flags { global, scoped })
+        Ok(Flags { dir: path.parent().map(Path::to_path_buf).unwrap_or_default(), global, scoped })
     }
 
     /// A flag by name (as in scene `scene` when it names one there), or a

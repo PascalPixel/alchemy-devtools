@@ -515,6 +515,13 @@ pub const MODES: &[&str] = &[
     "tile-animation",
     "world-map-scanlines",
     "world-map-footprint",
+    "round-events",
+    "battle-places",
+    "effect-canvas",
+    "effect-transfer",
+    "effect-particles",
+    "sprite-layers",
+    "shop-counters",
 ];
 
 impl Guide<'_> {
@@ -577,6 +584,13 @@ impl Guide<'_> {
             "tile-animation" => self.tile_animation(),
             "world-map-scanlines" => self.world_map_scanlines(),
             "world-map-footprint" => self.world_map_footprint(),
+            "round-events" => self.round_events(),
+            "battle-places" => self.battle_places(),
+            "effect-canvas" => self.effect_canvas(),
+            "effect-transfer" => self.effect_transfer(),
+            "effect-particles" => self.effect_particles(),
+            "sprite-layers" => self.sprite_layers(),
+            "shop-counters" => self.shop_counters(),
             _ => Err(format!("no mode {name}")),
         }
     }

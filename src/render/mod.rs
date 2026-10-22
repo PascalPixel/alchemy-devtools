@@ -16,6 +16,8 @@ mod front;
 #[cfg(feature = "render")]
 mod guide;
 #[cfg(feature = "render")]
+mod guide_apart;
+#[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
 mod guide_take;
@@ -1081,6 +1083,20 @@ Take-apart pictures for places and guides, each as its mode's name with
   (and venus-lighthouse-aerie-layers-3d.gif), scene-event-cells,
   credits-tile-ring, title-intro-layers-3d, item-screen-windows, sound-players,
   field-requests, grid-planes, tile-animation, world-map-scanlines
+Take-apart pictures for the battle, effect, field and shop guides
+(guide_apart.rs):
+  round-events      round-events.gif: Quake's battle events one frame each,
+                    beside the event queue
+  battle-places     battle-places.gif: aiming Quake through the command menu,
+                    beside the battlefield's places seen from above
+  effect-canvas     effect-canvas.gif: Heat Wave beside its 128 by 128 canvas
+  effect-transfer   effect-transfer.gif: Heat Wave's canvas under each
+                    canvas transfer mode, forced
+  effect-particles  effect-particles.gif: Heat Wave beside its particle pools
+  sprite-layers     sprite-layers.gif: Isaac's battle sprite, each layer
+                    composed alone and together
+  shop-counters     shop-counters.png: Bilibin's weapon shop before and after
+                    Vault's, its Buy and Artifacts lists
 --only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
 modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),
