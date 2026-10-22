@@ -8,7 +8,7 @@
 //! here counts toward DONE (C2); the figures are for people.
 
 use super::clex::{self, Kind, Token};
-use super::provenance::{self, Analysis, GameText, Origin, Thing};
+use super::provenance::{self, Analysis, Definition, GameText, Origin, Thing};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::Write as _;
@@ -624,11 +624,12 @@ type Enumerated = (Option<String>, Option<i64>);
 impl<'r, 'a> Walk<'r, 'a> {
     /// Keep a definition whose name may name a game thing, once per file.
     fn thing(&mut self, name: &str, origin: Origin, line: usize, own: String, context: String, enumerated: Enumerated) {
-        let Some(kind) = provenance::kind(name, self.file, origin) else { return };
+        let (tag, value) = enumerated;
+        let definition = Definition { tag: tag.as_deref(), value, ..Definition::new(name, self.file, origin) };
+        let Some(kind) = provenance::kind(definition, &self.report.macro_values) else { return };
         if !self.defined.insert(name.to_string()) {
             return;
         }
-        let (tag, value) = enumerated;
         let file = self.file.to_string();
         self.report.things.push(Thing { name: name.to_string(), kind, file, line, own, context, tag, value, alone: false });
     }
@@ -798,14 +799,17 @@ impl<'r, 'a> Walk<'r, 'a> {
                     let documented = self.code.doc_before[start] || (start..=end).any(|at| self.code.doc_after[at]);
                     self.macros.entry(name.text.to_string()).or_insert((false, line)).0 |= documented;
                     let own = self.code.doc_text[start].clone() + &self.code.notes(start, end);
-                    self.thing(name.text, Origin::Macro, line, own, String::new(), (None, None));
+                    let mut value = None;
                     if !function_like {
                         let words: Vec<&str> = (start + 3..end).map(|t| self.code.text(t)).collect();
                         let macros = &self.report.macro_values;
-                        if let Some(value) = evaluate(&words, &|name| macros.get(name).copied()) {
+                        value = evaluate(&words, &|name| macros.get(name).copied());
+                        if let Some(value) = value {
                             self.report.macro_values.insert(name.text.to_string(), value);
                         }
                     }
+                    let origin = if function_like { Origin::FunctionMacro } else { Origin::Macro };
+                    self.thing(name.text, origin, line, own, String::new(), (None, value));
                 }
             }
             _ => {}
@@ -1073,7 +1077,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 self.report.declare(false, &name, file, line, documented, defined);
                 // A mechanism's table counts where it is defined; a game thing
                 // (`extern char SceneId_Vale;`) where it is declared.
-                if defined || provenance::kind(&name, file, Origin::Global) != Some("global") {
+                if defined || provenance::kind(Definition::new(&name, file, Origin::Global), &self.report.macro_values) != Some("global") {
                     let own = self.code.doc_text[first].clone() + &self.code.notes(last, last);
                     self.thing(&name, Origin::Global, line, own, String::new(), (None, None));
                 }
@@ -1685,14 +1689,14 @@ mod tests {
             "/// The inn worker has apologized.\n",
             "enum { FLAG_INN_WORKER_APOLOGIZED = 0x900 };\n",
             "/// Two flags.\n",
-            "enum {\n  FLAG_FIRST = 0x901,\n  FLAG_SECOND = 0x902\n};\n",
+            "enum {\n  FLAG_DOOR_OPEN = 0x901,\n  FLAG_GATE_OPEN = 0x902\n};\n",
             "/// One flag and a count that is not a game thing.\n",
             "enum { FLAG_THIRD = 0x903, THIRD_COUNT = 1 };\n",
         ));
         let alone: Vec<(&str, bool)> = report.things.iter().map(|thing| (thing.name.as_str(), thing.alone)).collect();
         assert_eq!(
             alone,
-            [("FLAG_INN_WORKER_APOLOGIZED", true), ("FLAG_FIRST", false), ("FLAG_SECOND", false), ("FLAG_THIRD", false)]
+            [("FLAG_INN_WORKER_APOLOGIZED", true), ("FLAG_DOOR_OPEN", false), ("FLAG_GATE_OPEN", false), ("FLAG_THIRD", false)]
         );
     }
 
@@ -1993,6 +1997,26 @@ mod provenance_tests {
     }
 
     #[test]
+    fn mechanisms_are_not_game_things() {
+        let flags = concat!(
+            "#define FLAG_IN_PARTY(character) (character)\n",
+            "#define FLAG_SYSTEM_FIRST 0x100\n#define FLAG_SYSTEM_LAST 0x1ff\n",
+            "#define FLAG_IN_BATTLE 0x103\n#define FLAG_LURE_CAP (FLAG_SYSTEM_FIRST + 0x67)\n",
+            "#define FLAG_KRADEN_SETS_OFF 0x801\n",
+        );
+        let actors = concat!(
+            "enum ActorCollisionFlag { ACTOR_SOLID = 1 };\n",
+            "enum BilibinActor { ACTOR_GUARD = 8, ACTOR_SHOP_END };\n",
+            "enum { ACTOR_MAYOR = 10, ACTOR_SLOT_COUNT = 66 };\n",
+            "#define ITEM_TYPE_WEAPON 1\n#define ITEM_LIST_NAME_X 12\n",
+        );
+        let files = [("games/tbs/include/flags.h", flags), ("games/tbs/include/field_obj.h", actors)];
+        let report = game(files);
+        let names: Vec<&str> = report.things.iter().map(|thing| thing.name.as_str()).collect();
+        assert_eq!(names, ["FLAG_KRADEN_SETS_OFF", "ACTOR_GUARD", "ACTOR_SHOP_END", "ACTOR_MAYOR"]);
+    }
+
+    #[test]
     fn enumerator_values_and_table_names() {
         let words = |text: &str| text.split(' ').map(str::to_string).collect::<Vec<_>>();
         let lookup = |name: &str| (name == "FIRST").then_some(8);
@@ -2019,7 +2043,7 @@ mod provenance_tests {
         let report = game_with_text([("games/tbs/include/enemy_ids.h", header)], Some(&text));
         let values: Vec<(Option<&str>, Option<i64>)> =
             report.things.iter().map(|thing| (thing.tag.as_deref(), thing.value)).collect();
-        assert_eq!(values, [(None, None), (Some("EnemyClassId"), Some(9)), (Some("EnemyClassId"), Some(10)), (Some("EnemyClassId"), Some(11)), (None, Some(9))]);
+        assert_eq!(values, [(Some("EnemyClassId"), Some(9)), (Some("EnemyClassId"), Some(10)), (Some("EnemyClassId"), Some(11)), (None, Some(9))]);
         assert_eq!(report.macro_values.get("ENEMY_CLASS_FIRST"), Some(&8));
         assert_eq!(report.value("provenance_table"), 2, "ENEMY_VERMIN and ENEMY_VERMIN_2");
         assert_eq!(report.value("provenance_table_mismatch"), 1);

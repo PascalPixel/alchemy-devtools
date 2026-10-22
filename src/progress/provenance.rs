@@ -41,9 +41,21 @@ pub const VOCABULARY: &[&str] = &[
     "attr", "byte", "clr", "ui", "setup", "cached", "engine", "scheduler", "dispatch", "op", "noop", "placement",
     // How the engine draws and moves things, not what the player sees.
     "particle", "transition", "animation", "animate", "blend", "fade", "overlay", "channel", "angle", "collision",
-    "trigger", "marker", "cycle", "blank", "hblank", "vblank", "alpha", "vector",
+    "trigger", "marker", "cycle", "blank", "hblank", "vblank", "alpha", "vector", "tint", "darken", "hue", "flicker",
+    "dither", "contrast", "zoom", "rotation", "backdrop", "foreground", "background", "visibility", "occluding",
+    "collidable", "pixel", "scanline", "hofs", "canvas", "glyph", "graphics", "rgb", "radial", "orbit", "pulse",
+    "squash", "jitter", "emitter", "emission", "spawner", "cue", "audio",
+    // What code does with its data.
+    "pointer", "sync", "synchronize", "toggle", "variant", "default", "definition", "install", "queued", "pending",
+    "remap", "suspend", "compute", "clamp", "allocate", "address", "header", "heap", "storage", "descriptor",
+    "packet", "query", "probe", "validate", "invalid", "unset", "insert", "cleanup", "runtime", "snapshot",
+    "fallback", "override", "refresh", "redraw", "repaint", "context", "configure", "enable", "activate",
+    "resource", "lz", "hex", "dpad", "interpolation", "linear", "inverse", "magnitude", "ratio", "remainder", "sine",
+    "negative", "positive", "relative", "length", "width", "grid", "node", "cursor", "selector", "periodic",
+    "frequency",
     // Positions.
-    "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth", "last", "north",
+    "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth", "eleventh",
+    "twelfth", "last", "north",
     "south", "east", "west", "northeast", "northwest", "southeast", "southwest", "upper", "lower", "left", "right",
 ];
 
@@ -528,32 +540,78 @@ impl Thing {
     }
 }
 
-/// What kind of game thing a definition names, if any: by prefix, or a scene
-/// link by its header, or a function or global of the scene and object folders.
-pub fn kind(name: &str, file: &str, origin: Origin) -> Option<&'static str> {
+/// The family prefixes: the kind of game thing each names, and the word the
+/// tags of its own enums end in (`enum XianActor` holds actors).
+pub const FAMILIES: &[(&str, &str, &str)] = &[
+    ("SceneId_", "scene", "Scene"),
+    ("ACTOR_", "actor", "Actor"),
+    ("FLAG_", "flag", "Flag"),
+    ("ITEM_", "item", "Item"),
+    ("ABILITY_", "ability", "Ability"),
+    ("PSYNERGY_", "psynergy", "Psynergy"),
+    ("DJINNI_", "djinni", "Djinni"),
+    ("ENEMY_", "enemy", "Enemy"),
+    ("MONSTER_", "enemy", "Monster"),
+    ("SUMMON_", "summon", "Summon"),
+    ("CHARACTER_", "character", "Character"),
+    ("CLASS_", "class", "Class"),
+    ("PERSON_", "person", "Person"),
+    ("AREA_", "place", "Area"),
+];
+
+/// Words that, right after a family prefix, name a part of the family's
+/// mechanism rather than one member of it, for the names no enum tag
+/// classifies: `ITEM_USE_CONSUMED` is what using an item does to it,
+/// `ACTOR_ACTION_IDLE` an action an actor runs, `FLAG_MENU_OPEN` a flag of
+/// the menus, `PSYNERGY_EV_ANY` a Psynergy event's control word. Like the
+/// vocabulary, it errs short.
+pub const ASPECTS: &[&str] = &[
+    "kind", "type", "effect", "mode", "step", "phase", "state", "action", "command", "use", "range", "index", "menu",
+    "debug", "event", "ev",
+];
+
+/// Words that, last in a name, make it a quantity, a bound, a bit field or a
+/// place on the screen: `ITEM_STACK_MAX`, `ENEMY_CLASS_FIRST`, `SUMMON_END`,
+/// `PSYNERGY_SHORTCUT_ID_MASK`, `ITEM_LIST_NAME_X`.
+pub const MEASURES: &[&str] = &[
+    "count", "num", "max", "min", "first", "last", "end", "mask", "shift", "x", "y", "width", "height", "size",
+    "tile", "tiles", "slots", "words",
+];
+
+/// A definition `kind` classifies.
+#[derive(Clone, Copy, Debug)]
+pub struct Definition<'a> {
+    pub name: &'a str,
+    pub file: &'a str,
+    pub origin: Origin,
+    /// For an enumerator, its enum's tag.
+    pub tag: Option<&'a str>,
+    /// Its value, when it is a number the walk could read.
+    pub value: Option<i64>,
+}
+
+impl<'a> Definition<'a> {
+    pub fn new(name: &'a str, file: &'a str, origin: Origin) -> Definition<'a> {
+        Definition { name, file, origin, tag: None, value: None }
+    }
+}
+
+/// What kind of game thing a definition names, if any: a scene link by its
+/// header, a function or global of the scene and object folders as a
+/// mechanism whose words are checked, and otherwise a definition whose
+/// family prefix (`FAMILIES`) says what it names, unless what it is shows
+/// it to be a part of the family's mechanism (`is_mechanism`). `macros` are
+/// the source's numeric macros read so far.
+pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'static str> {
     static TEMP: OnceLock<Regex> = OnceLock::new();
     let temp = TEMP.get_or_init(|| Regex::new(r"^FLAG_(?:SCENE|PLACE)_TEMP_[0-9A-Fa-f]+$").unwrap());
+    let Definition { name, file, origin, .. } = definition;
     if super::humanity::is_placeholder(name) || temp.is_match(name) {
         return None;
     }
-    const PREFIXES: &[(&str, &str)] = &[
-        ("SceneId_", "scene"),
-        ("ACTOR_", "actor"),
-        ("FLAG_", "flag"),
-        ("ITEM_", "item"),
-        ("ABILITY_", "ability"),
-        ("PSYNERGY_", "psynergy"),
-        ("DJINNI_", "djinni"),
-        ("ENEMY_", "enemy"),
-        ("MONSTER_", "enemy"),
-        ("SUMMON_", "summon"),
-        ("CHARACTER_", "character"),
-        ("CLASS_", "class"),
-        ("PERSON_", "person"),
-        ("AREA_", "place"),
-    ];
-    if let Some(&(_, kind)) = PREFIXES.iter().find(|(prefix, _)| name.starts_with(prefix) && name.len() > prefix.len()) {
-        return Some(kind);
+    let family = FAMILIES.iter().find(|(prefix, ..)| name.starts_with(prefix) && name.len() > prefix.len());
+    if let Some(&(prefix, kind, word)) = family {
+        return (!is_mechanism(&definition, prefix, word, macros)).then_some(kind);
     }
     if origin == Origin::Enumerator && file.ends_with("scene_links.h") {
         return Some("link");
@@ -566,10 +624,51 @@ pub fn kind(name: &str, file: &str, origin: Origin) -> Option<&'static str> {
     }
 }
 
+/// A family-prefixed definition that names a part of the family's
+/// mechanism (a kind, an effect, a mode, a step, a phase, a bit, a bound, a
+/// layout value) rather than one member of the family (an item, an actor, a
+/// flag the story sets), from what it is:
+///
+/// - a function-like macro computes a value (`FLAG_IN_PARTY(character)`,
+///   `PSYNERGY_EV(phase)`);
+/// - an enumerator of a tagged enum is what the tag's last word says: an id
+///   (`enum ItemId`) or the family's own word (`enum XianActor`) holds
+///   members, and any other word the values of a mechanism
+///   (`enum AbilityKind`, `enum ActorMotionFlag`, `enum PsynergyPhase`);
+/// - its first word after the prefix names an aspect of the family
+///   (`ASPECTS`), or its last word a measure (`MEASURES`);
+/// - a flag numbered in the range the source names as the engine's own,
+///   `FLAG_SYSTEM_FIRST` to `FLAG_SYSTEM_LAST`, is what the field, battles
+///   and menus keep about their own working, not a fact of the story.
+fn is_mechanism(definition: &Definition, prefix: &str, family: &str, macros: &HashMap<String, i64>) -> bool {
+    if definition.origin == Origin::FunctionMacro {
+        return true;
+    }
+    if let Some(last) = definition.tag.and_then(|tag| pieces(tag).last().copied()) {
+        return last != "Id" && last != family;
+    }
+    let rest = &definition.name[prefix.len()..];
+    let first = rest.split('_').next().unwrap_or("").to_ascii_lowercase();
+    let last = rest.rsplit('_').next().unwrap_or("").to_ascii_lowercase();
+    if ASPECTS.contains(&first.as_str()) || MEASURES.contains(&last.as_str()) {
+        return true;
+    }
+    if prefix == "FLAG_" {
+        let range = (macros.get("FLAG_SYSTEM_FIRST"), macros.get("FLAG_SYSTEM_LAST"));
+        if let (Some(value), (Some(&low), Some(&high))) = (definition.value, range) {
+            return (low..=high).contains(&value);
+        }
+    }
+    false
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Origin {
     Enumerator,
+    /// An object-like macro.
     Macro,
+    /// A function-like macro.
+    FunctionMacro,
     Global,
     Function,
 }
@@ -959,12 +1058,38 @@ mod tests {
         let analysis = analyze(&things, &[], &text, &HashMap::new());
         assert_eq!(analysis.words[0], ("warehouse".to_string(), vec![0, 1]));
         assert!(analysis.rows[1].evidence.is_none(), "a mechanism's name needs no evidence");
+        let kind = |name, file, origin| kind(Definition::new(name, file, origin), &HashMap::new());
         assert_eq!(kind("SceneId_Vale", "a.h", Origin::Global), Some("scene"));
         assert_eq!(kind("FLAG_SCENE_TEMP_01", "a.h", Origin::Macro), None);
         assert_eq!(kind("VALE_FROM_WORLD_MAP", "games/tbs/include/scene_links.h", Origin::Enumerator), Some("link"));
         assert_eq!(kind("Vale_Init", "games/tbs/src/scene/vale.c", Origin::Function), Some("function"));
         assert_eq!(kind("Battle_Init", "games/tbs/src/battle/x.c", Origin::Function), None);
         assert_eq!(kind("ACTOR_unk_14", "a.h", Origin::Enumerator), None);
+    }
+
+    #[test]
+    fn mechanisms_of_a_family() {
+        let macros = HashMap::from([("FLAG_SYSTEM_FIRST".to_string(), 0x100), ("FLAG_SYSTEM_LAST".to_string(), 0x1ff)]);
+        let of = |name, origin, tag, value| {
+            kind(Definition { tag, value, ..Definition::new(name, "games/tbs/include/a.h", origin) }, &macros)
+        };
+        let enumerator = |name, tag| of(name, Origin::Enumerator, tag, None);
+        assert_eq!(enumerator("ITEM_HERB", Some("ItemId")), Some("item"), "an id enum holds members");
+        assert_eq!(enumerator("ACTOR_GUARD", Some("BilibinActor")), Some("actor"), "so does one tagged by the family");
+        assert_eq!(enumerator("ACTOR_GUARD", None), Some("actor"), "an untagged enum, by its words");
+        assert_eq!(enumerator("ABILITY_KIND_SUMMON", Some("AbilityKind")), None);
+        assert_eq!(enumerator("ACTOR_SOLID", Some("ActorCollisionFlag")), None, "an actor's bits");
+        assert_eq!(enumerator("CHARACTER_POISON", Some("CharacterAilment")), None, "a state, not a person");
+        assert_eq!(of("FLAG_IN_PARTY", Origin::FunctionMacro, None, None), None, "a computed value");
+        assert_eq!(of("ITEM_TYPE_WEAPON", Origin::Macro, None, Some(1)), None, "an aspect");
+        assert_eq!(of("PSYNERGY_STEP_TARGET", Origin::Enumerator, None, Some(3)), None);
+        assert_eq!(of("ITEM_LIST_NAME_X", Origin::Macro, None, Some(9)), None, "a position on the screen");
+        assert_eq!(of("ENEMY_SPRITE_SLOTS", Origin::Macro, None, Some(9)), None, "a measure");
+        assert_eq!(of("FLAG_IN_BATTLE", Origin::Macro, None, Some(0x103)), None, "the engine's own flag");
+        assert_eq!(of("FLAG_KRADEN_SETS_OFF", Origin::Macro, None, Some(0x801)), Some("flag"), "a story flag");
+        assert_eq!(of("FLAG_CHILDHOOD", Origin::Macro, None, Some(0x20)), Some("flag"));
+        let unranged = kind(Definition { value: Some(0x103), ..Definition::new("FLAG_IN_BATTLE", "a.h", Origin::Macro) }, &HashMap::new());
+        assert_eq!(unranged, Some("flag"), "no range named, no range");
     }
 
     /// Item and enemy name tables, numbered as the real catalog numbers them.
