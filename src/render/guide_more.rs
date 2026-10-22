@@ -585,11 +585,12 @@ impl<'a> Guide<'a> {
     /// height of the leader's ground as his sprite is (0 here). The leader's
     /// layer shows on a background that scrolls with the view, and a layer's
     /// cells pointer already starts at its window into the grid, so map and
-    /// screen pixels match. Ground more than a step above the leader's
-    /// (Map_CheckObjectStep's 8 pixels) is red and more than 12 below it
-    /// purple, a `MAP_CELL_WALL` cell magenta, the scene's event cells yellow
-    /// and the codes every map shares blue; a white line runs wherever the ground's height changes. Goma Cave
-    /// walls its floor with rims of ground 32 pixels high, often cut on a
+    /// screen pixels match. Collision codes take guide_take::code_colour's
+    /// colours (a `MAP_CELL_WALL` cell red, the scene's event cells yellow,
+    /// the codes every map shares blue); open ground more than a step above
+    /// the leader's (Map_CheckObjectStep's 8 pixels) is orange, and more
+    /// than 12 below it purple; a white line runs wherever the ground's
+    /// height changes. Goma Cave walls its floor with rims of ground 32 pixels high, often cut on a
     /// cell's diagonal, rather than with wall codes, so heights are read for
     /// every pixel (Map_GetTerrainHeight) where a cell isn't flat.
     pub fn cells(&mut self) -> Result<(), String> {
@@ -641,12 +642,9 @@ impl<'a> Guide<'a> {
             for sx in 0..w {
                 let at = (sy * w + sx) as usize;
                 let tint = match code[at] {
-                    255 => Some(0xe0_30_e0),
-                    1..=239 => Some(0xf0_d0_20),
-                    240..=254 => Some(0x30_80_f0),
-                    _ if height[at] - floor > 8 => Some(0xf0_30_30),
-                    _ if height[at] - floor < -12 => Some(0x80_40_e0),
-                    _ => None,
+                    0 if height[at] - floor > 8 => Some(0xff_80_20),
+                    0 if height[at] - floor < -12 => Some(0x80_40_e0),
+                    c => super::guide_take::code_colour(c),
                 };
                 let pixel = &mut drawn.pixels[at];
                 *pixel = match tint {
@@ -656,6 +654,15 @@ impl<'a> Guide<'a> {
                 // The cells' grid, faintly.
                 if (sx + mx).rem_euclid(16) == 0 || (sy + mz).rem_euclid(16) == 0 {
                     *pixel = mix(*pixel, 0x50_50_50, 0.6);
+                }
+            }
+        }
+        // A cell with a collision code outlined in its colour, so it shows
+        // under a sprite too.
+        for cz in mz.div_euclid(16)..=(mz + h - 1).div_euclid(16) {
+            for cx in mx.div_euclid(16)..=(mx + w - 1).div_euclid(16) {
+                if let Some(colour) = super::guide_take::code_colour(field.cell(layer, cx, cz)) {
+                    outline(&mut drawn, cx * 16 - mx, cz * 16 - mz, 16, 16, colour);
                 }
             }
         }

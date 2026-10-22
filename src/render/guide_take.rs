@@ -1495,19 +1495,29 @@ impl<'a> Guide<'a> {
                 }
             }
             columns.push(column);
-            if f % 150 == 0 {
+            if f % 30 == 0 {
                 shots.push((f, screen(&field.picture())));
             }
         }
-        let cell = 4usize;
+        // Three frames to a pixel column, each row as bright as the
+        // brightest of the three, so the chart reads at a page's width.
+        let per_column = 3usize;
+        let brightness = |c: u32| (c >> 16) + ((c >> 8) & 0xff) + (c & 0xff);
+        let narrowed: Vec<Vec<u32>> = columns.chunks(per_column).map(|chunk| (0..rows as usize).map(|r| chunk.iter().map(|c| c[r]).max_by_key(|&c| brightness(c)).unwrap_or(0x18_18_20)).collect()).collect();
+        let cell = 6usize;
         let label_w = 100usize;
-        let gap = 3usize;
+        let gap = 4usize;
+        let chart_w = narrowed.len();
         let chart_h = rows as usize * cell + 8 * gap;
-        let w = label_w + total as usize + 8;
+        // The screen at a few moments: before talking, the innkeeper's
+        // lines, the night, the morning and after.
+        let moments = [0u32, 180, 450, 750, 1200];
         let shot_w = WIDTH / 2;
-        let h = chart_h + 8 + 14 + HEIGHT / 2 + 12;
-        let mut out = canvas(w.max(shots.len() * (shot_w + 4) + 8), h, WHITE);
-        let mut y = 4usize;
+        let shots_w = moments.len() * (shot_w + gap);
+        let w = (label_w + chart_w).max(shots_w) + 2 * gap;
+        let h = gap + chart_h + 20 + HEIGHT / 2 + 20;
+        let mut out = canvas(w, h, WHITE);
+        let mut y = gap;
         let mut row = 0usize;
         for (p, &(_, count)) in players.iter().enumerate() {
             let name = match p {
@@ -1515,9 +1525,9 @@ impl<'a> Guide<'a> {
                 1 => "1 MUSIC".to_string(),
                 _ => format!("{p}"),
             };
-            text(&mut out, 4, y as i32 - 1, &name, 0x20_20_20, None, 1);
+            text(&mut out, gap as i32, y as i32 - 1, &name, 0x20_20_20, None, 2);
             for t in 0..count as usize {
-                for (x, column) in columns.iter().enumerate() {
+                for (x, column) in narrowed.iter().enumerate() {
                     let c = column[row + t];
                     for dy in 0..cell - 1 {
                         out.pixels[(y + t * cell + dy) * out.width + label_w + x] = c;
@@ -1527,31 +1537,35 @@ impl<'a> Guide<'a> {
             row += count as usize;
             y += count as usize * cell + gap;
         }
-        // A tick every second along the bottom.
+        // A tick every second along the bottom, numbered every five.
         for x in (0..total as usize).step_by(60) {
-            outline(&mut out, (label_w + x) as i32, y as i32, 1, 4, 0x20_20_20);
-            text(&mut out, (label_w + x) as i32 + 2, y as i32 + 2, &format!("{}", x / 60), 0x20_20_20, None, 1);
+            let px = (label_w + x / per_column) as i32;
+            outline(&mut out, px, y as i32, 1, 5, 0x20_20_20);
+            if x % 300 == 0 {
+                text(&mut out, px + 2, y as i32 + 2, &format!("{} S", x / 60), 0x20_20_20, None, 2);
+            }
         }
-        for (i, (f, shot)) in shots.iter().enumerate() {
+        for (i, &at) in moments.iter().enumerate() {
+            let shot = &shots.iter().find(|(f, _)| *f == at).ok_or("a moment without its screen")?.1;
             let mut small = canvas(shot_w, HEIGHT / 2, 0);
             for sy in 0..HEIGHT / 2 {
                 for sx in 0..shot_w {
                     small.pixels[sy * shot_w + sx] = shot.pixels[2 * sy * WIDTH + 2 * sx];
                 }
             }
-            let (x, yy) = (4 + i * (shot_w + 4), chart_h + 22);
+            let (x, yy) = (gap + i * (shot_w + gap), gap + chart_h + 20);
             paste(&mut out, &small, x, yy, 1);
-            text(&mut out, x as i32, yy as i32 + (HEIGHT / 2) as i32 + 1, &format!("{} S", f / 60), 0x20_20_20, None, 1);
+            text(&mut out, x as i32, (yy + HEIGHT / 2 + 2) as i32, &format!("{} S", at / 60), 0x20_20_20, None, 2);
         }
         self.guide_png("sound-players.png", &out, "the eight sound players' tracks through a night at Bilibin's inn")
     }
 
-    /// Talking to the Lizard Man in Mercury Lighthouse
-    /// (MercuryLighthouseEntrance_FightLizardMan), A pressed through his
-    /// lines, until the battle he starts takes over: the twelve request
-    /// fields of struct FieldWork, in the order the scene loop tests them,
-    /// at each frame any of them changes, a column a frame with the frame
-    /// number above and the screen below, as `field-requests.png`.
+    /// The leader walking into a door in Vale until the scene ends: the
+    /// twelve request fields of struct FieldWork, in the order the scene
+    /// loop tests them, at each change of any of them (several can fall in
+    /// one frame), a column a change headed by its frame, nonzero values red;
+    /// under the table, the screen at each frame named, as
+    /// `field-requests.png`.
     pub fn field_requests(&mut self) -> Result<(), String> {
         let (mut entered, spot) = self.stand_for(VALE_SCENE, super::story::Trigger::Touch(VALE_DOOR), 0)?;
         let field = &mut entered.field;
@@ -1560,68 +1574,103 @@ impl<'a> Guide<'a> {
         field.hold(spot.walk);
         let changes = field.watch_halfwords(&addresses, 120)?;
         field.hold(0);
-        let mut columns: Vec<(u32, Vec<i16>, Image)> = Vec::new();
         // Every frame while the leader pushes against the door the loop
         // takes `action` and clears it again within the frame: the first
         // three changes show that once, and the last four the door's event,
         // its exit and the scene's end.
         let n = changes.len();
         let kept: Vec<_> = changes.into_iter().enumerate().filter(|&(i, _)| i < 3 || i + 4 >= n).map(|(_, c)| c).collect();
+        let mut shots: Vec<(u32, Image)> = Vec::new();
+        let mut columns: Vec<(u32, Vec<i16>)> = Vec::new();
         for (f, values, picture) in kept {
-            let shot = screen(&picture);
-            let mut small = canvas(WIDTH / 2, HEIGHT / 2, 0);
-            for y in 0..HEIGHT / 2 {
-                for x in 0..WIDTH / 2 {
-                    small.pixels[y * (WIDTH / 2) + x] = shot.pixels[2 * y * WIDTH + 2 * x];
-                }
-            }
-            columns.push((f, values.iter().map(|&v| v as i16).collect(), small));
+            columns.push((f, values.iter().map(|&v| v as i16).collect()));
+            // A frame's screen, once: the last picture of it.
+            shots.retain(|(g, _)| *g != f);
+            shots.push((f, screen(&picture)));
         }
-        let label_w = 90usize;
-        let col_w = WIDTH / 2 + 6;
+        let gap = 4usize;
+        let label_w = 110usize;
+        let col_w = 76usize;
         let row_h = 16usize;
-        let h = 20 + REQUESTS.len() * row_h + 6 + HEIGHT / 2 + 8;
-        let mut out = canvas(label_w + columns.len() * col_w + 4, h, WHITE);
+        let table_h = 20 + REQUESTS.len() * row_h;
+        let table_w = label_w + columns.len() * col_w;
+        let shots_w = shots.len() * (WIDTH + gap) - gap;
+        let w = table_w.max(shots_w) + 2 * gap;
+        let h = gap + table_h + gap + HEIGHT + 20;
+        let mut out = canvas(w, h, WHITE);
         for (r, &(_, name)) in REQUESTS.iter().enumerate() {
-            text(&mut out, 2, (20 + r * row_h) as i32, name, 0x20_20_20, None, 2);
+            text(&mut out, gap as i32, (gap + 20 + r * row_h) as i32, name, 0x20_20_20, None, 2);
         }
-        for (c, (f, values, small)) in columns.iter().enumerate() {
-            let x = label_w + c * col_w;
-            text(&mut out, x as i32, 2, &format!("FRAME {f}"), 0x20_20_20, None, 2);
+        for (c, (f, values)) in columns.iter().enumerate() {
+            let x = gap + label_w + c * col_w;
+            text(&mut out, x as i32, gap as i32, &format!("FRAME {f}"), 0x20_20_20, None, 2);
             for (r, &v) in values.iter().enumerate() {
-                let y = 20 + r * row_h;
+                let y = gap + 20 + r * row_h;
                 let colour = if v != 0 { RED } else { 0xc0_c0_c0 };
                 text(&mut out, x as i32, y as i32, &v.to_string(), colour, None, 2);
             }
-            paste(&mut out, small, x, 20 + REQUESTS.len() * row_h + 6, 1);
+        }
+        for (i, (f, shot)) in shots.iter().enumerate() {
+            let (x, y) = (gap + i * (WIDTH + gap), gap + table_h + gap);
+            paste(&mut out, shot, x, y, 1);
+            text(&mut out, x as i32, (y + HEIGHT + 2) as i32, &format!("FRAME {f}"), 0x20_20_20, None, 2);
         }
         self.guide_png("field-requests.png", &out, "the scene loop's request fields frame by frame as the leader walks through a door in Vale")
     }
 
     /// Goma Cave's grid as Tile_ConvertMap leaves it, 128 by 128 cell words
     /// at Ram_MapCellBuffer, taken apart into the three planes the words
-    /// weave together, each read back out of the words a cell to two pixels:
-    /// the collision codes (byte 2, coloured as `cells.png` colours them), the
-    /// shapes (byte 3, a colour a shape) and the blocks (bits 11..0, a colour
-    /// a block); beside them, a stretch of six cells by four with each word
-    /// written in hex over the picture, as `grid-planes.png`.
+    /// weave together, each read back out of the words a cell to three
+    /// pixels and cropped to the part the map's three layer windows use
+    /// (outlined: the ground layer white, the middle green, the overhead
+    /// orange, as `grid.png` draws them): the collision codes (byte 2,
+    /// coloured as `cells.png` colours them, open ground dark), the shapes
+    /// (byte 3, a colour a shape) and the blocks (bits 11..0, a colour a
+    /// block); and a stretch of four cells by three around the leader with
+    /// each word written in hex over the picture. Two panels a row, so the
+    /// picture reads at a page's width, as `grid-planes.png`.
     pub fn grid_planes(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(GOMA_CAVE_ROOM, &[])?;
         let field = &mut entered.field;
         let words: Vec<u32> = (0..128 * 128).map(|i| field.read32(MAP_CELL_WORDS + 4 * i)).collect();
+        // Each layer's window: its first cell in the grid, and the header's
+        // span in cells.
+        let header = field.header();
+        let (span_x, span_z) = ((header[2] - header[0]) >> 20, (header[3] - header[1]) >> 20);
+        let work = field.map_work();
+        let windows: Vec<(i32, i32)> = (0..3u32)
+            .filter_map(|layer| {
+                let cells = field.read32(work + 0x130 + 0x30 * layer);
+                let index = (cells.checked_sub(MAP_CELL_WORDS)? / 4) as i32;
+                Some((index % 128, index / 128))
+            })
+            .collect();
+        let (gx1, gz1) = windows.iter().fold((0, 0), |(x, z), w| (x.max(w.0 + span_x), z.max(w.1 + span_z)));
+        let (gx1, gz1) = (gx1.min(128), gz1.min(128));
+        let per = 3usize;
+        let (pw, ph) = (gx1 as usize * per, gz1 as usize * per);
+        let window_colours = [WHITE, 0x40_e0_60, 0xff_a0_30];
         let plane = |f: &dyn Fn(u32) -> Option<u32>| {
-            let mut image = canvas(256, 256, 0x10_10_14);
-            for (i, &w) in words.iter().enumerate() {
-                if let Some(c) = f(w) {
-                    let (x, y) = (2 * (i % 128), 2 * (i / 128));
-                    for d in [0, 1, 256, 257] {
-                        image.pixels[y * 256 + x + d] = c;
+            let mut image = canvas(pw, ph, 0x10_10_14);
+            for z in 0..gz1 as usize {
+                for x in 0..gx1 as usize {
+                    if let Some(c) = f(words[z * 128 + x]) {
+                        for dy in 0..per {
+                            for dx in 0..per {
+                                image.pixels[(z * per + dy) * pw + x * per + dx] = c;
+                            }
+                        }
                     }
+                }
+            }
+            for (i, &(wx, wz)) in windows.iter().enumerate() {
+                for d in 0..2 {
+                    outline(&mut image, wx * per as i32 + d, wz * per as i32 + d, span_x * per as i32 - 2 * d, span_z * per as i32 - 2 * d, window_colours[i]);
                 }
             }
             image
         };
-        let codes = plane(&|w| code_colour(((w >> 16) & 0xff) as i32).or(Some(0x40_40_48)));
+        let codes = plane(&|w| code_colour(((w >> 16) & 0xff) as i32).or(Some(0x30_30_38)));
         let shapes = plane(&|w| Some(super::guide_more::hue(((w >> 24) & 0xff) as usize)).filter(|_| w >> 24 != 0));
         let blocks = plane(&|w| Some(super::guide_more::hue((w & 0xfff) as usize)).filter(|_| w & 0xfff != 0));
         // The stretch: around the leader, from the map's picture.
@@ -1629,26 +1678,31 @@ impl<'a> Guide<'a> {
         let (map, origin) = room_map(field, &settled)?;
         field.load(&settled);
         let leader = field.leader().ok_or("no leader")?;
-        let (c0, z0) = ((leader.x >> 4) - 3, (leader.z >> 4) - 2);
-        let part = crop(&map, c0 * 16 - origin.0, z0 * 16 - origin.1, 96, 64);
-        let mut zoom = canvas(96 * 4, 64 * 4, 0);
-        paste(&mut zoom, &part, 0, 0, 4);
-        for dz in 0..4 {
-            for dx in 0..6 {
+        let (across, down, zoom_by) = (4, 3, 5);
+        let (c0, z0) = ((leader.x >> 4) - 2, (leader.z >> 4) - 1);
+        let part = crop(&map, c0 * 16 - origin.0, z0 * 16 - origin.1, 16 * across as usize, 16 * down as usize);
+        let side = 16 * zoom_by;
+        let mut zoom = canvas(side as usize * across as usize, side as usize * down as usize, 0);
+        paste(&mut zoom, &part, 0, 0, zoom_by as usize);
+        for dz in 0..down {
+            for dx in 0..across {
                 let w = words[((z0 + dz) * 128 + c0 + dx) as usize];
-                let (x, y) = (dx * 64, dz * 64);
-                outline(&mut zoom, x, y, 64, 64, WHITE);
-                text(&mut zoom, x + 2, y + 2, &format!("{:08X}", w), WHITE, Some(0x20_20_20), 1);
+                let (x, y) = (dx * side, dz * side);
+                outline(&mut zoom, x, y, side, side, WHITE);
+                text(&mut zoom, x + 3, y + 3, &format!("{:08X}", w), WHITE, Some(0x20_20_20), 2);
             }
         }
-        let mut out = canvas(3 * 260 + zoom.width + 16, 256 + 28, WHITE);
-        for (i, (name, image)) in [("CODES", &codes), ("SHAPES", &shapes), ("BLOCKS", &blocks)].iter().enumerate() {
-            let x = 4 + i * 260;
-            text(&mut out, x as i32, 4, name, 0x20_20_20, None, 2);
-            paste(&mut out, image, x, 24, 1);
+        let panels: [(&str, &Image); 4] = [("CODES - BYTE 2", &codes), ("SHAPES - BYTE 3", &shapes), ("BLOCKS - BITS 11 TO 0", &blocks), ("CELL WORDS", &zoom)];
+        let (gap, label) = (12usize, 22usize);
+        let col_w = [pw.max(zoom.width), pw.max(zoom.width)];
+        let row_h = [ph, ph.max(zoom.height)];
+        let mut out = canvas(gap + col_w[0] + gap + col_w[1] + gap, gap + label + row_h[0] + gap + label + row_h[1] + gap, WHITE);
+        for (i, (name, image)) in panels.iter().enumerate() {
+            let x = gap + (i % 2) * (col_w[0] + gap);
+            let y = gap + (i / 2) * (label + row_h[0] + gap);
+            text(&mut out, x as i32, y as i32, name, 0x20_20_20, None, 2);
+            paste(&mut out, image, x, y + label, 1);
         }
-        text(&mut out, (4 + 3 * 260) as i32, 4, "CELL WORDS", 0x20_20_20, None, 2);
-        paste(&mut out, &zoom, 4 + 3 * 260, 24, 1);
         self.guide_png("grid-planes.png", &out, "Goma Cave's grid taken apart into its three planes, and a stretch of its cell words")
     }
 
