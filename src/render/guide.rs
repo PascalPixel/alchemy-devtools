@@ -515,6 +515,15 @@ pub const MODES: &[&str] = &[
     "tile-animation",
     "world-map-scanlines",
     "world-map-footprint",
+    "sanctum-account",
+    "star-room-rising",
+    "eruption-departures",
+    "statue-sky-rows",
+    "vale-opening",
+    "vale-gate-display",
+    "vale-shops-sleep",
+    "vale-kraden-rockslide",
+    "vale-cave-kite",
 ];
 
 impl Guide<'_> {
@@ -577,6 +586,15 @@ impl Guide<'_> {
             "tile-animation" => self.tile_animation(),
             "world-map-scanlines" => self.world_map_scanlines(),
             "world-map-footprint" => self.world_map_footprint(),
+            "sanctum-account" => self.sanctum_account(),
+            "star-room-rising" => self.star_room_rising(),
+            "eruption-departures" => self.eruption_departures(),
+            "statue-sky-rows" => self.statue_sky_rows(),
+            "vale-opening" => self.vale_opening(),
+            "vale-gate-display" => self.vale_gate_display(),
+            "vale-shops-sleep" => self.vale_shops_sleep(),
+            "vale-kraden-rockslide" => self.vale_kraden_rockslide(),
+            "vale-cave-kite" => self.vale_cave_kite(),
             _ => Err(format!("no mode {name}")),
         }
     }

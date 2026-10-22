@@ -18,6 +18,8 @@ mod guide;
 #[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
+mod guide_places;
+#[cfg(feature = "render")]
 mod guide_take;
 #[cfg(feature = "render")]
 mod guide_world;
@@ -1083,6 +1085,10 @@ Take-apart pictures for places and guides, each as its mode's name with
   (and venus-lighthouse-aerie-layers-3d.gif), scene-event-cells,
   credits-tile-ring, title-intro-layers-3d, item-screen-windows, sound-players,
   field-requests, grid-planes, tile-animation, world-map-scanlines
+Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
+  sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
+  vale-opening, vale-gate-display, vale-shops-sleep, vale-kraden-rockslide,
+  vale-cave-kite
 --only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
 modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),
