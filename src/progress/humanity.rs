@@ -1323,6 +1323,12 @@ fn unit(report: &mut Report, path: &str, text: &str) {
                 (on, listed) = (true, true);
                 continue;
             }
+            // A place whose last question was answered keeps the line, so it
+            // counts as done rather than never started.
+            if line == "/// Open questions: none." {
+                (on, listed) = (false, true);
+                continue;
+            }
             if !line.starts_with("///") {
                 on = false;
             }
