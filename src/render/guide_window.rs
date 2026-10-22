@@ -293,8 +293,8 @@ impl<'a> Guide<'a> {
         let (entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
         let work = entered.field.read32(slot);
         drop(entered);
-        const PANEL: usize = 360;
-        let (w, h) = (2 * WIDTH + PANEL, 2 * HEIGHT);
+        const PANEL: usize = 400;
+        let (w, h) = (2 * WIDTH + PANEL, 2 * HEIGHT + 48);
         let mut out = Vec::new();
         let mut shown = 0;
         let mut unmatched = 0;
@@ -346,8 +346,9 @@ impl<'a> Guide<'a> {
             let mut y = 22;
             for (s, items) in &lists {
                 let width = half(b, WINDOWS + WINDOW_SIZE * s + WINDOW_WIDTH);
-                text(&mut image, x0, y, &format!("WINDOWS {s}, {width} TILES WIDE", ), TEXT, None, 2);
-                y += 15;
+                let role = if items.iter().any(|&o| b[(l.outputs + OUTPUT_SIZE * o + OUTPUT_KIND) as usize] == 2) { "PORTRAIT" } else { "MESSAGE" };
+                text(&mut image, x0, y, &format!("WINDOW SLOT {s}: {role}, {width} TILES WIDE"), TEXT, None, 2);
+                y += 18;
                 for &o in items {
                     let at = l.outputs + OUTPUT_SIZE * o;
                     let kind = b[(at + OUTPUT_KIND) as usize];
@@ -359,31 +360,31 @@ impl<'a> Guide<'a> {
                     let colour = KIND_COLOURS[usize::from(kind).min(2)];
                     outline(&mut image, 2 * sx, 2 * sy, 2 * sw, 2 * sh, colour);
                     outline(&mut image, 2 * sx + 1, 2 * sy + 1, 2 * sw - 2, 2 * sh - 2, colour);
-                    let kind_name = ["GLYPH", "SPRITE", "PORTRAIT"].get(usize::from(kind)).copied().unwrap_or("?");
-                    let motion_name = match motion {
-                        1 => "STILL",
-                        2 => "PAGE_ARROW",
-                        _ => "",
+                    let what = match (kind, motion) {
+                        (0, 2) => "PAGE ARROW",
+                        (0, _) => "TWO LETTERS",
+                        (2, _) => "PORTRAIT",
+                        _ => "SPRITE",
                     };
-                    text(&mut image, x0 + 8, y, &format!("{o:2} {kind_name} {motion_name} {sw}X{sh} AT {sx},{sy}"), colour, None, 1);
-                    y += 9;
+                    text(&mut image, x0 + 8, y, &format!("{what}, {sw}X{sh} PX AT {sx},{sy}"), colour, None, 2);
+                    y += 16;
                 }
                 y += 6;
             }
-            let mut y = (2 * HEIGHT - 58) as i32;
-            for (k, name) in ["GLYPH: TWO LETTERS, OR THE ARROW", "SPRITE: ITS OWN VRAM CACHE ENTRY", "PORTRAIT: VRAM AND A PALETTE SLOT"].iter().enumerate() {
+            let (mut lx, ly) = (8i32, (2 * HEIGHT + 14) as i32);
+            for (k, name) in ["GLYPH OUTPUT: TWO LETTERS OR THE ARROW", "SPRITE OUTPUT", "PORTRAIT OUTPUT"].iter().enumerate() {
                 if k == 1 {
                     // No sprite output in this message.
                     continue;
                 }
                 for dy in 0..10 {
                     for dx in 0..10 {
-                        image.pixels[(y as usize + dy + 2) * w + x0 as usize + 4 + dx] = KIND_COLOURS[k];
+                        image.pixels[(ly as usize + dy + 2) * w + lx as usize + dx] = KIND_COLOURS[k];
                     }
                 }
-                text(&mut image, x0 + 18, y, name, TEXT, None, 2);
-                y += 18;
+                lx += 14 + text(&mut image, lx + 14, ly, name, TEXT, None, 2) + 24;
             }
+            text(&mut image, 8, ly + 18, "EACH OUTLINE: WHERE THE OUTPUT'S OWN OAM ATTRIBUTES PUT IT", DIM, None, 2);
             out.push(image.pixels);
         }
         eprintln!("render-outputs: {unmatched} output-frames whose attributes are not in OAM");
@@ -474,7 +475,7 @@ impl<'a> Guide<'a> {
             path.extend([(KEY_A, 3), (0, 60)]);
         }
         path.extend([(0, 200), (KEY_A, 3), (0, 90), (KEY_B, 3), (0, 90)]);
-        const PANEL: usize = 330;
+        const PANEL: usize = 400;
         let (w, h) = (2 * WIDTH + PANEL, 2 * HEIGHT);
         let mut out = Vec::new();
         let mut n = 0usize;
@@ -503,12 +504,14 @@ impl<'a> Guide<'a> {
                     continue;
                 }
                 let action = field.read8(work + SHOP_ACTION) as i8;
-                let service = ["REVIVE: HP 0", "CURE POISON: POISONED", "EXORCISE: HAUNTED", "REMOVE CURSE: RESTRAINT"].get(action as usize).copied().unwrap_or("?");
-                text(&mut image, x0, 6, &format!("SHOP->PARTYACTION {action}"), HEAD, None, 2);
+                let service = ["SANCTUM_SERVICE_REVIVE", "SANCTUM_SERVICE_CURE_POISON", "SANCTUM_SERVICE_EXORCISE", "SANCTUM_SERVICE_REMOVE_CURSE"].get(action as usize).copied().unwrap_or("NO SERVICE");
+                let need = ["NEEDED BY A MEMBER WHO IS DOWN", "NEEDED BY A POISONED MEMBER", "NEEDED BY A HAUNTED MEMBER", "NEEDED BY A CURSED MEMBER"].get(action as usize).copied().unwrap_or("");
+                text(&mut image, x0, 6, "THE SERVICE CHOSEN:", HEAD, None, 2);
                 text(&mut image, x0, 22, service, TEXT, None, 2);
-                text(&mut image, x0, 46, "PARTYMEMBERIDS, SHOP_CANSERVE", HEAD, None, 2);
+                text(&mut image, x0, 38, need, DIM, None, 2);
+                text(&mut image, x0, 62, "EACH MEMBER: SHOP_CANSERVE", HEAD, None, 2);
                 let count = field.read8(work + SHOP_MEMBER_COUNT);
-                let mut y = 66;
+                let mut y = 82;
                 for m in 0..u32::from(count) {
                     let id = field.read16(work + SHOP_MEMBER_IDS + 2 * m) as u8;
                     let Some(&(_, unit)) = units.iter().find(|(o, _)| *o == id) else { continue };
@@ -525,15 +528,19 @@ impl<'a> Guide<'a> {
                         _ => false,
                     };
                     let colour = if yes { MARK } else { DIM };
-                    text(&mut image, x0, y, &format!("{} {}", super::plan::character_name(id).to_uppercase(), if yes { "YES" } else { "NO" }), colour, None, 2);
-                    text(&mut image, x0 + 8, y + 16, &format!("HP {hp}/{}  POISON {poison}", field.read16(unit + UNIT_MAX_HP)), TEXT, None, 1);
-                    text(&mut image, x0 + 8, y + 26, &format!("HAUNT {haunt}  RESTRAINT {restraint}"), TEXT, None, 1);
-                    y += 44;
-                }
-                let recent: Vec<String> = calls.borrow().iter().rev().take_while(|c| n as u32 >= 3 && c.0 + 3 >= calls.borrow().last().map_or(0, |l| l.0)).map(|&(_, u, s)| format!("{},{}", u, s)).collect();
-                if !recent.is_empty() {
-                    text(&mut image, x0, y + 4, "LAST CALLS (UNIT, SERVICE):", DIM, None, 1);
-                    text(&mut image, x0, y + 14, &recent.into_iter().rev().take(8).collect::<Vec<_>>().join(" "), DIM, None, 1);
+                    let mut state = vec![if hp <= 0 { "DOWN".to_string() } else { format!("HP {hp} OF {}", field.read16(unit + UNIT_MAX_HP)) }];
+                    if poison != 0 {
+                        state.push("POISONED".to_string());
+                    }
+                    if haunt != 0 {
+                        state.push("HAUNTED".to_string());
+                    }
+                    if restraint != 0 {
+                        state.push("CURSED".to_string());
+                    }
+                    text(&mut image, x0, y, &format!("{}: {}", super::plan::character_name(id).to_uppercase(), if yes { "CAN BE CHOSEN" } else { "NOT NEEDED" }), colour, None, 2);
+                    text(&mut image, x0 + 16, y + 16, &state.join(", "), TEXT, None, 2);
+                    y += 40;
                 }
                 out.push(image.pixels);
             }
@@ -593,12 +600,12 @@ impl<'a> Guide<'a> {
             }
             let name = names.get(usize::from(entry & 0x1ff)).cloned().unwrap_or_default().to_uppercase();
             let count = (entry >> 11) + 1;
-            let equipped = if entry & 0x200 != 0 { " E" } else { "" };
-            if count > 1 { format!("{name} X{count}{equipped}") } else { format!("{name}{equipped}") }
+            let equipped = if entry & 0x200 != 0 { ", EQUIPPED" } else { "" };
+            if count > 1 { format!("{count} {name}{equipped}") } else { format!("{name}{equipped}") }
         };
         let path = PICKER_PATH;
-        const PANEL: usize = 300;
-        let (w, h) = (2 * WIDTH + PANEL, 2 * HEIGHT);
+        const PANEL: usize = 500;
+        let (w, h) = (2 * WIDTH + PANEL, 2 * HEIGHT + 48);
         let mut out = Vec::new();
         let mut n = 0;
         let mut before: Option<Vec<Vec<u16>>> = None;
@@ -621,14 +628,15 @@ impl<'a> Guide<'a> {
                     None => format!("PARTYINVENTORY_GIVEITEM({})", item_name(given)),
                     Some(_) => "SHOP_PICKUNITITEM HAS RUN".to_string(),
                 };
-                text(&mut image, x0, 4, &state, HEAD, None, 2);
+                text(&mut image, 8, (2 * HEIGHT + 8) as i32, &state, HEAD, None, 2);
+                text(&mut image, 8, (2 * HEIGHT + 26) as i32, "YELLOW: A SLOT WHOSE ITEM HAS CHANGED", MARK, None, 2);
                 for (k, (owner, _)) in units.iter().enumerate() {
-                    let y0 = 26 + k as i32 * 146;
-                    text(&mut image, x0, y0, &format!("{}'S BAG, 15 SLOTS", super::plan::character_name(*owner).to_uppercase()), TEXT, None, 2);
+                    let (cx, y0) = (x0 + k as i32 * 244, 4);
+                    text(&mut image, cx, y0, &format!("{}'S BAG", super::plan::character_name(*owner).to_uppercase()), TEXT, None, 2);
                     for (s, &entry) in bags[k].iter().enumerate() {
                         let changed = before.as_ref().is_some_and(|b| b[k][s] != entry);
                         let colour = if changed { MARK } else { DIM };
-                        text(&mut image, x0 + 4 + (s as i32 % 2) * 144, y0 + 18 + (s as i32 / 2) * 15, &item_name(entry), colour, None, 1);
+                        text(&mut image, cx, y0 + 20 + s as i32 * 18, &item_name(entry), colour, None, 2);
                     }
                 }
                 out.push(image.pixels);
@@ -728,32 +736,37 @@ impl<'a> Guide<'a> {
         }
         const CELL: usize = 5;
         let map_w = 64 * CELL;
-        let (w, h) = (2 * WIDTH + map_w + 300, 2 * (2 * HEIGHT + 40) + 10);
+        if shop_at != menu_at {
+            return Err(format!("the counter's block at {shop_at:#x} and the Item screen's at {menu_at:#x} differ"));
+        }
+        const ROW_H: usize = 24 + 2 * HEIGHT + 12 + 4 * 20 + 24;
+        let (w, h) = (8 + 2 * WIDTH + 16 + map_w + 8, 30 + 2 * ROW_H);
         let mut image = canvas(w, h, BACK);
+        text(&mut image, 8, 6, "GMENUWORK HOLDS THE SAME BLOCK BOTH TIMES", HEAD, None, 2);
         let rows: [MenuSlotRow; 2] = [
-            ("AT THE COUNTER: STRUCT SHOPRUNTIME", shop_at, shop_frames.last().ok_or("no frames")?, &shop_block, &SHOP_FIELDS),
-            ("THE ITEM SCREEN: STRUCT INVENTORYMENUSTATE", menu_at, menu_frames.last().ok_or("no frames")?, &menu_block, &ITEM_SCREEN_FIELDS),
+            ("AT THE COUNTER, READ AS STRUCT SHOPRUNTIME", shop_at, shop_frames.last().ok_or("no frames")?, &shop_block, &SHOP_FIELDS),
+            ("THE ITEM SCREEN, READ AS STRUCT INVENTORYMENUSTATE", menu_at, menu_frames.last().ok_or("no frames")?, &menu_block, &ITEM_SCREEN_FIELDS),
         ];
-        for (r, (title, at, picture, block, fields)) in rows.iter().enumerate() {
-            let y0 = 8 + r * (2 * HEIGHT + 40);
-            text(&mut image, 8, y0 as i32, &format!("{title}, GMENUWORK = {at:#X}"), HEAD, None, 2);
-            paste(&mut image, &screen(picture), 8, y0 + 24, 2);
-            let mx = 2 * WIDTH + 20;
-            paste(&mut image, &menu_map(block, fields, CELL), mx, y0 + 24, 1);
-            let lx = (mx + map_w + 14) as i32;
-            let mut ly = y0 as i32 + 24;
-            for (name, from, to, colour) in fields.iter() {
+        for (r, (title, _, picture, block, fields)) in rows.iter().enumerate() {
+            let y0 = 30 + r * ROW_H;
+            text(&mut image, 8, y0 as i32, title, TEXT, None, 2);
+            paste(&mut image, &screen(picture), 8, y0 + 20, 2);
+            let mx = 8 + 2 * WIDTH + 16;
+            paste(&mut image, &menu_map(block, fields, CELL), mx, y0 + 20, 1);
+            text(&mut image, mx as i32, (y0 + 20 + 42 * CELL + 6) as i32, "2,672 BYTES, ONE A CELL,", DIM, None, 2);
+            text(&mut image, mx as i32, (y0 + 20 + 42 * CELL + 22) as i32, "64 A ROW; BRIGHT IF NOT 0", DIM, None, 2);
+            let top = (y0 + 20 + 2 * HEIGHT + 10) as i32;
+            let mut entries: Vec<(String, u32)> = fields.iter().map(|(name, from, to, colour)| (format!("{name}: BYTES {from} TO {}", to - 1), *colour)).collect();
+            entries.push(("NOT NAMED IN THE STRUCT".to_string(), 0x90_94_9c));
+            for (k, (label, colour)) in entries.iter().enumerate() {
+                let (lx, ly) = (8 + (k % 2) as i32 * 410, top + (k / 2) as i32 * 20);
                 for dy in 0..10 {
                     for dx in 0..10 {
                         image.pixels[(ly as usize + dy + 2) * w + lx as usize + dx] = *colour;
                     }
                 }
-                text(&mut image, lx + 14, ly, name, TEXT, None, 2);
-                text(&mut image, lx + 14, ly + 16, &format!("{from:#05X} TO {to:#05X}"), DIM, None, 1);
-                ly += 30;
+                text(&mut image, lx + 14, ly, label, TEXT, None, 2);
             }
-            text(&mut image, lx, ly, "GREY: NOT NAMED", DIM, None, 2);
-            text(&mut image, mx as i32, (y0 + 24 + 42 * CELL + 4) as i32, "0XA70 BYTES, 64 A ROW", DIM, None, 2);
         }
         self.guide_png("menu-slot.png", &image, "the menu work slot as a counter and as the Item screen use it")
     }
@@ -822,12 +835,12 @@ impl<'a> Guide<'a> {
                 let (ww, wh) = (i32::from(field.read16(window + WINDOW_WIDTH)), i32::from(field.read16(window + WINDOW_HEIGHT)));
                 outline(&mut image, 16 * wx, 16 * wy, 16 * ww, 16 * wh, MARK);
                 outline(&mut image, 16 * wx + 1, 16 * wy + 1, 16 * ww - 2, 16 * wh - 2, MARK);
-                text(&mut image, x0, 30, &format!("WINDOW AT {wx},{wy}, {ww} X {wh} TILES"), MARK, None, 2);
+                text(&mut image, x0, 30, &format!("WINDOW: {ww} X {wh} TILES AT {wx},{wy}"), MARK, None, 2);
             } else {
                 text(&mut image, x0, 30, "WINDOW CLOSED", DIM, None, 2);
             }
-            text(&mut image, x0, 56, "EVENT WORK COUNTDOWN", TEXT, None, 2);
-            text(&mut image, x0, 74, &format!("{count} OF {NOTICE_FRAMES}"), TEXT, None, 3);
+            text(&mut image, x0, 56, "THE EVENT WORK'S COUNTDOWN, FROM 90", TEXT, None, 2);
+            text(&mut image, x0, 74, &format!("{count} FRAMES LEFT"), TEXT, None, 3);
             let bar = (count.min(NOTICE_FRAMES) as usize * (PANEL - 30)) / NOTICE_FRAMES as usize;
             for dy in 0..12 {
                 for dx in 0..PANEL - 30 {
