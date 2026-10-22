@@ -18,6 +18,8 @@ mod guide;
 #[cfg(feature = "render")]
 mod guide_apart;
 #[cfg(feature = "render")]
+mod guide_battle;
+#[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
 mod guide_places;
@@ -1101,6 +1103,10 @@ Take-apart pictures for the battle, effect, field and shop guides
                     composed alone and together
   shop-counters     shop-counters.png: Bilibin's weapon shop before and after
                     Vault's, its Buy and Artifacts lists
+Pictures for the battle guide's rules (guide_battle.rs):
+  enemy-actions     enemy-actions.png: a Gryphon's eight actions, the
+                    weights its strategy picks them by and the place each
+                    of the 256 rolls takes
 Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
   vale-opening, vale-gate-display, vale-shops-sleep, vale-kraden-rockslide,

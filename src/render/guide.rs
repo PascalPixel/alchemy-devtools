@@ -531,6 +531,9 @@ pub const MODES: &[&str] = &[
     "vale-shops-sleep",
     "vale-kraden-rockslide",
     "vale-cave-kite",
+    "enemy-actions",
+    "first-strikes",
+    "element-multiplier",
 ];
 
 impl Guide<'_> {
@@ -609,6 +612,9 @@ impl Guide<'_> {
             "vale-shops-sleep" => self.vale_shops_sleep(),
             "vale-kraden-rockslide" => self.vale_kraden_rockslide(),
             "vale-cave-kite" => self.vale_cave_kite(),
+            "enemy-actions" => self.enemy_actions(),
+            "first-strikes" => self.first_strikes(),
+            "element-multiplier" => self.element_multiplier(),
             _ => Err(format!("no mode {name}")),
         }
     }
