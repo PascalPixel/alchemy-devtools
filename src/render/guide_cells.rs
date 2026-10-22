@@ -550,8 +550,8 @@ const VALE_WORDS: Words = &[
     ("Event_ClearPathCellOverride", "Off the upper path: its cells change back", None),
     ("Event_WatchThePuppies", "The puppies bark", None),
     ("Event_TurnBackFromThePuppies", "The puppies bark", None),
-    ("Event_EnterNorthernPassage", "Ladder up onto the roof of Isaac's house (walk north into it)", None),
-    ("Event_ReturnThroughSouthernPassage", "Ladder down from the roof (walk south into it)", None),
+    ("Event_ClimbLadderOntoRoof", "Ladder up onto the roof of Isaac's house (walk north into it)", None),
+    ("Event_ClimbDownFromRoof", "Ladder down from the roof (walk south into it)", None),
     ("Event_PushPillar", "Push the stone pillar", None),
     ("Event_SearchTheLockedDoor", "Search the locked door", None),
 ];
