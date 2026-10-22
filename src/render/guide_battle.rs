@@ -19,6 +19,7 @@ const KEY_DOWN: u32 = 0x80;
 /// struct GameState offsets (game_state.h), as `battle.rs` uses them.
 const STATE_ACTIVE_OWNERS: u32 = 0x1f8;
 const STATE_BATTLE_START: u32 = 0x22b;
+const STATE_OWNERS: u32 = 0x2c0;
 /// gGameState.battleStart: BATTLE_START_NORMAL rolls a first strike; 1, which
 /// no battle start names, leaves the battle to open normally, as `render
 /// psynergy` sets it.
@@ -516,7 +517,7 @@ struct Multiplied {
 
 /// The keys that make Isaac attack from the battle's first menu: Fight,
 /// Attack, the aimed enemy.
-const ATTACK_MENU: [(u32, u32); 7] = [(0, 20), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 200)];
+const ATTACK_MENU: [(u32, u32); 7] = [(0, 20), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 320)];
 
 impl<'a> Guide<'a> {
     /// Isaac's Quake (or, with `menu`, the action those keys choose) at
@@ -637,5 +638,189 @@ impl<'a> Guide<'a> {
         dot(&mut image, px(a.input), py(a.result), 6, 0xff_90_30);
         text(&mut image, px(a.input) - 250, py(a.result) + 44, &format!("ATTACK UNLEASHING BLIZZARD, IVAN {:+} = {}/256", a.input, a.result), 0xff_90_30, Some(PANEL_BACK), 2);
         self.guide_png("element-multiplier.png", &image, "the element multiplier's line with Quake's and an attack's targets on it")
+    }
+}
+
+/// struct BattlePlan's per-target fields, the first target's.
+const PLAN_MULTIPLIER: u32 = 0x1e;
+const PLAN_CRITICAL: u32 = 0x2c;
+const PLAN_ABILITY: u32 = 0x4c;
+const PLAN_FLAGS: u32 = 0x58;
+/// struct BattleUnit's inventory (battle_unit.h) and an entry's parts
+/// (enum InventoryEncoding).
+const UNIT_INVENTORY: u32 = 0xd8;
+const INVENTORY_SLOTS: u32 = 15;
+const ITEM_ID_MASK: u16 = 0x1ff;
+const INVENTORY_EQUIPPED: u16 = 0x200;
+/// items.tsv: the Swift Sword, whose unleash is Sonic Smash, a triple
+/// blow; ITEM_TYPE_WEAPON.
+const SWIFT_SWORD: u16 = 21;
+const ITEM_TYPE_WEAPON: &str = "1";
+/// enum BattleCritical.
+fn critical_name(c: i8) -> &'static str {
+    match c {
+        0 => "NONE",
+        1 => "CRITICAL_HIT",
+        2 => "CRITICAL_STRONG",
+        _ => "?",
+    }
+}
+
+/// One roll answered, or let be, during a plan: the function that asked,
+/// the answer and what it was compared with.
+struct Roll {
+    by: String,
+    answer: u32,
+    forced: bool,
+}
+
+/// What `rolls` read from one attack.
+struct Rolled {
+    frames: Vec<Vec<u16>>,
+    rolls: Vec<Roll>,
+    /// The plan as BattleTargetExec first reads it: ability, multiplier,
+    /// critical, presentation flags.
+    plan: (u32, i8, i8, u32),
+    /// Frames each message started.
+    messages: Vec<usize>,
+}
+
+impl<'a> Guide<'a> {
+    /// Isaac attacks a copy of Ivan through the command menu, the rolls
+    /// BattleCommand_BuildPlan and RollWeaponUnleash ask BattleRandom for
+    /// answered in turn from `plan_answers` and `unleash`, and, with
+    /// `weapon`, that item in place of his equipped weapon as the battle
+    /// opens.
+    fn rolled_attack(&self, plan_answers: &[u32], unleash: u32, weapon: Option<u16>) -> Result<Rolled, String> {
+        let root = crate::compile::root();
+        let plan = Tables::read(root)?.plan()?;
+        let mut cast = plan.casts.into_iter().find(|c| c.ability.name == "Quake").ok_or("no Quake cast")?;
+        cast.foes = vec![plan::IVAN];
+        let symbols = super::battle::Symbols::find(self.map)?;
+        let random = self.sym("BattleRandom")?;
+        let work_slot = self.sym("gBattleWork")?;
+        let exec = self.sym("BattleTargetExec")?;
+        let encounter = self.sym("Battle_RunEncounter")?;
+        let message = self.sym("UiText_ShowMessageAndWaitCore")?;
+        let owner = self.sym("gGameState")? + STATE_OWNERS;
+        let types: Vec<String> = {
+            let path = root.join("games/tbs/src/game/items.tsv");
+            let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+            let mut lines = text.lines();
+            let column = lines.next().unwrap_or("").split('\t').position(|c| c.starts_with("type:")).ok_or("items.tsv has no type")?;
+            lines.map(|l| l.split('\t').nth(column).unwrap_or("").to_string()).collect()
+        };
+        let mut out = Rolled { frames: Vec::new(), rolls: Vec::new(), plan: (0, 0, 0, 0), messages: Vec::new() };
+        let mut planned = false;
+        let mut frame = 0usize;
+        let mut asked = 0;
+        let mut swapped = weapon.is_none();
+        let recording = super::battle::record_watching(self.rom, &symbols, &cast, &super::battle::Scene::Game, false, Some(&ATTACK_MENU), &[random, exec, encounter, message], &mut |gba, hook| match hook {
+            Some(h) if h == encounter && !swapped => {
+                // Isaac's equipped weapon becomes `weapon`, as if he wore it.
+                for slot in 0..INVENTORY_SLOTS {
+                    let at = owner + UNIT_INVENTORY + 2 * slot;
+                    let entry = gba.read16(at);
+                    if entry & INVENTORY_EQUIPPED != 0 && types.get(usize::from(entry & ITEM_ID_MASK)).map(String::as_str) == Some(ITEM_TYPE_WEAPON) {
+                        gba.write16(at, (entry & !ITEM_ID_MASK) | weapon.unwrap_or(0));
+                        swapped = true;
+                    }
+                }
+            }
+            Some(h) if h == random && !planned => {
+                let by = self.function_at(gba.register(LR) & !1);
+                let answer = match by.as_str() {
+                    "BattleCommand_BuildPlan" => {
+                        asked += 1;
+                        plan_answers.get(asked - 1).copied()
+                    }
+                    "RollWeaponUnleash" => Some(unleash),
+                    _ => None,
+                };
+                if let Some(a) = answer {
+                    gba.return_now(a);
+                    out.rolls.push(Roll { by, answer: a, forced: true });
+                } else if by == "BattleCommand_BuildPlan" || by == "RollWeaponUnleash" {
+                    out.rolls.push(Roll { by, answer: 0, forced: false });
+                }
+            }
+            Some(h) if h == exec => planned = true,
+            Some(h) if h == message => out.messages.push(frame),
+            Some(_) => {}
+            None => {
+                // The plan stays in BattleWork until the next action.
+                let work = gba.read32(work_slot);
+                if work != 0 {
+                    let p = work + WORK_PLAN;
+                    out.plan = (gba.read32(p + PLAN_ABILITY), gba.read8(p + PLAN_MULTIPLIER) as i8, gba.read8(p + PLAN_CRITICAL) as i8, gba.read32(p + PLAN_FLAGS));
+                }
+                frame += 1;
+            }
+        })?;
+        if !swapped {
+            return Err("Isaac wears no weapon".into());
+        }
+        out.frames = recording.frames;
+        Ok(out)
+    }
+
+    /// Isaac attacks a copy of Ivan three times, the plan's rolls answered
+    /// at BattleRandom: a miss (the miss roll answered 0, so `& 31` is 0), a
+    /// critical hit (the miss roll 1, the critical roll 0), and, wearing the
+    /// Swift Sword, its unleash Sonic Smash (the unleash roll 0) struck
+    /// three times (the blow roll 0, under 153); each beside the plan's
+    /// rolls and the fields BattleTargetExec then reads, as
+    /// `plan-rolls.png`.
+    pub fn plan_rolls(&mut self) -> Result<(), String> {
+        let names = ability_names()?;
+        let runs = [
+            ("A MISS", self.rolled_attack(&[0, 1, 0xffff], 0xffff, None)?),
+            ("A CRITICAL HIT", self.rolled_attack(&[1, 0], 0xffff, None)?),
+            ("A TRIPLE BLOW", self.rolled_attack(&[0], 0, Some(SWIFT_SWORD))?),
+        ];
+        for (label, r) in &runs {
+            eprintln!("plan-rolls {label}: {} frames, messages at {:?}", r.frames.len(), r.messages);
+            for roll in &r.rolls {
+                eprintln!("  {} {} {}", roll.by, if roll.forced { "answered" } else { "rolled" }, roll.answer);
+            }
+            eprintln!("  plan: ability {} multiplier {} critical {} flags {:#x}", names.get(r.plan.0 as usize).map_or("?", String::as_str), r.plan.1, critical_name(r.plan.2), r.plan.3);
+        }
+        // Each run a row: three moments of the attack beside its rolls.
+        // The frames each row shows, from the battle's start: the swing and
+        // its result, chosen by looking at the runs.
+        const SHOTS: [[usize; 4]; 3] = [[115, 130, 145, 160], [130, 160, 205, 250], [145, 205, 235, 265]];
+        const PANEL: usize = 430;
+        const ROW: usize = HEIGHT + 34;
+        let (w, h) = (4 * (WIDTH + 8) + PANEL + 16, runs.len() * ROW + 8);
+        let mut image = canvas(w, h, PANEL_BACK);
+        for (r, (label, run)) in runs.iter().enumerate() {
+            let y = 8 + r * ROW;
+            text(&mut image, 8, y as i32, label, PANEL_MARK, None, 2);
+            for (k, &f) in SHOTS[r].iter().enumerate() {
+                let at = f.min(run.frames.len() - 1);
+                paste(&mut image, &screen(&run.frames[at]), 8 + k * (WIDTH + 8), y + 22, 1);
+            }
+            let x = (8 + 4 * (WIDTH + 8) + 8) as i32;
+            let mut ty = y as i32 + 22;
+            text(&mut image, x, ty, "BATTLERANDOM ASKED BY:", PANEL_HEAD, None, 2);
+            for roll in &run.rolls {
+                ty += 18;
+                let by = if roll.by == "RollWeaponUnleash" { "ROLLWEAPONUNLEASH" } else { "BATTLECOMMAND_BUILDPLAN" };
+                text(&mut image, x + 8, ty, &format!("{by} {}", roll.answer), PANEL_TEXT, None, 2);
+            }
+            ty += 26;
+            text(&mut image, x, ty, "THE PLAN, FIRST TARGET:", PANEL_HEAD, None, 2);
+            let (ability, multiplier, critical, flags) = run.plan;
+            for line in [
+                format!("ABILITYID {}", names.get(ability as usize).map_or("?", String::as_str).to_uppercase()),
+                format!("TARGETMULTIPLIER {multiplier}"),
+                format!("TARGETCRITICAL {}", critical_name(critical)),
+                format!("VARIANT {}", (flags >> 12) & 3),
+            ] {
+                ty += 18;
+                text(&mut image, x + 8, ty, &line, PANEL_TEXT, None, 2);
+            }
+        }
+        self.guide_png("plan-rolls.png", &image, "a miss, a critical hit and a triple blow beside the plan's rolls")
     }
 }
