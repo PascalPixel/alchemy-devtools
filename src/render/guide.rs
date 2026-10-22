@@ -545,6 +545,11 @@ pub const MODES: &[&str] = &[
     "staging",
     "added-effects",
     "after-target",
+    "effect-variants",
+    "djinn-attacks",
+    "spark-groups",
+    "stat-reductions",
+    "target-strikes",
 ];
 
 impl Guide<'_> {
@@ -637,6 +642,11 @@ impl Guide<'_> {
             "staging" => self.staging(),
             "added-effects" => self.added_effects(),
             "after-target" => self.after_target(),
+            "effect-variants" => self.effect_variants(),
+            "djinn-attacks" => self.djinn_attacks(),
+            "spark-groups" => self.spark_groups(),
+            "stat-reductions" => self.stat_reductions(),
+            "target-strikes" => self.target_strikes(),
             _ => Err(format!("no mode {name}")),
         }
     }
