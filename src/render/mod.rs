@@ -972,7 +972,7 @@ fn play_probe(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
     let symbols = field::Symbols::find(&map)?;
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new() };
+    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
     let mut failed = Vec::new();
     for name in probe::PROBES.iter().filter(|p| only.is_empty() || only.iter().any(|o| o == *p)) {
         if let Err(e) = guide.probe(name, &map) {

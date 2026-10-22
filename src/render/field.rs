@@ -1082,11 +1082,6 @@ impl<'rom> Field<'rom> {
         self.gba.read32(work + FIELD_ACTORS + 4 * u32::from(id))
     }
 
-    /// The address of actor `id`'s object, or 0 when there is none.
-    pub fn actor_address(&self, id: u16) -> u32 {
-        self.actor_object(id)
-    }
-
     /// Stops drawing actor `id` (its object kind 0, which the camera still
     /// follows when it is the leader).
     pub fn hide_actor(&mut self, id: u16) {
