@@ -292,38 +292,40 @@ impl<'a> Guide<'a> {
         if picks.iter().any(|p| p.2 != 1) {
             return Err("a roll was refused and drawn again".into());
         }
-        // The frame the Gryphon's announcement is written out.
+        // The screen as the Gryphon's announcement is written out, beside its
+        // eight places, each a colour, its chance and the rolls it took;
+        // below, every roll in the place's colour.
         let shot = &frames[(turn + 60).min(frames.len() - 1)];
-        const SIDE: usize = 620;
-        let (w, h) = (2 * WIDTH + SIDE, 2 * HEIGHT + 150);
-        let mut image = canvas(w, h, PANEL_BACK);
+        const W: usize = 2 * WIDTH + 496;
+        let mut image = canvas(W, 2 * HEIGHT + 150, PANEL_BACK);
         paste(&mut image, &screen(shot), 0, 0, 2);
-        let x = (2 * WIDTH + 14) as i32;
-        text(&mut image, x, 6, "GRYPHON (ENEMIES.TSV ROW 90)", PANEL_HEAD, None, 2);
-        text(&mut image, x, 24, "ACTION_STRATEGY_FALLING: WEIGHTS IN 256", PANEL_DIM, None, 2);
-        text(&mut image, x, 48, "PLACE ABILITY       WEIGHT", PANEL_DIM, None, 2);
+        let x = (2 * WIDTH + 16) as i32;
+        text(&mut image, x, 2, "THE GRYPHON'S EIGHT ACTIONS", PANEL_HEAD, None, 2);
+        text(&mut image, x, 18, "ACTION_STRATEGY_FALLING: EACH ONE'S", PANEL_DIM, None, 2);
+        text(&mut image, x, 34, "CHANCE IN 256 AND THE ROLLS IT TAKES", PANEL_DIM, None, 2);
         let used = names[usize::from(played.1)].clone();
         for (place, &ability) in actions.iter().enumerate() {
-            let y = 68 + 26 * place as i32;
+            let y = 56 + 33 * place as i32;
             let (a, b, _) = spans.iter().find(|s| s.2 == place).copied().unwrap_or((0, 0, place));
-            let name = names[ability].to_uppercase();
             let colour = if names[ability] == used { PANEL_MARK } else { PANEL_TEXT };
-            text(&mut image, x, y, &format!("{place}     {name}"), colour, None, 2);
-            let bx = x as usize + 236;
+            fill(&mut image, x as usize, y as usize + 2, 12, 12, PLACE_COLOURS[place]);
+            let note = if names[ability] == used { "  (PLAYED)" } else { "" };
+            text(&mut image, x + 18, y, &format!("{}{note}", names[ability].to_uppercase()), colour, None, 2);
             let weight = usize::from(weights[place]);
-            fill(&mut image, bx, y as usize + 2, 2 * weight, 12, PLACE_COLOURS[place]);
-            text(&mut image, (bx + 2 * weight + 6) as i32, y, &format!("{weight}  ROLLS {a}-{b}"), PANEL_DIM, None, 2);
+            fill(&mut image, x as usize + 18, y as usize + 18, 2 * weight, 8, PLACE_COLOURS[place]);
+            text(&mut image, x + 24 + 2 * weight as i32, y + 14, &format!("{weight} IN 256: ROLLS {a} TO {b}"), PANEL_DIM, None, 2);
         }
-        // The 256 rolls, four pixels each, coloured by the place taken.
-        let sy = 2 * HEIGHT + 20;
-        text(&mut image, 8, sy as i32, "EACH ROLL, THE LOW BYTE OF BATTLE_RANDOM FROM 0 TO 255, BY THE PLACE THE GAME TOOK", PANEL_TEXT, None, 2);
+        // The 256 rolls, three pixels each.
+        let sy = 2 * HEIGHT + 14;
+        text(&mut image, 8, sy as i32, "THE ACTION TAKEN FOR EACH ROLL FROM 0 TO 255 (THE LOW BYTE OF BATTLE_RANDOM),", PANEL_TEXT, None, 2);
+        text(&mut image, 8, sy as i32 + 16, "IN ITS ACTION'S COLOUR ABOVE; EACH NUMBER IS THE FIRST ROLL OF A SPAN", PANEL_TEXT, None, 2);
         for (roll, p) in picks.iter().enumerate() {
-            fill(&mut image, 8 + 4 * roll, sy + 22, 4, 40, PLACE_COLOURS[place_of(p).unwrap_or(0)]);
+            fill(&mut image, 16 + 3 * roll, sy + 40, 3, 40, PLACE_COLOURS[place_of(p).unwrap_or(0)]);
         }
         for &(a, _, place) in &spans {
-            text(&mut image, (8 + 4 * a) as i32, (sy + 66) as i32, &format!("{a}"), PLACE_COLOURS[place], None, 2);
+            text(&mut image, (16 + 3 * a) as i32, (sy + 84) as i32, &format!("{a}"), PLACE_COLOURS[place], None, 2);
         }
-        text(&mut image, 8, (sy + 96) as i32, &format!("THE GRYPHON'S TURN AS IT PLAYED: {}", used.to_uppercase()), PANEL_MARK, None, 2);
+        text(&mut image, 16 + 3 * 256 + 6, (sy + 52) as i32, "ROLL 255", PANEL_DIM, None, 2);
         self.guide_png("enemy-actions.png", &image, "a Gryphon's eight actions, their weights and the place each roll takes")
     }
 }
@@ -466,35 +468,45 @@ impl<'a> Guide<'a> {
                 eprintln!("  frame {}: {} {}", a.0, a.1, command_name(a.2));
             }
         }
-        // Each run as a row of moments: its message, each action of the
-        // first round as it is announced, and the next round's commands.
-        let runs = [(&first, "THE PARTY STRIKES FIRST: BATTLE_RANDOM ANSWERED 0, AND 0 AND 15 IS 0"), (&surprised, "CAUGHT BY SURPRISE: ANSWERED 1 (1 AND 15 IS NOT 0), THEN 0 (0 AND 31 IS 0)")];
-        let mut rows: Vec<(String, Vec<(usize, String)>)> = Vec::new();
-        for (run, label) in runs {
-            let mut shots = Vec::new();
-            let m = run.message.ok_or("no first-strike message")?;
-            shots.push((m + MESSAGE_SHOWN, encounter_name(run.modes[m]).to_string()));
-            for (f, unit, _) in &run.acts {
-                shots.push((f + ANNOUNCED, format!("{} ACTS", unit.to_uppercase())));
-            }
-            shots.push((run.frames.len() - 1, "ROUND 2: COMMANDS".to_string()));
-            rows.push((label.to_string(), shots));
-        }
-        let columns = rows.iter().map(|r| r.1.len()).max().unwrap_or(1);
-        const CELL: usize = WIDTH + 12;
-        const ROW: usize = 26 + HEIGHT + 26;
-        let (w, h) = (columns * CELL + 12, rows.len() * ROW + 8);
+        // Each run a column of moments at twice the size: its message, the
+        // round's first and last actions as they are announced, and the
+        // next round's commands.
+        let numbers = ["NONE", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"];
+        let count = |n: usize| numbers.get(n).copied().unwrap_or("MANY");
+        let runs = [
+            (&first, ["THE FIRST-STRIKE ROLL (1 IN 16) CAME UP:", "THE PARTY STRIKES FIRST"]),
+            (&surprised, ["THAT ROLL FAILED, THE SURPRISE ROLL (1 IN 32)", "CAME UP: THE ENEMIES STRIKE FIRST"]),
+        ];
+        const COLUMN: usize = 2 * WIDTH + 16;
+        const SHOT: usize = 2 * HEIGHT + 26;
+        let (w, h) = (2 * COLUMN, 44 + 4 * SHOT + 40);
         let mut image = canvas(w, h, PANEL_BACK);
-        for (r, ((label, shots), (run, _))) in rows.iter().zip(runs).enumerate() {
-            let y = r * ROW + 6;
-            text(&mut image, 8, y as i32, label, PANEL_HEAD, None, 2);
-            for (c, (f, caption)) in shots.iter().enumerate() {
-                let at = (*f).min(run.frames.len() - 1);
-                let x = 8 + c * CELL;
-                paste(&mut image, &screen(&run.frames[at]), x, y + 22, 1);
-                let colour = if c == 0 { PANEL_MARK } else { PANEL_TEXT };
-                text(&mut image, x as i32, (y + 26 + HEIGHT) as i32, caption, colour, None, 2);
+        for (c, (run, head)) in runs.iter().enumerate() {
+            let x = 8 + c * COLUMN;
+            text(&mut image, x as i32, 4, head[0], PANEL_HEAD, None, 2);
+            text(&mut image, x as i32, 20, head[1], PANEL_HEAD, None, 2);
+            let m = run.message.ok_or("no first-strike message")?;
+            let acts = &run.acts;
+            let (first_act, last_act) = (acts.first().ok_or("no action")?, acts.last().ok_or("no action")?);
+            let who = |a: &(usize, String, u16)| a.1.to_uppercase();
+            let shots = [
+                (m + MESSAGE_SHOWN, format!("ENCOUNTERMODE {}", encounter_name(run.modes[m]))),
+                (first_act.0 + ANNOUNCED, format!("{} ACTS: THE ROUND'S FIRST ACTION", who(first_act))),
+                (last_act.0 + ANNOUNCED, format!("{} ACTS: THE {} AND LAST ACTION", who(last_act), ["", "FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH"].get(acts.len()).copied().unwrap_or("LAST"))),
+                (run.frames.len() - 1, format!("ROUND 2: ENCOUNTERMODE {}", encounter_name(*run.modes.last().unwrap_or(&0)))),
+            ];
+            for (r, (f, caption)) in shots.iter().enumerate() {
+                let y = 44 + r * SHOT;
+                paste(&mut image, &screen(&run.frames[(*f).min(run.frames.len() - 1)]), x, y, 2);
+                text(&mut image, x as i32, (y + 2 * HEIGHT + 4) as i32, caption, if r == 0 { PANEL_MARK } else { PANEL_TEXT }, None, 2);
             }
+            let party = acts.iter().filter(|a| ["Isaac", "Garet", "Ivan", "Mia", "Jenna"].contains(&a.1.as_str())).count();
+            let summary = if party == acts.len() {
+                format!("ROUND 1: {} PARTY MEMBERS ACT, NO ENEMY DOES", count(party))
+            } else {
+                format!("ROUND 1: {} OF THE FOUR ENEMIES ACT, NO COMMANDS", count(acts.len()))
+            };
+            text(&mut image, x as i32, (44 + 4 * SHOT + 14) as i32, &summary, PANEL_MARK, None, 2);
         }
         self.guide_png("first-strikes.png", &image, "a first strike beside a surprise")
     }
@@ -578,19 +590,27 @@ impl<'a> Guide<'a> {
         let points: Vec<(i32, i32)> = (0..5).map(|p| (half(2 * p), half(2 * p + 1))).collect();
         eprintln!("element-multiplier: curve {points:?}");
 
-        const CHART_W: usize = 640;
-        let (w, h) = (2 * WIDTH + CHART_W + 16, 2 * HEIGHT + 2 * HEIGHT / 2 + 40);
-        let mut image = canvas(w, h, PANEL_BACK);
-        let last = quake.last().map_or(0, |c| c.frame);
-        paste(&mut image, &screen(&frames[(last + 70).min(frames.len() - 1)]), 0, 0, 2);
-        let attack_shot = &attack_frames[(attack[0].frame + 70).min(attack_frames.len() - 1)];
-        let small = screen(attack_shot);
-        paste(&mut image, &small, WIDTH / 2, 2 * HEIGHT + 30, 1);
-        text(&mut image, 8, (2 * HEIGHT + 8) as i32, "ISAAC ATTACKS IVAN: A BLOW, HALVED", PANEL_DIM, None, 2);
-
-        // The chart: differences -250 to 250 across, multipliers 0 to 2.5
-        // (0 to 640 in 256ths) up.
-        let (cx, cy, cw, ch) = (2 * WIDTH + 70, 40usize, CHART_W - 90, h - 110);
+        // The chart on top, the two battles below it at twice their size.
+        const W: usize = 4 * WIDTH + 16;
+        const CHART_H: usize = 470;
+        let h = CHART_H + 24 + 2 * HEIGHT + 30;
+        let mut image = canvas(W, h, PANEL_BACK);
+        const CAST_LINE: u32 = 0x9c_c8_ff;
+        const BLOW_LINE: u32 = 0x60_b0_80;
+        const BLOW_MARK: u32 = 0xff_90_30;
+        text(&mut image, 8, 4, "GELEMENT_POWERRESISTCURVE: THE DAMAGE MULTIPLIER BY THE ACTOR'S POWER", PANEL_HEAD, None, 2);
+        text(&mut image, 8, 20, "IN THE ELEMENT LESS THE TARGET'S RESIST IN IT", PANEL_HEAD, None, 2);
+        // The key.
+        fill(&mut image, 8, 42, 24, 4, CAST_LINE);
+        text(&mut image, 38, 36, "A CAST'S LINE", CAST_LINE, None, 2);
+        fill(&mut image, 200, 42, 24, 4, BLOW_LINE);
+        text(&mut image, 230, 36, "A BLOW'S LINE, HALVED", BLOW_LINE, None, 2);
+        fill(&mut image, 430, 38, 10, 10, PANEL_MARK);
+        text(&mut image, 446, 36, "QUAKE'S TARGETS", PANEL_MARK, None, 2);
+        fill(&mut image, 600, 38, 10, 10, BLOW_MARK);
+        text(&mut image, 616, 36, "AN ATTACK'S TARGET", BLOW_MARK, None, 2);
+        // Differences -250 to 250 across, multipliers 0 to 2.5 times up.
+        let (cx, cy, cw, ch) = (80usize, 64usize, W - 110, CHART_H - 120);
         let px = |d: i32| cx as i32 + (d + 250) * cw as i32 / 500;
         let py = |m: i32| (cy + ch) as i32 - m * ch as i32 / 640;
         let dot = |image: &mut Image, x: i32, y: i32, r: i32, colour: u32| {
@@ -604,39 +624,46 @@ impl<'a> Guide<'a> {
         };
         for d in (-200..=200).step_by(50) {
             fill(&mut image, px(d) as usize, cy, 1, ch, if d == 0 { 0x50_55_60 } else { 0x30_33_3a });
-            text(&mut image, px(d) - 12, (cy + ch + 6) as i32, &format!("{d}"), PANEL_DIM, None, 2);
+            text(&mut image, px(d) - 12, (cy + ch + 6) as i32, &format!("{d:+}").replace("+0", "0"), PANEL_DIM, None, 2);
         }
         for m in [0, 128, 256, 384, 512] {
             fill(&mut image, cx, py(m) as usize, cw, 1, if m == 256 { 0x50_55_60 } else { 0x30_33_3a });
-            text(&mut image, cx as i32 - 62, py(m) - 6, &format!("{:.1}X", f64::from(m) / 256.0), PANEL_DIM, None, 2);
+            text(&mut image, 8, py(m) - 6, &format!("{:.1} X", f64::from(m) / 256.0), PANEL_DIM, None, 2);
         }
-        text(&mut image, cx as i32, 6, "GELEMENT_POWERRESISTCURVE: THE MULTIPLIER BY POWER LESS RESIST", PANEL_HEAD, None, 2);
-        text(&mut image, cx as i32 + 120, (cy + ch + 26) as i32, "THE ACTOR'S POWER LESS THE TARGET'S RESIST", PANEL_DIM, None, 2);
+        text(&mut image, cx as i32 + 120, (cy + ch + 26) as i32, "POWER LESS RESIST, IN POINTS", PANEL_DIM, None, 2);
+        text(&mut image, 8, (cy + ch + 26) as i32, "TIMES", PANEL_DIM, None, 2);
         // The line through the ROM's points, held flat past the ends, whole
         // and halved; its value is 256 plus the curve's.
         for d in -250..=250 {
             let c = d.clamp(points[4].0, points[0].0);
             let i = points.iter().position(|p| c > p.0).unwrap_or(5);
             let v = if i == 0 { points[0].1 } else if i == 5 { points[4].1 } else { (c - points[i].0) * (points[i - 1].1 - points[i].1) / (points[i - 1].0 - points[i].0) + points[i].1 };
-            dot(&mut image, px(d), py(256 + v), 1, 0x9c_c8_ff);
-            dot(&mut image, px(d), py(256 + v / 2), 1, 0x60_b0_80);
+            dot(&mut image, px(d), py(256 + v), 1, CAST_LINE);
+            dot(&mut image, px(d), py(256 + v / 2), 1, BLOW_LINE);
         }
         for p in &points {
-            dot(&mut image, px(p.0), py(256 + p.1), 4, 0x9c_c8_ff);
+            dot(&mut image, px(p.0), py(256 + p.1), 4, CAST_LINE);
         }
-        text(&mut image, px(110), py(256 + 220), "A CAST", 0x9c_c8_ff, None, 2);
-        text(&mut image, px(-245), py(105), "A BLOW, HALVED", 0x60_b0_80, None, 2);
-        // The calls the game made.
+        // The calls the game made, each multiplier in 256ths shown as times.
+        let times = |r: i32| format!("{:.2} X", f64::from(r) / 256.0);
         for (k, c) in quake.iter().enumerate() {
             dot(&mut image, px(c.input), py(c.result), 6, PANEL_MARK);
-            let label = format!("{} {:+} = {}/256", name(c.unit), c.input, c.result);
+            let label = format!("{} {:+}: {}", name(c.unit), c.input, times(c.result));
             // Ivan above to the left, Isaac to the left, Mia below to the right.
-            let (dx, dy) = [(-200, -28), (-230, -22), (14, 12)][k.min(2)];
+            let (dx, dy) = [(-170, -28), (-190, -22), (14, 12)][k.min(2)];
             text(&mut image, px(c.input) + dx, py(c.result) + dy, &label, PANEL_MARK, Some(PANEL_BACK), 2);
         }
         let a = &attack[0];
-        dot(&mut image, px(a.input), py(a.result), 6, 0xff_90_30);
-        text(&mut image, px(a.input) - 250, py(a.result) + 44, &format!("ATTACK UNLEASHING BLIZZARD, IVAN {:+} = {}/256", a.input, a.result), 0xff_90_30, Some(PANEL_BACK), 2);
+        dot(&mut image, px(a.input), py(a.result), 6, BLOW_MARK);
+        text(&mut image, px(a.input) + 14, py(a.result) + 30, &format!("IVAN, AN ATTACK {:+}: {}", a.input, times(a.result)), BLOW_MARK, Some(PANEL_BACK), 2);
+        // The two battles.
+        let y = CHART_H + 20;
+        let last = quake.last().map_or(0, |c| c.frame);
+        paste(&mut image, &screen(&frames[(last + 70).min(frames.len() - 1)]), 8, y, 2);
+        text(&mut image, 8, (y + 2 * HEIGHT + 6) as i32, "ISAAC'S QUAKE AT IVAN, ISAAC AND MIA", PANEL_TEXT, None, 2);
+        let attack_shot = &attack_frames[(attack[0].frame + 70).min(attack_frames.len() - 1)];
+        paste(&mut image, &screen(attack_shot), 2 * WIDTH + 8, y, 2);
+        text(&mut image, (2 * WIDTH + 8) as i32, (y + 2 * HEIGHT + 6) as i32, "ISAAC ATTACKS IVAN, UNLEASHING BLIZZARD", PANEL_TEXT, None, 2);
         self.guide_png("element-multiplier.png", &image, "the element multiplier's line with Quake's and an attack's targets on it")
     }
 }
@@ -785,14 +812,16 @@ impl<'a> Guide<'a> {
             }
             eprintln!("  plan: ability {} multiplier {} critical {} flags {:#x}", names.get(r.plan.0 as usize).map_or("?", String::as_str), r.plan.1, critical_name(r.plan.2), r.plan.3);
         }
-        // Each run a row: three moments of the attack beside its rolls.
+        // Each run a row: four moments of the attack, and below them what
+        // each roll decided and what the plan then holds, in words.
         // The frames each row shows, from the battle's start: the swing and
         // its result, chosen by looking at the runs.
         const SHOTS: [[usize; 4]; 3] = [[115, 130, 145, 160], [130, 160, 205, 250], [145, 205, 235, 265]];
-        const PANEL: usize = 430;
-        const ROW: usize = HEIGHT + 34;
-        let (w, h) = (4 * (WIDTH + 8) + PANEL + 16, runs.len() * ROW + 8);
+        const LINES: usize = 5;
+        const ROW: usize = 24 + HEIGHT + 10 + 18 * LINES + 18;
+        let (w, h) = (4 * (WIDTH + 8) + 8, runs.len() * ROW + 8);
         let mut image = canvas(w, h, PANEL_BACK);
+        let blows = ["NONE LANDS", "ONE", "TWO", "THREE"];
         for (r, (label, run)) in runs.iter().enumerate() {
             let y = 8 + r * ROW;
             text(&mut image, 8, y as i32, label, PANEL_MARK, None, 2);
@@ -800,25 +829,41 @@ impl<'a> Guide<'a> {
                 let at = f.min(run.frames.len() - 1);
                 paste(&mut image, &screen(&run.frames[at]), 8 + k * (WIDTH + 8), y + 22, 1);
             }
-            let x = (8 + 4 * (WIDTH + 8) + 8) as i32;
-            let mut ty = y as i32 + 22;
-            text(&mut image, x, ty, "BATTLE_RANDOM ASKED BY:", PANEL_HEAD, None, 2);
-            for roll in &run.rolls {
-                ty += 18;
-                let by = if roll.by == "RollWeaponUnleash" { "ROLLWEAPONUNLEASH" } else { "BATTLECOMMAND_BUILDPLAN" };
-                text(&mut image, x + 8, ty, &format!("{by} {}", roll.answer), PANEL_TEXT, None, 2);
-            }
-            ty += 26;
-            text(&mut image, x, ty, "THE PLAN, FIRST TARGET:", PANEL_HEAD, None, 2);
             let (ability, multiplier, critical, flags) = run.plan;
-            for line in [
-                format!("ABILITYID {}", names.get(ability as usize).map_or("?", String::as_str).to_uppercase()),
-                format!("TARGETMULTIPLIER {multiplier}"),
-                format!("TARGETCRITICAL {}", critical_name(critical)),
-                format!("VARIANT {}", (flags >> 12) & 3),
-            ] {
-                ty += 18;
-                text(&mut image, x + 8, ty, &line, PANEL_TEXT, None, 2);
+            let action = names.get(ability as usize).map_or("?", String::as_str).to_uppercase();
+            let attack = action == "ATTACK";
+            // The rolls in the order they were asked for.
+            let mut decided: Vec<String> = Vec::new();
+            let mut plan_rolls = 0;
+            for roll in &run.rolls {
+                let line = if roll.by == "RollWeaponUnleash" {
+                    if attack { "UNLEASH ROLL: NO UNLEASH".to_string() } else { format!("UNLEASH ROLL: UNLEASHES {action}") }
+                } else {
+                    plan_rolls += 1;
+                    match (attack, plan_rolls) {
+                        (true, 1) => format!("HIT ROLL (1 IN 32 MISSES): {}", if multiplier == 0 { "MISSES" } else { "LANDS" }),
+                        (true, 2) => format!("CRITICAL ROLL (1 IN 32): {}", if critical != 0 { "CRITICAL" } else { "NOT CRITICAL" }),
+                        (true, _) => "EQUIPMENT'S CRITICAL BONUS ROLL: NOT CRITICAL".to_string(),
+                        (false, _) => format!("EXTRA BLOWS ROLL (153 IN 256): {}", if multiplier > 1 { "YES" } else { "NO" }),
+                    }
+                };
+                decided.push(line);
+            }
+            let plan_lines = [
+                format!("THE ACTION: {action}"),
+                format!("BLOWS: {} (TARGETMULTIPLIER)", blows.get(multiplier as usize).copied().unwrap_or("?")),
+                format!("CRITICAL: {}", if critical != 0 { "YES, CRITICAL_HIT" } else { "NO" }),
+                format!("THE EFFECT SHOWS {} (ITS VARIANT)", ["ONE BLOW", "TWO BLOWS", "THREE BLOWS", "FOUR BLOWS"][((flags >> 12) & 3) as usize]),
+            ];
+            let ty = (y + 22 + HEIGHT + 8) as i32;
+            text(&mut image, 8, ty, "WHAT EACH ROLL DECIDED:", PANEL_HEAD, None, 2);
+            for (i, line) in decided.iter().enumerate() {
+                text(&mut image, 16, ty + 18 * (i as i32 + 1), line, PANEL_TEXT, None, 2);
+            }
+            let px = (8 + 2 * (WIDTH + 8)) as i32;
+            text(&mut image, px, ty, "THE PLAN FOR THE TARGET:", PANEL_HEAD, None, 2);
+            for (i, line) in plan_lines.iter().enumerate() {
+                text(&mut image, px + 8, ty + 18 * (i as i32 + 1), line, PANEL_TEXT, None, 2);
             }
         }
         self.guide_png("plan-rolls.png", &image, "a miss, a critical hit and a triple blow beside the plan's rolls")
@@ -974,6 +1019,11 @@ impl<'a> Guide<'a> {
 /// messages start.
 type Rounds = (Vec<Counted>, Vec<usize>, Vec<usize>);
 
+/// A counter changed other than by counting down: the frame, the units, the
+/// counter (an index of COUNTERS), its turns before and after, and the
+/// stage after.
+type Change<'a> = (usize, Vec<&'a str>, usize, i8, i8, i8);
+
 /// One frame of `added-effects`: the screen, and the Vermin's and Isaac's
 /// counters.
 struct Counted {
@@ -1050,72 +1100,83 @@ impl<'a> Guide<'a> {
         }
         eprintln!("  messages at {messages:?}");
         // The moments a counter changes other than by counting down, each
-        // shown once its message is written out.
-        let mut shots: Vec<(usize, String)> = Vec::new();
+        // told in words and shown once its message is written out:
+        // (frame, units, counter, turns before, turns after, stage after).
+        let mut changes: Vec<Change> = Vec::new();
         for f in 1..frames.len() {
             let (a, b) = (&frames[f - 1], &frames[f]);
-            let what = |name: &str, i: usize, before: &[i8], after: &[i8]| -> Option<String> {
-                let (x, y) = (before[i], after[i]);
-                (x != y && !(y == x - 1 && y > 0)).then(|| format!("{name} {} {x} TO {y}", COUNTERS[i]))
-            };
-            for i in [2, 3, 6] {
-                if let Some(s) = what("VERMIN", i, &a.vermin, &b.vermin) {
-                    if i != 3 || b.vermin[2] != 0 && a.vermin[2] == 0 {
-                        shots.push((f, s));
-                    }
-                }
-                if let Some(s) = what("ISAAC", i, &a.isaac, &b.isaac) {
-                    if i != 3 || b.isaac[2] != 0 && a.isaac[2] == 0 {
-                        shots.push((f, s));
+            for (unit, before, after) in [("VERMIN", &a.vermin, &b.vermin), ("ISAAC", &a.isaac, &b.isaac)] {
+                // Defense turns (its stage changes with it) and delusion.
+                for i in [2, 6] {
+                    let (x, y) = (before[i], after[i]);
+                    if x != y && !(y == x - 1 && y > 0) {
+                        match changes.last_mut() {
+                            // Two units' changes shown by the same message.
+                            Some(c) if f - c.0 < 30 && c.2 == i && (c.3, c.4) == (x, y) => c.1.push(unit),
+                            _ => changes.push((f, vec![unit], i, x, y, after[3])),
+                        }
                     }
                 }
             }
         }
-        // A stage and its turns change together: one shot, named by the turns.
-        shots.dedup_by_key(|s| s.0);
-        // Two units' changes shown by the same message make one shot.
-        let mut joined: Vec<(usize, String)> = Vec::new();
-        for (f, s) in shots {
-            match joined.last_mut() {
-                Some((g, t)) if f - *g < 30 && t.split_once(' ').map(|p| p.1) == s.split_once(' ').map(|p| p.1) => {
-                    *t = format!("{}, {s}", t.split_once(' ').map_or("", |p| p.0));
-                }
-                _ => joined.push((f, s)),
+        eprintln!("  changes {changes:?}");
+        let possessive = |units: &[&str]| -> String {
+            let names: Vec<String> = units.iter().map(|u| if *u == "VERMIN" { "THE VERMIN'S".to_string() } else { format!("{u}'S") }).collect();
+            names.join(" AND ")
+        };
+        let words = |(_, units, i, x, y, stage): &Change| -> [String; 2] {
+            let whose = possessive(units);
+            match (*i, *x, *y) {
+                (6, 0, n) => [format!("{} DELUDED", units.join(" AND ")), format!("FOR {n} TURNS")],
+                (6, left, 0) if left > 1 => [format!("{whose} DELUSION ENDS"), format!("EARLY, {left} TURNS LEFT")],
+                (6, _, _) => [format!("{whose} DELUSION ENDS"), "ITS TURNS RUN OUT".to_string()],
+                (_, 0, n) => [format!("{whose} DEFENSE"), format!("{stage:+} STAGES FOR {n} TURNS")],
+                (_, _, 0) => [format!("{whose} DEFENSE"), "BACK TO NORMAL, TURNS RUN OUT".to_string()],
+                _ => [format!("{whose} DEFENSE"), format!("{y} TURNS LEFT")],
             }
-        }
-        let shots = joined;
-        eprintln!("  shots {shots:?}");
+        };
         const CELL: usize = WIDTH + 8;
-        let table_rows: [(&str, bool, usize); 3] = [("VERMIN: DEFENSESTAGE, DEFENSETURNS", true, 3), ("VERMIN: DELUSION", true, 6), ("ISAAC: DEFENSESTAGE, DEFENSETURNS", false, 3)];
-        let columns = starts.len();
-        let (w, h) = ((shots.len().min(6)) * CELL + 16, 36 + HEIGHT + 30 + 40 + 24 * table_rows.len() + 16);
-        let w = w.max(300 + 70 * columns);
+        const PER_ROW: usize = 3;
+        const SHOT_H: usize = HEIGHT + 44;
+        let shot_rows = changes.len().div_ceil(PER_ROW);
+        let ty = 46 + shot_rows * SHOT_H + 10;
+        let w = PER_ROW * CELL + 16;
+        let h = ty + 40 + 20 * starts.len() + 16;
         let mut image = canvas(w, h, PANEL_BACK);
-        text(&mut image, 8, 6, "ROUND 1: ISAAC CASTS IMPAIR AND IVAN DELUDE AT THE VERMIN, MIA GUARD ON ISAAC; THEN THE FOUR DEFEND", PANEL_HEAD, None, 2);
-        for (k, (f, caption)) in shots.iter().take(6).enumerate() {
+        text(&mut image, 8, 4, "ROUND 1: IVAN CASTS DELUDE AND ISAAC IMPAIR AT THE VERMIN,", PANEL_HEAD, None, 2);
+        text(&mut image, 8, 20, "MIA CASTS GUARD ON ISAAC. LATER ROUNDS: THE FOUR DEFEND.", PANEL_HEAD, None, 2);
+        for (k, change) in changes.iter().enumerate() {
+            let f = change.0;
             // The message this change wrote, once written out.
-            let at = messages.iter().find(|&&m| m + 2 >= *f).map_or(*f, |&m| m).max(*f) + SHOWN;
+            let at = messages.iter().find(|&&m| m + 2 >= f).map_or(f, |&m| m).max(f) + SHOWN;
             let at = at.min(frames.len() - 1);
-            paste(&mut image, &screen(&frames[at].screen), 8 + k * CELL, 30, 1);
-            let caption = caption.replace("DEFENSETURNS ", "DEFENSE TURNS ");
-            text(&mut image, (8 + k * CELL) as i32, (34 + HEIGHT) as i32, &caption, PANEL_MARK, None, if caption.len() > 29 { 1 } else { 2 });
+            let (x, y) = (8 + (k % PER_ROW) * CELL, 46 + (k / PER_ROW) * SHOT_H);
+            paste(&mut image, &screen(&frames[at].screen), x, y, 1);
+            let [one, two] = words(change);
+            text(&mut image, x as i32, (y + HEIGHT + 4) as i32, &one, PANEL_MARK, None, 2);
+            text(&mut image, x as i32, (y + HEIGHT + 20) as i32, &two, PANEL_MARK, None, 2);
         }
         // The counters as each round's commands are given: after the round
         // before it has ended.
-        let ty = 36 + HEIGHT + 30;
-        text(&mut image, 8, ty as i32, "AS EACH ROUND STARTS:", PANEL_HEAD, None, 2);
-        for c in 0..columns {
-            text(&mut image, (300 + 70 * c) as i32, ty as i32, &format!("R{}", c + 1), PANEL_DIM, None, 2);
+        text(&mut image, 8, ty as i32, "AS EACH ROUND STARTS (A STAGE IS AN EIGHTH OF THE STAT):", PANEL_HEAD, None, 2);
+        let columns: [(&str, bool, usize); 3] = [("VERMIN'S DEFENSE", true, 2), ("VERMIN'S DELUSION", true, 6), ("ISAAC'S DEFENSE", false, 2)];
+        let cx = |c: usize| (110 + 214 * c) as i32;
+        for (c, (label, _, _)) in columns.iter().enumerate() {
+            text(&mut image, cx(c), (ty + 22) as i32, label, PANEL_DIM, None, 2);
         }
-        for (r, (label, vermin, i)) in table_rows.iter().enumerate() {
-            let y = (ty + 24 + 24 * r) as i32;
-            text(&mut image, 8, y, label, PANEL_TEXT, None, 1);
-            for (c, &s) in starts.iter().enumerate() {
-                let counted = &frames[s.min(frames.len() - 1)];
-                let values = if *vermin { &counted.vermin } else { &counted.isaac };
-                let cell = if *i == 3 { format!("{:+} {}", values[3], values[2]) } else { format!("{}", values[*i]) };
-                let colour = if cell == "0" || cell == "+0 0" { PANEL_DIM } else { PANEL_MARK };
-                text(&mut image, (300 + 70 * c) as i32, y - 4, &cell, colour, None, 2);
+        for (r, &s) in starts.iter().enumerate() {
+            let y = (ty + 42 + 20 * r) as i32;
+            text(&mut image, 8, y, &format!("ROUND {}", r + 1), PANEL_DIM, None, 2);
+            let counted = &frames[s.min(frames.len() - 1)];
+            for (c, &(_, vermin, i)) in columns.iter().enumerate() {
+                let v = if vermin { &counted.vermin } else { &counted.isaac };
+                let cell = match (i, v[i]) {
+                    (2, 0) => "NORMAL".to_string(),
+                    (2, turns) => format!("{:+} STAGES, {turns} TURNS", v[3]),
+                    (_, 0) => "NONE".to_string(),
+                    (_, turns) => format!("{turns} TURNS LEFT"),
+                };
+                text(&mut image, cx(c), y, &cell, if v[i] == 0 { PANEL_DIM } else { PANEL_MARK }, None, 2);
             }
         }
         self.guide_png("added-effects.png", &image, "stat stages and status counters as they change and count down")
@@ -1252,33 +1313,36 @@ impl<'a> Guide<'a> {
         if dealt.len() != 3 {
             return Err(format!("{} targets", dealt.len()));
         }
-        // A shot of each target's last message, and of the evil spirit's.
+        // A shot of each target's last message, and of the evil spirit's,
+        // each with what happened told in words.
         const CELL: usize = WIDTH + 8;
-        const PANEL_H: usize = 120;
-        let (w, h) = (4 * CELL + 8, 30 + HEIGHT + PANEL_H);
+        const TOP: usize = 44;
+        const PANEL_H: usize = 104;
+        let (w, h) = (4 * CELL + 8, TOP + HEIGHT + PANEL_H);
         let mut image = canvas(w, h, PANEL_BACK);
-        text(&mut image, 8, 6, "ISAAC, HAUNTED, CASTS QUAKE; THE COPY OF IVAN HAS SLEPT A ROUND (SLEEP 6)", PANEL_HEAD, None, 2);
+        text(&mut image, 8, 4, "ISAAC, HAUNTED, CASTS QUAKE. THE COPY OF IVAN HAS SLEPT A ROUND (6 TURNS OF", PANEL_HEAD, None, 2);
+        text(&mut image, 8, 20, "SLEEP LEFT). THE WAKE AND HAUNT ROLLS ARE ANSWERED 0, SO BOTH COME UP.", PANEL_HEAD, None, 2);
         for (k, d) in dealt.iter().enumerate() {
             let x = 8 + k * CELL;
-            paste(&mut image, &screen(&frames[d.end.saturating_sub(SHOWN / 3).min(frames.len() - 1)]), x, 26, 1);
-            let mut y = (32 + HEIGHT) as i32;
+            paste(&mut image, &screen(&frames[d.end.saturating_sub(SHOWN / 3).min(frames.len() - 1)]), x, TOP, 1);
+            let mut y = (TOP + HEIGHT + 6) as i32;
+            let lost = d.hp.0 - d.hp.1;
             let lines = [
-                format!("{}: HP {} TO {}", foe_name(d.unit), d.hp.0, d.hp.1),
-                format!("SLEEP {} TO {}", d.sleep.0, d.sleep.1),
-                format!("ANSWERED 0: {}", d.answered.join(", ")),
-                format!("SHARE {} = {} / 4", (d.hp.0 - d.hp.1) / 4, d.hp.0 - d.hp.1),
-                format!("HAUNTDAMAGE NOW {}", d.haunt),
+                (format!("{} LOSES {lost} HP", foe_name(d.unit)), false),
+                (if d.sleep.0 == 0 { "AWAKE: NO WAKE ROLL".to_string() } else if d.sleep.1 == 0 { "ASLEEP: THE ROLL WAKES HIM".to_string() } else { "ASLEEP: STAYS ASLEEP".to_string() }, d.sleep.0 != d.sleep.1),
+                (format!("SPIRIT'S SHARE: {} HP ({lost} / 4)", lost / 4), false),
+                (format!("HAUNTDAMAGE SO FAR: {} HP", d.haunt), true),
             ];
-            for (i, line) in lines.iter().enumerate() {
-                let colour = if i == 1 && d.sleep.0 != d.sleep.1 || i == 4 { PANEL_MARK } else { PANEL_TEXT };
-                text(&mut image, x as i32, y, line, colour, None, 2);
+            for (line, marked) in &lines {
+                text(&mut image, x as i32, y, line, if *marked { PANEL_MARK } else { PANEL_TEXT }, None, 2);
                 y += 18;
             }
+            let _ = &d.answered;
         }
         let x = 8 + 3 * CELL;
-        paste(&mut image, &screen(&frames[frames.len().saturating_sub(SHOWN)]), x, 26, 1);
-        let mut y = (32 + HEIGHT) as i32;
-        for line in ["THE TURN'S END:".to_string(), format!("ISAAC HP {} TO {}", isaac_hp.0, isaac_hp.1)] {
+        paste(&mut image, &screen(&frames[frames.len().saturating_sub(SHOWN)]), x, TOP, 1);
+        let mut y = (TOP + HEIGHT + 6) as i32;
+        for line in ["THE TURN'S END:".to_string(), format!("THE SPIRIT TAKES {} HP", isaac_hp.0 - isaac_hp.1), format!("ISAAC: {} HP TO {}", isaac_hp.0, isaac_hp.1)] {
             text(&mut image, x as i32, y, &line, PANEL_MARK, None, 2);
             y += 18;
         }
