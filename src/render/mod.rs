@@ -20,6 +20,7 @@ mod guide_apart;
 #[cfg(feature = "render")]
 mod guide_battle;
 mod guide_effect;
+mod guide_menu;
 #[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
@@ -1143,6 +1144,15 @@ Take-apart pictures for the battle effects guide (guide_effect.rs):
   stat-reductions   stat-reductions.gif: Debilitate beside each target's shards
   target-strikes    target-strikes.gif: Twin Beaks and Acid Bite beside
                     their parked smoke, motes and sparks
+Take-apart pictures for the menu guide (guide_menu.rs), in Xian:
+  psynergy-steps    psynergy-steps.png: Cure used on Garet, a panel for each
+                    step of the Psynergy screen
+  djinn-preview     djinn-preview.png: Flint put on standby, the preview beside
+                    Isaac's unit before and after
+  status-pages      status-pages.png: the Status screen's member row and pages,
+                    the four Djinn figures outlined
+  status-panels     status-panels.png: the status panel once for each kind
+  item-sorting      item-sorting.png: Isaac's items in each of the four orders
 Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
   vale-opening, vale-gate-display, vale-shops-sleep, vale-kraden-rockslide,

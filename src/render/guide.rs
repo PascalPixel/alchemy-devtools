@@ -550,6 +550,11 @@ pub const MODES: &[&str] = &[
     "spark-groups",
     "stat-reductions",
     "target-strikes",
+    "psynergy-steps",
+    "djinn-preview",
+    "status-pages",
+    "status-panels",
+    "item-sorting",
 ];
 
 impl Guide<'_> {
@@ -647,6 +652,11 @@ impl Guide<'_> {
             "spark-groups" => self.spark_groups(),
             "stat-reductions" => self.stat_reductions(),
             "target-strikes" => self.target_strikes(),
+            "psynergy-steps" => self.menu_psynergy_steps(),
+            "djinn-preview" => self.djinn_preview(),
+            "status-pages" => self.status_pages(),
+            "status-panels" => self.status_panels(),
+            "item-sorting" => self.item_sorting(),
             _ => Err(format!("no mode {name}")),
         }
     }
