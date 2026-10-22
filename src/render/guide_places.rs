@@ -198,7 +198,7 @@ impl<'a> Guide<'a> {
     pub fn sanctum_account(&mut self) -> Result<(), String> {
         let reenact = self.overlay_sym("Sanctum_GetPlacements", "Sanctum_ReenactSolSanctum")?;
         let request = self.overlay_sym("Sanctum_GetPlacements", "Sanctum_RequestQuestAcceptance")?;
-        let mut field = self.arrive((9, 20), &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_SOL_SANCTUM_STAR_ROOM_COLLAPSED"], &["FLAG_PARTY_LEFT_VALE", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
+        let mut field = self.arrive((9, 20), &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_SOL_SANCTUM_STAR_ROOM_COLLAPSED"], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let phase = std::rc::Rc::new(std::cell::Cell::new(0u8));
         let set = phase.clone();
         field.probe_pcs = vec![reenact, request];
@@ -244,13 +244,13 @@ impl<'a> Guide<'a> {
     /// Isaac rising into the Elemental Star Room on the first arrival, as
     /// `star-room-rising.gif`.
     pub fn star_room_rising(&mut self) -> Result<(), String> {
-        self.rising("star-room-rising.gif", (17, 10), &[], &["FLAG_PARTY_LEFT_VALE", "FLAG_SOL_SANCTUM_STAR_ROOM_EXPLAINED", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"], 8, 3000)
+        self.rising("star-room-rising.gif", (17, 10), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_SOL_SANCTUM_STAR_ROOM_EXPLAINED", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"], 8, 3000)
     }
 
     /// Saturos's group leaving the collapsing chamber one by one, as
     /// `eruption-departures.gif`.
     pub fn eruption_departures(&mut self) -> Result<(), String> {
-        self.rising("eruption-departures.gif", (18, 10), &[], &["FLAG_PARTY_LEFT_VALE", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"], 8, 40000)
+        self.rising("eruption-departures.gif", (18, 10), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"], 8, 40000)
     }
 
     /// The statue room's three rows of sky sprites drifting behind the
@@ -299,7 +299,7 @@ impl<'a> Guide<'a> {
     pub fn vale_opening(&mut self) -> Result<(), String> {
         let begin = self.overlay_sym("Vale_GetPlacements", "Scene_StartCutscenePsynergy")?;
         let end = self.overlay_sym("Vale_GetPlacements", "Scene_EndCutscenePsynergy")?;
-        let mut field = self.arrive((4, 16), &[], &["FLAG_PARTY_LEFT_VALE", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
+        let mut field = self.arrive((4, 16), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let on = std::rc::Rc::new(std::cell::Cell::new(false));
         let set = on.clone();
         field.probe_pcs = vec![begin, end];
@@ -329,7 +329,7 @@ impl<'a> Guide<'a> {
     pub fn vale_gate_display(&mut self) -> Result<(), String> {
         let begin = self.overlay_sym("ValeGate_GetPlacements", "Scene_StartCutscenePsynergy")?;
         let end = self.overlay_sym("ValeGate_GetPlacements", "Scene_EndCutscenePsynergy")?;
-        let mut entered = self.enter_story((5, 0), &[], &["FLAG_PARTY_LEFT_VALE", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
+        let mut entered = self.enter_story((5, 0), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let field = &mut entered.field;
         // ACTOR_STRONGMAN_SHOWING_PSYNERGY (ACTOR_FIRST_PLACED + 9).
         let id = 17u16;
@@ -369,7 +369,7 @@ impl<'a> Guide<'a> {
     /// cycle written, as `sleep-z.gif`.
     pub fn vale_shops_sleep(&mut self) -> Result<(), String> {
         let count = self.sym("gFrameCount")?;
-        let mut field = self.arrive((7, 6), &["FLAG_PARTY_LEFT_VALE", "FLAG_REACHED_KALAY"], &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
+        let mut field = self.arrive((7, 6), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let panels = [Panel::Screen, Panel::Sprites];
         let marks: [Mark; 4] = [(8, YELLOW, "GRANDFATHER"), (23, RED, "Z1"), (24, CYAN, "Z2"), (25, 0x60_f0_60, "Z3")];
         let mut frames = Vec::new();
@@ -411,7 +411,7 @@ impl<'a> Guide<'a> {
     pub fn vale_kraden_rockslide(&mut self) -> Result<(), String> {
         const CELLS: [(i32, i32); 6] = [(14, 21), (15, 21), (23, 19), (24, 19), (23, 20), (24, 20)];
         let mut maps = Vec::new();
-        for (storm, set, clear) in [(true, vec!["FLAG_VALE_STORM", "FLAG_CHILDHOOD"], vec!["FLAG_PARTY_LEFT_VALE"]), (false, vec![], vec!["FLAG_PARTY_LEFT_VALE", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])] {
+        for (storm, set, clear) in [(true, vec!["FLAG_VALE_STORM", "FLAG_CHILDHOOD"], vec!["FLAG_VALE_PARTY_LEFT"]), (false, vec![], vec!["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])] {
             let mut e = self.enter_story((6, 1), &set, &clear)?;
             let settled = e.field.save();
             let rocks: Vec<(i32, i32)> = [9u16, 10].iter().filter_map(|&id| e.field.actor(id)).filter(|a| a.x != 0).map(|a| (a.x, a.z - (a.y >> 16))).collect();
@@ -442,7 +442,7 @@ impl<'a> Guide<'a> {
     /// boxed, as `kite-ledge.gif`.
     pub fn vale_cave_kite(&mut self) -> Result<(), String> {
         const TARGETS: [(i32, i32); 12] = [(760, 296), (760, 280), (776, 280), (792, 280), (808, 280), (824, 280), (824, 296), (824, 312), (808, 312), (792, 312), (776, 312), (760, 312)];
-        let mut e = self.enter_story((94, 5), &["FLAG_PARTY_LEFT_VALE", "FLAG_VALE_CAVE_KITE_BEHIND_LEDGE"], &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
+        let mut e = self.enter_story((94, 5), &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_CAVE_KITE_BEHIND_LEDGE"], &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let mut triggers: Vec<(u16, i32, i32)> = Vec::new();
         for code in 45..57u16 {
             for (_, cx, cz) in e.field.cells_with_code(code)? {

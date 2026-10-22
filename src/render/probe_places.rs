@@ -45,7 +45,7 @@ pub const PROBES: &[&str] = &[
 
 impl<'a> Guide<'a> {
     /// Enters `place` from a new game with the named flags set and cleared,
-    /// none of enter_with's own (FLAG_PARTY_LEFT_VALE): the field with the
+    /// none of enter_with's own (FLAG_VALE_PARTY_LEFT): the field with the
     /// player in control, and the moment the party was placed.
     pub(super) fn enter_story(&self, place: (u16, u16), set: &[&str], clear: &[&str]) -> Result<Entered<'a>, String> {
         let resolve = |names: &[&str]| -> Result<Vec<u16>, String> {
@@ -126,7 +126,7 @@ impl<'a> Guide<'a> {
                 // the third at its north end (FLAG_PLACE_TEMP_0B), the
                 // leader on it walking north and then south.
                 for keys in [KEY_UP, KEY_DOWN] {
-                    let mut e = self.enter_story((64, 2), &["FLAG_PARTY_LEFT_VALE", "0x312", "0x30b"], &[])?;
+                    let mut e = self.enter_story((64, 2), &["FLAG_VALE_PARTY_LEFT", "0x312", "0x30b"], &[])?;
                     let placed = e.placed_clone();
                     println!("fourth log before: {}", describe(&e.field, 11));
                     cells(&e.field, 0, (13, 20), (17, 33));
@@ -148,7 +148,7 @@ impl<'a> Guide<'a> {
                 // without FLAG_VALE_RETURNED_FROM_MT_ALEPH, and walking north
                 // into the door from below them.
                 for set in [vec!["FLAG_SOL_SANCTUM_ERUPTED"], vec!["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_VALE_RETURNED_FROM_MT_ALEPH"]] {
-                    let mut e = self.enter_story((19, 0), &set, &["FLAG_PARTY_LEFT_VALE"])?;
+                    let mut e = self.enter_story((19, 0), &set, &["FLAG_VALE_PARTY_LEFT"])?;
                     println!("{set:?}: leader {}", describe(&e.field, 0));
                     for layer in 0..2 {
                         cells(&e.field, layer, (0, 0), (14, 16));
@@ -186,10 +186,10 @@ impl<'a> Guide<'a> {
                     (4, 0, &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_SOL_SANCTUM_STAR_ROOM_COLLAPSED", "FLAG_VALE_RETURNED_FROM_MT_ALEPH"]),
                     (9, 0, &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_VALE_RETURNED_FROM_MT_ALEPH"]),
                     (5, 0, &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_VALE_RETURNED_FROM_MT_ALEPH"]),
-                    (2, 0, &["FLAG_PARTY_LEFT_VALE"]),
-                    (20, 0, &["FLAG_PARTY_LEFT_VALE"]),
-                    (21, 0, &["FLAG_PARTY_LEFT_VALE", "FLAG_VAULT_IVAN_JOINED_ROD_SEARCH", "FLAG_VAULT_SUSPECTS_APPROACHED"]),
-                    (27, 5, &["FLAG_PARTY_LEFT_VALE"]),
+                    (2, 0, &["FLAG_VALE_PARTY_LEFT"]),
+                    (20, 0, &["FLAG_VALE_PARTY_LEFT"]),
+                    (21, 0, &["FLAG_VALE_PARTY_LEFT", "FLAG_VAULT_IVAN_JOINED_ROD_SEARCH", "FLAG_VAULT_SUSPECTS_APPROACHED"]),
+                    (27, 5, &["FLAG_VALE_PARTY_LEFT"]),
                 ];
                 for (scene, entrance, set) in places {
                     let mut all: Vec<&str> = set.to_vec();
@@ -242,7 +242,7 @@ impl<'a> Guide<'a> {
                 // ValeGate (5) on the stormy night: the rock, its spot and
                 // the boy; walking into the spot with it and without it.
                 let storm = ["FLAG_VALE_STORM", "FLAG_CHILDHOOD"];
-                let mut e = self.enter_story((5, 0), &storm, &["FLAG_PARTY_LEFT_VALE"])?;
+                let mut e = self.enter_story((5, 0), &storm, &["FLAG_VALE_PARTY_LEFT"])?;
                 actors(&e.field, 8..32);
                 let placed = e.placed_clone();
                 for (from, facing, keys) in [((56, 760), NORTH, KEY_UP), ((24, 729), EAST, KEY_RIGHT), ((88, 729), WEST, KEY_LEFT), ((56, 700), SOUTH, KEY_DOWN)] {
@@ -252,7 +252,7 @@ impl<'a> Guide<'a> {
                     }
                 }
                 for id in [21u16, 22] {
-                    let mut e = self.enter_story((5, 0), &storm, &["FLAG_PARTY_LEFT_VALE"])?;
+                    let mut e = self.enter_story((5, 0), &storm, &["FLAG_VALE_PARTY_LEFT"])?;
                     let a = e.field.actor_address(id);
                     e.field.write32(a + 8, 0);
                     e.field.write32(a + 0x10, 0);
@@ -267,7 +267,7 @@ impl<'a> Guide<'a> {
                 }
                 // The sprites alone over the rock's spot, with the spot's
                 // actor and without it.
-                let mut e = self.enter_story((5, 0), &storm, &["FLAG_PARTY_LEFT_VALE"])?;
+                let mut e = self.enter_story((5, 0), &storm, &["FLAG_VALE_PARTY_LEFT"])?;
                 let placed = e.placed_clone();
                 let height = e.field.ground(0, 56, 776)?;
                 e.field.stand(&placed, &Spot { x: 56, z: 776, layer: 0, height, facing: NORTH, walk: 0, cell: None })?;
@@ -286,10 +286,10 @@ impl<'a> Guide<'a> {
                 self.guide_png("vale-gate-rock-spot.png", &c, "the stormy night's small rock: the screen, its sprites, its sprites without the spot")?;
                 // Cell code 11 in each state the scene has.
                 for (label, set, clear) in [
-                    ("storm", vec!["FLAG_VALE_STORM", "FLAG_CHILDHOOD"], vec!["FLAG_PARTY_LEFT_VALE"]),
-                    ("day", vec![], vec!["FLAG_PARTY_LEFT_VALE"]),
-                    ("left", vec!["FLAG_PARTY_LEFT_VALE"], vec![]),
-                    ("kalay", vec!["FLAG_PARTY_LEFT_VALE", "FLAG_REACHED_KALAY"], vec![]),
+                    ("storm", vec!["FLAG_VALE_STORM", "FLAG_CHILDHOOD"], vec!["FLAG_VALE_PARTY_LEFT"]),
+                    ("day", vec![], vec!["FLAG_VALE_PARTY_LEFT"]),
+                    ("left", vec!["FLAG_VALE_PARTY_LEFT"], vec![]),
+                    ("kalay", vec!["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], vec![]),
                 ] {
                     let Ok(mut e) = self.enter_story((5, 0), &set, &clear) else {
                         println!("{label}: cannot enter");
@@ -307,7 +307,7 @@ impl<'a> Guide<'a> {
                 // Vault (20): actor 22 (the ivy at (0, 0)) and every actor;
                 // the passage cells at (23, 26) as they are and after each
                 // touch code; the cells with codes 1 and 2.
-                let mut e = self.enter_story((20, 0), &["FLAG_PARTY_LEFT_VALE"], &[])?;
+                let mut e = self.enter_story((20, 0), &["FLAG_VALE_PARTY_LEFT"], &[])?;
                 actors(&e.field, 8..30);
                 println!("code 1: {:?}", e.field.cells_with_code(1)?);
                 println!("code 2: {:?}", e.field.cells_with_code(2)?);
@@ -342,7 +342,7 @@ impl<'a> Guide<'a> {
                         marks.push((cx, cz));
                     }
                 }
-                let mut e = self.enter_story((20, 0), &["FLAG_PARTY_LEFT_VALE"], &[])?;
+                let mut e = self.enter_story((20, 0), &["FLAG_VALE_PARTY_LEFT"], &[])?;
                 for (file, from, facing, keys) in [
                     ("vault-bridge-west.gif", (456, 424), WEST, KEY_LEFT),
                     ("vault-bridge-east.gif", (312, 424), EAST, KEY_RIGHT),
@@ -358,7 +358,7 @@ impl<'a> Guide<'a> {
             "kraden-lift" => {
                 // ValeKraden (6): Lift cast on the boulder by the fence
                 // (actor 8), in the day's table and after the party left.
-                for (label, set, clear) in [("day", vec![], vec!["FLAG_PARTY_LEFT_VALE"]), ("left", vec!["FLAG_PARTY_LEFT_VALE"], vec![])] {
+                for (label, set, clear) in [("day", vec![], vec!["FLAG_VALE_PARTY_LEFT"]), ("left", vec!["FLAG_VALE_PARTY_LEFT"], vec![])] {
                     let mut e = self.enter_story((6, 0), &set, &clear)?;
                     println!("{label}: {}", describe(&e.field, 8));
                     let before = e.field.last_message();
@@ -381,12 +381,12 @@ impl<'a> Guide<'a> {
                 // the leader walking onto them from each side, recorded until
                 // the next scene is in.
                 for entrance in [1u16, 2] {
-                    let mut e = self.enter_story((14, entrance), &["FLAG_SOL_SANCTUM_ENTERED"], &["FLAG_PARTY_LEFT_VALE"])?;
+                    let mut e = self.enter_story((14, entrance), &["FLAG_SOL_SANCTUM_ENTERED"], &["FLAG_VALE_PARTY_LEFT"])?;
                     let c1 = e.field.cells_with_code(1)?;
                     let c2 = e.field.cells_with_code(2)?;
                     println!("entrance {entrance}: leader {}; code 1 {c1:?}; code 2 {c2:?}", describe(&e.field, 0));
                 }
-                let mut e = self.enter_story((14, 1), &["FLAG_SOL_SANCTUM_ENTERED"], &["FLAG_PARTY_LEFT_VALE"])?;
+                let mut e = self.enter_story((14, 1), &["FLAG_SOL_SANCTUM_ENTERED"], &["FLAG_VALE_PARTY_LEFT"])?;
                 let c1 = e.field.cells_with_code(1)?;
                 let Some(&(_, cx, cz)) = c1.first() else { return Err("no code 1".into()) };
                 for (dir, (dx, dz), facing, keys) in [("north", (0, 1), NORTH, KEY_UP), ("south", (0, -1), SOUTH, KEY_DOWN), ("east", (-1, 0), EAST, KEY_RIGHT), ("west", (1, 0), WEST, KEY_LEFT)] {
@@ -430,7 +430,7 @@ impl<'a> Guide<'a> {
                 // placed at (0, 0) (actor 22 and 20) from the scene's start,
                 // walking, ringing the bell and casting Whirlwind.
                 let get = at("ObjectTable_Get")?;
-                for (scene, id, set) in [(20u16, 22u32, vec!["FLAG_PARTY_LEFT_VALE"]), (23, 20, vec!["FLAG_PARTY_LEFT_VALE", "FLAG_REACHED_KALAY"])] {
+                for (scene, id, set) in [(20u16, 22u32, vec!["FLAG_VALE_PARTY_LEFT"]), (23, 20, vec!["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"])] {
                     let flags: Vec<u16> = set.iter().map(|n| self.flag(n).unwrap_or(0)).collect();
                     let setup = Setup { scene, entrance: 0, set: flags, clear: Vec::new() };
                     let mut field = Field::enter(self.rom, self.symbols, &setup)?;
@@ -471,7 +471,7 @@ impl<'a> Guide<'a> {
                 // ValeCaveKite (94): the still crate at (120, 232) and the
                 // still chest at (642, 552), each with the sprites alone.
                 for (entrance, (x, z), file) in [(1u16, (120, 232), "vale-cave-crate.png"), (8, (642, 552), "vale-cave-chest.png")] {
-                    let mut e = self.enter_story((94, entrance), &["FLAG_PARTY_LEFT_VALE"], &[])?;
+                    let mut e = self.enter_story((94, entrance), &["FLAG_VALE_PARTY_LEFT"], &[])?;
                     for a in (0x0200_0000u32..0x0204_0000).step_by(4) {
                         if e.field.read32(a) == (x as u32) << 16 && e.field.read32(a + 8) == (z as u32) << 16 {
                             let o = a - 8;
@@ -499,8 +499,8 @@ impl<'a> Guide<'a> {
                 // the cells with VAULT_INTERIORS_CELL_GUESTS_ROOM (10) and
                 // the row the events rewrite, in each state of the chase.
                 for (label, set) in [
-                    ("before", vec!["FLAG_PARTY_LEFT_VALE", "FLAG_VAULT_IVAN_JOINED_ROD_SEARCH"]),
-                    ("approached", vec!["FLAG_PARTY_LEFT_VALE", "FLAG_VAULT_IVAN_JOINED_ROD_SEARCH", "FLAG_VAULT_SUSPECTS_APPROACHED"]),
+                    ("before", vec!["FLAG_VALE_PARTY_LEFT", "FLAG_VAULT_IVAN_JOINED_ROD_SEARCH"]),
+                    ("approached", vec!["FLAG_VALE_PARTY_LEFT", "FLAG_VAULT_IVAN_JOINED_ROD_SEARCH", "FLAG_VAULT_SUSPECTS_APPROACHED"]),
                 ] {
                     let entrance = 12u16;
                     let Ok(mut e) = self.enter_story((21, entrance), &set, &[]) else {
@@ -518,7 +518,7 @@ impl<'a> Guide<'a> {
                 // VaultRevisit (23): configured object 223 at (128, 420) and
                 // the 3-by-3 block copied from (45, 41) to (8, 45), the room
                 // before the copy and after it.
-                let mut e = self.enter_story((23, 0), &["FLAG_PARTY_LEFT_VALE", "FLAG_REACHED_KALAY"], &[])?;
+                let mut e = self.enter_story((23, 0), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;
                 println!("header {:?} room {:?}", e.field.header(), e.field.room());
                 for a in (0x0200_0000u32..0x0204_0000).step_by(4) {
                     if e.field.read32(a) == 128 << 16 && e.field.read32(a + 8) == 420 << 16 {
@@ -597,7 +597,7 @@ impl<'a> Guide<'a> {
                 self.marked_room(&mut e, "vault-revisit-after.png", &marks, "Vault after Kalay, the copied block outlined")?;
                 // Before: put the source's old cells back by entering Vault
                 // (20), whose initialization does not copy them.
-                let mut v = self.enter_story((20, 0), &["FLAG_PARTY_LEFT_VALE"], &[])?;
+                let mut v = self.enter_story((20, 0), &["FLAG_VALE_PARTY_LEFT"], &[])?;
                 for layer in 0..3 {
                     super::probe::words(&v.field, layer, (6, 43), (12, 49));
                 }
@@ -607,14 +607,14 @@ impl<'a> Guide<'a> {
             "vault-interiors-revisit" => {
                 // VaultInteriorsRevisit (24): the gem owner's house, its
                 // cells at (8, 67) and the copy's source at (0, 120).
-                let e = self.enter_story((24, 0), &["FLAG_PARTY_LEFT_VALE", "FLAG_REACHED_KALAY"], &[])?;
+                let e = self.enter_story((24, 0), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;
                 let entrance = {
                     let ents = e.field.entrances();
                     ents.iter().map(|x| (x.number, x.x, x.z)).collect::<Vec<_>>()
                 };
                 println!("entrances: {entrance:?}");
                 drop(e);
-                let mut e = self.enter_story((24, 5), &["FLAG_PARTY_LEFT_VALE", "FLAG_REACHED_KALAY"], &[])?;
+                let mut e = self.enter_story((24, 5), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;
                 println!("leader {}", describe(&e.field, 0));
                 {
                     let work = e.field.map_work();
@@ -639,7 +639,7 @@ impl<'a> Guide<'a> {
                 self.marked_room(&mut e, "vault-interiors-revisit-after.png", &marks, "the gem owner's house after Kalay")?;
                 // The same room before Kalay (VaultInteriors, 21).
                 let entrance = 1u16;
-                let mut v = self.enter_story((21, entrance), &["FLAG_PARTY_LEFT_VALE"], &[])?;
+                let mut v = self.enter_story((21, entrance), &["FLAG_VALE_PARTY_LEFT"], &[])?;
                 for layer in 0..3 {
                     super::probe::words(&v.field, layer, (6, 65), (13, 71));
                 }
@@ -650,11 +650,11 @@ impl<'a> Guide<'a> {
                 // ValeInteriorsInn (8) after Kalay: ACTOR_BLANK_AFTER_KALAY
                 // and its neighbours, and walking into it.
                 let ents = {
-                    let e = self.enter_story((8, 0), &["FLAG_PARTY_LEFT_VALE", "FLAG_REACHED_KALAY"], &[])?;
+                    let e = self.enter_story((8, 0), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;
                     e.field.entrances().iter().map(|x| (x.number, x.x, x.z)).collect::<Vec<_>>()
                 };
                 println!("entrances: {ents:?}");
-                let after = ["FLAG_PARTY_LEFT_VALE", "FLAG_REACHED_KALAY"];
+                let after = ["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"];
                 let entrance = 5u16;
                 {
                     let mut e = self.enter_story((8, entrance), &after, &[])?;

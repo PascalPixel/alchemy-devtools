@@ -943,8 +943,8 @@ fn compose_alone(gba: &mut Gba, sprite: u32, only: u32, compose: u32) -> Option<
 impl<'a> Guide<'a> {
     /// Isaac attacking from the battle test menu (Fight, Attack, the aimed
     /// enemy), his battle sprite taken apart each frame one of its layers
-    /// changes: the body (entries[0], BattleObj.resource) and the weapon
-    /// (entries[1], BattleObj.overlay) each composed alone by the game's own
+    /// changes: the body (entries[0], BattleObject.resource) and the weapon
+    /// (entries[1], BattleObject.overlay) each composed alone by the game's own
     /// Sprite_ComposeAnimationFrame, the other layer's priority raised past
     /// 3 and the scripts held still, and the buffer it composes from both,
     /// read back from the sprite's tiles in video memory, beside the screen,
@@ -990,7 +990,7 @@ impl<'a> Guide<'a> {
         for a in &aparts {
             eprintln!("  {:?} {}x{} alone {:?}", a.layers, a.composed.width, a.composed.height, a.alone.iter().map(Option::is_some).collect::<Vec<_>>());
         }
-        // Which BattleObj field each layer came from, in the order
+        // Which BattleObject field each layer came from, in the order
         // BattleObj_SpawnObjectsForList registers them for a one-part body
         // with no status icon.
         const ROLES: [&str; 3] = ["RESOURCE", "OVERLAY", "EFFECT"];

@@ -256,7 +256,7 @@ impl<'a> Guide<'a> {
 
     /// A cutscene's script beside the frames each of its commands waits
     /// through, as `scene-script.gif`: Event_ReactToAnotherTremor, a Vale
-    /// villager's talk event once FLAG_REACHED_KALAY is set, played by
+    /// villager's talk event once FLAG_KALAY_REACHED is set, played by
     /// talking to her. Its body is read from vale.c a statement to a line;
     /// its calls are the BL instructions of its code in the loaded overlay,
     /// one to a statement, and every halfword of that code is probed, so a
@@ -270,7 +270,7 @@ impl<'a> Guide<'a> {
         let body: Vec<String> = source.lines().skip(head + 1).take_while(|l| !l.starts_with('}')).map(|l| l.trim().to_string()).filter(|l| !l.is_empty() && !l.starts_with("//")).collect();
         // As the 3 by 5 font draws them: no semicolons, and X for a times.
         let shown: Vec<String> = body.iter().map(|l| l.trim_end_matches(';').replace('*', "X")).collect();
-        let mut entered = self.enter_with(VALE, &["FLAG_REACHED_KALAY"])?;
+        let mut entered = self.enter_with(VALE, &["FLAG_KALAY_REACHED"])?;
         let spot = entered.field.spots(super::story::Trigger::Talk(WOMAN))?.into_iter().next().ok_or("nowhere to talk to her")?;
         entered.field.stand(&entered.placed, &spot)?;
         let field = &mut entered.field;

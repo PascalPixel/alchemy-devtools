@@ -60,7 +60,7 @@ impl<'a> Guide<'a> {
     /// Enters a scene after the party has left Vale, with the party the
     /// story has there (party.rs), and runs until the player has control.
     pub(super) fn enter(&self, (scene, entrance): (u16, u16)) -> Result<Field<'a>, String> {
-        let set = vec![self.flag("FLAG_PARTY_LEFT_VALE")?];
+        let set = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
         let setup = Setup { scene, entrance, set, clear };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
@@ -364,7 +364,7 @@ impl<'a> Guide<'a> {
 
     /// Enters a scene as `enter` does, with the flags `set` set as well.
     fn enter_set(&self, place: (u16, u16), set: Vec<u16>) -> Result<Entered<'a>, String> {
-        let mut flags = vec![self.flag("FLAG_PARTY_LEFT_VALE")?];
+        let mut flags = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
         for f in set {
             if !flags.contains(&f) {
                 flags.push(f);

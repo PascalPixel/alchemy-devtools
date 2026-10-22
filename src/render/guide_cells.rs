@@ -566,7 +566,7 @@ impl<'a> Guide<'a> {
     /// beside the picture that says in words what each does, each door
     /// checked by walking into it, as `scene-event-cells.png`.
     pub fn scene_event_cells(&mut self) -> Result<(), String> {
-        let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?, self.flag("FLAG_PARTY_LEFT_VALE")?];
+        let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?, self.flag("FLAG_VALE_PARTY_LEFT")?];
         let setup = Setup { scene: VALE.0, entrance: VALE.1, set: Vec::new(), clear };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let placed = field.save();

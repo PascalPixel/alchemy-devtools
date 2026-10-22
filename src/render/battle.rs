@@ -47,7 +47,7 @@ const ADVANCE: u32 = 45;
 const MAX_FRAMES: u32 = 6000;
 
 /// struct GameState (game_state.h), struct BattleUnit (battle/battle_unit.h),
-/// struct BattleWork (battle_work.h) and struct BattleObj
+/// struct BattleWork (battle_work.h) and struct BattleObject
 /// (battle/battle_session.h) offsets.
 const STATE_ACTIVE_OWNERS: u32 = 0x1f8;
 const STATE_BATTLE_START: u32 = 0x22b;
@@ -423,7 +423,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
                                 let word = gba.read32(owner(foe) + i);
                                 gba.write32(to + i, word);
                             }
-                            // Unit_Calculate rebuilds maxHp from baseHp and luck
+                            // Unit_Calculate rebuilds hpMax from baseHp and luck
                             // from baseLuck each round
                             // (BattleUnit_ResetGuardLevels), so raise both.
                             for field in [UNIT_BASE_HP, UNIT_MAX_HP, UNIT_HP] {

@@ -108,7 +108,7 @@ impl Front<'_> {
     }
 
     /// Vale's send-off (Event_DepartForQuest, ValeHome's entrance 12, with
-    /// FLAG_REACHED_KALAY clear): Isaac and Garet hear everyone is at the
+    /// FLAG_KALAY_REACHED clear): Isaac and Garet hear everyone is at the
     /// gate, walk to the crowd, and the town calls out "Farewell!". The GIF
     /// runs from message `first` to the hold of message `last`; the still is
     /// the crowd just before message `crowd`.
@@ -117,7 +117,7 @@ impl Front<'_> {
             scene: VALE_HOME.0,
             entrance: VALE_HOME.1,
             set: Vec::new(),
-            clear: vec![self.flag("FLAG_REACHED_KALAY")?, self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?],
+            clear: vec![self.flag("FLAG_KALAY_REACHED")?, self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?],
         };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         field.set_party(&[0, 1]);
@@ -138,7 +138,7 @@ impl Front<'_> {
     /// erupts: WorldMap_PlayLighthouseTransition(1), until the scene goes on
     /// to the aerie's entrance 93.
     pub fn lighthouse(&mut self) -> Result<(), String> {
-        let set = ["FLAG_VENUS_LIGHTHOUSE_LIT", "FLAG_MERCURY_LIGHTHOUSE_LIT", "FLAG_PARTY_LEFT_VALE"]
+        let set = ["FLAG_VENUS_LIGHTHOUSE_LIT", "FLAG_MERCURY_LIGHTHOUSE_LIT", "FLAG_VALE_PARTY_LEFT"]
             .iter()
             .map(|n| self.flag(n))
             .collect::<Result<Vec<u16>, String>>()?;
@@ -223,7 +223,7 @@ impl Front<'_> {
         // Lighthouse.
         for at in [None, Some((5800, 500))] {
             let mut canvas = vec![0u32; size * size];
-            let setup = Setup { scene: WORLD_MAP.0, entrance: 1, set: vec![self.flag("FLAG_PARTY_LEFT_VALE")?], clear: Vec::new() };
+            let setup = Setup { scene: WORLD_MAP.0, entrance: 1, set: vec![self.flag("FLAG_VALE_PARTY_LEFT")?], clear: Vec::new() };
             let mut field = Field::enter(self.rom, self.symbols, &setup)?;
             if let Some((x, z)) = at {
                 field.set_position(x, z);

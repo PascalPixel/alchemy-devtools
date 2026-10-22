@@ -864,7 +864,7 @@ impl<'a> Guide<'a> {
         let (x0, z0, side) = (170, 530, 130);
         let mut rows = Vec::new();
         for mia in [false, true] {
-            let mut set = vec![self.flag("FLAG_PARTY_LEFT_VALE")?];
+            let mut set = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
             if mia {
                 set.push(FLAG_MIA_IN_PARTY);
             }
@@ -1283,7 +1283,7 @@ impl<'a> Guide<'a> {
     /// `venus-lighthouse-aerie-layers-3d.gif`.
     pub fn venus_lighthouse_aerie_eruption(&mut self) -> Result<(), String> {
         let stacked = self.flag("FLAG_SCENE_TEMP_36")?;
-        let set = vec![self.flag("FLAG_PARTY_LEFT_VALE")?];
+        let set = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
         let mut field = Field::enter(self.rom, self.symbols, &super::field::Setup { scene: VENUS_LIGHTHOUSE_AERIE.0, entrance: VENUS_LIGHTHOUSE_AERIE.1, set, clear })?;
         let scene = field.scene();
