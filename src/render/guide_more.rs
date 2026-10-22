@@ -581,7 +581,8 @@ impl<'a> Guide<'a> {
 
     /// The ground under one screen of Goma Cave, as `cells.png`: the screen,
     /// and the same screen with the ground of the layer the leader follows
-    /// drawn over it pixel by pixel at its place on the map. The leader's
+    /// drawn over it pixel by pixel at its place on the map, raised by the
+    /// height of the leader's ground as his sprite is (0 here). The leader's
     /// layer shows on a background that scrolls with the view, and a layer's
     /// cells pointer already starts at its window into the grid, so map and
     /// screen pixels match. Ground more than a step above the leader's
@@ -615,13 +616,16 @@ impl<'a> Guide<'a> {
         // Each screen pixel's ground height and collision code.
         let mut height = vec![0i32; WIDTH * HEIGHT];
         let mut code = vec![0i32; WIDTH * HEIGHT];
-        for cz in vy.div_euclid(16)..=(vy + h - 1).div_euclid(16) {
-            for cx in vx.div_euclid(16)..=(vx + w - 1).div_euclid(16) {
+        // The map pixel under each screen pixel, at the leader's height as
+        // his sprite is drawn.
+        let (mx, mz) = (vx, vy + floor);
+        for cz in mz.div_euclid(16)..=(mz + h - 1).div_euclid(16) {
+            for cx in mx.div_euclid(16)..=(mx + w - 1).div_euclid(16) {
                 let (kind, flat) = field.shape(layer, cx, cz);
                 let c = field.cell(layer, cx, cz);
                 for py in 0..16 {
                     for px in 0..16 {
-                        let (sx, sy) = (cx * 16 + px - vx, cz * 16 + py - vy);
+                        let (sx, sy) = (cx * 16 + px - mx, cz * 16 + py - mz);
                         if !(0..w).contains(&sx) || !(0..h).contains(&sy) {
                             continue;
                         }
@@ -650,7 +654,7 @@ impl<'a> Guide<'a> {
                     None => mix(*pixel, 0x30_30_30, 0.15),
                 };
                 // The cells' grid, faintly.
-                if (sx + vx) % 16 == 0 || (sy + vy) % 16 == 0 {
+                if (sx + mx).rem_euclid(16) == 0 || (sy + mz).rem_euclid(16) == 0 {
                     *pixel = mix(*pixel, 0x50_50_50, 0.6);
                 }
             }

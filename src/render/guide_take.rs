@@ -1121,6 +1121,10 @@ impl<'a> Guide<'a> {
         let leader = field.read32(self.sym("gGameState")? + 0x1f4) as u16;
         field.hide_actor(leader);
         settle_view(field)?;
+        // The pool's ground is 32 pixels up, and a rider on a lift is drawn
+        // that far above his place on the map: the cells are drawn there
+        // too, so they sit under the lifts.
+        let lift = field.ground(0, LIFT_WATCH.0, LIFT_WATCH.1)? >> 16;
         let mut cells: Vec<(i32, i32)> = (58..=64).map(|x| (x, 13)).collect();
         cells.push((58, 11));
         let mut frames = Vec::new();
@@ -1130,7 +1134,7 @@ impl<'a> Guide<'a> {
             let mut image = canvas(2 * WIDTH, 2 * HEIGHT, 0);
             paste(&mut image, &screen(&field.picture()), 0, 0, 2);
             for &(cx, cz) in &cells {
-                let (sx, sy) = (2 * (cx * 16 - vx), 2 * (cz * 16 - vy));
+                let (sx, sy) = (2 * (cx * 16 - vx), 2 * (cz * 16 - vy - lift));
                 outline(&mut image, sx, sy, 32, 32, RED);
                 text(&mut image, sx + 2, sy + 2, &field.cell(0, cx, cz).to_string(), WHITE, Some(RED), 2);
             }
