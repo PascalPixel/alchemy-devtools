@@ -18,7 +18,7 @@ use std::sync::OnceLock;
 pub const REPORT: &str = "out/reports/humanity.tsv";
 
 /// S2's devices, in its order.
-pub const DEVICES: [&str; 7] = ["wrapper", "volatile", "temporary", "dead", "one-pass", "barrier", "pin"];
+pub const DEVICES: [&str; 8] = ["wrapper", "volatile", "temporary", "dead", "one-pass", "barrier", "pin", "signature"];
 
 /// A function body this many tokens long or more takes part in the duplicate search.
 const FUNCTION_TOKENS: usize = 24;
@@ -1317,6 +1317,7 @@ const ROWS: &[(&str, &str)] = &[
     ("fakematch_one-pass", "  one-pass"),
     ("fakematch_barrier", "  barrier"),
     ("fakematch_pin", "  pin"),
+    ("fakematch_signature", "  signature"),
     ("goto", "goto"),
     ("if_language", "#if on LANGUAGE"),
     ("if_patch", "#if on a patch level"),
