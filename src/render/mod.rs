@@ -985,6 +985,8 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
   battle-layers-3d, world-map-layers-3d, menu-layers-3d, talk-layers-3d
               a Goma Cave battle, the world map, the field menu and a message,
               pulled apart the same way, each as NAME.gif
+  scene-actors scene-actors.png: Vale at twice its size, each actor labelled
+              with its actor number
   world-map   world-map-walk.gif: the world map's perspective view, walking
   menus, menu-start, items, boot
               the field menu, Start closing it, the Item screen, power-on

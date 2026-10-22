@@ -383,6 +383,31 @@ impl<'a> Guide<'a> {
 
     /// One frame of Vale with each entry of the sprite list (OAM) outlined
     /// in its own colour, beside the sprites alone, as `oam.png`.
+    /// Where Garet's sister stands in Vale at twice the GBA's size, each
+    /// actor on screen marked at its feet and labelled with its actor
+    /// number (the scene's own placement rows start at ACTOR_FIRST_PLACED),
+    /// as `scene-actors.png`.
+    pub fn scene_actors(&mut self) -> Result<(), String> {
+        let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
+        let field = &mut entered.field;
+        field.frames(1)?;
+        let mut image = canvas(2 * WIDTH, 2 * HEIGHT, 0);
+        paste(&mut image, &screen(&field.picture()), 0, 0, 2);
+        let (vx, vy) = field.view();
+        for id in 0..ACTOR_SLOTS {
+            let Some(a) = field.actor(id) else { continue };
+            // A raised actor is drawn its height higher up the screen.
+            let (sx, sy) = (2 * (a.x - vx), 2 * (a.z - (a.y >> 16) - vy));
+            if !(0..2 * WIDTH as i32).contains(&sx) || !(0..2 * HEIGHT as i32).contains(&sy) {
+                continue;
+            }
+            let colour = hue(usize::from(id));
+            outline(&mut image, sx - 3, sy - 3, 6, 6, colour);
+            label(&mut image, sx - 6, sy - 60, id, colour);
+        }
+        self.guide_png("scene-actors.png", &image, "Vale's actors labelled by number")
+    }
+
     pub fn oam(&mut self) -> Result<(), String> {
         // Where Garet's sister and her neighbours stand.
         let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
@@ -841,4 +866,50 @@ struct Stretch {
     across: bool,
     ends: [i32; 2],
     keys: [u32; 2],
+}
+
+/// The field's actor slots (FIELD_ACTOR_COUNT in field.rs).
+const ACTOR_SLOTS: u16 = 66;
+
+/// Each digit of a 3 by 5 font, a row of three bits to a line, top first.
+const DIGITS: [[u8; 5]; 10] = [
+    [7, 5, 5, 5, 7],
+    [2, 6, 2, 2, 7],
+    [7, 1, 7, 4, 7],
+    [7, 1, 3, 1, 7],
+    [5, 5, 7, 1, 1],
+    [7, 4, 7, 1, 7],
+    [7, 4, 7, 5, 7],
+    [7, 1, 1, 1, 1],
+    [7, 5, 7, 5, 7],
+    [7, 5, 7, 1, 7],
+];
+
+/// Writes `n` at (x, y) in the 3 by 5 font at twice its size, white on a box
+/// of `colour`, clipped.
+fn label(image: &mut Image, x: i32, y: i32, n: u16, colour: u32) {
+    let text = n.to_string();
+    let (w, h) = (text.len() as i32 * 8 + 2, 14);
+    let mut put = |px: i32, py: i32, c: u32| {
+        if px >= 0 && py >= 0 && (px as usize) < image.width && (py as usize) < image.height {
+            image.pixels[py as usize * image.width + px as usize] = c;
+        }
+    };
+    for by in 0..h {
+        for bx in 0..w {
+            put(x + bx, y + by, colour);
+        }
+    }
+    for (i, ch) in text.bytes().enumerate() {
+        let rows = DIGITS[usize::from(ch - b'0')];
+        for (r, bits) in rows.iter().enumerate() {
+            for c in 0..3 {
+                if bits & (4 >> c) != 0 {
+                    for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
+                        put(x + 2 + i as i32 * 8 + 2 * c + dx, y + 2 + 2 * r as i32 + dy, 0xff_ff_ff);
+                    }
+                }
+            }
+        }
+    }
 }
