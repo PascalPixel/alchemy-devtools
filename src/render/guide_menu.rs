@@ -221,17 +221,17 @@ impl<'a> Guide<'a> {
         let (_, target, action, hp_after, pp_after) = reads[last];
         let user = reads[at[0]].0;
         let lines: [Vec<String>; 5] = [
-            vec![format!("CHOSEN: OWNERIDS[0] = {} ({})", user, NAMES[usize::from(user)])],
-            vec![format!("CHOSEN: PANEACTION[0] = {} ({})", reads[at[1]].2, name(reads[at[1]].2))],
-            vec!["RETURNS 1: ONE MEMBER,".to_string(), "SO THE NEXT STEP IS _TARGET".to_string()],
-            vec![format!("CHOSEN: OWNERIDS[1] = {} ({})", target, NAMES[usize::from(target)])],
-            vec![format!("{} HP {hp_before} TO {hp_after}", NAMES[usize::from(target)]), format!("{} PP {pp_before} TO {pp_after}", NAMES[usize::from(user)])],
+            vec![format!("THE USER, OWNERIDS[0]: {}", NAMES[usize::from(user)])],
+            vec![format!("THE PSYNERGY, PANEACTION[0]: {}", name(reads[at[1]].2))],
+            vec!["IT WORKS ON ONE MEMBER,".to_string(), "SO THE NEXT STEP IS _TARGET".to_string()],
+            vec![format!("THE TARGET, OWNERIDS[1]: {}", NAMES[usize::from(target)])],
+            vec![format!("{}'S HP: {hp_before} TO {hp_after}", NAMES[usize::from(target)]), format!("{}'S PP: {pp_before} TO {pp_after}", NAMES[usize::from(user)])],
         ];
         eprintln!("psynergy-steps: at {at:?}; {} {action}; {lines:?}", name(action));
         let (cw, ch) = (2 * WIDTH + 16, 2 * HEIGHT + 90);
-        let mut image = canvas(3 * cw + 8, 2 * ch + 8, BACK);
+        let mut image = canvas(2 * cw + 8, 3 * ch + 8, BACK);
         for i in 0..5 {
-            let (x, y) = (8 + (i % 3) * cw, 8 + (i / 3) * ch);
+            let (x, y) = (8 + (i % 2) * cw, 8 + (i / 2) * ch);
             text(&mut image, x as i32, y as i32, &format!("{} {}", i + 1, steps[i].0), MARK, None, 2);
             text(&mut image, x as i32, y as i32 + 18, &steps[i].2.to_uppercase(), HEAD, None, 2);
             for (n, l) in lines[i].iter().enumerate() {
@@ -239,7 +239,7 @@ impl<'a> Guide<'a> {
             }
             paste(&mut image, &screen(&frames[at[i]]), x, y + 78, 2);
         }
-        let (x, y) = (8 + 2 * cw, 8 + ch);
+        let (x, y) = (8 + cw, 8 + 2 * ch + 40);
         let notes = [
             "MENU_RESOLVESELECTEDACTION'S STEPS, EACH",
             "FOUND WHERE ITS FUNCTION IS ENTERED, AND",
@@ -377,7 +377,13 @@ impl<'a> Guide<'a> {
         let back = hits.iter().find(|h| h.pc == steps[1].1 && h.frame > starts[3]).map_or(frames.len(), |h| h.frame);
         let ends = [starts[1], starts[2], starts[3], back];
         let (cw, ch) = (2 * WIDTH + 16, 2 * HEIGHT + 60);
-        let mut image = canvas(2 * cw + 8, 2 * ch + 8, BACK);
+        let mut image = canvas(2 * cw + 8, 2 * ch + 36, BACK);
+        // The key: each element's outline colour.
+        let mut kx = 8;
+        kx += text(&mut image, kx, (2 * ch + 14) as i32, "OUTLINED DJINN FIGURES: ", DIM, None, 2);
+        for (name, colour) in ELEMENTS {
+            kx += text(&mut image, kx, (2 * ch + 14) as i32, name, colour, None, 2) + 12;
+        }
         for k in 0..4 {
             // Before the A that leaves the page, which is held 4 frames.
             let at = ends[k].saturating_sub(7).min(frames.len() - 1);
@@ -396,8 +402,8 @@ impl<'a> Guide<'a> {
             }
             paste(&mut image, &shot, x, y + 54, 2);
             let place = match shown.first() {
-                Some(&(_, _, fy)) => format!("DJINN FIGURES AT X {}, Y {fy}", shown.iter().map(|s| s.1.to_string()).collect::<Vec<_>>().join(" ")),
-                None => format!("DJINN FIGURES AT Y {}: ABOVE THE SCREEN", figures[at][0].2),
+                Some(&(_, _, fy)) => format!("FIGURES STAND AT SCREEN X {}, Y {fy} PIXELS", shown.iter().map(|s| s.1.to_string()).collect::<Vec<_>>().join(" ")),
+                None => format!("FIGURES AT SCREEN Y {} PIXELS: ABOVE THE SCREEN", figures[at][0].2),
             };
             text(&mut image, x as i32, y as i32 + 36, &place, TEXT, None, 2);
             eprintln!("  {}: frame {at}, figures {:?}", steps[k].0, shown);
@@ -440,7 +446,7 @@ impl<'a> Guide<'a> {
             .map(|e| {
                 let name = items.get(usize::from(e & ITEM_ID_MASK)).cloned().unwrap_or_default().to_uppercase();
                 let n = (e >> INVENTORY_QUANTITY_SHIFT) + 1;
-                let name = if n > 1 { format!("{name} X{n}") } else { name };
+                let name = if n > 1 { format!("{name}, {n} HELD") } else { name };
                 if e & INVENTORY_EQUIPPED != 0 { format!("{name} (E)") } else { name }
             })
             .collect()
@@ -478,17 +484,23 @@ impl<'a> Guide<'a> {
         const SORTS: [&str; 4] = ["LIST_SORT_EQUIPPED_THEN_ITEMS", "LIST_SORT_EQUIPPED_THEN_EQUIPMENT", "LIST_SORT_EQUIPMENT_FIRST", "LIST_SORT_ITEMS_FIRST"];
         // The item window: tiles 13 to 30 across, 3 to 13 down.
         let (wx, wy, ww, wh): (i32, i32, usize, usize) = (13 * 8, 3 * 8, 17 * 8, 10 * 8);
-        let cw = 2 * ww + 40;
-        let mut image = canvas(5 * cw + 8, 2 * wh + 300, BACK);
+        // Two to a row: the window at twice its size, the list beside it.
+        let (cw, ch) = (2 * ww + 210, 2 * wh + 70);
+        let mut image = canvas(2 * cw + 8, 3 * ch + 8, BACK);
         for k in 0..5 {
-            let x = 8 + k * cw;
-            let (head, sub) = if k == 0 { ("AS GIVEN".to_string(), String::new()) } else { (format!("PRESS {k}: SORT MODE {}", modes[k - 1]), SORTS.get(modes[k - 1] as usize).copied().unwrap_or("?").to_string()) };
-            text(&mut image, x as i32, 8, &head, MARK, None, 2);
-            text(&mut image, x as i32, 26, &sub, HEAD, None, 2);
-            paste(&mut image, &crop(&screen(&shots[k]), wx, wy, ww, wh), x, 48, 2);
+            let (x, y) = (8 + (k % 2) * cw, 8 + (k / 2) * ch);
+            let (head, sub) = if k == 0 { ("AS GIVEN".to_string(), String::new()) } else { (format!("PRESS {k} OF A WITH L HELD:"), SORTS.get(modes[k - 1] as usize).copied().unwrap_or("?").to_string()) };
+            text(&mut image, x as i32, y as i32, &head, MARK, None, 2);
+            text(&mut image, x as i32, y as i32 + 18, &sub, HEAD, None, 2);
+            paste(&mut image, &crop(&screen(&shots[k]), wx, wy, ww, wh), x, y + 40, 2);
             for (n, line) in lists[k].iter().enumerate() {
-                text(&mut image, x as i32, (60 + 2 * wh + 16 * n) as i32, line, if line.ends_with("(E)") { MARK } else { TEXT }, None, 2);
+                text(&mut image, (x + 2 * ww + 10) as i32, (y + 40 + 16 * n) as i32, line, if line.ends_with("(E)") { MARK } else { TEXT }, None, 2);
             }
+        }
+        let (x, y) = (8 + cw, 8 + 2 * ch + 40);
+        let key = ["EACH LIST IS ISAAC'S INVENTORY", "AS HIS UNIT HOLDS IT, IN ORDER.", "", "IN YELLOW, MARKED (E): EQUIPPED.", "THE SORT EACH PRESS USED IS THE", "ONE INVENTORYMENU_SORTBYLISTORDER", "WAS ENTERED WITH."];
+        for (n, l) in key.iter().enumerate() {
+            text(&mut image, x as i32, (y + 16 * n) as i32, l, if n == 3 { MARK } else { DIM }, None, 2);
         }
         self.guide_png("item-sorting.png", &image, "Isaac's items in each of the four sort orders")
     }
@@ -541,8 +553,8 @@ impl<'a> Guide<'a> {
             // member row.
             let list_from = open_screen(2).iter().map(|p| p.1 as usize).sum::<usize>() + 70;
             let wants: [(u32, &dyn Fn(&Hit) -> bool, &str); 4] = [
-                (0, &|h| h.frame < list_from, "THE MEMBER ROW"),
-                (8, &|h| h.frame < list_from, "THE MEMBER ROW, R HELD"),
+                (0, &|h| h.frame < list_from, "ON THE ITEM SCREEN'S|MEMBER ROW"),
+                (8, &|h| h.frame < list_from, "ON THE MEMBER ROW,|WITH R HELD"),
                 (2, &|h| item_of(h) == ("Long Sword".to_string(), false), ""),
                 (4, &|h| item_of(h).0 == "Orb of Force", ""),
             ];
@@ -550,7 +562,7 @@ impl<'a> Guide<'a> {
                 let k = hits.iter().position(|h| h.r[3] & 0xff == want && pick(h)).ok_or(format!("no call drew {}", names(want)))?;
                 let hit = hits[k];
                 let end = hits.get(k + 1).map_or(frames.len(), |n| n.frame).min(hit.frame + 30);
-                let note = if what.is_empty() { format!("THE CURSOR ON THE {}", item_of(&hit).0.to_uppercase()) } else { what.to_string() };
+                let note = if what.is_empty() { format!("THE CURSOR ON|THE {}", item_of(&hit).0.to_uppercase()) } else { what.to_string() };
                 eprintln!("  {}: frame {} shown {}", names(want), hit.frame, end - 1);
                 panels.push((names(want).to_string(), hit.r[3], frames[end - 1].clone(), note));
             }
@@ -562,17 +574,20 @@ impl<'a> Guide<'a> {
             let (frames, hits) = Self::run_hooked(&mut field, &[draw], &open_screen(2), &mut |_| {})?;
             let hit = hits.first().ok_or("the member row drew no panel")?;
             eprintln!("  forced: frame {} mode {:#x} given 6", hit.frame, hit.r[3]);
-            panels.push(("STATUS_PANEL_CLASS".to_string(), 6, frames.last().cloned().unwrap(), "NO CALL PASSES IT: MODE 6 GIVEN".to_string()));
+            panels.push(("STATUS_PANEL_CLASS".to_string(), 6, frames.last().cloned().unwrap(), "NO CALL PASSES IT: GIVEN|TO THE MEMBER ROW'S CALL".to_string()));
         }
         let (px, py, pw, ph) = (0usize, 5 * 8usize, 13 * 8usize, 12 * 8usize);
-        let cw = 3 * pw + 24;
-        let mut image = canvas(5 * cw + 8, 3 * ph + 74, BACK);
-        for (k, (kind, mode, shot, note)) in panels.iter().enumerate() {
-            let x = 8 + k * cw;
-            text(&mut image, x as i32, 8, kind, MARK, None, 2);
-            text(&mut image, x as i32, 26, &format!("MODE {mode:#x}"), HEAD, None, 2);
-            text(&mut image, x as i32, 44, note, DIM, None, 2);
-            paste(&mut image, &crop(&screen(shot), px as i32, py as i32, pw, ph), x, 66, 3);
+        // Three to a row, each at twice its size under its kind and where
+        // it was drawn.
+        let (cw, ch) = (2 * pw + 112, 2 * ph + 76);
+        let mut image = canvas(3 * cw + 8, 2 * ch + 8, BACK);
+        for (k, (kind, _, shot, note)) in panels.iter().enumerate() {
+            let (x, y) = (8 + (k % 3) * cw, 8 + (k / 3) * ch);
+            text(&mut image, x as i32, y as i32, kind, MARK, None, 2);
+            let (first, second) = note.split_once('|').unwrap_or((note, ""));
+            text(&mut image, x as i32, y as i32 + 18, first, TEXT, None, 2);
+            text(&mut image, x as i32, y as i32 + 34, second, TEXT, None, 2);
+            paste(&mut image, &crop(&screen(shot), px as i32, py as i32, pw, ph), x, y + 56, 2);
         }
         self.guide_png("status-panels.png", &image, "the status panel once for each kind")
     }
