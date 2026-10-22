@@ -10,6 +10,7 @@ pub(crate) mod figure;
 pub(crate) mod history;
 pub(crate) mod humanity;
 pub(crate) mod jsnum;
+pub(crate) mod naming;
 pub(crate) mod provenance;
 pub(crate) mod letters;
 pub(crate) mod model;
@@ -36,7 +37,9 @@ headers, from the source alone (README), prints a table and writes
 out/reports/humanity.tsv; --top N also lists the N files leading each count,
 and --list METRIC prints each counted thing of one TSV metric instead
 (--list provenance is the name provenance worklist, --list unused_word the
-words the game's text never uses).";
+words the game's text never uses, and --list synonym, synonym_referent,
+abbreviation, family_shape, prefix_unlisted or prefix_twin the names a
+reader could not guess from their siblings).";
 
 fn read(path: &Path) -> Result<String, String> {
     std::fs::read(path)

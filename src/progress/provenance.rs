@@ -286,6 +286,11 @@ impl GameText {
     pub fn is_empty(&self) -> bool {
         self.messages.is_empty()
     }
+
+    /// The area names, as `gScene_AreaNameRules` reads them.
+    pub fn areas(&self) -> &[String] {
+        &self.areas
+    }
 }
 
 /// A name's words as it writes them: `SceneId_SolSanctumLunaSolRooms` is

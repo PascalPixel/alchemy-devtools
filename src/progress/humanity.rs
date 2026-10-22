@@ -4,10 +4,12 @@
 //! counted by simple rules the README sets out: magic numbers, placeholder
 //! and numbered names, compiler-steering devices, edition tests, undocumented
 //! declarations, long files, duplicated code and, with the game's English
-//! text, where the names of game things come from (`provenance`). Nothing
-//! here counts toward DONE (C2); the figures are for people.
+//! text, where the names of game things come from (`provenance`), and whether
+//! the names can be guessed from one another (`naming`). Nothing here counts
+//! toward DONE (C2); the figures are for people.
 
 use super::clex::{self, Kind, Token};
+use super::naming::{self, NameKind};
 use super::provenance::{self, Analysis, Definition, GameText, Origin, Thing};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -120,6 +122,8 @@ pub struct Report {
     macro_parameters: HashMap<String, Vec<(String, Option<(String, usize)>)>>,
     function_bodies: HashMap<String, Group>,
     table_bodies: HashMap<String, Group>,
+    /// Every name the source defines or declares, for the naming checks.
+    pub naming: naming::Names,
 }
 
 /// A lone number passed to a call, with each call around it and the
@@ -622,6 +626,12 @@ struct Walk<'r, 'a> {
 type Enumerated = (Option<String>, Option<i64>);
 
 impl<'r, 'a> Walk<'r, 'a> {
+    /// Keep a name for the naming checks.
+    fn named(&mut self, name: &str, kind: NameKind, line: usize, group: Option<String>) {
+        let file = self.file.to_string();
+        self.report.naming.names.push(naming::Name { name: name.to_string(), kind, file, line, group });
+    }
+
     /// Keep a definition whose name may name a game thing, once per file.
     fn thing(&mut self, name: &str, origin: Origin, line: usize, own: String, context: String, enumerated: Enumerated) {
         let (tag, value) = enumerated;
@@ -672,6 +682,8 @@ impl<'r, 'a> Walk<'r, 'a> {
         if let Some(&open) = self.open.last() {
             self.enum_next.insert(open, (tag.clone(), value.map(|value| value + 1)));
         }
+        let group = self.open.last().map(|open| format!("{}#{open}", self.file));
+        self.named(name, NameKind::Enumerator, line, group);
         let before = self.report.things.len();
         self.thing(name, Origin::Enumerator, line, own, context, (tag, value));
         if let Some(&open) = self.open.last() {
@@ -691,6 +703,42 @@ impl<'r, 'a> Walk<'r, 'a> {
                 self.report.names.entry(kind).or_default().insert(name.to_string());
             }
         }
+    }
+
+    /// A struct or union member's name at `at`: an identifier its type
+    /// precedes and `;`, `,`, `[` or `:` follows, or a pointer to functions
+    /// (`void (*draw)(void);`).
+    fn field(&mut self, at: usize, prev: Option<usize>, prev2: Option<usize>) {
+        let text = |at: Option<usize>| at.map_or("", |at| self.code.text(at));
+        let name = self.code.text(at);
+        let after = self.code.tokens.get(at + 1).map_or("", |t| t.text);
+        let member = matches!(after, ";" | "," | "[" | ":") && !matches!(text(prev), "struct" | "union" | "enum" | "{" | ";");
+        let pointer = after == ")" && text(prev) == "*" && text(prev2) == "(";
+        if is_keyword(name) || !(member || pointer) {
+            return;
+        }
+        let Some(&open) = self.open.last() else { return };
+        let tag = open.checked_sub(1).map(|before| &self.code.tokens[before]).filter(|t| t.kind == Kind::Ident && !is_keyword(t.text));
+        let group = tag.map_or_else(|| format!("{}#{open}", self.file), |tag| tag.text.to_string());
+        let line = self.code.tokens[at].line;
+        self.named(name, NameKind::Field, line, Some(group));
+    }
+
+    /// A variable, parameter or member declared with a struct or union type
+    /// (`struct BattleUnit *unit`), for the names one type goes by.
+    fn typed(&mut self, at: usize) {
+        let tokens = &self.code.tokens;
+        let Some(tag) = tokens.get(at + 1).filter(|t| t.kind == Kind::Ident && !is_keyword(t.text)) else { return };
+        let mut next = at + 2;
+        while tokens.get(next).is_some_and(|t| matches!(t.text, "*" | "const" | "volatile")) {
+            next += 1;
+        }
+        let Some(name) = tokens.get(next).filter(|t| t.kind == Kind::Ident && !is_keyword(t.text)) else { return };
+        if !tokens.get(next + 1).is_some_and(|t| matches!(t.text, "," | ")" | ";" | "=" | "[")) {
+            return;
+        }
+        let typed = naming::Typed { tag: tag.text.to_string(), name: name.text.to_string(), file: self.file.to_string(), line: name.line };
+        self.report.naming.typed.push(typed);
     }
 
     /// `(w * h)` written with literals.
@@ -808,6 +856,8 @@ impl<'r, 'a> Walk<'r, 'a> {
                             self.report.macro_values.insert(name.text.to_string(), value);
                         }
                     }
+                    let kind = if function_like { NameKind::FunctionMacro } else { NameKind::Macro };
+                    self.named(name.text, kind, line, None);
                     let origin = if function_like { Origin::FunctionMacro } else { Origin::Macro };
                     self.thing(name.text, origin, line, own, String::new(), (None, value));
                 }
@@ -939,6 +989,12 @@ impl<'r, 'a> Walk<'r, 'a> {
                     {
                         self.enumerator(at);
                     }
+                    if self.stack.last() == Some(&Brace::Struct) {
+                        self.field(at, prev, prev2);
+                    }
+                    if matches!(name, "struct" | "union") {
+                        self.typed(at);
+                    }
                 }
                 (Kind::Number, _) if self.stack.is_empty() && self.square > 0 => {}
                 (Kind::Number, _) => self.number(at, None),
@@ -1041,6 +1097,7 @@ impl<'r, 'a> Walk<'r, 'a> {
             return;
         }
         let line = self.code.tokens[first].line;
+        self.tags(&opened, if lead == "typedef" { second_last } else { "" }, line);
         if lead == "typedef" {
             self.types(&opened, second_last, line, documented);
             return;
@@ -1050,6 +1107,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 let name = name.to_string();
                 self.parameters(&name, &statement);
                 self.report.declare(true, &name, file, line, documented, true);
+                self.named(&name, NameKind::Function, line, None);
                 self.duplicate(true, open, &name);
                 let own = self.code.doc_text[first].clone();
                 self.thing(&name, Origin::Function, line, own, String::new(), (None, None));
@@ -1071,10 +1129,12 @@ impl<'r, 'a> Walk<'r, 'a> {
                 let name = name.to_string();
                 self.parameters(&name, &statement);
                 self.report.declare(true, &name, file, line, documented, false);
+                self.named(&name, NameKind::Prototype, line, None);
             }
             Some(Declarator::Global(name)) => {
                 let name = name.to_string();
                 self.report.declare(false, &name, file, line, documented, defined);
+                self.named(&name, if defined { NameKind::Global } else { NameKind::Extern }, line, None);
                 // A mechanism's table counts where it is defined; a game thing
                 // (`extern char SceneId_Vale;`) where it is declared.
                 if defined || provenance::kind(Definition::new(&name, file, Origin::Global), &self.report.macro_values) != Some("global") {
@@ -1108,6 +1168,24 @@ impl<'r, 'a> Walk<'r, 'a> {
             }
             let name = tag.map_or(if typedef.is_empty() { "(anonymous)" } else { typedef }, |t| t.text);
             self.report.note(metric, self.file, line, name);
+        }
+    }
+
+    /// The struct, union and enum tags a statement defines, and the name a
+    /// typedef gives.
+    fn tags(&mut self, opened: &[(usize, Brace)], typedef: &str, line: usize) {
+        for &(open, kind) in opened {
+            if !matches!(kind, Brace::Struct | Brace::Enum) {
+                continue;
+            }
+            let tag = open.checked_sub(1).map(|at| &self.code.tokens[at]).filter(|t| t.kind == Kind::Ident && !is_keyword(t.text));
+            if let Some(tag) = tag {
+                let (name, line) = (tag.text, tag.line);
+                self.named(name, NameKind::Tag, line, None);
+            }
+        }
+        if !typedef.is_empty() && !is_keyword(typedef) && typedef.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
+            self.named(typedef, NameKind::Typedef, line, None);
         }
     }
 
@@ -1246,6 +1324,7 @@ pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, t
     for (path, text) in files {
         if path.ends_with("/README.md") {
             unit(&mut report, path, text);
+            report.naming.guides.push((path.to_string(), text.to_string()));
             continue;
         }
         file(&mut report, path, text);
@@ -1254,8 +1333,14 @@ pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, t
         }
     }
     report.finish();
-    if let Some(text) = text.filter(|text| !text.is_empty()) {
+    let text = text.filter(|text| !text.is_empty());
+    if let Some(text) = text {
         report.check_provenance(text);
+    }
+    let mut findings = naming::check(&report.naming, text);
+    findings.sort_by(|a, b| a.metric.cmp(b.metric).then(a.file.cmp(&b.file)).then(a.line.cmp(&b.line)).then(a.what.cmp(&b.what)));
+    for finding in findings {
+        report.note(finding.metric, &finding.file, finding.line, &finding.what);
     }
     report
 }
@@ -1438,6 +1523,13 @@ const ROWS: &[(&str, &str)] = &[
     ("unused_word_name", "  names using them"),
     ("door_words", "door words unresolved"),
     ("door_word_link", "  links using them"),
+    ("", "names to guess (one word per idea):"),
+    ("synonym", "  a second word for one idea"),
+    ("synonym_referent", "  one type, two variable names"),
+    ("abbreviation", "  shortened, spelled elsewhere"),
+    ("family_shape", "  off their family's pattern"),
+    ("prefix_unlisted", "  prefixes no guide lists"),
+    ("prefix_twin", "  one idea under two prefixes"),
     ("", "to review, not to fill (D9):"),
     ("undocumented_function", "  functions without ///"),
     ("undocumented_struct", "  structs without ///"),
@@ -1451,7 +1543,7 @@ const LISTED: &[&str] = &[
     "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "goto", "if_language", "if_patch",
     "if_in_function", "undocumented_entry", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
     "undocumented_global", "provenance_none", "provenance_prose", "provenance_table_mismatch", "unused_word_name",
-    "door_word_link", "unit_open",
+    "door_word_link", "unit_open", "synonym", "synonym_referent", "abbreviation", "family_shape", "prefix_unlisted", "prefix_twin",
 ];
 
 impl Report {
@@ -2066,5 +2158,51 @@ mod provenance_tests {
         let worklist = list(&[("tbs", &report)], "provenance");
         assert!(worklist.contains("\tTOLBI_TO_HOUSE\tlink\tgames/tbs/include/scene_links.h:4\tto,house\tnone; door: house\n"), "{worklist}");
         assert!(tsv(&[("tbs", &report)]).contains("tbs\tdoor_word\thouse\t2\n"));
+    }
+}
+
+#[cfg(test)]
+mod naming_tests {
+    use super::*;
+
+    #[test]
+    fn names_are_read_for_the_naming_checks() {
+        let guide = "# Battle\n\n| `Battle_` | the battle |\n";
+        let code = concat!(
+            "struct BattleUnit { u8 itemCnt; u16 count; void (*draw)(void); };\n",
+            "enum Mode { MODE_IDLE, MODE_WALK, MODE_RUN };\n",
+            "#define UNIT_COUNT 4\n",
+            "void Battle_Run(struct BattleUnit *unit) { struct BattleUnit *target; }\n",
+            "void Spoils_Count(void) {}\n",
+        );
+        let report = game([("games/tbs/src/battle/README.md", guide), ("games/tbs/src/battle/a.c", code)]);
+        let named: Vec<(&str, NameKind)> = report.naming.names.iter().map(|name| (name.name.as_str(), name.kind)).collect();
+        assert_eq!(
+            named,
+            [
+                ("itemCnt", NameKind::Field),
+                ("count", NameKind::Field),
+                ("draw", NameKind::Field),
+                ("BattleUnit", NameKind::Tag),
+                ("MODE_IDLE", NameKind::Enumerator),
+                ("MODE_WALK", NameKind::Enumerator),
+                ("MODE_RUN", NameKind::Enumerator),
+                ("Mode", NameKind::Tag),
+                ("UNIT_COUNT", NameKind::Macro),
+                ("Battle_Run", NameKind::Function),
+                ("Spoils_Count", NameKind::Function),
+            ]
+        );
+        let typed: Vec<(&str, &str)> = report.naming.typed.iter().map(|typed| (typed.tag.as_str(), typed.name.as_str())).collect();
+        assert_eq!(typed, [("BattleUnit", "unit"), ("BattleUnit", "target")]);
+        assert_eq!(
+            list(&[("tbs", &report)], "prefix_unlisted"),
+            "tbs\tgames/tbs/src/battle/a.c:5\tSpoils_\t1 functions; not in src/battle/README.md or another folder guide (first: Spoils_Count)\n"
+        );
+        assert_eq!(
+            list(&[("tbs", &report)], "abbreviation"),
+            "tbs\tgames/tbs/src/battle/a.c:1\titemCnt\tcnt -> count: itemCount (3 names spell count, as UNIT_COUNT does)\n"
+        );
+        assert_eq!(report.value("abbreviation"), 1);
     }
 }
