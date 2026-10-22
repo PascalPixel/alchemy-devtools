@@ -185,6 +185,56 @@ impl Flags {
     }
 }
 
+/// The first of the story's flags (FLAG_KRADEN_WONDERED_ABOUT_STRANGERS,
+/// flags.h): below it are the party's and the Djinn's, the system's, the
+/// scenes' and places' own (cleared on entering them) and the shops' stock.
+pub const STORY_FLAGS_FIRST: u16 = 0x800;
+
+impl Flags {
+    /// The story flags that hold when the party first reaches scene `scene`:
+    /// every story flag a beat before the scene's first sets, less those a
+    /// later one of them clears, as beats.tsv (the story tools' index of the
+    /// events in the story's order, written beside flags.tsv) has them.
+    /// What the title's hand-over from the prologue changes (FLAG_CHILDHOOD,
+    /// FLAG_ISAAC_WEARS_TUNIC, Party_EndChildhood) is no story flag.
+    pub fn before_first_visit(&self, scene: u16) -> Result<Vec<u16>, String> {
+        let path = self.dir.join("beats.tsv");
+        let tsv = Tsv::read(&path)?;
+        let (scenes, sets, clears) = (tsv.column("scenes")?, tsv.column("sets")?, tsv.column("clears")?);
+        let mut held: Vec<u16> = Vec::new();
+        for row in &tsv.rows {
+            // "25 GomaCaveEntrance, 26 GomaCavePond": numbers and symbols.
+            let listed: Vec<(u16, &str)> = tsv
+                .get(row, scenes)
+                .split(',')
+                .filter_map(|s| s.trim().split_once(' ').and_then(|(n, name)| Some((n.parse().ok()?, name))))
+                .collect();
+            if listed.iter().any(|&(n, _)| n == scene) {
+                held.sort_unstable();
+                return Ok(held);
+            }
+            let symbol = listed.first().map(|&(_, name)| name);
+            let names = |column: usize| -> Vec<u16> {
+                tsv.get(row, column)
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|n| !n.is_empty())
+                    .filter_map(|n| self.resolve(n, symbol))
+                    .filter(|&f| f >= STORY_FLAGS_FIRST)
+                    .collect()
+            };
+            for f in names(sets) {
+                if !held.contains(&f) {
+                    held.push(f);
+                }
+            }
+            let cleared = names(clears);
+            held.retain(|f| !cleared.contains(f));
+        }
+        Err(format!("{} has no beat in scene {scene}", path.display()))
+    }
+}
+
 fn parse_number(text: &str) -> Option<u32> {
     let text = text.trim();
     match text.strip_prefix("0x") {
@@ -394,6 +444,30 @@ mod tests {
         assert_eq!(parse_trigger("mind read on 1027"), Ok(Trigger::Psynergy(0x8d, 3)));
         assert_eq!(parse_trigger("ply on ACTOR_WATERFALL_STATUE=12"), Ok(Trigger::Psynergy(0x5d, 12)));
         assert!(parse_trigger("entry initialize").is_err());
+    }
+
+    #[test]
+    fn a_first_visit_holds_the_story_flags_set_before_it() {
+        let dir = std::env::temp_dir().join(format!("alchemy-story-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("flags.tsv"),
+            "flag\tnumber\tnames\n0x021\t0x021\tFLAG_TUNIC\n0x800\t0x800\tFLAG_A\n0x801\t0x801\tFLAG_B\n0x802\t0x802\tFLAG_C\n0x803\t0x803\tFLAG_D\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("beats.tsv"),
+            "order\tplace\tfile\tscenes\tevent\ttrigger\trequires\tsets\tclears\n\
+             1\tVale\tv.c\t4 Vale\tE1\t\t\tFLAG_A, FLAG_B, FLAG_TUNIC\t\n\
+             2\tVault\tv.c\t20 Vault, 21 VaultInteriors\tE2\t\t\tFLAG_C\tFLAG_B\n\
+             3\tGoma Cave\tg.c\t27 GomaCavePillar\tE3\t\t\tFLAG_D\t\n",
+        )
+        .unwrap();
+        let flags = Flags::read(&dir.join("flags.tsv")).unwrap();
+        assert_eq!(flags.before_first_visit(27), Ok(vec![0x800, 0x802]));
+        assert_eq!(flags.before_first_visit(21), Ok(vec![0x800, 0x801]));
+        assert!(flags.before_first_visit(99).is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

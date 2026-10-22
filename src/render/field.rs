@@ -120,7 +120,7 @@ const CELL_EVENT_LAST: i32 = 239;
 const CELL_LEDGE: i32 = 252;
 const CELL_CLIMB: i32 = 253;
 const CELL_JUMP: i32 = 254;
-const CELL_WALL: i32 = 255;
+pub(super) const CELL_WALL: i32 = 255;
 /// North, east, south and west: a cell's step, the heading that faces that
 /// way and the direction key that walks it.
 const STEP: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
@@ -128,8 +128,8 @@ const FACING: [u32; 4] = [0xc000, 0x0000, 0x4000, 0x8000];
 const KEYS: [u32; 4] = [KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT];
 /// Map_CheckObjectStep's limits: ground up to 8 pixels higher or 12 lower
 /// is a step the leader can take.
-const STEP_UP: i32 = 8 << 16;
-const STEP_DOWN: i32 = 12 << 16;
+pub(super) const STEP_UP: i32 = 8 << 16;
+pub(super) const STEP_DOWN: i32 = 12 << 16;
 /// The furthest a ledge, a climb or a jump is taken to drop the leader.
 const JUMP_DROP: i32 = 96 << 16;
 /// struct SceneEvent: its control word (kind in the low four bits, a facing

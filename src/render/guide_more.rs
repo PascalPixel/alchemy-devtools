@@ -4,7 +4,7 @@
 //! its palettes, the sprite list, a map's cells, the overlay area).
 
 use super::animation;
-use super::field::{box_holds, Field, Image, Spot};
+use super::field::{box_holds, Actor, Field, Image, Spot, CELL_WALL, STEP_DOWN, STEP_UP};
 use super::guide::{Entered, Guide};
 use super::mgba::{HEIGHT, WIDTH};
 use super::places::write_png;
@@ -598,7 +598,7 @@ impl<'a> Guide<'a> {
     /// its ground below.
     pub fn cells(&mut self) -> Result<(), String> {
         let names = self.cell_names("gGomaCavePillar_Events", "GomaCavePillar")?;
-        let mut entered = self.enter_with(GOMA_CAVE, &[])?;
+        let mut entered = self.enter_goma_cave(GOMA_CAVE)?;
         let field = &mut entered.field;
         Self::press_path(field, &[(0, 10)])?;
         let plain = screen(&field.picture());
@@ -735,7 +735,7 @@ impl<'a> Guide<'a> {
     /// from its block, and each layer's window onto it outlined: the ground
     /// layer white, the middle green, the overhead orange, as `grid.png`.
     pub fn grid(&mut self) -> Result<(), String> {
-        let entered = self.enter_with(GOMA_CAVE, &[])?;
+        let entered = self.enter_goma_cave(GOMA_CAVE)?;
         let field = &entered.field;
         let colours = palettes(field);
         let work = field.map_work();
@@ -787,14 +787,15 @@ impl<'a> Guide<'a> {
         self.guide_png("grid.png", &out, "the cell grid of Goma Cave's map and its three layer windows")
     }
 
-    /// Walking back and forth in Goma Cave until a random battle starts, and
-    /// the battle's opening, as `random-battle.gif`.
+    /// Walking back and forth in Goma Cave, as the party first reaches it,
+    /// until a random battle starts, and the battle's opening, as
+    /// `random-battle.gif`.
     pub fn random_battle(&mut self) -> Result<(), String> {
-        let (entrance, stretch) = self.goma_cave_stretch()?;
-        let mut entered = self.enter_with((GOMA_CAVE.0, entrance), &[])?;
+        let (place, stretch) = self.goma_cave_stretch()?;
+        let mut entered = self.enter_goma_cave(place)?;
         let field = &mut entered.field;
         let mut frames = Vec::new();
-        let at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0)?.ok_or("no battle came")?;
+        let at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
         for _ in 0..240 {
             field.frames(1)?;
             frames.push(field.picture());
@@ -824,83 +825,102 @@ impl<'a> Guide<'a> {
     /// sheets in the order the hardware stacks them (guide::stacking), as
     /// `battle-layers-3d.gif`.
     pub fn battle_exploded(&mut self) -> Result<(), String> {
-        let (entrance, stretch) = self.goma_cave_stretch()?;
-        let mut entered = self.enter_with((GOMA_CAVE.0, entrance), &[])?;
+        let (place, stretch) = self.goma_cave_stretch()?;
+        let mut entered = self.enter_goma_cave(place)?;
         let field = &mut entered.field;
-        Self::walk_stretch(field, &stretch, 80, &mut Vec::new(), &mut 0)?.ok_or("no battle came")?;
+        Self::walk_stretch(field, &stretch, 80, &mut Vec::new(), &mut 0, &mut |_| {})?.ok_or("no battle came")?;
         field.frames(BATTLE_SETTLE_FRAMES)?;
         self.explode_now(field, "battle-layers-3d.gif", "a Goma Cave battle")
     }
 
-    /// The entrance of Goma Cave and the stretch of ground from it that a
-    /// random battle is walked into: each entrance and each way from it, the
-    /// straight run of ground the field's collision lets the leader walk
-    /// (Field::reach), tried there and back once; the one the camera shows
-    /// him on best (the least of the dark around him, where a cave draws
-    /// nothing), and then the longest.
-    fn goma_cave_stretch(&self) -> Result<(u16, Stretch), String> {
-        let mut best: Option<(u32, i32, u16, Stretch)> = None;
-        for entrance in 1..=6u16 {
-            for across in [true, false] {
-                let Ok(mut entered) = self.enter_with((GOMA_CAVE.0, entrance), &[]) else {
-                    continue;
-                };
-                let Ok(stretch) = Self::open_stretch(&mut entered.field, across) else {
-                    continue;
-                };
-                let length = stretch.ends[1] - stretch.ends[0];
-                if length < 64 {
-                    continue;
-                }
-                let mut frames = Vec::new();
-                let mut dark = 0;
-                Self::walk_stretch(&mut entered.field, &stretch, 2, &mut frames, &mut dark)?;
-                if best.as_ref().is_none_or(|b| (dark, -length) < (b.0, -b.1)) {
-                    best = Some((dark, length, entrance, stretch));
+    /// Enters a room of Goma Cave as the story has it when the party first
+    /// reaches the pillar room, the first of its rooms the story plays in
+    /// (Guide::enter_first_visit).
+    pub(super) fn enter_goma_cave(&self, place: (u16, u16)) -> Result<Entered<'a>, String> {
+        self.enter_first_visit(place, GOMA_CAVE.0)
+    }
+
+    /// The room and entrance of Goma Cave and the stretch of ground from it
+    /// that a random battle is walked into, the cave entered as the party
+    /// first reaches it (Guide::enter_first_visit): each entrance its room's
+    /// table lists (another number puts the party at the default place, in
+    /// the dark outside the room) and each way from it, the straight run the
+    /// game lets the leader walk there (Guide::measure_stretch), walked there
+    /// and back once; of those the camera shows him on, never with more than
+    /// DARK_LIMIT of the pixels around him black (a cave draws nothing beyond
+    /// its rooms), the longest.
+    pub(super) fn goma_cave_stretch(&self) -> Result<((u16, u16), Stretch), String> {
+        let mut best: Option<(i32, (u16, u16), Stretch)> = None;
+        for scene in GOMA_CAVE_ROOMS {
+            let table = self.enter_goma_cave((scene, 1))?.field.entrances();
+            for entrance in table.iter().map(|e| e.number as u16) {
+                for across in [true, false] {
+                    let Ok(mut entered) = self.enter_goma_cave((scene, entrance)) else {
+                        continue;
+                    };
+                    let Ok(stretch) = Self::measure_stretch(&mut entered.field, across) else {
+                        continue;
+                    };
+                    let length = stretch.ends[1] - stretch.ends[0];
+                    if length < 64 || best.as_ref().is_some_and(|b| b.0 >= length) {
+                        continue;
+                    }
+                    let mut dark = 0;
+                    if Self::walk_stretch(&mut entered.field, &stretch, 2, &mut Vec::new(), &mut dark, &mut |_| {}).is_err() || dark > DARK_LIMIT {
+                        continue;
+                    }
+                    best = Some((length, (scene, entrance), stretch));
                 }
             }
         }
-        let (_, _, entrance, stretch) = best.ok_or("no entrance of Goma Cave has open ground to walk")?;
-        Ok((entrance, stretch))
+        let (_, place, stretch) = best.ok_or("no entrance of Goma Cave has open ground to walk")?;
+        Ok((place, stretch))
     }
 
     /// Walks the leader `legs` times from one end of `stretch` to the other
-    /// with the d-pad (B held), each leg until he reaches its end or
-    /// something stops him, keeping every frame; `dark` keeps the most of
-    /// the 32 by 32 pixels around him that were black in any frame. Returns
-    /// the frame a battle began, if one did.
-    fn walk_stretch(field: &mut Field, stretch: &Stretch, legs: u32, frames: &mut Vec<Vec<u16>>, dark: &mut u32) -> Result<Option<usize>, String> {
+    /// with the d-pad (B held), each leg until he reaches its end, keeping
+    /// every frame; `dark` keeps the most of the 32 by 32 pixels around him
+    /// that were black in any frame. Returns the frame a battle began, if
+    /// one did. The game alone moves him, and every frame his footing is
+    /// checked against what the game allows (Guide::check_footing): the walk
+    /// fails rather than show him anywhere he could not stand. `each` sees
+    /// the field after every frame.
+    pub(super) fn walk_stretch(field: &mut Field, stretch: &Stretch, legs: u32, frames: &mut Vec<Vec<u16>>, dark: &mut u32, each: &mut dyn FnMut(&Field)) -> Result<Option<usize>, String> {
         let mut way = 1;
+        let mut last = field.leader().ok_or("the scene has no leader")?;
         for _ in 0..legs {
             field.hold(stretch.keys[way] | KEY_B);
             let mut still = 0;
-            let mut last = field.leader().map(|a| (a.x, a.z));
             for _ in 0..400 {
                 field.frames(1)?;
                 let picture = field.picture();
+                each(field);
                 if field.scene() == SCENE_BATTLE {
                     frames.push(picture);
                     field.hold(0);
                     return Ok(Some(frames.len()));
                 }
-                let now = field.leader();
-                if let Some(a) = now {
-                    let (vx, vy) = field.view();
-                    let (sx, sy) = (a.x - vx, a.z - vy - 16);
-                    let black = (sy - 16..sy + 16)
-                        .flat_map(|y| (sx - 16..sx + 16).map(move |x| (x, y)))
-                        .filter(|&(x, y)| (0..WIDTH as i32).contains(&x) && (0..HEIGHT as i32).contains(&y))
-                        .filter(|&(x, y)| { let c = picture[y as usize * WIDTH + x as usize]; (0..3).all(|i| (c >> (5 * i)) & 31 < 4) })
-                        .count() as u32;
-                    *dark = (*dark).max(black);
-                }
+                let now = field.leader().ok_or("the leader is gone")?;
+                Self::check_footing(field, stretch, &last, &now)?;
+                let (vx, vy) = field.view();
+                let (sx, sy) = (now.x - vx, now.z - vy - 16);
+                let black = (sy - 16..sy + 16)
+                    .flat_map(|y| (sx - 16..sx + 16).map(move |x| (x, y)))
+                    .filter(|&(x, y)| (0..WIDTH as i32).contains(&x) && (0..HEIGHT as i32).contains(&y))
+                    .filter(|&(x, y)| { let c = picture[y as usize * WIDTH + x as usize]; (0..3).all(|i| (c >> (5 * i)) & 31 < 4) })
+                    .count() as u32;
+                *dark = (*dark).max(black);
                 frames.push(picture);
-                let now = now.map(|a| (a.x, a.z));
-                still = if now == last { still + 1 } else { 0 };
+                still = if (now.x, now.z) == (last.x, last.z) { still + 1 } else { 0 };
                 last = now;
-                let along = now.map_or(0, |(x, z)| if stretch.across { x } else { z });
-                if still >= 6 || (way == 1 && along >= stretch.ends[1]) || (way == 0 && along <= stretch.ends[0]) {
+                let along = if stretch.across { last.x } else { last.z };
+                if (way == 1 && along >= stretch.ends[1]) || (way == 0 && along <= stretch.ends[0]) {
                     break;
+                }
+                // Turning round takes the game a few frames; standing longer
+                // means something stopped him short of the end.
+                if still >= 12 {
+                    return Err(format!("the leader stopped at ({}, {}) short of the stretch's end", last.x, last.z));
                 }
             }
             way = 1 - way;
@@ -909,21 +929,76 @@ impl<'a> Guide<'a> {
         Ok(None)
     }
 
-    /// The straight run of ground through the leader's cell that he can
-    /// walk (Field::reach), crossing no exit, across (x) or down (z).
-    fn open_stretch(field: &mut Field, across: bool) -> Result<Stretch, String> {
-        let reach = field.reach(None)?;
-        let leader = field.leader().ok_or("the scene has no leader")?;
-        let (cx, cz) = (leader.x >> 4, leader.z >> 4);
-        let layer = reach.layer;
-        let run = |dx: i32, dz: i32| (1..64).take_while(|k| reach.holds(layer, (cx + dx * k) * 16 + 8, (cz + dz * k) * 16 + 8)).count() as i32;
-        // The ends' centres, a cell short of each end.
-        let ends = |less: i32, more: i32, at: i32| [(at - less + 1) * 16 + 8, (at + more - 1) * 16 + 8];
-        Ok(if across {
-            Stretch { across: true, ends: ends(run(-1, 0), run(1, 0), cx), keys: [KEY_LEFT, KEY_RIGHT] }
-        } else {
-            Stretch { across: false, ends: ends(run(0, -1), run(0, 1), cz), keys: [KEY_UP, KEY_DOWN] }
-        })
+    /// Whether the leader's step from `last` to `now` is one the game lets
+    /// him take along `stretch`, else why not: he stays on its line (the
+    /// game turns him aside only when something blocks his way), moves no
+    /// more than a running step, stands on a cell of his layer that is no
+    /// wall (MAP_CELL_WALL), and climbs or drops no more than
+    /// Map_CheckObjectStep's 8 and 12 pixels.
+    fn check_footing(field: &mut Field, stretch: &Stretch, last: &Actor, now: &Actor) -> Result<(), String> {
+        let at = format!("at ({}, {}) on layer {}", now.x, now.z, now.layer);
+        let (line, was) = if stretch.across { (now.z, last.z) } else { (now.x, last.x) };
+        if line != was {
+            return Err(format!("the leader was turned aside {at}"));
+        }
+        if (now.x - last.x).abs() + (now.z - last.z).abs() > 4 {
+            return Err(format!("the leader jumped from ({}, {}) {at}", last.x, last.z));
+        }
+        let code = field.cell(now.layer, now.x >> 4, now.z >> 4);
+        if code < 0 || code == CELL_WALL {
+            return Err(format!("the leader stands in a wall {at}"));
+        }
+        if !(-STEP_DOWN..=STEP_UP).contains(&(now.y - last.y)) {
+            return Err(format!("the leader's height went from {} to {} {at}", last.y >> 16, now.y >> 16));
+        }
+        let ground = field.ground(now.layer, now.x, now.z)?;
+        if (now.y - ground).abs() > 1 << 16 {
+            return Err(format!("the leader is {} pixels off the ground {at}", (now.y - ground) >> 16));
+        }
+        Ok(())
+    }
+
+    /// The straight run of ground through the leader's place that the game
+    /// lets him walk, across (x) or down (z): each way held with the d-pad
+    /// (B held) from where he stands until the game stops him or turns him
+    /// off the line, every frame checked as Guide::walk_stretch checks it,
+    /// and the ends STRETCH_MARGIN short of where he got to, so the walk
+    /// never runs into what stopped him. The field is put back as it was.
+    fn measure_stretch(field: &mut Field, across: bool) -> Result<Stretch, String> {
+        let saved = field.save();
+        let scene = field.scene();
+        let start = field.leader().ok_or("the scene has no leader")?;
+        let keys = if across { [KEY_LEFT, KEY_RIGHT] } else { [KEY_UP, KEY_DOWN] };
+        let along = |a: &Actor| if across { a.x } else { a.z };
+        // Open both ways while measuring: the check is of the line and the
+        // footing, not of where the stretch ends.
+        let open = Stretch { across, ends: [i32::MIN, i32::MAX], keys };
+        let mut ends = [along(&start); 2];
+        for way in 0..2 {
+            field.load(&saved);
+            field.hold(keys[way] | KEY_B);
+            let mut last = start;
+            let mut still = 0;
+            for _ in 0..400 {
+                field.frames(1)?;
+                if field.scene() != scene {
+                    break;
+                }
+                let Some(now) = field.leader() else { break };
+                if Self::check_footing(field, &open, &last, &now).is_err() {
+                    break;
+                }
+                still = if (now.x, now.z) == (last.x, last.z) { still + 1 } else { 0 };
+                last = now;
+                ends[way] = along(&last);
+                if still >= 6 {
+                    break;
+                }
+            }
+        }
+        field.hold(0);
+        field.load(&saved);
+        Ok(Stretch { across, ends: [ends[0] + STRETCH_MARGIN, ends[1] - STRETCH_MARGIN], keys })
     }
 
     /// The world map's still picture: R, the cursor moved over the map, L
@@ -972,13 +1047,24 @@ impl<'a> Guide<'a> {
 
 }
 
-/// A straight run of walkable ground (Guide::open_stretch): along x or z,
+/// A straight run of walkable ground (Guide::measure_stretch): along x or z,
 /// its two ends in pixels, and the keys that walk toward each.
-struct Stretch {
+#[derive(Clone, Copy)]
+pub(super) struct Stretch {
     across: bool,
     ends: [i32; 2],
     keys: [u32; 2],
 }
+
+/// Goma Cave's rooms: the pond, the pillar room, the stream and the bridge
+/// (SceneId_GomaCavePond to SceneId_GomaCaveBridge).
+const GOMA_CAVE_ROOMS: [u16; 4] = [26, 27, 28, 29];
+/// The most of the 32 by 32 pixels around the leader that may be black as a
+/// random battle is walked into: an eighth.
+const DARK_LIMIT: u32 = 128;
+/// How far short of where the game stops the leader a stretch ends
+/// (Guide::measure_stretch), pixels.
+const STRETCH_MARGIN: i32 = 8;
 
 /// The field's actor slots (FIELD_ACTOR_COUNT in field.rs).
 pub(super) const ACTOR_SLOTS: u16 = 66;

@@ -908,36 +908,26 @@ impl<'a> Guide<'a> {
         Ok(())
     }
 
-    /// Goma Cave walked back and forth until a random battle opens, drawn
-    /// with `draw` a sample every fourth frame from two seconds before the
-    /// battle to five after.
+    /// Goma Cave, as the party first reaches it, walked back and forth along
+    /// the stretch random-battle.gif walks (Guide::goma_cave_stretch) until a
+    /// random battle opens, drawn with `draw` a sample every fourth frame
+    /// from two seconds before the battle to five after.
     fn memory_battle(&self, draw: &dyn Fn(&Field, &str) -> Vec<u32>) -> Result<Vec<Vec<u32>>, String> {
-        const GOMA_CAVE: (u16, u16) = (27, 5);
-        const SCENE_BATTLE: u16 = 0x1fe;
-        let mut entered = self.enter_with(GOMA_CAVE, &[])?;
+        let (place, stretch) = self.goma_cave_stretch()?;
+        let mut entered = self.enter_goma_cave(place)?;
         let field = &mut entered.field;
         let mut kept: Vec<Vec<u32>> = Vec::new();
-        let mut since = None;
         let mut frame = 0u32;
-        'walk: for leg in 0..80 {
-            field.hold(if leg % 2 == 0 { KEY_LEFT | KEY_B } else { KEY_RIGHT | KEY_B });
-            for _ in 0..40 {
-                field.frames(1)?;
-                frame += 1;
-                if field.scene() == SCENE_BATTLE {
-                    since = Some(frame);
-                    break 'walk;
-                }
-                if frame % 4 == 0 {
-                    kept.push(draw(field, "GOMA CAVE"));
-                    if kept.len() > 30 {
-                        kept.remove(0);
-                    }
+        let mut sample = |field: &Field| {
+            frame += 1;
+            if frame % 4 == 0 {
+                kept.push(draw(field, "GOMA CAVE"));
+                if kept.len() > 30 {
+                    kept.remove(0);
                 }
             }
-        }
-        field.hold(0);
-        since.ok_or("no battle came in Goma Cave")?;
+        };
+        Self::walk_stretch(field, &stretch, 80, &mut Vec::new(), &mut 0, &mut sample)?.ok_or("no battle came in Goma Cave")?;
         let mut frames: Vec<Vec<u32>> = kept.into_iter().flat_map(|f| [f.clone(), f]).collect();
         for i in 0..300u32 {
             field.frames(1)?;

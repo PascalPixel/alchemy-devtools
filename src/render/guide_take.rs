@@ -1641,7 +1641,7 @@ impl<'a> Guide<'a> {
     /// each word written in hex over the picture. Two panels a row, so the
     /// picture reads at a page's width, as `grid-planes.png`.
     pub fn grid_planes(&mut self) -> Result<(), String> {
-        let mut entered = self.enter_with(GOMA_CAVE_ROOM, &[])?;
+        let mut entered = self.enter_goma_cave(GOMA_CAVE_ROOM)?;
         let field = &mut entered.field;
         let words: Vec<u32> = (0..128 * 128).map(|i| field.read32(MAP_CELL_WORDS + 4 * i)).collect();
         // Each layer's window: its first cell in the grid, and the header's

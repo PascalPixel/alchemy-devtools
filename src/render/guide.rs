@@ -350,10 +350,28 @@ impl<'a> Guide<'a> {
     /// Enters a scene as `enter` does, with `set` set as well, keeping the
     /// moment the party was placed.
     pub(super) fn enter_with(&self, place: (u16, u16), set: &[&str]) -> Result<Entered<'a>, String> {
+        let set = set.iter().map(|name| self.flag(name)).collect::<Result<Vec<u16>, String>>()?;
+        self.enter_set(place, set)
+    }
+
+    /// Enters a scene as the story has it when the party first reaches scene
+    /// `of` (the place's first room, for any room of it): with every story
+    /// flag set before then (Flags::before_first_visit), the chapter's party
+    /// (party.rs), and the prologue over.
+    pub(super) fn enter_first_visit(&self, place: (u16, u16), of: u16) -> Result<Entered<'a>, String> {
+        self.enter_set(place, self.flags.before_first_visit(of)?)
+    }
+
+    /// Enters a scene as `enter` does, with the flags `set` set as well.
+    fn enter_set(&self, place: (u16, u16), set: Vec<u16>) -> Result<Entered<'a>, String> {
         let mut flags = vec![self.flag("FLAG_PARTY_LEFT_VALE")?];
-        for name in set {
-            flags.push(self.flag(name)?);
+        for f in set {
+            if !flags.contains(&f) {
+                flags.push(f);
+            }
         }
+        // Set first, then cleared: the night's storm and the childhood
+        // sprites are over, whatever a beat before left set.
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
         let setup = Setup { scene: place.0, entrance: place.1, set: flags, clear };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
