@@ -74,6 +74,16 @@ struct Declared {
     entry: bool,
 }
 
+/// A unit H4 judges: a scene overlay or a folder guide, how many of its
+/// open questions are `- XXX:` or `- XXX (picture):` items, and whether it
+/// has the list at all (`/// Open questions:`, `## Evidence and open
+/// questions`).
+pub struct Unit {
+    pub file: String,
+    pub open: u64,
+    pub listed: bool,
+}
+
 /// One game's counts.
 #[derive(Default)]
 pub struct Report {
@@ -84,6 +94,9 @@ pub struct Report {
     /// Distinct placeholder and numbered names.
     pub names: BTreeMap<&'static str, BTreeSet<String>>,
     pub long_files: Vec<(String, usize)>,
+    /// Each unit H4 judges (a scene overlay, a folder guide) and its open
+    /// questions.
+    pub units: Vec<Unit>,
     pub function_groups: Vec<Group>,
     pub table_groups: Vec<Group>,
     /// Each counted thing, for `--list`.
@@ -1209,7 +1222,14 @@ pub fn game<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>) -> Report {
 pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, text: Option<&GameText>) -> Report {
     let mut report = Report::default();
     for (path, text) in files {
+        if path.ends_with("/README.md") {
+            unit(&mut report, path, text);
+            continue;
+        }
         file(&mut report, path, text);
+        if is_scene_overlay(path) {
+            unit(&mut report, path, text);
+        }
     }
     report.finish();
     if let Some(text) = text.filter(|text| !text.is_empty()) {
@@ -1271,6 +1291,51 @@ fn game_text(root: &Path, game: &str) -> Option<GameText> {
     Some(GameText::parse(&String::from_utf8_lossy(&po), areas))
 }
 
+/// A place's overlay, `games/<game>/src/scene/<place>.c`.
+fn is_scene_overlay(path: &str) -> bool {
+    let parts: Vec<&str> = path.split('/').collect();
+    parts.len() == 5 && parts[3] == "scene" && path.ends_with(".c")
+}
+
+/// A folder guide, `games/<game>/src/<folder>/README.md`.
+fn is_folder_guide(path: &str) -> bool {
+    let parts: Vec<&str> = path.split('/').collect();
+    parts.len() == 5 && parts[2] == "src" && parts[4] == "README.md"
+}
+
+/// Notes a unit's open questions (H4): the `- XXX:` and `- XXX (picture):`
+/// items of a scene overlay's `Open questions:` list or of a folder guide's
+/// `## Evidence and open questions` section. `- XXX (no evidence):` items
+/// leave a unit done.
+fn unit(report: &mut Report, path: &str, text: &str) {
+    let guide = path.ends_with("/README.md");
+    let (mut on, mut listed, mut open) = (false, false, 0);
+    for (i, line) in text.lines().enumerate() {
+        let item = if guide {
+            if let Some(heading) = line.strip_prefix("## ") {
+                on = heading == "Evidence and open questions";
+                listed |= on;
+                continue;
+            }
+            line.strip_prefix("- ")
+        } else {
+            if line == "/// Open questions:" {
+                (on, listed) = (true, true);
+                continue;
+            }
+            if !line.starts_with("///") {
+                on = false;
+            }
+            line.strip_prefix("/// - ")
+        };
+        if let Some(item) = item.filter(|item| on && (item.starts_with("XXX:") || item.starts_with("XXX (picture):"))) {
+            open += 1;
+            report.note("unit_open", path, i + 1, item);
+        }
+    }
+    report.units.push(Unit { file: path.to_string(), open, listed });
+}
+
 /// The tracked C and headers of a game, never build output.
 fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     let output = std::process::Command::new("git")
@@ -1286,7 +1351,7 @@ fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     }
     let mut files = Vec::new();
     for path in String::from_utf8_lossy(&output.stdout).split('\0') {
-        if path.ends_with(".c") || path.ends_with(".h") {
+        if path.ends_with(".c") || path.ends_with(".h") || is_folder_guide(path) {
             let bytes = std::fs::read(root.join(path)).map_err(|error| format!("cannot read {path}: {error}"))?;
             files.push((path.to_string(), String::from_utf8_lossy(&bytes).into_owned()));
         }
@@ -1325,6 +1390,9 @@ const ROWS: &[(&str, &str)] = &[
     ("if_in_function", "  of those inside functions"),
     ("undocumented_entry", "far-call entries without ///"),
     ("long_file", "objects over 3,000 lines"),
+    ("units", "units (places and folder guides)"),
+    ("units_done", "  done under H4"),
+    ("unit_open", "  open questions in them"),
     ("duplicate_function", "duplicate function groups"),
     ("duplicate_function_copies", "  copies past the first"),
     ("duplicate_table", "duplicate table groups"),
@@ -1355,7 +1423,7 @@ const LISTED: &[&str] = &[
     "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "goto", "if_language", "if_patch",
     "if_in_function", "undocumented_entry", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
     "undocumented_global", "provenance_none", "provenance_prose", "provenance_table_mismatch", "unused_word_name",
-    "door_word_link",
+    "door_word_link", "unit_open",
 ];
 
 impl Report {
@@ -1365,6 +1433,8 @@ impl Report {
             "numbered_names" => self.distinct("numbered") as u64,
             "fakematch" => DEVICES.iter().map(|kind| self.total(&format!("fakematch_{kind}"))).sum(),
             "long_file" => self.long_files.len() as u64,
+            "units" => self.units.len() as u64,
+            "units_done" => self.units.iter().filter(|unit| unit.listed && unit.open == 0).count() as u64,
             "duplicate_function" => self.function_groups.len() as u64,
             "duplicate_function_copies" => Report::copies(&self.function_groups) as u64,
             "duplicate_table" => self.table_groups.len() as u64,
