@@ -485,7 +485,7 @@ pub fn field_cast_names() -> Vec<&'static str> {
 
 /// Every mode, in the order `render guide` plays them.
 pub const MODES: &[&str] = &[
-    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "menu-layers-3d", "talk-layers-3d", "scene-actors", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
+    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "menu-layers-3d", "item-layers-3d", "talk-layers-3d", "scene-actors", "debug-rooms", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
     "inn", "menu-psynergy", "credits", "sleep", "oam", "vram", "cells", "grid", "random-battle", "world-map-picture", "overlay",
 ];
 
@@ -500,8 +500,10 @@ impl Guide<'_> {
             "battle-layers-3d" => self.battle_exploded(),
             "world-map-layers-3d" => self.world_map_exploded(),
             "menu-layers-3d" => self.menu_exploded(),
+            "item-layers-3d" => self.item_exploded(),
             "talk-layers-3d" => self.talk_exploded(),
             "scene-actors" => self.scene_actors(),
+            "debug-rooms" => self.debug_rooms(),
             "world-map" => self.world_map(),
             "menus" => self.menus(),
             "menu-start" => self.menu_start(),
@@ -630,5 +632,17 @@ impl Guide<'_> {
         Self::hold(&mut field, KEY_A, 4, &mut frames)?;
         Self::hold(&mut field, 0, 50, &mut frames)?;
         self.explode_now(&mut field, "menu-layers-3d.gif", "the field menu in Vale")
+    }
+
+    /// The Item screen open in Vale, pulled apart, as `item-layers-3d.gif`:
+    /// the field menu's third icon chosen, its windows and its item icons
+    /// apart from the map behind them.
+    pub fn item_exploded(&mut self) -> Result<(), String> {
+        let mut field = self.enter(VALE)?;
+        let mut frames = Vec::new();
+        for (keys, n) in [(0, 20), (KEY_A, 4), (0, 50), (KEY_RIGHT, 4), (0, 30), (KEY_RIGHT, 4), (0, 30), (KEY_A, 4), (0, 90)] {
+            Self::hold(&mut field, keys, n, &mut frames)?;
+        }
+        self.explode_now(&mut field, "item-layers-3d.gif", "the Item screen in Vale")
     }
 }

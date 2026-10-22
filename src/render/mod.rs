@@ -987,6 +987,10 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
               pulled apart the same way, each as NAME.gif
   scene-actors scene-actors.png: Vale at twice its size, each actor labelled
               with its actor number
+  debug-rooms debug-level-room.png, debug-menu-room.png: the debug level room
+              and menu test room, their actors labelled
+  item-layers-3d
+              item-layers-3d.gif: the Item screen pulled apart
   world-map   world-map-walk.gif: the world map's perspective view, walking
   menus, menu-start, items, boot
               the field menu, Start closing it, the Item screen, power-on

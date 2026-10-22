@@ -389,7 +389,25 @@ impl<'a> Guide<'a> {
     /// as `scene-actors.png`.
     pub fn scene_actors(&mut self) -> Result<(), String> {
         let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
-        let field = &mut entered.field;
+        let image = Self::labelled_actors(&mut entered.field)?;
+        self.guide_png("scene-actors.png", &image, "Vale's actors labelled by number")
+    }
+
+    /// The debug level room and menu test room, which draw no map, each with
+    /// its actors labelled by number, as `debug-level-room.png` and
+    /// `debug-menu-room.png`.
+    pub fn debug_rooms(&mut self) -> Result<(), String> {
+        for (scene, file, what) in [(LEVEL_ROOM, "debug-level-room.png", "the level room's actors labelled"), (MENU_TEST_ROOM, "debug-menu-room.png", "the menu test room's actors labelled")] {
+            let mut entered = self.enter_with((scene, 0), &[])?;
+            let image = Self::labelled_actors(&mut entered.field)?;
+            self.guide_png(file, &image, what)?;
+        }
+        Ok(())
+    }
+
+    /// The screen at twice the GBA's size, each actor on it marked at its
+    /// feet and labelled with its actor number.
+    fn labelled_actors(field: &mut Field) -> Result<Image, String> {
         field.frames(1)?;
         let mut image = canvas(2 * WIDTH, 2 * HEIGHT, 0);
         paste(&mut image, &screen(&field.picture()), 0, 0, 2);
@@ -405,7 +423,7 @@ impl<'a> Guide<'a> {
             outline(&mut image, sx - 3, sy - 3, 6, 6, colour);
             label(&mut image, sx - 6, sy - 60, id, colour);
         }
-        self.guide_png("scene-actors.png", &image, "Vale's actors labelled by number")
+        Ok(image)
     }
 
     pub fn oam(&mut self) -> Result<(), String> {
@@ -870,6 +888,10 @@ struct Stretch {
 
 /// The field's actor slots (FIELD_ACTOR_COUNT in field.rs).
 const ACTOR_SLOTS: u16 = 66;
+/// SceneId_IncreaseItemAndLevel and SceneId_MenuTest, the debug level room
+/// and menu test room (scenes.s).
+const LEVEL_ROOM: u16 = 199;
+const MENU_TEST_ROOM: u16 = 200;
 
 /// Each digit of a 3 by 5 font, a row of three bits to a line, top first.
 const DIGITS: [[u8; 5]; 10] = [
