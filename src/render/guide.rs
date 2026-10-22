@@ -485,7 +485,7 @@ pub fn field_cast_names() -> Vec<&'static str> {
 
 /// Every mode, in the order `render guide` plays them.
 pub const MODES: &[&str] = &[
-    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
+    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "menu-layers-3d", "talk-layers-3d", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
     "inn", "menu-psynergy", "credits", "sleep", "oam", "vram", "cells", "grid", "random-battle", "world-map-picture", "overlay",
 ];
 
@@ -499,6 +499,8 @@ impl Guide<'_> {
             "layers-3d" => self.exploded(),
             "battle-layers-3d" => self.battle_exploded(),
             "world-map-layers-3d" => self.world_map_exploded(),
+            "menu-layers-3d" => self.menu_exploded(),
+            "talk-layers-3d" => self.talk_exploded(),
             "world-map" => self.world_map(),
             "menus" => self.menus(),
             "menu-start" => self.menu_start(),
@@ -603,3 +605,29 @@ pub(super) fn spread_frames(sheets: &[Vec<Option<u32>>]) -> Vec<Vec<u32>> {
 const BG0CNT: u32 = 0x0400_0008;
 /// Sprite attribute memory: 128 entries of 8 bytes.
 const OAM: u32 = 0x0700_0000;
+
+impl Guide<'_> {
+    /// The moment `field` is at, pulled apart like Vale's layers into
+    /// `file`: each layer the display mode shows, in the order the hardware
+    /// stacks them (stacking), as sheets that spread and close again.
+    pub(super) fn explode_now(&mut self, field: &mut Field, file: &str, what: &str) -> Result<(), String> {
+        let layers = stacking(field);
+        let sheets = layer_sheets(field, &layers)?;
+        let frames = spread_frames(&sheets);
+        let written = animation::write(&self.out.join(file), &frames, CANVAS.0)?;
+        let order: Vec<String> = layers.iter().map(|&n| if n == 4 { "sprites".to_string() } else { format!("BG{n}") }).collect();
+        self.written.push((file.to_string(), written.bytes, format!("{what} pulled apart, back to front {}; {} frames", order.join(", "), written.frames)));
+        Ok(())
+    }
+
+    /// The field menu open in Vale, pulled apart, as `menu-layers-3d.gif`:
+    /// the menu's windows apart from the map and the party behind them.
+    pub fn menu_exploded(&mut self) -> Result<(), String> {
+        let mut field = self.enter(VALE)?;
+        let mut frames = Vec::new();
+        Self::hold(&mut field, 0, 20, &mut frames)?;
+        Self::hold(&mut field, KEY_A, 4, &mut frames)?;
+        Self::hold(&mut field, 0, 50, &mut frames)?;
+        self.explode_now(&mut field, "menu-layers-3d.gif", "the field menu in Vale")
+    }
+}

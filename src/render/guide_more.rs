@@ -235,6 +235,16 @@ impl<'a> Guide<'a> {
     /// Talking to Garet's sister in Vale: the window zooms open, the line is
     /// typed out and the arrow bobs, then the window closes, as `talk.gif`;
     /// and the window's first frames side by side, as `window-open.png`.
+    /// Garet's sister talking in Vale, her first page typed out, pulled
+    /// apart, as `talk-layers-3d.gif`: the message window and portrait on
+    /// their own layer over the map and the actors.
+    pub fn talk_exploded(&mut self) -> Result<(), String> {
+        let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
+        let field = &mut entered.field;
+        Self::press_path(field, &[(0, 20), (KEY_A, 3), (0, 150)])?;
+        self.explode_now(field, "talk-layers-3d.gif", "a message in Vale")
+    }
+
     pub fn talk(&mut self) -> Result<(), String> {
         let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
         let field = &mut entered.field;
@@ -669,13 +679,7 @@ impl<'a> Guide<'a> {
         field.frames(WORLD_MAP_SETTLE_FRAMES)?;
         field.hold(0);
         field.frames(2)?;
-        let layers = super::guide::stacking(field);
-        let sheets = super::guide::layer_sheets(field, &layers)?;
-        let frames = super::guide::spread_frames(&sheets);
-        let written = animation::write(&self.out.join("world-map-layers-3d.gif"), &frames, super::guide::CANVAS.0)?;
-        let order: Vec<String> = layers.iter().map(|&n| if n == 4 { "sprites".to_string() } else { format!("BG{n}") }).collect();
-        self.written.push(("world-map-layers-3d.gif".to_string(), written.bytes, format!("the world map's layers pulled apart, back to front {}; {} frames", order.join(", "), written.frames)));
-        Ok(())
+        self.explode_now(field, "world-map-layers-3d.gif", "the world map")
     }
 
     /// A random battle in Goma Cave pulled apart like Vale's layers, once the
@@ -688,13 +692,7 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         Self::walk_stretch(field, &stretch, 80, &mut Vec::new(), &mut 0)?.ok_or("no battle came")?;
         field.frames(BATTLE_SETTLE_FRAMES)?;
-        let layers = super::guide::stacking(field);
-        let sheets = super::guide::layer_sheets(field, &layers)?;
-        let frames = super::guide::spread_frames(&sheets);
-        let written = animation::write(&self.out.join("battle-layers-3d.gif"), &frames, super::guide::CANVAS.0)?;
-        let order: Vec<String> = layers.iter().map(|&n| if n == 4 { "sprites".to_string() } else { format!("BG{n}") }).collect();
-        self.written.push(("battle-layers-3d.gif".to_string(), written.bytes, format!("a battle's layers pulled apart, back to front {}; {} frames", order.join(", "), written.frames)));
-        Ok(())
+        self.explode_now(field, "battle-layers-3d.gif", "a Goma Cave battle")
     }
 
     /// The entrance of Goma Cave and the stretch of ground from it that a

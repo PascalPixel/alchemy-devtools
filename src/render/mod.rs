@@ -982,9 +982,9 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
   snow        snow.gif: Imil, the leader's footprints in the snow
   layers      layers.gif: Vale built up layer by layer, BG3 to BG1
   layers-3d   layers-3d.gif: Vale's layers pulled apart into sheets in 3D
-  battle-layers-3d, world-map-layers-3d
-              battle-layers-3d.gif, world-map-layers-3d.gif: a Goma Cave battle
-              and the world map pulled apart the same way
+  battle-layers-3d, world-map-layers-3d, menu-layers-3d, talk-layers-3d
+              a Goma Cave battle, the world map, the field menu and a message,
+              pulled apart the same way, each as NAME.gif
   world-map   world-map-walk.gif: the world map's perspective view, walking
   menus, menu-start, items, boot
               the field menu, Start closing it, the Item screen, power-on
