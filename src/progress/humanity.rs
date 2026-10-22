@@ -1331,6 +1331,9 @@ pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, t
         if is_scene_overlay(path) {
             unit(&mut report, path, text);
         }
+        if naming::is_pret_flash(path) {
+            report.naming.pret.extend(naming::identifiers(text).map(str::to_string));
+        }
     }
     report.finish();
     let text = text.filter(|text| !text.is_empty());

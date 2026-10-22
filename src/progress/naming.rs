@@ -68,13 +68,32 @@ pub struct Typed {
     pub line: usize,
 }
 
-/// What the checks read: every name, the struct-typed variables and the
-/// folder guides (`src/<folder>/README.md`) with their text.
+/// What the checks read: every name, the struct-typed variables, the
+/// folder guides (`src/<folder>/README.md`) with their text, and the
+/// identifiers pret's flash library uses (`PRET_FLASH`).
 #[derive(Default)]
 pub struct Names {
     pub names: Vec<Name>,
     pub typed: Vec<Typed>,
     pub guides: Vec<(String, String)>,
+    pub pret: HashSet<String>,
+}
+
+/// The files of pret's flash library, the Makefile's `FLASH_C`, which
+/// pret's `old_agbcc` builds. Their names are pret's (`gFlashNumRemainingBytes`,
+/// `maxTime`), which AGENTS.md keeps as pret writes them, so every
+/// identifier they use is left out of the checks.
+pub const PRET_FLASH: &[&str] =
+    &["/src/system/save/flash.c", "/src/system/save/sst.c", "/src/system/save/atmel.c", "/src/system/save/program_flash_sector.c"];
+
+/// Whether a file is one of pret's flash library's.
+pub fn is_pret_flash(path: &str) -> bool {
+    PRET_FLASH.iter().any(|file| path.ends_with(file))
+}
+
+/// The identifiers a file's text uses, comments and strings included.
+pub fn identifiers(text: &str) -> impl Iterator<Item = &str> {
+    text.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')).filter(|word| word.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_'))
 }
 
 /// One name that disagrees with its siblings.
@@ -185,13 +204,15 @@ fn words(name: &str) -> Vec<String> {
 
 /// A word in the singular: `entries` is `entry`, `objects` `object`. Only
 /// plurals come off, never `-ing` or `-ed`, which make other words
-/// (`FLASHING_` is not `FLASH_`, nor `STATE` `STAT`).
+/// (`FLASHING_` is not `FLASH_`, nor `STATE` `STAT`). `-es` comes off only
+/// after a hissing ending (`classes`, `statuses`, `boxes`), so `poses` is
+/// `pose`, not `pos`.
 fn singular(word: &str) -> String {
     let w = word.to_ascii_lowercase();
     let n = w.len();
     if n > 4 && w.ends_with("ies") {
         format!("{}y", &w[..n - 3])
-    } else if n > 3 && w.ends_with("es") && ["s", "x", "z", "ch", "sh"].iter().any(|end| w[..n - 2].ends_with(end)) {
+    } else if n > 3 && w.ends_with("es") && ["ss", "us", "x", "z", "ch", "sh"].iter().any(|end| w[..n - 2].ends_with(end)) {
         w[..n - 2].to_string()
     } else if n > 3 && w.ends_with('s') && !["ss", "us", "is"].iter().any(|end| w.ends_with(end)) {
         w[..n - 1].to_string()
@@ -219,12 +240,15 @@ fn meaning(word: &str) -> String {
 
 /// Names the checks leave alone: placeholders, the compiler's and the
 /// hardware's names (`__`, `REG_`, `io_reg.h`), message symbols (`Msg...`,
-/// AGENTS.md's S3) and the temporary flags.
+/// AGENTS.md's S3), the temporary flags, and the `OWN_` guards, which
+/// repeat the name of the symbol they guard (`OWN_gFlash`) and are
+/// measured there.
 fn exempt(name: &Name) -> bool {
     let n = name.name.as_str();
     super::humanity::is_placeholder(n)
         || n.starts_with("__")
         || n.starts_with("REG_")
+        || n.starts_with("OWN_")
         || n.starts_with("FLAG_SCENE_TEMP_")
         || n.starts_with("FLAG_PLACE_TEMP_")
         || name.file.ends_with("/io_reg.h")
@@ -365,13 +389,13 @@ fn finding(metric: &'static str, name: &Name, what: String) -> Finding {
 
 /// Run every check on one game's names.
 pub fn check(names: &Names, text: Option<&GameText>) -> Vec<Finding> {
-    let all = distinct(&names.names);
+    let all: Vec<&Name> = distinct(&names.names).into_iter().filter(|name| !names.pret.contains(&name.name)).collect();
     let mut out = Vec::new();
     let usage = Usage::new(&all);
     let families = collect_families(&all);
     let runs = Runs::new(&all);
     let hardware = hardware_segments(&names.names);
-    let twins = twin_prefixes(&all, &mut out);
+    let twins = twin_prefixes(&all, &hardware, &mut out);
     words_of_one_idea(&all, &usage, &runs, &twins, &hardware, text, &mut out);
     referents(names, &mut out);
     shapes(&all, &families, text, &mut out);
@@ -853,12 +877,13 @@ fn shapes(all: &[&Name], families: &[Family], text: Option<&GameText>, out: &mut
 
 /// `family_shape`, game-wide: a count or bound (`MEASURE_WORDS`) first in a
 /// name where the game's other names put it last, or the other way round.
-/// Functions are left out, since there `Count` is a verb.
+/// Functions and the macros written as calls are left out, since there
+/// `Count` is a verb (`COUNT_ALL_CURES(unit, count)`).
 fn measures(all: &[&Name], out: &mut Vec<Finding>) {
     let meanings: BTreeSet<String> = MEASURE_WORDS.iter().map(|word| meaning(word)).collect();
     for measure in &meanings {
         let (mut leading, mut trailing) = (Vec::new(), Vec::new());
-        for &name in all.iter().filter(|name| !matches!(name.kind, NameKind::Function | NameKind::Prototype)) {
+        for &name in all.iter().filter(|name| !matches!(name.kind, NameKind::Function | NameKind::Prototype | NameKind::FunctionMacro)) {
             let name_words = words(&name.name);
             if name_words.len() < 2 {
                 continue;
@@ -933,13 +958,18 @@ fn unlisted_prefixes(all: &[&Name], guides: &[(String, String)], text: Option<&G
 /// shortened word is spelled out, each `SPELLINGS` word is its set's and
 /// plurals are singular (`BattleObj_` and `BattleObject_`, `ANIM_` and
 /// `ANIMATION_`, `Projectiles_` and `PROJECTILE_`). Prefixes that differ
-/// only in case (`Battle_` and `BATTLE_`) are one spelling, and struct
-/// members are left out. The spelling fewer names use is reported, at its
-/// first name; the set of those prefixes is returned.
-fn twin_prefixes(all: &[&Name], out: &mut Vec<Finding>) -> HashSet<String> {
+/// only in case (`Battle_` and `BATTLE_`) are one spelling, struct members
+/// are left out, and so is a shortened word that is a hardware register's
+/// segment (`OBJ_` of `OBJ_AFFINE_MATRIX_COUNT`, the hardware's OBJ, not a
+/// shortened object). The spelling fewer names use is reported, at its first name;
+/// the set of those prefixes is returned.
+fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, out: &mut Vec<Finding>) -> HashSet<String> {
     let mut by_prefix: BTreeMap<&str, Vec<&Name>> = BTreeMap::new();
     for &name in all.iter().filter(|name| name.kind != NameKind::Field) {
-        if let Some(family) = prefix(&name.name).filter(|family| family.starts_with(|c: char| c.is_ascii_uppercase())) {
+        if let Some(family) = prefix(&name.name)
+            .filter(|family| family.starts_with(|c: char| c.is_ascii_uppercase()))
+            .filter(|family| !(hardware.contains(*family) && ABBREVIATIONS.iter().any(|(short, _)| family.eq_ignore_ascii_case(short))))
+        {
             by_prefix.entry(family).or_default().push(name);
         }
     }
@@ -1040,6 +1070,44 @@ mod tests {
             ],
             "Idx: nothing spells index; MsgItemName: a message symbol; BattleObj_ once for its prefix; BG1CNT: the hardware's"
         );
+    }
+
+    #[test]
+    fn names_the_rules_keep() {
+        let file = "games/tbs/src/battle/a.c";
+        let flash = "games/tbs/src/system/save/flash.c";
+        let mut names = Names {
+            names: vec![
+                // pret's flash library keeps pret's names.
+                name("gFlashNumRemainingBytes", NameKind::Extern, "games/tbs/include/system/system.h", 1),
+                name("maxTime", NameKind::Field, "games/tbs/include/system/flash_data.h", 2),
+                // An OWN_ guard repeats the symbol it guards.
+                name("OWN_gFlashNumRemainingBytes", NameKind::Macro, file, 3),
+                // Poses are not positions.
+                name("gCybele_ObjectPoses", NameKind::Global, file, 4),
+                // A macro written as a call may start with a verb.
+                name("COUNT_ALL_CURES", NameKind::FunctionMacro, file, 5),
+                // The hardware's OBJ is not a shortened object.
+                name("OBJ_AFFINE_MATRIX_COUNT", NameKind::Enumerator, file, 6),
+                name("OBJ_MODE_NORMAL", NameKind::Macro, "games/tbs/include/system/io_reg.h", 7),
+                name("OBJECT_SLOT_COUNT", NameKind::Macro, file, 8),
+                name("OBJECT_SLOT_FIRST", NameKind::Macro, file, 9),
+                name("gHeapRemainingCount", NameKind::Global, file, 11),
+                name("ScatterPosition", NameKind::Tag, file, 12),
+            ],
+            ..Names::default()
+        };
+        for (at, count) in ["ITEM_COUNT", "ENEMY_COUNT", "UNIT_COUNT", "ACTOR_COUNT", "SLOT_COUNT", "LIST_MAX"].iter().enumerate() {
+            names.names.push(name(count, NameKind::Macro, "games/tbs/include/counts.h", 20 + at));
+        }
+        let text = "u16 gFlashNumRemainingBytes; const u16 *maxTime; // pret's names";
+        assert!(is_pret_flash(flash) && !is_pret_flash(file));
+        names.pret.extend(identifiers(text).map(str::to_string));
+        let findings: Vec<String> = check(&names, None).into_iter().map(|f| format!("{} {}", f.metric, f.what)).collect();
+        assert!(findings.is_empty(), "{findings:?}");
+        assert_eq!(singular("poses"), "pose");
+        assert_eq!(singular("classes"), "class");
+        assert_eq!(singular("statuses"), "status");
     }
 
     #[test]
