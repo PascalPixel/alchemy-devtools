@@ -1202,7 +1202,7 @@ const SHOP_STOCK_ITEMS: u32 = 0x26c;
 const ITEM_IDS: u32 = 512;
 
 /// Item names by id, from items.tsv's `item` column.
-fn item_names() -> Result<Vec<String>, String> {
+pub(super) fn item_names() -> Result<Vec<String>, String> {
     let path = crate::compile::root().join("games/tbs/src/game/items.tsv");
     let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     let mut lines = text.lines();

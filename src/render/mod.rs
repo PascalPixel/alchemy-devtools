@@ -20,13 +20,21 @@ mod guide_engine;
 #[cfg(feature = "render")]
 mod guide_apart;
 #[cfg(feature = "render")]
+mod guide_battle;
+#[cfg(feature = "render")]
 mod guide_cells;
+#[cfg(feature = "render")]
+mod guide_effect;
+#[cfg(feature = "render")]
+mod guide_menu;
 #[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
 mod guide_places;
 #[cfg(feature = "render")]
 mod guide_take;
+#[cfg(feature = "render")]
+mod guide_window;
 #[cfg(feature = "render")]
 mod guide_world;
 mod jobs;
@@ -1105,6 +1113,52 @@ Take-apart pictures for the battle, effect, field and shop guides
                     composed alone and together
   shop-counters     shop-counters.png: Bilibin's weapon shop before and after
                     Vault's, its Buy and Artifacts lists
+Take-apart pictures for the window and shop guides (guide_window.rs; work-block
+also reads out/tbs-ja, make tbs-ja):
+  work-block        work-block.gif: the window work block byte by byte in the
+                    Japanese and international layouts as a message shows
+  text-ring         text-ring.gif: a message decoded into the ring, typed out
+  render-outputs    render-outputs.gif: a message's render outputs outlined
+  area-name         area-name.gif: Bilibin's area name and its countdown
+  sanctum           sanctum.gif: the Vale Sanctum's Revive and its members
+  item-picker       item-picker.gif: a Nut given with every bag full
+  menu-slot         menu-slot.png: the menu work slot as a counter and as the
+                    Item screen read it
+Pictures for the battle guide's rules (guide_battle.rs):
+  enemy-actions     enemy-actions.png: a Gryphon's eight actions, the
+                    weights its strategy picks them by and the place each
+                    of the 256 rolls takes
+  first-strikes     first-strikes.png: a random encounter opened with a first
+                    strike and with a surprise, through the first round
+  element-multiplier
+                    element-multiplier.png: gElement_PowerResistCurve as its
+                    line, with Quake's and an attack's targets on it
+  plan-rolls        plan-rolls.png: a miss, a critical hit and a triple blow
+                    beside the plan's rolls
+  staging           staging.gif: Quake under each outcome, PLAN_SHOW_CAST to
+                    PLAN_SHOW_FULL_SCREEN
+  added-effects     added-effects.png: Impair, Delude and Guard's stages and
+                    counters over nine rounds
+  after-target      after-target.png: a sleeper woken by Quake, and a haunted
+                    caster's evil spirit taking its share
+Take-apart pictures for the battle effects guide (guide_effect.rs):
+  effect-variants   effect-variants.gif: Quake, Earthquake and Quake Sphere
+                    side by side, beside their plan words
+  djinn-attacks     djinn-attacks.gif: Venus, Mercury, Mars and Jupiter
+                    beside their flames and motes
+  spark-groups      spark-groups.gif: Supernova beside its flashes and sparks
+  stat-reductions   stat-reductions.gif: Debilitate beside each target's shards
+  target-strikes    target-strikes.gif: Twin Beaks and Acid Bite beside
+                    their parked smoke, motes and sparks
+Take-apart pictures for the menu guide (guide_menu.rs), in Xian:
+  psynergy-steps    psynergy-steps.png: Cure used on Garet, a panel for each
+                    step of the Psynergy screen
+  djinn-preview     djinn-preview.png: Flint put on standby, the preview beside
+                    Isaac's unit before and after
+  status-pages      status-pages.png: the Status screen's member row and pages,
+                    the four Djinn figures outlined
+  status-panels     status-panels.png: the status panel once for each kind
+  item-sorting      item-sorting.png: Isaac's items in each of the four orders
 Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
   vale-opening, vale-gate-display, vale-shops-sleep, vale-kraden-rockslide,
