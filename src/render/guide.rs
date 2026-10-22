@@ -38,13 +38,15 @@ pub struct Guide<'a> {
     pub symbols: &'a Symbols,
     pub flags: &'a Flags,
     pub out: &'a Path,
+    /// The edition's linker map, for the addresses a picture reads.
+    pub map: &'a crate::ld_map::Map,
     pub written: Vec<(String, u64, String)>,
     /// Rows of the abilities' index.tsv for the field casts recorded.
     pub casts: Vec<String>,
 }
 
 impl<'a> Guide<'a> {
-    fn flag(&self, name: &str) -> Result<u16, String> {
+    pub(super) fn flag(&self, name: &str) -> Result<u16, String> {
         self.flags.resolve(name, None).ok_or_else(|| format!("flags.tsv names no {name}"))
     }
 
@@ -57,7 +59,7 @@ impl<'a> Guide<'a> {
 
     /// Enters a scene after the party has left Vale, with the party the
     /// story has there (party.rs), and runs until the player has control.
-    fn enter(&self, (scene, entrance): (u16, u16)) -> Result<Field<'a>, String> {
+    pub(super) fn enter(&self, (scene, entrance): (u16, u16)) -> Result<Field<'a>, String> {
         let set = vec![self.flag("FLAG_PARTY_LEFT_VALE")?];
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
         let setup = Setup { scene, entrance, set, clear };
@@ -390,7 +392,7 @@ impl<'a> Guide<'a> {
     }
 
     /// A spot at (x, z) pixels on the leader's layer, on the ground there.
-    fn spot_at(field: &mut Field, (x, z, facing): (i32, i32, u32)) -> Result<Spot, String> {
+    pub(super) fn spot_at(field: &mut Field, (x, z, facing): (i32, i32, u32)) -> Result<Spot, String> {
         let layer = field.leader().ok_or("the scene has no leader")?.layer.min(2);
         let height = field.ground(layer, x, z)?;
         Ok(Spot { x, z, layer, height, facing, walk: 0, cell: None })
@@ -488,6 +490,30 @@ pub fn field_cast_names() -> Vec<&'static str> {
 pub const MODES: &[&str] = &[
     "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "menu-layers-3d", "item-layers-3d", "talk-layers-3d", "scene-actors", "debug-rooms", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
     "inn", "menu-psynergy", "credits", "sleep", "oam", "vram", "cells", "grid", "random-battle", "world-map-picture", "overlay",
+    "tret-tree-branch-split",
+    "kolima-forest-tree-healing",
+    "altmiller-cave-darkness",
+    "bilibin-cave-third-puddle",
+    "fuchin-falls-cave-logs",
+    "mercury-lighthouse-pool",
+    "lunpa-fortress-patrol",
+    "tolbi-spring-toss",
+    "kolima-forest-entrance-fields",
+    "tret-tree-interiors-cocoons",
+    "colosseum-azart-race",
+    "colosseum-navampa-scales",
+    "colosseum-satrage-lifts",
+    "tunnel-ruins-balance",
+    "venus-lighthouse-aerie-eruption",
+    "scene-event-cells",
+    "credits-tile-ring",
+    "title-intro-layers-3d",
+    "item-screen-windows",
+    "sound-players",
+    "field-requests",
+    "grid-planes",
+    "tile-animation",
+    "world-map-scanlines",
 ];
 
 impl Guide<'_> {
@@ -525,6 +551,30 @@ impl Guide<'_> {
             "random-battle" => self.random_battle(),
             "world-map-picture" => self.world_map_picture(),
             "overlay" => self.overlay(),
+            "tret-tree-branch-split" => self.tret_tree_branch_split(),
+            "kolima-forest-tree-healing" => self.kolima_forest_tree_healing(),
+            "altmiller-cave-darkness" => self.altmiller_cave_darkness(),
+            "bilibin-cave-third-puddle" => self.bilibin_cave_third_puddle(),
+            "fuchin-falls-cave-logs" => self.fuchin_falls_cave_logs(),
+            "mercury-lighthouse-pool" => self.mercury_lighthouse_pool(),
+            "lunpa-fortress-patrol" => self.lunpa_fortress_patrol(),
+            "tolbi-spring-toss" => self.tolbi_spring_toss(),
+            "kolima-forest-entrance-fields" => self.kolima_forest_entrance_fields(),
+            "tret-tree-interiors-cocoons" => self.tret_tree_interiors_cocoons(),
+            "colosseum-azart-race" => self.colosseum_azart_race(),
+            "colosseum-navampa-scales" => self.colosseum_navampa_scales(),
+            "colosseum-satrage-lifts" => self.colosseum_satrage_lifts(),
+            "tunnel-ruins-balance" => self.tunnel_ruins_balance(),
+            "venus-lighthouse-aerie-eruption" => self.venus_lighthouse_aerie_eruption(),
+            "scene-event-cells" => self.scene_event_cells(),
+            "credits-tile-ring" => self.credits_tile_ring(),
+            "title-intro-layers-3d" => self.title_intro_exploded(),
+            "item-screen-windows" => self.item_screen_windows(),
+            "sound-players" => self.sound_players(),
+            "field-requests" => self.field_requests(),
+            "grid-planes" => self.grid_planes(),
+            "tile-animation" => self.tile_animation(),
+            "world-map-scanlines" => self.world_map_scanlines(),
             _ => Err(format!("no mode {name}")),
         }
     }

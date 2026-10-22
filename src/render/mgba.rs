@@ -137,6 +137,11 @@ impl<'rom> Gba<'rom> {
         unsafe { alchemy_mgba_backdrop(self.machine.as_ptr(), lines.as_ptr()) }
     }
 
+    /// Draws each line with the game's own colour 0 again.
+    pub fn clear_backdrop(&mut self) {
+        unsafe { alchemy_mgba_backdrop(self.machine.as_ptr(), std::ptr::null()) }
+    }
+
     /// Draws each of `entries` (palette entries, 0 to 255 BG and 256 to 511 OBJ)
     /// from now on as `table` maps its colour in palette RAM; the RAM keeps
     /// the game's colours.

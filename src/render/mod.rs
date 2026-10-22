@@ -17,6 +17,8 @@ mod front;
 mod guide;
 #[cfg(feature = "render")]
 mod guide_more;
+#[cfg(feature = "render")]
+mod guide_take;
 mod jobs;
 #[cfg(feature = "render")]
 mod mgba;
@@ -1067,6 +1069,16 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
   world-map-picture
               world-map-picture.gif: the world map's still picture (R)
   overlay     overlay.gif: walking into the Sanctum beside the overlay area
+Take-apart pictures for places and guides, each as its mode's name with
+.png or .gif (guide_take.rs):
+  tret-tree-branch-split, kolima-forest-tree-healing, altmiller-cave-darkness,
+  bilibin-cave-third-puddle, fuchin-falls-cave-logs, mercury-lighthouse-pool,
+  lunpa-fortress-patrol, tolbi-spring-toss, kolima-forest-entrance-fields,
+  tret-tree-interiors-cocoons, colosseum-azart-race, colosseum-navampa-scales,
+  colosseum-satrage-lifts, tunnel-ruins-balance, venus-lighthouse-aerie-eruption
+  (and venus-lighthouse-aerie-layers-3d.gif), scene-event-cells,
+  credits-tile-ring, title-intro-layers-3d, item-screen-windows, sound-players,
+  field-requests, grid-planes, tile-animation, world-map-scanlines
 --only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
 modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),
@@ -1174,7 +1186,7 @@ fn play_guide(
         }
         let symbols = field::Symbols::find(&map)?;
         std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-        let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, written: Vec::new(), casts: Vec::new() };
+        let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
         if jobs.child {
             // A piece is a mode, or one of field-psynergy's casts.
             return jobs::serve(|unit| {
