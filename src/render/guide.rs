@@ -531,6 +531,11 @@ pub const MODES: &[&str] = &[
     "vale-shops-sleep",
     "vale-kraden-rockslide",
     "vale-cave-kite",
+    "psynergy-steps",
+    "djinn-preview",
+    "status-pages",
+    "status-panels",
+    "item-sorting",
 ];
 
 impl Guide<'_> {
@@ -609,6 +614,11 @@ impl Guide<'_> {
             "vale-shops-sleep" => self.vale_shops_sleep(),
             "vale-kraden-rockslide" => self.vale_kraden_rockslide(),
             "vale-cave-kite" => self.vale_cave_kite(),
+            "psynergy-steps" => self.menu_psynergy_steps(),
+            "djinn-preview" => self.djinn_preview(),
+            "status-pages" => self.status_pages(),
+            "status-panels" => self.status_panels(),
+            "item-sorting" => self.item_sorting(),
             _ => Err(format!("no mode {name}")),
         }
     }

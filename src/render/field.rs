@@ -416,6 +416,9 @@ pub struct Field<'rom> {
     pub returns: Vec<(u32, u32)>,
     /// Words written as the CPU reaches an address: (address, where, value).
     pub pokes: Vec<(u32, u32, u32)>,
+    /// Registers set as the CPU reaches an address: (address, register,
+    /// value), as a caller would have passed the value.
+    pub register_pokes: Vec<(u32, u32, u32)>,
 }
 
 impl<'rom> Field<'rom> {
@@ -470,7 +473,7 @@ impl<'rom> Field<'rom> {
             party_calls: 0,
             party_saved: [0; 5],
         };
-        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new() };
+        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new() };
         while !field.t.applied {
             field.tick()?;
         }
@@ -787,6 +790,12 @@ impl<'rom> Field<'rom> {
                 probe(&self.gba, 0, self.t.frame);
             }
             self.probe = Some(probe);
+        }
+        for i in 0..self.register_pokes.len() {
+            let (at, register, value) = self.register_pokes[i];
+            if at == pc {
+                self.gba.set_register(register, value);
+            }
         }
         for i in 0..self.pokes.len() {
             let (at, address, value) = self.pokes[i];
