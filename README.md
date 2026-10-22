@@ -1,4 +1,4 @@
-# Alchemy Devtools
+# 🌋 Alchemy Devtools
 
 Reconstruction tools for [Alchemy](https://github.com/PascalPixel/alchemy): compare C with the game's machine code, search for matching forms, inspect assets, and measure code and data progress.
 
