@@ -212,6 +212,8 @@ enum Phase {
     Playing,
     /// The action is over; recording the round's end.
     Played,
+    /// The command menu is the player's: the keys come from a script.
+    Menu,
 }
 
 /// What the battlefield shows behind the fighters.
@@ -235,6 +237,17 @@ pub struct Background {
 /// Plays `cast` on `rom` with the battlefield showing `scene` and returns its
 /// frames; `log` prints each step of the setup.
 pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool) -> Result<Recording, String> {
+    record_watching(rom, symbols, cast, scene, log, None, &[], &mut |_, _| {})
+}
+
+/// As `record`, calling `watch` with the machine after each frame it keeps,
+/// so a picture can read the battle's memory beside the frame. It is also
+/// called with the address when the run reaches one of `hooks`.
+/// With `menu`, the command menu is not answered: from its first frame the
+/// run records and holds each (keys, frames) of `menu` in turn, and stops
+/// when the script ends.
+#[allow(clippy::too_many_arguments)]
+pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool, menu: Option<&[(u32, u32)]>, hooks: &[u32], watch: &mut dyn FnMut(&mut Gba, Option<u32>)) -> Result<Recording, String> {
     let mut gba = Gba::new(rom)?;
     let s = symbols;
     let owner = |id: u8| s.game_state + STATE_OWNERS + u32::from(id) * UNIT_SIZE;
@@ -268,6 +281,9 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
     loop {
         let step = gba.step();
         let pc = step.pc;
+        if hooks.contains(&pc) {
+            watch(&mut gba, Some(pc));
+        }
         let frame_done = step.frame != frame;
         frame = step.frame;
 
@@ -456,6 +472,10 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                 // The next round's commands: the battle is idle.
                 tail = Some(0);
             }
+        } else if phase == Phase::Intro && pc == s.commands && menu.is_some() {
+            say(frame, "the command menu: the script plays".to_string());
+            phase = Phase::Menu;
+            recording = true;
         } else if phase == Phase::Intro && pc == s.commands {
             // The command menu (Battle_CollectPartyCommands, reached through
             // its far stub): fill in the first command record and return one
@@ -508,6 +528,7 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             continue;
         }
         if recording {
+            watch(&mut gba, None);
             frames.push(gba.picture());
             if frames.len() >= MAX_RECORDED {
                 capped = true;
@@ -527,6 +548,20 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
         let work = if phase >= Phase::Battle { gba.read32(s.battle_work) } else { 0 };
         let waiting = wait_return != 0 || (work != 0 && gba.read32(work + WORK_EVENT_PHASE) == PLAY_ADVANCE);
         prompt_frames = if waiting { prompt_frames + 1 } else { 0 };
+        if phase == Phase::Menu {
+            let script = menu.unwrap_or(&[]);
+            let at = frames.len() as u32;
+            let mut start = 0;
+            let step = script.iter().find(|&&(_, n)| {
+                start += n;
+                at < start
+            });
+            match step {
+                Some(&(keys, _)) => gba.set_keys(keys),
+                None => break,
+            }
+            continue;
+        }
         let keys = if hold_down {
             KEY_DOWN
         } else if matches!(phase, Phase::Chooser | Phase::Intro) {
