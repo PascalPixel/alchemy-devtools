@@ -449,6 +449,10 @@ impl<'rom> Field<'rom> {
         Ok(field)
     }
 
+    pub fn flag_is_set(&self, flag: u16) -> bool {
+        self.gba.read8(self.s.flag_bytes + u32::from((flag >> 3) & 0x1ff)) & (1 << (flag & 7)) != 0
+    }
+
     pub fn set_flag(&mut self, flag: u16, on: bool) {
         let a = self.s.flag_bytes + u32::from((flag >> 3) & 0x1ff);
         let m = 1u8 << (flag & 7);
@@ -476,6 +480,14 @@ impl<'rom> Field<'rom> {
 
     pub fn read32(&self, address: u32) -> u32 {
         self.gba.read32(address)
+    }
+
+    pub fn write8(&mut self, address: u32, value: u8) {
+        self.gba.write8(address, value);
+    }
+
+    pub fn write16(&mut self, address: u32, value: u16) {
+        self.gba.write16(address, value);
     }
 
     /// The map's view: the screen's top left on the map, in pixels.
@@ -513,6 +525,16 @@ impl<'rom> Field<'rom> {
         Ok((0..32).map(|i| self.gba.read16(unit + UNIT_ACTION_SLOTS + 4 * i) & 0x3fff).filter(|&a| a != 0).collect())
     }
 
+    /// The address of character `owner`'s struct BattleUnit (UnitGet).
+    pub fn unit(&mut self, owner: u8) -> Result<u32, String> {
+        self.eval(self.s.unit_get, [u32::from(owner), 0, 0, 0])
+    }
+
+    /// The scene's struct FieldWork (gEventWork).
+    pub fn field_work(&self) -> u32 {
+        self.gba.read32(self.s.field_work)
+    }
+
     /// Gives the party `coins` (GameState.coins).
     pub fn set_coins(&mut self, coins: u32) {
         self.gba.write32(self.s.game_state + GS_COINS, coins);
@@ -524,6 +546,11 @@ impl<'rom> Field<'rom> {
     /// is drawn; the game's palette keeps its own colour 0.
     pub fn set_backdrop(&mut self, colour: u16) {
         self.gba.set_backdrop(&[colour; HEIGHT]);
+    }
+
+    /// Draws every line with the game's own colour 0 again.
+    pub fn clear_backdrop(&mut self) {
+        self.gba.clear_backdrop();
     }
 
     /// Stores a halfword into an I/O register, as the processor would.
@@ -810,6 +837,31 @@ impl<'rom> Field<'rom> {
         Ok(frame_done)
     }
 
+    /// Runs `n` frames an instruction at a time, and returns the halfwords
+    /// at `addresses` each time any of them changes: the frame it changed in
+    /// (counted from 0) and their values then, with the picture of the last
+    /// whole frame. It stops early when the scene's field work is freed or
+    /// replaced (gEventWork changes), since the addresses are then another
+    /// scene's.
+    pub fn watch_halfwords(&mut self, addresses: &[u32], n: u32) -> Result<Vec<(u32, Vec<u16>, Vec<u16>)>, String> {
+        let read = |field: &Field| addresses.iter().map(|&a| field.gba.read16(a)).collect::<Vec<u16>>();
+        let work = self.gba.read32(self.s.field_work);
+        let mut last = read(self);
+        let mut out = vec![(0, last.clone(), self.picture())];
+        let mut frame = 0;
+        while frame < n && self.gba.read32(self.s.field_work) == work {
+            if self.tick()? {
+                frame += 1;
+            }
+            let now = read(self);
+            if now != last {
+                out.push((frame, now.clone(), self.picture()));
+                last = now;
+            }
+        }
+        Ok(out)
+    }
+
     pub fn frames(&mut self, mut n: u32) -> Result<(), String> {
         while n > 0 {
             if self.tick()? {
@@ -864,6 +916,13 @@ impl<'rom> Field<'rom> {
         self.gba.load(&saved.state);
         self.t = saved.track;
         self.gba.set_keys(0);
+    }
+
+    /// Loads `saved` with the keys it was saved holding still held, so a
+    /// moment can be looked at and played on as though it had not been.
+    pub fn resume(&mut self, saved: &Saved) {
+        self.load(saved);
+        self.gba.set_keys(self.t.keys);
     }
 
     pub fn screen(&self) -> Image {
@@ -964,6 +1023,30 @@ impl<'rom> Field<'rom> {
             return 0;
         }
         self.gba.read32(work + FIELD_ACTORS + 4 * u32::from(id))
+    }
+
+    /// The address of actor `id`'s object, or 0 when there is none.
+    pub fn actor_address(&self, id: u16) -> u32 {
+        self.actor_object(id)
+    }
+
+    /// Stops drawing actor `id` (its object kind 0, which the camera still
+    /// follows when it is the leader).
+    pub fn hide_actor(&mut self, id: u16) {
+        let a = self.actor_object(id);
+        if a != 0 {
+            self.gba.write8(a + OBJ_KIND, 0);
+        }
+    }
+
+    /// Moves actor `id` to (x, z) pixels on the map, where it stays until
+    /// something moves it.
+    pub fn set_actor_position(&mut self, id: u16, x: i32, z: i32) {
+        let a = self.actor_object(id);
+        if a != 0 {
+            self.gba.write32(a + OBJ_X, fx(x) as u32);
+            self.gba.write32(a + OBJ_Z, fx(z) as u32);
+        }
     }
 
     /// Actor `id`'s object as it is now, when the scene has one.
@@ -1328,7 +1411,7 @@ impl<'rom> Field<'rom> {
 
     /// Puts the leader at `spot`: on its layer, standing on its ground and
     /// facing its way.
-    fn put_leader(&mut self, spot: &Spot) {
+    pub fn put_leader(&mut self, spot: &Spot) {
         let a = self.leader_object();
         if a == 0 {
             return;
@@ -1399,7 +1482,7 @@ impl<'rom> Field<'rom> {
     /// The room the run entered: its entrance's camera box in pixels, the
     /// header's sides where the entrance gives none. The camera never leaves
     /// it, so a leader outside it is off the screen.
-    fn room(&self) -> [i32; 4] {
+    pub fn room(&self) -> [i32; 4] {
         let entrances = self.entrances();
         let entrance = entrances.iter().find(|e| e.number as u16 == self.setup.entrance).or_else(|| entrances.first());
         let h = self.header();

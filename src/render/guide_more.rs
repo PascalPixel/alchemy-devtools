@@ -75,13 +75,13 @@ fn rgb(c: u16) -> u32 {
 }
 
 /// An image of `w` by `h` pixels in `fill`.
-fn canvas(w: usize, h: usize, fill: u32) -> Image {
+pub(super) fn canvas(w: usize, h: usize, fill: u32) -> Image {
     Image { width: w, height: h, pixels: vec![fill; w * h] }
 }
 
 /// Draws `from` into `to` with its top left at (x, y), `scale` times its
 /// size.
-fn paste(to: &mut Image, from: &Image, x: usize, y: usize, scale: usize) {
+pub(super) fn paste(to: &mut Image, from: &Image, x: usize, y: usize, scale: usize) {
     for fy in 0..from.height * scale {
         for fx in 0..from.width * scale {
             let (tx, ty) = (x + fx, y + fy);
@@ -92,11 +92,11 @@ fn paste(to: &mut Image, from: &Image, x: usize, y: usize, scale: usize) {
     }
 }
 
-fn screen(picture: &[u16]) -> Image {
+pub(super) fn screen(picture: &[u16]) -> Image {
     Image { width: WIDTH, height: HEIGHT, pixels: picture.iter().map(|&c| rgb(c)).collect() }
 }
 
-fn mix(a: u32, b: u32, share: f64) -> u32 {
+pub(super) fn mix(a: u32, b: u32, share: f64) -> u32 {
     let channel = |s: u32| {
         let (x, y) = (f64::from((a >> s) & 0xff), f64::from((b >> s) & 0xff));
         ((x + (y - x) * share).round() as u32) << s
@@ -105,7 +105,7 @@ fn mix(a: u32, b: u32, share: f64) -> u32 {
 }
 
 /// Outlines the rectangle (x, y, w, h) in `colour`, clipped.
-fn outline(image: &mut Image, x: i32, y: i32, w: i32, h: i32, colour: u32) {
+pub(super) fn outline(image: &mut Image, x: i32, y: i32, w: i32, h: i32, colour: u32) {
     let mut put = |px: i32, py: i32| {
         if px >= 0 && py >= 0 && (px as usize) < image.width && (py as usize) < image.height {
             image.pixels[py as usize * image.width + px as usize] = colour;
@@ -122,7 +122,7 @@ fn outline(image: &mut Image, x: i32, y: i32, w: i32, h: i32, colour: u32) {
 }
 
 /// A colour for the n-th of many things, around the colour wheel.
-fn hue(n: usize) -> u32 {
+pub(super) fn hue(n: usize) -> u32 {
     let h = (n as f64 * 0.618_034).fract() * 6.0;
     let x = 1.0 - (h % 2.0 - 1.0).abs();
     let (r, g, b) = match h as u32 {
@@ -139,7 +139,7 @@ fn hue(n: usize) -> u32 {
 
 /// One 8 by 8 tile at `address`, 4 or 8 bits a pixel, with colours from
 /// `palette` (the 16 or 256 entries it reads); colour 0 is `empty`.
-fn tile(field: &Field, address: u32, wide: bool, palette: &[u32], empty: u32) -> [u32; 64] {
+pub(super) fn tile(field: &Field, address: u32, wide: bool, palette: &[u32], empty: u32) -> [u32; 64] {
     let mut out = [empty; 64];
     for (i, px) in out.iter_mut().enumerate() {
         let index = if wide {
@@ -155,7 +155,7 @@ fn tile(field: &Field, address: u32, wide: bool, palette: &[u32], empty: u32) ->
     out
 }
 
-fn put_tile(image: &mut Image, x: usize, y: usize, pixels: &[u32; 64], hflip: bool, vflip: bool) {
+pub(super) fn put_tile(image: &mut Image, x: usize, y: usize, pixels: &[u32; 64], hflip: bool, vflip: bool) {
     for ty in 0..8 {
         for tx in 0..8 {
             let (sx, sy) = (if hflip { 7 - tx } else { tx }, if vflip { 7 - ty } else { ty });
@@ -169,20 +169,20 @@ fn put_tile(image: &mut Image, x: usize, y: usize, pixels: &[u32; 64], hflip: bo
 
 /// The 512 colours of palette RAM: 256 for the backgrounds, then 256 for
 /// the sprites.
-fn palettes(field: &Field) -> Vec<u32> {
+pub(super) fn palettes(field: &Field) -> Vec<u32> {
     (0..512).map(|i| rgb(field.read16(PALETTE + 2 * i))).collect()
 }
 
 impl<'a> Guide<'a> {
     /// Writes `frames` (BGR555 at 60 a second) as `file`.
-    fn guide_gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
+    pub(super) fn guide_gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
         let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.iter().map(|&c| rgb(c)).collect()).collect();
         let written = animation::write(&self.out.join(file), &rgb, WIDTH)?;
         self.written.push((file.to_string(), written.bytes, format!("{what}; {} frames at 30 a second", written.frames)));
         Ok(())
     }
 
-    fn guide_png(&mut self, file: &str, image: &Image, what: &str) -> Result<(), String> {
+    pub(super) fn guide_png(&mut self, file: &str, image: &Image, what: &str) -> Result<(), String> {
         let bytes = write_png(&self.out.join(file), image)?;
         self.written.push((file.to_string(), bytes, what.to_string()));
         Ok(())
@@ -191,12 +191,12 @@ impl<'a> Guide<'a> {
     /// The scene entered with the leader where `trigger` would start, from
     /// `place` or else from an entrance whose room holds the actor: the
     /// entered scene and the spot, the player in control there.
-    fn stand_for(&self, place: (u16, u16), trigger: Trigger, actor: u16) -> Result<(Entered<'a>, Spot), String> {
+    pub(super) fn stand_for(&self, place: (u16, u16), trigger: Trigger, actor: u16) -> Result<(Entered<'a>, Spot), String> {
         self.stand_where(place, trigger, actor, |_| true)
     }
 
     /// As `stand_for`, at the first spot `pick` accepts.
-    fn stand_where(&self, place: (u16, u16), trigger: Trigger, actor: u16, pick: impl Fn(&Spot) -> bool) -> Result<(Entered<'a>, Spot), String> {
+    pub(super) fn stand_where(&self, place: (u16, u16), trigger: Trigger, actor: u16, pick: impl Fn(&Spot) -> bool) -> Result<(Entered<'a>, Spot), String> {
         let mut entered = self.enter_with(place, &[])?;
         let first = match entered.field.spots(trigger) {
             Ok(spots) if spots.iter().any(&pick) => {
@@ -224,7 +224,7 @@ impl<'a> Guide<'a> {
 
     /// Holds each step's keys in turn from the moment the leader stands
     /// ready, keeping every frame.
-    fn press_path(field: &mut Field, path: &[(u32, u32)]) -> Result<Vec<Vec<u16>>, String> {
+    pub(super) fn press_path(field: &mut Field, path: &[(u32, u32)]) -> Result<Vec<Vec<u16>>, String> {
         let mut frames = vec![field.picture()];
         for &(keys, n) in path {
             Self::hold(field, keys, n, &mut frames)?;
@@ -407,7 +407,7 @@ impl<'a> Guide<'a> {
 
     /// The screen at twice the GBA's size, each actor on it marked at its
     /// feet and labelled with its actor number.
-    fn labelled_actors(field: &mut Field) -> Result<Image, String> {
+    pub(super) fn labelled_actors(field: &mut Field) -> Result<Image, String> {
         field.frames(1)?;
         let mut image = canvas(2 * WIDTH, 2 * HEIGHT, 0);
         paste(&mut image, &screen(&field.picture()), 0, 0, 2);
@@ -887,7 +887,7 @@ struct Stretch {
 }
 
 /// The field's actor slots (FIELD_ACTOR_COUNT in field.rs).
-const ACTOR_SLOTS: u16 = 66;
+pub(super) const ACTOR_SLOTS: u16 = 66;
 /// SceneId_IncreaseItemAndLevel and SceneId_MenuTest, the debug level room
 /// and menu test room (scenes.s).
 const LEVEL_ROOM: u16 = 199;
@@ -909,7 +909,7 @@ const DIGITS: [[u8; 5]; 10] = [
 
 /// Writes `n` at (x, y) in the 3 by 5 font at twice its size, white on a box
 /// of `colour`, clipped.
-fn label(image: &mut Image, x: i32, y: i32, n: u16, colour: u32) {
+pub(super) fn label(image: &mut Image, x: i32, y: i32, n: u16, colour: u32) {
     let text = n.to_string();
     let (w, h) = (text.len() as i32 * 8 + 2, 14);
     let mut put = |px: i32, py: i32, c: u32| {
