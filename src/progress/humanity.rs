@@ -70,6 +70,8 @@ struct Declared {
     /// Where it is defined, else where it is first declared.
     file: String,
     defined: bool,
+    /// Declared in a far-call header: an entry point another bank reaches.
+    entry: bool,
 }
 
 /// One game's counts.
@@ -97,8 +99,96 @@ pub struct Report {
     /// Object-like macros whose value is a number or a simple sum, for the
     /// tables' first numbers (`ENEMY_CLASS_FIRST`).
     pub macro_values: HashMap<String, i64>,
+    /// Each lone argument in code, settled once every declaration is read.
+    arguments: Vec<Argument>,
+    /// Each declared function's parameter names.
+    parameters: HashMap<String, Vec<Option<String>>>,
+    /// Each function-like macro's parameters and the call each is passed to.
+    macro_parameters: HashMap<String, Vec<(String, Option<(String, usize)>)>>,
     function_bodies: HashMap<String, Group>,
     table_bodies: HashMap<String, Group>,
+}
+
+/// A lone number passed to a call, with each call around it and the
+/// argument it fills (from 0), innermost first, as far as the lexer can tell.
+#[derive(Clone, Debug)]
+struct Argument {
+    file: String,
+    line: usize,
+    literal: String,
+    calls: Vec<(String, usize)>,
+}
+
+/// The words of parameter names that hold data S3 lets stay a number: a
+/// coordinate (a cell's row and column included), a duration in frames, a
+/// size or a count. A speed, an angle, a weight, a mode or a value is not
+/// here: its number may have a meaning to name.
+const DATA_PARAMETERS: &[(&str, &[&str])] = &[
+    ("coordinate", &["x", "y", "z", "dx", "dy", "dz", "row", "column"]),
+    ("frames", &["frames", "duration", "delay", "ticks"]),
+    ("size", &["width", "height", "w", "h", "size", "length", "radius", "distance"]),
+    ("count", &["count"]),
+];
+
+/// Words that make a parameter a rate, whatever else it says: `stepX`,
+/// `initial_velocity_y`.
+const RATE_WORDS: &[&str] = &["velocity", "speed", "step", "freq", "frequency", "acceleration"];
+
+/// What kind of data a parameter's name says it holds, from any of its words
+/// with their digits dropped: `srcX`, `fixed_x` and `xOffset` a coordinate,
+/// `frames` a duration.
+pub fn data_parameter(name: &str) -> Option<&'static str> {
+    let mut words = Vec::new();
+    let mut word = String::new();
+    let mut previous = '_';
+    for c in name.chars() {
+        if c == '_' || c.is_ascii_digit() || (c.is_ascii_uppercase() && previous.is_ascii_lowercase()) {
+            words.push(std::mem::take(&mut word));
+        }
+        if c.is_ascii_alphabetic() {
+            word.push(c.to_ascii_lowercase());
+        }
+        previous = c;
+    }
+    words.push(word);
+    if words.iter().any(|word| RATE_WORDS.contains(&word.as_str())) {
+        return None;
+    }
+    DATA_PARAMETERS.iter().find(|(_, list)| words.iter().any(|word| list.contains(&word.as_str()))).map(|(kind, _)| *kind)
+}
+
+/// The callee of the call whose argument list holds the token at `at`, and
+/// which argument it is in (from 0), reading back no further than `floor`: `Actor_WalkTo`
+/// and 1 for the `257` of `Actor_WalkTo(ACTOR_PARTY_LEADER, 257, 420)`.
+/// Parentheses that only group (`(x) << 16`) are looked through.
+fn call_site(tokens: &[Token], at: usize, floor: usize) -> Option<(usize, usize)> {
+    let directive = tokens[at].pp;
+    let (mut depth, mut position) = (0, 0);
+    let mut index = at;
+    while index > floor {
+        index -= 1;
+        let token = &tokens[index];
+        if token.pp != directive || token.kind == Kind::Comment {
+            continue;
+        }
+        match token.text {
+            ")" | "]" => depth += 1,
+            "[" if depth > 0 => depth -= 1,
+            "(" if depth > 0 => depth -= 1,
+            "(" => {
+                let callee = (index > floor).then(|| &tokens[index - 1]);
+                match callee {
+                    Some(name) if name.kind == Kind::Ident && !is_keyword(name.text) => return Some((index - 1, position)),
+                    // A grouping parenthesis: the argument is the whole group.
+                    _ => position = 0,
+                }
+            }
+            "," if depth == 0 => position += 1,
+            "{" | "}" | ";" | "[" => return None,
+            _ => {}
+        }
+    }
+    None
 }
 
 /// One counted thing: where it is and what it is.
@@ -143,6 +233,7 @@ impl Report {
         let map = if function { &mut self.functions } else { &mut self.globals };
         let entry = map.entry(name.to_string()).or_insert_with(|| Declared { file: file.to_string(), line, ..Declared::default() });
         entry.documented |= documented;
+        entry.entry |= file.contains("/include/farcall/");
         if defined && !entry.defined {
             entry.defined = true;
             entry.file = file.to_string();
@@ -150,9 +241,65 @@ impl Report {
         }
     }
 
-    /// Settle what needs the whole game: documentation across declarations,
-    /// and the duplicate groups.
+    /// The parameter an argument fills, by name, and the kind of data that
+    /// name says it holds. A macro's parameter takes its own name's kind, else
+    /// that of the parameter it is passed to (`WAIT(n)` is
+    /// `Engine_EventWait(s32 frames)`).
+    fn parameter(&self, callee: &str, position: usize, depth: usize) -> Option<(String, Option<&'static str>)> {
+        if let Some(names) = self.parameters.get(callee) {
+            let name = names.get(position)?.clone()?;
+            let kind = data_parameter(&name);
+            return Some((name, kind));
+        }
+        let (name, call) = self.macro_parameters.get(callee)?.get(position)?;
+        let inner = call.as_ref().filter(|_| depth < 8).and_then(|(callee, at)| self.parameter(callee, *at, depth + 1));
+        let kind = data_parameter(name).or_else(|| inner.as_ref().and_then(|(_, kind)| *kind));
+        Some((name.clone(), kind))
+    }
+
+    /// The kind of data a lone argument is, from the calls around it: the
+    /// parameter it fills, or, where that is a macro that only converts its
+    /// value (`PIXELS(value)`, `((value) << 16)`), the parameter the macro's
+    /// result fills.
+    fn argument_kind(&self, calls: &[(String, usize)]) -> Option<&'static str> {
+        for (callee, at) in calls {
+            let (_, kind) = self.parameter(callee, *at, 0)?;
+            if kind.is_some() {
+                return kind;
+            }
+            let converts = self.macro_parameters.get(callee).and_then(|list| list.get(*at)).is_some_and(|(_, call)| call.is_none());
+            if !converts {
+                return None;
+            }
+        }
+        None
+    }
+
+    /// Settle what needs the whole game: lone arguments by the parameters
+    /// they fill, documentation across declarations, and the duplicate groups.
     fn finish(&mut self) {
+        for argument in std::mem::take(&mut self.arguments) {
+            let (file, line, literal) = (&argument.file, argument.line, &argument.literal);
+            let what = match argument.calls.first() {
+                Some((callee, at)) => match self.parameter(callee, *at, 0) {
+                    Some((name, _)) => format!("{literal}\t{callee} {name}"),
+                    None => format!("{literal}\t{callee} #{}", at + 1),
+                },
+                None => format!("{literal}\t-"),
+            };
+            match self.argument_kind(&argument.calls) {
+                Some(kind) => {
+                    self.note("data_argument", file, line, &what);
+                    self.note(&format!("data_argument_{kind}"), file, line, &what);
+                }
+                None => {
+                    self.note("magic_code", file, line, literal);
+                    self.note("magic_argument", file, line, &what);
+                }
+            }
+        }
+        // Each list in file and line order, as the files were read.
+        self.items.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
         for (function, kind) in [(true, "undocumented_function"), (false, "undocumented_global")] {
             let missing: Vec<(String, usize, String)> = (if function { &self.functions } else { &self.globals })
                 .iter()
@@ -162,6 +309,17 @@ impl Report {
             for (file, line, name) in missing {
                 self.note(kind, &file, line, &name);
             }
+        }
+        // D9 asks every entry point for its summary; any other declaration only
+        // where it has something to say, which no count can tell.
+        let entries: Vec<(String, usize, String)> = self
+            .functions
+            .iter()
+            .filter(|(_, declared)| declared.entry && !declared.documented)
+            .map(|(name, declared)| (declared.file.clone(), declared.line, name.clone()))
+            .collect();
+        for (file, line, name) in entries {
+            self.note("undocumented_entry", &file, line, &name);
         }
         let groups = |bodies: &mut HashMap<String, Group>| {
             let mut groups: Vec<Group> = bodies.drain().map(|(_, group)| group).filter(|g| g.members.len() > 1).collect();
@@ -438,6 +596,10 @@ struct Walk<'r, 'a> {
     enum_next: HashMap<usize, (Option<String>, Option<i64>)>,
     /// This file's enumerators with known values.
     enum_values: HashMap<String, i64>,
+    /// Where the directive being read starts.
+    directive_start: usize,
+    /// How many functions this file defines.
+    functions: usize,
 }
 
 /// An enumerator's tag and value, where known.
@@ -536,10 +698,22 @@ impl<'r, 'a> Walk<'r, 'a> {
         };
         let line = self.code.tokens[at].line;
         let literal = self.code.text(at);
-        self.report.note(metric, self.file, line, literal);
         if metric == "magic_code" && self.is_argument(at) {
-            self.report.note("magic_argument", self.file, line, literal);
+            // Whether it is data depends on the parameter it fills, which may be
+            // declared in a file read later.
+            let floor = if function_macro.is_some() { self.directive_start } else { 0 };
+            // The calls around it, innermost first: `PIXELS` and then `Actor_SetPosition`.
+            let mut calls = Vec::new();
+            let mut inside = at;
+            while let Some((callee, position)) = call_site(&self.code.tokens, inside, floor) {
+                calls.push((self.code.text(callee).to_string(), position));
+                inside = callee;
+            }
+            let (file, literal) = (self.file.to_string(), literal.to_string());
+            self.report.arguments.push(Argument { file, line, literal, calls });
+            return;
         }
+        self.report.note(metric, self.file, line, literal);
     }
 
     /// A literal standing alone between `(` or `,` and `,` or `)`: an argument or list element.
@@ -588,6 +762,10 @@ impl<'r, 'a> Walk<'r, 'a> {
             "define" => {
                 let Some(name) = tokens.get(1).filter(|t| t.kind == Kind::Ident) else { return };
                 let function_like = tokens.get(2).is_some_and(|t| t.text == "(" && t.glued);
+                if function_like {
+                    self.macro_parameters(name.text, start, end);
+                }
+                self.directive_start = start;
                 for at in start + 3..end {
                     if self.code.tokens[at].kind == Kind::Number {
                         self.number(at, Some(function_like));
@@ -613,6 +791,79 @@ impl<'r, 'a> Walk<'r, 'a> {
         for ident in idents.iter().skip(1) {
             self.name(ident, line);
         }
+    }
+
+    /// A function-like macro's parameters, each with the call in its body it
+    /// is passed to: `WAIT(n)`'s `n` is `Engine_EventWait`'s first argument.
+    fn macro_parameters(&mut self, name: &str, start: usize, end: usize) {
+        // `#`, `define`, the name, `(`, then the parameters up to `)`.
+        let mut names = Vec::new();
+        let mut at = start + 4;
+        while at < end && self.code.text(at) != ")" {
+            if self.code.tokens[at].kind == Kind::Ident {
+                names.push(self.code.text(at));
+            }
+            at += 1;
+        }
+        let body = at + 1;
+        let parameters = names
+            .iter()
+            .map(|&parameter| {
+                let call = (body..end)
+                    .filter(|&use_at| self.code.text(use_at) == parameter)
+                    .find_map(|use_at| call_site(&self.code.tokens, use_at, body))
+                    .map(|(callee, position)| (self.code.text(callee).to_string(), position));
+                (parameter.to_string(), call)
+            })
+            .collect();
+        self.report.macro_parameters.entry(name.to_string()).or_insert(parameters);
+    }
+
+    /// The parameter names of the function a declaration names, `None` where
+    /// a parameter is unnamed: `void Map_CopyCells(s32 srcX, ...)`.
+    fn parameters(&mut self, name: &str, statement: &[usize]) {
+        let Some(open) = statement.windows(2).find(|pair| self.code.text(pair[0]) == name && self.code.text(pair[1]) == "(")
+        else {
+            return;
+        };
+        let open = statement.iter().position(|&at| at == open[1]).expect("its own token");
+        let (mut names, mut current, mut depth) = (Vec::new(), Vec::new(), 0);
+        for &at in &statement[open + 1..] {
+            let text = self.code.text(at);
+            match text {
+                "(" => depth += 1,
+                ")" if depth == 0 => break,
+                ")" => depth -= 1,
+                "," if depth == 0 => {
+                    names.push(self.parameter_name(&current));
+                    current.clear();
+                    continue;
+                }
+                _ => {}
+            }
+            current.push(at);
+        }
+        names.push(self.parameter_name(&current));
+        if names.iter().all(Option::is_none) {
+            return;
+        }
+        let named = |list: &[Option<String>]| list.iter().filter(|n| n.is_some()).count();
+        let entry = self.report.parameters.entry(name.to_string()).or_default();
+        if named(&names) > named(entry) {
+            *entry = names;
+        }
+    }
+
+    /// The name one parameter's tokens end in, when they name it: not `s32`,
+    /// `struct Actor *` or a pointer to functions.
+    fn parameter_name(&self, tokens: &[usize]) -> Option<String> {
+        let (&last, rest) = tokens.split_last()?;
+        let token = &self.code.tokens[last];
+        let before = rest.last().map_or("", |&at| self.code.text(at));
+        let typed = rest.iter().any(|&at| self.code.tokens[at].kind == Kind::Ident);
+        (token.kind == Kind::Ident && !is_keyword(token.text) && typed && !matches!(before, "struct" | "union" | "enum"))
+            .then(|| token.text.to_string())
+            .filter(|_| !rest.iter().any(|&at| self.code.text(at) == "("))
     }
 
     fn branch(&mut self) {
@@ -694,6 +945,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                         if self.stack.is_empty() {
                             self.statement.push(at);
                             if self.braces[&open].kind == Brace::Func {
+                                self.functions += 1;
                                 self.declaration();
                             }
                         }
@@ -770,6 +1022,7 @@ impl<'r, 'a> Walk<'r, 'a> {
         if let Some(&(open, _)) = opened.iter().find(|(_, kind)| *kind == Brace::Func) {
             if let Some(Declarator::Function(name)) = self.declarator(&statement) {
                 let name = name.to_string();
+                self.parameters(&name, &statement);
                 self.report.declare(true, &name, file, line, documented, true);
                 self.duplicate(true, open, &name);
                 let own = self.code.doc_text[first].clone();
@@ -790,6 +1043,7 @@ impl<'r, 'a> Walk<'r, 'a> {
         match self.declarator(&statement) {
             Some(Declarator::Function(name)) => {
                 let name = name.to_string();
+                self.parameters(&name, &statement);
                 self.report.declare(true, &name, file, line, documented, false);
             }
             Some(Declarator::Global(name)) => {
@@ -891,9 +1145,11 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
     report.files += 1;
     let lines = text.lines().count();
     report.lines += lines;
-    if lines > LONG_FILE {
-        report.long_files.push((path.to_string(), lines));
-    }
+    // S3 splits only an object holding more than one family: never a header, a
+    // scene overlay (laid out by kind, so one file), a part (one family
+    // already) or a data object (one file).
+    let object = path.ends_with(".c") && !path.contains("/src/scene/") && !comments.iter().any(|c| c.text.starts_with("// Part of "));
+    let long = object && lines > LONG_FILE;
     static TAG: OnceLock<Regex> = OnceLock::new();
     let tag = TAG.get_or_init(|| Regex::new(r"FAKEMATCH\(([a-z-]+)\)").unwrap());
     if path.contains("/src/scene/") {
@@ -934,8 +1190,13 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         defined: BTreeSet::new(),
         enum_next: HashMap::new(),
         enum_values: HashMap::new(),
+        directive_start: 0,
+        functions: 0,
     };
     walk.walk();
+    if long && walk.functions > 0 {
+        walk.report.long_files.push((path.to_string(), lines));
+    }
 }
 
 /// Count a game from `(path, text)` pairs.
@@ -1033,10 +1294,16 @@ fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     Ok(files)
 }
 
-/// The rows of the summary, as `(metric, label)`; a metric's TSV total is its value.
+/// The rows of the summary, as `(metric, label)`; a metric's TSV total is its value. A row
+/// with no metric is a heading.
 const ROWS: &[(&str, &str)] = &[
     ("magic_code", "magic numbers in code"),
     ("magic_argument", "  of those, lone arguments"),
+    ("data_argument", "numbers passed as data"),
+    ("data_argument_frames", "  frames"),
+    ("data_argument_coordinate", "  coordinates"),
+    ("data_argument_size", "  sizes"),
+    ("data_argument_count", "  counts"),
     ("magic_table", "numbers in table data"),
     ("placeholder_names", "placeholder names"),
     ("placeholder", "  their uses"),
@@ -1055,12 +1322,8 @@ const ROWS: &[(&str, &str)] = &[
     ("if_patch", "#if on a patch level"),
     ("if_edition_name", "#if on an edition name"),
     ("if_in_function", "  of those inside functions"),
-    ("undocumented_function", "functions without ///"),
-    ("undocumented_struct", "structs without ///"),
-    ("undocumented_enum", "enums without ///"),
-    ("undocumented_macro", "macros without ///"),
-    ("undocumented_global", "globals without ///"),
-    ("long_file", "files over 3,000 lines"),
+    ("undocumented_entry", "far-call entries without ///"),
+    ("long_file", "objects over 3,000 lines"),
     ("duplicate_function", "duplicate function groups"),
     ("duplicate_function_copies", "  copies past the first"),
     ("duplicate_table", "duplicate table groups"),
@@ -1078,12 +1341,18 @@ const ROWS: &[(&str, &str)] = &[
     ("unused_word_name", "  names using them"),
     ("door_words", "door words unresolved"),
     ("door_word_link", "  links using them"),
+    ("", "to review, not to fill (D9):"),
+    ("undocumented_function", "  functions without ///"),
+    ("undocumented_struct", "  structs without ///"),
+    ("undocumented_enum", "  enums without ///"),
+    ("undocumented_macro", "  macros without ///"),
+    ("undocumented_global", "  globals without ///"),
 ];
 
 /// Metrics whose top files are listed.
 const LISTED: &[&str] = &[
     "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "goto", "if_language", "if_patch",
-    "if_in_function", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
+    "if_in_function", "undocumented_entry", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
     "undocumented_global", "provenance_none", "provenance_prose", "provenance_table_mismatch", "unused_word_name",
     "door_word_link",
 ];
@@ -1133,7 +1402,7 @@ pub fn tsv(games: &[(&str, &Report)]) -> String {
     for (game, report) in games {
         let _ = writeln!(text, "{game}\tfiles\ttotal\t{}", report.files);
         let _ = writeln!(text, "{game}\tlines\ttotal\t{}", report.lines);
-        for (metric, _) in ROWS {
+        for (metric, _) in ROWS.iter().filter(|(metric, _)| !metric.is_empty()) {
             let _ = writeln!(text, "{game}\t{metric}\ttotal\t{}", report.value(metric));
         }
         for metric in LISTED {
@@ -1178,6 +1447,10 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
     }
     text.push('\n');
     for (metric, label) in ROWS {
+        if metric.is_empty() {
+            let _ = writeln!(text, "  {label}");
+            continue;
+        }
         let _ = write!(text, "  {label:<30}");
         for (_, report) in games {
             let _ = write!(text, "{:>10}", super::commas(report.value(metric) as i64));
@@ -1432,20 +1705,84 @@ mod tests {
         let renamed = body.replace("gA", "gC").replace("Load", "Fetch");
         let table = "= { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };\n";
         let first = format!("void Alpha(void) {body}void Beta(void) {renamed}void Gamma(void) {{ int i; }}\nconst u8 gT1[] {table}");
-        let second = format!("const u8 gT2[] {table}{}", "\n".repeat(3001));
-        let report = game([("a.c", first.as_str()), ("b.c", second.as_str())]);
+        let long = "\n".repeat(3001);
+        let second = format!("const u8 gT2[] {table}void Delta(void) {{}}{long}");
+        // A scene overlay, a part, a header and a data object stay one file however long.
+        let part = format!("// Part of effect.c.\nvoid Epsilon(void) {{}}{long}");
+        let data = format!("const u8 gT3[] = {{ 0 }};{long}");
+        let scene = format!("void Zeta(void) {{}}{long}");
+        let report = game([
+            ("a.c", first.as_str()),
+            ("b.c", second.as_str()),
+            ("games/tbs/src/scene/vale.c", scene.as_str()),
+            ("games/tbs/src/effect/parts/bolt.c", part.as_str()),
+            ("games/tbs/include/scene_links.h", long.as_str()),
+            ("games/tbs/src/object/table.c", data.as_str()),
+        ]);
         assert_eq!(report.function_groups.len(), 1);
         assert_eq!(report.function_groups[0].members, vec!["a.c:Alpha", "a.c:Beta"]);
         assert_eq!(report.table_groups.len(), 1);
         assert_eq!(report.table_groups[0].members, vec!["a.c:gT1", "b.c:gT2"]);
         assert_eq!(report.long_files, vec![("b.c".to_string(), 3002)]);
         let tsv = tsv(&[("tbs", &report)]);
-        assert!(tsv.starts_with("game\tmetric\tscope\tcount\ntbs\tfiles\ttotal\t2\n"));
+        assert!(tsv.starts_with("game\tmetric\tscope\tcount\ntbs\tfiles\ttotal\t6\n"));
         assert!(tsv.contains("tbs\tduplicate_function\ttotal\t1\n"));
         assert!(tsv.contains("tbs\tduplicate_function\ta.c:Alpha a.c:Beta\t"));
         assert!(tsv.contains("tbs\tlong_file\tb.c\t3002\n"));
         let table = summary(&[("tbs", &report)], 0);
-        assert!(table.contains("files over 3,000 lines") && table.lines().count() == ROWS.len() + 3);
+        assert!(table.contains("objects over 3,000 lines") && table.lines().count() == ROWS.len() + 3);
+    }
+
+    #[test]
+    fn arguments_that_are_data() {
+        for (name, kind) in [
+            ("frames", Some("frames")), ("waitFrames", Some("frames")), ("srcX", Some("coordinate")), ("fixed_z", Some("coordinate")),
+            ("xOffset", Some("coordinate")), ("x2", Some("coordinate")), ("sourceRow", Some("coordinate")), ("height", Some("size")),
+            ("count", Some("count")), ("stepX", None), ("initial_velocity_y", None), ("speed", None), ("facing", None), ("box", None),
+        ] {
+            assert_eq!(data_parameter(name), kind, "{name}");
+        }
+        let header = concat!(
+            "void Engine_EventWait(s32 frames);\n",
+            "#define WAIT(n) Engine_EventWait(n)\n",
+            "#define PIXELS(value) ((value) << 16)\n",
+            "#define BLEND(top, bottom) Blend((top) | ((bottom) << 8))\n",
+            "void Actor_SetPosition(s32 actor, s32 fixed_x, s32 fixed_z);\n",
+            "static inline void Actor_SetSpeed(s32 actor, s32 speed, s32 acceleration) { Engine(actor, speed); }\n",
+            "void Old();\n",
+            "void Blend(s32);\n",
+        );
+        let source = concat!(
+            "void Run(void) {\n",
+            "    WAIT(80);\n",
+            "    Engine_EventWait(\n        40);\n",
+            "    Actor_SetPosition(ACTOR_LEADER, PIXELS(312), (416) << 16);\n",
+            "    Actor_SetSpeed(ACTOR_LEADER, PIXELS(24), 0x8000);\n",
+            "    Old(1, 20);\n",
+            "    BLEND(10, 12);\n",
+            "    draw[0](canvas, 64, 40);\n",
+            "}\n",
+        );
+        let report = game([("f.h", header), ("f.c", source)]);
+        assert_eq!(report.total("data_argument_frames"), 2, "WAIT(80) and 40");
+        assert_eq!(report.total("data_argument_coordinate"), 2, "312 and 416, through PIXELS and a group");
+        assert_eq!(report.total("data_argument"), 4);
+        // 24 and 0x8000 (a speed and an acceleration), 20, 10 and 12, 64 and 40;
+        // the shifts' 16, in PIXELS and in Run, are no arguments.
+        assert_eq!((report.total("magic_argument"), report.total("magic_code")), (7, 9));
+        let listed = list(&[("tbs", &report)], "magic_argument");
+        assert!(listed.starts_with("tbs\tf.c:6\t24\tPIXELS value\ntbs\tf.c:6\t0x8000\tActor_SetSpeed acceleration\ntbs\tf.c:7\t20\tOld #2\n"), "{listed}");
+        assert!(listed.ends_with("tbs\tf.c:9\t40\t-\n"), "{listed}");
+        assert!(list(&[("tbs", &report)], "data_argument").contains("tbs\tf.c:2\t80\tWAIT n\n"));
+    }
+
+    #[test]
+    fn entry_points_need_their_summary() {
+        let far = "/// Draws a number.\nvoid UiText_DrawNumberFar(s32 number);\nvoid UiText_ClearFar(void);\n";
+        let source = "void UiText_ClearFar(void) {}\nvoid Helper(void) {}\n";
+        let report = game([("games/tbs/include/farcall/window.h", far), ("games/tbs/src/window/text.c", source)]);
+        assert_eq!(list(&[("tbs", &report)], "undocumented_entry"), "tbs\tgames/tbs/src/window/text.c:1\tUiText_ClearFar\n");
+        assert_eq!(report.total("undocumented_function"), 2, "UiText_ClearFar and Helper, to review");
     }
 
     #[test]
