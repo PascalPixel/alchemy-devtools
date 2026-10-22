@@ -29,6 +29,34 @@ const EFFECT_COUNT: u32 = 0x14;
 const EFFECT_ACTORS: u32 = 0x24;
 /// The first enemy unit id.
 const FIRST_ENEMY_UNIT: u32 = 128;
+/// BattlePlan.presentationFlags' kind and variant (STAGING_ in
+/// battle_internal.h).
+const STAGING_KIND_MASK: u32 = 0xfff;
+const STAGING_VARIANT_MASK: u32 = 0x3000;
+const STAGING_VARIANT_SHIFT: u32 = 12;
+
+/// The effect kinds' names by value (enum BattleEffectKind) and the
+/// variants' in order (enum EffectVariant), from effect.h.
+fn effect_names() -> Result<(std::collections::HashMap<u32, String>, Vec<String>), String> {
+    let path = crate::compile::root().join("games/tbs/include/unit/effect/effect.h");
+    let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let mut kinds = std::collections::HashMap::new();
+    let mut variants = Vec::new();
+    for line in text.lines() {
+        let line = line.split("///").next().unwrap_or("").trim().trim_end_matches(',');
+        if let Some((name, value)) = line.split_once(" = ") {
+            if name.starts_with("BATTLE_EFFECT_") {
+                if let Ok(v) = value.trim().parse() {
+                    kinds.insert(v, name.to_string());
+                }
+            }
+        } else if line.starts_with("EFFECT_VARIANT_") && !line.contains(' ') {
+            variants.push(line.to_string());
+        }
+    }
+    Ok((kinds, variants))
+}
+
 /// Frames kept before the effect's work block is taken and after it is
 /// released.
 const MARGIN: usize = 8;
@@ -178,20 +206,24 @@ impl<'a> Guide<'a> {
             eprintln!("effect-variants: {name}: presentationFlags {flags:#x}, effect kind {kind}, variant {variant}; {} frames, effect from {start}", frames.len());
             columns.push((name.to_string(), flags, kind, variant, frames.into_iter().skip(start.saturating_sub(4)).map(|f| f.screen).collect()));
         }
-        const VARIANTS: [&str; 3] = ["BASIC", "STRONGER", "STRONGEST"];
-        let (top, gap) = (78, 12);
+        let (kinds, variants) = effect_names()?;
+        let (top, gap) = (84, 12);
         let w = 3 * WIDTH + 4 * gap;
         let h = top + HEIGHT + 8;
         let n = columns.iter().map(|c| c.4.len()).max().unwrap_or(0);
         let mut out = Vec::new();
         for i in 0..n {
             let mut image = canvas(w, h, BACK);
+            text(&mut image, gap as i32 - 2, 2, "PRESENTATIONFLAGS: KIND AND VARIANT, AS THE HANDLER GETS THEM", DIM, None, 2);
             for (k, (name, flags, kind, variant, frames)) in columns.iter().enumerate() {
                 let x = gap + k * (WIDTH + gap);
-                text(&mut image, x as i32 - 2, 4, &name.to_uppercase(), MARK, None, 2);
-                text(&mut image, x as i32 - 2, 22, &format!("PRESENTATIONFLAGS {flags:#06X}").replace("0X", "0x"), TEXT, None, 2);
-                text(&mut image, x as i32 - 2, 40, &format!("KIND {} VARIANT {}", kind, variant), TEXT, None, 2);
-                text(&mut image, x as i32 - 2, 58, VARIANTS.get(*variant as usize).copied().unwrap_or("?"), DIM, None, 2);
+                // The word's kind and variant fields, named as effect.h names
+                // them; the handler is handed the same two.
+                let (word_kind, word_variant) = (flags & STAGING_KIND_MASK, (flags & STAGING_VARIANT_MASK) >> STAGING_VARIANT_SHIFT);
+                assert_eq!((word_kind, word_variant), (*kind, *variant), "{name}: the plan's word and the handler disagree");
+                text(&mut image, x as i32 - 2, 22, &name.to_uppercase(), MARK, None, 2);
+                text(&mut image, x as i32 - 2, 42, kinds.get(kind).map_or("?", String::as_str), TEXT, None, 2);
+                text(&mut image, x as i32 - 2, 60, variants.get(*variant as usize).map_or("?", String::as_str), TEXT, None, 2);
                 let f = &frames[i.min(frames.len() - 1)];
                 paste(&mut image, &screen(f), x, top, 1);
             }
@@ -225,7 +257,7 @@ impl<'a> Guide<'a> {
         const COLS: usize = 32;
         let panel_w = WIDTH + 12 + COLS * CELL + 12;
         let panel_h = HEIGHT.max(20 + CELL + 26 + 16 * CELL + 30) + 30;
-        let (w, h) = (2 * panel_w + 8, 2 * panel_h + 28);
+        let (w, h) = (2 * panel_w + 8, 2 * panel_h + 46);
         // Each attack starts 6 frames before its handler places its
         // particles, after the summon's opening, and ends when its pools fall still for 30 frames; the
         // work block stays taken after that for the summon's Power boost,
@@ -260,7 +292,7 @@ impl<'a> Guide<'a> {
                 text(&mut image, px as i32, py as i32, &name.to_uppercase(), MARK, None, 2);
                 paste(&mut image, &screen(&f.screen), px, py + 22, 1);
                 let gx = px + WIDTH + 12;
-                text(&mut image, gx as i32 - 2, py as i32, "WORK->PARTICLES 0-31", HEAD, None, 2);
+                text(&mut image, gx as i32 - 2, py as i32, "FLAMES: WORK->PARTICLES", HEAD, None, 2);
                 let flames: Vec<u32> = (0..32)
                     .map(|s| {
                         let (now, was) = (f.ranges[0][s], before.ranges[0][s]);
@@ -275,7 +307,7 @@ impl<'a> Guide<'a> {
                     .collect();
                 grid(&mut image, gx, py + 20, COLS, CELL, &flames);
                 let my = py + 20 + CELL + 8;
-                text(&mut image, gx as i32 - 2, my as i32, "PARTICLES 0-511", HEAD, None, 2);
+                text(&mut image, gx as i32 - 2, my as i32, "MOTES: PARTICLES", HEAD, None, 2);
                 let motes: Vec<u32> = (0..512)
                     .map(|s| {
                         let (now, was) = (f.ranges[1][s], before.ranges[1][s]);
@@ -293,14 +325,17 @@ impl<'a> Guide<'a> {
                 grid(&mut image, gx, my + 18, COLS, CELL, &motes);
                 let lit_flames = flames.iter().filter(|&&c| c == 0xff_90_30).count();
                 let lit_motes = motes.iter().filter(|&&c| c != FREE && c != PARKED).count();
-                text(&mut image, gx as i32 - 2, (my + 18 + 16 * CELL + 6) as i32, &format!("FLAMES {lit_flames}  MOTES {lit_motes}"), TEXT, None, 2);
+                text(&mut image, gx as i32 - 2, (my + 18 + 16 * CELL + 6) as i32, &format!("{lit_flames} FLAMES MOVING, {lit_motes} MOTES"), TEXT, None, 2);
             }
             let mut kx = 6;
-            let ky = (h - 20) as i32;
+            let ky = (h - 38) as i32;
             kx += key(&mut image, kx, ky, 0xff_90_30, "FLAME MOVING");
             kx += key(&mut image, kx, ky, PARKED, "PLACED, WAITING");
             kx += key(&mut image, kx, ky, 0xff_e0_70, "MOTE, BY LIFE LEFT");
             key(&mut image, kx, ky, 0xff_c0_60, "MARS EMBER MOVING");
+            let ky = ky + 18;
+            let kx = 6 + key(&mut image, 6, ky, FREE, "SLOT NOT IN USE");
+            text(&mut image, kx, ky - 2, "EACH ROW OF MOTES: 32 SLOTS, ONE FLAME'S", TEXT, None, 2);
             out.push(image.pixels.clone());
             out.push(image.pixels);
         }
@@ -333,8 +368,8 @@ impl<'a> Guide<'a> {
             let mut counts = (0, 0, 0, 0);
             for burst in 0..3usize {
                 let x = 2 * WIDTH + 12 + burst * (COLS * CELL + 12);
-                text(&mut image, x as i32 - 2, 4, &format!("BURST {burst}"), MARK, None, 2);
-                text(&mut image, x as i32 - 2, 24, "FLASHES", HEAD, None, 2);
+                text(&mut image, x as i32 - 2, 4, ["FIRST BURST", "SECOND BURST", "THIRD BURST"][burst], MARK, None, 2);
+                text(&mut image, x as i32 - 2, 24, "16 FLASHES", HEAD, None, 2);
                 let flashes: Vec<u32> = (0..16)
                     .map(|j| {
                         let v = f.ranges[0][burst * 16 + j][3];
@@ -354,7 +389,7 @@ impl<'a> Guide<'a> {
                     })
                     .collect();
                 grid(&mut image, x, 42, COLS, CELL, &flashes);
-                text(&mut image, x as i32 - 2, 42 + CELL as i32 + 10, "SPARKS", HEAD, None, 2);
+                text(&mut image, x as i32 - 2, 42 + CELL as i32 + 10, "192 SPARKS", HEAD, None, 2);
                 let sparks: Vec<u32> = (0..192)
                     .map(|j| {
                         let v = f.ranges[1][burst * 192 + j][3];
@@ -376,7 +411,7 @@ impl<'a> Guide<'a> {
             text(&mut image, 4, y, &format!("FLASHES WAITING {}  DRAWN {}  SPARKS WAITING {}  FLYING {}", counts.0, counts.1, counts.3, counts.2), TEXT, None, 2);
             let kx = 2 * WIDTH as i32 + 12;
             let mut ky = 42 + 3 * CELL as i32 + 28 + 12 * CELL as i32 + 14;
-            for (c, label) in [(PARKED, "FLASH WAITING"), (0xff_ff_ff, "FLASH DRAWN, LAST 18 FRAMES"), (SPENT, "FLASHES 12-15: NEVER DRAWN"), (PARKED, "SPARK PLACED, WAITING"), (0xff_c0_40, "SPARK FLYING, BY LIFE LEFT")] {
+            for (c, label) in [(PARKED, "FLASH WAITING"), (0xff_ff_ff, "FLASH DRAWN, LAST 18 FRAMES"), (SPENT, "LAST 4 OF EACH 16: NEVER DRAWN"), (PARKED, "SPARK PLACED, WAITING"), (0xff_c0_40, "SPARK FLYING, BY LIFE LEFT"), (FREE, "SLOT FREE")] {
                 key(&mut image, kx, ky, c, label);
                 ky += 16;
             }
@@ -426,7 +461,7 @@ impl<'a> Guide<'a> {
                 if moving > 0 && first_moved[t].is_none() {
                     first_moved[t] = Some(i);
                 }
-                text(&mut image, x as i32 - 2, y as i32, &format!("TARGET {t}: {}  {}-{}", names.get(t).map_or("?", String::as_str), t * 32, t * 32 + 31), TEXT, None, 2);
+                text(&mut image, x as i32 - 2, y as i32, &format!("{} TARGET, {}: 32 SLOTS", ["FIRST", "SECOND", "THIRD", "FOURTH"][t.min(3)], names.get(t).map_or("?", String::as_str)), TEXT, None, 2);
                 let cells: Vec<u32> = (0..32)
                     .map(|s| {
                         let (now, was) = (f.ranges[0][t * 32 + s], before.ranges[0][t * 32 + s]);
@@ -450,7 +485,8 @@ impl<'a> Guide<'a> {
             key(&mut image, x as i32, ky, PARKED, "PLACED, NOT YET BROKEN OFF");
             key(&mut image, x as i32, ky + 16, 0xff_70_d0, "SHARD IN FLIGHT");
             key(&mut image, x as i32, ky + 32, 0x6a_40_5c, "SHARD DONE, NO LONGER DRAWN");
-            key(&mut image, x as i32, ky + 48, SPENT, "SLOTS 24-31: NEVER USED");
+            key(&mut image, x as i32, ky + 48, SPENT, "LAST 8 OF EACH 32: NEVER USED");
+            key(&mut image, x as i32, ky + 64, FREE, "NOT YET TAKEN BY THE EFFECT");
             let e = i as i32 - start as i32;
             text(&mut image, 4, (2 * HEIGHT + 8) as i32, &format!("{} FRAMES SINCE THE EFFECT BEGAN", e.max(0)), DIM, None, 2);
             out.push(image.pixels);
@@ -469,10 +505,10 @@ impl<'a> Guide<'a> {
     /// the frame a hit lights a group is held, with the slots it lit named.
     pub fn target_strikes(&mut self) -> Result<(), String> {
         let ranges = [Range { pool: Pool::Work, first: 0, count: 64 }, Range { pool: Pool::Particles, first: 0, count: 128 }, Range { pool: Pool::Particles, first: 512, count: 512 }];
-        const POOLS: [(&str, usize); 3] = [("SMOKE: WORK->PARTICLES 0-63", 64), ("MOTES: PARTICLES 0-127", 128), ("SPARKS: PARTICLES 512-1023", 512)];
+        const POOLS: [(&str, usize); 3] = [("64 SMOKE PUFFS: WORK->PARTICLES", 64), ("128 MOTES: PARTICLES", 128), ("512 SPARKS: PARTICLES[512] ON", 512)];
         const CELL: usize = 6;
         const COLS: usize = 32;
-        let panel_w = WIDTH * 2 + 12 + COLS * CELL + 56;
+        let panel_w = WIDTH * 2 + 12 + COLS * CELL + 76;
         let pools_h = 3 * 20 + (2 + 4 + 16) * CELL + 3 * 6;
         let panel_h = (2 * HEIGHT).max(pools_h) + 44;
         let mut runs = Vec::new();
@@ -501,6 +537,7 @@ impl<'a> Guide<'a> {
             // code left there.
             let parked = frames.iter().position(|f| f.running && f.ranges.iter().all(|r| r.iter().all(|s| s[3] == -1))).ok_or("the strike never parked its particles")?;
             let mut hits = 0;
+            let mut groups: Vec<usize> = Vec::new();
             for (i, f) in frames.iter().enumerate() {
                 let before = &frames[i.saturating_sub(1)];
                 let mut image = canvas(panel_w, panel_h, BACK);
@@ -508,7 +545,7 @@ impl<'a> Guide<'a> {
                 paste(&mut image, &screen(&f.screen), 0, 26, 2);
                 let x = 2 * WIDTH + 12;
                 let mut y = 26;
-                let mut newly: Vec<String> = Vec::new();
+                let mut newly: Vec<(usize, usize, usize)> = Vec::new();
                 for (p, (label, count)) in POOLS.iter().enumerate() {
                     text(&mut image, x as i32 - 2, y as i32, label, HEAD, None, 2);
                     y += 18;
@@ -530,16 +567,8 @@ impl<'a> Guide<'a> {
                             }
                         })
                         .collect();
-                    if let (Some(a), Some(b)) = (fresh.first(), fresh.last()) {
-                        let base = if p == 2 { 512 } else { 0 };
-                        let what = ["SMOKE", "MOTES", "SPARKS"][p];
-                        // A re-lit spark may draw a life no longer than the
-                        // one it had, and then is not seen to change.
-                        if fresh.len() == b - a + 1 {
-                            newly.push(format!("{what} {}-{}", a + base, b + base));
-                        } else {
-                            newly.push(format!("{} {what} IN {}-{}", fresh.len(), a + base, b + base));
-                        }
+                    if let Some(&a) = fresh.first() {
+                        newly.push((p, fresh.len(), a));
                     }
                     y += grid(&mut image, x, y, COLS, CELL, &cells) + 6;
                 }
@@ -547,14 +576,27 @@ impl<'a> Guide<'a> {
                     1
                 } else {
                     hits += 1;
-                    eprintln!("  frame {} (effect frame {}): lit {}", i, i as i32 - *start as i32, newly.join(", "));
+                    eprintln!("  frame {} (effect frame {}): lit (pool, count, first slot) {:?}", i, i as i32 - *start as i32, newly);
                     24
                 };
-                let line = if newly.is_empty() { String::new() } else { format!("HIT {hits} LIGHTS {}", newly.join("  ")) };
+                // The group a hit lights, numbered from 1 by its smoke: 16 puffs a
+                // group, of which a hit lights the first 8.
+                let line = match newly.iter().find(|n| n.0 == 0) {
+                    None => String::new(),
+                    Some(&(_, _, first)) => {
+                        let group = first / 16 + 1;
+                        let again = if groups.contains(&group) { " AGAIN" } else { "" };
+                        groups.push(group);
+                        // A re-lit spark whose new life is no longer than its old is not
+                        // seen to change, so a group lit again counts only those seen.
+                        let what: Vec<String> = newly.iter().map(|&(p, n, _)| if p == 2 && !again.is_empty() { format!("{n} SPARKS SEEN") } else { format!("{n} {}", ["SMOKE PUFFS", "MOTES", "SPARKS"][p]) }).collect();
+                        format!("HIT {hits} LIGHTS GROUP {group}{again}: {}", what.join(", "))
+                    }
+                };
                 text(&mut image, 4, (panel_h - 18) as i32, &line, MARK, None, 2);
                 let kx = x as i32;
                 let mut ky = y as i32 + 2;
-                for (c, label) in [(PARKED, "PARKED, VARIANT -1"), (0xff_ff_ff, "LIT THIS FRAME")] {
+                for (c, label) in [(PARKED, "PARKED, IDLE"), (0xff_ff_ff, "LIT THIS FRAME"), (0xc0_c0_c0, "SMOKE LIT"), (0x60_e0_90, "MOTE LIT"), (0xff_c0_40, "SPARK LIT"), (SPENT, "SMOKE PUFF DONE"), (FREE, "NOT YET PARKED")] {
                     key(&mut image, kx, ky, c, label);
                     ky += 16;
                 }
