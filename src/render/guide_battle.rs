@@ -824,3 +824,91 @@ impl<'a> Guide<'a> {
         self.guide_png("plan-rolls.png", &image, "a miss, a critical hit and a triple blow beside the plan's rolls")
     }
 }
+
+/// BattlePlan.outcome (enum BattlePlanStaging).
+const PLAN_OUTCOME: u32 = 0x54;
+const PLAN_SHOW_FLEE: u32 = 7;
+fn outcome_name(o: u32) -> &'static str {
+    match o {
+        1 => "PLAN_SHOW_MESSAGES",
+        2 => "PLAN_SHOW_ATTACK",
+        3 => "PLAN_SHOW_CAST",
+        4 => "PLAN_SHOW_ITEM",
+        5 => "PLAN_SHOW_SUMMON",
+        6 => "PLAN_SHOW_DJINNI",
+        7 => "PLAN_SHOW_FLEE",
+        8 => "PLAN_SHOW_ENEMY_CAST",
+        9 => "PLAN_SHOW_FULL_SCREEN",
+        _ => "?",
+    }
+}
+
+impl<'a> Guide<'a> {
+    /// Isaac's Quake at copies of Garet, Ivan and Mia as `render psynergy`
+    /// casts it, with BattleWork.plan.outcome rewritten to `outcome` (when
+    /// given) where BattleCommand_BuildPlan returns to
+    /// BattlePresentation_DispatchAction, before the dispatch switches on
+    /// it; returns the frames, the outcome the plan held, and the return
+    /// address found.
+    fn staged_quake(&self, outcome: Option<u32>, back: u32) -> Result<(Vec<Vec<u16>>, u32, u32), String> {
+        let root = crate::compile::root();
+        let plan = Tables::read(root)?.plan()?;
+        let cast = plan.casts.into_iter().find(|c| c.ability.name == "Quake").ok_or("no Quake cast")?;
+        let symbols = super::battle::Symbols::find(self.map)?;
+        let build = self.sym("BattleCommand_BuildPlan")?;
+        let work_slot = self.sym("gBattleWork")?;
+        let mut found = 0;
+        let mut own = 0;
+        let hooks: Vec<u32> = if back == 0 { vec![build] } else { vec![build, back] };
+        let recording = super::battle::record_watching(self.rom, &symbols, &cast, &super::battle::Scene::Game, false, None, &hooks, &mut |gba, hook| match hook {
+            Some(h) if h == build => found = gba.register(LR) & !1,
+            Some(_) => {
+                let p = gba.read32(work_slot) + WORK_PLAN;
+                own = gba.read32(p + PLAN_OUTCOME);
+                if let Some(o) = outcome {
+                    gba.write32(p + PLAN_OUTCOME, o);
+                }
+            }
+            None => {}
+        })?;
+        Ok((recording.frames, own, found))
+    }
+
+    /// Quake played seven times, its plan's outcome rewritten each time to
+    /// one of PLAN_SHOW_CAST to PLAN_SHOW_FULL_SCREEN as the plan returns,
+    /// so the dispatch stages the same action each way; side by side, frame
+    /// for frame, as `staging.gif`.
+    pub fn staging(&mut self) -> Result<(), String> {
+        let (_, _, back) = self.staged_quake(None, 0)?;
+        eprintln!("staging: BattleCommand_BuildPlan returns to {back:#x} ({})", self.function_at(back));
+        let mut runs = Vec::new();
+        for o in 3..=9u32 {
+            let (frames, own, _) = self.staged_quake(Some(o), back)?;
+            eprintln!("  {}: {} frames (Quake's own {})", outcome_name(o), frames.len(), outcome_name(own));
+            runs.push((o, own, frames));
+        }
+        // Fleeing ends the battle; the others end with the round.
+        let n = runs.iter().filter(|r| r.0 != PLAN_SHOW_FLEE).map(|r| r.2.len()).max().unwrap_or(0);
+        const CELL_W: usize = WIDTH + 8;
+        const CELL_H: usize = HEIGHT + 22;
+        let (w, h) = (4 * CELL_W + 8, 2 * CELL_H + 8);
+        let mut out = Vec::new();
+        // Fifteen pictures a second, each shown for two of the GIF's frames.
+        for i in (0..n).step_by(4) {
+            let mut image = canvas(w, h, PANEL_BACK);
+            for (k, (o, own, frames)) in runs.iter().enumerate() {
+                let (x, y) = (8 + (k % 4) * CELL_W, 4 + (k / 4) * CELL_H);
+                let label = if o == own { format!("{} (QUAKE'S OWN)", outcome_name(*o)) } else { outcome_name(*o).to_string() };
+                text(&mut image, x as i32 - 2, y as i32, &label, if o == own { PANEL_MARK } else { PANEL_TEXT }, None, 2);
+                paste(&mut image, &screen(&frames[i.min(frames.len() - 1)]), x, y + 18, 1);
+            }
+            out.push(image.pixels.clone());
+            out.push(image.pixels.clone());
+            out.push(image.pixels.clone());
+            out.push(image.pixels);
+        }
+        let written = super::animation::write(&self.out.join("staging.gif"), &out, w)?;
+        self.written.push(("staging.gif".to_string(), written.bytes, format!("Quake under each outcome; {} frames", written.frames)));
+        Ok(())
+    }
+}

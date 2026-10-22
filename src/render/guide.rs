@@ -535,6 +535,7 @@ pub const MODES: &[&str] = &[
     "first-strikes",
     "element-multiplier",
     "plan-rolls",
+    "staging",
 ];
 
 impl Guide<'_> {
@@ -617,6 +618,7 @@ impl Guide<'_> {
             "first-strikes" => self.first_strikes(),
             "element-multiplier" => self.element_multiplier(),
             "plan-rolls" => self.plan_rolls(),
+            "staging" => self.staging(),
             _ => Err(format!("no mode {name}")),
         }
     }
