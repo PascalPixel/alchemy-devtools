@@ -19,6 +19,8 @@ mod guide;
 mod guide_more;
 #[cfg(feature = "render")]
 mod guide_take;
+#[cfg(feature = "render")]
+mod guide_world;
 mod jobs;
 #[cfg(feature = "render")]
 mod mgba;

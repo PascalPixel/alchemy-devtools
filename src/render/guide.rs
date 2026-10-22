@@ -514,6 +514,7 @@ pub const MODES: &[&str] = &[
     "grid-planes",
     "tile-animation",
     "world-map-scanlines",
+    "world-map-footprint",
 ];
 
 impl Guide<'_> {
@@ -575,6 +576,7 @@ impl Guide<'_> {
             "grid-planes" => self.grid_planes(),
             "tile-animation" => self.tile_animation(),
             "world-map-scanlines" => self.world_map_scanlines(),
+            "world-map-footprint" => self.world_map_footprint(),
             _ => Err(format!("no mode {name}")),
         }
     }
