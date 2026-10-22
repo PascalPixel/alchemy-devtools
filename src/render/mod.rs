@@ -18,6 +18,8 @@ mod guide;
 #[cfg(feature = "render")]
 mod guide_apart;
 #[cfg(feature = "render")]
+mod guide_cells;
+#[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
 mod guide_places;

@@ -117,6 +117,8 @@ fn glyph(c: char) -> [u8; 5] {
         '<' => [1, 2, 4, 2, 1],
         '>' => [4, 2, 1, 2, 4],
         '?' => [7, 1, 2, 0, 2],
+        ';' => [0, 2, 0, 2, 4],
+        '"' => [5, 5, 0, 0, 0],
         _ => [0; 5],
     }
 }
@@ -429,7 +431,8 @@ impl<'a> Guide<'a> {
     /// one beside the frozen third puddle and moved east onto it with Move:
     /// the puddle melts and the cells north and south of it change. Each
     /// frame outlines the torch's cell in yellow and the two rewritten cells
-    /// in red with their collision codes, as `bilibin-cave-third-puddle.gif`.
+    /// in red, each labelled with what it does (guide_cells::meaning), over
+    /// a key, as `bilibin-cave-third-puddle.gif`.
     pub fn bilibin_cave_third_puddle(&mut self) -> Result<(), String> {
         let (tx, tz) = (MELT_CELL.0 * 16 + 8, MELT_CELL.1 * 16 + 8);
         let entrance = self.entrance_holding(BILIBIN_CAVE_ICE, tx, tz)?;
@@ -447,20 +450,28 @@ impl<'a> Guide<'a> {
         // Move waits for the d-pad: east, until the torch has moved.
         field.hold(spot.walk);
         let layer = spot.layer;
+        let names = self.cell_names("BilibinCave_GetEvents", "BilibinCaveIce")?;
+        let legend = [
+            (0xff_e0_30, "Yellow outline: the cell beside the ice pillar; a torch standing on it melts the pillar".to_string()),
+            (RED, "Red outline: the cells north and south of the pillar, which melting rewrites; each labelled with what it does".to_string()),
+        ];
+        let key = super::guide_cells::key(&legend, 2 * WIDTH - 8, None);
         let mut frames = Vec::new();
         for _ in 0..420 {
             field.frames(1)?;
             let (vx, vy) = field.view();
-            let codes: Vec<i32> = PUDDLE_SIDE_CELLS.iter().map(|&(cx, cz)| field.cell(layer, cx, cz)).collect();
-            let mut image = super::guide_more::canvas(2 * WIDTH, 2 * HEIGHT, 0);
+            let mut image = super::guide_more::canvas(2 * WIDTH, 2 * HEIGHT + 8 + key.height, WHITE);
             paste(&mut image, &screen(&field.picture()), 0, 0, 2);
             outline(&mut image, 2 * (MELT_CELL.0 * 16 - vx), 2 * (MELT_CELL.1 * 16 - vy), 32, 32, 0xff_e0_30);
-            for (k, &(cx, cz)) in PUDDLE_SIDE_CELLS.iter().enumerate() {
+            for &(cx, cz) in &PUDDLE_SIDE_CELLS {
+                let code = field.cell(layer, cx, cz);
+                let words = super::guide_cells::meaning(field, &names, &[], code)?.map_or_else(|| "Open ground".to_string(), |m| m.words);
                 let (sx, sy) = (2 * (cx * 16 - vx), 2 * (cz * 16 - vy));
                 outline(&mut image, sx, sy, 32, 32, RED);
                 outline(&mut image, sx + 1, sy + 1, 30, 30, RED);
-                text(&mut image, sx + 2, sy + 2, &codes[k].to_string(), WHITE, Some(RED), 2);
+                text(&mut image, sx + 36, sy + 9, &words.to_uppercase(), WHITE, Some(RED), 2);
             }
+            paste(&mut image, &key, 4, 2 * HEIGHT + 4, 1);
             frames.push(image.pixels);
             if field.actor(FOURTH_TORCH).is_some_and(|a| a.x != tx - 16) {
                 field.hold(0);
@@ -484,33 +495,47 @@ pub(super) fn code_colour(code: i32) -> Option<u32> {
     }
 }
 
-/// Draws the collision codes of the cells from (c0, z0) to (c1, z1)
-/// inclusive over `image`, a picture of the map at `scale` times its size
-/// whose top left is the map's (ox, oz) pixels: each cell tinted by
-/// code_colour and labelled with its code, and outlined in white where its
-/// whole word (picture, code and ground) differs from `before`'s.
-pub(super) fn draw_codes(image: &mut Image, field: &Field, layer: u8, (ox, oz): (i32, i32), scale: i32, (c0, z0, c1, z1): (i32, i32, i32, i32), before: Option<&dyn Fn(i32, i32) -> i32>) {
+/// Draws what the cells from (c0, z0) to (c1, z1) inclusive do over
+/// `image`, a picture of the map at `scale` times its size whose top left
+/// is the map's (ox, oz) pixels: each cell with a collision code tinted by
+/// its meaning's colour in `palette` (guide_cells::meaning, its rows put in
+/// `words`), and outlined in white where its whole word (picture, code and
+/// ground) differs from `before`'s. Returns whether any cell was outlined.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn draw_codes(
+    image: &mut Image,
+    field: &Field,
+    layer: u8,
+    (ox, oz): (i32, i32),
+    scale: i32,
+    (c0, z0, c1, z1): (i32, i32, i32, i32),
+    before: Option<&dyn Fn(i32, i32) -> i32>,
+    (names, words, palette): (&super::guide_cells::Names, super::guide_cells::Words, &mut super::guide_cells::Palette),
+) -> Result<bool, String> {
+    let mut changed = false;
     for cz in z0..=z1 {
         for cx in c0..=c1 {
             let code = field.cell(layer, cx, cz);
             let (sx, sy) = (scale * (cx * 16 - ox), scale * (cz * 16 - oz));
             let side = 16 * scale;
-            if let Some(colour) = code_colour(code) {
+            if let Some(m) = super::guide_cells::meaning(field, names, words, code)? {
+                let colour = palette.colour(&m);
                 for y in sy.max(0)..(sy + side).min(image.height as i32) {
                     for x in sx.max(0)..(sx + side).min(image.width as i32) {
                         let at = &mut image.pixels[y as usize * image.width + x as usize];
-                        *at = super::guide_more::mix(*at, colour, 0.45);
+                        *at = super::guide_more::mix(*at, colour, 0.5);
                     }
                 }
-                text(image, sx + 1, sy + 1, &code.to_string(), WHITE, Some(0x20_20_20), scale);
             }
             outline(image, sx, sy, side, side, 0x50_50_50);
             if before.is_some_and(|f| f(cx, cz) != field.cell_word(layer, cx, cz)) {
                 outline(image, sx, sy, side, side, WHITE);
                 outline(image, sx + 1, sy + 1, side - 2, side - 2, WHITE);
+                changed = true;
             }
         }
     }
+    Ok(changed)
 }
 
 /// A part of `image`: the rectangle (x, y, w, h), clipped.
@@ -537,28 +562,42 @@ const FUCHIN_TRACKS: (i32, i32, i32, i32) = (8, 29, 22, 33);
 
 impl<'a> Guide<'a> {
     /// Fuchin Falls Cave's first room entered with none, then each in turn,
-    /// of its logs' stop flags set: the track's part of the map with its
-    /// collision codes drawn over it, the cells whose codes differ from the
-    /// room with no flag set outlined in white, a panel per state, as
+    /// of its logs' stop flags set: the track's part of the map with what
+    /// each cell does drawn over it, the cells that differ from the room
+    /// with no flag set outlined in white, a panel per state, as
     /// `fuchin-falls-cave-logs.png`.
     pub fn fuchin_falls_cave_logs(&mut self) -> Result<(), String> {
+        const MOVED: [&str; 4] = ["No log moved", "First log pushed east", "Second log pushed north too", "Third log pushed north too"];
         let states: Vec<(String, Vec<&str>)> = (0..=3)
             .map(|set| {
-                let name = if set == 0 { "NO FLAG SET".to_string() } else { FUCHIN_LOG_FLAGS[..set].join(" + ") };
+                let name = if set == 0 { MOVED[0].to_string() } else { format!("{} ({})", MOVED[set], FUCHIN_LOG_FLAGS[set - 1]) };
                 (name, FUCHIN_LOG_FLAGS[..set].to_vec())
             })
             .collect();
-        let out = self.code_panels(FUCHIN_FIRST_ROOM, None, FUCHIN_TRACKS, &states)?;
+        let names = self.cell_names("ImilFuchinFalls_GetEvents", "FuchinFallsCaveEntrance")?;
+        let out = self.code_panels(FUCHIN_FIRST_ROOM, None, FUCHIN_TRACKS, &states, &names, super::guide_cells::FUCHIN_FIRST_ROOM_WORDS)?;
         self.guide_png("fuchin-falls-cave-logs.png", &out, "Fuchin Falls Cave's first room, its log track's cells as each log's flag is set")
     }
 
     /// The cells from (c0, z0) to (c1, z1) of `scene`, a cell round them
     /// too, entered at `entrance` (else one whose room holds them) once for
     /// each of `states`, a label and the flags set: the map there at twice
-    /// its size with its collision codes drawn over it, the cells whose codes
-    /// differ from the first state's outlined in white, a labelled panel per
-    /// state, one under the other.
-    pub(super) fn code_panels(&self, scene: u16, entrance: Option<u16>, (c0, z0, c1, z1): (i32, i32, i32, i32), states: &[(String, Vec<&str>)]) -> Result<Image, String> {
+    /// its size with what each cell does drawn over it (draw_codes), the
+    /// cells that differ from the first state's outlined in white, a
+    /// labelled panel per state, one under the other, and a key under them
+    /// saying in words what each colour means.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn code_panels(
+        &self,
+        scene: u16,
+        entrance: Option<u16>,
+        (c0, z0, c1, z1): (i32, i32, i32, i32),
+        states: &[(String, Vec<&str>)],
+        names: &super::guide_cells::Names,
+        words: super::guide_cells::Words,
+    ) -> Result<Image, String> {
+        let mut palette = super::guide_cells::Palette::default();
+        let mut changed = false;
         let entrance = match entrance {
             Some(e) => e,
             None => self.entrance_holding(scene, (c0 + c1) * 8, (z0 + z1) * 8)?,
@@ -583,15 +622,21 @@ impl<'a> Guide<'a> {
             let base = first.get_or_insert(codes).clone();
             let row = (c1 - c0 + 1 + 2 * margin) as usize;
             let was = move |cx: i32, cz: i32| base[((cz - z0 + margin) as usize) * row + (cx - c0 + margin) as usize];
-            draw_codes(&mut big, field, layer, (ox, oz), scale, (c0 - margin, z0 - margin, c1 + margin, z1 + margin), Some(&was));
+            changed |= draw_codes(&mut big, field, layer, (ox, oz), scale, (c0 - margin, z0 - margin, c1 + margin, z1 + margin), Some(&was), (names, words, &mut palette))?;
             panels.push((name.clone(), big));
         }
-        let mut out = canvas(w + 8, panels.len() * (h + 22) + 4, WHITE);
+        let mut legend = palette.entries.clone();
+        if changed {
+            legend.push((WHITE, format!("White outline: changed from \"{}\"", states[0].0)));
+        }
+        let colours = super::guide_cells::key(&legend, w, Some("Colours"));
+        let mut out = canvas(w + 8, panels.len() * (h + 22) + 8 + colours.height, WHITE);
         for (i, (name, panel)) in panels.iter().enumerate() {
             let y = 4 + i * (h + 22);
-            text(&mut out, 4, y as i32, name, WHITE, Some(0x40_40_40), 2);
+            text(&mut out, 4, y as i32, &name.to_uppercase(), WHITE, Some(0x40_40_40), 2);
             paste(&mut out, panel, 4, y + 16, 1);
         }
+        paste(&mut out, &colours, 4, 4 + panels.len() * (h + 22), 1);
         Ok(out)
     }
 
@@ -601,8 +646,9 @@ impl<'a> Guide<'a> {
     /// (FLAG_MERCURY_LIGHTHOUSE_HEART_HONORED), which puts the same cells back
     /// on entry, as `mercury-lighthouse-pool.png`.
     pub fn mercury_lighthouse_pool(&mut self) -> Result<(), String> {
-        let states = vec![("BEFORE PLY".to_string(), vec![]), ("FLAG_MERCURY_LIGHTHOUSE_HEART_HONORED".to_string(), vec!["FLAG_MERCURY_LIGHTHOUSE_HEART_HONORED"])];
-        let out = self.code_panels(MERCURY_LIGHTHOUSE_ENTRANCE, Some(MERCURY_GODDESS_FROM_SIX_STATUES), MERCURY_POOL, &states)?;
+        let states = vec![("Before Ply".to_string(), vec![]), ("After Ply (FLAG_MERCURY_LIGHTHOUSE_HEART_HONORED)".to_string(), vec!["FLAG_MERCURY_LIGHTHOUSE_HEART_HONORED"])];
+        let names = self.cell_names("MercuryLighthouseEntrance_GetEvents", "MercuryLighthouseEntrance")?;
+        let out = self.code_panels(MERCURY_LIGHTHOUSE_ENTRANCE, Some(MERCURY_GODDESS_FROM_SIX_STATUES), MERCURY_POOL, &states, &names, super::guide_cells::MERCURY_LIGHTHOUSE_ENTRANCE_WORDS)?;
         self.guide_png("mercury-lighthouse-pool.png", &out, "Mercury Lighthouse's pool cells before and after Ply")
     }
 }
@@ -992,6 +1038,8 @@ const BALANCE_WEST: u16 = 10;
 const BALANCE_WATCH: (i32, i32) = (168, 200);
 const OBJ_TIMER: u32 = 0x64;
 const LIFT_WATCH: (i32, i32) = (984, 216);
+/// COLOSSEUM_SATRAGE_MATCH_LIFT_CYCLE_FRAMES: the frames between the lifts' changes.
+const LIFT_CYCLE_FRAMES: u32 = 120;
 /// The tour of the course (COLOSSEUM_AZART_MATCH_FROM_COLOSSEUM), and the
 /// finish across which Azart's place mirrors his recorded path
 /// (Colosso_StartRaceGauge's finishX).
@@ -1111,12 +1159,11 @@ impl<'a> Guide<'a> {
     /// The shifting floor stage of Colosseum Final 2 entered for the tour,
     /// the leader put among the lifts and hidden so the camera centres on
     /// them, over two of the lifts' cycles: the screen at twice its size with
-    /// the cells
-    /// ColosseumSatrageMatch_UpdateLifts copies each frame (row 13 from
-    /// column 58 to 64, and cell (58, 11)) outlined with their collision
-    /// codes, and the lifts' phase and timer
-    /// (gColosseumSatrageMatch_LiftPhase and _LiftTimer) written above, as
-    /// `colosseum-satrage-lifts.gif`.
+    /// the cells ColosseumSatrageMatch_UpdateLifts copies each frame (row 13
+    /// from column 58 to 64, and cell (58, 11)) outlined and tinted by what
+    /// each does, over a key, and the lifts' phase in words and the frames to
+    /// its next change (gColosseumSatrageMatch_LiftPhase and _LiftTimer)
+    /// written above, as `colosseum-satrage-lifts.gif`.
     pub fn colosseum_satrage_lifts(&mut self) -> Result<(), String> {
         let timer = self.overlay_sym("gColosseumSatrageMatch_LiftTimer", "gColosseumSatrageMatch_LiftTimer")?;
         let phase = self.overlay_sym("gColosseumSatrageMatch_LiftTimer", "gColosseumSatrageMatch_LiftPhase")?;
@@ -1133,19 +1180,45 @@ impl<'a> Guide<'a> {
         let lift = field.ground(0, LIFT_WATCH.0, LIFT_WATCH.1)? >> 16;
         let mut cells: Vec<(i32, i32)> = (58..=64).map(|x| (x, 13)).collect();
         cells.push((58, 11));
+        let names = self.cell_names("gColosseumSatrageMatch_LiftTimer", "ColosseumSatrageMatch")?;
+        // Every meaning the cells take over the two cycles, so the key is
+        // the same in every frame.
+        let mut palette = super::guide_cells::Palette::default();
+        let start = field.save();
+        for _ in 0..2 * LIFT_CYCLE_FRAMES + 20 {
+            field.frames(1)?;
+            for &(cx, cz) in &cells {
+                if let Some(m) = super::guide_cells::meaning(field, &names, super::guide_cells::SATRAGE_WORDS, field.cell(0, cx, cz))? {
+                    palette.colour(&m);
+                }
+            }
+        }
+        field.load(&start);
+        let mut legend = palette.entries.clone();
+        legend.push((WHITE, "White outline: a cell the lifts' task copies collision into; with no tint, it is open ground".to_string()));
+        let key = super::guide_cells::key(&legend, 2 * WIDTH - 8, Some("Colours"));
         let mut frames = Vec::new();
-        for _ in 0..2 * 120 + 20 {
+        for _ in 0..2 * LIFT_CYCLE_FRAMES + 20 {
             field.frames(1)?;
             let (vx, vy) = field.view();
-            let mut image = canvas(2 * WIDTH, 2 * HEIGHT, 0);
+            let mut image = canvas(2 * WIDTH, 2 * HEIGHT + 8 + key.height, WHITE);
             paste(&mut image, &screen(&field.picture()), 0, 0, 2);
             for &(cx, cz) in &cells {
                 let (sx, sy) = (2 * (cx * 16 - vx), 2 * (cz * 16 - vy - lift));
-                outline(&mut image, sx, sy, 32, 32, RED);
-                text(&mut image, sx + 2, sy + 2, &field.cell(0, cx, cz).to_string(), WHITE, Some(RED), 2);
+                if let Some(m) = super::guide_cells::meaning(field, &names, super::guide_cells::SATRAGE_WORDS, field.cell(0, cx, cz))? {
+                    super::guide_cells::tint_cell(&mut image, sx, sy, 32, palette.colour(&m), 0.55);
+                }
+                outline(&mut image, sx, sy, 32, 32, WHITE);
+                outline(&mut image, sx + 1, sy + 1, 30, 30, WHITE);
             }
-            let line = format!("PHASE {}  TIMER {}", field.read32(phase), field.read32(timer));
-            text(&mut image, 4, 4, &line, WHITE, Some(0x40_40_40), 2);
+            // In phase 0 the lifts come into line across the water, in phase
+            // 1 they part, two up and two down (ColosseumSatrageMatch_UpdateLifts,
+            // as the frames show).
+            let lifts = if field.read32(phase) != 0 { "Lifts parting" } else { "Lifts lining up" };
+            let left = LIFT_CYCLE_FRAMES.saturating_sub(field.read32(timer));
+            let line = format!("{lifts}; next change in {left} frames");
+            text(&mut image, 4, 4, &line.to_uppercase(), WHITE, Some(0x40_40_40), 2);
+            paste(&mut image, &key, 4, 2 * HEIGHT + 4, 1);
             frames.push(image.pixels);
         }
         let written = animation::write(&self.out.join("colosseum-satrage-lifts.gif"), &frames, 2 * WIDTH)?;
@@ -1263,76 +1336,6 @@ impl<'a> Guide<'a> {
         let written = animation::write(&self.out.join("venus-lighthouse-aerie-eruption.gif"), &frames, WIDTH)?;
         self.written.push(("venus-lighthouse-aerie-eruption.gif".to_string(), written.bytes, format!("Venus Lighthouse's beacon erupting; {} frames", written.frames)));
         Ok(())
-    }
-
-    /// The screen's worth of Vale by day with the most event cells, drawn
-    /// from the map with the leader hidden at twice the GBA's size: every
-    /// cell whose collision code is one of the scene's own (1 to 239), drawn
-    /// its ground's height up, tinted by the kind of the first row of
-    /// the scene's event table that names that code (an exit blue, a touch
-    /// magenta, a search cyan, none grey) and labelled with the code, as
-    /// `scene-event-cells.png`.
-    pub fn scene_event_cells(&mut self) -> Result<(), String> {
-        let mut entered = self.enter_with(VALE_SCENE, &[])?;
-        let field = &mut entered.field;
-        let settled = field.save();
-        // The scene's own cells, with their layers, and the screen's worth of
-        // the room that holds the most of them.
-        let cells: Vec<(u8, i32, i32)> = field.cells_by_code()?.values().flatten().copied().collect();
-        let r = field.room();
-        let mut best = (0, (r[0] / 16, r[1] / 16));
-        for cz in (r[1] / 16..r[3] / 16 - 9).step_by(2) {
-            for cx in (r[0] / 16..r[2] / 16 - 14).step_by(2) {
-                let n = cells.iter().filter(|&&(_, x, z)| (cx..cx + 15).contains(&x) && (cz..cz + 10).contains(&z)).count();
-                if n > best.0 {
-                    best = (n, (cx, cz));
-                }
-            }
-        }
-        let (map, origin) = room_map(field, &settled)?;
-        field.load(&settled);
-        let (vx, vy) = (best.1 .0 * 16, best.1 .1 * 16);
-        let part = crop(&map, vx - origin.0, vy - origin.1, WIDTH, HEIGHT);
-        // The scene's event table: 12-byte rows of control (kind in bits
-        // 3..0), trigger, condition and value, ended by a control of -1.
-        let mut kinds: std::collections::HashMap<i32, u32> = std::collections::HashMap::new();
-        let mut row = field.read32(field.field_work() + 0x10);
-        for _ in 0..1024 {
-            let control = field.read32(row);
-            if row == 0 || control == u32::MAX {
-                break;
-            }
-            let kind = control & 15;
-            if matches!(kind, 1..=3) {
-                kinds.entry(i32::from(field.read8(row + 4))).or_insert(kind);
-            }
-            row += 12;
-        }
-        let mut image = canvas(2 * WIDTH, 2 * HEIGHT, 0);
-        paste(&mut image, &part, 0, 0, 2);
-        for &(layer, cx, cz) in &cells {
-            let code = field.cell(layer, cx, cz);
-            let lift = field.ground(layer, cx * 16 + 8, cz * 16 + 8)? >> 16;
-            let colour = match kinds.get(&code) {
-                Some(1) => 0x30_80_f0,
-                Some(2) => 0xe0_40_e0,
-                Some(3) => 0x30_d0_d0,
-                _ => 0x90_90_90,
-            };
-            let (sx, sy) = (2 * (cx * 16 - vx), 2 * (cz * 16 - vy - lift));
-            if sx < -32 || sy < -32 || sx >= image.width as i32 || sy >= image.height as i32 {
-                continue;
-            }
-            for y in sy.max(0)..(sy + 32).min(image.height as i32) {
-                for x in sx.max(0)..(sx + 32).min(image.width as i32) {
-                    let at = &mut image.pixels[y as usize * image.width + x as usize];
-                    *at = super::guide_more::mix(*at, colour, 0.55);
-                }
-            }
-            outline(&mut image, sx, sy, 32, 32, colour);
-            text(&mut image, sx + 2, sy + 2, &code.to_string(), WHITE, Some(super::guide_more::mix(colour, 0, 0.4)), 2);
-        }
-        self.guide_png("scene-event-cells.png", &image, "Vale's event cells labelled with their codes, coloured by the event kind that answers each")
     }
 
     /// The credits' names scrolling, beside the sprites' tile memory (32 KB

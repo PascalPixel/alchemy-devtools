@@ -585,29 +585,56 @@ impl<'a> Guide<'a> {
     /// height of the leader's ground as his sprite is (0 here). The leader's
     /// layer shows on a background that scrolls with the view, and a layer's
     /// cells pointer already starts at its window into the grid, so map and
-    /// screen pixels match. Collision codes take guide_take::code_colour's
-    /// colours (a `MAP_CELL_WALL` cell red, the scene's event cells yellow,
-    /// the codes every map shares blue); open ground more than a step above
-    /// the leader's (Map_CheckObjectStep's 8 pixels) is orange, and more
-    /// than 12 below it purple; a white line runs wherever the ground's
-    /// height changes. Goma Cave walls its floor with rims of ground 32 pixels high, often cut on a
-    /// cell's diagonal, rather than with wall codes, so heights are read for
-    /// every pixel (Map_GetTerrainHeight) where a cell isn't flat.
+    /// screen pixels match. A cell with a collision code is tinted by what
+    /// answers it (guide_cells::meaning: a wall red, an exit row blue, a
+    /// touch row magenta), and each of the scene's own is joined to words
+    /// saying what it does; open ground more than a step above the leader's
+    /// (Map_CheckObjectStep's 8 pixels) is orange, and more than 12 below it
+    /// purple; a white line runs wherever the ground's height changes; a key
+    /// under it says what each colour stands for. Goma Cave walls its floor
+    /// with rims of ground 32 pixels high, often cut on a cell's diagonal,
+    /// rather than with wall codes, so heights are read for every pixel
+    /// (Map_GetTerrainHeight) where a cell isn't flat. The screen is above,
+    /// its ground below.
     pub fn cells(&mut self) -> Result<(), String> {
+        let names = self.cell_names("gGomaCavePillar_Events", "GomaCavePillar")?;
         let mut entered = self.enter_with(GOMA_CAVE, &[])?;
         let field = &mut entered.field;
         Self::press_path(field, &[(0, 10)])?;
         let plain = screen(&field.picture());
-        let drawn = Self::ground_overlay(field, &plain)?;
-        let mut out = canvas(4 * WIDTH + 12, 2 * HEIGHT + 8, 0xffffff);
-        paste(&mut out, &plain, 4, 4, 2);
-        paste(&mut out, &drawn, 8 + 2 * WIDTH, 4, 2);
-        self.guide_png("cells.png", &out, "one screen of Goma Cave and its ground")
+        let (drawn, coded, shades) = Self::ground_overlay(field, &plain, &names, super::guide_cells::GOMA_CAVE_PILLAR_WORDS)?;
+        let mut picture = canvas(2 * WIDTH, 4 * HEIGHT + 8, 0xffffff);
+        paste(&mut picture, &plain, 0, 0, 2);
+        let below = 2 * HEIGHT as i32 + 8;
+        paste(&mut picture, &drawn, 0, below as usize, 2);
+        // A label for each of the scene's own meanings, from its rightmost
+        // cell.
+        let mut marks: Vec<super::guide_cells::Mark> = Vec::new();
+        let mut legend: Vec<(u32, String)> = shades;
+        for (m, sx, sy) in &coded {
+            let colour = m.kind.colour();
+            if !legend.iter().any(|(c, _)| *c == colour) {
+                legend.push((colour, m.kind.key().to_string()));
+            }
+            let at = (2 * sx + 31, below + 2 * sy + 16);
+            if matches!(m.kind, super::guide_cells::Kind::Exit | super::guide_cells::Kind::Touch | super::guide_cells::Kind::Search | super::guide_cells::Kind::NoEvent) {
+                match marks.iter_mut().find(|k| k.1 == m.words) {
+                    Some(k) if k.2 .0 >= at.0 => {}
+                    Some(k) => k.2 = at,
+                    None => marks.push((colour, m.words.clone(), at)),
+                }
+            }
+        }
+        let out = super::guide_cells::labelled(&picture, &marks, &legend, 216);
+        self.guide_png("cells.png", &out, "one screen of Goma Cave and its ground, each cell's meaning in words")
     }
 
     /// `plain`, the screen as it is now, with the ground of the leader's
-    /// layer drawn over it as `cells` describes.
-    fn ground_overlay(field: &mut Field, plain: &Image) -> Result<Image, String> {
+    /// layer drawn over it as `cells` describes; and each cell on screen
+    /// with a collision code, by its meaning and its top left on the
+    /// screen, and the ground's shades the picture uses with their words.
+    #[allow(clippy::type_complexity)]
+    fn ground_overlay(field: &mut Field, plain: &Image, names: &super::guide_cells::Names, words: super::guide_cells::Words) -> Result<(Image, Vec<(super::guide_cells::Meaning, i32, i32)>, Vec<(u32, String)>), String> {
         let mut drawn = Image { width: WIDTH, height: HEIGHT, pixels: plain.pixels.clone() };
         let (vx, vy) = field.view();
         let leader = field.leader().ok_or("no leader")?;
@@ -617,6 +644,9 @@ impl<'a> Guide<'a> {
         // Each screen pixel's ground height and collision code.
         let mut height = vec![0i32; WIDTH * HEIGHT];
         let mut code = vec![0i32; WIDTH * HEIGHT];
+        // Each code's meaning, read once.
+        let mut meanings: std::collections::HashMap<i32, Option<super::guide_cells::Meaning>> = std::collections::HashMap::new();
+        let mut coded = Vec::new();
         // The map pixel under each screen pixel, at the leader's height as
         // his sprite is drawn.
         let (mx, mz) = (vx, vy + floor);
@@ -624,6 +654,12 @@ impl<'a> Guide<'a> {
             for cx in mx.div_euclid(16)..=(mx + w - 1).div_euclid(16) {
                 let (kind, flat) = field.shape(layer, cx, cz);
                 let c = field.cell(layer, cx, cz);
+                if !meanings.contains_key(&c) {
+                    meanings.insert(c, super::guide_cells::meaning(field, names, words, c)?);
+                }
+                if let Some(m) = &meanings[&c] {
+                    coded.push((m.clone(), cx * 16 - mx, cz * 16 - mz));
+                }
                 for py in 0..16 {
                     for px in 0..16 {
                         let (sx, sy) = (cx * 16 + px - mx, cz * 16 + py - mz);
@@ -638,13 +674,22 @@ impl<'a> Guide<'a> {
                 }
             }
         }
+        let colour_of = |c: i32| meanings.get(&c).and_then(|m| m.as_ref()).map(|m| m.kind.colour());
+        let (high, low) = (0xff_80_20, 0x80_40_e0);
+        let (mut any_high, mut any_low, mut any_line) = (false, false, false);
         for sy in 0..h {
             for sx in 0..w {
                 let at = (sy * w + sx) as usize;
                 let tint = match code[at] {
-                    0 if height[at] - floor > 8 => Some(0xff_80_20),
-                    0 if height[at] - floor < -12 => Some(0x80_40_e0),
-                    c => super::guide_take::code_colour(c),
+                    0 if height[at] - floor > 8 => {
+                        any_high = true;
+                        Some(high)
+                    }
+                    0 if height[at] - floor < -12 => {
+                        any_low = true;
+                        Some(low)
+                    }
+                    c => colour_of(c),
                 };
                 let pixel = &mut drawn.pixels[at];
                 *pixel = match tint {
@@ -659,12 +704,8 @@ impl<'a> Guide<'a> {
         }
         // A cell with a collision code outlined in its colour, so it shows
         // under a sprite too.
-        for cz in mz.div_euclid(16)..=(mz + h - 1).div_euclid(16) {
-            for cx in mx.div_euclid(16)..=(mx + w - 1).div_euclid(16) {
-                if let Some(colour) = super::guide_take::code_colour(field.cell(layer, cx, cz)) {
-                    outline(&mut drawn, cx * 16 - mx, cz * 16 - mz, 16, 16, colour);
-                }
-            }
+        for (m, sx, sy) in &coded {
+            outline(&mut drawn, *sx, *sy, 16, 16, m.kind.colour());
         }
         for sy in 0..h {
             for sx in 0..w {
@@ -673,10 +714,21 @@ impl<'a> Guide<'a> {
                 let below = sy + 1 < h && height[at + WIDTH] != height[at];
                 if right || below {
                     drawn.pixels[at] = 0xff_ff_ff;
+                    any_line = true;
                 }
             }
         }
-        Ok(drawn)
+        let mut shades = Vec::new();
+        if any_high {
+            shades.push((high, "Ground more than 8 pixels above the leader's: too high to step up".to_string()));
+        }
+        if any_low {
+            shades.push((low, "Ground more than 12 pixels below the leader's: too far to step down".to_string()));
+        }
+        if any_line {
+            shades.push((0xff_ff_ff, "White line: the ground's height changes".to_string()));
+        }
+        Ok((drawn, coded, shades))
     }
 
     /// The whole cell grid of the map Goma Cave stands on, each cell drawn
