@@ -626,7 +626,7 @@ impl<'a> Guide<'a> {
     /// Garet's Heat Wave at Mia, as `render psynergy` casts it, with each
     /// frame's effect state; `force`, when given, is written over
     /// work->transferMode and transferValue each time
-    /// BattleFx_ProcessPendingGraphicsTransfer runs. Only the frames from
+    /// BattleEffect_ProcessPendingGraphicsTransfer runs. Only the frames from
     /// shortly before the effect's work block is taken to shortly after it
     /// is released are kept.
     fn heat_wave(&self, force: Option<(u32, u32)>) -> Result<Vec<FxFrame>, String> {
@@ -644,7 +644,7 @@ impl<'a> Guide<'a> {
         let symbols = battle::Symbols::find(self.map)?;
         let work_slots = self.sym("gWorkSlot")?;
         let pool = self.sym("gMapCellBuffer")?;
-        let transfer = self.sym("BattleFx_ProcessPendingGraphicsTransfer")?;
+        let transfer = self.sym("BattleEffect_ProcessPendingGraphicsTransfer")?;
         let mut copies: Vec<Image> = Vec::new();
         let mut copy_frames: Vec<usize> = Vec::new();
         let mut frames: Vec<FxFrame> = Vec::new();

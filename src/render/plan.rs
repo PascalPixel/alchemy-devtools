@@ -21,7 +21,7 @@ const JENNA_CLASS: usize = 202;
 
 /// Debug party preset 0 (presets.tsv): the four at level 35, each with their
 /// grown-up battle sprite (BATTLE_CHARACTER, 300 on). Preset 10, the level-1
-/// rows, equips Isaac and Garet with a Machete, which BattleObjMake draws with
+/// rows, equips Isaac and Garet with a Machete, which BattleObject_Make draws with
 /// sprites 480 and 482 instead. Jenna, in no preset but 10 and 11, keeps the
 /// record the debug menu's defaults give her.
 const PRESET_FOUR: u8 = 0;

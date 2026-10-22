@@ -37,7 +37,7 @@ const UNIT_DJINN_ACTIVE_COUNTS: u32 = 0x11c;
 /// HP of each foe, so every cast leaves it standing.
 const FOE_HP: u16 = 999;
 /// Luck of a foe facing instant death: half of it comes off the effect's
-/// chance in BattleFx_RollSuccess, which leaves none.
+/// chance in BattleEffect_RollSuccess, which leaves none.
 const FOE_LUCK: u8 = 99;
 /// PP a caster is given when it has too few for the cast.
 const CASTER_PP: u16 = 99;
@@ -170,7 +170,7 @@ impl Symbols {
             preset: at("DebugParty_LoadPreset")?,
             encounter: at("Battle_RunEncounter")?,
             collect: at("BattleParty_CollectUnitList")?,
-            obj_make: at("BattleObjMake")?,
+            obj_make: at("BattleObject_Make")?,
             background: at("BattleBackground_Load")?,
             build: at("BattlePresentation_BuildActions")?,
             commands: at("Battle_CollectPartyCommands")?,
@@ -339,7 +339,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
             if let Some(&ally) = cast.party.get(1) {
                 let unit = owner(ally);
                 let max = u32::from(gba.read16(unit + UNIT_MAX_HP));
-                // UnitCalc keeps the share of HP the gauge holds.
+                // Unit_Calculate keeps the share of HP the gauge holds.
                 let set_hp = |gba: &mut Gba, hp: u32| {
                     gba.write16(unit + UNIT_HP, hp as u16);
                     gba.write16(unit + UNIT_HP_GAUGE, (hp * GAUGE_FULL / max.max(1)) as u16);
@@ -423,7 +423,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
                                 let word = gba.read32(owner(foe) + i);
                                 gba.write32(to + i, word);
                             }
-                            // UnitCalc rebuilds maxHp from baseHp and luck
+                            // Unit_Calculate rebuilds maxHp from baseHp and luck
                             // from baseLuck each round
                             // (BattleUnit_ResetGuardLevels), so raise both.
                             for field in [UNIT_BASE_HP, UNIT_MAX_HP, UNIT_HP] {
@@ -445,7 +445,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
             obj_unit = gba.register(1);
             obj_return = gba.register(LR) & !1;
         } else if obj_return != 0 && pc == obj_return {
-            // BattleObjMake gives a character on the enemy side palette 1,
+            // BattleObject_Make gives a character on the enemy side palette 1,
             // the link opponent's colours: draw it in its own.
             if obj_unit >= FIRST_ENEMY_UNIT && !cast.foes.is_empty() {
                 gba.write32(obj_actor + OBJ_PALETTE, 0);
@@ -458,7 +458,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
             say(
                 frame,
                 format!(
-                    "BattleObjMake unit {obj_unit}: classId {}, classIndex {}, sprite {}, weapon sprite {}, palette {}",
+                    "BattleObject_Make unit {obj_unit}: classId {}, classIndex {}, sprite {}, weapon sprite {}, palette {}",
                     gba.read8(unit + UNIT_CLASS_ID),
                     gba.read8(unit + UNIT_CLASS_INDEX),
                     gba.read16(obj_actor + OBJ_RESOURCE),

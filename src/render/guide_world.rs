@@ -99,7 +99,7 @@ struct Moment {
 impl Guide<'_> {
     /// The world map laid flat beside the tilted screen, as
     /// `world-map-footprint.gif`: the party walks south from Vale, then L
-    /// zooms the view out (FieldFx_RunVisibilityTransition) and back. The
+    /// zooms the view out (FieldEffect_RunVisibilityTransition) and back. The
     /// flat part is BG2 over BG3 as they sit in video memory, the 2 by 2
     /// squares unpacked around the party, at their own size (a pixel is two
     /// of the world's). On it, every plane pixel some screen pixel reads

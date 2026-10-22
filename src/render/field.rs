@@ -1,5 +1,5 @@
 //! A field scene, run from a built edition: where Game_ResetForNewGame has
-//! set a new game's defaults (GameState_InitDefaults) and makes its next call
+//! set a new game's defaults (GameState_InitializeDefaults) and makes its next call
 //! (PaletteGlow_Update), the run writes the scene, entrance and story flags
 //! into gGameState, so the main loop loads that scene instead of the title.
 //! The location-name notice (UiTimedNotice_Create) returns at once. The
@@ -239,7 +239,7 @@ impl Symbols {
     pub fn find(map: &Map) -> Result<Symbols, String> {
         let at = |name: &str| map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"));
         Ok(Symbols {
-            init: at("GameState_InitDefaults")?,
+            init: at("GameState_InitializeDefaults")?,
             glow: at("PaletteGlow_Update")?,
             load_layered: at("Map_LoadLayeredScene")?,
             apply_entrance: at("Scene_ApplyEntrance")?,
@@ -259,7 +259,7 @@ impl Symbols {
             map_cell_buffer: at("gMapCellBuffer")?,
             preset: at("DebugParty_LoadPreset")?,
             restore: at("Party_RestoreHpPp")?,
-            unit_get: at("UnitGet")?,
+            unit_get: at("Unit_Get")?,
             defeat: Vec::new(),
             talk: at("Scene_TalkToActor")?,
             touch: at("Scene_RunTouchOrExit")?,
@@ -553,7 +553,7 @@ impl<'rom> Field<'rom> {
         Ok((0..32).map(|i| self.gba.read16(unit + UNIT_ACTION_SLOTS + 4 * i) & 0x3fff).filter(|&a| a != 0).collect())
     }
 
-    /// The address of character `owner`'s struct BattleUnit (UnitGet).
+    /// The address of character `owner`'s struct BattleUnit (Unit_Get).
     pub fn unit(&mut self, owner: u8) -> Result<u32, String> {
         self.eval(self.s.unit_get, [u32::from(owner), 0, 0, 0])
     }
@@ -2604,7 +2604,7 @@ fn shorten_blanks(frames: Vec<Vec<u16>>, keep: usize) -> Vec<Vec<u16>> {
 }
 
 /// A field Psynergy's reach by its ability id: its range
-/// (gBattleFx_TargetRangeByMode, by field kind) and the height between the
+/// (gBattleEffect_TargetRangeByMode, by field kind) and the height between the
 /// leader and the actor it allows, in pixels and 16.16 pixels.
 fn psynergy_reach(ability: u16) -> (i32, i32) {
     match ability {
