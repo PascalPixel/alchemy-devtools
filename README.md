@@ -114,7 +114,7 @@ Some things in the pictures are the game's own doing, and some had to be worked 
 - **File names:** the Djinni Mist is `mist-djinni.gif`, so it doesn't overwrite the Psynergy Mist's GIF.
 - **Viewing the GIFs:** some image viewers draw these GIFs with a magenta mask; browsers show them as written.
 
-The story tables `render place`, `render event`, `render story` and `render guide` read (`places.tsv`, `events.tsv`, `flags.tsv`, `messages.tsv`) are written by `alchemy-docs`' `bun scripts/story.ts` into its `build/story/`, from the same Alchemy checkout; make them again after renames in the source, since their columns follow its names. Two runs that build this crate at once should use separate `CARGO_TARGET_DIR`s.
+The story tables `render place`, `render event`, `render story` and `render guide` read (`places.tsv`, `events.tsv`, `flags.tsv`, `messages.tsv`) are written by `alchemy-docs`' `bun scripts/story.ts` into its `build/story/`, from the same Alchemy checkout; the renderer reads that `places.tsv` as it is (one area name a scene, `WorldMap` the only perspective map), or a richer one with `sceneNumber`, `sceneSymbol`, `overlayFile`, `areaNames` and `map` columns; make them again after renames in the source, since their columns follow its names. Two runs that build this crate at once should use separate `CARGO_TARGET_DIR`s.
 
 Still open: Lamakan Desert's maps show faint seams from its heat shimmer; BabiPalace2 and TolbiSpring2 fail because their map scroll update never runs; rooms whose state starts a cutscene that leaves before the player has control (the world map's entrance 69, the Colosseum, Vale Gate once Garet has left) are skipped; and where a scene's events give few conditions, the order of its story moments is a guess.
 

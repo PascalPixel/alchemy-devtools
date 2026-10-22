@@ -82,6 +82,9 @@ impl Tsv {
 
 pub fn read_scenes(path: &Path) -> Result<Vec<Scene>, String> {
     let tsv = Tsv::read(path)?;
+    if tsv.column("sceneNumber").is_err() {
+        return read_story_scenes(path, &tsv);
+    }
     let [number, symbol, file, area, map] =
         ["sceneNumber", "sceneSymbol", "overlayFile", "areaNames", "map"].map(|c| tsv.column(c));
     let (number, symbol, file, area, map) = (number?, symbol?, file?, area?, map?);
@@ -97,6 +100,34 @@ pub fn read_scenes(path: &Path) -> Result<Vec<Scene>, String> {
                 area: tsv.get(row, area).to_string(),
                 map: tsv.get(row, map).to_string(),
                 overlay: overlay.and_then(|c| u16::from_str_radix(tsv.get(row, c).trim_start_matches("0x"), 16).ok()),
+            })
+        })
+        .collect()
+}
+
+/// The places table `alchemy-docs`' `bun scripts/story.ts` writes when it is
+/// given none (columns scene, name, file, group, area name): the scene's
+/// number, its SceneId name, its overlay under `games/tbs/src`, and one area
+/// name for every entrance. It has no map column, so only WorldMap is the
+/// perspective world map, and no overlay ids.
+fn read_story_scenes(path: &Path, tsv: &Tsv) -> Result<Vec<Scene>, String> {
+    let (number, name, file, area) = (tsv.column("scene")?, tsv.column("name")?, tsv.column("file")?, tsv.column("area name")?);
+    tsv.rows
+        .iter()
+        .map(|row| {
+            let n = tsv.get(row, number);
+            let name = tsv.get(row, name);
+            let file = tsv.get(row, file);
+            Ok(Scene {
+                number: n.parse().map_err(|_| format!("{}: scene number {n:?}", path.display()))?,
+                symbol: (!name.is_empty()).then(|| name.to_string()),
+                file: if file.is_empty() { String::new() } else { format!("games/tbs/src/{file}") },
+                area: match tsv.get(row, area) {
+                    "" => String::new(),
+                    a => format!("*={a}"),
+                },
+                map: if name == "WorldMap" { "world".to_string() } else { String::new() },
+                overlay: None,
             })
         })
         .collect()
