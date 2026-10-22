@@ -16,6 +16,8 @@ mod front;
 #[cfg(feature = "render")]
 mod guide;
 #[cfg(feature = "render")]
+mod guide_engine;
+#[cfg(feature = "render")]
 mod guide_apart;
 #[cfg(feature = "render")]
 mod guide_more;
@@ -1105,6 +1107,12 @@ Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
   vale-opening, vale-gate-display, vale-shops-sleep, vale-kraden-rockslide,
   vale-cave-kite
+Take-apart pictures for the engine's guides, each as its mode's name with
+.png or .gif (guide_engine.rs):
+  menu-test-setup, palette-fade, scheduler, io-write-queue,
+  resource-directory, memory-maps, map-header, placeholders, markers,
+  world-map-squares, colosso-path, player-probes, item-row, scene-script,
+  temporary-flags, overlay-common
 --only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
 modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),
@@ -1166,7 +1174,7 @@ fn play_guide(
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     // The work in pieces: each mode, and field-psynergy's casts one by one.
     let mut units: Vec<String> = Vec::new();
-    for &name in guide::MODES.iter().filter(|&&name| wanted(name)) {
+    for &name in guide::MODES.iter().chain(guide_engine::MODES).filter(|&&name| wanted(name)) {
         if name == "field-psynergy" {
             let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
             units.extend(guide::field_cast_names().into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
@@ -1200,7 +1208,7 @@ fn play_guide(
             }
         }
         // Failures in the order the modes play.
-        failed.sort_by_key(|name| guide::MODES.iter().position(|m| m == name));
+        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_engine::MODES).position(|m| m == name));
         failed.dedup();
     } else {
         let build = root.join("out").join(edition);
@@ -1230,7 +1238,7 @@ fn play_guide(
                 Ok(records)
             });
         }
-        for &name in guide::MODES {
+        for &name in guide::MODES.iter().chain(guide_engine::MODES) {
             if wanted(name) {
                 if let Err(e) = guide.run(name, casts) {
                     eprintln!("{name}: {e}");

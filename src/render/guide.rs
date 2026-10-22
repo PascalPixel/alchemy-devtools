@@ -609,7 +609,7 @@ impl Guide<'_> {
             "vale-shops-sleep" => self.vale_shops_sleep(),
             "vale-kraden-rockslide" => self.vale_kraden_rockslide(),
             "vale-cave-kite" => self.vale_cave_kite(),
-            _ => Err(format!("no mode {name}")),
+            _ => self.run_engine(name),
         }
     }
 }
