@@ -1025,7 +1025,7 @@ Take-apart pictures for places and guides, each as its mode's name with
   colosseum-satrage-lifts, tunnel-ruins-balance, venus-lighthouse-aerie-eruption
   (and venus-lighthouse-aerie-layers-3d.gif), scene-event-cells,
   credits-tile-ring, title-intro-layers-3d, item-screen-windows, sound-players,
-  field-requests, grid-planes, tile-animation
+  field-requests, grid-planes, tile-animation, world-map-scanlines
 --only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
 modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),

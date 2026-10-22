@@ -512,6 +512,7 @@ pub const MODES: &[&str] = &[
     "field-requests",
     "grid-planes",
     "tile-animation",
+    "world-map-scanlines",
 ];
 
 impl Guide<'_> {
@@ -572,6 +573,7 @@ impl Guide<'_> {
             "field-requests" => self.field_requests(),
             "grid-planes" => self.grid_planes(),
             "tile-animation" => self.tile_animation(),
+            "world-map-scanlines" => self.world_map_scanlines(),
             _ => Err(format!("no mode {name}")),
         }
     }

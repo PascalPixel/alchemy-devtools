@@ -923,6 +923,8 @@ const AZART: u16 = 8;
 const COLOSSEUM_SATRAGE_TOUR: (u16, u16) = (144, 3);
 /// Vale entered by day (scene 4, entrance 1) and Garet's sister there.
 const VALE_SCENE: (u16, u16) = (4, 1);
+/// The world map's frame work's heap slot (HEAP_SLOT_MAP_FRAME).
+const HEAP_SLOT_MAP_FRAME: u32 = 7;
 /// Goma Cave's pillar room, as `grid.png` enters it, and the cell words.
 const GOMA_CAVE_ROOM: (u16, u16) = (27, 5);
 const MAP_CELL_WORDS: u32 = 0x0201_0000;
@@ -1687,6 +1689,44 @@ impl<'a> Guide<'a> {
         let written = animation::write(&self.out.join("tile-animation.gif"), &frames, w)?;
         self.written.push(("tile-animation.gif".to_string(), written.bytes, format!("Vale beside its ground layer's tiles as the tile animation rewrites them; {} frames", written.frames)));
         Ok(())
+    }
+}
+
+impl<'a> Guide<'a> {
+    /// The world map as the party first leaves Vale, after a short walk
+    /// south as `world-map-layers-3d.gif` takes it: the screen at twice its
+    /// size beside each scanline's width scale from the map frame's work
+    /// (struct MapFrameWork in HEAP_SLOT_MAP_FRAME, its MapScanline.scale,
+    /// 16.16 fixed point) drawn as a bar on the same line, 0 above the
+    /// horizon, as `world-map-scanlines.png`.
+    pub fn world_map_scanlines(&mut self) -> Result<(), String> {
+        let slots = self.sym("gWorkSlot")?;
+        let mut field = self.enter((2, 1))?;
+        field.hold(0x80);
+        field.frames(50)?;
+        field.hold(0);
+        field.frames(2)?;
+        let frame_work = field.read32(slots + 4 * HEAP_SLOT_MAP_FRAME);
+        let scales: Vec<i32> = (0..HEIGHT as u32).map(|y| field.read32(frame_work + 20 * y) as i32).collect();
+        let most = scales.iter().copied().max().unwrap_or(1).max(1);
+        let bars = 240usize;
+        let mut out = canvas(2 * WIDTH + 12 + bars, 2 * HEIGHT + 8, WHITE);
+        paste(&mut out, &screen(&field.picture()), 4, 4, 2);
+        let x0 = 2 * WIDTH + 8;
+        for (y, &s) in scales.iter().enumerate() {
+            let len = (i64::from(s.max(0)) * bars as i64 / i64::from(most)) as usize;
+            for dy in 0..2 {
+                for x in 0..len {
+                    out.pixels[(4 + 2 * y + dy) * out.width + x0 + x] = 0x30_60_c0;
+                }
+            }
+        }
+        text(&mut out, x0 as i32 + 4, 8, "WIDTH SCALE", WHITE, None, 2);
+        for (y, s) in [(0usize, scales[0]), (HEIGHT - 1, scales[HEIGHT - 1])] {
+            let label = format!("{:.2}", f64::from(s) / 65536.0);
+            text(&mut out, x0 as i32 + 4, (4 + 2 * y) as i32 - if y == 0 { -24 } else { 18 }, &label, WHITE, None, 2);
+        }
+        self.guide_png("world-map-scanlines.png", &out, "the world map beside each scanline's width scale")
     }
 }
 
