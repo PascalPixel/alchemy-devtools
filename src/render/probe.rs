@@ -53,7 +53,7 @@ pub fn describe(field: &Field, id: u16) -> String {
     )
 }
 
-fn actors(field: &Field, ids: std::ops::Range<u16>) {
+pub(super) fn actors(field: &Field, ids: std::ops::Range<u16>) {
     for id in ids {
         println!("  {}", describe(field, id));
     }
@@ -61,7 +61,7 @@ fn actors(field: &Field, ids: std::ops::Range<u16>) {
 
 /// The cells of layer `layer` from (x0, z0) to (x1, z1) as their collision
 /// codes, and their whole words.
-fn cells(field: &Field, layer: u8, (x0, z0): (i32, i32), (x1, z1): (i32, i32)) {
+pub(super) fn cells(field: &Field, layer: u8, (x0, z0): (i32, i32), (x1, z1): (i32, i32)) {
     println!("  layer {layer} codes, columns {x0}..={x1}:");
     for z in z0..=z1 {
         let row: Vec<String> = (x0..=x1).map(|x| format!("{:3}", field.cell(layer, x, z))).collect();
@@ -69,7 +69,7 @@ fn cells(field: &Field, layer: u8, (x0, z0): (i32, i32), (x1, z1): (i32, i32)) {
     }
 }
 
-fn words(field: &Field, layer: u8, (x0, z0): (i32, i32), (x1, z1): (i32, i32)) {
+pub(super) fn words(field: &Field, layer: u8, (x0, z0): (i32, i32), (x1, z1): (i32, i32)) {
     println!("  layer {layer} words, columns {x0}..={x1}:");
     for z in z0..=z1 {
         let row: Vec<String> = (x0..=x1).map(|x| format!("{:08x}", field.cell_word(layer, x, z) as u32)).collect();
@@ -79,7 +79,7 @@ fn words(field: &Field, layer: u8, (x0, z0): (i32, i32), (x1, z1): (i32, i32)) {
 
 /// Puts the leader at (x, z) on `layer` facing `facing`, then holds `keys`
 /// for `frames` frames; where he started and where he ended up.
-fn walk(field: &mut Field, placed: &super::field::Saved, (x, z): (i32, i32), layer: u8, facing: u32, keys: u32, frames: u32) -> Result<String, String> {
+pub(super) fn walk(field: &mut Field, placed: &super::field::Saved, (x, z): (i32, i32), layer: u8, facing: u32, keys: u32, frames: u32) -> Result<String, String> {
     let height = field.ground(layer, x, z)?;
     let spot = Spot { x, z, layer, height, facing, walk: 0, cell: None };
     field.stand(placed, &spot)?;
@@ -394,12 +394,12 @@ impl<'a> Guide<'a> {
             "heap" => self.heap(&at("gWorkSlot")?, map),
             "heap-battle" => self.heap_battle(map),
             "venus" => self.venus(map),
-            other => Err(format!("no probe {other}")),
+            other => self.probe_place(other, map),
         }
     }
 
     /// Enters as enter_with does, with these flags (numbers) set too.
-    fn enter_flags(&self, place: (u16, u16), set: &[u16]) -> Result<super::guide::Entered<'a>, String> {
+    pub(super) fn enter_flags(&self, place: (u16, u16), set: &[u16]) -> Result<super::guide::Entered<'a>, String> {
         let names: Vec<String> = set.iter().map(|f| format!("0x{f:x}")).collect();
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
         self.enter_with(place, &refs)
