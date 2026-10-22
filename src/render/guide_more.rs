@@ -44,6 +44,9 @@ const BILIBIN_INNKEEPER: u16 = 19;
 const FLINT: u16 = 8;
 /// The scene number of a battle (SCENE_BATTLE).
 const SCENE_BATTLE: u16 = 0x1fe;
+/// Frames from a battle's start until its command menu is up and the
+/// battle is still.
+const BATTLE_SETTLE_FRAMES: u32 = 300;
 
 /// Memory: video RAM (backgrounds, then sprites from OBJ_VRAM), palette RAM,
 /// OAM, the display registers, the overlay area and the map's cells and
@@ -638,11 +641,46 @@ impl<'a> Guide<'a> {
     /// Walking back and forth in Goma Cave until a random battle starts, and
     /// the battle's opening, as `random-battle.gif`.
     pub fn random_battle(&mut self) -> Result<(), String> {
-        // Each entrance of the room and each way from it: the straight run of
-        // ground the field's collision lets the leader walk (Field::reach),
-        // tried there and back once; the one the camera shows him on best
-        // (the least of the dark around him, where a cave draws nothing)
-        // and then the longest is walked until a battle comes.
+        let (entrance, stretch) = self.goma_cave_stretch()?;
+        let mut entered = self.enter_with((GOMA_CAVE.0, entrance), &[])?;
+        let field = &mut entered.field;
+        let mut frames = Vec::new();
+        let at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0)?.ok_or("no battle came")?;
+        for _ in 0..240 {
+            field.frames(1)?;
+            frames.push(field.picture());
+        }
+        // From two seconds of walking before the battle began.
+        let start = at.saturating_sub(180);
+        self.guide_gif("random-battle.gif", &frames[start..], "a random battle in Goma Cave")
+    }
+
+    /// A random battle in Goma Cave pulled apart like Vale's layers, once the
+    /// battle has settled: each background it shows and the sprites, drawn as
+    /// sheets in the order the hardware stacks them (guide::stacking), as
+    /// `battle-layers-3d.gif`.
+    pub fn battle_exploded(&mut self) -> Result<(), String> {
+        let (entrance, stretch) = self.goma_cave_stretch()?;
+        let mut entered = self.enter_with((GOMA_CAVE.0, entrance), &[])?;
+        let field = &mut entered.field;
+        Self::walk_stretch(field, &stretch, 80, &mut Vec::new(), &mut 0)?.ok_or("no battle came")?;
+        field.frames(BATTLE_SETTLE_FRAMES)?;
+        let layers = super::guide::stacking(field);
+        let sheets = super::guide::layer_sheets(field, &layers)?;
+        let frames = super::guide::spread_frames(&sheets);
+        let written = animation::write(&self.out.join("battle-layers-3d.gif"), &frames, super::guide::CANVAS.0)?;
+        let order: Vec<String> = layers.iter().map(|&n| if n == 4 { "sprites".to_string() } else { format!("BG{n}") }).collect();
+        self.written.push(("battle-layers-3d.gif".to_string(), written.bytes, format!("a battle's layers pulled apart, back to front {}; {} frames", order.join(", "), written.frames)));
+        Ok(())
+    }
+
+    /// The entrance of Goma Cave and the stretch of ground from it that a
+    /// random battle is walked into: each entrance and each way from it, the
+    /// straight run of ground the field's collision lets the leader walk
+    /// (Field::reach), tried there and back once; the one the camera shows
+    /// him on best (the least of the dark around him, where a cave draws
+    /// nothing), and then the longest.
+    fn goma_cave_stretch(&self) -> Result<(u16, Stretch), String> {
         let mut best: Option<(u32, i32, u16, Stretch)> = None;
         for entrance in 1..=6u16 {
             for across in [true, false] {
@@ -665,17 +703,7 @@ impl<'a> Guide<'a> {
             }
         }
         let (_, _, entrance, stretch) = best.ok_or("no entrance of Goma Cave has open ground to walk")?;
-        let mut entered = self.enter_with((GOMA_CAVE.0, entrance), &[])?;
-        let field = &mut entered.field;
-        let mut frames = Vec::new();
-        let at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0)?.ok_or("no battle came")?;
-        for _ in 0..240 {
-            field.frames(1)?;
-            frames.push(field.picture());
-        }
-        // From two seconds of walking before the battle began.
-        let start = at.saturating_sub(180);
-        self.guide_gif("random-battle.gif", &frames[start..], "a random battle in Goma Cave")
+        Ok((entrance, stretch))
     }
 
     /// Walks the leader `legs` times from one end of `stretch` to the other

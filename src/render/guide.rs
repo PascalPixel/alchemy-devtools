@@ -208,9 +208,9 @@ impl<'a> Guide<'a> {
 
 /// The colour an empty pixel of a sheet is drawn in: full magenta, which no
 /// map tile here uses.
-const KEY: u16 = 0x7c1f;
+pub(super) const KEY: u16 = 0x7c1f;
 /// The exploded view's picture, its background and the sheets' tint and edge.
-const CANVAS: (usize, usize) = (520, 400);
+pub(super) const CANVAS: (usize, usize) = (520, 400);
 const BACKGROUND: u32 = 0x10_10_14;
 const EDGE: u32 = 0xb0_b8_c8;
 const SHEET: u32 = 0x30_36_44;
@@ -223,7 +223,7 @@ const PITCH: f64 = 14.0;
 const DISTANCE: f64 = 700.0;
 const SCALE: f64 = 1.5;
 
-fn ease(t: f64) -> f64 {
+pub(super) fn ease(t: f64) -> f64 {
     t * t * (3.0 - 2.0 * t)
 }
 
@@ -251,7 +251,7 @@ fn det(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
 
 /// One frame of the exploded view with the sheets `e` of the way apart
 /// (0 flat, 1 apart), the first sheet at the back, drawn back to front.
-fn draw_sheets(sheets: &[Vec<Option<u32>>], e: f64) -> Vec<u32> {
+pub(super) fn draw_sheets(sheets: &[Vec<Option<u32>>], e: f64) -> Vec<u32> {
     let (w, h) = CANVAS;
     let mut canvas = vec![BACKGROUND; w * h];
     let (yaw, pitch) = ((YAW * e).to_radians(), (PITCH * e).to_radians());
@@ -485,7 +485,7 @@ pub fn field_cast_names() -> Vec<&'static str> {
 
 /// Every mode, in the order `render guide` plays them.
 pub const MODES: &[&str] = &[
-    "walk", "snow", "layers", "layers-3d", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
+    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
     "inn", "menu-psynergy", "credits", "sleep", "oam", "vram", "cells", "grid", "random-battle", "world-map-picture", "overlay",
 ];
 
@@ -497,6 +497,7 @@ impl Guide<'_> {
             "snow" => self.snow(),
             "layers" => self.layers(),
             "layers-3d" => self.exploded(),
+            "battle-layers-3d" => self.battle_exploded(),
             "world-map" => self.world_map(),
             "menus" => self.menus(),
             "menu-start" => self.menu_start(),
@@ -521,3 +522,74 @@ impl Guide<'_> {
         }
     }
 }
+
+/// The layers the picture shows, back to front, as the hardware stacks them:
+/// a lower priority (BGxCNT bits 1..0, an OAM entry's attribute 2 bits
+/// 11..10) is nearer, sprites are nearer than a background of the same
+/// priority, and of two backgrounds the lower-numbered is nearer. The
+/// sprites take the priority most of the shown entries use. Layers are
+/// numbered by their DISPCNT bit: 0 to 3 the backgrounds, 4 the sprites.
+pub(super) fn stacking(field: &Field) -> Vec<u32> {
+    let shown = field.read16(DISPCNT);
+    let mut layers: Vec<(u16, u8, u32)> = Vec::new();
+    for bg in 0..4u32 {
+        if shown & (0x100 << bg) != 0 {
+            layers.push((field.read16(BG0CNT + 2 * bg) & 3, 1, bg));
+        }
+    }
+    if shown & 0x1000 != 0 {
+        let mut count = [0usize; 4];
+        for entry in 0..128u32 {
+            let attr0 = field.read16(OAM + 8 * entry);
+            if attr0 & 0x300 == 0x200 {
+                continue;
+            }
+            count[(field.read16(OAM + 8 * entry + 4) >> 10 & 3) as usize] += 1;
+        }
+        let priority = (0..4).max_by_key(|&p| (count[p], std::cmp::Reverse(p))).unwrap_or(0) as u16;
+        layers.push((priority, 0, 4));
+    }
+    // Nearest first, then turned round so the farthest sheet comes first.
+    layers.sort_by_key(|&(priority, kind, n)| (priority, kind, n));
+    layers.iter().rev().map(|&(_, _, n)| n).collect()
+}
+
+/// Each of `layers` captured alone over KEY from the same saved moment, as a
+/// sheet whose empty pixels are None. Each layer is chosen through DISPCNT,
+/// as `exploded` does: hiding a background in libmgba itself crashed it in a
+/// battle. It fails if the game rewrites DISPCNT during the capture.
+pub(super) fn layer_sheets(field: &mut Field, layers: &[u32]) -> Result<Vec<Vec<Option<u32>>>, String> {
+    let saved = field.save();
+    let shown = field.read16(DISPCNT);
+    let mut sheets = Vec::new();
+    for &layer in layers {
+        field.load(&saved);
+        let bit = 0x100u16 << layer;
+        field.io_write16(DISPCNT, (shown & !LAYER_BITS) | bit);
+        field.set_backdrop(KEY);
+        field.frames(2)?;
+        if field.read16(DISPCNT) & LAYER_BITS != bit {
+            return Err(format!("the game rewrote DISPCNT while layer {layer} was captured"));
+        }
+        sheets.push(field.picture().iter().map(|&c| (c != KEY).then(|| animation::rgb(c))).collect());
+    }
+    field.load(&saved);
+    Ok(sheets)
+}
+
+/// The exploded view's frames at 60 a second: flat, apart, held, together,
+/// flat, as `layers-3d.gif` plays them.
+pub(super) fn spread_frames(sheets: &[Vec<Option<u32>>]) -> Vec<Vec<u32>> {
+    let mut spread = Vec::new();
+    spread.extend(std::iter::repeat_n(0.0, 50));
+    spread.extend((0..60).map(|i| ease(i as f64 / 59.0)));
+    spread.extend(std::iter::repeat_n(1.0, 120));
+    spread.extend((0..60).map(|i| ease(1.0 - i as f64 / 59.0)));
+    spread.extend(std::iter::repeat_n(0.0, 20));
+    spread.iter().map(|&e| draw_sheets(sheets, e)).collect()
+}
+
+/// The first background control register; BG1CNT to BG3CNT follow it.
+const BG0CNT: u32 = 0x0400_0008;
+/// Sprite attribute memory: 128 entries of 8 bytes.
+const OAM: u32 = 0x0700_0000;
