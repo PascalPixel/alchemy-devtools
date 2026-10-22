@@ -915,9 +915,7 @@ impl<'a> Guide<'a> {
 
 /// struct BattleUnit's counters (battle_unit.h): the stat changes' turns
 /// and stages, then the statuses.
-const UNIT_GUARD: u32 = 0x12b;
 const UNIT_ATTACK_TURNS: u32 = 0x132;
-const UNIT_DELUSION: u32 = 0x138;
 const UNIT_SLEEP: u32 = 0x13c;
 const UNIT_HAUNT: u32 = 0x140;
 const UNIT_HP: u32 = 0x38;
@@ -972,6 +970,10 @@ impl<'a> Guide<'a> {
     }
 }
 
+/// The frames of `added-effects`, the frames its rounds start and those its
+/// messages start.
+type Rounds = (Vec<Counted>, Vec<usize>, Vec<usize>);
+
 /// One frame of `added-effects`: the screen, and the Vermin's and Isaac's
 /// counters.
 struct Counted {
@@ -986,7 +988,7 @@ impl<'a> Guide<'a> {
     /// Isaac; in each later round the four defend. Each frame keeps the
     /// screen and both units' counters; the rounds' starts and the messages'
     /// starts are kept too.
-    fn added_effect_rounds(&self, rounds: usize) -> Result<(Vec<Counted>, Vec<usize>, Vec<usize>), String> {
+    fn added_effect_rounds(&self, rounds: usize) -> Result<Rounds, String> {
         let commands = self.sym("Battle_CollectPartyCommands")?;
         let message = self.sym("UiText_ShowMessageAndWaitCore")?;
         let drive = self.quake_drive(ONE_VERMIN, BATTLE_START_SET, vec![commands, message])?;
@@ -1117,5 +1119,169 @@ impl<'a> Guide<'a> {
             }
         }
         self.guide_png("added-effects.png", &image, "stat stages and status counters as they change and count down")
+    }
+}
+
+/// struct BattlePlan.hauntDamage.
+const PLAN_HAUNT: u32 = 0x60;
+/// A sleep counter already counted down once: the target fell asleep in an
+/// earlier round (STATUS_TURNS less one).
+const SLEPT_A_ROUND: u8 = 6;
+
+impl<'a> Guide<'a> {
+    /// The return addresses of the Thumb `bl` calls to `callee` inside the
+    /// function at `start` (up to the next symbol), in address order, read
+    /// from the ROM.
+    pub(super) fn calls_in(&self, start: u32, callee: u32) -> Vec<u32> {
+        let end = self
+            .map
+            .at_address(start)
+            .and_then(|p| p.symbols.iter().map(|(a, _)| *a & !1).filter(|&a| a > start).min())
+            .unwrap_or(start + 0x1000);
+        let half = |a: u32| u16::from_le_bytes([self.rom[(a - 0x0800_0000) as usize], self.rom[(a - 0x0800_0000 + 1) as usize]]);
+        let mut out = Vec::new();
+        let mut a = start;
+        while a + 4 <= end {
+            let (hi, lo) = (half(a), half(a + 2));
+            if hi & 0xf800 == 0xf000 && lo & 0xf800 == 0xf800 {
+                let offset = ((i32::from(hi & 0x7ff) << 21) >> 9) + (i32::from(lo & 0x7ff) << 1);
+                if (a as i32 + 4 + offset) as u32 == callee {
+                    out.push(a + 4);
+                }
+                a += 4;
+            } else {
+                a += 2;
+            }
+        }
+        out
+    }
+    /// Isaac, haunted (BattleUnit.haunt set as the plan is built), casts
+    /// Quake at copies of Garet, Ivan and Mia, the copy of Ivan asleep for a
+    /// round already (sleep SLEPT_A_ROUND); BattleTargetExec's wake roll and
+    /// haunt roll, its last two calls of BattleRandomFar, are answered 0,
+    /// so the sleeper wakes and every target feeds the evil spirit. Each
+    /// target's HP, sleep and BattlePlan.hauntDamage are read as
+    /// BattleTargetExec starts and as the next starts or the turn ends,
+    /// beside the screen as each is announced, as `after-target.png`.
+    pub fn after_target(&mut self) -> Result<(), String> {
+        let root = crate::compile::root();
+        let plan = Tables::read(root)?.plan()?;
+        let mut cast = plan.casts.into_iter().find(|c| c.ability.name == "Quake").ok_or("no Quake cast")?;
+        cast.foes = vec![plan::GARET, plan::IVAN, plan::MIA];
+        let foe_name = |u: u16| plan::character_name(cast.foes[usize::from(u) - FIRST_ENEMY_UNIT as usize]).to_uppercase();
+        let symbols = super::battle::Symbols::find(self.map)?;
+        let random = self.sym("BattleRandom")?;
+        let exec = self.sym("BattleTargetExec")?;
+        let build = self.sym("BattleCommand_BuildPlan")?;
+        let turn_end = self.sym("BattleUnit_ProcessTurnEnd")?;
+        let work_slot = self.sym("gBattleWork")?;
+        let sites = self.calls_in(exec, self.sym("BattleRandomFar")?);
+        let [.., wake, haunt] = sites[..] else {
+            return Err("BattleTargetExec makes fewer than two rolls".into());
+        };
+        // Each target: (unit, HP before, after, sleep before, after,
+        // hauntDamage after, rolls answered, the frame it ended).
+        struct Dealt {
+            unit: u16,
+            hp: (i16, i16),
+            sleep: (u8, u8),
+            haunt: u32,
+            answered: Vec<&'static str>,
+            end: usize,
+        }
+        let mut dealt: Vec<Dealt> = Vec::new();
+        let mut open = false;
+        let mut frame = 0usize;
+        let mut set = false;
+        let mut isaac_hp = (0i16, 0i16);
+        let mut ended = 0usize;
+        let unit_hp = |gba: &Gba, u: u16| -> i16 { self.unit_address(gba, u).map_or(0, |a| gba.read16(a + UNIT_HP) as i16) };
+        let unit_sleep = |gba: &Gba, u: u16| -> u8 { self.unit_address(gba, u).map_or(0, |a| gba.read8(a + UNIT_SLEEP)) };
+        let recording = super::battle::record_watching(self.rom, &symbols, &cast, &super::battle::Scene::Game, false, None, &[random, exec, build, turn_end], &mut |gba, hook| {
+            let plan_at = gba.read32(work_slot) + WORK_PLAN;
+            let close = |gba: &Gba, dealt: &mut Vec<Dealt>, open: &mut bool| {
+                if let Some(d) = dealt.last_mut().filter(|_| *open) {
+                    d.hp.1 = unit_hp(gba, d.unit);
+                    d.sleep.1 = unit_sleep(gba, d.unit);
+                    d.haunt = gba.read32(plan_at + PLAN_HAUNT);
+                    d.end = frame;
+                }
+                *open = false;
+            };
+            match hook {
+                Some(h) if h == build && !set => {
+                    let isaac = self.unit_address(gba, u16::from(plan::ISAAC)).unwrap_or(0);
+                    gba.write8(isaac + UNIT_HAUNT, 1);
+                    let ivan = self.unit_address(gba, FIRST_ENEMY_UNIT as u16 + 1).unwrap_or(0);
+                    gba.write8(ivan + UNIT_SLEEP, SLEPT_A_ROUND);
+                    set = true;
+                }
+                Some(h) if h == random => {
+                    let back = gba.register(LR) & !1;
+                    if back == wake || back == haunt {
+                        gba.return_now(0);
+                        if let Some(d) = dealt.last_mut() {
+                            d.answered.push(if back == wake { "WAKE" } else { "HAUNT" });
+                        }
+                    }
+                }
+                Some(h) if h == exec => {
+                    close(gba, &mut dealt, &mut open);
+                    let p = gba.register(0);
+                    let u = u16::from(gba.read8(p + PLAN_TARGET_IDS + gba.register(1)));
+                    dealt.push(Dealt { unit: u, hp: (unit_hp(gba, u), 0), sleep: (unit_sleep(gba, u), 0), haunt: 0, answered: Vec::new(), end: 0 });
+                    open = true;
+                }
+                Some(h) if h == turn_end => {
+                    close(gba, &mut dealt, &mut open);
+                    isaac_hp.0 = unit_hp(gba, u16::from(plan::ISAAC));
+                    ended = frame;
+                }
+                Some(_) => {}
+                None => {
+                    isaac_hp.1 = unit_hp(gba, u16::from(plan::ISAAC));
+                    frame += 1;
+                }
+            }
+        })?;
+        let frames = recording.frames;
+        for d in &dealt {
+            eprintln!("after-target: {} HP {:?} sleep {:?} hauntDamage {} answered {:?} until frame {}", foe_name(d.unit), d.hp, d.sleep, d.haunt, d.answered, d.end);
+        }
+        eprintln!("  turn end at {ended}: Isaac HP {:?}", isaac_hp);
+        if dealt.len() != 3 {
+            return Err(format!("{} targets", dealt.len()));
+        }
+        // A shot of each target's last message, and of the evil spirit's.
+        const CELL: usize = WIDTH + 8;
+        const PANEL_H: usize = 120;
+        let (w, h) = (4 * CELL + 8, 30 + HEIGHT + PANEL_H);
+        let mut image = canvas(w, h, PANEL_BACK);
+        text(&mut image, 8, 6, "ISAAC, HAUNTED, CASTS QUAKE; THE COPY OF IVAN HAS SLEPT A ROUND (SLEEP 6)", PANEL_HEAD, None, 2);
+        for (k, d) in dealt.iter().enumerate() {
+            let x = 8 + k * CELL;
+            paste(&mut image, &screen(&frames[d.end.saturating_sub(SHOWN / 3).min(frames.len() - 1)]), x, 26, 1);
+            let mut y = (32 + HEIGHT) as i32;
+            let lines = [
+                format!("{}: HP {} TO {}", foe_name(d.unit), d.hp.0, d.hp.1),
+                format!("SLEEP {} TO {}", d.sleep.0, d.sleep.1),
+                format!("ANSWERED 0: {}", d.answered.join(", ")),
+                format!("SHARE {} = {} / 4", (d.hp.0 - d.hp.1) / 4, d.hp.0 - d.hp.1),
+                format!("HAUNTDAMAGE NOW {}", d.haunt),
+            ];
+            for (i, line) in lines.iter().enumerate() {
+                let colour = if i == 1 && d.sleep.0 != d.sleep.1 || i == 4 { PANEL_MARK } else { PANEL_TEXT };
+                text(&mut image, x as i32, y, line, colour, None, 2);
+                y += 18;
+            }
+        }
+        let x = 8 + 3 * CELL;
+        paste(&mut image, &screen(&frames[frames.len().saturating_sub(SHOWN)]), x, 26, 1);
+        let mut y = (32 + HEIGHT) as i32;
+        for line in ["THE TURN'S END:".to_string(), format!("ISAAC HP {} TO {}", isaac_hp.0, isaac_hp.1)] {
+            text(&mut image, x as i32, y, &line, PANEL_MARK, None, 2);
+            y += 18;
+        }
+        self.guide_png("after-target.png", &image, "a sleeping target woken by damage, and the evil spirit's share")
     }
 }
