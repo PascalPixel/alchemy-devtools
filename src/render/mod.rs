@@ -18,6 +18,8 @@ mod guide;
 #[cfg(feature = "render")]
 mod guide_apart;
 #[cfg(feature = "render")]
+mod guide_effect;
+#[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
 mod guide_places;
@@ -1101,6 +1103,15 @@ Take-apart pictures for the battle, effect, field and shop guides
                     composed alone and together
   shop-counters     shop-counters.png: Bilibin's weapon shop before and after
                     Vault's, its Buy and Artifacts lists
+Take-apart pictures for the battle effects guide (guide_effect.rs):
+  effect-variants   effect-variants.gif: Quake, Earthquake and Quake Sphere
+                    side by side, beside their plan words
+  djinn-attacks     djinn-attacks.gif: Venus, Mercury, Mars and Jupiter
+                    beside their flames and motes
+  spark-groups      spark-groups.gif: Supernova beside its flashes and sparks
+  stat-reductions   stat-reductions.gif: Debilitate beside each target's shards
+  target-strikes    target-strikes.gif: Twin Beaks and Acid Bite beside
+                    their parked smoke, motes and sparks
 Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
   vale-opening, vale-gate-display, vale-shops-sleep, vale-kraden-rockslide,

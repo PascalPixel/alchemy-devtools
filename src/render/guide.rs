@@ -531,6 +531,11 @@ pub const MODES: &[&str] = &[
     "vale-shops-sleep",
     "vale-kraden-rockslide",
     "vale-cave-kite",
+    "effect-variants",
+    "djinn-attacks",
+    "spark-groups",
+    "stat-reductions",
+    "target-strikes",
 ];
 
 impl Guide<'_> {
@@ -609,6 +614,11 @@ impl Guide<'_> {
             "vale-shops-sleep" => self.vale_shops_sleep(),
             "vale-kraden-rockslide" => self.vale_kraden_rockslide(),
             "vale-cave-kite" => self.vale_cave_kite(),
+            "effect-variants" => self.effect_variants(),
+            "djinn-attacks" => self.djinn_attacks(),
+            "spark-groups" => self.spark_groups(),
+            "stat-reductions" => self.stat_reductions(),
+            "target-strikes" => self.target_strikes(),
             _ => Err(format!("no mode {name}")),
         }
     }
