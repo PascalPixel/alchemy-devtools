@@ -623,6 +623,12 @@ impl<'rom> Field<'rom> {
         (self.t.last_dismiss > 0 && self.t.last_dismiss + 2 >= self.t.frame) || self.t.choice_return != 0
     }
 
+    /// How many times the field loop has stepped, which it does only while
+    /// the player has control.
+    pub fn steps(&self) -> u32 {
+        self.t.steps
+    }
+
     /// The message last looked up.
     pub fn last_message(&self) -> u32 {
         self.t.last_message

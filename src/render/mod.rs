@@ -20,6 +20,8 @@ mod guide_apart;
 #[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
+mod guide_places;
+#[cfg(feature = "render")]
 mod guide_take;
 #[cfg(feature = "render")]
 mod guide_world;
@@ -32,6 +34,8 @@ mod party;
 mod places;
 #[cfg(feature = "render")]
 mod probe;
+#[cfg(feature = "render")]
+mod probe_places;
 mod plan;
 // Read only by the feature's commands; without it they say how to build them.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
@@ -978,7 +982,7 @@ fn play_probe(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
     let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
     let mut failed = Vec::new();
-    for name in probe::PROBES.iter().filter(|p| only.is_empty() || only.iter().any(|o| o == *p)) {
+    for name in probe::PROBES.iter().chain(probe_places::PROBES).filter(|p| only.is_empty() || only.iter().any(|o| o == *p)) {
         if let Err(e) = guide.probe(name, &map) {
             eprintln!("{name}: {e}");
             failed.push(*name);
@@ -1097,6 +1101,10 @@ Take-apart pictures for the battle, effect, field and shop guides
                     composed alone and together
   shop-counters     shop-counters.png: Bilibin's weapon shop before and after
                     Vault's, its Buy and Artifacts lists
+Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
+  sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
+  vale-opening, vale-gate-display, vale-shops-sleep, vale-kraden-rockslide,
+  vale-cave-kite
 --only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
 modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),
