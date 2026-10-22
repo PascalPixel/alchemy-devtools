@@ -531,6 +531,13 @@ pub const MODES: &[&str] = &[
     "vale-shops-sleep",
     "vale-kraden-rockslide",
     "vale-cave-kite",
+    "work-block",
+    "text-ring",
+    "render-outputs",
+    "area-name",
+    "sanctum",
+    "item-picker",
+    "menu-slot",
 ];
 
 impl Guide<'_> {
@@ -609,6 +616,13 @@ impl Guide<'_> {
             "vale-shops-sleep" => self.vale_shops_sleep(),
             "vale-kraden-rockslide" => self.vale_kraden_rockslide(),
             "vale-cave-kite" => self.vale_cave_kite(),
+            "work-block" => self.window_work_block(),
+            "text-ring" => self.window_text_ring(),
+            "render-outputs" => self.window_render_outputs(),
+            "area-name" => self.window_area_name(),
+            "sanctum" => self.sanctum_members(),
+            "item-picker" => self.item_picker(),
+            "menu-slot" => self.shop_menu_slot(),
             _ => Err(format!("no mode {name}")),
         }
     }

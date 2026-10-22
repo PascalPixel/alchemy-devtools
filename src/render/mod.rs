@@ -24,6 +24,8 @@ mod guide_places;
 #[cfg(feature = "render")]
 mod guide_take;
 #[cfg(feature = "render")]
+mod guide_window;
+#[cfg(feature = "render")]
 mod guide_world;
 mod jobs;
 #[cfg(feature = "render")]
@@ -1101,6 +1103,17 @@ Take-apart pictures for the battle, effect, field and shop guides
                     composed alone and together
   shop-counters     shop-counters.png: Bilibin's weapon shop before and after
                     Vault's, its Buy and Artifacts lists
+Take-apart pictures for the window and shop guides (guide_window.rs; work-block
+also reads out/tbs-ja, make tbs-ja):
+  work-block        work-block.gif: the window work block byte by byte in the
+                    Japanese and international layouts as a message shows
+  text-ring         text-ring.gif: a message decoded into the ring, typed out
+  render-outputs    render-outputs.gif: a message's render outputs outlined
+  area-name         area-name.gif: Bilibin's area name and its countdown
+  sanctum           sanctum.gif: the Vale Sanctum's Revive and its members
+  item-picker       item-picker.gif: a Nut given with every bag full
+  menu-slot         menu-slot.png: the menu work slot as a counter and as the
+                    Item screen read it
 Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
   vale-opening, vale-gate-display, vale-shops-sleep, vale-kraden-rockslide,

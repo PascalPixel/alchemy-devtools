@@ -2,7 +2,8 @@
 //! set a new game's defaults (GameState_InitDefaults) and makes its next call
 //! (PaletteGlow_Update), the run writes the scene, entrance and story flags
 //! into gGameState, so the main loop loads that scene instead of the title.
-//! The location-name notice (UiTimedNotice_Create) returns at once. The
+//! The location-name notice (UiTimedNotice_Create) returns at once unless
+//! show_notice is set. The
 //! scene is the player's once Field_RunScene's field loop takes its first
 //! step (Field_ProcessStep).
 //!
@@ -335,6 +336,8 @@ struct Track {
     call_origin: [i32; 2],
     calling: bool,
     call_saved: [u32; 5],
+    /// r0 and r1 for the call, when start_call gives them.
+    call_args: Option<[u32; 2]>,
     /// The instruction the CPU runs next.
     pc: u32,
     /// The last frame the field loop stepped, and the first of the frames
@@ -416,6 +419,8 @@ pub struct Field<'rom> {
     pub returns: Vec<(u32, u32)>,
     /// Words written as the CPU reaches an address: (address, where, value).
     pub pokes: Vec<(u32, u32, u32)>,
+    /// Lets UiTimedNotice_Create run, for a picture of the notice.
+    pub show_notice: bool,
 }
 
 impl<'rom> Field<'rom> {
@@ -456,6 +461,7 @@ impl<'rom> Field<'rom> {
             call_origin: [0; 2],
             calling: false,
             call_saved: [0; 5],
+            call_args: None,
             pc: 0,
             step_frame: 0,
             stepping_since: 0,
@@ -470,7 +476,7 @@ impl<'rom> Field<'rom> {
             party_calls: 0,
             party_saved: [0; 5],
         };
-        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new() };
+        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false };
         while !field.t.applied {
             field.tick()?;
         }
@@ -596,6 +602,14 @@ impl<'rom> Field<'rom> {
             self.tick()?;
         }
         Ok(())
+    }
+
+    /// As `call`, with r0 and r1, without waiting: the frames that follow
+    /// run it, so a function that waits on the pad can be played.
+    pub fn start_call(&mut self, target: u32, args: [u32; 2]) {
+        self.t.call_target = target & !1;
+        self.t.call_origin = [self.gba.read32(self.s.game_state + GS_X) as i32, self.gba.read32(self.s.game_state + GS_Z) as i32];
+        self.t.call_args = Some(args);
     }
 
     /// Moves the party's position in the game state (pixels).
@@ -777,7 +791,7 @@ impl<'rom> Field<'rom> {
             self.t.applied = true;
             self.t.phase = Phase::Entered;
         }
-        if pc == s.notice {
+        if pc == s.notice && !self.show_notice {
             self.gba.return_now(0);
         }
         if (frame_done || self.probe_pcs.contains(&pc)) && self.probe.is_some() {
@@ -829,6 +843,10 @@ impl<'rom> Field<'rom> {
             let target = self.t.call_target;
             self.t.call_target = 0;
             self.t.calling = true;
+            if let Some(args) = self.t.call_args.take() {
+                self.gba.set_register(0, args[0]);
+                self.gba.set_register(1, args[1]);
+            }
             self.gba.branch(target);
             return Ok(frame_done);
         }
