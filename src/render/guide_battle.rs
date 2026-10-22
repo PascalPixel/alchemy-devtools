@@ -912,3 +912,210 @@ impl<'a> Guide<'a> {
         Ok(())
     }
 }
+
+/// struct BattleUnit's counters (battle_unit.h): the stat changes' turns
+/// and stages, then the statuses.
+const UNIT_GUARD: u32 = 0x12b;
+const UNIT_ATTACK_TURNS: u32 = 0x132;
+const UNIT_DELUSION: u32 = 0x138;
+const UNIT_SLEEP: u32 = 0x13c;
+const UNIT_HAUNT: u32 = 0x140;
+const UNIT_HP: u32 = 0x38;
+/// The counters `added-effects` reads, from attackTurns to sleep.
+const COUNTERS: [&str; 11] = ["ATTACKTURNS", "ATTACKSTAGE", "DEFENSETURNS", "DEFENSESTAGE", "RESISTANCETURNS", "RESISTANCESTAGE", "DELUSION", "CONFUSION", "CHARM", "STUN", "SLEEP"];
+/// actions.tsv: Impair, Delude, Guard.
+const IMPAIR: u16 = 108;
+const DELUDE: u16 = 116;
+const GUARD: u16 = 106;
+/// enum BattleCommand and the places a command aims at
+/// (BattleActionRecord.target): a party place from 0x100, an enemy's from
+/// 0x180.
+const CMD_PSYNERGY: u16 = 1;
+const CMD_DEFEND: u16 = 3;
+const PLACE_PARTY: u16 = 0x100;
+const PLACE_ENEMY: u16 = 0x180;
+const UNIT_AGILITY: u32 = 0x40;
+/// formatn.tsv row 1: one Vermin.
+const ONE_VERMIN: u32 = 1;
+/// Frames from a change to its message written out.
+const SHOWN: usize = 24;
+
+/// A unit's counters at one moment, attackTurns to sleep.
+fn counters(gba: &Gba, unit: u32) -> Vec<i8> {
+    (0..COUNTERS.len() as u32).map(|i| gba.read8(unit + UNIT_ATTACK_TURNS + i) as i8).collect()
+}
+
+impl<'a> Guide<'a> {
+    /// The address of unit `id`'s struct BattleUnit.
+    pub(super) fn unit_address(&self, gba: &Gba, id: u16) -> Result<u32, String> {
+        if u32::from(id) >= FIRST_ENEMY_UNIT {
+            Ok(gba.read32(self.sym("gBattleOwnerStates")?) + (u32::from(id) - FIRST_ENEMY_UNIT) * UNIT_SIZE)
+        } else {
+            Ok(self.sym("gGameState")? + STATE_OWNERS + u32::from(id) * UNIT_SIZE)
+        }
+    }
+
+    /// Fills the command menu's records (Battle_CollectPartyCommands, at
+    /// its entry) with `commands`, (unit, command, ability, place, range)
+    /// each, and returns from it with their count.
+    pub(super) fn give_commands(&self, gba: &mut Gba, commands: &[(u16, u16, u16, u16, u16)]) -> Result<(), String> {
+        let record = gba.register(0);
+        for (i, &(unit, command, ability, place, range)) in commands.iter().enumerate() {
+            let agility = gba.read16(self.unit_address(gba, unit)? + UNIT_AGILITY);
+            let fields = [unit, 0, agility, command, ability, place, range, 0];
+            for (k, v) in fields.into_iter().enumerate() {
+                gba.write16(record + 16 * i as u32 + 2 * k as u32, v);
+            }
+        }
+        gba.return_now(commands.len() as u32);
+        Ok(())
+    }
+}
+
+/// One frame of `added-effects`: the screen, and the Vermin's and Isaac's
+/// counters.
+struct Counted {
+    screen: Vec<u16>,
+    vermin: Vec<i8>,
+    isaac: Vec<i8>,
+}
+
+impl<'a> Guide<'a> {
+    /// The four at level 35 against one Vermin: in the first round Isaac
+    /// casts Impair and Ivan Delude at the Vermin and Mia casts Guard on
+    /// Isaac; in each later round the four defend. Each frame keeps the
+    /// screen and both units' counters; the rounds' starts and the messages'
+    /// starts are kept too.
+    fn added_effect_rounds(&self, rounds: usize) -> Result<(Vec<Counted>, Vec<usize>, Vec<usize>), String> {
+        let commands = self.sym("Battle_CollectPartyCommands")?;
+        let message = self.sym("UiText_ShowMessageAndWaitCore")?;
+        let drive = self.quake_drive(ONE_VERMIN, BATTLE_START_SET, vec![commands, message])?;
+        let mut frames: Vec<Counted> = Vec::new();
+        let mut starts: Vec<usize> = Vec::new();
+        let mut messages: Vec<usize> = Vec::new();
+        let mut failed: Option<String> = None;
+        self.drive(&drive, &mut |gba, hook, f| {
+            match hook {
+                Some(h) if h == commands => {
+                    starts.push(f);
+                    let order: Vec<(u16, u16, u16, u16, u16)> = if starts.len() == 1 {
+                        vec![
+                            (u16::from(plan::ISAAC), CMD_PSYNERGY, IMPAIR, PLACE_ENEMY, 1),
+                            (u16::from(plan::IVAN), CMD_PSYNERGY, DELUDE, PLACE_ENEMY, 2),
+                            (u16::from(plan::MIA), CMD_PSYNERGY, GUARD, PLACE_PARTY, 1),
+                        ]
+                    } else {
+                        [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA].iter().enumerate().map(|(i, &o)| (u16::from(o), CMD_DEFEND, 0, PLACE_PARTY + i as u16, 1)).collect()
+                    };
+                    if let Err(e) = self.give_commands(gba, &order) {
+                        failed = Some(e);
+                    }
+                    return Act::Mash;
+                }
+                Some(_) => {
+                    messages.push(f);
+                    return Act::Mash;
+                }
+                None => {}
+            }
+            let (Ok(v), Ok(i)) = (self.unit_address(gba, FIRST_ENEMY_UNIT as u16), self.unit_address(gba, u16::from(plan::ISAAC))) else {
+                return Act::Mash;
+            };
+            frames.push(Counted { screen: gba.picture(), vermin: counters(gba, v), isaac: counters(gba, i) });
+            if starts.len() > rounds {
+                Act::Stop
+            } else {
+                Act::Mash
+            }
+        })?;
+        if let Some(e) = failed {
+            return Err(e);
+        }
+        Ok((frames, starts, messages))
+    }
+
+    /// Stat stages and status counters as they change and count down, as
+    /// `added-effects.png`.
+    pub fn added_effects(&mut self) -> Result<(), String> {
+        let (frames, starts, messages) = self.added_effect_rounds(9)?;
+        eprintln!("added-effects: {} frames, rounds at {starts:?}", frames.len());
+        let mut last: Option<(&Vec<i8>, &Vec<i8>)> = None;
+        for (f, c) in frames.iter().enumerate() {
+            if last != Some((&c.vermin, &c.isaac)) {
+                eprintln!("  frame {f}: vermin {:?} isaac {:?}", c.vermin, c.isaac);
+                last = Some((&c.vermin, &c.isaac));
+            }
+        }
+        eprintln!("  messages at {messages:?}");
+        // The moments a counter changes other than by counting down, each
+        // shown once its message is written out.
+        let mut shots: Vec<(usize, String)> = Vec::new();
+        for f in 1..frames.len() {
+            let (a, b) = (&frames[f - 1], &frames[f]);
+            let what = |name: &str, i: usize, before: &[i8], after: &[i8]| -> Option<String> {
+                let (x, y) = (before[i], after[i]);
+                (x != y && !(y == x - 1 && y > 0)).then(|| format!("{name} {} {x} TO {y}", COUNTERS[i]))
+            };
+            for i in [2, 3, 6] {
+                if let Some(s) = what("VERMIN", i, &a.vermin, &b.vermin) {
+                    if i != 3 || b.vermin[2] != 0 && a.vermin[2] == 0 {
+                        shots.push((f, s));
+                    }
+                }
+                if let Some(s) = what("ISAAC", i, &a.isaac, &b.isaac) {
+                    if i != 3 || b.isaac[2] != 0 && a.isaac[2] == 0 {
+                        shots.push((f, s));
+                    }
+                }
+            }
+        }
+        // A stage and its turns change together: one shot, named by the turns.
+        shots.dedup_by_key(|s| s.0);
+        // Two units' changes shown by the same message make one shot.
+        let mut joined: Vec<(usize, String)> = Vec::new();
+        for (f, s) in shots {
+            match joined.last_mut() {
+                Some((g, t)) if f - *g < 30 && t.split_once(' ').map(|p| p.1) == s.split_once(' ').map(|p| p.1) => {
+                    *t = format!("{}, {s}", t.split_once(' ').map_or("", |p| p.0));
+                }
+                _ => joined.push((f, s)),
+            }
+        }
+        let shots = joined;
+        eprintln!("  shots {shots:?}");
+        const CELL: usize = WIDTH + 8;
+        let table_rows: [(&str, bool, usize); 3] = [("VERMIN: DEFENSESTAGE, DEFENSETURNS", true, 3), ("VERMIN: DELUSION", true, 6), ("ISAAC: DEFENSESTAGE, DEFENSETURNS", false, 3)];
+        let columns = starts.len();
+        let (w, h) = ((shots.len().min(6)) * CELL + 16, 36 + HEIGHT + 30 + 40 + 24 * table_rows.len() + 16);
+        let w = w.max(300 + 70 * columns);
+        let mut image = canvas(w, h, PANEL_BACK);
+        text(&mut image, 8, 6, "ROUND 1: ISAAC CASTS IMPAIR AND IVAN DELUDE AT THE VERMIN, MIA GUARD ON ISAAC; THEN THE FOUR DEFEND", PANEL_HEAD, None, 2);
+        for (k, (f, caption)) in shots.iter().take(6).enumerate() {
+            // The message this change wrote, once written out.
+            let at = messages.iter().find(|&&m| m + 2 >= *f).map_or(*f, |&m| m).max(*f) + SHOWN;
+            let at = at.min(frames.len() - 1);
+            paste(&mut image, &screen(&frames[at].screen), 8 + k * CELL, 30, 1);
+            let caption = caption.replace("DEFENSETURNS ", "DEFENSE TURNS ");
+            text(&mut image, (8 + k * CELL) as i32, (34 + HEIGHT) as i32, &caption, PANEL_MARK, None, if caption.len() > 29 { 1 } else { 2 });
+        }
+        // The counters as each round's commands are given: after the round
+        // before it has ended.
+        let ty = 36 + HEIGHT + 30;
+        text(&mut image, 8, ty as i32, "AS EACH ROUND STARTS:", PANEL_HEAD, None, 2);
+        for c in 0..columns {
+            text(&mut image, (300 + 70 * c) as i32, ty as i32, &format!("R{}", c + 1), PANEL_DIM, None, 2);
+        }
+        for (r, (label, vermin, i)) in table_rows.iter().enumerate() {
+            let y = (ty + 24 + 24 * r) as i32;
+            text(&mut image, 8, y, label, PANEL_TEXT, None, 1);
+            for (c, &s) in starts.iter().enumerate() {
+                let counted = &frames[s.min(frames.len() - 1)];
+                let values = if *vermin { &counted.vermin } else { &counted.isaac };
+                let cell = if *i == 3 { format!("{:+} {}", values[3], values[2]) } else { format!("{}", values[*i]) };
+                let colour = if cell == "0" || cell == "+0 0" { PANEL_DIM } else { PANEL_MARK };
+                text(&mut image, (300 + 70 * c) as i32, y - 4, &cell, colour, None, 2);
+            }
+        }
+        self.guide_png("added-effects.png", &image, "stat stages and status counters as they change and count down")
+    }
+}
