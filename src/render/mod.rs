@@ -19,7 +19,11 @@ mod guide;
 mod guide_apart;
 #[cfg(feature = "render")]
 mod guide_battle;
+#[cfg(feature = "render")]
+mod guide_cells;
+#[cfg(feature = "render")]
 mod guide_effect;
+#[cfg(feature = "render")]
 mod guide_menu;
 #[cfg(feature = "render")]
 mod guide_more;
@@ -62,7 +66,7 @@ in battle that the party learns (classes.tsv and the items that teach one),
 and lists the rest with why they are left out; --ability casts one by id or
 English name. --list prints the casts instead of playing them; --verbose
 prints each run's setup: the party, the units' classes and the sprites
-BattleObjMake picks. --unlearned lets --ability name one no party list teaches,
+BattleObject_Make picks. --unlearned lets --ability name one no party list teaches,
 or one only enemies use (Fusion Dragon's Outer Space and Dragon Driver),
 cast by its element's character like the rest.
 

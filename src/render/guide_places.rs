@@ -297,7 +297,7 @@ impl<'a> Guide<'a> {
     /// screen beside the sprites and the sprite palettes, Garet, the pillar
     /// and the hand boxed, as `opening-move.gif`.
     pub fn vale_opening(&mut self) -> Result<(), String> {
-        let begin = self.overlay_sym("Vale_GetPlacements", "Scene_BeginCutscenePsynergy")?;
+        let begin = self.overlay_sym("Vale_GetPlacements", "Scene_StartCutscenePsynergy")?;
         let end = self.overlay_sym("Vale_GetPlacements", "Scene_EndCutscenePsynergy")?;
         let mut field = self.arrive((4, 16), &[], &["FLAG_PARTY_LEFT_VALE", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let on = std::rc::Rc::new(std::cell::Cell::new(false));
@@ -327,7 +327,7 @@ impl<'a> Guide<'a> {
     /// sprites and the sprite palettes while his display lasts, as
     /// `psynergy-display.gif`.
     pub fn vale_gate_display(&mut self) -> Result<(), String> {
-        let begin = self.overlay_sym("ValeGate_GetPlacements", "Scene_BeginCutscenePsynergy")?;
+        let begin = self.overlay_sym("ValeGate_GetPlacements", "Scene_StartCutscenePsynergy")?;
         let end = self.overlay_sym("ValeGate_GetPlacements", "Scene_EndCutscenePsynergy")?;
         let mut entered = self.enter_story((5, 0), &[], &["FLAG_PARTY_LEFT_VALE", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let field = &mut entered.field;
