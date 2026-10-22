@@ -516,6 +516,9 @@ pub struct Thing {
     pub tag: Option<String>,
     /// For an enumerator, its value, when it is a number or simple sum.
     pub value: Option<i64>,
+    /// For an enumerator, whether it is its enum's only one, so that the
+    /// enum's comment is its own.
+    pub alone: bool,
 }
 
 impl Thing {
@@ -812,6 +815,11 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
             if let Some(line) = evidence_line(&own, text) {
                 return line;
             }
+            if thing.alone {
+                if let Some(line) = evidence_line(&comment_words(&thing.context), text) {
+                    return line;
+                }
+            }
             let mut kinds = prose(&own, text, &mut quotes);
             let mut more = |comment: &str, kinds: &mut Vec<&'static str>| {
                 for kind in prose(comment, text, &mut quotes) {
@@ -890,6 +898,17 @@ mod tests {
             context: context.to_string(),
             ..Thing::default()
         }
+    }
+
+    #[test]
+    fn a_lone_enumerator_takes_its_enums_line() {
+        let text = GameText::parse(PO, Some(2));
+        let line = "/// The barricade is down.\n/// ★ Named from its area name: Bilibin Barricade";
+        let lone = Thing { alone: true, ..thing("FLAG_BARRICADE_DOWN", "", line) };
+        let shared = thing("FLAG_BARRICADE_UP", "", line);
+        let analysis = analyze(&[lone, shared], &[], &text, &HashMap::new());
+        let evidence: Vec<String> = analysis.rows.iter().map(|row| row.evidence.as_ref().unwrap().describe()).collect();
+        assert_eq!(evidence, ["verified area", "prose area"], "an enum of several keeps its line its own");
     }
 
     #[test]

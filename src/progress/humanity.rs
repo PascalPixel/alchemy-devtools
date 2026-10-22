@@ -609,6 +609,9 @@ struct Walk<'r, 'a> {
     enum_next: HashMap<usize, (Option<String>, Option<i64>)>,
     /// This file's enumerators with known values.
     enum_values: HashMap<String, i64>,
+    /// Each enum's enumerators, by its brace: how many, and the game things
+    /// among them (their places in the report).
+    enum_members: HashMap<usize, (usize, Vec<usize>)>,
     /// Where the directive being read starts.
     directive_start: usize,
     /// How many functions this file defines.
@@ -627,7 +630,7 @@ impl<'r, 'a> Walk<'r, 'a> {
         }
         let (tag, value) = enumerated;
         let file = self.file.to_string();
-        self.report.things.push(Thing { name: name.to_string(), kind, file, line, own, context, tag, value });
+        self.report.things.push(Thing { name: name.to_string(), kind, file, line, own, context, tag, value, alone: false });
     }
 
     /// An enumerator at `at`: its own comment and notes, up to its `,` or `}`.
@@ -668,7 +671,13 @@ impl<'r, 'a> Walk<'r, 'a> {
         if let Some(&open) = self.open.last() {
             self.enum_next.insert(open, (tag.clone(), value.map(|value| value + 1)));
         }
+        let before = self.report.things.len();
         self.thing(name, Origin::Enumerator, line, own, context, (tag, value));
+        if let Some(&open) = self.open.last() {
+            let members = self.enum_members.entry(open).or_default();
+            members.0 += 1;
+            members.1.extend(before..self.report.things.len());
+        }
     }
 
     fn name(&mut self, name: &str, line: usize) {
@@ -1203,10 +1212,19 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         defined: BTreeSet::new(),
         enum_next: HashMap::new(),
         enum_values: HashMap::new(),
+        enum_members: HashMap::new(),
         directive_start: 0,
         functions: 0,
     };
     walk.walk();
+    // An enum of one enumerator documents it: its comment is that name's own.
+    for (count, things) in walk.enum_members.values() {
+        if *count == 1 {
+            for &at in things {
+                walk.report.things[at].alone = true;
+            }
+        }
+    }
     if long && walk.functions > 0 {
         walk.report.long_files.push((path.to_string(), lines));
     }
@@ -1659,6 +1677,23 @@ mod tests {
 
     fn one(text: &str) -> Report {
         game([("f.c", text)])
+    }
+
+    #[test]
+    fn an_enum_of_one_enumerator_is_its_comment() {
+        let report = one(concat!(
+            "/// The inn worker has apologized.\n",
+            "enum { FLAG_INN_WORKER_APOLOGIZED = 0x900 };\n",
+            "/// Two flags.\n",
+            "enum {\n  FLAG_FIRST = 0x901,\n  FLAG_SECOND = 0x902\n};\n",
+            "/// One flag and a count that is not a game thing.\n",
+            "enum { FLAG_THIRD = 0x903, THIRD_COUNT = 1 };\n",
+        ));
+        let alone: Vec<(&str, bool)> = report.things.iter().map(|thing| (thing.name.as_str(), thing.alone)).collect();
+        assert_eq!(
+            alone,
+            [("FLAG_INN_WORKER_APOLOGIZED", true), ("FLAG_FIRST", false), ("FLAG_SECOND", false), ("FLAG_THIRD", false)]
+        );
     }
 
     #[test]
