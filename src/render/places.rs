@@ -539,12 +539,17 @@ impl Context<'_> {
                 if scene.map == "world" {
                     return Ok(());
                 }
-                // Gauges that hide while an event runs (the heat gauge) slide away
-                // under FLAG_CONTACT_BLOCKED before the map's moment.
-                if let Some(flag) = self.flags.resolve("FLAG_CONTACT_BLOCKED", None) {
-                    field.set_flag(flag, true);
-                    field.frames(HUD_FRAMES)?;
-                }
+                // Gauges that hide while the field loop handles a request (the
+                // heat gauge) slide away under FLAG_FIELD_HANDLING_REQUESTS
+                // before the map's moment. A flags.tsv without the name is an
+                // error: a silent miss once left the gauge in every desert map.
+                let flag = self
+                    .flags
+                    .resolve("FLAG_FIELD_HANDLING_REQUESTS", None)
+                    .or_else(|| self.flags.resolve("FLAG_CONTACT_BLOCKED", None))
+                    .ok_or("flags.tsv has no FLAG_FIELD_HANDLING_REQUESTS (FLAG_CONTACT_BLOCKED before 21 October)")?;
+                field.set_flag(flag, true);
+                field.frames(HUD_FRAMES)?;
                 let settled = field.save();
                 let bounds = field.bounds();
                 let image = field.stitch(&settled, bounds, false)?;
