@@ -161,9 +161,9 @@ impl<'a> Guide<'a> {
     /// Quake, Earthquake and Quake Sphere side by side, each from the frame
     /// its effect starts, as `effect-variants.gif`: above each, the
     /// presentationFlags word its plan holds and the kind and variant
-    /// BattleFx_RunQuake is handed, both read as the handler is entered.
+    /// BattleEffect_RunQuake is handed, both read as the handler is entered.
     pub fn effect_variants(&mut self) -> Result<(), String> {
-        let quake = self.sym("BattleFx_RunQuake")?;
+        let quake = self.sym("BattleEffect_RunQuake")?;
         let battle_work = self.sym("gBattleWork")?;
         let mut columns: Vec<(String, u32, u32, u32, Vec<Vec<u16>>)> = Vec::new();
         for name in ["Quake", "Earthquake", "Quake Sphere"] {
@@ -174,7 +174,7 @@ impl<'a> Guide<'a> {
                 let effect = gba.register(0);
                 read = Some((gba.read32(plan + PLAN_PRESENTATION_FLAGS), gba.read32(effect + EFFECT_KIND), gba.read32(effect + EFFECT_VARIANT), at));
             })?;
-            let (flags, kind, variant, _) = read.ok_or(format!("{name} never reached BattleFx_RunQuake"))?;
+            let (flags, kind, variant, _) = read.ok_or(format!("{name} never reached BattleEffect_RunQuake"))?;
             eprintln!("effect-variants: {name}: presentationFlags {flags:#x}, effect kind {kind}, variant {variant}; {} frames, effect from {start}", frames.len());
             columns.push((name.to_string(), flags, kind, variant, frames.into_iter().skip(start.saturating_sub(4)).map(|f| f.screen).collect()));
         }
@@ -397,7 +397,7 @@ impl<'a> Guide<'a> {
         let ranges = [Range { pool: Pool::Particles, first: 0, count: 32 * targets as u32 }];
         // The effect's targets in its own order, read as the handler is
         // entered: row j of PARTICLES is effect->actors[j]'s.
-        let impair = self.sym("BattleFx_RunImpair")?;
+        let impair = self.sym("BattleEffect_RunImpair")?;
         let mut actors: Vec<u32> = Vec::new();
         let (frames, start) = self.record_pools(&cast, &ranges, &[impair], &mut |gba, _, _| {
             let effect = gba.register(0);
@@ -463,7 +463,7 @@ impl<'a> Guide<'a> {
 
     /// Twin Beaks (two slashes, with sparks) and Acid Bite (three columns,
     /// with smoke), each given to Isaac against a copy of Ivan, beside the
-    /// slots BattleFx_RunTargetStrike parks: work->particles' 64 smoke
+    /// slots BattleEffect_RunTargetStrike parks: work->particles' 64 smoke
     /// puffs, PARTICLES' 128 motes and the 512 sparks from PARTICLES[512],
     /// as `target-strikes.gif`. A slot is lit while its variant is not -1;
     /// the frame a hit lights a group is held, with the slots it lit named.
