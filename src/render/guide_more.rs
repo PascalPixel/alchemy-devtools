@@ -32,7 +32,7 @@ const BILIBIN_INN: (u16, u16) = (31, 6);
 const NORTH: u32 = 0xc000;
 /// The Djinn test room (debug/rooms.c).
 const DJINN_ROOM: (u16, u16) = (191, 0);
-/// The title overlay's entrance that runs the credits (ScrollFar_Entry00).
+/// The title overlay's entrance that runs the credits (CreditsFar_Entry00).
 const CREDITS: (u16, u16) = (0, 9);
 /// Vale's actors: Garet's sister, the stone pillar Move pushes.
 const GARETS_SISTER: u16 = 18;
@@ -791,7 +791,7 @@ impl<'a> Guide<'a> {
     /// answers it (guide_cells::meaning: a wall red, an exit row blue, a
     /// touch row magenta), and each of the scene's own is joined to words
     /// saying what it does; open ground more than a step above the leader's
-    /// (MapGrid_CheckObjectStep's 8 pixels) is orange, and more than 12 below it
+    /// (MapGrid_CheckCollision's 8 pixels) is orange, and more than 12 below it
     /// purple; a white line runs wherever the ground's height changes; a key
     /// under it says what each colour stands for. Goma Cave walls its floor
     /// with rims of ground 32 pixels high, often cut on a cell's diagonal,
@@ -1136,7 +1136,7 @@ impl<'a> Guide<'a> {
     /// game turns him aside only when something blocks his way), moves no
     /// more than a running step, stands on a cell of his layer that is no
     /// wall (MB_WALL), and climbs or drops no more than
-    /// MapGrid_CheckObjectStep's 8 and 12 pixels.
+    /// MapGrid_CheckCollision's 8 and 12 pixels.
     fn check_footing(field: &mut Field, stretch: &Stretch, last: &Actor, now: &Actor) -> Result<(), String> {
         let at = format!("at ({}, {}) on layer {}", now.x, now.z, now.layer);
         let (line, was) = if stretch.across { (now.z, last.z) } else { (now.x, last.x) };
@@ -1275,7 +1275,7 @@ pub(super) const LOCALID_SLOTS: u16 = 66;
 const LEVEL_ROOM: u16 = 199;
 const MENU_TEST_ROOM: u16 = 200;
 /// The level room's placed actors, LOCALID_FIRST_PLACED on (enum
-/// ItemLevelLocalId, debug/level.c); outside Japanese all seven are placed.
+/// IncreaseItemAndLevelLocalId, debug/level.c); outside Japanese all seven are placed.
 const LEVEL_ROOM_ACTORS: std::ops::Range<u16> = 8..15;
 /// Facing west, in 1/65536 turns (NORTH is a quarter turn short of a whole).
 const WEST: u32 = 0x8000;

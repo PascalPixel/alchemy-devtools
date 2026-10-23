@@ -11,32 +11,32 @@ use super::guide_take::text;
 use super::mgba::{Gba, HEIGHT, WIDTH};
 use super::plan::{self, Ally, Aim, Cast, Command, Tables};
 
-/// gWorkSlot[HEAP_SLOT_BATTLE_EFFECT] holds struct BattleEffectWork
-/// (battle_effect_work.h); its particles are 64 struct EffectStep from
-/// 0x7080. PARTICLES is gMapGridCellBuffer, read as struct EffectStep.
-const HEAP_SLOT_BATTLE_EFFECT: u32 = 39;
+/// gHeapSlots[HEAP_SLOT_BATTLE_ANIM] holds struct BattleAnimWork
+/// (battle_effect_work.h); its particles are 64 struct Particle from
+/// 0x7080. PARTICLES is gMapGridCellBuffer, read as struct Particle.
+const HEAP_SLOT_BATTLE_ANIM: u32 = 39;
 const FX_PARTICLES: u32 = 0x7080;
-/// struct EffectStep: x, y, z, three velocities, then variant.
+/// struct Particle: x, y, z, three velocities, then variant.
 const STEP_SIZE: u32 = 28;
 const STEP_VARIANT: u32 = 24;
-/// gBattleWork->plan (struct BattlePlan) and its presentationFlags.
+/// gBattleWork->turn (struct BattleTurn) and its animation word.
 const WORK_PLAN: u32 = 0x654;
 const PLAN_PRESENTATION_FLAGS: u32 = 0x58;
-/// struct BattleEffectArgument's kind and variant.
+/// struct BattleAnimArgs's kind and variant.
 const EFFECT_KIND: u32 = 0x00;
 const EFFECT_VARIANT: u32 = 0x18;
 const EFFECT_COUNT: u32 = 0x14;
 const EFFECT_ACTORS: u32 = 0x24;
 /// The first enemy unit id.
 const FIRST_ENEMY_UNIT: u32 = 128;
-/// BattlePlan.presentationFlags' kind and variant (STAGING_ in
-/// battle_internal.h).
-const STAGING_KIND_MASK: u32 = 0xfff;
-const STAGING_VARIANT_MASK: u32 = 0x3000;
-const STAGING_VARIANT_SHIFT: u32 = 12;
+/// BattleTurn.animation's kind and variant (ANIM_ID_MASK and
+/// ANIM_VARIANT_MASK in battle_internal.h).
+const ANIM_ID_MASK: u32 = 0xfff;
+const ANIM_VARIANT_MASK: u32 = 0x3000;
+const ANIM_VARIANT_SHIFT: u32 = 12;
 
-/// The effect kinds' names by value (enum BattleEffectKind) and the
-/// variants' in order (enum EffectVariant), from effect.h.
+/// The effect kinds' names by value (enum BattleAnimId) and the
+/// variants' in order (enum AnimVariant), from effect.h.
 fn effect_names() -> Result<(std::collections::HashMap<u32, String>, Vec<String>), String> {
     let path = crate::compile::root().join("games/tbs/include/unit/effect/effect.h");
     let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
@@ -45,12 +45,12 @@ fn effect_names() -> Result<(std::collections::HashMap<u32, String>, Vec<String>
     for line in text.lines() {
         let line = line.split("///").next().unwrap_or("").trim().trim_end_matches(',');
         if let Some((name, value)) = line.split_once(" = ") {
-            if name.starts_with("BATTLE_EFFECT_") {
+            if name.starts_with("BATTLE_ANIM_") {
                 if let Ok(v) = value.trim().parse() {
                     kinds.insert(v, name.to_string());
                 }
             }
-        } else if line.starts_with("EFFECT_VARIANT_") && !line.contains(' ') {
+        } else if line.starts_with("ANIM_VARIANT_") && !line.contains(' ') {
             variants.push(line.to_string());
         }
     }
@@ -162,13 +162,13 @@ impl<'a> Guide<'a> {
     /// shortly after it is released, and the index of the first running one.
     fn record_pools(&self, cast: &Cast, ranges: &[Range], hooks: &[u32], at_hook: &mut dyn FnMut(&Gba, u32, usize)) -> Result<(Vec<Frame>, usize), String> {
         let symbols = battle::Symbols::find(self.map)?;
-        let work_slots = self.sym("gWorkSlot")?;
+        let work_slots = self.sym("gHeapSlots")?;
         let particles = self.sym("gMapGridCellBuffer")?;
         let mut frames: Vec<Frame> = Vec::new();
         battle::record_watching(self.rom, &symbols, cast, &Scene::Game, false, None, hooks, &mut |gba, hook| match hook {
             Some(pc) => at_hook(gba, pc, frames.len()),
             None => {
-                let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_EFFECT);
+                let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_ANIM);
                 let read = ranges
                     .iter()
                     .map(|r| match r.pool {
@@ -188,10 +188,10 @@ impl<'a> Guide<'a> {
 
     /// Quake, Earthquake and Quake Sphere side by side, each from the frame
     /// its effect starts, as `effect-variants.gif`: above each, the
-    /// presentationFlags word its plan holds and the kind and variant
-    /// BattleEffect_RunQuake is handed, both read as the handler is entered.
+    /// animation word its turn holds and the kind and variant
+    /// BattleAnim_RunQuake is handed, both read as the handler is entered.
     pub fn effect_variants(&mut self) -> Result<(), String> {
-        let quake = self.sym("BattleEffect_RunQuake")?;
+        let quake = self.sym("BattleAnim_RunQuake")?;
         let battle_work = self.sym("gBattleWork")?;
         let mut columns: Vec<(String, u32, u32, u32, Vec<Vec<u16>>)> = Vec::new();
         for name in ["Quake", "Earthquake", "Quake Sphere"] {
@@ -202,8 +202,8 @@ impl<'a> Guide<'a> {
                 let effect = gba.register(0);
                 read = Some((gba.read32(plan + PLAN_PRESENTATION_FLAGS), gba.read32(effect + EFFECT_KIND), gba.read32(effect + EFFECT_VARIANT), at));
             })?;
-            let (flags, kind, variant, _) = read.ok_or(format!("{name} never reached BattleEffect_RunQuake"))?;
-            eprintln!("effect-variants: {name}: presentationFlags {flags:#x}, effect kind {kind}, variant {variant}; {} frames, effect from {start}", frames.len());
+            let (flags, kind, variant, _) = read.ok_or(format!("{name} never reached BattleAnim_RunQuake"))?;
+            eprintln!("effect-variants: {name}: animation {flags:#x}, effect kind {kind}, variant {variant}; {} frames, effect from {start}", frames.len());
             columns.push((name.to_string(), flags, kind, variant, frames.into_iter().skip(start.saturating_sub(4)).map(|f| f.screen).collect()));
         }
         let (kinds, variants) = effect_names()?;
@@ -219,7 +219,7 @@ impl<'a> Guide<'a> {
                 let x = gap + k * (WIDTH + gap);
                 // The word's kind and variant fields, named as effect.h names
                 // them; the handler is handed the same two.
-                let (word_kind, word_variant) = (flags & STAGING_KIND_MASK, (flags & STAGING_VARIANT_MASK) >> STAGING_VARIANT_SHIFT);
+                let (word_kind, word_variant) = (flags & ANIM_ID_MASK, (flags & ANIM_VARIANT_MASK) >> ANIM_VARIANT_SHIFT);
                 assert_eq!((word_kind, word_variant), (*kind, *variant), "{name}: the plan's word and the handler disagree");
                 text(&mut image, x as i32 - 2, 22, &name.to_uppercase(), MARK, None, 2);
                 text(&mut image, x as i32 - 2, 42, kinds.get(kind).map_or("?", String::as_str), TEXT, None, 2);
@@ -432,7 +432,7 @@ impl<'a> Guide<'a> {
         let ranges = [Range { pool: Pool::Particles, first: 0, count: 32 * targets as u32 }];
         // The effect's targets in its own order, read as the handler is
         // entered: row j of PARTICLES is effect->actors[j]'s.
-        let impair = self.sym("BattleEffect_RunImpair")?;
+        let impair = self.sym("BattleAnim_RunImpair")?;
         let mut actors: Vec<u32> = Vec::new();
         let (frames, start) = self.record_pools(&cast, &ranges, &[impair], &mut |gba, _, _| {
             let effect = gba.register(0);
@@ -499,7 +499,7 @@ impl<'a> Guide<'a> {
 
     /// Twin Beaks (two slashes, with sparks) and Acid Bite (three columns,
     /// with smoke), each given to Isaac against a copy of Ivan, beside the
-    /// slots BattleEffect_RunTargetStrike parks: work->particles' 64 smoke
+    /// slots BattleAnim_RunTargetStrike parks: work->particles' 64 smoke
     /// puffs, PARTICLES' 128 motes and the 512 sparks from PARTICLES[512],
     /// as `target-strikes.gif`. A slot is lit while its variant is not -1;
     /// the frame a hit lights a group is held, with the slots it lit named.

@@ -188,7 +188,7 @@ pub fn affine_plane(field: &Field, bgcnt: u16) -> (Image, Vec<u8>) {
 /// affine planes (256 pixels), two squares across a plane.
 const SQUARES: usize = 16;
 const SQUARE: usize = 256;
-/// PerspectiveWork.tileIds: the square drawn at each grid place.
+/// WorldMapView.tileIds: the square drawn at each grid place.
 const TILE_IDS: u32 = 0x138;
 
 /// The share of a square's pixels that are near white: a square drawn with

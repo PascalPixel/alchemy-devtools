@@ -11,7 +11,7 @@
 //!   or the code has settled on one (`SPELLINGS`);
 //! - `synonym_referent`: one struct type that its variables call by
 //!   different spellings of its own name (`obj` and `object` for
-//!   `struct ObjectRuntime`);
+//!   `struct Object`);
 //! - `abbreviation`: a shortened word (`Cnt`, `Idx`, `Obj`) whose full word
 //!   other names spell out (`ABBREVIATIONS`);
 //! - `family_shape`: a member of a prefix family or an enum whose shape its
@@ -270,7 +270,7 @@ fn exempt(name: &Name) -> bool {
 }
 
 /// The first segment of a name with `_`, without pret's `g` or `s`: the
-/// family prefix `Battle` of `Battle_RunEncounter` and `gBattle_Work`,
+/// family prefix `Battle` of `Battle_Run` and `gBattle_Work`,
 /// `FLAG` of `FLAG_CHILDHOOD`.
 fn prefix(name: &str) -> Option<&str> {
     let (first, rest) = name.split_once('_')?;
@@ -282,7 +282,7 @@ fn prefix(name: &str) -> Option<&str> {
     Some(if pret { &first[1..] } else { first })
 }
 
-/// After the family prefix: `RunEncounter` of `Battle_RunEncounter`.
+/// After the family prefix: `Run` of `Battle_Run`.
 fn rest(name: &str) -> &str {
     name.split_once('_').map_or(name, |(_, rest)| rest)
 }
@@ -596,7 +596,7 @@ fn words_of_one_idea(
 /// `synonym_referent`: the variables of one struct type, called by
 /// different spellings of the type's own name. A variable spells its type
 /// when each of its words means one of the type's (`object` and `obj` for
-/// `struct ObjectRuntime`, `work` and `fieldWork` for `struct FieldWork`),
+/// `struct Object`, `work` and `fieldWork` for `struct FieldWork`),
 /// or it is the type's initials; names for a role (`leader`, `target`) are
 /// not spellings and are left alone. The spelling most variables use is
 /// the type's, and each other spelling is listed once, at its first use.
@@ -1096,7 +1096,7 @@ mod tests {
                 name("Map_RunCoordEventOrWarp", NameKind::Function, file, 3),
                 name("gSerialReceiveDest", NameKind::Global, file, 4),
                 name("Script_SetDestination", NameKind::Function, file, 5),
-                name("EffectStep_Coordinates", NameKind::Function, file, 6),
+                name("Particle_Coordinates", NameKind::Function, file, 6),
             ],
             ..Names::default()
         };
@@ -1170,12 +1170,12 @@ mod tests {
         let typed = |tag: &str, name: &str, line| Typed { tag: tag.to_string(), name: name.to_string(), file: "f.c".to_string(), line };
         let names = Names {
             typed: vec![
-                typed("ObjectRuntime", "object", 1),
-                typed("ObjectRuntime", "object", 2),
-                typed("ObjectRuntime", "object", 3),
-                typed("ObjectRuntime", "obj", 3),
-                typed("ObjectRuntime", "leader", 4),
-                typed("ObjectRuntime", "gObjects", 5),
+                typed("Object", "object", 1),
+                typed("Object", "object", 2),
+                typed("Object", "object", 3),
+                typed("Object", "obj", 3),
+                typed("Object", "leader", 4),
+                typed("Object", "gObjects", 5),
                 typed("FieldWork", "work", 6),
                 typed("FieldWork", "fieldWork", 7),
                 typed("FieldWork", "work", 8),
@@ -1190,7 +1190,7 @@ mod tests {
             [
                 "f.c:7 fieldWork\tstruct FieldWork: 1 uses -> work (3 uses)",
                 "f.c:9 fw\tstruct FieldWork: 1 uses -> work (3 uses)",
-                "f.c:3 obj\tstruct ObjectRuntime: 1 uses -> object (3 uses)",
+                "f.c:3 obj\tstruct Object: 1 uses -> object (3 uses)",
             ],
             "a role (leader) and a global are not spellings of the type; a list of works is work"
         );

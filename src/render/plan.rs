@@ -26,13 +26,13 @@ const JENNA_CLASS: usize = 202;
 /// record the debug menu's defaults give her.
 const PRESET_FOUR: u8 = 0;
 
-/// BattleAct.flags (struct BattleAct, battle/battle_unit.h).
+/// AbilityDefinition.flags (struct AbilityDefinition, battle/battle_unit.h).
 const USABLE_IN_BATTLE: u8 = 0x80;
 const KIND_MASK: u8 = 15;
 /// Kind 9: field Psynergy, Defend, Flee and the enemies' commands.
 const KIND_NO_POWER: u8 = 9;
 
-/// enum AbilityKind and enum AbilityEffect values the setup answers.
+/// enum AbilityFormula and enum AbilityEffect values the setup answers.
 const KIND_HEAL_HP: u8 = 1;
 const EFFECT_CURE_POISON: u8 = 3;
 const EFFECT_RESTORE: u8 = 4;
@@ -42,7 +42,7 @@ const EFFECT_REVIVE_HALF: u8 = 56;
 const EFFECT_REVIVE_80: u8 = 57;
 const EFFECT_INSTANT_DEATH: u8 = 27;
 
-/// BattleAct.targetMode.
+/// AbilityDefinition.targetMode.
 pub const TARGET_FOES: u8 = 1;
 
 /// enum Element.

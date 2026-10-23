@@ -588,7 +588,7 @@ pub const ASPECTS: &[&str] = &[
 pub const STAND_INS: &[&str] = &["blank", "mask"];
 
 /// Words that, last in a name, make it a quantity, a bound, a bit field or a
-/// place on the screen: `ITEM_STACK_MAX`, `ENEMY_CLASS_FIRST`, `SUMMON_END`,
+/// place on the screen: `ITEM_STACK_MAX`, `ENEMY_ID_FIRST`, `SUMMON_END`,
 /// `PSYNERGY_SHORTCUT_ID_MASK`, `ITEM_LIST_NAME_X`.
 pub const MEASURES: &[&str] = &[
     "count", "num", "max", "min", "first", "last", "end", "mask", "shift", "x", "y", "width", "height", "size",
@@ -649,13 +649,13 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
 /// flag the story sets), from what it is:
 ///
 /// - a function-like macro computes a value (`FLAG_IN_PARTY(character)`,
-///   `PSYNERGY_EV(phase)`);
+///   `PSYNERGY_EVENT(phase)`);
 /// - an object event whose first word is a stand-in's (`STAND_INS`),
 ///   whatever its enum, is a blank object or a mask;
 /// - an enumerator of a tagged enum is what the tag's last word says: an id
 ///   (`enum ItemId`, `enum XianLocalId`) or the family's own word holds
 ///   members, and any other word the values of a mechanism
-///   (`enum AbilityKind`, `enum ObjectEventMotionFlag`, `enum PsynergyPhase`);
+///   (`enum AbilityFormula`, `enum ObjectEventMotionFlag`, `enum PsynergyPhase`);
 /// - except that the family's own enum, tagged by the family word alone
 ///   (`enum LocalId`), numbers the engine's slots (the party leader, the first
 ///   object event a map places), not anyone a map places;
@@ -712,7 +712,7 @@ pub struct Table {
     /// The table's first message: the name of index 0.
     pub symbol: &'static str,
     /// A macro whose value the enum's numbers start from (an enemy's class id
-    /// is its row plus `ENEMY_CLASS_FIRST`), if any.
+    /// is its row plus `ENEMY_ID_FIRST`), if any.
     pub first: Option<&'static str>,
 }
 
@@ -723,7 +723,7 @@ pub struct Table {
 pub const TABLES: &[Table] = &[
     Table { tag: "ItemId", prefix: "ITEM_", symbol: "MsgItemName", first: None },
     Table { tag: "AbilityId", prefix: "ABILITY_", symbol: "MsgAbilityName", first: None },
-    Table { tag: "EnemyClassId", prefix: "ENEMY_", symbol: "MsgEnemyName", first: Some("ENEMY_CLASS_FIRST") },
+    Table { tag: "EnemyId", prefix: "ENEMY_", symbol: "MsgEnemyName", first: Some("ENEMY_ID_FIRST") },
     Table { tag: "DjinniId", prefix: "DJINNI_", symbol: "MsgDjinnName", first: None },
 ];
 
@@ -1116,9 +1116,9 @@ mod tests {
         assert_eq!(enumerator("LOCALID_MASKED_MAN", Some("ValeInteriorsInnLocalId")), Some("object event"));
         assert_eq!(enumerator("LOCALID_HIDDEN_PUDDLE", Some("LunpaLocalId")), Some("object event"), "hidden is not blank");
         assert_eq!(enumerator("ITEM_BLANK", Some("ItemId")), Some("item"), "stand-ins are actors");
-        assert_eq!(enumerator("ABILITY_KIND_SUMMON", Some("AbilityKind")), None);
+        assert_eq!(enumerator("ABILITY_FORMULA_SUMMON", Some("AbilityFormula")), None);
         assert_eq!(enumerator("OBJ_EVENT_SOLID", Some("ObjectEventCollisionFlag")), None, "an actor's bits");
-        assert_eq!(enumerator("CHARACTER_POISON", Some("CharacterAilment")), None, "a state, not a person");
+        assert_eq!(enumerator("CHARACTER_POISON", Some("UnitStatus")), None, "a state, not a person");
         assert_eq!(of("FLAG_IN_PARTY", Origin::FunctionMacro, None, None), None, "a computed value");
         assert_eq!(of("ITEM_TYPE_WEAPON", Origin::Macro, None, Some(1)), None, "an aspect");
         assert_eq!(of("PSYNERGY_STEP_TARGET", Origin::Enumerator, None, Some(3)), None);
@@ -1152,16 +1152,16 @@ mod tests {
         assert_eq!(text.table_entry("MsgEnemyName", 2), Some("Slime"));
         assert_eq!(text.table_entry("MsgNope", 0), None);
         assert_eq!(table_words("{x}Bandit's Sword"), "x bandits sword");
-        let macros = HashMap::from([("ENEMY_CLASS_FIRST".to_string(), 8)]);
+        let macros = HashMap::from([("ENEMY_ID_FIRST".to_string(), 8)]);
         let mut unknown = entry("ITEM_MYSTERY", "item", "ItemId", 0);
         unknown.value = None;
         let things = [
             entry("ITEM_BANDITS_SWORD", "item", "ItemId", 1),
             entry("ITEM_HYPER_BOOTS", "item", "ItemId", 2),
             entry("ITEM_SPEED_BOOTS", "item", "ItemId", 2),
-            entry("ENEMY_SLIME", "enemy", "EnemyClassId", 9),
-            entry("ENEMY_SLIME_2", "enemy", "EnemyClassId", 10),
-            entry("ENEMY_OOZE", "enemy", "EnemyClassId", 10),
+            entry("ENEMY_SLIME", "enemy", "EnemyId", 9),
+            entry("ENEMY_SLIME_2", "enemy", "EnemyId", 10),
+            entry("ENEMY_OOZE", "enemy", "EnemyId", 10),
             Thing { own: "/// ★ Named from the game: \"Slime\" (MsgEnemyName)".to_string(), ..entry("ITEM_X", "item", "Other", 1) },
             unknown,
         ];
@@ -1170,14 +1170,14 @@ mod tests {
         assert_eq!(evidence[0], "table MsgItemName+1");
         assert_eq!(evidence[1], "table MsgItemName+2", "a hyphen is a space");
         assert_eq!(evidence[2], "mismatch: MsgItemName+2 is \"Hyper-Boots\"");
-        assert_eq!(evidence[3], "table MsgEnemyName+1", "an enemy's row is its class id less ENEMY_CLASS_FIRST");
+        assert_eq!(evidence[3], "table MsgEnemyName+1", "an enemy's row is its class id less ENEMY_ID_FIRST");
         assert_eq!(evidence[4], "table MsgEnemyName+2 numbered");
         assert_eq!(evidence[5], "mismatch: MsgEnemyName+2 is \"Slime\"");
         assert_eq!(evidence[6], "verified quote", "an enum no table reads keeps its ★ line");
         assert_eq!(evidence[7], "none", "an unknown value is not checked");
         assert_eq!(analysis.rows[2].evidence.as_ref().unwrap().metric(), "provenance_table_mismatch");
         let without = analyze(&things[3..4], &[], &text, &HashMap::new());
-        assert_eq!(without.rows[0].evidence, Some(Evidence::None), "no ENEMY_CLASS_FIRST, no check");
+        assert_eq!(without.rows[0].evidence, Some(Evidence::None), "no ENEMY_ID_FIRST, no check");
     }
 
     #[test]

@@ -200,7 +200,7 @@ Discarded input sections
 
 Linker script and memory map
 
-                0x00000000000004ec                Resource_Decode2CodeSize = (Resource_Decode2End - Resource_Decode2)
+                0x00000000000004ec                Decompress_Type2CommandsCodeSize = (Resource_Decode2End - Decompress_Type2Commands)
 
 .rom_start      0x0000000008000000       0x30
  */recon/tbs/de/rom.o(.rom.00000000)

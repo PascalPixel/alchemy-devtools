@@ -22,10 +22,10 @@ const QUEUE_COUNT: u32 = 0x144;
 const EVENTS_PHASE: u32 = 0x148;
 const EVENTS_INDEX: u32 = 0x14c;
 const QUEUE_CAPACITY: u32 = 64;
-/// BattleWork.plan (struct BattlePlan) and its target count.
+/// BattleWork.turn (struct BattleTurn) and its target count.
 const WORK_PLAN: u32 = 0x654;
 
-/// enum BattleEventOpcode's names, as the panel prints them.
+/// enum BattlePlaybackCommand's names, as the panel prints them.
 const OPCODES: [&str; 15] = [
     "UNIT_NAME",
     "NUMBER",
@@ -100,7 +100,7 @@ fn read_events(gba: &Gba, work_slot: u32) -> Option<Events> {
     })
 }
 
-/// BattlePlan.targetCount's offset in the plan.
+/// BattleTurn.targetCount's offset in the plan.
 const PLAN_TARGET_COUNT: u32 = 0x01;
 
 /// The messages' symbols and texts by number, from the story tools'
@@ -331,7 +331,7 @@ const SLOT_SIZE: u32 = 0x2c;
 const SLOT_ANCHOR_X: u32 = 0x0c;
 const SLOT_ANCHOR_Z: u32 = 0x10;
 const UNIT_LIST_END: u16 = 0xff;
-/// BattlePresentation_SetActorModes' mode for the units a target covers.
+/// BattleHighlight_SetModes' mode for the units a target covers.
 const HIGHLIGHT_TARGETED: u32 = 1;
 
 /// The keys that open Isaac's Psynergy list from the battle's first menu,
@@ -412,7 +412,7 @@ impl<'a> Guide<'a> {
     /// (BattleUnit_RefreshPlacement, BattlePlacement_LayoutEnemies), the
     /// covered units ringed with their steps from the aimed place, as
     /// `battle-places.gif`. Which units are covered is read where the
-    /// selection marks them, at BattlePresentation_SetActorModes' entry
+    /// selection marks them, at BattleHighlight_SetModes' entry
     /// with mode 1: its list, the aimed unit first.
     pub fn battle_places(&mut self) -> Result<(), String> {
         let root = crate::compile::root();
@@ -422,7 +422,7 @@ impl<'a> Guide<'a> {
         let range = cast.ability.range as usize;
         let symbols = battle::Symbols::find(self.map)?;
         let work_slot = self.sym("gBattleWork")?;
-        let modes = self.sym("BattlePresentation_SetActorModes")?;
+        let modes = self.sym("BattleHighlight_SetModes")?;
         // (frame, covered units, aimed first) at each marking; the places.
         let mut marks: Vec<(usize, Vec<u16>)> = Vec::new();
         let mut frame = 0usize;
@@ -527,15 +527,15 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// The effect's heap slots (heap_state.h): gWorkSlot[HEAP_SLOT_BATTLE_EFFECT]
-/// holds struct BattleEffectWork (battle_effect_work.h).
-const HEAP_SLOT_BATTLE_EFFECT: u32 = 39;
+/// The effect's heap slots (heap_state.h): gHeapSlots[HEAP_SLOT_BATTLE_ANIM]
+/// holds struct BattleAnimWork (battle_effect_work.h).
+const HEAP_SLOT_BATTLE_ANIM: u32 = 39;
 const FX_PARTICLES: u32 = 0x7080;
 const FX_TRANSFER_MODE: u32 = 0x7780;
 const FX_TRANSFER_VALUE: u32 = 0x7784;
 const FX_TRANSFER_PENDING: u32 = 0x7824;
 const HEAP_SLOT_BATTLE_CANVAS: u32 = 40;
-/// struct EffectStep: x, y, z, three velocities, then variant.
+/// struct Particle: x, y, z, three velocities, then variant.
 const STEP_SIZE: u32 = 28;
 const STEP_X: u32 = 0;
 const STEP_VARIANT: u32 = 24;
@@ -578,7 +578,7 @@ struct FxFrame {
 }
 
 fn read_fx(gba: &Gba, work_slots: u32, pool: u32) -> FxFrame {
-    let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_EFFECT);
+    let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_ANIM);
     let running = work != 0;
     let mut canvas = vec![0u8; CANVAS_SIDE * CANVAS_SIDE];
     for (i, px) in canvas.iter_mut().enumerate() {
@@ -626,7 +626,7 @@ impl<'a> Guide<'a> {
     /// Garet's Heat Wave at Mia, as `render psynergy` casts it, with each
     /// frame's effect state; `force`, when given, is written over
     /// work->transferMode and transferValue each time
-    /// BattleEffect_ProcessPendingGraphicsTransfer runs. Only the frames from
+    /// BattleAnim_ProcessPendingGraphicsTransfer runs. Only the frames from
     /// shortly before the effect's work block is taken to shortly after it
     /// is released are kept.
     fn heat_wave(&self, force: Option<(u32, u32)>) -> Result<Vec<FxFrame>, String> {
@@ -642,15 +642,15 @@ impl<'a> Guide<'a> {
         let plan = Tables::read(root)?.plan()?;
         let cast: Cast = plan.casts.into_iter().find(|c| c.ability.name == "Heat Wave").ok_or("no Heat Wave cast")?;
         let symbols = battle::Symbols::find(self.map)?;
-        let work_slots = self.sym("gWorkSlot")?;
+        let work_slots = self.sym("gHeapSlots")?;
         let pool = self.sym("gMapGridCellBuffer")?;
-        let transfer = self.sym("BattleEffect_ProcessPendingGraphicsTransfer")?;
+        let transfer = self.sym("BattleAnim_ProcessPendingGraphicsTransfer")?;
         let mut copies: Vec<Image> = Vec::new();
         let mut copy_frames: Vec<usize> = Vec::new();
         let mut frames: Vec<FxFrame> = Vec::new();
         battle::record_watching(self.rom, &symbols, &cast, &Scene::Game, false, None, &[transfer], &mut |gba, hook| match hook {
             Some(_) => {
-                let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_EFFECT);
+                let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_ANIM);
                 if work != 0 && gba.read32(work + FX_TRANSFER_PENDING) != 0 {
                     let block = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_CANVAS);
                     let mut frame = read_fx(gba, work_slots, pool);
@@ -662,7 +662,7 @@ impl<'a> Guide<'a> {
                     copy_frames.push(frames.len());
                 }
                 if let Some((mode, value)) = force {
-                    let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_EFFECT);
+                    let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_ANIM);
                     if work != 0 {
                         gba.write32(work + FX_TRANSFER_MODE, mode);
                         gba.write32(work + FX_TRANSFER_VALUE, value);
@@ -835,11 +835,11 @@ fn fill(image: &mut Image, x: usize, y: usize, w: usize, h: usize, colour: u32) 
     }
 }
 
-/// struct MotionObject's sprite (motobj.h) and struct AnimationObject and
-/// AnimationEntry (animspr.h).
+/// struct MotionObject's sprite (motobj.h) and struct Sprite and
+/// SpriteAnim (animspr.h).
 const MOTION_RECORDS: u32 = 0x50;
 const MOTION_RECORD_KIND: u32 = 0x54;
-const RECORDS_SINGLE: u8 = 1;
+const OBJECT_SPRITES_ONE: u8 = 1;
 const SPRITE_IMAGE_ATTR2: u32 = 0x08;
 const SPRITE_WIDTH: u32 = 0x20;
 const SPRITE_HEIGHT: u32 = 0x21;
@@ -850,7 +850,7 @@ const ENTRY_ANIM_ID: u32 = 0x00;
 const ENTRY_PRIORITY: u32 = 0x06;
 const ENTRY_STEP: u32 = 0x15;
 const ENTRY_FRAME: u32 = 0x16;
-/// A layer whose priority is above 3 is not drawn (Sprite_ComposeAnimationFrame).
+/// A layer whose priority is above 3 is not drawn (Sprite_ComposeFrame).
 const HIDDEN_PRIORITY: u8 = 9;
 const OBJ_TILES: u32 = 0x0601_0000;
 const OBJ_PALETTE: u32 = 0x0500_0200;
@@ -902,7 +902,7 @@ struct SpriteApart {
     composed: Image,
 }
 
-/// Runs the machine to the game's next call of Sprite_ComposeAnimationFrame
+/// Runs the machine to the game's next call of Sprite_ComposeFrame
 /// for `sprite` and there lets it draw only layer `only` (the others'
 /// priority raised past 3), its scripts held still (every layer's step 0);
 /// reads the buffer back from video memory when the call returns, and puts
@@ -945,7 +945,7 @@ impl<'a> Guide<'a> {
     /// enemy), his battle sprite taken apart each frame one of its layers
     /// changes: the body (entries[0], BattleObject.resource) and the weapon
     /// (entries[1], BattleObject.overlay) each composed alone by the game's own
-    /// Sprite_ComposeAnimationFrame, the other layer's priority raised past
+    /// Sprite_ComposeFrame, the other layer's priority raised past
     /// 3 and the scripts held still, and the buffer it composes from both,
     /// read back from the sprite's tiles in video memory, beside the screen,
     /// as `sprite-layers.gif`.
@@ -955,7 +955,7 @@ impl<'a> Guide<'a> {
         let mut cast: Cast = plan.casts.into_iter().find(|c| c.ability.name == "Quake").ok_or("no Quake cast")?;
         cast.foes = vec![plan::IVAN];
         let symbols = battle::Symbols::find(self.map)?;
-        let compose = self.sym("Sprite_ComposeAnimationFrame")?;
+        let compose = self.sym("Sprite_ComposeFrame")?;
         let work_slot = self.sym("gBattleWork")?;
         let script = [(0, 20), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 170)];
         let mut aparts: Vec<SpriteApart> = Vec::new();
@@ -973,7 +973,7 @@ impl<'a> Guide<'a> {
             // Isaac is party unit 0: his battle object's single sprite.
             let slot = work + WORK_SLOTS + SLOT_SIZE * u32::from(gba.read8(work + WORK_PLACEMENT));
             let object = gba.read32(slot);
-            if object == 0 || gba.read8(object + MOTION_RECORD_KIND) & 15 != RECORDS_SINGLE {
+            if object == 0 || gba.read8(object + MOTION_RECORD_KIND) & 15 != OBJECT_SPRITES_ONE {
                 return;
             }
             let sprite = gba.read32(object + MOTION_RECORDS);
@@ -1094,7 +1094,7 @@ impl<'a> Guide<'a> {
     /// weapon shop (row 4) has been opened for the first time in a run of
     /// its own. Each time the Buy list and the Artifacts list are shown, as
     /// `shop-counters.png`, with the row's items and artifacts read from the
-    /// shop's work block (ShopRuntime.stockItemIds) and the counters above
+    /// shop's work block (ShopWork.stockItemIds) and the counters above
     /// zero.
     pub fn shop_counters(&mut self) -> Result<(), String> {
         let names = item_names()?;
@@ -1196,7 +1196,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// ShopRuntime.stockItemIds (shop.h).
+/// ShopWork.stockItemIds (shop.h).
 const SHOP_STOCK_ITEMS: u32 = 0x26c;
 /// Every 9-bit item id, as Shop_ListAvailableArtifacts tries them.
 const ITEM_IDS: u32 = 512;

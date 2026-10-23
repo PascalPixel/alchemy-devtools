@@ -112,7 +112,7 @@ pub struct Report {
     /// The provenance checks, when the game has its English text.
     pub provenance: Option<Analysis>,
     /// Object-like macros whose value is a number or a simple sum, for the
-    /// tables' first numbers (`ENEMY_CLASS_FIRST`).
+    /// tables' first numbers (`ENEMY_ID_FIRST`).
     pub macro_values: HashMap<String, i64>,
     /// Each lone argument in code, settled once every declaration is read.
     arguments: Vec<Argument>,
@@ -725,7 +725,7 @@ impl<'r, 'a> Walk<'r, 'a> {
     }
 
     /// A variable, parameter or member declared with a struct or union type
-    /// (`struct BattleUnit *unit`), for the names one type goes by.
+    /// (`struct Unit *unit`), for the names one type goes by.
     fn typed(&mut self, at: usize) {
         let tokens = &self.code.tokens;
         let Some(tag) = tokens.get(at + 1).filter(|t| t.kind == Kind::Ident && !is_keyword(t.text)) else { return };
@@ -1995,7 +1995,7 @@ mod tests {
 
     #[test]
     fn entry_points_need_their_summary() {
-        let far = "/// Draws a number.\nvoid UiText_DrawNumberFar(s32 number);\nvoid UiText_ClearFar(void);\n";
+        let far = "/// Draws a number.\nvoid Text_DrawNumberFar(s32 number);\nvoid UiText_ClearFar(void);\n";
         let source = "void UiText_ClearFar(void) {}\nvoid Helper(void) {}\n";
         let report = game([("games/tbs/include/farcall/window.h", far), ("games/tbs/src/window/text.c", source)]);
         assert_eq!(list(&[("tbs", &report)], "undocumented_entry"), "tbs\tgames/tbs/src/window/text.c:1\tUiText_ClearFar\n");
@@ -2136,16 +2136,16 @@ mod provenance_tests {
         );
         let text = GameText::parse(po, None);
         let header = concat!(
-            "/// The first class id.\n#define ENEMY_CLASS_FIRST 8\n",
-            "/// Classes.\nenum EnemyClassId {\n",
-            "  ENEMY_VERMIN = ENEMY_CLASS_FIRST + 1,\n  ENEMY_VERMIN_2,\n  ENEMY_RAT = 0xb, ///< a rat\n};\n",
+            "/// The first class id.\n#define ENEMY_ID_FIRST 8\n",
+            "/// Classes.\nenum EnemyId {\n",
+            "  ENEMY_VERMIN = ENEMY_ID_FIRST + 1,\n  ENEMY_VERMIN_2,\n  ENEMY_RAT = 0xb, ///< a rat\n};\n",
             "enum { ENEMY_NOT_IN_A_TABLE = 9 };\n",
         );
         let report = game_with_text([("games/tbs/include/enemy_ids.h", header)], Some(&text));
         let values: Vec<(Option<&str>, Option<i64>)> =
             report.things.iter().map(|thing| (thing.tag.as_deref(), thing.value)).collect();
-        assert_eq!(values, [(Some("EnemyClassId"), Some(9)), (Some("EnemyClassId"), Some(10)), (Some("EnemyClassId"), Some(11)), (None, Some(9))]);
-        assert_eq!(report.macro_values.get("ENEMY_CLASS_FIRST"), Some(&8));
+        assert_eq!(values, [(Some("EnemyId"), Some(9)), (Some("EnemyId"), Some(10)), (Some("EnemyId"), Some(11)), (None, Some(9))]);
+        assert_eq!(report.macro_values.get("ENEMY_ID_FIRST"), Some(&8));
         assert_eq!(report.value("provenance_table"), 2, "ENEMY_VERMIN and ENEMY_VERMIN_2");
         assert_eq!(report.value("provenance_table_mismatch"), 1);
         assert_eq!(list(&[("tbs", &report)], "provenance_table_mismatch"), "tbs\tgames/tbs/include/enemy_ids.h:7\tENEMY_RAT\tMad Vermin\n");
@@ -2178,10 +2178,10 @@ mod naming_tests {
     fn names_are_read_for_the_naming_checks() {
         let guide = "# Battle\n\n| `Battle_` | the battle |\n";
         let code = concat!(
-            "struct BattleUnit { u8 itemCnt; u16 count; void (*draw)(void); };\n",
+            "struct Unit { u8 itemCnt; u16 count; void (*draw)(void); };\n",
             "enum Mode { MODE_IDLE, MODE_WALK, MODE_RUN };\n",
             "#define UNIT_COUNT 4\n",
-            "void Battle_Run(struct BattleUnit *unit) { struct BattleUnit *target; }\n",
+            "void Battle_Run(struct Unit *unit) { struct Unit *target; }\n",
             "void Spoils_Count(void) {}\n",
         );
         let report = game([("games/tbs/src/battle/README.md", guide), ("games/tbs/src/battle/a.c", code)]);
@@ -2192,7 +2192,7 @@ mod naming_tests {
                 ("itemCnt", NameKind::Field),
                 ("count", NameKind::Field),
                 ("draw", NameKind::Field),
-                ("BattleUnit", NameKind::Tag),
+                ("Unit", NameKind::Tag),
                 ("MODE_IDLE", NameKind::Enumerator),
                 ("MODE_WALK", NameKind::Enumerator),
                 ("MODE_RUN", NameKind::Enumerator),
@@ -2203,7 +2203,7 @@ mod naming_tests {
             ]
         );
         let typed: Vec<(&str, &str)> = report.naming.typed.iter().map(|typed| (typed.tag.as_str(), typed.name.as_str())).collect();
-        assert_eq!(typed, [("BattleUnit", "unit"), ("BattleUnit", "target")]);
+        assert_eq!(typed, [("Unit", "unit"), ("Unit", "target")]);
         assert_eq!(
             list(&[("tbs", &report)], "prefix_unlisted"),
             "tbs\tgames/tbs/src/battle/a.c:5\tSpoils_\t1 functions; not in src/battle/README.md or another folder guide (first: Spoils_Count)\n"

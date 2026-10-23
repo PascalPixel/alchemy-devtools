@@ -20,7 +20,7 @@ const KEY_DOWN: u32 = 0x80;
 const STATE_ACTIVE_OWNERS: u32 = 0x1f8;
 const STATE_BATTLE_START: u32 = 0x22b;
 const STATE_OWNERS: u32 = 0x2c0;
-/// gGameState.battleStart: BATTLE_START_NORMAL rolls a first strike; 1, which
+/// gGameState.battleType: BATTLE_TYPE_NORMAL rolls a first strike; 1, which
 /// no battle start names, leaves the battle to open normally, as `render
 /// psynergy` sets it.
 const BATTLE_START_SET: u8 = 1;
@@ -34,7 +34,7 @@ pub(super) const PANEL_MARK: u32 = 0xff_d8_40;
 pub(super) const PANEL_HEAD: u32 = 0x9c_c8_ff;
 
 /// What a battle run is: the debug party preset and party, the formation
-/// (a row of formatn.tsv), gGameState.battleStart and the function entries
+/// (a row of formatn.tsv), gGameState.battleType and the function entries
 /// the watcher is called at.
 pub(super) struct Drive {
     pub preset: u8,
@@ -74,7 +74,7 @@ impl<'a> Guide<'a> {
             start: at("Game_RunFar")?,
             menu: at("DebugBattle_RunMenu")?,
             preset: at("DebugParty_LoadPreset")?,
-            encounter: at("Battle_RunEncounter")?,
+            encounter: at("Battle_Run")?,
             game_state: at("gGameState")?,
             game_flags: at("gGameFlagBytes")?,
         };
@@ -196,7 +196,7 @@ const PLACE_COLOURS: [u32; 8] = [0xe0_60_50, 0xe0_a0_40, 0xd0_d0_50, 0x70_c0_60,
 /// 90, the Gryphon: ACTION_STRATEGY_FALLING and eight different actions.
 const GRYPHONS: u32 = 294;
 const GRYPHON: usize = 90;
-/// struct BattleActionRecord (battle_session.h).
+/// struct BattleAction (battle_session.h).
 const RECORD_UNIT: u32 = 0x00;
 const RECORD_COMMAND: u32 = 0x06;
 const RECORD_PARAMETER: u32 = 0x08;
@@ -215,21 +215,21 @@ const FIRST_ENEMY_UNIT: u32 = 128;
 
 impl<'a> Guide<'a> {
     /// Two Gryphons against the four at level 35: at the first Gryphon's
-    /// turn, BattleCommand_SelectAutomatic (retry 1) is run 256 times from
+    /// turn, BattleAI_ChooseAction (retry 1) is run 256 times from
     /// the same saved moment, its first Battle_Random answered with each
     /// roll from 0 to 255 in turn, and the action it settles on read from
     /// the request it fills; beside the screen of the turn as it then plays,
     /// with the Gryphon's eight places, the weights of its strategy's row of
-    /// gBattleCommand_SelectionWeights read from the ROM, and the rolls each
+    /// gBattleAI_ActionWeights read from the ROM, and the rolls each
     /// place took, as `enemy-actions.png`.
     pub fn enemy_actions(&mut self) -> Result<(), String> {
         let names = ability_names()?;
         let row = table_row("game/enemies.tsv", GRYPHON)?;
         let strategy: u32 = row["action_strategy"].parse().map_err(|_| "no action_strategy")?;
         let actions: Vec<usize> = (0..8).map(|i| row[&format!("action{i}")].parse().unwrap_or(0)).collect();
-        let select = self.sym("BattleCommand_SelectAutomatic")?;
+        let select = self.sym("BattleAI_ChooseAction")?;
         let random = self.sym("Battle_Random")?;
-        let weights_at = self.sym("gBattleCommand_SelectionWeights")?;
+        let weights_at = self.sym("gBattleAI_ActionWeights")?;
         let drive = self.quake_drive(GRYPHONS, BATTLE_START_SET, vec![select])?;
         // Each roll's (command, ability) and the Battle_Random calls made.
         let mut picks: Vec<(u16, u16, u32)> = Vec::new();
@@ -330,25 +330,25 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// struct BattleWork's encounterMode (battle_work.h) and enum
+/// struct BattleWork's firstStrike (battle_work.h) and enum
 /// BattleEncounterMode's names.
 const WORK_ENCOUNTER_MODE: u32 = 0x45;
 fn encounter_name(mode: u8) -> &'static str {
     match mode {
-        0 => "BATTLE_ENCOUNTER_NORMAL",
-        1 => "BATTLE_ENCOUNTER_PARTY_FIRST",
-        2 => "BATTLE_ENCOUNTER_ENEMIES_FIRST",
+        0 => "FIRST_STRIKE_NONE",
+        1 => "FIRST_STRIKE_PARTY",
+        2 => "FIRST_STRIKE_ENEMIES",
         _ => "?",
     }
 }
 /// formatn.tsv row 296: a fixed formation of four, the Lizard King, a
 /// Harridan and two Stone Soldiers.
 const FOUR_ENEMIES: u32 = 296;
-/// struct BattleUnit's classId, an enemy's row of enemies.tsv plus ENEMY_CLASS_FIRST.
-const ENEMY_CLASS_FIRST: usize = 8;
+/// struct Unit's id, an enemy's row of enemies.tsv plus ENEMY_ID_FIRST.
+const ENEMY_ID_FIRST: usize = 8;
 const UNIT_CLASS_ID: u32 = 0x128;
 const UNIT_SIZE: u32 = 0x14c;
-const BATTLE_START_NORMAL: u8 = 0;
+const BATTLE_TYPE_NORMAL: u8 = 0;
 /// The numbers of MsgPartyStrikesFirst and MsgPartySurprised (text/en.po).
 const MSG_PARTY_STRIKES_FIRST: u32 = 2066;
 const MSG_PARTY_SURPRISED: u32 = 2067;
@@ -358,7 +358,7 @@ const MESSAGE_SHOWN: usize = 70;
 const ANNOUNCED: usize = 40;
 const MESSAGE_HELD: usize = 90;
 
-/// One run of `first-strikes`: its frames, each frame's encounterMode, and
+/// One run of `first-strikes`: its frames, each frame's firstStrike, and
 /// each action dispatched in the first round (frame, unit, command).
 struct Opening {
     frames: Vec<Vec<u16>>,
@@ -384,22 +384,22 @@ impl<'a> Guide<'a> {
         if u32::from(unit) < FIRST_ENEMY_UNIT {
             return plan::character_name(unit as u8).to_string();
         }
-        let enemies = self.sym("gBattleOwnerStates").map(|s| gba.read32(s)).unwrap_or(0);
+        let enemies = self.sym("gEnemyUnits").map(|s| gba.read32(s)).unwrap_or(0);
         let class = gba.read8(enemies + (u32::from(unit) - FIRST_ENEMY_UNIT) * UNIT_SIZE + UNIT_CLASS_ID);
-        table_row("game/enemies.tsv", usize::from(class).wrapping_sub(ENEMY_CLASS_FIRST)).ok().and_then(|r| r.get("enemy").cloned()).unwrap_or(format!("UNIT {unit}"))
+        table_row("game/enemies.tsv", usize::from(class).wrapping_sub(ENEMY_ID_FIRST)).ok().and_then(|r| r.get("enemy").cloned()).unwrap_or(format!("UNIT {unit}"))
     }
 
     /// The four against FOUR_ENEMIES in a random encounter
-    /// (BATTLE_START_NORMAL), Battle_RunEncounter's first-strike rolls
+    /// (BATTLE_TYPE_NORMAL), Battle_Run's first-strike rolls
     /// answered with `answers` in turn, played to the second round's
     /// commands.
     fn opening(&self, answers: &[u32]) -> Result<Opening, String> {
         let random = self.sym("Battle_Random")?;
-        let build = self.sym("BattlePresentation_BuildActions")?;
-        let dispatch = self.sym("BattlePresentation_DispatchAction")?;
-        let message = self.sym("UiText_ShowMessageAndWaitCore")?;
+        let build = self.sym("Battle_GatherActions")?;
+        let dispatch = self.sym("BattleStaging_DispatchAction")?;
+        let message = self.sym("BattleMessage_ShowAndWait")?;
         let work_slot = self.sym("gBattleWork")?;
-        let drive = self.quake_drive(FOUR_ENEMIES, BATTLE_START_NORMAL, vec![random, build, dispatch, message])?;
+        let drive = self.quake_drive(FOUR_ENEMIES, BATTLE_TYPE_NORMAL, vec![random, build, dispatch, message])?;
         let mut out = Opening { frames: Vec::new(), modes: Vec::new(), acts: Vec::new(), rolls: Vec::new(), message: None };
         let mut rounds = 0;
         let mut end: Option<usize> = None;
@@ -407,7 +407,7 @@ impl<'a> Guide<'a> {
             match hook {
                 Some(h) if h == random => {
                     let lr = gba.register(LR) & !1;
-                    if self.function_at(lr) == "Battle_RunEncounter" {
+                    if self.function_at(lr) == "Battle_Run" {
                         let n = out.rolls.len();
                         if let Some(&a) = answers.get(n) {
                             gba.return_now(a);
@@ -453,11 +453,11 @@ impl<'a> Guide<'a> {
     }
 
     /// A random encounter with four enemies opened twice: once with the
-    /// party striking first (Battle_RunEncounter's first Battle_Random
+    /// party striking first (Battle_Run's first Battle_Random
     /// answered 0, so `& 15` is 0) and once caught by surprise (answered 1,
     /// then 0 for the second roll's `& 31`); each played through its first
     /// round to the second round's commands, side by side, with
-    /// BattleWork.encounterMode as each frame leaves it and the actions the
+    /// BattleWork.firstStrike as each frame leaves it and the actions the
     /// round dispatched, as `first-strikes.gif`.
     pub fn first_strikes(&mut self) -> Result<(), String> {
         let first = self.opening(&[0])?;
@@ -490,10 +490,10 @@ impl<'a> Guide<'a> {
             let (first_act, last_act) = (acts.first().ok_or("no action")?, acts.last().ok_or("no action")?);
             let who = |a: &(usize, String, u16)| a.1.to_uppercase();
             let shots = [
-                (m + MESSAGE_SHOWN, format!("ENCOUNTERMODE {}", encounter_name(run.modes[m]))),
+                (m + MESSAGE_SHOWN, format!("FIRSTSTRIKE {}", encounter_name(run.modes[m]))),
                 (first_act.0 + ANNOUNCED, format!("{} ACTS: THE ROUND'S FIRST ACTION", who(first_act))),
                 (last_act.0 + ANNOUNCED, format!("{} ACTS: THE {} AND LAST ACTION", who(last_act), ["", "FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH"].get(acts.len()).copied().unwrap_or("LAST"))),
-                (run.frames.len() - 1, format!("ROUND 2: ENCOUNTERMODE {}", encounter_name(*run.modes.last().unwrap_or(&0)))),
+                (run.frames.len() - 1, format!("ROUND 2: FIRSTSTRIKE {}", encounter_name(*run.modes.last().unwrap_or(&0)))),
             ];
             for (r, (f, caption)) in shots.iter().enumerate() {
                 let y = 44 + r * SHOT;
@@ -512,7 +512,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// struct BattlePlan (battle_type.h) at BattleWork.plan.
+/// struct BattleTurn (battle_type.h) at BattleWork.turn.
 const WORK_PLAN: u32 = 0x654;
 const PLAN_TARGET_IDS: u32 = 0x02;
 
@@ -536,7 +536,7 @@ impl<'a> Guide<'a> {
     /// copies of `foes`, as `render psynergy` casts it, with every call of
     /// Battle_GetElementMultiplier read at its entry (the difference passed,
     /// and whether it is halved) and at its return, and the target
-    /// BattleTarget_Execute is dealing with; returns those and the frames.
+    /// BattleAbility_ApplyToTarget is dealing with; returns those and the frames.
     fn element_calls(&self, foes: &[u8], menu: Option<&[(u32, u32)]>) -> Result<(Vec<Multiplied>, Vec<Vec<u16>>), String> {
         let root = crate::compile::root();
         let plan = Tables::read(root)?.plan()?;
@@ -544,7 +544,7 @@ impl<'a> Guide<'a> {
         cast.foes = foes.to_vec();
         let symbols = super::battle::Symbols::find(self.map)?;
         let multiplier = self.sym("Battle_GetElementMultiplier")?;
-        let exec = self.sym("BattleTarget_Execute")?;
+        let exec = self.sym("BattleAbility_ApplyToTarget")?;
         let mut calls = Vec::new();
         let mut unit = 0u16;
         let mut frame = 0usize;
@@ -668,12 +668,12 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// struct BattlePlan's per-target fields, the first target's.
+/// struct BattleTurn's per-target fields, the first target's.
 const PLAN_MULTIPLIER: u32 = 0x1e;
 const PLAN_CRITICAL: u32 = 0x2c;
 const PLAN_ABILITY: u32 = 0x4c;
 const PLAN_FLAGS: u32 = 0x58;
-/// struct BattleUnit's inventory (battle_unit.h) and an entry's parts
+/// struct Unit's inventory (battle_unit.h) and an entry's parts
 /// (enum InventoryEncoding).
 const UNIT_INVENTORY: u32 = 0xd8;
 const INVENTORY_SLOTS: u32 = 15;
@@ -705,7 +705,7 @@ struct Roll {
 struct Rolled {
     frames: Vec<Vec<u16>>,
     rolls: Vec<Roll>,
-    /// The plan as BattleTarget_Execute first reads it: ability, multiplier,
+    /// The plan as BattleAbility_ApplyToTarget first reads it: ability, multiplier,
     /// critical, presentation flags.
     plan: (u32, i8, i8, u32),
     /// Frames each message started.
@@ -714,7 +714,7 @@ struct Rolled {
 
 impl<'a> Guide<'a> {
     /// Isaac attacks a copy of Ivan through the command menu, the rolls
-    /// BattleCommand_BuildPlan and RollWeaponUnleash ask Battle_Random for
+    /// BattleTurn_Build and RollWeaponUnleash ask Battle_Random for
     /// answered in turn from `plan_answers` and `unleash`, and, with
     /// `weapon`, that item in place of his equipped weapon as the battle
     /// opens.
@@ -726,9 +726,9 @@ impl<'a> Guide<'a> {
         let symbols = super::battle::Symbols::find(self.map)?;
         let random = self.sym("Battle_Random")?;
         let work_slot = self.sym("gBattleWork")?;
-        let exec = self.sym("BattleTarget_Execute")?;
-        let encounter = self.sym("Battle_RunEncounter")?;
-        let message = self.sym("UiText_ShowMessageAndWaitCore")?;
+        let exec = self.sym("BattleAbility_ApplyToTarget")?;
+        let encounter = self.sym("Battle_Run")?;
+        let message = self.sym("BattleMessage_ShowAndWait")?;
         let owner = self.sym("gGameState")? + STATE_OWNERS;
         let types: Vec<String> = {
             let path = root.join("games/tbs/src/game/items.tsv");
@@ -757,7 +757,7 @@ impl<'a> Guide<'a> {
             Some(h) if h == random && !planned => {
                 let by = self.function_at(gba.register(LR) & !1);
                 let answer = match by.as_str() {
-                    "BattleCommand_BuildPlan" => {
+                    "BattleTurn_Build" => {
                         asked += 1;
                         plan_answers.get(asked - 1).copied()
                     }
@@ -767,7 +767,7 @@ impl<'a> Guide<'a> {
                 if let Some(a) = answer {
                     gba.return_now(a);
                     out.rolls.push(Roll { by, answer: a, forced: true });
-                } else if by == "BattleCommand_BuildPlan" || by == "RollWeaponUnleash" {
+                } else if by == "BattleTurn_Build" || by == "RollWeaponUnleash" {
                     out.rolls.push(Roll { by, answer: 0, forced: false });
                 }
             }
@@ -796,7 +796,7 @@ impl<'a> Guide<'a> {
     /// critical hit (the miss roll 1, the critical roll 0), and, wearing the
     /// Swift Sword, its unleash Sonic Smash (the unleash roll 0) struck
     /// three times (the blow roll 0, under 153); each beside the plan's
-    /// rolls and the fields BattleTarget_Execute then reads, as
+    /// rolls and the fields BattleAbility_ApplyToTarget then reads, as
     /// `plan-rolls.png`.
     pub fn plan_rolls(&mut self) -> Result<(), String> {
         let names = ability_names()?;
@@ -870,29 +870,29 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// BattlePlan.outcome (enum BattlePlanStaging).
+/// BattleTurn.staging (enum BattleStaging).
 const PLAN_OUTCOME: u32 = 0x54;
-const PLAN_SHOW_FLEE: u32 = 7;
+const STAGING_FLEE: u32 = 7;
 fn outcome_name(o: u32) -> &'static str {
     match o {
-        1 => "PLAN_SHOW_MESSAGES",
-        2 => "PLAN_SHOW_ATTACK",
-        3 => "PLAN_SHOW_CAST",
-        4 => "PLAN_SHOW_ITEM",
-        5 => "PLAN_SHOW_SUMMON",
-        6 => "PLAN_SHOW_DJINNI",
-        7 => "PLAN_SHOW_FLEE",
-        8 => "PLAN_SHOW_ENEMY_CAST",
-        9 => "PLAN_SHOW_FULL_SCREEN",
+        1 => "STAGING_MESSAGES",
+        2 => "STAGING_ATTACK",
+        3 => "STAGING_CAST",
+        4 => "STAGING_ITEM",
+        5 => "STAGING_SUMMON",
+        6 => "STAGING_DJINNI",
+        7 => "STAGING_FLEE",
+        8 => "STAGING_ENEMY_CAST",
+        9 => "STAGING_FULL_SCREEN",
         _ => "?",
     }
 }
 
 impl<'a> Guide<'a> {
     /// Isaac's Quake at copies of Garet, Ivan and Mia as `render psynergy`
-    /// casts it, with BattleWork.plan.outcome rewritten to `outcome` (when
-    /// given) where BattleCommand_BuildPlan returns to
-    /// BattlePresentation_DispatchAction, before the dispatch switches on
+    /// casts it, with BattleWork.turn.staging rewritten to `outcome` (when
+    /// given) where BattleTurn_Build returns to
+    /// BattleStaging_DispatchAction, before the dispatch switches on
     /// it; returns the frames, the outcome the plan held, and the return
     /// address found.
     fn staged_quake(&self, outcome: Option<u32>, back: u32) -> Result<(Vec<Vec<u16>>, u32, u32), String> {
@@ -900,7 +900,7 @@ impl<'a> Guide<'a> {
         let plan = Tables::read(root)?.plan()?;
         let cast = plan.casts.into_iter().find(|c| c.ability.name == "Quake").ok_or("no Quake cast")?;
         let symbols = super::battle::Symbols::find(self.map)?;
-        let build = self.sym("BattleCommand_BuildPlan")?;
+        let build = self.sym("BattleTurn_Build")?;
         let work_slot = self.sym("gBattleWork")?;
         let mut found = 0;
         let mut own = 0;
@@ -920,12 +920,12 @@ impl<'a> Guide<'a> {
     }
 
     /// Quake played seven times, its plan's outcome rewritten each time to
-    /// one of PLAN_SHOW_CAST to PLAN_SHOW_FULL_SCREEN as the plan returns,
+    /// one of STAGING_CAST to STAGING_FULL_SCREEN as the plan returns,
     /// so the dispatch stages the same action each way; side by side, frame
     /// for frame, as `staging.gif`.
     pub fn staging(&mut self) -> Result<(), String> {
         let (_, _, back) = self.staged_quake(None, 0)?;
-        eprintln!("staging: BattleCommand_BuildPlan returns to {back:#x} ({})", self.function_at(back));
+        eprintln!("staging: BattleTurn_Build returns to {back:#x} ({})", self.function_at(back));
         let mut runs = Vec::new();
         for o in 3..=9u32 {
             let (frames, own, _) = self.staged_quake(Some(o), back)?;
@@ -933,7 +933,7 @@ impl<'a> Guide<'a> {
             runs.push((o, own, frames));
         }
         // Fleeing ends the battle; the others end with the round.
-        let n = runs.iter().filter(|r| r.0 != PLAN_SHOW_FLEE).map(|r| r.2.len()).max().unwrap_or(0);
+        let n = runs.iter().filter(|r| r.0 != STAGING_FLEE).map(|r| r.2.len()).max().unwrap_or(0);
         const CELL_W: usize = WIDTH + 8;
         const CELL_H: usize = HEIGHT + 22;
         let (w, h) = (4 * CELL_W + 8, 2 * CELL_H + 8);
@@ -958,7 +958,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// struct BattleUnit's counters (battle_unit.h): the stat changes' turns
+/// struct Unit's counters (battle_unit.h): the stat changes' turns
 /// and stages, then the statuses.
 const UNIT_ATTACK_TURNS: u32 = 0x132;
 const UNIT_SLEEP: u32 = 0x13c;
@@ -971,7 +971,7 @@ const IMPAIR: u16 = 108;
 const DELUDE: u16 = 116;
 const GUARD: u16 = 106;
 /// enum BattleCommand and the places a command aims at
-/// (BattleActionRecord.target): a party place from 0x100, an enemy's from
+/// (BattleAction.target): a party place from 0x100, an enemy's from
 /// 0x180.
 const COMMAND_PSYNERGY: u16 = 1;
 const COMMAND_DEFEND: u16 = 3;
@@ -989,10 +989,10 @@ fn counters(gba: &Gba, unit: u32) -> Vec<i8> {
 }
 
 impl<'a> Guide<'a> {
-    /// The address of unit `id`'s struct BattleUnit.
+    /// The address of unit `id`'s struct Unit.
     pub(super) fn unit_address(&self, gba: &Gba, id: u16) -> Result<u32, String> {
         if u32::from(id) >= FIRST_ENEMY_UNIT {
-            Ok(gba.read32(self.sym("gBattleOwnerStates")?) + (u32::from(id) - FIRST_ENEMY_UNIT) * UNIT_SIZE)
+            Ok(gba.read32(self.sym("gEnemyUnits")?) + (u32::from(id) - FIRST_ENEMY_UNIT) * UNIT_SIZE)
         } else {
             Ok(self.sym("gGameState")? + STATE_OWNERS + u32::from(id) * UNIT_SIZE)
         }
@@ -1040,7 +1040,7 @@ impl<'a> Guide<'a> {
     /// starts are kept too.
     fn added_effect_rounds(&self, rounds: usize) -> Result<Rounds, String> {
         let commands = self.sym("Battle_CollectPartyCommands")?;
-        let message = self.sym("UiText_ShowMessageAndWaitCore")?;
+        let message = self.sym("BattleMessage_ShowAndWait")?;
         let drive = self.quake_drive(ONE_VERMIN, BATTLE_START_SET, vec![commands, message])?;
         let mut frames: Vec<Counted> = Vec::new();
         let mut starts: Vec<usize> = Vec::new();
@@ -1183,7 +1183,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// struct BattlePlan.hauntDamage.
+/// struct BattleTurn.hauntDamage.
 const PLAN_HAUNT: u32 = 0x60;
 /// A sleep counter already counted down once: the target fell asleep in an
 /// earlier round (STATUS_TURNS less one).
@@ -1216,13 +1216,13 @@ impl<'a> Guide<'a> {
         }
         out
     }
-    /// Isaac, haunted (BattleUnit.haunt set as the plan is built), casts
+    /// Isaac, haunted (Unit.haunt set as the plan is built), casts
     /// Quake at copies of Garet, Ivan and Mia, the copy of Ivan asleep for a
-    /// round already (sleep SLEPT_A_ROUND); BattleTarget_Execute's wake roll and
+    /// round already (sleep SLEPT_A_ROUND); BattleAbility_ApplyToTarget's wake roll and
     /// haunt roll, its last two calls of Battle_RandomFar, are answered 0,
     /// so the sleeper wakes and every target feeds the evil spirit. Each
-    /// target's HP, sleep and BattlePlan.hauntDamage are read as
-    /// BattleTarget_Execute starts and as the next starts or the turn ends,
+    /// target's HP, sleep and BattleTurn.hauntDamage are read as
+    /// BattleAbility_ApplyToTarget starts and as the next starts or the turn ends,
     /// beside the screen as each is announced, as `after-target.png`.
     pub fn after_target(&mut self) -> Result<(), String> {
         let root = crate::compile::root();
@@ -1232,13 +1232,13 @@ impl<'a> Guide<'a> {
         let foe_name = |u: u16| plan::character_name(cast.foes[usize::from(u) - FIRST_ENEMY_UNIT as usize]).to_uppercase();
         let symbols = super::battle::Symbols::find(self.map)?;
         let random = self.sym("Battle_Random")?;
-        let exec = self.sym("BattleTarget_Execute")?;
-        let build = self.sym("BattleCommand_BuildPlan")?;
+        let exec = self.sym("BattleAbility_ApplyToTarget")?;
+        let build = self.sym("BattleTurn_Build")?;
         let turn_end = self.sym("BattleUnit_ProcessTurnEnd")?;
         let work_slot = self.sym("gBattleWork")?;
         let sites = self.calls_in(exec, self.sym("Battle_RandomFar")?);
         let [.., wake, haunt] = sites[..] else {
-            return Err("BattleTarget_Execute makes fewer than two rolls".into());
+            return Err("BattleAbility_ApplyToTarget makes fewer than two rolls".into());
         };
         // Each target: (unit, HP before, after, sleep before, after,
         // hauntDamage after, rolls answered, the frame it ended).

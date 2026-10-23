@@ -1,10 +1,10 @@
 //! A field scene, run from a built edition: where Game_ResetForNewGame has
 //! set a new game's defaults (GameState_InitializeDefaults) and makes its next call
-//! (PaletteGlow_Update), the run writes the scene, entrance and story flags
+//! (WindowColor_Apply), the run writes the scene, entrance and story flags
 //! into gGameState, so the main loop loads that scene instead of the title.
-//! The location-name notice (UiTimedNotice_Create) returns at once unless
+//! The location-name notice (MapNamePopup_Show) returns at once unless
 //! show_notice is set. The
-//! scene is the player's once Field_RunMap's field loop takes its first
+//! scene is the player's once Map_Run's field loop takes its first
 //! step (Field_ProcessStep).
 //!
 //! A map is stitched from one moment of the game: for each 240 by 160 view
@@ -24,13 +24,13 @@
 //! to from where he entered, in the room the camera shows (Field::reach).
 //! Then A (talk, search), a field Psynergy request (FieldWork.command) or
 //! walking onto the cell (touch) starts it, and the field loop's own
-//! dispatch (Map_TalkToObjectEvent, Map_RunCoordEventOrWarp, Field_SearchTile,
+//! dispatch (Map_TalkToObjectEvent, Map_RunCoordEventOrWarp, Field_SearchCell,
 //! Field_UsePsynergy) shows which event began; the event function the CPU
 //! then enters (Field::watch) shows whose row it was, since two rooms of a
 //! scene can give the same actor id or cell code to different events. Each
 //! message page is kept once it is typed and waits for the button
-//! (UiText_CheckTextDismissed), and each yes or no choice
-//! (Menu_RunConfirmSelection) once shown; then A moves on. The event is over
+//! (Text_CheckTextDismissed), and each yes or no choice
+//! (YesNoMenu_Run) once shown; then A moves on. The event is over
 //! when the field loop steps again with nothing to read and nothing it set
 //! moving (a pushed pillar) still moves.
 
@@ -51,7 +51,7 @@ const GS_X: u32 = 0x1dc;
 const GS_Y: u32 = 0x1e0;
 const GS_Z: u32 = 0x1e4;
 const GS_HEADING: u32 = 0x1e8;
-/// The leader's terrainId, which the field gives the leader it creates.
+/// The leader's layer, which the field gives the leader it creates.
 const GS_TURN: u32 = 0x1ec;
 const GS_SELECTED_ACTOR: u32 = 0x1f4;
 const GS_ACTIVE_OWNERS: u32 = 0x1f8;
@@ -70,7 +70,7 @@ const FIELD_ACTOR_COUNT: u32 = 66;
 /// The first actor a scene places (LOCALID_FIRST_PLACED); 0 to 7 are the party.
 const FIRST_PLACED: u16 = 8;
 const FIELD_COMMAND: u32 = 0x17e;
-/// struct ObjectRuntime.
+/// struct Object.
 const OBJ_ANGLE: u32 = 0x06;
 const OBJ_X: u32 = 0x08;
 const OBJ_Y: u32 = 0x0c;
@@ -80,16 +80,16 @@ const OBJ_TERRAIN_ID: u32 = 0x22;
 const OBJ_VELOCITY: u32 = 0x24;
 /// 1: one sprite; 2: a group; 0: no sprite, which the camera skips.
 const OBJ_KIND: u32 = 0x54;
-/// The struct AnimationObject (kind 1) or the four of a group (kind 2).
+/// The struct Sprite (kind 1) or the four of a group (kind 2).
 const OBJ_SPRITE: u32 = 0x50;
-/// struct AnimationObject's entries, its four layers, and the colour mode
-/// (param) of struct AnimationEntry, whose first halfword is its sprite id.
+/// struct Sprite's entries, its four layers, and the colour mode
+/// (param) of struct SpriteAnim, whose first halfword is its sprite id.
 const ANIM_ENTRIES: u32 = 0x28;
 const ANIM_ENTRY_PARAM: u32 = 0x05;
 /// FieldWork.mode (an enum ObjectSystemMode) and its world map mode.
 const FIELD_MODE: u32 = 0x19e;
-const MODE_WORLD_MAP: u16 = 3;
-/// The world map (struct PerspectiveWork, which gMapGridWork points to there):
+const OBJECT_SYSTEM_WORLD_MAP: u16 = 3;
+/// The world map (struct WorldMapView, which gMapGridWork points to there):
 /// 16 by 16 tiles of 16 by 16 cells, each cell 32 pixels square, so 8192
 /// pixels each way. tileIds names the tile at each place, and Ram_Metatiles
 /// (gMetatiles) holds the 2 by 2 tiles around the party, 32 cells to a row,
@@ -101,8 +101,8 @@ const WORLD_TILES: i32 = 16;
 const WORLD_TILE_CELLS: i32 = 16;
 const WORLD_CELL: i32 = 32;
 const WORLD_CELLS: i32 = WORLD_TILES * WORLD_TILE_CELLS;
-/// GetWorldMapCollision's value where neither layer has one, and the
-/// values the party walks on (CheckWorldMapWalkable).
+/// WorldMap_GetCollision's value where neither layer has one, and the
+/// values the party walks on (WorldMap_IsWalkable).
 const WORLD_COLLISION_DEFAULT: u32 = 7;
 /// The world map's touch for walking into one of its actors, a place:
 /// this plus the actor (COORD_EVENT_PLACE_BASE).
@@ -126,7 +126,7 @@ pub(super) const CELL_WALL: i32 = 255;
 const STEP: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
 const FACING: [u32; 4] = [0xc000, 0x0000, 0x4000, 0x8000];
 const KEYS: [u32; 4] = [KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT];
-/// MapGrid_CheckObjectStep's limits: ground up to 8 pixels higher or 12 lower
+/// MapGrid_CheckCollision's limits: ground up to 8 pixels higher or 12 lower
 /// is a step the leader can take.
 pub(super) const STEP_UP: i32 = 8 << 16;
 pub(super) const STEP_DOWN: i32 = 12 << 16;
@@ -145,7 +145,7 @@ pub const MAP_EVENT_BG: u8 = 3;
 pub const MAP_EVENT_PSYNERGY: u8 = 5;
 /// No random encounters while set (flags.h).
 const FLAG_NO_ENCOUNTERS: u16 = 0x160;
-/// struct BattleUnit's actionSlots, four bytes each.
+/// struct Unit's psynergy, four bytes each.
 const UNIT_ACTION_SLOTS: u32 = 0x58;
 /// Palette RAM, 1 KB.
 const PALETTE_RAM: u32 = 0x0500_0000;
@@ -177,9 +177,9 @@ const START_FRAMES: u32 = 180;
 
 use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
 
-/// For `render probe heap`: the heap's work (gWorkSlot, 0 while off), the
-/// functions at whose entry it is read besides each frame's end (MemFree,
-/// Runtime_ReleaseHeapBlock, Runtime_InitializeHeap: just before a pool's
+/// For `render probe heap`: the heap's work (gHeapSlots, 0 while off), the
+/// functions at whose entry it is read besides each frame's end (Free,
+/// FreeHeapSlot, InitHeap: just before a pool's
 /// next address falls), and the highest next addresses read.
 pub static HEAP_WORK: AtomicU32 = AtomicU32::new(0);
 pub static HEAP_PCS: [AtomicU32; 3] = [AtomicU32::new(1), AtomicU32::new(1), AtomicU32::new(1)];
@@ -241,22 +241,22 @@ impl Symbols {
         let at = |name: &str| map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"));
         Ok(Symbols {
             init: at("GameState_InitializeDefaults")?,
-            glow: at("PaletteGlow_Update")?,
+            glow: at("WindowColor_Apply")?,
             load_layered: at("MapGrid_LoadLayout")?,
             apply_entrance: at("Map_ApplyWarpDest")?,
-            notice: at("UiTimedNotice_Create")?,
+            notice: at("MapNamePopup_Show")?,
             step: at("Field_ProcessStep")?,
             update_layer: at("MapGrid_UpdateLayerScroll")?,
             center: at("MapGrid_CenterOnFollowedPoint")?,
-            dismiss: at("UiText_CheckTextDismissed")?,
+            dismiss: at("Text_CheckTextDismissed")?,
             objects: at("Object_UpdateAllThumb")?,
-            typing: at("UiWork_StepChannelScript")?,
-            choice: at("Menu_RunConfirmSelection")?,
-            lookup: at("UiText_LookupMessage")?,
+            typing: at("TextPrinter_Step")?,
+            choice: at("YesNoMenu_Run")?,
+            lookup: at("Message_Find")?,
             terrain_height: at("MapGrid_GetTerrainHeight")?,
             write_cell_tile: at("WorldMap_WriteLayerCellTile")?,
             map_blocks: at("gMetatiles")?,
-            map_collision: at("gMapGridCollision")?,
+            map_collision: at("gMapGridShapes")?,
             map_cell_buffer: at("gMapGridCellBuffer")?,
             preset: at("DebugParty_LoadPreset")?,
             restore: at("Party_RestoreHpPp")?,
@@ -264,12 +264,12 @@ impl Symbols {
             defeat: Vec::new(),
             talk: at("Map_TalkToObjectEvent")?,
             touch: at("Map_RunCoordEventOrWarp")?,
-            search: at("Field_SearchTile")?,
+            search: at("Field_SearchCell")?,
             psynergy: at("Field_UsePsynergy")?,
             game_state: at("gGameState")?,
             flag_bytes: at("gGameFlagBytes")?,
             map_work: at("gMapGridWork")?,
-            field_work: at("gEventWork")?,
+            field_work: at("gFieldWork")?,
             overlay: at("gOverlayArea")?,
         })
     }
@@ -364,7 +364,7 @@ struct Track {
     /// Whether one of the event's own functions (Field::own) has run since.
     own_ran: bool,
     /// The calls that set up the scene's party (Field::party_calls) made
-    /// so far at PaletteGlow_Update's entry, and r0 to r3 and lr kept
+    /// so far at WindowColor_Apply's entry, and r0 to r3 and lr kept
     /// meanwhile.
     party_calls: u8,
     party_saved: [u32; 5],
@@ -419,7 +419,7 @@ pub struct Field<'rom> {
     pub returns: Vec<(u32, u32)>,
     /// Words written as the CPU reaches an address: (address, where, value).
     pub pokes: Vec<(u32, u32, u32)>,
-    /// Lets UiTimedNotice_Create run, for a picture of the notice.
+    /// Lets MapNamePopup_Show run, for a picture of the notice.
     pub show_notice: bool,
     /// Registers set as the CPU reaches an address: (address, register,
     /// value), as a caller would have passed the value.
@@ -498,7 +498,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// Makes `party` the active party, in order: party flags 0 to 7 and
-    /// gGameState.activeOwners.
+    /// gGameState.party.
     pub fn set_party(&mut self, party: &[u8]) {
         let bits = party.iter().fold(0u8, |b, &o| b | 1 << o);
         self.gba.write8(self.s.flag_bytes, bits);
@@ -555,19 +555,19 @@ impl<'rom> Field<'rom> {
     }
 
     /// The abilities character `owner` has, in the order of their slots
-    /// (struct BattleUnit's actionSlots, an action id in each low 14 bits),
+    /// (struct Unit's psynergy, an action id in each low 14 bits),
     /// as the field menu lists them.
     pub fn abilities(&mut self, owner: u8) -> Result<Vec<u16>, String> {
         let unit = self.eval(self.s.unit_get, [u32::from(owner), 0, 0, 0])?;
         Ok((0..32).map(|i| self.gba.read16(unit + UNIT_ACTION_SLOTS + 4 * i) & 0x3fff).filter(|&a| a != 0).collect())
     }
 
-    /// The address of character `owner`'s struct BattleUnit (Unit_Get).
+    /// The address of character `owner`'s struct Unit (Unit_Get).
     pub fn unit(&mut self, owner: u8) -> Result<u32, String> {
         self.eval(self.s.unit_get, [u32::from(owner), 0, 0, 0])
     }
 
-    /// The scene's struct FieldWork (gEventWork).
+    /// The scene's struct FieldWork (gFieldWork).
     pub fn field_work(&self) -> u32 {
         self.gba.read32(self.s.field_work)
     }
@@ -675,7 +675,7 @@ impl<'rom> Field<'rom> {
         }
     }
 
-    /// At PaletteGlow_Update's entry, while a new game is set up: makes the
+    /// At WindowColor_Apply's entry, while a new game is set up: makes the
     /// next of the party's calls, returning to that entry, or, once all are
     /// made, puts back the registers the first found. Whether it called.
     fn party_call(&mut self) -> bool {
@@ -705,7 +705,7 @@ impl<'rom> Field<'rom> {
         false
     }
 
-    /// Lists the party (gGameState.activeOwners) as the party flags have it
+    /// Lists the party (gGameState.party) as the party flags have it
     /// now, the chapter's members first (party::order); before the run's
     /// flags decide, the chapter's members are the party flags.
     fn list_party(&mut self) {
@@ -748,7 +748,7 @@ impl<'rom> Field<'rom> {
             self.t.init_return = lr(&self.gba);
         } else if self.t.init_return != 0 && pc == self.t.init_return {
             // Game_ResetForNewGame now stores the title and entrance 2, then
-            // calls PaletteGlow_UpdateFar.
+            // calls WindowColor_ApplyFar.
             self.t.init_return = 0;
             self.t.phase = Phase::Defaults;
         } else if self.t.phase == Phase::Defaults && pc == s.glow && self.party_call() {
@@ -931,7 +931,7 @@ impl<'rom> Field<'rom> {
     /// at `addresses` each time any of them changes: the frame it changed in
     /// (counted from 0) and their values then, with the picture of the last
     /// whole frame. It stops early when the scene's field work is freed or
-    /// replaced (gEventWork changes), since the addresses are then another
+    /// replaced (gFieldWork changes), since the addresses are then another
     /// scene's.
     pub fn watch_halfwords(&mut self, addresses: &[u32], n: u32) -> Result<Vec<(u32, Vec<u16>, Vec<u16>)>, String> {
         let read = |field: &Field| addresses.iter().map(|&a| field.gba.read16(a)).collect::<Vec<u16>>();
@@ -1055,7 +1055,7 @@ impl<'rom> Field<'rom> {
     /// Whether the field runs the world map (FieldWork.mode).
     pub fn world(&self) -> bool {
         let work = self.gba.read32(self.s.field_work);
-        work != 0 && self.gba.read16(work + FIELD_MODE) == MODE_WORLD_MAP
+        work != 0 && self.gba.read16(work + FIELD_MODE) == OBJECT_SYSTEM_WORLD_MAP
     }
 
     /// The side of a map cell in pixels: 16, or the world map's 32.
@@ -1607,8 +1607,8 @@ impl<'rom> Field<'rom> {
     }
 
     /// Whether the leader can walk from cell `a` into the next cell the way
-    /// `d` (an index of STEP) on map layer `layer`, as FieldObject_UpdatePlayerControl
-    /// lets him: MapGrid_CheckObjectStep passes the ground 8 pixels ahead of him
+    /// `d` (an index of STEP) on map layer `layer`, as Object_UpdateLeaderControl
+    /// lets him: MapGrid_CheckCollision passes the ground 8 pixels ahead of him
     /// all the way.
     fn passable(&mut self, layer: u8, a: (i32, i32), d: usize) -> Result<bool, String> {
         if self.world() {
@@ -1681,7 +1681,7 @@ impl<'rom> Field<'rom> {
                     queue.push_back(n);
                 }
                 // Standing on a ledge, a climb or a jump cell and pushing on
-                // (Field_RunPushTileEvent) takes him over what is ahead: down
+                // (Field_RunPushCellEvent) takes him over what is ahead: down
                 // a ledge with Down held, up or down a climb, across a jump
                 // (Field_TryJumpForward: over a wall or a drop, never ground
                 // more than a step higher, onto ground within a step). He
@@ -1733,7 +1733,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// The world map's collision value at (x, z) pixels, as
-    /// GetWorldMapCollision reads it: 4-bit values in 16-pixel squares, from
+    /// WorldMap_GetCollision reads it: 4-bit values in 16-pixel squares, from
     /// the upper layer where it has one, else the lower, else
     /// WORLD_MAP_COLLISION_DEFAULT. The game reads each square's collision
     /// tile from the BG maps WorldMap_WriteLayerCellTile draws around the party (a
@@ -1756,7 +1756,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// Whether the party can walk at (x, z) pixels on the world map
-    /// (CheckWorldMapWalkable).
+    /// (WorldMap_IsWalkable).
     fn world_walkable(&self, x: i32, z: i32) -> bool {
         WORLD_WALKABLE.contains(&self.world_collision(x, z))
     }
@@ -2649,7 +2649,7 @@ fn shorten_blanks(frames: Vec<Vec<u16>>, keep: usize) -> Vec<Vec<u16>> {
 }
 
 /// A field Psynergy's reach by its ability id: its range
-/// (gBattleEffect_TargetRangeByMode, by field kind) and the height between the
+/// (gFieldEffect_TargetRangeByMode, by field kind) and the height between the
 /// leader and the actor it allows, in pixels and 16.16 pixels.
 fn psynergy_reach(ability: u16) -> (i32, i32) {
     match ability {
@@ -2747,7 +2747,7 @@ pub struct Actor {
     pub z: i32,
     /// Its height, 16.16 pixels.
     pub y: i32,
-    /// The map layer its ground is read from (terrainId).
+    /// The map layer its ground is read from (layer).
     pub layer: u8,
     /// Whether it has a sprite.
     pub drawn: bool,

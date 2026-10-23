@@ -1153,9 +1153,9 @@ mod tests {
 
     #[test]
     fn main_scaffold_can_be_named_explicitly() {
-        let args = ["candidate.c", "--edition", "tbs-ja", "--symbol", "SaveMenu_SelectSlot"].map(String::from);
+        let args = ["candidate.c", "--edition", "tbs-ja", "--symbol", "FileMenu_SelectFile"].map(String::from);
         let parsed = parse(&args).unwrap();
-        assert_eq!(parsed.addresses, ["SaveMenu_SelectSlot"]);
+        assert_eq!(parsed.addresses, ["FileMenu_SelectFile"]);
         assert_eq!(parsed.target.id.as_str(), "tbs-ja");
     }
 

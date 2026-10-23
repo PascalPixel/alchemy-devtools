@@ -246,7 +246,7 @@ impl<'a> Guide<'a> {
 const KOLIMA_FOREST_TREE: u16 = 44;
 const TRET_STAND_IN: u16 = 12;
 const HERMES_WATER: u16 = 0xb8;
-/// struct BattleUnit's inventory, 15 halfwords; struct FieldWork's item
+/// struct Unit's inventory, 15 halfwords; struct FieldWork's item
 /// request and the inventory slot it passes (field_runtime.h).
 const UNIT_INVENTORY: u32 = 0xd8;
 const WORK_ITEM: u32 = 0x180;
@@ -556,8 +556,8 @@ pub(super) fn crop(image: &Image, x: i32, y: i32, w: usize, h: usize) -> Image {
 
 /// Fuchin Falls Cave's first room: MapId_FuchinFallsCaveEntrance, the
 /// flags of its three logs' stops (FLAG_MAPSEC_TEMP_01 to 03), and the cells
-/// of their tracks that Fuchin_RebuildEntranceLogs rewrites (columns 8 to 22,
-/// rows 29 to 33).
+/// of their tracks that FuchinFallsCave_RebuildEntranceLogs rewrites
+/// (columns 8 to 22, rows 29 to 33).
 const FUCHIN_FIRST_ROOM: u16 = 62;
 const FUCHIN_LOG_FLAGS: [&str; 3] = ["FLAG_MAPSEC_TEMP_01", "FLAG_MAPSEC_TEMP_02", "FLAG_MAPSEC_TEMP_03"];
 const FUCHIN_TRACKS: (i32, i32, i32, i32) = (8, 29, 22, 33);
@@ -962,7 +962,7 @@ impl<'a> Guide<'a> {
 }
 
 /// Colosseum Final 1 (MapId_ColosseumAzartMatch) at the race
-/// (COLOSSEUM_AZART_MATCH_RACE_FROM_LEND_A_HAND), and Azart (OPPONENT).
+/// (COLOSSEUM_AZART_MATCH_RACE_FROM_LEND_A_HAND), and Azart (LOCALID_OPPONENT).
 const COLOSSEUM_AZART_RACE: (u16, u16) = (143, 1);
 /// Colosseum Final 3 (MapId_ColosseumNavampaMatch), the touch that steps
 /// onto the Scales of Justice and its two pans.
@@ -983,17 +983,17 @@ const HEAP_SLOT_WORLD_MAP_FRAME: u32 = 7;
 const GOMA_CAVE_ROOM: (u16, u16) = (27, 5);
 const MAP_CELL_WORDS: u32 = 0x0201_0000;
 /// struct FieldWork's twelve requests, by offset, in the order
-/// Field_RunMap tests them.
+/// Map_Run tests them.
 const REQUESTS: [(u32, &str); 12] = [
-    (0x170, "EXIT"),
-    (0x182, "EVENT"),
+    (0x170, "WARP"),
+    (0x182, "RAISEDEVENT"),
     (0x17c, "BATTLE"),
-    (0x16c, "ACTION"),
-    (0x16e, "PUSHTILE"),
+    (0x16c, "COORDEVENT"),
+    (0x16e, "PUSHCELL"),
     (0x174, "EXAMINE"),
     (0x172, "MENU"),
     (0x178, "TALK"),
-    (0x17a, "TILE"),
+    (0x17a, "SEARCHCELL"),
     (0x17e, "PSYNERGY"),
     (0x180, "ITEM"),
     (0x176, "START"),
@@ -1004,19 +1004,19 @@ const VALE_DOOR: u16 = 7;
 /// innkeeper.
 const BILIBIN_INN_ROOM: (u16, u16) = (31, 6);
 const BILIBIN_INNKEEPER_ACTOR: u16 = 19;
-/// The window members of struct InventoryMenuState (inventory_menu.h), by
+/// The window members of struct ItemMenuWork (inventory_menu.h), by
 /// offset.
 const ITEM_SCREEN_WINDOWS: [(u32, &str); 10] = [
     (0x10, "mainWindow"),
     (0x20, "itemWindow"),
     (0x24, "statusWindow"),
-    (0x28, "helpWindow"),
-    (0x2c, "infoWindow"),
+    (0x28, "buttonHelpWindow"),
+    (0x2c, "descriptionWindow"),
     (0x30, "equipWindow"),
     (0x34, "listWindow"),
     (0x3c, "modalWindow"),
-    (0x10c, "messageWindow"),
-    (0x38, "unknownWindow38"),
+    (0x10c, "questionWindow"),
+    (0x38, "unopenedWindow"),
 ];
 /// Sprite attribute memory and the sprites' tile memory.
 const OAM_BASE: u32 = 0x0700_0000;
@@ -1344,7 +1344,7 @@ impl<'a> Guide<'a> {
     /// at OBJ_VRAM, 32 tiles to a row, a tile drawn at its own 8 by 8 pixels
     /// in the colours of the names' sprites): each row of tiles outlined in
     /// red for the 16 frames after its tiles change, as
-    /// DisplayScroll_RenderEnteringLine draws the line entering, as
+    /// Credits_DrawEnteringLine draws the line entering, as
     /// `credits-tile-ring.gif`.
     pub fn credits_tile_ring(&mut self) -> Result<(), String> {
         let setup = super::field::Setup { scene: 0, entrance: 9, set: Vec::new(), clear: Vec::new() };
@@ -1427,8 +1427,8 @@ impl<'a> Guide<'a> {
     /// The Item screen opened from the field menu in Vale, at twice the GBA's
     /// size at two moments: Isaac's items listed, and an item chosen with its
     /// commands up. Each window the screen's work (struct
-    /// InventoryMenuState, in gMenuWork) holds is outlined at its place and
-    /// size (struct UiWindow's x, y, width and height, in tiles) and labelled
+    /// ItemMenuWork, in gMenuWork) holds is outlined at its place and
+    /// size (struct Window's x, y, width and height, in tiles) and labelled
     /// with the member that holds it, as `item-screen-windows.png`.
     pub fn item_screen_windows(&mut self) -> Result<(), String> {
         let menu_work = self.sym("gMenuWork")?;
@@ -1468,7 +1468,7 @@ impl<'a> Guide<'a> {
         for (i, panel) in panels.iter().enumerate() {
             paste(&mut out, panel, 4 + i * (2 * WIDTH + 4), 4, 1);
         }
-        self.guide_png("item-screen-windows.png", &out, "the Item screen's windows, each labelled with the InventoryMenuState member that holds it")
+        self.guide_png("item-screen-windows.png", &out, "the Item screen's windows, each labelled with the ItemMenuWork member that holds it")
     }
 
     /// A night at Bilibin's inn, the party given 500 coins and A pressed
@@ -1600,7 +1600,7 @@ impl<'a> Guide<'a> {
             shots.push((f, screen(&picture)));
         }
         let gap = 4usize;
-        let label_w = 110usize;
+        let label_w = 160usize;
         let col_w = 76usize;
         let row_h = 16usize;
         let table_h = 20 + REQUESTS.len() * row_h;
@@ -1769,7 +1769,7 @@ impl<'a> Guide<'a> {
     /// 16.16 fixed point) drawn as a bar on the same line, 0 above the
     /// horizon, as `world-map-scanlines.png`.
     pub fn world_map_scanlines(&mut self) -> Result<(), String> {
-        let slots = self.sym("gWorkSlot")?;
+        let slots = self.sym("gHeapSlots")?;
         let mut field = self.enter((2, 1))?;
         field.hold(0x80);
         field.frames(50)?;

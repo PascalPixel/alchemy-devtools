@@ -1156,8 +1156,8 @@ Pictures for the battle guide's rules (guide_battle.rs):
                     line, with Quake's and an attack's targets on it
   plan-rolls        plan-rolls.png: a miss, a critical hit and a triple blow
                     beside the plan's rolls
-  staging           staging.gif: Quake under each outcome, PLAN_SHOW_CAST to
-                    PLAN_SHOW_FULL_SCREEN
+  staging           staging.gif: Quake under each outcome, STAGING_CAST to
+                    STAGING_FULL_SCREEN
   added-effects     added-effects.png: Impair, Delude and Guard's stages and
                     counters over nine rounds
   after-target      after-target.png: a sleeper woken by Quake, and a haunted

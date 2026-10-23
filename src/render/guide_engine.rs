@@ -33,7 +33,7 @@ const GS_ENTRANCE: u32 = 0x1c2;
 const FW_MARKERS: u32 = 0x11c;
 const FW_EXIT: u32 = 0x170;
 const EXIT_TO_DESTINATION: u16 = 999;
-/// struct BattleUnit's level.
+/// struct Unit's level.
 const UNIT_LEVEL: u32 = 0x0f;
 
 /// The panels' colours.
@@ -48,7 +48,7 @@ const GREEN: u32 = 0x60_e0_70;
 /// The eight characters by owner number.
 const CHARACTERS: [&str; 8] = ["ISAAC", "GARET", "IVAN", "MIA", "FELIX", "JENNA", "SHEBA", "PIERS"];
 
-/// The rare items whose counters CommandTable_ConfigureCommandList raises,
+/// The rare items whose counters MenuTest_Initialize raises,
 /// by item id (item_ids.h), with how many times it raises each.
 const MENU_TEST_COUNTERS: [(u32, &str, u32); 11] = [
     (0x05, "SHAMSHIR", 3),
@@ -109,14 +109,14 @@ impl<'a> Guide<'a> {
         field.frames(frames)
     }
 
-    /// The menu test room's setup entry, CommandTable_ConfigureCommandList,
+    /// The menu test room's setup entry, MenuTest_Initialize,
     /// seen through the party it changes: the party in Vale before the
     /// visit, as the room's first entry leaves it, and after it has run a
     /// second time as the next visit runs it, as `menu-test-setup.png`. The
     /// party is sent into the room as FieldScript_SetDestination sends it, and the
     /// entry's runs are counted by probing it.
     pub fn menu_test_setup(&mut self) -> Result<(), String> {
-        let setup_fn = self.overlay_sym("MenuTest_GetEvents", "CommandTable_ConfigureCommandList")?;
+        let setup_fn = self.overlay_sym("MenuTest_GetEvents", "MenuTest_Initialize")?;
         let state = self.sym("gGameState")?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
@@ -551,7 +551,7 @@ impl<'a> Guide<'a> {
     pub fn io_write_queue(&mut self) -> Result<(), String> {
         let queue = self.sym("gIoWriteQueue")?;
         let flush = self.sym("IoWriteQueue_FlushPending")?;
-        let start = self.sym("PaletteFade_Start")?;
+        let start = self.sym("TitlePaletteFade_Start")?;
         let setup = super::field::Setup { scene: 0, entrance: 0, set: Vec::new(), clear: Vec::new() };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let flushes = Rc::new(RefCell::new(Vec::new()));
@@ -575,7 +575,7 @@ impl<'a> Guide<'a> {
                 return Err("the intro's fade never started".to_string());
             }
         }
-        // From the VBlank before the frame PaletteFade_Start ran in: its
+        // From the VBlank before the frame TitlePaletteFade_Start ran in: its
         // pushes so far are kept in `already`.
         let already = field.read16(queue);
         let changes = field.watch_halfwords(&[queue, 0x0400_0006], 3)?;
@@ -801,11 +801,11 @@ impl<'a> Guide<'a> {
     /// until a random battle opens. Each byte is a grey of its value tinted
     /// with its area's colour (the EWRAM table and the IWRAM table of the
     /// System guide, from the link map's names), and each heap's blocks in
-    /// use, from its start to the next free address in gWorkSlot's first
+    /// use, from its start to the next free address in gHeapSlots's first
     /// two words, are tinted brighter than the free rest, with a white line
     /// at the next free address.
     pub fn memory_maps(&mut self) -> Result<(), String> {
-        let work_slot = self.sym("gWorkSlot")?;
+        let work_slot = self.sym("gHeapSlots")?;
         let ewram_heap = self.sym("gEwramHeap")?;
         let iwram_heap = self.sym("gIwramHeap")?;
         // EWRAM's areas, from ewram.s's names.
@@ -816,8 +816,8 @@ impl<'a> Guide<'a> {
             (self.sym("gActorSpriteSlots")?, self.sym("gDecodeBuffer")?, "ACTOR SPRITE SLOTS", 0xe0_a0_e0),
             (self.sym("gDecodeBuffer")?, self.sym("gMetatiles")?, "DECODE BUFFER", 0xe0_e0_60),
             (self.sym("gMetatiles")?, self.sym("gMapGridLayerData")?, "MAP BLOCKS", 0x30_b0_a0),
-            (self.sym("gMapGridLayerData")?, self.sym("gMapGridCollision")?, "MAP LAYER DATA", 0x80_d0_ff),
-            (self.sym("gMapGridCollision")?, ewram_heap, "MAP COLLISION", 0x60_e0_40),
+            (self.sym("gMapGridLayerData")?, self.sym("gMapGridShapes")?, "MAP LAYER DATA", 0x80_d0_ff),
+            (self.sym("gMapGridShapes")?, ewram_heap, "MAP COLLISION", 0x60_e0_40),
             (ewram_heap, self.sym("gBgTileBuffer")?, "EWRAM HEAP", 0x40_80_ff),
             (self.sym("gBgTileBuffer")?, 0x0204_0000, "BG TILE BUFFER", 0xa0_60_ff),
         ];
@@ -994,7 +994,7 @@ impl<'a> Guide<'a> {
     /// row of gLayouts and the directory.
     pub fn map_header(&mut self) -> Result<(), String> {
         const SUHALLA_DESERT_NORTH: u16 = 164;
-        let scenes = self.sym("gField_MapTable")?;
+        let scenes = self.sym("gMapHeaders")?;
         let layered = self.sym("gLayouts")?;
         let directory = self.sym("Resource_DirectoryTable")?;
         let map_001 = 0x128u32;
@@ -1305,7 +1305,7 @@ impl<'a> Guide<'a> {
     /// each drawn as the mean colour of its 256-colour tile in `BG3`'s char
     /// block, where the ground layer's screen map is). The 2 by 2 squares unpacked now are bright and outlined,
     /// those unpacked earlier dim, the rest black; each frame the quarters'
-    /// squares (PerspectiveWork.quarterTiles) are checked against the squares
+    /// squares (WorldMapView.quarterTiles) are checked against the squares
     /// the followed point's place and the tileIds table give.
     pub fn world_map_squares(&mut self) -> Result<(), String> {
         const WORLD_MAP: (u16, u16) = (2, 3);
@@ -1501,14 +1501,14 @@ impl<'a> Guide<'a> {
 
     /// The leader's probes for a step as he is pushed into a wall and slides
     /// along it, as `player-probes.gif`: Vale at twice the GBA's size, and
-    /// over it every point FieldObject_UpdatePlayerControl tested that frame
-    /// through MapGrid_CheckObjectStep for the leader, green where the ground
-    /// was open (MAPGRID_STEP_OPEN) and red where it was not, with a line from
+    /// over it every point Object_UpdateLeaderControl tested that frame
+    /// through MapGrid_CheckCollision for the leader, green where the ground
+    /// was open (COLLISION_NONE) and red where it was not, with a line from
     /// the leader to the pad's way. The probes are read at the function's
     /// entry (r1, the position) and its results at the return addresses a
     /// first run of the same frames found.
     pub fn player_probes(&mut self, path: &[(u32, u32)], file: &str) -> Result<(), String> {
-        let check = self.sym("MapGrid_CheckObjectStep")?;
+        let check = self.sym("MapGrid_CheckCollision")?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
         let start = field.save();
@@ -1626,13 +1626,13 @@ impl<'a> Guide<'a> {
     }
 
     /// The task table in Vale through one frame, as `scheduler.png`: Vale
-    /// beside the 20 slots of gSchedulerTaskTable, each with its order, the
+    /// beside the 20 slots of gTasks, each with its order, the
     /// pass its order's high byte picks and its routine, and the place it
-    /// ran in that pass. The runs are seen by probing Scheduler_RunPass
+    /// ran in that pass. The runs are seen by probing Task_RunPass
     /// (r0 the pass's key) and every task's routine.
     pub fn scheduler(&mut self) -> Result<(), String> {
-        let table = self.sym("gSchedulerTaskTable")?;
-        let run_pass = self.sym("Scheduler_RunPass")?;
+        let table = self.sym("gTasks")?;
+        let run_pass = self.sym("Task_RunPass")?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
         field.frames(10)?;
@@ -1735,14 +1735,14 @@ impl<'a> Guide<'a> {
         }
     }
 
-    /// The title intro's palette fade (Title_ShowIntro's PaletteFade_Start
+    /// The title intro's palette fade (Title_ShowIntro's TitlePaletteFade_Start
     /// of 60 frames), every frame of it shown twice: the screen beside the
     /// 256 background and 256 sprite colours of palette RAM, a palette of
     /// 16 to a row, as `palette-fade.gif`. The fade's frames are counted
-    /// from PaletteFade_Start to the update that finds the fade done
-    /// (PaletteFade_Update with the work's duration 0).
+    /// from TitlePaletteFade_Start to the update that finds the fade done
+    /// (TitlePaletteFade_Update with the work's duration 0).
     pub fn palette_fade(&mut self) -> Result<(), String> {
-        let start = self.sym("PaletteFade_Start")?;
+        let start = self.sym("TitlePaletteFade_Start")?;
         let setup = super::field::Setup { scene: 0, entrance: 0, set: Vec::new(), clear: Vec::new() };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let started = Rc::new(RefCell::new(None));
@@ -1792,7 +1792,7 @@ impl<'a> Guide<'a> {
         let mut changes = 0;
         // Each step reaches palette RAM at the VBlank after the update that
         // queued it, so the first shows on the second frame after
-        // PaletteFade_Start; the first frame still has the colours the intro
+        // TitlePaletteFade_Start; the first frame still has the colours the intro
         // loaded, under a blank screen.
         for f in 1..=61u32 {
             field.frames(1)?;

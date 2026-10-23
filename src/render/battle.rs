@@ -46,7 +46,7 @@ const ADVANCE: u32 = 45;
 /// A run that is not over by this frame has gone wrong.
 const MAX_FRAMES: u32 = 6000;
 
-/// struct GameState (game_state.h), struct BattleUnit (battle/battle_unit.h),
+/// struct GameState (game_state.h), struct Unit (battle/battle_unit.h),
 /// struct BattleWork (battle_work.h) and struct BattleObject
 /// (battle/battle_session.h) offsets.
 const STATE_ACTIVE_OWNERS: u32 = 0x1f8;
@@ -70,7 +70,7 @@ const UNIT_POISON: u32 = 0x131;
 const UNIT_DELUSION: u32 = 0x138;
 /// A status's turns as it lands.
 const STATUS_TURNS: u8 = 7;
-/// A gauge's full share, BattleUnit.hpGauge.
+/// A gauge's full share, Unit.hpGauge.
 const GAUGE_FULL: u32 = 0x4000;
 const SIDE_ABSENT: u8 = 0;
 const SIDE_ENEMY: u8 = 1;
@@ -97,7 +97,7 @@ const PLACE_ENEMY: u16 = 0x180;
 /// map in screen block 31.
 const PICTURE: std::ops::Range<u32> = 0x0600_8000..0x0600_f800;
 /// The window colours, as BG palette entries: palette 15's colours 4 to 10,
-/// which PaletteGlow_Update sets from the player's window hue and brightness;
+/// which WindowColor_Apply sets from the player's window hue and brightness;
 /// palette 14's, palette 15 brightened for a chosen window
 /// (Palette_UpdatePulseBrightness); palette 5's colour 14, which the battle
 /// copies from colour 4 for the status windows' HP and PP (background.c), and
@@ -168,21 +168,21 @@ impl Symbols {
             start: at("Game_RunFar").or_else(|_| at("Game_ResetForNewGameFar"))?,
             menu: at("DebugBattle_RunMenu")?,
             preset: at("DebugParty_LoadPreset")?,
-            encounter: at("Battle_RunEncounter")?,
-            collect: at("BattleParty_CollectUnitList")?,
+            encounter: at("Battle_Run")?,
+            collect: at("BattleUnits_Collect")?,
             obj_make: at("BattleObject_Make")?,
             background: at("BattleBackground_Load")?,
-            build: at("BattlePresentation_BuildActions")?,
+            build: at("Battle_GatherActions")?,
             commands: at("Battle_CollectPartyCommands")?,
-            opponents: at("BattlePresentation_BuildOpponentEntries").or_else(|_| at("BattlePres_BuildOpponentEntries"))?,
-            dispatch: at("BattlePresentation_DispatchAction")?,
-            wait_advance: at("BattlePresentation_WaitForAdvance")?,
-            message: at("UiText_ShowMessageAndWaitCore")?,
+            opponents: at("Battle_BuildOpponentActions").or_else(|_| at("BattlePres_BuildOpponentEntries"))?,
+            dispatch: at("BattleStaging_DispatchAction")?,
+            wait_advance: at("BattleMessage_WaitForAdvance")?,
+            message: at("BattleMessage_ShowAndWait")?,
             battle_over: at("Battle_ClearSerialTransferPayload")?,
             battle_work: at("gBattleWork")?,
             game_state: at("gGameState")?,
             game_flags: at("gGameFlagBytes")?,
-            owner_states: at("gBattleOwnerStates")?,
+            owner_states: at("gEnemyUnits")?,
         })
     }
 }
@@ -202,7 +202,7 @@ enum Phase {
     Boot,
     /// The menu's chooser, waiting for A.
     Chooser,
-    /// Battle_RunEncounter has started.
+    /// Battle_Run has started.
     Battle,
     /// The units are set; A through the opening message.
     Intro,
@@ -314,7 +314,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
                 }
             }
             // A summon's Djinn go on standby: the caster's first `count` of
-            // the element leave its Set Djinn (Djinn_Deactivate) and join the
+            // the element leave its Set Djinn (Djinn_PutOnStandby) and join the
             // party's recovery list with turns -1 (DjinnRecovery_AddStandby).
             if let Command::Summon { element, count, .. } = cast.command {
                 let (e, list) = (u32::from(element), s.game_state + STATE_RECOVERY_LIST);
@@ -503,11 +503,11 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
             // The enemies' actions: none.
             gba.return_now(0);
         } else if phase == Phase::Commanded && pc == s.dispatch {
-            say(frame, "BattlePresentation_DispatchAction".to_string());
+            say(frame, "BattleStaging_DispatchAction".to_string());
             dispatch_return = gba.register(LR) & !1;
             phase = Phase::Playing;
         } else if phase == Phase::Playing && pc == s.message && !recording {
-            // The plan shows `<unit> casts <ability>!` (BattleCommand_BuildPlan)
+            // The plan shows `<unit> casts <ability>!` (BattleTurn_Build)
             // once the camera has turned from the command view to the cast's.
             say(frame, "the cast's message: recording".to_string());
             recording = true;
@@ -543,7 +543,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
         }
         // The player: Down from power-on; A every other four frames in the
         // chooser and through the opening message; then A once a prompt has
-        // waited: BattlePresentation_WaitForAdvance, or the playback task's
+        // waited: BattleMessage_WaitForAdvance, or the playback task's
         // arrow.
         let work = if phase >= Phase::Battle { gba.read32(s.battle_work) } else { 0 };
         let waiting = wait_return != 0 || (work != 0 && gba.read32(work + WORK_EVENT_PHASE) == PLAY_ADVANCE);

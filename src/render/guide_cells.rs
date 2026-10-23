@@ -190,7 +190,7 @@ impl Names {
 /// What cell code `code` makes happen in `field`'s scene now, its rows'
 /// names put in `words`; None for open ground. The rows taken are those
 /// Map_FindEvent could take: each whose condition holds, and a search on
-/// a named target whatever its condition (Field_SearchTile tests it
+/// a named target whatever its condition (Field_SearchCell tests it
 /// afterwards). Stepping on a cell runs a touch row before an exit row, so
 /// a touch row gives the colour, then an exit row, then a search row.
 pub(super) fn meaning(field: &Field, names: &Names, words: Words, code: i32) -> Result<Option<Meaning>, String> {
@@ -489,25 +489,25 @@ pub(super) const GOMA_CAVE_PILLAR_WORDS: Words = &[
 ];
 
 /// What the rows of Fuchin Falls Cave's first room
-/// (gImilFuchinFalls_FirstRoomEvents) do, from their functions' comments:
+/// (gImilFuchinFalls_EntranceEvents) do, from their functions' comments:
 /// walking into a log's trigger cell pushes it along the water, and
 /// stepping on it plays the log's rolling.
 pub(super) const FUCHIN_FIRST_ROOM_WORDS: Words = &[
-    ("Fuchin_FirstRoom_MoveFirstLogEast", "Push the first log east (walk east into it)", None),
-    ("Fuchin_FirstRoom_MoveFirstLogWest", "Push the first log back west (walk west into it)", None),
-    ("Fuchin_FirstRoom_MoveSecondLogSouth", "Push the second log back south (walk south into it)", None),
-    ("Fuchin_FirstRoom_MoveSecondLogNorth", "Push the second log north (walk north into it)", None),
-    ("Fuchin_FirstRoom_MoveThirdLogSouth", "Push the third log back south (walk south into it)", None),
-    ("Fuchin_FirstRoom_MoveThirdLogNorth", "Push the third log north (walk north into it)", None),
-    ("Fuchin_AnimateFirstLog", "the log rolls when stepped on", None),
-    ("Fuchin_AnimateSecondLog", "the log rolls when stepped on", None),
-    ("Fuchin_AnimateThirdLog", "the log rolls when stepped on", None),
+    ("FuchinFallsCave_Entrance_MoveFirstLogEast", "Push the first log east (walk east into it)", None),
+    ("FuchinFallsCave_Entrance_MoveFirstLogWest", "Push the first log back west (walk west into it)", None),
+    ("FuchinFallsCave_Entrance_MoveSecondLogSouth", "Push the second log back south (walk south into it)", None),
+    ("FuchinFallsCave_Entrance_MoveSecondLogNorth", "Push the second log north (walk north into it)", None),
+    ("FuchinFallsCave_Entrance_MoveThirdLogSouth", "Push the third log back south (walk south into it)", None),
+    ("FuchinFallsCave_Entrance_MoveThirdLogNorth", "Push the third log north (walk north into it)", None),
+    ("FuchinFallsCave_AnimateFirstLog", "the log rolls when stepped on", None),
+    ("FuchinFallsCave_AnimateSecondLog", "the log rolls when stepped on", None),
+    ("FuchinFallsCave_AnimateThirdLog", "the log rolls when stepped on", None),
     ("FUCHIN_FALLS_CAVE_ENTRANCE_TO_FUCHIN_TEMPLE_GROUNDS", "Way out to Fuchin Temple", None),
     ("FUCHIN_FALLS_CAVE_ENTRANCE_TO_FUCHIN_FALLS_CAVE_ZEPHYR", "Way out to Zephyr's room", None),
     ("FUCHIN_FALLS_CAVE_ENTRANCE_TO_FUCHIN_FALLS_CAVE_ARCTIC_BLADE", "Way out to the Arctic Blade's room", None),
     ("FUCHIN_FALLS_CAVE_ENTRANCE_SOUTH_HALF_TO_NORTH_HALF", "Way to the cave's northern part", None),
     ("FUCHIN_FALLS_CAVE_ENTRANCE_NORTH_HALF_TO_SOUTH_HALF", "Way to the cave's southern part", None),
-    ("Fuchin_ReadDragonFlameInscription", "Search: an inscription", None),
+    ("FuchinFallsCave_ReadDragonFlameInscription", "Search: an inscription", None),
     ("FIND_MIMIC", "Chest: a mimic", None),
 ];
 

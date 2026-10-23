@@ -112,7 +112,7 @@ impl Guide<'_> {
     /// WorldMap_InitializePerspective), and every line meets the ground, so
     /// there is no horizon on screen.
     pub fn world_map_footprint(&mut self) -> Result<(), String> {
-        let slots = self.sym("gWorkSlot")?;
+        let slots = self.sym("gHeapSlots")?;
         let mut field = self.enter(WORLD_MAP)?;
         let mut moments = Vec::new();
         let steps: [(u32, u32); 4] = [(KEY_DOWN, 90), (0, 20), (KEY_L, 70), (0, 40)];

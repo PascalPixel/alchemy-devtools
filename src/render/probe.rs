@@ -109,13 +109,13 @@ impl<'a> Guide<'a> {
                     let mut e = self.enter_with((170, entrance), &[])?;
                     println!("SuhallaGateDew entrance {entrance}:");
                     actors(&e.field, 0..20);
-                    let work = e.field.read32(at("gEventWork")?);
-                    println!("  slot 15 word (gEventWork+0x14+60): {:08x}", e.field.read32(work + 0x14 + 60));
+                    let work = e.field.read32(at("gFieldWork")?);
+                    println!("  slot 15 word (gFieldWork+0x14+60): {:08x}", e.field.read32(work + 0x14 + 60));
                     if entrance == 0 {
                         // Again from the party's placing, watching every
                         // actor lookup of slot 15 as the scene starts.
-                        let get = at("ObjectTable_Get")?;
-                        let ew_sym = at("gEventWork")?;
+                        let get = at("ObjectEvent_GetByLocalId")?;
+                        let ew_sym = at("gFieldWork")?;
                         e.field.load(&e.placed);
                         e.field.probe_pcs = vec![get];
                         let seen = Rc::new(RefCell::new(Vec::new()));
@@ -123,7 +123,7 @@ impl<'a> Guide<'a> {
                         e.field.probe = Some(Box::new(move |gba: &Gba, pc: u32, frame: u32| {
                             if pc != 0 && gba.register(0) == 15 {
                                 let work = gba.read32(ew_sym);
-                                keep.borrow_mut().push(format!("frame {frame}: ObjectTable_Get(15) from {:08x}, slot word {:08x}", gba.register(14), gba.read32(work + 0x14 + 60)));
+                                keep.borrow_mut().push(format!("frame {frame}: ObjectEvent_GetByLocalId(15) from {:08x}, slot word {:08x}", gba.register(14), gba.read32(work + 0x14 + 60)));
                             }
                         }));
                         e.field.until_control()?;
@@ -391,7 +391,7 @@ impl<'a> Guide<'a> {
                 }
                 Ok(())
             }
-            "heap" => self.heap(&at("gWorkSlot")?, map),
+            "heap" => self.heap(&at("gHeapSlots")?, map),
             "heap-battle" => self.heap_battle(map),
             "venus" => self.venus(map),
             other => self.probe_place(other, map),
@@ -409,7 +409,7 @@ impl<'a> Guide<'a> {
         use super::field::{HEAP_EWRAM_HIGH, HEAP_IWRAM_HIGH, HEAP_PCS, HEAP_WORK};
         use std::sync::atomic::Ordering::Relaxed;
         let at = |s: &str| map.symbol(s).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {s}"));
-        for (slot, name) in HEAP_PCS.iter().zip(["MemFree", "Runtime_ReleaseHeapBlock", "Runtime_InitializeHeap"]) {
+        for (slot, name) in HEAP_PCS.iter().zip(["Free", "FreeHeapSlot", "InitHeap"]) {
             slot.store(at(name)?, Relaxed);
         }
         HEAP_WORK.store(*work, Relaxed);
@@ -462,10 +462,10 @@ impl<'a> Guide<'a> {
     /// mixer's bytes change.
     fn heap_battle(&mut self, map: &Map) -> Result<(), String> {
         let at = |s: &str| map.symbol(s).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {s}"));
-        let work = at("gWorkSlot")?;
+        let work = at("gHeapSlots")?;
         let mixer = at("SoundDriver_Mixer")?;
-        let allocators = vec![at("Runtime_AllocateHeapBlock")?, at("Runtime_AllocateBlock")?, at("MemAlloc")?, at("Runtime_BumpAllocateAlternatePool")?, at("MemFree")?, at("Runtime_ReleaseHeapBlock")?];
-        let names = ["Runtime_AllocateHeapBlock", "Runtime_AllocateBlock", "MemAlloc", "Runtime_BumpAllocateAlternatePool", "MemFree", "Runtime_ReleaseHeapBlock"];
+        let allocators = vec![at("AllocHeapSlot")?, at("AllocHeapSlotEwram")?, at("Alloc")?, at("AllocEwram")?, at("Free")?, at("FreeHeapSlot")?];
+        let names = ["AllocHeapSlot", "AllocHeapSlotEwram", "Alloc", "AllocEwram", "Free", "FreeHeapSlot"];
         let mut e = self.enter_with((27, 5), &[])?;
         let snapshot: Vec<u32> = (0..233).map(|i| e.field.read32(mixer + 4 * i)).collect();
         let log = Rc::new(RefCell::new(Vec::<String>::new()));

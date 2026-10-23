@@ -40,7 +40,7 @@ const ISAAC: u8 = 0;
 const GARET: u8 = 1;
 const NAMES: [&str; 8] = ["ISAAC", "GARET", "IVAN", "MIA", "", "JENNA", "", ""];
 
-/// struct BattleUnit (battle/battle_unit.h).
+/// struct Unit (battle/battle_unit.h).
 const UNIT_MAX_HP: u32 = 0x34;
 const UNIT_MAX_PP: u32 = 0x36;
 const UNIT_HP: u32 = 0x38;
@@ -59,15 +59,15 @@ const INVENTORY_SLOTS: u32 = 15;
 const INVENTORY_EQUIPPED: u16 = 0x200;
 const INVENTORY_QUANTITY_SHIFT: u16 = 11;
 const ITEM_ID_MASK: u16 = 0x1ff;
-const OWNER_ACTION_ID_MASK: u16 = 0x3fff;
-/// A gauge's full share, BattleUnit.hpGauge.
+const PSYNERGY_ABILITY_MASK: u16 = 0x3fff;
+/// A gauge's full share, Unit.hpGauge.
 const GAUGE_FULL: u32 = 0x4000;
 
-/// struct PsynergyMenuState (psynergy_menu.h).
+/// struct PsynergyMenuWork (psynergy_menu.h).
 const PSY_PANE_ACTION: u32 = 0x178;
 const PSY_OWNER_IDS: u32 = 0x21a;
 
-/// struct FourObjectMotionState (four_object_motion.h).
+/// struct DjinnFiguresWork (four_object_motion.h).
 const FIGURE_OBJECTS: u32 = 0x224;
 const FIGURE_X: u32 = 0x234;
 const FIGURE_Y: u32 = 0x23c;
@@ -157,7 +157,7 @@ impl<'a> Guide<'a> {
     }
 
     /// The Psynergy screen in Xian: Isaac's Cure chosen and used on Garet,
-    /// hurt first, one panel for each step of Menu_ResolveSelectedAction,
+    /// hurt first, one panel for each step of PsynergyMenu_RunSteps,
     /// found where the step's function is entered
     /// (PsynergyMenu_SelectPartySlot, PsynergyMenu_RunList,
     /// PsynergyMenu_ClassifySelectedPsynergy, PsynergyMenu_SelectTarget,
@@ -167,7 +167,7 @@ impl<'a> Guide<'a> {
     pub fn menu_psynergy_steps(&mut self) -> Result<(), String> {
         let menu = self.sym("gMenuWork")?;
         let steps = [
-            ("PSYNERGY_STEP_OWNER", self.sym("PsynergyMenu_SelectPartySlot")?, "PsynergyMenu_SelectPartySlot"),
+            ("PSYNERGY_STEP_MEMBER", self.sym("PsynergyMenu_SelectPartySlot")?, "PsynergyMenu_SelectPartySlot"),
             ("PSYNERGY_STEP_LIST", self.sym("PsynergyMenu_RunList")?, "PsynergyMenu_RunList"),
             ("PSYNERGY_STEP_CLASSIFY", self.sym("PsynergyMenu_ClassifySelectedPsynergy")?, "PsynergyMenu_ClassifySelectedPsynergy"),
             ("PSYNERGY_STEP_TARGET", self.sym("PsynergyMenu_SelectTarget")?, "PsynergyMenu_SelectTarget"),
@@ -191,7 +191,7 @@ impl<'a> Guide<'a> {
         let hooks: Vec<u32> = steps.iter().map(|s| s.1).collect();
         let (frames, hits) = Self::run_hooked(&mut field, &hooks, &path, &mut |f| {
             let work = f.read32(menu);
-            reads.push((f.read8(work + PSY_OWNER_IDS), f.read8(work + PSY_OWNER_IDS + 1), f.read16(work + PSY_PANE_ACTION) & OWNER_ACTION_ID_MASK, f.read16(garet + UNIT_HP), f.read16(isaac + UNIT_PP)))
+            reads.push((f.read8(work + PSY_OWNER_IDS), f.read8(work + PSY_OWNER_IDS + 1), f.read16(work + PSY_PANE_ACTION) & PSYNERGY_ABILITY_MASK, f.read16(garet + UNIT_HP), f.read16(isaac + UNIT_PP)))
         })?;
         for h in &hits {
             eprintln!("  frame {}: {} r0..r3 {:x?}", h.frame, steps.iter().find(|s| s.1 == h.pc).map_or("?", |s| s.2), h.r);
@@ -241,7 +241,7 @@ impl<'a> Guide<'a> {
         }
         let (x, y) = (8 + cw, 8 + 2 * ch + 40);
         let notes = [
-            "MENU_RESOLVESELECTEDACTION'S STEPS, EACH",
+            "PSYNERGYMENU_RUNSTEPS'S STEPS, EACH",
             "FOUND WHERE ITS FUNCTION IS ENTERED, AND",
             "THE SCREEN JUST BEFORE THE A THAT ENDS IT.",
             "",
@@ -260,17 +260,17 @@ impl<'a> Guide<'a> {
     /// and the Psynergy its action list holds.
     fn stats(field: &Field, unit: u32) -> ([u16; 7], u8, Vec<u16>) {
         let s = [UNIT_MAX_HP, UNIT_MAX_PP, UNIT_ATTACK, UNIT_DEFENSE, UNIT_AGILITY, UNIT_LUCK, UNIT_HP].map(|o| if o == UNIT_LUCK { u16::from(field.read8(unit + o)) } else { field.read16(unit + o) });
-        let psynergy = (0..32).map(|i| field.read16(unit + UNIT_ACTION_SLOTS + 4 * i) & OWNER_ACTION_ID_MASK).filter(|&a| a != 0).collect();
+        let psynergy = (0..32).map(|i| field.read16(unit + UNIT_ACTION_SLOTS + 4 * i) & PSYNERGY_ABILITY_MASK).filter(|&a| a != 0).collect();
         (s, field.read8(unit + UNIT_CLASS_INDEX), psynergy)
     }
 
     /// The Djinn screen in Xian: Isaac's Flint put on standby. The screen's
-    /// preview (OwnerAction_RunCompareLoop) at twice its size, beside
+    /// preview (PsynergyList_RunCompareLoop) at twice its size, beside
     /// Isaac's unit as it stands before and as the game leaves it once the
     /// change is made: his Djinn set, class, stats and Psynergy, read from
     /// the unit, as `djinn-preview.png`.
     pub fn djinn_preview(&mut self) -> Result<(), String> {
-        let compare = self.sym("OwnerAction_RunCompareLoop")?;
+        let compare = self.sym("PsynergyList_RunCompareLoop")?;
         let abilities = column("games/tbs/src/game/actions.tsv", "ability")?;
         let classes = self.class_names();
         let mut field = self.enter(XIAN)?;
@@ -333,17 +333,17 @@ impl<'a> Guide<'a> {
 
     /// The Status screen in Xian: the member row, then A through Isaac's
     /// status, Psynergy and equipment pages, each found where
-    /// Menu_RunActionFlow's step function is entered
-    /// (CharacterSelector_RunRearrange, CharacterMenu_SelectCommand,
+    /// SummaryScreen_RunPages's step function is entered
+    /// (MemberChooser_RunRearrange, SummaryScreen_SelectCommand,
     /// PsynergyMenu_SelectAction, ItemMenu_SelectItem), at twice its size;
     /// each Djinni figure of the row of four outlined where the menu work
-    /// places it (FourObjectMotionState positionsX and positionsY, the
+    /// places it (DjinnFiguresWork positionsX and positionsY, the
     /// image standing on that point), as `status-pages.png`.
     pub fn status_pages(&mut self) -> Result<(), String> {
         let menu = self.sym("gMenuWork")?;
         let steps = [
-            ("STATUS_STEP_MEMBER", self.sym("CharacterSelector_RunRearrange")?, "the member row"),
-            ("STATUS_STEP_STATUS", self.sym("CharacterMenu_SelectCommand")?, "the status page"),
+            ("STATUS_STEP_MEMBER", self.sym("MemberChooser_RunRearrange")?, "the member row"),
+            ("STATUS_STEP_STATUS", self.sym("SummaryScreen_SelectCommand")?, "the status page"),
             ("STATUS_STEP_PSYNERGY", self.sym("PsynergyMenu_SelectAction")?, "the Psynergy page"),
             ("STATUS_STEP_EQUIPMENT", self.sym("ItemMenu_SelectItem")?, "the equipment page"),
         ];
@@ -457,10 +457,10 @@ impl<'a> Guide<'a> {
     /// pressed four times: his list as given and after each press, the
     /// screen's item window beside the order the inventory then holds,
     /// read from his unit, each press labelled with the sort mode
-    /// InventoryMenu_SortByListOrder was entered with, as
+    /// ItemMenu_Sort was entered with, as
     /// `item-sorting.png`.
     pub fn item_sorting(&mut self) -> Result<(), String> {
-        let sort = self.sym("InventoryMenu_SortByListOrder")?;
+        let sort = self.sym("ItemMenu_Sort")?;
         let items = column("games/tbs/src/game/items.tsv", "item")?;
         let mut field = self.enter(XIAN)?;
         let isaac = field.unit(ISAAC)?;
@@ -498,14 +498,14 @@ impl<'a> Guide<'a> {
             }
         }
         let (x, y) = (8 + cw, 8 + 2 * ch + 40);
-        let key = ["EACH LIST IS ISAAC'S INVENTORY", "AS HIS UNIT HOLDS IT, IN ORDER.", "", "IN YELLOW, MARKED (E): EQUIPPED.", "THE SORT EACH PRESS USED IS THE", "ONE INVENTORYMENU_SORTBYLISTORDER", "WAS ENTERED WITH."];
+        let key = ["EACH LIST IS ISAAC'S INVENTORY", "AS HIS UNIT HOLDS IT, IN ORDER.", "", "IN YELLOW, MARKED (E): EQUIPPED.", "THE SORT EACH PRESS USED IS THE", "ONE ITEMMENU_SORT", "WAS ENTERED WITH."];
         for (n, l) in key.iter().enumerate() {
             text(&mut image, x as i32, (y + 16 * n) as i32, l, if n == 3 { MARK } else { DIM }, None, 2);
         }
         self.guide_png("item-sorting.png", &image, "Isaac's items in each of the four sort orders")
     }
 
-    /// The status panel (Menu_DrawOwnerStatusPanel's window, tile (0, 5),
+    /// The status panel (StatusPanel_Draw's window, tile (0, 5),
     /// 13 by 12 tiles) once for each kind, in Xian with Isaac holding his
     /// equipped items and seven more: on the Item screen's member row
     /// (STATUS_PANEL_EXPERIENCE), with R held there (STATUS_PANEL_STATS),
@@ -515,7 +515,7 @@ impl<'a> Guide<'a> {
     /// giving the member row's first call that mode instead. As
     /// `status-panels.png`.
     pub fn status_panels(&mut self) -> Result<(), String> {
-        let draw = self.sym("Menu_DrawOwnerStatusPanel")?;
+        let draw = self.sym("StatusPanel_Draw")?;
         let items = column("games/tbs/src/game/items.tsv", "item")?;
         // (kind's name, mode, screen) for each panel.
         let mut panels: Vec<(String, u32, Vec<u16>, String)> = Vec::new();
