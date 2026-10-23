@@ -575,6 +575,14 @@ pub const ASPECTS: &[&str] = &[
     "debug", "event", "ev",
 ];
 
+/// Words that, right after `ACTOR_`, make an actor a part of its scene's
+/// machinery rather than a person or thing of the game, even among the
+/// actors a scene numbers in one enum: a blank actor draws nothing the player
+/// sees and is there for a script to steer or to stand in the way
+/// (`ACTOR_BLANK_ROCK_GUIDE`, which the falling rock is held above), and a
+/// mask hides the parts of another sprite it covers (`ACTOR_MASK_FOR_STUMP`).
+pub const STAND_INS: &[&str] = &["blank", "mask"];
+
 /// Words that, last in a name, make it a quantity, a bound, a bit field or a
 /// place on the screen: `ITEM_STACK_MAX`, `ENEMY_CLASS_FIRST`, `SUMMON_END`,
 /// `PSYNERGY_SHORTCUT_ID_MASK`, `ITEM_LIST_NAME_X`.
@@ -636,6 +644,8 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
 ///
 /// - a function-like macro computes a value (`FLAG_IN_PARTY(character)`,
 ///   `PSYNERGY_EV(phase)`);
+/// - an actor whose first word is a stand-in's (`STAND_INS`), whatever its
+///   enum, is a blank actor or a mask;
 /// - an enumerator of a tagged enum is what the tag's last word says: an id
 ///   (`enum ItemId`) or the family's own word (`enum XianActor`) holds
 ///   members, and any other word the values of a mechanism
@@ -649,11 +659,14 @@ fn is_mechanism(definition: &Definition, prefix: &str, family: &str, macros: &Ha
     if definition.origin == Origin::FunctionMacro {
         return true;
     }
+    let rest = &definition.name[prefix.len()..];
+    let first = rest.split('_').next().unwrap_or("").to_ascii_lowercase();
+    if prefix == "ACTOR_" && STAND_INS.contains(&first.as_str()) {
+        return true;
+    }
     if let Some(last) = definition.tag.and_then(|tag| pieces(tag).last().copied()) {
         return last != "Id" && last != family;
     }
-    let rest = &definition.name[prefix.len()..];
-    let first = rest.split('_').next().unwrap_or("").to_ascii_lowercase();
     let last = rest.rsplit('_').next().unwrap_or("").to_ascii_lowercase();
     if ASPECTS.contains(&first.as_str()) || MEASURES.contains(&last.as_str()) {
         return true;
@@ -1082,6 +1095,12 @@ mod tests {
         assert_eq!(enumerator("ITEM_HERB", Some("ItemId")), Some("item"), "an id enum holds members");
         assert_eq!(enumerator("ACTOR_GUARD", Some("BilibinActor")), Some("actor"), "so does one tagged by the family");
         assert_eq!(enumerator("ACTOR_GUARD", None), Some("actor"), "an untagged enum, by its words");
+        assert_eq!(enumerator("ACTOR_BLANK_ROCK_GUIDE", Some("WorldMapCaravanActor")), None, "a blank actor");
+        assert_eq!(enumerator("ACTOR_MASK_FOR_STUMP", Some("GomaCavePillarActor")), None, "a mask");
+        assert_eq!(enumerator("ACTOR_YOUNG_MAN_SAW_MASK", Some("ValeInteriorsInnActor")), Some("actor"), "a mask last is a word");
+        assert_eq!(enumerator("ACTOR_MASKED_MAN", Some("ValeInteriorsInnActor")), Some("actor"));
+        assert_eq!(enumerator("ACTOR_HIDDEN_PUDDLE", Some("LunpaActor")), Some("actor"), "hidden is not blank");
+        assert_eq!(enumerator("ITEM_BLANK", Some("ItemId")), Some("item"), "stand-ins are actors");
         assert_eq!(enumerator("ABILITY_KIND_SUMMON", Some("AbilityKind")), None);
         assert_eq!(enumerator("ACTOR_SOLID", Some("ActorCollisionFlag")), None, "an actor's bits");
         assert_eq!(enumerator("CHARACTER_POISON", Some("CharacterAilment")), None, "a state, not a person");
