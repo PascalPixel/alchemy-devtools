@@ -626,8 +626,10 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
     if let Some(&(prefix, kind, word)) = family {
         return (!is_mechanism(&definition, prefix, word, macros)).then_some(kind);
     }
+    // Each scene's links are an anonymous enum; a tagged enum there holds
+    // what the links share (`enum DefaultEntrance`), a mechanism.
     if origin == Origin::Enumerator && file.ends_with("scene_links.h") {
-        return Some("link");
+        return definition.tag.is_none().then_some("link");
     }
     let mechanism_folder = file.contains("/src/scene/") || file.contains("/src/object/");
     match origin {
@@ -1080,6 +1082,8 @@ mod tests {
         assert_eq!(kind("SceneId_Vale", "a.h", Origin::Global), Some("scene"));
         assert_eq!(kind("FLAG_SCENE_TEMP_01", "a.h", Origin::Macro), None);
         assert_eq!(kind("VALE_FROM_WORLD_MAP", "games/tbs/include/scene_links.h", Origin::Enumerator), Some("link"));
+        let shared = Definition { tag: Some("DefaultEntrance"), ..Definition::new("ENTRANCE_DEFAULT", "games/tbs/include/scene_links.h", Origin::Enumerator) };
+        assert_eq!(super::kind(shared, &HashMap::new()), None, "what the links share");
         assert_eq!(kind("Vale_Init", "games/tbs/src/scene/vale.c", Origin::Function), Some("function"));
         assert_eq!(kind("Battle_Init", "games/tbs/src/battle/x.c", Origin::Function), None);
         assert_eq!(kind("ACTOR_unk_14", "a.h", Origin::Enumerator), None);
