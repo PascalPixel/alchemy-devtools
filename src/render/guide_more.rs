@@ -42,8 +42,8 @@ const BILIBIN_ITEM_SHOPKEEPER: u16 = 18;
 const BILIBIN_INNKEEPER: u16 = 19;
 /// The Djinn room's Flint.
 const FLINT: u16 = 8;
-/// The scene number of a battle (SCENE_BATTLE).
-const SCENE_BATTLE: u16 = 0x1fe;
+/// The scene number of a battle (MAP_BATTLE).
+const MAP_BATTLE: u16 = 0x1fe;
 /// Frames from a battle's start until its command menu is up and the
 /// battle is still.
 const BATTLE_SETTLE_FRAMES: u32 = 300;
@@ -62,9 +62,9 @@ const LAYER_BITS: u16 = 0x1f00;
 const BGCNT: u32 = 0x0400_0008;
 const OVERLAY_AREA: u32 = 0x0200_8000;
 const OVERLAY_SIZE: u32 = 0x8000;
-const MAP_CELLS: u32 = 0x0201_0000;
+const MAPGRID_CELLS: u32 = 0x0201_0000;
 const MAP_BLOCKS: u32 = 0x0202_0000;
-/// MapState.layers' cells pointers (field.rs).
+/// MapGridState.layers' cells pointers (field.rs).
 const MAP_LAYER_CELLS: u32 = 0x130;
 const MAP_LAYER_SIZE: u32 = 0x30;
 /// The map's cells: 128 by 128.
@@ -385,7 +385,7 @@ impl<'a> Guide<'a> {
     /// in its own colour, beside the sprites alone, as `oam.png`.
     /// Where Garet's sister stands in Vale at twice the GBA's size, each
     /// actor on screen marked at its feet and labelled with its actor
-    /// number (the scene's own placement rows start at ACTOR_FIRST_PLACED),
+    /// number (the scene's own placement rows start at LOCALID_FIRST_PLACED),
     /// as `scene-actors.png`.
     pub fn scene_actors(&mut self) -> Result<(), String> {
         let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
@@ -547,7 +547,7 @@ impl<'a> Guide<'a> {
         let mut image = canvas(2 * WIDTH, 2 * HEIGHT, 0);
         paste(&mut image, &screen(&field.picture()), 0, 0, 2);
         let (vx, vy) = field.view();
-        for id in 0..ACTOR_SLOTS {
+        for id in 0..LOCALID_SLOTS {
             let Some(a) = field.actor(id) else { continue };
             // A raised actor is drawn its height higher up the screen.
             let (sx, sy) = (2 * (a.x - vx), 2 * (a.z - (a.y >> 16) - vy));
@@ -724,12 +724,12 @@ impl<'a> Guide<'a> {
     /// answers it (guide_cells::meaning: a wall red, an exit row blue, a
     /// touch row magenta), and each of the scene's own is joined to words
     /// saying what it does; open ground more than a step above the leader's
-    /// (Map_CheckObjectStep's 8 pixels) is orange, and more than 12 below it
+    /// (MapGrid_CheckObjectStep's 8 pixels) is orange, and more than 12 below it
     /// purple; a white line runs wherever the ground's height changes; a key
     /// under it says what each colour stands for. Goma Cave walls its floor
     /// with rims of ground 32 pixels high, often cut on a cell's diagonal,
     /// rather than with wall codes, so heights are read for every pixel
-    /// (Map_GetTerrainHeight) where a cell isn't flat. The screen is above,
+    /// (MapGrid_GetTerrainHeight) where a cell isn't flat. The screen is above,
     /// its ground below.
     pub fn cells(&mut self) -> Result<(), String> {
         let names = self.cell_names("gGomaCavePillar_Events", "GomaCavePillar")?;
@@ -881,10 +881,10 @@ impl<'a> Guide<'a> {
         let mut windows = Vec::new();
         for layer in 0..3u32 {
             let cells = field.read32(work + MAP_LAYER_CELLS + MAP_LAYER_SIZE * layer);
-            if cells < MAP_CELLS {
+            if cells < MAPGRID_CELLS {
                 continue;
             }
-            let index = ((cells - MAP_CELLS) / 4) as i32;
+            let index = ((cells - MAPGRID_CELLS) / 4) as i32;
             let control = field.read16(BGCNT + 2 * (3 - layer));
             windows.push((index % GRID, index / GRID, u32::from((control >> 2) & 3), control & 0x80 != 0));
         }
@@ -894,7 +894,7 @@ impl<'a> Guide<'a> {
                 let Some(&(_, _, char_base, wide)) = windows.iter().rev().find(|w| cx >= w.0 && cz >= w.1 && cx < w.0 + span_x.max(1) && cz < w.1 + span_z.max(1)) else {
                     continue;
                 };
-                let word = field.read32(MAP_CELLS + 4 * (cx + cz * GRID) as u32);
+                let word = field.read32(MAPGRID_CELLS + 4 * (cx + cz * GRID) as u32);
                 let block = word & 0xfff;
                 for q in 0..4u32 {
                     let entry = field.read16(MAP_BLOCKS + block * 8 + 2 * q);
@@ -1030,7 +1030,7 @@ impl<'a> Guide<'a> {
                 field.frames(1)?;
                 let picture = field.picture();
                 each(field);
-                if field.scene() == SCENE_BATTLE {
+                if field.scene() == MAP_BATTLE {
                     frames.push(picture);
                     field.hold(0);
                     return Ok(Some(frames.len()));
@@ -1068,8 +1068,8 @@ impl<'a> Guide<'a> {
     /// him take along `stretch`, else why not: he stays on its line (the
     /// game turns him aside only when something blocks his way), moves no
     /// more than a running step, stands on a cell of his layer that is no
-    /// wall (MAP_CELL_WALL), and climbs or drops no more than
-    /// Map_CheckObjectStep's 8 and 12 pixels.
+    /// wall (MB_WALL), and climbs or drops no more than
+    /// MapGrid_CheckObjectStep's 8 and 12 pixels.
     fn check_footing(field: &mut Field, stretch: &Stretch, last: &Actor, now: &Actor) -> Result<(), String> {
         let at = format!("at ({}, {}) on layer {}", now.x, now.z, now.layer);
         let (line, was) = if stretch.across { (now.z, last.z) } else { (now.x, last.x) };
@@ -1192,7 +1192,7 @@ pub(super) struct Stretch {
 }
 
 /// Goma Cave's rooms: the pond, the pillar room, the stream and the bridge
-/// (SceneId_GomaCavePond to SceneId_GomaCaveBridge).
+/// (MapId_GomaCavePond to MapId_GomaCaveBridge).
 const GOMA_CAVE_ROOMS: [u16; 4] = [26, 27, 28, 29];
 /// The most of the 32 by 32 pixels around the leader that may be black as a
 /// random battle is walked into: an eighth.
@@ -1202,13 +1202,13 @@ const DARK_LIMIT: u32 = 128;
 const STRETCH_MARGIN: i32 = 8;
 
 /// The field's actor slots (FIELD_ACTOR_COUNT in field.rs).
-pub(super) const ACTOR_SLOTS: u16 = 66;
-/// SceneId_IncreaseItemAndLevel and SceneId_MenuTest, the debug level room
+pub(super) const LOCALID_SLOTS: u16 = 66;
+/// MapId_IncreaseItemAndLevel and MapId_MenuTest, the debug level room
 /// and menu test room (scenes.s).
 const LEVEL_ROOM: u16 = 199;
 const MENU_TEST_ROOM: u16 = 200;
-/// The level room's placed actors, ACTOR_FIRST_PLACED on (enum
-/// ItemLevelActor, debug/level.c); outside Japanese all seven are placed.
+/// The level room's placed actors, LOCALID_FIRST_PLACED on (enum
+/// ItemLevelLocalId, debug/level.c); outside Japanese all seven are placed.
 const LEVEL_ROOM_ACTORS: std::ops::Range<u16> = 8..15;
 /// Facing west, in 1/65536 turns (NORTH is a quarter turn short of a whole).
 const WEST: u32 = 0x8000;

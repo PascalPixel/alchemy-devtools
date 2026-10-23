@@ -30,7 +30,7 @@ fn word(field: &Field, a: u32) -> i32 {
     field.read32(a) as i32
 }
 
-/// One actor's object as the engine keeps it (struct FieldActor).
+/// One actor's object as the engine keeps it (struct ObjectEvent).
 pub fn describe(field: &Field, id: u16) -> String {
     let a = field.actor_address(id);
     if a == 0 {
@@ -215,7 +215,7 @@ impl<'a> Guide<'a> {
                 // Jumping the gap at row 17 (touch cells 10 and 11) from each
                 // side, after each arrival, with layer 2's cell (43, 17) (raw
                 // grid (107, 17)) as the arrival left it and then swapped.
-                let base = at("gMapCellBuffer")?;
+                let base = at("gMapGridCellBuffer")?;
                 let cell = base + (107 + 17 * 128) * 4;
                 for entrance in [1u16, 2, 3, 6] {
                     for swap in [false, true] {
@@ -259,7 +259,7 @@ impl<'a> Guide<'a> {
                 // Move cast east on the pillar, from column 41 and from 42,
                 // after each arrival: where it ends up, whether it drops.
                 let flag = self.flags.resolve("FLAG_GONDOWAN_CAVE_PILLAR_DROPPED", None).ok_or("no flag")?;
-                let base = at("gMapCellBuffer")?;
+                let base = at("gMapGridCellBuffer")?;
                 let cell = base + (107 + 17 * 128) * 4;
                 let flags_at = at("gGameFlagBytes")?;
                 for entrance in [1u16, 2] {
@@ -310,7 +310,7 @@ impl<'a> Guide<'a> {
                 // The dropped pillar (actor 10) with layer 2's cell (43, 17)
                 // as the map loads it and as the drop leaves it, seen from
                 // the leader standing west of the crevice.
-                let base = at("gMapCellBuffer")?;
+                let base = at("gMapGridCellBuffer")?;
                 let cell = base + (107 + 17 * 128) * 4;
                 let flag = self.flags.resolve("FLAG_GONDOWAN_CAVE_PILLAR_DROPPED", None).ok_or("no flag")?;
                 for (entrance, drop) in [(2u16, true), (1, true), (2, false), (1, false)] {
@@ -335,7 +335,7 @@ impl<'a> Guide<'a> {
                 for entrance in [0u16, 1, 2, 5] {
                     let e = self.enter_with((158, entrance), &[])?;
                     let work = e.field.map_work();
-                    let base = at("gMapCellBuffer")?;
+                    let base = at("gMapGridCellBuffer")?;
                     let ptrs: Vec<String> = (0..3).map(|l| {
                         let p = e.field.read32(work + 0x130 + 0x30 * l);
                         format!("{p:08x} (+{} words: column {}, row {})", (p.wrapping_sub(base)) / 4, ((p.wrapping_sub(base)) / 4) % 128, ((p.wrapping_sub(base)) / 4) / 128)
@@ -360,11 +360,11 @@ impl<'a> Guide<'a> {
                 // state of the fourth log's flags.
                 let states: [(&str, &[u16]); 6] = [
                     ("no flags", &[]),
-                    ("FLAG_PLACE_TEMP_0F", &[0x30f]),
-                    ("FLAG_PLACE_TEMP_10", &[0x310]),
-                    ("FLAG_PLACE_TEMP_11", &[0x311]),
-                    ("FLAG_PLACE_TEMP_12", &[0x312]),
-                    ("FLAG_PLACE_TEMP_08", &[0x308]),
+                    ("FLAG_MAPSEC_TEMP_0F", &[0x30f]),
+                    ("FLAG_MAPSEC_TEMP_10", &[0x310]),
+                    ("FLAG_MAPSEC_TEMP_11", &[0x311]),
+                    ("FLAG_MAPSEC_TEMP_12", &[0x312]),
+                    ("FLAG_MAPSEC_TEMP_08", &[0x308]),
                 ];
                 for entrance in 0..4u16 {
                     for (label, set) in states {

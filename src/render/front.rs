@@ -12,7 +12,7 @@ use std::path::Path;
 
 /// The scenes and entrances the pictures start from (places.tsv): the
 /// title's entrance 10 shows the logo card after the ending; ValeHome's 12
-/// runs Event_DepartForQuest; the world map's 91 plays
+/// runs EventScript_DepartForQuest; the world map's 91 plays
 /// WorldMap_PlayLighthouseTransition(1) after Venus Lighthouse's beacon
 /// erupts.
 const TITLE: (u16, u16) = (0, 3);
@@ -107,7 +107,7 @@ impl Front<'_> {
         Ok(())
     }
 
-    /// Vale's send-off (Event_DepartForQuest, ValeHome's entrance 12, with
+    /// Vale's send-off (EventScript_DepartForQuest, ValeHome's entrance 12, with
     /// FLAG_KALAY_REACHED clear): Isaac and Garet hear everyone is at the
     /// gate, walk to the crowd, and the town calls out "Farewell!". The GIF
     /// runs from message `first` to the hold of message `last`; the still is
@@ -128,7 +128,7 @@ impl Front<'_> {
         let last_shown = frames.iter().rposition(|f| f.message == last).ok_or(format!("message {last:05} never showed"))?;
         let end = (last_shown + PAGE_HOLD as usize).min(frames.len());
         let clip: Vec<&Frame> = frames[start..end].iter().filter(|f| f.scene == scene).collect();
-        self.gif("vale-farewell.gif", &clip, &format!("Event_DepartForQuest from message {first:05} to {last:05}"))?;
+        self.gif("vale-farewell.gif", &clip, &format!("EventScript_DepartForQuest from message {first:05} to {last:05}"))?;
         let gathered = at(crowd)?.saturating_sub(2);
         self.png("vale-farewell.png", &image(&frames[gathered].picture), &format!("the town gathered, before message {crowd:05}"))?;
         Ok(())
@@ -208,7 +208,7 @@ fn whiteness(canvas: &[u32], size: usize, sx: usize, sz: usize) -> usize {
 
 impl Front<'_> {
     /// The world map drawn flat from its own planes: for every 2 by 2
-    /// squares the followed point is moved there and Map_UpdateCurrentTileBlock
+    /// squares the followed point is moved there and WorldMap_UpdateCurrentTileBlock
     /// draws them into BG3 (the ground) and BG2 (mountains, woods and towns
     /// over it); the planes are read from VRAM and laid on one canvas, BG2 over
     /// BG3. The world map loads one of two graphics sets by where the party

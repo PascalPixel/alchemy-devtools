@@ -20,7 +20,7 @@ const KEY_DOWN: u32 = 0x80;
 
 /// Vale's part with the Vale Sanctum, entered by day.
 const VALE: (u16, u16) = (4, 1);
-/// SceneId_MenuTest, the debug menu test room (scenes.s).
+/// MapId_MenuTest, the debug menu test room (scenes.s).
 const MENU_TEST_ROOM: u16 = 200;
 
 /// struct GameState (gGameState): the coins, and the scene and entrance the
@@ -29,7 +29,7 @@ const GS_COINS: u32 = 0x10;
 const GS_SCENE: u32 = 0x1c0;
 const GS_ENTRANCE: u32 = 0x1c2;
 /// struct FieldWork: the exit request, which ends the scene; 999 leaves for
-/// the game state's scene and entrance (Event_SetDestination).
+/// the game state's scene and entrance (FieldScript_SetDestination).
 const FW_MARKERS: u32 = 0x11c;
 const FW_EXIT: u32 = 0x170;
 const EXIT_TO_DESTINATION: u16 = 999;
@@ -99,7 +99,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Sends the party from the scene it is in to `scene`'s `entrance`, as
-    /// Event_SetDestination does, and runs `frames` frames.
+    /// FieldScript_SetDestination does, and runs `frames` frames.
     fn travel(&self, field: &mut Field, (scene, entrance): (u16, u16), frames: u32) -> Result<(), String> {
         let state = self.sym("gGameState")?;
         field.write16(state + GS_SCENE, scene);
@@ -113,7 +113,7 @@ impl<'a> Guide<'a> {
     /// seen through the party it changes: the party in Vale before the
     /// visit, as the room's first entry leaves it, and after it has run a
     /// second time as the next visit runs it, as `menu-test-setup.png`. The
-    /// party is sent into the room as Event_SetDestination sends it, and the
+    /// party is sent into the room as FieldScript_SetDestination sends it, and the
     /// entry's runs are counted by probing it.
     pub fn menu_test_setup(&mut self) -> Result<(), String> {
         let setup_fn = self.overlay_sym("MenuTest_GetEvents", "CommandTable_ConfigureCommandList")?;
@@ -255,7 +255,7 @@ impl<'a> Guide<'a> {
     }
 
     /// A cutscene's script beside the frames each of its commands waits
-    /// through, as `scene-script.gif`: Event_ReactToAnotherTremor, a Vale
+    /// through, as `scene-script.gif`: EventScript_ReactToAnotherTremor, a Vale
     /// villager's talk event once FLAG_KALAY_REACHED is set, played by
     /// talking to her. Its body is read from vale.c a statement to a line;
     /// its calls are the BL instructions of its code in the loaded overlay,
@@ -263,11 +263,13 @@ impl<'a> Guide<'a> {
     /// statement is current from the frame its call is reached until the
     /// frame the instruction after it is.
     pub fn scene_script(&mut self) -> Result<(), String> {
-        const EVENT: &str = "Event_ReactToAnotherTremor";
+        const EVENT: &str = "EventScript_ReactToAnotherTremor";
         const WOMAN: u16 = 17;
-        let source = std::fs::read_to_string(crate::compile::root().join("games/tbs/src/scene/vale.c")).map_err(|e| format!("vale.c: {e}"))?;
+        let source = std::fs::read_to_string(crate::compile::root().join("games/tbs/src/map/vale.c")).map_err(|e| format!("vale.c: {e}"))?;
         let head = source.lines().position(|l| l.contains(&format!("void {EVENT}(void)"))).ok_or("vale.c has no such event")?;
-        let body: Vec<String> = source.lines().skip(head + 1).take_while(|l| !l.starts_with('}')).map(|l| l.trim().to_string()).filter(|l| !l.is_empty() && !l.starts_with("//")).collect();
+        // One statement a line, a statement clang-format wrapped joined again.
+        let lines: Vec<&str> = source.lines().skip(head + 1).take_while(|l| !l.starts_with('}')).map(str::trim).filter(|l| !l.is_empty() && !l.starts_with("//")).collect();
+        let body: Vec<String> = lines.join(" ").split_inclusive(';').map(|s| s.trim().replace("( ", "(")).filter(|s| !s.is_empty()).collect();
         // As the 3 by 5 font draws them: no semicolons, and X for a times.
         let shown: Vec<String> = body.iter().map(|l| l.trim_end_matches(';').replace('*', "X")).collect();
         let mut entered = self.enter_with(VALE, &["FLAG_KALAY_REACHED"])?;
@@ -303,7 +305,9 @@ impl<'a> Guide<'a> {
             }
         }));
         // Talk to her, and play until the script has run its last call.
-        let (w, hgt) = (WIDTH + 16 + 560, 330);
+        // Wide enough for the longest statement, as `text` measures it.
+        let longest = shown.iter().map(|l| text(&mut canvas(1, 1, BACK), -100, -100, l, 0, None, 2)).max().unwrap_or(0).max(544) as usize;
+        let (w, hgt) = (WIDTH + 16 + longest + 16, 330);
         let mut frames = Vec::new();
         let mut current: Option<usize> = None;
         let mut waited = vec![0u32; calls.len()];
@@ -366,10 +370,10 @@ impl<'a> Guide<'a> {
     }
 
     /// The scene and place flags across two entrances, as
-    /// `temporary-flags.png`: in Vale every one of FLAG_SCENE_TEMP_00 to
-    /// FLAG_PLACE_TEMP_FF is set by hand; the party is sent to the Sanctum,
+    /// `temporary-flags.png`: in Vale every one of FLAG_MAP_TEMP_00 to
+    /// FLAG_MAPSEC_TEMP_FF is set by hand; the party is sent to the Sanctum,
     /// a scene of the same place, then to the world map, another place, and
-    /// back into Vale (Event_SetDestination's way); each time the 512 flags are drawn as
+    /// back into Vale (FieldScript_SetDestination's way); each time the 512 flags are drawn as
     /// two grids of 16 by 16, lit where set, beside the screen.
     pub fn temporary_flags(&mut self) -> Result<(), String> {
         const FIRST: u32 = 0x200;
@@ -413,16 +417,16 @@ impl<'a> Guide<'a> {
                     }
                 }
                 let count = set[half * 256..half * 256 + 256].iter().filter(|&&b| b).count();
-                text(&mut image, gx as i32, (gy + grid + 6) as i32, &format!("{} {count}", ["SCENE", "PLACE"][half]), [0x60_b0_ff, 0xff_b0_50][half], None, 2);
+                text(&mut image, gx as i32, (gy + grid + 6) as i32, &format!("{} {count}", ["MAP", "MAPSEC"][half]), [0x60_b0_ff, 0xff_b0_50][half], None, 2);
             }
         }
         let y = (HEIGHT + 34 + grid + 26) as i32;
-        text(&mut image, 8, y, "FLAG_SCENE_TEMP_00 TO _FF (BLUE) AND FLAG_PLACE_TEMP_00 TO _FF (ORANGE),", DIM, None, 2);
+        text(&mut image, 8, y, "FLAG_MAP_TEMP_00 TO _FF (BLUE) AND FLAG_MAPSEC_TEMP_00 TO _FF (ORANGE),", DIM, None, 2);
         text(&mut image, 8, y + 16, "A SQUARE A FLAG, LIT WHERE SET, EACH AS THE PARTY HAS CONTROL AGAIN", DIM, None, 2);
-        self.guide_png("temporary-flags.png", &image, "the scene and place flags as the party enters a scene of the same place and then another place")
+        self.guide_png("temporary-flags.png", &image, "the map and map-section flags as the party enters a map of the same section and then another section")
     }
 
-    /// Flags FLAG_SCENE_TEMP_00 to FLAG_PLACE_TEMP_FF, whether each is set.
+    /// Flags FLAG_MAP_TEMP_00 to FLAG_MAPSEC_TEMP_FF, whether each is set.
     fn temp_flags(&self, field: &Field, flags: u32) -> Vec<bool> {
         (0x200..0x400u32).map(|f| field.read8(flags + f / 8) & (1 << (f % 8)) != 0).collect()
     }
@@ -472,7 +476,7 @@ impl<'a> Guide<'a> {
         // address when every halfword that differs, BL offsets aside, is
         // in an aligned word that is an address in RAM or the ROM in both.
         let is_address = |w: u32| matches!(w >> 24, 0x02 | 0x03 | 0x08);
-        let headers: String = std::fs::read_dir(crate::compile::root().join("games/tbs/src/scene/common")).map_err(|e| format!("common/: {e}"))?.flatten().filter_map(|e| std::fs::read_to_string(e.path()).ok()).collect();
+        let headers: String = std::fs::read_dir(crate::compile::root().join("games/tbs/src/map/common")).map_err(|e| format!("common/: {e}"))?.flatten().filter_map(|e| std::fs::read_to_string(e.path()).ok()).collect();
         let copies: Vec<String> = overlays[0].1.iter().filter(|(n, (_, b))| headers.contains(n.as_str()) && !n.starts_with("_call_via") && overlays[1].1.get(*n).is_some_and(|(_, c)| c.len() == b.len())).map(|(n, _)| n.clone()).collect();
         let mut identical = 0;
         let mut addresses_only = 0;
@@ -690,7 +694,7 @@ impl<'a> Guide<'a> {
         let kind_of = |name: &str| -> usize {
             if name.starts_with("Resource_Overlay") {
                 0
-            } else if name.starts_with("Field_Map") {
+            } else if name.starts_with("Field_Layout") {
                 1
             } else if name.starts_with("Tileset_") {
                 2
@@ -807,13 +811,13 @@ impl<'a> Guide<'a> {
         // EWRAM's areas, from ewram.s's names.
         let ewram_areas: Vec<(u32, u32, &str, u32)> = vec![
             (0x0200_0000, self.sym("gOverlayArea")?, "MAIN IMAGE'S VARIABLES", 0x90_90_90),
-            (self.sym("gOverlayArea")?, self.sym("gMapCellBuffer")?, "OVERLAY AREA", 0xff_70_50),
-            (self.sym("gMapCellBuffer")?, self.sym("gActorSpriteSlots")?, "MAP CELLS", 0x40_c8_70),
+            (self.sym("gOverlayArea")?, self.sym("gMapGridCellBuffer")?, "OVERLAY AREA", 0xff_70_50),
+            (self.sym("gMapGridCellBuffer")?, self.sym("gActorSpriteSlots")?, "MAP CELLS", 0x40_c8_70),
             (self.sym("gActorSpriteSlots")?, self.sym("gDecodeBuffer")?, "ACTOR SPRITE SLOTS", 0xe0_a0_e0),
-            (self.sym("gDecodeBuffer")?, self.sym("gMapBlocks")?, "DECODE BUFFER", 0xe0_e0_60),
-            (self.sym("gMapBlocks")?, self.sym("gMapLayerData")?, "MAP BLOCKS", 0x30_b0_a0),
-            (self.sym("gMapLayerData")?, self.sym("gMapCollision")?, "MAP LAYER DATA", 0x80_d0_ff),
-            (self.sym("gMapCollision")?, ewram_heap, "MAP COLLISION", 0x60_e0_40),
+            (self.sym("gDecodeBuffer")?, self.sym("gMetatiles")?, "DECODE BUFFER", 0xe0_e0_60),
+            (self.sym("gMetatiles")?, self.sym("gMapGridLayerData")?, "MAP BLOCKS", 0x30_b0_a0),
+            (self.sym("gMapGridLayerData")?, self.sym("gMapGridCollision")?, "MAP LAYER DATA", 0x80_d0_ff),
+            (self.sym("gMapGridCollision")?, ewram_heap, "MAP COLLISION", 0x60_e0_40),
             (ewram_heap, self.sym("gBgTileBuffer")?, "EWRAM HEAP", 0x40_80_ff),
             (self.sym("gBgTileBuffer")?, 0x0204_0000, "BG TILE BUFFER", 0xa0_60_ff),
         ];
@@ -943,11 +947,11 @@ impl<'a> Guide<'a> {
     /// The map's whole cell grid as the three layers' windows show it, each
     /// cell drawn from its block and the tiles video memory holds, at full
     /// size: the window of layer n (0 the ground on BG3, 1 the middle on
-    /// BG2, 2 the overhead on BG1) starts at the cell its MapLayerScroll's
+    /// BG2, 2 the overhead on BG1) starts at the cell its MapGridLayerScroll's
     /// cells pointer names and spans `spans[n]` cells. Returns the picture
     /// and each window's first cell.
     fn grid_picture(field: &Field, spans: [(i32, i32); 3]) -> (Image, [(i32, i32); 3]) {
-        const MAP_CELLS: u32 = 0x0201_0000;
+        const MAPGRID_CELLS: u32 = 0x0201_0000;
         const MAP_BLOCKS: u32 = 0x0202_0000;
         const GRID: i32 = 128;
         let colours = super::guide_more::palettes(field);
@@ -956,7 +960,7 @@ impl<'a> Guide<'a> {
         let mut image = canvas((GRID * 16) as usize, (GRID * 16) as usize, 0x10_10_14);
         for layer in 0..3u32 {
             let cells = field.read32(work + 0x104 + 0x30 * layer + 0x2c);
-            let index = ((cells - MAP_CELLS) / 4) as i32;
+            let index = ((cells - MAPGRID_CELLS) / 4) as i32;
             let (wx, wz) = (index % GRID, index / GRID);
             windows[layer as usize] = (wx, wz);
             let control = field.read16(0x0400_0008 + 2 * (3 - layer));
@@ -964,7 +968,7 @@ impl<'a> Guide<'a> {
             let (sw, sh) = spans[layer as usize];
             for cz in wz..(wz + sh).min(GRID) {
                 for cx in wx..(wx + sw).min(GRID) {
-                    let block = field.read32(MAP_CELLS + 4 * (cx + cz * GRID) as u32) & 0xfff;
+                    let block = field.read32(MAPGRID_CELLS + 4 * (cx + cz * GRID) as u32) & 0xfff;
                     for q in 0..4u32 {
                         let entry = field.read16(MAP_BLOCKS + block * 8 + 2 * q);
                         let size = if wide { 64 } else { 32 };
@@ -985,13 +989,13 @@ impl<'a> Guide<'a> {
     /// with each layer's window (its origin from the header, its size the
     /// camera's bounds, or the wrap period of the drifting layer) outlined
     /// in its colour and the part of it on screen this frame
-    /// (MapLayerScroll's x and y) drawn as a box, wrapped as the layer
+    /// (MapGridLayerScroll's x and y) drawn as a box, wrapped as the layer
     /// wraps. The header's values are read from the ROM through the scene's
-    /// row of gMap_LayeredScenes and the directory.
+    /// row of gLayouts and the directory.
     pub fn map_header(&mut self) -> Result<(), String> {
         const SUHALLA_DESERT_NORTH: u16 = 164;
-        let scenes = self.sym("gField_SceneTable")?;
-        let layered = self.sym("gMap_LayeredScenes")?;
+        let scenes = self.sym("gField_MapTable")?;
+        let layered = self.sym("gLayouts")?;
         let directory = self.sym("Resource_DirectoryTable")?;
         let map_001 = 0x128u32;
         let rom = |a: u32| self.rom[(a - 0x0800_0000) as usize];
@@ -1083,7 +1087,7 @@ impl<'a> Guide<'a> {
 
     /// Goma Cave's grid and its placeholder blocks, as `placeholders.png`:
     /// the party is sent from Vale into Goma Cave, and the block plane is
-    /// read as TileMap_ConvertBuffer is entered, before Tile_ConvertMap has
+    /// read as TileMap_ConvertBuffer is entered, before Tile_ConvertMapGrid has
     /// numbered it; the cells' words are read once the cave is loaded. On
     /// the left the three layer windows at half size, every cell dimmed but
     /// the placeholders, each a block's first use, tinted yellow; on the
@@ -1199,14 +1203,14 @@ impl<'a> Guide<'a> {
         let y = (8 + lh.max(240) + 8) as i32;
         text(&mut image, 8, y, &format!("GOMA CAVE\x27S THREE LAYER WINDOWS, THE {placeholders} PLACEHOLDERS IN YELLOW."), INK, None, 2);
         text(&mut image, 8, y + 18, &format!("ONE PLACEHOLDER FOR EACH OF THE MAP\x27S {blocks_used} BLOCKS, AT ITS FIRST USE."), INK, None, 2);
-        self.guide_png("placeholders.png", &image, "Goma Cave's grid with each block's first use, the placeholder Tile_ConvertMap numbers")
+        self.guide_png("placeholders.png", &image, "Goma Cave's grid with each block's first use, the placeholder Tile_ConvertMapGrid numbers")
     }
 
     /// The marker list of the map CrossboneIsleKeys and CrossboneIsleBane
     /// share, drawn over both rooms, as `markers.png`: each scene is
     /// entered, its room stitched from the map as it loads it, and its
     /// placed markers read from FieldWork.markers; every marker of the list
-    /// (read in place through MapScrollWork.script) is outlined at its cell
+    /// (read in place through MapGridScrollWork.script) is outlined at its cell
     /// with its id, in the colour of the scene that placed it.
     pub fn markers(&mut self) -> Result<(), String> {
         const SCENES: [(u16, &str, u32); 2] = [(117, "CROSSBONEISLEKEYS", 0xff_d8_40), (120, "CROSSBONEISLEBANE", 0x50_d0_ff)];
@@ -1268,7 +1272,7 @@ impl<'a> Guide<'a> {
             for d in 0..2 {
                 outline(&mut image, x - d, y - d, 16 + 2 * d, 16 + 2 * d, colour);
             }
-            // What each chest holds, from the scenes' event rows (SEARCH_CHEST
+            // What each chest holds, from the scenes' event rows (BG_EVENT_CHEST
             // with FIND_COINS or FIND_ITEM, crossbone_isle_keys.c), staggered
             // so that neighbours' labels clear each other; the marker's id
             // small under its cell.
@@ -1287,8 +1291,8 @@ impl<'a> Guide<'a> {
         }
         text(&mut image, 8, y, &format!("THE MAP'S LIST HOLDS {} MARKERS, EACH LABELLED BY WHAT ITS CHEST HOLDS", list.len()), DIM, None, 2);
         text(&mut image, 8, y + 18, "THE DEMON AXE'S MARKER (107) IS PLACED, THEN MOVED TO 0, 0 BY THE", DIM, None, 2);
-        text(&mut image, 8, y + 36, "SCENE UNTIL THE STONE PILLAR CARRYING ITS CHEST REACHES THE LADDER", DIM, None, 2);
-        self.guide_png("markers.png", &image, "the markers of the map Crossbone Isle's two rooms share, and which scene places each")
+        text(&mut image, 8, y + 36, "MAP UNTIL THE STONE PILLAR CARRYING ITS CHEST REACHES THE LADDER", DIM, None, 2);
+        self.guide_png("markers.png", &image, "the markers of the map Crossbone Isle's two rooms share, and which map places each")
     }
 
     /// The world map's squares unpacked around the party, as
@@ -1296,8 +1300,8 @@ impl<'a> Guide<'a> {
     /// map's entrance 3, south of Vale, with FLAG_NO_ENCOUNTERS set; beside
     /// the screen, 5 by 4 of the world's 512-pixel squares, each drawn from
     /// the ground layer's block buffer while it is unpacked there
-    /// (Map_WriteLayerCellTile's quarters of Ram_MapBlocks: a cell word's
-    /// low halfword picks a block of four tile numbers in Ram_MapCellBuffer,
+    /// (WorldMap_WriteLayerCellTile's quarters of Ram_Metatiles: a cell word's
+    /// low halfword picks a block of four tile numbers in Ram_MapGridCellBuffer,
     /// each drawn as the mean colour of its 256-colour tile in `BG3`'s char
     /// block, where the ground layer's screen map is). The 2 by 2 squares unpacked now are bright and outlined,
     /// those unpacked earlier dim, the rest black; each frame the quarters'
@@ -1450,7 +1454,7 @@ impl<'a> Guide<'a> {
         const TOUR: u16 = 3;
         const AZART: u16 = 8;
         const FINISH_X: i32 = 1304;
-        let tsv = std::fs::read_to_string(crate::compile::root().join("games/tbs/src/map/colosso/opponent_path_a.tsv")).map_err(|e| format!("opponent_path_a.tsv: {e}"))?;
+        let tsv = std::fs::read_to_string(crate::compile::root().join("games/tbs/src/layout/colosso/opponent_path_a.tsv")).map_err(|e| format!("opponent_path_a.tsv: {e}"))?;
         let path: Vec<(i32, i32)> = tsv.lines().skip(1).filter_map(|l| {
             let mut it = l.split('\t').map(|v| v.trim().parse::<i32>());
             Some((it.next()?.ok()?, it.next()?.ok()?))
@@ -1498,13 +1502,13 @@ impl<'a> Guide<'a> {
     /// The leader's probes for a step as he is pushed into a wall and slides
     /// along it, as `player-probes.gif`: Vale at twice the GBA's size, and
     /// over it every point FieldObject_UpdatePlayerControl tested that frame
-    /// through Map_CheckObjectStep for the leader, green where the ground
-    /// was open (MAP_STEP_OPEN) and red where it was not, with a line from
+    /// through MapGrid_CheckObjectStep for the leader, green where the ground
+    /// was open (MAPGRID_STEP_OPEN) and red where it was not, with a line from
     /// the leader to the pad's way. The probes are read at the function's
     /// entry (r1, the position) and its results at the return addresses a
     /// first run of the same frames found.
     pub fn player_probes(&mut self, path: &[(u32, u32)], file: &str) -> Result<(), String> {
-        let check = self.sym("Map_CheckObjectStep")?;
+        let check = self.sym("MapGrid_CheckObjectStep")?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
         let start = field.save();

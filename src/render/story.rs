@@ -12,7 +12,7 @@ use std::path::Path;
 #[derive(Debug, Clone)]
 pub struct Scene {
     pub number: u16,
-    /// SceneId_<name> without the prefix; none for an unnamed row.
+    /// MapId_<name> without the prefix; none for an unnamed row.
     pub symbol: Option<String>,
     /// The overlay's source, `games/tbs/src/scene/vale.c`.
     pub file: String,
@@ -95,7 +95,7 @@ pub fn read_scenes(path: &Path) -> Result<Vec<Scene>, String> {
             let n = tsv.get(row, number);
             Ok(Scene {
                 number: n.parse().map_err(|_| format!("{}: scene number {n:?}", path.display()))?,
-                symbol: tsv.get(row, symbol).strip_prefix("SceneId_").map(str::to_string),
+                symbol: tsv.get(row, symbol).strip_prefix("MapId_").or_else(|| tsv.get(row, symbol).strip_prefix("SceneId_")).map(str::to_string),
                 file: tsv.get(row, file).to_string(),
                 area: tsv.get(row, area).to_string(),
                 map: tsv.get(row, map).to_string(),
@@ -316,7 +316,7 @@ const PSYNERGY: [(&str, u16); 13] = [
     ("ply", 0x5d),
 ];
 
-/// The number after a trigger word: `12` or `ACTOR_NAME=12`.
+/// The number after a trigger word: `12` or `LOCALID_NAME=12`.
 fn target(text: &str) -> Option<u16> {
     let value = text.trim().rsplit('=').next()?;
     value.trim().parse().ok()
@@ -435,14 +435,14 @@ mod tests {
 
     #[test]
     fn triggers_name_their_target() {
-        assert_eq!(parse_trigger("talk ACTOR_EASTWARD_MONK=10"), Ok(Trigger::Talk(10)));
+        assert_eq!(parse_trigger("talk LOCALID_EASTWARD_MONK=10"), Ok(Trigger::Talk(10)));
         assert_eq!(parse_trigger("touch 20; touch 21"), Ok(Trigger::Touch(20)));
         assert_eq!(parse_trigger("search 208"), Ok(Trigger::Search(208)));
         assert_eq!(parse_trigger("mind read on 8"), Ok(Trigger::Psynergy(0x8d, 8)));
-        assert_eq!(parse_trigger("force on ACTOR_PILLAR=12"), Ok(Trigger::Psynergy(0x8e, 12)));
-        assert_eq!(parse_trigger("move on ACTOR_BLOCK=19"), Ok(Trigger::Psynergy(MOVE, 19)));
+        assert_eq!(parse_trigger("force on LOCALID_PILLAR=12"), Ok(Trigger::Psynergy(0x8e, 12)));
+        assert_eq!(parse_trigger("move on LOCALID_BLOCK=19"), Ok(Trigger::Psynergy(MOVE, 19)));
         assert_eq!(parse_trigger("mind read on 1027"), Ok(Trigger::Psynergy(0x8d, 3)));
-        assert_eq!(parse_trigger("ply on ACTOR_WATERFALL_STATUE=12"), Ok(Trigger::Psynergy(0x5d, 12)));
+        assert_eq!(parse_trigger("ply on LOCALID_WATERFALL_STATUE=12"), Ok(Trigger::Psynergy(0x5d, 12)));
         assert!(parse_trigger("entry initialize").is_err());
     }
 

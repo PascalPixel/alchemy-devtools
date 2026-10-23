@@ -927,7 +927,7 @@ writes into DIR (default out/EDITION/story):
   title       title.gif and title.png: the Golden Sun logo card the title
               shows after the ending (its entrance 10), coming up and held
   farewell    vale-farewell.gif and vale-farewell.png: Vale's send-off,
-              Event_DepartForQuest (ValeHome's entrance 12), through the
+              EventScript_DepartForQuest (ValeHome's entrance 12), through the
               town's farewell, and the town gathered
   lighthouse  venus-lighthouse-lit.gif and .png: the world map cut at its
               entrance 91 after Venus Lighthouse's beacon erupts
@@ -1024,7 +1024,7 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     let mut failed = Vec::new();
     if wanted("world") {
-        let update = map.symbol("Map_UpdateCurrentTileBlock").map(|(_, a)| a).ok_or("the map has no Map_UpdateCurrentTileBlock")?;
+        let update = map.symbol("WorldMap_UpdateCurrentTileBlock").map(|(_, a)| a).ok_or("the map has no WorldMap_UpdateCurrentTileBlock")?;
         if let Err(e) = front.world(update) {
             eprintln!("world: {e}");
             failed.push("world");

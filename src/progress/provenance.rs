@@ -1,5 +1,5 @@
 //! Name provenance for the humanization report: whether the names of game
-//! things (scenes, actors, flags, scene links, items, abilities and the like)
+//! things (maps, object events, flags, warps, items, abilities and the like)
 //! come from evidence or were made up (Alchemy's S3). Three checks, all read
 //! from the source and the game's English text (`text/en.po`):
 //!
@@ -13,8 +13,8 @@
 //!   none at all;
 //! - names checked mechanically, which need no line: an enumerator of a
 //!   table-indexed enum (`ItemId`) against the game's name for its index,
-//!   and a scene link whose words are verified scenes, door words and the
-//!   room words of those scenes.
+//!   and a warp whose words are verified maps, door words and the
+//!   room words of those maps.
 //!
 //! The README's "Humanization report" section sets the rules out.
 
@@ -24,12 +24,12 @@ use std::sync::OnceLock;
 
 /// Words a name may use that are the program's, not the game's: what code
 /// does (`Get`, `Update`), how it is organized (`Table`, `Entry`, `Handler`)
-/// and the report's own kind prefixes (`SceneId`, `ACTOR`, `FLAG`). Ordinary
+/// and the report's own kind prefixes (`MapId`, `LOCALID`, `FLAG`). Ordinary
 /// English the text already uses never needs a place here; anything else
 /// stays flagged, so the list errs short.
 pub const VOCABULARY: &[&str] = &[
     // Kinds and prefixes.
-    "scene", "id", "ids", "actor", "actors", "flag", "flags", "event", "events", "script", "scripts", "handler",
+    "map", "mapsec", "localid", "scene", "id", "ids", "actor", "actors", "flag", "flags", "event", "events", "script", "scripts", "handler",
     "handlers", "callback", "table", "tables", "entry", "entries", "index", "count", "num", "interiors", "interior",
     "temp", "tmp", "msg", "obj", "npc", "fx", "se", "mus", "bg", "gfx", "anim", "oam", "vram", "sprite", "sprites",
     "tile", "tiles", "tilemap", "palette", "pal", "cell", "cells", "region", "regions", "layer", "rect", "ptr",
@@ -39,6 +39,7 @@ pub const VOCABULARY: &[&str] = &[
     "src", "dst", "len", "info", "ctx", "cfg", "config", "rng", "random", "rom", "ram", "iwram", "ewram", "dma",
     "irq", "params", "param", "struct", "enum", "macro", "lut", "offset", "addr", "ov", "alloc", "mem", "var", "cb",
     "attr", "byte", "clr", "ui", "setup", "cached", "engine", "scheduler", "dispatch", "op", "noop", "placement",
+    "template", "templates", "dest", "dests", "coord",
     // How the engine draws and moves things, not what the player sees.
     "particle", "transition", "animation", "animate", "blend", "fade", "overlay", "channel", "angle", "collision",
     "trigger", "marker", "cycle", "blank", "hblank", "vblank", "alpha", "vector", "tint", "darken", "hue", "flicker",
@@ -74,7 +75,7 @@ pub struct GameText {
     symbols: HashMap<String, usize>,
     /// Each message's place by its number (`msgid`).
     numbers: HashMap<u32, usize>,
-    /// The area names (`gScene_AreaNameRules`, from `MsgDebugEntryName`).
+    /// The area names (`gMapSec_NameRules`, from `MsgDebugEntryName`).
     areas: Vec<String>,
 }
 
@@ -156,7 +157,7 @@ pub fn stem(word: &str) -> String {
 
 impl GameText {
     /// Read `en.po`; `areas` is how many area names follow `MsgDebugEntryName`
-    /// (the highest index in `gScene_AreaNameRules` plus one), or all the
+    /// (the highest index in `gMapSec_NameRules` plus one), or all the
     /// messages up to the next named one.
     pub fn parse(po: &str, areas: Option<usize>) -> GameText {
         let mut text = GameText::default();
@@ -287,14 +288,14 @@ impl GameText {
         self.messages.is_empty()
     }
 
-    /// The area names, as `gScene_AreaNameRules` reads them.
+    /// The area names, as `gMapSec_NameRules` reads them.
     pub fn areas(&self) -> &[String] {
         &self.areas
     }
 }
 
-/// A name's words as it writes them: `SceneId_SolSanctumLunaSolRooms` is
-/// Scene, Id, Sol, Sanctum, Luna, Sol, Rooms; `ACTOR_TREE_MAN` is ACTOR, TREE,
+/// A name's words as it writes them: `MapId_SolSanctumLunaSolRooms` is
+/// Map, Id, Sol, Sanctum, Luna, Sol, Rooms; `LOCALID_TREE_MAN` is LOCALID, TREE,
 /// MAN. Digits, hex letters after them and single letters (`g`, `s`)
 /// are left out.
 pub fn pieces(name: &str) -> Vec<&str> {
@@ -368,7 +369,7 @@ pub enum Evidence {
     Table { symbol: &'static str, offset: i64, numbered: bool },
     /// The same, but its words differ from the game's name, which it gives.
     Mismatch { symbol: &'static str, offset: i64, game: String },
-    /// A scene link whose words are all verified scenes and door words.
+    /// A warp whose words are all verified maps and door words.
     Rooms,
     /// The same line, confirmed, without its ★.
     Unstarred(&'static str),
@@ -489,7 +490,7 @@ fn prose_regexes() -> &'static [Regex; 4] {
         [
             Regex::new(r#""([^"]{3,})"|`([^`]{3,})`|“([^”]{3,})”"#).unwrap(),
             Regex::new(r"\bMsg[A-Z][A-Za-z0-9_]*").unwrap(),
-            Regex::new(r"(?i)area name|gScene_AreaNameRules|MsgDebugEntryName|Scene_GetAreaNameIndex").unwrap(),
+            Regex::new(r"(?i)area name|gMapSec_NameRules|MsgDebugEntryName|MapSec_GetNameIndex").unwrap(),
             Regex::new(r"(?i)\brender|what the player sees|\brecording|\bseen in\b").unwrap(),
         ]
     })
@@ -546,10 +547,13 @@ impl Thing {
 }
 
 /// The family prefixes: the kind of game thing each names, and the word the
-/// tags of its own enums end in (`enum XianActor` holds actors).
+/// tags of its own enums end in (`enum XianLocalId` holds object events, by
+/// its `Id`). ⚓️, not yet renamed, still writes `SceneId_` and `ACTOR_`.
 pub const FAMILIES: &[(&str, &str, &str)] = &[
-    ("SceneId_", "scene", "Scene"),
-    ("ACTOR_", "actor", "Actor"),
+    ("MapId_", "map", "Map"),
+    ("SceneId_", "map", "Scene"),
+    ("LOCALID_", "object event", "LocalId"),
+    ("ACTOR_", "object event", "Actor"),
     ("FLAG_", "flag", "Flag"),
     ("ITEM_", "item", "Item"),
     ("ABILITY_", "ability", "Ability"),
@@ -567,7 +571,7 @@ pub const FAMILIES: &[(&str, &str, &str)] = &[
 /// Words that, right after a family prefix, name a part of the family's
 /// mechanism rather than one member of it, for the names no enum tag
 /// classifies: `ITEM_USE_CONSUMED` is what using an item does to it,
-/// `ACTOR_ACTION_IDLE` an action an actor runs, `FLAG_MENU_OPEN` a flag of
+/// `LOCALID_` and `OBJ_EVENT_ACTION_IDLE` an action an object event runs, `FLAG_MENU_OPEN` a flag of
 /// the menus, `PSYNERGY_EV_ANY` a Psynergy event's control word. Like the
 /// vocabulary, it errs short.
 pub const ASPECTS: &[&str] = &[
@@ -575,12 +579,12 @@ pub const ASPECTS: &[&str] = &[
     "debug", "event", "ev",
 ];
 
-/// Words that, right after `ACTOR_`, make an actor a part of its scene's
+/// Words that, right after `LOCALID_`, make an object event a part of its map's
 /// machinery rather than a person or thing of the game, even among the
-/// actors a scene numbers in one enum: a blank actor draws nothing the player
+/// object events a map numbers in one enum: a blank one draws nothing the player
 /// sees and is there for a script to steer or to stand in the way
-/// (`ACTOR_BLANK_ROCK_GUIDE`, which the falling rock is held above), and a
-/// mask hides the parts of another sprite it covers (`ACTOR_MASK_FOR_STUMP`).
+/// (`LOCALID_BLANK_ROCK_GUIDE`, which the falling rock is held above), and a
+/// mask hides the parts of another sprite it covers (`LOCALID_MASK_FOR_STUMP`).
 pub const STAND_INS: &[&str] = &["blank", "mask"];
 
 /// Words that, last in a name, make it a quantity, a bound, a bit field or a
@@ -609,15 +613,15 @@ impl<'a> Definition<'a> {
     }
 }
 
-/// What kind of game thing a definition names, if any: a scene link by its
-/// header, a function or global of the scene and object folders as a
+/// What kind of game thing a definition names, if any: a warp by its
+/// header, a function or global of the map and object folders as a
 /// mechanism whose words are checked, and otherwise a definition whose
 /// family prefix (`FAMILIES`) says what it names, unless what it is shows
 /// it to be a part of the family's mechanism (`is_mechanism`). `macros` are
 /// the source's numeric macros read so far.
 pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'static str> {
     static TEMP: OnceLock<Regex> = OnceLock::new();
-    let temp = TEMP.get_or_init(|| Regex::new(r"^FLAG_(?:SCENE|PLACE)_TEMP_[0-9A-Fa-f]+$").unwrap());
+    let temp = TEMP.get_or_init(|| Regex::new(r"^FLAG_(?:MAP|MAPSEC)_TEMP_[0-9A-Fa-f]+$").unwrap());
     let Definition { name, file, origin, .. } = definition;
     if super::humanity::is_placeholder(name) || temp.is_match(name) {
         return None;
@@ -626,12 +630,12 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
     if let Some(&(prefix, kind, word)) = family {
         return (!is_mechanism(&definition, prefix, word, macros)).then_some(kind);
     }
-    // Each scene's links are an anonymous enum; a tagged enum there holds
+    // Each map's warps are an anonymous enum; a tagged enum there holds
     // what the links share (`enum DefaultEntrance`), a mechanism.
-    if origin == Origin::Enumerator && file.ends_with("scene_links.h") {
-        return definition.tag.is_none().then_some("link");
+    if origin == Origin::Enumerator && (file.ends_with("map_warps.h") || file.ends_with("scene_links.h")) {
+        return definition.tag.is_none().then_some("warp");
     }
-    let mechanism_folder = file.contains("/src/scene/") || file.contains("/src/object/");
+    let mechanism_folder = file.contains("/src/map/") || file.contains("/src/scene/") || file.contains("/src/object/");
     match origin {
         Origin::Function if mechanism_folder => Some("function"),
         Origin::Global if mechanism_folder => Some("global"),
@@ -641,17 +645,20 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
 
 /// A family-prefixed definition that names a part of the family's
 /// mechanism (a kind, an effect, a mode, a step, a phase, a bit, a bound, a
-/// layout value) rather than one member of the family (an item, an actor, a
+/// layout value) rather than one member of the family (an item, an object event, a
 /// flag the story sets), from what it is:
 ///
 /// - a function-like macro computes a value (`FLAG_IN_PARTY(character)`,
 ///   `PSYNERGY_EV(phase)`);
-/// - an actor whose first word is a stand-in's (`STAND_INS`), whatever its
-///   enum, is a blank actor or a mask;
+/// - an object event whose first word is a stand-in's (`STAND_INS`),
+///   whatever its enum, is a blank object or a mask;
 /// - an enumerator of a tagged enum is what the tag's last word says: an id
-///   (`enum ItemId`) or the family's own word (`enum XianActor`) holds
+///   (`enum ItemId`, `enum XianLocalId`) or the family's own word holds
 ///   members, and any other word the values of a mechanism
-///   (`enum AbilityKind`, `enum ActorMotionFlag`, `enum PsynergyPhase`);
+///   (`enum AbilityKind`, `enum ObjectEventMotionFlag`, `enum PsynergyPhase`);
+/// - except that the family's own enum, tagged by the family word alone
+///   (`enum LocalId`), numbers the engine's slots (the party leader, the first
+///   object event a map places), not anyone a map places;
 /// - its first word after the prefix names an aspect of the family
 ///   (`ASPECTS`), or its last word a measure (`MEASURES`);
 /// - a flag numbered in the range the source names as the engine's own,
@@ -663,7 +670,10 @@ fn is_mechanism(definition: &Definition, prefix: &str, family: &str, macros: &Ha
     }
     let rest = &definition.name[prefix.len()..];
     let first = rest.split('_').next().unwrap_or("").to_ascii_lowercase();
-    if prefix == "ACTOR_" && STAND_INS.contains(&first.as_str()) {
+    if matches!(prefix, "LOCALID_" | "ACTOR_") && STAND_INS.contains(&first.as_str()) {
+        return true;
+    }
+    if definition.tag == Some(family) {
         return true;
     }
     if let Some(last) = definition.tag.and_then(|tag| pieces(tag).last().copied()) {
@@ -762,8 +772,8 @@ pub struct Row {
     pub words: Vec<String>,
     /// `None` for a mechanism's name.
     pub evidence: Option<Evidence>,
-    /// For a scene link not verified otherwise, the words that are neither a
-    /// verified scene nor door vocabulary.
+    /// For a warp not verified otherwise, the words that are neither a
+    /// verified map nor door vocabulary.
     pub door_words: Vec<String>,
 }
 
@@ -777,9 +787,9 @@ pub struct Analysis {
     pub door_words: Vec<(String, Vec<usize>)>,
 }
 
-/// The name as prose writes it: `SceneId_Bilibin` is `Bilibin`.
+/// The name as prose writes it: `MapId_Bilibin` is `Bilibin`.
 fn spoken(name: &str) -> &str {
-    name.strip_prefix("SceneId_").unwrap_or(name)
+    name.strip_prefix("MapId_").or_else(|| name.strip_prefix("SceneId_")).unwrap_or(name)
 }
 
 /// `word` stands alone in `text`, between characters no name holds.
@@ -790,21 +800,21 @@ fn mentions(text: &str, word: &str) -> bool {
     })
 }
 
-/// Words a scene link uses for how it joins scenes: the directions, its
+/// Words a warp uses for how it joins maps: the directions, its
 /// side of the door, and the markers for links no exit takes.
 pub const DOOR_WORDS: &[&str] = &[
     "to", "from", "north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest", "unused",
     "debug", "battle", "after", "before",
 ];
 
-/// A scene link's words, uppercase, split as `pieces` splits them.
+/// A warp's words, uppercase, split as `pieces` splits them.
 fn link_words(name: &str) -> Vec<String> {
     pieces(name).iter().map(|piece| piece.to_ascii_uppercase()).collect()
 }
 
-/// The scenes a link's words name, longest first at each place, and the
+/// The maps a warp's words name, longest first at each place, and the
 /// words left over, lowercase, in order. Words are compared run together, so
-/// `MCCOY_PALACE` is `SceneId_McCoyPalace`.
+/// `MCCOY_PALACE` is `MapId_McCoyPalace`.
 fn resolve(words: &[String], scenes: &HashMap<String, usize>, longest: usize) -> Vec<Result<usize, String>> {
     let mut out = Vec::new();
     let mut at = 0;
@@ -831,9 +841,9 @@ fn star_stems(comment: &str) -> impl Iterator<Item = String> + '_ {
     table_words(&rest).split(' ').filter(|w| !w.is_empty()).map(stem).collect::<Vec<_>>().into_iter()
 }
 
-/// Verify the scene links that a ★ line doesn't by their words: each must
-/// be a ★-verified scene, a door word, a room word of one of the scenes it
-/// names (from the scene's ★ line or a ★-verified link of that scene), or
+/// Verify the warps that a ★ line doesn't by their words: each must
+/// be a ★-verified map, a door word, a room word of one of the maps it
+/// names (from the map's ★ line or a ★-verified warp of that map), or
 /// after AFTER or BEFORE a game word or a word of a ★-verified name.
 fn check_doors(analysis: &mut Analysis, text: &GameText) {
     let rows = &mut analysis.rows;
@@ -841,7 +851,7 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
     let mut scenes: HashMap<String, usize> = HashMap::new();
     let mut longest = 0;
     let mut rooms: HashMap<usize, HashSet<String>> = HashMap::new();
-    for (at, row) in rows.iter().enumerate().filter(|(_, row)| row.thing.kind == "scene") {
+    for (at, row) in rows.iter().enumerate().filter(|(_, row)| row.thing.kind == "map") {
         let words = link_words(&row.thing.name);
         if words.len() > 2 {
             scenes.entry(words[2..].concat()).or_insert(at);
@@ -854,7 +864,7 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
     let door = |word: &str| DOOR_WORDS.contains(&word);
     let mut events: HashSet<String> = HashSet::new();
     for row in rows.iter().filter(|row| verified(row)) {
-        if row.thing.kind == "link" {
+        if row.thing.kind == "warp" {
             let parts = resolve(&link_words(&row.thing.name), &scenes, longest);
             let named: Vec<usize> = parts.iter().filter_map(|part| part.as_ref().ok().copied()).collect();
             for word in parts.iter().filter_map(|part| part.as_ref().err()).filter(|word| !door(word)) {
@@ -862,14 +872,14 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
                     rooms.entry(*scene).or_default().insert(stem(word));
                 }
             }
-        } else if row.thing.kind != "scene" {
+        } else if row.thing.kind != "map" {
             events.extend(link_words(&row.thing.name).iter().skip(1).map(|word| stem(word)));
         }
     }
     let mut words: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     for at in 0..rows.len() {
         let row = &rows[at];
-        if row.thing.kind != "link" || matches!(row.evidence, Some(Evidence::Verified(_) | Evidence::Failed(_))) {
+        if row.thing.kind != "warp" || matches!(row.evidence, Some(Evidence::Verified(_) | Evidence::Failed(_))) {
             continue;
         }
         let parts = resolve(&link_words(&row.thing.name), &scenes, longest);
@@ -907,7 +917,7 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
     analysis.door_words.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
 }
 
-/// Run both checks. `places` are the opening comments of the scene overlays
+/// Run both checks. `places` are the opening comments of the map overlays
 /// (raw); a paragraph of one that mentions a name counts as its prose.
 /// `macros` are the source's numeric macros, for a table's first number.
 pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, macros: &HashMap<String, i64>) -> Analysis {
@@ -996,22 +1006,22 @@ mod tests {
 
     #[test]
     fn words_of_names() {
-        assert_eq!(pieces("SceneId_SolSanctumLunaSolRooms"), ["Scene", "Id", "Sol", "Sanctum", "Luna", "Sol", "Rooms"]);
+        assert_eq!(pieces("MapId_SolSanctumLunaSolRooms"), ["Map", "Id", "Sol", "Sanctum", "Luna", "Sol", "Rooms"]);
         assert_eq!(pieces("gBilibinEvents1"), ["Bilibin", "Events"]);
-        assert_eq!(pieces("ACTOR_TREE_MAN_2"), ["ACTOR", "TREE", "MAN"]);
+        assert_eq!(pieces("LOCALID_TREE_MAN_2"), ["LOCALID", "TREE", "MAN"]);
         assert_eq!(pieces("HTMLParser"), ["HTML", "Parser"]);
-        assert_eq!(pieces("SceneId_Ov6aaRoom1"), ["Scene", "Id", "Ov", "Room"]);
+        assert_eq!(pieces("MapId_Ov6aaRoom1"), ["Map", "Id", "Ov", "Room"]);
         let text = GameText::parse(PO, Some(2));
         assert_eq!(unused_words("Bilibin_UpdateWarehouseApproach", &text), ["warehouse", "approach"]);
-        assert_eq!(unused_words("ACTOR_MCCOY_TREES", &text), Vec::<String>::new());
+        assert_eq!(unused_words("LOCALID_MCCOY_TREES", &text), Vec::<String>::new());
         assert_eq!(unused_words("Event_McCoyTreasury", &text), Vec::<String>::new(), "Mc and Coy are one word");
     }
 
     fn thing(name: &str, own: &str, context: &str) -> Thing {
         Thing {
             name: name.to_string(),
-            kind: "actor",
-            file: "games/tbs/src/scene/bilibin.c".to_string(),
+            kind: "object event",
+            file: "games/tbs/src/map/bilibin.c".to_string(),
             line: 1,
             own: own.to_string(),
             context: context.to_string(),
@@ -1034,23 +1044,23 @@ mod tests {
     fn evidence_lines_and_prose() {
         let text = GameText::parse(PO, Some(2));
         let things = [
-            thing("ACTOR_A", "/// ★ Named from the game: \"McCoy's Hidden\n/// Treasury\" (MsgSignMcCoy)", ""),
-            thing("ACTOR_B", "///< Named from its area name: Bilibin Barricade.", ""),
-            thing("ACTOR_C", "/// ★ Named from what the player sees: a stack of crates (its render)", ""),
-            thing("ACTOR_D", "/// ★ Named from the game: \"Hidden Warehouse\" (MsgSignMcCoy)", ""),
-            thing("ACTOR_E", "/// ★ Named from its area name: Bilibin Warehouse", ""),
-            thing("ACTOR_F", "/// ★ Named from the game: \"The trees\" (MsgNope)", ""),
-            thing("ACTOR_G", "/// Says `The trees are moving.`", ""),
-            thing("ACTOR_H", "/// The sign (MsgSignMcCoy).", ""),
-            thing("ACTOR_I", "", "/// The actors, as their renders show them."),
-            thing("ACTOR_J", "/// A raised warehouse approach.", "/// Says \"warehouse\"."),
-            thing("ACTOR_K", "", ""),
-            thing("ACTOR_L", "/// ★ Named from the game: \"The trees are moving.\" (MsgSignMcCoy)", ""),
-            thing("ACTOR_M", "/// ★ Named from the game: \"Kolima Forest\" (MsgSignMcCoy)", ""),
+            thing("LOCALID_A", "/// ★ Named from the game: \"McCoy's Hidden\n/// Treasury\" (MsgSignMcCoy)", ""),
+            thing("LOCALID_B", "///< Named from its area name: Bilibin Barricade.", ""),
+            thing("LOCALID_C", "/// ★ Named from what the player sees: a stack of crates (its render)", ""),
+            thing("LOCALID_D", "/// ★ Named from the game: \"Hidden Warehouse\" (MsgSignMcCoy)", ""),
+            thing("LOCALID_E", "/// ★ Named from its area name: Bilibin Warehouse", ""),
+            thing("LOCALID_F", "/// ★ Named from the game: \"The trees\" (MsgNope)", ""),
+            thing("LOCALID_G", "/// Says `The trees are moving.`", ""),
+            thing("LOCALID_H", "/// The sign (MsgSignMcCoy).", ""),
+            thing("LOCALID_I", "", "/// The actors, as their renders show them."),
+            thing("LOCALID_J", "/// A raised warehouse approach.", "/// Says \"warehouse\"."),
+            thing("LOCALID_K", "", ""),
+            thing("LOCALID_L", "/// ★ Named from the game: \"The trees are moving.\" (MsgSignMcCoy)", ""),
+            thing("LOCALID_M", "/// ★ Named from the game: \"Kolima Forest\" (MsgSignMcCoy)", ""),
         ];
         let places = [(
-            "games/tbs/src/scene/bilibin.c".to_string(),
-            "/// @file\n/// ACTOR_K stands where its area name says.\n///\n/// ACTOR_J says `Treasury`.".to_string(),
+            "games/tbs/src/map/bilibin.c".to_string(),
+            "/// @file\n/// LOCALID_K stands where its area name says.\n///\n/// LOCALID_J says `Treasury`.".to_string(),
         )];
         let analysis = analyze(&things, &places, &text, &HashMap::new());
         let evidence: Vec<String> = analysis.rows.iter().map(|row| row.evidence.as_ref().unwrap().describe()).collect();
@@ -1074,19 +1084,20 @@ mod tests {
         let text = GameText::parse(PO, Some(2));
         let mut function = thing("Bilibin_RaiseWarehouse", "", "");
         function.kind = "function";
-        let things = [thing("ACTOR_WAREHOUSE_GUARD", "", ""), function, thing("ACTOR_PILLAR", "", "")];
+        let things = [thing("LOCALID_WAREHOUSE_GUARD", "", ""), function, thing("LOCALID_PILLAR", "", "")];
         let analysis = analyze(&things, &[], &text, &HashMap::new());
         assert_eq!(analysis.words[0], ("warehouse".to_string(), vec![0, 1]));
         assert!(analysis.rows[1].evidence.is_none(), "a mechanism's name needs no evidence");
         let kind = |name, file, origin| kind(Definition::new(name, file, origin), &HashMap::new());
-        assert_eq!(kind("SceneId_Vale", "a.h", Origin::Global), Some("scene"));
-        assert_eq!(kind("FLAG_SCENE_TEMP_01", "a.h", Origin::Macro), None);
-        assert_eq!(kind("VALE_FROM_WORLD_MAP", "games/tbs/include/scene_links.h", Origin::Enumerator), Some("link"));
-        let shared = Definition { tag: Some("DefaultEntrance"), ..Definition::new("ENTRANCE_DEFAULT", "games/tbs/include/scene_links.h", Origin::Enumerator) };
+        assert_eq!(kind("MapId_Vale", "a.h", Origin::Global), Some("map"));
+        assert_eq!(kind("SceneId_Vale", "a.h", Origin::Global), Some("map"), "⚓️ keeps its scene ids until it is renamed");
+        assert_eq!(kind("FLAG_MAP_TEMP_01", "a.h", Origin::Macro), None);
+        assert_eq!(kind("VALE_FROM_WORLD_MAP", "games/tbs/include/map_warps.h", Origin::Enumerator), Some("warp"));
+        let shared = Definition { tag: Some("DefaultWarpDest"), ..Definition::new("WARP_DEST_DEFAULT", "games/tbs/include/map_warps.h", Origin::Enumerator) };
         assert_eq!(super::kind(shared, &HashMap::new()), None, "what the links share");
-        assert_eq!(kind("Vale_Init", "games/tbs/src/scene/vale.c", Origin::Function), Some("function"));
+        assert_eq!(kind("Vale_Init", "games/tbs/src/map/vale.c", Origin::Function), Some("function"));
         assert_eq!(kind("Battle_Init", "games/tbs/src/battle/x.c", Origin::Function), None);
-        assert_eq!(kind("ACTOR_unk_14", "a.h", Origin::Enumerator), None);
+        assert_eq!(kind("LOCALID_unk_14", "a.h", Origin::Enumerator), None);
     }
 
     #[test]
@@ -1097,16 +1108,16 @@ mod tests {
         };
         let enumerator = |name, tag| of(name, Origin::Enumerator, tag, None);
         assert_eq!(enumerator("ITEM_HERB", Some("ItemId")), Some("item"), "an id enum holds members");
-        assert_eq!(enumerator("ACTOR_GUARD", Some("BilibinActor")), Some("actor"), "so does one tagged by the family");
-        assert_eq!(enumerator("ACTOR_GUARD", None), Some("actor"), "an untagged enum, by its words");
-        assert_eq!(enumerator("ACTOR_BLANK_ROCK_GUIDE", Some("WorldMapCaravanActor")), None, "a blank actor");
-        assert_eq!(enumerator("ACTOR_MASK_FOR_STUMP", Some("GomaCavePillarActor")), None, "a mask");
-        assert_eq!(enumerator("ACTOR_YOUNG_MAN_SAW_MASK", Some("ValeInteriorsInnActor")), Some("actor"), "a mask last is a word");
-        assert_eq!(enumerator("ACTOR_MASKED_MAN", Some("ValeInteriorsInnActor")), Some("actor"));
-        assert_eq!(enumerator("ACTOR_HIDDEN_PUDDLE", Some("LunpaActor")), Some("actor"), "hidden is not blank");
+        assert_eq!(enumerator("LOCALID_GUARD", Some("BilibinLocalId")), Some("object event"), "so does one tagged by the family");
+        assert_eq!(enumerator("LOCALID_GUARD", None), Some("object event"), "an untagged enum, by its words");
+        assert_eq!(enumerator("LOCALID_BLANK_ROCK_GUIDE", Some("WorldMapCaravanLocalId")), None, "a blank actor");
+        assert_eq!(enumerator("LOCALID_MASK_FOR_STUMP", Some("GomaCavePillarLocalId")), None, "a mask");
+        assert_eq!(enumerator("LOCALID_YOUNG_MAN_SAW_MASK", Some("ValeInteriorsInnLocalId")), Some("object event"), "a mask last is a word");
+        assert_eq!(enumerator("LOCALID_MASKED_MAN", Some("ValeInteriorsInnLocalId")), Some("object event"));
+        assert_eq!(enumerator("LOCALID_HIDDEN_PUDDLE", Some("LunpaLocalId")), Some("object event"), "hidden is not blank");
         assert_eq!(enumerator("ITEM_BLANK", Some("ItemId")), Some("item"), "stand-ins are actors");
         assert_eq!(enumerator("ABILITY_KIND_SUMMON", Some("AbilityKind")), None);
-        assert_eq!(enumerator("ACTOR_SOLID", Some("ActorCollisionFlag")), None, "an actor's bits");
+        assert_eq!(enumerator("OBJ_EVENT_SOLID", Some("ObjectEventCollisionFlag")), None, "an actor's bits");
         assert_eq!(enumerator("CHARACTER_POISON", Some("CharacterAilment")), None, "a state, not a person");
         assert_eq!(of("FLAG_IN_PARTY", Origin::FunctionMacro, None, None), None, "a computed value");
         assert_eq!(of("ITEM_TYPE_WEAPON", Origin::Macro, None, Some(1)), None, "an aspect");
@@ -1179,20 +1190,20 @@ mod tests {
         let text = GameText::parse(po, Some(1));
         let scene = |name: &str, own: &str| Thing {
             name: name.to_string(),
-            kind: "scene",
+            kind: "map",
             own: own.to_string(),
             ..Thing::default()
         };
         let link = |name: &str, own: &str| Thing {
             name: name.to_string(),
-            kind: "link",
+            kind: "warp",
             own: own.to_string(),
             ..Thing::default()
         };
         let things = [
-            scene("SceneId_Tolbi", "/// ★ Named from its area name: Tolbi"),
-            scene("SceneId_TolbiShip", "/// ★ Named from what the player sees: Tolbi's ship and its well-kept deck (its render)"),
-            scene("SceneId_TolbiShipMast", ""),
+            scene("MapId_Tolbi", "/// ★ Named from its area name: Tolbi"),
+            scene("MapId_TolbiShip", "/// ★ Named from what the player sees: Tolbi's ship and its well-kept deck (its render)"),
+            scene("MapId_TolbiShipMast", ""),
             Thing { kind: "flag", ..scene("FLAG_SAW_LIGHTHOUSE", "/// ★ Named from the game: \"Inn Full\" (MsgSignInn)") },
             link("TOLBI_TO_INN", "///< ★ Named from the game: \"Inn Full\" (MsgSignInn)"),
             link("TOLBI_FROM_INN", ""),
@@ -1202,9 +1213,9 @@ mod tests {
             link("TOLBI_SHIP_AFTER_CREW_ATTACKED", ""),
             link("TOLBI_SHIP_AFTER_LIGHTHOUSE", "/// Tolbi's dock."),
             link("TOLBI_SHIP_CREW_ATTACKED", ""),
-            link("ENTRANCE_DEFAULT", ""),
+            link("WARP_DEST_DEFAULT", ""),
             link("TOLBI_FROM_INN_BROKEN", "///< ★ Named from the game: \"Inn Empty\" (MsgSignInn)"),
-            scene("SceneId_McCoyPalace", "/// ★ Named from its area name: Tolbi"),
+            scene("MapId_McCoyPalace", "/// ★ Named from its area name: Tolbi"),
             link("TOLBI_FROM_MCCOY_PALACE", ""),
         ];
         let analysis = analyze(&things, &[], &text, &HashMap::new());
@@ -1212,13 +1223,13 @@ mod tests {
         let doors: Vec<String> = analysis.rows.iter().map(|row| row.door_words.join(",")).collect();
         assert_eq!(evidence[4], "verified quote");
         assert_eq!(evidence[5], "rooms", "INN, from the ★-verified TOLBI_TO_INN");
-        assert_eq!(evidence[6], "rooms", "DECK, from SceneId_TolbiShip's ★ line");
-        assert_eq!((evidence[7].as_str(), doors[7].as_str()), ("none", "SceneId_TolbiShipMast"), "an unverified scene");
+        assert_eq!(evidence[6], "rooms", "DECK, from MapId_TolbiShip's ★ line");
+        assert_eq!((evidence[7].as_str(), doors[7].as_str()), ("none", "MapId_TolbiShipMast"), "an unverified scene");
         assert_eq!(doors[8], "house,upper");
         assert_eq!(evidence[9], "rooms", "after AFTER, the game's words");
         assert_eq!(evidence[10], "rooms", "after AFTER, a ★-verified name's words");
         assert_eq!(doors[11], "crew,attacked", "the game's words only after AFTER or BEFORE");
-        assert_eq!(doors[12], "entrance,default", "no scene, nothing verified");
+        assert_eq!(doors[12], "warp,dest,default", "no map, nothing verified");
         assert!(evidence[13].starts_with("failed") && doors[13].is_empty(), "a failing line stays a finding");
         assert!(analysis.door_words.contains(&("attacked".to_string(), vec![11])));
         assert_eq!(analysis.rows[5].evidence.as_ref().unwrap().metric(), "provenance_rooms");

@@ -3,8 +3,8 @@
 //! of its events, as PNG files at the GBA's own size, with an index.
 
 use super::field::{
-    box_holds, result_key, stands_in, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, EVENT_EXIT, EVENT_LIMIT, EVENT_PSYNERGY, EVENT_SEARCH, EVENT_TALK,
-    EVENT_TOUCH, SETTLE,
+    box_holds, result_key, stands_in, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, MAP_EVENT_WARP, EVENT_LIMIT, MAP_EVENT_PSYNERGY, MAP_EVENT_BG, MAP_EVENT_TALK,
+    MAP_EVENT_COORD, SETTLE,
 };
 use super::story::{parse_trigger, Alternative, Event, Flags, Scene, Trigger, MOVE};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -184,7 +184,7 @@ pub fn story_moments(candidates: &[String], own: &[String], events: &[Event], nu
 /// Flags a scene's initialization tests that are no story state: the
 /// party's kept position and the scene's own temporary flags.
 fn is_story_flag(name: &str, flags: &Flags) -> bool {
-    if name == "FLAG_KEEP_PARTY_POSITION" || name.starts_with("FLAG_SCENE_TEMP_") {
+    if name == "FLAG_KEEP_PARTY_POSITION" || name.starts_with("FLAG_MAP_TEMP_") {
         return false;
     }
     // 0x200 to 0x3ff are the scene's and the place's own (cleared on entry).
@@ -213,7 +213,7 @@ pub struct Row {
     /// A GIF's frames at 30 a second.
     pub frames: usize,
     /// An event GIF's destination: the scene it leads to, by its SceneId
-    /// symbol (`SceneId_WorldMap`, `#N` for an unnamed row).
+    /// symbol (`MapId_WorldMap`, `#N` for an unnamed row).
     pub leads_to: String,
     /// Why an exit's recording ends before the player has control there.
     pub note: String,
@@ -782,11 +782,11 @@ impl Context<'_> {
         let answers = |scan: &Scan, own: &[u32]| {
             let row = |kind: u8, target: u16| scan.triggers.iter().any(|&(k, t, r)| k == kind && t == target && (own.is_empty() || own.contains(&r)));
             match trigger {
-                Trigger::Talk(a) => row(EVENT_TALK, a),
-                Trigger::Search(c) => row(EVENT_SEARCH, c),
-                Trigger::Touch(c) => row(EVENT_TOUCH, c) || (own.is_empty() && row(EVENT_EXIT, c)),
-                Trigger::Psynergy(..) if own.is_empty() => scan.triggers.iter().any(|t| t.0 == EVENT_PSYNERGY),
-                Trigger::Psynergy(_, a) => row(EVENT_PSYNERGY, a),
+                Trigger::Talk(a) => row(MAP_EVENT_TALK, a),
+                Trigger::Search(c) => row(MAP_EVENT_BG, c),
+                Trigger::Touch(c) => row(MAP_EVENT_COORD, c) || (own.is_empty() && row(MAP_EVENT_WARP, c)),
+                Trigger::Psynergy(..) if own.is_empty() => scan.triggers.iter().any(|t| t.0 == MAP_EVENT_PSYNERGY),
+                Trigger::Psynergy(_, a) => row(MAP_EVENT_PSYNERGY, a),
             }
         };
         for scene in scenes.iter().filter(|s| is_place(s).is_ok()) {
@@ -1301,7 +1301,7 @@ impl Context<'_> {
         let file = format!("{}/events/{base}.gif", scene.slug());
         let written = self.gif(&file, &run.frames)?;
         let leads_to = run.leads_to.map(|n| match self.scenes.iter().find(|s| s.number == n).and_then(|s| s.symbol.as_deref()) {
-            Some(symbol) => format!("SceneId_{symbol}"),
+            Some(symbol) => format!("MapId_{symbol}"),
             None => format!("#{n}"),
         });
         self.rows.push(Row {
@@ -1367,7 +1367,7 @@ mod tests {
 
     #[test]
     fn event_names_become_file_names() {
-        assert_eq!(file_name("Event_InspectWell"), "Event_InspectWell");
+        assert_eq!(file_name("EventScript_InspectWell"), "EventScript_InspectWell");
         assert_eq!(file_name("gXianInteriors_Events[65]"), "gXianInteriors_Events-65");
     }
 
@@ -1468,7 +1468,7 @@ mod tests {
     fn message_rows_are_told_from_functions() {
         assert!(is_message_row("MsgValeRockCannotBeMoved"));
         assert!(is_message_row("gValeStorm_Events[26]"));
-        assert!(!is_message_row("Event_PushPillar"));
+        assert!(!is_message_row("EventScript_PushPillar"));
     }
 }
 

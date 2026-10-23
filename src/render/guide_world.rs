@@ -15,9 +15,9 @@ const WHITE: u32 = 0xff_ff_ff;
 
 /// The world map's scene and the entrance that leaves Vale.
 const WORLD_MAP: (u16, u16) = (2, 1);
-/// struct MapFrameWork in HEAP_SLOT_MAP_FRAME: its two pages of 160 lines'
-/// struct MapAffinePair (BG2's line, then BG3's, 16 bytes each).
-const HEAP_SLOT_MAP_FRAME: u32 = 7;
+/// struct WorldMapFrameWork in HEAP_SLOT_WORLD_MAP_FRAME: its two pages of 160 lines'
+/// struct WorldMapAffinePair (BG2's line, then BG3's, 16 bytes each).
+const HEAP_SLOT_WORLD_MAP_FRAME: u32 = 7;
 const FRAME_PAGES: u32 = 0xc80;
 const PAIR: u32 = 32;
 const PAGE: u32 = 160 * PAIR;
@@ -26,7 +26,7 @@ const BG2CNT: u32 = 0x0400_000c;
 const BG3CNT: u32 = 0x0400_000e;
 /// The affine planes: 512 pixels square, wrapping (BGCNT_WRAP); a plane
 /// pixel is two world map pixels, since a 32-pixel cell is drawn as 2 by 2
-/// tiles (Map_WriteLayerCellTile).
+/// tiles (WorldMap_WriteLayerCellTile).
 const PLANE: i32 = 512;
 const WORLD_PER_PLANE: i32 = 2;
 /// The screen lines picked out in colour, top to bottom, and their colours.
@@ -34,7 +34,7 @@ const PICKED: [usize; 5] = [0, 40, 80, 120, 159];
 const PICKED_COLOURS: [u32; 5] = [0xff_40_40, 0xff_a0_20, 0xff_f0_40, 0x40_e0_ff, 0xe0_60_ff];
 
 /// One screen line's BG2 affine values as the HBlank DMA feeds them
-/// (struct MapAffineLine): the matrix's first column in 8.8 fixed point and
+/// (struct WorldMapAffineLine): the matrix's first column in 8.8 fixed point and
 /// the reference point in 20.8, both in plane pixels.
 #[derive(Clone, Copy)]
 struct Line {
@@ -106,10 +106,10 @@ impl Guide<'_> {
     /// is lit and the rest dimmed, so the trapezoid the 160 lines sample
     /// shows, and five lines are picked out in colour on both sides. Each
     /// line's values are read from the affine page the HBlank DMA feeds
-    /// (MapAnimation_ApplyAffineFrame): of the two pages, the one whose
+    /// (WorldMap_ApplyAffineFrame): of the two pages, the one whose
     /// lines draw the screen's ground pixel for pixel. The pitch never
     /// changes on the world map (0xe000, set by
-    /// Map_InitializePerspectiveScene), and every line meets the ground, so
+    /// WorldMap_InitializePerspective), and every line meets the ground, so
     /// there is no horizon on screen.
     pub fn world_map_footprint(&mut self) -> Result<(), String> {
         let slots = self.sym("gWorkSlot")?;
@@ -139,7 +139,7 @@ impl Guide<'_> {
         let (u0, v0) = (u0 - margin, v0 - margin);
         let (cw, ch) = ((u1 - u0 + 1 + margin) as usize, (v1 - v0 + 1 + margin) as usize);
         // The planes hold only the 2 by 2 squares around the party
-        // (Map_UpdateCurrentTileBlock: from 256 world pixels left of it and
+        // (WorldMap_UpdateCurrentTileBlock: from 256 world pixels left of it and
         // 320 above, in 512-pixel squares); past them the wrap shows other
         // squares, so the crop must stay inside them throughout.
         for m in &moments {
@@ -222,7 +222,7 @@ impl Guide<'_> {
     /// The world map now: the screen, the planes, the page whose lines draw
     /// the screen's ground, and the party.
     fn moment(field: &Field, slots: u32, zoomed: bool) -> Result<Moment, String> {
-        let frame_work = field.read32(slots + 4 * HEAP_SLOT_MAP_FRAME);
+        let frame_work = field.read32(slots + 4 * HEAP_SLOT_WORLD_MAP_FRAME);
         let picture = screen(&field.picture());
         let plane = plane(field);
         // The page the DMA fed this picture: the one that draws it. The

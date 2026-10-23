@@ -122,8 +122,8 @@ impl<'a> Guide<'a> {
         match name {
             "fuchin-24" => {
                 // FuchinFallsCaveDragonsEye (64): the fourth log put at its
-                // lower stop (FLAG_PLACE_TEMP_12, which no script sets) with
-                // the third at its north end (FLAG_PLACE_TEMP_0B), the
+                // lower stop (FLAG_MAPSEC_TEMP_12, which no script sets) with
+                // the third at its north end (FLAG_MAPSEC_TEMP_0B), the
                 // leader on it walking north and then south.
                 for keys in [KEY_UP, KEY_DOWN] {
                     let mut e = self.enter_story((64, 2), &["FLAG_VALE_PARTY_LEFT", "0x312", "0x30b"], &[])?;
@@ -570,7 +570,7 @@ impl<'a> Guide<'a> {
                 }
                 {
                     let work = e.field.map_work();
-                    let base = at("gMapCellBuffer")?;
+                    let base = at("gMapGridCellBuffer")?;
                     for l in 0..3u32 {
                         let p = e.field.read32(work + 0x130 + 0x30 * l);
                         let w = p.wrapping_sub(base) / 4;
@@ -618,7 +618,7 @@ impl<'a> Guide<'a> {
                 println!("leader {}", describe(&e.field, 0));
                 {
                     let work = e.field.map_work();
-                    let base = at("gMapCellBuffer")?;
+                    let base = at("gMapGridCellBuffer")?;
                     for l in 0..3u32 {
                         let p = e.field.read32(work + 0x130 + 0x30 * l);
                         let w = p.wrapping_sub(base) / 4;
@@ -647,7 +647,7 @@ impl<'a> Guide<'a> {
                 Ok(())
             }
             "vale-inn" => {
-                // ValeInteriorsInn (8) after Kalay: ACTOR_BLANK_AFTER_KALAY
+                // ValeInteriorsInn (8) after Kalay: LOCALID_BLANK_AFTER_KALAY
                 // and its neighbours, and walking into it.
                 let ents = {
                     let e = self.enter_story((8, 0), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;

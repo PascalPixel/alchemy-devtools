@@ -40,7 +40,7 @@ const TWO: &[u8] = &[ISAAC, GARET];
 const THREE: &[u8] = &[ISAAC, GARET, IVAN];
 const FOUR: &[u8] = &[ISAAC, GARET, IVAN, MIA];
 
-/// The chapters, by scene number (SceneId_*): ranges of scenes in the
+/// The chapters, by scene number (MapId_*): ranges of scenes in the
 /// story's order.
 pub const CHAPTERS: &[Chapter] = &[
     // The stormy night: Isaac and Garet as children, a new game's level 1.

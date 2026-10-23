@@ -160,6 +160,19 @@ pub const ABBREVIATIONS: &[(&str, &str)] = &[
     ("desc", "description"),
 ];
 
+/// Shortened words pret's map layer writes, which the source keeps as pret
+/// does, each beside the word it shortens with: a warp destination is a
+/// `WarpDest`, an event the party triggers by stepping on its cell a
+/// `CoordEvent` (`COORD_EVENT_FLAG_WALKING`, `MAP_EVENT_COORD`). The short
+/// word elsewhere is still measured.
+pub const PRET_TERMS: &[(&str, &str)] = &[("warp", "dest"), ("coord", "event"), ("event", "coord")];
+
+/// Whether the word at `at` of a name's words is half of a `PRET_TERMS` pair.
+fn in_pret_term(words: &[String], at: usize) -> bool {
+    let pair = |first: &str, second: &str| PRET_TERMS.contains(&(first, second));
+    (at > 0 && pair(&words[at - 1], &words[at])) || words.get(at + 1).is_some_and(|next| pair(&words[at], next))
+}
+
 /// Words that name one idea, as the code has used them, each set marked by
 /// whose words they are. A game thing's word is the game's (H3): where its
 /// text uses exactly one word of a set, that is the word; where it uses
@@ -249,8 +262,8 @@ fn exempt(name: &Name) -> bool {
         || n.starts_with("__")
         || n.starts_with("REG_")
         || n.starts_with("OWN_")
-        || n.starts_with("FLAG_SCENE_TEMP_")
-        || n.starts_with("FLAG_PLACE_TEMP_")
+        || n.starts_with("FLAG_MAP_TEMP_")
+        || n.starts_with("FLAG_MAPSEC_TEMP_")
         || name.file.ends_with("/io_reg.h")
         || (n.starts_with("Msg") && matches!(name.kind, NameKind::Global | NameKind::Extern))
         || n.len() < 2
@@ -546,9 +559,10 @@ fn words_of_one_idea(
             .enumerate()
             .flat_map(|(at, segment)| words(segment).into_iter().map(move |word| (at, segment, word)))
             .collect();
-        for (at, segment, word) in placed {
+        let singulars: Vec<String> = placed.iter().map(|(_, _, word)| singular(word)).collect();
+        for (index, (at, segment, word)) in placed.into_iter().enumerate() {
             let (metric, full) = if let Some(&(_, full)) = ABBREVIATIONS.iter().find(|(short, _)| *short == singular(&word)) {
-                if text.is_some_and(|text| text.uses(&word)) || usage.count(full) == 0 || hardware.contains(segment) {
+                if in_pret_term(&singulars, index) || text.is_some_and(|text| text.uses(&word)) || usage.count(full) == 0 || hardware.contains(segment) {
                     continue;
                 }
                 ("abbreviation", full)
@@ -762,7 +776,7 @@ fn place_at(name_words: &[String], areas: &[Vec<String>]) -> Option<(usize, Stri
 /// share. A family has at least `FAMILY` members, and its pattern is what
 /// two thirds of them do:
 ///
-/// - case: `SceneId_Vale` beside `SceneId_VALE_CAVE`;
+/// - case: `MapId_Vale` beside `MapId_VALE_CAVE`;
 /// - an enum's shared leading segments (`FLAG_VALE_`) that one of its
 ///   members lacks;
 /// - a function named with a family's prefix but no `_` (`BattleObjGet`
@@ -836,7 +850,7 @@ fn shapes(all: &[&Name], families: &[Family], text: Option<&GameText>, out: &mut
                 let example =
                     placed.iter().find(|(_, _, place)| matches!(place, Some((0, _)))).map_or("", |(_, name, _)| name.name.as_str());
                 for (_, name, place) in &placed {
-                    // S3 puts `Unused` right after the prefix (`SceneId_UnusedMercuryLighthouseAerie2`).
+                    // S3 puts `Unused` right after the prefix (`MapId_UnusedMercuryLighthouseAerie2`).
                     let unused = rest(&name.name).to_ascii_lowercase().starts_with("unused");
                     if let Some((_, area)) = place.as_ref().filter(|(at, _)| *at > 0 && !unused) {
                         let family_prefix = prefix(&name.name).unwrap_or("");
@@ -927,22 +941,22 @@ fn folder(file: &str) -> Option<&str> {
 /// `prefix_unlisted`: a function prefix no folder guide lists. S3 adds each
 /// new prefix to its folder's guide and lets a function take the prefix of
 /// a thing the engine names elsewhere, so a prefix counts as listed when any
-/// folder guide writes it (`Battle_`); a scene's functions take its place's
-/// name (the scene guide), so in `src/scene` a prefix that is a place's
+/// folder guide writes it (`Battle_`); a map's functions take its place's
+/// name (the map guide), so in `src/map` a prefix that is a place's
 /// name or its start (`Fuchin_` of Fuchin Falls Cave, `LemurianShip_` of
-/// `SceneId_LemurianShip`) is listed too. Each
+/// `MapId_LemurianShip`) is listed too. Each
 /// unlisted prefix is reported once per folder, at its first function.
 fn unlisted_prefixes(all: &[&Name], guides: &[(String, String)], text: Option<&GameText>, out: &mut Vec<Finding>) {
-    // The places: the area names and the scene ids, which H3 names from them.
+    // The places: the area names and the map ids, which H3 names from them.
     let mut areas = area_words(text);
-    areas.extend(all.iter().filter_map(|name| name.name.strip_prefix("SceneId_")).map(words).filter(|place| !place.is_empty()));
+    areas.extend(all.iter().filter_map(|name| name.name.strip_prefix("MapId_").or_else(|| name.name.strip_prefix("SceneId_"))).map(words).filter(|place| !place.is_empty()));
     let mut unlisted: BTreeMap<(&str, &str), Vec<&Name>> = BTreeMap::new();
     for &name in all.iter().filter(|name| name.kind == NameKind::Function) {
         let (Some(family), Some(folder)) = (prefix(&name.name), folder(&name.file)) else { continue };
         if !family.bytes().any(|b| b.is_ascii_lowercase()) || guides.iter().any(|(_, guide)| lists(guide, family)) {
             continue;
         }
-        if folder == "scene" && is_place(family, &areas) {
+        if matches!(folder, "map" | "scene") && is_place(family, &areas) {
             continue;
         }
         unlisted.entry((folder, family)).or_default().push(name);
@@ -1073,6 +1087,29 @@ mod tests {
     }
 
     #[test]
+    fn pret_terms_keep_their_short_words() {
+        let file = "games/tbs/src/map/a.c";
+        let names = Names {
+            names: vec![
+                name("Map_GetWarpDests", NameKind::Function, file, 1),
+                name("MAP_EVENT_COORD", NameKind::Macro, file, 2),
+                name("Map_RunCoordEventOrWarp", NameKind::Function, file, 3),
+                name("gSerialReceiveDest", NameKind::Global, file, 4),
+                name("Script_SetDestination", NameKind::Function, file, 5),
+                name("EffectStep_Coordinates", NameKind::Function, file, 6),
+            ],
+            ..Names::default()
+        };
+        let findings = check(&names, None);
+        let abbreviations: Vec<&str> = findings.iter().filter(|f| f.metric == "abbreviation").map(|f| f.what.as_str()).collect();
+        assert_eq!(
+            abbreviations,
+            ["gSerialReceiveDest\tdest -> destination: gSerialReceiveDestination (1 names spell destination, as Script_SetDestination does)"],
+            "WarpDest and CoordEvent are pret's; a dest outside them is still measured"
+        );
+    }
+
+    #[test]
     fn names_the_rules_keep() {
         let file = "games/tbs/src/battle/a.c";
         let flash = "games/tbs/src/system/save/flash.c";
@@ -1097,7 +1134,7 @@ mod tests {
             ],
             ..Names::default()
         };
-        for (at, count) in ["ITEM_COUNT", "ENEMY_COUNT", "UNIT_COUNT", "ACTOR_COUNT", "SLOT_COUNT", "LIST_MAX"].iter().enumerate() {
+        for (at, count) in ["ITEM_COUNT", "ENEMY_COUNT", "UNIT_COUNT", "LOCALID_COUNT", "SLOT_COUNT", "LIST_MAX"].iter().enumerate() {
             names.names.push(name(count, NameKind::Macro, "games/tbs/include/counts.h", 20 + at));
         }
         let text = "u16 gFlashNumRemainingBytes; const u16 *maxTime; // pret's names";
@@ -1112,20 +1149,20 @@ mod tests {
 
     #[test]
     fn synonyms_take_the_games_word() {
-        let file = "games/tbs/src/scene/a.c";
+        let file = "games/tbs/src/map/a.c";
         let po = "msgctxt \"MsgShop\"\nmsgid \"00001\"\nmsgstr \"I'm a merchant.\"\n";
         let text = GameText::parse(po, None);
         let names = Names {
             names: vec![
-                name("ACTOR_SHOPKEEPER", NameKind::Enumerator, file, 1),
-                name("ACTOR_MERCHANT", NameKind::Enumerator, file, 2),
-                name("ACTOR_OLD_MAN", NameKind::Enumerator, file, 3),
+                name("LOCALID_SHOPKEEPER", NameKind::Enumerator, file, 1),
+                name("LOCALID_MERCHANT", NameKind::Enumerator, file, 2),
+                name("LOCALID_OLD_MAN", NameKind::Enumerator, file, 3),
             ],
             ..Names::default()
         };
         let findings = check(&names, Some(&text));
         let synonyms: Vec<&str> = findings.iter().filter(|f| f.metric == "synonym").map(|f| f.what.as_str()).collect();
-        assert_eq!(synonyms, ["ACTOR_SHOPKEEPER\tshopkeeper -> merchant: ACTOR_MERCHANT (1 names spell merchant, as ACTOR_MERCHANT does)"]);
+        assert_eq!(synonyms, ["LOCALID_SHOPKEEPER\tshopkeeper -> merchant: LOCALID_MERCHANT (1 names spell merchant, as LOCALID_MERCHANT does)"]);
     }
 
     #[test]
@@ -1171,14 +1208,14 @@ mod tests {
                 .enumerate()
                 .map(|(at, n)| name(n, NameKind::Macro, file, at + 1))
                 .collect();
-        let scene = "games/tbs/src/scene/vale.c";
-        for (at, n) in ["ACTOR_GUARD", "ACTOR_MAYOR", "ACTOR_DOG", "GUARD_CAPTAIN"].iter().enumerate() {
+        let scene = "games/tbs/src/map/vale.c";
+        for (at, n) in ["LOCALID_GUARD", "LOCALID_MAYOR", "LOCALID_DOG", "GUARD_CAPTAIN"].iter().enumerate() {
             list.push(Name { group: Some("vale.c#3".to_string()), ..name(n, NameKind::Enumerator, scene, 10 + at) });
         }
         for (at, n) in ["BattleObj_Init", "BattleObj_Free", "BattleObj_Draw", "BattleObjGet"].iter().enumerate() {
             list.push(name(n, NameKind::Function, "games/tbs/src/battle/obj.c", 20 + at));
         }
-        for (at, n) in ["ITEM_COUNT", "ENEMY_COUNT", "UNIT_COUNT", "ACTOR_COUNT", "SLOT_COUNT", "NUM_ELEMENTS"].iter().enumerate() {
+        for (at, n) in ["ITEM_COUNT", "ENEMY_COUNT", "UNIT_COUNT", "LOCALID_COUNT", "SLOT_COUNT", "NUM_ELEMENTS"].iter().enumerate() {
             list.push(name(n, NameKind::Macro, "games/tbs/include/counts.h", 30 + at));
         }
         let findings = check(&Names { names: list, ..Names::default() }, Some(&text));
@@ -1188,7 +1225,7 @@ mod tests {
             [
                 "FLAG_Childhood\tcase: PascalCase where the FLAG_ names are CAPITALS (6 of 7, as FLAG_VALE_A)",
                 "FLAG_SAW_SHIP_AT_IDEJIMA\tplace last: FLAG_IDEJIMA_... as 5 of the 7 FLAG_ names start with their place (as FLAG_VALE_A)",
-                "GUARD_CAPTAIN\tmissing part: ACTOR_... as 3 of the 4 in its enum are (as ACTOR_GUARD)",
+                "GUARD_CAPTAIN\tmissing part: LOCALID_... as 3 of the 4 in its enum are (as LOCALID_GUARD)",
                 "BattleObjGet\tseparator: BattleObj_Get, as the 3 BattleObj_ functions are, or a prefix of its own",
                 "NUM_ELEMENTS\torder: num goes last, where 5 of the game's 6 names with it at an end put it (as ITEM_COUNT)",
             ]

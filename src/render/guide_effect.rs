@@ -13,7 +13,7 @@ use super::plan::{self, Ally, Aim, Cast, Command, Tables};
 
 /// gWorkSlot[HEAP_SLOT_BATTLE_EFFECT] holds struct BattleEffectWork
 /// (battle_effect_work.h); its particles are 64 struct EffectStep from
-/// 0x7080. PARTICLES is gMapCellBuffer, read as struct EffectStep.
+/// 0x7080. PARTICLES is gMapGridCellBuffer, read as struct EffectStep.
 const HEAP_SLOT_BATTLE_EFFECT: u32 = 39;
 const FX_PARTICLES: u32 = 0x7080;
 /// struct EffectStep: x, y, z, three velocities, then variant.
@@ -163,7 +163,7 @@ impl<'a> Guide<'a> {
     fn record_pools(&self, cast: &Cast, ranges: &[Range], hooks: &[u32], at_hook: &mut dyn FnMut(&Gba, u32, usize)) -> Result<(Vec<Frame>, usize), String> {
         let symbols = battle::Symbols::find(self.map)?;
         let work_slots = self.sym("gWorkSlot")?;
-        let particles = self.sym("gMapCellBuffer")?;
+        let particles = self.sym("gMapGridCellBuffer")?;
         let mut frames: Vec<Frame> = Vec::new();
         battle::record_watching(self.rom, &symbols, cast, &Scene::Game, false, None, hooks, &mut |gba, hook| match hook {
             Some(pc) => at_hook(gba, pc, frames.len()),

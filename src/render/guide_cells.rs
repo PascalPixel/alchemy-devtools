@@ -1,8 +1,8 @@
 //! Cells labelled in words. A picture that marks map cells says what each
 //! does, never the collision code the engine looks up: a code every map
-//! shares (enum MapCellCode) by the name the code gives it, and one of the
+//! shares (enum MetatileBehavior) by the name the code gives it, and one of the
 //! scene's own (1 to 239) by the rows of the scene's event table that answer
-//! it, read as Scene_FindEvent reads them, each row's function or exit put
+//! it, read as Map_FindEvent reads them, each row's function or exit put
 //! in words the picture supplies. A key beside the picture says what each
 //! colour stands for.
 
@@ -22,10 +22,10 @@ pub(super) const INK: u32 = 0x20_20_20;
 /// trigger, condition and value, ended by a control of -1.
 const FIELD_EVENTS: u32 = 0x10;
 const EVENT_ROW_SIZE: u32 = 12;
-/// enum SceneEventKind's kinds that answer a cell.
-const EVENT_EXIT: u32 = 1;
-const EVENT_TOUCH: u32 = 2;
-const EVENT_SEARCH: u32 = 3;
+/// enum MapEventKind's kinds that answer a cell.
+const MAP_EVENT_WARP: u32 = 1;
+const MAP_EVENT_COORD: u32 = 2;
+const MAP_EVENT_BG: u32 = 3;
 
 /// What answers a cell, which picks its colour.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
@@ -38,16 +38,16 @@ pub(super) enum Kind {
     Search,
     /// One of the scene's own codes that no row answers.
     NoEvent,
-    /// MAP_CELL_WALL.
+    /// MB_WALL.
     Wall,
-    /// MAP_CELL_ENCOUNTER_GROUND_1 and _2.
+    /// MB_ENCOUNTER_GROUND_1 and _2.
     Encounters,
-    /// MAP_CELL_JAR to MAP_CELL_WELL: a search spot every map shares.
+    /// MB_JAR to MB_WELL: a search spot every map shares.
     SearchSpot,
-    /// MAP_CELL_LEDGE, MAP_CELL_CLIMB, MAP_CELL_JUMP_FORWARD and
-    /// MAP_CELL_JUMP_FORWARD_UNREACHED: cells the leader pushes against.
+    /// MB_LEDGE, MB_CLIMB, MB_JUMP_FORWARD and
+    /// MB_JUMP_FORWARD_UNREACHED: cells the leader pushes against.
     Push,
-    /// MAP_CELL_HAZARD.
+    /// MB_DESERT_SAND.
     Hazard,
 }
 
@@ -90,7 +90,7 @@ pub(super) struct Meaning {
     pub kind: Kind,
 }
 
-/// A code every map shares, by the name enum MapCellCode gives it.
+/// A code every map shares, by the name enum MetatileBehavior gives it.
 fn shared(code: i32) -> Option<Meaning> {
     let (words, kind) = match code {
         240 => ("Encounter ground 1", Kind::Encounters),
@@ -146,7 +146,7 @@ fn rows(field: &Field, code: i32) -> Vec<Row> {
             break;
         }
         let kind = control & 15;
-        if (EVENT_EXIT..=EVENT_SEARCH).contains(&kind) && i32::from(field.read8(a + 4)) == code {
+        if (MAP_EVENT_WARP..=MAP_EVENT_BG).contains(&kind) && i32::from(field.read8(a + 4)) == code {
             out.push(Row { control, condition: field.read16(a + 6) as i16, value: field.read32(a + 8) });
         }
         a += EVENT_ROW_SIZE;
@@ -170,7 +170,7 @@ impl Names {
     /// function's for a script, else what a search finds.
     fn of(&self, row: &Row) -> String {
         let value = row.value;
-        if row.control & 15 == EVENT_EXIT {
+        if row.control & 15 == MAP_EVENT_WARP {
             return self.exits.get(&value).cloned().unwrap_or_else(|| format!("exit {value}"));
         }
         if value >= 0x0200_0000 {
@@ -189,7 +189,7 @@ impl Names {
 
 /// What cell code `code` makes happen in `field`'s scene now, its rows'
 /// names put in `words`; None for open ground. The rows taken are those
-/// Scene_FindEvent could take: each whose condition holds, and a search on
+/// Map_FindEvent could take: each whose condition holds, and a search on
 /// a named target whatever its condition (Field_SearchTile tests it
 /// afterwards). Stepping on a cell runs a touch row before an exit row, so
 /// a touch row gives the colour, then an exit row, then a search row.
@@ -204,7 +204,7 @@ pub(super) fn meaning(field: &Field, names: &Names, words: Words, code: i32) -> 
     let mut kinds = Vec::new();
     for row in rows(field, code) {
         let kind = row.control & 15;
-        let named_search = kind == EVENT_SEARCH && (row.control >> 4) & 31 != 0;
+        let named_search = kind == MAP_EVENT_BG && (row.control >> 4) & 31 != 0;
         if !named_search && !holds(field, row.condition) {
             continue;
         }
@@ -219,11 +219,11 @@ pub(super) fn meaning(field: &Field, names: &Names, words: Words, code: i32) -> 
         }
         kinds.push(kind);
     }
-    let kind = if kinds.contains(&EVENT_TOUCH) {
+    let kind = if kinds.contains(&MAP_EVENT_COORD) {
         Kind::Touch
-    } else if kinds.contains(&EVENT_EXIT) {
+    } else if kinds.contains(&MAP_EVENT_WARP) {
         Kind::Exit
-    } else if kinds.contains(&EVENT_SEARCH) {
+    } else if kinds.contains(&MAP_EVENT_BG) {
         Kind::Search
     } else {
         Kind::NoEvent
@@ -235,7 +235,7 @@ pub(super) fn meaning(field: &Field, names: &Names, words: Words, code: i32) -> 
 impl<'a> Guide<'a> {
     /// The names `scene`'s rows are read through: the functions of the
     /// overlay that defines `anchor`, and the exits scene_links.h lists
-    /// under `SceneId_<scene>'s exits`.
+    /// under `MapId_<scene>'s exits`.
     pub(super) fn cell_names(&self, anchor: &str, scene: &str) -> Result<Names, String> {
         let root = crate::compile::root();
         let dir = root.join("out/tbs-en/overlays");
@@ -256,12 +256,12 @@ impl<'a> Guide<'a> {
             break;
         }
         let functions = functions.ok_or_else(|| format!("no overlay defines {anchor}"))?;
-        let links_path = root.join("games/tbs/include/scene_links.h");
+        let links_path = root.join("games/tbs/include/map_warps.h");
         let links = std::fs::read_to_string(&links_path).map_err(|e| format!("cannot read {}: {e}", links_path.display()))?;
         let heading = links
-            .find(&format!("/// SceneId_{scene}'s exits."))
-            .or_else(|| links.find(&format!("/// SceneId_{scene}'s entrances and exits.")))
-            .ok_or_else(|| format!("scene_links.h lists no exits of SceneId_{scene}"))?;
+            .find(&format!("/// MapId_{scene}'s exits."))
+            .or_else(|| links.find(&format!("/// MapId_{scene}'s entrances and exits.")))
+            .ok_or_else(|| format!("map_warps.h lists no warps of MapId_{scene}"))?;
         let block = &links[heading..];
         let block = &block[..block.find("};").unwrap_or(block.len())];
         // Comments taken out, so a name and its number may stand on two lines.
@@ -470,7 +470,7 @@ pub(super) fn labelled(picture: &Image, marks: &[Mark], legend: &[(u32, String)]
 }
 
 /// What the rows of the Goma Cave room of two pillars and a stump
-/// (SceneId_GomaCavePillar) do: its exits lead to the rooms scene_ids.h
+/// (MapId_GomaCavePillar) do: its exits lead to the rooms scene_ids.h
 /// names from their renders.
 pub(super) const GOMA_CAVE_PILLAR_WORDS: Words = &[
     ("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST", "Way out to the room of the stream", None),
@@ -478,8 +478,8 @@ pub(super) const GOMA_CAVE_PILLAR_WORDS: Words = &[
     ("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_POND_WEST", "Way down to the room of the pond", None),
     ("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_POND_SOUTH", "Way down to the room of the pond", None),
     ("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_POND_EAST", "Way down to the room of the pond", None),
-    ("Event_JumpGapWest", "Jump the gap west (walk west into it)", None),
-    ("Event_PushEastPillar", "Push the east stone pillar a step (walk into it)", None),
+    ("EventScript_JumpGapWest", "Jump the gap west (walk west into it)", None),
+    ("EventScript_PushEastPillar", "Push the east stone pillar a step (walk into it)", None),
     ("FIND_ITEM", "Chest", None),
 ];
 
@@ -507,7 +507,7 @@ pub(super) const FUCHIN_FIRST_ROOM_WORDS: Words = &[
 ];
 
 /// What the rows of Mercury Lighthouse's ground floor
-/// (SceneId_MercuryLighthouseEntrance) do around the pool, from their
+/// (MapId_MercuryLighthouseEntrance) do around the pool, from their
 /// functions' comments; the exits' rooms are named in scene_links.h.
 pub(super) const MERCURY_LIGHTHOUSE_ENTRANCE_WORDS: Words = &[
     ("MercuryLighthouseEntrance_HopAcrossPool", "Hop two cells (walk into it)", None),
@@ -522,38 +522,38 @@ pub(super) const MERCURY_LIGHTHOUSE_ENTRANCE_WORDS: Words = &[
 ];
 
 /// What the rows of the shifting floor stage of Colosseum Final 2
-/// (SceneId_ColosseumSatrageMatch) do where its lifts' task copies cells.
+/// (MapId_ColosseumSatrageMatch) do where its lifts' task copies cells.
 pub(super) const SATRAGE_WORDS: Words = &[];
 
-/// Vale by day, on the day the story begins (SceneId_Vale, entered by the
+/// Vale by day, on the day the story begins (MapId_Vale, entered by the
 /// Sanctum's door).
 const VALE: (u16, u16) = (4, 1);
-/// The scenes Vale's doors lead into: SceneId_ValeInteriorsShops and
-/// SceneId_ValeInteriorsInn.
+/// The scenes Vale's doors lead into: MapId_ValeInteriorsShops and
+/// MapId_ValeInteriorsInn.
 const VALE_INTERIORS_SHOPS: u16 = 7;
 const VALE_INTERIORS_INN: u16 = 8;
 
 /// What the rows of Vale's event table do, from their functions'
 /// comments, the scenes their exits lead to, and the event renders.
 const VALE_WORDS: Words = &[
-    ("Event_EnterSanctum", "Door into the Sanctum", Some(9)),
-    ("Event_ApproachMtAleph", "Path up Mt. Aleph", None),
-    ("Event_TakeExitToValeKradenNorth", "Way out to Kraden's cottage, north", Some(6)),
-    ("Event_TakeExitToValeKradenSouth", "Way out to Kraden's cottage, south", Some(6)),
-    ("Event_TakeExitToValeGate", "Way out to the Psynergy Stone", Some(5)),
-    ("Event_EnterGaretsHouse", "Door into Garet's house (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
-    ("Event_EnterValeInteriorsShops", "Door into a house (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
-    ("Event_EnterIsaacsHouse", "Door into Isaac's house (walk north into it)", Some(VALE_INTERIORS_INN)),
-    ("Event_EnterJennasGrandparentsHouse", "Door into the house of Jenna's grandparents (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
-    ("Event_EnterValeInteriorsShopsWest", "Door into a house (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
-    ("Event_SetPathCellOverride", "Onto the upper path: its cells change", None),
-    ("Event_ClearPathCellOverride", "Off the upper path: its cells change back", None),
-    ("Event_WatchThePuppies", "The puppies bark", None),
-    ("Event_TurnBackFromThePuppies", "The puppies bark", None),
-    ("Event_ClimbLadderOntoRoof", "Ladder up onto the roof of Isaac's house (walk north into it)", None),
-    ("Event_ClimbDownFromRoof", "Ladder down from the roof (walk south into it)", None),
-    ("Event_PushPillar", "Push the stone pillar", None),
-    ("Event_SearchTheLockedDoor", "Search the locked door", None),
+    ("EventScript_EnterSanctum", "Door into the Sanctum", Some(9)),
+    ("EventScript_ApproachMtAleph", "Path up Mt. Aleph", None),
+    ("EventScript_WarpToValeKradenNorth", "Way out to Kraden's cottage, north", Some(6)),
+    ("EventScript_WarpToValeKradenSouth", "Way out to Kraden's cottage, south", Some(6)),
+    ("EventScript_WarpToValeGate", "Way out to the Psynergy Stone", Some(5)),
+    ("EventScript_EnterGaretsHouse", "Door into Garet's house (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
+    ("EventScript_EnterValeInteriorsShops", "Door into a house (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
+    ("EventScript_EnterIsaacsHouse", "Door into Isaac's house (walk north into it)", Some(VALE_INTERIORS_INN)),
+    ("EventScript_EnterJennasGrandparentsHouse", "Door into the house of Jenna's grandparents (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
+    ("EventScript_EnterValeInteriorsShopsWest", "Door into a house (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
+    ("EventScript_SetPathCellOverride", "Onto the upper path: its cells change", None),
+    ("EventScript_ClearPathCellOverride", "Off the upper path: its cells change back", None),
+    ("EventScript_WatchThePuppies", "The puppies bark", None),
+    ("EventScript_TurnBackFromThePuppies", "The puppies bark", None),
+    ("EventScript_ClimbLadderOntoRoof", "Ladder up onto the roof of Isaac's house (walk north into it)", None),
+    ("EventScript_ClimbDownFromRoof", "Ladder down from the roof (walk south into it)", None),
+    ("EventScript_PushPillar", "Push the stone pillar", None),
+    ("EventScript_SearchTheLockedDoor", "Search the locked door", None),
 ];
 
 impl<'a> Guide<'a> {

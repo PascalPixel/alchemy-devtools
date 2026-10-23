@@ -643,7 +643,7 @@ impl<'a> Guide<'a> {
         let cast: Cast = plan.casts.into_iter().find(|c| c.ability.name == "Heat Wave").ok_or("no Heat Wave cast")?;
         let symbols = battle::Symbols::find(self.map)?;
         let work_slots = self.sym("gWorkSlot")?;
-        let pool = self.sym("gMapCellBuffer")?;
+        let pool = self.sym("gMapGridCellBuffer")?;
         let transfer = self.sym("BattleEffect_ProcessPendingGraphicsTransfer")?;
         let mut copies: Vec<Image> = Vec::new();
         let mut copy_frames: Vec<usize> = Vec::new();
@@ -1040,11 +1040,11 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Bilibin's weapon and armor shop (SceneId_BilibinInteriors, entrance
+/// Bilibin's weapon and armor shop (MapId_BilibinInteriors, entrance
 /// BILIBIN_INTERIORS_WEAPON_AND_ARMOR_SHOP) and its weapon merchant
 /// (BILIBIN_WEAPON_MERCHANT), whose counter opens stock row 7; Vault's
-/// interiors (SceneId_VaultInteriors, from its east-southeast door) and its
-/// weapon merchant (ACTOR_WEAPON_MERCHANT), whose counter opens row 4.
+/// interiors (MapId_VaultInteriors, from its east-southeast door) and its
+/// weapon merchant (LOCALID_WEAPON_MERCHANT), whose counter opens row 4.
 const BILIBIN_WEAPON_SHOP: (u16, u16) = (31, 4);
 const BILIBIN_WEAPON_MERCHANT: u16 = 16;
 const BILIBIN_WEAPON_ROW: usize = 7;
