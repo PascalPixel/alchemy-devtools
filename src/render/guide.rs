@@ -185,6 +185,7 @@ impl<'a> Guide<'a> {
     /// over KEY, the colour that marks its empty pixels.
     pub fn exploded(&mut self) -> Result<(), String> {
         let mut field = self.enter(VALE)?;
+        self.planes_now(&mut field, "planes/field", "Vale")?;
         let shown = field.read16(DISPCNT);
         let saved = field.save();
         let mut sheets = Vec::new();
@@ -767,6 +768,8 @@ impl Guide<'_> {
     /// `file`: each layer the display mode shows, in the order the hardware
     /// stacks them (stacking), as sheets that spread and close again.
     pub(super) fn explode_now(&mut self, field: &mut Field, file: &str, what: &str) -> Result<(), String> {
+        let stem = file.trim_end_matches(".gif").trim_end_matches("-layers-3d");
+        self.planes_now(field, &format!("planes/{stem}"), what)?;
         let layers = stacking(field);
         let sheets = layer_sheets(field, &layers)?;
         let frames = spread_frames(&sheets);

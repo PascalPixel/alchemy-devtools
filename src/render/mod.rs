@@ -30,6 +30,8 @@ mod guide_menu;
 #[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
+mod guide_planes;
+#[cfg(feature = "render")]
 mod guide_places;
 #[cfg(feature = "render")]
 mod guide_take;
@@ -1056,10 +1058,13 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
   walk        walk-run.gif: Vale, walking right, then running back with B
   snow        snow.gif: Imil, the leader's footprints in the snow
   layers      layers.gif: Vale built up layer by layer, BG3 to BG1
-  layers-3d   layers-3d.gif: Vale's layers pulled apart into sheets in 3D
+  layers-3d   layers-3d.gif: Vale's layers pulled apart into sheets in 3D,
+              and planes/field/: each plane alone as a transparent PNG with
+              planes.tsv, the order the registers give (guide_planes.rs)
   battle-layers-3d, world-map-layers-3d, menu-layers-3d, talk-layers-3d
               a Goma Cave battle, the world map, the field menu and a message,
-              pulled apart the same way, each as NAME.gif
+              pulled apart the same way, each as NAME.gif, with its
+              planes in planes/NAME/
   scene-actors scene-actors.png: Vale at twice its size, each actor labelled
               with its actor number
   debug-rooms debug-level-room.png, debug-menu-room.png: the debug level room

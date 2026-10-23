@@ -952,6 +952,24 @@ impl<'rom> Field<'rom> {
         Ok(out)
     }
 
+    /// Runs an instruction at a time until VCOUNT reads `line`: 227, the
+    /// last line of vertical blank, is after the game's VBlank work has
+    /// copied its OAM and registers and before the next picture is drawn.
+    pub fn until_line(&mut self, line: u16) -> Result<(), String> {
+        // A halted processor passes several lines in one step, and may pass
+        // this one; it is met within a few frames, or this fails.
+        let mut frames = 0;
+        while self.gba.read16(0x0400_0006) & 0xff != line {
+            if self.tick()? {
+                frames += 1;
+                if frames > 8 {
+                    return Err(format!("line {line} was never reached in 8 frames"));
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn frames(&mut self, mut n: u32) -> Result<(), String> {
         while n > 0 {
             if self.tick()? {
