@@ -1,9 +1,8 @@
-
 use super::asm::{Data, Label, Pointer};
 use encoding_rs::WINDOWS_1252;
 mod huffman;
-use huffman::encode_huffman_archive;
 use crate::assets::po::{self, Catalog};
+use huffman::encode_huffman_archive;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
@@ -16,23 +15,20 @@ pub struct ArchiveSpec {
     pub target: &'static str,
     pub language: &'static str,
     pub output: &'static str,
-    pub charmap: Option<&'static str>,
 }
 
-impl ArchiveSpec {
-    pub(crate) fn characters(&self) -> Option<String> {
-        self.charmap.map(|charmap| {
-            charmap
-                .lines()
-                .filter(|line| !line.starts_with('#') && !line.is_empty())
-                .map(|line| match line.split('\t').nth(1) {
-                    Some("SPACE") => ' ',
-                    Some("BOX") | None => '\u{fffd}',
-                    Some(text) => text.chars().next().unwrap_or('\u{fffd}'),
-                })
-                .collect()
+/// The glyph order of a Japanese font map, `games/<game>/src/graphics/font/charmap*_ja.tsv`:
+/// a character's symbol is its row plus 32.
+fn charmap_characters(charmap: &str) -> String {
+    charmap
+        .lines()
+        .filter(|line| !line.starts_with('#') && !line.is_empty())
+        .map(|line| match line.split('\t').nth(1) {
+            Some("SPACE") => ' ',
+            Some("BOX") | None => '\u{fffd}',
+            Some(text) => text.chars().next().unwrap_or('\u{fffd}'),
         })
-    }
+        .collect()
 }
 
 pub static ARCHIVES: [ArchiveSpec; 12] = [
@@ -40,77 +36,61 @@ pub static ARCHIVES: [ArchiveSpec; 12] = [
         target: "tbs-ja",
         language: "ja",
         output: "games/tbs/text/ja.po",
-        charmap: Some(include_str!(
-            "../data/charmap_ja.tsv"
-        )),
     },
     ArchiveSpec {
         target: "tbs-en",
         language: "en",
         output: "games/tbs/text/en.po",
-        charmap: None,
     },
     ArchiveSpec {
         target: "tbs-de",
         language: "de",
         output: "games/tbs/text/de.po",
-        charmap: None,
     },
     ArchiveSpec {
         target: "tbs-es",
         language: "es",
         output: "games/tbs/text/es.po",
-        charmap: None,
     },
     ArchiveSpec {
         target: "tbs-fr",
         language: "fr",
         output: "games/tbs/text/fr.po",
-        charmap: None,
     },
     ArchiveSpec {
         target: "tbs-it",
         language: "it",
         output: "games/tbs/text/it.po",
-        charmap: None,
     },
     ArchiveSpec {
         target: "tla-ja",
         language: "ja",
         output: "games/tla/text/ja.po",
-        charmap: Some(include_str!(
-            "../data/charmap_tla_ja.tsv"
-        )),
     },
     ArchiveSpec {
         target: "tla-en",
         language: "en",
         output: "games/tla/text/en.po",
-        charmap: None,
     },
     ArchiveSpec {
         target: "tla-de",
         language: "de",
         output: "games/tla/text/de.po",
-        charmap: None,
     },
     ArchiveSpec {
         target: "tla-es",
         language: "es",
         output: "games/tla/text/es.po",
-        charmap: None,
     },
     ArchiveSpec {
         target: "tla-fr",
         language: "fr",
         output: "games/tla/text/fr.po",
-        charmap: None,
     },
     ArchiveSpec {
         target: "tla-it",
         language: "it",
         output: "games/tla/text/it.po",
-        charmap: None,
     },
 ];
 
@@ -326,11 +306,19 @@ pub fn read_catalog(path: &Path) -> Result<Catalog, String> {
     po::read(&text).map_err(|error| format!("{}: {error}", path.display()))
 }
 
-pub fn read_source(path: &Path) -> Result<SourceCatalog, String> {
-    source_catalog(&read_catalog(path)?).map_err(|error| format!("{}: {error}", path.display()))
+/// A Japanese edition's text is encoded through its font map, as the Makefile passes it
+/// to `ags-po --charmap`; the other editions are Windows-1252.
+pub fn read_source(path: &Path, charmap: Option<&Path>) -> Result<SourceCatalog, String> {
+    let charmap = charmap
+        .map(|charmap| {
+            fs::read_to_string(charmap).map_err(|error| format!("{}: {error}", charmap.display()))
+        })
+        .transpose()?;
+    source_catalog(&read_catalog(path)?, charmap.as_deref())
+        .map_err(|error| format!("{}: {error}", path.display()))
 }
 
-fn source_catalog(catalog: &Catalog) -> Result<SourceCatalog, String> {
+fn source_catalog(catalog: &Catalog, charmap: Option<&str>) -> Result<SourceCatalog, String> {
     for name in catalog
         .headers
         .keys()
@@ -356,6 +344,12 @@ fn source_catalog(catalog: &Catalog) -> Result<SourceCatalog, String> {
         .iter()
         .find(|spec| spec.target == target)
         .ok_or("PO target is unknown")?;
+    let characters = match (spec.language, charmap) {
+        ("ja", Some(charmap)) => Some(charmap_characters(charmap)),
+        ("ja", None) => return Err("Japanese text needs its font map (--charmap)".into()),
+        (_, Some(_)) => return Err("only Japanese text takes a font map".into()),
+        (_, None) => None,
+    };
     let symbol_count = header_number(&catalog.headers, "X-Alchemy-Symbol-Count")?;
     let message_count = catalog.entries.len();
     if !(1..=65536).contains(&message_count) || !(1..=4096).contains(&symbol_count) {
@@ -382,7 +376,7 @@ fn source_catalog(catalog: &Catalog) -> Result<SourceCatalog, String> {
         } else {
             Some(text_symbols(
                 &entry.value,
-                spec.characters().as_deref(),
+                characters.as_deref(),
                 symbol_count,
             )?)
         });
@@ -474,6 +468,41 @@ mod tests {
         let names = catalog_names(&catalog).unwrap();
         assert_eq!(names, vec![("MsgFirst".to_owned(), 1), (END.to_owned(), 3)]);
         catalog.entries.push(entry(3, END));
-        assert!(catalog_names(&catalog).unwrap_err().contains("names two messages"));
+        assert!(catalog_names(&catalog)
+            .unwrap_err()
+            .contains("names two messages"));
+    }
+
+    /// Japanese text reads its font map from the Alchemy checkout, never a copy here.
+    #[test]
+    fn japanese_text_is_encoded_through_the_checkout_font_map() {
+        let Some(root) = std::env::var_os("ALCHEMY_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let catalog = |target: &str, value: String| Catalog {
+            headers: [
+                ("X-Alchemy-Format", "1"),
+                ("X-Alchemy-Target", target),
+                ("X-Alchemy-Symbol-Count", "4096"),
+            ]
+            .into_iter()
+            .map(|(name, value)| (name.to_owned(), value.to_owned()))
+            .collect(),
+            entries: vec![Entry {
+                value,
+                ..entry(0, UNNAMED)
+            }],
+        };
+        for (game, charmap) in [("tbs", "charmap_ja.tsv"), ("tla", "charmap_tla_ja.tsv")] {
+            let path = root.join(format!("games/{game}/src/graphics/font/{charmap}"));
+            let charmap = fs::read_to_string(path).unwrap();
+            let glyph = charmap_characters(&charmap).chars().nth(40).unwrap();
+            let ja = catalog(&format!("{game}-ja"), glyph.to_string());
+            let source = source_catalog(&ja, Some(&charmap)).unwrap();
+            assert_eq!(source.banks[0][0], Some(vec![40 + 32]));
+            assert!(source_catalog(&ja, None).unwrap_err().contains("--charmap"));
+            let en = catalog(&format!("{game}-en"), "A".into());
+            assert!(source_catalog(&en, Some(&charmap)).is_err());
+        }
     }
 }

@@ -1,12 +1,13 @@
 use std::path::Path;
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: po2ags CATALOG.po OUTPUT.inc [--label NAME]
-       po2ags CATALOG.po OUTPUT.h --header [--as-value]
+const USAGE: &str = "usage: po2ags CATALOG.po OUTPUT.inc [--label NAME] [--charmap FONTMAP.tsv]
+       po2ags CATALOG.po OUTPUT.h --header [--as-value] [--charmap FONTMAP.tsv]
 The first form writes the edition's message archive as assembly; the second
 writes the C declarations of its messages: MSGNO(name) is a message's number,
 and each name is its linker symbol. With --as-value each name also stands for
-that symbol read as an s32 (☀️).";
+that symbol read as an s32 (☀️). A Japanese catalog needs its
+font map, games/<game>/src/graphics/font/charmap*_ja.tsv.";
 
 /// The C declarations of an edition's messages.
 fn header(names: &[(String, usize)], as_value: bool) -> String {
@@ -47,12 +48,14 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     }
     let flag = |name: &str| args.iter().any(|arg| arg == name);
-    let label = args
-        .iter()
-        .position(|arg| arg == "--label")
-        .and_then(|index| args.get(index + 1))
-        .map_or("Text_Message", String::as_str);
-    let result = ags::text::read_source(Path::new(&args[0]))
+    let value = |name: &str| {
+        args.iter()
+            .position(|arg| arg == name)
+            .and_then(|index| args.get(index + 1))
+    };
+    let label = value("--label").map_or("Text_Message", String::as_str);
+    let charmap = value("--charmap").map(Path::new);
+    let result = ags::text::read_source(Path::new(&args[0]), charmap)
         .and_then(|source| {
             if flag("--header") {
                 Ok(header(&source.names, flag("--as-value")))
