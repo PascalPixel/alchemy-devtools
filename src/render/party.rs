@@ -20,7 +20,7 @@
 //! The stormy night keeps a new game's level-1 children (FLAG_CHILDHOOD is
 //! set by the run's flags there).
 
-/// The characters by number (FLAG_IN_PARTY, gGameState.party).
+/// The characters by number (FLAG_IN_PARTY, gSaveBlock.party).
 pub const ISAAC: u8 = 0;
 pub const GARET: u8 = 1;
 pub const IVAN: u8 = 2;

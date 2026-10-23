@@ -135,10 +135,9 @@ impl<'a> Guide<'a> {
         self.walk_path(VALE, &path, "items.gif", "the Item screen and an item's stats")
     }
 
-    /// The game from power-on with no key pressed and no save file: the
-    /// Nintendo and Camelot logos, then the Golden Sun logo, which a new
-    /// game follows with name entry, as `boot.gif`. BOOT_FRAMES ends it on
-    /// the logo.
+    /// The game from power-on with no key pressed and no save file, from the
+    /// Camelot logo to the Golden Sun logo, which a new game follows with
+    /// name entry, as `boot.gif`. BOOT_FRAMES ends it on the logo.
     pub fn boot(&mut self) -> Result<(), String> {
         let setup = Setup { scene: POWER_ON.0, entrance: POWER_ON.1, set: Vec::new(), clear: Vec::new() };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
@@ -146,7 +145,12 @@ impl<'a> Guide<'a> {
         Self::hold(&mut field, 0, 900, &mut frames)?;
         let first = frames.iter().position(|f| f.iter().any(|&c| c & 0x7fff != 0)).unwrap_or(0);
         let end = (first + BOOT_FRAMES).min(frames.len());
-        self.gif("boot.gif", &frames[first..end], "the game from power-on: the Nintendo, Camelot and Golden Sun logos")
+        // The Camelot logo is the first picture after the black that follows
+        // the Nintendo logo.
+        let lit = |f: &Vec<u16>| f.iter().any(|&c| c & 0x7fff != 0);
+        let black = first + frames[first..].iter().position(|f| !lit(f)).ok_or("power-on never turns black")?;
+        let camelot = black + frames[black..].iter().position(lit).ok_or("no picture after the black")?;
+        self.gif("boot.gif", &frames[camelot..end], "the game at power-on: the Camelot and Golden Sun logos")
     }
 
     /// Start pressed two screens deep: every screen closes at once.

@@ -835,11 +835,11 @@ fn fill(image: &mut Image, x: usize, y: usize, w: usize, h: usize, colour: u32) 
     }
 }
 
-/// struct MotionObject's sprite (motobj.h) and struct Sprite and
+/// struct Object's sprite and spriteStorageKind (object.h) and struct Sprite and
 /// SpriteAnim (animspr.h).
-const MOTION_RECORDS: u32 = 0x50;
-const MOTION_RECORD_KIND: u32 = 0x54;
-const OBJECT_SPRITES_ONE: u8 = 1;
+const OBJECT_SPRITE: u32 = 0x50;
+const OBJECT_SPRITE_STORAGE_KIND: u32 = 0x54;
+const OBJECT_SPRITE_ONE: u8 = 1;
 const SPRITE_IMAGE_ATTR2: u32 = 0x08;
 const SPRITE_WIDTH: u32 = 0x20;
 const SPRITE_HEIGHT: u32 = 0x21;
@@ -973,10 +973,10 @@ impl<'a> Guide<'a> {
             // Isaac is party unit 0: his battle object's single sprite.
             let slot = work + WORK_SLOTS + SLOT_SIZE * u32::from(gba.read8(work + WORK_PLACEMENT));
             let object = gba.read32(slot);
-            if object == 0 || gba.read8(object + MOTION_RECORD_KIND) & 15 != OBJECT_SPRITES_ONE {
+            if object == 0 || gba.read8(object + OBJECT_SPRITE_STORAGE_KIND) & 15 != OBJECT_SPRITE_ONE {
                 return;
             }
-            let sprite = gba.read32(object + MOTION_RECORDS);
+            let sprite = gba.read32(object + OBJECT_SPRITE);
             let now = layers(gba, sprite);
             if last.as_ref() != Some(&now) {
                 last = Some(now.clone());

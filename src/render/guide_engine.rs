@@ -23,7 +23,7 @@ const VALE: (u16, u16) = (4, 1);
 /// MapId_MenuTest, the debug menu test room (scenes.s).
 const MENU_TEST_ROOM: u16 = 200;
 
-/// struct GameState (gGameState): the coins, and the scene and entrance the
+/// struct SaveBlock (gSaveBlock): the coins, and the scene and entrance the
 /// field loads next.
 const GS_COINS: u32 = 0x10;
 const GS_SCENE: u32 = 0x1c0;
@@ -76,7 +76,7 @@ impl<'a> Guide<'a> {
     /// The party, coins and rare-item counters as the game holds them now.
     fn party_state(&self, field: &mut Field) -> Result<PartyState, String> {
         let flags = self.sym("gGameFlagBytes")?;
-        let state = self.sym("gGameState")?;
+        let state = self.sym("gSaveBlock")?;
         let counters = self.sym("gItemCounters")?;
         let slots = self.sym("gItem_ArtifactSlotTable")?;
         let mut members = Vec::new();
@@ -101,7 +101,7 @@ impl<'a> Guide<'a> {
     /// Sends the party from the scene it is in to `scene`'s `entrance`, as
     /// FieldScript_SetDestination does, and runs `frames` frames.
     fn travel(&self, field: &mut Field, (scene, entrance): (u16, u16), frames: u32) -> Result<(), String> {
-        let state = self.sym("gGameState")?;
+        let state = self.sym("gSaveBlock")?;
         field.write16(state + GS_SCENE, scene);
         field.write16(state + GS_ENTRANCE, entrance);
         let work = field.field_work();
@@ -117,7 +117,7 @@ impl<'a> Guide<'a> {
     /// entry's runs are counted by probing it.
     pub fn menu_test_setup(&mut self) -> Result<(), String> {
         let setup_fn = self.overlay_sym("MenuTest_GetEvents", "MenuTest_Initialize")?;
-        let state = self.sym("gGameState")?;
+        let state = self.sym("gSaveBlock")?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
         let before = self.party_state(field)?;
@@ -1099,7 +1099,7 @@ impl<'a> Guide<'a> {
         const GRID: i32 = 128;
         const PLACEHOLDER: u16 = 0xfff;
         let convert = self.sym("TileMap_ConvertBuffer")?;
-        let state = self.sym("gGameState")?;
+        let state = self.sym("gSaveBlock")?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
         let plane = Rc::new(RefCell::new(Vec::new()));

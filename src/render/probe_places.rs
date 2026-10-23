@@ -178,8 +178,8 @@ impl<'a> Guide<'a> {
                 // Every read of flags 0x100 and 0x1ff (a bit test, or the
                 // byte or nibble that holds it) while scenes after the
                 // eruption and after the chase in Vault's inn play.
-                let tests = [at("GameFlag_Test")?, at("GameFlag_Toggle")?, at("GameFlag_GetByte")?, at("GameFlag_GetNibble")?, at("GameFlag_IncrementByte")?, at("GameFlag_DecrementByte")?];
-                let names = ["GameFlag_Test", "GameFlag_Toggle", "GameFlag_GetByte", "GameFlag_GetNibble", "GameFlag_IncrementByte", "GameFlag_DecrementByte"];
+                let tests = [at("GameFlag_Get")?, at("GameFlag_Toggle")?, at("GameFlag_GetByte")?, at("GameFlag_GetNibble")?, at("GameFlag_IncrementByte")?, at("GameFlag_DecrementByte")?];
+                let names = ["GameFlag_Get", "GameFlag_Toggle", "GameFlag_GetByte", "GameFlag_GetNibble", "GameFlag_IncrementByte", "GameFlag_DecrementByte"];
                 let places: [(u16, u16, &[&str]); 9] = [
                     (11, 0, &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_SOL_SANCTUM_STAR_ROOM_COLLAPSED"]),
                     (10, 0, &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_SOL_SANCTUM_STAR_ROOM_COLLAPSED"]),

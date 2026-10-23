@@ -1,7 +1,7 @@
 //! A field scene, run from a built edition: where Game_ResetForNewGame has
-//! set a new game's defaults (GameState_InitializeDefaults) and makes its next call
+//! set a new game's defaults (SaveBlock_InitializeDefaults) and makes its next call
 //! (WindowColor_Apply), the run writes the scene, entrance and story flags
-//! into gGameState, so the main loop loads that scene instead of the title.
+//! into gSaveBlock, so the main loop loads that scene instead of the title.
 //! The location-name notice (MapNamePopup_Show) returns at once unless
 //! show_notice is set. The
 //! scene is the player's once Map_Run's field loop takes its first
@@ -9,7 +9,7 @@
 //!
 //! A map is stitched from one moment of the game: for each 240 by 160 view
 //! of the box the machine is loaded again, the map's followed point
-//! (MapGridScrollWork.origin) is pinned to gGameState.x, y and z holding the
+//! (MapGridScrollWork.origin) is pinned to gSaveBlock.x, y and z holding the
 //! view's focus at each entry of its two readers, and the next scheduler
 //! call of MapGrid_UpdateLayerScroll runs MapGrid_CenterOnFollowedPoint instead,
 //! which redraws each layer around the point as the event camera does. The
@@ -40,7 +40,7 @@ use super::story::{Trigger, CARRY, MOVE};
 use crate::ld_map::Map;
 use std::collections::HashMap;
 
-/// struct GameState (game_state.h), struct MapGridScrollWork (map_grid_scroll.h),
+/// struct SaveBlock (save_block.h), struct MapGridScrollWork (map_grid_scroll.h),
 /// struct FieldWork (map_header.h), struct MapEntries and the object
 /// slots' offsets.
 const GS_COINS: u32 = 0x10;
@@ -240,7 +240,7 @@ impl Symbols {
     pub fn find(map: &Map) -> Result<Symbols, String> {
         let at = |name: &str| map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"));
         Ok(Symbols {
-            init: at("GameState_InitializeDefaults")?,
+            init: at("SaveBlock_InitializeDefaults")?,
             glow: at("WindowColor_Apply")?,
             load_layered: at("MapGrid_LoadLayout")?,
             apply_entrance: at("Map_ApplyWarpDest")?,
@@ -266,7 +266,7 @@ impl Symbols {
             touch: at("Map_RunCoordEventOrWarp")?,
             search: at("Field_SearchCell")?,
             psynergy: at("Field_UsePsynergy")?,
-            game_state: at("gGameState")?,
+            game_state: at("gSaveBlock")?,
             flag_bytes: at("gGameFlagBytes")?,
             map_work: at("gMapGridWork")?,
             field_work: at("gFieldWork")?,
@@ -498,7 +498,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// Makes `party` the active party, in order: party flags 0 to 7 and
-    /// gGameState.party.
+    /// gSaveBlock.party.
     pub fn set_party(&mut self, party: &[u8]) {
         let bits = party.iter().fold(0u8, |b, &o| b | 1 << o);
         self.gba.write8(self.s.flag_bytes, bits);
@@ -572,7 +572,7 @@ impl<'rom> Field<'rom> {
         self.gba.read32(self.s.field_work)
     }
 
-    /// Gives the party `coins` (GameState.coins).
+    /// Gives the party `coins` (SaveBlock.coins).
     pub fn set_coins(&mut self, coins: u32) {
         self.gba.write32(self.s.game_state + GS_COINS, coins);
     }
@@ -705,7 +705,7 @@ impl<'rom> Field<'rom> {
         false
     }
 
-    /// Lists the party (gGameState.party) as the party flags have it
+    /// Lists the party (gSaveBlock.party) as the party flags have it
     /// now, the chapter's members first (party::order); before the run's
     /// flags decide, the chapter's members are the party flags.
     fn list_party(&mut self) {
