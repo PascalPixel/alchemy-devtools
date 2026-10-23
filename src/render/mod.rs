@@ -1336,7 +1336,7 @@ fn play_guide(
     if problems.is_empty() { Ok(()) } else { Err(problems.join("\n")) }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "render"))]
 mod tests {
     use super::*;
 
