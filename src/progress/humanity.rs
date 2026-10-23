@@ -1396,7 +1396,7 @@ fn game_text(root: &Path, game: &str) -> Option<GameText> {
         return None;
     }
     let po = std::fs::read(root.join(&path)).ok()?;
-    let rules = std::fs::read(root.join(format!("games/{game}/src/object/map_rules.s"))).ok();
+    let rules = std::fs::read(root.join(format!("games/{game}/src/overworld/map_rules.s"))).ok();
     let areas = rules.and_then(|rules| area_count(&String::from_utf8_lossy(&rules)));
     Some(GameText::parse(&String::from_utf8_lossy(&po), areas))
 }
@@ -1924,16 +1924,16 @@ mod tests {
         let long = "\n".repeat(3001);
         let second = format!("const u8 gT2[] {table}void Delta(void) {{}}{long}");
         // A map overlay, a part, a header and a data object stay one file however long.
-        let part = format!("// Part of effect.c.\nvoid Epsilon(void) {{}}{long}");
+        let part = format!("// Part of battle_anim.c.\nvoid Epsilon(void) {{}}{long}");
         let data = format!("const u8 gT3[] = {{ 0 }};{long}");
         let scene = format!("void Zeta(void) {{}}{long}");
         let report = game([
             ("a.c", first.as_str()),
             ("b.c", second.as_str()),
             ("games/tbs/src/map/vale.c", scene.as_str()),
-            ("games/tbs/src/effect/parts/bolt.c", part.as_str()),
+            ("games/tbs/src/battle_anim/parts/bolt.c", part.as_str()),
             ("games/tbs/include/map_warps.h", long.as_str()),
-            ("games/tbs/src/object/table.c", data.as_str()),
+            ("games/tbs/src/overworld/table.c", data.as_str()),
         ]);
         assert_eq!(report.function_groups.len(), 1);
         assert_eq!(report.function_groups[0].members, vec!["a.c:Alpha", "a.c:Beta"]);

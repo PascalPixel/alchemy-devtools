@@ -299,7 +299,7 @@ pub const MOVE: u16 = 0x8c;
 pub const CARRY: u16 = 0x93;
 
 /// Field Psynergy by the name a trigger gives it, and its ability id
-/// (actions.tsv).
+/// (abilities.tsv).
 const PSYNERGY: [(&str, u16); 13] = [
     ("move", MOVE),
     ("mind read", 0x8d),

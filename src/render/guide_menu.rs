@@ -173,7 +173,7 @@ impl<'a> Guide<'a> {
             ("PSYNERGY_STEP_TARGET", self.sym("PsynergyMenu_SelectTarget")?, "PsynergyMenu_SelectTarget"),
             ("PSYNERGY_STEP_APPLY", self.sym("Ability_ApplyToTargets")?, "Ability_ApplyToTargets"),
         ];
-        let abilities = column("games/tbs/src/game/actions.tsv", "ability")?;
+        let abilities = column("games/tbs/src/game/abilities.tsv", "ability")?;
         let mut field = self.enter(XIAN)?;
         let isaac = field.unit(ISAAC)?;
         let garet = field.unit(GARET)?;
@@ -271,7 +271,7 @@ impl<'a> Guide<'a> {
     /// the unit, as `djinn-preview.png`.
     pub fn djinn_preview(&mut self) -> Result<(), String> {
         let compare = self.sym("PsynergyList_RunCompareLoop")?;
-        let abilities = column("games/tbs/src/game/actions.tsv", "ability")?;
+        let abilities = column("games/tbs/src/game/abilities.tsv", "ability")?;
         let classes = self.class_names();
         let mut field = self.enter(XIAN)?;
         let isaac = field.unit(ISAAC)?;

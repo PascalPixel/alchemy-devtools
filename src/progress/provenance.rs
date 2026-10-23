@@ -635,7 +635,7 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
     if origin == Origin::Enumerator && (file.ends_with("map_warps.h") || file.ends_with("scene_links.h")) {
         return definition.tag.is_none().then_some("warp");
     }
-    let mechanism_folder = file.contains("/src/map/") || file.contains("/src/scene/") || file.contains("/src/object/");
+    let mechanism_folder = file.contains("/src/map/") || file.contains("/src/scene/") || file.contains("/src/overworld/");
     match origin {
         Origin::Function if mechanism_folder => Some("function"),
         Origin::Global if mechanism_folder => Some("global"),

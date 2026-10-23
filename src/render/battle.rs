@@ -18,7 +18,7 @@ use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, LR};
 use super::plan::{self, Aim, Ally, Cast, Command};
 use crate::ld_map::Map;
 
-/// formatn.tsv row 1: one Vermin, a fixed formation (the first enemy in the
+/// formations.tsv row 1: one Vermin, a fixed formation (the first enemy in the
 /// middle).
 const ENCOUNTER: u32 = 1;
 /// The command, enum BattleCommand's CMD_PSYNERGY.

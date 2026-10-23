@@ -40,8 +40,8 @@ use super::story::{Trigger, CARRY, MOVE};
 use crate::ld_map::Map;
 use std::collections::HashMap;
 
-/// struct GameState (game_state.h), struct MapGridScrollWork (map_scroll.h),
-/// struct FieldWork (field_runtime.h), struct MapEntries and the object
+/// struct GameState (game_state.h), struct MapGridScrollWork (map_grid_scroll.h),
+/// struct FieldWork (map_header.h), struct MapEntries and the object
 /// slots' offsets.
 const GS_COINS: u32 = 0x10;
 const GS_SCENE: u32 = 0x1c0;

@@ -40,7 +40,7 @@ struct Layout {
 const INTERNATIONAL: Layout = Layout { name: "INTERNATIONAL", window_count: 8, printers: 0x620, sprites: 0x698, text_tile_state: 0xda0, text_buffer: 0xeb0, codes: 512, count: 0x12b2, argument_values: 0x12bc, portrait_pictures: 0x12ec, size: 0x12fc };
 const JAPANESE: Layout = Layout { name: "JAPANESE", window_count: 12, printers: 0x6b0, sprites: 0x728, text_tile_state: 0xe30, text_buffer: 0xf40, codes: 256, count: 0x1142, argument_values: 0x114c, portrait_pictures: 0x117c, size: 0x118c };
 
-/// struct Window, struct TextPrinter and struct WindowSprite (uiwindow.h,
+/// struct Window, struct TextPrinter and struct WindowSprite (window.h,
 /// render_input.h): sizes and the offsets read here.
 const WINDOWS: u32 = 0x500;
 const WINDOW_SIZE: u32 = 0x24;
@@ -52,7 +52,7 @@ const SPRITE_KIND: u32 = 0x04;
 const SPRITE_MOTION: u32 = 0x05;
 const SPRITE_OAM: u32 = 0x14;
 const SPRITE_COUNT: u32 = 64;
-/// heap_state.h's HEAP_SLOT_WINDOW.
+/// heap.h's HEAP_SLOT_WINDOW.
 const HEAP_SLOT_WINDOW: u32 = 15;
 /// Sprite attribute memory.
 const OAM: u32 = 0x0700_0000;
@@ -673,7 +673,7 @@ const SHOP_FIELDS: [(&str, u32, u32, u32); 7] = [
     ("COUNTS, MODE, ACTION", 0x3a6, 0x3b0, 0xe0_50_50),
     ("EFFECTS, 24 SLOTS", 0x3b0, 0xa70, 0x90_70_d0),
 ];
-/// struct ItemMenuWork's named fields (inventory_menu.h), the Item
+/// struct ItemMenuWork's named fields (item_menu.h), the Item
 /// screen's reading of the same block.
 const ITEM_SCREEN_FIELDS: [(&str, u32, u32, u32); 6] = [
     ("WINDOWS AND PANE ICONS", 0x010, 0x048, 0xe0_a0_30),

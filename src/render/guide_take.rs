@@ -247,7 +247,7 @@ const KOLIMA_FOREST_TREE: u16 = 44;
 const TRET_STAND_IN: u16 = 12;
 const HERMES_WATER: u16 = 0xb8;
 /// struct Unit's inventory, 15 halfwords; struct FieldWork's item
-/// request and the inventory slot it passes (field_runtime.h).
+/// request and the inventory slot it passes (map_header.h).
 const UNIT_INVENTORY: u32 = 0xd8;
 const WORK_ITEM: u32 = 0x180;
 const WORK_ITEM_SLOT: u32 = 0x19a;
@@ -354,7 +354,7 @@ pub(super) fn settle_view(field: &mut Field) -> Result<(), String> {
     Err("the camera never settled".to_string())
 }
 
-/// struct FieldWork's Psynergy request (field_runtime.h).
+/// struct FieldWork's Psynergy request (map_header.h).
 const WORK_PSYNERGY: u32 = 0x17e;
 
 /// Casts `ability` as Isaac from where the leader stands, as the field menu
@@ -1004,7 +1004,7 @@ const VALE_DOOR: u16 = 7;
 /// innkeeper.
 const BILIBIN_INN_ROOM: (u16, u16) = (31, 6);
 const BILIBIN_INNKEEPER_ACTOR: u16 = 19;
-/// The window members of struct ItemMenuWork (inventory_menu.h), by
+/// The window members of struct ItemMenuWork (item_menu.h), by
 /// offset.
 const ITEM_SCREEN_WINDOWS: [(u32, &str); 10] = [
     (0x10, "mainWindow"),

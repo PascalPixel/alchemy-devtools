@@ -7,7 +7,7 @@ use super::battle::{gradient, Background, Scene};
 use std::collections::HashMap;
 use std::path::Path;
 
-/// A battle backdrop's size (games/tbs/src/graphics/backdrop).
+/// A battle backdrop's size (games/tbs/src/graphics/battle_bg).
 pub const WIDTH: usize = 256;
 pub const HEIGHT: usize = 120;
 /// The colours of a backdrop's palette, BG palettes 6 to 13.

@@ -907,8 +907,8 @@ mod tests {
         assert_eq!(bytes[15], 0x80);
         assert!(bytes[2..15].iter().all(|&byte| byte == 0));
         assert!(one_bpp("T.1bpp", &pixels[..120], 15, 8).is_err());
-        assert!(is_recipe("graphics/display/staff.1bpp"));
-        assert!(!is_recipe("graphics/display/staff.2bpp"));
+        assert!(is_recipe("graphics/credits/staff.1bpp"));
+        assert!(!is_recipe("graphics/credits/staff.2bpp"));
     }
     #[test]
     fn a_frame_bank_numbers_a_slot_it_never_drew() {

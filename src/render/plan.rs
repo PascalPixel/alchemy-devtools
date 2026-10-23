@@ -1,5 +1,5 @@
 //! Which abilities `render psynergy` casts, by whom and at whom, from the
-//! game's own tables: actions.tsv (each ability's targeting, flags, element,
+//! game's own tables: abilities.tsv (each ability's targeting, flags, element,
 //! range and cost), classes.tsv and items.tsv (what the party can learn), and
 //! djinn.tsv, summons.tsv, items.tsv and enemies.tsv for the rest.
 
@@ -59,7 +59,7 @@ pub fn character_name(owner: u8) -> &'static str {
     }
 }
 
-/// One row of actions.tsv.
+/// One row of abilities.tsv.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ability {
     pub id: u16,
@@ -321,7 +321,7 @@ pub struct Tables {
 impl Tables {
     pub fn read(root: &Path) -> Result<Tables, String> {
         let game = root.join("games/tbs/src/game");
-        let actions = game.join("actions.tsv");
+        let actions = game.join("abilities.tsv");
         Ok(Tables {
             actions: std::fs::read_to_string(&actions).map_err(|e| format!("cannot read {}: {e}", actions.display()))?,
             classes: Table::read(&game.join("classes.tsv"))?,

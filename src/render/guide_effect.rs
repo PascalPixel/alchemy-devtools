@@ -12,7 +12,7 @@ use super::mgba::{Gba, HEIGHT, WIDTH};
 use super::plan::{self, Ally, Aim, Cast, Command, Tables};
 
 /// gHeapSlots[HEAP_SLOT_BATTLE_ANIM] holds struct BattleAnimWork
-/// (battle_effect_work.h); its particles are 64 struct Particle from
+/// (battle_anim_work.h); its particles are 64 struct Particle from
 /// 0x7080. PARTICLES is gMapGridCellBuffer, read as struct Particle.
 const HEAP_SLOT_BATTLE_ANIM: u32 = 39;
 const FX_PARTICLES: u32 = 0x7080;
@@ -36,9 +36,9 @@ const ANIM_VARIANT_MASK: u32 = 0x3000;
 const ANIM_VARIANT_SHIFT: u32 = 12;
 
 /// The effect kinds' names by value (enum BattleAnimId) and the
-/// variants' in order (enum AnimVariant), from effect.h.
+/// variants' in order (enum AnimVariant), from battle_anim.h.
 fn effect_names() -> Result<(std::collections::HashMap<u32, String>, Vec<String>), String> {
-    let path = crate::compile::root().join("games/tbs/include/unit/effect/effect.h");
+    let path = crate::compile::root().join("games/tbs/include/unit/battle_anim/battle_anim.h");
     let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     let mut kinds = std::collections::HashMap::new();
     let mut variants = Vec::new();
@@ -148,7 +148,7 @@ impl<'a> Guide<'a> {
 
     /// An ability only enemies use, given to Isaac as a Psynergy command
     /// against a copy of Ivan: the command record carries its id, and the
-    /// plan and effect follow its actflags.tsv row like any other.
+    /// plan and effect follow its ability_anims.tsv row like any other.
     fn enemy_cast(&self, name: &str) -> Result<Cast, String> {
         let tables = Tables::read(crate::compile::root())?;
         let ability = plan::abilities(&tables.actions)?.into_iter().find(|a| a.name == name).ok_or_else(|| format!("no ability {name}"))?;
@@ -217,7 +217,7 @@ impl<'a> Guide<'a> {
             text(&mut image, gap as i32 - 2, 2, "PRESENTATIONFLAGS: KIND AND VARIANT, AS THE HANDLER GETS THEM", DIM, None, 2);
             for (k, (name, flags, kind, variant, frames)) in columns.iter().enumerate() {
                 let x = gap + k * (WIDTH + gap);
-                // The word's kind and variant fields, named as effect.h names
+                // The word's kind and variant fields, named as battle_anim.h names
                 // them; the handler is handed the same two.
                 let (word_kind, word_variant) = (flags & ANIM_ID_MASK, (flags & ANIM_VARIANT_MASK) >> ANIM_VARIANT_SHIFT);
                 assert_eq!((word_kind, word_variant), (*kind, *variant), "{name}: the plan's word and the handler disagree");

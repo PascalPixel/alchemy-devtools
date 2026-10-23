@@ -34,7 +34,7 @@ pub(super) const PANEL_MARK: u32 = 0xff_d8_40;
 pub(super) const PANEL_HEAD: u32 = 0x9c_c8_ff;
 
 /// What a battle run is: the debug party preset and party, the formation
-/// (a row of formatn.tsv), gGameState.battleType and the function entries
+/// (a row of formations.tsv), gGameState.battleType and the function entries
 /// the watcher is called at.
 pub(super) struct Drive {
     pub preset: u8,
@@ -164,9 +164,9 @@ pub(super) fn run_to(gba: &mut Gba, back: u32, limit: u32, at: &mut dyn FnMut(&m
     false
 }
 
-/// Action names by ability id, from actions.tsv.
+/// Action names by ability id, from abilities.tsv.
 pub(super) fn ability_names() -> Result<Vec<String>, String> {
-    let path = crate::compile::root().join("games/tbs/src/game/actions.tsv");
+    let path = crate::compile::root().join("games/tbs/src/game/abilities.tsv");
     let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     Ok(plan::abilities(&text)?.into_iter().map(|a| a.name).collect())
 }
@@ -192,7 +192,7 @@ pub(super) fn fill(image: &mut Image, x: usize, y: usize, w: usize, h: usize, co
 /// Eight colours for an enemy's eight places.
 const PLACE_COLOURS: [u32; 8] = [0xe0_60_50, 0xe0_a0_40, 0xd0_d0_50, 0x70_c0_60, 0x50_b0_c0, 0x60_80_e0, 0xa0_70_e0, 0xd0_70_b0];
 
-/// formatn.tsv row 294: two Gryphons, a random formation. enemies.tsv row
+/// formations.tsv row 294: two Gryphons, a random formation. enemies.tsv row
 /// 90, the Gryphon: ACTION_STRATEGY_FALLING and eight different actions.
 const GRYPHONS: u32 = 294;
 const GRYPHON: usize = 90;
@@ -341,7 +341,7 @@ fn encounter_name(mode: u8) -> &'static str {
         _ => "?",
     }
 }
-/// formatn.tsv row 296: a fixed formation of four, the Lizard King, a
+/// formations.tsv row 296: a fixed formation of four, the Lizard King, a
 /// Harridan and two Stone Soldiers.
 const FOUR_ENEMIES: u32 = 296;
 /// struct Unit's id, an enemy's row of enemies.tsv plus ENEMY_ID_FIRST.
@@ -966,7 +966,7 @@ const UNIT_HAUNT: u32 = 0x140;
 const UNIT_HP: u32 = 0x38;
 /// The counters `added-effects` reads, from attackTurns to sleep.
 const COUNTERS: [&str; 11] = ["ATTACKTURNS", "ATTACKSTAGE", "DEFENSETURNS", "DEFENSESTAGE", "RESISTANCETURNS", "RESISTANCESTAGE", "DELUSION", "CONFUSION", "CHARM", "STUN", "SLEEP"];
-/// actions.tsv: Impair, Delude, Guard.
+/// abilities.tsv: Impair, Delude, Guard.
 const IMPAIR: u16 = 108;
 const DELUDE: u16 = 116;
 const GUARD: u16 = 106;
@@ -978,7 +978,7 @@ const COMMAND_DEFEND: u16 = 3;
 const PLACE_PARTY: u16 = 0x100;
 const PLACE_ENEMY: u16 = 0x180;
 const UNIT_AGILITY: u32 = 0x40;
-/// formatn.tsv row 1: one Vermin.
+/// formations.tsv row 1: one Vermin.
 const ONE_VERMIN: u32 = 1;
 /// Frames from a change to its message written out.
 const SHOWN: usize = 24;

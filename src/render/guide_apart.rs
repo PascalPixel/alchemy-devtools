@@ -527,8 +527,8 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// The effect's heap slots (heap_state.h): gHeapSlots[HEAP_SLOT_BATTLE_ANIM]
-/// holds struct BattleAnimWork (battle_effect_work.h).
+/// The effect's heap slots (heap.h): gHeapSlots[HEAP_SLOT_BATTLE_ANIM]
+/// holds struct BattleAnimWork (battle_anim_work.h).
 const HEAP_SLOT_BATTLE_ANIM: u32 = 39;
 const FX_PARTICLES: u32 = 0x7080;
 const FX_TRANSFER_MODE: u32 = 0x7780;
