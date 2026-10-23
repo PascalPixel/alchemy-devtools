@@ -405,6 +405,141 @@ impl<'a> Guide<'a> {
         Ok(())
     }
 
+    /// Each placed actor of the debug level room talked to (A pressed where
+    /// a talk with it starts) and the screen two seconds later, as
+    /// `debug-level-room-<actor>.png`, the talk itself as
+    /// `debug-level-room-<actor>.gif`.
+    pub fn debug_room_talks(&mut self) -> Result<(), String> {
+        for actor in LEVEL_ROOM_ACTORS {
+            let mut entered = self.enter_with((LEVEL_ROOM, 0), &[])?;
+            // The room draws no map, so the trigger's spots are all off
+            // stage: the leader stands 16 pixels east of the actor, facing
+            // it, on its ground (the icon and portrait browsers stand one
+            // above the other, 24 pixels apart).
+            let at = entered.field.actor(actor).ok_or(format!("actor {actor} is not placed"))?;
+            let spot = Spot { x: at.x + 16, z: at.z, layer: at.layer, height: at.y, facing: WEST, walk: 0, cell: None };
+            entered.field.stand(&entered.placed, &spot)?;
+            let frames = Self::press_path(&mut entered.field, &[(0, 20), (KEY_A, 3), (0, 120)])?;
+            let last = frames.last().cloned().unwrap_or_default();
+            self.guide_png(&format!("debug-level-room-{actor}.png"), &screen(&last), &format!("actor {actor} of the debug level room, two seconds after A"))?;
+            self.guide_gif(&format!("debug-level-room-{actor}.gif"), &frames, &format!("talking to actor {actor} of the debug level room"))?;
+        }
+        Ok(())
+    }
+
+    /// A scene entered and left to play on its own, for a moment no event
+    /// recording reaches: MOMENT_PLACE (`scene,entrance`), MOMENT_SET (flag
+    /// names or `0x` numbers, comma separated), MOMENT_FRAMES (default 600)
+    /// and MOMENT_EVERY (default 30). Writes `moment.gif` and, from frame
+    /// MOMENT_FROM on, every MOMENT_EVERY-th frame with its actors labelled as
+    /// `moment-<frame>.png`; for each of MOMENT_ACTORS it prints where the
+    /// actor is and what it adds to the screen, the next frames with it and
+    /// with it moved to the map's origin compared. MOMENT_A presses A that
+    /// often to page through messages, and MOMENT_OAM prints the sprite
+    /// list's blended entries.
+    pub fn play_moment(&mut self) -> Result<(), String> {
+        let var = |name: &str| std::env::var(name).unwrap_or_default();
+        let place: Vec<u16> = var("MOMENT_PLACE").split(',').filter_map(|v| v.trim().parse().ok()).collect();
+        // A full run of the guide plays no moment unless one is asked for.
+        let [scene, entrance] = place[..] else {
+            eprintln!("moment: skipped, MOMENT_PLACE (scene,entrance) is not set");
+            return Ok(());
+        };
+        let names = var("MOMENT_SET");
+        let set: Vec<&str> = names.split(',').map(str::trim).filter(|n| !n.is_empty()).collect();
+        let frames: u32 = var("MOMENT_FRAMES").parse().unwrap_or(600);
+        let every: u32 = var("MOMENT_EVERY").parse().unwrap_or(30);
+        let watch: Vec<u16> = var("MOMENT_ACTORS").split(',').filter_map(|v| v.trim().parse().ok()).collect();
+        // From the moment the party was placed, before the scene's opening
+        // script has run, which may never hand the player control.
+        let resolve = |n: &&str| match n.strip_prefix("0x") {
+            Some(hex) => u16::from_str_radix(hex, 16).map_err(|e| e.to_string()),
+            None => self.flag(n),
+        };
+        let set = set.iter().map(resolve).collect::<Result<Vec<u16>, String>>()?;
+        let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
+        let setup = super::field::Setup { scene, entrance, set, clear };
+        let mut entered = Field::enter(self.rom, self.symbols, &setup)?;
+        let field = &mut entered;
+        let mut shots = vec![field.picture()];
+        // MOMENT_A: A pressed for 3 frames every so many, to page through
+        // the scene's messages.
+        let press: u32 = var("MOMENT_A").parse().unwrap_or(0);
+        // MOMENT_FROM: the first frame written or measured.
+        let from: u32 = var("MOMENT_FROM").parse().unwrap_or(0);
+        for n in 1..=frames {
+            if press != 0 {
+                field.hold(if n % press < 3 { KEY_A } else { 0 });
+            }
+            field.frames(1)?;
+            shots.push(field.picture());
+            if n % every == 0 && n >= from {
+                let image = Self::labelled_actors(field)?;
+                self.guide_png(&format!("moment-{n}.png"), &image, "a moment, its actors labelled")?;
+                if !var("MOMENT_OAM").is_empty() {
+                    // The sprite list's entries drawn in a mode other than
+                    // normal: semi-transparent (1) or an object window (2).
+                    for i in 0..128 {
+                        let a0 = field.read16(OAM + 8 * i);
+                        let a1 = field.read16(OAM + 8 * i + 2);
+                        let a2 = field.read16(OAM + 8 * i + 4);
+                        let mode = (a0 >> 10) & 3;
+                        if (a0 >> 8) & 3 != 2 && mode != 0 {
+                            println!("frame {n}: OAM {i} mode {mode} y {} x {} tile {} priority {}", a0 & 0xff, a1 & 0x1ff, a2 & 0x3ff, (a2 >> 10) & 3);
+                        }
+                    }
+                    println!("frame {n}: DISPCNT {:#06x} WINOUT {:#06x} BLDCNT {:#06x}", field.read16(DISPCNT), field.read16(0x0400_004a), field.read16(0x0400_0050));
+                }
+                for &id in &watch {
+                    println!("frame {n}: {}", super::probe::describe(field, id));
+                    // What the actor adds to the screen: the next frame with
+                    // it and with it moved off to the map's origin.
+                    let saved = field.save();
+                    field.frames(3)?;
+                    let with = field.picture();
+                    field.load(&saved);
+                    let a = field.actor_address(id);
+                    if a != 0 {
+                        field.write32(a + 8, 0);
+                        field.write32(a + 0x10, 0);
+                    }
+                    field.frames(3)?;
+                    let without = field.picture();
+                    field.load(&saved);
+                    let changed: Vec<usize> = (0..with.len()).filter(|&i| with[i] != without[i]).collect();
+                    if let (Some(lo), Some(hi)) = (changed.iter().map(|i| i % WIDTH).min(), changed.iter().map(|i| i % WIDTH).max()) {
+                        let (top, bottom) = (changed[0] / WIDTH, changed[changed.len() - 1] / WIDTH);
+                        println!("frame {n}: actor {id} changes {} pixels, x {lo}..={hi}, y {top}..={bottom}", changed.len());
+                        let mut marked = screen(&with);
+                        outline(&mut marked, lo as i32 - 1, top as i32 - 1, (hi - lo + 3) as i32, (bottom - top + 3) as i32, 0xff00ff);
+                        self.guide_png(&format!("moment-{n}-actor-{id}.png"), &marked, "what the actor adds, outlined")?;
+                        // The changed box with the actor and without it, side
+                        // by side at eight times the size.
+                        let (bw, bh) = (hi - lo + 9, bottom - top + 9);
+                        let mut pair = canvas(2 * 8 * bw + 8, 8 * bh, 0xff00ff);
+                        for (k, source) in [&with, &without].into_iter().enumerate() {
+                            for y in 0..bh {
+                                for x in 0..bw {
+                                    let (sx, sy) = ((lo + x).saturating_sub(4).min(WIDTH - 1), (top + y).saturating_sub(4).min(HEIGHT - 1));
+                                    let colour = rgb(source[sy * WIDTH + sx]);
+                                    for dy in 0..8 {
+                                        for dx in 0..8 {
+                                            pair.pixels[(8 * y + dy) * pair.width + k * (8 * bw + 8) + 8 * x + dx] = colour;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        self.guide_png(&format!("moment-{n}-actor-{id}-pair.png"), &pair, "with and without the actor")?;
+                    } else {
+                        println!("frame {n}: actor {id} changes nothing on screen");
+                    }
+                }
+            }
+        }
+        self.guide_gif("moment.gif", &shots, "a moment played on its own")
+    }
+
     /// The screen at twice the GBA's size, each actor on it marked at its
     /// feet and labelled with its actor number.
     pub(super) fn labelled_actors(field: &mut Field) -> Result<Image, String> {
@@ -1072,6 +1207,11 @@ pub(super) const ACTOR_SLOTS: u16 = 66;
 /// and menu test room (scenes.s).
 const LEVEL_ROOM: u16 = 199;
 const MENU_TEST_ROOM: u16 = 200;
+/// The level room's placed actors, ACTOR_FIRST_PLACED on (enum
+/// ItemLevelActor, debug/level.c); outside Japanese all seven are placed.
+const LEVEL_ROOM_ACTORS: std::ops::Range<u16> = 8..15;
+/// Facing west, in 1/65536 turns (NORTH is a quarter turn short of a whole).
+const WEST: u32 = 0x8000;
 
 /// Each digit of a 3 by 5 font, a row of three bits to a line, top first.
 const DIGITS: [[u8; 5]; 10] = [

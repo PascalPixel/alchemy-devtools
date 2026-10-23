@@ -1064,6 +1064,15 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
               with its actor number
   debug-rooms debug-level-room.png, debug-menu-room.png: the debug level room
               and menu test room, their actors labelled
+  debug-room-talks
+              debug-level-room-N.png and .gif: each placed actor N of the debug
+              level room talked to, and the screen two seconds after A
+  moment      moment.gif, moment-F.png: a scene entered at MOMENT_PLACE
+              (scene,entrance) with MOMENT_SET's flags and left to play for
+              MOMENT_FRAMES, every MOMENT_EVERY-th frame from MOMENT_FROM
+              labelled; A every MOMENT_A frames; for each of MOMENT_ACTORS,
+              what it adds to the screen (moment-F-actor-N.png and -pair.png:
+              with it and moved away); MOMENT_OAM prints blended sprites
   item-layers-3d
               item-layers-3d.gif: the Item screen pulled apart
   world-map   world-map-walk.gif: the world map's perspective view, walking

@@ -506,7 +506,7 @@ pub fn field_cast_names() -> Vec<&'static str> {
 
 /// Every mode, in the order `render guide` plays them.
 pub const MODES: &[&str] = &[
-    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "menu-layers-3d", "item-layers-3d", "talk-layers-3d", "scene-actors", "debug-rooms", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
+    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "menu-layers-3d", "item-layers-3d", "talk-layers-3d", "scene-actors", "debug-rooms", "debug-room-talks", "moment", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
     "inn", "menu-psynergy", "credits", "sleep", "oam", "vram", "cells", "grid", "random-battle", "world-map-picture", "overlay",
     "tret-tree-branch-split",
     "kolima-forest-tree-healing",
@@ -590,6 +590,8 @@ impl Guide<'_> {
             "talk-layers-3d" => self.talk_exploded(),
             "scene-actors" => self.scene_actors(),
             "debug-rooms" => self.debug_rooms(),
+            "debug-room-talks" => self.debug_room_talks(),
+            "moment" => self.play_moment(),
             "world-map" => self.world_map(),
             "menus" => self.menus(),
             "menu-start" => self.menu_start(),
