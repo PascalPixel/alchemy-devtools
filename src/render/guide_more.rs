@@ -493,6 +493,34 @@ impl<'a> Guide<'a> {
                 println!("cell code {code}: layer {layer}, x {x} z {z}, height {height}");
             }
         }
+        // MOMENT_STAND (`x,z` or `x,z,facing` in pixels and 1/65536 turns):
+        // the leader stood there on the ground once the player has control.
+        // MOMENT_HOLD (`keys,frames,keys,frames...`): those keys then held
+        // for that many frames, one pair after another, as the player would
+        // walk him. The leader's place and the camera's are printed after.
+        let stand: Vec<i64> = var("MOMENT_STAND").split(',').filter_map(|v| v.trim().parse().ok()).collect();
+        let hold: Vec<u32> = var("MOMENT_HOLD").split(',').filter_map(|v| v.trim().parse().ok()).collect();
+        if !stand.is_empty() || !hold.is_empty() {
+            let placed = field.save();
+            field.until_control()?;
+            field.frames(20)?;
+            if let [x, z, ref rest @ ..] = stand[..] {
+                let facing = rest.first().map_or(0x4000, |&f| f as u32);
+                let spot = Self::spot_at(field, (x as i32, z as i32, facing))?;
+                field.stand(&placed, &spot)?;
+            }
+        }
+        for pair in hold.chunks(2) {
+            let [keys, count] = pair[..] else { break };
+            field.hold(keys);
+            field.frames(count)?;
+            field.hold(0);
+            field.frames(4)?;
+        }
+        if let Some(a) = field.leader() {
+            let (vx, vz) = field.view();
+            println!("leader: x {} z {} layer {} height {}; view x {vx} z {vz}", a.x, a.z, a.layer, a.y >> 16);
+        }
         let mut shots = vec![field.picture()];
         // MOMENT_A: A pressed for 3 frames every so many, to page through
         // the scene's messages.

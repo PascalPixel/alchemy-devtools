@@ -1081,7 +1081,9 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
               what it adds to the screen (moment-F-actor-N.png and -pair.png:
               with it and moved away); MOMENT_OAM prints blended sprites;
               MOMENT_PLANES writes those frames' planes in planes/moment-F/;
-              MOMENT_CELLS prints where the map holds those cell codes
+              MOMENT_CELLS prints where the map holds those cell codes;
+              MOMENT_STAND (x,z) stands the leader there and MOMENT_HOLD
+              (keys,frames) then holds the pad, as a player walks
   status-layers-3d
               status-layers-3d.gif: the Status screen pulled apart
   world-map   world-map-walk.gif: the world map's perspective view, walking
