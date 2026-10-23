@@ -367,8 +367,9 @@ pub enum Evidence {
     /// for its index: the table's first message and the offset, and whether
     /// it took a duplicate's number (`ENEMY_SLIME_2`) to match.
     Table { symbol: &'static str, offset: i64, numbered: bool },
-    /// The same, but its words differ from the game's name, which it gives.
-    Mismatch { symbol: &'static str, offset: i64, game: String },
+    /// The same, but its words differ from the game's name, which it gives,
+    /// and whether they are the game's name and more words after it.
+    Mismatch { symbol: &'static str, offset: i64, game: String, suffixed: bool },
     /// A warp whose words are all verified maps and door words.
     Rooms,
     /// The same line, confirmed, without its ★.
@@ -402,7 +403,7 @@ impl Evidence {
             Evidence::Table { symbol, offset, numbered } => {
                 format!("table {symbol}+{offset}{}", if *numbered { " numbered" } else { "" })
             }
-            Evidence::Mismatch { symbol, offset, game } => format!("mismatch: {symbol}+{offset} is \"{game}\""),
+            Evidence::Mismatch { symbol, offset, game, .. } => format!("mismatch: {symbol}+{offset} is \"{game}\""),
             Evidence::Rooms => "rooms".to_string(),
             Evidence::Unstarred(kind) => format!("unstarred {kind}"),
             Evidence::Failed(why) => format!("failed: {why}"),
@@ -569,14 +570,16 @@ pub const FAMILIES: &[(&str, &str, &str)] = &[
 ];
 
 /// Words that, right after a family prefix, name a part of the family's
-/// mechanism rather than one member of it, for the names no enum tag
-/// classifies: `ITEM_USE_CONSUMED` is what using an item does to it,
-/// `LOCALID_` and `OBJ_EVENT_ACTION_IDLE` an action an object event runs, `FLAG_MENU_OPEN` a flag of
-/// the menus, `PSYNERGY_EV_ANY` a Psynergy event's control word. Like the
-/// vocabulary, it errs short.
+/// mechanism rather than one member of it, whatever enum holds it:
+/// `ITEM_USE_CONSUMED` is what using an item does to it,
+/// `OBJ_EVENT_ACTION_IDLE` an action an object event runs, `FLAG_MENU_OPEN` a flag of
+/// the menus, `PSYNERGY_EV_ANY` a Psynergy event's control word,
+/// `SUMMON_ANIM_RAMSES` the animation a summon runs, `PSYNERGY_FROM_CLASS`
+/// where a Psynergy came from and `ABILITY_USABLE_IN_FIELD` where an ability
+/// can be used. Like the vocabulary, it errs short.
 pub const ASPECTS: &[&str] = &[
     "kind", "type", "effect", "mode", "step", "phase", "state", "action", "command", "use", "range", "index", "menu",
-    "debug", "event", "ev",
+    "debug", "event", "ev", "anim", "animation", "from", "usable",
 ];
 
 /// Words that, right after `LOCALID_`, make an object event a part of its map's
@@ -652,6 +655,13 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
 ///   `PSYNERGY_EVENT(phase)`);
 /// - an object event whose first word is a stand-in's (`STAND_INS`),
 ///   whatever its enum, is a blank object or a mask;
+/// - its first word after the prefix names an aspect of the family
+///   (`ASPECTS`), or its last word a measure (`MEASURES`), even in an enum of
+///   ids (`SUMMON_ANIM_NONE`, `ABILITY_DJINNI_FIRST`), except an object event
+///   of a map's own enum, a person or thing whatever its words
+///   (`LOCALID_MAN_AT_SILK_ROADS_END`);
+/// - a name that is the prefix and `NONE` alone is the family's sentinel
+///   (`CLASS_NONE`, the class an enemy has), not a member;
 /// - an enumerator of a tagged enum is what the tag's last word says: an id
 ///   (`enum ItemId`, `enum XianLocalId`) or the family's own word holds
 ///   members, and any other word the values of a mechanism
@@ -659,8 +669,6 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
 /// - except that the family's own enum, tagged by the family word alone
 ///   (`enum LocalId`), numbers the engine's slots (the party leader, the first
 ///   object event a map places), not anyone a map places;
-/// - its first word after the prefix names an aspect of the family
-///   (`ASPECTS`), or its last word a measure (`MEASURES`);
 /// - a flag numbered in the range the source names as the engine's own,
 ///   `FLAG_SYSTEM_FIRST` to `FLAG_SYSTEM_LAST`, is what the field, battles
 ///   and menus keep about their own working, not a fact of the story.
@@ -673,15 +681,20 @@ fn is_mechanism(definition: &Definition, prefix: &str, family: &str, macros: &Ha
     if matches!(prefix, "LOCALID_" | "ACTOR_") && STAND_INS.contains(&first.as_str()) {
         return true;
     }
+    // An object event a map numbers in its own enum is a person or thing
+    // whatever its words (`LOCALID_MAN_AT_SILK_ROADS_END`,
+    // `LOCALID_DEBUG_HELPER`); elsewhere an aspect or a measure is a
+    // mechanism even in an enum of ids.
+    let object_event = matches!(prefix, "LOCALID_" | "ACTOR_") && definition.tag.is_some();
+    let last = rest.rsplit('_').next().unwrap_or("").to_ascii_lowercase();
+    if !object_event && (ASPECTS.contains(&first.as_str()) || MEASURES.contains(&last.as_str()) || rest == "NONE") {
+        return true;
+    }
     if definition.tag == Some(family) {
         return true;
     }
     if let Some(last) = definition.tag.and_then(|tag| pieces(tag).last().copied()) {
         return last != "Id" && last != family;
-    }
-    let last = rest.rsplit('_').next().unwrap_or("").to_ascii_lowercase();
-    if ASPECTS.contains(&first.as_str()) || MEASURES.contains(&last.as_str()) {
-        return true;
     }
     if prefix == "FLAG_" {
         let range = (macros.get("FLAG_SYSTEM_FIRST"), macros.get("FLAG_SYSTEM_LAST"));
@@ -762,7 +775,8 @@ fn table_check(thing: &Thing, text: &GameText, macros: &HashMap<String, i64>) ->
     if base == Some(wanted.as_str()) {
         return Some(Evidence::Table { symbol, offset, numbered: true });
     }
-    Some(Evidence::Mismatch { symbol, offset, game: game.to_string() })
+    let suffixed = words.strip_prefix(wanted.as_str()).is_some_and(|rest| rest.starts_with(' '));
+    Some(Evidence::Mismatch { symbol, offset, game: game.to_string(), suffixed })
 }
 
 /// One row of the worklist.
@@ -937,10 +951,18 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
     for thing in things {
         let flagged = unused_words(&thing.name, text);
         let evidence = thing.needs_evidence().then(|| {
+            let own = comment_words(&thing.own);
             if let Some(table) = table_check(thing, text, macros) {
+                // One of several rows the game gives one name, told apart by
+                // a suffix (`ENEMY_MIMIC_ALTIN_PEAK`, the Mimic of Altin
+                // Peak's chest), is named by its own verified line.
+                if let Evidence::Mismatch { suffixed: true, .. } = table {
+                    if let Some(line @ Evidence::Verified(_)) = evidence_line(&own, text) {
+                        return line;
+                    }
+                }
                 return table;
             }
-            let own = comment_words(&thing.own);
             if let Some(line) = evidence_line(&own, text) {
                 return line;
             }
@@ -1164,6 +1186,16 @@ mod tests {
             entry("ENEMY_OOZE", "enemy", "EnemyId", 10),
             Thing { own: "/// ★ Named from the game: \"Slime\" (MsgEnemyName)".to_string(), ..entry("ITEM_X", "item", "Other", 1) },
             unknown,
+            Thing {
+                own: "/// ★ Named from what the player sees: the Slime in the cave (its render)".to_string(),
+                ..entry("ENEMY_SLIME_CAVE", "enemy", "EnemyId", 10)
+            },
+            entry("ENEMY_SLIME_POOL", "enemy", "EnemyId", 10),
+            Thing { own: "/// ★ Named from the game: \"Ooze\" (MsgNope)".to_string(), ..entry("ENEMY_SLIME_PIT", "enemy", "EnemyId", 10) },
+            Thing {
+                own: "/// ★ Named from what the player sees: an ooze (its render)".to_string(),
+                ..entry("ENEMY_OOZE_CAVE", "enemy", "EnemyId", 10)
+            },
         ];
         let analysis = analyze(&things, &[], &text, &macros);
         let evidence: Vec<String> = analysis.rows.iter().map(|row| row.evidence.as_ref().unwrap().describe()).collect();
@@ -1175,6 +1207,10 @@ mod tests {
         assert_eq!(evidence[5], "mismatch: MsgEnemyName+2 is \"Slime\"");
         assert_eq!(evidence[6], "verified quote", "an enum no table reads keeps its ★ line");
         assert_eq!(evidence[7], "none", "an unknown value is not checked");
+        assert_eq!(evidence[8], "verified render", "one of a name's rows, told apart by its ★ line");
+        assert_eq!(evidence[9], "mismatch: MsgEnemyName+2 is \"Slime\"", "a suffix without a line");
+        assert_eq!(evidence[10], "mismatch: MsgEnemyName+2 is \"Slime\"", "a suffix with a failing line");
+        assert_eq!(evidence[11], "mismatch: MsgEnemyName+2 is \"Slime\"", "a line on another name");
         assert_eq!(analysis.rows[2].evidence.as_ref().unwrap().metric(), "provenance_table_mismatch");
         let without = analyze(&things[3..4], &[], &text, &HashMap::new());
         assert_eq!(without.rows[0].evidence, Some(Evidence::None), "no ENEMY_ID_FIRST, no check");

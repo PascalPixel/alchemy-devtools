@@ -60,23 +60,68 @@ pub struct Name {
 }
 
 /// A variable, parameter or member declared with a struct or union type.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Typed {
     pub tag: String,
     pub name: String,
     pub file: String,
     pub line: usize,
+    /// A struct or union member, which names its place in the record rather
+    /// than the thing it holds.
+    pub member: bool,
+    /// An array, which names a set of the things rather than one.
+    pub array: bool,
+    /// The declaration it belongs to in its file (the token that starts a
+    /// function, for its parameters and locals), to tell which names a
+    /// function already uses.
+    pub scope: Option<usize>,
 }
 
 /// What the checks read: every name, the struct-typed variables, the
-/// folder guides (`src/<folder>/README.md`) with their text, and the
-/// identifiers pret's flash library uses (`PRET_FLASH`).
+/// folder guides (`src/<folder>/README.md`) with their text, the
+/// identifiers pret's flash library uses (`PRET_FLASH`), and the names
+/// `names.tsv` records as pret's own (`pret_names`).
 #[derive(Default)]
 pub struct Names {
     pub names: Vec<Name>,
     pub typed: Vec<Typed>,
     pub guides: Vec<(String, String)>,
     pub pret: HashSet<String>,
+    pub pret_names: HashSet<String>,
+}
+
+/// The identifiers of the rows of a game's `names.tsv` whose source column
+/// is `pret`, from their name column: `PaletteSelection, PALETTES_ALL/BG/OBJECTS`
+/// gives `PaletteSelection`, `PALETTES_ALL`, `PALETTES_BG` and
+/// `PALETTES_OBJECTS`, and `OBJECT_SYSTEM_LAYOUT, _WORLD_MAP` gives
+/// `OBJECT_SYSTEM_WORLD_MAP` too, the last segment replaced.
+pub fn pret_names(tsv: &str) -> HashSet<String> {
+    let mut out = HashSet::new();
+    for row in tsv.lines().skip(1) {
+        let columns: Vec<&str> = row.split('\t').collect();
+        if columns.get(2) != Some(&"pret") {
+            continue;
+        }
+        // The last name written in full, whose stem the short forms take.
+        let mut last = String::new();
+        for token in columns[0].split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '/')) {
+            for (index, part) in token.split('/').enumerate() {
+                let stem = last.rsplit_once('_').map_or("", |(stem, _)| stem);
+                let (name, full) = match part.strip_prefix('_') {
+                    Some(tail) if !stem.is_empty() => (format!("{stem}_{tail}"), false),
+                    None if index > 0 && !stem.is_empty() => (format!("{stem}_{part}"), false),
+                    _ => (part.to_string(), true),
+                };
+                if name.len() > 1 && name.starts_with(|c: char| c.is_ascii_alphabetic()) {
+                    if full {
+                        last = name.clone();
+                    }
+                    out.insert(name);
+                }
+            }
+        }
+    }
+    out
 }
 
 /// The files of pret's flash library, the Makefile's `FLASH_C`, which
@@ -109,8 +154,10 @@ pub struct Finding {
 /// Shortened words and the words they shorten. A name is flagged for one
 /// only where another name spells the full word out, so the game already
 /// has both spellings of one idea, and never where the game's own text uses
-/// the short form (`Psy`, `HP`). `num` is a count wherever this code uses
-/// it (`NUM_ELEMENTS`). Words the hardware or AGENTS.md gives the code
+/// the short form (`Psy`, `HP`). The short forms pret itself writes
+/// (`PRET_WORDS`: `num`, a count wherever this code uses it, as in
+/// `NUM_ELEMENTS` and pret's `songNum`) are here only so that each is one
+/// idea with its full word, and are never flagged. Words the hardware or AGENTS.md gives the code
 /// (`BG`, `OAM`, `attr`, `Msg` for a message symbol, `Temp` for the
 /// temporary flags) are not here.
 pub const ABBREVIATIONS: &[(&str, &str)] = &[
@@ -166,6 +213,17 @@ pub const ABBREVIATIONS: &[(&str, &str)] = &[
 /// `CoordEvent` (`COORD_EVENT_FLAG_WALKING`, `MAP_EVENT_COORD`). The short
 /// word elsewhere is still measured.
 pub const PRET_TERMS: &[(&str, &str)] = &[("warp", "dest"), ("coord", "event"), ("event", "coord")];
+
+/// Shortened words pret writes as its own spelling, kept as pret does
+/// wherever they appear (`StartSpriteAnim`, `gBattleAnimArgs`, `InitHeap`,
+/// `affineParam`, `songNum`): never flagged as an abbreviation, and the
+/// spelling `prefix_twin` prefers.
+pub const PRET_WORDS: &[&str] = &["anim", "anims", "args", "init", "param", "num"];
+
+/// Whether a word, as written or in the singular, is one of `PRET_WORDS`.
+fn is_pret_word(word: &str) -> bool {
+    PRET_WORDS.contains(&word) || PRET_WORDS.contains(&singular(word).as_str())
+}
 
 /// Whether the word at `at` of a name's words is half of a `PRET_TERMS` pair.
 fn in_pret_term(words: &[String], at: usize) -> bool {
@@ -408,7 +466,7 @@ pub fn check(names: &Names, text: Option<&GameText>) -> Vec<Finding> {
     let families = collect_families(&all);
     let runs = Runs::new(&all);
     let hardware = hardware_segments(&names.names);
-    let twins = twin_prefixes(&all, &hardware, &mut out);
+    let twins = twin_prefixes(&all, &hardware, &names.pret_names, &mut out);
     words_of_one_idea(&all, &usage, &runs, &twins, &hardware, text, &mut out);
     referents(names, &mut out);
     shapes(&all, &families, text, &mut out);
@@ -562,7 +620,7 @@ fn words_of_one_idea(
         let singulars: Vec<String> = placed.iter().map(|(_, _, word)| singular(word)).collect();
         for (index, (at, segment, word)) in placed.into_iter().enumerate() {
             let (metric, full) = if let Some(&(_, full)) = ABBREVIATIONS.iter().find(|(short, _)| *short == singular(&word)) {
-                if in_pret_term(&singulars, index) || text.is_some_and(|text| text.uses(&word)) || usage.count(full) == 0 || hardware.contains(segment) {
+                if in_pret_term(&singulars, index) || is_pret_word(&word) || text.is_some_and(|text| text.uses(&word)) || usage.count(full) == 0 || hardware.contains(segment) {
                     continue;
                 }
                 ("abbreviation", full)
@@ -598,14 +656,22 @@ fn words_of_one_idea(
 /// when each of its words means one of the type's (`object` and `obj` for
 /// `struct Object`, `work` and `fieldWork` for `struct FieldWork`),
 /// or it is the type's initials; names for a role (`leader`, `target`) are
-/// not spellings and are left alone. The spelling most variables use is
-/// the type's, and each other spelling is listed once, at its first use.
+/// not spellings and are left alone, and so are struct members and arrays,
+/// as `prefix_twin` leaves out members: a member names its place in a record
+/// and an array a set, not one of the type. The spelling most variables use
+/// is the type's, and each other spelling is listed once, at its first use
+/// in a function that doesn't already give that name to another variable.
 fn referents(names: &Names, out: &mut Vec<Finding>) {
     let mut by_tag: BTreeMap<&str, Vec<&Typed>> = BTreeMap::new();
+    // The names each declaration (a function, with its parameters) uses.
+    let mut scopes: HashMap<(&str, usize), Vec<&Typed>> = HashMap::new();
     for typed in &names.typed {
+        if let Some(scope) = typed.scope {
+            scopes.entry((typed.file.as_str(), scope)).or_default().push(typed);
+        }
         let bytes = typed.name.as_bytes();
         let pret = bytes.len() > 1 && matches!(bytes[0], b'g' | b's') && bytes[1].is_ascii_uppercase();
-        if pret || super::humanity::is_placeholder(&typed.name) || !bytes[0].is_ascii_lowercase() {
+        if typed.member || typed.array || pret || super::humanity::is_placeholder(&typed.name) || !bytes[0].is_ascii_lowercase() {
             continue;
         }
         by_tag.entry(typed.tag.as_str()).or_default().push(typed);
@@ -651,7 +717,14 @@ fn referents(names: &Names, out: &mut Vec<Finding>) {
             if uses.len() >= most {
                 continue;
             }
-            let first = uses[0];
+            // Where its function already calls another variable `best`, the
+            // rename would clash.
+            let taken = |typed: &Typed| {
+                typed.scope.and_then(|scope| scopes.get(&(typed.file.as_str(), scope))).is_some_and(|others| {
+                    others.iter().any(|other| other.name == best)
+                })
+            };
+            let Some(first) = uses.iter().copied().find(|typed| !taken(typed)) else { continue };
             let what = format!("struct {tag}: {} uses -> {best} ({most} uses)", uses.len());
             out.push(Finding {
                 metric: "synonym_referent",
@@ -973,13 +1046,16 @@ fn unlisted_prefixes(all: &[&Name], guides: &[(String, String)], text: Option<&G
 /// plurals are singular (`BattleObj_` and `BattleObject_`, `ANIM_` and
 /// `ANIMATION_`, `Projectiles_` and `PROJECTILE_`). Prefixes that differ
 /// only in case (`Battle_` and `BATTLE_`) are one spelling, struct members
-/// are left out, and so is a shortened word that is a hardware register's
+/// are left out, so are macros written as calls, which may start with a
+/// verb (`COUNT_ALL_CURES` counts, beside pret's `NUM_MUSIC_PLAYERS`), and so is a shortened word that is a hardware register's
 /// segment (`OBJ_` of `OBJ_AFFINE_MATRIX_COUNT`, the hardware's OBJ, not a
-/// shortened object). The spelling fewer names use is reported, at its first name;
+/// shortened object). A plural prefix whose names are all pret's, as
+/// `names.tsv` records them (`PALETTES_ALL` beside `PALETTE_`), is pret's
+/// set and left out. The spelling fewer names use is reported, at its first name;
 /// the set of those prefixes is returned.
-fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, out: &mut Vec<Finding>) -> HashSet<String> {
+fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, pret_names: &HashSet<String>, out: &mut Vec<Finding>) -> HashSet<String> {
     let mut by_prefix: BTreeMap<&str, Vec<&Name>> = BTreeMap::new();
-    for &name in all.iter().filter(|name| name.kind != NameKind::Field) {
+    for &name in all.iter().filter(|name| !matches!(name.kind, NameKind::Field | NameKind::FunctionMacro)) {
         if let Some(family) = prefix(&name.name)
             .filter(|family| family.starts_with(|c: char| c.is_ascii_uppercase()))
             .filter(|family| !(hardware.contains(*family) && ABBREVIATIONS.iter().any(|(short, _)| family.eq_ignore_ascii_case(short))))
@@ -987,6 +1063,10 @@ fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, out: &mut Vec<Findin
             by_prefix.entry(family).or_default().push(name);
         }
     }
+    by_prefix.retain(|family, members| {
+        let plural = words(family).last().is_some_and(|word| singular(word) != *word);
+        !(plural && members.iter().all(|name| pret_names.contains(&name.name)))
+    });
     let mut ideas: BTreeMap<Vec<String>, Vec<(&str, &Vec<&Name>)>> = BTreeMap::new();
     for (family, members) in &by_prefix {
         let family_words = words(family);
@@ -1007,12 +1087,16 @@ fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, out: &mut Vec<Findin
         if distinct.len() < 2 {
             continue;
         }
-        // The spelled-out spelling where they differ by a shortened word
-        // (`ANIMATION_`, not `ANIM_`), else the one more names use.
-        let short = |key: &str| key.split(' ').filter(|word| ABBREVIATIONS.iter().any(|(short, _)| *short == singular(word))).count();
+        // pret's spelling where one uses a word of pret's (`ANIM_`, not
+        // `ANIMATION_`), else the spelled-out one where they differ by a
+        // shortened word (`OBJECT_`, not `OBJ_`), else the one more names use.
+        let pret = |key: &str| key.split(' ').filter(|word| is_pret_word(word)).count();
+        let short = |key: &str| {
+            key.split(' ').filter(|word| !is_pret_word(word) && ABBREVIATIONS.iter().any(|(short, _)| *short == singular(word))).count()
+        };
         let (_, &(most, best, _)) = distinct
             .iter()
-            .max_by_key(|(key, (count, ..))| (std::cmp::Reverse(short(key)), *count, std::cmp::Reverse((*key).clone())))
+            .max_by_key(|(key, (count, ..))| (pret(key), std::cmp::Reverse(short(key)), *count, std::cmp::Reverse((*key).clone())))
             .expect("two");
         for (other, _) in spellings {
             twins.insert(other.to_string());
@@ -1167,7 +1251,7 @@ mod tests {
 
     #[test]
     fn one_type_one_name() {
-        let typed = |tag: &str, name: &str, line| Typed { tag: tag.to_string(), name: name.to_string(), file: "f.c".to_string(), line };
+        let typed = |tag: &str, name: &str, line| Typed { tag: tag.to_string(), name: name.to_string(), file: "f.c".to_string(), line, ..Typed::default() };
         let names = Names {
             typed: vec![
                 typed("Object", "object", 1),
@@ -1229,6 +1313,107 @@ mod tests {
                 "BattleObjGet\tseparator: BattleObj_Get, as the 3 BattleObj_ functions are, or a prefix of its own",
                 "NUM_ELEMENTS\torder: num goes last, where 5 of the game's 6 names with it at an end put it (as ITEM_COUNT)",
             ]
+        );
+    }
+
+    #[test]
+    fn pret_words_are_pret_spelling() {
+        let file = "games/tbs/src/battle/a.c";
+        let names = Names {
+            names: vec![
+                name("Sprite_StartAnim", NameKind::Function, file, 1),
+                name("gBattleAnimArgs", NameKind::Global, file, 2),
+                name("InitHeap", NameKind::Function, file, 3),
+                name("affineParam", NameKind::Field, file, 4),
+                name("songNum", NameKind::Field, file, 5),
+                name("Field_RunAnimation", NameKind::Function, file, 6),
+                name("Battle_ApplyArgument", NameKind::Function, file, 7),
+                name("Object_Initialize", NameKind::Function, file, 8),
+                name("Motion_SetParameter", NameKind::Function, file, 9),
+                name("Unit_Count", NameKind::Function, file, 10),
+                name("Battle_GetArg", NameKind::Function, file, 11),
+                name("ANIM_WALK", NameKind::Macro, file, 12),
+                name("ANIM_RUN", NameKind::Macro, file, 13),
+                name("ANIMATION_IDLE", NameKind::Macro, file, 14),
+                name("ANIMATION_JUMP", NameKind::Macro, file, 15),
+                name("ANIMATION_FALL", NameKind::Macro, file, 16),
+                // A macro written as a call starts with its verb.
+                name("NUM_MUSIC_PLAYERS", NameKind::Macro, file, 17),
+                name("COUNT_ALL_CURES", NameKind::FunctionMacro, file, 18),
+                name("COUNT_PARTIAL_CURES", NameKind::FunctionMacro, file, 19),
+            ],
+            ..Names::default()
+        };
+        let findings = check(&names, None);
+        let what = |metric: &str| -> Vec<String> {
+            findings.iter().filter(|f| f.metric == metric).map(|f| f.what.split('\t').next().unwrap().to_string()).collect()
+        };
+        assert_eq!(what("abbreviation"), ["Battle_GetArg"], "anim, args, init, param and num are pret's; arg alone is not");
+        assert_eq!(what("prefix_twin"), ["ANIMATION_"], "pret's ANIM_ is preferred though fewer names use it; COUNT_ALL_CURES is a verb, not a twin of NUM_");
+    }
+
+    #[test]
+    fn plural_prefixes_pret_writes() {
+        let tsv = concat!(
+            "name\tkind\tsource\tevidence\n",
+            "PaletteSelection, PALETTES_ALL/BG/OBJECTS\tenum\tpret\tpret PALETTES_ALL\n",
+            "OBJECT_SYSTEM_LAYOUT, _WORLD_MAP, _BATTLE\tconstant\tpret\tenum ObjectSystemMode\n",
+            "TRACKS_FEW\tconstant\tcommon\tnot pret's\n",
+        );
+        let pret = pret_names(tsv);
+        for expected in ["PaletteSelection", "PALETTES_ALL", "PALETTES_BG", "PALETTES_OBJECTS", "OBJECT_SYSTEM_WORLD_MAP", "OBJECT_SYSTEM_BATTLE"] {
+            assert!(pret.contains(expected), "{expected} in {pret:?}");
+        }
+        assert!(!pret.contains("TRACKS_FEW") && !pret.contains("BG"));
+        let file = "games/tbs/include/a.h";
+        let mut list: Vec<Name> = ["PALETTES_ALL", "PALETTES_BG", "PALETTES_OBJECTS", "TRACKS_ALL", "TRACKS_FEW"]
+            .iter()
+            .enumerate()
+            .map(|(at, n)| name(n, NameKind::Enumerator, file, at + 1))
+            .collect();
+        for (at, n) in ["PALETTE_A", "PALETTE_B", "PALETTE_C", "TRACK_A", "TRACK_B", "TRACK_C"].iter().enumerate() {
+            list.push(name(n, NameKind::Enumerator, file, at + 10));
+        }
+        let mut names = Names { names: list, pret_names: pret, ..Names::default() };
+        names.pret_names.insert("TRACKS_ALL".to_string());
+        let twins: Vec<String> = check(&names, None).into_iter().filter(|f| f.metric == "prefix_twin").map(|f| f.what).collect();
+        assert_eq!(twins, ["TRACKS_\t2 names; one idea with TRACK_ (3 names)"], "a plural prefix is pret's only when all its names are");
+    }
+
+    #[test]
+    fn one_type_one_name_leaves_out_members_arrays_and_clashes() {
+        let typed = |tag: &str, name: &str, line, scope| Typed {
+            tag: tag.to_string(),
+            name: name.to_string(),
+            file: "f.c".to_string(),
+            line,
+            scope: Some(scope),
+            ..Typed::default()
+        };
+        let names = Names {
+            typed: vec![
+                typed("Object", "object", 1, 1),
+                typed("Object", "object", 2, 2),
+                typed("Object", "object", 3, 3),
+                Typed { member: true, ..typed("Object", "objects", 4, 4) },
+                Typed { array: true, ..typed("Object", "objs", 5, 5) },
+                // `obj` where its function already has another `object`.
+                typed("Object", "obj", 6, 6),
+                typed("Unit", "object", 6, 6),
+                typed("Object", "obj", 7, 7),
+                typed("ItemDefinition", "item", 8, 8),
+                typed("ItemDefinition", "item", 9, 9),
+                typed("ItemDefinition", "item", 10, 10),
+                typed("ItemDefinition", "definition", 11, 11),
+                typed("Unit", "item", 11, 11),
+            ],
+            ..Names::default()
+        };
+        let findings: Vec<String> = check(&names, None).into_iter().map(|f| format!("{}:{} {}", f.file, f.line, f.what)).collect();
+        assert_eq!(
+            findings,
+            ["f.c:7 obj\tstruct Object: 2 uses -> object (3 uses)"],
+            "a member and an array are left out; obj is reported where object is free, definition, whose one function has an item, not at all"
         );
     }
 }

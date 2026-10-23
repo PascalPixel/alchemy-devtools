@@ -169,7 +169,7 @@ impl Symbols {
             menu: at("DebugBattle_RunMenu")?,
             preset: at("DebugParty_LoadPreset")?,
             encounter: at("Battle_Run")?,
-            collect: at("BattleUnits_Collect")?,
+            collect: at("BattleUnit_Collect")?,
             obj_make: at("BattleObject_Make")?,
             background: at("BattleBackground_Load")?,
             build: at("Battle_GatherActions")?,

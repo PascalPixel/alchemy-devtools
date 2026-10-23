@@ -1474,12 +1474,12 @@ impl<'a> Guide<'a> {
     /// A night at Bilibin's inn, the party given 500 coins and A pressed
     /// through the innkeeper's lines as `inn.gif` plays them: a chart
     /// with a column a frame and a row for each track of the eight players
-    /// (gSound_PlayerSlots: the fanfare player's 4, the music player's 10,
+    /// (gMPlayTable: the fanfare player's 4, the music player's 10,
     /// then 2 each), each cell lit while the track is active and has notes
-    /// sounding, as bright as its output volume (struct SoundTrack's
+    /// sounding, as bright as its output volume (struct MusicPlayerTrack's
     /// outVolumeA and outVolumeB), as `sound-players.png`.
     pub fn sound_players(&mut self) -> Result<(), String> {
-        let slots = self.sym("gSound_PlayerSlots")?;
+        let slots = self.sym("gMPlayTable")?;
         let (mut entered, _) = self.stand_where(BILIBIN_INN_ROOM, super::story::Trigger::Talk(BILIBIN_INNKEEPER_ACTOR), BILIBIN_INNKEEPER_ACTOR, |s| s.facing == 0xc000)?;
         let field = &mut entered.field;
         field.set_coins(500);

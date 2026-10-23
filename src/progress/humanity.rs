@@ -737,7 +737,13 @@ impl<'r, 'a> Walk<'r, 'a> {
         if !tokens.get(next + 1).is_some_and(|t| matches!(t.text, "," | ")" | ";" | "=" | "[")) {
             return;
         }
-        let typed = naming::Typed { tag: tag.text.to_string(), name: name.text.to_string(), file: self.file.to_string(), line: name.line };
+        let member = self.stack.last() == Some(&Brace::Struct);
+        let array = tokens.get(next + 1).is_some_and(|t| t.text == "[");
+        // The declaration being read: a function's, from its declarator to its
+        // closing brace, for its parameters and locals alike.
+        let scope = self.statement.first().copied();
+        let (tag, name, file, line) = (tag.text.to_string(), name.text.to_string(), self.file.to_string(), name.line);
+        let typed = naming::Typed { tag, name, file, line, member, array, scope };
         self.report.naming.typed.push(typed);
     }
 
@@ -1322,6 +1328,10 @@ pub fn game<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>) -> Report {
 pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, text: Option<&GameText>) -> Report {
     let mut report = Report::default();
     for (path, text) in files {
+        if path.ends_with("/names.tsv") {
+            report.naming.pret_names.extend(naming::pret_names(text));
+            continue;
+        }
         if path.ends_with("/README.md") {
             unit(&mut report, path, text);
             report.naming.guides.push((path.to_string(), text.to_string()));
@@ -1457,7 +1467,8 @@ fn unit(report: &mut Report, path: &str, text: &str) {
     report.units.push(Unit { file: path.to_string(), open, listed });
 }
 
-/// The tracked C and headers of a game, never build output.
+/// The tracked C, headers and folder guides of a game, and its `names.tsv`,
+/// never build output.
 fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     let output = std::process::Command::new("git")
         .arg("-C")
@@ -1465,6 +1476,7 @@ fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
         .args(["ls-files", "-z", "--"])
         .arg(format!("games/{game}/src"))
         .arg(format!("games/{game}/include"))
+        .arg(format!("games/{game}/names.tsv"))
         .output()
         .map_err(|error| format!("cannot run git: {error}"))?;
     if !output.status.success() {
@@ -1472,7 +1484,7 @@ fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     }
     let mut files = Vec::new();
     for path in String::from_utf8_lossy(&output.stdout).split('\0') {
-        if path.ends_with(".c") || path.ends_with(".h") || is_folder_guide(path) {
+        if path.ends_with(".c") || path.ends_with(".h") || path.ends_with("/names.tsv") || is_folder_guide(path) {
             let bytes = std::fs::read(root.join(path)).map_err(|error| format!("cannot read {path}: {error}"))?;
             files.push((path.to_string(), String::from_utf8_lossy(&bytes).into_owned()));
         }

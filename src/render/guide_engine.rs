@@ -824,8 +824,8 @@ impl<'a> Guide<'a> {
         let iwram_areas: Vec<(u32, u32, &str, u32)> = vec![
             (0x0300_0000, 0x0300_1400, "RESIDENT RUNTIME", 0xf0_e0_40),
             (0x0300_1400, iwram_heap, "IWRAM VARIABLES", 0x90_90_90),
-            (iwram_heap, self.sym("SoundDriver_Mixer")?, "IWRAM HEAP", 0x40_80_ff),
-            (self.sym("SoundDriver_Mixer")?, 0x0300_7800, "SOUND MIXER", 0xff_b0_50),
+            (iwram_heap, self.sym("SoundMainRAM")?, "IWRAM HEAP", 0x40_80_ff),
+            (self.sym("SoundMainRAM")?, 0x0300_7800, "SOUND MIXER", 0xff_b0_50),
             (0x0300_7800, 0x0300_8000, "STACKS", 0xff_70_50),
         ];
         // Each heap's range: the EWRAM heap runs to the end of EWRAM, over

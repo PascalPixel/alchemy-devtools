@@ -453,7 +453,7 @@ impl<'a> Guide<'a> {
             }
         }
         HEAP_WORK.store(0, Relaxed);
-        println!("highest: IWRAM {:08x}, EWRAM {:08x}; the mixer at {:08x}", highest.0, highest.1, at("SoundDriver_Mixer")?);
+        println!("highest: IWRAM {:08x}, EWRAM {:08x}; the mixer at {:08x}", highest.0, highest.1, at("SoundMainRAM")?);
         Ok(())
     }
 
@@ -463,7 +463,7 @@ impl<'a> Guide<'a> {
     fn heap_battle(&mut self, map: &Map) -> Result<(), String> {
         let at = |s: &str| map.symbol(s).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {s}"));
         let work = at("gHeapSlots")?;
-        let mixer = at("SoundDriver_Mixer")?;
+        let mixer = at("SoundMainRAM")?;
         let allocators = vec![at("AllocHeapSlot")?, at("AllocHeapSlotEwram")?, at("Alloc")?, at("AllocEwram")?, at("Free")?, at("FreeHeapSlot")?];
         let names = ["AllocHeapSlot", "AllocHeapSlotEwram", "Alloc", "AllocEwram", "Free", "FreeHeapSlot"];
         let mut e = self.enter_with((27, 5), &[])?;
@@ -472,9 +472,9 @@ impl<'a> Guide<'a> {
         let keep = log.clone();
         let mut pcs = allocators.clone();
         pcs.push(mixer);
-        let tick = at("AudioEngine_RunMixerTick")?;
+        let tick = at("SoundMain")?;
         pcs.push(tick);
-        let enter = at("SoundDriver_EnterMixer")?;
+        let enter = at("Mixer_Enter")?;
         pcs.push(enter);
         let enters = Rc::new(RefCell::new(0u32));
         let keep_enters = enters.clone();
@@ -550,7 +550,7 @@ impl<'a> Guide<'a> {
         for line in log.borrow().iter().take(80) {
             println!("{line}");
         }
-        println!("{} lines; the mixer changed: {:?}; mixer entries while intact, while overwritten: {:?}; ticks {}; SoundDriver_EnterMixer entries {}; sound work ident {:08x}", log.borrow().len(), changed.borrow(), runs_damaged.borrow(), ticks.borrow(), enters.borrow(), e.field.read32(at("gSound_Work")?));
+        println!("{} lines; the mixer changed: {:?}; mixer entries while intact, while overwritten: {:?}; ticks {}; Mixer_Enter entries {}; gSoundInfo ident {:08x}", log.borrow().len(), changed.borrow(), runs_damaged.borrow(), ticks.borrow(), enters.borrow(), e.field.read32(at("gSoundInfo")?));
         for line in log.borrow().iter().filter(|l| l.contains("the mixer is")) {
             println!("{line}");
         }
