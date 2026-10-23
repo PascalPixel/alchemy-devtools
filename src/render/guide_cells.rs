@@ -118,7 +118,7 @@ fn shared(code: i32) -> Option<Meaning> {
 pub(super) type Words = &'static [(&'static str, &'static str, Option<u16>)];
 
 /// The names a scene's rows are read through: its overlay's functions by
-/// address, and its exits by number (scene_links.h).
+/// address, and its exits by number (map_warps.h).
 pub(super) struct Names {
     functions: HashMap<u32, String>,
     exits: HashMap<u32, String>,
@@ -232,10 +232,20 @@ pub(super) fn meaning(field: &Field, names: &Names, words: Words, code: i32) -> 
     Ok(Some(Meaning { words, kind }))
 }
 
+/// The enum of `scene`'s warps in map_warps.h: under `MapId_<scene>'s
+/// warps.`, or `warp destinations and warps.` where one enum holds both.
+fn warps_block<'t>(links: &'t str, scene: &str) -> Result<&'t str, String> {
+    let heading = links
+        .find(&format!("/// MapId_{scene}'s warps."))
+        .or_else(|| links.find(&format!("/// MapId_{scene}'s warp destinations and warps.")))
+        .ok_or_else(|| format!("map_warps.h lists no warps of MapId_{scene}"))?;
+    let block = &links[heading..];
+    Ok(&block[..block.find("};").unwrap_or(block.len())])
+}
+
 impl<'a> Guide<'a> {
     /// The names `scene`'s rows are read through: the functions of the
-    /// overlay that defines `anchor`, and the exits scene_links.h lists
-    /// under `MapId_<scene>'s exits`.
+    /// overlay that defines `anchor`, and its warps (`warps_block`).
     pub(super) fn cell_names(&self, anchor: &str, scene: &str) -> Result<Names, String> {
         let root = crate::compile::root();
         let dir = root.join("out/tbs-en/overlays");
@@ -258,12 +268,7 @@ impl<'a> Guide<'a> {
         let functions = functions.ok_or_else(|| format!("no overlay defines {anchor}"))?;
         let links_path = root.join("games/tbs/include/map_warps.h");
         let links = std::fs::read_to_string(&links_path).map_err(|e| format!("cannot read {}: {e}", links_path.display()))?;
-        let heading = links
-            .find(&format!("/// MapId_{scene}'s exits."))
-            .or_else(|| links.find(&format!("/// MapId_{scene}'s entrances and exits.")))
-            .ok_or_else(|| format!("map_warps.h lists no warps of MapId_{scene}"))?;
-        let block = &links[heading..];
-        let block = &block[..block.find("};").unwrap_or(block.len())];
+        let block = warps_block(&links, scene)?;
         // Comments taken out, so a name and its number may stand on two lines.
         let plain: String = block.lines().map(|l| l.split("//").next().unwrap_or("")).collect::<Vec<_>>().join(" ");
         let pattern = regex::Regex::new(r"([A-Z][A-Z0-9_]+)\s*=\s*(\d+)").map_err(|e| e.to_string())?;
@@ -508,7 +513,7 @@ pub(super) const FUCHIN_FIRST_ROOM_WORDS: Words = &[
 
 /// What the rows of Mercury Lighthouse's ground floor
 /// (MapId_MercuryLighthouseEntrance) do around the pool, from their
-/// functions' comments; the exits' rooms are named in scene_links.h.
+/// functions' comments; the exits' rooms are named in map_warps.h.
 pub(super) const MERCURY_LIGHTHOUSE_ENTRANCE_WORDS: Words = &[
     ("MercuryLighthouseEntrance_HopAcrossPool", "Hop two cells (walk into it)", None),
     ("MercuryLighthouseEntrance_LoseLights", "takes the leader's lights", None),
@@ -629,5 +634,19 @@ impl<'a> Guide<'a> {
         let legend: Vec<(u32, String)> = kinds.iter().map(|k| (k.colour(), k.key().to_string())).collect();
         let image = labelled(&picture, &marks, &legend, 216);
         self.guide_png("scene-event-cells.png", &image, "Vale's event cells, each joined to words saying what it does, coloured by the kind of row that answers it")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::warps_block;
+
+    #[test]
+    fn warps_are_found_under_either_heading() {
+        let links = "/// MapId_Title's warp destinations and warps.\nenum {\n  TITLE_FROM_VALE_GATE = 1,\n};\n\n/// MapId_GomaCavePillar's warp destinations.\nenum {\n  GOMA_CAVE_PILLAR_FROM_GOMA_CAVE_STREAM_WEST = 1,\n};\n\n/// MapId_GomaCavePillar's warps.\nenum {\n  GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1,\n};\n";
+        assert!(warps_block(links, "GomaCavePillar").unwrap().contains("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1"));
+        assert!(!warps_block(links, "GomaCavePillar").unwrap().contains("_FROM_"));
+        assert!(warps_block(links, "Title").unwrap().contains("TITLE_FROM_VALE_GATE"));
+        assert!(warps_block(links, "Vale").is_err());
     }
 }
