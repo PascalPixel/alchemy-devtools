@@ -1201,11 +1201,7 @@ const SHOP_STOCK_ITEMS: u32 = 0x26c;
 /// Every 9-bit item id, as Shop_ListAvailableArtifacts tries them.
 const ITEM_IDS: u32 = 512;
 
-/// Item names by id, from items.tsv's `item` column.
+/// Item names by id.
 pub(super) fn item_names() -> Result<Vec<String>, String> {
-    let path = crate::compile::root().join("games/tbs/src/game/items.tsv");
-    let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-    let mut lines = text.lines();
-    let column = lines.next().unwrap_or("").split('\t').position(|c| c == "item").ok_or("items.tsv has no item column")?;
-    Ok(lines.map(|l| l.split('\t').nth(column).unwrap_or("").to_string()).collect())
+    super::tables::Game::here()?.item_names()
 }

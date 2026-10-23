@@ -1,8 +1,10 @@
 //! Which abilities `render psynergy` casts, by whom and at whom, from the
-//! game's own tables: abilities.tsv (each ability's targeting, flags, element,
-//! range and cost), classes.tsv and items.tsv (what the party can learn), and
-//! djinn.tsv, summons.tsv, items.tsv and enemies.tsv for the rest.
+//! game's own tables as the built edition holds them (tables.rs):
+//! gAbilityDefinitions (each ability's targeting, flags, element, range and
+//! cost), gClass_DefinitionTable and gItem_DefinitionTable (what the party can
+//! learn), and the Djinn, summon, item and enemy tables for the rest.
 
+use super::tables::{Game, Table};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
@@ -19,7 +21,7 @@ const FOUR: [u8; 4] = [ISAAC, GARET, IVAN, MIA];
 /// Jenna's fixed class (Class_Determine): the Psynergy she casts.
 const JENNA_CLASS: usize = 202;
 
-/// Debug party preset 0 (presets.tsv): the four at level 35, each with their
+/// Debug party preset 0 (gDebug_PartyPresets): the four at level 35, each with their
 /// grown-up battle sprite (BATTLE_CHARACTER, 300 on). Preset 10, the level-1
 /// rows, equips Isaac and Garet with a Machete, which BattleObject_Make draws with
 /// sprites 480 and 482 instead. Jenna, in no preset but 10 and 11, keeps the
@@ -59,7 +61,7 @@ pub fn character_name(owner: u8) -> &'static str {
     }
 }
 
-/// One row of abilities.tsv.
+/// One row of gAbilityDefinitions, with its name.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ability {
     pub id: u16,
@@ -135,7 +137,7 @@ pub enum Command {
     Psynergy,
     /// A Djinni Set on the caster: its element and its index in it.
     Djinni { element: u8, index: u8 },
-    /// A summon, by its row of summons.tsv, with `count` Djinn of
+    /// A summon, by its row of gSummon_DefinitionTable, with `count` Djinn of
     /// `element` on standby.
     Summon { row: u8, element: u8, count: u8 },
 }
@@ -195,155 +197,96 @@ pub struct Plan {
     pub skipped: Vec<(Ability, Skip)>,
 }
 
-/// A table the build encodes: a header of `name:type` columns and rows.
-struct Table {
-    columns: Vec<String>,
-    rows: Vec<Vec<String>>,
+/// Every nonzero value of `path` in every row of `table`.
+fn nonzero(table: &Table, path: &str) -> Result<BTreeSet<u16>, String> {
+    let mut values = BTreeSet::new();
+    for row in 0..table.len() {
+        values.extend(table.values(row, path)?.into_iter().filter(|&v| v > 0).map(|v| v as u16));
+    }
+    Ok(values)
 }
 
-impl Table {
-    fn parse(text: &str) -> Table {
-        let mut lines = text.lines().filter(|l| !l.is_empty());
-        let columns = lines
-            .next()
-            .unwrap_or("")
-            .split('\t')
-            .map(|c| c.split(':').next().unwrap_or(c).to_string())
-            .collect();
-        let rows = lines.map(|l| l.split('\t').map(str::to_string).collect()).collect();
-        Table { columns, rows }
-    }
-
-    fn read(path: &Path) -> Result<Table, String> {
-        let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-        Ok(Table::parse(&text))
-    }
-
-    fn column(&self, name: &str) -> Result<usize, String> {
-        self.columns.iter().position(|c| c == name).ok_or_else(|| format!("no column {name}"))
-    }
-
-    fn text(&self, row: usize, column: usize) -> &str {
-        self.rows[row].get(column).map_or("", String::as_str)
-    }
-
-    fn number(&self, row: usize, column: usize) -> Result<i64, String> {
-        let text = self.text(row, column).trim();
-        let value = match text.strip_prefix("0x") {
-            Some(hex) => i64::from_str_radix(hex, 16).ok(),
-            None => text.parse().ok(),
-        };
-        value.ok_or_else(|| format!("row {row}: {:?} is not a number", text))
-    }
-
-    /// Every nonzero value of the named columns.
-    fn values(&self, names: &[String]) -> Result<BTreeSet<u16>, String> {
-        let mut values = BTreeSet::new();
-        for name in names {
-            let column = self.column(name)?;
-            for row in 0..self.rows.len() {
-                let value = self.number(row, column)?;
-                if value > 0 {
-                    values.insert(value as u16);
-                }
-            }
-        }
-        Ok(values)
-    }
-}
-
-pub fn abilities(actions: &str) -> Result<Vec<Ability>, String> {
-    let table = Table::parse(actions);
-    let [target_mode, flags, element, effect, range, pp_cost, name] =
-        ["target_mode", "flags", "element", "effect", "range", "pp_cost", "ability"].map(|c| table.column(c));
-    let (target_mode, flags, element, effect, range, pp_cost, name) =
-        (target_mode?, flags?, element?, effect?, range?, pp_cost?, name?);
-    (0..table.rows.len())
+/// Every ability by id (gAbilityDefinitions), named from MsgAbilityName.
+pub fn abilities(game: &Game) -> Result<Vec<Ability>, String> {
+    let table = game.table("gAbilityDefinitions", "AbilityDefinition")?;
+    let names = game.names("MsgAbilityName", table.len())?;
+    (0..table.len())
         .map(|row| {
-            let byte = |column| table.number(row, column).map(|v| v as u8);
+            let byte = |field| table.value(row, field).map(|v| v as u8);
             Ok(Ability {
                 id: row as u16,
-                name: table.text(row, name).to_string(),
-                target_mode: byte(target_mode)?,
-                flags: byte(flags)?,
-                element: byte(element)?,
-                effect: byte(effect)?,
-                range: byte(range)?,
-                pp_cost: byte(pp_cost)?,
+                name: names[row].clone(),
+                target_mode: byte("targetMode")?,
+                flags: byte("flags")?,
+                element: byte("element")?,
+                effect: byte("effect")?,
+                range: byte("range")?,
+                pp_cost: byte("ppCost")?,
             })
         })
         .collect()
 }
 
-/// What the party learns: each class's Psynergy, and the abilities items
-/// teach while equipped (use type 3).
-fn class_abilities(classes: &Table) -> Result<(BTreeSet<u16>, BTreeSet<u16>), String> {
-    let names: Vec<String> = (0..16).map(|k| format!("ability{k}")).collect();
-    let all = classes.values(&names)?;
-    let mut jenna = BTreeSet::new();
-    if JENNA_CLASS < classes.rows.len() {
-        for name in &names {
-            let value = classes.number(JENNA_CLASS, classes.column(name)?)?;
-            if value > 0 {
-                jenna.insert(value as u16);
-            }
-        }
-    }
-    Ok((all, jenna))
-}
-
-fn item_abilities(items: &Table) -> Result<(BTreeSet<u16>, BTreeSet<u16>, BTreeSet<u16>), String> {
-    let (use_type, action, unleash) = (items.column("use_type")?, items.column("action_id")?, items.column("unleash_action")?);
-    let (mut taught, mut used, mut unleashed) = (BTreeSet::new(), BTreeSet::new(), BTreeSet::new());
-    for row in 0..items.rows.len() {
-        let id = items.number(row, action)?;
-        if id > 0 {
-            if items.number(row, use_type)? == 3 { &mut taught } else { &mut used }.insert(id as u16);
-        }
-        let id = items.number(row, unleash)?;
-        if id > 0 {
-            unleashed.insert(id as u16);
-        }
-    }
-    Ok((taught, used, unleashed))
-}
-
-/// The tables, from games/tbs/src under `root`.
+/// What the tables say about the abilities, read from the built edition.
 pub struct Tables {
-    pub actions: String,
-    classes: Table,
-    items: Table,
-    djinn: Table,
-    summons: Table,
-    enemies: Table,
+    pub abilities: Vec<Ability>,
+    /// Every class's Psynergy (gClass_DefinitionTable), and Jenna's.
+    learned: BTreeSet<u16>,
+    jenna: BTreeSet<u16>,
+    /// The abilities items teach while equipped (ITEM_USE_TEACHES), those they
+    /// are used for, and those weapons unleash (gItem_DefinitionTable).
+    taught: BTreeSet<u16>,
+    used: BTreeSet<u16>,
+    unleashed: BTreeSet<u16>,
+    /// The Djinn's abilities (gDjinn_DefinitionTable).
+    djinn: BTreeSet<u16>,
+    /// Each summon's ability and the standby Djinn it needs by element
+    /// (gSummon_DefinitionTable).
+    summons: Vec<(u16, Vec<i64>)>,
+    /// What the enemies choose from (gEnemy_Definitions).
+    enemy: BTreeSet<u16>,
 }
 
 impl Tables {
     pub fn read(root: &Path) -> Result<Tables, String> {
-        let game = root.join("games/tbs/src/game");
-        let actions = game.join("abilities.tsv");
+        let game = Game::read(root)?;
+        let classes = game.table("gClass_DefinitionTable", "ClassDefinition")?;
+        let items = game.table("gItem_DefinitionTable", "ItemDefinition")?;
+        let summons = game.table("gSummon_DefinitionTable", "SummonDefinition")?;
+        let teaches = game.constant("ITEM_USE_TEACHES")?;
+        let (mut taught, mut used) = (BTreeSet::new(), BTreeSet::new());
+        for row in 0..items.len() {
+            let id = items.value(row, "abilityId")?;
+            if id > 0 {
+                if items.value(row, "useType")? == teaches { &mut taught } else { &mut used }.insert(id as u16);
+            }
+        }
+        let jenna = if JENNA_CLASS < classes.len() {
+            classes.values(JENNA_CLASS, "abilities.ability")?.into_iter().filter(|&v| v > 0).map(|v| v as u16).collect()
+        } else {
+            BTreeSet::new()
+        };
         Ok(Tables {
-            actions: std::fs::read_to_string(&actions).map_err(|e| format!("cannot read {}: {e}", actions.display()))?,
-            classes: Table::read(&game.join("classes.tsv"))?,
-            items: Table::read(&game.join("items.tsv"))?,
-            djinn: Table::read(&game.join("djinn.tsv"))?,
-            summons: Table::read(&game.join("summons.tsv"))?,
-            enemies: Table::read(&game.join("enemies.tsv"))?,
+            abilities: abilities(&game)?,
+            learned: nonzero(&classes, "abilities.ability")?,
+            jenna,
+            taught,
+            used,
+            unleashed: nonzero(&items, "unleashAbility")?,
+            djinn: nonzero(&game.table("gDjinn_DefinitionTable", "DjinnDefinition")?, "abilityId")?,
+            summons: (0..summons.len()).map(|row| Ok((summons.value(row, "abilityId")? as u16, summons.values(row, "djinnRequired")?))).collect::<Result<_, String>>()?,
+            enemy: nonzero(&game.table("gEnemy_Definitions", "EnemyDefinition")?, "abilities")?,
         })
     }
 
     pub fn plan(&self) -> Result<Plan, String> {
-        let abilities = abilities(&self.actions)?;
-        let (learned, jenna) = class_abilities(&self.classes)?;
-        let (taught, used, unleashed) = item_abilities(&self.items)?;
-        let djinn = self.djinn.values(&["ability".to_string()])?;
-        let summons = self.summons.values(&["ability".to_string()])?;
-        let enemy_columns: Vec<String> = (0..8).map(|k| format!("action{k}")).collect();
-        let enemy = self.enemies.values(&enemy_columns)?;
+        let (learned, jenna, taught, used, unleashed, djinn, enemy) =
+            (&self.learned, &self.jenna, &self.taught, &self.used, &self.unleashed, &self.djinn, &self.enemy);
+        let summons: BTreeSet<u16> = self.summons.iter().map(|s| s.0).filter(|&a| a > 0).collect();
         let mut casts = Vec::new();
         let mut specials = Vec::new();
         let mut skipped = Vec::new();
-        for ability in abilities.into_iter().filter(Ability::usable_in_battle) {
+        for ability in self.abilities.iter().cloned().filter(Ability::usable_in_battle) {
             let id = ability.id;
             let skip = if id <= 2 {
                 Some(Skip::Command)
@@ -402,19 +345,15 @@ impl Tables {
         Ok(Plan { casts, skipped })
     }
 
-    /// A summon's row of summons.tsv, and the one element and count of Djinn
-    /// it needs.
+    /// A summon's row of gSummon_DefinitionTable, and the one element and
+    /// count of Djinn it needs.
     fn summon_row(&self, id: u16) -> Option<(u8, u8, u8)> {
-        let ability = self.summons.column("ability").ok()?;
-        let row = (0..self.summons.rows.len()).find(|&r| self.summons.number(r, ability).ok() == Some(i64::from(id)))?;
-        (0..4u8).find_map(|e| {
-            let n = self.summons.number(row, self.summons.column(&format!("djinn{e}")).ok()?).ok()?;
-            (n > 0).then_some((row as u8, e, n as u8))
-        })
+        let row = self.summons.iter().position(|s| s.0 == id)?;
+        self.summons[row].1.iter().enumerate().find_map(|(e, &n)| (n > 0).then_some((row as u8, e as u8, n as u8)))
     }
 }
 
-/// A Djinni's ability id: 300 + 20 x element + index (djinn.tsv).
+/// A Djinni's ability id: 300 + 20 x element + index (gDjinn_DefinitionTable).
 const DJINN_FIRST: u16 = 300;
 const DJINN_PER_ELEMENT: u16 = 20;
 
@@ -494,20 +433,18 @@ pub fn element_name(element: u8) -> &'static str {
 mod tests {
     use super::*;
 
-    const ACTIONS: &str = "target_mode:u8\tflags:u8\telement:u8\teffect:u8\trange:u8\tpp_cost:u8\tability
-1\t0x05\t4\t0\t1\t0\tNothing
-1\t0x83\t4\t0\t1\t0\tAttack
-4\t0x89\t4\t46\t1\t0\tDefend
-1\t0x85\t0\t0\t2\t4\tQuake
-2\t0xc1\t1\t0\t1\t4\tPly
-1\t0x85\t2\t0\t1\t4\tFlare
-";
+    /// (target mode, flags, element, effect, range, PP cost, name).
+    fn rows() -> Vec<Ability> {
+        [(1, 0x05, 4, 0, 1, 0, "Nothing"), (1, 0x83, 4, 0, 1, 0, "Attack"), (4, 0x89, 4, 46, 1, 0, "Defend"), (1, 0x85, 0, 0, 2, 4, "Quake"), (2, 0xc1, 1, 0, 1, 4, "Ply"), (1, 0x85, 2, 0, 1, 4, "Flare")]
+            .into_iter()
+            .enumerate()
+            .map(|(id, (target_mode, flags, element, effect, range, pp_cost, name))| Ability { id: id as u16, name: name.to_string(), target_mode, flags, element, effect, range, pp_cost })
+            .collect()
+    }
 
     #[test]
-    fn rows_are_read_by_column_name() {
-        let rows = abilities(ACTIONS).unwrap();
-        assert_eq!(rows.len(), 6);
-        assert_eq!(rows[3].name, "Quake");
+    fn kinds_and_battle_use_come_from_the_flags() {
+        let rows = rows();
         assert_eq!((rows[3].flags, rows[3].kind(), rows[3].range, rows[3].pp_cost), (0x85, 5, 2, 4));
         assert!(!rows[0].usable_in_battle());
         assert!(rows[1].usable_in_battle());
@@ -515,7 +452,7 @@ mod tests {
 
     #[test]
     fn casters_and_targets_follow_the_elements() {
-        let rows = abilities(ACTIONS).unwrap();
+        let rows = rows();
         let quake = cast(rows[3].clone(), false).unwrap();
         assert_eq!((quake.party.clone(), quake.foes.clone(), quake.aim), (vec![ISAAC], vec![GARET, IVAN, MIA], Aim::Foe));
         let ply = cast(rows[4].clone(), false).unwrap();
@@ -535,7 +472,7 @@ mod tests {
 
     #[test]
     fn shared_names_take_their_ids() {
-        let rows = abilities(ACTIONS).unwrap();
+        let rows = rows();
         let mut casts: Vec<Cast> = [3, 3].iter().map(|&i| cast(rows[i].clone(), false).unwrap()).collect();
         casts[1].ability.id = 9;
         name_files(&mut casts);

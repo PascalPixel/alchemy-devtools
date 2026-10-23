@@ -732,7 +732,7 @@ pub struct Table {
 /// The table-indexed enums, as `games/tbs/src/game/README.md` sets out their
 /// messages: an item's name is `MsgItemName` + id, an ability's
 /// `MsgAbilityName` + id, an enemy's `MsgEnemyName` + its row in
-/// `enemies.tsv`, a Djinni's `MsgDjinnName` + its number.
+/// `gEnemy_Definitions`, a Djinni's `MsgDjinnName` + its number.
 pub const TABLES: &[Table] = &[
     Table { tag: "ItemId", prefix: "ITEM_", symbol: "MsgItemName", first: None },
     Table { tag: "AbilityId", prefix: "ABILITY_", symbol: "MsgAbilityName", first: None },

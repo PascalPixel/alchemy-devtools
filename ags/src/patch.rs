@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn a_patch_restores_the_bytes_the_packer_saw() {
-        let patch = Patch::parse("grid_patch.tsv", TEXT.as_bytes()).unwrap();
+        let patch = Patch::parse("map_patch.tsv", TEXT.as_bytes()).unwrap();
         assert_eq!(patch.literals(), 1);
         let shipped = [0, 0, 0, 0, 1, 0, 1, 0];
         assert_eq!(
@@ -140,6 +140,6 @@ mod tests {
         assert!(Patch::parse("X", unproven.as_bytes()).is_err());
         let falling = "position\tpack\tship\tproof\n6\t0x02\t0x01\ta\n4\t0x02\t0x01\tb\n";
         assert!(Patch::parse("X", falling.as_bytes()).is_err());
-        assert_eq!(patch_name("map/map_181/grid.tsv"), "grid_patch.tsv");
+        assert_eq!(patch_name("layout/layout_181/map.txt"), "map_patch.tsv");
     }
 }

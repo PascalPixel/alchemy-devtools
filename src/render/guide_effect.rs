@@ -148,10 +148,10 @@ impl<'a> Guide<'a> {
 
     /// An ability only enemies use, given to Isaac as a Psynergy command
     /// against a copy of Ivan: the command record carries its id, and the
-    /// plan and effect follow its ability_anims.tsv row like any other.
+    /// plan and effect follow its gAbilityAnimations row like any other.
     fn enemy_cast(&self, name: &str) -> Result<Cast, String> {
         let tables = Tables::read(crate::compile::root())?;
-        let ability = plan::abilities(&tables.actions)?.into_iter().find(|a| a.name == name).ok_or_else(|| format!("no ability {name}"))?;
+        let ability = tables.abilities.into_iter().find(|a| a.name == name).ok_or_else(|| format!("no ability {name}"))?;
         let quake = self.find_cast("Quake", false)?;
         Ok(Cast { slug: plan::slug(name), ability, command: Command::Psynergy, preset: quake.preset, party: vec![plan::ISAAC], foes: vec![plan::IVAN], aim: Aim::Foe, ally: Ally::Healthy, lucky_foes: false })
     }

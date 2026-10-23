@@ -188,20 +188,22 @@ impl<'a> Guide<'a> {
         self.guide_png("menu-test-setup.png", &image, "the menu test room's setup: the party and rare-item counters before a visit, after it and after a second")
     }
 
-    /// The Long Sword's row of items.tsv beside the screens that show its
+    /// The Long Sword's row of gItem_DefinitionTable beside the screens that show its
     /// columns, as `item-row.png`: in Bilibin's weapon shop (merchant 16)
     /// the Buy list with its price; the member chooser on Isaac, his Attack
     /// with his Bandit's Sword and with the Long Sword, and on Ivan, whose
-    /// bit of equip_mask is clear; and, once it is bought and the shop
+    /// bit of equipMask is clear; and, once it is bought and the shop
     /// left, the Item screen with it chosen among Isaac's items. The row is
-    /// read from items.tsv; the screens are played with the pad.
+    /// read from the build; the screens are played with the pad.
     pub fn item_row(&mut self) -> Result<(), String> {
         const LONG_SWORD: &str = "Long Sword";
-        let tsv = std::fs::read_to_string(crate::compile::root().join("games/tbs/src/game/items.tsv")).map_err(|e| format!("items.tsv: {e}"))?;
-        let mut lines = tsv.lines();
-        let header: Vec<&str> = lines.next().unwrap_or("").split('\t').map(|c| c.split(':').next().unwrap_or(c)).collect();
-        let row: Vec<&str> = lines.find(|l| l.ends_with(&format!("\t{LONG_SWORD}"))).ok_or("items.tsv has no Long Sword")?.split('\t').collect();
-        let col = |name: &str| header.iter().position(|&h| h == name).map(|i| row[i].to_string()).unwrap_or_default();
+        let game = super::tables::Game::here()?;
+        let items = game.table("gItem_DefinitionTable", "ItemDefinition")?;
+        let row = game.item_names()?.iter().position(|n| n == LONG_SWORD).ok_or("no item is the Long Sword")?;
+        let col = |name: &str| -> String {
+            let value = items.values(row, name).ok().and_then(|v| v.first().copied()).unwrap_or_default();
+            if name == "equipMask" { format!("0X{value:X}") } else { value.to_string() }
+        };
         let (mut entered, _) = self.stand_where((31, 4), super::story::Trigger::Talk(16), 16, |s| s.facing == 0xc000)?;
         let field = &mut entered.field;
         field.set_coins(2000);
@@ -224,8 +226,8 @@ impl<'a> Guide<'a> {
         }
         let captions = [
             format!("PRICE {}: THE BUY LIST", col("price")),
-            format!("PRIMARY_BONUS {}: ISAAC'S ATTACK 56 TO 58", col("primary_bonus")),
-            format!("EQUIP_MASK {}: IVAN CAN'T EQUIP IT", col("equip_mask")),
+            format!("PRIMARYBONUS {}: ISAAC'S ATTACK 56 TO 58", col("primaryBonus")),
+            format!("EQUIPMASK {}: IVAN CAN'T EQUIP IT", col("equipMask")),
             format!("ICON {} AND ITS NAME: THE ITEM SCREEN", col("icon")),
         ];
         let left = 330usize;
@@ -237,20 +239,20 @@ impl<'a> Guide<'a> {
             text(&mut image, x as i32, (y + 2 * HEIGHT + 6) as i32, &captions[i], MARK, None, 2);
         }
         let mut y = 8;
-        text(&mut image, 8, y, "ITEMS.TSV, THE LONG SWORD", HEAD, None, 2);
+        text(&mut image, 8, y, "GITEM_DEFINITIONTABLE, THE LONG SWORD", HEAD, None, 2);
         y += 22;
-        let shown = ["price", "type", "flags", "equip_mask", "icon", "primary_bonus", "secondary_bonus", "unleash_action", "unleash_chance", "use_type", "element", "effect0_kind", "action_id"];
+        let shown = ["price", "type", "flags", "equipMask", "icon", "primaryBonus", "secondaryBonus", "unleashAbility", "unleashChance", "useType", "element", "effects.kind", "abilityId"];
         for name in shown {
-            let on_screen = ["price", "equip_mask", "icon", "primary_bonus"].contains(&name);
-            text(&mut image, 8, y, &format!("{:<16}{}", name.to_uppercase(), col(name)), if on_screen { MARK } else { INK }, None, 2);
+            let on_screen = ["price", "equipMask", "icon", "primaryBonus"].contains(&name);
+            text(&mut image, 8, y, &format!("{:<16}{}", name.replace("effects.", "effects[0].").to_uppercase(), col(name)), if on_screen { MARK } else { INK }, None, 2);
             y += 16;
         }
         y += 8;
-        for line in ["TYPE 1: A WEAPON", "EQUIP_MASK 0X13:", "ISAAC, GARET, FELIX", "ELEMENT 4: NONE", "YELLOW: ON THE SCREENS"] {
+        for line in ["TYPE 1: A WEAPON", "EQUIPMASK 0X13:", "ISAAC, GARET, FELIX", "ELEMENT 4: NONE", "YELLOW: ON THE SCREENS"] {
             text(&mut image, 8, y, line, DIM, None, 2);
             y += 16;
         }
-        self.guide_png("item-row.png", &image, "the Long Sword's row of items.tsv beside the shop and Item screens that show its columns")
+        self.guide_png("item-row.png", &image, "the Long Sword's row of gItem_DefinitionTable beside the shop and Item screens that show its columns")
     }
 
     /// A cutscene's script beside the frames each of its commands waits

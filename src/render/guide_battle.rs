@@ -34,7 +34,7 @@ pub(super) const PANEL_MARK: u32 = 0xff_d8_40;
 pub(super) const PANEL_HEAD: u32 = 0x9c_c8_ff;
 
 /// What a battle run is: the debug party preset and party, the formation
-/// (a row of formations.tsv), gSaveBlock.battleType and the function entries
+/// (a row of gFormations), gSaveBlock.battleType and the function entries
 /// the watcher is called at.
 pub(super) struct Drive {
     pub preset: u8,
@@ -164,21 +164,15 @@ pub(super) fn run_to(gba: &mut Gba, back: u32, limit: u32, at: &mut dyn FnMut(&m
     false
 }
 
-/// Action names by ability id, from abilities.tsv.
+/// Action names by ability id.
 pub(super) fn ability_names() -> Result<Vec<String>, String> {
-    let path = crate::compile::root().join("games/tbs/src/game/abilities.tsv");
-    let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-    Ok(plan::abilities(&text)?.into_iter().map(|a| a.name).collect())
+    super::tables::Game::here()?.ability_names()
 }
 
-/// A row of a table under games/tbs/src: its columns by name.
-pub(super) fn table_row(file: &str, row: usize) -> Result<std::collections::HashMap<String, String>, String> {
-    let path = crate::compile::root().join("games/tbs/src").join(file);
-    let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-    let mut lines = text.lines();
-    let head: Vec<String> = lines.next().unwrap_or("").split('\t').map(|c| c.split(':').next().unwrap_or(c).to_string()).collect();
-    let line = lines.nth(row).ok_or_else(|| format!("{file} has no row {row}"))?;
-    Ok(head.into_iter().zip(line.split('\t').map(str::to_string)).collect())
+/// The enemies' table and their names, by row (enemy id less ENEMY_ID_FIRST).
+fn enemy_table() -> Result<(super::tables::Table, Vec<String>), String> {
+    let game = super::tables::Game::here()?;
+    Ok((game.table("gEnemy_Definitions", "EnemyDefinition")?, game.row_names("gEnemy_Definitions", "EnemyDefinition", "MsgEnemyName")?))
 }
 
 pub(super) fn fill(image: &mut Image, x: usize, y: usize, w: usize, h: usize, colour: u32) {
@@ -192,8 +186,8 @@ pub(super) fn fill(image: &mut Image, x: usize, y: usize, w: usize, h: usize, co
 /// Eight colours for an enemy's eight places.
 const PLACE_COLOURS: [u32; 8] = [0xe0_60_50, 0xe0_a0_40, 0xd0_d0_50, 0x70_c0_60, 0x50_b0_c0, 0x60_80_e0, 0xa0_70_e0, 0xd0_70_b0];
 
-/// formations.tsv row 294: two Gryphons, a random formation. enemies.tsv row
-/// 90, the Gryphon: ACTION_STRATEGY_FALLING and eight different actions.
+/// gFormations row 294: two Gryphons, a random formation. gEnemy_Definitions
+/// row 90, the Gryphon: ACTION_STRATEGY_FALLING and eight different actions.
 const GRYPHONS: u32 = 294;
 const GRYPHON: usize = 90;
 /// struct BattleAction (battle_session.h).
@@ -224,9 +218,9 @@ impl<'a> Guide<'a> {
     /// place took, as `enemy-actions.png`.
     pub fn enemy_actions(&mut self) -> Result<(), String> {
         let names = ability_names()?;
-        let row = table_row("game/enemies.tsv", GRYPHON)?;
-        let strategy: u32 = row["action_strategy"].parse().map_err(|_| "no action_strategy")?;
-        let actions: Vec<usize> = (0..8).map(|i| row[&format!("action{i}")].parse().unwrap_or(0)).collect();
+        let (enemies, _) = enemy_table()?;
+        let strategy = enemies.value(GRYPHON, "actionStrategy")? as u32;
+        let actions: Vec<usize> = enemies.values(GRYPHON, "abilities")?.into_iter().map(|a| a as usize).collect();
         let select = self.sym("BattleAI_ChooseAction")?;
         let random = self.sym("Battle_Random")?;
         let weights_at = self.sym("gBattleAI_ActionWeights")?;
@@ -341,10 +335,10 @@ fn encounter_name(mode: u8) -> &'static str {
         _ => "?",
     }
 }
-/// formations.tsv row 296: a fixed formation of four, the Lizard King, a
+/// gFormations row 296: a fixed formation of four, the Lizard King, a
 /// Harridan and two Stone Soldiers.
 const FOUR_ENEMIES: u32 = 296;
-/// struct Unit's id, an enemy's row of enemies.tsv plus ENEMY_ID_FIRST.
+/// struct Unit's id, an enemy's row of gEnemy_Definitions plus ENEMY_ID_FIRST.
 const ENEMY_ID_FIRST: usize = 8;
 const UNIT_CLASS_ID: u32 = 0x128;
 const UNIT_SIZE: u32 = 0x14c;
@@ -378,15 +372,15 @@ impl<'a> Guide<'a> {
             .unwrap_or_default()
     }
 
-    /// A unit's name: a party member's, or an enemy's class from
-    /// enemies.tsv.
+    /// A unit's name: a party member's, or an enemy's name, from its
+    /// class.
     pub(super) fn unit_name(&self, gba: &Gba, unit: u16) -> String {
         if u32::from(unit) < FIRST_ENEMY_UNIT {
             return plan::character_name(unit as u8).to_string();
         }
         let enemies = self.sym("gEnemyUnits").map(|s| gba.read32(s)).unwrap_or(0);
         let class = gba.read8(enemies + (u32::from(unit) - FIRST_ENEMY_UNIT) * UNIT_SIZE + UNIT_CLASS_ID);
-        table_row("game/enemies.tsv", usize::from(class).wrapping_sub(ENEMY_ID_FIRST)).ok().and_then(|r| r.get("enemy").cloned()).unwrap_or(format!("UNIT {unit}"))
+        enemy_table().ok().and_then(|(_, names)| names.get(usize::from(class).wrapping_sub(ENEMY_ID_FIRST)).filter(|n| !n.is_empty()).cloned()).unwrap_or(format!("UNIT {unit}"))
     }
 
     /// The four against FOUR_ENEMIES in a random encounter
@@ -679,10 +673,9 @@ const UNIT_INVENTORY: u32 = 0xd8;
 const INVENTORY_SLOTS: u32 = 15;
 const ITEM_ID_MASK: u16 = 0x1ff;
 const INVENTORY_EQUIPPED: u16 = 0x200;
-/// items.tsv: the Swift Sword, whose unleash is Sonic Smash, a triple
+/// gItem_DefinitionTable: the Swift Sword, whose unleash is Sonic Smash, a triple
 /// blow; ITEM_TYPE_WEAPON.
 const SWIFT_SWORD: u16 = 21;
-const ITEM_TYPE_WEAPON: &str = "1";
 /// enum BattleCritical.
 fn critical_name(c: i8) -> &'static str {
     match c {
@@ -730,13 +723,9 @@ impl<'a> Guide<'a> {
         let encounter = self.sym("Battle_Run")?;
         let message = self.sym("BattleMessage_ShowAndWait")?;
         let owner = self.sym("gSaveBlock")? + STATE_OWNERS;
-        let types: Vec<String> = {
-            let path = root.join("games/tbs/src/game/items.tsv");
-            let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-            let mut lines = text.lines();
-            let column = lines.next().unwrap_or("").split('\t').position(|c| c.starts_with("type:")).ok_or("items.tsv has no type")?;
-            lines.map(|l| l.split('\t').nth(column).unwrap_or("").to_string()).collect()
-        };
+        let game = super::tables::Game::here()?;
+        let types = game.table("gItem_DefinitionTable", "ItemDefinition")?.column("type")?;
+        let weapon_type = game.constant("ITEM_TYPE_WEAPON")?;
         let mut out = Rolled { frames: Vec::new(), rolls: Vec::new(), plan: (0, 0, 0, 0), messages: Vec::new() };
         let mut planned = false;
         let mut frame = 0usize;
@@ -748,7 +737,7 @@ impl<'a> Guide<'a> {
                 for slot in 0..INVENTORY_SLOTS {
                     let at = owner + UNIT_INVENTORY + 2 * slot;
                     let entry = gba.read16(at);
-                    if entry & INVENTORY_EQUIPPED != 0 && types.get(usize::from(entry & ITEM_ID_MASK)).map(String::as_str) == Some(ITEM_TYPE_WEAPON) {
+                    if entry & INVENTORY_EQUIPPED != 0 && types.get(usize::from(entry & ITEM_ID_MASK)) == Some(&weapon_type) {
                         gba.write16(at, (entry & !ITEM_ID_MASK) | weapon.unwrap_or(0));
                         swapped = true;
                     }
@@ -966,7 +955,7 @@ const UNIT_HAUNT: u32 = 0x140;
 const UNIT_HP: u32 = 0x38;
 /// The counters `added-effects` reads, from attackTurns to sleep.
 const COUNTERS: [&str; 11] = ["ATTACKTURNS", "ATTACKSTAGE", "DEFENSETURNS", "DEFENSESTAGE", "RESISTANCETURNS", "RESISTANCESTAGE", "DELUSION", "CONFUSION", "CHARM", "STUN", "SLEEP"];
-/// abilities.tsv: Impair, Delude, Guard.
+/// Ability ids: Impair, Delude, Guard.
 const IMPAIR: u16 = 108;
 const DELUDE: u16 = 116;
 const GUARD: u16 = 106;
@@ -978,7 +967,7 @@ const COMMAND_DEFEND: u16 = 3;
 const PLACE_PARTY: u16 = 0x100;
 const PLACE_ENEMY: u16 = 0x180;
 const UNIT_AGILITY: u32 = 0x40;
-/// formations.tsv row 1: one Vermin.
+/// gFormations row 1: one Vermin.
 const ONE_VERMIN: u32 = 1;
 /// Frames from a change to its message written out.
 const SHOWN: usize = 24;

@@ -53,6 +53,9 @@ mod probe_places;
 #[cfg(feature = "render")]
 mod source;
 mod plan;
+// Read only by the feature's commands and by plan.rs.
+#[cfg_attr(not(feature = "render"), allow(dead_code))]
+mod tables;
 // Read only by the feature's commands; without it they say how to build them.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 mod story;
@@ -68,7 +71,7 @@ writes each cast as DIR/<ability>.gif: the whole 240 by 160 screen at 30
 frames a second, looping, from the cast's message to the next round. DIR/index.tsv
 lists each file's ability id, name, caster, target and frames at 30 a
 second. DIR defaults to out/EDITION/psynergy. --all casts every ability usable
-in battle that the party learns (classes.tsv and the items that teach one),
+in battle that the party learns (its classes and the items that teach one),
 and lists the rest with why they are left out; --ability casts one by id or
 English name. --list prints the casts instead of playing them; --verbose
 prints each run's setup: the party, the units' classes and the sprites

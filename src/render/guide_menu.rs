@@ -90,15 +90,6 @@ struct Hit {
     r: [u32; 4],
 }
 
-/// One column of a table file.
-fn column(path: &str, name: &str) -> Result<Vec<String>, String> {
-    let path = crate::compile::root().join(path);
-    let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-    let mut lines = text.lines();
-    let c = lines.next().unwrap_or("").split('\t').position(|c| c == name).ok_or(format!("{} has no {name} column", path.display()))?;
-    Ok(lines.map(|l| l.split('\t').nth(c).unwrap_or("").to_string()).collect())
-}
-
 impl<'a> Guide<'a> {
     /// Holds each step of `path`, keeping every frame, with each entry of
     /// one of `hooks` and `each` called after every frame.
@@ -174,7 +165,7 @@ impl<'a> Guide<'a> {
             ("PSYNERGY_STEP_TARGET", self.sym("PsynergyMenu_SelectTarget")?, "PsynergyMenu_SelectTarget"),
             ("PSYNERGY_STEP_APPLY", self.sym("Ability_ApplyToTargets")?, "Ability_ApplyToTargets"),
         ];
-        let abilities = column("games/tbs/src/game/abilities.tsv", "ability")?;
+        let abilities = super::tables::Game::here()?.ability_names()?;
         let mut field = self.enter(XIAN)?;
         let isaac = field.unit(ISAAC)?;
         let garet = field.unit(GARET)?;
@@ -272,7 +263,7 @@ impl<'a> Guide<'a> {
     /// the unit, as `djinn-preview.png`.
     pub fn djinn_preview(&mut self) -> Result<(), String> {
         let compare = self.sym("PsynergyList_RunCompareLoop")?;
-        let abilities = column("games/tbs/src/game/abilities.tsv", "ability")?;
+        let abilities = super::tables::Game::here()?.ability_names()?;
         let classes = self.class_names();
         let mut field = self.enter(XIAN)?;
         let isaac = field.unit(ISAAC)?;
@@ -421,7 +412,7 @@ impl<'a> Guide<'a> {
     /// Fills Isaac's inventory: his equipped items with GIVEN between them.
     fn give_items(field: &mut Field, unit: u32, items: &[String]) -> Result<(), String> {
         let held: Vec<u16> = (0..INVENTORY_SLOTS).map(|i| field.read16(unit + UNIT_INVENTORY + 2 * i)).filter(|&e| e != 0).collect();
-        let id = |n: &str| items.iter().position(|i| i == n).map(|p| p as u16).ok_or(format!("items.tsv has no {n}"));
+        let id = |n: &str| items.iter().position(|i| i == n).map(|p| p as u16).ok_or(format!("no item is named {n}"));
         let mut list = Vec::new();
         for (k, &(name, count)) in GIVEN.iter().enumerate() {
             list.push(id(name)? | (count - 1) << INVENTORY_QUANTITY_SHIFT);
@@ -462,7 +453,7 @@ impl<'a> Guide<'a> {
     /// `item-sorting.png`.
     pub fn item_sorting(&mut self) -> Result<(), String> {
         let sort = self.sym("ItemMenu_Sort")?;
-        let items = column("games/tbs/src/game/items.tsv", "item")?;
+        let items = super::tables::Game::here()?.item_names()?;
         let mut field = self.enter(XIAN)?;
         let isaac = field.unit(ISAAC)?;
         Self::give_items(&mut field, isaac, &items)?;
@@ -517,7 +508,7 @@ impl<'a> Guide<'a> {
     /// `status-panels.png`.
     pub fn status_panels(&mut self) -> Result<(), String> {
         let draw = self.sym("StatusPanel_Draw")?;
-        let items = column("games/tbs/src/game/items.tsv", "item")?;
+        let items = super::tables::Game::here()?.item_names()?;
         // (kind's name, mode, screen) for each panel.
         let mut panels: Vec<(String, u32, Vec<u16>, String)> = Vec::new();
         let names = |m: u32| match m & 0xff {

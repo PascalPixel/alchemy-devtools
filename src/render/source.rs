@@ -1,9 +1,9 @@
 //! Game facts the renderer reads from the Broken Seal's source rather than
 //! keeping copies of: map numbers (gMapHeaders), area names
 //! (gMapSec_NameRules and text/en.po), ability numbers and names
-//! (ability_ids.h, abilities.tsv), object events' local ids (each map's
+//! (ability_ids.h, MsgAbilityName), object events' local ids (each map's
 //! enum), characters (character_ids.h) and the debug party presets
-//! (presets.tsv).
+//! (gDebug_PartyPresets, read from the build by tables.rs).
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -211,14 +211,13 @@ pub fn ability_id(name: &str) -> Result<u16, String> {
     enumerator("include/ability_ids.h", name).map(|v| v as u16)
 }
 
-/// The game's name for ability `id`: abilities.tsv's ability column.
+/// The game's name for ability `id`: message MsgAbilityName plus `id`.
 pub fn ability_name(id: u16) -> Result<String, String> {
-    let abilities = super::plan::abilities(&read("src/game/abilities.tsv")?)?;
-    abilities
+    super::tables::Game::here()?
+        .ability_names()?
         .into_iter()
         .nth(usize::from(id))
-        .map(|a| a.name)
-        .ok_or_else(|| format!("abilities.tsv has no row {id}"))
+        .ok_or_else(|| format!("gAbilityDefinitions has no row {id}"))
 }
 
 /// The local id of object event `name` on map `MapId_<map>`, from the map
@@ -304,19 +303,15 @@ pub fn character_names() -> Result<Vec<String>, String> {
     }
 }
 
-/// The members debug party preset `preset` raises (presets.tsv, read by
-/// DebugParty_LoadPreset: runs of rows, each ended by a member of -1).
+/// The members debug party preset `preset` raises (gDebug_PartyPresets, read
+/// by DebugParty_LoadPreset: runs of rows, each ended by DEBUG_PRESET_END).
 pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
-    let text = read("src/battle/presets.tsv")?;
+    let game = super::tables::Game::here()?;
+    let end = game.constant("DEBUG_PRESET_END")?;
     let mut current = 0;
     let mut members = Vec::new();
-    for line in text.lines().skip(1) {
-        let unit = line
-            .split('\t')
-            .next()
-            .and_then(number)
-            .ok_or_else(|| format!("presets.tsv: {line}"))?;
-        if unit == -1 {
+    for unit in game.table("gDebug_PartyPresets", "DebugPartyEntry")?.column("unitId")? {
+        if unit == end {
             if current == preset {
                 return Ok(members);
             }
@@ -325,7 +320,7 @@ pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
             members.push(unit as u8);
         }
     }
-    Err(format!("presets.tsv has no preset {preset}"))
+    Err(format!("gDebug_PartyPresets has no preset {preset}"))
 }
 
 #[cfg(test)]

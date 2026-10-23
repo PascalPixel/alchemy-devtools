@@ -341,7 +341,7 @@ const FIELD_CASTS: &[FieldCast] = &[
 ];
 
 /// A field cast read through the source: the ability's number and name
-/// (abilities.tsv), the map's number, its area name there (scene), and the
+/// (gAbilityDefinitions), the map's number, its area name there (scene), and the
 /// object event's local id.
 struct Cast {
     id: u16,
@@ -854,7 +854,7 @@ mod tests {
     fn field_casts_resolve_through_the_source() {
         let casts = field_casts().unwrap();
         let names = field_cast_names().unwrap();
-        // Every field Psynergy once: abilities.tsv's kind-9 rows from Move to
+        // Every field Psynergy once: the kind-9 abilities from Move to
         // Avoid, as ability_ids.h numbers them.
         let (first, last) = (source::ability_id("ABILITY_MOVE").unwrap(), source::ability_id("ABILITY_AVOID").unwrap());
         let mut ids: Vec<u16> = casts.iter().map(|c| c.id).collect();
