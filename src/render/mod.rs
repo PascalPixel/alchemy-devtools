@@ -1079,7 +1079,9 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
               MOMENT_FRAMES, every MOMENT_EVERY-th frame from MOMENT_FROM
               labelled; A every MOMENT_A frames; for each of MOMENT_ACTORS,
               what it adds to the screen (moment-F-actor-N.png and -pair.png:
-              with it and moved away); MOMENT_OAM prints blended sprites
+              with it and moved away); MOMENT_OAM prints blended sprites;
+              MOMENT_PLANES writes those frames' planes in planes/moment-F/;
+              MOMENT_CELLS prints where the map holds those cell codes
   status-layers-3d
               status-layers-3d.gif: the Status screen pulled apart
   world-map   world-map-walk.gif: the world map's perspective view, walking

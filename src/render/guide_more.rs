@@ -448,7 +448,9 @@ impl<'a> Guide<'a> {
     /// actor is and what it adds to the screen, the next frames with it and
     /// with it moved to the map's origin compared. MOMENT_A presses A that
     /// often to page through messages, and MOMENT_OAM prints the sprite
-    /// list's blended entries.
+    /// list's blended entries. MOMENT_PLANES also writes each of those
+    /// frames as its planes, into `planes/moment-<frame>/`. MOMENT_CELLS
+    /// prints where the map holds each of its collision codes.
     pub fn play_moment(&mut self) -> Result<(), String> {
         let var = |name: &str| std::env::var(name).unwrap_or_default();
         let place: Vec<u16> = var("MOMENT_PLACE").split(',').filter_map(|v| v.trim().parse().ok()).collect();
@@ -473,6 +475,24 @@ impl<'a> Guide<'a> {
         let setup = super::field::Setup { scene, entrance, set, clear };
         let mut entered = Field::enter(self.rom, self.symbols, &setup)?;
         let field = &mut entered;
+        // MOMENT_CELLS: where the map holds each of these collision codes
+        // (the event rows' cell codes): each cell's top-left corner in
+        // pixels on its map layer and its ground's height, which lifts it
+        // that far up the picture. A map picture (render place's map-N.png)
+        // starts at the scroll bounds' top left, also printed.
+        let codes: Vec<u16> = var("MOMENT_CELLS").split(',').filter_map(|v| v.trim().parse().ok()).collect();
+        if !codes.is_empty() {
+            let b = field.bounds();
+            println!("scroll bounds: x {}..{} z {}..{}", b[0] >> 16, b[2] >> 16, b[1] >> 16, b[3] >> 16);
+        }
+        for code in codes {
+            let size = field.cell_size();
+            for (layer, cx, cz) in field.cells_with_code(code)? {
+                let (x, z) = (cx * size, cz * size);
+                let height = field.ground(layer, x + size / 2, z + size / 2)? >> 16;
+                println!("cell code {code}: layer {layer}, x {x} z {z}, height {height}");
+            }
+        }
         let mut shots = vec![field.picture()];
         // MOMENT_A: A pressed for 3 frames every so many, to page through
         // the scene's messages.
@@ -486,6 +506,13 @@ impl<'a> Guide<'a> {
             field.frames(1)?;
             shots.push(field.picture());
             if n % every == 0 && n >= from {
+                // MOMENT_PLANES: the same moment taken apart, each plane
+                // alone in planes/moment-<frame>/, for an illustration to
+                // crop. planes_now comes back to the saved moment, so the
+                // recording goes on unchanged.
+                if !var("MOMENT_PLANES").is_empty() {
+                    self.planes_now(field, &format!("planes/moment-{n}"), "a moment")?;
+                }
                 let image = Self::labelled_actors(field)?;
                 self.guide_png(&format!("moment-{n}.png"), &image, "a moment, its actors labelled")?;
                 if !var("MOMENT_OAM").is_empty() {
