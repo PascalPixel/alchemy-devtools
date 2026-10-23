@@ -146,3 +146,54 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod properties {
+    use super::*;
+
+    /// The unit-cost edit distance, by the textbook table.
+    fn distance(a: &[&str], b: &[&str]) -> usize {
+        let mut previous: Vec<usize> = (0..=b.len()).collect();
+        for (i, x) in a.iter().enumerate() {
+            let mut current = vec![i + 1; b.len() + 1];
+            for (j, y) in b.iter().enumerate() {
+                current[j + 1] = (previous[j] + usize::from(x != y)).min(previous[j + 1] + 1).min(current[j] + 1);
+            }
+            previous = current;
+        }
+        previous[b.len()]
+    }
+
+    /// Blocks are equal spans in order, end with the empty block at both
+    /// ends, and leave gaps whose cost (the longer side of each) sums to the
+    /// edit distance: an optimal alignment.
+    fn check(a: &[&str], b: &[&str]) {
+        let blocks = matching_blocks(a, b);
+        assert_eq!(blocks.last(), Some(&(a.len(), b.len(), 0)));
+        let (mut at_a, mut at_b, mut cost) = (0, 0, 0);
+        for &(i, j, n) in &blocks {
+            assert!(i >= at_a && j >= at_b, "{blocks:?}");
+            assert_eq!(a[i..i + n], b[j..j + n], "{blocks:?}");
+            cost += (i - at_a).max(j - at_b);
+            (at_a, at_b) = (i + n, j + n);
+        }
+        assert_eq!(cost, distance(a, b), "{a:?} / {b:?}: {blocks:?}");
+    }
+
+    #[test]
+    fn alignments_are_optimal_equal_spans() {
+        let mut state: u64 = 0x2545_f491_4f6c_dd1d;
+        let mut next = |limit: usize| {
+            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            (state >> 33) as usize % limit
+        };
+        const LETTERS: [&str; 4] = ["w", "x", "y", "z"];
+        for case in 0..400 {
+            let longest = if case < 390 { 40 } else { 1500 };
+            let letters = 1 + next(4);
+            let a: Vec<&str> = (0..next(longest + 1)).map(|_| LETTERS[next(letters)]).collect();
+            let b: Vec<&str> = (0..next(longest + 1)).map(|_| LETTERS[next(letters)]).collect();
+            check(&a, &b);
+        }
+    }
+}

@@ -1037,10 +1037,13 @@ mod tests {
         }
     }
 
+    /// Every fixture program, for the passes and walks below.
+    const FIXTURE_CASES: [&str; 11] = ["flow", "nested", "regions", "arithmetic", "types", "assignments", "shadow", "lifetime", "structs", "manyvars", "inline"];
+
     #[test]
     fn passes_match_in_nested_blocks_and_regions() {
         let mut failures = Vec::new();
-        for row in include_str!("c/fixtures/mutations-auxiliary.tsv").lines().chain(include_str!("c/fixtures/mutations-expression.tsv").lines()).chain(include_str!("c/fixtures/mutations-types-assignments.tsv").lines()).chain(include_str!("c/fixtures/mutations-lifetime.tsv").lines()).chain(include_str!("c/fixtures/mutations-final.tsv").lines()) {
+        for row in include_str!("c/fixtures/mutations-passes.tsv").lines() {
             let c: Vec<_> = row.split('\t').collect();
             let kind = fixture_kind(c[1]);
             let mut unit = parsed(fixture_source(c[0]));
@@ -1057,12 +1060,62 @@ mod tests {
     }
 
     #[test]
+    fn passes_are_whole_and_seeded_on_every_fixture() {
+        let mut changes: BTreeSet<Kind> = BTreeSet::new();
+        for case in FIXTURE_CASES {
+            let base = parsed(fixture_source(case));
+            for (kind, _) in Kind::GCC {
+                for seed in 0..16 {
+                    let (mut unit, mut rng) = (base.clone(), Rng::new(seed));
+                    let context = format!("{case} {kind:?} seed {seed}");
+                    if !apply(&mut unit, "target", kind, &mut rng) {
+                        assert_eq!(unit, base, "{context}: a failed pass leaves its input");
+                        continue;
+                    }
+                    let (mut again, mut again_rng) = (base.clone(), Rng::new(seed));
+                    assert!(apply(&mut again, "target", kind, &mut again_rng), "{context}");
+                    assert_eq!((&unit, rng.random()), (&again, again_rng.random()), "{context}: the seed decides the result");
+                    if unit != base {
+                        changes.insert(kind);
+                    }
+                }
+            }
+        }
+        let idle: Vec<_> = Kind::GCC.iter().map(|(k, _)| *k).filter(|k| !changes.contains(k)).collect();
+        assert!(idle.is_empty(), "passes that changed no fixture: {idle:?}");
+    }
+
+    #[test]
     fn successive_mutations_match_source_hashes_retries_and_rng() {
-        check_walks(include_str!("c/fixtures/mutations-integer-seeds.tsv"), &[include_str!("c/fixtures/mutations-auxiliary.tsv"), include_str!("c/fixtures/mutations-expression.tsv"), include_str!("c/fixtures/mutations-types-assignments.tsv"), include_str!("c/fixtures/mutations-lifetime.tsv"), include_str!("c/fixtures/mutations-final.tsv")], true);
-        check_walks(include_str!("c/fixtures/mutations-final-walks.tsv"), &[include_str!("c/fixtures/mutations-auxiliary.tsv"), include_str!("c/fixtures/mutations-expression.tsv"), include_str!("c/fixtures/mutations-types-assignments.tsv"), include_str!("c/fixtures/mutations-lifetime.tsv"), include_str!("c/fixtures/mutations-final.tsv")], true);
-        check_walks(include_str!("c/fixtures/mutations-walks.tsv"), &[include_str!("c/fixtures/mutations-auxiliary.tsv"), include_str!("c/fixtures/mutations-expression.tsv")], false);
-        check_walks(include_str!("c/fixtures/mutations-types-walks.tsv"), &[include_str!("c/fixtures/mutations-auxiliary.tsv"), include_str!("c/fixtures/mutations-expression.tsv"), include_str!("c/fixtures/mutations-types-assignments.tsv")], true);
-        check_walks(include_str!("c/fixtures/mutations-lifetime-walks.tsv"), &[include_str!("c/fixtures/mutations-auxiliary.tsv"), include_str!("c/fixtures/mutations-expression.tsv"), include_str!("c/fixtures/mutations-types-assignments.tsv"), include_str!("c/fixtures/mutations-lifetime.tsv")], true);
+        check_walks(include_str!("c/fixtures/mutations-integer-seeds.tsv"), &[include_str!("c/fixtures/mutations-passes.tsv")], true);
+    }
+
+    #[test]
+    fn walks_agree_with_the_driver_and_replay_on_every_fixture() {
+        for case in FIXTURE_CASES {
+            for seed in 0..4 {
+                let (mut unit, mut rng) = (parsed(fixture_source(case)), Rng::new(seed));
+                for step in 0..12 {
+                    let context = format!("{case} seed {seed} step {step}");
+                    let (mut driven, mut driver_rng) = (unit.clone(), rng.clone());
+                    let mut restored = unit.clone();
+                    let sites = Sites::new(&unit, "target", &mut rng).unwrap();
+                    let kind = loop {
+                        let kind = Kind::GCC[weighted(&mut rng, Kind::GCC.iter().map(|(_, w)| *w))].0;
+                        if apply_sites(&mut unit, "target", kind, &mut rng, &sites) {
+                            break kind;
+                        }
+                    };
+                    let taken = mutate(&mut driven, "target", &mut driver_rng).unwrap();
+                    assert_eq!(driven, unit, "{context}: production mutation driver");
+                    assert_eq!(driver_rng.clone().random(), rng.clone().random(), "{context}: driver random state");
+                    let super::super::mutate::Kind::Full(replayed) = taken.kind else { panic!() };
+                    assert_eq!(replayed, kind, "{context}");
+                    assert!(replay(&mut restored, "target", kind, &mut taken.rng.clone(), taken.region), "{context}");
+                    assert_eq!(restored, unit, "{context}: replay");
+                }
+            }
+        }
     }
 
     fn check_walks(walks: &str, fixtures: &[&str], full_text: bool) {
