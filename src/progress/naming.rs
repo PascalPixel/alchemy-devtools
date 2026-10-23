@@ -1,10 +1,10 @@
 //! Whether names can be guessed from one another. Alchemy's bar for a
 //! humanized name is that a reader who knows one name of a family can predict
 //! the others: one word for each idea, one shape for each family, and a small
-//! vocabulary of prefixes that the folder guides list (S3). These checks read
+//! vocabulary of prefixes (S3). These checks read
 //! every name the source defines or declares (functions, globals, macros,
 //! enumerators, tags, typedefs and struct members, and the variables declared
-//! with a struct type) and the folder guides, never the ROM, and report where
+//! with a struct type), never the ROM, and report where
 //! a name disagrees with its siblings:
 //!
 //! - `synonym`: a name that spells an idea with a second word where the game
@@ -19,7 +19,6 @@
 //!   a family prefix without its `_`, a place that isn't first where the
 //!   family puts it first, or a count or bound on the other side from the
 //!   rest of the game);
-//! - `prefix_unlisted`: a function prefix no folder guide lists;
 //! - `prefix_twin`: one idea under two prefixes (`ANIM_` and `ANIMATION_`).
 //!
 //! Each rule measures a name against what the rest of the game does, so a
@@ -77,52 +76,19 @@ pub struct Typed {
     pub scope: Option<usize>,
 }
 
-/// What the checks read: every name, the struct-typed variables, the
-/// folder guides (`src/<folder>/README.md`) with their text, the
-/// identifiers pret's flash library uses (`PRET_FLASH`), and the names
-/// `names.tsv` records as pret's own (`pret_names`).
+/// What the checks read: every name, the struct-typed variables and the
+/// identifiers pret's flash library uses (`PRET_FLASH`).
 #[derive(Default)]
 pub struct Names {
     pub names: Vec<Name>,
     pub typed: Vec<Typed>,
-    pub guides: Vec<(String, String)>,
     pub pret: HashSet<String>,
-    pub pret_names: HashSet<String>,
 }
 
-/// The identifiers of the rows of a game's `names.tsv` whose source column
-/// is `pret`, from their name column: `PaletteSelection, PALETTES_ALL/BG/OBJECTS`
-/// gives `PaletteSelection`, `PALETTES_ALL`, `PALETTES_BG` and
-/// `PALETTES_OBJECTS`, and `OBJECT_SYSTEM_LAYOUT, _WORLD_MAP` gives
-/// `OBJECT_SYSTEM_WORLD_MAP` too, the last segment replaced.
-pub fn pret_names(tsv: &str) -> HashSet<String> {
-    let mut out = HashSet::new();
-    for row in tsv.lines().skip(1) {
-        let columns: Vec<&str> = row.split('\t').collect();
-        if columns.get(2) != Some(&"pret") {
-            continue;
-        }
-        // The last name written in full, whose stem the short forms take.
-        let mut last = String::new();
-        for token in columns[0].split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '/')) {
-            for (index, part) in token.split('/').enumerate() {
-                let stem = last.rsplit_once('_').map_or("", |(stem, _)| stem);
-                let (name, full) = match part.strip_prefix('_') {
-                    Some(tail) if !stem.is_empty() => (format!("{stem}_{tail}"), false),
-                    None if index > 0 && !stem.is_empty() => (format!("{stem}_{part}"), false),
-                    _ => (part.to_string(), true),
-                };
-                if name.len() > 1 && name.starts_with(|c: char| c.is_ascii_alphabetic()) {
-                    if full {
-                        last = name.clone();
-                    }
-                    out.insert(name);
-                }
-            }
-        }
-    }
-    out
-}
+/// Names pret spells with a plural prefix beside a singular one
+/// (pokeemerald's `PALETTES_ALL` beside `PALETTE_`, its `TRACKS_ALL`), which
+/// the games keep as pret writes them.
+pub const PRET_PLURALS: &[&str] = &["PALETTES_ALL", "PALETTES_BG", "PALETTES_OBJECTS", "TRACKS_ALL"];
 
 /// The files of pret's flash library, the Makefile's `FLASH_C`, which
 /// pret's `old_agbcc` builds. Their names are pret's (`gFlashNumRemainingBytes`,
@@ -466,12 +432,11 @@ pub fn check(names: &Names, text: Option<&GameText>) -> Vec<Finding> {
     let families = collect_families(&all);
     let runs = Runs::new(&all);
     let hardware = hardware_segments(&names.names);
-    let twins = twin_prefixes(&all, &hardware, &names.pret_names, &mut out);
+    let twins = twin_prefixes(&all, &hardware, &mut out);
     words_of_one_idea(&all, &usage, &runs, &twins, &hardware, text, &mut out);
     referents(names, &mut out);
     shapes(&all, &families, text, &mut out);
     measures(&all, &mut out);
-    unlisted_prefixes(&all, &names.guides, text, &mut out);
     out
 }
 
@@ -998,49 +963,6 @@ fn measures(all: &[&Name], out: &mut Vec<Finding>) {
     }
 }
 
-/// Whether a guide lists a prefix: `Battle_` written in it, after a
-/// character that can't be part of a name.
-fn lists(guide: &str, prefix: &str) -> bool {
-    let needle = format!("{prefix}_");
-    guide.match_indices(&needle).any(|(at, _)| guide[..at].chars().next_back().is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_')))
-}
-
-/// `games/<game>/src/<folder>/...`: the folder.
-fn folder(file: &str) -> Option<&str> {
-    let parts: Vec<&str> = file.split('/').collect();
-    (parts.len() > 4 && parts[2] == "src").then(|| parts[3])
-}
-
-/// `prefix_unlisted`: a function prefix no folder guide lists. S3 adds each
-/// new prefix to its folder's guide and lets a function take the prefix of
-/// a thing the engine names elsewhere, so a prefix counts as listed when any
-/// folder guide writes it (`Battle_`); a map's functions take its place's
-/// name (the map guide), so in `src/map` a prefix that is a place's
-/// name or its start (`Fuchin_` of Fuchin Falls Cave, `LemurianShip_` of
-/// `MapId_LemurianShip`) is listed too. Each
-/// unlisted prefix is reported once per folder, at its first function.
-fn unlisted_prefixes(all: &[&Name], guides: &[(String, String)], text: Option<&GameText>, out: &mut Vec<Finding>) {
-    // The places: the area names and the map ids, which H3 names from them.
-    let mut areas = area_words(text);
-    areas.extend(all.iter().filter_map(|name| name.name.strip_prefix("MapId_").or_else(|| name.name.strip_prefix("SceneId_"))).map(words).filter(|place| !place.is_empty()));
-    let mut unlisted: BTreeMap<(&str, &str), Vec<&Name>> = BTreeMap::new();
-    for &name in all.iter().filter(|name| name.kind == NameKind::Function) {
-        let (Some(family), Some(folder)) = (prefix(&name.name), folder(&name.file)) else { continue };
-        if !family.bytes().any(|b| b.is_ascii_lowercase()) || guides.iter().any(|(_, guide)| lists(guide, family)) {
-            continue;
-        }
-        if matches!(folder, "map" | "scene") && is_place(family, &areas) {
-            continue;
-        }
-        unlisted.entry((folder, family)).or_default().push(name);
-    }
-    for ((folder, family), members) in unlisted {
-        let first = members[0];
-        let what = format!("{} functions; not in src/{folder}/README.md or another folder guide (first: {})", members.len(), first.name);
-        out.push(Finding { metric: "prefix_unlisted", file: first.file.clone(), line: first.line, what: format!("{family}_\t{what}") });
-    }
-}
-
 /// `prefix_twin`: two prefixes for one idea, their words the same once each
 /// shortened word is spelled out, each `SPELLINGS` word is its set's and
 /// plurals are singular (`BattleObj_` and `BattleObject_`, `ANIM_` and
@@ -1049,11 +971,11 @@ fn unlisted_prefixes(all: &[&Name], guides: &[(String, String)], text: Option<&G
 /// are left out, so are macros written as calls, which may start with a
 /// verb (`COUNT_ALL_CURES` counts, beside pret's `NUM_MUSIC_PLAYERS`), and so is a shortened word that is a hardware register's
 /// segment (`OBJ_` of `OBJ_AFFINE_MATRIX_COUNT`, the hardware's OBJ, not a
-/// shortened object). A plural prefix whose names are all pret's, as
-/// `names.tsv` records them (`PALETTES_ALL` beside `PALETTE_`), is pret's
-/// set and left out. The spelling fewer names use is reported, at its first name;
+/// shortened object). A plural prefix whose names are all pret's
+/// (`PRET_PLURALS`: `PALETTES_ALL` beside `PALETTE_`) is pret's set and left
+/// out. The spelling fewer names use is reported, at its first name;
 /// the set of those prefixes is returned.
-fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, pret_names: &HashSet<String>, out: &mut Vec<Finding>) -> HashSet<String> {
+fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, out: &mut Vec<Finding>) -> HashSet<String> {
     let mut by_prefix: BTreeMap<&str, Vec<&Name>> = BTreeMap::new();
     for &name in all.iter().filter(|name| !matches!(name.kind, NameKind::Field | NameKind::FunctionMacro)) {
         if let Some(family) = prefix(&name.name)
@@ -1065,7 +987,7 @@ fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, pret_names: &HashSet
     }
     by_prefix.retain(|family, members| {
         let plural = words(family).last().is_some_and(|word| singular(word) != *word);
-        !(plural && members.iter().all(|name| pret_names.contains(&name.name)))
+        !(plural && members.iter().all(|name| PRET_PLURALS.contains(&name.name.as_str())))
     });
     let mut ideas: BTreeMap<Vec<String>, Vec<(&str, &Vec<&Name>)>> = BTreeMap::new();
     for (family, members) in &by_prefix {
@@ -1354,17 +1276,6 @@ mod tests {
 
     #[test]
     fn plural_prefixes_pret_writes() {
-        let tsv = concat!(
-            "name\tkind\tsource\tevidence\n",
-            "PaletteSelection, PALETTES_ALL/BG/OBJECTS\tenum\tpret\tpret PALETTES_ALL\n",
-            "OBJECT_SYSTEM_LAYOUT, _WORLD_MAP, _BATTLE\tconstant\tpret\tenum ObjectSystemMode\n",
-            "TRACKS_FEW\tconstant\tcommon\tnot pret's\n",
-        );
-        let pret = pret_names(tsv);
-        for expected in ["PaletteSelection", "PALETTES_ALL", "PALETTES_BG", "PALETTES_OBJECTS", "OBJECT_SYSTEM_WORLD_MAP", "OBJECT_SYSTEM_BATTLE"] {
-            assert!(pret.contains(expected), "{expected} in {pret:?}");
-        }
-        assert!(!pret.contains("TRACKS_FEW") && !pret.contains("BG"));
         let file = "games/tbs/include/a.h";
         let mut list: Vec<Name> = ["PALETTES_ALL", "PALETTES_BG", "PALETTES_OBJECTS", "TRACKS_ALL", "TRACKS_FEW"]
             .iter()
@@ -1374,8 +1285,7 @@ mod tests {
         for (at, n) in ["PALETTE_A", "PALETTE_B", "PALETTE_C", "TRACK_A", "TRACK_B", "TRACK_C"].iter().enumerate() {
             list.push(name(n, NameKind::Enumerator, file, at + 10));
         }
-        let mut names = Names { names: list, pret_names: pret, ..Names::default() };
-        names.pret_names.insert("TRACKS_ALL".to_string());
+        let names = Names { names: list, ..Names::default() };
         let twins: Vec<String> = check(&names, None).into_iter().filter(|f| f.metric == "prefix_twin").map(|f| f.what).collect();
         assert_eq!(twins, ["TRACKS_\t2 names; one idea with TRACK_ (3 names)"], "a plural prefix is pret's only when all its names are");
     }

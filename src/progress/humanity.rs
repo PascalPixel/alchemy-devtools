@@ -1328,13 +1328,8 @@ pub fn game<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>) -> Report {
 pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, text: Option<&GameText>) -> Report {
     let mut report = Report::default();
     for (path, text) in files {
-        if path.ends_with("/names.tsv") {
-            report.naming.pret_names.extend(naming::pret_names(text));
-            continue;
-        }
         if path.ends_with("/README.md") {
             unit(&mut report, path, text);
-            report.naming.guides.push((path.to_string(), text.to_string()));
             continue;
         }
         file(&mut report, path, text);
@@ -1467,8 +1462,7 @@ fn unit(report: &mut Report, path: &str, text: &str) {
     report.units.push(Unit { file: path.to_string(), open, listed });
 }
 
-/// The tracked C, headers and folder guides of a game, and its `names.tsv`,
-/// never build output.
+/// The tracked C, headers and folder guides of a game, never build output.
 fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     let output = std::process::Command::new("git")
         .arg("-C")
@@ -1476,7 +1470,6 @@ fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
         .args(["ls-files", "-z", "--"])
         .arg(format!("games/{game}/src"))
         .arg(format!("games/{game}/include"))
-        .arg(format!("games/{game}/names.tsv"))
         .output()
         .map_err(|error| format!("cannot run git: {error}"))?;
     if !output.status.success() {
@@ -1484,7 +1477,7 @@ fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     }
     let mut files = Vec::new();
     for path in String::from_utf8_lossy(&output.stdout).split('\0') {
-        if path.ends_with(".c") || path.ends_with(".h") || path.ends_with("/names.tsv") || is_folder_guide(path) {
+        if path.ends_with(".c") || path.ends_with(".h") || is_folder_guide(path) {
             let bytes = std::fs::read(root.join(path)).map_err(|error| format!("cannot read {path}: {error}"))?;
             files.push((path.to_string(), String::from_utf8_lossy(&bytes).into_owned()));
         }
@@ -1548,7 +1541,6 @@ const ROWS: &[(&str, &str)] = &[
     ("synonym_referent", "  one type, two variable names"),
     ("abbreviation", "  shortened, spelled elsewhere"),
     ("family_shape", "  off their family's pattern"),
-    ("prefix_unlisted", "  prefixes no guide lists"),
     ("prefix_twin", "  one idea under two prefixes"),
     ("", "to review, not to fill (D9):"),
     ("undocumented_function", "  functions without ///"),
@@ -1563,7 +1555,7 @@ const LISTED: &[&str] = &[
     "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "goto", "if_language", "if_patch",
     "if_in_function", "undocumented_entry", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
     "undocumented_global", "provenance_none", "provenance_prose", "provenance_table_mismatch", "unused_word_name",
-    "door_word_link", "unit_open", "synonym", "synonym_referent", "abbreviation", "family_shape", "prefix_unlisted", "prefix_twin",
+    "door_word_link", "unit_open", "synonym", "synonym_referent", "abbreviation", "family_shape", "prefix_twin",
 ];
 
 impl Report {
@@ -2215,10 +2207,6 @@ mod naming_tests {
         );
         let typed: Vec<(&str, &str)> = report.naming.typed.iter().map(|typed| (typed.tag.as_str(), typed.name.as_str())).collect();
         assert_eq!(typed, [("Unit", "unit"), ("Unit", "target")]);
-        assert_eq!(
-            list(&[("tbs", &report)], "prefix_unlisted"),
-            "tbs\tgames/tbs/src/battle/a.c:5\tSpoils_\t1 functions; not in src/battle/README.md or another folder guide (first: Spoils_Count)\n"
-        );
         assert_eq!(
             list(&[("tbs", &report)], "abbreviation"),
             "tbs\tgames/tbs/src/battle/a.c:1\titemCnt\tcnt -> count: itemCount (3 names spell count, as UNIT_COUNT does)\n"
