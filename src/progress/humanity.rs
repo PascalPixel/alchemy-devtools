@@ -77,7 +77,7 @@ struct Declared {
 }
 
 /// A unit H4 judges: a map overlay or a folder guide, how many of its
-/// open questions are `- XXX:` or `- XXX (picture):` items, and whether it
+/// open questions are `- XXX:` items, and whether it
 /// has the list at all (`/// Open questions:`, `## Evidence and open
 /// questions`).
 pub struct Unit {
@@ -1419,10 +1419,9 @@ fn is_folder_guide(path: &str) -> bool {
     parts.len() == 5 && parts[2] == "src" && parts[4] == "README.md"
 }
 
-/// Notes a unit's open questions (H4): the `- XXX:` and `- XXX (picture):`
-/// items of a map overlay's `Open questions:` list or of a folder guide's
-/// `## Evidence and open questions` section. `- XXX (no evidence):` items
-/// leave a unit done.
+/// Notes a unit's open questions (H4): the `- XXX:` items of a map
+/// overlay's `Open questions:` list or of a folder guide's `## Evidence and
+/// open questions` section. `- XXX (no evidence):` items leave a unit done.
 fn unit(report: &mut Report, path: &str, text: &str) {
     let guide = path.ends_with("/README.md");
     let (mut on, mut listed, mut open) = (false, false, 0);
@@ -1450,7 +1449,7 @@ fn unit(report: &mut Report, path: &str, text: &str) {
             }
             line.strip_prefix("/// - ")
         };
-        if let Some(item) = item.filter(|item| on && (item.starts_with("XXX:") || item.starts_with("XXX (picture):"))) {
+        if let Some(item) = item.filter(|item| on && item.starts_with("XXX:")) {
             open += 1;
             report.note("unit_open", path, i + 1, item);
         }
