@@ -8,6 +8,7 @@ use super::field::{box_holds, Actor, Field, Image, Spot, CELL_WALL, STEP_DOWN, S
 use super::guide::{Entered, Guide};
 use super::mgba::{HEIGHT, WIDTH};
 use super::places::write_png;
+use super::source;
 use super::story::{Trigger, MOVE};
 
 const KEY_A: u32 = 0x1;
@@ -1053,7 +1054,7 @@ impl<'a> Guide<'a> {
     /// its rooms), the longest.
     pub(super) fn goma_cave_stretch(&self) -> Result<((u16, u16), Stretch), String> {
         let mut best: Option<(i32, (u16, u16), Stretch)> = None;
-        for scene in GOMA_CAVE_ROOMS {
+        for scene in source::map_id(GOMA_CAVE_ROOMS.0)?..=source::map_id(GOMA_CAVE_ROOMS.1)? {
             let table = self.enter_goma_cave((scene, 1))?.field.entrances();
             for entrance in table.iter().map(|e| e.number as u16) {
                 for across in [true, false] {
@@ -1258,9 +1259,9 @@ pub(super) struct Stretch {
     keys: [u32; 2],
 }
 
-/// Goma Cave's rooms: the pond, the pillar room, the stream and the bridge
-/// (MapId_GomaCavePond to MapId_GomaCaveBridge).
-const GOMA_CAVE_ROOMS: [u16; 4] = [26, 27, 28, 29];
+/// Goma Cave's rooms: the pond, the pillar room, the stream and the bridge,
+/// gMapHeaders' rows from MapId_GomaCavePond to MapId_GomaCaveBridge.
+const GOMA_CAVE_ROOMS: (&str, &str) = ("GomaCavePond", "GomaCaveBridge");
 /// The most of the 32 by 32 pixels around the leader that may be black as a
 /// random battle is walked into: an eighth.
 const DARK_LIMIT: u32 = 128;

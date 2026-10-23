@@ -35,7 +35,7 @@
 //! moving (a pushed pillar) still moves.
 
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, LR, SP, WIDTH};
-use super::party::{chapter, order};
+use super::party::{chapter, order, Party};
 use super::story::{Trigger, CARRY, MOVE};
 use crate::ld_map::Map;
 use std::collections::HashMap;
@@ -424,6 +424,8 @@ pub struct Field<'rom> {
     /// Registers set as the CPU reaches an address: (address, register,
     /// value), as a caller would have passed the value.
     pub register_pokes: Vec<(u32, u32, u32)>,
+    /// The story chapter the scene falls in (party.rs), if any.
+    party: Option<&'static Party>,
 }
 
 impl<'rom> Field<'rom> {
@@ -479,7 +481,7 @@ impl<'rom> Field<'rom> {
             party_calls: 0,
             party_saved: [0; 5],
         };
-        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false };
+        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
         while !field.t.applied {
             field.tick()?;
         }
@@ -669,7 +671,7 @@ impl<'rom> Field<'rom> {
     /// the scene loads: Camelot's debug preset, then every member's HP and PP
     /// restored (Party_RestoreHpPp).
     fn party_calls(&self) -> Vec<(u32, u32)> {
-        match chapter(self.setup.scene).and_then(|c| c.preset) {
+        match self.party.and_then(|c| c.preset) {
             Some(preset) => vec![(self.s.preset, preset), (self.s.restore, 1)],
             None => Vec::new(),
         }
@@ -709,7 +711,7 @@ impl<'rom> Field<'rom> {
     /// now, the chapter's members first (party::order); before the run's
     /// flags decide, the chapter's members are the party flags.
     fn list_party(&mut self) {
-        let Some(chapter) = chapter(self.setup.scene) else {
+        let Some(chapter) = self.party else {
             return;
         };
         if self.t.phase == Phase::Defaults {
@@ -718,7 +720,7 @@ impl<'rom> Field<'rom> {
             self.apply_flags();
         }
         let flags = self.gba.read8(self.s.flag_bytes);
-        let party = order(chapter.members, flags);
+        let party = order(&chapter.members, flags);
         for (i, &owner) in party.iter().enumerate() {
             self.gba.write8(self.s.game_state + GS_ACTIVE_OWNERS + i as u32, owner);
         }

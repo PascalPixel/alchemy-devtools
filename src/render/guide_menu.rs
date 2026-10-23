@@ -8,6 +8,7 @@ use super::guide::Guide;
 use super::guide_more::{canvas, outline, paste, screen};
 use super::guide_take::{crop, text};
 use super::mgba::{HEIGHT, WIDTH};
+use super::source;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -38,7 +39,6 @@ fn open_screen(icon: u32) -> Vec<(u32, u32)> {
 /// The characters by number.
 const ISAAC: u8 = 0;
 const GARET: u8 = 1;
-const NAMES: [&str; 8] = ["ISAAC", "GARET", "IVAN", "MIA", "", "JENNA", "", ""];
 
 /// struct Unit (battle/battle_unit.h).
 const UNIT_MAX_HP: u32 = 0x34;
@@ -165,6 +165,7 @@ impl<'a> Guide<'a> {
     /// step, with what the screen's work and the units hold then, as
     /// `psynergy-steps.png`.
     pub fn menu_psynergy_steps(&mut self) -> Result<(), String> {
+        let names = source::character_names()?;
         let menu = self.sym("gMenuWork")?;
         let steps = [
             ("PSYNERGY_STEP_MEMBER", self.sym("PsynergyMenu_SelectPartySlot")?, "PsynergyMenu_SelectPartySlot"),
@@ -221,11 +222,11 @@ impl<'a> Guide<'a> {
         let (_, target, action, hp_after, pp_after) = reads[last];
         let user = reads[at[0]].0;
         let lines: [Vec<String>; 5] = [
-            vec![format!("THE USER, OWNERIDS[0]: {}", NAMES[usize::from(user)])],
+            vec![format!("THE USER, OWNERIDS[0]: {}", names[usize::from(user)])],
             vec![format!("THE PSYNERGY, PANEACTION[0]: {}", name(reads[at[1]].2))],
             vec!["IT WORKS ON ONE MEMBER,".to_string(), "SO THE NEXT STEP IS _TARGET".to_string()],
-            vec![format!("THE TARGET, OWNERIDS[1]: {}", NAMES[usize::from(target)])],
-            vec![format!("{}'S HP: {hp_before} TO {hp_after}", NAMES[usize::from(target)]), format!("{}'S PP: {pp_before} TO {pp_after}", NAMES[usize::from(user)])],
+            vec![format!("THE TARGET, OWNERIDS[1]: {}", names[usize::from(target)])],
+            vec![format!("{}'S HP: {hp_before} TO {hp_after}", names[usize::from(target)]), format!("{}'S PP: {pp_before} TO {pp_after}", names[usize::from(user)])],
         ];
         eprintln!("psynergy-steps: at {at:?}; {} {action}; {lines:?}", name(action));
         let (cw, ch) = (2 * WIDTH + 16, 2 * HEIGHT + 90);

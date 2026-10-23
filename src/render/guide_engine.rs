@@ -8,6 +8,7 @@ use super::guide::Guide;
 use super::guide_more::{canvas, hue, mix, outline, paste, screen};
 use super::guide_take::text;
 use super::mgba::{HEIGHT, WIDTH};
+use super::source;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -44,9 +45,6 @@ const MARK: u32 = 0xff_d8_40;
 const HEAD: u32 = 0x9c_c8_ff;
 const RED: u32 = 0xff_50_50;
 const GREEN: u32 = 0x60_e0_70;
-
-/// The eight characters by owner number.
-const CHARACTERS: [&str; 8] = ["ISAAC", "GARET", "IVAN", "MIA", "FELIX", "JENNA", "SHEBA", "PIERS"];
 
 /// The rare items whose counters MenuTest_Initialize raises,
 /// by item id (item_ids.h), with how many times it raises each.
@@ -116,6 +114,7 @@ impl<'a> Guide<'a> {
     /// party is sent into the room as FieldScript_SetDestination sends it, and the
     /// entry's runs are counted by probing it.
     pub fn menu_test_setup(&mut self) -> Result<(), String> {
+        let characters = source::character_names()?;
         let setup_fn = self.overlay_sym("MenuTest_GetEvents", "MenuTest_Initialize")?;
         let state = self.sym("gSaveBlock")?;
         let mut entered = self.enter_with(VALE, &[])?;
@@ -164,14 +163,14 @@ impl<'a> Guide<'a> {
                 let then = if n == 0 { now } else { states[n - 1].1.members.iter().find(|m| m.0 == owner) };
                 let Some(&(_, level)) = now else {
                     if then.is_some() {
-                        text(&mut image, x, y, &format!("{:<13}LEFT", CHARACTERS[owner]), RED, None, 2);
+                        text(&mut image, x, y, &format!("{:<13}LEFT", characters[owner]), RED, None, 2);
                         y += 16;
                     }
                     continue;
                 };
                 let changed = n > 0 && then.map(|t| t.1) != Some(level);
                 let colour = if then.is_none() { GREEN } else if changed { MARK } else { INK };
-                text(&mut image, x, y, &format!("{:<13}{level:>3}", CHARACTERS[owner]), colour, None, 2);
+                text(&mut image, x, y, &format!("{:<13}{level:>3}", characters[owner]), colour, None, 2);
                 y += 16;
             }
             let y = HEIGHT as i32 + 16 + 20 + 16 + 16 * 5 + 8;

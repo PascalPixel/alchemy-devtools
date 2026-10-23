@@ -6,6 +6,7 @@
 use super::animation;
 use super::field::{box_holds, Field, Saved, Setup, Spot, Start, Symbols};
 use super::mgba::{HEIGHT, WIDTH};
+use super::source;
 use super::story::{Flags, Trigger};
 use std::path::Path;
 
@@ -302,17 +303,17 @@ pub(super) fn draw_sheets(sheets: &[Vec<Option<u32>>], e: f64) -> Vec<u32> {
     canvas
 }
 
-/// A field Psynergy recorded for the abilities' index: its ability id, the
-/// scene it is cast in (scene, entrance), what it is cast at (an actor, or
-/// none for one cast on the area), where the leader stands for an area
-/// cast (pixels, facing), and the frames kept after the player has control
+/// A field Psynergy recorded for the abilities' index: the ability
+/// (ability_ids.h), the map and warp destination it is cast in, what it is
+/// cast at (an object event's local id, or none for one cast on the area)
+/// and in this renderer's words, where the leader stands for an area cast
+/// (pixels, facing), and the frames kept after the player has control
 /// again.
 struct FieldCast {
-    id: u16,
-    name: &'static str,
-    place: (u16, u16),
-    scene: &'static str,
-    actor: Option<u16>,
+    ability: &'static str,
+    map: &'static str,
+    warp_dest: u16,
+    actor: Option<&'static str>,
     target: &'static str,
     stand: Option<(i32, i32, u32)>,
     tail: u32,
@@ -323,21 +324,55 @@ const FACE_NORTH: u32 = 0xc000;
 const FACE_EAST: u32 = 0x0000;
 
 /// Where each field Psynergy that had no recording is cast: on the thing
-/// its scene's event answers, or in the room whose event it changes.
+/// its map's event answers, or in the room whose event it changes.
 /// A Psynergy may be listed more than once, at places tried in turn.
 const FIELD_CASTS: &[FieldCast] = &[
-    FieldCast { id: 144, name: "Reveal", place: (94, 1), scene: "Vale Cave", actor: None, target: "the hidden floor", stand: Some((248, 280, FACE_NORTH)), tail: 600 },
-    FieldCast { id: 140, name: "Move", place: (4, 1), scene: "Vale", actor: Some(20), target: "a stone pillar", stand: None, tail: 40 },
-    FieldCast { id: 150, name: "Avoid", place: (27, 5), scene: "Goma Cave", actor: None, target: "the party", stand: None, tail: 30 },
-    FieldCast { id: 141, name: "Mind Read", place: (4, 1), scene: "Vale", actor: Some(18), target: "Garet's sister", stand: None, tail: 20 },
-    FieldCast { id: 148, name: "Catch", place: (4, 1), scene: "Vale", actor: Some(26), target: "a Nut", stand: None, tail: 30 },
-    FieldCast { id: 149, name: "Retreat", place: (27, 5), scene: "Goma Cave", actor: None, target: "the party", stand: None, tail: 240 },
-    FieldCast { id: 142, name: "Force", place: (72, 0), scene: "Xian", actor: Some(21), target: "the training tree", stand: None, tail: 30 },
-    FieldCast { id: 143, name: "Lift", place: (158, 0), scene: "Gondowan Cave", actor: Some(11), target: "a boulder", stand: None, tail: 30 },
-    FieldCast { id: 147, name: "Carry", place: (173, 0), scene: "Tunnel Ruins", actor: Some(13), target: "a stone block", stand: None, tail: 60 },
-    FieldCast { id: 146, name: "Cloak", place: (159, 0), scene: "Lunpa Fortress", actor: None, target: "the party", stand: None, tail: 120 },
-    FieldCast { id: 145, name: "Halt", place: (94, 5), scene: "Vale Cave", actor: Some(8), target: "Kite", stand: Some((792, 256, FACE_NORTH)), tail: 60 },
+    FieldCast { ability: "ABILITY_REVEAL", map: "ValeCaveKite", warp_dest: 1, actor: None, target: "the hidden floor", stand: Some((248, 280, FACE_NORTH)), tail: 600 },
+    FieldCast { ability: "ABILITY_MOVE", map: "Vale", warp_dest: 1, actor: Some("LOCALID_PILLAR"), target: "a stone pillar", stand: None, tail: 40 },
+    FieldCast { ability: "ABILITY_AVOID", map: "GomaCavePillar", warp_dest: 5, actor: None, target: "the party", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_MIND_READ", map: "Vale", warp_dest: 1, actor: Some("LOCALID_GARETS_SISTER"), target: "Garet's sister", stand: None, tail: 20 },
+    FieldCast { ability: "ABILITY_CATCH", map: "Vale", warp_dest: 1, actor: Some("LOCALID_NUT"), target: "a Nut", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_RETREAT", map: "GomaCavePillar", warp_dest: 5, actor: None, target: "the party", stand: None, tail: 240 },
+    FieldCast { ability: "ABILITY_FORCE", map: "Xian", warp_dest: 0, actor: Some("LOCALID_FORCE_TARGET"), target: "the training tree", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_LIFT", map: "GondowanCave", warp_dest: 0, actor: Some("LOCALID_BOULDER"), target: "a boulder", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_CARRY", map: "TunnelRuinsLadyStatues", warp_dest: 0, actor: Some("LOCALID_MIDDLE_CARRY_STONE"), target: "a stone block", stand: None, tail: 60 },
+    FieldCast { ability: "ABILITY_CLOAK", map: "LunpaFortressGates", warp_dest: 0, actor: None, target: "the party", stand: None, tail: 120 },
+    FieldCast { ability: "ABILITY_HALT", map: "ValeCaveKite", warp_dest: 5, actor: Some("LOCALID_KITE"), target: "Kite", stand: Some((792, 256, FACE_NORTH)), tail: 60 },
 ];
+
+/// A field cast read through the source: the ability's number and name
+/// (abilities.tsv), the map's number, its area name there (scene), and the
+/// object event's local id.
+struct Cast {
+    id: u16,
+    name: String,
+    place: (u16, u16),
+    scene: String,
+    actor: Option<u16>,
+    target: &'static str,
+    stand: Option<(i32, i32, u32)>,
+    tail: u32,
+}
+
+fn field_casts() -> Result<Vec<Cast>, String> {
+    FIELD_CASTS
+        .iter()
+        .map(|cast| {
+            let id = source::ability_id(cast.ability)?;
+            let map = source::map_id(cast.map)?;
+            Ok(Cast {
+                id,
+                name: source::ability_name(id)?,
+                place: (map, cast.warp_dest),
+                scene: source::area_name(map, cast.warp_dest)?,
+                actor: cast.actor.map(|name| source::local_id(cast.map, name)).transpose()?,
+                target: cast.target,
+                stand: cast.stand,
+                tail: cast.tail,
+            })
+        })
+        .collect()
+}
 
 /// The longest a field cast is recorded, at 60 frames a second.
 const CAST_FRAMES: usize = 1800;
@@ -424,7 +459,7 @@ impl<'a> Guide<'a> {
     /// Records one field cast: from its entrance, and for a cast on an
     /// actor the leader cannot reach from there, from each entrance whose
     /// room holds the actor.
-    fn record_cast(&self, cast: &FieldCast) -> Result<Vec<Vec<u16>>, String> {
+    fn record_cast(&self, cast: &Cast) -> Result<Vec<Vec<u16>>, String> {
         let mut entered = self.enter_with(cast.place, &[])?;
         let trigger = Trigger::Psynergy(cast.id, cast.actor.unwrap_or(0));
         if let (Some(_), Some(stand)) = (cast.actor, cast.stand) {
@@ -470,25 +505,26 @@ impl<'a> Guide<'a> {
     /// answers it, as `<name>.gif` with a row of `index.tsv`.
     pub fn field_psynergy(&mut self, only: &[String]) -> Result<(), String> {
         let mut failed = Vec::new();
-        let mut done: Vec<&str> = Vec::new();
-        for (i, cast) in FIELD_CASTS.iter().enumerate() {
-            if done.contains(&cast.name) || (!only.is_empty() && !only.iter().any(|o| o.eq_ignore_ascii_case(cast.name))) {
+        let mut done: Vec<String> = Vec::new();
+        let casts = field_casts()?;
+        for (i, cast) in casts.iter().enumerate() {
+            if done.contains(&cast.name) || (!only.is_empty() && !only.iter().any(|o| o.eq_ignore_ascii_case(&cast.name))) {
                 continue;
             }
-            let last = !FIELD_CASTS[i + 1..].iter().any(|c| c.name == cast.name);
-            let file = format!("{}.gif", super::plan::slug(cast.name));
+            let last = !casts[i + 1..].iter().any(|c| c.name == cast.name);
+            let file = format!("{}.gif", super::plan::slug(&cast.name));
             match self.record_cast(cast) {
                 Ok(frames) => {
                     let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.iter().map(|&c| animation::rgb(c)).collect()).collect();
                     let written = animation::write(&self.out.join(&file), &rgb, WIDTH)?;
                     self.written.push((file.clone(), written.bytes, format!("{} cast at {} in {}", cast.name, cast.target, cast.scene)));
                     self.casts.push(format!("{}\t{}\tIsaac\t{}\t{}\t{file}\t{}", cast.id, cast.name, cast.target, written.frames, cast.scene));
-                    done.push(cast.name);
+                    done.push(cast.name.clone());
                 }
                 Err(e) => {
                     eprintln!("{} in {}: {e}", cast.name, cast.scene);
                     if last {
-                        failed.push(cast.name);
+                        failed.push(cast.name.clone());
                     }
                 }
             }
@@ -499,14 +535,14 @@ impl<'a> Guide<'a> {
 
 
 /// The field Psynergy `field-psynergy` casts, each once, in its order.
-pub fn field_cast_names() -> Vec<&'static str> {
-    let mut names: Vec<&str> = Vec::new();
-    for cast in FIELD_CASTS {
+pub fn field_cast_names() -> Result<Vec<String>, String> {
+    let mut names: Vec<String> = Vec::new();
+    for cast in field_casts()? {
         if !names.contains(&cast.name) {
             names.push(cast.name);
         }
     }
-    names
+    Ok(names)
 }
 
 /// Every mode, in the order `render guide` plays them.
@@ -807,5 +843,25 @@ impl Guide<'_> {
             Self::hold(&mut field, keys, n, &mut frames)?;
         }
         self.explode_now(&mut field, "status-layers-3d.gif", "the Status screen in Vale")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn field_casts_resolve_through_the_source() {
+        let casts = field_casts().unwrap();
+        let names = field_cast_names().unwrap();
+        // Every field Psynergy once: abilities.tsv's kind-9 rows from Move to
+        // Avoid, as ability_ids.h numbers them.
+        let (first, last) = (source::ability_id("ABILITY_MOVE").unwrap(), source::ability_id("ABILITY_AVOID").unwrap());
+        let mut ids: Vec<u16> = casts.iter().map(|c| c.id).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids, (first..=last).collect::<Vec<_>>());
+        assert_eq!(names.len(), ids.len());
+        assert!(casts.iter().all(|c| !c.scene.is_empty()));
     }
 }

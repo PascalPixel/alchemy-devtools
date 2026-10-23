@@ -50,6 +50,8 @@ mod places;
 mod probe;
 #[cfg(feature = "render")]
 mod probe_places;
+#[cfg(feature = "render")]
+mod source;
 mod plan;
 // Read only by the feature's commands; without it they say how to build them.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
@@ -1254,7 +1256,7 @@ fn play_guide(
     for &name in guide::MODES.iter().chain(guide_engine::MODES).filter(|&&name| wanted(name)) {
         if name == "field-psynergy" {
             let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
-            units.extend(guide::field_cast_names().into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
+            units.extend(guide::field_cast_names()?.into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
         } else {
             units.push(name.to_string());
         }
