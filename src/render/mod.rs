@@ -1061,8 +1061,10 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
   layers-3d   layers-3d.gif: Vale's layers pulled apart into sheets in 3D,
               and planes/field/: each plane alone as a transparent PNG with
               planes.tsv, the order the registers give (guide_planes.rs)
-  battle-layers-3d, world-map-layers-3d, menu-layers-3d, talk-layers-3d
-              a Goma Cave battle, the world map, the field menu and a message,
+  battle-layers-3d, world-map-layers-3d, menu-layers-3d, talk-layers-3d,
+  shop-layers-3d
+              a Goma Cave battle, the world map, the field menu, a message and
+              Bilibin's item shop asking what to buy,
               pulled apart the same way, each as NAME.gif, with its
               planes in planes/NAME/
   scene-actors scene-actors.png: Vale at twice its size, each actor labelled
@@ -1078,8 +1080,8 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
               labelled; A every MOMENT_A frames; for each of MOMENT_ACTORS,
               what it adds to the screen (moment-F-actor-N.png and -pair.png:
               with it and moved away); MOMENT_OAM prints blended sprites
-  item-layers-3d
-              item-layers-3d.gif: the Item screen pulled apart
+  status-layers-3d
+              status-layers-3d.gif: the Status screen pulled apart
   world-map   world-map-walk.gif: the world map's perspective view, walking
   menus, menu-start, items, boot
               the field menu, Start closing it, the Item screen, power-on
@@ -1112,7 +1114,8 @@ Take-apart pictures for places and guides, each as its mode's name with
   colosseum-satrage-lifts, tunnel-ruins-balance, venus-lighthouse-aerie-eruption
   (and venus-lighthouse-aerie-layers-3d.gif), scene-event-cells,
   credits-tile-ring, title-intro-layers-3d, item-screen-windows, sound-players,
-  field-requests, grid-planes, tile-animation, world-map-scanlines
+  field-requests, grid-planes, tile-animation, world-map-scanlines,
+  world-map-footprint
 Take-apart pictures for the battle, effect, field and shop guides
 (guide_apart.rs):
   round-events      round-events.gif: Quake's battle events one frame each,
@@ -1331,4 +1334,22 @@ fn play_guide(
         problems.insert(0, format!("{} failed", failed.join(", ")));
     }
     if problems.is_empty() { Ok(()) } else { Err(problems.join("\n")) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every mode `render guide` plays is named in its usage, so a new one
+    /// (`shop-layers-3d`) or a renamed one (`status-layers-3d`) can be found
+    /// from `--help`.
+    #[test]
+    fn every_guide_mode_is_in_the_usage() {
+        let words: Vec<&str> = GUIDE_USAGE.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-')).collect();
+        for &mode in guide::MODES.iter().chain(guide_engine::MODES) {
+            assert!(words.contains(&mode), "{mode} is not in GUIDE_USAGE");
+        }
+        assert!(guide::MODES.contains(&"shop-layers-3d"));
+        assert!(!guide::MODES.contains(&"item-layers-3d"));
+    }
 }

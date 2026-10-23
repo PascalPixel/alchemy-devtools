@@ -507,7 +507,7 @@ pub fn field_cast_names() -> Vec<&'static str> {
 
 /// Every mode, in the order `render guide` plays them.
 pub const MODES: &[&str] = &[
-    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "menu-layers-3d", "item-layers-3d", "talk-layers-3d", "scene-actors", "debug-rooms", "debug-room-talks", "moment", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
+    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "menu-layers-3d", "status-layers-3d", "talk-layers-3d", "shop-layers-3d", "scene-actors", "debug-rooms", "debug-room-talks", "moment", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
     "inn", "menu-psynergy", "credits", "sleep", "oam", "vram", "cells", "grid", "random-battle", "world-map-picture", "overlay",
     "tret-tree-branch-split",
     "kolima-forest-tree-healing",
@@ -587,8 +587,9 @@ impl Guide<'_> {
             "battle-layers-3d" => self.battle_exploded(),
             "world-map-layers-3d" => self.world_map_exploded(),
             "menu-layers-3d" => self.menu_exploded(),
-            "item-layers-3d" => self.item_exploded(),
+            "status-layers-3d" => self.status_exploded(),
             "talk-layers-3d" => self.talk_exploded(),
+            "shop-layers-3d" => self.shop_exploded(),
             "scene-actors" => self.scene_actors(),
             "debug-rooms" => self.debug_rooms(),
             "debug-room-talks" => self.debug_room_talks(),
@@ -790,15 +791,17 @@ impl Guide<'_> {
         self.explode_now(&mut field, "menu-layers-3d.gif", "the field menu in Vale")
     }
 
-    /// The Item screen open in Vale, pulled apart, as `item-layers-3d.gif`:
-    /// the field menu's third icon chosen, its windows and its item icons
-    /// apart from the map behind them.
-    pub fn item_exploded(&mut self) -> Result<(), String> {
+    /// The Status screen open in Vale, pulled apart, as `status-layers-3d.gif`:
+    /// the field menu's third icon chosen (the Djinn icon is left out until
+    /// the first Djinni joins, so it is Status), its party row, its windows
+    /// and their text on BG0, and the figures, portrait and hand as sprites,
+    /// over the map they hide.
+    pub fn status_exploded(&mut self) -> Result<(), String> {
         let mut field = self.enter(VALE)?;
         let mut frames = Vec::new();
         for (keys, n) in [(0, 20), (KEY_A, 4), (0, 50), (KEY_RIGHT, 4), (0, 30), (KEY_RIGHT, 4), (0, 30), (KEY_A, 4), (0, 90)] {
             Self::hold(&mut field, keys, n, &mut frames)?;
         }
-        self.explode_now(&mut field, "item-layers-3d.gif", "the Item screen in Vale")
+        self.explode_now(&mut field, "status-layers-3d.gif", "the Status screen in Vale")
     }
 }

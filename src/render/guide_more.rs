@@ -304,6 +304,18 @@ impl<'a> Guide<'a> {
         self.guide_gif("shop.gif", &frames, "buying at Bilibin's item shop")
     }
 
+    /// Bilibin's item shop as the shopkeeper asks `What would you like?`,
+    /// pulled apart, as `shop-layers-3d.gif`: Buy chosen, the price, coins,
+    /// list and description windows open on BG0 with their text drawn into
+    /// them, and the message's letters, the portrait and the item icons as
+    /// sprites over them. The path is `shop.gif`'s up to that question.
+    pub fn shop_exploded(&mut self) -> Result<(), String> {
+        let (mut entered, _) = self.stand_where(BILIBIN_ITEM_SHOP, Trigger::Talk(BILIBIN_ITEM_SHOPKEEPER), BILIBIN_ITEM_SHOPKEEPER, |s| s.facing == NORTH)?;
+        entered.field.set_coins(500);
+        Self::press_path(&mut entered.field, &[(0, 20), (KEY_A, 3), (0, 100), (KEY_A, 3), (0, 50)])?;
+        self.explode_now(&mut entered.field, "shop-layers-3d.gif", "Bilibin's item shop")
+    }
+
     /// Bilibin's inn, the party given 500 coins: a night's stay, the fade
     /// to black and back, as `inn.gif`.
     pub fn inn(&mut self) -> Result<(), String> {
