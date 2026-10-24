@@ -719,7 +719,10 @@ impl Guide<'_> {
             "status-pages" => self.status_pages(),
             "status-panels" => self.status_panels(),
             "item-sorting" => self.item_sorting(),
-            _ => self.run_engine(name),
+            _ => match self.fight(name) {
+                Some(result) => result,
+                None => self.run_engine(name),
+            },
         }
     }
 }
