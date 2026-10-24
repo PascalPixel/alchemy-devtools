@@ -1,7 +1,8 @@
 //! `render story`: pictures for The Broken Seal's front page, each played
 //! from a built edition as the game shows it: the title's logo card, Vale's
 //! farewell to Isaac and Garet, the world map cut after Venus Lighthouse is
-//! lit, and the whole world map laid flat.
+//! lit and after Mercury Lighthouse is lit, with the aerie it goes on to,
+//! and the whole world map laid flat.
 
 use super::animation;
 use super::field::{Field, Image, Setup, Symbols};
@@ -14,10 +15,16 @@ use std::path::Path;
 /// title's entrance 10 shows the logo card after the ending; ValeHome's 12
 /// runs EventScript_DepartForQuest; the world map's 91 plays
 /// WorldMap_PlayLighthouseTransition(1) after Venus Lighthouse's beacon
-/// erupts.
+/// erupts, and its 90 WorldMap_PlayLighthouseTransition(0) after Mercury
+/// Lighthouse's is lit, going on to the Lighthouse Aerie
+/// (MapId_MercuryLighthouseAerie) at MERCURY_LIGHTHOUSE_AERIE_AFTER_BEACON_LIT.
 const TITLE: (u16, u16) = (0, 3);
 const VALE_HOME: (u16, u16) = (5, 12);
 const WORLD_MAP: (u16, u16) = (2, 91);
+const WORLD_MAP_AFTER_MERCURY_LIGHTHOUSE_LIT: (u16, u16) = (2, 90);
+const MERCURY_LIGHTHOUSE_AERIE: u16 = 58;
+/// Frames the aerie is kept once the player has control there.
+const ARRIVAL_HOLD: usize = 30;
 
 /// Frames a page is held before A, so a GIF shows it.
 const PAGE_HOLD: u32 = 45;
@@ -156,6 +163,51 @@ impl Front<'_> {
         self.png("venus-lighthouse-lit.png", &image(&still.picture), "the beacon's flare held at the lighthouse's top")?;
         Ok(())
     }
+
+    /// The world map cut at entrance 90, after Mercury Lighthouse's beacon is
+    /// lit: WorldMap_PlayLighthouseTransition(0), the ball of light in the
+    /// lighthouse's own colours, as `mercury-lighthouse-lit.gif`, with the
+    /// frame of most of its cold light as `.png`; then the Lighthouse Aerie
+    /// it goes on to (MercuryLighthouseAerie_PartyArrives: the aerie shakes,
+    /// the camera crosses to the lit beacon and in a flash the party stands
+    /// at the top), until the player has control there, as
+    /// `mercury-lighthouse-aerie-arrival.gif`.
+    pub fn mercury_lighthouse(&mut self) -> Result<(), String> {
+        let set = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
+        let place = WORLD_MAP_AFTER_MERCURY_LIGHTHOUSE_LIT;
+        let setup = Setup { scene: place.0, entrance: place.1, set, clear: Vec::new() };
+        let mut field = Field::enter(self.rom, self.symbols, &setup)?;
+        field.set_party(&[0, 1, 2, 3]);
+        // The field loop's steps as the aerie comes up: it steps again once
+        // the player has control there.
+        let arrived: std::cell::Cell<Option<u32>> = std::cell::Cell::new(None);
+        let frames = self.record(&mut field, 6000, &|f: &Field| {
+            if f.scene() != MERCURY_LIGHTHOUSE_AERIE {
+                return false;
+            }
+            let at = *arrived.get().get_or_insert(f.steps());
+            arrived.set(Some(at));
+            f.steps() > at
+        })?;
+        let start = frames.iter().position(|f| !is_black(&f.picture)).ok_or("the cut stayed black")?;
+        let end = frames.iter().rposition(|f| !is_black(&f.picture) && f.scene == place.0).ok_or("the cut stayed black")? + 1;
+        let clip: Vec<&Frame> = frames[start..end].iter().collect();
+        self.gif("mercury-lighthouse-lit.gif", &clip, "the world map cut at entrance 90")?;
+        let still = clip.iter().max_by_key(|f| coldness(&f.picture)).ok_or("the cut is empty")?;
+        self.png("mercury-lighthouse-lit.png", &image(&still.picture), "the beacon's flare held at the lighthouse's top")?;
+        if frames.last().is_none_or(|f| f.scene != MERCURY_LIGHTHOUSE_AERIE) {
+            return Err("the cut never went on to the aerie".to_string());
+        }
+        // The player has control at the aerie: hold it a moment.
+        let mut held = Vec::new();
+        for _ in 0..ARRIVAL_HOLD {
+            field.frames(1)?;
+            held.push(Frame { picture: field.picture(), message: field.last_message(), scene: field.scene() });
+        }
+        let arrival = frames.iter().position(|f| f.scene == MERCURY_LIGHTHOUSE_AERIE && !is_black(&f.picture)).ok_or("the aerie stayed black")?;
+        let clip: Vec<&Frame> = frames[arrival..].iter().chain(held.iter()).collect();
+        self.gif("mercury-lighthouse-aerie-arrival.gif", &clip, "the Lighthouse Aerie at MERCURY_LIGHTHOUSE_AERIE_AFTER_BEACON_LIT")
+    }
 }
 
 /// An affine background plane drawn flat from VRAM: its map (a byte a
@@ -286,6 +338,11 @@ impl Front<'_> {
 /// Pixels of bright warm light: much red, little blue.
 fn warmth(picture: &[u16]) -> usize {
     picture.iter().filter(|&&c| c & 31 >= 26 && (c >> 10) & 31 <= 16).count()
+}
+
+/// The pixels of a Mercury beacon's cold light: strong blue, little red.
+fn coldness(picture: &[u16]) -> usize {
+    picture.iter().filter(|&&c| (c >> 10) & 31 >= 26 && c & 31 <= 16).count()
 }
 
 fn differ(a: &[u16], b: &[u16]) -> usize {

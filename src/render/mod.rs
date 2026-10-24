@@ -948,6 +948,10 @@ writes into DIR (default out/EDITION/story):
               town's farewell, and the town gathered
   lighthouse  venus-lighthouse-lit.gif and .png: the world map cut at its
               entrance 91 after Venus Lighthouse's beacon erupts
+  mercury     mercury-lighthouse-lit.gif and .png: the world map cut at its
+              entrance 90 after Mercury Lighthouse's beacon is lit, and
+              mercury-lighthouse-aerie-arrival.gif: the Lighthouse Aerie it
+              goes on to, until the player has control there
 --only picks some; flags.tsv is the story tools' flag names.";
 
 fn story_pictures(arguments: &[String]) -> Result<(), String> {
@@ -1047,11 +1051,12 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
             failed.push("world");
         }
     }
-    for name in ["title", "farewell", "lighthouse"] {
+    for name in ["title", "farewell", "lighthouse", "mercury"] {
         if wanted(name) {
             let result = match name {
                 "title" => front.title(),
                 "farewell" => front.farewell(4607, 4613, 4628),
+                "mercury" => front.mercury_lighthouse(),
                 _ => front.lighthouse(),
             };
             if let Err(e) = result {
@@ -1225,8 +1230,8 @@ FOLDER/NAME.gif under DIR, the guide it opens a section of:
   field-step-height, field-world-map-zoom (field/), overworld-battle-return,
   overworld-move-nothing (overworld/), layout-ledge, layout-waterfall
   (layout/), map-arrive, map-talk-twice (map/), layout-haze,
-  layout-psynergy-stone (layout/), map-colosso-race (map/,
-  guide_docs_world.rs); overworld-battle-return also
+  layout-psynergy-stone (layout/), map-colosso-race, map-venus-star-thrown
+  (map/, guide_docs_world.rs); overworld-battle-return also
   writes field/battle-swing.gif
 Recordings for the menu, window, shop and game guides, one GIF each
 (guide_menus.rs):

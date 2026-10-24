@@ -27,6 +27,18 @@ const SOL_SANCTUM_PSYNERGY_STONE: (u16, u16) = (13, 1);
 /// Colosseum Final 1 (MapId_ColosseumAzartMatch) at the race
 /// (COLOSSEUM_AZART_MATCH_RACE_FROM_LEND_A_HAND).
 const COLOSSEUM_AZART_RACE: (u16, u16) = (143, 1);
+/// Venus Lighthouse's aerie (MapId_VenusLighthouseAerie) back from the first
+/// battle (VENUS_LIGHTHOUSE_AERIE_AFTER_FIRST_BATTLE), where
+/// VenusLighthouseAerie_CombineSaturosAndMenardi plays, and the Venus Star's
+/// shadow (LOCALID_VENUS_STAR_SHADOW), kept at the map's origin until the
+/// star is thrown.
+const VENUS_LIGHTHOUSE_AERIE_AFTER_FIRST_BATTLE: (u16, u16) = (187, 2);
+const LOCALID_VENUS_STAR_SHADOW: u16 = 22;
+/// Frames kept before the shadow leaves the origin (Saturos jumps and the
+/// star shows above him), and the last frame held at the end so the loop
+/// rests before it starts again.
+const STAR_LEAD: usize = 24;
+const STAR_HOLD: usize = 30;
 
 impl<'a> Guide<'a> {
     pub(super) fn run_docs_world(&mut self, name: &str) -> Result<(), String> {
@@ -34,6 +46,7 @@ impl<'a> Guide<'a> {
             "layout-haze" => self.haze(),
             "layout-psynergy-stone" => self.psynergy_stone(),
             "map-colosso-race" => self.colosso_race(),
+            "map-venus-star-thrown" => self.venus_star_thrown(),
             _ => Err(format!("no mode {name}")),
         }
     }
@@ -92,5 +105,75 @@ impl<'a> Guide<'a> {
         Self::hold(&mut field, 0, 650, &mut frames)?;
         Self::hold(&mut field, KEY_UP, 30, &mut frames)?;
         self.world_gif("map/colosso-race.gif", &frames, "the start of Colosso's first final")
+    }
+}
+
+impl Guide<'_> {
+    /// Saturos throwing the Venus Star into Venus Lighthouse's beacon, as
+    /// `map/venus-star-thrown.gif`: the aerie back from the first battle,
+    /// its pages answered with A, from a moment before the star shows above
+    /// him (its shadow leaves the map's origin) through its three bounces
+    /// until it drops into the beacon as the group's bubbles come up (its
+    /// first emote bubble, probed), that frame held. The GIF loops forever.
+    fn venus_star_thrown(&mut self) -> Result<(), String> {
+        let set = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
+        let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
+        let place = VENUS_LIGHTHOUSE_AERIE_AFTER_FIRST_BATTLE;
+        let setup = Setup { scene: place.0, entrance: place.1, set, clear };
+        let mut field = Field::enter(self.rom, self.symbols, &setup)?;
+        // VenusLighthouseAerie_ShowGroupEmote pops each one's bubble through
+        // ObjectEvent_ShowEmote, FieldEffect_SpawnLinked.
+        let emote = self.sym("FieldEffect_SpawnLinked")?;
+        let reacted = std::rc::Rc::new(std::cell::Cell::new(false));
+        let seen = reacted.clone();
+        field.probe_pcs = vec![emote];
+        field.probe = Some(Box::new(move |_, pc, _| {
+            if pc == emote {
+                seen.set(true);
+            }
+        }));
+        let thrown = |f: &Field| f.actor(LOCALID_VENUS_STAR_SHADOW).is_some_and(|a| a.x != 0 || a.z != 0);
+        let mut star = false;
+        let mut kept: std::collections::VecDeque<Vec<u16>> = std::collections::VecDeque::new();
+        let mut frames: Vec<Vec<u16>> = Vec::new();
+        for _ in 0..12000 {
+            field.frames(1)?;
+            if field.scene() != place.0 {
+                break;
+            }
+            let picture = field.picture();
+            if !star {
+                if thrown(&field) {
+                    star = true;
+                    reacted.set(false);
+                    frames.extend(kept.drain(..));
+                    frames.push(picture);
+                } else {
+                    if field.waiting() {
+                        field.press(3)?;
+                    }
+                    kept.push_back(picture);
+                    if kept.len() > STAR_LEAD {
+                        kept.pop_front();
+                    }
+                }
+                continue;
+            }
+            frames.push(picture);
+            if reacted.get() || frames.len() > 900 {
+                break;
+            }
+        }
+        // The star leaves the screen in the frame the bubbles come up: that
+        // frame ends it, held, the star gone and the group startled.
+        field.frames(1)?;
+        frames.push(field.picture());
+        field.probe = None;
+        if !star {
+            return Err("the Venus Star was never thrown".to_string());
+        }
+        let last = frames.last().cloned().ok_or("no frames")?;
+        frames.extend(std::iter::repeat(last).take(STAR_HOLD));
+        self.world_gif("map/venus-star-thrown.gif", &frames, "Saturos throwing the Venus Star into Venus Lighthouse's beacon")
     }
 }
