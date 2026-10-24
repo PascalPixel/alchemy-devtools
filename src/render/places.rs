@@ -1157,6 +1157,12 @@ impl Context<'_> {
             };
             match field.event(start, trigger, spot, &own, messages, MAX_PAGES, record) {
                 Ok(run) if !strict => return Ok(run),
+                // Its messages open beside an actor the scene does not
+                // place here: another entrance, or a moment before, has the
+                // cast on stage.
+                Ok(run) if run.absent_speaker.is_some() => {
+                    error = format!("a message opened beside actor {}, who is not on stage here", run.absent_speaker.unwrap_or_default());
+                }
                 // Another row for the trigger ran its function: the actor
                 // with this id in another room, or a later part of the story.
                 Ok(run) if own_function.is_some() && !run.own_ran => {

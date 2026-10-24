@@ -164,6 +164,9 @@ const HOLD: u32 = 3;
 const MAX_FRAMES: u32 = 30000;
 /// Frames of the leader standing ready that open an event's recording.
 const LEAD_IN: u32 = 12;
+/// Speakers below this are the party (FieldMessage_ShowAtObject has them
+/// speak from the leader); from it on, a speaker is an actor of the scene.
+const PARTY_SPEAKERS: u16 = 8;
 /// Frames the field loop must step, with nothing to read, before the
 /// player has control again.
 const CONTROL_FRAMES: u32 = 30;
@@ -201,6 +204,8 @@ pub struct Symbols {
     update_layer: u32,
     center: u32,
     dismiss: u32,
+    /// FieldMessage_ShowAtObject, which opens a message beside its speaker.
+    speak: u32,
     objects: u32,
     typing: u32,
     choice: u32,
@@ -249,6 +254,7 @@ impl Symbols {
             update_layer: at("MapGrid_UpdateLayerScroll")?,
             center: at("MapGrid_CenterOnFollowedPoint")?,
             dismiss: at("Text_CheckTextDismissed")?,
+            speak: at("FieldMessage_ShowAtObject")?,
             objects: at("Object_UpdateAllThumb")?,
             typing: at("TextPrinter_Step")?,
             choice: at("YesNoMenu_Run")?,
@@ -323,6 +329,10 @@ struct Track {
     pin_focus: bool,
     freeze: bool,
     focus: [i32; 3],
+    /// The first speaker an event's message was opened beside that the
+    /// scene has no actor for (0 for none): the event is playing where its
+    /// cast is not on stage.
+    absent_speaker: u16,
     last_dismiss: u32,
     last_typing: u32,
     choice_return: u32,
@@ -456,6 +466,7 @@ impl<'rom> Field<'rom> {
             pin_focus: false,
             freeze: false,
             focus: [0; 3],
+            absent_speaker: 0,
             last_dismiss: 0,
             last_typing: 0,
             choice_return: 0,
@@ -909,6 +920,12 @@ impl<'rom> Field<'rom> {
         }
         if self.t.freeze && pc == s.objects {
             self.gba.return_now(0);
+        }
+        if pc == s.speak && self.t.dispatched.is_some() && self.t.absent_speaker == 0 {
+            let id = (self.gba.register(0) & 0xfff) as u16;
+            if id >= PARTY_SPEAKERS && self.actor(id).is_none() {
+                self.t.absent_speaker = id;
+            }
         }
         if pc == s.dismiss {
             self.t.last_dismiss = self.t.frame;
@@ -2226,6 +2243,7 @@ impl<'rom> Field<'rom> {
         let cap = record.unwrap_or(EVENT_LIMIT as usize);
         self.t.dispatched = None;
         let trigger_frame = self.t.frame;
+        self.t.absent_speaker = 0;
         let loads = self.t.loads;
         let entries = self.t.entries;
         let mut left = false;
@@ -2332,6 +2350,11 @@ impl<'rom> Field<'rom> {
                 break;
             }
             self.frames(1)?;
+            // A recorded event that speaks from an actor not on stage is
+            // refused (EventRun::absent_speaker): no need to play it out.
+            if record.is_some() && self.t.absent_speaker != 0 {
+                break;
+            }
             if let Some(at) = arrival {
                 match self.arrive(at, hold, &mut wait_start, &mut press_frame, &mut quiet_start)? {
                     Arrival::Going => continue,
@@ -2562,7 +2585,7 @@ impl<'rom> Field<'rom> {
             let placed = "the leader starts where the walk from the entrance does not reach, since what opens the way there is not played first".to_string();
             note = Some(note.map_or(placed.clone(), |n| format!("{placed}; {n}")));
         }
-        Ok(EventRun { pages, frames, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note })
+        Ok(EventRun { pages, frames, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker) })
     }
 
     /// One frame of an exit's arrival in the scene it leads to, which began
@@ -2847,9 +2870,11 @@ const BATTLE_OPENING: usize = 150;
 
 /// Frames a page is held before A while an event is recorded.
 const PAGE_HOLD: u32 = 45;
-/// Frames an event may run, three minutes: the longest scripted scenes seen,
-/// the stormy night at the river and Ivan joining in Vault, run under two.
-pub const EVENT_LIMIT: u32 = 10800;
+/// Frames an event may run, four minutes: Mercury Lighthouse Aerie's
+/// confrontation with Saturos runs past three to its battle, with every
+/// page held; the stormy night at the river and Ivan joining in Vault run
+/// under two.
+pub const EVENT_LIMIT: u32 = 14400;
 
 /// What an event left: its pages, when recorded its frames, and the moment
 /// the player had control again, when that was in the same scene.
@@ -2887,6 +2912,11 @@ pub struct EventRun {
     /// Why a recorded arrival stopped before the player had control: a
     /// battle began, or it ran past ARRIVAL_LIMIT.
     pub note: Option<String>,
+    /// A speaker one of the event's messages was opened beside that the
+    /// scene has no actor for: played here, its cast is not on stage (Mercury
+    /// Lighthouse Aerie's hostages after the battle), and its windows open
+    /// beside nobody.
+    pub absent_speaker: Option<u16>,
 }
 
 /// Whether entrance `e` only stands in for a room another entrance gives

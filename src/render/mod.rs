@@ -471,7 +471,7 @@ never sits on black. An arrival is followed for at most 10 seconds from
 the load; one that runs longer, or that begins a battle, ends there, and
 index.tsv's note column says so. index.tsv's leads_to column names the scene an event places the
 party in next by its SceneId symbol (its own scene for a staircase to
-another of its entrances). An event that runs past three minutes gets no
+another of its entrances). An event that runs past four minutes gets no
 GIF, noted in skipped.tsv. --messages is accepted and not read.
 
 --jobs N runs N processes of this program, each with its own libmgba
