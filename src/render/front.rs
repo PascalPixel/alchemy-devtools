@@ -167,7 +167,7 @@ impl Front<'_> {
     /// The world map cut at entrance 90, after Mercury Lighthouse's beacon is
     /// lit: WorldMap_PlayLighthouseTransition(0), the ball of light in the
     /// lighthouse's own colours, as `mercury-lighthouse-lit.gif`, with the
-    /// frame of most of its cold light as `.png`; then the Lighthouse Aerie
+    /// frame the ball of light is biggest as `.png`; then the Lighthouse Aerie
     /// it goes on to (MercuryLighthouseAerie_PartyArrives: the aerie shakes,
     /// the camera crosses to the lit beacon and in a flash the party stands
     /// at the top), until the player has control there, as
@@ -193,7 +193,7 @@ impl Front<'_> {
         let end = frames.iter().rposition(|f| !is_black(&f.picture) && f.scene == place.0).ok_or("the cut stayed black")? + 1;
         let clip: Vec<&Frame> = frames[start..end].iter().collect();
         self.gif("mercury-lighthouse-lit.gif", &clip, "the world map cut at entrance 90")?;
-        let still = clip.iter().max_by_key(|f| coldness(&f.picture)).ok_or("the cut is empty")?;
+        let still = clip.iter().max_by_key(|f| flare(&f.picture)).ok_or("the cut is empty")?;
         self.png("mercury-lighthouse-lit.png", &image(&still.picture), "the beacon's flare held at the lighthouse's top")?;
         if frames.last().is_none_or(|f| f.scene != MERCURY_LIGHTHOUSE_AERIE) {
             return Err("the cut never went on to the aerie".to_string());
@@ -340,11 +340,6 @@ fn warmth(picture: &[u16]) -> usize {
     picture.iter().filter(|&&c| c & 31 >= 26 && (c >> 10) & 31 <= 16).count()
 }
 
-/// The pixels of a Mercury beacon's cold light: strong blue, little red.
-fn coldness(picture: &[u16]) -> usize {
-    picture.iter().filter(|&&c| (c >> 10) & 31 >= 26 && c & 31 <= 16).count()
-}
-
 fn differ(a: &[u16], b: &[u16]) -> usize {
     a.iter().zip(b).filter(|(x, y)| x != y).count()
 }
@@ -365,4 +360,21 @@ fn steadiest(frames: &[&Frame]) -> std::ops::Range<usize> {
         }
     }
     best
+}
+
+/// Pale cyan and white pixels above the lighthouse's island, which the
+/// still view centres: the ball of light's size. The sea around Mercury
+/// Lighthouse is as blue as its light, and Imil's snow as white, so only
+/// this box, over the sea and the tower's top, is counted.
+fn flare(picture: &[u16]) -> usize {
+    let mut n = 0;
+    for y in 20..72 {
+        for x in 90..150 {
+            let c = picture[y * WIDTH + x];
+            if (c >> 5) & 31 >= 26 && (c >> 10) & 31 >= 28 {
+                n += 1;
+            }
+        }
+    }
+    n
 }
