@@ -1203,7 +1203,8 @@ FOLDER/NAME.gif under DIR, the guide it opens a section of:
   world-map-battle (world/), field-talk-walk, field-well-route,
   field-step-height, field-world-map-zoom (field/), overworld-battle-return,
   overworld-move-nothing (overworld/), layout-ledge, layout-waterfall
-  (layout/), map-arrive, map-talk-twice (map/)
+  (layout/), map-arrive, map-talk-twice (map/); overworld-battle-return also
+  writes field/battle-swing.gif
 --only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
 modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),

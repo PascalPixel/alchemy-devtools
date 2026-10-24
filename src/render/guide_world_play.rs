@@ -388,6 +388,9 @@ impl<'a> Guide<'a> {
             }
         }
         Self::hold(field, stretch.keys[0], 40, &mut frames)?;
+        // Isaac's and Garet's last swings, for the sprites' guide.
+        let swings = back.saturating_sub(300).max(120);
+        self.world_gif("field/battle-swing.gif", &frames[swings..(swings + 150).min(back)], "the last swings of a Goma Cave battle")?;
         // The walk and the battle's opening, then, cut, its last ten
         // seconds and the cave again.
         let mut kept = before;
