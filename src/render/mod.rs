@@ -26,6 +26,8 @@ mod guide_battle;
 #[cfg(feature = "render")]
 mod guide_cells;
 #[cfg(feature = "render")]
+mod guide_docs_world;
+#[cfg(feature = "render")]
 mod guide_effect;
 #[cfg(feature = "render")]
 mod guide_fight;
@@ -1222,7 +1224,9 @@ FOLDER/NAME.gif under DIR, the guide it opens a section of:
   world-map-battle (world/), field-talk-walk, field-well-route,
   field-step-height, field-world-map-zoom (field/), overworld-battle-return,
   overworld-move-nothing (overworld/), layout-ledge, layout-waterfall
-  (layout/), map-arrive, map-talk-twice (map/); overworld-battle-return also
+  (layout/), map-arrive, map-talk-twice (map/), layout-haze,
+  layout-psynergy-stone (layout/), map-colosso-race (map/,
+  guide_docs_world.rs); overworld-battle-return also
   writes field/battle-swing.gif
 Recordings for the menu, window, shop and game guides, one GIF each
 (guide_menus.rs):

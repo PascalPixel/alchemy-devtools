@@ -32,6 +32,9 @@ pub const MODES: &[&str] = &[
     "layout-waterfall",
     "map-arrive",
     "map-talk-twice",
+    "layout-haze",
+    "layout-psynergy-stone",
+    "map-colosso-race",
 ];
 
 impl<'a> Guide<'a> {
@@ -52,12 +55,12 @@ impl<'a> Guide<'a> {
             "layout-waterfall" => self.play(&WATERFALL),
             "map-arrive" => self.play(&ARRIVE),
             "map-talk-twice" => self.talk_twice(),
-            _ => Err(format!("no mode {name}")),
+            _ => self.run_docs_world(name),
         }
     }
 
     /// Writes `frames` as `file` under the output folder, making its folder.
-    fn world_gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
+    pub(super) fn world_gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
         if let Some(parent) = Path::new(file).parent() {
             std::fs::create_dir_all(self.out.join(parent)).map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
         }
@@ -261,7 +264,7 @@ impl<'a> Guide<'a> {
     /// Presses A and keeps every frame until the talk or search it starts
     /// is over and the player has control again, pressing A through each
     /// page that waits.
-    fn talk_through(field: &mut Field, frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
+    pub(super) fn talk_through(field: &mut Field, frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
         Self::hold(field, KEY_A, 3, frames)?;
         // The field loop stops stepping while the talk runs.
         let (mut last, mut still, mut talking, mut waited) = (field.steps(), 0, false, 0);
