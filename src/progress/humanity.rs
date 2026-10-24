@@ -76,14 +76,11 @@ struct Declared {
     entry: bool,
 }
 
-/// A unit H4 judges: a map overlay or a folder guide, how many of its
-/// open questions are `- XXX:` items, and whether it
-/// has the list at all (`/// Open questions:`, `## Evidence and open
-/// questions`).
+/// A unit H4 judges, a map overlay or a folder guide, and how many `XXX:`
+/// questions its files hold (`XXX (no evidence):` ones aside).
 pub struct Unit {
     pub file: String,
     pub open: u64,
-    pub listed: bool,
 }
 
 /// One game's counts.
@@ -99,6 +96,8 @@ pub struct Report {
     /// Each unit H4 judges (a map overlay, a folder guide) and its open
     /// questions.
     pub units: Vec<Unit>,
+    /// Each file's `XXX:` questions, by line, for its unit.
+    questions: BTreeMap<String, Vec<(usize, String)>>,
     pub function_groups: Vec<Group>,
     pub table_groups: Vec<Group>,
     /// Each counted thing, for `--list`.
@@ -1284,6 +1283,7 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
                 report.note(&format!("fakematch_{}", &capture[1]), path, comment.line, &capture[1]);
             }
         }
+        questions(report, path, comment.line, comment.text);
     }
     let mut walk = Walk {
         report,
@@ -1327,18 +1327,23 @@ pub fn game<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>) -> Report {
 /// Count a game, and with its English text check its names' provenance.
 pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, text: Option<&GameText>) -> Report {
     let mut report = Report::default();
+    let mut units = Vec::new();
     for (path, text) in files {
         if path.ends_with("/README.md") {
-            unit(&mut report, path, text);
+            questions(&mut report, path, 1, text);
+            units.push(path);
             continue;
         }
         file(&mut report, path, text);
         if is_map_overlay(path) {
-            unit(&mut report, path, text);
+            units.push(path);
         }
         if naming::is_pret_flash(path) {
             report.naming.pret.extend(naming::identifiers(text).map(str::to_string));
         }
+    }
+    for path in units {
+        unit(&mut report, path);
     }
     report.finish();
     let text = text.filter(|text| !text.is_empty());
@@ -1424,42 +1429,33 @@ fn is_folder_guide(path: &str) -> bool {
     parts.len() == 5 && parts[2] == "src" && parts[4] == "README.md"
 }
 
-/// Notes a unit's open questions (H4): the `- XXX:` items of a map
-/// overlay's `Open questions:` list or of a folder guide's `## Evidence and
-/// open questions` section. `- XXX (no evidence):` items leave a unit done.
-fn unit(report: &mut Report, path: &str, text: &str) {
-    let guide = path.ends_with("/README.md");
-    let (mut on, mut listed, mut open) = (false, false, 0);
-    for (i, line) in text.lines().enumerate() {
-        let item = if guide {
-            if let Some(heading) = line.strip_prefix("## ") {
-                on = heading == "Evidence and open questions";
-                listed |= on;
-                continue;
-            }
-            line.strip_prefix("- ")
-        } else {
-            if line == "/// Open questions:" {
-                (on, listed) = (true, true);
-                continue;
-            }
-            // A place whose last question was answered keeps the line, so it
-            // counts as done rather than never started.
-            if line == "/// Open questions: none." {
-                (on, listed) = (false, true);
-                continue;
-            }
-            if !line.starts_with("///") {
-                on = false;
-            }
-            line.strip_prefix("/// - ")
-        };
-        if let Some(item) = item.filter(|item| on && item.starts_with("XXX:")) {
-            open += 1;
-            report.note("unit_open", path, i + 1, item);
+/// Keeps the `XXX:` questions of a comment or a guide that starts at `line`.
+/// `XXX (no evidence):` marks a question nothing in reach settles, so it is
+/// not kept and leaves its unit done (H4).
+fn questions(report: &mut Report, path: &str, line: usize, text: &str) {
+    for (offset, _) in text.match_indices("XXX:") {
+        let at = line + text[..offset].matches('\n').count();
+        let question = text[offset..].lines().next().unwrap_or_default().trim_end();
+        report.questions.entry(path.to_string()).or_default().push((at, question.to_string()));
+    }
+}
+
+/// Counts a unit's open questions (H4). A map's unit is its overlay; a
+/// folder's is its guide and the C files and headers under its folder, but
+/// for the map overlays, which are units of their own.
+fn unit(report: &mut Report, path: &str) {
+    let folder = path.strip_suffix("README.md").filter(|folder| folder.ends_with('/'));
+    let mut found = Vec::new();
+    for (file, questions) in &report.questions {
+        let mine = file == path || folder.is_some_and(|folder| file.starts_with(folder) && !is_map_overlay(file));
+        if mine {
+            found.extend(questions.iter().map(|(line, question)| (file.clone(), *line, question.clone())));
         }
     }
-    report.units.push(Unit { file: path.to_string(), open, listed });
+    for (file, line, question) in &found {
+        report.note("unit_open", file, *line, question);
+    }
+    report.units.push(Unit { file: path.to_string(), open: found.len() as u64 });
 }
 
 /// The tracked C, headers and folder guides of a game, never build output.
@@ -1518,7 +1514,7 @@ const ROWS: &[(&str, &str)] = &[
     ("long_file", "objects over 3,000 lines"),
     ("units", "units (places and folder guides)"),
     ("units_done", "  done under H4"),
-    ("unit_open", "  open questions in them"),
+    ("unit_open", "  XXX: questions in them"),
     ("duplicate_function", "duplicate function groups"),
     ("duplicate_function_copies", "  copies past the first"),
     ("duplicate_table", "duplicate table groups"),
@@ -1566,7 +1562,7 @@ impl Report {
             "fakematch" => DEVICES.iter().map(|kind| self.total(&format!("fakematch_{kind}"))).sum(),
             "long_file" => self.long_files.len() as u64,
             "units" => self.units.len() as u64,
-            "units_done" => self.units.iter().filter(|unit| unit.listed && unit.open == 0).count() as u64,
+            "units_done" => self.units.iter().filter(|unit| unit.open == 0).count() as u64,
             "duplicate_function" => self.function_groups.len() as u64,
             "duplicate_function_copies" => Report::copies(&self.function_groups) as u64,
             "duplicate_table" => self.table_groups.len() as u64,
@@ -1785,6 +1781,34 @@ mod tests {
 
     fn one(text: &str) -> Report {
         game([("f.c", text)])
+    }
+
+    #[test]
+    fn a_unit_is_open_while_its_files_hold_an_xxx() {
+        let report = game([
+            ("games/tbs/src/shop/README.md", "# Shops\n\n## Evidence\n\nNamed from the counters.\n"),
+            ("games/tbs/src/shop/shop/run.c", "// XXX: why three; a probe would settle it.\nvoid Shop_Run(void) {}\n"),
+            ("games/tbs/src/shop/shop/inn.c", "void Inn_Run(void) {\n  // XXX (no evidence): why; only the source says.\n}\n"),
+            ("games/tbs/src/map/README.md", "# Maps\n"),
+            ("games/tbs/src/map/common/door.h", "/// A door.\nstruct Door { int x; };\n"),
+            ("games/tbs/src/map/vale.c", "/// @file\n/// Vale.\n\nvoid Vale_Run(void) {\n  /* XXX: what this is; its render. */\n}\n"),
+            ("games/tbs/src/map/vault.c", "/// @file\n/// Vault.\n// XXX (no evidence): what the ivy is for; nothing says.\n"),
+        ]);
+        let open: Vec<(&str, u64)> = report.units.iter().map(|unit| (unit.file.as_str(), unit.open)).collect();
+        assert_eq!(
+            open,
+            [
+                ("games/tbs/src/shop/README.md", 1),
+                ("games/tbs/src/map/README.md", 0),
+                ("games/tbs/src/map/vale.c", 1),
+                ("games/tbs/src/map/vault.c", 0),
+            ]
+        );
+        assert_eq!(report.value("units"), 4);
+        assert_eq!(report.value("units_done"), 2);
+        let listed: Vec<(&str, usize)> =
+            report.items.iter().filter(|item| item.metric == "unit_open").map(|item| (item.file.as_str(), item.line)).collect();
+        assert_eq!(listed, [("games/tbs/src/map/vale.c", 5), ("games/tbs/src/shop/shop/run.c", 1)]);
     }
 
     #[test]
