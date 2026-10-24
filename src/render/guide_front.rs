@@ -64,7 +64,7 @@ pub const MODES: &[&str] = &[
     "front-warp-rows",
     "front-story",
     "engine-waiting",
-    "engine-chest",
+    "front-chest",
     "engine-debug-select",
     "runtime-soft-reset",
     "runtime-save",
@@ -88,7 +88,7 @@ impl<'a> Guide<'a> {
             "front-warp-rows" => self.front_warp_rows(),
             "front-story" => self.front_story(),
             "engine-waiting" => self.engine_waiting(),
-            "engine-chest" => self.engine_chest(),
+            "front-chest" => self.front_chest(),
             "engine-debug-select" => self.engine_debug_select(),
             "runtime-soft-reset" => self.runtime_soft_reset(),
             "runtime-save" => self.runtime_save(),
@@ -180,11 +180,12 @@ impl<'a> Guide<'a> {
     }
 
     /// Opening the chest in Sol Sanctum: the Small Jewel rises and the
-    /// treasure fanfare plays.
-    fn engine_chest(&mut self) -> Result<(), String> {
+    /// treasure fanfare plays; the chest's row lasts until
+    /// FLAG_SOL_SANCTUM_FIRST_SMALL_JEWEL_FOUND is set.
+    fn front_chest(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(SOL_CHEST_ROOM, &[])?;
         let frames = Self::record_trigger(&mut entered, Trigger::Search(MB_SOL_SANCTUM_RELIEFS_CHEST), None, 20)?;
-        self.front_gif("engine/chest.gif", &frames, "a chest opened in Sol Sanctum")
+        self.front_gif("front/chest.gif", &frames, "a chest opened in Sol Sanctum")
     }
 
     /// The debug map selector in Vale with gDebugMode set: Start pressed

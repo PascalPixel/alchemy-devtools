@@ -1200,7 +1200,7 @@ Take-apart pictures for the engine's guides, each as its mode's name with
 Recordings for the front page, the engine page and the runtime, graphics,
 sound and debug guides, each under its guide folder (guide_front.rs):
   front-door, front-area-name, front-warp-rows, front-story,
-  engine-waiting, engine-chest, engine-debug-select, runtime-soft-reset,
+  front-chest, engine-waiting, engine-debug-select, runtime-soft-reset,
   runtime-save, graphics-title-fade, graphics-credits-names,
   sound-inn-fanfare, debug-map-select, debug-level-editor,
   debug-felix-facing
