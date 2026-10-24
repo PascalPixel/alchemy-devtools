@@ -39,6 +39,8 @@ mod guide_take;
 mod guide_window;
 #[cfg(feature = "render")]
 mod guide_world;
+#[cfg(feature = "render")]
+mod guide_world_play;
 mod jobs;
 #[cfg(feature = "render")]
 mod mgba;
@@ -1195,6 +1197,13 @@ Take-apart pictures for the engine's guides, each as its mode's name with
   resource-directory, memory-maps, map-header, placeholders, markers,
   world-map-squares, colosso-path, player-probes, item-row, scene-script,
   temporary-flags, overlay-common
+Recordings for the world guides (guide_world_play.rs), each as
+FOLDER/NAME.gif under DIR, the guide it opens a section of:
+  world-door, world-wall-slide, world-wooden-box, world-behind-roof,
+  world-map-battle (world/), field-talk-walk, field-well-route,
+  field-step-height, field-world-map-zoom (field/), overworld-battle-return,
+  overworld-move-nothing (overworld/), layout-ledge, layout-waterfall
+  (layout/), map-arrive, map-talk-twice (map/)
 --only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
 modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),
@@ -1256,7 +1265,7 @@ fn play_guide(
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     // The work in pieces: each mode, and field-psynergy's casts one by one.
     let mut units: Vec<String> = Vec::new();
-    for &name in guide::MODES.iter().chain(guide_engine::MODES).filter(|&&name| wanted(name)) {
+    for &name in guide::MODES.iter().chain(guide_engine::MODES).chain(guide_world_play::MODES).filter(|&&name| wanted(name)) {
         if name == "field-psynergy" {
             let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
             units.extend(guide::field_cast_names()?.into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
@@ -1290,7 +1299,7 @@ fn play_guide(
             }
         }
         // Failures in the order the modes play.
-        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_engine::MODES).position(|m| m == name));
+        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_engine::MODES).chain(guide_world_play::MODES).position(|m| m == name));
         failed.dedup();
     } else {
         let build = root.join("out").join(edition);
@@ -1320,7 +1329,7 @@ fn play_guide(
                 Ok(records)
             });
         }
-        for &name in guide::MODES.iter().chain(guide_engine::MODES) {
+        for &name in guide::MODES.iter().chain(guide_engine::MODES).chain(guide_world_play::MODES) {
             if wanted(name) {
                 if let Err(e) = guide.run(name, casts) {
                     eprintln!("{name}: {e}");
@@ -1355,7 +1364,7 @@ mod tests {
     #[test]
     fn every_guide_mode_is_in_the_usage() {
         let words: Vec<&str> = GUIDE_USAGE.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-')).collect();
-        for &mode in guide::MODES.iter().chain(guide_engine::MODES) {
+        for &mode in guide::MODES.iter().chain(guide_engine::MODES).chain(guide_world_play::MODES) {
             assert!(words.contains(&mode), "{mode} is not in GUIDE_USAGE");
         }
         assert!(guide::MODES.contains(&"shop-layers-3d"));

@@ -1254,9 +1254,9 @@ impl<'a> Guide<'a> {
 /// its two ends in pixels, and the keys that walk toward each.
 #[derive(Clone, Copy)]
 pub(super) struct Stretch {
-    across: bool,
-    ends: [i32; 2],
-    keys: [u32; 2],
+    pub(super) across: bool,
+    pub(super) ends: [i32; 2],
+    pub(super) keys: [u32; 2],
 }
 
 /// Goma Cave's rooms: the pond, the pillar room, the stream and the bridge,
