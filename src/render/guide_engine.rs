@@ -1867,6 +1867,7 @@ impl Guide<'_> {
             "temporary-flags" => self.temporary_flags(),
             "overlay-common" => self.overlay_common(),
             "player-probes" => self.player_probes(&[(0, 10), (KEY_RIGHT, 40), (KEY_UP | KEY_RIGHT, 70), (0, 10)], "player-probes.gif"),
+            _ if guide_world_play::MODES.contains(&name) => self.run_world_play(name),
             _ => self.run_front(name),
         }
     }
