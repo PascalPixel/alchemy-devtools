@@ -21,7 +21,7 @@ pub(crate) mod raster;
 use calcrom::{Game, GameDone};
 use std::path::Path;
 
-const USAGE: &str = "usage: alchemy-devtools progress [--publish ARCHIVE COMMIT DIRECTORY | --upload COMMIT REMOTE | --pre-push REMOTE | --humanity [--top N] [--list METRIC]]
+const USAGE: &str = "usage: alchemy-devtools progress [--game GAME OUTPUT | --publish ARCHIVE COMMIT DIRECTORY MEASURED | --upload COMMIT REMOTE | --pre-push REMOTE | --humanity [--top N] [--list METRIC]]
 With no option, counts DONE code and data in each edition built and matching
 rom.sha1 (make compare-editions), prints a line for each, and writes the
 measurement and decomp.dev's report under out/reports/decomp; a game without
@@ -29,9 +29,15 @@ all six editions is pending. --upload sends that measurement to the
 decomp-reports release for COMMIT, when REMOTE is this repository's;
 --pre-push does so for the tip git pushes to main.
 Stage source changes before measuring: the receipt must describe the source
-the build actually read. --publish is CI's: it rebuilds history from ARCHIVE's
-immutable baseline and accepted receipts, admits COMMIT after its successful
-build, and draws both figures in DIRECTORY. Measurement dates are UTC.
+the build actually read. --game GAME OUTPUT is CI's own count of one game's
+six editions, written to OUTPUT with no receipt. --publish is CI's too: with
+MEASURED, CI's count of The Broken Seal, it admits COMMIT after its
+successful build, checking its receipt's Broken Seal row against MEASURED;
+without a receipt it admits MEASURED and The Lost Age's figures from the
+nearest ancestor with a receipt, as that measurement where everything The
+Lost Age's measurement reads is unchanged, else as its last measurement. It
+rebuilds history from ARCHIVE's immutable baseline and accepted records and
+draws both figures in DIRECTORY. Measurement dates are UTC.
 --humanity counts what is left to humanize in each game's tracked C and
 headers, from the source alone (README), prints a table and writes
 out/reports/humanity.tsv; --top N also lists the N files leading each count,
@@ -86,8 +92,14 @@ fn status_line(sun: Option<GameDone>, anchor: Option<GameDone>) -> String {
 
 /// A line for each edition, then each game's total.
 fn lines(games: &[Result<Game, String>; 2]) -> String {
+    lines_of(games, &[0, 1])
+}
+
+/// The lines of the games at `which`.
+fn lines_of(games: &[Result<Game, String>; 2], which: &[usize]) -> String {
     let mut text = String::new();
-    for ((mark, name), game) in [("☀️", "The Broken Seal"), ("⚓️", "The Lost Age")].iter().zip(games) {
+    let names = [("☀️", "The Broken Seal"), ("⚓️", "The Lost Age")];
+    for ((mark, name), game) in which.iter().map(|&at| (names[at], &games[at])) {
         let Ok(game) = game else {
             text += &format!("{mark} {name}: pending ({})\n", game.as_ref().err().unwrap());
             continue;
@@ -207,6 +219,25 @@ fn measure(root: &Path) -> Result<String, String> {
     Ok(format!("{}measured {} {decomp} measurement={}", lines(&games), status_line(sun, anchor), publish::MEASUREMENT))
 }
 
+/// One game's six editions, which CI builds and measures for itself: the
+/// measurement holds that game's row alone and no receipt, since CI's own
+/// build is what it vouches for.
+fn measure_one(root: &Path, game: &str, output: &Path) -> Result<String, String> {
+    let at = match game {
+        "tbs" => 0,
+        "tla" => 1,
+        _ => return Err(format!("--game takes tbs or tla, not {game}")),
+    };
+    let measured = calcrom::measure_game(root, game);
+    let done = measured.as_ref().map(Game::combined).map_err(|why| format!("{game} is not measured: {why}"))?;
+    let mut games = [Err(String::from("not measured")), Err(String::from("not measured"))];
+    games[at] = measured;
+    let mut only = [None, None];
+    only[at] = Some(done);
+    write(output, &measurement_text(only[0], only[1]))?;
+    Ok(format!("{}measurement={}", lines_of(&games, &[at]), output.display()))
+}
+
 /// `--humanity`'s options: `--top N` and `--list METRIC`.
 fn humanity_options(root: &Path, options: &[String]) -> Result<String, String> {
     let (mut top, mut metric) = (0, None);
@@ -243,9 +274,14 @@ pub(crate) fn run(argv: &[String]) -> Result<(), String> {
     let line = match argv {
         [flag] if flag == "-h" || flag == "--help" => USAGE.to_string(),
         [] => measure(root)?,
-        [flag, archive, commit, directory] if flag == "--publish" => {
-            archive::publish(root, Path::new(archive), commit, Path::new(directory))?
-        }
+        [flag, archive, commit, directory, measured] if flag == "--publish" => archive::publish(
+            root,
+            Path::new(archive),
+            commit,
+            Path::new(directory),
+            Path::new(measured),
+        )?,
+        [flag, game, output] if flag == "--game" => measure_one(root, game, Path::new(output))?,
         [flag, commit, remote] if flag == "--upload" => {
             publish::upload(root, commit, remote)?;
             String::new()

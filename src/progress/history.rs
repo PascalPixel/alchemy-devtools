@@ -10,6 +10,8 @@ const MODELS_HEADER: &str = "date\ttbs_done\ttbs_executable\ttbs_percent\ttbs_da
 const CODE_ONLY_HEADER: &str = "date\ttbs_done\ttbs_executable\ttbs_percent\ttla_done\ttla_executable\ttla_percent\tmodels\toverhaul";
 /// The note on the first day that records DONE data.
 pub(crate) const DATA_BEGINS: &str = "DONE is code and data from here (Pascal, 2026-10-08)";
+/// The current status of a game whose figures are its last measurement.
+const LAST_MEASURED: &str = "last measured at ";
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Measure {
@@ -82,6 +84,10 @@ pub(crate) struct Current {
     pub date: String,
     pub tbs_pending: bool,
     pub tla_pending: bool,
+    /// The commit The Lost Age was last measured at, when its source has
+    /// changed since: its figures are shown as that measurement, never as
+    /// the current one.
+    pub tla_last: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -98,6 +104,19 @@ impl History {
             "tbs" => current.tbs_pending,
             _ => current.tla_pending,
         })
+    }
+    /// The commit The Lost Age was last measured at, when that is all there is.
+    pub(crate) fn last_measured(&self, game: &str) -> Option<&str> {
+        let current = self.current.as_ref()?;
+        (game == "tla").then_some(current.tla_last.as_deref()).flatten()
+    }
+    /// The Lost Age's figures are its measurement at `commit`, whose source
+    /// differs from the one published.
+    pub(crate) fn mark_last_measured(&mut self, commit: &str) {
+        if let Some(current) = &mut self.current {
+            current.tla_pending = false;
+            current.tla_last = Some(commit.to_string());
+        }
     }
     #[cfg(test)]
     pub(crate) fn stricter(&self) -> impl Iterator<Item = (&str, &str)> {
@@ -128,11 +147,14 @@ pub(crate) fn text(history: &History) -> String {
     );
     if let Some(current) = &history.current {
         let state = |pending: bool| if pending { "pending" } else { "verified" };
+        let tla = match &current.tla_last {
+            Some(commit) => format!("{LAST_MEASURED}{commit}"),
+            None => state(current.tla_pending).to_string(),
+        };
         text.push_str(&format!(
-            "# current\t{}\t{}\t{}\n",
+            "# current\t{}\t{}\t{tla}\n",
             current.date,
             state(current.tbs_pending),
-            state(current.tla_pending)
         ));
     }
     text.push_str(HEADER);
@@ -184,11 +206,14 @@ fn parse(text: &str) -> Result<History, String> {
         }
         if let Some(fields) = line.strip_prefix("# current\t") {
             let fields = fields.split('\t').collect::<Vec<_>>();
+            let tla_last = fields
+                .get(2)
+                .and_then(|state| state.strip_prefix(LAST_MEASURED))
+                .filter(|commit| super::publish::valid_id(commit));
             if fields.len() != 3
                 || day_number(fields[0]).is_none()
-                || fields[1..]
-                    .iter()
-                    .any(|state| !matches!(*state, "verified" | "pending"))
+                || !matches!(fields[1], "verified" | "pending")
+                || !(matches!(fields[2], "verified" | "pending") || tla_last.is_some())
             {
                 return Err(problem(
                     "current status needs date and verified/pending for each game",
@@ -198,6 +223,7 @@ fn parse(text: &str) -> Result<History, String> {
                 date: fields[0].to_string(),
                 tbs_pending: fields[1] == "pending",
                 tla_pending: fields[2] == "pending",
+                tla_last: tla_last.map(str::to_string),
             });
             continue;
         }
@@ -418,6 +444,7 @@ pub(crate) fn record(
         date: date.to_string(),
         tbs_pending: pending[0],
         tla_pending: pending[1],
+        tla_last: None,
     });
     let had_data = history.days.iter().any(|row| {
         [&row.tbs, &row.tla]
@@ -611,6 +638,30 @@ mod tests {
             loaded.stricter().collect::<Vec<_>>(),
             [("2026-09-28", "Executable audit pending after cleanup")]
         );
+    }
+
+    #[test]
+    fn a_last_measurement_is_named_and_survives_its_text() {
+        let commit = "0123456789abcdef0123456789abcdef01234567";
+        let mut history = History {
+            began: "2026-09-27".into(),
+            ..History::default()
+        };
+        let sun = GameDone {
+            game_c: 10,
+            executable: 10,
+            ..GameDone::default()
+        };
+        record(&mut history, "2026-09-28", Some(sun), None);
+        assert!(history.pending("tla"));
+        history.mark_last_measured(commit);
+        assert!(!history.pending("tla"));
+        let written = text(&history);
+        assert!(written.contains(&format!("# current\t2026-09-28\tverified\tlast measured at {commit}\n")));
+        let loaded = parse(&written).unwrap();
+        assert_eq!(loaded.last_measured("tla"), Some(commit));
+        assert_eq!(loaded.last_measured("tbs"), None);
+        assert!(parse(&written.replace(commit, "HEAD")).is_err());
     }
 
     #[test]

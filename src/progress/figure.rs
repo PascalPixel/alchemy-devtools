@@ -113,15 +113,17 @@ pub(crate) fn chart(letters: &Letters, history: &History) -> Canvas {
         .filter(|(_, pending)| *pending)
         .map(|((_, name, _), _)| *name)
         .collect::<Vec<_>>();
-    if !waiting.is_empty() {
-        let note = if waiting.len() == series.len() {
-            "Historical measurements; current DONE pending matching builds".to_string()
-        } else {
-            format!(
-                "{}: historical measurement; pending a matching build",
-                waiting[0]
-            )
-        };
+    let last_measured = series.iter().find_map(|(key, name, _)| {
+        history.last_measured(key).map(|commit| format!("{name}: last measured at {}", &commit[..7]))
+    });
+    let note = match waiting.as_slice() {
+        [] => last_measured,
+        all if all.len() == series.len() => {
+            Some("Historical measurements; current DONE pending matching builds".to_string())
+        }
+        [name, ..] => Some(format!("{name}: historical measurement; pending a matching build")),
+    };
+    if let Some(note) = note {
         canvas.text(letters, left, top - 16, &note, MUTED, Some(SHADOW));
     }
     let span = last_hour - began * 24;
@@ -567,6 +569,7 @@ mod tests {
                 date: "2026-09-28".into(),
                 tbs_pending: true,
                 tla_pending: true,
+                tla_last: None,
             }),
             days: vec![
                 row("2026-09-27", Some(70.0), Some(2.0)),
@@ -583,6 +586,16 @@ mod tests {
             assert!((32..canvas.height - FOOTER).any(|y| canvas.get(41, y) == Some(ink)));
         }
         assert_eq!(history.days, published);
+        // A last measurement keeps its figure and says where it was taken.
+        let mut last = history.clone();
+        last.current = Some(Current {
+            date: "2026-09-28".into(),
+            tbs_pending: false,
+            tla_pending: false,
+            tla_last: Some("0123456789abcdef0123456789abcdef01234567".into()),
+        });
+        assert_eq!(latest_label(&last, "tla").as_deref(), Some("2.10%"));
+        assert_ne!(chart(&fixture(), &last).rgba(1), chart(&fixture(), &history).rgba(1));
     }
     #[test]
     fn data_draws_its_own_line_and_label_once_recorded() {
