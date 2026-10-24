@@ -695,8 +695,8 @@ struct Roll {
 }
 
 /// What `rolls` read from one attack.
-struct Rolled {
-    frames: Vec<Vec<u16>>,
+pub(super) struct Rolled {
+    pub(super) frames: Vec<Vec<u16>>,
     rolls: Vec<Roll>,
     /// The plan as BattleAbility_ApplyToTarget first reads it: ability, multiplier,
     /// critical, presentation flags.
@@ -711,7 +711,7 @@ impl<'a> Guide<'a> {
     /// answered in turn from `plan_answers` and `unleash`, and, with
     /// `weapon`, that item in place of his equipped weapon as the battle
     /// opens.
-    fn rolled_attack(&self, plan_answers: &[u32], unleash: u32, weapon: Option<u16>) -> Result<Rolled, String> {
+    pub(super) fn rolled_attack(&self, plan_answers: &[u32], unleash: u32, weapon: Option<u16>) -> Result<Rolled, String> {
         let root = crate::compile::root();
         let plan = Tables::read(root)?.plan()?;
         let mut cast = plan.casts.into_iter().find(|c| c.ability.name == "Quake").ok_or("no Quake cast")?;

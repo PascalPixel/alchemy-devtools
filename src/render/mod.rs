@@ -26,6 +26,8 @@ mod guide_cells;
 #[cfg(feature = "render")]
 mod guide_effect;
 #[cfg(feature = "render")]
+mod guide_fight;
+#[cfg(feature = "render")]
 mod guide_menu;
 #[cfg(feature = "render")]
 mod guide_more;
@@ -1176,6 +1178,12 @@ Take-apart pictures for the battle effects guide (guide_effect.rs):
   stat-reductions   stat-reductions.gif: Debilitate beside each target's shards
   target-strikes    target-strikes.gif: Twin Beaks and Acid Bite beside
                     their parked smoke, motes and sparks
+Recordings for the battle pages, the game alone (guide_fight.rs), each
+into battle/ or battle_anim/ under DIR:
+  fight-opening, fight-commands, fight-aim, fight-round, fight-turn-order,
+  fight-first-strike, fight-flee, fight-gryphons, fight-twin-beaks,
+  fight-unleash, fight-rolls, fight-wake, fight-won, fight-bone-charge,
+  fight-ally-search
 Take-apart pictures for the menu guide (guide_menu.rs), in Xian:
   psynergy-steps    psynergy-steps.png: Cure used on Garet, a panel for each
                     step of the Psynergy screen
@@ -1256,7 +1264,7 @@ fn play_guide(
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     // The work in pieces: each mode, and field-psynergy's casts one by one.
     let mut units: Vec<String> = Vec::new();
-    for &name in guide::MODES.iter().chain(guide_engine::MODES).filter(|&&name| wanted(name)) {
+    for &name in guide::MODES.iter().chain(guide_engine::MODES).chain(guide_fight::MODES).filter(|&&name| wanted(name)) {
         if name == "field-psynergy" {
             let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
             units.extend(guide::field_cast_names()?.into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
@@ -1290,7 +1298,7 @@ fn play_guide(
             }
         }
         // Failures in the order the modes play.
-        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_engine::MODES).position(|m| m == name));
+        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_engine::MODES).chain(guide_fight::MODES).position(|m| m == name));
         failed.dedup();
     } else {
         let build = root.join("out").join(edition);
@@ -1320,7 +1328,7 @@ fn play_guide(
                 Ok(records)
             });
         }
-        for &name in guide::MODES.iter().chain(guide_engine::MODES) {
+        for &name in guide::MODES.iter().chain(guide_engine::MODES).chain(guide_fight::MODES) {
             if wanted(name) {
                 if let Err(e) = guide.run(name, casts) {
                     eprintln!("{name}: {e}");
@@ -1355,7 +1363,7 @@ mod tests {
     #[test]
     fn every_guide_mode_is_in_the_usage() {
         let words: Vec<&str> = GUIDE_USAGE.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-')).collect();
-        for &mode in guide::MODES.iter().chain(guide_engine::MODES) {
+        for &mode in guide::MODES.iter().chain(guide_engine::MODES).chain(guide_fight::MODES) {
             assert!(words.contains(&mode), "{mode} is not in GUIDE_USAGE");
         }
         assert!(guide::MODES.contains(&"shop-layers-3d"));
