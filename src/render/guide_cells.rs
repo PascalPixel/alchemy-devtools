@@ -533,26 +533,26 @@ pub(super) const SATRAGE_WORDS: Words = &[];
 /// Vale by day, on the day the story begins (MapId_Vale, entered by the
 /// Sanctum's door).
 const VALE: (u16, u16) = (4, 1);
-/// The scenes Vale's doors lead into: MapId_ValeInteriorsShops and
-/// MapId_ValeInteriorsInn.
-const VALE_INTERIORS_SHOPS: u16 = 7;
-const VALE_INTERIORS_INN: u16 = 8;
+/// The scenes Vale's doors lead into: MapId_ValeShops and
+/// MapId_ValeInn.
+const VALE_SHOPS: u16 = 7;
+const VALE_INN: u16 = 8;
 
 /// What the rows of Vale's event table do, from their functions'
 /// comments, the scenes their exits lead to, and the event renders.
 const VALE_WORDS: Words = &[
     ("EventScript_EnterSanctum", "Door into the Sanctum", Some(9)),
     ("EventScript_ApproachMtAleph", "Path up Mt. Aleph", None),
-    ("EventScript_WarpToValeKradenNorth", "Way out to Kraden's cottage, north", Some(6)),
-    ("EventScript_WarpToValeKradenSouth", "Way out to Kraden's cottage, south", Some(6)),
-    ("EventScript_WarpToValeGate", "Way out to the Psynergy Stone", Some(5)),
-    ("EventScript_EnterGaretsHouse", "Door into Garet's house (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
-    ("EventScript_EnterValeInteriorsShops", "Door into a house (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
-    ("EventScript_EnterIsaacsHouse", "Door into Isaac's house (walk north into it)", Some(VALE_INTERIORS_INN)),
-    ("EventScript_EnterJennasGrandparentsHouse", "Door into the house of Jenna's grandparents (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
-    ("EventScript_EnterValeInteriorsShopsWest", "Door into a house (walk north into it)", Some(VALE_INTERIORS_SHOPS)),
-    ("EventScript_SetPathCellOverride", "Onto the upper path: its cells change", None),
-    ("EventScript_ClearPathCellOverride", "Off the upper path: its cells change back", None),
+    ("EventScript_WarpToValeKradensCottageNorth", "Way out to Kraden's cottage, north", Some(6)),
+    ("EventScript_WarpToValeKradensCottageSouth", "Way out to Kraden's cottage, south", Some(6)),
+    ("EventScript_WarpToValePlaza", "Way out to the Psynergy Stone", Some(5)),
+    ("EventScript_EnterGaretsHouse", "Door into Garet's house (walk north into it)", Some(VALE_SHOPS)),
+    ("EventScript_EnterValeShops", "Door into a house (walk north into it)", Some(VALE_SHOPS)),
+    ("EventScript_EnterIsaacsHouse", "Door into Isaac's house (walk north into it)", Some(VALE_INN)),
+    ("EventScript_EnterJennasGrandparentsHouse", "Door into the house of Jenna's grandparents (walk north into it)", Some(VALE_SHOPS)),
+    ("EventScript_EnterValeShopsWest", "Door into a house (walk north into it)", Some(VALE_SHOPS)),
+    ("EventScript_StepOntoUpperPath", "Onto the upper path: its cells change", None),
+    ("EventScript_StepOffUpperPath", "Off the upper path: its cells change back", None),
     ("EventScript_WatchThePuppies", "The puppies bark", None),
     ("EventScript_TurnBackFromThePuppies", "The puppies bark", None),
     ("EventScript_ClimbLadderOntoRoof", "Ladder up onto the roof of Isaac's house (walk north into it)", None),
@@ -643,10 +643,10 @@ mod tests {
 
     #[test]
     fn warps_are_found_under_either_heading() {
-        let links = "/// MapId_Title's warp destinations and warps.\nenum {\n  TITLE_FROM_VALE_GATE = 1,\n};\n\n/// MapId_GomaCavePillar's warp destinations.\nenum {\n  GOMA_CAVE_PILLAR_FROM_GOMA_CAVE_STREAM_WEST = 1,\n};\n\n/// MapId_GomaCavePillar's warps.\nenum {\n  GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1,\n};\n";
+        let links = "/// MapId_Title's warp destinations and warps.\nenum {\n  TITLE_FROM_VALE_PLAZA = 1,\n};\n\n/// MapId_GomaCavePillar's warp destinations.\nenum {\n  GOMA_CAVE_PILLAR_FROM_GOMA_CAVE_STREAM_WEST = 1,\n};\n\n/// MapId_GomaCavePillar's warps.\nenum {\n  GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1,\n};\n";
         assert!(warps_block(links, "GomaCavePillar").unwrap().contains("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1"));
         assert!(!warps_block(links, "GomaCavePillar").unwrap().contains("_FROM_"));
-        assert!(warps_block(links, "Title").unwrap().contains("TITLE_FROM_VALE_GATE"));
+        assert!(warps_block(links, "Title").unwrap().contains("TITLE_FROM_VALE_PLAZA"));
         assert!(warps_block(links, "Vale").is_err());
     }
 }

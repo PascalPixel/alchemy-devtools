@@ -584,11 +584,11 @@ pub const ASPECTS: &[&str] = &[
 
 /// Words that, right after `LOCALID_`, make an object event a part of its map's
 /// machinery rather than a person or thing of the game, even among the
-/// object events a map numbers in one enum: a blank one draws nothing the player
+/// object events a map numbers in one enum: an invisible one draws nothing the player
 /// sees and is there for a script to steer or to stand in the way
-/// (`LOCALID_BLANK_ROCK_GUIDE`, which the falling rock is held above), and a
+/// (`LOCALID_INVISIBLE_ROCK_GUIDE`, which the falling rock is held above), and a
 /// mask hides the parts of another sprite it covers (`LOCALID_MASK_FOR_STUMP`).
-pub const STAND_INS: &[&str] = &["blank", "mask"];
+pub const STAND_INS: &[&str] = &["invisible", "mask"];
 
 /// Words that, last in a name, make it a quantity, a bound, a bit field or a
 /// place on the screen: `ITEM_STACK_MAX`, `ENEMY_ID_FIRST`, `SUMMON_END`,
@@ -654,7 +654,7 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
 /// - a function-like macro computes a value (`FLAG_IN_PARTY(character)`,
 ///   `PSYNERGY_EVENT(phase)`);
 /// - an object event whose first word is a stand-in's (`STAND_INS`),
-///   whatever its enum, is a blank object or a mask;
+///   whatever its enum, is an invisible object or a mask;
 /// - its first word after the prefix names an aspect of the family
 ///   (`ASPECTS`), or its last word a measure (`MEASURES`), even in an enum of
 ///   ids (`SUMMON_ANIM_NONE`, `ABILITY_DJINNI_FIRST`), except an object event
@@ -1132,11 +1132,11 @@ mod tests {
         assert_eq!(enumerator("ITEM_HERB", Some("ItemId")), Some("item"), "an id enum holds members");
         assert_eq!(enumerator("LOCALID_GUARD", Some("BilibinLocalId")), Some("object event"), "so does one tagged by the family");
         assert_eq!(enumerator("LOCALID_GUARD", None), Some("object event"), "an untagged enum, by its words");
-        assert_eq!(enumerator("LOCALID_BLANK_ROCK_GUIDE", Some("WorldMapCaravanLocalId")), None, "a blank actor");
+        assert_eq!(enumerator("LOCALID_INVISIBLE_ROCK_GUIDE", Some("WorldMapCaravanLocalId")), None, "an invisible object event");
         assert_eq!(enumerator("LOCALID_MASK_FOR_STUMP", Some("GomaCavePillarLocalId")), None, "a mask");
-        assert_eq!(enumerator("LOCALID_YOUNG_MAN_SAW_MASK", Some("ValeInteriorsInnLocalId")), Some("object event"), "a mask last is a word");
-        assert_eq!(enumerator("LOCALID_MASKED_MAN", Some("ValeInteriorsInnLocalId")), Some("object event"));
-        assert_eq!(enumerator("LOCALID_HIDDEN_PUDDLE", Some("LunpaLocalId")), Some("object event"), "hidden is not blank");
+        assert_eq!(enumerator("LOCALID_YOUNG_MAN_SAW_MASK", Some("ValeInnLocalId")), Some("object event"), "a mask last is a word");
+        assert_eq!(enumerator("LOCALID_MASKED_MAN", Some("ValeInnLocalId")), Some("object event"));
+        assert_eq!(enumerator("LOCALID_HIDDEN_PUDDLE", Some("LunpaLocalId")), Some("object event"), "hidden is not invisible");
         assert_eq!(enumerator("ITEM_BLANK", Some("ItemId")), Some("item"), "stand-ins are actors");
         assert_eq!(enumerator("ABILITY_FORMULA_SUMMON", Some("AbilityFormula")), None);
         assert_eq!(enumerator("OBJ_EVENT_SOLID", Some("ObjectEventCollisionFlag")), None, "an actor's bits");

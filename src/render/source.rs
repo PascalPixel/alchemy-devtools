@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn the_checkout_answers() {
-        assert_eq!(map_id("Vale").unwrap(), map_id("ValeStorm").unwrap() + 1);
+        assert_eq!(map_id("Vale").unwrap(), map_id("ValeStormyNight").unwrap() + 1);
         assert_eq!(area_name(map_id("Vale").unwrap(), 1).unwrap(), "Vale");
         assert_eq!(
             character_names().unwrap()[usize::from(character("JENNA").unwrap())],

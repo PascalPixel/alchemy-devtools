@@ -1052,18 +1052,18 @@ const VAULT_SHOPS: (u16, u16) = (21, 5);
 const VAULT_WEAPON_MERCHANT: u16 = 19;
 /// Facing north, 1/65536 turns: across a counter.
 const FACING_NORTH: u32 = 0xc000;
-/// gItemCounters (ram_buffer.h): a byte for each artifact's counter.
+/// gRareItemStock (game/game.h): a byte for each artifact's counter.
 const ITEM_COUNTERS: u32 = 128;
 
 impl<'a> Guide<'a> {
     /// Stands across `merchant`'s counter in `place` with 2,000 coins, after
-    /// `counters` (when given) are written over gItemCounters, and talks to
+    /// `counters` (when given) are written over gRareItemStock, and talks to
     /// him; returns the field once `path` has been pressed, every frame kept.
     fn at_counter(&self, place: (u16, u16), merchant: u16, counters: Option<&[u8]>, path: &[(u32, u32)]) -> Result<(super::field::Field<'a>, Vec<Vec<u16>>, Vec<u8>), String> {
         let (mut entered, _) = self.stand_where(place, super::story::Trigger::Talk(merchant), merchant, |s| s.facing == FACING_NORTH)?;
         entered.field.set_coins(2000);
         if let Some(c) = counters {
-            let base = self.sym("gItemCounters")?;
+            let base = self.sym("gRareItemStock")?;
             for (i, &v) in c.iter().enumerate() {
                 entered.field.write8(base + i as u32, v);
             }
@@ -1074,12 +1074,12 @@ impl<'a> Guide<'a> {
     }
 
     fn counters(&self, field: &super::field::Field) -> Result<Vec<u8>, String> {
-        let base = self.sym("gItemCounters")?;
+        let base = self.sym("gRareItemStock")?;
         Ok((0..ITEM_COUNTERS).map(|i| field.read8(base + i)).collect())
     }
 
 
-    /// The items each counter of gItemCounters belongs to, from the ROM's
+    /// The items each counter of gRareItemStock belongs to, from the ROM's
     /// gItem_ArtifactSlotTable (an item's counter plus one, 0 for none).
     fn counter_items(&self, field: &super::field::Field) -> Result<Vec<(usize, u16)>, String> {
         let table = self.sym("gItem_ArtifactSlotTable")?;
@@ -1090,7 +1090,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Bilibin's weapon shop, stock row 7, opened twice from a new game:
-    /// first as it is, then with gItemCounters as they stand after Vault's
+    /// first as it is, then with gRareItemStock as they stand after Vault's
     /// weapon shop (row 4) has been opened for the first time in a run of
     /// its own. Each time the Buy list and the Artifacts list are shown, as
     /// `shop-counters.png`, with the row's items and artifacts read from the

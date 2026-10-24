@@ -75,7 +75,7 @@ impl<'a> Guide<'a> {
     fn party_state(&self, field: &mut Field) -> Result<PartyState, String> {
         let flags = self.sym("gGameFlagBytes")?;
         let state = self.sym("gSaveBlock")?;
-        let counters = self.sym("gItemCounters")?;
+        let counters = self.sym("gRareItemStock")?;
         let slots = self.sym("gItem_ArtifactSlotTable")?;
         let mut members = Vec::new();
         for owner in 0..8u32 {
@@ -816,8 +816,8 @@ impl<'a> Guide<'a> {
             (self.sym("gMapGridCellBuffer")?, self.sym("gActorSpriteSlots")?, "MAP CELLS", 0x40_c8_70),
             (self.sym("gActorSpriteSlots")?, self.sym("gDecodeBuffer")?, "ACTOR SPRITE SLOTS", 0xe0_a0_e0),
             (self.sym("gDecodeBuffer")?, self.sym("gMetatiles")?, "DECODE BUFFER", 0xe0_e0_60),
-            (self.sym("gMetatiles")?, self.sym("gMapGridLayerData")?, "MAP BLOCKS", 0x30_b0_a0),
-            (self.sym("gMapGridLayerData")?, self.sym("gMapGridShapes")?, "MAP LAYER DATA", 0x80_d0_ff),
+            (self.sym("gMetatiles")?, self.sym("gMapGridAnimTiles")?, "MAP BLOCKS", 0x30_b0_a0),
+            (self.sym("gMapGridAnimTiles")?, self.sym("gMapGridShapes")?, "MAP ANIM TILES", 0x80_d0_ff),
             (self.sym("gMapGridShapes")?, ewram_heap, "MAP COLLISION", 0x60_e0_40),
             (ewram_heap, self.sym("gBgTileBuffer")?, "EWRAM HEAP", 0x40_80_ff),
             (self.sym("gBgTileBuffer")?, 0x0204_0000, "BG TILE BUFFER", 0xa0_60_ff),
@@ -1014,7 +1014,7 @@ impl<'a> Guide<'a> {
             v
         }).collect();
         // With the storms already risen, so the sand haze on BG1 is up.
-        let mut entered = self.enter_with((SUHALLA_DESERT_NORTH, 1), &["FLAG_STORMS_RISEN"])?;
+        let mut entered = self.enter_with((SUHALLA_DESERT_NORTH, 1), &["FLAG_SUHALLA_DESERT_SANDSTORMS_RISEN"])?;
         let field = &mut entered.field;
         // Each window in cells: the bounds, or the wrap period when the
         // layer wraps sooner.

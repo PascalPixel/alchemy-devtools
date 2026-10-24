@@ -430,7 +430,7 @@ impl Context<'_> {
             // children (as alternative_flags has it); once it is over they
             // are grown.
             if let (Some(storm), Some(child)) = (storm, child) {
-                if set.contains(&storm) || name == Some("ValeStorm") {
+                if set.contains(&storm) || name == Some("ValeStormyNight") {
                     set.push(child);
                 } else if clear.contains(&storm) {
                     clear.push(child);
@@ -936,7 +936,7 @@ impl Context<'_> {
         // then, and the party's sprites follow FLAG_CHILDHOOD
         // (Party_RemapCharacterIdByFlags).
         if let (Some(storm), Some(child)) = (self.flags.resolve("FLAG_VALE_STORM", None), self.flags.resolve("FLAG_CHILDHOOD", None)) {
-            if (set.contains(&storm) || first.symbol.as_deref() == Some("ValeStorm")) && !set.contains(&child) {
+            if (set.contains(&storm) || first.symbol.as_deref() == Some("ValeStormyNight")) && !set.contains(&child) {
                 clear.retain(|&f| f != child);
                 set.push(child);
             }
@@ -1467,7 +1467,7 @@ mod tests {
     #[test]
     fn message_rows_are_told_from_functions() {
         assert!(is_message_row("MsgValeRockCannotBeMoved"));
-        assert!(is_message_row("gValeStorm_Events[26]"));
+        assert!(is_message_row("gValeStormyNight_Events[26]"));
         assert!(!is_message_row("EventScript_PushPillar"));
     }
 }

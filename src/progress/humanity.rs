@@ -261,7 +261,7 @@ impl Report {
     /// The parameter an argument fills, by name, and the kind of data that
     /// name says it holds. A macro's parameter takes its own name's kind, else
     /// that of the parameter it is passed to (`WAIT(n)` is
-    /// `Engine_EventWait(s32 frames)`).
+    /// `FieldScript_WaitFrames(s32 frames)`).
     fn parameter(&self, callee: &str, position: usize, depth: usize) -> Option<(String, Option<&'static str>)> {
         if let Some(names) = self.parameters.get(callee) {
             let name = names.get(position)?.clone()?;
@@ -876,7 +876,7 @@ impl<'r, 'a> Walk<'r, 'a> {
     }
 
     /// A function-like macro's parameters, each with the call in its body it
-    /// is passed to: `WAIT(n)`'s `n` is `Engine_EventWait`'s first argument.
+    /// is passed to: `WAIT(n)`'s `n` is `FieldScript_WaitFrames`'s first argument.
     fn macro_parameters(&mut self, name: &str, start: usize, end: usize) {
         // `#`, `define`, the name, `(`, then the parameters up to `)`.
         let mut names = Vec::new();
@@ -1791,7 +1791,7 @@ mod tests {
     fn an_enum_of_one_enumerator_is_its_comment() {
         let report = one(concat!(
             "/// The inn worker has apologized.\n",
-            "enum { FLAG_INN_WORKER_APOLOGIZED = 0x900 };\n",
+            "enum { FLAG_LALIVERO_INN_WORKER_APOLOGIZED = 0x900 };\n",
             "/// Two flags.\n",
             "enum {\n  FLAG_DOOR_OPEN = 0x901,\n  FLAG_GATE_OPEN = 0x902\n};\n",
             "/// One flag and a count that is not a game thing.\n",
@@ -1800,7 +1800,7 @@ mod tests {
         let alone: Vec<(&str, bool)> = report.things.iter().map(|thing| (thing.name.as_str(), thing.alone)).collect();
         assert_eq!(
             alone,
-            [("FLAG_INN_WORKER_APOLOGIZED", true), ("FLAG_DOOR_OPEN", false), ("FLAG_GATE_OPEN", false), ("FLAG_THIRD", false)]
+            [("FLAG_LALIVERO_INN_WORKER_APOLOGIZED", true), ("FLAG_DOOR_OPEN", false), ("FLAG_GATE_OPEN", false), ("FLAG_THIRD", false)]
         );
     }
 
@@ -1963,8 +1963,8 @@ mod tests {
             assert_eq!(data_parameter(name), kind, "{name}");
         }
         let header = concat!(
-            "void Engine_ScriptWait(s32 frames);\n",
-            "#define WAIT(n) Engine_ScriptWait(n)\n",
+            "void FieldScript_WaitFrames(s32 frames);\n",
+            "#define WAIT(n) FieldScript_WaitFrames(n)\n",
             "#define PIXELS(value) ((value) << 16)\n",
             "#define BLEND(top, bottom) Blend((top) | ((bottom) << 8))\n",
             "void ObjectEvent_SetPosition(s32 actor, s32 fixed_x, s32 fixed_z);\n",
@@ -1975,7 +1975,7 @@ mod tests {
         let source = concat!(
             "void Run(void) {\n",
             "    WAIT(80);\n",
-            "    Engine_ScriptWait(\n        40);\n",
+            "    FieldScript_WaitFrames(\n        40);\n",
             "    ObjectEvent_SetPosition(LOCALID_LEADER, PIXELS(312), (416) << 16);\n",
             "    ObjectEvent_SetSpeed(LOCALID_LEADER, PIXELS(24), 0x8000);\n",
             "    Old(1, 20);\n",

@@ -239,7 +239,7 @@ impl<'a> Guide<'a> {
                 Ok(())
             }
             "vale-gate" => {
-                // ValeGate (5) on the stormy night: the rock, its spot and
+                // ValePlaza (5) on the stormy night: the rock, its spot and
                 // the boy; walking into the spot with it and without it.
                 let storm = ["FLAG_VALE_STORM", "FLAG_CHILDHOOD"];
                 let mut e = self.enter_story((5, 0), &storm, &["FLAG_VALE_PARTY_LEFT"])?;
@@ -356,7 +356,7 @@ impl<'a> Guide<'a> {
                 Ok(())
             }
             "kraden-lift" => {
-                // ValeKraden (6): Lift cast on the boulder by the fence
+                // ValeKradensCottage (6): Lift cast on the boulder by the fence
                 // (actor 8), in the day's table and after the party left.
                 for (label, set, clear) in [("day", vec![], vec!["FLAG_VALE_PARTY_LEFT"]), ("left", vec!["FLAG_VALE_PARTY_LEFT"], vec![])] {
                     let mut e = self.enter_story((6, 0), &set, &clear)?;
@@ -647,7 +647,7 @@ impl<'a> Guide<'a> {
                 Ok(())
             }
             "vale-inn" => {
-                // ValeInteriorsInn (8) after Kalay: LOCALID_BLANK_AFTER_KALAY
+                // ValeInn (8) after Kalay: LOCALID_INVISIBLE_AFTER_KALAY
                 // and its neighbours, and walking into it.
                 let ents = {
                     let e = self.enter_story((8, 0), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;

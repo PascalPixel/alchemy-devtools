@@ -36,7 +36,7 @@ struct Chapter {
 /// The chapters, in the story's order.
 const CHAPTERS: &[Chapter] = &[
     // The stormy night: Isaac and Garet as children, a new game's level 1.
-    Chapter { maps: &[("ValeStorm", "ValeStorm")], preset: None, members: Some(&["ISAAC", "GARET"]) },
+    Chapter { maps: &[("ValeStormyNight", "ValeStormyNight")], preset: None, members: Some(&["ISAAC", "GARET"]) },
     // Vale three years on, before Sol Sanctum: Jenna, in the preset, has
     // not joined yet.
     Chapter { maps: &[("Vale", "ValeEruption")], preset: Some(10), members: Some(&["ISAAC", "GARET"]) },
@@ -137,7 +137,7 @@ mod tests {
         }
         let altin = source::map_id("AltinPeakWestExit").unwrap();
         assert_eq!(chapter(altin).unwrap().map(|p| p.members.len()), Some(4));
-        let storm = source::map_id("ValeStorm").unwrap();
+        let storm = source::map_id("ValeStormyNight").unwrap();
         assert_eq!(chapter(storm).unwrap().and_then(|p| p.preset), None);
     }
 

@@ -226,7 +226,7 @@ Linker script and memory map
 iwram           0x0000000003000100       0x40 load address 0x0000000008000038
  */recon/tbs/sym_iwram.o(.sym_iwram)
  .sym_iwram     0x0000000003000100       0x40 /x/out/tbs-de/obj/recon/tbs/sym_iwram.o
-                0x0000000003000100                gFrameTick
+                0x0000000003000100                gVBlankCount
 
 .rom_main       0x0000000008000038       0x20
  */recon/tbs/unidentified.o(.unidentified.08000030)

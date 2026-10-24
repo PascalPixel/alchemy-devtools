@@ -60,7 +60,7 @@ const MAP_VIEW_X: u32 = 0xe4;
 const MAP_VIEW_Y: u32 = 0xe8;
 /// minX, minY, maxX and maxY, s32 16.16 pixels.
 const MAP_BOUNDS: u32 = 0xec;
-/// MapGridState.layers: each layer's window onto the cell grid, 0x30 bytes
+/// MapGridScrollAnimView.layers: each layer's window onto the cell grid, 0x30 bytes
 /// apart, its cells pointer first.
 const MAP_LAYER_CELLS: u32 = 0x130;
 const MAP_LAYER_SIZE: u32 = 0x30;

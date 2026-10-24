@@ -1136,7 +1136,7 @@ mod tests {
                 name("OBJECT_SLOT_COUNT", NameKind::Macro, file, 8),
                 name("OBJECT_SLOT_FIRST", NameKind::Macro, file, 9),
                 name("gHeapRemainingCount", NameKind::Global, file, 11),
-                name("ScatterPosition", NameKind::Tag, file, 12),
+                name("Vector3", NameKind::Tag, file, 12),
             ],
             ..Names::default()
         };

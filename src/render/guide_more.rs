@@ -33,7 +33,7 @@ const BILIBIN_INN: (u16, u16) = (31, 6);
 const NORTH: u32 = 0xc000;
 /// The Djinn test room (debug/rooms.c).
 const DJINN_ROOM: (u16, u16) = (191, 0);
-/// The title overlay's entrance that runs the credits (CreditsFar_Entry00).
+/// The title overlay's entrance that runs the credits (Import_CreditsRun).
 const CREDITS: (u16, u16) = (0, 9);
 /// Vale's actors: Garet's sister, the stone pillar Move pushes.
 const GARETS_SISTER: u16 = 18;
@@ -65,7 +65,7 @@ const OVERLAY_AREA: u32 = 0x0200_8000;
 const OVERLAY_SIZE: u32 = 0x8000;
 const MAPGRID_CELLS: u32 = 0x0201_0000;
 const MAP_BLOCKS: u32 = 0x0202_0000;
-/// MapGridState.layers' cells pointers (field.rs).
+/// MapGridScrollAnimView.layers' cells pointers (field.rs).
 const MAP_LAYER_CELLS: u32 = 0x130;
 const MAP_LAYER_SIZE: u32 = 0x30;
 /// The map's cells: 128 by 128.

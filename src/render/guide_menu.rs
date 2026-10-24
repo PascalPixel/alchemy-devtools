@@ -67,7 +67,7 @@ const GAUGE_FULL: u32 = 0x4000;
 const PSY_PANE_ACTION: u32 = 0x178;
 const PSY_OWNER_IDS: u32 = 0x21a;
 
-/// struct DjinnFiguresWork (four_object_motion.h).
+/// struct ItemMenuFiguresView (four_object_motion.h).
 const FIGURE_OBJECTS: u32 = 0x224;
 const FIGURE_X: u32 = 0x234;
 const FIGURE_Y: u32 = 0x23c;
@@ -329,7 +329,7 @@ impl<'a> Guide<'a> {
     /// (MemberChooser_RunRearrange, SummaryScreen_SelectCommand,
     /// PsynergyMenu_SelectAction, ItemMenu_SelectItem), at twice its size;
     /// each Djinni figure of the row of four outlined where the menu work
-    /// places it (DjinnFiguresWork positionsX and positionsY, the
+    /// places it (ItemMenuFiguresView positionsX and positionsY, the
     /// image standing on that point), as `status-pages.png`.
     pub fn status_pages(&mut self) -> Result<(), String> {
         let menu = self.sym("gMenuWork")?;

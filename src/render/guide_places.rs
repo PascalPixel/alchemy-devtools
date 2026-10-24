@@ -327,8 +327,8 @@ impl<'a> Guide<'a> {
     /// sprites and the sprite palettes while his display lasts, as
     /// `psynergy-display.gif`.
     pub fn vale_gate_display(&mut self) -> Result<(), String> {
-        let begin = self.overlay_sym("ValeGate_GetObjectEventTemplates", "Map_StartCutscenePsynergy")?;
-        let end = self.overlay_sym("ValeGate_GetObjectEventTemplates", "Map_EndCutscenePsynergy")?;
+        let begin = self.overlay_sym("ValePlaza_GetObjectEventTemplates", "Map_StartCutscenePsynergy")?;
+        let end = self.overlay_sym("ValePlaza_GetObjectEventTemplates", "Map_EndCutscenePsynergy")?;
         let mut entered = self.enter_story((5, 0), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let field = &mut entered.field;
         // LOCALID_STRONGMAN_SHOWING_PSYNERGY (LOCALID_FIRST_PLACED + 9).
@@ -404,7 +404,7 @@ impl<'a> Guide<'a> {
         self.place_gif("sleep-z.gif", &frames, "Garet's grandfather asleep: the screen and the sprites, the letters Z boxed")
     }
 
-    /// Vale on the stormy night by Kraden's cottage (ValeKraden): the room's
+    /// Vale on the stormy night by Kraden's cottage (ValeKradensCottage): the room's
     /// map with the two rocks boxed and the six cells the rockslide rewrites
     /// outlined with their collision codes, beside the same cells by day, as
     /// `rockslide-cells.png`.
