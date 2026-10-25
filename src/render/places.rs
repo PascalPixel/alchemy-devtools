@@ -1161,6 +1161,9 @@ impl Context<'_> {
                 // place here: another entrance, or a moment before, has the
                 // cast on stage.
                 Ok(run) if run.absent_speaker.is_some() => {
+                    if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+                        eprintln!("    {} at scene {} entrance {} spot ({}, {}): actor {} not on stage", event.name, setup.scene, setup.entrance, spot.x, spot.z, run.absent_speaker.unwrap_or_default());
+                    }
                     error = format!("a message opened beside actor {}, who is not on stage here", run.absent_speaker.unwrap_or_default());
                 }
                 // Another row for the trigger ran its function: the actor

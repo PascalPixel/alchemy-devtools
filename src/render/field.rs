@@ -923,7 +923,9 @@ impl<'rom> Field<'rom> {
         }
         if pc == s.speak && self.t.dispatched.is_some() && self.t.absent_speaker == 0 {
             let id = (self.gba.register(0) & 0xfff) as u16;
-            if id >= PARTY_SPEAKERS && self.actor(id).is_none() {
+            // A speaker past the field's objects (0xfff) is none: the window
+            // opens in its usual place, beside nobody by design.
+            if (PARTY_SPEAKERS..FIELD_ACTOR_COUNT as u16).contains(&id) && self.actor(id).is_none() {
                 self.t.absent_speaker = id;
             }
         }
