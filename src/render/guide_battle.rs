@@ -71,7 +71,7 @@ impl<'a> Guide<'a> {
     pub(super) fn drive(&self, drive: &Drive, watch: &mut dyn FnMut(&mut Gba, Option<u32>, usize) -> Act) -> Result<(), String> {
         let at = |name: &str| self.sym(name);
         let s = Boot {
-            start: at("Game_RunFar")?,
+            start: at("Game_MainLoopFar").or_else(|_| at("Game_RunFar"))?,
             menu: at("DebugBattle_RunMenu")?,
             preset: at("DebugParty_LoadPreset")?,
             encounter: at("Battle_Run")?,

@@ -6,6 +6,7 @@ use super::field::{
     box_holds, result_key, stands_in, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, MAP_EVENT_WARP, EVENT_LIMIT, MAP_EVENT_PSYNERGY, MAP_EVENT_BG, MAP_EVENT_TALK,
     MAP_EVENT_COORD, SETTLE,
 };
+use super::arrivals;
 use super::story::{parse_trigger, Alternative, Event, Flags, Scene, Trigger, MOVE};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -14,6 +15,17 @@ use std::path::{Path, PathBuf};
 const MAX_PAGES: usize = 4;
 /// Frames a gauge takes to slide off the screen.
 const HUD_FRAMES: u32 = 30;
+/// Frames of an arrival scene watched for its photo at most (15 seconds).
+const ARRIVAL_SCENE_FRAMES: u32 = 900;
+
+/// Whether a run of `render place` takes the entrance photo: not, once the
+/// player has control, or during the arrival scene.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Photo {
+    None,
+    Control,
+    Scene,
+}
 
 /// A story flag whose moments have names of their own: scenes whose
 /// initialization tests `flag` are shown at the new game's state as
@@ -345,6 +357,9 @@ pub struct Context<'a> {
     /// Each scene's functions by name, from its overlay's ELF: an event
     /// named by its function is told by its row's result.
     pub functions: &'a HashMap<u16, HashMap<String, u32>>,
+    /// Each map's arrivals from other maps, by map number (arrivals.rs):
+    /// its entrance photo is taken as the party arrives by one of them.
+    pub arrivals: &'a HashMap<u16, Vec<super::arrivals::Arrival>>,
     /// Story moments drawn (besides the new game's state), the scenes that
     /// have any, and the scenes that had more than MAX_MOMENTS.
     pub moments: usize,
@@ -441,6 +456,18 @@ impl Context<'_> {
         out
     }
 
+    /// Writes a state's entrance photo, taken by warp destination `number`,
+    /// noting in skipped.tsv where its leader is misplaced (`wrong`).
+    fn take_photo(&mut self, scene: &Scene, column: &str, folder: &str, number: i16, image: &Image, wrong: &[String]) -> Result<(), String> {
+        let file = format!("{folder}/entrance.png");
+        self.write(image, &file)?;
+        if !wrong.is_empty() {
+            self.skip(scene, &format!("{file} (kept)"), format!("the leader is misplaced by every way in; by warp destination {number}: {}", wrong.join("; ")));
+        }
+        self.rows.push(Row { scene: scene.slug(), number: scene.number, area: scene.area.clone(), variant: column.to_string(), kind: "entrance", entrance: number, file, ..Row::default() });
+        Ok(())
+    }
+
     /// The entrance photo and a map of each room, at the new game's state
     /// and at each moment of the scene's story that changes what a room
     /// shows (Field::signature) from every state drawn before it; only the
@@ -495,9 +522,47 @@ impl Context<'_> {
                 rooms.push(*e);
             }
         }
+        // The entrance photo shows the party as it arrives by a warp from
+        // another map (arrivals::ranked), placed by Map_ApplyWarpDest and the
+        // map's own arrival, by the next way in when an arrival goes on to
+        // another map before the player has control (the eruption leaves
+        // Vale for the world map); by the table's first row, where no warp
+        // may lead (WARP_DEST_DEFAULT), only when no warp leads in.
+        let numbers: Vec<i16> = entrances.iter().map(|e| e.number).collect();
+        let mut ways: Vec<Entrance> = self
+            .arrivals
+            .get(&scene.number)
+            .map(|a| arrivals::ranked(a, &numbers))
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|&n| entrances.iter().find(|e| e.number == n as i16).copied())
+            .collect();
+        if ways.is_empty() {
+            if all {
+                self.skip(scene, "entrance.png (kept)", "no warp of another map leads in, so it is taken by the table's first row".to_string());
+            }
+            ways.push(rooms[0]);
+        }
+        // Each run: the room (named by its first entrance), whether its map
+        // is drawn, and whether the photo is taken there. A room is entered
+        // by its first entrance; a way in that is no room's first entrance
+        // is a run of its own. When every way in goes on to another map
+        // before the player has control, the photo is of the first way's
+        // arrival scene (Field::arrival_scene).
+        let mut runs: Vec<(Entrance, bool, Photo)> =
+            rooms.iter().map(|r| (*r, true, if ways[0].number == r.number { Photo::Control } else { Photo::None })).collect();
+        if !rooms.iter().any(|r| r.number == ways[0].number) {
+            runs.push((ways[0], false, Photo::Control));
+        }
+        let mut next_way = 1;
+        let mut misplaced: Option<(Image, i16, Vec<String>)> = None;
+        let mut try_next = false;
         let mut named: HashMap<i16, usize> = HashMap::new();
         let mut wrote = false;
-        for (i, room) in rooms.iter().enumerate() {
+        let mut k = 0;
+        while k < runs.len() {
+            let (room, map, photo) = runs[k];
+            k += 1;
             let mut set = set.to_vec();
             if room.required_flag >= 0 {
                 set.push(room.required_flag as u16);
@@ -505,6 +570,15 @@ impl Context<'_> {
             let setup = Setup { scene: scene.number, entrance: room.number as u16, set, clear: clear.to_vec() };
             let result = (|| -> Result<(), String> {
                 let mut field = Field::enter(self.rom, self.symbols, &setup)?;
+                if photo == Photo::Scene {
+                    let image = field.arrival_scene(ARRIVAL_SCENE_FRAMES)?;
+                    let file = format!("{folder}/entrance.png");
+                    self.write(&image, &file)?;
+                    self.skip(scene, &format!("{file} (kept)"), format!("every way in goes on to another map before the player has control, so it shows warp destination {}'s arrival scene", room.number));
+                    self.rows.push(Row { scene: scene.slug(), number: scene.number, area: scene.area.clone(), variant: column.to_string(), kind: "entrance", entrance: room.number, file, ..Row::default() });
+                    wrote = true;
+                    return Ok(());
+                }
                 field.until_control()?;
                 field.frames(SETTLE)?;
                 let signature = field.signature();
@@ -530,13 +604,26 @@ impl Context<'_> {
                     file,
                     ..Row::default()
                 };
-                if i == 0 {
-                    let file = format!("{folder}/entrance.png");
-                    self.write(&field.screen(), &file)?;
-                    self.rows.push(row("entrance", file));
-                    wrote = true;
+                if photo == Photo::Control {
+                    // Where the leader stands is checked, and the machine
+                    // put back as it was. A photo whose leader is misplaced
+                    // waits while another way in is tried; when every way
+                    // is, the first such photo is kept.
+                    let image = field.screen();
+                    let photographed = field.save();
+                    let wrong = field.misplaced()?;
+                    field.load(&photographed);
+                    if wrong.is_empty() || (next_way >= ways.len() && misplaced.is_none()) {
+                        self.take_photo(scene, column, &folder, room.number, &image, &wrong)?;
+                        wrote = true;
+                    } else {
+                        if misplaced.is_none() {
+                            misplaced = Some((image, room.number, wrong));
+                        }
+                        try_next = true;
+                    }
                 }
-                if scene.map == "world" {
+                if !map || scene.map == "world" {
                     return Ok(());
                 }
                 // Gauges that hide while the field loop handles a request (the
@@ -568,6 +655,19 @@ impl Context<'_> {
             })();
             if let Err(e) = result {
                 self.skip(scene, &format!("{folder} room of entrance {}", room.number), e);
+                try_next = photo == Photo::Control;
+            }
+            if try_next {
+                try_next = false;
+                if next_way < ways.len() {
+                    runs.push((ways[next_way], false, Photo::Control));
+                    next_way += 1;
+                } else if let Some((image, number, wrong)) = misplaced.take() {
+                    self.take_photo(scene, column, &folder, number, &image, &wrong)?;
+                    wrote = true;
+                } else if all {
+                    runs.push((ways[0], false, Photo::Scene));
+                }
             }
         }
         if all && scene.map == "world" {

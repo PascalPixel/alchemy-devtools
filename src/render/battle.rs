@@ -164,8 +164,8 @@ impl Symbols {
             map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"))
         };
         Ok(Symbols {
-            // Game_RunFar, called Game_ResetForNewGameFar in older builds.
-            start: at("Game_RunFar").or_else(|_| at("Game_ResetForNewGameFar"))?,
+            // Game_MainLoopFar, called Game_RunFar and Game_ResetForNewGameFar in older builds.
+            start: at("Game_MainLoopFar").or_else(|_| at("Game_RunFar")).or_else(|_| at("Game_ResetForNewGameFar"))?,
             menu: at("DebugBattle_RunMenu")?,
             preset: at("DebugParty_LoadPreset")?,
             encounter: at("Battle_Run")?,
