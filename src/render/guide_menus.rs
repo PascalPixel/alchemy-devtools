@@ -125,7 +125,7 @@ impl<'a> Guide<'a> {
             "sanctum-revive" => self.sanctum_revive(),
             "item-picker-full" => self.item_picker_full(),
             "inventory-slots" => self.inventory_slots(),
-            _ => Err(format!("no mode {name}")),
+            _ => self.run_lucky(name),
         }
     }
 
