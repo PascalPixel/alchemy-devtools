@@ -36,6 +36,8 @@ pub const MODES: &[&str] = &[
     "layout-psynergy-stone",
     "map-colosso-race",
     "map-venus-star-thrown",
+    "venus-lighthouse-aerie-beam-whole",
+    "venus-lighthouse-aerie-eruption-whole",
 ];
 
 impl<'a> Guide<'a> {

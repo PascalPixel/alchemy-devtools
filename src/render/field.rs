@@ -64,6 +64,21 @@ const MAP_BOUNDS: u32 = 0xec;
 /// apart, its cells pointer first.
 const MAP_LAYER_CELLS: u32 = 0x130;
 const MAP_LAYER_SIZE: u32 = 0x30;
+/// MapGridScrollWork.layers: BG3, BG2 and BG1, each x then y first.
+const MAP_LAYERS: u32 = 0x104;
+/// MapGridLayerScroll's offset, parallax scale, drift speed and phase (x
+/// then y, words) and wrap mask (x then y, halfwords).
+const LAYER_OFFSET: u32 = 0x08;
+const LAYER_SCALE: u32 = 0x10;
+const LAYER_SPEED: u32 = 0x18;
+const LAYER_PHASE: u32 = 0x20;
+const LAYER_MASK: u32 = 0x28;
+/// The layers' screen maps in VRAM, BG_SCREEN_BLOCK(5) to (7), which
+/// MapGrid_SetCameraCenter draws; and the frames Field::pin_view waits for
+/// the field's layer task to run.
+const PIN_SCREEN_MAPS: u32 = 0x0600_2800;
+const PIN_SCREEN_MAP_BYTES: u32 = 3 * 0x800;
+const PIN_DRAW_FRAMES: u32 = 8;
 const FIELD_EVENTS: u32 = 0x10;
 const FIELD_ACTORS: u32 = 0x14;
 const FIELD_ACTOR_COUNT: u32 = 66;
@@ -1910,6 +1925,91 @@ impl<'rom> Field<'rom> {
         }
         let h = self.header();
         Ok(Reach { layer: 0, cells, room: [h[0] >> 16, h[1] >> 16, h[2] >> 16, h[3] >> 16], stops, origin, width })
+    }
+
+    /// Loads `from` with the view's top left pinned at `view` (16.16 pixels)
+    /// inside the scroll bounds `b`, which may reach past the header's, and
+    /// the layers' screen maps already drawn there, so the game runs on from
+    /// `from` as it would have, objects and all, until unpin_view: views
+    /// pinned from one saved moment and run the same frames show the same
+    /// moment. The maps are drawn whole (MapGrid_CenterOnFollowedPoint) in a
+    /// run from `from` that is then put back, because drawing them takes the
+    /// game more than a frame and would leave it a frame behind; their
+    /// screen maps (BG_SCREEN_BLOCK(5) to (7)) and the layers' positions are
+    /// carried over. The view and the layers' BG scroll values (in
+    /// `bg_scroll`, gBgScroll) are set as MapGrid_UpdateLayerScroll would set
+    /// them there, unshaken, for a frame in which the game does not scroll.
+    pub fn pin_view(&mut self, from: &Saved, view: (i32, i32), b: [i32; 4], bg_scroll: u32) -> Result<(), String> {
+        // The maps are drawn within the map's own bounds: drawn from above its
+        // top, MapGrid_SetCameraCenter would place its rows a metatile out
+        // (its tile numbers round toward zero). The view pinned past an edge
+        // then shows the map's rows and columns where they are, and only
+        // what lies past the edge is not the map.
+        let pin = |field: &mut Field, within: bool| {
+            field.load(from);
+            let work = field.map_work();
+            field.t.focus = [view.0 + fx(120), 0, view.1 + fx(96)];
+            field.t.pin_focus = true;
+            let live = field.bounds();
+            for (i, &v) in b.iter().enumerate() {
+                let v = match (within, i) {
+                    (false, _) => v,
+                    (true, 0 | 1) => v.max(live[i]),
+                    (true, _) => v.min(live[i]),
+                };
+                field.gba.write32(work + MAP_BOUNDS + 4 * i as u32, v as u32);
+            }
+            work
+        };
+        let work = pin(self, true);
+        self.t.arm_center = true;
+        let mut ran = 0;
+        while self.t.arm_center {
+            self.frames(1)?;
+            ran += 1;
+            if ran > PIN_DRAW_FRAMES {
+                return Err("MapGrid_UpdateLayerScroll never ran".to_string());
+            }
+        }
+        // The drawing may run past the frame it started in.
+        self.frames(1)?;
+        let maps: Vec<u32> = (0..PIN_SCREEN_MAP_BYTES / 4).map(|i| self.gba.read32(PIN_SCREEN_MAPS + 4 * i)).collect();
+        let layers: Vec<u32> = (0..3).flat_map(|l| [0, 4].map(|o| self.gba.read32(work + MAP_LAYERS + MAP_LAYER_SIZE * l + o))).collect();
+        pin(self, false);
+        for (i, &word) in maps.iter().enumerate() {
+            self.gba.write32(PIN_SCREEN_MAPS + 4 * i as u32, word);
+        }
+        for (i, &word) in layers.iter().enumerate() {
+            self.gba.write32(work + MAP_LAYERS + MAP_LAYER_SIZE * (i as u32 / 2) + 4 * (i as u32 % 2), word);
+        }
+        self.gba.write32(work + MAP_VIEW_X, view.0 as u32);
+        self.gba.write32(work + MAP_VIEW_Y, view.1 as u32);
+        for l in 0..3u32 {
+            let at = work + MAP_LAYERS + MAP_LAYER_SIZE * l;
+            let word = |o: u32| self.gba.read32(at + o) as i32;
+            // Each axis: the view times the layer's parallax, wrapped with its
+            // drift when it drifts, plus its offset; BG3 is the first layer.
+            let axis = |v: i32, k: u32| {
+                let mut base = ((i64::from(v) * i64::from(word(LAYER_SCALE + 4 * k))) >> 16) as i32;
+                if word(LAYER_SPEED + 4 * k) != 0 {
+                    let mask = i32::from(self.gba.read16(at + LAYER_MASK + 2 * k));
+                    base = (base + word(LAYER_PHASE + 4 * k)) & ((mask << 19) | 0x7ffff);
+                }
+                base + word(LAYER_OFFSET + 4 * k)
+            };
+            let (x, y) = (axis(view.0, 0), axis(view.1, 1));
+            self.gba.write16(bg_scroll + 4 * (3 - l), (x >> 16) as u16);
+            self.gba.write16(bg_scroll + 4 * (3 - l) + 2, (y >> 16) as u16);
+        }
+        Ok(())
+    }
+
+    /// Lets the view follow the camera again, and returns the view the map
+    /// work last drew from (its top left, pixels).
+    pub fn unpin_view(&mut self) -> (i32, i32) {
+        self.t.pin_focus = false;
+        let work = self.map_work();
+        (self.gba.read32(work + MAP_VIEW_X) as i32 >> 16, self.gba.read32(work + MAP_VIEW_Y) as i32 >> 16)
     }
 
     /// The map of `box` (16.16 pixels) from the moment `settled`, the leader

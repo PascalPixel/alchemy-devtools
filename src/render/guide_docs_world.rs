@@ -47,6 +47,8 @@ impl<'a> Guide<'a> {
             "layout-psynergy-stone" => self.psynergy_stone(),
             "map-colosso-race" => self.colosso_race(),
             "map-venus-star-thrown" => self.venus_star_thrown(),
+            "venus-lighthouse-aerie-beam-whole" => self.venus_beam_whole(),
+            "venus-lighthouse-aerie-eruption-whole" => self.venus_eruption_whole(),
             _ => Err(format!("no mode {name}")),
         }
     }
