@@ -164,6 +164,9 @@ const HOLD: u32 = 3;
 const MAX_FRAMES: u32 = 30000;
 /// Frames of the leader standing ready that open an event's recording.
 const LEAD_IN: u32 = 12;
+/// Speakers below this are the party (FieldMessage_ShowAtObject has them
+/// speak from the leader); from it on, a speaker is an actor of the scene.
+const PARTY_SPEAKERS: u16 = 8;
 /// Frames the field loop must step, with nothing to read, before the
 /// player has control again.
 const CONTROL_FRAMES: u32 = 30;
@@ -201,6 +204,8 @@ pub struct Symbols {
     update_layer: u32,
     center: u32,
     dismiss: u32,
+    /// FieldMessage_ShowAtObject, which opens a message beside its speaker.
+    speak: u32,
     objects: u32,
     typing: u32,
     choice: u32,
@@ -249,6 +254,7 @@ impl Symbols {
             update_layer: at("MapGrid_UpdateLayerScroll")?,
             center: at("MapGrid_CenterOnFollowedPoint")?,
             dismiss: at("Text_CheckTextDismissed")?,
+            speak: at("FieldMessage_ShowAtObject")?,
             objects: at("Object_UpdateAllThumb")?,
             typing: at("TextPrinter_Step")?,
             choice: at("YesNoMenu_Run")?,
@@ -323,6 +329,10 @@ struct Track {
     pin_focus: bool,
     freeze: bool,
     focus: [i32; 3],
+    /// The first speaker an event's message was opened beside that the
+    /// scene has no actor for (0 for none): the event is playing where its
+    /// cast is not on stage.
+    absent_speaker: u16,
     last_dismiss: u32,
     last_typing: u32,
     choice_return: u32,
@@ -456,6 +466,7 @@ impl<'rom> Field<'rom> {
             pin_focus: false,
             freeze: false,
             focus: [0; 3],
+            absent_speaker: 0,
             last_dismiss: 0,
             last_typing: 0,
             choice_return: 0,
@@ -910,6 +921,14 @@ impl<'rom> Field<'rom> {
         if self.t.freeze && pc == s.objects {
             self.gba.return_now(0);
         }
+        if pc == s.speak && self.t.dispatched.is_some() && self.t.absent_speaker == 0 {
+            let id = (self.gba.register(0) & 0xfff) as u16;
+            // A speaker past the field's objects (0xfff) is none: the window
+            // opens in its usual place, beside nobody by design.
+            if (PARTY_SPEAKERS..FIELD_ACTOR_COUNT as u16).contains(&id) && self.actor(id).is_none() {
+                self.t.absent_speaker = id;
+            }
+        }
         if pc == s.dismiss {
             self.t.last_dismiss = self.t.frame;
         }
@@ -1016,6 +1035,31 @@ impl<'rom> Field<'rom> {
             return Err(format!("the scene went on to scene {scene} before the player had control"));
         }
         Ok(())
+    }
+
+    /// A photo of an arrival that plays a scene and goes on to another map
+    /// before the player has control (the eruption's return to Vale): the
+    /// screen half a second before its first message starts typing, or
+    /// before it leaves the map, or after `max` frames, whichever comes
+    /// first; of those, the last that is not mostly black, as a fade leaves
+    /// it.
+    pub fn arrival_scene(&mut self, max: u32) -> Result<Image, String> {
+        const BEFORE: usize = 30;
+        let mut kept: std::collections::VecDeque<Image> = std::collections::VecDeque::new();
+        let typed = self.t.last_typing;
+        for _ in 0..max {
+            self.frames(1)?;
+            if self.t.last_typing != typed || self.gba.read16(self.s.game_state + GS_SCENE) != self.setup.scene {
+                break;
+            }
+            kept.push_back(self.screen());
+            if kept.len() > 4 * BEFORE {
+                kept.pop_front();
+            }
+        }
+        let lit = |image: &Image| image.pixels.iter().filter(|&&p| p & 0xf0_f0_f0 != 0).count() * 2 > image.pixels.len();
+        let early = kept.len().saturating_sub(BEFORE);
+        kept.iter().take(early.max(1)).rev().find(|i| lit(i)).or_else(|| kept.iter().rev().find(|i| lit(i))).map(|i| Image { width: i.width, height: i.height, pixels: i.pixels.clone() }).ok_or_else(|| "the arrival showed nothing but black".to_string())
     }
 
     pub fn save(&mut self) -> Saved {
@@ -1540,6 +1584,76 @@ impl<'rom> Field<'rom> {
         for i in 0..3 {
             self.gba.write32(a + OBJ_VELOCITY + 4 * i, 0);
         }
+    }
+
+    /// What is wrong with where the leader stands, for a photo that should
+    /// show him where the party can be: without a sprite, off the cell grid, on a wall cell
+    /// (a cliff, a wall, water), off his ground, outside his room's camera
+    /// box or the screen, on another actor (a stump, a pillar), or on ground
+    /// from which he can walk almost nowhere. Empty when nothing is.
+    pub fn misplaced(&mut self) -> Result<Vec<String>, String> {
+        let leader = self.leader().ok_or("the scene has no leader")?;
+        let (x, z) = (leader.x, leader.z);
+        let mut out = Vec::new();
+        if self.world() {
+            self.read_world()?;
+            if !self.world_walkable(x, z) {
+                out.push(format!("({x}, {z}) is world map ground the party cannot walk on"));
+            }
+            return Ok(out);
+        }
+        if !leader.drawn {
+            out.push("he has no sprite".to_string());
+        }
+        let layer = leader.layer.min(2);
+        match self.code_at(layer, x, z) {
+            -1 => out.push(format!("({x}, {z}) is off the cell grid")),
+            CELL_WALL => out.push(format!("({x}, {z}) is a wall cell of layer {layer}")),
+            _ => {}
+        }
+        let ground = self.ground(layer, x, z)?;
+        if (leader.y - ground).abs() > 2 << 16 {
+            out.push(format!("he stands {} pixels off the ground", (leader.y - ground) >> 16));
+        }
+        let room = self.room();
+        if x < room[0] || x >= room[2] || z < room[1] || z >= room[3] {
+            out.push(format!("({x}, {z}) is outside his room's camera box {room:?}"));
+        }
+        let (vx, vy) = self.view();
+        let (sx, sy) = (x - vx, z - (leader.y >> 16) - vy);
+        if !(0..WIDTH as i32).contains(&sx) || !(0..HEIGHT as i32).contains(&sy) {
+            out.push(format!("he is off the screen, at ({sx}, {sy}) on it"));
+        } else {
+            // The screen within 24 pixels of his feet, his own sprite
+            // left out, is black where the map draws nothing.
+            let screen = self.screen();
+            let (mut black, mut all) = (0, 0);
+            for py in (sy - 24).max(0)..(sy + 24).min(HEIGHT as i32) {
+                for px in (sx - 24).max(0)..(sx + 24).min(WIDTH as i32) {
+                    if (px - sx).abs() < 10 && py > sy - 28 && py < sy + 4 {
+                        continue;
+                    }
+                    all += 1;
+                    if screen.pixels[py as usize * WIDTH + px as usize] & 0xf0_f0_f0 == 0 {
+                        black += 1;
+                    }
+                }
+            }
+            if all > 0 && black * 10 > all * 8 {
+                out.push(format!("he stands in black, {}% of the screen around him", black * 100 / all));
+            }
+        }
+        for (id, ax, az) in self.stage() {
+            if (ax - x).abs() < 14 && (az - z).abs() < 14 {
+                out.push(format!("he stands on actor {id}, at ({ax}, {az})"));
+            }
+        }
+        let reach = self.reach(None)?;
+        let cells = reach.cells.iter().filter(|&&c| c).count();
+        if cells < 4 {
+            out.push(format!("he can walk to {cells} cells from there"));
+        }
+        Ok(out)
     }
 
     /// Why the leader is not standing at `spot`, on its ground, if he is not.
@@ -2226,6 +2340,7 @@ impl<'rom> Field<'rom> {
         let cap = record.unwrap_or(EVENT_LIMIT as usize);
         self.t.dispatched = None;
         let trigger_frame = self.t.frame;
+        self.t.absent_speaker = 0;
         let loads = self.t.loads;
         let entries = self.t.entries;
         let mut left = false;
@@ -2332,6 +2447,11 @@ impl<'rom> Field<'rom> {
                 break;
             }
             self.frames(1)?;
+            // A recorded event that speaks from an actor not on stage is
+            // refused (EventRun::absent_speaker): no need to play it out.
+            if record.is_some() && self.t.absent_speaker != 0 {
+                break;
+            }
             if let Some(at) = arrival {
                 match self.arrive(at, hold, &mut wait_start, &mut press_frame, &mut quiet_start)? {
                     Arrival::Going => continue,
@@ -2562,7 +2682,7 @@ impl<'rom> Field<'rom> {
             let placed = "the leader starts where the walk from the entrance does not reach, since what opens the way there is not played first".to_string();
             note = Some(note.map_or(placed.clone(), |n| format!("{placed}; {n}")));
         }
-        Ok(EventRun { pages, frames, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note })
+        Ok(EventRun { pages, frames, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker) })
     }
 
     /// One frame of an exit's arrival in the scene it leads to, which began
@@ -2847,9 +2967,11 @@ const BATTLE_OPENING: usize = 150;
 
 /// Frames a page is held before A while an event is recorded.
 const PAGE_HOLD: u32 = 45;
-/// Frames an event may run, three minutes: the longest scripted scenes seen,
-/// the stormy night at the river and Ivan joining in Vault, run under two.
-pub const EVENT_LIMIT: u32 = 10800;
+/// Frames an event may run, four minutes: Mercury Lighthouse Aerie's
+/// confrontation with Saturos runs past three to its battle, with every
+/// page held; the stormy night at the river and Ivan joining in Vault run
+/// under two.
+pub const EVENT_LIMIT: u32 = 14400;
 
 /// What an event left: its pages, when recorded its frames, and the moment
 /// the player had control again, when that was in the same scene.
@@ -2887,6 +3009,11 @@ pub struct EventRun {
     /// Why a recorded arrival stopped before the player had control: a
     /// battle began, or it ran past ARRIVAL_LIMIT.
     pub note: Option<String>,
+    /// A speaker one of the event's messages was opened beside that the
+    /// scene has no actor for: played here, its cast is not on stage (Mercury
+    /// Lighthouse Aerie's hostages after the battle), and its windows open
+    /// beside nobody.
+    pub absent_speaker: Option<u16>,
 }
 
 /// Whether entrance `e` only stands in for a room another entrance gives

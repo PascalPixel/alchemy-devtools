@@ -1023,10 +1023,8 @@ const OAM_BASE: u32 = 0x0700_0000;
 const OBJ_VRAM_BASE: u32 = 0x0601_0000;
 const GARETS_SISTER_ACTOR: u16 = 18;
 /// The Lighthouse Aerie (MapId_VenusLighthouseAerie) after the second
-/// battle (VENUS_LIGHTHOUSE_AERIE_AFTER_SECOND_BATTLE), and the beam's lowest
-/// segment (LOCALID_BEAM_BOTTOM; the other four follow it).
+/// battle (VENUS_LIGHTHOUSE_AERIE_AFTER_SECOND_BATTLE).
 const VENUS_LIGHTHOUSE_AERIE: (u16, u16) = (187, 3);
-const LOCALID_BEAM_BOTTOM: u16 = 24;
 /// The Tunnel Ruins' balance room (MapId_TunnelRuinsLadyStatues), its two
 /// entrances (TUNNEL_RUINS_LADY_STATUES_FROM_TUNNEL_RUINS_GREAT_STATUE_NORTH
 /// and TUNNEL_RUINS_LADY_STATUES_BALANCE_SOUTH), its west platform
@@ -1275,9 +1273,8 @@ impl<'a> Guide<'a> {
     /// Venus Lighthouse's beacon erupting, played from the aerie's entrance
     /// after the second battle with A pressed through the lines: from a
     /// second before the beam stacks its five segments (FLAG_MAP_TEMP_36)
-    /// for eight seconds, the screen with each
-    /// beam segment (LOCALID_BEAM_BOTTOM to LOCALID_BEAM_TOP) numbered 1 to 5 from
-    /// the bottom at its place, as `venus-lighthouse-aerie-eruption.gif`;
+    /// for eight seconds, the game alone with nothing drawn over it, as
+    /// `venus-lighthouse-aerie-eruption.gif`;
     /// and the moment five and a half seconds in, the split open and the
     /// colours back, pulled apart into its layers, as
     /// `venus-lighthouse-aerie-layers-3d.gif`.
@@ -1298,16 +1295,7 @@ impl<'a> Guide<'a> {
             if field.scene() != scene {
                 break;
             }
-            let (vx, vy) = field.view();
-            let mut image = canvas(WIDTH, HEIGHT, 0);
-            paste(&mut image, &screen(&field.picture()), 0, 0, 1);
-            if field.flag_is_set(stacked) {
-                for (k, id) in (LOCALID_BEAM_BOTTOM..LOCALID_BEAM_BOTTOM + 5).enumerate() {
-                    let Some(a) = field.actor(id) else { continue };
-                    let (sx, sy) = (a.x - vx, a.z - (a.y >> 16) - vy);
-                    text(&mut image, sx + 6, sy - 7, &(k + 1).to_string(), WHITE, Some(RED), 2);
-                }
-            }
+            let image = screen(&field.picture());
             match since {
                 None if field.flag_is_set(stacked) => {
                     since = Some(0);

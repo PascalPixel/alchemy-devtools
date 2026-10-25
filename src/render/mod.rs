@@ -6,6 +6,8 @@
 #[cfg(feature = "render")]
 mod animation;
 #[cfg(feature = "render")]
+mod arrivals;
+#[cfg(feature = "render")]
 mod backdrop;
 #[cfg(feature = "render")]
 mod battle;
@@ -424,10 +426,19 @@ clear-data screen and the debug test rooms. The tables are the story tools'
 places.tsv (scenes), events.tsv (each event's trigger, flags and messages)
 and flags.tsv (flag names).
 
-place: the main entrance's photo once the player has control
-(entrance.png; the main entrance is the table's first, which the scene
-falls back to), and a map of each room, one camera box of the scene's
-entrances, named by the first entrance that reaches it (map-<entrance>.png),
+place: the photo of the party arriving, once the player has control
+(entrance.png): entered by the lowest-numbered warp destination another
+map's warp leads to (MAP_WARP in the source's warp tables), the Sanctum's,
+the menus' and unused maps' warps after every other, so the game's own
+arrival places the party and the camera. The next way in is tried when an
+arrival goes on to another map before the player has control, or leaves
+the leader without a sprite, on a wall cell, off his ground, outside his
+room or the screen, in black, on another actor or where he can walk almost
+nowhere; when every way does, the first such photo is kept and skipped.tsv
+says why, and when every way goes on to another map, the photo is of the
+first arrival's scene, half a second before its first message.
+And a map of each room, one camera box of the scene's entrances, named
+by the first entrance that reaches it (map-<entrance>.png),
 stitched from one moment with the leader hidden. Then the same at each
 moment of the scene's story: each sets one more of the named story flags
 its initialization tests, in the order the events' conditions give, so
@@ -471,7 +482,7 @@ never sits on black. An arrival is followed for at most 10 seconds from
 the load; one that runs longer, or that begins a battle, ends there, and
 index.tsv's note column says so. index.tsv's leads_to column names the scene an event places the
 party in next by its SceneId symbol (its own scene for a staircase to
-another of its entrances). An event that runs past three minutes gets no
+another of its entrances). An event that runs past four minutes gets no
 GIF, noted in skipped.tsv. --messages is accepted and not read.
 
 --jobs N runs N processes of this program, each with its own libmgba
@@ -820,6 +831,8 @@ struct Machines {
     rom: Vec<u8>,
     symbols: field::Symbols,
     functions: std::collections::HashMap<u16, std::collections::HashMap<String, u32>>,
+    /// Each map's arrivals from other maps, by map number, from the source.
+    arrivals: std::collections::HashMap<u16, Vec<arrivals::Arrival>>,
 }
 
 #[cfg(feature = "render")]
@@ -848,7 +861,8 @@ impl Machines {
             let named = elf.symbols.iter().filter(|y| y.kind == 2 && !y.name.is_empty()).map(|y| (y.name.clone(), y.value & !1)).collect();
             functions.insert(s.number, named);
         }
-        Ok(Machines { rom, symbols, functions })
+        let arrivals = arrivals::read(root)?;
+        Ok(Machines { rom, symbols, functions, arrivals })
     }
 
     /// A fresh context for one piece of work.
@@ -870,6 +884,7 @@ impl Machines {
             only: r.only,
             cleared: Vec::new(),
             functions: &self.functions,
+            arrivals: &self.arrivals,
             moments: 0,
             moment_scenes: 0,
             capped: 0,
@@ -948,6 +963,10 @@ writes into DIR (default out/EDITION/story):
               town's farewell, and the town gathered
   lighthouse  venus-lighthouse-lit.gif and .png: the world map cut at its
               entrance 91 after Venus Lighthouse's beacon erupts
+  mercury     mercury-lighthouse-lit.gif and .png: the world map cut at its
+              entrance 90 after Mercury Lighthouse's beacon is lit, and
+              mercury-lighthouse-aerie-arrival.gif: the Lighthouse Aerie it
+              goes on to, until the player has control there
 --only picks some; flags.tsv is the story tools' flag names.";
 
 fn story_pictures(arguments: &[String]) -> Result<(), String> {
@@ -1047,11 +1066,12 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
             failed.push("world");
         }
     }
-    for name in ["title", "farewell", "lighthouse"] {
+    for name in ["title", "farewell", "lighthouse", "mercury"] {
         if wanted(name) {
             let result = match name {
                 "title" => front.title(),
                 "farewell" => front.farewell(4607, 4613, 4628),
+                "mercury" => front.mercury_lighthouse(),
                 _ => front.lighthouse(),
             };
             if let Err(e) = result {
@@ -1225,8 +1245,8 @@ FOLDER/NAME.gif under DIR, the guide it opens a section of:
   field-step-height, field-world-map-zoom (field/), overworld-battle-return,
   overworld-move-nothing (overworld/), layout-ledge, layout-waterfall
   (layout/), map-arrive, map-talk-twice (map/), layout-haze,
-  layout-psynergy-stone (layout/), map-colosso-race (map/,
-  guide_docs_world.rs); overworld-battle-return also
+  layout-psynergy-stone (layout/), map-colosso-race, map-venus-star-thrown
+  (map/, guide_docs_world.rs); overworld-battle-return also
   writes field/battle-swing.gif
 Recordings for the menu, window, shop and game guides, one GIF each
 (guide_menus.rs):
