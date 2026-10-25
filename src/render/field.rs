@@ -1542,6 +1542,54 @@ impl<'rom> Field<'rom> {
         }
     }
 
+    /// What is wrong with where the leader stands, for a photo that should
+    /// show him where the party can be: off the cell grid, on a wall cell
+    /// (a cliff, a wall, water), off his ground, outside his room's camera
+    /// box or the screen, on another actor (a stump, a pillar), or on ground
+    /// from which he can walk almost nowhere. Empty when nothing is.
+    pub fn misplaced(&mut self) -> Result<Vec<String>, String> {
+        let leader = self.leader().ok_or("the scene has no leader")?;
+        let (x, z) = (leader.x, leader.z);
+        let mut out = Vec::new();
+        if self.world() {
+            self.read_world()?;
+            if !self.world_walkable(x, z) {
+                out.push(format!("({x}, {z}) is world map ground the party cannot walk on"));
+            }
+            return Ok(out);
+        }
+        let layer = leader.layer.min(2);
+        match self.code_at(layer, x, z) {
+            -1 => out.push(format!("({x}, {z}) is off the cell grid")),
+            CELL_WALL => out.push(format!("({x}, {z}) is a wall cell of layer {layer}")),
+            _ => {}
+        }
+        let ground = self.ground(layer, x, z)?;
+        if (leader.y - ground).abs() > 2 << 16 {
+            out.push(format!("he stands {} pixels off the ground", (leader.y - ground) >> 16));
+        }
+        let room = self.room();
+        if x < room[0] || x >= room[2] || z < room[1] || z >= room[3] {
+            out.push(format!("({x}, {z}) is outside his room's camera box {room:?}"));
+        }
+        let (vx, vy) = self.view();
+        let (sx, sy) = (x - vx, z - (leader.y >> 16) - vy);
+        if !(0..WIDTH as i32).contains(&sx) || !(0..HEIGHT as i32).contains(&sy) {
+            out.push(format!("he is off the screen, at ({sx}, {sy}) on it"));
+        }
+        for (id, ax, az) in self.stage() {
+            if (ax - x).abs() < 14 && (az - z).abs() < 14 {
+                out.push(format!("he stands on actor {id}, at ({ax}, {az})"));
+            }
+        }
+        let reach = self.reach(None)?;
+        let cells = reach.cells.iter().filter(|&&c| c).count();
+        if cells < 4 {
+            out.push(format!("he can walk to {cells} cells from there"));
+        }
+        Ok(out)
+    }
+
     /// Why the leader is not standing at `spot`, on its ground, if he is not.
     fn check_leader(&mut self, spot: &Spot) -> Result<(), String> {
         let selected = self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16;

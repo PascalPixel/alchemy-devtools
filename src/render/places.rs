@@ -533,6 +533,14 @@ impl Context<'_> {
                 if i == 0 {
                     let file = format!("{folder}/entrance.png");
                     self.write(&field.screen(), &file)?;
+                    // The photo is kept, but where the leader stands is
+                    // checked, and the machine put back as it was.
+                    let photographed = field.save();
+                    let wrong = field.misplaced()?;
+                    field.load(&photographed);
+                    if !wrong.is_empty() {
+                        self.skip(scene, &format!("{file} (kept)"), format!("the leader is misplaced: {}", wrong.join("; ")));
+                    }
                     self.rows.push(row("entrance", file));
                     wrote = true;
                 }
