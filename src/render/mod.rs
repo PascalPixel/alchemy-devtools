@@ -1149,7 +1149,7 @@ Take-apart pictures for places and guides, each as its mode's name with
   tret-tree-branch-split, kolima-forest-tree-healing, altmiller-cave-darkness,
   bilibin-cave-third-puddle, fuchin-falls-cave-logs, mercury-lighthouse-pool,
   lunpa-fortress-patrol, tolbi-spring-toss, kolima-forest-entrance-fields,
-  tret-tree-interiors-cocoons, colosseum-azart-race, colosseum-navampa-scales,
+  tree-rooms-cocoons, colosseum-azart-race, colosseum-navampa-scales,
   colosseum-satrage-lifts, tunnel-ruins-balance, venus-lighthouse-aerie-eruption
   (and venus-lighthouse-aerie-layers-3d.gif), scene-event-cells,
   credits-tile-ring, title-intro-layers-3d, item-screen-windows, sound-players,
@@ -1223,7 +1223,7 @@ Take-apart pictures for the menu guide (guide_menu.rs), in Xian:
   item-sorting      item-sorting.png: Isaac's items in each of the four orders
 Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
-  vale-opening, vale-gate-display, vale-interiors-sleep, vale-kraden-rockslide,
+  vale-opening, vale-gate-display, cottage-rooms-a-sleep, vale-kraden-rockslide,
   vale-cave-kite
 Take-apart pictures for the engine's guides, each as its mode's name with
 .png or .gif (guide_engine.rs):

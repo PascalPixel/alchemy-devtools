@@ -62,7 +62,7 @@ const CHAPTERS: &[Chapter] = &[
     // Lama Temple and the Lamakan Desert.
     Chapter { maps: &[("LamaTemple", "LamakanDesertCave")], preset: Some(40), members: None },
     // Kalay, its docks and Hammet's palace.
-    Chapter { maps: &[("Kalay", "HammetPalace"), ("KalayDocks", "WoodenRoomsB")], preset: Some(42), members: None },
+    Chapter { maps: &[("Kalay", "HammetPalace"), ("KalayDocks", "CottageRoomsE")], preset: Some(42), members: None },
     // The Tolbi-bound Ship and Tolbi Docks.
     Chapter { maps: &[("TolbiShipDeck", "TolbiDocks")], preset: Some(43), members: None },
     // Tolbi and Babi's palace.
@@ -77,7 +77,7 @@ const CHAPTERS: &[Chapter] = &[
     // The Suhalla Desert, Suhalla, its gate, Gateway Cave, the Tunnel Ruins.
     Chapter { maps: &[("SuhallaDesertNorth", "TunnelRuinsLadyStatues")], preset: Some(64), members: None },
     // Babi Lighthouse, Lalivero, the Lemurian Ship.
-    Chapter { maps: &[("BabiLighthouseStoneDoor", "LaliveroInteriorsB"), ("LemurianShip", "LemurianShip")], preset: Some(65), members: None },
+    Chapter { maps: &[("BabiLighthouseStoneDoor", "TimberRoomsC"), ("LemurianShip", "LemurianShip")], preset: Some(65), members: None },
     // Crossbone Isle, open to the end.
     Chapter { maps: &[("CrossboneIsle", "CrossboneIsleNinthFloor")], preset: Some(67), members: None },
     // Venus Lighthouse.

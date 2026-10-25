@@ -33,7 +33,7 @@ const SOL_CHEST_ROOM: (u16, u16) = (16, 2);
 const MB_SOL_SANCTUM_RELIEFS_CHEST: u16 = 100;
 /// Vale's strongman by the river (vale.c, LOCALID_STRONGMAN_BY_THE_RIVER).
 const STRONGMAN_BY_THE_RIVER: u16 = 12;
-/// Vale's inn and its innkeeper (wooden_rooms_a.c, LOCALID_INNKEEPER).
+/// Vale's inn and its innkeeper (cottage_rooms_b.c, LOCALID_INNKEEPER).
 const VALE_INN: (u16, u16) = (8, 0);
 const VALE_INNKEEPER: u16 = 13;
 /// The title overlay's entrance that plays the intro after the prologue.

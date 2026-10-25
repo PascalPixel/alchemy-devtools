@@ -367,7 +367,7 @@ impl<'a> Guide<'a> {
     /// (EventScript_GaretComesHome): the screen beside the sprites, the three
     /// letters Z (actors 23 to 25) boxed and the frame of their 180-frame
     /// cycle written, as `sleep-z.gif`.
-    pub fn vale_interiors_sleep(&mut self) -> Result<(), String> {
+    pub fn cottage_rooms_a_sleep(&mut self) -> Result<(), String> {
         let count = self.sym("gFrameCount")?;
         let mut field = self.arrive((7, 6), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let panels = [Panel::Screen, Panel::Sprites];

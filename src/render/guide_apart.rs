@@ -1040,10 +1040,10 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Bilibin's weapon and armor shop (MapId_BilibinInteriors, entrance
-/// BILIBIN_INTERIORS_WEAPON_AND_ARMOR_SHOP) and its weapon merchant
+/// Bilibin's weapon and armor shop (MapId_CottageRoomsC, entrance
+/// COTTAGE_ROOMS_C_WEAPON_AND_ARMOR_SHOP) and its weapon merchant
 /// (BILIBIN_WEAPON_MERCHANT), whose counter opens stock row 7; Vault's
-/// interiors (MapId_VaultInteriors, from its east-southeast door) and its
+/// interiors (MapId_LogRoomsA, from its east-southeast door) and its
 /// weapon merchant (LOCALID_WEAPON_MERCHANT), whose counter opens row 4.
 const BILIBIN_WEAPON_SHOP: (u16, u16) = (31, 4);
 const BILIBIN_WEAPON_MERCHANT: u16 = 16;

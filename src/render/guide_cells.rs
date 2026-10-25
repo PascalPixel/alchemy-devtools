@@ -533,10 +533,10 @@ pub(super) const SATRAGE_WORDS: Words = &[];
 /// Vale by day, on the day the story begins (MapId_Vale, entered by the
 /// Sanctum's door).
 const VALE: (u16, u16) = (4, 1);
-/// The scenes Vale's doors lead into: MapId_ValeInteriors and
-/// MapId_WoodenRoomsA.
-const VALE_INTERIORS: u16 = 7;
-const WOODEN_ROOMS_A: u16 = 8;
+/// The scenes Vale's doors lead into: MapId_CottageRoomsA and
+/// MapId_CottageRoomsB.
+const COTTAGE_ROOMS_A: u16 = 7;
+const COTTAGE_ROOMS_B: u16 = 8;
 
 /// What the rows of Vale's event table do, from their functions'
 /// comments, the scenes their exits lead to, and the event renders.
@@ -546,11 +546,11 @@ const VALE_WORDS: Words = &[
     ("EventScript_WarpToValeKradensCottageNorth", "Way out to Kraden's cottage, north", Some(6)),
     ("EventScript_WarpToValeKradensCottageSouth", "Way out to Kraden's cottage, south", Some(6)),
     ("EventScript_WarpToValePlaza", "Way out to the Psynergy Stone", Some(5)),
-    ("EventScript_EnterGaretsHouse", "Door into Garet's house (walk north into it)", Some(VALE_INTERIORS)),
-    ("EventScript_EnterValeInteriors", "Door into a house (walk north into it)", Some(VALE_INTERIORS)),
-    ("EventScript_EnterIsaacsHouse", "Door into Isaac's house (walk north into it)", Some(WOODEN_ROOMS_A)),
-    ("EventScript_EnterJennasGrandparentsHouse", "Door into the house of Jenna's grandparents (walk north into it)", Some(VALE_INTERIORS)),
-    ("EventScript_EnterValeInteriorsWest", "Door into a house (walk north into it)", Some(VALE_INTERIORS)),
+    ("EventScript_EnterGaretsHouse", "Door into Garet's house (walk north into it)", Some(COTTAGE_ROOMS_A)),
+    ("EventScript_EnterCottageRoomsA", "Door into a house (walk north into it)", Some(COTTAGE_ROOMS_A)),
+    ("EventScript_EnterIsaacsHouse", "Door into Isaac's house (walk north into it)", Some(COTTAGE_ROOMS_B)),
+    ("EventScript_EnterJennasGrandparentsHouse", "Door into the house of Jenna's grandparents (walk north into it)", Some(COTTAGE_ROOMS_A)),
+    ("EventScript_EnterCottageRoomsAWest", "Door into a house (walk north into it)", Some(COTTAGE_ROOMS_A)),
     ("EventScript_StepOntoBridge", "Onto the bridge: its cells change", None),
     ("EventScript_StepOffBridge", "Off the bridge: its cells change back", None),
     ("EventScript_WatchThePuppies", "The puppies bark", None),

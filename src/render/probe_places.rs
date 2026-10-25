@@ -32,9 +32,9 @@ pub const PROBES: &[&str] = &[
     "flag-reads",
     "vale-gate",
     "vault",
-    "vault-interiors",
+    "log-rooms-a",
     "vault-revisit",
-    "vault-interiors-revisit",
+    "log-rooms-b",
     "vault-bridge",
     "vale-cave",
     "vault-ivy",
@@ -494,9 +494,9 @@ impl<'a> Guide<'a> {
                 }
                 Ok(())
             }
-            "vault-interiors" => {
-                // VaultInteriors (21), the guests' room upstairs at the inn:
-                // the cells with VAULT_INTERIORS_CELL_GUESTS_ROOM (10) and
+            "log-rooms-a" => {
+                // LogRoomsA (21), the guests' room upstairs at the inn:
+                // the cells with LOG_ROOMS_A_CELL_GUESTS_ROOM (10) and
                 // the row the events rewrite, in each state of the chase.
                 for (label, set) in [
                     ("before", vec!["FLAG_VALE_PARTY_LEFT", "FLAG_VAULT_IVAN_JOINED_ROD_SEARCH"]),
@@ -604,8 +604,8 @@ impl<'a> Guide<'a> {
                 self.marked_room(&mut v, "vault-before.png", &marks, "Vault before Kalay, the same cells outlined")?;
                 Ok(())
             }
-            "vault-interiors-revisit" => {
-                // VaultInteriorsRevisit (24): the gem owner's house, its
+            "log-rooms-b" => {
+                // LogRoomsB (24): the gem owner's house, its
                 // cells at (8, 67) and the copy's source at (0, 120).
                 let e = self.enter_story((24, 0), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;
                 let entrance = {
@@ -636,18 +636,18 @@ impl<'a> Guide<'a> {
                         marks.push((cx, cz, RED, String::new()));
                     }
                 }
-                self.marked_room(&mut e, "vault-interiors-revisit-after.png", &marks, "the gem owner's house after Kalay")?;
-                // The same room before Kalay (VaultInteriors, 21).
+                self.marked_room(&mut e, "log-rooms-b-after.png", &marks, "the gem owner's house after Kalay")?;
+                // The same room before Kalay (LogRoomsA, 21).
                 let entrance = 1u16;
                 let mut v = self.enter_story((21, entrance), &["FLAG_VALE_PARTY_LEFT"], &[])?;
                 for layer in 0..3 {
                     super::probe::words(&v.field, layer, (6, 65), (13, 71));
                 }
-                self.marked_room(&mut v, "vault-interiors-before.png", &marks, "the gem owner's house before Kalay")?;
+                self.marked_room(&mut v, "log-rooms-a-before.png", &marks, "the gem owner's house before Kalay")?;
                 Ok(())
             }
             "vale-inn" => {
-                // WoodenRoomsA (8) after Kalay: LOCALID_INVISIBLE_AFTER_KALAY
+                // CottageRoomsB (8) after Kalay: LOCALID_INVISIBLE_AFTER_KALAY
                 // and its neighbours, and walking into it.
                 let ents = {
                     let e = self.enter_story((8, 0), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;

@@ -656,8 +656,8 @@ const PICKER_PATH: &[(u32, u32)] = &[
     (KEY_RIGHT, 3), (0, 50), (KEY_LEFT, 3), (0, 50), (KEY_A, 3), (0, 50), (KEY_DOWN, 3), (0, 40), (KEY_A, 3), (0, 120),
 ];
 
-/// Bilibin's item shop (MapId_BilibinInteriors, entrance
-/// BILIBIN_INTERIORS_ITEM_SHOP) and its keeper.
+/// Bilibin's item shop (MapId_CottageRoomsC, entrance
+/// COTTAGE_ROOMS_C_ITEM_SHOP) and its keeper.
 const BILIBIN_ITEM_SHOP: (u16, u16) = (31, 5);
 const BILIBIN_ITEM_SHOPKEEPER: u16 = 18;
 /// sizeof(struct ShopWork), the menu work's size.

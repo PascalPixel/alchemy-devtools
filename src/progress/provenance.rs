@@ -31,6 +31,9 @@ pub const VOCABULARY: &[&str] = &[
     // Kinds and prefixes.
     "map", "mapsec", "localid", "scene", "id", "ids", "actor", "actors", "flag", "flags", "event", "events", "script", "scripts", "handler",
     "handlers", "callback", "table", "tables", "entry", "entries", "index", "count", "num", "interiors", "interior",
+    // The interior styles a sheet of rooms is named for, the words the game's
+    // text lacks.
+    "stucco", "timber", "lacquer",
     "temp", "tmp", "msg", "obj", "npc", "fx", "se", "mus", "bg", "gfx", "anim", "oam", "vram", "sprite", "sprites",
     "tile", "tiles", "tilemap", "palette", "pal", "cell", "cells", "region", "regions", "layer", "rect", "ptr",
     "buf", "buffer", "data", "state", "mode", "kind", "type", "init", "initialize", "update", "updates", "get",
@@ -1134,8 +1137,8 @@ mod tests {
         assert_eq!(enumerator("LOCALID_GUARD", None), Some("object event"), "an untagged enum, by its words");
         assert_eq!(enumerator("LOCALID_INVISIBLE_ROCK_GUIDE", Some("WorldMapCaravanLocalId")), None, "an invisible object event");
         assert_eq!(enumerator("LOCALID_MASK_FOR_STUMP", Some("GomaCavePillarLocalId")), None, "a mask");
-        assert_eq!(enumerator("LOCALID_YOUNG_MAN_SAW_MASK", Some("WoodenRoomsALocalId")), Some("object event"), "a mask last is a word");
-        assert_eq!(enumerator("LOCALID_MASKED_MAN", Some("WoodenRoomsALocalId")), Some("object event"));
+        assert_eq!(enumerator("LOCALID_YOUNG_MAN_SAW_MASK", Some("CottageRoomsBLocalId")), Some("object event"), "a mask last is a word");
+        assert_eq!(enumerator("LOCALID_MASKED_MAN", Some("CottageRoomsBLocalId")), Some("object event"));
         assert_eq!(enumerator("LOCALID_HIDDEN_PUDDLE", Some("LunpaLocalId")), Some("object event"), "hidden is not invisible");
         assert_eq!(enumerator("ITEM_BLANK", Some("ItemId")), Some("item"), "stand-ins are actors");
         assert_eq!(enumerator("ABILITY_FORMULA_SUMMON", Some("AbilityFormula")), None);

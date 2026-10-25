@@ -26,7 +26,7 @@ const WORLD_MAP: (u16, u16) = (2, 1);
 /// Goma Cave's pillar room, entered from the pond to its south (its default
 /// entrance stands in for it with the header's wider bounds).
 const GOMA_CAVE: (u16, u16) = (27, 5);
-/// Bilibin's item shop and inn, rooms of BilibinInteriors (scene_links.h).
+/// Bilibin's item shop and inn, rooms of CottageRoomsC (scene_links.h).
 const BILIBIN_ITEM_SHOP: (u16, u16) = (31, 5);
 const BILIBIN_INN: (u16, u16) = (31, 6);
 /// Facing north, 1/65536 turns: across a counter.
@@ -38,7 +38,7 @@ const CREDITS: (u16, u16) = (0, 9);
 /// Vale's actors: Garet's sister, the stone pillar Move pushes.
 const GARETS_SISTER: u16 = 18;
 const VALE_PILLAR: u16 = 20;
-/// Bilibin's item shopkeeper and innkeeper (bilibin_interiors.c).
+/// Bilibin's item shopkeeper and innkeeper (cottage_rooms_c.c).
 const BILIBIN_ITEM_SHOPKEEPER: u16 = 18;
 const BILIBIN_INNKEEPER: u16 = 19;
 /// The Djinn room's Flint.

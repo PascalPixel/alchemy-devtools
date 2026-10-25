@@ -927,14 +927,14 @@ impl<'a> Guide<'a> {
         self.guide_png("kolima-forest-entrance-fields.png", &out, "the Psynergy fields on two frames running, and where a sparkle bursts on them")
     }
 
-    /// The whole map of Tret Tree's inside (MapId_TretTreeInteriors), all
+    /// The whole map of Tret Tree's inside (MapId_TreeRooms), all
     /// six rooms where the map lays them out: each cocoon's touch cells
     /// (codes 21 to 29, 31, 32 and 50 to 59) outlined and labelled with the
     /// code, and the entrance of the same number, where breaking through it
     /// drops the leader, marked with a ring and the same label in the same
-    /// colour, as `tret-tree-interiors-cocoons.png`.
-    pub fn tret_tree_interiors_cocoons(&mut self) -> Result<(), String> {
-        let mut entered = self.enter_with((TRET_TREE_INTERIORS, 0), &[])?;
+    /// colour, as `tree-rooms-cocoons.png`.
+    pub fn tree_rooms_cocoons(&mut self) -> Result<(), String> {
+        let mut entered = self.enter_with((TREE_ROOMS, 0), &[])?;
         let field = &mut entered.field;
         let settled = field.save();
         let h = field.header();
@@ -957,7 +957,7 @@ impl<'a> Guide<'a> {
                 text(&mut image, x + 9, z - 7, &code.to_string(), colour, Some(WHITE), 2);
             }
         }
-        self.guide_png("tret-tree-interiors-cocoons.png", &image, "Tret Tree's rooms, each cocoon and the entrance it drops the leader to")
+        self.guide_png("tree-rooms-cocoons.png", &image, "Tret Tree's rooms, each cocoon and the entrance it drops the leader to")
     }
 }
 
@@ -1000,7 +1000,7 @@ const REQUESTS: [(u32, &str); 12] = [
 ];
 /// A door of Vale's, a touch cell whose event leaves the scene.
 const VALE_DOOR: u16 = 7;
-/// Bilibin's inn, a room of BilibinInteriors (scene_links.h), and its
+/// Bilibin's inn, a room of CottageRoomsC (scene_links.h), and its
 /// innkeeper.
 const BILIBIN_INN_ROOM: (u16, u16) = (31, 6);
 const BILIBIN_INNKEEPER_ACTOR: u16 = 19;
@@ -1787,8 +1787,8 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Tret Tree's inside (MapId_TretTreeInteriors) and its cocoons' touch
+/// Tret Tree's inside (MapId_TreeRooms) and its cocoons' touch
 /// codes, each the number of the entrance breaking through it lands on.
-const TRET_TREE_INTERIORS: u16 = 45;
+const TREE_ROOMS: u16 = 45;
 const TRET_COCOONS: [u16; 21] = [21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59];
 // (end)

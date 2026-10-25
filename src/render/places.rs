@@ -1432,7 +1432,7 @@ impl Context<'_> {
 }
 
 /// An event's name as a file name: letters, digits and underscores kept,
-/// anything else a hyphen (`gXianInteriors_Events-65`).
+/// anything else a hyphen (`gLacquerRoomsB_Events-65`).
 fn file_name(name: &str) -> String {
     let mut out = String::new();
     for c in name.chars() {
@@ -1477,7 +1477,7 @@ mod tests {
     #[test]
     fn event_names_become_file_names() {
         assert_eq!(file_name("EventScript_InspectWell"), "EventScript_InspectWell");
-        assert_eq!(file_name("gXianInteriors_Events[65]"), "gXianInteriors_Events-65");
+        assert_eq!(file_name("gLacquerRoomsB_Events[65]"), "gLacquerRoomsB_Events-65");
     }
 
     #[test]

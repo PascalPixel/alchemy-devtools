@@ -368,11 +368,11 @@ impl<'a> Guide<'a> {
         self.record(&mut field, &path, "item-sort.gif", "Isaac's bag sorted in each of the four orders")
     }
 
-    /// A room of BilibinInteriors entered by warp destination `room`, the
-    /// leader across the counter from `keeper` (bilibin_interiors.c).
+    /// A room of CottageRoomsC entered by warp destination `room`, the
+    /// leader across the counter from `keeper` (cottage_rooms_c.c).
     fn bilibin_keeper(&self, room: u16, keeper: &str) -> Result<(super::guide::Entered<'a>, super::field::Spot), String> {
-        let map = source::map_id("BilibinInteriors")?;
-        let id = source::local_id("BilibinInteriors", keeper)?;
+        let map = source::map_id("CottageRoomsC")?;
+        let id = source::local_id("CottageRoomsC", keeper)?;
         self.stand_where((map, room), Trigger::Talk(id), id, |s| s.facing == NORTH)
     }
 

@@ -459,7 +459,7 @@ mod tests {
             dir.join("beats.tsv"),
             "order\tplace\tfile\tscenes\tevent\ttrigger\trequires\tsets\tclears\n\
              1\tVale\tv.c\t4 Vale\tE1\t\t\tFLAG_A, FLAG_B, FLAG_TUNIC\t\n\
-             2\tVault\tv.c\t20 Vault, 21 VaultInteriors\tE2\t\t\tFLAG_C\tFLAG_B\n\
+             2\tVault\tv.c\t20 Vault, 21 LogRoomsA\tE2\t\t\tFLAG_C\tFLAG_B\n\
              3\tGoma Cave\tg.c\t27 GomaCavePillar\tE3\t\t\tFLAG_D\t\n",
         )
         .unwrap();
