@@ -6,6 +6,8 @@
 #[cfg(feature = "render")]
 mod animation;
 #[cfg(feature = "render")]
+mod arrivals;
+#[cfg(feature = "render")]
 mod backdrop;
 #[cfg(feature = "render")]
 mod battle;
@@ -424,10 +426,19 @@ clear-data screen and the debug test rooms. The tables are the story tools'
 places.tsv (scenes), events.tsv (each event's trigger, flags and messages)
 and flags.tsv (flag names).
 
-place: the main entrance's photo once the player has control
-(entrance.png; the main entrance is the table's first, which the scene
-falls back to), and a map of each room, one camera box of the scene's
-entrances, named by the first entrance that reaches it (map-<entrance>.png),
+place: the photo of the party arriving, once the player has control
+(entrance.png): entered by the lowest-numbered warp destination another
+map's warp leads to (MAP_WARP in the source's warp tables), the Sanctum's,
+the menus' and unused maps' warps after every other, so the game's own
+arrival places the party and the camera. The next way in is tried when an
+arrival goes on to another map before the player has control, or leaves
+the leader without a sprite, on a wall cell, off his ground, outside his
+room or the screen, in black, on another actor or where he can walk almost
+nowhere; when every way does, the first such photo is kept and skipped.tsv
+says why, and when every way goes on to another map, the photo is of the
+first arrival's scene, half a second before its first message.
+And a map of each room, one camera box of the scene's entrances, named
+by the first entrance that reaches it (map-<entrance>.png),
 stitched from one moment with the leader hidden. Then the same at each
 moment of the scene's story: each sets one more of the named story flags
 its initialization tests, in the order the events' conditions give, so
@@ -820,6 +831,8 @@ struct Machines {
     rom: Vec<u8>,
     symbols: field::Symbols,
     functions: std::collections::HashMap<u16, std::collections::HashMap<String, u32>>,
+    /// Each map's arrivals from other maps, by map number, from the source.
+    arrivals: std::collections::HashMap<u16, Vec<arrivals::Arrival>>,
 }
 
 #[cfg(feature = "render")]
@@ -848,7 +861,8 @@ impl Machines {
             let named = elf.symbols.iter().filter(|y| y.kind == 2 && !y.name.is_empty()).map(|y| (y.name.clone(), y.value & !1)).collect();
             functions.insert(s.number, named);
         }
-        Ok(Machines { rom, symbols, functions })
+        let arrivals = arrivals::read(root)?;
+        Ok(Machines { rom, symbols, functions, arrivals })
     }
 
     /// A fresh context for one piece of work.
@@ -870,6 +884,7 @@ impl Machines {
             only: r.only,
             cleared: Vec::new(),
             functions: &self.functions,
+            arrivals: &self.arrivals,
             moments: 0,
             moment_scenes: 0,
             capped: 0,

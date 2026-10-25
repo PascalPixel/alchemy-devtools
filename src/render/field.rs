@@ -1018,6 +1018,31 @@ impl<'rom> Field<'rom> {
         Ok(())
     }
 
+    /// A photo of an arrival that plays a scene and goes on to another map
+    /// before the player has control (the eruption's return to Vale): the
+    /// screen half a second before its first message starts typing, or
+    /// before it leaves the map, or after `max` frames, whichever comes
+    /// first; of those, the last that is not mostly black, as a fade leaves
+    /// it.
+    pub fn arrival_scene(&mut self, max: u32) -> Result<Image, String> {
+        const BEFORE: usize = 30;
+        let mut kept: std::collections::VecDeque<Image> = std::collections::VecDeque::new();
+        let typed = self.t.last_typing;
+        for _ in 0..max {
+            self.frames(1)?;
+            if self.t.last_typing != typed || self.gba.read16(self.s.game_state + GS_SCENE) != self.setup.scene {
+                break;
+            }
+            kept.push_back(self.screen());
+            if kept.len() > 4 * BEFORE {
+                kept.pop_front();
+            }
+        }
+        let lit = |image: &Image| image.pixels.iter().filter(|&&p| p & 0xf0_f0_f0 != 0).count() * 2 > image.pixels.len();
+        let early = kept.len().saturating_sub(BEFORE);
+        kept.iter().take(early.max(1)).rev().find(|i| lit(i)).or_else(|| kept.iter().rev().find(|i| lit(i))).map(|i| Image { width: i.width, height: i.height, pixels: i.pixels.clone() }).ok_or_else(|| "the arrival showed nothing but black".to_string())
+    }
+
     pub fn save(&mut self) -> Saved {
         Saved { state: self.gba.save(), track: self.t }
     }
@@ -1543,7 +1568,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// What is wrong with where the leader stands, for a photo that should
-    /// show him where the party can be: off the cell grid, on a wall cell
+    /// show him where the party can be: without a sprite, off the cell grid, on a wall cell
     /// (a cliff, a wall, water), off his ground, outside his room's camera
     /// box or the screen, on another actor (a stump, a pillar), or on ground
     /// from which he can walk almost nowhere. Empty when nothing is.
@@ -1557,6 +1582,9 @@ impl<'rom> Field<'rom> {
                 out.push(format!("({x}, {z}) is world map ground the party cannot walk on"));
             }
             return Ok(out);
+        }
+        if !leader.drawn {
+            out.push("he has no sprite".to_string());
         }
         let layer = leader.layer.min(2);
         match self.code_at(layer, x, z) {
@@ -1576,6 +1604,25 @@ impl<'rom> Field<'rom> {
         let (sx, sy) = (x - vx, z - (leader.y >> 16) - vy);
         if !(0..WIDTH as i32).contains(&sx) || !(0..HEIGHT as i32).contains(&sy) {
             out.push(format!("he is off the screen, at ({sx}, {sy}) on it"));
+        } else {
+            // The screen within 24 pixels of his feet, his own sprite
+            // left out, is black where the map draws nothing.
+            let screen = self.screen();
+            let (mut black, mut all) = (0, 0);
+            for py in (sy - 24).max(0)..(sy + 24).min(HEIGHT as i32) {
+                for px in (sx - 24).max(0)..(sx + 24).min(WIDTH as i32) {
+                    if (px - sx).abs() < 10 && py > sy - 28 && py < sy + 4 {
+                        continue;
+                    }
+                    all += 1;
+                    if screen.pixels[py as usize * WIDTH + px as usize] & 0xf0_f0_f0 == 0 {
+                        black += 1;
+                    }
+                }
+            }
+            if all > 0 && black * 10 > all * 8 {
+                out.push(format!("he stands in black, {}% of the screen around him", black * 100 / all));
+            }
         }
         for (id, ax, az) in self.stage() {
             if (ax - x).abs() < 14 && (az - z).abs() < 14 {
