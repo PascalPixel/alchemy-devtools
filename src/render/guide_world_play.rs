@@ -95,10 +95,10 @@ const NORTH: u32 = 0xc000;
 
 /// Vale's part with the Sanctum (MapId_Vale, entered from the world map),
 /// the world map as the party leaves Vale, and Vale's houses
-/// (MapId_ValeShops) entered by the north door (VALE_SHOPS_FROM_VALE_NORTH).
+/// (MapId_ValeInteriors) entered by the north door (VALE_INTERIORS_FROM_VALE_NORTH).
 const VALE: (u16, u16) = (4, 1);
 const WORLD_MAP: (u16, u16) = (2, 1);
-const VALE_SHOPS_NORTH: (u16, u16) = (7, 2);
+const VALE_INTERIORS_NORTH: (u16, u16) = (7, 2);
 /// Vault (MapId_Vault) from the world map's south road, and its houses on
 /// the party's return (MapId_VaultInteriorsRevisit), entered by the mayor's
 /// door (VAULT_INTERIORS_REVISIT_FROM_VAULT_REVISIT_NORTHWEST).
@@ -130,7 +130,7 @@ struct Play {
 
 /// Walking north into the door of Jenna's grandparents' house in Vale
 /// (EventScript_EnterJennasGrandparentsHouse, metatile behavior 9): the door
-/// opens, the leader walks in and the warp VALE_TO_VALE_SHOPS_NORTH ends the
+/// opens, the leader walks in and the warp VALE_TO_VALE_INTERIORS_NORTH ends the
 /// map, and the room inside fades in.
 const DOOR: Play = Play {
     file: "world/door.gif",
@@ -229,10 +229,10 @@ const WATERFALL: Play = Play {
 };
 
 /// Walking out of the north door of Vale's houses: the map ends and Vale
-/// loads with the party at the door (VALE_FROM_VALE_SHOPS_NORTH).
+/// loads with the party at the door (VALE_FROM_VALE_INTERIORS_NORTH).
 const ARRIVE: Play = Play {
     file: "map/arrive.gif",
-    place: VALE_SHOPS_NORTH,
+    place: VALE_INTERIORS_NORTH,
     of: 0,
     set: &[],
     stand: None,

@@ -647,7 +647,7 @@ impl<'a> Guide<'a> {
                 Ok(())
             }
             "vale-inn" => {
-                // ValeInn (8) after Kalay: LOCALID_INVISIBLE_AFTER_KALAY
+                // WoodenRoomsA (8) after Kalay: LOCALID_INVISIBLE_AFTER_KALAY
                 // and its neighbours, and walking into it.
                 let ents = {
                     let e = self.enter_story((8, 0), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;

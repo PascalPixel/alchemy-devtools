@@ -1134,8 +1134,8 @@ mod tests {
         assert_eq!(enumerator("LOCALID_GUARD", None), Some("object event"), "an untagged enum, by its words");
         assert_eq!(enumerator("LOCALID_INVISIBLE_ROCK_GUIDE", Some("WorldMapCaravanLocalId")), None, "an invisible object event");
         assert_eq!(enumerator("LOCALID_MASK_FOR_STUMP", Some("GomaCavePillarLocalId")), None, "a mask");
-        assert_eq!(enumerator("LOCALID_YOUNG_MAN_SAW_MASK", Some("ValeInnLocalId")), Some("object event"), "a mask last is a word");
-        assert_eq!(enumerator("LOCALID_MASKED_MAN", Some("ValeInnLocalId")), Some("object event"));
+        assert_eq!(enumerator("LOCALID_YOUNG_MAN_SAW_MASK", Some("WoodenRoomsALocalId")), Some("object event"), "a mask last is a word");
+        assert_eq!(enumerator("LOCALID_MASKED_MAN", Some("WoodenRoomsALocalId")), Some("object event"));
         assert_eq!(enumerator("LOCALID_HIDDEN_PUDDLE", Some("LunpaLocalId")), Some("object event"), "hidden is not invisible");
         assert_eq!(enumerator("ITEM_BLANK", Some("ItemId")), Some("item"), "stand-ins are actors");
         assert_eq!(enumerator("ABILITY_FORMULA_SUMMON", Some("AbilityFormula")), None);

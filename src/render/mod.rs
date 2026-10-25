@@ -1203,7 +1203,7 @@ Take-apart pictures for the menu guide (guide_menu.rs), in Xian:
   item-sorting      item-sorting.png: Isaac's items in each of the four orders
 Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
-  vale-opening, vale-gate-display, vale-shops-sleep, vale-kraden-rockslide,
+  vale-opening, vale-gate-display, vale-interiors-sleep, vale-kraden-rockslide,
   vale-cave-kite
 Take-apart pictures for the engine's guides, each as its mode's name with
 .png or .gif (guide_engine.rs):
