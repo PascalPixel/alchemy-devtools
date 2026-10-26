@@ -132,6 +132,41 @@ fn tool(name: &str) -> String {
     root().join("tools/out/compilers").join(name).to_string_lossy().into_owned()
 }
 
+fn tool304(name: &str) -> String {
+    root().join("tools/out/compilers-304").join(name).to_string_lossy().into_owned()
+}
+
+/// Whether The Lost Age's `source` compiles with GCC 3.0.4 (alchemy-gcc's
+/// gcc-3.0.4 branch), as the Makefile routes it while the game moves to that
+/// compiler: only where games/tla/gcc2000.txt exists, for a game file it does
+/// not list and for every draft, which is rematched for GCC 3.0.4.
+/// ALCHEMY_TLA_COMPILER=2000 or 304 overrides the choice.
+pub fn tla_on_gcc304(source: &str) -> bool {
+    match std::env::var("ALCHEMY_TLA_COMPILER").as_deref() {
+        Ok("2000") => return false,
+        Ok("304") => return true,
+        _ => {}
+    }
+    let Ok(list) = std::fs::read_to_string(root().join("games/tla/gcc2000.txt")) else {
+        return false;
+    };
+    let relative = Path::new(source)
+        .strip_prefix(root())
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| source.to_string());
+    if !relative.starts_with("games/tla/") {
+        return true;
+    }
+    !list.lines().any(|line| line.trim() == relative)
+}
+
+/// The Lost Age's options on GCC 3.0.4 (the Makefile's CFLAGS_tla304).
+pub fn cflags_tla304() -> Vec<String> {
+    ["-O2", "-mthumb", "-mcpu=arm7tdmi", "-nostdinc", "-fcall-used-r4", "-mthumb-split-constants", "-mthumb-call-via-lr"]
+        .map(String::from)
+        .to_vec()
+}
+
 /// The game's C options (the Makefile's CFLAGS_tbs and CFLAGS_tla).
 pub fn cflags(target: CompilerTarget) -> Vec<String> {
     let mut flags: Vec<String> = ["-O2", "-mthumb"].map(String::from).to_vec();
@@ -174,8 +209,13 @@ pub fn steps(
     let mut steps = Vec::new();
     match family {
         CompilerFamily::Game => {
-            let mut compile = vec![tool("xgcc"), format!("-B{}/", tool(""))];
-            compile.extend(cflags(target));
+            let on304 = target == CompilerTarget::Tla && tla_on_gcc304(&source_text);
+            let mut compile = if on304 {
+                vec![tool304("xgcc"), format!("-B{}/", tool304(""))]
+            } else {
+                vec![tool("xgcc"), format!("-B{}/", tool(""))]
+            };
+            compile.extend(if on304 { cflags_tla304() } else { cflags(target) });
             compile.extend(includes(target));
             compile.extend(edition);
             compile.extend(["-S".into(), "-o".into(), assembly.clone(), source_text]);
