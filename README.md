@@ -120,6 +120,10 @@ The story tables `render place`, `render event`, `render story` and `render guid
 
 Still open: Lamakan Desert's maps show faint seams from its heat shimmer; BabiPalace2 and TolbiSpring2 fail because their map scroll update never runs; rooms whose state starts a cutscene that leaves before the player has control (the world map's entrance 69, the Colosseum, Vale Gate once Garet has left) are skipped; and where a scene's events give few conditions, the order of its story moments is a guess.
 
+## Colour
+
+`lit IN.png OUT.png` recolours a picture in alchemy-lit, the colour correction chosen for showing Golden Sun's pictures on a modern screen (`src/lit.rs`). It keeps the game's own colours except two families of hue, chosen by their stored OKLCH hue with smooth edges: yellows keep 75% of their saturation and turn 28 degrees towards red, greens keep 72% and turn 5 degrees towards yellow. Lightness, blues, purples, reds, greys, black and white stay exactly as stored. An indexed picture keeps its pixels and gets a new palette; a true-colour one is recoloured pixel by pixel. Pokefan531's GBA colour shader mixes every channel into every other, which turns the Psynergy Stone's purple towards blue; alchemy-lit decides by hue instead, so the docs site's SVG filter only approximates it.
+
 ## Progress publication
 
 Stage source changes before `make land` or `make progress`. Measurement checks that the working source matches the index, records its tree and both report digests, and preserves the original measurement time when the same tree is measured again. Alchemy's pre-push hook uploads the reports and receipt for the pushed main revision.
