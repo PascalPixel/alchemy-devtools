@@ -17,7 +17,7 @@ const NORTH: u32 = 0xc000;
 /// Suhalla Desert's north (SceneId_SuhallaDesertNorth, map_147) entered from
 /// the world map (SUHALLA_DESERT_NORTH_FROM_WORLD_MAP).
 const SUHALLA_DESERT_NORTH: (u16, u16) = (164, 1);
-/// FLAG_SUHALLA_DESERT_SANDSTORMS_RISEN, FLAG_MAPSEC_TEMP_40 in
+/// FLAG_SUHALLA_DESERT_SANDSTORMS_RISEN, FLAG_AREA_TEMP_40 in
 /// map/suhalla_desert.c: a storm of the desert has risen.
 const FLAG_SUHALLA_DESERT_SANDSTORMS_RISEN: u16 = 0x340;
 /// The Psynergy Stone room of Sol Sanctum (SceneId_SolSanctumPsynergyStone)
@@ -30,10 +30,10 @@ const COLOSSEUM_AZART_RACE: (u16, u16) = (143, 1);
 /// Venus Lighthouse's aerie (SceneId_VenusLighthouseAerie) back from the first
 /// battle (VENUS_LIGHTHOUSE_AERIE_AFTER_FIRST_BATTLE), where
 /// VenusLighthouseAerie_CombineSaturosAndMenardi plays, and the Venus Star's
-/// shadow (LOCALID_VENUS_STAR_SHADOW), kept at the map's origin until the
+/// shadow (ACTOR_VENUS_STAR_SHADOW), kept at the map's origin until the
 /// star is thrown.
 const VENUS_LIGHTHOUSE_AERIE_AFTER_FIRST_BATTLE: (u16, u16) = (187, 2);
-const LOCALID_VENUS_STAR_SHADOW: u16 = 22;
+const ACTOR_VENUS_STAR_SHADOW: u16 = 22;
 /// Frames kept before the shadow leaves the origin (Saturos jumps and the
 /// star shows above him), and the last frame held at the end so the loop
 /// rests before it starts again.
@@ -124,7 +124,7 @@ impl Guide<'_> {
         let setup = Setup { scene: place.0, entrance: place.1, set, clear };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         // VenusLighthouseAerie_ShowGroupEmote pops each one's bubble through
-        // ObjectEvent_ShowEmote, FieldEffect_SpawnLinked.
+        // Actor_ShowEmote, FieldEffect_SpawnLinked.
         let emote = self.sym("FieldEffect_SpawnLinked")?;
         let reacted = std::rc::Rc::new(std::cell::Cell::new(false));
         let seen = reacted.clone();
@@ -134,7 +134,7 @@ impl Guide<'_> {
                 seen.set(true);
             }
         }));
-        let thrown = |f: &Field| f.actor(LOCALID_VENUS_STAR_SHADOW).is_some_and(|a| a.x != 0 || a.z != 0);
+        let thrown = |f: &Field| f.actor(ACTOR_VENUS_STAR_SHADOW).is_some_and(|a| a.x != 0 || a.z != 0);
         let mut star = false;
         let mut kept: std::collections::VecDeque<Vec<u16>> = std::collections::VecDeque::new();
         let mut frames: Vec<Vec<u16>> = Vec::new();

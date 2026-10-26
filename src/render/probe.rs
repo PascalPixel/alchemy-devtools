@@ -30,7 +30,7 @@ fn word(field: &Field, a: u32) -> i32 {
     field.read32(a) as i32
 }
 
-/// One actor's object as the engine keeps it (struct ObjectEvent).
+/// One actor's object as the engine keeps it (struct Actor).
 pub fn describe(field: &Field, id: u16) -> String {
     let a = field.actor_address(id);
     if a == 0 {
@@ -114,7 +114,7 @@ impl<'a> Guide<'a> {
                     if entrance == 0 {
                         // Again from the party's placing, watching every
                         // actor lookup of slot 15 as the scene starts.
-                        let get = at("ObjectEvent_GetByLocalId")?;
+                        let get = at("Actor_GetByActorId").or_else(|_| at("ObjectEvent_GetByLocalId"))?;
                         let ew_sym = at("gFieldWork")?;
                         e.field.load(&e.placed);
                         e.field.probe_pcs = vec![get];
@@ -123,7 +123,7 @@ impl<'a> Guide<'a> {
                         e.field.probe = Some(Box::new(move |gba: &Gba, pc: u32, frame: u32| {
                             if pc != 0 && gba.register(0) == 15 {
                                 let work = gba.read32(ew_sym);
-                                keep.borrow_mut().push(format!("frame {frame}: ObjectEvent_GetByLocalId(15) from {:08x}, slot word {:08x}", gba.register(14), gba.read32(work + 0x14 + 60)));
+                                keep.borrow_mut().push(format!("frame {frame}: Actor_GetByActorId(15) from {:08x}, slot word {:08x}", gba.register(14), gba.read32(work + 0x14 + 60)));
                             }
                         }));
                         e.field.until_control()?;
@@ -360,11 +360,11 @@ impl<'a> Guide<'a> {
                 // state of the fourth log's flags.
                 let states: [(&str, &[u16]); 6] = [
                     ("no flags", &[]),
-                    ("FLAG_MAPSEC_TEMP_0F", &[0x30f]),
-                    ("FLAG_MAPSEC_TEMP_10", &[0x310]),
-                    ("FLAG_MAPSEC_TEMP_11", &[0x311]),
-                    ("FLAG_MAPSEC_TEMP_12", &[0x312]),
-                    ("FLAG_MAPSEC_TEMP_08", &[0x308]),
+                    ("FLAG_AREA_TEMP_0F", &[0x30f]),
+                    ("FLAG_AREA_TEMP_10", &[0x310]),
+                    ("FLAG_AREA_TEMP_11", &[0x311]),
+                    ("FLAG_AREA_TEMP_12", &[0x312]),
+                    ("FLAG_AREA_TEMP_08", &[0x308]),
                 ];
                 for entrance in 0..4u16 {
                     for (label, set) in states {

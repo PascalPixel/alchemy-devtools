@@ -1044,7 +1044,7 @@ impl<'a> Guide<'a> {
 /// COTTAGE_ROOMS_C_WEAPON_AND_ARMOR_SHOP) and its weapon merchant
 /// (BILIBIN_WEAPON_MERCHANT), whose counter opens stock row 7; Vault's
 /// interiors (SceneId_LogRoomsA, from its east-southeast door) and its
-/// weapon merchant (LOCALID_WEAPON_MERCHANT), whose counter opens row 4.
+/// weapon merchant (ACTOR_WEAPON_MERCHANT), whose counter opens row 4.
 const BILIBIN_WEAPON_SHOP: (u16, u16) = (31, 4);
 const BILIBIN_WEAPON_MERCHANT: u16 = 16;
 const BILIBIN_WEAPON_ROW: usize = 7;

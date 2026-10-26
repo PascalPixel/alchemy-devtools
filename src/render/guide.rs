@@ -47,8 +47,11 @@ pub struct Guide<'a> {
 }
 
 impl<'a> Guide<'a> {
+    /// The number of flag `name`; `name` may list its spellings, the new
+    /// first (`FLAG_AREA_TEMP_01|FLAG_MAPSEC_TEMP_01`), so that a checkout
+    /// from before The Broken Seal's rename is read too.
     pub(super) fn flag(&self, name: &str) -> Result<u16, String> {
-        self.flags.resolve(name, None).ok_or_else(|| format!("flags.tsv names no {name}"))
+        name.split('|').find_map(|n| self.flags.resolve(n, None)).ok_or_else(|| format!("flags.tsv names no {name}"))
     }
 
     fn gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
@@ -304,15 +307,15 @@ pub(super) fn draw_sheets(sheets: &[Vec<Option<u32>>], e: f64) -> Vec<u32> {
 }
 
 /// A field Psynergy recorded for the abilities' index: the ability
-/// (ability_ids.h), the map and warp destination it is cast in, what it is
-/// cast at (an object event's local id, or none for one cast on the area)
+/// (ability_ids.h), the map and entrance it is cast in, what it is
+/// cast at (an actor's id, or none for one cast on the area)
 /// and in this renderer's words, where the leader stands for an area cast
 /// (pixels, facing), and the frames kept after the player has control
 /// again.
 struct FieldCast {
     ability: &'static str,
     map: &'static str,
-    warp_dest: u16,
+    entrance: u16,
     actor: Option<&'static str>,
     target: &'static str,
     stand: Option<(i32, i32, u32)>,
@@ -327,22 +330,22 @@ const FACE_EAST: u32 = 0x0000;
 /// its map's event answers, or in the room whose event it changes.
 /// A Psynergy may be listed more than once, at places tried in turn.
 const FIELD_CASTS: &[FieldCast] = &[
-    FieldCast { ability: "ABILITY_REVEAL", map: "ValeCaveKite", warp_dest: 1, actor: None, target: "the hidden floor", stand: Some((248, 280, FACE_NORTH)), tail: 600 },
-    FieldCast { ability: "ABILITY_MOVE", map: "Vale", warp_dest: 1, actor: Some("LOCALID_PILLAR"), target: "a stone pillar", stand: None, tail: 40 },
-    FieldCast { ability: "ABILITY_AVOID", map: "GomaCavePillar", warp_dest: 5, actor: None, target: "the party", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_MIND_READ", map: "Vale", warp_dest: 1, actor: Some("LOCALID_GARETS_SISTER"), target: "Garet's sister", stand: None, tail: 20 },
-    FieldCast { ability: "ABILITY_CATCH", map: "Vale", warp_dest: 1, actor: Some("LOCALID_NUT"), target: "a Nut", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_RETREAT", map: "GomaCavePillar", warp_dest: 5, actor: None, target: "the party", stand: None, tail: 240 },
-    FieldCast { ability: "ABILITY_FORCE", map: "Xian", warp_dest: 0, actor: Some("LOCALID_FORCE_TARGET"), target: "the training tree", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_LIFT", map: "GondowanCave", warp_dest: 0, actor: Some("LOCALID_BOULDER"), target: "a boulder", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_CARRY", map: "TunnelRuinsLadyStatues", warp_dest: 0, actor: Some("LOCALID_MIDDLE_CARRY_STONE"), target: "a stone block", stand: None, tail: 60 },
-    FieldCast { ability: "ABILITY_CLOAK", map: "LunpaFortressGates", warp_dest: 0, actor: None, target: "the party", stand: None, tail: 120 },
-    FieldCast { ability: "ABILITY_HALT", map: "ValeCaveKite", warp_dest: 5, actor: Some("LOCALID_KITE"), target: "Kite", stand: Some((792, 256, FACE_NORTH)), tail: 60 },
+    FieldCast { ability: "ABILITY_REVEAL", map: "ValeCaveKite", entrance: 1, actor: None, target: "the hidden floor", stand: Some((248, 280, FACE_NORTH)), tail: 600 },
+    FieldCast { ability: "ABILITY_MOVE", map: "Vale", entrance: 1, actor: Some("ACTOR_PILLAR|LOCALID_PILLAR"), target: "a stone pillar", stand: None, tail: 40 },
+    FieldCast { ability: "ABILITY_AVOID", map: "GomaCavePillar", entrance: 5, actor: None, target: "the party", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_MIND_READ", map: "Vale", entrance: 1, actor: Some("ACTOR_GARETS_SISTER|LOCALID_GARETS_SISTER"), target: "Garet's sister", stand: None, tail: 20 },
+    FieldCast { ability: "ABILITY_CATCH", map: "Vale", entrance: 1, actor: Some("ACTOR_NUT|LOCALID_NUT"), target: "a Nut", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_RETREAT", map: "GomaCavePillar", entrance: 5, actor: None, target: "the party", stand: None, tail: 240 },
+    FieldCast { ability: "ABILITY_FORCE", map: "Xian", entrance: 0, actor: Some("ACTOR_FORCE_TARGET|LOCALID_FORCE_TARGET"), target: "the training tree", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_LIFT", map: "GondowanCave", entrance: 0, actor: Some("ACTOR_BOULDER|LOCALID_BOULDER"), target: "a boulder", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_CARRY", map: "TunnelRuinsLadyStatues", entrance: 0, actor: Some("ACTOR_MIDDLE_CARRY_STONE|LOCALID_MIDDLE_CARRY_STONE"), target: "a stone block", stand: None, tail: 60 },
+    FieldCast { ability: "ABILITY_CLOAK", map: "LunpaFortressGates", entrance: 0, actor: None, target: "the party", stand: None, tail: 120 },
+    FieldCast { ability: "ABILITY_HALT", map: "ValeCaveKite", entrance: 5, actor: Some("ACTOR_KITE|LOCALID_KITE"), target: "Kite", stand: Some((792, 256, FACE_NORTH)), tail: 60 },
 ];
 
 /// A field cast read through the source: the ability's number and name
 /// (gAbilityDefinitions), the map's number, its area name there (scene), and the
-/// object event's local id.
+/// actor's id.
 struct Cast {
     id: u16,
     name: String,
@@ -363,9 +366,9 @@ fn field_casts() -> Result<Vec<Cast>, String> {
             Ok(Cast {
                 id,
                 name: source::ability_name(id)?,
-                place: (map, cast.warp_dest),
-                scene: source::area_name(map, cast.warp_dest)?,
-                actor: cast.actor.map(|name| source::local_id(cast.map, name)).transpose()?,
+                place: (map, cast.entrance),
+                scene: source::area_name(map, cast.entrance)?,
+                actor: cast.actor.map(|name| source::actor_id(cast.map, name)).transpose()?,
                 target: cast.target,
                 stand: cast.stand,
                 tail: cast.tail,
@@ -378,7 +381,7 @@ fn field_casts() -> Result<Vec<Cast>, String> {
 const CAST_FRAMES: usize = 1800;
 
 /// A field scene entered for a recording: the field with the player in
-/// control, and the moment Scene_ApplyWarpDest placed the party, from which
+/// control, and the moment Scene_ApplyEntrance placed the party, from which
 /// an event starts with the leader already at its spot and the camera on
 /// him.
 pub struct Entered<'a> {

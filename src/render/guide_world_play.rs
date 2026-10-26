@@ -133,7 +133,7 @@ struct Play {
 
 /// Walking north into the door of Jenna's grandparents' house in Vale
 /// (EventScript_EnterJennasGrandparentsHouse, metatile behavior 9): the door
-/// opens, the leader walks in and the warp VALE_TO_COTTAGE_ROOMS_A_NORTH ends the
+/// opens, the leader walks in and the exit VALE_TO_COTTAGE_ROOMS_A_NORTH ends the
 /// map, and the room inside fades in.
 const DOOR: Play = Play {
     file: "world/door.gif",
@@ -360,8 +360,8 @@ impl<'a> Guide<'a> {
     }
 
     /// A random battle in Goma Cave fought to its end with A, and the cave
-    /// loaded again with the party where it stood (ObjectEvent_Snapshot,
-    /// ObjectEvent_Restore): from the battle's last seconds to the walk
+    /// loaded again with the party where it stood (Actor_Snapshot,
+    /// Actor_Restore): from the battle's last seconds to the walk
     /// again.
     fn battle_return(&mut self) -> Result<(), String> {
         let (place, stretch) = self.goma_cave_stretch()?;
@@ -406,7 +406,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Move cast in Vale with nothing ahead: the hand appears and pushes,
-    /// and nothing moves, since no map event answers it there.
+    /// and nothing moves, since no trigger answers it there.
     fn move_nothing(&mut self) -> Result<(), String> {
         let play = Play { file: "overworld/move-nothing.gif", place: VALE, of: 0, set: &[], stand: Some((300, 470, EAST)), path: &[(0, 10)], what: "" };
         let (mut entered, mut frames) = self.start(&play)?;

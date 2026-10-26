@@ -115,7 +115,7 @@ impl<'a> Guide<'a> {
     /// entry's runs are counted by probing it.
     pub fn menu_test_setup(&mut self) -> Result<(), String> {
         let characters = source::character_names()?;
-        let setup_fn = self.overlay_sym("MenuTest_GetEvents", "MenuTest_Initialize")?;
+        let setup_fn = self.overlay_sym("MenuTest_GetTriggers|MenuTest_GetEvents", "MenuTest_Initialize")?;
         let state = self.sym("gSaveBlock")?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
@@ -372,7 +372,7 @@ impl<'a> Guide<'a> {
 
     /// The scene and place flags across two entrances, as
     /// `temporary-flags.png`: in Vale every one of FLAG_SCENE_TEMP_00 to
-    /// FLAG_MAPSEC_TEMP_FF is set by hand; the party is sent to the Sanctum,
+    /// FLAG_AREA_TEMP_FF is set by hand; the party is sent to the Sanctum,
     /// a scene of the same place, then to the world map, another place, and
     /// back into Vale (FieldScript_SetDestination's way); each time the 512 flags are drawn as
     /// two grids of 16 by 16, lit where set, beside the screen.
@@ -418,16 +418,16 @@ impl<'a> Guide<'a> {
                     }
                 }
                 let count = set[half * 256..half * 256 + 256].iter().filter(|&&b| b).count();
-                text(&mut image, gx as i32, (gy + grid + 6) as i32, &format!("{} {count}", ["MAP", "MAPSEC"][half]), [0x60_b0_ff, 0xff_b0_50][half], None, 2);
+                text(&mut image, gx as i32, (gy + grid + 6) as i32, &format!("{} {count}", ["MAP", "AREA"][half]), [0x60_b0_ff, 0xff_b0_50][half], None, 2);
             }
         }
         let y = (HEIGHT + 34 + grid + 26) as i32;
-        text(&mut image, 8, y, "FLAG_SCENE_TEMP_00 TO _FF (BLUE) AND FLAG_MAPSEC_TEMP_00 TO _FF (ORANGE),", DIM, None, 2);
+        text(&mut image, 8, y, "FLAG_SCENE_TEMP_00 TO _FF (BLUE) AND FLAG_AREA_TEMP_00 TO _FF (ORANGE),", DIM, None, 2);
         text(&mut image, 8, y + 16, "A SQUARE A FLAG, LIT WHERE SET, EACH AS THE PARTY HAS CONTROL AGAIN", DIM, None, 2);
         self.guide_png("temporary-flags.png", &image, "the map and map-section flags as the party enters a map of the same section and then another section")
     }
 
-    /// Flags FLAG_SCENE_TEMP_00 to FLAG_MAPSEC_TEMP_FF, whether each is set.
+    /// Flags FLAG_SCENE_TEMP_00 to FLAG_AREA_TEMP_FF, whether each is set.
     fn temp_flags(&self, field: &Field, flags: u32) -> Vec<bool> {
         (0x200..0x400u32).map(|f| field.read8(flags + f / 8) & (1 << (f % 8)) != 0).collect()
     }
@@ -1273,7 +1273,7 @@ impl<'a> Guide<'a> {
             for d in 0..2 {
                 outline(&mut image, x - d, y - d, 16 + 2 * d, 16 + 2 * d, colour);
             }
-            // What each chest holds, from the scenes' event rows (BG_EVENT_CHEST
+            // What each chest holds, from the scenes' event rows (EXAMINE_CHEST
             // with FIND_COINS or FIND_ITEM, crossbone_isle_keys.c), staggered
             // so that neighbours' labels clear each other; the marker's id
             // small under its cell.

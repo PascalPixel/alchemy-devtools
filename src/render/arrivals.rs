@@ -1,24 +1,25 @@
-//! How the party arrives in each map: the warp destinations other maps'
-//! warps lead to, read from the source's warp tables (each overlay's
-//! MAP_WARP rows, their names numbered in map_warps.h) and map numbers
+//! How the party arrives in each map: the entrances other maps' exits lead
+//! to, read from the source's exit tables (each overlay's SCENE_EXIT rows,
+//! their names numbered in scene_exits.h; MAP_WARP rows and map_warps.h
+//! before The Broken Seal's rename) and map numbers
 //! (field/scene_headers.s). `render place` photographs a map as the party
 //! arrives by one of them, rather than by the table's first row, which no
-//! warp may use (WARP_DEST_DEFAULT is where the debug map select starts).
+//! exit may use (ENTRANCE_DEFAULT is where the debug map select starts).
 
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::Path;
 
-/// One warp into a map from another map.
+/// One exit into a map from another map.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Arrival {
-    /// The warp destination it arrives at.
+    /// The entrance it arrives at.
     pub dest: u16,
-    /// The map whose warp table holds it (`GomaCaveEntrance`).
+    /// The map whose exit table holds it (`GomaCaveEntrance`).
     pub from: String,
 }
 
-/// Maps a warp from which is no way the story walks in: the Sanctum's
+/// Maps an exit from which is no way the story walks in: the Sanctum's
 /// revival, the title and the main menu, and maps the game never reaches.
 fn aside(from: &str) -> bool {
     from == "Sanctum" || from == "Title" || from == "MainMenu" || from.starts_with("Unused")
@@ -44,10 +45,10 @@ fn map_names(text: &str) -> Vec<String> {
     text.lines().filter_map(|l| pattern.captures(l).map(|c| c[1].to_string())).collect()
 }
 
-/// The warps of one source file, as (the map whose table holds it, the map
-/// it leads to, its warp destination's name or number), in table order.
+/// The exits of one source file, as (the map whose table holds it, the map
+/// it leads to, its entrance's name or number), in table order.
 fn warps(text: &str) -> Vec<(String, String, String)> {
-    let pattern = Regex::new(r"MAP_WARPS\(\s*(\w+)\s*\)|MAP_WARP(?:_IF)?\(\s*\w+\s*,\s*(\w+)\s*,\s*(\w+)").unwrap();
+    let pattern = Regex::new(r"(?:SCENE_EXITS|MAP_WARPS)\(\s*(\w+)\s*\)|(?:SCENE_EXIT|MAP_WARP)(?:_IF)?\(\s*\w+\s*,\s*(\w+)\s*,\s*(\w+)").unwrap();
     let mut from = None;
     let mut out = Vec::new();
     for c in pattern.captures_iter(&plain(text)) {
@@ -65,7 +66,7 @@ fn sources(dir: &Path, out: &mut Vec<std::path::PathBuf>) -> Result<(), String> 
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
-            // The debug test rooms' warps lead where the story never goes.
+            // The debug test rooms' exits lead where the story never goes.
             if path.file_name().is_some_and(|n| n != "debug") {
                 sources(&path, out)?;
             }
@@ -82,18 +83,18 @@ pub fn read(root: &Path) -> Result<HashMap<u16, Vec<Arrival>>, String> {
     let game = root.join("games/tbs");
     let read = |path: &Path| std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()));
     let names = map_names(&read(&game.join("src/field/scene_headers.s"))?);
-    let shared = numbers(&read(&game.join("include/map_warps.h"))?);
+    let shared = numbers(&read(&game.join("include/scene_exits.h")).or_else(|_| read(&game.join("include/map_warps.h")))?);
     let mut files = Vec::new();
     sources(&game.join("src"), &mut files)?;
     files.sort();
     let mut out: HashMap<u16, Vec<Arrival>> = HashMap::new();
     for path in files {
         let text = read(&path)?;
-        if !text.contains("MAP_WARPS(") {
+        if !text.contains("SCENE_EXITS(") && !text.contains("MAP_WARPS(") {
             continue;
         }
         // An overlay may number a destination of its own (an enum beside
-        // its warp destination table).
+        // its entrance table).
         let own = numbers(&text);
         for (from, to, dest) in warps(&text) {
             let Some(number) = names.iter().position(|n| *n == to) else {
@@ -111,13 +112,13 @@ pub fn read(root: &Path) -> Result<HashMap<u16, Vec<Arrival>>, String> {
     Ok(out)
 }
 
-/// The warp destinations to photograph a map by, best first, of those in its
-/// table (`dests`) that another map's warp leads to: lowest-numbered first,
+/// The entrances to photograph a map by, best first, of those in its
+/// table (`dests`) that another map's exit leads to: lowest-numbered first,
 /// Camelot numbering a map's ways in from 1 in the order of its own table,
-/// and warps from the Sanctum, the menus and unused maps after every other.
-/// A warp to a destination the table lacks lands on the table's first row
-/// (Scene_ApplyWarpDest), so that row is then a way in too, after the rest.
-/// Empty when no warp leads in at all.
+/// and exits from the Sanctum, the menus and unused maps after every other.
+/// An exit to a destination the table lacks lands on the table's first row
+/// (Scene_ApplyEntrance), so that row is then a way in too, after the rest.
+/// Empty when no exit leads in at all.
 pub fn ranked(arrivals: &[Arrival], dests: &[i16]) -> Vec<u16> {
     let mut ways: Vec<(bool, u16)> = Vec::new();
     for a in arrivals {
@@ -146,7 +147,7 @@ mod tests {
 
     #[test]
     fn warp_tables_are_read_by_their_maps() {
-        let text = "u32 gTable[] = {\n    MAP_WARPS(GomaCaveStream), // a note\n    MAP_WARP(GOMA_CAVE_STREAM_TO_GOMA_CAVE_ENTRANCE, GomaCaveEntrance,\n             GOMA_CAVE_ENTRANCE_FROM_GOMA_CAVE_STREAM),\n    /* MAP_WARP(X, Vale, 3), */\n    MAP_WARPS(GomaCaveBridge),\n    MAP_WARP_IF(GOMA_CAVE_BRIDGE_TO_WORLD_MAP, WorldMap, 40, FLAG_X),\n    MAP_WARPS_END,\n};";
+        let text = "u32 gTable[] = {\n    SCENE_EXITS(GomaCaveStream), // a note\n    SCENE_EXIT(GOMA_CAVE_STREAM_TO_GOMA_CAVE_ENTRANCE, GomaCaveEntrance,\n             GOMA_CAVE_ENTRANCE_FROM_GOMA_CAVE_STREAM),\n    /* SCENE_EXIT(X, Vale, 3), */\n    SCENE_EXITS(GomaCaveBridge),\n    MAP_WARP_IF(GOMA_CAVE_BRIDGE_TO_WORLD_MAP, WorldMap, 40, FLAG_X),\n    SCENE_EXITS_END,\n};";
         assert_eq!(
             warps(text),
             vec![
@@ -182,11 +183,11 @@ mod tests {
     #[test]
     fn ways_in_are_ranked_lowest_first() {
         let a = |dest, from: &str| Arrival { dest, from: from.to_string() };
-        // Goma Cave Entrance: the default row 0 is in the table, but no warp leads there.
+        // Goma Cave Entrance: the default row 0 is in the table, but no exit leads there.
         assert_eq!(ranked(&[a(2, "GomaCaveStream"), a(1, "WorldMap")], &[0, 1, 2]), vec![1, 2]);
         // The Sanctum's revival after every other way in.
         assert_eq!(ranked(&[a(1, "Sanctum"), a(2, "SolEntrance")], &[0, 1, 2]), vec![2, 1]);
-        // A warp to a destination the table lacks lands on its first row.
+        // An exit to a destination the table lacks lands on its first row.
         assert_eq!(ranked(&[a(10, "SolSanctumLunaSolRooms")], &[3, 4]), vec![3]);
         assert_eq!(ranked(&[a(7, "Vale"), a(4, "Vale")], &[3, 4]), vec![4, 3]);
         assert!(ranked(&[], &[0, 1]).is_empty());

@@ -122,8 +122,8 @@ impl<'a> Guide<'a> {
         match name {
             "fuchin-24" => {
                 // FuchinFallsCaveDragonsEye (64): the fourth log put at its
-                // lower stop (FLAG_MAPSEC_TEMP_12, which no script sets) with
-                // the third at its north end (FLAG_MAPSEC_TEMP_0B), the
+                // lower stop (FLAG_AREA_TEMP_12, which no script sets) with
+                // the third at its north end (FLAG_AREA_TEMP_0B), the
                 // leader on it walking north and then south.
                 for keys in [KEY_UP, KEY_DOWN] {
                     let mut e = self.enter_story((64, 2), &["FLAG_VALE_PARTY_LEFT", "0x312", "0x30b"], &[])?;
@@ -429,7 +429,7 @@ impl<'a> Guide<'a> {
                 // Vault (20) and VaultRevisit (23): every lookup of the ivy
                 // placed at (0, 0) (actor 22 and 20) from the scene's start,
                 // walking, ringing the bell and casting Whirlwind.
-                let get = at("ObjectEvent_GetByLocalId")?;
+                let get = at("Actor_GetByActorId").or_else(|_| at("ObjectEvent_GetByLocalId"))?;
                 for (scene, id, set) in [(20u16, 22u32, vec!["FLAG_VALE_PARTY_LEFT"]), (23, 20, vec!["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"])] {
                     let flags: Vec<u16> = set.iter().map(|n| self.flag(n).unwrap_or(0)).collect();
                     let setup = Setup { scene, entrance: 0, set: flags, clear: Vec::new() };
@@ -647,7 +647,7 @@ impl<'a> Guide<'a> {
                 Ok(())
             }
             "vale-inn" => {
-                // CottageRoomsB (8) after Kalay: LOCALID_INVISIBLE_AFTER_KALAY
+                // CottageRoomsB (8) after Kalay: ACTOR_INVISIBLE_AFTER_KALAY
                 // and its neighbours, and walking into it.
                 let ents = {
                     let e = self.enter_story((8, 0), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;

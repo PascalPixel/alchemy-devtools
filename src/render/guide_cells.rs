@@ -2,7 +2,7 @@
 //! does, never the collision code the engine looks up: a code every map
 //! shares (enum MetatileBehavior) by the name the code gives it, and one of the
 //! scene's own (1 to 239) by the rows of the scene's event table that answer
-//! it, read as Scene_FindEvent reads them, each row's function or exit put
+//! it, read as Scene_FindTrigger reads them, each row's function or exit put
 //! in words the picture supplies. A key beside the picture says what each
 //! colour stands for.
 
@@ -22,10 +22,10 @@ pub(super) const INK: u32 = 0x20_20_20;
 /// trigger, condition and value, ended by a control of -1.
 const FIELD_EVENTS: u32 = 0x10;
 const EVENT_ROW_SIZE: u32 = 12;
-/// enum MapEventKind's kinds that answer a cell.
-const MAP_EVENT_WARP: u32 = 1;
-const MAP_EVENT_COORD: u32 = 2;
-const MAP_EVENT_BG: u32 = 3;
+/// enum TriggerKind's kinds that answer a cell.
+const TRIGGER_EXIT: u32 = 1;
+const TRIGGER_STEP: u32 = 2;
+const TRIGGER_EXAMINE: u32 = 3;
 
 /// What answers a cell, which picks its colour.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
@@ -118,7 +118,7 @@ fn shared(code: i32) -> Option<Meaning> {
 pub(super) type Words = &'static [(&'static str, &'static str, Option<u16>)];
 
 /// The names a scene's rows are read through: its overlay's functions by
-/// address, and its exits by number (map_warps.h).
+/// address, and its exits by number (scene_exits.h).
 pub(super) struct Names {
     functions: HashMap<u32, String>,
     exits: HashMap<u32, String>,
@@ -146,7 +146,7 @@ fn rows(field: &Field, code: i32) -> Vec<Row> {
             break;
         }
         let kind = control & 15;
-        if (MAP_EVENT_WARP..=MAP_EVENT_BG).contains(&kind) && i32::from(field.read8(a + 4)) == code {
+        if (TRIGGER_EXIT..=TRIGGER_EXAMINE).contains(&kind) && i32::from(field.read8(a + 4)) == code {
             out.push(Row { control, condition: field.read16(a + 6) as i16, value: field.read32(a + 8) });
         }
         a += EVENT_ROW_SIZE;
@@ -170,7 +170,7 @@ impl Names {
     /// function's for a script, else what a search finds.
     fn of(&self, row: &Row) -> String {
         let value = row.value;
-        if row.control & 15 == MAP_EVENT_WARP {
+        if row.control & 15 == TRIGGER_EXIT {
             return self.exits.get(&value).cloned().unwrap_or_else(|| format!("exit {value}"));
         }
         if value >= 0x0200_0000 {
@@ -189,7 +189,7 @@ impl Names {
 
 /// What cell code `code` makes happen in `field`'s scene now, its rows'
 /// names put in `words`; None for open ground. The rows taken are those
-/// Scene_FindEvent could take: each whose condition holds, and a search on
+/// Scene_FindTrigger could take: each whose condition holds, and a search on
 /// a named target whatever its condition (Field_SearchCell tests it
 /// afterwards). Stepping on a cell runs a touch row before an exit row, so
 /// a touch row gives the colour, then an exit row, then a search row.
@@ -204,14 +204,14 @@ pub(super) fn meaning(field: &Field, names: &Names, words: Words, code: i32) -> 
     let mut kinds = Vec::new();
     for row in rows(field, code) {
         let kind = row.control & 15;
-        let named_search = kind == MAP_EVENT_BG && (row.control >> 4) & 31 != 0;
+        let named_search = kind == TRIGGER_EXAMINE && (row.control >> 4) & 31 != 0;
         if !named_search && !holds(field, row.condition) {
             continue;
         }
         let name = names.of(&row);
         let said = words
             .iter()
-            .find(|(n, _, _)| *n == name)
+            .find(|(n, _, _)| n.split('|').any(|n| n == name))
             .map(|(_, w, _)| w.to_string())
             .ok_or_else(|| format!("no words for {name}, which answers cell code {code}"))?;
         if !parts.contains(&said) {
@@ -219,11 +219,11 @@ pub(super) fn meaning(field: &Field, names: &Names, words: Words, code: i32) -> 
         }
         kinds.push(kind);
     }
-    let kind = if kinds.contains(&MAP_EVENT_COORD) {
+    let kind = if kinds.contains(&TRIGGER_STEP) {
         Kind::Touch
-    } else if kinds.contains(&MAP_EVENT_WARP) {
+    } else if kinds.contains(&TRIGGER_EXIT) {
         Kind::Exit
-    } else if kinds.contains(&MAP_EVENT_BG) {
+    } else if kinds.contains(&TRIGGER_EXAMINE) {
         Kind::Search
     } else {
         Kind::NoEvent
@@ -232,20 +232,23 @@ pub(super) fn meaning(field: &Field, names: &Names, words: Words, code: i32) -> 
     Ok(Some(Meaning { words, kind }))
 }
 
-/// The enum of `scene`'s warps in map_warps.h: under `SceneId_<scene>'s
-/// warps.`, or `warp destinations and warps.` where one enum holds both.
-fn warps_block<'t>(links: &'t str, scene: &str) -> Result<&'t str, String> {
-    let heading = links
-        .find(&format!("/// SceneId_{scene}'s warps."))
-        .or_else(|| links.find(&format!("/// SceneId_{scene}'s warp destinations and warps.")))
-        .ok_or_else(|| format!("map_warps.h lists no warps of SceneId_{scene}"))?;
+/// The enum of `scene`'s exits in scene_exits.h: under `SceneId_<scene>'s
+/// exits.`, or `entrances and exits.` where one enum holds both (in
+/// map_warps.h before The Broken Seal's rename, `warps.` and `warp
+/// destinations and warps.`).
+fn exits_block<'t>(links: &'t str, scene: &str) -> Result<&'t str, String> {
+    let heading = ["exits", "entrances and exits", "warps", "warp destinations and warps"]
+        .iter()
+        .find_map(|heading| links.find(&format!("/// SceneId_{scene}'s {heading}.")))
+        .ok_or_else(|| format!("scene_exits.h lists no exits of SceneId_{scene}"))?;
     let block = &links[heading..];
     Ok(&block[..block.find("};").unwrap_or(block.len())])
 }
 
 impl<'a> Guide<'a> {
     /// The names `scene`'s rows are read through: the functions of the
-    /// overlay that defines `anchor`, and its warps (`warps_block`).
+    /// overlay that defines `anchor` (which may list its spellings, as
+    /// `overlay_sym`'s does), and its exits (`exits_block`).
     pub(super) fn cell_names(&self, anchor: &str, scene: &str) -> Result<Names, String> {
         let root = crate::compile::root();
         let dir = root.join("out/tbs-en/overlays");
@@ -259,16 +262,17 @@ impl<'a> Guide<'a> {
             }
             let Ok(data) = std::fs::read(&path) else { continue };
             let Ok(elf) = crate::elf::Elf::parse(&data) else { continue };
-            if !elf.symbols.iter().any(|s| s.name == anchor) {
+            if !elf.symbols.iter().any(|s| anchor.split('|').any(|a| s.name == a)) {
                 continue;
             }
             functions = Some(elf.symbols.iter().filter(|s| s.kind == 2 && !s.name.is_empty()).map(|s| (s.value & !1, s.name.clone())).collect());
             break;
         }
         let functions = functions.ok_or_else(|| format!("no overlay defines {anchor}"))?;
-        let links_path = root.join("games/tbs/include/map_warps.h");
+        let include = root.join("games/tbs/include");
+        let links_path = [include.join("scene_exits.h"), include.join("map_warps.h")].into_iter().find(|p| p.exists()).unwrap_or(include.join("scene_exits.h"));
         let links = std::fs::read_to_string(&links_path).map_err(|e| format!("cannot read {}: {e}", links_path.display()))?;
-        let block = warps_block(&links, scene)?;
+        let block = exits_block(&links, scene)?;
         // Comments taken out, so a name and its number may stand on two lines.
         let plain: String = block.lines().map(|l| l.split("//").next().unwrap_or("")).collect::<Vec<_>>().join(" ");
         let pattern = regex::Regex::new(r"([A-Z][A-Z0-9_]+)\s*=\s*(\d+)").map_err(|e| e.to_string())?;
@@ -286,7 +290,7 @@ impl<'a> Guide<'a> {
                 .filter(|r| holds(field, r.condition))
                 .filter_map(|r| {
                     let name = names.of(r);
-                    words.iter().find(|(n, _, _)| *n == name).and_then(|(_, _, s)| s.map(|s| (name, s)))
+                    words.iter().find(|(n, _, _)| n.split('|').any(|n| n == name)).and_then(|(_, _, s)| s.map(|s| (name, s)))
                 })
                 .collect();
             let Some((name, scene)) = found.first().cloned() else { continue };
@@ -489,7 +493,7 @@ pub(super) const GOMA_CAVE_PILLAR_WORDS: Words = &[
 ];
 
 /// What the rows of Fuchin Falls Cave's first room
-/// (gImilFuchinFalls_EntranceEvents) do, from their functions' comments:
+/// (gImilFuchinFalls_EntranceTriggers) do, from their functions' comments:
 /// walking into a log's trigger cell pushes it along the water, and
 /// stepping on it plays the log's rolling.
 pub(super) const FUCHIN_FIRST_ROOM_WORDS: Words = &[
@@ -513,7 +517,7 @@ pub(super) const FUCHIN_FIRST_ROOM_WORDS: Words = &[
 
 /// What the rows of Mercury Lighthouse's ground floor
 /// (SceneId_MercuryLighthouseEntrance) do around the pool, from their
-/// functions' comments; the exits' rooms are named in map_warps.h.
+/// functions' comments; the exits' rooms are named in scene_exits.h.
 pub(super) const MERCURY_LIGHTHOUSE_ENTRANCE_WORDS: Words = &[
     ("MercuryLighthouseEntrance_HopAcrossPool", "Hop two cells (walk into it)", None),
     ("MercuryLighthouseEntrance_LoseLights", "takes the leader's lights", None),
@@ -543,9 +547,9 @@ const COTTAGE_ROOMS_B: u16 = 8;
 const VALE_WORDS: Words = &[
     ("EventScript_EnterSanctum", "Door into the Sanctum", Some(9)),
     ("EventScript_ApproachMtAleph", "Path up Mt. Aleph", None),
-    ("EventScript_WarpToValeKradensCottageNorth", "Way out to Kraden's cottage, north", Some(6)),
-    ("EventScript_WarpToValeKradensCottageSouth", "Way out to Kraden's cottage, south", Some(6)),
-    ("EventScript_WarpToValePlaza", "Way out to the Psynergy Stone", Some(5)),
+    ("EventScript_ExitToValeKradensCottageNorth|EventScript_WarpToValeKradensCottageNorth", "Way out to Kraden's cottage, north", Some(6)),
+    ("EventScript_ExitToValeKradensCottageSouth|EventScript_WarpToValeKradensCottageSouth", "Way out to Kraden's cottage, south", Some(6)),
+    ("EventScript_ExitToValePlaza|EventScript_WarpToValePlaza", "Way out to the Psynergy Stone", Some(5)),
     ("EventScript_EnterGaretsHouse", "Door into Garet's house (walk north into it)", Some(COTTAGE_ROOMS_A)),
     ("EventScript_EnterCottageRoomsA", "Door into a house (walk north into it)", Some(COTTAGE_ROOMS_A)),
     ("EventScript_EnterIsaacsHouse", "Door into Isaac's house (walk north into it)", Some(COTTAGE_ROOMS_B)),
@@ -577,7 +581,7 @@ impl<'a> Guide<'a> {
         let placed = field.save();
         field.until_control()?;
         field.frames(20)?;
-        let names = self.cell_names("Vale_GetEvents", "Vale")?;
+        let names = self.cell_names("Vale_GetTriggers|Vale_GetEvents", "Vale")?;
         let settled = field.save();
         // The scene's own cells, with their layers, and the screen's worth of
         // the room that holds the most of them.
@@ -639,14 +643,16 @@ impl<'a> Guide<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::warps_block;
+    use super::exits_block;
 
     #[test]
-    fn warps_are_found_under_either_heading() {
-        let links = "/// SceneId_Title's warp destinations and warps.\nenum {\n  TITLE_FROM_VALE_PLAZA = 1,\n};\n\n/// SceneId_GomaCavePillar's warp destinations.\nenum {\n  GOMA_CAVE_PILLAR_FROM_GOMA_CAVE_STREAM_WEST = 1,\n};\n\n/// SceneId_GomaCavePillar's warps.\nenum {\n  GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1,\n};\n";
-        assert!(warps_block(links, "GomaCavePillar").unwrap().contains("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1"));
-        assert!(!warps_block(links, "GomaCavePillar").unwrap().contains("_FROM_"));
-        assert!(warps_block(links, "Title").unwrap().contains("TITLE_FROM_VALE_PLAZA"));
-        assert!(warps_block(links, "Vale").is_err());
+    fn exits_are_found_under_either_heading() {
+        let links = "/// SceneId_Title's entrances and exits.\nenum {\n  TITLE_FROM_VALE_PLAZA = 1,\n};\n\n/// SceneId_GomaCavePillar's entrances.\nenum {\n  GOMA_CAVE_PILLAR_FROM_GOMA_CAVE_STREAM_WEST = 1,\n};\n\n/// SceneId_GomaCavePillar's exits.\nenum {\n  GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1,\n};\n";
+        assert!(exits_block(links, "GomaCavePillar").unwrap().contains("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1"));
+        assert!(!exits_block(links, "GomaCavePillar").unwrap().contains("_FROM_"));
+        assert!(exits_block(links, "Title").unwrap().contains("TITLE_FROM_VALE_PLAZA"));
+        assert!(exits_block(links, "Vale").is_err());
+        let old = "/// SceneId_Vale's warp destinations.\nenum {\n  VALE_FROM_PLAZA = 1,\n};\n\n/// SceneId_Vale's warps.\nenum {\n  VALE_TO_PLAZA = 1,\n};\n";
+        assert!(exits_block(old, "Vale").unwrap().contains("VALE_TO_PLAZA"), "map_warps.h's headings, before the rename");
     }
 }

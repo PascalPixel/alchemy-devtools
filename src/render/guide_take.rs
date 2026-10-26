@@ -22,9 +22,12 @@ const RED: u32 = 0xff_30_30;
 const WHITE: u32 = 0xff_ff_ff;
 
 impl<'a> Guide<'a> {
-    /// The address of `name` in the edition's linker map.
+    /// The address of `name` in the edition's linker map. Here and in
+    /// `overlay_sym` a name may list its spellings, the new first
+    /// (`StatusScreen_SelectCommand|SummaryScreen_SelectCommand`), so that a
+    /// checkout from before The Broken Seal's rename is read too.
     pub(super) fn sym(&self, name: &str) -> Result<u32, String> {
-        self.map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"))
+        name.split('|').find_map(|n| self.map.symbol(n)).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"))
     }
 
     /// The address of a scene overlay's `name`, a static the main map leaves
@@ -40,10 +43,10 @@ impl<'a> Guide<'a> {
             }
             let Ok(data) = std::fs::read(&path) else { continue };
             let Ok(elf) = crate::elf::Elf::parse(&data) else { continue };
-            if !elf.symbols.iter().any(|s| s.name == anchor) {
+            if !elf.symbols.iter().any(|s| anchor.split('|').any(|a| s.name == a)) {
                 continue;
             }
-            return elf.symbols.iter().find(|s| s.name == name).map(|s| s.value & !1).ok_or_else(|| format!("{file} has no {name}"));
+            return elf.symbols.iter().find(|s| name.split('|').any(|n| s.name == n)).map(|s| s.value & !1).ok_or_else(|| format!("{file} has no {name}"));
         }
         Err(format!("no overlay defines {anchor}"))
     }
@@ -209,7 +212,7 @@ impl<'a> Guide<'a> {
     /// the line it also drifts right a pixel every four frames, as
     /// `tret-tree-branch-split.gif`.
     pub fn tret_tree_branch_split(&mut self) -> Result<(), String> {
-        let split = self.overlay_sym("gTretTreeBranch_WarpDests", "sSplitLine")?;
+        let split = self.overlay_sym("gTretTreeBranch_Entrances|gTretTreeBranch_WarpDests", "sSplitLine")?;
         // The entrance on the branch west of the trunk at 248 pixels down,
         // where the split is near the screen's top: walking along the
         // branch moves the map under the line and not over it.
@@ -242,7 +245,7 @@ impl<'a> Guide<'a> {
 }
 
 /// Kolima Forest's last map, where Tret stands: SceneId_KolimaForestTree,
-/// Tret's stand-in (LOCALID_TRET_STAND_IN) and Hermes' Water (ITEM_HERMES_WATER).
+/// Tret's stand-in (ACTOR_TRET_STAND_IN) and Hermes' Water (ITEM_HERMES_WATER).
 const KOLIMA_FOREST_TREE: u16 = 44;
 const TRET_STAND_IN: u16 = 12;
 const HERMES_WATER: u16 = 0xb8;
@@ -372,7 +375,7 @@ impl<'a> Guide<'a> {
     /// outside the light, as `altmiller-cave-darkness.png`.
     pub fn altmiller_cave_darkness(&mut self) -> Result<(), String> {
         let state = self.sym("gSceneLocalState")?;
-        let apply = self.overlay_sym("AltmillerCave_GetWarpDests", "AltmillerCave_ApplyFadeBlend")?;
+        let apply = self.overlay_sym("AltmillerCave_GetEntrances|AltmillerCave_GetWarpDests", "AltmillerCave_ApplyFadeBlend")?;
         let mut entered = self.enter_with(ALTMILLER_CAVE_ENTRANCE, &[])?;
         let field = &mut entered.field;
         let settled = field.save();
@@ -411,7 +414,7 @@ impl<'a> Guide<'a> {
 }
 
 /// Bilibin Cave's ice room: SceneId_BilibinCaveIce, its fourth torch
-/// (LOCALID_FOURTH_TORCH), the cell a torch melts the third puddle from, and
+/// (ACTOR_FOURTH_TORCH), the cell a torch melts the third puddle from, and
 /// the cells north and south of the puddle that BilibinCave_UpdateThirdPuddleFromTorches
 /// rewrites (MapGrid_CopyCellAttributes to (36, 22) and (36, 24)).
 const BILIBIN_CAVE_ICE: u16 = 47;
@@ -452,7 +455,7 @@ impl<'a> Guide<'a> {
         // Move waits for the d-pad: east, until the torch has moved.
         field.hold(spot.walk);
         let layer = spot.layer;
-        let names = self.cell_names("BilibinCave_GetEvents", "BilibinCaveIce")?;
+        let names = self.cell_names("BilibinCave_GetTriggers|BilibinCave_GetEvents", "BilibinCaveIce")?;
         let legend = [
             (0xff_e0_30, "Yellow outline: the cell beside the ice pillar; a torch standing on it melts the pillar".to_string()),
             (RED, "Red outline: the cells north and south of the pillar, which melting rewrites; each labelled with what it does".to_string()),
@@ -555,11 +558,11 @@ pub(super) fn crop(image: &Image, x: i32, y: i32, w: usize, h: usize) -> Image {
 }
 
 /// Fuchin Falls Cave's first room: SceneId_FuchinFallsCaveEntrance, the
-/// flags of its three logs' stops (FLAG_MAPSEC_TEMP_01 to 03), and the cells
+/// flags of its three logs' stops (FLAG_AREA_TEMP_01 to 03), and the cells
 /// of their tracks that FuchinFallsCave_RebuildEntranceLogs rewrites
 /// (columns 8 to 22, rows 29 to 33).
 const FUCHIN_FIRST_ROOM: u16 = 62;
-const FUCHIN_LOG_FLAGS: [&str; 3] = ["FLAG_MAPSEC_TEMP_01", "FLAG_MAPSEC_TEMP_02", "FLAG_MAPSEC_TEMP_03"];
+const FUCHIN_LOG_FLAGS: [&str; 3] = ["FLAG_AREA_TEMP_01|FLAG_MAPSEC_TEMP_01", "FLAG_AREA_TEMP_02|FLAG_MAPSEC_TEMP_02", "FLAG_AREA_TEMP_03|FLAG_MAPSEC_TEMP_03"];
 const FUCHIN_TRACKS: (i32, i32, i32, i32) = (8, 29, 22, 33);
 
 impl<'a> Guide<'a> {
@@ -572,11 +575,11 @@ impl<'a> Guide<'a> {
         const MOVED: [&str; 4] = ["No log moved", "First log pushed east", "Second log pushed north too", "Third log pushed north too"];
         let states: Vec<(String, Vec<&str>)> = (0..=3)
             .map(|set| {
-                let name = if set == 0 { MOVED[0].to_string() } else { format!("{} ({})", MOVED[set], FUCHIN_LOG_FLAGS[set - 1]) };
+                let name = if set == 0 { MOVED[0].to_string() } else { format!("{} ({})", MOVED[set], FUCHIN_LOG_FLAGS[set - 1].split('|').next().unwrap_or("")) };
                 (name, FUCHIN_LOG_FLAGS[..set].to_vec())
             })
             .collect();
-        let names = self.cell_names("ImilFuchinFalls_GetEvents", "FuchinFallsCaveEntrance")?;
+        let names = self.cell_names("ImilFuchinFalls_GetTriggers|ImilFuchinFalls_GetEvents", "FuchinFallsCaveEntrance")?;
         let out = self.code_panels(FUCHIN_FIRST_ROOM, None, FUCHIN_TRACKS, &states, &names, super::guide_cells::FUCHIN_FIRST_ROOM_WORDS)?;
         self.guide_png("fuchin-falls-cave-logs.png", &out, "Fuchin Falls Cave's first room, its log track's cells as each log's flag is set")
     }
@@ -649,7 +652,7 @@ impl<'a> Guide<'a> {
     /// on entry, as `mercury-lighthouse-pool.png`.
     pub fn mercury_lighthouse_pool(&mut self) -> Result<(), String> {
         let states = vec![("Before Ply".to_string(), vec![]), ("After Ply (FLAG_MERCURY_LIGHTHOUSE_HEART_HONORED)".to_string(), vec!["FLAG_MERCURY_LIGHTHOUSE_HEART_HONORED"])];
-        let names = self.cell_names("MercuryLighthouseEntrance_GetEvents", "MercuryLighthouseEntrance")?;
+        let names = self.cell_names("MercuryLighthouseEntrance_GetTriggers|MercuryLighthouseEntrance_GetEvents", "MercuryLighthouseEntrance")?;
         let out = self.code_panels(MERCURY_LIGHTHOUSE_ENTRANCE, Some(MERCURY_GODDESS_FROM_SIX_STATUES), MERCURY_POOL, &states, &names, super::guide_cells::MERCURY_LIGHTHOUSE_ENTRANCE_WORDS)?;
         self.guide_png("mercury-lighthouse-pool.png", &out, "Mercury Lighthouse's pool cells before and after Ply")
     }
@@ -772,8 +775,8 @@ impl<'a> Guide<'a> {
     /// path so far (sToss's first trail point, on the water) in yellow, as
     /// `tolbi-spring-toss.gif`.
     pub fn tolbi_spring_toss(&mut self) -> Result<(), String> {
-        let toss = self.overlay_sym("gTolbiSpring_WarpDests", "sToss")?;
-        let ended = self.overlay_sym("gTolbiSpring_WarpDests", "sTossEnded")?;
+        let toss = self.overlay_sym("gTolbiSpring_Entrances|gTolbiSpring_WarpDests", "sToss")?;
+        let ended = self.overlay_sym("gTolbiSpring_Entrances|gTolbiSpring_WarpDests", "sTossEnded")?;
         let (mut entered, _) = self.stand_for((TOLBI_SPRING, TOLBI_SPRING_FROM_TOLBI), super::story::Trigger::Search(TOLBI_SPRING_SPRING), 0)?;
         let field = &mut entered.field;
         field.set_coins(100);
@@ -842,8 +845,8 @@ impl<'a> Guide<'a> {
 
 /// Kolima Forest's way in (SceneId_KolimaForestEntrance) from the world map
 /// (KOLIMA_FOREST_ENTRANCE_FROM_WORLD_MAP), where the curse falls the first
-/// time; its four Psynergy fields (LOCALID_LEADER_PSYNERGY_FIELD to
-/// LOCALID_GARET_PSYNERGY_FIELD), where KolimaForestEntrance_WitnessForestCurse
+/// time; its four Psynergy fields (ACTOR_LEADER_PSYNERGY_FIELD to
+/// ACTOR_GARET_PSYNERGY_FIELD), where KolimaForestEntrance_WitnessForestCurse
 /// puts them, and the boxes KolimaForestEntrance_BurstOnPsynergyField tests a
 /// landing sparkle against, in pixels (x0, x1, z0, z1), with Mia in the party
 /// and without her.
@@ -962,7 +965,7 @@ impl<'a> Guide<'a> {
 }
 
 /// Colosseum Final 1 (SceneId_ColosseumAzartMatch) at the race
-/// (COLOSSEUM_AZART_MATCH_RACE_FROM_LEND_A_HAND), and Azart (LOCALID_OPPONENT).
+/// (COLOSSEUM_AZART_MATCH_RACE_FROM_LEND_A_HAND), and Azart (ACTOR_OPPONENT).
 const COLOSSEUM_AZART_RACE: (u16, u16) = (143, 1);
 /// Colosseum Final 3 (SceneId_ColosseumNavampaMatch), the touch that steps
 /// onto the Scales of Justice and its two pans.
@@ -1028,9 +1031,9 @@ const VENUS_LIGHTHOUSE_AERIE: (u16, u16) = (187, 3);
 /// The Tunnel Ruins' balance room (SceneId_TunnelRuinsLadyStatues), its two
 /// entrances (TUNNEL_RUINS_LADY_STATUES_FROM_TUNNEL_RUINS_GREAT_STATUE_NORTH
 /// and TUNNEL_RUINS_LADY_STATUES_BALANCE_SOUTH), its west platform
-/// (LOCALID_BALANCE_WEST; the east one and the carved stones A to C follow),
+/// (ACTOR_BALANCE_WEST; the east one and the carved stones A to C follow),
 /// where the hidden leader is put for the camera to centre on the balance,
-/// and struct ObjectEvent's timer, a platform's weight.
+/// and struct Actor's timer, a platform's weight.
 const TUNNEL_RUINS_LADY_STATUES: u16 = 173;
 const BALANCE_FROM_GREAT_STATUE: u16 = 4;
 const BALANCE_SOUTH: u16 = 5;

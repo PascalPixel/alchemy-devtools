@@ -2,7 +2,7 @@
 //! set a new game's defaults (SaveBlock_InitializeDefaults) and makes its next call
 //! (WindowColor_Apply), the run writes the scene, entrance and story flags
 //! into gSaveBlock, so the main loop loads that scene instead of the title.
-//! The location-name notice (MapNamePopup_Show) returns at once unless
+//! The location-name notice (AreaNameWindow_Show) returns at once unless
 //! show_notice is set. The
 //! scene is the player's once SceneManager_Run's field loop takes its first
 //! step (Field_ProcessStep).
@@ -24,7 +24,7 @@
 //! to from where he entered, in the room the camera shows (Field::reach).
 //! Then A (talk, search), a field Psynergy request (FieldWork.command) or
 //! walking onto the cell (touch) starts it, and the field loop's own
-//! dispatch (Scene_TalkToObjectEvent, Scene_RunCoordEventOrWarp, Field_SearchCell,
+//! dispatch (Scene_TalkToActor, Scene_RunStepTriggerOrExit, Field_SearchCell,
 //! Field_UsePsynergy) shows which event began; the event function the CPU
 //! then enters (Field::watch) shows whose row it was, since two rooms of a
 //! scene can give the same actor id or cell code to different events. Each
@@ -82,7 +82,7 @@ const PIN_DRAW_FRAMES: u32 = 8;
 const FIELD_EVENTS: u32 = 0x10;
 const FIELD_ACTORS: u32 = 0x14;
 const FIELD_ACTOR_COUNT: u32 = 66;
-/// The first actor a scene places (LOCALID_FIRST_PLACED); 0 to 7 are the party.
+/// The first actor a scene places (ACTOR_FIRST_PLACED); 0 to 7 are the party.
 const FIRST_PLACED: u16 = 8;
 const FIELD_COMMAND: u32 = 0x17e;
 /// struct Object.
@@ -148,16 +148,16 @@ pub(super) const STEP_DOWN: i32 = 12 << 16;
 /// The furthest a ledge, a climb or a jump is taken to drop the leader.
 const JUMP_DROP: i32 = 96 << 16;
 /// struct MapEvent: its control word (kind in the low four bits, a facing
-/// in bits 15..12 with MAP_EVENT_FLAG_FACING), its target and its result.
+/// in bits 15..12 with TRIGGER_FLAG_FACING), its target and its result.
 const EVENT_ROW_SIZE: u32 = 12;
-const COORD_EVENT_FLAG_WALKING: u32 = 0x200;
-const MAP_EVENT_FLAG_FACING: u32 = 0x400;
-/// The MapEventKind of each dispatch.
-pub const MAP_EVENT_TALK: u8 = 0;
-pub const MAP_EVENT_WARP: u8 = 1;
-pub const MAP_EVENT_COORD: u8 = 2;
-pub const MAP_EVENT_BG: u8 = 3;
-pub const MAP_EVENT_PSYNERGY: u8 = 5;
+const STEP_TRIGGER_FLAG_WALKING: u32 = 0x200;
+const TRIGGER_FLAG_FACING: u32 = 0x400;
+/// The TriggerKind of each dispatch.
+pub const TRIGGER_TALK: u8 = 0;
+pub const TRIGGER_EXIT: u8 = 1;
+pub const TRIGGER_STEP: u8 = 2;
+pub const TRIGGER_EXAMINE: u8 = 3;
+pub const TRIGGER_PSYNERGY: u8 = 5;
 /// No random encounters while set (flags.h).
 const FLAG_NO_ENCOUNTERS: u16 = 0x160;
 /// struct Unit's psynergy, four bytes each.
@@ -269,8 +269,9 @@ impl Symbols {
             init: at("SaveBlock_InitializeDefaults")?,
             glow: at("WindowColor_Apply")?,
             load_layered: at("MapGrid_LoadMap")?,
-            apply_entrance: at("Scene_ApplyWarpDest")?,
-            notice: at("MapNamePopup_Show")?,
+            // Each second spelling is Alchemy's before The Broken Seal's rename.
+            apply_entrance: at("Scene_ApplyEntrance").or_else(|_| at("Scene_ApplyWarpDest"))?,
+            notice: at("AreaNameWindow_Show").or_else(|_| at("MapNamePopup_Show"))?,
             step: at("Field_ProcessStep")?,
             update_layer: at("MapGrid_UpdateLayerScroll")?,
             center: at("MapGrid_CenterOnFollowedPoint")?,
@@ -289,8 +290,8 @@ impl Symbols {
             restore: at("Party_RestoreHpPp")?,
             unit_get: at("Unit_Get")?,
             defeat: Vec::new(),
-            talk: at("Scene_TalkToObjectEvent")?,
-            touch: at("Scene_RunCoordEventOrWarp")?,
+            talk: at("Scene_TalkToActor").or_else(|_| at("Scene_TalkToObjectEvent"))?,
+            touch: at("Scene_RunStepTriggerOrExit").or_else(|_| at("Scene_RunCoordEventOrWarp"))?,
             search: at("Field_SearchCell")?,
             psynergy: at("Field_UsePsynergy")?,
             game_state: at("gSaveBlock")?,
@@ -316,7 +317,7 @@ pub struct Setup {
     pub clear: Vec<u16>,
 }
 
-/// A row of the scene's entrance table (struct MapWarpDest).
+/// A row of the scene's entrance table (struct SceneEntrance).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Entrance {
     pub number: i16,
@@ -379,7 +380,7 @@ pub(super) struct Track {
     /// it has stepped in a row up to it.
     step_frame: u32,
     stepping_since: u32,
-    /// The last event the field loop dispatched: its kind (MAP_EVENT_TALK and
+    /// The last event the field loop dispatched: its kind (TRIGGER_TALK and
     /// on) and target (an actor or a collision code), and the frame.
     dispatched: Option<(u8, u32, u32)>,
     /// Where that dispatch returns to while it runs (0 once it has), and
@@ -390,7 +391,7 @@ pub(super) struct Track {
     dispatch_end: u32,
     /// How many times a layered map has started loading.
     loads: u32,
-    /// How many times Scene_ApplyWarpDest has placed the party: once each
+    /// How many times Scene_ApplyEntrance has placed the party: once each
     /// scene the field runs, the world map included.
     entries: u32,
     /// The first of the watched event functions (Field::watch) the CPU
@@ -505,7 +506,7 @@ pub struct Field<'rom> {
     pub returns: Vec<(u32, u32)>,
     /// Words written as the CPU reaches an address: (address, where, value).
     pub pokes: Vec<(u32, u32, u32)>,
-    /// Lets MapNamePopup_Show run, for a picture of the notice.
+    /// Lets AreaNameWindow_Show run, for a picture of the notice.
     pub show_notice: bool,
     /// Registers set as the CPU reaches an address: (address, register,
     /// value), as a caller would have passed the value.
@@ -544,7 +545,7 @@ impl<'rom> Field<'rom> {
         self.actor_object(id)
     }
 
-    /// Boots the ROM and runs until Scene_ApplyWarpDest has placed the party.
+    /// Boots the ROM and runs until Scene_ApplyEntrance has placed the party.
     pub fn enter(rom: &'rom [u8], s: &'rom Symbols, setup: &Setup) -> Result<Field<'rom>, String> {
         let t = Track {
             phase: Phase::Boot,
@@ -648,7 +649,7 @@ impl<'rom> Field<'rom> {
         self.actor(self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16)
     }
 
-    /// Enters again from `placed` (as Scene_ApplyWarpDest placed the party)
+    /// Enters again from `placed` (as Scene_ApplyEntrance placed the party)
     /// with the leader at `spot`, and runs until the player has control and
     /// the camera has settled on him, as an event's start does.
     pub fn stand(&mut self, placed: &Saved, spot: &Spot) -> Result<(), String> {
@@ -895,7 +896,7 @@ impl<'rom> Field<'rom> {
             self.t.entrances_return = 0;
             self.t.entrances_fn = 0;
         } else if self.t.apply_return != 0 && pc == self.t.apply_return {
-            // Scene_ApplyWarpDest has placed the party; the scene's
+            // Scene_ApplyEntrance has placed the party; the scene's
             // initialization, which reads the story flags, comes next. Scene
             // loading may have cleared some of them, so they are set again.
             self.t.apply_return = 0;
@@ -976,7 +977,7 @@ impl<'rom> Field<'rom> {
             }
             self.t.step_frame = self.t.frame;
         }
-        let dispatch = [(s.talk, MAP_EVENT_TALK), (s.touch, MAP_EVENT_COORD), (s.search, MAP_EVENT_BG), (s.psynergy, MAP_EVENT_PSYNERGY)];
+        let dispatch = [(s.talk, TRIGGER_TALK), (s.touch, TRIGGER_STEP), (s.search, TRIGGER_EXAMINE), (s.psynergy, TRIGGER_PSYNERGY)];
         if let Some(&(_, kind)) = dispatch.iter().find(|(a, _)| *a == pc) {
             self.t.dispatched = Some((kind, self.gba.register(0), self.t.frame));
             self.t.dispatch_return = lr(&self.gba);
@@ -1813,7 +1814,7 @@ impl<'rom> Field<'rom> {
     /// row answers while the flags are as they are (a warning given once).
     fn quiet(&self, code: i32) -> bool {
         let idle = |kind| self.event_rows(kind, code as u16).iter().all(|r| !self.condition_holds(r.condition));
-        Self::standable(code) || ((1..=CELL_EVENT_LAST).contains(&code) && idle(MAP_EVENT_COORD) && idle(MAP_EVENT_WARP))
+        Self::standable(code) || ((1..=CELL_EVENT_LAST).contains(&code) && idle(TRIGGER_STEP) && idle(TRIGGER_EXIT))
     }
 
     /// Whether the leader walking on crosses a cell with collision code
@@ -1823,7 +1824,7 @@ impl<'rom> Field<'rom> {
         if !(1..=CELL_EVENT_LAST).contains(&code) {
             return true;
         }
-        target != Some(code as u16) && self.event_rows(MAP_EVENT_WARP, code as u16).iter().all(|r| !self.condition_holds(r.condition))
+        target != Some(code as u16) && self.event_rows(TRIGGER_EXIT, code as u16).iter().all(|r| !self.condition_holds(r.condition))
     }
 
     /// Whether (x, z) pixels lie within the map's bounds, `margin` pixels in.
@@ -2329,7 +2330,7 @@ impl<'rom> Field<'rom> {
             Trigger::Search(code) => {
                 // The leader searches the ground layer's cell 16 pixels ahead
                 // of him, whichever way he faces
-                // (ObjectEvent_GetTriggerTileAheadOfCurrent). He stands on his own
+                // (Actor_GetTriggerTileAheadOfCurrent). He stands on his own
                 // layer, level with the cell or up to 64 pixels below it (a
                 // jar on a shelf).
                 let cells: Vec<_> = self.cells_with_code(code)?.into_iter().filter(|c| c.0 == 0).collect();
@@ -2370,13 +2371,13 @@ impl<'rom> Field<'rom> {
                 }
             }
             Trigger::Touch(code) => {
-                // A row that needs pushing (COORD_EVENT_FLAG_WALKING) is pushed
+                // A row that needs pushing (STEP_TRIGGER_FLAG_WALKING) is pushed
                 // from the cell itself, the way the row faces when it names
-                // one (MAP_EVENT_FLAG_FACING); any other is walked onto, that
+                // one (TRIGGER_FLAG_FACING); any other is walked onto, that
                 // way first.
-                let rows = self.event_rows(MAP_EVENT_COORD, code);
-                let pushing = rows.iter().any(|r| r.flags & COORD_EVENT_FLAG_WALKING != 0);
-                let facing = rows.iter().find(|r| r.flags & MAP_EVENT_FLAG_FACING != 0).map(|r| r.flags & 0xf000);
+                let rows = self.event_rows(TRIGGER_STEP, code);
+                let pushing = rows.iter().any(|r| r.flags & STEP_TRIGGER_FLAG_WALKING != 0);
+                let facing = rows.iter().find(|r| r.flags & TRIGGER_FLAG_FACING != 0).map(|r| r.flags & 0xf000);
                 let mut ways = vec![0, 2, 3, 1];
                 if let Some(f) = facing {
                     ways.sort_by_key(|&d| (FACING[d] as u16).wrapping_sub(f as u16).wrapping_add(0x1fff) > 0x3ffe);
@@ -2562,14 +2563,14 @@ impl<'rom> Field<'rom> {
         let mut arrival: Option<u32> = None;
         let mut note = None;
         let (kind, target) = match trigger {
-            Trigger::Talk(id) => (MAP_EVENT_TALK, id),
-            Trigger::Search(code) => (MAP_EVENT_BG, code),
-            Trigger::Touch(code) => (MAP_EVENT_COORD, code),
-            Trigger::Psynergy(_, id) => (MAP_EVENT_PSYNERGY, id),
+            Trigger::Talk(id) => (TRIGGER_TALK, id),
+            Trigger::Search(code) => (TRIGGER_EXAMINE, code),
+            Trigger::Touch(code) => (TRIGGER_STEP, code),
+            Trigger::Psynergy(_, id) => (TRIGGER_PSYNERGY, id),
         };
         // The dispatch it starts: Field_UsePsynergy takes the Psynergy, not
         // the actor.
-        let want = (kind, (kind != MAP_EVENT_PSYNERGY).then_some(u32::from(target)));
+        let want = (kind, (kind != TRIGGER_PSYNERGY).then_some(u32::from(target)));
         let table = self.event_rows(kind, target);
         let rows = table.len();
         if !own.is_empty() && !self.has_row(kind, target, own) {
@@ -3040,10 +3041,10 @@ fn facing_toward(dx: i32, dz: i32) -> u32 {
 /// A trigger's kind by name.
 fn kind_name(kind: u8) -> &'static str {
     match kind {
-        MAP_EVENT_TALK => "talk",
-        MAP_EVENT_COORD => "touch",
-        MAP_EVENT_BG => "search",
-        MAP_EVENT_PSYNERGY => "Psynergy",
+        TRIGGER_TALK => "talk",
+        TRIGGER_STEP => "touch",
+        TRIGGER_EXAMINE => "search",
+        TRIGGER_PSYNERGY => "Psynergy",
         _ => "event",
     }
 }
@@ -3168,7 +3169,7 @@ pub struct Spot {
 /// The moment an event is played from.
 #[derive(Clone, Copy)]
 pub enum Start<'a> {
-    /// As Scene_ApplyWarpDest has placed the party: the leader is put at the
+    /// As Scene_ApplyEntrance has placed the party: the leader is put at the
     /// spot before the scene's actors are made.
     Entered(&'a Saved),
     /// With the player in control (after another event): the leader is

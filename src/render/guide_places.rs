@@ -25,7 +25,7 @@ const GREY: u32 = 0x40_40_40;
 /// DISPCNT bits 8 to 12: BG0 to BG3, then the sprites.
 const SPRITES: u16 = 0x1000;
 const BACKGROUNDS: u16 = 0x0f00;
-/// struct ObjectEvent: its position (16.16 pixels) and scale.
+/// struct Actor: its position (16.16 pixels) and scale.
 const OBJ_X: u32 = 0x08;
 const OBJ_Z: u32 = 0x10;
 /// Its object kind: 0 draws nothing.
@@ -192,12 +192,12 @@ impl<'a> Guide<'a> {
     /// account of Sol Sanctum in sepia, the screen beside the background
     /// palettes the sepia transform rewrites, as `sanctum-account-sepia.gif`;
     /// and each time the Great Healer's Psynergy shows, the screen beside the
-    /// sprites and the sprites without his afterimage (LOCALID_HEALER_AFTERIMAGE,
+    /// sprites and the sprites without his afterimage (ACTOR_HEALER_AFTERIMAGE,
     /// 14), the healer and the afterimage boxed, as
     /// `sanctum-healer-afterimages.gif`.
     pub fn sanctum_account(&mut self) -> Result<(), String> {
-        let reenact = self.overlay_sym("Sanctum_GetObjectEventTemplates", "Sanctum_ReenactSolSanctum")?;
-        let request = self.overlay_sym("Sanctum_GetObjectEventTemplates", "Sanctum_RequestQuestAcceptance")?;
+        let reenact = self.overlay_sym("Sanctum_GetActorTemplates|Sanctum_GetObjectEventTemplates", "Sanctum_ReenactSolSanctum")?;
+        let request = self.overlay_sym("Sanctum_GetActorTemplates|Sanctum_GetObjectEventTemplates", "Sanctum_RequestQuestAcceptance")?;
         let mut field = self.arrive((9, 20), &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_SOL_SANCTUM_STAR_ROOM_COLLAPSED"], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let phase = std::rc::Rc::new(std::cell::Cell::new(0u8));
         let set = phase.clone();
@@ -230,7 +230,7 @@ impl<'a> Guide<'a> {
         self.place_gif("sanctum-healer-afterimages.gif", &healer, "the Great Healer's Psynergy: the screen, the sprites, the sprites without his afterimage")
     }
 
-    /// A rising effect: actor `effect` (a blank actor, LOCALID_RISING_EFFECT)
+    /// A rising effect: actor `effect` (a blank actor, ACTOR_RISING_EFFECT)
     /// on the platform while it stands there, the screen beside the sprites
     /// and the sprites without it, the riser and the effect boxed.
     fn rising(&mut self, file: &str, place: (u16, u16), set: &[&str], clear: &[&str], effect: u16, limit: u32) -> Result<(), String> {
@@ -238,7 +238,7 @@ impl<'a> Guide<'a> {
         let panels = [Panel::Screen, Panel::Sprites, Panel::SpritesWithout(vec![effect])];
         let marks: [Mark; 1] = [(effect, RED, "EFFECT")];
         let frames = Self::play_apart(&mut field, limit, &panels, &marks, &mut |f| f.actor(effect).is_some_and(|a| a.x == 471 && a.z == 290))?;
-        self.place_gif(file, &frames, "an actor rising with LOCALID_RISING_EFFECT: the screen, the sprites, the sprites without the effect")
+        self.place_gif(file, &frames, "an actor rising with ACTOR_RISING_EFFECT: the screen, the sprites, the sprites without the effect")
     }
 
     /// Isaac rising into the Elemental Star Room on the first arrival, as
@@ -297,8 +297,8 @@ impl<'a> Guide<'a> {
     /// screen beside the sprites and the sprite palettes, Garet, the pillar
     /// and the hand boxed, as `opening-move.gif`.
     pub fn vale_opening(&mut self) -> Result<(), String> {
-        let begin = self.overlay_sym("Vale_GetObjectEventTemplates", "Scene_StartEventPsynergy")?;
-        let end = self.overlay_sym("Vale_GetObjectEventTemplates", "Scene_EndEventPsynergy")?;
+        let begin = self.overlay_sym("Vale_GetActorTemplates|Vale_GetObjectEventTemplates", "Scene_StartEventPsynergy")?;
+        let end = self.overlay_sym("Vale_GetActorTemplates|Vale_GetObjectEventTemplates", "Scene_EndEventPsynergy")?;
         let mut field = self.arrive((4, 16), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let on = std::rc::Rc::new(std::cell::Cell::new(false));
         let set = on.clone();
@@ -327,11 +327,11 @@ impl<'a> Guide<'a> {
     /// sprites and the sprite palettes while his display lasts, as
     /// `psynergy-display.gif`.
     pub fn vale_gate_display(&mut self) -> Result<(), String> {
-        let begin = self.overlay_sym("ValePlaza_GetObjectEventTemplates", "Scene_StartEventPsynergy")?;
-        let end = self.overlay_sym("ValePlaza_GetObjectEventTemplates", "Scene_EndEventPsynergy")?;
+        let begin = self.overlay_sym("ValePlaza_GetActorTemplates|ValePlaza_GetObjectEventTemplates", "Scene_StartEventPsynergy")?;
+        let end = self.overlay_sym("ValePlaza_GetActorTemplates|ValePlaza_GetObjectEventTemplates", "Scene_EndEventPsynergy")?;
         let mut entered = self.enter_story((5, 0), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let field = &mut entered.field;
-        // LOCALID_STRONGMAN_SHOWING_PSYNERGY (LOCALID_FIRST_PLACED + 9).
+        // ACTOR_STRONGMAN_SHOWING_PSYNERGY (ACTOR_FIRST_PLACED + 9).
         let id = 17u16;
         let spot = *field.spots(super::story::Trigger::Talk(id))?.first().ok_or("nowhere to talk to him from")?;
         field.load(&entered.placed);

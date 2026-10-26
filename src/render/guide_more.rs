@@ -398,7 +398,7 @@ impl<'a> Guide<'a> {
     /// in its own colour, beside the sprites alone, as `oam.png`.
     /// Where Garet's sister stands in Vale at twice the GBA's size, each
     /// actor on screen marked at its feet and labelled with its actor
-    /// number (the scene's own placement rows start at LOCALID_FIRST_PLACED),
+    /// number (the scene's own placement rows start at ACTOR_FIRST_PLACED),
     /// as `scene-actors.png`.
     pub fn scene_actors(&mut self) -> Result<(), String> {
         let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
@@ -615,7 +615,7 @@ impl<'a> Guide<'a> {
         let mut image = canvas(2 * WIDTH, 2 * HEIGHT, 0);
         paste(&mut image, &screen(&field.picture()), 0, 0, 2);
         let (vx, vy) = field.view();
-        for id in 0..LOCALID_SLOTS {
+        for id in 0..ACTOR_SLOTS {
             let Some(a) = field.actor(id) else { continue };
             // A raised actor is drawn its height higher up the screen.
             let (sx, sy) = (2 * (a.x - vx), 2 * (a.z - (a.y >> 16) - vy));
@@ -800,7 +800,7 @@ impl<'a> Guide<'a> {
     /// (MapGrid_GetTerrainHeight) where a cell isn't flat. The screen is above,
     /// its ground below.
     pub fn cells(&mut self) -> Result<(), String> {
-        let names = self.cell_names("gGomaCavePillar_Events", "GomaCavePillar")?;
+        let names = self.cell_names("gGomaCavePillar_Triggers|gGomaCavePillar_Events", "GomaCavePillar")?;
         let mut entered = self.enter_goma_cave(GOMA_CAVE)?;
         let field = &mut entered.field;
         Self::press_path(field, &[(0, 10)])?;
@@ -1270,13 +1270,13 @@ const DARK_LIMIT: u32 = 128;
 const STRETCH_MARGIN: i32 = 8;
 
 /// The field's actor slots (FIELD_ACTOR_COUNT in field.rs).
-pub(super) const LOCALID_SLOTS: u16 = 66;
+pub(super) const ACTOR_SLOTS: u16 = 66;
 /// SceneId_IncreaseItemAndLevel and SceneId_MenuTest, the debug level room
 /// and menu test room (scenes.s).
 const LEVEL_ROOM: u16 = 199;
 const MENU_TEST_ROOM: u16 = 200;
-/// The level room's placed actors, LOCALID_FIRST_PLACED on (enum
-/// IncreaseItemAndLevelLocalId, debug/level.c); outside Japanese all seven are placed.
+/// The level room's placed actors, ACTOR_FIRST_PLACED on (enum
+/// IncreaseItemAndLevelActorId, debug/level.c); outside Japanese all seven are placed.
 const LEVEL_ROOM_ACTORS: std::ops::Range<u16> = 8..15;
 /// Facing west, in 1/65536 turns (NORTH is a quarter turn short of a whole).
 const WEST: u32 = 0x8000;

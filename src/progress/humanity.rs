@@ -174,8 +174,8 @@ pub fn data_parameter(name: &str) -> Option<&'static str> {
 }
 
 /// The callee of the call whose argument list holds the token at `at`, and
-/// which argument it is in (from 0), reading back no further than `floor`: `ObjectEvent_WalkTo`
-/// and 1 for the `257` of `ObjectEvent_WalkTo(LOCALID_PARTY_LEADER, 257, 420)`.
+/// which argument it is in (from 0), reading back no further than `floor`: `Actor_WalkTo`
+/// and 1 for the `257` of `Actor_WalkTo(ACTOR_PARTY_LEADER, 257, 420)`.
 /// Parentheses that only group (`(x) << 16`) are looked through.
 fn call_site(tokens: &[Token], at: usize, floor: usize) -> Option<(usize, usize)> {
     let directive = tokens[at].pp;
@@ -374,7 +374,7 @@ fn regexes() -> &'static [Regex; 3] {
             .unwrap(),
             // Conventions that keep their number: temporary flags, registers and
             // the compiler library (`__divsi3`).
-            Regex::new(r"^FLAG_(?:SCENE|MAPSEC)_TEMP_[0-9A-F]+$|^REG_|^__").unwrap(),
+            Regex::new(r"^FLAG_(?:SCENE|MAPSEC|AREA)_TEMP_[0-9A-F]+$|^REG_|^__").unwrap(),
             // Edition names, which belong in linker scripts and assembly.
             Regex::new(r"^(?:TBS|TLA)_EDITION_[A-Z]+$").unwrap(),
         ]
@@ -403,7 +403,7 @@ fn last_word(text: &str) -> &str {
 }
 
 /// A name that carries a number in place of a meaning: `ColosseumFinal1`,
-/// `EventScript_LeaveByWarp10`, `LOCALID_8`. Placeholders, hardware and convention
+/// `EventScript_LeaveByExit10`, `ACTOR_8`. Placeholders, hardware and convention
 /// names (`BG2`, `Dma3`, `REG_DMA3`, `u16`, `Random16`, `FLAG_SCENE_TEMP_01`)
 /// are not.
 pub fn is_numbered(name: &str) -> bool {
@@ -778,7 +778,7 @@ impl<'r, 'a> Walk<'r, 'a> {
             // Whether it is data depends on the parameter it fills, which may be
             // declared in a file read later.
             let floor = if function_macro.is_some() { self.directive_start } else { 0 };
-            // The calls around it, innermost first: `PIXELS` and then `ObjectEvent_SetPosition`.
+            // The calls around it, innermost first: `PIXELS` and then `Actor_SetPosition`.
             let mut calls = Vec::new();
             let mut inside = at;
             while let Some((callee, position)) = call_site(&self.code.tokens, inside, floor) {
@@ -936,7 +936,7 @@ impl<'r, 'a> Walk<'r, 'a> {
     }
 
     /// The name one parameter's tokens end in, when they name it: not `s32`,
-    /// `struct ObjectEvent *` or a pointer to functions.
+    /// `struct Actor *` or a pointer to functions.
     fn parameter_name(&self, tokens: &[usize]) -> Option<String> {
         let (&last, rest) = tokens.split_last()?;
         let token = &self.code.tokens[last];
@@ -1386,13 +1386,14 @@ impl Report {
     }
 }
 
-/// How many area names `gMapSec_NameRules` reads: its highest name index
-/// plus one, from `map_rules.s`.
+/// How many area names `gArea_NameRules` reads: its highest name index
+/// plus one, from the `scene_name` and `area_name` rows of `map_rules.s`
+/// (`map_name` and `group_name` before the rename).
 pub fn area_count(rules: &str) -> Option<usize> {
     rules
         .lines()
         .map(str::trim)
-        .filter(|line| line.starts_with("map_name ") || line.starts_with("group_name "))
+        .filter(|line| ["scene_name ", "area_name ", "map_name ", "group_name "].iter().any(|row| line.starts_with(row)))
         .filter_map(|line| line.split(',').nth(2)?.split('@').next()?.trim().parse::<usize>().ok())
         .max()
         .map(|max| max + 1)
@@ -1860,7 +1861,7 @@ mod tests {
         for name in ["Unkempt", "Unknowable", "Trunk", "FunkyUnkle", "SE_JUMP"] {
             assert!(!is_placeholder(name), "{name}");
         }
-        for name in ["ColosseumFinal1", "Event_LeaveByExit10", "LOCALID_8", "gEffectScript0", "VenusLighthouse2", "arg0"] {
+        for name in ["ColosseumFinal1", "Event_LeaveByExit10", "ACTOR_8", "gEffectScript0", "VenusLighthouse2", "arg0"] {
             assert!(is_numbered(name), "{name}");
         }
         for name in [
@@ -1960,7 +1961,7 @@ mod tests {
             ("b.c", second.as_str()),
             ("games/tbs/src/scene/vale.c", scene.as_str()),
             ("games/tbs/src/battle_anim/parts/bolt.c", part.as_str()),
-            ("games/tbs/include/map_warps.h", long.as_str()),
+            ("games/tbs/include/scene_exits.h", long.as_str()),
             ("games/tbs/src/overworld/table.c", data.as_str()),
         ]);
         assert_eq!(report.function_groups.len(), 1);
@@ -1991,8 +1992,8 @@ mod tests {
             "#define WAIT(n) FieldScript_WaitFrames(n)\n",
             "#define PIXELS(value) ((value) << 16)\n",
             "#define BLEND(top, bottom) Blend((top) | ((bottom) << 8))\n",
-            "void ObjectEvent_SetPosition(s32 actor, s32 fixed_x, s32 fixed_z);\n",
-            "static inline void ObjectEvent_SetSpeed(s32 actor, s32 speed, s32 acceleration) { Engine(actor, speed); }\n",
+            "void Actor_SetPosition(s32 actor, s32 fixed_x, s32 fixed_z);\n",
+            "static inline void Actor_SetSpeed(s32 actor, s32 speed, s32 acceleration) { Engine(actor, speed); }\n",
             "void Old();\n",
             "void Blend(s32);\n",
         );
@@ -2000,8 +2001,8 @@ mod tests {
             "void Run(void) {\n",
             "    WAIT(80);\n",
             "    FieldScript_WaitFrames(\n        40);\n",
-            "    ObjectEvent_SetPosition(LOCALID_LEADER, PIXELS(312), (416) << 16);\n",
-            "    ObjectEvent_SetSpeed(LOCALID_LEADER, PIXELS(24), 0x8000);\n",
+            "    Actor_SetPosition(ACTOR_LEADER, PIXELS(312), (416) << 16);\n",
+            "    Actor_SetSpeed(ACTOR_LEADER, PIXELS(24), 0x8000);\n",
             "    Old(1, 20);\n",
             "    BLEND(10, 12);\n",
             "    draw[0](canvas, 64, 40);\n",
@@ -2015,7 +2016,7 @@ mod tests {
         // the shifts' 16, in PIXELS and in Run, are no arguments.
         assert_eq!((report.total("magic_argument"), report.total("magic_code")), (7, 9));
         let listed = list(&[("tbs", &report)], "magic_argument");
-        assert!(listed.starts_with("tbs\tf.c:6\t24\tPIXELS value\ntbs\tf.c:6\t0x8000\tObjectEvent_SetSpeed acceleration\ntbs\tf.c:7\t20\tOld #2\n"), "{listed}");
+        assert!(listed.starts_with("tbs\tf.c:6\t24\tPIXELS value\ntbs\tf.c:6\t0x8000\tActor_SetSpeed acceleration\ntbs\tf.c:7\t20\tOld #2\n"), "{listed}");
         assert!(listed.ends_with("tbs\tf.c:9\t40\t-\n"), "{listed}");
         assert!(list(&[("tbs", &report)], "data_argument").contains("tbs\tf.c:2\t80\tWAIT n\n"));
     }
@@ -2079,17 +2080,17 @@ mod provenance_tests {
         let ids = "/// @file\n/// Scenes.\n\n/// ★ Named from its area name: Bilibin\nextern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
         let flags = "/// ★ Named from the game: \"Hidden Treasury\" (MsgSign)\n#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_SCENE_TEMP_01 0x200\n#define FLAG_WAREHOUSE_SEEN 0x11 ///< Named from the game: \"Hidden Treasury\" (MsgSign)\n";
         let scene = concat!(
-            "/// @file\n/// Bilibin and the Bilibin Barricade.\n///\n/// LOCALID_GUARD stands by `Bilibin Barricade`.\n",
+            "/// @file\n/// Bilibin and the Bilibin Barricade.\n///\n/// ACTOR_GUARD stands by `Bilibin Barricade`.\n",
             "#include \"x.h\"\n",
             "/// Its actors.\n",
             "enum {\n",
-            "  LOCALID_GUARD, ///< the guard\n",
-            "  LOCALID_PILLAR_APPROACH = 3, ///< a stack of crates;\n",
+            "  ACTOR_GUARD, ///< the guard\n",
+            "  ACTOR_PILLAR_APPROACH = 3, ///< a stack of crates;\n",
             "                          ///< Named from what the player sees: crates (its render)\n",
-            "  /// A man.\n  LOCALID_MAN,\n",
+            "  /// A man.\n  ACTOR_MAN,\n",
             "};\n",
             "/// Runs the treasury.\n",
-            "void Bilibin_UpdateWarehouse(void) { LOCALID_MAN; }\n",
+            "void Bilibin_UpdateWarehouse(void) { ACTOR_MAN; }\n",
             "static const u8 gBilibinTreasury[] = { 1 };\n",
         );
         let files = [
@@ -2102,20 +2103,20 @@ mod provenance_tests {
         assert_eq!(
             names,
             [
-                "SceneId_Bilibin", "SceneId_BilibinWarehouse", "FLAG_TREASURY_OPEN", "FLAG_WAREHOUSE_SEEN", "LOCALID_GUARD",
-                "LOCALID_PILLAR_APPROACH", "LOCALID_MAN", "Bilibin_UpdateWarehouse", "gBilibinTreasury",
+                "SceneId_Bilibin", "SceneId_BilibinWarehouse", "FLAG_TREASURY_OPEN", "FLAG_WAREHOUSE_SEEN", "ACTOR_GUARD",
+                "ACTOR_PILLAR_APPROACH", "ACTOR_MAN", "Bilibin_UpdateWarehouse", "gBilibinTreasury",
             ]
         );
         assert_eq!(report.value("provenance_names"), 7);
         assert_eq!(report.value("provenance_verified"), 2, "SceneId_Bilibin and FLAG_TREASURY_OPEN");
-        assert_eq!(report.value("provenance_unstarred"), 2, "FLAG_WAREHOUSE_SEEN and LOCALID_PILLAR_APPROACH");
-        assert_eq!(report.value("provenance_prose"), 1, "LOCALID_GUARD, from its place paragraph");
-        assert_eq!(report.value("provenance_none"), 2, "SceneId_BilibinWarehouse and LOCALID_MAN");
+        assert_eq!(report.value("provenance_unstarred"), 2, "FLAG_WAREHOUSE_SEEN and ACTOR_PILLAR_APPROACH");
+        assert_eq!(report.value("provenance_prose"), 1, "ACTOR_GUARD, from its place paragraph");
+        assert_eq!(report.value("provenance_none"), 2, "SceneId_BilibinWarehouse and ACTOR_MAN");
         assert_eq!(report.value("unused_words"), 7, "warehouse, open, seen, guard, pillar, approach and man");
         let words = list(&[("tbs", &report)], "unused_word");
         assert!(words.starts_with("tbs\twarehouse\t3\tSceneId_BilibinWarehouse games/tbs/include/scene_ids.h:6; "), "{words}");
         let worklist = list(&[("tbs", &report)], "provenance");
-        assert!(worklist.contains("tbs\tLOCALID_PILLAR_APPROACH\tobject event\tgames/tbs/src/scene/bilibin.c:9\tpillar,approach\tunstarred render\n"), "{worklist}");
+        assert!(worklist.contains("tbs\tACTOR_PILLAR_APPROACH\tactor\tgames/tbs/src/scene/bilibin.c:9\tpillar,approach\tunstarred render\n"), "{worklist}");
         assert!(worklist.contains("tbs\tBilibin_UpdateWarehouse\tfunction\tgames/tbs/src/scene/bilibin.c:15\twarehouse\t-\n"));
         assert!(!worklist.contains("gBilibinTreasury"), "a mechanism whose words the game uses is not work");
         assert_eq!(list(&[("tbs", &report)], "provenance_none").lines().count(), 2);
@@ -2133,15 +2134,15 @@ mod provenance_tests {
             "#define FLAG_KRADEN_SETS_OFF 0x801\n",
         );
         let actors = concat!(
-            "enum ObjectEventCollisionFlag { OBJ_EVENT_SOLID = 1 };\n",
-            "enum BilibinLocalId { LOCALID_GUARD = 8, LOCALID_SHOP_END };\n",
-            "enum { LOCALID_MAYOR = 10, OBJ_EVENT_SLOT_COUNT = 66 };\n",
+            "enum ActorCollisionFlag { ACTOR_SOLID = 1 };\n",
+            "enum BilibinActorId { ACTOR_GUARD = 8, ACTOR_SHOP_END };\n",
+            "enum { ACTOR_MAYOR = 10, ACTOR_SLOT_COUNT = 66 };\n",
             "#define ITEM_TYPE_WEAPON 1\n#define ITEM_LIST_NAME_X 12\n",
         );
-        let files = [("games/tbs/include/flags.h", flags), ("games/tbs/include/object_event.h", actors)];
+        let files = [("games/tbs/include/flags.h", flags), ("games/tbs/include/actor.h", actors)];
         let report = game(files);
         let names: Vec<&str> = report.things.iter().map(|thing| thing.name.as_str()).collect();
-        assert_eq!(names, ["FLAG_KRADEN_SETS_OFF", "LOCALID_GUARD", "LOCALID_SHOP_END", "LOCALID_MAYOR"]);
+        assert_eq!(names, ["FLAG_KRADEN_SETS_OFF", "ACTOR_GUARD", "ACTOR_SHOP_END", "ACTOR_MAYOR"]);
     }
 
     #[test]
@@ -2186,13 +2187,13 @@ mod provenance_tests {
         let text = GameText::parse(po, Some(1));
         let ids = "/// ★ Named from its area name: Tolbi\nextern char SceneId_Tolbi;\n";
         let links = "enum {\n  TOLBI_FROM_WORLD_MAP_NORTH = 1,\n  TOLBI_FROM_HOUSE = 2,\n  TOLBI_TO_HOUSE = 3,\n};\n";
-        let files = [("games/tbs/include/scene_ids.h", ids), ("games/tbs/include/map_warps.h", links)];
+        let files = [("games/tbs/include/scene_ids.h", ids), ("games/tbs/include/scene_exits.h", links)];
         let report = game_with_text(files, Some(&text));
         assert_eq!(report.value("provenance_rooms"), 0, "WORLD_MAP is no map here");
         assert_eq!((report.value("door_words"), report.value("door_word_link")), (3, 3), "world, map and house; north is a door word");
-        assert_eq!(list(&[("tbs", &report)], "door_word").lines().next(), Some("tbs\thouse\t2\tTOLBI_FROM_HOUSE games/tbs/include/map_warps.h:3; TOLBI_TO_HOUSE games/tbs/include/map_warps.h:4"));
+        assert_eq!(list(&[("tbs", &report)], "door_word").lines().next(), Some("tbs\thouse\t2\tTOLBI_FROM_HOUSE games/tbs/include/scene_exits.h:3; TOLBI_TO_HOUSE games/tbs/include/scene_exits.h:4"));
         let worklist = list(&[("tbs", &report)], "provenance");
-        assert!(worklist.contains("\tTOLBI_TO_HOUSE\twarp\tgames/tbs/include/map_warps.h:4\tto,house\tnone; door: house\n"), "{worklist}");
+        assert!(worklist.contains("\tTOLBI_TO_HOUSE\texit\tgames/tbs/include/scene_exits.h:4\tto,house\tnone; door: house\n"), "{worklist}");
         assert!(tsv(&[("tbs", &report)]).contains("tbs\tdoor_word\thouse\t2\n"));
     }
 }

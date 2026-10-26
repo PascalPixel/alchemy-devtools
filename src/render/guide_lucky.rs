@@ -13,12 +13,12 @@ use super::story::Trigger;
 const KEY_A: u32 = 0x1;
 const KEY_UP: u32 = 0x40;
 
-/// The game rooms' map and the warp destinations into their two rooms
+/// The game rooms' map and the entrances into their two rooms
 /// (STUCCO_ROOMS_C_LUCKY_DICE_FROM_TOLBI, STUCCO_ROOMS_C_LUCKY_WHEELS_FROM_TOLBI).
 const GAME_ROOMS: &str = "StuccoRoomsC";
 const DICE_ROOM: u16 = 10;
 const WHEELS_ROOM: u16 = 11;
-/// The main loop's turns that run the games (map_tables.h), stored in
+/// The main loop's turns that run the games (scene_tables.h), stored in
 /// SaveBlock.mapId in place of a map.
 const SEQUENCE_LUCKY_WHEELS: u16 = 0x1fc;
 const SEQUENCE_LUCKY_DICE: u16 = 0x1fd;
@@ -73,7 +73,7 @@ impl<'a> Guide<'a> {
     /// until the main loop's turn is `run`. Returns the field there.
     fn lucky_reach(&self, room: u16, attendant: &str, prepare: impl Fn(&mut Field) -> Result<(), String>, run: u16) -> Result<Field<'a>, String> {
         let map = source::map_id(GAME_ROOMS)?;
-        let id = source::local_id(GAME_ROOMS, attendant)?;
+        let id = source::actor_id(GAME_ROOMS, attendant)?;
         let (entered, _) = self.stand_for((map, room), Trigger::Talk(id), id)?;
         let mut field = entered.field;
         prepare(&mut field)?;
@@ -122,7 +122,7 @@ impl<'a> Guide<'a> {
     /// (two pairs or better), and that throw is kept.
     fn lucky_dice(&mut self) -> Result<(), String> {
         let save = self.sym("gSaveBlock")?;
-        let mut field = self.lucky_reach(DICE_ROOM, "LOCALID_TOLBI_SPRING_DICE_ATTENDANT", |f| {
+        let mut field = self.lucky_reach(DICE_ROOM, "ACTOR_TOLBI_SPRING_DICE_ATTENDANT|LOCALID_TOLBI_SPRING_DICE_ATTENDANT", |f| {
             f.set_coins(DICE_COINS);
             Ok(())
         }, SEQUENCE_LUCKY_DICE)?;
@@ -165,7 +165,7 @@ impl<'a> Guide<'a> {
     fn lucky_wheels(&mut self) -> Result<(), String> {
         let save = self.sym("gSaveBlock")?;
         let ticket = super::tables::Game::here()?.item_names()?.iter().position(|i| i == "Game Ticket").ok_or("no item is named Game Ticket")? as u16;
-        let mut field = self.lucky_reach(WHEELS_ROOM, "LOCALID_TOLBI_SPRING_WHEELS_ATTENDANT", |f| {
+        let mut field = self.lucky_reach(WHEELS_ROOM, "ACTOR_TOLBI_SPRING_WHEELS_ATTENDANT|LOCALID_TOLBI_SPRING_WHEELS_ATTENDANT", |f| {
             let unit = f.unit(0)?;
             for i in 0..INVENTORY_SLOTS {
                 if f.read16(unit + UNIT_INVENTORY + 2 * i) == 0 {

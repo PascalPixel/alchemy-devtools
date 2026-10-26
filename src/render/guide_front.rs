@@ -31,9 +31,9 @@ const SOL_ENTRANCE: (u16, u16) = (19, 1);
 /// and its chest's metatile behavior (MB_SOL_SANCTUM_RELIEFS_CHEST).
 const SOL_CHEST_ROOM: (u16, u16) = (16, 2);
 const MB_SOL_SANCTUM_RELIEFS_CHEST: u16 = 100;
-/// Vale's strongman by the river (vale.c, LOCALID_STRONGMAN_BY_THE_RIVER).
+/// Vale's strongman by the river (vale.c, ACTOR_STRONGMAN_BY_THE_RIVER).
 const STRONGMAN_BY_THE_RIVER: u16 = 12;
-/// Vale's inn and its innkeeper (cottage_rooms_b.c, LOCALID_INNKEEPER).
+/// Vale's inn and its innkeeper (cottage_rooms_b.c, ACTOR_INNKEEPER).
 const VALE_INN: (u16, u16) = (8, 0);
 const VALE_INNKEEPER: u16 = 13;
 /// The title overlay's entrance that plays the intro after the prologue.
@@ -130,8 +130,8 @@ impl<'a> Guide<'a> {
         self.front_gif("front/sanctum-door.gif", &frames, "up through the Sanctum's door, Vale giving way to the Sanctum")
     }
 
-    /// From the world map into Vale's gate, a new map section, whose area
-    /// name shows on arrival (MapNamePopup_Show).
+    /// From the world map into Vale's gate, a new area, whose area
+    /// name shows on arrival (AreaNameWindow_Show).
     fn front_area_name(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(WORLD_MAP, &[])?;
         // The field leaves the area name out of every other recording.
@@ -141,9 +141,9 @@ impl<'a> Guide<'a> {
     }
 
     /// Down the path from Sol Sanctum's entrance, twice: before the
-    /// eruption the warp leads to Vale, and with FLAG_SOL_SANCTUM_ERUPTED set
-    /// and FLAG_VALE_PARTY_LEFT clear the same warp leads to the erupting
-    /// village (gSolSanctumEntrance_Warps).
+    /// eruption the exit leads to Vale, and with FLAG_SOL_SANCTUM_ERUPTED set
+    /// and FLAG_VALE_PARTY_LEFT clear the same exit leads to the erupting
+    /// village (gSolSanctumEntrance_Exits).
     fn front_warp_rows(&mut self) -> Result<(), String> {
         let mut frames = Vec::new();
         let mut field = self.enter_exactly(SOL_ENTRANCE, &["FLAG_VALE_PARTY_LEFT"], &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
@@ -190,7 +190,7 @@ impl<'a> Guide<'a> {
 
     /// The debug map selector in Vale with gDebugMode set: Start pressed
     /// with B held (SceneManager_Run), the map stepped down `steps` times from Vale's
-    /// number with Left, then A, which warps there.
+    /// number with Left, then A, which takes the party there.
     fn selector(&mut self, steps: u32, tail: u32) -> Result<Vec<Vec<u16>>, String> {
         let mode = self.sym("gDebugMode")?;
         let mut entered = self.enter_with(VALE, &[])?;

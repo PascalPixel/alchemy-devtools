@@ -27,7 +27,7 @@ const GARETS_SISTER: u16 = 18;
 /// preset (party.rs).
 const XIAN: (u16, u16) = (72, 1);
 /// Bilibin from the world map's road (SceneId_Bilibin, entrance 1): a new
-/// map section, so its area name shows on arrival.
+/// area, so its area name shows on arrival.
 const BILIBIN: (u16, u16) = (30, 1);
 /// The Vale Sanctum from Vale (SceneId_Sanctum, entrance 1).
 const VALE_SANCTUM: (u16, u16) = (9, 1);
@@ -195,7 +195,7 @@ impl<'a> Guide<'a> {
     /// Bilibin's innkeeper asked for a room: the price, a number filled
     /// into the line, and No, as `message-blanks.gif`.
     fn message_blanks(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(6, "LOCALID_BILIBIN_INNKEEPER")?;
+        let (mut entered, _) = self.bilibin_keeper(6, "ACTOR_BILIBIN_INNKEEPER|LOCALID_BILIBIN_INNKEEPER")?;
         entered.field.set_coins(500);
         let path = [(0, 20), (KEY_A, 3), (0, 70), (KEY_A, 3), (0, 90), (KEY_DOWN, 3), (0, 20), (KEY_A, 3), (0, 90), (KEY_A, 3), (0, 40)];
         self.record(&mut entered.field, &path, "message-blanks.gif", "the innkeeper's price, a number filled into the line")
@@ -232,7 +232,7 @@ impl<'a> Guide<'a> {
         self.record(&mut field, &path, "options.gif", "the option menu's window colours changed and cancelled")
     }
 
-    /// A new game with no save file: the naming screen, the hand across the
+    /// A new game with no save file: the name entry screen, the hand across the
     /// keyboard, a letter taken off and two put on, and End, as
     /// `naming-screen.gif`.
     fn naming_screen(&mut self) -> Result<(), String> {
@@ -254,7 +254,7 @@ impl<'a> Guide<'a> {
         for &(keys, n) in &path {
             Self::hold(&mut field, keys, n, &mut frames)?;
         }
-        self.guide_gif("naming-screen.gif", &frames, "the naming screen of a new game")
+        self.guide_gif("naming-screen.gif", &frames, "the name entry screen of a new game")
     }
 
     /// Arriving in Bilibin from the world map: its area name shows near
@@ -314,7 +314,7 @@ impl<'a> Guide<'a> {
         self.record(&mut field, &path, "djinn-standby.gif", "Flint put on standby from the Djinn screen")
     }
 
-    /// The summary screen in Xian: Isaac's three pages, R to Garet, and B
+    /// The Status screen in Xian: Isaac's three pages, R to Garet, and B
     /// out, as `summary-screen.gif`.
     fn summary_screen(&mut self) -> Result<(), String> {
         let mut field = self.enter(XIAN)?;
@@ -322,7 +322,7 @@ impl<'a> Guide<'a> {
         path.extend(presses(&[KEY_A], 60));
         path.extend(presses(&[KEY_A, KEY_A, KEY_A, KEY_R], 60));
         path.extend(presses(&[KEY_B, KEY_B, KEY_B], 30));
-        self.record(&mut field, &path, "summary-screen.gif", "the summary screen's pages")
+        self.record(&mut field, &path, "summary-screen.gif", "the Status screen's pages")
     }
 
     /// The Item screen in Xian, Isaac holding a Long Sword he does not wear
@@ -368,18 +368,18 @@ impl<'a> Guide<'a> {
         self.record(&mut field, &path, "item-sort.gif", "Isaac's bag sorted in each of the four orders")
     }
 
-    /// A room of CottageRoomsC entered by warp destination `room`, the
+    /// A room of CottageRoomsC entered by entrance `room`, the
     /// leader across the counter from `keeper` (cottage_rooms_c.c).
     fn bilibin_keeper(&self, room: u16, keeper: &str) -> Result<(super::guide::Entered<'a>, super::field::Spot), String> {
         let map = source::map_id("CottageRoomsC")?;
-        let id = source::local_id("CottageRoomsC", keeper)?;
+        let id = source::actor_id("CottageRoomsC", keeper)?;
         self.stand_where((map, room), Trigger::Talk(id), id, |s| s.facing == NORTH)
     }
 
     /// Bilibin's weapon shop: the counter's four icons, Buy, Sell,
     /// Artifacts and Repair, and B to leave, as `shop-counter.gif`.
     fn shop_counter(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(4, "LOCALID_BILIBIN_WEAPON_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT|LOCALID_BILIBIN_WEAPON_MERCHANT")?;
         entered.field.set_coins(1000);
         let mut path = vec![(0, 20), (KEY_A, 3), (0, 100)];
         path.extend(presses(&[KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_B], 35));
@@ -391,7 +391,7 @@ impl<'a> Guide<'a> {
     /// member, the shop showing what it would do to their Attack, as
     /// `long-sword.gif`.
     fn shop_long_sword(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(4, "LOCALID_BILIBIN_WEAPON_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT|LOCALID_BILIBIN_WEAPON_MERCHANT")?;
         entered.field.set_coins(1000);
         let mut path = vec![(0, 20), (KEY_A, 3), (0, 100), (KEY_A, 3), (0, 70), (KEY_A, 3), (0, 60)];
         path.extend(presses(&[KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_B, KEY_B, KEY_B], 45));
@@ -403,7 +403,7 @@ impl<'a> Guide<'a> {
     /// Ticket: a Herb bought, and the ticket given, as `game-ticket.gif`.
     fn game_ticket(&mut self) -> Result<(), String> {
         let save = self.sym("gSaveBlock")?;
-        let (mut entered, _) = self.bilibin_keeper(5, "LOCALID_BILIBIN_ITEM_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(5, "ACTOR_BILIBIN_ITEM_MERCHANT|LOCALID_BILIBIN_ITEM_MERCHANT")?;
         entered.field.set_coins(500);
         entered.field.write32(save + SAVE_SHOP_CREDIT, 295);
         let mut path = vec![(0, 20), (KEY_A, 3), (0, 100)];
@@ -420,7 +420,7 @@ impl<'a> Guide<'a> {
     /// Bilibin's item shop: Sell, Isaac, his Herb, and the coins it brings,
     /// as `sell.gif`.
     fn shop_sell(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(5, "LOCALID_BILIBIN_ITEM_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(5, "ACTOR_BILIBIN_ITEM_MERCHANT|LOCALID_BILIBIN_ITEM_MERCHANT")?;
         entered.field.set_coins(500);
         let herb = Self::item_id("Herb")?;
         Self::give_front(&mut entered.field, ISAAC, &[herb])?;
@@ -434,7 +434,7 @@ impl<'a> Guide<'a> {
     /// breaks one use in eight; a sword never does), and the smith's hammer,
     /// as `repair.gif`.
     fn shop_repair(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(4, "LOCALID_BILIBIN_WEAPON_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT|LOCALID_BILIBIN_WEAPON_MERCHANT")?;
         entered.field.set_coins(1000);
         // The ring goes last: while the smith has it, its slot is left empty
         // and the list shows no more than the items before it.
@@ -457,7 +457,7 @@ impl<'a> Guide<'a> {
 
     /// Bilibin's weapon shop: Artifacts and its list, as `artifacts.gif`.
     fn shop_artifacts(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(4, "LOCALID_BILIBIN_WEAPON_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT|LOCALID_BILIBIN_WEAPON_MERCHANT")?;
         entered.field.set_coins(5000);
         let mut path = vec![(0, 20), (KEY_A, 3), (0, 100)];
         path.extend(presses(&[KEY_RIGHT, KEY_RIGHT, KEY_A], 40));

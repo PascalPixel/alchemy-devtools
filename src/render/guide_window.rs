@@ -404,7 +404,7 @@ fn sprite_size(shape: u16, size: u16) -> (i32, i32) {
 }
 
 /// The Vale Sanctum from Vale (SceneId_Sanctum, entrance 1) and its Great
-/// Healer (LOCALID_HEALER), who opens the services when talked to from the
+/// Healer (ACTOR_HEALER), who opens the services when talked to from the
 /// front.
 const VALE_SANCTUM: (u16, u16) = (9, 1);
 const SANCTUM_HEALER: u16 = 8;
@@ -783,16 +783,16 @@ const NOTICE_COUNTDOWN: u32 = 0x234;
 const WINDOW_HEIGHT: u32 = 0x0a;
 const WINDOW_X: u32 = 0x0c;
 const WINDOW_Y: u32 = 0x0e;
-/// MAP_NAME_POPUP_FRAMES.
+/// AREA_NAME_WINDOW_FRAMES.
 const NOTICE_FRAMES: u32 = 90;
 
 impl<'a> Guide<'a> {
-    /// Arriving in Bilibin: from the frame MapNamePopup_Show runs, the
+    /// Arriving in Bilibin: from the frame AreaNameWindow_Show runs, the
     /// screen with the notice's window outlined where its Window puts it,
     /// beside its countdown read from the event work each frame, until a
     /// second after the window has closed, as `area-name.gif`.
     pub fn window_area_name(&mut self) -> Result<(), String> {
-        let create = self.sym("MapNamePopup_Show")?;
+        let create = self.sym("AreaNameWindow_Show|MapNamePopup_Show")?;
         let event_work = self.sym("gFieldWork")?;
         let mut field = self.arrive(BILIBIN, &[], &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         field.show_notice = true;
@@ -801,7 +801,7 @@ impl<'a> Guide<'a> {
         field.probe_pcs = vec![create];
         field.probe = Some(Box::new(move |gba, pc, frame| {
             if pc == create && seen.get().is_none() {
-                eprintln!("area-name: MapNamePopup_Show at frame {frame}, gFieldWork {:#x}", gba.read32(event_work));
+                eprintln!("area-name: AreaNameWindow_Show at frame {frame}, gFieldWork {:#x}", gba.read32(event_work));
                 seen.set(Some(frame));
             }
         }));
@@ -847,7 +847,7 @@ impl<'a> Guide<'a> {
                     image.pixels[(104 + dy) * w + x0 as usize + dx] = if dx < bar { MARK } else { 0x40_42_48 };
                 }
             }
-            text(&mut image, x0, 130, "MAPNAMEPOPUP_UPDATE TAKES ONE", DIM, None, 2);
+            text(&mut image, x0, 130, "AREANAMEWINDOW_UPDATE TAKES ONE", DIM, None, 2);
             text(&mut image, x0, 146, "A FRAME AND CLOSES IT AT 0", DIM, None, 2);
             if out.is_empty() {
                 // Half a second of the arrival before the notice.
@@ -863,7 +863,7 @@ impl<'a> Guide<'a> {
             }
         }
         if created.get().is_none() {
-            return Err("MapNamePopup_Show never ran".to_string());
+            return Err("AreaNameWindow_Show never ran".to_string());
         }
         let written = super::animation::write(&self.out.join("area-name.gif"), &out, w)?;
         self.written.push(("area-name.gif".to_string(), written.bytes, format!("Bilibin's area name and its countdown; {} frames", written.frames)));

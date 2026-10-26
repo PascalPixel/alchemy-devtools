@@ -325,8 +325,8 @@ impl<'a> Guide<'a> {
 
     /// The Status screen in Xian: the member row, then A through Isaac's
     /// status, Psynergy and equipment pages, each found where
-    /// SummaryScreen_RunPages's step function is entered
-    /// (MemberChooser_RunRearrange, SummaryScreen_SelectCommand,
+    /// StatusScreen_RunPages's step function is entered
+    /// (MemberChooser_RunRearrange, StatusScreen_SelectCommand,
     /// PsynergyMenu_SelectAction, ItemMenu_SelectItem), at twice its size;
     /// each Djinni figure of the row of four outlined where the menu work
     /// places it (ItemMenuFiguresView positionsX and positionsY, the
@@ -335,7 +335,7 @@ impl<'a> Guide<'a> {
         let menu = self.sym("gMenuWork")?;
         let steps = [
             ("STATUS_STEP_MEMBER", self.sym("MemberChooser_RunRearrange")?, "the member row"),
-            ("STATUS_STEP_STATUS", self.sym("SummaryScreen_SelectCommand")?, "the status page"),
+            ("STATUS_STEP_STATUS", self.sym("StatusScreen_SelectCommand|SummaryScreen_SelectCommand")?, "the status page"),
             ("STATUS_STEP_PSYNERGY", self.sym("PsynergyMenu_SelectAction")?, "the Psynergy page"),
             ("STATUS_STEP_EQUIPMENT", self.sym("ItemMenu_SelectItem")?, "the equipment page"),
         ];

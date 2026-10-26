@@ -1,8 +1,8 @@
 //! Game facts the renderer reads from the Broken Seal's source rather than
 //! keeping copies of: map numbers (gSceneHeaders), area names
-//! (gMapSec_NameRules and text/en.po), ability numbers and names
-//! (ability_ids.h, MsgAbilityName), object events' local ids (each map's
-//! enum), characters (character_ids.h) and the debug party presets
+//! (gArea_NameRules and text/en.po), ability numbers and names
+//! (ability_ids.h, MsgAbilityName), actors' ids (each map's enum),
+//! characters (character_ids.h) and the debug party presets
 //! (gDebug_PartyPresets, read from the build by tables.rs).
 
 use std::collections::HashMap;
@@ -79,17 +79,17 @@ fn macro_rows(
 }
 
 /// The maps in gSceneHeaders' order (field/scene_headers.s): each one's name
-/// without `SceneId_` (empty for an unnamed row) and its map section.
+/// without `SceneId_` (empty for an unnamed row) and its area.
 fn maps() -> Result<Vec<(String, i64)>, String> {
     let text = read("src/field/scene_headers.s")?;
     macro_rows(&text, "gSceneHeaders", &["scene_header"])?
         .into_iter()
         .map(|(_, row)| {
-            let mapsec = row
+            let area = row
                 .get(2)
                 .and_then(|m| number(m))
-                .ok_or_else(|| format!("map_header {row:?}: no map section"))?;
-            Ok((row[0].clone(), mapsec))
+                .ok_or_else(|| format!("scene_header {row:?}: no area"))?;
+            Ok((row[0].clone(), area))
         })
         .collect()
 }
@@ -116,29 +116,34 @@ fn message_number(catalog: &crate::po::Catalog, name: &str) -> Result<usize, Str
         .map_err(|_| format!("en.po: {name} has key {:?}", entry.id))
 }
 
-/// The area name the game gives map `map` entered at warp destination
-/// `warp_dest`, as MapSec_GetNameIndex finds it: the first rule of
-/// gMapSec_NameRules naming the map, or else its map section, with that
-/// warp destination or any; the name is that many messages after
+/// The area name the game gives map `map` entered by entrance
+/// `entrance`, as Area_GetNameIndex finds it: the first rule of
+/// gArea_NameRules naming the map, or else its area, with that
+/// entrance or any; the name is that many messages after
 /// MsgDebugEntryName.
-pub fn area_name(map: u16, warp_dest: u16) -> Result<String, String> {
+pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
     let maps = maps()?;
-    let mapsec = maps
+    let area = maps
         .get(usize::from(map))
         .ok_or_else(|| format!("no map {map}"))?
         .1;
     let rules = read("src/overworld/map_rules.s")?;
+    // Before The Broken Seal's rename the table was gMapSec_NameRules and
+    // its rows map_name and group_name.
+    let kinds = ["scene_name", "area_name", "map_name", "group_name"];
+    let rows = macro_rows(&rules, "gArea_NameRules", &kinds)
+        .or_else(|_| macro_rows(&rules, "gMapSec_NameRules", &kinds))?;
     let mut index = 0;
-    for (kind, args) in macro_rows(&rules, "gMapSec_NameRules", &["map_name", "group_name"])? {
+    for (kind, args) in rows {
         let [id, dest, name] = &args[..] else {
             return Err(format!("map_rules.s: {kind} {args:?}"));
         };
-        let matches = if kind == "map_name" {
+        let matches = if kind == "scene_name" || kind == "map_name" {
             maps.iter().position(|(n, _)| n == id) == Some(usize::from(map))
         } else {
-            number(id) == Some(mapsec)
+            number(id) == Some(area)
         };
-        if matches && (number(dest) == Some(-1) || number(dest) == Some(i64::from(warp_dest))) {
+        if matches && (number(dest) == Some(-1) || number(dest) == Some(i64::from(entrance))) {
             index = number(name).ok_or_else(|| format!("map_rules.s: {kind} {args:?}"))? as usize;
             break;
         }
@@ -220,12 +225,17 @@ pub fn ability_name(id: u16) -> Result<String, String> {
         .ok_or_else(|| format!("gAbilityDefinitions has no row {id}"))
 }
 
-/// The local id of object event `name` on map `SceneId_<map>`, from the map
-/// overlays' enums: the map's own `enum <map>LocalId` where it has one,
-/// else the one value every map overlay gives the name.
-pub fn local_id(map: &str, name: &str) -> Result<u16, String> {
+/// The actor id of actor `name` on map `SceneId_<map>`, from the map
+/// overlays' enums: the map's own `enum <map>ActorId` where it has one,
+/// else the one value every map overlay gives the name. `name` may list its
+/// spellings, the new first (`ACTOR_PILLAR|LOCALID_PILLAR`): before The
+/// Broken Seal's rename the ids were `LOCALID_`, a map's enum
+/// `<map>LocalId` and the shared header map_tables.h.
+pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
+    let names: Vec<&str> = name.split('|').collect();
+    let shared = read("include/scene_tables.h").or_else(|_| read("include/map_tables.h"))?;
     let mut known = HashMap::new();
-    for (_, values) in enums(&read("include/map_tables.h")?, &HashMap::new())? {
+    for (_, values) in enums(&shared, &HashMap::new())? {
         known.extend(values.into_iter().filter_map(|(n, v)| Some((n, v?))));
     }
     let dir = tbs("src/scene");
@@ -235,7 +245,7 @@ pub fn local_id(map: &str, name: &str) -> Result<u16, String> {
         .map(|e| e.path())
         .collect();
     files.sort();
-    let own = format!("{map}LocalId");
+    let own = [format!("{map}ActorId"), format!("{map}LocalId")];
     let mut found = Vec::new();
     for path in files
         .iter()
@@ -243,13 +253,13 @@ pub fn local_id(map: &str, name: &str) -> Result<u16, String> {
     {
         let text = std::fs::read_to_string(path)
             .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-        if !text.contains(name) {
+        if !names.iter().any(|n| text.contains(n)) {
             continue;
         }
         for (tag, values) in enums(&text, &known)? {
-            if let Some((_, value)) = values.iter().find(|(n, _)| n == name) {
+            if let Some((_, value)) = values.iter().find(|(n, _)| names.contains(&n.as_str())) {
                 let value = value.ok_or_else(|| format!("cannot evaluate {name}"))?;
-                if tag.as_deref() == Some(own.as_str()) {
+                if tag.as_ref().is_some_and(|tag| own.contains(tag)) {
                     return Ok(value as u16);
                 }
                 found.push(value);
@@ -261,7 +271,8 @@ pub fn local_id(map: &str, name: &str) -> Result<u16, String> {
         [value] => Ok(value as u16),
         [] => Err(format!("no scene overlay names {name}")),
         _ => Err(format!(
-            "{name} has several values and SceneId_{map} has no enum {own}"
+            "{name} has several values and SceneId_{map} has no enum {}",
+            own[0]
         )),
     }
 }
@@ -329,10 +340,10 @@ mod tests {
 
     #[test]
     fn enumerators_count_on_from_names() {
-        let known = HashMap::from([("LOCALID_FIRST_PLACED".to_string(), 8)]);
-        let text = "enum ValeLocalId {\n  A = LOCALID_FIRST_PLACED, /* x, y */\n  B, // z\n  C = B + 3,\n  D ///< w\n};\nenum { E = 0x10 };";
+        let known = HashMap::from([("ACTOR_FIRST_PLACED".to_string(), 8)]);
+        let text = "enum ValeActorId {\n  A = ACTOR_FIRST_PLACED, /* x, y */\n  B, // z\n  C = B + 3,\n  D ///< w\n};\nenum { E = 0x10 };";
         let found = enums(text, &known).unwrap();
-        assert_eq!(found[0].0.as_deref(), Some("ValeLocalId"));
+        assert_eq!(found[0].0.as_deref(), Some("ValeActorId"));
         assert_eq!(
             found[0].1,
             vec![
@@ -353,6 +364,8 @@ mod tests {
     fn the_checkout_answers() {
         assert_eq!(map_id("Vale").unwrap(), map_id("ValeStormyNight").unwrap() + 1);
         assert_eq!(area_name(map_id("Vale").unwrap(), 1).unwrap(), "Vale");
+        assert!(actor_id("Vale", "ACTOR_PILLAR|LOCALID_PILLAR").unwrap() >= 8);
+        assert!(actor_id("CottageRoomsC", "ACTOR_BILIBIN_INNKEEPER|LOCALID_BILIBIN_INNKEEPER").is_ok());
         assert_eq!(
             character_names().unwrap()[usize::from(character("JENNA").unwrap())],
             "JENNA"

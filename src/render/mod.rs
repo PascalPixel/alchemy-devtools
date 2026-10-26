@@ -433,9 +433,9 @@ places.tsv (scenes), events.tsv (each event's trigger, flags and messages)
 and flags.tsv (flag names).
 
 place: the photo of the party arriving, once the player has control
-(entrance.png): entered by the lowest-numbered warp destination another
-map's warp leads to (MAP_WARP in the source's warp tables), the Sanctum's,
-the menus' and unused maps' warps after every other, so the game's own
+(entrance.png): entered by the lowest-numbered entrance another map's exit
+leads to (SCENE_EXIT in the source's exit tables), the Sanctum's, the
+menus' and unused maps' exits after every other, so the game's own
 arrival places the party and the camera. The next way in is tried when an
 arrival goes on to another map before the player has control, or leaves
 the leader without a sprite, on a wall cell, off his ground, outside his

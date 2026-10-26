@@ -15,7 +15,7 @@ const AFTER_FIRST_BATTLE: (u16, u16) = (187, 2);
 const AFTER_SECOND_BATTLE: (u16, u16) = (187, 3);
 /// The beam's lowest segment, which CombineSaturosAndMenardi places over the
 /// beacon (x 304) as the star goes in.
-const LOCALID_BEAM_BOTTOM: u16 = 24;
+const ACTOR_BEAM_BOTTOM: u16 = 24;
 const BEAM_X: i32 = 304;
 const KEY_A: u32 = 0x1;
 const PALETTE_RAM: u32 = 0x0500_0000;
@@ -35,8 +35,8 @@ const STAR_COLOURS: u32 = 200;
 const STAR_SETTLE: usize = 60;
 const PARTICLE_LIFE: usize = 30;
 /// Frames looked through for the start, and the last actor whose idle
-/// animation is compared (LOCALID_BEAM_TOP), with the offsets read for it:
-/// ObjectEvent.sprite, Sprite.entries and SpriteAnim.frame.
+/// animation is compared (ACTOR_BEAM_TOP), with the offsets read for it:
+/// Actor.sprite, Sprite.entries and SpriteAnim.frame.
 const STAR_SEARCH: usize = 3000;
 const LAST_ACTOR: u16 = 28;
 const OBJ_SPRITE: u32 = 0x50;
@@ -77,7 +77,7 @@ impl<'a> Guide<'a> {
             if n > 12000 || field.scene() != AFTER_FIRST_BATTLE.0 {
                 return Err("the beam never settled with a page waiting".to_string());
             }
-            if beam.is_none() && field.actor(LOCALID_BEAM_BOTTOM).is_some_and(|a| a.x == BEAM_X) {
+            if beam.is_none() && field.actor(ACTOR_BEAM_BOTTOM).is_some_and(|a| a.x == BEAM_X) {
                 beam = Some((n, bg_palette(&field)));
             }
             if field.waiting() {
@@ -197,7 +197,7 @@ impl<'a> Guide<'a> {
 }
 
 /// What each actor shows: its place and height (pixels) and the frame each
-/// layer of its sprite shows (ObjectEvent.sprite, Sprite.entries,
+/// layer of its sprite shows (Actor.sprite, Sprite.entries,
 /// SpriteAnim.frame), for the actors 0 (the party) to LAST_ACTOR.
 fn idle_frames(field: &Field) -> Vec<i32> {
     let mut out = Vec::new();

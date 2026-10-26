@@ -173,11 +173,12 @@ pub const ABBREVIATIONS: &[(&str, &str)] = &[
     ("desc", "description"),
 ];
 
-/// Shortened words pret's map layer writes, which the source keeps as pret
-/// does, each beside the word it shortens with: a warp destination is a
-/// `WarpDest`, an event the party triggers by stepping on its cell a
-/// `CoordEvent` (`COORD_EVENT_FLAG_WALKING`, `MAP_EVENT_COORD`). The short
-/// word elsewhere is still measured.
+/// Shortened words pret's map layer writes, which the source kept as pret
+/// does until The Broken Seal's rename to entrances and step triggers, each
+/// beside the word it shortens with: a warp destination was a `WarpDest`, an
+/// event the party triggers by stepping on its cell a `CoordEvent`
+/// (`COORD_EVENT_FLAG_WALKING`, `MAP_EVENT_COORD`). The short word elsewhere
+/// is still measured.
 pub const PRET_TERMS: &[(&str, &str)] = &[("warp", "dest"), ("coord", "event"), ("event", "coord")];
 
 /// Shortened words pret writes as its own spelling, kept as pret does
@@ -288,6 +289,7 @@ fn exempt(name: &Name) -> bool {
         || n.starts_with("OWN_")
         || n.starts_with("FLAG_SCENE_TEMP_")
         || n.starts_with("FLAG_MAPSEC_TEMP_")
+        || n.starts_with("FLAG_AREA_TEMP_")
         || name.file.ends_with("/io_reg.h")
         || (n.starts_with("Msg") && matches!(name.kind, NameKind::Global | NameKind::Extern))
         || n.len() < 2
@@ -1140,7 +1142,7 @@ mod tests {
             ],
             ..Names::default()
         };
-        for (at, count) in ["ITEM_COUNT", "ENEMY_COUNT", "UNIT_COUNT", "LOCALID_COUNT", "SLOT_COUNT", "LIST_MAX"].iter().enumerate() {
+        for (at, count) in ["ITEM_COUNT", "ENEMY_COUNT", "UNIT_COUNT", "ACTOR_COUNT", "SLOT_COUNT", "LIST_MAX"].iter().enumerate() {
             names.names.push(name(count, NameKind::Macro, "games/tbs/include/counts.h", 20 + at));
         }
         let text = "u16 gFlashNumRemainingBytes; const u16 *maxTime; // pret's names";
@@ -1160,15 +1162,15 @@ mod tests {
         let text = GameText::parse(po, None);
         let names = Names {
             names: vec![
-                name("LOCALID_SHOPKEEPER", NameKind::Enumerator, file, 1),
-                name("LOCALID_MERCHANT", NameKind::Enumerator, file, 2),
-                name("LOCALID_OLD_MAN", NameKind::Enumerator, file, 3),
+                name("ACTOR_SHOPKEEPER", NameKind::Enumerator, file, 1),
+                name("ACTOR_MERCHANT", NameKind::Enumerator, file, 2),
+                name("ACTOR_OLD_MAN", NameKind::Enumerator, file, 3),
             ],
             ..Names::default()
         };
         let findings = check(&names, Some(&text));
         let synonyms: Vec<&str> = findings.iter().filter(|f| f.metric == "synonym").map(|f| f.what.as_str()).collect();
-        assert_eq!(synonyms, ["LOCALID_SHOPKEEPER\tshopkeeper -> merchant: LOCALID_MERCHANT (1 names spell merchant, as LOCALID_MERCHANT does)"]);
+        assert_eq!(synonyms, ["ACTOR_SHOPKEEPER\tshopkeeper -> merchant: ACTOR_MERCHANT (1 names spell merchant, as ACTOR_MERCHANT does)"]);
     }
 
     #[test]
@@ -1215,13 +1217,13 @@ mod tests {
                 .map(|(at, n)| name(n, NameKind::Macro, file, at + 1))
                 .collect();
         let scene = "games/tbs/src/scene/vale.c";
-        for (at, n) in ["LOCALID_GUARD", "LOCALID_MAYOR", "LOCALID_DOG", "GUARD_CAPTAIN"].iter().enumerate() {
+        for (at, n) in ["ACTOR_GUARD", "ACTOR_MAYOR", "ACTOR_DOG", "GUARD_CAPTAIN"].iter().enumerate() {
             list.push(Name { group: Some("vale.c#3".to_string()), ..name(n, NameKind::Enumerator, scene, 10 + at) });
         }
         for (at, n) in ["BattleObj_Init", "BattleObj_Free", "BattleObj_Draw", "BattleObjGet"].iter().enumerate() {
             list.push(name(n, NameKind::Function, "games/tbs/src/battle/obj.c", 20 + at));
         }
-        for (at, n) in ["ITEM_COUNT", "ENEMY_COUNT", "UNIT_COUNT", "LOCALID_COUNT", "SLOT_COUNT", "NUM_ELEMENTS"].iter().enumerate() {
+        for (at, n) in ["ITEM_COUNT", "ENEMY_COUNT", "UNIT_COUNT", "ACTOR_COUNT", "SLOT_COUNT", "NUM_ELEMENTS"].iter().enumerate() {
             list.push(name(n, NameKind::Macro, "games/tbs/include/counts.h", 30 + at));
         }
         let findings = check(&Names { names: list, ..Names::default() }, Some(&text));
@@ -1231,7 +1233,7 @@ mod tests {
             [
                 "FLAG_Childhood\tcase: PascalCase where the FLAG_ names are CAPITALS (6 of 7, as FLAG_VALE_A)",
                 "FLAG_SAW_SHIP_AT_IDEJIMA\tplace last: FLAG_IDEJIMA_... as 5 of the 7 FLAG_ names start with their place (as FLAG_VALE_A)",
-                "GUARD_CAPTAIN\tmissing part: LOCALID_... as 3 of the 4 in its enum are (as LOCALID_GUARD)",
+                "GUARD_CAPTAIN\tmissing part: ACTOR_... as 3 of the 4 in its enum are (as ACTOR_GUARD)",
                 "BattleObjGet\tseparator: BattleObj_Get, as the 3 BattleObj_ functions are, or a prefix of its own",
                 "NUM_ELEMENTS\torder: num goes last, where 5 of the game's 6 names with it at an end put it (as ITEM_COUNT)",
             ]

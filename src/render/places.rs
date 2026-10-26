@@ -3,8 +3,8 @@
 //! of its events, as PNG files at the GBA's own size, with an index.
 
 use super::field::{
-    box_holds, result_key, stands_in, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, MAP_EVENT_WARP, EVENT_LIMIT, MAP_EVENT_PSYNERGY, MAP_EVENT_BG, MAP_EVENT_TALK,
-    MAP_EVENT_COORD, SETTLE,
+    box_holds, result_key, stands_in, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, TRIGGER_EXIT, EVENT_LIMIT, TRIGGER_PSYNERGY, TRIGGER_EXAMINE, TRIGGER_TALK,
+    TRIGGER_STEP, SETTLE,
 };
 use super::arrivals;
 use super::story::{parse_trigger, Alternative, Event, Flags, Scene, Trigger, MOVE};
@@ -459,13 +459,13 @@ impl Context<'_> {
         out
     }
 
-    /// Writes a state's entrance photo, taken by warp destination `number`,
+    /// Writes a state's entrance photo, taken by entrance `number`,
     /// noting in skipped.tsv where its leader is misplaced (`wrong`).
     fn take_photo(&mut self, scene: &Scene, column: &str, folder: &str, number: i16, image: &Image, wrong: &[String]) -> Result<(), String> {
         let file = format!("{folder}/entrance.png");
         self.write(image, &file)?;
         if !wrong.is_empty() {
-            self.skip(scene, &format!("{file} (kept)"), format!("the leader is misplaced by every way in; by warp destination {number}: {}", wrong.join("; ")));
+            self.skip(scene, &format!("{file} (kept)"), format!("the leader is misplaced by every way in; by entrance {number}: {}", wrong.join("; ")));
         }
         self.rows.push(Row { scene: scene.slug(), number: scene.number, area: scene.area.clone(), variant: column.to_string(), kind: "entrance", entrance: number, file, ..Row::default() });
         Ok(())
@@ -525,12 +525,12 @@ impl Context<'_> {
                 rooms.push(*e);
             }
         }
-        // The entrance photo shows the party as it arrives by a warp from
-        // another map (arrivals::ranked), placed by Scene_ApplyWarpDest and the
+        // The entrance photo shows the party as it arrives by an exit from
+        // another map (arrivals::ranked), placed by Scene_ApplyEntrance and the
         // map's own arrival, by the next way in when an arrival goes on to
         // another map before the player has control (the eruption leaves
-        // Vale for the world map); by the table's first row, where no warp
-        // may lead (WARP_DEST_DEFAULT), only when no warp leads in.
+        // Vale for the world map); by the table's first row, where no exit
+        // may lead (ENTRANCE_DEFAULT), only when no exit leads in.
         let numbers: Vec<i16> = entrances.iter().map(|e| e.number).collect();
         let mut ways: Vec<Entrance> = self
             .arrivals
@@ -542,7 +542,7 @@ impl Context<'_> {
             .collect();
         if ways.is_empty() {
             if all {
-                self.skip(scene, "entrance.png (kept)", "no warp of another map leads in, so it is taken by the table's first row".to_string());
+                self.skip(scene, "entrance.png (kept)", "no exit of another map leads in, so it is taken by the table's first row".to_string());
             }
             ways.push(rooms[0]);
         }
@@ -577,7 +577,7 @@ impl Context<'_> {
                     let image = field.arrival_scene(ARRIVAL_SCENE_FRAMES)?;
                     let file = format!("{folder}/entrance.png");
                     self.write(&image, &file)?;
-                    self.skip(scene, &format!("{file} (kept)"), format!("every way in goes on to another map before the player has control, so it shows warp destination {}'s arrival scene", room.number));
+                    self.skip(scene, &format!("{file} (kept)"), format!("every way in goes on to another map before the player has control, so it shows entrance {}'s arrival scene", room.number));
                     self.rows.push(Row { scene: scene.slug(), number: scene.number, area: scene.area.clone(), variant: column.to_string(), kind: "entrance", entrance: room.number, file, ..Row::default() });
                     wrote = true;
                     return Ok(());
@@ -885,11 +885,11 @@ impl Context<'_> {
         let answers = |scan: &Scan, own: &[u32]| {
             let row = |kind: u8, target: u16| scan.triggers.iter().any(|&(k, t, r)| k == kind && t == target && (own.is_empty() || own.contains(&r)));
             match trigger {
-                Trigger::Talk(a) => row(MAP_EVENT_TALK, a),
-                Trigger::Search(c) => row(MAP_EVENT_BG, c),
-                Trigger::Touch(c) => row(MAP_EVENT_COORD, c) || (own.is_empty() && row(MAP_EVENT_WARP, c)),
-                Trigger::Psynergy(..) if own.is_empty() => scan.triggers.iter().any(|t| t.0 == MAP_EVENT_PSYNERGY),
-                Trigger::Psynergy(_, a) => row(MAP_EVENT_PSYNERGY, a),
+                Trigger::Talk(a) => row(TRIGGER_TALK, a),
+                Trigger::Search(c) => row(TRIGGER_EXAMINE, c),
+                Trigger::Touch(c) => row(TRIGGER_STEP, c) || (own.is_empty() && row(TRIGGER_EXIT, c)),
+                Trigger::Psynergy(..) if own.is_empty() => scan.triggers.iter().any(|t| t.0 == TRIGGER_PSYNERGY),
+                Trigger::Psynergy(_, a) => row(TRIGGER_PSYNERGY, a),
             }
         };
         for scene in scenes.iter().filter(|s| is_place(s).is_ok()) {
@@ -1454,7 +1454,7 @@ impl Context<'_> {
 }
 
 /// An event's name as a file name: letters, digits and underscores kept,
-/// anything else a hyphen (`gLacquerRoomsB_Events-65`).
+/// anything else a hyphen (`gLacquerRoomsB_Triggers-65`).
 fn file_name(name: &str) -> String {
     let mut out = String::new();
     for c in name.chars() {
@@ -1499,7 +1499,7 @@ mod tests {
     #[test]
     fn event_names_become_file_names() {
         assert_eq!(file_name("EventScript_InspectWell"), "EventScript_InspectWell");
-        assert_eq!(file_name("gLacquerRoomsB_Events[65]"), "gLacquerRoomsB_Events-65");
+        assert_eq!(file_name("gLacquerRoomsB_Triggers[65]"), "gLacquerRoomsB_Triggers-65");
     }
 
     #[test]
@@ -1598,7 +1598,7 @@ mod tests {
     #[test]
     fn message_rows_are_told_from_functions() {
         assert!(is_message_row("MsgValeRockCannotBeMoved"));
-        assert!(is_message_row("gValeStormyNight_Events[26]"));
+        assert!(is_message_row("gValeStormyNight_Triggers[26]"));
         assert!(!is_message_row("EventScript_PushPillar"));
     }
 }
