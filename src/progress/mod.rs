@@ -21,13 +21,17 @@ pub(crate) mod raster;
 use calcrom::{Game, GameDone};
 use std::path::Path;
 
-const USAGE: &str = "usage: alchemy-devtools progress [--game GAME OUTPUT | --publish ARCHIVE COMMIT DIRECTORY MEASURED | --upload COMMIT REMOTE | --pre-push REMOTE | --humanity [--top N] [--list METRIC]]
+const USAGE: &str = "usage: alchemy-devtools progress [--game GAME OUTPUT | --publish ARCHIVE COMMIT DIRECTORY MEASURED | --archive FILE | --volumes | --upload COMMIT REMOTE | --pre-push REMOTE | --humanity [--top N] [--list METRIC]]
 With no option, counts DONE code and data in each edition built and matching
 rom.sha1 (make compare-editions), prints a line for each, and writes the
 measurement and decomp.dev's report under out/reports/decomp; a game without
 all six editions is pending. --upload sends that measurement to the
-decomp-reports release for COMMIT, when REMOTE is this repository's;
---pre-push does so for the tip git pushes to main.
+archive for COMMIT, when REMOTE is this repository's; --pre-push does so
+for the tip git pushes to main. The archive is the decomp-reports release
+and its numbered successors (decomp-reports-2 and on), since GitHub holds
+1,000 assets in a release: --volumes lists them in order, and --archive adds
+FILE to the newest under its own name, opening the next when it is full and
+refusing a file a volume already holds changed.
 Stage source changes before measuring: the receipt must describe the source
 the build actually read. --game GAME OUTPUT is CI's own count of one game's
 six editions, written to OUTPUT with no receipt. --publish is CI's too: with
@@ -282,11 +286,16 @@ pub(crate) fn run(argv: &[String]) -> Result<(), String> {
             Path::new(measured),
         )?,
         [flag, game, output] if flag == "--game" => measure_one(root, game, Path::new(output))?,
+        [flag, path] if flag == "--archive" => {
+            publish::archive(root, Path::new(path))?;
+            String::new()
+        }
         [flag, commit, remote] if flag == "--upload" => {
             publish::upload(root, commit, remote)?;
             String::new()
         }
         [flag, options @ ..] if flag == "--humanity" => humanity_options(root, options)?,
+        [flag] if flag == "--volumes" => publish::volumes(root)?.join("\n"),
         [flag, remote] if flag == "--pre-push" => {
             pre_push(root, remote)?;
             String::new()

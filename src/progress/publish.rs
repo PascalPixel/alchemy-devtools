@@ -7,7 +7,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub(crate) const MEASUREMENT: &str = "out/reports/decomp/measurement.tsv";
 
 const REPO: &str = "PascalPixel/alchemy";
+/// The archive is a run of releases, `decomp-reports` then
+/// `decomp-reports-2` and on, since GitHub holds at most 1,000 assets in a
+/// release. Readers search every volume; writers add to the newest, opening
+/// the next while the newest still has room for a landing (three assets from
+/// the push, two from CI).
 const RELEASE: &str = "decomp-reports";
+const VOLUME_ASSETS: usize = 1000;
+const LANDING_ASSETS: usize = 5;
 const RECEIPT: &str = "out/reports/decomp/publication.tsv";
 const STALE: &str =
     "progress measurement is stale or missing: stage all source changes, then run make land";
@@ -140,18 +147,114 @@ fn needs_upload(remote_digest: &str, bytes: &[u8]) -> Result<bool, String> {
     }
 }
 
-fn remote_digest(root: &Path, name: &str) -> Result<String, String> {
-    let query = format!(".assets[] | select(.name == \"{name}\") | .digest");
+/// A volume's number: 1 for `decomp-reports`, N for `decomp-reports-N`.
+fn volume_number(tag: &str) -> Option<usize> {
+    match tag.strip_prefix(RELEASE)? {
+        "" => Some(1),
+        rest => rest
+            .strip_prefix('-')
+            .filter(|n| !n.starts_with('0'))
+            .and_then(|n| n.parse().ok())
+            .filter(|&n| n > 1),
+    }
+}
+
+fn volume_tag(number: usize) -> String {
+    if number == 1 {
+        RELEASE.to_string()
+    } else {
+        format!("{RELEASE}-{number}")
+    }
+}
+
+/// The archive's volumes, in order.
+pub(super) fn volumes(root: &Path) -> Result<Vec<String>, String> {
+    let tags = command(
+        root,
+        "gh",
+        &["api", "--paginate", &format!("repos/{REPO}/releases"), "--jq", ".[].tag_name"],
+    )?;
+    let mut numbered: Vec<usize> = tags.lines().filter_map(volume_number).collect();
+    numbered.sort_unstable();
+    numbered.dedup();
+    if numbered.first() != Some(&1) {
+        return Err(format!("the {RELEASE} release is missing"));
+    }
+    Ok(numbered.into_iter().map(volume_tag).collect())
+}
+
+fn release_query(root: &Path, tag: &str, query: &str) -> Result<String, String> {
     command(
         root,
         "gh",
-        &[
-            "api",
-            &format!("repos/{REPO}/releases/tags/{RELEASE}"),
-            "--jq",
-            &query,
-        ],
+        &["api", &format!("repos/{REPO}/releases/tags/{tag}"), "--jq", query],
     )
+}
+
+/// An asset's digest in whichever volume holds it, empty when none does.
+fn remote_digest(root: &Path, volumes: &[String], name: &str) -> Result<String, String> {
+    let query = format!(".assets[] | select(.name == \"{name}\") | .digest");
+    for tag in volumes {
+        let found = release_query(root, tag, &query)?;
+        if !found.is_empty() {
+            return Ok(found);
+        }
+    }
+    Ok(String::new())
+}
+
+/// The volume to add a landing's assets to: the newest, or a new one when
+/// the newest has no room left for a whole landing.
+fn writable_volume(root: &Path, volumes: &mut Vec<String>) -> Result<String, String> {
+    let newest = volumes.last().cloned().ok_or("no archive volume")?;
+    let count: usize = release_query(root, &newest, ".assets | length")?
+        .parse()
+        .map_err(|_| format!("cannot count the assets of {newest}"))?;
+    if count + LANDING_ASSETS <= VOLUME_ASSETS {
+        return Ok(newest);
+    }
+    let next = volume_tag(volume_number(&newest).unwrap_or(1) + 1);
+    let title = format!("decomp reports {}", volume_number(&next).unwrap_or(2));
+    let notes = format!("Progress measurements, continued from {newest}: GitHub holds 1,000 assets in a release.");
+    // A concurrent writer may have opened it already.
+    if release_query(root, &next, ".tag_name").is_err() {
+        command(
+            root,
+            "gh",
+            &["release", "create", &next, "--repo", REPO, "--prerelease", "--title", &title, "--notes", &notes],
+        )
+        .or_else(|why| release_query(root, &next, ".tag_name").map(|_| String::new()).map_err(|_| why))?;
+    }
+    volumes.push(next.clone());
+    Ok(next)
+}
+
+/// Adds one file to the archive under its own name, unless a volume already
+/// holds it with the same digest; refuses one that holds it changed.
+fn archive_file(root: &Path, volumes: &mut Vec<String>, path: &Path, bytes: &[u8]) -> Result<(), String> {
+    let name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or("invalid report path")?;
+    if !needs_upload(&remote_digest(root, volumes, name)?, bytes)? {
+        return Ok(());
+    }
+    let tag = writable_volume(root, volumes)?;
+    command(
+        root,
+        "gh",
+        &["release", "upload", &tag, path.to_str().ok_or("invalid report path")?, "--repo", REPO],
+    )?;
+    if needs_upload(&remote_digest(root, volumes, name)?, bytes)? {
+        return Err(format!("uploaded {name} is absent from {tag}"));
+    }
+    Ok(())
+}
+
+/// CI's upload of a file it made (an accepted record, a site archive).
+pub(crate) fn archive(root: &Path, path: &Path) -> Result<(), String> {
+    let bytes = std::fs::read(path).map_err(|error| format!("{}: {error}", path.display()))?;
+    archive_file(root, &mut volumes(root)?, path, &bytes)
 }
 
 pub(crate) fn upload(root: &Path, commit: &str, remote: &str) -> Result<(), String> {
@@ -165,28 +268,11 @@ pub(crate) fn upload(root: &Path, commit: &str, remote: &str) -> Result<(), Stri
     let files = prepared(root, &tree)?;
     let directory = root.join("out/reports/decomp/upload");
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    let mut volumes = volumes(root)?;
     for (extension, bytes) in ["pb", "tsv", "receipt.tsv"].iter().zip(&files) {
-        let name = format!("{commit}.{extension}");
-        if !needs_upload(&remote_digest(root, &name)?, bytes)? {
-            continue;
-        }
-        let path = directory.join(&name);
+        let path = directory.join(format!("{commit}.{extension}"));
         std::fs::write(&path, bytes).map_err(|error| error.to_string())?;
-        command(
-            root,
-            "gh",
-            &[
-                "release",
-                "upload",
-                RELEASE,
-                path.to_str().ok_or("invalid report path")?,
-                "--repo",
-                REPO,
-            ],
-        )?;
-        if needs_upload(&remote_digest(root, &name)?, bytes)? {
-            return Err(format!("uploaded {name} is absent from the release"));
-        }
+        archive_file(root, &mut volumes, &path, bytes)?;
     }
     println!("progress measurement uploaded for {commit}; CI publishes it after the push");
     Ok(())
@@ -209,6 +295,18 @@ mod tests {
         assert!(verify(&saved.replace("1792497600", "0"), tree, &files).is_err());
         assert!(!needs_upload(&digest(&files[0]), &files[0]).unwrap());
         assert!(needs_upload(&digest(&files[0]), &files[1]).is_err());
+    }
+
+    #[test]
+    fn archive_volumes_are_numbered_after_the_first() {
+        assert_eq!(volume_number("decomp-reports"), Some(1));
+        assert_eq!(volume_number("decomp-reports-2"), Some(2));
+        assert_eq!(volume_number("decomp-reports-12"), Some(12));
+        for other in ["decomp-reports-1", "decomp-reports-02", "decomp-reports-x", "decomp-reportsX", "v1"] {
+            assert_eq!(volume_number(other), None, "{other}");
+        }
+        assert_eq!(volume_tag(1), "decomp-reports");
+        assert_eq!(volume_tag(3), "decomp-reports-3");
     }
 
     #[test]
