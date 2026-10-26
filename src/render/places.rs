@@ -196,7 +196,7 @@ pub fn story_moments(candidates: &[String], own: &[String], events: &[Event], nu
 /// Flags a scene's initialization tests that are no story state: the
 /// party's kept position and the scene's own temporary flags.
 fn is_story_flag(name: &str, flags: &Flags) -> bool {
-    if name == "FLAG_KEEP_PARTY_POSITION" || name.starts_with("FLAG_MAP_TEMP_") {
+    if name == "FLAG_KEEP_PARTY_POSITION" || name.starts_with("FLAG_SCENE_TEMP_") {
         return false;
     }
     // 0x200 to 0x3ff are the scene's and the place's own (cleared on entry).
@@ -225,7 +225,7 @@ pub struct Row {
     /// A GIF's frames at 30 a second.
     pub frames: usize,
     /// An event GIF's destination: the scene it leads to, by its SceneId
-    /// symbol (`MapId_WorldMap`, `#N` for an unnamed row).
+    /// symbol (`SceneId_WorldMap`, `#N` for an unnamed row).
     pub leads_to: String,
     /// Why an exit's recording ends before the player has control there.
     pub note: String,
@@ -526,7 +526,7 @@ impl Context<'_> {
             }
         }
         // The entrance photo shows the party as it arrives by a warp from
-        // another map (arrivals::ranked), placed by Map_ApplyWarpDest and the
+        // another map (arrivals::ranked), placed by Scene_ApplyWarpDest and the
         // map's own arrival, by the next way in when an arrival goes on to
         // another map before the player has control (the eruption leaves
         // Vale for the world map); by the table's first row, where no warp
@@ -1420,7 +1420,7 @@ impl Context<'_> {
         let file = format!("{}/events/{base}.gif", scene.slug());
         let written = self.gif(&file, &run.frames)?;
         let leads_to = run.leads_to.map(|n| match self.scenes.iter().find(|s| s.number == n).and_then(|s| s.symbol.as_deref()) {
-            Some(symbol) => format!("MapId_{symbol}"),
+            Some(symbol) => format!("SceneId_{symbol}"),
             None => format!("#{n}"),
         });
         self.rows.push(Row {

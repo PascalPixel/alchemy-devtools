@@ -12,7 +12,7 @@ use std::path::Path;
 #[derive(Debug, Clone)]
 pub struct Scene {
     pub number: u16,
-    /// MapId_<name> without the prefix; none for an unnamed row.
+    /// SceneId_<name> without the prefix; none for an unnamed row.
     pub symbol: Option<String>,
     /// The overlay's source, `games/tbs/src/scene/vale.c`.
     pub file: String,
@@ -95,7 +95,7 @@ pub fn read_scenes(path: &Path) -> Result<Vec<Scene>, String> {
             let n = tsv.get(row, number);
             Ok(Scene {
                 number: n.parse().map_err(|_| format!("{}: scene number {n:?}", path.display()))?,
-                symbol: tsv.get(row, symbol).strip_prefix("MapId_").or_else(|| tsv.get(row, symbol).strip_prefix("SceneId_")).map(str::to_string),
+                symbol: tsv.get(row, symbol).strip_prefix("SceneId_").or_else(|| tsv.get(row, symbol).strip_prefix("SceneId_")).map(str::to_string),
                 file: tsv.get(row, file).to_string(),
                 area: tsv.get(row, area).to_string(),
                 map: tsv.get(row, map).to_string(),

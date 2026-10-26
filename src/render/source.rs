@@ -1,5 +1,5 @@
 //! Game facts the renderer reads from the Broken Seal's source rather than
-//! keeping copies of: map numbers (gMapHeaders), area names
+//! keeping copies of: map numbers (gSceneHeaders), area names
 //! (gMapSec_NameRules and text/en.po), ability numbers and names
 //! (ability_ids.h, MsgAbilityName), object events' local ids (each map's
 //! enum), characters (character_ids.h) and the debug party presets
@@ -78,11 +78,11 @@ fn macro_rows(
     Ok(rows)
 }
 
-/// The maps in gMapHeaders' order (field/map_headers.s): each one's name
-/// without `MapId_` (empty for an unnamed row) and its map section.
+/// The maps in gSceneHeaders' order (field/scene_headers.s): each one's name
+/// without `SceneId_` (empty for an unnamed row) and its map section.
 fn maps() -> Result<Vec<(String, i64)>, String> {
-    let text = read("src/field/map_headers.s")?;
-    macro_rows(&text, "gMapHeaders", &["map_header"])?
+    let text = read("src/field/scene_headers.s")?;
+    macro_rows(&text, "gSceneHeaders", &["scene_header"])?
         .into_iter()
         .map(|(_, row)| {
             let mapsec = row
@@ -94,13 +94,13 @@ fn maps() -> Result<Vec<(String, i64)>, String> {
         .collect()
 }
 
-/// The number of map `MapId_<name>`, its row of gMapHeaders.
+/// The number of map `SceneId_<name>`, its row of gSceneHeaders.
 pub fn map_id(name: &str) -> Result<u16, String> {
     maps()?
         .iter()
         .position(|(n, _)| n == name)
         .map(|i| i as u16)
-        .ok_or_else(|| format!("map_headers.s has no MapId_{name}"))
+        .ok_or_else(|| format!("scene_headers.s has no SceneId_{name}"))
 }
 
 /// The message key of the PO entry named `name` in text/en.po.
@@ -220,7 +220,7 @@ pub fn ability_name(id: u16) -> Result<String, String> {
         .ok_or_else(|| format!("gAbilityDefinitions has no row {id}"))
 }
 
-/// The local id of object event `name` on map `MapId_<map>`, from the map
+/// The local id of object event `name` on map `SceneId_<map>`, from the map
 /// overlays' enums: the map's own `enum <map>LocalId` where it has one,
 /// else the one value every map overlay gives the name.
 pub fn local_id(map: &str, name: &str) -> Result<u16, String> {
@@ -228,7 +228,7 @@ pub fn local_id(map: &str, name: &str) -> Result<u16, String> {
     for (_, values) in enums(&read("include/map_tables.h")?, &HashMap::new())? {
         known.extend(values.into_iter().filter_map(|(n, v)| Some((n, v?))));
     }
-    let dir = tbs("src/map");
+    let dir = tbs("src/scene");
     let mut files: Vec<PathBuf> = std::fs::read_dir(&dir)
         .map_err(|e| format!("cannot read {}: {e}", dir.display()))?
         .flatten()
@@ -259,9 +259,9 @@ pub fn local_id(map: &str, name: &str) -> Result<u16, String> {
     found.dedup();
     match found[..] {
         [value] => Ok(value as u16),
-        [] => Err(format!("no map overlay names {name}")),
+        [] => Err(format!("no scene overlay names {name}")),
         _ => Err(format!(
-            "{name} has several values and MapId_{map} has no enum {own}"
+            "{name} has several values and SceneId_{map} has no enum {own}"
         )),
     }
 }

@@ -21,7 +21,7 @@ const KEY_DOWN: u32 = 0x80;
 const VALE: (u16, u16) = (4, 1);
 /// The world map as the party first leaves Vale (WORLD_MAP_FROM_VALE_PLAZA).
 const WORLD_MAP: (u16, u16) = (2, 1);
-/// Vale's gate, MapId_ValePlaza, arrived at from the world map
+/// Vale's gate, SceneId_ValePlaza, arrived at from the world map
 /// (VALE_PLAZA_FROM_WORLD_MAP).
 const VALE_PLAZA: (u16, u16) = (5, 10);
 /// Sol Sanctum's entrance, arrived at from Vale at the foot of its path
@@ -40,7 +40,7 @@ const VALE_INNKEEPER: u16 = 13;
 const TITLE_AFTER_PROLOGUE: (u16, u16) = (0, 3);
 /// The title overlay's entrance that runs the credits (Import_CreditsRun).
 const CREDITS: (u16, u16) = (0, 9);
-/// The level room and the menu test room (map_headers.s).
+/// The level room and the menu test room (scene_headers.s).
 const LEVEL_ROOM: u16 = 199;
 const MENU_TEST_ROOM: u16 = 200;
 /// The level room's level editor and the menu test room's first Felix
@@ -189,7 +189,7 @@ impl<'a> Guide<'a> {
     }
 
     /// The debug map selector in Vale with gDebugMode set: Start pressed
-    /// with B held (Map_Run), the map stepped down `steps` times from Vale's
+    /// with B held (SceneManager_Run), the map stepped down `steps` times from Vale's
     /// number with Left, then A, which warps there.
     fn selector(&mut self, steps: u32, tail: u32) -> Result<Vec<Vec<u16>>, String> {
         let mode = self.sym("gDebugMode")?;
@@ -204,13 +204,13 @@ impl<'a> Guide<'a> {
         Self::press_path(field, &path)
     }
 
-    /// Vale's number stepped down past map 0 to MapId_MenuTest, and A.
+    /// Vale's number stepped down past map 0 to SceneId_MenuTest, and A.
     fn engine_debug_select(&mut self) -> Result<(), String> {
         let frames = self.selector(5, 110)?;
         self.front_gif("engine/debug-select.gif", &frames, "the debug map selector opened in Vale, warping to the menu test room")
     }
 
-    /// One step further, to MapId_IncreaseItemAndLevel, and A.
+    /// One step further, to SceneId_IncreaseItemAndLevel, and A.
     fn debug_map_select(&mut self) -> Result<(), String> {
         let frames = self.selector(6, 110)?;
         self.front_gif("debug/map-select.gif", &frames, "the debug map selector opened in Vale, warping to the level room")

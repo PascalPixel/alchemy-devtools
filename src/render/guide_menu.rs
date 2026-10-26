@@ -12,7 +12,7 @@ use super::source;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-/// Xian (MapId_Xian), entered from the world map: all four members have
+/// Xian (SceneId_Xian), entered from the world map: all four members have
 /// joined by then, with the Djinn, Psynergy and equipment of their debug
 /// preset (party.rs).
 const XIAN: (u16, u16) = (72, 1);

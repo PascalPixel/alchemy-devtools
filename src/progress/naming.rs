@@ -286,7 +286,7 @@ fn exempt(name: &Name) -> bool {
         || n.starts_with("__")
         || n.starts_with("REG_")
         || n.starts_with("OWN_")
-        || n.starts_with("FLAG_MAP_TEMP_")
+        || n.starts_with("FLAG_SCENE_TEMP_")
         || n.starts_with("FLAG_MAPSEC_TEMP_")
         || name.file.ends_with("/io_reg.h")
         || (n.starts_with("Msg") && matches!(name.kind, NameKind::Global | NameKind::Extern))
@@ -814,7 +814,7 @@ fn place_at(name_words: &[String], areas: &[Vec<String>]) -> Option<(usize, Stri
 /// share. A family has at least `FAMILY` members, and its pattern is what
 /// two thirds of them do:
 ///
-/// - case: `MapId_Vale` beside `MapId_VALE_CAVE`;
+/// - case: `SceneId_Vale` beside `SceneId_VALE_CAVE`;
 /// - an enum's shared leading segments (`FLAG_VALE_`) that one of its
 ///   members lacks;
 /// - a function named with a family's prefix but no `_` (`BattleObjGet`
@@ -888,7 +888,7 @@ fn shapes(all: &[&Name], families: &[Family], text: Option<&GameText>, out: &mut
                 let example =
                     placed.iter().find(|(_, _, place)| matches!(place, Some((0, _)))).map_or("", |(_, name, _)| name.name.as_str());
                 for (_, name, place) in &placed {
-                    // S3 puts `Unused` right after the prefix (`MapId_UnusedMercuryLighthouseAerie2`).
+                    // S3 puts `Unused` right after the prefix (`SceneId_UnusedMercuryLighthouseAerie2`).
                     let unused = rest(&name.name).to_ascii_lowercase().starts_with("unused");
                     if let Some((_, area)) = place.as_ref().filter(|(at, _)| *at > 0 && !unused) {
                         let family_prefix = prefix(&name.name).unwrap_or("");
@@ -1094,12 +1094,12 @@ mod tests {
 
     #[test]
     fn pret_terms_keep_their_short_words() {
-        let file = "games/tbs/src/map/a.c";
+        let file = "games/tbs/src/scene/a.c";
         let names = Names {
             names: vec![
-                name("Map_GetWarpDests", NameKind::Function, file, 1),
+                name("Scene_GetWarpDests", NameKind::Function, file, 1),
                 name("MAP_EVENT_COORD", NameKind::Macro, file, 2),
-                name("Map_RunCoordEventOrWarp", NameKind::Function, file, 3),
+                name("Scene_RunCoordEventOrWarp", NameKind::Function, file, 3),
                 name("gSerialReceiveDest", NameKind::Global, file, 4),
                 name("Script_SetDestination", NameKind::Function, file, 5),
                 name("Particle_Coordinates", NameKind::Function, file, 6),
@@ -1155,7 +1155,7 @@ mod tests {
 
     #[test]
     fn synonyms_take_the_games_word() {
-        let file = "games/tbs/src/map/a.c";
+        let file = "games/tbs/src/scene/a.c";
         let po = "msgctxt \"MsgShop\"\nmsgid \"00001\"\nmsgstr \"I'm a merchant.\"\n";
         let text = GameText::parse(po, None);
         let names = Names {
@@ -1214,7 +1214,7 @@ mod tests {
                 .enumerate()
                 .map(|(at, n)| name(n, NameKind::Macro, file, at + 1))
                 .collect();
-        let scene = "games/tbs/src/map/vale.c";
+        let scene = "games/tbs/src/scene/vale.c";
         for (at, n) in ["LOCALID_GUARD", "LOCALID_MAYOR", "LOCALID_DOG", "GUARD_CAPTAIN"].iter().enumerate() {
             list.push(Name { group: Some("vale.c#3".to_string()), ..name(n, NameKind::Enumerator, scene, 10 + at) });
         }

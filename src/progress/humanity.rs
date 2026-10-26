@@ -374,7 +374,7 @@ fn regexes() -> &'static [Regex; 3] {
             .unwrap(),
             // Conventions that keep their number: temporary flags, registers and
             // the compiler library (`__divsi3`).
-            Regex::new(r"^FLAG_(?:MAP|MAPSEC)_TEMP_[0-9A-F]+$|^REG_|^__").unwrap(),
+            Regex::new(r"^FLAG_(?:SCENE|MAPSEC)_TEMP_[0-9A-F]+$|^REG_|^__").unwrap(),
             // Edition names, which belong in linker scripts and assembly.
             Regex::new(r"^(?:TBS|TLA)_EDITION_[A-Z]+$").unwrap(),
         ]
@@ -404,7 +404,7 @@ fn last_word(text: &str) -> &str {
 
 /// A name that carries a number in place of a meaning: `ColosseumFinal1`,
 /// `EventScript_LeaveByWarp10`, `LOCALID_8`. Placeholders, hardware and convention
-/// names (`BG2`, `Dma3`, `REG_DMA3`, `u16`, `Random16`, `FLAG_MAP_TEMP_01`)
+/// names (`BG2`, `Dma3`, `REG_DMA3`, `u16`, `Random16`, `FLAG_SCENE_TEMP_01`)
 /// are not.
 pub fn is_numbered(name: &str) -> bool {
     let stem_end = name.trim_end_matches(|c: char| c.is_ascii_digit()).len();
@@ -1141,7 +1141,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 self.report.declare(false, &name, file, line, documented, defined);
                 self.named(&name, if defined { NameKind::Global } else { NameKind::Extern }, line, None);
                 // A mechanism's table counts where it is defined; a game thing
-                // (`extern char MapId_Vale;`) where it is declared.
+                // (`extern char SceneId_Vale;`) where it is declared.
                 if defined || provenance::kind(Definition::new(&name, file, Origin::Global), &self.report.macro_values) != Some("global") {
                     let own = self.code.doc_text[first].clone() + &self.code.notes(last, last);
                     self.thing(&name, Origin::Global, line, own, String::new(), (None, None));
@@ -1362,7 +1362,7 @@ impl Report {
     fn check_provenance(&mut self, text: &GameText) {
         // A map id is declared once for the game, wherever it is repeated.
         let mut maps = BTreeSet::new();
-        self.things.retain(|thing| thing.kind != "map" || maps.insert(thing.name.clone()));
+        self.things.retain(|thing| thing.kind != "scene" || maps.insert(thing.name.clone()));
         let analysis = provenance::analyze(&self.things, &self.places, text, &self.macro_values);
         for row in &analysis.rows {
             let (file, line, name) = (&row.thing.file, row.thing.line, &row.thing.name);
@@ -1411,16 +1411,16 @@ fn game_text(root: &Path, game: &str) -> Option<GameText> {
     Some(GameText::parse(&String::from_utf8_lossy(&po), areas))
 }
 
-/// A place's overlay, `games/<game>/src/map/<place>.c` (⚓️, not yet
-/// renamed, keeps its overlays in `src/scene`).
+/// A scene's overlay, `games/<game>/src/scene/<scene>.c` (⚓️'s overlays are
+/// still folders there, so they are not counted here).
 fn is_map_overlay(path: &str) -> bool {
     let parts: Vec<&str> = path.split('/').collect();
-    parts.len() == 5 && matches!(parts[3], "map" | "scene") && path.ends_with(".c")
+    parts.len() == 5 && parts[3] == "scene" && path.ends_with(".c")
 }
 
-/// Under a game's map overlays, `src/map` (⚓️'s `src/scene`).
+/// Under a game's scene overlays, `src/scene`.
 fn in_map_folder(path: &str) -> bool {
-    path.contains("/src/map/") || path.contains("/src/scene/")
+    path.contains("/src/scene/")
 }
 
 /// A folder guide, `games/<game>/src/<folder>/README.md`.
@@ -1789,26 +1789,26 @@ mod tests {
             ("games/tbs/src/shop/README.md", "# Shops\n\n## Evidence\n\nNamed from the counters.\n"),
             ("games/tbs/src/shop/shop/run.c", "// XXX: why three; a probe would settle it.\nvoid Shop_Run(void) {}\n"),
             ("games/tbs/src/shop/shop/inn.c", "void Inn_Run(void) {\n  // XXX (no evidence): why; only the source says.\n}\n"),
-            ("games/tbs/src/map/README.md", "# Maps\n"),
-            ("games/tbs/src/map/common/door.h", "/// A door.\nstruct Door { int x; };\n"),
-            ("games/tbs/src/map/vale.c", "/// @file\n/// Vale.\n\nvoid Vale_Run(void) {\n  /* XXX: what this is; its render. */\n}\n"),
-            ("games/tbs/src/map/vault.c", "/// @file\n/// Vault.\n// XXX (no evidence): what the ivy is for; nothing says.\n"),
+            ("games/tbs/src/scene/README.md", "# Maps\n"),
+            ("games/tbs/src/scene/common/door.h", "/// A door.\nstruct Door { int x; };\n"),
+            ("games/tbs/src/scene/vale.c", "/// @file\n/// Vale.\n\nvoid Vale_Run(void) {\n  /* XXX: what this is; its render. */\n}\n"),
+            ("games/tbs/src/scene/vault.c", "/// @file\n/// Vault.\n// XXX (no evidence): what the ivy is for; nothing says.\n"),
         ]);
         let open: Vec<(&str, u64)> = report.units.iter().map(|unit| (unit.file.as_str(), unit.open)).collect();
         assert_eq!(
             open,
             [
                 ("games/tbs/src/shop/README.md", 1),
-                ("games/tbs/src/map/README.md", 0),
-                ("games/tbs/src/map/vale.c", 1),
-                ("games/tbs/src/map/vault.c", 0),
+                ("games/tbs/src/scene/README.md", 0),
+                ("games/tbs/src/scene/vale.c", 1),
+                ("games/tbs/src/scene/vault.c", 0),
             ]
         );
         assert_eq!(report.value("units"), 4);
         assert_eq!(report.value("units_done"), 2);
         let listed: Vec<(&str, usize)> =
             report.items.iter().filter(|item| item.metric == "unit_open").map(|item| (item.file.as_str(), item.line)).collect();
-        assert_eq!(listed, [("games/tbs/src/map/vale.c", 5), ("games/tbs/src/shop/shop/run.c", 1)]);
+        assert_eq!(listed, [("games/tbs/src/scene/vale.c", 5), ("games/tbs/src/shop/shop/run.c", 1)]);
     }
 
     #[test]
@@ -1865,8 +1865,8 @@ mod tests {
         }
         for name in [
             "u8", "vu16", "s32", "BG2", "Bg2", "Dma3", "REG_DMA3", "Random16", "Dma_Fill32", "MulQ16", "Q_8_8",
-            "FLAG_MAP_TEMP_01", "TBS_PATCH_1", "DISPCNT_MODE_1", "BLDCNT_TGT1_BG2", "x1", "ArcTan2", "attr2",
-            "Vector3", "unk_14", "MapGridCell", "SE_138", "FLAG_MAP_TEMP_0E", "__divsi3", "rgb555", "OBJ_VRAM0",
+            "FLAG_SCENE_TEMP_01", "TBS_PATCH_1", "DISPCNT_MODE_1", "BLDCNT_TGT1_BG2", "x1", "ArcTan2", "attr2",
+            "Vector3", "unk_14", "MapGridCell", "SE_138", "FLAG_SCENE_TEMP_0E", "__divsi3", "rgb555", "OBJ_VRAM0",
         ] {
             assert!(!is_numbered(name), "{name}");
         }
@@ -1958,7 +1958,7 @@ mod tests {
         let report = game([
             ("a.c", first.as_str()),
             ("b.c", second.as_str()),
-            ("games/tbs/src/map/vale.c", scene.as_str()),
+            ("games/tbs/src/scene/vale.c", scene.as_str()),
             ("games/tbs/src/battle_anim/parts/bolt.c", part.as_str()),
             ("games/tbs/include/map_warps.h", long.as_str()),
             ("games/tbs/src/overworld/table.c", data.as_str()),
@@ -2076,8 +2076,8 @@ mod provenance_tests {
             "msgctxt \"message\"\nmsgid \"00003\"\nmsgstr \"Bilibin Barricade\"\n",
         );
         let text = GameText::parse(po, area_count("\tgroup_name 0, -1, 0\n\tscene_name Bilibin, -1, 1\n"));
-        let ids = "/// @file\n/// Scenes.\n\n/// ★ Named from its area name: Bilibin\nextern char MapId_Bilibin;\nextern char MapId_BilibinWarehouse;\n";
-        let flags = "/// ★ Named from the game: \"Hidden Treasury\" (MsgSign)\n#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_MAP_TEMP_01 0x200\n#define FLAG_WAREHOUSE_SEEN 0x11 ///< Named from the game: \"Hidden Treasury\" (MsgSign)\n";
+        let ids = "/// @file\n/// Scenes.\n\n/// ★ Named from its area name: Bilibin\nextern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
+        let flags = "/// ★ Named from the game: \"Hidden Treasury\" (MsgSign)\n#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_SCENE_TEMP_01 0x200\n#define FLAG_WAREHOUSE_SEEN 0x11 ///< Named from the game: \"Hidden Treasury\" (MsgSign)\n";
         let scene = concat!(
             "/// @file\n/// Bilibin and the Bilibin Barricade.\n///\n/// LOCALID_GUARD stands by `Bilibin Barricade`.\n",
             "#include \"x.h\"\n",
@@ -2093,30 +2093,30 @@ mod provenance_tests {
             "static const u8 gBilibinTreasury[] = { 1 };\n",
         );
         let files = [
-            ("games/tbs/include/map_ids.h", ids),
+            ("games/tbs/include/scene_ids.h", ids),
             ("games/tbs/include/flags.h", flags),
-            ("games/tbs/src/map/bilibin.c", scene),
+            ("games/tbs/src/scene/bilibin.c", scene),
         ];
         let report = game_with_text(files, Some(&text));
         let names: Vec<&str> = report.things.iter().map(|thing| thing.name.as_str()).collect();
         assert_eq!(
             names,
             [
-                "MapId_Bilibin", "MapId_BilibinWarehouse", "FLAG_TREASURY_OPEN", "FLAG_WAREHOUSE_SEEN", "LOCALID_GUARD",
+                "SceneId_Bilibin", "SceneId_BilibinWarehouse", "FLAG_TREASURY_OPEN", "FLAG_WAREHOUSE_SEEN", "LOCALID_GUARD",
                 "LOCALID_PILLAR_APPROACH", "LOCALID_MAN", "Bilibin_UpdateWarehouse", "gBilibinTreasury",
             ]
         );
         assert_eq!(report.value("provenance_names"), 7);
-        assert_eq!(report.value("provenance_verified"), 2, "MapId_Bilibin and FLAG_TREASURY_OPEN");
+        assert_eq!(report.value("provenance_verified"), 2, "SceneId_Bilibin and FLAG_TREASURY_OPEN");
         assert_eq!(report.value("provenance_unstarred"), 2, "FLAG_WAREHOUSE_SEEN and LOCALID_PILLAR_APPROACH");
         assert_eq!(report.value("provenance_prose"), 1, "LOCALID_GUARD, from its place paragraph");
-        assert_eq!(report.value("provenance_none"), 2, "MapId_BilibinWarehouse and LOCALID_MAN");
+        assert_eq!(report.value("provenance_none"), 2, "SceneId_BilibinWarehouse and LOCALID_MAN");
         assert_eq!(report.value("unused_words"), 7, "warehouse, open, seen, guard, pillar, approach and man");
         let words = list(&[("tbs", &report)], "unused_word");
-        assert!(words.starts_with("tbs\twarehouse\t3\tMapId_BilibinWarehouse games/tbs/include/map_ids.h:6; "), "{words}");
+        assert!(words.starts_with("tbs\twarehouse\t3\tSceneId_BilibinWarehouse games/tbs/include/scene_ids.h:6; "), "{words}");
         let worklist = list(&[("tbs", &report)], "provenance");
-        assert!(worklist.contains("tbs\tLOCALID_PILLAR_APPROACH\tobject event\tgames/tbs/src/map/bilibin.c:9\tpillar,approach\tunstarred render\n"), "{worklist}");
-        assert!(worklist.contains("tbs\tBilibin_UpdateWarehouse\tfunction\tgames/tbs/src/map/bilibin.c:15\twarehouse\t-\n"));
+        assert!(worklist.contains("tbs\tLOCALID_PILLAR_APPROACH\tobject event\tgames/tbs/src/scene/bilibin.c:9\tpillar,approach\tunstarred render\n"), "{worklist}");
+        assert!(worklist.contains("tbs\tBilibin_UpdateWarehouse\tfunction\tgames/tbs/src/scene/bilibin.c:15\twarehouse\t-\n"));
         assert!(!worklist.contains("gBilibinTreasury"), "a mechanism whose words the game uses is not work");
         assert_eq!(list(&[("tbs", &report)], "provenance_none").lines().count(), 2);
         let tsv = tsv(&[("tbs", &report)]);
@@ -2184,9 +2184,9 @@ mod provenance_tests {
     fn door_words_in_the_report() {
         let po = "msgctxt \"MsgDebugEntryName\"\nmsgid \"00001\"\nmsgstr \"Tolbi\"\n";
         let text = GameText::parse(po, Some(1));
-        let ids = "/// ★ Named from its area name: Tolbi\nextern char MapId_Tolbi;\n";
+        let ids = "/// ★ Named from its area name: Tolbi\nextern char SceneId_Tolbi;\n";
         let links = "enum {\n  TOLBI_FROM_WORLD_MAP_NORTH = 1,\n  TOLBI_FROM_HOUSE = 2,\n  TOLBI_TO_HOUSE = 3,\n};\n";
-        let files = [("games/tbs/include/map_ids.h", ids), ("games/tbs/include/map_warps.h", links)];
+        let files = [("games/tbs/include/scene_ids.h", ids), ("games/tbs/include/map_warps.h", links)];
         let report = game_with_text(files, Some(&text));
         assert_eq!(report.value("provenance_rooms"), 0, "WORLD_MAP is no map here");
         assert_eq!((report.value("door_words"), report.value("door_word_link")), (3, 3), "world, map and house; north is a door word");

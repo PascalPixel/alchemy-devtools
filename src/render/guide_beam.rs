@@ -6,7 +6,7 @@ use super::field::{Field, Image, Setup};
 use super::guide::Guide;
 use super::whole::{self, States, LATE, LEAD};
 
-/// The Lighthouse Aerie (MapId_VenusLighthouseAerie) back from the first
+/// The Lighthouse Aerie (SceneId_VenusLighthouseAerie) back from the first
 /// battle (VENUS_LIGHTHOUSE_AERIE_AFTER_FIRST_BATTLE), where
 /// VenusLighthouseAerie_CombineSaturosAndMenardi throws the Venus Star into
 /// the beacon, and after the second (VENUS_LIGHTHOUSE_AERIE_AFTER_SECOND_BATTLE),
@@ -50,7 +50,7 @@ const SPRITE_ANIM_FRAME: u32 = 0x16;
 /// more.
 const ERUPTION_BEFORE: usize = 12;
 const ERUPTION_AFTER: usize = 420;
-/// FLAG_VENUS_AERIE_BEACON_ERUPTED, FLAG_MAP_TEMP_36 in
+/// FLAG_VENUS_AERIE_BEACON_ERUPTED, FLAG_SCENE_TEMP_36 in
 /// map/venus_lighthouse_aerie.c: the beacon has erupted.
 const FLAG_VENUS_AERIE_BEACON_ERUPTED: u16 = 0x236;
 

@@ -1260,7 +1260,7 @@ pub(super) struct Stretch {
 }
 
 /// Goma Cave's rooms: the pond, the pillar room, the stream and the bridge,
-/// gMapHeaders' rows from MapId_GomaCavePond to MapId_GomaCaveBridge.
+/// gSceneHeaders' rows from SceneId_GomaCavePond to SceneId_GomaCaveBridge.
 const GOMA_CAVE_ROOMS: (&str, &str) = ("GomaCavePond", "GomaCaveBridge");
 /// The most of the 32 by 32 pixels around the leader that may be black as a
 /// random battle is walked into: an eighth.
@@ -1271,7 +1271,7 @@ const STRETCH_MARGIN: i32 = 8;
 
 /// The field's actor slots (FIELD_ACTOR_COUNT in field.rs).
 pub(super) const LOCALID_SLOTS: u16 = 66;
-/// MapId_IncreaseItemAndLevel and MapId_MenuTest, the debug level room
+/// SceneId_IncreaseItemAndLevel and SceneId_MenuTest, the debug level room
 /// and menu test room (scenes.s).
 const LEVEL_ROOM: u16 = 199;
 const MENU_TEST_ROOM: u16 = 200;

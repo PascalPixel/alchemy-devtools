@@ -14,20 +14,20 @@ const KEY_DOWN: u32 = 0x80;
 /// Facings, 1/65536 turns (enum Facing).
 const NORTH: u32 = 0xc000;
 
-/// Suhalla Desert's north (MapId_SuhallaDesertNorth, layout_147) entered from
+/// Suhalla Desert's north (SceneId_SuhallaDesertNorth, map_147) entered from
 /// the world map (SUHALLA_DESERT_NORTH_FROM_WORLD_MAP).
 const SUHALLA_DESERT_NORTH: (u16, u16) = (164, 1);
 /// FLAG_SUHALLA_DESERT_SANDSTORMS_RISEN, FLAG_MAPSEC_TEMP_40 in
 /// map/suhalla_desert.c: a storm of the desert has risen.
 const FLAG_SUHALLA_DESERT_SANDSTORMS_RISEN: u16 = 0x340;
-/// The Psynergy Stone room of Sol Sanctum (MapId_SolSanctumPsynergyStone)
+/// The Psynergy Stone room of Sol Sanctum (SceneId_SolSanctumPsynergyStone)
 /// entered from the statue room (SOL_SANCTUM_PSYNERGY_STONE_FROM_SOL_SANCTUM_STATUE),
-/// whose treasure spot 100 (layout_011's cell 4, 5) holds the stone.
+/// whose treasure spot 100 (map_011's cell 4, 5) holds the stone.
 const SOL_SANCTUM_PSYNERGY_STONE: (u16, u16) = (13, 1);
-/// Colosseum Final 1 (MapId_ColosseumAzartMatch) at the race
+/// Colosseum Final 1 (SceneId_ColosseumAzartMatch) at the race
 /// (COLOSSEUM_AZART_MATCH_RACE_FROM_LEND_A_HAND).
 const COLOSSEUM_AZART_RACE: (u16, u16) = (143, 1);
-/// Venus Lighthouse's aerie (MapId_VenusLighthouseAerie) back from the first
+/// Venus Lighthouse's aerie (SceneId_VenusLighthouseAerie) back from the first
 /// battle (VENUS_LIGHTHOUSE_AERIE_AFTER_FIRST_BATTLE), where
 /// VenusLighthouseAerie_CombineSaturosAndMenardi plays, and the Venus Star's
 /// shadow (LOCALID_VENUS_STAR_SHADOW), kept at the map's origin until the
@@ -56,7 +56,7 @@ impl<'a> Guide<'a> {
     /// Suhalla Desert's north as the party comes back to it once a storm has
     /// risen (FLAG_SUHALLA_DESERT_SANDSTORMS_RISEN set, so the map's setup
     /// shows the haze at full weight, SUHALLA_DESERT_HAZE_BLEND): the sand
-    /// haze, BG1 as layout_147's header scrolls and drifts it, streams across
+    /// haze, BG1 as map_147's header scrolls and drifts it, streams across
     /// the desert while the party stands, then walks south.
     fn haze(&mut self) -> Result<(), String> {
         let mut entered = self.enter_first_visit(SUHALLA_DESERT_NORTH, SUHALLA_DESERT_NORTH.0)?;

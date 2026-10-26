@@ -1,8 +1,8 @@
 //! Recordings of Tolbi's two minigames for the overworld guide, each
 //! reached as the player reaches it: the attendant in the game rooms by
-//! Tolbi's spring (MapId_StuccoRoomsC, tolbi_spring.c) talked to, the
+//! Tolbi's spring (SceneId_StuccoRoomsC, tolbi_spring.c) talked to, the
 //! offer accepted, and the game played from the main loop's turn that runs
-//! it (RUN_LUCKY_DICE, RUN_LUCKY_WHEELS).
+//! it (SEQUENCE_LUCKY_DICE, SEQUENCE_LUCKY_WHEELS).
 
 use super::field::{Field, Saved};
 use super::guide::Guide;
@@ -20,8 +20,8 @@ const DICE_ROOM: u16 = 10;
 const WHEELS_ROOM: u16 = 11;
 /// The main loop's turns that run the games (map_tables.h), stored in
 /// SaveBlock.mapId in place of a map.
-const RUN_LUCKY_WHEELS: u16 = 0x1fc;
-const RUN_LUCKY_DICE: u16 = 0x1fd;
+const SEQUENCE_LUCKY_WHEELS: u16 = 0x1fc;
+const SEQUENCE_LUCKY_DICE: u16 = 0x1fd;
 /// struct SaveBlock's mapId and the prize categories Lucky Wheels writes
 /// (SaveBlockWonPrizesView, lucky_wheels.c), s8 each, -1 after the last.
 const SAVE_MAP_ID: u32 = 0x1c0;
@@ -125,7 +125,7 @@ impl<'a> Guide<'a> {
         let mut field = self.lucky_reach(DICE_ROOM, "LOCALID_TOLBI_SPRING_DICE_ATTENDANT", |f| {
             f.set_coins(DICE_COINS);
             Ok(())
-        }, RUN_LUCKY_DICE)?;
+        }, SEQUENCE_LUCKY_DICE)?;
         // Past the fade in, the dice on the throwing line.
         field.frames(SETTLE)?;
         let coins = |f: &Field| f.read32(save + SAVE_COINS);
@@ -174,7 +174,7 @@ impl<'a> Guide<'a> {
                 }
             }
             Err("Isaac's bag is full".to_string())
-        }, RUN_LUCKY_WHEELS)?;
+        }, SEQUENCE_LUCKY_WHEELS)?;
         field.frames(SETTLE)?;
         // Up three times: the bet from one ticket to four.
         for _ in 0..3 {

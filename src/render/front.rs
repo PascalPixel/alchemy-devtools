@@ -17,7 +17,7 @@ use std::path::Path;
 /// WorldMap_PlayLighthouseTransition(1) after Venus Lighthouse's beacon
 /// erupts, and its 90 WorldMap_PlayLighthouseTransition(0) after Mercury
 /// Lighthouse's is lit, going on to the Lighthouse Aerie
-/// (MapId_MercuryLighthouseAerie) at MERCURY_LIGHTHOUSE_AERIE_AFTER_BEACON_LIT.
+/// (SceneId_MercuryLighthouseAerie) at MERCURY_LIGHTHOUSE_AERIE_AFTER_BEACON_LIT.
 const TITLE: (u16, u16) = (0, 3);
 const VALE_HOME: (u16, u16) = (5, 12);
 const WORLD_MAP: (u16, u16) = (2, 91);

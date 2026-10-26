@@ -2,7 +2,7 @@
 //! does, never the collision code the engine looks up: a code every map
 //! shares (enum MetatileBehavior) by the name the code gives it, and one of the
 //! scene's own (1 to 239) by the rows of the scene's event table that answer
-//! it, read as Map_FindEvent reads them, each row's function or exit put
+//! it, read as Scene_FindEvent reads them, each row's function or exit put
 //! in words the picture supplies. A key beside the picture says what each
 //! colour stands for.
 
@@ -189,7 +189,7 @@ impl Names {
 
 /// What cell code `code` makes happen in `field`'s scene now, its rows'
 /// names put in `words`; None for open ground. The rows taken are those
-/// Map_FindEvent could take: each whose condition holds, and a search on
+/// Scene_FindEvent could take: each whose condition holds, and a search on
 /// a named target whatever its condition (Field_SearchCell tests it
 /// afterwards). Stepping on a cell runs a touch row before an exit row, so
 /// a touch row gives the colour, then an exit row, then a search row.
@@ -232,13 +232,13 @@ pub(super) fn meaning(field: &Field, names: &Names, words: Words, code: i32) -> 
     Ok(Some(Meaning { words, kind }))
 }
 
-/// The enum of `scene`'s warps in map_warps.h: under `MapId_<scene>'s
+/// The enum of `scene`'s warps in map_warps.h: under `SceneId_<scene>'s
 /// warps.`, or `warp destinations and warps.` where one enum holds both.
 fn warps_block<'t>(links: &'t str, scene: &str) -> Result<&'t str, String> {
     let heading = links
-        .find(&format!("/// MapId_{scene}'s warps."))
-        .or_else(|| links.find(&format!("/// MapId_{scene}'s warp destinations and warps.")))
-        .ok_or_else(|| format!("map_warps.h lists no warps of MapId_{scene}"))?;
+        .find(&format!("/// SceneId_{scene}'s warps."))
+        .or_else(|| links.find(&format!("/// SceneId_{scene}'s warp destinations and warps.")))
+        .ok_or_else(|| format!("map_warps.h lists no warps of SceneId_{scene}"))?;
     let block = &links[heading..];
     Ok(&block[..block.find("};").unwrap_or(block.len())])
 }
@@ -475,7 +475,7 @@ pub(super) fn labelled(picture: &Image, marks: &[Mark], legend: &[(u32, String)]
 }
 
 /// What the rows of the Goma Cave room of two pillars and a stump
-/// (MapId_GomaCavePillar) do: its exits lead to the rooms scene_ids.h
+/// (SceneId_GomaCavePillar) do: its exits lead to the rooms scene_ids.h
 /// names from their renders.
 pub(super) const GOMA_CAVE_PILLAR_WORDS: Words = &[
     ("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST", "Way out to the room of the stream", None),
@@ -512,7 +512,7 @@ pub(super) const FUCHIN_FIRST_ROOM_WORDS: Words = &[
 ];
 
 /// What the rows of Mercury Lighthouse's ground floor
-/// (MapId_MercuryLighthouseEntrance) do around the pool, from their
+/// (SceneId_MercuryLighthouseEntrance) do around the pool, from their
 /// functions' comments; the exits' rooms are named in map_warps.h.
 pub(super) const MERCURY_LIGHTHOUSE_ENTRANCE_WORDS: Words = &[
     ("MercuryLighthouseEntrance_HopAcrossPool", "Hop two cells (walk into it)", None),
@@ -527,14 +527,14 @@ pub(super) const MERCURY_LIGHTHOUSE_ENTRANCE_WORDS: Words = &[
 ];
 
 /// What the rows of the shifting floor stage of Colosseum Final 2
-/// (MapId_ColosseumSatrageMatch) do where its lifts' task copies cells.
+/// (SceneId_ColosseumSatrageMatch) do where its lifts' task copies cells.
 pub(super) const SATRAGE_WORDS: Words = &[];
 
-/// Vale by day, on the day the story begins (MapId_Vale, entered by the
+/// Vale by day, on the day the story begins (SceneId_Vale, entered by the
 /// Sanctum's door).
 const VALE: (u16, u16) = (4, 1);
-/// The scenes Vale's doors lead into: MapId_CottageRoomsA and
-/// MapId_CottageRoomsB.
+/// The scenes Vale's doors lead into: SceneId_CottageRoomsA and
+/// SceneId_CottageRoomsB.
 const COTTAGE_ROOMS_A: u16 = 7;
 const COTTAGE_ROOMS_B: u16 = 8;
 
@@ -643,7 +643,7 @@ mod tests {
 
     #[test]
     fn warps_are_found_under_either_heading() {
-        let links = "/// MapId_Title's warp destinations and warps.\nenum {\n  TITLE_FROM_VALE_PLAZA = 1,\n};\n\n/// MapId_GomaCavePillar's warp destinations.\nenum {\n  GOMA_CAVE_PILLAR_FROM_GOMA_CAVE_STREAM_WEST = 1,\n};\n\n/// MapId_GomaCavePillar's warps.\nenum {\n  GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1,\n};\n";
+        let links = "/// SceneId_Title's warp destinations and warps.\nenum {\n  TITLE_FROM_VALE_PLAZA = 1,\n};\n\n/// SceneId_GomaCavePillar's warp destinations.\nenum {\n  GOMA_CAVE_PILLAR_FROM_GOMA_CAVE_STREAM_WEST = 1,\n};\n\n/// SceneId_GomaCavePillar's warps.\nenum {\n  GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1,\n};\n";
         assert!(warps_block(links, "GomaCavePillar").unwrap().contains("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_STREAM_WEST = 1"));
         assert!(!warps_block(links, "GomaCavePillar").unwrap().contains("_FROM_"));
         assert!(warps_block(links, "Title").unwrap().contains("TITLE_FROM_VALE_PLAZA"));

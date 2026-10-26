@@ -24,7 +24,7 @@ use std::sync::OnceLock;
 
 /// Words a name may use that are the program's, not the game's: what code
 /// does (`Get`, `Update`), how it is organized (`Table`, `Entry`, `Handler`)
-/// and the report's own kind prefixes (`MapId`, `LOCALID`, `FLAG`). Ordinary
+/// and the report's own kind prefixes (`SceneId`, `LOCALID`, `FLAG`). Ordinary
 /// English the text already uses never needs a place here; anything else
 /// stays flagged, so the list errs short.
 pub const VOCABULARY: &[&str] = &[
@@ -297,7 +297,7 @@ impl GameText {
     }
 }
 
-/// A name's words as it writes them: `MapId_SolSanctumLunaSolRooms` is
+/// A name's words as it writes them: `SceneId_SolSanctumLunaSolRooms` is
 /// Map, Id, Sol, Sanctum, Luna, Sol, Rooms; `LOCALID_TREE_MAN` is LOCALID, TREE,
 /// MAN. Digits, hex letters after them and single letters (`g`, `s`)
 /// are left out.
@@ -552,10 +552,9 @@ impl Thing {
 
 /// The family prefixes: the kind of game thing each names, and the word the
 /// tags of its own enums end in (`enum XianLocalId` holds object events, by
-/// its `Id`). ⚓️, not yet renamed, still writes `SceneId_` and `ACTOR_`.
+/// its `Id`). ⚓️, not yet renamed, still writes `ACTOR_`.
 pub const FAMILIES: &[(&str, &str, &str)] = &[
-    ("MapId_", "map", "Map"),
-    ("SceneId_", "map", "Scene"),
+    ("SceneId_", "scene", "Scene"),
     ("LOCALID_", "object event", "LocalId"),
     ("ACTOR_", "object event", "Actor"),
     ("FLAG_", "flag", "Flag"),
@@ -627,7 +626,7 @@ impl<'a> Definition<'a> {
 /// the source's numeric macros read so far.
 pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'static str> {
     static TEMP: OnceLock<Regex> = OnceLock::new();
-    let temp = TEMP.get_or_init(|| Regex::new(r"^FLAG_(?:MAP|MAPSEC)_TEMP_[0-9A-Fa-f]+$").unwrap());
+    let temp = TEMP.get_or_init(|| Regex::new(r"^FLAG_(?:SCENE|MAPSEC)_TEMP_[0-9A-Fa-f]+$").unwrap());
     let Definition { name, file, origin, .. } = definition;
     if super::humanity::is_placeholder(name) || temp.is_match(name) {
         return None;
@@ -804,9 +803,9 @@ pub struct Analysis {
     pub door_words: Vec<(String, Vec<usize>)>,
 }
 
-/// The name as prose writes it: `MapId_Bilibin` is `Bilibin`.
+/// The name as prose writes it: `SceneId_Bilibin` is `Bilibin`.
 fn spoken(name: &str) -> &str {
-    name.strip_prefix("MapId_").or_else(|| name.strip_prefix("SceneId_")).unwrap_or(name)
+    name.strip_prefix("SceneId_").unwrap_or(name)
 }
 
 /// `word` stands alone in `text`, between characters no name holds.
@@ -831,7 +830,7 @@ fn link_words(name: &str) -> Vec<String> {
 
 /// The maps a warp's words name, longest first at each place, and the
 /// words left over, lowercase, in order. Words are compared run together, so
-/// `MCCOY_PALACE` is `MapId_McCoyPalace`.
+/// `MCCOY_PALACE` is `SceneId_McCoyPalace`.
 fn resolve(words: &[String], scenes: &HashMap<String, usize>, longest: usize) -> Vec<Result<usize, String>> {
     let mut out = Vec::new();
     let mut at = 0;
@@ -868,7 +867,7 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
     let mut scenes: HashMap<String, usize> = HashMap::new();
     let mut longest = 0;
     let mut rooms: HashMap<usize, HashSet<String>> = HashMap::new();
-    for (at, row) in rows.iter().enumerate().filter(|(_, row)| row.thing.kind == "map") {
+    for (at, row) in rows.iter().enumerate().filter(|(_, row)| row.thing.kind == "scene") {
         let words = link_words(&row.thing.name);
         if words.len() > 2 {
             scenes.entry(words[2..].concat()).or_insert(at);
@@ -889,7 +888,7 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
                     rooms.entry(*scene).or_default().insert(stem(word));
                 }
             }
-        } else if row.thing.kind != "map" {
+        } else if row.thing.kind != "scene" {
             events.extend(link_words(&row.thing.name).iter().skip(1).map(|word| stem(word)));
         }
     }
@@ -1031,11 +1030,11 @@ mod tests {
 
     #[test]
     fn words_of_names() {
-        assert_eq!(pieces("MapId_SolSanctumLunaSolRooms"), ["Map", "Id", "Sol", "Sanctum", "Luna", "Sol", "Rooms"]);
+        assert_eq!(pieces("SceneId_SolSanctumLunaSolRooms"), ["Scene", "Id", "Sol", "Sanctum", "Luna", "Sol", "Rooms"]);
         assert_eq!(pieces("gBilibinEvents1"), ["Bilibin", "Events"]);
         assert_eq!(pieces("LOCALID_TREE_MAN_2"), ["LOCALID", "TREE", "MAN"]);
         assert_eq!(pieces("HTMLParser"), ["HTML", "Parser"]);
-        assert_eq!(pieces("MapId_Ov6aaRoom1"), ["Map", "Id", "Ov", "Room"]);
+        assert_eq!(pieces("SceneId_Ov6aaRoom1"), ["Scene", "Id", "Ov", "Room"]);
         let text = GameText::parse(PO, Some(2));
         assert_eq!(unused_words("Bilibin_UpdateWarehouseApproach", &text), ["warehouse", "approach"]);
         assert_eq!(unused_words("LOCALID_MCCOY_TREES", &text), Vec::<String>::new());
@@ -1046,7 +1045,7 @@ mod tests {
         Thing {
             name: name.to_string(),
             kind: "object event",
-            file: "games/tbs/src/map/bilibin.c".to_string(),
+            file: "games/tbs/src/scene/bilibin.c".to_string(),
             line: 1,
             own: own.to_string(),
             context: context.to_string(),
@@ -1084,7 +1083,7 @@ mod tests {
             thing("LOCALID_M", "/// ★ Named from the game: \"Kolima Forest\" (MsgSignMcCoy)", ""),
         ];
         let places = [(
-            "games/tbs/src/map/bilibin.c".to_string(),
+            "games/tbs/src/scene/bilibin.c".to_string(),
             "/// @file\n/// LOCALID_K stands where its area name says.\n///\n/// LOCALID_J says `Treasury`.".to_string(),
         )];
         let analysis = analyze(&things, &places, &text, &HashMap::new());
@@ -1114,13 +1113,12 @@ mod tests {
         assert_eq!(analysis.words[0], ("warehouse".to_string(), vec![0, 1]));
         assert!(analysis.rows[1].evidence.is_none(), "a mechanism's name needs no evidence");
         let kind = |name, file, origin| kind(Definition::new(name, file, origin), &HashMap::new());
-        assert_eq!(kind("MapId_Vale", "a.h", Origin::Global), Some("map"));
-        assert_eq!(kind("SceneId_Vale", "a.h", Origin::Global), Some("map"), "⚓️ keeps its scene ids until it is renamed");
-        assert_eq!(kind("FLAG_MAP_TEMP_01", "a.h", Origin::Macro), None);
+        assert_eq!(kind("SceneId_Vale", "a.h", Origin::Global), Some("scene"));
+        assert_eq!(kind("FLAG_SCENE_TEMP_01", "a.h", Origin::Macro), None);
         assert_eq!(kind("VALE_FROM_WORLD_MAP", "games/tbs/include/map_warps.h", Origin::Enumerator), Some("warp"));
         let shared = Definition { tag: Some("DefaultWarpDest"), ..Definition::new("WARP_DEST_DEFAULT", "games/tbs/include/map_warps.h", Origin::Enumerator) };
         assert_eq!(super::kind(shared, &HashMap::new()), None, "what the links share");
-        assert_eq!(kind("Vale_Init", "games/tbs/src/map/vale.c", Origin::Function), Some("function"));
+        assert_eq!(kind("Vale_Init", "games/tbs/src/scene/vale.c", Origin::Function), Some("function"));
         assert_eq!(kind("Battle_Init", "games/tbs/src/battle/x.c", Origin::Function), None);
         assert_eq!(kind("LOCALID_unk_14", "a.h", Origin::Enumerator), None);
     }
@@ -1229,7 +1227,7 @@ mod tests {
         let text = GameText::parse(po, Some(1));
         let scene = |name: &str, own: &str| Thing {
             name: name.to_string(),
-            kind: "map",
+            kind: "scene",
             own: own.to_string(),
             ..Thing::default()
         };
@@ -1240,9 +1238,9 @@ mod tests {
             ..Thing::default()
         };
         let things = [
-            scene("MapId_Tolbi", "/// ★ Named from its area name: Tolbi"),
-            scene("MapId_TolbiShip", "/// ★ Named from what the player sees: Tolbi's ship and its well-kept deck (its render)"),
-            scene("MapId_TolbiShipMast", ""),
+            scene("SceneId_Tolbi", "/// ★ Named from its area name: Tolbi"),
+            scene("SceneId_TolbiShip", "/// ★ Named from what the player sees: Tolbi's ship and its well-kept deck (its render)"),
+            scene("SceneId_TolbiShipMast", ""),
             Thing { kind: "flag", ..scene("FLAG_SAW_LIGHTHOUSE", "/// ★ Named from the game: \"Inn Full\" (MsgSignInn)") },
             link("TOLBI_TO_INN", "///< ★ Named from the game: \"Inn Full\" (MsgSignInn)"),
             link("TOLBI_FROM_INN", ""),
@@ -1254,7 +1252,7 @@ mod tests {
             link("TOLBI_SHIP_CREW_ATTACKED", ""),
             link("WARP_DEST_DEFAULT", ""),
             link("TOLBI_FROM_INN_BROKEN", "///< ★ Named from the game: \"Inn Empty\" (MsgSignInn)"),
-            scene("MapId_McCoyPalace", "/// ★ Named from its area name: Tolbi"),
+            scene("SceneId_McCoyPalace", "/// ★ Named from its area name: Tolbi"),
             link("TOLBI_FROM_MCCOY_PALACE", ""),
         ];
         let analysis = analyze(&things, &[], &text, &HashMap::new());
@@ -1262,8 +1260,8 @@ mod tests {
         let doors: Vec<String> = analysis.rows.iter().map(|row| row.door_words.join(",")).collect();
         assert_eq!(evidence[4], "verified quote");
         assert_eq!(evidence[5], "rooms", "INN, from the ★-verified TOLBI_TO_INN");
-        assert_eq!(evidence[6], "rooms", "DECK, from MapId_TolbiShip's ★ line");
-        assert_eq!((evidence[7].as_str(), doors[7].as_str()), ("none", "MapId_TolbiShipMast"), "an unverified scene");
+        assert_eq!(evidence[6], "rooms", "DECK, from SceneId_TolbiShip's ★ line");
+        assert_eq!((evidence[7].as_str(), doors[7].as_str()), ("none", "SceneId_TolbiShipMast"), "an unverified scene");
         assert_eq!(doors[8], "house,upper");
         assert_eq!(evidence[9], "rooms", "after AFTER, the game's words");
         assert_eq!(evidence[10], "rooms", "after AFTER, a ★-verified name's words");

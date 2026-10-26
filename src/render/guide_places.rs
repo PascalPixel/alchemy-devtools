@@ -297,8 +297,8 @@ impl<'a> Guide<'a> {
     /// screen beside the sprites and the sprite palettes, Garet, the pillar
     /// and the hand boxed, as `opening-move.gif`.
     pub fn vale_opening(&mut self) -> Result<(), String> {
-        let begin = self.overlay_sym("Vale_GetObjectEventTemplates", "Map_StartCutscenePsynergy")?;
-        let end = self.overlay_sym("Vale_GetObjectEventTemplates", "Map_EndCutscenePsynergy")?;
+        let begin = self.overlay_sym("Vale_GetObjectEventTemplates", "Scene_StartEventPsynergy")?;
+        let end = self.overlay_sym("Vale_GetObjectEventTemplates", "Scene_EndEventPsynergy")?;
         let mut field = self.arrive((4, 16), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let on = std::rc::Rc::new(std::cell::Cell::new(false));
         let set = on.clone();
@@ -327,8 +327,8 @@ impl<'a> Guide<'a> {
     /// sprites and the sprite palettes while his display lasts, as
     /// `psynergy-display.gif`.
     pub fn vale_gate_display(&mut self) -> Result<(), String> {
-        let begin = self.overlay_sym("ValePlaza_GetObjectEventTemplates", "Map_StartCutscenePsynergy")?;
-        let end = self.overlay_sym("ValePlaza_GetObjectEventTemplates", "Map_EndCutscenePsynergy")?;
+        let begin = self.overlay_sym("ValePlaza_GetObjectEventTemplates", "Scene_StartEventPsynergy")?;
+        let end = self.overlay_sym("ValePlaza_GetObjectEventTemplates", "Scene_EndEventPsynergy")?;
         let mut entered = self.enter_story((5, 0), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let field = &mut entered.field;
         // LOCALID_STRONGMAN_SHOWING_PSYNERGY (LOCALID_FIRST_PLACED + 9).

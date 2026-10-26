@@ -21,7 +21,7 @@ const KEY_DOWN: u32 = 0x80;
 
 /// Vale's part with the Vale Sanctum, entered by day.
 const VALE: (u16, u16) = (4, 1);
-/// MapId_MenuTest, the debug menu test room (scenes.s).
+/// SceneId_MenuTest, the debug menu test room (scenes.s).
 const MENU_TEST_ROOM: u16 = 200;
 
 /// struct SaveBlock (gSaveBlock): the coins, and the scene and entrance the
@@ -266,7 +266,7 @@ impl<'a> Guide<'a> {
     pub fn scene_script(&mut self) -> Result<(), String> {
         const EVENT: &str = "EventScript_ReactToAnotherTremor";
         const WOMAN: u16 = 17;
-        let source = std::fs::read_to_string(crate::compile::root().join("games/tbs/src/map/vale.c")).map_err(|e| format!("vale.c: {e}"))?;
+        let source = std::fs::read_to_string(crate::compile::root().join("games/tbs/src/scene/vale.c")).map_err(|e| format!("vale.c: {e}"))?;
         let head = source.lines().position(|l| l.contains(&format!("void {EVENT}(void)"))).ok_or("vale.c has no such event")?;
         // One statement a line, a statement clang-format wrapped joined again.
         let lines: Vec<&str> = source.lines().skip(head + 1).take_while(|l| !l.starts_with('}')).map(str::trim).filter(|l| !l.is_empty() && !l.starts_with("//")).collect();
@@ -371,7 +371,7 @@ impl<'a> Guide<'a> {
     }
 
     /// The scene and place flags across two entrances, as
-    /// `temporary-flags.png`: in Vale every one of FLAG_MAP_TEMP_00 to
+    /// `temporary-flags.png`: in Vale every one of FLAG_SCENE_TEMP_00 to
     /// FLAG_MAPSEC_TEMP_FF is set by hand; the party is sent to the Sanctum,
     /// a scene of the same place, then to the world map, another place, and
     /// back into Vale (FieldScript_SetDestination's way); each time the 512 flags are drawn as
@@ -422,12 +422,12 @@ impl<'a> Guide<'a> {
             }
         }
         let y = (HEIGHT + 34 + grid + 26) as i32;
-        text(&mut image, 8, y, "FLAG_MAP_TEMP_00 TO _FF (BLUE) AND FLAG_MAPSEC_TEMP_00 TO _FF (ORANGE),", DIM, None, 2);
+        text(&mut image, 8, y, "FLAG_SCENE_TEMP_00 TO _FF (BLUE) AND FLAG_MAPSEC_TEMP_00 TO _FF (ORANGE),", DIM, None, 2);
         text(&mut image, 8, y + 16, "A SQUARE A FLAG, LIT WHERE SET, EACH AS THE PARTY HAS CONTROL AGAIN", DIM, None, 2);
         self.guide_png("temporary-flags.png", &image, "the map and map-section flags as the party enters a map of the same section and then another section")
     }
 
-    /// Flags FLAG_MAP_TEMP_00 to FLAG_MAPSEC_TEMP_FF, whether each is set.
+    /// Flags FLAG_SCENE_TEMP_00 to FLAG_MAPSEC_TEMP_FF, whether each is set.
     fn temp_flags(&self, field: &Field, flags: u32) -> Vec<bool> {
         (0x200..0x400u32).map(|f| field.read8(flags + f / 8) & (1 << (f % 8)) != 0).collect()
     }
@@ -477,7 +477,7 @@ impl<'a> Guide<'a> {
         // address when every halfword that differs, BL offsets aside, is
         // in an aligned word that is an address in RAM or the ROM in both.
         let is_address = |w: u32| matches!(w >> 24, 0x02 | 0x03 | 0x08);
-        let headers: String = std::fs::read_dir(crate::compile::root().join("games/tbs/src/map/common")).map_err(|e| format!("common/: {e}"))?.flatten().filter_map(|e| std::fs::read_to_string(e.path()).ok()).collect();
+        let headers: String = std::fs::read_dir(crate::compile::root().join("games/tbs/src/scene/common")).map_err(|e| format!("common/: {e}"))?.flatten().filter_map(|e| std::fs::read_to_string(e.path()).ok()).collect();
         let copies: Vec<String> = overlays[0].1.iter().filter(|(n, (_, b))| headers.contains(n.as_str()) && !n.starts_with("_call_via") && overlays[1].1.get(*n).is_some_and(|(_, c)| c.len() == b.len())).map(|(n, _)| n.clone()).collect();
         let mut identical = 0;
         let mut addresses_only = 0;
@@ -695,7 +695,7 @@ impl<'a> Guide<'a> {
         let kind_of = |name: &str| -> usize {
             if name.starts_with("Resource_Overlay") {
                 0
-            } else if name.starts_with("Field_Layout") {
+            } else if name.starts_with("Field_Map") {
                 1
             } else if name.starts_with("Tileset_") {
                 2
@@ -992,11 +992,11 @@ impl<'a> Guide<'a> {
     /// in its colour and the part of it on screen this frame
     /// (MapGridLayerScroll's x and y) drawn as a box, wrapped as the layer
     /// wraps. The header's values are read from the ROM through the scene's
-    /// row of gLayouts and the directory.
+    /// row of gMaps and the directory.
     pub fn map_header(&mut self) -> Result<(), String> {
         const SUHALLA_DESERT_NORTH: u16 = 164;
-        let scenes = self.sym("gMapHeaders")?;
-        let layered = self.sym("gLayouts")?;
+        let scenes = self.sym("gSceneHeaders")?;
+        let layered = self.sym("gMaps")?;
         let directory = self.sym("Resource_DirectoryTable")?;
         let map_001 = 0x128u32;
         let rom = |a: u32| self.rom[(a - 0x0800_0000) as usize];
@@ -1455,7 +1455,7 @@ impl<'a> Guide<'a> {
         const TOUR: u16 = 3;
         const AZART: u16 = 8;
         const FINISH_X: i32 = 1304;
-        let tsv = std::fs::read_to_string(crate::compile::root().join("games/tbs/src/layout/colosso/opponent_path_a.tsv")).map_err(|e| format!("opponent_path_a.tsv: {e}"))?;
+        let tsv = std::fs::read_to_string(crate::compile::root().join("games/tbs/src/map/colosso/opponent_path_a.tsv")).map_err(|e| format!("opponent_path_a.tsv: {e}"))?;
         let path: Vec<(i32, i32)> = tsv.lines().skip(1).filter_map(|l| {
             let mut it = l.split('\t').map(|v| v.trim().parse::<i32>());
             Some((it.next()?.ok()?, it.next()?.ok()?))

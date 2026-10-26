@@ -18,18 +18,18 @@ const KEY_DOWN: u32 = 0x80;
 const KEY_R: u32 = 0x100;
 const KEY_L: u32 = 0x200;
 
-/// Vale's part with the Sanctum, by day (MapId_Vale, entrance 1), and
+/// Vale's part with the Sanctum, by day (SceneId_Vale, entrance 1), and
 /// Garet's sister there.
 const VALE: (u16, u16) = (4, 1);
 const GARETS_SISTER: u16 = 18;
-/// Xian (MapId_Xian), entered from the world map: all four members have
+/// Xian (SceneId_Xian), entered from the world map: all four members have
 /// joined by then, with the Djinn, Psynergy and equipment of their debug
 /// preset (party.rs).
 const XIAN: (u16, u16) = (72, 1);
-/// Bilibin from the world map's road (MapId_Bilibin, entrance 1): a new
+/// Bilibin from the world map's road (SceneId_Bilibin, entrance 1): a new
 /// map section, so its area name shows on arrival.
 const BILIBIN: (u16, u16) = (30, 1);
-/// The Vale Sanctum from Vale (MapId_Sanctum, entrance 1).
+/// The Vale Sanctum from Vale (SceneId_Sanctum, entrance 1).
 const VALE_SANCTUM: (u16, u16) = (9, 1);
 /// Facing north, 1/65536 turns: across a counter.
 const NORTH: u32 = 0xc000;

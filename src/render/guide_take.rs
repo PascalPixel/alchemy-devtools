@@ -198,7 +198,7 @@ fn hline(image: &mut Image, y: i32, colour: u32) {
     outline(image, 0, y, image.width as i32, 2, colour);
 }
 
-/// The Tret Tree branches overlay: MapId_TretTreeBranch.
+/// The Tret Tree branches overlay: SceneId_TretTreeBranch.
 const TRET_TREE_BRANCH: u16 = 46;
 
 impl<'a> Guide<'a> {
@@ -241,13 +241,13 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Kolima Forest's last map, where Tret stands: MapId_KolimaForestTree,
+/// Kolima Forest's last map, where Tret stands: SceneId_KolimaForestTree,
 /// Tret's stand-in (LOCALID_TRET_STAND_IN) and Hermes' Water (ITEM_HERMES_WATER).
 const KOLIMA_FOREST_TREE: u16 = 44;
 const TRET_STAND_IN: u16 = 12;
 const HERMES_WATER: u16 = 0xb8;
 /// struct Unit's inventory, 15 halfwords; struct FieldWork's item
-/// request and the inventory slot it passes (map_header.h).
+/// request and the inventory slot it passes (scene_header.h).
 const UNIT_INVENTORY: u32 = 0xd8;
 const WORK_ITEM: u32 = 0x180;
 const WORK_ITEM_SLOT: u32 = 0x19a;
@@ -329,9 +329,9 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Altmiller Cave's way in: MapId_AltmillerCaveEntrance at its first entrance, where entering from the
+/// Altmiller Cave's way in: SceneId_AltmillerCaveEntrance at its first entrance, where entering from the
 /// world map, and the touch codes 60 to 65 that set its darkness levels 0
-/// to 5 (AltmillerCave_DarkenToLevel0 to 5), the level kept in gMapLocalState
+/// to 5 (AltmillerCave_DarkenToLevel0 to 5), the level kept in gSceneLocalState
 /// byte 4. AltmillerCave_ApplyFadeBlend gives BG1 no weight and every other
 /// layer these sixteenths at each level.
 const ALTMILLER_CAVE_ENTRANCE: (u16, u16) = (146, 1);
@@ -354,7 +354,7 @@ pub(super) fn settle_view(field: &mut Field) -> Result<(), String> {
     Err("the camera never settled".to_string())
 }
 
-/// struct FieldWork's Psynergy request (map_header.h).
+/// struct FieldWork's Psynergy request (scene_header.h).
 const WORK_PSYNERGY: u32 = 0x17e;
 
 /// Casts `ability` as Isaac from where the leader stands, as the field menu
@@ -371,7 +371,7 @@ impl<'a> Guide<'a> {
     /// with the level and the weight the layers under BG1 keep
     /// outside the light, as `altmiller-cave-darkness.png`.
     pub fn altmiller_cave_darkness(&mut self) -> Result<(), String> {
-        let state = self.sym("gMapLocalState")?;
+        let state = self.sym("gSceneLocalState")?;
         let apply = self.overlay_sym("AltmillerCave_GetWarpDests", "AltmillerCave_ApplyFadeBlend")?;
         let mut entered = self.enter_with(ALTMILLER_CAVE_ENTRANCE, &[])?;
         let field = &mut entered.field;
@@ -410,7 +410,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Bilibin Cave's ice room: MapId_BilibinCaveIce, its fourth torch
+/// Bilibin Cave's ice room: SceneId_BilibinCaveIce, its fourth torch
 /// (LOCALID_FOURTH_TORCH), the cell a torch melts the third puddle from, and
 /// the cells north and south of the puddle that BilibinCave_UpdateThirdPuddleFromTorches
 /// rewrites (MapGrid_CopyCellAttributes to (36, 22) and (36, 24)).
@@ -554,7 +554,7 @@ pub(super) fn crop(image: &Image, x: i32, y: i32, w: usize, h: usize) -> Image {
     out
 }
 
-/// Fuchin Falls Cave's first room: MapId_FuchinFallsCaveEntrance, the
+/// Fuchin Falls Cave's first room: SceneId_FuchinFallsCaveEntrance, the
 /// flags of its three logs' stops (FLAG_MAPSEC_TEMP_01 to 03), and the cells
 /// of their tracks that FuchinFallsCave_RebuildEntranceLogs rewrites
 /// (columns 8 to 22, rows 29 to 33).
@@ -655,7 +655,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Lunpa Fortress's upper floor (MapId_LunpaFortressUpperFloor), entered
+/// Lunpa Fortress's upper floor (SceneId_LunpaFortressUpperFloor), entered
 /// into its west passage (LUNPA_FORTRESS_UPPER_FLOOR_WEST_PASSAGE_FROM_NORTH_PASSAGE),
 /// and its patrolling pair's rounds (gFirstPatrolRoute and
 /// gSecondPatrolRoute): across from 88 to 192 pixels, at 192 and 288 down.
@@ -729,14 +729,14 @@ impl<'a> Guide<'a> {
 
 }
 
-/// Mercury Lighthouse's ground floor (MapId_MercuryLighthouseEntrance) and
+/// Mercury Lighthouse's ground floor (SceneId_MercuryLighthouseEntrance) and
 /// the pool's cells that Ply rewrites: columns 6 to 18, rows 32 to 38.
 const MERCURY_LIGHTHOUSE_ENTRANCE: u16 = 53;
 const MERCURY_POOL: (i32, i32, i32, i32) = (6, 32, 18, 38);
 /// MERCURY_LIGHTHOUSE_ENTRANCE_GODDESS_FROM_SIX_STATUES (scene_links.h).
 const MERCURY_GODDESS_FROM_SIX_STATUES: u16 = 3;
 
-/// Tolbi Spring (MapId_TolbiSpring) and the search code of its spring
+/// Tolbi Spring (SceneId_TolbiSpring) and the search code of its spring
 /// (TOLBI_SPRING_SPRING); the toss's centre (TOLBI_SPRING_CENTER_X and _Z),
 /// the squared distances that bound its five rings and what a coin wins in
 /// each (gTolbiSpring_CoinPrizes); struct SpringTossMotion's launch frame
@@ -840,7 +840,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Kolima Forest's way in (MapId_KolimaForestEntrance) from the world map
+/// Kolima Forest's way in (SceneId_KolimaForestEntrance) from the world map
 /// (KOLIMA_FOREST_ENTRANCE_FROM_WORLD_MAP), where the curse falls the first
 /// time; its four Psynergy fields (LOCALID_LEADER_PSYNERGY_FIELD to
 /// LOCALID_GARET_PSYNERGY_FIELD), where KolimaForestEntrance_WitnessForestCurse
@@ -927,7 +927,7 @@ impl<'a> Guide<'a> {
         self.guide_png("kolima-forest-entrance-fields.png", &out, "the Psynergy fields on two frames running, and where a sparkle bursts on them")
     }
 
-    /// The whole map of Tret Tree's inside (MapId_TreeRooms), all
+    /// The whole map of Tret Tree's inside (SceneId_TreeRooms), all
     /// six rooms where the map lays them out: each cocoon's touch cells
     /// (codes 21 to 29, 31, 32 and 50 to 59) outlined and labelled with the
     /// code, and the entrance of the same number, where breaking through it
@@ -961,17 +961,17 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Colosseum Final 1 (MapId_ColosseumAzartMatch) at the race
+/// Colosseum Final 1 (SceneId_ColosseumAzartMatch) at the race
 /// (COLOSSEUM_AZART_MATCH_RACE_FROM_LEND_A_HAND), and Azart (LOCALID_OPPONENT).
 const COLOSSEUM_AZART_RACE: (u16, u16) = (143, 1);
-/// Colosseum Final 3 (MapId_ColosseumNavampaMatch), the touch that steps
+/// Colosseum Final 3 (SceneId_ColosseumNavampaMatch), the touch that steps
 /// onto the Scales of Justice and its two pans.
 const COLOSSEUM_NAVAMPA_MATCH: u16 = 145;
 const STEP_ON_SCALES: u16 = 15;
 const SCALE_PAN_WEST: u16 = 10;
 const SCALE_PAN_EAST: u16 = 11;
 const AZART: u16 = 8;
-/// Colosseum Final 2 (MapId_ColosseumSatrageMatch) at the tour
+/// Colosseum Final 2 (SceneId_ColosseumSatrageMatch) at the tour
 /// (COLOSSEUM_SATRAGE_MATCH_FROM_COLOSSEUM_WEST), and where the leader is put,
 /// hidden, for the camera to centre on the lifts.
 const COLOSSEUM_SATRAGE_TOUR: (u16, u16) = (144, 3);
@@ -983,7 +983,7 @@ const HEAP_SLOT_WORLD_MAP_FRAME: u32 = 7;
 const GOMA_CAVE_ROOM: (u16, u16) = (27, 5);
 const MAP_CELL_WORDS: u32 = 0x0201_0000;
 /// struct FieldWork's twelve requests, by offset, in the order
-/// Map_Run tests them.
+/// SceneManager_Run tests them.
 const REQUESTS: [(u32, &str); 12] = [
     (0x170, "WARP"),
     (0x182, "RAISEDEVENT"),
@@ -1022,10 +1022,10 @@ const ITEM_SCREEN_WINDOWS: [(u32, &str); 10] = [
 const OAM_BASE: u32 = 0x0700_0000;
 const OBJ_VRAM_BASE: u32 = 0x0601_0000;
 const GARETS_SISTER_ACTOR: u16 = 18;
-/// The Lighthouse Aerie (MapId_VenusLighthouseAerie) after the second
+/// The Lighthouse Aerie (SceneId_VenusLighthouseAerie) after the second
 /// battle (VENUS_LIGHTHOUSE_AERIE_AFTER_SECOND_BATTLE).
 const VENUS_LIGHTHOUSE_AERIE: (u16, u16) = (187, 3);
-/// The Tunnel Ruins' balance room (MapId_TunnelRuinsLadyStatues), its two
+/// The Tunnel Ruins' balance room (SceneId_TunnelRuinsLadyStatues), its two
 /// entrances (TUNNEL_RUINS_LADY_STATUES_FROM_TUNNEL_RUINS_GREAT_STATUE_NORTH
 /// and TUNNEL_RUINS_LADY_STATUES_BALANCE_SOUTH), its west platform
 /// (LOCALID_BALANCE_WEST; the east one and the carved stones A to C follow),
@@ -1272,14 +1272,14 @@ impl<'a> Guide<'a> {
 
     /// Venus Lighthouse's beacon erupting, played from the aerie's entrance
     /// after the second battle with A pressed through the lines: from a
-    /// second before the beam stacks its five segments (FLAG_MAP_TEMP_36)
+    /// second before the beam stacks its five segments (FLAG_SCENE_TEMP_36)
     /// for eight seconds, the game alone with nothing drawn over it, as
     /// `venus-lighthouse-aerie-eruption.gif`;
     /// and the moment five and a half seconds in, the split open and the
     /// colours back, pulled apart into its layers, as
     /// `venus-lighthouse-aerie-layers-3d.gif`.
     pub fn venus_lighthouse_aerie_eruption(&mut self) -> Result<(), String> {
-        let stacked = self.flag("FLAG_MAP_TEMP_36")?;
+        let stacked = self.flag("FLAG_SCENE_TEMP_36")?;
         let set = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
         let mut field = Field::enter(self.rom, self.symbols, &super::field::Setup { scene: VENUS_LIGHTHOUSE_AERIE.0, entrance: VENUS_LIGHTHOUSE_AERIE.1, set, clear })?;
@@ -1787,7 +1787,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Tret Tree's inside (MapId_TreeRooms) and its cocoons' touch
+/// Tret Tree's inside (SceneId_TreeRooms) and its cocoons' touch
 /// codes, each the number of the entrance breaking through it lands on.
 const TREE_ROOMS: u16 = 45;
 const TRET_COCOONS: [u16; 21] = [21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59];

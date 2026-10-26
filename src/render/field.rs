@@ -4,7 +4,7 @@
 //! into gSaveBlock, so the main loop loads that scene instead of the title.
 //! The location-name notice (MapNamePopup_Show) returns at once unless
 //! show_notice is set. The
-//! scene is the player's once Map_Run's field loop takes its first
+//! scene is the player's once SceneManager_Run's field loop takes its first
 //! step (Field_ProcessStep).
 //!
 //! A map is stitched from one moment of the game: for each 240 by 160 view
@@ -24,7 +24,7 @@
 //! to from where he entered, in the room the camera shows (Field::reach).
 //! Then A (talk, search), a field Psynergy request (FieldWork.command) or
 //! walking onto the cell (touch) starts it, and the field loop's own
-//! dispatch (Map_TalkToObjectEvent, Map_RunCoordEventOrWarp, Field_SearchCell,
+//! dispatch (Scene_TalkToObjectEvent, Scene_RunCoordEventOrWarp, Field_SearchCell,
 //! Field_UsePsynergy) shows which event began; the event function the CPU
 //! then enters (Field::watch) shows whose row it was, since two rooms of a
 //! scene can give the same actor id or cell code to different events. Each
@@ -41,7 +41,7 @@ use crate::ld_map::Map;
 use std::collections::HashMap;
 
 /// struct SaveBlock (save_block.h), struct MapGridScrollWork (map_grid_scroll.h),
-/// struct FieldWork (map_header.h), struct MapEntries and the object
+/// struct FieldWork (scene_header.h), struct SceneEntries and the object
 /// slots' offsets.
 const GS_COINS: u32 = 0x10;
 const GS_SCENE: u32 = 0x1c0;
@@ -268,8 +268,8 @@ impl Symbols {
         Ok(Symbols {
             init: at("SaveBlock_InitializeDefaults")?,
             glow: at("WindowColor_Apply")?,
-            load_layered: at("MapGrid_LoadLayout")?,
-            apply_entrance: at("Map_ApplyWarpDest")?,
+            load_layered: at("MapGrid_LoadMap")?,
+            apply_entrance: at("Scene_ApplyWarpDest")?,
             notice: at("MapNamePopup_Show")?,
             step: at("Field_ProcessStep")?,
             update_layer: at("MapGrid_UpdateLayerScroll")?,
@@ -289,8 +289,8 @@ impl Symbols {
             restore: at("Party_RestoreHpPp")?,
             unit_get: at("Unit_Get")?,
             defeat: Vec::new(),
-            talk: at("Map_TalkToObjectEvent")?,
-            touch: at("Map_RunCoordEventOrWarp")?,
+            talk: at("Scene_TalkToObjectEvent")?,
+            touch: at("Scene_RunCoordEventOrWarp")?,
             search: at("Field_SearchCell")?,
             psynergy: at("Field_UsePsynergy")?,
             game_state: at("gSaveBlock")?,
@@ -390,7 +390,7 @@ pub(super) struct Track {
     dispatch_end: u32,
     /// How many times a layered map has started loading.
     loads: u32,
-    /// How many times Map_ApplyWarpDest has placed the party: once each
+    /// How many times Scene_ApplyWarpDest has placed the party: once each
     /// scene the field runs, the world map included.
     entries: u32,
     /// The first of the watched event functions (Field::watch) the CPU
@@ -544,7 +544,7 @@ impl<'rom> Field<'rom> {
         self.actor_object(id)
     }
 
-    /// Boots the ROM and runs until Map_ApplyWarpDest has placed the party.
+    /// Boots the ROM and runs until Scene_ApplyWarpDest has placed the party.
     pub fn enter(rom: &'rom [u8], s: &'rom Symbols, setup: &Setup) -> Result<Field<'rom>, String> {
         let t = Track {
             phase: Phase::Boot,
@@ -648,7 +648,7 @@ impl<'rom> Field<'rom> {
         self.actor(self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16)
     }
 
-    /// Enters again from `placed` (as Map_ApplyWarpDest placed the party)
+    /// Enters again from `placed` (as Scene_ApplyWarpDest placed the party)
     /// with the leader at `spot`, and runs until the player has control and
     /// the camera has settled on him, as an event's start does.
     pub fn stand(&mut self, placed: &Saved, spot: &Spot) -> Result<(), String> {
@@ -895,7 +895,7 @@ impl<'rom> Field<'rom> {
             self.t.entrances_return = 0;
             self.t.entrances_fn = 0;
         } else if self.t.apply_return != 0 && pc == self.t.apply_return {
-            // Map_ApplyWarpDest has placed the party; the scene's
+            // Scene_ApplyWarpDest has placed the party; the scene's
             // initialization, which reads the story flags, comes next. Scene
             // loading may have cleared some of them, so they are set again.
             self.t.apply_return = 0;
@@ -3168,7 +3168,7 @@ pub struct Spot {
 /// The moment an event is played from.
 #[derive(Clone, Copy)]
 pub enum Start<'a> {
-    /// As Map_ApplyWarpDest has placed the party: the leader is put at the
+    /// As Scene_ApplyWarpDest has placed the party: the leader is put at the
     /// spot before the scene's actors are made.
     Entered(&'a Saved),
     /// With the player in control (after another event): the leader is
