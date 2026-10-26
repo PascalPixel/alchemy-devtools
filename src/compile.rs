@@ -173,7 +173,7 @@ pub fn cflags(target: CompilerTarget) -> Vec<String> {
     if target == CompilerTarget::Tbs {
         flags.push("-mthumb-interwork".into());
     }
-    flags.extend(["-mcpu=arm7tdmi", "-nostdinc", "-fcall-used-r4"].map(String::from));
+    flags.extend(["-nostdinc", "-fcall-used-r4"].map(String::from));
     if target == CompilerTarget::Tla {
         flags.extend(["-mtune=arm9tdmi", "-mthumb-split-constants", "-mthumb-call-via-lr", "-mthumb-slow-loads"].map(String::from));
     }
