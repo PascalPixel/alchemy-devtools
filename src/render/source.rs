@@ -104,7 +104,7 @@ pub fn map_id(name: &str) -> Result<u16, String> {
 }
 
 /// The message key of the PO entry named `name` in text/en.po.
-fn message_number(catalog: &ags::assets::po::Catalog, name: &str) -> Result<usize, String> {
+fn message_number(catalog: &crate::po::Catalog, name: &str) -> Result<usize, String> {
     let entry = catalog
         .entries
         .iter()
@@ -143,7 +143,7 @@ pub fn area_name(map: u16, warp_dest: u16) -> Result<String, String> {
             break;
         }
     }
-    let catalog = ags::text::read_catalog(&tbs("text/en.po"))?;
+    let catalog = crate::po::read_catalog(&tbs("text/en.po"))?;
     let key = message_number(&catalog, "MsgDebugEntryName")? + index;
     catalog
         .entries

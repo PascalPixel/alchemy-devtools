@@ -1,6 +1,9 @@
+//! po: reads Alchemy's PO message catalogs (`games/<game>/text/*.po`) for the
+//! render tables. Alchemy's C tool `ags-text` encodes them for the build.
 
-use super::{err, AssetError};
 use std::collections::BTreeMap;
+use std::fs;
+use std::path::Path;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Entry {
@@ -17,10 +20,10 @@ pub struct Catalog {
     pub entries: Vec<Entry>,
 }
 
-fn unquote(text: &str) -> Result<String, AssetError> {
+fn unquote(text: &str) -> Result<String, String> {
     let bytes = text.trim().as_bytes();
     if bytes.len() < 2 || bytes[0] != b'"' || bytes[bytes.len() - 1] != b'"' {
-        return err("PO string is not quoted");
+        return Err("PO string is not quoted".into());
     }
     let mut output = String::new();
     let mut characters = text.trim()[1..text.trim().len() - 1].chars();
@@ -32,14 +35,14 @@ fn unquote(text: &str) -> Result<String, AssetError> {
         output.push(
             match characters
                 .next()
-                .ok_or_else(|| AssetError("PO escape is incomplete".into()))?
+                .ok_or_else(|| "PO escape is incomplete".to_string())?
             {
                 '\\' => '\\',
                 '"' => '"',
                 'n' => '\n',
                 'r' => '\r',
                 't' => '\t',
-                other => return err(format!("unsupported PO escape \\{other}")),
+                other => return Err(format!("unsupported PO escape \\{other}")),
             },
         );
     }
@@ -53,7 +56,7 @@ enum Active {
     Value,
 }
 
-pub fn read(text: &str) -> Result<Catalog, AssetError> {
+pub fn read(text: &str) -> Result<Catalog, String> {
     let mut catalog = Catalog::default();
     let mut comments = Vec::new();
     let mut flags = Vec::new();
@@ -67,7 +70,7 @@ pub fn read(text: &str) -> Result<Catalog, AssetError> {
                   context: &mut Option<String>,
                   id: &mut Option<String>,
                   value: &mut Option<String>|
-     -> Result<(), AssetError> {
+     -> Result<(), String> {
         let Some(id_value) = id.take() else {
             comments.clear();
             flags.clear();
@@ -77,7 +80,7 @@ pub fn read(text: &str) -> Result<Catalog, AssetError> {
         };
         let value_value = value
             .take()
-            .ok_or_else(|| AssetError("PO entry has no msgstr".into()))?;
+            .ok_or_else(|| "PO entry has no msgstr".to_string())?;
         if id_value.is_empty() && context.is_none() {
             for line in value_value.lines() {
                 if let Some((name, value)) = line.split_once(':') {
@@ -130,16 +133,22 @@ pub fn read(text: &str) -> Result<Catalog, AssetError> {
             active = Some(Active::Value);
         } else if trimmed.starts_with('"') {
             let continuation = unquote(trimmed)?;
-            match active.ok_or_else(|| AssetError("orphan PO continuation".into()))? {
+            match active.ok_or_else(|| "orphan PO continuation".to_string())? {
                 Active::Context => context.as_mut(),
                 Active::Id => id.as_mut(),
                 Active::Value => value.as_mut(),
             }
-            .ok_or_else(|| AssetError("PO continuation has no field".into()))?
+            .ok_or_else(|| "PO continuation has no field".to_string())?
             .push_str(&continuation);
         } else {
-            return err(format!("unsupported PO line: {trimmed}"));
+            return Err(format!("unsupported PO line: {trimmed}"));
         }
     }
     Ok(catalog)
+}
+
+/// Reads the catalog at `path`, naming the file in any error.
+pub fn read_catalog(path: &Path) -> Result<Catalog, String> {
+    let text = fs::read_to_string(path).map_err(|error| format!("{}: {error}", path.display()))?;
+    read(&text).map_err(|error| format!("{}: {error}", path.display()))
 }

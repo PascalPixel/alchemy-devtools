@@ -397,11 +397,11 @@ pub(crate) fn reference_overlay(rom: &[u8], main_map: &Map, id: &str) -> Result<
         .min()
         .unwrap_or(rom.len());
     let decoded = match rom[start] {
-        0 => ags::assets::lz::decode_general(rom, start, end, 0x100000),
-        1 => ags::assets::lz::decode_palette(rom, start + 1, end, 0x100000),
+        0 => crate::lz::decode_general(rom, start, end, 0x100000),
+        1 => crate::lz::decode_palette(rom, start + 1, end, 0x100000),
         kind => return Err(format!("overlay stream has unsupported kind {kind}")),
     };
-    let (mut decoded, _) = decoded.map_err(|error| error.0)?;
+    let (mut decoded, _) = decoded?;
     restore_thumb_calls(&mut decoded);
     Ok(decoded)
 }
@@ -561,7 +561,10 @@ mod tests {
             }],
         };
         let payload = halves(&[0x2001, 0x4770, 0x2002, 0x4770]);
-        let packed = ags::lz::compress_general(&payload, &ags::resource::PACKER).unwrap();
+        // The payload packed once as a general and as a palette stream by the encoders
+        // that alchemy-devtools once carried, kept as bytes so this test needs no encoder.
+        let packed = [0x00, 0x03, 0x82, 0x84, 0x7b, 0x54, 0x40, 0x87, 0x0f, 0x00];
+        let palette = [0x01, 0x06, 0x01, 0x20, 0x70, 0x47, 0x02, 0x02, 0x04, 0x00, 0x00];
         let mut rom = vec![0; 0x100];
         let directory = [
             ROM,
@@ -583,7 +586,6 @@ mod tests {
             reference_overlay(&rom, &map, "resource_005").unwrap(),
             payload
         );
-        let palette = ags::lz::compress_tagged_palette(&payload, &ags::resource::PACKER).unwrap();
         rom[0x80..0x80 + palette.len()].copy_from_slice(&palette);
         assert_eq!(
             reference_overlay(&rom, &map, "resource_004").unwrap(),

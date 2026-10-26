@@ -182,6 +182,6 @@ The tables are short and say why each entry is there; a rule that would need a l
 
 ## Source
 
-`src/` holds the reconstruction commands. `ags/` holds the asset readers and the earlier Rust encoders used for inspection and comparisons with Alchemy's C encoders. These are outside Alchemy's ROM build.
+`src/` holds the reconstruction commands. It also holds the two asset readers the commands need: `src/lz.rs` unpacks the ROM's packed resource streams and `src/po.rs` reads Alchemy's PO catalogs. Alchemy's own C tools in `tools/` encode its assets; nothing here takes part in its ROM build.
 
 This repository starts with the tooling from Alchemy revision `2c2a8be6b258221ab067e3c7e22c29ff882ef8bc`. The permuter reimplements behavior from [Simon Lindholm's decomp-permuter](https://github.com/simonlindholm/decomp-permuter).

@@ -336,7 +336,7 @@ pub struct Game {
     root: PathBuf,
     elf: crate::elf::Elf,
     headers: Headers,
-    catalog: ags::assets::po::Catalog,
+    catalog: crate::po::Catalog,
 }
 
 impl Game {
@@ -347,7 +347,7 @@ impl Game {
             root: root.to_path_buf(),
             elf: crate::elf::Elf::parse(&data)?,
             headers: Headers::read(root)?,
-            catalog: ags::text::read_catalog(&root.join("games/tbs/text/en.po"))?,
+            catalog: crate::po::read_catalog(&root.join("games/tbs/text/en.po"))?,
         })
     }
 
@@ -377,7 +377,7 @@ impl Game {
     /// The `count` names that follow message `first` (`MsgAbilityName`): the
     /// name of row n is that message plus n, its control codes left out.
     pub fn names(&self, first: &str, count: usize) -> Result<Vec<String>, String> {
-        let key = |e: &ags::assets::po::Entry| e.id.parse::<usize>().ok();
+        let key = |e: &crate::po::Entry| e.id.parse::<usize>().ok();
         let base = self.catalog.entries.iter().find(|e| e.context.as_deref() == Some(first)).and_then(key).ok_or_else(|| format!("en.po has no {first}"))?;
         let by_key: HashMap<usize, &str> = self.catalog.entries.iter().filter_map(|e| Some((key(e)?, e.value.as_str()))).collect();
         let codes = regex::Regex::new(r"\{[^}]*\}").map_err(|e| e.to_string())?;

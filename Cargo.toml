@@ -6,7 +6,6 @@ edition.workspace = true
 [dependencies]
 fdeflate = "0.3"
 png = "0.17"
-ags = { path = "ags" }
 regex = "1"
 libc = "0.2"
 object = { version = "0.39.1", default-features = false, features = ["read_core", "elf", "std"] }
@@ -30,7 +29,6 @@ path = "src/main.rs"
 
 [workspace]
 resolver = "2"
-members = ["ags"]
 
 [workspace.package]
 version = "0.1.0"
