@@ -162,7 +162,7 @@ pub fn tla_on_gcc304(source: &str) -> bool {
 
 /// The Lost Age's options on GCC 3.0.4 (the Makefile's CFLAGS_tla304).
 pub fn cflags_tla304() -> Vec<String> {
-    ["-O2", "-mthumb", "-mcpu=arm7tdmi", "-nostdinc", "-fcall-used-r4", "-mthumb-split-constants", "-mthumb-call-via-lr"]
+    ["-O2", "-mthumb", "-mcpu=arm7tdmi", "-nostdinc", "-fcall-used-r4", "-mthumb-split-constants", "-mthumb-call-via-lr", "-fno-reorder-blocks", "-mtune=arm9tdmi"]
         .map(String::from)
         .to_vec()
 }
