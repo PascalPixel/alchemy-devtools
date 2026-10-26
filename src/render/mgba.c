@@ -29,6 +29,7 @@ struct AlchemyStep {
   uint32_t pc;     // the instruction the CPU runs next
   uint32_t frame;  // frames completed since power-on
   int32_t vcount;  // the line being drawn
+  int32_t halted;  // whether the CPU sleeps until the next interrupt
 };
 
 struct AlchemyMachine {
@@ -129,6 +130,7 @@ void alchemy_mgba_step(struct AlchemyMachine *m, struct AlchemyStep *out) {
             (cpu->cpsr.t ? WORD_SIZE_THUMB : WORD_SIZE_ARM);
   out->frame = m->core->frameCounter(m->core);
   out->vcount = m->gba->video.vcount;
+  out->halted = cpu->halted;
 }
 
 uint32_t alchemy_mgba_register(struct AlchemyMachine *m, unsigned n) {

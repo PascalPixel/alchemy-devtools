@@ -24,6 +24,8 @@ mod guide_front;
 #[cfg(feature = "render")]
 mod guide_apart;
 #[cfg(feature = "render")]
+mod guide_aerie;
+#[cfg(feature = "render")]
 mod guide_battle;
 #[cfg(feature = "render")]
 mod guide_beam;
@@ -1272,6 +1274,9 @@ FOLDER/NAME.gif under DIR, the guide it opens a section of:
 Venus Lighthouse's beam seen whole, the aerie's map and the sky in every
 frame, as places/venus-lighthouse-aerie/NAME.gif (guide_beam.rs):
   venus-lighthouse-aerie-beam-whole, venus-lighthouse-aerie-eruption-whole
+and the aerie's whole story in the Doll House recorder, from the arrival to
+the exit to Lalivero, battles and world map trips cut out (guide_aerie.rs):
+  venus-lighthouse-aerie-story-dollhouse
 Recordings for the menu, window, shop and game guides, one GIF each
 (guide_menus.rs):
   windows-zoom, message-speed, message-blanks, pause-menu, save-game,

@@ -10,7 +10,9 @@
 //! letters, which the game draws as sprites) are left out. The camera's
 //! shake moves the view and not the world, so the map seen whole holds
 //! still. Venus Lighthouse's beam (guide_beam.rs) and any event `render
-//! event --whole` plays (places.rs) are drawn so.
+//! event --whole` plays (places.rs) are drawn so. This is the Doll House
+//! recorder; the Lighthouse Aerie's story (guide_aerie.rs) draws several
+//! runs of the game as one recording (stitch_runs).
 
 use super::animation;
 use super::field::{Field, Image, Saved, Track};
@@ -27,8 +29,14 @@ pub const LATE: usize = 4;
 /// Pixels each view reaches past the canvas and overlaps the next: more than
 /// twice the shake (MapGrid_SetShake, at most 6 pixels in the game's
 /// scripts), which narrows the scroll bounds by its amplitude and then moves
-/// the view by as much.
+/// the view by as much. A strong shake moves a view by up to 12 pixels, past
+/// the EDGE it leaves out: WIDE_MARGIN covers that too, for the frames
+/// MARGIN leaves a gap in (Run::wide: the Lighthouse Aerie's quakes). Views
+/// placed elsewhere catch other sprites at their edges and can reach things
+/// the game only moves while they are in view (its random draws then
+/// differ), so every other frame keeps MARGIN.
 const MARGIN: i32 = 16;
+const WIDE_MARGIN: i32 = 20;
 /// The lines at the top of each view and the columns at its left left out
 /// of the whole picture: a tile's.
 const EDGE: i32 = 8;
@@ -179,6 +187,47 @@ fn undelta(base: &[u8], d: &[u8]) -> Vec<u8> {
 /// from one side of a change made from outside the game (Field::cut) and
 /// drawn on the other.
 pub fn stitch(field: &mut Field, states: &States, frames: &[usize], area: [i32; 4]) -> Result<Vec<Image>, String> {
+    stitch_runs(&mut [Run { field, states, frames, wide: false }], area)
+}
+
+/// One run of the game drawn whole (stitch_runs): its field, the states it
+/// kept, the frames drawn from them, and whether a frame its views leave a
+/// gap in (a strong shake) is drawn again from views reaching WIDE_MARGIN.
+pub struct Run<'f, 'rom> {
+    pub field: &'f mut Field<'rom>,
+    pub states: &'f States,
+    pub frames: &'f [usize],
+    pub wide: bool,
+}
+
+/// Several runs drawn whole one after another over the same area, as one
+/// picture sequence: each run's frames as stitch draws them, the sky over
+/// the area cut once for all, to the highest sprite drawn there in any run.
+pub fn stitch_runs(runs: &mut [Run], area: [i32; 4]) -> Result<Vec<Image>, String> {
+    let canvas = Canvas::new(area, MARGIN);
+    let mut pictures = Vec::new();
+    let mut highest = canvas.map_top;
+    for run in runs.iter_mut() {
+        let mut canvases = vec![Canvas::new(area, MARGIN)];
+        if run.wide {
+            canvases.push(Canvas::new(area, WIDE_MARGIN));
+        }
+        let (mut p, h) = stitch_uncut(run.field, run.states, run.frames, &canvases)?;
+        pictures.append(&mut p);
+        highest = highest.min(h);
+    }
+    let w = canvas.w;
+    let cut = if highest < canvas.map_top { (highest - SKY_MARGIN).max(canvas.top) - canvas.top } else { ABOVE } as usize;
+    for p in &mut pictures {
+        p.pixels.drain(..cut * w);
+        p.height -= cut;
+    }
+    Ok(pictures)
+}
+
+/// stitch's frames with the whole sky over the map left on, and the highest
+/// row a sprite showed in there.
+fn stitch_uncut(field: &mut Field, states: &States, frames: &[usize], canvases: &[Canvas]) -> Result<(Vec<Image>, i32), String> {
     let s = field.symbols();
     let (seed, frame_count, pending) = (s.random_seed, s.frame_count, s.render_pending);
     // Each state's frame counter, whether the game had finished its frame
@@ -189,7 +238,6 @@ pub fn stitch(field: &mut Field, states: &States, frames: &[usize], area: [i32; 
             (field.read32(frame_count), field.read8(pending) != 0, field.read32(seed))
         })
         .collect();
-    let canvas = Canvas::new(area);
     // The frames are shared out among threads, each drawing a run of them
     // on its own field (Field::recipe) from the same states: every view is
     // drawn from a state loaded whole, so which machine draws it does not
@@ -199,21 +247,21 @@ pub fn stitch(field: &mut Field, states: &States, frames: &[usize], area: [i32; 
         n => n,
     };
     let threads = wanted.min(frames.len() / FRAMES_A_THREAD).max(1);
-    let (mut pictures, highest) = match field.recipe() {
+    let (pictures, highest) = match field.recipe() {
         Some(recipe) if threads > 1 => {
             let part = frames.len().div_ceil(threads);
             let drawn: Vec<Result<(Vec<Image>, i32), String>> = std::thread::scope(|scope| {
                 let workers: Vec<_> = frames
                     .chunks(part)
                     .map(|run| {
-                        let (recipe, marks, canvas) = (&recipe, &marks, &canvas);
-                        scope.spawn(move || draw(&mut recipe.enter()?, states, run, canvas, marks))
+                        let (recipe, marks) = (&recipe, &marks);
+                        scope.spawn(move || draw(&mut recipe.enter()?, states, run, canvases, marks))
                     })
                     .collect();
                 workers.into_iter().map(|w| w.join().unwrap_or_else(|_| Err("a thread drawing frames whole failed".to_string()))).collect()
             });
             let mut pictures = Vec::with_capacity(frames.len());
-            let mut highest = canvas.map_top;
+            let mut highest = canvases[0].map_top;
             for run in drawn {
                 let (mut p, h) = run?;
                 pictures.append(&mut p);
@@ -221,16 +269,18 @@ pub fn stitch(field: &mut Field, states: &States, frames: &[usize], area: [i32; 
             }
             (pictures, highest)
         }
-        _ => draw(field, states, frames, &canvas, &marks)?,
+        _ => draw(field, states, frames, canvases, &marks)?,
     };
     field.load(&states.get(states.len() - 1));
-    let w = canvas.w;
-    let cut = if highest < canvas.map_top { (highest - SKY_MARGIN).max(canvas.top) - canvas.top } else { ABOVE } as usize;
-    for p in &mut pictures {
-        p.pixels.drain(..cut * w);
-        p.height -= cut;
-    }
-    Ok(pictures)
+    Ok((pictures, highest))
+}
+
+/// Whether the game finished a frame between two states, the second a blank
+/// or more after the first: its picture is waiting at the second
+/// (gFrameRenderPending), and was not at the first or the frame counter has
+/// moved on since.
+fn completes(before: Mark, after: Mark) -> bool {
+    after.1 && (!before.1 || after.0 != before.0)
 }
 
 /// A state's frame counter (gFrameCount), whether the game had finished
@@ -253,19 +303,19 @@ struct Canvas {
 }
 
 impl Canvas {
-    fn new(area: [i32; 4]) -> Canvas {
+    fn new(area: [i32; 4], margin: i32) -> Canvas {
         let [left, map_top, right, bottom] = area;
         let top = map_top - ABOVE;
-        let bounds = [(left - MARGIN) << 16, (top - MARGIN) << 16, (right + MARGIN) << 16, (bottom + MARGIN) << 16];
+        let bounds = [(left - margin) << 16, (top - margin) << 16, (right + margin) << 16, (bottom + margin) << 16];
         // Views over the sky (their top above the map's) draw only the
         // sprites, over KEY; the rest draw the map. They overlap and reach
-        // MARGIN past the edges, so that the shake leaves no gap.
-        let stride = |size: usize| size as i32 - 2 * MARGIN;
-        let sky_rows = steps(top - MARGIN, map_top + MARGIN, HEIGHT as i32, stride(HEIGHT)).into_iter().map(|y| (y, true));
-        let map_rows = steps(map_top - MARGIN, bottom + MARGIN, HEIGHT as i32, stride(HEIGHT)).into_iter().map(|y| (y, false));
+        // margin past the edges, so that the shake leaves no gap.
+        let stride = |size: usize| size as i32 - 2 * margin;
+        let sky_rows = steps(top - margin, map_top + margin, HEIGHT as i32, stride(HEIGHT)).into_iter().map(|y| (y, true));
+        let map_rows = steps(map_top - margin, bottom + margin, HEIGHT as i32, stride(HEIGHT)).into_iter().map(|y| (y, false));
         let mut views = Vec::new();
         for (y, over_sky) in sky_rows.chain(map_rows) {
-            for x in steps(left - MARGIN, right + MARGIN, WIDTH as i32, stride(WIDTH)) {
+            for x in steps(left - margin, right + margin, WIDTH as i32, stride(WIDTH)) {
                 views.push(((x, y), over_sky));
             }
         }
@@ -274,110 +324,143 @@ impl Canvas {
 }
 
 /// Draws the frames `frames` whole on `field` (stitch), the sky above the
-/// map uncut: the pictures, and the highest row a sprite showed in above the
+/// map uncut, each from the views of the first of `canvases` that leaves no
+/// gap in it: the pictures, and the highest row a sprite showed in above the
 /// map (the map's top for none).
-fn draw(field: &mut Field, states: &States, frames: &[usize], c: &Canvas, marks: &[Mark]) -> Result<(Vec<Image>, i32), String> {
+fn draw(field: &mut Field, states: &States, frames: &[usize], canvases: &[Canvas], marks: &[Mark]) -> Result<(Vec<Image>, i32), String> {
+    let mut pictures = Vec::new();
+    let mut highest = canvases[0].map_top;
+    for &t in frames {
+        let mut drawn = None;
+        for c in canvases {
+            drawn = draw_frame(field, states, t, c, marks, &mut highest)?;
+            if drawn.is_some() {
+                break;
+            }
+        }
+        pictures.push(drawn.ok_or_else(|| format!("some of the map was in no view on frame {t}"))?);
+    }
+    Ok((pictures, highest))
+}
+
+/// Frame `t` drawn whole from the views of `c` (draw), none when they leave
+/// a gap in it; `highest` is lowered to the highest row a sprite shows in
+/// above the map.
+fn draw_frame(field: &mut Field, states: &States, t: usize, c: &Canvas, marks: &[Mark], highest: &mut i32) -> Result<Option<Image>, String> {
     let s = field.symbols();
     let (seed, frame_count, pending, bg_scroll) = (s.random_seed, s.frame_count, s.render_pending, s.bg_scroll);
     let (left, top, map_top, right, bottom, w, h) = (c.left, c.top, c.map_top, c.right, c.bottom, c.w, c.h);
-    let mut pictures = Vec::new();
-    let mut highest = map_top;
-    for &t in frames {
-        // The picture's frame; the seed as the game finishes it, at t - 1
-        // or later when the game itself took longer over it; and the last
-        // state, LEAD frames before t or earlier, at which the game had
-        // finished the frame before and not begun this one.
-        let built = marks[t - 1].0;
-        let built_seed = (t - 1..states.len()).take_while(|&k| marks[k].0 == built).find(|&k| marks[k].1).map(|k| marks[k].2);
-        let from = (0..=t - LEAD).rev().find(|&k| marks[k].0 < built && marks[k].1).ok_or_else(|| format!("no state before frame {t} began"))?;
-        if states.cuts(from) != states.cuts(t - 1) {
-            return Err(format!("frame {t}'s views would be pinned across a change made from outside the game"));
-        }
-        let start = states.get(from);
-        let mut canvas = vec![u32::MAX; w * h];
-        for &(view, over_sky) in &c.views {
-            field.pin_view(&start, (view.0 << 16, view.1 << 16), c.bounds, bg_scroll)?;
-            field.hold_now(start.keys());
-            let mut ran = 0;
-            loop {
-                // The keys the run held as this frame ended, past its last
-                // state those it ended with.
-                field.hold(states.keys((from + ran + 1).min(states.len() - 1)));
-                field.frames(1)?;
-                ran += 1;
-                if field.read32(frame_count) == built && field.read8(pending) != 0 {
-                    break;
-                }
-                if ran > t - from + LATE {
-                    return Err(format!("the view at {view:?} never finished frame {t}'s picture"));
-                }
-            }
-            if built_seed.is_some_and(|s| s != field.read32(seed)) {
-                return Err(format!("the view at {view:?} changed the game's random draws before frame {t}"));
-            }
-            // The view the picture was built at (with the shake), before the
-            // game moves on to its next frame while the picture is drawn.
-            let at = field.unpin_view();
-            field.until_line(LAST_BLANK_LINE)?;
-            hide_front_sprites(field);
-            let hidden = if over_sky { DISPCNT_BGS } else { DISPCNT_BG0 };
-            field.io_write16(DISPCNT, field.read16(DISPCNT) & !hidden);
-            if over_sky {
-                field.io_write16(BLDCNT, field.read16(BLDCNT) & !BLEND_KEY_TARGETS);
-                field.set_backdrop(KEY);
-            }
+    // The picture's frame; the seed as the game finishes it, at t - 1
+    // or later when the game itself took longer over it; and the last
+    // state, LEAD frames before t or earlier, at which the game had
+    // finished the frame before and not begun this one.
+    let built = marks[t - 1].0;
+    let finished = (t - 1..states.len()).take_while(|&k| marks[k].0 == built).find(|&k| marks[k].1);
+    let built_seed = finished.map(|k| marks[k].2);
+    let from = (0..=t - LEAD).rev().find(|&k| marks[k].0 < built && marks[k].1).ok_or_else(|| format!("no state before frame {t} began"))?;
+    // The frames the game finished from there to this one's picture: a
+    // view that makes the game slower finishes the same frame a blank or
+    // more later, when the frame counter has passed `built`.
+    let needed = finished.map(|k| (from + 1..=k).filter(|&i| completes(marks[i - 1], marks[i])).count());
+    if states.cuts(from) != states.cuts(t - 1) {
+        return Err(format!("frame {t}'s views would be pinned across a change made from outside the game"));
+    }
+    let start = states.get(from);
+    let mut canvas = vec![u32::MAX; w * h];
+    for &(view, over_sky) in &c.views {
+        field.pin_view(&start, (view.0 << 16, view.1 << 16), c.bounds, bg_scroll)?;
+        field.hold_now(start.keys());
+        let mut ran = 0;
+        let mut last = marks[from];
+        let mut done = 0;
+        loop {
+            // The keys the run held as this frame ended, past its last
+            // state those it ended with.
+            field.hold(states.keys((from + ran + 1).min(states.len() - 1)));
             field.frames(1)?;
-            field.clear_backdrop();
-            if field.read16(DISPCNT) & hidden != 0 {
-                return Err(format!("the game showed the layers again while the view at {view:?} drew frame {t}"));
+            ran += 1;
+            let now = (field.read32(frame_count), field.read8(pending) != 0, 0);
+            done += usize::from(completes(last, now));
+            last = now;
+            if now.0 == built && now.1 {
+                break;
             }
-            let picture = field.picture();
-            // A picture's first lines and columns can show what the map
-            // does not there (a black line, the sky of another height or
-            // the backdrop): they are left out, and the views overlap
-            // enough to leave no gap.
-            for y in EDGE..HEIGHT as i32 {
-                let my = at.1 + y;
-                // A view over the sky gives only the rows above the map,
-                // a view of the map only the map's.
-                if my < top || my >= bottom || over_sky != (my < map_top) {
+            if now.0 > built && now.1 && Some(done) == needed {
+                break;
+            }
+            if ran > t - from + LATE {
+                return Err(format!("the view at {view:?} never finished frame {t}'s picture"));
+            }
+        }
+        if built_seed.is_some_and(|s| s != field.read32(seed)) {
+            return Err(format!("the view at {view:?} changed the game's random draws before frame {t}"));
+        }
+        // The view the picture was built at (with the shake), before the
+        // game moves on to its next frame while the picture is drawn. The
+        // view stays pinned until it is drawn: a game slow over its frames
+        // still runs its last while the first lines are drawn, and let go,
+        // its view would jump back to the camera and draw the row and column
+        // that come into view there into the picture.
+        let at = field.view();
+        field.until_line(LAST_BLANK_LINE).map_err(|e| format!("frame {t}, the view at {view:?}: {e}"))?;
+        hide_front_sprites(field);
+        let hidden = if over_sky { DISPCNT_BGS } else { DISPCNT_BG0 };
+        field.io_write16(DISPCNT, field.read16(DISPCNT) & !hidden);
+        if over_sky {
+            field.io_write16(BLDCNT, field.read16(BLDCNT) & !BLEND_KEY_TARGETS);
+            field.set_backdrop(KEY);
+        }
+        field.frames(1)?;
+        field.clear_backdrop();
+        field.unpin_view();
+        if field.read16(DISPCNT) & hidden != 0 {
+            return Err(format!("the game showed the layers again while the view at {view:?} drew frame {t}"));
+        }
+        let picture = field.picture();
+        // A picture's first lines and columns can show what the map
+        // does not there (a black line, the sky of another height or
+        // the backdrop): they are left out, and the views overlap
+        // enough to leave no gap.
+        for y in EDGE..HEIGHT as i32 {
+            let my = at.1 + y;
+            // A view over the sky gives only the rows above the map,
+            // a view of the map only the map's.
+            if my < top || my >= bottom || over_sky != (my < map_top) {
+                continue;
+            }
+            for x in EDGE..WIDTH as i32 {
+                let mx = at.0 + x;
+                if mx < left || mx >= right {
                     continue;
                 }
-                for x in EDGE..WIDTH as i32 {
-                    let mx = at.0 + x;
-                    if mx < left || mx >= right {
-                        continue;
-                    }
-                    let c = picture[(y * WIDTH as i32 + x) as usize];
-                    let i = (my - top) as usize * w + (mx - left) as usize;
-                    if !over_sky {
-                        canvas[i] = animation::rgb(c);
-                    } else if c != KEY {
-                        canvas[i] = animation::rgb(c);
-                        highest = highest.min(my);
-                    }
+                let c = picture[(y * WIDTH as i32 + x) as usize];
+                let i = (my - top) as usize * w + (mx - left) as usize;
+                if !over_sky {
+                    canvas[i] = animation::rgb(c);
+                } else if c != KEY {
+                    canvas[i] = animation::rgb(c);
+                    *highest = (*highest).min(my);
                 }
             }
         }
-        // The sky above the map is the colour its top SKY_ROWS rows show
-        // most: its first row alone can show another while the colours
-        // fade.
-        let mut sky: HashMap<u32, usize> = HashMap::new();
-        for &c in &canvas[ABOVE as usize * w..(ABOVE + SKY_ROWS) as usize * w] {
-            *sky.entry(c).or_default() += 1;
-        }
-        let fill = sky.into_iter().filter(|&(c, _)| c != u32::MAX).max_by_key(|&(_, count)| count).map(|(c, _)| c).ok_or("the map's top rows were in no view")?;
-        for c in canvas.iter_mut().take(ABOVE as usize * w) {
-            if *c == u32::MAX {
-                *c = fill;
-            }
-        }
-        if canvas.contains(&u32::MAX) {
-            return Err(format!("some of the map was in no view on frame {t}"));
-        }
-        pictures.push(Image { width: w, height: h, pixels: canvas });
     }
-    Ok((pictures, highest))
+    // The sky above the map is the colour its top SKY_ROWS rows show
+    // most: its first row alone can show another while the colours
+    // fade.
+    let mut sky: HashMap<u32, usize> = HashMap::new();
+    for &c in &canvas[ABOVE as usize * w..(ABOVE + SKY_ROWS) as usize * w] {
+        *sky.entry(c).or_default() += 1;
+    }
+    let fill = sky.into_iter().filter(|&(c, _)| c != u32::MAX).max_by_key(|&(_, count)| count).map(|(c, _)| c).ok_or("the map's top rows were in no view")?;
+    for c in canvas.iter_mut().take(ABOVE as usize * w) {
+        if *c == u32::MAX {
+            *c = fill;
+        }
+    }
+    if canvas.contains(&u32::MAX) {
+        return Ok(None);
+    }
+    Ok(Some(Image { width: w, height: h, pixels: canvas }))
 }
 
 /// A recorded event drawn whole (render event --whole): every second frame

@@ -189,7 +189,7 @@ impl<'a> Guide<'a> {
         whole::stitch(field, states, frames, area)
     }
 
-    fn whole_gif(&mut self, file: &str, pictures: &[Image], what: &str) -> Result<(), String> {
+    pub(super) fn whole_gif(&mut self, file: &str, pictures: &[Image], what: &str) -> Result<(), String> {
         let (bytes, frames) = whole::write_gif(&self.out.join(file), pictures)?;
         self.written.push((file.to_string(), bytes, format!("{what}; {frames}")));
         Ok(())

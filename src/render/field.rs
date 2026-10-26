@@ -166,6 +166,8 @@ const UNIT_ACTION_SLOTS: u32 = 0x58;
 const PALETTE_RAM: u32 = 0x0500_0000;
 /// The scene number of a battle (MAP_BATTLE).
 const MAP_BATTLE: u16 = 0x1fe;
+/// The first line of vertical blank.
+const VBLANK_FIRST_LINE: u16 = 160;
 
 /// Frames from the player's control to the entrance photo.
 pub const SETTLE: u32 = 30;
@@ -376,6 +378,8 @@ pub(super) struct Track {
     call_args: Option<[u32; 2]>,
     /// The instruction the CPU runs next.
     pc: u32,
+    /// Whether the CPU sleeps until the next interrupt.
+    halted: bool,
     /// The last frame the field loop stepped, and the first of the frames
     /// it has stepped in a row up to it.
     step_frame: u32,
@@ -576,6 +580,7 @@ impl<'rom> Field<'rom> {
             call_saved: [0; 5],
             call_args: None,
             pc: 0,
+            halted: false,
             step_frame: 0,
             stepping_since: 0,
             dispatched: None,
@@ -852,6 +857,7 @@ impl<'rom> Field<'rom> {
         self.t.frame = step.frame;
         let pc = step.pc;
         self.t.pc = pc;
+        self.t.halted = step.halted != 0;
         let s = self.s;
         let lr = |gba: &Gba| gba.register(LR) & !1;
 
@@ -1080,9 +1086,25 @@ impl<'rom> Field<'rom> {
     /// copied its OAM and registers and before the next picture is drawn.
     pub fn until_line(&mut self, line: u16) -> Result<(), String> {
         // A halted processor passes several lines in one step, and may pass
-        // this one; it is met within a few frames, or this fails.
+        // this one; it is met within a few frames, or this fails. Asleep in
+        // vertical blank short of the line, the game has done its frame's
+        // work: the step is tried, and taken back when it sleeps past the
+        // line, so the run stops there instead (a quiet moment, a page
+        // waiting, sleeps through the whole blank).
+        let vcount = |f: &Self| f.gba.read16(0x0400_0006) & 0xff;
         let mut frames = 0;
-        while self.gba.read16(0x0400_0006) & 0xff != line {
+        while vcount(self) != line {
+            let before = vcount(self);
+            if self.t.halted && (VBLANK_FIRST_LINE..line).contains(&before) {
+                let asleep = self.save();
+                self.tick()?;
+                let after = vcount(self);
+                if !(before..=line).contains(&after) {
+                    self.resume(&asleep);
+                    return Ok(());
+                }
+                continue;
+            }
             if self.tick()? {
                 frames += 1;
                 if frames > 8 {

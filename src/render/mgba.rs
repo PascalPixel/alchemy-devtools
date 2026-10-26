@@ -17,6 +17,9 @@ pub struct Step {
     pub frame: u32,
     /// The line being drawn.
     pub vcount: i32,
+    /// Whether the CPU sleeps until the next interrupt (HALT): its next
+    /// step may pass several lines.
+    pub halted: i32,
 }
 
 extern "C" {
