@@ -118,13 +118,18 @@ pub fn family_for_source(_target: CompilerTarget, source: &str) -> CompilerFamil
 
 const INCLUDE_MODULES: [&str; 8] = ["battle", "field", "game", "graphics", "lib", "menu", "sound", "system"];
 
+/// The game's include folders, and a branch's recon/<game>/include where
+/// headers only drafts read have moved.
 fn includes(target: CompilerTarget) -> Vec<String> {
-    let mut flags = vec![format!("-I{}/games/{}/include", root().display(), target.as_str())];
-    flags.extend(
-        INCLUDE_MODULES
-            .iter()
-            .map(|module| format!("-I{}/games/{}/include/{module}", root().display(), target.as_str())),
-    );
+    let mut flags = Vec::new();
+    for base in ["games", "recon"] {
+        let folder = root().join(base).join(target.as_str()).join("include");
+        if base == "recon" && !folder.is_dir() {
+            continue;
+        }
+        flags.push(format!("-I{}", folder.display()));
+        flags.extend(INCLUDE_MODULES.iter().map(|module| format!("-I{}", folder.join(module).display())));
+    }
     flags
 }
 
@@ -132,52 +137,83 @@ fn tool(name: &str) -> String {
     root().join("tools/out/compilers").join(name).to_string_lossy().into_owned()
 }
 
-fn tool304(name: &str) -> String {
-    root().join("tools/out/compilers-304").join(name).to_string_lossy().into_owned()
+/// The checkout's Makefile's own value of `name` (`NAME := value`, continued
+/// over lines ending in `\`), with the `$(VAR)`s it uses expanded the same
+/// way, so a draft compiles as the build compiles on that branch.
+fn makefile_var(name: &str) -> Option<String> {
+    static MAKEFILE: OnceLock<String> = OnceLock::new();
+    let text = MAKEFILE.get_or_init(|| std::fs::read_to_string(root().join("Makefile")).unwrap_or_default());
+    makefile_value(text, name)
 }
 
-/// Whether The Lost Age's `source` compiles with GCC 3.0.4 (alchemy-gcc's
-/// gcc-3.0.4 branch), as the Makefile routes it while the game moves to that
-/// compiler: only where games/tla/gcc2000.txt exists, for a game file it does
-/// not list and for every draft, which is rematched for GCC 3.0.4.
-/// ALCHEMY_TLA_COMPILER=2000 or 304 overrides the choice.
-pub fn tla_on_gcc304(source: &str) -> bool {
-    match std::env::var("ALCHEMY_TLA_COMPILER").as_deref() {
-        Ok("2000") => return false,
-        Ok("304") => return true,
-        _ => {}
+fn makefile_value(text: &str, name: &str) -> Option<String> {
+    let mut lines = text.lines();
+    while let Some(line) = lines.next() {
+        let Some(rest) = line.strip_prefix(name) else { continue };
+        if !rest.starts_with([' ', ':', '=']) {
+            continue;
+        }
+        let rest = rest.trim_start();
+        let Some(value) = rest.strip_prefix(":=").or_else(|| rest.strip_prefix('=')) else { continue };
+        let mut value = value.trim().to_string();
+        while value.ends_with('\\') {
+            value.pop();
+            value.push(' ');
+            value.push_str(lines.next().unwrap_or("").trim());
+        }
+        let mut expanded = String::new();
+        let mut rest = value.as_str();
+        while let Some(at) = rest.find("$(") {
+            expanded.push_str(&rest[..at]);
+            let inner = &rest[at + 2..];
+            let Some(end) = inner.find(')') else { break };
+            let reference = &inner[..end];
+            expanded.push_str(&makefile_value(text, reference).unwrap_or_else(|| format!("$({reference})")));
+            rest = &inner[end + 1..];
+        }
+        expanded.push_str(rest);
+        return Some(expanded.split_whitespace().collect::<Vec<_>>().join(" "));
     }
-    let Ok(list) = std::fs::read_to_string(root().join("games/tla/gcc2000.txt")) else {
-        return false;
-    };
-    let relative = Path::new(source)
-        .strip_prefix(root())
-        .map(|path| path.to_string_lossy().into_owned())
-        .unwrap_or_else(|_| source.to_string());
-    if !relative.starts_with("games/tla/") {
-        return true;
-    }
-    !list.lines().any(|line| line.trim() == relative)
+    None
 }
 
-/// The Lost Age's options on GCC 3.0.4 (the Makefile's CFLAGS_tla304).
-pub fn cflags_tla304() -> Vec<String> {
-    ["-O2", "-mthumb", "-mcpu=arm7tdmi", "-nostdinc", "-fcall-used-r4", "-mthumb-split-constants", "-mthumb-call-via-lr", "-fno-reorder-blocks", "-mtune=arm9tdmi"]
-        .map(String::from)
-        .to_vec()
+/// The game's C compiler as the Makefile runs it (GAME_XGCC_<game>, else
+/// XGCC), with its paths made absolute.
+fn game_compiler(target: CompilerTarget) -> Vec<String> {
+    let words = makefile_var(&format!("GAME_XGCC_{}", target.as_str()))
+        .or_else(|| makefile_var("XGCC"))
+        .unwrap_or_else(|| format!("{} -B{}/", tool("xgcc"), tool("")));
+    words
+        .split_whitespace()
+        .map(|word| match word.strip_prefix("-B") {
+            Some(path) => format!("-B{}", root().join(path).display()),
+            None if word.contains('/') => root().join(word).display().to_string(),
+            None => word.to_string(),
+        })
+        .collect()
 }
 
-/// The game's C options (the Makefile's CFLAGS_tbs and CFLAGS_tla).
+/// The game's C options, the Makefile's CFLAGS_tbs or CFLAGS_tla on this
+/// checkout's branch.
 pub fn cflags(target: CompilerTarget) -> Vec<String> {
-    let mut flags: Vec<String> = ["-O2", "-mthumb"].map(String::from).to_vec();
-    if target == CompilerTarget::Tbs {
-        flags.push("-mthumb-interwork".into());
+    makefile_var(&format!("CFLAGS_{}", target.as_str()))
+        .unwrap_or_default()
+        .split_whitespace()
+        .map(String::from)
+        .collect()
+}
+
+#[cfg(test)]
+mod makefile_tests {
+    use super::makefile_value;
+
+    #[test]
+    fn reads_continued_and_nested_values() {
+        let text = "COMPILER := tools/out/c\nXGCC := $(COMPILER)/xgcc -B$(COMPILER)/\nCFLAGS_tla := -O2 \\\n  -mthumb\nCFLAGS_tla304 := -Os\n";
+        assert_eq!(makefile_value(text, "XGCC").as_deref(), Some("tools/out/c/xgcc -Btools/out/c/"));
+        assert_eq!(makefile_value(text, "CFLAGS_tla").as_deref(), Some("-O2 -mthumb"));
+        assert_eq!(makefile_value(text, "GAME_XGCC_tla"), None);
     }
-    flags.extend(["-nostdinc", "-fcall-used-r4"].map(String::from));
-    if target == CompilerTarget::Tla {
-        flags.extend(["-mtune=arm9tdmi", "-mthumb-split-constants", "-mthumb-call-via-lr", "-mthumb-slow-loads"].map(String::from));
-    }
-    flags
 }
 
 /// ARM C's options (GCC 2.95.2).
@@ -209,13 +245,8 @@ pub fn steps(
     let mut steps = Vec::new();
     match family {
         CompilerFamily::Game => {
-            let on304 = target == CompilerTarget::Tla && tla_on_gcc304(&source_text);
-            let mut compile = if on304 {
-                vec![tool304("xgcc"), format!("-B{}/", tool304(""))]
-            } else {
-                vec![tool("xgcc"), format!("-B{}/", tool(""))]
-            };
-            compile.extend(if on304 { cflags_tla304() } else { cflags(target) });
+            let mut compile = game_compiler(target);
+            compile.extend(cflags(target));
             compile.extend(includes(target));
             compile.extend(edition);
             compile.extend(["-S".into(), "-o".into(), assembly.clone(), source_text]);
