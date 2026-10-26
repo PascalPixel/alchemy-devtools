@@ -369,6 +369,9 @@ pub struct Context<'a> {
     /// walk (Field::relaxed): an event no walkable spot plays is tried once
     /// more that way.
     pub relaxed: std::cell::Cell<bool>,
+    /// Whether each event recorded is also drawn whole (whole::event), as
+    /// <event>-whole.gif.
+    pub whole: bool,
 }
 
 /// Whether a scene is a place: not the title, the clear-data screen or the
@@ -1239,6 +1242,7 @@ impl Context<'_> {
         let message_row = !own.is_empty() && own_function.is_none();
         let mut field = Field::enter(self.rom, self.symbols, setup)?;
         field.relaxed = self.relaxed.get();
+        field.whole = self.whole && record.is_some();
         let entered: Saved = field.save();
         match after {
             Some(saved) => field.load(saved),
@@ -1300,7 +1304,13 @@ impl Context<'_> {
                 Ok(run) if silent && messages.is_empty() && !run.shown => {
                     error = "it ran, but nothing moved, showed or changed from any spot".to_string();
                 }
-                Ok(run) => return Ok(run),
+                Ok(mut run) => {
+                    if field.whole {
+                        let states = run.states.take().ok_or("no states were kept to draw it whole");
+                        run.whole = Some(states.map_err(String::from).and_then(|states| super::whole::event(&mut field, &states)));
+                    }
+                    return Ok(run);
+                }
                 Err(e) => error = self.name_other(e, setup.scene),
             }
         }
@@ -1373,7 +1383,7 @@ impl Context<'_> {
                 continue;
             };
             let page = stem.strip_prefix(base.as_str()).and_then(|r| r.strip_prefix('-')).is_some_and(|n| n.parse::<u32>().is_ok());
-            if stem == base || page {
+            if stem == base || page || stem == format!("{base}-whole") {
                 let _ = std::fs::remove_file(entry.path());
             }
         }
@@ -1427,6 +1437,18 @@ impl Context<'_> {
             file,
             ..Row::default()
         });
+        match &run.whole {
+            Some(Ok(pictures)) => {
+                let file = format!("{}/events/{base}-whole.gif", scene.slug());
+                let (bytes, _) = super::whole::write_gif(&self.out.join(&file), pictures)?;
+                self.bytes += bytes;
+                self.images += 1;
+                self.gifs += 1;
+                self.gif_bytes += bytes;
+            }
+            Some(Err(e)) => self.skip(scene, &format!("event {} whole", event.name), e.clone()),
+            None => {}
+        }
         Ok(())
     }
 }

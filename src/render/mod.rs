@@ -68,6 +68,8 @@ mod probe;
 mod probe_places;
 #[cfg(feature = "render")]
 mod source;
+#[cfg(feature = "render")]
+mod whole;
 mod plan;
 // Read only by the feature's commands and by plan.rs.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
@@ -418,7 +420,7 @@ Run any of them with --help for its options.";
 
 const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene N|NAME]... [--all]
          --places places.tsv --events events.tsv --flags flags.tsv [--messages messages.tsv]
-         [--event NAME]... [--out DIR] [--edition tbs-en] [--jobs N]
+         [--event NAME]... [--whole] [--out DIR] [--edition tbs-en] [--jobs N]
 Plays a built ☀️ edition (make tbs-en) under libmgba from a new game's
 defaults straight into each scene, and writes PNG files at the GBA's size
 into DIR/<scene>/ (DIR defaults to out/EDITION/places), with DIR/index.tsv
@@ -489,6 +491,13 @@ party in next by its SceneId symbol (its own scene for a staircase to
 another of its entrances). An event that runs past four minutes gets no
 GIF, noted in skipped.tsv. --messages is accepted and not read.
 
+--whole also draws each event's GIF whole, as <event>-whole.gif: every
+second frame of the same run, from the trigger until it leaves the scene
+or a battle begins, shows the room's whole camera box (the map's scroll
+bounds when its entrance gives none) and any sky above it a sprite
+reaches, each frame stitched from views of that moment (whole.rs). A run
+it cannot draw whole keeps its GIF; skipped.tsv says why.
+
 --jobs N runs N processes of this program, each with its own libmgba
 (default: the number of CPUs; 1 plays it all here), and hands each the
 next piece of work as it finishes one, the costliest first: a scene for
@@ -507,6 +516,7 @@ struct SceneOptions {
     scenes: Vec<String>,
     events: Vec<String>,
     all: bool,
+    whole: bool,
     out: Option<PathBuf>,
     edition: String,
     places_tsv: Option<PathBuf>,
@@ -520,6 +530,7 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
         scenes: Vec::new(),
         events: Vec::new(),
         all: false,
+        whole: false,
         out: None,
         edition: "tbs-en".to_string(),
         places_tsv: None,
@@ -539,6 +550,7 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             "--scene" => o.scenes.push(value("--scene")?),
             "--event" => o.events.push(value("--event")?),
             "--all" => o.all = true,
+            "--whole" => o.whole = true,
             "--out" => o.out = Some(PathBuf::from(value("--out")?)),
             "--edition" => o.edition = value("--edition")?,
             "--places" => o.places_tsv = Some(PathBuf::from(value("--places")?)),
@@ -588,7 +600,7 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     };
     let root = crate::compile::root();
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
-    let request = SceneRequest { kind, scenes: &scene_rows, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags };
+    let request = SceneRequest { kind, scenes: &scene_rows, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags, whole: o.whole };
     play_scenes(root, &o.edition, &request, &out, &o.jobs, arguments)
 }
 
@@ -603,6 +615,8 @@ struct SceneRequest<'a> {
     events: &'a [story::Event],
     wanted: &'a [String],
     flags: &'a story::Flags,
+    /// Whether each event is also drawn whole (render event --whole).
+    whole: bool,
 }
 
 /// What a scene's work is part of: the scene itself for places, its
@@ -715,6 +729,8 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
     if jobs.child {
         // A piece is a scene by number, or an overlay's event by its source
         // and name; the overlay's scans are kept for its next events.
+        // The processes share the CPUs: each draws whole frames on one.
+        whole::THREADS.store(1, std::sync::atomic::Ordering::Relaxed);
         let machines = Machines::load(root, edition, r.chosen, false)?;
         let mut kept: std::collections::HashMap<String, places::Job> = std::collections::HashMap::new();
         return jobs::serve(|key| {
@@ -893,6 +909,7 @@ impl Machines {
             moment_scenes: 0,
             capped: 0,
             relaxed: std::cell::Cell::new(false),
+            whole: r.whole,
         }
     }
 }
@@ -1375,6 +1392,8 @@ fn play_guide(
         std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
         let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
         if jobs.child {
+            // The processes share the CPUs: each draws whole frames on one.
+            whole::THREADS.store(1, std::sync::atomic::Ordering::Relaxed);
             // A piece is a mode, or one of field-psynergy's casts.
             return jobs::serve(|unit| {
                 let (name, these) = match unit.strip_prefix(FIELD_CAST_KEY) {

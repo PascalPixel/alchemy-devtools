@@ -245,6 +245,12 @@ pub struct Symbols {
     map_work: u32,
     field_work: u32,
     overlay: u32,
+    /// gRandomSeed, gFrameCount, gFrameRenderPending and gBgScroll, which a
+    /// whole picture (whole.rs) reads to tell the moment a view shows.
+    pub random_seed: u32,
+    pub frame_count: u32,
+    pub render_pending: u32,
+    pub bg_scroll: u32,
 }
 
 impl Symbols {
@@ -292,6 +298,10 @@ impl Symbols {
             map_work: at("gMapGridWork")?,
             field_work: at("gFieldWork")?,
             overlay: at("gOverlayArea")?,
+            random_seed: at("gRandomSeed")?,
+            frame_count: at("gFrameCount")?,
+            render_pending: at("gFrameRenderPending")?,
+            bg_scroll: at("gBgScroll")?,
         })
     }
 }
@@ -327,7 +337,7 @@ enum Phase {
 
 /// The run's state, saved and loaded with the machine's.
 #[derive(Debug, Clone, Copy)]
-struct Track {
+pub(super) struct Track {
     phase: Phase,
     frame: u32,
     init_return: u32,
@@ -393,12 +403,57 @@ struct Track {
     /// meanwhile.
     party_calls: u8,
     party_saved: [u32; 5],
+    /// How many times the run has been changed from outside the game since
+    /// it began (Field::cut): a whole picture never pins a view from one
+    /// side of a change and draws it on the other.
+    cuts: u32,
+}
+
+/// What makes a field (Field::recipe): its ROM, symbols and setup, and the
+/// changes it makes as the CPU runs.
+pub struct Recipe<'rom> {
+    rom: &'rom [u8],
+    s: &'rom Symbols,
+    setup: Setup,
+    returns: Vec<(u32, u32)>,
+    pokes: Vec<(u32, u32, u32)>,
+    register_pokes: Vec<(u32, u32, u32)>,
+    show_notice: bool,
+}
+
+impl<'rom> Recipe<'rom> {
+    pub fn enter(&self) -> Result<Field<'rom>, String> {
+        let mut field = Field::enter(self.rom, self.s, &self.setup)?;
+        field.returns.clone_from(&self.returns);
+        field.pokes.clone_from(&self.pokes);
+        field.register_pokes.clone_from(&self.register_pokes);
+        field.show_notice = self.show_notice;
+        Ok(field)
+    }
 }
 
 /// A saved moment: the machine and the run's state.
 pub struct Saved {
-    state: Vec<u8>,
-    track: Track,
+    pub(super) state: Vec<u8>,
+    pub(super) track: Track,
+}
+
+impl Track {
+    pub(super) fn keys(&self) -> u32 {
+        self.keys
+    }
+
+    pub(super) fn cuts(&self) -> u32 {
+        self.cuts
+    }
+}
+
+impl Saved {
+    /// The keys the machine holds from this moment (KEYINPUT bits), as the
+    /// last frame left them.
+    pub fn keys(&self) -> u32 {
+        self.track.keys
+    }
 }
 
 /// An image, 0xRRGGBB.
@@ -418,11 +473,17 @@ pub struct Page {
 
 pub struct Field<'rom> {
     gba: Gba<'rom>,
+    rom: &'rom [u8],
     s: &'rom Symbols,
     t: Track,
     setup: Setup,
     /// Frames kept while an event is recorded.
     recorded: Option<Vec<Vec<u16>>>,
+    /// The machine's state at the end of each frame, kept while an event is
+    /// recorded whole (Field::whole), to draw it whole from.
+    states: Option<super::whole::States>,
+    /// Whether a recorded event also keeps its states, for whole.rs.
+    pub whole: bool,
     /// The event functions of the rows for the trigger being played, to see
     /// which one the dispatch runs.
     watch: Vec<u32>,
@@ -456,6 +517,26 @@ pub struct Field<'rom> {
 impl<'rom> Field<'rom> {
     pub fn write32(&mut self, address: u32, value: u32) {
         self.gba.write32(address, value);
+    }
+
+    /// The addresses the run reads, from the edition's map.
+    pub fn symbols(&self) -> &'rom Symbols {
+        self.s
+    }
+
+    /// How to make another field like this one, on another thread, to load
+    /// its states into; none while a probe watches it, which cannot be
+    /// copied.
+    pub fn recipe(&self) -> Option<Recipe<'rom>> {
+        (self.probe.is_none() && self.probe_pcs.is_empty()).then(|| Recipe {
+            rom: self.rom,
+            s: self.s,
+            setup: self.setup.clone(),
+            returns: self.returns.clone(),
+            pokes: self.pokes.clone(),
+            register_pokes: self.register_pokes.clone(),
+            show_notice: self.show_notice,
+        })
     }
 
     /// Actor `id`'s object's address, 0 for none.
@@ -506,8 +587,9 @@ impl<'rom> Field<'rom> {
             own_ran: false,
             party_calls: 0,
             party_saved: [0; 5],
+            cuts: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, s, t, setup: setup.clone(), recorded: None, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
         while !field.t.applied {
             field.tick()?;
         }
@@ -955,6 +1037,10 @@ impl<'rom> Field<'rom> {
         }
         if frame_done {
             self.gba.set_keys(self.t.keys);
+            if let Some(mut states) = self.states.take() {
+                states.push(self.save());
+                self.states = Some(states);
+            }
             if self.t.frame > MAX_FRAMES {
                 let scene = self.gba.read16(s.game_state + GS_SCENE);
                 return Err(format!("gave up at frame {} in scene {scene}", self.t.frame));
@@ -1013,6 +1099,29 @@ impl<'rom> Field<'rom> {
             }
         }
         Ok(())
+    }
+
+    /// Marks a change made to the run from outside the game (a flag set, a
+    /// value written): the states kept after it are on its other side.
+    pub fn cut(&mut self) {
+        self.t.cuts += 1;
+    }
+
+    /// Holds `keys` from now: the machine's keys at once, as a state saved
+    /// holding them left them, and from each frame on.
+    pub fn hold_now(&mut self, keys: u32) {
+        self.t.keys = keys;
+        self.gba.set_keys(keys);
+    }
+
+    /// Starts keeping the machine's state at the end of every frame, or
+    /// stops and returns what was kept.
+    pub fn keep_states(&mut self, on: bool) -> Option<super::whole::States> {
+        let kept = self.states.take();
+        if on {
+            self.states = Some(super::whole::States::default());
+        }
+        kept
     }
 
     /// Holds `keys` (KEYINPUT bits) from the next frame until changed.
@@ -2435,6 +2544,7 @@ impl<'rom> Field<'rom> {
         self.check_leader(spot)?;
         if record.is_some() {
             self.recorded = Some(Vec::new());
+            self.keep_states(self.whole);
         }
         self.frames(LEAD_IN)?;
         let cap = record.unwrap_or(EVENT_LIMIT as usize);
@@ -2473,6 +2583,9 @@ impl<'rom> Field<'rom> {
         // event starts (FLAG_NO_ENCOUNTERS).
         self.set_flag(FLAG_NO_ENCOUNTERS, true);
         self.unshadow(kind, target, own, messages)?;
+        // The flags set and the actors moved for the event are written from
+        // outside the game.
+        self.cut();
         self.watch = table.iter().map(|r| result_key(r.result)).filter(|&r| r >= 0x10000).collect();
         self.t.ran = 0;
         self.own = own.iter().copied().filter(|&r| r >= 0x10000).collect();
@@ -2482,6 +2595,7 @@ impl<'rom> Field<'rom> {
             Trigger::Psynergy(ability, _) => {
                 let work = self.gba.read32(self.s.field_work);
                 self.gba.write16(work + FIELD_COMMAND, ability);
+                self.cut();
             }
             Trigger::Touch(_) => self.hold(spot.walk),
         }
@@ -2745,6 +2859,7 @@ impl<'rom> Field<'rom> {
         }
         self.hold(0);
         let mut frames = self.recorded.take().unwrap_or_default();
+        let states = self.keep_states(false);
         // A battle the recording cannot hold to its end (a boss fought by A
         // alone) is shown to its opening, as is one the party lost.
         let unfinished = capped && fought && self.scene() == MAP_BATTLE;
@@ -2782,7 +2897,7 @@ impl<'rom> Field<'rom> {
             let placed = "the leader starts where the walk from the entrance does not reach, since what opens the way there is not played first".to_string();
             note = Some(note.map_or(placed.clone(), |n| format!("{placed}; {n}")));
         }
-        Ok(EventRun { pages, frames, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker) })
+        Ok(EventRun { pages, frames, states, whole: None, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker) })
     }
 
     /// One frame of an exit's arrival in the scene it leads to, which began
@@ -3079,6 +3194,12 @@ pub struct EventRun {
     pub pages: Vec<Page>,
     /// Each frame's picture, BGR555.
     pub frames: Vec<Vec<u16>>,
+    /// The machine's state at the end of each of those frames, when the
+    /// event was recorded whole (Field::whole).
+    pub states: Option<super::whole::States>,
+    /// The event drawn whole from those states (whole::event), or why it
+    /// could not be.
+    pub whole: Option<Result<Vec<Image>, String>>,
     /// Whether the recording stopped at its cap.
     pub capped: bool,
     /// Whether the event ran no script: its dispatch returned in the frame
