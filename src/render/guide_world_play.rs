@@ -133,7 +133,7 @@ struct Play {
 }
 
 /// Walking north into the door of Jenna's grandparents' house in Vale
-/// (EventScript_EnterJennasGrandparentsHouse, metatile behavior 9): the door
+/// (Vale_EnterJennasGrandparentsHouse, metatile behavior 9): the door
 /// opens, the leader walks in and the exit VALE_TO_COTTAGE_ROOMS_A_NORTH ends the
 /// map, and the room inside fades in.
 const DOOR: Play = Play {
@@ -148,7 +148,7 @@ const DOOR: Play = Play {
 
 /// Up and right held below the Sanctum's front in Vale: the leader slides
 /// right along the front wall, then up along the cliff
-/// (Object_UpdateLeaderControl's headings off the pad's).
+/// (Actor_UpdatePlayerControl's headings off the pad's).
 const WALL_SLIDE: Play = Play {
     file: "world/wall-slide.gif",
     place: VALE,
@@ -209,7 +209,7 @@ const WORLD_MAP_ZOOM: Play = Play {
 };
 
 /// Jumping down a ledge (MB_LEDGE) in Bilibin Cave's entrance with Down
-/// held (Field_RunPushCellEvent).
+/// held (Field_RunPushCell).
 const LEDGE: Play = Play {
     file: "layout/ledge.gif",
     place: BILIBIN_CAVE_ENTRANCE,
@@ -322,9 +322,9 @@ impl<'a> Guide<'a> {
 
     /// The mayor of Vault talked to twice in his house on the party's
     /// return: the first time he welcomes Isaac back
-    /// (EventScript_WelcomeIsaacBack, while
+    /// (LogRoomsB_WelcomeIsaacBack, while
     /// FLAG_VAULT_REVISIT_ISAAC_WELCOMED_BACK is clear), the second he only
-    /// warns of the thieves (EventScript_WarnOfThievesRevenge).
+    /// warns of the thieves (LogRoomsB_WarnOfThievesRevenge).
     fn talk_twice(&mut self) -> Result<(), String> {
         let play = Play { file: "map/talk-twice.gif", place: VAULT_HOUSES_REVISIT, of: VAULT_HOUSES_REVISIT.0, set: &[], stand: Some((510, 452, EAST)), path: &[(0, 15)], what: "" };
         let (mut entered, mut frames) = self.start(&play)?;

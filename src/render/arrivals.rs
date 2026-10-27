@@ -2,7 +2,7 @@
 //! to, read from the source's exit tables (each overlay's SCENE_EXIT rows,
 //! their names numbered in scene_exits.h; MAP_WARP rows and map_warps.h
 //! before The Broken Seal's rename) and map numbers
-//! (field/scene_headers.s). `render place` photographs a map as the party
+//! (field/scenes.s). `render place` photographs a map as the party
 //! arrives by one of them, rather than by the table's first row, which no
 //! exit may use (ENTRANCE_DEFAULT is where the debug map select starts).
 
@@ -38,10 +38,10 @@ fn numbers(text: &str) -> HashMap<String, u16> {
     pattern.captures_iter(&plain(text)).filter_map(|c| Some((c[1].to_string(), c[2].parse().ok()?))).collect()
 }
 
-/// The map names of scene_headers.s in row order: a row's number is its
+/// The scene names of scenes.s in row order: a row's number is its
 /// SceneId_. A row without a name is an empty string.
 fn map_names(text: &str) -> Vec<String> {
-    let pattern = Regex::new(r"^\s*scene_header\s+(\w*)\s*,").unwrap();
+    let pattern = Regex::new(r"^\s*scene\s+(\w*)\s*,").unwrap();
     text.lines().filter_map(|l| pattern.captures(l).map(|c| c[1].to_string())).collect()
 }
 
@@ -82,7 +82,7 @@ fn sources(dir: &Path, out: &mut Vec<std::path::PathBuf>) -> Result<(), String> 
 pub fn read(root: &Path) -> Result<HashMap<u16, Vec<Arrival>>, String> {
     let game = root.join("games/tbs");
     let read = |path: &Path| std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()));
-    let names = map_names(&read(&game.join("src/field/scene_headers.s"))?);
+    let names = map_names(&read(&game.join("src/field/scenes.s"))?);
     let shared = numbers(&read(&game.join("include/scene_exits.h")).or_else(|_| read(&game.join("include/map_warps.h")))?);
     let mut files = Vec::new();
     sources(&game.join("src"), &mut files)?;
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn map_numbers_are_their_rows() {
-        let text = "\t.macro scene_header name, code:req\n\t.endm\ngMapHeaders:\n\tscene_header Title, 0x36f, 0x00, 1, 0x00\n\tscene_header , 0x370, 0x01, 1, 0x00\n\tscene_header WorldMap, 0x371, 0x02, 1, 0x01\n";
+        let text = "\t.macro scene name, code:req\n\t.endm\ngScenes:\n\tscene Title, 0x36f, 0x00, 1, 0x00\n\tscene , 0x370, 0x01, 1, 0x00\n\tscene WorldMap, 0x371, 0x02, 1, 0x01\n";
         assert_eq!(map_names(text), vec!["Title", "", "WorldMap"]);
     }
 
@@ -174,7 +174,7 @@ mod tests {
     #[test]
     fn goma_cave_entrance_is_entered_from_the_world_map() {
         let arrivals = read(crate::compile::root()).unwrap();
-        let names = map_names(&std::fs::read_to_string(crate::compile::root().join("games/tbs/src/field/scene_headers.s")).unwrap());
+        let names = map_names(&std::fs::read_to_string(crate::compile::root().join("games/tbs/src/field/scenes.s")).unwrap());
         let number = names.iter().position(|n| n == "GomaCaveEntrance").unwrap() as u16;
         assert!(arrivals[&number].contains(&Arrival { dest: 1, from: "WorldMap".to_string() }), "{:?}", arrivals[&number]);
         assert_eq!(ranked(&arrivals[&number], &[0, 1, 2]), vec![1, 2]);

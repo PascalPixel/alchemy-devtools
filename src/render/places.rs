@@ -380,7 +380,7 @@ pub fn is_place(scene: &Scene) -> Result<(), String> {
     if scene.file.contains("/debug/") {
         return Err("a debug test room".to_string());
     }
-    if scene.file.ends_with("menu/title.c") || scene.file.ends_with("menu/main_menu.c") {
+    if scene.file.ends_with("menu/title.c") || scene.file.ends_with("menu/file_screen.c") {
         return Err("a menu, not a place".to_string());
     }
     Ok(())
@@ -1498,7 +1498,7 @@ mod tests {
 
     #[test]
     fn event_names_become_file_names() {
-        assert_eq!(file_name("EventScript_InspectWell"), "EventScript_InspectWell");
+        assert_eq!(file_name("Bilibin_InspectWell"), "Bilibin_InspectWell");
         assert_eq!(file_name("gLacquerRoomsB_Triggers[65]"), "gLacquerRoomsB_Triggers-65");
     }
 
@@ -1599,7 +1599,7 @@ mod tests {
     fn message_rows_are_told_from_functions() {
         assert!(is_message_row("MsgValeRockCannotBeMoved"));
         assert!(is_message_row("gValeStormyNight_Triggers[26]"));
-        assert!(!is_message_row("EventScript_PushPillar"));
+        assert!(!is_message_row("Vale_PushPillar"));
     }
 }
 

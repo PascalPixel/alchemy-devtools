@@ -1260,7 +1260,7 @@ pub(super) struct Stretch {
 }
 
 /// Goma Cave's rooms: the pond, the pillar room, the stream and the bridge,
-/// gSceneHeaders' rows from SceneId_GomaCavePond to SceneId_GomaCaveBridge.
+/// gScenes' rows from SceneId_GomaCavePond to SceneId_GomaCaveBridge.
 const GOMA_CAVE_ROOMS: (&str, &str) = ("GomaCavePond", "GomaCaveBridge");
 /// The most of the 32 by 32 pixels around the leader that may be black as a
 /// random battle is walked into: an eighth.

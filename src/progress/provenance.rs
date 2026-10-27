@@ -575,7 +575,7 @@ pub const FAMILIES: &[(&str, &str, &str)] = &[
 /// Words that, right after a family prefix, name a part of the family's
 /// mechanism rather than one member of it, whatever enum holds it:
 /// `ITEM_USE_CONSUMED` is what using an item does to it,
-/// `ACTOR_ACTION_IDLE` an action an actor runs, `FLAG_MENU_OPEN` a flag of
+/// `MOVEMENT_TYPE_STAND` an action an actor runs, `FLAG_MENU_OPEN` a flag of
 /// the menus, `PSYNERGY_TRIGGER_ANY` a Psynergy trigger's control word,
 /// `SUMMON_ANIM_RAMSES` the animation a summon runs, `PSYNERGY_FROM_CLASS`
 /// where a Psynergy came from and `ABILITY_USABLE_IN_FIELD` where an ability

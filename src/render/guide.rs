@@ -95,7 +95,7 @@ impl<'a> Guide<'a> {
     }
 
     /// In Vale, walking right at 1 pixel a frame, then running back with B
-    /// held at 1.5 (Object_UpdateLeaderControl).
+    /// held at 1.5 (Actor_UpdatePlayerControl).
     pub fn walk(&mut self) -> Result<(), String> {
         let path = [(KEY_RIGHT, 60), (0, 15), (KEY_LEFT | KEY_B, 60), (0, 20)];
         self.walk_path(VALE, &path, "walk-run.gif", "walking right, then running back")

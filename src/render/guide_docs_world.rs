@@ -125,8 +125,8 @@ impl Guide<'_> {
         let setup = Setup { scene: place.0, entrance: place.1, set, clear };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         // VenusLighthouseAerie_ShowGroupEmote pops each one's bubble through
-        // Actor_ShowEmote, FieldEffect_SpawnLinked.
-        let emote = self.sym("FieldEffect_SpawnLinked")?;
+        // Actor_ShowEmote, FieldEffect_SpawnAttached.
+        let emote = self.sym("FieldEffect_SpawnAttached")?;
         let reacted = std::rc::Rc::new(std::cell::Cell::new(false));
         let seen = reacted.clone();
         field.probe_pcs = vec![emote];

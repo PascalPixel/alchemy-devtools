@@ -323,7 +323,7 @@ impl<'a> Guide<'a> {
     }
 
     /// A villager of Vale Gate showing his Psynergy by day
-    /// (EventScript_DemonstratePsynergy): talked to, then the screen beside the
+    /// (ValePlaza_DemonstratePsynergy): talked to, then the screen beside the
     /// sprites and the sprite palettes while his display lasts, as
     /// `psynergy-display.gif`.
     pub fn vale_gate_display(&mut self) -> Result<(), String> {
@@ -364,7 +364,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Garet's sleeping grandfather as the party comes home after Kalay
-    /// (EventScript_GaretComesHome): the screen beside the sprites, the three
+    /// (CottageRoomsA_GaretComesHome): the screen beside the sprites, the three
     /// letters Z (actors 23 to 25) boxed and the frame of their 180-frame
     /// cycle written, as `sleep-z.gif`.
     pub fn cottage_rooms_a_sleep(&mut self) -> Result<(), String> {

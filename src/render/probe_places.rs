@@ -429,7 +429,7 @@ impl<'a> Guide<'a> {
                 // Vault (20) and VaultRevisit (23): every lookup of the ivy
                 // placed at (0, 0) (actor 22 and 20) from the scene's start,
                 // walking, ringing the bell and casting Whirlwind.
-                let get = at("Actor_GetByActorId").or_else(|_| at("ObjectEvent_GetByLocalId"))?;
+                let get = at("Actor_Lookup").or_else(|_| at("ObjectEvent_GetByLocalId"))?;
                 for (scene, id, set) in [(20u16, 22u32, vec!["FLAG_VALE_PARTY_LEFT"]), (23, 20, vec!["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"])] {
                     let flags: Vec<u16> = set.iter().map(|n| self.flag(n).unwrap_or(0)).collect();
                     let setup = Setup { scene, entrance: 0, set: flags, clear: Vec::new() };

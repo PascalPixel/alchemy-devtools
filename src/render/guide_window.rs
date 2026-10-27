@@ -773,7 +773,7 @@ impl<'a> Guide<'a> {
 }
 
 /// Bilibin from the world map's road (SceneId_Bilibin, entrance 1): a new
-/// place group, so FLAG_SHOW_LOCATION_NAME is set on arrival.
+/// place group, so FLAG_SHOW_AREA_NAME is set on arrival.
 const BILIBIN: (u16, u16) = (30, 1);
 /// struct TimedNoticeWork (window/shortcuts.c): the notice's window and
 /// countdown in the event work.

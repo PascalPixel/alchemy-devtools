@@ -5,7 +5,7 @@
 //! The location-name notice (AreaNameWindow_Show) returns at once unless
 //! show_notice is set. The
 //! scene is the player's once SceneManager_Run's field loop takes its first
-//! step (Field_ProcessStep).
+//! step (Field_UpdateWalking).
 //!
 //! A map is stitched from one moment of the game: for each 240 by 160 view
 //! of the box the machine is loaded again, the map's followed point
@@ -13,7 +13,7 @@
 //! view's focus at each entry of its two readers, and the next scheduler
 //! call of MapGrid_UpdateLayerScroll runs MapGrid_CenterOnFollowedPoint instead,
 //! which redraws each layer around the point as the event camera does. The
-//! actors' task (Object_UpdateAllThumb) is skipped meanwhile, so no actor
+//! actors' task (Actor_UpdateAllThumb) is skipped meanwhile, so no actor
 //! moves or draws on the shared random numbers; the third frame is the view.
 //!
 //! An event starts with the leader where the player would stand to start
@@ -24,7 +24,7 @@
 //! to from where he entered, in the room the camera shows (Field::reach).
 //! Then A (talk, search), a field Psynergy request (FieldWork.command) or
 //! walking onto the cell (touch) starts it, and the field loop's own
-//! dispatch (Scene_TalkToActor, Scene_RunStepTriggerOrExit, Field_SearchCell,
+//! dispatch (Scene_TalkToActor, Scene_RunStepTriggerOrExit, Field_ExamineCell,
 //! Field_UsePsynergy) shows which event began; the event function the CPU
 //! then enters (Field::watch) shows whose row it was, since two rooms of a
 //! scene can give the same actor id or cell code to different events. Each
@@ -41,7 +41,7 @@ use crate::ld_map::Map;
 use std::collections::HashMap;
 
 /// struct SaveBlock (save_block.h), struct MapGridScrollWork (map_grid_scroll.h),
-/// struct FieldWork (scene_header.h), struct SceneEntries and the object
+/// struct FieldWork (field_work.h), struct SceneEntryPoints and the object
 /// slots' offsets.
 const GS_COINS: u32 = 0x10;
 const GS_SCENE: u32 = 0x1c0;
@@ -101,14 +101,14 @@ const OBJ_SPRITE: u32 = 0x50;
 /// (param) of struct SpriteAnim, whose first halfword is its sprite id.
 const ANIM_ENTRIES: u32 = 0x28;
 const ANIM_ENTRY_PARAM: u32 = 0x05;
-/// FieldWork.mode (an enum ObjectSystemMode) and its world map mode.
+/// FieldWork.mode (an enum ActorSystemMode) and its world map mode.
 const FIELD_MODE: u32 = 0x19e;
-const OBJECT_SYSTEM_WORLD_MAP: u16 = 3;
+const ACTOR_SYSTEM_WORLD_MAP: u16 = 3;
 /// The world map (struct WorldMapView, which gMapGridWork points to there):
 /// 16 by 16 tiles of 16 by 16 cells, each cell 32 pixels square, so 8192
 /// pixels each way. tileIds names the tile at each place, and Ram_Metatiles
 /// (gMetatiles) holds the 2 by 2 tiles around the party, 32 cells to a row,
-/// the collision code in byte 2 as on a layered map (Field_ProcessStep's
+/// the collision code in byte 2 as on a layered map (Field_UpdateWalking's
 /// step test reads it there).
 const PERSPECTIVE_TILE_IDS: u32 = 0x138;
 const PERSPECTIVE_QUARTER_TILES: u32 = 0x338;
@@ -181,7 +181,7 @@ const HOLD: u32 = 3;
 const MAX_FRAMES: u32 = 30000;
 /// Frames of the leader standing ready that open an event's recording.
 const LEAD_IN: u32 = 12;
-/// Speakers below this are the party (FieldMessage_ShowAtObject has them
+/// Speakers below this are the party (FieldMessage_ShowAtActor has them
 /// speak from the leader); from it on, a speaker is an actor of the scene.
 const PARTY_SPEAKERS: u16 = 8;
 /// Frames the field loop must step, with nothing to read, before the
@@ -221,7 +221,7 @@ pub struct Symbols {
     update_layer: u32,
     center: u32,
     dismiss: u32,
-    /// FieldMessage_ShowAtObject, which opens a message beside its speaker.
+    /// FieldMessage_ShowAtActor, which opens a message beside its speaker.
     speak: u32,
     objects: u32,
     typing: u32,
@@ -274,12 +274,12 @@ impl Symbols {
             // Each second spelling is Alchemy's before The Broken Seal's rename.
             apply_entrance: at("Scene_ApplyEntrance").or_else(|_| at("Scene_ApplyWarpDest"))?,
             notice: at("AreaNameWindow_Show").or_else(|_| at("MapNamePopup_Show"))?,
-            step: at("Field_ProcessStep")?,
+            step: at("Field_UpdateWalking")?,
             update_layer: at("MapGrid_UpdateLayerScroll")?,
             center: at("MapGrid_CenterOnFollowedPoint")?,
             dismiss: at("Text_CheckTextDismissed")?,
-            speak: at("FieldMessage_ShowAtObject")?,
-            objects: at("Object_UpdateAllThumb")?,
+            speak: at("FieldMessage_ShowAtActor")?,
+            objects: at("Actor_UpdateAllThumb")?,
             typing: at("TextPrinter_Step")?,
             choice: at("YesNoMenu_Run")?,
             lookup: at("Message_Find")?,
@@ -294,7 +294,7 @@ impl Symbols {
             defeat: Vec::new(),
             talk: at("Scene_TalkToActor").or_else(|_| at("Scene_TalkToObjectEvent"))?,
             touch: at("Scene_RunStepTriggerOrExit").or_else(|_| at("Scene_RunCoordEventOrWarp"))?,
-            search: at("Field_SearchCell")?,
+            search: at("Field_ExamineCell")?,
             psynergy: at("Field_UsePsynergy")?,
             game_state: at("gSaveBlock")?,
             flag_bytes: at("gGameFlagBytes")?,
@@ -367,7 +367,7 @@ pub(super) struct Track {
     choice_frame: u32,
     last_message: u32,
     keys: u32,
-    /// A function to call at the next Field_ProcessStep entry (0 for none),
+    /// A function to call at the next Field_UpdateWalking entry (0 for none),
     /// with x and z written to the followed point first; and r0 to r3 and
     /// lr kept while it runs.
     call_target: u32,
@@ -711,7 +711,7 @@ impl<'rom> Field<'rom> {
         self.gba.io_write16(address, value);
     }
 
-    /// Calls the game function at `target` from the next Field_ProcessStep
+    /// Calls the game function at `target` from the next Field_UpdateWalking
     /// entry, with the followed point at (x, z) (16.16 pixels), and runs
     /// until it has returned.
     pub fn call(&mut self, target: u32, origin: [i32; 2]) -> Result<(), String> {
@@ -737,7 +737,7 @@ impl<'rom> Field<'rom> {
         self.gba.write32(self.s.game_state + GS_Z, fx(z) as u32);
     }
 
-    /// Stops or starts the actors' task (Object_UpdateAllThumb).
+    /// Stops or starts the actors' task (Actor_UpdateAllThumb).
     pub fn freeze(&mut self, on: bool) {
         self.t.freeze = on;
     }
@@ -1248,7 +1248,7 @@ impl<'rom> Field<'rom> {
     /// Whether the field runs the world map (FieldWork.mode).
     pub fn world(&self) -> bool {
         let work = self.gba.read32(self.s.field_work);
-        work != 0 && self.gba.read16(work + FIELD_MODE) == OBJECT_SYSTEM_WORLD_MAP
+        work != 0 && self.gba.read16(work + FIELD_MODE) == ACTOR_SYSTEM_WORLD_MAP
     }
 
     /// The side of a map cell in pixels: 16, or the world map's 32.
@@ -1376,7 +1376,7 @@ impl<'rom> Field<'rom> {
             return Err(format!("actor {id} is off stage, at ({}, {}) outside the map", actor.x, actor.z));
         }
         // The world map draws only the actors near the party
-        // (WorldMap_UpdateLocationContacts).
+        // (WorldMap_UpdateAreaContacts).
         if !actor.drawn && !self.world() {
             return Err(format!("actor {id} has no sprite"));
         }
@@ -1659,7 +1659,7 @@ impl<'rom> Field<'rom> {
         self.event_rows(kind, target).iter().any(|r| own.contains(&result_key(r.result)))
     }
 
-    /// Runs the field loop to its next step (Field_ProcessStep's entry),
+    /// Runs the field loop to its next step (Field_UpdateWalking's entry),
     /// where a game function can be called between two of its calls.
     fn to_step(&mut self) -> Result<(), String> {
         for _ in 0..4_000_000 {
@@ -1870,7 +1870,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// Whether the leader can walk from cell `a` into the next cell the way
-    /// `d` (an index of STEP) on map layer `layer`, as Object_UpdateLeaderControl
+    /// `d` (an index of STEP) on map layer `layer`, as Actor_UpdatePlayerControl
     /// lets him: MapGrid_CheckCollision passes the ground 8 pixels ahead of him
     /// all the way.
     fn passable(&mut self, layer: u8, a: (i32, i32), d: usize) -> Result<bool, String> {
@@ -1944,7 +1944,7 @@ impl<'rom> Field<'rom> {
                     queue.push_back(n);
                 }
                 // Standing on a ledge, a climb or a jump cell and pushing on
-                // (Field_RunPushCellEvent) takes him over what is ahead: down
+                // (Field_RunPushCell) takes him over what is ahead: down
                 // a ledge with Down held, up or down a climb, across a jump
                 // (Field_TryJumpForward: over a wall or a drop, never ground
                 // more than a step higher, onto ground within a step). He
@@ -2352,7 +2352,7 @@ impl<'rom> Field<'rom> {
             Trigger::Search(code) => {
                 // The leader searches the ground layer's cell 16 pixels ahead
                 // of him, whichever way he faces
-                // (Actor_GetTriggerTileAheadOfCurrent). He stands on his own
+                // (Actor_GetTriggerCellAheadOfCurrent). He stands on his own
                 // layer, level with the cell or up to 64 pixels below it (a
                 // jar on a shelf).
                 let cells: Vec<_> = self.cells_with_code(code)?.into_iter().filter(|c| c.0 == 0).collect();
@@ -2407,7 +2407,7 @@ impl<'rom> Field<'rom> {
                 let cells = self.cells_with_code(code)?;
                 let size = self.cell_size();
                 // The world map's places are actors the leader walks into
-                // (WorldMap_UpdateLocationContacts), not cells.
+                // (WorldMap_UpdateAreaContacts), not cells.
                 if cells.is_empty() && self.world() && code >= WORLD_CONTACT_BASE {
                     return self.contact_spots(code - WORLD_CONTACT_BASE, reach);
                 }
@@ -2475,7 +2475,7 @@ impl<'rom> Field<'rom> {
 
     /// Where the leader stands to walk into world map actor `id`, a place:
     /// a little way south, west, east or north of it, walking toward it,
-    /// nearer first. WorldMap_UpdateLocationContacts raises the place's
+    /// nearer first. WorldMap_UpdateAreaContacts raises the place's
     /// touch (WORLD_CONTACT_BASE + its actor) once he is close enough.
     fn contact_spots(&mut self, id: u16, reach: &Reach) -> Result<Vec<Spot>, String> {
         let actor = self.present(id)?;

@@ -114,7 +114,7 @@ impl<'a> Guide<'a> {
                     if entrance == 0 {
                         // Again from the party's placing, watching every
                         // actor lookup of slot 15 as the scene starts.
-                        let get = at("Actor_GetByActorId").or_else(|_| at("ObjectEvent_GetByLocalId"))?;
+                        let get = at("Actor_Lookup").or_else(|_| at("ObjectEvent_GetByLocalId"))?;
                         let ew_sym = at("gFieldWork")?;
                         e.field.load(&e.placed);
                         e.field.probe_pcs = vec![get];
@@ -123,7 +123,7 @@ impl<'a> Guide<'a> {
                         e.field.probe = Some(Box::new(move |gba: &Gba, pc: u32, frame: u32| {
                             if pc != 0 && gba.register(0) == 15 {
                                 let work = gba.read32(ew_sym);
-                                keep.borrow_mut().push(format!("frame {frame}: Actor_GetByActorId(15) from {:08x}, slot word {:08x}", gba.register(14), gba.read32(work + 0x14 + 60)));
+                                keep.borrow_mut().push(format!("frame {frame}: Actor_Lookup(15) from {:08x}, slot word {:08x}", gba.register(14), gba.read32(work + 0x14 + 60)));
                             }
                         }));
                         e.field.until_control()?;

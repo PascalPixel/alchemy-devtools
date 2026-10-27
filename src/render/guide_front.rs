@@ -40,7 +40,7 @@ const VALE_INNKEEPER: u16 = 13;
 const TITLE_AFTER_PROLOGUE: (u16, u16) = (0, 3);
 /// The title overlay's entrance that runs the credits (Import_CreditsRun).
 const CREDITS: (u16, u16) = (0, 9);
-/// The level room and the menu test room (scene_headers.s).
+/// The level room and the menu test room (scenes.s).
 const LEVEL_ROOM: u16 = 199;
 const MENU_TEST_ROOM: u16 = 200;
 /// The level room's level editor and the menu test room's first Felix

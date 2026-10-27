@@ -1,5 +1,5 @@
 //! Game facts the renderer reads from the Broken Seal's source rather than
-//! keeping copies of: map numbers (gSceneHeaders), area names
+//! keeping copies of: map numbers (gScenes), area names
 //! (gArea_NameRules and text/en.po), ability numbers and names
 //! (ability_ids.h, MsgAbilityName), actors' ids (each map's enum),
 //! characters (character_ids.h) and the debug party presets
@@ -78,29 +78,29 @@ fn macro_rows(
     Ok(rows)
 }
 
-/// The maps in gSceneHeaders' order (field/scene_headers.s): each one's name
+/// The scenes in gScenes' order (field/scenes.s): each one's name
 /// without `SceneId_` (empty for an unnamed row) and its area.
 fn maps() -> Result<Vec<(String, i64)>, String> {
-    let text = read("src/field/scene_headers.s")?;
-    macro_rows(&text, "gSceneHeaders", &["scene_header"])?
+    let text = read("src/field/scenes.s")?;
+    macro_rows(&text, "gScenes", &["scene"])?
         .into_iter()
         .map(|(_, row)| {
             let area = row
                 .get(2)
                 .and_then(|m| number(m))
-                .ok_or_else(|| format!("scene_header {row:?}: no area"))?;
+                .ok_or_else(|| format!("scene {row:?}: no area"))?;
             Ok((row[0].clone(), area))
         })
         .collect()
 }
 
-/// The number of map `SceneId_<name>`, its row of gSceneHeaders.
+/// The number of map `SceneId_<name>`, its row of gScenes.
 pub fn map_id(name: &str) -> Result<u16, String> {
     maps()?
         .iter()
         .position(|(n, _)| n == name)
         .map(|i| i as u16)
-        .ok_or_else(|| format!("scene_headers.s has no SceneId_{name}"))
+        .ok_or_else(|| format!("scenes.s has no SceneId_{name}"))
 }
 
 /// The message key of the PO entry named `name` in text/en.po.
@@ -127,7 +127,7 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
         .get(usize::from(map))
         .ok_or_else(|| format!("no map {map}"))?
         .1;
-    let rules = read("src/overworld/map_rules.s")?;
+    let rules = read("src/overworld/scene_rules.s")?;
     // Before The Broken Seal's rename the table was gMapSec_NameRules and
     // its rows map_name and group_name.
     let kinds = ["scene_name", "area_name", "map_name", "group_name"];
@@ -136,7 +136,7 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
     let mut index = 0;
     for (kind, args) in rows {
         let [id, dest, name] = &args[..] else {
-            return Err(format!("map_rules.s: {kind} {args:?}"));
+            return Err(format!("scene_rules.s: {kind} {args:?}"));
         };
         let matches = if kind == "scene_name" || kind == "map_name" {
             maps.iter().position(|(n, _)| n == id) == Some(usize::from(map))
@@ -144,7 +144,7 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
             number(id) == Some(area)
         };
         if matches && (number(dest) == Some(-1) || number(dest) == Some(i64::from(entrance))) {
-            index = number(name).ok_or_else(|| format!("map_rules.s: {kind} {args:?}"))? as usize;
+            index = number(name).ok_or_else(|| format!("scene_rules.s: {kind} {args:?}"))? as usize;
             break;
         }
     }

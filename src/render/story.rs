@@ -293,7 +293,7 @@ impl Event {
 }
 
 /// Move's ability id: the one field Psynergy steered with the d-pad once it
-/// is cast (FieldEffect_SteerPushedTarget).
+/// is cast (FieldPsynergy_SteerPushedTarget).
 pub const MOVE: u16 = 0x8c;
 /// Carry's: lifted, then steered with the d-pad as Move is, and dropped with A.
 pub const CARRY: u16 = 0x93;

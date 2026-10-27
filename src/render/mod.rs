@@ -982,7 +982,7 @@ writes into DIR (default out/EDITION/story):
   title       title.gif and title.png: the Golden Sun logo card the title
               shows after the ending (its entrance 10), coming up and held
   farewell    vale-farewell.gif and vale-farewell.png: Vale's send-off,
-              EventScript_DepartForQuest (ValeHome's entrance 12), through the
+              ValePlaza_DepartForQuest (ValeHome's entrance 12), through the
               town's farewell, and the town gathered
   lighthouse  venus-lighthouse-lit.gif and .png: the world map cut at its
               entrance 91 after Venus Lighthouse's beacon erupts

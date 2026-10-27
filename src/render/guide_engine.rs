@@ -30,7 +30,7 @@ const GS_COINS: u32 = 0x10;
 const GS_SCENE: u32 = 0x1c0;
 const GS_ENTRANCE: u32 = 0x1c2;
 /// struct FieldWork: the exit request, which ends the scene; 999 leaves for
-/// the game state's scene and entrance (FieldScript_SetDestination).
+/// the game state's scene and entrance (Event_SetDestination).
 const FW_MARKERS: u32 = 0x11c;
 const FW_EXIT: u32 = 0x170;
 const EXIT_TO_DESTINATION: u16 = 999;
@@ -97,7 +97,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Sends the party from the scene it is in to `scene`'s `entrance`, as
-    /// FieldScript_SetDestination does, and runs `frames` frames.
+    /// Event_SetDestination does, and runs `frames` frames.
     fn travel(&self, field: &mut Field, (scene, entrance): (u16, u16), frames: u32) -> Result<(), String> {
         let state = self.sym("gSaveBlock")?;
         field.write16(state + GS_SCENE, scene);
@@ -111,7 +111,7 @@ impl<'a> Guide<'a> {
     /// seen through the party it changes: the party in Vale before the
     /// visit, as the room's first entry leaves it, and after it has run a
     /// second time as the next visit runs it, as `menu-test-setup.png`. The
-    /// party is sent into the room as FieldScript_SetDestination sends it, and the
+    /// party is sent into the room as Event_SetDestination sends it, and the
     /// entry's runs are counted by probing it.
     pub fn menu_test_setup(&mut self) -> Result<(), String> {
         let characters = source::character_names()?;
@@ -256,7 +256,7 @@ impl<'a> Guide<'a> {
     }
 
     /// A cutscene's script beside the frames each of its commands waits
-    /// through, as `scene-script.gif`: EventScript_ReactToAnotherTremor, a Vale
+    /// through, as `scene-script.gif`: Vale_ReactToAnotherTremor, a Vale
     /// villager's talk event once FLAG_KALAY_REACHED is set, played by
     /// talking to her. Its body is read from vale.c a statement to a line;
     /// its calls are the BL instructions of its code in the loaded overlay,
@@ -264,7 +264,7 @@ impl<'a> Guide<'a> {
     /// statement is current from the frame its call is reached until the
     /// frame the instruction after it is.
     pub fn scene_script(&mut self) -> Result<(), String> {
-        const EVENT: &str = "EventScript_ReactToAnotherTremor";
+        const EVENT: &str = "Vale_ReactToAnotherTremor";
         const WOMAN: u16 = 17;
         let source = std::fs::read_to_string(crate::compile::root().join("games/tbs/src/scene/vale.c")).map_err(|e| format!("vale.c: {e}"))?;
         let head = source.lines().position(|l| l.contains(&format!("void {EVENT}(void)"))).ok_or("vale.c has no such event")?;
@@ -374,7 +374,7 @@ impl<'a> Guide<'a> {
     /// `temporary-flags.png`: in Vale every one of FLAG_SCENE_TEMP_00 to
     /// FLAG_AREA_TEMP_FF is set by hand; the party is sent to the Sanctum,
     /// a scene of the same place, then to the world map, another place, and
-    /// back into Vale (FieldScript_SetDestination's way); each time the 512 flags are drawn as
+    /// back into Vale (Event_SetDestination's way); each time the 512 flags are drawn as
     /// two grids of 16 by 16, lit where set, beside the screen.
     pub fn temporary_flags(&mut self) -> Result<(), String> {
         const FIRST: u32 = 0x200;
@@ -995,7 +995,7 @@ impl<'a> Guide<'a> {
     /// row of gMaps and the directory.
     pub fn map_header(&mut self) -> Result<(), String> {
         const SUHALLA_DESERT_NORTH: u16 = 164;
-        let scenes = self.sym("gSceneHeaders")?;
+        let scenes = self.sym("gScenes")?;
         let layered = self.sym("gMaps")?;
         let directory = self.sym("Resource_DirectoryTable")?;
         let map_001 = 0x128u32;
@@ -1502,7 +1502,7 @@ impl<'a> Guide<'a> {
 
     /// The leader's probes for a step as he is pushed into a wall and slides
     /// along it, as `player-probes.gif`: Vale at twice the GBA's size, and
-    /// over it every point Object_UpdateLeaderControl tested that frame
+    /// over it every point Actor_UpdatePlayerControl tested that frame
     /// through MapGrid_CheckCollision for the leader, green where the ground
     /// was open (COLLISION_NONE) and red where it was not, with a line from
     /// the leader to the pad's way. The probes are read at the function's

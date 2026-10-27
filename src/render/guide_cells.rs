@@ -190,7 +190,7 @@ impl Names {
 /// What cell code `code` makes happen in `field`'s scene now, its rows'
 /// names put in `words`; None for open ground. The rows taken are those
 /// Scene_FindTrigger could take: each whose condition holds, and a search on
-/// a named target whatever its condition (Field_SearchCell tests it
+/// a named target whatever its condition (Field_ExamineCell tests it
 /// afterwards). Stepping on a cell runs a touch row before an exit row, so
 /// a touch row gives the colour, then an exit row, then a search row.
 pub(super) fn meaning(field: &Field, names: &Names, words: Words, code: i32) -> Result<Option<Meaning>, String> {
@@ -487,8 +487,8 @@ pub(super) const GOMA_CAVE_PILLAR_WORDS: Words = &[
     ("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_POND_WEST", "Way down to the room of the pond", None),
     ("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_POND_SOUTH", "Way down to the room of the pond", None),
     ("GOMA_CAVE_PILLAR_TO_GOMA_CAVE_POND_EAST", "Way down to the room of the pond", None),
-    ("EventScript_JumpGapWest", "Jump the gap west (walk west into it)", None),
-    ("EventScript_PushEastPillar", "Push the east stone pillar a step (walk into it)", None),
+    ("GomaCavePillar_JumpGapWest", "Jump the gap west (walk west into it)", None),
+    ("GomaCavePillar_PushEastPillar", "Push the east stone pillar a step (walk into it)", None),
     ("FIND_ITEM", "Chest", None),
 ];
 
@@ -545,24 +545,24 @@ const COTTAGE_ROOMS_B: u16 = 8;
 /// What the rows of Vale's event table do, from their functions'
 /// comments, the scenes their exits lead to, and the event renders.
 const VALE_WORDS: Words = &[
-    ("EventScript_EnterSanctum", "Door into the Sanctum", Some(9)),
-    ("EventScript_ApproachMtAleph", "Path up Mt. Aleph", None),
-    ("EventScript_ExitToValeKradensCottageNorth|EventScript_WarpToValeKradensCottageNorth", "Way out to Kraden's cottage, north", Some(6)),
-    ("EventScript_ExitToValeKradensCottageSouth|EventScript_WarpToValeKradensCottageSouth", "Way out to Kraden's cottage, south", Some(6)),
-    ("EventScript_ExitToValePlaza|EventScript_WarpToValePlaza", "Way out to the Psynergy Stone", Some(5)),
-    ("EventScript_EnterGaretsHouse", "Door into Garet's house (walk north into it)", Some(COTTAGE_ROOMS_A)),
-    ("EventScript_EnterCottageRoomsA", "Door into a house (walk north into it)", Some(COTTAGE_ROOMS_A)),
-    ("EventScript_EnterIsaacsHouse", "Door into Isaac's house (walk north into it)", Some(COTTAGE_ROOMS_B)),
-    ("EventScript_EnterJennasGrandparentsHouse", "Door into the house of Jenna's grandparents (walk north into it)", Some(COTTAGE_ROOMS_A)),
-    ("EventScript_EnterCottageRoomsAWest", "Door into a house (walk north into it)", Some(COTTAGE_ROOMS_A)),
-    ("EventScript_StepOntoBridge", "Onto the bridge: its cells change", None),
-    ("EventScript_StepOffBridge", "Off the bridge: its cells change back", None),
-    ("EventScript_WatchThePuppies", "The puppies bark", None),
-    ("EventScript_TurnBackFromThePuppies", "The puppies bark", None),
-    ("EventScript_ClimbLadderOntoRoof", "Ladder up onto the roof of Isaac's house (walk north into it)", None),
-    ("EventScript_ClimbDownFromRoof", "Ladder down from the roof (walk south into it)", None),
-    ("EventScript_PushPillar", "Push the stone pillar", None),
-    ("EventScript_SearchTheLockedDoor", "Search the locked door", None),
+    ("Vale_EnterSanctum", "Door into the Sanctum", Some(9)),
+    ("Vale_ApproachMtAleph", "Path up Mt. Aleph", None),
+    ("Vale_ExitToValeKradensCottageNorth", "Way out to Kraden's cottage, north", Some(6)),
+    ("Vale_ExitToValeKradensCottageSouth", "Way out to Kraden's cottage, south", Some(6)),
+    ("Vale_ExitToValePlaza", "Way out to the Psynergy Stone", Some(5)),
+    ("Vale_EnterGaretsHouse", "Door into Garet's house (walk north into it)", Some(COTTAGE_ROOMS_A)),
+    ("Vale_EnterCottageRoomsA", "Door into a house (walk north into it)", Some(COTTAGE_ROOMS_A)),
+    ("Vale_EnterIsaacsHouse", "Door into Isaac's house (walk north into it)", Some(COTTAGE_ROOMS_B)),
+    ("Vale_EnterJennasGrandparentsHouse", "Door into the house of Jenna's grandparents (walk north into it)", Some(COTTAGE_ROOMS_A)),
+    ("Vale_EnterCottageRoomsAWest", "Door into a house (walk north into it)", Some(COTTAGE_ROOMS_A)),
+    ("Vale_StepOntoBridge", "Onto the bridge: its cells change", None),
+    ("Vale_StepOffBridge", "Off the bridge: its cells change back", None),
+    ("Vale_WatchThePuppies", "The puppies bark", None),
+    ("Vale_TurnBackFromThePuppies", "The puppies bark", None),
+    ("Vale_ClimbLadderOntoRoof", "Ladder up onto the roof of Isaac's house (walk north into it)", None),
+    ("Vale_ClimbDownFromRoof", "Ladder down from the roof (walk south into it)", None),
+    ("Vale_PushPillar", "Push the stone pillar", None),
+    ("Vale_SearchTheLockedDoor", "Search the locked door", None),
 ];
 
 impl<'a> Guide<'a> {

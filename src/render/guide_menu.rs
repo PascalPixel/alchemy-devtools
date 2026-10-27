@@ -67,7 +67,7 @@ const GAUGE_FULL: u32 = 0x4000;
 const PSY_PANE_ACTION: u32 = 0x178;
 const PSY_OWNER_IDS: u32 = 0x21a;
 
-/// struct ItemMenuFiguresView (four_object_motion.h).
+/// struct ItemMenuFiguresView (djinn_figures.h).
 const FIGURE_OBJECTS: u32 = 0x224;
 const FIGURE_X: u32 = 0x234;
 const FIGURE_Y: u32 = 0x23c;
@@ -326,7 +326,7 @@ impl<'a> Guide<'a> {
     /// The Status screen in Xian: the member row, then A through Isaac's
     /// status, Psynergy and equipment pages, each found where
     /// StatusScreen_RunPages's step function is entered
-    /// (MemberChooser_RunRearrange, StatusScreen_SelectCommand,
+    /// (PartyMemberChooser_RunRearrange, StatusScreen_SelectCommand,
     /// PsynergyMenu_SelectAction, ItemMenu_SelectItem), at twice its size;
     /// each Djinni figure of the row of four outlined where the menu work
     /// places it (ItemMenuFiguresView positionsX and positionsY, the
@@ -334,7 +334,7 @@ impl<'a> Guide<'a> {
     pub fn status_pages(&mut self) -> Result<(), String> {
         let menu = self.sym("gMenuWork")?;
         let steps = [
-            ("STATUS_STEP_MEMBER", self.sym("MemberChooser_RunRearrange")?, "the member row"),
+            ("STATUS_STEP_MEMBER", self.sym("PartyMemberChooser_RunRearrange")?, "the member row"),
             ("STATUS_STEP_STATUS", self.sym("StatusScreen_SelectCommand|SummaryScreen_SelectCommand")?, "the status page"),
             ("STATUS_STEP_PSYNERGY", self.sym("PsynergyMenu_SelectAction")?, "the Psynergy page"),
             ("STATUS_STEP_EQUIPMENT", self.sym("ItemMenu_SelectItem")?, "the equipment page"),

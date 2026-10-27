@@ -260,7 +260,7 @@ impl Report {
     /// The parameter an argument fills, by name, and the kind of data that
     /// name says it holds. A macro's parameter takes its own name's kind, else
     /// that of the parameter it is passed to (`WAIT(n)` is
-    /// `FieldScript_WaitFrames(s32 frames)`).
+    /// `Event_WaitFrames(s32 frames)`).
     fn parameter(&self, callee: &str, position: usize, depth: usize) -> Option<(String, Option<&'static str>)> {
         if let Some(names) = self.parameters.get(callee) {
             let name = names.get(position)?.clone()?;
@@ -403,7 +403,7 @@ fn last_word(text: &str) -> &str {
 }
 
 /// A name that carries a number in place of a meaning: `ColosseumFinal1`,
-/// `EventScript_LeaveByExit10`, `ACTOR_8`. Placeholders, hardware and convention
+/// `Vale_LeaveByExit10`, `ACTOR_8`. Placeholders, hardware and convention
 /// names (`BG2`, `Dma3`, `REG_DMA3`, `u16`, `Random16`, `FLAG_SCENE_TEMP_01`)
 /// are not.
 pub fn is_numbered(name: &str) -> bool {
@@ -875,7 +875,7 @@ impl<'r, 'a> Walk<'r, 'a> {
     }
 
     /// A function-like macro's parameters, each with the call in its body it
-    /// is passed to: `WAIT(n)`'s `n` is `FieldScript_WaitFrames`'s first argument.
+    /// is passed to: `WAIT(n)`'s `n` is `Event_WaitFrames`'s first argument.
     fn macro_parameters(&mut self, name: &str, start: usize, end: usize) {
         // `#`, `define`, the name, `(`, then the parameters up to `)`.
         let mut names = Vec::new();
@@ -1387,7 +1387,7 @@ impl Report {
 }
 
 /// How many area names `gArea_NameRules` reads: its highest name index
-/// plus one, from the `scene_name` and `area_name` rows of `map_rules.s`
+/// plus one, from the `scene_name` and `area_name` rows of `scene_rules.s` (`map_rules.s` in The Lost Age)
 /// (`map_name` and `group_name` before the rename).
 pub fn area_count(rules: &str) -> Option<usize> {
     rules
@@ -1407,7 +1407,9 @@ fn game_text(root: &Path, game: &str) -> Option<GameText> {
         return None;
     }
     let po = std::fs::read(root.join(&path)).ok()?;
-    let rules = std::fs::read(root.join(format!("games/{game}/src/overworld/map_rules.s"))).ok();
+    let rules = std::fs::read(root.join(format!("games/{game}/src/overworld/scene_rules.s")))
+        .or_else(|_| std::fs::read(root.join(format!("games/{game}/src/overworld/map_rules.s"))))
+        .ok();
     let areas = rules.and_then(|rules| area_count(&String::from_utf8_lossy(&rules)));
     Some(GameText::parse(&String::from_utf8_lossy(&po), areas))
 }
@@ -1988,8 +1990,8 @@ mod tests {
             assert_eq!(data_parameter(name), kind, "{name}");
         }
         let header = concat!(
-            "void FieldScript_WaitFrames(s32 frames);\n",
-            "#define WAIT(n) FieldScript_WaitFrames(n)\n",
+            "void Event_WaitFrames(s32 frames);\n",
+            "#define WAIT(n) Event_WaitFrames(n)\n",
             "#define PIXELS(value) ((value) << 16)\n",
             "#define BLEND(top, bottom) Blend((top) | ((bottom) << 8))\n",
             "void Actor_SetPosition(s32 actor, s32 fixed_x, s32 fixed_z);\n",
@@ -2000,7 +2002,7 @@ mod tests {
         let source = concat!(
             "void Run(void) {\n",
             "    WAIT(80);\n",
-            "    FieldScript_WaitFrames(\n        40);\n",
+            "    Event_WaitFrames(\n        40);\n",
             "    Actor_SetPosition(ACTOR_LEADER, PIXELS(312), (416) << 16);\n",
             "    Actor_SetSpeed(ACTOR_LEADER, PIXELS(24), 0x8000);\n",
             "    Old(1, 20);\n",
@@ -2136,7 +2138,7 @@ mod provenance_tests {
         let actors = concat!(
             "enum ActorCollisionFlag { ACTOR_SOLID = 1 };\n",
             "enum BilibinActorId { ACTOR_GUARD = 8, ACTOR_SHOP_END };\n",
-            "enum { ACTOR_MAYOR = 10, ACTOR_SLOT_COUNT = 66 };\n",
+            "enum { ACTOR_MAYOR = 10, ACTOR_ID_COUNT = 66 };\n",
             "#define ITEM_TYPE_WEAPON 1\n#define ITEM_LIST_NAME_X 12\n",
         );
         let files = [("games/tbs/include/flags.h", flags), ("games/tbs/include/actor.h", actors)];

@@ -23,7 +23,7 @@
 use super::source;
 use std::sync::OnceLock;
 
-/// One stretch of the story: the maps it covers, as runs of gSceneHeaders
+/// One stretch of the story: the maps it covers, as runs of gScenes
 /// from one SceneId_ to another, the debug preset that sets the party's
 /// strength (none for a new game's level 1), and the members it names
 /// (character_ids.h) where the party is not the preset's.

@@ -250,7 +250,7 @@ const KOLIMA_FOREST_TREE: u16 = 44;
 const TRET_STAND_IN: u16 = 12;
 const HERMES_WATER: u16 = 0xb8;
 /// struct Unit's inventory, 15 halfwords; struct FieldWork's item
-/// request and the inventory slot it passes (scene_header.h).
+/// request and the inventory slot it passes (field_work.h).
 const UNIT_INVENTORY: u32 = 0xd8;
 const WORK_ITEM: u32 = 0x180;
 const WORK_ITEM_SLOT: u32 = 0x19a;
@@ -357,7 +357,7 @@ pub(super) fn settle_view(field: &mut Field) -> Result<(), String> {
     Err("the camera never settled".to_string())
 }
 
-/// struct FieldWork's Psynergy request (scene_header.h).
+/// struct FieldWork's Psynergy request (field_work.h).
 const WORK_PSYNERGY: u32 = 0x17e;
 
 /// Casts `ability` as Isaac from where the leader stands, as the field menu
@@ -1125,7 +1125,7 @@ impl<'a> Guide<'a> {
     }
 
     /// The leader stepping onto the western pan of the Scales of Justice in
-    /// Colosseum Final 3 (touch 15, EventScript_StepOnScales): the screen at twice
+    /// Colosseum Final 3 (touch 15, ColosseumNavampaMatch_StepOnScales): the screen at twice
     /// its size with each pan (SCALE_PAN_WEST and SCALE_PAN_EAST) marked at
     /// its place and labelled with its height in pixels as it moves, as
     /// `colosseum-navampa-scales.gif`.

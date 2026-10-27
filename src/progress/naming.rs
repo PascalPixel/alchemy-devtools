@@ -1013,7 +1013,7 @@ fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, out: &mut Vec<Findin
         }
         // pret's spelling where one uses a word of pret's (`ANIM_`, not
         // `ANIMATION_`), else the spelled-out one where they differ by a
-        // shortened word (`OBJECT_`, not `OBJ_`), else the one more names use.
+        // shortened word (`ACTOR_`, not `ACT_`), else the one more names use.
         let pret = |key: &str| key.split(' ').filter(|word| is_pret_word(word)).count();
         let short = |key: &str| {
             key.split(' ').filter(|word| !is_pret_word(word) && ABBREVIATIONS.iter().any(|(short, _)| *short == singular(word))).count()
@@ -1103,7 +1103,7 @@ mod tests {
                 name("MAP_EVENT_COORD", NameKind::Macro, file, 2),
                 name("Scene_RunCoordEventOrWarp", NameKind::Function, file, 3),
                 name("gSerialReceiveDest", NameKind::Global, file, 4),
-                name("Script_SetDestination", NameKind::Function, file, 5),
+                name("Event_SetDestination", NameKind::Function, file, 5),
                 name("Particle_Coordinates", NameKind::Function, file, 6),
             ],
             ..Names::default()
@@ -1112,7 +1112,7 @@ mod tests {
         let abbreviations: Vec<&str> = findings.iter().filter(|f| f.metric == "abbreviation").map(|f| f.what.as_str()).collect();
         assert_eq!(
             abbreviations,
-            ["gSerialReceiveDest\tdest -> destination: gSerialReceiveDestination (1 names spell destination, as Script_SetDestination does)"],
+            ["gSerialReceiveDest\tdest -> destination: gSerialReceiveDestination (1 names spell destination, as Event_SetDestination does)"],
             "WarpDest and CoordEvent are pret's; a dest outside them is still measured"
         );
     }
@@ -1183,7 +1183,7 @@ mod tests {
                 typed("Object", "object", 3),
                 typed("Object", "obj", 3),
                 typed("Object", "leader", 4),
-                typed("Object", "gObjects", 5),
+                typed("Object", "gActors", 5),
                 typed("FieldWork", "work", 6),
                 typed("FieldWork", "fieldWork", 7),
                 typed("FieldWork", "work", 8),
@@ -1252,7 +1252,7 @@ mod tests {
                 name("songNum", NameKind::Field, file, 5),
                 name("Field_RunAnimation", NameKind::Function, file, 6),
                 name("Battle_ApplyArgument", NameKind::Function, file, 7),
-                name("Object_Initialize", NameKind::Function, file, 8),
+                name("Actor_StartScript", NameKind::Function, file, 8),
                 name("Motion_SetParameter", NameKind::Function, file, 9),
                 name("Unit_Count", NameKind::Function, file, 10),
                 name("Battle_GetArg", NameKind::Function, file, 11),
