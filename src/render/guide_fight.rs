@@ -24,7 +24,7 @@ const KEY_DOWN: u32 = 0x80;
 /// and two Stone Soldiers (fixed).
 const GRYPHONS: u32 = 294;
 const FOUR_ENEMIES: u32 = 296;
-/// gSaveBlock.battleType: BATTLE_TYPE_NORMAL rolls a first strike; 1, which
+/// gPersistentState.battleType: BATTLE_TYPE_NORMAL rolls a first strike; 1, which
 /// no battle start names, opens the battle normally.
 const BATTLE_TYPE_NORMAL: u8 = 0;
 const BATTLE_START_SET: u8 = 1;

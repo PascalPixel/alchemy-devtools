@@ -16,11 +16,11 @@ use super::plan::{self, Tables};
 const KEY_A: u32 = 0x1;
 const KEY_DOWN: u32 = 0x80;
 
-/// struct SaveBlock offsets (save_block.h), as `battle.rs` uses them.
+/// struct PersistentState offsets (persistent_state.h), as `battle.rs` uses them.
 const STATE_ACTIVE_OWNERS: u32 = 0x1f8;
 const STATE_BATTLE_START: u32 = 0x22b;
 const STATE_OWNERS: u32 = 0x2c0;
-/// gSaveBlock.battleType: BATTLE_TYPE_NORMAL rolls a first strike; 1, which
+/// gPersistentState.battleType: BATTLE_TYPE_NORMAL rolls a first strike; 1, which
 /// no battle start names, leaves the battle to open normally, as `render
 /// psynergy` sets it.
 const BATTLE_START_SET: u8 = 1;
@@ -34,7 +34,7 @@ pub(super) const PANEL_MARK: u32 = 0xff_d8_40;
 pub(super) const PANEL_HEAD: u32 = 0x9c_c8_ff;
 
 /// What a battle run is: the debug party preset and party, the formation
-/// (a row of gFormations), gSaveBlock.battleType and the function entries
+/// (a row of gFormations), gPersistentState.battleType and the function entries
 /// the watcher is called at.
 pub(super) struct Drive {
     pub preset: u8,
@@ -71,11 +71,11 @@ impl<'a> Guide<'a> {
     pub(super) fn drive(&self, drive: &Drive, watch: &mut dyn FnMut(&mut Gba, Option<u32>, usize) -> Act) -> Result<(), String> {
         let at = |name: &str| self.sym(name);
         let s = Boot {
-            start: at("SequenceManager_RunFar").or_else(|_| at("Game_RunFar"))?,
+            start: at("Monitor_RunFar").or_else(|_| at("SequenceManager_RunFar")).or_else(|_| at("Game_RunFar"))?,
             menu: at("DebugBattle_RunMenu")?,
             preset: at("DebugParty_LoadPreset")?,
             encounter: at("Battle_Run")?,
-            game_state: at("gSaveBlock")?,
+            game_state: at("gPersistentState").or_else(|_| at("gSaveBlock"))?,
             game_flags: at("gGameFlagBytes")?,
         };
         let mut gba = Gba::new(self.rom)?;
@@ -722,7 +722,7 @@ impl<'a> Guide<'a> {
         let exec = self.sym("BattleAbility_ApplyToTarget")?;
         let encounter = self.sym("Battle_Run")?;
         let message = self.sym("BattleMessage_ShowAndWait")?;
-        let owner = self.sym("gSaveBlock")? + STATE_OWNERS;
+        let owner = self.sym("gPersistentState").or_else(|_| self.sym("gSaveBlock"))? + STATE_OWNERS;
         let game = super::tables::Game::here()?;
         let types = game.table("gItem_DefinitionTable", "ItemDefinition")?.column("type")?;
         let weapon_type = game.constant("ITEM_TYPE_WEAPON")?;
@@ -983,7 +983,7 @@ impl<'a> Guide<'a> {
         if u32::from(id) >= FIRST_ENEMY_UNIT {
             Ok(gba.read32(self.sym("gEnemyUnits")?) + (u32::from(id) - FIRST_ENEMY_UNIT) * UNIT_SIZE)
         } else {
-            Ok(self.sym("gSaveBlock")? + STATE_OWNERS + u32::from(id) * UNIT_SIZE)
+            Ok(self.sym("gPersistentState").or_else(|_| self.sym("gSaveBlock"))? + STATE_OWNERS + u32::from(id) * UNIT_SIZE)
         }
     }
 

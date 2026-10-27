@@ -986,7 +986,7 @@ const HEAP_SLOT_WORLD_MAP_FRAME: u32 = 7;
 const GOMA_CAVE_ROOM: (u16, u16) = (27, 5);
 const MAP_CELL_WORDS: u32 = 0x0201_0000;
 /// struct FieldWork's twelve requests, by offset, in the order
-/// SceneManager_Run tests them.
+/// FieldLoop_Run tests them.
 const REQUESTS: [(u32, &str); 12] = [
     (0x170, "WARP"),
     (0x182, "RAISEDEVENT"),
@@ -1174,7 +1174,7 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         let spot = Self::spot_at(field, (LIFT_WATCH.0, LIFT_WATCH.1, 0x8000))?;
         field.stand(&entered.placed, &spot)?;
-        let leader = field.read32(self.sym("gSaveBlock")? + 0x1f4) as u16;
+        let leader = field.read32(self.sym("gPersistentState").or_else(|_| self.sym("gSaveBlock"))? + 0x1f4) as u16;
         field.hide_actor(leader);
         settle_view(field)?;
         // The pool's ground is 32 pixels up, and a rider on a lift is drawn
@@ -1244,7 +1244,7 @@ impl<'a> Guide<'a> {
             let field = &mut entered.field;
             let spot = Self::spot_at(field, (BALANCE_WATCH.0, BALANCE_WATCH.1, 0xc000))?;
             field.stand(&entered.placed, &spot)?;
-            let leader = field.read32(self.sym("gSaveBlock")? + 0x1f4) as u16;
+            let leader = field.read32(self.sym("gPersistentState").or_else(|_| self.sym("gSaveBlock"))? + 0x1f4) as u16;
             field.hide_actor(leader);
             settle_view(field)?;
             field.frames(30)?;
