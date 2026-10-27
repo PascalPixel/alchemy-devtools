@@ -27,8 +27,8 @@ const CMD_DJINN: u16 = 5;
 const CMD_SUMMON: u16 = 6;
 /// Frames kept at most: 25 seconds, for the longest summons.
 const MAX_RECORDED: usize = 1500;
-/// The party's Djinn recovery list, gPersistentState + 12 (Djinn_GetRecoveryTable
-/// is gPersistentState + 4; its list follows 8 bytes on): 64 four-byte entries
+/// The party's Djinn recovery list, gCommon + 12 (Djinn_GetRecoveryTable
+/// is gCommon + 4; its list follows 8 bytes on): 64 four-byte entries
 /// (element, index, owner, turns), then the count.
 const STATE_RECOVERY_LIST: u32 = 0x0c;
 const RECOVERY_COUNT: u32 = 0x100;
@@ -46,7 +46,7 @@ const ADVANCE: u32 = 45;
 /// A run that is not over by this frame has gone wrong.
 const MAX_FRAMES: u32 = 6000;
 
-/// struct PersistentState (persistent_state.h), struct Unit (battle/battle_unit.h),
+/// struct Common (common.h), struct Unit (battle/battle_unit.h),
 /// struct BattleWork (battle_work.h) and struct BattleObject
 /// (battle/battle_session.h) offsets.
 const STATE_ACTIVE_OWNERS: u32 = 0x1f8;
@@ -180,7 +180,7 @@ impl Symbols {
             message: at("BattleMessage_ShowAndWait")?,
             battle_over: at("Battle_ClearSerialTransferPayload")?,
             battle_work: at("gBattleWork")?,
-            game_state: at("gPersistentState").or_else(|_| at("gSaveBlock"))?,
+            game_state: at("gCommon").or_else(|_| at("gPersistentState")).or_else(|_| at("gSaveBlock"))?,
             game_flags: at("gGameFlagBytes")?,
             owner_states: at("gEnemyUnits")?,
         })
