@@ -106,7 +106,7 @@ impl Guide<'_> {
     /// is lit and the rest dimmed, so the trapezoid the 160 lines sample
     /// shows, and five lines are picked out in colour on both sides. Each
     /// line's values are read from the affine page the HBlank DMA feeds
-    /// (WorldMap_ApplyAffineFrame): of the two pages, the one whose
+    /// (WorldMap_ApplyAffinePage): of the two pages, the one whose
     /// lines draw the screen's ground pixel for pixel. The pitch never
     /// changes on the world map (0xe000, set by
     /// WorldMap_InitializePerspective), and every line meets the ground, so

@@ -1699,7 +1699,7 @@ impl<'a> Guide<'a> {
             text(&mut image, tx + columns[1], y, &format!("{:04X}", t.1), colour, None, 2);
             text(&mut image, tx + columns[2], y, pass_name, colour, None, 2);
             if let Some((pass, n)) = runs[slot] {
-                let label = format!("{}{n}", if pass == 0xc80 { "M" } else { "V" });
+                let label = format!("{}{n}", if pass == 0xc80 { "F" } else { "V" });
                 text(&mut image, tx + columns[3], y, &label, MARK, None, 2);
             }
             if t.0 != 0 {
@@ -1707,7 +1707,7 @@ impl<'a> Guide<'a> {
             }
         }
         let y = ty + row * 21 + 8;
-        text(&mut image, tx, y, "RAN: V IN THE VBLANK PASS, M IN THE MAIN-LOOP PASS,", DIM, None, 2);
+        text(&mut image, tx, y, "RAN: V IN THE VBLANK PASS, F IN THE FRAME PASS,", DIM, None, 2);
         text(&mut image, tx, y + 14, "EACH PASS IN TABLE ORDER", DIM, None, 2);
         self.guide_png("scheduler.png", &image, "Vale's task table through one frame: each slot's order, pass and routine, and when it ran")
     }
