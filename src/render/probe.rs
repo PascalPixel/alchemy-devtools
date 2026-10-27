@@ -472,14 +472,14 @@ impl<'a> Guide<'a> {
         let keep = log.clone();
         let mut pcs = allocators.clone();
         pcs.push(mixer);
-        let tick = at("SoundMain")?;
-        pcs.push(tick);
+        let sound_main = at("SoundMain")?;
+        pcs.push(sound_main);
         let enter = at("Mixer_Enter")?;
         pcs.push(enter);
         let enters = Rc::new(RefCell::new(0u32));
         let keep_enters = enters.clone();
-        let ticks = Rc::new(RefCell::new(0u32));
-        let keep_ticks = ticks.clone();
+        let sound_mains = Rc::new(RefCell::new(0u32));
+        let keep_sound_mains = sound_mains.clone();
         let changed = Rc::new(RefCell::new(None::<u32>));
         let keep_changed = changed.clone();
         let damaged = Rc::new(RefCell::new(false));
@@ -503,8 +503,8 @@ impl<'a> Guide<'a> {
                 *keep_enters.borrow_mut() += 1;
                 return;
             }
-            if pc == tick {
-                *keep_ticks.borrow_mut() += 1;
+            if pc == sound_main {
+                *keep_sound_mains.borrow_mut() += 1;
                 return;
             }
             if pc == mixer {
@@ -550,7 +550,7 @@ impl<'a> Guide<'a> {
         for line in log.borrow().iter().take(80) {
             println!("{line}");
         }
-        println!("{} lines; the mixer changed: {:?}; mixer entries while intact, while overwritten: {:?}; ticks {}; Mixer_Enter entries {}; gSoundInfo ident {:08x}", log.borrow().len(), changed.borrow(), runs_damaged.borrow(), ticks.borrow(), enters.borrow(), e.field.read32(at("gSoundInfo")?));
+        println!("{} lines; the mixer changed: {:?}; mixer entries while intact, while overwritten: {:?}; SoundMain calls {}; Mixer_Enter entries {}; gSoundInfo ident {:08x}", log.borrow().len(), changed.borrow(), runs_damaged.borrow(), sound_mains.borrow(), enters.borrow(), e.field.read32(at("gSoundInfo")?));
         for line in log.borrow().iter().filter(|l| l.contains("the mixer is")) {
             println!("{line}");
         }

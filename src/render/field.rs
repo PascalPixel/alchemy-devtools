@@ -597,7 +597,7 @@ impl<'rom> Field<'rom> {
         };
         let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
         while !field.t.applied {
-            field.tick()?;
+            field.run_instruction()?;
         }
         Ok(field)
     }
@@ -718,7 +718,7 @@ impl<'rom> Field<'rom> {
         self.t.call_target = target & !1;
         self.t.call_origin = origin;
         while self.t.call_target != 0 || self.t.calling {
-            self.tick()?;
+            self.run_instruction()?;
         }
         Ok(())
     }
@@ -851,7 +851,7 @@ impl<'rom> Field<'rom> {
 
     /// One instruction and the hooks at the address it reaches; true at a
     /// frame's end.
-    fn tick(&mut self) -> Result<bool, String> {
+    fn run_instruction(&mut self) -> Result<bool, String> {
         let step = self.gba.step();
         let frame_done = step.frame != self.t.frame;
         self.t.frame = step.frame;
@@ -1069,7 +1069,7 @@ impl<'rom> Field<'rom> {
         let mut out = vec![(0, last.clone(), self.picture())];
         let mut frame = 0;
         while frame < n && self.gba.read32(self.s.field_work) == work {
-            if self.tick()? {
+            if self.run_instruction()? {
                 frame += 1;
             }
             let now = read(self);
@@ -1097,7 +1097,7 @@ impl<'rom> Field<'rom> {
             let before = vcount(self);
             if self.t.halted && (VBLANK_FIRST_LINE..line).contains(&before) {
                 let asleep = self.save();
-                self.tick()?;
+                self.run_instruction()?;
                 let after = vcount(self);
                 if !(before..=line).contains(&after) {
                     self.resume(&asleep);
@@ -1105,7 +1105,7 @@ impl<'rom> Field<'rom> {
                 }
                 continue;
             }
-            if self.tick()? {
+            if self.run_instruction()? {
                 frames += 1;
                 if frames > 8 {
                     return Err(format!("line {line} was never reached in 8 frames"));
@@ -1117,7 +1117,7 @@ impl<'rom> Field<'rom> {
 
     pub fn frames(&mut self, mut n: u32) -> Result<(), String> {
         while n > 0 {
-            if self.tick()? {
+            if self.run_instruction()? {
                 n -= 1;
             }
         }
@@ -1164,7 +1164,7 @@ impl<'rom> Field<'rom> {
     pub fn until_control(&mut self) -> Result<(), String> {
         let (mut waited, mut idle) = (0, 0);
         while self.t.steps == 0 {
-            if self.tick()? {
+            if self.run_instruction()? {
                 let waiting = self.t.last_dismiss + 2 >= self.t.frame && self.t.last_dismiss > 0;
                 waited = if waiting || self.t.choice_return != 0 { waited + 1 } else { 0 };
                 idle += 1;
@@ -1666,7 +1666,7 @@ impl<'rom> Field<'rom> {
             if self.t.pc == self.s.step && !self.t.calling && self.t.call_target == 0 {
                 return Ok(());
             }
-            self.tick()?;
+            self.run_instruction()?;
         }
         Err("the field loop did not step".to_string())
     }

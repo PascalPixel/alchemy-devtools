@@ -1689,7 +1689,7 @@ impl<'a> Guide<'a> {
         for (slot, t) in tasks.iter().enumerate() {
             let y = ty + row * (slot as i32 + 1) + 4;
             let (pass_name, colour) = match t.1 >> 8 {
-                0x0c => ("MAIN LOOP", 0x8c_c8_ff),
+                0x0c => ("FRAME", 0x8c_c8_ff),
                 0x04 => ("VBLANK", 0xff_b0_50),
                 0xff if t.1 == 0xffff => ("EMPTY", DIM),
                 0x7f if t.1 == 0x7fff => ("REMOVED", DIM),

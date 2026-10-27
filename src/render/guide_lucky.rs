@@ -1,7 +1,7 @@
 //! Recordings of Tolbi's two minigames for the overworld guide, each
 //! reached as the player reaches it: the attendant in the game rooms by
 //! Tolbi's spring (SceneId_StuccoRoomsC, tolbi_spring.c) talked to, the
-//! offer accepted, and the game played from the main loop's turn that runs
+//! offer accepted, and the game played from the program that runs
 //! it (SEQUENCE_LUCKY_DICE, SEQUENCE_LUCKY_WHEELS).
 
 use super::field::{Field, Saved};
@@ -18,7 +18,7 @@ const KEY_UP: u32 = 0x40;
 const GAME_ROOMS: &str = "StuccoRoomsC";
 const DICE_ROOM: u16 = 10;
 const WHEELS_ROOM: u16 = 11;
-/// The main loop's turns that run the games (scene_tables.h), stored in
+/// The programs that run the games (scene_tables.h), stored in
 /// SaveBlock.mapId in place of a map.
 const SEQUENCE_LUCKY_WHEELS: u16 = 0x1fc;
 const SEQUENCE_LUCKY_DICE: u16 = 0x1fd;
@@ -70,7 +70,7 @@ impl<'a> Guide<'a> {
 
     /// The game rooms entered by `room`, the leader across from attendant
     /// `attendant`, then, after `prepare`, A every 40 frames through the offer
-    /// until the main loop's turn is `run`. Returns the field there.
+    /// until the next program is `run`. Returns the field there.
     fn lucky_reach(&self, room: u16, attendant: &str, prepare: impl Fn(&mut Field) -> Result<(), String>, run: u16) -> Result<Field<'a>, String> {
         let map = source::map_id(GAME_ROOMS)?;
         let id = source::actor_id(GAME_ROOMS, attendant)?;
@@ -158,7 +158,7 @@ impl<'a> Guide<'a> {
 
     /// Lucky Wheels with nine Game Tickets: four bet, which plays all seven
     /// lines; A spins the five wheels, they stop one by one, and the
-    /// winning line's prize is shown, as `lucky-wheels.gif`. LuckyWheels_RunFrame
+    /// winning line's prize is shown, as `lucky-wheels.gif`. LuckyWheels_Update
     /// draws on Random16 every frame, and the wheels stop a random 4 to 7
     /// frames after their turn comes, so the player waiting a frame longer
     /// before A is another spin: the first that wins is kept.
@@ -183,7 +183,7 @@ impl<'a> Guide<'a> {
             field.hold(0);
             field.frames(10)?;
         }
-        // No prize written yet: LuckyWheels_RunFrame writes the first
+        // No prize written yet: LuckyWheels_Update writes the first
         // line's prize when the last wheel stops on a win.
         field.write8(save + SAVE_WON_PRIZES, NO_PRIZE as u8);
         let ready = field.save();
