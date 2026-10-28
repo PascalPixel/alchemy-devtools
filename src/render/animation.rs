@@ -244,6 +244,76 @@ fn median_cut(histogram: &[(u32, u64)], limit: usize) -> Vec<u32> {
     palette
 }
 
+/// `render check DIR...`: every GIF under each folder against
+/// check_black_clearance, those refused listed with why; an error if any is.
+pub fn check_folders(folders: &[String]) -> Result<(), String> {
+    if folders.is_empty() {
+        return Err("usage: alchemy-devtools render check DIR...".to_string());
+    }
+    let mut files = Vec::new();
+    for folder in folders {
+        gifs_under(Path::new(folder), &mut files)?;
+    }
+    files.sort();
+    let mut refused = 0;
+    for file in &files {
+        if let Err(why) = black_pictures(file).and_then(|black| check_black_clearance(&black, STRIDE)) {
+            println!("{}\t{why}", file.display());
+            refused += 1;
+        }
+    }
+    match refused {
+        0 => {
+            eprintln!("{} recordings, none refused", files.len());
+            Ok(())
+        }
+        n => Err(format!("{n} of {} recordings refused", files.len())),
+    }
+}
+
+fn gifs_under(dir: &Path, out: &mut Vec<std::path::PathBuf>) -> Result<(), String> {
+    for entry in std::fs::read_dir(dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))? {
+        let path = entry.map_err(|e| e.to_string())?.path();
+        if path.is_dir() {
+            gifs_under(&path, out)?;
+        } else if path.extension().is_some_and(|e| e == "gif") {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+/// Whether each picture a GIF shows, one every thirtieth of a second, is
+/// black: its frames drawn one over the last, as encode writes them, each
+/// lasting the pictures its delay covers (frame i of encode's starts at
+/// i * 100 / 30 hundredths, rounded).
+fn black_pictures(path: &Path) -> Result<Vec<bool>, String> {
+    let error = |e: gif::DecodingError| format!("{}: {e}", path.display());
+    let file = std::fs::File::open(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let mut options = gif::DecodeOptions::new();
+    options.set_color_output(gif::ColorOutput::RGBA);
+    let mut decoder = options.read_info(std::io::BufReader::new(file)).map_err(error)?;
+    let (w, h) = (decoder.width() as usize, decoder.height() as usize);
+    let mut canvas = vec![0u32; w * h];
+    let start = |i: usize| (i * 100 + FPS / 2) / FPS;
+    let (mut elapsed, mut black) = (0, Vec::new());
+    while let Some(frame) = decoder.read_next_frame().map_err(error)? {
+        let (left, top, fw) = (usize::from(frame.left), usize::from(frame.top), usize::from(frame.width));
+        for (k, px) in frame.buffer.chunks_exact(4).enumerate() {
+            let (x, y) = (left + k % fw, top + k / fw);
+            if px[3] != 0 && x < w && y < h {
+                canvas[y * w + x] = u32::from(px[0]) << 16 | u32::from(px[1]) << 8 | u32::from(px[2]);
+            }
+        }
+        elapsed += usize::from(frame.delay);
+        let dark = is_black(&canvas);
+        while start(black.len()) < elapsed {
+            black.push(dark);
+        }
+    }
+    Ok(black)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,6 +348,23 @@ mod tests {
         assert!(check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 100), (true, 8), (false, 300)]), 2).is_err());
         assert!(is_black(&[0, 0x080808]) && !is_black(&[0, 0x100000]));
         assert!(is_black_bgr555(&[0, 1 | 1 << 5]) && !is_black_bgr555(&[2]));
+    }
+
+    #[test]
+    fn a_written_recording_reads_back_picture_for_picture() {
+        let colour: Vec<u16> = vec![0x7c00; 16];
+        let dark: Vec<u16> = vec![0; 16];
+        let mut frames: Vec<&[u16]> = vec![&colour; 620];
+        frames.extend(std::iter::repeat_n(dark.as_slice(), 10));
+        frames.extend(std::iter::repeat_n(colour.as_slice(), 620));
+        let path = std::env::temp_dir().join(format!("alchemy-black-{}.gif", std::process::id()));
+        let written = write_bgr555(&path, &frames, 4).unwrap();
+        let black = black_pictures(&path).unwrap();
+        std::fs::remove_file(&path).ok();
+        assert_eq!(black.len(), written.frames);
+        assert_eq!(black.iter().filter(|&&b| b).count(), 5);
+        assert!(write_bgr555(&path, &frames[600..], 4).is_err());
+        std::fs::remove_file(&path).ok();
     }
 
     #[test]
