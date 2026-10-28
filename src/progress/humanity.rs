@@ -260,7 +260,7 @@ impl Report {
     /// The parameter an argument fills, by name, and the kind of data that
     /// name says it holds. A macro's parameter takes its own name's kind, else
     /// that of the parameter it is passed to (`WAIT(n)` is
-    /// `Event_WaitFrames(s32 frames)`).
+    /// `Event_Wait(s32 frames)`).
     fn parameter(&self, callee: &str, position: usize, depth: usize) -> Option<(String, Option<&'static str>)> {
         if let Some(names) = self.parameters.get(callee) {
             let name = names.get(position)?.clone()?;
@@ -875,7 +875,7 @@ impl<'r, 'a> Walk<'r, 'a> {
     }
 
     /// A function-like macro's parameters, each with the call in its body it
-    /// is passed to: `WAIT(n)`'s `n` is `Event_WaitFrames`'s first argument.
+    /// is passed to: `WAIT(n)`'s `n` is `Event_Wait`'s first argument.
     fn macro_parameters(&mut self, name: &str, start: usize, end: usize) {
         // `#`, `define`, the name, `(`, then the parameters up to `)`.
         let mut names = Vec::new();
@@ -1990,8 +1990,8 @@ mod tests {
             assert_eq!(data_parameter(name), kind, "{name}");
         }
         let header = concat!(
-            "void Event_WaitFrames(s32 frames);\n",
-            "#define WAIT(n) Event_WaitFrames(n)\n",
+            "void Event_Wait(s32 frames);\n",
+            "#define WAIT(n) Event_Wait(n)\n",
             "#define PIXELS(value) ((value) << 16)\n",
             "#define BLEND(top, bottom) Blend((top) | ((bottom) << 8))\n",
             "void Actor_SetPosition(s32 actor, s32 fixed_x, s32 fixed_z);\n",
@@ -2002,7 +2002,7 @@ mod tests {
         let source = concat!(
             "void Run(void) {\n",
             "    WAIT(80);\n",
-            "    Event_WaitFrames(\n        40);\n",
+            "    Event_Wait(\n        40);\n",
             "    Actor_SetPosition(ACTOR_LEADER, PIXELS(312), (416) << 16);\n",
             "    Actor_SetSpeed(ACTOR_LEADER, PIXELS(24), 0x8000);\n",
             "    Old(1, 20);\n",
