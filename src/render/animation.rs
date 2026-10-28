@@ -34,14 +34,67 @@ fn channels(c: u32) -> [i32; 3] {
     [(c >> 16) as i32 & 0xff, (c >> 8) as i32 & 0xff, c as i32 & 0xff]
 }
 
+/// GBA frames a recording shows of the game on each side of a black screen
+/// (a fade or a load), ten seconds: a short loop through black flashes as
+/// it repeats, which Pascal found nauseating and a risk to anyone sensitive
+/// to flashing (28 October 2026).
+pub const BLACK_CLEARANCE: usize = 600;
+
+/// Whether a picture (0xRRGGBB) is black all over: every channel of every
+/// pixel at most 8 of 255, the GBA's darkest step above 0.
+pub fn is_black(picture: &[u32]) -> bool {
+    !picture.is_empty() && picture.iter().all(|&c| channels(c).iter().all(|&v| v <= 8))
+}
+
+/// The same for a BGR555 picture: every channel at most 1 of 31.
+pub fn is_black_bgr555(picture: &[u16]) -> bool {
+    !picture.is_empty() && picture.iter().all(|&c| c & 31 <= 1 && c >> 5 & 31 <= 1 && c >> 10 & 31 <= 1)
+}
+
+/// Refuses a recording, given whether each picture shown is black, that
+/// shows less than BLACK_CLEARANCE GBA frames (`stride` to a picture) of the
+/// game before or after a black screen: the stretch that opens the loop,
+/// each stretch between black screens and the stretch that closes it must
+/// each be that long. A recording with no black screen passes.
+pub fn check_black_clearance(black: &[bool], stride: usize) -> Result<(), String> {
+    if !black.contains(&true) {
+        return Ok(());
+    }
+    let need = BLACK_CLEARANCE.div_ceil(stride);
+    let seconds = |n: usize| (n * stride) as f64 / 60.0;
+    let mut start = 0;
+    for (i, &b) in black.iter().chain([&true]).enumerate() {
+        if !b {
+            continue;
+        }
+        let run = i - start;
+        if run > 0 && run < need {
+            let at = if start == 0 {
+                "before its first black screen".to_string()
+            } else if i == black.len() {
+                "after its last black screen".to_string()
+            } else {
+                format!("between the black screens at {:.1} and {:.1} seconds", seconds(start), seconds(i))
+            };
+            let keep = BLACK_CLEARANCE / 60;
+            return Err(format!("it shows {:.1} seconds of the game {at}, under the {keep} a recording keeps on each side of one", seconds(run)));
+        }
+        start = i + 1;
+    }
+    Ok(())
+}
+
 /// Writes `frames` (0xRRGGBB, `width` pixels a row) to `path`.
 pub fn write(path: &Path, frames: &[Vec<u32>], width: usize) -> Result<Written, String> {
-    encode(path, &frames.iter().step_by(STRIDE).collect::<Vec<_>>(), width)
+    let shown: Vec<&Vec<u32>> = frames.iter().step_by(STRIDE).collect();
+    check_black_clearance(&shown.iter().map(|f| is_black(f)).collect::<Vec<_>>(), STRIDE)?;
+    encode(path, &shown, width)
 }
 
 /// Writes `frames` (BGR555, as the GBA draws them) to `path`, widening only
 /// the frames shown.
 pub fn write_bgr555(path: &Path, frames: &[&[u16]], width: usize) -> Result<Written, String> {
+    check_black_clearance(&frames.iter().step_by(STRIDE).map(|f| is_black_bgr555(f)).collect::<Vec<_>>(), STRIDE)?;
     let shown: Vec<Vec<u32>> = frames.iter().step_by(STRIDE).map(|f| f.iter().map(|&c| rgb(c)).collect()).collect();
     encode(path, &shown.iter().collect::<Vec<_>>(), width)
 }
@@ -210,6 +263,21 @@ mod tests {
         new[10] = 1;
         assert_eq!(changed(&old, &new, 4), Some((1, 1, 2, 2)));
         assert_eq!(changed(&old, &old, 4), None);
+    }
+
+    #[test]
+    fn black_screens_need_ten_seconds_of_the_game_around_them() {
+        let clip = |runs: &[(bool, usize)]| -> Vec<bool> { runs.iter().flat_map(|&(b, n)| std::iter::repeat_n(b, n)).collect() };
+        assert!(check_black_clearance(&clip(&[(false, 40)]), 2).is_ok());
+        assert!(check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 300)]), 2).is_ok());
+        assert!(check_black_clearance(&clip(&[(true, 8), (false, 300)]), 2).is_ok());
+        let short_before = check_black_clearance(&clip(&[(false, 20), (true, 8), (false, 300)]), 2).unwrap_err();
+        assert!(short_before.contains("before its first black screen"), "{short_before}");
+        let short_after = check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 299)]), 2).unwrap_err();
+        assert!(short_after.contains("after its last black screen"), "{short_after}");
+        assert!(check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 100), (true, 8), (false, 300)]), 2).is_err());
+        assert!(is_black(&[0, 0x080808]) && !is_black(&[0, 0x100000]));
+        assert!(is_black_bgr555(&[0, 1 | 1 << 5]) && !is_black_bgr555(&[2]));
     }
 
     #[test]

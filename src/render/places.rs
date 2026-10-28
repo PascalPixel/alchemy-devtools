@@ -1,7 +1,9 @@
-//! `render place` and `render eis_story_flag(t, flags)ent`: the photo of a scene's main entrance,
+//! `render place` and `render event`: the photo of a scene's main entrance,
 //! a map of each of its rooms, story-state variants, and the message pages
 //! of its events, as PNG files at the GBA's own size, with an index.
 
+use super::animation::{is_black_bgr555, BLACK_CLEARANCE};
+use super::field::{CLEARANCE_MARGIN, LEAD_IN};
 use super::field::{
     box_holds, result_key, stands_in, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, TRIGGER_EXIT, EVENT_LIMIT, TRIGGER_PSYNERGY, TRIGGER_EXAMINE, TRIGGER_TALK,
     TRIGGER_STEP, SETTLE,
@@ -369,6 +371,9 @@ pub struct Context<'a> {
     /// walk (Field::relaxed): an event no walkable spot plays is tried once
     /// more that way.
     pub relaxed: std::cell::Cell<bool>,
+    /// Frames of the leader standing ready before a recorded event's
+    /// trigger (Field::lead_in).
+    pub lead_in: std::cell::Cell<u32>,
     /// Whether each event recorded is also drawn whole (whole::event), as
     /// <event>-whole.gif.
     pub whole: bool,
@@ -999,12 +1004,28 @@ impl Context<'_> {
                 self.remove_event_files(scene, &event.name);
             }
             let mut played = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
+            let mut relaxed = false;
             if played.as_ref().is_err_and(|f| f.reason.contains("cannot walk")) {
                 self.relaxed.set(true);
-                let relaxed = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
+                let again = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
                 self.relaxed.set(false);
-                if relaxed.is_ok() {
-                    played = relaxed;
+                if again.is_ok() {
+                    played = again;
+                    relaxed = true;
+                }
+            }
+            // An event that reaches a black screen sooner than
+            // BLACK_CLEARANCE is played again with the leader standing ready
+            // for longer before its trigger, so the recording clears it.
+            let first_black = played.as_ref().ok().and_then(|p| p.run.frames.iter().position(|f| is_black_bgr555(f)));
+            if let Some(first_black) = first_black.filter(|&b| b < BLACK_CLEARANCE + CLEARANCE_MARGIN) {
+                self.lead_in.set(LEAD_IN + (BLACK_CLEARANCE + CLEARANCE_MARGIN - first_black) as u32);
+                self.relaxed.set(relaxed);
+                let longer = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
+                self.relaxed.set(false);
+                self.lead_in.set(LEAD_IN);
+                if longer.is_ok() {
+                    played = longer;
                 }
             }
             match played {
@@ -1243,6 +1264,7 @@ impl Context<'_> {
         let message_row = !own.is_empty() && own_function.is_none();
         let mut field = Field::enter(self.rom, self.symbols, setup)?;
         field.relaxed = self.relaxed.get();
+        field.lead_in = self.lead_in.get();
         field.whole = self.whole && record.is_some();
         let entered: Saved = field.save();
         match after {

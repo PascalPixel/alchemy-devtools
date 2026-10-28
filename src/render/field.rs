@@ -34,6 +34,7 @@
 //! when the field sequence steps again with nothing to read and nothing it set
 //! moving (a pushed pillar) still moves.
 
+use super::animation::{is_black_bgr555, BLACK_CLEARANCE};
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, LR, SP, WIDTH};
 use super::party::{chapter, order, Party};
 use super::story::{Trigger, CARRY, MOVE};
@@ -180,7 +181,10 @@ const HOLD: u32 = 3;
 /// A run past this frame has gone wrong.
 const MAX_FRAMES: u32 = 30000;
 /// Frames of the leader standing ready that open an event's recording.
-const LEAD_IN: u32 = 12;
+pub const LEAD_IN: u32 = 12;
+/// Frames past BLACK_CLEARANCE a recording is lengthened by, so the
+/// pictures a GIF shows, one of every two, still clear it.
+pub const CLEARANCE_MARGIN: usize = 4;
 /// Speakers below this are the party (FieldMessage_ShowAtActor has them
 /// speak from the leader); from it on, a speaker is an actor of the scene.
 const PARTY_SPEAKERS: u16 = 8;
@@ -502,6 +506,10 @@ pub struct Field<'rom> {
     /// were such.
     pub relaxed: bool,
     unwalked: bool,
+    /// Frames of the leader standing ready before a recorded event's
+    /// trigger: LEAD_IN, or more where the event reaches a black screen
+    /// sooner than BLACK_CLEARANCE (Context::lead_in).
+    pub lead_in: u32,
     /// For `render probe`: the addresses whose entry calls `probe` (with the
     /// machine, the address and the frame), which also runs at each frame's
     /// end (address 0); and the functions made to return at once, with r0.
@@ -595,7 +603,7 @@ impl<'rom> Field<'rom> {
             party_saved: [0; 5],
             cuts: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -2569,7 +2577,7 @@ impl<'rom> Field<'rom> {
             self.recorded = Some(Vec::new());
             self.keep_states(self.whole);
         }
-        self.frames(LEAD_IN)?;
+        self.frames(self.lead_in)?;
         let cap = record.unwrap_or(EVENT_LIMIT as usize);
         self.t.dispatched = None;
         let trigger_frame = self.t.frame;
@@ -2881,13 +2889,28 @@ impl<'rom> Field<'rom> {
             }
         }
         self.hold(0);
+        // A recording through a black screen goes on, the player in control
+        // and still, until it has shown BLACK_CLEARANCE frames of the game
+        // after the last one (animation::check_black_clearance); the state
+        // is put back after, so what plays next starts as it would have.
+        let unfinished = capped && fought && self.scene() == MAP_BATTLE;
+        if record.is_some() && !capped && !defeated {
+            let since = self.recorded.as_ref().and_then(|f| f.iter().rposition(|p| is_black_bgr555(p)).map(|i| f.len() - 1 - i));
+            if let Some(since) = since.filter(|&s| s < BLACK_CLEARANCE + CLEARANCE_MARGIN) {
+                let resume = self.save();
+                self.frames((BLACK_CLEARANCE + CLEARANCE_MARGIN - since) as u32)?;
+                self.load(&resume);
+            }
+        }
         let mut frames = self.recorded.take().unwrap_or_default();
         let states = self.keep_states(false);
         // A battle the recording cannot hold to its end (a boss fought by A
-        // alone) is shown to its opening, as is one the party lost.
-        let unfinished = capped && fought && self.scene() == MAP_BATTLE;
+        // alone) is shown to its opening, as is one the party lost: past its
+        // last black screen by BLACK_CLEARANCE where the run has the frames.
         if defeated || unfinished {
-            frames.truncate(battle_start + BATTLE_OPENING);
+            let opening = battle_start + BATTLE_OPENING;
+            let cleared = frames.iter().take(opening).rposition(|p| is_black_bgr555(p)).map_or(0, |i| i + 1 + BLACK_CLEARANCE + CLEARANCE_MARGIN);
+            frames.truncate(opening.max(cleared));
             capped = false;
             let why = if defeated { "the party, as strong as the story has it here, lost it" } else { "fought by A alone, it runs past the recording's length" };
             note = Some(format!("the recording ends as the battle begins: {why}"));

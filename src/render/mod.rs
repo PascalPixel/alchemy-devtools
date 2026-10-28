@@ -911,6 +911,7 @@ impl Machines {
             moment_scenes: 0,
             capped: 0,
             relaxed: std::cell::Cell::new(false),
+            lead_in: std::cell::Cell::new(field::LEAD_IN),
             whole: r.whole,
         }
     }

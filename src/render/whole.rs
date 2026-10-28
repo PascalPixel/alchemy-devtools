@@ -507,6 +507,7 @@ pub fn write_gif(path: &Path, pictures: &[Image]) -> Result<(u64, String), Strin
     }
     let first = pictures.first().ok_or("no frames")?;
     let (w, h) = (first.width, first.height);
+    animation::check_black_clearance(&pictures.iter().map(|p| animation::is_black(&p.pixels)).collect::<Vec<_>>(), 2)?;
     let all: HashSet<u32> = pictures.iter().flat_map(|p| p.pixels.iter().copied()).collect();
     if all.len() <= GIF_COLOURS {
         // animation::write shows every second frame it is given: each
