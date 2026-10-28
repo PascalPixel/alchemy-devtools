@@ -134,6 +134,7 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         Some("story") => story_pictures(&arguments[1..]),
         Some("guide") => guide_pictures(&arguments[1..]),
         Some("probe") => probe_command(&arguments[1..]),
+        #[cfg(feature = "render")]
         Some("check") => animation::check_folders(&arguments[1..]),
         Some("-h" | "--help") => {
             println!("{COMMANDS}");
