@@ -30,6 +30,9 @@ const CMD_SUMMON: u16 = 6;
 /// Frames kept at most: 35 seconds, for the longest summons and the ten
 /// seconds after their last black screen.
 const MAX_RECORDED: usize = 2100;
+/// Frames the opening message waits past what a cast lacks, for the
+/// frames the message takes to type once A comes.
+const INTRO_WAIT_MARGIN: usize = 30;
 /// The party's Djinn recovery list, gMainRoutineWork + 12 (Djinn_GetRecoveryTable
 /// is gMainRoutineWork + 4; its list follows 8 bytes on): 64 four-byte entries
 /// (element, index, owner, turns), then the count.
@@ -244,7 +247,14 @@ pub struct Background {
 /// Plays `cast` on `rom` with the battlefield showing `scene` and returns its
 /// frames; `log` prints each step of the setup.
 pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool) -> Result<Recording, String> {
-    let mut recording = record_watching(rom, symbols, cast, scene, log, None, &[], &mut |_, _| {})?;
+    let mut recording = record_run(rom, symbols, cast, scene, log, None, &[], &mut |_, _| {}, 0)?;
+    // A cast that reaches black sooner than the battle has shown since its
+    // own opening black screen is played again with the opening message left
+    // waiting for as long as it lacks.
+    if let Some(first) = recording.frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b + recording.before.len() < CLEARED) {
+        let wait = CLEARED - first - recording.before.len() + INTRO_WAIT_MARGIN;
+        recording = record_run(rom, symbols, cast, scene, log, None, &[], &mut |_, _| {}, wait as u32)?;
+    }
     if let Some(first) = recording.frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b < CLEARED) {
         let take = (CLEARED - first).min(recording.before.len());
         let mut frames = recording.before.split_off(recording.before.len() - take);
@@ -262,6 +272,13 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
 /// when the script ends.
 #[allow(clippy::too_many_arguments)]
 pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool, menu: Option<&[(u32, u32)]>, hooks: &[u32], watch: &mut dyn FnMut(&mut Gba, Option<u32>)) -> Result<Recording, String> {
+    record_run(rom, symbols, cast, scene, log, menu, hooks, watch, 0)
+}
+
+/// As `record_watching`, the battle's opening message left unanswered for
+/// `intro_wait` frames first, so the battle shows longer before the cast.
+#[allow(clippy::too_many_arguments)]
+fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool, menu: Option<&[(u32, u32)]>, hooks: &[u32], watch: &mut dyn FnMut(&mut Gba, Option<u32>), intro_wait: u32) -> Result<Recording, String> {
     let mut gba = Gba::new(rom)?;
     let s = symbols;
     let owner = |id: u8| s.game_state + STATE_OWNERS + u32::from(id) * UNIT_SIZE;
@@ -292,6 +309,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
     let mut capped = false;
     let mut frames = Vec::new();
     let mut before: std::collections::VecDeque<Vec<u16>> = std::collections::VecDeque::new();
+    let mut intro_from = 0;
 
     loop {
         let step = gba.step();
@@ -454,6 +472,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
                     }
                 }
             }
+            intro_from = frame;
             phase = Phase::Intro;
         } else if pc == s.obj_make && obj_return == 0 {
             obj_actor = gba.register(0);
@@ -590,6 +609,8 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
         }
         let keys = if hold_down {
             KEY_DOWN
+        } else if phase == Phase::Intro && frame < intro_from + intro_wait {
+            0
         } else if matches!(phase, Phase::Chooser | Phase::Intro) {
             if (frame / 4) % 2 == 1 { KEY_A } else { 0 }
         } else if waiting && (ADVANCE..ADVANCE + 2).contains(&prompt_frames) {

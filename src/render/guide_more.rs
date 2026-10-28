@@ -1031,8 +1031,19 @@ impl<'a> Guide<'a> {
         let (place, stretch) = self.goma_cave_stretch()?;
         let mut entered = self.enter_goma_cave(place)?;
         let field = &mut entered.field;
+        let start_state = field.save();
         let mut frames = Vec::new();
-        let at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        let mut at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        // A battle that comes before CLEARED frames of walking: the walk is
+        // played again with the leader standing that much longer first.
+        let first_black = |frames: &[Vec<u16>], at: usize| at + frames[at..].iter().position(|f| is_black_bgr555(f)).unwrap_or(0);
+        if first_black(&frames, at) < CLEARED {
+            let stand = (CLEARED - first_black(&frames, at)) as u32;
+            field.load(&start_state);
+            frames.clear();
+            Self::hold(field, 0, stand, &mut frames)?;
+            at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        }
         Self::hold(field, 0, 240, &mut frames)?;
         Self::run_past_black(field, &mut frames)?;
         // From CLEARED frames of walking before the battle's first black
@@ -1242,7 +1253,7 @@ impl<'a> Guide<'a> {
     /// held to bring it back to the party, and A closing it, as `world-map-picture.gif`.
     pub fn world_map_picture(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(WORLD_MAP, &[])?;
-        let path = [(0, 20), (KEY_R, 3), (0, 90), (KEY_RIGHT, 50), (0, 40), (KEY_UP, 40), (0, 40), (KEY_L, 40), (0, 40), (KEY_A, 3), (0, 60)];
+        let path = [(0, 20), (KEY_R, 3), (0, 90), (KEY_RIGHT, 50), (0, 40), (KEY_UP, 40), (0, 40), (KEY_L, 40), (0, 320), (KEY_A, 3), (0, 60)];
         let frames = Self::press_path_cleared(&mut entered.field, &path)?;
         self.guide_gif("world-map-picture.gif", &frames, "the world map's still picture")
     }

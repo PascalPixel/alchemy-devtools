@@ -4,7 +4,7 @@
 //! layer, footprints in the snow, and the world map's perspective view.
 
 use super::animation::{self, is_black_bgr555};
-use super::field::{box_holds, Field, Saved, Setup, Spot, Start, Symbols, CLEARED};
+use super::field::{box_holds, Field, Saved, Setup, Spot, Start, Symbols, CLEARED, LEAD_IN};
 use super::mgba::{HEIGHT, WIDTH};
 use super::source;
 use super::story::{Flags, Trigger};
@@ -446,6 +446,14 @@ impl<'a> Guide<'a> {
             match field.event(Start::Entered(&entered.placed), trigger, s, &[], &[], 16, Some(CAST_FRAMES)) {
                 Ok(run) if run.shown || spot.is_some() => {
                     let mut frames = run.frames;
+                    // One that reaches a black screen sooner than CLEARED is
+                    // played again with the leader standing ready for longer.
+                    if let Some(first) = frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b < CLEARED) {
+                        field.lead_in = LEAD_IN + (CLEARED - first) as u32;
+                        let longer = field.event(Start::Entered(&entered.placed), trigger, s, &[], &[], 16, Some(CAST_FRAMES));
+                        field.lead_in = LEAD_IN;
+                        frames = longer?.frames;
+                    }
                     for _ in 0..tail {
                         field.frames(1)?;
                         frames.push(field.picture());
