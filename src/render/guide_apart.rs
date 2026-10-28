@@ -850,7 +850,7 @@ const ENTRY_ANIM_ID: u32 = 0x00;
 const ENTRY_PRIORITY: u32 = 0x06;
 const ENTRY_STEP: u32 = 0x15;
 const ENTRY_FRAME: u32 = 0x16;
-/// A layer whose priority is above 3 is not drawn (Sprite_ComposeFrame).
+/// A layer whose priority is above 3 is not drawn (Sprite_ComposePicture).
 const HIDDEN_PRIORITY: u8 = 9;
 const OBJ_TILES: u32 = 0x0601_0000;
 const OBJ_PALETTE: u32 = 0x0500_0200;
@@ -902,7 +902,7 @@ struct SpriteApart {
     composed: Image,
 }
 
-/// Runs the machine to the game's next call of Sprite_ComposeFrame
+/// Runs the machine to the game's next call of Sprite_ComposePicture
 /// for `sprite` and there lets it draw only layer `only` (the others'
 /// priority raised past 3), its scripts held still (every layer's step 0);
 /// reads the buffer back from video memory when the call returns, and puts
@@ -945,7 +945,7 @@ impl<'a> Guide<'a> {
     /// enemy), his battle sprite taken apart each frame one of its layers
     /// changes: the body (entries[0], BattleObject.resource) and the weapon
     /// (entries[1], BattleObject.overlay) each composed alone by the game's own
-    /// Sprite_ComposeFrame, the other layer's priority raised past
+    /// Sprite_ComposePicture, the other layer's priority raised past
     /// 3 and the scripts held still, and the buffer it composes from both,
     /// read back from the sprite's tiles in video memory, beside the screen,
     /// as `sprite-layers.gif`.
@@ -955,7 +955,7 @@ impl<'a> Guide<'a> {
         let mut cast: Cast = plan.casts.into_iter().find(|c| c.ability.name == "Quake").ok_or("no Quake cast")?;
         cast.foes = vec![plan::IVAN];
         let symbols = battle::Symbols::find(self.map)?;
-        let compose = self.sym("Sprite_ComposeFrame")?;
+        let compose = self.sym("Sprite_ComposePicture|Sprite_ComposeFrame")?;
         let work_slot = self.sym("gBattleWork")?;
         let script = [(0, 20), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 170)];
         let mut aparts: Vec<SpriteApart> = Vec::new();
