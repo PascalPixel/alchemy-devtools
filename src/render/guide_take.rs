@@ -361,7 +361,7 @@ pub(super) fn settle_view(field: &mut Field) -> Result<(), String> {
 const WORK_PSYNERGY: u32 = 0x17e;
 
 /// Casts `ability` as Isaac from where the leader stands, as the field menu
-/// asks for it: the request the field loop answers next.
+/// asks for it: the request the scene sequence answers next.
 pub(super) fn cast(field: &mut Field, ability: u16) {
     let work = field.field_work();
     field.write16(work + WORK_PSYNERGY, ability);
@@ -986,7 +986,7 @@ const HEAP_SLOT_WORLD_MAP_FRAME: u32 = 7;
 const GOMA_CAVE_ROOM: (u16, u16) = (27, 5);
 const MAP_CELL_WORDS: u32 = 0x0201_0000;
 /// struct FieldWork's twelve requests, by offset, in the order
-/// FieldLoop_Run tests them.
+/// SceneSequence_Run tests them.
 const REQUESTS: [(u32, &str); 12] = [
     (0x170, "WARP"),
     (0x182, "RAISEDEVENT"),

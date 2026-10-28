@@ -629,7 +629,7 @@ impl Context<'_> {
                 if !map || scene.map == "world" {
                     return Ok(());
                 }
-                // Gauges that hide while the field loop handles a request (the
+                // Gauges that hide while the scene sequence handles a request (the
                 // heat gauge) slide away under FLAG_FIELD_HANDLING_REQUESTS
                 // before the map's moment. A flags.tsv without the name is an
                 // error: a silent miss once left the gauge in every desert map.

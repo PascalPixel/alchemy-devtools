@@ -270,7 +270,7 @@ impl<'a> Guide<'a> {
     /// page that waits.
     pub(super) fn talk_through(field: &mut Field, frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
         Self::hold(field, KEY_A, 3, frames)?;
-        // The field loop stops stepping while the talk runs.
+        // The scene sequence stops stepping while the talk runs.
         let (mut last, mut still, mut talking, mut waited) = (field.steps(), 0, false, 0);
         for _ in 0..3000 {
             field.frames(1)?;

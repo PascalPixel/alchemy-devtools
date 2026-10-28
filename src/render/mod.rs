@@ -474,7 +474,7 @@ walk to from where he enters, in the room the camera shows: beside the
 actor, on its map layer and level with it, facing it; facing the cell it
 searches from any of eight ways; a cell from the cell it touches, walking
 onto it, or on the cell pushing the way its row needs. Move is steered
-with the d-pad once cast. An event counts only when the field loop
+with the d-pad once cast. An event counts only when the scene sequence
 dispatches it at the leader's spot, it runs a script, and it shows
 itself: one of its messages when it has messages, else (a touch, a Move)
 something that moves, leaves, fights or changes the map. Each of its

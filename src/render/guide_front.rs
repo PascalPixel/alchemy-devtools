@@ -189,7 +189,7 @@ impl<'a> Guide<'a> {
     }
 
     /// The debug map selector in Vale with gDebugMode set: Start pressed
-    /// with B held (FieldLoop_Run), the map stepped down `steps` times from Vale's
+    /// with B held (SceneSequence_Run), the map stepped down `steps` times from Vale's
     /// number with Left, then A, which takes the party there.
     fn selector(&mut self, steps: u32, tail: u32) -> Result<Vec<Vec<u16>>, String> {
         let mode = self.sym("gDebugMode")?;
