@@ -26,7 +26,7 @@ const TALK: [(u32, u32); 7] = [(0, 20), (KEY_A, 3), (0, 150), (KEY_A, 3), (0, 12
 struct Layout {
     name: &'static str,
     window_count: u32,
-    printers: u32,
+    messages: u32,
     sprites: u32,
     text_tile_state: u32,
     text_buffer: u32,
@@ -37,8 +37,8 @@ struct Layout {
     size: u32,
 }
 
-const INTERNATIONAL: Layout = Layout { name: "INTERNATIONAL", window_count: 8, printers: 0x620, sprites: 0x698, text_tile_state: 0xda0, text_buffer: 0xeb0, codes: 512, count: 0x12b2, argument_values: 0x12bc, portrait_pictures: 0x12ec, size: 0x12fc };
-const JAPANESE: Layout = Layout { name: "JAPANESE", window_count: 12, printers: 0x6b0, sprites: 0x728, text_tile_state: 0xe30, text_buffer: 0xf40, codes: 256, count: 0x1142, argument_values: 0x114c, portrait_pictures: 0x117c, size: 0x118c };
+const INTERNATIONAL: Layout = Layout { name: "INTERNATIONAL", window_count: 8, messages: 0x620, sprites: 0x698, text_tile_state: 0xda0, text_buffer: 0xeb0, codes: 512, count: 0x12b2, argument_values: 0x12bc, portrait_pictures: 0x12ec, size: 0x12fc };
+const JAPANESE: Layout = Layout { name: "JAPANESE", window_count: 12, messages: 0x6b0, sprites: 0x728, text_tile_state: 0xe30, text_buffer: 0xf40, codes: 256, count: 0x1142, argument_values: 0x114c, portrait_pictures: 0x117c, size: 0x118c };
 
 /// struct Window, struct Message and struct WindowSprite (window.h,
 /// render_input.h): sizes and the offsets read here.
@@ -46,7 +46,7 @@ const WINDOWS: u32 = 0x500;
 const WINDOW_SIZE: u32 = 0x24;
 const WINDOW_WIDTH: u32 = 0x08;
 const WINDOW_FLAGS: u32 = 0x16;
-const PRINTER_TEXT_INDEX: u32 = 0x12;
+const MESSAGE_TEXT_INDEX: u32 = 0x12;
 const SPRITE_SIZE: u32 = 0x1c;
 const SPRITE_KIND: u32 = 0x04;
 const SPRITE_MOTION: u32 = 0x05;
@@ -77,8 +77,8 @@ fn regions(l: &Layout) -> Vec<(&'static str, u32, u32, u32)> {
     let ring_end = l.text_buffer + 2 * l.codes;
     vec![
         ("TILEMAP, 32 X 20 TILES", 0, WINDOWS, 0x4a_78_c8),
-        ("WINDOWS", WINDOWS, l.printers, 0xe0_a0_30),
-        ("MESSAGES, 3", l.printers, l.sprites, 0xe0_50_50),
+        ("WINDOWS", WINDOWS, l.messages, 0xe0_a0_30),
+        ("MESSAGES, 3", l.messages, l.sprites, 0xe0_50_50),
         ("SPRITES, 64", l.sprites, after_sprites, 0x50_b0_70),
         ("FREE SPRITES LIST", after_sprites, l.text_tile_state, 0xa0_e0_a0),
         ("TEXT TILE STATE", l.text_tile_state, l.text_tile_state + 0x100, 0x90_70_d0),
@@ -202,7 +202,7 @@ impl<'a> Guide<'a> {
     /// Garet's sister's two pages in Vale beside the decoded-text ring, as
     /// `text-ring.gif`: each of the 512 codes of work->textBuffer a cell, a
     /// character as its letter and a control code by its name; the codes
-    /// before the printer's next one lit, the message's start, the printer's
+    /// before the first message's next one lit, the message's start, its
     /// next code and where the next decoding goes marked.
     pub fn window_text_ring(&mut self) -> Result<(), String> {
         let l = INTERNATIONAL;
@@ -219,11 +219,11 @@ impl<'a> Guide<'a> {
             let b = &f.block;
             let count = half(b, l.count);
             let start = half(b, l.count + 2);
-            let printer_window = u32::from_le_bytes([b[l.printers as usize], b[l.printers as usize + 1], b[l.printers as usize + 2], b[l.printers as usize + 3]]);
-            let next = (printer_window != 0).then(|| half(b, l.printers + PRINTER_TEXT_INDEX));
+            let message_window = u32::from_le_bytes([b[l.messages as usize], b[l.messages as usize + 1], b[l.messages as usize + 2], b[l.messages as usize + 3]]);
+            let next = (message_window != 0).then(|| half(b, l.messages + MESSAGE_TEXT_INDEX));
             let state = (count, start, next);
             if last_state != Some(state) {
-                eprintln!("text-ring: frame {i}: count {count}, start {start}, printer 0 {next:?}");
+                eprintln!("text-ring: frame {i}: count {count}, start {start}, message 0 {next:?}");
                 last_state = Some(state);
             }
             if i % 2 == 1 {
@@ -267,8 +267,8 @@ impl<'a> Guide<'a> {
             text(&mut image, grid_x as i32, ly, &format!("COUNT {count}: WHERE THE NEXT MESSAGE GOES"), MARK, None, 2);
             text(&mut image, grid_x as i32, ly + 16, &format!("LASTMESSAGESTART {start}: THE LAST ONE DECODED"), 0x60_e0_80, None, 2);
             let line = match next {
-                Some(n) => format!("PRINTER 0'S NEXT CODE {n}; TYPED ONES LIT"),
-                None => "NO PRINTER TYPING".to_string(),
+                Some(n) => format!("MESSAGE 0'S NEXT CODE {n}; TYPED ONES LIT"),
+                None => "NO MESSAGE TYPING".to_string(),
             };
             text(&mut image, grid_x as i32, ly + 32, &line, TEXT, None, 2);
             text(&mut image, grid_x as i32, ly + 52, "N NEWLINE  P PAGE  W WAIT KEY  E END", DIM, None, 2);

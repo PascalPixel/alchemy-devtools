@@ -947,14 +947,14 @@ impl<'a> Guide<'a> {
     }
 
     /// The map's whole cell grid as the three layers' windows show it, each
-    /// cell drawn from its block and the tiles video memory holds, at full
+    /// cell drawn from its cell picture and the tiles video memory holds, at full
     /// size: the window of layer n (0 the ground on BG3, 1 the middle on
     /// BG2, 2 the overhead on BG1) starts at the cell its MapGridLayerScroll's
     /// cells pointer names and spans `spans[n]` cells. Returns the picture
     /// and each window's first cell.
     fn grid_picture(field: &Field, spans: [(i32, i32); 3]) -> (Image, [(i32, i32); 3]) {
         const MAPGRID_CELLS: u32 = 0x0201_0000;
-        const MAP_BLOCKS: u32 = 0x0202_0000;
+        const CELL_PICTURES: u32 = 0x0202_0000;
         const GRID: i32 = 128;
         let colours = super::guide_more::palettes(field);
         let work = field.map_work();
@@ -970,9 +970,9 @@ impl<'a> Guide<'a> {
             let (sw, sh) = spans[layer as usize];
             for cz in wz..(wz + sh).min(GRID) {
                 for cx in wx..(wx + sw).min(GRID) {
-                    let block = field.read32(MAPGRID_CELLS + 4 * (cx + cz * GRID) as u32) & 0xfff;
+                    let picture = field.read32(MAPGRID_CELLS + 4 * (cx + cz * GRID) as u32) & 0xfff;
                     for q in 0..4u32 {
-                        let entry = field.read16(MAP_BLOCKS + block * 8 + 2 * q);
+                        let entry = field.read16(CELL_PICTURES + picture * 8 + 2 * q);
                         let size = if wide { 64 } else { 32 };
                         let address = 0x0600_0000 + char_base * 0x4000 + u32::from(entry & 0x3ff) * size;
                         let pal: Vec<u32> = if wide { colours[..256].to_vec() } else { let p = usize::from(entry >> 12); colours[p * 16..p * 16 + 16].to_vec() };

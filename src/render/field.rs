@@ -229,7 +229,7 @@ pub struct Symbols {
     lookup: u32,
     terrain_height: u32,
     write_cell_tile: u32,
-    map_blocks: u32,
+    map_cell_pictures: u32,
     map_collision: u32,
     map_cell_buffer: u32,
     preset: u32,
@@ -285,7 +285,7 @@ impl Symbols {
             lookup: at("Message_Find")?,
             terrain_height: at("MapGrid_GetTerrainHeight")?,
             write_cell_tile: at("WorldMap_WriteLayerCellTile")?,
-            map_blocks: at("gCellPictures").or_else(|_| at("gMetatiles"))?,
+            map_cell_pictures: at("gCellPictures").or_else(|_| at("gMetatiles"))?,
             map_collision: at("gMapGridShapes")?,
             map_cell_buffer: at("gMapGridCellBuffer")?,
             preset: at("DebugParty_LoadPreset")?,
@@ -1284,7 +1284,7 @@ impl<'rom> Field<'rom> {
                     let quarter = ((layer * 2 + (ty & 1)) * 2 + (tx & 1)) as u32;
                     self.gba.write16(work + PERSPECTIVE_QUARTER_TILES + 2 * quarter, 0xffff);
                     self.eval(self.s.write_cell_tile, [layer as u32, tx as u32, ty as u32, tile])?;
-                    let base = self.s.map_blocks + ((((layer * 2 + (ty & 1)) * 32 + (tx & 1)) << 6) as u32);
+                    let base = self.s.map_cell_pictures + ((((layer * 2 + (ty & 1)) * 32 + (tx & 1)) << 6) as u32);
                     for r in 0..WORLD_TILE_CELLS {
                         for c in 0..WORLD_TILE_CELLS {
                             let word = self.gba.read32(base + (r * 128 + c * 4) as u32);
@@ -1409,7 +1409,7 @@ impl<'rom> Field<'rom> {
         let (cx, cz) = (cx.rem_euclid(WORLD_CELLS), cz.rem_euclid(WORLD_CELLS));
         match &self.world_cells {
             Some(cells) => cells[((layer * WORLD_CELLS + cz) * WORLD_CELLS + cx) as usize],
-            None => self.gba.read32(self.s.map_blocks + ((layer << 12) + (((cx & 31) + ((cz & 31) << 5)) << 2)) as u32),
+            None => self.gba.read32(self.s.map_cell_pictures + ((layer << 12) + (((cx & 31) + ((cz & 31) << 5)) << 2)) as u32),
         }
     }
 
