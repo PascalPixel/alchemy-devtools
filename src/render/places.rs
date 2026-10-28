@@ -2,8 +2,8 @@
 //! a map of each of its rooms, story-state variants, and the message pages
 //! of its events, as PNG files at the GBA's own size, with an index.
 
-use super::animation::{is_black_bgr555, BLACK_CLEARANCE};
-use super::field::{CLEARANCE_MARGIN, LEAD_IN};
+use super::animation::is_black_bgr555;
+use super::field::{CLEARED, LEAD_IN};
 use super::field::{
     box_holds, result_key, stands_in, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, TRIGGER_EXIT, EVENT_LIMIT, TRIGGER_PSYNERGY, TRIGGER_EXAMINE, TRIGGER_TALK,
     TRIGGER_STEP, SETTLE,
@@ -1018,8 +1018,8 @@ impl Context<'_> {
             // BLACK_CLEARANCE is played again with the leader standing ready
             // for longer before its trigger, so the recording clears it.
             let first_black = played.as_ref().ok().and_then(|p| p.run.frames.iter().position(|f| is_black_bgr555(f)));
-            if let Some(first_black) = first_black.filter(|&b| b < BLACK_CLEARANCE + CLEARANCE_MARGIN) {
-                self.lead_in.set(LEAD_IN + (BLACK_CLEARANCE + CLEARANCE_MARGIN - first_black) as u32);
+            if let Some(first_black) = first_black.filter(|&b| b < CLEARED) {
+                self.lead_in.set(LEAD_IN + (CLEARED - first_black) as u32);
                 self.relaxed.set(relaxed);
                 let longer = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
                 self.relaxed.set(false);

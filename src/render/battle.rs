@@ -14,8 +14,8 @@
 //! lightness. The backdrop colours and the greys change the picture alone:
 //! the game's palette RAM keeps its own colours.
 
-use super::animation::{is_black_bgr555, BLACK_CLEARANCE};
-use super::field::CLEARANCE_MARGIN;
+use super::animation::is_black_bgr555;
+use super::field::CLEARED;
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, LR};
 use super::plan::{self, Aim, Ally, Cast, Command};
 use crate::ld_map::Map;
@@ -30,9 +30,6 @@ const CMD_SUMMON: u16 = 6;
 /// Frames kept at most: 35 seconds, for the longest summons and the ten
 /// seconds after their last black screen.
 const MAX_RECORDED: usize = 2100;
-/// Frames a recording keeps of the game on each side of a black screen,
-/// with the margin for the pictures a GIF shows (animation::BLACK_CLEARANCE).
-const CLEARED: usize = BLACK_CLEARANCE + CLEARANCE_MARGIN;
 /// The party's Djinn recovery list, gMainRoutineWork + 12 (Djinn_GetRecoveryTable
 /// is gMainRoutineWork + 4; its list follows 8 bytes on): 64 four-byte entries
 /// (element, index, owner, turns), then the count.

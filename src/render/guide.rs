@@ -3,8 +3,8 @@
 //! would: the leader walking and then running, a map built up layer by
 //! layer, footprints in the snow, and the world map's perspective view.
 
-use super::animation;
-use super::field::{box_holds, Field, Saved, Setup, Spot, Start, Symbols};
+use super::animation::{self, is_black_bgr555};
+use super::field::{box_holds, Field, Saved, Setup, Spot, Start, Symbols, CLEARED};
 use super::mgba::{HEIGHT, WIDTH};
 use super::source;
 use super::story::{Flags, Trigger};
@@ -31,8 +31,6 @@ const IMIL: (u16, u16) = (50, 0);
 const WORLD_MAP: (u16, u16) = (2, 1);
 /// The title overlay as the game starts it at power-on (scene 0, entrance 2).
 const POWER_ON: (u16, u16) = (0, 2);
-/// Frames from the first one not black to the Golden Sun logo held.
-const BOOT_FRAMES: usize = 420;
 
 pub struct Guide<'a> {
     pub rom: &'a [u8],
@@ -139,22 +137,31 @@ impl<'a> Guide<'a> {
         self.walk_path(VALE, &path, "items.gif", "the Item screen and an item's stats")
     }
 
-    /// The game from power-on with no key pressed and no save file, from the
-    /// Camelot logo to the Golden Sun logo, which a new game follows with
-    /// name entry, as `boot.gif`. BOOT_FRAMES ends it on the logo.
+    /// The game from power-on with no key pressed and no save file: the
+    /// Golden Sun logo, which a new game follows with name entry, fading in
+    /// from the black after the Camelot logo, as `boot.gif`. The Camelot logo
+    /// shows for under the CLEARED frames a recording keeps of the game on
+    /// each side of a black screen, so the recording begins on the black
+    /// after it and holds the Golden Sun logo for CLEARED frames.
     pub fn boot(&mut self) -> Result<(), String> {
         let setup = Setup { scene: POWER_ON.0, entrance: POWER_ON.1, set: Vec::new(), clear: Vec::new() };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let mut frames = Vec::new();
         Self::hold(&mut field, 0, 900, &mut frames)?;
-        let first = frames.iter().position(|f| f.iter().any(|&c| c & 0x7fff != 0)).unwrap_or(0);
-        let end = (first + BOOT_FRAMES).min(frames.len());
         // The Camelot logo is the first picture after the black that follows
-        // the Nintendo logo.
-        let lit = |f: &Vec<u16>| f.iter().any(|&c| c & 0x7fff != 0);
-        let black = first + frames[first..].iter().position(|f| !lit(f)).ok_or("power-on never turns black")?;
-        let camelot = black + frames[black..].iter().position(lit).ok_or("no picture after the black")?;
-        self.gif("boot.gif", &frames[camelot..end], "the game at power-on: the Camelot and Golden Sun logos")
+        // the Nintendo logo; the Golden Sun logo the first after the black
+        // that follows it.
+        let lit = |f: &Vec<u16>| !is_black_bgr555(f);
+        let after = |from: usize, want: bool| frames[from..].iter().position(|f| lit(f) == want).map(|i| from + i);
+        let first = after(0, true).ok_or("power-on shows nothing")?;
+        let camelot = after(after(first, false).ok_or("power-on never turns black")?, true).ok_or("no picture after the black")?;
+        let black = after(camelot, false).ok_or("the Camelot logo never turns black")?;
+        let logo = after(black, true).ok_or("no Golden Sun logo after the black")?;
+        let end = logo + CLEARED;
+        if frames.len() < end {
+            Self::hold(&mut field, 0, (end - frames.len()) as u32, &mut frames)?;
+        }
+        self.gif("boot.gif", &frames[black..end], "the game at power-on: the Golden Sun logo fading in")
     }
 
     /// Start pressed two screens deep: every screen closes at once.

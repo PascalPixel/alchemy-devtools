@@ -182,9 +182,10 @@ const HOLD: u32 = 3;
 const MAX_FRAMES: u32 = 30000;
 /// Frames of the leader standing ready that open an event's recording.
 pub const LEAD_IN: u32 = 12;
-/// Frames past BLACK_CLEARANCE a recording is lengthened by, so the
-/// pictures a GIF shows, one of every two, still clear it.
-pub const CLEARANCE_MARGIN: usize = 4;
+/// Frames a recording keeps of the game on each side of a black screen:
+/// BLACK_CLEARANCE and a margin, so the pictures a GIF shows, one of every
+/// two, still clear it.
+pub const CLEARED: usize = BLACK_CLEARANCE + 4;
 /// Speakers below this are the party (FieldMessage_ShowAtActor has them
 /// speak from the leader); from it on, a speaker is an actor of the scene.
 const PARTY_SPEAKERS: u16 = 8;
@@ -2896,9 +2897,9 @@ impl<'rom> Field<'rom> {
         let unfinished = capped && fought && self.scene() == MAP_BATTLE;
         if record.is_some() && !capped && !defeated {
             let since = self.recorded.as_ref().and_then(|f| f.iter().rposition(|p| is_black_bgr555(p)).map(|i| f.len() - 1 - i));
-            if let Some(since) = since.filter(|&s| s < BLACK_CLEARANCE + CLEARANCE_MARGIN) {
+            if let Some(since) = since.filter(|&s| s < CLEARED) {
                 let resume = self.save();
-                self.frames((BLACK_CLEARANCE + CLEARANCE_MARGIN - since) as u32)?;
+                self.frames((CLEARED - since) as u32)?;
                 self.load(&resume);
             }
         }
@@ -2909,7 +2910,7 @@ impl<'rom> Field<'rom> {
         // last black screen by BLACK_CLEARANCE where the run has the frames.
         if defeated || unfinished {
             let opening = battle_start + BATTLE_OPENING;
-            let cleared = frames.iter().take(opening).rposition(|p| is_black_bgr555(p)).map_or(0, |i| i + 1 + BLACK_CLEARANCE + CLEARANCE_MARGIN);
+            let cleared = frames.iter().take(opening).rposition(|p| is_black_bgr555(p)).map_or(0, |i| i + 1 + CLEARED);
             frames.truncate(opening.max(cleared));
             capped = false;
             let why = if defeated { "the party, as strong as the story has it here, lost it" } else { "fought by A alone, it runs past the recording's length" };

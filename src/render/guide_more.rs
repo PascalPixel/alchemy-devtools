@@ -4,7 +4,8 @@
 //! its palettes, the sprite list, a map's cells, the overlay area).
 
 use super::animation;
-use super::field::{box_holds, Actor, Field, Image, Spot, CELL_WALL, STEP_DOWN, STEP_UP};
+use super::animation::is_black_bgr555;
+use super::field::{box_holds, Actor, Field, Image, Spot, CELL_WALL, CLEARED, STEP_DOWN, STEP_UP};
 use super::guide::{Entered, Guide};
 use super::mgba::{HEIGHT, WIDTH};
 use super::places::write_png;
@@ -233,6 +234,39 @@ impl<'a> Guide<'a> {
         Ok(frames)
     }
 
+    /// As press_path, for a path through a black screen: played again with
+    /// the leader standing ready for longer first where it reaches black
+    /// sooner than CLEARED, then run on with the pad left alone until it
+    /// has shown CLEARED frames past its last black screen
+    /// (animation::check_black_clearance).
+    pub(super) fn press_path_cleared(field: &mut Field, path: &[(u32, u32)]) -> Result<Vec<Vec<u16>>, String> {
+        let start = field.save();
+        let mut frames = Self::press_path(field, path)?;
+        if let Some(first) = frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b < CLEARED) {
+            field.load(&start);
+            let mut longer = vec![(0, (CLEARED - first) as u32)];
+            longer.extend_from_slice(path);
+            frames = Self::press_path(field, &longer)?;
+        }
+        Self::run_past_black(field, &mut frames)?;
+        Ok(frames)
+    }
+
+    /// Runs `field` on, the pad left alone and every picture kept, until
+    /// `frames` shows CLEARED frames past its last black screen.
+    pub(super) fn run_past_black(field: &mut Field, frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
+        // A black screen the run on reaches is cleared in turn, four at most.
+        for _ in 0..4 {
+            let Some(last) = frames.iter().rposition(|f| is_black_bgr555(f)) else { break };
+            let since = frames.len() - 1 - last;
+            if since >= CLEARED {
+                break;
+            }
+            Self::hold(field, 0, (CLEARED - since) as u32, frames)?;
+        }
+        Ok(())
+    }
+
     /// Talking to Garet's sister in Vale: the window zooms open, the line is
     /// typed out and the arrow bobs, then the window closes, as `talk.gif`;
     /// and the window's first frames side by side, as `window-open.png`.
@@ -323,7 +357,7 @@ impl<'a> Guide<'a> {
         let (mut entered, _) = self.stand_where(BILIBIN_INN, Trigger::Talk(BILIBIN_INNKEEPER), BILIBIN_INNKEEPER, |s| s.facing == NORTH)?;
         entered.field.set_coins(500);
         let path = [(0, 20), (KEY_A, 3), (0, 70), (KEY_A, 3), (0, 90), (KEY_A, 3), (0, 90), (KEY_A, 3), (0, 600), (KEY_A, 3), (0, 90)];
-        let frames = Self::press_path(&mut entered.field, &path)?;
+        let frames = Self::press_path_cleared(&mut entered.field, &path)?;
         self.guide_gif("inn.gif", &frames, "a night at Bilibin's inn")
     }
 
@@ -999,12 +1033,12 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         let mut frames = Vec::new();
         let at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
-        for _ in 0..240 {
-            field.frames(1)?;
-            frames.push(field.picture());
-        }
-        // From two seconds of walking before the battle began.
-        let start = at.saturating_sub(180);
+        Self::hold(field, 0, 240, &mut frames)?;
+        Self::run_past_black(field, &mut frames)?;
+        // From CLEARED frames of walking before the battle's first black
+        // screen, where the walk is that long.
+        let black = at + frames[at..].iter().position(|f| is_black_bgr555(f)).unwrap_or(0);
+        let start = black.saturating_sub(CLEARED);
         self.guide_gif("random-battle.gif", &frames[start..], "a random battle in Goma Cave")
     }
 
@@ -1209,7 +1243,7 @@ impl<'a> Guide<'a> {
     pub fn world_map_picture(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(WORLD_MAP, &[])?;
         let path = [(0, 20), (KEY_R, 3), (0, 90), (KEY_RIGHT, 50), (0, 40), (KEY_UP, 40), (0, 40), (KEY_L, 40), (0, 40), (KEY_A, 3), (0, 60)];
-        let frames = Self::press_path(&mut entered.field, &path)?;
+        let frames = Self::press_path_cleared(&mut entered.field, &path)?;
         self.guide_gif("world-map-picture.gif", &frames, "the world map's still picture")
     }
 
