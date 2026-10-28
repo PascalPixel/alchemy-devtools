@@ -127,7 +127,7 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
         .get(usize::from(map))
         .ok_or_else(|| format!("no map {map}"))?
         .1;
-    let rules = read("src/overworld/scene_rules.s")?;
+    let rules = read("src/field/scene_rules.s").or_else(|_| read("src/overworld/scene_rules.s"))?;
     // Before The Broken Seal's rename the table was gMapSec_NameRules and
     // its rows map_name and group_name.
     let kinds = ["scene_name", "area_name", "map_name", "group_name"];

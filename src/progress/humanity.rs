@@ -1407,7 +1407,8 @@ fn game_text(root: &Path, game: &str) -> Option<GameText> {
         return None;
     }
     let po = std::fs::read(root.join(&path)).ok()?;
-    let rules = std::fs::read(root.join(format!("games/{game}/src/overworld/scene_rules.s")))
+    let rules = std::fs::read(root.join(format!("games/{game}/src/field/scene_rules.s")))
+        .or_else(|_| std::fs::read(root.join(format!("games/{game}/src/overworld/scene_rules.s"))))
         .or_else(|_| std::fs::read(root.join(format!("games/{game}/src/overworld/map_rules.s"))))
         .ok();
     let areas = rules.and_then(|rules| area_count(&String::from_utf8_lossy(&rules)));
@@ -1964,7 +1965,7 @@ mod tests {
             ("games/tbs/src/scene/vale.c", scene.as_str()),
             ("games/tbs/src/battle_effect/parts/bolt.c", part.as_str()),
             ("games/tbs/include/scene_exits.h", long.as_str()),
-            ("games/tbs/src/overworld/table.c", data.as_str()),
+            ("games/tbs/src/field/table.c", data.as_str()),
         ]);
         assert_eq!(report.function_groups.len(), 1);
         assert_eq!(report.function_groups[0].members, vec!["a.c:Alpha", "a.c:Beta"]);

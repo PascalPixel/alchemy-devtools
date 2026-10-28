@@ -94,6 +94,8 @@ const FLASH_C: &[&str] = &[
 ];
 const ARM_C: &[&str] = &[
     "games/tbs/src/window/glyph_arm.c",
+    "games/tbs/src/field/actor_update_arm.c",
+    "games/tbs/src/field/world_map_lines.c",
     "games/tbs/src/field/update.c",
     "games/tbs/src/field/vertices.c",
     "games/tla/src/graphics/tile/cell_picture.c",

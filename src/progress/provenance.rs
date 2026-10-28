@@ -619,6 +619,24 @@ impl<'a> Definition<'a> {
     }
 }
 
+/// The Broken Seal's bank 04 code and data, which sat in `src/overworld/`
+/// before it joined `src/field/`: the field sequence's and event commands'
+/// objects and the tables beside them, but not bank 01's field code.
+fn field_sequence_bank(file: &str) -> bool {
+    const FILES: &[&str] = &[
+        "/src/field/field_sequence",
+        "/src/field/event_commands",
+        "/src/field/encounter_zones.c",
+        "/src/field/encounter_rules.s",
+        "/src/field/world_map_encounter_rules.c",
+        "/src/field/scene_rules.s",
+        "/src/field/battle_music.c",
+        "/src/field/scripts.s",
+        "/src/field/lucky_wheels.c",
+    ];
+    file.contains("/src/overworld/") || (file.contains("games/tbs/") && FILES.iter().any(|path| file.contains(path)))
+}
+
 /// What kind of game thing a definition names, if any: an exit by its
 /// header, a function or global of the map and object folders as a
 /// mechanism whose words are checked, and otherwise a definition whose
@@ -641,7 +659,7 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
     if origin == Origin::Enumerator && ["scene_exits.h", "map_warps.h", "scene_links.h"].iter().any(|header| file.ends_with(header)) {
         return definition.tag.is_none().then_some("exit");
     }
-    let mechanism_folder = file.contains("/src/map/") || file.contains("/src/scene/") || file.contains("/src/overworld/");
+    let mechanism_folder = file.contains("/src/map/") || file.contains("/src/scene/") || field_sequence_bank(file);
     match origin {
         Origin::Function if mechanism_folder => Some("function"),
         Origin::Global if mechanism_folder => Some("global"),
