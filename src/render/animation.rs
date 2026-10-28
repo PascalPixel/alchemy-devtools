@@ -34,14 +34,67 @@ fn channels(c: u32) -> [i32; 3] {
     [(c >> 16) as i32 & 0xff, (c >> 8) as i32 & 0xff, c as i32 & 0xff]
 }
 
+/// GBA frames a recording shows of the game on each side of a black screen
+/// (a fade or a load), ten seconds: a short loop through black flashes as
+/// it repeats, which Pascal found nauseating and a risk to anyone sensitive
+/// to flashing (28 October 2026).
+pub const BLACK_CLEARANCE: usize = 600;
+
+/// Whether a picture (0xRRGGBB) is black all over: every channel of every
+/// pixel at most 8 of 255, the GBA's darkest step above 0.
+pub fn is_black(picture: &[u32]) -> bool {
+    !picture.is_empty() && picture.iter().all(|&c| channels(c).iter().all(|&v| v <= 8))
+}
+
+/// The same for a BGR555 picture: every channel at most 1 of 31.
+pub fn is_black_bgr555(picture: &[u16]) -> bool {
+    !picture.is_empty() && picture.iter().all(|&c| c & 31 <= 1 && c >> 5 & 31 <= 1 && c >> 10 & 31 <= 1)
+}
+
+/// Refuses a recording, given whether each picture shown is black, that
+/// shows less than BLACK_CLEARANCE GBA frames (`stride` to a picture) of the
+/// game before or after a black screen: the stretch that opens the loop,
+/// each stretch between black screens and the stretch that closes it must
+/// each be that long. A recording with no black screen passes.
+pub fn check_black_clearance(black: &[bool], stride: usize) -> Result<(), String> {
+    if !black.contains(&true) {
+        return Ok(());
+    }
+    let need = BLACK_CLEARANCE.div_ceil(stride);
+    let seconds = |n: usize| (n * stride) as f64 / 60.0;
+    let mut start = 0;
+    for (i, &b) in black.iter().chain([&true]).enumerate() {
+        if !b {
+            continue;
+        }
+        let run = i - start;
+        if run > 0 && run < need {
+            let at = if start == 0 {
+                "before its first black screen".to_string()
+            } else if i == black.len() {
+                "after its last black screen".to_string()
+            } else {
+                format!("between the black screens at {:.1} and {:.1} seconds", seconds(start), seconds(i))
+            };
+            let keep = BLACK_CLEARANCE / 60;
+            return Err(format!("it shows {:.1} seconds of the game {at}, under the {keep} a recording keeps on each side of one", seconds(run)));
+        }
+        start = i + 1;
+    }
+    Ok(())
+}
+
 /// Writes `frames` (0xRRGGBB, `width` pixels a row) to `path`.
 pub fn write(path: &Path, frames: &[Vec<u32>], width: usize) -> Result<Written, String> {
-    encode(path, &frames.iter().step_by(STRIDE).collect::<Vec<_>>(), width)
+    let shown: Vec<&Vec<u32>> = frames.iter().step_by(STRIDE).collect();
+    check_black_clearance(&shown.iter().map(|f| is_black(f)).collect::<Vec<_>>(), STRIDE)?;
+    encode(path, &shown, width)
 }
 
 /// Writes `frames` (BGR555, as the GBA draws them) to `path`, widening only
 /// the frames shown.
 pub fn write_bgr555(path: &Path, frames: &[&[u16]], width: usize) -> Result<Written, String> {
+    check_black_clearance(&frames.iter().step_by(STRIDE).map(|f| is_black_bgr555(f)).collect::<Vec<_>>(), STRIDE)?;
     let shown: Vec<Vec<u32>> = frames.iter().step_by(STRIDE).map(|f| f.iter().map(|&c| rgb(c)).collect()).collect();
     encode(path, &shown.iter().collect::<Vec<_>>(), width)
 }
@@ -191,6 +244,76 @@ fn median_cut(histogram: &[(u32, u64)], limit: usize) -> Vec<u32> {
     palette
 }
 
+/// `render check DIR...`: every GIF under each folder against
+/// check_black_clearance, those refused listed with why; an error if any is.
+pub fn check_folders(folders: &[String]) -> Result<(), String> {
+    if folders.is_empty() {
+        return Err("usage: alchemy-devtools render check DIR...".to_string());
+    }
+    let mut files = Vec::new();
+    for folder in folders {
+        gifs_under(Path::new(folder), &mut files)?;
+    }
+    files.sort();
+    let mut refused = 0;
+    for file in &files {
+        if let Err(why) = black_pictures(file).and_then(|black| check_black_clearance(&black, STRIDE)) {
+            println!("{}\t{why}", file.display());
+            refused += 1;
+        }
+    }
+    match refused {
+        0 => {
+            eprintln!("{} recordings, none refused", files.len());
+            Ok(())
+        }
+        n => Err(format!("{n} of {} recordings refused", files.len())),
+    }
+}
+
+fn gifs_under(dir: &Path, out: &mut Vec<std::path::PathBuf>) -> Result<(), String> {
+    for entry in std::fs::read_dir(dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))? {
+        let path = entry.map_err(|e| e.to_string())?.path();
+        if path.is_dir() {
+            gifs_under(&path, out)?;
+        } else if path.extension().is_some_and(|e| e == "gif") {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+/// Whether each picture a GIF shows, one every thirtieth of a second, is
+/// black: its frames drawn one over the last, as encode writes them, each
+/// lasting the pictures its delay covers (frame i of encode's starts at
+/// i * 100 / 30 hundredths, rounded).
+fn black_pictures(path: &Path) -> Result<Vec<bool>, String> {
+    let error = |e: gif::DecodingError| format!("{}: {e}", path.display());
+    let file = std::fs::File::open(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let mut options = gif::DecodeOptions::new();
+    options.set_color_output(gif::ColorOutput::RGBA);
+    let mut decoder = options.read_info(std::io::BufReader::new(file)).map_err(error)?;
+    let (w, h) = (decoder.width() as usize, decoder.height() as usize);
+    let mut canvas = vec![0u32; w * h];
+    let start = |i: usize| (i * 100 + FPS / 2) / FPS;
+    let (mut elapsed, mut black) = (0, Vec::new());
+    while let Some(frame) = decoder.read_next_frame().map_err(error)? {
+        let (left, top, fw) = (usize::from(frame.left), usize::from(frame.top), usize::from(frame.width));
+        for (k, px) in frame.buffer.chunks_exact(4).enumerate() {
+            let (x, y) = (left + k % fw, top + k / fw);
+            if px[3] != 0 && x < w && y < h {
+                canvas[y * w + x] = u32::from(px[0]) << 16 | u32::from(px[1]) << 8 | u32::from(px[2]);
+            }
+        }
+        elapsed += usize::from(frame.delay);
+        let dark = is_black(&canvas);
+        while start(black.len()) < elapsed {
+            black.push(dark);
+        }
+    }
+    Ok(black)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -210,6 +333,38 @@ mod tests {
         new[10] = 1;
         assert_eq!(changed(&old, &new, 4), Some((1, 1, 2, 2)));
         assert_eq!(changed(&old, &old, 4), None);
+    }
+
+    #[test]
+    fn black_screens_need_ten_seconds_of_the_game_around_them() {
+        let clip = |runs: &[(bool, usize)]| -> Vec<bool> { runs.iter().flat_map(|&(b, n)| std::iter::repeat_n(b, n)).collect() };
+        assert!(check_black_clearance(&clip(&[(false, 40)]), 2).is_ok());
+        assert!(check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 300)]), 2).is_ok());
+        assert!(check_black_clearance(&clip(&[(true, 8), (false, 300)]), 2).is_ok());
+        let short_before = check_black_clearance(&clip(&[(false, 20), (true, 8), (false, 300)]), 2).unwrap_err();
+        assert!(short_before.contains("before its first black screen"), "{short_before}");
+        let short_after = check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 299)]), 2).unwrap_err();
+        assert!(short_after.contains("after its last black screen"), "{short_after}");
+        assert!(check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 100), (true, 8), (false, 300)]), 2).is_err());
+        assert!(is_black(&[0, 0x080808]) && !is_black(&[0, 0x100000]));
+        assert!(is_black_bgr555(&[0, 1 | 1 << 5]) && !is_black_bgr555(&[2]));
+    }
+
+    #[test]
+    fn a_written_recording_reads_back_picture_for_picture() {
+        let colour: Vec<u16> = vec![0x7c00; 16];
+        let dark: Vec<u16> = vec![0; 16];
+        let mut frames: Vec<&[u16]> = vec![&colour; 620];
+        frames.extend(std::iter::repeat_n(dark.as_slice(), 10));
+        frames.extend(std::iter::repeat_n(colour.as_slice(), 620));
+        let path = std::env::temp_dir().join(format!("alchemy-black-{}.gif", std::process::id()));
+        let written = write_bgr555(&path, &frames, 4).unwrap();
+        let black = black_pictures(&path).unwrap();
+        std::fs::remove_file(&path).ok();
+        assert_eq!(black.len(), written.frames);
+        assert_eq!(black.iter().filter(|&&b| b).count(), 5);
+        assert!(write_bgr555(&path, &frames[600..], 4).is_err());
+        std::fs::remove_file(&path).ok();
     }
 
     #[test]

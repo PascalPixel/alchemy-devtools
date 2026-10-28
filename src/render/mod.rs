@@ -134,6 +134,7 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         Some("story") => story_pictures(&arguments[1..]),
         Some("guide") => guide_pictures(&arguments[1..]),
         Some("probe") => probe_command(&arguments[1..]),
+        Some("check") => animation::check_folders(&arguments[1..]),
         Some("-h" | "--help") => {
             println!("{COMMANDS}");
             Ok(())
@@ -369,7 +370,7 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<(Vec<Ro
             written.stored,
             written.colours,
             written.bytes.div_ceil(1024),
-            if recording.battle_over { ", the battle ended" } else if recording.capped { ", stopped at 25 seconds" } else { "" }
+            if recording.battle_over { ", the battle ended" } else if recording.capped { ", stopped at 35 seconds" } else { "" }
         );
         rows.push(Row {
             id: a.id,
@@ -418,6 +419,8 @@ const COMMANDS: &str = "usage: alchemy-devtools render psynergy|place|event [opt
   event     the message pages of each scene's events, as PNG
   story     the front page's pictures: the title, Vale's farewell, the lit
             lighthouse and the world map
+  check     every GIF under each folder given against the ten seconds a
+            recording keeps of the game on each side of a black screen
 Run any of them with --help for its options.";
 
 const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene N|NAME]... [--all]
@@ -911,6 +914,7 @@ impl Machines {
             moment_scenes: 0,
             capped: 0,
             relaxed: std::cell::Cell::new(false),
+            lead_in: std::cell::Cell::new(field::LEAD_IN),
             whole: r.whole,
         }
     }

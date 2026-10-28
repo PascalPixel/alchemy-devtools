@@ -14,6 +14,8 @@
 //! lightness. The backdrop colours and the greys change the picture alone:
 //! the game's palette RAM keeps its own colours.
 
+use super::animation::is_black_bgr555;
+use super::field::CLEARED;
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, LR};
 use super::plan::{self, Aim, Ally, Cast, Command};
 use crate::ld_map::Map;
@@ -25,8 +27,9 @@ const ENCOUNTER: u32 = 1;
 const CMD_PSYNERGY: u16 = 1;
 const CMD_DJINN: u16 = 5;
 const CMD_SUMMON: u16 = 6;
-/// Frames kept at most: 25 seconds, for the longest summons.
-const MAX_RECORDED: usize = 1500;
+/// Frames kept at most: 35 seconds, for the longest summons and the ten
+/// seconds after their last black screen.
+const MAX_RECORDED: usize = 2100;
 /// The party's Djinn recovery list, gMainRoutineWork + 12 (Djinn_GetRecoveryTable
 /// is gMainRoutineWork + 4; its list follows 8 bytes on): 64 four-byte entries
 /// (element, index, owner, turns), then the count.
@@ -195,6 +198,10 @@ pub struct Recording {
     pub battle_over: bool,
     /// Whether the recording stopped at MAX_RECORDED.
     pub capped: bool,
+    /// The battle's frames just before the recording began, since its last
+    /// black screen, at most CLEARED: what `record` puts before a cast that
+    /// reaches black sooner.
+    pub before: Vec<Vec<u16>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -237,7 +244,14 @@ pub struct Background {
 /// Plays `cast` on `rom` with the battlefield showing `scene` and returns its
 /// frames; `log` prints each step of the setup.
 pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool) -> Result<Recording, String> {
-    record_watching(rom, symbols, cast, scene, log, None, &[], &mut |_, _| {})
+    let mut recording = record_watching(rom, symbols, cast, scene, log, None, &[], &mut |_, _| {})?;
+    if let Some(first) = recording.frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b < CLEARED) {
+        let take = (CLEARED - first).min(recording.before.len());
+        let mut frames = recording.before.split_off(recording.before.len() - take);
+        frames.append(&mut recording.frames);
+        recording.frames = frames;
+    }
+    Ok(recording)
 }
 
 /// As `record`, calling `watch` with the machine after each frame it keeps,
@@ -277,6 +291,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
     let mut recording = false;
     let mut capped = false;
     let mut frames = Vec::new();
+    let mut before: std::collections::VecDeque<Vec<u16>> = std::collections::VecDeque::new();
 
     loop {
         let step = gba.step();
@@ -527,6 +542,17 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
         if !frame_done {
             continue;
         }
+        if !recording && phase >= Phase::Battle {
+            let picture = gba.picture();
+            if is_black_bgr555(&picture) {
+                before.clear();
+            } else {
+                before.push_back(picture);
+                if before.len() > CLEARED {
+                    before.pop_front();
+                }
+            }
+        }
         if recording {
             watch(&mut gba, None);
             frames.push(gba.picture());
@@ -536,7 +562,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
             }
             if let Some(t) = tail.as_mut() {
                 *t += 1;
-                if *t > 1 {
+                if *t > 1 && frames.iter().rposition(|f| is_black_bgr555(f)).is_none_or(|b| frames.len() - 1 - b >= CLEARED) {
                     break;
                 }
             }
@@ -577,7 +603,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
         }
     }
     say(frame, format!("{} frames", frames.len()));
-    Ok(Recording { frames, battle_over, capped })
+    Ok(Recording { frames, battle_over, capped, before: before.into() })
 }
 
 /// A colour with each channel scaled by `scale` (16.16, at most 1), as
