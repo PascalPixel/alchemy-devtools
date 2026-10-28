@@ -707,7 +707,7 @@ fn menu_map(block: &[u8], fields: &[(&str, u32, u32, u32)], cell: usize) -> Imag
 }
 
 impl<'a> Guide<'a> {
-    /// The menu work slot (gMenuWork, HEAP_SLOT_MENU) in Bilibin's item
+    /// The menu heap slot (gMenuWork, HEAP_SLOT_MENU) in Bilibin's item
     /// shop: at the counter's Buy list, read as struct ShopWork, and,
     /// in a run of its own, with the field menu's Item screen open there,
     /// read as struct ItemMenuWork, as `menu-slot.png`. Each byte of
@@ -732,7 +732,7 @@ impl<'a> Guide<'a> {
         let (menu_at, menu_block) = read(&entered.field);
         eprintln!("menu-slot: the Item screen's work at {menu_at:#x}");
         if shop_at == 0 || menu_at == 0 {
-            return Err("the menu work slot was empty".to_string());
+            return Err("the menu heap slot was empty".to_string());
         }
         const CELL: usize = 5;
         let map_w = 64 * CELL;
@@ -768,7 +768,7 @@ impl<'a> Guide<'a> {
                 text(&mut image, lx + 14, ly, label, TEXT, None, 2);
             }
         }
-        self.guide_png("menu-slot.png", &image, "the menu work slot as a counter and as the Item screen use it")
+        self.guide_png("menu-slot.png", &image, "the menu heap slot as a counter and as the Item screen use it")
     }
 }
 

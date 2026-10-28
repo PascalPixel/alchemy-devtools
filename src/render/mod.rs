@@ -18,7 +18,7 @@ mod front;
 #[cfg(feature = "render")]
 mod guide;
 #[cfg(feature = "render")]
-mod guide_engine;
+mod guide_system;
 #[cfg(feature = "render")]
 mod guide_front;
 #[cfg(feature = "render")]
@@ -1201,7 +1201,7 @@ also reads out/tbs-ja, make tbs-ja):
   area-name         area-name.gif: Bilibin's area name and its countdown
   sanctum           sanctum.gif: the Vale Sanctum's Revive and its members
   item-picker       item-picker.gif: a Nut given with every bag full
-  menu-slot         menu-slot.png: the menu work slot as a counter and as the
+  menu-slot         menu-slot.png: the menu heap slot as a counter and as the
                     Item screen read it
 Pictures for the battle guide's rules (guide_battle.rs):
   enemy-actions     enemy-actions.png: a Gryphon's eight actions, the
@@ -1249,7 +1249,7 @@ Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   vale-opening, vale-gate-display, cottage-rooms-a-sleep, vale-kraden-rockslide,
   vale-cave-kite
 Take-apart pictures for the system's and field's guides, each as its mode's
-name with .png or .gif (guide_engine.rs):
+name with .png or .gif (guide_system.rs):
   menu-test-setup, palette-fade, scheduler, io-write-queue,
   resource-directory, memory-maps, map-header, placeholders, markers,
   world-map-squares, colosso-path, player-probes, item-row, scene-script,
@@ -1349,7 +1349,7 @@ fn play_guide(
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     // The work in pieces: each mode, and field-psynergy's casts one by one.
     let mut units: Vec<String> = Vec::new();
-    for &name in guide::MODES.iter().chain(guide_engine::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).filter(|&&name| wanted(name)) {
+    for &name in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).filter(|&&name| wanted(name)) {
         if name == "field-psynergy" {
             let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
             units.extend(guide::field_cast_names()?.into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
@@ -1383,7 +1383,7 @@ fn play_guide(
             }
         }
         // Failures in the order the modes play.
-        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_engine::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).position(|m| m == name));
+        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).position(|m| m == name));
         failed.dedup();
     } else {
         let build = root.join("out").join(edition);
@@ -1415,7 +1415,7 @@ fn play_guide(
                 Ok(records)
             });
         }
-        for &name in guide::MODES.iter().chain(guide_engine::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES) {
+        for &name in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES) {
             if wanted(name) {
                 if let Err(e) = guide.run(name, casts) {
                     eprintln!("{name}: {e}");
@@ -1450,7 +1450,7 @@ mod tests {
     #[test]
     fn every_guide_mode_is_in_the_usage() {
         let words: Vec<&str> = GUIDE_USAGE.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-')).collect();
-        for &mode in guide::MODES.iter().chain(guide_engine::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES) {
+        for &mode in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES) {
             assert!(words.contains(&mode), "{mode} is not in GUIDE_USAGE");
         }
         assert!(guide::MODES.contains(&"shop-layers-3d"));

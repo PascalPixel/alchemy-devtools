@@ -15,7 +15,7 @@ const KEY_UP: u32 = 0x40;
 const KEY_DOWN: u32 = 0x80;
 const KEY_L: u32 = 0x200;
 
-/// The modes this file plays, after guide::MODES and guide_engine::MODES.
+/// The modes this file plays, after guide::MODES and guide_system::MODES.
 pub const MODES: &[&str] = &[
     "world-door",
     "world-wall-slide",

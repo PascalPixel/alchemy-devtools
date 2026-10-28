@@ -53,7 +53,7 @@ const SAVE_MESSAGE_SPEED: u32 = 0x20c;
 const ISAAC: u8 = 0;
 const GARET: u8 = 1;
 
-/// The modes this file plays, after guide_engine::MODES.
+/// The modes this file plays, after guide_system::MODES.
 pub const MODES: &[&str] = &[
     "windows-zoom",
     "message-speed",

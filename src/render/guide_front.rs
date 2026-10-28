@@ -57,7 +57,7 @@ const CREDITS_LEAD: usize = 300;
 const CREDITS_FADE: usize = 64;
 const CREDITS_HOLD: usize = 267;
 
-/// The modes this file plays, after guide_engine::MODES.
+/// The modes this file plays, after guide_system::MODES.
 pub const MODES: &[&str] = &[
     "front-door",
     "front-area-name",
