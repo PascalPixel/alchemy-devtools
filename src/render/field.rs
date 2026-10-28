@@ -2642,6 +2642,8 @@ impl<'rom> Field<'rom> {
         // Where in the recording a battle the event starts began, and whether
         // the party lost it.
         let mut battle_start = 0;
+        // Where in the recording the party left that battle, once it has.
+        let mut battle_end: Option<usize> = None;
         let room = self.room();
         let mut beyond = false;
         let mut defeated = false;
@@ -2787,6 +2789,9 @@ impl<'rom> Field<'rom> {
                 let wide = r[2] - r[0] >= WIDTH as i32;
                 let tall = r[3] - r[1] >= HEIGHT as i32;
                 beyond = (wide && (vx < r[0] || vx + WIDTH as i32 > r[2])) || (tall && (vy < r[1] || vy + HEIGHT as i32 > r[3]));
+            }
+            if fought && battle_end.is_none() && self.scene() != MAP_BATTLE {
+                battle_end = Some(self.recorded.as_ref().map_or(0, Vec::len));
             }
             if !fought && self.scene() == MAP_BATTLE {
                 battle_start = self.recorded.as_ref().map_or(0, Vec::len);
@@ -2944,7 +2949,8 @@ impl<'rom> Field<'rom> {
             let placed = "the leader starts where the walk from the entrance does not reach, since what opens the way there is not played first".to_string();
             note = Some(note.map_or(placed.clone(), |n| format!("{placed}; {n}")));
         }
-        Ok(EventRun { pages, frames, states, whole: None, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker) })
+        let frames_len = frames.len();
+        Ok(EventRun { pages, frames, states, whole: None, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, battle: fought.then(|| (battle_start, battle_end.unwrap_or(frames_len))), absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker) })
     }
 
     /// One frame of an exit's arrival in the scene it leads to, which began
@@ -3277,6 +3283,9 @@ pub struct EventRun {
     /// Why a recorded arrival stopped before the player had control: a
     /// battle began, or it ran past ARRIVAL_LIMIT.
     pub note: Option<String>,
+    /// The recorded frames a battle the event started ran over: its first,
+    /// and the first after it, or the recording's end.
+    pub battle: Option<(usize, usize)>,
     /// A speaker one of the event's messages was opened beside that the
     /// scene has no actor for: played here, its cast is not on stage (Mercury
     /// Lighthouse Aerie's hostages after the battle), and its windows open

@@ -4,7 +4,8 @@
 //! a player would, written under the guide folder it belongs to
 //! (`front/sanctum-door.gif`).
 
-use super::field::{Field, Setup, Spot};
+use super::animation::is_black_bgr555;
+use super::field::{Field, Setup, Spot, Start, CLEARED, EVENT_LIMIT};
 use super::guide::Guide;
 use super::story::Trigger;
 
@@ -33,6 +34,11 @@ const SOL_CHEST_ROOM: (u16, u16) = (16, 2);
 const CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST: u16 = 100;
 /// Vale's strongman by the river (vale.c, ACTOR_STRONGMAN_BY_THE_RIVER).
 const STRONGMAN_BY_THE_RIVER: u16 = 12;
+/// The loft of Vault's inn, SceneId_LogRoomsA by its loft entrance, and
+/// the villager the thieves tied up there (log_rooms_a.c,
+/// ACTOR_TIED_UP_VILLAGER).
+const VAULT_LOFT: (u16, u16) = (21, 15);
+const VAULT_TIED_UP_VILLAGER: u16 = 8;
 /// Vale's inn and its innkeeper (cottage_rooms_b.c, ACTOR_INNKEEPER).
 const VALE_INN: (u16, u16) = (8, 0);
 const VALE_INNKEEPER: u16 = 13;
@@ -65,6 +71,7 @@ pub const MODES: &[&str] = &[
     "front-story",
     "engine-waiting",
     "front-chest",
+    "front-thieves",
     "engine-debug-select",
     "runtime-soft-reset",
     "runtime-save",
@@ -89,6 +96,7 @@ impl<'a> Guide<'a> {
             "front-story" => self.front_story(),
             "engine-waiting" => self.engine_waiting(),
             "front-chest" => self.front_chest(),
+            "front-thieves" => self.front_thieves(),
             "engine-debug-select" => self.engine_debug_select(),
             "runtime-soft-reset" => self.runtime_soft_reset(),
             "runtime-save" => self.runtime_save(),
@@ -186,6 +194,45 @@ impl<'a> Guide<'a> {
         let mut entered = self.enter_with(SOL_CHEST_ROOM, &[])?;
         let frames = Self::record_trigger(&mut entered, Trigger::Search(CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST), None, 20)?;
         self.front_gif("front/chest.gif", &frames, "a chest opened in Sol Sanctum")
+    }
+
+    /// The thieves in the loft of Vault's inn (SceneId_LogRoomsA, its
+    /// loft entrance): Isaac frees the villager tied up there, the thieves
+    /// attack, the battle opens, the battle's end, and the loft after the
+    /// party wins, as `front/vault-thieves.gif`. Each part shows CLEARED frames
+    /// of the game on its side of each black screen; the battle between its
+    /// opening and its end is cut, a cut no black screen marks.
+    fn front_thieves(&mut self) -> Result<(), String> {
+        let mut entered = self.enter_with(VAULT_LOFT, &[])?;
+        let trigger = Trigger::Talk(VAULT_TIED_UP_VILLAGER);
+        let field = &mut entered.field;
+        let spots = field.spots(trigger)?;
+        let spot = spots.first().ok_or("nowhere to stand to free the villager")?;
+        let run = field.event(Start::Entered(&entered.placed), trigger, spot, &[], &[], 16, Some(EVENT_LIMIT as usize))?;
+        let frames = run.frames;
+        let black: Vec<bool> = frames.iter().map(|f| is_black_bgr555(f)).collect();
+        // The black screens' runs, in frames.
+        let mut runs: Vec<(usize, usize)> = Vec::new();
+        for (i, &b) in black.iter().enumerate() {
+            match runs.last_mut() {
+                Some(r) if b && r.1 == i => r.1 = i + 1,
+                _ if b => runs.push((i, i + 1)),
+                _ => {}
+            }
+        }
+        let (opens, closes) = run.battle.ok_or("the event started no battle")?;
+        // The loft before the attack and the battle's opening, CLEARED each.
+        let mut cut: Vec<Vec<u16>> = frames[opens.saturating_sub(CLEARED)..(opens + CLEARED).min(closes)].to_vec();
+        // The battle's end, then the loft it returns to, up to the next black
+        // screen after the one the return fades through (which can end a few
+        // frames before the battle is over), at most 2 * CLEARED past it.
+        let after = runs.iter().position(|r| r.1 + CLEARED > closes);
+        let end = match after {
+            Some(i) => runs.get(i + 1).map_or(frames.len(), |r| r.0).min(runs[i].1 + 2 * CLEARED),
+            None => (closes + 2 * CLEARED).min(frames.len()),
+        };
+        cut.extend_from_slice(&frames[closes.saturating_sub(CLEARED).max(opens + CLEARED)..end]);
+        self.front_gif("front/vault-thieves.gif", &cut, "the thieves in Vault's inn: the loft, the battle's opening and end, and the loft after")
     }
 
     /// The debug map selector in Vale with gDebugMode set: Start pressed
