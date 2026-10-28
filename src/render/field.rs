@@ -1,7 +1,7 @@
 //! A field scene, run from a built edition: where Game_ResetForNewGame has
-//! set a new game's defaults (SequenceParentWork_InitializeDefaults) and makes its next call
+//! set a new game's defaults (MainRoutineWork_InitializeDefaults) and makes its next call
 //! (WindowColor_Apply), the run writes the scene, entrance and story flags
-//! into gSequenceParentWork, so the sequence parent runs that scene instead of the title.
+//! into gMainRoutineWork, so the main routine runs that scene instead of the title.
 //! The location-name notice (AreaNameWindow_Show) returns at once unless
 //! show_notice is set. The
 //! scene is the player's once FieldSequence_Run's loop takes its first
@@ -9,7 +9,7 @@
 //!
 //! A map is stitched from one moment of the game: for each 240 by 160 view
 //! of the box the machine is loaded again, the map's followed point
-//! (MapGridScrollWork.origin) is pinned to gSequenceParentWork.x, y and z holding the
+//! (MapGridScrollWork.origin) is pinned to gMainRoutineWork.x, y and z holding the
 //! view's focus at each entry of its two readers, and the next scheduler
 //! call of MapGrid_UpdateLayerScroll runs MapGrid_CenterOnFollowedPoint instead,
 //! which redraws each layer around the point as the event camera does. The
@@ -40,7 +40,7 @@ use super::story::{Trigger, CARRY, MOVE};
 use crate::ld_map::Map;
 use std::collections::HashMap;
 
-/// struct SequenceParentWork (sequence_parent_work.h), struct MapGridScrollWork (map_grid_scroll.h),
+/// struct MainRoutineWork (main_routine_work.h), struct MapGridScrollWork (map_grid_scroll.h),
 /// struct FieldWork (field_work.h), struct SceneEntryPoints and the object
 /// slots' offsets.
 const GS_COINS: u32 = 0x10;
@@ -268,7 +268,7 @@ impl Symbols {
     pub fn find(map: &Map) -> Result<Symbols, String> {
         let at = |name: &str| map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"));
         Ok(Symbols {
-            init: at("SequenceParentWork_InitializeDefaults").or_else(|_| at("Adventure_InitializeDefaults")).or_else(|_| at("Common_InitializeDefaults")).or_else(|_| at("SaveBlock_InitializeDefaults"))?,
+            init: at("MainRoutineWork_InitializeDefaults").or_else(|_| at("SequenceParentWork_InitializeDefaults")).or_else(|_| at("Adventure_InitializeDefaults")).or_else(|_| at("Common_InitializeDefaults")).or_else(|_| at("SaveBlock_InitializeDefaults"))?,
             glow: at("WindowColor_Apply")?,
             load_layered: at("MapGrid_LoadMap")?,
             // Each second spelling is Alchemy's before The Broken Seal's rename.
@@ -296,7 +296,7 @@ impl Symbols {
             touch: at("Scene_RunStepTriggerOrExit").or_else(|_| at("Scene_RunCoordEventOrWarp"))?,
             search: at("Field_ExamineCell")?,
             psynergy: at("Field_UsePsynergy")?,
-            game_state: at("gSequenceParentWork").or_else(|_| at("gAdventure")).or_else(|_| at("gCommon")).or_else(|_| at("gPersistentState")).or_else(|_| at("gSaveBlock"))?,
+            game_state: at("gMainRoutineWork").or_else(|_| at("gSequenceParentWork")).or_else(|_| at("gAdventure")).or_else(|_| at("gCommon")).or_else(|_| at("gPersistentState")).or_else(|_| at("gSaveBlock"))?,
             flag_bytes: at("gGameFlagBytes")?,
             map_work: at("gMapGridWork")?,
             field_work: at("gFieldWork")?,
@@ -614,7 +614,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// Makes `party` the active party, in order: party flags 0 to 7 and
-    /// gSequenceParentWork.party.
+    /// gMainRoutineWork.party.
     pub fn set_party(&mut self, party: &[u8]) {
         let bits = party.iter().fold(0u8, |b, &o| b | 1 << o);
         self.gba.write8(self.s.flag_bytes, bits);
@@ -821,7 +821,7 @@ impl<'rom> Field<'rom> {
         false
     }
 
-    /// Lists the party (gSequenceParentWork.party) as the party flags have it
+    /// Lists the party (gMainRoutineWork.party) as the party flags have it
     /// now, the chapter's members first (party::order); before the run's
     /// flags decide, the chapter's members are the party flags.
     fn list_party(&mut self) {

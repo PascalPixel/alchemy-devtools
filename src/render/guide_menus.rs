@@ -46,7 +46,7 @@ const INVENTORY_BROKEN: u16 = 0x400;
 const INVENTORY_QUANTITY_SHIFT: u16 = 11;
 /// A gauge's full share, Unit.hpGauge.
 const GAUGE_FULL: u32 = 0x4000;
-/// struct SequenceParentWork's fields (sequence_parent_work.h).
+/// struct MainRoutineWork's fields (main_routine_work.h).
 const SAVE_SHOP_CREDIT: u32 = 0x118;
 const SAVE_MESSAGE_SPEED: u32 = 0x20c;
 /// The characters by number.
@@ -178,7 +178,7 @@ impl<'a> Guide<'a> {
     /// then, talked to again from the same moment, at the fast speed, as
     /// `message-speed.gif`.
     fn message_speed(&mut self) -> Result<(), String> {
-        let save = self.sym("gSequenceParentWork").or_else(|_| self.sym("gAdventure")).or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
+        let save = self.sym("gMainRoutineWork").or_else(|_| self.sym("gSequenceParentWork")).or_else(|_| self.sym("gAdventure")).or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
         let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
         let field = &mut entered.field;
         let ready = field.save();
@@ -402,7 +402,7 @@ impl<'a> Guide<'a> {
     /// Bilibin's item shop with the shop credit 5 short of the first Game
     /// Ticket: a Herb bought, and the ticket given, as `game-ticket.gif`.
     fn game_ticket(&mut self) -> Result<(), String> {
-        let save = self.sym("gSequenceParentWork").or_else(|_| self.sym("gAdventure")).or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
+        let save = self.sym("gMainRoutineWork").or_else(|_| self.sym("gSequenceParentWork")).or_else(|_| self.sym("gAdventure")).or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
         let (mut entered, _) = self.bilibin_keeper(5, "ACTOR_BILIBIN_ITEM_MERCHANT|LOCALID_BILIBIN_ITEM_MERCHANT")?;
         entered.field.set_coins(500);
         entered.field.write32(save + SAVE_SHOP_CREDIT, 295);

@@ -27,8 +27,8 @@ const CMD_DJINN: u16 = 5;
 const CMD_SUMMON: u16 = 6;
 /// Frames kept at most: 25 seconds, for the longest summons.
 const MAX_RECORDED: usize = 1500;
-/// The party's Djinn recovery list, gSequenceParentWork + 12 (Djinn_GetRecoveryTable
-/// is gSequenceParentWork + 4; its list follows 8 bytes on): 64 four-byte entries
+/// The party's Djinn recovery list, gMainRoutineWork + 12 (Djinn_GetRecoveryTable
+/// is gMainRoutineWork + 4; its list follows 8 bytes on): 64 four-byte entries
 /// (element, index, owner, turns), then the count.
 const STATE_RECOVERY_LIST: u32 = 0x0c;
 const RECOVERY_COUNT: u32 = 0x100;
@@ -46,7 +46,7 @@ const ADVANCE: u32 = 45;
 /// A run that is not over by this frame has gone wrong.
 const MAX_FRAMES: u32 = 6000;
 
-/// struct SequenceParentWork (sequence_parent_work.h), struct Unit (battle/battle_unit.h),
+/// struct MainRoutineWork (main_routine_work.h), struct Unit (battle/battle_unit.h),
 /// struct BattleWork (battle_work.h) and struct BattleObject
 /// (battle/battle_session.h) offsets.
 const STATE_ACTIVE_OWNERS: u32 = 0x1f8;
@@ -164,8 +164,8 @@ impl Symbols {
             map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"))
         };
         Ok(Symbols {
-            // SequenceParent_RunFar, called ParentSequence_RunFar, Monitor_RunFar, SequenceManager_RunFar, Game_RunFar and Game_ResetForNewGameFar in older builds.
-            start: at("SequenceParent_RunFar").or_else(|_| at("ParentSequence_RunFar")).or_else(|_| at("Monitor_RunFar")).or_else(|_| at("SequenceManager_RunFar")).or_else(|_| at("Game_RunFar")).or_else(|_| at("Game_ResetForNewGameFar"))?,
+            // MainRoutine_RunFar, called MainRoutine_RunFar, ParentSequence_RunFar, Monitor_RunFar, SequenceManager_RunFar, Game_RunFar and Game_ResetForNewGameFar in older builds.
+            start: at("MainRoutine_RunFar").or_else(|_| at("SequenceParent_RunFar")).or_else(|_| at("ParentSequence_RunFar")).or_else(|_| at("Monitor_RunFar")).or_else(|_| at("SequenceManager_RunFar")).or_else(|_| at("Game_RunFar")).or_else(|_| at("Game_ResetForNewGameFar"))?,
             menu: at("DebugBattle_RunMenu")?,
             preset: at("DebugParty_LoadPreset")?,
             encounter: at("Battle_Run")?,
@@ -180,7 +180,7 @@ impl Symbols {
             message: at("BattleMessage_ShowAndWait")?,
             battle_over: at("Battle_ClearSerialTransferPayload")?,
             battle_work: at("gBattleWork")?,
-            game_state: at("gSequenceParentWork").or_else(|_| at("gAdventure")).or_else(|_| at("gCommon")).or_else(|_| at("gPersistentState")).or_else(|_| at("gSaveBlock"))?,
+            game_state: at("gMainRoutineWork").or_else(|_| at("gSequenceParentWork")).or_else(|_| at("gAdventure")).or_else(|_| at("gCommon")).or_else(|_| at("gPersistentState")).or_else(|_| at("gSaveBlock"))?,
             game_flags: at("gGameFlagBytes")?,
             owner_states: at("gEnemyUnits")?,
         })
