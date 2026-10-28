@@ -4,7 +4,7 @@
 //! into gSequenceParentWork, so the sequence parent runs that scene instead of the title.
 //! The location-name notice (AreaNameWindow_Show) returns at once unless
 //! show_notice is set. The
-//! scene is the player's once SceneSequence_Run's loop takes its first
+//! scene is the player's once FieldSequence_Run's loop takes its first
 //! step (Field_UpdateWalking).
 //!
 //! A map is stitched from one moment of the game: for each 240 by 160 view
@@ -20,10 +20,10 @@
 //! it: beside the actor it talks to, level with it on the layer he walks
 //! (the actor's own only after it), or a step from the cell it touches or
 //! searches, on the ground there (MapGrid_GetTerrainHeight, run in the machine
-//! between two steps of the scene sequence), and always on ground he could walk
+//! between two steps of the field sequence), and always on ground he could walk
 //! to from where he entered, in the room the camera shows (Field::reach).
 //! Then A (talk, search), a field Psynergy request (FieldWork.command) or
-//! walking onto the cell (touch) starts it, and the scene sequence's own
+//! walking onto the cell (touch) starts it, and the field sequence's own
 //! dispatch (Scene_TalkToActor, Scene_RunStepTriggerOrExit, Field_ExamineCell,
 //! Field_UsePsynergy) shows which event began; the event function the CPU
 //! then enters (Field::watch) shows whose row it was, since two rooms of a
@@ -31,7 +31,7 @@
 //! message page is kept once it is typed and waits for the button
 //! (Text_CheckTextDismissed), and each yes or no choice
 //! (YesNoMenu_Run) once shown; then A moves on. The event is over
-//! when the scene sequence steps again with nothing to read and nothing it set
+//! when the field sequence steps again with nothing to read and nothing it set
 //! moving (a pushed pillar) still moves.
 
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, LR, SP, WIDTH};
@@ -184,7 +184,7 @@ const LEAD_IN: u32 = 12;
 /// Speakers below this are the party (FieldMessage_ShowAtActor has them
 /// speak from the leader); from it on, a speaker is an actor of the scene.
 const PARTY_SPEAKERS: u16 = 8;
-/// Frames the scene sequence must step, with nothing to read, before the
+/// Frames the field sequence must step, with nothing to read, before the
 /// player has control again.
 const CONTROL_FRAMES: u32 = 30;
 /// Frames with nothing on stage moving before an event that has given back
@@ -380,11 +380,11 @@ pub(super) struct Track {
     pc: u32,
     /// Whether the CPU sleeps until the next interrupt.
     halted: bool,
-    /// The last frame the scene sequence stepped, and the first of the frames
+    /// The last frame the field sequence stepped, and the first of the frames
     /// it has stepped in a row up to it.
     step_frame: u32,
     stepping_since: u32,
-    /// The last event the scene sequence dispatched: its kind (TRIGGER_TALK and
+    /// The last event the field sequence dispatched: its kind (TRIGGER_TALK and
     /// on) and target (an actor or a collision code), and the frame.
     dispatched: Option<(u8, u32, u32)>,
     /// Where that dispatch returns to while it runs (0 once it has), and
@@ -756,7 +756,7 @@ impl<'rom> Field<'rom> {
         (self.t.last_dismiss > 0 && self.t.last_dismiss + 2 >= self.t.frame) || self.t.choice_return != 0
     }
 
-    /// How many times the scene sequence has stepped, which it does only while
+    /// How many times the field sequence has stepped, which it does only while
     /// the player has control.
     pub fn steps(&self) -> u32 {
         self.t.steps
@@ -1659,7 +1659,7 @@ impl<'rom> Field<'rom> {
         self.event_rows(kind, target).iter().any(|r| own.contains(&result_key(r.result)))
     }
 
-    /// Runs the scene sequence to its next step (Field_UpdateWalking's entry),
+    /// Runs the field sequence to its next step (Field_UpdateWalking's entry),
     /// where a game function can be called between two of its calls.
     fn to_step(&mut self) -> Result<(), String> {
         for _ in 0..4_000_000 {
@@ -1668,10 +1668,10 @@ impl<'rom> Field<'rom> {
             }
             self.run_instruction()?;
         }
-        Err("the scene sequence did not step".to_string())
+        Err("the field sequence did not step".to_string())
     }
 
-    /// Calls the Thumb function at `target` with `args` at the scene sequence's
+    /// Calls the Thumb function at `target` with `args` at the field sequence's
     /// step and returns its r0; the loop goes on as if nothing ran. The
     /// function must only read (MapGrid_GetTerrainHeight).
     fn eval(&mut self, target: u32, args: [u32; 4]) -> Result<u32, String> {
@@ -2653,7 +2653,7 @@ impl<'rom> Field<'rom> {
         let mut pushed_again = false;
         // The frame the dispatch that began the event returned.
         let mut returned: Option<u32> = None;
-        // Whether the scene sequence stopped stepping for a while once the event
+        // Whether the field sequence stopped stepping for a while once the event
         // began (a script, a battle, a scene change).
         let mut paused = false;
         let mut pages = Vec::new();
@@ -2842,7 +2842,7 @@ impl<'rom> Field<'rom> {
             }
             wait_start = 0;
             captured = false;
-            // The scene sequence has stepped every frame since the event, with
+            // The field sequence has stepped every frame since the event, with
             // nothing to read: the player has control again.
             let typing = self.t.frame - self.t.last_typing <= 2;
             let run = self.t.stepping_since.max(b + 1);
@@ -2874,7 +2874,7 @@ impl<'rom> Field<'rom> {
                 continue;
             }
             // Nothing typed or waiting for 120 frames (an effect, a walk)
-            // while the scene sequence is stopped: press A.
+            // while the field sequence is stopped: press A.
             if self.t.frame - quiet_start >= 120 && self.t.step_frame + 1 < self.t.frame {
                 self.press(3)?;
                 quiet_start = self.t.frame;
@@ -2900,7 +2900,7 @@ impl<'rom> Field<'rom> {
         let own_ran = self.t.own_ran;
         let end = (!capped && !left && !defeated && !unfinished && self.scene() == self.setup.scene).then(|| self.save());
         // An event whose dispatch returned in the frame it began, with the
-        // scene sequence stepping on, ran no script: it showed nothing, or
+        // field sequence stepping on, ran no script: it showed nothing, or
         // nothing it could show from here.
         let instant = began.is_some() && returned == began && !left && !paused;
         // Colours the event changed and left changed show too: a cave
@@ -2925,7 +2925,7 @@ impl<'rom> Field<'rom> {
 
     /// One frame of an exit's arrival in the scene it leads to, which began
     /// loading at frame `at`: its pages are read and answered as the event's
-    /// are (none is kept), until the scene sequence has stepped CONTROL_FRAMES
+    /// are (none is kept), until the field sequence has stepped CONTROL_FRAMES
     /// in a row with nothing to read, as at a scene's start.
     fn arrive(&mut self, at: u32, hold: u32, wait_start: &mut u32, press_frame: &mut u32, quiet_start: &mut u32) -> Result<Arrival, String> {
         let frame = self.t.frame;

@@ -178,7 +178,7 @@ impl Front<'_> {
         let setup = Setup { scene: place.0, entrance: place.1, set, clear: Vec::new() };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         field.set_party(&[0, 1, 2, 3]);
-        // The scene sequence's steps as the aerie comes up: it steps again once
+        // The field sequence's steps as the aerie comes up: it steps again once
         // the player has control there.
         let arrived: std::cell::Cell<Option<u32>> = std::cell::Cell::new(None);
         let frames = self.record(&mut field, 6000, &|f: &Field| {
