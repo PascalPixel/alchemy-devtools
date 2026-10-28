@@ -409,8 +409,10 @@ impl<'a> Guide<'a> {
         use super::field::{HEAP_EWRAM_HIGH, HEAP_IWRAM_HIGH, HEAP_PCS, HEAP_WORK};
         use std::sync::atomic::Ordering::Relaxed;
         let at = |s: &str| map.symbol(s).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {s}"));
-        for (slot, name) in HEAP_PCS.iter().zip(["Free", "FreeHeapSlot", "InitHeap"]) {
-            slot.store(at(name)?, Relaxed);
+        // Each routine by its name, then by its name before Alchemy renamed it.
+        let either = |new: &str, old: &str| at(new).or_else(|_| at(old));
+        for (slot, (new, old)) in HEAP_PCS.iter().zip([("Heap_Release", "Free"), ("HeapSlot_Release", "FreeHeapSlot"), ("Heap_Initialize", "InitHeap")]) {
+            slot.store(either(new, old)?, Relaxed);
         }
         HEAP_WORK.store(*work, Relaxed);
         let mut highest = (0u32, 0u32);
@@ -464,8 +466,9 @@ impl<'a> Guide<'a> {
         let at = |s: &str| map.symbol(s).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {s}"));
         let work = at("gHeapSlots")?;
         let mixer = at("SoundMainRAM")?;
-        let allocators = vec![at("AllocHeapSlot")?, at("AllocHeapSlotEwram")?, at("Alloc")?, at("AllocEwram")?, at("Free")?, at("FreeHeapSlot")?];
-        let names = ["AllocHeapSlot", "AllocHeapSlotEwram", "Alloc", "AllocEwram", "Free", "FreeHeapSlot"];
+        let names = ["HeapSlot_Alloc", "HeapSlot_AllocEwram", "Heap_Alloc", "Heap_AllocEwram", "Heap_Release", "HeapSlot_Release"];
+        let old = ["AllocHeapSlot", "AllocHeapSlotEwram", "Alloc", "AllocEwram", "Free", "FreeHeapSlot"];
+        let allocators = names.iter().zip(old).map(|(new, old)| at(new).or_else(|_| at(old))).collect::<Result<Vec<_>, _>>()?;
         let mut e = self.enter_with((27, 5), &[])?;
         let snapshot: Vec<u32> = (0..233).map(|i| e.field.read32(mixer + 4 * i)).collect();
         let log = Rc::new(RefCell::new(Vec::<String>::new()));

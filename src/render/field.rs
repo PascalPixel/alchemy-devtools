@@ -198,8 +198,8 @@ const START_FRAMES: u32 = 180;
 use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
 
 /// For `render probe heap`: the heap's work (gHeapSlots, 0 while off), the
-/// functions at whose entry it is read besides each frame's end (Free,
-/// FreeHeapSlot, InitHeap: just before a pool's
+/// functions at whose entry it is read besides each frame's end (Heap_Release,
+/// HeapSlot_Release, Heap_Initialize: just before a pool's
 /// next address falls), and the highest next addresses read.
 pub static HEAP_WORK: AtomicU32 = AtomicU32::new(0);
 pub static HEAP_PCS: [AtomicU32; 3] = [AtomicU32::new(1), AtomicU32::new(1), AtomicU32::new(1)];

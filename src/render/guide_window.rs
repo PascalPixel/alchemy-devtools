@@ -134,7 +134,7 @@ impl<'a> Guide<'a> {
     /// The window work block of the international and Japanese editions side
     /// by side as Garet's sister talks in each, a byte a cell, as
     /// `work-block.gif`. Each block's size is read where the game allocates
-    /// it (AllocHeapSlot for HEAP_SLOT_WINDOW) and must be
+    /// it (HeapSlot_Alloc for HEAP_SLOT_WINDOW) and must be
     /// tbs_edition.h's WINDOW_WORK_SIZE.
     pub fn window_work_block(&mut self) -> Result<(), String> {
         let root = crate::compile::root();
