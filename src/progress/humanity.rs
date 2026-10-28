@@ -249,7 +249,7 @@ impl Report {
         let map = if function { &mut self.functions } else { &mut self.globals };
         let entry = map.entry(name.to_string()).or_insert_with(|| Declared { file: file.to_string(), line, ..Declared::default() });
         entry.documented |= documented;
-        entry.entry |= file.contains("/include/farcall/");
+        entry.entry |= file.contains("/include/gamepak/far_call/") || file.contains("/include/farcall/");
         if defined && !entry.defined {
             entry.defined = true;
             entry.file = file.to_string();
@@ -2028,7 +2028,7 @@ mod tests {
     fn entry_points_need_their_summary() {
         let far = "/// Draws a number.\nvoid Text_DrawNumberFar(s32 number);\nvoid UiText_ClearFar(void);\n";
         let source = "void UiText_ClearFar(void) {}\nvoid Helper(void) {}\n";
-        let report = game([("games/tbs/include/farcall/window.h", far), ("games/tbs/src/window/text.c", source)]);
+        let report = game([("games/tbs/include/gamepak/far_call/window.h", far), ("games/tbs/src/window/text.c", source)]);
         assert_eq!(list(&[("tbs", &report)], "undocumented_entry"), "tbs\tgames/tbs/src/window/text.c:1\tUiText_ClearFar\n");
         assert_eq!(report.total("undocumented_function"), 2, "UiText_ClearFar and Helper, to review");
     }
@@ -2142,7 +2142,7 @@ mod provenance_tests {
             "enum { ACTOR_MAYOR = 10, ACTOR_ID_COUNT = 66 };\n",
             "#define ITEM_TYPE_WEAPON 1\n#define ITEM_LIST_NAME_X 12\n",
         );
-        let files = [("games/tbs/include/flags.h", flags), ("games/tbs/include/actor.h", actors)];
+        let files = [("games/tbs/include/flags.h", flags), ("games/tbs/include/field/actor.h", actors)];
         let report = game(files);
         let names: Vec<&str> = report.things.iter().map(|thing| thing.name.as_str()).collect();
         assert_eq!(names, ["FLAG_KRADEN_SETS_OFF", "ACTOR_GUARD", "ACTOR_SHOP_END", "ACTOR_MAYOR"]);

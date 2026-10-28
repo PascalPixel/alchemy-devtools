@@ -233,7 +233,7 @@ pub fn ability_name(id: u16) -> Result<String, String> {
 /// `<map>LocalId` and the shared header map_tables.h.
 pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
     let names: Vec<&str> = name.split('|').collect();
-    let shared = read("include/scene_tables.h").or_else(|_| read("include/map_tables.h"))?;
+    let shared = read("include/field/scene_tables.h").or_else(|_| read("include/scene_tables.h")).or_else(|_| read("include/map_tables.h"))?;
     let mut known = HashMap::new();
     for (_, values) in enums(&shared, &HashMap::new())? {
         known.extend(values.into_iter().filter_map(|(n, v)| Some((n, v?))));

@@ -1136,8 +1136,8 @@ mod tests {
         let mut names = Names {
             names: vec![
                 // pret's flash library keeps pret's names.
-                name("gFlashNumRemainingBytes", NameKind::Extern, "games/tbs/include/system/system.h", 1),
-                name("maxTime", NameKind::Field, "games/tbs/include/system/flash_data.h", 2),
+                name("gFlashNumRemainingBytes", NameKind::Extern, "games/tbs/include/gamepak/flash.h", 1),
+                name("maxTime", NameKind::Field, "games/tbs/include/gamepak/flash_data.h", 2),
                 // An OWN_ guard repeats the symbol it guards.
                 name("OWN_gFlashNumRemainingBytes", NameKind::Macro, file, 3),
                 // Poses are not positions.
