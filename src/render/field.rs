@@ -1,7 +1,7 @@
 //! A field scene, run from a built edition: where Game_ResetForNewGame has
 //! set a new game's defaults (Adventure_InitializeDefaults) and makes its next call
 //! (WindowColor_Apply), the run writes the scene, entrance and story flags
-//! into gAdventure, so the parent sequence runs that scene instead of the title.
+//! into gAdventure, so the sequence parent runs that scene instead of the title.
 //! The location-name notice (AreaNameWindow_Show) returns at once unless
 //! show_notice is set. The
 //! scene is the player's once SceneSequence_Run's loop takes its first

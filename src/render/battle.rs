@@ -164,8 +164,8 @@ impl Symbols {
             map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"))
         };
         Ok(Symbols {
-            // ParentSequence_RunFar, called Monitor_RunFar, SequenceManager_RunFar, Game_RunFar and Game_ResetForNewGameFar in older builds.
-            start: at("ParentSequence_RunFar").or_else(|_| at("Monitor_RunFar")).or_else(|_| at("SequenceManager_RunFar")).or_else(|_| at("Game_RunFar")).or_else(|_| at("Game_ResetForNewGameFar"))?,
+            // SequenceParent_RunFar, called ParentSequence_RunFar, Monitor_RunFar, SequenceManager_RunFar, Game_RunFar and Game_ResetForNewGameFar in older builds.
+            start: at("SequenceParent_RunFar").or_else(|_| at("ParentSequence_RunFar")).or_else(|_| at("Monitor_RunFar")).or_else(|_| at("SequenceManager_RunFar")).or_else(|_| at("Game_RunFar")).or_else(|_| at("Game_ResetForNewGameFar"))?,
             menu: at("DebugBattle_RunMenu")?,
             preset: at("DebugParty_LoadPreset")?,
             encounter: at("Battle_Run")?,
