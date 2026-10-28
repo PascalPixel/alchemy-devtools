@@ -1174,7 +1174,7 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         let spot = Self::spot_at(field, (LIFT_WATCH.0, LIFT_WATCH.1, 0x8000))?;
         field.stand(&entered.placed, &spot)?;
-        let leader = field.read32(self.sym("gCommon").or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))? + 0x1f4) as u16;
+        let leader = field.read32(self.sym("gAdventure").or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))? + 0x1f4) as u16;
         field.hide_actor(leader);
         settle_view(field)?;
         // The pool's ground is 32 pixels up, and a rider on a lift is drawn
@@ -1244,7 +1244,7 @@ impl<'a> Guide<'a> {
             let field = &mut entered.field;
             let spot = Self::spot_at(field, (BALANCE_WATCH.0, BALANCE_WATCH.1, 0xc000))?;
             field.stand(&entered.placed, &spot)?;
-            let leader = field.read32(self.sym("gCommon").or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))? + 0x1f4) as u16;
+            let leader = field.read32(self.sym("gAdventure").or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))? + 0x1f4) as u16;
             field.hide_actor(leader);
             settle_view(field)?;
             field.frames(30)?;

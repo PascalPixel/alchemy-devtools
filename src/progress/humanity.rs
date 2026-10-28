@@ -1793,7 +1793,7 @@ mod tests {
             ("games/tbs/src/shop/shop/run.c", "// XXX: why three; a probe would settle it.\nvoid Shop_Run(void) {}\n"),
             ("games/tbs/src/shop/shop/inn.c", "void Inn_Run(void) {\n  // XXX (no evidence): why; only the source says.\n}\n"),
             ("games/tbs/src/scene/README.md", "# Maps\n"),
-            ("games/tbs/src/scene/common/door.h", "/// A door.\nstruct Door { int x; };\n"),
+            ("games/tbs/src/scene/shared/door.h", "/// A door.\nstruct Door { int x; };\n"),
             ("games/tbs/src/scene/vale.c", "/// @file\n/// Vale.\n\nvoid Vale_Run(void) {\n  /* XXX: what this is; its render. */\n}\n"),
             ("games/tbs/src/scene/vault.c", "/// @file\n/// Vault.\n// XXX (no evidence): what the ivy is for; nothing says.\n"),
         ]);

@@ -24,7 +24,7 @@ const VALE: (u16, u16) = (4, 1);
 /// SceneId_MenuTest, the debug menu test room (scenes.s).
 const MENU_TEST_ROOM: u16 = 200;
 
-/// struct Common (gCommon): the coins, and the scene and entrance the
+/// struct Adventure (gAdventure): the coins, and the scene and entrance the
 /// field loads next.
 const GS_COINS: u32 = 0x10;
 const GS_SCENE: u32 = 0x1c0;
@@ -74,7 +74,7 @@ impl<'a> Guide<'a> {
     /// The party, coins and rare-item counters as the game holds them now.
     fn party_state(&self, field: &mut Field) -> Result<PartyState, String> {
         let flags = self.sym("gGameFlagBytes")?;
-        let state = self.sym("gCommon").or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
+        let state = self.sym("gAdventure").or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
         let counters = self.sym("gRareItemStock")?;
         let slots = self.sym("gItem_ArtifactSlotTable")?;
         let mut members = Vec::new();
@@ -99,7 +99,7 @@ impl<'a> Guide<'a> {
     /// Sends the party from the scene it is in to `scene`'s `entrance`, as
     /// Event_SetDestination does, and runs `frames` frames.
     fn travel(&self, field: &mut Field, (scene, entrance): (u16, u16), frames: u32) -> Result<(), String> {
-        let state = self.sym("gCommon").or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
+        let state = self.sym("gAdventure").or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
         field.write16(state + GS_SCENE, scene);
         field.write16(state + GS_ENTRANCE, entrance);
         let work = field.field_work();
@@ -116,7 +116,7 @@ impl<'a> Guide<'a> {
     pub fn menu_test_setup(&mut self) -> Result<(), String> {
         let characters = source::character_names()?;
         let setup_fn = self.overlay_sym("MenuTest_GetTriggers|MenuTest_GetEvents", "MenuTest_Initialize")?;
-        let state = self.sym("gCommon").or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
+        let state = self.sym("gAdventure").or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
         let before = self.party_state(field)?;
@@ -436,7 +436,7 @@ impl<'a> Guide<'a> {
     /// Navampa's (0x3bc), drawn a byte to a pixel, 128 to a line, as
     /// `overlay-common.png`: each from its unpacked build output, grey by
     /// value, and every function or table both define under one name with
-    /// the same bytes, the copies common/ headers place in each, tinted in a
+    /// the same bytes, the copies shared/ headers place in each, tinted in a
     /// colour of its own, the same in both. Names and sizes come from each
     /// overlay's ELF.
     pub fn overlay_common(&mut self) -> Result<(), String> {
@@ -471,13 +471,13 @@ impl<'a> Guide<'a> {
             }
             h
         };
-        // A copy in both: one name and one size in each, from a common/
+        // A copy in both: one name and one size in each, from a shared/
         // header (the compiler library's _call_via_ stubs are linked into
         // every overlay and left out). It differs only where it holds an
         // address when every halfword that differs, BL offsets aside, is
         // in an aligned word that is an address in RAM or the ROM in both.
         let is_address = |w: u32| matches!(w >> 24, 0x02 | 0x03 | 0x08);
-        let headers: String = std::fs::read_dir(crate::compile::root().join("games/tbs/src/scene/common")).map_err(|e| format!("common/: {e}"))?.flatten().filter_map(|e| std::fs::read_to_string(e.path()).ok()).collect();
+        let headers: String = std::fs::read_dir(crate::compile::root().join("games/tbs/src/scene/shared")).or_else(|_| std::fs::read_dir(crate::compile::root().join("games/tbs/src/scene/common"))).map_err(|e| format!("shared/: {e}"))?.flatten().filter_map(|e| std::fs::read_to_string(e.path()).ok()).collect();
         let copies: Vec<String> = overlays[0].1.iter().filter(|(n, (_, b))| headers.contains(n.as_str()) && !n.starts_with("_call_via") && overlays[1].1.get(*n).is_some_and(|(_, c)| c.len() == b.len())).map(|(n, _)| n.clone()).collect();
         let mut identical = 0;
         let mut addresses_only = 0;
@@ -535,10 +535,10 @@ impl<'a> Guide<'a> {
             text(&mut image, x0 as i32, 8, &format!("{} ({} BYTES)", PAIR[k].1, bytes.len()), HEAD, None, 2);
         }
         let y = (30 + rows * SCALE + 8) as i32;
-        text(&mut image, 8, y, &format!("TINTED: {} FUNCTIONS AND TABLES FROM COMMON/, {shared_bytes} BYTES", common.len()), INK, None, 2);
+        text(&mut image, 8, y, &format!("TINTED: {} FUNCTIONS AND TABLES FROM SHARED/, {shared_bytes} BYTES", common.len()), INK, None, 2);
         text(&mut image, 8, y + 16, &format!("OF EACH: {identical} BYTE FOR BYTE, {addresses_only} DIFFERING ONLY IN ADDRESSES"), INK, None, 2);
         text(&mut image, 8, y + 32, "GREY: EACH OVERLAY'S OWN CODE AND TABLES", DIM, None, 2);
-        self.guide_png("overlay-common.png", &image, "two Colosso match overlays a byte to a pixel, the code both carry from common/ tinted")
+        self.guide_png("overlay-common.png", &image, "two Colosso match overlays a byte to a pixel, the code both carry from shared/ tinted")
     }
 
     /// The register write queue through the first three frames of the title
@@ -1100,7 +1100,7 @@ impl<'a> Guide<'a> {
         const GRID: i32 = 128;
         const PLACEHOLDER: u16 = 0xfff;
         let convert = self.sym("TileMap_ConvertBuffer")?;
-        let state = self.sym("gCommon").or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
+        let state = self.sym("gAdventure").or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
         let plane = Rc::new(RefCell::new(Vec::new()));
