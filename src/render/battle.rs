@@ -164,10 +164,10 @@ impl Symbols {
             map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"))
         };
         Ok(Symbols {
-            // MainRoutine_RunFar, called MainRoutine_RunFar, ParentSequence_RunFar, Monitor_RunFar, SequenceManager_RunFar, Game_RunFar and Game_ResetForNewGameFar in older builds.
+            // MainRoutine_RunFar, called SequenceParent_RunFar, ParentSequence_RunFar, Monitor_RunFar, SequenceManager_RunFar, Game_RunFar and Game_ResetForNewGameFar in older builds.
             start: at("MainRoutine_RunFar").or_else(|_| at("SequenceParent_RunFar")).or_else(|_| at("ParentSequence_RunFar")).or_else(|_| at("Monitor_RunFar")).or_else(|_| at("SequenceManager_RunFar")).or_else(|_| at("Game_RunFar")).or_else(|_| at("Game_ResetForNewGameFar"))?,
             menu: at("DebugBattle_RunMenu")?,
-            preset: at("DebugParty_LoadPreset")?,
+            preset: at("DebugParameterSet_Load").or_else(|_| at("DebugParty_LoadPreset"))?,
             encounter: at("Battle_Run")?,
             collect: at("BattleUnit_Collect")?,
             obj_make: at("BattleObject_Make")?,
@@ -294,7 +294,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
             phase = Phase::Chooser;
         } else if phase == Phase::Chooser && pc == s.preset {
             // The chooser loads preset 0 first: load ours instead.
-            say(frame, format!("DebugParty_LoadPreset({}) -> {}", gba.register(0), cast.preset));
+            say(frame, format!("DebugParameterSet_Load({}) -> {}", gba.register(0), cast.preset));
             gba.set_register(0, cast.preset.into());
             hold_down = false;
         } else if phase == Phase::Chooser && pc == s.encounter {

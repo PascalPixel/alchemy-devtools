@@ -315,13 +315,16 @@ pub fn character_names() -> Result<Vec<String>, String> {
 }
 
 /// The members debug party preset `preset` raises (gDebug_ParameterSets, read
-/// by DebugParty_LoadPreset: runs of rows, each ended by DEBUG_PRESET_END).
+/// by DebugParameterSet_Load: runs of rows, each ended by
+/// DEBUG_PARAMETER_SET_END).
 pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
     let game = super::tables::Game::here()?;
-    let end = game.constant("DEBUG_PRESET_END")?;
+    // DEBUG_PARAMETER_SET_END and DebugParameterSetRow, called DEBUG_PRESET_END and
+    // DebugPartyEntry in older builds.
+    let end = game.constant("DEBUG_PARAMETER_SET_END").or_else(|_| game.constant("DEBUG_PRESET_END"))?;
     let mut current = 0;
     let mut members = Vec::new();
-    for unit in game.table("gDebug_ParameterSets", "DebugPartyEntry")?.column("unitId")? {
+    for unit in game.table("gDebug_ParameterSets", "DebugParameterSetRow").or_else(|_| game.table("gDebug_ParameterSets", "DebugPartyEntry"))?.column("unitId")? {
         if unit == end {
             if current == preset {
                 return Ok(members);

@@ -4,7 +4,7 @@
 //! A run starts from a new game's defaults (Isaac alone, level 1), so a
 //! scene of Altin Peak would show him fighting its water beast alone. Each
 //! scene instead takes a chapter of the story: one of Camelot's own debug
-//! party presets (DebugParty_LoadPreset, gDebug_ParameterSets in games/tbs/src/battle/debug_presets.c),
+//! parameter sets (DebugParameterSet_Load, gDebug_ParameterSets in games/tbs/src/battle/debug_parameter_sets.c),
 //! which raises each member to a level and gives them Djinn, Psynergy and
 //! equipment, and the preset's members. Presets 10 to 70 follow the story:
 //! Isaac, Garet and Jenna at level 1 or 2, Isaac and Garet at 3, Ivan

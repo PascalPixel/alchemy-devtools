@@ -73,7 +73,7 @@ impl<'a> Guide<'a> {
         let s = Boot {
             start: at("MainRoutine_RunFar").or_else(|_| at("SequenceParent_RunFar")).or_else(|_| at("ParentSequence_RunFar")).or_else(|_| at("Monitor_RunFar")).or_else(|_| at("SequenceManager_RunFar")).or_else(|_| at("Game_RunFar"))?,
             menu: at("DebugBattle_RunMenu")?,
-            preset: at("DebugParty_LoadPreset")?,
+            preset: at("DebugParameterSet_Load").or_else(|_| at("DebugParty_LoadPreset"))?,
             encounter: at("Battle_Run")?,
             game_state: at("gMainRoutineWork").or_else(|_| at("gSequenceParentWork")).or_else(|_| at("gAdventure")).or_else(|_| at("gCommon")).or_else(|_| at("gPersistentState")).or_else(|_| at("gSaveBlock"))?,
             game_flags: at("gGameFlagBytes")?,

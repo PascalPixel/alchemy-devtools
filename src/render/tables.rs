@@ -495,10 +495,10 @@ STATIC_ASSERT(offsetof(struct Row, pairs) == 0x08);
             ("gDjinn_DefinitionTable", "DjinnDefinition"),
             ("gSummon_DefinitionTable", "SummonDefinition"),
             ("gEnemy_Definitions", "EnemyDefinition"),
-            ("gDebug_ParameterSets", "DebugPartyEntry"),
+            ("gDebug_ParameterSets", "DebugParameterSetRow"),
         ] {
             assert!(game.table(symbol, row).unwrap().len() > 0, "{symbol}");
         }
-        assert_eq!(game.constant("DEBUG_PRESET_END").unwrap(), -1);
+        assert_eq!(game.constant("DEBUG_PARAMETER_SET_END").unwrap(), -1);
     }
 }

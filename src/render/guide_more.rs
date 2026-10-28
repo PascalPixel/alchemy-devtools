@@ -31,7 +31,7 @@ const BILIBIN_ITEM_SHOP: (u16, u16) = (31, 5);
 const BILIBIN_INN: (u16, u16) = (31, 6);
 /// Facing north, 1/65536 turns: across a counter.
 const NORTH: u32 = 0xc000;
-/// The Djinn test room (debug/rooms.c).
+/// The test scenes (debug/test_scenes.c).
 const DJINN_ROOM: (u16, u16) = (191, 0);
 /// The title overlay's entrance that runs the credits (Import_CreditsRun).
 const CREDITS: (u16, u16) = (0, 9);

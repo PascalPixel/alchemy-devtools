@@ -288,7 +288,7 @@ impl Symbols {
             map_cell_pictures: at("gCellPictures").or_else(|_| at("gMetatiles"))?,
             map_collision: at("gMapGridShapes")?,
             map_cell_buffer: at("gMapGridCellBuffer")?,
-            preset: at("DebugParty_LoadPreset")?,
+            preset: at("DebugParameterSet_Load").or_else(|_| at("DebugParty_LoadPreset"))?,
             restore: at("Party_RestoreHpPp")?,
             unit_get: at("Unit_Get")?,
             defeat: Vec::new(),
