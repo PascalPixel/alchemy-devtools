@@ -38,7 +38,9 @@ const ANIM_VARIANT_SHIFT: u32 = 12;
 /// The effect kinds' names by value (enum BattleAnimId) and the
 /// variants' in order (enum AnimVariant), from battle_anim.h.
 fn effect_names() -> Result<(std::collections::HashMap<u32, String>, Vec<String>), String> {
-    let path = crate::compile::root().join("games/tbs/include/unit/battle_anim/battle_anim.h");
+    // The module header, or where it lived before Alchemy named the folder.
+    let root = crate::compile::root();
+    let path = ["module", "unit"].iter().map(|d| root.join(format!("games/tbs/include/{d}/battle_anim/battle_anim.h"))).find(|p| p.exists()).unwrap_or_else(|| root.join("games/tbs/include/module/battle_anim/battle_anim.h"));
     let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     let mut kinds = std::collections::HashMap::new();
     let mut variants = Vec::new();
