@@ -736,7 +736,7 @@ impl<'a> Guide<'a> {
 /// the pool's cells that Ply rewrites: columns 6 to 18, rows 32 to 38.
 const MERCURY_LIGHTHOUSE_ENTRANCE: u16 = 53;
 const MERCURY_POOL: (i32, i32, i32, i32) = (6, 32, 18, 38);
-/// MERCURY_LIGHTHOUSE_ENTRANCE_GODDESS_FROM_SIX_STATUES (scene_links.h).
+/// MERCURY_LIGHTHOUSE_ENTRANCE_GODDESS_FROM_SIX_STATUES (scene_exits.h).
 const MERCURY_GODDESS_FROM_SIX_STATUES: u16 = 3;
 
 /// Tolbi Spring (SceneId_TolbiSpring) and the search code of its spring
@@ -1003,7 +1003,7 @@ const REQUESTS: [(u32, &str); 12] = [
 ];
 /// A door of Vale's, a touch cell whose event leaves the scene.
 const VALE_DOOR: u16 = 7;
-/// Bilibin's inn, a room of CottageRoomsC (scene_links.h), and its
+/// Bilibin's inn, a room of CottageRoomsC (scene_exits.h), and its
 /// innkeeper.
 const BILIBIN_INN_ROOM: (u16, u16) = (31, 6);
 const BILIBIN_INNKEEPER_ACTOR: u16 = 19;

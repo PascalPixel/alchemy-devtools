@@ -26,7 +26,7 @@ const WORLD_MAP: (u16, u16) = (2, 1);
 /// Goma Cave's pillar room, entered from the pond to its south (its default
 /// entrance stands in for it with the header's wider bounds).
 const GOMA_CAVE: (u16, u16) = (27, 5);
-/// Bilibin's item shop and inn, rooms of CottageRoomsC (scene_links.h).
+/// Bilibin's item shop and inn, rooms of CottageRoomsC (scene_exits.h).
 const BILIBIN_ITEM_SHOP: (u16, u16) = (31, 5);
 const BILIBIN_INN: (u16, u16) = (31, 6);
 /// Facing north, 1/65536 turns: across a counter.
