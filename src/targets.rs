@@ -83,7 +83,7 @@ const PRODUCTS: [(CompilerTarget, u64, &str, &str, usize); 2] = [
         CompilerTarget::Tbs,
         0x0080_0000,
         "games/tbs/src",
-        "games/tbs/src/system/overlay",
+        "games/tbs/src/cartridge/overlay",
         6,
     ),
     (

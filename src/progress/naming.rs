@@ -94,8 +94,16 @@ pub const PRET_PLURALS: &[&str] = &["PALETTES_ALL", "PALETTES_BG", "PALETTES_OBJ
 /// pret's `old_agbcc` builds. Their names are pret's (`gFlashNumRemainingBytes`,
 /// `maxTime`), which AGENTS.md keeps as pret writes them, so every
 /// identifier they use is left out of the checks.
-pub const PRET_FLASH: &[&str] =
-    &["/src/system/save/flash.c", "/src/system/save/sst.c", "/src/system/save/atmel.c", "/src/system/save/program_flash_sector.c"];
+pub const PRET_FLASH: &[&str] = &[
+    "/src/cartridge/save/flash.c",
+    "/src/cartridge/save/sst.c",
+    "/src/cartridge/save/atmel.c",
+    "/src/cartridge/save/program_flash_sector.c",
+    "/src/system/save/flash.c",
+    "/src/system/save/sst.c",
+    "/src/system/save/atmel.c",
+    "/src/system/save/program_flash_sector.c",
+];
 
 /// Whether a file is one of pret's flash library's.
 pub fn is_pret_flash(path: &str) -> bool {
@@ -1120,7 +1128,7 @@ mod tests {
     #[test]
     fn names_the_rules_keep() {
         let file = "games/tbs/src/battle/a.c";
-        let flash = "games/tbs/src/system/save/flash.c";
+        let flash = "games/tbs/src/cartridge/save/flash.c";
         let mut names = Names {
             names: vec![
                 // pret's flash library keeps pret's names.
