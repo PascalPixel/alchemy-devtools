@@ -621,7 +621,8 @@ impl<'a> Definition<'a> {
 
 /// The Broken Seal's bank 04 code and data, which sat in `src/overworld/`
 /// before it joined `src/field/`: the field sequence's and event commands'
-/// objects and the tables beside them, but not bank 01's field code.
+/// objects and the tables beside them, and the main routine, which left it
+/// for `src/system/`, but not bank 01's field code.
 fn field_sequence_bank(file: &str) -> bool {
     const FILES: &[&str] = &[
         "/src/field/field_sequence",
@@ -633,6 +634,7 @@ fn field_sequence_bank(file: &str) -> bool {
         "/src/field/battle_music.c",
         "/src/field/scripts.s",
         "/src/field/lucky_wheels.c",
+        "/src/system/main_routine.c",
     ];
     file.contains("/src/overworld/") || (file.contains("games/tbs/") && FILES.iter().any(|path| file.contains(path)))
 }
