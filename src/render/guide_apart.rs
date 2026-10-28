@@ -836,7 +836,7 @@ fn fill(image: &mut Image, x: usize, y: usize, w: usize, h: usize, colour: u32) 
 }
 
 /// struct Actor's sprite and spriteStorageKind (actor.h) and struct Sprite and
-/// SpriteAnim (animspr.h).
+/// SpriteAnimation (animspr.h).
 const ACTOR_SPRITE: u32 = 0x50;
 const ACTOR_SPRITE_STORAGE_KIND: u32 = 0x54;
 const ACTOR_SPRITE_ONE: u8 = 1;

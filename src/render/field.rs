@@ -98,7 +98,7 @@ const OBJ_KIND: u32 = 0x54;
 /// The struct Sprite (kind 1) or the four of a group (kind 2).
 const OBJ_SPRITE: u32 = 0x50;
 /// struct Sprite's entries, its four layers, and the colour mode
-/// (param) of struct SpriteAnim, whose first halfword is its sprite id.
+/// (param) of struct SpriteAnimation, whose first halfword is its sprite id.
 const ANIM_ENTRIES: u32 = 0x28;
 const ANIM_ENTRY_PARAM: u32 = 0x05;
 /// FieldWork.mode (an enum ActorSystemMode) and its world map mode.

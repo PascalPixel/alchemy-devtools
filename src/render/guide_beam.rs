@@ -36,12 +36,12 @@ const STAR_SETTLE: usize = 60;
 const PARTICLE_LIFE: usize = 30;
 /// Frames looked through for the start, and the last actor whose idle
 /// animation is compared (ACTOR_BEAM_TOP), with the offsets read for it:
-/// Actor.sprite, Sprite.entries and SpriteAnim.frame.
+/// Actor.sprite, Sprite.entries and SpriteAnimation.picture.
 const STAR_SEARCH: usize = 3000;
 const LAST_ACTOR: u16 = 28;
 const OBJ_SPRITE: u32 = 0x50;
 const SPRITE_ENTRIES: u32 = 0x28;
-const SPRITE_ANIM_FRAME: u32 = 0x16;
+const SPRITE_ANIMATION_PICTURE: u32 = 0x16;
 
 /// The eruption: frames kept from before the beam stacks its five segments
 /// (FLAG_VENUS_AERIE_BEACON_ERUPTED), the white flash already full, and
@@ -198,7 +198,7 @@ impl<'a> Guide<'a> {
 
 /// What each actor shows: its place and height (pixels) and the frame each
 /// layer of its sprite shows (Actor.sprite, Sprite.entries,
-/// SpriteAnim.frame), for the actors 0 (the party) to LAST_ACTOR.
+/// SpriteAnimation.picture), for the actors 0 (the party) to LAST_ACTOR.
 fn idle_frames(field: &Field) -> Vec<i32> {
     let mut out = Vec::new();
     for id in 0..=LAST_ACTOR {
@@ -210,7 +210,7 @@ fn idle_frames(field: &Field) -> Vec<i32> {
         }
         for k in 0..4 {
             let anim = field.read32(sprite + SPRITE_ENTRIES + 4 * k);
-            out.push(if is_ram(anim) { i32::from(field.read8(anim + SPRITE_ANIM_FRAME)) } else { -1 });
+            out.push(if is_ram(anim) { i32::from(field.read8(anim + SPRITE_ANIMATION_PICTURE)) } else { -1 });
         }
     }
     out
