@@ -95,6 +95,10 @@ pub const PRET_PLURALS: &[&str] = &["PALETTES_ALL", "PALETTES_BG", "PALETTES_OBJ
 /// `maxTime`), which AGENTS.md keeps as pret writes them, so every
 /// identifier they use is left out of the checks.
 pub const PRET_FLASH: &[&str] = &[
+    "tbs/src/gamepak/flash/flash.c",
+    "tbs/src/gamepak/flash/sst.c",
+    "tbs/src/gamepak/flash/atmel.c",
+    "tbs/src/gamepak/flash/program_flash_sector.c",
     "tbs/src/cartridge/save/flash.c",
     "tbs/src/cartridge/save/sst.c",
     "tbs/src/cartridge/save/atmel.c",
@@ -1128,7 +1132,7 @@ mod tests {
     #[test]
     fn names_the_rules_keep() {
         let file = "games/tbs/src/battle/a.c";
-        let flash = "games/tbs/src/cartridge/save/flash.c";
+        let flash = "games/tbs/src/gamepak/flash/flash.c";
         let mut names = Names {
             names: vec![
                 // pret's flash library keeps pret's names.

@@ -267,15 +267,15 @@ mod tests {
 Linker script and memory map
 
 ewram           0x02000000    0x38000
- .sym_ewram     0x02000000    0x38000 out/x/obj/games/tbs/src/cartridge/ewram.o
+ .sym_ewram     0x02000000    0x38000 out/x/obj/games/tbs/src/system/ewram.o
 .rom_start      0x08000000      0x200
  .text          0x08000000      0x100 out/x/obj/games/tbs/src/main.o
- .text          0x08000100       0x40 out/x/obj/games/tbs/src/cartridge/far_call/RUNTIME.o
+ .text          0x08000100       0x40 out/x/obj/games/tbs/src/gamepak/far_call/SYSTEM.o
  .rodata        0x08000140       0x30 out/x/obj/games/tbs/src/main.o
  *fill*         0x08000170       0x10
  .rom.00000180  0x08000180       0x40 out/x/obj/recon/tla/ja/rom.o
  .text          0x080001c0       0x20 out/x/obj/recon/tla/raw/080001c0.o
- .overlays      0x080001e0       0x20 out/x/obj/games/tbs/src/cartridge/overlay/overlays.o
+ .overlays      0x080001e0       0x20 out/x/obj/games/tbs/src/system/overlay/overlays.o
 ";
 
     #[test]

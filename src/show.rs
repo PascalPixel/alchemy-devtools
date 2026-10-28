@@ -640,7 +640,7 @@ mod tests {
         let found = |wanted: &str| {
             resolve(&map, None, &functions, wanted).map(|(p, a, n)| (p.label(), a, n))
         };
-        let io = "games/tbs/src/cartridge/io.o".to_string();
+        let io = "games/tbs/src/system/io.o".to_string();
         assert_eq!(
             found("Input_Poll"),
             Ok((io.clone(), 0x0800_0018, "Input_Poll".to_string()))

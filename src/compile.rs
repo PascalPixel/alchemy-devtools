@@ -79,6 +79,10 @@ const SOUND_C: &[&str] = &[
     "games/tla/src/sound/tables.c",
 ];
 const FLASH_C: &[&str] = &[
+    "games/tbs/src/gamepak/flash/flash.c",
+    "games/tbs/src/gamepak/flash/sst.c",
+    "games/tbs/src/gamepak/flash/atmel.c",
+    "games/tbs/src/gamepak/flash/program_flash_sector.c",
     "games/tbs/src/cartridge/save/flash.c",
     "games/tbs/src/cartridge/save/sst.c",
     "games/tbs/src/cartridge/save/atmel.c",

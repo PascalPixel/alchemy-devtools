@@ -1036,7 +1036,7 @@ mod tests {
     #[test]
     fn adopted_code_uses_its_linked_extent_and_still_refuses_data_and_unloaded_sections() {
         let section = Placed {
-            name: ".text".into(), path: "out/tbs-en/obj/games/tbs/src/cartridge/link/link.o".into(),
+            name: ".text".into(), path: "out/tbs-en/obj/games/tbs/src/system/serial.o".into(),
             address: ROM + 0x100, load: ROM + 0x100, size: 0x30, loaded: true,
             symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x118, "Next".into())],
         };
