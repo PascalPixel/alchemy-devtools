@@ -1963,7 +1963,7 @@ mod tests {
             ("a.c", first.as_str()),
             ("b.c", second.as_str()),
             ("games/tbs/src/scene/vale.c", scene.as_str()),
-            ("games/tbs/src/battle_effect/parts/bolt.c", part.as_str()),
+            ("games/tbs/src/battle_effect/battle_effect/bolt.c", part.as_str()),
             ("games/tbs/include/scene_exits.h", long.as_str()),
             ("games/tbs/src/field/table.c", data.as_str()),
         ]);
