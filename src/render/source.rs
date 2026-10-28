@@ -3,7 +3,7 @@
 //! (gArea_NameRules and text/en.po), ability numbers and names
 //! (ability_ids.h, MsgAbilityName), actors' ids (each map's enum),
 //! characters (character_ids.h) and the debug party presets
-//! (gDebug_PartyPresets, read from the build by tables.rs).
+//! (gDebug_ParameterSets, read from the build by tables.rs).
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -120,7 +120,7 @@ fn message_number(catalog: &crate::po::Catalog, name: &str) -> Result<usize, Str
 /// `entrance`, as Area_GetNameIndex finds it: the first rule of
 /// gArea_NameRules naming the map, or else its area, with that
 /// entrance or any; the name is that many messages after
-/// MsgDebugEntryName.
+/// MsgDebugAreaName.
 pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
     let maps = maps()?;
     let area = maps
@@ -149,7 +149,7 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
         }
     }
     let catalog = crate::po::read_catalog(&tbs("text/en.po"))?;
-    let key = message_number(&catalog, "MsgDebugEntryName")? + index;
+    let key = message_number(&catalog, "MsgDebugAreaName").or_else(|_| message_number(&catalog, "MsgDebugEntryName"))? + index;
     catalog
         .entries
         .iter()
@@ -314,14 +314,14 @@ pub fn character_names() -> Result<Vec<String>, String> {
     }
 }
 
-/// The members debug party preset `preset` raises (gDebug_PartyPresets, read
+/// The members debug party preset `preset` raises (gDebug_ParameterSets, read
 /// by DebugParty_LoadPreset: runs of rows, each ended by DEBUG_PRESET_END).
 pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
     let game = super::tables::Game::here()?;
     let end = game.constant("DEBUG_PRESET_END")?;
     let mut current = 0;
     let mut members = Vec::new();
-    for unit in game.table("gDebug_PartyPresets", "DebugPartyEntry")?.column("unitId")? {
+    for unit in game.table("gDebug_ParameterSets", "DebugPartyEntry")?.column("unitId")? {
         if unit == end {
             if current == preset {
                 return Ok(members);
@@ -331,7 +331,7 @@ pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
             members.push(unit as u8);
         }
     }
-    Err(format!("gDebug_PartyPresets has no preset {preset}"))
+    Err(format!("gDebug_ParameterSets has no preset {preset}"))
 }
 
 #[cfg(test)]
@@ -362,7 +362,7 @@ mod tests {
 
     #[test]
     fn the_checkout_answers() {
-        assert_eq!(map_id("Vale").unwrap(), map_id("ValeStormyNight").unwrap() + 1);
+        assert_eq!(map_id("Vale").unwrap(), map_id("ValePrologue").unwrap() + 1);
         assert_eq!(area_name(map_id("Vale").unwrap(), 1).unwrap(), "Vale");
         assert!(actor_id("Vale", "ACTOR_PILLAR|LOCALID_PILLAR").unwrap() >= 8);
         assert!(actor_id("CottageRoomsC", "ACTOR_BILIBIN_INNKEEPER|LOCALID_BILIBIN_INNKEEPER").is_ok());

@@ -2075,7 +2075,7 @@ mod provenance_tests {
     fn names_of_game_things_and_their_evidence() {
         let po = concat!(
             "msgctxt \"MsgSign\"\nmsgid \"00001\"\nmsgstr \"McCoy's Hidden Treasury\"\n\n",
-            "msgctxt \"MsgDebugEntryName\"\nmsgid \"00002\"\nmsgstr \"Bilibin\"\n\n",
+            "msgctxt \"MsgDebugAreaName\"\nmsgid \"00002\"\nmsgstr \"Bilibin\"\n\n",
             "msgctxt \"message\"\nmsgid \"00003\"\nmsgstr \"Bilibin Barricade\"\n",
         );
         let text = GameText::parse(po, area_count("\tgroup_name 0, -1, 0\n\tscene_name Bilibin, -1, 1\n"));
@@ -2185,7 +2185,7 @@ mod provenance_tests {
 
     #[test]
     fn door_words_in_the_report() {
-        let po = "msgctxt \"MsgDebugEntryName\"\nmsgid \"00001\"\nmsgstr \"Tolbi\"\n";
+        let po = "msgctxt \"MsgDebugAreaName\"\nmsgid \"00001\"\nmsgstr \"Tolbi\"\n";
         let text = GameText::parse(po, Some(1));
         let ids = "/// ★ Named from its area name: Tolbi\nextern char SceneId_Tolbi;\n";
         let links = "enum {\n  TOLBI_FROM_WORLD_MAP_NORTH = 1,\n  TOLBI_FROM_HOUSE = 2,\n  TOLBI_TO_HOUSE = 3,\n};\n";

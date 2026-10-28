@@ -78,7 +78,7 @@ pub struct GameText {
     symbols: HashMap<String, usize>,
     /// Each message's place by its number (`msgid`).
     numbers: HashMap<u32, usize>,
-    /// The area names (`gArea_NameRules`, from `MsgDebugEntryName`).
+    /// The area names (`gArea_NameRules`, from `MsgDebugAreaName`).
     areas: Vec<String>,
 }
 
@@ -159,7 +159,7 @@ pub fn stem(word: &str) -> String {
 }
 
 impl GameText {
-    /// Read `en.po`; `areas` is how many area names follow `MsgDebugEntryName`
+    /// Read `en.po`; `areas` is how many area names follow `MsgDebugAreaName`
     /// (the highest index in `gArea_NameRules` plus one), or all the
     /// messages up to the next named one.
     pub fn parse(po: &str, areas: Option<usize>) -> GameText {
@@ -225,7 +225,7 @@ impl GameText {
             }
         }
         text.joined = text.messages.iter().map(|(_, body)| body.as_str()).collect::<Vec<_>>().join("\u{1}");
-        if let Some(&start) = text.symbols.get("MsgDebugEntryName") {
+        if let Some(&start) = text.symbols.get("MsgDebugAreaName").or_else(|| text.symbols.get("MsgDebugEntryName")) {
             let end = match areas {
                 Some(count) => (start + count).min(text.messages.len()),
                 None => (start + 1..text.messages.len()).find(|&at| text.messages[at].0.is_some()).unwrap_or(text.messages.len()),
@@ -494,7 +494,7 @@ fn prose_regexes() -> &'static [Regex; 4] {
         [
             Regex::new(r#""([^"]{3,})"|`([^`]{3,})`|“([^”]{3,})”"#).unwrap(),
             Regex::new(r"\bMsg[A-Z][A-Za-z0-9_]*").unwrap(),
-            Regex::new(r"(?i)area name|gArea_NameRules|MsgDebugEntryName|Area_GetNameIndex").unwrap(),
+            Regex::new(r"(?i)area name|gArea_NameRules|MsgDebugAreaName|MsgDebugEntryName|Area_GetNameIndex").unwrap(),
             Regex::new(r"(?i)\brender|what the player sees|\brecording|\bseen in\b").unwrap(),
         ]
     })
@@ -1011,7 +1011,7 @@ mod tests {
         "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n",
         "msgctxt \"MsgSignMcCoy\"\nmsgid \"00001\"\nmsgstr \"\"\n\"McCoy's Hidden\\n\"\n\"Treasury{end_wait}\"\n\n",
         "msgctxt \"message\"\nmsgid \"00002\"\nmsgstr \"The trees are moving.{end_now}\"\n\n",
-        "msgctxt \"MsgDebugEntryName\"\nmsgid \"00003\"\nmsgstr \"Bilibin Barricade\"\n\n",
+        "msgctxt \"MsgDebugAreaName\"\nmsgid \"00003\"\nmsgstr \"Bilibin Barricade\"\n\n",
         "msgctxt \"message\"\nmsgid \"00004\"\nmsgstr \"Bilibin\"\n\n",
         "msgctxt \"MsgOther\"\nmsgid \"00005\"\nmsgstr \"Kolima Forest\"\n",
     );
@@ -1221,7 +1221,7 @@ mod tests {
     #[test]
     fn door_names() {
         let po = concat!(
-            "msgctxt \"MsgDebugEntryName\"\nmsgid \"00001\"\nmsgstr \"Tolbi\"\n\n",
+            "msgctxt \"MsgDebugAreaName\"\nmsgid \"00001\"\nmsgstr \"Tolbi\"\n\n",
             "msgctxt \"MsgSignInn\"\nmsgid \"00002\"\nmsgstr \"Inn Full\"\n\n",
             "msgctxt \"message\"\nmsgid \"00003\"\nmsgstr \"The ship's crew was attacked.\"\n",
         );

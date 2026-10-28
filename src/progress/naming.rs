@@ -1215,7 +1215,7 @@ mod tests {
     #[test]
     fn family_shapes() {
         let po =
-            "msgctxt \"MsgDebugEntryName\"\nmsgid \"00001\"\nmsgstr \"Vale\"\n\nmsgctxt \"message\"\nmsgid \"00002\"\nmsgstr \"Idejima\"\n";
+            "msgctxt \"MsgDebugAreaName\"\nmsgid \"00001\"\nmsgstr \"Vale\"\n\nmsgctxt \"message\"\nmsgid \"00002\"\nmsgstr \"Idejima\"\n";
         let text = GameText::parse(po, Some(2));
         let file = "games/tbs/include/flags.h";
         let mut list: Vec<Name> =

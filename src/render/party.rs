@@ -4,7 +4,7 @@
 //! A run starts from a new game's defaults (Isaac alone, level 1), so a
 //! scene of Altin Peak would show him fighting its water beast alone. Each
 //! scene instead takes a chapter of the story: one of Camelot's own debug
-//! party presets (DebugParty_LoadPreset, gDebug_PartyPresets in games/tbs/src/battle/debug_presets.c),
+//! party presets (DebugParty_LoadPreset, gDebug_ParameterSets in games/tbs/src/battle/debug_presets.c),
 //! which raises each member to a level and gives them Djinn, Psynergy and
 //! equipment, and the preset's members. Presets 10 to 70 follow the story:
 //! Isaac, Garet and Jenna at level 1 or 2, Isaac and Garet at 3, Ivan
@@ -36,7 +36,7 @@ struct Chapter {
 /// The chapters, in the story's order.
 const CHAPTERS: &[Chapter] = &[
     // The stormy night: Isaac and Garet as children, a new game's level 1.
-    Chapter { maps: &[("ValeStormyNight", "ValeStormyNight")], preset: None, members: Some(&["ISAAC", "GARET"]) },
+    Chapter { maps: &[("ValePrologue", "ValePrologue")], preset: None, members: Some(&["ISAAC", "GARET"]) },
     // Vale three years on, before Sol Sanctum: Jenna, in the preset, has
     // not joined yet.
     Chapter { maps: &[("Vale", "ValeEruption")], preset: Some(10), members: Some(&["ISAAC", "GARET"]) },
@@ -137,7 +137,7 @@ mod tests {
         }
         let altin = source::map_id("AltinPeakWestExit").unwrap();
         assert_eq!(chapter(altin).unwrap().map(|p| p.members.len()), Some(4));
-        let storm = source::map_id("ValeStormyNight").unwrap();
+        let storm = source::map_id("ValePrologue").or_else(|_| source::map_id("ValeStormyNight")).unwrap();
         assert_eq!(chapter(storm).unwrap().and_then(|p| p.preset), None);
     }
 

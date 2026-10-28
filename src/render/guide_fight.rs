@@ -28,7 +28,7 @@ const FOUR_ENEMIES: u32 = 296;
 /// no battle start names, opens the battle normally.
 const BATTLE_TYPE_NORMAL: u8 = 0;
 const BATTLE_START_SET: u8 = 1;
-/// Debug party preset 6 (gDebug_PartyPresets): the four at level 20, whose
+/// Debug party preset 6 (gDebug_ParameterSets): the four at level 20, whose
 /// chance to run from two Gryphons (level 23) is 35 percent.
 const PRESET_LEVEL_20: u8 = 6;
 /// The first enemy's unit id.

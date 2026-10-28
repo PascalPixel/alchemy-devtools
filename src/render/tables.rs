@@ -495,7 +495,7 @@ STATIC_ASSERT(offsetof(struct Row, pairs) == 0x08);
             ("gDjinn_DefinitionTable", "DjinnDefinition"),
             ("gSummon_DefinitionTable", "SummonDefinition"),
             ("gEnemy_Definitions", "EnemyDefinition"),
-            ("gDebug_PartyPresets", "DebugPartyEntry"),
+            ("gDebug_ParameterSets", "DebugPartyEntry"),
         ] {
             assert!(game.table(symbol, row).unwrap().len() > 0, "{symbol}");
         }
