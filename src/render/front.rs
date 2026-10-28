@@ -363,7 +363,7 @@ fn steadiest(frames: &[&Frame]) -> std::ops::Range<usize> {
 }
 
 /// Pale cyan and white pixels above the lighthouse's island, which the
-/// still view centres: the ball of light's size. The sea around Mercury
+/// still picture centres: the ball of light's size. The sea around Mercury
 /// Lighthouse is as blue as its light, and Imil's snow as white, so only
 /// this box, over the sea and the tower's top, is counted.
 fn flare(picture: &[u16]) -> usize {
