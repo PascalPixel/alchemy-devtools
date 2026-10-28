@@ -106,8 +106,8 @@ const FIELD_MODE: u32 = 0x19e;
 const ACTOR_SYSTEM_WORLD_MAP: u16 = 3;
 /// The world map (struct WorldMapView, which gMapGridWork points to there):
 /// 16 by 16 tiles of 16 by 16 cells, each cell 32 pixels square, so 8192
-/// pixels each way. tileIds names the tile at each place, and Ram_Metatiles
-/// (gMetatiles) holds the 2 by 2 tiles around the party, 32 cells to a row,
+/// pixels each way. tileIds names the tile at each place, and Ram_CellPictures
+/// (gCellPictures) holds the 2 by 2 tiles around the party, 32 cells to a row,
 /// the collision code in byte 2 as on a layered map (Field_UpdateWalking's
 /// step test reads it there).
 const PERSPECTIVE_TILE_IDS: u32 = 0x138;
@@ -285,7 +285,7 @@ impl Symbols {
             lookup: at("Message_Find")?,
             terrain_height: at("MapGrid_GetTerrainHeight")?,
             write_cell_tile: at("WorldMap_WriteLayerCellTile")?,
-            map_blocks: at("gMetatiles")?,
+            map_blocks: at("gCellPictures").or_else(|_| at("gMetatiles"))?,
             map_collision: at("gMapGridShapes")?,
             map_cell_buffer: at("gMapGridCellBuffer")?,
             preset: at("DebugParty_LoadPreset")?,
@@ -1414,7 +1414,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// The whole word of cell (cx, cz) of map layer `layer`: its picture
-    /// (metatile), its collision code and its ground; 0 off the grid.
+    /// (cell picture), its collision code and its ground; 0 off the grid.
     pub fn cell_word(&self, layer: u8, cx: i32, cz: i32) -> i32 {
         if !(0..GRID).contains(&cx) || !(0..GRID).contains(&cz) || layer > 2 {
             return 0;
@@ -2073,7 +2073,7 @@ impl<'rom> Field<'rom> {
     /// them there, unshaken, for a frame in which the game does not scroll.
     pub fn pin_view(&mut self, from: &Saved, view: (i32, i32), b: [i32; 4], bg_scroll: u32) -> Result<(), String> {
         // The maps are drawn within the map's own bounds: drawn from above its
-        // top, MapGrid_SetCameraCenter would place its rows a metatile out
+        // top, MapGrid_SetCameraCenter would place its rows a cell out
         // (its tile numbers round toward zero). The view pinned past an edge
         // then shows the map's rows and columns where they are, and only
         // what lies past the edge is not the map.

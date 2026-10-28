@@ -816,8 +816,8 @@ impl<'a> Guide<'a> {
             (self.sym("gOverlayArea")?, self.sym("gMapGridCellBuffer")?, "OVERLAY AREA", 0xff_70_50),
             (self.sym("gMapGridCellBuffer")?, self.sym("gActorSpriteSlots")?, "MAP CELLS", 0x40_c8_70),
             (self.sym("gActorSpriteSlots")?, self.sym("gDecodeBuffer")?, "ACTOR SPRITE SLOTS", 0xe0_a0_e0),
-            (self.sym("gDecodeBuffer")?, self.sym("gMetatiles")?, "DECODE BUFFER", 0xe0_e0_60),
-            (self.sym("gMetatiles")?, self.sym("gMapGridAnimTiles")?, "MAP BLOCKS", 0x30_b0_a0),
+            (self.sym("gDecodeBuffer")?, self.sym("gCellPictures").or_else(|_| self.sym("gMetatiles"))?, "DECODE BUFFER", 0xe0_e0_60),
+            (self.sym("gCellPictures").or_else(|_| self.sym("gMetatiles"))?, self.sym("gMapGridAnimTiles")?, "CELL PICTURES", 0x30_b0_a0),
             (self.sym("gMapGridAnimTiles")?, self.sym("gMapGridShapes")?, "MAP ANIM TILES", 0x80_d0_ff),
             (self.sym("gMapGridShapes")?, ewram_heap, "MAP COLLISION", 0x60_e0_40),
             (ewram_heap, self.sym("gBgTileBuffer")?, "EWRAM HEAP", 0x40_80_ff),
@@ -1302,7 +1302,7 @@ impl<'a> Guide<'a> {
     /// map's entrance 3, south of Vale, with FLAG_NO_ENCOUNTERS set; beside
     /// the screen, 5 by 4 of the world's 512-pixel squares, each drawn from
     /// the ground layer's block buffer while it is unpacked there
-    /// (WorldMap_WriteLayerCellTile's quarters of Ram_Metatiles: a cell word's
+    /// (WorldMap_WriteLayerCellTile's quarters of Ram_CellPictures: a cell word's
     /// low halfword picks a block of four tile numbers in Ram_MapGridCellBuffer,
     /// each drawn as the mean colour of its 256-colour tile in `BG3`'s char
     /// block, where the ground layer's screen map is). The 2 by 2 squares unpacked now are bright and outlined,

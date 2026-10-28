@@ -91,7 +91,7 @@ const ARM_C: &[&str] = &[
     "games/tbs/src/window/glyph_arm.c",
     "games/tbs/src/field/update.c",
     "games/tbs/src/field/vertices.c",
-    "games/tla/src/graphics/tile/metatile.c",
+    "games/tla/src/graphics/tile/cell_picture.c",
 ];
 
 fn relative(source: &str) -> &str {
