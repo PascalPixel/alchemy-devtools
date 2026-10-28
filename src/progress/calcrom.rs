@@ -122,9 +122,26 @@ fn tally(root: &Path, map: &str, overlay: bool, tally: &mut Tally) {
     let Some(body) = map.split("Linker script and memory map").nth(1) else { return };
     let (mut first, mut last) = (i64::MAX, 0);
     let (mut placed, mut wrapped) = (false, None::<String>);
+    // An output section whose name is too long for its column (ld wraps
+    // past 14 characters: `.iwram_resident`) has its address, size and load
+    // address on the next line.
+    let mut heading: Option<String> = None;
     for line in body.lines() {
+        let joined;
+        let line = match heading.take() {
+            Some(name) if line.trim_start().starts_with("0x") => {
+                joined = format!("{name} {}", line.trim_start());
+                joined.as_str()
+            }
+            _ => line,
+        };
         if !line.starts_with(' ') && !line.is_empty() {
             let fields: Vec<&str> = line.split_whitespace().collect();
+            if fields.len() == 1 {
+                heading = Some(line.to_owned());
+                placed = false;
+                continue;
+            }
             let (address, size) = (fields.get(1).and_then(|f| number(f)), fields.get(2).and_then(|f| number(f)));
             let load = line.split("load address ").nth(1).and_then(|rest| number(rest.trim()));
             placed = match (address, size) {
@@ -276,6 +293,9 @@ ewram           0x02000000    0x38000
  .rom.00000180  0x08000180       0x40 out/x/obj/recon/tla/ja/rom.o
  .text          0x080001c0       0x20 out/x/obj/recon/tla/raw/080001c0.o
  .overlays      0x080001e0       0x20 out/x/obj/games/tbs/src/system/overlay/overlays.o
+.iwram_resident
+                0x03000000       0x20 load address 0x08000200
+ .text          0x03000000       0x20 out/x/obj/games/tbs/src/system/runtime.o
 ";
 
     #[test]
@@ -283,9 +303,10 @@ ewram           0x02000000    0x38000
         let mut counted = Tally::default();
         tally(Path::new("/nowhere"), MAP, false, &mut counted);
         let done = counted.counted.done;
-        assert_eq!(counted.span, 0x200);
-        assert_eq!(counted.code, 0x160);
-        assert_eq!((done.game_asm, done.veneers), (0x140, 0x40));
+        // The wrapped .iwram_resident heading still places its code.
+        assert_eq!(counted.span, 0x220);
+        assert_eq!(counted.code, 0x180);
+        assert_eq!((done.game_asm, done.veneers), (0x160, 0x40));
         assert_eq!(counted.streams, 0x20);
         assert_eq!(counted.data_todo, 0x40);
     }
