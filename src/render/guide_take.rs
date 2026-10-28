@@ -1465,7 +1465,7 @@ impl<'a> Guide<'a> {
     /// A night at Bilibin's inn, the party given 500 coins and A pressed
     /// through the innkeeper's lines as `inn.gif` plays them: a chart
     /// with a column a frame and a row for each track of the eight players
-    /// (gMPlayTable: the fanfare player's 4, the music player's 10,
+    /// (gMPlayTable: the jingle player's 4, the music player's 10,
     /// then 2 each), each cell lit while the track is active and has notes
     /// sounding, as bright as its output volume (struct MusicPlayerTrack's
     /// outVolumeA and outVolumeB), as `sound-players.png`.
@@ -1523,7 +1523,7 @@ impl<'a> Guide<'a> {
         let mut row = 0usize;
         for (p, &(_, count)) in players.iter().enumerate() {
             let name = match p {
-                0 => "0 FANFARE".to_string(),
+                0 => "0 JINGLE".to_string(),
                 1 => "1 MUSIC".to_string(),
                 _ => format!("{p}"),
             };

@@ -503,7 +503,7 @@ impl<'a> Guide<'a> {
     }
 
     /// The first Gryphon's Twin Beaks, from its announcement to the second
-    /// Gryphon's turn, as `battle_anim/twin-beaks.gif`.
+    /// Gryphon's action, as `battle_anim/twin-beaks.gif`.
     pub fn fight_twin_beaks(&mut self) -> Result<(), String> {
         let (frames, turns) = self.enemy_round(GRYPHONS, &[ROLL_TWIN_BEAKS, ROLL_WING_FLUTTER], false)?;
         let first = *turns.first().ok_or("no Gryphon acted")?;

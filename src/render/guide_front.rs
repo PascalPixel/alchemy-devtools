@@ -180,7 +180,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Opening the chest in Sol Sanctum: the Small Jewel rises and the
-    /// treasure fanfare plays; the chest's row lasts until
+    /// treasure jingle plays; the chest's row lasts until
     /// FLAG_SOL_SANCTUM_FIRST_SMALL_JEWEL_FOUND is set.
     fn front_chest(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(SOL_CHEST_ROOM, &[])?;
@@ -270,7 +270,7 @@ impl<'a> Guide<'a> {
     }
 
     /// A night at Vale's inn: the screen closes to black and opens again
-    /// while the inn's fanfare plays.
+    /// while the inn's jingle plays.
     fn sound_inn_fanfare(&mut self) -> Result<(), String> {
         let (mut entered, _) = self.stand_where(VALE_INN, Trigger::Talk(VALE_INNKEEPER), VALE_INNKEEPER, |s| s.facing == NORTH)?;
         entered.field.set_coins(500);

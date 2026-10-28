@@ -577,7 +577,7 @@ pub const FAMILIES: &[(&str, &str, &str)] = &[
 /// `ITEM_USE_CONSUMED` is what using an item does to it,
 /// `MOVEMENT_TYPE_STAND` an action an actor runs, `FLAG_MENU_OPEN` a flag of
 /// the menus, `PSYNERGY_TRIGGER_ANY` a Psynergy trigger's control word,
-/// `SUMMON_ANIM_RAMSES` the animation a summon runs, `PSYNERGY_FROM_CLASS`
+/// `SUMMON_EFFECT_RAMSES` the effect a summon runs, `PSYNERGY_FROM_CLASS`
 /// where a Psynergy came from and `ABILITY_USABLE_IN_FIELD` where an ability
 /// can be used. Like the vocabulary, it errs short.
 pub const ASPECTS: &[&str] = &[
@@ -660,7 +660,7 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
 ///   whatever its enum, is an invisible object or a mask;
 /// - its first word after the prefix names an aspect of the family
 ///   (`ASPECTS`), or its last word a measure (`MEASURES`), even in an enum of
-///   ids (`SUMMON_ANIM_NONE`, `ABILITY_DJINNI_FIRST`), except an actor
+///   ids (`SUMMON_EFFECT_NONE`, `ABILITY_DJINNI_FIRST`), except an actor
 ///   of a map's own enum, a person or thing whatever its words
 ///   (`ACTOR_MAN_AT_SILK_ROADS_END`);
 /// - a name that is the prefix and `NONE` alone is the family's sentinel
