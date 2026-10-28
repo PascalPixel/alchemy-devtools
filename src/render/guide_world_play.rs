@@ -1,4 +1,4 @@
-//! Recordings for the world layer's guides (world.md and the field,
+//! Recordings for the Field division's guides (field.md and the field,
 //! overworld, layout and map folder guides): each one thing the player
 //! sees, played from a built edition with the pad held as a player would,
 //! from the moment it starts to the moment it is over.
