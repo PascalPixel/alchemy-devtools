@@ -35,11 +35,11 @@ const AFTER_SECOND_BATTLE: u16 = 3;
 const RUNS: [(u16, u16); 3] = [(FROM_FOURTH_FLOOR, MAP_BATTLE), (AFTER_FIRST_BATTLE, MAP_BATTLE), (AFTER_SECOND_BATTLE, 0)];
 /// The leader's walk from where the arrival leaves him (491, 164) to the
 /// beacon, in pixels, each point reached by holding one direction: south onto
-/// the floor by the platforms (MB_VENUS_LIGHTHOUSE_AERIE_FLOOR_BY_PLATFORMS),
+/// the floor by the platforms (CELL_BEHAVIOR_VENUS_LIGHTHOUSE_AERIE_FLOOR_BY_PLATFORMS),
 /// which jumps him onto the first platform, west from platform to platform
 /// onto the lighthouse's floor by them, up its stair to the north, west and
 /// south round the raised beacon, and west onto the cells before it
-/// (MB_VENUS_LIGHTHOUSE_AERIE_BEFORE_BEACON), where the confrontation starts.
+/// (CELL_BEHAVIOR_VENUS_LIGHTHOUSE_AERIE_BEFORE_BEACON), where the confrontation starts.
 const WALK: [(i32, i32); 8] = [(504, 200), (472, 200), (440, 200), (408, 200), (408, 136), (376, 136), (376, 232), (344, 232)];
 /// Pixels from a point at which it counts as reached.
 const NEAR: i32 = 2;

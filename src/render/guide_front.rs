@@ -28,9 +28,9 @@ const VALE_PLAZA: (u16, u16) = (5, 10);
 /// (SOL_ENTRANCE_FROM_VALE).
 const SOL_ENTRANCE: (u16, u16) = (19, 1);
 /// Sol Sanctum's chest room (SOL_SANCTUM_RELIEFS_CHEST_ROOM_FROM_FIRST_RELIEF_ROOM)
-/// and its chest's metatile behavior (MB_SOL_SANCTUM_RELIEFS_CHEST).
+/// and its chest's cell behavior (CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST).
 const SOL_CHEST_ROOM: (u16, u16) = (16, 2);
-const MB_SOL_SANCTUM_RELIEFS_CHEST: u16 = 100;
+const CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST: u16 = 100;
 /// Vale's strongman by the river (vale.c, ACTOR_STRONGMAN_BY_THE_RIVER).
 const STRONGMAN_BY_THE_RIVER: u16 = 12;
 /// Vale's inn and its innkeeper (cottage_rooms_b.c, ACTOR_INNKEEPER).
@@ -184,7 +184,7 @@ impl<'a> Guide<'a> {
     /// FLAG_SOL_SANCTUM_FIRST_SMALL_JEWEL_FOUND is set.
     fn front_chest(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(SOL_CHEST_ROOM, &[])?;
-        let frames = Self::record_trigger(&mut entered, Trigger::Search(MB_SOL_SANCTUM_RELIEFS_CHEST), None, 20)?;
+        let frames = Self::record_trigger(&mut entered, Trigger::Search(CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST), None, 20)?;
         self.front_gif("front/chest.gif", &frames, "a chest opened in Sol Sanctum")
     }
 

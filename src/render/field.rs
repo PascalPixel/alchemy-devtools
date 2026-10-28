@@ -129,7 +129,7 @@ const OVERLAY_ENTRANCES: u32 = 0x0c;
 const ENTRANCE_SIZE: u32 = 24;
 /// The map cells' grid: 128 by 128 words, the collision code in byte 2.
 const GRID: i32 = 128;
-/// Collision codes (enum MetatileBehavior): the scene's own events, the cells the
+/// Collision codes (enum CellBehavior): the scene's own events, the cells the
 /// leader pushes against, and the wall.
 const CELL_EVENT_LAST: i32 = 239;
 const CELL_LEDGE: i32 = 252;

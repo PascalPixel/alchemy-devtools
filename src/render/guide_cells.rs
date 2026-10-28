@@ -1,6 +1,6 @@
 //! Cells labelled in words. A picture that marks map cells says what each
 //! does, never the collision code the field looks up: a code every map
-//! shares (enum MetatileBehavior) by the name the code gives it, and one of the
+//! shares (enum CellBehavior) by the name the code gives it, and one of the
 //! scene's own (1 to 239) by the rows of the scene's event table that answer
 //! it, read as Scene_FindTrigger reads them, each row's function or exit put
 //! in words the picture supplies. A key beside the picture says what each
@@ -38,16 +38,16 @@ pub(super) enum Kind {
     Search,
     /// One of the scene's own codes that no row answers.
     NoEvent,
-    /// MB_WALL.
+    /// CELL_BEHAVIOR_WALL.
     Wall,
-    /// MB_ENCOUNTER_GROUND_1 and _2.
+    /// CELL_BEHAVIOR_ENCOUNTER_GROUND_1 and _2.
     Encounters,
-    /// MB_JAR to MB_WELL: a search spot every map shares.
+    /// CELL_BEHAVIOR_JAR to CELL_BEHAVIOR_WELL: a search spot every map shares.
     SearchSpot,
-    /// MB_LEDGE, MB_CLIMB, MB_JUMP_FORWARD and
-    /// MB_JUMP_FORWARD_UNREACHED: cells the leader pushes against.
+    /// CELL_BEHAVIOR_LEDGE, CELL_BEHAVIOR_CLIMB, CELL_BEHAVIOR_JUMP_FORWARD and
+    /// CELL_BEHAVIOR_JUMP_FORWARD_UNREACHED: cells the leader pushes against.
     Push,
-    /// MB_DESERT_SAND.
+    /// CELL_BEHAVIOR_DESERT_SAND.
     Hazard,
 }
 
@@ -90,7 +90,7 @@ pub(super) struct Meaning {
     pub kind: Kind,
 }
 
-/// A code every map shares, by the name enum MetatileBehavior gives it.
+/// A code every map shares, by the name enum CellBehavior gives it.
 fn shared(code: i32) -> Option<Meaning> {
     let (words, kind) = match code {
         240 => ("Encounter ground 1", Kind::Encounters),

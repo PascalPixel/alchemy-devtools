@@ -133,7 +133,7 @@ struct Play {
 }
 
 /// Walking north into the door of Jenna's grandparents' house in Vale
-/// (Vale_EnterJennasGrandparentsHouse, metatile behavior 9): the door
+/// (Vale_EnterJennasGrandparentsHouse, cell behavior 9): the door
 /// opens, the leader walks in and the exit VALE_TO_COTTAGE_ROOMS_A_NORTH ends the
 /// map, and the room inside fades in.
 const DOOR: Play = Play {
@@ -208,7 +208,7 @@ const WORLD_MAP_ZOOM: Play = Play {
     what: "L held on the world map",
 };
 
-/// Jumping down a ledge (MB_LEDGE) in Bilibin Cave's entrance with Down
+/// Jumping down a ledge (CELL_BEHAVIOR_LEDGE) in Bilibin Cave's entrance with Down
 /// held (Field_RunPushCell).
 const LEDGE: Play = Play {
     file: "layout/ledge.gif",
@@ -297,7 +297,7 @@ impl<'a> Guide<'a> {
         Err("the talk never handed back control".to_string())
     }
 
-    /// A wooden box searched in Vale (MB_WOODEN_BOX): `Isaac checked the
+    /// A wooden box searched in Vale (CELL_BEHAVIOR_WOODEN_BOX): `Isaac checked the
     /// wooden box...` and `but didn't find anything.`, the lines every map
     /// shares.
     fn wooden_box(&mut self) -> Result<(), String> {

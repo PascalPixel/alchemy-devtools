@@ -488,7 +488,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// A colour for a collision code (enum MetatileBehavior): none for open ground,
+/// A colour for a collision code (enum CellBehavior): none for open ground,
 /// red for a wall, yellow for the scene's own events, blue for the codes
 /// every map shares.
 pub(super) fn code_colour(code: i32) -> Option<u32> {

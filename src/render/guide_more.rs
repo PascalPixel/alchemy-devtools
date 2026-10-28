@@ -1136,7 +1136,7 @@ impl<'a> Guide<'a> {
     /// him take along `stretch`, else why not: he stays on its line (the
     /// game turns him aside only when something blocks his way), moves no
     /// more than a running step, stands on a cell of his layer that is no
-    /// wall (MB_WALL), and climbs or drops no more than
+    /// wall (CELL_BEHAVIOR_WALL), and climbs or drops no more than
     /// MapGrid_CheckCollision's 8 and 12 pixels.
     fn check_footing(field: &mut Field, stretch: &Stretch, last: &Actor, now: &Actor) -> Result<(), String> {
         let at = format!("at ({}, {}) on layer {}", now.x, now.z, now.layer);
