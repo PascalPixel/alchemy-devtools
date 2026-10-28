@@ -42,7 +42,7 @@ pub const VOCABULARY: &[&str] = &[
     "src", "dst", "len", "info", "ctx", "cfg", "config", "rng", "random", "rom", "ram", "iwram", "ewram", "dma",
     "irq", "params", "param", "struct", "enum", "macro", "lut", "offset", "addr", "ov", "alloc", "mem", "var", "cb",
     "attr", "byte", "clr", "ui", "setup", "cached", "engine", "scheduler", "dispatch", "op", "noop", "placement",
-    "template", "templates", "dest", "dests", "coord",
+    "placements", "template", "templates", "dest", "dests", "coord",
     // How the code draws and moves things, not what the player sees.
     "particle", "transition", "animation", "animate", "blend", "fade", "overlay", "channel", "angle", "collision",
     "trigger", "marker", "cycle", "blank", "hblank", "vblank", "alpha", "vector", "tint", "darken", "hue", "flicker",
@@ -582,7 +582,7 @@ pub const FAMILIES: &[(&str, &str, &str)] = &[
 /// can be used. Like the vocabulary, it errs short.
 pub const ASPECTS: &[&str] = &[
     "kind", "type", "effect", "mode", "step", "phase", "state", "action", "command", "use", "range", "index", "menu",
-    "debug", "event", "ev", "trigger", "anim", "animation", "from", "usable", "snapshot", "template",
+    "debug", "event", "ev", "trigger", "anim", "animation", "from", "usable", "snapshot", "template", "placement",
 ];
 
 /// Words that, right after `ACTOR_`, make an actor a part of its map's

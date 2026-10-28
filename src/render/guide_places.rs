@@ -196,8 +196,8 @@ impl<'a> Guide<'a> {
     /// 14), the healer and the afterimage boxed, as
     /// `sanctum-healer-afterimages.gif`.
     pub fn sanctum_account(&mut self) -> Result<(), String> {
-        let reenact = self.overlay_sym("Sanctum_GetActorTemplates|Sanctum_GetObjectEventTemplates", "Sanctum_ReenactSolSanctum")?;
-        let request = self.overlay_sym("Sanctum_GetActorTemplates|Sanctum_GetObjectEventTemplates", "Sanctum_RequestQuestAcceptance")?;
+        let reenact = self.overlay_sym("Sanctum_GetActorPlacements|Sanctum_GetActorTemplates|Sanctum_GetObjectEventTemplates", "Sanctum_ReenactSolSanctum")?;
+        let request = self.overlay_sym("Sanctum_GetActorPlacements|Sanctum_GetActorTemplates|Sanctum_GetObjectEventTemplates", "Sanctum_RequestQuestAcceptance")?;
         let mut field = self.arrive((9, 20), &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_SOL_SANCTUM_STAR_ROOM_COLLAPSED"], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let phase = std::rc::Rc::new(std::cell::Cell::new(0u8));
         let set = phase.clone();
@@ -297,8 +297,8 @@ impl<'a> Guide<'a> {
     /// screen beside the sprites and the sprite palettes, Garet, the pillar
     /// and the hand boxed, as `opening-move.gif`.
     pub fn vale_opening(&mut self) -> Result<(), String> {
-        let begin = self.overlay_sym("Vale_GetActorTemplates|Vale_GetObjectEventTemplates", "Scene_StartEventPsynergy")?;
-        let end = self.overlay_sym("Vale_GetActorTemplates|Vale_GetObjectEventTemplates", "Scene_EndEventPsynergy")?;
+        let begin = self.overlay_sym("Vale_GetActorPlacements|Vale_GetActorTemplates|Vale_GetObjectEventTemplates", "Scene_StartEventPsynergy")?;
+        let end = self.overlay_sym("Vale_GetActorPlacements|Vale_GetActorTemplates|Vale_GetObjectEventTemplates", "Scene_EndEventPsynergy")?;
         let mut field = self.arrive((4, 16), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let on = std::rc::Rc::new(std::cell::Cell::new(false));
         let set = on.clone();
@@ -327,8 +327,8 @@ impl<'a> Guide<'a> {
     /// sprites and the sprite palettes while his display lasts, as
     /// `psynergy-display.gif`.
     pub fn vale_gate_display(&mut self) -> Result<(), String> {
-        let begin = self.overlay_sym("ValePlaza_GetActorTemplates|ValePlaza_GetObjectEventTemplates", "Scene_StartEventPsynergy")?;
-        let end = self.overlay_sym("ValePlaza_GetActorTemplates|ValePlaza_GetObjectEventTemplates", "Scene_EndEventPsynergy")?;
+        let begin = self.overlay_sym("ValePlaza_GetActorPlacements|ValePlaza_GetActorTemplates|ValePlaza_GetObjectEventTemplates", "Scene_StartEventPsynergy")?;
+        let end = self.overlay_sym("ValePlaza_GetActorPlacements|ValePlaza_GetActorTemplates|ValePlaza_GetObjectEventTemplates", "Scene_EndEventPsynergy")?;
         let mut entered = self.enter_story((5, 0), &[], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
         let field = &mut entered.field;
         // ACTOR_STRONGMAN_SHOWING_PSYNERGY (ACTOR_FIRST_PLACED + 9).
