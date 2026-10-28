@@ -1,4 +1,4 @@
-//! More recordings for the world layer's guides (the layout and map folder
+//! More recordings for the field's guides (the layout and map folder
 //! guides): the sand haze a layout's header drifts over Suhalla Desert, a
 //! Psynergy Stone picked up from its treasure spot, and the start of a
 //! Colosso final's race. Each plays a built edition with the pad held as a

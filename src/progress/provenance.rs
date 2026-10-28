@@ -43,7 +43,7 @@ pub const VOCABULARY: &[&str] = &[
     "irq", "params", "param", "struct", "enum", "macro", "lut", "offset", "addr", "ov", "alloc", "mem", "var", "cb",
     "attr", "byte", "clr", "ui", "setup", "cached", "engine", "scheduler", "dispatch", "op", "noop", "placement",
     "template", "templates", "dest", "dests", "coord",
-    // How the engine draws and moves things, not what the player sees.
+    // How the code draws and moves things, not what the player sees.
     "particle", "transition", "animation", "animate", "blend", "fade", "overlay", "channel", "angle", "collision",
     "trigger", "marker", "cycle", "blank", "hblank", "vblank", "alpha", "vector", "tint", "darken", "hue", "flicker",
     "dither", "contrast", "zoom", "rotation", "backdrop", "foreground", "background", "visibility", "occluding",
@@ -552,7 +552,7 @@ impl Thing {
 
 /// The family prefixes: the kind of game thing each names, and the word the
 /// tags of its own enums end in (`enum XianActorId` holds actors, by its
-/// `Id`; the engine's own `enum ActorId` numbers its slots). Alchemy before
+/// `Id`; the field's own `enum ActorId` numbers its slots). Alchemy before
 /// The Broken Seal's rename wrote `LOCALID_` and `enum <map>LocalId`.
 pub const FAMILIES: &[(&str, &str, &str)] = &[
     ("SceneId_", "scene", "Scene"),
@@ -670,9 +670,9 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
 ///   members, and any other word the values of a mechanism
 ///   (`enum AbilityFormula`, `enum ActorMotionFlag`, `enum PsynergyPhase`);
 /// - except that the family's own enum, tagged by the family word alone
-///   (`enum ActorId`), numbers the engine's slots (the party leader, the first
+///   (`enum ActorId`), numbers the field's slots (the party leader, the first
 ///   actor a map places), not anyone a map places;
-/// - a flag numbered in the range the source names as the engine's own,
+/// - a flag numbered in the range the source names as the system's own,
 ///   `FLAG_SYSTEM_FIRST` to `FLAG_SYSTEM_LAST`, is what the field, battles
 ///   and menus keep about their own working, not a fact of the story.
 fn is_mechanism(definition: &Definition, prefix: &str, family: &str, macros: &HashMap<String, i64>) -> bool {
@@ -1148,7 +1148,7 @@ mod tests {
         assert_eq!(of("PSYNERGY_STEP_TARGET", Origin::Enumerator, None, Some(3)), None);
         assert_eq!(of("ITEM_LIST_NAME_X", Origin::Macro, None, Some(9)), None, "a position on the screen");
         assert_eq!(of("ENEMY_SPRITE_SLOTS", Origin::Macro, None, Some(9)), None, "a measure");
-        assert_eq!(of("FLAG_IN_BATTLE", Origin::Macro, None, Some(0x103)), None, "the engine's own flag");
+        assert_eq!(of("FLAG_IN_BATTLE", Origin::Macro, None, Some(0x103)), None, "the system's own flag");
         assert_eq!(of("FLAG_KRADEN_SETS_OFF", Origin::Macro, None, Some(0x801)), Some("flag"), "a story flag");
         assert_eq!(of("FLAG_CHILDHOOD", Origin::Macro, None, Some(0x20)), Some("flag"));
         let unranged = kind(Definition { value: Some(0x103), ..Definition::new("FLAG_IN_BATTLE", "a.h", Origin::Macro) }, &HashMap::new());

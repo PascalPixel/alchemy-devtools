@@ -30,7 +30,7 @@ fn word(field: &Field, a: u32) -> i32 {
     field.read32(a) as i32
 }
 
-/// One actor's object as the engine keeps it (struct Actor).
+/// One actor as the field keeps it (struct Actor).
 pub fn describe(field: &Field, id: u16) -> String {
     let a = field.actor_address(id);
     if a == 0 {

@@ -1,5 +1,5 @@
-//! Recordings for The Broken Seal's front page, its engine page and the
-//! engine's folder guides (runtime, graphics, sound, debug): each one
+//! Recordings for The Broken Seal's front page, its System page and the
+//! system's folder guides (runtime, graphics, sound, debug): each one
 //! moment the player sees, played from a built edition with the pad held as
 //! a player would, written under the guide folder it belongs to
 //! (`front/sanctum-door.gif`).

@@ -1248,13 +1248,13 @@ Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
   sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
   vale-opening, vale-gate-display, cottage-rooms-a-sleep, vale-kraden-rockslide,
   vale-cave-kite
-Take-apart pictures for the engine's guides, each as its mode's name with
-.png or .gif (guide_engine.rs):
+Take-apart pictures for the system's and field's guides, each as its mode's
+name with .png or .gif (guide_engine.rs):
   menu-test-setup, palette-fade, scheduler, io-write-queue,
   resource-directory, memory-maps, map-header, placeholders, markers,
   world-map-squares, colosso-path, player-probes, item-row, scene-script,
   temporary-flags, overlay-common
-Recordings for the front page, the engine page and the runtime, graphics,
+Recordings for the front page, the System page and the runtime, graphics,
 sound and debug guides, each under its guide folder (guide_front.rs):
   front-door, front-area-name, front-warp-rows, front-story,
   front-chest, engine-waiting, engine-debug-select, runtime-soft-reset,

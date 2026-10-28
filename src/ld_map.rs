@@ -206,8 +206,8 @@ Linker script and memory map
  */recon/tbs/de/rom.o(.rom.00000000)
  .rom.00000000  0x0000000008000000       0x10 /x/out/tbs-de/obj/recon/tbs/de/rom.o
                 0x0000000008000000                Rom_Start
- */games/tbs/src/system/io.o(.text .rodata .data .padding)
- .text          0x0000000008000010        0xe /x/out/tbs-de/obj/games/tbs/src/system/io.o
+ */games/tbs/src/cartridge/io.o(.text .rodata .data .padding)
+ .text          0x0000000008000010        0xe /x/out/tbs-de/obj/games/tbs/src/cartridge/io.o
                 0x0000000008000010                Func_08000010
                 0x0000000008000010                Input_Handle
                 0x0000000008000018                Input_Poll
@@ -218,10 +218,10 @@ Linker script and memory map
                 0x0000000008000030                IwramCodeEnd = .
 
 .iwram_runtime  0x0000000003000000        0x8 load address 0x0000000008000030
- */games/tbs/src/system/runtime.o(.text)
- .text          0x0000000003000000        0x8 /x/out/tbs-de/obj/games/tbs/src/system/runtime.o
+ */games/tbs/src/cartridge/runtime.o(.text)
+ .text          0x0000000003000000        0x8 /x/out/tbs-de/obj/games/tbs/src/cartridge/runtime.o
                 0x0000000003000000                IwramIrqMain
- .bss           0x0000000003000008        0x4 /x/out/tbs-de/obj/games/tbs/src/system/runtime.o
+ .bss           0x0000000003000008        0x4 /x/out/tbs-de/obj/games/tbs/src/cartridge/runtime.o
 
 iwram           0x0000000003000100       0x40 load address 0x0000000008000038
  */recon/tbs/sym_iwram.o(.sym_iwram)

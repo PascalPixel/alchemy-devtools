@@ -25,7 +25,7 @@
 //! convention the game keeps everywhere is never flagged, and the conventions
 //! AGENTS.md sets (pret's `gName` and `sName`, message symbols, the
 //! hardware's register names, the temporary flags, a function taking the
-//! prefix of a thing the engine names elsewhere) are left alone.
+//! prefix of a thing the code names elsewhere) are left alone.
 
 use super::provenance::{self, GameText};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -95,14 +95,14 @@ pub const PRET_PLURALS: &[&str] = &["PALETTES_ALL", "PALETTES_BG", "PALETTES_OBJ
 /// `maxTime`), which AGENTS.md keeps as pret writes them, so every
 /// identifier they use is left out of the checks.
 pub const PRET_FLASH: &[&str] = &[
-    "/src/cartridge/save/flash.c",
-    "/src/cartridge/save/sst.c",
-    "/src/cartridge/save/atmel.c",
-    "/src/cartridge/save/program_flash_sector.c",
-    "/src/system/save/flash.c",
-    "/src/system/save/sst.c",
-    "/src/system/save/atmel.c",
-    "/src/system/save/program_flash_sector.c",
+    "tbs/src/cartridge/save/flash.c",
+    "tbs/src/cartridge/save/sst.c",
+    "tbs/src/cartridge/save/atmel.c",
+    "tbs/src/cartridge/save/program_flash_sector.c",
+    "tla/src/system/save/flash.c",
+    "tla/src/system/save/sst.c",
+    "tla/src/system/save/atmel.c",
+    "tla/src/system/save/program_flash_sector.c",
 ];
 
 /// Whether a file is one of pret's flash library's.

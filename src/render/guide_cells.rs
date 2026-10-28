@@ -1,5 +1,5 @@
 //! Cells labelled in words. A picture that marks map cells says what each
-//! does, never the collision code the engine looks up: a code every map
+//! does, never the collision code the field looks up: a code every map
 //! shares (enum MetatileBehavior) by the name the code gives it, and one of the
 //! scene's own (1 to 239) by the rows of the scene's event table that answer
 //! it, read as Scene_FindTrigger reads them, each row's function or exit put

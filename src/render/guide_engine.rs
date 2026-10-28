@@ -1,6 +1,7 @@
-//! Take-apart pictures for the engine's guides (runtime, system, map, scene,
-//! field, game, graphics and debug): the machine's tables and memory read
-//! from the running game and drawn beside the screen they make.
+//! Take-apart pictures for the system's and field's guides (runtime,
+//! cartridge, map, scene, field, game, graphics and debug): the machine's
+//! tables and memory read from the running game and drawn beside the screen
+//! they make.
 
 use super::animation;
 use super::field::{Field, Image};
