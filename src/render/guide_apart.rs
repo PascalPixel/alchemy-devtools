@@ -22,7 +22,7 @@ const QUEUE_COUNT: u32 = 0x144;
 const EVENTS_PHASE: u32 = 0x148;
 const EVENTS_INDEX: u32 = 0x14c;
 const QUEUE_CAPACITY: u32 = 64;
-/// BattleWork.turn (struct BattleTurn) and its target count.
+/// BattleWork.actionRun (struct BattleActionRun) and its target count.
 const WORK_PLAN: u32 = 0x654;
 
 /// enum BattlePlaybackCommand's names, as the panel prints them.
@@ -100,7 +100,7 @@ fn read_events(gba: &Gba, work_slot: u32) -> Option<Events> {
     })
 }
 
-/// BattleTurn.targetCount's offset in the plan.
+/// BattleActionRun.targetCount's offset in the plan.
 const PLAN_TARGET_COUNT: u32 = 0x01;
 
 /// The messages' symbols and texts by number, from the story tools'

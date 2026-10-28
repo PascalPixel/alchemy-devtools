@@ -507,7 +507,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
             dispatch_return = gba.register(LR) & !1;
             phase = Phase::Playing;
         } else if phase == Phase::Playing && pc == s.message && !recording {
-            // The plan shows `<unit> casts <ability>!` (BattleTurn_Build)
+            // The plan shows `<unit> casts <ability>!` (BattleActionRun_Build)
             // once the camera has turned from the command view to the cast's.
             say(frame, "the cast's message: recording".to_string());
             recording = true;

@@ -506,7 +506,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// struct BattleTurn (battle_type.h) at BattleWork.turn.
+/// struct BattleActionRun (battle_type.h) at BattleWork.actionRun.
 const WORK_PLAN: u32 = 0x654;
 const PLAN_TARGET_IDS: u32 = 0x02;
 
@@ -662,7 +662,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// struct BattleTurn's per-target fields, the first target's.
+/// struct BattleActionRun's per-target fields, the first target's.
 const PLAN_MULTIPLIER: u32 = 0x1e;
 const PLAN_CRITICAL: u32 = 0x2c;
 const PLAN_ABILITY: u32 = 0x4c;
@@ -707,7 +707,7 @@ pub(super) struct Rolled {
 
 impl<'a> Guide<'a> {
     /// Isaac attacks a copy of Ivan through the command menu, the rolls
-    /// BattleTurn_Build and RollWeaponUnleash ask Battle_Random for
+    /// BattleActionRun_Build and RollWeaponUnleash ask Battle_Random for
     /// answered in turn from `plan_answers` and `unleash`, and, with
     /// `weapon`, that item in place of his equipped weapon as the battle
     /// opens.
@@ -746,7 +746,7 @@ impl<'a> Guide<'a> {
             Some(h) if h == random && !planned => {
                 let by = self.function_at(gba.register(LR) & !1);
                 let answer = match by.as_str() {
-                    "BattleTurn_Build" => {
+                    "BattleActionRun_Build" | "BattleTurn_Build" => {
                         asked += 1;
                         plan_answers.get(asked - 1).copied()
                     }
@@ -756,7 +756,7 @@ impl<'a> Guide<'a> {
                 if let Some(a) = answer {
                     gba.return_now(a);
                     out.rolls.push(Roll { by, answer: a, forced: true });
-                } else if by == "BattleTurn_Build" || by == "RollWeaponUnleash" {
+                } else if by == "BattleActionRun_Build" || by == "BattleTurn_Build" || by == "RollWeaponUnleash" {
                     out.rolls.push(Roll { by, answer: 0, forced: false });
                 }
             }
@@ -859,7 +859,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// BattleTurn.staging (enum BattleStaging).
+/// BattleActionRun.staging (enum BattleStaging).
 const PLAN_OUTCOME: u32 = 0x54;
 const STAGING_FLEE: u32 = 7;
 fn outcome_name(o: u32) -> &'static str {
@@ -879,8 +879,8 @@ fn outcome_name(o: u32) -> &'static str {
 
 impl<'a> Guide<'a> {
     /// Isaac's Quake at copies of Garet, Ivan and Mia as `render psynergy`
-    /// casts it, with BattleWork.turn.staging rewritten to `outcome` (when
-    /// given) where BattleTurn_Build returns to
+    /// casts it, with BattleWork.actionRun.staging rewritten to `outcome` (when
+    /// given) where BattleActionRun_Build returns to
     /// BattleStaging_DispatchAction, before the dispatch switches on
     /// it; returns the frames, the outcome the plan held, and the return
     /// address found.
@@ -889,7 +889,7 @@ impl<'a> Guide<'a> {
         let plan = Tables::read(root)?.plan()?;
         let cast = plan.casts.into_iter().find(|c| c.ability.name == "Quake").ok_or("no Quake cast")?;
         let symbols = super::battle::Symbols::find(self.map)?;
-        let build = self.sym("BattleTurn_Build")?;
+        let build = self.sym("BattleActionRun_Build|BattleTurn_Build")?;
         let work_slot = self.sym("gBattleWork")?;
         let mut found = 0;
         let mut own = 0;
@@ -914,7 +914,7 @@ impl<'a> Guide<'a> {
     /// for frame, as `staging.gif`.
     pub fn staging(&mut self) -> Result<(), String> {
         let (_, _, back) = self.staged_quake(None, 0)?;
-        eprintln!("staging: BattleTurn_Build returns to {back:#x} ({})", self.function_at(back));
+        eprintln!("staging: BattleActionRun_Build returns to {back:#x} ({})", self.function_at(back));
         let mut runs = Vec::new();
         for o in 3..=9u32 {
             let (frames, own, _) = self.staged_quake(Some(o), back)?;
@@ -1172,7 +1172,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// struct BattleTurn.hauntDamage.
+/// struct BattleActionRun.hauntDamage.
 const PLAN_HAUNT: u32 = 0x60;
 /// A sleep counter already counted down once: the target fell asleep in an
 /// earlier round (STATUS_TURNS less one).
@@ -1210,7 +1210,7 @@ impl<'a> Guide<'a> {
     /// round already (sleep SLEPT_A_ROUND); BattleAbility_ApplyToTarget's wake roll and
     /// haunt roll, its last two calls of Battle_RandomFar, are answered 0,
     /// so the sleeper wakes and every target feeds the evil spirit. Each
-    /// target's HP, sleep and BattleTurn.hauntDamage are read as
+    /// target's HP, sleep and BattleActionRun.hauntDamage are read as
     /// BattleAbility_ApplyToTarget starts and as the next starts or the turn ends,
     /// beside the screen as each is announced, as `after-target.png`.
     pub fn after_target(&mut self) -> Result<(), String> {
@@ -1222,8 +1222,8 @@ impl<'a> Guide<'a> {
         let symbols = super::battle::Symbols::find(self.map)?;
         let random = self.sym("Battle_Random")?;
         let exec = self.sym("BattleAbility_ApplyToTarget")?;
-        let build = self.sym("BattleTurn_Build")?;
-        let turn_end = self.sym("BattleUnit_ProcessTurnEnd")?;
+        let build = self.sym("BattleActionRun_Build|BattleTurn_Build")?;
+        let turn_end = self.sym("BattleUnit_ProcessActionEnd|BattleUnit_ProcessTurnEnd")?;
         let work_slot = self.sym("gBattleWork")?;
         let sites = self.calls_in(exec, self.sym("Battle_RandomFar")?);
         let [.., wake, haunt] = sites[..] else {

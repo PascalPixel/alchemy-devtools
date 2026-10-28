@@ -19,7 +19,7 @@ const FX_PARTICLES: u32 = 0x7080;
 /// struct Particle: x, y, z, three velocities, then variant.
 const STEP_SIZE: u32 = 28;
 const STEP_VARIANT: u32 = 24;
-/// gBattleWork->turn (struct BattleTurn) and its animation word.
+/// gBattleWork->actionRun (struct BattleActionRun) and its animation word.
 const WORK_PLAN: u32 = 0x654;
 const PLAN_PRESENTATION_FLAGS: u32 = 0x58;
 /// struct BattleAnimArgs's kind and variant.
@@ -29,7 +29,7 @@ const EFFECT_COUNT: u32 = 0x14;
 const EFFECT_ACTORS: u32 = 0x24;
 /// The first enemy unit id.
 const FIRST_ENEMY_UNIT: u32 = 128;
-/// BattleTurn.animation's kind and variant (ANIM_ID_MASK and
+/// BattleActionRun.animation's kind and variant (ANIM_ID_MASK and
 /// ANIM_VARIANT_MASK in battle_internal.h).
 const ANIM_ID_MASK: u32 = 0xfff;
 const ANIM_VARIANT_MASK: u32 = 0x3000;
