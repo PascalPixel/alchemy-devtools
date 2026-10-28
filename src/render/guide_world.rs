@@ -15,9 +15,9 @@ const WHITE: u32 = 0xff_ff_ff;
 
 /// The world map's scene and the entrance that leaves Vale.
 const WORLD_MAP: (u16, u16) = (2, 1);
-/// struct WorldMapFrameWork in HEAP_SLOT_WORLD_MAP_FRAME: its two pages of 160 lines'
+/// struct WorldMapAffineWork in HEAP_SLOT_WORLD_MAP_AFFINE: its two pages of 160 lines'
 /// struct WorldMapAffinePair (BG2's line, then BG3's, 16 bytes each).
-const HEAP_SLOT_WORLD_MAP_FRAME: u32 = 7;
+const HEAP_SLOT_WORLD_MAP_AFFINE: u32 = 7;
 const FRAME_PAGES: u32 = 0xc80;
 const PAIR: u32 = 32;
 const PAGE: u32 = 160 * PAIR;
@@ -52,10 +52,10 @@ impl Line {
 }
 
 /// The 160 lines of affine page `page`.
-fn page(field: &Field, frame_work: u32, page: u32) -> Vec<Line> {
+fn page(field: &Field, affine_work: u32, page: u32) -> Vec<Line> {
     (0..HEIGHT as u32)
         .map(|y| {
-            let at = frame_work + FRAME_PAGES + page * PAGE + y * PAIR;
+            let at = affine_work + FRAME_PAGES + page * PAGE + y * PAIR;
             Line { pa: i32::from(field.read16(at) as i16), pc: i32::from(field.read16(at + 4) as i16), x: field.read32(at + 8) as i32, y: field.read32(at + 12) as i32 }
         })
         .collect()
@@ -222,7 +222,7 @@ impl Guide<'_> {
     /// The world map now: the screen, the planes, the page whose lines draw
     /// the screen's ground, and the party.
     fn moment(field: &Field, slots: u32, zoomed: bool) -> Result<Moment, String> {
-        let frame_work = field.read32(slots + 4 * HEAP_SLOT_WORLD_MAP_FRAME);
+        let affine_work = field.read32(slots + 4 * HEAP_SLOT_WORLD_MAP_AFFINE);
         let picture = screen(&field.picture());
         let plane = plane(field);
         // The page the DMA fed this picture: the one that draws it. The
@@ -230,7 +230,7 @@ impl Guide<'_> {
         // it must match nearly all.
         let mut best = (0usize, Vec::new());
         for p in 0..2 {
-            let lines = page(field, frame_work, p);
+            let lines = page(field, affine_work, p);
             let drawn = synthesize(&plane, &lines);
             let same = drawn.iter().zip(&picture.pixels).filter(|(a, b)| a == b).count();
             if same > best.0 {

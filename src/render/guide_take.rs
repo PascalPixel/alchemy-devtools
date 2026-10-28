@@ -980,8 +980,8 @@ const AZART: u16 = 8;
 const COLOSSEUM_SATRAGE_TOUR: (u16, u16) = (144, 3);
 /// Vale entered by day (scene 4, entrance 1) and Garet's sister there.
 const VALE_SCENE: (u16, u16) = (4, 1);
-/// The world map's frame work's heap slot (HEAP_SLOT_WORLD_MAP_FRAME).
-const HEAP_SLOT_WORLD_MAP_FRAME: u32 = 7;
+/// The world map's affine work's heap slot (HEAP_SLOT_WORLD_MAP_AFFINE).
+const HEAP_SLOT_WORLD_MAP_AFFINE: u32 = 7;
 /// Goma Cave's pillar room, as `grid.png` enters it, and the cell words.
 const GOMA_CAVE_ROOM: (u16, u16) = (27, 5);
 const MAP_CELL_WORDS: u32 = 0x0201_0000;
@@ -1756,7 +1756,7 @@ impl<'a> Guide<'a> {
     /// The world map as the party first leaves Vale, after a short walk
     /// south as `world-map-layers-3d.gif` takes it: the screen at twice its
     /// size beside each scanline's width scale from the map frame's work
-    /// (struct WorldMapFrameWork in HEAP_SLOT_WORLD_MAP_FRAME, its WorldMapScanline.scale,
+    /// (struct WorldMapAffineWork in HEAP_SLOT_WORLD_MAP_AFFINE, its WorldMapScanline.scale,
     /// 16.16 fixed point) drawn as a bar on the same line, 0 above the
     /// horizon, as `world-map-scanlines.png`.
     pub fn world_map_scanlines(&mut self) -> Result<(), String> {
@@ -1766,8 +1766,8 @@ impl<'a> Guide<'a> {
         field.frames(50)?;
         field.hold(0);
         field.frames(2)?;
-        let frame_work = field.read32(slots + 4 * HEAP_SLOT_WORLD_MAP_FRAME);
-        let scales: Vec<i32> = (0..HEIGHT as u32).map(|y| field.read32(frame_work + 20 * y) as i32).collect();
+        let affine_work = field.read32(slots + 4 * HEAP_SLOT_WORLD_MAP_AFFINE);
+        let scales: Vec<i32> = (0..HEIGHT as u32).map(|y| field.read32(affine_work + 20 * y) as i32).collect();
         let most = scales.iter().copied().max().unwrap_or(1).max(1);
         let bars = 240usize;
         let mut out = canvas(2 * WIDTH + 12 + bars, 2 * HEIGHT + 8, WHITE);
