@@ -119,10 +119,10 @@ fn messages(dir: &std::path::Path) -> HashMap<u32, (String, String)> {
     out
 }
 
-/// The sounds' names by number, from songs.h.
+/// The sounds' names by number, from sounds.h (songs.h before Alchemy renamed it).
 fn sounds() -> HashMap<u32, String> {
-    let path = crate::compile::root().join("games/tbs/include/songs.h");
-    let text = std::fs::read_to_string(path).unwrap_or_default();
+    let root = crate::compile::root();
+    let text = std::fs::read_to_string(root.join("games/tbs/include/sounds.h")).or_else(|_| std::fs::read_to_string(root.join("games/tbs/include/songs.h"))).unwrap_or_default();
     text.lines()
         .filter_map(|l| {
             let mut w = l.split_whitespace();
