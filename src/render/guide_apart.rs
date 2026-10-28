@@ -527,9 +527,9 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// The effect's heap slots (heap.h): gHeapSlots[HEAP_SLOT_BATTLE_ANIM]
-/// holds struct BattleAnimWork (battle_anim_work.h).
-const HEAP_SLOT_BATTLE_ANIM: u32 = 39;
+/// The effect's heap slots (heap.h): gHeapSlots[HEAP_SLOT_BATTLE_EFFECT]
+/// holds struct BattleEffectWork (battle_effect_work.h).
+const HEAP_SLOT_BATTLE_EFFECT: u32 = 39;
 const FX_PARTICLES: u32 = 0x7080;
 const FX_TRANSFER_MODE: u32 = 0x7780;
 const FX_TRANSFER_VALUE: u32 = 0x7784;
@@ -578,7 +578,7 @@ struct FxFrame {
 }
 
 fn read_fx(gba: &Gba, work_slots: u32, pool: u32) -> FxFrame {
-    let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_ANIM);
+    let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_EFFECT);
     let running = work != 0;
     let mut canvas = vec![0u8; CANVAS_SIDE * CANVAS_SIDE];
     for (i, px) in canvas.iter_mut().enumerate() {
@@ -626,7 +626,7 @@ impl<'a> Guide<'a> {
     /// Garet's Heat Wave at Mia, as `render psynergy` casts it, with each
     /// frame's effect state; `force`, when given, is written over
     /// work->transferMode and transferValue each time
-    /// BattleAnim_ProcessPendingGraphicsTransfer runs. Only the frames from
+    /// BattleEffect_ProcessPendingGraphicsTransfer runs. Only the frames from
     /// shortly before the effect's work block is taken to shortly after it
     /// is released are kept.
     fn heat_wave(&self, force: Option<(u32, u32)>) -> Result<Vec<FxFrame>, String> {
@@ -644,13 +644,13 @@ impl<'a> Guide<'a> {
         let symbols = battle::Symbols::find(self.map)?;
         let work_slots = self.sym("gHeapSlots")?;
         let pool = self.sym("gMapGridCellBuffer")?;
-        let transfer = self.sym("BattleAnim_ProcessPendingGraphicsTransfer")?;
+        let transfer = self.sym("BattleEffect_ProcessPendingGraphicsTransfer|BattleAnim_ProcessPendingGraphicsTransfer")?;
         let mut copies: Vec<Image> = Vec::new();
         let mut copy_frames: Vec<usize> = Vec::new();
         let mut frames: Vec<FxFrame> = Vec::new();
         battle::record_watching(self.rom, &symbols, &cast, &Scene::Game, false, None, &[transfer], &mut |gba, hook| match hook {
             Some(_) => {
-                let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_ANIM);
+                let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_EFFECT);
                 if work != 0 && gba.read32(work + FX_TRANSFER_PENDING) != 0 {
                     let block = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_CANVAS);
                     let mut frame = read_fx(gba, work_slots, pool);
@@ -662,7 +662,7 @@ impl<'a> Guide<'a> {
                     copy_frames.push(frames.len());
                 }
                 if let Some((mode, value)) = force {
-                    let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_ANIM);
+                    let work = gba.read32(work_slots + 4 * HEAP_SLOT_BATTLE_EFFECT);
                     if work != 0 {
                         gba.write32(work + FX_TRANSFER_MODE, mode);
                         gba.write32(work + FX_TRANSFER_VALUE, value);

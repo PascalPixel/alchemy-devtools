@@ -1955,14 +1955,14 @@ mod tests {
         let long = "\n".repeat(3001);
         let second = format!("const u8 gT2[] {table}void Delta(void) {{}}{long}");
         // A map overlay, a part, a header and a data object stay one file however long.
-        let part = format!("// Part of battle_anim.c.\nvoid Epsilon(void) {{}}{long}");
+        let part = format!("// Part of battle_effect.c.\nvoid Epsilon(void) {{}}{long}");
         let data = format!("const u8 gT3[] = {{ 0 }};{long}");
         let scene = format!("void Zeta(void) {{}}{long}");
         let report = game([
             ("a.c", first.as_str()),
             ("b.c", second.as_str()),
             ("games/tbs/src/scene/vale.c", scene.as_str()),
-            ("games/tbs/src/battle_anim/parts/bolt.c", part.as_str()),
+            ("games/tbs/src/battle_effect/parts/bolt.c", part.as_str()),
             ("games/tbs/include/scene_exits.h", long.as_str()),
             ("games/tbs/src/overworld/table.c", data.as_str()),
         ]);
