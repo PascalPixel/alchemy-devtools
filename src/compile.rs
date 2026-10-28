@@ -73,6 +73,7 @@ pub enum CompilerFamily {
 const SOUND_C: &[&str] = &[
     "games/tbs/src/sound/audio.c",
     "games/tbs/src/sound/tables.c",
+    "games/tbs/src/sound/driver.c",
     "games/tbs/src/sound/engine.c",
     "games/tla/src/sound/sound.c",
     "games/tla/src/sound/tables.c",
@@ -104,7 +105,7 @@ fn relative(source: &str) -> &str {
 pub fn family_for_source(_target: CompilerTarget, source: &str) -> CompilerFamily {
     let source = relative(source);
     let tla_sound = source.starts_with("games/tla/src/sound/")
-        && (source.ends_with("/engine.c") || source.ends_with("/tail.c") || source.contains("/music_track_"));
+        && (source.ends_with("/driver.c") || source.ends_with("/engine.c") || source.ends_with("/tail.c") || source.contains("/music_track_"));
     if SOUND_C.contains(&source) || tla_sound {
         CompilerFamily::Agbcc
     } else if FLASH_C.contains(&source) {
