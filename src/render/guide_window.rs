@@ -40,7 +40,7 @@ struct Layout {
 const INTERNATIONAL: Layout = Layout { name: "INTERNATIONAL", window_count: 8, printers: 0x620, sprites: 0x698, text_tile_state: 0xda0, text_buffer: 0xeb0, codes: 512, count: 0x12b2, argument_values: 0x12bc, portrait_pictures: 0x12ec, size: 0x12fc };
 const JAPANESE: Layout = Layout { name: "JAPANESE", window_count: 12, printers: 0x6b0, sprites: 0x728, text_tile_state: 0xe30, text_buffer: 0xf40, codes: 256, count: 0x1142, argument_values: 0x114c, portrait_pictures: 0x117c, size: 0x118c };
 
-/// struct Window, struct TextPrinter and struct WindowSprite (window.h,
+/// struct Window, struct Message and struct WindowSprite (window.h,
 /// render_input.h): sizes and the offsets read here.
 const WINDOWS: u32 = 0x500;
 const WINDOW_SIZE: u32 = 0x24;
@@ -78,7 +78,7 @@ fn regions(l: &Layout) -> Vec<(&'static str, u32, u32, u32)> {
     vec![
         ("TILEMAP, 32 X 20 TILES", 0, WINDOWS, 0x4a_78_c8),
         ("WINDOWS", WINDOWS, l.printers, 0xe0_a0_30),
-        ("TEXT PRINTERS, 3", l.printers, l.sprites, 0xe0_50_50),
+        ("MESSAGES, 3", l.printers, l.sprites, 0xe0_50_50),
         ("SPRITES, 64", l.sprites, after_sprites, 0x50_b0_70),
         ("FREE SPRITES LIST", after_sprites, l.text_tile_state, 0xa0_e0_a0),
         ("TEXT TILE STATE", l.text_tile_state, l.text_tile_state + 0x100, 0x90_70_d0),

@@ -280,7 +280,7 @@ impl Symbols {
             dismiss: at("Text_CheckTextDismissed")?,
             speak: at("FieldMessage_ShowAtActor")?,
             objects: at("Actor_UpdateAllThumb")?,
-            typing: at("TextPrinter_Step")?,
+            typing: at("Message_Type").or_else(|_| at("TextPrinter_Step"))?,
             choice: at("YesNoMenu_Run")?,
             lookup: at("Message_Find")?,
             terrain_height: at("MapGrid_GetTerrainHeight")?,
