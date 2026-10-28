@@ -87,6 +87,10 @@ const FLASH_C: &[&str] = &[
     "games/tbs/src/cartridge/save/sst.c",
     "games/tbs/src/cartridge/save/atmel.c",
     "games/tbs/src/cartridge/save/program_flash_sector.c",
+    "games/tla/src/gamepak/flash/flash.c",
+    "games/tla/src/gamepak/flash/sst.c",
+    "games/tla/src/gamepak/flash/atmel.c",
+    "games/tla/src/gamepak/flash/program_flash_sector.c",
     "games/tla/src/system/save/flash.c",
     "games/tla/src/system/save/sst.c",
     "games/tla/src/system/save/atmel.c",
@@ -98,6 +102,7 @@ const ARM_C: &[&str] = &[
     "games/tbs/src/field/world_map_lines.c",
     "games/tbs/src/field/update.c",
     "games/tbs/src/field/vertices.c",
+    "games/tla/src/window/cell_picture.c",
     "games/tla/src/graphics/tile/cell_picture.c",
 ];
 
