@@ -3084,7 +3084,7 @@ pub fn result_key(result: u32) -> u32 {
     }
 }
 
-/// FIND_MESSAGE (field_scene.h): a row's result that shows a message as
+/// FIND_MESSAGE (scene_tables.h): a row's result that shows a message as
 /// something found.
 const FIND_MESSAGE: u32 = 0x0040_0000;
 
