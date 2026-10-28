@@ -671,7 +671,7 @@ impl<'a> Guide<'a> {
     /// The resource directory's rows drawn against the ROM, as
     /// `resource-directory.png`: the 8 MB cartridge a pixel to 8 bytes,
     /// 8 KB to a line, each row's data coloured by its kind (an overlay, a
-    /// map, a map's tiles or palette, the program's own tables, any other
+    /// map, a map's tiles or palette, the main image's own tables, any other
     /// picture or table) from the address the row holds to the next symbol
     /// after it; what no row points into is grey where the link placed
     /// something and black where it placed nothing. Read from the built ROM
@@ -688,7 +688,7 @@ impl<'a> Guide<'a> {
             ("OVERLAYS", 0xff_70_50),
             ("MAPS", 0x40_c8_70),
             ("MAP TILES AND PALETTES", 0x30_80_e0),
-            ("THE PROGRAM'S OWN TABLES", 0xf0_e0_40),
+            ("THE MAIN IMAGE'S OWN TABLES", 0xf0_e0_40),
             ("OTHER PICTURES AND TABLES", 0xc0_70_e0),
             ("UNUSED ROWS", 0),
         ];
@@ -721,7 +721,7 @@ impl<'a> Guide<'a> {
             // before the rest.
             let kind = p.symbols.iter().filter(|s| s.0 == place).map(|s| kind_of(&s.1)).min().unwrap_or(4);
             counts[kind] += 1;
-            // A table of the program is drawn whole, as the link placed its
+            // A table of the main image is drawn whole, as the link placed its
             // object; anything else up to the next name after it.
             let end = if kind == 3 { p.end() } else { p.symbols.iter().map(|s| s.0).filter(|&a| a > place).min().unwrap_or(p.end()).min(p.end()) };
             sizes[kind] += (end - place) as usize;
