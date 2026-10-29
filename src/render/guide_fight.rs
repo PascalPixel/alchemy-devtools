@@ -1,12 +1,14 @@
 //! Recordings for the battle pages, each the game alone as the player sees
 //! it: a battle's opening, the command menu, aiming, a round, a first
 //! strike, running away, the Gryphons' choices and Twin Beaks, a weapon's
-//! unleash, a miss and a critical hit, a sleeper woken, and a battle won
-//! and the field coming back. Each plays a battle from Camelot's battle test
-//! menu (guide_battle.rs's drive, or `render psynergy`'s record_watching)
-//! or a random encounter in Goma Cave; a roll is forced only by answering
-//! the random call that makes it, and weapons never unleash unless a
-//! recording is about the unleash, so an Attack reads as one.
+//! unleash, a miss and a critical hit, a sleeper woken, a battle won and the
+//! field coming back, the Fusion Dragon's storm, a critical hit with the
+//! whole party on the field, an item used and broken, an enemy running and
+//! a summon. Each plays a battle from Camelot's battle test menu
+//! (guide_battle.rs's drive, or `render psynergy`'s record_watching and
+//! record) or a random encounter in Goma Cave; a roll is forced only by
+//! answering the random call that makes it, and weapons never unleash unless
+//! a recording is about the unleash, so an Attack reads as one.
 
 use super::guide::Guide;
 use super::guide_battle::{Act, Drive};
@@ -621,6 +623,277 @@ impl<'a> Guide<'a> {
     }
 }
 
+/// gFormations rows: one or two Rat Soldiers, with up to two Rats and a
+/// Bat as Battle_Run rolls them, and the Fusion Dragon on the Venus
+/// Lighthouse aerie, whose battle opens in a storm (transition.c's
+/// TRANSITION_STORM_FORMATION).
+const RAT_SOLDIERS: u32 = 55;
+const FUSION_DRAGON: u32 = 347;
+/// enum BattleCommand: COMMAND_ATTACK, and COMMAND_ITEM, whose parameter is
+/// an inventory slot; the first enemy's place.
+const COMMAND_ATTACK: u16 = 0;
+const COMMAND_ITEM: u16 = 2;
+const PLACE_ENEMY: u16 = 0x180;
+/// The Healing Ring, which casts Cure and may break (ITEM_USE_MAY_BREAK),
+/// put in Mia's last inventory slot, which the debug parameter set leaves
+/// empty.
+const HEALING_RING: u16 = 0x109;
+const RING_SLOT: u16 = 14;
+/// struct Unit: its inventory and its HP.
+const UNIT_INVENTORY: u32 = 0xd8;
+const UNIT_HP: u32 = 0x38;
+/// The Rat Soldier's first two actions are Flee: rolls 0 to 63 of its even
+/// draw (ACTION_STRATEGY_EVEN).
+const ROLL_FLEE: u32 = 10;
+/// Frames between presses of A in `commanded_round`, long enough to read
+/// two lines of messages and to watch a unit leave.
+const READ_A: usize = 80;
+
+/// What `commanded_round` asks to answer: a random call, by the function
+/// that made it and the unit acting (empty before the first action), or an
+/// enemy's draw of its action, by the enemy's name.
+enum Asked<'n> {
+    Call { by: &'n str, actor: &'n str },
+    Choice(&'n str),
+}
+
+impl<'a> Guide<'a> {
+    /// One round of `encounter` with the four's commands given, (unit,
+    /// command, parameter, target, range) each: `prepare` is called as the
+    /// commands are given, and `answer` at each Battle_Random and Random16,
+    /// returning the number to answer with or None to let the call run.
+    /// Returns the frames and the frame and unit of each action dispatched.
+    #[allow(clippy::type_complexity)]
+    fn commanded_round(&self, encounter: u32, commands: &[(u16, u16, u16, u16, u16)], prepare: &mut dyn FnMut(&mut Gba), answer: &mut dyn FnMut(Asked) -> Option<u32>) -> Result<(Vec<Vec<u16>>, Vec<(usize, String)>), String> {
+        let given = self.sym("Battle_CollectPartyCommands")?;
+        let dispatch = self.sym("BattleStaging_DispatchAction")?;
+        let random = self.sym("Battle_Random")?;
+        let random16 = self.sym("Random16")?;
+        let choose = self.sym("BattleAI_ChooseAction")?;
+        let party = [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA];
+        let drive = self.party_drive(&party, encounter, BATTLE_START_SET, vec![given, dispatch, random, random16, choose])?;
+        let mut frames = Vec::new();
+        let mut starts = 0;
+        let mut acts: Vec<(usize, String)> = Vec::new();
+        // The enemy whose draw of an action the next Battle_Random is.
+        let mut choosing: Option<String> = None;
+        let mut failed = None;
+        let mut round_over: Option<usize> = None;
+        self.drive(&drive, &mut |gba, hook, f| {
+            match hook {
+                Some(h) if h == given => {
+                    starts += 1;
+                    if starts > 1 {
+                        // No commands given: the menu opens and waits.
+                        return Act::Keys(0);
+                    }
+                    prepare(gba);
+                    if let Err(e) = self.give_commands(gba, commands) {
+                        failed = Some(e);
+                    }
+                    return Act::Mash;
+                }
+                Some(h) if h == choose => {
+                    // Retry 1: the draw as the enemy acts.
+                    if gba.register(1) == 1 {
+                        let unit = gba.read16(gba.register(0) + RECORD_UNIT);
+                        choosing = Some(self.unit_name(gba, unit));
+                    }
+                    return Act::Mash;
+                }
+                Some(h) if h == random || h == random16 => {
+                    if h == random && self.quiet_weapon(gba) {
+                        return Act::Mash;
+                    }
+                    let by = self.function_at(gba.register(LR) & !1);
+                    let asked = match (h == random, choosing.take()) {
+                        (true, Some(name)) => answer(Asked::Choice(&name)),
+                        _ => answer(Asked::Call { by: &by, actor: acts.last().map_or("", |a| a.1.as_str()) }),
+                    };
+                    if let Some(a) = asked {
+                        gba.return_now(a);
+                    }
+                    return Act::Mash;
+                }
+                Some(_) => {
+                    let unit = gba.read16(gba.register(0) + RECORD_UNIT);
+                    acts.push((f, self.unit_name(gba, unit)));
+                    return Act::Mash;
+                }
+                None => {}
+            }
+            frames.push(gba.picture());
+            if starts > 1 {
+                let end = *round_over.get_or_insert(f + 30);
+                return if f >= end { Act::Stop } else { Act::Keys(0) };
+            }
+            // Once the round plays, A only every READ_A frames, so each
+            // message can be read before it goes.
+            if acts.is_empty() {
+                Act::Mash
+            } else {
+                Act::Keys(if f % READ_A < 4 { KEY_A } else { 0 })
+            }
+        })?;
+        if let Some(e) = failed {
+            return Err(e);
+        }
+        eprintln!("commanded round: {} frames, actions {acts:?}", frames.len());
+        Ok((frames, acts))
+    }
+
+    /// The frames from `before` frames before the first action `who` matches
+    /// to ten after the next action starts.
+    fn one_action(frames: &[Vec<u16>], acts: &[(usize, String)], before: usize, who: &dyn Fn(&str) -> bool) -> Result<Vec<Vec<u16>>, String> {
+        let at = acts.iter().position(|(_, name)| who(name)).ok_or("the unit never acted")?;
+        let start = acts[at].0.saturating_sub(before);
+        let end = acts.get(at + 1).map_or(frames.len(), |a| a.0 + 10).min(frames.len());
+        Ok(trimmed(&frames[start..end]))
+    }
+
+    /// Isaac attacks a Gryphon while the others defend, and his plan's rolls
+    /// (Battle_Random in BattleActionRun_Build) are answered 1 for the miss
+    /// and 0 for the critical hit: the field clears to the two, the camera
+    /// zooms in over the run up and the blow lands as the ring and spark
+    /// effect, as `battle/critical.gif`. Kept from his action to the next.
+    pub fn fight_critical(&mut self) -> Result<(), String> {
+        let commands = [
+            (u16::from(plan::ISAAC), COMMAND_ATTACK, 0, PLACE_ENEMY, 1),
+            (u16::from(plan::GARET), COMMAND_DEFEND, 0, PLACE_PARTY + 1, 1),
+            (u16::from(plan::IVAN), COMMAND_DEFEND, 0, PLACE_PARTY + 2, 1),
+            (u16::from(plan::MIA), COMMAND_DEFEND, 0, PLACE_PARTY + 3, 1),
+        ];
+        let answers = [1, 0];
+        let mut asked = 0;
+        let (frames, acts) = self.commanded_round(GRYPHONS, &commands, &mut |_| {}, &mut |call| match call {
+            Asked::Call { by: "BattleActionRun_Build", actor: "Isaac" } => {
+                asked += 1;
+                answers.get(asked - 1).copied()
+            }
+            _ => None,
+        })?;
+        if asked < answers.len() {
+            return Err(format!("Isaac's attack made {asked} rolls"));
+        }
+        let frames = Self::one_action(&frames, &acts, 10, &|name| name == "Isaac")?;
+        self.fight_gif("battle/critical.gif", &frames, "a critical hit")
+    }
+
+    /// Mia uses a Healing Ring on Garet, hurt to a third of his HP, while
+    /// the others defend against two Gryphons: the background dims while
+    /// Cure plays, and the ring's break roll (Battle_Random in
+    /// BattleStaging_RunItem, `& 7`) is answered 0, so it breaks, as
+    /// `battle/item.gif`. Kept from Mia's action to the next.
+    pub fn fight_item(&mut self) -> Result<(), String> {
+        let commands = [
+            (u16::from(plan::ISAAC), COMMAND_DEFEND, 0, PLACE_PARTY, 1),
+            (u16::from(plan::GARET), COMMAND_DEFEND, 0, PLACE_PARTY + 1, 1),
+            (u16::from(plan::IVAN), COMMAND_DEFEND, 0, PLACE_PARTY + 2, 1),
+            (u16::from(plan::MIA), COMMAND_ITEM, RING_SLOT, PLACE_PARTY + 1, 1),
+        ];
+        let mut broke = 0;
+        let (frames, acts) = self.commanded_round(
+            GRYPHONS,
+            &commands,
+            &mut |gba| {
+                if let (Ok(mia), Ok(garet)) = (self.unit_address(gba, plan::MIA.into()), self.unit_address(gba, plan::GARET.into())) {
+                    gba.write16(mia + UNIT_INVENTORY + 2 * u32::from(RING_SLOT), HEALING_RING);
+                    let hp = gba.read16(garet + UNIT_HP);
+                    gba.write16(garet + UNIT_HP, hp / 3);
+                }
+            },
+            &mut |asked| match asked {
+                Asked::Call { by: "BattleStaging_RunItem", .. } => {
+                    broke += 1;
+                    Some(0)
+                }
+                _ => None,
+            },
+        )?;
+        if broke == 0 {
+            return Err("the Healing Ring made no break roll".into());
+        }
+        let frames = Self::one_action(&frames, &acts, 10, &|name| name == "Mia")?;
+        self.fight_gif("battle/item.gif", &frames, "an item used and broken")
+    }
+
+    /// A Rat Soldier runs: the four defend, its draw of an action answered
+    /// with Flee and BattleStaging_RunFlee's roll (Random16, 7 in 10 away)
+    /// answered 0, so it gets away, as `battle/enemy-flees.gif`. Kept from a
+    /// moment before its action to the next.
+    pub fn fight_enemy_flees(&mut self) -> Result<(), String> {
+        let commands: Vec<(u16, u16, u16, u16, u16)> = [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA].iter().enumerate().map(|(i, &o)| (u16::from(o), COMMAND_DEFEND, 0, PLACE_PARTY + i as u16, 1)).collect();
+        let mut fled = 0;
+        let mut chosen = false;
+        let (frames, acts) = self.commanded_round(RAT_SOLDIERS, &commands, &mut |_| {}, &mut |asked| match asked {
+            Asked::Choice(name) if name.starts_with("Rat Soldier") && !chosen => {
+                chosen = true;
+                Some(ROLL_FLEE)
+            }
+            Asked::Call { by: "BattleStaging_RunFlee", .. } => {
+                fled += 1;
+                Some(0)
+            }
+            _ => None,
+        })?;
+        if fled == 0 {
+            return Err("no Rat Soldier ran".into());
+        }
+        let frames = Self::one_action(&frames, &acts, 70, &|name| name.starts_with("Rat Soldier"))?;
+        self.fight_gif("battle/enemy-flees.gif", &frames, "an enemy running away")
+    }
+
+    /// The battle against the Fusion Dragon from its first frame: the storm,
+    /// the enemies' shattering opening and the party fading in, kept until
+    /// the first menu has opened, as `battle/storm.gif`.
+    pub fn fight_storm(&mut self) -> Result<(), String> {
+        let menu = self.sym("Battle_BuildUnitActions")?;
+        let message = self.sym("BattleMessage_ShowAndWait")?;
+        let drive = self.party_drive(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], FUSION_DRAGON, BATTLE_START_SET, vec![menu, message])?;
+        let mut frames = Vec::new();
+        let mut opened: Option<usize> = None;
+        let mut messages = Vec::new();
+        self.drive(&drive, &mut |gba, hook, f| {
+            match hook {
+                Some(h) if h == menu => {
+                    opened.get_or_insert(f);
+                    return Act::Keys(0);
+                }
+                Some(_) => {
+                    messages.push(f);
+                    return Act::Keys(0);
+                }
+                None => {}
+            }
+            frames.push(gba.picture());
+            // `Fusion Dragon appeared!` is left a moment before A.
+            match (opened, messages.last()) {
+                (Some(o), _) if f > o + 50 => Act::Stop,
+                (None, Some(&m)) if f > m + 60 => Act::Mash,
+                (None, None) => Act::Mash,
+                _ => Act::Keys(0),
+            }
+        })?;
+        eprintln!("fight-storm: {} frames, messages at {messages:?}, menu at {opened:?}", frames.len());
+        self.fight_gif("battle/storm.gif", &trimmed(&frames), "the Fusion Dragon's storm")
+    }
+
+    /// Isaac summons Judgment at copies of Garet, Ivan and Mia through
+    /// BattleEffect_RunSummon: the side left alone fades, and the battle
+    /// wipes away to the summon's sky and back, recorded as `render
+    /// psynergy` records a cast, with ten seconds of the game on each side
+    /// of its black screens, as `battle_anim/summon.gif`.
+    pub fn fight_summon(&mut self) -> Result<(), String> {
+        let root = crate::compile::root();
+        let plan = Tables::read(root)?.plan()?;
+        let cast = plan.casts.into_iter().find(|c| c.ability.name == "Judgment").ok_or("no Judgment cast")?;
+        let symbols = super::battle::Symbols::find(self.map)?;
+        let recording = super::battle::record(self.rom, &symbols, &cast, &super::battle::Scene::Game, false)?;
+        eprintln!("fight-summon: {} frames", recording.frames.len());
+        self.fight_gif("battle_anim/summon.gif", &recording.frames, "a summon")
+    }
+}
+
 /// The modes this file plays.
 pub const MODES: &[&str] = &[
     "fight-opening",
@@ -638,6 +911,11 @@ pub const MODES: &[&str] = &[
     "fight-won",
     "fight-bone-charge",
     "fight-ally-search",
+    "fight-storm",
+    "fight-critical",
+    "fight-item",
+    "fight-enemy-flees",
+    "fight-summon",
 ];
 
 impl Guide<'_> {
@@ -659,6 +937,11 @@ impl Guide<'_> {
             "fight-won" => self.fight_won(),
             "fight-bone-charge" => self.fight_bone_charge(),
             "fight-ally-search" => self.fight_ally_search(),
+            "fight-storm" => self.fight_storm(),
+            "fight-critical" => self.fight_critical(),
+            "fight-item" => self.fight_item(),
+            "fight-enemy-flees" => self.fight_enemy_flees(),
+            "fight-summon" => self.fight_summon(),
             _ => return None,
         })
     }
