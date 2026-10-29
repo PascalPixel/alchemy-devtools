@@ -64,6 +64,7 @@ impl<'a> Guide<'a> {
         match name {
             "overworld-lucky-dice" => self.lucky_dice(),
             "overworld-lucky-wheels" => self.lucky_wheels(),
+            _ if super::guide_scene_map::MODES.contains(&name) => self.run_scene_map(name),
             _ => self.run_interface(name),
         }
     }
