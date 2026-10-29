@@ -50,7 +50,7 @@ impl<'a> Guide<'a> {
             "venus-lighthouse-aerie-beam-whole" => self.venus_beam_whole(),
             "venus-lighthouse-aerie-eruption-whole" => self.venus_eruption_whole(),
             "venus-lighthouse-aerie-story-dollhouse" => self.venus_story_dollhouse(),
-            _ => Err(format!("no mode {name}")),
+            _ => self.run_field_moves(name),
         }
     }
 
