@@ -34,6 +34,8 @@ mod guide_cells;
 #[cfg(feature = "render")]
 mod guide_docs_world;
 #[cfg(feature = "render")]
+mod guide_field_moves;
+#[cfg(feature = "render")]
 mod guide_effect;
 #[cfg(feature = "render")]
 mod guide_fight;
@@ -1277,6 +1279,10 @@ FOLDER/NAME.gif under DIR, the guide it opens a section of:
   layout-psynergy-stone (layout/), map-colosso-race, map-venus-star-thrown
   (map/, guide_docs_world.rs); overworld-battle-return also
   writes field/battle-swing.gif
+More recordings for the field guide and the Field page, each as FOLDER/NAME.gif
+under DIR (guide_field_moves.rs): field-push-pillar, field-climb,
+  field-villager, field-stairs, field-palette-fade, field-cloak (field/),
+  layout-sand-damage (layout/)
 Venus Lighthouse's beam seen whole, the aerie's map and the sky in every
 frame, as places/venus-lighthouse-aerie/NAME.gif (guide_beam.rs):
   venus-lighthouse-aerie-beam-whole, venus-lighthouse-aerie-eruption-whole

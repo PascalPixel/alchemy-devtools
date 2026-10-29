@@ -692,6 +692,11 @@ impl<'rom> Field<'rom> {
         self.eval(self.s.unit_get, [u32::from(owner), 0, 0, 0])
     }
 
+    /// The address of gMainRoutineWork, struct MainRoutineWork.
+    pub fn main_routine_work(&self) -> u32 {
+        self.s.game_state
+    }
+
     /// The scene's struct FieldWork (gFieldWork).
     pub fn field_work(&self) -> u32 {
         self.gba.read32(self.s.field_work)

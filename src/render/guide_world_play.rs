@@ -39,6 +39,13 @@ pub const MODES: &[&str] = &[
     "venus-lighthouse-aerie-beam-whole",
     "venus-lighthouse-aerie-eruption-whole",
     "venus-lighthouse-aerie-story-dollhouse",
+    "field-push-pillar",
+    "field-climb",
+    "field-villager",
+    "field-stairs",
+    "layout-sand-damage",
+    "field-palette-fade",
+    "field-cloak",
 ];
 
 impl<'a> Guide<'a> {
