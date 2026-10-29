@@ -56,6 +56,8 @@ const ROLL_TWIN_BEAKS: u32 = 120;
 const ONE_SKELETON: u32 = 35;
 const ONE_FIGHTER_BEE: u32 = 47;
 const ROLL_BONE_CHARGE: u32 = 170;
+/// The Skeleton's first five actions are Attack, rolls 0 to 159.
+const ROLL_SKELETON_ATTACK: u32 = 10;
 const ROLL_ALLY_SEARCH: u32 = 80;
 /// Frames a recording keeps once the screen has stopped changing, and the
 /// pixels that may still change (the prompt arrow) in a still screen.
@@ -519,6 +521,17 @@ impl<'a> Guide<'a> {
         self.fight_gif("battle_anim/bone-charge.gif", &trimmed(&frames[first.saturating_sub(10)..]), "a Skeleton's Bone Charge")
     }
 
+    /// One Skeleton from the battle's first picture to the end of its
+    /// Attack, the party defending, as `graphics/monster.gif`: its
+    /// pictures in `monster/skeleton.png` stand it at six angles and strike
+    /// at six, and the battle shows the one for the camera's angle as the
+    /// camera swings in and round, and a striking one as it attacks.
+    pub fn graphics_monster(&mut self) -> Result<(), String> {
+        let (frames, turns) = self.enemy_round(ONE_SKELETON, &[ROLL_SKELETON_ATTACK], false)?;
+        turns.first().ok_or("the Skeleton never acted")?;
+        self.fight_gif("graphics/monster.gif", &trimmed(&frames), "a Skeleton's pictures as the camera swings and it attacks")
+    }
+
     /// A Fighter Bee's Ally Search, its roll landing: a second Fighter Bee
     /// joins, as `battle/ally-search.gif`; the screen hardly changes while
     /// the bee looks, so the turn is kept whole rather than trimmed.
@@ -638,6 +651,7 @@ pub const MODES: &[&str] = &[
     "fight-won",
     "fight-bone-charge",
     "fight-ally-search",
+    "graphics-monster",
 ];
 
 impl Guide<'_> {
@@ -659,6 +673,7 @@ impl Guide<'_> {
             "fight-won" => self.fight_won(),
             "fight-bone-charge" => self.fight_bone_charge(),
             "fight-ally-search" => self.fight_ally_search(),
+            "graphics-monster" => self.graphics_monster(),
             _ => return None,
         })
     }
