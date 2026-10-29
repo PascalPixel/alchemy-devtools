@@ -3,8 +3,9 @@
 //! strike, running away, the Gryphons' choices and Twin Beaks, a weapon's
 //! unleash, a miss and a critical hit, a sleeper woken, a battle won and the
 //! field coming back, the Fusion Dragon's storm, a critical hit with the
-//! whole party on the field, an item used and broken, an enemy running and
-//! a summon. Each plays a battle from Camelot's battle test menu
+//! whole party on the field, an item used and broken, an enemy running, a
+//! summon, an action's end and a turn's end, a level gained in the spoils,
+//! and a battle lost. Each plays a battle from Camelot's battle test menu
 //! (guide_battle.rs's drive, or `render psynergy`'s record_watching and
 //! record) or a random encounter in Goma Cave; a roll is forced only by
 //! answering the random call that makes it, and weapons never unleash unless
@@ -12,6 +13,8 @@
 
 use super::guide::Guide;
 use super::guide_battle::{Act, Drive};
+use super::animation::is_black_bgr555;
+use super::field::CLEARED;
 use super::mgba::{Gba, LR, WIDTH};
 use super::plan::{self, Tables};
 
@@ -894,6 +897,367 @@ impl<'a> Guide<'a> {
     }
 }
 
+/// struct Unit (battle/battle_unit.h): its size and the fields the ends of
+/// an action, a turn and a battle read.
+const UNIT_SIZE: u32 = 0x14c;
+const UNIT_LEVEL: u32 = 0x0f;
+const UNIT_BASE_HP: u32 = 0x10;
+const UNIT_HP_GAUGE: u32 = 0x14;
+const UNIT_MAX_HP: u32 = 0x34;
+const UNIT_DJINN_SET: u32 = 0x108;
+const UNIT_DJINN_SET_COUNTS: u32 = 0x11c;
+const UNIT_EXPERIENCE: u32 = 0x124;
+const UNIT_SIDE: u32 = 0x12a;
+const UNIT_POISON: u32 = 0x131;
+const UNIT_DELUSION: u32 = 0x138;
+const UNIT_GRIM_REAPER: u32 = 0x141;
+/// Unit.hpGauge full (UNIT_GAUGE_FULL), and BATTLE_SIDE_ENEMY.
+const GAUGE_FULL: u16 = 0x4000;
+const SIDE_ENEMY: u8 = 1;
+/// The enemy units a battle has.
+const ENEMY_UNITS: u16 = 6;
+/// HP that no blow of these recordings takes, so the enemies outlast them.
+const LASTING_HP: u16 = 999;
+/// POISON_NORMAL, and a counter with one turn left.
+const POISON_NORMAL: u8 = 1;
+const LAST_TURN: u8 = 1;
+/// enum BattleCommand, and the first enemy's place.
+const COMMAND_SUMMON: u16 = 6;
+/// gCharacter_LevelExpTable: 99 levels a character.
+const LEVELS: u32 = 99;
+/// The levels at which the Squire learns Psynergy (gClass_DefinitionTable).
+const SQUIRE_LEARNS: [u8; 9] = [2, 4, 6, 10, 13, 14, 20, 26, 42];
+/// Frames between presses of A while the spoils are handed out, so each
+/// message can be read.
+const SPOILS_A: usize = 60;
+
+/// What a battle of `summon_turns` showed: every frame, the frames each
+/// action ended (with its unit), each turn ended and each action was
+/// dispatched, and the frame the menu came back after the last turn.
+struct Ends {
+    frames: Vec<Vec<u16>>,
+    action_ends: Vec<(usize, u8)>,
+    turn_ends: Vec<usize>,
+    dispatches: Vec<usize>,
+    over: usize,
+}
+
+impl<'a> Guide<'a> {
+    /// A message's number, from the edition's ELF (messages are absolute
+    /// symbols the linker map leaves out).
+    fn message_number(&self, name: &str) -> Result<u32, String> {
+        let path = crate::compile::root().join("out/tbs-en/tbs-en.elf");
+        let data = std::fs::read(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+        let elf = crate::elf::Elf::parse(&data)?;
+        elf.symbols.iter().find(|s| s.name == name).map(|s| s.value).ok_or_else(|| format!("the ELF has no {name}"))
+    }
+
+    /// Isaac and Garet at level 35 against two Gryphons that cannot fall
+    /// and do nothing, for `turns` turns: in the first Isaac summons Venus
+    /// with a Venus Djinni put on standby before the battle (taken off his
+    /// set as DjinnRecovery_Reconcile lists it) while Garet defends, and in
+    /// each later turn both defend. `prepare` is called at the start of each
+    /// turn, numbered from 1, before the commands are given.
+    fn summon_turns(&self, turns: usize, prepare: &dyn Fn(&Self, &mut Gba, usize) -> Result<(), String>) -> Result<Ends, String> {
+        let root = crate::compile::root();
+        let plan = Tables::read(root)?.plan()?;
+        let venus = plan.casts.into_iter().find(|c| c.ability.name == "Venus" && matches!(c.command, plan::Command::Summon { .. })).ok_or("no Venus summon")?;
+        let plan::Command::Summon { row, element, count } = venus.command else {
+            return Err("Venus is no summon".into());
+        };
+        let reconcile = self.sym("DjinnRecovery_Reconcile")?;
+        let commands = self.sym("Battle_CollectPartyCommands")?;
+        let opponents = self.sym("Battle_BuildOpponentActions")?;
+        let action_end = self.sym("BattleUnit_ProcessActionEnd")?;
+        let turn_end = self.sym("Battle_ProcessTurnEnd")?;
+        let dispatch = self.sym("BattleStaging_DispatchAction")?;
+        let random = self.sym("Battle_Random")?;
+        let drive = self.party_drive(&[plan::ISAAC, plan::GARET], GRYPHONS, BATTLE_START_SET, vec![reconcile, commands, opponents, action_end, turn_end, dispatch, random])?;
+        let mut ends = Ends { frames: Vec::new(), action_ends: Vec::new(), turn_ends: Vec::new(), dispatches: Vec::new(), over: 0 };
+        let mut turn = 0;
+        let mut over: Option<usize> = None;
+        let mut failed: Option<String> = None;
+        let mut on_standby = 0;
+        self.drive(&drive, &mut |gba, hook, f| {
+            match hook {
+                Some(h) if h == random => {
+                    self.quiet_weapon(gba);
+                    return Act::Mash;
+                }
+                Some(h) if h == reconcile => {
+                    let Ok(isaac) = self.unit_address(gba, u16::from(plan::ISAAC)) else { return Act::Mash };
+                    let set = isaac + UNIT_DJINN_SET + 4 * u32::from(element);
+                    for index in 0..32 {
+                        let bits = gba.read32(set);
+                        if on_standby < count && bits & 1 << index != 0 {
+                            gba.write32(set, bits & !(1 << index));
+                            let counted = isaac + UNIT_DJINN_SET_COUNTS + u32::from(element);
+                            gba.write8(counted, gba.read8(counted).saturating_sub(1));
+                            on_standby += 1;
+                        }
+                    }
+                    return Act::Mash;
+                }
+                Some(h) if h == commands => {
+                    turn += 1;
+                    if turn > turns {
+                        // The menu opens and waits.
+                        over.get_or_insert(f);
+                        return Act::Keys(0);
+                    }
+                    let result = (|| {
+                        if turn == 1 {
+                            for i in 0..ENEMY_UNITS {
+                                let enemy = self.unit_address(gba, FIRST_ENEMY_UNIT + i)?;
+                                if gba.read8(enemy + UNIT_SIDE) == SIDE_ENEMY {
+                                    for field in [UNIT_BASE_HP, UNIT_MAX_HP, UNIT_HP] {
+                                        gba.write16(enemy + field, LASTING_HP);
+                                    }
+                                    gba.write16(enemy + UNIT_HP_GAUGE, GAUGE_FULL);
+                                }
+                            }
+                        }
+                        prepare(self, gba, turn)?;
+                        let isaac = if turn == 1 {
+                            (u16::from(plan::ISAAC), COMMAND_SUMMON, u16::from(row), PLACE_ENEMY, u16::from(venus.ability.range))
+                        } else {
+                            (u16::from(plan::ISAAC), COMMAND_DEFEND, 0, PLACE_PARTY, 1)
+                        };
+                        self.give_commands(gba, &[isaac, (u16::from(plan::GARET), COMMAND_DEFEND, 0, PLACE_PARTY + 1, 1)])
+                    })();
+                    if let Err(e) = result {
+                        failed = Some(e);
+                    }
+                    return Act::Mash;
+                }
+                Some(h) if h == opponents => {
+                    gba.return_now(0);
+                    return Act::Mash;
+                }
+                Some(h) if h == action_end => {
+                    ends.action_ends.push((f, gba.read8(gba.register(0))));
+                    return Act::Mash;
+                }
+                Some(h) if h == turn_end => {
+                    ends.turn_ends.push(f);
+                    return Act::Mash;
+                }
+                Some(_) => {
+                    ends.dispatches.push(f);
+                    return Act::Mash;
+                }
+                None => {}
+            }
+            ends.frames.push(gba.picture());
+            if over.is_some_and(|o| f > o + STILL_KEPT) || failed.is_some() {
+                return Act::Stop;
+            }
+            // The menu after the last turn is left alone; while the actions
+            // play, A only every SLOW_A frames, so each message can be read.
+            if over.is_some() {
+                Act::Keys(0)
+            } else if ends.dispatches.is_empty() {
+                Act::Mash
+            } else {
+                Act::Keys(if f % SLOW_A < 4 { KEY_A } else { 0 })
+            }
+        })?;
+        if let Some(e) = failed {
+            return Err(e);
+        }
+        if on_standby < count {
+            return Err(format!("Isaac had {on_standby} of the {count} Venus Djinn the summon needs set"));
+        }
+        ends.over = over.ok_or("the battle never came back to the menu")?;
+        eprintln!("summon turns: {} frames, actions ended at {:?}, turns ended at {:?}, dispatches at {:?}, menu back at {}", ends.frames.len(), ends.action_ends, ends.turn_ends, ends.dispatches, ends.over);
+        Ok(ends)
+    }
+
+    /// Isaac, poisoned and with the Grim Reaper's countdown at its last
+    /// turn, summons Venus: as his action ends `Isaac's Earth Power rises
+    /// by <n>!` over a pillar of earth, the poison bites, and the Grim Reaper
+    /// calls him, as `battle/action-end.gif`.
+    pub fn fight_action_end(&mut self) -> Result<(), String> {
+        let ends = self.summon_turns(1, &|guide, gba, turn| {
+            if turn == 1 {
+                let isaac = guide.unit_address(gba, u16::from(plan::ISAAC))?;
+                gba.write8(isaac + UNIT_POISON, POISON_NORMAL);
+                gba.write8(isaac + UNIT_GRIM_REAPER, LAST_TURN);
+            }
+            Ok(())
+        })?;
+        let (end, _) = *ends.action_ends.iter().find(|&&(_, unit)| unit == plan::ISAAC).ok_or("Isaac's action never ended")?;
+        let next = ends.dispatches.iter().chain(&ends.turn_ends).copied().filter(|&d| d > end).min().unwrap_or(ends.frames.len());
+        let from = end.saturating_sub(ACTION_END_BEFORE);
+        let to = (next + 10).min(ends.frames.len());
+        self.fight_gif("battle/action-end.gif", &ends.frames[from..to], "an action's end")
+    }
+
+    /// Isaac summons Venus and both defend for a turn; in the next Isaac,
+    /// deluded with one turn left, defends again: as that turn ends the
+    /// Venus Djinni is set to him again and he sees clearly, as
+    /// `battle/turn-end.gif`.
+    pub fn fight_turn_end(&mut self) -> Result<(), String> {
+        let ends = self.summon_turns(2, &|guide, gba, turn| {
+            if turn == 2 {
+                let isaac = guide.unit_address(gba, u16::from(plan::ISAAC))?;
+                gba.write8(isaac + UNIT_DELUSION, LAST_TURN);
+            }
+            Ok(())
+        })?;
+        let end = *ends.turn_ends.get(1).ok_or("the second turn never ended")?;
+        let from = end.saturating_sub(TURN_END_BEFORE);
+        let to = (ends.over + MENU_KEPT).min(ends.frames.len());
+        self.fight_gif("battle/turn-end.gif", &ends.frames[from..to], "a turn's end")
+    }
+}
+
+/// Frames kept before an action's end and a turn's end.
+const ACTION_END_BEFORE: usize = 90;
+const TURN_END_BEFORE: usize = 60;
+/// Frames kept of the command menu that opens after a turn.
+const MENU_KEPT: usize = 30;
+
+impl<'a> Guide<'a> {
+    /// Goma Cave's random battle with Isaac's experience one point short of
+    /// the next level at which his class learns Psynergy: the battle played
+    /// to its end with A pressed, kept from just before the experience is
+    /// handed out to a moment after the coins, as `game/level-up.gif`.
+    pub fn fight_level_up(&mut self) -> Result<(), String> {
+        let gained = self.message_number("MsgExpGained")?;
+        let coins = self.message_number("MsgCoinsGained")?;
+        let table = self.sym("gCharacter_LevelExpTable")?;
+        let (place, stretch) = self.goma_cave_stretch()?;
+        let mut entered = self.enter_goma_cave(place)?;
+        let field = &mut entered.field;
+        let isaac = field.unit(plan::ISAAC)?;
+        let level = field.read8(isaac + UNIT_LEVEL);
+        let next = *SQUIRE_LEARNS.iter().find(|&&l| l > level).ok_or("Isaac learns nothing more")?;
+        let at = (table - 0x0800_0000 + 4 * (u32::from(plan::ISAAC) * LEVELS + u32::from(next) - 1)) as usize;
+        let needed = u32::from_le_bytes(self.rom[at..at + 4].try_into().map_err(|_| "the table is past the ROM")?);
+        eprintln!("fight-level-up: Isaac level {level}, raised to {} with {} experience", next - 1, needed - 1);
+        field.write8(isaac + UNIT_LEVEL, next - 1);
+        field.write32(isaac + UNIT_EXPERIENCE, needed - 1);
+        let mut frames = Vec::new();
+        Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        frames.clear();
+        let mut first: Option<usize> = None;
+        let mut last: Option<usize> = None;
+        for f in 0..20000usize {
+            let keys = match first {
+                None => (f / 4) % 2 == 1,
+                Some(_) => f % SPOILS_A < 4,
+            };
+            field.hold(if keys { KEY_A } else { 0 });
+            field.frames(1)?;
+            frames.push(field.picture());
+            if first.is_none() && field.last_message() == gained {
+                first = Some(frames.len());
+            }
+            if last.is_none() && field.last_message() == coins {
+                last = Some(frames.len());
+            }
+            if last.is_some_and(|l| frames.len() > l + SPOILS_A) {
+                break;
+            }
+        }
+        field.hold(0);
+        let (first, last) = (first.ok_or("no experience was handed out")?, last.ok_or("no coins were handed out")?);
+        eprintln!("fight-level-up: experience at {first}, coins at {last}");
+        self.fight_gif("game/level-up.gif", &frames[first.saturating_sub(SPOILS_BEFORE)..], "the spoils with a level gained")
+    }
+
+    /// Goma Cave's random battle with the party at 1 HP and the enemies
+    /// lasting: played with A pressed until `Isaac's party has been
+    /// defeated!`, then left alone through the fade to where the party
+    /// wakes, kept from CLEARED frames before the first black screen to
+    /// CLEARED after the last, as `battle/lost.gif`.
+    pub fn fight_lost(&mut self) -> Result<(), String> {
+        let defeated = self.message_number("MsgPartyDefeated")?;
+        let enemies = self.sym("gEnemyUnits")?;
+        let (place, stretch) = self.goma_cave_stretch()?;
+        let mut entered = self.enter_goma_cave(place)?;
+        let field = &mut entered.field;
+        // The restart point the story leaves on the way to Goma Cave: Vault
+        // sets it to its Sanctum as the party enters (gScene_RestartRules).
+        let work = self.sym("gMainRoutineWork")?;
+        field.write16(work + STATE_RESTART_SCENE, super::source::map_id("Sanctum")?);
+        field.write16(work + STATE_RESTART_ENTRANCE, VAULT_SANCTUM_ENTRANCE);
+        for owner in [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA] {
+            let unit = field.unit(owner)?;
+            let max = u32::from(field.read16(unit + UNIT_MAX_HP)).max(1);
+            field.write16(unit + UNIT_HP, 1);
+            // Unit_Calculate keeps the share of HP the gauge holds.
+            field.write16(unit + UNIT_HP_GAUGE, (u32::from(GAUGE_FULL) / max).max(1) as u16);
+        }
+        let mut frames = Vec::new();
+        Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        let battle = field.scene();
+        frames.clear();
+        let mut lasting = [false; ENEMY_UNITS as usize];
+        let mut lost: Option<usize> = None;
+        let mut back: Option<usize> = None;
+        for f in 0..30000usize {
+            // The enemies last once the battle has set them up.
+            if f > ENEMIES_SET && lost.is_none() {
+                let base = field.read32(enemies);
+                for (i, done) in lasting.iter_mut().enumerate() {
+                    let unit = base + i as u32 * UNIT_SIZE;
+                    if !*done && field.read8(unit + UNIT_SIDE) == SIDE_ENEMY && field.read16(unit + UNIT_HP) != 0 {
+                        for at in [UNIT_BASE_HP, UNIT_MAX_HP, UNIT_HP] {
+                            field.write16(unit + at, LASTING_HP);
+                        }
+                        field.write16(unit + UNIT_HP_GAUGE, GAUGE_FULL);
+                        *done = true;
+                    }
+                }
+            }
+            // A until the field is back, the defeat message left a moment
+            // first so it can be read.
+            let reading = lost.is_some_and(|l| frames.len() < l + DEFEAT_SHOWN);
+            field.hold(if back.is_none() && !reading && (f / 4) % 2 == 1 { KEY_A } else { 0 });
+            field.frames(1)?;
+            frames.push(field.picture());
+            if lost.is_none() && field.last_message() == defeated {
+                lost = Some(frames.len());
+            }
+            if back.is_none() && lost.is_some() && field.scene() != battle {
+                back = Some(frames.len());
+            }
+            if let (Some(l), Some(b)) = (lost, back) {
+                // CLEARED frames past the last black screen since the
+                // defeat, once the field has been back long enough to fade in.
+                let since = frames[l..].iter().rposition(|p| is_black_bgr555(p)).map(|k| frames.len() - 1 - (k + l));
+                if since.is_some_and(|s| s >= CLEARED + 10) || frames.len() > b + FIELD_KEPT {
+                    break;
+                }
+            }
+        }
+        field.hold(0);
+        let lost = lost.ok_or("the party was never defeated")?;
+        let back = back.ok_or("the party never left the battle")?;
+        let black = frames[lost..].iter().position(|p| is_black_bgr555(p)).map(|b| b + lost).ok_or("the battle never faded")?;
+        let from = black.saturating_sub(CLEARED + 10);
+        eprintln!("fight-lost: {} frames, defeated at {lost}, first black at {black}, scene {} at {back}", frames.len(), field.scene());
+        self.fight_gif("battle/lost.gif", &frames[from..], "a battle lost and where the party wakes")
+    }
+}
+
+/// Frames kept before the experience message, which show the battle's
+/// last moments and the win.
+const SPOILS_BEFORE: usize = 150;
+/// Frames into a battle by which its enemy units are set up.
+const ENEMIES_SET: usize = 60;
+/// Frames a defeat is followed past the battle at most.
+const FIELD_KEPT: usize = 3000;
+/// Frames the defeat message is left on screen before A.
+const DEFEAT_SHOWN: usize = 150;
+/// struct MainRoutineWork: the restart point (main_routine_work.h).
+const STATE_RESTART_SCENE: u32 = 0x1c4;
+const STATE_RESTART_ENTRANCE: u32 = 0x1c6;
+/// The Sanctum's entrance Vault's restart rules name.
+const VAULT_SANCTUM_ENTRANCE: u16 = 12;
+
 /// The modes this file plays.
 pub const MODES: &[&str] = &[
     "fight-opening",
@@ -916,6 +1280,10 @@ pub const MODES: &[&str] = &[
     "fight-item",
     "fight-enemy-flees",
     "fight-summon",
+    "fight-action-end",
+    "fight-turn-end",
+    "fight-level-up",
+    "fight-lost",
 ];
 
 impl Guide<'_> {
@@ -942,6 +1310,10 @@ impl Guide<'_> {
             "fight-item" => self.fight_item(),
             "fight-enemy-flees" => self.fight_enemy_flees(),
             "fight-summon" => self.fight_summon(),
+            "fight-action-end" => self.fight_action_end(),
+            "fight-turn-end" => self.fight_turn_end(),
+            "fight-level-up" => self.fight_level_up(),
+            "fight-lost" => self.fight_lost(),
             _ => return None,
         })
     }

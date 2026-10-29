@@ -1240,7 +1240,8 @@ into battle/ or battle_anim/ under DIR:
   fight-first-strike, fight-flee, fight-gryphons, fight-twin-beaks,
   fight-unleash, fight-rolls, fight-wake, fight-won, fight-bone-charge,
   fight-ally-search, fight-storm, fight-critical, fight-item,
-  fight-enemy-flees, fight-summon
+  fight-enemy-flees, fight-summon, fight-action-end, fight-turn-end,
+  fight-level-up (into game/), fight-lost
 Take-apart pictures for the menu guide (guide_menu.rs), in Xian:
   psynergy-steps    psynergy-steps.png: Cure used on Garet, a panel for each
                     step of the Psynergy screen
