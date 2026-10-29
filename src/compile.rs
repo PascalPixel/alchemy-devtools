@@ -128,10 +128,11 @@ pub fn family_for_source(_target: CompilerTarget, source: &str) -> CompilerFamil
     }
 }
 
-const INCLUDE_MODULES: [&str; 8] = ["battle", "field", "game", "graphics", "lib", "menu", "sound", "system"];
-
 /// The game's include folders, and a branch's recon/<game>/include where
-/// headers only drafts read have moved.
+/// headers only drafts read have moved: the folder and each folder inside it
+/// but `module`, whose headers are included by their path, as the Makefile's
+/// INCLUDES lists them, read from the tree so a folder renamed there needs no
+/// change here.
 fn includes(target: CompilerTarget) -> Vec<String> {
     let mut flags = Vec::new();
     for base in ["games", "recon"] {
@@ -140,7 +141,15 @@ fn includes(target: CompilerTarget) -> Vec<String> {
             continue;
         }
         flags.push(format!("-I{}", folder.display()));
-        flags.extend(INCLUDE_MODULES.iter().map(|module| format!("-I{}", folder.join(module).display())));
+        let mut inner: Vec<PathBuf> = std::fs::read_dir(&folder)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|entry| entry.path())
+            .filter(|path| path.is_dir() && path.file_name().is_some_and(|name| name != "module"))
+            .collect();
+        inner.sort();
+        flags.extend(inner.iter().map(|path| format!("-I{}", path.display())));
     }
     flags
 }
