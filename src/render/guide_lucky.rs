@@ -64,7 +64,7 @@ impl<'a> Guide<'a> {
         match name {
             "overworld-lucky-dice" => self.lucky_dice(),
             "overworld-lucky-wheels" => self.lucky_wheels(),
-            _ => Err(format!("no mode {name}")),
+            _ => self.run_interface(name),
         }
     }
 
