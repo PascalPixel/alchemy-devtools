@@ -50,6 +50,8 @@ mod guide_planes;
 #[cfg(feature = "render")]
 mod guide_places;
 #[cfg(feature = "render")]
+mod guide_scene_map;
+#[cfg(feature = "render")]
 mod guide_take;
 #[cfg(feature = "render")]
 mod guide_window;
@@ -1294,6 +1296,18 @@ Recordings for the menu, window, shop and game guides, one GIF each
 Recordings of Tolbi's minigames, each as overworld/NAME.gif, reached by
 talking to the attendant (guide_lucky.rs):
   overworld-lucky-dice, overworld-lucky-wheels
+Recordings for the scene, map, debug and game guides, each as FOLDER/NAME
+under DIR (guide_scene_map.rs):
+  scene-exit-region (scene/exit-region.gif: up Kolima's tunnel's ladder),
+  scene-log-state (scene/log-state.gif: Kolima Forest's log in the river
+  after a battle and back on the bank after the party leaves),
+  map-recolour (map/recolour.png: two floors of Crossbone Isle, one
+  tileset in two palettes), debug-menu-test-twice
+  (debug/menu-test-twice.gif: the Masamune bought out and back on sale),
+  game-djinni-flag (game/djinni-flag.gif: Granite joining, and gone on the
+  next visit), game-pack-full (game/pack-full.gif: a chest's item going to
+  Garet); and in guide_fight.rs graphics-monster (graphics/monster.gif: a
+  Skeleton's pictures as the camera swings and it attacks)
 --only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
 modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),
@@ -1355,7 +1369,7 @@ fn play_guide(
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     // The work in pieces: each mode, and field-psynergy's casts one by one.
     let mut units: Vec<String> = Vec::new();
-    for &name in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).filter(|&&name| wanted(name)) {
+    for &name in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_scene_map::MODES).filter(|&&name| wanted(name)) {
         if name == "field-psynergy" {
             let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
             units.extend(guide::field_cast_names()?.into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
@@ -1389,7 +1403,7 @@ fn play_guide(
             }
         }
         // Failures in the order the modes play.
-        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).position(|m| m == name));
+        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_scene_map::MODES).position(|m| m == name));
         failed.dedup();
     } else {
         let build = root.join("out").join(edition);
@@ -1421,7 +1435,7 @@ fn play_guide(
                 Ok(records)
             });
         }
-        for &name in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES) {
+        for &name in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_scene_map::MODES) {
             if wanted(name) {
                 if let Err(e) = guide.run(name, casts) {
                     eprintln!("{name}: {e}");
@@ -1456,7 +1470,7 @@ mod tests {
     #[test]
     fn every_guide_mode_is_in_the_usage() {
         let words: Vec<&str> = GUIDE_USAGE.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-')).collect();
-        for &mode in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES) {
+        for &mode in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_scene_map::MODES) {
             assert!(words.contains(&mode), "{mode} is not in GUIDE_USAGE");
         }
         assert!(guide::MODES.contains(&"shop-layers-3d"));
