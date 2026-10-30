@@ -874,6 +874,35 @@ impl Context<'_> {
         let mut out = Vec::new();
         let mut error = None;
         let mut absent = None;
+        // A direct start, a message row shown directly or a cast anywhere
+        // stands nowhere in particular: the first entrance of each room of a
+        // scene (for a direct start, one whose overlay holds the function).
+        if let Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..) = trigger {
+            for scene in scenes.iter().filter(|s| is_place(s).is_ok()) {
+                let holds = match trigger {
+                    Trigger::Direct(address) => self.own(event, scene.number).contains(&result_key(address)),
+                    _ => true,
+                };
+                if !holds {
+                    continue;
+                }
+                let first = match self.scanned(scans, scene.number, 0, set, clear) {
+                    Ok(scan) => scan,
+                    Err(e) => {
+                        error.get_or_insert_with(|| format!("{}: {e}", scene.name()));
+                        continue;
+                    }
+                };
+                let mut rooms: Vec<Entrance> = Vec::new();
+                for e in first.entrances.iter().filter(|e| e.number >= 0 && !stands_in(e, &first.entrances)) {
+                    if !rooms.iter().any(|r| r.camera == e.camera) && rooms.len() < MAX_ENTRANCES {
+                        rooms.push(*e);
+                    }
+                }
+                out.extend(rooms.into_iter().map(|e| (scene.number, e)));
+            }
+            return if out.is_empty() { Err(Failure::new(error.unwrap_or_else(|| "no scene of its overlay holds its function".to_string()))) } else { Ok(out) };
+        }
         // Where the trigger stands in a scan: the actor, or the cells with
         // its code (the ground layer's for a search).
         let at = |scan: &Scan| -> Vec<(i32, i32)> {
@@ -884,6 +913,7 @@ impl Context<'_> {
                 // A world map place is an actor the leader walks into.
                 Trigger::Touch(c) if scan.size == 32 && c >= 100 && !scan.cells.contains_key(&c) => scan.actors.get(&(c - 100)).copied().into_iter().collect(),
                 Trigger::Touch(c) => scan.cells.get(&c).map_or_else(Vec::new, |v| v.iter().map(centre).collect()),
+                Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..) => Vec::new(),
             }
         };
         // Whether the event table a scan's entrance gives answers the
@@ -896,6 +926,8 @@ impl Context<'_> {
                 Trigger::Touch(c) => row(TRIGGER_STEP, c) || (own.is_empty() && row(TRIGGER_EXIT, c)),
                 Trigger::Psynergy(..) if own.is_empty() => scan.triggers.iter().any(|t| t.0 == TRIGGER_PSYNERGY),
                 Trigger::Psynergy(_, a) => row(TRIGGER_PSYNERGY, a),
+                Trigger::Direct(_) | Trigger::Message(..) => false,
+                Trigger::Cast(_) => scan.triggers.iter().any(|t| t.0 == TRIGGER_PSYNERGY),
             }
         };
         for scene in scenes.iter().filter(|s| is_place(s).is_ok()) {
@@ -969,6 +1001,8 @@ impl Context<'_> {
                 Trigger::Touch(c) => format!("no entrance of {names} leads to a room with a cell with code {c} that its events answer"),
                 Trigger::Talk(a) => format!("no entrance of {names} leads to a room with actor {a} that its events talk to"),
                 Trigger::Psynergy(_, a) => format!("no entrance of {names} leads to a room with actor {a} and a Psynergy event"),
+                Trigger::Direct(_) | Trigger::Message(..) => format!("no entrance of {names} holds its function"),
+                Trigger::Cast(_) => format!("no entrance of {names} answers a cast anywhere"),
             };
             return Err(Failure::new(error.unwrap_or(missing)));
         }
@@ -1248,7 +1282,83 @@ impl Context<'_> {
                 failure.reason
             };
         }
+        // No trigger the renderer gives reaches it: its own function, started
+        // as its row's dispatch would start it, from where the scene's
+        // arrival leaves the party.
+        if within.is_none() {
+            match self.play_direct(event, scenes, job, record) {
+                Ok(played) => return Ok(played),
+                Err(e) => failure.reason = format!("{}; started directly, {e}", failure.reason),
+            }
+        }
         Err(failure)
+    }
+
+    /// Plays an event by starting its function directly (Trigger::Direct),
+    /// or a message row by showing its message as its row's dispatch would
+    /// (Trigger::Message), with the flags its first row needs, at each room
+    /// of each scene whose overlay holds the function.
+    fn play_direct(&self, event: &Event, scenes: &[&Scene], job: &mut Job, record: Option<usize>) -> Result<Played, String> {
+        let first = scenes[0];
+        let function = scenes.iter().find_map(|s| self.functions.get(&s.number).and_then(|f| f.get(&event.name)).copied());
+        let trigger = match function {
+            Some(address) => Trigger::Direct(address),
+            None => {
+                // A message row: its message, beside the actor its trigger
+                // names (none for a search).
+                let message = scenes.iter().flat_map(|s| self.own(event, s.number)).find(|&r| r < 0x10000).ok_or("it has no function or message of its own")?;
+                let actor = match event.trigger() {
+                    Ok(Trigger::Talk(a) | Trigger::Psynergy(_, a)) => a,
+                    _ => u16::MAX,
+                };
+                Trigger::Message(message as u16, actor)
+            }
+        };
+        let (set, clear) = match event.alternatives.first() {
+            Some(alternative) => self.alternative_flags(alternative, first)?,
+            None => (Vec::new(), Vec::new()),
+        };
+        let places = self.places(scenes, trigger, event, &set, &clear, &mut job.scans).map_err(|f| f.reason)?;
+        let mut error = String::new();
+        for (scene, entrance) in places {
+            let mut set = set.clone();
+            if entrance.required_flag >= 0 && !set.contains(&(entrance.required_flag as u16)) {
+                set.push(entrance.required_flag as u16);
+                set.sort_unstable();
+            }
+            let setup = Setup { scene, entrance: entrance.number as u16, set, clear: clear.clone() };
+            match self.play_at(&setup, None, trigger, event, record, true) {
+                Ok(run) => return Ok(Played { setup, run }),
+                Err(e) => error = e,
+            }
+        }
+        // What it shows another event leaves (a path Reveal opened, for the
+        // event that hides it): started after each of the scene's other
+        // events, from where that event leaves the player.
+        let mut seen: Vec<&str> = Vec::new();
+        let others: Vec<&Event> = self
+            .events
+            .iter()
+            .filter(|e| {
+                let fresh = !seen.contains(&e.name.as_str());
+                seen.push(e.name.as_str());
+                fresh && e.scenes.contains(&first.number) && e.name != event.name && !is_message_row(&e.name) && e.trigger().is_ok()
+            })
+            .collect();
+        for other in others {
+            let key = (other.name.clone(), set.clone(), clear.clone());
+            if !job.ends.contains_key(&key) {
+                let end = self.play_event(other, scenes, job, None, Some((&set, &clear))).ok().and_then(|p| p.run.end.map(|end| (p.setup, end)));
+                job.ends.insert(key.clone(), end);
+            }
+            let Some((setup, end)) = &job.ends[&key] else {
+                continue;
+            };
+            if let Ok(run) = self.play_at(setup, Some(end), trigger, event, record, true) {
+                return Ok(Played { setup: setup.clone(), run });
+            }
+        }
+        Err(error)
     }
 
     /// Plays an event at one place, from each spot around its trigger until
@@ -1276,7 +1386,9 @@ impl Context<'_> {
         }
         let spots = field.spots(trigger)?;
         let mut error = String::new();
-        let silent = matches!(trigger, Trigger::Touch(_) | Trigger::Psynergy(MOVE, _));
+        // A direct start has no button press or step to show for it: it must
+        // show itself as a silent trigger must.
+        let silent = matches!(trigger, Trigger::Touch(_) | Trigger::Psynergy(MOVE, _) | Trigger::Direct(_) | Trigger::Cast(_));
         for spot in spots.iter().take(MAX_SPOTS) {
             let start = match after {
                 Some(saved) => Start::InControl(saved),

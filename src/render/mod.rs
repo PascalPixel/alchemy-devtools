@@ -473,7 +473,7 @@ FLAG_KOLIMA_CURSE_LIFTED is drawn cursed at the new game's state, in
 DIR/<scene>_cursed/, and cured at that moment, in DIR/<scene>_cured/.
 index.tsv's variant column gives each moment's name and flags.
 
-event: every talk, search, touch and Psynergy-on-actor event of the scenes
+event: every talk, search, touch and Psynergy event of the scenes
 (--event names some; rows of one name are one event), each played once,
 from just before its trigger until the player has control again, as
 DIR/<scene>/events/<event>.gif, with its first four pages that wait for
@@ -483,15 +483,27 @@ The leader stands where the player would to start it, on ground he could
 walk to from where he enters, in the room the camera shows: beside the
 actor, on its map layer and level with it, facing it; facing the cell it
 searches from any of eight ways; a cell from the cell it touches, walking
-onto it, or on the cell pushing the way its row needs. Move is steered
-with the d-pad once cast. An event counts only when the field sequence
+onto it, or on the cell pushing the way its row needs; for a Psynergy any
+target answers (Reveal, Cloak), where the scene's arrival leaves him. Move
+is steered with the d-pad once cast. An event counts only when the field
+sequence
 dispatches it at the leader's spot, it runs a script, and it shows
 itself: one of its messages when it has messages, else (a touch, a Move)
 something that moves, leaves, fights or changes the map. Each of its
 triggers is tried in turn, by the entrances whose events answer it, with
 the flags its row needs, then with each story flag its scene's setup
 tests or its scene's events set; one that does not play is tried again
-after each of the scene's other events. Pages are held 45 frames. An exit
+after each of the scene's other events. An event no trigger reaches (a
+raised trigger, a row nothing calls, a spot the leader cannot walk to) is
+started directly, where the scene's arrival leaves the leader: the field
+sequence raises a trigger no scene answers and, where it would run that
+trigger's row, runs the event's own function, or a message row's message
+as a row's dispatch shows it (Event_Start, Event_SetMessageId,
+Event_ShowMessageAndWait, Event_End), before and after each of the scene's
+other events. Such a start counts only when it speaks, moves someone,
+fights or leaves, or when its last picture differs from the same moment
+played as long with nothing started by at least one pixel in a hundred.
+Pages are held 45 frames. An exit
 is followed into the scene it leads to: the fade out, the load, that
 scene's arrival (its pages answered, none kept) and its fade in, until the
 player has control there as at a scene's start and half a second more,
@@ -882,8 +894,24 @@ impl Machines {
         let mut symbols = field::Symbols::find(&map)?;
         symbols.read_defeat(&build.join(format!("{edition}.elf")))?;
         let mut functions = std::collections::HashMap::new();
+        // A places table without overlay ids (the story tools'): each
+        // overlay by the scene object its linker map links.
+        let mut by_file: std::collections::HashMap<String, u16> = std::collections::HashMap::new();
+        if chosen.iter().any(|s| s.overlay.is_none()) {
+            for entry in std::fs::read_dir(build.join("overlays")).into_iter().flatten().flatten() {
+                let path = entry.path();
+                let Some(id) = path.file_name().and_then(|n| n.to_str()).and_then(|n| n.strip_prefix("resource_")).and_then(|n| n.strip_suffix(".map")).and_then(|n| u16::from_str_radix(n, 16).ok()) else {
+                    continue;
+                };
+                let text = std::fs::read_to_string(&path).unwrap_or_default();
+                for word in text.split_whitespace().filter(|w| w.contains("games/") && w.ends_with(".o")) {
+                    let source = &word[word.find("games/").unwrap_or(0)..];
+                    by_file.entry(source.trim_end_matches(".o").to_string()).or_insert(id);
+                }
+            }
+        }
         for s in chosen {
-            let Some(id) = s.overlay else {
+            let Some(id) = s.overlay.or_else(|| by_file.get(s.file.trim_end_matches(".c")).copied()) else {
                 continue;
             };
             let path = build.join("overlays").join(format!("resource_{id:03x}.elf"));

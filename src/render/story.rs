@@ -254,6 +254,19 @@ pub enum Trigger {
     Touch(u16),
     /// A field Psynergy (its ability id) on actor N.
     Psynergy(u16, u16),
+    /// A field Psynergy (its ability id) cast anywhere, which a row for any
+    /// target answers (PSYNERGY_ANYWHERE: Reveal, Cloak).
+    Cast(u16),
+    /// The event function at this address, started from the field sequence
+    /// as a trigger row's dispatch calls it, for an event no trigger the
+    /// renderer can give reaches (a raised trigger, a row nothing calls, an
+    /// event with no row).
+    Direct(u32),
+    /// A message row's message, shown beside actor N (0xffff for none) as a
+    /// row's dispatch shows it (Event_Start, Event_SetMessageId,
+    /// Event_ShowMessageAndWait, Event_End), for a message row no trigger the
+    /// renderer can give reaches.
+    Message(u16, u16),
 }
 
 /// One row of events.tsv.
@@ -341,8 +354,19 @@ pub fn parse_trigger(text: &str) -> Result<Trigger, String> {
             return target(rest).map(|actor| Trigger::Psynergy(ability, actor & 0xff)).ok_or_else(bad);
         }
     }
-    Err(format!("{first:?} is not a talk, search, touch or Psynergy-on-actor trigger"))
+    // A cast for any target (`reveal 0`): the number is its phase.
+    for (name, ability) in [("reveal", REVEAL), ("cloak", CLOAK)] {
+        if first.strip_prefix(name).is_some_and(|rest| rest.starts_with(' ') && target(rest).is_some()) {
+            return Ok(Trigger::Cast(ability));
+        }
+    }
+    Err(format!("{first:?} is not a talk, search, touch or Psynergy trigger"))
 }
+
+/// Reveal's ability id (ability_ids.h).
+pub const REVEAL: u16 = 0x90;
+/// Cloak's.
+pub const CLOAK: u16 = 0x92;
 
 /// `FLAG_A set and FLAG_B clear` as (name, set) pairs.
 fn parse_conditions(text: &str) -> Vec<(String, bool)> {
@@ -444,6 +468,9 @@ mod tests {
         assert_eq!(parse_trigger("mind read on 1027"), Ok(Trigger::Psynergy(0x8d, 3)));
         assert_eq!(parse_trigger("ply on ACTOR_WATERFALL_STATUE=12"), Ok(Trigger::Psynergy(0x5d, 12)));
         assert!(parse_trigger("entry initialize").is_err());
+        assert_eq!(parse_trigger("reveal 0"), Ok(Trigger::Cast(REVEAL)));
+        assert_eq!(parse_trigger("cloak 1"), Ok(Trigger::Cast(CLOAK)));
+        assert!(parse_trigger("revealed 0").is_err());
     }
 
     #[test]

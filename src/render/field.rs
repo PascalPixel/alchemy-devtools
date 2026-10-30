@@ -85,7 +85,13 @@ const FIELD_ACTORS: u32 = 0x14;
 const FIELD_ACTOR_COUNT: u32 = 66;
 /// The first actor a scene places (ACTOR_FIRST_PLACED); 0 to 7 are the party.
 const FIRST_PLACED: u16 = 8;
+/// FieldWork.psynergy: a field Psynergy for the field sequence to use.
 const FIELD_COMMAND: u32 = 0x17e;
+/// FieldWork.raisedTrigger, two requests on.
+const FIELD_RAISED: u32 = FIELD_COMMAND + 4;
+/// A raised trigger no scene answers (theirs are small numbers; the
+/// field's own are negative), which a direct start raises.
+const RAISED_DIRECT: u32 = 0x7fff;
 /// struct Object.
 const OBJ_ANGLE: u32 = 0x06;
 const OBJ_X: u32 = 0x08;
@@ -159,6 +165,9 @@ pub const TRIGGER_EXIT: u8 = 1;
 pub const TRIGGER_STEP: u8 = 2;
 pub const TRIGGER_EXAMINE: u8 = 3;
 pub const TRIGGER_PSYNERGY: u8 = 5;
+/// No kind of the game's: an event function started directly
+/// (Trigger::Direct).
+pub const TRIGGER_DIRECT: u8 = 0xff;
 /// No random encounters while set (flags.h).
 const FLAG_NO_ENCOUNTERS: u16 = 0x160;
 /// struct Unit's psynergy, four bytes each.
@@ -247,6 +256,12 @@ pub struct Symbols {
     touch: u32,
     search: u32,
     psynergy: u32,
+    /// Scene_RunRaisedTrigger, where a direct start begins.
+    run_raised: u32,
+    /// What a trigger row's dispatch calls to show a message row
+    /// (Field_RunPsynergyEvent, Scene_TalkToActor): Event_Start,
+    /// Event_SetMessageId, Event_ShowMessageAndWait and Event_End.
+    show_row: [u32; 4],
     game_state: u32,
     flag_bytes: u32,
     map_work: u32,
@@ -301,6 +316,8 @@ impl Symbols {
             touch: at("Scene_RunStepTriggerOrExit").or_else(|_| at("Scene_RunCoordEventOrWarp"))?,
             search: at("Field_ExamineCell")?,
             psynergy: at("Field_UsePsynergy")?,
+            run_raised: at("Scene_RunRaisedTrigger")?,
+            show_row: [at("Event_Start")?, at("Event_SetMessageId")?, at("Event_ShowMessageAndWait")?, at("Event_End")?],
             game_state: at("gMainRoutineWork").or_else(|_| at("gSequenceParentWork")).or_else(|_| at("gAdventure")).or_else(|_| at("gCommon")).or_else(|_| at("gPersistentState")).or_else(|_| at("gSaveBlock"))?,
             flag_bytes: at("gGameFlagBytes")?,
             map_work: at("gMapGridWork")?,
@@ -381,6 +398,14 @@ pub(super) struct Track {
     call_saved: [u32; 5],
     /// r0 and r1 for the call, when start_call gives them.
     call_args: Option<[u32; 2]>,
+    /// An event's direct start: the calls the field sequence makes in place
+    /// of Scene_RunRaisedTrigger for the trigger it raised (RAISED_DIRECT),
+    /// in order, each with r0 and r1; how many there are; how many are made;
+    /// and where the first was to return to in the field sequence.
+    raise: [(u32, [u32; 2]); 4],
+    raise_len: u8,
+    raise_next: u8,
+    raise_lr: u32,
     /// The instruction the CPU runs next.
     pc: u32,
     /// Whether the CPU sleeps until the next interrupt.
@@ -588,6 +613,10 @@ impl<'rom> Field<'rom> {
             calling: false,
             call_saved: [0; 5],
             call_args: None,
+            raise: [(0, [0; 2]); 4],
+            raise_len: 0,
+            raise_next: 0,
+            raise_lr: 0,
             pc: 0,
             halted: false,
             step_frame: 0,
@@ -961,6 +990,34 @@ impl<'rom> Field<'rom> {
         }
         if let Some(&(_, r0)) = self.returns.iter().find(|(a, _)| *a == pc) {
             self.gba.return_now(r0);
+            return Ok(frame_done);
+        }
+        // A direct start: the field sequence answers the trigger it raised by
+        // calling Scene_RunRaisedTrigger, from its request loop with the
+        // field busy, as it starts every event. In its place the event's own
+        // calls are made, each returning here for the next and the last to
+        // the loop, so the event begins and ends as a dispatched one does.
+        if pc == s.run_raised && self.t.raise_next < self.t.raise_len {
+            let i = usize::from(self.t.raise_next);
+            let (target, args) = self.t.raise[i];
+            if i == 0 {
+                self.t.raise_lr = self.gba.register(LR);
+                self.t.dispatched = Some((TRIGGER_DIRECT, 0, self.t.frame));
+                self.t.dispatch_return = self.t.raise_lr & !1;
+                self.t.dispatch_result = None;
+                // The branch lands on the function: the next step reports
+                // the instruction after its first, so it runs from here.
+                if self.watch.contains(&target) {
+                    self.t.ran = target;
+                    self.t.own_ran |= self.own.contains(&target);
+                }
+            }
+            self.t.raise_next += 1;
+            let last = self.t.raise_next == self.t.raise_len;
+            self.gba.set_register(0, args[0]);
+            self.gba.set_register(1, args[1]);
+            self.gba.set_register(LR, if last { self.t.raise_lr } else { s.run_raised | 1 });
+            self.gba.branch(target);
             return Ok(frame_done);
         }
         if pc == s.step && self.t.calling {
@@ -2249,6 +2306,13 @@ impl<'rom> Field<'rom> {
     /// anywhere in his room, and the event's recording says so.
     pub fn spots(&mut self, trigger: Trigger) -> Result<Vec<Spot>, String> {
         self.unwalked = false;
+        // A direct start needs no place: the leader stays where the scene's
+        // arrival left him, facing as it left him.
+        if let Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..) = trigger {
+            let leader = self.leader().ok_or("the leader has no actor")?;
+            let facing = self.gba.read32(self.s.game_state + GS_HEADING);
+            return Ok(vec![Spot { x: leader.x, z: leader.z, layer: leader.layer, height: leader.y, facing, walk: 0, cell: None }]);
+        }
         let reach = self.reach(match trigger {
             Trigger::Touch(code) => Some(code),
             _ => None,
@@ -2276,6 +2340,8 @@ impl<'rom> Field<'rom> {
         // Spots dropped because the leader cannot walk there.
         let mut unreached = 0;
         match trigger {
+            // `spots` places a direct start itself.
+            Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..) => return Err("a direct start or a cast anywhere is placed where the leader stands".to_string()),
             Trigger::Psynergy(ability, id) => {
                 // Field_FindNearbyPsynergyTarget: the actor within the
                 // Psynergy's range and height of the leader, ahead of him
@@ -2603,13 +2669,18 @@ impl<'rom> Field<'rom> {
             Trigger::Search(code) => (TRIGGER_EXAMINE, code),
             Trigger::Touch(code) => (TRIGGER_STEP, code),
             Trigger::Psynergy(_, id) => (TRIGGER_PSYNERGY, id),
+            Trigger::Cast(_) => (TRIGGER_PSYNERGY, 0),
+            Trigger::Direct(_) | Trigger::Message(..) => (TRIGGER_DIRECT, 0),
         };
+        let direct = kind == TRIGGER_DIRECT;
+        let anywhere = matches!(trigger, Trigger::Cast(_));
         // The dispatch it starts: Field_UsePsynergy takes the Psynergy, not
         // the actor.
         let want = (kind, (kind != TRIGGER_PSYNERGY).then_some(u32::from(target)));
-        let table = self.event_rows(kind, target);
+        // A direct start reads no table.
+        let table = if direct { Vec::new() } else { self.event_rows(kind, target) };
         let rows = table.len();
-        if !own.is_empty() && !self.has_row(kind, target, own) {
+        if !direct && !anywhere && !own.is_empty() && !self.has_row(kind, target, own) {
             return Err(format!("the event table here has no row of its own for {} {target}", kind_name(kind)));
         }
         // What the event needs holds as it starts: the scene's own setup may
@@ -2619,22 +2690,51 @@ impl<'rom> Field<'rom> {
         // No random battle breaks into the event: a battle shown is one the
         // event starts (FLAG_NO_ENCOUNTERS).
         self.set_flag(FLAG_NO_ENCOUNTERS, true);
-        self.unshadow(kind, target, own, messages)?;
+        if !direct && !anywhere {
+            self.unshadow(kind, target, own, messages)?;
+        }
         // The flags set and the actors moved for the event are written from
         // outside the game.
         self.cut();
-        self.watch = table.iter().map(|r| result_key(r.result)).filter(|&r| r >= 0x10000).collect();
-        self.t.ran = 0;
         self.own = own.iter().copied().filter(|&r| r >= 0x10000).collect();
+        self.watch = if direct { self.own.clone() } else { table.iter().map(|r| result_key(r.result)).filter(|&r| r >= 0x10000).collect() };
+        self.t.ran = 0;
         self.t.own_ran = false;
+        // A direct start is judged against the same moment left alone (see
+        // `shown` below).
+        let control = (direct || anywhere).then(|| self.save());
         match trigger {
             Trigger::Talk(_) | Trigger::Search(_) => self.press(2)?,
-            Trigger::Psynergy(ability, _) => {
+            Trigger::Psynergy(ability, _) | Trigger::Cast(ability) => {
                 let work = self.gba.read32(self.s.field_work);
                 self.gba.write16(work + FIELD_COMMAND, ability);
                 self.cut();
             }
             Trigger::Touch(_) => self.hold(spot.walk),
+            // Raised for the field sequence to start (see run_instruction):
+            // the function, called as a row's dispatch calls it with the
+            // value it would pass, here the raised one; or, for a message
+            // row, the four calls a row's dispatch makes for it, the actor -1
+            // when it has none.
+            Trigger::Direct(_) | Trigger::Message(..) => {
+                self.t.raise_len = match trigger {
+                    Trigger::Direct(address) => {
+                        self.t.raise[0] = (address, [RAISED_DIRECT, 0]);
+                        1
+                    }
+                    Trigger::Message(message, actor) => {
+                        let [start, set, show, end] = self.s.show_row;
+                        let actor = if actor == u16::MAX { u32::MAX } else { u32::from(actor) };
+                        self.t.raise = [(start, [0, 0]), (set, [u32::from(message), 0]), (show, [actor, 0]), (end, [0, 0])];
+                        4
+                    }
+                    _ => 0,
+                };
+                self.t.raise_next = 0;
+                let work = self.gba.read32(self.s.field_work);
+                self.gba.write16(work + FIELD_RAISED, RAISED_DIRECT as u16);
+                self.cut();
+            }
         }
         let hold = if record.is_some() { PAGE_HOLD } else { 3 };
         // What is on stage as the trigger comes, to tell whether the event
@@ -2769,7 +2869,8 @@ impl<'rom> Field<'rom> {
                     let how = match trigger {
                         Trigger::Talk(_) | Trigger::Search(_) => "pressing A",
                         Trigger::Touch(_) => "walking onto the cell",
-                        Trigger::Psynergy(..) => "the cast",
+                        Trigger::Psynergy(..) | Trigger::Cast(_) => "the cast",
+                        Trigger::Direct(_) | Trigger::Message(..) => "the direct start",
                     };
                     return Err(format!("{how} from ({}, {}) started nothing in {} frames", spot.x, spot.z, START_FRAMES));
                 }
@@ -2939,7 +3040,22 @@ impl<'rom> Field<'rom> {
         let instant = began.is_some() && returned == began && !left && !paused;
         // Colours the event changed and left changed show too: a cave
         // darkening as the party goes deeper (Altmiller Cave's blend).
-        let shown = !pages.is_empty() || left || fought || moved || (!left && (self.cell_codes() != cells_before || self.palette() != palette_before));
+        let mut shown = !pages.is_empty() || left || fought || moved || (!left && (self.cell_codes() != cells_before || self.palette() != palette_before));
+        // A direct start that spoke, moved no one, fought and left nowhere
+        // shows itself only by what it drew: its last picture against the
+        // same moment played as long with nothing started, where water and
+        // cycling colours run alike.
+        if let Some(control) = control.filter(|_| shown && pages.is_empty() && !left && !fought && !moved) {
+            let span = self.t.frame.saturating_sub(trigger_frame);
+            let drawn = self.picture();
+            let after = self.save();
+            self.load(&control);
+            self.frames(span)?;
+            let idle = self.picture();
+            self.load(&after);
+            let changed = drawn.iter().zip(&idle).filter(|(a, b)| a != b).count();
+            shown = changed * 100 >= drawn.len();
+        }
         // ALCHEMY_RENDER_DEBUG prints what each try did, to see why a spot
         // was refused.
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
@@ -3102,6 +3218,7 @@ fn kind_name(kind: u8) -> &'static str {
         TRIGGER_STEP => "touch",
         TRIGGER_EXAMINE => "search",
         TRIGGER_PSYNERGY => "Psynergy",
+        TRIGGER_DIRECT => "direct start",
         _ => "event",
     }
 }
