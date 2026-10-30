@@ -1431,6 +1431,13 @@ impl<'rom> Field<'rom> {
         })
     }
 
+    /// The actors the scene keeps parked in the map's corner cell, at its
+    /// origin, until it needs them (Alex on Mercury Lighthouse's aerie,
+    /// before he appears): the game's camera never shows that corner.
+    pub fn parked(&self) -> Vec<Actor> {
+        (0..FIELD_ACTOR_COUNT as u16).filter_map(|id| self.actor(id)).filter(|a| (0..16).contains(&a.x) && (0..16).contains(&a.z)).collect()
+    }
+
     /// Actor `id` when it is on stage: placed away from the map's origin,
     /// where scenes keep the actors they do not show, within the map's
     /// bounds, and drawn (on the world map, wherever the party is); else why

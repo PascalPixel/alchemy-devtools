@@ -54,6 +54,8 @@ mod guide_planes;
 #[cfg(feature = "render")]
 mod guide_places;
 #[cfg(feature = "render")]
+mod guide_set_piece;
+#[cfg(feature = "render")]
 mod guide_scene_map;
 #[cfg(feature = "render")]
 mod guide_take;
@@ -1325,6 +1327,12 @@ frame, as places/venus-lighthouse-aerie/NAME.gif (guide_beam.rs):
 and the aerie's whole story in the Doll House recorder, from the arrival to
 the exit to Lalivero, battles and world map trips cut out (guide_aerie.rs):
   venus-lighthouse-aerie-story-dollhouse
+Other story set pieces in the Doll House recorder, each as
+places/SCENE/story-dollhouse.gif: the leader placed beside the trigger that
+starts the story, as render event places him, and the scene played to its
+battle or until the player has control again (guide_set_piece.rs):
+  mercury-lighthouse-aerie-story-dollhouse, lalivero-story-dollhouse,
+  babi-lighthouse-stone-door-story-dollhouse
 Recordings for the menu, window, shop and game guides, one GIF each
 (guide_menus.rs):
   windows-zoom, message-speed, message-blanks, pause-menu, save-game,

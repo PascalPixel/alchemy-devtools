@@ -404,6 +404,7 @@ fn draw_frame(field: &mut Field, states: &States, t: usize, c: &Canvas, marks: &
         let at = field.view();
         field.until_line(LAST_BLANK_LINE).map_err(|e| format!("frame {t}, the view at {view:?}: {e}"))?;
         hide_front_sprites(field);
+        hide_parked_sprites(field);
         let hidden = if over_sky { DISPCNT_BGS } else { DISPCNT_BG0 };
         field.io_write16(DISPCNT, field.read16(DISPCNT) & !hidden);
         if over_sky {
@@ -597,6 +598,40 @@ fn hide_front_sprites(field: &mut Field) {
         }
     }
 }
+
+/// Hides, for the frame about to be drawn, the sprites of the actors parked
+/// at the map's origin (Field::parked), which the game never shows but a
+/// view of the map's corner would: each sprite within reach of where such
+/// an actor stands on the screen, above its feet.
+fn hide_parked_sprites(field: &mut Field) {
+    let parked = field.parked();
+    if parked.is_empty() {
+        return;
+    }
+    let (vx, vy) = field.view();
+    for i in 0..128u32 {
+        let attr0 = field.read16(OAM + 8 * i);
+        if attr0 & 0x300 == 0x200 {
+            continue;
+        }
+        let y = i32::from(attr0 & 0xff);
+        let y = if y >= HEIGHT as i32 { y - 256 } else { y };
+        let x = i32::from(field.read16(OAM + 8 * i + 2) & 0x1ff);
+        let x = if x >= 256 { x - 512 } else { x };
+        let near = parked.iter().any(|a| {
+            let (sx, sy) = (a.x - vx, a.z - (a.y >> 16) - vy);
+            (x - sx).abs() <= PARKED_REACH && (-PARKED_HEIGHT..=PARKED_REACH).contains(&(y - sy))
+        });
+        if near {
+            field.write16(OAM + 8 * i, (attr0 & !0x300) | 0x200);
+        }
+    }
+}
+
+/// Pixels a parked actor's sprites reach beside and below its place, and
+/// above it.
+const PARKED_REACH: i32 = 32;
+const PARKED_HEIGHT: i32 = 64;
 
 /// The starts of views `size` long, `stride` apart, that cover `from` to
 /// `to`, the last one ending at `to` (or starting at `from` when the span is

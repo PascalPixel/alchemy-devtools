@@ -206,7 +206,7 @@ impl<'a> Guide<'a> {
 /// effect (an HBlank interrupt, or DMA 0 started each HBlank), such as the
 /// dissolve the aerie leaves and comes back from the world map with and the
 /// window that cuts the arrival's camera from the beacon to the party.
-fn line_effect(field: &Field) -> bool {
+pub(super) fn line_effect(field: &Field) -> bool {
     let windows = field.read16(DISPCNT) & DISPCNT_WINDOWS != 0;
     let hblank_irq = field.read16(REG_IE) & IRQ_HBLANK != 0;
     let dma0 = field.read16(REG_DMA0CNT_H);
@@ -215,7 +215,7 @@ fn line_effect(field: &Field) -> bool {
 
 /// Whether the screen shows more than one colour: not the black or white of
 /// a fade at its full.
-fn lit(field: &Field) -> bool {
+pub(super) fn lit(field: &Field) -> bool {
     let picture = field.picture();
     picture.iter().any(|&c| c != picture[0])
 }
@@ -224,7 +224,7 @@ fn lit(field: &Field) -> bool {
 /// aerie shows, from its first frame lit to its last, the first leaving the
 /// LEAD and LATE frames each view is pinned from and run through before it on
 /// the aerie.
-fn shown_frames(shown: &[bool]) -> Vec<usize> {
+pub(super) fn shown_frames(shown: &[bool]) -> Vec<usize> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < shown.len() {
@@ -242,7 +242,7 @@ fn shown_frames(shown: &[bool]) -> Vec<usize> {
 }
 
 /// The carried flags set now, `before` among them.
-fn carried_flags_set(field: &Field, before: &[u16]) -> Vec<u16> {
+pub(super) fn carried_flags_set(field: &Field, before: &[u16]) -> Vec<u16> {
     let mut out = before.to_vec();
     out.extend(CARRIED_FLAGS.iter().cloned().flatten().filter(|&f| field.flag_is_set(f) && !before.contains(&f)));
     out

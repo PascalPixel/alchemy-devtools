@@ -50,6 +50,9 @@ impl<'a> Guide<'a> {
             "venus-lighthouse-aerie-beam-whole" => self.venus_beam_whole(),
             "venus-lighthouse-aerie-eruption-whole" => self.venus_eruption_whole(),
             "venus-lighthouse-aerie-story-dollhouse" => self.venus_story_dollhouse(),
+            "mercury-lighthouse-aerie-story-dollhouse" => self.set_piece(&super::guide_set_piece::MERCURY_LIGHTHOUSE_AERIE),
+            "lalivero-story-dollhouse" => self.set_piece(&super::guide_set_piece::LALIVERO_BLACK_ORB),
+            "babi-lighthouse-stone-door-story-dollhouse" => self.set_piece(&super::guide_set_piece::BABI_LIGHTHOUSE_TRUTH_DOOR),
             _ => self.run_field_moves(name),
         }
     }
