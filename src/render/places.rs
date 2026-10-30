@@ -761,7 +761,23 @@ pub fn job_events(events: &[Event], wanted: &[String], only: &[u16], scenes: &[&
         .filter(|e| e.scenes.iter().any(|n| numbers.contains(n)))
         .filter(|e| only.is_empty() || e.scenes.iter().any(|n| only.contains(n)))
         .collect();
-    merge_rows(&rows)
+    let mut out = merge_rows(&rows);
+    // A name asked for that no row has (an event nothing calls, which the
+    // story tools list no trigger for): an event with no trigger, at the
+    // scenes whose overlay source defines it, which only a direct start
+    // plays.
+    for name in wanted.iter().filter(|w| !events.iter().any(|e| e.name == **w)) {
+        let at: Vec<u16> = scenes
+            .iter()
+            .filter(|s| only.is_empty() || only.contains(&s.number))
+            .filter(|s| std::fs::read_to_string(&s.file).is_ok_and(|source| source.contains(&format!(" {name}("))))
+            .map(|s| s.number)
+            .collect();
+        if !at.is_empty() {
+            out.push(Event { scenes: at, name: name.clone(), trigger_text: String::new(), alternatives: Vec::new(), tests: Vec::new(), sets: Vec::new(), clears: Vec::new(), messages: Vec::new() });
+        }
+    }
+    out
 }
 
 /// Every event of a scene played afresh: what an earlier run wrote for it
