@@ -369,7 +369,7 @@ fn regexes() -> &'static [Regex; 3] {
                 r"|^field_[0-9A-Fa-f]+",
                 r"|[_a-z0-9]Unk(?:nown)?(?:$|[_0-9A-Z])|_unk(?:$|[_0-9])|_UNK(?:$|[_0-9])",
                 r"|_0[23689][0-9A-Fa-f]{6}(?:$|_)",
-                r"|^(?:SE|MUS)_[0-9]+$|^nullsub",
+                r"|^(?:SE|MUS|SPRITE|ITEM|ABILITY|ENEMY|DJINNI)_[0-9]+$|^nullsub",
             ))
             .unwrap(),
             // Conventions that keep their number: temporary flags, registers and
@@ -381,8 +381,9 @@ fn regexes() -> &'static [Regex; 3] {
     })
 }
 
-/// `unk_14`, `sub_08012345`, `gUnknown_0203`, `field_1C`, `SE_138`: a name
-/// that says it is not known yet.
+/// `unk_14`, `sub_08012345`, `gUnknown_0203`, `field_1C`, `SE_138`, the id
+/// headers' pret-style row placeholders (`ITEM_034`): a name that says it is
+/// not known yet.
 pub fn is_placeholder(name: &str) -> bool {
     regexes()[0].is_match(name)
 }
@@ -1860,7 +1861,7 @@ mod tests {
         {
             assert!(is_placeholder(name), "{name}");
         }
-        assert!(is_placeholder("SE_138") && is_placeholder("Battle_08012345") && is_placeholder("UnkThing"));
+        assert!(is_placeholder("SE_138") && is_placeholder("ITEM_034") && is_placeholder("DJINNI_07") && is_placeholder("Battle_08012345") && is_placeholder("UnkThing"));
         for name in ["Unkempt", "Unknowable", "Trunk", "FunkyUnkle", "SE_JUMP"] {
             assert!(!is_placeholder(name), "{name}");
         }

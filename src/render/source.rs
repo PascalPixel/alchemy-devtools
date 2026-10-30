@@ -277,9 +277,13 @@ pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
     }
 }
 
-/// Character `name`'s number (`ISAAC`), from character_ids.h.
+/// Character `name`'s number (`ISAAC`), from character_ids.h: its
+/// enumerator, or before the characters were an enum its `#define`.
 pub fn character(name: &str) -> Result<u8, String> {
     let text = read("include/game/character_ids.h")?;
+    if let Some(value) = enums(&text, &HashMap::new())?.into_iter().flat_map(|(_, values)| values).find(|(n, _)| n == name).and_then(|(_, v)| v) {
+        return Ok(value as u8);
+    }
     text.lines()
         .find_map(|line| {
             let mut words = line.strip_prefix("#define ")?.split_whitespace();
@@ -290,9 +294,13 @@ pub fn character(name: &str) -> Result<u8, String> {
 }
 
 /// The characters' names in character_ids.h (`ISAAC` to `PIERS`), by number:
+/// `enum CharacterId` but its count, or before the characters were an enum
 /// its first run of definitions numbered from 0.
 pub fn character_names() -> Result<Vec<String>, String> {
     let text = read("include/game/character_ids.h")?;
+    if let Some((_, values)) = enums(&text, &HashMap::new())?.into_iter().find(|(tag, _)| tag.as_deref() == Some("CharacterId")) {
+        return Ok(values.into_iter().map(|(n, _)| n).filter(|n| !n.ends_with("_COUNT")).collect());
+    }
     let mut names = Vec::new();
     for line in text.lines() {
         let mut words = line

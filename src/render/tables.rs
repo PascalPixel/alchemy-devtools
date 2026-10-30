@@ -86,8 +86,8 @@ fn scalar(name: &str) -> Option<Type> {
 struct Headers {
     texts: Vec<(PathBuf, String)>,
     /// Each object-like `#define`'s replacement text, and each enumerator's
-    /// expression (its value counted on from the one before where it has
-    /// none, as `PREVIOUS + 1`).
+    /// expression (its value counted on from the last one that has one where
+    /// it has none, as `ANCHOR + 2`).
     defines: HashMap<String, String>,
 }
 
@@ -115,14 +115,28 @@ impl Headers {
                 defines.entry(found[1].to_string()).or_insert_with(|| found[2].to_string());
             }
             for found in enumeration.captures_iter(text) {
-                let mut previous: Option<String> = None;
+                // The last enumerator with a value of its own, and how far past
+                // it this one is: an enum that lists hundreds of rows counts on
+                // from its first, not through every row before.
+                let mut anchor: Option<String> = None;
+                let mut past = 0;
                 for item in found[1].split(',').map(str::trim).filter(|i| !i.is_empty()) {
                     let (name, value) = match item.split_once('=') {
-                        Some((name, value)) => (name.trim().to_string(), value.trim().to_string()),
-                        None => (item.to_string(), previous.as_ref().map_or("0".to_string(), |p| format!("{p} + 1"))),
+                        Some((name, value)) => {
+                            anchor = Some(name.trim().to_string());
+                            past = 0;
+                            (name.trim().to_string(), value.trim().to_string())
+                        }
+                        None => {
+                            past += 1;
+                            let value = match &anchor {
+                                Some(anchor) => format!("{anchor} + {past}"),
+                                None => (past - 1).to_string(),
+                            };
+                            (item.to_string(), value)
+                        }
                     };
-                    defines.entry(name.clone()).or_insert(value);
-                    previous = Some(name);
+                    defines.entry(name).or_insert(value);
                 }
             }
         }
