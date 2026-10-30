@@ -75,6 +75,8 @@ mod probe;
 #[cfg(feature = "render")]
 mod probe_places;
 #[cfg(feature = "render")]
+mod probe_units;
+#[cfg(feature = "render")]
 mod source;
 #[cfg(feature = "render")]
 mod whole;
@@ -1092,7 +1094,7 @@ fn play_probe(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
     let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
     let mut failed = Vec::new();
-    for name in probe::PROBES.iter().chain(probe_places::PROBES).filter(|p| only.is_empty() || only.iter().any(|o| o == *p)) {
+    for name in probe::PROBES.iter().chain(probe_places::PROBES).chain(probe_units::PROBES).filter(|p| only.is_empty() || only.iter().any(|o| o == *p)) {
         if let Err(e) = guide.probe(name, &map) {
             eprintln!("{name}: {e}");
             failed.push(*name);

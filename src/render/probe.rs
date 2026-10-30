@@ -394,6 +394,7 @@ impl<'a> Guide<'a> {
             "heap" => self.heap(&at("gHeapSlots")?, map),
             "heap-battle" => self.heap_battle(map),
             "venus" => self.venus(map),
+            other if super::probe_units::PROBES.contains(&other) => self.probe_unit(other, map),
             other => self.probe_place(other, map),
         }
     }
