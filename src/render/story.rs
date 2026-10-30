@@ -140,6 +140,8 @@ pub struct Flags {
     pub dir: std::path::PathBuf,
     global: HashMap<String, u16>,
     scoped: HashMap<(String, String), u16>,
+    /// flags.h's numbered names, for one the table lacks.
+    header: HashMap<String, u16>,
 }
 
 impl Flags {
@@ -164,7 +166,20 @@ impl Flags {
                 }
             }
         }
-        Ok(Flags { dir: path.parent().map(Path::to_path_buf).unwrap_or_default(), global, scoped })
+        // The flags flags.h names with a number, which the table lists under
+        // a scene's or place's own names only (FLAG_SCENE_TEMP_FIRST,
+        // FLAG_AREA_TEMP_01): a name the table lacks is looked up there, in
+        // the checkout the renderer runs from.
+        let mut header = HashMap::new();
+        for line in std::fs::read_to_string("games/tbs/include/flags.h").unwrap_or_default().lines() {
+            let mut words = line.split_whitespace();
+            if let (Some("#define"), Some(name), Some(value)) = (words.next(), words.next(), words.next()) {
+                if let Some(value) = name.starts_with("FLAG_").then(|| parse_number(value)).flatten() {
+                    header.insert(name.to_string(), value as u16);
+                }
+            }
+        }
+        Ok(Flags { dir: path.parent().map(Path::to_path_buf).unwrap_or_default(), global, scoped, header })
     }
 
     /// A flag by name (as in scene `scene` when it names one there), or a
@@ -182,6 +197,7 @@ impl Flags {
             .get(name)
             .copied()
             .or_else(|| self.scoped.iter().find(|((_, n), _)| n == name).map(|(_, &v)| v))
+            .or_else(|| self.header.get(name).copied())
     }
 }
 
