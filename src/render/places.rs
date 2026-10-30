@@ -1300,8 +1300,11 @@ impl Context<'_> {
         }
         // No trigger the renderer gives reaches it: its own function, started
         // as its row's dispatch would start it, from where the scene's
-        // arrival leaves the party.
-        if within.is_none() {
+        // arrival leaves the party. Not yet while the leader could still be
+        // placed where the walk does not reach (`events` tries that next),
+        // so a cast's own trigger comes first.
+        let relaxed_next = !self.relaxed.get() && failure.reason.contains("cannot walk");
+        if within.is_none() && !relaxed_next {
             match self.play_direct(event, scenes, job, record) {
                 Ok(played) => return Ok(played),
                 Err(e) => failure.reason = format!("{}; started directly, {e}", failure.reason),
@@ -1343,7 +1346,10 @@ impl Context<'_> {
                 set.sort_unstable();
             }
             let setup = Setup { scene, entrance: entrance.number as u16, set, clear: clear.clone() };
+            // A start that never gives the player control back waits on
+            // what started it (a cast's phase, a choice): no recording.
             match self.play_at(&setup, None, trigger, event, record, true) {
+                Ok(run) if run.capped => error = "it never gives the player control again".to_string(),
                 Ok(run) => return Ok(Played { setup, run }),
                 Err(e) => error = e,
             }
@@ -1370,7 +1376,7 @@ impl Context<'_> {
             let Some((setup, end)) = &job.ends[&key] else {
                 continue;
             };
-            if let Ok(run) = self.play_at(setup, Some(end), trigger, event, record, true) {
+            if let Some(run) = self.play_at(setup, Some(end), trigger, event, record, true).ok().filter(|run| !run.capped) {
                 return Ok(Played { setup: setup.clone(), run });
             }
         }
