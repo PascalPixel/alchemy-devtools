@@ -161,7 +161,7 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
 /// The enumerators of every `enum` in C source `text`: each enum's tag
 /// (none for an anonymous one) and its names and values, which may count on
 /// from `known` names; a value that counts on a name not known here is none.
-fn enums(
+pub(crate) fn enums(
     text: &str,
     known: &HashMap<String, i64>,
 ) -> Result<Vec<(Option<String>, Vec<(String, Option<i64>)>)>, String> {

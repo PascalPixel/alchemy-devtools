@@ -119,10 +119,16 @@ fn messages(dir: &std::path::Path) -> HashMap<u32, (String, String)> {
     out
 }
 
-/// The sounds' names by number, from sounds.h (songs.h before Alchemy renamed it).
+/// The sounds' names by number, from sounds.h (songs.h before Alchemy renamed
+/// it): enum SoundId, or before the sounds were an enum their `#define`s.
 fn sounds() -> HashMap<u32, String> {
     let root = crate::compile::root();
     let text = std::fs::read_to_string(root.join("games/tbs/include/sounds.h")).or_else(|_| std::fs::read_to_string(root.join("games/tbs/include/songs.h"))).unwrap_or_default();
+    if let Ok(found) = super::source::enums(&text, &HashMap::new()) {
+        if let Some((_, values)) = found.into_iter().find(|(tag, _)| tag.as_deref() == Some("SoundId")) {
+            return values.into_iter().filter_map(|(name, value)| (name.starts_with("SE_")).then_some((value? as u32, name))).collect();
+        }
+    }
     text.lines()
         .filter_map(|l| {
             let mut w = l.split_whitespace();
