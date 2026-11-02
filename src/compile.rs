@@ -224,9 +224,22 @@ pub fn cflags(target: CompilerTarget) -> Vec<String> {
         .collect()
 }
 
+/// Whether a source is linked only into overlays: an overlay draft or a scene.
+fn overlay_only(source: &str) -> bool {
+    source.contains("/overlays/") || source.contains("/src/scene/")
+}
+
 #[cfg(test)]
 mod makefile_tests {
-    use super::makefile_value;
+    use super::{makefile_value, overlay_only};
+
+    #[test]
+    fn overlay_sources_are_the_drafts_and_scenes() {
+        assert!(overlay_only("recon/tla/en/overlays/resource_68f_c_02001b48.c"));
+        assert!(overlay_only("games/tla/src/scene/prox/s3ee8.c"));
+        assert!(!overlay_only("recon/tla/en/main/0813fd84.c"));
+        assert!(!overlay_only("games/tla/src/battle_effect/f13e7e0.c"));
+    }
 
     #[test]
     fn reads_continued_and_nested_values() {
@@ -267,7 +280,17 @@ pub fn steps(
     match family {
         CompilerFamily::Game => {
             let mut compile = game_compiler(target);
-            compile.extend(cflags(target));
+            let mut flags = cflags(target);
+            // The Lost Age's C linked only into overlays builds for size, as the
+            // Makefile routes it: overlay drafts and scene objects.
+            if target.as_str() == "tla" && overlay_only(&source_text) {
+                for flag in &mut flags {
+                    if flag == "-O2" {
+                        *flag = "-Os".into();
+                    }
+                }
+            }
+            compile.extend(flags);
             compile.extend(includes(target));
             compile.extend(edition);
             compile.extend(["-S".into(), "-o".into(), assembly.clone(), source_text]);
