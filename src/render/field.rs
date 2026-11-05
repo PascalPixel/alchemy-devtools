@@ -536,6 +536,8 @@ pub struct Field<'rom> {
     /// trigger: LEAD_IN, or more where the event reaches a black screen
     /// sooner than BLACK_CLEARANCE (Context::lead_in).
     pub lead_in: u32,
+    /// Whether an event is recorded with the leader hidden from its start.
+    pub hide_leader: bool,
     /// For `render probe`: the addresses whose entry calls `probe` (with the
     /// machine, the address and the frame), which also runs at each frame's
     /// end (address 0); and the functions made to return at once, with r0.
@@ -633,7 +635,7 @@ impl<'rom> Field<'rom> {
             party_saved: [0; 5],
             cuts: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -1387,6 +1389,15 @@ impl<'rom> Field<'rom> {
             a += ENTRANCE_SIZE;
         }
         out
+    }
+
+    /// Puts an actor at (x, z) pixels, as Actor_SetPosition does.
+    pub fn put_actor(&mut self, id: u16, x: i32, z: i32) {
+        let a = self.actor_object(id);
+        if a != 0 {
+            self.gba.write32(a + OBJ_X, fx(x) as u32);
+            self.gba.write32(a + OBJ_Z, fx(z) as u32);
+        }
     }
 
     fn actor_object(&self, id: u16) -> u32 {
@@ -2652,6 +2663,24 @@ impl<'rom> Field<'rom> {
             }
         };
         self.check_leader(spot)?;
+        // A recording never shows the leader where the party cannot be (in the
+        // sky, in a wall, on water): he is hidden, and the camera that follows
+        // him is all that is left of him.
+        // Beside an actor is the game's own place for him when he walked there
+        // (peering into a well); only a start that placed him can be wrong.
+        let placed_him = self.unwalked || matches!(trigger, Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..));
+        let mut misplaced = if self.hide_leader {
+            vec!["his position only places the camera".to_string()]
+        } else if record.is_some() {
+            self.misplaced()?
+        } else {
+            Vec::new()
+        };
+        misplaced.retain(|why| placed_him || !why.starts_with("he stands on actor"));
+        if !misplaced.is_empty() {
+            let selected = self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16;
+            self.hide_actor(selected);
+        }
         if record.is_some() {
             self.recorded = Some(Vec::new());
             self.keep_states(self.whole);
@@ -3072,6 +3101,14 @@ impl<'rom> Field<'rom> {
         if beyond {
             let past = "the camera shows past the room's box, where the map has no ground".to_string();
             note = Some(note.map_or(past.clone(), |n| format!("{n}; {past}")));
+        }
+        if !misplaced.is_empty() {
+            let hidden = format!("the leader is hidden: {}", misplaced.join(", "));
+            note = Some(note.map_or(hidden.clone(), |n| format!("{hidden}; {n}")));
+        }
+        if matches!(trigger, Trigger::Direct(_)) {
+            let started = "started directly: nothing staged the moment its code needs, so what it does may be off camera or missing".to_string();
+            note = Some(note.map_or(started.clone(), |n| format!("{started}; {n}")));
         }
         if self.unwalked {
             let placed = "the leader starts where the walk from the entrance does not reach, since what opens the way there is not played first".to_string();

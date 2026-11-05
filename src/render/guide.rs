@@ -52,7 +52,7 @@ impl<'a> Guide<'a> {
         name.split('|').find_map(|n| self.flags.resolve(n, None)).ok_or_else(|| format!("flags.tsv names no {name}"))
     }
 
-    fn gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
+    pub(super) fn gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
         let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.iter().map(|&c| animation::rgb(c)).collect()).collect();
         let written = animation::write(&self.out.join(file), &rgb, WIDTH)?;
         self.written.push((file.to_string(), written.bytes, format!("{what}; {} frames at 30 a second", written.frames)));

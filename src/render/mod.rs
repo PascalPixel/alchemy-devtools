@@ -35,6 +35,7 @@ mod guide_cells;
 mod guide_docs_world;
 #[cfg(feature = "render")]
 mod guide_field_moves;
+mod guide_unused;
 #[cfg(feature = "render")]
 mod guide_effect;
 #[cfg(feature = "render")]
@@ -1317,6 +1318,8 @@ FOLDER/NAME.gif under DIR, the guide it opens a section of:
   layout-psynergy-stone (layout/), map-colosso-race, map-venus-star-thrown
   (map/, guide_docs_world.rs); overworld-battle-return also
   writes field/battle-swing.gif
+Code the game never reaches, staged by hand, as unused/FUNCTION.gif
+(guide_unused.rs): unused
 More recordings for the field guide and the Field page, each as FOLDER/NAME.gif
 under DIR (guide_field_moves.rs): field-push-pillar, field-climb,
   field-villager, field-stairs, field-palette-fade, field-cloak (field/),

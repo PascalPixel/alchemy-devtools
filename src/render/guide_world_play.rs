@@ -36,6 +36,7 @@ pub const MODES: &[&str] = &[
     "layout-psynergy-stone",
     "map-colosso-race",
     "map-venus-star-thrown",
+    "unused",
     "venus-lighthouse-aerie-beam-whole",
     "venus-lighthouse-aerie-eruption-whole",
     "venus-lighthouse-aerie-story-dollhouse",
