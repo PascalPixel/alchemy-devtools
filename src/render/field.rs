@@ -191,6 +191,26 @@ const HOLD: u32 = 3;
 const MAX_FRAMES: u32 = 30000;
 /// Frames of the leader standing ready that open an event's recording.
 pub const LEAD_IN: u32 = 12;
+/// How many frames a script may keep the leader in a wall, in black or off
+/// the map: longer than a hop over a ledge, shorter than anyone could miss.
+const ASTRAY_FRAMES: u32 = 40;
+/// How far a script may move the leader in a direct start, in pixels: a turn
+/// or a flinch, not a walk.
+const DIRECT_WALK: i32 = 16;
+/// A step this long between two looks at the leader is no walk: a door or a
+/// script has put him somewhere else, and where he was says nothing of it.
+const TELEPORT: i32 = 24;
+/// How many frames he may stand with black all around him.
+const BLACK_FRAMES: u32 = 24;
+/// How many frames a script may have him where a placed start could not walk.
+/// How many frames he may hang over ground that is there: a fall, a long jump.
+const ALOFT_FRAMES: u32 = 90;
+/// How near an actor's centre he counts as riding it: a log is two cells long.
+const RIDE_REACH: i32 = 20;
+/// How many spots beside its speaker a message row tries.
+const BESIDE_SPOTS: usize = 4;
+/// How many spots of open ground a direct start tries.
+const NEAR_SPOTS: usize = 6;
 /// Frames a recording keeps of the game on each side of a black screen:
 /// BLACK_CLEARANCE and a margin, so the pictures a GIF shows, one of every
 /// two, still clear it.
@@ -532,6 +552,12 @@ pub struct Field<'rom> {
     /// were such.
     pub relaxed: bool,
     unwalked: bool,
+    /// Whether a direct start moved the leader off where the arrival left him.
+    resettled: bool,
+    /// The event has a trigger of its own (a touch, a search), so a direct
+    /// start is a stand-in that staged nothing; a raised or entry event has no
+    /// other start, and its script may walk the leader as it means to.
+    pub has_trigger: bool,
     /// Frames of the leader standing ready before a recorded event's
     /// trigger: LEAD_IN, or more where the event reaches a black screen
     /// sooner than BLACK_CLEARANCE (Context::lead_in).
@@ -635,7 +661,7 @@ impl<'rom> Field<'rom> {
             party_saved: [0; 5],
             cuts: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -1822,6 +1848,118 @@ impl<'rom> Field<'rom> {
         }
     }
 
+    /// What of `misplaced` counts against a start that placed the leader:
+    /// off the screen shows nothing wrong, and the camera may yet come to him.
+    fn wrong_for_a_placed_start(mut wrong: Vec<String>) -> Vec<String> {
+        wrong.retain(|why| !why.starts_with("he is off the screen"));
+        wrong
+    }
+
+    /// Spots on open ground in the leader's room, nearest him first, 32 pixels
+    /// apart: every cell around each is ground he can stand on, nothing
+    /// starts there, and no actor stands on it.
+    fn open_ground_near(&mut self, leader: &Actor, facing: u32) -> Result<Vec<Spot>, String> {
+        let layer = leader.layer.min(2);
+        let room = self.room();
+        let stage = self.stage();
+        let mut cells = Vec::new();
+        for cz in (room[1] >> 4)..=(room[3] >> 4) {
+            for cx in (room[0] >> 4)..=(room[2] >> 4) {
+                let (x, z) = (cx * 16 + 8, cz * 16 + 8);
+                if x < room[0] + 16 || x >= room[2] - 16 || z < room[1] + 16 || z >= room[3] - 16 || !self.inside(x, z, 16) {
+                    continue;
+                }
+                let open = (-1..=1).all(|dz| (-1..=1).all(|dx| self.quiet(self.cell(layer, cx + dx, cz + dz)) && Self::standable(self.cell(layer, cx + dx, cz + dz))));
+                if open && !stage.iter().any(|&(_, ax, az)| (ax - x).abs() < 24 && (az - z).abs() < 24) {
+                    let (dx, dz) = (x - leader.x, z - leader.z);
+                    cells.push((dx * dx + dz * dz, x, z));
+                }
+            }
+        }
+        cells.sort_unstable();
+        let mut chosen: Vec<(i32, i32)> = Vec::new();
+        let mut out = Vec::new();
+        for (_, x, z) in cells {
+            if out.len() == NEAR_SPOTS {
+                break;
+            }
+            if chosen.iter().any(|&(a, b)| (a - x).abs() < 32 && (b - z).abs() < 32) {
+                continue;
+            }
+            chosen.push((x, z));
+            let height = self.ground(layer, x, z)?;
+            out.push(Spot { x, z, layer, height, facing, walk: 0, cell: None });
+        }
+        Ok(out)
+    }
+
+    /// Why the frame just played shows the leader where the party cannot be,
+    /// and for how many frames that may last before the recording is false: a
+    /// hop passes over a wall or a gap in moments, while a lift or a fall may
+    /// hold him off the ground for longer. Nothing while the game has him
+    /// undrawn, off the screen, or riding an actor (a log, a platform). The
+    /// cell grid beyond a map reads as open ground. `off_ground` is how far off
+    /// the kept height he stood when he was placed, which `misplaced` passed.
+    fn astray(&self, off_ground: i32) -> Option<(String, u32)> {
+        let leader = self.leader()?;
+        if !leader.drawn || self.world() {
+            return None;
+        }
+        let (x, z) = (leader.x, leader.z);
+        if self.stage().iter().any(|&(_, ax, az)| (ax - x).abs() <= RIDE_REACH && (az - z).abs() <= RIDE_REACH) {
+            return None;
+        }
+        let layer = leader.layer.min(2);
+        let (vx, vy) = self.view();
+        let (sx, sy) = (x - vx, z - (leader.y >> 16) - vy);
+        if !(0..WIDTH as i32).contains(&sx) || !(0..HEIGHT as i32).contains(&sy) {
+            return None;
+        }
+        match self.code_at(layer, x, z) {
+            -1 => return Some((format!("({x}, {z}) is off the cell grid"), ASTRAY_FRAMES)),
+            CELL_WALL => return Some((format!("({x}, {z}) is a wall cell of layer {layer}"), ASTRAY_FRAMES)),
+            _ => {}
+        }
+        let room = self.room();
+        if x < room[0] || x >= room[2] || z < room[1] || z >= room[3] {
+            return Some((format!("({x}, {z}) is outside his room's camera box {room:?}"), ASTRAY_FRAMES));
+        }
+        let black = self.black_around(sx, sy);
+        if black > 75 {
+            return Some((format!("he stands in black, {black}% of the screen around him"), BLACK_FRAMES));
+        }
+        // The height the game keeps for him: `ground` would run the game on to
+        // a step of the field sequence, which a script has stopped.
+        let ground = self.gba.read32(self.leader_object() + OBJ_TERRAIN_HEIGHT) as i32;
+        if (leader.y - ground - off_ground).abs() > 2 << 16 {
+            return Some((format!("he stands {} pixels off the ground", (leader.y - ground - off_ground) >> 16), ALOFT_FRAMES));
+        }
+        None
+    }
+
+    /// How much of the screen within 24 pixels of (sx, sy), the leader's own
+    /// sprite left out, is black where the map draws nothing, in percent.
+    fn black_around(&self, sx: i32, sy: i32) -> i32 {
+        let screen = self.screen();
+        let (mut black, mut all) = (0, 0);
+        for py in (sy - 24).max(0)..(sy + 24).min(HEIGHT as i32) {
+            for px in (sx - 24).max(0)..(sx + 24).min(WIDTH as i32) {
+                if (px - sx).abs() < 10 && py > sy - 28 && py < sy + 4 {
+                    continue;
+                }
+                all += 1;
+                if screen.pixels[py as usize * WIDTH + px as usize] & 0xf0_f0_f0 == 0 {
+                    black += 1;
+                }
+            }
+        }
+        if all > 0 {
+            black * 100 / all
+        } else {
+            0
+        }
+    }
+
     /// What is wrong with where the leader stands, for a photo that should
     /// show him where the party can be: without a sprite, off the cell grid, on a wall cell
     /// (a cliff, a wall, water), off his ground, outside his room's camera
@@ -1860,23 +1998,9 @@ impl<'rom> Field<'rom> {
         if !(0..WIDTH as i32).contains(&sx) || !(0..HEIGHT as i32).contains(&sy) {
             out.push(format!("he is off the screen, at ({sx}, {sy}) on it"));
         } else {
-            // The screen within 24 pixels of his feet, his own sprite
-            // left out, is black where the map draws nothing.
-            let screen = self.screen();
-            let (mut black, mut all) = (0, 0);
-            for py in (sy - 24).max(0)..(sy + 24).min(HEIGHT as i32) {
-                for px in (sx - 24).max(0)..(sx + 24).min(WIDTH as i32) {
-                    if (px - sx).abs() < 10 && py > sy - 28 && py < sy + 4 {
-                        continue;
-                    }
-                    all += 1;
-                    if screen.pixels[py as usize * WIDTH + px as usize] & 0xf0_f0_f0 == 0 {
-                        black += 1;
-                    }
-                }
-            }
-            if all > 0 && black * 10 > all * 8 {
-                out.push(format!("he stands in black, {}% of the screen around him", black * 100 / all));
+            let black = self.black_around(sx, sy);
+            if black > 80 {
+                out.push(format!("he stands in black, {black}% of the screen around him"));
             }
         }
         for (id, ax, az) in self.stage() {
@@ -2324,12 +2448,33 @@ impl<'rom> Field<'rom> {
     /// anywhere in his room, and the event's recording says so.
     pub fn spots(&mut self, trigger: Trigger) -> Result<Vec<Spot>, String> {
         self.unwalked = false;
+        self.resettled = false;
         // A direct start needs no place: the leader stays where the scene's
-        // arrival left him, facing as it left him.
+        // arrival left him, facing as it left him, unless the party cannot be
+        // there; then the nearest open ground has him. A message row spoken
+        // by an actor is heard beside that actor.
         if let Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..) = trigger {
             let leader = self.leader().ok_or("the leader has no actor")?;
             let facing = self.gba.read32(self.s.game_state + GS_HEADING);
-            return Ok(vec![Spot { x: leader.x, z: leader.z, layer: leader.layer, height: leader.y, facing, walk: 0, cell: None }]);
+            let here = Spot { x: leader.x, z: leader.z, layer: leader.layer, height: leader.y, facing, walk: 0, cell: None };
+            let mut out = Vec::new();
+            if let Trigger::Message(_, actor) = trigger {
+                if actor != u16::MAX {
+                    let reach = self.reach(None)?;
+                    let beside = self.spots_in(Trigger::Talk(actor), &reach).or_else(|_| self.spots_in(Trigger::Talk(actor), &reach.anywhere()));
+                    out.extend(beside.unwrap_or_default().into_iter().take(BESIDE_SPOTS));
+                }
+            }
+            if !out.is_empty() {
+                return Ok(out);
+            }
+            let wrong = Self::wrong_for_a_placed_start(self.misplaced()?);
+            if wrong.is_empty() {
+                return Ok(vec![here]);
+            }
+            self.resettled = true;
+            let near = self.open_ground_near(&leader, facing)?;
+            return if near.is_empty() { Err(format!("the arrival leaves the leader where the party cannot be ({}) and no open ground is near", wrong.join(", "))) } else { Ok(near) };
         }
         let reach = self.reach(match trigger {
             Trigger::Touch(code) => Some(code),
@@ -2664,25 +2809,24 @@ impl<'rom> Field<'rom> {
         };
         self.check_leader(spot)?;
         // A recording never shows the leader where the party cannot be (in the
-        // sky, in a wall, on water): he is hidden, and the camera that follows
-        // him is all that is left of him.
-        // Beside an actor or in a tight spot is the game's own place for him when
-        // he walked there (peering into a well); only a start that placed him can
-        // be wrong. Off the screen he shows nothing to hide, and the camera may
-        // yet come to him.
+        // sky, in a wall, on water), and he is never left out of what he does:
+        // a spot he cannot stand on is refused, and the next spot or entrance
+        // is tried. Only a stage that places the camera by him hides him.
+        // Beside an actor or in a tight spot is the game's own place for him
+        // when he walked there (peering into a well); only a start that placed
+        // him can be wrong.
         let placed_him = self.unwalked || matches!(trigger, Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..));
-        let mut misplaced = if self.hide_leader {
-            vec!["his position only places the camera".to_string()]
-        } else if record.is_some() {
-            self.misplaced()?
-        } else {
-            Vec::new()
-        };
-        misplaced.retain(|why| !why.starts_with("he is off the screen") && (placed_him || !(why.starts_with("he stands on actor") || why.starts_with("he can walk to"))));
-        if !misplaced.is_empty() {
+        if self.hide_leader {
             let selected = self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16;
             self.hide_actor(selected);
+        } else if record.is_some() {
+            let mut wrong = Self::wrong_for_a_placed_start(self.misplaced()?);
+            wrong.retain(|why| placed_him || !(why.starts_with("he stands on actor") || why.starts_with("he can walk to") || why.starts_with("he has no sprite")));
+            if !wrong.is_empty() {
+                return Err(format!("the leader is misplaced at ({}, {}): {}", spot.x, spot.z, wrong.join(", ")));
+            }
         }
+        let off_ground = self.leader().map_or(0, |l| l.y - self.gba.read32(self.leader_object() + OBJ_TERRAIN_HEIGHT) as i32);
         if record.is_some() {
             self.recorded = Some(Vec::new());
             self.keep_states(self.whole);
@@ -2828,6 +2972,9 @@ impl<'rom> Field<'rom> {
         let place = |f: &Self| -> Vec<(i32, i32, i32)> { mobile.iter().map(|&id| f.actor(id).map_or((0, 0, 0), |a| (a.x, a.z, a.y >> 16))).collect() };
         let mut places = place(self);
         let mut last_motion = 0;
+        let mut astray_since: Option<u32> = None;
+        let mut leader_last: Option<(i32, i32)> = None;
+        let mut teleported = false;
         loop {
             if record.is_none() && pages.len() >= max_pages {
                 break;
@@ -2923,6 +3070,36 @@ impl<'rom> Field<'rom> {
                 if let Some(from) = leader_from {
                     let now = self.actor(self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16);
                     moved |= shifted(now, from.x, from.z, 20) || now.is_some_and(|a| (a.y - from.y).abs() >= 6 << 16);
+                }
+            }
+            if let Some(now) = self.leader() {
+                teleported |= leader_last.is_some_and(|(x, z)| (now.x - x).abs().max((now.z - z).abs()) >= TELEPORT);
+                leader_last = Some((now.x, now.z));
+            }
+            // The script has carried the leader where the party cannot be:
+            // what plays is not the game (a log ride with no log under him).
+            // A start he walked to is the game's own, and all it does after is too.
+            let shows_him = placed_him && !teleported && record.is_some() && !self.hide_leader && arrival.is_none() && self.scene() == self.setup.scene && !self.recorded.as_ref().and_then(|f| f.last()).is_some_and(|p| is_black_bgr555(p));
+            // A direct start staged nothing: if the script walks the leader, the
+            // event is about him, and he is walking from the wrong place.
+            if shows_him && self.has_trigger && matches!(trigger, Trigger::Direct(_)) {
+                if let (Some(from), Some(now)) = (leader_from, self.leader()) {
+                    if (now.x - from.x).abs().max((now.z - from.z).abs()) >= DIRECT_WALK {
+                        self.hold(0);
+                        return Err(format!("the script walks the leader from ({}, {}) to ({}, {}), and a direct start staged nothing for that", from.x, from.z, now.x, now.z));
+                    }
+                }
+            }
+            if shows_him && self.t.frame % 4 == 0 {
+                match self.astray(off_ground) {
+                    Some((why, limit)) => {
+                        let since = astray_since.get_or_insert(self.t.frame);
+                        if self.t.frame - *since >= limit {
+                            self.hold(0);
+                            return Err(format!("the script keeps the leader where the party cannot be: {why}"));
+                        }
+                    }
+                    None => astray_since = None,
                 }
             }
             // The camera showing past the room's box: what lies there is
@@ -3039,6 +3216,15 @@ impl<'rom> Field<'rom> {
             }
         }
         self.hold(0);
+        // Where the event leaves him is where the player takes over: the party
+        // must be able to be there.
+        if placed_him && !teleported && record.is_some() && !self.hide_leader && !left && !fought && !capped && self.scene() == self.setup.scene {
+            if let Some((why, limit)) = self.astray(off_ground) {
+                if limit != ALOFT_FRAMES {
+                    return Err(format!("the event leaves the leader where the party cannot be: {why}"));
+                }
+            }
+        }
         // A recording through a black screen goes on, the player in control
         // and still, until it has shown BLACK_CLEARANCE frames of the game
         // after the last one (animation::check_black_clearance); the state
@@ -3104,9 +3290,9 @@ impl<'rom> Field<'rom> {
             let past = "the camera shows past the room's box, where the map has no ground".to_string();
             note = Some(note.map_or(past.clone(), |n| format!("{n}; {past}")));
         }
-        if !misplaced.is_empty() {
-            let hidden = format!("the leader is hidden: {}", misplaced.join(", "));
-            note = Some(note.map_or(hidden.clone(), |n| format!("{hidden}; {n}")));
+        if self.resettled {
+            let placed = "the arrival leaves the leader where the party cannot be, so he starts on the nearest open ground".to_string();
+            note = Some(note.map_or(placed.clone(), |n| format!("{placed}; {n}")));
         }
         if matches!(trigger, Trigger::Direct(_)) {
             let started = "started directly: nothing staged the moment its code needs, so what it does may be off camera or missing".to_string();

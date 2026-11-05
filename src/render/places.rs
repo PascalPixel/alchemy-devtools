@@ -1318,6 +1318,11 @@ impl Context<'_> {
     /// (Trigger::Message), with the flags its first row needs, at each room
     /// of each scene whose overlay holds the function.
     fn play_direct(&self, event: &Event, scenes: &[&Scene], job: &mut Job, record: Option<usize>) -> Result<Played, String> {
+        // Code the game never reaches has no moment to start from: it is shown
+        // only staged by hand (guide_unused), or not at all.
+        if event.name.contains("_Unused") {
+            return Err("code the game never reaches is shown only staged by hand".to_string());
+        }
         let first = scenes[0];
         let function = scenes.iter().find_map(|s| self.functions.get(&s.number).and_then(|f| f.get(&event.name)).copied());
         let trigger = match function {
@@ -1337,7 +1342,11 @@ impl Context<'_> {
             Some(alternative) => self.alternative_flags(alternative, first)?,
             None => (Vec::new(), Vec::new()),
         };
-        let places = self.places(scenes, trigger, event, &set, &clear, &mut job.scans).map_err(|f| f.reason)?;
+        let mut places = self.places(scenes, trigger, event, &set, &clear, &mut job.scans).map_err(|f| f.reason)?;
+        // Entrance 0 is where a scene puts the party with no way in: often a
+        // debug default out in the sky or on water, sometimes the one place an
+        // opening plays. A start tries it after every other.
+        places.sort_by_key(|(_, e)| e.number == 0);
         let mut error = String::new();
         for (scene, entrance) in places {
             let mut set = set.clone();
@@ -1398,6 +1407,7 @@ impl Context<'_> {
         field.relaxed = self.relaxed.get();
         field.lead_in = self.lead_in.get();
         field.whole = self.whole && record.is_some();
+        field.has_trigger = event.trigger().is_ok();
         let entered: Saved = field.save();
         match after {
             Some(saved) => field.load(saved),
