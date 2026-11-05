@@ -2666,8 +2666,10 @@ impl<'rom> Field<'rom> {
         // A recording never shows the leader where the party cannot be (in the
         // sky, in a wall, on water): he is hidden, and the camera that follows
         // him is all that is left of him.
-        // Beside an actor is the game's own place for him when he walked there
-        // (peering into a well); only a start that placed him can be wrong.
+        // Beside an actor or in a tight spot is the game's own place for him when
+        // he walked there (peering into a well); only a start that placed him can
+        // be wrong. Off the screen he shows nothing to hide, and the camera may
+        // yet come to him.
         let placed_him = self.unwalked || matches!(trigger, Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..));
         let mut misplaced = if self.hide_leader {
             vec!["his position only places the camera".to_string()]
@@ -2676,7 +2678,7 @@ impl<'rom> Field<'rom> {
         } else {
             Vec::new()
         };
-        misplaced.retain(|why| placed_him || !why.starts_with("he stands on actor"));
+        misplaced.retain(|why| !why.starts_with("he is off the screen") && (placed_him || !(why.starts_with("he stands on actor") || why.starts_with("he can walk to"))));
         if !misplaced.is_empty() {
             let selected = self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16;
             self.hide_actor(selected);

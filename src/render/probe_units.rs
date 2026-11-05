@@ -236,7 +236,7 @@ impl<'a> Guide<'a> {
             }
             "venus-sockets-a" => {
                 // VenusLighthouseThirdFloor (185) entered by entrance 15: the
-                // pillars as FLAG_VENUS_LIGHTHOUSE_SOCKETS_A records them, the
+                // pillars as FLAG_VENUS_LIGHTHOUSE_SOUTHEAST_SOCKET_EMPTY records them, the
                 // south-east piece (actor 9) in the north-west socket, the
                 // west-east piece (10) in the north-east one and the
                 // north-west piece (11) a cell east of the south-west one,
@@ -320,8 +320,8 @@ impl<'a> Guide<'a> {
                 let flag = |f: u32| e.field.read8(flags_at + (f >> 3)) >> (f & 7) & 1;
                 for name in [
                     "FLAG_VENUS_LIGHTHOUSE_THREE_PILLAR_GATE_OPEN",
-                    "FLAG_VENUS_LIGHTHOUSE_SOCKETS_A",
-                    "FLAG_VENUS_LIGHTHOUSE_SOCKETS_B",
+                    "FLAG_VENUS_LIGHTHOUSE_SOUTHEAST_SOCKET_EMPTY",
+                    "FLAG_VENUS_LIGHTHOUSE_NORTHWEST_SOCKET_EMPTY",
                 ] {
                     println!("  {name} {}", flag(u32::from(self.flag(name)?)));
                 }
