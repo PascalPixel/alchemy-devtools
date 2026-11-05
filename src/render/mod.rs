@@ -35,6 +35,7 @@ mod guide_cells;
 mod guide_docs_world;
 #[cfg(feature = "render")]
 mod guide_field_moves;
+#[cfg(feature = "render")]
 mod guide_unused;
 #[cfg(feature = "render")]
 mod guide_effect;
