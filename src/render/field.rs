@@ -200,6 +200,18 @@ const DIRECT_WALK: i32 = 16;
 /// A step this long between two looks at the leader is no walk: a door or a
 /// script has put him somewhere else, and where he was says nothing of it.
 const TELEPORT: i32 = 24;
+/// Below this many pixels of a placed leader on the screen, what stands in
+/// front of him hides him: a pillar, a bush, a bridge. Measured over the
+/// recordings looked at: a leader in the open shows 280 to 480.
+const HIDDEN_BELOW: i32 = 170;
+/// Below this many, the sprite is not what shows him, and nothing can be said.
+const UNMEASURED_BELOW: i32 = 20;
+/// With this share of the ground at his feet one flat colour, in percent, the
+/// map draws nothing there: ground has a texture, the void around a map has none.
+const VOID_AT_FEET: i32 = 75;
+/// How many connected cells of open ground make somewhere to stand: fewer is a
+/// pocket shut in by a cliff or a wall, which the player never reaches.
+const OPEN_REGION: usize = 64;
 /// How many frames he may stand with black all around him.
 const BLACK_FRAMES: u32 = 24;
 /// How many frames a script may have him where a placed start could not walk.
@@ -1883,7 +1895,7 @@ impl<'rom> Field<'rom> {
                     continue;
                 }
                 let open = (-1..=1).all(|dz| (-1..=1).all(|dx| self.quiet(self.cell(layer, cx + dx, cz + dz)) && Self::standable(self.cell(layer, cx + dx, cz + dz))));
-                if open && !stage.iter().any(|&(_, ax, az)| (ax - x).abs() < 24 && (az - z).abs() < 24) {
+                if open && self.in_open_region(layer, cx, cz) && !stage.iter().any(|&(_, ax, az)| (ax - x).abs() < 24 && (az - z).abs() < 24) {
                     let (dx, dz) = (x - leader.x, z - leader.z);
                     cells.push((dx * dx + dz * dz, x, z));
                 }
@@ -1948,6 +1960,73 @@ impl<'rom> Field<'rom> {
             return Some((format!("he stands {} pixels off the ground", (leader.y - ground - off_ground) >> 16), ALOFT_FRAMES));
         }
         None
+    }
+
+    /// What the screen says against where a start placed the leader, which the
+    /// cell grid cannot: that what stands in front hides him, or that the map
+    /// draws nothing at his feet. Nothing while he is off the screen.
+    fn unseen(&mut self) -> Result<Option<String>, String> {
+        let saved = self.save();
+        let result = self.look_at_leader();
+        self.load(&saved);
+        result
+    }
+
+    fn look_at_leader(&mut self) -> Result<Option<String>, String> {
+        self.frames(2)?;
+        let Some(leader) = self.leader() else {
+            return Ok(None);
+        };
+        let (vx, vy) = self.view();
+        let (sx, sy) = (leader.x - vx, leader.z - (leader.y >> 16) - vy);
+        if !(0..WIDTH as i32).contains(&sx) || !(0..HEIGHT as i32).contains(&sy) {
+            return Ok(None);
+        }
+        let with_him = self.screen();
+        let mut colours = std::collections::HashMap::new();
+        let mut feet = 0;
+        for py in (sy + 1).max(0)..(sy + 10).min(HEIGHT as i32) {
+            for px in (sx - 14).max(0)..(sx + 14).min(WIDTH as i32) {
+                feet += 1;
+                *colours.entry(with_him.pixels[py as usize * WIDTH + px as usize]).or_insert(0) += 1;
+            }
+        }
+        let flat = if feet > 0 { colours.values().max().copied().unwrap_or(0) * 100 / feet } else { 0 };
+        if flat >= VOID_AT_FEET {
+            return Ok(Some(format!("the map draws nothing at his feet, {flat}% of them one flat colour")));
+        }
+        let selected = self.gba.read32(self.s.game_state + GS_SELECTED_ACTOR) as u16;
+        self.hide_actor(selected);
+        self.frames(2)?;
+        let without = self.screen();
+        let mut seen = 0;
+        for py in (sy - 32).max(0)..(sy + 6).min(HEIGHT as i32) {
+            for px in (sx - 14).max(0)..(sx + 14).min(WIDTH as i32) {
+                let i = py as usize * WIDTH + px as usize;
+                if with_him.pixels[i] != without.pixels[i] {
+                    seen += 1;
+                }
+            }
+        }
+        Ok(((UNMEASURED_BELOW..HIDDEN_BELOW).contains(&seen)).then(|| format!("something stands in front of him: {seen} pixels of him show")))
+    }
+
+    /// Whether (cx, cz) lies in a connected stretch of open ground of at least
+    /// OPEN_REGION cells on `layer`.
+    fn in_open_region(&self, layer: u8, cx: i32, cz: i32) -> bool {
+        let mut seen = std::collections::HashSet::from([(cx, cz)]);
+        let mut next = vec![(cx, cz)];
+        while let Some((x, z)) = next.pop() {
+            if seen.len() >= OPEN_REGION {
+                return true;
+            }
+            for (nx, nz) in [(x + 1, z), (x - 1, z), (x, z + 1), (x, z - 1)] {
+                if self.inside(nx * 16 + 8, nz * 16 + 8, 0) && Self::standable(self.cell(layer, nx, nz)) && seen.insert((nx, nz)) {
+                    next.push((nx, nz));
+                }
+            }
+        }
+        seen.len() >= OPEN_REGION
     }
 
     /// How much of the screen within 24 pixels of (sx, sy), the leader's own
@@ -2837,6 +2916,11 @@ impl<'rom> Field<'rom> {
             wrong.retain(|why| placed_him || !(why.starts_with("he stands on actor") || why.starts_with("he can walk to") || why.starts_with("he has no sprite")));
             if !wrong.is_empty() {
                 return Err(format!("the leader is misplaced at ({}, {}): {}", spot.x, spot.z, wrong.join(", ")));
+            }
+            if placed_him {
+                if let Some(why) = self.unseen()? {
+                    return Err(format!("the leader is misplaced at ({}, {}): {why}", spot.x, spot.z));
+                }
             }
         }
         let off_ground = self.leader().map_or(0, |l| l.y - self.gba.read32(self.leader_object() + OBJ_TERRAIN_HEIGHT) as i32);
