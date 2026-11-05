@@ -375,8 +375,9 @@ pub struct Context<'a> {
     /// trigger (Field::lead_in).
     pub lead_in: std::cell::Cell<u32>,
     /// Whether each event recorded is also drawn whole (whole::event), as
-    /// <event>-whole.gif.
+    /// <event>-whole.gif, and how its whole frames are cut and dressed.
     pub whole: bool,
+    pub cut: super::whole::Cut,
 }
 
 /// Whether a scene is a place: not the title, the clear-data screen or the
@@ -1474,7 +1475,7 @@ impl Context<'_> {
                 Ok(mut run) => {
                     if field.whole {
                         let states = run.states.take().ok_or("no states were kept to draw it whole");
-                        run.whole = Some(states.map_err(String::from).and_then(|states| super::whole::event(&mut field, &states)));
+                        run.whole = Some(states.map_err(String::from).and_then(|states| super::whole::event(&mut field, &states, &run.frames, self.cut)));
                     }
                     return Ok(run);
                 }

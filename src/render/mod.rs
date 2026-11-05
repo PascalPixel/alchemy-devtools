@@ -438,7 +438,8 @@ Run any of them with --help for its options.";
 
 const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene N|NAME]... [--all]
          --places places.tsv --events events.tsv --flags flags.tsv [--messages messages.tsv]
-         [--event NAME]... [--whole] [--out DIR] [--edition tbs-en] [--jobs N]
+         [--event NAME]... [--whole [--whole-frame L,T,W,H] [--whole-window PLACE]]
+         [--out DIR] [--edition tbs-en] [--jobs N]
 Plays a built ☀️ edition (make tbs-en) under libmgba from a new game's
 defaults straight into each scene, and writes PNG files at the GBA's size
 into DIR/<scene>/ (DIR defaults to out/EDITION/places), with DIR/index.tsv
@@ -527,6 +528,13 @@ or a battle begins, shows the room's whole camera box (the map's scroll
 bounds when its entrance gives none) and any sky above it a sprite
 reaches, each frame stitched from views of that moment (whole.rs). A run
 it cannot draw whole keeps its GIF; skipped.tsv says why.
+--whole-frame L,T,W,H cuts each whole frame to that frame, in the room's
+pixels from its top left corner (the map pictures' pixels; a negative T
+reaches into the sky). --whole-window PLACE draws the message window, its
+portrait and letters, which a whole frame leaves out, on each frame as the
+screen shows them, at top, bottom, top-left, top-right, bottom-left or
+bottom-right of the frame, as far from its edges as they stand from the
+screen's nearest edge.
 
 --jobs N runs N processes of this program, each with its own libmgba
 (default: the number of CPUs; 1 plays it all here), and hands each the
@@ -547,6 +555,8 @@ struct SceneOptions {
     events: Vec<String>,
     all: bool,
     whole: bool,
+    #[cfg(feature = "render")]
+    cut: whole::Cut,
     out: Option<PathBuf>,
     edition: String,
     places_tsv: Option<PathBuf>,
@@ -561,6 +571,8 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
         events: Vec::new(),
         all: false,
         whole: false,
+        #[cfg(feature = "render")]
+        cut: whole::Cut::default(),
         out: None,
         edition: "tbs-en".to_string(),
         places_tsv: None,
@@ -581,6 +593,10 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             "--event" => o.events.push(value("--event")?),
             "--all" => o.all = true,
             "--whole" => o.whole = true,
+            #[cfg(feature = "render")]
+            "--whole-frame" => o.cut.frame = Some(whole::Cut::parse_frame(&value("--whole-frame")?)?),
+            #[cfg(feature = "render")]
+            "--whole-window" => o.cut.window = Some(whole::Cut::parse_place(&value("--whole-window")?)?),
             "--out" => o.out = Some(PathBuf::from(value("--out")?)),
             "--edition" => o.edition = value("--edition")?,
             "--places" => o.places_tsv = Some(PathBuf::from(value("--places")?)),
@@ -630,7 +646,10 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     };
     let root = crate::compile::root();
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
-    let request = SceneRequest { kind, scenes: &scene_rows, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags, whole: o.whole };
+    let request = SceneRequest { kind, scenes: &scene_rows, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags, whole: o.whole,
+        #[cfg(feature = "render")]
+        cut: o.cut,
+    };
     play_scenes(root, &o.edition, &request, &out, &o.jobs, arguments)
 }
 
@@ -645,8 +664,11 @@ struct SceneRequest<'a> {
     events: &'a [story::Event],
     wanted: &'a [String],
     flags: &'a story::Flags,
-    /// Whether each event is also drawn whole (render event --whole).
+    /// Whether each event is also drawn whole (render event --whole), and
+    /// how its whole frames are cut and dressed.
     whole: bool,
+    #[cfg(feature = "render")]
+    cut: whole::Cut,
 }
 
 /// What a scene's work is part of: the scene itself for places, its
@@ -957,6 +979,7 @@ impl Machines {
             relaxed: std::cell::Cell::new(false),
             lead_in: std::cell::Cell::new(field::LEAD_IN),
             whole: r.whole,
+            cut: r.cut,
         }
     }
 }

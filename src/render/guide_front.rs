@@ -4,7 +4,9 @@
 //! a player would, written under the guide folder it belongs to
 //! (`front/sanctum-door.gif`).
 
+use super::animation;
 use super::animation::is_black_bgr555;
+use super::mgba::WIDTH;
 use super::field::{Field, Setup, Spot, Start, CLEARED, EVENT_LIMIT};
 use super::guide::Guide;
 use super::story::Trigger;
@@ -110,6 +112,35 @@ impl<'a> Guide<'a> {
         }
     }
 
+    /// Two takes of the same moment side by side as `path`, each with the
+    /// same length so the pair restarts together as an exact loop.
+    fn front_pair(&mut self, path: &str, left: &[Vec<u16>], right: &[Vec<u16>], what: &str) -> Result<(), String> {
+        if left.len() != right.len() {
+            return Err(format!("{path}: the takes differ in length ({} and {} frames)", left.len(), right.len()));
+        }
+        // A gap of one black column pair separates the panels; black never counts as a screen.
+        const GAP: usize = 4;
+        let joined: Vec<Vec<u16>> = left
+            .iter()
+            .zip(right)
+            .map(|(a, b)| {
+                let mut frame = Vec::with_capacity(a.len() + b.len() + GAP * (a.len() / WIDTH));
+                for (row_a, row_b) in a.chunks(WIDTH).zip(b.chunks(WIDTH)) {
+                    frame.extend_from_slice(row_a);
+                    frame.extend(std::iter::repeat(0u16).take(GAP));
+                    frame.extend_from_slice(row_b);
+                }
+                frame
+            })
+            .collect();
+        if let Some(dir) = std::path::Path::new(path).parent() {
+            std::fs::create_dir_all(self.out.join(dir)).map_err(|e| format!("cannot make {}: {e}", dir.display()))?;
+        }
+        let written = animation::write_bgr555(&self.out.join(path), &joined.iter().map(Vec::as_slice).collect::<Vec<_>>(), 2 * WIDTH + GAP)?;
+        self.written.push((path.to_string(), written.bytes, format!("{what}; {} frames at 30 a second", written.frames)));
+        Ok(())
+    }
+
     /// Writes `frames` as `path` under the output folder, making its folder.
     fn front_gif(&mut self, path: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
         if let Some(dir) = std::path::Path::new(path).parent() {
@@ -148,35 +179,30 @@ impl<'a> Guide<'a> {
         self.front_gif("front/area-name.gif", &frames, "into Vale from the world map, its area name shown")
     }
 
-    /// Down the path from Sol Sanctum's entrance, twice: before the
-    /// eruption the exit leads to Vale, and with FLAG_SOL_SANCTUM_ERUPTED set
-    /// and FLAG_VALE_PARTY_LEFT clear the same exit leads to the erupting
-    /// village (gSolSanctumEntrance_Exits).
+    /// Down the path from Sol Sanctum's entrance, the two takes side by side:
+    /// before the eruption the exit leads to Vale, and with
+    /// FLAG_SOL_SANCTUM_ERUPTED set and FLAG_VALE_PARTY_LEFT clear the same
+    /// exit leads to the erupting village (gSolSanctumEntrance_Exits).
     fn front_warp_rows(&mut self) -> Result<(), String> {
-        let mut frames = Vec::new();
+        let path = [(0, 10 + animation::BLACK_CLEARANCE as u32), (KEY_DOWN, 50), (0, animation::BLACK_CLEARANCE as u32 + 60)];
         let mut field = self.enter_exactly(SOL_ENTRANCE, &["FLAG_VALE_PARTY_LEFT"], &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
-        frames.extend(Self::press_path(&mut field, &[(0, 10), (KEY_DOWN, 50), (0, 80)])?);
+        let before = Self::press_path(&mut field, &path)?;
         let mut field = self.enter_exactly(SOL_ENTRANCE, &["FLAG_SOL_SANCTUM_ERUPTED"], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
-        frames.extend(Self::press_path(&mut field, &[(0, 10), (KEY_DOWN, 50), (0, 140)])?);
-        self.front_gif("front/sol-entrance-warp.gif", &frames, "down Sol Sanctum's path to Vale, then to the erupting village")
+        let after = Self::press_path(&mut field, &path)?;
+        self.front_pair("front/sol-entrance-warp.gif", &before, &after, "down Sol Sanctum's path to Vale beside the same path to the erupting village")
     }
 
-    /// Vale's gate three times in the story, the leader stepping in from the
-    /// world map: the stormy night (FLAG_VALE_STORM, villagers gathered),
-    /// after the party has left (FLAG_VALE_PARTY_LEFT) and after it reached
-    /// Kalay (FLAG_KALAY_REACHED).
+    /// Vale's gate in the story's two versions side by side, the leader
+    /// stepping in from the world map: the stormy night (FLAG_VALE_STORM,
+    /// villagers gathered), the prelude, beside the village after the party
+    /// has left (FLAG_VALE_PARTY_LEFT), the main story.
     fn front_story(&mut self) -> Result<(), String> {
-        let mut frames = Vec::new();
-        let stages: [(&[&str], &[&str]); 3] = [
-            (&["FLAG_VALE_STORM", "FLAG_CHILDHOOD"], &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"]),
-            (&["FLAG_VALE_PARTY_LEFT"], &["FLAG_VALE_STORM", "FLAG_KALAY_REACHED", "FLAG_CHILDHOOD"]),
-            (&["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"]),
-        ];
-        for (set, clear) in stages {
-            let mut field = self.enter_exactly(VALE_PLAZA, set, clear)?;
-            frames.extend(Self::press_path(&mut field, &[(0, 20), (KEY_UP, 24), (0, 56)])?);
-        }
-        self.front_gif("front/vale-plaza-story.gif", &frames, "Vale's gate on the stormy night, after the party left and after Kalay")
+        let path = [(0, 20), (KEY_UP, 24), (0, 56)];
+        let mut field = self.enter_exactly(VALE_PLAZA, &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"], &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"])?;
+        let prelude = Self::press_path(&mut field, &path)?;
+        let mut field = self.enter_exactly(VALE_PLAZA, &["FLAG_VALE_PARTY_LEFT"], &["FLAG_VALE_STORM", "FLAG_KALAY_REACHED", "FLAG_CHILDHOOD"])?;
+        let main = Self::press_path(&mut field, &path)?;
+        self.front_pair("front/vale-plaza-story.gif", &prelude, &main, "Vale's gate on the stormy night beside the gate after the party left")
     }
 
     /// Talking to the strongman by Vale's river: the line types out and
