@@ -293,7 +293,7 @@ fn apply_sites(unit: &mut Node, target: &str, kind: Kind, rng: &mut Rng, sites: 
     let mut trial = unit.clone();
     let result = match kind {
         Kind::Temporary => lifetime::temporary(&mut trial, target, sites, rng),
-        Kind::Expand => lifetime::expand(&mut trial, sites, rng),
+        Kind::Expand => lifetime::expand(&mut trial, target, sites, rng),
         Kind::LocalType | Kind::GlobalType | Kind::FunctionType => change_type(&mut trial, target, sites, kind, rng),
         Kind::ReorderStatements | Kind::ReorderDeclarations => reorder(&mut trial, sites, kind, rng),
         Kind::SplitAssignment | Kind::ChainAssignment | Kind::LongChainAssignment => assignments(&mut trial, sites, kind, rng),
@@ -660,7 +660,9 @@ fn change_type(unit: &mut Node, target: &str, sites: &Sites, kind: Kind, rng: &m
     if rng.random() < 0.5 {
         let old = types.decay(ret)?;
         let void = matches!(types.resolve(&old)?, Node::TypeDecl { ty, .. } if matches!(ty.as_ref(), Node::IdentifierType { names } if names.contains(&"void".into())));
-        **ret = if void { random_type(rng) } else if rng.random() < 0.2 { types::basic("void") } else { if !types.integral(&old) { return None; } random_type(rng) };
+        // A pointer or struct result is read through, so only an integer or void one changes.
+        if !void && !types.integral(&old) { return None; }
+        **ret = if void { random_type(rng) } else if rng.random() < 0.2 { types::basic("void") } else { random_type(rng) };
         types::set_name(&mut new, Some(selected));
     } else {
         let Node::ParamList { params } = args.as_deref_mut()? else { return None };
@@ -692,7 +694,7 @@ fn reorder(unit: &mut Node, sites: &Sites, kind: Kind, rng: &mut Rng) -> Option<
     let sources: Vec<_> = candidates.iter().enumerate().filter_map(|(slot, (path, i))| {
         let stmt = statements(at(unit, path)).unwrap().get(*i)?;
         let movable = if decl { matches!(stmt, Node::Decl { .. }) }
-            else { !matches!(stmt, Node::Pragma { .. } | Node::Compound { .. } | Node::For { .. } | Node::While { .. } | Node::DoWhile { .. } | Node::If { .. } | Node::Switch { .. } | Node::Case { .. } | Node::Default { .. }) };
+            else { !matches!(stmt, Node::Pragma { .. } | Node::Compound { .. } | Node::For { .. } | Node::While { .. } | Node::DoWhile { .. } | Node::If { .. } | Node::Switch { .. } | Node::Case { .. } | Node::Default { .. } | Node::Break {} | Node::Continue {}) };
         movable.then_some(slot)
     }).collect();
     let source = sources[choose(rng, &sources)?];
@@ -812,6 +814,22 @@ fn assignments(unit: &mut Node, sites: &Sites, kind: Kind, rng: &mut Rng) -> Opt
     Some(())
 }
 
+/// Whether `node` holds a break or continue that no loop or switch inside it
+/// catches: one that belongs to a statement around it.
+fn loop_exit(node: &Node, in_loop: bool, in_switch: bool) -> bool {
+    match node {
+        Node::Break {} => !(in_loop || in_switch),
+        Node::Continue {} => !in_loop,
+        Node::Compound { block_items } => block_items.iter().any(|n| loop_exit(n, in_loop, in_switch)),
+        Node::If { iftrue, iffalse, .. } => loop_exit(iftrue, in_loop, in_switch) || iffalse.as_ref().is_some_and(|n| loop_exit(n, in_loop, in_switch)),
+        Node::Label { stmt, .. } => loop_exit(stmt, in_loop, in_switch),
+        Node::Case { stmts, .. } | Node::Default { stmts } => stmts.iter().any(|n| loop_exit(n, in_loop, in_switch)),
+        Node::For { stmt, .. } | Node::While { stmt, .. } | Node::DoWhile { stmt, .. } => loop_exit(stmt, true, in_switch),
+        Node::Switch { stmt, .. } => loop_exit(stmt, in_loop, true),
+        _ => false,
+    }
+}
+
 fn wrap(unit: &mut Node, sites: &Sites, rng: &mut Rng) -> Option<()> {
         let blocks = sites.blocks(unit);
         let path = &blocks[choose(rng, &blocks)?];
@@ -821,7 +839,9 @@ fn wrap(unit: &mut Node, sites: &Sites, rng: &mut Rng) -> Option<()> {
         let mut lo = leading + rng.below(items.len() + 1 - leading);
         let mut hi = leading + rng.below(items.len() + 1 - leading);
         if hi < lo { std::mem::swap(&mut lo, &mut hi); }
-        let same_line = rng.random() < 0.5 && (lo..hi).all(|i| sites.allows(&statement_path(path, block, i)));
+        let same_line = rng.random() < 0.5 && (lo..hi).all(|i| sites.allows(&statement_path(path, block, i)))
+            // A do-while would catch a break or continue meant for an outer loop.
+            && !items[lo..hi].iter().any(|n| loop_exit(n, false, false));
         let items = statements_mut(at_mut(unit, path));
         let body = compound(items.drain(lo..hi).collect()).boxed();
         let replacement = if same_line {

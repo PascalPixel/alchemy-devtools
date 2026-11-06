@@ -85,7 +85,7 @@ fn insert_decl(unit: &mut Node, sites: &Sites, var: &str, ty: Node, rng: &mut Rn
     items.insert(rng.below(count + 1), types::declaration(var, ty));
 }
 
-pub(super) fn expand(unit: &mut Node, sites: &Sites, rng: &mut Rng) -> Option<()> {
+pub(super) fn expand(unit: &mut Node, target: &str, sites: &Sites, rng: &mut Rng) -> Option<()> {
     let access = Access::new(unit, sites);
     let candidates: Vec<_> = access.reads.iter().flat_map(|(name, paths)| paths.iter().filter(|p| sites.allows_pre(p)).map(move |p| (name, p))).collect();
     let (var, path) = candidates.get(choose(rng, &candidates)?)?;
@@ -100,6 +100,15 @@ pub(super) fn expand(unit: &mut Node, sites: &Sites, rng: &mut Rng) -> Option<()
         Node::Decl { init: Some(init), .. } if !matches!(init.as_ref(), Node::InitList { .. }) => *init.clone(),
         Node::Assignment { op, rvalue, .. } if op == "=" => *rvalue.clone(),
         _ => return None,
+    };
+    // A pointer variable converts its value on assignment: keep that conversion
+    // where the value replaces it, or a void pointer could not be read through.
+    let expr = {
+        let types = Types::new(unit, target);
+        match (types.decayed(&Node::id(var.as_str())), types.decayed(&expr)) {
+            (Some(to), Some(from)) if matches!(types.resolve(&to), Some(Node::PtrDecl { .. })) && !types.same(&to, &from, false) => Node::Cast { to_type: types::typename(to).boxed(), expr: expr.boxed() },
+            _ => expr,
+        }
     };
     let declaration = matches!(at(unit, write), Node::Decl { .. });
     let mut uses: Vec<_> = access.reads.iter().find(|(name, _)| name == *var)?.1.iter().filter(|p| before < access.starts[*p] && access.starts[*p] < after && sites.allows_pre(p)).cloned().collect();
