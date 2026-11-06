@@ -186,14 +186,101 @@ pub(super) fn room_map(field: &mut Field, settled: &super::field::Saved) -> Resu
 }
 
 /// Each cell holding collision code `code` on the leader's layer, with the
-/// height its ground is drawn up by.
+/// height its marker is drawn up by (cell_lift).
 pub(super) fn code_cells(field: &mut Field, code: u16) -> Result<Vec<(i32, i32, i32)>, String> {
     let mut out = Vec::new();
+    let reach = field.reach(None).ok();
     for (layer, cx, cz) in field.cells_with_code(code)? {
-        let lift = field.ground(layer, cx * 16 + 8, cz * 16 + 8)? >> 16;
+        let lift = cell_lift(field, reach.as_ref(), layer, cx, cz, i32::from(code))?;
         out.push((cx, cz, lift));
     }
     Ok(out)
+}
+
+/// How many pixels up the map picture the marker of cell (cx, cz) of `layer`
+/// is drawn, `code` being the cell's behavior.
+///
+/// The game finds a cell by ground position alone, and draws an actor its
+/// height above its place on the map (ActorSystem_PlaceSprites), so a cell
+/// shows where an actor standing on it, or looking at it, is drawn. A cell
+/// the leader stands on is drawn up by its own ground. A cell he examines
+/// is drawn up by the floor he examines it from (marker_lift): its own
+/// ground is often the top of what stands there, a bookcase's 32 pixels.
+/// A neighbour is floor when the leader can walk to it (`reach`, from where
+/// he stands); with no reach, any neighbour but a wall or another examined
+/// cell is.
+pub(super) fn cell_lift(field: &mut Field, reach: Option<&super::field::Reach>, layer: u8, cx: i32, cz: i32, code: i32) -> Result<i32, String> {
+    let own = field.ground(layer, cx * 16 + 8, cz * 16 + 8)? >> 16;
+    if !super::guide_cells::examined(field, code) {
+        return Ok(own);
+    }
+    let mut floors = Vec::new();
+    for (dx, dz) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
+        let (nx, nz) = (cx + dx, cz + dz);
+        let next = field.cell(layer, nx, nz);
+        // A wall and the edge of the grid are no floor. A cell the leader can
+        // walk to is, even one he also examines, as the row before a bookcase
+        // often is; with no reach, another examined cell is taken for
+        // furniture.
+        let floor = match reach {
+            Some(r) => r.holds(layer, nx * 16 + 8, nz * 16 + 8),
+            None => !super::guide_cells::examined(field, next),
+        };
+        if next < 0 || next == 255 || !floor {
+            continue;
+        }
+        floors.push(field.ground(layer, nx * 16 + 8, nz * 16 + 8)? >> 16);
+    }
+    Ok(marker_lift(own, &floors, true))
+}
+
+/// The height a cell's marker is drawn up by, from the cell's own ground
+/// `own` and the ground of the neighbours an actor can stand on, `floors`,
+/// all in pixels. A cell stood on keeps its own. A cell examined takes the
+/// highest floor from level with it to 64 pixels below it, the reach the
+/// game allows a search spot (Actor_GetTriggerCellAheadOfCurrent); with no
+/// such floor, the lowest floor beside it; with no floor, its own.
+pub(super) fn marker_lift(own: i32, floors: &[i32], examined: bool) -> i32 {
+    if !examined {
+        return own;
+    }
+    floors
+        .iter()
+        .copied()
+        .filter(|&floor| floor <= own && floor >= own - 64)
+        .max()
+        .or_else(|| floors.iter().copied().min())
+        .unwrap_or(own)
+}
+
+#[cfg(test)]
+mod marker_tests {
+    use super::marker_lift;
+
+    #[test]
+    fn a_cell_stood_on_keeps_its_ground() {
+        assert_eq!(marker_lift(48, &[0, 48], false), 48);
+    }
+
+    #[test]
+    fn a_bookcase_is_drawn_at_the_floor_before_it() {
+        // Its top is 32 pixels up and the room's floor is 0: the marker
+        // goes on the bookcase's face, not two rows above it.
+        assert_eq!(marker_lift(32, &[0], true), 0);
+        assert_eq!(marker_lift(0, &[0], true), 0);
+    }
+
+    #[test]
+    fn a_chest_on_a_ledge_is_drawn_at_the_ledge() {
+        // Examined from the ledge at 48, not from the ground 48 below it.
+        assert_eq!(marker_lift(56, &[48, 0], true), 48);
+    }
+
+    #[test]
+    fn with_no_floor_in_reach_the_lowest_floor_is_used() {
+        assert_eq!(marker_lift(200, &[16, 40], true), 16);
+        assert_eq!(marker_lift(24, &[], true), 24);
+    }
 }
 
 /// A horizontal line across `image` at row `y`, two pixels thick.

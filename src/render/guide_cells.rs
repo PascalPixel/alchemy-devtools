@@ -154,6 +154,13 @@ fn rows(field: &Field, code: i32) -> Vec<Row> {
     out
 }
 
+/// Whether the leader looks at cell code `code` rather than standing on it:
+/// a fixed search spot (CELL_BEHAVIOR_JAR to CELL_BEHAVIOR_WELL) or a code
+/// the scene has an examine row for (Actor_GetTriggerCellAheadOfCurrent).
+pub(super) fn examined(field: &Field, code: i32) -> bool {
+    (242..=247).contains(&code) || rows(field, code).iter().any(|r| r.control & 15 == TRIGGER_EXAMINE)
+}
+
 /// Whether a row's condition holds (GameFlag_IsConditionActive): -1
 /// always, one with bit 0x1000 while its flag is set, any other while its
 /// flag is clear.
@@ -603,9 +610,10 @@ impl<'a> Guide<'a> {
         // Each code on screen: its meaning and its cells' places on the
         // picture.
         let mut groups: Vec<(i32, Meaning, Vec<(i32, i32)>)> = Vec::new();
+        let reach = field.reach(None).ok();
         for &(layer, cx, cz) in &cells {
             let code = field.cell(layer, cx, cz);
-            let lift = field.ground(layer, cx * 16 + 8, cz * 16 + 8)? >> 16;
+            let lift = super::guide_take::cell_lift(&mut field, reach.as_ref(), layer, cx, cz, code)?;
             let (sx, sy) = (2 * (cx * 16 - vx), 2 * (cz * 16 - vy - lift));
             if sx < 0 || sy < 0 || sx + 32 > 2 * WIDTH as i32 || sy + 32 > 2 * HEIGHT as i32 {
                 continue;
