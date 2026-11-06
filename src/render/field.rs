@@ -251,6 +251,7 @@ pub struct Symbols {
     load_layered: u32,
     apply_entrance: u32,
     notice: u32,
+    field_menu: u32,
     step: u32,
     update_layer: u32,
     center: u32,
@@ -314,6 +315,7 @@ impl Symbols {
             // Each second spelling is Alchemy's before The Broken Seal's rename.
             apply_entrance: at("Scene_ApplyEntrance").or_else(|_| at("Scene_ApplyWarpDest"))?,
             notice: at("AreaNameWindow_Show").or_else(|_| at("MapNamePopup_Show"))?,
+            field_menu: at("FieldMenu_Run")?,
             step: at("Field_UpdateWalking")?,
             update_layer: at("MapGrid_UpdateLayerScroll")?,
             center: at("MapGrid_CenterOnFollowedPoint")?,
@@ -403,6 +405,11 @@ pub(super) struct Track {
     /// scene has no actor for (0 for none): the event is playing where its
     /// cast is not on stage.
     absent_speaker: u16,
+    /// While an event plays: the field menu a press of A would open is
+    /// not opened, and the frame it would have opened is kept (the player
+    /// had control again; A with nothing ahead opens it, FieldSequence_Run).
+    block_menu: bool,
+    menu_frame: u32,
     last_dismiss: u32,
     last_typing: u32,
     choice_return: u32,
@@ -630,6 +637,8 @@ impl<'rom> Field<'rom> {
             freeze: false,
             focus: [0; 3],
             absent_speaker: 0,
+            block_menu: false,
+            menu_frame: 0,
             last_dismiss: 0,
             last_typing: 0,
             choice_return: 0,
@@ -984,6 +993,10 @@ impl<'rom> Field<'rom> {
         }
         if pc == s.notice && !self.show_notice {
             self.gba.return_now(0);
+        }
+        if pc == s.field_menu && self.t.block_menu {
+            self.gba.return_now(0);
+            self.t.menu_frame = self.t.frame;
         }
         if (frame_done || self.probe_pcs.contains(&pc)) && self.probe.is_some() {
             let mut probe = self.probe.take().unwrap();
@@ -2975,6 +2988,8 @@ impl<'rom> Field<'rom> {
         let mut astray_since: Option<u32> = None;
         let mut leader_last: Option<(i32, i32)> = None;
         let mut teleported = false;
+        self.t.block_menu = true;
+        self.t.menu_frame = 0;
         loop {
             if record.is_none() && pages.len() >= max_pages {
                 break;
@@ -3063,6 +3078,10 @@ impl<'rom> Field<'rom> {
             };
             if returned.is_none() && self.t.dispatch_return == 0 {
                 returned = Some(self.t.dispatch_end);
+            }
+            // A press of A opened the field menu: the player had control again.
+            if self.t.menu_frame > b {
+                break;
             }
             if !moved {
                 let shifted = |a: Option<Actor>, x: i32, z: i32, by: i32| a.is_some_and(|a| (a.x - x).abs().max((a.z - z).abs()) >= by);
@@ -3216,6 +3235,7 @@ impl<'rom> Field<'rom> {
             }
         }
         self.hold(0);
+        self.t.block_menu = false;
         // Where the event leaves him is where the player takes over: the party
         // must be able to be there.
         if placed_him && !teleported && record.is_some() && !self.hide_leader && !left && !fought && !capped && self.scene() == self.setup.scene {
