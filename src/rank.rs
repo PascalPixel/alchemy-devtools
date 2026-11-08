@@ -34,8 +34,9 @@ closer with it added. Overlay copies of one shape (the same instructions,
 calling and reading the same names and constants) are one family, measured
 once from the copy with a draft, and so are the editions whose comparison
 is the same instruction for instruction.
-Pieces with no draft come first, by size times copies; then drafts that do
-not measure; then drafts by weight, the gap times copies. Columns, tab-
+Pieces with no draft come first, by size times copies; then drafts by
+weight, the gap times copies; then drafts that do not measure, last, since
+no brief can give them a figure. Columns, tab-
 separated: rank weight gap copies size differ kind state where name draft
 measure. size is the listing's instructions as diff counts them; a piece
 not measured weighs twice its size; measure is the diff command that
@@ -44,8 +45,9 @@ measures the piece, where its draft is to be written when there is none.
 first words: "no draft", "does not measure", "draft", "ready"); --limit
 keeps the first N. --json prints the rows as one JSON array on stdout
 instead of the table; --out writes the table to FILE. The totals by kind
-and state, and the run's time, go to stderr. With no --game, every game
-that still has recon/<game>."#;
+and state, the listings left out (padding: no instructions and no draft)
+by name, and the run's time, go to stderr. With no --game, every game that
+still has recon/<game>."#;
 
 struct Options {
     games: Vec<&'static str>,
@@ -117,13 +119,15 @@ fn weight(row: &Row) -> usize {
     gap(row) * row.places.len()
 }
 
-/// No draft first, by size times copies; then what does not measure; then
-/// drafts by weight; larger first, then by size, then as found.
+/// No draft first, by size times copies; then drafts by weight; then what
+/// does not measure, which no brief can give a figure or a stop rule, so
+/// the head of the list is always work an agent can measure; larger first,
+/// then by size, then as found.
 fn order(rows: &mut [Row]) {
     let tier = |row: &Row| match &row.measured {
         None => 0,
-        Some(Err(_)) => 1,
-        Some(Ok(_)) => 2,
+        Some(Ok(_)) => 1,
+        Some(Err(_)) => 2,
     };
     rows.sort_by(|a, b| {
         let key = |row: &Row| if tier(row) == 0 { row.size * row.places.len() } else { weight(row) };
@@ -290,7 +294,14 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         for (listing, draft) in &summary.nested {
             notes += &format!("{game}: {listing} measured with the draft of {draft}, which holds it\n");
         }
-        notes += &format!("{game}: {} drafts compiled; {} listings with no instructions and no draft left out\n", summary.compiled, summary.padding);
+        notes += &format!("{game}: {} drafts compiled\n", summary.compiled);
+        if !summary.padding.is_empty() {
+            notes += &format!(
+                "{game}: {} listings with no instructions and no draft left out: {}\n",
+                summary.padding.len(),
+                summary.padding.join(" ")
+            );
+        }
     }
     if !options.states.is_empty() {
         rows.retain(|row| {
@@ -345,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    fn no_draft_comes_first_then_what_does_not_measure_then_the_gap() {
+    fn no_draft_comes_first_then_the_gap_then_what_does_not_measure() {
         let mut rows = vec![
             row(Kind::Main, "08000010", 50, 1, measured(10, 4)),
             row(Kind::Main, "08000020", 10, 1, None),
@@ -356,9 +367,9 @@ mod tests {
         ];
         order(&mut rows);
         let places: Vec<&str> = rows.iter().map(|row| row.piece.place.as_str()).collect();
-        assert_eq!(places, ["08000040", "08000020", "08000030", "08000060", "08000010", "08000050"]);
-        assert_eq!(rows.iter().map(weight).collect::<Vec<_>>(), [120, 20, 60, 6, 4, 0]);
-        assert_eq!(rows.iter().map(state).collect::<Vec<_>>()[2..], ["does not measure: xgcc failed", "draft", "draft", "ready to adopt"]);
+        assert_eq!(places, ["08000040", "08000020", "08000060", "08000010", "08000050", "08000030"]);
+        assert_eq!(rows.iter().map(weight).collect::<Vec<_>>(), [120, 20, 6, 4, 0, 60]);
+        assert_eq!(rows.iter().map(state).collect::<Vec<_>>()[2..], ["draft", "draft", "ready to adopt", "does not measure: xgcc failed"]);
     }
 
     #[test]

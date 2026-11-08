@@ -47,8 +47,9 @@ pub(crate) struct Row {
 #[derive(Debug, Default)]
 pub(crate) struct Summary {
     pub compiled: usize,
-    /// Listings with no instructions and no draft (a function's padding).
-    pub padding: usize,
+    /// Listings with no instructions and no draft (a function's padding),
+    /// left out of the rows, by place.
+    pub padding: Vec<String>,
     /// Each listing found nested in a neighbour's draft, and that draft's address.
     pub nested: Vec<(String, String)>,
 }
@@ -392,7 +393,7 @@ pub(crate) fn measure(mut pieces: Vec<Piece>, editions: &[DecompTarget], jobs: u
     for (((_, members), &leader), outcome) in families.iter().zip(&leaders).zip(measured) {
         let piece = &pieces[leader];
         if matches!(piece.kind, Kind::Main | Kind::Arm) && sizes[leader] == 0 && piece.draft.is_none() {
-            summary.padding += 1;
+            summary.padding.push(piece.place.clone());
             continue;
         }
         let mut places = vec![piece.place.clone()];
