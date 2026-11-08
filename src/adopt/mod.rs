@@ -799,6 +799,13 @@ fn relink_edition(
     for (start, end, keep) in edits {
         out.splice(start..end, keep);
     }
+    // What the module calls that the edition never labelled is labelled
+    // where the edition's own code says it is.
+    let mut notes = Vec::new();
+    if let (Some(edition), Some((start, first))) = (edition, cuts[0].start.as_ref()) {
+        let adopted = adopted_names(files, layout, list, language, edition);
+        notes = edition.label_callees(&mut out, *start, first, &adopted)?;
+    }
     files.write(&path, join_lines(&out, newline));
     let cut = &cuts[0];
     let mut done = match &cuts[..] {
@@ -839,6 +846,9 @@ fn relink_edition(
         Some(false) => {}
         None => done.push_str("; no edition's map says whether it ends on a halfword: check what follows"),
     }
+    for note in notes {
+        done.push_str(&format!("\n      {note}"));
+    }
     *list = edited;
     Ok(done)
 }
@@ -870,6 +880,30 @@ fn unlabelled_beside(list: &ObjectList, all: &[&str], module: &str, scaffold: &s
         }
     }
     (found.len() == 1).then(|| found.into_iter().next().unwrap())
+}
+
+/// The names defined by the sources under games/ that `language` links now
+/// but did not at its last link: what adoptions since took from its scaffold.
+fn adopted_names(files: &mut Files, layout: &Layout, list: &ObjectList, language: &str, edition: &Edition) -> BTreeSet<String> {
+    let sources = layout.sources();
+    let objects: BTreeSet<String> = list
+        .rows
+        .iter()
+        .filter(|row| row.links(language) && row.object().starts_with(&sources) && !edition.linked_objects.contains(row.object()))
+        .map(|row| row.object().to_string())
+        .collect();
+    let mut names = BTreeSet::new();
+    for object in objects {
+        for extension in [".c", ".s", ".S"] {
+            let Ok(text) = files.read(&format!("{object}{extension}")) else { continue };
+            match extension {
+                ".c" => names.extend(definitions(&text)),
+                _ => names.extend(globals(&lines(&text).0)),
+            }
+            break;
+        }
+    }
+    names
 }
 
 /// Two rows placing the same sections of one object, one beside the other,

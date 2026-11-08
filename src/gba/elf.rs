@@ -65,6 +65,7 @@ pub struct Header {
     pub offset: usize,
     pub size: usize,
     pub link: u32,
+    pub info: u32,
 }
 
 /// Every section header, in the file's order, named from its string table.
@@ -88,6 +89,7 @@ pub fn headers(data: &[u8]) -> Result<Vec<Header>, String> {
             offset: word(data, at + 16)? as usize,
             size: word(data, at + 20)? as usize,
             link: word(data, at + 24)?,
+            info: word(data, at + 28)?,
         });
     }
     let strings = headers.get(half(data, 0x32)? as usize).and_then(|h| data.get(h.offset..h.offset + h.size));
@@ -134,5 +136,76 @@ impl Elf {
         }
         Ok(Elf { sections, symbols })
     }
+}
 
+/// R_ARM_ABS32: a word holding a symbol's address plus the word there.
+pub const R_ARM_ABS32: u8 = 2;
+/// R_ARM_THM_CALL (R_ARM_THM_PC22): a Thumb BL pair.
+pub const R_ARM_THM_CALL: u8 = 10;
+const SHT_REL: u32 = 9;
+
+/// One relocation of a relocatable object's section: where, of which kind,
+/// against which symbol, and whether the object defines that symbol.
+pub struct Relocation {
+    pub offset: u32,
+    pub kind: u8,
+    pub symbol: String,
+    pub defined: bool,
+}
+
+/// A relocatable object's section named `name`: its bytes and the
+/// relocations its `SHT_REL` table applies to it. None when it has none.
+pub fn relocated_section(data: &[u8], name: &str) -> Result<Option<(Vec<u8>, Vec<Relocation>)>, String> {
+    let headers = headers(data)?;
+    let Some(index) = headers.iter().position(|h| h.name == name) else { return Ok(None) };
+    let bytes_of = |h: &Header| data.get(h.offset..h.offset + h.size).ok_or_else(|| "ELF section outside the file".to_string());
+    let bytes = bytes_of(&headers[index])?.to_vec();
+    let mut relocations = Vec::new();
+    for table in headers.iter().filter(|h| h.kind == SHT_REL && h.info as usize == index) {
+        let symbols = headers.get(table.link as usize).ok_or("a relocation table with no symbol table")?;
+        let symbol_bytes = bytes_of(symbols)?;
+        let strings = headers.get(symbols.link as usize).map(bytes_of).transpose()?.unwrap_or(&[]);
+        for entry in bytes_of(table)?.as_chunks::<8>().0 {
+            let info = word(entry, 4)?;
+            let symbol = symbol_bytes.get((info >> 8) as usize * 16..).ok_or("a relocation past its symbol table")?;
+            relocations.push(Relocation {
+                offset: word(entry, 0)?,
+                kind: (info & 0xff) as u8,
+                symbol: string(strings, word(symbol, 0)? as usize),
+                defined: half(symbol, 14)? != 0,
+            });
+        }
+    }
+    Ok(Some((bytes, relocations)))
+}
+
+/// The Thumb BL pair at `at` in `bytes`: where it branches to, as an offset
+/// from `at`'s base (`at + 4 + displacement`), or None when it is no BL.
+pub fn thumb_bl_target(bytes: &[u8], at: usize) -> Option<u32> {
+    let high = u16::from_le_bytes([*bytes.get(at)?, *bytes.get(at + 1)?]);
+    let low = u16::from_le_bytes([*bytes.get(at + 2)?, *bytes.get(at + 3)?]);
+    if high & 0xf800 != 0xf000 || low & 0xf800 != 0xf800 {
+        return None;
+    }
+    let mut displacement = (i32::from(high & 0x7ff) << 12) | (i32::from(low & 0x7ff) << 1);
+    if displacement & 0x40_0000 != 0 {
+        displacement -= 0x80_0000;
+    }
+    u32::try_from(at as i64 + 4 + i64::from(displacement)).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_thumb_bl_pair_decodes_forward_and_back() {
+        // bl +0x100 from 0x10, and bl -0x10 from 0x20.
+        let mut bytes = vec![0u8; 0x40];
+        bytes[0x10..0x14].copy_from_slice(&[0x00, 0xf0, 0x80, 0xf8]);
+        bytes[0x20..0x24].copy_from_slice(&[0xff, 0xf7, 0xf8, 0xff]);
+        assert_eq!(thumb_bl_target(&bytes, 0x10), Some(0x114));
+        assert_eq!(thumb_bl_target(&bytes, 0x20), Some(0x14));
+        assert_eq!(thumb_bl_target(&bytes, 0), None);
+    }
 }
