@@ -1,6 +1,8 @@
 //! A C draft compiled as the Makefile compiles the file it would replace:
-//! the same compiler, options and edition for its route (K1, K2).
+//! the recipe `make -n` prints for that file's object in the draft's
+//! edition, with the draft in its place (`gba::recipe`).
 
+use crate::alchemy::targets::DecompTarget;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
@@ -46,286 +48,39 @@ mod checkout_tests {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum CompilerTarget {
-    Tbs,
-    Tla,
-}
-
-impl CompilerTarget {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            CompilerTarget::Tbs => "tbs",
-            CompilerTarget::Tla => "tla",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum CompilerFamily {
-    Game,
-    Agbcc,
-    AgbccFlash,
-    GameArm,
-}
-
-/// The Makefile's SOUND_C, FLASH_C and ARM_C.
-const SOUND_C: &[&str] = &[
-    "games/tbs/src/sound/audio.c",
-    "games/tbs/src/sound/tables.c",
-    "games/tbs/src/sound/driver.c",
-    "games/tbs/src/sound/engine.c",
-    "games/tla/src/sound/sound.c",
-    "games/tla/src/sound/tables.c",
-];
-const FLASH_C: &[&str] = &[
-    "games/tbs/src/gamepak/flash/flash.c",
-    "games/tbs/src/gamepak/flash/sst.c",
-    "games/tbs/src/gamepak/flash/atmel.c",
-    "games/tbs/src/gamepak/flash/program_flash_sector.c",
-    "games/tbs/src/cartridge/save/flash.c",
-    "games/tbs/src/cartridge/save/sst.c",
-    "games/tbs/src/cartridge/save/atmel.c",
-    "games/tbs/src/cartridge/save/program_flash_sector.c",
-    "games/tla/src/gamepak/flash/flash.c",
-    "games/tla/src/gamepak/flash/sst.c",
-    "games/tla/src/gamepak/flash/atmel.c",
-    "games/tla/src/gamepak/flash/program_flash_sector.c",
-    "games/tla/src/system/save/flash.c",
-    "games/tla/src/system/save/sst.c",
-    "games/tla/src/system/save/atmel.c",
-    "games/tla/src/system/save/program_flash_sector.c",
-];
-const ARM_C: &[&str] = &[
-    "games/tbs/src/window/glyph_arm.c",
-    "games/tbs/src/field/actor_update_arm.c",
-    "games/tbs/src/field/world_map_lines.c",
-    "games/tbs/src/field/update.c",
-    "games/tbs/src/field/vertices.c",
-    "games/tla/src/window/cell_picture.c",
-    "games/tla/src/graphics/tile/cell_picture.c",
-];
-
-fn relative(source: &str) -> &str {
-    let root = root().to_string_lossy();
-    source.strip_prefix(root.as_ref()).map_or(source, |rest| rest.trim_start_matches('/'))
-}
-
-/// The route the Makefile gives a source: by its path, as the file it would
-/// replace when it is a draft named after one.
-pub fn family_for_source(_target: CompilerTarget, source: &str) -> CompilerFamily {
-    let source = relative(source);
-    let tla_sound = source.starts_with("games/tla/src/sound/")
-        && (source.ends_with("/driver.c") || source.ends_with("/engine.c") || source.ends_with("/tail.c") || source.contains("/music_track_"));
-    if SOUND_C.contains(&source) || tla_sound {
-        CompilerFamily::Agbcc
-    } else if FLASH_C.contains(&source) {
-        CompilerFamily::AgbccFlash
-    } else if ARM_C.contains(&source) {
-        CompilerFamily::GameArm
+/// The commands that compile `draft` into `object` (its `.s` and `.i` beside
+/// it) as `target`'s build compiles the file the draft replaces:
+/// - a file the edition's object list names takes its own recipe;
+/// - an overlay draft takes the recipe of C its overlay alone links, which
+///   for The Lost Age builds for size;
+/// - with `arm`, the draft takes the ARM C route: make is told it is one of
+///   the Makefile's `ARM_C`;
+/// - any other draft takes the recipe the Makefile gives every other C file.
+pub(crate) fn steps(target: DecompTarget, draft: &Path, object: &Path, overlay: Option<&str>, arm: bool) -> Result<Vec<Vec<String>>, String> {
+    let root = root();
+    // The draft as make names it: relative to the checkout when inside it.
+    let named = if draft.is_absolute() { draft.strip_prefix(root).unwrap_or(draft) } else { draft };
+    let named = named.to_string_lossy().into_owned();
+    let object_of = |source: &str| format!("{}/obj/{}.o", target.output_dir, source.strip_suffix(".c").unwrap_or(source));
+    let mut variables = vec![format!("EDITION={}", target.id)];
+    let source = if arm {
+        variables.push(format!("ARM_C={named}"));
+        named
+    } else if let Some(overlay) = overlay.filter(|_| !listed(target, &named)) {
+        crate::alchemy::overlay::linked_source(root, Path::new(target.output_dir), overlay)?
     } else {
-        CompilerFamily::Game
-    }
+        named
+    };
+    let made = object_of(&source);
+    let recipe = crate::gba::recipe::recipe(root, Path::new(target.output_dir), &variables, &source, &made)
+        .map_err(|error| format!("{error}; build {} first", target.id))?;
+    Ok(crate::gba::recipe::retarget(&recipe, root, &source, &made, draft, object))
 }
 
-/// The game's include folders, and a branch's recon/<game>/include where
-/// headers only drafts read have moved: the folder and each folder inside it
-/// but `module`, whose headers are included by their path, as the Makefile's
-/// INCLUDES lists them, read from the tree so a folder renamed there needs no
-/// change here.
-fn includes(target: CompilerTarget) -> Vec<String> {
-    let mut flags = Vec::new();
-    for base in ["games", "recon"] {
-        let folder = root().join(base).join(target.as_str()).join("include");
-        if base == "recon" && !folder.is_dir() {
-            continue;
-        }
-        flags.push(format!("-I{}", folder.display()));
-        let mut inner: Vec<PathBuf> = std::fs::read_dir(&folder)
-            .into_iter()
-            .flatten()
-            .flatten()
-            .map(|entry| entry.path())
-            .filter(|path| path.is_dir() && path.file_name().is_some_and(|name| name != "module"))
-            .collect();
-        inner.sort();
-        flags.extend(inner.iter().map(|path| format!("-I{}", path.display())));
-    }
-    flags
-}
-
-fn tool(name: &str) -> String {
-    root().join("tools/out/compilers").join(name).to_string_lossy().into_owned()
-}
-
-/// The checkout's Makefile's own value of `name` (`NAME := value`, continued
-/// over lines ending in `\`), with the `$(VAR)`s it uses expanded the same
-/// way, so a draft compiles as the build compiles on that branch.
-fn makefile_var(name: &str) -> Option<String> {
-    static MAKEFILE: OnceLock<String> = OnceLock::new();
-    let text = MAKEFILE.get_or_init(|| std::fs::read_to_string(root().join("Makefile")).unwrap_or_default());
-    makefile_value(text, name)
-}
-
-fn makefile_value(text: &str, name: &str) -> Option<String> {
-    let mut lines = text.lines();
-    while let Some(line) = lines.next() {
-        let Some(rest) = line.strip_prefix(name) else { continue };
-        if !rest.starts_with([' ', ':', '=']) {
-            continue;
-        }
-        let rest = rest.trim_start();
-        let Some(value) = rest.strip_prefix(":=").or_else(|| rest.strip_prefix('=')) else { continue };
-        let mut value = value.trim().to_string();
-        while value.ends_with('\\') {
-            value.pop();
-            value.push(' ');
-            value.push_str(lines.next().unwrap_or("").trim());
-        }
-        let mut expanded = String::new();
-        let mut rest = value.as_str();
-        while let Some(at) = rest.find("$(") {
-            expanded.push_str(&rest[..at]);
-            let inner = &rest[at + 2..];
-            let Some(end) = inner.find(')') else { break };
-            let reference = &inner[..end];
-            expanded.push_str(&makefile_value(text, reference).unwrap_or_else(|| format!("$({reference})")));
-            rest = &inner[end + 1..];
-        }
-        expanded.push_str(rest);
-        return Some(expanded.split_whitespace().collect::<Vec<_>>().join(" "));
-    }
-    None
-}
-
-/// The game's C compiler as the Makefile runs it (GAME_XGCC_<game>, else
-/// XGCC), with its paths made absolute.
-fn game_compiler(target: CompilerTarget) -> Vec<String> {
-    let words = makefile_var(&format!("GAME_XGCC_{}", target.as_str()))
-        .or_else(|| makefile_var("XGCC"))
-        .unwrap_or_else(|| format!("{} -B{}/", tool("xgcc"), tool("")));
-    words
-        .split_whitespace()
-        .map(|word| match word.strip_prefix("-B") {
-            Some(path) => format!("-B{}", root().join(path).display()),
-            None if word.contains('/') => root().join(word).display().to_string(),
-            None => word.to_string(),
-        })
-        .collect()
-}
-
-/// The game's C options, the Makefile's CFLAGS_tbs or CFLAGS_tla on this
-/// checkout's branch.
-pub fn cflags(target: CompilerTarget) -> Vec<String> {
-    makefile_var(&format!("CFLAGS_{}", target.as_str()))
-        .unwrap_or_default()
-        .split_whitespace()
-        .map(String::from)
-        .collect()
-}
-
-/// Whether a source is linked only into overlays: an overlay draft or a scene.
-fn overlay_only(source: &str) -> bool {
-    source.contains("/overlays/") || source.contains("/src/scene/")
-}
-
-#[cfg(test)]
-mod makefile_tests {
-    use super::{makefile_value, overlay_only};
-
-    #[test]
-    fn overlay_sources_are_the_drafts_and_scenes() {
-        assert!(overlay_only("recon/tla/en/overlays/resource_68f_c_02001b48.c"));
-        assert!(overlay_only("games/tla/src/scene/prox/s3ee8.c"));
-        assert!(!overlay_only("recon/tla/en/main/0813fd84.c"));
-        assert!(!overlay_only("games/tla/src/battle_effect/f13e7e0.c"));
-    }
-
-    #[test]
-    fn reads_continued_and_nested_values() {
-        let text = "COMPILER := tools/out/c\nXGCC := $(COMPILER)/xgcc -B$(COMPILER)/\nCFLAGS_tla := -O2 \\\n  -mthumb\nCFLAGS_tla304 := -Os\n";
-        assert_eq!(makefile_value(text, "XGCC").as_deref(), Some("tools/out/c/xgcc -Btools/out/c/"));
-        assert_eq!(makefile_value(text, "CFLAGS_tla").as_deref(), Some("-O2 -mthumb"));
-        assert_eq!(makefile_value(text, "GAME_XGCC_tla"), None);
-    }
-}
-
-/// ARM C's options (GCC 2.95.2).
-pub fn arm_cflags() -> Vec<String> {
-    ["-O2", "-mthumb-interwork", "-fomit-frame-pointer", "-fcall-used-r4"].map(String::from).to_vec()
-}
-
-const CPPFLAGS: &[&str] = &[
-    "-lang-c", "-nostdinc", "-Acpu(arm)", "-Amachine(arm)", "-D__CHAR_UNSIGNED__", "-D__OPTIMIZE__",
-    "-D__ARM_ARCH_4T__", "-D__APCS_32__", "-D__ARMEL__", "-Darm_elf", "-D__ELF__",
-];
-
-/// The commands that compile `source` into `object`, through its own route
-/// or `family`: the edition's define and its build folder (for the message
-/// ids) come from `define` and `build`.
-pub fn steps(
-    target: CompilerTarget,
-    define: &str,
-    build: &Path,
-    source: &Path,
-    object: &Path,
-    family: Option<CompilerFamily>,
-) -> Vec<Vec<String>> {
-    let text = |path: &Path| path.to_string_lossy().into_owned();
-    let (source_text, assembly, preprocessed) = (text(source), text(&object.with_extension("s")), text(&object.with_extension("i")));
-    let family = family.unwrap_or_else(|| family_for_source(target, &source_text));
-    let edition = [format!("-D{define}=1"), format!("-I{}", build.display())];
-    let dumpbase = source.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
-    let mut steps = Vec::new();
-    match family {
-        CompilerFamily::Game => {
-            let mut compile = game_compiler(target);
-            let mut flags = cflags(target);
-            // The Lost Age's C linked only into overlays builds for size, as the
-            // Makefile routes it: overlay drafts and scene objects.
-            if target.as_str() == "tla" && overlay_only(&source_text) {
-                for flag in &mut flags {
-                    if flag == "-O2" {
-                        *flag = "-Os".into();
-                    }
-                }
-            }
-            compile.extend(flags);
-            compile.extend(includes(target));
-            compile.extend(edition);
-            compile.extend(["-S".into(), "-o".into(), assembly.clone(), source_text]);
-            steps.push(compile);
-        }
-        CompilerFamily::Agbcc | CompilerFamily::AgbccFlash => {
-            let mut preprocess = vec![tool("cpp0")];
-            preprocess.extend(CPPFLAGS.iter().map(|flag| flag.to_string()));
-            preprocess.push(format!("-I{}/games/{}/include", root().display(), target.as_str()));
-            preprocess.extend(["-D__GNUC__=2", "-D__GNUC_MINOR__=9", "-D__GNUC_PATCHLEVEL__=0", "-D__THUMBEL__", "-Dthumb", "-D__thumb__"].map(String::from));
-            preprocess.extend(edition);
-            preprocess.extend([source_text, preprocessed.clone()]);
-            steps.push(preprocess);
-            let level = if family == CompilerFamily::AgbccFlash { "-O" } else { "-O2" };
-            steps.push(vec![tool("agbcc/old_agbcc"), preprocessed, "-dumpbase".into(), dumpbase, "-mthumb-interwork".into(), level.into(), "-o".into(), assembly.clone()]);
-        }
-        CompilerFamily::GameArm => {
-            let mut preprocess = vec![tool("cpp0")];
-            preprocess.extend(CPPFLAGS.iter().map(|flag| flag.to_string()));
-            preprocess.extend(includes(target));
-            preprocess.extend(["-D__GNUC__=2", "-D__GNUC_MINOR__=95", "-D__GNUC_PATCHLEVEL__=2", "-Darm", "-D__arm__"].map(String::from));
-            preprocess.extend(edition);
-            preprocess.extend([source_text, preprocessed.clone()]);
-            steps.push(preprocess);
-            let mut compile = vec![tool("gcc2952_arm"), preprocessed, "-dumpbase".into(), dumpbase];
-            compile.extend(arm_cflags());
-            compile.extend(["-o".into(), assembly.clone()]);
-            steps.push(compile);
-        }
-    }
-    let mut assemble = vec![tool("as"), "-marm7tdmi".into()];
-    if family != CompilerFamily::GameArm {
-        assemble.push("-mthumb".into());
-    }
-    assemble.extend(["-mthumb-interwork".into(), "-o".into(), text(object), assembly]);
-    steps.push(assemble);
-    steps
+/// Whether the edition's object list (ags-objects' `objects.mk`) names the
+/// object `source` builds.
+fn listed(target: DecompTarget, source: &str) -> bool {
+    let object = format!("$(BUILD)/obj/{}.o", source.strip_suffix(".c").unwrap_or(source));
+    std::fs::read_to_string(root().join(target.output_dir).join("objects.mk"))
+        .is_ok_and(|list| list.split_whitespace().any(|word| word == object))
 }

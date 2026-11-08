@@ -1,41 +1,60 @@
-use crate::compile::{family_for_source, root, CompilerFamily};
-use crate::gba::process::run as command;
-use crate::alchemy::targets::{decomp_target, DecompTarget};
+use crate::alchemy::overlay;
+use crate::alchemy::targets::{decomp_target, targets, DecompTarget};
+use crate::compile::root;
+use crate::gba::bounds::{function_end, resolve};
 use crate::gba::elf::Elf;
 use crate::gba::ld_map::{Map, Placed, ROM};
+use crate::gba::process::run as command;
+use crate::gba::thumb::{thumb_lines, Part};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-const USAGE: &str = r#"usage: alchemy-devtools diff DRAFT.c [ADDRESS[,ADDRESS...]] [--game tbs|tla] [--edition EDITION] [--arm] [--rtl] [--heat] [--show]
-       alchemy-devtools diff OVERLAY_DRAFT.c [--overlay resource_XXX] [--symbol NAME] [--edition EDITION] [--rtl] [--show]
-Compiles DRAFT.c for --edition (default: the game's English edition) with
-the build's own compiler and options, then compares its instructions with
-listing objects out/EDITION/obj/recon/<game>/raw/ADDRESS.o (build the
-edition first). ADDRESS defaults to the draft's file name; give several,
-comma-separated, when the draft holds a nested function and its parent.
-The game defaults from the draft's path. Prints the instruction counts and
-how many differ; --show prints the comparison, - for the listing and + for
-the draft. "differ 0" means the code matches instruction for instruction.
+mod alloc;
+mod skeleton;
+
+const USAGE: &str = r#"usage: alchemy-devtools diff DRAFT.c [ADDRESS[,ADDRESS...]] [--game GAME] [--edition EDITION] [--arm] [--rtl] [--alloc] [--heat] [--show] [--skeleton]
+       alchemy-devtools diff OVERLAY_DRAFT.c [--overlay resource_XXX] [--symbol NAME] [--edition EDITION] [--rtl] [--alloc] [--heat] [--show] [--skeleton]
+Compiles DRAFT.c for --edition (default: the game's English edition) as the
+build compiles the file it replaces: the recipe `make -n` prints for that
+file's object, with the draft in its place. A file the edition's object list
+names takes its own recipe; an overlay draft takes the recipe of C its
+overlay alone links; any other draft takes the recipe of the main image's C.
+Then compares its instructions with listing objects
+out/EDITION/obj/recon/<game>/raw/ADDRESS.o (build the edition first).
+ADDRESS defaults to the draft's file name; give several, comma-separated,
+when the draft holds a nested function and its parent. The game defaults
+from the draft's path. Prints the instruction counts and how many differ,
+then the skeleton gap: the instructions that still differ once registers,
+stack and pool offsets, branch distances and register lists are set aside,
+as rows of the listing removed and rows of the draft added. --show prints
+the comparison, - for the listing and + for the draft; --skeleton prints the
+comparison of the skeletons. "differ 0" means the code matches instruction
+for instruction.
+Each run compiles in its own folder, out/EDITION/obj/drafts/run-PID, and
+removes it when done.
 An overlay draft (a path under overlays/) compares with the function of
 the same name, or --symbol, in out/EDITION/overlays/OVERLAY_overlay.o;
 an adopted function absent from that object uses the linked overlay's bounds
-and code decoded from our reference ROM, as alchemy show does.
-The overlay defaults from the path (resource_XXX). When no separate listing
-object exists, a main-image function is resolved by ADDRESS or --symbol
-in the selected edition's map and ELF. Its reference ROM extent is read only
-for comparison; literal pools and jump tables are omitted. --arm explicitly
-selects ARM for scaffolds without instruction-set markers. Mixed-mode
-scaffolds are unsupported. This normalized comparison is analysis only;
-the full twelve-edition ROM comparison remains the matching authority.
+and code unpacked from our reference ROM. The overlay defaults from the path
+(resource_XXX). When no separate listing object exists, a main-image
+function is resolved by ADDRESS or --symbol in the selected edition's map
+and ELF. Its reference ROM extent is read only for comparison; literal pools
+and jump tables are omitted. --symbol names one function: give several as
+ADDRESS,ADDRESS. --arm explicitly selects ARM for scaffolds without
+instruction-set markers. Mixed-mode scaffolds are unsupported. This
+normalized comparison is analysis only; the full twelve-edition ROM
+comparison remains the matching authority.
 --arm compiles an ARM draft of either game as the build compiles game ARM C
-(GAME_ARM_SOURCES, AGENTS.md K1): stock GCC 2.95.2 at the common ARM
+(the Makefile's ARM_C, AGENTS.md K1): stock GCC 2.95.2 at the common ARM
 setting, assembled as ARM. Credit comes only from source the build links.
-Output stays in obj/drafts/arm.
---rtl keeps the compiler's dump after every pass (GCC's -da) in
-out/EDITION/obj/drafts/rtl/, named DRAFT.c.PASS, to find the pass where the
-draft's allocation or scheduling first leaves the listing's. The lreg and greg
-dumps give each pseudo's allocation priority; with -fsched-verbose=5 the sched
-and sched2 dumps say in words why each instruction was scheduled where it is.
+--rtl keeps the run's folder and the compiler's dump after every pass in it
+(GCC's -da), named DRAFT.c.PASS, to find the pass where the draft's
+allocation or scheduling first leaves the listing's; with -fsched-verbose=5
+the sched and sched2 dumps say in words why each instruction was scheduled
+where it is. --alloc prints each pseudo register global.c allocates, in its
+order, from the lreg and greg dumps: its references, live length, priority
+(floor(log2 refs) * refs / live length), the calls it lives across and the
+hard register it got.
 --heat compiles the draft once more with -g (analysis only) and prints its
 function's lines, each with its count of differing instructions in diff's
 own alignment (a listing row counts on the draft line it falls before), and
@@ -50,8 +69,10 @@ struct Options {
     game: &'static str,
     target: DecompTarget,
     show: bool,
+    skeleton: bool,
     arm: bool,
     rtl: bool,
+    alloc: bool,
     heat: bool,
     overlay: Option<String>,
     symbol: Option<String>,
@@ -63,8 +84,10 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
     let mut game = None;
     let mut target = None;
     let mut show = false;
+    let mut skeleton = false;
     let mut arm = false;
     let mut rtl = false;
+    let mut alloc = false;
     let mut heat = false;
     let mut overlay = None;
     let mut symbol = None;
@@ -72,8 +95,10 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
     while i < arguments.len() {
         match arguments[i].as_str() {
             "--show" => show = true,
+            "--skeleton" => skeleton = true,
             "--arm" => arm = true,
             "--rtl" => rtl = true,
+            "--alloc" => alloc = true,
             "--heat" => heat = true,
             "--overlay" => {
                 i += 1;
@@ -89,13 +114,9 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
             }
             "--game" => {
                 i += 1;
-                game = match arguments.get(i).map(String::as_str) {
-                    Some("tbs") => Some("tbs"),
-                    Some("tla") => Some("tla"),
-                    _ => return Err(USAGE.into()),
-                }
+                let named = arguments.get(i).ok_or_else(|| USAGE.to_string())?;
+                game = Some(targets()?.into_iter().map(|target| target.game()).find(|game| game == named).ok_or_else(|| USAGE.to_string())?);
             }
-            "-h" | "--help" => return Err(USAGE.into()),
             value if value.starts_with('-') => return Err(format!("unknown diff option: {value}\n{USAGE}")),
             value if draft.is_none() => draft = Some(PathBuf::from(value)),
             value if addresses.is_empty() => {
@@ -108,7 +129,10 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
     let draft = draft.ok_or_else(|| USAGE.to_string())?;
     let path_text = draft.to_string_lossy().into_owned();
     if overlay.is_none() && path_text.contains("/overlays/") {
-        overlay = resource_name(&path_text);
+        overlay = overlay::named_in(&path_text);
+    }
+    if symbol.is_some() && addresses.len() > 1 {
+        return Err("--symbol names one function; give several as ADDRESS,ADDRESS".into());
     }
     if let Some(symbol) = symbol.as_ref().filter(|_| addresses.is_empty() && overlay.is_none()) {
         addresses.push(symbol.clone());
@@ -123,70 +147,96 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
         }
         addresses.push(stem);
     }
-    let text = draft.to_string_lossy();
-    let edition_game = target.map(|target| if target.id.as_str().starts_with("tla-") { "tla" } else { "tbs" });
+    let edition_game = target.map(|target| target.game());
     if matches!((game, edition_game), (Some(game), Some(edition_game)) if game != edition_game) {
         return Err("--game and --edition name different games".into());
     }
-    let game = game.or(edition_game).unwrap_or(if text.contains("/tla/") {
-        "tla"
-    } else {
-        "tbs"
-    });
-    let target = target.unwrap_or(decomp_target(Some(&format!("{game}-en")))?);
+    let game = match game.or(edition_game) {
+        Some(game) => game,
+        None => {
+            let games: Vec<&str> = targets()?.into_iter().map(|target| target.game()).collect();
+            games.iter().copied().find(|game| path_text.contains(&format!("/{game}/"))).or(games.first().copied()).ok_or("rom.sha1 lists no edition")?
+        }
+    };
+    let target = match target {
+        Some(target) => target,
+        None => decomp_target(Some(&format!("{game}-en")))?,
+    };
     if arm && overlay.is_some() {
         return Err("--arm compiles main-image game ARM C; overlays are Thumb".into());
     }
-    Ok(Options { draft, addresses, game, target, show, arm, rtl, heat, overlay, symbol })
+    Ok(Options { draft, addresses, game, target, show, skeleton, arm, rtl, alloc, heat, overlay, symbol })
 }
 
-fn draft_object(output: &Path, stem: &str) -> PathBuf {
-    output.join("obj/drafts").join(format!("{stem}.o"))
+/// A run's own folder, out/EDITION/obj/drafts/run-PID: the compiler runs in
+/// it, so its pass dumps land there, and no two runs share an object. It is
+/// removed when the run ends unless kept.
+struct Work {
+    folder: PathBuf,
+    keep: bool,
 }
 
-fn arm_object(output: &Path, stem: &str) -> PathBuf {
-    output.join("obj/drafts/arm").join(format!("{stem}.o"))
+impl Work {
+    fn new(target: DecompTarget) -> Result<Work, String> {
+        let folder = root().join(target.output_dir).join("obj/drafts").join(format!("run-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&folder);
+        std::fs::create_dir_all(&folder).map_err(|error| format!("{}: {error}", folder.display()))?;
+        Ok(Work { folder, keep: false })
+    }
 }
 
+impl Drop for Work {
+    fn drop(&mut self) {
+        if !self.keep {
+            let _ = std::fs::remove_dir_all(&self.folder);
+        }
+    }
+}
+
+/// A draft's compile commands, as the edition's build compiles the file it
+/// replaces; an overlay draft names its overlay in its path.
 pub(crate) fn draft_steps(target: DecompTarget, draft: &Path, object: &Path) -> Result<Vec<Vec<String>>, String> {
-    let steps = c_steps(target, draft, object, None);
-    Ok(with_draft_assembly(target, object, steps))
+    let named = draft.to_string_lossy();
+    let overlay = named.contains("/overlays/").then(|| overlay::named_in(&named)).flatten();
+    steps(target, draft, object, overlay.as_deref(), false)
 }
 
-/// A draft of either game compiled as the build compiles a GAME_ARM_SOURCES file.
+/// A draft of either game compiled as the build compiles its ARM C.
 pub(crate) fn arm_steps(target: DecompTarget, draft: &Path, object: &Path) -> Result<Vec<Vec<String>>, String> {
-    if family_for_source(target.compiler, &draft.to_string_lossy()) != CompilerFamily::Game {
-        return Err("--arm compiles game C only; library compiler routes are unchanged".into());
-    }
-    let steps = c_steps(target, draft, object, Some(CompilerFamily::GameArm));
-    Ok(with_draft_assembly(target, object, steps))
+    steps(target, draft, object, None, true)
 }
 
-/// Asks the compiler step for its per-pass dumps: the 2.96 driver is the
-/// first step and takes the scheduler's verbose dump too; on the ARM route
-/// the first step is cpp0, so the ARM cc1 (the second) takes -da alone,
-/// as it knows no -fsched-verbose.
-fn rtl_flags(steps: &mut [Vec<String>], arm: bool) {
-    if arm {
-        steps[1].push("-da".into());
-    } else {
-        steps[0].extend(["-da".into(), "-fsched-verbose=5".into()]);
+fn steps(target: DecompTarget, draft: &Path, object: &Path, overlay: Option<&str>, arm: bool) -> Result<Vec<Vec<String>>, String> {
+    with_draft_assembly(crate::compile::steps(target, draft, object, overlay, arm)?, object)
+}
+
+/// Asks the compile step for its per-pass dumps: a compiler driver (-S) takes
+/// the scheduler's verbose dump too; a direct cc1 (-dumpbase, the library and
+/// ARM routes) takes -da alone, as GCC 2.95's cc1 knows no -fsched-verbose.
+/// A preprocessor step takes neither.
+fn rtl_flags(steps: &mut [Vec<String>]) {
+    for step in steps {
+        if step.iter().any(|argument| argument == "-S") {
+            step.extend(["-da".into(), "-fsched-verbose=5".into()]);
+        } else if step.iter().any(|argument| argument == "-dumpbase") {
+            step.push("-da".into());
+        }
     }
 }
 
-/// Replaces the build's assembly step with the comparison's own assembler.
-fn with_draft_assembly(target: DecompTarget, object: &Path, mut steps: Vec<Vec<String>>) -> Vec<Vec<String>> {
-    steps.pop();
+/// The comparison assembles a draft as the build assembles a listing: with
+/// binutils' assembler, which marks data among code with mapping symbols.
+/// The build assembles C with GAS 2.10, which marks none, and objdump then
+/// reads a lone call suffix (`.2byte 0xf800`) and the instruction after it
+/// as one Thumb-2 instruction. The recipe's other options are kept.
+fn with_draft_assembly(mut steps: Vec<Vec<String>>, object: &Path) -> Result<Vec<Vec<String>>, String> {
+    let object_text = object.to_string_lossy();
+    let build = steps.pop().filter(|step| step.iter().any(|argument| *argument == object_text))
+        .ok_or("the recipe does not end by assembling its object")?;
     let mut assemble = vec!["arm-none-eabi-as".to_string(), "-mcpu=arm7tdmi".into()];
-    if target.compiler == crate::compile::CompilerTarget::Tbs {
-        assemble.push("-mthumb-interwork".into());
-    }
-    assemble.extend([
-        "-o".into(), object.to_string_lossy().into_owned(),
-        object.with_extension("s").to_string_lossy().into_owned(),
-    ]);
+    assemble.extend(build.into_iter().skip(1).filter(|argument| argument != "-marm7tdmi" && !argument.starts_with("-mcpu=")));
     steps.push(assemble);
-    steps
+    Ok(steps)
 }
 
 pub(crate) fn normalize(objdump: &str) -> Vec<String> {
@@ -540,7 +590,7 @@ fn scaffold_extent_mode(map: &Map, elf: &Elf, wanted: &str, arm: bool) -> Result
         .filter(|symbol| matches!(symbol.kind, 2 | 15) && !symbol.name.starts_with('$'))
         .map(|symbol| (symbol.value & !1, symbol.name.clone()))
         .collect();
-    let (section, start, name) = crate::show::resolve(map, Some(elf), &functions, wanted)?;
+    let (section, start, name) = resolve(map, Some(elf), &functions, wanted)?;
     let scaffold = section.object().starts_with("recon/") && section.object().ends_with("/rom.o")
         && section.name.starts_with(".rom.");
     let source = section.object().starts_with("games/")
@@ -550,7 +600,7 @@ fn scaffold_extent_mode(map: &Map, elf: &Elf, wanted: &str, arm: bool) -> Result
     }
     let statics: Vec<u32> = functions.iter().map(|(address, _)| *address).collect();
     let size = elf.symbols.iter().find(|symbol| symbol.name == name && matches!(symbol.kind, 2 | 15)).map(|symbol| symbol.size);
-    let end = crate::show::function_end(section, start, &statics, size);
+    let end = function_end(section, start, &statics, size);
     if arm {
         let thumb = elf.symbols.iter().any(|symbol| (symbol.value & !1) >= start && (symbol.value & !1) < end
             && (symbol.name.starts_with("$t") || symbol.kind == 15 || (symbol.kind == 2 && symbol.value & 1 != 0)));
@@ -579,8 +629,8 @@ fn thumb_reference(image: &[u8], base: u32, start: u32, end: u32) -> Result<Vec<
     if start < base || end <= start || (end - base) as usize > image.len() {
         return Err("scaffold function runs past the reference image".into());
     }
-    let lines = crate::show::thumb_lines(image, base, start, end, &crate::show::Names::new());
-    if lines.iter().any(|line| line.text.starts_with(".2byte")) {
+    let lines = thumb_lines(image, base, start, end);
+    if lines.iter().any(|line| line.part == Part::Undecodable) {
         return Err("scaffold contains an unsupported Thumb instruction; no comparison produced".into());
     }
     // Mask only the data in this temporary disassembly view. Otherwise
@@ -588,17 +638,17 @@ fn thumb_reference(image: &[u8], base: u32, start: u32, end: u32) -> Result<Vec<
     // and consume the first real instruction after it. Code is unchanged;
     // pool values remain outside this instruction-only comparison.
     let mut view = image[(start - base) as usize..(end - base) as usize].to_vec();
-    for line in lines.iter().filter(|line| line.wide) {
+    for line in lines.iter().filter(|line| line.part == Part::Data) {
         let at = (line.address - start) as usize;
-        view[at..at + line.bytes.len()].fill(0);
+        view[at..at + line.size as usize].fill(0);
     }
     let file = tempfile::NamedTempFile::new().map_err(|error| format!("Thumb analysis file: {error}"))?;
     std::fs::write(file.path(), view).map_err(|error| format!("Thumb analysis file: {error}"))?;
-    let instructions: BTreeSet<u32> = lines.iter().filter(|line| !line.wide).map(|line| line.address).collect();
+    let instructions: BTreeSet<u32> = lines.iter().filter(|line| line.part != Part::Data).map(|line| line.address).collect();
     // Binary objdump interprets a standalone BL suffix plus its successor as
     // Thumb-2 even with -marmv4t. Split at the call using our ARM7 decoder so
     // disassembly resumes at the next real instruction, without changing bytes.
-    let calls: Vec<u32> = lines.iter().filter(|line| line.text.starts_with("bl lr"))
+    let calls: Vec<u32> = lines.iter().filter(|line| line.part == Part::CallSuffix)
         .map(|line| line.address).collect();
     let mut cursor = start;
     let mut code = String::new();
@@ -632,7 +682,7 @@ fn arm_reference(file: &Path, image: &[u8], base: u32, start: u32, end: u32) -> 
         return Err("ARM scaffold function has invalid reference bounds".into());
     }
     let bytes = &image[(start - base) as usize..(end - base) as usize];
-    let (_, pool, table) = arm_tokens(bytes, start);
+    let (pool, table) = arm_data(bytes, start);
     let output = command(&[
         "arm-none-eabi-objdump", "-D", "-b", "binary", "-marm",
         "--no-show-raw-insn", "--disassemble-zeroes",
@@ -665,10 +715,7 @@ pub(crate) fn scaffold_reference(target: DecompTarget, wanted: &str, arm: bool) 
     } else {
         scaffold_extent(&map, &elf, wanted)?
     };
-    let reference_path = root().join(target.rom);
-    let reference = std::fs::read(&reference_path)
-        .map_err(|error| format!("{}: {error}", reference_path.display()))?;
-    target.verify_reference(&reference)?;
+    let (reference_path, reference) = reference_rom(target)?;
     let tokens = if arm {
         arm_reference(&reference_path, &reference, base, start, end)?
     } else {
@@ -679,10 +726,12 @@ pub(crate) fn scaffold_reference(target: DecompTarget, wanted: &str, arm: bool) 
     Ok((tokens, name))
 }
 
-fn resource_name(path: &str) -> Option<String> {
-    let at = path.find("resource_")?;
-    let id = &path[at + 9..at + 12];
-    id.chars().all(|c| c.is_ascii_hexdigit()).then(|| format!("resource_{id}"))
+/// The edition's reference ROM, checked against rom.sha1.
+fn reference_rom(target: DecompTarget) -> Result<(PathBuf, Vec<u8>), String> {
+    let path = root().join(target.rom);
+    let rom = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    target.verify_reference(&rom)?;
+    Ok((path, rom))
 }
 
 fn overlay_extent(map: &Map, elf: &Elf, wanted: &str) -> Result<(u32, u32, u32, String), String> {
@@ -691,7 +740,7 @@ fn overlay_extent(map: &Map, elf: &Elf, wanted: &str) -> Result<(u32, u32, u32, 
             && !symbol.name.starts_with('$'))
         .map(|symbol| (symbol.value & !1, symbol.name.clone()))
         .collect();
-    let (section, start, name) = crate::show::resolve(map, Some(elf), &functions, wanted)?;
+    let (section, start, name) = resolve(map, Some(elf), &functions, wanted)?;
     if !(section.name == ".text" || section.name.starts_with(".text.")) {
         return Err(format!("{name}: no overlay code extent"));
     }
@@ -699,26 +748,31 @@ fn overlay_extent(map: &Map, elf: &Elf, wanted: &str) -> Result<(u32, u32, u32, 
         && matches!(symbol.kind, 2 | 15) && !matches!(symbol.section, 0 | 0xfff1))
         .ok_or_else(|| format!("{name}: no defined overlay function"))?;
     let statics = functions.iter().map(|(address, _)| *address).collect::<Vec<_>>();
-    let end = crate::show::function_end(section, start, &statics, Some(symbol.size));
+    let end = function_end(section, start, &statics, Some(symbol.size));
     require_thumb_scaffold(elf, section, start, end)?;
     let base = elf.sections.iter().filter(|section| !section.bytes.is_empty())
         .map(|section| section.address).min().ok_or("overlay ELF has no placed bytes")?;
     Ok((start, end, base, name))
 }
 
+/// An overlay function's code for analysis: the linked overlay gives its
+/// bounds, the reference ROM's unpacked stream its bytes.
 pub(crate) fn overlay_reference(target: DecompTarget, overlay: &str, wanted: &str) -> Result<(Vec<String>, String), String> {
-    let id = overlay.strip_prefix("resource_").filter(|id| id.len() == 3 && id.bytes().all(|c| c.is_ascii_hexdigit()))
-        .ok_or("overlay must be resource_XXX")?;
-    let output = root().join(target.output_dir);
-    let read = |name: &str| std::fs::read(output.join(name)).map_err(|error| format!("{name}: {error}; build {} first", target.id));
-    let map = Map::parse(&String::from_utf8_lossy(&read(&format!("overlays/resource_{id}.map"))?));
-    let elf = Elf::parse(&read(&format!("overlays/resource_{id}.elf"))?)?;
-    let (start, end, _, name) = overlay_extent(&map, &elf, wanted)?;
-    let native = crate::show::overlay_function_reference(target, overlay, &name)?;
-    if native.start != start || native.end != end || native.name != name {
-        return Err(format!("{name}: overlay analysis bounds disagree"));
+    if overlay::named_in(overlay).as_deref() != Some(overlay) {
+        return Err("overlay must be resource_XXX".into());
     }
-    let tokens = thumb_reference(&native.bytes, start, start, end)?;
+    let output = root().join(target.output_dir);
+    let read = |path: PathBuf| std::fs::read(&path).map_err(|error| format!("{}: {error}; build {} first", path.display(), target.id));
+    let map = Map::parse(&String::from_utf8_lossy(&read(overlay::file(&output, overlay, ".map"))?));
+    let elf = Elf::parse(&read(overlay::file(&output, overlay, ".elf"))?)?;
+    let (start, end, base, name) = overlay_extent(&map, &elf, wanted)?;
+    let main_map = Map::parse(&String::from_utf8_lossy(&read(output.join(format!("{}.map", target.id)))?));
+    let (_, rom) = reference_rom(target)?;
+    let image = overlay::unpacked(&rom, &main_map, overlay)?;
+    let code = start.checked_sub(base).zip(end.checked_sub(base))
+        .and_then(|(from, to)| image.get(from as usize..to as usize))
+        .ok_or("function runs past the end of an image")?;
+    let tokens = thumb_reference(code, start, start, end)?;
     println!("Thumb overlay ROM analysis: {} {overlay} {name}, {start:#010x}..{end:#010x}; full ROM comparison remains required.", target.id);
     Ok((tokens, name))
 }
@@ -750,62 +804,47 @@ fn refuse_perm_macros(draft: &Path) -> Result<(), String> {
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
+    if arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
+        println!("{USAGE}");
+        return Ok(());
+    }
     let options = parse(arguments)?;
     if options.arm {
         println!("{GAME_ARM_NOTICE}");
     }
     let root = root();
     let target = options.target;
-    let stem = options
-        .draft
-        .file_stem()
-        .map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let object = if options.arm {
-        arm_object(&root.join(target.output_dir), &stem)
-    } else {
-        draft_object(&root.join(target.output_dir), &stem)
-    };
-    std::fs::create_dir_all(object.parent().unwrap()).map_err(|e| e.to_string())?;
     let draft = std::fs::canonicalize(&options.draft)
         .map_err(|e| format!("{}: {e}", options.draft.display()))?;
     refuse_perm_macros(&draft)?;
-    let mut steps = if options.arm {
-        arm_steps(target, &draft, &object)?
-    } else {
-        draft_steps(target, &draft, &object)?
-    };
+    let stem = draft.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let name = draft.file_name().unwrap_or_default().to_string_lossy().into_owned();
+    let mut work = Work::new(target)?;
+    work.keep = options.rtl;
+    let object = work.folder.join(format!("{stem}.o"));
+    let mut plan = steps(target, &draft, &object, options.overlay.as_deref(), options.arm)?;
+    let built = plan.clone();
+    if options.rtl || options.alloc {
+        rtl_flags(&mut plan);
+    }
+    let assemble = plan.pop().expect("draft plan ends with assembly");
+    for step in plan {
+        command(&step, &work.folder)?;
+    }
     if options.rtl {
-        rtl_flags(&mut steps, options.arm);
+        println!("pass dumps: {}/{name}.*", work.folder.display());
     }
-    let assemble = steps.pop().expect("draft plan ends with assembly");
-    for step in steps {
-        command(&step, root)?;
-    }
-    if options.rtl {
-        // The 2.96 driver names each dump after the input and writes it in
-        // the working directory; gather them beside the draft object.
-        let dumps = object.parent().unwrap().join("rtl");
-        std::fs::create_dir_all(&dumps).map_err(|e| e.to_string())?;
-        let name = draft.file_name().unwrap_or_default().to_string_lossy().into_owned();
-        for entry in std::fs::read_dir(root).map_err(|e| e.to_string())?.flatten() {
-            let file = entry.file_name().to_string_lossy().into_owned();
-            if file.starts_with(&format!("{name}.")) {
-                std::fs::rename(entry.path(), dumps.join(&file)).map_err(|e| format!("{file}: {e}"))?;
-            }
-        }
-        println!("pass dumps: {}/{name}.*", dumps.display());
-    }
-    command(&assemble, root)?;
+    command(&assemble, &work.folder)?;
     let mut listing = Vec::new();
     let mut draft_symbol = None;
     if let Some(overlay) = &options.overlay {
-        let reference = root.join(target.output_dir).join(format!("overlays/{overlay}_overlay.o"));
+        let output = root.join(target.output_dir);
+        let reference = overlay::file(&output, overlay, "_overlay.o");
         let symbol = match &options.symbol {
             Some(s) => s.clone(),
             None => {
                 let mut ours = if reference.exists() { text_symbols(&reference)? } else { Vec::new() };
-                let linked = root.join(target.output_dir).join(format!("overlays/{overlay}.elf"));
+                let linked = overlay::file(&output, overlay, ".elf");
                 if linked.exists() {
                     ours.extend(text_symbols(&linked)?);
                     ours.sort();
@@ -857,29 +896,45 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         compiled.len(),
         listing.len() + compiled.len() - 2 * common
     );
+    let (removed, added) = skeleton::gap(&listing, &compiled);
+    println!("skeleton gap {} (removed {removed}, added {added})", removed + added);
     if options.show {
         for line in script {
             println!("{line}");
         }
     }
+    if options.skeleton {
+        let (_, script) = compare(&skeleton::skeletons(&listing), &skeleton::skeletons(&compiled));
+        for line in script {
+            println!("{line}");
+        }
+    }
     if options.heat {
-        let heat_object = if options.arm {
-            arm_object(&root.join(target.output_dir), &format!("{stem}-heat"))
-        } else {
-            draft_object(&root.join(target.output_dir), &format!("{stem}-heat"))
-        };
-        let steps = if options.arm {
-            arm_steps(target, &draft, &heat_object)?
-        } else {
-            draft_steps(target, &draft, &heat_object)?
-        };
-        let name = draft.file_name().unwrap_or_default().to_string_lossy().into_owned();
-        let located = located(&steps, &heat_object, draft_symbol.as_deref(), &name)?;
+        // The same plan, writing beside the first object.
+        let heat_object = work.folder.join(format!("{stem}-heat.o"));
+        let outputs = ["o", "s", "i"].map(|extension| {
+            (object.with_extension(extension).to_string_lossy().into_owned(), heat_object.with_extension(extension).to_string_lossy().into_owned())
+        });
+        let plan: Vec<Vec<String>> = built.iter().map(|step| step.iter().map(|argument| {
+            outputs.iter().find(|(from, _)| argument.contains(from.as_str())).map_or(argument.clone(), |(from, to)| argument.replace(from.as_str(), to))
+        }).collect()).collect();
+        let located = located(&plan, &heat_object, draft_symbol.as_deref(), &name)?;
         if located.iter().map(|(row, _)| row).ne(compiled.iter()) {
             println!("heat: -g changed the code; the lines below are approximate");
         }
         let text = std::fs::read_to_string(&draft).map_err(|e| format!("{}: {e}", draft.display()))?;
         print_heat(&text, &heat(&listing, &located), &located);
+    }
+    if options.alloc {
+        let dump = |extension: &str| -> Result<String, String> {
+            let found = std::fs::read_dir(&work.folder).map_err(|e| format!("{}: {e}", work.folder.display()))?.flatten()
+                .map(|entry| entry.path())
+                .find(|path| path.extension().is_some_and(|e| e == extension)
+                    && path.file_name().is_some_and(|file| file.to_string_lossy().starts_with(&format!("{name}."))))
+                .ok_or_else(|| format!("--alloc: the compiler wrote no {extension} dump"))?;
+            std::fs::read_to_string(&found).map_err(|e| format!("{}: {e}", found.display()))
+        };
+        alloc::print(&alloc::read(&dump("lreg")?, &dump("greg")?, draft_symbol.as_deref()));
     }
     Ok(())
 }
@@ -980,7 +1035,7 @@ mod tests {
             symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x118, "Next".into())],
         };
         let map = Map { placed: vec![section.clone()] };
-        let symbol = |name: &str, value, kind| crate::gba::elf::Symbol { name: name.into(), value, size: 0, kind, bind: 1, section: 1 };
+        let symbol = |name: &str, value, kind| crate::gba::elf::Symbol { name: name.into(), value, size: 0, kind, section: 1 };
         let mut elf = Elf { sections: vec![], symbols: vec![symbol("First", ROM + 0x101, 2), symbol("Next", ROM + 0x119, 2)] };
         assert_eq!(scaffold_extent(&map, &elf, "First").unwrap(), (ROM + 0x100, ROM + 0x118, ROM, "First".into()));
         assert_eq!(scaffold_extent(&map, &elf, "08000100").unwrap().1, ROM + 0x118);
@@ -1017,7 +1072,7 @@ mod tests {
             symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x128, "Next".into())],
         };
         let symbol = |name: &str, value, size| crate::gba::elf::Symbol {
-            name: name.into(), value, size, kind: 2, bind: 1, section: 1,
+            name: name.into(), value, size, kind: 2, section: 1,
         };
         let elf = Elf { sections: vec![], symbols: vec![
             symbol("First", ROM + 0x101, 0x24), symbol("Next", ROM + 0x129, 0x20),
@@ -1041,8 +1096,8 @@ mod tests {
             symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x118, "Next".into())],
         };
         let elf = Elf { sections: vec![], symbols: vec![
-            crate::gba::elf::Symbol { name: "First".into(), value: ROM + 0x101, size: 0x10, kind: 2, bind: 1, section: 1 },
-            crate::gba::elf::Symbol { name: "Next".into(), value: ROM + 0x119, size: 0x18, kind: 2, bind: 1, section: 1 },
+            crate::gba::elf::Symbol { name: "First".into(), value: ROM + 0x101, size: 0x10, kind: 2, section: 1 },
+            crate::gba::elf::Symbol { name: "Next".into(), value: ROM + 0x119, size: 0x18, kind: 2, section: 1 },
         ] };
         let mut map = Map { placed: vec![section] };
         assert_eq!(scaffold_extent(&map, &elf, "First").unwrap(), (ROM + 0x100, ROM + 0x110, ROM, "First".into()));
@@ -1068,9 +1123,9 @@ mod tests {
         let mut elf = Elf {
             sections: vec![crate::gba::elf::Section { address: base, bytes: vec![0; 0x30] }],
             symbols: vec![
-                crate::gba::elf::Symbol { name: "First".into(), value: base + 1, size: 0x10, kind: 2, bind: 1, section: 1 },
-                crate::gba::elf::Symbol { name: "Next".into(), value: base + 0x19, size: 0x18, kind: 2, bind: 1, section: 1 },
-                crate::gba::elf::Symbol { name: "Import".into(), value: base + 9, size: 0, kind: 2, bind: 1, section: 0xfff1 },
+                crate::gba::elf::Symbol { name: "First".into(), value: base + 1, size: 0x10, kind: 2, section: 1 },
+                crate::gba::elf::Symbol { name: "Next".into(), value: base + 0x19, size: 0x18, kind: 2, section: 1 },
+                crate::gba::elf::Symbol { name: "Import".into(), value: base + 9, size: 0, kind: 2, section: 0xfff1 },
             ],
         };
         assert_eq!(overlay_extent(&map, &elf, "First").unwrap(), (base, base + 0x10, base, "First".into()));
@@ -1081,7 +1136,7 @@ mod tests {
         elf.symbols[0].section = 0;
         assert!(overlay_extent(&map, &elf, "First").is_err());
         elf.symbols[0].section = 1;
-        elf.symbols.push(crate::gba::elf::Symbol { name: "$a".into(), value: base + 4, size: 0, kind: 0, bind: 0, section: 1 });
+        elf.symbols.push(crate::gba::elf::Symbol { name: "$a".into(), value: base + 4, size: 0, kind: 0, section: 1 });
         assert!(overlay_extent(&map, &elf, "First").is_err());
     }
 
@@ -1186,16 +1241,17 @@ mod tests {
     }
 
     #[test]
-    fn rtl_dumps_go_to_the_compiler_step_of_each_route() {
-        let plan = || vec![vec!["first".to_string()], vec!["second".to_string()], vec!["as".to_string()]];
-        let mut thumb = plan();
-        rtl_flags(&mut thumb, false);
-        assert_eq!(thumb[0], ["first", "-da", "-fsched-verbose=5"]);
-        assert_eq!(thumb[1], ["second"]);
-        let mut arm = plan();
-        rtl_flags(&mut arm, true);
-        assert_eq!(arm[0], ["first"]);
-        assert_eq!(arm[1], ["second", "-da"]);
+    fn rtl_dumps_go_to_the_compile_step_of_each_route() {
+        let words = |text: &str| text.split(' ').map(String::from).collect::<Vec<_>>();
+        let mut driver = vec![words("xgcc -O2 -S -o a.s a.c"), words("as -o a.o a.s")];
+        rtl_flags(&mut driver);
+        assert_eq!(driver[0].join(" "), "xgcc -O2 -S -o a.s a.c -da -fsched-verbose=5");
+        assert_eq!(driver[1].join(" "), "as -o a.o a.s");
+        let mut direct = vec![words("cpp0 -lang-c a.c a.i"), words("old_agbcc a.i -dumpbase a.c -O2 -o a.s"), words("as -o a.o a.s")];
+        rtl_flags(&mut direct);
+        assert_eq!(direct[0].join(" "), "cpp0 -lang-c a.c a.i");
+        assert_eq!(direct[1].join(" "), "old_agbcc a.i -dumpbase a.c -O2 -o a.s -da");
+        assert_eq!(direct[2].join(" "), "as -o a.o a.s");
     }
 
     #[test]
@@ -1205,42 +1261,60 @@ mod tests {
         assert!(parse(&args(&["recon/tbs/en/main/080158e8.c", "--arm"])).unwrap().arm);
         assert_eq!(parse(&args(&["080388fc.c", "--arm", "--game", "tla"])).unwrap().game, "tla");
         assert!(parse(&args(&["08023e70.c", "--rtl"])).unwrap().rtl);
+        assert!(parse(&args(&["08023e70.c", "--game", "pokeemerald"])).is_err());
         for flag in ["-O1", "-fomit-frame-pointer", "-marm", "--cflags", "--camelot-arm"] {
             assert!(parse(&args(&["0800a0f8.c", "--arm", flag])).is_err(), "{flag}");
         }
-        let output = Path::new("out/tbs-ja");
-        assert_eq!(draft_object(output, "0800a0f8"), output.join("obj/drafts/0800a0f8.o"));
-        assert_eq!(arm_object(output, "0800a0f8"), output.join("obj/drafts/arm/0800a0f8.o"));
-        let target = decomp_target(Some("tbs-en")).unwrap();
-        let source = root().join("recon/tbs/en/main/08000000.c");
-        let object = root().join(target.output_dir).join("obj/drafts/arm/test.o");
-        let steps = arm_steps(target, &source, &object).unwrap();
-        assert_eq!(steps.len(), 3);
-        assert!(steps[1][0].ends_with("gcc2952_arm"));
-        for flag in crate::compile::arm_cflags() {
-            assert!(steps[1].contains(&flag), "{flag}");
+        for edition in ["tbs-en", "tla-en"] {
+            let target = decomp_target(Some(edition)).unwrap();
+            let source = root().join("recon").join(target.game()).join("en/main/08000000.c");
+            let object = Path::new("/work/run-1/test.o");
+            let steps = arm_steps(target, &source, object).unwrap();
+            assert_eq!(steps.len(), 3);
+            assert!(steps[0][0].ends_with("cpp0") && steps[0].contains(&source.to_string_lossy().into_owned()));
+            assert!(steps[1][0].ends_with("gcc2952_arm"));
+            for flag in ["-O2", "-mthumb-interwork", "-fomit-frame-pointer", "-fcall-used-r4", "/work/run-1/test.i", "/work/run-1/test.s"] {
+                assert!(steps[1].iter().any(|argument| argument == flag), "{flag}");
+            }
+            assert_eq!(steps[2][..2], ["arm-none-eabi-as", "-mcpu=arm7tdmi"]);
+            assert!(!steps[2].iter().any(|flag| flag == "-mthumb"));
         }
-        assert!(!steps[2].iter().any(|flag| flag == "-mthumb"));
-        let library = root().join("games/tbs/src/sound/driver.c");
-        assert!(arm_steps(target, &library, &object).is_err());
-        let tla = decomp_target(Some("tla-en")).unwrap();
-        let tla_source = root().join("recon/tla/en/main/08000000.c");
-        let tla_steps = arm_steps(tla, &tla_source, &object).unwrap();
-        assert!(tla_steps[1][0].ends_with("gcc2952_arm"));
-        assert!(!tla_steps[2].iter().any(|flag| flag == "-mthumb"));
+    }
+
+    /// The flags of a route's compile step, and that every path it names is absolute.
+    fn compile_step(target: DecompTarget, source: &Path, overlay: Option<&str>) -> Vec<String> {
+        let steps = steps(target, source, Path::new("/work/run-1/test.o"), overlay, false).unwrap();
+        for step in &steps {
+            for argument in step.iter().filter(|argument| argument.starts_with("-I") || argument.starts_with("-B")) {
+                assert!(argument[2..].starts_with('/'), "{argument}");
+            }
+        }
+        assert_eq!(steps.last().unwrap()[..2], ["arm-none-eabi-as", "-mcpu=arm7tdmi"]);
+        steps.into_iter().find(|step| step.iter().any(|argument| argument == "-S" || argument == "-dumpbase")).unwrap()
     }
 
     #[test]
     fn draft_steps_compile_as_the_build_does() {
         for edition in ["tbs-ja", "tbs-en", "tla-ja", "tla-it"] {
             let target = decomp_target(Some(edition)).unwrap();
-            let source = root().join("recon").join(&edition[..3]).join("en/main/08000000.c");
-            let object = root().join(target.output_dir).join("obj/drafts/test.o");
-            let production = c_steps(target, &source, &object, None);
-            let draft = draft_steps(target, &source, &object).unwrap();
-            assert_eq!(draft[..draft.len() - 1], production[..production.len() - 1]);
-            assert!(production[0].iter().any(|flag| flag == "-mthumb"));
+            let source = root().join("recon").join(target.game()).join("en/main/08000000.c");
+            let step = compile_step(target, &source, None);
+            let define = format!("-D{}_EDITION_{}=1", target.game().to_uppercase(), edition[4..].to_uppercase());
+            for flag in ["-O2", "-mthumb", "-fcall-used-r4", define.as_str(), &source.to_string_lossy()] {
+                assert!(step.iter().any(|argument| argument == flag), "{edition}: {flag}");
+            }
+            assert_eq!(step.iter().any(|argument| argument == "-mtune=gba"), target.game() == "tla");
         }
+        // The Lost Age's overlay-only C builds for size, a draft for an
+        // overlay with it; the libraries and ARM C keep their own routes.
+        let tla = decomp_target(Some("tla-en")).unwrap();
+        let only = crate::alchemy::overlay::linked_source(root(), Path::new(tla.output_dir), "resource_6aa").unwrap();
+        let level = |source: &Path, overlay| compile_step(tla, source, overlay).into_iter().find(|argument| argument.starts_with("-O")).unwrap();
+        assert_eq!(level(&root().join(&only), None), "-Os");
+        assert_eq!(level(&root().join("recon/tla/en/overlays/resource_6aa_c_02000000.c"), Some("resource_6aa")), "-Os");
+        assert_eq!(level(&root().join("recon/tla/en/main/08000000.c"), None), "-O2");
+        assert!(compile_step(tla, &root().join("games/tla/src/sound/player_work_copy.c"), None)[0].ends_with("old_agbcc"));
+        assert!(compile_step(tla, &root().join("games/tla/src/field/f021470.c"), None)[0].ends_with("gcc2952_arm"));
     }
 
     #[test]
@@ -1252,11 +1326,13 @@ mod tests {
             "recon/tbs/ja/overlays/resource_3b7_c_02000ac8.c", "--edition", "tbs-ja",
         ])).unwrap();
         assert_eq!(japanese.target.id.as_str(), "tbs-ja");
-        assert_eq!(japanese.target.edition_define, "TBS_EDITION_JA");
         assert_eq!(japanese.target.output_dir, "out/tbs-ja");
         assert_eq!(japanese.overlay.as_deref(), Some("resource_3b7"));
         assert!(parse(&args(&["08123456.c", "--game", "tla", "--edition", "tbs-ja"])).is_err());
         assert!(parse(&args(&["08123456.c", "--edition", "tbs-xx"])).is_err());
+        // --symbol names one function; several are named in the address list.
+        assert!(parse(&args(&["081843fc.c", "081843fc,081848ec", "--symbol", "Func_081843fc"])).is_err());
+        assert_eq!(parse(&args(&["081843fc.c", "081843fc,081848ec"])).unwrap().addresses, ["081843fc", "081848ec"]);
     }
 
     #[test]
@@ -1277,8 +1353,7 @@ mod tests {
         let source = work.path().join("probe.c");
         std::fs::write(&source, "int g;\nint probe(int a, int b)\n{\n    int c = a * 3;\n    if (b)\n        c += g;\n    return c + b;\n}\n").unwrap();
         let target = decomp_target(Some("tbs-en")).unwrap();
-        let object = draft_object(&work.path().join("tbs-en"), "probe");
-        std::fs::create_dir_all(object.parent().unwrap()).unwrap();
+        let object = work.path().join("probe.o");
         let steps = draft_steps(target, &source, &object).unwrap();
         for step in &steps {
             command(step, root()).unwrap();
@@ -1349,13 +1424,6 @@ mod tests {
     }
 
     #[test]
-    fn overlay_comes_from_the_draft_path() {
-        assert_eq!(resource_name("recon/tbs/en/overlays/resource_383_c_020048c8.c").as_deref(), Some("resource_383"));
-        assert_eq!(resource_name("recon/tbs/en/overlays/resource_3cd/02008768.c").as_deref(), Some("resource_3cd"));
-        assert_eq!(resource_name("recon/tbs/en/main/08011bf4.c"), None);
-    }
-
-    #[test]
     fn text_symbols_do_not_offer_the_compiler_marker_as_a_function() {
 
         let work = tempfile::tempdir().unwrap();
@@ -1377,12 +1445,6 @@ mod tests {
         assert!(script.contains(&"- bgt.n +8".to_string()));
         assert!(script.contains(&"+ bgt.n +12".to_string()));
     }
-}
-
-/// A draft's compile commands, as the Makefile compiles the file it would
-/// replace in this edition, or through `family`.
-fn c_steps(target: DecompTarget, draft: &Path, object: &Path, family: Option<CompilerFamily>) -> Vec<Vec<String>> {
-    crate::compile::steps(target.compiler, target.edition_define, &root().join(target.output_dir), draft, object, family)
 }
 
 fn arm_word(bytes: &[u8], i: usize) -> u32 {
@@ -1411,10 +1473,9 @@ fn arm_tables(bytes: &[u8], base: u32) -> BTreeSet<usize> {
     table
 }
 
-/// ARM code compares word by word: pool words a pc-relative load reads are
-/// dropped, jump-table words become `table`, and calls lose their targets;
-/// branches inside stay relative.
-fn arm_tokens(bytes: &[u8], base: u32) -> (Vec<String>, BTreeSet<usize>, BTreeSet<usize>) {
+/// The data among ARM code at `base`, by word index: the pool words a
+/// pc-relative load reads, and the jump-table words.
+fn arm_data(bytes: &[u8], base: u32) -> (BTreeSet<usize>, BTreeSet<usize>) {
     let count = bytes.len() / 4;
     let mut pool = BTreeSet::new();
     for i in 0..count {
@@ -1427,19 +1488,5 @@ fn arm_tokens(bytes: &[u8], base: u32) -> (Vec<String>, BTreeSet<usize>, BTreeSe
             }
         }
     }
-    let table = arm_tables(bytes, base);
-    let tokens = (0..count)
-        .filter(|i| !pool.contains(i))
-        .map(|i| {
-            let w = arm_word(bytes, i);
-            if table.contains(&i) {
-                "table".to_string()
-            } else if w & 0x0f00_0000 == 0x0b00_0000 {
-                format!("bl{:x}", w >> 28)
-            } else {
-                format!("{w:08x}")
-            }
-        })
-        .collect();
-    (tokens, pool, table)
+    (pool, arm_tables(bytes, base))
 }
