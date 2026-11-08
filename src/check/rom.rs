@@ -74,9 +74,11 @@ pub fn overlays(arguments: &[String]) -> Result<(), String> {
     }
     let root = crate::compile::root();
     let (mut checked, mut missing, mut unbuilt) = (0, 0, 0);
-    for id in built::editions(&words)? {
+    let (editions, mut not_built) = (built::editions(&words)?, Vec::new());
+    for &id in &editions {
         let Ok(streams) = built::overlay_files(root, id, "lz") else {
             println!("{id}: not built; make compare-{id}");
+            not_built.push(id);
             continue;
         };
         let streams: Vec<_> = streams.into_iter().filter(|(name, _)| wanted.is_empty() || wanted.contains(name)).collect();
@@ -102,9 +104,21 @@ pub fn overlays(arguments: &[String]) -> Result<(), String> {
         }
     }
     match (missing, unbuilt) {
-        (0, 0) => Ok(()),
+        (0, 0) => checked_all(!words.is_empty(), editions.len(), &not_built),
         (0, unbuilt) => Err(format!("{unbuilt} overlays asked for are not built")),
         (missing, _) => Err(format!("{missing} of {checked} overlay streams are not in their reference ROMs")),
+    }
+}
+
+/// Whether a check that found nothing wrong checked what it was asked to:
+/// every edition named, or with none named at least one edition built.
+fn checked_all(named: bool, editions: usize, not_built: &[DecompTargetId]) -> Result<(), String> {
+    let names = || not_built.iter().map(|id| id.as_str()).collect::<Vec<_>>().join(" ");
+    match not_built.len() {
+        0 => Ok(()),
+        _ if named => Err(format!("not built, so not checked: {}", names())),
+        count if count == editions => Err("no edition is built, so nothing was checked".into()),
+        _ => Ok(()),
     }
 }
 
@@ -192,10 +206,12 @@ pub fn roms(arguments: &[String]) -> Result<(), String> {
     }
     let root = crate::compile::root();
     let mut differing = Vec::new();
-    for id in built::editions(arguments)? {
+    let (editions, mut not_built) = (built::editions(arguments)?, Vec::new());
+    for &id in &editions {
         let path = built::output(root, id).join(format!("{id}.gba"));
         let Ok(image) = std::fs::read(&path) else {
             println!("{id}: not built; make compare-{id}");
+            not_built.push(id);
             continue;
         };
         let rom = target_for(id).rom;
@@ -217,7 +233,7 @@ pub fn roms(arguments: &[String]) -> Result<(), String> {
         }
     }
     match differing.as_slice() {
-        [] => Ok(()),
+        [] => checked_all(!arguments.is_empty(), editions.len(), &not_built),
         [edition] => Err(format!("{edition} differs from its reference ROM")),
         editions => Err(format!("{} differ from their reference ROMs", editions.join(" "))),
     }
@@ -244,6 +260,15 @@ mod tests {
         assert_eq!(overlay_id("recon/tla/en/overlays/resource_6aa_c_0200263c.c").as_deref(), Some("resource_6aa"));
         assert_eq!(overlay_id("out/tla-en/overlays/resource_649.lz").as_deref(), Some("resource_649"));
         assert_eq!(overlay_id("tla-en"), None);
+    }
+
+    #[test]
+    fn an_edition_named_or_every_edition_unbuilt_fails() {
+        let unbuilt = [id("tla-ja")];
+        assert!(checked_all(false, 6, &[]).is_ok());
+        assert!(checked_all(false, 6, &unbuilt).is_ok(), "with none named, what is built is checked");
+        assert!(checked_all(true, 6, &unbuilt).unwrap_err().contains("tla-ja"));
+        assert!(checked_all(false, 1, &unbuilt).unwrap_err().contains("nothing was checked"));
     }
 
     #[test]

@@ -20,7 +20,9 @@ default) against S2's form, /* FAKEMATCH(<kind>): the form kept; as <plain
 form>, N of M instructions differ in <edition>. */, with kind pin,
 signature, barrier, wrapper, temporary or dead; and every function or macro
 with more asm statements than tags.
-Each prints what it finds and fails when anything differs or is malformed.";
+Each prints what it finds and fails when anything differs or is malformed;
+overlays and rom also fail when an edition named is not built, or when none
+is.";
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
     let Some((what, rest)) = arguments.split_first() else {
