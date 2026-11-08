@@ -1,8 +1,9 @@
 //! What adoption reads about one edition before it relinks a module there:
-//! the module compiled as that edition's build compiles it (its size and
-//! the names it calls and points at), the names the edition's last link
-//! defines, and its reference ROM, where the edition's own calls and pool
-//! words say where a callee is. Nothing here writes; the ROM is only read.
+//! the module compiled as that edition's build compiles it (its size, the
+//! names it calls and points at, the message and resource names it uses),
+//! the names the edition's last link defines, and its reference ROM, where
+//! the edition's own calls and pool words say where a callee is and which
+//! message id the code reads. Nothing here writes; the ROM is only read.
 
 use crate::alchemy::built;
 use crate::alchemy::layout::{incbin, Layout};
@@ -34,6 +35,9 @@ pub(super) struct Edition {
     pub(super) compiled: Compiled,
     /// Every name the edition's last link defines, with its value.
     pub(super) defined: BTreeMap<String, u32>,
+    /// Each message and resource name the edition's catalogue and resource
+    /// directory give, with its id (None when the game has neither).
+    pub(super) ids: Option<BTreeMap<String, u32>>,
     /// The names the last link placed through the edition's scaffold: one the
     /// scaffold no longer labels is no longer defined.
     pub(super) scaffold_names: BTreeSet<String>,
@@ -46,6 +50,47 @@ pub(super) struct Edition {
 /// the resource directory define per edition.
 pub(super) fn is_id(name: &str) -> bool {
     name.starts_with("Msg") || name.starts_with("ResourceId_")
+}
+
+/// The message names `games/GAME/text/LANG.po` gives (an entry named only
+/// `message` has none), and the resource names its resource directory gives
+/// in that edition, each `resource` line one id in order, an
+/// `.ifdef GAME_EDITION_LANG` block counting only in its edition.
+fn ids(root: &Path, game: &str, language: &str) -> Result<BTreeMap<String, u32>, String> {
+    let mut ids = BTreeMap::new();
+    let catalog = crate::alchemy::po::read_catalog(&root.join(format!("games/{game}/text/{language}.po")))?;
+    for entry in catalog.entries {
+        if let (Some(name), Ok(id)) = (entry.context.filter(|name| name.starts_with("Msg")), entry.id.parse::<u32>()) {
+            ids.insert(name, id);
+        }
+    }
+    let path = format!("games/{game}/src/gamepak/resource_directory.s");
+    let text = std::fs::read_to_string(root.join(&path)).map_err(|error| format!("{path}: {error}"))?;
+    let edition = format!("{}_EDITION_{}", game.to_uppercase(), language.to_uppercase());
+    let mut counting: Vec<bool> = Vec::new();
+    let mut id = 0;
+    for line in text.lines().map(str::trim) {
+        if let Some(symbol) = line.strip_prefix(".ifdef").map(str::trim) {
+            counting.push(!symbol.contains("_EDITION_") || symbol == edition);
+        } else if let Some(symbol) = line.strip_prefix(".ifndef").map(str::trim) {
+            counting.push(!symbol.contains("_EDITION_") || symbol != edition);
+        } else if line == ".else" {
+            if let Some(last) = counting.last_mut() {
+                *last = !*last;
+            }
+        } else if line == ".endif" {
+            counting.pop();
+        } else if let Some(rest) = line.strip_prefix("resource ").or_else(|| line.strip_prefix("resource\t")) {
+            if counting.iter().all(|&on| on) {
+                let name = rest.split(',').next().unwrap_or("").trim();
+                if !name.is_empty() {
+                    ids.insert(format!("ResourceId_{name}"), id);
+                }
+                id += 1;
+            }
+        }
+    }
+    Ok(ids)
 }
 
 impl Edition {
@@ -89,7 +134,8 @@ impl Edition {
             .filter(|symbol| symbol.section == text_index && symbol.is_function())
             .map(|symbol| (symbol.name, symbol.value & !1))
             .collect();
-        Ok(Edition { compiled: Compiled { text, functions, relocations }, defined, scaffold_names, linked_objects, rom })
+        let ids = ids(root, game, language).ok();
+        Ok(Edition { compiled: Compiled { text, functions, relocations }, defined, ids, scaffold_names, linked_objects, rom })
     }
 
     /// Where the edition places the relocation's target, read from its own
@@ -154,6 +200,51 @@ impl Edition {
         Ok(notes)
     }
 
+    /// The names the module calls or points at that the edition defines
+    /// nowhere: what an edition whose scaffold is listings (English) lacks.
+    pub(super) fn undefined(&self) -> Vec<String> {
+        let mut names: Vec<String> = Vec::new();
+        for relocation in &self.compiled.relocations {
+            let name = &relocation.symbol;
+            if !relocation.defined && !name.is_empty() && !is_id(name) && !self.defined.contains_key(name) && !names.contains(name) {
+                names.push(name.clone());
+            }
+        }
+        names
+    }
+
+    /// Each message or resource name the module uses that the edition's
+    /// catalogue or resource directory lacks, or gives another id than its
+    /// code reads, with the name it gives the id the code reads. `start` is the ROM offset of the
+    /// module's `first` function.
+    pub(super) fn id_names(&self, start: u32, first: &str) -> Vec<String> {
+        let Some(ids) = &self.ids else { return Vec::new() };
+        let function = self.function(first);
+        let mut found: Vec<String> = Vec::new();
+        let mut seen: Vec<&str> = Vec::new();
+        for relocation in self.compiled.relocations.iter().filter(|r| r.kind == R_ARM_ABS32 && is_id(&r.symbol)) {
+            let name = relocation.symbol.as_str();
+            if seen.contains(&name) {
+                continue;
+            }
+            seen.push(name);
+            let read = self.target(relocation, start, function);
+            let family = if name.starts_with("Msg") { "Msg" } else { "ResourceId_" };
+            let named_at = |id: u32| {
+                let names: Vec<&str> = ids.iter().filter(|(n, v)| n.starts_with(family) && **v == id).map(|(n, _)| n.as_str()).collect();
+                if names.is_empty() { "no name".to_string() } else { names.join(" and ") }
+            };
+            match (ids.get(name), read) {
+                (None, Some(id)) => found.push(format!("{name} lacking (its code reads {id}, which has {})", named_at(id))),
+                (None, None) => found.push(format!("{name} lacking")),
+                (Some(&value), Some(id)) if value != id => {
+                    found.push(format!("{name} is {value}, but its code reads {id} (which has {})", named_at(id)))
+                }
+                _ => {}
+            }
+        }
+        found
+    }
 }
 
 /// Puts a label for `name` at ROM offset `offset` in a scaffold's lines,
@@ -183,6 +274,11 @@ pub(super) fn label(lines: &mut Vec<String>, name: &str, offset: u32, thumb: boo
 
 pub(super) fn incbin_line(offset: u32, length: u32) -> String {
     format!("\t.incbin \"baserom.gba\", {offset:#010x}, {length:#010x}")
+}
+
+/// The ROM offset of an English main-image listing's address.
+pub(super) fn listing_offset(layout: &Layout, object: &str) -> Option<u32> {
+    layout.listing_address(object).and_then(|address| u32::from_str_radix(address, 16).ok()).and_then(|address| address.checked_sub(ROM))
 }
 
 #[cfg(test)]

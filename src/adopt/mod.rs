@@ -19,7 +19,7 @@ use std::path::{Path, PathBuf};
 mod edition;
 mod merge;
 
-use edition::{incbin_line, Edition};
+use edition::{incbin_line, listing_offset, Edition};
 
 const USAGE: &str = r#"usage: alchemy-devtools adopt main ADDRESS[,ADDRESS...]... [--editions LIST] [--game GAME] [--unmeasured] [--verify | --dry-run]
        alchemy-devtools adopt overlay DRAFT.c... [--edition-forms] [--unmeasured] [--verify | --dry-run]
@@ -39,7 +39,13 @@ its size there from its label: bytes before the label stay in the section,
 bytes after it (code no label names, a pad) become a section of its own
 with the labels they hold, after the module's row, and a later section the
 module's bytes run on into (its pool, its last instruction) goes or is
-trimmed. An edition not built is cut at labels alone: a section that also
+trimmed. A function the module calls or points at that the edition defines
+nowhere is labelled in its scaffold where the edition's own BL or pool word
+lands, or the edition stays on its scaffold, naming it. Each message and
+resource name the module uses that an edition's catalogue or resource
+directory lacks, or gives another id than that edition's code reads, is
+reported with the id the code reads; nothing is written for it. An edition
+not built is cut at labels alone: a section that also
 holds another function keeps it as a section of its own when the two
 divide at its label, else the edition stays on its scaffold. Code whose
 listing ends with a halfword's padding makes what follows it align itself.
@@ -543,6 +549,20 @@ fn adopt_main(files: &mut Files, layout: &Layout, item: &str, options: &Options)
         }
     }
     report.push(line);
+    // English reads its ids at the listing's place; the names it lacks are
+    // reported, never written.
+    if let (Ok(english), Some(start), Some(name)) =
+        (Edition::read(files.root(), &layout.game, "en", &draft_path), listing_offset(layout, &listings[0].0), first_names.first())
+    {
+        report.extend(english.id_names(start, name).into_iter().map(|line| format!("      names: {line}")));
+        // Its listings name their functions; one the module calls by
+        // another name will not link.
+        let missing: Vec<String> =
+            english.undefined().into_iter().filter(|name| !listings.iter().any(|(_, text)| globals(&lines(text).0).contains(name))).collect();
+        if !missing.is_empty() {
+            report.push(format!("      en defines no {}, which the module calls or points at", missing.join(" or ")));
+        }
+    }
     for language in editions.iter().filter(|e| *e != "en") {
         let (edition, unknown) = match Edition::read(files.root(), &layout.game, language, &draft_path) {
             Ok(edition) => (Some(edition), None),
@@ -800,11 +820,13 @@ fn relink_edition(
         out.splice(start..end, keep);
     }
     // What the module calls that the edition never labelled is labelled
-    // where the edition's own code says it is.
+    // where the edition's own code says it is, and the names of messages and
+    // resources it uses are checked against the edition's.
     let mut notes = Vec::new();
     if let (Some(edition), Some((start, first))) = (edition, cuts[0].start.as_ref()) {
         let adopted = adopted_names(files, layout, list, language, edition);
         notes = edition.label_callees(&mut out, *start, first, &adopted)?;
+        notes.extend(edition.id_names(*start, first).into_iter().map(|line| format!("names: {line}")));
     }
     files.write(&path, join_lines(&out, newline));
     let cut = &cuts[0];
