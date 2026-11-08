@@ -32,7 +32,7 @@ Run any command with --help for its options.
   permute   search rewrites and PERM macro choices of a draft toward differ 0
   progress  DONE code and data in each edition, from the linker maps
   rank      every unfinished function, furthest first by skeleton gap
-  regress   the functions whose assembly differs between two builds of the tree
+  regress   the functions whose assembly differs from a saved build, each classed
   render    pictures of a built edition: Psynergy, places and events (feature render)
   twins     the reference game's functions closest in shape to each unmatched one
   variants  named rewrites of a draft, each kept only when it narrows the gap
