@@ -1153,17 +1153,38 @@ impl Files {
             .unwrap_or(0);
         let journal_path = format!("out/adopt/{:04}-{name}.journal", last + 1);
         std::fs::write(self.root.join(&journal_path), &journal).map_err(|error| format!("cannot write {journal_path}: {error}"))?;
-        for folder in &folders {
-            std::fs::create_dir_all(self.root.join(folder)).map_err(|error| format!("cannot create {folder}: {error}"))?;
-        }
-        for (path, _, now) in &changed {
-            let full = self.root.join(path);
-            match now {
-                Some(text) => std::fs::write(&full, text).map_err(|error| format!("cannot write {path}: {error}"))?,
-                None => std::fs::remove_file(&full).map_err(|error| format!("cannot remove {path}: {error}"))?,
+        let put = |path: &str, text: &Option<String>| -> Result<(), String> {
+            match text {
+                Some(text) => std::fs::write(self.root.join(path), text).map_err(|error| format!("cannot write {path}: {error}")),
+                None => std::fs::remove_file(self.root.join(path)).map_err(|error| format!("cannot remove {path}: {error}")),
+            }
+        };
+        let mut written = 0;
+        let mut failed = folders
+            .iter()
+            .find_map(|folder| std::fs::create_dir_all(self.root.join(folder)).err().map(|error| format!("cannot create {folder}: {error}")));
+        if failed.is_none() {
+            for (path, _, now) in &changed {
+                if let Err(error) = put(path, now) {
+                    failed = Some(error);
+                    break;
+                }
+                written += 1;
             }
         }
-        Ok(journal_path)
+        let Some(error) = failed else { return Ok(journal_path) };
+        // A write failed partway: what was written goes back, so the tree is
+        // as adoption found it and the journal has nothing to undo.
+        let stuck: Vec<&str> =
+            changed[..written].iter().rev().filter(|(path, before, _)| put(path, before).is_err()).map(|(path, ..)| path.as_str()).collect();
+        for folder in folders.iter().rev() {
+            let _ = std::fs::remove_dir(self.root.join(folder));
+        }
+        if stuck.is_empty() {
+            let _ = std::fs::remove_file(self.root.join(&journal_path));
+            return Err(format!("{error}; nothing was changed"));
+        }
+        Err(format!("{error}; {} could not be put back: adopt --undo {journal_path} restores them", stuck.join(" ")))
     }
 }
 
@@ -1261,7 +1282,8 @@ fn read_journal(bytes: &[u8]) -> Result<(Vec<String>, Vec<Entry>), String> {
 }
 
 /// Puts back what a journal's adoption changed, refusing when any file it
-/// wrote has changed since.
+/// wrote has changed since. A file already as it was before (an adoption
+/// whose writing stopped partway) is left alone.
 fn undo(root: &Path, journal: &Path) -> Result<(), String> {
     let _lock = Lock::take(root)?;
     let journal_path = [std::env::current_dir().map(|d| d.join(journal)).ok(), Some(root.join(journal))]
@@ -1270,15 +1292,20 @@ fn undo(root: &Path, journal: &Path) -> Result<(), String> {
         .find(|path| path.is_file())
         .ok_or_else(|| format!("cannot read {}", journal.display()))?;
     let bytes = std::fs::read(&journal_path).map_err(|error| format!("cannot read {}: {error}", journal.display()))?;
-    let (folders, entries) = read_journal(&bytes)?;
+    let (folders, mut entries) = read_journal(&bytes)?;
+    let state = |entry: &Entry| fingerprint(std::fs::read_to_string(root.join(&entry.path)).ok().as_deref());
     let changed: Vec<&str> = entries
         .iter()
-        .filter(|entry| fingerprint(std::fs::read_to_string(root.join(&entry.path)).ok().as_deref()) != entry.now)
+        .filter(|entry| {
+            let state = state(entry);
+            state != entry.now && state != fingerprint(entry.was.as_deref())
+        })
         .map(|entry| entry.path.as_str())
         .collect();
     if !changed.is_empty() {
         return Err(format!("changed since the adoption, so nothing was undone:\n  {}", changed.join("\n  ")));
     }
+    entries.retain(|entry| state(entry) == entry.now);
     for entry in &entries {
         let full = root.join(&entry.path);
         match &entry.was {
@@ -1371,6 +1398,35 @@ mod tests {
         assert_eq!(std::fs::read_to_string(root.join("gone.txt")).unwrap(), "old");
         assert!(!root.join("new").exists());
         assert!(!root.join(&journal).exists());
+    }
+
+    /// A write that fails partway puts back what was written; a journal whose
+    /// adoption stopped partway still undoes what it did write.
+    #[test]
+    fn a_failed_write_changes_nothing_and_a_partial_adoption_still_undoes() {
+        use std::os::unix::fs::PermissionsExt;
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        std::fs::write(root.join("a.txt"), "a\n").unwrap();
+        std::fs::write(root.join("b.txt"), "b\n").unwrap();
+        std::fs::set_permissions(root.join("b.txt"), std::fs::Permissions::from_mode(0o444)).unwrap();
+        let mut files = Files::new(root);
+        files.write("a.txt", "a2\n".into());
+        files.write("b.txt", "b2\n".into());
+        files.write("new/c.txt", "c\n".into());
+        let error = files.commit("adopt test", "test").unwrap_err();
+        assert!(error.contains("b.txt") && error.ends_with("nothing was changed"), "{error}");
+        assert_eq!(std::fs::read_to_string(root.join("a.txt")).unwrap(), "a\n");
+        assert!(!root.join("new").exists());
+        assert_eq!(std::fs::read_dir(root.join("out/adopt")).unwrap().count(), 0);
+
+        std::fs::set_permissions(root.join("b.txt"), std::fs::Permissions::from_mode(0o644)).unwrap();
+        let journal = files.commit("adopt test", "test").unwrap();
+        std::fs::write(root.join("b.txt"), "b\n").unwrap();
+        undo(root, Path::new(&journal)).unwrap();
+        assert_eq!(std::fs::read_to_string(root.join("a.txt")).unwrap(), "a\n");
+        assert_eq!(std::fs::read_to_string(root.join("b.txt")).unwrap(), "b\n");
+        assert!(!root.join("new").exists());
     }
 
     /// Two adoptions that read the same file: the second writes nothing over
