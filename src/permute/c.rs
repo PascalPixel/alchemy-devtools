@@ -49,10 +49,6 @@ macro_rules! nodes {
         pub enum Node { $($kind { $($field: $ty),* }),* }
 
         impl Node {
-            #[cfg(test)]
-            fn kind(&self) -> &'static str {
-                match self { $(Self::$kind { .. } => stringify!($kind)),* }
-            }
             pub fn children(&self) -> Vec<&Node> {
                 let mut result = Vec::new();
                 let mut lists = Vec::new();
@@ -206,6 +202,11 @@ impl Node {
 mod tests {
     use super::*;
 
+    /// The node's variant, as its debug form starts.
+    fn kind(node: &Node) -> String {
+        format!("{node:?}").split([' ', '{']).next().unwrap_or_default().to_string()
+    }
+
     fn decode(text: &str) -> String {
         let mut result = String::new();
         let mut chars = text.chars();
@@ -258,7 +259,7 @@ mod tests {
     fn independent_parser_inputs_match_printing_and_traversal() {
         let mut failures = Vec::new();
         fn topology(node: &Node, out: &mut String) {
-            out.push_str(match node.kind() { "FileAst" => "FileAST", "Id" => "ID", "Attribute" => "GccAttribute", "AttributeStatement" => "GccAttributeStatement", name => name });
+            out.push_str(match kind(node).as_str() { "FileAst" => "FileAST", "Id" => "ID", "Attribute" => "GccAttribute", "AttributeStatement" => "GccAttributeStatement", name => name });
             if let Node::Constant { ty, .. } = node { out.push('\t'); out.push_str(ty); }
             out.push('\n');
             for child in node.children() { topology(child, out); }
@@ -290,7 +291,7 @@ mod tests {
             unit.extract_function("target").unwrap();
             assert_eq!(unit.print(), expected.replace("\\x20\n", " \n").replace("\\x0a\n", "\n"));
             fn topology(node: &Node, out: &mut String) {
-                out.push_str(match node.kind() { "FileAst" => "FileAST", "Id" => "ID", "Attribute" => "GccAttribute", "AttributeStatement" => "GccAttributeStatement", name => name });
+                out.push_str(match kind(node).as_str() { "FileAst" => "FileAST", "Id" => "ID", "Attribute" => "GccAttribute", "AttributeStatement" => "GccAttributeStatement", name => name });
                 if let Node::Constant { ty, .. } = node { out.push('\t'); out.push_str(ty); }
                 out.push('\n');
                 for child in node.children() { topology(child, out); }

@@ -5,20 +5,6 @@ use regex::Regex;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::OnceLock;
-mod levenshtein;
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum Algorithm { #[default] Difflib, Levenshtein }
-
-impl Algorithm {
-    pub fn parse(value: &str) -> Result<Self, String> {
-        match value {
-            "difflib" => Ok(Self::Difflib),
-            "levenshtein" => Ok(Self::Levenshtein),
-            _ => Err("--algorithm: expected difflib or levenshtein".into()),
-        }
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Line {
@@ -141,17 +127,14 @@ pub struct Score {
     pub differ: usize,
     pub regalloc: usize,
     pub stack: u64,
-    pub branch: usize,
     pub reordered: usize,
     pub inserted: usize,
     pub deleted: usize,
-    /// Rows that match from the start before diff's alignment first
-    /// diverges.
-    pub prefix: usize,
 }
 
 impl Score {
-    /// Weighted search distance, with strict instruction differences breaking ties.
+    /// What the search lowers: the weighted score, with strict instruction
+    /// differences breaking ties.
     pub fn distance(&self) -> (u64, usize) {
         (self.weighted, self.differ)
     }
@@ -161,31 +144,11 @@ impl Score {
         self.distance() == (0, 0)
     }
 
-    /// What the search lowers: with `prefix`, a longer matched prefix
-    /// first, then the weighted score.
-    pub fn key(&self, prefix: bool) -> (std::cmp::Reverse<usize>, u64) {
-        (std::cmp::Reverse(if prefix { self.prefix } else { 0 }), self.weighted)
-    }
-
-    pub fn rank(&self, prefix: bool) -> ((std::cmp::Reverse<usize>, u64), usize) {
-        (self.key(prefix), self.differ)
-    }
-
-    /// The summary, with the matched prefix when the search ranks by it.
-    pub fn summary_with(&self, prefix: bool) -> String {
-        if prefix {
-            format!("prefix {}, {}", self.prefix, self.summary())
-        } else {
-            self.summary()
-        }
-    }
-
     pub fn summary(&self) -> String {
         let mut parts = Vec::new();
         for (count, name) in [
             (self.regalloc, "register"),
             (self.stack as usize, "stack"),
-            (self.branch, "branch"),
             (self.reordered, "reordered"),
             (self.inserted, "inserted"),
             (self.deleted, "deleted"),
@@ -201,18 +164,11 @@ impl Score {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+/// Branch and call destinations never contribute to the weighted score;
+/// stack offsets do only with `stack_differences`.
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Options {
-    pub algorithm: Algorithm,
     pub stack_differences: bool,
-    pub ignore_branch_targets: bool,
-}
-
-impl Default for Options {
-    fn default() -> Self {
-        // Branch destinations do not contribute to the default weighted score.
-        Self { algorithm: Algorithm::Difflib, stack_differences: false, ignore_branch_targets: true }
-    }
 }
 
 fn mnemonic(text: &str) -> &str {
@@ -248,14 +204,13 @@ fn normalize(text: &str, options: Options) -> String {
         }
         row = stack_pattern().replace_all(&row, "addr(sp)").into_owned();
     }
-    if options.ignore_branch_targets && branch(mnemonic(text)) {
+    if branch(mnemonic(text)) {
         if let Some((prefix, _)) = row.rsplit_once(',') {
             row = format!("{prefix},<target>");
         } else {
             row = format!("{}\t<target>", mnemonic(text));
         }
-    }
-    if !branch(mnemonic(text)) {
+    } else {
         static INTEGER: OnceLock<Regex> = OnceLock::new();
         let integer = INTEGER.get_or_init(|| Regex::new(r"-?[0-9]+").unwrap());
         let mut converted = String::new();
@@ -351,7 +306,7 @@ fn operands(text: &str) -> Vec<&str> {
         .map_or_else(Vec::new, |(_, args)| args.trim_start().split(',').collect())
 }
 
-fn same_line(old: &str, new: &str, old_symbol: bool, new_symbol: bool, options: Options, score: &mut Score) {
+fn same_line(old: &str, new: &str, old_symbol: bool, options: Options, score: &mut Score) {
     if old == new {
         return;
     }
@@ -365,10 +320,6 @@ fn same_line(old: &str, new: &str, old_symbol: bool, new_symbol: bool, options: 
             score.stack += int(&old[1]).abs_diff(int(&new[1]));
             ignore_last = true;
         }
-    }
-    if !options.ignore_branch_targets && !old_symbol && !new_symbol && branch(mnemonic(old)) && old.rsplit(',').next() != new.rsplit(',').next() {
-        score.branch += 1;
-        ignore_last = true;
     }
     let (mut old, mut new) = (operands(old), operands(new));
     if ignore_last {
@@ -384,18 +335,9 @@ fn same_line(old: &str, new: &str, old_symbol: bool, new_symbol: bool, options: 
     score.regalloc += old.iter().zip(&new).filter(|(a, b)| a != b && !(old_symbol && b.contains('.'))).count() + old.len().abs_diff(new.len());
 }
 
-#[cfg(test)]
-pub fn score(listing: &[String], draft: &[String]) -> Score {
-    score_with(listing, draft, Options::default())
-}
-
 pub fn score_with(listing: &[String], draft: &[String], options: Options) -> Score {
-    let (common, prefix) = crate::diff::compare_counts(listing, draft);
-    let mut result = Score {
-        differ: listing.len() + draft.len() - 2 * common,
-        prefix,
-        ..Score::default()
-    };
+    let (common, _) = crate::diff::compare_counts(listing, draft);
+    let mut result = Score { differ: listing.len() + draft.len() - 2 * common, ..Score::default() };
     let lines = |rows: &[String]| {
         rows.iter()
             .map(|row| Line {
@@ -408,15 +350,9 @@ pub fn score_with(listing: &[String], draft: &[String], options: Options) -> Sco
     result
 }
 
-pub fn prepared(rows: &[Line], options: Options) -> Vec<Line> {
+fn prepared(rows: &[Line], options: Options) -> Vec<Line> {
     let end = rows.iter().rposition(|s| mnemonic(&s.row) != "nop").map_or(0, |i| i + 1);
     rows[..end].iter().map(|s| Line { row: normalize(&s.row, options), has_symbol: s.has_symbol }).collect()
-}
-
-#[cfg(test)]
-pub fn assembly_key(rows: &[Line], options: Options) -> [u8; 32] {
-    use sha2::{Digest, Sha256};
-    Sha256::digest(prepared(rows, options).iter().map(|s| s.row.as_str()).collect::<Vec<_>>().join("\n").as_bytes()).into()
 }
 
 /// Deduplication must retain operands the weighted search deliberately ignores.
@@ -426,18 +362,10 @@ pub fn strict_assembly_key(rows: &[Line]) -> [u8; 32] {
 }
 
 pub fn weighted(listing: &[Line], draft: &[Line], options: Options, result: &mut Score) {
-    let (differ, prefix) = (result.differ, result.prefix);
-    *result = Score {
-        differ,
-        prefix,
-        ..Score::default()
-    };
+    *result = Score { differ: result.differ, ..Score::default() };
     let (old, new) = (prepared(listing, options), prepared(draft, options));
     let (a, b) = (new.iter().map(|s| mnemonic(&s.row)).collect::<Vec<_>>(), old.iter().map(|s| mnemonic(&s.row)).collect::<Vec<_>>());
-    let blocks = match options.algorithm {
-        Algorithm::Difflib => matching_blocks(&a, &b),
-        Algorithm::Levenshtein => levenshtein::matching_blocks(&a, &b),
-    };
+    let blocks = matching_blocks(&a, &b);
     let mut unmatched: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
     let (mut a, mut b) = (0, 0);
     for (i, j, n) in blocks {
@@ -448,7 +376,7 @@ pub fn weighted(listing: &[Line], draft: &[Line], options: Options, result: &mut
             unmatched.entry(&line.row).or_default().1 += 1;
         }
         for k in 0..n {
-            same_line(&old[j + k].row, &new[i + k].row, old[j + k].has_symbol, new[i + k].has_symbol, options, result);
+            same_line(&old[j + k].row, &new[i + k].row, old[j + k].has_symbol, options, result);
         }
         (a, b) = (i + n, j + n);
     }
@@ -459,7 +387,6 @@ pub fn weighted(listing: &[Line], draft: &[Line], options: Options, result: &mut
         result.deleted += deletions - moved;
     }
     result.weighted = result.stack
-        + result.branch as u64
         + result.regalloc as u64 * REGALLOC
         + result.reordered as u64 * REORDER
         + result.inserted as u64 * INSERT
@@ -468,16 +395,28 @@ pub fn weighted(listing: &[Line], draft: &[Line], options: Options, result: &mut
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    fn score(listing: &[String], draft: &[String]) -> Score {
+        score_with(listing, draft, Options::default())
+    }
+
+    /// The weighted search's view of the rows, as a hash.
+    fn assembly_key(rows: &[Line], options: Options) -> [u8; 32] {
+        use sha2::{Digest, Sha256};
+        Sha256::digest(prepared(rows, options).iter().map(|s| s.row.as_str()).collect::<Vec<_>>().join("\n").as_bytes()).into()
+    }
+
     #[test]
     fn raw_column_reuse_preserves_relocations_and_refuses_omissions() {
         let raw = "header\n  0:\tf7ff fffe \tbl\t0 <Call>\n  0: R_ARM_THM_CALL Call\n  4:\t00000000 \t.word\t0x00000000\n  4: R_ARM_ABS32 Data\n  8:\t4770     \tbx\tlr\n  8: R_ARM_V4BX *ABS*\n";
         let plain = "header\n  0:\tbl\t0 <Call>\n  0: R_ARM_THM_CALL Call\n  4:\t.word\t0x00000000\n  4: R_ARM_ABS32 Data\n  8:\tbx\tlr\n  8: R_ARM_V4BX *ABS*\n";
-        let reused = super::parse_objdump(&super::without_raw_instructions(raw).unwrap()).unwrap();
-        let expected = super::parse_objdump(plain).unwrap();
+        let reused = parse_objdump(&without_raw_instructions(raw).unwrap()).unwrap();
+        let expected = parse_objdump(plain).unwrap();
         assert_eq!(reused, expected);
-        assert_eq!(super::strict_assembly_key(&reused), super::strict_assembly_key(&expected));
+        assert_eq!(strict_assembly_key(&reused), strict_assembly_key(&expected));
         for ambiguous in ["\t...\n", "  0:\tunknown raw\tmovs\tr0, #1\n", "  0:\t123\tmovs\tr0, #1\n"] {
-            assert!(super::without_raw_instructions(ambiguous).is_none(), "{ambiguous}");
+            assert!(without_raw_instructions(ambiguous).is_none(), "{ambiguous}");
         }
     }
 
@@ -499,11 +438,11 @@ mod tests {
             crate::gba::process::run(&["arm-none-eabi-as", "-mcpu=arm7tdmi", "-o", &object.to_string_lossy(), &source.to_string_lossy()], crate::compile::root()).unwrap();
             for symbol in [None, Some("Target")] {
                 let text = crate::diff::disassemble_text(&object, symbol).unwrap();
-                assert_eq!(super::without_raw_instructions(&text).is_none(), zeros, "arm={arm}, symbol={symbol:?}: {text}");
-                let legacy = (crate::diff::disassemble(&object, symbol).unwrap(), super::disassemble(&object, symbol).unwrap());
-                let reused = super::disassemble_both(&object, symbol).unwrap();
+                assert_eq!(without_raw_instructions(&text).is_none(), zeros, "arm={arm}, symbol={symbol:?}: {text}");
+                let legacy = (crate::diff::disassemble(&object, symbol).unwrap(), disassemble(&object, symbol).unwrap());
+                let reused = disassemble_both(&object, symbol).unwrap();
                 assert_eq!(reused, legacy, "arm={arm}, zeros={zeros}, symbol={symbol:?}");
-                assert_eq!(super::strict_assembly_key(&reused.1), super::strict_assembly_key(&legacy.1));
+                assert_eq!(strict_assembly_key(&reused.1), strict_assembly_key(&legacy.1));
                 assert!(reused.1.iter().any(|line| line.has_symbol && line.row.ends_with("Data")));
             }
         }
@@ -511,19 +450,19 @@ mod tests {
 
     #[test]
     fn archive_identity_retains_operands_ignored_by_weighting() {
-        let rows = |row: &str| vec![super::Line { row: row.into(), has_symbol: false }];
+        let rows = |row: &str| vec![Line { row: row.into(), has_symbol: false }];
         for (old, new) in [("ldr\tr0, [sp, #0]", "ldr\tr0, [sp, #4]"), ("b\t10", "b\t12")] {
             let (old, new) = (rows(old), rows(new));
-            assert_eq!(super::assembly_key(&old, super::Options::default()), super::assembly_key(&new, super::Options::default()));
-            assert_ne!(super::strict_assembly_key(&old), super::strict_assembly_key(&new));
+            assert_eq!(assembly_key(&old, Options::default()), assembly_key(&new, Options::default()));
+            assert_ne!(strict_assembly_key(&old), strict_assembly_key(&new));
         }
         let old = rows("bx\tlr");
         let mut new = old.clone();
         new.extend(rows("nop"));
-        assert_eq!(super::assembly_key(&old, super::Options::default()), super::assembly_key(&new, super::Options::default()));
-        assert_ne!(super::strict_assembly_key(&old), super::strict_assembly_key(&new));
-        assert!(!super::Score { differ: 42, ..super::Score::default() }.is_zero());
-        assert!(super::Score::default().is_zero());
+        assert_eq!(assembly_key(&old, Options::default()), assembly_key(&new, Options::default()));
+        assert_ne!(strict_assembly_key(&old), strict_assembly_key(&new));
+        assert!(!Score { differ: 42, ..Score::default() }.is_zero());
+        assert!(Score::default().is_zero());
     }
 
     #[test]
@@ -531,27 +470,26 @@ mod tests {
         use sha2::{Digest, Sha256};
         for row in include_str!("c/fixtures/output-assembly.tsv").lines() {
             let c: Vec<_> = row.split('\t').collect();
-            let options = super::Options { stack_differences: c[0] == "1", ignore_branch_targets: c[1] == "1", ..super::Options::default() };
-            let raw = c[2].replace("\\n", "\n").replace("\\t", "\t");
-            let expected = c[3].replace("\\n", "\n").replace("\\t", "\t");
-            let lines = super::parse_objdump(&raw).unwrap();
-            assert_eq!(super::prepared(&lines, options).iter().map(|line| line.row.as_str()).collect::<Vec<_>>().join("\n"), expected);
+            let options = Options { stack_differences: c[0] == "1" };
+            let raw = c[1].replace("\\n", "\n").replace("\\t", "\t");
+            let expected = c[2].replace("\\n", "\n").replace("\\t", "\t");
+            let lines = parse_objdump(&raw).unwrap();
+            assert_eq!(prepared(&lines, options).iter().map(|line| line.row.as_str()).collect::<Vec<_>>().join("\n"), expected);
             let expected_hash: [u8; 32] = Sha256::digest(expected.as_bytes()).into();
-            assert_eq!(super::assembly_key(&lines, options), expected_hash);
+            assert_eq!(assembly_key(&lines, options), expected_hash);
         }
     }
-    use super::*;
 
     #[test]
-    fn both_algorithms_match_scores_and_normalization_options() {
-        for row in include_str!("c/fixtures/scoring-algorithms.tsv").lines() {
+    fn recorded_scores_with_each_stack_option() {
+        for row in include_str!("c/fixtures/scoring.tsv").lines() {
             let c: Vec<_> = row.split('\t').collect();
-            let options = Options { algorithm: Algorithm::parse(c[0]).unwrap(), stack_differences: c[1] == "1", ignore_branch_targets: c[2] == "1" };
+            let options = Options { stack_differences: c[0] == "1" };
             let decode = |s: &str| s.replace("\\t", "\t").replace("\\n", "\n");
-            let (old, new) = (parse_objdump(&decode(c[5])).unwrap(), parse_objdump(&decode(c[6])).unwrap());
+            let (old, new) = (parse_objdump(&decode(c[3])).unwrap(), parse_objdump(&decode(c[4])).unwrap());
             let mut actual = Score::default();
             weighted(&old, &new, options, &mut actual);
-            assert_eq!(actual.weighted, c[4].parse::<u64>().unwrap(), "{} seed {} stack={} ignore={} {:?}", c[0], c[3], c[1], c[2], actual);
+            assert_eq!(actual.weighted, c[2].parse::<u64>().unwrap(), "seed {} stack={} {:?}", c[1], c[0], actual);
         }
     }
 
@@ -573,17 +511,12 @@ mod tests {
         let lines = |rows: &[String]| rows.iter().map(|row| Line { row: row.clone(), has_symbol: false }).collect::<Vec<_>>();
         for draft in &drafts {
             for (listing, draft) in [(&listing, draft), (draft, &listing)] {
-                let (common, script) = crate::diff::compare(listing, draft);
-                let prefix = script.iter().take_while(|line| line.starts_with("  ")).count();
-                for algorithm in [Algorithm::Difflib, Algorithm::Levenshtein] {
-                    for stack_differences in [false, true] {
-                        for ignore_branch_targets in [false, true] {
-                            let options = Options { algorithm, stack_differences, ignore_branch_targets };
-                            let mut expected = Score { differ: listing.len() + draft.len() - 2 * common, prefix, ..Score::default() };
-                            weighted(&lines(listing), &lines(draft), options, &mut expected);
-                            assert_eq!(score_with(listing, draft, options), expected, "{options:?} {listing:?} / {draft:?}");
-                        }
-                    }
+                let (common, _) = crate::diff::compare(listing, draft);
+                for stack_differences in [false, true] {
+                    let options = Options { stack_differences };
+                    let mut expected = Score { differ: listing.len() + draft.len() - 2 * common, ..Score::default() };
+                    weighted(&lines(listing), &lines(draft), options, &mut expected);
+                    assert_eq!(score_with(listing, draft, options), expected, "{options:?} {listing:?} / {draft:?}");
                 }
             }
         }
@@ -592,7 +525,7 @@ mod tests {
     #[test]
     fn identical_code_scores_zero_and_registers_cost_least() {
         let listing = rows(&["push {r5, lr}", "ldrh r3, [r0, r1]", "lsrs r0, r3, #9", "bx r1"]);
-        assert_eq!(score(&listing, &listing), Score { prefix: 4, ..Score::default() });
+        assert_eq!(score(&listing, &listing), Score::default());
         let renamed = score(&listing, &rows(&["push {r5, lr}", "ldrh r2, [r0, r1]", "lsrs r0, r2, #9", "bx r1"]));
         assert_eq!((renamed.weighted, renamed.regalloc, renamed.differ), (2 * REGALLOC, 2, 4));
         let pool = score(&rows(&["ldr r0, [pc, #4]", "bx lr"]), &rows(&["ldr r0, [pc, #8]", "bx lr"]));
@@ -614,24 +547,6 @@ mod tests {
     }
 
     #[test]
-    fn prefix_ranking_puts_a_longer_matched_start_first() {
-        let listing = rows(&["push {r5, lr}", "movs r0, #1", "adds r1, #2", "str r0, [r2]", "bx lr"]);
-        // Early difference, otherwise close: weighted 10, prefix 1.
-        let early = score(&listing, &rows(&["push {r5, lr}", "movs r3, #1", "adds r1, #2", "str r0, [r2]", "bx lr"]));
-        // Late difference, costlier: weighted 100, prefix 3.
-        let late = score(&listing, &rows(&["push {r5, lr}", "movs r0, #1", "adds r1, #2", "bx lr"]));
-        assert_eq!((early.prefix, early.weighted), (1, REGALLOC));
-        assert_eq!((late.prefix, late.weighted), (3, DELETE));
-        assert!(early.key(false) < late.key(false));
-        assert!(late.key(true) < early.key(true));
-        // Equal prefixes fall back to the weighted score.
-        let other = score(&listing, &rows(&["push {r5, lr}", "movs r3, #1", "adds r1, #2", "bx lr"]));
-        assert!(early.key(true) < other.key(true));
-        assert_eq!(late.summary_with(true), format!("prefix 3, {}", late.summary()));
-        assert_eq!(late.summary_with(false), late.summary());
-    }
-
-    #[test]
     fn unchanged_rows_keep_both_measurements_zero() {
         let listing = rows(&["movs r0, #1", "bx lr"]);
         for draft in [rows(&["movs r0, #1", "bx lr"]), rows(&["movs r1, #1", "bx lr"]), rows(&["bx lr"])] {
@@ -649,34 +564,14 @@ mod tests {
     }
 
     #[test]
-    fn ignores_stack_by_default_and_charges_branch_targets_one() {
+    fn ignores_branch_targets_and_by_default_stack_offsets() {
         let old = rows(&["ldr r0, [sp, #12]", "b.n +4"]);
         let new = rows(&["ldr r0, [sp, #20]", "b.n +8"]);
         let result = score(&old, &new);
-        assert_eq!((result.weighted, result.branch, result.stack), (0, 0, 0));
-        let result = score_with(&old, &new, Options { stack_differences: false, ignore_branch_targets: false, ..Options::default() });
-        assert_eq!((result.weighted, result.branch, result.stack), (1, 1, 0));
-        let result = score_with(
-            &old,
-            &new,
-            Options {
-                stack_differences: true,
-                ignore_branch_targets: false,
-                ..Options::default()
-            },
-        );
-        assert_eq!((result.weighted, result.branch, result.stack), (9, 1, 8));
-        let result = score_with(
-            &old,
-            &new,
-            Options {
-                stack_differences: false,
-                ignore_branch_targets: true,
-                ..Options::default()
-            },
-        );
-        assert_eq!(result.weighted, 0);
+        assert_eq!((result.weighted, result.stack), (0, 0));
         assert_ne!(result.differ, 0, "weighted zero must not be presented as byte identity");
+        let result = score_with(&old, &new, Options { stack_differences: true });
+        assert_eq!((result.weighted, result.stack), (8, 8));
     }
 
     #[test]
@@ -691,18 +586,19 @@ mod tests {
         assert_eq!(target[0].row, "bl\tCall");
         assert_eq!(target[1].row, ".word\tData");
         assert!(target[0].has_symbol && target[1].has_symbol);
-        let candidate = parse_objdump("header\n  0:\tbl\t4 <f>\n  0: R_ARM_THM_CALL .text+0x34\n  4:\t.word\t0x00000000\n  4: R_ARM_ABS32 Data\n").unwrap();
+        // A candidate's section-relative word stands for any symbol.
+        let candidate = parse_objdump("header\n  0:\tbl\t4 <f>\n  0: R_ARM_THM_CALL Call\n  4:\t.word\t0x00000000\n  4: R_ARM_ABS32 .data+0x4\n").unwrap();
         let mut score = Score::default();
-        let options = Options { stack_differences: false, ignore_branch_targets: false, ..Options::default() };
-        weighted(&target, &candidate, options, &mut score);
+        weighted(&target, &candidate, Options::default(), &mut score);
         assert_eq!(score.weighted, 0);
-        weighted(&candidate, &target, options, &mut score);
+        weighted(&candidate, &target, Options::default(), &mut score);
         assert_eq!(score.weighted, REGALLOC, "symbol wildcard is directional, in this scoring direction");
+        let wrong_word = parse_objdump("  0:\tbl\t4 <f>\n  0: R_ARM_THM_CALL Call\n  4:\t.word\t0x00000000\n  4: R_ARM_ABS32 Other\n").unwrap();
+        weighted(&target, &wrong_word, Options::default(), &mut score);
+        assert_eq!(score.weighted, REGALLOC, "literal words keep their symbols");
         let wrong_call = parse_objdump("  0:\tbl\t4 <f>\n  0: R_ARM_THM_CALL Other\n  4:\t.word\t0x00000000\n  4: R_ARM_ABS32 Data\n").unwrap();
-        weighted(&target, &wrong_call, options, &mut score);
-        assert_eq!(score.weighted, REGALLOC, "test options retain relocated callees");
         weighted(&target, &wrong_call, Options::default(), &mut score);
-        assert_eq!(score.weighted, 0, "the CLI default ignores call targets as well as branch destinations");
+        assert_eq!(score.weighted, 0, "call targets are ignored as well as branch destinations");
     }
 
     #[test]

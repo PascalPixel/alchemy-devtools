@@ -1,9 +1,9 @@
-//! Parse the function to permute from the draft as written, and the
-//! declarations the preprocessed translation unit makes visible to it.
+//! Parse a function from the draft as written, and the typedef names the
+//! preprocessed translation unit makes visible to it.
 
 use super::ast::*;
 use super::lex::{lex, Tok, Token};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 pub type Result<T> = std::result::Result<T, String>;
 
@@ -39,18 +39,15 @@ const SPEC_WORDS: &[&str] = &[
 
 const QUALIFIERS: &[&str] = &["const", "__const", "volatile", "__volatile__", "__volatile"];
 
-/// A struct or union, or the constants of an enum, seen while scanning.
+/// The typedef names a translation unit declares, seen while scanning.
 #[derive(Clone, Debug, Default)]
 pub struct Unit {
-    pub typedefs: BTreeMap<String, (Vec<String>, Declarator)>,
-    pub records: BTreeMap<String, Vec<(Vec<String>, Declarator)>>,
-    pub globals: BTreeMap<String, (Vec<String>, Declarator)>,
-    pub enum_constants: BTreeSet<String>,
+    typedefs: BTreeSet<String>,
 }
 
 impl Unit {
     pub fn typedef_names(&self) -> BTreeSet<String> {
-        self.typedefs.keys().cloned().collect()
+        self.typedefs.clone()
     }
 }
 
@@ -206,7 +203,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Storage class, qualifiers and type specifiers. A struct, union or enum
-    /// body is recorded in `unit` and replaced by its tag.
+    /// body is skipped and replaced by its tag.
     fn specifiers(&mut self) -> Result<Vec<String>> {
         let mut specs = Vec::new();
         let mut typed = false;
@@ -231,8 +228,7 @@ impl<'a> Parser<'a> {
                     if word == "enum" {
                         self.enum_body()?;
                     } else {
-                        let members = self.record_body()?;
-                        self.unit.records.insert(tag.clone(), members);
+                        self.record_body()?;
                     }
                 }
                 specs.push(tag);
@@ -273,8 +269,7 @@ impl<'a> Parser<'a> {
     fn enum_body(&mut self) -> Result<()> {
         self.expect("{")?;
         while !self.eat("}") {
-            let name = self.ident()?;
-            self.unit.enum_constants.insert(name);
+            self.ident()?;
             if self.eat("=") {
                 self.conditional()?;
             }
@@ -286,9 +281,8 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn record_body(&mut self) -> Result<Vec<(Vec<String>, Declarator)>> {
+    fn record_body(&mut self) -> Result<()> {
         self.expect("{")?;
-        let mut members = Vec::new();
         while !self.eat("}") {
             let specs = self.specifiers()?;
             if specs.is_empty() {
@@ -300,11 +294,10 @@ impl<'a> Parser<'a> {
                     self.next()?;
                     self.conditional()?;
                 } else if !self.is_punct(";") {
-                    let item = self.declarator(false)?;
+                    self.declarator(false)?;
                     if self.eat(":") {
                         self.conditional()?;
                     }
-                    members.push((specs.clone(), item));
                 }
                 if !self.eat(",") {
                     break;
@@ -312,7 +305,7 @@ impl<'a> Parser<'a> {
             }
             self.expect(";")?;
         }
-        Ok(members)
+        Ok(())
     }
 
     /// Declarator tokens up to `,`, `;`, `=`, `:` or a function body; the
@@ -777,8 +770,8 @@ impl<'a> Parser<'a> {
 
     // Translation units.
 
-    /// Record every typedef, record, enum constant and global declaration,
-    /// skipping function bodies and anything this scanner cannot read.
+    /// Record every typedef name, skipping function bodies and anything
+    /// this scanner cannot read.
     pub fn scan_unit(&mut self) {
         while self.peek().is_some() {
             let start = self.position;
@@ -825,22 +818,14 @@ impl<'a> Parser<'a> {
         loop {
             let item = self.declarator(false)?;
             if self.is_punct("{") {
-                self.skip_braces()?;
-                self.unit.globals.insert(item.name.clone(), (specs, item));
-                return Ok(());
+                return self.skip_braces();
             }
             if self.eat("=") {
                 self.initializer()?;
             }
             if typedef {
                 self.typedefs.insert(item.name.clone());
-                self.unit
-                    .typedefs
-                    .insert(item.name.clone(), (specs.clone(), item));
-            } else {
-                self.unit
-                    .globals
-                    .insert(item.name.clone(), (specs.clone(), item));
+                self.unit.typedefs.insert(item.name);
             }
             if !self.eat(",") {
                 break;
@@ -1054,20 +1039,19 @@ pub(crate) fn matching(tokens: &[Token], open: usize) -> Option<usize> {
     None
 }
 
-
-#[cfg(test)]
-pub fn parse_body(source: &str, typedefs: &[&str]) -> Result<Vec<Stmt>> {
-    let mut names: BTreeSet<String> = typedefs.iter().map(|name| name.to_string()).collect();
-    let mut parser = Parser::new(lex(source)?, &mut names);
-    let body = parser.block_items()?;
-    if parser.peek().is_some() {
-        return parser.error("unexpected text");
-    }
-    Ok(body)
-}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn parse_body(source: &str, typedefs: &[&str]) -> Result<Vec<Stmt>> {
+        let mut names: BTreeSet<String> = typedefs.iter().map(|name| name.to_string()).collect();
+        let mut parser = Parser::new(lex(source)?, &mut names);
+        let body = parser.block_items()?;
+        if parser.peek().is_some() {
+            return parser.error("unexpected text");
+        }
+        Ok(body)
+    }
 
     const DRAFT: &str = "#include \"types.h\"\n/* header */\nextern u16 gTable[];\n\ns32 Find_Slot(s32 key)\n{\n    s32 index;\n    int entry;\n    for (index = 0; ; index += 1) {\n        entry = gTable[index];\n        /* note */\n        if (key == (entry & 0x1FF))\n            return *(u16 *)((u8 *)gTable + index * 2) >> 9;\n        if (((s16)entry) == -1)\n            break;\n    }\n    return 6;\n}\n";
 
@@ -1092,17 +1076,12 @@ mod tests {
     }
 
     #[test]
-    fn scans_typedefs_records_and_prototypes() {
+    fn scans_typedefs_past_records_and_prototypes() {
         let unit = scan_unit(
             "typedef unsigned short u16;\ntypedef struct { u16 a; u16 b : 3; } Pair;\nstruct Node { struct Node *next; u16 value[4]; };\nenum { KIND_A, KIND_B = 3 };\nextern struct Node *gHead;\nu16 Get(int);\nstatic int Helper(int x) { return x + 1; }\nint gCount = 2, gOther;\n",
         )
         .unwrap();
-        assert!(unit.typedefs.contains_key("u16") && unit.typedefs.contains_key("Pair"));
-        assert_eq!(unit.records["Node"].len(), 2);
-        assert!(unit.enum_constants.contains("KIND_B"));
-        for name in ["gHead", "Get", "Helper", "gCount", "gOther"] {
-            assert!(unit.globals.contains_key(name), "{name}");
-        }
+        assert_eq!(unit.typedef_names(), ["Pair", "u16"].map(String::from).into());
     }
 
     #[test]

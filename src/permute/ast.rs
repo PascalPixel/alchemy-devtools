@@ -1,7 +1,7 @@
-//! The function body the permuter edits, and its printer.
+//! A function as the draft writes it, and its printer: what lets a
+//! candidate's rewrites be carried back into the draft's own lines.
 //!
-//! Types stay spelled as their tokens; `types` resolves them when a mutation
-//! needs to know a width or a signedness.
+//! Types stay spelled as their tokens.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum BinOp {
@@ -88,13 +88,6 @@ impl BinOp {
         }
     }
 
-    pub fn is_comparison(self) -> bool {
-        matches!(
-            self,
-            BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge | BinOp::Eq | BinOp::Ne
-        )
-    }
-
     fn is_bitwise_or_shift(self) -> bool {
         matches!(
             self,
@@ -166,10 +159,6 @@ pub enum Expr {
 }
 
 impl Expr {
-    pub fn ident(name: &str) -> Expr {
-        Expr::Ident(name.to_string())
-    }
-
     pub fn binary(op: BinOp, left: Expr, right: Expr) -> Expr {
         Expr::Binary(op, Box::new(left), Box::new(right))
     }
@@ -183,51 +172,6 @@ impl Expr {
             Expr::Unary(..) | Expr::Cast(..) | Expr::SizeofValue(..) | Expr::SizeofType(..) => 14,
             _ => 15,
         }
-    }
-
-    /// Every direct subexpression, in source order.
-    pub fn children(&self) -> Vec<&Expr> {
-        match self {
-            Expr::Ident(_)
-            | Expr::Number(_)
-            | Expr::Char(_)
-            | Expr::Str(_)
-            | Expr::SizeofType(_) => Vec::new(),
-            Expr::Unary(_, a)
-            | Expr::PostInc(a)
-            | Expr::PostDec(a)
-            | Expr::Member(a, ..)
-            | Expr::Cast(_, a)
-            | Expr::SizeofValue(a) => vec![a],
-            Expr::Binary(_, a, b)
-            | Expr::Assign(_, a, b)
-            | Expr::Comma(a, b)
-            | Expr::Index(a, b) => vec![a, b],
-            Expr::Cond(a, b, c) => vec![a, b, c],
-            Expr::Call(callee, arguments) => {
-                let mut all = vec![callee.as_ref()];
-                all.extend(arguments.iter());
-                all
-            }
-        }
-    }
-
-    /// Calls `visit` on this expression and every subexpression.
-    pub fn each(&self, visit: &mut dyn FnMut(&Expr)) {
-        visit(self);
-        for child in self.children() {
-            child.each(visit);
-        }
-    }
-
-    pub fn mentions(&self, name: &str) -> usize {
-        let mut count = 0;
-        self.each(&mut |expr| {
-            if matches!(expr, Expr::Ident(ident) if ident == name) {
-                count += 1;
-            }
-        });
-        count
     }
 }
 
@@ -273,70 +217,6 @@ pub enum Stmt {
     Goto(String),
     Empty,
     Comment(String),
-}
-
-impl Stmt {
-    /// Calls `visit` on every statement nested in this one, this one first.
-    pub fn each(&self, visit: &mut dyn FnMut(&Stmt)) {
-        visit(self);
-        match self {
-            Stmt::Block(stmts) => stmts.iter().for_each(|stmt| stmt.each(visit)),
-            Stmt::If(_, then, other) => {
-                then.each(visit);
-                if let Some(other) = other {
-                    other.each(visit);
-                }
-            }
-            Stmt::While(_, body)
-            | Stmt::DoWhile(body, _)
-            | Stmt::For(_, _, _, body)
-            | Stmt::Switch(_, body) => body.each(visit),
-            _ => {}
-        }
-    }
-
-    /// The expressions this statement evaluates directly, not in nested statements.
-    pub fn own_exprs(&self) -> Vec<&Expr> {
-        match self {
-            Stmt::Expr(expr)
-            | Stmt::If(expr, ..)
-            | Stmt::While(expr, _)
-            | Stmt::DoWhile(_, expr)
-            | Stmt::Switch(expr, _)
-            | Stmt::Case(expr)
-            | Stmt::Return(Some(expr)) => vec![expr],
-            Stmt::For(init, cond, step, _) => [init, cond, step]
-                .into_iter()
-                .filter_map(Option::as_ref)
-                .collect(),
-            Stmt::Decl(decl) => {
-                let mut all = Vec::new();
-                for item in &decl.items {
-                    if let Some(init) = &item.init {
-                        init_exprs(init, &mut all);
-                    }
-                }
-                all
-            }
-            _ => Vec::new(),
-        }
-    }
-
-    /// Every expression in this statement and the statements nested in it.
-    pub fn each_expr(&self, visit: &mut dyn FnMut(&Expr)) {
-        self.each(&mut |stmt| {
-            for expr in stmt.own_exprs() {
-                expr.each(visit);
-            }
-        });
-    }
-}
-
-fn init_exprs<'a>(init: &'a Init, all: &mut Vec<&'a Expr>) {
-    match init {
-        Init::Expr(expr) => all.push(expr),
-        Init::List(items) => items.iter().for_each(|item| init_exprs(item, all)),
-    }
 }
 
 /// A parsed function: its header as written, and its body.

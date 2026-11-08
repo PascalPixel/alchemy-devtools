@@ -1,57 +1,56 @@
-//! Source-hypothesis search for a single C function.
-//! Candidates compile through Alchemy's approved game routes. Weighted scoring
+//! Source-hypothesis search for a single C function: decomp-permuter's
+//! whole-translation-unit rewrites and its PERM macros. Candidates compile
+//! through Alchemy's game routes as `diff` compiles a draft. Weighted scoring
 //! and instruction differences are separate measurements; listings judge
-//! candidates and never supply their source. The default engine has 37 mutation
-//! families, manual choices and replay. The optional heat-directed engine keeps
-//! its own source-line mapping. Output lives under out/permute.
+//! candidates and never supply their source. Output lives under out/permute.
 
-mod aim;
+mod ast;
 mod c;
-pub(crate) mod ast;
-mod effects;
-pub(crate) mod lex;
-mod mutate;
-pub(crate) mod parse;
-pub(crate) mod perm;
-mod score;
+mod lex;
 mod output;
-mod rng;
+mod parse;
+pub(crate) mod perm;
 mod randomize;
-pub(crate) mod types;
+mod rng;
+mod score;
 #[cfg(test)]
 mod compatibility_tests;
 
-use crate::compile::root;
 use crate::alchemy::targets::{decomp_target, DecompTarget};
-use ast::Function;
-#[cfg(test)]
-use mutate::mutate;
-use mutate::{mutate_with, unnatural, Kind, Rng, Step};
+use crate::compile::root;
 use parse::{locate, scan_unit, Unit};
 use perm::{Expanded, Node};
+use randomize::Step;
 use score::Score;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use types::Env;
 
-const USAGE: &str = r#"usage: alchemy-devtools permute DRAFT.c [ADDRESS[,ADDRESS...]] [--edition EDITION] [--minutes N] [--jobs J] [--seed S] [--function NAME] [--overlay resource_XXX] [--iterations N] [--heat] [--prefix] [--arm] [--stack-diffs] [--ignore-branch-targets] [--keep-prob P] [--stop-on-zero]
-Searches source variations of DRAFT.c until its code matches the
-listing alchemy-devtools diff compares it with (ADDRESS defaults to the file name;
-build the edition first). Each candidate compiles with alchemy-devtools diff's steps
-in its job's own directory under out/permute/STEM/, and scores two ways:
-differ, alchemy-devtools diff's count, and a weighted score. The weighted score aligns
-mnemonics with difflib, then charges 5 per differing
-operand, 1 per differing branch target, 60 per exactly reordered row and
-100 per insertion or deletion. Stack offsets, branch targets and trailing nops are ignored
-by default: weighted 0 alone does not establish a match. --stack-diffs counts
-stack distance; --no-ignore-branch-targets counts branch destinations.
-The default search uses the whole C tree: temporary reuse, type and signature
-changes, inline helpers, assignments, expressions and statement placement.
-These are matching hypotheses, not a proof of equivalent behavior. Review
-results before adoption and tag compiler-steering devices under S2.
+const USAGE: &str = r#"usage: alchemy-devtools permute DRAFT.c [ADDRESS[,ADDRESS...]] [--game tbs|tla] [--edition EDITION] [--function NAME] [--overlay resource_XXX] [--arm] [--minutes N] [--iterations N] [--jobs J] [--seed S] [--keep-prob P] [--stack-diffs] [--stop-on-zero] [--better-only]
+Searches source variations of DRAFT.c until its code matches the listing
+alchemy-devtools diff compares it with (build the edition first). The draft
+is read as diff reads it: ADDRESS defaults to the file name, the game to the
+draft's path, the edition to the game's English one, and an overlay draft's
+--overlay to the resource_XXX in its path. --function (or --symbol, as diff
+spells it) names the definition to rewrite when the draft has several; it
+defaults to the one named after the draft's address, and an overlay draft's
+to the function diff would compare. Without an address in its name, a
+main-image draft's listing is the function --function names in the
+edition's map.
+Each candidate compiles with diff's steps in its job's own directory under
+out/permute/STEM/, and scores two ways: differ, diff's count, and a weighted
+score. The weighted score aligns mnemonics with difflib, then charges 5 per
+differing operand, 60 per exactly reordered row and 100 per insertion or
+deletion. Branch and call targets, stack offsets and trailing nops are
+ignored: weighted 0 alone does not establish a match. --stack-diffs counts
+stack distance.
+The search rewrites the whole C tree as decomp-permuter does: temporary
+reuse, type and signature changes, inline helpers, assignments, expressions
+and statement placement. These are matching hypotheses, not a proof of
+equivalent behavior. Review results before adoption and tag
+compiler-steering devices under S2.
 PERM macros in the draft are expanded only here:
   PERM_GENERAL(a, b, ...) or PERM_ONEOF(a, b, ...)  one of the alternatives
   PERM_LINESWAP(lines)       reorder parsed statements
@@ -63,56 +62,32 @@ PERM macros in the draft are expanded only here:
   PERM_IGNORE(code)          passed through, never parsed or rewritten
   PERM_PRETEND(code)         parser-only declarations
   PERM_FORCE_SAMELINE(code)  print this region on one line
-Manual choices are enumerated without repeating seeds, subject to the time
-or iteration limit. With a single base
-source randomization is automatic; otherwise PERM_RANDOMIZE enables it.
-Random runs keep the preceding candidate with --keep-prob (default 0.6),
-regardless of improvement, restarting after failure or an instruction match.
---stop-on-zero requires both weighted zero and differ zero. Equal weighted
-scores are ranked by differ; output deduplication retains stack offsets and
-branch destinations and trailing nops even when scoring ignores them.
-An exact initial expansion is saved even with --better-only; the output
-threshold still applies. A forced seed's candidate is evaluated as requested.
-After the search, each best candidate is
-minimized: its rewrites are undone one at a time, last first, and each
-removal that leaves the weighted score, then differ, no higher is kept. Writes
-out/permute/STEM/best-N.c (best first), its remaining rewrites in
-best-N.txt, and best-N.diff, a unified diff against the draft file that
-`patch -p0` applies from the checkout: PERM macros become their chosen
-alternatives as the draft writes them, and the rewrites replace only the
-draft lines they change (or the whole function as printed, when they do not
-carry over with the same score). The run's scratch is removed however it
-ends. Defaults: --minutes 10, --jobs cores - 2, --search-seed 1.
---function names the definition to rewrite when the draft has several;
---iterations bounds each job instead of the clock; --jobs 1 makes seeded
-runs deterministic.
---seed RNG or --seed PERM,RNG forces a randomizer seed. RNG is a
-signed decimal integer of any size; PERM defaults to zero. A zero RNG uses
-fresh randomizer seeds on restarts.
---search-seed controls Alchemy's scheduler and manual-choice enumeration.
---rng-seed INTEGER replays a randomizer stream, selects manual choice
-zero, and keeps mutating the candidate even after a failed compile or match.
-Use --jobs 1 to reproduce one walk. This explicit option also forces seed zero.
---heat aims the rewrites as alchemy
-diff --heat shows: the draft's printing is compiled once with -g, and each
-rewrite's site is drawn in proportion to 1 plus the heat of the lines it
-changes (4 per differing instruction, 24 at the first divergence, 8 on each
-of the 3 lines before it). It uses the older conservative function-body
-engine; the default whole-tree engine explores a broader search space.
---prefix ranks candidates by how many
-instructions match from the start first, then by weighted score.
---algorithm selects difflib (default) or Levenshtein alignment.
-Qualifying candidates are saved immediately in output-SCORE-N directories
-with source.c, score.txt and diff.txt, in addition to minimized best-N files.
---better-only requires an improvement over the draft; --best-only excludes
-candidates ranked below the best already saved. Both follow --prefix when
-enabled, then weighted score and differ. --only-if-below N requires a weighted
-score strictly below N.
---no-context-output trims source.c before the first target function occurrence.
---overlay resource_XXX with --function NAME compares an overlay's linked
-function against the reference ROM's decoded stream, as alchemy-devtools diff does.
---arm compiles each candidate as alchemy-devtools diff --arm does:
-through the game ARM route (GAME_ARM_SOURCES): stock GCC 2.95.2."#;
+Manual choices are enumerated without repeating, subject to the time or
+iteration limit. Without choices, or with PERM_RANDOMIZE, candidates are
+also rewritten at random: each job keeps rewriting its last candidate with
+--keep-prob (default 0.6), regardless of improvement, and starts afresh
+after a failed compile or an instruction match.
+--seed S (or --search-seed S) seeds the search: the manual-choice order, and
+each job's own random stream, derived from S and the job's number, so jobs
+never repeat each other's work. --jobs 1 makes seeded runs deterministic;
+--iterations bounds each job instead of the clock. Defaults: --minutes 10,
+--jobs cores - 2, --seed 1.
+--stop-on-zero stops at weighted 0 and differ 0. Equal weighted scores are
+ranked by differ. Candidates no worse than the draft are saved as they are
+found in output-SCORE-N/ (source.c, score.txt, diff.txt), each compiled
+result once; --better-only saves only improvements on the draft. A draft
+that already matches is saved even so.
+After the search, each best candidate is minimized: its rewrites are undone
+one at a time, last first, and each removal that leaves the weighted score,
+then differ, no higher is kept. Writes out/permute/STEM/best-N.c (best
+first), its remaining rewrites in best-N.txt, and best-N.diff, a unified diff
+against the draft file that `patch -p0` applies from the checkout: PERM
+macros become their chosen alternatives as the draft writes them, and the
+rewrites replace only the draft lines they change (or the whole function as
+printed, when they do not carry over with the same code). The run's scratch
+is removed however it ends.
+--arm compiles each candidate as alchemy-devtools diff --arm does: through
+the game ARM route (GAME_ARM_SOURCES): stock GCC 2.95.2."#;
 
 struct Options {
     draft: PathBuf,
@@ -122,53 +97,49 @@ struct Options {
     minutes: f64,
     jobs: usize,
     seed: u64,
-    rng_seed: Option<String>,
-    perm_seed: Option<u64>,
     function: Option<String>,
     overlay: Option<String>,
     iterations: Option<u64>,
     arm: bool,
-    heat: bool,
-    prefix: bool,
     score_options: score::Options,
     keep_prob: f64,
     stop_on_zero: bool,
-    output: output::Options,
+    better_only: bool,
 }
 
 fn parse_options(arguments: &[String]) -> Result<Options, String> {
     let mut draft = None;
     let mut addresses = Vec::new();
+    let mut game = None;
     let mut target = None;
     let mut minutes = 10.0_f64;
     let mut jobs = std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(2).max(1));
     let mut seed = 1;
-    let mut rng_seed = None;
-    let mut perm_seed = None;
     let mut function = None;
     let mut overlay = None;
     let mut iterations = None;
     let mut arm = false;
-    let (mut heat, mut prefix) = (false, false);
     let mut score_options = score::Options::default();
     let mut keep_prob = 0.6;
     let mut stop_on_zero = false;
-    let mut output = output::Options::default();
+    let mut better_only = false;
     let mut index = 0;
     let value = |index: usize| arguments.get(index).cloned().ok_or_else(|| USAGE.to_string());
     while index < arguments.len() {
         match arguments[index].as_str() {
-            "--better-only" => output.better_only = true,
-            "--best-only" => output.best_only = true,
-            "--no-context-output" => output.no_context = true,
-            "--only-if-below" => {
-                index += 1;
-                output.threshold = Some(value(index)?.parse().map_err(|_| "--only-if-below: an integer")?);
-            }
+            "--better-only" => better_only = true,
             "-h" | "--help" => return Err(USAGE.into()),
             "--edition" => {
                 index += 1;
                 target = Some(decomp_target(Some(&value(index)?))?);
+            }
+            "--game" => {
+                index += 1;
+                game = match value(index)?.as_str() {
+                    "tbs" => Some("tbs"),
+                    "tla" => Some("tla"),
+                    _ => return Err(format!("--game: tbs or tla\n{USAGE}")),
+                };
             }
             "--minutes" => {
                 index += 1;
@@ -178,55 +149,25 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
                 index += 1;
                 jobs = value(index)?.parse::<usize>().map_err(|_| format!("--jobs: a count\n{USAGE}"))?.max(1);
             }
-            "--seed" => {
+            option @ ("--seed" | "--search-seed") => {
                 index += 1;
-                let text = value(index)?;
-                let parts: Vec<_> = text.split(',').collect();
-                let (manual, random) = match parts.as_slice() {
-                    [random] => (0, *random),
-                    [manual, random] => (manual.trim().parse::<u64>().map_err(|_| "--seed: PERM must be a nonnegative integer")?, *random),
-                    _ => return Err("--seed: expected RNG or PERM,RNG".into()),
-                };
-                Rng::from_decimal(random).map_err(|e| format!("--seed: {e}"))?;
-                perm_seed = Some(manual);
-                rng_seed = (!random.trim().trim_start_matches(['-', '+']).bytes().all(|b| b == b'0')).then(|| random.to_string());
-            }
-            "--search-seed" => {
-                index += 1;
-                seed = value(index)?.parse().map_err(|_| format!("--search-seed: a number\n{USAGE}"))?;
-            }
-            "--rng-seed" => {
-                index += 1;
-                let text = value(index)?;
-                Rng::from_decimal(&text).map_err(|e| format!("--rng-seed: {e}\n{USAGE}"))?;
-                rng_seed = Some(text);
-                perm_seed = Some(0);
+                seed = value(index)?.trim().parse().map_err(|_| format!("{option}: a nonnegative integer\n{USAGE}"))?;
             }
             "--iterations" => {
                 index += 1;
                 iterations = Some(value(index)?.parse().map_err(|_| format!("--iterations: a count\n{USAGE}"))?);
             }
-            "--function" => {
+            "--function" | "--symbol" => {
                 index += 1;
                 function = Some(value(index)?);
             }
             "--overlay" => {
                 index += 1;
                 let name = value(index)?;
-                let id = name.strip_prefix("resource_").filter(|id| id.len() == 3 && id.bytes().all(|c| c.is_ascii_hexdigit()))
-                    .ok_or("--overlay must be resource_XXX")?;
-                overlay = Some(format!("resource_{}", id.to_ascii_lowercase()));
+                overlay = Some(resource(&name).filter(|_| name.len() == 12).ok_or("--overlay must be resource_XXX")?);
             }
             "--arm" => arm = true,
-            "--heat" => heat = true,
-            "--prefix" => prefix = true,
             "--stack-diffs" => score_options.stack_differences = true,
-            "--algorithm" => {
-                index += 1;
-                score_options.algorithm = score::Algorithm::parse(&value(index)?)?;
-            }
-            "--ignore-branch-targets" => score_options.ignore_branch_targets = true,
-            "--no-ignore-branch-targets" => score_options.ignore_branch_targets = false,
             "--stop-on-zero" => stop_on_zero = true,
             "--keep-prob" => {
                 index += 1;
@@ -242,31 +183,53 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
     }
     let draft = draft.ok_or_else(|| USAGE.to_string())?;
     let text = draft.to_string_lossy().into_owned();
-    if overlay.is_some() && (arm || function.is_none() || !addresses.is_empty()) {
-        return Err("--overlay requires --function and cannot be combined with --arm or main-image addresses".into());
+    if overlay.is_none() && text.contains("/overlays/") {
+        overlay = Some(resource(&text).ok_or_else(|| format!("{}: name its overlay with --overlay resource_XXX", draft.display()))?);
     }
-    if text.contains("/overlays/") && overlay.is_none() {
-        return Err("name an overlay draft's resource with --overlay and its function with --function".into());
+    if overlay.is_some() && (arm || !addresses.is_empty()) {
+        return Err("--overlay compares one overlay function: it takes no main-image address and no --arm".into());
     }
     if addresses.is_empty() && overlay.is_none() {
         let stem = draft.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-        if stem.len() != 8 || !stem.chars().all(|c| c.is_ascii_hexdigit()) {
+        if stem.len() == 8 && stem.chars().all(|c| c.is_ascii_hexdigit()) {
+            addresses.push(stem);
+        } else if let Some(name) = &function {
+            // As diff resolves --symbol: by name in the edition's map.
+            addresses.push(name.clone());
+        } else {
             return Err(format!("{}: name the listing address\n{USAGE}", draft.display()));
         }
-        addresses.push(stem);
     }
-    let game = match target {
-        Some(target) if target.id.as_str().starts_with("tla-") => "tla",
-        Some(_) => "tbs",
-        None if text.contains("/tla/") => "tla",
-        None => "tbs",
-    };
+    let edition_game = target.map(|target| if target.id.as_str().starts_with("tla-") { "tla" } else { "tbs" });
+    if matches!((game, edition_game), (Some(game), Some(edition_game)) if game != edition_game) {
+        return Err("--game and --edition name different games".into());
+    }
+    let game = game.or(edition_game).unwrap_or(if text.contains("/tla/") { "tla" } else { "tbs" });
     let target = match target {
         Some(target) => target,
         None => decomp_target(Some(&format!("{game}-en")))?,
     };
     if !minutes.is_finite() || minutes < 0.0 { return Err("--minutes must be finite and nonnegative".into()); }
-    Ok(Options { draft, addresses, game, target, minutes, jobs, seed, rng_seed, perm_seed, function, overlay, iterations, arm, heat, prefix, score_options, keep_prob, stop_on_zero, output })
+    Ok(Options { draft, addresses, game, target, minutes, jobs, seed, function, overlay, iterations, arm, score_options, keep_prob, stop_on_zero, better_only })
+}
+
+/// The overlay a name or path holds as `resource_XXX`, in lower case.
+fn resource(name: &str) -> Option<String> {
+    let at = name.find("resource_")?;
+    let id = name.get(at + 9..at + 12)?;
+    id.bytes().all(|c| c.is_ascii_hexdigit()).then(|| format!("resource_{}", id.to_ascii_lowercase()))
+}
+
+/// The address a draft is named after: its file stem, or the stem's last
+/// `_`-separated part (`resource_XXX_c_ADDRESS`), when that is 8 hex digits.
+fn stem_address(stem: &str) -> Option<String> {
+    let tail = stem.rsplit('_').next()?;
+    (tail.len() == 8 && tail.chars().all(|c| c.is_ascii_hexdigit())).then(|| tail.to_ascii_lowercase())
+}
+
+/// Whether `name` is named after `address` (`Func_0200263c`).
+fn named_after(name: &str, address: Option<&str>) -> bool {
+    address.is_some_and(|address| name.to_ascii_lowercase().ends_with(address))
 }
 
 /// One job's scratch: its candidate file and alchemy-devtools diff's steps for it.
@@ -342,14 +305,13 @@ impl Job {
     }
 }
 
-/// A candidate: one expansion of the PERM macros and, when its function
-/// parses, the rewritten function.
+/// A candidate: one expansion of the PERM macros, its translation unit with
+/// the target function normalized, and the rewrites applied to that unit.
 #[derive(Clone)]
 struct State {
     expanded: Arc<Expanded>,
-    parsed: Option<(usize, usize, Function)>,
+    full: c::Node,
     steps: Vec<Step>,
-    full: Option<c::Node>,
 }
 
 struct Problem {
@@ -363,13 +325,11 @@ struct Problem {
     listing_rows: Option<Vec<score::Line>>,
     score_options: score::Options,
     symbol: Option<String>,
+    /// The preprocessed unit's typedef names, to find the function in the
+    /// draft's own text.
     unit: Unit,
     function: Option<String>,
     arm: bool,
-    /// --prefix: a longer matched prefix ranks first.
-    prefix: bool,
-    /// --heat: where rewrites are aimed.
-    aim: Option<aim::Aim>,
 }
 
 impl Problem {
@@ -377,27 +337,14 @@ impl Problem {
         self.state_of(Arc::new(expanded))
     }
 
+    /// The candidate an expansion `prepare` has given its unit starts from.
     fn state_of(&self, expanded: Arc<Expanded>) -> State {
-        let parsed = locate(&expanded.text, self.function.as_deref(), &self.unit.typedef_names())
-            .ok()
-            .map(|mut located| {
-                expanded.apply_ast(&mut located.function);
-                (located.start, located.end, located.function)
-            });
-        let full = expanded.unit.as_deref().cloned();
-        State { expanded, parsed, steps: Vec::new(), full }
+        let full = expanded.unit.as_deref().cloned().expect("a prepared expansion");
+        State { expanded, full, steps: Vec::new() }
     }
 
     fn source(&self, state: &State) -> String {
-        if let Some(full) = &state.full { return state.expanded.restore(&full.print()); }
-        let text = &state.expanded.text;
-        let spelled = match &state.parsed {
-            Some((start, end, function)) => {
-                format!("{}{}{}", &text[..*start], function.print().trim_end(), &text[*end..])
-            }
-            None => text.clone(),
-        };
-        state.expanded.restore(&spelled)
+        state.expanded.restore(&state.full.print())
     }
 
     fn evaluate(&self, job: &Job, text: &str) -> Result<Score, String> {
@@ -414,12 +361,23 @@ impl Problem {
         Ok((score, score::strict_assembly_key(&candidate)))
     }
 
+    /// One expansion's unit with `steps` applied in order, each at the site
+    /// its generator chose; a step whose site is gone is dropped.
+    fn replay(&self, expanded: &Arc<Expanded>, steps: &[Step]) -> State {
+        let mut state = self.state_of(expanded.clone());
+        let function = self.function.as_deref().expect("a selected function");
+        for step in steps {
+            if randomize::replay(&mut state.full, function, step.kind, &mut step.rng.clone(), step.region) {
+                state.steps.push(step.clone());
+            }
+        }
+        state
+    }
 }
 
 #[derive(Clone)]
 struct Found {
     score: Score,
-    unnatural: usize,
     text: String,
     steps: Vec<Step>,
     expanded: Arc<Expanded>,
@@ -428,8 +386,8 @@ struct Found {
 }
 
 impl Found {
-    fn rank(&self, base_unnatural: usize, prefix: bool) -> ((std::cmp::Reverse<usize>, u64), usize, usize, usize) {
-        (self.score.key(prefix), self.score.differ, self.unnatural.saturating_sub(base_unnatural), self.steps.len())
+    fn rank(&self) -> ((u64, usize), usize) {
+        (self.score.distance(), self.steps.len())
     }
 }
 
@@ -441,7 +399,7 @@ struct Reference {
 
 fn reference(options: &Options) -> Result<Reference, String> {
     if let Some(overlay) = &options.overlay {
-        let wanted = options.function.as_deref().ok_or("--overlay requires --function")?;
+        let wanted = options.function.as_deref().ok_or("name the overlay function with --function")?;
         let (listing, name) = crate::diff::overlay_reference(options.target, overlay, wanted)?;
         return Ok(Reference { listing, scaffold: Some(name), rows: None });
     }
@@ -470,8 +428,45 @@ fn reference(options: &Options) -> Result<Reference, String> {
     Ok(Reference { listing, scaffold, rows })
 }
 
+/// The overlay function an overlay draft is compared with, as diff finds
+/// it: the one function the draft defines that the overlay also has, or
+/// else the one the overlay names after the draft's address.
+fn overlay_function(target: DecompTarget, overlay: &str, stem: &str, text: &str) -> Result<String, String> {
+    let output = root().join(target.output_dir).join("overlays");
+    let mut ours = Vec::new();
+    for name in [format!("{overlay}_overlay.o"), format!("{overlay}.elf")] {
+        let path = output.join(name);
+        if path.exists() {
+            ours.extend(crate::diff::text_symbols(&path)?);
+        }
+    }
+    if ours.is_empty() {
+        return Err(format!("{overlay}: no linked overlay in {}; build {} first", output.display(), target.id));
+    }
+    ours.sort();
+    ours.dedup();
+    let defined: Vec<String> = lex::lex(text).map(|tokens| parse::scan_definitions(&tokens).into_iter().map(|entry| entry.0).collect()).unwrap_or_default();
+    shared_function(&ours, &defined, stem_address(stem).as_deref()).ok_or_else(|| {
+        format!("name the overlay function with --function: {overlay} has no single function the draft defines or names after its address")
+    })
+}
+
+/// The one of the overlay's functions the draft also defines; among
+/// several, or none, the one named after the draft's address.
+fn shared_function(ours: &[String], defined: &[String], address: Option<&str>) -> Option<String> {
+    let mut shared: Vec<&String> = ours.iter().filter(|name| defined.contains(name)).collect();
+    if shared.len() != 1 {
+        let among = if shared.is_empty() { ours.iter().collect() } else { shared };
+        shared = among.into_iter().filter(|name| named_after(name, address)).collect();
+    }
+    match shared.as_slice() {
+        [one] => Some(one.to_string()),
+        _ => None,
+    }
+}
+
 pub fn run(arguments: &[String]) -> Result<(), String> {
-    let options = parse_options(arguments)?;
+    let mut options = parse_options(arguments)?;
     if options.arm {
         println!("{}", crate::diff::GAME_ARM_NOTICE);
     }
@@ -480,6 +475,9 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let stem = draft.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     let output = root().join("out/permute").join(&stem);
     let nodes = perm::parse(&text)?;
+    if let (Some(overlay), None) = (&options.overlay, &options.function) {
+        options.function = Some(overlay_function(options.target, overlay, &stem, &text)?);
+    }
     let Reference { listing, scaffold, rows: listing_rows } = reference(&options)?;
     let problem = Problem {
         draft,
@@ -492,8 +490,6 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         listing_rows,
         score_options: options.score_options,
         symbol: None,
-        prefix: options.prefix,
-        aim: None,
         unit: Unit::default(),
         function: options.function.clone(),
         arm: options.arm,
@@ -515,7 +511,9 @@ impl Drop for Scratch {
     }
 }
 
-fn select_function(unit: &c::Node, selected: Option<&str>) -> Result<String, String> {
+/// The definition to rewrite: the one named, the draft's only one, or the
+/// one named after the draft's address.
+fn select_function(unit: &c::Node, selected: Option<&str>, stem: &str) -> Result<String, String> {
     if let Some(name) = selected {
         return randomize::target_index(unit, name).map(|_| name.to_string()).ok_or_else(|| format!("the draft does not define {name}"));
     }
@@ -525,7 +523,11 @@ fn select_function(unit: &c::Node, selected: Option<&str>) -> Result<String, Str
             c::Node::Decl { name: Some(name), funcspec, .. } if !funcspec.iter().any(|s| s == "inline") => Some(name.clone()), _ => None,
         }, _ => None,
     }).collect();
-    if names.len() == 1 { Ok(names[0].clone()) } else { Err(format!("choose a definition with --function (found: {})", names.join(", "))) }
+    let address = stem_address(stem);
+    match names.iter().filter(|name| names.len() == 1 || named_after(name, address.as_deref())).collect::<Vec<_>>().as_slice() {
+        [one] => Ok(one.to_string()),
+        _ => Err(format!("choose a definition with --function (found: {})", names.join(", "))),
+    }
 }
 
 fn prepare(job: &Job, expanded: &mut Expanded, target: &str) -> Result<(), String> {
@@ -534,27 +536,6 @@ fn prepare(job: &Job, expanded: &mut Expanded, target: &str) -> Result<(), Strin
     unit.extract_function(target)?;
     expanded.apply_c_ast(&mut unit);
     expanded.unit = Some(Arc::new(unit));
-    Ok(())
-}
-
-/// The body engine also needs the selected edition's translation unit.
-/// Keep its source scopes and permutation markers; strip cpp line markers
-/// so heat and printed source use the same line numbers.
-fn heat_source(expanded: &Expanded, preprocessed: &str) -> String {
-    let mut text = String::new();
-    for line in expanded.comment_markers(preprocessed).lines() {
-        let directive = line.trim_start().strip_prefix('#').map(str::trim_start);
-        if !directive.is_some_and(|s| s.starts_with("ident") || s.starts_with("line") || s.starts_with(|c: char| c.is_ascii_digit())) {
-            text.push_str(line);
-        }
-        text.push('\n');
-    }
-    text
-}
-
-fn prepare_heat(job: &Job, expanded: &mut Expanded) -> Result<(), String> {
-    std::fs::write(&job.candidate, expanded.preprocess_text()).map_err(|e| e.to_string())?;
-    expanded.text = heat_source(expanded, &job.preprocess()?);
     Ok(())
 }
 
@@ -605,23 +586,18 @@ fn execute(mut problem: Problem, options: &Options, scaffold: Option<String>, ou
     let guard = Scratch(output.join(format!("run-{}", std::process::id())));
     let scratch = guard.0.clone();
     let setup = Job::new(&problem, &scratch.join("setup"))?;
-    let mut original = perm::expand(&problem.nodes, None)?;
+    let mut original = perm::expand(&problem.nodes)?;
     // Preprocess before AST permutations: their temporary grouping blocks
     // intentionally do not have the final C declaration scopes.
     std::fs::write(&setup.candidate, original.preprocess_text()).map_err(|e| e.to_string())?;
-    let preprocessed = setup.preprocess()?;
-    let mut full_unit = c::parse(&preprocessed)?;
-    let target = select_function(&full_unit, problem.function.as_deref())?;
+    let mut full_unit = c::parse(&setup.preprocess()?)?;
+    let target = select_function(&full_unit, problem.function.as_deref(), &problem.stem)?;
     problem.function = Some(target.clone());
     full_unit.extract_function(&target)?;
     original.apply_c_ast(&mut full_unit);
     problem.unit = scan_unit(&full_unit.print())?;
-    if !options.heat {
-        original.unit = Some(Arc::new(full_unit));
-        problem.symbol = Some(target);
-    } else {
-        original.text = heat_source(&original, &preprocessed);
-    }
+    original.unit = Some(Arc::new(full_unit));
+    problem.symbol = Some(target);
     let base_state = problem.state(original);
     let base_text = problem.source(&base_state);
     setup.compile(&base_text)?;
@@ -630,28 +606,14 @@ fn execute(mut problem: Problem, options: &Options, scaffold: Option<String>, ou
             problem.symbol = Some(name);
         }
     }
-    let random = (base_state.full.is_some() || base_state.parsed.is_some()) && (!problem.choices || perm::randomizes(&problem.nodes));
-    if !random && !problem.choices {
-        return Err(match problem.function.as_deref() {
-            Some(name) => format!("{name}: the function does not parse for rewriting and the draft has no PERM choices"),
-            None => format!(
-                "{}: no function to rewrite ({}) and no PERM choices",
-                options.draft.display(),
-                locate(&base_state.expanded.text, None, &problem.unit.typedef_names()).err().unwrap_or_else(|| "only PERM_IGNORE regions".into())
-            ),
-        });
-    }
+    let random = !problem.choices || perm::randomizes(&problem.nodes);
     let base_score = problem.evaluate(&setup, &base_text)?;
-    if options.heat && random {
-        problem.aim = aim_at(&problem, &setup, &base_state, &base_text)?;
-    }
-    let base_unnatural = problem.unnatural(&base_state);
-    let base = Found { score: base_score, unnatural: base_unnatural, text: base_text, steps: Vec::new(), expanded: base_state.expanded.clone(), job: 0, iteration: 0 };
+    let base = Found { score: base_score, text: base_text, steps: Vec::new(), expanded: base_state.expanded.clone(), job: 0, iteration: 0 };
     println!(
-        "{}: listing {} instructions; draft {}; {} job(s), {}, search seed {}; rewrites: {}",
+        "{}: listing {} instructions; draft {}; {} job(s), {}, seed {}; rewrites: {}",
         problem.stem,
         problem.listing.len(),
-        base.score.summary_with(problem.prefix),
+        base.score.summary(),
         options.jobs,
         match options.iterations {
             Some(count) => format!("{count} iterations each"),
@@ -664,54 +626,28 @@ fn execute(mut problem: Problem, options: &Options, scaffold: Option<String>, ou
             _ => "PERM choices",
         }
     );
-    if let Some(seed) = options.perm_seed {
-        println!("forced PERM seed {seed}, RNG seed {}", options.rng_seed.as_deref().unwrap_or("0 (fresh seeds on restart)"));
-    }
     let started = Instant::now();
     let deadline = options.iterations.is_none().then(|| started + Duration::from_secs_f64(options.minutes * 60.0));
     let base_hash = score::strict_assembly_key(&score::disassemble(&setup.object, problem.symbol.as_deref())?);
     // Seed zero is the expansion already compiled above. Retain it when
     // it matches: no later candidate can strictly improve a zero score.
-    // An explicit nonzero choice or mutation seed still gets its own run.
-    let initial_match = base.score.is_zero() && options.perm_seed.is_none_or(|seed| seed == 0) && options.rng_seed.is_none();
-    let save_initial = initial_match && options.output.threshold.is_none_or(|limit| 0 < limit);
+    let initial_match = base.score.is_zero();
     if initial_match {
         println!("initial expansion is an exact instruction match");
-    }
-    if save_initial {
-        output::write(output, 0, &base.text, &base.text, problem.function.as_deref(), options.output)?;
+        output::write(output, 0, &base.text, &base.text)?;
     }
     let found = if initial_match && options.stop_on_zero { Vec::new() }
         else { search(&problem, &base_state, &base, random, options, deadline, &scratch, started, Some((output, base_hash)))? };
-    let mut found: Vec<_> = found.into_iter().filter(|entry| (!options.output.better_only || entry.score.rank(problem.prefix) < base.score.rank(problem.prefix))
-        && options.output.threshold.is_none_or(|limit| i128::from(entry.score.weighted) < limit)).collect();
-    if save_initial { found.insert(0, base.clone()); }
-    let best = minimize_best(&problem, &base, &found, &scratch.join("minimize"))?;
+    let mut found: Vec<_> = found.into_iter().filter(|entry| !options.better_only || entry.score.distance() < base.score.distance()).collect();
+    if initial_match { found.insert(0, base.clone()); }
+    let best = minimize_best(&problem, &found, &scratch.join("minimize"))?;
     write_best(&problem, &base, &best, output)
 }
 
-/// The base's heat on its printed function: its text compiled once more
-/// with -g, its rows charged to lines as `alchemy-devtools diff --heat` charges them.
-fn aim_at(problem: &Problem, setup: &Job, base_state: &State, base_text: &str) -> Result<Option<aim::Aim>, String> {
-    let Some((_, _, function)) = &base_state.parsed else { return Ok(None) };
-    let printed = base_state.expanded.restore(&function.print());
-    let Some(at) = base_text.find(printed.trim_end()) else {
-        println!("heat: the printed function is not in the compiled text; rewrites are not aimed");
-        return Ok(None);
-    };
-    std::fs::write(&setup.candidate, base_text).map_err(|e| format!("{}: {e}", setup.candidate.display()))?;
-    let name = setup.candidate.file_name().unwrap_or_default().to_string_lossy().into_owned();
-    let located = crate::diff::located(&setup.steps, &setup.object, problem.symbol.as_deref(), &name)?;
-    let heat = crate::diff::heat(&problem.listing, &located);
-    let first_line = base_text[..at].matches('\n').count() as u32 + 1;
-    let aim = aim::Aim::new(&printed, first_line, &heat);
-    println!(
-        "heat: {} differing rows on {} lines; first divergence at printed line {}",
-        heat.lines.values().sum::<usize>(),
-        heat.lines.len(),
-        heat.first.map_or("none".into(), |line| (i64::from(line) + 1 - i64::from(first_line)).to_string())
-    );
-    Ok(aim.aims().then_some(aim))
+/// Job `job`'s own random stream under the search seed: distinct for each
+/// job of a run, so no two jobs walk the same candidates.
+fn job_seed(seed: u64, job: usize) -> u64 {
+    seed.wrapping_mul(1_000_003).wrapping_add(job as u64)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -726,17 +662,14 @@ fn search(
     started: Instant,
     archive: Option<(&Path, SourceHash)>,
 ) -> Result<Vec<Found>, String> {
-    let archive_state = Mutex::new(archive.map(|(_, hash)| output::State::new(&base.score, hash, options.output, problem.prefix)));
+    let archive_state = Mutex::new(archive.map(|(_, hash)| output::State::new(&base.score, hash, options.better_only)));
     let stop = AtomicBool::new(false);
-    let global = Mutex::new((base.score.key(problem.prefix), base.score.differ));
+    let global = Mutex::new(base.score.distance());
     let found = Mutex::new(Vec::new());
     let failures = Mutex::new(Vec::new());
     let compiled = std::sync::atomic::AtomicU64::new(0);
-    let count = perm::count(&problem.nodes)?;
-    if options.perm_seed.is_some_and(|seed| seed >= count) {
-        return Err(format!("--seed: PERM seed must be in 0..{count}"));
-    }
-    let seeds = Mutex::new(perm::Seeds::new(count, random, options.seed));
+    let seeds = Mutex::new(perm::Seeds::new(perm::count(&problem.nodes)?, random, options.seed));
+    let function = problem.function.as_deref().expect("a selected function");
     let running = std::sync::atomic::AtomicUsize::new(options.jobs);
     std::thread::scope(|scope| {
         // Each minute, the trajectory notes where the search stands.
@@ -746,9 +679,8 @@ fn search(
             while running_ref.load(Ordering::Relaxed) > 0 {
                 std::thread::sleep(Duration::from_millis(200));
                 if started.elapsed() >= Duration::from_secs(60 * minute) {
-                    let ((std::cmp::Reverse(prefix), weighted), differ) = *global_ref.lock().unwrap();
-                    let prefix = if problem.prefix { format!("prefix {prefix}, ") } else { String::new() };
-                    println!("{:>8.1}s  {} candidates compiled; best {prefix}weighted {weighted}, differ {differ}", started.elapsed().as_secs_f64(), compiled_ref.load(Ordering::Relaxed));
+                    let (weighted, differ) = *global_ref.lock().unwrap();
+                    println!("{:>8.1}s  {} candidates compiled; best weighted {weighted}, differ {differ}", started.elapsed().as_secs_f64(), compiled_ref.load(Ordering::Relaxed));
                     minute += 1;
                 }
             }
@@ -767,14 +699,12 @@ fn search(
                         return;
                     }
                 };
-                let forced_rng = options.rng_seed.as_ref().map(|seed| Rng::from_decimal(seed).expect("validated randomizer seed"));
-                let mut walk = rng::WalkRng::new(options.seed.wrapping_mul(1_000_003).wrapping_add(job_index as u64), forced_rng);
-                let mut env = base_state.parsed.as_ref().map(|(_, _, function)| Env::new(&problem.unit, function));
+                let mut walk = rng::WalkRng::new(job_seed(options.seed, job_index));
                 // Keyed by a hash of the text: a long run sees many thousands.
                 let mut cache: HashMap<SourceHash, Option<(Score, SourceHash)>> = HashMap::new();
                 let mut prepared = HashMap::new();
                 prepared.insert(base_state.expanded.key(), base_state.expanded.clone());
-                let (mut best, mut current) = ((base_state.clone(), base.clone()), (base_state.clone(), base.clone()));
+                let (mut best, mut current) = (base.clone(), (base_state.clone(), base.clone()));
                 let mut iteration = 0u64;
                 let mut last_compiled = false;
                 while !stop.load(Ordering::Relaxed)
@@ -782,56 +712,35 @@ fn search(
                     && options.iterations.is_none_or(|limit| iteration < limit)
                     && deadline.is_none_or(|deadline| Instant::now() < deadline)
                 {
-                    let seed = if let Some(seed) = options.perm_seed {
-                        if !random && iteration != 0 { break; }
-                        seed
-                    } else {
-                        let Some(seed) = seeds.lock().unwrap().next() else { break };
-                        seed
-                    };
+                    let Some(seed) = seeds.lock().unwrap().next() else { break };
                     iteration += 1;
-                    // 0.6 regardless of whether its score improved. A failed
-                    // compile or an instruction match starts a fresh candidate.
+                    // Keep the last candidate at --keep-prob regardless of
+                    // whether its score improved. A failed compile or an
+                    // instruction match starts a fresh candidate.
                     let last_score = (iteration > 1).then_some(if last_compiled { current.1.score.distance() } else { (u64::MAX, usize::MAX) });
-                    let keep = walk.keep(random, last_score, options.keep_prob);
-                    let rng = &mut walk.mutation;
-                    let mut state = if !keep {
-                        match perm::expand_seed(&problem.nodes, seed) {
-                            Ok(mut expanded) => {
-                                if base_state.full.is_some() || options.heat {
-                                    let key = expanded.key();
-                                    if let Some(expanded) = prepared.get(&key) { problem.state_of(expanded.clone()) }
-                                    else {
-                                        let result = if options.heat {
-                                            prepare_heat(&job, &mut expanded)
-                                        } else {
-                                            prepare(&job, &mut expanded, problem.function.as_deref().unwrap())
-                                        };
-                                        if result.is_err() { last_compiled = false; continue; }
-                                        let expanded = Arc::new(expanded);
-                                        if prepared.len() < 128 { prepared.insert(key, expanded.clone()); }
-                                        problem.state_of(expanded)
-                                    }
-                                } else { problem.state(expanded) }
-                            },
-                            Err(_) => { last_compiled = false; continue; },
-                        }
-                    } else {
+                    let mut state = if walk.keep(random, last_score, options.keep_prob) {
                         current.0.clone()
-                    };
-                    if random {
-                        if let Some(full) = &mut state.full {
-                            if let Some(step) = randomize::mutate(full, problem.function.as_deref().unwrap(), rng) { state.steps.push(step); }
-                        } else if let (Some((_, _, function)), Some(env)) = (state.parsed.as_mut(), env.as_mut()) {
-                            env.refresh(function);
-                            let step = match &problem.aim {
-                                Some(aim) => aim::aimed(function, env, rng, &Kind::ALL, aim),
-                                None => mutate_with(function, env, rng, &Kind::ALL),
-                            };
-                            if let Some(step) = step {
-                                state.steps.push(step);
+                    } else {
+                        let Ok(mut expanded) = perm::expand_seed(&problem.nodes, seed) else {
+                            last_compiled = false;
+                            continue;
+                        };
+                        let key = expanded.key();
+                        match prepared.get(&key) {
+                            Some(expanded) => problem.state_of(expanded.clone()),
+                            None => {
+                                if prepare(&job, &mut expanded, function).is_err() {
+                                    last_compiled = false;
+                                    continue;
+                                }
+                                let expanded = Arc::new(expanded);
+                                if prepared.len() < 128 { prepared.insert(key, expanded.clone()); }
+                                problem.state_of(expanded)
                             }
                         }
+                    };
+                    if random {
+                        if let Some(step) = randomize::mutate(&mut state.full, function, &mut walk.mutation) { state.steps.push(step); }
                     }
                     let text = problem.source(&state);
                     let key = text_key(&text);
@@ -845,21 +754,18 @@ fn search(
                         }
                     };
                     last_compiled = result.is_some();
-                    // compilation fails. Score storage only tracks successes.
-                    if options.rng_seed.is_some() { current.0 = state.clone(); }
                     let Some((score, assembly_hash)) = result else { continue };
                     if let Some((path, _)) = archive {
                         let mut shared = archive_state.lock().unwrap();
                         let policy = shared.as_mut().unwrap();
-                        if policy.accepts(&score, Some(assembly_hash), true) {
-                            if let Err(error) = output::write(path, score.weighted, &text, &base.text, problem.function.as_deref(), options.output) {
+                        if policy.accepts(&score, assembly_hash) {
+                            if let Err(error) = output::write(path, score.weighted, &text, &base.text) {
                                 failures.lock().unwrap().push(error);
                                 stop.store(true, Ordering::Relaxed);
                             } else { policy.record(&score, assembly_hash); }
                         }
                     }
                     let candidate = Found {
-                        unnatural: problem.unnatural(&state),
                         score,
                         text,
                         steps: state.steps.clone(),
@@ -867,16 +773,16 @@ fn search(
                         job: job_index,
                         iteration,
                     };
-                    if candidate.rank(base.unnatural, problem.prefix) < best.1.rank(base.unnatural, problem.prefix) {
-                        best = (state.clone(), candidate.clone());
+                    if candidate.rank() < best.rank() {
+                        best = candidate.clone();
                         found.lock().unwrap().push(candidate.clone());
                         let mut global = global.lock().unwrap();
-                        if (candidate.score.key(problem.prefix), candidate.score.differ) < *global {
-                            *global = (candidate.score.key(problem.prefix), candidate.score.differ);
+                        if candidate.score.distance() < *global {
+                            *global = candidate.score.distance();
                             println!(
                                 "{:>8.1}s  job {job_index:>2}  iteration {iteration:>6}  {}",
                                 started.elapsed().as_secs_f64(),
-                                candidate.score.summary_with(problem.prefix)
+                                candidate.score.summary()
                             );
                         }
                     }
@@ -896,9 +802,7 @@ fn search(
         return Err(error.clone());
     }
     let mut all = found.into_inner().unwrap();
-    all.sort_by(|a, b| {
-        a.rank(base.unnatural, problem.prefix).cmp(&b.rank(base.unnatural, problem.prefix)).then(a.job.cmp(&b.job)).then(a.iteration.cmp(&b.iteration))
-    });
+    all.sort_by(|a, b| a.rank().cmp(&b.rank()).then(a.job.cmp(&b.job)).then(a.iteration.cmp(&b.iteration)));
     let mut distinct: Vec<Found> = Vec::new();
     for candidate in all {
         if !distinct.iter().any(|seen| seen.text == candidate.text) {
@@ -909,8 +813,8 @@ fn search(
 }
 
 /// The rewrites a walk applied, most frequent first, as `3x reorder ...`.
-fn rewrites(kinds: &[Kind]) -> String {
-    let mut counts: Vec<(usize, Kind)> = Vec::new();
+fn rewrites(kinds: &[randomize::Kind]) -> String {
+    let mut counts: Vec<(usize, randomize::Kind)> = Vec::new();
     for kind in kinds {
         match counts.iter_mut().find(|(_, seen)| seen == kind) {
             Some((count, _)) => *count += 1,
@@ -934,48 +838,15 @@ fn scored(problem: &Problem, job: &Job, text: &str, cache: &mut HashMap<SourceHa
     cache.entry(text_key(text)).or_insert_with(|| problem.evaluate(job, text).ok()).clone()
 }
 
-impl Problem {
-    /// One expansion's function with `steps` applied in order, each at the
-    /// site its generator chose; a step whose site is gone is dropped.
-    fn replay(&self, expanded: &Arc<Expanded>, steps: &[Step]) -> State {
-        let mut state = self.state_of(expanded.clone());
-        if let Some(full) = &mut state.full {
-            for step in steps {
-                if let Kind::Full(kind) = step.kind {
-                    if randomize::replay(full, self.function.as_deref().unwrap(), kind, &mut step.rng.clone(), step.region) { state.steps.push(step.clone()); }
-                }
-            }
-        } else if let Some((_, _, function)) = state.parsed.as_mut() {
-            let mut env = Env::new(&self.unit, function);
-            for step in steps {
-                env.refresh(function);
-                if mutate::apply(step.kind, function, &env, &mut step.rng.clone()) {
-                    state.steps.push(step.clone());
-                }
-            }
-        }
-        state
-    }
-
-    fn unnatural(&self, state: &State) -> usize {
-        if state.full.is_some() { return 0; }
-        match &state.parsed {
-            Some((_, _, function)) => unnatural(function, &Env::new(&self.unit, function)),
-            None => 0,
-        }
-    }
-}
-
 /// Undo a candidate's rewrites one at a time, last first, keeping each
-/// removal that leaves its weighted score (then differ, then its unnatural
-/// spellings) no higher, until a whole pass removes nothing. A trail that
-/// does not replay to the candidate's own text is left as found.
-fn minimize(problem: &Problem, job: &Job, base: &Found, best: &Found, cache: &mut HashMap<SourceHash, Option<Score>>) -> Found {
+/// removal that leaves its weighted score (then differ) no higher, until a
+/// whole pass removes nothing. A trail that does not replay to the
+/// candidate's own text is left as found.
+fn minimize(problem: &Problem, job: &Job, best: &Found, cache: &mut HashMap<SourceHash, Option<Score>>) -> Found {
     let replayed = problem.replay(&best.expanded, &best.steps);
     if replayed.steps.len() != best.steps.len() || problem.source(&replayed) != best.text {
         return best.clone();
     }
-    let measure = |found: &Found| (found.score.key(problem.prefix), found.score.differ, found.unnatural.saturating_sub(base.unnatural));
     let mut current = best.clone();
     loop {
         let mut removed = false;
@@ -992,8 +863,8 @@ fn minimize(problem: &Problem, job: &Job, base: &Found, best: &Found, cache: &mu
             // A rewrite that changes no text costs no compile.
             let score = if text == current.text { Some(current.score.clone()) } else { scored(problem, job, &text, cache) };
             let Some(score) = score else { continue };
-            let candidate = Found { score, unnatural: problem.unnatural(&state), text, steps: state.steps, ..current.clone() };
-            if measure(&candidate) <= measure(&current) {
+            let candidate = Found { score, text, steps: state.steps, ..current.clone() };
+            if candidate.score.distance() <= current.score.distance() {
                 current = candidate;
                 removed = true;
                 index = index.min(current.steps.len());
@@ -1156,9 +1027,9 @@ fn unified(old: &str, new: &str, name: &str) -> String {
 struct Best {
     found: Found,
     /// The rewrites the search applied, before minimizing.
-    searched: Vec<Kind>,
+    searched: Vec<randomize::Kind>,
     /// The candidate in the draft's own lines, or as the permuter prints
-    /// its function when the rewrites do not carry into them.
+    /// it when the rewrites do not carry into them.
     text: String,
     respelled: bool,
 }
@@ -1170,28 +1041,25 @@ fn respell(problem: &Problem, job: &Job, found: &Found) -> (String, bool) {
     let draft = found.expanded.restore(&found.expanded.text);
     let expected = job.compile(&found.text).and_then(|()| score::disassemble(&job.object, problem.symbol.as_deref())).ok();
     let verifies = |text: &str| {
-        // Equal scalar scores do not imply equal instructions. Both body
-        // and whole-unit projection must retain the compiled candidate,
-        // including relocations and literal data. Compile even a cached
-        // score's text so the object being checked belongs to this spelling.
+        // Equal scalar scores do not imply equal instructions. The
+        // projection must retain the compiled candidate, including
+        // relocations and literal data. Compile even a cached score's
+        // text so the object being checked belongs to this spelling.
         expected.is_some() && problem.evaluate(job, text).ok().as_ref() == Some(&found.score)
             && score::disassemble(&job.object, problem.symbol.as_deref()).ok() == expected
     };
     // Body/signature changes and new inline helpers usually fit back into
     // the original includes and comments. A changed external declaration
     // may have come from a header: keep the self-contained candidate then.
-    if let Some(before) = found.expanded.unit.as_deref() {
-        let state = problem.replay(&found.expanded, &found.steps);
-        if let Some(after) = &state.full {
-            if let Some((text, preserved)) = project_function(problem, &draft, before, after) {
-                let text = found.expanded.restore(&text);
-                if verifies(&text) {
-                    return (text, preserved);
-                }
-            }
+    let plain = problem.state_of(found.expanded.clone());
+    let after = problem.replay(&found.expanded, &found.steps);
+    if let Some((text, preserved)) = project_function(problem, &draft, &plain.full, &after.full) {
+        let text = found.expanded.restore(&text);
+        if verifies(&text) {
+            return (text, preserved);
         }
     }
-    let plain = problem.source(&problem.state_of(found.expanded.clone()));
+    let plain = problem.source(&plain);
     let text = if found.text == plain { Some(draft) } else { transplant(&draft, &plain, &found.text) };
     let printed = |text: &str| locate(text, problem.function.as_deref(), &problem.unit.typedef_names()).ok().map(|located| located.function.print());
     match text {
@@ -1244,7 +1112,7 @@ fn project_function(problem: &Problem, draft: &str, before: &c::Node, after: &c:
 }
 
 /// Minimize and respell the search's best, until three distinct remain.
-fn minimize_best(problem: &Problem, base: &Found, found: &[Found], directory: &Path) -> Result<Vec<Best>, String> {
+fn minimize_best(problem: &Problem, found: &[Found], directory: &Path) -> Result<Vec<Best>, String> {
     if found.is_empty() {
         return Ok(Vec::new());
     }
@@ -1256,7 +1124,7 @@ fn minimize_best(problem: &Problem, base: &Found, found: &[Found], directory: &P
         if best.len() == 3 {
             break;
         }
-        let minimized = minimize(problem, &job, base, candidate, &mut cache);
+        let minimized = minimize(problem, &job, candidate, &mut cache);
         let (text, respelled) = respell(problem, &job, &minimized);
         if best.iter().any(|seen| seen.text == text) {
             continue;
@@ -1272,7 +1140,7 @@ fn minimize_best(problem: &Problem, base: &Found, found: &[Found], directory: &P
     }
     best.sort_by(|a, b| {
         let (a, b) = (&a.found, &b.found);
-        a.rank(base.unnatural, problem.prefix).cmp(&b.rank(base.unnatural, problem.prefix)).then(a.job.cmp(&b.job)).then(a.iteration.cmp(&b.iteration))
+        a.rank().cmp(&b.rank()).then(a.job.cmp(&b.job)).then(a.iteration.cmp(&b.iteration))
     });
     Ok(best)
 }
@@ -1287,7 +1155,7 @@ fn write_best(problem: &Problem, base: &Found, found: &[Best], output: &Path) ->
     if INTERRUPTED.load(Ordering::Relaxed) {
         println!("interrupted: the best so far, minimized as far as it got");
     }
-    println!("draft:  {}", base.score.summary_with(problem.prefix));
+    println!("draft:  {}", base.score.summary());
     if found.is_empty() {
         println!("no candidate beat the draft");
         return Ok(());
@@ -1296,19 +1164,14 @@ fn write_best(problem: &Problem, base: &Found, found: &[Best], output: &Path) ->
     for (index, entry) in found.iter().take(3).enumerate() {
         let best = &entry.found;
         let path = output.join(format!("best-{}.c", index + 1));
-        let fakematch = if best.unnatural > base.unnatural {
-            "\n   It relies on a cast to an operand's own type, a cast of a cast or (*p).member: tag it FAKEMATCH (S2) or reshape it."
-        } else {
-            ""
-        };
-        let kinds: Vec<Kind> = best.steps.iter().map(|step| step.kind).collect();
+        let kinds: Vec<randomize::Kind> = best.steps.iter().map(|step| step.kind).collect();
         let spelling = if entry.respelled { "" } else { "\n   Its rewrites do not carry into the draft's lines: this is the permuter's printed source." };
-        let review = if kinds.iter().any(|k| matches!(k, Kind::Full(_))) { "\n   Source hypothesis: review type and behavior changes, and tag compiler-steering devices under S2 before adoption." } else { "" };
+        let review = if kinds.is_empty() { "" } else { "\n   Source hypothesis: review type and behavior changes, and tag compiler-steering devices under S2 before adoption." };
         let header = format!(
-            "/* alchemy-devtools permute {}: {}; draft {}.\n   Job {}, iteration {}; rewrites: {} (minimized from {}: {}).{spelling}{fakematch}{review} */\n",
+            "/* alchemy-devtools permute {}: {}; draft {}.\n   Job {}, iteration {}; rewrites: {} (minimized from {}: {}).{spelling}{review} */\n",
             problem.stem,
-            best.score.summary_with(problem.prefix),
-            base.score.summary_with(problem.prefix),
+            best.score.summary(),
+            base.score.summary(),
             best.job,
             best.iteration,
             rewrites(&kinds),
@@ -1327,7 +1190,7 @@ fn write_best(problem: &Problem, base: &Found, found: &[Best], output: &Path) ->
         println!(
             "best-{}: {}  {}\n        rewrites {} -> {}: {}",
             index + 1,
-            best.score.summary_with(problem.prefix),
+            best.score.summary(),
             path.strip_prefix(root()).unwrap_or(&path).display(),
             entry.searched.len(),
             kinds.len(),
@@ -1343,55 +1206,94 @@ fn write_best(problem: &Problem, base: &Found, found: &[Best], output: &Path) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rng::Rng;
+
+    fn args(items: &[&str]) -> Vec<String> {
+        items.iter().map(|item| item.to_string()).collect()
+    }
 
     #[test]
-    fn overlay_options_require_an_explicit_resource_and_function() {
-        let parse = |args: &[&str]| parse_options(&args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>());
+    fn overlay_options_follow_the_drafts_path_as_diff_does() {
+        let parse = |items: &[&str]| parse_options(&args(items));
         let options = parse(&["scene.c", "--overlay", "resource_3B7", "--function", "Event"]).unwrap();
         assert_eq!(options.overlay.as_deref(), Some("resource_3b7"));
         assert_eq!(options.function.as_deref(), Some("Event"));
         assert!(options.addresses.is_empty());
-        for args in [
-            vec!["scene.c", "--overlay", "resource_3b7"],
+        // The resource from the path; the function is left to the overlay.
+        let options = parse(&["recon/tla/en/overlays/resource_6AA_c_0200263c.c"]).unwrap();
+        assert_eq!((options.overlay.as_deref(), options.function.as_deref(), options.game), (Some("resource_6aa"), None, "tla"));
+        let options = parse(&["recon/tla/en/overlays/resource_6aa_c_0200263c.c", "--symbol", "Func_0200263c"]).unwrap();
+        assert_eq!(options.function.as_deref(), Some("Func_0200263c"));
+        assert!(options.addresses.is_empty());
+        for items in [
             vec!["scene.c", "--overlay", "resource_../x", "--function", "Event"],
+            vec!["scene.c", "--overlay", "resource_3b7x"],
             vec!["scene.c", "--overlay", "resource_3b7", "--function", "Event", "--arm"],
             vec!["scene.c", "08000000", "--overlay", "resource_3b7", "--function", "Event"],
+            vec!["recon/tla/en/overlays/draft.c"],
         ] {
-            assert!(parse(&args).is_err(), "{args:?}");
+            assert!(parse(&items).is_err(), "{items:?}");
         }
     }
 
     #[test]
+    fn overlay_functions_are_found_as_diff_finds_them() {
+        let names = |items: &[&str]| items.iter().map(|item| item.to_string()).collect::<Vec<_>>();
+        let ours = names(&["Func_02000100", "Func_0200263c", "Scene_Init"]);
+        // The one the draft defines, whatever its name.
+        assert_eq!(shared_function(&ours, &names(&["Scene_Init", "Helper"]), Some("0200263c")).as_deref(), Some("Scene_Init"));
+        // None, or several: the one named after the address.
+        assert_eq!(shared_function(&ours, &names(&["Helper"]), Some("0200263c")).as_deref(), Some("Func_0200263c"));
+        assert_eq!(shared_function(&ours, &names(&["Func_02000100", "Func_0200263c"]), Some("0200263c")).as_deref(), Some("Func_0200263c"));
+        assert_eq!(shared_function(&ours, &names(&["Func_02000100", "Scene_Init"]), Some("0200263c")), None);
+        assert_eq!(shared_function(&ours, &names(&["Helper"]), None), None);
+        assert_eq!(stem_address("resource_6aa_c_0200263C").as_deref(), Some("0200263c"));
+        assert_eq!(stem_address("080cbc0c").as_deref(), Some("080cbc0c"));
+        assert_eq!(stem_address("draft_link"), None);
+    }
+
+    #[test]
+    fn the_definition_named_after_the_drafts_address_is_rewritten() {
+        let unit = c::parse("int Helper(int x) { return x; }\nint Func_0800a0f8(int x) { return Helper(x) + 1; }\n").unwrap();
+        assert_eq!(select_function(&unit, None, "0800a0f8").unwrap(), "Func_0800a0f8");
+        assert_eq!(select_function(&unit, Some("Helper"), "0800a0f8").unwrap(), "Helper");
+        assert!(select_function(&unit, None, "draft").unwrap_err().contains("Helper, Func_0800a0f8"));
+        assert!(select_function(&unit, Some("Missing"), "0800a0f8").is_err());
+        let unit = c::parse("int Only(int x) { return x; }\n").unwrap();
+        assert_eq!(select_function(&unit, None, "draft").unwrap(), "Only");
+    }
+
+    #[test]
     fn options_default_and_parse() {
-        let args = |items: &[&str]| items.iter().map(|item| item.to_string()).collect::<Vec<_>>();
         let parsed = parse_options(&args(&["recon/tbs/en/main/080cbc0c.c"])).unwrap();
         assert_eq!((parsed.addresses.as_slice(), parsed.minutes, parsed.seed), (["080cbc0c".to_string()].as_slice(), 10.0, 1));
-        assert!(parsed.jobs >= 1);
-        assert!(parsed.rng_seed.is_none());
-        assert_eq!(parse_options(&args(&["08000000.c", "--rng-seed", "-99999999999999999999"])).unwrap().rng_seed.as_deref(), Some("-99999999999999999999"));
-        assert!(parse_options(&args(&["08000000.c", "--rng-seed", "1,2"])).is_err());
-        assert_eq!(parsed.score_options.algorithm, score::Algorithm::Difflib);
-        assert_eq!(parse_options(&args(&["08000000.c", "--algorithm", "levenshtein"])).unwrap().score_options.algorithm, score::Algorithm::Levenshtein);
-        assert!(parse_options(&args(&["08000000.c", "--algorithm", "lcs"])).is_err());
+        assert!(parsed.jobs >= 1 && !parsed.better_only);
         assert_eq!(parsed.target.id.as_str(), "tbs-en");
         let parsed = parse_options(&args(&["x.c", "08000000,08000010", "--edition", "tla-de", "--minutes", "0.5", "--jobs", "3", "--search-seed", "9"])).unwrap();
         assert_eq!((parsed.addresses.len(), parsed.game, parsed.jobs, parsed.seed, parsed.minutes), (2, "tla", 3, 9, 0.5));
-        for (text, manual, forced) in [("9", 0, Some("9")), ("1,-99999999999999999999", 1, Some("-99999999999999999999")), ("2,-000", 2, None)] {
-            let parsed = parse_options(&args(&["08000000.c", "--seed", text])).unwrap();
-            assert_eq!(parsed.perm_seed, Some(manual));
-            assert_eq!(parsed.rng_seed.as_deref(), forced);
+        // --seed seeds the search, as --search-seed does.
+        for flag in ["--seed", "--search-seed"] {
+            assert_eq!(parse_options(&args(&["08000000.c", flag, "7"])).unwrap().seed, 7);
         }
-        for text in ["1,2,3", "bad", "1,", "-1,2"] {
-            assert!(parse_options(&args(&["08000000.c", "--seed", text])).is_err());
+        for text in ["1,2", "bad", "-1"] {
+            assert!(parse_options(&args(&["08000000.c", "--seed", text])).is_err(), "{text}");
         }
+        // --game as diff reads it.
+        assert_eq!(parse_options(&args(&["x.c", "08000000", "--game", "tla"])).unwrap().target.id.as_str(), "tla-en");
+        assert!(parse_options(&args(&["x.c", "08000000", "--game", "tla", "--edition", "tbs-de"])).is_err());
+        assert!(parse_options(&args(&["x.c", "08000000", "--game", "gs"])).is_err());
+        // A draft not named after its address: the listing is the named function's.
+        let parsed = parse_options(&args(&["out/draft_link.c", "--symbol", "Serial_Begin"])).unwrap();
+        assert_eq!((parsed.addresses.as_slice(), parsed.function.as_deref()), (["Serial_Begin".to_string()].as_slice(), Some("Serial_Begin")));
         assert!(parse_options(&args(&["x.c"])).is_err());
-        assert!(parse_options(&args(&["recon/tbs/en/overlays/resource_383_c_020048c8.c"])).is_err());
+        let parsed = parse_options(&args(&["recon/tbs/en/overlays/resource_383_c_020048c8.c"])).unwrap();
+        assert_eq!((parsed.overlay.as_deref(), parsed.game), (Some("resource_383"), "tbs"));
         assert!(parse_options(&args(&["08000000.c", "--bogus"])).is_err());
         assert!(!parse_options(&args(&["08000000.c"])).unwrap().arm);
         assert!(parse_options(&args(&["recon/tbs/en/main/0800a0f8.c", "--arm"])).unwrap().arm);
         assert!(parse_options(&args(&["08000000.c", "--edition", "tla-en", "--arm"])).unwrap().arm);
-        let parsed = parse_options(&args(&["08000000.c", "--stack-diffs", "--ignore-branch-targets", "--keep-prob", "0.25", "--stop-on-zero"])).unwrap();
-        assert!(parsed.score_options.stack_differences && parsed.score_options.ignore_branch_targets && parsed.stop_on_zero);
+        let parsed = parse_options(&args(&["08000000.c", "--stack-diffs", "--keep-prob", "0.25", "--stop-on-zero", "--better-only"])).unwrap();
+        assert!(parsed.score_options.stack_differences && parsed.stop_on_zero && parsed.better_only);
         assert_eq!(parsed.keep_prob, 0.25);
         for value in ["NaN", "-1", "1.1"] {
             assert!(parse_options(&args(&["08000000.c", "--keep-prob", value])).is_err());
@@ -1399,6 +1301,18 @@ mod tests {
         for value in ["NaN", "inf", "-1"] {
             assert!(parse_options(&args(&["08000000.c", "--minutes", value])).is_err());
         }
+    }
+
+    #[test]
+    fn jobs_walk_their_own_streams_under_one_seed() {
+        let stream = |seed: u64, job: usize| {
+            let mut walk = rng::WalkRng::new(job_seed(seed, job));
+            assert!(!walk.keep(true, None, 0.6));
+            (0..4).map(|_| walk.mutation.random()).collect::<Vec<_>>()
+        };
+        assert_eq!(stream(7, 0), stream(7, 0));
+        assert_ne!(stream(7, 0), stream(7, 1));
+        assert_ne!(stream(7, 1), stream(8, 1));
     }
 
     #[test]
@@ -1522,11 +1436,31 @@ mod tests {
             listing_rows: None,
             score_options: score::Options::default(),
             symbol: None,
-            prefix: false,
-            aim: None,
             unit: scan_unit(text).unwrap_or_default(),
             function: function.map(str::to_string),
             arm: false,
+        }
+    }
+
+    /// One job, a two-iteration search, on the English edition of the
+    /// first game.
+    pub(super) fn test_options(draft: &Path) -> Options {
+        Options {
+            draft: draft.to_path_buf(),
+            addresses: Vec::new(),
+            game: "tbs",
+            target: decomp_target(Some("tbs-en")).unwrap(),
+            minutes: 0.0,
+            jobs: 1,
+            seed: 1,
+            function: None,
+            overlay: None,
+            iterations: Some(2),
+            arm: false,
+            score_options: score::Options::default(),
+            keep_prob: 0.6,
+            stop_on_zero: false,
+            better_only: false,
         }
     }
 
@@ -1534,27 +1468,19 @@ mod tests {
     fn rewrites_carry_into_the_draft_lines_and_the_diff_patches_the_draft() {
         // The draft's own layout: a comment, odd spacing and a PERM choice.
         let draft = "extern int gX;\nextern int gY;\n\n/* kept as written */\nvoid Set(int a, int b)\n{\n    gX   =   a;   /* x */\n    gY = PERM_ONEOF(b, b + 1);\n    if (a)\n        gX = b;\n}\n";
-        let problem = test_problem(Path::new("recon/tbs/en/main/08000000.c"), draft, Vec::new(), None);
-        let mut rng = Rng::new(2);
-        let expanded = Arc::new(perm::expand(&problem.nodes, Some(&mut rng)).unwrap());
-        let plain = problem.source(&problem.state_of(expanded.clone()));
-        // Some seed's rewrite touches one statement only.
-        let (text, respelled) = (1..200u64)
-            .find_map(|seed| {
-                let mut state = problem.state_of(expanded.clone());
-                let (_, _, function) = state.parsed.as_mut().unwrap();
-                let mut env = Env::new(&problem.unit, function);
-                let step = mutate(function, &mut env, &mut Rng::new(seed))?;
-                state.steps.push(step);
-                let after = problem.source(&state);
-                let spelled = transplant(&expanded.restore(&expanded.text), &plain, &after)?;
-                (after != plain && spelled.contains("gX   =   a;   /* x */")).then_some((spelled, after))
-            })
-            .expect("a rewrite that leaves the first statement alone");
-        assert!(text.contains("/* kept as written */") && !perm::has_macros(&text), "{text}");
-        // The respelled text holds the rewritten function exactly.
-        let printed = |text: &str| locate(text, None, &problem.unit.typedef_names()).unwrap().function.print();
-        assert_eq!(printed(&text), printed(&respelled));
+        let expanded = perm::expand(&perm::parse(draft).unwrap()).unwrap();
+        let written = expanded.restore(&expanded.text);
+        // The function as the tree prints it, before and after a rewrite
+        // of its last statement.
+        let mut unit = c::parse(&expanded.preprocess_text()).unwrap();
+        unit.extract_function("Set").unwrap();
+        let c::Node::FileAst { ext } = &unit else { panic!() };
+        let before = ext[randomize::target_index(&unit, "Set").unwrap()].print();
+        let after = before.replace("gX = b;", "gX = b + a;");
+        assert_ne!(before, after, "{before}");
+        let text = transplant(&written, &before, &after).expect("the rewritten line aligns with the draft's");
+        assert!(text.contains("/* kept as written */") && text.contains("gX   =   a;   /* x */") && !perm::has_macros(&text), "{text}");
+        assert!(text.contains("gY = b;\n") && text.contains("gX = b + a;") && !text.contains("gX = b;"), "{text}");
         let diff = unified(draft, &text, "recon/tbs/en/main/08000000.c");
         assert_eq!(apply_unified(draft, &diff), text);
         // And `patch` itself, where the system has it.
@@ -1587,6 +1513,13 @@ mod tests {
         crate::diff::disassemble(&object, None).unwrap()
     }
 
+    /// The draft's first expansion, prepared as the search prepares one.
+    fn prepared(problem: &Problem, job: &Job, function: &str) -> State {
+        let mut expanded = perm::expand(&problem.nodes).unwrap();
+        prepare(job, &mut expanded, function).unwrap();
+        problem.state(expanded)
+    }
+
     #[test]
     fn scoring_reads_real_compiler_objects() {
 
@@ -1617,22 +1550,20 @@ mod tests {
             job.compile("extern unsigned char input; int F(void) { return input; }\n").unwrap();
             problem.listing = crate::diff::disassemble(&job.object, Some("F")).unwrap();
             problem.listing_rows = Some(score::disassemble(&job.object, Some("F")).unwrap());
-            let mut expanded = perm::expand(&problem.nodes, None).unwrap();
-            prepare(&job, &mut expanded, "F").unwrap();
-            let base_state = problem.state(expanded);
+            let base_state = prepared(&problem, &job, "F");
             let base_text = problem.source(&base_state);
-            let base = Found { score: problem.evaluate(&job, &base_text).unwrap(), unnatural: 0, text: base_text, steps: vec![], expanded: base_state.expanded.clone(), job: 0, iteration: 0 };
-            assert!(base.score.differ > 0 && base.score.weighted > 0, "arm={arm}: {}\nsource: {}\nreference: {:?}\ncandidate: {:?}", base.score.summary_with(false), base.text, problem.listing, crate::diff::disassemble(&job.object, Some("F")).unwrap());
+            let base = Found { score: problem.evaluate(&job, &base_text).unwrap(), text: base_text, steps: vec![], expanded: base_state.expanded.clone(), job: 0, iteration: 0 };
+            assert!(base.score.differ > 0 && base.score.weighted > 0, "arm={arm}: {}\nsource: {}\nreference: {:?}\ncandidate: {:?}", base.score.summary(), base.text, problem.listing, crate::diff::disassemble(&job.object, Some("F")).unwrap());
             let found = (0..80).find_map(|seed| {
                 let mut state = base_state.clone();
                 let kind = randomize::Kind::GlobalType;
-                if !randomize::apply(state.full.as_mut().unwrap(), "F", kind, &mut Rng::new(seed)) { return None; }
+                if !randomize::replay(&mut state.full, "F", kind, &mut Rng::new(seed), None) { return None; }
                 let text = problem.source(&state);
                 let score = problem.evaluate(&job, &text).ok()?;
                 if score.differ != 0 { return None; }
-                Some(Found { score, unnatural: 0, text, steps: vec![Step { kind: Kind::Full(kind), rng: Rng::new(seed), region: None }], expanded: state.expanded, job: 0, iteration: seed })
-            }).expect("changing a global type reaches the byte load the old body engine cannot generate");
-            let minimized = minimize(&problem, &job, &base, &found, &mut HashMap::new());
+                Some(Found { score, text, steps: vec![Step { kind, rng: Rng::new(seed), region: None }], expanded: state.expanded, job: 0, iteration: seed })
+            }).expect("changing a global type reaches the byte load");
+            let minimized = minimize(&problem, &job, &found, &mut HashMap::new());
             assert_eq!(minimized.steps.len(), 1);
             let replay = problem.replay(&minimized.expanded, &minimized.steps);
             assert_eq!(problem.source(&replay), minimized.text);
@@ -1670,36 +1601,6 @@ mod tests {
     }
 
     #[test]
-    fn heat_expansions_preprocess_edition_branches_and_keep_regions() {
-
-        let source = "#include \"edition.h\"\n#if LANGUAGE != LANGUAGE_JAPANESE\nextern int selected;\n#endif\nint F(int x) {\n#if LANGUAGE != LANGUAGE_JAPANESE\nx += selected;\n#else\nx += unavailable;\n#endif\nPERM_RANDOMIZE(x += PERM_GENERAL(3, 7);)\nPERM_IGNORE(x *= 2;)\nreturn x;\n}\n";
-        let work = tempfile::tempdir().unwrap();
-        let mut problem = test_problem(&work.path().join("draft/08000000.c"), source, vec![], Some("F"));
-        problem.symbol = Some("F".into());
-        let job = Job::new(&problem, &work.path().join("job")).unwrap();
-        let mut compiled = Vec::new();
-        for seed in 0..2 {
-            let mut expanded = perm::expand_seed(&problem.nodes, seed).unwrap();
-            prepare_heat(&job, &mut expanded).unwrap();
-            assert!(expanded.text.contains("/* _permuter randomizer start */"));
-            assert!(!expanded.text.contains("unavailable"));
-            assert!(!expanded.text.lines().any(|line| line.trim_start().starts_with("# ")));
-            problem.unit = scan_unit(&expanded.text).unwrap();
-            let state = problem.state(expanded);
-            assert!(state.parsed.is_some() && state.full.is_none());
-            let text = problem.source(&state);
-            assert!(!text.contains("_permuter") && text.contains("x *= 2;"));
-            job.compile(&text).unwrap();
-            compiled.push(crate::diff::disassemble(&job.object, Some("F")).unwrap());
-            if seed == 1 {
-                problem.listing = compiled[0].clone();
-                assert!(aim_at(&problem, &job, &state, &text).unwrap().is_some());
-            }
-        }
-        assert_ne!(compiled[0], compiled[1]);
-    }
-
-    #[test]
     fn whole_tree_outputs_keep_includes_and_comments_when_only_the_function_changes() {
 
         let source = "#include \"types.h\"\n/* Keep this explanation. */\nint F(int a, int b) { return a + b; }\n";
@@ -1707,41 +1608,15 @@ mod tests {
         let mut problem = test_problem(&work.path().join("draft/08000000.c"), source, vec![], Some("F"));
         problem.symbol = Some("F".into());
         let job = Job::new(&problem, &work.path().join("job")).unwrap();
-        let mut expanded = perm::expand(&problem.nodes, None).unwrap();
-        prepare(&job, &mut expanded, "F").unwrap();
-        let mut state = problem.state(expanded);
+        let mut state = prepared(&problem, &job, "F");
         let kind = randomize::Kind::Commutative;
-        assert!(randomize::apply(state.full.as_mut().unwrap(), "F", kind, &mut Rng::new(0)));
-        state.steps.push(Step { kind: Kind::Full(kind), rng: Rng::new(0), region: None });
+        assert!(randomize::replay(&mut state.full, "F", kind, &mut Rng::new(0), None));
+        state.steps.push(Step { kind, rng: Rng::new(0), region: None });
         let text = problem.source(&state);
-        let found = Found { score: problem.evaluate(&job, &text).unwrap(), unnatural: 0, text, steps: state.steps, expanded: state.expanded, job: 0, iteration: 1 };
+        let found = Found { score: problem.evaluate(&job, &text).unwrap(), text, steps: state.steps, expanded: state.expanded, job: 0, iteration: 1 };
         let (output, _) = respell(&problem, &job, &found);
         assert!(output.contains("#include \"types.h\"") && output.contains("/* Keep this explanation. */") && output.contains("b + a"), "{output}");
         assert!(!output.contains("typedef"), "output should not inline all headers");
-    }
-
-    #[test]
-    fn body_respell_preserves_instructions_when_scores_tie() {
-
-        let work = tempfile::tempdir().unwrap();
-        let source = "int F(void) { return __LINE__; }\n";
-        let listing = listing_of(work.path(), "int F(void) { return 0; }\n");
-        let mut problem = test_problem(&work.path().join("draft/08000000.c"), source, listing, Some("F"));
-        problem.symbol = Some("F".into());
-        let job = Job::new(&problem, &work.path().join("job")).unwrap();
-        let state = problem.state(perm::expand(&problem.nodes, None).unwrap());
-        assert!(state.full.is_none());
-        let text = problem.source(&state);
-        let score = problem.evaluate(&job, &text).unwrap();
-        let expected = score::disassemble(&job.object, Some("F")).unwrap();
-        assert_eq!(problem.evaluate(&job, source).unwrap(), score);
-        assert_ne!(score::disassemble(&job.object, Some("F")).unwrap(), expected);
-        let found = Found { score, unnatural: 0, text: text.clone(), steps: Vec::new(), expanded: state.expanded, job: 0, iteration: 1 };
-        let (output, preserved) = respell(&problem, &job, &found);
-        assert!(!preserved);
-        assert_eq!(output, text);
-        job.compile(&output).unwrap();
-        assert_eq!(score::disassemble(&job.object, Some("F")).unwrap(), expected);
     }
 
     #[test]
@@ -1754,37 +1629,33 @@ mod tests {
         std::fs::create_dir_all(draft.parent().unwrap()).unwrap();
         let text = "int gX;\nint gY;\nvoid Set(int a, int b)\n{\n    gX = a;\n    gY = b;\n}\n";
         std::fs::write(&draft, text).unwrap();
-        let problem = test_problem(&draft, text, listing, None);
+        let mut problem = test_problem(&draft, text, listing, Some("Set"));
+        problem.symbol = Some("Set".into());
         let job = Job::new(&problem, &work.path().join("run/minimize")).unwrap();
-        let base_state = problem.state(perm::expand(&problem.nodes, None).unwrap());
+        let base_state = prepared(&problem, &job, "Set");
         let base_text = problem.source(&base_state);
         let mut cache = HashMap::new();
-        let base_score = scored(&problem, &job, &base_text, &mut cache).unwrap();
-        assert!(base_score.weighted > 0);
-        let base = Found { score: base_score, unnatural: 0, text: base_text, steps: Vec::new(), expanded: base_state.expanded.clone(), job: 0, iteration: 0 };
+        assert!(scored(&problem, &job, &base_text, &mut cache).unwrap().weighted > 0);
         // A long walk under a fixed seed that ends with gY stored first.
-        let walk = (1..500u64)
+        let stores_y_first = |text: &str| matches!((text.find("gY = b"), text.find("gX = a")), (Some(y), Some(x)) if y < x);
+        let (state, walked) = (1..500u64)
             .find_map(|seed| {
                 let mut state = base_state.clone();
-                let (_, _, function) = state.parsed.as_mut().unwrap();
-                let mut env = Env::new(&problem.unit, function);
                 let mut rng = Rng::new(seed);
                 for _ in 0..8 {
-                    env.refresh(function);
-                    if let Some(step) = mutate(function, &mut env, &mut rng) {
+                    if let Some(step) = randomize::mutate(&mut state.full, "Set", &mut rng) {
                         state.steps.push(step);
                     }
                 }
                 let text = problem.source(&state);
-                (state.steps.len() >= 6 && text.find("gY =") < text.find("gX =")).then_some((state, text))
+                (state.steps.len() >= 6 && stores_y_first(&text)).then_some((state, text))
             })
             .expect("a walk that reorders the stores");
-        let (state, walked) = walk;
         let score = scored(&problem, &job, &walked, &mut cache).unwrap();
-        let found = Found { score, unnatural: problem.unnatural(&state), text: walked, steps: state.steps.clone(), expanded: state.expanded.clone(), job: 0, iteration: 1 };
-        let minimized = minimize(&problem, &job, &base, &found, &mut cache);
+        let found = Found { score, text: walked, steps: state.steps.clone(), expanded: state.expanded.clone(), job: 0, iteration: 1 };
+        let minimized = minimize(&problem, &job, &found, &mut cache);
         assert!(minimized.steps.len() < found.steps.len(), "{} of {} rewrites remain", minimized.steps.len(), found.steps.len());
-        assert!((minimized.score.weighted, minimized.score.differ) <= (found.score.weighted, found.score.differ));
+        assert!(minimized.score.distance() <= found.score.distance());
         // The minimized trail replays to its text, and that text scores as recorded.
         assert_eq!(problem.source(&problem.replay(&minimized.expanded, &minimized.steps)), minimized.text);
         assert_eq!(problem.evaluate(&job, &minimized.text).unwrap(), minimized.score);
@@ -1792,16 +1663,14 @@ mod tests {
         for index in 0..minimized.steps.len() {
             let mut fewer = minimized.steps.clone();
             fewer.remove(index);
-            let state = problem.replay(&minimized.expanded, &fewer);
-            let text = problem.source(&state);
+            let text = problem.source(&problem.replay(&minimized.expanded, &fewer));
             assert_ne!(text, minimized.text, "rewrite {index} changes nothing");
             if let Ok(score) = problem.evaluate(&job, &text) {
-                let measure = (score.weighted, score.differ, problem.unnatural(&state));
-                assert!(measure > (minimized.score.weighted, minimized.score.differ, minimized.unnatural), "rewrite {index} is not needed");
+                assert!(score.distance() > minimized.score.distance(), "rewrite {index} is not needed");
             }
         }
         // The same minimization twice is the same.
-        assert_eq!(minimize(&problem, &job, &base, &found, &mut cache).text, minimized.text);
+        assert_eq!(minimize(&problem, &job, &found, &mut cache).text, minimized.text);
     }
 
     #[test]
@@ -1809,27 +1678,6 @@ mod tests {
 
         let work = tempfile::tempdir().unwrap();
         let listing = listing_of(work.path(), "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return a - b;\n}\n");
-        let options = |draft: &Path, function: Option<&str>| Options {
-            draft: draft.to_path_buf(),
-            addresses: Vec::new(),
-            game: "tbs",
-            target: decomp_target(Some("tbs-en")).unwrap(),
-            minutes: 0.0,
-            jobs: 1,
-            seed: 1,
-            rng_seed: None,
-            perm_seed: None,
-            function: function.map(str::to_string),
-            overlay: None,
-            arm: false,
-            iterations: Some(2),
-            heat: false,
-            prefix: false,
-            score_options: score::Options::default(),
-            keep_prob: 0.6,
-            stop_on_zero: false,
-            output: output::Options::default(),
-        };
         let draft = work.path().join("draft/08000000.c");
         std::fs::create_dir_all(draft.parent().unwrap()).unwrap();
         let output = work.path().join("out/permute/08000000");
@@ -1840,7 +1688,7 @@ mod tests {
         for (text, function) in cases {
             std::fs::write(&draft, text).unwrap();
             let problem = test_problem(&draft, text, listing.clone(), function);
-            assert!(execute(problem, &options(&draft, function), None, &output).is_err());
+            assert!(execute(problem, &test_options(&draft), None, &output).is_err());
             assert!(!output.exists(), "{:?}", std::fs::read_dir(&output).map(|d| d.flatten().map(|e| e.file_name()).collect::<Vec<_>>()));
         }
         // A killed run's scratch goes at the next run; a live one's stays.
@@ -1865,7 +1713,7 @@ mod tests {
         let text = "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return PERM_ONEOF(b - a, a - b);\n}\n";
         std::fs::write(&draft, text).unwrap();
         let problem = test_problem(&draft, text, listing, None);
-        execute(problem, &options(&draft, None), None, &output).unwrap();
+        execute(problem, &test_options(&draft), None, &output).unwrap();
         let names: Vec<String> = std::fs::read_dir(&output).unwrap().flatten().map(|entry| entry.file_name().to_string_lossy().into_owned()).collect();
         assert!(names.iter().all(|name| name.starts_with("best-") || name.starts_with("output-")) && names.contains(&"best-1.diff".to_string()), "{names:?}");
         assert_eq!(std::fs::read_to_string(output.join("output-0-1/score.txt")).unwrap(), "0\n");
@@ -1888,109 +1736,6 @@ mod tests {
     }
 
     #[test]
-    fn mutations_repeat_exactly_under_a_seed() {
-        let source = "extern int gX;\nextern int gY;\n\nvoid Store(int a, int b, int *p)\n{\n    int t = a + 1;\n    gX = t;\n    gY = b * 2;\n    if (a > b)\n        p[0] = a - b;\n    p[1] = a & 3;\n}\n";
-        let unit = scan_unit(source).unwrap();
-        let run = |seed: u64| {
-            let mut function = locate(source, None, &unit.typedef_names()).unwrap().function;
-            let mut env = Env::new(&unit, &function);
-            let mut rng = Rng::new(seed);
-            let mut trail = Vec::new();
-            for _ in 0..40 {
-                env.refresh(&function);
-                let kind = mutate(&mut function, &mut env, &mut rng);
-                trail.push((kind, function.print()));
-            }
-            trail
-        };
-        let first = run(5);
-        assert_eq!(first, run(5));
-        assert!(first.iter().any(|(kind, _)| kind.is_some()), "some rewrite applies");
-        assert_ne!(first, run(6));
-    }
-
-    #[test]
-    fn each_mutation_kind_repeats_exactly_under_a_seed() {
-        let source = "extern int gX;\nextern int gY;\n\nint Walk(int a, int b, int *p, unsigned char *q)\n{\n    int i;\n    int t = a + 1;\n    int u;\n    gX = t;\n    gY = b * 2;\n    for (i = 0; i < a; i++) {\n        p[i] = p[i] + (int)q[i];\n    }\n    u = a & 3;\n    if (u != 0)\n        p[1] = u;\n    else\n        p[2] = b;\n    gX += b;\n    return t;\n}\n";
-        let unit = scan_unit(source).unwrap();
-        let base = locate(source, None, &unit.typedef_names()).unwrap().function;
-        let mut applied = 0;
-        for (kind, _) in Kind::ALL {
-            let once = |seed: u64| {
-                let mut function = base.clone();
-                let env = Env::new(&unit, &function);
-                let mut rng = Rng::new(seed);
-                let changed = mutate::apply(kind, &mut function, &env, &mut rng);
-                (changed, function.print())
-            };
-            for seed in [1, 2, 3] {
-                assert_eq!(once(seed), once(seed), "{}", kind.name());
-            }
-            applied += usize::from(once(1).0);
-        }
-        assert!(applied >= 8, "{applied} kinds found a site");
-    }
-
-    #[test]
-    fn perm_expansions_parse_and_rewrite_only_randomized_statements() {
-        let draft = "extern int gX;\nextern int gY;\n\nvoid Pair(int a, int b)\n{\n    PERM_LINESWAP(\n    gX = a;\n    gY = b;\n    )\n    PERM_RANDOMIZE(gX = a + b * 2;)\n    gY = a - b;\n}\n";
-        let nodes = perm::parse(draft).unwrap();
-        let problem = Problem {
-            draft: PathBuf::from("08000000.c"),
-            text: draft.into(),
-            stem: "08000000".into(),
-            target: decomp_target(Some("tbs-en")).unwrap(),
-            choices: perm::has_choices(&nodes),
-            nodes,
-            listing: Vec::new(),
-            listing_rows: None,
-            score_options: score::Options::default(),
-            symbol: None,
-            prefix: false,
-            aim: None,
-            unit: scan_unit(draft).unwrap_or_default(),
-            function: None,
-            arm: false,
-        };
-        let state = problem.state(perm::expand(&problem.nodes, None).unwrap());
-        assert!(state.parsed.is_some());
-        let mut rng = Rng::new(4);
-        let mut texts = std::collections::BTreeSet::new();
-        let (_, _, base) = state.parsed.clone().unwrap();
-        let mut env = Env::new(&problem.unit, &base);
-        for _ in 0..60 {
-            let mut state = problem.state(perm::expand(&problem.nodes, Some(&mut rng)).unwrap());
-            let (_, _, function) = state.parsed.as_mut().unwrap();
-            env.refresh(function);
-            mutate(function, &mut env, &mut rng);
-            let text = problem.source(&state);
-            assert!(!perm::has_macros(&text));
-            assert!(text.contains("gY = a - b;"), "{text}");
-            texts.insert(text);
-        }
-        assert!(texts.iter().any(|text| text.find("gY = b;") < text.find("gX = a;")));
-        assert!(texts.iter().any(|text| !text.contains("gX = a + b * 2;")), "the randomized statement is rewritten");
-    }
-
-    #[test]
-    fn randomized_regions_use_identity_and_survive_repeated_rewrites() {
-        let text = "void F(int a, int b) { gX = a + b; PERM_RANDOMIZE(gX = a + b;) gX = a + b; }";
-        let problem = test_problem(Path::new("08000000.c"), text, Vec::new(), None);
-        for seed in 0..40 {
-            let mut state = problem.state(perm::expand(&problem.nodes, None).unwrap());
-            let (_, _, function) = state.parsed.as_mut().unwrap();
-            let env = Env::new(&problem.unit, function);
-            let before = function.body[0].clone();
-            let after = function.body.last().unwrap().clone();
-            for _ in 0..4 {
-                assert!(mutate::apply(Kind::SwapOperands, function, &env, &mut Rng::new(seed)));
-                assert_eq!(function.body[0], before);
-                assert_eq!(function.body.last().unwrap(), &after);
-            }
-        }
-    }
-
-    #[test]
     fn search_reaches_differ_zero_through_diffs_own_compile() {
 
         let work = tempfile::tempdir().unwrap();
@@ -2009,26 +1754,9 @@ mod tests {
         std::fs::create_dir_all(draft.parent().unwrap()).unwrap();
         let text = "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return PERM_ONEOF(b - a, a - b);\n}\n";
         std::fs::write(&draft, text).unwrap();
-        let nodes = perm::parse(text).unwrap();
-        let problem = Problem {
-            draft: draft.clone(),
-            text: text.into(),
-            stem: "08000000".into(),
-            target,
-            choices: perm::has_choices(&nodes),
-            nodes,
-            listing,
-            listing_rows: None,
-            score_options: score::Options::default(),
-            symbol: None,
-            prefix: false,
-            aim: None,
-            unit: Unit::default(),
-            function: None,
-            arm: false,
-        };
-        let base_state = problem.state(perm::expand(&problem.nodes, None).unwrap());
+        let problem = test_problem(&draft, text, listing, Some("Sub"));
         let setup = Job::new(&problem, &work.path().join("run/setup")).unwrap();
+        let base_state = prepared(&problem, &setup, "Sub");
         let base_text = problem.source(&base_state);
         let score = problem.evaluate(&setup, &base_text).unwrap();
         assert!(score.weighted > 0 && score.differ > 0, "{score:?}");
@@ -2036,41 +1764,18 @@ mod tests {
         let compiled = crate::diff::disassemble(&setup.object, None).unwrap();
         let (common, _) = crate::diff::compare(&problem.listing, &compiled);
         assert_eq!(score.differ, problem.listing.len() + compiled.len() - 2 * common);
-        let base = Found { score, unnatural: 0, text: base_text, steps: Vec::new(), expanded: base_state.expanded.clone(), job: 0, iteration: 0 };
-        let options = Options {
-            draft,
-            addresses: Vec::new(),
-            game: "tbs",
-            target,
-            minutes: 0.0,
-            jobs: 2,
-            seed: 1,
-            rng_seed: None,
-            perm_seed: None,
-            function: None,
-            overlay: None,
-            arm: false,
-            iterations: Some(8),
-            heat: false,
-            prefix: false,
-            score_options: score::Options::default(),
-            keep_prob: 0.6,
-            stop_on_zero: false,
-            output: output::Options::default(),
-        };
+        let base = Found { score, text: base_text, steps: Vec::new(), expanded: base_state.expanded.clone(), job: 0, iteration: 0 };
+        let options = Options { jobs: 2, iterations: Some(8), ..test_options(&draft) };
         let found = search(&problem, &base_state, &base, false, &options, None, &work.path().join("run"), Instant::now(), None).unwrap();
         assert_eq!((found[0].score.weighted, found[0].score.differ), (0, 0));
         assert!(found[0].text.contains("return a - b;") && !perm::has_macros(&found[0].text));
-        // nonrandom sources are evaluated only once, despite the limit of 8.
-        let args = [options.draft.to_str().unwrap(), "--seed", "1,-99999999999999999999", "--jobs", "1", "--iterations", "8"].map(str::to_string);
-        let forced = parse_options(&args).unwrap();
-        let found = search(&problem, &base_state, &base, false, &forced, None, &work.path().join("forced"), Instant::now(), None).unwrap();
-        assert_eq!((found[0].score.weighted, found[0].iteration), (0, 1));
     }
 
     #[test]
     fn rewrites_count_kinds_and_name_perm_only_runs() {
         assert_eq!(rewrites(&[]), "PERM choices only");
+        let kinds = [randomize::Kind::Cast, randomize::Kind::Temporary, randomize::Kind::Temporary];
+        assert_eq!(rewrites(&kinds), "2x introduce or reuse a temporary, 1x cast an expression");
     }
 
     #[test]
@@ -2081,16 +1786,10 @@ mod tests {
         let draft = work.path().join("08000000.c");
         let source = "extern int unused;\nint F(void) { return PERM_ONEOF(1, 2); }\n";
         std::fs::write(&draft, source).unwrap();
-        for (index, flags, expected) in [
-            (0, vec![], 1),
-            (1, vec!["--better-only"], 0),
-            (2, vec!["--best-only", "--no-context-output"], 1),
-            (3, vec!["--only-if-below", "5"], 0),
-            (4, vec!["--only-if-below", "6"], 1),
-        ] {
-            let mut args = vec![draft.to_str().unwrap(), "--jobs", "1", "--iterations", "2"];
-            args.extend(flags);
-            let options = parse_options(&args.into_iter().map(str::to_string).collect::<Vec<_>>()).unwrap();
+        for (index, flags, expected) in [(0, vec![], 1), (1, vec!["--better-only"], 0)] {
+            let mut items = vec![draft.to_str().unwrap(), "--jobs", "1", "--iterations", "2"];
+            items.extend(flags);
+            let options = parse_options(&args(&items)).unwrap();
             let output = work.path().join(format!("output-{index}"));
             execute(test_problem(&draft, source, listing.clone(), Some("F")), &options, None, &output).unwrap();
             let archives: Vec<_> = if output.exists() {
@@ -2100,8 +1799,7 @@ mod tests {
             if expected != 0 {
                 assert_eq!(std::fs::read_to_string(archives[0].path().join("score.txt")).unwrap(), "5\n");
                 let source = std::fs::read_to_string(archives[0].path().join("source.c")).unwrap();
-                assert!(source.contains("return 2;"));
-                assert_eq!(source.contains("extern int unused;"), index != 2);
+                assert!(source.contains("return 2;") && source.contains("extern int unused;"));
             }
         }
     }

@@ -5,45 +5,28 @@ use std::path::Path;
 use super::SourceHash;
 use super::score::Score;
 
-#[derive(Clone, Copy, Default)]
-pub struct Options {
-    pub better_only: bool,
-    pub best_only: bool,
-    pub threshold: Option<i128>,
-    pub no_context: bool,
-}
-
+/// Which candidates are saved as they are found: none worse than the draft,
+/// none whose instructions a saved one already has (exact matches aside),
+/// and with `better_only` none merely as good as the draft.
 pub struct State {
-    base: ((std::cmp::Reverse<usize>, u64), usize),
-    best: ((std::cmp::Reverse<usize>, u64), usize),
-    prefix: bool,
+    base: (u64, usize),
     hashes: HashSet<SourceHash>,
-    options: Options,
+    better_only: bool,
 }
 
 impl State {
-    pub fn new(base: &Score, hash: SourceHash, options: Options, prefix: bool) -> Self {
-        let base = base.rank(prefix);
-        Self { base, best: base, prefix, hashes: HashSet::from([hash]), options }
+    pub fn new(base: &Score, hash: SourceHash, better_only: bool) -> Self {
+        Self { base: base.distance(), hashes: HashSet::from([hash]), better_only }
     }
 
-    pub fn accepts(&self, score: &Score, hash: Option<SourceHash>, has_source: bool) -> bool {
-        let weighted = score.weighted;
-        let score = score.rank(self.prefix);
-        score <= self.base && has_source && hash.is_some_and(|hash| !self.hashes.contains(&hash))
-            && !(self.options.best_only && score > self.best)
-            && (score < self.base || !self.options.better_only)
-            && self.options.threshold.is_none_or(|limit| i128::from(weighted) < limit)
+    pub fn accepts(&self, score: &Score, hash: SourceHash) -> bool {
+        let score = score.distance();
+        score <= self.base && !self.hashes.contains(&hash) && (score < self.base || !self.better_only)
     }
 
     pub fn record(&mut self, score: &Score, hash: SourceHash) {
-        self.best = self.best.min(score.rank(self.prefix));
         if !score.is_zero() { self.hashes.insert(hash); }
     }
-}
-
-pub fn trim<'a>(source: &'a str, function: Option<&str>) -> &'a str {
-    function.and_then(|name| source.find(name)).and_then(|i| source[..i].rfind('\n')).map_or(source, |i| &source[i..])
 }
 
 /// Save the complete patch, showing large preprocessed contexts by path only.
@@ -57,7 +40,7 @@ pub fn write_diff<'a>(path: &Path, diff: &'a str) -> Result<Cow<'a, str>, String
     }
 }
 
-pub fn write(root: &Path, score: u64, source: &str, base: &str, function: Option<&str>, options: Options) -> Result<(), String> {
+pub fn write(root: &Path, score: u64, source: &str, base: &str) -> Result<(), String> {
     let mut counter = 1u64;
     let directory = loop {
         let directory = root.join(format!("output-{score}-{counter}"));
@@ -67,9 +50,8 @@ pub fn write(root: &Path, score: u64, source: &str, base: &str, function: Option
             Err(error) => return Err(format!("{}: {error}", directory.display())),
         }
     };
-    let shown = if options.no_context { trim(source, function) } else { source };
     let diff = diff(base, source);
-    for (name, text) in [("source.c", shown.to_string()), ("score.txt", format!("{score}\n")), ("diff.txt", diff)] {
+    for (name, text) in [("source.c", source.to_string()), ("score.txt", format!("{score}\n")), ("diff.txt", diff)] {
         let path = directory.join(name);
         std::fs::write(&path, text).map_err(|error| format!("{}: {error}", path.display()))?;
     }
@@ -132,18 +114,16 @@ mod tests {
     fn output_policy_sequences() {
         let hash = |name: &str| super::super::text_key(name);
         let base = Score { weighted: 100, ..Score::default() };
-        let mut policy = State::new(&base, hash("base"), Options::default(), false);
+        let mut policy = State::new(&base, hash("base"), false);
         for row in include_str!("c/fixtures/output-policy.tsv").lines() {
             let c: Vec<_> = row.split('\t').collect();
-            if c[3] == "0" {
-                policy = State::new(&base, hash("base"), Options { better_only: c[0] == "1", best_only: c[1] == "1", threshold: (c[2] != "none").then(|| c[2].parse().unwrap()), no_context: false }, false);
+            if c[1] == "0" {
+                policy = State::new(&base, hash("base"), c[0] == "1");
             }
-            let score = Score { weighted: c[4].parse().unwrap(), ..Score::default() };
-            let hash = (c[5] != "none").then(|| hash(c[5]));
-            let accepted = policy.accepts(&score, hash, c[6] == "1");
-            assert_eq!(accepted, c[7] == "1", "{row}");
-            if accepted { policy.record(&score, hash.unwrap()); }
-            assert_eq!(policy.best.0.1, c[8].parse::<u64>().unwrap(), "{row}");
+            let score = Score { weighted: c[2].parse().unwrap(), ..Score::default() };
+            let accepted = policy.accepts(&score, hash(c[3]));
+            assert_eq!(accepted, c[4] == "1", "{row}");
+            if accepted { policy.record(&score, hash(c[3])); }
         }
     }
 
@@ -151,36 +131,17 @@ mod tests {
     fn equal_weighted_scores_retain_strict_improvements() {
         let hash = |name: &str| super::super::text_key(name);
         let base = Score { differ: 42, ..Score::default() };
-        let options = Options { better_only: true, best_only: true, ..Options::default() };
-        let mut policy = State::new(&base, hash("base"), options, false);
-        assert!(!policy.accepts(&base, Some(hash("tie")), true));
+        let mut policy = State::new(&base, hash("base"), true);
+        assert!(!policy.accepts(&base, hash("tie")));
         let improved = Score { differ: 2, ..Score::default() };
-        assert!(policy.accepts(&improved, Some(hash("improved")), true));
+        assert!(policy.accepts(&improved, hash("improved")));
         policy.record(&improved, hash("improved"));
-        assert!(!policy.accepts(&improved, Some(hash("improved")), true));
-        assert!(!policy.accepts(&base, Some(hash("worse")), true));
+        assert!(!policy.accepts(&improved, hash("improved")));
+        assert!(!policy.accepts(&base, hash("worse")));
         let exact = Score::default();
-        assert!(policy.accepts(&exact, Some(hash("exact")), true));
+        assert!(policy.accepts(&exact, hash("exact")));
         policy.record(&exact, hash("exact"));
-        assert!(!policy.accepts(&improved, Some(hash("another")), true));
-    }
-
-    #[test]
-    fn prefix_improvements_survive_weighted_output_filters() {
-        let hash = |name: &str| super::super::text_key(name);
-        let base = Score { prefix: 7, weighted: 260, differ: 4, ..Score::default() };
-        let improved = Score { prefix: 8, weighted: 850, differ: 18, ..Score::default() };
-        let options = Options { better_only: true, best_only: true, ..Options::default() };
-        let mut policy = State::new(&base, hash("base"), options, true);
-        assert!(policy.accepts(&improved, Some(hash("improved")), true));
-        policy.record(&improved, hash("improved"));
-        assert!(!policy.accepts(&base, Some(hash("base-again")), true));
-        let same_prefix = Score { weighted: 800, ..improved.clone() };
-        assert!(policy.accepts(&same_prefix, Some(hash("same-prefix")), true));
-        let weighted = State::new(&base, hash("base"), options, false);
-        assert!(!weighted.accepts(&improved, Some(hash("improved")), true));
-        let limited = State::new(&base, hash("base"), Options { threshold: Some(800), ..options }, true);
-        assert!(!limited.accepts(&improved, Some(hash("improved")), true));
+        assert!(policy.accepts(&exact, hash("exact")), "every spelling of an exact match is kept");
     }
 
     #[test]
@@ -225,18 +186,16 @@ mod tests {
     }
 
     #[test]
-    fn candidate_files_keep_existing_outputs_and_trim_source_context() {
+    fn candidate_files_keep_existing_outputs() {
         let root = tempfile::tempdir().unwrap();
         let source = "extern int global;\n\nint target(void)\n{\n  return 2;\n}\n";
-        let options = Options { no_context: true, ..Options::default() };
-        write(root.path(), 0, source, source, Some("target"), options).unwrap();
-        write(root.path(), 0, source, source, Some("target"), options).unwrap();
+        write(root.path(), 0, source, source).unwrap();
+        write(root.path(), 0, source, source).unwrap();
         for number in [1, 2] {
             let path = root.path().join(format!("output-0-{number}"));
-            assert_eq!(std::fs::read_to_string(path.join("source.c")).unwrap(), "\nint target(void)\n{\n  return 2;\n}\n");
+            assert_eq!(std::fs::read_to_string(path.join("source.c")).unwrap(), source);
             assert_eq!(std::fs::read_to_string(path.join("score.txt")).unwrap(), "0\n");
             assert_eq!(std::fs::read_to_string(path.join("diff.txt")).unwrap(), "\n");
         }
-        assert_eq!(trim(source, Some("absent")), source);
     }
 }

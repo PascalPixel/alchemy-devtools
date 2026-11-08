@@ -1,7 +1,6 @@
 //! Manual-permutation trees and mixed-radix choice enumeration.
 
-use super::ast::{Function, Stmt};
-use super::mutate::Rng;
+use super::rng::Rng;
 use std::collections::{BTreeMap, HashSet};
 
 const NAMES: &[&str] = &[
@@ -68,6 +67,9 @@ impl Expanded {
         super::text_key(&format!("{:?}{:?}{:?}", self.text, self.ignored, self.ast_swaps))
     }
 
+    /// Apply line swaps after parsing each line as a compound statement.
+    /// This is observably different from text swapping for declarations,
+    /// dangling else, and a macro used as an unbraced control-flow body.
     pub fn apply_c_ast(&self, unit: &mut super::c::Node) {
         use super::c::Node as C;
         fn visit(unit: &mut C, swaps: &[Vec<usize>]) -> bool {
@@ -98,10 +100,10 @@ impl Expanded {
         visit(unit, &self.ast_swaps);
     }
 
-    /// Return preprocessor-preserved markers to the body parser's comments.
-    pub fn comment_markers(&self, text: &str) -> String {
+    /// Return the markers the tree prints as pragmas to the comments the
+    /// expansion wrote, which `restore` reads.
+    fn comment_markers(&self, text: &str) -> String {
         let mut out = text.to_string();
-        // Both printers use the same markers; the full tree prints pragmas.
         for (index, _) in self.ignored.iter().enumerate() {
             out = out.replace(&format!("#pragma _permuter ignored {index}"), &format!("/* _permuter ignored {index} */"));
         }
@@ -151,72 +153,6 @@ impl Expanded {
             }
         }
         result
-    }
-
-    /// Apply line swaps after parsing each line as a compound statement.
-    /// This is observably different from text swapping for declarations,
-    /// dangling else, and a macro used as an unbraced control-flow body.
-    pub fn apply_ast(&self, function: &mut Function) {
-        fn block(stmts: &mut Vec<Stmt>, swaps: &[Vec<usize>]) {
-            for stmt in stmts.iter_mut() {
-                nested(stmt, swaps);
-            }
-            let mut out = Vec::new();
-            for stmt in std::mem::take(stmts) {
-                if let Stmt::Block(mut items) = stmt {
-                    if let Some(order) = marker(&items, swaps) {
-                        items.remove(0);
-                        for &i in order {
-                            if let Stmt::Block(inner) = &items[i] {
-                                out.extend(inner.clone());
-                            }
-                        }
-                    } else {
-                        out.push(Stmt::Block(items));
-                    }
-                } else {
-                    out.push(stmt);
-                }
-            }
-            *stmts = out;
-        }
-        fn marker<'a>(items: &[Stmt], swaps: &'a [Vec<usize>]) -> Option<&'a Vec<usize>> {
-            let Stmt::Comment(text) = items.first()? else { return None };
-            let id = text.strip_prefix("/* _permuter ast ")?.strip_suffix(" */")?.parse::<usize>().ok()?;
-            swaps.get(id)
-        }
-        fn nested(stmt: &mut Stmt, swaps: &[Vec<usize>]) {
-            match stmt {
-                Stmt::Block(items) => {
-                    // Leave this block's marker for its parent to flatten.
-                    block(items, swaps);
-                }
-                Stmt::If(_, body, other) => {
-                    body_block(body, swaps);
-                    if let Some(other) = other {
-                        body_block(other, swaps);
-                    }
-                }
-                Stmt::While(_, body) | Stmt::DoWhile(body, _) | Stmt::For(_, _, _, body) | Stmt::Switch(_, body) => body_block(body, swaps),
-                _ => {}
-            }
-        }
-        fn body_block(body: &mut Stmt, swaps: &[Vec<usize>]) {
-            nested(body, swaps);
-            if let Stmt::Block(items) = body {
-                if let Some(order) = marker(items, swaps) {
-                    let out = order
-                        .iter()
-                        .flat_map(|&i| match &items[i + 1] {
-                            Stmt::Block(inner) => inner.clone(),
-                            _ => unreachable!("line swap arguments are blocks"),
-                        })
-                        .collect();
-                    *items = out;
-                }
-            }
-        }
-        block(&mut function.body, &self.ast_swaps);
     }
 }
 
@@ -445,11 +381,9 @@ pub fn randomizes(nodes: &[Node]) -> bool {
     })
 }
 
-/// Expand with the first alternative and the written line order, or with
-/// choices drawn from `rng`.
-pub fn expand(nodes: &[Node], rng: Option<&mut Rng>) -> Result<Expanded, String> {
-    let total = count(nodes)?;
-    expand_seed(nodes, rng.map_or(0, |r| r.below(total as usize) as u64))
+/// Expand with the first alternative and the written line order.
+pub fn expand(nodes: &[Node]) -> Result<Expanded, String> {
+    expand_seed(nodes, 0)
 }
 
 fn product(mut counts: impl Iterator<Item = Result<u64, String>>) -> Result<u64, String> {
@@ -637,7 +571,9 @@ fn eval_node(node: &Node, mut seed: u64, once: &[&Node], vars: &mut BTreeMap<Str
     })
 }
 
-/// visited, then shuffle the remainder. A finite pass never repeats a seed.
+/// The manual-choice seeds in search order: random draws until half the
+/// space is visited, then shuffle the remainder. A finite pass never repeats
+/// a seed; a randomized search starts another pass.
 pub struct Seeds {
     total: u64,
     seen: HashSet<u64>,
@@ -695,14 +631,24 @@ mod tests {
 
     const DRAFT: &str = "void f(int *p)\n{\n    PERM_LINESWAP(\n    p[0] = 1;\n    p[1] = 2;\n    )\n    p[2] = PERM_GENERAL(3, 4 + PERM_ONEOF(5, 6));\n    PERM_IGNORE(asm(\"\" ::: \"r5\");)\n    PERM_RANDOMIZE(p[3] = 7;)\n    /* PERM_GENERAL(x) in a comment stays */\n}\n";
 
+    /// The expansion as the search's tree holds it, its line swaps applied.
+    fn tree(expanded: &Expanded) -> super::super::c::Node {
+        let mut unit = super::super::c::parse(&expanded.preprocess_text()).unwrap();
+        expanded.apply_c_ast(&mut unit);
+        unit
+    }
+
+    /// Whether `first` is printed before `second`.
+    fn before(text: &str, first: &str, second: &str) -> bool {
+        text.find(first).unwrap() < text.find(second).unwrap()
+    }
+
     #[test]
     fn default_expansion_takes_first_choices_and_written_order() {
         let nodes = parse(DRAFT).unwrap();
         assert!(has_choices(&nodes) && randomizes(&nodes));
-        let expanded = expand(&nodes, None).unwrap();
-        let mut function = super::super::parse::locate(&expanded.text, None, &Default::default()).unwrap().function;
-        expanded.apply_ast(&mut function);
-        assert!(function.print().contains("    p[0] = 1;\n    p[1] = 2;\n"));
+        let expanded = expand(&nodes).unwrap();
+        assert!(before(&tree(&expanded).print(), "p[0] = 1;", "p[1] = 2;"));
         assert!(expanded.text.contains("p[2] = 3;"));
         assert!(expanded.text.contains("/* _permuter ignored 0 */"));
         assert_eq!(expanded.randomize, ["p[3] = 7;"]);
@@ -715,21 +661,20 @@ mod tests {
     #[test]
     fn random_expansions_reach_every_choice_and_repeat_under_a_seed() {
         let nodes = parse(DRAFT).unwrap();
+        let total = count(&nodes).unwrap() as usize;
+        let draw = |rng: &mut Rng| expand_seed(&nodes, rng.below(total) as u64).unwrap();
         let mut seen = std::collections::BTreeSet::new();
         let mut rng = Rng::new(7);
         for _ in 0..200 {
-            let expanded = expand(&nodes, Some(&mut rng)).unwrap();
-            let mut function = super::super::parse::locate(&expanded.text, None, &Default::default()).unwrap().function;
-            expanded.apply_ast(&mut function);
-            seen.insert(function.print());
+            seen.insert(tree(&draw(&mut rng)).print());
         }
         // Two line orders times three values.
         assert_eq!(seen.len(), 6);
         assert!(seen.iter().any(|text| text.contains("p[2] = 4 + 6;")));
-        assert!(seen.iter().any(|text| text.contains("    p[1] = 2;\n    p[0] = 1;\n")));
+        assert!(seen.iter().any(|text| before(text, "p[1] = 2;", "p[0] = 1;")));
         let (mut a, mut b) = (Rng::new(3), Rng::new(3));
         for _ in 0..20 {
-            assert_eq!(expand(&nodes, Some(&mut a)), expand(&nodes, Some(&mut b)));
+            assert_eq!(draw(&mut a), draw(&mut b));
         }
     }
 
@@ -773,7 +718,7 @@ mod tests {
         assert_eq!(expansions("begin;PERM_ONCE(note,record(3);)middle;PERM_ONCE(note,record(8);)end;"), ["begin;record(3);middle;end;", "begin;middle;record(8);end;"]);
         assert_eq!(expansions("PERM_VAR(mask,PERM_GENERAL(15,63))return value & PERM_VAR(mask);"), ["return value & 15;", "return value & 63;"]);
         assert!(parse("prefix;PERM_ONCE(record(4);)suffix;").is_err());
-        assert!(expand(&parse("return PERM_VAR(unbound_mask);").unwrap(), None).is_err());
+        assert!(expand(&parse("return PERM_VAR(unbound_mask);").unwrap()).is_err());
         assert_eq!(expansions("PERM_LINESWAP_TEXT(\nPERM_VAR(step,19)start();\nfinish(PERM_VAR(step));\n)"), ["start();\nfinish(19);", "finish(19);\nstart();"]);
     }
 
@@ -781,32 +726,36 @@ mod tests {
     fn ignored_macros_expand_and_pretend_only_reaches_the_parser() {
         assert_eq!(expansions("PERM_IGNORE(PERM_INT(2,3))"), ["2", "3"]);
         assert_eq!(expansions("PERM_PRETEND(typedef int T;)int x;"), ["int x;"]);
-        let expanded = expand(&parse("PERM_PRETEND(typedef int T;)int x;").unwrap(), None).unwrap();
+        let expanded = expand(&parse("PERM_PRETEND(typedef int T;)int x;").unwrap()).unwrap();
         assert!(expanded.text.contains("typedef int T;"));
         assert_eq!(expansions("PERM_FORCE_SAMELINE(a;\nb;)"), ["a; b;"]);
         assert_eq!(expansions("/* 日本語 */ PERM_INT(1,1)"), ["/* 日本語 */ 1"]);
-        assert!(expand(&parse("PERM_RANDOMIZE(PERM_RANDOMIZE(x();))").unwrap(), None).is_err());
+        assert!(expand(&parse("PERM_RANDOMIZE(PERM_RANDOMIZE(x();))").unwrap()).is_err());
         assert_eq!(expansions("PERM_PRETEND(\n#pragma _permuter define ID 7\ntypedef int T;\n)"), ["#define ID 7"]);
     }
 
     #[test]
     fn ast_lineswap_keeps_unbraced_bodies_together_and_flattens_declarations() {
         let source = "void f(int a) { if (a) PERM_LINESWAP(\nx(); y();\nz();\n) }";
+        use super::super::c::Node as C;
+        /// The statements of the unit's first function.
+        fn body(unit: &C) -> &Vec<C> {
+            let C::FileAst { ext } = unit else { panic!() };
+            let C::FuncDef { body, .. } = &ext[0] else { panic!() };
+            let C::Compound { block_items } = body.as_ref() else { panic!() };
+            block_items
+        }
         let nodes = parse(source).unwrap();
         for seed in 0..2 {
-            let expanded = expand_seed(&nodes, seed).unwrap();
-            let mut f = super::super::parse::locate(&expanded.text, None, &Default::default()).unwrap().function;
-            expanded.apply_ast(&mut f);
-            let Stmt::If(_, body, _) = &f.body[0] else { panic!() };
-            let Stmt::Block(stmts) = body.as_ref() else { panic!("must remain a block") };
-            assert_eq!(stmts.len(), 3);
-            assert!(!f.print().contains("_permuter ast"));
+            let unit = tree(&expand_seed(&nodes, seed).unwrap());
+            let C::If { iftrue, .. } = &body(&unit)[0] else { panic!() };
+            let C::Compound { block_items } = iftrue.as_ref() else { panic!("must remain a block") };
+            assert_eq!(block_items.len(), 3);
+            assert!(!unit.print().contains("_permuter ast"));
         }
         let source = "void f(void) { PERM_LINESWAP(\nint a;\nint b;\n) a = b = 0; }";
-        let expanded = expand(&parse(source).unwrap(), None).unwrap();
-        let mut f = super::super::parse::locate(&expanded.text, None, &Default::default()).unwrap().function;
-        expanded.apply_ast(&mut f);
-        assert!(matches!(f.body[0], Stmt::Decl(_)) && matches!(f.body[1], Stmt::Decl(_)));
+        let unit = tree(&expand(&parse(source).unwrap()).unwrap());
+        assert!(matches!(body(&unit)[..2], [C::Decl { .. }, C::Decl { .. }]));
     }
 
     #[test]
