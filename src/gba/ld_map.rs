@@ -24,17 +24,6 @@ impl Placed {
     pub fn object(&self) -> &str {
         self.path.rsplit_once("/obj/").map_or(&self.path, |(_, tail)| tail)
     }
-
-    pub fn label(&self) -> String {
-        if self.is_fill() {
-            return format!("*fill* at {:#010x}", self.load);
-        }
-        match self.name.as_str() {
-            ".text" | ".rodata" | ".data" | ".padding" => self.object().to_string(),
-            name => format!("{}({name})", self.object()),
-        }
-    }
-
 }
 
 pub fn preferred(symbols: &[(u32, String)], address: u32) -> Option<&str> {

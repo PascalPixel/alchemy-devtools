@@ -17,7 +17,6 @@ mod progress;
 mod rank;
 mod regress;
 mod render;
-mod show;
 mod twins;
 mod variants;
 mod r#where;

@@ -1,4 +1,4 @@
-//! lz: the two decoders for the ROM's packed resource streams, which `show`
+//! lz: the two decoders for the ROM's packed resource streams, which `diff`
 //! uses to unpack overlays. Alchemy's own C encoders (`tools/`) write these
 //! streams; this side only reads them.
 

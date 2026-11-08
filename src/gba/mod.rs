@@ -1,12 +1,14 @@
-//! What any GBA decompilation can use: the ARM7TDMI decoder, the ELF and GNU ld
-//! map readers, and the runner that starts a build's tools at fixed addresses.
+//! What any GBA decompilation can use: the Thumb reader, the ELF and GNU ld
+//! map readers, a function's bounds in a linked image, a source's recipe from
+//! its Makefile, and the runner that starts a build's tools at fixed addresses.
 //! Nothing here knows which game or project it serves, and the test below keeps
 //! it so: no path out of `crate::gba`, no game's or project's name in its code.
 
-pub(crate) mod decode;
+pub(crate) mod bounds;
 pub(crate) mod elf;
 pub(crate) mod ld_map;
 pub(crate) mod process;
+pub(crate) mod recipe;
 pub(crate) mod thumb;
 
 #[cfg(test)]
