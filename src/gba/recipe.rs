@@ -17,40 +17,89 @@ use std::path::{Path, PathBuf};
 /// passed as `-o`, since make remakes the makefiles it includes even under
 /// `-n`; `-W` makes the object out of date whether or not it was built.
 pub(crate) fn recipe(root: &Path, build: &Path, variables: &[String], source: &str, object: &str) -> Result<Vec<Vec<String>>, String> {
+    recipes(root, build, variables, &[(source.to_string(), object.to_string())])?.remove(0)
+}
+
+/// The recipe of each (source, object) in `wanted`, as `recipe` gives one,
+/// from one `make -n` for all of them: make reads the project's makefiles
+/// once rather than once an object, the most of each compile's cost to ask
+/// for. A line belongs to each object whose source or outputs it names;
+/// make's own messages ("make: `X' is up to date.") belong to none. An
+/// object asked for twice is asked for once. When make fails on one of
+/// them, each is asked for on its own, so one error stays its object's.
+pub(crate) fn recipes(root: &Path, build: &Path, variables: &[String], wanted: &[(String, String)]) -> Result<Vec<Result<Vec<Vec<String>>, String>>, String> {
+    let mut distinct: Vec<&(String, String)> = Vec::new();
+    for pair in wanted {
+        if !distinct.contains(&pair) {
+            distinct.push(pair);
+        }
+    }
+    if distinct.len() < wanted.len() {
+        let once: Vec<(String, String)> = distinct.iter().map(|&pair| pair.clone()).collect();
+        let found = recipes(root, build, variables, &once)?;
+        return Ok(wanted.iter().map(|pair| found[once.iter().position(|other| other == pair).unwrap_or(0)].clone()).collect());
+    }
     let mut arguments = vec!["make".to_string(), "-n".into()];
-    for makefile in held(root, build, object)? {
+    let mut held_all: Vec<String> = Vec::new();
+    for (_, object) in wanted {
+        for makefile in held(root, build, object)? {
+            if !held_all.contains(&makefile) {
+                held_all.push(makefile);
+            }
+        }
+    }
+    for makefile in held_all {
         arguments.extend(["-o".into(), makefile]);
     }
     arguments.extend(variables.iter().cloned());
-    arguments.extend(["-W".into(), source.to_string(), object.to_string()]);
-    let printed = crate::gba::process::run(&arguments, root)?;
-    let base = object.strip_suffix(".o").unwrap_or(object);
-    let outputs = [".o", ".s", ".i"].map(|extension| format!("{base}{extension}"));
+    for (source, _) in wanted {
+        arguments.extend(["-W".into(), source.clone()]);
+    }
+    arguments.extend(wanted.iter().map(|(_, object)| object.clone()));
+    let printed = match crate::gba::process::run(&arguments, root) {
+        Ok(printed) => printed,
+        Err(error) if wanted.len() == 1 => return Err(error),
+        Err(_) => return Ok(wanted.iter().map(|(source, object)| recipe(root, build, variables, source, object)).collect()),
+    };
     let mut shell: Option<Vec<String>> = None;
-    let mut steps = Vec::new();
-    for line in printed.lines() {
-        match words(line) {
-            Ok(words) => {
-                let ours = words.iter().any(|word| word == source || outputs.iter().any(|output| word.contains(output.as_str())));
-                if ours && !words.is_empty() {
-                    steps.push(words);
+    let mut found: Vec<Vec<Vec<String>>> = vec![Vec::new(); wanted.len()];
+    for line in printed.lines().filter(|line| !message(line)) {
+        let words = words(line);
+        for (index, (source, object)) in wanted.iter().enumerate() {
+            let base = object.strip_suffix(".o").unwrap_or(object);
+            let outputs = [".o", ".s", ".i"].map(|extension| format!("{base}{extension}"));
+            match &words {
+                Ok(words) => {
+                    let ours = words.iter().any(|word| word == source || outputs.iter().any(|output| word.contains(output.as_str())));
+                    if ours && !words.is_empty() {
+                        found[index].push(words.clone());
+                    }
                 }
-            }
-            Err(_) if mentions(line, source) || outputs.iter().any(|output| line.contains(output.as_str())) => {
-                if shell.is_none() {
-                    shell = Some(make_shell(root, variables).map_err(|error| format!("make's recipe for {object} needs its shell: {error}"))?);
+                Err(_) if mentions(line, source) || outputs.iter().any(|output| line.contains(output.as_str())) => {
+                    if shell.is_none() {
+                        shell = Some(make_shell(root, variables).map_err(|error| format!("make's recipe for {object} needs its shell: {error}"))?);
+                    }
+                    let mut step = shell.clone().unwrap_or_default();
+                    step.push(format!("cd {} && {line}", quote(&root.to_string_lossy())));
+                    found[index].push(step);
                 }
-                let mut step = shell.clone().unwrap_or_default();
-                step.push(format!("cd {} && {line}", quote(&root.to_string_lossy())));
-                steps.push(step);
+                Err(_) => {}
             }
-            Err(_) => {}
         }
     }
-    if steps.is_empty() {
-        return Err(format!("make printed no recipe for {object}"));
-    }
-    Ok(steps)
+    Ok(found
+        .into_iter()
+        .zip(wanted)
+        .map(|(steps, (_, object))| if steps.is_empty() { Err(format!("make printed no recipe for {object}")) } else { Ok(steps) })
+        .collect())
+}
+
+/// Whether a printed line is make's own message, `make: ...` or
+/// `make[1]: ...`, not a recipe line.
+fn message(line: &str) -> bool {
+    let (program, _) = line.split_once(": ").unwrap_or(("", ""));
+    let program = program.split_once('[').map_or(program, |(name, _)| name);
+    !program.contains(' ') && program.rsplit('/').next().is_some_and(|name| name.ends_with("make"))
 }
 
 /// The makefiles make would remake under `-n` once `-W` makes the source
@@ -261,6 +310,28 @@ mod tests {
         assert_eq!(aimed[0].join(" "), format!("tools/cc -B{r}/tools/ -O2 -I{r}/include -I{r}/include/sub -I{r}/missing -S -o /work/run-1/draft.s /drafts/draft.c"));
         assert_eq!(aimed[1].join(" "), "tools/cc1 /work/run-1/draft.i -dumpbase draft.c -o /work/run-1/draft.s");
         assert_eq!(aimed[2].join(" "), "as -mthumb -o /work/run-1/draft.o /work/run-1/draft.s");
+    }
+
+    /// Two objects from one make: each takes only its own lines, one asked
+    /// for twice takes the same, and make's own messages are no one's.
+    #[test]
+    fn one_make_gives_each_object_its_own_recipe() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::create_dir_all(root.join("build/src")).unwrap();
+        std::fs::write(root.join("Makefile"), "build/src/%.o: src/%.c\n\tcc -c -o $@ $<\n").unwrap();
+        for name in ["a", "b"] {
+            std::fs::write(root.join(format!("src/{name}.c")), "int x;\n").unwrap();
+        }
+        let pair = |name: &str| (format!("src/{name}.c"), format!("build/src/{name}.o"));
+        let found = recipes(root, Path::new("build"), &[], &[pair("a"), pair("b"), pair("a")]).unwrap();
+        let line = |steps: &Result<Vec<Vec<String>>, String>| steps.as_ref().unwrap().iter().map(|step| step.join(" ")).collect::<Vec<_>>();
+        assert_eq!(line(&found[0]), ["cc -c -o build/src/a.o src/a.c"]);
+        assert_eq!(line(&found[1]), ["cc -c -o build/src/b.o src/b.c"]);
+        assert_eq!(line(&found[2]), line(&found[0]));
+        assert!(message("make: `build/src/a.o' is up to date.") && message("/usr/bin/gmake[1]: Nothing to be done for `x'."));
+        assert!(!message("cc: error: x") && !message("echo make: it"));
     }
 
     /// pret's shape: a pipeline that needs the Makefile's SHELL, and a

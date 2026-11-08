@@ -107,16 +107,42 @@ fn job_of(piece: &Piece) -> Option<Job> {
     Some(Job { draft, edition: piece.target.id.as_str(), overlay, arm: piece.arm })
 }
 
-fn compile(job: &Job, target: DecompTarget, folder: &Path, index: usize) -> Result<Compiled, String> {
+/// Where job `index` compiles its draft: its object in the edition's folder.
+fn object_of(job: &Job, folder: &Path, index: usize) -> PathBuf {
+    let stem = Path::new(&job.draft).file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or_default();
+    folder.join(format!("{index}-{stem}.o"))
+}
+
+/// Every job's compile steps, as diff compiles its draft, from one `make -n`
+/// an edition and route rather than one a draft.
+fn steps_of(work: &[Job], target: impl Fn(&str) -> DecompTarget) -> Vec<Result<Vec<Vec<String>>, String>> {
+    let mut steps: Vec<Option<Result<Vec<Vec<String>>, String>>> = vec![None; work.len()];
+    let editions: BTreeSet<&str> = work.iter().map(|job| job.edition).collect();
+    for edition in editions {
+        let members: Vec<usize> = (0..work.len()).filter(|&index| work[index].edition == edition).collect();
+        let paths: Vec<(PathBuf, PathBuf)> =
+            members.iter().map(|&index| (root().join(&work[index].draft), object_of(&work[index], &folder(target(edition)), index))).collect();
+        let drafts: Vec<(&Path, &Path, Option<&str>, bool)> = members
+            .iter()
+            .zip(&paths)
+            .map(|(&index, (draft, object))| (draft.as_path(), object.as_path(), work[index].overlay.as_deref(), work[index].arm))
+            .collect();
+        for (&index, found) in members.iter().zip(diff::steps_many(target(edition), &drafts)) {
+            steps[index] = Some(found);
+        }
+    }
+    steps.into_iter().map(|found| found.unwrap_or_else(|| Err("no steps".into()))).collect()
+}
+
+fn compile(job: &Job, steps: &Result<Vec<Vec<String>>, String>, folder: &Path, index: usize) -> Result<Compiled, String> {
     let draft = root().join(&job.draft);
     let text = std::fs::read_to_string(&draft).map_err(|error| format!("{}: {error}", job.draft))?;
     if crate::permute::perm::has_macros(&text) {
         return Err("the draft uses PERM macros".into());
     }
-    let stem = draft.file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or_default();
-    let object = folder.join(format!("{index}-{stem}.o"));
-    for step in diff::steps(target, &draft, &object, job.overlay.as_deref(), job.arm)? {
-        command(&step, folder)?;
+    let object = object_of(job, folder, index);
+    for step in steps.as_ref().map_err(Clone::clone)? {
+        command(step, folder)?;
     }
     Ok(Compiled { whole: diff::disassemble(&object, None)?, defined: diff::text_symbols(&object)?, object })
 }
@@ -315,8 +341,9 @@ pub(crate) fn measure(mut pieces: Vec<Piece>, editions: &[DecompTarget], jobs: u
             folders.0.push(folder);
         }
     }
+    let steps = steps_of(&work, |edition| target(edition));
     let indexed: Vec<(usize, &Job)> = work.iter().enumerate().collect();
-    let results = parallel(&indexed, jobs, |&(index, job)| compile(job, target(job.edition), &folder(target(job.edition)), index));
+    let results = parallel(&indexed, jobs, |&(index, job)| compile(job, &steps[index], &folder(target(job.edition)), index));
     let compiled: HashMap<Job, Result<Compiled, String>> = work.into_iter().zip(results).collect();
     summary.compiled = compiled.len();
 

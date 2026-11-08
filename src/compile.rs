@@ -38,24 +38,72 @@ pub fn root() -> &'static Path {
 ///   the Makefile's `ARM_C`;
 /// - any other draft takes the recipe the Makefile gives every other C file.
 pub(crate) fn steps(target: DecompTarget, draft: &Path, object: &Path, overlay: Option<&str>, arm: bool) -> Result<Vec<Vec<String>>, String> {
+    steps_many(target, &[(draft, object, overlay, arm)]).remove(0)
+}
+
+/// What `steps` gives each of `drafts` (draft, object, overlay, arm), asking
+/// make once for every draft that shares make's variables.
+pub(crate) fn steps_many(target: DecompTarget, drafts: &[(&Path, &Path, Option<&str>, bool)]) -> Vec<Result<Vec<Vec<String>>, String>> {
     let root = root();
-    // The draft as make names it: relative to the checkout when inside it.
-    let named = if draft.is_absolute() { draft.strip_prefix(root).unwrap_or(draft) } else { draft };
-    let named = named.to_string_lossy().into_owned();
     let object_of = |source: &str| format!("{}/obj/{}.o", target.output_dir, source.strip_suffix(".c").unwrap_or(source));
-    let mut variables = vec![format!("EDITION={}", target.id)];
-    let source = if arm {
-        variables.push(format!("ARM_C={named}"));
-        named
-    } else if let Some(overlay) = overlay.filter(|_| !listed(target, &named)) {
-        crate::alchemy::overlay::linked_source(root, Path::new(target.output_dir), overlay)?
-    } else {
-        named
-    };
-    let made = object_of(&source);
-    let recipe = crate::gba::recipe::recipe(root, Path::new(target.output_dir), &variables, &source, &made)
-        .map_err(|error| format!("{error}; build {} first", target.id))?;
-    Ok(crate::gba::recipe::retarget(&recipe, root, &source, &made, draft, object))
+    // Each draft's make variables and the source and object whose recipe it takes.
+    let routed: Vec<Result<(Vec<String>, String, String), String>> = drafts
+        .iter()
+        .map(|&(draft, _, overlay, arm)| {
+            // The draft as make names it: relative to the checkout when inside it.
+            let named = if draft.is_absolute() { draft.strip_prefix(root).unwrap_or(draft) } else { draft };
+            let named = named.to_string_lossy().into_owned();
+            let mut variables = vec![format!("EDITION={}", target.id)];
+            let source = if arm {
+                variables.push(format!("ARM_C={named}"));
+                named
+            } else if let Some(overlay) = overlay.filter(|_| !listed(target, &named)) {
+                crate::alchemy::overlay::linked_source(root, Path::new(target.output_dir), overlay)?
+            } else {
+                named
+            };
+            let made = object_of(&source);
+            Ok((variables, source, made))
+        })
+        .collect();
+    let mut recipes: Vec<Option<Result<Vec<Vec<String>>, String>>> = vec![None; drafts.len()];
+    let mut groups: Vec<(Vec<String>, Vec<usize>)> = Vec::new();
+    for (index, routed) in routed.iter().enumerate() {
+        match routed {
+            Ok((variables, ..)) => match groups.iter_mut().find(|(group, _)| group == variables) {
+                Some((_, members)) => members.push(index),
+                None => groups.push((variables.clone(), vec![index])),
+            },
+            Err(error) => recipes[index] = Some(Err(error.clone())),
+        }
+    }
+    for (variables, members) in groups {
+        let wanted: Vec<(String, String)> = members
+            .iter()
+            .filter_map(|&index| routed[index].as_ref().ok().map(|(_, source, made)| (source.clone(), made.clone())))
+            .collect();
+        match crate::gba::recipe::recipes(root, Path::new(target.output_dir), &variables, &wanted) {
+            Ok(found) => {
+                for (index, recipe) in members.into_iter().zip(found) {
+                    recipes[index] = Some(recipe);
+                }
+            }
+            Err(error) => {
+                for index in members {
+                    recipes[index] = Some(Err(error.clone()));
+                }
+            }
+        }
+    }
+    recipes
+        .into_iter()
+        .zip(drafts.iter().zip(&routed))
+        .map(|(recipe, (&(draft, object, _, _), routed))| {
+            let recipe = recipe.unwrap_or_else(|| Err("no recipe asked for".into())).map_err(|error| format!("{error}; build {} first", target.id))?;
+            let (_, source, made) = routed.as_ref().map_err(Clone::clone)?;
+            Ok(crate::gba::recipe::retarget(&recipe, root, source, made, draft, object))
+        })
+        .collect()
 }
 
 /// Whether the edition's object list (ags-objects' `objects.mk`) names the

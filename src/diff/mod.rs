@@ -270,6 +270,17 @@ pub(crate) fn steps(target: DecompTarget, draft: &Path, object: &Path, overlay: 
     with_draft_assembly(crate::compile::steps(target, draft, object, overlay, arm)?, object)
 }
 
+/// What `steps` gives each of `drafts` (draft, object, overlay, arm), from
+/// one `make -n` for the drafts that share a route: rank's many drafts in an
+/// edition.
+pub(crate) fn steps_many(target: DecompTarget, drafts: &[(&Path, &Path, Option<&str>, bool)]) -> Vec<Result<Vec<Vec<String>>, String>> {
+    crate::compile::steps_many(target, drafts)
+        .into_iter()
+        .zip(drafts)
+        .map(|(steps, &(_, object, _, _))| with_draft_assembly(steps?, object))
+        .collect()
+}
+
 /// Adds `flags` to each compile step (a compiler driver's -S, or a direct
 /// cc1's -dumpbase), as --flag asks for an analysis the build never runs.
 fn add_flags(steps: &mut [Vec<String>], flags: &[String]) {
