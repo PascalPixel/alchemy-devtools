@@ -40,7 +40,9 @@ and code unpacked from our reference ROM. The overlay defaults from the path
 function is resolved by ADDRESS or --symbol in the selected edition's map
 and ELF. Its reference ROM extent is read only for comparison; literal pools
 and jump tables are omitted. --symbol names one function: give several as
-ADDRESS,ADDRESS. --arm explicitly selects ARM for scaffolds without
+ADDRESS,ADDRESS. A draft whose compiled object defines no function it is
+compared with (--symbol's, or the one ADDRESS names in --edition's map,
+which in another edition is often another function) is refused. --arm explicitly selects ARM for scaffolds without
 instruction-set markers. Mixed-mode scaffolds are unsupported. This
 normalized comparison is analysis only; the full twelve-edition ROM
 comparison remains the matching authority.
@@ -826,20 +828,30 @@ pub(crate) fn text_symbols(object: &Path) -> Result<Vec<String>, String> {
 
 /// What a draft is compared with: the listing's instructions, and the
 /// functions it names, the last of which the draft's object defines being
-/// the one compared (the whole object when it defines none).
+/// the one compared. A listing object names none: the whole object is.
 pub(crate) struct Reference {
     pub(crate) listing: Vec<String>,
     pub(crate) functions: Vec<String>,
 }
 
 impl Reference {
-    /// The function to read from `object`, a compiled draft.
+    /// The function to read from `object`, a compiled draft. A draft that
+    /// defines none of the functions named is an error: comparing its whole
+    /// object would measure other code (an edition that compiles another
+    /// form, or an address that names another function there).
     pub(crate) fn symbol(&self, object: &Path) -> Result<Option<String>, String> {
         if self.functions.is_empty() {
             return Ok(None);
         }
         let defined = text_symbols(object)?;
-        Ok(self.functions.iter().rev().find(|name| defined.contains(name)).cloned())
+        match self.functions.iter().rev().find(|name| defined.contains(name)) {
+            Some(name) => Ok(Some(name.clone())),
+            None => Err(format!(
+                "the compiled draft defines no {} (it defines {}); name the function it holds with --symbol",
+                self.functions.join(" or "),
+                if defined.is_empty() { "nothing".to_string() } else { defined.join(" ") }
+            )),
+        }
     }
 }
 
