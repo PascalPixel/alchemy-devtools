@@ -277,49 +277,16 @@ pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
     }
 }
 
-/// Character `name`'s number (`ISAAC`), from character_ids.h: its
-/// enumerator, or before the characters were an enum its `#define`.
+/// Character `name`'s number (`ISAAC`), its enumerator in character_ids.h.
 pub fn character(name: &str) -> Result<u8, String> {
     let text = read("include/game/character_ids.h")?;
-    if let Some(value) = enums(&text, &HashMap::new())?.into_iter().flat_map(|(_, values)| values).find(|(n, _)| n == name).and_then(|(_, v)| v) {
-        return Ok(value as u8);
-    }
-    text.lines()
-        .find_map(|line| {
-            let mut words = line.strip_prefix("#define ")?.split_whitespace();
-            (words.next()? == name).then(|| number(words.next()?))?
-        })
-        .map(|v| v as u8)
+    enums(&text, &HashMap::new())?
+        .into_iter()
+        .flat_map(|(_, values)| values)
+        .find(|(n, _)| n == name)
+        .and_then(|(_, v)| v)
+        .map(|value| value as u8)
         .ok_or_else(|| format!("character_ids.h has no {name}"))
-}
-
-/// The characters' names in character_ids.h (`ISAAC` to `PIERS`), by number:
-/// `enum CharacterId` but its count, or before the characters were an enum
-/// its first run of definitions numbered from 0.
-pub fn character_names() -> Result<Vec<String>, String> {
-    let text = read("include/game/character_ids.h")?;
-    if let Some((_, values)) = enums(&text, &HashMap::new())?.into_iter().find(|(tag, _)| tag.as_deref() == Some("CharacterId")) {
-        return Ok(values.into_iter().map(|(n, _)| n).filter(|n| !n.ends_with("_COUNT")).collect());
-    }
-    let mut names = Vec::new();
-    for line in text.lines() {
-        let mut words = line
-            .strip_prefix("#define ")
-            .unwrap_or("")
-            .split_whitespace();
-        let (Some(name), Some(value)) = (words.next(), words.next().and_then(number)) else {
-            continue;
-        };
-        if value != names.len() as i64 {
-            break;
-        }
-        names.push(name.to_string());
-    }
-    if names.is_empty() {
-        Err("character_ids.h numbers no characters".into())
-    } else {
-        Ok(names)
-    }
 }
 
 /// The members debug party preset `preset` raises (gDebug_ParameterSets, read
@@ -377,11 +344,7 @@ mod tests {
         assert_eq!(area_name(map_id("Vale").unwrap(), 1).unwrap(), "Vale");
         assert!(actor_id("Vale", "ACTOR_PILLAR|LOCALID_PILLAR").unwrap() >= 8);
         assert!(actor_id("CottageRoomsC", "ACTOR_BILIBIN_INNKEEPER|LOCALID_BILIBIN_INNKEEPER").is_ok());
-        assert_eq!(
-            character_names().unwrap()[usize::from(character("JENNA").unwrap())],
-            "JENNA"
-        );
-        assert_eq!(character_names().unwrap().len(), 8);
+        assert_eq!(character("JENNA").unwrap(), 5);
         assert_eq!(
             ability_name(ability_id("ABILITY_MOVE").unwrap()).unwrap(),
             "Move"

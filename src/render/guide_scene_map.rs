@@ -18,7 +18,7 @@ const KEY_LEFT: u32 = 0x20;
 const KEY_UP: u32 = 0x40;
 const KEY_DOWN: u32 = 0x80;
 
-/// The modes this file plays, after guide_lucky::MODES.
+/// The modes this file plays, after guide_interface::MODES.
 pub const MODES: &[&str] = &["scene-exit-region", "game-djinni-flag", "map-recolour", "game-pack-full", "scene-log-state", "debug-menu-test-twice"];
 
 /// Kolima's tunnel (SceneId_KolimaTunnel), entered from Kolima at the foot

@@ -3,9 +3,9 @@
 //! strike, running away, the Gryphons' choices and Twin Beaks, a weapon's
 //! unleash, a miss and a critical hit, a sleeper woken, a battle won and the
 //! field coming back, the Fusion Dragon's storm, a critical hit with the
-//! whole party on the field, an item used and broken, an enemy running, a
-//! summon, an action's end and a turn's end, a level gained in the spoils,
-//! and a battle lost. Each plays a battle from Camelot's battle test menu
+//! whole party on the field, an item used and broken, an enemy running, an
+//! action's end and a turn's end, a level gained in the spoils, and a
+//! battle lost. Each plays a battle from Camelot's battle test menu
 //! (guide_battle.rs's drive, or `render psynergy`'s record_watching and
 //! record) or a random encounter in Goma Cave; a roll is forced only by
 //! answering the random call that makes it, and weapons never unleash unless
@@ -552,7 +552,7 @@ impl<'a> Guide<'a> {
     /// answered 0 and its blow roll 0: `Isaac's Swift Sword lets out a
     /// howl!`, then Sonic Smash strikes three times, as `battle/unleash.gif`.
     pub fn fight_unleash(&mut self) -> Result<(), String> {
-        let frames = self.rolled_attack(&[0], 0, Some(SWIFT_SWORD))?.frames;
+        let frames = self.rolled_attack(&[0], 0, Some(SWIFT_SWORD))?;
         self.fight_gif("battle/unleash.gif", &trimmed(&frames), "a weapon's unleash")
     }
 
@@ -560,8 +560,8 @@ impl<'a> Guide<'a> {
     /// and a critical hit (the miss roll 1, the critical roll 0), one after
     /// the other, as `battle/rolls.gif`.
     pub fn fight_rolls(&mut self) -> Result<(), String> {
-        let mut frames = trimmed(&self.rolled_attack(&[0, 1, 0xffff], 0xffff, None)?.frames);
-        frames.extend(trimmed(&self.rolled_attack(&[1, 0], 0xffff, None)?.frames));
+        let mut frames = trimmed(&self.rolled_attack(&[0, 1, 0xffff], 0xffff, None)?);
+        frames.extend(trimmed(&self.rolled_attack(&[1, 0], 0xffff, None)?));
         self.fight_gif("battle/rolls.gif", &frames, "a miss and a critical hit")
     }
 
@@ -894,20 +894,6 @@ impl<'a> Guide<'a> {
         self.fight_gif("battle/storm.gif", &trimmed(&frames), "the Fusion Dragon's storm")
     }
 
-    /// Isaac summons Judgment at copies of Garet, Ivan and Mia through
-    /// BattleEffect_RunSummon: the side left alone fades, and the battle
-    /// wipes away to the summon's sky and back, recorded as `render
-    /// psynergy` records a cast, with ten seconds of the game on each side
-    /// of its black screens, as `battle_anim/summon.gif`.
-    pub fn fight_summon(&mut self) -> Result<(), String> {
-        let root = crate::compile::root();
-        let plan = Tables::read(root)?.plan()?;
-        let cast = plan.casts.into_iter().find(|c| c.ability.name == "Judgment").ok_or("no Judgment cast")?;
-        let symbols = super::battle::Symbols::find(self.map)?;
-        let recording = super::battle::record(self.rom, &symbols, &cast, &super::battle::Scene::Game, false)?;
-        eprintln!("fight-summon: {} frames", recording.frames.len());
-        self.fight_gif("battle_anim/summon.gif", &recording.frames, "a summon")
-    }
 }
 
 /// struct Unit (battle/battle_unit.h): its size and the fields the ends of
@@ -1271,7 +1257,7 @@ const STATE_RESTART_ENTRANCE: u32 = 0x1c6;
 /// The Sanctum's entrance Vault's restart rules name.
 const VAULT_SANCTUM_ENTRANCE: u16 = 12;
 
-/// The modes this file plays.
+/// The modes this file plays, after guide_world_play::MODES.
 pub const MODES: &[&str] = &[
     "fight-opening",
     "fight-commands",
@@ -1292,7 +1278,6 @@ pub const MODES: &[&str] = &[
     "fight-critical",
     "fight-item",
     "fight-enemy-flees",
-    "fight-summon",
     "fight-action-end",
     "fight-turn-end",
     "fight-level-up",
@@ -1323,7 +1308,6 @@ impl Guide<'_> {
             "fight-critical" => self.fight_critical(),
             "fight-item" => self.fight_item(),
             "fight-enemy-flees" => self.fight_enemy_flees(),
-            "fight-summon" => self.fight_summon(),
             "fight-action-end" => self.fight_action_end(),
             "fight-turn-end" => self.fight_turn_end(),
             "fight-level-up" => self.fight_level_up(),

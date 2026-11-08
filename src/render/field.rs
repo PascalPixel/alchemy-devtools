@@ -241,17 +241,6 @@ const SLIDE_FRAMES: u32 = 240;
 /// cell and pushing against what is beyond it.
 const START_FRAMES: u32 = 180;
 
-use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
-
-/// For `render probe heap`: the heap's work (gHeapSlots, 0 while off), the
-/// functions at whose entry it is read besides each frame's end (Heap_Release,
-/// HeapSlot_Release, Heap_Initialize: just before a pool's
-/// next address falls), and the highest next addresses read.
-pub static HEAP_WORK: AtomicU32 = AtomicU32::new(0);
-pub static HEAP_PCS: [AtomicU32; 3] = [AtomicU32::new(1), AtomicU32::new(1), AtomicU32::new(1)];
-pub static HEAP_IWRAM_HIGH: AtomicU32 = AtomicU32::new(0);
-pub static HEAP_EWRAM_HIGH: AtomicU32 = AtomicU32::new(0);
-
 fn fx(px: i32) -> i32 {
     px << 16
 }
@@ -583,9 +572,10 @@ pub struct Field<'rom> {
     pub lead_in: u32,
     /// Whether an event is recorded with the leader hidden from its start.
     pub hide_leader: bool,
-    /// For `render probe`: the addresses whose entry calls `probe` (with the
-    /// machine, the address and the frame), which also runs at each frame's
-    /// end (address 0); and the functions made to return at once, with r0.
+    /// The addresses whose entry calls `probe` (with the machine, the
+    /// address and the frame), which also runs at each frame's end (address
+    /// 0), for a recording that watches the game; and the functions made to
+    /// return at once, with r0.
     pub probe_pcs: Vec<u32>,
     pub probe: Option<Box<dyn FnMut(&Gba<'rom>, u32, u32) + 'rom>>,
     pub returns: Vec<(u32, u32)>,
@@ -1030,17 +1020,6 @@ impl<'rom> Field<'rom> {
                 self.gba.write32(address, value);
             }
         }
-        let heap = HEAP_WORK.load(Relaxed);
-        if heap != 0 && (frame_done || HEAP_PCS.iter().any(|p| p.load(Relaxed) == pc)) {
-            let ew = self.gba.read32(heap);
-            let iw = self.gba.read32(heap + 4);
-            if (0x0300_0000..0x0300_8000).contains(&iw) && iw > HEAP_IWRAM_HIGH.load(Relaxed) {
-                HEAP_IWRAM_HIGH.store(iw, Relaxed);
-            }
-            if (0x0200_0000..0x0204_0000).contains(&ew) && ew > HEAP_EWRAM_HIGH.load(Relaxed) {
-                HEAP_EWRAM_HIGH.store(ew, Relaxed);
-            }
-        }
         if let Some(&(_, r0)) = self.returns.iter().find(|(a, _)| *a == pc) {
             self.gba.return_now(r0);
             return Ok(frame_done);
@@ -1178,31 +1157,6 @@ impl<'rom> Field<'rom> {
             }
         }
         Ok(frame_done)
-    }
-
-    /// Runs `n` frames an instruction at a time, and returns the halfwords
-    /// at `addresses` each time any of them changes: the frame it changed in
-    /// (counted from 0) and their values then, with the picture of the last
-    /// whole frame. It stops early when the scene's field work is freed or
-    /// replaced (gFieldWork changes), since the addresses are then another
-    /// scene's.
-    pub fn watch_halfwords(&mut self, addresses: &[u32], n: u32) -> Result<Vec<(u32, Vec<u16>, Vec<u16>)>, String> {
-        let read = |field: &Field| addresses.iter().map(|&a| field.gba.read16(a)).collect::<Vec<u16>>();
-        let work = self.gba.read32(self.s.field_work);
-        let mut last = read(self);
-        let mut out = vec![(0, last.clone(), self.picture())];
-        let mut frame = 0;
-        while frame < n && self.gba.read32(self.s.field_work) == work {
-            if self.run_instruction()? {
-                frame += 1;
-            }
-            let now = read(self);
-            if now != last {
-                out.push((frame, now.clone(), self.picture()));
-                last = now;
-            }
-        }
-        Ok(out)
     }
 
     /// Runs an instruction at a time until VCOUNT reads `line`: 227, the
@@ -1468,16 +1422,6 @@ impl<'rom> Field<'rom> {
         }
     }
 
-    /// Moves actor `id` to (x, z) pixels on the map, where it stays until
-    /// something moves it.
-    pub fn set_actor_position(&mut self, id: u16, x: i32, z: i32) {
-        let a = self.actor_object(id);
-        if a != 0 {
-            self.gba.write32(a + OBJ_X, fx(x) as u32);
-            self.gba.write32(a + OBJ_Z, fx(z) as u32);
-        }
-    }
-
     /// Actor `id`'s object as it is now, when the scene has one.
     pub fn actor(&self, id: u16) -> Option<Actor> {
         let a = self.actor_object(id);
@@ -1561,16 +1505,6 @@ impl<'rom> Field<'rom> {
         }
         let cells = self.gba.read32(self.map_work() + MAP_LAYER_CELLS + MAP_LAYER_SIZE * u32::from(layer));
         self.gba.read32(cells + ((cx + (cz << 7)) << 2) as u32) as i32
-    }
-
-    /// The terrain kind of cell (cx, cz) of map layer `layer` (enum
-    /// TerrainKind, the low four bits of its shape's first byte) and its
-    /// first height sample in pixels, which is the height everywhere in a
-    /// TERRAIN_FLAT cell.
-    pub fn shape(&self, layer: u8, cx: i32, cz: i32) -> (u8, i32) {
-        let shape = (self.cell_word(layer, cx, cz) as u32) >> 24;
-        let at = self.s.map_collision + 4 * shape;
-        (self.gba.read8(at) & 15, i32::from(self.gba.read8(at + 1) as i8) * 8)
     }
 
     /// The cells within the header's bounds, by layer and row, as (layer,

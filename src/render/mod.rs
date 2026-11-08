@@ -18,11 +18,7 @@ mod front;
 #[cfg(feature = "render")]
 mod guide;
 #[cfg(feature = "render")]
-mod guide_system;
-#[cfg(feature = "render")]
 mod guide_front;
-#[cfg(feature = "render")]
-mod guide_apart;
 #[cfg(feature = "render")]
 mod guide_aerie;
 #[cfg(feature = "render")]
@@ -30,19 +26,13 @@ mod guide_battle;
 #[cfg(feature = "render")]
 mod guide_beam;
 #[cfg(feature = "render")]
-mod guide_cells;
-#[cfg(feature = "render")]
 mod guide_docs_world;
 #[cfg(feature = "render")]
 mod guide_field_moves;
 #[cfg(feature = "render")]
 mod guide_unused;
 #[cfg(feature = "render")]
-mod guide_effect;
-#[cfg(feature = "render")]
 mod guide_fight;
-#[cfg(feature = "render")]
-mod guide_menu;
 #[cfg(feature = "render")]
 mod guide_lucky;
 #[cfg(feature = "render")]
@@ -52,8 +42,6 @@ mod guide_menus;
 #[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
-mod guide_planes;
-#[cfg(feature = "render")]
 mod guide_places;
 #[cfg(feature = "render")]
 mod guide_set_piece;
@@ -61,10 +49,6 @@ mod guide_set_piece;
 mod guide_scene_map;
 #[cfg(feature = "render")]
 mod guide_take;
-#[cfg(feature = "render")]
-mod guide_window;
-#[cfg(feature = "render")]
-mod guide_world;
 #[cfg(feature = "render")]
 mod guide_world_play;
 mod jobs;
@@ -74,12 +58,6 @@ mod mgba;
 mod party;
 #[cfg(feature = "render")]
 mod places;
-#[cfg(feature = "render")]
-mod probe;
-#[cfg(feature = "render")]
-mod probe_places;
-#[cfg(feature = "render")]
-mod probe_units;
 #[cfg(feature = "render")]
 mod source;
 #[cfg(feature = "render")]
@@ -145,7 +123,6 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         Some(kind @ ("place" | "event")) => scenes(kind, &arguments[1..]),
         Some("story") => story_pictures(&arguments[1..]),
         Some("guide") => guide_pictures(&arguments[1..]),
-        Some("probe") => probe_command(&arguments[1..]),
         #[cfg(feature = "render")]
         Some("check") => animation::check_folders(&arguments[1..]),
         Some("-h" | "--help") => {
@@ -1083,56 +1060,6 @@ fn story_pictures(arguments: &[String]) -> Result<(), String> {
     play_story(root, &edition, &only, &flags, &out)
 }
 
-const PROBE_USAGE: &str = "usage: alchemy-devtools render probe --flags flags.tsv --only NAME... [--out DIR] [--edition tbs-en]
-Plays a built ☀️ edition and prints what it reads for open questions only the
-running game settles.";
-
-fn probe_command(arguments: &[String]) -> Result<(), String> {
-    let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
-    let mut arguments = arguments.iter();
-    while let Some(argument) = arguments.next() {
-        let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{PROBE_USAGE}"));
-        match argument.as_str() {
-            "--only" => only.push(value("--only")?),
-            "--out" => out = Some(PathBuf::from(value("--out")?)),
-            "--edition" => edition = value("--edition")?,
-            "--flags" => flags_tsv = Some(PathBuf::from(value("--flags")?)),
-            other => return Err(format!("unexpected argument {other:?}\n{PROBE_USAGE}")),
-        }
-    }
-    let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{PROBE_USAGE}"))?)?;
-    let root = crate::compile::root();
-    let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("probe"));
-    play_probe(root, &edition, &only, &flags, &out)
-}
-
-#[cfg(not(feature = "render"))]
-fn play_probe(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Result<(), String> {
-    Err("alchemy-devtools was built without the render feature".to_string())
-}
-
-#[cfg(feature = "render")]
-fn play_probe(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
-    let build = root.join("out").join(edition);
-    let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
-    let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
-    let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
-    let symbols = field::Symbols::find(&map)?;
-    std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
-    let mut failed = Vec::new();
-    for name in probe::PROBES.iter().chain(probe_places::PROBES).chain(probe_units::PROBES).filter(|p| only.is_empty() || only.iter().any(|o| o == *p)) {
-        if let Err(e) = guide.probe(name, &map) {
-            eprintln!("{name}: {e}");
-            failed.push(*name);
-        }
-    }
-    for (file, bytes, what) in &guide.written {
-        eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
-    }
-    if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
-}
-
 #[cfg(not(feature = "render"))]
 fn play_story(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Result<(), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
@@ -1448,7 +1375,7 @@ fn play_guide(
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     // The work in pieces: each mode, and field-psynergy's casts one by one.
     let mut units: Vec<String> = Vec::new();
-    for &name in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_interface::MODES).chain(guide_scene_map::MODES).filter(|&&name| wanted(name)) {
+    for name in guide::modes().filter(|&name| wanted(name)) {
         if name == "field-psynergy" {
             let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
             units.extend(guide::field_cast_names()?.into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
@@ -1482,7 +1409,7 @@ fn play_guide(
             }
         }
         // Failures in the order the modes play.
-        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_interface::MODES).chain(guide_scene_map::MODES).position(|m| m == name));
+        failed.sort_by_key(|name| guide::modes().position(|m| m == name));
         failed.dedup();
     } else {
         let build = root.join("out").join(edition);
@@ -1514,7 +1441,7 @@ fn play_guide(
                 Ok(records)
             });
         }
-        for &name in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_interface::MODES).chain(guide_scene_map::MODES) {
+        for name in guide::modes() {
             if wanted(name) {
                 if let Err(e) = guide.run(name, casts) {
                     eprintln!("{name}: {e}");
@@ -1544,15 +1471,12 @@ mod tests {
     use super::*;
 
     /// Every mode `render guide` plays is named in its usage, so a new one
-    /// (`shop-layers-3d`) or a renamed one (`status-layers-3d`) can be found
-    /// from `--help`.
+    /// or a renamed one can be found from `--help`.
     #[test]
     fn every_guide_mode_is_in_the_usage() {
         let words: Vec<&str> = GUIDE_USAGE.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-')).collect();
-        for &mode in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_interface::MODES).chain(guide_scene_map::MODES) {
+        for mode in guide::modes() {
             assert!(words.contains(&mode), "{mode} is not in GUIDE_USAGE");
         }
-        assert!(guide::MODES.contains(&"shop-layers-3d"));
-        assert!(!guide::MODES.contains(&"item-layers-3d"));
     }
 }
