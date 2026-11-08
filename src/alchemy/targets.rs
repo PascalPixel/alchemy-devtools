@@ -15,6 +15,16 @@ impl DecompTargetId {
     pub fn as_str(self) -> &'static str {
         self.0
     }
+
+    /// The game an edition belongs to: its name before the language.
+    pub fn game(self) -> &'static str {
+        self.0.split_once('-').map_or(self.0, |(game, _)| game)
+    }
+
+    /// The edition's language: its name after the game.
+    pub fn language(self) -> &'static str {
+        self.0.split_once('-').map_or("", |(_, language)| language)
+    }
 }
 
 impl std::fmt::Display for DecompTargetId {
@@ -34,9 +44,8 @@ pub struct DecompTarget {
 }
 
 impl DecompTarget {
-    /// The game an edition belongs to: its name before the language.
     pub fn game(&self) -> &'static str {
-        self.id.0.split_once('-').map_or(self.id.0, |(game, _)| game)
+        self.id.game()
     }
 
     pub fn verify_reference(&self, rom: &[u8]) -> Result<(), String> {
@@ -100,6 +109,18 @@ fn target(edition: &'static Edition) -> DecompTarget {
 /// Every edition, in rom.sha1's order.
 pub fn targets() -> Result<Vec<DecompTarget>, String> {
     Ok(editions()?.iter().map(target).collect())
+}
+
+/// Every edition's name, in rom.sha1's order.
+pub fn ids() -> Result<Vec<DecompTargetId>, String> {
+    Ok(editions()?.iter().map(|edition| DecompTargetId(&edition.id)).collect())
+}
+
+/// The edition a name stands for. A name is made only from rom.sha1's lines,
+/// so its edition is always there.
+pub fn target_for(id: DecompTargetId) -> DecompTarget {
+    let all = editions().expect("an edition's name comes from rom.sha1");
+    target(all.iter().find(|edition| edition.id == id.0).expect("an edition's name comes from rom.sha1"))
 }
 
 pub fn parse_decomp_target(value: &str) -> Result<DecompTargetId, String> {

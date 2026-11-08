@@ -179,7 +179,7 @@ fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
 }
 
 /// Whether an edition's ROM is the one rom.sha1 names.
-fn verified(root: &Path, edition: &str) -> Result<(), String> {
+pub(crate) fn verified(root: &Path, edition: &str) -> Result<(), String> {
     let rom = format!("out/{edition}/{edition}.gba");
     let list = std::fs::read_to_string(root.join("rom.sha1")).map_err(|error| format!("rom.sha1: {error}"))?;
     let expected = list
@@ -195,6 +195,12 @@ fn verified(root: &Path, edition: &str) -> Result<(), String> {
 
 pub(crate) fn measure_edition(root: &Path, edition: &str) -> Result<Counted, String> {
     verified(root, edition)?;
+    count_edition(root, edition)
+}
+
+/// One edition counted from its maps alone, whatever its ROM: what `where
+/// --done` shows of a tree in progress. A measurement is `measure_edition`.
+pub(crate) fn count_edition(root: &Path, edition: &str) -> Result<Counted, String> {
     let mut counted = Tally::default();
     let main = root.join(format!("out/{edition}/{edition}.map"));
     let text = std::fs::read_to_string(&main).map_err(|error| format!("{}: {error}", main.display()))?;
@@ -218,9 +224,18 @@ pub(crate) fn measure_edition(root: &Path, edition: &str) -> Result<Counted, Str
 
 /// A game's six editions, or why it is pending.
 pub(crate) fn measure_game(root: &Path, game: &str) -> Result<Game, String> {
+    count_game(root, game, measure_edition)
+}
+
+/// A game's six editions, each counted by `count`.
+pub(crate) fn count_game(
+    root: &Path,
+    game: &str,
+    count: fn(&Path, &str) -> Result<Counted, String>,
+) -> Result<Game, String> {
     let mut editions = Vec::new();
     for language in LANGUAGES {
-        editions.push((language, measure_edition(root, &format!("{game}-{language}"))?));
+        editions.push((language, count(root, &format!("{game}-{language}"))?));
     }
     let english = editions[1].1.done.executable;
     for (_, counted) in &mut editions {

@@ -63,12 +63,17 @@ impl Layout {
         format!("recon/{}/{language}/rom", self.game)
     }
 
+    /// The folder of the overlays' link scripts and scaffolds.
+    pub fn overlays(&self) -> String {
+        format!("recon/{}/raw/overlays", self.game)
+    }
+
     pub fn overlay_script(&self, id: &str) -> String {
-        format!("recon/{}/raw/overlays/resource_{id}.ld", self.game)
+        format!("{}/resource_{id}.ld", self.overlays())
     }
 
     pub fn overlay_scaffold(&self, id: &str) -> String {
-        format!("recon/{}/raw/overlays/resource_{id}_overlay.s", self.game)
+        format!("{}/resource_{id}_overlay.s", self.overlays())
     }
 
     /// What an overlay's link script says to place one scaffold section.

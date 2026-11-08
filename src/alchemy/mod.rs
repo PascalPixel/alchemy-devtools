@@ -1,9 +1,10 @@
 //! Alchemy's own layout: where its object lists, listings, scaffolds and
-//! drafts live, its twelve editions and their reference ROMs, the overlays and
-//! the packed resource streams Camelot's loader unpacks, the PO message
-//! catalogs, what counts as DONE, how a measurement is published, and the
-//! humanization report.
+//! drafts live, what a built edition leaves under out/, its twelve editions and
+//! their reference ROMs, the overlays and the packed resource streams Camelot's
+//! loader unpacks, the PO message catalogs, what counts as DONE, how a
+//! measurement is published, and the humanization report.
 
+pub(crate) mod built;
 pub(crate) mod done;
 pub(crate) mod humanity;
 pub(crate) mod layout;

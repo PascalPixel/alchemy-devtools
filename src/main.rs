@@ -25,17 +25,17 @@ const USAGE: &str = r#"usage: alchemy-devtools <command> [args]
 Run any command with --help for its options.
 
   adopt     move matched drafts into the build in every edition, with a journal to undo it
-  check     each edition's built bytes against its ROM, and the fake-match tags
+  check     each built ROM and overlay against its reference, and the fake-match tags
   diff      a C draft against the listing it would replace
-  editions  what an edition still takes from its scaffold while another links C
+  editions  what an edition still takes from its scaffold while English links C
   permute   search rewrites and PERM macro choices of a draft toward differ 0
   progress  DONE code and data in each edition, from the linker maps, and what is left to humanize
   rank      every unfinished function, furthest first by skeleton gap
-  regress   the functions whose assembly differs between two builds of the tree
+  regress   the functions whose assembly differs from a saved build, each classed
   render    the docs site's pictures and recordings of a built edition (feature render)
   twins     the reference game's functions closest in shape to each unmatched one
   variants  named rewrites of a draft, each kept only when it narrows the gap
-  where     the bytes each edition still places from recon/, by object"#;
+  where     the bytes each edition still places from recon/, and DONE from the maps"#;
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
