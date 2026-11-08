@@ -31,3 +31,19 @@ The main session ranks, briefs, verifies, adopts and lands; agents match. A work
 11. **Scale to the work.** Matching is wide: one agent per item over the whole ranking. Design questions are narrow: a few readers, then the main session decides. Never cap silently; log what a round left out (rank names the listings it leaves out on stderr). Check that an item list is not empty before launching it.
 
 Near misses stopped by allocation or scheduling are not chased while far-off work remains; the far-off work often settles them. The last stretch works them with tagged devices where the project allows them, so DONE is reached and the devices are cleared afterwards: `sweep` takes out each device every edition compiles the same without.
+
+Cost decides the shape. One agent per draft with a second agent verifying each claim cost about 64M tokens for 0.9 points of The Lost Age: most claims failed on rules the matching agent never checked. A few agents, each working a batch in turn and checking its own drafts against the rules (`check tags`, the source rules, `diff` in every edition) before calling one clean, took 2.75 points for 1.1M. Make the agent that writes a match prove it; keep independent verification for samples and landings.
+
+## What matching has measured
+
+Facts about Alchemy's compiler, alchemy-gcc, not rules.
+
+- `p[n]` and `*(p + n)` can compile differently; each site keeps the spelling it matches with.
+- A struct declared before its type is complete keeps a smaller alignment: a header includes its structs' headers first. alchemy-gcc pads every struct to 4 bytes, so a table read by columns is a `[][N]` array.
+- Locals declared in an inner block take their pseudos later and change allocation. Allocation order is r3, r2, r1, r0, ip, lr, r4 to r7, r8, r10, r9, r11; global.c ranks pseudos by refs over live length; a constant `REG_EQUAL` note doubles a pseudo's live length.
+- A loop built from labels and `goto` has no loop notes, so loop.c and jump.c leave it alone; an empty C loop is deleted.
+- An empty asm counts 4 bytes when literal pools are placed and emits none; a one-pass block's loop-end note ends CSE's block and is a scheduling barrier; sched2 breaks ties by RTL order. CSE reuses a register holding 0 or 1.
+- A file that tests `LANGUAGE` without including `edition.h` silently gets the Japanese branch.
+- Within an object, code and data follow definition order; only the object list orders objects.
+- Japanese is often an older layout of a function. A function that saves r9 and never uses it is a nested function storing its static chain.
+- To measure a rewrite in seconds, compile its one object to assembly for one edition and diff it against the build's, `.L` numbers ignored; then `make compare-editions`.
