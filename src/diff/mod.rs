@@ -31,7 +31,7 @@ the comparison, - for the listing and + for the draft; --skeleton prints the
 comparison of the skeletons. "differ 0" means the code matches instruction
 for instruction.
 Each run compiles in its own folder, out/EDITION/obj/drafts/run-PID, and
-removes it when done.
+removes it when done; a run killed first leaves it to the next run.
 An overlay draft (a path under overlays/) compares with the function of
 the same name, or --symbol, in out/EDITION/overlays/OVERLAY_overlay.o;
 an adopted function absent from that object uses the linked overlay's bounds
@@ -42,15 +42,17 @@ and ELF. Its reference ROM extent is read only for comparison; literal pools
 and jump tables are omitted. --symbol names one function: give several as
 ADDRESS,ADDRESS. A draft whose compiled object defines no function it is
 compared with (--symbol's, or the one ADDRESS names in --edition's map,
-which in another edition is often another function) is refused. --arm explicitly selects ARM for scaffolds without
-instruction-set markers. Mixed-mode scaffolds are unsupported. This
+which in another edition is often another function) is refused. --arm
+explicitly selects ARM for scaffolds without instruction-set markers.
+Mixed-mode scaffolds are unsupported. This
 normalized comparison is analysis only; the full twelve-edition ROM
 comparison remains the matching authority.
 --arm compiles an ARM draft of either game as the build compiles game ARM C
 (the Makefile's ARM_C, AGENTS.md K1): stock GCC 2.95.2 at the common ARM
 setting, assembled as ARM. Credit comes only from source the build links.
---rtl keeps the run's folder and the compiler's dump after every pass in it
-(GCC's -da), named DRAFT.c.PASS, to find the pass where the draft's
+--rtl keeps the run's folder as out/EDITION/obj/drafts/rtl-DRAFT, in place
+of the last --rtl run's on that draft, with the compiler's dump after every
+pass in it (GCC's -da), named DRAFT.c.PASS, to find the pass where the draft's
 allocation or scheduling first leaves the listing's; with -fsched-verbose=5
 the sched and sched2 dumps say in words why each instruction was scheduled
 where it is. --alloc prints each pseudo register global.c allocates, in its
@@ -166,26 +168,41 @@ pub(crate) fn parse(arguments: &[String]) -> Result<Options, String> {
 
 /// A run's own folder, out/EDITION/obj/drafts/run-PID: the compiler runs in
 /// it, so its pass dumps land there, and no two runs share an object. It is
-/// removed when the run ends unless kept.
+/// removed when the run ends, or kept under the name `keep` gives it, in
+/// place of what that name held. A run killed before it could remove its
+/// folder leaves it to the next run, which sweeps it.
 pub(crate) struct Work {
     pub(crate) folder: PathBuf,
-    keep: bool,
+    keep: Option<PathBuf>,
 }
 
 impl Work {
     pub(crate) fn new(target: DecompTarget) -> Result<Work, String> {
-        let folder = root().join(target.output_dir).join("obj/drafts").join(format!("run-{}", std::process::id()));
+        let drafts = root().join(target.output_dir).join("obj/drafts");
+        crate::gba::process::sweep(&drafts, "run-");
+        let folder = drafts.join(format!("run-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&folder);
         std::fs::create_dir_all(&folder).map_err(|error| format!("{}: {error}", folder.display()))?;
-        Ok(Work { folder, keep: false })
+        Ok(Work { folder, keep: None })
+    }
+
+    /// Keeps the folder when the run ends, as `name` beside it.
+    fn keep_as(&mut self, name: &str) -> PathBuf {
+        let kept = self.folder.with_file_name(name);
+        self.keep = Some(kept.clone());
+        kept
     }
 }
 
 impl Drop for Work {
     fn drop(&mut self) {
-        if !self.keep {
-            let _ = std::fs::remove_dir_all(&self.folder);
+        if let Some(kept) = &self.keep {
+            let _ = std::fs::remove_dir_all(kept);
+            if std::fs::rename(&self.folder, kept).is_ok() {
+                return;
+            }
         }
+        let _ = std::fs::remove_dir_all(&self.folder);
     }
 }
 
@@ -936,7 +953,7 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let stem = draft.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     let name = draft.file_name().unwrap_or_default().to_string_lossy().into_owned();
     let mut work = Work::new(target)?;
-    work.keep = options.rtl;
+    let kept = options.rtl.then(|| work.keep_as(&format!("rtl-{stem}")));
     let object = work.folder.join(format!("{stem}.o"));
     let mut plan = steps(target, &draft, &object, options.overlay.as_deref(), options.arm)?;
     let built = plan.clone();
@@ -947,8 +964,8 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     for step in plan {
         command(&step, &work.folder)?;
     }
-    if options.rtl {
-        println!("pass dumps: {}/{name}.*", work.folder.display());
+    if let Some(kept) = &kept {
+        println!("pass dumps: {}/{name}.*", kept.display());
     }
     command(&assemble, &work.folder)?;
     let found = reference(&options, &object)?;

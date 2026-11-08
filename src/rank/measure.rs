@@ -305,6 +305,10 @@ pub(crate) fn measure(mut pieces: Vec<Piece>, editions: &[DecompTarget], jobs: u
     for job in &work {
         let folder = folder(target(job.edition));
         if !folders.0.contains(&folder) {
+            // What a killed rank left goes first; a live one's stays.
+            if let Some(drafts) = folder.parent() {
+                crate::gba::process::sweep(drafts, "rank-");
+            }
             let _ = std::fs::remove_dir_all(&folder);
             std::fs::create_dir_all(&folder).map_err(|error| format!("{}: {error}", folder.display()))?;
             folders.0.push(folder);

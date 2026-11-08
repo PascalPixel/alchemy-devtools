@@ -513,16 +513,7 @@ pub(crate) fn stop_on_signals() {
 /// Remove the scratch of earlier runs on this draft whose process has gone
 /// (killed before its guard could run); a live run's scratch stays.
 fn sweep(output: &Path) {
-    let Ok(entries) = std::fs::read_dir(output) else { return };
-    for entry in entries.flatten() {
-        let name = entry.file_name().to_string_lossy().into_owned();
-        let Some(pid) = name.strip_prefix("run-").and_then(|pid| pid.parse::<libc::pid_t>().ok()) else { continue };
-        // SAFETY: signal 0 only asks whether the process exists.
-        let gone = unsafe { libc::kill(pid, 0) } != 0 && std::io::Error::last_os_error().raw_os_error() == Some(libc::ESRCH);
-        if gone {
-            let _ = std::fs::remove_dir_all(entry.path());
-        }
-    }
+    crate::gba::process::sweep(output, "run-");
 }
 
 fn execute(mut problem: Problem, options: &Options, scaffold: Option<String>, output: &Path) -> Result<(), String> {

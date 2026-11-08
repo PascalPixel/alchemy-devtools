@@ -39,6 +39,19 @@ pub(crate) fn gone(pid: u32) -> bool {
     pid <= 0 || (unsafe { libc::kill(pid, 0) } != 0 && std::io::Error::last_os_error().raw_os_error() == Some(libc::ESRCH))
 }
 
+/// Removes each folder in `folder` named `prefix` and a process id whose
+/// process has ended: a run killed before it could remove its own. A live
+/// run's folder stays.
+pub(crate) fn sweep(folder: &Path, prefix: &str) {
+    let Ok(entries) = std::fs::read_dir(folder) else { return };
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.strip_prefix(prefix).and_then(|pid| pid.parse::<u32>().ok()).is_some_and(gone) {
+            let _ = std::fs::remove_dir_all(entry.path());
+        }
+    }
+}
+
 #[cfg(not(target_os = "macos"))]
 fn spawn(program: &str, args: &[&str], cwd: &Path) -> Result<Output, String> {
     #[cfg(target_os = "linux")]
@@ -286,9 +299,19 @@ mod tests {
     }
 
     #[test]
-    fn a_running_process_is_not_gone() {
+    fn a_running_process_is_not_gone_and_an_ended_ones_folder_is_swept() {
         assert!(!gone(std::process::id()));
         assert!(gone(0) && gone(u32::MAX) && gone(0x3fff_fff0));
+        let directory = tempfile::tempdir().unwrap();
+        let mut child = std::process::Command::new("true").spawn().unwrap();
+        child.wait().unwrap();
+        let folders = [format!("run-{}", child.id()), format!("run-{}", std::process::id()), format!("rank-{}", child.id()), "run-x".into()];
+        for name in &folders {
+            std::fs::create_dir_all(directory.path().join(name).join("inner")).unwrap();
+        }
+        sweep(directory.path(), "run-");
+        let left: Vec<bool> = folders.iter().map(|name| directory.path().join(name).exists()).collect();
+        assert_eq!(left, [false, true, true, true]);
     }
 
     #[test]
