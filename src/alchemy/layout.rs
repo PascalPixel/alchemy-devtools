@@ -378,9 +378,9 @@ pub struct Piece {
 pub fn pieces(lines: &[&str], section: &Section) -> Vec<Piece> {
     let mut pieces: Vec<Piece> = Vec::new();
     let mut bytes_seen = false;
-    for i in section.start + 1..section.end {
-        let bytes = incbin(lines[i]);
-        if pieces.is_empty() || (bytes.is_none() && bytes_seen && !lines[i].trim().is_empty()) {
+    for (i, line) in lines.iter().enumerate().take(section.end).skip(section.start + 1) {
+        let bytes = incbin(line);
+        if pieces.is_empty() || (bytes.is_none() && bytes_seen && !line.trim().is_empty()) {
             pieces.push(Piece { start: i, end: i, names: Vec::new(), offset: None });
             bytes_seen = false;
         }

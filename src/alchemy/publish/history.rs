@@ -664,7 +664,7 @@ mod tests {
         );
         let mut history = parse(&old).unwrap();
         assert_eq!(history.days[0].tbs, Some(Measure::bytes(7808068, 8237808)));
-        assert_eq!(text(&history), format!("# Published progress; '-' means no value was recorded.\n{}", &old));
+        assert_eq!(text(&history), format!("# Published progress; '-' means no value was recorded.\n{}", old));
         // The archive holds no history in older columns; such a file is refused.
         let models = old.replace("\toverhaul", "\tmodels\toverhaul");
         assert!(parse(&models).is_err());

@@ -118,13 +118,11 @@ pub fn lex(text: &str) -> Vec<Token<'_>> {
             let exponent: &[u8] = if hex { b"pP" } else { b"eE" };
             while at < bytes.len() {
                 let next = bytes[at];
-                if (next == b'+' || next == b'-') && exponent.contains(&bytes[at - 1]) {
-                    at += 1;
-                } else if next.is_ascii_alphanumeric() || next == b'_' || next == b'.' {
-                    at += 1;
-                } else {
+                let sign = (next == b'+' || next == b'-') && exponent.contains(&bytes[at - 1]);
+                if !(sign || next.is_ascii_alphanumeric() || next == b'_' || next == b'.') {
                     break;
                 }
+                at += 1;
             }
             Kind::Number
         } else if byte.is_ascii_alphabetic() || byte == b'_' || byte == b'$' {

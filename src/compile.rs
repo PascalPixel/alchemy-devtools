@@ -29,25 +29,6 @@ pub fn root() -> &'static Path {
     })
 }
 
-#[cfg(test)]
-mod checkout_tests {
-    use super::*;
-
-    #[test]
-    fn finds_the_game_checkout_above_a_submodule() {
-        let directory = tempfile::tempdir().unwrap();
-        let root = directory.path();
-        std::fs::create_dir(root.join("games")).unwrap();
-        std::fs::write(root.join("rom.sha1"), "").unwrap();
-        std::fs::write(root.join("Makefile"), "").unwrap();
-        let nested = root.join("alchemy-devtools/src");
-        std::fs::create_dir_all(&nested).unwrap();
-        assert_eq!(checkout_root(&nested).as_deref(), Some(root));
-        std::fs::remove_file(root.join("rom.sha1")).unwrap();
-        assert!(checkout_root(&nested).is_none());
-    }
-}
-
 /// The commands that compile `draft` into `object` (its `.s` and `.i` beside
 /// it) as `target`'s build compiles the file the draft replaces:
 /// - a file the edition's object list names takes its own recipe;
@@ -83,4 +64,23 @@ fn listed(target: DecompTarget, source: &str) -> bool {
     let object = format!("$(BUILD)/obj/{}.o", source.strip_suffix(".c").unwrap_or(source));
     std::fs::read_to_string(root().join(target.output_dir).join("objects.mk"))
         .is_ok_and(|list| list.split_whitespace().any(|word| word == object))
+}
+
+#[cfg(test)]
+mod checkout_tests {
+    use super::*;
+
+    #[test]
+    fn finds_the_game_checkout_above_a_submodule() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        std::fs::create_dir(root.join("games")).unwrap();
+        std::fs::write(root.join("rom.sha1"), "").unwrap();
+        std::fs::write(root.join("Makefile"), "").unwrap();
+        let nested = root.join("alchemy-devtools/src");
+        std::fs::create_dir_all(&nested).unwrap();
+        assert_eq!(checkout_root(&nested).as_deref(), Some(root));
+        std::fs::remove_file(root.join("rom.sha1")).unwrap();
+        assert!(checkout_root(&nested).is_none());
+    }
 }

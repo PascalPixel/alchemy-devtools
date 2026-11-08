@@ -88,7 +88,7 @@ rewrites replace only the draft lines they change (or the whole function as
 printed, when they do not carry over with the same code). The run's scratch
 is removed however it ends.
 --arm compiles each candidate as alchemy-devtools diff --arm does: through
-the game ARM route (GAME_ARM_SOURCES): stock GCC 2.95.2."#;
+the game ARM route (the Makefile's ARM_C): stock GCC 2.95.2."#;
 
 struct Options {
     draft: PathBuf,

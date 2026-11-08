@@ -931,6 +931,50 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+fn arm_word(bytes: &[u8], i: usize) -> u32 {
+    u32::from_le_bytes([bytes[i * 4], bytes[i * 4 + 1], bytes[i * 4 + 2], bytes[i * 4 + 3]])
+}
+
+/// Jump-table words of ARM code at `base`: after `ldr pc, [pc, rN, lsl #2]` or
+/// `add pc, pc, rN, lsl #2` (any condition), the words from pc + 8 on whose
+/// value is an address inside the function. They move with the function, so
+/// they compare as relocations, not instructions.
+fn arm_tables(bytes: &[u8], base: u32) -> BTreeSet<usize> {
+    let count = bytes.len() / 4;
+    let inside = |w: u32| w >= base && w < base + bytes.len() as u32;
+    let mut table = BTreeSet::new();
+    for i in 0..count {
+        let w = arm_word(bytes, i);
+        if w & 0x0fff_fff0 != 0x079f_f100 && w & 0x0fff_fff0 != 0x008f_f100 {
+            continue;
+        }
+        let mut j = i + 2;
+        while j < count && inside(arm_word(bytes, j)) {
+            table.insert(j);
+            j += 1;
+        }
+    }
+    table
+}
+
+/// The data among ARM code at `base`, by word index: the pool words a
+/// pc-relative load reads, and the jump-table words.
+fn arm_data(bytes: &[u8], base: u32) -> (BTreeSet<usize>, BTreeSet<usize>) {
+    let count = bytes.len() / 4;
+    let mut pool = BTreeSet::new();
+    for i in 0..count {
+        let w = arm_word(bytes, i);
+        if w & 0x0f3f_0000 == 0x051f_0000 {
+            let offset = (w & 0xfff) as i64;
+            let target = i as i64 * 4 + 8 + if w & (1 << 23) != 0 { offset } else { -offset };
+            if target >= 0 && target % 4 == 0 && (target / 4) < count as i64 {
+                pool.insert((target / 4) as usize);
+            }
+        }
+    }
+    (pool, arm_tables(bytes, base))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1437,48 +1481,4 @@ mod tests {
         assert!(script.contains(&"- bgt.n +8".to_string()));
         assert!(script.contains(&"+ bgt.n +12".to_string()));
     }
-}
-
-fn arm_word(bytes: &[u8], i: usize) -> u32 {
-    u32::from_le_bytes([bytes[i * 4], bytes[i * 4 + 1], bytes[i * 4 + 2], bytes[i * 4 + 3]])
-}
-
-/// Jump-table words of ARM code at `base`: after `ldr pc, [pc, rN, lsl #2]` or
-/// `add pc, pc, rN, lsl #2` (any condition), the words from pc + 8 on whose
-/// value is an address inside the function. They move with the function, so
-/// they compare as relocations, not instructions.
-fn arm_tables(bytes: &[u8], base: u32) -> BTreeSet<usize> {
-    let count = bytes.len() / 4;
-    let inside = |w: u32| w >= base && w < base + bytes.len() as u32;
-    let mut table = BTreeSet::new();
-    for i in 0..count {
-        let w = arm_word(bytes, i);
-        if w & 0x0fff_fff0 != 0x079f_f100 && w & 0x0fff_fff0 != 0x008f_f100 {
-            continue;
-        }
-        let mut j = i + 2;
-        while j < count && inside(arm_word(bytes, j)) {
-            table.insert(j);
-            j += 1;
-        }
-    }
-    table
-}
-
-/// The data among ARM code at `base`, by word index: the pool words a
-/// pc-relative load reads, and the jump-table words.
-fn arm_data(bytes: &[u8], base: u32) -> (BTreeSet<usize>, BTreeSet<usize>) {
-    let count = bytes.len() / 4;
-    let mut pool = BTreeSet::new();
-    for i in 0..count {
-        let w = arm_word(bytes, i);
-        if w & 0x0f3f_0000 == 0x051f_0000 {
-            let offset = (w & 0xfff) as i64;
-            let target = i as i64 * 4 + 8 + if w & (1 << 23) != 0 { offset } else { -offset };
-            if target >= 0 && target % 4 == 0 && (target / 4) < count as i64 {
-                pool.insert((target / 4) as usize);
-            }
-        }
-    }
-    (pool, arm_tables(bytes, base))
 }
