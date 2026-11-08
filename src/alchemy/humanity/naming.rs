@@ -1175,7 +1175,7 @@ mod tests {
     fn synonyms_take_the_games_word() {
         let file = "games/tbs/src/scene/a.c";
         let po = "msgctxt \"MsgShop\"\nmsgid \"00001\"\nmsgstr \"I'm a merchant.\"\n";
-        let text = GameText::parse(po, None);
+        let text = GameText::parse(po, None).unwrap();
         let names = Names {
             names: vec![
                 name("ACTOR_SHOPKEEPER", NameKind::Enumerator, file, 1),
@@ -1224,7 +1224,7 @@ mod tests {
     fn family_shapes() {
         let po =
             "msgctxt \"MsgDebugAreaName\"\nmsgid \"00001\"\nmsgstr \"Vale\"\n\nmsgctxt \"message\"\nmsgid \"00002\"\nmsgstr \"Idejima\"\n";
-        let text = GameText::parse(po, Some(2));
+        let text = GameText::parse(po, Some(2)).unwrap();
         let file = "games/tbs/include/flags.h";
         let mut list: Vec<Name> =
             ["FLAG_VALE_A", "FLAG_VALE_B", "FLAG_VALE_C", "FLAG_IDEJIMA_D", "FLAG_IDEJIMA_E", "FLAG_SAW_SHIP_AT_IDEJIMA", "FLAG_Childhood"]

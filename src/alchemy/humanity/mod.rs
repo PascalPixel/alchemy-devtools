@@ -1403,16 +1403,15 @@ pub fn area_count(rules: &str) -> Option<usize> {
 }
 
 /// A game's English text, if git tracks one.
-fn game_text(root: &Path, game: &str) -> Option<GameText> {
+fn game_text(root: &Path, game: &str) -> Result<Option<GameText>, String> {
     let path = format!("games/{game}/text/en.po");
-    let tracked = std::process::Command::new("git").arg("-C").arg(root).args(["ls-files", "--"]).arg(&path).output().ok()?;
-    if tracked.stdout.is_empty() {
-        return None;
-    }
-    let po = std::fs::read(root.join(&path)).ok()?;
+    let tracked = std::process::Command::new("git").arg("-C").arg(root).args(["ls-files", "--"]).arg(&path).output();
+    let Some(po) = tracked.ok().filter(|tracked| !tracked.stdout.is_empty()).and_then(|_| std::fs::read(root.join(&path)).ok()) else {
+        return Ok(None);
+    };
     let rules = std::fs::read(root.join(format!("games/{game}/src/field/scene_rules.s"))).ok();
     let areas = rules.and_then(|rules| area_count(&String::from_utf8_lossy(&rules)));
-    Some(GameText::parse(&String::from_utf8_lossy(&po), areas))
+    GameText::parse(&String::from_utf8_lossy(&po), areas).map(Some).map_err(|error| format!("{path}: {error}"))
 }
 
 /// A scene's overlay, `games/<game>/src/scene/<scene>.c` (⚓️'s overlays are
@@ -1772,7 +1771,7 @@ pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, Stri
         ["tbs", "tla"]
             .map(|game| {
                 scope.spawn(move || {
-                    let text = game_text(root, game);
+                    let text = game_text(root, game)?;
                     sources(root, game)
                         .map(|files| game_with_text(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref()))
                 })
@@ -2096,7 +2095,7 @@ mod provenance_tests {
             "msgctxt \"MsgDebugAreaName\"\nmsgid \"00002\"\nmsgstr \"Bilibin\"\n\n",
             "msgctxt \"message\"\nmsgid \"00003\"\nmsgstr \"Bilibin Barricade\"\n",
         );
-        let text = GameText::parse(po, area_count("\tarea_name 0, -1, 0\n\tscene_name Bilibin, -1, 1\n"));
+        let text = GameText::parse(po, area_count("\tarea_name 0, -1, 0\n\tscene_name Bilibin, -1, 1\n")).unwrap();
         let ids = "/// @file\n/// Scenes.\n\n/// ★ Named from its area name: Bilibin\nextern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
         let flags = "/// ★ Named from the game: \"Hidden Treasury\" (MsgSign)\n#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_SCENE_TEMP_01 0x200\n#define FLAG_WAREHOUSE_SEEN 0x11 ///< Named from the game: \"Hidden Treasury\" (MsgSign)\n";
         let scene = concat!(
@@ -2182,7 +2181,7 @@ mod provenance_tests {
             "msgctxt \"message\"\nmsgid \"00657\"\nmsgstr \"Vermin\"\n\n",
             "msgctxt \"message\"\nmsgid \"00658\"\nmsgstr \"Mad Vermin\"\n",
         );
-        let text = GameText::parse(po, None);
+        let text = GameText::parse(po, None).unwrap();
         let header = concat!(
             "/// The first class id.\n#define ENEMY_ID_FIRST 8\n",
             "/// Classes.\nenum EnemyId {\n",
@@ -2204,7 +2203,7 @@ mod provenance_tests {
     #[test]
     fn door_words_in_the_report() {
         let po = "msgctxt \"MsgDebugAreaName\"\nmsgid \"00001\"\nmsgstr \"Tolbi\"\n";
-        let text = GameText::parse(po, Some(1));
+        let text = GameText::parse(po, Some(1)).unwrap();
         let ids = "/// ★ Named from its area name: Tolbi\nextern char SceneId_Tolbi;\n";
         let links = "enum {\n  TOLBI_FROM_WORLD_MAP_NORTH = 1,\n  TOLBI_FROM_HOUSE = 2,\n  TOLBI_TO_HOUSE = 3,\n};\n";
         let files = [("games/tbs/include/scene_ids.h", ids), ("games/tbs/include/scene_exits.h", links)];

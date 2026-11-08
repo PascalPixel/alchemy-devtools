@@ -17,6 +17,7 @@
 //!   and an exit whose words are verified maps, door words and the
 //!   room words of those maps.
 
+use crate::alchemy::po;
 use regex::Regex;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::OnceLock;
@@ -100,26 +101,6 @@ fn flatten(text: &str) -> String {
     out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// A PO string's contents with its escapes undone.
-fn unquote(text: &str) -> String {
-    let inner = text.trim().strip_prefix('"').and_then(|t| t.strip_suffix('"')).unwrap_or("");
-    let mut out = String::new();
-    let mut chars = inner.chars();
-    while let Some(c) = chars.next() {
-        if c == '\\' {
-            match chars.next() {
-                Some('n') => out.push('\n'),
-                Some('t') => out.push('\t'),
-                Some(other) => out.push(other),
-                None => {}
-            }
-        } else {
-            out.push(c);
-        }
-    }
-    out
-}
-
 /// `McCoy's` is `mccoy`; `Storms` is `storm`; `moving` and `move` meet at
 /// `mov`. Crude, and applied alike to the text and the names.
 pub fn stem(word: &str) -> String {
@@ -161,48 +142,14 @@ impl GameText {
     /// Read `en.po`; `areas` is how many area names follow `MsgDebugAreaName`
     /// (the highest index in `gArea_NameRules` plus one), or all the
     /// messages up to the next named one.
-    pub fn parse(po: &str, areas: Option<usize>) -> GameText {
+    pub fn parse(po: &str, areas: Option<usize>) -> Result<GameText, String> {
         let mut text = GameText::default();
-        let (mut ctxt, mut msgstr, mut in_str) = (None::<String>, None::<String>, false);
-        let mut number = None::<u32>;
-        let flush = |ctxt: &mut Option<String>, msgstr: &mut Option<String>, number: &mut Option<u32>, text: &mut GameText| {
-            if let Some(body) = msgstr.take() {
-                let symbol = ctxt.take().filter(|c| c != "message");
-                if let Some(number) = number.take().filter(|_| !body.starts_with("Content-Type:")) {
-                    text.numbers.insert(number, text.messages.len());
-                }
-                text.messages.push((symbol, flatten(&body)));
+        // The header entry is the catalog's, not game text.
+        for entry in po::read(po)?.entries {
+            if let Ok(number) = entry.id.parse() {
+                text.numbers.insert(number, text.messages.len());
             }
-            *ctxt = None;
-            *number = None;
-        };
-        for line in po.lines() {
-            let line = line.trim();
-            if let Some(rest) = line.strip_prefix("msgctxt ") {
-                flush(&mut ctxt, &mut msgstr, &mut number, &mut text);
-                ctxt = Some(unquote(rest));
-                in_str = false;
-            } else if let Some(rest) = line.strip_prefix("msgid ") {
-                number = unquote(rest).parse().ok();
-                in_str = false;
-            } else if let Some(rest) = line.strip_prefix("msgstr ") {
-                msgstr = Some(unquote(rest));
-                in_str = true;
-            } else if line.starts_with('"') && in_str {
-                if let Some(body) = msgstr.as_mut() {
-                    body.push_str(&unquote(line));
-                }
-            } else if line.is_empty() || line.starts_with('#') {
-                in_str = false;
-            }
-        }
-        flush(&mut ctxt, &mut msgstr, &mut number, &mut text);
-        // The header entry has no context and no game text.
-        if let Some(header) = text.messages.iter().position(|(_, body)| body.starts_with("Content-Type:")) {
-            text.messages.remove(header);
-            for at in text.numbers.values_mut().filter(|at| **at > header) {
-                *at -= 1;
-            }
+            text.messages.push((entry.context.filter(|context| context != "message"), flatten(&entry.value)));
         }
         for (at, (symbol, _)) in text.messages.iter().enumerate() {
             if let Some(symbol) = symbol {
@@ -236,7 +183,7 @@ impl GameText {
                 }
             }
         }
-        text
+        Ok(text)
     }
 
     /// The game's text uses the word, or a word with its stem.
@@ -1037,12 +984,12 @@ mod tests {
 
     #[test]
     fn text_words_stems_and_areas() {
-        let text = GameText::parse(PO, Some(2));
+        let text = GameText::parse(PO, Some(2)).unwrap();
         assert!(text.uses("Treasury") && text.uses("tree") && text.uses("Move") && text.uses("McCoy"));
         assert!(!text.uses("Warehouse") && !text.uses("charset"));
         assert!(text.holds("McCoy's Hidden Treasury") && !text.holds("Hidden Warehouse"));
         assert_eq!(text.areas, vec!["Bilibin Barricade", "Bilibin"]);
-        assert_eq!(GameText::parse(PO, None).areas.len(), 2, "up to the next named message");
+        assert_eq!(GameText::parse(PO, None).unwrap().areas.len(), 2, "up to the next named message");
         assert_eq!(stem("Storms"), "storm");
         assert_eq!(stem("moving"), stem("move"));
         assert_eq!(stem("bodies"), "body");
@@ -1055,7 +1002,7 @@ mod tests {
         assert_eq!(pieces("ACTOR_TREE_MAN_2"), ["ACTOR", "TREE", "MAN"]);
         assert_eq!(pieces("HTMLParser"), ["HTML", "Parser"]);
         assert_eq!(pieces("SceneId_Ov6aaRoom1"), ["Scene", "Id", "Ov", "Room"]);
-        let text = GameText::parse(PO, Some(2));
+        let text = GameText::parse(PO, Some(2)).unwrap();
         assert_eq!(unused_words("Bilibin_UpdateWarehouseApproach", &text), ["warehouse", "approach"]);
         assert_eq!(unused_words("ACTOR_MCCOY_TREES", &text), Vec::<String>::new());
         assert_eq!(unused_words("Event_McCoyTreasury", &text), Vec::<String>::new(), "Mc and Coy are one word");
@@ -1075,7 +1022,7 @@ mod tests {
 
     #[test]
     fn a_lone_enumerator_takes_its_enums_line() {
-        let text = GameText::parse(PO, Some(2));
+        let text = GameText::parse(PO, Some(2)).unwrap();
         let line = "/// The barricade is down.\n/// ★ Named from its area name: Bilibin Barricade";
         let lone = Thing { alone: true, ..thing("FLAG_BARRICADE_DOWN", "", line) };
         let shared = thing("FLAG_BARRICADE_UP", "", line);
@@ -1086,7 +1033,7 @@ mod tests {
 
     #[test]
     fn evidence_lines_and_prose() {
-        let text = GameText::parse(PO, Some(2));
+        let text = GameText::parse(PO, Some(2)).unwrap();
         let things = [
             thing("ACTOR_A", "/// ★ Named from the game: \"McCoy's Hidden\n/// Treasury\" (MsgSignMcCoy)", ""),
             thing("ACTOR_B", "///< Named from its area name: Bilibin Barricade.", ""),
@@ -1125,7 +1072,7 @@ mod tests {
 
     #[test]
     fn flagged_words_by_use() {
-        let text = GameText::parse(PO, Some(2));
+        let text = GameText::parse(PO, Some(2)).unwrap();
         let mut function = thing("Bilibin_RaiseWarehouse", "", "");
         function.kind = "function";
         let things = [thing("ACTOR_WAREHOUSE_GUARD", "", ""), function, thing("ACTOR_PILLAR", "", "")];
@@ -1190,7 +1137,7 @@ mod tests {
 
     #[test]
     fn table_names() {
-        let text = GameText::parse(TABLE_PO, None);
+        let text = GameText::parse(TABLE_PO, None).unwrap();
         assert_eq!(text.table_entry("MsgItemName", 1), Some("Bandit's Sword"), "by msgid, commands taken out");
         assert_eq!(text.table_entry("MsgEnemyName", 2), Some("Slime"));
         assert_eq!(text.table_entry("MsgNope", 0), None);
@@ -1244,7 +1191,7 @@ mod tests {
             "msgctxt \"MsgSignInn\"\nmsgid \"00002\"\nmsgstr \"Inn Full\"\n\n",
             "msgctxt \"message\"\nmsgid \"00003\"\nmsgstr \"The ship's crew was attacked.\"\n",
         );
-        let text = GameText::parse(po, Some(1));
+        let text = GameText::parse(po, Some(1)).unwrap();
         let scene = |name: &str, own: &str| Thing {
             name: name.to_string(),
             kind: "scene",

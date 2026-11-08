@@ -1,5 +1,6 @@
 //! po: reads Alchemy's PO message catalogs (`games/<game>/text/*.po`) for the
-//! render tables. Alchemy's C tool `ags-text` encodes them for the build.
+//! render tables and the humanization report. Alchemy's C tool `ags-text`
+//! encodes them for the build.
 
 use std::collections::BTreeMap;
 use std::fs;
