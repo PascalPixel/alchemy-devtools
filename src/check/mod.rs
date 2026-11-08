@@ -8,7 +8,7 @@ mod tags;
 
 const USAGE: &str = "usage: alchemy-devtools check overlays [ID...] [--edition EDITION|GAME]...
        alchemy-devtools check packer [EDITION|GAME...]
-       alchemy-devtools check rom [EDITION|GAME...]
+       alchemy-devtools check rom [EDITION|GAME...] [--all | --origin]
        alchemy-devtools check tags [PATH...]
 overlays: each built overlay's packed stream (out/<edition>/overlays/
 resource_<id>.lz) looked for in its edition's reference ROM; an ID is the
@@ -20,8 +20,13 @@ reference ROM, in every edition whose assembler reads the row (its
 .ifdef, .ifeq and .else followed with the edition's symbols). No edition
 checks every edition built.
 rom: each built ROM against its reference, byte for byte; every range that
-differs is named by the symbol and object that placed it. No edition checks
-every edition built.
+differs is named by the symbol and object that placed it, the first 40
+unless --all. Each edition that differs first names its origin: the first
+object named for its place (a scaffold's .rom.OFFSET, an English listing or
+fADDRESS module) that the build places elsewhere, the last placed right
+before it, and the objects from there on, each marked where its bytes differ;
+everything after a size change differs, so that is where to look. --origin
+prints only that. No edition checks every edition built.
 tags: every FAKEMATCH tag in the C sources and headers under PATH (games/ by
 default) against S2's form, /* FAKEMATCH(<kind>): the form kept; as <plain
 form>, N of M instructions differ in <edition>. */, with kind pin,

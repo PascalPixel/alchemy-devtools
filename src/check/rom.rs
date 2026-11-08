@@ -3,6 +3,7 @@
 //! every difference named by what placed it.
 
 use crate::alchemy::built;
+use crate::alchemy::layout::rom_offset;
 use crate::alchemy::done::commas;
 use crate::alchemy::overlay;
 use crate::alchemy::targets::{target_for, DecompTargetId};
@@ -237,13 +238,94 @@ pub(crate) fn first_difference(root: &Path, id: DecompTargetId) -> Result<Option
     Ok(Some(Difference { label: placement.at(address), object: placement.object(address), overlays }))
 }
 
+/// Where an object places its bytes in the reference layout, as its name
+/// says: a scaffold section `.rom.OFFSET`, an English listing
+/// `recon/GAME/raw/ADDRESS`, or (in English) a module named for its address,
+/// `fADDRESS` (`f0f94a4` for 0x080f94a4). None for anything else.
+fn expected(id: DecompTargetId, piece: &Placed, stem: &str) -> Option<u32> {
+    if let Some(offset) = rom_offset(&piece.name) {
+        return Some(ROM + offset);
+    }
+    let name = stem.rsplit('/').next().unwrap_or(stem);
+    let hex = |text: &str| u32::from_str_radix(text, 16).ok();
+    if name.len() == 8 && name.starts_with("08") && stem.contains("/raw/") {
+        return hex(name);
+    }
+    let address = name.strip_prefix('f').filter(|rest| rest.len() == 6 && id.language() == "en" && stem.starts_with("games/")).and_then(hex)?;
+    Some(ROM + address)
+}
+
+/// How many objects the origin names between its anchors.
+const ORIGIN_LISTED: usize = 12;
+
+/// Where an edition's layout first moves: the first object named for its
+/// place that is placed elsewhere, the last before it that is placed right,
+/// and the objects from that one up to it, each marked when its bytes differ from the
+/// reference there. Everything after a size change differs, so this, not
+/// the first differing byte, is where to look when sizes changed. None
+/// when every such object is in place.
+fn origin(placement: &Placement, image: &[u8], reference: &[u8]) -> Option<Vec<String>> {
+    let id = placement.edition;
+    let pieces: Vec<&Placed> = placement.sections.iter().filter(|placed| !placed.is_fill()).collect();
+    let mut last_right: Option<usize> = None;
+    for (index, piece) in pieces.iter().enumerate() {
+        let stem = built::stem(id, &piece.path);
+        let Some(expected) = expected(id, piece, &stem) else { continue };
+        if expected == piece.load {
+            last_right = Some(index);
+            continue;
+        }
+        let label = |piece: &Placed| match piece.name.as_str() {
+            ".text" => built::stem(id, &piece.path),
+            name => format!("{}({name})", built::stem(id, &piece.path)),
+        };
+        let shift = i64::from(piece.load) - i64::from(expected);
+        let mut lines = vec![format!(
+            "origin: {} is placed at {:#010x}, {} bytes {} its place; {}",
+            label(piece),
+            piece.load,
+            commas(shift.abs()),
+            if shift > 0 { "after" } else { "before" },
+            match last_right {
+                Some(at) => format!("the layout last holds at {} ({:#010x}). From there:", label(pieces[at]), pieces[at].load),
+                None => "nothing before it is placed by name. Before it:".to_string(),
+            }
+        )];
+        let between = &pieces[last_right.unwrap_or(0)..index];
+        for piece in between.iter().take(ORIGIN_LISTED) {
+            let at = (piece.load - ROM) as usize;
+            let end = at + piece.size as usize;
+            let differs = image.get(at..end) != reference.get(at..end);
+            lines.push(format!(
+                "  {:#010x} {:>7} {}{}",
+                piece.load,
+                format!("{:#x}", piece.size),
+                label(piece),
+                if differs { "  (differs)" } else { "" }
+            ));
+        }
+        if between.len() > ORIGIN_LISTED {
+            lines.push(format!("  and {} objects more", between.len() - ORIGIN_LISTED));
+        }
+        return Some(lines);
+    }
+    None
+}
+
 pub fn roms(arguments: &[String]) -> Result<(), String> {
-    if let Some(flag) = arguments.iter().find(|argument| argument.starts_with('-')) {
-        return Err(format!("unknown option {flag}"));
+    let mut words = Vec::new();
+    let (mut all, mut origin_only) = (false, false);
+    for argument in arguments {
+        match argument.as_str() {
+            "--all" => all = true,
+            "--origin" => origin_only = true,
+            flag if flag.starts_with('-') => return Err(format!("unknown option {flag}")),
+            word => words.push(word.to_string()),
+        }
     }
     let root = crate::compile::root();
     let mut differing = Vec::new();
-    let (editions, mut not_built) = (built::editions(arguments)?, Vec::new());
+    let (editions, mut not_built) = (built::editions(&words)?, Vec::new());
     for &id in &editions {
         let path = built::output(root, id).join(format!("{id}.gba"));
         let Ok(image) = std::fs::read(&path) else {
@@ -252,7 +334,8 @@ pub fn roms(arguments: &[String]) -> Result<(), String> {
             continue;
         };
         let rom = target_for(id).rom;
-        let ranges = differences(&image, &reference(root, id)?);
+        let reference = reference(root, id)?;
+        let ranges = differences(&image, &reference);
         if ranges.is_empty() {
             println!("{id}: identical to {rom}");
             continue;
@@ -261,16 +344,24 @@ pub fn roms(arguments: &[String]) -> Result<(), String> {
         let bytes: usize = ranges.iter().map(|(start, end)| end - start).sum();
         println!("{id}: {} bytes in {} ranges differ from {rom}", commas(bytes as i64), ranges.len());
         let placement = Placement::read(root, id)?;
-        for &(start, end) in ranges.iter().take(LISTED) {
+        match origin(&placement, &image, &reference) {
+            Some(lines) => lines.iter().for_each(|line| println!("  {line}")),
+            None => println!("  origin: every object named for its place is in place; the first range below is where to look"),
+        }
+        if origin_only {
+            continue;
+        }
+        let listed = if all { ranges.len() } else { LISTED };
+        for &(start, end) in ranges.iter().take(listed) {
             let at = ROM + start as u32;
             println!("  {at:#010x}..{:#010x} {:>9}  {}", ROM + end as u32, commas((end - start) as i64), placement.at(at));
         }
-        if ranges.len() > LISTED {
-            println!("  and {} ranges more", ranges.len() - LISTED);
+        if ranges.len() > listed {
+            println!("  and {} ranges more (--all lists them)", ranges.len() - listed);
         }
     }
     match differing.as_slice() {
-        [] => checked_all(!arguments.is_empty(), editions.len(), &not_built),
+        [] => checked_all(!words.is_empty(), editions.len(), &not_built),
         [edition] => Err(format!("{edition} differs from its reference ROM")),
         editions => Err(format!("{} differ from their reference ROMs", editions.join(" "))),
     }
@@ -318,6 +409,43 @@ mod tests {
         assert_eq!(differences(&built, &reference), [(2, 5), (20, 21)]);
         assert_eq!(differences(&built[..30], &reference), [(2, 5), (20, 21), (30, 32)]);
         assert!(differences(&reference, &reference).is_empty());
+    }
+
+    /// A module 2 bytes long moves everything after it: the origin names the
+    /// scaffold section it pushed, the last in place, and the module between.
+    #[test]
+    fn the_origin_is_the_first_object_placed_away_from_its_name() {
+        let placed = |name: &str, path: &str, load: u32, size: u32| Placed {
+            name: name.into(),
+            path: path.into(),
+            address: load,
+            size,
+            load,
+            loaded: true,
+            symbols: Vec::new(),
+            output: None,
+        };
+        let de = id("tla-de");
+        let sections = vec![
+            placed(".rom.00000000", "out/tla-de/obj/recon/tla/de/rom.o", 0x0800_0000, 0x10),
+            placed(".text", "out/tla-de/obj/games/tla/src/menu/f000010.o", 0x0800_0010, 0x12),
+            placed(".rom.00000020", "out/tla-de/obj/recon/tla/de/rom.o", 0x0800_0022, 0x8),
+        ];
+        let placement = Placement { edition: de, sections, symbols: Vec::new() };
+        let reference = vec![0u8; 0x2a];
+        let mut image = reference.clone();
+        image[0x20] = 1;
+        let lines = origin(&placement, &image, &reference).unwrap();
+        assert!(lines[0].starts_with("origin: recon/tla/de/rom(.rom.00000020) is placed at 0x08000022, 2 bytes after its place"), "{}", lines[0]);
+        assert!(lines[0].contains("last holds at recon/tla/de/rom(.rom.00000000)"));
+        assert_eq!(lines[1..], ["  0x08000000    0x10 recon/tla/de/rom(.rom.00000000)", "  0x08000010    0x12 games/tla/src/menu/f000010  (differs)"]);
+        assert_eq!(expected(id("tla-en"), &placement.sections[1], "games/tla/src/menu/f0f94a4"), Some(0x080f_94a4));
+        assert_eq!(expected(de, &placement.sections[1], "games/tla/src/menu/f0f94a4"), None, "modules are named by English addresses");
+        assert_eq!(expected(id("tla-en"), &placement.sections[1], "recon/tla/raw/080f9644"), Some(0x080f_9644));
+        image[0x20] = 0;
+        let mut right = placement.sections.clone();
+        right[2].load = 0x0800_0020;
+        assert!(origin(&Placement { edition: de, sections: right, symbols: Vec::new() }, &image, &reference).is_none());
     }
 
     #[test]
