@@ -23,7 +23,8 @@ png = "0.17"
 cc = { version = "1", optional = true }
 
 [features]
-# `render`: the docs site's pictures and recordings, run in libmgba (README).
+# `render`: the docs site's pictures and recordings, run in libmgba, and
+# lit's PNG reading; README says how to build it.
 render = ["dep:gif", "dep:cc", "dep:png"]
 
 [[bin]]

@@ -28,7 +28,7 @@ const USAGE: &str = r#"usage: alchemy-devtools <command> [args]
 Run any command with --help for its options.
 
   adopt     move matched drafts into the build in every edition, with a journal to undo it
-  check     each built ROM and overlay against its reference, and the fake-match tags
+  check     each built ROM, overlay and PACKER row against the reference ROMs, and the fake-match tags
   diff      a C draft against the listing it would replace
   editions  what an edition still takes from its scaffold while English links C
   lit       recolour a picture in alchemy-lit, the colour correction the docs site's filter is fitted to
