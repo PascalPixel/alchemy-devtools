@@ -28,13 +28,17 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-const USAGE: &str = r#"usage: alchemy-devtools permute DRAFT.c [ADDRESS[,ADDRESS...]] [--edition EDITION] [--function NAME] [--overlay resource_XXX] [--arm] [--minutes N] [--iterations N] [--jobs J] [--seed S] [--keep-prob P] [--stack-diffs] [--stop-on-zero] [--better-only]
+const USAGE: &str = r#"usage: alchemy-devtools permute DRAFT.c [ADDRESS[,ADDRESS...]] [--game tbs|tla] [--edition EDITION] [--function NAME] [--overlay resource_XXX] [--arm] [--minutes N] [--iterations N] [--jobs J] [--seed S] [--keep-prob P] [--stack-diffs] [--stop-on-zero] [--better-only]
 Searches source variations of DRAFT.c until its code matches the listing
-alchemy-devtools diff compares it with (ADDRESS defaults to the file name;
-build the edition first). --function names the definition to rewrite when
-the draft has several. --overlay resource_XXX with --function NAME compares
-an overlay's linked function against the reference ROM's decoded stream, as
-alchemy-devtools diff does.
+alchemy-devtools diff compares it with (build the edition first). The draft
+is read as diff reads it: ADDRESS defaults to the file name, the game to the
+draft's path, the edition to the game's English one, and an overlay draft's
+--overlay to the resource_XXX in its path. --function (or --symbol, as diff
+spells it) names the definition to rewrite when the draft has several; it
+defaults to the one named after the draft's address, and an overlay draft's
+to the function diff would compare. Without an address in its name, a
+main-image draft's listing is the function --function names in the
+edition's map.
 Each candidate compiles with diff's steps in its job's own directory under
 out/permute/STEM/, and scores two ways: differ, diff's count, and a weighted
 score. The weighted score aligns mnemonics with difflib, then charges 5 per
@@ -106,6 +110,7 @@ struct Options {
 fn parse_options(arguments: &[String]) -> Result<Options, String> {
     let mut draft = None;
     let mut addresses = Vec::new();
+    let mut game = None;
     let mut target = None;
     let mut minutes = 10.0_f64;
     let mut jobs = std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(2).max(1));
@@ -128,6 +133,14 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
                 index += 1;
                 target = Some(decomp_target(Some(&value(index)?))?);
             }
+            "--game" => {
+                index += 1;
+                game = match value(index)?.as_str() {
+                    "tbs" => Some("tbs"),
+                    "tla" => Some("tla"),
+                    _ => return Err(format!("--game: tbs or tla\n{USAGE}")),
+                };
+            }
             "--minutes" => {
                 index += 1;
                 minutes = value(index)?.parse().map_err(|_| format!("--minutes: a number\n{USAGE}"))?;
@@ -144,16 +157,14 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
                 index += 1;
                 iterations = Some(value(index)?.parse().map_err(|_| format!("--iterations: a count\n{USAGE}"))?);
             }
-            "--function" => {
+            "--function" | "--symbol" => {
                 index += 1;
                 function = Some(value(index)?);
             }
             "--overlay" => {
                 index += 1;
                 let name = value(index)?;
-                let id = name.strip_prefix("resource_").filter(|id| id.len() == 3 && id.bytes().all(|c| c.is_ascii_hexdigit()))
-                    .ok_or("--overlay must be resource_XXX")?;
-                overlay = Some(format!("resource_{}", id.to_ascii_lowercase()));
+                overlay = Some(resource(&name).filter(|_| name.len() == 12).ok_or("--overlay must be resource_XXX")?);
             }
             "--arm" => arm = true,
             "--stack-diffs" => score_options.stack_differences = true,
@@ -172,31 +183,53 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
     }
     let draft = draft.ok_or_else(|| USAGE.to_string())?;
     let text = draft.to_string_lossy().into_owned();
-    if overlay.is_some() && (arm || function.is_none() || !addresses.is_empty()) {
-        return Err("--overlay requires --function and cannot be combined with --arm or main-image addresses".into());
+    if overlay.is_none() && text.contains("/overlays/") {
+        overlay = Some(resource(&text).ok_or_else(|| format!("{}: name its overlay with --overlay resource_XXX", draft.display()))?);
     }
-    if text.contains("/overlays/") && overlay.is_none() {
-        return Err("name an overlay draft's resource with --overlay and its function with --function".into());
+    if overlay.is_some() && (arm || !addresses.is_empty()) {
+        return Err("--overlay compares one overlay function: it takes no main-image address and no --arm".into());
     }
     if addresses.is_empty() && overlay.is_none() {
         let stem = draft.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-        if stem.len() != 8 || !stem.chars().all(|c| c.is_ascii_hexdigit()) {
+        if stem.len() == 8 && stem.chars().all(|c| c.is_ascii_hexdigit()) {
+            addresses.push(stem);
+        } else if let Some(name) = &function {
+            // As diff resolves --symbol: by name in the edition's map.
+            addresses.push(name.clone());
+        } else {
             return Err(format!("{}: name the listing address\n{USAGE}", draft.display()));
         }
-        addresses.push(stem);
     }
-    let game = match target {
-        Some(target) if target.id.as_str().starts_with("tla-") => "tla",
-        Some(_) => "tbs",
-        None if text.contains("/tla/") => "tla",
-        None => "tbs",
-    };
+    let edition_game = target.map(|target| if target.id.as_str().starts_with("tla-") { "tla" } else { "tbs" });
+    if matches!((game, edition_game), (Some(game), Some(edition_game)) if game != edition_game) {
+        return Err("--game and --edition name different games".into());
+    }
+    let game = game.or(edition_game).unwrap_or(if text.contains("/tla/") { "tla" } else { "tbs" });
     let target = match target {
         Some(target) => target,
         None => decomp_target(Some(&format!("{game}-en")))?,
     };
     if !minutes.is_finite() || minutes < 0.0 { return Err("--minutes must be finite and nonnegative".into()); }
     Ok(Options { draft, addresses, game, target, minutes, jobs, seed, function, overlay, iterations, arm, score_options, keep_prob, stop_on_zero, better_only })
+}
+
+/// The overlay a name or path holds as `resource_XXX`, in lower case.
+fn resource(name: &str) -> Option<String> {
+    let at = name.find("resource_")?;
+    let id = name.get(at + 9..at + 12)?;
+    id.bytes().all(|c| c.is_ascii_hexdigit()).then(|| format!("resource_{}", id.to_ascii_lowercase()))
+}
+
+/// The address a draft is named after: its file stem, or the stem's last
+/// `_`-separated part (`resource_XXX_c_ADDRESS`), when that is 8 hex digits.
+fn stem_address(stem: &str) -> Option<String> {
+    let tail = stem.rsplit('_').next()?;
+    (tail.len() == 8 && tail.chars().all(|c| c.is_ascii_hexdigit())).then(|| tail.to_ascii_lowercase())
+}
+
+/// Whether `name` is named after `address` (`Func_0200263c`).
+fn named_after(name: &str, address: Option<&str>) -> bool {
+    address.is_some_and(|address| name.to_ascii_lowercase().ends_with(address))
 }
 
 /// One job's scratch: its candidate file and alchemy-devtools diff's steps for it.
@@ -366,7 +399,7 @@ struct Reference {
 
 fn reference(options: &Options) -> Result<Reference, String> {
     if let Some(overlay) = &options.overlay {
-        let wanted = options.function.as_deref().ok_or("--overlay requires --function")?;
+        let wanted = options.function.as_deref().ok_or("name the overlay function with --function")?;
         let (listing, name) = crate::diff::overlay_reference(options.target, overlay, wanted)?;
         return Ok(Reference { listing, scaffold: Some(name), rows: None });
     }
@@ -395,8 +428,45 @@ fn reference(options: &Options) -> Result<Reference, String> {
     Ok(Reference { listing, scaffold, rows })
 }
 
+/// The overlay function an overlay draft is compared with, as diff finds
+/// it: the one function the draft defines that the overlay also has, or
+/// else the one the overlay names after the draft's address.
+fn overlay_function(target: DecompTarget, overlay: &str, stem: &str, text: &str) -> Result<String, String> {
+    let output = root().join(target.output_dir).join("overlays");
+    let mut ours = Vec::new();
+    for name in [format!("{overlay}_overlay.o"), format!("{overlay}.elf")] {
+        let path = output.join(name);
+        if path.exists() {
+            ours.extend(crate::diff::text_symbols(&path)?);
+        }
+    }
+    if ours.is_empty() {
+        return Err(format!("{overlay}: no linked overlay in {}; build {} first", output.display(), target.id));
+    }
+    ours.sort();
+    ours.dedup();
+    let defined: Vec<String> = lex::lex(text).map(|tokens| parse::scan_definitions(&tokens).into_iter().map(|entry| entry.0).collect()).unwrap_or_default();
+    shared_function(&ours, &defined, stem_address(stem).as_deref()).ok_or_else(|| {
+        format!("name the overlay function with --function: {overlay} has no single function the draft defines or names after its address")
+    })
+}
+
+/// The one of the overlay's functions the draft also defines; among
+/// several, or none, the one named after the draft's address.
+fn shared_function(ours: &[String], defined: &[String], address: Option<&str>) -> Option<String> {
+    let mut shared: Vec<&String> = ours.iter().filter(|name| defined.contains(name)).collect();
+    if shared.len() != 1 {
+        let among = if shared.is_empty() { ours.iter().collect() } else { shared };
+        shared = among.into_iter().filter(|name| named_after(name, address)).collect();
+    }
+    match shared.as_slice() {
+        [one] => Some(one.to_string()),
+        _ => None,
+    }
+}
+
 pub fn run(arguments: &[String]) -> Result<(), String> {
-    let options = parse_options(arguments)?;
+    let mut options = parse_options(arguments)?;
     if options.arm {
         println!("{}", crate::diff::GAME_ARM_NOTICE);
     }
@@ -405,6 +475,9 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let stem = draft.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     let output = root().join("out/permute").join(&stem);
     let nodes = perm::parse(&text)?;
+    if let (Some(overlay), None) = (&options.overlay, &options.function) {
+        options.function = Some(overlay_function(options.target, overlay, &stem, &text)?);
+    }
     let Reference { listing, scaffold, rows: listing_rows } = reference(&options)?;
     let problem = Problem {
         draft,
@@ -438,7 +511,9 @@ impl Drop for Scratch {
     }
 }
 
-fn select_function(unit: &c::Node, selected: Option<&str>) -> Result<String, String> {
+/// The definition to rewrite: the one named, the draft's only one, or the
+/// one named after the draft's address.
+fn select_function(unit: &c::Node, selected: Option<&str>, stem: &str) -> Result<String, String> {
     if let Some(name) = selected {
         return randomize::target_index(unit, name).map(|_| name.to_string()).ok_or_else(|| format!("the draft does not define {name}"));
     }
@@ -448,7 +523,11 @@ fn select_function(unit: &c::Node, selected: Option<&str>) -> Result<String, Str
             c::Node::Decl { name: Some(name), funcspec, .. } if !funcspec.iter().any(|s| s == "inline") => Some(name.clone()), _ => None,
         }, _ => None,
     }).collect();
-    if names.len() == 1 { Ok(names[0].clone()) } else { Err(format!("choose a definition with --function (found: {})", names.join(", "))) }
+    let address = stem_address(stem);
+    match names.iter().filter(|name| names.len() == 1 || named_after(name, address.as_deref())).collect::<Vec<_>>().as_slice() {
+        [one] => Ok(one.to_string()),
+        _ => Err(format!("choose a definition with --function (found: {})", names.join(", "))),
+    }
 }
 
 fn prepare(job: &Job, expanded: &mut Expanded, target: &str) -> Result<(), String> {
@@ -512,7 +591,7 @@ fn execute(mut problem: Problem, options: &Options, scaffold: Option<String>, ou
     // intentionally do not have the final C declaration scopes.
     std::fs::write(&setup.candidate, original.preprocess_text()).map_err(|e| e.to_string())?;
     let mut full_unit = c::parse(&setup.preprocess()?)?;
-    let target = select_function(&full_unit, problem.function.as_deref())?;
+    let target = select_function(&full_unit, problem.function.as_deref(), &problem.stem)?;
     problem.function = Some(target.clone());
     full_unit.extract_function(&target)?;
     original.apply_c_ast(&mut full_unit);
@@ -1134,20 +1213,54 @@ mod tests {
     }
 
     #[test]
-    fn overlay_options_require_an_explicit_resource_and_function() {
+    fn overlay_options_follow_the_drafts_path_as_diff_does() {
         let parse = |items: &[&str]| parse_options(&args(items));
         let options = parse(&["scene.c", "--overlay", "resource_3B7", "--function", "Event"]).unwrap();
         assert_eq!(options.overlay.as_deref(), Some("resource_3b7"));
         assert_eq!(options.function.as_deref(), Some("Event"));
         assert!(options.addresses.is_empty());
+        // The resource from the path; the function is left to the overlay.
+        let options = parse(&["recon/tla/en/overlays/resource_6AA_c_0200263c.c"]).unwrap();
+        assert_eq!((options.overlay.as_deref(), options.function.as_deref(), options.game), (Some("resource_6aa"), None, "tla"));
+        let options = parse(&["recon/tla/en/overlays/resource_6aa_c_0200263c.c", "--symbol", "Func_0200263c"]).unwrap();
+        assert_eq!(options.function.as_deref(), Some("Func_0200263c"));
+        assert!(options.addresses.is_empty());
         for items in [
-            vec!["scene.c", "--overlay", "resource_3b7"],
             vec!["scene.c", "--overlay", "resource_../x", "--function", "Event"],
+            vec!["scene.c", "--overlay", "resource_3b7x"],
             vec!["scene.c", "--overlay", "resource_3b7", "--function", "Event", "--arm"],
             vec!["scene.c", "08000000", "--overlay", "resource_3b7", "--function", "Event"],
+            vec!["recon/tla/en/overlays/draft.c"],
         ] {
             assert!(parse(&items).is_err(), "{items:?}");
         }
+    }
+
+    #[test]
+    fn overlay_functions_are_found_as_diff_finds_them() {
+        let names = |items: &[&str]| items.iter().map(|item| item.to_string()).collect::<Vec<_>>();
+        let ours = names(&["Func_02000100", "Func_0200263c", "Scene_Init"]);
+        // The one the draft defines, whatever its name.
+        assert_eq!(shared_function(&ours, &names(&["Scene_Init", "Helper"]), Some("0200263c")).as_deref(), Some("Scene_Init"));
+        // None, or several: the one named after the address.
+        assert_eq!(shared_function(&ours, &names(&["Helper"]), Some("0200263c")).as_deref(), Some("Func_0200263c"));
+        assert_eq!(shared_function(&ours, &names(&["Func_02000100", "Func_0200263c"]), Some("0200263c")).as_deref(), Some("Func_0200263c"));
+        assert_eq!(shared_function(&ours, &names(&["Func_02000100", "Scene_Init"]), Some("0200263c")), None);
+        assert_eq!(shared_function(&ours, &names(&["Helper"]), None), None);
+        assert_eq!(stem_address("resource_6aa_c_0200263C").as_deref(), Some("0200263c"));
+        assert_eq!(stem_address("080cbc0c").as_deref(), Some("080cbc0c"));
+        assert_eq!(stem_address("draft_link"), None);
+    }
+
+    #[test]
+    fn the_definition_named_after_the_drafts_address_is_rewritten() {
+        let unit = c::parse("int Helper(int x) { return x; }\nint Func_0800a0f8(int x) { return Helper(x) + 1; }\n").unwrap();
+        assert_eq!(select_function(&unit, None, "0800a0f8").unwrap(), "Func_0800a0f8");
+        assert_eq!(select_function(&unit, Some("Helper"), "0800a0f8").unwrap(), "Helper");
+        assert!(select_function(&unit, None, "draft").unwrap_err().contains("Helper, Func_0800a0f8"));
+        assert!(select_function(&unit, Some("Missing"), "0800a0f8").is_err());
+        let unit = c::parse("int Only(int x) { return x; }\n").unwrap();
+        assert_eq!(select_function(&unit, None, "draft").unwrap(), "Only");
     }
 
     #[test]
@@ -1165,8 +1278,16 @@ mod tests {
         for text in ["1,2", "bad", "-1"] {
             assert!(parse_options(&args(&["08000000.c", "--seed", text])).is_err(), "{text}");
         }
+        // --game as diff reads it.
+        assert_eq!(parse_options(&args(&["x.c", "08000000", "--game", "tla"])).unwrap().target.id.as_str(), "tla-en");
+        assert!(parse_options(&args(&["x.c", "08000000", "--game", "tla", "--edition", "tbs-de"])).is_err());
+        assert!(parse_options(&args(&["x.c", "08000000", "--game", "gs"])).is_err());
+        // A draft not named after its address: the listing is the named function's.
+        let parsed = parse_options(&args(&["out/draft_link.c", "--symbol", "Serial_Begin"])).unwrap();
+        assert_eq!((parsed.addresses.as_slice(), parsed.function.as_deref()), (["Serial_Begin".to_string()].as_slice(), Some("Serial_Begin")));
         assert!(parse_options(&args(&["x.c"])).is_err());
-        assert!(parse_options(&args(&["recon/tbs/en/overlays/resource_383_c_020048c8.c"])).is_err());
+        let parsed = parse_options(&args(&["recon/tbs/en/overlays/resource_383_c_020048c8.c"])).unwrap();
+        assert_eq!((parsed.overlay.as_deref(), parsed.game), (Some("resource_383"), "tbs"));
         assert!(parse_options(&args(&["08000000.c", "--bogus"])).is_err());
         assert!(!parse_options(&args(&["08000000.c"])).unwrap().arm);
         assert!(parse_options(&args(&["recon/tbs/en/main/0800a0f8.c", "--arm"])).unwrap().arm);
