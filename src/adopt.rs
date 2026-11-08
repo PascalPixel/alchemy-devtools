@@ -1,6 +1,9 @@
 //! adopt: moves matched drafts into the build in every edition, and keeps a
-//! journal that undoes it. It reads no ROM: the build judges what it did
-//! (`make compare-editions`), and `check` traces a failure to its function.
+//! journal that undoes it, whole or one item at a time. Each draft must
+//! first measure differ 0 as diff measures it; the build still judges what
+//! adoption did (`make compare-editions`), `check rom` traces a failure to
+//! its function, and `--undo JOURNAL ITEM` sends that function back to its
+//! draft while the rest of the batch stays.
 
 use crate::alchemy::layout::{
     aligns, edition_only, ends_with_padding, globals, has_edition_forms, overlay_draft, overlay_section, pieces,
@@ -13,11 +16,11 @@ use crate::gba::clex::{lex, Kind, Token};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-const USAGE: &str = r#"usage: alchemy-devtools adopt main ADDRESS[,ADDRESS...]... [--editions LIST] [--game GAME] [--dry-run]
-       alchemy-devtools adopt overlay DRAFT.c... [--edition-forms] [--dry-run]
+const USAGE: &str = r#"usage: alchemy-devtools adopt main ADDRESS[,ADDRESS...]... [--editions LIST] [--game GAME] [--unmeasured] [--dry-run]
+       alchemy-devtools adopt overlay DRAFT.c... [--edition-forms] [--unmeasured] [--dry-run]
        alchemy-devtools adopt edition OBJECT... --editions LIST [--dry-run]
-       alchemy-devtools adopt replace FILE.c DRAFT.c [--dry-run]
-       alchemy-devtools adopt --undo JOURNAL
+       alchemy-devtools adopt replace FILE.c DRAFT.c [--unmeasured] [--dry-run]
+       alchemy-devtools adopt --undo JOURNAL [ITEM...]
 main: the English draft recon/GAME/en/main/ADDRESS.c becomes
 games/GAME/src/FOLDER/fADDRESS.c, FOLDER being the nearest object's in the
 object list (not gamepak or sound). Further addresses name listings the
@@ -43,11 +46,21 @@ replace: an overlay draft that matches in every edition replaces FILE, an
 adopted scene file whose Japanese form stayed on the scaffold; the scaffold
 sections the draft defines, and the edition-only sections linked beside
 FILE, go with their link lines.
+Each draft is first measured as diff measures it (main: in English with its
+addresses; overlay: in English; replace: in every edition) and refused
+unless it differs in nothing. A measured differ 0 is not yet a match: pools,
+padding and an edition's own bytes show only in the linked ROM, so the build
+still judges (make compare-editions, then check rom). --unmeasured adopts a
+draft diff cannot measure and leaves the build alone to judge it.
 Drafts lose their leading // header and are clang-formatted. --dry-run
 prints what would change. Otherwise the changes are written with a journal
 under out/adopt/ that --undo reverses exactly, provided nothing it wrote
-has changed since. One adopt or undo runs at a time (out/adopt/lock), and
-none writes over a file that changed after it read it. LIST: en,de,es,fr,it,ja, or edition names (tla-en)."#;
+has changed since. --undo JOURNAL ITEM... backs out only those items (an
+address list, its first address, or a draft or object path): the journal is
+undone and its adoption run again without them, under a new journal. One
+adopt or undo runs at a time (out/adopt/lock), and none writes over a file
+that changed after it read it. LIST: en,de,es,fr,it,ja, or edition names
+(tla-en)."#;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Form {
@@ -64,12 +77,15 @@ struct Options {
     editions: Option<Vec<String>>,
     game: Option<String>,
     edition_forms: bool,
+    /// Whether each draft is measured before it is adopted.
+    measured: bool,
     dry_run: bool,
 }
 
 enum Request {
     Adopt(Options),
-    Undo(PathBuf),
+    /// A journal to undo, and the items to back out of it alone.
+    Undo(PathBuf, Vec<String>),
 }
 
 fn parse(arguments: &[String]) -> Result<Request, String> {
@@ -78,6 +94,7 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
     let mut editions = None;
     let mut game = None;
     let mut edition_forms = false;
+    let mut measured = true;
     let mut dry_run = false;
     let mut i = 0;
     while i < arguments.len() {
@@ -85,9 +102,14 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
         match value {
             "--dry-run" => dry_run = true,
             "--edition-forms" => edition_forms = true,
+            "--unmeasured" => measured = false,
             "--undo" => {
-                let journal = arguments.get(i + 1).filter(|_| arguments.len() == 2 && i == 0);
-                return journal.map(|j| Request::Undo(PathBuf::from(j))).ok_or_else(|| USAGE.to_string());
+                let journal = arguments.get(i + 1).filter(|_| i == 0);
+                let items = arguments.get(2..).unwrap_or_default().to_vec();
+                if items.iter().any(|item| item.starts_with('-')) {
+                    return Err(USAGE.into());
+                }
+                return journal.map(|j| Request::Undo(PathBuf::from(j), items)).ok_or_else(|| USAGE.to_string());
             }
             "--editions" => {
                 i += 1;
@@ -120,7 +142,8 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
     };
     let misplaced = (editions.is_some() && matches!(form, Form::Overlay | Form::Replace))
         || (edition_forms && form != Form::Overlay)
-        || (game.is_some() && form != Form::Main);
+        || (game.is_some() && form != Form::Main)
+        || (!measured && form == Form::Edition);
     if !fits || misplaced {
         return Err(USAGE.into());
     }
@@ -128,7 +151,7 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
         // One replacement: FILE and the draft that replaces it.
         items = vec![items.join(" ")];
     }
-    Ok(Request::Adopt(Options { form, items, editions, game, edition_forms, dry_run }))
+    Ok(Request::Adopt(Options { form, items, editions, game, edition_forms, measured, dry_run }))
 }
 
 fn parse_editions(text: &str) -> Result<Vec<String>, String> {
@@ -152,9 +175,76 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         return Ok(());
     }
     match parse(arguments)? {
-        Request::Undo(journal) => undo(root(), &journal),
-        Request::Adopt(options) => adopt(root(), &options, &format!("adopt {}", arguments.join(" "))),
+        Request::Undo(journal, items) if items.is_empty() => undo(root(), &journal),
+        Request::Undo(journal, items) => back_out(root(), &journal, &items),
+        Request::Adopt(options) => adopt(root(), &options, &command_line(arguments)),
     }
+}
+
+/// The command a journal records, which `back_out` reads back as words.
+fn command_line(arguments: &[String]) -> String {
+    format!("adopt {}", arguments.join(" "))
+}
+
+/// Backs `items` out of a journal's adoption: the journal is undone and the
+/// adoption it records run again without them, so the rest stay adopted.
+fn back_out(root: &Path, journal: &Path, items: &[String]) -> Result<(), String> {
+    let path = [std::env::current_dir().map(|d| d.join(journal)).ok(), Some(root.join(journal))]
+        .into_iter()
+        .flatten()
+        .find(|path| path.is_file())
+        .ok_or_else(|| format!("cannot read {}", journal.display()))?;
+    let bytes = std::fs::read(&path).map_err(|error| format!("cannot read {}: {error}", journal.display()))?;
+    let command = read_journal(&bytes)?.0.ok_or("the journal records no command")?;
+    let words: Vec<String> = command.split_whitespace().skip(1).map(str::to_string).collect();
+    let Request::Adopt(mut options) = parse(&words)? else { return Err("the journal records an undo".into()) };
+    let named = |item: &str, given: &str| {
+        item == given || item.split([',', ' ']).any(|part| part == given || part.ends_with(&format!("/{given}")) || given.ends_with(&format!("/{part}")))
+    };
+    if let Some(unknown) = items.iter().find(|given| !options.items.iter().any(|item| named(item, given))) {
+        return Err(format!("{unknown} is not among the journal's items: {}", options.items.join(" ")));
+    }
+    options.items.retain(|item| !items.iter().any(|given| named(item, given)));
+    undo(root, journal)?;
+    if options.items.is_empty() {
+        return Ok(());
+    }
+    // The rest measured as they were when the journal was written.
+    let words: Vec<String> = words.into_iter().filter(|word| !items.iter().any(|given| named(word, given))).collect();
+    adopt(root, &options, &command_line(&words))
+}
+
+/// The diff commands that measure an item's draft, from the checkout, or
+/// none for a form with no draft.
+fn measures(root: &Path, options: &Options, item: &str) -> Result<Vec<Vec<String>>, String> {
+    let path = |path: &str| root.join(path).to_string_lossy().into_owned();
+    Ok(match options.form {
+        Form::Main => {
+            let layout = Layout::new(&main_game(root, options)?);
+            let first = item.split(',').next().unwrap_or(item);
+            vec![vec![path(&layout.main_draft(first)), item.to_string()]]
+        }
+        Form::Overlay => vec![vec![path(item)]],
+        Form::Replace => {
+            let draft = item.split_once(' ').map_or(item, |(_, draft)| draft);
+            let layout = Layout::of_path(draft).ok_or_else(|| format!("{draft} is not under recon/GAME"))?;
+            LANGUAGES.iter().map(|language| vec![path(draft), "--edition".into(), format!("{}-{language}", layout.game)]).collect()
+        }
+        Form::Edition => Vec::new(),
+    })
+}
+
+/// Measures an item's draft as diff does: Ok when it differs in nothing.
+fn measure(root: &Path, options: &Options, item: &str) -> Result<(), String> {
+    for arguments in measures(root, options, item)? {
+        let (listing, draft, differ) = crate::diff::measure(&arguments)
+            .map_err(|error| format!("diff cannot measure it ({error}); --unmeasured leaves the build to judge"))?;
+        if differ != 0 {
+            let edition = arguments.iter().skip_while(|word| *word != "--edition").nth(1).map_or(String::new(), |e| format!(" in {e}"));
+            return Err(format!("it measures differ {differ}{edition} ({listing} listing, {draft} draft instructions): adopt what matches"));
+        }
+    }
+    Ok(())
 }
 
 fn adopt(root: &Path, options: &Options, command: &str) -> Result<(), String> {
@@ -165,6 +255,13 @@ fn adopt(root: &Path, options: &Options, command: &str) -> Result<(), String> {
     let mut adopted = 0;
     let mut refused = 0;
     for item in &options.items {
+        if options.measured {
+            if let Err(why) = measure(root, options, item) {
+                refused += 1;
+                println!("refused {item}: {why}");
+                continue;
+            }
+        }
         let saved = files.now.clone();
         let result = match options.form {
             Form::Main => main_game(root, options).and_then(|game| adopt_main(&mut files, &Layout::new(&game), item, options)),
@@ -1267,7 +1364,8 @@ struct Entry {
     now: String,
 }
 
-fn read_journal(bytes: &[u8]) -> Result<(Vec<String>, Vec<Entry>), String> {
+/// A journal's command, the folders it made and its files.
+fn read_journal(bytes: &[u8]) -> Result<(Option<String>, Vec<String>, Vec<Entry>), String> {
     let mut at = 0;
     let line = |at: &mut usize| -> Option<String> {
         let end = bytes[*at..].iter().position(|&b| b == b'\n')? + *at;
@@ -1279,10 +1377,12 @@ fn read_journal(bytes: &[u8]) -> Result<(Vec<String>, Vec<Entry>), String> {
         return Err("not an adopt journal".into());
     }
     let broken = || "the journal is cut short".to_string();
+    let mut command = None;
     let mut folders = Vec::new();
     let mut entries = Vec::new();
     while let Some(next) = line(&mut at) {
-        if next.starts_with("command ") {
+        if let Some(text) = next.strip_prefix("command ") {
+            command = Some(text.to_string());
             continue;
         }
         if let Some(folder) = next.strip_prefix("folder ") {
@@ -1302,7 +1402,7 @@ fn read_journal(bytes: &[u8]) -> Result<(Vec<String>, Vec<Entry>), String> {
         let now = line(&mut at).and_then(|l| l.strip_prefix("now ").map(str::to_string)).ok_or_else(broken)?;
         entries.push(Entry { path, was, now });
     }
-    Ok((folders, entries))
+    Ok((command, folders, entries))
 }
 
 /// Puts back what a journal's adoption changed, refusing when any file it
@@ -1316,7 +1416,7 @@ fn undo(root: &Path, journal: &Path) -> Result<(), String> {
         .find(|path| path.is_file())
         .ok_or_else(|| format!("cannot read {}", journal.display()))?;
     let bytes = std::fs::read(&journal_path).map_err(|error| format!("cannot read {}: {error}", journal.display()))?;
-    let (folders, mut entries) = read_journal(&bytes)?;
+    let (_, folders, mut entries) = read_journal(&bytes)?;
     let state = |entry: &Entry| fingerprint(std::fs::read_to_string(root.join(&entry.path)).ok().as_deref());
     let changed: Vec<&str> = entries
         .iter()
@@ -1370,7 +1470,9 @@ mod tests {
         assert!(parse(&args(&["overlay", "a.c", "--editions", "en"])).is_err());
         assert!(parse(&args(&["replace", "a.c"])).is_err());
         assert!(parse(&args(&["main", "1", "--editions", "xx"])).is_err());
-        assert!(matches!(parse(&args(&["--undo", "j"])), Ok(Request::Undo(_))));
+        assert!(matches!(parse(&args(&["--undo", "j"])), Ok(Request::Undo(_, items)) if items.is_empty()));
+        assert!(matches!(parse(&args(&["--undo", "j", "08000100"])), Ok(Request::Undo(_, items)) if items == ["08000100"]));
+        assert!(parse(&args(&["edition", "games/tla/src/x", "--editions", "ja", "--unmeasured"])).is_err());
     }
 
     #[test]
@@ -1500,7 +1602,7 @@ mod tests {
             std::fs::create_dir_all(root.join(path).parent().unwrap()).unwrap();
             std::fs::write(root.join(path), text).unwrap();
         }
-        let Ok(Request::Adopt(options)) = parse(&args(&["main", "08000100", "--editions", "en,de,ja", "--game", "tla"])) else {
+        let Ok(Request::Adopt(options)) = parse(&args(&["main", "08000100", "--editions", "en,de,ja", "--game", "tla", "--unmeasured"])) else {
             panic!("main did not parse")
         };
         adopt(root, &options, "adopt test").unwrap();
@@ -1549,6 +1651,42 @@ mod tests {
         assert!(report.iter().any(|line| line.contains("de  stays on its scaffold")), "{report:?}");
         assert_eq!(files.read("recon/tla/de/rom.s").unwrap(), de);
         assert!(files.read("games/tla/objects.tsv").unwrap().contains("recon/tla/de/rom\t.rom.00000100\tde\n"));
+    }
+
+    /// Two overlay drafts adopted in one journal; the build blames the second,
+    /// which goes back to its draft while the first stays adopted.
+    #[test]
+    fn one_item_backs_out_of_a_batch_and_the_rest_stay() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        let script = "SECTIONS\n{\n    .text 0x2008000 :\n    {\n        \"*/games/tla/src/scene/islets/entry.o\"(.text)\n        \"*/resource_674_overlay.o\"(.text.x02008100)\n        \"*/resource_674_overlay.o\"(.text.x02008110)\n    }\n}\n";
+        let scaffold = ".syntax unified\n\t.thumb\n\t.section .text.x02008100,\"ax\",%progbits\n\t.global Func_02000100\n\t.thumb_func\nFunc_02000100:\n\tbx lr\n\t.section .text.x02008110,\"ax\",%progbits\n\t.global Func_02000110\n\t.thumb_func\nFunc_02000110:\n\tbx lr\n";
+        let tree = [
+            ("recon/tla/raw/overlays/resource_674.ld", script),
+            ("recon/tla/raw/overlays/resource_674_overlay.s", scaffold),
+            ("recon/tla/en/overlays/resource_674_c_02000100.c", "void Func_02000100(void) {}\n"),
+            ("recon/tla/en/overlays/resource_674_c_02000110.c", "void Func_02000110(void) {}\n"),
+        ];
+        for (path, text) in tree {
+            std::fs::create_dir_all(root.join(path).parent().unwrap()).unwrap();
+            std::fs::write(root.join(path), text).unwrap();
+        }
+        let words = args(&["overlay", "recon/tla/en/overlays/resource_674_c_02000100.c", "recon/tla/en/overlays/resource_674_c_02000110.c", "--unmeasured"]);
+        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("overlay did not parse") };
+        adopt(root, &options, &command_line(&words)).unwrap();
+        let read = |path: &str| std::fs::read_to_string(root.join(path)).ok();
+        assert!(read("games/tla/src/scene/islets/s0100.c").is_some() && read("games/tla/src/scene/islets/s0110.c").is_some());
+        let journal = Path::new("out/adopt/0001-overlay-resource_674_c_02000100.journal");
+        assert!(back_out(root, journal, &["Func_x.c".into()]).unwrap_err().contains("not among"));
+        back_out(root, journal, &["resource_674_c_02000110.c".into()]).unwrap();
+        assert!(read("games/tla/src/scene/islets/s0100.c").is_some() && read("games/tla/src/scene/islets/s0110.c").is_none());
+        assert_eq!(read("recon/tla/en/overlays/resource_674_c_02000110.c").as_deref(), Some(tree[3].1));
+        assert!(read("recon/tla/raw/overlays/resource_674_overlay.s").unwrap().contains("Func_02000110:"));
+        // The journal written afresh, under the number the undone one freed.
+        let second = std::fs::read_dir(root.join("out/adopt")).unwrap().flatten().map(|entry| entry.file_name()).collect::<Vec<_>>();
+        assert_eq!(second, ["0001-overlay-resource_674_c_02000100.journal"]);
+        let recorded = read("out/adopt/0001-overlay-resource_674_c_02000100.journal").unwrap();
+        assert!(recorded.contains("command adopt overlay recon/tla/en/overlays/resource_674_c_02000100.c --unmeasured\n"), "{recorded}");
     }
 
     /// An overlay draft takes its section's link line; a replacement takes the
