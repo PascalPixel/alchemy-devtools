@@ -340,7 +340,7 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<(Vec<Ro
     let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
     let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
     let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
-    note_modified(root, edition, &rom);
+    note_modified(edition, &rom);
     let symbols = battle::Symbols::find(&map)?;
     let mut rows = Vec::new();
     let mut total = 0;
@@ -806,7 +806,7 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
         }
         let rom_path = root.join("out").join(edition).join(format!("{edition}.gba"));
         let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
-        note_modified(root, edition, &rom);
+        note_modified(edition, &rom);
         processes = jobs.count.min(pieces.len());
         let joined = jobs::run(r.kind, arguments, &pieces, jobs.count)?;
         outcome.read(&joined.records);
@@ -908,7 +908,7 @@ impl Machines {
         let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
         let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
         if note {
-            note_modified(root, edition, &rom);
+            note_modified(edition, &rom);
         }
         let mut symbols = field::Symbols::find(&map)?;
         symbols.read_defeat(&build.join(format!("{edition}.elf")))?;
@@ -1025,12 +1025,8 @@ fn scene_pieces(
 /// Says so when the built ROM is not the one rom.sha1 names: a modified
 /// build, whose pictures are its own.
 #[cfg(feature = "render")]
-fn note_modified(root: &Path, edition: &str, rom: &[u8]) {
-    use sha1::{Digest, Sha1};
-
-    let listed = std::fs::read_to_string(root.join("rom.sha1")).unwrap_or_default();
-    let digest = format!("{:x}", Sha1::digest(rom));
-    if !listed.lines().any(|l| l.starts_with(&digest) && l.ends_with(&format!("{edition}.gba"))) {
+fn note_modified(edition: &str, rom: &[u8]) {
+    if !crate::alchemy::targets::decomp_target(Some(edition)).is_ok_and(|target| target.matches(rom)) {
         eprintln!("note: out/{edition}/{edition}.gba is not the ROM rom.sha1 names: a modified build");
     }
 }
@@ -1088,7 +1084,7 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
     let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
     let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
-    note_modified(root, edition, &rom);
+    note_modified(edition, &rom);
     let symbols = field::Symbols::find(&map)?;
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
     let mut front = front::Front { rom: &rom, symbols: &symbols, flags, out, written: Vec::new() };
@@ -1348,7 +1344,7 @@ fn play_guide(
         let pieces: Vec<(String, u64)> = units.iter().map(|u| (u.clone(), 1)).collect();
         let rom = std::fs::read(root.join("out").join(edition).join(format!("{edition}.gba")))
             .map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
-        note_modified(root, edition, &rom);
+        note_modified(edition, &rom);
         std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
         let joined = jobs::run("guide", arguments, &pieces, jobs.count)?;
         children_failed = joined.failed;
@@ -1374,7 +1370,7 @@ fn play_guide(
         let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
         let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
         if !jobs.child {
-            note_modified(root, edition, &rom);
+            note_modified(edition, &rom);
         }
         let symbols = field::Symbols::find(&map)?;
         std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
