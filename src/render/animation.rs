@@ -244,11 +244,21 @@ fn median_cut(histogram: &[(u32, u64)], limit: usize) -> Vec<u32> {
     palette
 }
 
+const CHECK_USAGE: &str = "usage: alchemy-devtools render check DIR...
+Reads every GIF under each DIR and prints each recording that shows less
+than ten seconds of the game before its first black screen, between two
+or after its last, with why; fails when it prints any. A recording with
+no black screen passes.";
+
 /// `render check DIR...`: every GIF under each folder against
 /// check_black_clearance, those refused listed with why; an error if any is.
 pub fn check_folders(folders: &[String]) -> Result<(), String> {
+    if matches!(folders, [help] if help == "-h" || help == "--help") {
+        println!("{CHECK_USAGE}");
+        return Ok(());
+    }
     if folders.is_empty() {
-        return Err("usage: alchemy-devtools render check DIR...".to_string());
+        return Err(CHECK_USAGE.to_string());
     }
     let mut files = Vec::new();
     for folder in folders {

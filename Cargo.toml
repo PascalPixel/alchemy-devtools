@@ -19,7 +19,7 @@ gif = { version = "0.14", default-features = false, features = ["std"], optional
 cc = { version = "1", optional = true }
 
 [features]
-# `render`: the battle pictures, run in libmgba (README).
+# `render`: the docs site's pictures and recordings, run in libmgba (README).
 render = ["dep:gif", "dep:cc"]
 
 [[bin]]
