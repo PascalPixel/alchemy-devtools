@@ -26,7 +26,7 @@ const USAGE: &str = r#"usage: alchemy-devtools <command> [args]
 Run any command with --help for its options.
 
   adopt     move matched drafts into the build, judged by every edition's bytes
-  check     each edition's built bytes against its ROM, and the fake-match tags
+  check     each built ROM and overlay against its reference, and the S2 tags
   diff      a C draft against the listing it would replace
   editions  what an edition still takes from its scaffold while English links C
   permute   search rewrites and PERM macro choices of a draft toward differ 0
