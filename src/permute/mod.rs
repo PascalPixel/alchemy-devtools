@@ -490,13 +490,13 @@ fn prepare(job: &Job, expanded: &mut Expanded, target: &str) -> Result<(), Strin
 /// Set by the first SIGINT or SIGTERM: the search and the minimizer stop
 /// where they stand, the best so far is written and the scratch removed.
 /// A second signal ends the process at once; the next run sweeps its scratch.
-static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+pub(crate) static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
 extern "C" fn interrupted(_: libc::c_int) {
     INTERRUPTED.store(true, Ordering::Relaxed);
 }
 
-fn stop_on_signals() {
+pub(crate) fn stop_on_signals() {
     for signal in [libc::SIGINT, libc::SIGTERM] {
         // SAFETY: the handler only stores to an atomic, which is
         // async-signal-safe; SA_RESETHAND restores the default for a second.

@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 mod alloc;
 pub(crate) mod skeleton;
 
-const USAGE: &str = r#"usage: alchemy-devtools diff DRAFT.c [ADDRESS[,ADDRESS...]] [--game GAME] [--edition EDITION] [--arm] [--rtl] [--alloc] [--heat] [--show] [--skeleton]
+pub(crate) const USAGE: &str = r#"usage: alchemy-devtools diff DRAFT.c [ADDRESS[,ADDRESS...]] [--game GAME] [--edition EDITION] [--arm] [--rtl] [--alloc] [--heat] [--show] [--skeleton]
        alchemy-devtools diff OVERLAY_DRAFT.c [--overlay resource_XXX] [--symbol NAME] [--edition EDITION] [--rtl] [--alloc] [--heat] [--show] [--skeleton]
 Compiles DRAFT.c for --edition (default: the game's English edition) as the
 build compiles the file it replaces: the recipe `make -n` prints for that
@@ -63,14 +63,14 @@ scheduling cascade from early differences, so start there."#;
 
 pub(crate) const GAME_ARM_NOTICE: &str = "game ARM route: stock GCC 2.95.2 at the common ARM setting.";
 
-struct Options {
-    draft: PathBuf,
+pub(crate) struct Options {
+    pub(crate) draft: PathBuf,
     addresses: Vec<String>,
     game: &'static str,
-    target: DecompTarget,
+    pub(crate) target: DecompTarget,
     show: bool,
     skeleton: bool,
-    arm: bool,
+    pub(crate) arm: bool,
     rtl: bool,
     alloc: bool,
     heat: bool,
@@ -78,7 +78,15 @@ struct Options {
     symbol: Option<String>,
 }
 
-fn parse(arguments: &[String]) -> Result<Options, String> {
+impl Options {
+    /// `draft`'s compile commands, writing `object`, as these options
+    /// compile the draft they name.
+    pub(crate) fn steps(&self, draft: &Path, object: &Path) -> Result<Vec<Vec<String>>, String> {
+        steps(self.target, draft, object, self.overlay.as_deref(), self.arm)
+    }
+}
+
+pub(crate) fn parse(arguments: &[String]) -> Result<Options, String> {
     let mut draft = None;
     let mut addresses = Vec::new();
     let mut game = None;
@@ -157,13 +165,13 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
 /// A run's own folder, out/EDITION/obj/drafts/run-PID: the compiler runs in
 /// it, so its pass dumps land there, and no two runs share an object. It is
 /// removed when the run ends unless kept.
-struct Work {
-    folder: PathBuf,
+pub(crate) struct Work {
+    pub(crate) folder: PathBuf,
     keep: bool,
 }
 
 impl Work {
-    fn new(target: DecompTarget) -> Result<Work, String> {
+    pub(crate) fn new(target: DecompTarget) -> Result<Work, String> {
         let folder = root().join(target.output_dir).join("obj/drafts").join(format!("run-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&folder);
         std::fs::create_dir_all(&folder).map_err(|error| format!("{}: {error}", folder.display()))?;
@@ -816,6 +824,77 @@ pub(crate) fn text_symbols(object: &Path) -> Result<Vec<String>, String> {
         .collect())
 }
 
+/// What a draft is compared with: the listing's instructions, and the
+/// functions it names, the last of which the draft's object defines being
+/// the one compared (the whole object when it defines none).
+pub(crate) struct Reference {
+    pub(crate) listing: Vec<String>,
+    pub(crate) functions: Vec<String>,
+}
+
+impl Reference {
+    /// The function to read from `object`, a compiled draft.
+    pub(crate) fn symbol(&self, object: &Path) -> Result<Option<String>, String> {
+        if self.functions.is_empty() {
+            return Ok(None);
+        }
+        let defined = text_symbols(object)?;
+        Ok(self.functions.iter().rev().find(|name| defined.contains(name)).cloned())
+    }
+}
+
+/// The listing `options` name: an overlay's function (--symbol, or the one
+/// `object`, the compiled draft, shares with the overlay), then each
+/// ADDRESS's listing object, or its extent in the edition's scaffold.
+/// `object` is named after the draft.
+pub(crate) fn reference(options: &Options, object: &Path) -> Result<Reference, String> {
+    let target = options.target;
+    let stem = object.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let mut listing = Vec::new();
+    let mut functions = Vec::new();
+    if let Some(overlay) = &options.overlay {
+        let output = root().join(target.output_dir);
+        let reference = overlay::file(&output, overlay, "_overlay.o");
+        let symbol = match &options.symbol {
+            Some(s) => s.clone(),
+            None => {
+                let ours = overlay_functions(target, overlay)?;
+                let defined = text_symbols(object)?;
+                overlay::function(&ours, &defined, &stem).ok_or_else(|| {
+                    let shared = defined.iter().filter(|name| ours.contains(name)).count();
+                    format!("name the listing function with --symbol (the draft and {overlay} share {shared} names)")
+                })?
+            }
+        };
+        let raw = if reference.exists() { disassemble(&reference, Some(&symbol))? } else { Vec::new() };
+        if raw.is_empty() {
+            listing.extend(overlay_reference(target, overlay, &symbol)?.0);
+        } else {
+            listing.extend(raw);
+        }
+        functions.push(symbol);
+    }
+    for address in &options.addresses {
+        let reference = root()
+            .join(target.output_dir)
+            .join(format!("obj/recon/{}/raw/{address}.o", options.game));
+        if !reference.exists() {
+            let wanted = options.symbol.as_deref().unwrap_or(address);
+            let (tokens, name) = scaffold_reference(target, wanted, options.arm)?;
+            listing.extend(tokens);
+            if options.addresses.len() == 1 {
+                functions.push(name);
+            }
+        } else {
+            listing.extend(disassemble(&reference, None)?);
+        }
+    }
+    if listing.is_empty() {
+        return Err("the selected reference function contains no instructions".into());
+    }
+    Ok(Reference { listing, functions })
+}
+
 /// PERM macros are the permuter's notation, not C: diff compares only a
 /// draft the build could compile.
 fn refuse_perm_macros(draft: &Path) -> Result<(), String> {
@@ -838,7 +917,6 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     if options.arm {
         println!("{GAME_ARM_NOTICE}");
     }
-    let root = root();
     let target = options.target;
     let draft = std::fs::canonicalize(&options.draft)
         .map_err(|e| format!("{}: {e}", options.draft.display()))?;
@@ -861,50 +939,9 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         println!("pass dumps: {}/{name}.*", work.folder.display());
     }
     command(&assemble, &work.folder)?;
-    let mut listing = Vec::new();
-    let mut draft_symbol = None;
-    if let Some(overlay) = &options.overlay {
-        let output = root.join(target.output_dir);
-        let reference = overlay::file(&output, overlay, "_overlay.o");
-        let symbol = match &options.symbol {
-            Some(s) => s.clone(),
-            None => {
-                let ours = overlay_functions(target, overlay)?;
-                let defined = text_symbols(&object)?;
-                overlay::function(&ours, &defined, &stem).ok_or_else(|| {
-                    let shared = defined.iter().filter(|name| ours.contains(name)).count();
-                    format!("name the listing function with --symbol (the draft and {overlay} share {shared} names)")
-                })?
-            }
-        };
-        let raw = if reference.exists() { disassemble(&reference, Some(&symbol))? } else { Vec::new() };
-        if raw.is_empty() {
-            listing.extend(overlay_reference(target, overlay, &symbol)?.0);
-        } else {
-            listing.extend(raw);
-        }
-        if text_symbols(&object)?.contains(&symbol) {
-            draft_symbol = Some(symbol);
-        }
-    }
-    for address in &options.addresses {
-        let reference = root
-            .join(target.output_dir)
-            .join(format!("obj/recon/{}/raw/{address}.o", options.game));
-        if !reference.exists() {
-            let wanted = options.symbol.as_deref().unwrap_or(address);
-            let (tokens, name) = scaffold_reference(target, wanted, options.arm)?;
-            listing.extend(tokens);
-            if options.addresses.len() == 1 && text_symbols(&object)?.contains(&name) {
-                draft_symbol = Some(name);
-            }
-        } else {
-            listing.extend(disassemble(&reference, None)?);
-        }
-    }
-    if listing.is_empty() {
-        return Err("the selected reference function contains no instructions".into());
-    }
+    let found = reference(&options, &object)?;
+    let draft_symbol = found.symbol(&object)?;
+    let listing = found.listing;
     let compiled = disassemble(&object, draft_symbol.as_deref())?;
     let (common, script) = compare(&listing, &compiled);
     println!(
