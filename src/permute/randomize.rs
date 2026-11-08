@@ -262,23 +262,29 @@ fn random_type(rng: &mut Rng) -> Node {
     ty
 }
 
+/// One applied rewrite, replayable: its kind and the generator as it stood
+/// when the rewrite chose its site, so `replay` repeats it exactly on the
+/// same unit, and the minimizer can replay a trail with steps left out.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Step {
+    pub kind: Kind,
+    pub rng: Rng,
+    /// The randomization region, chosen once before retries. The ordinal
+    /// survives node insertions and is resolved anew on replay.
+    pub region: Option<usize>,
+}
+
 /// Retry failed passes with the same weights. Block insertion and padding
 /// declarations remain applicable even when the function has no expressions.
-pub fn mutate(unit: &mut Node, target: &str, rng: &mut Rng) -> Option<super::mutate::Step> {
+pub fn mutate(unit: &mut Node, target: &str, rng: &mut Rng) -> Option<Step> {
     let sites = Sites::new(unit, target, rng)?;
     loop {
         let kind = Kind::GCC[weighted(rng, Kind::GCC.iter().map(|(_, w)| *w))].0;
         let before = rng.clone();
         if apply_sites(unit, target, kind, rng, &sites) {
-            return Some(super::mutate::Step { kind: super::mutate::Kind::Full(kind), rng: before, region: sites.choice });
+            return Some(Step { kind, rng: before, region: sites.choice });
         }
     }
-}
-
-#[cfg(test)]
-pub fn apply(unit: &mut Node, target: &str, kind: Kind, rng: &mut Rng) -> bool {
-    let Some(sites) = Sites::new(unit, target, rng) else { return false };
-    apply_sites(unit, target, kind, rng, &sites)
 }
 
 pub fn replay(unit: &mut Node, target: &str, kind: Kind, rng: &mut Rng, region: Option<usize>) -> bool {
@@ -862,6 +868,12 @@ mod tests {
         unit.extract_function("target").unwrap(); unit
     }
 
+    /// One pass of `kind`, drawing its region as `mutate` does.
+    fn apply(unit: &mut Node, target: &str, kind: Kind, rng: &mut Rng) -> bool {
+        let Some(sites) = Sites::new(unit, target, rng) else { return false };
+        apply_sites(unit, target, kind, rng, &sites)
+    }
+
     #[test]
     fn supported_families_generate_replayable_c() {
         let base = parsed(SOURCE);
@@ -934,7 +946,7 @@ mod tests {
             for _ in 0..24 { if let Some(step) = mutate(&mut unit, "target", &mut rng) { steps.push(step); } }
             let mut replay = base.clone();
             for step in steps {
-                let super::super::mutate::Kind::Full(kind) = step.kind else { panic!() };
+                let kind = step.kind;
                 assert!(super::replay(&mut replay, "target", kind, &mut step.rng.clone(), step.region));
             }
             assert_eq!(unit, replay);
@@ -954,7 +966,7 @@ mod tests {
             for _ in 0..12 { if let Some(step) = mutate(&mut unit, "target", &mut rng) { steps.push(step); } }
             let mut restored = base.clone();
             for step in steps {
-                let super::super::mutate::Kind::Full(kind) = step.kind else { panic!() };
+                let kind = step.kind;
                 assert!(replay(&mut restored, "target", kind, &mut step.rng.clone(), step.region));
             }
             assert_eq!(unit, restored, "seed {seed}");
@@ -1129,7 +1141,7 @@ mod tests {
                     let taken = mutate(&mut driven, "target", &mut driver_rng).unwrap();
                     assert_eq!(driven, unit, "{context}: production mutation driver");
                     assert_eq!(driver_rng.clone().random(), rng.clone().random(), "{context}: driver random state");
-                    let super::super::mutate::Kind::Full(replayed) = taken.kind else { panic!() };
+                    let replayed = taken.kind;
                     assert_eq!(replayed, kind, "{context}");
                     assert!(replay(&mut restored, "target", kind, &mut taken.rng.clone(), taken.region), "{context}");
                     assert_eq!(restored, unit, "{context}: replay");
@@ -1168,7 +1180,7 @@ mod tests {
                 let step = mutate(&mut driven, "target", &mut driver_rng).unwrap();
                 assert_eq!(driven, unit, "{context}: production mutation driver");
                 assert_eq!(driver_rng.random(), c[6].parse::<f64>().unwrap(), "{context}: driver random state");
-                let super::super::mutate::Kind::Full(kind) = step.kind else { panic!() };
+                let kind = step.kind;
                 assert!(replay(&mut restored, "target", kind, &mut step.rng.clone(), step.region));
                 assert_eq!(restored, unit, "{context}: replay");
             }

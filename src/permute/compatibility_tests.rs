@@ -1,10 +1,10 @@
 //! Original search and declaration scenarios through both game toolchains.
 
-use super::tests::test_problem;
+use super::tests::{test_options, test_problem};
 use super::*;
 
 #[test]
-fn initial_exact_expansion_is_saved_without_losing_output_limits_or_forced_seeds() {
+fn initial_exact_expansion_is_saved_under_output_filters() {
 
     let work = tempfile::tempdir().unwrap();
     let draft = work.path().join("08000000.c");
@@ -16,13 +16,7 @@ fn initial_exact_expansion_is_saved_without_losing_output_limits_or_forced_seeds
     reference.compile("int target(void) { return 3; }\n").unwrap();
     let listing = crate::diff::disassemble(&reference.object, Some("target")).unwrap();
     let rows = score::disassemble(&reference.object, Some("target")).unwrap();
-    for (index, (flags, saves_match)) in [
-        (vec![], true),
-        (vec!["--better-only", "--best-only", "--stop-on-zero"], true),
-        (vec!["--seed", "0,0", "--stop-on-zero"], true),
-        (vec!["--only-if-below", "0", "--stop-on-zero"], false),
-        (vec!["--seed", "1,0", "--stop-on-zero"], false),
-    ].into_iter().enumerate() {
+    for (index, flags) in [vec![], vec!["--better-only", "--stop-on-zero"]].into_iter().enumerate() {
         let mut problem = test_problem(&draft, source, listing.clone(), Some("target"));
         problem.symbol = Some("target".into());
         problem.listing_rows = Some(rows.clone());
@@ -36,14 +30,12 @@ fn initial_exact_expansion_is_saved_without_losing_output_limits_or_forced_seeds
         execute(problem, &options, None, &output).unwrap();
         let archive = output.join("output-0-1/source.c");
         let best = output.join("best-1.c");
-        assert_eq!(archive.is_file(), saves_match, "case {index}: an exact initial expansion must be retained");
-        assert_eq!(best.is_file(), saves_match, "case {index}");
-        if saves_match {
-            for path in [archive, best] {
-                let text = std::fs::read_to_string(path).unwrap();
-                assert!(!perm::has_macros(&text));
-                assert!(checker.evaluate(&reference, &text).unwrap().is_zero());
-            }
+        assert!(archive.is_file(), "case {index}: an exact initial expansion must be retained");
+        assert!(best.is_file(), "case {index}");
+        for path in [archive, best] {
+            let text = std::fs::read_to_string(path).unwrap();
+            assert!(!perm::has_macros(&text));
+            assert!(checker.evaluate(&reference, &text).unwrap().is_zero());
         }
     }
 }
@@ -63,10 +55,9 @@ fn saved_best_preserves_line_sensitive_compiler_output() {
     problem.listing_rows = Some(expected.clone());
     let found = Found {
         score: problem.evaluate(&reference, source).unwrap(),
-        unnatural: 0,
         text: source.into(),
         steps: vec![],
-        expanded: Arc::new(perm::expand(&problem.nodes, None).unwrap()),
+        expanded: Arc::new(perm::expand(&problem.nodes).unwrap()),
         job: 0,
         iteration: 0,
     };
@@ -80,41 +71,6 @@ fn saved_best_preserves_line_sensitive_compiler_output() {
     assert_eq!(score::disassemble(&reference.object, Some("target")).unwrap(), expected);
     assert_eq!(saved, source);
     assert!(std::fs::read_to_string(output.join("best-1.txt")).unwrap().contains("Job 0, iteration 0"));
-}
-
-#[test]
-fn prefix_search_saves_improvement_above_baseline_weighted_score() {
-
-    let work = tempfile::tempdir().unwrap();
-    let draft = work.path().join("draft/08000000.c");
-    std::fs::create_dir_all(draft.parent().unwrap()).unwrap();
-    let source = "int target(int x) { return PERM_GENERAL((x * 5) + 9, (x * 3) ^ 9); }";
-    let target = "int target(int x) { return (x * 3) + 9; }";
-    let improved = "int target(int x) { return (x * 3) ^ 9; }";
-    std::fs::write(&draft, source).unwrap();
-    let mut problem = test_problem(&draft, source, vec![], Some("target"));
-    problem.symbol = Some("target".into());
-    problem.prefix = true;
-    let reference = Job::new(&problem, &work.path().join("reference")).unwrap();
-    reference.compile(target).unwrap();
-    problem.listing = crate::diff::disassemble(&reference.object, Some("target")).unwrap();
-    problem.listing_rows = Some(score::disassemble(&reference.object, Some("target")).unwrap());
-    let base = problem.source(&problem.state(perm::expand(&problem.nodes, None).unwrap()));
-    let base_score = problem.evaluate(&reference, &base).unwrap();
-    let improved_score = problem.evaluate(&reference, improved).unwrap();
-    assert!(improved_score.prefix > base_score.prefix, "base {base_score:?}, improved {improved_score:?}");
-    assert!(improved_score.weighted > base_score.weighted, "base {base_score:?}, improved {improved_score:?}");
-    let arguments = [draft.to_str().unwrap(), "--function", "target", "--jobs", "1", "--iterations", "2", "--prefix", "--better-only", "--best-only"].map(str::to_string);
-    let options = parse_options(&arguments).unwrap();
-    let mut checker = test_problem(&draft, source, problem.listing.clone(), Some("target"));
-    checker.symbol = problem.symbol.clone();
-    checker.listing_rows = problem.listing_rows.clone();
-    let output = work.path().join("output");
-    execute(problem, &options, None, &output).unwrap();
-    let best = std::fs::read_to_string(output.join("best-1.c")).unwrap();
-    assert_eq!(checker.evaluate(&reference, &best).unwrap(), improved_score);
-    let archived = std::fs::read_to_string(output.join(format!("output-{}-1/source.c", improved_score.weighted))).unwrap();
-    assert_eq!(checker.evaluate(&reference, &archived).unwrap(), improved_score);
 }
 
 #[test]
@@ -132,11 +88,11 @@ fn exact_stack_operand_candidate_survives_zero_weighted_baseline() {
     reference.compile(target).unwrap();
     problem.listing = crate::diff::disassemble(&reference.object, Some("target")).unwrap();
     problem.listing_rows = Some(score::disassemble(&reference.object, Some("target")).unwrap());
-    let base = problem.source(&problem.state(perm::expand(&problem.nodes, None).unwrap()));
-    let score = problem.evaluate(&reference, &base).unwrap();
+    let base = perm::expand(&problem.nodes).unwrap();
+    let score = problem.evaluate(&reference, &base.restore(&base.text)).unwrap();
     assert_eq!(score.weighted, 0, "reference: {:?}; candidate: {:?}", problem.listing_rows, score::disassemble(&reference.object, Some("target")).unwrap());
     assert!(score.differ > 0);
-    let arguments = [draft.to_str().unwrap(), "--function", "target", "--jobs", "1", "--iterations", "3", "--better-only", "--best-only", "--stop-on-zero"].map(str::to_string);
+    let arguments = [draft.to_str().unwrap(), "--function", "target", "--jobs", "1", "--iterations", "3", "--better-only", "--stop-on-zero"].map(str::to_string);
     let options = parse_options(&arguments).unwrap();
     let checker = test_problem(&draft, source, problem.listing.clone(), Some("target"));
     let output = work.path().join("output");
@@ -145,71 +101,6 @@ fn exact_stack_operand_candidate_survives_zero_weighted_baseline() {
     assert!(checker.evaluate(&reference, &best).unwrap().is_zero());
     let archived = std::fs::read_to_string(output.join("output-0-1/source.c")).unwrap();
     assert!(checker.evaluate(&reference, &archived).unwrap().is_zero());
-}
-
-#[test]
-fn forced_randomizer_seed_search_reaches_candidate() {
-
-    let work = tempfile::tempdir().unwrap();
-    let draft = work.path().join("draft/08000000.c");
-    std::fs::create_dir_all(draft.parent().unwrap()).unwrap();
-    let source = include_str!("c/fixtures/mutations-flow.c");
-    std::fs::write(&draft, source).unwrap();
-    let first: Vec<_> = include_str!("c/fixtures/mutations-integer-seeds.tsv")
-        .lines()
-        .next()
-        .unwrap()
-        .split('\t')
-        .collect();
-    let mut problem = test_problem(&draft, source, vec![], Some("target"));
-    problem.symbol = Some("target".into());
-    let reference = Job::new(&problem, &work.path().join("reference")).unwrap();
-    reference.compile(&first[5].replace("\\n", "\n")).unwrap();
-    problem.listing = crate::diff::disassemble(&reference.object, Some("target")).unwrap();
-    problem.listing_rows = Some(score::disassemble(&reference.object, Some("target")).unwrap());
-    let arguments = [
-        draft.to_str().unwrap(),
-        "--function",
-        "target",
-        "--jobs",
-        "1",
-        "--iterations",
-        "1",
-        "--search-seed",
-        "987",
-        "--seed",
-        first[1],
-    ]
-    .map(str::to_string);
-    let options = parse_options(&arguments).unwrap();
-    let mut state = perm::expand(&problem.nodes, None).unwrap();
-    prepare(&reference, &mut state, "target").unwrap();
-    let state = problem.state(state);
-    let text = problem.source(&state);
-    let base = Found {
-        score: problem.evaluate(&reference, &text).unwrap(),
-        unnatural: 0,
-        text,
-        steps: vec![],
-        expanded: state.expanded.clone(),
-        job: 0,
-        iteration: 0,
-    };
-    assert!(base.score.weighted > 0);
-    let found = search(
-        &problem,
-        &state,
-        &base,
-        true,
-        &options,
-        None,
-        &work.path().join("run"),
-        Instant::now(),
-        None,
-    )
-    .unwrap();
-    assert_eq!((found[0].score.weighted, found[0].score.differ), (0, 0));
-    assert_eq!(found[0].text, first[5].replace("\\n", "\n"));
 }
 
 #[test]
@@ -232,18 +123,16 @@ fn independent_shared_declarations_match_printing() {
 #[test]
 fn independent_search_scenarios_reach_targets_and_isolate_workers() {
 
-    // Each game/scorer pair owns private compiler jobs and output directories.
-    // Run the four pairs together instead of serializing their subprocesses.
+    // Each game owns private compiler jobs and output directories. Run
+    // both together instead of serializing their subprocesses.
     std::thread::scope(|scope| {
-        for algorithm in [score::Algorithm::Difflib, score::Algorithm::Levenshtein] {
-            for (game, edition) in [("tbs", "tbs-en"), ("tla", "tla-en")] {
-                scope.spawn(move || check_search_scenarios(game, edition, algorithm));
-            }
+        for (game, edition) in [("tbs", "tbs-en"), ("tla", "tla-en")] {
+            scope.spawn(move || check_search_scenarios(game, edition));
         }
     });
 }
 
-fn check_search_scenarios(game: &'static str, edition: &str, algorithm: score::Algorithm) {
+fn check_search_scenarios(game: &'static str, edition: &str) {
     for row in include_str!("c/fixtures/search-scenarios.tsv").lines() {
         let c: Vec<_> = row.split('\t').collect();
         let source = c[4].replace("\\n", "\n");
@@ -254,9 +143,6 @@ fn check_search_scenarios(game: &'static str, edition: &str, algorithm: score::A
         std::fs::write(&draft, &source).unwrap();
         let mut problem = test_problem(&draft, &source, vec![], Some(c[1]));
         problem.target = decomp_target(Some(edition)).unwrap();
-        // ign_branch_targets defaults false. Its CLI defaults true instead.
-        problem.score_options.ignore_branch_targets = false;
-        problem.score_options.algorithm = algorithm;
         problem.symbol = Some(c[1].into());
         let reference = Job::new(&problem, &work.path().join("reference")).unwrap();
         reference
@@ -265,25 +151,13 @@ fn check_search_scenarios(game: &'static str, edition: &str, algorithm: score::A
         problem.listing = crate::diff::disassemble(&reference.object, Some(c[1])).unwrap();
         problem.listing_rows = Some(score::disassemble(&reference.object, Some(c[1])).unwrap());
         let options = Options {
-            draft,
-            addresses: vec![],
             game,
             target: problem.target,
-            minutes: 0.0,
             jobs: c[2].parse().unwrap(),
-            seed: 1,
-            rng_seed: None,
-            perm_seed: None,
             function: Some(c[1].into()),
-            overlay: None,
-            arm: false,
             iterations: Some(1000),
-            heat: false,
-            prefix: false,
-            score_options: problem.score_options,
-            keep_prob: 0.6,
             stop_on_zero: true,
-            output: output::Options::default(),
+            ..test_options(&draft)
         };
         let output = work.path().join("output");
         let mut checker =
@@ -297,7 +171,8 @@ fn check_search_scenarios(game: &'static str, edition: &str, algorithm: score::A
         let best = match std::fs::read_to_string(output.join("best-1.c")) {
             Ok(best) => best,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                checker.source(&checker.state(perm::expand(&checker.nodes, None).unwrap()))
+                let draft = perm::expand(&checker.nodes).unwrap();
+                draft.restore(&draft.text)
             }
             Err(e) => panic!("{}: result: {e}", c[0]),
         };
@@ -309,7 +184,7 @@ fn check_search_scenarios(game: &'static str, edition: &str, algorithm: score::A
             c[3] == "1",
             "{}: {}\n{best}",
             c[0],
-            checked.summary_with(false)
+            checked.summary()
         );
         if c[3] == "1" {
             assert_eq!(
@@ -329,9 +204,6 @@ fn check_search_scenarios(game: &'static str, edition: &str, algorithm: score::A
                 c[0]
             );
         }
-        println!(
-            "independent case {} ({edition}, {algorithm:?}) passed",
-            c[0]
-        );
+        println!("independent case {} ({edition}) passed", c[0]);
     }
 }

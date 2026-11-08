@@ -1,0 +1,8 @@
+0	2	300	  0:\tadds\tr0, r1, #12\n  2:\tadds\tr0, r1, #12\n  4:\tbl\t4\n  4:\tR_ARM_THM_CALL\t.text+0x34\n	  0:\tldr\tr1, [sp, #20]\n  2:\tbl\t4\n  2:\tR_ARM_THM_CALL\t.text+0x34\n
+1	2	300	  0:\tadds\tr0, r1, #12\n  2:\tadds\tr0, r1, #12\n  4:\tbl\t4\n  4:\tR_ARM_THM_CALL\t.text+0x34\n	  0:\tldr\tr1, [sp, #20]\n  2:\tbl\t4\n  2:\tR_ARM_THM_CALL\t.text+0x34\n
+0	14	460	  0:\tbne\t10\n  2:\tbne\t20\n  4:\tbne\t20\n  6:\tbl\t4\n  6:\tR_ARM_THM_CALL\tCall\n  8:\tadds\tr0, r1, #12\n  a:\tbx\tlr\n	  0:\tadds\tr0, r1, #12\n  2:\tbne\t20\n
+1	14	460	  0:\tbne\t10\n  2:\tbne\t20\n  4:\tbne\t20\n  6:\tbl\t4\n  6:\tR_ARM_THM_CALL\tCall\n  8:\tadds\tr0, r1, #12\n  a:\tbx\tlr\n	  0:\tadds\tr0, r1, #12\n  2:\tbne\t20\n
+0	19	400	  0:\tadds\tr2, r3, #20\n  2:\tsub\tsp, sp, #20\n	  0:\tadds\tr2, r3, #20\n  2:\tbne\t20\n  4:\tbne\t20\n  6:\tldr\tr1, [sp, #20]\n
+1	19	400	  0:\tadds\tr2, r3, #20\n  2:\tsub\tsp, sp, #20\n	  0:\tadds\tr2, r3, #20\n  2:\tbne\t20\n  4:\tbne\t20\n  6:\tldr\tr1, [sp, #20]\n
+0	31	500		  0:\t.word\t0x00000000\n  0:\tR_ARM_ABS32\tData\n  2:\t.word\t0x00000000\n  2:\tR_ARM_ABS32\t.data+0x34\n  4:\t.word\t0x00000000\n  4:\tR_ARM_ABS32\tData\n  6:\tadds\tr0, r1, #12\n  8:\tbl\t4\n  8:\tR_ARM_THM_CALL\tOther\n
+1	31	500		  0:\t.word\t0x00000000\n  0:\tR_ARM_ABS32\tData\n  2:\t.word\t0x00000000\n  2:\tR_ARM_ABS32\t.data+0x34\n  4:\t.word\t0x00000000\n  4:\tR_ARM_ABS32\tData\n  6:\tadds\tr0, r1, #12\n  8:\tbl\t4\n  8:\tR_ARM_THM_CALL\tOther\n

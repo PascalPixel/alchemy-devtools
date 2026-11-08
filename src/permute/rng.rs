@@ -94,10 +94,6 @@ impl Rng {
         low | (u64::from(self.word() >> (64 - bits)) << 32)
     }
 
-    pub fn next(&mut self) -> u64 {
-        self.bits(64)
-    }
-
     pub fn candidate_seed(&mut self) -> u128 {
         const WIDTH: u128 = 100_000_000_000_000_000_000 - 1;
         loop {
@@ -123,11 +119,9 @@ impl Rng {
         }
     }
 
-    pub fn chance(&mut self, numerator: u64, denominator: u64) -> bool {
-        self.random() < numerator as f64 / denominator as f64
-    }
-
-    /// rejection sampling. The order matters to variable aliasing/removal.
+    /// Two distinct indices below `length`, in the order Python's
+    /// random.sample draws them: from a pool up to 21, else by rejection
+    /// sampling. The order matters to variable aliasing/removal.
     pub fn sample_pair(&mut self, length: usize) -> (usize, usize) {
         assert!(length >= 2, "sample larger than population");
         let first = self.below(length);
@@ -141,29 +135,30 @@ impl Rng {
     }
 }
 
-/// Candidate-local randomization never consumes the scheduler's stream.
+/// One job's walk. Its control stream decides when a walk restarts and
+/// seeds each new walk's mutation stream, so candidate-local randomization
+/// never consumes the scheduler's draws.
 pub struct WalkRng {
     control: Rng,
-    forced: Option<Rng>,
     pub mutation: Rng,
     started: bool,
 }
 
 impl WalkRng {
-    pub fn new(control_seed: u64, forced: Option<Rng>) -> Self {
-        Self { control: Rng::new(control_seed), forced, mutation: Rng::new(0), started: false }
+    pub fn new(control_seed: u64) -> Self {
+        Self { control: Rng::new(control_seed), mutation: Rng::new(0), started: false }
     }
 
+    /// Whether to keep mutating the last candidate. A walk restarts after a
+    /// failed compile or an instruction match, and otherwise by chance.
     pub fn keep(&mut self, random: bool, last_score: Option<(u64, usize)>, probability: f64) -> bool {
         // Randomized inputs consume the keep draw before checking the score,
         // including the initial evaluation.
-        let keep = (random && self.control.random() < probability
-            && last_score != Some((0, 0)) && last_score != Some((u64::MAX, usize::MAX))) || self.forced.is_some();
+        let keep = random && self.control.random() < probability
+            && last_score != Some((0, 0)) && last_score != Some((u64::MAX, usize::MAX));
         let keep = self.started && keep;
         if !keep {
-            self.mutation = self.forced.clone().unwrap_or_else(|| {
-                Rng::from_decimal(&self.control.candidate_seed().to_string()).unwrap()
-            });
+            self.mutation = Rng::from_decimal(&self.control.candidate_seed().to_string()).unwrap();
             self.started = true;
         }
         keep
@@ -176,25 +171,24 @@ mod tests {
 
     #[test]
     fn candidate_scheduling_and_independent_streams() {
-        let mut walk = WalkRng::new(0, None);
+        let mut walk = WalkRng::new(0);
         for row in include_str!("c/fixtures/rng-scheduling.tsv").lines() {
             let c: Vec<_> = row.split('\t').collect();
-            let step: usize = c[3].parse().unwrap();
+            let step: usize = c[2].parse().unwrap();
             if step == 0 {
-                let forced = (!matches!(c[1], "none" | "0")).then(|| Rng::from_decimal(c[1]).unwrap());
-                walk = WalkRng::new(c[0].parse().unwrap(), forced);
+                walk = WalkRng::new(c[0].parse().unwrap());
             }
-            let score = match c[4] { "none" => None, "1000000000" => Some((u64::MAX, usize::MAX)), n => Some((n.parse().unwrap(), 0)) };
-            assert_eq!(walk.keep(c[2] == "1", score, 0.6), c[5] == "1", "{row}");
+            let score = match c[3] { "none" => None, "1000000000" => Some((u64::MAX, usize::MAX)), n => Some((n.parse().unwrap(), 0)) };
+            assert_eq!(walk.keep(c[1] == "1", score, 0.6), c[4] == "1", "{row}");
             for _ in 0..step % 4 { walk.mutation.random(); }
-            assert_eq!(walk.mutation.clone().random(), c[6].parse::<f64>().unwrap(), "{row}");
-            assert_eq!(walk.control.clone().random(), c[7].parse::<f64>().unwrap(), "{row}");
+            assert_eq!(walk.mutation.clone().random(), c[5].parse::<f64>().unwrap(), "{row}");
+            assert_eq!(walk.control.clone().random(), c[6].parse::<f64>().unwrap(), "{row}");
         }
     }
 
     #[test]
     fn weighted_zero_with_instruction_differences_keeps_the_walk() {
-        let mut walk = WalkRng::new(0, None);
+        let mut walk = WalkRng::new(0);
         assert!(!walk.keep(true, None, 1.0));
         assert!(walk.keep(true, Some((0, 42)), 1.0));
         assert!(!walk.keep(true, Some((0, 0)), 1.0));
