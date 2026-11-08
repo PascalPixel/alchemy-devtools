@@ -18,8 +18,10 @@ every edition built.
 tags: every FAKEMATCH tag in the C sources and headers under PATH (games/ by
 default) against S2's form, /* FAKEMATCH(<kind>): the form kept; as <plain
 form>, N of M instructions differ in <edition>. */, with kind pin,
-signature, barrier, wrapper, temporary or dead; and every function or macro
-with more asm statements than tags.
+signature, barrier, wrapper, temporary or dead, in the spellings The Broken
+Seal's finished tags use (the plain form named by what it lacks, 'without
+them'; a nested function's instructions; a note after the edition); and
+every function or macro with more asm statements than tags.
 Each prints what it finds and fails when anything differs or is malformed;
 overlays and rom also fail when an edition named is not built, or when none
 is.";

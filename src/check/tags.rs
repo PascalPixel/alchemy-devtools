@@ -1,7 +1,7 @@
 //! The fake-match tags against S2: each comment that opens with FAKEMATCH
 //! must read `FAKEMATCH(<kind>): the form kept; as <plain form>, N of M
-//! instructions differ in <edition>.`, inside the function (or macro) whose
-//! device it tags; and a function or macro with more asm statements than
+//! instructions differ in <edition>.`, or one of the spellings `judge` takes,
+//! inside the function (or macro) whose device it tags; and a function or macro with more asm statements than
 //! tags has a device no tag names.
 
 use crate::alchemy::humanity::DEVICES;
@@ -39,13 +39,18 @@ fn plain(comments: &[&str]) -> String {
     words
 }
 
-/// What is wrong with a tag's plain text, if anything.
+/// What is wrong with a tag's plain text, if anything. S2's parts are what
+/// is judged: a kind, the form kept, the plain form, and N of M measured in
+/// an edition. As The Broken Seal's finished tags write them, the plain form
+/// may open a sentence of its own and be named by what it lacks ("Without
+/// them", "with no arm"), the instructions may be a nested function's, and
+/// a parenthesis or a clause after the edition may say more.
 fn judge(text: &str, broken_seal: bool) -> Option<String> {
     static KIND: OnceLock<Regex> = OnceLock::new();
     static FORM: OnceLock<Regex> = OnceLock::new();
     let kind = KIND.get_or_init(|| Regex::new(r"^FAKEMATCH(\(([^)]*)\))?:").unwrap());
     let form = FORM.get_or_init(|| {
-        Regex::new(r"^FAKEMATCH\([^)]*\): (.+); as (.+), (\d+) of (\d+) instructions differ in (\S+)\.$").unwrap()
+        Regex::new(r"^FAKEMATCH\([^)]*\): (.+)[;.] (?i:as|without|with) (.+?), (\d+) of (\d+) instructions(?: of [^,;]+?)? differ in ([a-z]+-[a-z]+)(?:[ ,][^.]*)?\.$").unwrap()
     });
     const FORM_TEXT: &str = "FAKEMATCH(<kind>): the form kept; as <plain form>, N of M instructions differ in <edition>.";
     let Some(captures) = kind.captures(text) else {
@@ -348,6 +353,20 @@ mod tests {
         assert!(judge(&ok.replace("2 of", "0 of"), false).unwrap().contains("no device"));
         assert!(judge(&ok.replace("tla-en", "tla-xx"), false).unwrap().contains("not an edition"));
         assert!(judge("FAKEMATCH(dead): kept.", false).unwrap().starts_with("not S2's form"));
+        // The Broken Seal's finished tags: the plain form named by what it
+        // lacks, and the function measured in a parenthesis.
+        for finished in [
+            "FAKEMATCH(dead): updates that cancel out end CSE; without them, 2 of 43 instructions differ in tbs-en.",
+            "FAKEMATCH(dead): a never-taken null arm; with no arm, 2 of 174 instructions differ in tbs-en.",
+            "FAKEMATCH(dead): state set again; as the one assignment above, 14 of 62 instructions differ in tbs-en (BattleArena_ExchangePartyRecords).",
+            "FAKEMATCH(dead): two self-tests of offset keep their branch. Without them, 22 of 228 instructions differ in tbs-en.",
+            "FAKEMATCH(dead): the pair keeps r9; without the pair, 8 of 80 instructions of the nested DjinnMenu_DrawStatArrow differ in tbs-en.",
+            "FAKEMATCH(dead): dead stores restore the frame; without them, 65 of 1585 instructions differ in tbs-en, each a spill offset.",
+        ] {
+            assert_eq!(judge(finished, true), None, "{finished}");
+        }
+        assert!(judge("FAKEMATCH(dead): kept; without them, 2 of 43 differ in tbs-en.", true).unwrap().starts_with("not S2's form"));
+        assert!(judge("FAKEMATCH(dead): kept, 2 of 43 instructions differ in tbs-en.", true).unwrap().starts_with("not S2's form"));
     }
 
     #[test]
