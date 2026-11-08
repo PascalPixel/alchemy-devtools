@@ -455,7 +455,7 @@ impl Context<'_> {
             // children (as alternative_flags has it); once it is over they
             // are grown.
             if let (Some(storm), Some(child)) = (storm, child) {
-                if set.contains(&storm) || (name == Some("ValePrologue") || name == Some("ValeStormyNight")) {
+                if set.contains(&storm) || name == Some("ValePrologue") {
                     set.push(child);
                 } else if clear.contains(&storm) {
                     clear.push(child);
@@ -1112,7 +1112,7 @@ impl Context<'_> {
         // then, and the party's sprites follow FLAG_CHILDHOOD
         // (Party_RemapCharacterIdByFlags).
         if let (Some(storm), Some(child)) = (self.flags.resolve("FLAG_VALE_STORM", None), self.flags.resolve("FLAG_CHILDHOOD", None)) {
-            if (set.contains(&storm) || matches!(first.symbol.as_deref(), Some("ValePrologue" | "ValeStormyNight"))) && !set.contains(&child) {
+            if (set.contains(&storm) || first.symbol.as_deref() == Some("ValePrologue")) && !set.contains(&child) {
                 clear.retain(|&f| f != child);
                 set.push(child);
             }
@@ -1538,7 +1538,8 @@ impl Context<'_> {
         }
     }
 
-    /// Removes an event's GIF and pages from a scene's folder.
+    /// Removes an event's GIF from a scene's folder, and the page PNGs
+    /// earlier versions wrote beside it.
     fn remove_event_files(&self, scene: &Scene, name: &str) {
         let base = file_name(name);
         let folder = self.out.join(scene.slug()).join("events");
@@ -1557,31 +1558,10 @@ impl Context<'_> {
         }
     }
 
-    /// An event's pages and its GIF.
+    /// An event's GIF.
     fn write_event(&mut self, scene: &Scene, entrance: i16, event: &Event, run: &EventRun) -> Result<(), String> {
         let base = file_name(&event.name);
         let messages = event.messages.iter().map(|m| format!("{m:05}")).collect::<Vec<_>>().join(", ");
-        for (k, page) in run.pages.iter().enumerate() {
-            let file = if k == 0 {
-                format!("{}/events/{base}.png", scene.slug())
-            } else {
-                format!("{}/events/{base}-{}.png", scene.slug(), k + 1)
-            };
-            self.write(&page.image, &file)?;
-            self.rows.push(Row {
-                scene: scene.slug(),
-                number: scene.number,
-                area: scene.area.clone(),
-                kind: "event",
-                entrance,
-                event: event.name.clone(),
-                page: k + 1,
-                message: page.message.map(|m| format!("{m:05}")).unwrap_or_default(),
-                messages: messages.clone(),
-                file,
-                ..Row::default()
-            });
-        }
         if run.frames.is_empty() {
             return Err("no frame was recorded".to_string());
         }

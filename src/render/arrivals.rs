@@ -1,10 +1,9 @@
 //! How the party arrives in each map: the entrances other maps' exits lead
 //! to, read from the source's exit tables (each overlay's SCENE_EXIT rows,
-//! their names numbered in scene_exits.h; MAP_WARP rows and map_warps.h
-//! before The Broken Seal's rename) and map numbers
-//! (field/scenes.s). `render place` photographs a map as the party
-//! arrives by one of them, rather than by the table's first row, which no
-//! exit may use (ENTRANCE_DEFAULT is where the debug map select starts).
+//! their names numbered in scene_exits.h) and map numbers (field/scenes.s).
+//! `render place` photographs a map as the party arrives by one of them,
+//! rather than by the table's first row, which no exit may use
+//! (ENTRANCE_DEFAULT is where the debug map select starts).
 
 use regex::Regex;
 use std::collections::HashMap;
@@ -48,7 +47,7 @@ fn map_names(text: &str) -> Vec<String> {
 /// The exits of one source file, as (the map whose table holds it, the map
 /// it leads to, its entrance's name or number), in table order.
 fn warps(text: &str) -> Vec<(String, String, String)> {
-    let pattern = Regex::new(r"(?:SCENE_EXITS|MAP_WARPS)\(\s*(\w+)\s*\)|(?:SCENE_EXIT|MAP_WARP)(?:_IF)?\(\s*\w+\s*,\s*(\w+)\s*,\s*(\w+)").unwrap();
+    let pattern = Regex::new(r"SCENE_EXITS\(\s*(\w+)\s*\)|SCENE_EXIT\(\s*\w+\s*,\s*(\w+)\s*,\s*(\w+)").unwrap();
     let mut from = None;
     let mut out = Vec::new();
     for c in pattern.captures_iter(&plain(text)) {
@@ -83,14 +82,14 @@ pub fn read(root: &Path) -> Result<HashMap<u16, Vec<Arrival>>, String> {
     let game = root.join("games/tbs");
     let read = |path: &Path| std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()));
     let names = map_names(&read(&game.join("src/field/scenes.s"))?);
-    let shared = numbers(&read(&game.join("include/scene_exits.h")).or_else(|_| read(&game.join("include/map_warps.h")))?);
+    let shared = numbers(&read(&game.join("include/scene_exits.h"))?);
     let mut files = Vec::new();
     sources(&game.join("src"), &mut files)?;
     files.sort();
     let mut out: HashMap<u16, Vec<Arrival>> = HashMap::new();
     for path in files {
         let text = read(&path)?;
-        if !text.contains("SCENE_EXITS(") && !text.contains("MAP_WARPS(") {
+        if !text.contains("SCENE_EXITS(") {
             continue;
         }
         // An overlay may number a destination of its own (an enum beside
@@ -147,7 +146,7 @@ mod tests {
 
     #[test]
     fn warp_tables_are_read_by_their_maps() {
-        let text = "u32 gTable[] = {\n    SCENE_EXITS(GomaCaveStream), // a note\n    SCENE_EXIT(GOMA_CAVE_STREAM_TO_GOMA_CAVE_ENTRANCE, GomaCaveEntrance,\n             GOMA_CAVE_ENTRANCE_FROM_GOMA_CAVE_STREAM),\n    /* SCENE_EXIT(X, Vale, 3), */\n    SCENE_EXITS(GomaCaveBridge),\n    MAP_WARP_IF(GOMA_CAVE_BRIDGE_TO_WORLD_MAP, WorldMap, 40, FLAG_X),\n    SCENE_EXITS_END,\n};";
+        let text = "u32 gTable[] = {\n    SCENE_EXITS(GomaCaveStream), // a note\n    SCENE_EXIT(GOMA_CAVE_STREAM_TO_GOMA_CAVE_ENTRANCE, GomaCaveEntrance,\n             GOMA_CAVE_ENTRANCE_FROM_GOMA_CAVE_STREAM),\n    /* SCENE_EXIT(X, Vale, 3), */\n    SCENE_EXITS(GomaCaveBridge),\n    SCENE_EXIT(GOMA_CAVE_BRIDGE_TO_WORLD_MAP, WorldMap, 40),\n    SCENE_EXITS_END,\n};";
         assert_eq!(
             warps(text),
             vec![

@@ -144,7 +144,7 @@ impl<'a> Guide<'a> {
     /// the counter from the merchant, the four party members there.
     fn weapon_counter(&self) -> Result<Field<'a>, String> {
         let map = source::map_id("CottageRoomsC")?;
-        let id = source::actor_id("CottageRoomsC", "ACTOR_BILIBIN_WEAPON_MERCHANT|LOCALID_BILIBIN_WEAPON_MERCHANT")?;
+        let id = source::actor_id("CottageRoomsC", "ACTOR_BILIBIN_WEAPON_MERCHANT")?;
         let (mut entered, _) = self.stand_where((map, 4), Trigger::Talk(id), id, |s| s.facing == NORTH)?;
         entered.field.set_party(&[0, 1, 2, 3]);
         entered.field.set_coins(3000);

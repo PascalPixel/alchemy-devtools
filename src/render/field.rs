@@ -310,12 +310,11 @@ impl Symbols {
     pub fn find(map: &Map) -> Result<Symbols, String> {
         let at = |name: &str| map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"));
         Ok(Symbols {
-            init: at("MainRoutineWork_InitializeDefaults").or_else(|_| at("SequenceParentWork_InitializeDefaults")).or_else(|_| at("Adventure_InitializeDefaults")).or_else(|_| at("Common_InitializeDefaults")).or_else(|_| at("SaveBlock_InitializeDefaults"))?,
+            init: at("MainRoutineWork_InitializeDefaults")?,
             glow: at("WindowColor_Apply")?,
             load_layered: at("MapGrid_LoadMap")?,
-            // Each second spelling is Alchemy's before The Broken Seal's rename.
-            apply_entrance: at("Scene_ApplyEntrance").or_else(|_| at("Scene_ApplyWarpDest"))?,
-            notice: at("AreaNameWindow_Show").or_else(|_| at("MapNamePopup_Show"))?,
+            apply_entrance: at("Scene_ApplyEntrance")?,
+            notice: at("AreaNameWindow_Show")?,
             field_menu: at("FieldMenu_Run")?,
             step: at("Field_UpdateWalking")?,
             update_layer: at("MapGrid_UpdateLayerScroll")?,
@@ -323,25 +322,25 @@ impl Symbols {
             dismiss: at("Text_CheckTextDismissed")?,
             speak: at("FieldMessage_ShowAtActor")?,
             objects: at("Actor_UpdateAllThumb")?,
-            typing: at("Message_Type").or_else(|_| at("TextPrinter_Step"))?,
+            typing: at("Message_Type")?,
             choice: at("YesNoMenu_Run")?,
             lookup: at("Message_Find")?,
             terrain_height: at("MapGrid_GetTerrainHeight")?,
             write_cell_tile: at("WorldMap_WriteLayerCellTile")?,
-            map_cell_pictures: at("gCellPictures").or_else(|_| at("gMetatiles"))?,
+            map_cell_pictures: at("gCellPictures")?,
             map_collision: at("gMapGridShapes")?,
             map_cell_buffer: at("gMapGridCellBuffer")?,
-            preset: at("DebugParameterSet_Load").or_else(|_| at("DebugParty_LoadPreset"))?,
+            preset: at("DebugParameterSet_Load")?,
             restore: at("Party_RestoreHpPp")?,
             unit_get: at("Unit_Get")?,
             defeat: Vec::new(),
-            talk: at("Scene_TalkToActor").or_else(|_| at("Scene_TalkToObjectEvent"))?,
-            touch: at("Scene_RunStepTriggerOrExit").or_else(|_| at("Scene_RunCoordEventOrWarp"))?,
+            talk: at("Scene_TalkToActor")?,
+            touch: at("Scene_RunStepTriggerOrExit")?,
             search: at("Field_ExamineCell")?,
             psynergy: at("Field_UsePsynergy")?,
             run_raised: at("Scene_RunRaisedTrigger")?,
             show_row: [at("Event_Start")?, at("Event_SetMessageId")?, at("Event_ShowMessageAndWait")?, at("Event_End")?],
-            game_state: at("gMainRoutineWork").or_else(|_| at("gSequenceParentWork")).or_else(|_| at("gAdventure")).or_else(|_| at("gCommon")).or_else(|_| at("gPersistentState")).or_else(|_| at("gSaveBlock"))?,
+            game_state: at("gMainRoutineWork")?,
             flag_bytes: at("gGameFlagBytes")?,
             map_work: at("gMapGridWork")?,
             field_work: at("gFieldWork")?,
@@ -526,9 +525,8 @@ pub struct Image {
     pub pixels: Vec<u32>,
 }
 
-/// One page of an event.
+/// One page of an event, a moment it waited for the button.
 pub struct Page {
-    pub image: Image,
     /// The message last looked up before the page waited, when the event
     /// lists it.
     pub message: Option<u32>,
@@ -3186,7 +3184,7 @@ impl<'rom> Field<'rom> {
                 }
                 if !captured && self.t.frame - wait_start >= 3 {
                     if pages.len() < max_pages {
-                        pages.push(Page { image: self.screen(), message });
+                        pages.push(Page { message });
                     }
                     captured = true;
                 }
@@ -3205,7 +3203,7 @@ impl<'rom> Field<'rom> {
             if self.t.choice_return != 0 {
                 quiet_start = self.t.frame;
                 if self.t.frame - self.t.choice_frame == 20 && pages.len() < max_pages {
-                    pages.push(Page { image: self.screen(), message });
+                    pages.push(Page { message });
                 }
                 if self.t.frame - self.t.choice_frame == 20.max(hold) {
                     self.press(3)?;

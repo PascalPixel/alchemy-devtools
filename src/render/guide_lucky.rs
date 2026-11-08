@@ -78,7 +78,7 @@ impl<'a> Guide<'a> {
         let (entered, _) = self.stand_for((map, room), Trigger::Talk(id), id)?;
         let mut field = entered.field;
         prepare(&mut field)?;
-        let save = self.sym("gMainRoutineWork").or_else(|_| self.sym("gSequenceParentWork")).or_else(|_| self.sym("gAdventure")).or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
+        let save = self.sym("gMainRoutineWork")?;
         let mut n = 0;
         while field.read16(save + SAVE_MAP_ID) != run {
             if n > 3000 {
@@ -122,8 +122,8 @@ impl<'a> Guide<'a> {
     /// result, back to the line) until a throw pays more than its bet back
     /// (two pairs or better), and that throw is kept.
     fn lucky_dice(&mut self) -> Result<(), String> {
-        let save = self.sym("gMainRoutineWork").or_else(|_| self.sym("gSequenceParentWork")).or_else(|_| self.sym("gAdventure")).or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
-        let mut field = self.lucky_reach(DICE_ROOM, "ACTOR_TOLBI_SPRING_DICE_ATTENDANT|LOCALID_TOLBI_SPRING_DICE_ATTENDANT", |f| {
+        let save = self.sym("gMainRoutineWork")?;
+        let mut field = self.lucky_reach(DICE_ROOM, "ACTOR_TOLBI_SPRING_DICE_ATTENDANT", |f| {
             f.set_coins(DICE_COINS);
             Ok(())
         }, SEQUENCE_LUCKY_DICE)?;
@@ -164,9 +164,9 @@ impl<'a> Guide<'a> {
     /// frames after their turn comes, so the player waiting a frame longer
     /// before A is another spin: the first that wins is kept.
     fn lucky_wheels(&mut self) -> Result<(), String> {
-        let save = self.sym("gMainRoutineWork").or_else(|_| self.sym("gSequenceParentWork")).or_else(|_| self.sym("gAdventure")).or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
+        let save = self.sym("gMainRoutineWork")?;
         let ticket = super::tables::Game::here()?.item_names()?.iter().position(|i| i == "Game Ticket").ok_or("no item is named Game Ticket")? as u16;
-        let mut field = self.lucky_reach(WHEELS_ROOM, "ACTOR_TOLBI_SPRING_WHEELS_ATTENDANT|LOCALID_TOLBI_SPRING_WHEELS_ATTENDANT", |f| {
+        let mut field = self.lucky_reach(WHEELS_ROOM, "ACTOR_TOLBI_SPRING_WHEELS_ATTENDANT", |f| {
             let unit = f.unit(0)?;
             for i in 0..INVENTORY_SLOTS {
                 if f.read16(unit + UNIT_INVENTORY + 2 * i) == 0 {

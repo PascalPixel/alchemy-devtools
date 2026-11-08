@@ -45,11 +45,9 @@ pub struct Guide<'a> {
 }
 
 impl<'a> Guide<'a> {
-    /// The number of flag `name`; `name` may list its spellings, the new
-    /// first (`FLAG_AREA_TEMP_01|FLAG_MAPSEC_TEMP_01`), so that a checkout
-    /// from before The Broken Seal's rename is read too.
+    /// The number of flag `name`.
     pub(super) fn flag(&self, name: &str) -> Result<u16, String> {
-        name.split('|').find_map(|n| self.flags.resolve(n, None)).ok_or_else(|| format!("flags.tsv names no {name}"))
+        self.flags.resolve(name, None).ok_or_else(|| format!("flags.tsv names no {name}"))
     }
 
     pub(super) fn gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
@@ -321,16 +319,16 @@ const FACE_EAST: u32 = 0x0000;
 /// A Psynergy may be listed more than once, at places tried in turn.
 const FIELD_CASTS: &[FieldCast] = &[
     FieldCast { ability: "ABILITY_REVEAL", map: "ValeCaveKite", entrance: 1, actor: None, target: "the hidden floor", stand: Some((248, 280, FACE_NORTH)), tail: 600 },
-    FieldCast { ability: "ABILITY_MOVE", map: "Vale", entrance: 1, actor: Some("ACTOR_PILLAR|LOCALID_PILLAR"), target: "a stone pillar", stand: None, tail: 40 },
+    FieldCast { ability: "ABILITY_MOVE", map: "Vale", entrance: 1, actor: Some("ACTOR_PILLAR"), target: "a stone pillar", stand: None, tail: 40 },
     FieldCast { ability: "ABILITY_AVOID", map: "GomaCavePillar", entrance: 5, actor: None, target: "the party", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_MIND_READ", map: "Vale", entrance: 1, actor: Some("ACTOR_GARETS_SISTER|LOCALID_GARETS_SISTER"), target: "Garet's sister", stand: None, tail: 20 },
-    FieldCast { ability: "ABILITY_CATCH", map: "Vale", entrance: 1, actor: Some("ACTOR_NUT|LOCALID_NUT"), target: "a Nut", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_MIND_READ", map: "Vale", entrance: 1, actor: Some("ACTOR_GARETS_SISTER"), target: "Garet's sister", stand: None, tail: 20 },
+    FieldCast { ability: "ABILITY_CATCH", map: "Vale", entrance: 1, actor: Some("ACTOR_NUT"), target: "a Nut", stand: None, tail: 30 },
     FieldCast { ability: "ABILITY_RETREAT", map: "GomaCavePillar", entrance: 5, actor: None, target: "the party", stand: None, tail: 240 },
-    FieldCast { ability: "ABILITY_FORCE", map: "Xian", entrance: 0, actor: Some("ACTOR_FORCE_TARGET|LOCALID_FORCE_TARGET"), target: "the training tree", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_LIFT", map: "GondowanCave", entrance: 0, actor: Some("ACTOR_BOULDER|LOCALID_BOULDER"), target: "a boulder", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_CARRY", map: "TunnelRuinsLadyStatues", entrance: 0, actor: Some("ACTOR_MIDDLE_CARRY_STONE|LOCALID_MIDDLE_CARRY_STONE"), target: "a stone block", stand: None, tail: 60 },
+    FieldCast { ability: "ABILITY_FORCE", map: "Xian", entrance: 0, actor: Some("ACTOR_FORCE_TARGET"), target: "the training tree", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_LIFT", map: "GondowanCave", entrance: 0, actor: Some("ACTOR_BOULDER"), target: "a boulder", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_CARRY", map: "TunnelRuinsLadyStatues", entrance: 0, actor: Some("ACTOR_MIDDLE_CARRY_STONE"), target: "a stone block", stand: None, tail: 60 },
     FieldCast { ability: "ABILITY_CLOAK", map: "LunpaFortressGates", entrance: 0, actor: None, target: "the party", stand: None, tail: 120 },
-    FieldCast { ability: "ABILITY_HALT", map: "ValeCaveKite", entrance: 5, actor: Some("ACTOR_KITE|LOCALID_KITE"), target: "Kite", stand: Some((792, 256, FACE_NORTH)), tail: 60 },
+    FieldCast { ability: "ABILITY_HALT", map: "ValeCaveKite", entrance: 5, actor: Some("ACTOR_KITE"), target: "Kite", stand: Some((792, 256, FACE_NORTH)), tail: 60 },
 ];
 
 /// A field cast read through the source: the ability's number and name

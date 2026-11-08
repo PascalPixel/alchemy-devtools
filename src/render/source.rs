@@ -127,18 +127,14 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
         .get(usize::from(map))
         .ok_or_else(|| format!("no map {map}"))?
         .1;
-    let rules = read("src/field/scene_rules.s").or_else(|_| read("src/overworld/scene_rules.s"))?;
-    // Before The Broken Seal's rename the table was gMapSec_NameRules and
-    // its rows map_name and group_name.
-    let kinds = ["scene_name", "area_name", "map_name", "group_name"];
-    let rows = macro_rows(&rules, "gArea_NameRules", &kinds)
-        .or_else(|_| macro_rows(&rules, "gMapSec_NameRules", &kinds))?;
+    let rules = read("src/field/scene_rules.s")?;
+    let rows = macro_rows(&rules, "gArea_NameRules", &["scene_name", "area_name"])?;
     let mut index = 0;
     for (kind, args) in rows {
         let [id, dest, name] = &args[..] else {
             return Err(format!("scene_rules.s: {kind} {args:?}"));
         };
-        let matches = if kind == "scene_name" || kind == "map_name" {
+        let matches = if kind == "scene_name" {
             maps.iter().position(|(n, _)| n == id) == Some(usize::from(map))
         } else {
             number(id) == Some(area)
@@ -149,7 +145,7 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
         }
     }
     let catalog = crate::alchemy::po::read_catalog(&tbs("text/en.po"))?;
-    let key = message_number(&catalog, "MsgDebugAreaName").or_else(|_| message_number(&catalog, "MsgDebugEntryName"))? + index;
+    let key = message_number(&catalog, "MsgDebugAreaName")? + index;
     catalog
         .entries
         .iter()
@@ -227,13 +223,9 @@ pub fn ability_name(id: u16) -> Result<String, String> {
 
 /// The actor id of actor `name` on map `SceneId_<map>`, from the map
 /// overlays' enums: the map's own `enum <map>ActorId` where it has one,
-/// else the one value every map overlay gives the name. `name` may list its
-/// spellings, the new first (`ACTOR_PILLAR|LOCALID_PILLAR`): before The
-/// Broken Seal's rename the ids were `LOCALID_`, a map's enum
-/// `<map>LocalId` and the shared header map_tables.h.
+/// else the one value every map overlay gives the name.
 pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
-    let names: Vec<&str> = name.split('|').collect();
-    let shared = read("include/field/scene_tables.h").or_else(|_| read("include/scene_tables.h")).or_else(|_| read("include/map_tables.h"))?;
+    let shared = read("include/field/scene_tables.h")?;
     let mut known = HashMap::new();
     for (_, values) in enums(&shared, &HashMap::new())? {
         known.extend(values.into_iter().filter_map(|(n, v)| Some((n, v?))));
@@ -245,7 +237,7 @@ pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
         .map(|e| e.path())
         .collect();
     files.sort();
-    let own = [format!("{map}ActorId"), format!("{map}LocalId")];
+    let own = format!("{map}ActorId");
     let mut found = Vec::new();
     for path in files
         .iter()
@@ -253,13 +245,13 @@ pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
     {
         let text = std::fs::read_to_string(path)
             .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-        if !names.iter().any(|n| text.contains(n)) {
+        if !text.contains(name) {
             continue;
         }
         for (tag, values) in enums(&text, &known)? {
-            if let Some((_, value)) = values.iter().find(|(n, _)| names.contains(&n.as_str())) {
+            if let Some((_, value)) = values.iter().find(|(n, _)| n == name) {
                 let value = value.ok_or_else(|| format!("cannot evaluate {name}"))?;
-                if tag.as_ref().is_some_and(|tag| own.contains(tag)) {
+                if tag.as_ref() == Some(&own) {
                     return Ok(value as u16);
                 }
                 found.push(value);
@@ -270,10 +262,7 @@ pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
     match found[..] {
         [value] => Ok(value as u16),
         [] => Err(format!("no scene overlay names {name}")),
-        _ => Err(format!(
-            "{name} has several values and SceneId_{map} has no enum {}",
-            own[0]
-        )),
+        _ => Err(format!("{name} has several values and SceneId_{map} has no enum {own}")),
     }
 }
 
@@ -294,12 +283,10 @@ pub fn character(name: &str) -> Result<u8, String> {
 /// DEBUG_PARAMETER_SET_END).
 pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
     let game = super::tables::Game::here()?;
-    // DEBUG_PARAMETER_SET_END and DebugParameterSetRow, called DEBUG_PRESET_END and
-    // DebugPartyEntry in older builds.
-    let end = game.constant("DEBUG_PARAMETER_SET_END").or_else(|_| game.constant("DEBUG_PRESET_END"))?;
+    let end = game.constant("DEBUG_PARAMETER_SET_END")?;
     let mut current = 0;
     let mut members = Vec::new();
-    for unit in game.table("gDebug_ParameterSets", "DebugParameterSetRow").or_else(|_| game.table("gDebug_ParameterSets", "DebugPartyEntry"))?.column("unitId")? {
+    for unit in game.table("gDebug_ParameterSets", "DebugParameterSetRow")?.column("unitId")? {
         if unit == end {
             if current == preset {
                 return Ok(members);
@@ -342,8 +329,8 @@ mod tests {
     fn the_checkout_answers() {
         assert_eq!(map_id("Vale").unwrap(), map_id("ValePrologue").unwrap() + 1);
         assert_eq!(area_name(map_id("Vale").unwrap(), 1).unwrap(), "Vale");
-        assert!(actor_id("Vale", "ACTOR_PILLAR|LOCALID_PILLAR").unwrap() >= 8);
-        assert!(actor_id("CottageRoomsC", "ACTOR_BILIBIN_INNKEEPER|LOCALID_BILIBIN_INNKEEPER").is_ok());
+        assert!(actor_id("Vale", "ACTOR_PILLAR").unwrap() >= 8);
+        assert!(actor_id("CottageRoomsC", "ACTOR_BILIBIN_INNKEEPER").is_ok());
         assert_eq!(character("JENNA").unwrap(), 5);
         assert_eq!(
             ability_name(ability_id("ABILITY_MOVE").unwrap()).unwrap(),

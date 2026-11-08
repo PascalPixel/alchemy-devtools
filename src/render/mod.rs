@@ -579,9 +579,6 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             "--places" => o.places_tsv = Some(PathBuf::from(value("--places")?)),
             "--events" => o.events_tsv = Some(PathBuf::from(value("--events")?)),
             "--flags" => o.flags_tsv = Some(PathBuf::from(value("--flags")?)),
-            "--messages" => {
-                value("--messages")?;
-            }
             other => {
                 if !o.jobs.option(other, &mut value)? {
                     return Err(format!("unexpected argument {other:?}\n{SCENES_USAGE}"));

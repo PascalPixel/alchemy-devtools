@@ -170,23 +170,22 @@ impl Symbols {
             map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"))
         };
         Ok(Symbols {
-            // MainRoutine_RunFar, called SequenceParent_RunFar, ParentSequence_RunFar, Monitor_RunFar, SequenceManager_RunFar, Game_RunFar and Game_ResetForNewGameFar in older builds.
-            start: at("MainRoutine_RunFar").or_else(|_| at("SequenceParent_RunFar")).or_else(|_| at("ParentSequence_RunFar")).or_else(|_| at("Monitor_RunFar")).or_else(|_| at("SequenceManager_RunFar")).or_else(|_| at("Game_RunFar")).or_else(|_| at("Game_ResetForNewGameFar"))?,
+            start: at("MainRoutine_RunFar")?,
             menu: at("DebugBattle_RunMenu")?,
-            preset: at("DebugParameterSet_Load").or_else(|_| at("DebugParty_LoadPreset"))?,
+            preset: at("DebugParameterSet_Load")?,
             encounter: at("Battle_Run")?,
             collect: at("BattleUnit_Collect")?,
             obj_make: at("BattleObject_Make")?,
             background: at("BattleBackground_Load")?,
             build: at("Battle_GatherActions")?,
             commands: at("Battle_CollectPartyCommands")?,
-            opponents: at("Battle_BuildOpponentActions").or_else(|_| at("BattlePres_BuildOpponentEntries"))?,
+            opponents: at("Battle_BuildOpponentActions")?,
             dispatch: at("BattleStaging_DispatchAction")?,
             wait_advance: at("BattleMessage_WaitForAdvance")?,
             message: at("BattleMessage_ShowAndWait")?,
             battle_over: at("Battle_ClearSerialTransferPayload")?,
             battle_work: at("gBattleWork")?,
-            game_state: at("gMainRoutineWork").or_else(|_| at("gSequenceParentWork")).or_else(|_| at("gAdventure")).or_else(|_| at("gCommon")).or_else(|_| at("gPersistentState")).or_else(|_| at("gSaveBlock"))?,
+            game_state: at("gMainRoutineWork")?,
             game_flags: at("gGameFlagBytes")?,
             owner_states: at("gEnemyUnits")?,
         })
