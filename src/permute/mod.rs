@@ -419,6 +419,10 @@ fn overlay_function(target: DecompTarget, overlay: &str, stem: &str, text: &str)
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
+    if arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
+        println!("{USAGE}");
+        return Ok(());
+    }
     let mut options = parse_options(arguments)?;
     if options.arm {
         println!("{}", crate::diff::GAME_ARM_NOTICE);

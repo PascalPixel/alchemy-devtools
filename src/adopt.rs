@@ -147,6 +147,10 @@ fn parse_editions(text: &str) -> Result<Vec<String>, String> {
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
+    if arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
+        println!("{USAGE}");
+        return Ok(());
+    }
     match parse(arguments)? {
         Request::Undo(journal) => undo(root(), &journal),
         Request::Adopt(options) => adopt(root(), &options, &format!("adopt {}", arguments.join(" "))),
