@@ -12,8 +12,9 @@ use std::path::{Path, PathBuf};
 mod alloc;
 pub(crate) mod skeleton;
 
-pub(crate) const USAGE: &str = r#"usage: alchemy-devtools diff DRAFT.c [ADDRESS[,ADDRESS...]] [--game GAME] [--edition EDITION] [--arm] [--rtl] [--alloc] [--heat] [--show] [--skeleton]
-       alchemy-devtools diff OVERLAY_DRAFT.c [--overlay resource_XXX] [--symbol NAME] [--edition EDITION] [--rtl] [--alloc] [--heat] [--show] [--skeleton]
+pub(crate) const USAGE: &str = r#"usage: alchemy-devtools diff DRAFT.c [ADDRESS[,ADDRESS...]] [--game GAME] [--edition EDITION] [--arm] [--rtl] [--alloc] [--heat] [--show] [--hunks] [--skeleton] [--flag OPTION]...
+       alchemy-devtools diff ADDRESS [...]
+       alchemy-devtools diff OVERLAY_DRAFT.c [--overlay resource_XXX] [--symbol NAME] [--edition EDITION] [--rtl] [--alloc] [--heat] [--show] [--hunks] [--skeleton] [--flag OPTION]...
 Compiles DRAFT.c for --edition (default: the game's English edition) as the
 build compiles the file it replaces: the recipe `make -n` prints for that
 file's object, with the draft in its place. A file the edition's object list
@@ -22,14 +23,16 @@ overlay alone links; any other draft takes the recipe of the main image's C.
 Then compares its instructions with listing objects
 out/EDITION/obj/recon/<game>/raw/ADDRESS.o (build the edition first).
 ADDRESS defaults to the draft's file name; give several, comma-separated,
-when the draft holds a nested function and its parent. The game defaults
-from the draft's path. Prints the instruction counts and how many differ,
-then the skeleton gap: the instructions that still differ once registers,
+when the draft holds a nested function and its parent. An address in place
+of DRAFT.c names its English draft, recon/<game>/en/main/ADDRESS.c. The
+game defaults from the draft's path. Prints the instruction counts and how
+many differ, then the skeleton gap: the instructions that still differ once registers,
 stack and pool offsets, branch distances and register lists are set aside,
 as rows of the listing removed and rows of the draft added. --show prints
 the comparison, - for the listing and + for the draft; --skeleton prints the
-comparison of the skeletons. "differ 0" means the code matches instruction
-for instruction.
+comparison of the skeletons; --hunks lists each run of differing rows by
+the listing rows it covers, largest first. "differ 0" means the code
+matches instruction for instruction.
 Each run compiles in its own folder, out/EDITION/obj/drafts/run-PID, and
 removes it when done; a run killed first leaves it to the next run.
 An overlay draft (a path under overlays/) compares with the function of
@@ -63,7 +66,10 @@ hard register it got.
 function's lines, each with its count of differing instructions in diff's
 own alignment (a listing row counts on the draft line it falls before), and
 marks the line where the comparison first diverges with >. Allocation and
-scheduling cascade from early differences, so start there."#;
+scheduling cascade from early differences, so start there.
+--flag OPTION adds a compiler option to the compile step, for analysis
+only (what -fno-gcse changes, say): the build never passes it, a match
+under it is no match, and the run says so."#;
 
 pub(crate) const GAME_ARM_NOTICE: &str = "game ARM route: stock GCC 2.95.2 at the common ARM setting.";
 
@@ -73,6 +79,7 @@ pub(crate) struct Options {
     game: &'static str,
     pub(crate) target: DecompTarget,
     show: bool,
+    hunks: bool,
     skeleton: bool,
     pub(crate) arm: bool,
     rtl: bool,
@@ -80,6 +87,8 @@ pub(crate) struct Options {
     heat: bool,
     overlay: Option<String>,
     symbol: Option<String>,
+    /// Options added to the compile step, for analysis only.
+    flags: Vec<String>,
 }
 
 impl Options {
@@ -96,6 +105,7 @@ pub(crate) fn parse(arguments: &[String]) -> Result<Options, String> {
     let mut game = None;
     let mut target = None;
     let mut show = false;
+    let mut hunks = false;
     let mut skeleton = false;
     let mut arm = false;
     let mut rtl = false;
@@ -103,15 +113,21 @@ pub(crate) fn parse(arguments: &[String]) -> Result<Options, String> {
     let mut heat = false;
     let mut overlay = None;
     let mut symbol = None;
+    let mut flags = Vec::new();
     let mut i = 0;
     while i < arguments.len() {
         match arguments[i].as_str() {
             "--show" => show = true,
+            "--hunks" => hunks = true,
             "--skeleton" => skeleton = true,
             "--arm" => arm = true,
             "--rtl" => rtl = true,
             "--alloc" => alloc = true,
             "--heat" => heat = true,
+            "--flag" => {
+                i += 1;
+                flags.push(arguments.get(i).ok_or_else(|| USAGE.to_string())?.clone());
+            }
             "--overlay" => {
                 i += 1;
                 overlay = Some(arguments.get(i).ok_or_else(|| USAGE.to_string())?.clone());
@@ -139,6 +155,10 @@ pub(crate) fn parse(arguments: &[String]) -> Result<Options, String> {
         i += 1;
     }
     let draft = draft.ok_or_else(|| USAGE.to_string())?;
+    let draft = match english_draft(&draft, game)? {
+        Some(found) => found,
+        None => draft,
+    };
     let path_text = draft.to_string_lossy().into_owned();
     if overlay.is_none() && path_text.contains("/overlays/") {
         overlay = overlay::named_in(&path_text);
@@ -163,7 +183,32 @@ pub(crate) fn parse(arguments: &[String]) -> Result<Options, String> {
     if arm && overlay.is_some() {
         return Err("--arm compiles main-image game ARM C; overlays are Thumb".into());
     }
-    Ok(Options { draft, addresses, game, target, show, skeleton, arm, rtl, alloc, heat, overlay, symbol })
+    Ok(Options { draft, addresses, game, target, show, hunks, skeleton, arm, rtl, alloc, heat, overlay, symbol, flags })
+}
+
+/// The English draft an address names in place of a path: the one file
+/// `recon/<game>/en/main/ADDRESS.c` for --game, or for the one game that has
+/// it. None when `named` is a file or not an address.
+fn english_draft(named: &Path, game: Option<&'static str>) -> Result<Option<PathBuf>, String> {
+    let text = named.to_string_lossy();
+    if named.exists() || text.len() != 8 || !text.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Ok(None);
+    }
+    let address = text.to_ascii_lowercase();
+    let games = match game {
+        Some(game) => vec![game],
+        None => targets::games()?,
+    };
+    let found: Vec<PathBuf> = games
+        .iter()
+        .map(|game| root().join(crate::alchemy::layout::Layout::new(game).main_draft(&address)))
+        .filter(|path| path.is_file())
+        .collect();
+    match found.as_slice() {
+        [one] => Ok(Some(one.clone())),
+        [] => Err(format!("no English draft for {address} (recon/GAME/en/main/{address}.c)")),
+        _ => Err(format!("{address} has an English draft in more than one game: give --game")),
+    }
 }
 
 /// A run's own folder, out/EDITION/obj/drafts/run-PID: the compiler runs in
@@ -223,6 +268,16 @@ pub(crate) fn arm_steps(target: DecompTarget, draft: &Path, object: &Path) -> Re
 /// it names one, the game's ARM route with `arm`.
 pub(crate) fn steps(target: DecompTarget, draft: &Path, object: &Path, overlay: Option<&str>, arm: bool) -> Result<Vec<Vec<String>>, String> {
     with_draft_assembly(crate::compile::steps(target, draft, object, overlay, arm)?, object)
+}
+
+/// Adds `flags` to each compile step (a compiler driver's -S, or a direct
+/// cc1's -dumpbase), as --flag asks for an analysis the build never runs.
+fn add_flags(steps: &mut [Vec<String>], flags: &[String]) {
+    for step in steps {
+        if step.iter().any(|argument| argument == "-S" || argument == "-dumpbase") {
+            step.extend(flags.iter().cloned());
+        }
+    }
 }
 
 /// Asks the compile step for its per-pass dumps: a compiler driver (-S) takes
@@ -384,6 +439,38 @@ pub(crate) fn compare(listing: &[String], draft: &[String]) -> (usize, Vec<Strin
         }
     }
     (table[0][0] as usize, script)
+}
+
+/// Each run of differing rows in a comparison script, by the listing rows it
+/// covers (1-based; a run of added rows alone sits between two), largest
+/// first, then in listing order.
+pub(crate) fn hunks(script: &[String]) -> Vec<String> {
+    let mut found: Vec<(usize, usize, usize, usize)> = Vec::new();
+    let mut row = 0;
+    let mut open: Option<(usize, usize, usize)> = None;
+    for line in script.iter().map(String::as_str).chain(std::iter::once("  ")) {
+        match line.as_bytes().first() {
+            Some(b'-') => {
+                row += 1;
+                open.get_or_insert((row, 0, 0)).1 += 1;
+            }
+            Some(b'+') => open.get_or_insert((row + 1, 0, 0)).2 += 1,
+            _ => {
+                if let Some((start, removed, added)) = open.take() {
+                    found.push((start, removed, added, row));
+                }
+                row += 1;
+            }
+        }
+    }
+    found.sort_by(|a, b| (b.1 + b.2).cmp(&(a.1 + a.2)).then(a.0.cmp(&b.0)));
+    found
+        .into_iter()
+        .map(|(start, removed, added, end)| match removed {
+            0 => format!("hunk at listing row {start}: {added} added"),
+            _ => format!("hunk at listing rows {start}..{end}: {removed} removed, {added} added"),
+        })
+        .collect()
 }
 
 /// The scorer needs only the LCS length and the script's initial equal rows.
@@ -976,6 +1063,10 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let kept = options.rtl.then(|| work.keep_as(&format!("rtl-{stem}")));
     let object = work.folder.join(format!("{stem}.o"));
     let mut plan = steps(target, &draft, &object, options.overlay.as_deref(), options.arm)?;
+    if !options.flags.is_empty() {
+        println!("analysis only: compiled with {} added, which the build never passes", options.flags.join(" "));
+        add_flags(&mut plan, &options.flags);
+    }
     let built = plan.clone();
     if options.rtl || options.alloc {
         rtl_flags(&mut plan);
@@ -1001,6 +1092,11 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     );
     let (removed, added) = skeleton::gap(&listing, &compiled);
     println!("skeleton gap {} (removed {removed}, added {added})", removed + added);
+    if options.hunks {
+        for line in hunks(&script) {
+            println!("{line}");
+        }
+    }
     if options.show {
         for line in script {
             println!("{line}");
@@ -1094,6 +1190,28 @@ mod tests {
         let (common, script) = compare(listing, draft);
         let prefix = script.iter().take_while(|line| line.starts_with("  ")).count();
         assert_eq!(compare_counts(listing, draft), (common, prefix), "{listing:?} / {draft:?}");
+    }
+
+    #[test]
+    fn hunks_name_the_listing_rows_they_cover_largest_first() {
+        let rows = |text: &str| text.split(' ').map(str::to_string).collect::<Vec<_>>();
+        let (_, script) = compare(&rows("a b c d e f"), &rows("a x c d y z e f"));
+        assert_eq!(hunks(&script), ["hunk at listing rows 2..2: 1 removed, 1 added", "hunk at listing row 5: 2 added"]);
+        let (_, script) = compare(&rows("a b c d"), &rows("a d"));
+        assert_eq!(hunks(&script), ["hunk at listing rows 2..3: 2 removed, 0 added"]);
+        assert!(hunks(&compare(&rows("a b"), &rows("a b")).1).is_empty());
+    }
+
+    #[test]
+    fn options_take_an_address_and_analysis_flags() {
+        let args = |items: &[&str]| items.iter().map(|item| item.to_string()).collect::<Vec<_>>();
+        let options = parse(&args(&["recon/tla/en/main/08000100.c", "--flag", "-fno-gcse", "--flag", "-O1", "--hunks"])).unwrap();
+        assert_eq!((options.flags, options.hunks), (vec!["-fno-gcse".to_string(), "-O1".to_string()], true));
+        let mut steps = vec![args(&["cpp", "x.c"]), args(&["cc1", "-O2", "-S", "-o", "x.s"]), args(&["cc1", "-dumpbase", "x.c"]), args(&["as", "x.s"])];
+        add_flags(&mut steps, &args(&["-fno-gcse"]));
+        assert_eq!(steps.iter().map(|step| step.len()).collect::<Vec<_>>(), [2, 6, 4, 2]);
+        assert!(english_draft(Path::new("0800zzzz"), None).unwrap().is_none());
+        assert!(english_draft(Path::new("01234567"), Some("tla")).unwrap_err().contains("no English draft"));
     }
 
     #[test]
