@@ -18,6 +18,9 @@ pub(crate) enum Kind {
     Arm,
     Overlay,
     Edition,
+    /// Bytes English still places from recon/ outside any code section: data
+    /// not yet read as C, measured by no draft.
+    Data,
 }
 
 impl Kind {
@@ -27,12 +30,13 @@ impl Kind {
             Kind::Arm => "main-arm",
             Kind::Overlay => "overlay",
             Kind::Edition => "edition",
+            Kind::Data => "data",
         }
     }
 
     /// The kind `--kind` names.
     pub fn named(word: &str) -> Option<Kind> {
-        [Kind::Main, Kind::Arm, Kind::Overlay, Kind::Edition].into_iter().find(|kind| match kind {
+        [Kind::Main, Kind::Arm, Kind::Overlay, Kind::Edition, Kind::Data].into_iter().find(|kind| match kind {
             Kind::Arm => word == "arm",
             kind => kind.name() == word,
         })

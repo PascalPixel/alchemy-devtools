@@ -16,7 +16,7 @@ use inventory::{Kind, Reference};
 use measure::{Measure, Row};
 use std::path::Path;
 
-const USAGE: &str = r#"usage: alchemy-devtools rank [--game GAME] [--kind main|arm|overlay|edition]... [--state STATE]... [--limit N] [--jobs N] [--twins] [--json | --out FILE]
+const USAGE: &str = r#"usage: alchemy-devtools rank [--game GAME] [--kind main|arm|overlay|edition|data]... [--state STATE]... [--limit N] [--jobs N] [--twins] [--json | --out FILE]
 Lists every unfinished piece of a game, furthest first: each English listing
 of the main image (kind main, or main-arm for ARM), each section of an
 overlay scaffold English still assembles (overlay), and each function
@@ -33,7 +33,12 @@ five listings whose comparison comes at least 70% of the listing's size
 closer with it added. Overlay copies of one shape (the same instructions,
 calling and reading the same names and constants) are one family, measured
 once from the copy with a draft, and so are the editions whose comparison
-is the same instruction for instruction.
+is the same instruction for instruction. Families of 12 or more
+instructions whose instructions are the same but whose names or constants
+differ are near copies, which one draft may serve with its names changed:
+stderr lists them by their first copy's place. --kind data adds, only when
+asked, each piece of data English still places from recon/ outside code (a
+size in bytes, with no draft to measure).
 Pieces with no draft come first, by size times copies; then drafts by
 weight, the gap times copies; then drafts that do not measure, last, since
 no brief can give them a figure. Columns, tab-separated: rank weight gap
@@ -81,7 +86,7 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
             "--game" => options.games.push(targets::game(value()?)?),
             "--kind" => {
                 for kind in value()?.split(',') {
-                    options.kinds.push(Kind::named(kind).ok_or_else(|| format!("--kind takes main, arm, overlay or edition, not {kind}"))?);
+                    options.kinds.push(Kind::named(kind).ok_or_else(|| format!("--kind takes main, arm, overlay, edition or data, not {kind}"))?);
                 }
             }
             "--state" => options.states.push(value()?.to_ascii_lowercase()),
@@ -275,6 +280,33 @@ fn totals(rows: &[Row]) -> String {
     text
 }
 
+/// The data English still places from recon/: each piece outside a code
+/// section (a scaffold's .rom.* sections are other editions' and kind
+/// edition's), sized in bytes, with no draft to measure.
+fn data(root: &Path, english: crate::alchemy::targets::DecompTargetId) -> Result<Vec<Row>, String> {
+    let pieces = built::pieces(root, english)?;
+    Ok(pieces
+        .iter()
+        .filter(|piece| piece.stem.starts_with("recon/") && !piece.is_code() && !piece.is_scaffold())
+        .map(|piece| Row {
+            piece: inventory::Piece {
+                kind: Kind::Data,
+                target: target_for(english),
+                name: piece.label(),
+                place: piece.label(),
+                draft: None,
+                planned: None,
+                reference: Reference::Listings(Vec::new()),
+                arm: false,
+                unmeasurable: None,
+            },
+            size: piece.placed.size as usize,
+            places: vec![piece.label()],
+            measured: None,
+        })
+        .collect())
+}
+
 pub fn run(arguments: &[String]) -> Result<(), String> {
     if arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
         println!("{USAGE}");
@@ -308,8 +340,14 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         }
         let (measured, summary) = measure::measure(pieces, &editions, options.jobs)?;
         rows.extend(measured.into_iter().filter(|row| wants(row.piece.kind)));
+        if wants(Kind::Data) {
+            rows.extend(data(root, english)?);
+        }
         for (listing, draft) in &summary.nested {
             notes += &format!("{game}: {listing} measured with the draft of {draft}, which holds it\n");
+        }
+        for places in &summary.near {
+            notes += &format!("{game}: near copies, the same instructions with other names or constants: {}\n", places.join(", "));
         }
         notes += &format!("{game}: {} drafts compiled\n", summary.compiled);
         if !summary.padding.is_empty() {
@@ -445,7 +483,8 @@ mod tests {
         assert_eq!(options.kinds, [Kind::Main, Kind::Arm, Kind::Edition]);
         assert_eq!((options.states, options.limit, options.jobs), (vec!["draft".to_string()], Some(5), 3));
         assert!(parse(&args(&["--json", "--out", "rank.tsv"])).is_err());
-        assert!(parse(&args(&["--kind", "data"])).is_err());
+        assert!(parse(&args(&["--kind", "code"])).is_err());
+        assert_eq!(parse(&args(&["--kind", "data"])).unwrap().kinds, [Kind::Data]);
         assert!(parse(&args(&["--jobs", "0"])).is_err());
         assert!(parse(&args(&["--limit"])).is_err());
         assert_eq!(parse(&[]).unwrap().kinds.len(), 4);

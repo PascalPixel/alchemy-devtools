@@ -43,6 +43,10 @@ pub(crate) struct Row {
     pub measured: Option<Result<Measure, String>>,
 }
 
+/// A near copy is told only among functions this long: shorter ones share
+/// their instructions by chance.
+const NEAR_LENGTH: usize = 12;
+
 /// What measuring found besides the rows.
 #[derive(Debug, Default)]
 pub(crate) struct Summary {
@@ -52,6 +56,10 @@ pub(crate) struct Summary {
     pub padding: Vec<String>,
     /// Each listing found nested in a neighbour's draft, and that draft's address.
     pub nested: Vec<(String, String)>,
+    /// Overlay families whose instructions are the same and whose names or
+    /// constants differ, by their first copy's place: near copies one draft
+    /// may serve with its names changed.
+    pub near: Vec<Vec<String>>,
 }
 
 /// `work` on every item, `jobs` at a time, in the items' order.
@@ -374,6 +382,22 @@ pub(crate) fn measure(mut pieces: Vec<Piece>, editions: &[DecompTarget], jobs: u
             None => families.push((shape, vec![index])),
         }
     }
+
+    // Families with the same instructions but other names or constants are
+    // near copies: one draft may serve them all with its names changed.
+    let mut near: Vec<(&Vec<String>, Vec<String>)> = Vec::new();
+    for (_, members) in &families {
+        let first = members[0];
+        let Ok(rows) = &listings[first].rows else { continue };
+        if pieces[first].kind != Kind::Overlay || rows.len() < NEAR_LENGTH {
+            continue;
+        }
+        match near.iter_mut().find(|(other, _)| *other == rows) {
+            Some((_, places)) => places.push(pieces[first].place.clone()),
+            None => near.push((rows, vec![pieces[first].place.clone()])),
+        }
+    }
+    summary.near = near.into_iter().map(|(_, places)| places).filter(|places| places.len() > 1).collect();
 
     // Each family's comparison, from its first drafted copy.
     let leaders: Vec<usize> = families
