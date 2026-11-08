@@ -4,6 +4,7 @@
 
 use crate::alchemy::built;
 use crate::alchemy::done::commas;
+use crate::alchemy::overlay;
 use crate::alchemy::targets::{target_for, DecompTargetId};
 use crate::gba::count::CARTRIDGE;
 use crate::gba::elf::Elf;
@@ -56,12 +57,7 @@ fn find_all(haystack: &[u8], needles: &[Vec<u8>]) -> Vec<Option<usize>> {
 /// The overlay id an argument names: `64b`, `resource_64b`, or a path with
 /// `resource_64b` in it.
 fn overlay_id(argument: &str) -> Option<String> {
-    let id = match argument.rfind("resource_") {
-        Some(at) => &argument[at + "resource_".len()..],
-        None => argument,
-    };
-    let id: String = id.chars().take_while(char::is_ascii_hexdigit).collect();
-    (!id.is_empty()).then(|| format!("resource_{}", id.to_ascii_lowercase()))
+    overlay::named_in(argument).or_else(|| overlay::named_in(&format!("resource_{argument}")).filter(|_| argument.len() == 3))
 }
 
 pub fn overlays(arguments: &[String]) -> Result<(), String> {

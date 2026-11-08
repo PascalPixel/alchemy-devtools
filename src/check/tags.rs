@@ -4,14 +4,13 @@
 //! device it tags; and a function or macro with more asm statements than
 //! tags has a device no tag names.
 
+use crate::alchemy::humanity::DEVICES;
 use crate::alchemy::targets::parse_decomp_target;
 use crate::gba::clex::{lex, Kind, Token};
 use regex::Regex;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-/// S2's kinds, worst to mildest.
-pub const KINDS: [&str; 6] = ["pin", "signature", "barrier", "wrapper", "temporary", "dead"];
 /// Kinds S2 once had and now writes as ordinary C, with no tag.
 const ORDINARY: [&str; 2] = ["volatile", "one-pass"];
 /// The kinds The Broken Seal refuses (S2).
@@ -58,8 +57,8 @@ fn judge(text: &str, broken_seal: bool) -> Option<String> {
     if ORDINARY.contains(&kind) {
         return Some(format!("{kind} is ordinary C under S2: it takes no tag"));
     }
-    if !KINDS.contains(&kind) {
-        return Some(format!("unknown kind {kind}: {}", KINDS.join(", ")));
+    if !DEVICES.contains(&kind) {
+        return Some(format!("unknown kind {kind}: {}", DEVICES.join(", ")));
     }
     if broken_seal && NOT_IN_TBS.contains(&kind) {
         return Some(format!("The Broken Seal takes no {kind} (S2)"));

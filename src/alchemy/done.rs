@@ -11,9 +11,9 @@
 //! still be bytes of its scaffold, which the English build has as listings.
 //! An edition counts only when its ROM matches rom.sha1.
 
+use super::targets;
 use crate::gba::count::{self, Image};
 use crate::gba::ld_map::Map;
-use sha1::{Digest, Sha1};
 use std::path::Path;
 
 /// The two games: their id, mark and title.
@@ -183,14 +183,10 @@ fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
 
 /// Whether an edition's ROM is the one rom.sha1 names.
 pub(crate) fn verified(root: &Path, edition: &str) -> Result<(), String> {
-    let rom = format!("out/{edition}/{edition}.gba");
-    let list = std::fs::read_to_string(root.join("rom.sha1")).map_err(|error| format!("rom.sha1: {error}"))?;
-    let expected = list
-        .lines()
-        .find_map(|line| line.strip_suffix(&format!("  {rom}")))
-        .ok_or_else(|| format!("rom.sha1 names no {rom}"))?;
+    let target = targets::decomp_target(Some(edition))?;
+    let rom = target.image();
     let bytes = std::fs::read(root.join(&rom)).map_err(|_| format!("{rom} is not built: make compare-{edition}"))?;
-    if format!("{:x}", Sha1::digest(bytes)) != expected {
+    if !target.matches(&bytes) {
         return Err(format!("{rom} does not match rom.sha1"));
     }
     Ok(())

@@ -48,8 +48,18 @@ impl DecompTarget {
         self.id.game()
     }
 
+    /// The image the edition's build writes, relative to the checkout.
+    pub fn image(&self) -> String {
+        format!("{}/{}.gba", self.output_dir, self.id)
+    }
+
+    /// Whether an image is the edition's ROM: its SHA-1 is rom.sha1's.
+    pub fn matches(&self, image: &[u8]) -> bool {
+        format!("{:x}", <sha1::Sha1 as sha1::Digest>::digest(image)) == self.rom_sha1
+    }
+
     pub fn verify_reference(&self, rom: &[u8]) -> Result<(), String> {
-        if format!("{:x}", <sha1::Sha1 as sha1::Digest>::digest(rom)) != self.rom_sha1 {
+        if !self.matches(rom) {
             return Err(format!("{}: its SHA-1 is not the one rom.sha1 gives {}", self.rom, self.id));
         }
         Ok(())
