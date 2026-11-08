@@ -243,9 +243,13 @@ fn rtl_flags(steps: &mut [Vec<String>]) {
 /// binutils' assembler, which marks data among code with mapping symbols.
 /// The build assembles C with GAS 2.10, which marks none, and objdump then
 /// reads a lone call suffix (`.2byte 0xf800`) and the instruction after it
-/// as one Thumb-2 instruction. The recipe's other options are kept.
+/// as one Thumb-2 instruction. The recipe's other options are kept. A recipe
+/// that assembles inside a shell pipeline (pret's) keeps its own assembler.
 fn with_draft_assembly(mut steps: Vec<Vec<String>>, object: &Path) -> Result<Vec<Vec<String>>, String> {
     let object_text = object.to_string_lossy();
+    if steps.last().is_some_and(|step| crate::gba::recipe::is_shell(step) && step.last().is_some_and(|line| line.contains(&*object_text))) {
+        return Ok(steps);
+    }
     let build = steps.pop().filter(|step| step.iter().any(|argument| *argument == object_text))
         .ok_or("the recipe does not end by assembling its object")?;
     let mut assemble = vec!["arm-none-eabi-as".to_string(), "-mcpu=arm7tdmi".into()];

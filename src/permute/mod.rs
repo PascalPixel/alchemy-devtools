@@ -221,6 +221,11 @@ impl Job {
         } else {
             crate::diff::draft_steps(problem.target, &problem.draft, &object)?
         };
+        // The search edits each compile command's own arguments (its search
+        // folders, its -S), which a line run through the shell does not have.
+        if steps.iter().any(|step| crate::gba::recipe::is_shell(step)) {
+            return Err(format!("{}: its recipe runs through make's shell (a pipeline); permute edits each command's arguments, so measure it with diff", problem.draft.display()));
+        }
         let draft = problem.draft.to_string_lossy().into_owned();
         let candidate_text = candidate.to_string_lossy().into_owned();
         let import_from = format!("-I{}", directory.display());

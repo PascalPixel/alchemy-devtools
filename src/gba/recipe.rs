@@ -2,18 +2,62 @@
 //! `make -n` prints the recipe of the object a source builds; a draft takes
 //! that recipe with itself in place of the source and a private folder in
 //! place of the build's outputs, so it compiles with the build's compiler,
-//! options and route without any of them copied here.
+//! options and route without any of them copied here. A line make would
+//! hand its shell (a pipeline, a redirection, pret's `<(...)`) runs through
+//! the Makefile's own SHELL, from the checkout; every other line runs as its
+//! words, from any folder. A makefile's parse-time `$(shell ...)` still runs,
+//! as it does under make itself.
 
 use std::path::{Path, PathBuf};
 
 /// The recipe make prints for `object` (relative to `root`, as the Makefile
 /// names it), built from `source`: one argument list per command line,
 /// without the lines that only make folders. `variables` are make's
-/// command-line variables. Every makefile in `build` is passed as `-o`, since
-/// make remakes the makefiles it includes even under `-n`; `-W` makes the
-/// object out of date whether or not it was built.
+/// command-line variables. The makefiles `-W` would make out of date are
+/// passed as `-o`, since make remakes the makefiles it includes even under
+/// `-n`; `-W` makes the object out of date whether or not it was built.
 pub(crate) fn recipe(root: &Path, build: &Path, variables: &[String], source: &str, object: &str) -> Result<Vec<Vec<String>>, String> {
     let mut arguments = vec!["make".to_string(), "-n".into()];
+    for makefile in held(root, build, object)? {
+        arguments.extend(["-o".into(), makefile]);
+    }
+    arguments.extend(variables.iter().cloned());
+    arguments.extend(["-W".into(), source.to_string(), object.to_string()]);
+    let printed = crate::gba::process::run(&arguments, root)?;
+    let base = object.strip_suffix(".o").unwrap_or(object);
+    let outputs = [".o", ".s", ".i"].map(|extension| format!("{base}{extension}"));
+    let mut shell: Option<Vec<String>> = None;
+    let mut steps = Vec::new();
+    for line in printed.lines() {
+        match words(line) {
+            Ok(words) => {
+                let ours = words.iter().any(|word| word == source || outputs.iter().any(|output| word.contains(output.as_str())));
+                if ours && !words.is_empty() {
+                    steps.push(words);
+                }
+            }
+            Err(_) if mentions(line, source) || outputs.iter().any(|output| line.contains(output.as_str())) => {
+                if shell.is_none() {
+                    shell = Some(make_shell(root, variables).map_err(|error| format!("make's recipe for {object} needs its shell: {error}"))?);
+                }
+                let mut step = shell.clone().unwrap_or_default();
+                step.push(format!("cd {} && {line}", quote(&root.to_string_lossy())));
+                steps.push(step);
+            }
+            Err(_) => {}
+        }
+    }
+    if steps.is_empty() {
+        return Err(format!("make printed no recipe for {object}"));
+    }
+    Ok(steps)
+}
+
+/// The makefiles make would remake under `-n` once `-W` makes the source
+/// new, relative to `root`: every `.mk` in `build` (a generated object list
+/// or dependency list), and the object's own dependency file, `NAME.d`
+/// beside `NAME.o`, which a Makefile that includes it remakes from the source.
+fn held(root: &Path, build: &Path, object: &str) -> Result<Vec<String>, String> {
     let mut included: Vec<PathBuf> = std::fs::read_dir(root.join(build))
         .map_err(|error| format!("{}: {error}", build.display()))?
         .flatten()
@@ -21,26 +65,72 @@ pub(crate) fn recipe(root: &Path, build: &Path, variables: &[String], source: &s
         .filter(|path| path.extension().is_some_and(|extension| extension == "mk"))
         .collect();
     included.sort();
-    for makefile in included {
-        arguments.extend(["-o".into(), makefile.strip_prefix(root).unwrap_or(&makefile).to_string_lossy().into_owned()]);
+    let mut held: Vec<String> = included.iter().map(|path| path.strip_prefix(root).unwrap_or(path).to_string_lossy().into_owned()).collect();
+    let dependencies = format!("{}.d", object.strip_suffix(".o").unwrap_or(object));
+    if root.join(&dependencies).is_file() {
+        held.push(dependencies);
     }
+    Ok(held)
+}
+
+/// The shell make runs recipe lines with, and its flags: the Makefile's
+/// SHELL, and .SHELLFLAGS where make has it (-c before GNU make 3.82). Read
+/// from a rule of our own read after the project's makefile, as make 3.81
+/// has no --eval.
+fn make_shell(root: &Path, variables: &[String]) -> Result<Vec<String>, String> {
+    let makefile = ["GNUmakefile", "makefile", "Makefile"].into_iter().find(|name| root.join(name).is_file()).ok_or("no makefile")?;
+    let mut probe = tempfile::Builder::new().prefix("devtools-shell").suffix(".mk").tempfile().map_err(|error| error.to_string())?;
+    use std::io::Write;
+    probe
+        .write_all(b".PHONY: devtools-shell\ndevtools-shell:\n\t@echo devtools-shell $(SHELL) devtools-flags $(or $(.SHELLFLAGS),-c)\n")
+        .map_err(|error| error.to_string())?;
+    let mut arguments = vec!["make".to_string(), "-n".into(), "-f".into(), makefile.into(), "-f".into(), probe.path().to_string_lossy().into_owned()];
     arguments.extend(variables.iter().cloned());
-    arguments.extend(["-W".into(), source.to_string(), object.to_string()]);
+    arguments.push("devtools-shell".into());
     let printed = crate::gba::process::run(&arguments, root)?;
-    let base = object.strip_suffix(".o").unwrap_or(object);
-    let outputs = [".o", ".s", ".i"].map(|extension| format!("{base}{extension}"));
-    let mut steps = Vec::new();
-    for line in printed.lines() {
-        let words = words(line).map_err(|error| format!("make's recipe for {object}: {error}: {line}"))?;
-        let ours = words.iter().any(|word| word == source || outputs.iter().any(|output| word.contains(output.as_str())));
-        if ours && !words.is_empty() {
-            steps.push(words);
-        }
+    let line = printed.lines().find(|line| line.starts_with("echo devtools-shell ")).ok_or("make printed no SHELL")?;
+    let mut words = words(line)?.into_iter().skip(2).filter(|word| word != "devtools-flags").collect::<Vec<_>>();
+    if words.len() < 2 {
+        words = vec!["/bin/sh".into(), "-c".into()];
     }
-    if steps.is_empty() {
-        return Err(format!("make printed no recipe for {object}"));
+    Ok(words)
+}
+
+/// Whether `text` names `path` as a whole path, not as the tail or head of
+/// a longer one.
+fn mentions(text: &str, path: &str) -> bool {
+    !path.is_empty() && text.match_indices(path).any(|(at, _)| bounded(text, at, path.len()))
+}
+
+fn bounded(text: &str, at: usize, length: usize) -> bool {
+    let path_char = |c: char| c.is_alphanumeric() || matches!(c, '_' | '.' | '/' | '-' | '+');
+    !text[..at].chars().next_back().is_some_and(path_char) && !text[at + length..].chars().next().is_some_and(path_char)
+}
+
+/// `text` with every whole-path mention of `from` made `to`.
+fn replace_path(text: &str, from: &str, to: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut last = 0;
+    for (at, _) in text.match_indices(from).filter(|&(at, _)| bounded(text, at, from.len())) {
+        out += &text[last..at];
+        out += to;
+        last = at + from.len();
     }
-    Ok(steps)
+    out + &text[last..]
+}
+
+/// A word as the shell reads it back unchanged.
+fn quote(word: &str) -> String {
+    if !word.is_empty() && word.chars().all(|c| c.is_alphanumeric() || matches!(c, '_' | '.' | '/' | '-' | '+' | ',' | '=' | ':' | '@' | '%')) {
+        return word.to_string();
+    }
+    format!("'{}'", word.replace('\'', r"'\''"))
+}
+
+/// Whether a step is a recipe line run through make's shell: its last word
+/// is the line, run from the checkout.
+pub(crate) fn is_shell(step: &[String]) -> bool {
+    step.len() > 1 && step.last().is_some_and(|line| line.starts_with("cd ") && line.contains(" && "))
 }
 
 /// A recipe line split as the shell splits it. Quotes and backslashes are
@@ -93,6 +183,7 @@ fn words(line: &str) -> Result<Vec<String>, String> {
 /// `output` (with its `.s` and `.i` beside it): the draft stands for the
 /// source, also as the `-dumpbase` name, and every relative path the recipe
 /// names under `root` becomes absolute, so the steps run from any folder.
+/// A line run through the shell has the same paths replaced in its text.
 pub(crate) fn retarget(steps: &[Vec<String>], root: &Path, source: &str, object: &str, draft: &Path, output: &Path) -> Vec<Vec<String>> {
     let base = object.strip_suffix(".o").unwrap_or(object);
     let outputs = ["o", "s", "i"].map(|extension| (format!("{base}.{extension}"), output.with_extension(extension).to_string_lossy().into_owned()));
@@ -112,6 +203,15 @@ pub(crate) fn retarget(steps: &[Vec<String>], root: &Path, source: &str, object:
     steps
         .iter()
         .map(|step| {
+            if is_shell(step) {
+                let mut step = step.clone();
+                let mut line = replace_path(&step.pop().unwrap_or_default(), source, &quote(&draft.to_string_lossy()));
+                for (from, to) in &outputs {
+                    line = replace_path(&line, from, &quote(to));
+                }
+                step.push(line);
+                return step;
+            }
             let mut retargeted: Vec<String> = Vec::with_capacity(step.len());
             for word in step {
                 let after_dumpbase = retargeted.last().is_some_and(|last| last == "-dumpbase");
@@ -161,5 +261,38 @@ mod tests {
         assert_eq!(aimed[0].join(" "), format!("tools/cc -B{r}/tools/ -O2 -I{r}/include -I{r}/include/sub -I{r}/missing -S -o /work/run-1/draft.s /drafts/draft.c"));
         assert_eq!(aimed[1].join(" "), "tools/cc1 /work/run-1/draft.i -dumpbase draft.c -o /work/run-1/draft.s");
         assert_eq!(aimed[2].join(" "), "as -mthumb -o /work/run-1/draft.o /work/run-1/draft.s");
+    }
+
+    /// pret's shape: a pipeline that needs the Makefile's SHELL, and a
+    /// dependency file the Makefile includes and would remake from the source.
+    #[test]
+    fn a_pipeline_runs_through_the_makefiles_shell_and_its_dependency_file_is_left_alone() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::create_dir_all(root.join("build/src")).unwrap();
+        std::fs::write(
+            root.join("Makefile"),
+            "SHELL := /bin/sh\n-include build/src/a.d\nbuild/src/a.o: src/a.c\n\t@echo \"cc <flags> -o $@ $<\"\n\tcat $< | tr a-z A-Z > $@\nbuild/src/a.d: src/a.c\n\techo remade > $@\n",
+        )
+        .unwrap();
+        std::fs::write(root.join("src/a.c"), "int a;\n").unwrap();
+        std::fs::write(root.join("build/src/a.d"), "# kept\n").unwrap();
+        let steps = recipe(root, Path::new("build"), &[], "src/a.c", "build/src/a.o").unwrap();
+        assert_eq!(std::fs::read_to_string(root.join("build/src/a.d")).unwrap(), "# kept\n", "-o kept the dependency file");
+        let shell = steps.last().unwrap();
+        assert!(is_shell(shell) && !is_shell(&steps[0]), "{steps:?}");
+        assert_eq!(shell[..2], ["/bin/sh", "-c"]);
+        let work = tempfile::tempdir().unwrap();
+        let draft = work.path().join("my draft.c");
+        std::fs::write(&draft, "int b;\n").unwrap();
+        let output = work.path().join("draft.o");
+        let aimed = retarget(&steps, root, "src/a.c", "build/src/a.o", &draft, &output);
+        assert!(aimed.last().unwrap().last().unwrap().ends_with(&format!("cat '{}' | tr a-z A-Z > {}", draft.display(), quote(&output.to_string_lossy()))));
+        for step in &aimed {
+            crate::gba::process::run(step, work.path()).unwrap();
+        }
+        assert_eq!(std::fs::read_to_string(&output).unwrap(), "INT B;\n");
+        assert!(mentions("cc src/a.c -o x", "src/a.c") && !mentions("cc build/src/a.c", "src/a.c") && !mentions("src/a.cc", "src/a.c"));
     }
 }
