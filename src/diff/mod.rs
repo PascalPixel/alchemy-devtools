@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 mod alloc;
-mod skeleton;
+pub(crate) mod skeleton;
 
 const USAGE: &str = r#"usage: alchemy-devtools diff DRAFT.c [ADDRESS[,ADDRESS...]] [--game GAME] [--edition EDITION] [--arm] [--rtl] [--alloc] [--heat] [--show] [--skeleton]
        alchemy-devtools diff OVERLAY_DRAFT.c [--overlay resource_XXX] [--symbol NAME] [--edition EDITION] [--rtl] [--alloc] [--heat] [--show] [--skeleton]
@@ -192,7 +192,9 @@ pub(crate) fn arm_steps(target: DecompTarget, draft: &Path, object: &Path) -> Re
     steps(target, draft, object, None, true)
 }
 
-fn steps(target: DecompTarget, draft: &Path, object: &Path, overlay: Option<&str>, arm: bool) -> Result<Vec<Vec<String>>, String> {
+/// A draft's compile commands as diff runs them: for `overlay`'s route when
+/// it names one, the game's ARM route with `arm`.
+pub(crate) fn steps(target: DecompTarget, draft: &Path, object: &Path, overlay: Option<&str>, arm: bool) -> Result<Vec<Vec<String>>, String> {
     with_draft_assembly(crate::compile::steps(target, draft, object, overlay, arm)?, object)
 }
 
@@ -691,25 +693,48 @@ fn arm_reference(file: &Path, image: &[u8], base: u32, start: u32, end: u32) -> 
 }
 
 pub(crate) fn scaffold_reference(target: DecompTarget, wanted: &str, arm: bool) -> Result<(Vec<String>, String), String> {
-    let output = root().join(target.output_dir);
-    let read = |name: &str| std::fs::read(output.join(name))
-        .map_err(|error| format!("{}: {error}; build {} first", output.join(name).display(), target.id));
-    let map = Map::parse(&String::from_utf8_lossy(&read(&format!("{}.map", target.id))?));
-    let elf = Elf::parse(&read(&format!("{}.elf", target.id))?)?;
-    let (start, end, base, name) = if arm {
-        scaffold_extent_mode(&map, &elf, wanted, true)?
-    } else {
-        scaffold_extent(&map, &elf, wanted)?
-    };
-    let (reference_path, reference) = reference_rom(target)?;
-    let tokens = if arm {
-        arm_reference(&reference_path, &reference, base, start, end)?
-    } else {
-        thumb_reference(&reference, base, start, end)?
-    };
+    let image = MainImage::load(target)?;
+    let (tokens, name, start, end) = scaffold_rows(&image, wanted, arm)?;
     let mode = if arm { "ARM" } else { "Thumb" };
     println!("{mode} main-image analysis: {} {name}, {start:#010x}..{end:#010x}; full ROM comparison remains required.", target.id);
     Ok((tokens, name))
+}
+
+/// A built edition's main image as a comparison reads it: its map and ELF
+/// for a function's bounds, its reference ROM for the bytes.
+pub(crate) struct MainImage {
+    map: Map,
+    elf: Elf,
+    rom_path: PathBuf,
+    rom: Vec<u8>,
+}
+
+impl MainImage {
+    pub(crate) fn load(target: DecompTarget) -> Result<MainImage, String> {
+        let output = root().join(target.output_dir);
+        let read = |name: &str| std::fs::read(output.join(name))
+            .map_err(|error| format!("{}: {error}; build {} first", output.join(name).display(), target.id));
+        let map = Map::parse(&String::from_utf8_lossy(&read(&format!("{}.map", target.id))?));
+        let elf = Elf::parse(&read(&format!("{}.elf", target.id))?)?;
+        let (rom_path, rom) = reference_rom(target)?;
+        Ok(MainImage { map, elf, rom_path, rom })
+    }
+}
+
+/// A main-image function's instructions from the reference ROM, its name and
+/// its bounds, as `scaffold_reference` compares them, without its notice.
+pub(crate) fn scaffold_rows(image: &MainImage, wanted: &str, arm: bool) -> Result<(Vec<String>, String, u32, u32), String> {
+    let (start, end, base, name) = if arm {
+        scaffold_extent_mode(&image.map, &image.elf, wanted, true)?
+    } else {
+        scaffold_extent(&image.map, &image.elf, wanted)?
+    };
+    let tokens = if arm {
+        arm_reference(&image.rom_path, &image.rom, base, start, end)?
+    } else {
+        thumb_reference(&image.rom, base, start, end)?
+    };
+    Ok((tokens, name, start, end))
 }
 
 /// The edition's reference ROM, checked against rom.sha1.

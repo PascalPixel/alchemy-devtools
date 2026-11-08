@@ -27,27 +27,27 @@ const STB_GLOBAL: u8 = 1;
 
 /// A scaffold section where an edition still places a name.
 #[derive(Debug)]
-struct Held {
-    edition: DecompTargetId,
-    section: String,
+pub(crate) struct Held {
+    pub edition: DecompTargetId,
+    pub section: String,
     size: u64,
 }
 
 /// An object some edition does not link, or whose names some scaffold holds.
 #[derive(Debug)]
-struct Object {
-    object: String,
-    file: String,
+pub(crate) struct Object {
+    pub object: String,
+    pub file: String,
     linked: Vec<DecompTargetId>,
-    missing: Vec<DecompTargetId>,
+    pub missing: Vec<DecompTargetId>,
     /// Every global name the object defines, each with where the scaffolds
     /// that still hold it place it.
-    names: Vec<(String, Vec<Held>)>,
+    pub names: Vec<(String, Vec<Held>)>,
 }
 
 /// One edition's scaffold, summed by what its sections hold.
 #[derive(Debug)]
-struct Scaffold {
+pub(crate) struct Scaffold {
     edition: DecompTargetId,
     source: String,
     unlinked: usize,
@@ -105,7 +105,7 @@ fn of_game(chosen: &[DecompTargetId], game: &str) -> Vec<DecompTargetId> {
 }
 
 /// One game's objects and scaffolds.
-fn survey(root: &Path, game: &str, chosen: &[DecompTargetId]) -> Result<(Vec<Object>, Vec<Scaffold>), String> {
+pub(crate) fn survey(root: &Path, game: &str, chosen: &[DecompTargetId]) -> Result<(Vec<Object>, Vec<Scaffold>), String> {
     let all: Vec<DecompTargetId> = built::editions(&[game.to_string()])?;
     let english = built::edition(game, "en").ok_or_else(|| format!("{game} has no English edition"))?;
     // The object list's rows merged per object, in link order.
@@ -249,7 +249,7 @@ fn bytes(count: u64) -> String {
     format!("{} bytes", commas(count as i64))
 }
 
-fn quote(text: &str) -> String {
+pub(crate) fn quote(text: &str) -> String {
     let mut quoted = String::from("\"");
     for c in text.chars() {
         match c {
