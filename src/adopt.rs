@@ -357,9 +357,29 @@ struct Cut {
 }
 
 /// Links `module` in `language` in place of the edition's rom.s sections
-/// that name it. On Err the edition is left as it was.
+/// that name it. On Err the edition is left as it was: every file it edited
+/// is put back, and `list` is untouched.
 #[allow(clippy::too_many_arguments)]
 fn relink(
+    files: &mut Files,
+    layout: &Layout,
+    list: &mut ObjectList,
+    language: &str,
+    module: &str,
+    names: &[String],
+    known: &BTreeSet<String>,
+    halfword: Option<bool>,
+) -> Result<String, String> {
+    let saved = files.now.clone();
+    let result = relink_edition(files, layout, list, language, module, names, known, halfword);
+    if result.is_err() {
+        files.now = saved;
+    }
+    result
+}
+
+#[allow(clippy::too_many_arguments)]
+fn relink_edition(
     files: &mut Files,
     layout: &Layout,
     list: &mut ObjectList,
@@ -1497,6 +1517,34 @@ mod tests {
             assert_eq!(read(path), text, "{path}");
         }
         assert!(!root.join("games/tla/src/field/f000100.c").exists());
+    }
+
+    /// German's next row is a listing with no file, so aligning what follows
+    /// fails: German stays on its scaffold with its section where it was.
+    #[test]
+    fn an_edition_that_stays_on_its_scaffold_keeps_its_section() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        let objects = "image\tplace\tobject\tsections\teditions\nmain\trom\tgames/tla/src/field/a\t.text\nmain\trom\trecon/tla/raw/08000100\t.text\ten\nmain\trom\trecon/tla/de/rom\t.rom.00000100\tde\nmain\trom\trecon/tla/raw/08000200\t.text\tde\n";
+        let de = "\t.section .rom.00000100, \"ax\"\n\t.global Func_08000100\nFunc_08000100:\n\t.incbin \"baserom.gba\", 0x00000100, 0x00000004\n";
+        let tree = [
+            ("games/tla/objects.tsv", objects),
+            ("recon/tla/raw/08000100.s", ".syntax unified\n\t.thumb\n\t.global Func_08000100\n\t.thumb_func\nFunc_08000100:\n\tbx lr\n\t.2byte 0x0000\n"),
+            ("recon/tla/en/main/08000100.c", "void Func_08000100(void) {}\n"),
+            ("recon/tla/de/rom.s", de),
+        ];
+        for (path, text) in tree {
+            std::fs::create_dir_all(root.join(path).parent().unwrap()).unwrap();
+            std::fs::write(root.join(path), text).unwrap();
+        }
+        let Ok(Request::Adopt(options)) = parse(&args(&["main", "08000100", "--editions", "en,de", "--game", "tla"])) else {
+            panic!("main did not parse")
+        };
+        let mut files = Files::new(root);
+        let report = adopt_main(&mut files, &Layout::new("tla"), "08000100", &options).unwrap();
+        assert!(report.iter().any(|line| line.contains("de  stays on its scaffold")), "{report:?}");
+        assert_eq!(files.read("recon/tla/de/rom.s").unwrap(), de);
+        assert!(files.read("games/tla/objects.tsv").unwrap().contains("recon/tla/de/rom\t.rom.00000100\tde\n"));
     }
 
     /// An overlay draft takes its section's link line; a replacement takes the
