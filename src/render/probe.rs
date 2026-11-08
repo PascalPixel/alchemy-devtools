@@ -8,7 +8,7 @@ use super::field::{Field, Spot};
 use super::guide::Guide;
 use super::mgba::Gba;
 use super::story::{Trigger, MOVE};
-use crate::ld_map::Map;
+use crate::gba::ld_map::Map;
 use std::cell::RefCell;
 use std::rc::Rc;
 

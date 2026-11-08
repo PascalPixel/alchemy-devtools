@@ -961,7 +961,7 @@ impl<'a> Guide<'a> {
     fn message_number(&self, name: &str) -> Result<u32, String> {
         let path = crate::compile::root().join("out/tbs-en/tbs-en.elf");
         let data = std::fs::read(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-        let elf = crate::elf::Elf::parse(&data)?;
+        let elf = crate::gba::elf::Elf::parse(&data)?;
         elf.symbols.iter().find(|s| s.name == name).map(|s| s.value).ok_or_else(|| format!("the ELF has no {name}"))
     }
 

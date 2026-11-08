@@ -196,47 +196,47 @@ pub(crate) mod tests {
 Discarded input sections
 
  .ARM.attributes
-                0x0000000000000000       0x20 /x/out/tbs-de/obj/recon/tbs/unidentified.o
+                0x0000000000000000       0x20 /x/build/obj/asm/unidentified.o
 
 Linker script and memory map
 
                 0x00000000000004ec                Decompress_MoveToFrontLzCommandsCodeSize = (Resource_Decode2End - Decompress_MoveToFrontLzCommands)
 
 .rom_start      0x0000000008000000       0x30
- */recon/tbs/de/rom.o(.rom.00000000)
- .rom.00000000  0x0000000008000000       0x10 /x/out/tbs-de/obj/recon/tbs/de/rom.o
+ */asm/rom.o(.rom.00000000)
+ .rom.00000000  0x0000000008000000       0x10 /x/build/obj/asm/rom.o
                 0x0000000008000000                Rom_Start
- */games/tbs/src/system/io.o(.text .rodata .data .padding)
- .text          0x0000000008000010        0xe /x/out/tbs-de/obj/games/tbs/src/system/io.o
+ */src/system/io.o(.text .rodata .data .padding)
+ .text          0x0000000008000010        0xe /x/build/obj/src/system/io.o
                 0x0000000008000010                Func_08000010
                 0x0000000008000010                Input_Handle
                 0x0000000008000018                Input_Poll
- */recon/tbs/de/rom.o(.rom.00000020)
+ */asm/rom.o(.rom.00000020)
  *fill*         0x000000000800001e        0x2
- .rom.00000020  0x0000000008000020       0x10 /x/out/tbs-de/obj/recon/tbs/de/rom.o
+ .rom.00000020  0x0000000008000020       0x10 /x/build/obj/asm/rom.o
                 0x0000000008000020                Func_08000020
                 0x0000000008000030                IwramCodeEnd = .
 
 .iwram_resident 0x0000000003000000        0x8 load address 0x0000000008000030
- */games/tbs/src/system/iwram_routines.o(.text)
- .text          0x0000000003000000        0x8 /x/out/tbs-de/obj/games/tbs/src/system/iwram_routines.o
+ */src/system/iwram_routines.o(.text)
+ .text          0x0000000003000000        0x8 /x/build/obj/src/system/iwram_routines.o
                 0x0000000003000000                IwramIrqMain
- .bss           0x0000000003000008        0x4 /x/out/tbs-de/obj/games/tbs/src/system/iwram_routines.o
+ .bss           0x0000000003000008        0x4 /x/build/obj/src/system/iwram_routines.o
 
 iwram           0x0000000003000100       0x40 load address 0x0000000008000038
- */recon/tbs/sym_iwram.o(.sym_iwram)
- .sym_iwram     0x0000000003000100       0x40 /x/out/tbs-de/obj/recon/tbs/sym_iwram.o
+ */asm/sym_iwram.o(.sym_iwram)
+ .sym_iwram     0x0000000003000100       0x40 /x/build/obj/asm/sym_iwram.o
                 0x0000000003000100                gVBlankCount
 
 .rom_main       0x0000000008000038       0x20
- */recon/tbs/unidentified.o(.unidentified.08000030)
+ */asm/unidentified.o(.unidentified.08000030)
  .unidentified.08000030
-                0x0000000008000038       0x10 /x/out/tbs-de/obj/recon/tbs/unidentified.o
+                0x0000000008000038       0x10 /x/build/obj/asm/unidentified.o
                 0x0000000008000038                Math_Table
- */recon/tbs/raw/08000048.o(.text)
- .text          0x0000000008000048       0x10 /x/out/tbs-de/obj/recon/tbs/raw/08000048.o
+ */asm/raw/08000048.o(.text)
+ .text          0x0000000008000048       0x10 /x/build/obj/asm/raw/08000048.o
                 0x0000000008000048                Func_08000048
-LOAD /x/out/tbs-de/obj/recon/tbs/de/rom.o
+LOAD /x/build/obj/asm/rom.o
 ";
 
 }

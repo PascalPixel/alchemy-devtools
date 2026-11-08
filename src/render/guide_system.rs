@@ -449,7 +449,7 @@ impl<'a> Guide<'a> {
         for (name, _) in PAIR {
             let bytes = std::fs::read(dir.join(format!("{name}.bin"))).map_err(|e| format!("{name}.bin: {e}"))?;
             let data = std::fs::read(dir.join(format!("{name}.elf"))).map_err(|e| format!("{name}.elf: {e}"))?;
-            let elf = crate::elf::Elf::parse(&data)?;
+            let elf = crate::gba::elf::Elf::parse(&data)?;
             // Functions and tables with a size, by name: their offset in the
             // overlay and their bytes.
             let mut things: std::collections::BTreeMap<String, (usize, Vec<u8>)> = std::collections::BTreeMap::new();
@@ -1824,7 +1824,7 @@ impl<'a> Guide<'a> {
 
 /// The overlay unpacked in the overlay area now: its resource name and its
 /// ELF, found as the build's unpacked overlay whose bytes the area holds.
-fn loaded_overlay(field: &Field) -> Option<(String, crate::elf::Elf)> {
+fn loaded_overlay(field: &Field) -> Option<(String, crate::gba::elf::Elf)> {
     let dir = crate::compile::root().join("out/tbs-en/overlays");
     let mut names: Vec<_> = std::fs::read_dir(&dir).ok()?.flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "bin")).collect();
     names.sort();
@@ -1837,7 +1837,7 @@ fn loaded_overlay(field: &Field) -> Option<(String, crate::elf::Elf)> {
         if (0..n as u32).all(|i| field.read8(0x0200_8000 + i) == bytes[i as usize]) {
             let elf_path = path.with_extension("elf");
             let data = std::fs::read(&elf_path).ok()?;
-            let elf = crate::elf::Elf::parse(&data).ok()?;
+            let elf = crate::gba::elf::Elf::parse(&data).ok()?;
             let name = path.file_stem()?.to_string_lossy().to_string();
             return Some((name, elf));
         }

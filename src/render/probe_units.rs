@@ -7,7 +7,7 @@
 use super::guide::Guide;
 use super::probe::{cells, describe};
 use super::story::Trigger;
-use crate::ld_map::Map;
+use crate::gba::ld_map::Map;
 
 const KEY_A: u32 = 0x1;
 const KEY_DOWN: u32 = 0x80;

@@ -268,7 +268,7 @@ impl<'a> Guide<'a> {
                 continue;
             }
             let Ok(data) = std::fs::read(&path) else { continue };
-            let Ok(elf) = crate::elf::Elf::parse(&data) else { continue };
+            let Ok(elf) = crate::gba::elf::Elf::parse(&data) else { continue };
             if !elf.symbols.iter().any(|s| anchor.split('|').any(|a| s.name == a)) {
                 continue;
             }

@@ -642,7 +642,7 @@ pub fn decode_one(image: &[u8], base: u32, pc: u32) -> Option<Ins> {
                 }
             } else if half & 0xf800 == 0xf000 {
                 let pair = image.get(offset..offset + 4)?;
-                let Some(displacement) = crate::thumb::bl_displacement(pair) else {
+                let Some(displacement) = crate::gba::thumb::bl_displacement(pair) else {
                     return Some(Ins {
                         addr: pc,
                         size: 2,

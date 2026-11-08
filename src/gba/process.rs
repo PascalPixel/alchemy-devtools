@@ -96,7 +96,7 @@ mod fixed_addresses {
             if let Err(error) = &result {
                 REFUSED.call_once(|| {
                     eprintln!(
-                        "alchemy: the kernel refuses to load the build's tools at fixed addresses \
+                        "run: the kernel refuses to load the build's tools at fixed addresses \
                          ({error}); they run with address randomisation"
                     );
                 });
@@ -176,7 +176,7 @@ mod address_stable {
     pub(crate) fn spawn(program: &str, args: &[&str], cwd: &Path) -> Result<Output, String> {
         let serial = SERIAL.fetch_add(1, Ordering::Relaxed);
         let stem =
-            std::env::temp_dir().join(format!("alchemy-run-{}-{serial}", std::process::id()));
+            std::env::temp_dir().join(format!("devtools-run-{}-{serial}", std::process::id()));
         let stdout_path = stem.with_extension("out");
         let stderr_path = stem.with_extension("err");
         let result = spawn_to_files(program, args, cwd, &stdout_path, &stderr_path);
@@ -283,9 +283,9 @@ mod tests {
         assert!(run::<&str>(&[], &cwd)
             .unwrap_err()
             .contains("empty command"));
-        assert!(run(&["/nonexistent-alchemy-tool"], &cwd)
+        assert!(run(&["/nonexistent-tool"], &cwd)
             .unwrap_err()
-            .starts_with("nonexistent-alchemy-tool:"));
+            .starts_with("nonexistent-tool:"));
         for (script, expected) in [
             ("printf out; printf err >&2; exit 1", "sh failed: err"),
             ("printf out; printf ' ' >&2; exit 1", "sh failed: out"),

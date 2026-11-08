@@ -140,7 +140,7 @@ impl<'a> Guide<'a> {
         let root = crate::compile::root();
         let build = root.join("out/tbs-ja");
         let ja_map = std::fs::read(build.join("tbs-ja.map")).map_err(|e| format!("cannot read the Japanese map: {e} (make tbs-ja)"))?;
-        let ja_map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&ja_map));
+        let ja_map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&ja_map));
         let ja_rom = std::fs::read(build.join("tbs-ja.gba")).map_err(|e| format!("cannot read the Japanese ROM: {e} (make tbs-ja)"))?;
         let ja_symbols = Symbols::find(&ja_map)?;
         let ja = Guide { rom: &ja_rom, symbols: &ja_symbols, flags: self.flags, out: self.out, map: &ja_map, written: Vec::new(), casts: Vec::new() };

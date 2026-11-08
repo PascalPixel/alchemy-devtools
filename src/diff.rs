@@ -1,8 +1,8 @@
 use crate::compile::{family_for_source, root, CompilerFamily};
-use crate::process::run as command;
-use crate::targets::{decomp_target, DecompTarget};
-use crate::elf::Elf;
-use crate::ld_map::{Map, Placed, ROM};
+use crate::gba::process::run as command;
+use crate::alchemy::targets::{decomp_target, DecompTarget};
+use crate::gba::elf::Elf;
+use crate::gba::ld_map::{Map, Placed, ROM};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
@@ -980,7 +980,7 @@ mod tests {
             symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x118, "Next".into())],
         };
         let map = Map { placed: vec![section.clone()] };
-        let symbol = |name: &str, value, kind| crate::elf::Symbol { name: name.into(), value, size: 0, kind, bind: 1, section: 1 };
+        let symbol = |name: &str, value, kind| crate::gba::elf::Symbol { name: name.into(), value, size: 0, kind, bind: 1, section: 1 };
         let mut elf = Elf { sections: vec![], symbols: vec![symbol("First", ROM + 0x101, 2), symbol("Next", ROM + 0x119, 2)] };
         assert_eq!(scaffold_extent(&map, &elf, "First").unwrap(), (ROM + 0x100, ROM + 0x118, ROM, "First".into()));
         assert_eq!(scaffold_extent(&map, &elf, "08000100").unwrap().1, ROM + 0x118);
@@ -1016,7 +1016,7 @@ mod tests {
             address: ROM + 0x100, load: ROM + 0x100, size: 0x60, loaded: true,
             symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x128, "Next".into())],
         };
-        let symbol = |name: &str, value, size| crate::elf::Symbol {
+        let symbol = |name: &str, value, size| crate::gba::elf::Symbol {
             name: name.into(), value, size, kind: 2, bind: 1, section: 1,
         };
         let elf = Elf { sections: vec![], symbols: vec![
@@ -1041,8 +1041,8 @@ mod tests {
             symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x118, "Next".into())],
         };
         let elf = Elf { sections: vec![], symbols: vec![
-            crate::elf::Symbol { name: "First".into(), value: ROM + 0x101, size: 0x10, kind: 2, bind: 1, section: 1 },
-            crate::elf::Symbol { name: "Next".into(), value: ROM + 0x119, size: 0x18, kind: 2, bind: 1, section: 1 },
+            crate::gba::elf::Symbol { name: "First".into(), value: ROM + 0x101, size: 0x10, kind: 2, bind: 1, section: 1 },
+            crate::gba::elf::Symbol { name: "Next".into(), value: ROM + 0x119, size: 0x18, kind: 2, bind: 1, section: 1 },
         ] };
         let mut map = Map { placed: vec![section] };
         assert_eq!(scaffold_extent(&map, &elf, "First").unwrap(), (ROM + 0x100, ROM + 0x110, ROM, "First".into()));
@@ -1066,11 +1066,11 @@ mod tests {
             symbols: vec![(base, "First".into()), (base + 0x18, "Next".into())],
         }] };
         let mut elf = Elf {
-            sections: vec![crate::elf::Section { address: base, bytes: vec![0; 0x30] }],
+            sections: vec![crate::gba::elf::Section { address: base, bytes: vec![0; 0x30] }],
             symbols: vec![
-                crate::elf::Symbol { name: "First".into(), value: base + 1, size: 0x10, kind: 2, bind: 1, section: 1 },
-                crate::elf::Symbol { name: "Next".into(), value: base + 0x19, size: 0x18, kind: 2, bind: 1, section: 1 },
-                crate::elf::Symbol { name: "Import".into(), value: base + 9, size: 0, kind: 2, bind: 1, section: 0xfff1 },
+                crate::gba::elf::Symbol { name: "First".into(), value: base + 1, size: 0x10, kind: 2, bind: 1, section: 1 },
+                crate::gba::elf::Symbol { name: "Next".into(), value: base + 0x19, size: 0x18, kind: 2, bind: 1, section: 1 },
+                crate::gba::elf::Symbol { name: "Import".into(), value: base + 9, size: 0, kind: 2, bind: 1, section: 0xfff1 },
             ],
         };
         assert_eq!(overlay_extent(&map, &elf, "First").unwrap(), (base, base + 0x10, base, "First".into()));
@@ -1081,7 +1081,7 @@ mod tests {
         elf.symbols[0].section = 0;
         assert!(overlay_extent(&map, &elf, "First").is_err());
         elf.symbols[0].section = 1;
-        elf.symbols.push(crate::elf::Symbol { name: "$a".into(), value: base + 4, size: 0, kind: 0, bind: 0, section: 1 });
+        elf.symbols.push(crate::gba::elf::Symbol { name: "$a".into(), value: base + 4, size: 0, kind: 0, bind: 0, section: 1 });
         assert!(overlay_extent(&map, &elf, "First").is_err());
     }
 

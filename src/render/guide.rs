@@ -38,7 +38,7 @@ pub struct Guide<'a> {
     pub flags: &'a Flags,
     pub out: &'a Path,
     /// The edition's linker map, for the addresses a picture reads.
-    pub map: &'a crate::ld_map::Map,
+    pub map: &'a crate::gba::ld_map::Map,
     pub written: Vec<(String, u64, String)>,
     /// Rows of the abilities' index.tsv for the field casts recorded.
     pub casts: Vec<String>,

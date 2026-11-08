@@ -9,7 +9,7 @@ use super::guide_more::{canvas, outline, paste, screen};
 use super::guide_take::{room_map, text};
 use super::mgba::{Gba, HEIGHT, WIDTH};
 use super::probe::{actors, cells, describe, walk};
-use crate::ld_map::Map;
+use crate::gba::ld_map::Map;
 use std::cell::RefCell;
 use std::rc::Rc;
 

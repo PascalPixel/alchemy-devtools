@@ -38,7 +38,7 @@ use super::animation::{is_black_bgr555, BLACK_CLEARANCE};
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, LR, SP, WIDTH};
 use super::party::{chapter, order, Party};
 use super::story::{Trigger, CARRY, MOVE};
-use crate::ld_map::Map;
+use crate::gba::ld_map::Map;
 use std::collections::HashMap;
 
 /// struct MainRoutineWork (main_routine_work.h), struct MapGridScrollWork (map_grid_scroll.h),
@@ -313,7 +313,7 @@ impl Symbols {
     /// leaves out, from the edition's ELF at `elf`.
     pub fn read_defeat(&mut self, elf: &std::path::Path) -> Result<(), String> {
         let data = std::fs::read(elf).map_err(|e| format!("cannot read {}: {e}", elf.display()))?;
-        let elf = crate::elf::Elf::parse(&data)?;
+        let elf = crate::gba::elf::Elf::parse(&data)?;
         self.defeat = elf.symbols.iter().filter(|y| y.name == "MsgGoesDownInDefeat" || y.name == "MsgPartyDefeated").map(|y| y.value).collect();
         Ok(())
     }

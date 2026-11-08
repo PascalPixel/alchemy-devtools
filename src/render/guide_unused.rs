@@ -75,7 +75,7 @@ fn overlay_function(overlays: &std::path::Path, name: &str) -> Result<u32, Strin
         if path.extension().and_then(|e| e.to_str()) != Some("elf") {
             continue;
         }
-        let Some(elf) = std::fs::read(&path).ok().and_then(|data| crate::elf::Elf::parse(&data).ok()) else {
+        let Some(elf) = std::fs::read(&path).ok().and_then(|data| crate::gba::elf::Elf::parse(&data).ok()) else {
             continue;
         };
         if let Some(symbol) = elf.symbols.iter().find(|y| y.kind == 2 && y.name == name) {

@@ -22,7 +22,7 @@ pub(crate) mod types;
 mod compatibility_tests;
 
 use crate::compile::root;
-use crate::targets::{decomp_target, DecompTarget};
+use crate::alchemy::targets::{decomp_target, DecompTarget};
 use ast::Function;
 #[cfg(test)]
 use mutate::mutate;
@@ -328,7 +328,7 @@ impl Job {
         }
         // ARM compilation also leaves an .i file. It belongs to the previous
         // candidate, not necessarily to the expansion being prepared now.
-        crate::process::run(&step, root())?;
+        crate::gba::process::run(&step, root())?;
         std::fs::read_to_string(&preprocessed).map_err(|e| format!("{}: {e}", preprocessed.display()))
     }
 
@@ -336,7 +336,7 @@ impl Job {
         std::fs::write(&self.candidate, text).map_err(|e| format!("{}: {e}", self.candidate.display()))?;
         let _ = std::fs::remove_file(&self.object);
         for step in &self.steps {
-            crate::process::run(step, root())?;
+            crate::gba::process::run(step, root())?;
         }
         Ok(())
     }
@@ -1443,7 +1443,7 @@ mod tests {
             } else {
                 crate::diff::draft_steps(problem.target, &draft, &expected_object).unwrap()
             };
-            for step in &steps { crate::process::run(step, root()).unwrap(); }
+            for step in &steps { crate::gba::process::run(step, root()).unwrap(); }
             assert_eq!(crate::diff::disassemble(&job.object, Some("F")).unwrap(), crate::diff::disassemble(&expected_object, Some("F")).unwrap());
         }
     }
@@ -1582,7 +1582,7 @@ mod tests {
         std::fs::create_dir_all(object.parent().unwrap()).unwrap();
         std::fs::write(&reference, source).unwrap();
         for step in crate::diff::draft_steps(target, &reference, &object).unwrap() {
-            crate::process::run(&step, root()).unwrap();
+            crate::gba::process::run(&step, root()).unwrap();
         }
         crate::diff::disassemble(&object, None).unwrap()
     }
@@ -2001,7 +2001,7 @@ mod tests {
         std::fs::create_dir_all(object.parent().unwrap()).unwrap();
         std::fs::write(&reference, "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return a - b;\n}\n").unwrap();
         for step in crate::diff::draft_steps(target, &reference, &object).unwrap() {
-            crate::process::run(&step, root()).unwrap();
+            crate::gba::process::run(&step, root()).unwrap();
         }
         let listing = crate::diff::disassemble(&object, None).unwrap();
         // The draft offers that spelling only as its second choice.

@@ -212,7 +212,7 @@ fn options(arguments: &[String]) -> Result<Option<Options>, String> {
     if o.abilities.is_empty() && !o.all && !o.djinn && !o.summons {
         return Err(format!("name an --ability or ask for --all\n{USAGE}"));
     }
-    crate::targets::parse_decomp_target(&o.edition)?;
+    crate::alchemy::targets::parse_decomp_target(&o.edition)?;
     if !o.edition.starts_with("tbs-") {
         return Err(format!("{}: only the ☀️ editions have this battle setup", o.edition));
     }
@@ -358,7 +358,7 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<(Vec<Ro
     let map_path = build.join(format!("{edition}.map"));
     let rom_path = build.join(format!("{edition}.gba"));
     let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
-    let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+    let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
     let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
     note_modified(root, edition, &rom);
     let symbols = battle::Symbols::find(&map)?;
@@ -612,7 +612,7 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             }
         }
     }
-    crate::targets::parse_decomp_target(&o.edition)?;
+    crate::alchemy::targets::parse_decomp_target(&o.edition)?;
     if !o.edition.starts_with("tbs-") {
         return Err(format!("{}: only the ☀️ editions are read here", o.edition));
     }
@@ -914,7 +914,7 @@ impl Machines {
         let map_path = build.join(format!("{edition}.map"));
         let rom_path = build.join(format!("{edition}.gba"));
         let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
-        let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+        let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
         let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
         if note {
             note_modified(root, edition, &rom);
@@ -943,7 +943,7 @@ impl Machines {
                 continue;
             };
             let path = build.join("overlays").join(format!("resource_{id:03x}.elf"));
-            let Some(elf) = std::fs::read(&path).ok().and_then(|data| crate::elf::Elf::parse(&data).ok()) else {
+            let Some(elf) = std::fs::read(&path).ok().and_then(|data| crate::gba::elf::Elf::parse(&data).ok()) else {
                 continue;
             };
             let named = elf.symbols.iter().filter(|y| y.kind == 2 && !y.name.is_empty()).map(|y| (y.name.clone(), y.value & !1)).collect();
@@ -1115,7 +1115,7 @@ fn play_probe(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Re
 fn play_probe(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
     let build = root.join("out").join(edition);
     let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
-    let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+    let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
     let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
     let symbols = field::Symbols::find(&map)?;
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
@@ -1142,7 +1142,7 @@ fn play_story(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Re
 fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
     let build = root.join("out").join(edition);
     let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
-    let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+    let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
     let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
     note_modified(root, edition, &rom);
     let symbols = field::Symbols::find(&map)?;
@@ -1487,7 +1487,7 @@ fn play_guide(
     } else {
         let build = root.join("out").join(edition);
         let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
-        let map = crate::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+        let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
         let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
         if !jobs.child {
             note_modified(root, edition, &rom);

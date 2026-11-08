@@ -1,8 +1,8 @@
 use crate::compile::root;
-use crate::decode::{decode_one, half_at, word_at, Kind};
-use crate::elf::Elf;
-use crate::ld_map::{preferred, Map, Placed, ROM};
-use crate::targets::DecompTarget;
+use crate::gba::decode::{decode_one, half_at, word_at, Kind};
+use crate::gba::elf::Elf;
+use crate::gba::ld_map::{preferred, Map, Placed, ROM};
+use crate::alchemy::targets::DecompTarget;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
@@ -397,8 +397,8 @@ pub(crate) fn reference_overlay(rom: &[u8], main_map: &Map, id: &str) -> Result<
         .min()
         .unwrap_or(rom.len());
     let decoded = match rom[start] {
-        0 => crate::lz::decode_general(rom, start, end, 0x100000),
-        1 => crate::lz::decode_palette(rom, start + 1, end, 0x100000),
+        0 => crate::alchemy::lz::decode_general(rom, start, end, 0x100000),
+        1 => crate::alchemy::lz::decode_palette(rom, start + 1, end, 0x100000),
         kind => return Err(format!("overlay stream has unsupported kind {kind}")),
     };
     let (mut decoded, _) = decoded?;
@@ -472,11 +472,11 @@ mod tests {
         let elf = Elf {
             symbols: vec![],
             sections: vec![
-                crate::elf::Section {
+                crate::gba::elf::Section {
                     address: 0x2000,
                     bytes: vec![1, 2],
                 },
-                crate::elf::Section {
+                crate::gba::elf::Section {
                     address: 0x2004,
                     bytes: vec![3, 4],
                 },
@@ -488,7 +488,7 @@ mod tests {
         );
         let overflow = Elf {
             symbols: vec![],
-            sections: vec![crate::elf::Section {
+            sections: vec![crate::gba::elf::Section {
                 address: u32::MAX,
                 bytes: vec![1],
             }],
@@ -500,7 +500,7 @@ mod tests {
 
     #[test]
     fn overlay_bounds_ignore_imported_absolute_functions() {
-        let symbol = |name: &str, value, section| crate::elf::Symbol {
+        let symbol = |name: &str, value, section| crate::gba::elf::Symbol {
             name: name.into(),
             value,
             size: 0,
@@ -533,7 +533,7 @@ mod tests {
                 address: base, size: 8, load: base, loaded: true,
                 symbols: vec![(base + 2, "Adopted".into())],
             }] },
-            elf: Some(Elf { sections: vec![], symbols: vec![crate::elf::Symbol {
+            elf: Some(Elf { sections: vec![], symbols: vec![crate::gba::elf::Symbol {
                 name: "Adopted".into(), value: base + 3, size: 4,
                 kind: STT_FUNC, bind: 1, section: 1,
             }] }),
@@ -635,12 +635,12 @@ mod tests {
 
     #[test]
     fn an_address_stands_for_the_function_that_holds_it() {
-        let map = Map::parse(crate::ld_map::tests::MAP);
+        let map = Map::parse(crate::gba::ld_map::tests::MAP);
         let functions = vec![(0x0800_0014, "Input_Static".to_string())];
         let found = |wanted: &str| {
             resolve(&map, None, &functions, wanted).map(|(p, a, n)| (p.label(), a, n))
         };
-        let io = "games/tbs/src/system/io.o".to_string();
+        let io = "src/system/io.o".to_string();
         assert_eq!(
             found("Input_Poll"),
             Ok((io.clone(), 0x0800_0018, "Input_Poll".to_string()))

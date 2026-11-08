@@ -18,7 +18,7 @@ use super::animation::is_black_bgr555;
 use super::field::CLEARED;
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, LR};
 use super::plan::{self, Aim, Ally, Cast, Command};
-use crate::ld_map::Map;
+use crate::gba::ld_map::Map;
 
 /// gFormations row 1: one Vermin, a fixed formation (the first enemy in the
 /// middle).
