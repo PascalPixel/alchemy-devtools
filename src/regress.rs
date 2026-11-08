@@ -13,9 +13,11 @@ Compares the assembly the compiler wrote for each C source under games/
 current out/, edition by edition and function by function. Build first: the
 current tree's .s are the build's own (make compare-editions). Each function
 that differs is classed, worst first: instruction (an instruction added,
-dropped or changed), directive (the same instructions, other directives:
+dropped or changed, or a label at another instruction, so a branch lands
+elsewhere), directive (the same instructions and labels, other directives:
 alignment, sections), order+register, register-only, order-only. The count
-is the instructions that differ by longest common subsequence. No SOURCE
+is the instructions and labels that differ by longest common subsequence.
+No SOURCE
 compares every source REFERENCE holds; no edition, every edition both trees
 hold. --show prints each differing function's lines from the first edition
 it differs in.";
@@ -24,11 +26,30 @@ it differs in.";
 const CLASSES: [&str; 5] = ["order-only", "register-only", "order+register", "directive", "instruction"];
 
 /// One function's assembly: its lines with local labels numbered within it,
-/// and the instructions and data words among them.
+/// the instructions and data words among them, and where each local label
+/// stands: the count of instructions before it.
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Function {
     lines: Vec<String>,
     instructions: Vec<String>,
+    labels: Vec<usize>,
+}
+
+impl Function {
+    /// The instructions with a mark where each label stands, as the count
+    /// compares them: a label at another instruction differs.
+    fn sequence(&self) -> Vec<String> {
+        let mut sequence = Vec::with_capacity(self.instructions.len() + self.labels.len());
+        let mut labels = self.labels.iter().peekable();
+        for (at, instruction) in self.instructions.iter().enumerate() {
+            while labels.next_if(|&&label| label == at).is_some() {
+                sequence.push(".L:".to_string());
+            }
+            sequence.push(instruction.clone());
+        }
+        sequence.extend(labels.map(|_| ".L:".to_string()));
+        sequence
+    }
 }
 
 /// A compiled file: its functions by name, and every line outside them.
@@ -105,6 +126,8 @@ fn parse(text: &str) -> Assembly {
         let data = ["\t.word", "\t.short", "\t.hword", "\t.byte"].iter().any(|prefix| line.starts_with(prefix));
         if line.starts_with('\t') && (!directive || data) {
             function.instructions.push(line.clone());
+        } else if line.starts_with(".L#") && line.ends_with(':') {
+            function.labels.push(function.instructions.len());
         }
         function.lines.push(line);
     }
@@ -153,6 +176,11 @@ fn sorted(lines: impl Iterator<Item = String>) -> Vec<String> {
 fn classify(reference: &Function, current: &Function) -> Option<&'static str> {
     if reference.lines == current.lines {
         return None;
+    }
+    // A label at another instruction sends the branches to it elsewhere,
+    // whatever else stayed the same.
+    if reference.labels != current.labels {
+        return Some("instruction");
     }
     if reference.instructions == current.instructions {
         return Some("directive");
@@ -276,7 +304,7 @@ fn compare(reference: &str, current: &str, edition: DecompTargetId, show_lines: 
         let Some(class) = class else { continue };
         differs = true;
         let (fa, fb) = (fa.unwrap_or(&empty), fb.unwrap_or(&empty));
-        let count = differing(&fa.instructions, &fb.instructions);
+        let count = differing(&fa.sequence(), &fb.sequence());
         let entry = source.functions.entry(name.clone()).or_insert((class, 0, fa.instructions.len()));
         if rank(class) > rank(entry.0) {
             entry.0 = class;
@@ -478,6 +506,13 @@ First:
         assert_eq!(differing(&first.instructions, &changed.instructions), 1);
         let shown = show(&first.lines, &changed.lines);
         assert!(shown.contains("    -cmp r4, #0\n    +cmp r4, #1\n"), "{shown}");
+        // The branch now skips the call too: the same instructions, a label moved.
+        let moved = REFERENCE.replace("\tbl\tOther\n.L3:\n", ".L3:\n\tbl\tOther\n");
+        let moved = function(&moved, "First");
+        assert_eq!(moved.instructions, first.instructions);
+        assert_eq!(classify(&first, &moved), Some("instruction"));
+        assert_eq!(differing(&first.sequence(), &moved.sequence()), 1);
+        assert_eq!(first.sequence()[4..], ["\tbl\tOther".to_string(), ".L:".into(), "\tpop\t{r4, pc}".into()]);
     }
 
     #[test]
