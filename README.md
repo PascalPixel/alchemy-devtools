@@ -25,7 +25,7 @@ cargo build --release --features render
 
 | Command | What it does |
 |---|---|
-| `adopt` | moves drafts that measure differ 0 into the build in every edition, with a journal that undoes the batch or one item of it |
+| `adopt` | moves drafts that measure differ 0 into the build in every edition, has the build judge them (`--verify`), with a journal that undoes the batch or one item of it |
 | `check` | each built ROM, overlay and PACKER row against the reference ROMs, and the fake-match tags against the project's rule |
 | `diff` | a C draft compiled as the build compiles it, against the listing it would replace |
 | `editions` | what an edition still takes from its scaffold while English links C |
@@ -35,6 +35,7 @@ cargo build --release --features render
 | `rank` | every unfinished piece of a game, furthest first, each with the command that measures it |
 | `regress` | the functions whose assembly differs from a saved build, each classed |
 | `render` | the docs site's pictures and recordings, and the probes the source cites (feature `render`) |
+| `sweep` | takes out the fake-match devices every edition compiles the same without |
 | `twins` | for each unfinished function, the other game's matched function most like it |
 | `variants` | named rewrites of a draft, measured, best first |
 | `where` | the bytes each edition still places from `recon/`, and DONE from the maps |
