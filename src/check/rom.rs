@@ -18,7 +18,7 @@ const LISTED: usize = 40;
 const JOIN: usize = 4;
 
 /// An edition's reference ROM, checked against its approved digest.
-fn reference(root: &Path, id: DecompTargetId) -> Result<Vec<u8>, String> {
+pub(super) fn reference(root: &Path, id: DecompTargetId) -> Result<Vec<u8>, String> {
     let target = target_for(id);
     let rom = std::fs::read(root.join(target.rom)).map_err(|error| format!("{}: {error}", target.rom))?;
     target.verify_reference(&rom)?;
@@ -112,7 +112,7 @@ pub fn overlays(arguments: &[String]) -> Result<(), String> {
 
 /// Whether a check that found nothing wrong checked what it was asked to:
 /// every edition named, or with none named at least one edition built.
-fn checked_all(named: bool, editions: usize, not_built: &[DecompTargetId]) -> Result<(), String> {
+pub(super) fn checked_all(named: bool, editions: usize, not_built: &[DecompTargetId]) -> Result<(), String> {
     let names = || not_built.iter().map(|id| id.as_str()).collect::<Vec<_>>().join(" ");
     match not_built.len() {
         0 => Ok(()),
