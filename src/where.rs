@@ -12,21 +12,50 @@ const USAGE: &str = "usage: alchemy-devtools where [EDITION|GAME...] [--top N]
        alchemy-devtools where --done [EDITION|GAME...]
 Reads each edition's main and overlay linker maps under out/ (make
 compare-editions builds them) and sums the bytes still placed from recon/, by
-folder and by piece: an object, with its section unless that is .text. A .text
-section or a scaffold's .rom.* section is code; every other byte is data.
+folder and by piece: an object, with its section unless that is .text. Code
+and data are as C2 and --done count them: a .text section is code, every
+other byte data; of the data, a scaffold's .rom.* sections are marked
+scaffold, code and data not yet told apart.
 --top N lists the N largest pieces of each edition (25 by default). No
 edition names all twelve; a game names its six.
 --done counts DONE code and data as calcrom does (C2), from the maps alone
 and whatever each ROM is: analysis of a tree in progress, never a
 measurement. make land measures the tree and writes the receipt.";
 
+/// What a piece's bytes count as under C2, with a scaffold's sections, data
+/// to C2, marked apart.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+enum Kind {
+    Code,
+    Data,
+    Scaffold,
+}
+
+impl Kind {
+    fn of(piece: &Piece) -> Kind {
+        match (piece.is_code(), piece.is_scaffold()) {
+            (true, _) => Kind::Code,
+            (false, true) => Kind::Scaffold,
+            (false, false) => Kind::Data,
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Kind::Code => "code",
+            Kind::Data => "data",
+            Kind::Scaffold => "scaffold",
+        }
+    }
+}
+
 /// The bytes still placed from `recon/`, by piece and by folder.
 #[derive(Default)]
 struct Left {
-    /// (code, label) → bytes
-    pieces: BTreeMap<(bool, String), u64>,
-    /// (code, folder) → bytes, and the objects that place them
-    folders: BTreeMap<(bool, String), (u64, BTreeSet<String>)>,
+    /// (kind, label) → bytes
+    pieces: BTreeMap<(Kind, String), u64>,
+    /// (kind, folder) → bytes, and the objects that place them
+    folders: BTreeMap<(Kind, String), (u64, BTreeSet<String>)>,
 }
 
 impl Left {
@@ -34,48 +63,52 @@ impl Left {
         let mut left = Left::default();
         for piece in pieces.iter().filter(|piece| piece.stem.starts_with("recon/")) {
             let size = u64::from(piece.placed.size);
-            let code = piece.is_code();
-            *left.pieces.entry((code, piece.label())).or_default() += size;
+            let kind = Kind::of(piece);
+            *left.pieces.entry((kind, piece.label())).or_default() += size;
             let folder = piece.stem.rsplit_once('/').map_or("", |(folder, _)| folder).to_string();
-            let entry = left.folders.entry((code, folder)).or_default();
+            let entry = left.folders.entry((kind, folder)).or_default();
             entry.0 += size;
             entry.1.insert(piece.stem.clone());
         }
         left
     }
 
-    fn total(&self, code: bool) -> u64 {
-        self.pieces.iter().filter(|((c, _), _)| *c == code).map(|(_, size)| size).sum()
+    fn total(&self, kind: Kind) -> u64 {
+        self.pieces.iter().filter(|((k, _), _)| *k == kind).map(|(_, size)| size).sum()
     }
 
     fn report(&self, edition: DecompTargetId, top: usize) -> String {
-        let (code, data) = (self.total(true), self.total(false));
+        let (code, scaffold) = (self.total(Kind::Code), self.total(Kind::Scaffold));
+        let data = self.total(Kind::Data) + scaffold;
         if code + data == 0 {
             return format!("{edition}: nothing placed from recon/\n");
         }
         let width = commas((code + data) as i64).len();
-        let kind = |code: bool| if code { "code" } else { "data" };
         let mut text = format!(
-            "{edition}: {} code and {} data bytes still placed from recon/, in {} pieces\n",
+            "{edition}: {} code and {} data bytes still placed from recon/, in {} pieces",
             commas(code as i64),
             commas(data as i64),
             self.pieces.len()
         );
+        if scaffold > 0 {
+            text += &format!("; {} of the data in scaffold sections, code and data not yet told apart", commas(scaffold as i64));
+        }
+        text.push('\n');
         let mut folders: Vec<_> = self.folders.iter().collect();
         folders.sort_by(|a, b| b.1 .0.cmp(&a.1 .0).then(a.0.cmp(b.0)));
-        for ((code, folder), (size, objects)) in folders {
+        for ((kind, folder), (size, objects)) in folders {
             let label = match objects.len() {
                 1 => objects.first().unwrap().clone(),
                 n => format!("{folder}/* ({n} objects)"),
             };
-            text += &format!("  {:>width$}  {}  {label}\n", commas(*size as i64), kind(*code));
+            text += &format!("  {:>width$}  {:<8}  {label}\n", commas(*size as i64), kind.name());
         }
         if top > 0 {
             let mut pieces: Vec<_> = self.pieces.iter().collect();
             pieces.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
             text += &format!("  largest {}:\n", top.min(pieces.len()));
-            for ((code, label), size) in pieces.into_iter().take(top) {
-                text += &format!("  {:>width$}  {}  {label}\n", commas(*size as i64), kind(*code));
+            for ((kind, label), size) in pieces.into_iter().take(top) {
+                text += &format!("  {:>width$}  {:<8}  {label}\n", commas(*size as i64), kind.name());
             }
         }
         text
@@ -201,19 +234,20 @@ mod tests {
             piece("games/tla/src/main", ".text", 0x1000),
         ];
         let left = Left::of(&pieces);
-        assert_eq!((left.total(true), left.total(false)), (0x170, 6));
+        assert_eq!((left.total(Kind::Code), left.total(Kind::Scaffold), left.total(Kind::Data)), (0x140, 0x30, 6));
         let report = left.report(id("tla-ja"), 2);
-        assert!(report.starts_with("tla-ja: 368 code and 6 data bytes still placed from recon/, in 5 pieces\n"), "{report}");
-        assert!(report.contains("  320  code  recon/tla/raw/* (2 objects)\n"), "{report}");
-        assert!(report.contains("   48  code  recon/tla/ja/rom\n"), "{report}");
-        assert!(report.contains("    6  data  recon/tla/unidentified\n"), "{report}");
-        assert!(report.contains("  largest 2:\n  256  code  recon/tla/raw/08000100\n   64  code  recon/tla/raw/08000200\n"), "{report}");
+        let head = "tla-ja: 320 code and 54 data bytes still placed from recon/, in 5 pieces; 48 of the data in scaffold sections, code and data not yet told apart\n";
+        assert!(report.starts_with(head), "{report}");
+        assert!(report.contains("  320  code      recon/tla/raw/* (2 objects)\n"), "{report}");
+        assert!(report.contains("   48  scaffold  recon/tla/ja/rom\n"), "{report}");
+        assert!(report.contains("    6  data      recon/tla/unidentified\n"), "{report}");
+        assert!(report.contains("  largest 2:\n  256  code      recon/tla/raw/08000100\n   64  code      recon/tla/raw/08000200\n"), "{report}");
         assert_eq!(Left::of(&pieces[5..]).report(id("tbs-en"), 25), "tbs-en: nothing placed from recon/\n");
     }
 
     /// In every edition built, the bytes `where` finds left are those
-    /// calcrom counts not done, code and data together: the two differ only
-    /// in where a scaffold's .rom.* sections fall.
+    /// calcrom counts not done: its data with the scaffold sections, and in an
+    /// edition whose code total is its own, its code.
     #[test]
     fn what_is_left_is_what_calcrom_counts_not_done() {
         let root = crate::compile::root();
@@ -222,7 +256,8 @@ mod tests {
             let left = Left::of(&pieces);
             let done = done::count_edition(root, edition.as_str()).unwrap().done;
             let not_done = (done.executable - done.bytes()) + (done.data_total - done.data);
-            assert_eq!((left.total(true) + left.total(false)) as i64, not_done, "{edition}");
+            assert_eq!((left.total(Kind::Code) + left.total(Kind::Scaffold) + left.total(Kind::Data)) as i64, not_done, "{edition}");
+            assert_eq!((left.total(Kind::Scaffold) + left.total(Kind::Data)) as i64, done.data_total - done.data, "{edition}");
         }
     }
 }

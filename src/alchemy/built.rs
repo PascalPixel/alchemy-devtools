@@ -130,10 +130,15 @@ pub struct Piece {
 }
 
 impl Piece {
-    /// A `.text` section, or a scaffold's `.rom.*` section of code and data
-    /// not yet told apart.
+    /// Code as C2 counts it: a `.text` section, as `done` reads the maps.
     pub fn is_code(&self) -> bool {
-        self.placed.name.starts_with(".text") || self.placed.name.starts_with(".rom.")
+        self.placed.name.starts_with(".text")
+    }
+
+    /// A scaffold's `.rom.*` section, its code and data not yet told apart;
+    /// data to C2.
+    pub fn is_scaffold(&self) -> bool {
+        self.placed.name.starts_with(".rom.")
     }
 
     /// The stem, with its section unless that is plain `.text`.
