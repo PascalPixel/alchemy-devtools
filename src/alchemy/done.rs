@@ -212,7 +212,7 @@ pub(crate) fn count_edition(root: &Path, edition: &str) -> Result<Counted, Strin
     maps.sort();
     for map in maps {
         let text = std::fs::read_to_string(&map).map_err(|error| format!("{}: {error}", map.display()))?;
-        tally(root, &text, Image::Overlay, &mut counted);
+        tally(root, &text, Image::Linked(super::overlay::SECTIONS), &mut counted);
     }
     let done = &mut counted.counted.done;
     done.executable = counted.code;

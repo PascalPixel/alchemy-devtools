@@ -153,7 +153,7 @@ pub fn pieces(root: &Path, id: DecompTargetId) -> Result<Vec<Piece>, String> {
     let mut pieces: Vec<Piece> = count::placed(&main, Image::Rom).map(piece).collect();
     for (_, path) in overlay_files(root, id, "map")? {
         let map = Map::parse(&read_text(&path)?);
-        pieces.extend(count::placed(&map, Image::Overlay).map(piece));
+        pieces.extend(count::placed(&map, Image::Linked(super::overlay::SECTIONS)).map(piece));
     }
     Ok(pieces)
 }

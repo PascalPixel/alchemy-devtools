@@ -5,6 +5,10 @@
 use crate::gba::ld_map::{Map, ROM};
 use std::path::{Path, PathBuf};
 
+/// What an overlay's image holds: the output sections Camelot's overlay link
+/// scripts load into the stream, its code and its data (`.bss` is not).
+pub(crate) const SECTIONS: &[&str] = &[".text", ".data"];
+
 /// The overlay a path names (`resource_` and three hex digits), in lower case.
 pub(crate) fn named_in(path: &str) -> Option<String> {
     let at = path.find("resource_")?;

@@ -14,8 +14,9 @@ pub(crate) const CARTRIDGE: std::ops::Range<u32> = 0x0800_0000..0x0a00_0000;
 pub(crate) enum Image {
     /// The cartridge: every output section loaded inside its window.
     Rom,
-    /// An overlay linked on its own: its `.text` and `.data`.
-    Overlay,
+    /// An image linked on its own, such as an overlay: the output sections
+    /// its link script loads into its file, as the project names them.
+    Linked(&'static [&'static str]),
 }
 
 impl Image {
@@ -23,7 +24,7 @@ impl Image {
         output.size > 0
             && match self {
                 Image::Rom => CARTRIDGE.contains(&output.load),
-                Image::Overlay => matches!(output.name.as_str(), ".text" | ".data"),
+                Image::Linked(sections) => sections.contains(&output.name.as_str()),
             }
     }
 }
@@ -82,7 +83,7 @@ ewram           0x02000000    0x38000
                 (".text", 0x20, "build/src/fast.o"),
             ]
         );
-        // An overlay's image is its own `.text` and `.data`.
+        // An overlay's image is the sections its script loads: here `.text` and `.data`.
         let overlay = Map::parse(
             "\
 Linker script and memory map
@@ -95,8 +96,8 @@ Linker script and memory map
  .bss           0x02000040       0x20 build/src/scene/vale.o
 ",
         );
-        assert_eq!(span(&overlay, Image::Overlay), 0x40);
-        assert_eq!(placed(&overlay, Image::Overlay).map(|p| p.size).sum::<u32>(), 0x40);
+        assert_eq!(span(&overlay, Image::Linked(&[".text", ".data"])), 0x40);
+        assert_eq!(placed(&overlay, Image::Linked(&[".text", ".data"])).map(|p| p.size).sum::<u32>(), 0x40);
         let nothing = Map::parse("no map");
         assert_eq!((span(&nothing, Image::Rom), placed(&nothing, Image::Rom).count()), (0, 0));
     }
