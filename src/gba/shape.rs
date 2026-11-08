@@ -8,7 +8,7 @@
 //! each has.
 
 use super::bounds::function_end;
-use super::elf::Elf;
+use super::elf::{Elf, STT_ARM_TFUNC};
 use super::ld_map::{is_placeholder, Map, Placed};
 use super::thumb::{thumb_lines, Part};
 use std::collections::{HashMap, HashSet};
@@ -207,12 +207,11 @@ pub(crate) struct Function<'m> {
 /// or else at the next symbol. Names sharing an address are one function,
 /// under the first name that is not a placeholder.
 pub(crate) fn functions<'m>(elf: &Elf, map: &'m Map, keep: impl Fn(&Placed) -> bool) -> Vec<Function<'m>> {
-    // STT_FUNC or STT_ARM_TFUNC, defined here: neither SHN_UNDEF nor SHN_ABS.
-    let defined: Vec<_> = elf.symbols.iter().filter(|symbol| matches!(symbol.kind, 2 | 13) && !matches!(symbol.section, 0 | 0xfff1)).collect();
+    // A function defined here: neither SHN_UNDEF nor SHN_ABS.
+    let defined: Vec<_> = elf.symbols.iter().filter(|symbol| symbol.is_function() && !matches!(symbol.section, 0 | 0xfff1)).collect();
     let mut symbols: Vec<(u32, &str, u32)> = defined
         .iter()
-        .filter(|symbol| symbol.kind == 13 || symbol.value & 1 != 0)
-        .filter(|symbol| !symbol.name.is_empty() && !symbol.name.starts_with(['$', '.']))
+        .filter(|symbol| symbol.kind == STT_ARM_TFUNC || symbol.value & 1 != 0)
         .map(|symbol| (symbol.value & !1, symbol.name.as_str(), symbol.size))
         .collect();
     symbols.sort_by_key(|&(start, name, _)| (start, is_placeholder(name)));

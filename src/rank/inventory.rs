@@ -70,11 +70,6 @@ pub(crate) struct Piece {
     pub unmeasurable: Option<String>,
 }
 
-/// STT_FUNC, and the old assembler's Thumb function types.
-pub(crate) fn is_function(symbol: &elf::Symbol) -> bool {
-    matches!(symbol.kind, 2 | 13 | 15)
-}
-
 /// Whether a function symbol of a relocatable object is ARM code.
 fn is_arm(symbol: &elf::Symbol) -> bool {
     symbol.kind == 2 && symbol.value & 1 == 0
@@ -191,7 +186,7 @@ fn scaffold_sections(path: &Path, target: DecompTarget) -> Result<Vec<Section>, 
         let Some(bytes) = data.get(header.offset..header.offset + header.size).filter(|bytes| !bytes.is_empty()) else { continue };
         let function = symbols
             .iter()
-            .filter(|symbol| usize::from(symbol.section) == index && symbol.bind == 1 && is_function(symbol))
+            .filter(|symbol| usize::from(symbol.section) == index && symbol.bind == 1 && symbol.is_function())
             .min_by_key(|symbol| symbol.value & !1)
             .map(|symbol| symbol.name.clone());
         // A section of zeros that names nothing pads the next to its alignment.
@@ -298,7 +293,7 @@ pub(crate) fn editions(root: &Path, game: &str, english: DecompTargetId, chosen:
         let Some((sized_by, symbols)) = built else { continue };
         let source = object.file.ends_with(".c").then(|| object.file.clone());
         for (name, places) in &object.names {
-            let Some(symbol) = symbols.iter().find(|symbol| symbol.name == *name && is_function(symbol)) else { continue };
+            let Some(symbol) = symbols.iter().find(|symbol| symbol.name == *name && symbol.is_function()) else { continue };
             let mut wanting: Vec<(DecompTargetId, Option<String>)> = places.iter().map(|held| (held.edition, Some(held.section.clone()))).collect();
             for &id in object.missing.iter().filter(|id| scanned.contains(id)) {
                 if places.iter().all(|held| held.edition != id) {

@@ -2,7 +2,7 @@ use crate::alchemy::overlay;
 use crate::alchemy::targets::{self, decomp_target, DecompTarget};
 use crate::compile::root;
 use crate::gba::bounds::{function_end, resolve};
-use crate::gba::elf::Elf;
+use crate::gba::elf::{Elf, STT_ARM_TFUNC, STT_FUNC};
 use crate::gba::ld_map::{Map, Placed, ROM};
 use crate::gba::process::run as command;
 use crate::gba::thumb::{thumb_lines, Part};
@@ -604,9 +604,8 @@ fn scaffold_extent(map: &Map, elf: &Elf, wanted: &str) -> Result<(u32, u32, u32,
 }
 
 fn scaffold_extent_mode(map: &Map, elf: &Elf, wanted: &str, arm: bool) -> Result<(u32, u32, u32, String), String> {
-    // STT_ARM_TFUNC (15) is the old assembler's Thumb function alias type.
     let functions: Vec<(u32, String)> = elf.symbols.iter()
-        .filter(|symbol| matches!(symbol.kind, 2 | 15) && !symbol.name.starts_with('$'))
+        .filter(|symbol| symbol.is_function())
         .map(|symbol| (symbol.value & !1, symbol.name.clone()))
         .collect();
     let (section, start, name) = resolve(map, Some(elf), &functions, wanted)?;
@@ -617,11 +616,11 @@ fn scaffold_extent_mode(map: &Map, elf: &Elf, wanted: &str, arm: bool) -> Result
         return Err(format!("{name}: no main-image code extent; build the selected edition first"));
     }
     let statics: Vec<u32> = functions.iter().map(|(address, _)| *address).collect();
-    let size = elf.symbols.iter().find(|symbol| symbol.name == name && matches!(symbol.kind, 2 | 15)).map(|symbol| symbol.size);
+    let size = elf.symbols.iter().find(|symbol| symbol.name == name && symbol.is_function()).map(|symbol| symbol.size);
     let end = function_end(section, start, &statics, size);
     if arm {
         let thumb = elf.symbols.iter().any(|symbol| (symbol.value & !1) >= start && (symbol.value & !1) < end
-            && (symbol.name.starts_with("$t") || symbol.kind == 15 || (symbol.kind == 2 && symbol.value & 1 != 0)));
+            && (symbol.name.starts_with("$t") || symbol.kind == STT_ARM_TFUNC || (symbol.kind == STT_FUNC && symbol.value & 1 != 0)));
         if thumb || start & 3 != 0 || end & 3 != 0 || end <= start || end > section.end() {
             return Err("ARM scaffold comparison needs word-aligned bounds without Thumb or mixed-mode symbols".into());
         }
@@ -634,9 +633,9 @@ fn scaffold_extent_mode(map: &Map, elf: &Elf, wanted: &str, arm: bool) -> Result
 
 fn require_thumb_scaffold(elf: &Elf, section: &Placed, start: u32, end: u32) -> Result<(), String> {
     let thumb = elf.symbols.iter().any(|symbol| (symbol.value & !1) == start
-        && (symbol.kind == 15 || (symbol.kind == 2 && symbol.value & 1 != 0)));
+        && (symbol.kind == STT_ARM_TFUNC || (symbol.kind == STT_FUNC && symbol.value & 1 != 0)));
     let arm = elf.symbols.iter().any(|symbol| symbol.value >= start && symbol.value < end
-        && (symbol.name.starts_with("$a") || (symbol.kind == 2 && symbol.value & 1 == 0)));
+        && (symbol.name.starts_with("$a") || (symbol.kind == STT_FUNC && symbol.value & 1 == 0)));
     if !thumb || arm || start & 1 != 0 || end <= start || end > section.end() {
         return Err("main-image comparison supports a bounded Thumb function only; ARM, mixed or unknown ISA is unsupported".into());
     }
@@ -777,8 +776,7 @@ fn reference_rom(target: DecompTarget) -> Result<(PathBuf, Vec<u8>), String> {
 
 fn overlay_extent(map: &Map, elf: &Elf, wanted: &str) -> Result<(u32, u32, u32, String), String> {
     let functions: Vec<(u32, String)> = elf.symbols.iter()
-        .filter(|symbol| matches!(symbol.kind, 2 | 15) && !matches!(symbol.section, 0 | 0xfff1)
-            && !symbol.name.starts_with('$'))
+        .filter(|symbol| symbol.is_function() && !matches!(symbol.section, 0 | 0xfff1))
         .map(|symbol| (symbol.value & !1, symbol.name.clone()))
         .collect();
     let (section, start, name) = resolve(map, Some(elf), &functions, wanted)?;
@@ -786,7 +784,7 @@ fn overlay_extent(map: &Map, elf: &Elf, wanted: &str) -> Result<(u32, u32, u32, 
         return Err(format!("{name}: no overlay code extent"));
     }
     let symbol = elf.symbols.iter().find(|symbol| symbol.name == name
-        && matches!(symbol.kind, 2 | 15) && !matches!(symbol.section, 0 | 0xfff1))
+        && symbol.is_function() && !matches!(symbol.section, 0 | 0xfff1))
         .ok_or_else(|| format!("{name}: no defined overlay function"))?;
     let statics = functions.iter().map(|(address, _)| *address).collect::<Vec<_>>();
     let end = function_end(section, start, &statics, Some(symbol.size));
@@ -1171,7 +1169,7 @@ mod tests {
         assert_eq!(scaffold_extent(&map, &elf, "08000100").unwrap().1, ROM + 0x118);
         elf.symbols[0].size = 0x10;
         assert_eq!(scaffold_extent(&map, &elf, "First").unwrap().1, ROM + 0x110);
-        elf.symbols[0].kind = 15;
+        elf.symbols[0].kind = STT_ARM_TFUNC;
         elf.symbols[0].value &= !1;
         assert!(scaffold_extent(&map, &elf, "First").is_ok());
         elf.symbols.push(symbol("$a", ROM + 0x108, 0));

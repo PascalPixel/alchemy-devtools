@@ -14,6 +14,21 @@ pub struct Symbol {
     pub section: u16,
 }
 
+/// STT_FUNC.
+pub const STT_FUNC: u8 = 2;
+/// The ARM ELF's Thumb function type (STT_LOPROC), which old assemblers
+/// give a `.thumb_func`. 15 (STT_ARM_16BIT) is a marker, not a function:
+/// GAS 2.10 gives it to `.gcc2_compiled.`.
+pub const STT_ARM_TFUNC: u8 = 13;
+
+impl Symbol {
+    /// Whether the symbol names a function: FUNC or STT_ARM_TFUNC, and not a
+    /// mapping symbol (`$t`) or a compiler's marker (`.gcc2_compiled.`).
+    pub fn is_function(&self) -> bool {
+        matches!(self.kind, STT_FUNC | STT_ARM_TFUNC) && !self.name.is_empty() && !self.name.starts_with(['$', '.'])
+    }
+}
+
 pub struct Elf {
     pub sections: Vec<Section>,
     pub symbols: Vec<Symbol>,
