@@ -28,7 +28,7 @@ Run any command with --help for its options.
   adopt     move matched drafts into the build, judged by every edition's bytes
   check     each edition's built bytes against its ROM, and the fake-match tags
   diff      a C draft against the listing it would replace
-  editions  what an edition still takes from its scaffold while another links C
+  editions  what an edition still takes from its scaffold while English links C
   permute   search rewrites and PERM macro choices of a draft toward differ 0
   progress  DONE code and data in each edition, from the linker maps
   rank      every unfinished function, furthest first by skeleton gap

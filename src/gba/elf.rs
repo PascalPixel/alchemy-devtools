@@ -41,34 +41,50 @@ const SHT_PROGBITS: u32 = 1;
 const SHT_SYMTAB: u32 = 2;
 const SHF_ALLOC: u32 = 2;
 
+/// One section header; a symbol's `section` is its index in the table.
+pub struct Header {
+    pub name: String,
+    pub kind: u32,
+    pub flags: u32,
+    pub address: u32,
+    pub offset: usize,
+    pub size: usize,
+    pub link: u32,
+}
+
+/// Every section header, in the file's order, named from its string table.
+pub fn headers(data: &[u8]) -> Result<Vec<Header>, String> {
+    if data.get(..4) != Some(b"\x7fELF") || data.get(4) != Some(&1) || data.get(5) != Some(&1) {
+        return Err("not a little-endian ELF32 file".into());
+    }
+    let shoff = word(data, 0x20)? as usize;
+    let shentsize = half(data, 0x2e)? as usize;
+    let shnum = half(data, 0x30)? as usize;
+    let mut headers = Vec::with_capacity(shnum);
+    let mut names = Vec::with_capacity(shnum);
+    for i in 0..shnum {
+        let at = shoff + i * shentsize;
+        names.push(word(data, at)? as usize);
+        headers.push(Header {
+            name: String::new(),
+            kind: word(data, at + 4)?,
+            flags: word(data, at + 8)?,
+            address: word(data, at + 12)?,
+            offset: word(data, at + 16)? as usize,
+            size: word(data, at + 20)? as usize,
+            link: word(data, at + 24)?,
+        });
+    }
+    let strings = headers.get(half(data, 0x32)? as usize).and_then(|h| data.get(h.offset..h.offset + h.size));
+    for (header, name) in headers.iter_mut().zip(names) {
+        header.name = strings.map(|table| string(table, name)).unwrap_or_default();
+    }
+    Ok(headers)
+}
+
 impl Elf {
     pub fn parse(data: &[u8]) -> Result<Elf, String> {
-        if data.get(..4) != Some(b"\x7fELF") || data.get(4) != Some(&1) || data.get(5) != Some(&1) {
-            return Err("not a little-endian ELF32 file".into());
-        }
-        let shoff = word(data, 0x20)? as usize;
-        let shentsize = half(data, 0x2e)? as usize;
-        let shnum = half(data, 0x30)? as usize;
-        struct Header {
-            kind: u32,
-            flags: u32,
-            address: u32,
-            offset: usize,
-            size: usize,
-            link: u32,
-        }
-        let mut headers = Vec::with_capacity(shnum);
-        for i in 0..shnum {
-            let at = shoff + i * shentsize;
-            headers.push(Header {
-                kind: word(data, at + 4)?,
-                flags: word(data, at + 8)?,
-                address: word(data, at + 12)?,
-                offset: word(data, at + 16)? as usize,
-                size: word(data, at + 20)? as usize,
-                link: word(data, at + 24)?,
-            });
-        }
+        let headers = headers(data)?;
         let bytes_of = |h: &Header| -> Result<&[u8], String> {
             data.get(h.offset..h.offset + h.size)
                 .ok_or_else(|| "ELF section outside the file".to_string())
