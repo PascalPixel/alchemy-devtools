@@ -1,7 +1,8 @@
 //! What any GBA decompilation can use: the Thumb reader, the ELF and GNU ld
 //! map readers, a function's bounds in a linked image, a source's recipe from
 //! its Makefile, calcrom's count of what a map places, decomp.dev's report, a C
-//! lexer, and the runner that starts a build's tools at fixed addresses.
+//! lexer, the runner that starts a build's tools at fixed addresses, and the
+//! shapes that find a function's twin in another build.
 //! Nothing here knows which game or project it serves, and the test below keeps
 //! it so: no path out of `crate::gba`, no game's or project's name in its code.
 
@@ -13,6 +14,7 @@ pub(crate) mod ld_map;
 pub(crate) mod process;
 pub(crate) mod recipe;
 pub(crate) mod report;
+pub(crate) mod shape;
 pub(crate) mod thumb;
 
 #[cfg(test)]

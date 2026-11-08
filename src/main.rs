@@ -33,7 +33,7 @@ Run any command with --help for its options.
   rank      every unfinished piece of a game, furthest first, each with its measure command
   regress   the functions whose assembly differs from a saved build, each classed
   render    the docs site's pictures and recordings of a built edition (feature render)
-  twins     the reference game's functions closest in shape to each unmatched one
+  twins     for each unfinished function, the other game's matched function most like it in shape
   variants  named rewrites of a draft, each kept only when it narrows the gap
   where     the bytes each edition still places from recon/, and DONE from the maps"#;
 
