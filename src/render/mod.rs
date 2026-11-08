@@ -1,8 +1,9 @@
 //! render: the game's own code at work, recorded from a built ☀️ edition run
 //! in libmgba, for the docs site: each battle Psynergy the party casts
 //! (`psynergy`), each scene's entrance photo, maps and events (`place`,
-//! `event`), the front page's pictures (`story`) and the folder guides'
-//! recordings (`guide`), and the check every recording passes (`check`).
+//! `event`), the front page's pictures (`story`), the folder guides'
+//! recordings (`guide`), the probes the source cites as evidence (`probe`)
+//! and the check every recording passes (`check`).
 //! Nothing here takes part in a build, and the ROM is only read: the
 //! pictures are what it draws.
 
@@ -61,6 +62,12 @@ mod mgba;
 mod party;
 #[cfg(feature = "render")]
 mod places;
+#[cfg(feature = "render")]
+mod probe;
+#[cfg(feature = "render")]
+mod probe_places;
+#[cfg(feature = "render")]
+mod probe_units;
 #[cfg(feature = "render")]
 mod source;
 #[cfg(feature = "render")]
@@ -126,6 +133,7 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         Some(kind @ ("place" | "event")) => scenes(kind, &arguments[1..]),
         Some("story") => story_pictures(&arguments[1..]),
         Some("guide") => guide_pictures(&arguments[1..]),
+        Some("probe") => probe_command(&arguments[1..]),
         #[cfg(feature = "render")]
         Some("check") => animation::check_folders(&arguments[1..]),
         Some("-h" | "--help") => {
@@ -406,7 +414,7 @@ fn write_index(path: &Path, rows: Vec<Row>) -> Result<(), String> {
     std::fs::write(path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 
-const COMMANDS: &str = "usage: alchemy-devtools render psynergy|place|event|story|guide|check [options]
+const COMMANDS: &str = "usage: alchemy-devtools render psynergy|place|event|story|guide|probe|check [options]
   psynergy  each battle Psynergy the party casts, as a looping GIF
   place     each scene's entrance photo and a map of each room, as PNG
   event     each scene's events played from their trigger, as GIFs
@@ -414,6 +422,8 @@ const COMMANDS: &str = "usage: alchemy-devtools render psynergy|place|event|stor
             lighthouses and the world map laid flat
   guide     the folder guides' recordings: the game played with the pad
             held as a player would
+  probe     questions only the running game settles, kept for the ones
+            The Broken Seal's source and pages cite as evidence
   check     every GIF under each folder given against the ten seconds a
             recording keeps of the game on each side of a black screen
 Run any of them with --help for its options.
@@ -1112,6 +1122,83 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
         }
     }
     for (file, bytes, what) in &front.written {
+        eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
+    }
+    if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
+}
+
+const PROBE_USAGE: &str = "usage: alchemy-devtools render probe --flags flags.tsv [--only NAME]... [--out DIR] [--edition tbs-en]
+Plays a built ☀️ edition and prints what it reads for questions only the
+running game settles, writing any pictures into DIR (default
+out/EDITION/probe). Each probe is evidence The Broken Seal's source or pages
+cite by name (`render probe NAME`):
+  places      sol-entrance flag-reads vale-gate log-rooms-a vault-revisit
+              log-rooms-b vault-bridge vault-ivy maze-exit kraden-lift
+  units       hammet flint venus-sockets-a list-tees enemy-slot-509-field
+              effect-depth
+  venus       Venus Lighthouse's occluding passage, played as the game does
+              it and again with VenusLighthouse_CreateOccludingPassageEffect
+              returning at once: venus-sink-with.gif, venus-sink-without.gif
+              and the frame where they differ most, venus-frame-N-with.png
+              and -without.png
+Overlay addresses come from the environment, in hex: venus reads
+VENUS_OCCLUDER (the function above; VENUS_PILLAR and VENUS_LEADER, x,z in
+pixels, move the pillar and the leader, VENUS_SEARCH tries the floors'
+pillars until one makes it run), venus-sockets-a VENUS_ROUTE (a light's
+arrival at a socket) and VENUS_START (Actor_StartScript). Recordings are
+evidence kept beside what is printed: `render check` judges one before it is
+published. --only picks some; flags.tsv is the story tools' flag names.";
+
+fn probe_command(arguments: &[String]) -> Result<(), String> {
+    let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
+    let mut arguments = arguments.iter();
+    while let Some(argument) = arguments.next() {
+        let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{PROBE_USAGE}"));
+        match argument.as_str() {
+            "-h" | "--help" => {
+                println!("{PROBE_USAGE}");
+                return Ok(());
+            }
+            "--only" => only.push(value("--only")?),
+            "--out" => out = Some(PathBuf::from(value("--out")?)),
+            "--edition" => edition = value("--edition")?,
+            "--flags" => flags_tsv = Some(PathBuf::from(value("--flags")?)),
+            other => return Err(format!("unexpected argument {other:?}\n{PROBE_USAGE}")),
+        }
+    }
+    let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{PROBE_USAGE}"))?)?;
+    let root = crate::compile::root();
+    let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("probe"));
+    play_probe(root, &edition, &only, &flags, &out)
+}
+
+#[cfg(not(feature = "render"))]
+fn play_probe(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Result<(), String> {
+    Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
+}
+
+#[cfg(feature = "render")]
+fn play_probe(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
+    let all: Vec<&str> = probe::PROBES.iter().chain(probe_places::PROBES).chain(probe_units::PROBES).copied().collect();
+    if let Some(unknown) = only.iter().find(|name| !all.contains(&name.as_str())) {
+        return Err(format!("no probe {unknown:?}\n{PROBE_USAGE}"));
+    }
+    let build = root.join("out").join(edition);
+    let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
+    let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
+    let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
+    note_modified(edition, &rom);
+    let symbols = field::Symbols::find(&map)?;
+    std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
+    let mut failed = Vec::new();
+    for name in all.into_iter().filter(|p| only.is_empty() || only.iter().any(|o| o == *p)) {
+        if let Err(e) = guide.probe(name, &map) {
+            eprintln!("{name}: {e}");
+            failed.push(name);
+        }
+    }
+    for (file, bytes, what) in &guide.written {
         eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
     }
     if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }

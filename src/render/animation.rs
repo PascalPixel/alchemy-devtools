@@ -91,6 +91,13 @@ pub fn write(path: &Path, frames: &[Vec<u32>], width: usize) -> Result<Written, 
     encode(path, &shown, width)
 }
 
+/// Writes `frames` as `write` does, without the black-screen rule: a probe's
+/// recording, evidence kept beside what it printed, which `render check`
+/// still judges before any is published.
+pub fn write_evidence(path: &Path, frames: &[Vec<u32>], width: usize) -> Result<Written, String> {
+    encode(path, &frames.iter().step_by(STRIDE).collect::<Vec<_>>(), width)
+}
+
 /// Writes `frames` (BGR555, as the GBA draws them) to `path`, widening only
 /// the frames shown.
 pub fn write_bgr555(path: &Path, frames: &[&[u16]], width: usize) -> Result<Written, String> {

@@ -479,7 +479,6 @@ pub struct Recipe<'rom> {
     setup: Setup,
     returns: Vec<(u32, u32)>,
     pokes: Vec<(u32, u32, u32)>,
-    register_pokes: Vec<(u32, u32, u32)>,
     show_notice: bool,
 }
 
@@ -488,7 +487,6 @@ impl<'rom> Recipe<'rom> {
         let mut field = Field::enter(self.rom, self.s, &self.setup)?;
         field.returns.clone_from(&self.returns);
         field.pokes.clone_from(&self.pokes);
-        field.register_pokes.clone_from(&self.register_pokes);
         field.show_notice = self.show_notice;
         Ok(field)
     }
@@ -581,9 +579,6 @@ pub struct Field<'rom> {
     pub pokes: Vec<(u32, u32, u32)>,
     /// Lets AreaNameWindow_Show run, for a picture of the notice.
     pub show_notice: bool,
-    /// Registers set as the CPU reaches an address: (address, register,
-    /// value), as a caller would have passed the value.
-    pub register_pokes: Vec<(u32, u32, u32)>,
     /// The story chapter the scene falls in (party.rs), if any.
     party: Option<&'static Party>,
 }
@@ -608,7 +603,6 @@ impl<'rom> Field<'rom> {
             setup: self.setup.clone(),
             returns: self.returns.clone(),
             pokes: self.pokes.clone(),
-            register_pokes: self.register_pokes.clone(),
             show_notice: self.show_notice,
         })
     }
@@ -670,7 +664,7 @@ impl<'rom> Field<'rom> {
             party_saved: [0; 5],
             cuts: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), register_pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, party: chapter(setup.scene)? };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -1005,12 +999,6 @@ impl<'rom> Field<'rom> {
                 probe(&self.gba, 0, self.t.frame);
             }
             self.probe = Some(probe);
-        }
-        for i in 0..self.register_pokes.len() {
-            let (at, register, value) = self.register_pokes[i];
-            if at == pc {
-                self.gba.set_register(register, value);
-            }
         }
         for i in 0..self.pokes.len() {
             let (at, address, value) = self.pokes[i];
