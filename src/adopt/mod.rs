@@ -16,6 +16,8 @@ use crate::gba::clex::{lex, Kind, Token};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
+mod merge;
+
 const USAGE: &str = r#"usage: alchemy-devtools adopt main ADDRESS[,ADDRESS...]... [--editions LIST] [--game GAME] [--unmeasured] [--verify | --dry-run]
        alchemy-devtools adopt overlay DRAFT.c... [--edition-forms] [--unmeasured] [--verify | --dry-run]
        alchemy-devtools adopt edition OBJECT... --editions LIST [--verify | --dry-run]
@@ -1288,7 +1290,10 @@ struct Files {
     now: BTreeMap<String, Option<String>>,
 }
 
-const JOURNAL_HEADER: &str = "alchemy-devtools adopt journal 1";
+/// A journal: `was` and `now` each a file's whole text (version 1 kept only
+/// `now`'s digest, so it undoes only a file nothing changed since).
+const JOURNAL_HEADER: &str = "alchemy-devtools adopt journal 2";
+const JOURNAL_HEADER_1: &str = "alchemy-devtools adopt journal 1";
 
 impl Files {
     fn new(root: &Path) -> Files {
@@ -1378,7 +1383,16 @@ impl Files {
                 }
                 None => journal.extend(b"was absent\n"),
             }
-            journal.extend(format!("now {}\n", fingerprint(now.as_deref())).bytes());
+            // What it holds after, whole, so an undo can take its own change
+            // out of a file later adoptions changed too.
+            match now {
+                Some(text) => {
+                    journal.extend(format!("now {}\n", text.len()).bytes());
+                    journal.extend(text.bytes());
+                    journal.push(b'\n');
+                }
+                None => journal.extend(b"now absent\n"),
+            }
         }
         // Numbered after the journals already there, so they list in the
         // order they were written and are undone in the reverse.
@@ -1476,10 +1490,28 @@ fn fingerprint(text: Option<&str>) -> String {
     }
 }
 
+/// What a journal says a file held after its adoption: nothing, its text
+/// (version 2), or only its digest (version 1).
+enum After {
+    Absent,
+    Text(String),
+    Digest(String),
+}
+
+impl After {
+    fn fingerprint(&self) -> String {
+        match self {
+            After::Absent => fingerprint(None),
+            After::Text(text) => fingerprint(Some(text)),
+            After::Digest(digest) => digest.clone(),
+        }
+    }
+}
+
 struct Entry {
     path: String,
     was: Option<String>,
-    now: String,
+    now: After,
 }
 
 /// A journal's command, the folders it made and its files.
@@ -1491,10 +1523,18 @@ fn read_journal(bytes: &[u8]) -> Result<(Option<String>, Vec<String>, Vec<Entry>
         *at = end + 1;
         Some(text)
     };
-    if line(&mut at).as_deref() != Some(JOURNAL_HEADER) {
+    let header = line(&mut at);
+    if header.as_deref() != Some(JOURNAL_HEADER) && header.as_deref() != Some(JOURNAL_HEADER_1) {
         return Err("not an adopt journal".into());
     }
     let broken = || "the journal is cut short".to_string();
+    // A text written whole: its length on the line, then its bytes and a newline.
+    let text = |at: &mut usize, length: &str| -> Result<String, String> {
+        let length: usize = length.parse().map_err(|_| broken())?;
+        let text = bytes.get(*at..*at + length).ok_or_else(broken)?;
+        *at += length + 1;
+        String::from_utf8(text.to_vec()).map_err(|_| broken())
+    };
     let mut command = None;
     let mut folders = Vec::new();
     let mut entries = Vec::new();
@@ -1508,24 +1548,25 @@ fn read_journal(bytes: &[u8]) -> Result<(Option<String>, Vec<String>, Vec<Entry>
             continue;
         }
         let path = next.strip_prefix("file ").ok_or_else(broken)?.to_string();
-        let was = match line(&mut at).as_deref().and_then(|l| l.strip_prefix("was ")).ok_or_else(broken)? {
+        let was = match line(&mut at).and_then(|l| l.strip_prefix("was ").map(str::to_string)).ok_or_else(broken)?.as_str() {
             "absent" => None,
-            length => {
-                let length: usize = length.parse().map_err(|_| broken())?;
-                let text = bytes.get(at..at + length).ok_or_else(broken)?;
-                at += length + 1;
-                Some(String::from_utf8(text.to_vec()).map_err(|_| broken())?)
-            }
+            length => Some(text(&mut at, length)?),
         };
-        let now = line(&mut at).and_then(|l| l.strip_prefix("now ").map(str::to_string)).ok_or_else(broken)?;
+        let now = match line(&mut at).and_then(|l| l.strip_prefix("now ").map(str::to_string)).ok_or_else(broken)?.as_str() {
+            "absent" => After::Absent,
+            digest if digest.starts_with("sha1:") => After::Digest(digest.to_string()),
+            length => After::Text(text(&mut at, length)?),
+        };
         entries.push(Entry { path, was, now });
     }
     Ok((command, folders, entries))
 }
 
-/// Puts back what a journal's adoption changed, refusing when any file it
-/// wrote has changed since. A file already as it was before (an adoption
-/// whose writing stopped partway) is left alone.
+/// Puts back what a journal's adoption changed. A file later work changed
+/// too takes the adoption's change out by a three-way merge of the lines; the
+/// undo refuses, writing nothing, when the two changed the same lines (or the
+/// journal, from version 1, kept no text to merge with). A file already as it
+/// was before (an adoption whose writing stopped partway) is left alone.
 fn undo(root: &Path, journal: &Path) -> Result<(), String> {
     let _lock = Lock::take(root)?;
     let journal_path = [std::env::current_dir().map(|d| d.join(journal)).ok(), Some(root.join(journal))]
@@ -1534,23 +1575,39 @@ fn undo(root: &Path, journal: &Path) -> Result<(), String> {
         .find(|path| path.is_file())
         .ok_or_else(|| format!("cannot read {}", journal.display()))?;
     let bytes = std::fs::read(&journal_path).map_err(|error| format!("cannot read {}: {error}", journal.display()))?;
-    let (_, folders, mut entries) = read_journal(&bytes)?;
-    let state = |entry: &Entry| fingerprint(std::fs::read_to_string(root.join(&entry.path)).ok().as_deref());
-    let changed: Vec<&str> = entries
-        .iter()
-        .filter(|entry| {
-            let state = state(entry);
-            state != entry.now && state != fingerprint(entry.was.as_deref())
-        })
-        .map(|entry| entry.path.as_str())
-        .collect();
-    if !changed.is_empty() {
-        return Err(format!("changed since the adoption, so nothing was undone:\n  {}", changed.join("\n  ")));
-    }
-    entries.retain(|entry| state(entry) == entry.now);
+    let (_, folders, entries) = read_journal(&bytes)?;
+    // Each file's text after the undo: None removes it.
+    let mut writes: Vec<(&Entry, Option<String>)> = Vec::new();
+    let mut clashes: Vec<&str> = Vec::new();
+    let mut merged = 0;
     for entry in &entries {
+        let current = std::fs::read_to_string(root.join(&entry.path)).ok();
+        let state = fingerprint(current.as_deref());
+        if state == entry.now.fingerprint() {
+            writes.push((entry, entry.was.clone()));
+        } else if state == fingerprint(entry.was.as_deref()) {
+            continue;
+        } else if let (After::Text(after), Some(was), Some(current)) = (&entry.now, &entry.was, &current) {
+            match merge::merge(after, current, was) {
+                Some(text) => {
+                    merged += 1;
+                    writes.push((entry, Some(text)));
+                }
+                None => clashes.push(&entry.path),
+            }
+        } else {
+            clashes.push(&entry.path);
+        }
+    }
+    if !clashes.is_empty() {
+        return Err(format!(
+            "changed since the adoption where it changed them, so nothing was undone:\n  {}",
+            clashes.join("\n  ")
+        ));
+    }
+    for (entry, text) in &writes {
         let full = root.join(&entry.path);
-        match &entry.was {
+        match text {
             Some(text) => {
                 if let Some(folder) = full.parent() {
                     std::fs::create_dir_all(folder).map_err(|error| format!("cannot create {}: {error}", folder.display()))?;
@@ -1565,7 +1622,8 @@ fn undo(root: &Path, journal: &Path) -> Result<(), String> {
         let _ = std::fs::remove_dir(root.join(folder));
     }
     std::fs::remove_file(&journal_path).map_err(|error| format!("cannot remove {}: {error}", journal_path.display()))?;
-    println!("undone: {} files restored from {}", entries.len(), journal.display());
+    let merged = if merged > 0 { format!(" ({merged} merged with later changes)") } else { String::new() };
+    println!("undone: {} files restored from {}{merged}", writes.len(), journal.display());
     Ok(())
 }
 
@@ -1635,13 +1693,41 @@ mod tests {
         assert_eq!(std::fs::read_to_string(root.join("kept.txt")).unwrap(), "after\n");
         assert!(!root.join("gone.txt").exists());
         std::fs::write(root.join("kept.txt"), "edited\n").unwrap();
-        assert!(undo(root, Path::new(&journal)).is_err());
+        assert!(undo(root, Path::new(&journal)).unwrap_err().contains("kept.txt"));
+        assert_eq!(std::fs::read_to_string(root.join("new/folder/made.c")).unwrap(), "int x;\n", "a refused undo writes nothing");
         std::fs::write(root.join("kept.txt"), "after\n").unwrap();
         undo(root, Path::new(&journal)).unwrap();
         assert_eq!(std::fs::read_to_string(root.join("kept.txt")).unwrap(), "before\n");
         assert_eq!(std::fs::read_to_string(root.join("gone.txt")).unwrap(), "old");
         assert!(!root.join("new").exists());
         assert!(!root.join(&journal).exists());
+    }
+
+    /// An earlier journal undoes beneath a later one that changed the same
+    /// files elsewhere, and the later one still undoes after it.
+    #[test]
+    fn an_earlier_journal_undoes_beneath_later_changes() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        std::fs::write(root.join("objects.tsv"), "a\nb\nc\nd\ne\n").unwrap();
+        let mut first = Files::new(root);
+        first.write("objects.tsv", "a\nB\nc\nd\ne\n".into());
+        let first = first.commit("adopt edition x --editions ja", "first").unwrap();
+        let mut second = Files::new(root);
+        second.write("objects.tsv", "a\nB\nc\nd\nE\nf\n".into());
+        let second = second.commit("adopt edition y --editions ja", "second").unwrap();
+        undo(root, Path::new(&first)).unwrap();
+        assert_eq!(std::fs::read_to_string(root.join("objects.tsv")).unwrap(), "a\nb\nc\nd\nE\nf\n");
+        undo(root, Path::new(&second)).unwrap();
+        assert_eq!(std::fs::read_to_string(root.join("objects.tsv")).unwrap(), "a\nb\nc\nd\ne\n");
+
+        // A later change to the same line leaves both journals in place.
+        let mut third = Files::new(root);
+        third.write("objects.tsv", "a\nB\nc\nd\ne\n".into());
+        let third = third.commit("adopt edition x --editions ja", "third").unwrap();
+        std::fs::write(root.join("objects.tsv"), "a\nBB\nc\nd\ne\n").unwrap();
+        assert!(undo(root, Path::new(&third)).unwrap_err().contains("objects.tsv"));
+        assert!(root.join(&third).exists());
     }
 
     /// A write that fails partway puts back what was written; a journal whose
