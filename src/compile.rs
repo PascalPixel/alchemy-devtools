@@ -108,7 +108,7 @@ pub(crate) fn steps_many(target: DecompTarget, drafts: &[(&Path, &Path, Option<&
 
 /// Whether the edition's object list (ags-objects' `objects.mk`) names the
 /// object `source` builds.
-fn listed(target: DecompTarget, source: &str) -> bool {
+pub(crate) fn listed(target: DecompTarget, source: &str) -> bool {
     let object = format!("$(BUILD)/obj/{}.o", source.strip_suffix(".c").unwrap_or(source));
     std::fs::read_to_string(root().join(target.output_dir).join("objects.mk"))
         .is_ok_and(|list| list.split_whitespace().any(|word| word == object))
