@@ -45,9 +45,10 @@ fn map_names(text: &str) -> Vec<String> {
 }
 
 /// The exits of one source file, as (the map whose table holds it, the map
-/// it leads to, its entrance's name or number), in table order.
+/// it leads to, its entrance's name or number), in table order: SCENE_EXIT
+/// rows, and SCENE_EXIT_UNLESS rows, taken until their flag is set.
 fn warps(text: &str) -> Vec<(String, String, String)> {
-    let pattern = Regex::new(r"SCENE_EXITS\(\s*(\w+)\s*\)|SCENE_EXIT\(\s*\w+\s*,\s*(\w+)\s*,\s*(\w+)").unwrap();
+    let pattern = Regex::new(r"SCENE_EXITS\(\s*(\w+)\s*\)|SCENE_EXIT(?:_UNLESS)?\(\s*\w+\s*,\s*(\w+)\s*,\s*(\w+)").unwrap();
     let mut from = None;
     let mut out = Vec::new();
     for c in pattern.captures_iter(&plain(text)) {
@@ -146,12 +147,13 @@ mod tests {
 
     #[test]
     fn warp_tables_are_read_by_their_maps() {
-        let text = "u32 gTable[] = {\n    SCENE_EXITS(GomaCaveStream), // a note\n    SCENE_EXIT(GOMA_CAVE_STREAM_TO_GOMA_CAVE_ENTRANCE, GomaCaveEntrance,\n             GOMA_CAVE_ENTRANCE_FROM_GOMA_CAVE_STREAM),\n    /* SCENE_EXIT(X, Vale, 3), */\n    SCENE_EXITS(GomaCaveBridge),\n    SCENE_EXIT(GOMA_CAVE_BRIDGE_TO_WORLD_MAP, WorldMap, 40),\n    SCENE_EXITS_END,\n};";
+        let text = "u32 gTable[] = {\n    SCENE_EXITS(GomaCaveStream), // a note\n    SCENE_EXIT(GOMA_CAVE_STREAM_TO_GOMA_CAVE_ENTRANCE, GomaCaveEntrance,\n             GOMA_CAVE_ENTRANCE_FROM_GOMA_CAVE_STREAM),\n    /* SCENE_EXIT(X, Vale, 3), */\n    SCENE_EXITS(GomaCaveBridge),\n    SCENE_EXIT(GOMA_CAVE_BRIDGE_TO_WORLD_MAP, WorldMap, 40),\n    SCENE_EXIT_UNLESS(\n        GOMA_CAVE_BRIDGE_TO_VALE, Vale, VALE_FROM_GOMA,\n        FLAG_X),\n    SCENE_EXITS_END,\n};";
         assert_eq!(
             warps(text),
             vec![
                 ("GomaCaveStream".to_string(), "GomaCaveEntrance".to_string(), "GOMA_CAVE_ENTRANCE_FROM_GOMA_CAVE_STREAM".to_string()),
                 ("GomaCaveBridge".to_string(), "WorldMap".to_string(), "40".to_string()),
+                ("GomaCaveBridge".to_string(), "Vale".to_string(), "VALE_FROM_GOMA".to_string()),
             ]
         );
     }
