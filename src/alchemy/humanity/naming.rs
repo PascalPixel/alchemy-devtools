@@ -299,7 +299,7 @@ fn meaning(word: &str) -> String {
 /// measured there.
 fn exempt(name: &Name) -> bool {
     let n = name.name.as_str();
-    super::humanity::is_placeholder(n)
+    super::is_placeholder(n)
         || n.starts_with("__")
         || n.starts_with("REG_")
         || n.starts_with("OWN_")
@@ -654,7 +654,7 @@ fn referents(names: &Names, out: &mut Vec<Finding>) {
         }
         let bytes = typed.name.as_bytes();
         let pret = bytes.len() > 1 && matches!(bytes[0], b'g' | b's') && bytes[1].is_ascii_uppercase();
-        if typed.member || typed.array || pret || super::humanity::is_placeholder(&typed.name) || !bytes[0].is_ascii_lowercase() {
+        if typed.member || typed.array || pret || super::is_placeholder(&typed.name) || !bytes[0].is_ascii_lowercase() {
             continue;
         }
         by_tag.entry(typed.tag.as_str()).or_default().push(typed);

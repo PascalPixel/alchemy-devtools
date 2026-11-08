@@ -1,7 +1,7 @@
-//! A small C lexer for the humanization report: identifiers, numbers,
-//! strings and punctuation with their lines, comments kept with their text,
-//! and each preprocessor directive bracketed by its own start and end tokens.
-//! It never expands a macro or follows an include.
+//! A small C lexer for counting what a decompilation's source holds:
+//! identifiers, numbers, strings and punctuation with their lines, comments
+//! kept with their text, and each preprocessor directive bracketed by its own
+//! start and end tokens. It never expands a macro or follows an include.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {

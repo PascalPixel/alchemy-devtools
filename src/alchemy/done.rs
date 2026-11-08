@@ -11,9 +11,12 @@
 //! still be bytes of its scaffold, which the English build has as listings.
 //! An edition counts only when its ROM matches rom.sha1.
 
-use super::floor_percent;
+use crate::gba::count::{self, Image};
 use sha1::{Digest, Sha1};
 use std::path::Path;
+
+/// The two games: their id, mark and title.
+pub(crate) const GAMES: [(&str, &str, &str); 2] = [("tbs", "☀️", "The Broken Seal"), ("tla", "⚓️", "The Lost Age")];
 
 pub(crate) const LANGUAGES: [&str; 6] = ["ja", "en", "de", "es", "fr", "it"];
 
@@ -93,6 +96,29 @@ impl Game {
     }
 }
 
+/// A share in hundredths of a percent, rounded down.
+pub fn floor_percent(n: i64, d: i64) -> f64 {
+    if d == 0 {
+        0.0
+    } else {
+        (n as i128 * 10_000 / d as i128) as f64 / 100.0
+    }
+}
+
+/// A count with a comma every three digits.
+pub fn commas(value: i64) -> String {
+    let text = value.to_string();
+    let (sign, digits) = text.strip_prefix('-').map_or(("", text.as_str()), |value| ("-", value));
+    let mut out = String::from(sign);
+    for (index, digit) in digits.chars().enumerate() {
+        if index > 0 && (digits.len() - index) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(digit);
+    }
+    out
+}
+
 #[derive(Default)]
 struct Tally {
     span: i64,
@@ -100,10 +126,6 @@ struct Tally {
     code: i64,
     data_todo: i64,
     counted: Counted,
-}
-
-fn number(text: &str) -> Option<i64> {
-    i64::from_str_radix(text.strip_prefix("0x")?, 16).ok()
 }
 
 /// An 8-byte far-call stub: a far-call bank, or an overlay's entry or
@@ -116,77 +138,12 @@ fn stub(stem: &str) -> bool {
         || stem.ends_with("/import")
 }
 
-/// Counts one linker map. The images' placed sections are the ROM's (their
-/// load address in the cartridge) or an overlay's `.text` and `.data`.
-fn tally(root: &Path, map: &str, overlay: bool, tally: &mut Tally) {
-    let Some(body) = map.split("Linker script and memory map").nth(1) else { return };
-    let (mut first, mut last) = (i64::MAX, 0);
-    let (mut placed, mut wrapped) = (false, None::<String>);
-    // An output section whose name is too long for its column (ld wraps
-    // past 14 characters: `.iwram_resident`) has its address, size and load
-    // address on the next line.
-    let mut heading: Option<String> = None;
-    for line in body.lines() {
-        let joined;
-        let line = match heading.take() {
-            Some(name) if line.trim_start().starts_with("0x") => {
-                joined = format!("{name} {}", line.trim_start());
-                joined.as_str()
-            }
-            _ => line,
-        };
-        if !line.starts_with(' ') && !line.is_empty() {
-            let fields: Vec<&str> = line.split_whitespace().collect();
-            if fields.len() == 1 {
-                heading = Some(line.to_owned());
-                placed = false;
-                continue;
-            }
-            let (address, size) = (fields.get(1).and_then(|f| number(f)), fields.get(2).and_then(|f| number(f)));
-            let load = line.split("load address ").nth(1).and_then(|rest| number(rest.trim()));
-            placed = match (address, size) {
-                (Some(address), Some(size)) if size > 0 => {
-                    let at = load.unwrap_or(address);
-                    let image = if overlay {
-                        matches!(fields[0], ".text" | ".data")
-                    } else {
-                        (0x0800_0000..0x0a00_0000).contains(&at)
-                    };
-                    if image {
-                        first = first.min(at);
-                        last = last.max(at + size);
-                    }
-                    image
-                }
-                _ => false,
-            };
-            continue;
-        }
-        if !placed {
-            continue;
-        }
-        let fields: Vec<&str> = line.split_whitespace().collect();
-        if let [name] = fields.as_slice() {
-            if name.starts_with('.') {
-                wrapped = Some((*name).to_owned());
-            }
-            continue;
-        }
-        let (name, rest) = match wrapped.take() {
-            Some(name) => (name, &fields[..]),
-            None if fields.first().is_some_and(|name| name.starts_with('.')) => (fields[0].to_owned(), &fields[1..]),
-            None => continue,
-        };
-        let (Some(_), Some(size)) = (rest.first().and_then(|f| number(f)), rest.get(1).and_then(|f| number(f))) else {
-            continue;
-        };
-        let object = rest.get(2).copied().unwrap_or("");
-        if size == 0 {
-            continue;
-        }
+/// Counts one linker map by the folder of each object that placed bytes.
+fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
+    let span = count::image(map, image, |name, size, object| {
         if name == ".overlays" {
             tally.streams += size;
-            continue;
+            return;
         }
         let stem = object.split_once("/obj/").map(|(_, stem)| stem.trim_end_matches(".o"));
         let games = stem.is_some_and(|stem| stem.starts_with("games/"));
@@ -197,7 +154,7 @@ fn tally(root: &Path, map: &str, overlay: bool, tally: &mut Tally) {
             if !(games || library || own) {
                 tally.data_todo += size;
             }
-            continue;
+            return;
         }
         tally.code += size;
         match stem {
@@ -217,10 +174,8 @@ fn tally(root: &Path, map: &str, overlay: bool, tally: &mut Tally) {
             }
             _ => {}
         }
-    }
-    if last > first {
-        tally.span += last - first;
-    }
+    });
+    tally.span += span;
 }
 
 /// Whether an edition's ROM is the one rom.sha1 names.
@@ -243,7 +198,7 @@ pub(crate) fn measure_edition(root: &Path, edition: &str) -> Result<Counted, Str
     let mut counted = Tally::default();
     let main = root.join(format!("out/{edition}/{edition}.map"));
     let text = std::fs::read_to_string(&main).map_err(|error| format!("{}: {error}", main.display()))?;
-    tally(root, &text, false, &mut counted);
+    tally(root, &text, Image::Rom, &mut counted);
     let mut maps: Vec<_> = std::fs::read_dir(root.join(format!("out/{edition}/overlays")))
         .map_err(|error| format!("out/{edition}/overlays: {error}"))?
         .filter_map(|entry| Some(entry.ok()?.path()))
@@ -252,7 +207,7 @@ pub(crate) fn measure_edition(root: &Path, edition: &str) -> Result<Counted, Str
     maps.sort();
     for map in maps {
         let text = std::fs::read_to_string(&map).map_err(|error| format!("{}: {error}", map.display()))?;
-        tally(root, &text, true, &mut counted);
+        tally(root, &text, Image::Overlay, &mut counted);
     }
     let done = &mut counted.counted.done;
     done.executable = counted.code;
@@ -274,6 +229,107 @@ pub(crate) fn measure_game(root: &Path, game: &str) -> Result<Game, String> {
         }
     }
     Ok(Game { editions })
+}
+
+/// Each game's code and data shares, or pending.
+pub(crate) fn status_line(sun: Option<GameDone>, anchor: Option<GameDone>) -> String {
+    let show = |done: Option<GameDone>| {
+        done.map_or("pending".to_string(), |d| format!("code {:.2}% data {:.2}%", d.percent(), d.data_percent()))
+    };
+    format!("{} {} · {} {}", GAMES[0].1, show(sun), GAMES[1].1, show(anchor))
+}
+
+/// The lines of the games at `which`: each game's total, then a line for
+/// each edition.
+pub(crate) fn lines_of(games: &[Result<Game, String>; 2], which: &[usize]) -> String {
+    let mut text = String::new();
+    for ((_, mark, name), game) in which.iter().map(|&at| (GAMES[at], &games[at])) {
+        let Ok(game) = game else {
+            text += &format!("{mark} {name}: pending ({})\n", game.as_ref().err().unwrap());
+            continue;
+        };
+        let all = game.combined();
+        let (c, assembly, stubs) = all.parts();
+        text += &format!(
+            "{mark} {name} DONE {}: code {:.2}% ({} / {} bytes: C {c:.2} + assembly {assembly:.2} + stubs {stubs:.2}) · data {:.2}% ({} / {} bytes), six editions\n",
+            if all.complete() { "100%" } else { "not yet" },
+            all.percent(),
+            commas(all.bytes()),
+            commas(all.executable),
+            all.data_percent(),
+            commas(all.data),
+            commas(all.data_total),
+        );
+        for (language, counted) in &game.editions {
+            let d = counted.done;
+            text += &format!(
+                "{mark}   {language} code {:.2}% ({} / {}) · data {:.2}% ({} / {})\n",
+                d.percent(),
+                commas(d.bytes()),
+                commas(d.executable),
+                d.data_percent(),
+                commas(d.data),
+                commas(d.data_total),
+            );
+        }
+    }
+    text
+}
+
+const MEASUREMENT_HEADER: &str = "game\tcommon_asm\tcommon_c\tgame_asm\tgame_c\texecutable\tveneers\tdata\tdata_total";
+
+/// The measurement a count writes and the archive keeps: a row for each
+/// game measured.
+pub(crate) fn measurement_text(sun: Option<GameDone>, anchor: Option<GameDone>) -> String {
+    let mut text = format!("{MEASUREMENT_HEADER}\n");
+    for ((game, _, _), done) in GAMES.into_iter().zip([sun, anchor]) {
+        if let Some(d) = done {
+            text += &format!(
+                "{game}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                d.common_asm, d.common_c, d.game_asm, d.game_c, d.executable, d.veneers, d.data, d.data_total
+            );
+        }
+    }
+    text
+}
+
+pub(crate) fn parse_measurement(text: &str) -> Result<[Option<GameDone>; 2], String> {
+    let mut lines = text.lines();
+    if lines.next() != Some(MEASUREMENT_HEADER) {
+        return Err("measurement has an unexpected header".into());
+    }
+    let mut games = [None, None];
+    for line in lines {
+        let fields = line.split('\t').collect::<Vec<_>>();
+        let at = fields
+            .first()
+            .and_then(|name| GAMES.iter().position(|(game, _, _)| game == name))
+            .ok_or_else(|| format!("measurement row names no game: {line}"))?;
+        let values = fields[1..]
+            .iter()
+            .map(|field| field.parse::<i64>())
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|_| format!("measurement row is not numeric: {line}"))?;
+        let [common_asm, common_c, game_asm, game_c, executable, veneers, data, data_total] = values[..] else {
+            return Err(format!("measurement row has the wrong width: {line}"));
+        };
+        let code = values[..4].iter().map(|value| *value as i128).sum::<i128>();
+        if values.iter().any(|value| *value < 0)
+            || executable == 0
+            || code > executable as i128
+            || veneers as i128 > common_asm as i128 + game_asm as i128
+        {
+            return Err(format!("measurement row has impossible code: {line}"));
+        }
+        if data > data_total {
+            return Err(format!("measurement row has impossible data: {line}"));
+        }
+        if games[at].is_some() {
+            return Err(format!("measurement names {} twice", fields[0]));
+        }
+        games[at] = Some(GameDone { common_asm, common_c, game_asm, game_c, executable, veneers, data, data_total });
+    }
+    Ok(games)
 }
 
 #[cfg(test)]
@@ -301,7 +357,7 @@ ewram           0x02000000    0x38000
     #[test]
     fn a_map_counts_by_folder() {
         let mut counted = Tally::default();
-        tally(Path::new("/nowhere"), MAP, false, &mut counted);
+        tally(Path::new("/nowhere"), MAP, Image::Rom, &mut counted);
         let done = counted.counted.done;
         // The wrapped .iwram_resident heading still places its code.
         assert_eq!(counted.span, 0x220);
@@ -309,5 +365,69 @@ ewram           0x02000000    0x38000
         assert_eq!((done.game_asm, done.veneers), (0x160, 0x40));
         assert_eq!(counted.streams, 0x20);
         assert_eq!(counted.data_todo, 0x40);
+    }
+
+    #[test]
+    fn shares_round_down_to_hundredths() {
+        assert_eq!(floor_percent(500, 1000), 50.0);
+        assert_eq!(floor_percent(632_006, 1_354_302), 46.66);
+        assert_eq!(floor_percent(249_266, 1_622_410), 15.36);
+        assert_eq!(floor_percent(9_999, 10_000), 99.99);
+        assert_eq!(floor_percent(2, 0), 0.0);
+        assert_eq!(commas(-1_622_410), "-1,622,410");
+    }
+
+    #[test]
+    fn status_shows_each_verified_game_or_pending() {
+        let sun = GameDone {
+            game_c: 250,
+            game_asm: 340,
+            executable: 1000,
+            data: 992,
+            data_total: 1000,
+            ..GameDone::default()
+        };
+        assert_eq!(
+            status_line(Some(sun), None),
+            "☀️ code 59.00% data 99.20% · ⚓️ pending"
+        );
+        let anchor = GameDone {
+            game_c: 10,
+            game_asm: 50,
+            veneers: 30,
+            executable: 1000,
+            ..GameDone::default()
+        };
+        assert_eq!(
+            status_line(Some(sun), Some(anchor)),
+            "☀️ code 59.00% data 99.20% · ⚓️ code 6.00% data 0.00%"
+        );
+    }
+
+    #[test]
+    fn a_measurement_survives_its_trip_to_ci() {
+        let sun = GameDone {
+            common_asm: 1,
+            common_c: 2,
+            game_asm: 3,
+            game_c: 4,
+            executable: 100,
+            veneers: 1,
+            data: 7,
+            data_total: 9,
+        };
+        let text = measurement_text(Some(sun), None);
+        assert_eq!(parse_measurement(&text).unwrap(), [Some(sun), None]);
+        assert!(parse_measurement("game\n").is_err());
+        assert!(parse_measurement(&format!("{text}tbs\t1\t2\t3\t4\t100\t1\t0\t0\n")).is_err());
+        assert!(parse_measurement(&format!("{text}tla\t1\t2\n")).is_err());
+        assert!(parse_measurement(&text.replace("\t7\t9", "\t9\t7")).is_err());
+        assert!(parse_measurement(&text.replace("\t100\t", "\t0\t")).is_err());
+        assert!(parse_measurement(&text.replace("\t100\t", "\t5\t")).is_err());
+        assert!(parse_measurement(&text.replace("tbs\t1\t", "tbs\t-1\t")).is_err());
+        // Every archived measurement has its data columns; one without is refused.
+        let code_only = "game\tcommon_asm\tcommon_c\tgame_asm\tgame_c\texecutable\tveneers\n\
+                         tla\t1\t2\t3\t4\t100\t1\n";
+        assert!(parse_measurement(code_only).is_err());
     }
 }

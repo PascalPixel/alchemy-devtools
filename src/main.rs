@@ -29,7 +29,7 @@ Run any command with --help for its options.
   diff      a C draft against the listing it would replace
   editions  what an edition still takes from its scaffold while another links C
   permute   search rewrites and PERM macro choices of a draft toward differ 0
-  progress  DONE code and data in each edition, from the linker maps
+  progress  DONE code and data in each edition, from the linker maps, and what is left to humanize
   rank      every unfinished function, furthest first by skeleton gap
   regress   the functions whose assembly differs between two builds of the tree
   render    pictures of a built edition: Psynergy, places and events (feature render)

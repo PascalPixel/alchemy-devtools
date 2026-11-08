@@ -1,10 +1,30 @@
-use super::decomp::REPORT;
+//! Publication (C3): the receipt that binds a measurement to the source tree
+//! it read, the pre-push upload of both reports with it, and the release
+//! archive that keeps every landing's records. CI's admission, the history
+//! it rebuilds and the chart it draws sit below.
+
+pub(crate) mod ci;
+pub(crate) mod decomp;
+mod figure;
+mod history;
+
+use decomp::REPORT;
 use sha2::{Digest, Sha256};
 use std::path::Path;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) const MEASUREMENT: &str = "out/reports/decomp/measurement.tsv";
+
+fn read(path: &Path) -> Result<String, String> {
+    std::fs::read(path)
+        .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+        .map_err(|error| format!("cannot read {}: {error}", path.display()))
+}
+
+fn write(path: &Path, text: &str) -> Result<(), String> {
+    std::fs::write(path, text).map_err(|error| format!("cannot write {}: {error}", path.display()))
+}
 
 const REPO: &str = "PascalPixel/alchemy";
 /// The archive is a run of releases, `decomp-reports` then
@@ -21,7 +41,7 @@ const STALE: &str =
 const ASSETS: [(&str, &str); 2] = [(REPORT, "pb"), (MEASUREMENT, "tsv")];
 const HEADER: &str = "version\ttree\tmeasured_at\tpb_sha256\ttsv_sha256";
 
-pub(super) fn command(root: &Path, program: &str, arguments: &[&str]) -> Result<String, String> {
+fn command(root: &Path, program: &str, arguments: &[&str]) -> Result<String, String> {
     let output = Command::new(program)
         .args(arguments)
         .current_dir(root)
@@ -36,7 +56,7 @@ pub(super) fn command(root: &Path, program: &str, arguments: &[&str]) -> Result<
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-pub(super) fn digest(bytes: &[u8]) -> String {
+fn digest(bytes: &[u8]) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes))
 }
 
@@ -48,7 +68,7 @@ fn receipt(tree: &str, measured_at: u64, files: &[Vec<u8>]) -> String {
     )
 }
 
-pub(super) fn valid_id(id: &str) -> bool {
+fn valid_id(id: &str) -> bool {
     id.len() == 40
         && id
             .bytes()
@@ -57,7 +77,7 @@ pub(super) fn valid_id(id: &str) -> bool {
 
 /// A receipt names the staged source tree and both report digests. Its time
 /// survives remeasurement of identical inputs, uploads and CI retries.
-pub(super) fn verify(saved: &str, tree: &str, files: &[Vec<u8>]) -> Result<u64, String> {
+fn verify(saved: &str, tree: &str, files: &[Vec<u8>]) -> Result<u64, String> {
     let fields: Vec<_> = saved
         .lines()
         .nth(1)
@@ -77,7 +97,7 @@ pub(super) fn verify(saved: &str, tree: &str, files: &[Vec<u8>]) -> Result<u64, 
 
 /// Builds read the working tree, so an index-only fingerprint is insufficient.
 /// Staged changes are allowed; unstaged and untracked source must be resolved.
-pub(super) fn source_tree(root: &Path) -> Result<String, String> {
+pub(crate) fn source_tree(root: &Path) -> Result<String, String> {
     command(
         root,
         "git",
@@ -168,7 +188,7 @@ fn volume_tag(number: usize) -> String {
 }
 
 /// The archive's volumes, in order.
-pub(super) fn volumes(root: &Path) -> Result<Vec<String>, String> {
+pub(crate) fn volumes(root: &Path) -> Result<Vec<String>, String> {
     let tags = command(
         root,
         "gh",
