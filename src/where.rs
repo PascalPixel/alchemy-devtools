@@ -3,8 +3,8 @@
 //! tree in progress.
 
 use crate::alchemy::built::{self, Piece};
-use crate::alchemy::targets::DecompTargetId;
 use crate::alchemy::done::{self, commas, Game};
+use crate::alchemy::targets::DecompTargetId;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
@@ -185,6 +185,7 @@ mod tests {
                 load: 0x0800_0000,
                 loaded: true,
                 symbols: Vec::new(),
+                output: None,
             },
         }
     }

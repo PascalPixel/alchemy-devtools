@@ -3,10 +3,11 @@
 //! every difference named by what placed it.
 
 use crate::alchemy::built;
+use crate::alchemy::done::commas;
 use crate::alchemy::targets::{target_for, DecompTargetId};
+use crate::gba::count::CARTRIDGE;
 use crate::gba::elf::Elf;
 use crate::gba::ld_map::{Map, Placed, ROM};
-use crate::alchemy::done::commas;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -143,7 +144,7 @@ impl Placement {
         let mut sections: Vec<Placed> = map
             .placed
             .into_iter()
-            .filter(|placed| placed.loaded && placed.size > 0 && (ROM..built::ROM_END).contains(&placed.load))
+            .filter(|placed| placed.loaded && placed.size > 0 && CARTRIDGE.contains(&placed.load))
             .collect();
         sections.sort_by_key(|placed| placed.load);
         let path = output.join(format!("{id}.elf"));

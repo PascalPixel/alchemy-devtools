@@ -1,18 +1,14 @@
 //! What a built edition leaves under `out/`, as the inventory commands read it
 //! (`where`, `editions`, `check`, `regress`): its linker maps and the sections
-//! they place, its objects, packed overlays and ROM, and the object list
-//! (`games/<game>/objects.tsv`) it was linked from. Nothing here builds; a
+//! they place, its objects, packed overlays and ROM. Nothing here builds; a
 //! missing file is reported as not built.
 
 use super::done::LANGUAGES;
 use super::layout::Layout;
 use super::targets::{self, target_for, DecompTargetId};
-use crate::gba::ld_map::{Map, Placed, ROM};
+use crate::gba::count::{self, Image};
+use crate::gba::ld_map::{Map, Placed};
 use std::path::{Path, PathBuf};
-
-/// The end of the cartridge's ROM window: a main image's section counts as
-/// placed when its load address lies in `ROM..ROM_END`.
-pub const ROM_END: u32 = 0x0a00_0000;
 
 /// Every edition, each game's six together, the games in rom.sha1's order and
 /// the languages in the measurement's (`ja en de es fr it`).
@@ -159,68 +155,17 @@ impl Piece {
     }
 }
 
-/// Whether a section places bytes: loaded, not the linker's fill, not empty.
-fn places(placed: &Placed) -> bool {
-    placed.loaded && !placed.is_fill() && placed.size > 0
-}
-
-/// Every section an edition places: the main map's that load into the ROM
-/// window, then each overlay map's. An overlay's map also lists its
-/// unallocated sections (attributes, comments) at address 0, which place
-/// nothing.
+/// Every section an edition places, as calcrom counts it: the main map's ROM
+/// image, then each overlay map's own.
 pub fn pieces(root: &Path, id: DecompTargetId) -> Result<Vec<Piece>, String> {
-    let main = read_text(&output(root, id).join(format!("{id}.map")))?;
-    let mut pieces: Vec<Piece> = Map::parse(&main)
-        .placed
-        .into_iter()
-        .filter(|placed| places(placed) && (ROM..ROM_END).contains(&placed.load))
-        .map(|placed| Piece { stem: stem(id, &placed.path), placed })
-        .collect();
+    let piece = |placed: &Placed| Piece { stem: stem(id, &placed.path), placed: placed.clone() };
+    let main = Map::parse(&read_text(&output(root, id).join(format!("{id}.map")))?);
+    let mut pieces: Vec<Piece> = count::placed(&main, Image::Rom).map(piece).collect();
     for (_, path) in overlay_files(root, id, "map")? {
         let map = Map::parse(&read_text(&path)?);
-        pieces.extend(
-            map.placed
-                .into_iter()
-                .filter(|placed| places(placed) && placed.address != 0)
-                .map(|placed| Piece { stem: stem(id, &placed.path), placed }),
-        );
+        pieces.extend(count::placed(&map, Image::Overlay).map(piece));
     }
     Ok(pieces)
-}
-
-/// One row of a game's object list: the image and place it is linked into,
-/// the object, its sections, and the languages that link it (none listed:
-/// every edition).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Row {
-    pub image: String,
-    pub place: String,
-    pub object: String,
-    pub sections: String,
-    pub languages: Vec<String>,
-}
-
-impl Row {
-    pub fn links(&self, language: &str) -> bool {
-        self.languages.is_empty() || self.languages.iter().any(|l| l == language)
-    }
-}
-
-pub fn parse_object_list(text: &str) -> Vec<Row> {
-    text.lines()
-        .filter(|line| !line.trim().is_empty() && !line.starts_with("image\t"))
-        .map(|line| {
-            let mut columns = line.split('\t');
-            let mut next = || columns.next().unwrap_or("").to_string();
-            let (image, place, object, sections, languages) = (next(), next(), next(), next(), next());
-            let languages = languages.split_whitespace().map(str::to_string).collect();
-            Row { image, place, object, sections, languages }
-        })
-        .collect()
-}
-
-pub fn object_list(root: &Path, game: &str) -> Result<Vec<Row>, String> {
-    Ok(parse_object_list(&read_text(&root.join(format!("games/{game}/objects.tsv")))?))
 }
 
 #[cfg(test)]
@@ -252,16 +197,5 @@ mod tests {
             "recon/tla/raw/overlays/resource_64c_overlay"
         );
         assert_eq!(stem(id("tla-en"), "tools/out/compiler-runtime/libgcc.a(_call_via_rX.o)"), "tools/out/compiler-runtime/libgcc.a(_call_via_rX.o)");
-    }
-
-    #[test]
-    fn object_list_rows_keep_their_languages() {
-        let rows = parse_object_list(
-            "image\tplace\tobject\tsections\teditions\nmain\tiwram\tgames/tla/src/system/iwram\t.sym_iwram\nmain\trom_main\tgames/tla/src/window/f039864\t.text\ten\n",
-        );
-        assert_eq!(rows.len(), 2);
-        assert!(rows[0].links("ja") && rows[0].languages.is_empty());
-        assert!(rows[1].links("en") && !rows[1].links("ja"));
-        assert_eq!(rows[1].sections, ".text");
     }
 }

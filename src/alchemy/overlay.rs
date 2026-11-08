@@ -173,7 +173,9 @@ mod tests {
                 load: ROM + 0x20,
                 loaded: true,
                 symbols: vec![(ROM + 0x20, "Resource_DirectoryTable".into())],
+                output: None,
             }],
+            outputs: Vec::new(),
         };
         let payload = halves(&[0x2001, 0x4770, 0x2002, 0x4770]);
         // The payload packed once as a general and as a palette stream by the encoders

@@ -4,9 +4,10 @@
 //! Names come from symbol tables, the object's own and the scaffold's.
 
 use crate::alchemy::built;
+use crate::alchemy::done::commas;
+use crate::alchemy::layout::{Layout, ObjectList};
 use crate::alchemy::targets::DecompTargetId;
 use crate::gba::elf::{self, Elf};
-use crate::alchemy::done::commas;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -110,9 +111,10 @@ fn survey(root: &Path, game: &str, chosen: &[DecompTargetId]) -> Result<(Vec<Obj
     // The object list's rows merged per object, in link order.
     let mut order: Vec<String> = Vec::new();
     let mut languages: HashMap<String, Vec<&str>> = HashMap::new();
-    for row in built::object_list(root, game)?.iter().filter(|row| row.object.starts_with("games/")) {
-        let linked = languages.entry(row.object.clone()).or_insert_with(|| {
-            order.push(row.object.clone());
+    let list = ObjectList::parse(&built::read_text(&root.join(Layout::new(game).objects()))?);
+    for row in list.rows.iter().filter(|row| row.object().starts_with("games/")) {
+        let linked = languages.entry(row.object().to_string()).or_insert_with(|| {
+            order.push(row.object().to_string());
             Vec::new()
         });
         for &id in &all {

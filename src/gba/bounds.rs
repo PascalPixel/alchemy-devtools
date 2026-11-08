@@ -88,6 +88,7 @@ mod tests {
             load: 0x0800_0100,
             loaded: true,
             symbols: vec![(0x0800_0100, "First".into()), (0x0800_0120, "Second".into())],
+            output: None,
         };
         assert_eq!(function_end(&section, 0x0800_0100, &[], None), 0x0800_0120);
         assert_eq!(function_end(&section, 0x0800_0120, &[0x0800_0200], None), 0x0800_0140);

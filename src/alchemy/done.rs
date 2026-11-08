@@ -12,6 +12,7 @@
 //! An edition counts only when its ROM matches rom.sha1.
 
 use crate::gba::count::{self, Image};
+use crate::gba::ld_map::Map;
 use sha1::{Digest, Sha1};
 use std::path::Path;
 
@@ -140,10 +141,12 @@ fn stub(stem: &str) -> bool {
 
 /// Counts one linker map by the folder of each object that placed bytes.
 fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
-    let span = count::image(map, image, |name, size, object| {
+    let map = Map::parse(map);
+    for placed in count::placed(&map, image) {
+        let (name, size, object) = (placed.name.as_str(), i64::from(placed.size), placed.path.as_str());
         if name == ".overlays" {
             tally.streams += size;
-            return;
+            continue;
         }
         let stem = object.split_once("/obj/").map(|(_, stem)| stem.trim_end_matches(".o"));
         let games = stem.is_some_and(|stem| stem.starts_with("games/"));
@@ -154,7 +157,7 @@ fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
             if !(games || library || own) {
                 tally.data_todo += size;
             }
-            return;
+            continue;
         }
         tally.code += size;
         match stem {
@@ -174,8 +177,8 @@ fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
             }
             _ => {}
         }
-    });
-    tally.span += span;
+    }
+    tally.span += count::span(&map, image);
 }
 
 /// Whether an edition's ROM is the one rom.sha1 names.

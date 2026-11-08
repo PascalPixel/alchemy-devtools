@@ -1032,9 +1032,9 @@ mod tests {
         let section = Placed {
             name: ".rom.00000100".into(), path: "out/tbs-ja/obj/recon/tbs/ja/rom.o".into(),
             address: ROM + 0x100, load: ROM + 0x100, size: 0x30, loaded: true,
-            symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x118, "Next".into())],
+            symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x118, "Next".into())], output: None,
         };
-        let map = Map { placed: vec![section.clone()] };
+        let map = Map { placed: vec![section.clone()], outputs: Vec::new() };
         let symbol = |name: &str, value, kind| crate::gba::elf::Symbol { name: name.into(), value, size: 0, kind, bind: 1, section: 1 };
         let mut elf = Elf { sections: vec![], symbols: vec![symbol("First", ROM + 0x101, 2), symbol("Next", ROM + 0x119, 2)] };
         assert_eq!(scaffold_extent(&map, &elf, "First").unwrap(), (ROM + 0x100, ROM + 0x118, ROM, "First".into()));
@@ -1061,7 +1061,7 @@ mod tests {
         assert!(scaffold_extent_mode(&map, &elf, "First", true).is_err());
         let mut ordinary = section;
         ordinary.path = "games/tbs/src/test.o".into();
-        assert!(scaffold_extent(&Map { placed: vec![ordinary] }, &elf, "First").unwrap_err().contains("no main-image code"));
+        assert!(scaffold_extent(&Map { placed: vec![ordinary], outputs: Vec::new() }, &elf, "First").unwrap_err().contains("no main-image code"));
     }
 
     #[test]
@@ -1069,7 +1069,7 @@ mod tests {
         let section = Placed {
             name: ".text".into(), path: "out/tla-en/obj/games/tla/src/battle/summon/definition.o".into(),
             address: ROM + 0x100, load: ROM + 0x100, size: 0x60, loaded: true,
-            symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x128, "Next".into())],
+            symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x128, "Next".into())], output: None,
         };
         let symbol = |name: &str, value, size| crate::gba::elf::Symbol {
             name: name.into(), value, size, kind: 2, bind: 1, section: 1,
@@ -1077,15 +1077,15 @@ mod tests {
         let elf = Elf { sections: vec![], symbols: vec![
             symbol("First", ROM + 0x101, 0x24), symbol("Next", ROM + 0x129, 0x20),
         ] };
-        let map = Map { placed: vec![section.clone()] };
+        let map = Map { placed: vec![section.clone()], outputs: Vec::new() };
         assert_eq!(scaffold_extent(&map, &elf, "First").unwrap(), (ROM + 0x100, ROM + 0x124, ROM, "First".into()));
         assert_eq!(scaffold_extent(&map, &elf, "08000100").unwrap().1, ROM + 0x124);
         let mut data = section.clone();
         data.name = ".rodata".into();
-        assert!(scaffold_extent(&Map { placed: vec![data] }, &elf, "First").is_err());
+        assert!(scaffold_extent(&Map { placed: vec![data], outputs: Vec::new() }, &elf, "First").is_err());
         let mut unloaded = section;
         unloaded.loaded = false;
-        assert!(scaffold_extent(&Map { placed: vec![unloaded] }, &elf, "First").is_err());
+        assert!(scaffold_extent(&Map { placed: vec![unloaded], outputs: Vec::new() }, &elf, "First").is_err());
     }
 
     #[test]
@@ -1093,13 +1093,13 @@ mod tests {
         let section = Placed {
             name: ".text".into(), path: "out/tbs-en/obj/games/tbs/src/system/serial.o".into(),
             address: ROM + 0x100, load: ROM + 0x100, size: 0x30, loaded: true,
-            symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x118, "Next".into())],
+            symbols: vec![(ROM + 0x100, "First".into()), (ROM + 0x118, "Next".into())], output: None,
         };
         let elf = Elf { sections: vec![], symbols: vec![
             crate::gba::elf::Symbol { name: "First".into(), value: ROM + 0x101, size: 0x10, kind: 2, bind: 1, section: 1 },
             crate::gba::elf::Symbol { name: "Next".into(), value: ROM + 0x119, size: 0x18, kind: 2, bind: 1, section: 1 },
         ] };
-        let mut map = Map { placed: vec![section] };
+        let mut map = Map { placed: vec![section], outputs: Vec::new() };
         assert_eq!(scaffold_extent(&map, &elf, "First").unwrap(), (ROM + 0x100, ROM + 0x110, ROM, "First".into()));
         map.placed[0].name = ".data".into();
         assert!(scaffold_extent(&map, &elf, "First").is_err());
@@ -1118,8 +1118,8 @@ mod tests {
         let mut map = Map { placed: vec![Placed {
             name: ".text".into(), path: "out/tbs-en/obj/games/tbs/src/field/scene.o".into(),
             address: base, load: base, size: 0x30, loaded: true,
-            symbols: vec![(base, "First".into()), (base + 0x18, "Next".into())],
-        }] };
+            symbols: vec![(base, "First".into()), (base + 0x18, "Next".into())], output: None,
+        }], outputs: Vec::new() };
         let mut elf = Elf {
             sections: vec![crate::gba::elf::Section { address: base, bytes: vec![0; 0x30] }],
             symbols: vec![
