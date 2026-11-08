@@ -16,7 +16,7 @@ use inventory::{Kind, Reference};
 use measure::{Measure, Row};
 use std::path::Path;
 
-const USAGE: &str = r#"usage: alchemy-devtools rank [--game GAME] [--kind main|arm|overlay|edition]... [--state STATE]... [--limit N] [--jobs N] [--json | --out FILE]
+const USAGE: &str = r#"usage: alchemy-devtools rank [--game GAME] [--kind main|arm|overlay|edition]... [--state STATE]... [--limit N] [--jobs N] [--twins] [--json | --out FILE]
 Lists every unfinished piece of a game, furthest first: each English listing
 of the main image (kind main, or main-arm for ARM), each section of an
 overlay scaffold English still assembles (overlay), and each function
@@ -36,11 +36,14 @@ once from the copy with a draft, and so are the editions whose comparison
 is the same instruction for instruction.
 Pieces with no draft come first, by size times copies; then drafts by
 weight, the gap times copies; then drafts that do not measure, last, since
-no brief can give them a figure. Columns, tab-
-separated: rank weight gap copies size differ kind state where name draft
-measure. size is the listing's instructions as diff counts them; a piece
-not measured weighs twice its size; measure is the diff command that
-measures the piece, where its draft is to be written when there is none.
+no brief can give them a figure. Columns, tab-separated: rank weight gap
+copies size differ kind state where name draft measure. size is the
+listing's instructions as diff counts them; a piece not measured weighs
+twice its size; measure is the diff command that measures the piece, where
+its draft is to be written when there is none. --twins adds a twin column:
+the other game's matched function most like the piece in shape, its source
+and their Dice coefficient, as twins finds them (a function of 12 or more
+instructions English has not finished).
 --kind and --state keep the pieces of those kinds and states (a state's
 first words: "no draft", "does not measure", "draft", "ready"); --limit
 keeps the first N. --json prints the rows as one JSON array on stdout
@@ -57,6 +60,7 @@ struct Options {
     jobs: usize,
     json: bool,
     out: Option<String>,
+    twins: bool,
 }
 
 fn parse(arguments: &[String]) -> Result<Options, String> {
@@ -68,6 +72,7 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
         jobs: std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(2).max(1)),
         json: false,
         out: None,
+        twins: false,
     };
     let mut words = arguments.iter();
     while let Some(word) = words.next() {
@@ -85,6 +90,7 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
                 options.jobs = value()?.parse().ok().filter(|&jobs| jobs > 0).ok_or_else(|| format!("--jobs takes a number above 0\n{USAGE}"))?
             }
             "--json" => options.json = true,
+            "--twins" => options.twins = true,
             "--out" => options.out = Some(value()?.clone()),
             other => return Err(format!("unknown rank option: {other}\n{USAGE}")),
         }
@@ -173,10 +179,19 @@ fn differ(row: &Row) -> Option<usize> {
     row.measured.as_ref().and_then(|measured| measured.as_ref().ok()).map(|measure| measure.differ)
 }
 
-fn table(rows: &[Row], program: &str) -> String {
-    let mut text = String::from("rank\tweight\tgap\tcopies\tsize\tdiffer\tkind\tstate\twhere\tname\tdraft\tmeasure\n");
+/// Each unfinished function's twin in the other game, by game and name, as
+/// rank --twins prints it: the twin, its source and their Dice coefficient.
+type Twins = std::collections::HashMap<(String, String), String>;
+
+fn twin(twins: &Twins, row: &Row) -> String {
+    twins.get(&(row.piece.target.game().to_string(), row.piece.name.clone())).cloned().unwrap_or_default()
+}
+
+fn table(rows: &[Row], program: &str, twins: Option<&Twins>) -> String {
+    let mut text = String::from("rank\tweight\tgap\tcopies\tsize\tdiffer\tkind\tstate\twhere\tname\tdraft\tmeasure");
+    text += if twins.is_some() { "\ttwin\n" } else { "\n" };
     for (n, row) in rows.iter().enumerate() {
-        let fields = [
+        let mut fields = vec![
             (n + 1).to_string(),
             weight(row).to_string(),
             gap(row).to_string(),
@@ -190,13 +205,14 @@ fn table(rows: &[Row], program: &str) -> String {
             row.piece.draft.clone().unwrap_or_default(),
             measure_command(row, program),
         ];
+        fields.extend(twins.map(|twins| twin(twins, row)));
         text += &fields.join("\t");
         text.push('\n');
     }
     text
 }
 
-fn json(rows: &[Row], program: &str) -> String {
+fn json(rows: &[Row], program: &str, twins: Option<&Twins>) -> String {
     let optional = |text: Option<&String>| text.map_or("null".into(), |text| quote(text));
     let list = |items: &[String]| format!("[{}]", items.iter().map(|item| quote(item)).collect::<Vec<_>>().join(","));
     let rows: Vec<String> = rows
@@ -208,7 +224,7 @@ fn json(rows: &[Row], program: &str) -> String {
                 _ => "null".into(),
             };
             format!(
-                "{{\"rank\":{},\"weight\":{},\"gap\":{},\"copies\":{},\"size\":{},\"differ\":{},\"kind\":{},\"state\":{},\"where\":{},\"name\":{},\"draft\":{},\"measure\":{},\"edition\":{},\"places\":{},\"listings\":{listings}}}",
+                "{{\"rank\":{},\"weight\":{},\"gap\":{},\"copies\":{},\"size\":{},\"differ\":{},\"kind\":{},\"state\":{},\"where\":{},\"name\":{},\"draft\":{},\"measure\":{},\"edition\":{},\"places\":{},\"listings\":{listings}{}}}",
                 n + 1,
                 weight(row),
                 gap(row),
@@ -223,6 +239,7 @@ fn json(rows: &[Row], program: &str) -> String {
                 quote(&measure_command(row, program)),
                 quote(row.piece.target.id.as_str()),
                 list(&row.places),
+                twins.map_or(String::new(), |twins| format!(",\"twin\":{}", optional(Some(&twin(twins, row)).filter(|twin| !twin.is_empty())))),
             )
         })
         .collect();
@@ -314,12 +331,24 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         rows.truncate(limit);
     }
     let program = program(root);
+    let twins = match options.twins {
+        true => {
+            let mut twins = Twins::new();
+            for game in rows.iter().map(|row| row.piece.target.game()).collect::<std::collections::BTreeSet<_>>() {
+                for (name, (twin, file, dice)) in crate::twins::index(root, game)? {
+                    twins.insert((game.to_string(), name), format!("{twin} {file} {dice:.3}"));
+                }
+            }
+            Some(twins)
+        }
+        false => None,
+    };
     if options.json {
-        print!("{}", json(&rows, &program));
+        print!("{}", json(&rows, &program, twins.as_ref()));
     } else if let Some(out) = &options.out {
-        std::fs::write(out, table(&rows, &program)).map_err(|error| format!("{out}: {error}"))?;
+        std::fs::write(out, table(&rows, &program, twins.as_ref())).map_err(|error| format!("{out}: {error}"))?;
     } else {
-        print!("{}", table(&rows, &program));
+        print!("{}", table(&rows, &program, twins.as_ref()));
     }
     eprint!("{notes}{}", totals(&rows));
     eprintln!("{} rows in {:.1} s on {} jobs", rows.len(), started.elapsed().as_secs_f64(), options.jobs);
@@ -401,12 +430,12 @@ mod tests {
             measure_command(&edition, "devtools"),
             "devtools diff games/tla/src/battle_effect/f170364.c --edition tla-ja --symbol BattleEffect_RunMegaera"
         );
-        let shown = table(std::slice::from_ref(&edition), "devtools");
+        let shown = table(std::slice::from_ref(&edition), "devtools", None);
         assert_eq!(
             shown.lines().nth(1).unwrap().split('\t').take(9).collect::<Vec<_>>(),
             ["1", "0", "0", "5", "1152", "0", "edition", "ready to adopt", "tla-ja .rom.0016fca8"]
         );
-        assert!(json(&[edition], "devtools").starts_with("[{\"rank\":1,\"weight\":0,\"gap\":0,\"copies\":5,\"size\":1152,\"differ\":0,\"kind\":\"edition\""));
+        assert!(json(&[edition], "devtools", None).starts_with("[{\"rank\":1,\"weight\":0,\"gap\":0,\"copies\":5,\"size\":1152,\"differ\":0,\"kind\":\"edition\""));
     }
 
     #[test]

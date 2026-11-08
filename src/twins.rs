@@ -171,6 +171,21 @@ fn rows<'a>(unfinished: &'a [Found], matched: &'a [Found], ratio: Option<(f64, f
     rows
 }
 
+/// Each function `game` has not finished, by name, and its twin among the
+/// other game's matched functions: the twin's name and source, and their Dice
+/// coefficient. For rank's twin column; empty when rom.sha1 lists one game.
+pub(crate) fn index(root: &Path, game: &str) -> Result<std::collections::HashMap<String, (String, String, f64)>, String> {
+    let others: Vec<&str> = targets::games()?.into_iter().filter(|&other| other != game).collect();
+    let [reference] = others[..] else { return Ok(Default::default()) };
+    let (_, mut unfinished) = read(root, game, |stem| stem.starts_with("recon/"))?;
+    unfinished.retain(|function| function.instructions.len() >= MIN_LENGTH);
+    let (_, matched) = read(root, reference, |stem| stem.starts_with("games/"))?;
+    Ok(rows(&unfinished, &matched, None)
+        .into_iter()
+        .filter_map(|row| row.twin.map(|(twin, dice)| (row.function.name.clone(), (twin.name.clone(), twin.file.clone(), dice))))
+        .collect())
+}
+
 pub fn run(arguments: &[String]) -> Result<(), String> {
     let Some(options) = parse(arguments)? else {
         println!("{USAGE}");
