@@ -140,7 +140,9 @@ pub fn game(name: &str) -> Result<&'static str, String> {
 
 /// The edition a draft is measured in, and its game: the edition named, or
 /// else the English edition of the game named, of the game whose folder the
-/// draft's path names (`recon/tla/`), or of rom.sha1's first game.
+/// draft's path names (`recon/tla/`), or of rom.sha1's first game. That last
+/// is a guess when rom.sha1 lists several, and stderr says so: a draft
+/// compiled with another game's headers fails in ways that hide why.
 pub fn draft_edition(game: Option<&'static str>, edition: Option<DecompTarget>, path: &str) -> Result<(&'static str, DecompTarget), String> {
     let edition_game = edition.map(|target| target.game());
     if matches!((game, edition_game), (Some(game), Some(edition_game)) if game != edition_game) {
@@ -150,7 +152,12 @@ pub fn draft_edition(game: Option<&'static str>, edition: Option<DecompTarget>, 
         Some(game) => game,
         None => {
             let games = games()?;
-            games.iter().copied().find(|game| path.contains(&format!("/{game}/"))).or(games.first().copied()).ok_or("rom.sha1 lists no edition")?
+            let named = games.iter().copied().find(|game| path.contains(&format!("/{game}/")) || path.starts_with(&format!("{game}/")));
+            let game = named.or(games.first().copied()).ok_or("rom.sha1 lists no edition")?;
+            if named.is_none() && games.len() > 1 {
+                eprintln!("note: {path} names no game's folder; measuring in {game}-en, rom.sha1's first game (give --game or --edition)");
+            }
+            game
         }
     };
     let target = match edition {
@@ -212,6 +219,7 @@ mod tests {
         };
         assert_eq!(named(None, None, "recon/tla/en/main/08000000.c").unwrap(), ("tla", "tla-en"));
         assert_eq!(named(None, None, "draft.c").unwrap(), ("tbs", "tbs-en"));
+        assert_eq!(named(None, None, "tla/src/field/a.c").unwrap(), ("tla", "tla-en"));
         assert_eq!(named(Some("tla"), None, "draft.c").unwrap(), ("tla", "tla-en"));
         assert_eq!(named(None, Some("tla-de"), "recon/tbs/en/main/08000000.c").unwrap(), ("tla", "tla-de"));
         assert!(named(Some("tbs"), Some("tla-de"), "draft.c").is_err());
