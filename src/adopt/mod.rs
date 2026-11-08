@@ -7,7 +7,7 @@
 
 use crate::alchemy::layout::{
     aligns, edition_only, ends_with_padding, globals, has_edition_forms, overlay_draft, overlay_section, pieces,
-    rom_offset, rom_section, sections, Layout, ObjectList, Row, Section, LANGUAGES,
+    incbin, rom_offset, rom_section, sections, Layout, ObjectList, Piece, Row, Section, LANGUAGES,
 };
 use crate::alchemy::built::object_stem;
 use crate::compile::root;
@@ -16,7 +16,10 @@ use crate::gba::clex::{lex, Kind, Token};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
+mod edition;
 mod merge;
+
+use edition::{incbin_line, Edition};
 
 const USAGE: &str = r#"usage: alchemy-devtools adopt main ADDRESS[,ADDRESS...]... [--editions LIST] [--game GAME] [--unmeasured] [--verify | --dry-run]
        alchemy-devtools adopt overlay DRAFT.c... [--edition-forms] [--unmeasured] [--verify | --dry-run]
@@ -31,10 +34,15 @@ first listing's names only. The module takes the earliest listing's row and
 the others' rows go. In every other edition of LIST (default: all six) the
 rom.s section whose .global names the function goes; its row becomes the
 module, joining the module's row unless a row that edition links lies
-between. A section that also holds another function keeps it as a section
-of its own when the two divide at its label, else the edition stays on its
-scaffold. Code whose listing ends with a halfword's padding makes what
-follows it align itself.
+between. The draft is compiled for each built edition, and the module takes
+its size there from its label: bytes before the label stay in the section,
+bytes after it (code no label names, a pad) become a section of its own
+with the labels they hold, after the module's row, and a later section the
+module's bytes run on into (its pool, its last instruction) goes or is
+trimmed. An edition not built is cut at labels alone: a section that also
+holds another function keeps it as a section of its own when the two
+divide at its label, else the edition stays on its scaffold. Code whose
+listing ends with a halfword's padding makes what follows it align itself.
 overlay: each draft (resource_ID_c_ADDRESS.c or resource_ID/ADDRESS.c)
 becomes s<offset>.c in the scene or debug folder its link script names;
 every scaffold section it defines goes, and the first one's link line
@@ -43,7 +51,8 @@ section with edition forms (unless --edition-forms: the draft covers each
 edition's form), a draft defining none of its section's names (unless it
 includes a .c file).
 edition: an adopted object (games/..., with or without its extension) is
-linked in each edition of LIST in place of the rom.s section naming it.
+linked in each edition of LIST in place of the rom.s section naming it,
+divided by its size as main divides it.
 replace: an overlay draft that matches in every edition replaces FILE, an
 adopted scene file whose Japanese form stayed on the scaffold; the scaffold
 sections the draft defines, and the edition-only sections linked beside
@@ -535,9 +544,16 @@ fn adopt_main(files: &mut Files, layout: &Layout, item: &str, options: &Options)
     }
     report.push(line);
     for language in editions.iter().filter(|e| *e != "en") {
-        match relink(files, layout, &mut list, language, &module, &names, &known, Some(halfword)) {
+        let (edition, unknown) = match Edition::read(files.root(), &layout.game, language, &draft_path) {
+            Ok(edition) => (Some(edition), None),
+            Err(why) => (None, Some(why)),
+        };
+        match relink(files, layout, &mut list, language, &module, &names, &known, Some(halfword), edition.as_ref()) {
             Ok(done) => report.push(format!("  {language}  {done}")),
             Err(why) => report.push(format!("  {language}  stays on its scaffold: {why}")),
+        }
+        if let Some(why) = unknown {
+            report.push(format!("      cut by its labels alone, its size there unknown: {why}"));
         }
     }
     files.write(&objects, list.render());
@@ -566,16 +582,25 @@ fn neighbour_folder(list: &ObjectList, at: usize, layout: &Layout) -> Option<Str
     None
 }
 
-/// What goes from one rom.s section: all of it, or the stretch from the
-/// module's first label up to the next function's label, the rest staying.
+/// What goes from one rom.s section: all of it, or the module's stretch, the
+/// rest staying: lines before the module's first label in the section
+/// itself, what follows as a section of its own. With the module's size in
+/// the edition known, the stretch is its bytes: code after it that no label
+/// names stays, and sections its bytes run on into go or are trimmed.
+#[derive(Debug)]
 struct Cut {
     section: Section,
     row: usize,
     /// The line the module's part starts at, when lines before it stay.
     head: Option<usize>,
-    /// The line and ROM offset of what stays after it, as a section of its own.
-    tail: Option<(usize, u32)>,
+    /// What stays after it, as a section of its own: its ROM offset and lines.
+    tail: Option<(u32, Vec<String>)>,
     kept: Vec<String>,
+    /// The ROM offset of the module's first labelled function, and its name.
+    start: Option<(u32, String)>,
+    /// Later sections the module's bytes run on into: each goes (None) or
+    /// keeps what follows them (its new offset and lines).
+    covered: Vec<(Section, Option<(u32, Vec<String>)>)>,
 }
 
 /// Links `module` in `language` in place of the edition's rom.s sections
@@ -591,9 +616,10 @@ fn relink(
     names: &[String],
     known: &BTreeSet<String>,
     halfword: Option<bool>,
+    edition: Option<&Edition>,
 ) -> Result<String, String> {
     let saved = files.now.clone();
-    let result = relink_edition(files, layout, list, language, module, names, known, halfword);
+    let result = relink_edition(files, layout, list, language, module, names, known, halfword, edition);
     if result.is_err() {
         files.now = saved;
     }
@@ -610,6 +636,7 @@ fn relink_edition(
     names: &[String],
     known: &BTreeSet<String>,
     halfword: Option<bool>,
+    edition: Option<&Edition>,
 ) -> Result<String, String> {
     if list.rows.iter().any(|row| row.object() == module && row.links(language)) {
         return Err("it already links the module".into());
@@ -618,15 +645,20 @@ fn relink_edition(
     let path = format!("{scaffold}.s");
     let text = files.read(&path)?;
     let (all, newline) = lines(&text);
+    let every = sections(&all);
+    let naming: Vec<&Section> = every
+        .iter()
+        .filter(|s| s.name.starts_with(".rom.") && globals(&all[s.start..s.end]).iter().any(|name| names.contains(name)))
+        .collect();
     let mut cuts = Vec::new();
-    for section in sections(&all).into_iter().filter(|s| s.name.starts_with(".rom.")) {
-        if !globals(&all[section.start..section.end]).iter().any(|name| names.contains(name)) {
-            continue;
-        }
+    for &section in &naming {
         let row = list
             .find(&scaffold, &section.name, language)
             .ok_or_else(|| format!("{} has no row in the object list", section.name))?;
-        cuts.push(cut(&all, section, row, known)?);
+        cuts.push(match (edition, naming.len()) {
+            (Some(edition), 1) => cut_sized(&all, &every, section.clone(), row, known, edition.compiled.size())?,
+            _ => cut(&all, section.clone(), row, known)?,
+        });
     }
     if cuts.is_empty() {
         let mut why = format!("no section of {path} names {}", names.join(" "));
@@ -635,9 +667,11 @@ fn relink_edition(
         }
         return Err(why);
     }
+    let sized = edition.is_some() && cuts.len() == 1;
+    let halfword = if sized { edition.map(|edition| edition.compiled.size() % 4 == 2) } else { halfword };
     cuts.sort_by_key(|cut| cut.row);
     let rows: Vec<usize> = cuts.iter().map(|cut| cut.row).collect();
-    let divided = cuts.iter().any(|cut| cut.head.is_some() || cut.tail.is_some());
+    let divided = cuts.iter().any(|cut| cut.head.is_some() || cut.tail.is_some() || !cut.covered.is_empty());
     if cuts.len() > 1 {
         if divided {
             return Err("its sections also hold other functions".into());
@@ -651,13 +685,17 @@ fn relink_edition(
     let place = list.rows[at].place().to_string();
     let image = list.rows[at].image().to_string();
 
-    // Join the module's row when nothing this edition links lies between.
+    // Join the module's row when nothing this edition links lies between: a
+    // head stays before it and a tail follows it. A module whose bytes run on
+    // into later sections keeps a row of its own.
     let mut blocked = None;
-    let joined = if divided {
+    let (head, tail) = (cuts[0].head.is_some(), cuts[0].tail.as_ref());
+    let joined = if !cuts[0].covered.is_empty() {
         None
     } else {
         let mut candidates: Vec<usize> = (0..list.rows.len())
             .filter(|&r| list.rows[r].object() == module && list.rows[r].place() == place && !list.rows[r].links(language))
+            .filter(|&r| !head || r > at)
             .collect();
         candidates.sort_by_key(|&r| r.abs_diff(at));
         candidates.into_iter().find(|&r| {
@@ -676,21 +714,47 @@ fn relink_edition(
     };
 
     let mut edited = list.clone();
-    let module_row = if let Some(r) = joined {
+    let mut module_row = if let Some(r) = joined {
         edited.rows[r] = edited.rows[r].with_edition(language);
-        for &row in rows.iter().rev() {
+        let mut going: Vec<usize> = if head { Vec::new() } else { rows.clone() };
+        if let Some((offset, _)) = tail {
+            edited.rows.insert(r + 1, Row::new(&image, &place, &scaffold, &rom_section(*offset), &[language]));
+            going.iter_mut().filter(|row| **row > r).for_each(|row| *row += 1);
+        }
+        going.sort_unstable();
+        for &row in going.iter().rev() {
             edited.rows.remove(row);
         }
-        r - rows.iter().filter(|&&row| row < r).count()
+        r - going.iter().filter(|&&row| row < r).count()
     } else {
         let cut = &cuts[0];
+        // The sections the module runs on into follow its row in this
+        // edition, one after another; each goes or is trimmed.
+        let mut previous = at;
+        let mut covered_rows = Vec::new();
+        for (section, _) in &cut.covered {
+            let row = edited.find(&scaffold, &section.name, language).ok_or_else(|| format!("{} has no row in the object list", section.name))?;
+            if edited.next_linked(previous, language) != Some(row) {
+                return Err(format!("the module runs on into {}, whose row does not follow its own", section.name));
+            }
+            covered_rows.push(row);
+            previous = row;
+        }
+        for ((_, keep), &row) in cut.covered.iter().zip(&covered_rows).rev() {
+            match keep {
+                Some((offset, _)) => edited.rows[row].fields[3] = rom_section(*offset),
+                None => {
+                    edited.rows.remove(row);
+                }
+            }
+        }
         let mut replacement = Vec::new();
         if cut.head.is_some() {
             replacement.push(edited.rows[at].clone());
         }
         replacement.push(Row::new(&image, &place, module, ".text", &[language]));
-        if let Some((_, offset)) = cut.tail {
-            replacement.push(Row::new(&image, &place, &scaffold, &rom_section(offset), &[language]));
+        if let Some((offset, _)) = &cut.tail {
+            replacement.push(Row::new(&image, &place, &scaffold, &rom_section(*offset), &[language]));
         }
         for &row in rows[1..].iter().rev() {
             edited.rows.remove(row);
@@ -698,34 +762,69 @@ fn relink_edition(
         edited.rows.splice(at..at + 1, replacement);
         at + usize::from(cut.head.is_some())
     };
+    // A row of its own beside another of the module's rows is that row.
+    for neighbour in [module_row.checked_sub(1), Some(module_row + 1)].into_iter().flatten() {
+        if let Some(merged) = edited.rows.get(neighbour).and_then(|row| merge_rows(row, &edited.rows[module_row])) {
+            edited.rows[neighbour] = merged;
+            edited.rows.remove(module_row);
+            module_row = neighbour.min(module_row);
+            break;
+        }
+    }
 
     // The scaffold without what goes.
     let mut out: Vec<String> = all.iter().map(|line| line.to_string()).collect();
-    let mut by_line: Vec<&Cut> = cuts.iter().collect();
-    by_line.sort_by_key(|cut| cut.section.start);
-    for cut in by_line.iter().rev() {
+    let mut edits: Vec<(usize, usize, Vec<String>)> = Vec::new();
+    for cut in &cuts {
         let s = &cut.section;
         let mut keep: Vec<String> = Vec::new();
         if let Some(start) = cut.head {
             keep.extend(all[s.start..start].iter().map(|l| l.to_string()));
         }
-        if let Some((start, offset)) = cut.tail {
-            keep.push(format!("\t.section {}, \"ax\"", rom_section(offset)));
-            keep.extend(all[start..s.end].iter().map(|l| l.to_string()));
+        if let Some((offset, lines)) = &cut.tail {
+            keep.push(format!("\t.section {}, \"ax\"", rom_section(*offset)));
+            keep.extend(lines.iter().cloned());
         }
-        out.splice(s.start..s.end, keep);
+        edits.push((s.start, s.end, keep));
+        for (section, rest) in &cut.covered {
+            let mut keep = Vec::new();
+            if let Some((offset, lines)) = rest {
+                keep.push(format!("\t.section {}, \"ax\"", rom_section(*offset)));
+                keep.extend(lines.iter().cloned());
+            }
+            edits.push((section.start, section.end, keep));
+        }
+    }
+    edits.sort_by_key(|(start, ..)| std::cmp::Reverse(*start));
+    for (start, end, keep) in edits {
+        out.splice(start..end, keep);
     }
     files.write(&path, join_lines(&out, newline));
+    let cut = &cuts[0];
     let mut done = match &cuts[..] {
-        [cut] if divided => format!(
+        [cut] if sized && (cut.tail.is_some() || cut.head.is_some()) => format!(
+            "{} keeps what is not the module's {:#x} bytes{}{}{}",
+            cut.section.name,
+            edition.map_or(0, |edition| edition.compiled.size()),
+            cut.start.as_ref().map(|(offset, _)| format!(" at {offset:#x}")).unwrap_or_default(),
+            if cut.kept.is_empty() { String::new() } else { format!(" ({} stay)", join(&cut.kept)) },
+            cut.tail.as_ref().map(|(offset, _)| format!(", from {} on", rom_section(*offset))).unwrap_or_default()
+        ),
+        [cut] if divided && cut.covered.is_empty() => format!(
             "{} divides at the module's labels: {} stay{}",
             cut.section.name,
             join(&cut.kept),
-            cut.tail.map(|(_, offset)| format!(", from {} on", rom_section(offset))).unwrap_or_default()
+            cut.tail.as_ref().map(|(offset, _)| format!(", from {} on", rom_section(*offset))).unwrap_or_default()
         ),
         [cut] => format!("{} goes", cut.section.name),
         _ => format!("{} go", join(&cuts.iter().map(|cut| &cut.section.name).collect::<Vec<_>>())),
     };
+    for (section, rest) in &cut.covered {
+        done.push_str(&match rest {
+            Some((offset, _)) => format!("; {} becomes {}, the module's bytes reaching into it", section.name, rom_section(*offset)),
+            None => format!("; {} goes, the module's bytes covering it", section.name),
+        });
+    }
     done.push_str(&match (joined, blocked) {
         (Some(_), _) => "; joins the module's row".to_string(),
         (None, Some(object)) => format!("; a row of its own ({object} lies between)"),
@@ -773,13 +872,27 @@ fn unlabelled_beside(list: &ObjectList, all: &[&str], module: &str, scaffold: &s
     (found.len() == 1).then(|| found.into_iter().next().unwrap())
 }
 
-/// Which of a section's pieces go with the module.
+/// Two rows placing the same sections of one object, one beside the other,
+/// as one row linking both rows' editions; None when they place different
+/// things or share an edition.
+fn merge_rows(a: &Row, b: &Row) -> Option<Row> {
+    let same = a.image() == b.image() && a.place() == b.place() && a.object() == b.object() && a.sections() == b.sections();
+    let (first, second) = (a.editions().unwrap_or(LANGUAGES.to_vec()), b.editions().unwrap_or(LANGUAGES.to_vec()));
+    if !same || first.iter().any(|edition| second.contains(edition)) {
+        return None;
+    }
+    let editions: Vec<&str> = first.into_iter().chain(second).collect();
+    Some(Row::new(a.image(), a.place(), a.object(), a.fields.get(3).map_or("", String::as_str), &editions))
+}
+
+/// Which of a section's pieces go with the module, by its labels.
 fn cut(all: &[&str], section: Section, row: usize, known: &BTreeSet<String>) -> Result<Cut, String> {
     let pieces = pieces(all, &section);
     let theirs = |names: &[String]| !names.is_empty() && names.iter().all(|name| !known.contains(name));
     let ours = |names: &[String]| !names.is_empty() && names.iter().all(|name| known.contains(name));
+    let start = pieces.iter().find(|piece| ours(&piece.names)).and_then(|piece| Some((piece.offset?, piece.names[0].clone())));
     if pieces.iter().all(|piece| piece.names.is_empty() || ours(&piece.names)) {
-        return Ok(Cut { section, row, head: None, tail: None, kept: Vec::new() });
+        return Ok(Cut { section, row, head: None, tail: None, kept: Vec::new(), start, covered: Vec::new() });
     }
     if let Some(mixed) = pieces.iter().find(|piece| !piece.names.is_empty() && !theirs(&piece.names) && !ours(&piece.names)) {
         return Err(format!("{} labels {} at one place", section.name, mixed.names.join(" and ")));
@@ -794,11 +907,87 @@ fn cut(all: &[&str], section: Section, row: usize, known: &BTreeSet<String>) -> 
         return Err(format!("{} holds bytes beside the module's that no label names", section.name));
     }
     let tail = match pieces.get(last + 1) {
-        Some(piece) => Some((piece.start, piece.offset.ok_or_else(|| format!("{} has a label with no bytes", section.name))?)),
+        Some(piece) => {
+            let offset = piece.offset.ok_or_else(|| format!("{} has a label with no bytes", section.name))?;
+            Some((offset, all[piece.start..section.end].iter().map(|line| line.to_string()).collect()))
+        }
         None => None,
     };
     let kept = pieces.iter().filter(|piece| theirs(&piece.names)).flat_map(|piece| piece.names.clone()).collect();
-    Ok(Cut { section, row, head: (first > 0).then_some(pieces[first].start), tail, kept })
+    Ok(Cut { section, row, head: (first > 0).then_some(pieces[first].start), tail, kept, start, covered: Vec::new() })
+}
+
+/// The ROM offset just past a section's last bytes.
+fn section_end(all: &[&str], section: &Section) -> Option<u32> {
+    all[section.start..section.end].iter().filter_map(|line| incbin(line)).map(|(offset, length)| offset + length).max()
+}
+
+/// Which of a section's bytes go with the module, by its size: the module's
+/// `size` bytes from its first label. What comes before stays in the
+/// section, what follows becomes a section of its own with the labels it
+/// holds, and later sections the bytes run on into go or are trimmed.
+fn cut_sized(all: &[&str], every: &[Section], section: Section, row: usize, known: &BTreeSet<String>, size: u32) -> Result<Cut, String> {
+    let parts = pieces(all, &section);
+    let ours = |names: &[String]| !names.is_empty() && names.iter().all(|name| known.contains(name));
+    if let Some(mixed) = parts.iter().find(|piece| !piece.names.is_empty() && !ours(&piece.names) && piece.names.iter().any(|n| known.contains(n))) {
+        return Err(format!("{} labels {} at one place", section.name, mixed.names.join(" and ")));
+    }
+    let first = parts.iter().position(|piece| ours(&piece.names)).ok_or_else(|| format!("{} labels none of the module's functions", section.name))?;
+    let start = parts[first].offset.ok_or_else(|| format!("{} has a label with no bytes", section.name))?;
+    if start % 4 != 0 {
+        return Err(format!("{} places the module at {start:#x}, which is not on a word", section.name));
+    }
+    let end = start + size;
+    let mut kept: Vec<String> = parts[..first].iter().flat_map(|piece| piece.names.clone()).collect();
+    let tail = clip(all, &parts[first..], end, known, &section.name, &mut kept)?;
+    let mut covered = Vec::new();
+    let mut reach = section_end(all, &section).ok_or_else(|| format!("{} places no bytes", section.name))?;
+    while end > reach {
+        let next = every
+            .iter()
+            .find(|s| rom_offset(&s.name) == Some(reach))
+            .ok_or_else(|| format!("the module's {size:#x} bytes run on past {}, and no section starts at {reach:#x}", section.name))?;
+        let rest = clip(all, &pieces(all, next), end, known, &next.name, &mut kept)?;
+        reach = section_end(all, next).ok_or_else(|| format!("{} places no bytes", next.name))?;
+        covered.push((next.clone(), rest));
+    }
+    let head = (first > 0).then_some(parts[first].start);
+    let name = parts[first].names[0].clone();
+    Ok(Cut { section, row, head, tail, kept, start: Some((start, name)), covered })
+}
+
+/// The lines of `pieces` from ROM offset `end` on, with the labels there
+/// (each added to `kept`), and the offset they start at; None when the
+/// module's bytes cover them all. A label of another function before `end`
+/// lies amid the module, and one of the module's after it past its bytes.
+fn clip(all: &[&str], pieces: &[Piece], end: u32, known: &BTreeSet<String>, name: &str, kept: &mut Vec<String>) -> Result<Option<(u32, Vec<String>)>, String> {
+    let mut lines = Vec::new();
+    let mut at = None;
+    for piece in pieces {
+        let offset = piece.offset.ok_or_else(|| format!("{name} has a label with no bytes"))?;
+        if offset >= end {
+            if let Some(ours) = piece.names.iter().find(|n| known.contains(*n)) {
+                return Err(format!("{name} labels {ours} past the module's bytes, at {offset:#x}"));
+            }
+            at.get_or_insert(offset);
+            kept.extend(piece.names.iter().cloned());
+            lines.extend(all[piece.start..piece.end].iter().map(|line| line.to_string()));
+            continue;
+        }
+        if let Some(other) = piece.names.iter().find(|n| !known.contains(*n)) {
+            return Err(format!("{name} labels {other} amid the module's bytes, at {offset:#x}"));
+        }
+        for line in &all[piece.start..piece.end] {
+            let Some((offset, length)) = incbin(line) else { continue };
+            if offset + length <= end {
+                continue;
+            }
+            let from = offset.max(end);
+            at.get_or_insert(from);
+            lines.push(incbin_line(from, offset + length - from));
+        }
+    }
+    Ok(at.map(|at| (at, lines)))
 }
 
 /// Code that ends on a halfword leaves what follows it 2 bytes early unless
@@ -880,12 +1069,22 @@ fn adopt_edition(files: &mut Files, item: &str, options: &Options) -> Result<Vec
             report.push(format!("  {language}  already links it"));
             continue;
         }
-        match relink(files, &layout, &mut list, language, object, &names, &defined, halfword) {
+        let (edition, unknown) = match source.ends_with(".c") {
+            true => match Edition::read(files.root(), &layout.game, language, &source) {
+                Ok(edition) => (Some(edition), None),
+                Err(why) => (None, Some(why)),
+            },
+            false => (None, None),
+        };
+        match relink(files, &layout, &mut list, language, object, &names, &defined, halfword, edition.as_ref()) {
             Ok(done) => {
                 linked += 1;
                 report.push(format!("  {language}  {done}"));
             }
             Err(why) => report.push(format!("  {language}  stays on its scaffold: {why}")),
+        }
+        if let Some(why) = unknown {
+            report.push(format!("      cut by its labels alone, its size there unknown: {why}"));
         }
     }
     if linked == 0 {
@@ -1788,7 +1987,8 @@ mod tests {
     }
 
     /// German's section goes and joins the module's row; Japanese's also holds
-    /// the next function, which stays as a section of its own; the code ends
+    /// the next function, which stays as a section of its own after the
+    /// module's joined row; the code ends
     /// on a halfword, so what follows it in each edition aligns itself.
     #[test]
     fn main_adoption_relinks_each_edition_and_undoes() {
@@ -1813,7 +2013,7 @@ mod tests {
         let read = |path: &str| std::fs::read_to_string(root.join(path)).unwrap();
         assert_eq!(
             read("games/tla/objects.tsv"),
-            "image\tplace\tobject\tsections\teditions\nmain\trom\tgames/tla/src/field/a\t.text\nmain\trom\tgames/tla/src/field/f000100\t.text\ten de\nmain\trom\tgames/tla/src/field/f000100\t.text\tja\nmain\trom\trecon/tla/ja/rom\t.rom.00000104\tja\nmain\trom\trecon/tla/raw/08000120\t.text\ten\nmain\trom\trecon/tla/de/rom\t.rom.00000120\tde\nmain\trom\tgames/tla/src/field/b\t.text\n"
+            "image\tplace\tobject\tsections\teditions\nmain\trom\tgames/tla/src/field/a\t.text\nmain\trom\tgames/tla/src/field/f000100\t.text\ten de ja\nmain\trom\trecon/tla/ja/rom\t.rom.00000104\tja\nmain\trom\trecon/tla/raw/08000120\t.text\ten\nmain\trom\trecon/tla/de/rom\t.rom.00000120\tde\nmain\trom\tgames/tla/src/field/b\t.text\n"
         );
         assert_eq!(read("recon/tla/raw/08000120.s"), ".syntax unified\n\t.thumb\n\t.balign 4\n\t.global Func_08000120\n\t.thumb_func\nFunc_08000120:\n\tbx lr\n");
         assert_eq!(read("recon/tla/de/rom.s"), "\t.section .rom.00000120, \"ax\"\n\t.balign 4\n\t.global Func_08000120\nFunc_08000120:\n\t.incbin \"baserom.gba\", 0x00000120, 0x00000002\n");
@@ -1855,6 +2055,56 @@ mod tests {
         assert!(report.iter().any(|line| line.contains("de  stays on its scaffold")), "{report:?}");
         assert_eq!(files.read("recon/tla/de/rom.s").unwrap(), de);
         assert!(files.read("games/tla/objects.tsv").unwrap().contains("recon/tla/de/rom\t.rom.00000100\tde\n"));
+    }
+
+    /// With the module's size in an edition known, a section keeps the gap
+    /// before its label and the code after the module's bytes, and the
+    /// section after it is trimmed or goes when the module runs on into it.
+    #[test]
+    fn a_section_divides_at_the_module_s_size() {
+        let text = "\t.section .rom.000000fe, \"ax\"\n\t.incbin \"baserom.gba\", 0x000000fe, 0x00000002\n\t.global F\n\t.thumb_func\nF:\n\t.incbin \"baserom.gba\", 0x00000100, 0x00000040\n\t.section .rom.00000140, \"ax\"\n\t.incbin \"baserom.gba\", 0x00000140, 0x00000004\n";
+        let all: Vec<&str> = text.lines().collect();
+        let every = sections(&all);
+        let known: BTreeSet<String> = ["F".to_string()].into();
+        let cut = cut_sized(&all, &every, every[0].clone(), 0, &known, 0x1e).unwrap();
+        assert_eq!(cut.head, Some(2), "the gap before F stays in its section");
+        assert_eq!(cut.tail, Some((0x11e, vec!["\t.incbin \"baserom.gba\", 0x0000011e, 0x00000022".to_string()])));
+        assert!(cut.covered.is_empty());
+        assert_eq!(cut.start, Some((0x100, "F".to_string())));
+        let cut = cut_sized(&all, &every, every[0].clone(), 0, &known, 0x42).unwrap();
+        assert_eq!(cut.tail, None);
+        assert_eq!(cut.covered, vec![(every[1].clone(), Some((0x142, vec!["\t.incbin \"baserom.gba\", 0x00000142, 0x00000002".to_string()])))]);
+        let cut = cut_sized(&all, &every, every[0].clone(), 0, &known, 0x44).unwrap();
+        assert_eq!(cut.covered, vec![(every[1].clone(), None)]);
+        assert!(cut_sized(&all, &every, every[0].clone(), 0, &known, 0x48).unwrap_err().contains("no section starts at 0x144"));
+    }
+
+    /// Three functions in one section, adopted one by one: each leaves the
+    /// next its labels, and the last takes what is left.
+    #[test]
+    fn functions_sharing_a_section_are_cut_one_after_another() {
+        let text = "\t.section .rom.00000100, \"ax\"\n\t.global F\nF:\n\t.incbin \"baserom.gba\", 0x00000100, 0x00000010\n\t.global G\nG:\n\t.incbin \"baserom.gba\", 0x00000110, 0x00000008\n\t.global H\nH:\n\t.incbin \"baserom.gba\", 0x00000118, 0x00000004\n";
+        let all: Vec<&str> = text.lines().collect();
+        let every = sections(&all);
+        let cut = cut_sized(&all, &every, every[0].clone(), 0, &["F".to_string()].into(), 0x10).unwrap();
+        let (offset, tail) = cut.tail.unwrap();
+        assert_eq!((offset, cut.kept), (0x110, vec!["G".to_string(), "H".to_string()]));
+        let rest = [format!("\t.section {}, \"ax\"", rom_section(offset))].into_iter().chain(tail).collect::<Vec<_>>();
+        let all: Vec<&str> = rest.iter().map(String::as_str).collect();
+        let every = sections(&all);
+        let cut = cut_sized(&all, &every, every[0].clone(), 0, &["G".to_string()].into(), 0x8).unwrap();
+        assert_eq!(cut.tail.as_ref().map(|(offset, _)| *offset), Some(0x118));
+        assert!(cut_sized(&all, &every, every[0].clone(), 0, &["G".to_string()].into(), 0xc).unwrap_err().contains("H amid"));
+        assert!(cut_sized(&all, &every, every[0].clone(), 0, &["G".to_string(), "H".to_string()].into(), 0x4).unwrap_err().contains("H past"));
+    }
+
+    #[test]
+    fn rows_beside_each_other_merge_only_when_they_place_the_same() {
+        let a = Row::new("main", "rom", "games/tla/src/x", ".text", &["ja"]);
+        let b = Row::new("main", "rom", "games/tla/src/x", ".text", &["en", "de", "es", "fr", "it"]);
+        assert_eq!(merge_rows(&a, &b).unwrap().fields.len(), 4, "all six editions write no column");
+        assert!(merge_rows(&a, &a).is_none());
+        assert!(merge_rows(&a, &Row::new("main", "rom", "games/tla/src/y", ".text", &["en"])).is_none());
     }
 
     /// Two overlay drafts adopted in one journal; the build blames the second,
