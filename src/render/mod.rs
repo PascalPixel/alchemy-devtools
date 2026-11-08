@@ -1,7 +1,10 @@
-//! render: the game's own code at work, recorded from a built edition run in
-//! libmgba. `render psynergy` plays each battle Psynergy the party casts and
-//! writes it as a looping GIF. Nothing here takes part in a build, and the
-//! ROM is only read: the pictures are what it draws.
+//! render: the game's own code at work, recorded from a built ☀️ edition run
+//! in libmgba, for the docs site: each battle Psynergy the party casts
+//! (`psynergy`), each scene's entrance photo, maps and events (`place`,
+//! `event`), the front page's pictures (`story`) and the folder guides'
+//! recordings (`guide`), and the check every recording passes (`check`).
+//! Nothing here takes part in a build, and the ROM is only read: the
+//! pictures are what it draws.
 
 #[cfg(feature = "render")]
 mod animation;
@@ -18,11 +21,7 @@ mod front;
 #[cfg(feature = "render")]
 mod guide;
 #[cfg(feature = "render")]
-mod guide_system;
-#[cfg(feature = "render")]
 mod guide_front;
-#[cfg(feature = "render")]
-mod guide_apart;
 #[cfg(feature = "render")]
 mod guide_aerie;
 #[cfg(feature = "render")]
@@ -30,19 +29,13 @@ mod guide_battle;
 #[cfg(feature = "render")]
 mod guide_beam;
 #[cfg(feature = "render")]
-mod guide_cells;
-#[cfg(feature = "render")]
 mod guide_docs_world;
 #[cfg(feature = "render")]
 mod guide_field_moves;
 #[cfg(feature = "render")]
 mod guide_unused;
 #[cfg(feature = "render")]
-mod guide_effect;
-#[cfg(feature = "render")]
 mod guide_fight;
-#[cfg(feature = "render")]
-mod guide_menu;
 #[cfg(feature = "render")]
 mod guide_lucky;
 #[cfg(feature = "render")]
@@ -52,8 +45,6 @@ mod guide_menus;
 #[cfg(feature = "render")]
 mod guide_more;
 #[cfg(feature = "render")]
-mod guide_planes;
-#[cfg(feature = "render")]
 mod guide_places;
 #[cfg(feature = "render")]
 mod guide_set_piece;
@@ -61,10 +52,6 @@ mod guide_set_piece;
 mod guide_scene_map;
 #[cfg(feature = "render")]
 mod guide_take;
-#[cfg(feature = "render")]
-mod guide_window;
-#[cfg(feature = "render")]
-mod guide_world;
 #[cfg(feature = "render")]
 mod guide_world_play;
 mod jobs;
@@ -74,12 +61,6 @@ mod mgba;
 mod party;
 #[cfg(feature = "render")]
 mod places;
-#[cfg(feature = "render")]
-mod probe;
-#[cfg(feature = "render")]
-mod probe_places;
-#[cfg(feature = "render")]
-mod probe_units;
 #[cfg(feature = "render")]
 mod source;
 #[cfg(feature = "render")]
@@ -117,12 +98,12 @@ cast as it finishes one, summons and Djinn first, and joins their rows
 into one index.tsv, the same as one process writes.
 
 --backdrop sets the battlefield behind the fighters: `gradient` (the default)
-clears the battle background and draws a grey a line as the GBA's backdrop
-colour; `game` keeps the battle's own background; a 256 by 120 PNG, a
-battle backdrop's size, takes the background's place in its own format (128
-colours in BG palettes 6 to 13, 256-colour tiles), and the game draws,
-scrolls, darkens and blends it as its own. The windows are drawn grey at
-their colours' lightness.
+clears the battle background and draws a grey gradient, a shade a line,
+as the GBA's backdrop colour; `game` keeps the battle's own background; a
+256 by 120 PNG, a battle backdrop's size, takes the background's place in
+its own format (128 colours in BG palettes 6 to 13, 256-colour tiles), and
+the game draws, scrolls, darkens and blends it as its own. The windows are
+drawn grey at their colours' lightness.
 
 The caster follows the element: Venus Isaac, Mercury Mia, Mars Jenna for
 her own Flare Psynergy and Garet for the rest, Jupiter Ivan: the four from
@@ -145,7 +126,6 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         Some(kind @ ("place" | "event")) => scenes(kind, &arguments[1..]),
         Some("story") => story_pictures(&arguments[1..]),
         Some("guide") => guide_pictures(&arguments[1..]),
-        Some("probe") => probe_command(&arguments[1..]),
         #[cfg(feature = "render")]
         Some("check") => animation::check_folders(&arguments[1..]),
         Some("-h" | "--help") => {
@@ -426,30 +406,47 @@ fn write_index(path: &Path, rows: Vec<Row>) -> Result<(), String> {
     std::fs::write(path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 
-const COMMANDS: &str = "usage: alchemy-devtools render psynergy|place|event [options]
+const COMMANDS: &str = "usage: alchemy-devtools render psynergy|place|event|story|guide|check [options]
   psynergy  each battle Psynergy the party casts, as a looping GIF
   place     each scene's entrance photo and a map of each room, as PNG
-  event     the message pages of each scene's events, as PNG
+  event     each scene's events played from their trigger, as GIFs
   story     the front page's pictures: the title, Vale's farewell, the lit
-            lighthouse and the world map
+            lighthouses and the world map laid flat
+  guide     the folder guides' recordings: the game played with the pad
+            held as a player would
   check     every GIF under each folder given against the ten seconds a
             recording keeps of the game on each side of a black screen
-Run any of them with --help for its options.";
+Run any of them with --help for its options.
+
+Environment:
+  ALCHEMY_ROOT          the Alchemy checkout, else the one holding the
+                        working directory
+  MGBA_PREFIX           where libmgba is installed, when the render feature
+                        is built
+  ALCHEMY_RENDER_DEBUG  when set, place, event and guide's Doll House
+                        recordings print why each spot, scan or leg went as
+                        it did
+  ALCHEMY_DRIVE_DEBUG   when set, guide's battle recordings write the screen
+                        every 300 frames of the battle test menu's run, as
+                        DIR/drive-NNNNN.png
+  MOMENT_*              guide's moment mode (render guide --help)";
 
 const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene N|NAME]... [--all]
-         --places places.tsv --events events.tsv --flags flags.tsv [--messages messages.tsv]
+         --places places.tsv --events events.tsv --flags flags.tsv
          [--event NAME]... [--whole [--whole-frame L,T,W,H] [--whole-window PLACE]]
          [--out DIR] [--edition tbs-en] [--jobs N]
 Plays a built ☀️ edition (make tbs-en) under libmgba from a new game's
-defaults straight into each scene, and writes PNG files at the GBA's size
-into DIR/<scene>/ (DIR defaults to out/EDITION/places), with DIR/index.tsv
-listing every image (scene, number, area, variant, kind, entrance, event,
-page, the page's message, frames, leads_to, note, the event's messages,
-file) and DIR/skipped.tsv
-what was left out and why. --all takes every scene but the title, the
-clear-data screen and the debug test rooms. The tables are the story tools'
-places.tsv (scenes), events.tsv (each event's trigger, flags and messages)
-and flags.tsv (flag names).
+defaults straight into each scene, and writes into DIR/<scene>/ (DIR
+defaults to out/EDITION/places) PNG files at the GBA's size for place and
+GIFs for event, with DIR/index.tsv listing every picture (scene, number,
+area, variant, kind: entrance, map or event-gif, entrance, event, frames,
+leads_to, note, the event's messages, file; the page, segment, message,
+after and before columns are kept, empty, for the rows earlier versions
+wrote) and DIR/skipped.tsv what was left out and why. --all takes every
+scene but the title, the clear-data screen and the debug test rooms. The
+tables are the story tools' places.tsv (scenes), events.tsv (each event's
+trigger, flags and messages) and flags.tsv (flag names).
+ALCHEMY_RENDER_DEBUG prints each scan and each spot an event is tried from.
 
 place: the photo of the party arriving, once the player has control
 (entrance.png): entered by the lowest-numbered entrance another map's exit
@@ -483,9 +480,8 @@ index.tsv's variant column gives each moment's name and flags.
 event: every talk, search, touch and Psynergy event of the scenes
 (--event names some; rows of one name are one event), each played once,
 from just before its trigger until the player has control again, as
-DIR/<scene>/events/<event>.gif, with its first four pages that wait for
-the button as <event>.png, <event>-2.png and on. An event plays at any
-scene its row lists, so a scene's overlay brings its other scenes along.
+DIR/<scene>/events/<event>.gif. An event plays at any scene its row
+lists, so a scene's overlay brings its other scenes along.
 The leader stands where the player would to start it, on ground he could
 walk to from where he enters, in the room the camera shows: beside the
 actor, on its map layer and level with it, facing it; facing the cell it
@@ -493,8 +489,7 @@ searches from any of eight ways; a cell from the cell it touches, walking
 onto it, or on the cell pushing the way its row needs; for a Psynergy any
 target answers (Reveal, Cloak), where the scene's arrival leaves him. Move
 is steered with the d-pad once cast. An event counts only when the field
-sequence
-dispatches it at the leader's spot, it runs a script, and it shows
+sequence dispatches it at the leader's spot, it runs a script, and it shows
 itself: one of its messages when it has messages, else (a touch, a Move)
 something that moves, leaves, fights or changes the map. Each of its
 triggers is tried in turn, by the entrances whose events answer it, with
@@ -510,17 +505,17 @@ Event_ShowMessageAndWait, Event_End), before and after each of the scene's
 other events. Such a start counts only when it speaks, moves someone,
 fights or leaves, or when its last picture differs from the same moment
 played as long with nothing started by at least one pixel in a hundred.
-Pages are held 45 frames. An exit
+Each page that waits for the button is held 45 frames before A. An exit
 is followed into the scene it leads to: the fade out, the load, that
-scene's arrival (its pages answered, none kept) and its fade in, until the
-player has control there as at a scene's start and half a second more,
-with each run of a blank screen cut to its first 8 frames so the GIF
-never sits on black. An arrival is followed for at most 10 seconds from
-the load; one that runs longer, or that begins a battle, ends there, and
-index.tsv's note column says so. index.tsv's leads_to column names the scene an event places the
-party in next by its SceneId symbol (its own scene for a staircase to
-another of its entrances). An event that runs past four minutes gets no
-GIF, noted in skipped.tsv. --messages is accepted and not read.
+scene's arrival (its pages answered) and its fade in, until the player
+has control there as at a scene's start and half a second more, with
+each run of a blank screen cut to its first 8 frames so the GIF never
+sits on black. An arrival is followed for at most 10 seconds from the
+load; one that runs longer, or that begins a battle, ends there, and
+index.tsv's note column says so. index.tsv's leads_to column names the
+scene an event places the party in next by its SceneId symbol (its own
+scene for a staircase to another of its entrances). An event that runs
+past four minutes gets no GIF, noted in skipped.tsv.
 
 --whole also draws each event's GIF whole, as <event>-whole.gif: every
 second frame of the same run, from the trigger until it leaves the scene
@@ -545,7 +540,6 @@ weighed by its triggers, the scenes it may play at and the frames its
 pictures took in an earlier run's index.tsv. The scenes' old event
 pictures are cleared first. The parent joins their index.tsv, skipped.tsv
 and variant-flags.tsv lines into the files one process would write.
-
 
 Needs the `render` feature: cargo build --release --features render, with
 libmgba and its headers installed (MGBA_PREFIX names their prefix).";
@@ -602,9 +596,6 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             "--places" => o.places_tsv = Some(PathBuf::from(value("--places")?)),
             "--events" => o.events_tsv = Some(PathBuf::from(value("--events")?)),
             "--flags" => o.flags_tsv = Some(PathBuf::from(value("--flags")?)),
-            "--messages" => {
-                value("--messages")?;
-            }
             other => {
                 if !o.jobs.option(other, &mut value)? {
                     return Err(format!("unexpected argument {other:?}\n{SCENES_USAGE}"));
@@ -1047,6 +1038,9 @@ fn note_modified(root: &Path, edition: &str, rom: &[u8]) {
 const STORY_USAGE: &str = "usage: alchemy-devtools render story --flags flags.tsv [--only NAME]... [--out DIR] [--edition tbs-en]
 Plays a built ☀️ edition (make tbs-en) for The Broken Seal's front page and
 writes into DIR (default out/EDITION/story):
+  world       world.png: the world map laid flat from its own planes,
+              WorldMap_UpdateCurrentTileBlock drawing every square, each
+              drawn from whichever of its two graphics sets shows it
   title       title.gif and title.png: the Golden Sun logo card the title
               shows after the ending (its entrance 10), coming up and held
   farewell    vale-farewell.gif and vale-farewell.png: Vale's send-off,
@@ -1081,56 +1075,6 @@ fn story_pictures(arguments: &[String]) -> Result<(), String> {
     let root = crate::compile::root();
     let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("story"));
     play_story(root, &edition, &only, &flags, &out)
-}
-
-const PROBE_USAGE: &str = "usage: alchemy-devtools render probe --flags flags.tsv --only NAME... [--out DIR] [--edition tbs-en]
-Plays a built ☀️ edition and prints what it reads for open questions only the
-running game settles.";
-
-fn probe_command(arguments: &[String]) -> Result<(), String> {
-    let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
-    let mut arguments = arguments.iter();
-    while let Some(argument) = arguments.next() {
-        let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{PROBE_USAGE}"));
-        match argument.as_str() {
-            "--only" => only.push(value("--only")?),
-            "--out" => out = Some(PathBuf::from(value("--out")?)),
-            "--edition" => edition = value("--edition")?,
-            "--flags" => flags_tsv = Some(PathBuf::from(value("--flags")?)),
-            other => return Err(format!("unexpected argument {other:?}\n{PROBE_USAGE}")),
-        }
-    }
-    let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{PROBE_USAGE}"))?)?;
-    let root = crate::compile::root();
-    let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("probe"));
-    play_probe(root, &edition, &only, &flags, &out)
-}
-
-#[cfg(not(feature = "render"))]
-fn play_probe(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Result<(), String> {
-    Err("alchemy-devtools was built without the render feature".to_string())
-}
-
-#[cfg(feature = "render")]
-fn play_probe(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
-    let build = root.join("out").join(edition);
-    let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
-    let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
-    let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
-    let symbols = field::Symbols::find(&map)?;
-    std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
-    let mut failed = Vec::new();
-    for name in probe::PROBES.iter().chain(probe_places::PROBES).chain(probe_units::PROBES).filter(|p| only.is_empty() || only.iter().any(|o| o == *p)) {
-        if let Err(e) = guide.probe(name, &map) {
-            eprintln!("{name}: {e}");
-            failed.push(*name);
-        }
-    }
-    for (file, bytes, what) in &guide.written {
-        eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
-    }
-    if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
 }
 
 #[cfg(not(feature = "render"))]
@@ -1183,35 +1127,13 @@ Plays a built ☀️ edition (make tbs-en) with the pad held as a player would,
 for the folder guides, and writes into DIR (default out/EDITION/guide):
   walk        walk-run.gif: Vale, walking right, then running back with B
   snow        snow.gif: Imil, the leader's footprints in the snow
-  layers      layers.gif: Vale built up layer by layer, BG3 to BG1
   layers-3d   layers-3d.gif: Vale's layers pulled apart into sheets in 3D,
-              and planes/field/: each plane alone as a transparent PNG with
-              planes.tsv, the order the registers give (guide_planes.rs)
-  battle-layers-3d, world-map-layers-3d, menu-layers-3d, talk-layers-3d,
-  shop-layers-3d
-              a Goma Cave battle, the world map, the field menu, a message and
-              Bilibin's item shop asking what to buy,
-              pulled apart the same way, each as NAME.gif, with its
-              planes in planes/NAME/
-  scene-actors scene-actors.png: Vale at twice its size, each actor labelled
-              with its actor number
-  debug-rooms debug-level-room.png, debug-menu-room.png: the debug level room
-              and menu test room, their actors labelled
-  debug-room-talks
-              debug-level-room-N.png and .gif: each placed actor N of the debug
-              level room talked to, and the screen two seconds after A
-  moment      moment.gif, moment-F.png: a scene entered at MOMENT_PLACE
-              (scene,entrance) with MOMENT_SET's flags and left to play for
-              MOMENT_FRAMES, every MOMENT_EVERY-th frame from MOMENT_FROM
-              labelled; A every MOMENT_A frames; for each of MOMENT_ACTORS,
-              what it adds to the screen (moment-F-actor-N.png and -pair.png:
-              with it and moved away); MOMENT_OAM prints blended sprites;
-              MOMENT_PLANES writes those frames' planes in planes/moment-F/;
-              MOMENT_CELLS prints where the map holds those cell codes;
-              MOMENT_STAND (x,z) stands the leader there and MOMENT_HOLD
-              (keys,frames) then holds the pad, as a player walks
-  status-layers-3d
-              status-layers-3d.gif: the Status screen pulled apart
+              in the order the registers stack them
+  battle-layers-3d, world-map-layers-3d, menu-layers-3d, talk-layers-3d
+              a Goma Cave battle, the world map, the field menu and a
+              message, pulled apart the same way, each as NAME.gif
+  moment      moment.gif and moment-F.png: a scene left to play on its own,
+              set by the environment (Moment, below)
   world-map   world-map-walk.gif: the world map's perspective view, walking
   menus, menu-start, items, boot
               the field menu, Start closing it, the Item screen, power-on
@@ -1226,104 +1148,30 @@ for the folder guides, and writes into DIR (default out/EDITION/guide):
               menu-psynergy.gif: Move chosen from the menu, then cast
   credits     credits.gif and credits-layers.png: the credits' crossfade
   sleep       sleep.gif: L and R held until the screen turns white
-  oam         oam.png: a frame's sprite list entries outlined
-  vram        vram.png: video memory as tiles, and the palettes
-  cells       cells.png: a screen's ground cells, collision and heights
-  grid        grid.png: a map's whole cell grid and its layers' windows
   random-battle
               random-battle.gif: walking until a random battle opens
   world-map-picture
               world-map-picture.gif: the world map's still picture (R)
   overlay     overlay.gif: walking into the Sanctum beside the overlay area
-Take-apart pictures for places and guides, each as its mode's name with
-.png or .gif (guide_take.rs):
-  tret-tree-branch-split, kolima-forest-tree-healing, altmiller-cave-darkness,
-  bilibin-cave-third-puddle, fuchin-falls-cave-logs, mercury-lighthouse-pool,
-  lunpa-fortress-patrol, tolbi-spring-toss, kolima-forest-entrance-fields,
-  tree-rooms-cocoons, colosseum-azart-race, colosseum-navampa-scales,
-  colosseum-satrage-lifts, tunnel-ruins-balance, venus-lighthouse-aerie-eruption
-  (and venus-lighthouse-aerie-layers-3d.gif), scene-event-cells,
-  credits-tile-ring, title-intro-layers-3d, item-screen-windows, sound-players,
-  field-requests, grid-planes, tile-animation, world-map-scanlines,
-  world-map-footprint
-Take-apart pictures for the battle, effect, field and shop guides
-(guide_apart.rs):
-  round-events      round-events.gif: Quake's battle events one frame each,
-                    beside the event queue
-  battle-places     battle-places.gif: aiming Quake through the command menu,
-                    beside the battlefield's places seen from above
-  effect-canvas     effect-canvas.gif: Heat Wave beside its 128 by 128 canvas
-  effect-transfer   effect-transfer.gif: Heat Wave's canvas under each
-                    canvas transfer mode, forced
-  effect-particles  effect-particles.gif: Heat Wave beside its particle pools
-  sprite-layers     sprite-layers.gif: Isaac's battle sprite, each layer
-                    composed alone and together
-  shop-counters     shop-counters.png: Bilibin's weapon shop before and after
-                    Vault's, its Buy and Artifacts lists
-Take-apart pictures for the window and shop guides (guide_window.rs; work-block
-also reads out/tbs-ja, make tbs-ja):
-  work-block        work-block.gif: the window work block byte by byte in the
-                    Japanese and international layouts as a message shows
-  text-ring         text-ring.gif: a message decoded into the ring, typed out
-  render-outputs    render-outputs.gif: a message's render outputs outlined
-  area-name         area-name.gif: Bilibin's area name and its countdown
-  sanctum           sanctum.gif: the Vale Sanctum's Revive and its members
-  item-picker       item-picker.gif: a Nut given with every bag full
-  menu-slot         menu-slot.png: the menu heap slot as a counter and as the
-                    Item screen read it
-Pictures for the battle guide's rules (guide_battle.rs):
-  enemy-actions     enemy-actions.png: a Gryphon's eight actions, the
-                    weights its strategy picks them by and the place each
-                    of the 256 rolls takes
-  first-strikes     first-strikes.png: a random encounter opened with a first
-                    strike and with a surprise, through the first round
-  element-multiplier
-                    element-multiplier.png: gElement_PowerResistCurve as its
-                    line, with Quake's and an attack's targets on it
-  plan-rolls        plan-rolls.png: a miss, a critical hit and a triple blow
-                    beside the plan's rolls
-  staging           staging.gif: Quake under each outcome, STAGING_CAST to
-                    STAGING_FULL_SCREEN
-  added-effects     added-effects.png: Impair, Delude and Guard's stages and
-                    counters over nine rounds
-  after-target      after-target.png: a sleeper woken by Quake, and a haunted
-                    caster's evil spirit taking its share
-Take-apart pictures for the battle effects guide (guide_effect.rs):
-  effect-variants   effect-variants.gif: Quake, Earthquake and Quake Sphere
-                    side by side, beside their plan words
-  djinn-attacks     djinn-attacks.gif: Venus, Mercury, Mars and Jupiter
-                    beside their flames and motes
-  spark-groups      spark-groups.gif: Supernova beside its flashes and sparks
-  stat-reductions   stat-reductions.gif: Debilitate beside each target's shards
-  target-strikes    target-strikes.gif: Twin Beaks and Acid Bite beside
-                    their parked smoke, motes and sparks
+  venus-lighthouse-aerie-eruption
+              venus-lighthouse-aerie-eruption.gif: the beacon erupting, and
+              venus-lighthouse-aerie-layers-3d.gif: its moment pulled apart
+  title-intro-layers-3d
+              title-intro-layers-3d.gif: the title intro pulled apart
+  tile-animation
+              tile-animation.gif: Vale beside the ground tiles the tile
+              animation rewrites
+  statue-sky-rows
+              statue-sky-rows.gif: Sol Sanctum's statue room, its drifting
+              sky beside the sprites alone and the backgrounds alone
 Recordings for the battle pages, the game alone (guide_fight.rs), each
 into battle/ or battle_anim/ under DIR:
   fight-opening, fight-commands, fight-aim, fight-round, fight-turn-order,
   fight-first-strike, fight-flee, fight-gryphons, fight-twin-beaks,
   fight-unleash, fight-rolls, fight-wake, fight-won, fight-bone-charge,
   fight-ally-search, fight-storm, fight-critical, fight-item,
-  fight-enemy-flees, fight-summon, fight-action-end, fight-turn-end,
-  fight-level-up (into game/), fight-lost
-Take-apart pictures for the menu guide (guide_menu.rs), in Xian:
-  psynergy-steps    psynergy-steps.png: Cure used on Garet, a panel for each
-                    step of the Psynergy screen
-  djinn-preview     djinn-preview.png: Flint put on standby, the preview beside
-                    Isaac's unit before and after
-  status-pages      status-pages.png: the Status screen's member row and pages,
-                    the four Djinn figures outlined
-  status-panels     status-panels.png: the status panel once for each kind
-  item-sorting      item-sorting.png: Isaac's items in each of the four orders
-Take-apart pictures for Vale, Sol Sanctum and the Sanctum (guide_places.rs):
-  sanctum-account, star-room-rising, eruption-departures, statue-sky-rows,
-  vale-opening, vale-gate-display, cottage-rooms-a-sleep, vale-kraden-rockslide,
-  vale-cave-kite
-Take-apart pictures for the system's and field's guides, each as its mode's
-name with .png or .gif (guide_system.rs):
-  menu-test-setup, palette-fade, scheduler, io-write-queue,
-  resource-directory, memory-maps, map-header, placeholders, markers,
-  world-map-squares, colosso-path, player-probes, item-row, scene-script,
-  temporary-flags, overlay-common
+  fight-enemy-flees, fight-action-end, fight-turn-end, fight-level-up
+  (into game/), fight-lost
 Recordings for the front page, the System page and the runtime, graphics,
 sound and debug guides, each under its guide folder (guide_front.rs):
   front-door, front-area-name, front-warp-rows, front-story,
@@ -1390,7 +1238,40 @@ under DIR (guide_scene_map.rs):
 --only picks some; flags.tsv is the story tools' flag names. --jobs N hands the
 modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),
-joining their index.tsv rows.";
+joining their index.tsv rows.
+
+Moment looks at the game at the moment a piece of code needs, for a name
+or a comment; a run without MOMENT_PLACE skips it. Its environment:
+  MOMENT_PLACE   scene,entrance: the scene entered from a new game's
+                 defaults, with Vale's stormy night and the childhood over,
+                 played from the moment the party is placed
+  MOMENT_SET     flags set first, comma separated: flags.tsv's names or
+                 0x numbers
+  MOMENT_FRAMES  the frames played after it (default 600)
+  MOMENT_EVERY   how often a frame is written as moment-F.png: the screen
+                 at twice its size, each actor on it labelled with its
+                 number (default 30)
+  MOMENT_FROM    the first frame written (default 0)
+  MOMENT_A       A pressed for 3 frames every so many frames, to page
+                 through messages
+  MOMENT_STAND   x,z or x,z,facing (pixels, 1/65536 turns): the leader
+                 stood there once the player has control
+  MOMENT_HOLD    keys,frames,...: then each keys mask held that many frames
+                 in turn, as a player walks him (A 1, B 2, Right 16, Left
+                 32, Up 64, Down 128); the leader's place and the view are
+                 printed before the frames play
+  MOMENT_ACTORS  actor numbers: at each frame written, where each stands
+                 and what it adds to the screen, compared with it moved
+                 away (moment-F-actor-N.png and moment-F-actor-N-pair.png)
+  MOMENT_OAM     when set, at each frame written, the sprite list's
+                 semi-transparent and window entries and DISPCNT, WINOUT
+                 and BLDCNT are printed
+  MOMENT_CELLS   collision codes: where the map holds each, every cell's
+                 corner, layer and ground height, with the scroll bounds
+
+ALCHEMY_RENDER_DEBUG prints how each Doll House recording's runs went, and
+ALCHEMY_DRIVE_DEBUG writes the screen every 300 frames of a battle
+recording's run through the battle test menu, as DIR/drive-NNNNN.png.";
 
 
 fn guide_pictures(arguments: &[String]) -> Result<(), String> {
@@ -1445,10 +1326,13 @@ fn play_guide(
     jobs: &jobs::Jobs,
     arguments: &[String],
 ) -> Result<(), String> {
+    if let Some(unknown) = only.iter().find(|o| !guide::modes().any(|m| m == o.as_str())) {
+        return Err(format!("render guide has no mode {unknown:?}: render guide --help lists them"));
+    }
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     // The work in pieces: each mode, and field-psynergy's casts one by one.
     let mut units: Vec<String> = Vec::new();
-    for &name in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_interface::MODES).chain(guide_scene_map::MODES).filter(|&&name| wanted(name)) {
+    for name in guide::modes().filter(|&name| wanted(name)) {
         if name == "field-psynergy" {
             let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
             units.extend(guide::field_cast_names()?.into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
@@ -1482,7 +1366,7 @@ fn play_guide(
             }
         }
         // Failures in the order the modes play.
-        failed.sort_by_key(|name| guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_interface::MODES).chain(guide_scene_map::MODES).position(|m| m == name));
+        failed.sort_by_key(|name| guide::modes().position(|m| m == name));
         failed.dedup();
     } else {
         let build = root.join("out").join(edition);
@@ -1514,7 +1398,7 @@ fn play_guide(
                 Ok(records)
             });
         }
-        for &name in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_interface::MODES).chain(guide_scene_map::MODES) {
+        for name in guide::modes() {
             if wanted(name) {
                 if let Err(e) = guide.run(name, casts) {
                     eprintln!("{name}: {e}");
@@ -1544,15 +1428,12 @@ mod tests {
     use super::*;
 
     /// Every mode `render guide` plays is named in its usage, so a new one
-    /// (`shop-layers-3d`) or a renamed one (`status-layers-3d`) can be found
-    /// from `--help`.
+    /// or a renamed one can be found from `--help`.
     #[test]
     fn every_guide_mode_is_in_the_usage() {
         let words: Vec<&str> = GUIDE_USAGE.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-')).collect();
-        for &mode in guide::MODES.iter().chain(guide_system::MODES).chain(guide_front::MODES).chain(guide_world_play::MODES).chain(guide_fight::MODES).chain(guide_menus::MODES).chain(guide_lucky::MODES).chain(guide_interface::MODES).chain(guide_scene_map::MODES) {
+        for mode in guide::modes() {
             assert!(words.contains(&mode), "{mode} is not in GUIDE_USAGE");
         }
-        assert!(guide::MODES.contains(&"shop-layers-3d"));
-        assert!(!guide::MODES.contains(&"item-layers-3d"));
     }
 }

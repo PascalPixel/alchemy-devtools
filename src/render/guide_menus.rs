@@ -53,7 +53,7 @@ const SAVE_MESSAGE_SPEED: u32 = 0x20c;
 const ISAAC: u8 = 0;
 const GARET: u8 = 1;
 
-/// The modes this file plays, after guide_system::MODES.
+/// The modes this file plays, after guide_fight::MODES.
 pub const MODES: &[&str] = &[
     "windows-zoom",
     "message-speed",
@@ -178,7 +178,7 @@ impl<'a> Guide<'a> {
     /// then, talked to again from the same moment, at the fast speed, as
     /// `message-speed.gif`.
     fn message_speed(&mut self) -> Result<(), String> {
-        let save = self.sym("gMainRoutineWork").or_else(|_| self.sym("gSequenceParentWork")).or_else(|_| self.sym("gAdventure")).or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
+        let save = self.sym("gMainRoutineWork")?;
         let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
         let field = &mut entered.field;
         let ready = field.save();
@@ -195,7 +195,7 @@ impl<'a> Guide<'a> {
     /// Bilibin's innkeeper asked for a room: the price, a number filled
     /// into the line, and No, as `message-blanks.gif`.
     fn message_blanks(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(6, "ACTOR_BILIBIN_INNKEEPER|LOCALID_BILIBIN_INNKEEPER")?;
+        let (mut entered, _) = self.bilibin_keeper(6, "ACTOR_BILIBIN_INNKEEPER")?;
         entered.field.set_coins(500);
         let path = [(0, 20), (KEY_A, 3), (0, 70), (KEY_A, 3), (0, 90), (KEY_DOWN, 3), (0, 20), (KEY_A, 3), (0, 90), (KEY_A, 3), (0, 40)];
         self.record(&mut entered.field, &path, "message-blanks.gif", "the innkeeper's price, a number filled into the line")
@@ -379,7 +379,7 @@ impl<'a> Guide<'a> {
     /// Bilibin's weapon shop: the counter's four icons, Buy, Sell,
     /// Artifacts and Repair, and B to leave, as `shop-counter.gif`.
     fn shop_counter(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT|LOCALID_BILIBIN_WEAPON_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT")?;
         entered.field.set_coins(1000);
         let mut path = vec![(0, 20), (KEY_A, 3), (0, 100)];
         path.extend(presses(&[KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_B], 35));
@@ -391,7 +391,7 @@ impl<'a> Guide<'a> {
     /// member, the shop showing what it would do to their Attack, as
     /// `long-sword.gif`.
     fn shop_long_sword(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT|LOCALID_BILIBIN_WEAPON_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT")?;
         entered.field.set_coins(1000);
         let mut path = vec![(0, 20), (KEY_A, 3), (0, 100), (KEY_A, 3), (0, 70), (KEY_A, 3), (0, 60)];
         path.extend(presses(&[KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_B, KEY_B, KEY_B], 45));
@@ -402,8 +402,8 @@ impl<'a> Guide<'a> {
     /// Bilibin's item shop with the shop credit 5 short of the first Game
     /// Ticket: a Herb bought, and the ticket given, as `game-ticket.gif`.
     fn game_ticket(&mut self) -> Result<(), String> {
-        let save = self.sym("gMainRoutineWork").or_else(|_| self.sym("gSequenceParentWork")).or_else(|_| self.sym("gAdventure")).or_else(|_| self.sym("gCommon")).or_else(|_| self.sym("gPersistentState")).or_else(|_| self.sym("gSaveBlock"))?;
-        let (mut entered, _) = self.bilibin_keeper(5, "ACTOR_BILIBIN_ITEM_MERCHANT|LOCALID_BILIBIN_ITEM_MERCHANT")?;
+        let save = self.sym("gMainRoutineWork")?;
+        let (mut entered, _) = self.bilibin_keeper(5, "ACTOR_BILIBIN_ITEM_MERCHANT")?;
         entered.field.set_coins(500);
         entered.field.write32(save + SAVE_SHOP_CREDIT, 295);
         let mut path = vec![(0, 20), (KEY_A, 3), (0, 100)];
@@ -420,7 +420,7 @@ impl<'a> Guide<'a> {
     /// Bilibin's item shop: Sell, Isaac, his Herb, and the coins it brings,
     /// as `sell.gif`.
     fn shop_sell(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(5, "ACTOR_BILIBIN_ITEM_MERCHANT|LOCALID_BILIBIN_ITEM_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(5, "ACTOR_BILIBIN_ITEM_MERCHANT")?;
         entered.field.set_coins(500);
         let herb = Self::item_id("Herb")?;
         Self::give_front(&mut entered.field, ISAAC, &[herb])?;
@@ -434,7 +434,7 @@ impl<'a> Guide<'a> {
     /// breaks one use in eight; a sword never does), and the smith's hammer,
     /// as `repair.gif`.
     fn shop_repair(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT|LOCALID_BILIBIN_WEAPON_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT")?;
         entered.field.set_coins(1000);
         // The ring goes last: while the smith has it, its slot is left empty
         // and the list shows no more than the items before it.
@@ -457,7 +457,7 @@ impl<'a> Guide<'a> {
 
     /// Bilibin's weapon shop: Artifacts and its list, as `artifacts.gif`.
     fn shop_artifacts(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT|LOCALID_BILIBIN_WEAPON_MERCHANT")?;
+        let (mut entered, _) = self.bilibin_keeper(4, "ACTOR_BILIBIN_WEAPON_MERCHANT")?;
         entered.field.set_coins(5000);
         let mut path = vec![(0, 20), (KEY_A, 3), (0, 100)];
         path.extend(presses(&[KEY_RIGHT, KEY_RIGHT, KEY_A], 40));

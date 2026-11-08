@@ -137,7 +137,7 @@ mod tests {
         }
         let altin = source::map_id("AltinPeakWestExit").unwrap();
         assert_eq!(chapter(altin).unwrap().map(|p| p.members.len()), Some(4));
-        let storm = source::map_id("ValePrologue").or_else(|_| source::map_id("ValeStormyNight")).unwrap();
+        let storm = source::map_id("ValePrologue").unwrap();
         assert_eq!(chapter(storm).unwrap().and_then(|p| p.preset), None);
     }
 

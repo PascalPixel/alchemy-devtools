@@ -1,7 +1,7 @@
 //! The folder guides' other pictures: what a mechanism looks like as it
 //! plays (a window opening, a shop's counter, the credits' crossfade, the
-//! sleep mode), and the machine's memory drawn as pictures (video memory and
-//! its palettes, the sprite list, a map's cells, the overlay area).
+//! sleep mode), a moment played on its own with its actors labelled, and
+//! the overlay area drawn beside the screen as a scene loads.
 
 use super::animation;
 use super::animation::is_black_bgr555;
@@ -52,25 +52,12 @@ const BATTLE_SETTLE_FRAMES: u32 = 300;
 /// Frames walked south on the world map before its picture is taken.
 const WORLD_MAP_SETTLE_FRAMES: u32 = 50;
 
-/// Memory: video RAM (backgrounds, then sprites from OBJ_VRAM), palette RAM,
-/// OAM, the display registers, the overlay area and the map's cells and
-/// blocks (ram_buffer.h).
-const VRAM: u32 = 0x0600_0000;
-const OBJ_VRAM: u32 = 0x0601_0000;
-const PALETTE: u32 = 0x0500_0000;
+/// Memory: OAM, the display registers and the overlay area (ram_buffer.h).
 const OAM: u32 = 0x0700_0000;
 const DISPCNT: u32 = 0x0400_0000;
 const LAYER_BITS: u16 = 0x1f00;
-const BGCNT: u32 = 0x0400_0008;
 const OVERLAY_AREA: u32 = 0x0200_8000;
 const OVERLAY_SIZE: u32 = 0x8000;
-const MAPGRID_CELLS: u32 = 0x0201_0000;
-const MAP_BLOCKS: u32 = 0x0202_0000;
-/// MapGridScrollAnimView.layers' cells pointers (field.rs).
-const MAP_LAYER_CELLS: u32 = 0x130;
-const MAP_LAYER_SIZE: u32 = 0x30;
-/// The map's cells: 128 by 128.
-const GRID: i32 = 128;
 
 fn rgb(c: u16) -> u32 {
     animation::rgb(c)
@@ -96,14 +83,6 @@ pub(super) fn paste(to: &mut Image, from: &Image, x: usize, y: usize, scale: usi
 
 pub(super) fn screen(picture: &[u16]) -> Image {
     Image { width: WIDTH, height: HEIGHT, pixels: picture.iter().map(|&c| rgb(c)).collect() }
-}
-
-pub(super) fn mix(a: u32, b: u32, share: f64) -> u32 {
-    let channel = |s: u32| {
-        let (x, y) = (f64::from((a >> s) & 0xff), f64::from((b >> s) & 0xff));
-        ((x + (y - x) * share).round() as u32) << s
-    };
-    channel(16) | channel(8) | channel(0)
 }
 
 /// Outlines the rectangle (x, y, w, h) in `colour`, clipped.
@@ -167,12 +146,6 @@ pub(super) fn put_tile(image: &mut Image, x: usize, y: usize, pixels: &[u32; 64]
             }
         }
     }
-}
-
-/// The 512 colours of palette RAM: 256 for the backgrounds, then 256 for
-/// the sprites.
-pub(super) fn palettes(field: &Field) -> Vec<u32> {
-    (0..512).map(|i| rgb(field.read16(PALETTE + 2 * i))).collect()
 }
 
 impl<'a> Guide<'a> {
@@ -339,18 +312,6 @@ impl<'a> Guide<'a> {
         self.guide_gif("shop.gif", &frames, "buying at Bilibin's item shop")
     }
 
-    /// Bilibin's item shop as the shopkeeper asks `What would you like?`,
-    /// pulled apart, as `shop-layers-3d.gif`: Buy chosen, the price, coins,
-    /// list and description windows open on BG0 with their text drawn into
-    /// them, and the message's letters, the portrait and the item icons as
-    /// sprites over them. The path is `shop.gif`'s up to that question.
-    pub fn shop_exploded(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.stand_where(BILIBIN_ITEM_SHOP, Trigger::Talk(BILIBIN_ITEM_SHOPKEEPER), BILIBIN_ITEM_SHOPKEEPER, |s| s.facing == NORTH)?;
-        entered.field.set_coins(500);
-        Self::press_path(&mut entered.field, &[(0, 20), (KEY_A, 3), (0, 100), (KEY_A, 3), (0, 50)])?;
-        self.explode_now(&mut entered.field, "shop-layers-3d.gif", "Bilibin's item shop")
-    }
-
     /// Bilibin's inn, the party given 500 coins: a night's stay, the fade
     /// to black and back, as `inn.gif`.
     pub fn inn(&mut self) -> Result<(), String> {
@@ -428,52 +389,6 @@ impl<'a> Guide<'a> {
         self.guide_gif("sleep.gif", &frames, "L and R held in Vale until the screen turns white for sleep")
     }
 
-    /// One frame of Vale with each entry of the sprite list (OAM) outlined
-    /// in its own colour, beside the sprites alone, as `oam.png`.
-    /// Where Garet's sister stands in Vale at twice the GBA's size, each
-    /// actor on screen marked at its feet and labelled with its actor
-    /// number (the scene's own placement rows start at ACTOR_FIRST_PLACED),
-    /// as `scene-actors.png`.
-    pub fn scene_actors(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
-        let image = Self::labelled_actors(&mut entered.field)?;
-        self.guide_png("scene-actors.png", &image, "Vale's actors labelled by number")
-    }
-
-    /// The debug level room and menu test room, which draw no map, each with
-    /// its actors labelled by number, as `debug-level-room.png` and
-    /// `debug-menu-room.png`.
-    pub fn debug_rooms(&mut self) -> Result<(), String> {
-        for (scene, file, what) in [(LEVEL_ROOM, "debug-level-room.png", "the level room's actors labelled"), (MENU_TEST_ROOM, "debug-menu-room.png", "the menu test room's actors labelled")] {
-            let mut entered = self.enter_with((scene, 0), &[])?;
-            let image = Self::labelled_actors(&mut entered.field)?;
-            self.guide_png(file, &image, what)?;
-        }
-        Ok(())
-    }
-
-    /// Each placed actor of the debug level room talked to (A pressed where
-    /// a talk with it starts) and the screen two seconds later, as
-    /// `debug-level-room-<actor>.png`, the talk itself as
-    /// `debug-level-room-<actor>.gif`.
-    pub fn debug_room_talks(&mut self) -> Result<(), String> {
-        for actor in LEVEL_ROOM_ACTORS {
-            let mut entered = self.enter_with((LEVEL_ROOM, 0), &[])?;
-            // The room draws no map, so the trigger's spots are all off
-            // stage: the leader stands 16 pixels east of the actor, facing
-            // it, on its ground (the icon and portrait browsers stand one
-            // above the other, 24 pixels apart).
-            let at = entered.field.actor(actor).ok_or(format!("actor {actor} is not placed"))?;
-            let spot = Spot { x: at.x + 16, z: at.z, layer: at.layer, height: at.y, facing: WEST, walk: 0, cell: None };
-            entered.field.stand(&entered.placed, &spot)?;
-            let frames = Self::press_path(&mut entered.field, &[(0, 20), (KEY_A, 3), (0, 120)])?;
-            let last = frames.last().cloned().unwrap_or_default();
-            self.guide_png(&format!("debug-level-room-{actor}.png"), &screen(&last), &format!("actor {actor} of the debug level room, two seconds after A"))?;
-            self.guide_gif(&format!("debug-level-room-{actor}.gif"), &frames, &format!("talking to actor {actor} of the debug level room"))?;
-        }
-        Ok(())
-    }
-
     /// A scene entered and left to play on its own, for a moment no event
     /// recording reaches: MOMENT_PLACE (`scene,entrance`), MOMENT_SET (flag
     /// names or `0x` numbers, comma separated), MOMENT_FRAMES (default 600)
@@ -483,9 +398,8 @@ impl<'a> Guide<'a> {
     /// actor is and what it adds to the screen, the next frames with it and
     /// with it moved to the map's origin compared. MOMENT_A presses A that
     /// often to page through messages, and MOMENT_OAM prints the sprite
-    /// list's blended entries. MOMENT_PLANES also writes each of those
-    /// frames as its planes, into `planes/moment-<frame>/`. MOMENT_CELLS
-    /// prints where the map holds each of its collision codes.
+    /// list's blended entries. MOMENT_CELLS prints where the map holds each
+    /// of its collision codes.
     pub fn play_moment(&mut self) -> Result<(), String> {
         let var = |name: &str| std::env::var(name).unwrap_or_default();
         let place: Vec<u16> = var("MOMENT_PLACE").split(',').filter_map(|v| v.trim().parse().ok()).collect();
@@ -569,13 +483,6 @@ impl<'a> Guide<'a> {
             field.frames(1)?;
             shots.push(field.picture());
             if n % every == 0 && n >= from {
-                // MOMENT_PLANES: the same moment taken apart, each plane
-                // alone in planes/moment-<frame>/, for an illustration to
-                // crop. planes_now comes back to the saved moment, so the
-                // recording goes on unchanged.
-                if !var("MOMENT_PLANES").is_empty() {
-                    self.planes_now(field, &format!("planes/moment-{n}"), "a moment")?;
-                }
                 let image = Self::labelled_actors(field)?;
                 self.guide_png(&format!("moment-{n}.png"), &image, "a moment, its actors labelled")?;
                 if !var("MOMENT_OAM").is_empty() {
@@ -593,7 +500,7 @@ impl<'a> Guide<'a> {
                     println!("frame {n}: DISPCNT {:#06x} WINOUT {:#06x} BLDCNT {:#06x}", field.read16(DISPCNT), field.read16(0x0400_004a), field.read16(0x0400_0050));
                 }
                 for &id in &watch {
-                    println!("frame {n}: {}", super::probe::describe(field, id));
+                    println!("frame {n}: {}", describe(field, id));
                     // What the actor adds to the screen: the next frame with
                     // it and with it moved off to the map's origin.
                     let saved = field.save();
@@ -662,368 +569,33 @@ impl<'a> Guide<'a> {
         }
         Ok(image)
     }
+}
 
-    pub fn oam(&mut self) -> Result<(), String> {
-        // Where Garet's sister and her neighbours stand.
-        let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
-        let field = &mut entered.field;
-        let saved = field.save();
-        field.frames(1)?;
-        let full = screen(&field.picture());
-        field.load(&saved);
-        let shown = field.read16(DISPCNT);
-        field.io_write16(DISPCNT, (shown & !LAYER_BITS) | 0x1000);
-        field.set_backdrop(0x4210);
-        field.frames(1)?;
-        let mut alone = screen(&field.picture());
-        field.io_write16(DISPCNT, shown);
-        let mut boxed = full;
-        let sizes = [[(8, 8), (16, 16), (32, 32), (64, 64)], [(16, 8), (32, 8), (32, 16), (64, 32)], [(8, 16), (8, 32), (16, 32), (32, 64)]];
-        let mut n = 0;
-        for i in 0..128 {
-            let a0 = field.read16(OAM + 8 * i);
-            let a1 = field.read16(OAM + 8 * i + 2);
-            let mode = (a0 >> 8) & 3;
-            if mode == 2 {
-                continue;
-            }
-            let shape = usize::from(a0 >> 14);
-            if shape == 3 {
-                continue;
-            }
-            let (mut w, mut h) = sizes[shape][usize::from(a1 >> 14)];
-            if mode == 3 {
-                w *= 2;
-                h *= 2;
-            }
-            let mut y = i32::from(a0 & 0xff);
-            if y >= 160 {
-                y -= 256;
-            }
-            let mut x = i32::from(a1 & 0x1ff);
-            if x >= 240 {
-                x -= 512;
-            }
-            if x + w <= 0 || y + h <= 0 || x >= WIDTH as i32 || y >= HEIGHT as i32 {
-                continue;
-            }
-            let colour = hue(n);
-            n += 1;
-            outline(&mut boxed, x, y, w, h, colour);
-            outline(&mut alone, x, y, w, h, colour);
-        }
-        let mut out = canvas(2 * WIDTH * 2 + 12, HEIGHT * 2 + 8, 0xffffff);
-        paste(&mut out, &boxed, 4, 4, 2);
-        paste(&mut out, &alone, 8 + 2 * WIDTH, 4, 2);
-        self.guide_png("oam.png", &out, &format!("Vale with its {n} sprite list entries on screen outlined"))
+/// One actor as the field keeps it (struct Actor), for MOMENT_ACTORS.
+fn describe(field: &Field, id: u16) -> String {
+    let a = field.actor_address(id);
+    if a == 0 {
+        return format!("actor {id}: none");
     }
+    let word = |offset: u32| field.read32(a + offset) as i32;
+    format!(
+        "actor {id} @{a:08x}: x {} z {} y {} radius {} terrain {} priority {:#04x} scale {:#x}/{:#x} kind {} motion {:#04x} collision {:#04x} sprites {:?}",
+        word(8) >> 16,
+        word(0x10) >> 16,
+        word(0x0c) as f64 / 65536.0,
+        field.read16(a + 0x20),
+        field.read8(a + 0x22),
+        field.read8(a + 0x23),
+        field.read32(a + 0x18),
+        field.read32(a + 0x1c),
+        field.read8(a + 0x54) & 15,
+        field.read8(a + 0x55),
+        field.read8(a + 0x59),
+        field.sprite_ids(a)
+    )
+}
 
-    /// Vale's video memory drawn as tiles, each in the palette the screen's
-    /// maps or sprites give it: the four background character blocks, then
-    /// the sprites' 32 KB; under them the 256 background colours and the 256
-    /// sprite colours, as `vram.png`.
-    pub fn vram(&mut self) -> Result<(), String> {
-        let entered = self.enter_with(VALE, &[])?;
-        let field = &entered.field;
-        let colours = palettes(field);
-        let empty = 0x20_20_28;
-        // Each background tile's palette, from the maps of the layers shown.
-        let dispcnt = field.read16(DISPCNT);
-        let mut bg_palette = vec![None::<(usize, bool)>; 2048];
-        for bg in 0..4u32 {
-            if dispcnt & (0x100 << bg) == 0 {
-                continue;
-            }
-            let control = field.read16(BGCNT + 2 * bg);
-            let (char_base, screen_base, wide) = (u32::from((control >> 2) & 3), u32::from((control >> 8) & 31), control & 0x80 != 0);
-            let blocks = [1, 2, 2, 4][usize::from(control >> 14)];
-            for e in 0..(1024 * blocks) {
-                let entry = field.read16(VRAM + screen_base * 0x800 + 2 * e);
-                let size = if wide { 64 } else { 32 };
-                let address = char_base * 0x4000 + u32::from(entry & 0x3ff) * size;
-                let slot = (address / 32) as usize;
-                if slot < 2048 && bg_palette[slot].is_none() {
-                    bg_palette[slot] = Some((usize::from(entry >> 12), wide));
-                }
-            }
-        }
-        // The map's blocks name the rest of each layer's tiles, those off
-        // screen too: layer 0 on BG3, 1 on BG2, 2 on BG1.
-        for layer in 0..3u32 {
-            let control = field.read16(BGCNT + 2 * (3 - layer));
-            if dispcnt & (0x100 << (3 - layer)) == 0 || control & 0x80 != 0 {
-                continue;
-            }
-            let char_base = u32::from((control >> 2) & 3);
-            for e in 0..4096 * 4 {
-                let entry = field.read16(MAP_BLOCKS + 2 * e);
-                let slot = (char_base * 512 + u32::from(entry & 0x3ff)) as usize;
-                if entry != 0 && slot < 2048 && bg_palette[slot].is_none() {
-                    bg_palette[slot] = Some((usize::from(entry >> 12), false));
-                }
-            }
-        }
-        // Each sprite tile's palette, from the sprite list.
-        let mut obj_palette = vec![None::<usize>; 1024];
-        let sizes = [[(1, 1), (2, 2), (4, 4), (8, 8)], [(2, 1), (4, 1), (4, 2), (8, 4)], [(1, 2), (1, 4), (2, 4), (4, 8)]];
-        for i in 0..128 {
-            let (a0, a1, a2) = (field.read16(OAM + 8 * i), field.read16(OAM + 8 * i + 2), field.read16(OAM + 8 * i + 4));
-            if (a0 >> 8) & 3 == 2 || a0 >> 14 == 3 {
-                continue;
-            }
-            let (w, h) = sizes[usize::from(a0 >> 14)][usize::from(a1 >> 14)];
-            let wide = a0 & 0x2000 != 0;
-            for t in 0..(w * h) * if wide { 2 } else { 1 } {
-                let slot = (usize::from(a2 & 0x3ff) + t) & 1023;
-                obj_palette[slot].get_or_insert(if wide { 256 } else { usize::from(a2 >> 12) });
-            }
-        }
-        let mut out = canvas(768 + 12, 256 + 8 + 2 * 24 + 8, 0xffffff);
-        let grey: Vec<u32> = (0..256).map(|i| { let v = (i * 255 / 15).min(255) as u32; v << 16 | v << 8 | v }).collect();
-        for block in 0..4u32 {
-            let (bx, by) = (4 + (block as usize % 2) * 256, 4 + (block as usize / 2) * 128);
-            for t in 0..512u32 {
-                let slot = (block * 512 + t) as usize;
-                let (pixels, _) = match bg_palette[slot] {
-                    Some((p, wide)) => {
-                        let pal: Vec<u32> = if wide { colours[..256].to_vec() } else { colours[p * 16..p * 16 + 16].to_vec() };
-                        (tile(field, VRAM + slot as u32 * 32, false, &pal, empty), true)
-                    }
-                    None => (tile(field, VRAM + slot as u32 * 32, false, &grey[..16], empty), false),
-                };
-                put_tile(&mut out, bx + (t as usize % 32) * 8, by + (t as usize / 32) * 8, &pixels, false, false);
-            }
-        }
-        for t in 0..1024usize {
-            let pal: Vec<u32> = match obj_palette[t] {
-                Some(p) if p < 16 => colours[256 + p * 16..256 + p * 16 + 16].to_vec(),
-                Some(_) => colours[256..].to_vec(),
-                None => grey[..16].to_vec(),
-            };
-            let pixels = tile(field, OBJ_VRAM + t as u32 * 32, false, &pal, empty);
-            put_tile(&mut out, 8 + 512 + (t % 32) * 8, 4 + (t / 32) * 8, &pixels, false, false);
-        }
-        for (row, start) in [0usize, 256].into_iter().enumerate() {
-            for i in 0..256 {
-                let (x, y) = (4 + i * 3, 4 + 256 + 8 + row * 24);
-                for dy in 0..20 {
-                    for dx in 0..3 {
-                        out.pixels[(y + dy) * out.width + x + dx] = colours[start + i];
-                    }
-                }
-            }
-        }
-        self.guide_png("vram.png", &out, "Vale's video memory as tiles, and its palettes")
-    }
-
-    /// The ground under one screen of Goma Cave, as `cells.png`: the screen,
-    /// and the same screen with the ground of the layer the leader follows
-    /// drawn over it pixel by pixel at its place on the map, raised by the
-    /// height of the leader's ground as his sprite is (0 here). The leader's
-    /// layer shows on a background that scrolls with the view, and a layer's
-    /// cells pointer already starts at its window into the grid, so map and
-    /// screen pixels match. A cell with a collision code is tinted by what
-    /// answers it (guide_cells::meaning: a wall red, an exit row blue, a
-    /// touch row magenta), and each of the scene's own is joined to words
-    /// saying what it does; open ground more than a step above the leader's
-    /// (MapGrid_CheckCollision's 8 pixels) is orange, and more than 12 below it
-    /// purple; a white line runs wherever the ground's height changes; a key
-    /// under it says what each colour stands for. Goma Cave walls its floor
-    /// with rims of ground 32 pixels high, often cut on a cell's diagonal,
-    /// rather than with wall codes, so heights are read for every pixel
-    /// (MapGrid_GetTerrainHeight) where a cell isn't flat. The screen is above,
-    /// its ground below.
-    pub fn cells(&mut self) -> Result<(), String> {
-        let names = self.cell_names("gGomaCavePillar_Triggers|gGomaCavePillar_Events", "GomaCavePillar")?;
-        let mut entered = self.enter_goma_cave(GOMA_CAVE)?;
-        let field = &mut entered.field;
-        Self::press_path(field, &[(0, 10)])?;
-        let plain = screen(&field.picture());
-        let (drawn, coded, shades) = Self::ground_overlay(field, &plain, &names, super::guide_cells::GOMA_CAVE_PILLAR_WORDS)?;
-        let mut picture = canvas(2 * WIDTH, 4 * HEIGHT + 8, 0xffffff);
-        paste(&mut picture, &plain, 0, 0, 2);
-        let below = 2 * HEIGHT as i32 + 8;
-        paste(&mut picture, &drawn, 0, below as usize, 2);
-        // A label for each of the scene's own meanings, from its rightmost
-        // cell.
-        let mut marks: Vec<super::guide_cells::Mark> = Vec::new();
-        let mut legend: Vec<(u32, String)> = shades;
-        for (m, sx, sy) in &coded {
-            let colour = m.kind.colour();
-            if !legend.iter().any(|(c, _)| *c == colour) {
-                legend.push((colour, m.kind.key().to_string()));
-            }
-            let at = (2 * sx + 31, below + 2 * sy + 16);
-            if matches!(m.kind, super::guide_cells::Kind::Exit | super::guide_cells::Kind::Touch | super::guide_cells::Kind::Search | super::guide_cells::Kind::NoEvent) {
-                match marks.iter_mut().find(|k| k.1 == m.words) {
-                    Some(k) if k.2 .0 >= at.0 => {}
-                    Some(k) => k.2 = at,
-                    None => marks.push((colour, m.words.clone(), at)),
-                }
-            }
-        }
-        let out = super::guide_cells::labelled(&picture, &marks, &legend, 216);
-        self.guide_png("cells.png", &out, "one screen of Goma Cave and its ground, each cell's meaning in words")
-    }
-
-    /// `plain`, the screen as it is now, with the ground of the leader's
-    /// layer drawn over it as `cells` describes; and each cell on screen
-    /// with a collision code, by its meaning and its top left on the
-    /// screen, and the ground's shades the picture uses with their words.
-    #[allow(clippy::type_complexity)]
-    fn ground_overlay(field: &mut Field, plain: &Image, names: &super::guide_cells::Names, words: super::guide_cells::Words) -> Result<(Image, Vec<(super::guide_cells::Meaning, i32, i32)>, Vec<(u32, String)>), String> {
-        let mut drawn = Image { width: WIDTH, height: HEIGHT, pixels: plain.pixels.clone() };
-        let (vx, vy) = field.view();
-        let leader = field.leader().ok_or("no leader")?;
-        let layer = leader.layer.min(2);
-        let floor = field.ground(layer, leader.x, leader.z)? >> 16;
-        let (w, h) = (WIDTH as i32, HEIGHT as i32);
-        // Each screen pixel's ground height and collision code.
-        let mut height = vec![0i32; WIDTH * HEIGHT];
-        let mut code = vec![0i32; WIDTH * HEIGHT];
-        // Each code's meaning, read once.
-        let mut meanings: std::collections::HashMap<i32, Option<super::guide_cells::Meaning>> = std::collections::HashMap::new();
-        let mut coded = Vec::new();
-        // The map pixel under each screen pixel, at the leader's height as
-        // his sprite is drawn.
-        let (mx, mz) = (vx, vy + floor);
-        for cz in mz.div_euclid(16)..=(mz + h - 1).div_euclid(16) {
-            for cx in mx.div_euclid(16)..=(mx + w - 1).div_euclid(16) {
-                let (kind, flat) = field.shape(layer, cx, cz);
-                let c = field.cell(layer, cx, cz);
-                if !meanings.contains_key(&c) {
-                    meanings.insert(c, super::guide_cells::meaning(field, names, words, c)?);
-                }
-                if let Some(m) = &meanings[&c] {
-                    coded.push((m.clone(), cx * 16 - mx, cz * 16 - mz));
-                }
-                for py in 0..16 {
-                    for px in 0..16 {
-                        let (sx, sy) = (cx * 16 + px - mx, cz * 16 + py - mz);
-                        if !(0..w).contains(&sx) || !(0..h).contains(&sy) {
-                            continue;
-                        }
-                        let ground = if kind == 0 { flat } else { field.ground(layer, cx * 16 + px, cz * 16 + py)? >> 16 };
-                        let at = (sy * w + sx) as usize;
-                        height[at] = ground;
-                        code[at] = c;
-                    }
-                }
-            }
-        }
-        let colour_of = |c: i32| meanings.get(&c).and_then(|m| m.as_ref()).map(|m| m.kind.colour());
-        let (high, low) = (0xff_80_20, 0x80_40_e0);
-        let (mut any_high, mut any_low, mut any_line) = (false, false, false);
-        for sy in 0..h {
-            for sx in 0..w {
-                let at = (sy * w + sx) as usize;
-                let tint = match code[at] {
-                    0 if height[at] - floor > 8 => {
-                        any_high = true;
-                        Some(high)
-                    }
-                    0 if height[at] - floor < -12 => {
-                        any_low = true;
-                        Some(low)
-                    }
-                    c => colour_of(c),
-                };
-                let pixel = &mut drawn.pixels[at];
-                *pixel = match tint {
-                    Some(t) => mix(*pixel, t, 0.55),
-                    None => mix(*pixel, 0x30_30_30, 0.15),
-                };
-                // The cells' grid, faintly.
-                if (sx + mx).rem_euclid(16) == 0 || (sy + mz).rem_euclid(16) == 0 {
-                    *pixel = mix(*pixel, 0x50_50_50, 0.6);
-                }
-            }
-        }
-        // A cell with a collision code outlined in its colour, so it shows
-        // under a sprite too.
-        for (m, sx, sy) in &coded {
-            outline(&mut drawn, *sx, *sy, 16, 16, m.kind.colour());
-        }
-        for sy in 0..h {
-            for sx in 0..w {
-                let at = (sy * w + sx) as usize;
-                let right = sx + 1 < w && height[at + 1] != height[at];
-                let below = sy + 1 < h && height[at + WIDTH] != height[at];
-                if right || below {
-                    drawn.pixels[at] = 0xff_ff_ff;
-                    any_line = true;
-                }
-            }
-        }
-        let mut shades = Vec::new();
-        if any_high {
-            shades.push((high, "Ground more than 8 pixels above the leader's: too high to step up".to_string()));
-        }
-        if any_low {
-            shades.push((low, "Ground more than 12 pixels below the leader's: too far to step down".to_string()));
-        }
-        if any_line {
-            shades.push((0xff_ff_ff, "White line: the ground's height changes".to_string()));
-        }
-        Ok((drawn, coded, shades))
-    }
-
-    /// The whole cell grid of the map Goma Cave stands on, each cell drawn
-    /// from its block, and each layer's window onto it outlined: the ground
-    /// layer white, the middle green, the overhead orange, as `grid.png`.
-    pub fn grid(&mut self) -> Result<(), String> {
-        let entered = self.enter_goma_cave(GOMA_CAVE)?;
-        let field = &entered.field;
-        let colours = palettes(field);
-        let work = field.map_work();
-        let header = field.header();
-        let (span_x, span_z) = ((header[2] - header[0]) >> 20, (header[3] - header[1]) >> 20);
-        // Layer 0 on BG3, 1 on BG2 and 2 on BG1: each window's origin in the
-        // grid and its tiles' character block.
-        let mut windows = Vec::new();
-        for layer in 0..3u32 {
-            let cells = field.read32(work + MAP_LAYER_CELLS + MAP_LAYER_SIZE * layer);
-            if cells < MAPGRID_CELLS {
-                continue;
-            }
-            let index = ((cells - MAPGRID_CELLS) / 4) as i32;
-            let control = field.read16(BGCNT + 2 * (3 - layer));
-            windows.push((index % GRID, index / GRID, u32::from((control >> 2) & 3), control & 0x80 != 0));
-        }
-        let mut image = canvas((GRID * 16) as usize, (GRID * 16) as usize, 0x10_10_14);
-        for cz in 0..GRID {
-            for cx in 0..GRID {
-                let Some(&(_, _, char_base, wide)) = windows.iter().rev().find(|w| cx >= w.0 && cz >= w.1 && cx < w.0 + span_x.max(1) && cz < w.1 + span_z.max(1)) else {
-                    continue;
-                };
-                let word = field.read32(MAPGRID_CELLS + 4 * (cx + cz * GRID) as u32);
-                let block = word & 0xfff;
-                for q in 0..4u32 {
-                    let entry = field.read16(MAP_BLOCKS + block * 8 + 2 * q);
-                    let size = if wide { 64 } else { 32 };
-                    let address = VRAM + char_base * 0x4000 + u32::from(entry & 0x3ff) * size;
-                    let pal: Vec<u32> = if wide { colours[..256].to_vec() } else { let p = usize::from(entry >> 12); colours[p * 16..p * 16 + 16].to_vec() };
-                    let pixels = tile(field, address, wide, &pal, 0x10_10_14);
-                    put_tile(&mut image, (cx * 16) as usize + (q as usize % 2) * 8, (cz * 16) as usize + (q as usize / 2) * 8, &pixels, entry & 0x400 != 0, entry & 0x800 != 0);
-                }
-            }
-        }
-        for (i, w) in windows.iter().enumerate() {
-            let colour = [0xff_ff_ff, 0x40_e0_60, 0xff_a0_30][i];
-            for d in 0..4 {
-                outline(&mut image, w.0 * 16 - d, w.1 * 16 - d, span_x * 16 + 2 * d, span_z * 16 + 2 * d, colour);
-            }
-        }
-        // Half size.
-        let mut out = canvas(image.width / 2, image.height / 2, 0);
-        for y in 0..out.height {
-            for x in 0..out.width {
-                out.pixels[y * out.width + x] = image.pixels[2 * y * image.width + 2 * x];
-            }
-        }
-        self.guide_png("grid.png", &out, "the cell grid of Goma Cave's map and its three layer windows")
-    }
-
+impl<'a> Guide<'a> {
     /// Walking back and forth in Goma Cave, as the party first reaches it,
     /// until a random battle starts, and the battle's opening, as
     /// `random-battle.gif`.
@@ -1316,15 +888,6 @@ const STRETCH_MARGIN: i32 = 8;
 
 /// The field's actor slots (FIELD_ACTOR_COUNT in field.rs).
 pub(super) const ACTOR_SLOTS: u16 = 66;
-/// SceneId_IncreaseItemAndLevel and SceneId_MenuTest, the debug level room
-/// and menu test room (scenes.s).
-const LEVEL_ROOM: u16 = 199;
-const MENU_TEST_ROOM: u16 = 200;
-/// The level room's placed actors, ACTOR_FIRST_PLACED on (enum
-/// IncreaseItemAndLevelActorId, debug/level.c); outside Japanese all seven are placed.
-const LEVEL_ROOM_ACTORS: std::ops::Range<u16> = 8..15;
-/// Facing west, in 1/65536 turns (NORTH is a quarter turn short of a whole).
-const WEST: u32 = 0x8000;
 
 /// Each digit of a 3 by 5 font, a row of three bits to a line, top first.
 const DIGITS: [[u8; 5]; 10] = [

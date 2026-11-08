@@ -32,7 +32,7 @@ Run any command with --help for its options.
   progress  DONE code and data in each edition, from the linker maps, and what is left to humanize
   rank      every unfinished function, furthest first by skeleton gap
   regress   the functions whose assembly differs between two builds of the tree
-  render    pictures of a built edition: Psynergy, places and events (feature render)
+  render    the docs site's pictures and recordings of a built edition (feature render)
   twins     the reference game's functions closest in shape to each unmatched one
   variants  named rewrites of a draft, each kept only when it narrows the gap
   where     the bytes each edition still places from recon/, by object"#;

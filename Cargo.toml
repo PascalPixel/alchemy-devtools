@@ -23,7 +23,7 @@ png = "0.17"
 cc = { version = "1", optional = true }
 
 [features]
-# `render`: the battle pictures, run in libmgba (README).
+# `render`: the docs site's pictures and recordings, run in libmgba (README).
 render = ["dep:gif", "dep:cc", "dep:png"]
 
 [[bin]]

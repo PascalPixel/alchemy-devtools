@@ -45,11 +45,9 @@ pub struct Guide<'a> {
 }
 
 impl<'a> Guide<'a> {
-    /// The number of flag `name`; `name` may list its spellings, the new
-    /// first (`FLAG_AREA_TEMP_01|FLAG_MAPSEC_TEMP_01`), so that a checkout
-    /// from before The Broken Seal's rename is read too.
+    /// The number of flag `name`.
     pub(super) fn flag(&self, name: &str) -> Result<u16, String> {
-        name.split('|').find_map(|n| self.flags.resolve(n, None)).ok_or_else(|| format!("flags.tsv names no {name}"))
+        self.flags.resolve(name, None).ok_or_else(|| format!("flags.tsv names no {name}"))
     }
 
     pub(super) fn gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
@@ -176,31 +174,14 @@ impl<'a> Guide<'a> {
         self.walk_path(WORLD_MAP, &path, "world-map-walk.gif", "walking and running on the world map")
     }
 
-    /// Vale built up layer by layer: BG3, then BG2 over it, then the
-    /// sprites, then BG1 over them. The field writes DISPCNT only as a scene
-    /// fades in, so a store into it holds until it is put back.
-    pub fn layers(&mut self) -> Result<(), String> {
-        let mut field = self.enter(VALE)?;
-        let shown = field.read16(DISPCNT);
-        let mut frames = Vec::new();
-        for (bits, n) in [(0x800u16, 40u32), (0xc00, 40), (0x1c00, 40), (0x1e00, 70)] {
-            field.io_write16(DISPCNT, (shown & !LAYER_BITS) | bits);
-            for _ in 0..n {
-                field.frames(1)?;
-                frames.push(field.picture());
-            }
-        }
-        field.io_write16(DISPCNT, shown);
-        self.gif("layers.gif", &frames, "BG3, then BG2, the sprites and BG1 added over it")
-    }
-
     /// Vale's layers pulled apart in 3D: the scene as the game shows it,
     /// then BG3, BG2, the sprites and BG1 drawn as sheets, turned and spread
     /// one behind the other, then flat again. Each sheet is captured alone
-    /// over KEY, the colour that marks its empty pixels.
+    /// over KEY, the colour that marks its empty pixels. The field writes
+    /// DISPCNT only as a scene fades in, so a store into it holds until it
+    /// is put back.
     pub fn exploded(&mut self) -> Result<(), String> {
         let mut field = self.enter(VALE)?;
-        self.planes_now(&mut field, "planes/field", "Vale")?;
         let shown = field.read16(DISPCNT);
         let saved = field.save();
         let mut sheets = Vec::new();
@@ -338,16 +319,16 @@ const FACE_EAST: u32 = 0x0000;
 /// A Psynergy may be listed more than once, at places tried in turn.
 const FIELD_CASTS: &[FieldCast] = &[
     FieldCast { ability: "ABILITY_REVEAL", map: "ValeCaveKite", entrance: 1, actor: None, target: "the hidden floor", stand: Some((248, 280, FACE_NORTH)), tail: 600 },
-    FieldCast { ability: "ABILITY_MOVE", map: "Vale", entrance: 1, actor: Some("ACTOR_PILLAR|LOCALID_PILLAR"), target: "a stone pillar", stand: None, tail: 40 },
+    FieldCast { ability: "ABILITY_MOVE", map: "Vale", entrance: 1, actor: Some("ACTOR_PILLAR"), target: "a stone pillar", stand: None, tail: 40 },
     FieldCast { ability: "ABILITY_AVOID", map: "GomaCavePillar", entrance: 5, actor: None, target: "the party", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_MIND_READ", map: "Vale", entrance: 1, actor: Some("ACTOR_GARETS_SISTER|LOCALID_GARETS_SISTER"), target: "Garet's sister", stand: None, tail: 20 },
-    FieldCast { ability: "ABILITY_CATCH", map: "Vale", entrance: 1, actor: Some("ACTOR_NUT|LOCALID_NUT"), target: "a Nut", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_MIND_READ", map: "Vale", entrance: 1, actor: Some("ACTOR_GARETS_SISTER"), target: "Garet's sister", stand: None, tail: 20 },
+    FieldCast { ability: "ABILITY_CATCH", map: "Vale", entrance: 1, actor: Some("ACTOR_NUT"), target: "a Nut", stand: None, tail: 30 },
     FieldCast { ability: "ABILITY_RETREAT", map: "GomaCavePillar", entrance: 5, actor: None, target: "the party", stand: None, tail: 240 },
-    FieldCast { ability: "ABILITY_FORCE", map: "Xian", entrance: 0, actor: Some("ACTOR_FORCE_TARGET|LOCALID_FORCE_TARGET"), target: "the training tree", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_LIFT", map: "GondowanCave", entrance: 0, actor: Some("ACTOR_BOULDER|LOCALID_BOULDER"), target: "a boulder", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_CARRY", map: "TunnelRuinsLadyStatues", entrance: 0, actor: Some("ACTOR_MIDDLE_CARRY_STONE|LOCALID_MIDDLE_CARRY_STONE"), target: "a stone block", stand: None, tail: 60 },
+    FieldCast { ability: "ABILITY_FORCE", map: "Xian", entrance: 0, actor: Some("ACTOR_FORCE_TARGET"), target: "the training tree", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_LIFT", map: "GondowanCave", entrance: 0, actor: Some("ACTOR_BOULDER"), target: "a boulder", stand: None, tail: 30 },
+    FieldCast { ability: "ABILITY_CARRY", map: "TunnelRuinsLadyStatues", entrance: 0, actor: Some("ACTOR_MIDDLE_CARRY_STONE"), target: "a stone block", stand: None, tail: 60 },
     FieldCast { ability: "ABILITY_CLOAK", map: "LunpaFortressGates", entrance: 0, actor: None, target: "the party", stand: None, tail: 120 },
-    FieldCast { ability: "ABILITY_HALT", map: "ValeCaveKite", entrance: 5, actor: Some("ACTOR_KITE|LOCALID_KITE"), target: "Kite", stand: Some((792, 256, FACE_NORTH)), tail: 60 },
+    FieldCast { ability: "ABILITY_HALT", map: "ValeCaveKite", entrance: 5, actor: Some("ACTOR_KITE"), target: "Kite", stand: Some((792, 256, FACE_NORTH)), tail: 60 },
 ];
 
 /// A field cast read through the source: the ability's number and name
@@ -429,6 +410,14 @@ impl<'a> Guide<'a> {
         field.until_control()?;
         field.frames(20)?;
         Ok(Entered { field, placed })
+    }
+
+    /// Enters `place` from a new game with these flags set and cleared and
+    /// stops where the scene's setup is about to run.
+    pub(super) fn arrive(&self, place: (u16, u16), set: &[&str], clear: &[&str]) -> Result<Field<'a>, String> {
+        let resolve = |names: &[&str]| -> Result<Vec<u16>, String> { names.iter().map(|n| self.flag(n)).collect() };
+        let setup = Setup { scene: place.0, entrance: place.1, set: resolve(set)?, clear: resolve(clear)? };
+        Field::enter(self.rom, self.symbols, &setup)
     }
 
     /// Plays `trigger` with the leader at `spot`, or else at each place
@@ -563,76 +552,53 @@ pub fn field_cast_names() -> Result<Vec<String>, String> {
     Ok(names)
 }
 
-/// Every mode, in the order `render guide` plays them.
+/// This file's modes, in the order `render guide` plays them.
 pub const MODES: &[&str] = &[
-    "walk", "snow", "layers", "layers-3d", "battle-layers-3d", "world-map-layers-3d", "menu-layers-3d", "status-layers-3d", "talk-layers-3d", "shop-layers-3d", "scene-actors", "debug-rooms", "debug-room-talks", "moment", "world-map", "menus", "menu-start", "boot", "items", "field-psynergy", "talk", "djinn-room", "shop",
-    "inn", "menu-psynergy", "credits", "sleep", "oam", "vram", "cells", "grid", "random-battle", "world-map-picture", "overlay",
-    "tret-tree-branch-split",
-    "kolima-forest-tree-healing",
-    "altmiller-cave-darkness",
-    "bilibin-cave-third-puddle",
-    "fuchin-falls-cave-logs",
-    "mercury-lighthouse-pool",
-    "lunpa-fortress-patrol",
-    "tolbi-spring-toss",
-    "kolima-forest-entrance-fields",
-    "tree-rooms-cocoons",
-    "colosseum-azart-race",
-    "colosseum-navampa-scales",
-    "colosseum-satrage-lifts",
-    "tunnel-ruins-balance",
+    "walk",
+    "snow",
+    "layers-3d",
+    "battle-layers-3d",
+    "world-map-layers-3d",
+    "menu-layers-3d",
+    "talk-layers-3d",
+    "moment",
+    "world-map",
+    "menus",
+    "menu-start",
+    "boot",
+    "items",
+    "field-psynergy",
+    "talk",
+    "djinn-room",
+    "shop",
+    "inn",
+    "menu-psynergy",
+    "credits",
+    "sleep",
+    "random-battle",
+    "world-map-picture",
+    "overlay",
     "venus-lighthouse-aerie-eruption",
-    "scene-event-cells",
-    "credits-tile-ring",
     "title-intro-layers-3d",
-    "item-screen-windows",
-    "sound-players",
-    "field-requests",
-    "grid-planes",
     "tile-animation",
-    "world-map-scanlines",
-    "world-map-footprint",
-    "round-events",
-    "battle-places",
-    "effect-canvas",
-    "effect-transfer",
-    "effect-particles",
-    "sprite-layers",
-    "shop-counters",
-    "sanctum-account",
-    "star-room-rising",
-    "eruption-departures",
     "statue-sky-rows",
-    "vale-opening",
-    "vale-gate-display",
-    "cottage-rooms-a-sleep",
-    "vale-kraden-rockslide",
-    "vale-cave-kite",
-    "work-block",
-    "text-ring",
-    "render-outputs",
-    "area-name",
-    "sanctum",
-    "item-picker",
-    "menu-slot",
-    "enemy-actions",
-    "first-strikes",
-    "element-multiplier",
-    "plan-rolls",
-    "staging",
-    "added-effects",
-    "after-target",
-    "effect-variants",
-    "djinn-attacks",
-    "spark-groups",
-    "stat-reductions",
-    "target-strikes",
-    "psynergy-steps",
-    "djinn-preview",
-    "status-pages",
-    "status-panels",
-    "item-sorting",
 ];
+
+/// Every mode, in the order `render guide` plays them: this file's, then
+/// each recording file's.
+pub fn modes() -> impl Iterator<Item = &'static str> {
+    use super::{guide_fight, guide_front, guide_interface, guide_lucky, guide_menus, guide_scene_map, guide_world_play};
+    MODES
+        .iter()
+        .chain(guide_front::MODES)
+        .chain(guide_world_play::MODES)
+        .chain(guide_fight::MODES)
+        .chain(guide_menus::MODES)
+        .chain(guide_lucky::MODES)
+        .chain(guide_interface::MODES)
+        .chain(guide_scene_map::MODES)
+        .copied()
+}
 
 impl Guide<'_> {
     /// Plays one mode; `casts` picks field Psynergy by name.
@@ -640,17 +606,11 @@ impl Guide<'_> {
         match name {
             "walk" => self.walk(),
             "snow" => self.snow(),
-            "layers" => self.layers(),
             "layers-3d" => self.exploded(),
             "battle-layers-3d" => self.battle_exploded(),
             "world-map-layers-3d" => self.world_map_exploded(),
             "menu-layers-3d" => self.menu_exploded(),
-            "status-layers-3d" => self.status_exploded(),
             "talk-layers-3d" => self.talk_exploded(),
-            "shop-layers-3d" => self.shop_exploded(),
-            "scene-actors" => self.scene_actors(),
-            "debug-rooms" => self.debug_rooms(),
-            "debug-room-talks" => self.debug_room_talks(),
             "moment" => self.play_moment(),
             "world-map" => self.world_map(),
             "menus" => self.menus(),
@@ -665,81 +625,18 @@ impl Guide<'_> {
             "menu-psynergy" => self.menu_psynergy(),
             "credits" => self.credits(),
             "sleep" => self.sleep(),
-            "oam" => self.oam(),
-            "vram" => self.vram(),
-            "cells" => self.cells(),
-            "grid" => self.grid(),
             "random-battle" => self.random_battle(),
             "world-map-picture" => self.world_map_picture(),
             "overlay" => self.overlay(),
-            "tret-tree-branch-split" => self.tret_tree_branch_split(),
-            "kolima-forest-tree-healing" => self.kolima_forest_tree_healing(),
-            "altmiller-cave-darkness" => self.altmiller_cave_darkness(),
-            "bilibin-cave-third-puddle" => self.bilibin_cave_third_puddle(),
-            "fuchin-falls-cave-logs" => self.fuchin_falls_cave_logs(),
-            "mercury-lighthouse-pool" => self.mercury_lighthouse_pool(),
-            "lunpa-fortress-patrol" => self.lunpa_fortress_patrol(),
-            "tolbi-spring-toss" => self.tolbi_spring_toss(),
-            "kolima-forest-entrance-fields" => self.kolima_forest_entrance_fields(),
-            "tree-rooms-cocoons" => self.tree_rooms_cocoons(),
-            "colosseum-azart-race" => self.colosseum_azart_race(),
-            "colosseum-navampa-scales" => self.colosseum_navampa_scales(),
-            "colosseum-satrage-lifts" => self.colosseum_satrage_lifts(),
-            "tunnel-ruins-balance" => self.tunnel_ruins_balance(),
             "venus-lighthouse-aerie-eruption" => self.venus_lighthouse_aerie_eruption(),
-            "scene-event-cells" => self.scene_event_cells(),
-            "credits-tile-ring" => self.credits_tile_ring(),
             "title-intro-layers-3d" => self.title_intro_exploded(),
-            "item-screen-windows" => self.item_screen_windows(),
-            "sound-players" => self.sound_players(),
-            "field-requests" => self.field_requests(),
-            "grid-planes" => self.grid_planes(),
             "tile-animation" => self.tile_animation(),
-            "world-map-scanlines" => self.world_map_scanlines(),
-            "world-map-footprint" => self.world_map_footprint(),
-            "round-events" => self.round_events(),
-            "battle-places" => self.battle_places(),
-            "effect-canvas" => self.effect_canvas(),
-            "effect-transfer" => self.effect_transfer(),
-            "effect-particles" => self.effect_particles(),
-            "sprite-layers" => self.sprite_layers(),
-            "shop-counters" => self.shop_counters(),
-            "sanctum-account" => self.sanctum_account(),
-            "star-room-rising" => self.star_room_rising(),
-            "eruption-departures" => self.eruption_departures(),
             "statue-sky-rows" => self.statue_sky_rows(),
-            "vale-opening" => self.vale_opening(),
-            "vale-gate-display" => self.vale_gate_display(),
-            "cottage-rooms-a-sleep" => self.cottage_rooms_a_sleep(),
-            "vale-kraden-rockslide" => self.vale_kraden_rockslide(),
-            "vale-cave-kite" => self.vale_cave_kite(),
-            "work-block" => self.window_work_block(),
-            "text-ring" => self.window_text_ring(),
-            "render-outputs" => self.window_render_outputs(),
-            "area-name" => self.window_area_name(),
-            "sanctum" => self.sanctum_members(),
-            "item-picker" => self.item_picker(),
-            "menu-slot" => self.shop_menu_slot(),
-            "enemy-actions" => self.enemy_actions(),
-            "first-strikes" => self.first_strikes(),
-            "element-multiplier" => self.element_multiplier(),
-            "plan-rolls" => self.plan_rolls(),
-            "staging" => self.staging(),
-            "added-effects" => self.added_effects(),
-            "after-target" => self.after_target(),
-            "effect-variants" => self.effect_variants(),
-            "djinn-attacks" => self.djinn_attacks(),
-            "spark-groups" => self.spark_groups(),
-            "stat-reductions" => self.stat_reductions(),
-            "target-strikes" => self.target_strikes(),
-            "psynergy-steps" => self.menu_psynergy_steps(),
-            "djinn-preview" => self.djinn_preview(),
-            "status-pages" => self.status_pages(),
-            "status-panels" => self.status_panels(),
-            "item-sorting" => self.item_sorting(),
+            _ if super::guide_world_play::MODES.contains(&name) => self.run_world_play(name),
+            _ if super::guide_front::MODES.contains(&name) => self.run_front(name),
             _ => match self.fight(name) {
                 Some(result) => result,
-                None => self.run_engine(name),
+                None => self.run_menus(name),
             },
         }
     }
@@ -830,8 +727,6 @@ impl Guide<'_> {
     /// `file`: each layer the display mode shows, in the order the hardware
     /// stacks them (stacking), as sheets that spread and close again.
     pub(super) fn explode_now(&mut self, field: &mut Field, file: &str, what: &str) -> Result<(), String> {
-        let stem = file.trim_end_matches(".gif").trim_end_matches("-layers-3d");
-        self.planes_now(field, &format!("planes/{stem}"), what)?;
         let layers = stacking(field);
         let sheets = layer_sheets(field, &layers)?;
         let frames = spread_frames(&sheets);
@@ -850,20 +745,6 @@ impl Guide<'_> {
         Self::hold(&mut field, KEY_A, 4, &mut frames)?;
         Self::hold(&mut field, 0, 50, &mut frames)?;
         self.explode_now(&mut field, "menu-layers-3d.gif", "the field menu in Vale")
-    }
-
-    /// The Status screen open in Vale, pulled apart, as `status-layers-3d.gif`:
-    /// the field menu's third icon chosen (the Djinn icon is left out until
-    /// the first Djinni joins, so it is Status), its party row, its windows
-    /// and their text on BG0, and the figures, portrait and hand as sprites,
-    /// over the map they hide.
-    pub fn status_exploded(&mut self) -> Result<(), String> {
-        let mut field = self.enter(VALE)?;
-        let mut frames = Vec::new();
-        for (keys, n) in [(0, 20), (KEY_A, 4), (0, 50), (KEY_RIGHT, 4), (0, 30), (KEY_RIGHT, 4), (0, 30), (KEY_A, 4), (0, 90)] {
-            Self::hold(&mut field, keys, n, &mut frames)?;
-        }
-        self.explode_now(&mut field, "status-layers-3d.gif", "the Status screen in Vale")
     }
 }
 
