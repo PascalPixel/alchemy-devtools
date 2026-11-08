@@ -1326,6 +1326,9 @@ fn play_guide(
     jobs: &jobs::Jobs,
     arguments: &[String],
 ) -> Result<(), String> {
+    if let Some(unknown) = only.iter().find(|o| !guide::modes().any(|m| m == o.as_str())) {
+        return Err(format!("render guide has no mode {unknown:?}: render guide --help lists them"));
+    }
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     // The work in pieces: each mode, and field-psynergy's casts one by one.
     let mut units: Vec<String> = Vec::new();
