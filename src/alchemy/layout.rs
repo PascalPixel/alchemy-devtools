@@ -43,6 +43,11 @@ impl Layout {
         format!("games/{}/src/", self.game)
     }
 
+    /// The folder of the English listings, one `ADDRESS.s` a function.
+    pub fn listings(&self) -> String {
+        format!("recon/{}/raw", self.game)
+    }
+
     /// An English listing's object (its source adds `.s`).
     pub fn listing(&self, address: &str) -> String {
         format!("recon/{}/raw/{address}", self.game)
@@ -55,6 +60,22 @@ impl Layout {
 
     pub fn main_draft(&self, address: &str) -> String {
         format!("recon/{}/en/main/{address}.c", self.game)
+    }
+
+    /// The folder of a language's drafts for the main image (`main`) or the
+    /// overlays (`overlays`); a language other than English keeps its own
+    /// forms there.
+    pub fn drafts(&self, language: &str, image: &str) -> String {
+        format!("recon/{}/{language}/{image}", self.game)
+    }
+
+    /// The two names an overlay function's English draft may have.
+    pub fn overlay_drafts(&self, id: &str, address: u32) -> [String; 2] {
+        let folder = self.drafts("en", "overlays");
+        [
+            format!("{folder}/resource_{id}_c_{:08x}.c", address.wrapping_sub(OVERLAY_LABEL_OFFSET)),
+            format!("{folder}/resource_{id}/{address:08x}.c"),
+        ]
     }
 
     /// An edition's scaffold object (its source adds `.s`), whose `.rom.OFFSET`

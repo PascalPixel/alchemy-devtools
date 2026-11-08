@@ -30,7 +30,7 @@ Run any command with --help for its options.
   editions  what an edition still takes from its scaffold while English links C
   permute   search rewrites and PERM macro choices of a draft toward differ 0
   progress  DONE code and data in each edition, from the linker maps, and what is left to humanize
-  rank      every unfinished function, furthest first by skeleton gap
+  rank      every unfinished piece of a game, furthest first, each with its measure command
   regress   the functions whose assembly differs from a saved build, each classed
   render    the docs site's pictures and recordings of a built edition (feature render)
   twins     the reference game's functions closest in shape to each unmatched one
