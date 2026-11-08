@@ -80,22 +80,27 @@ pub fn scaffold(root: &Path, id: DecompTargetId) -> Option<(String, PathBuf)> {
     root.join(format!("{stem}.s")).is_file().then(|| (format!("{stem}.s"), object(root, id, &stem)))
 }
 
+/// The source stem of an object path a map names, when the build compiled
+/// it from the checkout: `out/<edition>/obj/X.o` is `X` (`games/tla/src/...`,
+/// `recon/tla/ja/rom`). This is the one reading of the build's object folder;
+/// the generic map reader leaves paths as the map writes them.
+pub fn object_stem(path: &str) -> Option<&str> {
+    let (_, tail) = path.split_once("/obj/")?;
+    Some(tail.strip_suffix(".o").unwrap_or(tail))
+}
+
 /// The source stem behind an object path a map names: `out/<edition>/obj/X.o`
 /// is `X`, and an overlay's own scaffold, `out/<edition>/overlays/resource_<id>_overlay.o`,
 /// is the source the Makefile assembles it from (The Broken Seal's assemble
 /// nothing and place no bytes). Anything else (the compiler library, the
 /// linker's stubs) is named as the map names it.
 pub fn stem(id: DecompTargetId, path: &str) -> String {
-    let target = target_for(id);
-    let built = |folder: &str| {
-        let marker = format!("{}/{folder}/", target.output_dir);
-        path.split_once(&marker).map(|(_, tail)| tail.strip_suffix(".o").unwrap_or(tail).to_string())
-    };
-    if let Some(stem) = built("obj") {
-        return stem;
+    if let Some(stem) = object_stem(path) {
+        return stem.to_string();
     }
-    if let Some(stem) = built("overlays") {
-        return format!("{}/{stem}", Layout::new(id.game()).overlays());
+    let marker = format!("{}/overlays/", target_for(id).output_dir);
+    if let Some((_, tail)) = path.split_once(&marker) {
+        return format!("{}/{}", Layout::new(id.game()).overlays(), tail.strip_suffix(".o").unwrap_or(tail));
     }
     path.to_string()
 }

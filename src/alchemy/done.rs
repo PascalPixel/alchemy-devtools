@@ -148,7 +148,7 @@ fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
             tally.streams += size;
             continue;
         }
-        let stem = object.split_once("/obj/").map(|(_, stem)| stem.trim_end_matches(".o"));
+        let stem = super::built::object_stem(object);
         let games = stem.is_some_and(|stem| stem.starts_with("games/"));
         let library = object.contains("libgcc.a");
         let own = object.contains("/overlays/resource_");

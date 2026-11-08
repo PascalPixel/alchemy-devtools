@@ -151,13 +151,13 @@ mod tests {
         std::fs::create_dir_all(root.path().join("include/sub")).unwrap();
         std::fs::create_dir_all(root.path().join("tools")).unwrap();
         let steps = vec![
-            "tools/cc -Btools/ -O2 -Iinclude -Iinclude/sub -Imissing -S -o build/obj/src/a.s src/a.c".split(' ').map(String::from).collect(),
-            "tools/cc1 build/obj/src/a.i -dumpbase a.c -o build/obj/src/a.s".split(' ').map(String::from).collect::<Vec<_>>(),
-            "as -mthumb -o build/obj/src/a.o build/obj/src/a.s".split(' ').map(String::from).collect(),
+            "tools/cc -Btools/ -O2 -Iinclude -Iinclude/sub -Imissing -S -o build/src/a.s src/a.c".split(' ').map(String::from).collect(),
+            "tools/cc1 build/src/a.i -dumpbase a.c -o build/src/a.s".split(' ').map(String::from).collect::<Vec<_>>(),
+            "as -mthumb -o build/src/a.o build/src/a.s".split(' ').map(String::from).collect(),
         ];
         let output = Path::new("/work/run-1/draft.o");
         let r = root.path().display();
-        let aimed = retarget(&steps, root.path(), "src/a.c", "build/obj/src/a.o", Path::new("/drafts/draft.c"), output);
+        let aimed = retarget(&steps, root.path(), "src/a.c", "build/src/a.o", Path::new("/drafts/draft.c"), output);
         assert_eq!(aimed[0].join(" "), format!("tools/cc -B{r}/tools/ -O2 -I{r}/include -I{r}/include/sub -I{r}/missing -S -o /work/run-1/draft.s /drafts/draft.c"));
         assert_eq!(aimed[1].join(" "), "tools/cc1 /work/run-1/draft.i -dumpbase draft.c -o /work/run-1/draft.s");
         assert_eq!(aimed[2].join(" "), "as -mthumb -o /work/run-1/draft.o /work/run-1/draft.s");

@@ -458,9 +458,9 @@ mod tests {
 Linker script and memory map
 
 .text           0x02008000       0x30
- .text          0x02008000       0x10 out/obj/src/kept.o
+ .text          0x02008000       0x10 build/src/kept.o
                 0x02008000                Kept
- .text          0x02008010       0x20 out/obj/asm/other.o
+ .text          0x02008010       0x20 build/asm/other.o
                 0x02008010                Other
 ";
         let map = Map::parse(MAP);
@@ -480,7 +480,7 @@ Linker script and memory map
                 symbol("Imported", 0x0800_0001, 0, 2, 0xfff1),
             ],
         };
-        let found = functions(&elf, &map, |placed| placed.object() == "src/kept.o");
+        let found = functions(&elf, &map, |placed| placed.path == "build/src/kept.o");
         let rows: Vec<_> = found.iter().map(|f| (f.name.as_str(), text(&f.instructions))).collect();
         assert_eq!(
             rows,

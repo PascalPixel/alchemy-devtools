@@ -24,10 +24,6 @@ impl Placed {
     pub fn end(&self) -> u32 {
         self.address + self.size
     }
-
-    pub fn object(&self) -> &str {
-        self.path.rsplit_once("/obj/").map_or(&self.path, |(_, tail)| tail)
-    }
 }
 
 pub fn preferred(symbols: &[(u32, String)], address: u32) -> Option<&str> {
@@ -195,7 +191,7 @@ pub(crate) mod tests {
 Discarded input sections
 
  .ARM.attributes
-                0x0000000000000000       0x20 /x/build/obj/asm/unidentified.o
+                0x0000000000000000       0x20 /x/build/asm/unidentified.o
 
 Linker script and memory map
 
@@ -203,39 +199,39 @@ Linker script and memory map
 
 .rom_start      0x0000000008000000       0x30
  */asm/rom.o(.rom.00000000)
- .rom.00000000  0x0000000008000000       0x10 /x/build/obj/asm/rom.o
+ .rom.00000000  0x0000000008000000       0x10 /x/build/asm/rom.o
                 0x0000000008000000                Rom_Start
  */src/system/io.o(.text .rodata .data .padding)
- .text          0x0000000008000010        0xe /x/build/obj/src/system/io.o
+ .text          0x0000000008000010        0xe /x/build/src/system/io.o
                 0x0000000008000010                Func_08000010
                 0x0000000008000010                Input_Handle
                 0x0000000008000018                Input_Poll
  */asm/rom.o(.rom.00000020)
  *fill*         0x000000000800001e        0x2
- .rom.00000020  0x0000000008000020       0x10 /x/build/obj/asm/rom.o
+ .rom.00000020  0x0000000008000020       0x10 /x/build/asm/rom.o
                 0x0000000008000020                Func_08000020
                 0x0000000008000030                IwramCodeEnd = .
 
 .iwram_resident 0x0000000003000000        0x8 load address 0x0000000008000030
  */src/system/iwram_routines.o(.text)
- .text          0x0000000003000000        0x8 /x/build/obj/src/system/iwram_routines.o
+ .text          0x0000000003000000        0x8 /x/build/src/system/iwram_routines.o
                 0x0000000003000000                IwramIrqMain
- .bss           0x0000000003000008        0x4 /x/build/obj/src/system/iwram_routines.o
+ .bss           0x0000000003000008        0x4 /x/build/src/system/iwram_routines.o
 
 iwram           0x0000000003000100       0x40 load address 0x0000000008000038
  */asm/sym_iwram.o(.sym_iwram)
- .sym_iwram     0x0000000003000100       0x40 /x/build/obj/asm/sym_iwram.o
+ .sym_iwram     0x0000000003000100       0x40 /x/build/asm/sym_iwram.o
                 0x0000000003000100                gVBlankCount
 
 .rom_main       0x0000000008000038       0x20
  */asm/unidentified.o(.unidentified.08000030)
  .unidentified.08000030
-                0x0000000008000038       0x10 /x/build/obj/asm/unidentified.o
+                0x0000000008000038       0x10 /x/build/asm/unidentified.o
                 0x0000000008000038                Math_Table
  */asm/raw/08000048.o(.text)
- .text          0x0000000008000048       0x10 /x/build/obj/asm/raw/08000048.o
+ .text          0x0000000008000048       0x10 /x/build/asm/raw/08000048.o
                 0x0000000008000048                Func_08000048
-LOAD /x/build/obj/asm/rom.o
+LOAD /x/build/asm/rom.o
 ";
 
 }

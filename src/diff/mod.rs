@@ -606,10 +606,9 @@ fn scaffold_extent_mode(map: &Map, elf: &Elf, wanted: &str, arm: bool) -> Result
         .map(|symbol| (symbol.value & !1, symbol.name.clone()))
         .collect();
     let (section, start, name) = resolve(map, Some(elf), &functions, wanted)?;
-    let scaffold = section.object().starts_with("recon/") && section.object().ends_with("/rom.o")
-        && section.name.starts_with(".rom.");
-    let source = section.object().starts_with("games/")
-        && (section.name == ".text" || section.name.starts_with(".text."));
+    let stem = crate::alchemy::built::object_stem(&section.path).unwrap_or("");
+    let scaffold = stem.starts_with("recon/") && stem.ends_with("/rom") && section.name.starts_with(".rom.");
+    let source = stem.starts_with("games/") && (section.name == ".text" || section.name.starts_with(".text."));
     if !(scaffold || source) || !section.loaded || section.load < ROM {
         return Err(format!("{name}: no main-image code extent; build the selected edition first"));
     }

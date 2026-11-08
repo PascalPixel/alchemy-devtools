@@ -290,9 +290,9 @@ mod tests {
         sections.sort_by_key(|placed| placed.load);
         let symbols = vec![(0x0300_0000, "IwramIrqMain".to_string()), (0x0800_0010, "Input_Handle".to_string()), (0x0800_0018, "Input_Poll".to_string())];
         let placement = Placement { edition: id("tla-en"), sections, symbols };
-        assert_eq!(placement.at(0x0800_001a), "Input_Poll+0x2 in /x/build/obj/src/system/io.o");
-        assert_eq!(placement.at(0x0800_0032), "IwramIrqMain+0x2 in /x/build/obj/src/system/iwram_routines.o");
+        assert_eq!(placement.at(0x0800_001a), "Input_Poll+0x2 in /x/build/src/system/io.o");
+        assert_eq!(placement.at(0x0800_0032), "IwramIrqMain+0x2 in /x/build/src/system/iwram_routines.o");
         assert_eq!(placement.at(0x0800_001e), "the linker's fill");
-        assert_eq!(placement.at(0x0800_0004), "/x/build/obj/asm/rom.o(.rom.00000000)");
+        assert_eq!(placement.at(0x0800_0004), "/x/build/asm/rom.o(.rom.00000000)");
     }
 }

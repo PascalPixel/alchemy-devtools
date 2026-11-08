@@ -53,17 +53,17 @@ mod tests {
 Linker script and memory map
 
 ewram           0x02000000    0x38000
- .bss           0x02000000    0x38000 build/obj/src/ram.o
+ .bss           0x02000000    0x38000 build/src/ram.o
 .rom_start      0x08000000      0x200
- .text          0x08000000      0x100 build/obj/src/main.o
- .rodata        0x08000100       0x30 build/obj/src/main.o
+ .text          0x08000000      0x100 build/src/main.o
+ .rodata        0x08000100       0x30 build/src/main.o
  *fill*         0x08000130       0x10
  .rom.00000140
-                0x08000140       0x40 build/obj/asm/rom.o
- .text          0x08000180        0x0 build/obj/src/empty.o
+                0x08000140       0x40 build/asm/rom.o
+ .text          0x08000180        0x0 build/src/empty.o
 .iwram_code
                 0x03000000       0x20 load address 0x08000200
- .text          0x03000000       0x20 build/obj/src/fast.o
+ .text          0x03000000       0x20 build/src/fast.o
 ";
 
     #[test]
@@ -76,10 +76,10 @@ ewram           0x02000000    0x38000
         assert_eq!(
             sections,
             [
-                (".text", 0x100, "build/obj/src/main.o"),
-                (".rodata", 0x30, "build/obj/src/main.o"),
-                (".rom.00000140", 0x40, "build/obj/asm/rom.o"),
-                (".text", 0x20, "build/obj/src/fast.o"),
+                (".text", 0x100, "build/src/main.o"),
+                (".rodata", 0x30, "build/src/main.o"),
+                (".rom.00000140", 0x40, "build/asm/rom.o"),
+                (".text", 0x20, "build/src/fast.o"),
             ]
         );
         // An overlay's image is its own `.text` and `.data`.
@@ -88,11 +88,11 @@ ewram           0x02000000    0x38000
 Linker script and memory map
 
 .text           0x02000000       0x30
- .text          0x02000000       0x30 build/obj/src/scene/vale.o
+ .text          0x02000000       0x30 build/src/scene/vale.o
 .data           0x02000030       0x10
- .data          0x02000030       0x10 build/obj/src/scene/vale.o
+ .data          0x02000030       0x10 build/src/scene/vale.o
 .bss            0x02000040       0x20
- .bss           0x02000040       0x20 build/obj/src/scene/vale.o
+ .bss           0x02000040       0x20 build/src/scene/vale.o
 ",
         );
         assert_eq!(span(&overlay, Image::Overlay), 0x40);

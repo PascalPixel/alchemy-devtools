@@ -6,6 +6,7 @@ use crate::alchemy::layout::{
     aligns, edition_only, ends_with_padding, globals, has_edition_forms, overlay_draft, overlay_section, pieces,
     rom_offset, rom_section, sections, Layout, ObjectList, Row, Section, LANGUAGES,
 };
+use crate::alchemy::built::object_stem;
 use crate::compile::root;
 use crate::gba::ld_map::Map;
 use crate::gba::clex::{lex, Kind, Token};
@@ -676,13 +677,12 @@ fn adopt_edition(files: &mut Files, item: &str, options: &Options) -> Result<Vec
 /// Whether an adopted object's code ends on a halfword, from the map of an
 /// edition that links it (build output, not the ROM).
 fn halfword_from_maps(root: &Path, layout: &Layout, list: &ObjectList, object: &str) -> Option<bool> {
-    let placed = format!("{object}.o");
     let linking = LANGUAGES.iter().filter(|language| list.rows.iter().any(|row| row.object() == object && row.links(language)));
     linking.into_iter().find_map(|language| {
         let edition = format!("{}-{language}", layout.game);
         let text = std::fs::read_to_string(root.join(format!("out/{edition}/{edition}.map"))).ok()?;
         let map = Map::parse(&text);
-        map.placed.iter().find(|p| p.name == ".text" && p.object() == placed).map(|p| p.size % 4 == 2)
+        map.placed.iter().find(|p| p.name == ".text" && object_stem(&p.path) == Some(object)).map(|p| p.size % 4 == 2)
     })
 }
 

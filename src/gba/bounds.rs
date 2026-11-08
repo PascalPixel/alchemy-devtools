@@ -69,8 +69,8 @@ mod tests {
     fn an_address_stands_for_the_function_that_holds_it() {
         let map = Map::parse(crate::gba::ld_map::tests::MAP);
         let functions = vec![(0x0800_0014, "Input_Static".to_string())];
-        let found = |wanted: &str| resolve(&map, None, &functions, wanted).map(|(p, a, n)| (p.object().to_string(), a, n));
-        let io = "src/system/io.o".to_string();
+        let found = |wanted: &str| resolve(&map, None, &functions, wanted).map(|(p, a, n)| (p.path.clone(), a, n));
+        let io = "/x/build/src/system/io.o".to_string();
         assert_eq!(found("Input_Poll"), Ok((io.clone(), 0x0800_0018, "Input_Poll".to_string())));
         assert_eq!(found("08000012"), Ok((io.clone(), 0x0800_0010, "Input_Handle".to_string())));
         assert_eq!(found("0x08000016"), Ok((io.clone(), 0x0800_0014, "Input_Static".to_string())));
@@ -82,7 +82,7 @@ mod tests {
     fn a_function_ends_at_the_next_symbol_in_its_own_section() {
         let section = Placed {
             name: ".text".into(),
-            path: "/x/obj/src/A.o".into(),
+            path: "/x/build/src/A.o".into(),
             address: 0x0800_0100,
             size: 0x40,
             load: 0x0800_0100,
