@@ -1,6 +1,10 @@
-//! C tokens for the permuter. Comments are kept as tokens so statements can
-//! carry them; preprocessor lines are skipped, because the draft is read as
-//! written and the compiler preprocesses every candidate.
+//! C tokens for the permuter, read through `gba::clex`. Comments are kept as
+//! tokens so statements can carry them; preprocessor lines are skipped,
+//! because the draft is read as written and the compiler preprocesses every
+//! candidate. Unlike the counting lexer, the permuter refuses what is not C:
+//! an unterminated comment or literal, or a stray character.
+
+use crate::gba::clex::{self, Kind};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Tok {
@@ -26,114 +30,42 @@ const PUNCTUATORS: &[&str] = &[
     "+", "-", "~", "!", "/", "%", "<", ">", "^", "|", "?", ":", ";", "=", ",", "#",
 ];
 
+/// Whether a literal ends with its own quote, unescaped.
+fn closed(text: &str) -> bool {
+    let bytes = text.as_bytes();
+    let mut at = 1;
+    while at < bytes.len() {
+        match bytes[at] {
+            b'\\' => at += 2,
+            byte if byte == bytes[0] => return at == bytes.len() - 1,
+            _ => at += 1,
+        }
+    }
+    false
+}
+
 pub fn lex(source: &str) -> Result<Vec<Token>, String> {
-    let bytes = source.as_bytes();
     let mut tokens = Vec::new();
-    let mut index = 0;
-    let mut line = 1;
-    let mut line_start = true;
-    while index < bytes.len() {
-        let byte = bytes[index];
-        if byte == b'\n' {
-            line += 1;
-            line_start = true;
-            index += 1;
-            continue;
-        }
-        if byte.is_ascii_whitespace() {
-            index += 1;
-            continue;
-        }
-        if line_start && byte == b'#' {
-            // A preprocessor line, with its continuations.
-            while index < bytes.len() && bytes[index] != b'\n' {
-                if bytes[index] == b'\\' && bytes.get(index + 1) == Some(&b'\n') {
-                    line += 1;
-                    index += 1;
-                }
-                index += 1;
+    for token in clex::lex(source).into_iter().filter(|token| !token.pp) {
+        let (text, line) = (token.text, token.line);
+        let unexpected = |c: char| format!("line {line}: unexpected character {c:?}");
+        let tok = match token.kind {
+            Kind::Comment if text.starts_with("/*") && (text.len() < 4 || !text.ends_with("*/")) => {
+                return Err(format!("line {line}: unterminated comment"));
             }
-            continue;
-        }
-        line_start = false;
-        let start = index;
-        let token_line = line;
-        let tok = if source[index..].starts_with("/*") {
-            let end = source[index + 2..]
-                .find("*/")
-                .map(|at| index + 2 + at + 2)
-                .ok_or_else(|| format!("line {line}: unterminated comment"))?;
-            line += source[index..end].matches('\n').count();
-            index = end;
-            Tok::Comment(source[start..end].to_string())
-        } else if source[index..].starts_with("//") {
-            while index < bytes.len() && bytes[index] != b'\n' {
-                index += 1;
-            }
-            Tok::Comment(source[start..index].to_string())
-        } else if byte.is_ascii_alphabetic() || byte == b'_' {
-            while index < bytes.len()
-                && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_')
-            {
-                index += 1;
-            }
-            Tok::Ident(source[start..index].to_string())
-        } else if byte.is_ascii_digit()
-            || (byte == b'.' && bytes.get(index + 1).is_some_and(u8::is_ascii_digit))
-        {
-            while index < bytes.len() {
-                let c = bytes[index];
-                let exponent = matches!(c, b'+' | b'-')
-                    && matches!(bytes[index - 1], b'e' | b'E')
-                    && !source[start..index].starts_with("0x")
-                    && !source[start..index].starts_with("0X");
-                if c.is_ascii_alphanumeric() || c == b'_' || c == b'.' || exponent {
-                    index += 1;
-                } else {
-                    break;
-                }
-            }
-            Tok::Number(source[start..index].to_string())
-        } else if byte == b'\'' || byte == b'"' {
-            index += 1;
-            while index < bytes.len() && bytes[index] != byte {
-                if bytes[index] == b'\\' {
-                    index += 1;
-                }
-                if bytes.get(index) == Some(&b'\n') {
-                    return Err(format!("line {line}: unterminated literal"));
-                }
-                index += 1;
-            }
-            if index >= bytes.len() {
-                return Err(format!("line {line}: unterminated literal"));
-            }
-            index += 1;
-            let text = source[start..index].to_string();
-            if byte == b'\'' {
-                Tok::Char(text)
-            } else {
-                Tok::Str(text)
-            }
-        } else {
-            let punct = PUNCTUATORS
-                .iter()
-                .find(|punct| source[index..].starts_with(**punct))
-                .ok_or_else(|| {
-                    format!(
-                        "line {line}: unexpected character {:?}",
-                        source[index..].chars().next().unwrap_or(' ')
-                    )
-                })?;
-            index += punct.len();
-            Tok::Punct(punct)
+            Kind::Comment => Tok::Comment(text.to_string()),
+            Kind::Ident if text.contains('$') => return Err(unexpected('$')),
+            Kind::Ident => Tok::Ident(text.to_string()),
+            Kind::Number => Tok::Number(text.to_string()),
+            Kind::Char | Kind::Str if !closed(text) => return Err(format!("line {line}: unterminated literal")),
+            Kind::Char => Tok::Char(text.to_string()),
+            Kind::Str => Tok::Str(text.to_string()),
+            _ => Tok::Punct(
+                PUNCTUATORS.iter().find(|&&punct| punct == text).ok_or_else(|| unexpected(text.chars().next().unwrap_or(' ')))?,
+            ),
         };
-        tokens.push(Token {
-            tok,
-            start,
-            end: index,
-            line: token_line,
-        });
+        let start = text.as_ptr() as usize - source.as_ptr() as usize;
+        tokens.push(Token { tok, start, end: start + text.len(), line });
     }
     Ok(tokens)
 }
@@ -162,5 +94,10 @@ mod tests {
                 Tok::Punct(";"),
             ]
         );
+        let token = &lex("x = \"a\\\"b\";").unwrap()[2];
+        assert_eq!((&token.tok, token.start, token.end), (&Tok::Str("\"a\\\"b\"".into()), 4, 10));
+        for text in ["/* open", "\"open\n\";", "'a", "a@b", "a$b", "x = \"a\\\";"] {
+            assert!(lex(text).is_err(), "{text:?}");
+        }
     }
 }

@@ -101,7 +101,11 @@ pub fn lex(text: &str) -> Vec<Token<'_>> {
             while at < bytes.len() && bytes[at] != byte && bytes[at] != b'\n' {
                 at += if bytes[at] == b'\\' { 2 } else { 1 };
             }
-            at = (at + 1).min(bytes.len());
+            // The closing quote; an unterminated literal ends at its line's end.
+            if bytes.get(at) == Some(&byte) {
+                at += 1;
+            }
+            at = at.min(bytes.len());
             if byte == b'"' {
                 Kind::Str
             } else {
@@ -109,9 +113,12 @@ pub fn lex(text: &str) -> Vec<Token<'_>> {
             }
         } else if byte.is_ascii_digit() || (byte == b'.' && bytes.get(at + 1).is_some_and(u8::is_ascii_digit)) {
             at += 1;
+            // An exponent's sign: after e in a decimal number, after p in a hex one.
+            let hex = matches!(bytes.get(start + 1), Some(b'x' | b'X')) && byte == b'0';
+            let exponent: &[u8] = if hex { b"pP" } else { b"eE" };
             while at < bytes.len() {
                 let next = bytes[at];
-                if (next == b'+' || next == b'-') && matches!(bytes[at - 1], b'e' | b'E' | b'p' | b'P') {
+                if (next == b'+' || next == b'-') && exponent.contains(&bytes[at - 1]) {
                     at += 1;
                 } else if next.is_ascii_alphanumeric() || next == b'_' || next == b'.' {
                     at += 1;
@@ -167,6 +174,9 @@ mod tests {
         assert!(kinds.contains(&(Kind::Comment, "/// note", true)));
         assert!(kinds.contains(&(Kind::PpEnd, "", true)));
         assert!(kinds.contains(&(Kind::Number, "1.5e+3", false)));
+        // In a hex number e is a digit: the sign after it is an operator.
+        let texts: Vec<_> = lex("0x1e+1 'a\n").iter().map(|t| t.text).collect();
+        assert_eq!(texts, ["0x1e", "+", "1", "'a"]);
         assert_eq!(tokens.last().unwrap().line, 3);
         assert!(is_doc("/// x") && !is_doc("//// x") && !is_doc("// x") && is_trailing_doc("///< x"));
     }
