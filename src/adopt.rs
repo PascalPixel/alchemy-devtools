@@ -16,10 +16,10 @@ use crate::gba::clex::{lex, Kind, Token};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-const USAGE: &str = r#"usage: alchemy-devtools adopt main ADDRESS[,ADDRESS...]... [--editions LIST] [--game GAME] [--unmeasured] [--dry-run]
-       alchemy-devtools adopt overlay DRAFT.c... [--edition-forms] [--unmeasured] [--dry-run]
-       alchemy-devtools adopt edition OBJECT... --editions LIST [--dry-run]
-       alchemy-devtools adopt replace FILE.c DRAFT.c [--unmeasured] [--dry-run]
+const USAGE: &str = r#"usage: alchemy-devtools adopt main ADDRESS[,ADDRESS...]... [--editions LIST] [--game GAME] [--unmeasured] [--verify | --dry-run]
+       alchemy-devtools adopt overlay DRAFT.c... [--edition-forms] [--unmeasured] [--verify | --dry-run]
+       alchemy-devtools adopt edition OBJECT... --editions LIST [--verify | --dry-run]
+       alchemy-devtools adopt replace FILE.c DRAFT.c [--unmeasured] [--verify | --dry-run]
        alchemy-devtools adopt --undo JOURNAL [ITEM...]
 main: the English draft recon/GAME/en/main/ADDRESS.c becomes
 games/GAME/src/FOLDER/fADDRESS.c, FOLDER being the nearest object's in the
@@ -51,7 +51,13 @@ addresses; overlay: in English; replace: in every edition) and refused
 unless it differs in nothing. A measured differ 0 is not yet a match: pools,
 padding and an edition's own bytes show only in the linked ROM, so the build
 still judges (make compare-editions, then check rom). --unmeasured adopts a
-draft diff cannot measure and leaves the build alone to judge it.
+draft diff cannot measure and leaves the build alone to judge it. --verify
+has the build judge at once: it makes every edition of the game
+(make -k compare-EDITION), and while one differs, sends back to its draft
+the item that wrote the object placing the first byte it differs in, or
+whose overlay's stream the ROM lacks (as --undo JOURNAL ITEM does), and
+builds again; it stops, naming the journal, when an edition does not link
+or differs first in something no item wrote.
 Drafts lose their leading // header and are clang-formatted. --dry-run
 prints what would change. Otherwise the changes are written with a journal
 under out/adopt/ that --undo reverses exactly, provided nothing it wrote
@@ -79,6 +85,8 @@ struct Options {
     edition_forms: bool,
     /// Whether each draft is measured before it is adopted.
     measured: bool,
+    /// Whether the build judges the batch after it is written.
+    verify: bool,
     dry_run: bool,
 }
 
@@ -95,6 +103,7 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
     let mut game = None;
     let mut edition_forms = false;
     let mut measured = true;
+    let mut verify = false;
     let mut dry_run = false;
     let mut i = 0;
     while i < arguments.len() {
@@ -103,6 +112,7 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
             "--dry-run" => dry_run = true,
             "--edition-forms" => edition_forms = true,
             "--unmeasured" => measured = false,
+            "--verify" => verify = true,
             "--undo" => {
                 let journal = arguments.get(i + 1).filter(|_| i == 0);
                 let items = arguments.get(2..).unwrap_or_default().to_vec();
@@ -143,7 +153,8 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
     let misplaced = (editions.is_some() && matches!(form, Form::Overlay | Form::Replace))
         || (edition_forms && form != Form::Overlay)
         || (game.is_some() && form != Form::Main)
-        || (!measured && form == Form::Edition);
+        || (!measured && form == Form::Edition)
+        || (verify && dry_run);
     if !fits || misplaced {
         return Err(USAGE.into());
     }
@@ -151,7 +162,7 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
         // One replacement: FILE and the draft that replaces it.
         items = vec![items.join(" ")];
     }
-    Ok(Request::Adopt(Options { form, items, editions, game, edition_forms, measured, dry_run }))
+    Ok(Request::Adopt(Options { form, items, editions, game, edition_forms, measured, verify, dry_run }))
 }
 
 fn parse_editions(text: &str) -> Result<Vec<String>, String> {
@@ -189,6 +200,11 @@ fn command_line(arguments: &[String]) -> String {
 /// Backs `items` out of a journal's adoption: the journal is undone and the
 /// adoption it records run again without them, so the rest stay adopted.
 fn back_out(root: &Path, journal: &Path, items: &[String]) -> Result<(), String> {
+    back_out_batch(root, journal, items).map(|_| ())
+}
+
+/// `back_out`, giving the batch written again, if any item is left.
+fn back_out_batch(root: &Path, journal: &Path, items: &[String]) -> Result<Option<Batch>, String> {
     let path = [std::env::current_dir().map(|d| d.join(journal)).ok(), Some(root.join(journal))]
         .into_iter()
         .flatten()
@@ -207,11 +223,13 @@ fn back_out(root: &Path, journal: &Path, items: &[String]) -> Result<(), String>
     options.items.retain(|item| !items.iter().any(|given| named(item, given)));
     undo(root, journal)?;
     if options.items.is_empty() {
-        return Ok(());
+        return Ok(None);
     }
-    // The rest measured as they were when the journal was written.
-    let words: Vec<String> = words.into_iter().filter(|word| !items.iter().any(|given| named(word, given))).collect();
-    adopt(root, &options, &command_line(&words))
+    // The rest measured as they were when the journal was written, and
+    // verified by whoever called for the back-out.
+    let words: Vec<String> = words.into_iter().filter(|word| !items.iter().any(|given| named(word, given)) && word != "--verify").collect();
+    options.verify = false;
+    adopt_batch(root, &options, &command_line(&words))
 }
 
 /// The diff commands that measure an item's draft, from the checkout, or
@@ -247,13 +265,94 @@ fn measure(root: &Path, options: &Options, item: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// A batch written: its journal, its game, and each item with the source
+/// stems it wrote under games/ and the overlay its draft belongs to.
+struct Batch {
+    journal: String,
+    game: String,
+    items: Vec<(String, Vec<String>, Option<String>)>,
+}
+
 fn adopt(root: &Path, options: &Options, command: &str) -> Result<(), String> {
+    let batch = adopt_batch(root, options, command)?;
+    match batch.filter(|_| options.verify) {
+        Some(batch) => verify(root, batch),
+        None => Ok(()),
+    }
+}
+
+/// Builds every edition of the batch's game and backs out the item the build
+/// blames, by what placed the first byte an edition differs in or by the
+/// overlay whose stream the ROM lacks, until every edition compares.
+fn verify(root: &Path, mut batch: Batch) -> Result<(), String> {
+    let ids = crate::alchemy::built::editions(std::slice::from_ref(&batch.game))?;
+    let jobs = std::thread::available_parallelism().map_or(1, |n| n.get());
+    loop {
+        let mut arguments = vec!["make".to_string(), "-k".into(), format!("-j{jobs}")];
+        arguments.extend(ids.iter().map(|id| format!("compare-{id}")));
+        println!("verify: make {}", arguments[1..].join(" "));
+        let made = crate::gba::process::run(&arguments, root);
+        if made.is_ok() {
+            println!("verified: every {} edition matches its ROM", batch.game);
+            return Ok(());
+        }
+        // An edition the batch changed relinks after its journal was written;
+        // one that did not link keeps an older image.
+        let written = std::fs::metadata(root.join(&batch.journal)).and_then(|meta| meta.modified()).map_err(|error| format!("{}: {error}", batch.journal))?;
+        let mut blamed: Vec<String> = Vec::new();
+        for &id in &ids {
+            let image = root.join(crate::alchemy::targets::target_for(id).image());
+            let linked = std::fs::metadata(&image).and_then(|meta| meta.modified()).is_ok_and(|time| time >= written);
+            if !linked {
+                let error = made.as_ref().err().map_or("", |error| error.as_str());
+                let tail: Vec<&str> = error.lines().rev().take(6).collect::<Vec<_>>().into_iter().rev().collect();
+                return Err(format!(
+                    "{id} did not link, so no byte can be blamed:\n  {}\nback an item out with adopt --undo {} ITEM",
+                    tail.join("\n  "),
+                    batch.journal
+                ));
+            }
+            let Some(difference) = crate::check::rom::first_difference(root, id)? else { continue };
+            let culprit = batch.items.iter().find(|(_, stems, overlay)| {
+                difference.object.as_ref().is_some_and(|object| stems.contains(object))
+                    || overlay.as_ref().is_some_and(|overlay| difference.overlays.contains(overlay))
+            });
+            match culprit {
+                Some((item, ..)) => {
+                    println!("verify: {id} first differs at {}: {item} goes back to its draft", difference.label);
+                    if !blamed.contains(item) {
+                        blamed.push(item.clone());
+                    }
+                }
+                None => {
+                    return Err(format!(
+                        "{id} first differs at {}, which no item of this batch wrote; adopt --undo {} undoes it",
+                        difference.label, batch.journal
+                    ))
+                }
+            }
+        }
+        if blamed.is_empty() {
+            return Err(format!("make failed, yet every {} edition matches: {}", batch.game, made.err().unwrap_or_default()));
+        }
+        match back_out_batch(root, Path::new(&batch.journal), &blamed)? {
+            Some(rest) => batch = rest,
+            None => {
+                println!("verify: every item went back to its draft");
+                return Ok(());
+            }
+        }
+    }
+}
+
+fn adopt_batch(root: &Path, options: &Options, command: &str) -> Result<Option<Batch>, String> {
     // Held from the first read to the last write, so no other adoption
     // edits the files this one reads; a dry run writes nothing.
     let _lock = if options.dry_run { None } else { Some(Lock::take(root)?) };
     let mut files = Files::new(root);
     let mut adopted = 0;
     let mut refused = 0;
+    let mut written: Vec<(String, Vec<String>, Option<String>)> = Vec::new();
     for item in &options.items {
         if options.measured {
             if let Err(why) = measure(root, options, item) {
@@ -278,6 +377,16 @@ fn adopt(root: &Path, options: &Options, command: &str) -> Result<(), String> {
                 for line in lines {
                     println!("{line}");
                 }
+                // What the item wrote under games/: the objects the build
+                // can blame it by.
+                let stems: Vec<String> = files
+                    .now
+                    .iter()
+                    .filter(|(path, now)| saved.get(*path) != Some(*now) && now.is_some() && path.starts_with("games/"))
+                    .filter_map(|(path, _)| [".c", ".s", ".S"].iter().find_map(|extension| path.strip_suffix(extension)))
+                    .map(str::to_string)
+                    .collect();
+                written.push((item.clone(), stems, crate::alchemy::overlay::named_in(item)));
             }
             Err(why) => {
                 files.now = saved;
@@ -291,12 +400,21 @@ fn adopt(root: &Path, options: &Options, command: &str) -> Result<(), String> {
     }
     if options.dry_run {
         println!("dry run: {adopted} would be adopted, {refused} refused; nothing written");
-        return Ok(());
+        return Ok(None);
     }
     let journal = files.commit(command, &journal_name(options))?;
     println!("{adopted} adopted, {refused} refused; journal {journal}");
-    println!("judge with make compare-editions; undo with alchemy-devtools adopt --undo {journal}");
-    Ok(())
+    if !options.verify {
+        println!("judge with make compare-editions, or adopt --verify; undo with alchemy-devtools adopt --undo {journal} [ITEM...]");
+    }
+    let game = match options.form {
+        Form::Main => main_game(root, options)?,
+        _ => {
+            let path = options.items[0].split(' ').next().unwrap_or("");
+            Layout::of_path(path).map(|layout| layout.game).ok_or_else(|| format!("{path} names no game"))?
+        }
+    };
+    Ok(Some(Batch { journal, game, items: written }))
 }
 
 /// The game `adopt main` works in: --game, else the one game with English

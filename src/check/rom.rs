@@ -198,6 +198,43 @@ impl Placement {
             None => label,
         }
     }
+
+    /// The source stem of the object that placed the byte at an address.
+    fn object(&self, address: u32) -> Option<String> {
+        let after = self.sections.partition_point(|placed| placed.load <= address);
+        let placed = after.checked_sub(1).map(|at| &self.sections[at]).filter(|placed| address < placed.load + placed.size)?;
+        (!placed.is_fill()).then(|| built::stem(self.edition, &placed.path))
+    }
+}
+
+/// Where a built edition first differs from its reference ROM, for adopt's
+/// verifying, which blames what placed it: the first differing byte's label
+/// and the source stem of its object (code that grows or shrinks moves every
+/// byte after it, so only the first range names a culprit), and the overlays
+/// whose packed stream the ROM lacks. None when the edition is identical.
+pub(crate) struct Difference {
+    pub(crate) label: String,
+    pub(crate) object: Option<String>,
+    pub(crate) overlays: Vec<String>,
+}
+
+pub(crate) fn first_difference(root: &Path, id: DecompTargetId) -> Result<Option<Difference>, String> {
+    let path = built::output(root, id).join(format!("{id}.gba"));
+    let image = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let rom = reference(root, id)?;
+    let Some(&(start, _)) = differences(&image, &rom).first() else { return Ok(None) };
+    let placement = Placement::read(root, id)?;
+    let address = ROM + start as u32;
+    let mut overlays = Vec::new();
+    if let Ok(streams) = built::overlay_files(root, id, "lz") {
+        let packed = streams.iter().map(|(_, path)| std::fs::read(path).unwrap_or_default()).collect::<Vec<_>>();
+        for ((name, _), at) in streams.iter().zip(find_all(&rom, &packed)) {
+            if at.is_none() {
+                overlays.push(name.clone());
+            }
+        }
+    }
+    Ok(Some(Difference { label: placement.at(address), object: placement.object(address), overlays }))
 }
 
 pub fn roms(arguments: &[String]) -> Result<(), String> {

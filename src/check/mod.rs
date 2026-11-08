@@ -3,7 +3,7 @@
 //! or feeds it to the build (O1).
 
 mod packer;
-mod rom;
+pub(crate) mod rom;
 mod tags;
 
 const USAGE: &str = "usage: alchemy-devtools check overlays [ID...] [--edition EDITION|GAME]...
