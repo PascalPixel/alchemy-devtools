@@ -31,6 +31,14 @@ pub fn run<S: AsRef<str>>(command: &[S], cwd: impl AsRef<Path>) -> Result<String
     }
 }
 
+/// Whether process `pid` has ended. Signal 0 sends nothing; it only asks
+/// whether the process exists. 0 and what no process id can be count as gone.
+pub(crate) fn gone(pid: u32) -> bool {
+    let Ok(pid) = libc::pid_t::try_from(pid) else { return true };
+    // SAFETY: kill with signal 0 has no effect on the process.
+    pid <= 0 || (unsafe { libc::kill(pid, 0) } != 0 && std::io::Error::last_os_error().raw_os_error() == Some(libc::ESRCH))
+}
+
 #[cfg(not(target_os = "macos"))]
 fn spawn(program: &str, args: &[&str], cwd: &Path) -> Result<Output, String> {
     #[cfg(target_os = "linux")]
@@ -275,6 +283,12 @@ mod tests {
         let persona = run(&["cat", "/proc/self/personality"], "/").unwrap();
         let persona = u64::from_str_radix(persona.trim(), 16).unwrap();
         assert_eq!(persona & 0x4_0000 != 0, fixed);
+    }
+
+    #[test]
+    fn a_running_process_is_not_gone() {
+        assert!(!gone(std::process::id()));
+        assert!(gone(0) && gone(u32::MAX) && gone(0x3fff_fff0));
     }
 
     #[test]

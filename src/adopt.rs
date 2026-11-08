@@ -45,7 +45,8 @@ FILE, go with their link lines.
 Drafts lose their leading // header and are clang-formatted. --dry-run
 prints what would change. Otherwise the changes are written with a journal
 under out/adopt/ that --undo reverses exactly, provided nothing it wrote
-has changed since. LIST: en,de,es,fr,it,ja, or edition names (tla-en)."#;
+has changed since. One adopt or undo runs at a time (out/adopt/lock), and
+none writes over a file that changed after it read it. LIST: en,de,es,fr,it,ja, or edition names (tla-en)."#;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Form {
@@ -152,6 +153,9 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
 }
 
 fn adopt(root: &Path, options: &Options, command: &str) -> Result<(), String> {
+    // Held from the first read to the last write, so no other adoption
+    // edits the files this one reads; a dry run writes nothing.
+    let _lock = if options.dry_run { None } else { Some(Lock::take(root)?) };
     let mut files = Files::new(root);
     let mut adopted = 0;
     let mut refused = 0;
@@ -1087,7 +1091,8 @@ impl Files {
     }
 
     /// Writes the journal that undoes every change, then the changes; returns
-    /// the journal's path.
+    /// the journal's path. Nothing is written when a file it changes no longer
+    /// holds what adoption read.
     fn commit(&self, command: &str, name: &str) -> Result<String, String> {
         let changed: Vec<(&String, &Option<String>, &Option<String>)> = self
             .now
@@ -1095,6 +1100,14 @@ impl Files {
             .filter(|(path, now)| self.before[*path] != **now)
             .map(|(path, now)| (path, &self.before[path], now))
             .collect();
+        let moved: Vec<&str> = changed
+            .iter()
+            .filter(|(path, before, _)| std::fs::read_to_string(self.root.join(path)).ok() != **before)
+            .map(|(path, ..)| path.as_str())
+            .collect();
+        if !moved.is_empty() {
+            return Err(format!("changed since adopt read them, so nothing was written:\n  {}", moved.join("\n  ")));
+        }
         let mut folders: Vec<String> = Vec::new();
         for (path, _, now) in &changed {
             if now.is_none() {
@@ -1154,6 +1167,47 @@ impl Files {
     }
 }
 
+/// One adoption or undo at a time: `out/adopt/lock` holds the running one's
+/// process id and goes when it ends. A lock whose process has ended is taken
+/// over; journals are numbered while it is held, so no two share a number.
+#[derive(Debug)]
+struct Lock(PathBuf);
+
+impl Lock {
+    fn take(root: &Path) -> Result<Lock, String> {
+        let folder = root.join("out/adopt");
+        std::fs::create_dir_all(&folder).map_err(|error| format!("cannot create out/adopt: {error}"))?;
+        let path = folder.join("lock");
+        for _ in 0..2 {
+            match std::fs::OpenOptions::new().write(true).create_new(true).open(&path) {
+                Ok(mut file) => {
+                    use std::io::Write;
+                    writeln!(file, "{}", std::process::id()).map_err(|error| format!("cannot write out/adopt/lock: {error}"))?;
+                    return Ok(Lock(path));
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    let holder = std::fs::read_to_string(&path).ok().and_then(|text| text.trim().parse::<u32>().ok());
+                    match holder {
+                        Some(pid) if crate::gba::process::gone(pid) => {
+                            let _ = std::fs::remove_file(&path);
+                        }
+                        Some(pid) => return Err(format!("another adopt (process {pid}) holds out/adopt/lock; run one at a time")),
+                        None => return Err("out/adopt/lock names no process: remove it if no adopt is running".into()),
+                    }
+                }
+                Err(error) => return Err(format!("cannot create out/adopt/lock: {error}")),
+            }
+        }
+        Err("cannot take out/adopt/lock".into())
+    }
+}
+
+impl Drop for Lock {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
 fn fingerprint(text: Option<&str>) -> String {
     use sha1::{Digest, Sha1};
     match text {
@@ -1209,6 +1263,7 @@ fn read_journal(bytes: &[u8]) -> Result<(Vec<String>, Vec<Entry>), String> {
 /// Puts back what a journal's adoption changed, refusing when any file it
 /// wrote has changed since.
 fn undo(root: &Path, journal: &Path) -> Result<(), String> {
+    let _lock = Lock::take(root)?;
     let journal_path = [std::env::current_dir().map(|d| d.join(journal)).ok(), Some(root.join(journal))]
         .into_iter()
         .flatten()
@@ -1316,6 +1371,34 @@ mod tests {
         assert_eq!(std::fs::read_to_string(root.join("gone.txt")).unwrap(), "old");
         assert!(!root.join("new").exists());
         assert!(!root.join(&journal).exists());
+    }
+
+    /// Two adoptions that read the same file: the second writes nothing over
+    /// the first, and only one holds the lock at a time.
+    #[test]
+    fn adoptions_take_turns_and_never_write_over_each_other() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        std::fs::write(root.join("objects.tsv"), "a\n").unwrap();
+        let mut first = Files::new(root);
+        let mut second = Files::new(root);
+        first.write("objects.tsv", "a\nb\n".into());
+        second.write("objects.tsv", "a\nc\n".into());
+        second.write("made.c", "int c;\n".into());
+        first.commit("adopt first", "first").unwrap();
+        assert!(second.commit("adopt second", "second").unwrap_err().contains("objects.tsv"));
+        assert_eq!(std::fs::read_to_string(root.join("objects.tsv")).unwrap(), "a\nb\n");
+        assert!(!root.join("made.c").exists());
+        assert_eq!(std::fs::read_dir(root.join("out/adopt")).unwrap().count(), 1, "only the first journal");
+
+        let held = Lock::take(root).unwrap();
+        assert!(Lock::take(root).unwrap_err().contains(&std::process::id().to_string()));
+        drop(held);
+        std::fs::write(root.join("out/adopt/lock"), "1073741808\n").unwrap();
+        let taken = Lock::take(root).unwrap();
+        assert_eq!(std::fs::read_to_string(root.join("out/adopt/lock")).unwrap().trim(), std::process::id().to_string());
+        drop(taken);
+        assert!(!root.join("out/adopt/lock").exists());
     }
 
     /// German's section goes and joins the module's row; Japanese's also holds
