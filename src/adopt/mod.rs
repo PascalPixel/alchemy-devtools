@@ -77,8 +77,11 @@ builds again; it stops, naming the journal, when an edition does not link
 or differs first in something no item wrote.
 Drafts lose their leading // header and are clang-formatted. --dry-run
 prints what would change. Otherwise the changes are written with a journal
-under out/adopt/ that --undo reverses exactly, provided nothing it wrote
-has changed since. --undo JOURNAL ITEM... backs out only those items (an
+under out/adopt/ that --undo reverses: a file changed since (a later
+adoption's rows and scaffold edits) has only the journal's own change taken
+out, by a three-way merge of its lines, and the undo refuses, writing
+nothing, where the two changed the same lines. Journals undo in any order.
+--undo JOURNAL ITEM... backs out only those items (an
 address list, its first address, or a draft or object path): the journal is
 undone and its adoption run again without them, under a new journal. One
 adopt or undo runs at a time (out/adopt/lock), and none writes over a file
