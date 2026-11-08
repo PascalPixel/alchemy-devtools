@@ -32,9 +32,18 @@ pub fn preferred(symbols: &[(u32, String)], address: u32) -> Option<&str> {
     Some(std::iter::once(first).chain(names).find(|n| !is_placeholder(n)).unwrap_or(first))
 }
 
+/// A name given to what is not named yet: a word, `_` and its address in hex,
+/// eight digits (`Func_08000010`, `gUnknown_0203A0F4`) or, as pret writes a
+/// function's, seven with the leading 0 dropped (`sub_8000040`).
 pub fn is_placeholder(name: &str) -> bool {
-    name.rsplit_once('_')
-        .is_some_and(|(_, tail)| tail.len() == 8 && tail.chars().all(|c| c.is_ascii_hexdigit()))
+    name.rsplit_once('_').is_some_and(|(_, tail)| {
+        let address = (tail.chars().all(|c| c.is_ascii_hexdigit())).then(|| u32::from_str_radix(tail, 16).ok()).flatten();
+        match tail.len() {
+            8 => address.is_some(),
+            7 => address.is_some_and(|address| address >= 0x0200_0000),
+            _ => false,
+        }
+    })
 }
 
 #[derive(Default)]
@@ -187,6 +196,18 @@ fn is_identifier(name: &str) -> bool {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    #[test]
+    fn placeholders_are_named_by_their_address() {
+        for name in ["Func_08000010", "gData_02004695", "sub_8000040", "gUnknown_0203A0F4", "sub_80A1B2C"] {
+            assert!(super::is_placeholder(name), "{name}");
+        }
+        for name in ["Input_Poll", "nullsub_1", "unk_14", "gText_1234567", "Func_0800001"] {
+            assert!(!super::is_placeholder(name), "{name}");
+        }
+        let symbols = [(0x0800_0040, "sub_8000040".to_string()), (0x0800_0040, "AddOne".to_string())];
+        assert_eq!(super::preferred(&symbols, 0x0800_0040), Some("AddOne"));
+    }
+
     pub(crate) const MAP: &str = "\
 Discarded input sections
 
