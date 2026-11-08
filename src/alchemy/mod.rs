@@ -1,10 +1,12 @@
-//! Alchemy's own layout: its twelve editions and their reference ROMs, the
-//! overlays and the packed resource streams Camelot's loader unpacks, the PO
-//! message catalogs, what counts as DONE, how a measurement is published, and
-//! the humanization report.
+//! Alchemy's own layout: where its object lists, listings, scaffolds and
+//! drafts live, its twelve editions and their reference ROMs, the overlays and
+//! the packed resource streams Camelot's loader unpacks, the PO message
+//! catalogs, what counts as DONE, how a measurement is published, and the
+//! humanization report.
 
 pub(crate) mod done;
 pub(crate) mod humanity;
+pub(crate) mod layout;
 pub(crate) mod lz;
 pub(crate) mod overlay;
 pub(crate) mod po;

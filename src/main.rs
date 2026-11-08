@@ -24,7 +24,7 @@ mod r#where;
 const USAGE: &str = r#"usage: alchemy-devtools <command> [args]
 Run any command with --help for its options.
 
-  adopt     move matched drafts into the build, judged by every edition's bytes
+  adopt     move matched drafts into the build in every edition, with a journal to undo it
   check     each edition's built bytes against its ROM, and the fake-match tags
   diff      a C draft against the listing it would replace
   editions  what an edition still takes from its scaffold while another links C
