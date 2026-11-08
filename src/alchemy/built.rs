@@ -14,25 +14,10 @@ use std::path::{Path, PathBuf};
 /// the languages in the measurement's (`ja en de es fr it`).
 fn all() -> Result<Vec<DecompTargetId>, String> {
     let mut ids = targets::ids()?;
-    let games = games_of(&ids);
+    let games = targets::games()?;
     let language = |id: DecompTargetId| LANGUAGES.iter().position(|&language| language == id.language());
     ids.sort_by_key(|&id| (games.iter().position(|&game| game == id.game()), language(id)));
     Ok(ids)
-}
-
-fn games_of(ids: &[DecompTargetId]) -> Vec<&'static str> {
-    let mut games: Vec<&str> = Vec::new();
-    for id in ids {
-        if !games.contains(&id.game()) {
-            games.push(id.game());
-        }
-    }
-    games
-}
-
-/// Every game, in rom.sha1's order.
-pub fn games() -> Result<Vec<&'static str>, String> {
-    Ok(games_of(&targets::ids()?))
 }
 
 /// The editions a command line names: an edition (`tla-en`) or a game (`tla`,
@@ -49,7 +34,7 @@ pub fn editions(words: &[String]) -> Result<Vec<DecompTargetId>, String> {
             let names: Vec<&str> = all.iter().map(|id| id.as_str()).collect();
             return Err(format!(
                 "{word} is neither an edition nor a game: expected {} or one of {}",
-                games_of(&all).join(" or "),
+                targets::games()?.join(" or "),
                 names.join(" ")
             ));
         }
@@ -183,8 +168,7 @@ mod tests {
         let named: Vec<&str> = editions(&words(&["tla-de", "tla", "tbs-en"])).unwrap().iter().map(|id| id.as_str()).collect();
         assert_eq!(named, ["tla-de", "tla-ja", "tla-en", "tla-es", "tla-fr", "tla-it", "tbs-en"]);
         assert!(editions(&words(&["tla-xx"])).is_err());
-        assert_eq!(games().unwrap(), ["tbs", "tla"]);
-        assert_eq!((id("tla-de").game(), id("tla-de").language()), ("tla", "de"));
+                assert_eq!((id("tla-de").game(), id("tla-de").language()), ("tla", "de"));
         assert_eq!(edition("tbs", "it"), Some(id("tbs-it")));
     }
 

@@ -106,14 +106,48 @@ fn target(edition: &'static Edition) -> DecompTarget {
     }
 }
 
-/// Every edition, in rom.sha1's order.
-pub fn targets() -> Result<Vec<DecompTarget>, String> {
-    Ok(editions()?.iter().map(target).collect())
-}
-
 /// Every edition's name, in rom.sha1's order.
 pub fn ids() -> Result<Vec<DecompTargetId>, String> {
     Ok(editions()?.iter().map(|edition| DecompTargetId(&edition.id)).collect())
+}
+
+/// Every game, in the order rom.sha1 first lists it.
+pub fn games() -> Result<Vec<&'static str>, String> {
+    let mut games = Vec::new();
+    for id in ids()? {
+        if !games.contains(&id.game()) {
+            games.push(id.game());
+        }
+    }
+    Ok(games)
+}
+
+/// A game named on a command line, one rom.sha1 lists.
+pub fn game(name: &str) -> Result<&'static str, String> {
+    let games = games()?;
+    games.iter().copied().find(|&game| game == name).ok_or_else(|| format!("{name:?} is not a game rom.sha1 lists: {}", games.join(" or ")))
+}
+
+/// The edition a draft is measured in, and its game: the edition named, or
+/// else the English edition of the game named, of the game whose folder the
+/// draft's path names (`recon/tla/`), or of rom.sha1's first game.
+pub fn draft_edition(game: Option<&'static str>, edition: Option<DecompTarget>, path: &str) -> Result<(&'static str, DecompTarget), String> {
+    let edition_game = edition.map(|target| target.game());
+    if matches!((game, edition_game), (Some(game), Some(edition_game)) if game != edition_game) {
+        return Err("--game and --edition name different games".into());
+    }
+    let game = match game.or(edition_game) {
+        Some(game) => game,
+        None => {
+            let games = games()?;
+            games.iter().copied().find(|game| path.contains(&format!("/{game}/"))).or(games.first().copied()).ok_or("rom.sha1 lists no edition")?
+        }
+    };
+    let target = match edition {
+        Some(target) => target,
+        None => decomp_target(Some(&format!("{game}-en")))?,
+    };
+    Ok((game, target))
 }
 
 /// The edition a name stands for. A name is made only from rom.sha1's lines,
@@ -150,11 +184,26 @@ mod tests {
 
     #[test]
     fn the_checkout_lists_twelve_editions_and_checks_a_rom_by_its_line() {
-        assert_eq!(targets().unwrap().len(), 12);
+        assert_eq!(ids().unwrap().len(), 12);
         let target = decomp_target(Some("tla-ja")).unwrap();
         assert_eq!((target.game(), target.output_dir, target.rom), ("tla", "out/tla-ja", "roms/tla-ja.gba"));
         assert!(target.verify_reference(b"not the ROM").unwrap_err().contains("rom.sha1"));
         assert!(decomp_target(Some("tbs-xx")).unwrap_err().contains("tbs-en"));
         assert_eq!(parse_decomp_target("tbs-it").unwrap().as_str(), "tbs-it");
+        assert_eq!(games().unwrap(), ["tbs", "tla"]);
+        assert!(game("gs").unwrap_err().contains("tbs or tla"));
+    }
+
+    #[test]
+    fn a_draft_is_measured_in_its_games_english_edition_unless_named() {
+        let named = |game, edition: Option<&str>, path| {
+            draft_edition(game, edition.map(|edition| decomp_target(Some(edition)).unwrap()), path)
+                .map(|(game, target)| (game, target.id.as_str()))
+        };
+        assert_eq!(named(None, None, "recon/tla/en/main/08000000.c").unwrap(), ("tla", "tla-en"));
+        assert_eq!(named(None, None, "draft.c").unwrap(), ("tbs", "tbs-en"));
+        assert_eq!(named(Some("tla"), None, "draft.c").unwrap(), ("tla", "tla-en"));
+        assert_eq!(named(None, Some("tla-de"), "recon/tbs/en/main/08000000.c").unwrap(), ("tla", "tla-de"));
+        assert!(named(Some("tbs"), Some("tla-de"), "draft.c").is_err());
     }
 }

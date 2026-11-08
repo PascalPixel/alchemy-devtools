@@ -5,11 +5,39 @@
 use crate::gba::ld_map::{Map, ROM};
 use std::path::{Path, PathBuf};
 
-/// The overlay a path names (`resource_` and three hex digits).
+/// The overlay a path names (`resource_` and three hex digits), in lower case.
 pub(crate) fn named_in(path: &str) -> Option<String> {
     let at = path.find("resource_")?;
     let id = path.get(at + 9..at + 12)?;
-    id.chars().all(|c| c.is_ascii_hexdigit()).then(|| format!("resource_{id}"))
+    id.chars().all(|c| c.is_ascii_hexdigit()).then(|| format!("resource_{}", id.to_ascii_lowercase()))
+}
+
+/// The address a draft is named after: its file stem, or the stem's last
+/// `_`-separated part (`resource_XXX_c_ADDRESS`), when that is 8 hex digits.
+pub(crate) fn draft_address(stem: &str) -> Option<String> {
+    let tail = stem.rsplit('_').next()?;
+    (tail.len() == 8 && tail.chars().all(|c| c.is_ascii_hexdigit())).then(|| tail.to_ascii_lowercase())
+}
+
+/// Whether `name` is named after `address` (`Func_0200263c`).
+pub(crate) fn named_after(name: &str, address: Option<&str>) -> bool {
+    address.is_some_and(|address| name.to_ascii_lowercase().ends_with(address))
+}
+
+/// The overlay function an overlay draft is compared with: the one of the
+/// overlay's functions (`ours`) the draft also defines; among several, or
+/// none, the one named after the draft's address.
+pub(crate) fn function(ours: &[String], defined: &[String], stem: &str) -> Option<String> {
+    let address = draft_address(stem);
+    let mut shared: Vec<&String> = ours.iter().filter(|name| defined.contains(name)).collect();
+    if shared.len() != 1 {
+        let among = if shared.is_empty() { ours.iter().collect() } else { shared };
+        shared = among.into_iter().filter(|name| named_after(name, address.as_deref())).collect();
+    }
+    match shared.as_slice() {
+        [one] => Some(one.to_string()),
+        _ => None,
+    }
 }
 
 /// The overlay's own build file: `suffix` is `.map`, `.elf` or `_overlay.o`
@@ -130,6 +158,24 @@ mod tests {
         assert_eq!(named_in("recon/tbs/en/overlays/resource_3cd/02008768.c").as_deref(), Some("resource_3cd"));
         assert_eq!(named_in("recon/tbs/en/main/08011bf4.c"), None);
         assert_eq!(named_in("x/resource_3c"), None);
+        assert_eq!(named_in("resource_6AA_c_0200263c.c").as_deref(), Some("resource_6aa"));
+        assert_eq!(draft_address("resource_6aa_c_0200263C").as_deref(), Some("0200263c"));
+        assert_eq!(draft_address("080cbc0c").as_deref(), Some("080cbc0c"));
+        assert_eq!(draft_address("draft_link"), None);
+    }
+
+    #[test]
+    fn a_draft_is_compared_with_the_function_it_shares_or_is_named_after() {
+        let names = |items: &[&str]| items.iter().map(|item| item.to_string()).collect::<Vec<_>>();
+        let ours = names(&["Func_02000100", "Func_0200263c", "Scene_Init"]);
+        let stem = "resource_6aa_c_0200263c";
+        // The one the draft defines, whatever its name.
+        assert_eq!(function(&ours, &names(&["Scene_Init", "Helper"]), stem).as_deref(), Some("Scene_Init"));
+        // None, or several: the one named after the address.
+        assert_eq!(function(&ours, &names(&["Helper"]), stem).as_deref(), Some("Func_0200263c"));
+        assert_eq!(function(&ours, &names(&["Func_02000100", "Func_0200263c"]), stem).as_deref(), Some("Func_0200263c"));
+        assert_eq!(function(&ours, &names(&["Func_02000100", "Scene_Init"]), stem), None);
+        assert_eq!(function(&ours, &names(&["Helper"]), "draft"), None);
     }
 
     #[test]

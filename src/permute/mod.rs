@@ -16,7 +16,8 @@ mod score;
 #[cfg(test)]
 mod compatibility_tests;
 
-use crate::alchemy::targets::{decomp_target, DecompTarget};
+use crate::alchemy::overlay::{self, draft_address, named_after};
+use crate::alchemy::targets::{self, decomp_target, DecompTarget};
 use crate::compile::root;
 use parse::{locate, scan_unit, Unit};
 use perm::{Expanded, Node};
@@ -135,11 +136,7 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
             }
             "--game" => {
                 index += 1;
-                game = match value(index)?.as_str() {
-                    "tbs" => Some("tbs"),
-                    "tla" => Some("tla"),
-                    _ => return Err(format!("--game: tbs or tla\n{USAGE}")),
-                };
+                game = Some(targets::game(&value(index)?).map_err(|error| format!("--game: {error}\n{USAGE}"))?);
             }
             "--minutes" => {
                 index += 1;
@@ -164,7 +161,7 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
             "--overlay" => {
                 index += 1;
                 let name = value(index)?;
-                overlay = Some(resource(&name).filter(|_| name.len() == 12).ok_or("--overlay must be resource_XXX")?);
+                overlay = Some(overlay::named_in(&name).filter(|_| name.len() == 12).ok_or("--overlay must be resource_XXX")?);
             }
             "--arm" => arm = true,
             "--stack-diffs" => score_options.stack_differences = true,
@@ -184,7 +181,7 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
     let draft = draft.ok_or_else(|| USAGE.to_string())?;
     let text = draft.to_string_lossy().into_owned();
     if overlay.is_none() && text.contains("/overlays/") {
-        overlay = Some(resource(&text).ok_or_else(|| format!("{}: name its overlay with --overlay resource_XXX", draft.display()))?);
+        overlay = Some(overlay::named_in(&text).ok_or_else(|| format!("{}: name its overlay with --overlay resource_XXX", draft.display()))?);
     }
     if overlay.is_some() && (arm || !addresses.is_empty()) {
         return Err("--overlay compares one overlay function: it takes no main-image address and no --arm".into());
@@ -200,36 +197,9 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
             return Err(format!("{}: name the listing address\n{USAGE}", draft.display()));
         }
     }
-    let edition_game = target.map(|target| if target.id.as_str().starts_with("tla-") { "tla" } else { "tbs" });
-    if matches!((game, edition_game), (Some(game), Some(edition_game)) if game != edition_game) {
-        return Err("--game and --edition name different games".into());
-    }
-    let game = game.or(edition_game).unwrap_or(if text.contains("/tla/") { "tla" } else { "tbs" });
-    let target = match target {
-        Some(target) => target,
-        None => decomp_target(Some(&format!("{game}-en")))?,
-    };
+    let (game, target) = targets::draft_edition(game, target, &text)?;
     if !minutes.is_finite() || minutes < 0.0 { return Err("--minutes must be finite and nonnegative".into()); }
     Ok(Options { draft, addresses, game, target, minutes, jobs, seed, function, overlay, iterations, arm, score_options, keep_prob, stop_on_zero, better_only })
-}
-
-/// The overlay a name or path holds as `resource_XXX`, in lower case.
-fn resource(name: &str) -> Option<String> {
-    let at = name.find("resource_")?;
-    let id = name.get(at + 9..at + 12)?;
-    id.bytes().all(|c| c.is_ascii_hexdigit()).then(|| format!("resource_{}", id.to_ascii_lowercase()))
-}
-
-/// The address a draft is named after: its file stem, or the stem's last
-/// `_`-separated part (`resource_XXX_c_ADDRESS`), when that is 8 hex digits.
-fn stem_address(stem: &str) -> Option<String> {
-    let tail = stem.rsplit('_').next()?;
-    (tail.len() == 8 && tail.chars().all(|c| c.is_ascii_hexdigit())).then(|| tail.to_ascii_lowercase())
-}
-
-/// Whether `name` is named after `address` (`Func_0200263c`).
-fn named_after(name: &str, address: Option<&str>) -> bool {
-    address.is_some_and(|address| name.to_ascii_lowercase().ends_with(address))
 }
 
 /// One job's scratch: its candidate file and alchemy-devtools diff's steps for it.
@@ -433,36 +403,14 @@ fn reference(options: &Options) -> Result<Reference, String> {
 /// else the one the overlay names after the draft's address.
 fn overlay_function(target: DecompTarget, overlay: &str, stem: &str, text: &str) -> Result<String, String> {
     let output = root().join(target.output_dir).join("overlays");
-    let mut ours = Vec::new();
-    for name in [format!("{overlay}_overlay.o"), format!("{overlay}.elf")] {
-        let path = output.join(name);
-        if path.exists() {
-            ours.extend(crate::diff::text_symbols(&path)?);
-        }
-    }
+    let ours = crate::diff::overlay_functions(target, overlay)?;
     if ours.is_empty() {
         return Err(format!("{overlay}: no linked overlay in {}; build {} first", output.display(), target.id));
     }
-    ours.sort();
-    ours.dedup();
     let defined: Vec<String> = lex::lex(text).map(|tokens| parse::scan_definitions(&tokens).into_iter().map(|entry| entry.0).collect()).unwrap_or_default();
-    shared_function(&ours, &defined, stem_address(stem).as_deref()).ok_or_else(|| {
+    overlay::function(&ours, &defined, stem).ok_or_else(|| {
         format!("name the overlay function with --function: {overlay} has no single function the draft defines or names after its address")
     })
-}
-
-/// The one of the overlay's functions the draft also defines; among
-/// several, or none, the one named after the draft's address.
-fn shared_function(ours: &[String], defined: &[String], address: Option<&str>) -> Option<String> {
-    let mut shared: Vec<&String> = ours.iter().filter(|name| defined.contains(name)).collect();
-    if shared.len() != 1 {
-        let among = if shared.is_empty() { ours.iter().collect() } else { shared };
-        shared = among.into_iter().filter(|name| named_after(name, address)).collect();
-    }
-    match shared.as_slice() {
-        [one] => Some(one.to_string()),
-        _ => None,
-    }
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
@@ -523,7 +471,7 @@ fn select_function(unit: &c::Node, selected: Option<&str>, stem: &str) -> Result
             c::Node::Decl { name: Some(name), funcspec, .. } if !funcspec.iter().any(|s| s == "inline") => Some(name.clone()), _ => None,
         }, _ => None,
     }).collect();
-    let address = stem_address(stem);
+    let address = draft_address(stem);
     match names.iter().filter(|name| names.len() == 1 || named_after(name, address.as_deref())).collect::<Vec<_>>().as_slice() {
         [one] => Ok(one.to_string()),
         _ => Err(format!("choose a definition with --function (found: {})", names.join(", "))),
@@ -1234,22 +1182,6 @@ mod tests {
         ] {
             assert!(parse(&items).is_err(), "{items:?}");
         }
-    }
-
-    #[test]
-    fn overlay_functions_are_found_as_diff_finds_them() {
-        let names = |items: &[&str]| items.iter().map(|item| item.to_string()).collect::<Vec<_>>();
-        let ours = names(&["Func_02000100", "Func_0200263c", "Scene_Init"]);
-        // The one the draft defines, whatever its name.
-        assert_eq!(shared_function(&ours, &names(&["Scene_Init", "Helper"]), Some("0200263c")).as_deref(), Some("Scene_Init"));
-        // None, or several: the one named after the address.
-        assert_eq!(shared_function(&ours, &names(&["Helper"]), Some("0200263c")).as_deref(), Some("Func_0200263c"));
-        assert_eq!(shared_function(&ours, &names(&["Func_02000100", "Func_0200263c"]), Some("0200263c")).as_deref(), Some("Func_0200263c"));
-        assert_eq!(shared_function(&ours, &names(&["Func_02000100", "Scene_Init"]), Some("0200263c")), None);
-        assert_eq!(shared_function(&ours, &names(&["Helper"]), None), None);
-        assert_eq!(stem_address("resource_6aa_c_0200263C").as_deref(), Some("0200263c"));
-        assert_eq!(stem_address("080cbc0c").as_deref(), Some("080cbc0c"));
-        assert_eq!(stem_address("draft_link"), None);
     }
 
     #[test]

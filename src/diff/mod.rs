@@ -1,5 +1,5 @@
 use crate::alchemy::overlay;
-use crate::alchemy::targets::{decomp_target, targets, DecompTarget};
+use crate::alchemy::targets::{self, decomp_target, DecompTarget};
 use crate::compile::root;
 use crate::gba::bounds::{function_end, resolve};
 use crate::gba::elf::Elf;
@@ -115,7 +115,7 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
             "--game" => {
                 i += 1;
                 let named = arguments.get(i).ok_or_else(|| USAGE.to_string())?;
-                game = Some(targets()?.into_iter().map(|target| target.game()).find(|game| game == named).ok_or_else(|| USAGE.to_string())?);
+                game = Some(targets::game(named).map_err(|_| USAGE.to_string())?);
             }
             value if value.starts_with('-') => return Err(format!("unknown diff option: {value}\n{USAGE}")),
             value if draft.is_none() => draft = Some(PathBuf::from(value)),
@@ -147,21 +147,7 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
         }
         addresses.push(stem);
     }
-    let edition_game = target.map(|target| target.game());
-    if matches!((game, edition_game), (Some(game), Some(edition_game)) if game != edition_game) {
-        return Err("--game and --edition name different games".into());
-    }
-    let game = match game.or(edition_game) {
-        Some(game) => game,
-        None => {
-            let games: Vec<&str> = targets()?.into_iter().map(|target| target.game()).collect();
-            games.iter().copied().find(|game| path_text.contains(&format!("/{game}/"))).or(games.first().copied()).ok_or("rom.sha1 lists no edition")?
-        }
-    };
-    let target = match target {
-        Some(target) => target,
-        None => decomp_target(Some(&format!("{game}-en")))?,
-    };
+    let (game, target) = targets::draft_edition(game, target, &path_text)?;
     if arm && overlay.is_some() {
         return Err("--arm compiles main-image game ARM C; overlays are Thumb".into());
     }
@@ -777,6 +763,21 @@ pub(crate) fn overlay_reference(target: DecompTarget, overlay: &str, wanted: &st
     Ok((tokens, name))
 }
 
+/// The functions an overlay's build defines: its scaffold's and its linked
+/// ELF's, sorted.
+pub(crate) fn overlay_functions(target: DecompTarget, overlay: &str) -> Result<Vec<String>, String> {
+    let output = root().join(target.output_dir);
+    let mut ours = Vec::new();
+    for path in [overlay::file(&output, overlay, "_overlay.o"), overlay::file(&output, overlay, ".elf")] {
+        if path.exists() {
+            ours.extend(text_symbols(&path)?);
+        }
+    }
+    ours.sort();
+    ours.dedup();
+    Ok(ours)
+}
+
 pub(crate) fn text_symbols(object: &Path) -> Result<Vec<String>, String> {
     let listing = command(&["arm-none-eabi-nm", "--defined-only", &object.to_string_lossy()], root())?;
     Ok(listing
@@ -843,21 +844,12 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         let symbol = match &options.symbol {
             Some(s) => s.clone(),
             None => {
-                let mut ours = if reference.exists() { text_symbols(&reference)? } else { Vec::new() };
-                let linked = overlay::file(&output, overlay, ".elf");
-                if linked.exists() {
-                    ours.extend(text_symbols(&linked)?);
-                    ours.sort();
-                    ours.dedup();
-                }
-                let shared: Vec<String> = text_symbols(&object)?.into_iter().filter(|s| ours.contains(s)).collect();
-                let stem = options.draft.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-                let address = stem.rsplit('_').next().unwrap_or("").to_ascii_lowercase();
-                let by_address: Vec<String> = if address.len() == 8 { ours.iter().filter(|s| s.to_ascii_lowercase().ends_with(&address)).cloned().collect() } else { Vec::new() };
-                match (shared.as_slice(), by_address.as_slice()) {
-                    ([one], _) | ([], [one]) => one.clone(),
-                    _ => return Err(format!("name the listing function with --symbol (the draft and {overlay} share {} names)", shared.len())),
-                }
+                let ours = overlay_functions(target, overlay)?;
+                let defined = text_symbols(&object)?;
+                overlay::function(&ours, &defined, &stem).ok_or_else(|| {
+                    let shared = defined.iter().filter(|name| ours.contains(name)).count();
+                    format!("name the listing function with --symbol (the draft and {overlay} share {shared} names)")
+                })?
             }
         };
         let raw = if reference.exists() { disassemble(&reference, Some(&symbol))? } else { Vec::new() };

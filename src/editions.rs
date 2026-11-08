@@ -6,7 +6,7 @@
 use crate::alchemy::built;
 use crate::alchemy::done::commas;
 use crate::alchemy::layout::{Layout, ObjectList};
-use crate::alchemy::targets::DecompTargetId;
+use crate::alchemy::targets::{self, DecompTargetId};
 use crate::gba::elf::{self, Elf};
 use std::collections::HashMap;
 use std::path::Path;
@@ -332,7 +332,7 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let root = crate::compile::root();
     let chosen = if words.is_empty() {
         let unfinished: Vec<String> =
-            built::games()?.into_iter().filter(|game| root.join("recon").join(game).is_dir()).map(str::to_string).collect();
+            targets::games()?.into_iter().filter(|game| root.join("recon").join(game).is_dir()).map(str::to_string).collect();
         if unfinished.is_empty() {
             println!("every game is done: no recon/ left");
             return Ok(());
@@ -342,7 +342,7 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         built::editions(&words)?
     };
     let (mut objects, mut scaffolds) = (Vec::new(), Vec::new());
-    for game in built::games()? {
+    for game in targets::games()? {
         let editions = of_game(&chosen, game);
         if editions.is_empty() {
             continue;
