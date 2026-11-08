@@ -1387,16 +1387,18 @@ impl Report {
     }
 }
 
-/// How many area names `gArea_NameRules` reads: its highest name index
-/// plus one, from the `scene_name` and `area_name` rows of
-/// `src/field/scene_rules.s`. The Lost Age keeps its rows in
-/// `src/field/event_commands/area_name_rules.s`, which is not read yet, so
-/// its area names are not checked.
+/// The files a game keeps its area-name rules in: The Broken Seal's
+/// `gArea_NameRules` in `src/field/scene_rules.s`, The Lost Age's
+/// `gScene_AreaNameRules` in `src/field/event_commands/area_name_rules.s`.
+const AREA_RULES: [&str; 2] = ["src/field/scene_rules.s", "src/field/event_commands/area_name_rules.s"];
+
+/// How many area names the area-name rules read: their highest name index
+/// plus one, from the `scene_name`, `area_name` and `group_name` rows.
 pub fn area_count(rules: &str) -> Option<usize> {
     rules
         .lines()
         .map(str::trim)
-        .filter(|line| ["scene_name ", "area_name "].iter().any(|row| line.starts_with(row)))
+        .filter(|line| ["scene_name ", "area_name ", "group_name "].iter().any(|row| line.starts_with(row)))
         .filter_map(|line| line.split(',').nth(2)?.split('@').next()?.trim().parse::<usize>().ok())
         .max()
         .map(|max| max + 1)
@@ -1409,7 +1411,7 @@ fn game_text(root: &Path, game: &str) -> Result<Option<GameText>, String> {
     let Some(po) = tracked.ok().filter(|tracked| !tracked.stdout.is_empty()).and_then(|_| std::fs::read(root.join(&path)).ok()) else {
         return Ok(None);
     };
-    let rules = std::fs::read(root.join(format!("games/{game}/src/field/scene_rules.s"))).ok();
+    let rules = AREA_RULES.iter().find_map(|rules| std::fs::read(root.join(format!("games/{game}/{rules}"))).ok());
     let areas = rules.and_then(|rules| area_count(&String::from_utf8_lossy(&rules)));
     GameText::parse(&String::from_utf8_lossy(&po), areas).map(Some).map_err(|error| format!("{path}: {error}"))
 }
@@ -2096,6 +2098,9 @@ mod provenance_tests {
             "msgctxt \"message\"\nmsgid \"00003\"\nmsgstr \"Bilibin Barricade\"\n",
         );
         let text = GameText::parse(po, area_count("\tarea_name 0, -1, 0\n\tscene_name Bilibin, -1, 1\n")).unwrap();
+        // The Lost Age's rules: a macro's definition is no row, a group's is.
+        let rules = "\t.macro scene_name scene:req, entrance:req, name:req\n\t.endm\n\tgroup_name 0, -1, 0\n\tscene_name 11, 7, 7\n\tgroup_name 7, -1, 8\n";
+        assert_eq!(area_count(rules), Some(9));
         let ids = "/// @file\n/// Scenes.\n\n/// ★ Named from its area name: Bilibin\nextern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
         let flags = "/// ★ Named from the game: \"Hidden Treasury\" (MsgSign)\n#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_SCENE_TEMP_01 0x200\n#define FLAG_WAREHOUSE_SEEN 0x11 ///< Named from the game: \"Hidden Treasury\" (MsgSign)\n";
         let scene = concat!(
