@@ -5,7 +5,7 @@ edition.workspace = true
 
 [dependencies]
 fdeflate = "0.3"
-png = "0.17"
+png = { version = "0.17", optional = true }
 regex = "1"
 libc = "0.2"
 walkdir = "2.5"
@@ -15,12 +15,16 @@ sha1 = "0.10"
 lang-c = "=0.15.1"
 gif = { version = "0.14", default-features = false, features = ["std"], optional = true }
 
+[dev-dependencies]
+# The progress chart's tests decode the PNG it writes.
+png = "0.17"
+
 [build-dependencies]
 cc = { version = "1", optional = true }
 
 [features]
 # `render`: the battle pictures, run in libmgba (README).
-render = ["dep:gif", "dep:cc"]
+render = ["dep:gif", "dep:cc", "dep:png"]
 
 [[bin]]
 name = "alchemy-devtools"

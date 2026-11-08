@@ -1,15 +1,12 @@
-use super::calcrom::GameDone;
+//! The published history: the archived baseline's days, then each accepted
+//! measurement by day and by hour, as `history.tsv` holds them and the chart
+//! draws them. A day's note (the `overhaul` column) says what changed in how
+//! it was counted.
+
+use crate::alchemy::done::GameDone;
 use std::path::Path;
 
 const HEADER: &str = "date\ttbs_done\ttbs_executable\ttbs_percent\ttbs_data\ttbs_data_total\ttla_done\ttla_executable\ttla_percent\ttla_data\ttla_data_total\toverhaul";
-/// The columns while each day also counted its commits by model, read and
-/// rewritten without that column.
-const MODELS_HEADER: &str = "date\ttbs_done\ttbs_executable\ttbs_percent\ttbs_data\ttbs_data_total\ttla_done\ttla_executable\ttla_percent\ttla_data\ttla_data_total\tmodels\toverhaul";
-/// The columns before DONE data (Pascal, 2026-10-08), read and rewritten
-/// with the data columns left empty and without the model counts.
-const CODE_ONLY_HEADER: &str = "date\ttbs_done\ttbs_executable\ttbs_percent\ttla_done\ttla_executable\ttla_percent\tmodels\toverhaul";
-/// The note on the first day that records DONE data.
-pub(crate) const DATA_BEGINS: &str = "DONE is code and data from here (Pascal, 2026-10-08)";
 /// The current status of a game whose figures are its last measurement.
 const LAST_MEASURED: &str = "last measured at ";
 
@@ -96,7 +93,6 @@ pub(crate) struct History {
     pub current: Option<Current>,
     pub days: Vec<Day>,
     pub hours: Vec<Day>,
-    pub figures: Option<Day>,
 }
 impl History {
     pub(crate) fn pending(&self, game: &str) -> bool {
@@ -117,14 +113,6 @@ impl History {
             current.tla_pending = false;
             current.tla_last = Some(commit.to_string());
         }
-    }
-    #[cfg(test)]
-    pub(crate) fn stricter(&self) -> impl Iterator<Item = (&str, &str)> {
-        self.days.iter().filter_map(|day| {
-            day.correction
-                .as_deref()
-                .map(|note| (day.date.as_str(), note))
-        })
     }
     fn day_mut(&mut self, date: &str) -> &mut Day {
         let at = self.days.partition_point(|row| row.date.as_str() < date);
@@ -193,7 +181,7 @@ pub(crate) fn text(history: &History) -> String {
 
 fn parse(text: &str) -> Result<History, String> {
     let mut began = None;
-    let mut header = None;
+    let mut header = false;
     let mut days: Vec<Day> = Vec::new();
     let mut hours = Vec::new();
     let mut current = None;
@@ -209,7 +197,7 @@ fn parse(text: &str) -> Result<History, String> {
             let tla_last = fields
                 .get(2)
                 .and_then(|state| state.strip_prefix(LAST_MEASURED))
-                .filter(|commit| super::publish::valid_id(commit));
+                .filter(|commit| super::valid_id(commit));
             if fields.len() != 3
                 || day_number(fields[0]).is_none()
                 || !matches!(fields[1], "verified" | "pending")
@@ -230,23 +218,14 @@ fn parse(text: &str) -> Result<History, String> {
         if line.starts_with('#') || line.is_empty() {
             continue;
         }
-        let Some(columns) = header else {
-            header = Some(match line {
-                HEADER => HEADER,
-                MODELS_HEADER => MODELS_HEADER,
-                CODE_ONLY_HEADER => CODE_ONLY_HEADER,
-                _ => return Err(problem("unexpected progress columns")),
-            });
+        if !header {
+            if line != HEADER {
+                return Err(problem("unexpected progress columns"));
+            }
+            header = true;
             continue;
-        };
-        let mut fields = line.split('\t').collect::<Vec<_>>();
-        if columns == CODE_ONLY_HEADER && fields.len() == 9 {
-            fields.splice(7..7, ["-", "-"]);
-            fields.splice(4..4, ["-", "-"]);
         }
-        if columns != HEADER && fields.len() == 13 {
-            fields.remove(11);
-        }
+        let fields = line.split('\t').collect::<Vec<_>>();
         if fields.len() != 12 {
             return Err(problem("expected twelve progress columns"));
         }
@@ -323,19 +302,17 @@ fn parse(text: &str) -> Result<History, String> {
             days.push(row);
         }
     }
-    if header.is_none() {
+    if !header {
         return Err("missing progress columns".into());
     }
     let began = began
         .or_else(|| days.first().map(|row| row.date.clone()))
         .ok_or("history has no beginning date")?;
-    let figures = days.last().cloned();
     Ok(History {
         began,
         current,
         days,
         hours,
-        figures,
     })
 }
 
@@ -446,11 +423,6 @@ pub(crate) fn record(
         tla_pending: pending[1],
         tla_last: None,
     });
-    let had_data = history.days.iter().any(|row| {
-        [&row.tbs, &row.tla]
-            .iter()
-            .any(|game| game.as_ref().is_some_and(|m| m.data.is_some()))
-    });
     let row = history.day_mut(date);
     if let Some(value) = measured(sun) {
         row.tbs = Some(value);
@@ -458,49 +430,15 @@ pub(crate) fn record(
     if let Some(value) = measured(anchor) {
         row.tla = Some(value);
     }
-    let has_data = [&row.tbs, &row.tla]
-        .iter()
-        .any(|game| game.as_ref().is_some_and(|m| m.data.is_some()));
-    if has_data && !had_data && row.correction.is_none() {
-        row.correction = Some(DATA_BEGINS.into());
-    }
     if row.is_empty() {
         history.days.retain(|row| row.date != date);
     }
 }
-pub(crate) fn as_drawn(history: &History) -> History {
-    let mut drawn = history.clone();
-    let Some(figures) = &history.figures else {
-        return drawn;
-    };
-    drawn.days.retain(|row| row.date < figures.date);
-    if !figures.is_empty() {
-        drawn.days.push(figures.clone());
-    }
-    drawn
-}
-pub(crate) fn mark_drawn(history: &mut History, date: &str) {
-    history.figures = Some(
-        history
-            .days
-            .iter()
-            .find(|row| row.date == date)
-            .cloned()
-            .unwrap_or_else(|| Day::new(date)),
-    );
-}
 
+/// A Unix time's UTC hour, as `2026-10-20T12`.
 pub(crate) fn utc_hour(timestamp: u64) -> String {
-    let now = timestamp as libc::time_t;
-    let mut tm: libc::tm = unsafe { std::mem::zeroed() };
-    unsafe { libc::gmtime_r(&now, &mut tm) };
-    format!(
-        "{:04}-{:02}-{:02}T{:02}",
-        tm.tm_year + 1900,
-        tm.tm_mon + 1,
-        tm.tm_mday,
-        tm.tm_hour
-    )
+    let (year, month, day) = civil((timestamp / 86_400) as i64);
+    format!("{year:04}-{month:02}-{day:02}T{:02}", timestamp % 86_400 / 3_600)
 }
 pub(crate) fn day_number(date: &str) -> Option<i64> {
     let mut parts = date.splitn(3, '-').map(|part| part.parse::<i64>().ok());
@@ -524,11 +462,6 @@ pub(crate) fn civil(day: i64) -> (i64, i64, i64) {
     (yoe + era * 400 + i64::from(m <= 2), m, d)
 }
 
-#[cfg(test)]
-pub(crate) fn previous(date: &str) -> Option<String> {
-    let (y, m, d) = civil(day_number(date)? - 1);
-    Some(format!("{y:04}-{m:02}-{d:02}"))
-}
 pub(crate) fn day_label(day: i64) -> (String, bool) {
     const MONTHS: [&str; 12] = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
@@ -630,14 +563,10 @@ mod tests {
         };
         let published = history.days.clone();
         record(&mut history, "2026-09-28", None, None);
-        mark_drawn(&mut history, "2026-09-28");
         let loaded = parse(&text(&history)).unwrap();
         assert_eq!(loaded.days, published);
         assert!(loaded.pending("tbs") && loaded.pending("tla"));
-        assert_eq!(
-            loaded.stricter().collect::<Vec<_>>(),
-            [("2026-09-28", "Executable audit pending after cleanup")]
-        );
+        assert_eq!(loaded.days[0].correction.as_deref(), Some("Executable audit pending after cleanup"));
     }
 
     #[test]
@@ -679,19 +608,6 @@ mod tests {
         assert!(parse(&invalid).is_err());
     }
 
-    #[test]
-    fn model_counts_are_read_from_older_rows_and_dropped() {
-        let old = format!(
-            "# began\t2026-10-05\n{MODELS_HEADER}\n2026-10-05\t1\t10\t-\t-\t-\t-\t-\t-\t-\t-\tOpus 5.5=3;Untagged=1\tstricter\n"
-        );
-        let history = parse(&old).unwrap();
-        assert_eq!(history.days[0].tbs, Some(Measure::bytes(1, 10)));
-        assert_eq!(history.days[0].correction.as_deref(), Some("stricter"));
-        let text = text(&history);
-        assert!(!text.contains("models") && !text.contains("Opus"), "{text}");
-        assert!(text.contains("2026-10-05\t1\t10\t-\t-\t-\t-\t-\t-\t-\t-\tstricter\n"), "{text}");
-        assert_eq!(parse(&text).unwrap().days, history.days);
-    }
     fn done(bytes: i64) -> GameDone {
         GameDone {
             game_c: bytes,
@@ -700,7 +616,7 @@ mod tests {
         }
     }
     #[test]
-    fn a_day_keeps_its_last_measurement_and_the_drawn_row_stays_fixed() {
+    fn a_day_keeps_its_last_measurement() {
         let mut history = History {
             days: vec![
                 day("2026-09-22", Some(Measure::published(55.0)), None),
@@ -710,7 +626,6 @@ mod tests {
         };
         record(&mut history, "2026-09-23", Some(done(500)), None);
         record(&mut history, "2026-09-24", Some(done(600)), Some(done(20)));
-        mark_drawn(&mut history, "2026-09-24");
         record(&mut history, "2026-09-24", Some(done(610)), None);
         assert_eq!(
             history
@@ -723,8 +638,6 @@ mod tests {
         let percent = |day: &Day, game| day.game(game).and_then(Measure::percent);
         assert_eq!(percent(&history.days[2], "tbs"), Some(61.0));
         assert_eq!(percent(&history.days[2], "tla"), Some(2.0));
-        let drawn = as_drawn(&history);
-        assert_eq!(percent(&drawn.days[2], "tbs"), Some(60.0));
         record(&mut history, "2026-09-25", None, None);
         assert_eq!(history.days.len(), 3);
     }
@@ -735,25 +648,26 @@ mod tests {
             day_number("2026-09-24").unwrap() - day_number("2026-07-16").unwrap(),
             70
         );
-        assert_eq!(previous("2026-03-01").as_deref(), Some("2026-02-28"));
-        assert_eq!(previous("2026-09-01").as_deref(), Some("2026-08-31"));
+        assert_eq!(civil(day_number("2026-03-01").unwrap() - 1), (2026, 2, 28));
+        assert_eq!(civil(day_number("2028-03-01").unwrap() - 1), (2028, 2, 29));
+        assert_eq!(civil(day_number("2026-09-01").unwrap() - 1), (2026, 8, 31));
         assert_eq!(utc_hour(0), "1970-01-01T00");
         assert_eq!(utc_hour(1_792_497_600), "2026-10-20T12");
+        assert_eq!(utc_hour(1_792_497_600 - 1), "2026-10-20T11");
+        assert_eq!(utc_hour(253_402_300_799), "9999-12-31T23");
     }
 
     #[test]
-    fn code_only_history_reads_and_the_first_data_day_is_marked() {
+    fn data_is_recorded_beside_code() {
         let old = format!(
-            "# began\t2026-10-05\n{CODE_ONLY_HEADER}\n2026-10-05\t7808068\t8237808\t-\t731298\t11872824\t-\tOpus 5.5=3\t-\n2026-10-05T11\t7808068\t8237808\t-\t-\t-\t-\t-\t-\n"
+            "# began\t2026-10-05\n{HEADER}\n2026-10-05\t7808068\t8237808\t-\t-\t-\t731298\t11872824\t-\t-\t-\t-\n2026-10-05T11\t7808068\t8237808\t-\t-\t-\t-\t-\t-\t-\t-\t-\n"
         );
         let mut history = parse(&old).unwrap();
         assert_eq!(history.days[0].tbs, Some(Measure::bytes(7808068, 8237808)));
-        let text_before = text(&history);
-        assert!(text_before.starts_with(&format!("# Published progress; '-' means no value was recorded.\n# began\t2026-10-05\n{HEADER}\n")));
-        assert!(text_before.contains(
-            "2026-10-05\t7808068\t8237808\t-\t-\t-\t731298\t11872824\t-\t-\t-\t-\n"
-        ));
-        assert_eq!(parse(&text_before).unwrap().days, history.days);
+        assert_eq!(text(&history), format!("# Published progress; '-' means no value was recorded.\n{}", &old));
+        // The archive holds no history in older columns; such a file is refused.
+        let models = old.replace("\toverhaul", "\tmodels\toverhaul");
+        assert!(parse(&models).is_err());
         let sun = GameDone {
             data: 99,
             data_total: 100,
@@ -763,8 +677,7 @@ mod tests {
         record_hour(&mut history, "2026-10-08T09", Some(sun), None);
         record(&mut history, "2026-10-09", Some(sun), None);
         let day = |date: &str| history.days.iter().find(|row| row.date == date).unwrap();
-        assert_eq!(day("2026-10-08").correction.as_deref(), Some(DATA_BEGINS));
-        assert_eq!(day("2026-10-09").correction, None);
+        assert_eq!(day("2026-10-08").correction, None);
         assert_eq!(
             day("2026-10-08").tbs.as_ref().unwrap().data_percent(),
             Some(99.0)

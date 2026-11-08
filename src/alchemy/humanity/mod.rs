@@ -8,9 +8,13 @@
 //! the names can be guessed from one another (`naming`). Nothing here counts
 //! toward DONE (C2); the figures are for people.
 
-use super::clex::{self, Kind, Token};
-use super::naming::{self, NameKind};
-use super::provenance::{self, Analysis, Definition, GameText, Origin, Thing};
+mod naming;
+mod provenance;
+
+use crate::alchemy::done::commas;
+use crate::gba::clex::{self, Kind, Token};
+use naming::NameKind;
+use provenance::{Analysis, Definition, GameText, Origin, Thing};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::Write as _;
@@ -1642,12 +1646,12 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
     text.push('\n');
     let _ = write!(text, "  {:<30}", "files (lines)");
     for (_, report) in games {
-        let _ = write!(text, "{:>10}", super::commas(report.files as i64));
+        let _ = write!(text, "{:>10}", commas(report.files as i64));
     }
     text.push('\n');
     let _ = write!(text, "  {:<30}", "");
     for (_, report) in games {
-        let _ = write!(text, "{:>10}", format!("({})", super::commas(report.lines as i64)));
+        let _ = write!(text, "{:>10}", format!("({})", commas(report.lines as i64)));
     }
     text.push('\n');
     for (metric, label) in ROWS {
@@ -1657,7 +1661,7 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
         }
         let _ = write!(text, "  {label:<30}");
         for (_, report) in games {
-            let _ = write!(text, "{:>10}", super::commas(report.value(metric) as i64));
+            let _ = write!(text, "{:>10}", commas(report.value(metric) as i64));
         }
         text.push('\n');
     }
@@ -1670,13 +1674,13 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
                 }
                 let _ = writeln!(text, "{game} {metric}:");
                 for (file, count) in files {
-                    let _ = writeln!(text, "  {:>6}  {file}", super::commas(count as i64));
+                    let _ = writeln!(text, "  {:>6}  {file}", commas(count as i64));
                 }
             }
             if !report.long_files.is_empty() {
                 let _ = writeln!(text, "{game} long_file:");
                 for (file, lines) in report.long_files.iter().take(top) {
-                    let _ = writeln!(text, "  {:>6}  {file}", super::commas(*lines as i64));
+                    let _ = writeln!(text, "  {:>6}  {file}", commas(*lines as i64));
                 }
             }
             for (metric, groups) in [("duplicate_function", &report.function_groups), ("duplicate_table", &report.table_groups)] {
@@ -1773,7 +1777,8 @@ pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, Stri
     let games = [("☀️ tbs", &sun), ("⚓️ tla", &anchor)];
     let path = root.join(REPORT);
     std::fs::create_dir_all(path.parent().expect("report directory")).map_err(|error| format!("{REPORT}: {error}"))?;
-    super::write(&path, &tsv(&[("tbs", &sun), ("tla", &anchor)]))?;
+    std::fs::write(&path, tsv(&[("tbs", &sun), ("tla", &anchor)]))
+        .map_err(|error| format!("cannot write {}: {error}", path.display()))?;
     if let Some(metric) = metric {
         return Ok(list(&[("tbs", &sun), ("tla", &anchor)], metric).trim_end().to_string());
     }

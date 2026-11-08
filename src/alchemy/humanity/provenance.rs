@@ -649,7 +649,7 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
     static TEMP: OnceLock<Regex> = OnceLock::new();
     let temp = TEMP.get_or_init(|| Regex::new(r"^FLAG_(?:SCENE|MAPSEC|AREA)_TEMP_[0-9A-Fa-f]+$").unwrap());
     let Definition { name, file, origin, .. } = definition;
-    if super::humanity::is_placeholder(name) || temp.is_match(name) {
+    if super::is_placeholder(name) || temp.is_match(name) {
         return None;
     }
     let family = FAMILIES.iter().find(|(prefix, ..)| name.starts_with(prefix) && name.len() > prefix.len());

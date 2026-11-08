@@ -66,19 +66,6 @@ impl Canvas {
         }
         out
     }
-    pub(crate) fn rounded(&mut self, bounds: (i32, i32, i32, i32), draw: impl FnOnce(&mut Self)) {
-        let (x, y, width, height) = bounds;
-        let kept = Self::corner_pixels(x, y, width, height)
-            .into_iter()
-            .filter_map(|(px, py)| Some(((px, py), *self.at(px, py)?)))
-            .collect::<Vec<_>>();
-        draw(self);
-        for ((px, py), pixel) in kept {
-            if let Some(slot) = self.at(px, py) {
-                *slot = pixel;
-            }
-        }
-    }
     pub(crate) fn clear_corners(&mut self, x: i32, y: i32, width: i32, height: i32) {
         for (px, py) in Self::corner_pixels(x, y, width, height) {
             if let Some(slot) = self.at(px, py) {
@@ -102,11 +89,6 @@ impl Canvas {
                 self.pixels[(row * self.width + column) as usize] = color;
             }
         }
-    }
-    pub(crate) fn rounded_fill(&mut self, x: i32, y: i32, width: i32, height: i32, color: &str) {
-        self.rounded((x, y, width, height), |canvas| {
-            canvas.fill(x, y, width, height, color)
-        });
     }
     pub(crate) fn bevel(&mut self, x: i32, y: i32, width: i32, height: i32, relief: Relief) {
         let (first, second) = match relief {
@@ -349,7 +331,7 @@ mod tests {
     use super::*;
     #[test]
     fn a_canvas_scales_whole_pixels_and_keeps_its_text_chunks() {
-        let letters = crate::progress::letters::fixture();
+        let letters = super::super::letters::fixture();
         let mut canvas = Canvas::new(8, 16, "#000");
         canvas.fill(0, 0, 1, 1, "#ff0000");
         assert_eq!(canvas.text(&letters, 0, 0, "A", "#fff", Some("#123456")), 4);
@@ -369,14 +351,15 @@ mod tests {
         assert_eq!(canvas.png(2, "2026-09-24").unwrap(), png);
     }
     #[test]
-    fn boxes_step_their_corners_and_lay_translucent_light_bevels() {
-        use crate::progress::palette::{FACE, LIGHT_OPACITY, WELL};
+    fn bevels_step_their_corners_and_lay_translucent_light() {
+        use super::super::palette::{FACE, LIGHT_OPACITY, WELL};
         let mut canvas = Canvas::new(12, 10, FACE);
-        canvas.rounded_fill(2, 2, 8, 6, WELL);
+        canvas.fill(2, 2, 8, 6, WELL);
         canvas.bevel(2, 2, 8, 6, Relief::Raised);
         let (face, light, dark) = (rgb(FACE), rgb(LIGHT), rgb(DARK));
+        // A bevel leaves its box's cut corners as they were.
         for (x, y) in [(2, 2), (9, 2), (2, 7), (9, 7)] {
-            assert_eq!(canvas.get(x, y), Some(face), "{x},{y}");
+            assert_eq!(canvas.get(x, y), Some(rgb(WELL)), "{x},{y}");
         }
         let (o, rest) = (LIGHT_OPACITY, 100 - LIGHT_OPACITY);
         let over_well = blend(light, rgb(WELL), o);

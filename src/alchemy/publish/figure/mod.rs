@@ -1,18 +1,19 @@
-use super::boxtree::{
-    content_mix, directories, disk_tiles, legend_items, quiet, source_name, tracked_only,
-};
-use super::history::{day_number, History, Measure};
-use super::jsnum::commas;
-use super::letters::{Letters, LINE};
-use super::model::{treemap, Rect, Tile};
-use super::palette::{BLUE, DARK_BLUE, DARK_GOLD, FACE, GOLD, GRID, INK, MUTED, SHADOW, WELL};
-use super::raster::{Canvas, Relief};
-use std::path::Path;
+//! The progress chart the README shows: each game's DONE code and data, day
+//! by day from the history, drawn on whole pixels and written as an indexed
+//! PNG.
 
-pub(crate) const WIDTH: i32 = 838;
+mod letters;
+mod palette;
+mod raster;
+
+use super::history::{day_number, History, Measure};
+use letters::{Letters, LINE};
+use palette::{BLUE, DARK_BLUE, DARK_GOLD, FACE, GOLD, GRID, INK, MUTED, SHADOW, WELL};
+use raster::{Canvas, Relief};
+
+const WIDTH: i32 = 838;
 pub(crate) const CHART: &str = "PROGRESS_CHART.png";
-pub(crate) const MAP: &str = "PROGRESS.png";
-pub(crate) const LINK: &str = "github.com/PascalPixel/alchemy";
+const LINK: &str = "github.com/PascalPixel/alchemy";
 /// Below the plot: the date axis and its labels.
 const FOOTER: i32 = 30;
 
@@ -88,7 +89,7 @@ pub(crate) fn chart(letters: &Letters, history: &History) -> Canvas {
     for (key, name, ink) in series.iter().rev() {
         key_x -= letters.width(name) as i32;
         canvas.text(letters, key_x, 6, name, INK, Some(SHADOW));
-        key_x -= super::letters::mark_width(key) as i32 + 4;
+        key_x -= letters::mark_width(key) as i32 + 4;
         canvas.mark(key_x, 6, key, ink, SHADOW);
         key_x -= 12;
     }
@@ -210,244 +211,17 @@ pub(crate) fn chart(letters: &Letters, history: &History) -> Canvas {
     canvas
 }
 
-pub(crate) fn map(letters: &Letters, root: &Path) -> Canvas {
-    map_of(letters, tracked_only(root, disk_tiles(root)))
-}
-pub(crate) fn map_of(letters: &Letters, tiles: Vec<Tile>) -> Canvas {
-    let height = (WIDTH * 16 + 8) / 9;
-    let mut canvas = Canvas::new(WIDTH, height, FACE);
-    let total: i64 = tiles.iter().map(|tile| tile.bytes).sum();
-    let legend = legend_items(&tiles.iter().collect::<Vec<_>>())
-        .into_iter()
-        .map(|(name, swatch, bytes)| {
-            let share = 100.0 * bytes as f64 / total.max(1) as f64;
-            (format!("{name} {share:.1}%"), swatch)
-        })
-        .collect::<Vec<_>>();
-    let entry = |label: &str| 24 + letters.width(label) as i32;
-    let mut rows = 1;
-    let mut row_x = 8;
-    for (label, _) in &legend {
-        if row_x > 8 && row_x + entry(label) > WIDTH - 8 {
-            rows += 1;
-            row_x = 8;
-        }
-        row_x += entry(label);
-    }
-    masthead(&mut canvas, letters, 8, "Alchemy: Golden Sun Decompilation");
-    let corner = commas(total);
-    let corner_width = letters.width(&corner) as i32;
-    canvas.text(
-        letters,
-        WIDTH - 8 - corner_width,
-        8,
-        &corner,
-        INK,
-        Some(SHADOW),
-    );
-    let frame = (4, 32, WIDTH - 8, height - 44 - rows * 24);
-    canvas.rounded_fill(frame.0, frame.1, frame.2, frame.3, INK);
-    let nested = directories(tiles, "");
-    draw(
-        &mut canvas,
-        letters,
-        &nested.iter().collect::<Vec<_>>(),
-        frame,
-        None,
-        &mut Vec::new(),
-    );
-    let (mut x, mut y) = (8, frame.1 + frame.3 + 12);
-    for (label, swatch) in legend {
-        if x > 8 && x + entry(&label) > WIDTH - 8 {
-            x = 8;
-            y += 24;
-        }
-        canvas.fill(x, y, 16, 16, SHADOW);
-        canvas.fill(x, y, 15, 15, swatch);
-        canvas.text(letters, x + 20, y, &label, INK, Some(SHADOW));
-        x += entry(&label);
-    }
-    canvas.bevel(0, 0, WIDTH, height, Relief::Raised);
-    canvas.clear_corners(0, 0, WIDTH, height);
-    canvas
-}
-
-type Box = (i32, i32, i32, i32);
-
-fn snap(rect: Rect) -> Box {
-    let (x0, y0) = (rect.x.round() as i32, rect.y.round() as i32);
-    let (x1, y1) = (
-        (rect.x + rect.width).round() as i32,
-        (rect.y + rect.height).round() as i32,
-    );
-    (x0, y0, x1 - x0, y1 - y0)
-}
-fn overlaps(a: Box, b: Box) -> bool {
-    a.0 < b.0 + b.2 && a.0 + a.2 > b.0 && a.1 < b.1 + b.3 && a.1 + a.3 > b.1
-}
-
-fn draw(
-    canvas: &mut Canvas,
-    letters: &Letters,
-    tiles: &[&Tile],
-    frame: Box,
-    parent_source: Option<&str>,
-    reserved: &mut Vec<Box>,
-) {
-    let area = Rect {
-        x: frame.0 as f64,
-        y: frame.1 as f64,
-        width: frame.2 as f64,
-        height: frame.3 as f64,
-    };
-    for placed in treemap(tiles, |tile| tile.bytes, area) {
-        let tile = tiles[placed.index];
-        let cell = snap(placed.rect);
-        if cell.2 <= 0 || cell.3 <= 0 {
-            continue;
-        }
-        let container = !tile.children.is_empty();
-        let folder = container && tile.source.as_deref().is_some_and(|s| s.ends_with('/'));
-        let inset = if container && cell.2 >= 8 && cell.3 >= 8 {
-            2
-        } else {
-            0
-        };
-        let mut body = if container {
-            (
-                cell.0 + inset,
-                cell.1 + inset,
-                cell.2 - 2 * inset,
-                cell.3 - 2 * inset,
-            )
-        } else {
-            (cell.0, cell.1, (cell.2 - 1).max(1), (cell.3 - 1).max(1))
-        };
-        let expanded = container && body.2 >= 44 && body.3 >= 34;
-        if expanded {
-            canvas.rounded_fill(cell.0, cell.1, cell.2, cell.3, FACE);
-            canvas.bevel(cell.0, cell.1, cell.2, cell.3, Relief::Raised);
-        } else {
-            stack(canvas, tile, body);
-        }
-        let name = match tile.source.as_deref() {
-            Some(source) if !source.ends_with('/') || container => source_name(source),
-            Some(_) => &tile.label,
-            None => "",
-        };
-        let shown = (folder || container || !quiet(tile))
-            && (tile.source.is_none()
-                || tile.source.as_deref() != parent_source
-                || (!container && tile.source.as_deref().is_some_and(|p| p.ends_with('/'))));
-        let caption = caption(letters, name, body, folder)
-            .filter(|(_, bounds)| shown && !reserved.iter().any(|r| overlaps(*bounds, *r)));
-        if let Some((lines, bounds)) = &caption {
-            if folder {
-                canvas.text(letters, bounds.0, bounds.1, &lines[0], INK, Some(SHADOW));
-                if expanded {
-                    body.1 += LINE as i32 + 2;
-                    body.3 -= LINE as i32 + 2;
-                }
-            } else {
-                reserved.push(*bounds);
-            }
-        }
-        if expanded {
-            draw(
-                canvas,
-                letters,
-                &tile.children.iter().collect::<Vec<_>>(),
-                body,
-                tile.source.as_deref(),
-                reserved,
-            );
-        }
-        if let Some((lines, bounds)) = caption.filter(|_| !folder) {
-            for (row, line) in lines.iter().enumerate() {
-                let width = letters.width(line) as i32;
-                let x = bounds.0 + (bounds.2 - width) / 2;
-                canvas.text(
-                    letters,
-                    x,
-                    bounds.1 + row as i32 * LINE as i32,
-                    line,
-                    INK,
-                    Some(SHADOW),
-                );
-            }
-        }
-    }
-}
-fn stack(canvas: &mut Canvas, tile: &Tile, body: Box) {
-    let parts = content_mix(tile)
-        .into_iter()
-        .map(|(_, swatch, bytes)| (swatch, bytes));
-    let total = tile.bytes.max(1) as f64;
-    let mut below = 0.0;
-    let bottom = body.1 + body.3;
-    for (swatch, bytes) in parts {
-        let from = bottom - (below * body.3 as f64 / total).round() as i32;
-        below += bytes as f64;
-        let to = bottom - (below * body.3 as f64 / total).round() as i32;
-        canvas.fill(body.0, to, body.2, from - to, swatch);
-    }
-}
-fn caption(letters: &Letters, name: &str, body: Box, folder: bool) -> Option<(Vec<String>, Box)> {
-    let line = LINE as i32;
-    if name.is_empty() {
-        return None;
-    }
-    if folder {
-        let width = letters.width(name) as i32;
-        if body.2 < width + 4 || body.3 < line + 4 {
-            return None;
-        }
-        return Some((
-            vec![name.to_string()],
-            (body.0 + 2, body.1, width, line + 2),
-        ));
-    }
-    let room = body.2 - 8;
-    if body.3 < line + 12 || body.2 < 64 {
-        return None;
-    }
-    let mut lines = Vec::new();
-    let mut current = String::new();
-    for part in name.split_inclusive(['_', '.', '-', ' ']) {
-        if letters.width(part) as i32 > room {
-            return None;
-        }
-        if letters.width(&format!("{current}{part}")) as i32 > room {
-            lines.push(std::mem::take(&mut current));
-        }
-        current.push_str(part);
-    }
-    if !current.is_empty() {
-        lines.push(current);
-    }
-    let rows = lines.len() as i32;
-    if rows * line + 8 > body.3 {
-        return None;
-    }
-    let width = lines
-        .iter()
-        .map(|l| letters.width(l) as i32)
-        .max()
-        .unwrap_or(0);
-    let bounds = (
-        body.0 + (body.2 - width) / 2,
-        body.1 + (body.3 - rows * line) / 2,
-        width,
-        rows * line,
-    );
-    Some((lines, bounds))
+/// The chart of `history` as PNG bytes, dated `date` (`2026-10-20`).
+pub(crate) fn png(history: &History, date: &str) -> Result<Vec<u8>, String> {
+    chart(&Letters::face(), history).png(letters::FIGURE_SCALE, date)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::progress::history::{Current, Day};
-    use crate::progress::letters::fixture;
+    use crate::alchemy::publish::history::{Current, Day};
+    use letters::fixture;
+    use raster::{blend, rgb};
     fn row(date: &str, tbs: Option<f64>, tla: Option<f64>) -> Day {
         Day {
             tbs: tbs.map(Measure::published),
@@ -456,52 +230,19 @@ mod tests {
         }
     }
     #[test]
-    fn folder_names_fit_by_their_glyph_advances() {
-        let letters = fixture();
-        let body = (0, 0, 16, 20);
-        let (lines, bounds) = caption(&letters, "LIB", body, true).unwrap();
-        assert_eq!((lines[0].as_str(), bounds.2), ("LIB", 12));
-        assert!(caption(&letters, "LIBS", body, true).is_none());
-        assert!(caption(&letters, "LIB", (0, 0, 16, 19), true).is_none());
-        assert!(caption(&letters, "LIB", body, false).is_none());
-        let (lines, _) = caption(&letters, "STILL_IMAGE.PNG", (0, 0, 64, 60), false).unwrap();
-        assert_eq!(lines, ["STILL_IMAGE.", "PNG"]);
-    }
-    #[test]
-    fn the_map_draws_folders_with_bevels_on_whole_pixels() {
-        let letters = fixture();
-        let tile = |source: &str, bytes| Tile {
-            label: source.rsplit('/').next().unwrap().into(),
-            source: Some(source.into()),
-            bytes,
-            extension: source.rsplit('.').next().unwrap().to_lowercase(),
-            ..Tile::default()
+    fn the_chart_steps_its_corners_on_whole_pixels() {
+        let history = History {
+            began: "2026-07-16".into(),
+            days: vec![row("2026-07-16", Some(1.0), None)],
+            ..History::default()
         };
-        let canvas = map_of(
-            &letters,
-            vec![tile("games/x/src/a.c", 600), tile("games/x/src/b.s", 400)],
-        );
-        assert_eq!((canvas.width, canvas.height), (838, 1490));
-        use super::super::raster::{blend, rgb};
-        let light = blend(
-            rgb(crate::progress::palette::LIGHT),
-            rgb(FACE),
-            crate::progress::palette::LIGHT_OPACITY,
-        );
-        let corner = crate::progress::palette::CORNER;
-        let step = (0..)
-            .find(|&a| !crate::progress::palette::cut(a, 0, corner))
-            .unwrap();
+        let canvas = chart(&fixture(), &history);
+        let light = blend(rgb(palette::LIGHT), rgb(FACE), palette::LIGHT_OPACITY);
+        let step = (0..).find(|&a| !palette::cut(a, 0, palette::CORNER)).unwrap();
         assert_eq!(canvas.get(0, 0), None);
         assert_eq!(canvas.get(step - 1, 0), None);
         assert_eq!(canvas.get(step, 0), Some(light));
-        assert_eq!(canvas.get(4, 32), Some(rgb(FACE)));
-        assert_eq!(canvas.get(4 + step, 32), Some(light));
-        let again = map_of(
-            &letters,
-            vec![tile("games/x/src/a.c", 600), tile("games/x/src/b.s", 400)],
-        );
-        assert_eq!(canvas.rgba(2), again.rgba(2));
+        assert_eq!(canvas.rgba(2), chart(&fixture(), &history).rgba(2));
     }
     #[test]
     fn the_chart_starts_each_line_at_its_first_measurement() {
@@ -526,15 +267,15 @@ mod tests {
         let canvas = chart(&letters, &history);
         assert_eq!((canvas.width, canvas.height), (838, 471));
         let bottom = canvas.height - FOOTER;
-        let gold = super::super::raster::rgb(GOLD);
-        let blue = super::super::raster::rgb(BLUE);
+        let gold = rgb(GOLD);
+        let blue = rgb(BLUE);
         let column = |x: i32, ink| (0..bottom).any(|y| canvas.get(x, y) == Some(ink));
         assert!(column(41, gold));
         assert!(!column(41, blue) && !column(300, blue));
         let right = (0..WIDTH).rev().find(|x| column(*x, blue)).unwrap();
         assert!(right > 600);
         // The plot reaches down to the date axis.
-        let well = super::super::raster::rgb(WELL);
+        let well = rgb(WELL);
         assert_eq!(canvas.get(WIDTH / 2, bottom - 2), Some(well));
     }
     #[test]
@@ -582,7 +323,7 @@ mod tests {
         assert_eq!(latest_label(&history, "tla").as_deref(), Some("?%"));
         let canvas = chart(&fixture(), &history);
         for ink in [GOLD, BLUE] {
-            let ink = super::super::raster::rgb(ink);
+            let ink = rgb(ink);
             assert!((32..canvas.height - FOOTER).any(|y| canvas.get(41, y) == Some(ink)));
         }
         assert_eq!(history.days, published);
@@ -624,7 +365,7 @@ mod tests {
         let drawn = chart(&fixture(), &history);
         assert_ne!(code_only.rgba(1), drawn.rgba(1));
         // The data line has the game's darker colour, which code alone never draws.
-        let dark = super::super::raster::rgb(DARK_GOLD);
+        let dark = rgb(DARK_GOLD);
         let has = |canvas: &Canvas| (0..WIDTH).any(|x| (32..canvas.height - FOOTER).any(|y| canvas.get(x, y) == Some(dark)));
         assert!(has(&drawn) && !has(&code_only));
     }

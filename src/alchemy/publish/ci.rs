@@ -10,8 +10,8 @@
 //! measurement reads has the same git tree entry, else named as its last
 //! measurement and never recorded as this commit's.
 
-use super::calcrom::GameDone;
-use super::{figure, history, letters, parse_measurement, publish, read, status_line, write};
+use super::{figure, history, read, write};
+use crate::alchemy::done::{measurement_text, parse_measurement, status_line, GameDone};
 use std::path::Path;
 use std::process::Command;
 
@@ -22,18 +22,18 @@ const BASELINE_DIGEST: &str =
 /// A CI record's first line, then the measurement it admits.
 const CI_HEADER: &str = "version\ttree\tmeasured_at\ttla_commit\ttla_source";
 const CI_VERSION: &str = "ci1";
-/// Every path The Lost Age's measurement reads: its source, object list and
-/// linker scripts, its scaffolds, the Makefile and the tools that build it,
-/// the pinned compilers, rom.sha1, which admits its ROMs, and the devtools
-/// that count its maps. Nothing outside these reaches its build or its count.
-const TLA_INPUTS: [&str; 7] = [
+/// Every path in the tree that The Lost Age's measurement reads: its source,
+/// object list and linker scripts, its scaffolds, the Makefile and the tools
+/// that build it, the pinned compilers, and rom.sha1, which admits its ROMs.
+/// The devtools that count its maps are cloned outside the tree, so a change
+/// to the count itself is not among them.
+const TLA_INPUTS: [&str; 6] = [
     "Makefile",
     "rom.sha1",
     "games/tla",
     "recon/tla",
     "tools",
     "alchemy-gcc",
-    "alchemy-devtools",
 ];
 
 fn reports(directory: &Path, commit: &str) -> Result<Vec<Vec<u8>>, String> {
@@ -47,19 +47,19 @@ fn reports(directory: &Path, commit: &str) -> Result<Vec<Vec<u8>>, String> {
 }
 
 fn tree(root: &Path, commit: &str) -> Result<String, String> {
-    publish::command(root, "git", &["rev-parse", &format!("{commit}^{{tree}}")])
+    super::command(root, "git", &["rev-parse", &format!("{commit}^{{tree}}")])
 }
 
 /// The git tree entries of everything The Lost Age's measurement reads.
 fn tla_inputs(root: &Path, commit: &str) -> Result<String, String> {
     let mut arguments = vec!["ls-tree", "--full-tree", commit, "--"];
     arguments.extend(TLA_INPUTS);
-    publish::command(root, "git", &arguments)
+    super::command(root, "git", &arguments)
 }
 
 /// A CI record is dated by its commit, so a rerun admits the same record.
 fn committed_at(root: &Path, commit: &str) -> Result<u64, String> {
-    publish::command(root, "git", &["show", "-s", "--format=%ct", commit])?
+    super::command(root, "git", &["show", "-s", "--format=%ct", commit])?
         .parse()
         .map_err(|_| format!("cannot read the commit time of {commit}"))
 }
@@ -94,7 +94,7 @@ fn receipt(
     }
     let saved = read(&path)?;
     let files = reports(archive, commit)?;
-    let measured_at = publish::verify(&saved, &tree(root, commit)?, &files)
+    let measured_at = super::verify(&saved, &tree(root, commit)?, &files)
         .map_err(|error| format!("receipt for {commit}: {error}"))?;
     let values = measurement(&files[1])?;
     if values.iter().any(Option::is_none) {
@@ -117,7 +117,7 @@ enum Lost {
 /// The nearest ancestor of `commit` with a receipt, and whether everything
 /// The Lost Age's measurement reads is the same there.
 fn nearest_receipt(root: &Path, archive: &Path, commit: &str) -> Result<Lost, String> {
-    let ancestors = publish::command(root, "git", &["rev-list", "--topo-order", commit])?;
+    let ancestors = super::command(root, "git", &["rev-list", "--topo-order", commit])?;
     let inputs = tla_inputs(root, commit)?;
     for id in ancestors.lines().filter(|id| *id != commit) {
         let Some((_, _, [_, Some(anchor)])) = receipt(root, archive, id)? else {
@@ -140,7 +140,7 @@ fn ci_text(tree: &str, measured_at: u64, sun: GameDone, lost: &Lost) -> String {
     };
     format!(
         "{CI_HEADER}\n{CI_VERSION}\t{tree}\t{measured_at}\t{from}\t{source}\n{}",
-        super::measurement_text(Some(sun), anchor)
+        measurement_text(Some(sun), anchor)
     )
 }
 
@@ -170,7 +170,7 @@ fn verify_ci(root: &Path, archive: &Path, commit: &str, saved: &str) -> Result<(
     };
     let lost = match (*from, *source) {
         ("-", "-") => Lost::Unmeasured,
-        (id, "identical" | "changed") if publish::valid_id(id) && id != commit => {
+        (id, "identical" | "changed") if super::valid_id(id) && id != commit => {
             if !ancestor(root, id, commit)? {
                 return Err(wrong("The Lost Age's figures come from no ancestor"));
             }
@@ -242,7 +242,7 @@ fn accepted(
         return Ok((time, [Some(sun), anchor]));
     }
     let files = reports(archive, id)?;
-    let time = publish::verify(saved, &tree(root, id)?, &files)?;
+    let time = super::verify(saved, &tree(root, id)?, &files)?;
     let values = measurement(&files[1])?;
     if values.iter().any(Option::is_none) {
         return Err(format!("incomplete accepted measurement: {id}"));
@@ -261,20 +261,20 @@ fn lost_columns(commit: &str, lost: &Option<Lost>) -> (String, &'static str) {
     }
 }
 
-pub(super) fn publish(
+pub(crate) fn publish(
     root: &Path,
     archive: &Path,
     commit: &str,
     directory: &Path,
     measured: &Path,
 ) -> Result<String, String> {
-    if !publish::valid_id(commit)
-        || publish::command(root, "git", &["rev-parse", "HEAD"])? != commit
+    if !super::valid_id(commit)
+        || super::command(root, "git", &["rev-parse", "HEAD"])? != commit
     {
         return Err("publication must check out the measured commit exactly".into());
     }
     let baseline = archive.join(BASELINE);
-    if publish::digest(&std::fs::read(&baseline).map_err(|e| e.to_string())?) != BASELINE_DIGEST {
+    if super::digest(&std::fs::read(&baseline).map_err(|e| e.to_string())?) != BASELINE_DIGEST {
         return Err("the archived progress baseline is missing or changed".into());
     }
     let [Some(sun), None] = parse_measurement(&read(measured)?)? else {
@@ -289,7 +289,7 @@ pub(super) fn publish(
         let Some(id) = name.strip_suffix(".accepted.tsv") else {
             continue;
         };
-        if !publish::valid_id(id) {
+        if !super::valid_id(id) {
             return Err(format!("invalid accepted revision: {name}"));
         }
         let saved = read(&entry.path())?;
@@ -323,7 +323,6 @@ pub(super) fn publish(
     }
     let hour = history::utc_hour(current.measured_at);
     let today = &hour[..10];
-    history::mark_drawn(&mut history, today);
     std::fs::create_dir_all(directory).map_err(|e| e.to_string())?;
     write(&directory.join("history.tsv"), &history::text(&history))?;
     let (tla_commit, tla_source) = lost_columns(commit, &current.lost);
@@ -340,16 +339,8 @@ pub(super) fn publish(
         std::fs::copy(archive.join(format!("{commit}.pb")), directory.join("report.pb"))
             .map_err(|error| format!("report.pb: {error}"))?;
     }
-    let letters = letters::Letters::face();
-    let chart = figure::chart(&letters, &history::as_drawn(&history));
-    let map = figure::map(&letters, root);
-    for (name, canvas) in [(figure::CHART, chart), (figure::MAP, map)] {
-        std::fs::write(
-            directory.join(name),
-            canvas.png(letters::FIGURE_SCALE, today)?,
-        )
-        .map_err(|error| format!("{name}: {error}"))?;
-    }
+    std::fs::write(directory.join(figure::CHART), figure::png(&history, today)?)
+        .map_err(|error| format!("{}: {error}", figure::CHART))?;
     let [sun, anchor] = current.values;
     let shown = |done: GameDone| format!("code {:.2}% data {:.2}%", done.percent(), done.data_percent());
     let ci = format!("☀️ {} measured by CI at {commit}", shown(sun.expect("CI measures The Broken Seal")));
@@ -375,7 +366,7 @@ mod tests {
     use super::*;
 
     fn git(root: &Path, arguments: &[&str]) -> String {
-        publish::command(root, "git", arguments).unwrap()
+        super::super::command(root, "git", arguments).unwrap()
     }
 
     fn commit_file(root: &Path, path: &str, text: &str) -> String {
@@ -428,15 +419,15 @@ mod tests {
     /// Writes a receipt and both reports for `commit`, as make land and the
     /// pre-push hook would.
     fn upload(root: &Path, archive: &Path, commit: &str, sun: GameDone, anchor: GameDone) {
-        let files = vec![b"report".to_vec(), super::super::measurement_text(Some(sun), Some(anchor)).into_bytes()];
+        let files = vec![b"report".to_vec(), measurement_text(Some(sun), Some(anchor)).into_bytes()];
         let measured_at = committed_at(root, commit).unwrap() - 60;
-        let digests = files.iter().map(|bytes| publish::digest(bytes)).collect::<Vec<_>>();
+        let digests = files.iter().map(|bytes| super::super::digest(bytes)).collect::<Vec<_>>();
         let saved = format!(
             "version\ttree\tmeasured_at\tpb_sha256\ttsv_sha256\n1\t{}\t{measured_at}\t{}\n",
             tree(root, commit).unwrap(),
             digests.join("\t")
         );
-        assert!(publish::verify(&saved, &tree(root, commit).unwrap(), &files).is_ok());
+        assert!(super::super::verify(&saved, &tree(root, commit).unwrap(), &files).is_ok());
         std::fs::write(archive.join(format!("{commit}.receipt.tsv")), saved).unwrap();
         std::fs::write(archive.join(format!("{commit}.pb")), &files[0]).unwrap();
         std::fs::write(archive.join(format!("{commit}.tsv")), &files[1]).unwrap();
@@ -478,7 +469,7 @@ mod tests {
         assert!(verify_ci(root, &archive, &tla, &carried.text).is_err());
         let wrong_tla = carried.text.replace("tla\t0\t0\t0\t20", "tla\t0\t0\t0\t21");
         assert!(verify_ci(root, &archive, &readme, &wrong_tla).is_err());
-        // A rebuilt tool or a new devtools pin changes what counts it.
+        // A changed tool is among the inputs, as the build reads it.
         commit_file(root, "games/tla/src/a.c", "tla");
         let tool = commit_file(root, "tools/ags-text/a.c", "tool");
         assert!(matches!(nearest_receipt(root, &archive, &tool).unwrap(), Lost::Last(..)));
