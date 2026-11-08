@@ -41,6 +41,8 @@ pub struct DecompTarget {
     /// The folder the edition builds in, relative to the checkout.
     pub output_dir: &'static str,
     rom_sha1: &'static str,
+    /// The image the build writes, as rom.sha1 names it.
+    built: &'static str,
 }
 
 impl DecompTarget {
@@ -48,9 +50,10 @@ impl DecompTarget {
         self.id.game()
     }
 
-    /// The image the edition's build writes, relative to the checkout.
+    /// The image the edition's build writes, relative to the checkout: the
+    /// path rom.sha1 gives, at the checkout's root when it names no folder.
     pub fn image(&self) -> String {
-        format!("{}/{}.gba", self.output_dir, self.id)
+        self.built.to_string()
     }
 
     /// Whether an image is the edition's ROM: its SHA-1 is rom.sha1's.
@@ -71,6 +74,7 @@ struct Edition {
     rom: String,
     output_dir: String,
     sha1: String,
+    image: String,
 }
 
 /// rom.sha1's lines: `<sha1>  out/<edition>/<edition>.gba`.
@@ -90,6 +94,7 @@ fn read(text: &str) -> Result<Vec<Edition>, String> {
             rom: format!("roms/{id}.gba"),
             output_dir: folder.to_string_lossy().into_owned(),
             sha1: sha1.to_ascii_lowercase(),
+            image: image.to_string_lossy().into_owned(),
             id,
         });
     }
@@ -113,6 +118,7 @@ fn target(edition: &'static Edition) -> DecompTarget {
         rom: &edition.rom,
         output_dir: &edition.output_dir,
         rom_sha1: &edition.sha1,
+        built: &edition.image,
     }
 }
 
@@ -197,6 +203,11 @@ mod tests {
         let rows: Vec<_> = editions.iter().map(|e| (e.id.as_str(), e.rom.as_str(), e.output_dir.as_str(), &e.sha1[..4])).collect();
         assert_eq!(rows, [("tbs-en", "roms/tbs-en.gba", "out/tbs-en", "5c46"), ("tla-en", "roms/tla-en.gba", "out/tla-en", "b500")]);
         assert!(read("5c4695205413df7db52b9a184815a07783999971\n").is_err());
+        // pret's ROM is written at the checkout's root.
+        let root = read("f3ae088181bf583e55daf962a92bb46f4f1d07b7  pokeemerald.gba\n").unwrap();
+        assert_eq!((root[0].id.as_str(), root[0].output_dir.as_str(), root[0].image.as_str()), ("pokeemerald", "", "pokeemerald.gba"));
+        assert_eq!(target(Box::leak(Box::new(root.into_iter().next().unwrap()))).image(), "pokeemerald.gba");
+        assert_eq!(decomp_target(Some("tla-en")).unwrap().image(), "out/tla-en/tla-en.gba");
     }
 
     #[test]
