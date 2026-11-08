@@ -1,12 +1,13 @@
 //! The humanization report: numbers for the work of making the matched C
 //! readable (S3), meant to fall the way DONE rose. Each game's tracked C and
 //! headers under `src` and `include` are lexed (never preprocessed) and
-//! counted by simple rules the README sets out: magic numbers, placeholder
-//! and numbered names, compiler-steering devices, edition tests, undocumented
-//! declarations, long files, duplicated code and, with the game's English
-//! text, where the names of game things come from (`provenance`), and whether
-//! the names can be guessed from one another (`naming`). Nothing here counts
-//! toward DONE (C2); the figures are for people.
+//! counted by simple rules, each set out where it is counted: magic numbers,
+//! placeholder and numbered names, fake-match devices (S2), edition tests,
+//! undocumented declarations, long files, duplicated code and, with the
+//! game's English text, where the names of game things come from
+//! (`provenance`), and whether the names can be guessed from one another
+//! (`naming`). Nothing here counts toward DONE (C2); the figures are a
+//! worklist for people (H5).
 
 mod naming;
 mod provenance;
@@ -23,8 +24,9 @@ use std::sync::OnceLock;
 
 pub const REPORT: &str = "out/reports/humanity.tsv";
 
-/// S2's devices, in its order.
-pub const DEVICES: [&str; 8] = ["wrapper", "volatile", "temporary", "dead", "one-pass", "barrier", "pin", "signature"];
+/// S2's fake-match devices, worst to mildest. `volatile` and a once-only
+/// block are ordinary C under S2 and take no tag, so they are not counted.
+pub const DEVICES: [&str; 6] = ["pin", "signature", "barrier", "wrapper", "temporary", "dead"];
 
 /// A function body this many tokens long or more takes part in the duplicate search.
 const FUNCTION_TOKENS: usize = 24;
@@ -80,13 +82,6 @@ struct Declared {
     entry: bool,
 }
 
-/// A unit H4 judges, a map overlay or a folder guide, and how many `XXX:`
-/// questions its files hold (`XXX (no evidence):` ones aside).
-pub struct Unit {
-    pub file: String,
-    pub open: u64,
-}
-
 /// One game's counts.
 #[derive(Default)]
 pub struct Report {
@@ -97,9 +92,10 @@ pub struct Report {
     /// Distinct placeholder and numbered names.
     pub names: BTreeMap<&'static str, BTreeSet<String>>,
     pub long_files: Vec<(String, usize)>,
-    /// Each unit H4 judges (a map overlay, a folder guide) and its open
-    /// questions.
-    pub units: Vec<Unit>,
+    /// Each unit H4 judges (a map overlay, a folder guide), by its file, and
+    /// how many `XXX:` questions its files hold (`XXX (no evidence):` ones
+    /// aside).
+    pub units: BTreeMap<String, u64>,
     /// Each file's `XXX:` questions, by line, for its unit.
     questions: BTreeMap<String, Vec<(usize, String)>>,
     pub function_groups: Vec<Group>,
@@ -1392,13 +1388,15 @@ impl Report {
 }
 
 /// How many area names `gArea_NameRules` reads: its highest name index
-/// plus one, from the `scene_name` and `area_name` rows of `scene_rules.s` (`map_rules.s` in The Lost Age)
-/// (`map_name` and `group_name` before the rename).
+/// plus one, from the `scene_name` and `area_name` rows of
+/// `src/field/scene_rules.s`. The Lost Age keeps its rows in
+/// `src/field/event_commands/area_name_rules.s`, which is not read yet, so
+/// its area names are not checked.
 pub fn area_count(rules: &str) -> Option<usize> {
     rules
         .lines()
         .map(str::trim)
-        .filter(|line| ["scene_name ", "area_name ", "map_name ", "group_name "].iter().any(|row| line.starts_with(row)))
+        .filter(|line| ["scene_name ", "area_name "].iter().any(|row| line.starts_with(row)))
         .filter_map(|line| line.split(',').nth(2)?.split('@').next()?.trim().parse::<usize>().ok())
         .max()
         .map(|max| max + 1)
@@ -1412,10 +1410,7 @@ fn game_text(root: &Path, game: &str) -> Option<GameText> {
         return None;
     }
     let po = std::fs::read(root.join(&path)).ok()?;
-    let rules = std::fs::read(root.join(format!("games/{game}/src/field/scene_rules.s")))
-        .or_else(|_| std::fs::read(root.join(format!("games/{game}/src/overworld/scene_rules.s"))))
-        .or_else(|_| std::fs::read(root.join(format!("games/{game}/src/overworld/map_rules.s"))))
-        .ok();
+    let rules = std::fs::read(root.join(format!("games/{game}/src/field/scene_rules.s"))).ok();
     let areas = rules.and_then(|rules| area_count(&String::from_utf8_lossy(&rules)));
     Some(GameText::parse(&String::from_utf8_lossy(&po), areas))
 }
@@ -1464,7 +1459,7 @@ fn unit(report: &mut Report, path: &str) {
     for (file, line, question) in &found {
         report.note("unit_open", file, *line, question);
     }
-    report.units.push(Unit { file: path.to_string(), open: found.len() as u64 });
+    report.units.insert(path.to_string(), found.len() as u64);
 }
 
 /// The tracked C, headers and folder guides of a game, never build output.
@@ -1506,14 +1501,12 @@ const ROWS: &[(&str, &str)] = &[
     ("numbered_names", "numbered names"),
     ("numbered", "  their uses"),
     ("fakematch", "FAKEMATCH devices"),
-    ("fakematch_wrapper", "  wrapper"),
-    ("fakematch_volatile", "  volatile"),
-    ("fakematch_temporary", "  temporary"),
-    ("fakematch_dead", "  dead"),
-    ("fakematch_one-pass", "  one-pass"),
-    ("fakematch_barrier", "  barrier"),
     ("fakematch_pin", "  pin"),
     ("fakematch_signature", "  signature"),
+    ("fakematch_barrier", "  barrier"),
+    ("fakematch_wrapper", "  wrapper"),
+    ("fakematch_temporary", "  temporary"),
+    ("fakematch_dead", "  dead"),
     ("goto", "goto"),
     ("if_language", "#if on LANGUAGE"),
     ("if_patch", "#if on a patch level"),
@@ -1571,7 +1564,7 @@ impl Report {
             "fakematch" => DEVICES.iter().map(|kind| self.total(&format!("fakematch_{kind}"))).sum(),
             "long_file" => self.long_files.len() as u64,
             "units" => self.units.len() as u64,
-            "units_done" => self.units.iter().filter(|unit| unit.open == 0).count() as u64,
+            "units_done" => self.units.values().filter(|open| **open == 0).count() as u64,
             "duplicate_function" => self.function_groups.len() as u64,
             "duplicate_function_copies" => Report::copies(&self.function_groups) as u64,
             "duplicate_table" => self.table_groups.len() as u64,
@@ -1712,12 +1705,21 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
     text
 }
 
+/// The lists `--list` takes beside the table's metrics: the name provenance
+/// worklist, and the words the game never uses or that no door resolves.
+const WORD_LISTS: [&str; 3] = ["provenance", "unused_word", "door_word"];
+
+/// Whether `--list` knows a metric: one the table counts, or a word list.
+fn listable(metric: &str) -> bool {
+    WORD_LISTS.contains(&metric) || ROWS.iter().any(|(row, _)| !row.is_empty() && *row == metric)
+}
+
 /// Every counted thing of one metric (`fakematch` takes each device kind),
 /// one line each: game, `file:line`, what.
 pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
     let mut text = String::new();
     for (game, report) in games {
-        if metric == "provenance" || metric == "unused_word" || metric == "door_word" {
+        if WORD_LISTS.contains(&metric) {
             let Some(analysis) = &report.provenance else { continue };
             if metric != "provenance" {
                 // Each flagged or unresolved word, how many names use it and where.
@@ -1761,6 +1763,11 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
 /// `progress --humanity [--top N] [--list METRIC]`: count both games, write
 /// the TSV and return the table, or with `list` that metric's items.
 pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, String> {
+    if let Some(metric) = metric.filter(|metric| !listable(metric)) {
+        return Err(format!(
+            "--list takes a metric of the table, as humanity.tsv names it, or provenance, unused_word or door_word, not {metric}"
+        ));
+    }
     let reports = std::thread::scope(|scope| {
         ["tbs", "tla"]
             .map(|game| {
@@ -1804,14 +1811,14 @@ mod tests {
             ("games/tbs/src/scene/vale.c", "/// @file\n/// Vale.\n\nvoid Vale_Run(void) {\n  /* XXX: what this is; its render. */\n}\n"),
             ("games/tbs/src/scene/vault.c", "/// @file\n/// Vault.\n// XXX (no evidence): what the ivy is for; nothing says.\n"),
         ]);
-        let open: Vec<(&str, u64)> = report.units.iter().map(|unit| (unit.file.as_str(), unit.open)).collect();
+        let open: Vec<(&str, u64)> = report.units.iter().map(|(file, open)| (file.as_str(), *open)).collect();
         assert_eq!(
             open,
             [
-                ("games/tbs/src/shop/README.md", 1),
                 ("games/tbs/src/scene/README.md", 0),
                 ("games/tbs/src/scene/vale.c", 1),
                 ("games/tbs/src/scene/vault.c", 0),
+                ("games/tbs/src/shop/README.md", 1),
             ]
         );
         assert_eq!(report.value("units"), 4);
@@ -1898,6 +1905,7 @@ mod tests {
             "void F(void) {\n",
             "    /* FAKEMATCH(wrapper): kept; as plain, 2 of 9 instructions differ in tbs-en. */\n",
             "    // FAKEMATCH(dead): kept. FAKEMATCH(<kind>) is the form.\n",
+            "    // FAKEMATCH(volatile), FAKEMATCH(one-pass): ordinary C, not devices.\n",
             "#if LANGUAGE != LANGUAGE_JAPANESE && TBS_PATCH_2\n",
             "    goto done;\n",
             "#endif\n",
@@ -1905,6 +1913,9 @@ mod tests {
             "}\n",
         ));
         assert_eq!((report.total("fakematch_wrapper"), report.total("fakematch_dead"), report.value("fakematch")), (1, 1, 2));
+        let rows: Vec<&str> = ROWS.iter().filter_map(|(metric, _)| metric.strip_prefix("fakematch_")).collect();
+        assert_eq!(rows, DEVICES, "the table's device rows are S2's, in its order");
+        assert!(listable("fakematch_pin") && !listable("fakematch_volatile") && !listable("xyz"));
         assert_eq!(report.total("goto"), 1);
         assert_eq!((report.total("if_language"), report.total("if_patch")), (2, 2));
         assert_eq!(report.total("if_in_function"), 1);
@@ -2085,7 +2096,7 @@ mod provenance_tests {
             "msgctxt \"MsgDebugAreaName\"\nmsgid \"00002\"\nmsgstr \"Bilibin\"\n\n",
             "msgctxt \"message\"\nmsgid \"00003\"\nmsgstr \"Bilibin Barricade\"\n",
         );
-        let text = GameText::parse(po, area_count("\tgroup_name 0, -1, 0\n\tscene_name Bilibin, -1, 1\n"));
+        let text = GameText::parse(po, area_count("\tarea_name 0, -1, 0\n\tscene_name Bilibin, -1, 1\n"));
         let ids = "/// @file\n/// Scenes.\n\n/// ★ Named from its area name: Bilibin\nextern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
         let flags = "/// ★ Named from the game: \"Hidden Treasury\" (MsgSign)\n#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_SCENE_TEMP_01 0x200\n#define FLAG_WAREHOUSE_SEEN 0x11 ///< Named from the game: \"Hidden Treasury\" (MsgSign)\n";
         let scene = concat!(

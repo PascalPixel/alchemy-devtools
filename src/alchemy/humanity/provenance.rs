@@ -1,7 +1,8 @@
 //! Name provenance for the humanization report: whether the names of game
 //! things (maps, actors, flags, exits, items, abilities and the like)
-//! come from evidence or were made up (Alchemy's S3). Three checks, all read
-//! from the source and the game's English text (`text/en.po`):
+//! come from evidence or were made up (Alchemy's H3). Three checks, all read
+//! from the source and the game's English text (`text/en.po`), each set out
+//! in full where it is made:
 //!
 //! - words the game never uses: each name is split into words, and a word is
 //!   accounted for when the game's text uses it (after crude stemming) or it
@@ -15,8 +16,6 @@
 //!   table-indexed enum (`ItemId`) against the game's name for its index,
 //!   and an exit whose words are verified maps, door words and the
 //!   room words of those maps.
-//!
-//! The README's "Humanization report" section sets the rules out.
 
 use regex::Regex;
 use std::collections::{BTreeMap, HashMap, HashSet};
