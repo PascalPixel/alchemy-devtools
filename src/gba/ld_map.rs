@@ -216,7 +216,7 @@ Discarded input sections
 
 Linker script and memory map
 
-                0x00000000000004ec                Decompress_MoveToFrontLzCommandsCodeSize = (Resource_Decode2End - Decompress_MoveToFrontLzCommands)
+                0x00000000000004ec                Decompress_MoveToFrontLzCommandsCodeSize = (Decompress_End - Decompress_MoveToFrontLzCommands)
 
 .rom_start      0x0000000008000000       0x30
  */asm/rom.o(.rom.00000000)

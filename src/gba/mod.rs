@@ -106,17 +106,30 @@ mod boundary {
         })
     }
 
-    /// Each line of code that reaches outside `crate::gba` or names a game or
-    /// project, by its number.
-    fn findings(source: &str) -> Vec<(usize, String)> {
+    /// One project's layout, refused outside comments: its folders as a path
+    /// starts them (`build/obj/` is one, `layout/` is not) and its file names.
+    const FOLDERS: [&str; 5] = ["out/", "obj/", "games/", "roms/", "recon/"];
+    const FILES: [&str; 6] = ["rom.sha1", "objects.tsv", "objects.mk", "deps.mk", "resource_", "_overlay"];
+
+    fn folder(text: &str, word: &str) -> bool {
+        text.match_indices(word).any(|(k, _)| !text[..k].chars().next_back().is_some_and(identifier))
+    }
+
+    /// Each line of code that reaches outside `crate::gba`, through `crate::`
+    /// or a `super` above it, or names a game, a project or its layout, by its
+    /// number. `top` is whether the source is `gba` itself, whose `super` is
+    /// the crate.
+    fn findings(source: &str, top: bool) -> Vec<(usize, String)> {
         let mut found = Vec::new();
         for (number, line) in code(source).lines().enumerate() {
             let outside = line.match_indices("crate::").any(|(k, _)| {
                 let path = &line[k + "crate::".len()..];
                 !path.starts_with("gba") || path[3..].starts_with(identifier)
-            });
+            }) || line.contains("super::super") || (top && folder(line, "super::"));
             let lower = line.to_ascii_lowercase();
-            let named = NAMES.iter().any(|name| whole(&lower, name)) || lower.contains("recon/");
+            let named = NAMES.iter().any(|name| whole(&lower, name))
+                || FOLDERS.iter().any(|name| folder(&lower, name))
+                || FILES.iter().any(|name| lower.contains(name));
             if outside || named {
                 found.push((number + 1, line.trim().to_string()));
             }
@@ -140,7 +153,7 @@ mod boundary {
                 source.truncate(source.find("#[cfg(test)]").unwrap_or(source.len()));
             }
             read += 1;
-            for (line, text) in findings(&source) {
+            for (line, text) in findings(&source, path == directory.join("mod.rs")) {
                 let name = path.strip_prefix(&directory).unwrap().display();
                 found.push(format!("src/gba/{name}:{line}: {text}"));
             }
@@ -158,7 +171,20 @@ mod boundary {
                       fn f<'a>(x: &'a str) {} // TBS\n\
                       let s = r#\"a \" crate::gbax\"#; /* /* Camelot */ */\n\
                       let atlas = crate::gba::thumb::bl_displacement;\n";
-        let lines: Vec<usize> = findings(source).iter().map(|(line, _)| *line).collect();
+        let lines: Vec<usize> = findings(source, false).iter().map(|(line, _)| *line).collect();
         assert_eq!(lines, [2, 3, 4, 6]);
+    }
+
+    #[test]
+    fn a_projects_layout_and_a_path_above_gba_are_refused() {
+        let source = "let map = \"build/obj/src/a.o\";\n\
+                      let layout = \"layout/x\"; let place = \"build/src/a.o\";\n\
+                      let sums = root.join(\"rom.sha1\");\n\
+                      use super::super::diff;\n\
+                      use super::elf;\n\
+                      let list = \"out/x/objects.tsv\";\n";
+        let lines = |top| findings(source, top).iter().map(|(line, _)| *line).collect::<Vec<usize>>();
+        assert_eq!(lines(false), [1, 3, 4, 6]);
+        assert_eq!(lines(true), [1, 3, 4, 5, 6]);
     }
 }
