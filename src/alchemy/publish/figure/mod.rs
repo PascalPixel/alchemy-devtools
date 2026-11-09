@@ -1,14 +1,15 @@
-//! The progress chart the README shows: each game's DONE code and data, day
-//! by day from the history, drawn on whole pixels and written as an indexed
-//! PNG.
+//! The progress chart the README shows: each game's DONE code, day by day
+//! from the history, drawn on whole pixels and written as an indexed PNG.
+//! Each game's name at the top right, with its icon, is drawn in its line's
+//! colour, which is the chart's only key.
 
 mod letters;
 mod palette;
 mod raster;
 
-use super::history::{day_number, History, Measure};
-use letters::{Letters, LINE};
-use palette::{BLUE, DARK_BLUE, DARK_GOLD, FACE, GOLD, GRID, INK, MUTED, SHADOW, WELL};
+use super::history::{day_number, History};
+use letters::Letters;
+use palette::{BLUE, FACE, GOLD, GRID, INK, MUTED, SHADOW, WELL};
 use raster::{Canvas, Relief};
 
 const WIDTH: i32 = 838;
@@ -16,38 +17,6 @@ pub(crate) const CHART: &str = "PROGRESS_CHART.png";
 const LINK: &str = "github.com/PascalPixel/alchemy";
 /// Below the plot: the date axis and its labels.
 const FOOTER: i32 = 30;
-
-fn latest_label(history: &History, game: &str) -> Option<String> {
-    latest(history, game, Measure::percent, "")
-}
-
-/// DONE data's label, once a row has recorded it.
-fn latest_data_label(history: &History, game: &str) -> Option<String> {
-    let found = history
-        .days
-        .iter()
-        .any(|row| row.game(game).and_then(Measure::data_percent).is_some());
-    found
-        .then(|| latest(history, game, Measure::data_percent, "data "))
-        .flatten()
-}
-
-fn latest(
-    history: &History,
-    game: &str,
-    value: fn(&Measure) -> Option<f64>,
-    prefix: &str,
-) -> Option<String> {
-    if history.pending(game) {
-        return Some(format!("{prefix}?%"));
-    }
-    history
-        .days
-        .iter()
-        .rev()
-        .find_map(|row| row.game(game).and_then(value))
-        .map(|value| format!("{prefix}{:.2}%", ((value * 100.0) + 1e-6).floor() / 100.0))
-}
 
 fn masthead(canvas: &mut Canvas, letters: &Letters, y: i32, heading: &str) -> i32 {
     let mut x = 8 + canvas.mark(8, y, "alchemy", INK, SHADOW) + 4;
@@ -75,20 +44,11 @@ pub(crate) fn chart(letters: &Letters, history: &History) -> Canvas {
         ("tla", "The Lost Age", BLUE),
     ];
     let pending = series.map(|(key, _, _)| history.pending(key));
-    let latest_data = series.map(|(key, _, _)| latest_data_label(history, key));
-    // Beside a data label, the code label says which it is.
-    let latest = series.map(|(key, _, _)| {
-        let code = latest_label(history, key);
-        match latest_data_label(history, key) {
-            Some(_) => code.map(|label| format!("code {label}")),
-            None => code,
-        }
-    });
     let masthead_end = masthead(&mut canvas, letters, 6, "Alchemy: Golden Sun Decompilation");
     let mut key_x = WIDTH - 8;
     for (key, name, ink) in series.iter().rev() {
         key_x -= letters.width(name) as i32;
-        canvas.text(letters, key_x, 6, name, INK, Some(SHADOW));
+        canvas.text(letters, key_x, 6, name, ink, Some(SHADOW));
         key_x -= letters::mark_width(key) as i32 + 4;
         canvas.mark(key_x, 6, key, ink, SHADOW);
         key_x -= 12;
@@ -97,16 +57,8 @@ pub(crate) fn chart(letters: &Letters, history: &History) -> Canvas {
         masthead_end + 12 <= key_x - 14,
         "the chart's top line overflows"
     );
-    let label_room = latest
-        .iter()
-        .chain(&latest_data)
-        .flatten()
-        .map(|label| letters.width(label) as i32)
-        .max()
-        .unwrap_or(0)
-        + 12;
     let (left, top) = (40, 32);
-    let (right, bottom) = (WIDTH - 8 - label_room, height - FOOTER);
+    let (right, bottom) = (WIDTH - 8, height - FOOTER);
     let (plot_w, plot_h) = (right - left, bottom - top);
     let waiting = series
         .iter()
@@ -168,23 +120,8 @@ pub(crate) fn chart(letters: &Letters, history: &History) -> Canvas {
             labelled_until = at + width;
         }
     }
-    let mut ends = Vec::new();
-    // DONE data, from 2026-10-08, is a line of its own in the game's darker
-    // colour, drawn first so that the code line lies over it where they meet.
-    let data_inks = [DARK_GOLD, DARK_BLUE];
-    let lines = series
-        .iter()
-        .zip(&latest_data)
-        .zip(&data_inks)
-        .map(|(((key, _, _), label), ink)| (super::history::data_points(history, key), 2, ink, label))
-        .chain(
-            series
-                .iter()
-                .zip(&latest)
-                .map(|((key, _, ink), label)| (super::history::points(history, key), 2, ink, label)),
-        );
-    for (points, width, ink, label) in lines {
-        let points = points
+    for (key, _, ink) in &series {
+        let points = super::history::points(history, key)
             .into_iter()
             .map(|(hour, value)| (x_hour(hour), y_of(value)))
             .collect::<Vec<_>>();
@@ -192,21 +129,13 @@ pub(crate) fn chart(letters: &Letters, history: &History) -> Canvas {
             canvas.line(
                 (pair[0].0, pair[0].1 - 1),
                 (pair[1].0, pair[1].1 - 1),
-                width,
+                2,
                 ink,
             );
         }
-        if let (Some(end), Some(label)) = (points.last(), label) {
+        if let Some(end) = points.last() {
             canvas.fill(end.0 - 1, end.1 - 2, 4, 4, ink);
-            ends.push((end.1, label.clone(), *ink));
         }
-    }
-    ends.sort_by_key(|(y, _, _)| *y);
-    let mut floor = i32::MIN;
-    for (y, label, ink) in ends {
-        let at = (y - 8).max(floor).min(bottom - 16);
-        canvas.text(letters, right + 8, at, &label, ink, Some(SHADOW));
-        floor = at + LINE as i32;
     }
     canvas
 }
@@ -219,7 +148,7 @@ pub(crate) fn png(history: &History, date: &str) -> Result<Vec<u8>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::alchemy::publish::history::{Current, Day};
+    use crate::alchemy::publish::history::{Current, Day, Measure};
     use letters::fixture;
     use raster::{blend, rgb};
     fn row(date: &str, tbs: Option<f64>, tla: Option<f64>) -> Day {
@@ -303,7 +232,7 @@ mod tests {
         }
     }
     #[test]
-    fn pending_audits_label_unknown_and_keep_the_historical_lines() {
+    fn pending_audits_keep_the_historical_lines() {
         let history = History {
             began: "2026-09-27".into(),
             current: Some(Current {
@@ -319,15 +248,13 @@ mod tests {
             ..History::default()
         };
         let published = history.days.clone();
-        assert_eq!(latest_label(&history, "tbs").as_deref(), Some("?%"));
-        assert_eq!(latest_label(&history, "tla").as_deref(), Some("?%"));
         let canvas = chart(&fixture(), &history);
         for ink in [GOLD, BLUE] {
             let ink = rgb(ink);
             assert!((32..canvas.height - FOOTER).any(|y| canvas.get(41, y) == Some(ink)));
         }
         assert_eq!(history.days, published);
-        // A last measurement keeps its figure and says where it was taken.
+        // A last measurement says where it was taken.
         let mut last = history.clone();
         last.current = Some(Current {
             date: "2026-09-28".into(),
@@ -335,38 +262,38 @@ mod tests {
             tla_pending: false,
             tla_last: Some("0123456789abcdef0123456789abcdef01234567".into()),
         });
-        assert_eq!(latest_label(&last, "tla").as_deref(), Some("2.10%"));
         assert_ne!(chart(&fixture(), &last).rgba(1), chart(&fixture(), &history).rgba(1));
     }
     #[test]
-    fn data_draws_its_own_line_and_label_once_recorded() {
-        let mut history = History {
-            began: "2026-10-01".into(),
-            days: vec![
-                row("2026-10-01", Some(90.0), None),
-                row("2026-10-05", Some(100.0), None),
-            ],
-            ..History::default()
+    fn the_chart_draws_code_alone_and_keys_it_by_the_names_colours() {
+        let code = |date: &str, done| Day {
+            tbs: Some(Measure::bytes(done, 100)),
+            ..Day::new(date)
         };
-        assert_eq!(latest_data_label(&history, "tbs"), None);
-        let code_only = chart(&fixture(), &history);
-        let with_data = |date: &str, data| Day {
+        let with_data = |date: &str, done, data| Day {
             tbs: Some(Measure {
                 data: Some(data),
                 data_total: Some(100),
-                ..Measure::bytes(100, 100)
+                ..Measure::bytes(done, 100)
             }),
             ..Day::new(date)
         };
-        history.days.push(with_data("2026-10-08", 40));
-        history.days.push(with_data("2026-10-09", 50));
-        assert_eq!(latest_label(&history, "tbs").as_deref(), Some("100.00%"));
-        assert_eq!(latest_data_label(&history, "tbs").as_deref(), Some("data 50.00%"));
-        let drawn = chart(&fixture(), &history);
-        assert_ne!(code_only.rgba(1), drawn.rgba(1));
-        // The data line has the game's darker colour, which code alone never draws.
-        let dark = rgb(DARK_GOLD);
-        let has = |canvas: &Canvas| (0..WIDTH).any(|x| (32..canvas.height - FOOTER).any(|y| canvas.get(x, y) == Some(dark)));
-        assert!(has(&drawn) && !has(&code_only));
+        let history = |days| History {
+            began: "2026-10-01".into(),
+            days,
+            ..History::default()
+        };
+        let code_only = chart(&fixture(), &history(vec![code("2026-10-01", 90), code("2026-10-09", 100)]));
+        let drawn = chart(
+            &fixture(),
+            &history(vec![with_data("2026-10-01", 90, 40), with_data("2026-10-09", 100, 50)]),
+        );
+        // Recorded data draws nothing.
+        assert_eq!(code_only.rgba(1), drawn.rgba(1));
+        // The names at the top right are their lines' colours, not white.
+        let white = rgb(INK);
+        assert!((WIDTH - 260..WIDTH - 8).all(|x| (0..28).all(|y| drawn.get(x, y) != Some(white))));
+        let gold = rgb(GOLD);
+        assert!((WIDTH - 260..WIDTH - 8).any(|x| (0..28).any(|y| drawn.get(x, y) == Some(gold))));
     }
 }

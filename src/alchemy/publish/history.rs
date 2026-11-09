@@ -30,10 +30,6 @@ impl Measure {
             data_total: None,
         }
     }
-    pub(crate) fn data_percent(&self) -> Option<f64> {
-        let (data, total) = (self.data? as f64, self.data_total? as f64);
-        (total > 0.0).then(|| 100.0 * data / total)
-    }
     pub(crate) fn published(percent: f64) -> Self {
         Measure {
             percent: Some(percent),
@@ -351,11 +347,6 @@ pub(crate) fn record_hour(
 
 pub(crate) fn points(history: &History, game: &str) -> Vec<(i64, f64)> {
     points_of(history, game, Measure::percent)
-}
-
-/// DONE data's line: only the rows that recorded it, from 2026-10-08.
-pub(crate) fn data_points(history: &History, game: &str) -> Vec<(i64, f64)> {
-    points_of(history, game, Measure::data_percent)
 }
 
 fn points_of(
@@ -678,12 +669,12 @@ mod tests {
         record(&mut history, "2026-10-09", Some(sun), None);
         let day = |date: &str| history.days.iter().find(|row| row.date == date).unwrap();
         assert_eq!(day("2026-10-08").correction, None);
-        assert_eq!(
-            day("2026-10-08").tbs.as_ref().unwrap().data_percent(),
-            Some(99.0)
-        );
-        assert_eq!(day("2026-10-05").tbs.as_ref().unwrap().data_percent(), None);
-        assert_eq!(data_points(&history, "tbs").len(), 2);
+        let data = |date: &str| {
+            let measure = day(date).tbs.clone().unwrap();
+            (measure.data, measure.data_total)
+        };
+        assert_eq!(data("2026-10-08"), (Some(99), Some(100)));
+        assert_eq!(data("2026-10-05"), (None, None));
         assert_eq!(points(&history, "tbs").len(), 3);
         let loaded = parse(&text(&history)).unwrap();
         assert_eq!(
@@ -698,8 +689,8 @@ mod tests {
         let head = format!("# began\t2026-07-16\n{HEADER}\n");
         let beside = format!("{head}2026-07-16\t-\t-\t1.0\t0\t100\t-\t-\t-\t-\t-\t-\n");
         let history = parse(&beside).unwrap();
-        assert_eq!(history.days[0].tbs.as_ref().unwrap().data_percent(), Some(0.0));
-        assert_eq!(data_points(&history, "tbs").len(), 1);
+        let measure = history.days[0].tbs.as_ref().unwrap();
+        assert_eq!((measure.data, measure.data_total), (Some(0), Some(100)));
         let alone = format!("{head}2026-07-16\t-\t-\t-\t0\t100\t-\t-\t-\t-\t-\t-\n");
         assert!(parse(&alone).is_err());
     }
