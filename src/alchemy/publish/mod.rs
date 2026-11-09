@@ -10,6 +10,7 @@ mod history;
 
 use decomp::REPORT;
 use sha2::{Digest, Sha256};
+use std::collections::BTreeSet;
 use std::path::Path;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -277,6 +278,58 @@ pub(crate) fn archive(root: &Path, path: &Path) -> Result<(), String> {
     archive_file(root, &mut volumes(root)?, path, &bytes)
 }
 
+/// The files publication reads: reports, measurements, receipts and records.
+fn read_by_publication(name: &str) -> bool {
+    name.ends_with(".tsv") || name.ends_with(".pb")
+}
+
+/// The files in a fetched copy that no volume holds any more.
+fn withdrawn<'a>(local: impl Iterator<Item = &'a str>, held: &BTreeSet<String>) -> Vec<String> {
+    local
+        .filter(|name| read_by_publication(name) && !held.contains(*name))
+        .map(str::to_string)
+        .collect()
+}
+
+/// Brings `directory` level with the archive's files that publication reads.
+/// The archive never changes a file it holds, so a name is its content: a
+/// copy kept from an earlier run fetches only the files it lacks, one listing
+/// for each volume, and drops any file no volume holds any more.
+pub(crate) fn fetch(root: &Path, directory: &Path) -> Result<String, String> {
+    std::fs::create_dir_all(directory).map_err(|error| format!("{}: {error}", directory.display()))?;
+    let target = directory.to_str().ok_or("invalid archive directory")?;
+    let (mut held, mut fetched) = (BTreeSet::new(), 0);
+    for tag in volumes(root)? {
+        let listed = release_query(root, &tag, ".assets[].name")?;
+        let mut arguments = vec!["release", "download", tag.as_str(), "--repo", REPO, "--dir", target, "--skip-existing"];
+        let mut missing = 0;
+        for name in listed.lines().filter(|name| read_by_publication(name)) {
+            if !directory.join(name).exists() {
+                arguments.extend(["--pattern", name]);
+                missing += 1;
+            }
+            held.insert(name.to_string());
+        }
+        if missing > 0 {
+            command(root, "gh", &arguments)?;
+            fetched += missing;
+        }
+    }
+    let local: Vec<String> = std::fs::read_dir(directory)
+        .map_err(|error| format!("{}: {error}", directory.display()))?
+        .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+        .collect();
+    let gone = withdrawn(local.iter().map(String::as_str), &held);
+    for name in &gone {
+        std::fs::remove_file(directory.join(name)).map_err(|error| format!("{name}: {error}"))?;
+    }
+    Ok(format!(
+        "archive: {} files, {fetched} fetched, {} withdrawn",
+        held.len(),
+        gone.len()
+    ))
+}
+
 pub(crate) fn upload(root: &Path, commit: &str, remote: &str) -> Result<(), String> {
     if !canonical_remote(remote) {
         return Ok(());
@@ -327,6 +380,17 @@ mod tests {
         }
         assert_eq!(volume_tag(1), "decomp-reports");
         assert_eq!(volume_tag(3), "decomp-reports-3");
+    }
+
+    #[test]
+    fn a_fetched_copy_drops_only_what_the_archive_withdrew() {
+        let held: BTreeSet<String> = ["a.tsv", "a.pb", "progress-history-v2.tsv"]
+            .iter()
+            .map(|name| name.to_string())
+            .collect();
+        let local = ["a.tsv", "a.pb", "b.tsv", "b.pb", "progress-history-v2.tsv", "notes.txt"];
+        assert_eq!(withdrawn(local.into_iter(), &held), ["b.tsv", "b.pb"]);
+        assert!(withdrawn(["a.tsv"].into_iter(), &held).is_empty());
     }
 
     #[test]

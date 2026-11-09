@@ -8,7 +8,7 @@ use crate::alchemy::humanity;
 use crate::alchemy::publish::{self, ci, decomp};
 use std::path::Path;
 
-const USAGE: &str = "usage: alchemy-devtools progress [--game GAME OUTPUT | --publish ARCHIVE COMMIT DIRECTORY MEASURED | --archive FILE | --volumes | --pre-push REMOTE | --humanity [--top N] [--list METRIC]]
+const USAGE: &str = "usage: alchemy-devtools progress [--game GAME OUTPUT | --publish ARCHIVE COMMIT DIRECTORY MEASURED | --archive FILE | --fetch DIRECTORY | --volumes | --pre-push REMOTE | --humanity [--top N] [--list METRIC]]
 With no option, counts DONE code and data in each edition built and matching
 rom.sha1 (make compare-editions), prints a line for each, and writes the
 measurement and decomp.dev's report under out/reports/decomp; a game without
@@ -19,7 +19,10 @@ is this repository's. The archive is the decomp-reports release and its
 numbered successors (decomp-reports-2 and on), since GitHub holds 1,000
 assets in a release: --volumes lists them in order, and --archive adds FILE
 to the newest under its own name, opening the next when it is full and
-refusing a file a volume already holds changed.
+refusing a file a volume already holds changed. --fetch brings DIRECTORY level
+with the archive's .tsv and .pb files: since no archived file ever changes, a
+copy kept from an earlier run fetches only the files it lacks, and drops any
+the archive no longer holds.
 --game GAME OUTPUT counts one game's six editions into OUTPUT with no receipt
 and no look at git: CI's own count, and a quick one on unstaged work.
 --publish is CI's too: with MEASURED, CI's count of The Broken Seal, it
@@ -140,6 +143,7 @@ pub(crate) fn run(argv: &[String]) -> Result<(), String> {
             String::new()
         }
         [flag, options @ ..] if flag == "--humanity" => humanity_options(root, options)?,
+        [flag, directory] if flag == "--fetch" => publish::fetch(root, Path::new(directory))?,
         [flag] if flag == "--volumes" => publish::volumes(root)?.join("\n"),
         [flag, remote] if flag == "--pre-push" => {
             pre_push(root, remote)?;
