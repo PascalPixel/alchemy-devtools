@@ -15,9 +15,9 @@ use crate::alchemy::done::{measurement_text, parse_measurement, status_line, Gam
 use std::path::Path;
 use std::process::Command;
 
-const BASELINE: &str = "progress-history-v1.tsv";
+const BASELINE: &str = "progress-history-v2.tsv";
 const BASELINE_DIGEST: &str =
-    "sha256:7bafc24521086fb2d892dc7c40e656ab169956f60bae6f0abcbb7111b435100c";
+    "sha256:1d7533af62a04e84604b1ecb869ddeb9fdb4aaa43f7a5ed7b7fff37ff24417ff";
 
 /// A CI record's first line, then the measurement it admits.
 const CI_HEADER: &str = "version\ttree\tmeasured_at\ttla_commit\ttla_source";
