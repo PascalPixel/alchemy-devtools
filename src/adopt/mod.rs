@@ -260,7 +260,12 @@ fn measures(root: &Path, options: &Options, item: &str) -> Result<Vec<Vec<String
         Form::Main => {
             let layout = Layout::new(&main_game(root, options)?);
             let first = item.split(',').next().unwrap_or(item);
-            vec![vec![path(&layout.main_draft(first)), item.to_string()]]
+            // The first address names the draft; nested functions come before
+            // their parent, so the listings are measured in address order,
+            // as the module's bytes lie.
+            let mut addresses: Vec<&str> = item.split(',').collect();
+            addresses.sort_unstable();
+            vec![vec![path(&layout.main_draft(first)), addresses.join(",")]]
         }
         Form::Overlay => vec![vec![path(item)]],
         Form::Replace => {
