@@ -24,9 +24,9 @@ use std::sync::OnceLock;
 
 pub const REPORT: &str = "out/reports/humanity.tsv";
 
-/// S2's fake-match devices, worst to mildest. `volatile` and a once-only
-/// block are ordinary C under S2 and take no tag, so they are not counted.
-pub const DEVICES: [&str; 6] = ["pin", "signature", "barrier", "wrapper", "temporary", "dead"];
+/// S2's fake-match kinds, in its ranking, worst first. A once-only block no
+/// macro expands to is a `dead` device; `one-pass` is no longer a kind.
+pub const DEVICES: [&str; 7] = ["signature", "pin", "barrier", "wrapper", "volatile", "temporary", "dead"];
 
 /// A function body this many tokens long or more takes part in the duplicate search.
 const FUNCTION_TOKENS: usize = 24;
@@ -1502,10 +1502,11 @@ const ROWS: &[(&str, &str)] = &[
     ("numbered_names", "numbered names"),
     ("numbered", "  their uses"),
     ("fakematch", "FAKEMATCH devices"),
-    ("fakematch_pin", "  pin"),
     ("fakematch_signature", "  signature"),
+    ("fakematch_pin", "  pin"),
     ("fakematch_barrier", "  barrier"),
     ("fakematch_wrapper", "  wrapper"),
+    ("fakematch_volatile", "  volatile"),
     ("fakematch_temporary", "  temporary"),
     ("fakematch_dead", "  dead"),
     ("goto", "goto"),
@@ -1906,17 +1907,21 @@ mod tests {
             "void F(void) {\n",
             "    /* FAKEMATCH(wrapper): kept; as plain, 2 of 9 instructions differ in tbs-en. */\n",
             "    // FAKEMATCH(dead): kept. FAKEMATCH(<kind>) is the form.\n",
-            "    // FAKEMATCH(volatile), FAKEMATCH(one-pass): ordinary C, not devices.\n",
+            "    // FAKEMATCH(volatile): read afresh; as a plain local, 2 of 9 instructions differ in tla-en.\n",
+            "    // FAKEMATCH(one-pass): no longer a kind, not counted.\n",
             "#if LANGUAGE != LANGUAGE_JAPANESE && TBS_PATCH_2\n",
             "    goto done;\n",
             "#endif\n",
             "done:;\n",
             "}\n",
         ));
-        assert_eq!((report.total("fakematch_wrapper"), report.total("fakematch_dead"), report.value("fakematch")), (1, 1, 2));
+        assert_eq!(
+            (report.total("fakematch_wrapper"), report.total("fakematch_volatile"), report.total("fakematch_dead"), report.value("fakematch")),
+            (1, 1, 1, 3)
+        );
         let rows: Vec<&str> = ROWS.iter().filter_map(|(metric, _)| metric.strip_prefix("fakematch_")).collect();
         assert_eq!(rows, DEVICES, "the table's device rows are S2's, in its order");
-        assert!(listable("fakematch_pin") && !listable("fakematch_volatile") && !listable("xyz"));
+        assert!(listable("fakematch_pin") && listable("fakematch_volatile") && !listable("fakematch_one-pass") && !listable("xyz"));
         assert_eq!(report.total("goto"), 1);
         assert_eq!((report.total("if_language"), report.total("if_patch")), (2, 2));
         assert_eq!(report.total("if_in_function"), 1);

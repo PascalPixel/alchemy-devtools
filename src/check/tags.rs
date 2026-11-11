@@ -11,8 +11,9 @@ use regex::Regex;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-/// Kinds S2 once had and now writes as ordinary C, with no tag.
-const ORDINARY: [&str; 2] = ["volatile", "one-pass"];
+/// The kind S2 once had for a once-only block: one no macro expands to is
+/// now a `dead` device, and a macro's is ordinary C with no tag.
+const RETIRED: &str = "one-pass";
 /// The kinds The Broken Seal refuses (S2).
 const NOT_IN_TBS: [&str; 2] = ["pin", "signature"];
 
@@ -57,10 +58,12 @@ fn judge(text: &str, broken_seal: bool) -> Option<String> {
         return Some(format!("not S2's form: {FORM_TEXT}"));
     };
     let Some(kind) = captures.get(2).map(|kind| kind.as_str()) else {
-        return Some(format!("no kind: {FORM_TEXT}"));
+        return Some(format!("unfinished, no kind: give it its kind or remove it with its form (S2): {FORM_TEXT}"));
     };
-    if ORDINARY.contains(&kind) {
-        return Some(format!("{kind} is ordinary C under S2: it takes no tag"));
+    if kind == RETIRED {
+        return Some(format!(
+            "{RETIRED} is no kind under S2: a once-only block no macro expands to is FAKEMATCH(dead); a macro's takes no tag"
+        ));
     }
     if !DEVICES.contains(&kind) {
         return Some(format!("unknown kind {kind}: {}", DEVICES.join(", ")));
@@ -345,11 +348,20 @@ mod tests {
         assert_eq!(judge(ok, false), None);
         assert_eq!(judge(&ok.replace("barrier", "temporary"), true), None);
         assert!(judge(&ok.replace("barrier", "pin"), true).unwrap().contains("Broken Seal"));
-        assert!(judge(&ok.replace("barrier", "volatile"), false).unwrap().contains("ordinary C"));
+        assert!(judge(&ok.replace("barrier", "signature"), true).unwrap().contains("Broken Seal"));
+        assert!(judge(&ok.replace("barrier", "signature"), false).is_none());
+        // Revised S2 (11 November 2026): volatile is a kind, in both games.
+        assert_eq!(judge(&ok.replace("barrier", "volatile"), false), None);
+        assert_eq!(judge(&ok.replace("barrier", "volatile"), true), None);
+        assert!(judge("FAKEMATCH(volatile): read afresh (and more).", false).unwrap().starts_with("not S2's form"));
+        // A once-only block is dead now; one-pass is no kind.
+        let retired = judge(&ok.replace("barrier", "one-pass"), false).unwrap();
+        assert!(retired.starts_with("one-pass is no kind") && retired.contains("FAKEMATCH(dead)"), "{retired}");
         assert!(judge(&ok.replace("barrier", "frame"), false).unwrap().starts_with("unknown kind frame"));
-        assert!(judge(&ok.replace("(barrier)", ""), false).unwrap().starts_with("no kind"));
-        assert!(judge("FAKEMATCH(volatile): read afresh (and more).", false).unwrap().contains("ordinary C"));
-        assert!(judge("FAKEMATCH: forwarding through the pointer.", false).unwrap().starts_with("no kind"));
+        assert!(judge(&ok.replace("barrier", "frame"), false).unwrap().ends_with(&DEVICES.join(", ")));
+        assert!(judge(&ok.replace("(barrier)", ""), false).unwrap().starts_with("unfinished, no kind"));
+        assert!(judge("FAKEMATCH: forwarding through the pointer.", false).unwrap().starts_with("unfinished, no kind"));
+        assert!(judge("FAKEMATCH(): kept.", false).is_some());
         assert!(judge(&ok.replace("2 of", "0 of"), false).unwrap().contains("no device"));
         assert!(judge(&ok.replace("tla-en", "tla-xx"), false).unwrap().contains("not an edition"));
         assert!(judge("FAKEMATCH(dead): kept.", false).unwrap().starts_with("not S2's form"));
