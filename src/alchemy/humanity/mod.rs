@@ -17,7 +17,7 @@ use crate::gba::clex::{self, Kind, Token};
 use naming::NameKind;
 use provenance::{Analysis, Definition, GameText, Origin, Thing};
 use regex::Regex;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write as _;
 use std::path::Path;
 use std::sync::OnceLock;
@@ -119,6 +119,9 @@ pub struct Report {
     parameters: HashMap<String, Vec<Option<String>>>,
     /// Each function-like macro's parameters and the call each is passed to.
     macro_parameters: HashMap<String, Vec<(String, Option<(String, usize)>)>>,
+    /// Function-like macros that only compose a number from their parameters
+    /// (`PIXELS`, `RGB`, `DMA_COPY_WORDS`): S3's composed forms.
+    compositions: HashSet<String>,
     function_bodies: HashMap<String, Group>,
     table_bodies: HashMap<String, Group>,
     /// Every name the source defines or declares, for the naming checks.
@@ -277,18 +280,25 @@ impl Report {
     /// parameter it fills, or, where that is a macro that only converts its
     /// value (`PIXELS(value)`, `((value) << 16)`), the parameter the macro's
     /// result fills.
+    /// A number composed by one of S3's forms (`PIXELS(24)`, `RGB(31, 0, 0)`)
+    /// is a plain quantity in the unit its macro names: it is data, unless a
+    /// parameter further out says which kind (a coordinate, a size).
     fn argument_kind(&self, calls: &[(String, usize)]) -> Option<&'static str> {
+        let mut composed = None;
         for (callee, at) in calls {
-            let (_, kind) = self.parameter(callee, *at, 0)?;
+            let Some((_, kind)) = self.parameter(callee, *at, 0) else { return composed };
             if kind.is_some() {
                 return kind;
             }
+            if self.compositions.contains(callee) {
+                composed = Some("composed");
+            }
             let converts = self.macro_parameters.get(callee).and_then(|list| list.get(*at)).is_some_and(|(_, call)| call.is_none());
             if !converts {
-                return None;
+                return composed;
             }
         }
-        None
+        composed
     }
 
     /// Settle what needs the whole game: lone arguments by the parameters
@@ -500,6 +510,31 @@ fn evaluate(words: &[&str], lookup: &dyn Fn(&str) -> Option<i64>) -> Option<i64>
 
 fn is_keyword(text: &str) -> bool {
     KEYWORDS.contains(&text)
+}
+
+/// Whether a function-like macro's body only composes a number from its
+/// parameters, as S3's composed forms do: parameters, numbers and constants
+/// joined by shifts, ors and multiplies (`((value) << 16)`,
+/// `(((b) << 10) | ((g) << 5) | (r))`, `((DMA_ENABLE | DMA_32BIT) << 16 | (n))`).
+/// An offset (`0x180 + (group)`, an id's range), a cast, an index, a call or
+/// an assignment is not a composition: what it is passed may be an id.
+fn is_composition<'a>(parameters: &[&str], body: impl Iterator<Item = &'a str>) -> bool {
+    let (mut operator, mut used, mut name) = (false, false, false);
+    for word in body.filter(|&word| word != "\\") {
+        let was_name = std::mem::replace(&mut name, false);
+        match word {
+            // A `(` after a name is a call.
+            "(" if was_name => return false,
+            "(" | ")" => {}
+            "<<" | "|" | "*" => operator = true,
+            _ if parameters.contains(&word) => used = true,
+            _ if word.starts_with(|c: char| c.is_ascii_digit()) => {}
+            // A constant: `DMA_ENABLE`.
+            _ if is_macro_name(word) && word.starts_with(|c: char| c.is_ascii_alphabetic()) => name = true,
+            _ => return false,
+        }
+    }
+    operator && used
 }
 
 /// A name written in capitals, as macros are: `UNUSED`, `ALIGNED`.
@@ -899,6 +934,9 @@ impl<'r, 'a> Walk<'r, 'a> {
             })
             .collect();
         self.report.macro_parameters.entry(name.to_string()).or_insert(parameters);
+        if is_composition(&names, (body..end).filter(|&at| self.code.tokens[at].kind != Kind::Comment).map(|at| self.code.text(at))) {
+            self.report.compositions.insert(name.to_string());
+        }
     }
 
     /// The parameter names of the function a declaration names, `None` where
@@ -1496,6 +1534,7 @@ const ROWS: &[(&str, &str)] = &[
     ("data_argument_coordinate", "  coordinates"),
     ("data_argument_size", "  sizes"),
     ("data_argument_count", "  counts"),
+    ("data_argument_composed", "  composed quantities"),
     ("magic_table", "numbers in table data"),
     ("placeholder_names", "placeholder names"),
     ("placeholder", "  their uses"),
@@ -2037,14 +2076,52 @@ mod tests {
         let report = game([("f.h", header), ("f.c", source)]);
         assert_eq!(report.total("data_argument_frames"), 2, "WAIT(80) and 40");
         assert_eq!(report.total("data_argument_coordinate"), 2, "312 and 416, through PIXELS and a group");
-        assert_eq!(report.total("data_argument"), 4);
-        // 24 and 0x8000 (a speed and an acceleration), 20, 10 and 12, 64 and 40;
+        assert_eq!(report.total("data_argument_composed"), 1, "PIXELS(24), a speed in pixels");
+        assert_eq!(report.total("data_argument"), 5);
+        // 0x8000 (an acceleration), 20, 10 and 12 (BLEND calls Blend), 64 and 40;
         // the shifts' 16, in PIXELS and in Run, are no arguments.
-        assert_eq!((report.total("magic_argument"), report.total("magic_code")), (7, 9));
+        assert_eq!((report.total("magic_argument"), report.total("magic_code")), (6, 8));
         let listed = list(&[("tbs", &report)], "magic_argument");
-        assert!(listed.starts_with("tbs\tf.c:6\t24\tPIXELS value\ntbs\tf.c:6\t0x8000\tActor_SetSpeed acceleration\ntbs\tf.c:7\t20\tOld #2\n"), "{listed}");
+        assert!(listed.starts_with("tbs\tf.c:6\t0x8000\tActor_SetSpeed acceleration\ntbs\tf.c:7\t20\tOld #2\n"), "{listed}");
         assert!(listed.ends_with("tbs\tf.c:9\t40\t-\n"), "{listed}");
         assert!(list(&[("tbs", &report)], "data_argument").contains("tbs\tf.c:2\t80\tWAIT n\n"));
+    }
+
+    #[test]
+    fn composed_numbers_are_data() {
+        let composed = |body: &str, parameters: &[&str]| {
+            let tokens = clex::lex(body);
+            is_composition(parameters, tokens.iter().filter(|t| t.kind != Kind::Comment).map(|t| t.text))
+        };
+        assert!(composed("((value) << 16)", &["value"]));
+        assert!(composed("(((b) << 10) | ((g) << 5) | (r))", &["r", "g", "b"]));
+        assert!(composed("((DMA_ENABLE | DMA_32BIT) << 16 | (n)) ///< n words", &["n"]));
+        assert!(composed("((value) * (1 << (bits)))", &["value", "bits"]));
+        assert!(!composed("(0x180 + (group))", &["group"]), "an offset into a range of ids");
+        assert!(!composed("(BG_PLTT[(palette) * 16 + (color)])", &["palette", "color"]));
+        assert!(!composed("((u8 *)VRAM + (n) * BG_SCREEN_SIZE)", &["n"]));
+        assert!(!composed("(FLAG_BIT(n) << 1)", &["n"]), "a call");
+        assert!(!composed("(16)", &["n"]), "no parameter");
+        let header = concat!(
+            "#define DMA_ENABLE 0x8000\n",
+            "#define RGB(r, g, b) (((b) << 10) | ((g) << 5) | (r))\n",
+            "#define DMA_COPY_WORDS(n) ((DMA_ENABLE | 0x400) << 16 | (n)) ///< n words\n",
+            "#define FLAG_AREA_VISITED(group) (0x180 + (group))\n",
+            "void Palette_Set(s32 index, u16 color);\n",
+            "void Dma_Copy(const void *from, void *to, u32 control);\n",
+            "void Flag_Set(s32 flag);\n",
+        );
+        let source = concat!(
+            "void Run(void) {\n",
+            "    Palette_Set(12, RGB(31, 16, 0));\n",
+            "    Dma_Copy(a, b, DMA_COPY_WORDS(512));\n",
+            "    Flag_Set(FLAG_AREA_VISITED(37));\n",
+            "}\n",
+        );
+        let report = game([("f.h", header), ("f.c", source)]);
+        assert_eq!(report.total("data_argument_composed"), 3, "31, 16 and 512; a 0 is no magic number");
+        let listed = list(&[("tbs", &report)], "magic_argument");
+        assert_eq!(listed, "tbs\tf.c:2\t12\tPalette_Set index\ntbs\tf.c:4\t37\tFLAG_AREA_VISITED group\n", "{listed}");
     }
 
     #[test]
