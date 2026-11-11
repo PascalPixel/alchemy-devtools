@@ -25,7 +25,7 @@ cargo build --release --features render
 
 | Command | What it does |
 |---|---|
-| `adopt` | moves drafts that measure differ 0 into the build in every edition, has the build judge them (`--verify`), with a journal that undoes the batch or one item of it |
+| `adopt` | gathers a game's objects into one (`adopt merge`), editing its linker script, has the build judge it (`--verify`), with a journal that undoes the batch or one item of it |
 | `check` | each built ROM, overlay and PACKER row against the reference ROMs, and the fake-match tags against the project's rule |
 | `diff` | a C draft compiled as the build compiles it, against the listing it would replace |
 | `editions` | what an edition still takes from its scaffold while English links C |

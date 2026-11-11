@@ -51,31 +51,17 @@ pub(crate) fn file(output: &Path, overlay: &str, suffix: &str) -> PathBuf {
 }
 
 /// A C source the overlay links and the main image does not, as the edition's
-/// object list (`objects.mk`) names them: its recipe is the overlay's.
+/// object list (`objects.mk`, which the Makefile writes from the linker
+/// script) names them: its recipe is the overlay's.
 pub(crate) fn linked_source(root: &Path, output: &Path, overlay: &str) -> Result<String, String> {
+    let linked = super::link::from_objects_mk(root, output)?;
     let path = output.join("objects.mk");
-    let text = std::fs::read_to_string(root.join(&path)).map_err(|error| format!("{}: {error}", path.display()))?;
-    let list = |name: &str| -> Vec<String> {
-        let mut objects = Vec::new();
-        let mut inside = false;
-        for line in text.lines() {
-            if !inside {
-                inside = line.split_once(":=").is_some_and(|(variable, _)| variable.trim() == name);
-            } else if !line.starts_with('\t') {
-                break;
-            }
-            if inside {
-                objects.extend(line.split_whitespace().filter_map(|word| word.strip_prefix("$(BUILD)/obj/")).map(str::to_string));
-            }
-        }
-        objects
-    };
-    let id = overlay.strip_prefix("resource_").unwrap_or(overlay);
-    let main = list("MAIN_OBJS");
-    list(&format!("OVERLAY_OBJS_{id}"))
-        .into_iter()
-        .filter(|object| !main.contains(object))
-        .filter_map(|object| object.strip_suffix(".o").map(|base| format!("{base}.c")))
+    linked
+        .overlay(overlay)
+        .unwrap_or_default()
+        .iter()
+        .filter(|object| !linked.main.contains(object))
+        .map(|object| format!("{object}.c"))
         .find(|source| root.join(source).is_file())
         .ok_or_else(|| format!("{}: {overlay} links no C of its own", path.display()))
 }

@@ -5,18 +5,18 @@
 
 use crate::alchemy::built;
 use crate::alchemy::done::commas;
-use crate::alchemy::layout::{Layout, ObjectList};
+use crate::alchemy::link;
 use crate::alchemy::targets::{self, DecompTargetId};
 use crate::gba::elf::{self, Elf};
 use std::collections::HashMap;
 use std::path::Path;
 
 const USAGE: &str = "usage: alchemy-devtools editions [EDITION|GAME...] [--json]
-Lists each object from games/ that some edition does not link (the rows of
-games/<game>/objects.tsv merged per object), with the names its built object
-defines; under each name, the scaffold section (recon/<game>/<language>/rom.s)
-that still holds it in an edition that does not link the object, with its
-size. Then, for each edition with a scaffold, the bytes its scaffold holds:
+Lists each object from games/ that some edition does not link (each
+edition's object list, out/<edition>/objects.mk, which the Makefile writes
+from games/<game>/ld_script.ld), with the names its built object defines;
+under each name, the scaffold section (recon/<game>/<language>/rom.s) that
+still holds it in an edition that does not link the object, with its size. Then, for each edition with a scaffold, the bytes its scaffold holds:
 in sections with a name English links as C, with names English does not, and
 with no name. With no edition, every game that still has recon/<game>; a game
 names its six editions. --json prints the same as one JSON object.";
@@ -104,25 +104,34 @@ fn of_game(chosen: &[DecompTargetId], game: &str) -> Vec<DecompTargetId> {
     chosen.iter().copied().filter(|&id| id.game() == game).collect()
 }
 
-/// One game's objects and scaffolds.
-pub(crate) fn survey(root: &Path, game: &str, chosen: &[DecompTargetId]) -> Result<(Vec<Object>, Vec<Scaffold>), String> {
-    let all: Vec<DecompTargetId> = built::editions(&[game.to_string()])?;
-    let english = built::edition(game, "en").ok_or_else(|| format!("{game} has no English edition"))?;
-    // The object list's rows merged per object, in link order.
+/// Every object an edition of `all` links from `games/`, in English's link
+/// order and then each other edition's own in its order, with the languages
+/// whose main image or any overlay links it: each edition's object list as
+/// its build wrote it from the linker script.
+fn linked_by(root: &Path, all: &[DecompTargetId], english: DecompTargetId) -> Result<(Vec<String>, HashMap<String, Vec<&'static str>>), String> {
     let mut order: Vec<String> = Vec::new();
-    let mut languages: HashMap<String, Vec<&str>> = HashMap::new();
-    let list = ObjectList::parse(&built::read_text(&root.join(Layout::new(game).objects()))?);
-    for row in list.rows.iter().filter(|row| row.object().starts_with("games/")) {
-        let linked = languages.entry(row.object().to_string()).or_insert_with(|| {
-            order.push(row.object().to_string());
-            Vec::new()
-        });
-        for &id in &all {
-            if row.links(id.language()) && !linked.contains(&id.language()) {
+    let mut languages: HashMap<String, Vec<&'static str>> = HashMap::new();
+    let ordered = std::iter::once(english).chain(all.iter().copied().filter(|&id| id != english));
+    for id in ordered {
+        let lists = link::linked(root, id)?;
+        for stem in lists.all().into_iter().filter(|stem| stem.starts_with("games/")) {
+            let linked = languages.entry(stem.to_string()).or_insert_with(|| {
+                order.push(stem.to_string());
+                Vec::new()
+            });
+            if !linked.contains(&id.language()) {
                 linked.push(id.language());
             }
         }
     }
+    Ok((order, languages))
+}
+
+/// One game's objects and scaffolds.
+pub(crate) fn survey(root: &Path, game: &str, chosen: &[DecompTargetId]) -> Result<(Vec<Object>, Vec<Scaffold>), String> {
+    let all: Vec<DecompTargetId> = built::editions(&[game.to_string()])?;
+    let english = built::edition(game, "en").ok_or_else(|| format!("{game} has no English edition"))?;
+    let (order, languages) = linked_by(root, &all, english)?;
     let mut objects: Vec<Object> = Vec::new();
     // Each name English links from games/, by the object that defines it.
     let mut owner: HashMap<String, usize> = HashMap::new();
@@ -398,6 +407,31 @@ mod tests {
             "games/tla/src/window/f039864.c: linked by en; not by ja de\n  Message_StepScript: ja .rom.00039858 (1,548 bytes)\n  Message_Other: not in the scaffold of ja\n"
         ), "{shown}");
         assert!(shown.ends_with("tla-ja: 1 objects not linked; recon/tla/ja/rom.s holds 1,548 bytes in 1 sections with a name English links as C, 0 bytes with names English does not, 0 bytes with no name\n"), "{shown}");
+    }
+
+    /// Each edition's object list as its build wrote it: English's order
+    /// first, then what only another edition links, at its place there; an
+    /// object only an overlay links still counts as linked.
+    #[test]
+    fn objects_are_merged_from_each_edition_s_list() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        let (en, ja) = (id("tla-en"), id("tla-ja"));
+        let write = |id: DecompTargetId, text: &str| {
+            let output = built::output(root, id);
+            std::fs::create_dir_all(&output).unwrap();
+            std::fs::write(output.join("objects.mk"), text).unwrap();
+        };
+        write(en, "MAIN_OBJS := \\\n\t$(BUILD)/obj/games/tla/src/a.o \\\n\t$(BUILD)/obj/games/tla/src/b.o\nOVERLAYS := 649\nOVERLAY_OBJS_649 := \\\n\t$(BUILD)/obj/games/tla/src/scene/s.o\n");
+        write(ja, "MAIN_OBJS := \\\n\t$(BUILD)/obj/games/tla/src/a.o \\\n\t$(BUILD)/obj/games/tla/src/a_ja.o\nOVERLAYS := 649\nOVERLAY_OBJS_649 := \\\n\t$(BUILD)/obj/games/tla/src/scene/s.o\n");
+        let (order, languages) = linked_by(root, &[ja, en], en).unwrap();
+        assert_eq!(order, ["games/tla/src/a", "games/tla/src/b", "games/tla/src/scene/s", "games/tla/src/a_ja"]);
+        assert_eq!(languages["games/tla/src/a"], ["en", "ja"]);
+        assert_eq!(languages["games/tla/src/b"], ["en"]);
+        assert_eq!(languages["games/tla/src/a_ja"], ["ja"]);
+        assert_eq!(languages["games/tla/src/scene/s"], ["en", "ja"]);
+        let de = id("tla-de");
+        assert!(linked_by(root, &[en, de], en).unwrap_err().contains("tla-de is not built"));
     }
 
     /// A built scaffold's sections and names, read from its symbol table,

@@ -1,6 +1,6 @@
 //! A three-way merge by lines, so a journal undoes its own changes to a file
-//! that later adoptions changed elsewhere (objects.tsv and the scaffolds take
-//! every adoption's edits).
+//! that later adoptions changed elsewhere (a game's linker script takes every
+//! merge's edits).
 
 /// The lines of a text, each with its newline.
 fn lines(text: &str) -> Vec<&str> {

@@ -106,12 +106,11 @@ pub(crate) fn steps_many(target: DecompTarget, drafts: &[(&Path, &Path, Option<&
         .collect()
 }
 
-/// Whether the edition's object list (ags-objects' `objects.mk`) names the
-/// object `source` builds.
+/// Whether the edition's object list (`objects.mk`, which the Makefile writes
+/// from the linker script) names the object `source` builds.
 pub(crate) fn listed(target: DecompTarget, source: &str) -> bool {
-    let object = format!("$(BUILD)/obj/{}.o", source.strip_suffix(".c").unwrap_or(source));
-    std::fs::read_to_string(root().join(target.output_dir).join("objects.mk"))
-        .is_ok_and(|list| list.split_whitespace().any(|word| word == object))
+    let stem = source.strip_suffix(".c").unwrap_or(source);
+    crate::alchemy::link::from_objects_mk(root(), Path::new(target.output_dir)).is_ok_and(|linked| linked.links(stem))
 }
 
 #[cfg(test)]

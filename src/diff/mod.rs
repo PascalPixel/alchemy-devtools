@@ -1036,25 +1036,6 @@ fn refuse_perm_macros(draft: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// A draft measured as `diff ARGUMENTS` measures it, printing only what the
-/// reference's reader prints: the listing's instructions, the draft's, and
-/// how many differ.
-pub(crate) fn measure(arguments: &[String]) -> Result<(usize, usize, usize), String> {
-    let options = parse(arguments)?;
-    let draft = std::fs::canonicalize(&options.draft).map_err(|e| format!("{}: {e}", options.draft.display()))?;
-    refuse_perm_macros(&draft)?;
-    let stem = draft.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-    let work = Work::new(options.target)?;
-    let object = work.folder.join(format!("{stem}.o"));
-    for step in steps(options.target, &draft, &object, options.overlay.as_deref(), options.arm)? {
-        command(&step, &work.folder)?;
-    }
-    let found = reference(&options, &object)?;
-    let compiled = disassemble(&object, found.symbol(&object)?.as_deref())?;
-    let (common, _) = compare_counts(&found.listing, &compiled);
-    Ok((found.listing.len(), compiled.len(), found.listing.len() + compiled.len() - 2 * common))
-}
-
 pub fn run(arguments: &[String]) -> Result<(), String> {
     if arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
         println!("{USAGE}");

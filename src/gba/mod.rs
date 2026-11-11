@@ -109,7 +109,7 @@ mod boundary {
     /// One project's layout, refused outside comments: its folders as a path
     /// starts them (`build/obj/` is one, `layout/` is not) and its file names.
     const FOLDERS: [&str; 5] = ["out/", "obj/", "games/", "roms/", "recon/"];
-    const FILES: [&str; 6] = ["rom.sha1", "objects.tsv", "objects.mk", "deps.mk", "resource_", "_overlay"];
+    const FILES: [&str; 6] = ["rom.sha1", "ld_script", "objects.mk", "deps.mk", "resource_", "_overlay"];
 
     fn folder(text: &str, word: &str) -> bool {
         text.match_indices(word).any(|(k, _)| !text[..k].chars().next_back().is_some_and(identifier))
@@ -182,7 +182,7 @@ mod boundary {
                       let sums = root.join(\"rom.sha1\");\n\
                       use super::super::diff;\n\
                       use super::elf;\n\
-                      let list = \"out/x/objects.tsv\";\n";
+                      let list = \"games/x/ld_script.ld\";\n";
         let lines = |top| findings(source, top).iter().map(|(line, _)| *line).collect::<Vec<usize>>();
         assert_eq!(lines(false), [1, 3, 4, 6]);
         assert_eq!(lines(true), [1, 3, 4, 5, 6]);
