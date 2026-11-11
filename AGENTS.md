@@ -2,7 +2,7 @@ This file is not for humans.
 
 # Alchemy Devtools
 
-The toolkit and the method for matching a GBA game's machine code as C: measure a draft against the game, rank what is left, adopt what matches, count what is done, and run that work as agents. The project's own `AGENTS.md` owns what its source may contain and what counts (for Alchemy: S1 to S4, C1 to C3, O1 to O5, K1 to K3); this file owns how to get there. Where they meet, the project's rules win, and any change to what counts or to compiler routing follows the project's approval and separate-commit rules.
+The toolkit and the method for matching a GBA game's machine code as C: measure a draft against the game, rank what is left, adopt what matches, count what is done, and run that work as agents. The project's own `AGENTS.md` owns what its source may contain (for Alchemy: S1 to S3, C3, O1 to O5, K1 to K3); this file owns how to get there and, for Alchemy, what counts and how unfinished work is kept (C1, C2 and S4, under "Rules moved from Alchemy"). Where they meet, the project's rules win, and any change to what counts or to compiler routing follows the project's approval and separate-commit rules.
 
 Evidence is our own cartridge dumps, the project's source and public documentation. Never another project's work on the same game, never leaked SDKs or sources, never a ROM or game file committed or uploaded.
 
@@ -34,6 +34,21 @@ Near misses stopped by allocation or scheduling are not chased while far-off wor
 
 Cost decides the shape. One agent per draft with a second agent verifying each claim cost about 64M tokens for 0.9 points of The Lost Age: most claims failed on rules the matching agent never checked. A few agents, each working a batch in turn and checking its own drafts against the rules (`check tags`, the source rules, `diff` in every edition) before calling one clean, took 2.75 points for 1.1M. Make the agent that writes a match prove it; keep independent verification for samples and landings.
 
+## Rules moved from Alchemy
+
+Alchemy's matching is finished, and its `AGENTS.md` keeps what its source may contain. These rules are about matching and counting; they keep their Alchemy ids, and changing what they count needs Pascal and lands as its own commit (Alchemy W6).
+
+- **C1** A function counts only when its whole extent, literal pool included, compiles exactly and every edition stays byte-identical; in an edition, only when that edition links its C.
+- **C2** DONE is pret's calcrom over the linker maps, by folder: bytes placed from `games/` are done, from `recon/` not yet. Code is `.text`; data is everything else. A game's figure sums its six editions.
+- **S4** Never throw work away: commit each adoption and attempt; a near miss stays a draft with its remaining difference in its header; an edition whose bytes differ stays on its scaffold and never blocks the others.
+
+How Alchemy's matching ran, in its own words before `recon/` went:
+
+- Match furthest first: drafts in `recon/<game>/en/main/<address>.c`; a near miss stays a draft with its remaining difference in its header (S4); a match is adopted into the module of its linker neighbours in every edition whose bytes agree, and committed (C1). A mismatch is fixed in source, or the code stays a draft (Alchemy O4). Anything that is not proven assembly (Alchemy S1) stays in `recon/` until it matches as C.
+- ROM bytes reach the build only through pret's `.incbin "baserom.gba"` scaffold in `recon/`, which never counts (Alchemy O1).
+- "Not yet matched in this edition" is decided by the object list or the scaffold, never by a `LANGUAGE` test (Pascal, 7 November 2026; Alchemy S3).
+- The Lost Age may add tagged devices to reach a match (Alchemy S2).
+
 ## What matching has measured
 
 Facts about Alchemy's compiler, alchemy-gcc, not rules.
@@ -46,4 +61,5 @@ Facts about Alchemy's compiler, alchemy-gcc, not rules.
 - A file that tests `LANGUAGE` without including `edition.h` silently gets the Japanese branch.
 - Within an object, code and data follow definition order; only the object list orders objects.
 - Japanese is often an older layout of a function. A function that saves r9 and never uses it is a nested function storing its static chain.
+- `-mtune=gba`'s multiplies `3 3` (Alchemy K2), against `5 5`, bring 33 drafts closer and 1 further while every matched function still matches (8 November 2026).
 - To measure a rewrite in seconds, compile its one object to assembly for one edition and diff it against the build's, `.L` numbers ignored; then `make compare-editions`.
