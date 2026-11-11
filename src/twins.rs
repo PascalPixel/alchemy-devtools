@@ -12,10 +12,14 @@ use crate::gba::ld_map::Map;
 use crate::gba::shape::{self, Index, Instruction, GRAM};
 use std::path::Path;
 
-const USAGE: &str = "usage: alchemy-devtools twins GAME [--reference GAME] [--min-dice D] [--ratio LOW HIGH] [--limit N]
+const USAGE: &str = "usage: alchemy-devtools twins GAME [--all] [--min N] [--reference GAME] [--min-dice D] [--ratio LOW HIGH] [--limit N]
 For each function GAME still places from recon/ (its listings and its
 overlays' scaffold sections) with 12 or more instructions, the function the
-reference game places from games/ most like it in shape. Each Thumb
+reference game places from games/ most like it in shape; with --all, each
+function GAME places from games/ instead, so a finished game's functions
+find their counterparts (a function is never its own twin, so a game may be
+its own reference). --min N reads functions of N or more instructions in
+place of 12. Each Thumb
 instruction reads as its mnemonic with its immediate, or the stack, literal
 pool or pc it addresses; registers, branch targets, literal pools and jump
 tables are set aside. What one compiler writes one way and another another
@@ -41,9 +45,20 @@ const MIN_LENGTH: usize = 12;
 struct Options {
     game: &'static str,
     reference: &'static str,
+    /// Read the functions GAME places from games/, not from recon/.
+    all: bool,
+    /// The fewest instructions a function read from GAME has.
+    min_length: usize,
     min_dice: f64,
     ratio: Option<(f64, f64)>,
     limit: Option<usize>,
+}
+
+/// Whether an object of the game being read is one twins reads: from
+/// games/ with --all, else from recon/.
+fn reads(all: bool) -> impl Fn(&str) -> bool {
+    let folder = if all { "games/" } else { "recon/" };
+    move |stem: &str| stem.starts_with(folder)
 }
 
 fn number<T: std::str::FromStr>(value: Option<&String>, flag: &str) -> Result<T, String> {
@@ -53,10 +68,13 @@ fn number<T: std::str::FromStr>(value: Option<&String>, flag: &str) -> Result<T,
 /// The options, or None when help is asked for.
 fn parse(arguments: &[String]) -> Result<Option<Options>, String> {
     let (mut game, mut reference, mut min_dice, mut ratio, mut limit) = (None, None, 0.0, None, None);
+    let (mut all, mut min_length) = (false, MIN_LENGTH);
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
         match argument.as_str() {
             "-h" | "--help" => return Ok(None),
+            "--all" => all = true,
+            "--min" => min_length = number(arguments.next(), "--min")?,
             "--reference" => reference = Some(targets::game(arguments.next().ok_or_else(|| USAGE.to_string())?)?),
             "--min-dice" => min_dice = number(arguments.next(), "--min-dice")?,
             "--ratio" => {
@@ -80,7 +98,7 @@ fn parse(arguments: &[String]) -> Result<Option<Options>, String> {
             _ => return Err(format!("name the reference game with --reference\n{USAGE}")),
         },
     };
-    Ok(Some(Options { game, reference, min_dice, ratio, limit }))
+    Ok(Some(Options { game, reference, all, min_length, min_dice, ratio, limit }))
 }
 
 /// A Thumb function an edition's build defines, with the file that placed it.
@@ -146,7 +164,8 @@ impl Row<'_> {
 }
 
 /// Each function's twin among `matched`, most alike first, then the
-/// longest, then by name.
+/// longest, then by name. A function is never its own twin: one of the same
+/// name from the same file is passed over.
 fn rows<'a>(unfinished: &'a [Found], matched: &'a [Found], ratio: Option<(f64, f64)>) -> Vec<Row<'a>> {
     let index = Index::new(matched.iter().map(|found| found.instructions.as_slice()));
     let mut rows: Vec<Row> = unfinished
@@ -154,8 +173,10 @@ fn rows<'a>(unfinished: &'a [Found], matched: &'a [Found], ratio: Option<(f64, f
         .map(|function| {
             let length = function.instructions.len() as f64;
             let admits = |twin: usize| {
-                let twin = matched[twin].instructions.len() as f64;
-                ratio.is_none_or(|(low, high)| twin >= low * length && twin <= high * length)
+                let twin = &matched[twin];
+                let own = twin.name == function.name && twin.file == function.file;
+                let size = twin.instructions.len() as f64;
+                !own && ratio.is_none_or(|(low, high)| size >= low * length && size <= high * length)
             };
             let twin = index.nearest(&function.instructions, admits).map(|(twin, dice)| (&matched[twin], dice));
             Row { function, twin }
@@ -192,15 +213,17 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         return Ok(());
     };
     let root = crate::compile::root();
-    let (game, mut unfinished) = read(root, options.game, |stem| stem.starts_with("recon/"))?;
+    let (game, mut unfinished) = read(root, options.game, reads(options.all))?;
     let read_all = unfinished.len();
-    unfinished.retain(|function| function.instructions.len() >= MIN_LENGTH);
+    unfinished.retain(|function| function.instructions.len() >= options.min_length);
     let (reference, matched) = read(root, options.reference, |stem| stem.starts_with("games/"))?;
     let shaped = matched.iter().filter(|function| function.instructions.len() >= GRAM).count();
     eprintln!(
-        "{game}: {} unfinished functions, {} of {MIN_LENGTH} or more instructions; {reference}: {} matched functions indexed, {} of {GRAM} or more instructions",
+        "{game}: {} {} functions, {} of {} or more instructions; {reference}: {} matched functions indexed, {} of {GRAM} or more instructions",
         commas(read_all as i64),
+        if options.all { "matched" } else { "unfinished" },
         commas(unfinished.len() as i64),
+        options.min_length,
         commas(matched.len() as i64),
         commas(shaped as i64),
     );
@@ -232,6 +255,33 @@ mod tests {
             assert!(parse(&words(wrong)).is_err(), "{wrong:?}");
         }
         assert!(parse(&words("tla --help")).unwrap().is_none());
+        let options = parse(&words("tla")).unwrap().unwrap();
+        assert_eq!((options.all, options.min_length), (false, MIN_LENGTH));
+        let options = parse(&words("tla --all --min 30")).unwrap().unwrap();
+        assert_eq!((options.all, options.min_length), (true, 30));
+        assert!(parse(&words("tla --all --min")).is_err());
+        assert!(parse(&words("tla --min many")).is_err());
+    }
+
+    /// With --all the functions a game places from games/ are read, and
+    /// with the game its own reference none is its own twin.
+    #[test]
+    fn all_reads_the_matched_functions_and_none_is_its_own_twin() {
+        let root = crate::compile::root();
+        let (_, mut lost) = read(root, "tla", reads(true)).unwrap();
+        lost.retain(|function| function.instructions.len() >= 40);
+        assert!(lost.len() > 1_000, "{} functions of 40 or more instructions", lost.len());
+        assert!(lost.iter().all(|function| function.file.starts_with("games/")));
+        let (_, matched) = read(root, "tbs", reads(true)).unwrap();
+        let across = rows(&lost, &matched, Some((0.75, 1.33)));
+        let thor = across.iter().find(|row| row.function.name == "BattleEffect_RunThor").unwrap();
+        assert_eq!(thor.twin.unwrap().0.name, "BattleEffect_RunThor");
+        let own = rows(&matched, &matched, None);
+        assert!(own.iter().filter(|row| row.twin.is_some()).count() > 4_000);
+        for row in own {
+            let twin = row.twin.map(|(twin, _)| (twin.name.as_str(), twin.file.as_str()));
+            assert_ne!(twin, Some((row.function.name.as_str(), row.function.file.as_str())));
+        }
     }
 
     /// Every Thumb function the reference build places from games/ is read

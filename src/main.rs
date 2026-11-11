@@ -39,7 +39,7 @@ Run any command with --help for its options.
   regress   the functions whose assembly differs from a saved build, each classed
   render    the docs site's pictures and recordings of a built edition (feature render)
   sweep     take out the fake-match devices every edition compiles the same without
-  twins     for each unfinished function, the other game's matched function most like it in shape
+  twins     for each unfinished function (with --all, each matched one), the other game's matched function most like it in shape
   variants  named rewrites of a draft, measured as diff measures it, best first; --keep writes the best
   where     the bytes each edition still places from recon/, and DONE from the maps"#;
 

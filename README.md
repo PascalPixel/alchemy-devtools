@@ -36,7 +36,7 @@ cargo build --release --features render
 | `regress` | the functions whose assembly differs from a saved build, each classed |
 | `render` | the docs site's pictures and recordings, and the probes the source cites (feature `render`) |
 | `sweep` | takes out the fake-match devices every edition compiles the same without |
-| `twins` | for each unfinished function, the other game's matched function most like it |
+| `twins` | for each unfinished function (with `--all`, each matched one), the other game's matched function most like it |
 | `variants` | named rewrites of a draft, measured, best first |
 | `where` | the bytes each edition still places from `recon/`, and DONE from the maps |
 
