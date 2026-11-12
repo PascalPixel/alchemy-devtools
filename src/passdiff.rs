@@ -229,6 +229,7 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let read = |variant: &str, file: &str| std::fs::read_to_string(work.folder.join(variant).join(file)).unwrap_or_default();
     let mut first: Option<(String, Vec<String>)> = None;
     let mut seen = false;
+    let mut rows = Vec::new();
     for pass in &passes {
         let a = normalize(section(&read("a", pass), &options.function));
         let b = normalize(section(&read("b", pass), &options.function));
@@ -240,13 +241,16 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         }
         let (_, script) = crate::diff::compare(&a, &b);
         let changed = differing(&script).len();
-        println!("{short}\tinsns a={} b={}\tdiffer {changed}", instructions(&a), instructions(&b));
+        rows.push(format!("{short}\tinsns a={} b={}\tdiffer {changed}", instructions(&a), instructions(&b)));
         if changed > 0 && first.is_none() {
             first = Some((short.to_string(), script));
         }
     }
     if !seen {
         return Err(format!("{} is in no pass dump of {object}: check its name", options.function));
+    }
+    for row in rows {
+        println!("{row}");
     }
     match &first {
         Some((pass, script)) => {
