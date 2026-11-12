@@ -15,6 +15,7 @@ mod gba;
 // The colour math is read only by the PNG recolouring the render feature builds.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 mod lit;
+mod passdiff;
 mod permute;
 mod progress;
 mod rank;
@@ -33,6 +34,7 @@ Run any command with --help for its options.
   diff      a C draft against the listing it would replace
   editions  what an edition still takes from its scaffold while English links C
   lit       recolour a picture in alchemy-lit, the colour correction the docs site's filter is fitted to
+  passdiff  why a form is kept: an object compiled as it stands and with a plain variant, compared pass by pass
   permute   search rewrites and PERM macro choices of a draft toward differ 0
   progress  DONE code and data in each edition, from the linker maps, and what is left to humanize
   rank      every unfinished piece of a game, furthest first, each with its measure command
@@ -56,6 +58,7 @@ fn main() -> ExitCode {
         "diff" => result(diff::run(rest)),
         "editions" => result(editions::run(rest)),
         "lit" => result(lit::run(rest)),
+        "passdiff" => result(passdiff::run(rest)),
         "permute" => result(permute::run(rest)),
         "progress" => result(progress::run(rest)),
         "rank" => result(rank::run(rest)),

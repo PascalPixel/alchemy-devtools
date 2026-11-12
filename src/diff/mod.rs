@@ -232,7 +232,7 @@ impl Work {
     }
 
     /// Keeps the folder when the run ends, as `name` beside it.
-    fn keep_as(&mut self, name: &str) -> PathBuf {
+    pub(crate) fn keep_as(&mut self, name: &str) -> PathBuf {
         let kept = self.folder.with_file_name(name);
         self.keep = Some(kept.clone());
         kept

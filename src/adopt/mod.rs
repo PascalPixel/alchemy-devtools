@@ -950,7 +950,7 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: 
 /// beside it (`#include "world_map/s3600.c"`), with the file that includes
 /// it: such a source is read by more than its own object, so no merge takes
 /// it away or changes what it holds.
-fn included_sources(root: &Path, game: &str) -> BTreeMap<String, String> {
+pub(crate) fn included_sources(root: &Path, game: &str) -> BTreeMap<String, String> {
     let mut found = BTreeMap::new();
     let top = root.join("games").join(game);
     for entry in walkdir::WalkDir::new(&top).into_iter().filter_map(Result::ok) {
