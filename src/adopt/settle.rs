@@ -607,13 +607,19 @@ pub(crate) fn solve(original: &str, views: &[View], units: &[Unit], judge: &dyn 
 /// What a kept marker's note opens with, so a second settle replaces it.
 const TRIED: &str = "; tried ";
 
+/// What a marker that could not be tried says, the same way.
+const UNTRIED: &str = "; not tried: ";
+
 /// The text with a kept view's marker ending in what was tried.
 fn annotate(text: &str, view: &View, note: &str) -> String {
     let body = view.marker.strip_suffix("*/").unwrap_or(&view.marker).trim_end();
     let body = body.strip_suffix('.').unwrap_or(body);
-    let body = body.split_once(TRIED).map_or(body, |(before, _)| before);
-    let note = note.strip_prefix("tried ").unwrap_or(note);
-    let rewritten = format!("{body}{TRIED}{}. */", note.trim_end_matches('.'));
+    let body = [TRIED, UNTRIED].iter().find_map(|note| body.split_once(note)).map_or(body, |(before, _)| before);
+    // A view no choice could be written for says so in place of what was tried.
+    let rewritten = match note.strip_prefix("not tried: ") {
+        Some(why) => format!("{body}{UNTRIED}{}. */", why.trim_end_matches('.')),
+        None => format!("{body}{TRIED}{}. */", note.strip_prefix("tried ").unwrap_or(note).trim_end_matches('.')),
+    };
     let mut out = String::with_capacity(text.len() + rewritten.len());
     for line in text.split_inclusive('\n') {
         let (content, newline) = line.strip_suffix('\n').map_or((line, ""), |content| (content, "\n"));

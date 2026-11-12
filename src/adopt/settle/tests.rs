@@ -165,3 +165,12 @@ fn a_tag_with_the_other_s_layout_reads_its_members_by_the_other_s_names() {
     let shared = text.replace("struct Q { s32 z; }", "struct Q { s32 posX; }");
     assert!(member_renames(&shared, view, &shared).is_none());
 }
+
+#[test]
+fn a_view_that_could_not_be_tried_says_why() {
+    let text = "/* VIEW(b): static F as F__b; a has static int F(int x). */\n";
+    let view = &views_of(text)[0];
+    let noted = annotate(text, view, "not tried: F's definition holds a FAKEMATCH tag");
+    assert_eq!(noted, "/* VIEW(b): static F as F__b; a has static int F(int x); not tried: F's definition holds a FAKEMATCH tag. */\n");
+    assert_eq!(annotate(&noted, &views_of(&noted)[0], "tried as before, F moves"), "/* VIEW(b): static F as F__b; a has static int F(int x); tried as before, F moves. */\n");
+}
