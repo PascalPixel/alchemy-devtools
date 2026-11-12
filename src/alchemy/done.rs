@@ -290,62 +290,6 @@ pub(crate) fn lines_of(games: &[Result<Game, String>; 2], which: &[usize]) -> St
     text
 }
 
-const MEASUREMENT_HEADER: &str = "game\tcommon_asm\tcommon_c\tgame_asm\tgame_c\texecutable\tveneers\tdata\tdata_total";
-
-/// The measurement a count writes and the archive keeps: a row for each
-/// game measured.
-pub(crate) fn measurement_text(sun: Option<GameDone>, anchor: Option<GameDone>) -> String {
-    let mut text = format!("{MEASUREMENT_HEADER}\n");
-    for ((game, _, _), done) in GAMES.into_iter().zip([sun, anchor]) {
-        if let Some(d) = done {
-            text += &format!(
-                "{game}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
-                d.common_asm, d.common_c, d.game_asm, d.game_c, d.executable, d.veneers, d.data, d.data_total
-            );
-        }
-    }
-    text
-}
-
-pub(crate) fn parse_measurement(text: &str) -> Result<[Option<GameDone>; 2], String> {
-    let mut lines = text.lines();
-    if lines.next() != Some(MEASUREMENT_HEADER) {
-        return Err("measurement has an unexpected header".into());
-    }
-    let mut games = [None, None];
-    for line in lines {
-        let fields = line.split('\t').collect::<Vec<_>>();
-        let at = fields
-            .first()
-            .and_then(|name| GAMES.iter().position(|(game, _, _)| game == name))
-            .ok_or_else(|| format!("measurement row names no game: {line}"))?;
-        let values = fields[1..]
-            .iter()
-            .map(|field| field.parse::<i64>())
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| format!("measurement row is not numeric: {line}"))?;
-        let [common_asm, common_c, game_asm, game_c, executable, veneers, data, data_total] = values[..] else {
-            return Err(format!("measurement row has the wrong width: {line}"));
-        };
-        let code = values[..4].iter().map(|value| *value as i128).sum::<i128>();
-        if values.iter().any(|value| *value < 0)
-            || executable == 0
-            || code > executable as i128
-            || veneers as i128 > common_asm as i128 + game_asm as i128
-        {
-            return Err(format!("measurement row has impossible code: {line}"));
-        }
-        if data > data_total {
-            return Err(format!("measurement row has impossible data: {line}"));
-        }
-        if games[at].is_some() {
-            return Err(format!("measurement names {} twice", fields[0]));
-        }
-        games[at] = Some(GameDone { common_asm, common_c, game_asm, game_c, executable, veneers, data, data_total });
-    }
-    Ok(games)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -418,30 +362,4 @@ ewram           0x02000000    0x38000
         );
     }
 
-    #[test]
-    fn a_measurement_survives_its_trip_to_ci() {
-        let sun = GameDone {
-            common_asm: 1,
-            common_c: 2,
-            game_asm: 3,
-            game_c: 4,
-            executable: 100,
-            veneers: 1,
-            data: 7,
-            data_total: 9,
-        };
-        let text = measurement_text(Some(sun), None);
-        assert_eq!(parse_measurement(&text).unwrap(), [Some(sun), None]);
-        assert!(parse_measurement("game\n").is_err());
-        assert!(parse_measurement(&format!("{text}tbs\t1\t2\t3\t4\t100\t1\t0\t0\n")).is_err());
-        assert!(parse_measurement(&format!("{text}tla\t1\t2\n")).is_err());
-        assert!(parse_measurement(&text.replace("\t7\t9", "\t9\t7")).is_err());
-        assert!(parse_measurement(&text.replace("\t100\t", "\t0\t")).is_err());
-        assert!(parse_measurement(&text.replace("\t100\t", "\t5\t")).is_err());
-        assert!(parse_measurement(&text.replace("tbs\t1\t", "tbs\t-1\t")).is_err());
-        // Every archived measurement has its data columns; one without is refused.
-        let code_only = "game\tcommon_asm\tcommon_c\tgame_asm\tgame_c\texecutable\tveneers\n\
-                         tla\t1\t2\t3\t4\t100\t1\n";
-        assert!(parse_measurement(code_only).is_err());
-    }
 }

@@ -20,7 +20,7 @@ scaffold, code and data not yet told apart.
 edition names all twelve; a game names its six.
 --done counts DONE code and data as calcrom does (C2), from the maps alone
 and whatever each ROM is: analysis of a tree in progress, never a
-measurement. alchemy-devtools land measures the tree and writes the receipt.";
+measurement: progress counts only editions that match rom.sha1.";
 
 /// What a piece's bytes count as under C2, with a scaffold's sections, data
 /// to C2, marked apart.
@@ -158,7 +158,7 @@ fn done_report(root: &Path, editions: &[DecompTargetId]) -> String {
             games.push(id.game());
         }
     }
-    let mut text = String::from("DONE from the maps, analysis only: alchemy-devtools land measures the tree and writes the receipt.\n");
+    let mut text = String::from("DONE from the maps, analysis only: progress counts only editions that match rom.sha1.\n");
     for game in games {
         match done::count_game(root, game, done::count_edition) {
             Ok(counted) => text += &done_lines(root, game, &counted),

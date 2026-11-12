@@ -12,7 +12,6 @@ mod compile;
 mod diff;
 mod editions;
 mod gba;
-mod land;
 // The colour math is read only by the PNG recolouring the render feature builds.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 mod lit;
@@ -34,7 +33,6 @@ Run any command with --help for its options.
   check     each built ROM, overlay and PACKER row against the reference ROMs, and the fake-match tags
   diff      a C draft against the listing it would replace
   editions  what an edition still takes from its scaffold while English links C
-  land      before a landing on main: all twelve editions, make modern, the tests, then the measurement
   lit       recolour a picture in alchemy-lit, the colour correction the docs site's filter is fitted to
   passdiff  why a form is kept: an object compiled as it stands and with a plain variant, compared pass by pass
   permute   search rewrites and PERM macro choices of a draft toward differ 0
@@ -59,7 +57,6 @@ fn main() -> ExitCode {
         "check" => result(check::run(rest)),
         "diff" => result(diff::run(rest)),
         "editions" => result(editions::run(rest)),
-        "land" => result(land::run(rest)),
         "lit" => result(lit::run(rest)),
         "passdiff" => result(passdiff::run(rest)),
         "permute" => result(permute::run(rest)),
