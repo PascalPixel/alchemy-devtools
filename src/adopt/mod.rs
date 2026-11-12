@@ -15,11 +15,13 @@ use std::path::{Path, PathBuf};
 
 mod merge;
 mod runs;
+mod settle;
 pub(crate) mod views;
 
 const USAGE: &str = r#"usage: alchemy-devtools adopt merge [--keep-views] INTO.c=OBJECT.c,OBJECT.c... [--verify | --dry-run]
        alchemy-devtools adopt merge --keep-views --game GAME [--verify | --dry-run]
        alchemy-devtools adopt --undo JOURNAL [ITEM...]
+       alchemy-devtools adopt settle --game GAME [--dry-run] [OBJECT.c...]  (adopt settle --help)
 --keep-views joins without settling any disagreement between the sources:
 each becomes a part of INTO after a `// ---- SOURCE.c ----` line, and where
 a part sees a name otherwise than one before it, it keeps its own view: a
@@ -157,6 +159,9 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
+    if arguments.first().map(String::as_str) == Some("settle") {
+        return settle::run(&arguments[1..]);
+    }
     if arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
         println!("{USAGE}");
         return Ok(());

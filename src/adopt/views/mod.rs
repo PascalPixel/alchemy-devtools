@@ -1176,8 +1176,14 @@ impl Recipes {
             recipes.push((id.as_str().to_string(), recipe));
             object_of.push(object);
         }
+        Recipes::of(root, stem, recipes, object_of)
+    }
+
+    /// `stem`'s recipes as make already gave them: each edition with its
+    /// commands, and the object each edition builds.
+    pub fn of(root: &Path, stem: &str, recipes: Vec<(String, Vec<Vec<String>>)>, object_of: Vec<String>) -> Result<Recipes, String> {
         let scratch = tempfile::Builder::new().prefix("alchemy-views-").tempdir().map_err(|e| e.to_string())?;
-        Ok(Recipes { root: root.to_path_buf(), recipes, source, object_of, scratch })
+        Ok(Recipes { root: root.to_path_buf(), recipes, source: format!("{stem}.c"), object_of, scratch })
     }
 }
 
