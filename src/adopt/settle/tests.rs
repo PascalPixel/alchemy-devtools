@@ -174,3 +174,9 @@ fn a_view_that_could_not_be_tried_says_why() {
     assert_eq!(noted, "/* VIEW(b): static F as F__b; a has static int F(int x); not tried: F's definition holds a FAKEMATCH tag. */\n");
     assert_eq!(annotate(&noted, &views_of(&noted)[0], "tried as before, F moves"), "/* VIEW(b): static F as F__b; a has static int F(int x); tried as before, F moves. */\n");
 }
+
+#[test]
+fn an_error_names_its_files_from_the_checkout() {
+    let stderr = "/r/games/a/.settle-1-2.c: At top level:\n/r/games/a/.settle-1-2.c:3: warning: unused\n/r/games/inc/x.h:9: conflicting types for `F'\n";
+    assert_eq!(first_error(stderr, "/r/games/a/.settle-1-2.c", "games/a.c", Path::new("/r")), "games/inc/x.h:9: conflicting types for `F'");
+}

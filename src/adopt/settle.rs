@@ -896,11 +896,11 @@ pub(crate) fn moved_by(reference: &[assembly::Piece], now: &[assembly::Piece]) -
 }
 
 /// The first error a compile printed, its scratch file's name read as the object's.
-fn first_error(stderr: &str, scratch: &str, object: &str) -> String {
+fn first_error(stderr: &str, scratch: &str, object: &str, root: &Path) -> String {
     let placed = Regex::new(r":\d+: ").unwrap();
     let line = stderr.lines().find(|line| !line.contains("warning:") && placed.is_match(line)).or_else(|| stderr.lines().next()).unwrap_or("");
-    let line = line.replace(scratch, object);
-    // A generated header's path, from the checkout.
+    // Every path from the checkout, a header the build writes too.
+    let line = line.replace(scratch, object).replace(&format!("{}/", root.display()), "");
     line.split_once("/out/").map_or(line.clone(), |(_, rest)| format!("out/{rest}"))
 }
 
@@ -916,7 +916,7 @@ impl Judge for Built<'_> {
             let edition = editions[index].clone();
             if !compiled.ok {
                 let scratch_name = scratch.0.to_string_lossy();
-                let error = first_error(&compiled.stderr, &scratch_name, &format!("{}.c", self.stem));
+                let error = first_error(&compiled.stderr, &scratch_name, &format!("{}.c", self.stem), self.root);
                 return Some(Failure { edition, error: Some(error), moved: Vec::new() });
             }
             let moved = moved_by(&self.reference[index], &assembly::pieces(&compiled.output, &self.statics));
