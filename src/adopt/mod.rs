@@ -727,6 +727,10 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: 
             });
         }
     }
+    let included = included_sources(&files.root, &layout.game);
+    if let Some((source, by)) = objects.iter().find_map(|object| included.get_key_value(&format!("{object}.c"))) {
+        return Err(format!("{by} includes {source}, which stays the file it is"));
+    }
     let target = format!("{into}.c");
     let anew = !objects.contains(&into);
     if anew {
@@ -815,6 +819,31 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: 
 }
 
 // ---- sources ----
+
+/// Each C source of `game` that another file includes by a quoted path
+/// beside it (`#include "world_map/s3600.c"`), with the file that includes
+/// it: such a source is read by more than its own object, so no merge takes
+/// it away or changes what it holds.
+fn included_sources(root: &Path, game: &str) -> BTreeMap<String, String> {
+    let mut found = BTreeMap::new();
+    let top = root.join("games").join(game);
+    for entry in walkdir::WalkDir::new(&top).into_iter().filter_map(Result::ok) {
+        let path = entry.path();
+        if !matches!(path.extension().and_then(|e| e.to_str()), Some("c" | "h")) {
+            continue;
+        }
+        let (Ok(relative), Ok(text)) = (path.strip_prefix(root), std::fs::read_to_string(path)) else { continue };
+        let file = relative.to_string_lossy().into_owned();
+        for line in text.lines() {
+            let Some(included) = include_of(line.trim_start()).and_then(|named| named.strip_prefix('"')?.split('"').next()).filter(|named| named.ends_with(".c")) else { continue };
+            let Some(target) = normalize(&format!("{}/{included}", parent(&file))) else { continue };
+            if root.join(&target).is_file() {
+                found.entry(target).or_insert_with(|| file.clone());
+            }
+        }
+    }
+    found
+}
 
 fn parent(path: &str) -> &str {
     path.rsplit_once('/').map_or("", |(folder, _)| folder)
@@ -1402,6 +1431,9 @@ mod tests {
         // An object a run leaves out with nothing in its sections joins it.
         let empty = Stub { placing: vec![], apart: false, ..Stub::default() };
         assert!(merge_objects(&mut Files::new(root), &format!("games/tla/src/field/x.c={}", field("f,g")), &empty, None).is_ok());
+        // A source another file includes stays the file it is.
+        std::fs::write(root.join("games/tla/src/credits.c"), "#include \"field/c.c\"\n").unwrap();
+        assert!(merge(&format!("games/tla/src/field/x.c={}", field("b,c")), &alike).contains("games/tla/src/credits.c includes games/tla/src/field/c.c"));
     }
 
     /// Two merges in one journal; the build blames the second, which goes

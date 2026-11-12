@@ -396,15 +396,20 @@ impl<'a> Join<'a> {
         let text = self.source(site)?;
         let all = statements(&text);
         let statement = statement_at(&all, Join::line(site), name)?;
-        Some(Read {
-            text: statement.squashed(),
-            declaration: statement.declaration(),
-            typedef: statement.has("typedef"),
-            enumerator: statement.enumerates(name),
-            is_static: statement.has("static"),
-            inline: statement.is_inline(),
-            routine: statement.routine(name),
-            defines: statement.defines(name),
+        Some(Read::of(statement, name))
+    }
+
+    /// A declaration read as `read` reads it, or where its text never spells
+    /// the name (a shared file's `void EFFECT_SPAWN(...)` with `EFFECT_SPAWN`
+    /// a part's macro), as the preprocessor wrote it at the place the
+    /// compiler named.
+    fn read_at(&self, site: &Site, name: &str, place: Option<&Message>, pre: Option<&Preprocessed>) -> Option<Read> {
+        self.read(site, name).or_else(|| {
+            let (place, pre) = (place?, pre?);
+            let all = statements(&pre.text);
+            let at = |line: usize| pre.origin.get(line.wrapping_sub(1)).is_some_and(|(file, n)| *file == place.file && *n == place.line);
+            let statement = all.iter().find(|s| s.find(name).is_some() && (s.first_line..=s.last_line).any(at))?;
+            Some(Read::of(statement, name))
         })
     }
 
@@ -424,7 +429,7 @@ impl<'a> Join<'a> {
             }
             let later = self.site(segments, scratch, pre, &message.file, message.line);
             let earlier = previous.and_then(|previous| self.site(segments, scratch, pre, &previous.file, previous.line));
-            match self.answer(message, later.as_ref(), earlier.as_ref(), pre) {
+            match self.answer(message, previous, later.as_ref(), earlier.as_ref(), pre) {
                 Answer::Fix(fix) => {
                     if taken.insert(fix.part()) {
                         fixes.push(fix);
@@ -452,7 +457,8 @@ impl<'a> Join<'a> {
     }
 
     /// What one message (and the one naming the earlier place, if any) asks.
-    fn answer(&self, message: &Message, later: Option<&Site>, earlier: Option<&Site>, pre: Option<&Preprocessed>) -> Answer {
+    fn answer(&self, message: &Message, previous: Option<&Message>, later: Option<&Site>, earlier: Option<&Site>, pre: Option<&Preprocessed>) -> Answer {
+        let places = Places { later: message, earlier: previous, pre };
         let text = message.text.as_str();
         if let (Some(Site::Part { part, line }), false) = (later, message.warning) {
             if self.bound_before(*part, *line).is_some() {
@@ -468,7 +474,7 @@ impl<'a> Join<'a> {
         let is = |prefix: &str| text.starts_with(prefix);
         if is("conflicting types for") || is("redeclaration of `") && !is("redeclaration of `enum") || text.ends_with("redeclared as different kind of symbol") {
             let Some(earlier) = earlier else { return Answer::Unknown(" (no earlier declaration named)".into()) };
-            return self.disagree(&name, later, earlier);
+            return self.disagree(&name, later, earlier, &places);
         }
         if is("redefinition of `struct ") || is("redefinition of `union ") || is("redeclaration of `enum ") {
             let tag = name.split_whitespace().nth(1).unwrap_or(&name).to_string();
@@ -476,7 +482,7 @@ impl<'a> Join<'a> {
         }
         if is("redefinition of") {
             let Some(earlier) = earlier else { return Answer::Unknown(" (no earlier definition named)".into()) };
-            return self.redefined(&name, later, earlier);
+            return self.redefined(&name, later, earlier, &places);
         }
         if is("static declaration for") || text.contains("declared `extern' and later `static'") {
             let Some(read) = self.read(later, &name) else { return Answer::Unknown(" (its declaration was not found)".into()) };
@@ -513,11 +519,11 @@ impl<'a> Join<'a> {
     }
 
     /// Two declarations of one ordinary name that disagree.
-    fn disagree(&self, name: &str, later: &Site, earlier: &Site) -> Answer {
+    fn disagree(&self, name: &str, later: &Site, earlier: &Site, places: &Places) -> Answer {
         if later.part() == earlier.part() {
             return Answer::Unknown(" (both in one part)".into());
         }
-        let (Some(late), Some(early)) = (self.read(later, name), self.read(earlier, name)) else {
+        let (Some(late), Some(early)) = (self.read_at(later, name, Some(places.later), places.pre), self.read_at(earlier, name, places.earlier, places.pre)) else {
             return Answer::Unknown(" (a declaration was not found)".into());
         };
         // A part's own site renames; failing that, the later one's include.
@@ -577,11 +583,11 @@ impl<'a> Join<'a> {
 
     /// An ordinary name defined twice: an identical typedef or inline
     /// routine deleted, any other static renamed.
-    fn redefined(&self, name: &str, later: &Site, earlier: &Site) -> Answer {
+    fn redefined(&self, name: &str, later: &Site, earlier: &Site, places: &Places) -> Answer {
         if later.part() == earlier.part() {
             return Answer::Unknown(" (both in one part)".into());
         }
-        let (Some(late), Some(early)) = (self.read(later, name), self.read(earlier, name)) else {
+        let (Some(late), Some(early)) = (self.read_at(later, name, Some(places.later), places.pre), self.read_at(earlier, name, places.earlier, places.pre)) else {
             return Answer::Unknown(" (a definition was not found)".into());
         };
         let same = late.text == early.text;
@@ -791,6 +797,19 @@ struct Read {
 }
 
 impl Read {
+    fn of(statement: &text::Statement, name: &str) -> Read {
+        Read {
+            text: statement.squashed(),
+            declaration: statement.declaration(),
+            typedef: statement.has("typedef"),
+            enumerator: statement.enumerates(name),
+            is_static: statement.has("static"),
+            inline: statement.is_inline(),
+            routine: statement.routine(name),
+            defines: statement.defines(name),
+        }
+    }
+
     /// The declaration to write for a view of `_name`: a definition's head,
     /// or the statement itself.
     fn declaration_for(&self, _name: &str) -> String {
@@ -800,6 +819,14 @@ impl Read {
             self.text.clone()
         }
     }
+}
+
+/// Where a message and the one naming its earlier place point, and the
+/// preprocessed join, for a declaration only the expansion spells.
+struct Places<'m> {
+    later: &'m Message,
+    earlier: Option<&'m Message>,
+    pre: Option<&'m Preprocessed>,
 }
 
 enum Answer {

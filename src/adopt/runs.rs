@@ -10,7 +10,7 @@
 //! is free, else into its first object.
 
 use super::views::{self, Part, Reconciled};
-use super::{item_parts, joined, parent, rewrite_includes, statement, top_level_includes, Files};
+use super::{included_sources, item_parts, joined, parent, rewrite_includes, statement, top_level_includes, Files};
 use crate::alchemy::layout::Layout;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -19,6 +19,8 @@ use std::path::Path;
 pub(super) fn items(root: &Path, game: &str) -> Result<Vec<String>, String> {
     let layout = Layout::new(game);
     let makefile = crate::alchemy::built::read_text(&root.join("Makefile"))?;
+    // A source another file includes stays the file it is.
+    let included = included_sources(root, game);
     let mut groups: Vec<Vec<(String, String)>> = Vec::new();
     for script in layout.linker_scripts() {
         let Ok(text) = std::fs::read_to_string(root.join(&script)) else { continue };
@@ -37,7 +39,7 @@ pub(super) fn items(root: &Path, game: &str) -> Result<Vec<String>, String> {
     let ours = |stem: &str| {
         let name = format!("{stem}.c");
         let file = name.rsplit('/').next().unwrap_or(&name);
-        stem.starts_with(&layout.sources()) && root.join(&name).is_file() && !makefile.contains(file)
+        stem.starts_with(&layout.sources()) && root.join(&name).is_file() && !makefile.contains(file) && !included.contains_key(&name)
     };
     // Each candidate: our objects next to each other placing the same sections.
     let mut candidates: Vec<Vec<String>> = Vec::new();

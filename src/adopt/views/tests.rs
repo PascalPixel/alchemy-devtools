@@ -233,3 +233,17 @@ fn a_name_two_of_a_part_s_headers_declare_is_viewed_around_each_include() {
     // Each wrapper undefines its own macro; the part's end adds nothing.
     assert_eq!(settled.text.matches("#undef Actor_Hide\n").count(), 2, "{}", settled.text);
 }
+
+#[test]
+fn a_definition_a_macro_names_is_read_from_the_expansion() {
+    let Some(fixture) = Fixture::new(&[
+        ("include/spawn.inc", "void EFFECT_SPAWN(int x) { extern int gSpawned; gSpawned = x; }\n"),
+        ("a.c", "#define EFFECT_SPAWN Spawn\n#include \"spawn.inc\"\n"),
+        ("b.c", "void Spawn(short x);\nvoid B(void) { Spawn(3); }\n"),
+    ]) else {
+        return;
+    };
+    let settled = fixture.settle(&["a", "b"]).unwrap();
+    assert!(settled.text.contains("extern void Spawn__b(short x) __asm__(\"Spawn\");"), "{}", settled.text);
+    assert_eq!(marked(&settled.text), [("b".into(), "routine".into(), "Spawn".into())]);
+}
