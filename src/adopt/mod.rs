@@ -32,7 +32,10 @@ run's objects apart (a line of any other kind between, as a bank's start, an
 #if or a comment); objects that some edition links into the main image and
 another only into overlays, or that the Makefile compiles with different
 commands in some edition (a route or an option; The Lost Age's C linked only
-into overlays builds for size); an INTO whose name the Makefile names.
+into overlays builds for size); a new INTO whose name the Makefile names
+or a $(wildcard) of it would take, or whose own recipe, as make gives its
+name, is not the objects' (an ARM_C, SOUND_C or FLASH_C object merged into a
+name on no route, or game C into one on a route).
 A merge changes no compiler, option or route, but it can move bytes: the
 pool and alignment between functions that were apart, a static's order. The
 build judges: make compare-editions, then check rom. --verify has the build
@@ -325,8 +328,8 @@ trait Build {
     /// statement's list, `*` matching any tail) in any edition that links it.
     fn empty(&self, stem: &str, sections: &str) -> Result<bool, String>;
     /// Ok when every edition of `game` builds `stems` alike: all in its main
-    /// image or none, by the same commands but for the file names; and the
-    /// Makefile names no file called as `into` is.
+    /// image or none, by the same commands but for the file names; and a new
+    /// `into` by those commands too, its name on their route.
     fn alike(&self, game: &str, stems: &[String], into: &str) -> Result<(), String>;
 }
 
@@ -340,6 +343,23 @@ fn matches(pattern: &str, name: &str) -> bool {
         Some((head, tail)) => name.len() >= head.len() + tail.len() && name.starts_with(head) && name.ends_with(tail),
         None => pattern == name,
     }
+}
+
+/// The patterns of a makefile's `$(wildcard ...)` calls that name C files.
+fn wildcard_patterns(makefile: &str) -> Vec<String> {
+    let mut patterns = Vec::new();
+    for (at, call) in makefile.match_indices("$(wildcard ") {
+        let inside = makefile[at + call.len()..].split(')').next().unwrap_or("");
+        patterns.extend(inside.split_whitespace().filter(|word| word.contains('*') && word.ends_with(".c")).map(str::to_string));
+    }
+    patterns
+}
+
+/// Whether two recipes are one but for -O2 in `unplaced` where `placed`
+/// builds for size (-Os), as a Makefile builds C linked only into overlays.
+fn same_but_size(unplaced: &[Vec<String>], placed: &[Vec<String>]) -> bool {
+    unplaced.len() == placed.len()
+        && unplaced.iter().zip(placed).all(|(a, b)| a.len() == b.len() && a.iter().zip(b).all(|(x, y)| x == y || (x == "-O2" && y == "-Os")))
 }
 
 impl Build for Checkout<'_> {
@@ -368,8 +388,14 @@ impl Build for Checkout<'_> {
     fn alike(&self, game: &str, stems: &[String], into: &str) -> Result<(), String> {
         let makefile = built::read_text(&self.0.join("Makefile"))?;
         let name = into.rsplit('/').next().unwrap_or(into);
-        if !stems.iter().any(|stem| format!("{stem}.c") == into) && makefile.contains(name) {
+        let anew = !stems.iter().any(|stem| format!("{stem}.c") == into);
+        if anew && makefile.contains(name) {
             return Err(format!("the Makefile names {name}, so {into} may take another route"));
+        }
+        // A $(wildcard) names only the files there when make reads it, so its
+        // pattern would catch INTO once it is written.
+        if let Some(pattern) = anew.then(|| wildcard_patterns(&makefile).into_iter().find(|pattern| matches(pattern, into))).flatten() {
+            return Err(format!("the Makefile's {pattern} would take {into}, so it may take another route"));
         }
         for id in built::editions(&[game.to_string()])? {
             let linked = link::linked(self.0, id)?;
@@ -378,8 +404,15 @@ impl Build for Checkout<'_> {
                 let other = stems.iter().find(|stem| !main.contains(stem)).unwrap();
                 return Err(format!("{id} links {} into its main image and {other} only into overlays", main[0]));
             }
+            let overlays_only = main.is_empty() && stems.iter().any(|stem| linked.links(stem));
             let target = crate::alchemy::targets::target_for(id);
-            let wanted: Vec<(String, String)> = stems.iter().map(|stem| (format!("{stem}.c"), format!("{}/obj/{stem}.o", target.output_dir))).collect();
+            let mut wanted: Vec<(String, String)> = stems.iter().map(|stem| (format!("{stem}.c"), format!("{}/obj/{stem}.o", target.output_dir))).collect();
+            // A new INTO's own recipe, as make gives its name before any list
+            // places it: its route is the one its name takes.
+            if anew {
+                let stem = into.strip_suffix(".c").unwrap_or(into);
+                wanted.push((into.to_string(), format!("{}/obj/{stem}.o", target.output_dir)));
+            }
             let recipes = crate::gba::recipe::recipes(self.0, Path::new(target.output_dir), &[format!("EDITION={id}")], &wanted)?;
             let mut first: Option<(String, Vec<Vec<String>>)> = None;
             for ((source, object), recipe) in wanted.iter().zip(recipes) {
@@ -387,11 +420,16 @@ impl Build for Checkout<'_> {
                 let steps = crate::gba::recipe::retarget(&recipe, self.0, source, object, Path::new("/merge/object.c"), Path::new("/merge/object.o"));
                 match &first {
                     None => first = Some((source.clone(), steps)),
+                    // INTO is placed where the objects are, so where they
+                    // build for size and it, unplaced, does not, that is the
+                    // one difference allowed.
+                    Some(_) if anew && source == into && overlays_only && first.as_ref().is_some_and(|(_, theirs)| same_but_size(&steps, theirs)) => {}
                     Some((other, theirs)) if *theirs != steps => {
                         let mine = steps.concat();
                         let theirs = theirs.concat();
                         let differ = mine.iter().find(|word| !theirs.contains(word)).or_else(|| theirs.iter().find(|word| !mine.contains(word)));
-                        return Err(format!("{id} compiles {source} and {other} differently ({})", differ.map_or("in order", String::as_str)));
+                        let route = if source == into { " (INTO's route)" } else { "" };
+                        return Err(format!("{id} compiles {source} and {other} differently{route} ({})", differ.map_or("in order", String::as_str)));
                     }
                     Some(_) => {}
                 }
@@ -1165,6 +1203,41 @@ mod tests {
         assert!(script.contains("field/ab.o\"(.text)") && script.contains("field/f.o\"(.text .rodata)\n        \"*/games/tla/src/field/g.o\"(.text)"));
         let recorded = read("out/adopt/0001-merge-ab.journal").unwrap();
         assert!(recorded.contains(&format!("command adopt merge {first}\n")), "{recorded}");
+    }
+
+    /// The checkout's own build: a merge keeps every object on its route and
+    /// its side of the -O2/-Os line, INTO's own name included.
+    #[test]
+    fn the_checkout_refuses_a_merge_that_changes_a_route() {
+        let build = Checkout(root());
+        let field = |name: &str| format!("games/tla/src/field/{name}");
+        let arm = vec![field("f021470"), field("f021828")];
+        // Two ARM_C objects into a name the Makefile does not route: Thumb C.
+        let error = build.alike("tla", &arm, &field("arm_pair.c")).unwrap_err();
+        assert!(error.contains("INTO's route"), "{error}");
+        // Into one of their own names, the route stays.
+        build.alike("tla", &arm, &field("f021828.c")).unwrap();
+        // Game C into a name the sound library's wildcard would take.
+        let scene = |name: &str| format!("games/tla/src/scene/kandorean_temple/{name}");
+        let thumb = vec![scene("s00b8"), scene("events_a")];
+        let error = build.alike("tla", &thumb, "games/tla/src/sound/music_track_new.c").unwrap_err();
+        assert!(error.contains("music_track_*.c"), "{error}");
+        // C linked only into overlays builds for size, and a new INTO placed
+        // where it is does too.
+        build.alike("tla", &thumb, &scene("events.c")).unwrap();
+        // An ARM_C object and game C.
+        assert!(build.alike("tla", &[field("f021470"), scene("s00b8")], &field("mixed.c")).unwrap_err().contains("only into overlays"));
+    }
+
+    #[test]
+    fn a_makefile_s_wildcards_and_the_size_option() {
+        let makefile = "SOUND_C := a.c $(wildcard games/x/driver.c games/x/track_*.c)\nOTHER := $(wildcard *.s)\n";
+        assert_eq!(wildcard_patterns(makefile), ["games/x/track_*.c"]);
+        let step = |words: &[&str]| vec![words.iter().map(|w| w.to_string()).collect::<Vec<_>>()];
+        assert!(same_but_size(&step(&["cc", "-O2", "x.c"]), &step(&["cc", "-Os", "x.c"])));
+        assert!(same_but_size(&step(&["cc", "-O2"]), &step(&["cc", "-O2"])));
+        assert!(!same_but_size(&step(&["cc", "-Os"]), &step(&["cc", "-O2"])));
+        assert!(!same_but_size(&step(&["cc", "-O2", "-marm"]), &step(&["cc", "-Os", "-mthumb"])));
     }
 
     #[test]
