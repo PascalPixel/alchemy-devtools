@@ -57,8 +57,11 @@ pub(crate) fn steps_many(target: DecompTarget, drafts: &[(&Path, &Path, Option<&
             let source = if arm {
                 variables.push(format!("ARM_C={named}"));
                 named
-            } else if let Some(overlay) = overlay.filter(|_| !listed(target, &named)) {
-                crate::alchemy::overlay::linked_source(root, Path::new(target.output_dir), overlay)?
+            } else if let Some(overlay) = overlay {
+                match listed(target, &named)? {
+                    true => named,
+                    false => crate::alchemy::overlay::linked_source(root, Path::new(target.output_dir), overlay)?,
+                }
             } else {
                 named
             };
@@ -107,10 +110,15 @@ pub(crate) fn steps_many(target: DecompTarget, drafts: &[(&Path, &Path, Option<&
 }
 
 /// Whether the edition's object list (`objects.mk`, which the Makefile writes
-/// from the linker script) names the object `source` builds.
-pub(crate) fn listed(target: DecompTarget, source: &str) -> bool {
+/// from the linker script) names the object `source` builds: not when the
+/// edition is not built, and an error when its list is older than its
+/// scripts.
+pub(crate) fn listed(target: DecompTarget, source: &str) -> Result<bool, String> {
     let stem = source.strip_suffix(".c").unwrap_or(source);
-    crate::alchemy::link::from_objects_mk(root(), Path::new(target.output_dir)).is_ok_and(|linked| linked.links(stem))
+    if !root().join(target.output_dir).join("objects.mk").is_file() {
+        return Ok(false);
+    }
+    crate::alchemy::link::from_objects_mk(root(), Path::new(target.output_dir)).map(|linked| linked.links(stem))
 }
 
 #[cfg(test)]

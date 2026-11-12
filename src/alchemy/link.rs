@@ -2,8 +2,9 @@
 //! reads them: the Makefile runs `games/<game>/ld_script.ld` through the C
 //! preprocessor once for the main image and once for each overlay, and
 //! writes the objects each script names to `out/<edition>/objects.mk`. That
-//! list is read here; an edition whose list is missing has its preprocessed
-//! scripts (`out/<edition>/ld/`) read instead, by the Makefile's own pattern.
+//! list is read here, and refused when the scripts or headers it is made
+//! from changed after it: an edition whose list is missing or stale is made
+//! first.
 //! Nothing here runs the preprocessor: only it decides an edition's tests.
 
 use super::built;
@@ -94,48 +95,58 @@ pub(crate) fn statement_stem(line: &str) -> Option<&str> {
     path.strip_suffix(".o")
 }
 
-/// The objects a preprocessed script names, first mention first.
-fn script_objects(text: &str) -> Vec<String> {
-    let mut objects: Vec<String> = Vec::new();
-    for stem in text.lines().filter_map(statement_stem) {
-        if !objects.iter().any(|object| object == stem) {
-            objects.push(stem.to_string());
-        }
-    }
-    objects
-}
-
-/// An edition's objects from what its build wrote: `objects.mk`, else the
-/// preprocessed scripts under `ld/`.
+/// An edition's objects from what its build wrote, `objects.mk`, once it is
+/// as new as the scripts and headers it is made from.
 pub(crate) fn linked(root: &Path, id: DecompTargetId) -> Result<Linked, String> {
     let output = built::output(root, id);
-    if let Ok(text) = std::fs::read_to_string(output.join("objects.mk")) {
-        return Ok(parse_objects_mk(&text));
+    if !output.join("objects.mk").is_file() {
+        return Err(format!("{id} is not built (no objects.mk): make {id} first"));
     }
-    let main = std::fs::read_to_string(output.join("ld/main.ld")).map_err(|_| format!("{id} is not built (no objects.mk): make {id} first"))?;
-    let mut overlays = Vec::new();
-    let mut scripts: Vec<(String, std::path::PathBuf)> = std::fs::read_dir(output.join("ld"))
-        .map_err(|error| format!("{}: {error}", output.join("ld").display()))?
-        .flatten()
-        .filter_map(|entry| {
-            let name = entry.file_name().to_str()?.to_string();
-            let id = name.strip_prefix("overlay_")?.strip_suffix(".ld")?.to_string();
-            Some((id, entry.path()))
-        })
-        .collect();
-    scripts.sort();
-    for (overlay, path) in scripts {
-        let text = built::read_text(&path)?;
-        overlays.push((overlay, script_objects(&text)));
-    }
-    Ok(Linked { main: script_objects(&main), overlays })
+    from_objects_mk(root, &output)
 }
 
-/// The objects of `output`'s `objects.mk` (`out/<edition>`), relative to
-/// `root`: the build's own list, read by the commands that compile a draft.
+/// The objects of `output`'s `objects.mk` (`out/<edition>`, relative to
+/// `root` or not): the build's own list, refused when it is older than what
+/// it is made from.
 pub(crate) fn from_objects_mk(root: &Path, output: &Path) -> Result<Linked, String> {
-    let path = output.join("objects.mk");
-    std::fs::read_to_string(root.join(&path)).map(|text| parse_objects_mk(&text)).map_err(|error| format!("{}: {error}", path.display()))
+    let path = root.join(output).join("objects.mk");
+    let text = std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    fresh(root, output, &text)?;
+    Ok(parse_objects_mk(&text))
+}
+
+/// Ok when every image's list was written after its script and the headers
+/// it reads last changed. The Makefile rewrites a preprocessed script and
+/// `objects.mk` only when their text changes, and touches the script's stamp
+/// (`ld/main.stamp`, `ld/overlay_<id>.stamp`) whenever it runs the
+/// preprocessor: the later of the stamp and `objects.mk` is when the list
+/// was last made.
+fn fresh(root: &Path, output: &Path, text: &str) -> Result<(), String> {
+    let output = root.join(output);
+    let edition = output.file_name().and_then(|name| name.to_str()).unwrap_or("");
+    let game = edition.split('-').next().unwrap_or(edition);
+    let modified = |path: &Path| std::fs::metadata(path).and_then(|meta| meta.modified()).ok();
+    let written = modified(&output.join("objects.mk"));
+    // The Makefile's prerequisites of each script: the one script, the
+    // overlays' part it includes, and LD_HEADERS.
+    let script = format!("games/{game}/ld_script.ld");
+    let overlays = format!("games/{game}/src/system/overlay/overlay.ld");
+    let headers = [format!("games/{game}/include/edition.h"), format!("games/{game}/include/version.h")];
+    let check = |stamp: String, sources: Vec<&String>| -> Result<(), String> {
+        let made = modified(&output.join("ld").join(stamp)).max(written);
+        let newest = sources.into_iter().filter_map(|source| modified(&root.join(source)).map(|time| (time, source))).max();
+        match newest {
+            Some((time, source)) if made.is_none_or(|made| made < time) => {
+                Err(format!("{}/objects.mk is older than {source}: make {edition} first", output.strip_prefix(root).unwrap_or(&output).display()))
+            }
+            _ => Ok(()),
+        }
+    };
+    check("main.stamp".into(), [&script].into_iter().chain(&headers).collect())?;
+    for overlay in variable(text, "OVERLAYS") {
+        check(format!("overlay_{overlay}.stamp"), [&script, &overlays].into_iter().chain(&headers).collect())?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -160,7 +171,41 @@ mod tests {
         assert_eq!(statement_stem("        \"*libgcc.a:_udivsi3.o\"(.text)"), None);
         assert_eq!(statement_stem("        /* \"*/games/tla/src/x.o\"(.text) */"), None);
         assert_eq!(statement_stem("\t\"*/games/tla/src/x.o\"(.text)"), None, "the Makefile's pattern takes spaces only");
-        let script = "  \"*/games/tla/src/a.o\"(.sym_iwram_slots)\n  \"*/games/tla/src/b.o\"(.text)\n  \"*/games/tla/src/a.o\"(.sym_iwram)\n";
-        assert_eq!(script_objects(script), ["games/tla/src/a", "games/tla/src/b"]);
+    }
+
+    /// A list is as new as its scripts by its own time or its stamp's, and
+    /// refused once a script or header it is made from changed after both.
+    #[test]
+    fn a_list_older_than_its_scripts_is_refused() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        let at = |path: &str, seconds: u64| {
+            let path = root.join(path);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            if !path.exists() {
+                std::fs::write(&path, "\n").unwrap();
+            }
+            let time = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000 + seconds);
+            std::fs::File::options().write(true).open(&path).unwrap().set_modified(time).unwrap();
+        };
+        at("games/tla/ld_script.ld", 10);
+        at("games/tla/include/version.h", 0);
+        at("games/tla/src/system/overlay/overlay.ld", 10);
+        std::fs::create_dir_all(root.join("out/tla-en")).unwrap();
+        std::fs::write(root.join("out/tla-en/objects.mk"), "MAIN_OBJS := \\\n\t$(BUILD)/obj/games/tla/src/a.o\nOVERLAYS := 649\nOVERLAY_OBJS_649 :=\n").unwrap();
+        at("out/tla-en/objects.mk", 20);
+        let read = || from_objects_mk(root, Path::new("out/tla-en"));
+        assert_eq!(read().unwrap().main, ["games/tla/src/a"]);
+        at("games/tla/src/system/overlay/overlay.ld", 30);
+        assert!(read().unwrap_err().contains("older than games/tla/src/system/overlay/overlay.ld: make tla-en first"));
+        // The preprocessor ran again and wrote the same list.
+        at("out/tla-en/ld/overlay_649.stamp", 40);
+        read().unwrap();
+        at("games/tla/include/version.h", 50);
+        assert!(read().unwrap_err().contains("version.h"));
+        at("out/tla-en/ld/main.stamp", 60);
+        assert!(read().unwrap_err().contains("version.h"), "each overlay's stamp counts for its own script");
+        at("out/tla-en/ld/overlay_649.stamp", 60);
+        read().unwrap();
     }
 }

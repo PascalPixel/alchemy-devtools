@@ -157,8 +157,12 @@ fn sweep_file(root: &Path, file: &str, dry_run: bool) -> Result<(usize, usize), 
     let layout = Layout::of_path(relative).filter(|layout| relative.starts_with(&layout.sources())).ok_or_else(|| format!("{file} is not under games/GAME/src"))?;
     let path = root.join(relative);
     let original = std::fs::read_to_string(&path).map_err(|error| format!("{file}: {error}"))?;
-    let editions: Vec<DecompTargetId> =
-        built::editions(std::slice::from_ref(&layout.game))?.into_iter().filter(|&id| crate::compile::listed(target_for(id), relative)).collect();
+    let mut editions: Vec<DecompTargetId> = Vec::new();
+    for id in built::editions(std::slice::from_ref(&layout.game))? {
+        if crate::compile::listed(target_for(id), relative)? {
+            editions.push(id);
+        }
+    }
     if editions.is_empty() {
         return Err(format!("{file}: no edition's object list builds it"));
     }
