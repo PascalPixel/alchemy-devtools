@@ -31,6 +31,16 @@ pub fn run<S: AsRef<str>>(command: &[S], cwd: impl AsRef<Path>) -> Result<String
     }
 }
 
+/// A command's outcome with both its streams, whether it succeeded or not:
+/// a compiler writes its warnings to stderr when it succeeds too.
+pub(crate) fn capture<S: AsRef<str>>(command: &[S], cwd: impl AsRef<Path>) -> Result<(bool, String, String), String> {
+    let program = command.first().ok_or("run: empty command")?.as_ref();
+    let args: Vec<&str> = command[1..].iter().map(AsRef::as_ref).collect();
+    let output = spawn(program, &args, cwd.as_ref()).map_err(|error| format!("{program}: {error}"))?;
+    let text = |bytes: &[u8]| String::from_utf8_lossy(bytes).into_owned();
+    Ok((output.success, text(&output.stdout), text(&output.stderr)))
+}
+
 /// Whether process `pid` has ended. Signal 0 sends nothing; it only asks
 /// whether the process exists. 0 and what no process id can be count as gone.
 pub(crate) fn gone(pid: u32) -> bool {

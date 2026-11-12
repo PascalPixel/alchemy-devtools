@@ -14,9 +14,40 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 mod merge;
+mod runs;
+pub(crate) mod views;
 
-const USAGE: &str = r#"usage: alchemy-devtools adopt merge INTO.c=OBJECT.c,OBJECT.c... [--verify | --dry-run]
+const USAGE: &str = r#"usage: alchemy-devtools adopt merge [--keep-views] INTO.c=OBJECT.c,OBJECT.c... [--verify | --dry-run]
+       alchemy-devtools adopt merge --keep-views --game GAME [--verify | --dry-run]
        alchemy-devtools adopt --undo JOURNAL [ITEM...]
+--keep-views joins without settling any disagreement between the sources:
+each becomes a part of INTO after a `// ---- SOURCE.c ----` line, and where
+a part sees a name otherwise than one before it, it keeps its own view: a
+routine or variable under a private name bound to the same symbol
+(`extern int Helper__s0b84(struct Thing *) __asm__("Helper");`; where the
+later part holds the definition, the earlier takes the view), a tag,
+typedef, enumerator, static or macro under its own `__PART` name (a
+header's around the #include that first enters it). A part's macros are
+undefined where it ends; identical repeats of a type, typedef or inline
+routine are deleted. Each view is marked on the line above it, for check
+tags and progress --humanity to count:
+  /* VIEW(PART): KIND NAME as THIS; OTHER has THAT. */
+KIND is routine, variable, tag, typedef, enumerator, static or macro. The
+compiler judges: the join is compiled in every edition that links it until
+its messages name nothing more, then every function and datum is held
+against the build's own assembly of its file (out/EDITION/obj/SOURCE.s,
+.L labels renumbered). For one that moved, the name whose meaning changed
+for it is looked for (a routine declared otherwise than -aux-info saw it in
+its own file, a macro defined otherwise than -dM listed it) and kept as a
+view too; a part nothing reconciles is left out, saying why, and the
+objects either side of it join without it. --game GAME takes every run of
+the game's linker scripts: C objects on the game's route whose statements
+stand together in every section they place, compiled by one command in
+every edition, never across a bank's start or an overlay, never a file the
+Makefile names; each joins into its scene's own name where it is that
+scene's code and the name is free, else into its first object. Runs settle
+in parallel and are written as one batch, whose journal records the runs
+joined.
 merge: the objects become one object built from INTO.c, a new file or one of
 the objects' own. Its source is theirs one after another, in the order given:
 an #include of a header an earlier source includes goes where neither is
@@ -67,6 +98,10 @@ struct Options {
     /// Whether the build judges the batch after it is written.
     verify: bool,
     dry_run: bool,
+    /// Joins that keep each disagreement as a view (`--keep-views`).
+    keep_views: bool,
+    /// A game whose every run is joined (`--game GAME`, with `--keep-views`).
+    game: Option<String>,
 }
 
 enum Request {
@@ -80,9 +115,20 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
     let mut items = Vec::new();
     let mut verify = false;
     let mut dry_run = false;
+    let mut keep_views = false;
+    let mut game = None;
+    let mut skip = false;
     for (i, value) in arguments.iter().map(String::as_str).enumerate() {
+        if std::mem::take(&mut skip) {
+            continue;
+        }
         match value {
             "--dry-run" => dry_run = true,
+            "--keep-views" => keep_views = true,
+            "--game" => {
+                game = Some(arguments.get(i + 1).filter(|g| !g.starts_with('-')).ok_or_else(|| USAGE.to_string())?.clone());
+                skip = true;
+            }
             "--verify" => verify = true,
             "--undo" => {
                 let journal = arguments.get(i + 1).filter(|_| i == 0);
@@ -103,10 +149,11 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
             _ => items.push(value.to_string()),
         }
     }
-    if form.is_none() || items.is_empty() || (verify && dry_run) {
+    let wanted = items.is_empty() != game.is_some();
+    if form.is_none() || wanted || (verify && dry_run) || (game.is_some() && !keep_views) {
         return Err(USAGE.into());
     }
-    Ok(Request::Adopt(Options { items, verify, dry_run }))
+    Ok(Request::Adopt(Options { items, verify, dry_run, keep_views, game }))
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
@@ -292,9 +339,19 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
     let mut refused = 0;
     let mut written: Vec<(String, Vec<String>)> = Vec::new();
     let mut games: Vec<String> = Vec::new();
-    for item in &options.items {
+    let items = match &options.game {
+        Some(game) => runs::items(root, game)?,
+        None => options.items.clone(),
+    };
+    // With views, each item becomes the runs its views settled, each with
+    // its text: compiled and judged first, in parallel, writing nothing.
+    let planned: Vec<(String, Option<String>)> = match options.keep_views {
+        true => runs::settle(root, &mut files, &items)?,
+        false => items.into_iter().map(|item| (item, None)).collect(),
+    };
+    for (item, text) in &planned {
         let saved = files.now.clone();
-        match merge_objects(&mut files, item, build) {
+        match merge_objects(&mut files, item, build, text.clone()) {
             Ok((merged_game, lines)) => {
                 adopted += 1;
                 for line in lines {
@@ -328,7 +385,13 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
         println!("dry run: {adopted} would be merged, {refused} refused; nothing written");
         return Ok(None);
     }
-    let journal = files.commit(command, &journal_name(options))?;
+    // A batch with views records the runs it joined, which a back-out
+    // settles again without the items it names.
+    let command = match options.keep_views {
+        true => format!("adopt merge --keep-views {}", written.iter().map(|(item, _)| item.as_str()).collect::<Vec<_>>().join(" ")),
+        false => command.to_string(),
+    };
+    let journal = files.commit(&command, &journal_name(&written))?;
     println!("{adopted} merged, {refused} refused; journal {journal}");
     if !options.verify {
         println!("judge with make compare-editions, or adopt --verify; undo with alchemy-devtools adopt --undo {journal} [ITEM...]");
@@ -337,8 +400,8 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
 }
 
 /// What a journal is named after: its form and first item's INTO.
-fn journal_name(options: &Options) -> String {
-    let first = options.items[0].split([' ', ',', '=']).next().unwrap_or("");
+fn journal_name(items: &[(String, Vec<String>)]) -> String {
+    let first = items[0].0.split([' ', ',', '=']).next().unwrap_or("");
     let first: String = first
         .rsplit('/')
         .next()
@@ -643,7 +706,7 @@ fn item_parts(item: &str) -> Result<(String, Vec<String>), String> {
 }
 
 /// Merges one item, `INTO.c=OBJECT.c,OBJECT.c...`: its game and report.
-fn merge_objects(files: &mut Files, item: &str, build: &dyn Build) -> Result<(String, Vec<String>), String> {
+fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: Option<String>) -> Result<(String, Vec<String>), String> {
     let (into, objects) = item_parts(item)?;
     if objects.len() < 2 {
         return Err("a merge takes two objects or more".into());
@@ -721,8 +784,15 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build) -> Result<(St
         files.write(&script, join_lines(&out, newline));
     }
 
-    // The sources, one after another.
+    // The sources, one after another, unless views joined them already.
     let mut text = String::new();
+    if let Some(joined_text) = joined_text {
+        for object in objects.iter().filter(|object| **object != into) {
+            files.remove(&format!("{object}.c"));
+        }
+        files.write(&target, joined_text);
+        return Ok((layout.game, report));
+    }
     let mut included: Vec<String> = Vec::new();
     for object in &objects {
         let source = format!("{object}.c");
@@ -1298,12 +1368,12 @@ mod tests {
         tree(root);
         let stub = Stub { placing: vec![], apart: false, ..Stub::default() };
         let mut files = Files::new(root);
-        merge_objects(&mut files, "games/tla/src/field/a.c=games/tla/src/field/a.c,games/tla/src/field/b.c", &stub).unwrap();
+        merge_objects(&mut files, "games/tla/src/field/a.c=games/tla/src/field/a.c,games/tla/src/field/b.c", &stub, None).unwrap();
         assert!(files.read("games/tla/ld_script.ld").unwrap().contains("    {\n        \"*/games/tla/src/field/a.o\"(.text)\n\n        \"*/games/tla/src/field/c.o\"(.text)"));
         assert!(files.read("games/tla/src/field/a.c").unwrap().ends_with("void B(void) {}\n"));
         assert!(!files.exists("games/tla/src/field/b.c"));
         let mut files = Files::new(root);
-        merge_objects(&mut files, "games/tla/src/field/map/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c", &stub).unwrap();
+        merge_objects(&mut files, "games/tla/src/field/map/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c", &stub, None).unwrap();
         assert!(files.read("games/tla/src/field/map/ab.c").unwrap().contains("#include \"../../field.h\"\n"));
     }
 
@@ -1313,10 +1383,10 @@ mod tests {
         let root = directory.path();
         tree(root);
         let alike = Stub { placing: vec![("field/c", ".text"), ("field/e", ".text"), ("field/f", ".text"), ("field/g", ".text"), ("field/a", ".text")], apart: false, ..Stub::default() };
-        let merge = |item: &str, build: &dyn Build| merge_objects(&mut Files::new(root), item, build).unwrap_err();
+        let merge = |item: &str, build: &dyn Build| merge_objects(&mut Files::new(root), item, build, None).unwrap_err();
         let field = |names: &str| names.split(',').map(|name| format!("games/tla/src/field/{name}.c")).collect::<Vec<_>>().join(",");
         // A blank line is no bar.
-        assert!(merge_objects(&mut Files::new(root), &format!("games/tla/src/field/x.c={}", field("b,c")), &alike).is_ok());
+        assert!(merge_objects(&mut Files::new(root), &format!("games/tla/src/field/x.c={}", field("b,c")), &alike, None).is_ok());
         // An #if and a line of the compiler library lie between.
         assert!(merge(&format!("games/tla/src/field/x.c={}", field("c,e")), &alike).contains("leave out"));
         // Different sections.
@@ -1331,7 +1401,7 @@ mod tests {
         assert!(merge(&format!("games/tla/src/field/x.c={}", field("a,b")), &apart).contains("only into overlays"));
         // An object a run leaves out with nothing in its sections joins it.
         let empty = Stub { placing: vec![], apart: false, ..Stub::default() };
-        assert!(merge_objects(&mut Files::new(root), &format!("games/tla/src/field/x.c={}", field("f,g")), &empty).is_ok());
+        assert!(merge_objects(&mut Files::new(root), &format!("games/tla/src/field/x.c={}", field("f,g")), &empty, None).is_ok());
     }
 
     /// Two merges in one journal; the build blames the second, which goes

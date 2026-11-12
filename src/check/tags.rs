@@ -448,6 +448,22 @@ pub fn findings(path: &str, source: &str) -> (Tags, Vec<Finding>) {
     (tags, found)
 }
 
+/// The views a C file keeps (`adopt merge --keep-views`): each marker's kind,
+/// and a finding for a marker not in its form. A view is a disagreement no
+/// one has tested yet, not a device, so it is counted apart from the tags.
+pub fn views(source: &str) -> (Vec<&'static str>, Vec<Finding>) {
+    let mut kinds = Vec::new();
+    let mut found = Vec::new();
+    for token in lex(source).iter().filter(|token| token.kind == Kind::Comment) {
+        match crate::adopt::views::view_kind(token.text) {
+            Some(Ok(kind)) => kinds.push(kind),
+            Some(Err(message)) => found.push(Finding { line: token.line, message }),
+            None => {}
+        }
+    }
+    (kinds, found)
+}
+
 /// The C sources and headers under each path, sorted.
 fn sources(root: &Path, paths: &[String]) -> Result<Vec<PathBuf>, String> {
     let mut files = Vec::new();
@@ -467,26 +483,33 @@ fn sources(root: &Path, paths: &[String]) -> Result<Vec<PathBuf>, String> {
     Ok(files)
 }
 
-/// One game's count: its tags and marks, files and findings.
+/// One game's count: its tags and marks, views, files and findings.
 #[derive(Debug, Default)]
 struct Game {
     tags: Tags,
+    views: BTreeMap<&'static str, usize>,
     files: usize,
     findings: usize,
 }
 
 impl Game {
-    /// The game's line: fake matches, leftovers and `// DEAD:` marks apart,
-    /// never summed (S2).
-    fn line(&self, name: &str) -> String {
+    /// The game's lines: fake matches, leftovers, `// DEAD:` marks and
+    /// unsettled views each on its own line, never summed (S2).
+    fn lines(&self, name: &str) -> Vec<String> {
         let unformed = match self.tags.dead_unformed {
             0 => String::new(),
-            n => format!(" ({n} of the // DEAD: marks do not yet say what the ROM keeps, S3; counted, not refused)"),
+            n => format!(" ({n} do not yet say what the ROM keeps, S3; counted, not refused)"),
         };
-        format!(
-            "{name}: {} FAKEMATCH tags, {} LEFTOVER tags and {} // DEAD: marks in {} files; {} findings{unformed}",
-            self.tags.fakematch, self.tags.leftover, self.tags.dead, self.files, self.findings
-        )
+        let views: usize = self.views.values().sum();
+        let kinds: Vec<String> = self.views.iter().map(|(kind, n)| format!("{n} {kind}")).collect();
+        let kinds = if kinds.is_empty() { String::new() } else { format!(" ({})", kinds.join(", ")) };
+        vec![
+            format!("{name}: {} files; {} findings", self.files, self.findings),
+            format!("{name}: {} FAKEMATCH tags", self.tags.fakematch),
+            format!("{name}: {} LEFTOVER tags", self.tags.leftover),
+            format!("{name}: {} // DEAD: marks{unformed}", self.tags.dead),
+            format!("{name}: {views} VIEW markers{kinds}"),
+        ]
     }
 }
 
@@ -510,9 +533,14 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     for file in sources(root, &paths)? {
         let source = String::from_utf8_lossy(&std::fs::read(&file).map_err(|error| format!("{}: {error}", file.display()))?).into_owned();
         let name = file.strip_prefix(root).unwrap_or(&file).display().to_string();
-        let (found_tags, found) = findings(&name, &source);
+        let (found_tags, mut found) = findings(&name, &source);
+        let (kinds, malformed) = self::views(&source);
+        found.extend(malformed);
         let game = games.entry(game_of(&name)).or_default();
         game.tags.add(found_tags);
+        for kind in kinds {
+            *game.views.entry(kind).or_default() += 1;
+        }
         game.files += 1;
         game.findings += found.len();
         for finding in found {
@@ -520,7 +548,9 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         }
     }
     for (name, game) in &games {
-        println!("{}", game.line(name));
+        for line in game.lines(name) {
+            println!("{line}");
+        }
     }
     let count: usize = games.values().map(|game| game.findings).sum();
     match count {
@@ -532,6 +562,17 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn views_are_counted_apart_and_their_markers_judged() {
+        let source = "/* VIEW(s0b84): routine Helper as int Helper(struct Thing *t); the definition has void Helper(int a, int b). */\nextern int Helper__s0b84(struct Thing *t) __asm__(\"Helper\");\n/* VIEW(s0b84): tag struct Thing as struct Thing__s0b84; s0674 has another definition. */\n// VIEW(s0b84): widget Foo as Foo__s0b84; x has y.\n/* VIEW(): routine F as G; x has y. */\n/* A VIEW( in prose is no marker. */\n";
+        let (kinds, found) = views(source);
+        assert_eq!(kinds, ["routine", "tag"]);
+        assert_eq!(found.iter().map(|f| f.line).collect::<Vec<_>>(), [4, 5]);
+        assert!(found[0].message.starts_with("unknown view kind widget"), "{}", found[0].message);
+        // A view's asm label names a symbol in an extern declaration: no device.
+        assert!(findings("games/tla/src/x.c", source).1.is_empty());
+    }
 
     #[test]
     fn a_tag_is_read_across_its_lines() {
@@ -719,10 +760,22 @@ void F(int x) {
         assert_eq!(game_of("games/tbs/src/battle/run.c"), "games/tbs");
         assert_eq!(game_of("games/tla/include/x.h"), "games/tla");
         assert_eq!(game_of("tools/x.c"), "tools");
-        let game = Game { tags: Tags { fakematch: 169, leftover: 48, dead: 33, dead_unformed: 0 }, files: 832, findings: 0 };
-        assert_eq!(game.line("games/tbs"), "games/tbs: 169 FAKEMATCH tags, 48 LEFTOVER tags and 33 // DEAD: marks in 832 files; 0 findings");
-        let game = Game { tags: Tags { fakematch: 1, leftover: 0, dead: 60, dead_unformed: 40 }, files: 2, findings: 0 };
-        assert!(game.line("games/tla").ends_with("0 findings (40 of the // DEAD: marks do not yet say what the ROM keeps, S3; counted, not refused)"));
+        let game = Game { tags: Tags { fakematch: 169, leftover: 48, dead: 33, dead_unformed: 0 }, views: BTreeMap::new(), files: 832, findings: 0 };
+        assert_eq!(
+            game.lines("games/tbs"),
+            [
+                "games/tbs: 832 files; 0 findings",
+                "games/tbs: 169 FAKEMATCH tags",
+                "games/tbs: 48 LEFTOVER tags",
+                "games/tbs: 33 // DEAD: marks",
+                "games/tbs: 0 VIEW markers"
+            ]
+        );
+        let views = BTreeMap::from([("routine", 3), ("tag", 2)]);
+        let game = Game { tags: Tags { fakematch: 1, leftover: 0, dead: 60, dead_unformed: 40 }, views, files: 2, findings: 0 };
+        let lines = game.lines("games/tla");
+        assert_eq!(lines[3], "games/tla: 60 // DEAD: marks (40 do not yet say what the ROM keeps, S3; counted, not refused)");
+        assert_eq!(lines[4], "games/tla: 5 VIEW markers (3 routine, 2 tag)");
     }
 
     #[test]

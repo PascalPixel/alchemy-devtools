@@ -1335,6 +1335,9 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         if comment.text.starts_with("// DEAD:") {
             report.note("leftover_dead", path, comment.line, "dead");
         }
+        if let Some(Ok(kind)) = crate::adopt::views::view_kind(comment.text) {
+            report.note("views", path, comment.line, kind);
+        }
         questions(report, path, comment.line, comment.text);
     }
     let mut walk = Walk {
@@ -1565,6 +1568,7 @@ const ROWS: &[(&str, &str)] = &[
     ("leftover_frame", "  frame"),
     ("leftover_template", "  template"),
     ("leftover_dead", "  dead (// DEAD: marks)"),
+    ("views", "unsettled views (VIEW markers)"),
     ("goto", "goto"),
     ("if_language", "#if on LANGUAGE"),
     ("if_patch", "#if on a patch level"),
@@ -1619,7 +1623,7 @@ fn kinds(metric: &str) -> Vec<String> {
 
 /// Metrics whose top files are listed.
 const LISTED: &[&str] = &[
-    "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "leftover", "goto", "if_language", "if_patch",
+    "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "leftover", "views", "goto", "if_language", "if_patch",
     "if_in_function", "undocumented_entry", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
     "undocumented_global", "provenance_none", "provenance_prose", "provenance_table_mismatch", "unused_word_name",
     "door_word_link", "unit_open", "synonym", "synonym_referent", "abbreviation", "family_shape", "prefix_twin",
@@ -1977,6 +1981,7 @@ mod tests {
             "    // FAKEMATCH(dead): kept. FAKEMATCH(<kind>) is the form.\n",
             "    // FAKEMATCH(volatile): read afresh; as a plain local, 2 of 9 instructions differ in tla-en.\n",
             "    // FAKEMATCH(one-pass): no longer a kind, not counted.\n",
+            "    /* VIEW(s0b84): routine Helper as int Helper(int); the definition has void Helper(void). */\n",
             "#if LANGUAGE != LANGUAGE_JAPANESE && TBS_PATCH_2\n",
             "    goto done;\n",
             "#endif\n",
@@ -1991,6 +1996,8 @@ mod tests {
         assert_eq!(rows, DEVICES, "the table's device rows are S2's, in its order");
         assert!(listable("fakematch_pin") && listable("fakematch_volatile") && !listable("fakematch_one-pass") && !listable("xyz"));
         assert_eq!(report.value("leftover"), 0);
+        assert_eq!(report.total("views"), 1);
+        assert!(listable("views"));
         assert_eq!(report.total("goto"), 1);
         assert_eq!((report.total("if_language"), report.total("if_patch")), (2, 2));
         assert_eq!(report.total("if_in_function"), 1);
