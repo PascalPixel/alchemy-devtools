@@ -1702,7 +1702,7 @@ pub fn tsv(games: &[(&str, &Report)]) -> String {
     text
 }
 
-/// The short table `make progress` prints, and with `top` each metric's
+/// The short table `progress --humanity` prints, and with `top` each metric's
 /// leading files.
 pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
     let mut text = String::from("Humanization");

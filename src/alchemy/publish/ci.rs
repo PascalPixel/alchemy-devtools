@@ -3,7 +3,7 @@
 //! alone never enter the chart. The original history remains an immutable seed.
 //!
 //! CI measures The Broken Seal itself from the six editions it built. A commit
-//! with a receipt (make land) is admitted as that receipt, once its Broken Seal
+//! with a receipt (alchemy-devtools land) is admitted as that receipt, once its Broken Seal
 //! row equals CI's. A commit without one is admitted as a CI record: CI's Broken
 //! Seal row, and The Lost Age's figures from the nearest ancestor with a
 //! receipt, carried as that measurement only where every path The Lost Age's
@@ -418,7 +418,7 @@ mod tests {
         }
     }
 
-    /// Writes a receipt and both reports for `commit`, as make land and the
+    /// Writes a receipt and both reports for `commit`, as alchemy-devtools land and the
     /// pre-push hook would.
     fn upload(root: &Path, archive: &Path, commit: &str, sun: GameDone, anchor: GameDone) {
         let files = vec![b"report".to_vec(), measurement_text(Some(sun), Some(anchor)).into_bytes()];

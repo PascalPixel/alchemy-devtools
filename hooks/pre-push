@@ -1,0 +1,4 @@
+#!/bin/sh
+# A push to main sends that commit's measurement (alchemy-devtools land) for CI.
+# Installed from an Alchemy checkout: git config core.hooksPath alchemy-devtools/hooks
+exec alchemy-devtools/target/release/alchemy-devtools progress --pre-push "$2"

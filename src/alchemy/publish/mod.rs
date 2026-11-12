@@ -38,7 +38,7 @@ const VOLUME_ASSETS: usize = 1000;
 const LANDING_ASSETS: usize = 5;
 const RECEIPT: &str = "out/reports/decomp/publication.tsv";
 const STALE: &str =
-    "progress measurement is stale or missing: stage all source changes, then run make land";
+    "progress measurement is stale or missing: stage all source changes, then run alchemy-devtools land";
 const ASSETS: [(&str, &str); 2] = [(REPORT, "pb"), (MEASUREMENT, "tsv")];
 const HEADER: &str = "version\ttree\tmeasured_at\tpb_sha256\ttsv_sha256";
 
