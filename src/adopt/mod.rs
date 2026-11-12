@@ -285,7 +285,9 @@ fn modern(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<(), String
             println!("modern: every {} edition's C compiles with a current GCC", batch.games.join(" and "));
             return Ok(());
         };
-        let blamed: Vec<String> = batch.items.iter().filter(|(_, stems)| stems.iter().any(|stem| error.contains(&format!("{stem}.c:")))).map(|(item, _)| item.clone()).collect();
+        // Only a line that is an error names a file: a current GCC warns in most of them.
+        let errors: Vec<&str> = error.lines().filter(|line| line.contains(" error: ")).collect();
+        let blamed: Vec<String> = batch.items.iter().filter(|(_, stems)| stems.iter().any(|stem| errors.iter().any(|line| line.contains(&format!("{stem}.c:"))))).map(|(item, _)| item.clone()).collect();
         if blamed.is_empty() {
             let tail: Vec<&str> = error.lines().filter(|line| line.contains("error")).take(6).collect();
             return Err(format!(

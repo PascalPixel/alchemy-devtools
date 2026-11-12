@@ -63,6 +63,8 @@ pub(crate) fn recipes(root: &Path, build: &Path, variables: &[String], wanted: &
     };
     let mut shell: Option<Vec<String>> = None;
     let mut found: Vec<Vec<Vec<String>>> = vec![Vec::new(); wanted.len()];
+    // A recipe line make prints continued with a backslash is one command.
+    let printed = printed.replace("\\\n", "");
     for line in printed.lines().filter(|line| !message(line)) {
         let words = words(line);
         for (index, (source, object)) in wanted.iter().enumerate() {
