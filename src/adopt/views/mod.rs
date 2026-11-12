@@ -220,7 +220,9 @@ struct Other {
 enum Fix {
     /// A routine or variable seen another way: a private name bound to the
     /// same symbol.
-    Alias { name: String, site: Site, kind: &'static str, other: Other },
+    /// `expanded` is how the preprocessor wrote a declaration whose text
+    /// never spells the name.
+    Alias { name: String, site: Site, kind: &'static str, other: Other, expanded: Option<Read> },
     /// A tag, typedef, enumerator, static or macro defined another way: the
     /// part's own name for it.
     Rename { name: String, site: Site, space: Space, kind: &'static str, other: Other },
@@ -232,6 +234,10 @@ enum Fix {
     Declared { part: usize, name: String, declaration: String, other: Other },
     /// A macro the part saw as `original` (or not at all), now otherwise.
     Macro { part: usize, name: String, original: Option<String>, joined: Option<String> },
+    /// A macro a header the part enters at line `include` defines otherwise
+    /// than one before it: undefined before that #include, and the joined
+    /// definition (`joined`) given back where the part ends.
+    Unmacro { part: usize, include: usize, name: String, joined: String },
     /// An identical repeat of a type, typedef or inline routine: deleted.
     Delete { part: usize, line: usize, name: String, tag: bool },
     /// A header view's bound declaration (at `line`) that cannot be read
@@ -243,7 +249,7 @@ impl Fix {
     fn part(&self) -> usize {
         match self {
             Fix::Alias { site, .. } | Fix::Rename { site, .. } => site.part(),
-            Fix::Implicit { part, .. } | Fix::Declared { part, .. } | Fix::Macro { part, .. } | Fix::Delete { part, .. } | Fix::After { part, .. } => *part,
+            Fix::Implicit { part, .. } | Fix::Declared { part, .. } | Fix::Macro { part, .. } | Fix::Unmacro { part, .. } | Fix::Delete { part, .. } | Fix::After { part, .. } => *part,
         }
     }
 }
@@ -429,7 +435,7 @@ impl<'a> Join<'a> {
             }
             let later = self.site(segments, scratch, pre, &message.file, message.line);
             let earlier = previous.and_then(|previous| self.site(segments, scratch, pre, &previous.file, previous.line));
-            match self.answer(message, previous, later.as_ref(), earlier.as_ref(), pre) {
+            match self.answer(message, previous, later.as_ref(), earlier.as_ref(), pre, (segments, scratch)) {
                 Answer::Fix(fix) => {
                     if taken.insert(fix.part()) {
                         fixes.push(fix);
@@ -465,8 +471,8 @@ impl<'a> Join<'a> {
     }
 
     /// What one message (and the one naming the earlier place, if any) asks.
-    fn answer(&self, message: &Message, previous: Option<&Message>, later: Option<&Site>, earlier: Option<&Site>, pre: Option<&Preprocessed>) -> Answer {
-        let places = Places { later: message, earlier: previous, pre };
+    fn answer(&self, message: &Message, previous: Option<&Message>, later: Option<&Site>, earlier: Option<&Site>, pre: Option<&Preprocessed>, joined: (&Segments, &str)) -> Answer {
+        let places = Places { later: message, earlier: previous, pre, segments: joined.0, scratch: joined.1 };
         let text = message.text.as_str();
         if let (Some(Site::Part { part, line }), false) = (later, message.warning) {
             if self.bound_before(*part, *line).is_some() {
@@ -506,12 +512,32 @@ impl<'a> Join<'a> {
             let other = Other { owner: self.owner(later, read.defines), text: read.declaration };
             return Answer::Fix(Fix::Implicit { part: earlier.part(), name, other });
         }
+        if is("too many arguments to function") || is("too few arguments to function") {
+            // A part that declared the routine in a way C finds compatible
+            // (`void F();` after `void F(int a) {...}`) calls it as it did.
+            let Site::Part { part, .. } = later else { return Answer::Unknown(" (called in a header)".into()) };
+            let own = statements(&self.parts[*part].text).into_iter().find(|s| s.body.is_none() && s.routine(&name)).map(|s| s.first_line);
+            let Some(line) = own else { return Answer::Unknown(" (the part has no declaration of its own)".into()) };
+            let other = Other { owner: "the parts before it".into(), text: "another declaration".into() };
+            return Answer::Fix(Fix::Alias { name, site: Site::Part { part: *part, line }, kind: "routine", other, expanded: None });
+        }
         if text.ends_with("redefined") && message.warning {
             // A macro: the part that defines it keeps its own.
             let site = match (later, earlier) {
                 (Site::Part { .. }, _) => later.clone(),
                 (_, Some(earlier @ Site::Part { .. })) => earlier.clone(),
-                _ => return Answer::Unknown(" (both definitions are in headers)".into()),
+                (Site::Header { part, include, .. }, Some(earlier @ Site::Header { .. })) => {
+                    if earlier.part() == *part {
+                        return Answer::Nothing;
+                    }
+                    // Both in headers: the later header's is read as its own file read it.
+                    let joined = self.source(earlier).and_then(|text| {
+                        text::macros(&text).into_iter().filter(|(n, _, _)| *n == name).min_by_key(|(_, _, line)| line.abs_diff(Join::line(earlier))).map(|(_, definition, _)| definition)
+                    });
+                    let Some(joined) = joined else { return Answer::Unknown(" (the earlier definition was not found)".into()) };
+                    return Answer::Fix(Fix::Unmacro { part: *part, include: *include, name, joined });
+                }
+                _ => return Answer::Unknown(" (no earlier definition named)".into()),
             };
             if earlier.is_some_and(|earlier| earlier.part() == later.part()) {
                 return Answer::Nothing;
@@ -556,11 +582,15 @@ impl<'a> Join<'a> {
             let _ = this;
             return Answer::Fix(Fix::Rename { name: name.to_string(), site: site.clone(), space: Space::Ordinary, kind: "static", other: Other { owner: self.owner(other_site, that.defines), text: that.declaration.clone() } });
         }
-        // The definition is the truth: the other side is the view.
-        let (site, that, other_site) = if late.defines { (earlier, &late, later) } else { (later, &early, earlier) };
+        // The definition is the truth: the other side is the view. Between two
+        // declarations a part's own takes it rather than a header's, which the
+        // parts after it may read only through the include it guards.
+        let own_earlier = !early.defines && matches!((later, earlier), (Site::Header { .. }, Site::Part { .. }));
+        let (site, this, that, other_site) = if late.defines || own_earlier { (earlier, &early, &late, later) } else { (later, &late, &early, earlier) };
+        let expanded = self.read(site, name).is_none().then(|| this.clone());
         let kind = if late.routine || early.routine { "routine" } else { "variable" };
         let shown = if that.routine && that.defines { that.declaration.clone() } else { that.text.clone() };
-        Answer::Fix(Fix::Alias { name: name.to_string(), site: site.clone(), kind, other: Other { owner: self.owner(other_site, that.defines), text: shown } })
+        Answer::Fix(Fix::Alias { name: name.to_string(), site: site.clone(), kind, other: Other { owner: self.owner(other_site, that.defines), text: shown }, expanded })
     }
 
     /// A tag defined twice: deleted when the two are the same, else renamed.
@@ -577,6 +607,14 @@ impl<'a> Join<'a> {
         if definitions[late].3 == first.3 {
             if let Site::Part { part, line } = later {
                 return Answer::Fix(Fix::Delete { part: *part, line: *line, name: tag.to_string(), tag: true });
+            }
+        }
+        // A header's tag against a part's own: the part's is renamed, so the
+        // parts after it that read the header see it as theirs did.
+        if let (Site::Header { file, .. }, true) = (later, first.0 == places.scratch) {
+            if let Some((part, line)) = Join::locate(places.segments, first.1) {
+                let owner = file.rsplit('/').next().unwrap_or(file).to_string();
+                return Answer::Fix(Fix::Rename { name: tag.to_string(), site: Site::Part { part, line }, space: Space::Tag, kind: "tag", other: Other { owner, text: "another definition".into() } });
             }
         }
         let owner = first.0.rsplit('/').next().unwrap_or(&first.0).to_string();
@@ -609,7 +647,7 @@ impl<'a> Join<'a> {
     /// Makes a fix: the part's text changed, or why it cannot be.
     fn apply(&mut self, fix: &Fix) -> Result<(), String> {
         match fix {
-            Fix::Alias { name, site, kind, other } => self.alias(name, site, kind, other),
+            Fix::Alias { name, site, kind, other, expanded } => self.alias(name, site, kind, other, expanded.as_ref()),
             Fix::Rename { name, site, space, kind, other } => self.rename(name, site, *space, kind, other),
             Fix::Implicit { part, name, other } => {
                 let declaration = format!("extern int {name}();");
@@ -625,6 +663,16 @@ impl<'a> Join<'a> {
                 p.text = insert_before(&p.text, first_code_line(&p.text), &lines);
                 p.restore.push(format!("#undef {name}"));
                 p.restore.extend(joined.iter().map(|j| format!("#define {j}")));
+                *self.views.entry("macro").or_default() += 1;
+                Ok(())
+            }
+            Fix::Unmacro { part, include, name, joined } => {
+                let other = Other { owner: "the parts before it".into(), text: format!("#define {joined}") };
+                let p = &mut self.parts[*part];
+                let note = marker(p, "macro", name, "its header's own definition", &other);
+                p.text = insert_before(&p.text, *include, &[note, format!("#undef {name}")]);
+                p.restore.push(format!("#undef {name}"));
+                p.restore.push(format!("#define {joined}"));
                 *self.views.entry("macro").or_default() += 1;
                 Ok(())
             }
@@ -667,8 +715,8 @@ impl<'a> Join<'a> {
         }
     }
 
-    fn alias(&mut self, name: &str, site: &Site, kind: &'static str, other: &Other) -> Result<(), String> {
-        let read = self.read(site, name).ok_or_else(|| format!("{name}'s declaration was not found"))?;
+    fn alias(&mut self, name: &str, site: &Site, kind: &'static str, other: &Other, expanded: Option<&Read>) -> Result<(), String> {
+        let read = self.read(site, name).or_else(|| expanded.cloned()).ok_or_else(|| format!("{name}'s declaration was not found"))?;
         let part = site.part();
         let private = self.parts[part].private(name);
         let p = &mut self.parts[part];
@@ -788,6 +836,7 @@ fn tags_named(declaration: &str) -> Vec<String> {
 }
 
 /// What `Join::read` found of a declaration.
+#[derive(Clone, Debug)]
 struct Read {
     text: String,
     declaration: String,
@@ -830,6 +879,8 @@ struct Places<'m> {
     later: &'m Message,
     earlier: Option<&'m Message>,
     pre: Option<&'m Preprocessed>,
+    segments: &'m Segments,
+    scratch: &'m str,
 }
 
 enum Answer {

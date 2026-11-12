@@ -205,7 +205,7 @@ fn a_part_no_view_reconciles_is_left_out_and_its_neighbours_still_join() {
 fn a_header_view_whose_types_the_header_defines_is_bound_after_its_include() {
     let Some(fixture) = Fixture::new(&[
         ("include/task.h", "#ifndef TASK_H\n#define TASK_H\ntypedef void (*TaskFunc)(void);\nint Task_Add(TaskFunc func, int order);\n#endif\n"),
-        ("a.c", "void Task_Add(void (*func)(void), short order);\nvoid A(void) { Task_Add(A, 3); }\n"),
+        ("a.c", "void Task_Add(void (*func)(void), short order) { func(); }\nvoid A(void) { Task_Add(A, 3); }\n"),
         ("b.c", "#include \"task.h\"\nint B(void) { return Task_Add(0, 2); }\n"),
     ]) else {
         return;
@@ -223,7 +223,7 @@ fn a_name_two_of_a_part_s_headers_declare_is_viewed_around_each_include() {
     let Some(fixture) = Fixture::new(&[
         ("include/actor.h", "#ifndef ACTOR_H\n#define ACTOR_H\nvoid Actor_Hide(unsigned actor, int how);\n#endif\n"),
         ("include/event.h", "#ifndef EVENT_H\n#define EVENT_H\nvoid Actor_Hide(unsigned actor, int how);\n#endif\n"),
-        ("a.c", "void Actor_Hide(int actor, short how);\nvoid A(void) { Actor_Hide(1, 2); }\n"),
+        ("a.c", "void Actor_Hide(int actor, short how) { extern int gHidden; gHidden = actor + how; }\nvoid A(void) { Actor_Hide(1, 2); }\n"),
         ("b.c", "#include \"actor.h\"\n#include \"event.h\"\nvoid B(void) { Actor_Hide(3, 4); }\n"),
     ]) else {
         return;
@@ -275,4 +275,62 @@ fn a_tag_s_repeat_is_judged_by_the_definition_the_message_names() {
     // b's is a's again and goes; c's is its own.
     assert_eq!(settled.text.matches("struct T {").count(), 1, "{}", settled.text);
     assert!(settled.text.contains("struct T__c { short c; };"), "{}", settled.text);
+}
+
+#[test]
+fn a_macro_two_headers_define_is_undefined_before_the_later_include_and_given_back() {
+    let Some(fixture) = Fixture::new(&[
+        ("include/one.h", "#ifndef ONE_H\n#define ONE_H\nint One(void);\n#define TWICE(x) ((x) * 2)\n#endif\n"),
+        ("include/two.h", "#ifndef TWO_H\n#define TWO_H\nint Two(void);\n#define TWICE(x) ((x) + (x))\n#endif\n"),
+        ("a.c", "#include \"one.h\"\nint A(int v) { return TWICE(v); }\n"),
+        ("b.c", "#include \"two.h\"\nint B(int v) { return TWICE(v); }\n"),
+        ("c.c", "#include \"one.h\"\nint C(int v) { return TWICE(v); }\n"),
+    ]) else {
+        return;
+    };
+    let settled = fixture.settle(&["a", "b", "c"]).unwrap();
+    assert!(settled.text.contains("#undef TWICE\n#include \"two.h\"\n"), "{}", settled.text);
+    assert!(settled.text.contains("#undef TWICE\n#define TWICE(x) ((x) *2)\n"), "{}", settled.text);
+    assert_eq!(marked(&settled.text), [("b".into(), "macro".into(), "TWICE".into())]);
+}
+
+#[test]
+fn a_declaration_a_macro_names_in_a_shared_file_takes_its_view_around_the_include() {
+    let Some(fixture) = Fixture::new(&[
+        ("include/table.inc", "extern const short EFFECT_TABLE[];\nint EFFECT_READ(void) { return EFFECT_TABLE[1]; }\n"),
+        ("a.c", "#define EFFECT_TABLE gTable\n#define EFFECT_READ A\n#include \"table.inc\"\n"),
+        ("b.c", "const int gTable[2] = { 1, 2 };\n"),
+    ]) else {
+        return;
+    };
+    let settled = fixture.settle(&["a", "b"]).unwrap();
+    assert!(settled.text.contains("extern const short gTable__a[] __asm__(\"gTable\");\n#define gTable gTable__a\n#include \"table.inc\"\n#undef gTable\n"), "{}", settled.text);
+}
+
+#[test]
+fn between_a_part_s_declaration_and_a_header_s_the_part_keeps_the_view() {
+    let Some(fixture) = Fixture::new(&[
+        ("include/input.h", "#ifndef INPUT_H\n#define INPUT_H\nstruct Input { unsigned short held; };\nextern struct Input gInput;\n#endif\n"),
+        ("a.c", "extern unsigned gInput;\nint A(void) { return gInput >> 4; }\n"),
+        ("b.c", "#include \"input.h\"\nint B(void) { return gInput.held; }\n"),
+        ("c.c", "#include \"input.h\"\nint C(void) { return gInput.held >> 4; }\n"),
+    ]) else {
+        return;
+    };
+    let settled = fixture.settle(&["a", "b", "c"]).unwrap();
+    // The header keeps its own name for b and c, whose second include it guards.
+    assert!(settled.text.contains("extern unsigned gInput__a __asm__(\"gInput\");"), "{}", settled.text);
+    assert!(!settled.text.contains("#define gInput"), "{}", settled.text);
+}
+
+#[test]
+fn a_part_that_declared_a_routine_without_its_parameters_calls_it_as_it_did() {
+    let Some(fixture) = Fixture::new(&[
+        ("a.c", "void Move(int *position) { position[0] += 1; }\n"),
+        ("b.c", "void Move();\nvoid B(int *p) { Move(p, 2, 3); }\n"),
+    ]) else {
+        return;
+    };
+    let settled = fixture.settle(&["a", "b"]).unwrap();
+    assert!(settled.text.contains("extern void Move__b() __asm__(\"Move\");\nvoid B(int *p) { Move__b(p, 2, 3); }"), "{}", settled.text);
 }
