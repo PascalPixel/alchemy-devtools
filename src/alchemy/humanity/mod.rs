@@ -31,8 +31,9 @@ pub const DEVICES: [&str; 7] = ["signature", "pin", "barrier", "wrapper", "volat
 /// S2's leftover kinds: Camelot's own code that does nothing in an edition
 /// and still shapes it, tagged `LEFTOVER(<kind>)` (12 November 2026). They
 /// are counted beside the devices, never with them; the `// DEAD:` marks are
-/// counted with them as `dead`.
-pub const LEFTOVERS: [&str; 3] = ["frame", "template", "form"];
+/// counted with them, on a row of their own, as `dead`. `form` is no longer a
+/// kind: a device The Lost Age's ROM also needs is a fake match.
+pub const LEFTOVERS: [&str; 2] = ["frame", "template"];
 
 /// A function body this many tokens long or more takes part in the duplicate search.
 const FUNCTION_TOKENS: usize = 24;
@@ -1563,7 +1564,6 @@ const ROWS: &[(&str, &str)] = &[
     ("leftover", "LEFTOVERs (Camelot's)"),
     ("leftover_frame", "  frame"),
     ("leftover_template", "  template"),
-    ("leftover_form", "  form"),
     ("leftover_dead", "  dead (// DEAD: marks)"),
     ("goto", "goto"),
     ("if_language", "#if on LANGUAGE"),
@@ -2002,7 +2002,7 @@ mod tests {
             "void F(void) {\n",
             "    /* LEFTOVER(frame): an idle buffer the Japanese edition fills; as no buffer, 4 of 90 instructions differ in tbs-en. */\n",
             "    /* LEFTOVER(template): a second blitter, as its siblings have; as one, 6 of 80 instructions differ in tbs-en. */\n",
-            "    /* LEFTOVER(form): the record through a pointer, as The Lost Age's twin needs; as direct, 2 of 40 instructions differ in tbs-en. */\n",
+            "    /* LEFTOVER(form): a retired kind, not counted; as direct, 2 of 40 instructions differ in tbs-en. */\n",
             "    // LEFTOVER(dead): no kind of leftover, not counted.\n",
             "    // FAKEMATCH(frame): no kind of device, not counted.\n",
             "    // DEAD: a read whose value goes unused.\n",
@@ -2011,17 +2011,17 @@ mod tests {
         ));
         assert_eq!(
             ["leftover_frame", "leftover_template", "leftover_form", "leftover_dead"].map(|metric| report.total(metric)),
-            [1, 1, 1, 1]
+            [1, 1, 0, 1]
         );
-        assert_eq!((report.value("leftover"), report.value("fakematch")), (4, 1), "never summed together");
+        assert_eq!((report.value("leftover"), report.value("fakematch")), (3, 1), "never summed together");
         let rows: Vec<&str> = ROWS.iter().filter_map(|(metric, _)| metric.strip_prefix("leftover_")).collect();
-        assert_eq!(rows, ["frame", "template", "form", "dead"], "the table's leftover rows are S2's, then the DEAD marks");
+        assert_eq!(rows, ["frame", "template", "dead"], "the table's leftover rows are S2's, then the DEAD marks");
         assert!(listable("leftover") && listable("leftover_frame") && !listable("leftover_pin"));
-        assert_eq!(list(&[("tbs", &report)], "leftover"), "tbs\tf.c:2\tframe\ntbs\tf.c:3\ttemplate\ntbs\tf.c:4\tform\ntbs\tf.c:7\tdead\n");
+        assert_eq!(list(&[("tbs", &report)], "leftover"), "tbs\tf.c:2\tframe\ntbs\tf.c:3\ttemplate\ntbs\tf.c:7\tdead\n");
         assert_eq!(list(&[("tbs", &report)], "fakematch"), "tbs\tf.c:8\ttemporary\n");
         let tsv = tsv(&[("tbs", &report)]);
-        assert!(tsv.contains("tbs\tleftover\ttotal\t4\n") && tsv.contains("tbs\tleftover_form\ttotal\t1\n"), "{tsv}");
-        assert!(tsv.contains("tbs\tleftover\tf.c\t4\n") && tsv.contains("tbs\tfakematch\tf.c\t1\n"), "{tsv}");
+        assert!(tsv.contains("tbs\tleftover\ttotal\t3\n") && !tsv.contains("leftover_form"), "{tsv}");
+        assert!(tsv.contains("tbs\tleftover\tf.c\t3\n") && tsv.contains("tbs\tfakematch\tf.c\t1\n"), "{tsv}");
         let table = summary(&[("tbs", &report)], 0);
         let devices = table.find("FAKEMATCH devices").unwrap();
         let leftovers = table.find("LEFTOVERs (Camelot's)").unwrap();

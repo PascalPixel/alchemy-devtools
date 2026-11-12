@@ -3,27 +3,105 @@
 //! instructions differ in <edition>.`, or one of the spellings `judge` takes,
 //! inside the function (or macro) whose device it tags; and a function or macro with more asm statements than
 //! tags has a device no tag names. A LEFTOVER tag, Camelot's own idle code,
-//! is held to the same form with its own kinds and must name its evidence;
-//! it never covers an asm statement, since an asm is always a device.
+//! is held to the same form with its own kinds and must state the evidence
+//! its kind rests on; it never covers an asm statement, since an asm is
+//! always a device. A `// DEAD:` mark, Camelot's own code the ROM keeps,
+//! must say what the ROM keeps (S3).
 
 use crate::alchemy::humanity::{DEVICES, LEFTOVERS};
 use crate::alchemy::targets::parse_decomp_target;
 use crate::gba::clex::{lex, Kind, Token};
 use regex::Regex;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 /// The kind S2 once had for a once-only block: one no macro expands to is
 /// now a `dead` device, and a macro's is ordinary C with no tag.
 const RETIRED: &str = "one-pass";
+/// The leftover kind S2 had for a device The Lost Age's ROM also needs
+/// (removed 12 November 2026): one compiler meeting one reconstruction
+/// twice is no evidence that Camelot wrote it.
+const RETIRED_LEFTOVER: &str = "form";
 /// The kinds The Broken Seal refuses (S2).
 const NOT_IN_TBS: [&str; 2] = ["pin", "signature"];
-/// What a LEFTOVER tag's first part names as its evidence, one of S2's
-/// three: another edition or The Lost Age uses the thing (an edition, a
-/// language or a game named), the shape repeats down sibling routines, or a
-/// reconstructed macro or helper explains its family; for `frame`, the
-/// ROM's own frame. Only that the evidence is named is seen, not that it holds.
-const EVIDENCE: &str = r"(?i)\b(t(bs|la)-(ja|en|de|es|fr|it)|editions?|japanese|english|german|spanish|french|italian|the lost age|the broken seal|siblings?|family|macro|helper|frame)\b";
+/// A measurement inside a tag ("4 of 549 instructions differing in tla-en"),
+/// taken out of a leftover's evidence before it is read: a measured edition
+/// is no evidence that the edition uses the thing.
+const MEASUREMENT: &str = r"(?i)\d+ of \d+(?: instructions)?(?: [a-z]+)*? differ(?:ing)?(?: in| there)?(?: t(?:bs|la)-[a-z]{2})?";
+/// Forms S2 keeps fake matches whatever the evidence: none is ever a leftover.
+const FORBIDDEN: &str = r"(?i)\b(self-assignments?|cancel(?:s|ling|led)?|both arms|barriers?|asm|empty (?:block|loop|statement)s?|once-only|runs once)\b";
+/// A `frame` leftover's evidence, the frame itself: the bytes it reserves
+/// (`sub sp, #N`, or a byte count)...
+const RESERVED: &str = r"(?i)\b(?:sub|add) sp\b|\b\d+ bytes\b";
+/// ...and that no instruction touches them.
+const UNTOUCHED: &str = r"(?i)\buntouched\b|\bnever touch(?:es|ed)?\b|\bno instruction (?:addresses|reads|touches)\b";
+/// A routine named as evidence: ours (`Module_Name`) or a placeholder.
+const ROUTINE: &str = r"\b(?:[A-Z][A-Za-z0-9]*_[A-Z][A-Za-z0-9]*|(?:Func|sub)_[0-9a-f]{8})\b";
+/// A reconstructed family's macro, named as evidence.
+const FAMILY: &str = r"(?i:\b(?:macro|helper)\b).*\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b|\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b.*(?i:\b(?:macro|helper)\b)";
+/// A claim about another edition, by word...
+const EDITION_CLAIM: &str = r"(?i)\b(?:editions?|japanese|english|german|spanish|french|italian)\b";
+/// ...which must name the edition.
+const EDITION: &str = r"\bt(?:bs|la)-(?:ja|en|de|es|fr|it)\b";
+/// A claim about The Lost Age, which must name its routine.
+const LOST_AGE: &str = r"(?i)\bthe lost age\b";
+
+fn regex(cell: &'static OnceLock<Regex>, pattern: &str) -> &'static Regex {
+    cell.get_or_init(|| Regex::new(pattern).unwrap())
+}
+
+/// What is missing from a leftover's evidence, its first part read with any
+/// measurement taken out (S2, 12 November 2026). A `frame` leftover states
+/// the bytes the frame reserves and that no instruction touches them; a
+/// `template` names the sibling routine whose shape it shares, or the
+/// family's macro; a claim about another edition names it, and one about The
+/// Lost Age names its routine. A form S2 keeps a fake match is never one.
+fn evidence(kind: &str, first: &str) -> Option<String> {
+    static CELLS: [OnceLock<Regex>; 9] = [const { OnceLock::new() }; 9];
+    let text = regex(&CELLS[0], MEASUREMENT).replace_all(first, "");
+    if let Some(form) = regex(&CELLS[1], FORBIDDEN).find(&text) {
+        return Some(format!(
+            "a leftover never names {}: S2 keeps that form a fake match, whatever the evidence",
+            form.as_str()
+        ));
+    }
+    let routine = regex(&CELLS[2], ROUTINE).is_match(&text);
+    match kind {
+        "frame" if !(regex(&CELLS[3], RESERVED).is_match(&text) && regex(&CELLS[4], UNTOUCHED).is_match(&text)) => {
+            return Some(
+                "a frame leftover states its evidence before its plain form (S2): the bytes the frame reserves \
+                 (sub sp, #N, or a byte count) and that no instruction touches them; without it, it is a fake match"
+                    .to_string(),
+            );
+        }
+        "template" if !routine && !regex(&CELLS[5], FAMILY).is_match(&text) => {
+            return Some(
+                "a template leftover names before its plain form the sibling routine whose shape it shares, or its \
+                 family's macro (S2); without it, it is a fake match"
+                    .to_string(),
+            );
+        }
+        _ => {}
+    }
+    if regex(&CELLS[6], EDITION_CLAIM).is_match(&text) && !regex(&CELLS[7], EDITION).is_match(&text) {
+        return Some("a leftover's claim about another edition names that edition (tbs-ja and so on) outside its measurement (S2)".to_string());
+    }
+    if regex(&CELLS[8], LOST_AGE).is_match(&text) && !routine {
+        return Some("a leftover's claim about The Lost Age names the routine there (S2)".to_string());
+    }
+    None
+}
+
+/// What is wrong with a `// DEAD:` mark's plain text, if anything: S3's form
+/// is `// DEAD: <what>; the ROM keeps <its instructions>.`, since S2's
+/// physical test makes code the original's only where its own instructions
+/// are in the ROM.
+fn judge_dead(text: &str) -> Option<String> {
+    static KEEPS: OnceLock<Regex> = OnceLock::new();
+    let keeps = regex(&KEEPS, r"^DEAD: \S.*\bthe ROM keeps \S[^.]*\.$");
+    (!keeps.is_match(text)).then(|| "not S3's form: // DEAD: <what>; the ROM keeps <its instructions>.".to_string())
+}
 
 /// S2's form of a tag.
 fn form_text(word: &str) -> String {
@@ -64,17 +142,15 @@ fn plain(comments: &[&str]) -> String {
 /// a parenthesis or a clause after the edition may say more.
 ///
 /// A LEFTOVER tag, Camelot's own code idle in an edition, is judged the same
-/// way with its own kinds, and its first part must also name its evidence
-/// (see `EVIDENCE`): a claim without it is a fake match.
+/// way with its own kinds, and its first part must also state the evidence
+/// its kind rests on (see `evidence`): a claim without it is a fake match.
 fn judge(text: &str, broken_seal: bool) -> Option<String> {
     static KIND: OnceLock<Regex> = OnceLock::new();
     static FORM: OnceLock<Regex> = OnceLock::new();
-    static NAMED: OnceLock<Regex> = OnceLock::new();
     let kind = KIND.get_or_init(|| Regex::new(r"^(FAKEMATCH|LEFTOVER)(\(([^)]*)\))?:").unwrap());
     let form = FORM.get_or_init(|| {
         Regex::new(r"^[A-Z]+\([^)]*\): (.+)[;.] (?i:as|without|with) (.+?), (\d+) of (\d+) instructions(?: of [^,;]+?)? differ in ([a-z]+-[a-z]+)(?:[ ,][^.]*)?\.$").unwrap()
     });
-    let named = NAMED.get_or_init(|| Regex::new(EVIDENCE).unwrap());
     let Some(captures) = kind.captures(text) else {
         return Some(format!("not S2's form: {}", form_text("FAKEMATCH")));
     };
@@ -88,6 +164,12 @@ fn judge(text: &str, broken_seal: bool) -> Option<String> {
             "{RETIRED} is no kind under S2: a once-only block no macro expands to is FAKEMATCH(dead); a macro's takes no tag"
         ));
     }
+    if leftover && kind == RETIRED_LEFTOVER {
+        return Some(format!(
+            "{RETIRED_LEFTOVER} is no kind under S2: a device The Lost Age's ROM also needs is one compiler meeting one \
+             reconstruction twice, a fake match with its device's kind"
+        ));
+    }
     let kinds: &[&str] = if leftover { &LEFTOVERS } else { &DEVICES };
     if !kinds.contains(&kind) {
         return Some(format!("unknown kind {kind}: {}", kinds.join(", ")));
@@ -98,12 +180,10 @@ fn judge(text: &str, broken_seal: bool) -> Option<String> {
     let Some(captures) = form.captures(text) else {
         return Some(format!("not S2's form: {}", form_text(word)));
     };
-    if leftover && !named.is_match(&captures[1]) {
-        return Some(
-            "a leftover names its evidence before its plain form (S2): another edition or The Lost Age using it, \
-             the shape its sibling routines share, its frame, or its family's macro or helper; without it, it is a fake match"
-                .to_string(),
-        );
+    if leftover {
+        if let Some(message) = evidence(kind, &captures[1]) {
+            return Some(message);
+        }
     }
     if captures[3].parse::<u64>().unwrap_or(0) == 0 {
         return Some("0 instructions differ: the plain form matches, so this is no device".to_string());
@@ -155,14 +235,29 @@ fn function_name(tokens: &[&Token], close: usize) -> Option<String> {
     None
 }
 
-/// Every tag in one C file judged, and each unit with more asm than tags.
-/// The tags one file holds, each word counted apart (S2: never summed).
+/// The tags and marks one file holds, each word counted apart (S2: never
+/// summed). `dead` counts the `// DEAD:` marks; `dead_unformed` those of
+/// them not yet in S3's form where they are counted rather than refused.
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub struct Tags {
     pub fakematch: usize,
     pub leftover: usize,
+    pub dead: usize,
+    pub dead_unformed: usize,
 }
 
+impl Tags {
+    fn add(&mut self, other: Tags) {
+        self.fakematch += other.fakematch;
+        self.leftover += other.leftover;
+        self.dead += other.dead;
+        self.dead_unformed += other.dead_unformed;
+    }
+}
+
+/// Every tag and `// DEAD:` mark in one C file judged, and each unit with
+/// more asm than tags. The Broken Seal's marks are held to S3's form; The
+/// Lost Age's are counted where they miss it, for that game to rewrite.
 pub fn findings(path: &str, source: &str) -> (Tags, Vec<Finding>) {
     let broken_seal = path.contains("games/tbs/");
     let tokens = lex(source);
@@ -309,6 +404,28 @@ pub fn findings(path: &str, source: &str) -> (Tags, Vec<Finding>) {
                 Some(unit) => units[unit].tags += 1,
                 None => found.push(Finding { line: token.line, message: "a tag outside any function".to_string() }),
             }
+        } else if token.kind == Kind::Comment && token.text.starts_with("// DEAD:") {
+            // A mark goes on through the `//` comments right after it until
+            // its sentence ends.
+            let mut comments = vec![token.text];
+            while !plain(&comments).ends_with('.')
+                && tokens.get(at + 1).is_some_and(|t| t.kind == Kind::Comment && t.text.starts_with("//") && t.line == tokens[at].line + 1)
+            {
+                at += 1;
+                comments.push(tokens[at].text);
+            }
+            tags.dead += 1;
+            let mut problems: Vec<String> = judge_dead(&plain(&comments)).into_iter().collect();
+            if unit.is_none() {
+                problems.push("a // DEAD: mark outside any function".to_string());
+            }
+            if !problems.is_empty() {
+                if broken_seal {
+                    found.extend(problems.into_iter().map(|message| Finding { line: token.line, message }));
+                } else {
+                    tags.dead_unformed += 1;
+                }
+            }
         } else if is_asm(token) && !external && !modern {
             match unit {
                 Some(unit) => units[unit].asm += 1,
@@ -350,26 +467,62 @@ fn sources(root: &Path, paths: &[String]) -> Result<Vec<PathBuf>, String> {
     Ok(files)
 }
 
+/// One game's count: its tags and marks, files and findings.
+#[derive(Debug, Default)]
+struct Game {
+    tags: Tags,
+    files: usize,
+    findings: usize,
+}
+
+impl Game {
+    /// The game's line: fake matches, leftovers and `// DEAD:` marks apart,
+    /// never summed (S2).
+    fn line(&self, name: &str) -> String {
+        let unformed = match self.tags.dead_unformed {
+            0 => String::new(),
+            n => format!(" ({n} of the // DEAD: marks do not yet say what the ROM keeps, S3; counted, not refused)"),
+        };
+        format!(
+            "{name}: {} FAKEMATCH tags, {} LEFTOVER tags and {} // DEAD: marks in {} files; {} findings{unformed}",
+            self.tags.fakematch, self.tags.leftover, self.tags.dead, self.files, self.findings
+        )
+    }
+}
+
+/// The game a source path belongs to (`games/tbs`), or its first folder.
+fn game_of(path: &str) -> String {
+    let mut parts = path.split('/');
+    match (parts.next(), parts.next()) {
+        (Some("games"), Some(game)) if parts.next().is_some() => format!("games/{game}"),
+        (Some(first), _) => first.to_string(),
+        _ => path.to_string(),
+    }
+}
+
 pub fn run(arguments: &[String]) -> Result<(), String> {
     if let Some(flag) = arguments.iter().find(|argument| argument.starts_with('-')) {
         return Err(format!("unknown option {flag}"));
     }
     let root = crate::compile::root();
     let paths = if arguments.is_empty() { vec!["games".to_string()] } else { arguments.to_vec() };
-    let (mut tags, mut files, mut count) = (Tags::default(), 0, 0);
+    let mut games: BTreeMap<String, Game> = BTreeMap::new();
     for file in sources(root, &paths)? {
         let source = String::from_utf8_lossy(&std::fs::read(&file).map_err(|error| format!("{}: {error}", file.display()))?).into_owned();
         let name = file.strip_prefix(root).unwrap_or(&file).display().to_string();
         let (found_tags, found) = findings(&name, &source);
-        tags.fakematch += found_tags.fakematch;
-        tags.leftover += found_tags.leftover;
-        files += 1;
-        count += found.len();
+        let game = games.entry(game_of(&name)).or_default();
+        game.tags.add(found_tags);
+        game.files += 1;
+        game.findings += found.len();
         for finding in found {
             println!("{name}:{}: {}", finding.line, finding.message);
         }
     }
-    println!("{} FAKEMATCH tags and {} LEFTOVER tags in {files} files; {count} findings", tags.fakematch, tags.leftover);
+    for (name, game) in &games {
+        println!("{}", game.line(name));
+    }
+    let count: usize = games.values().map(|game| game.findings).sum();
     match count {
         0 => Ok(()),
         n => Err(format!("{n} tags or asm statements break S2")),
@@ -430,61 +583,174 @@ mod tests {
 
     #[test]
     fn leftovers_are_judged_by_s2_with_their_evidence() {
-        let ok = "LEFTOVER(frame): an idle buffer the Japanese edition still fills; as no buffer, 4 of 90 instructions differ in tbs-en.";
+        let ok = "LEFTOVER(frame): an unused local the ROM's frame reserves and never touches: of the 36 bytes it reserves (sub sp, #36), no instruction addresses the 28 at sp+8 to sp+35; as without it, 4 of 246 instructions differ in tbs-en.";
         assert_eq!(judge(ok, true), None);
         for evidenced in [
-            "LEFTOVER(template): a second blitter, idle here, as its sibling routines use it; as one blitter, 6 of 80 instructions differ in tbs-en.",
-            "LEFTOVER(form): the record through a pointer, which The Lost Age's twin needs, measured in tla-en; as direct, 2 of 40 instructions differ in tbs-en.",
-            "LEFTOVER(form): a constant in a named local, as the family's macro writes it; without it, 3 of 52 instructions differ in tbs-en.",
-            "LEFTOVER(frame): an unused local the ROM's frame reserves; as none, 2 of 30 instructions differ in tbs-en.",
+            "LEFTOVER(template): a second blitter, idle here, as its sibling BattleEffect_RunBolt uses it; as one blitter, 6 of 80 instructions differ in tbs-en.",
+            "LEFTOVER(template): a constant in a named local, as the family's macro FIELD_PARTICLES_SET_ACTIVE_STATE writes it; without it, 3 of 52 instructions differ in tbs-en.",
+            "LEFTOVER(frame): the buffer tbs-ja's loop fills; the other editions keep its 256 bytes (sub sp, #256), which stay untouched; as declared only with the loop, 4 of 232 instructions differ in tbs-en.",
+            "LEFTOVER(frame): an unused local: no instruction addresses the 8 bytes at sp+8, and The Lost Age's Message_OpenDecoded reserves the same 8; as without it, 4 of 42 instructions differ in tbs-en.",
         ] {
             assert_eq!(judge(evidenced, true), None, "{evidenced}");
         }
         // The same strictness as FAKEMATCH: a kind of its own list, the
         // measured ending, more than 0 instructions, a real edition.
         assert!(judge(&ok.replace("(frame)", ""), true).unwrap().starts_with("unfinished, no kind"));
-        let unknown = judge(&ok.replace("frame", "dead"), true).unwrap();
+        let unknown = judge(&ok.replace("(frame)", "(dead)"), true).unwrap();
         assert!(unknown.starts_with("unknown kind dead") && unknown.ends_with(&LEFTOVERS.join(", ")), "{unknown}");
         assert!(judge(&ok.replace("(frame)", "(barrier)"), true).unwrap().starts_with("unknown kind barrier"));
         assert!(judge(&ok.replace("4 of", "0 of"), true).unwrap().contains("no device"));
-        assert!(judge(&ok.replace("tbs-en", "tbs-xx"), true).unwrap().contains("not an edition"));
-        let form = judge("LEFTOVER(form): kept.", true).unwrap();
-        assert!(form.starts_with("not S2's form") && form.contains("what remains and the evidence"), "{form}");
-        // The evidence is named before the plain form; the edition the
-        // measurement names is not evidence.
-        let bare = judge("LEFTOVER(form): a constant in a named local; as the constant, 2 of 9 instructions differ in tbs-en.", true).unwrap();
-        assert!(bare.starts_with("a leftover names its evidence"), "{bare}");
+        assert!(judge(&ok.replace("tbs-en.", "tbs-xx."), true).unwrap().contains("not an edition"));
+        let kept = judge("LEFTOVER(frame): kept.", true).unwrap();
+        assert!(kept.starts_with("not S2's form") && kept.contains("what remains and the evidence"), "{kept}");
         // A leftover's kinds are not devices, and the reverse.
         assert!(judge(&ok.replace("LEFTOVER", "FAKEMATCH"), true).unwrap().starts_with("unknown kind frame"));
-        assert_eq!(judge(&ok.replace("LEFTOVER(frame)", "LEFTOVER(template)"), true), None);
+    }
+
+    #[test]
+    fn form_is_no_kind_of_leftover() {
+        let form = judge(
+            "LEFTOVER(form): the record through a pointer, which The Lost Age's Func_08049a30 needs too; as direct, 2 of 40 instructions differ in tbs-en.",
+            true,
+        )
+        .unwrap();
+        assert!(form.starts_with("form is no kind") && form.contains("fake match"), "{form}");
+    }
+
+    #[test]
+    fn each_kind_states_its_own_evidence() {
+        // A frame states the bytes reserved and that none is touched; the
+        // word frame alone, or an animation frame, is no evidence.
+        for unevidenced in [
+            "LEFTOVER(frame): an unused local the ROM's frame reserves; as none, 2 of 30 instructions differ in tbs-en.",
+            "LEFTOVER(frame): a constant in a named local, kept from frame 152 on; as the constant, 2 of 9 instructions differ in tbs-en.",
+            "LEFTOVER(frame): an unused local for 12 bytes of the frame (sub sp, #12); as none, 4 of 42 instructions differ in tbs-en.",
+        ] {
+            let message = judge(unevidenced, true).unwrap();
+            assert!(message.starts_with("a frame leftover states its evidence"), "{unevidenced}: {message}");
+        }
+        // A template names its sibling routine or its family's macro.
+        for unevidenced in [
+            "LEFTOVER(template): a second blitter, idle here, as its sibling routines use it; as one blitter, 6 of 80 instructions differ in tbs-en.",
+            "LEFTOVER(template): the sibling loop above holds the size the same way; as 2, 69 of 415 instructions differ in tbs-en.",
+        ] {
+            let message = judge(unevidenced, true).unwrap();
+            assert!(message.starts_with("a template leftover names"), "{unevidenced}: {message}");
+        }
+        // A claim about another edition names it outside the measurement;
+        // one about The Lost Age names the routine there.
+        let edition = judge(
+            "LEFTOVER(frame): a buffer the Japanese edition fills, whose 256 bytes (sub sp, #256) stay untouched here; as none, 4 of 232 instructions differ in tbs-en.",
+            true,
+        )
+        .unwrap();
+        assert!(edition.contains("names that edition"), "{edition}");
+        let measured = judge(
+            "LEFTOVER(frame): a buffer the Japanese edition fills, 4 of 230 instructions differing in tbs-ja without it, whose 256 bytes (sub sp, #256) stay untouched here; as none, 4 of 232 instructions differ in tbs-en.",
+            true,
+        )
+        .unwrap();
+        assert!(measured.contains("names that edition"), "the measurement's edition is no evidence: {measured}");
+        let lost_age = judge(
+            "LEFTOVER(template): the shape The Lost Age's twin uses, as BattleEffect_RunBolt's; as none, 2 of 9 instructions differ in tbs-en.",
+            true,
+        );
+        assert_eq!(lost_age, None, "a named routine carries the claim");
+        let unnamed = judge(
+            "LEFTOVER(frame): 8 bytes (sub sp, #16) no instruction addresses, which The Lost Age reserves too; as none, 4 of 42 instructions differ in tbs-en.",
+            true,
+        )
+        .unwrap();
+        assert!(unnamed.contains("names the routine there"), "{unnamed}");
+    }
+
+    #[test]
+    fn a_leftover_never_names_a_form_s2_keeps_a_fake_match() {
+        for (text, form) in [
+            ("LEFTOVER(template): a self-assignment, as in BattleEffect_RunBolt; as none, 2 of 9 instructions differ in tbs-en.", "self-assignment"),
+            ("LEFTOVER(template): cancelling updates, the helper HELPER_X's habit; as none, 2 of 9 instructions differ in tbs-en.", "cancelling"),
+            ("LEFTOVER(template): both arms alike, as in Battle_Run; as one arm, 2 of 9 instructions differ in tbs-en.", "both arms"),
+            ("LEFTOVER(frame): an empty block before sub sp, #12, the 12 bytes untouched; as none, 2 of 9 instructions differ in tbs-en.", "empty block"),
+            ("LEFTOVER(template): a loop that runs once, as Battle_Run's; as its body, 2 of 9 instructions differ in tbs-en.", "runs once"),
+        ] {
+            let message = judge(text, true).unwrap();
+            assert!(message.starts_with(&format!("a leftover never names {form}")), "{text}: {message}");
+        }
+    }
+
+    #[test]
+    fn dead_marks_say_what_the_rom_keeps() {
+        assert_eq!(judge_dead("DEAD: nothing reads velocityZ; the ROM keeps the store."), None);
+        assert_eq!(judge_dead("DEAD: the depth is clamped to -60..60 but never read; the ROM keeps the clamp and the move."), None);
+        for unformed in ["DEAD: x++ then x--.", "DEAD: both fields are set again before anything reads them.", "DEAD: never true; the source keeps the test.", "DEAD:", "DEAD: never true; the ROM keeps the test"] {
+            assert!(judge_dead(unformed).unwrap().starts_with("not S3's form"), "{unformed}");
+        }
+        let source = "\
+void F(int x) {
+  // DEAD: never true, as x is 5 here; the ROM keeps
+  // the compare.
+  if (x > 9)
+    x = 9;
+  // DEAD: x++ then x--.
+  x++;
+  // DEAD: a read whose value goes unused;
+  // the ROM keeps the load.
+  // An ordinary comment after it.
+  (void)x;
+}
+
+// DEAD: outside; the ROM keeps nothing.
+";
+        let (tags, found) = findings("games/tbs/src/x.c", source);
+        assert_eq!((tags.dead, tags.dead_unformed), (4, 0));
+        let lines: Vec<(usize, &str)> = found.iter().map(|finding| (finding.line, finding.message.as_str())).collect();
+        assert_eq!(
+            lines,
+            [(6, "not S3's form: // DEAD: <what>; the ROM keeps <its instructions>."), (14, "a // DEAD: mark outside any function")],
+            "{found:?}"
+        );
+        // The Lost Age's marks are counted where they miss the form, not refused.
+        let (tags, found) = findings("games/tla/src/x.c", source);
+        assert_eq!((tags.dead, tags.dead_unformed, found.len()), (4, 2, 0), "{found:?}");
+    }
+
+    #[test]
+    fn each_game_has_its_own_line() {
+        assert_eq!(game_of("games/tbs/src/battle/run.c"), "games/tbs");
+        assert_eq!(game_of("games/tla/include/x.h"), "games/tla");
+        assert_eq!(game_of("tools/x.c"), "tools");
+        let game = Game { tags: Tags { fakematch: 169, leftover: 48, dead: 33, dead_unformed: 0 }, files: 832, findings: 0 };
+        assert_eq!(game.line("games/tbs"), "games/tbs: 169 FAKEMATCH tags, 48 LEFTOVER tags and 33 // DEAD: marks in 832 files; 0 findings");
+        let game = Game { tags: Tags { fakematch: 1, leftover: 0, dead: 60, dead_unformed: 40 }, files: 2, findings: 0 };
+        assert!(game.line("games/tla").ends_with("0 findings (40 of the // DEAD: marks do not yet say what the ROM keeps, S3; counted, not refused)"));
     }
 
     #[test]
     fn a_leftover_is_counted_apart_and_covers_no_asm() {
         let source = "\
 void Kept(void) {
-  /* LEFTOVER(frame): an idle buffer the Japanese edition fills; as
+  /* LEFTOVER(frame): an idle buffer: of the 16 bytes the frame reserves (sub sp, #16), no instruction addresses any; as
    * no buffer, 4 of 90 instructions differ in tbs-en. */
   u8 buffer[16];
   asm(\"\");
 }
 
 void Unproven(void) {
-  // LEFTOVER(form): a constant in a named local; as the constant, 2 of 9 instructions differ in tbs-en.
+  // LEFTOVER(template): a constant in a named local; as the constant, 2 of 9 instructions differ in tbs-en.
   int n = 4;
 }
 
-/* LEFTOVER(template): as its siblings; as one, 1 of 2 instructions differ in tbs-en. */
+/* LEFTOVER(template): as its sibling Battle_Run; as one, 1 of 2 instructions differ in tbs-en. */
 static const int table[] = { 1, 2 };
 ";
         let (tags, found) = findings("games/tbs/src/x.c", source);
-        assert_eq!(tags, Tags { fakematch: 0, leftover: 3 });
+        assert_eq!(tags, Tags { fakematch: 0, leftover: 3, dead: 0, dead_unformed: 0 });
         let lines: Vec<(usize, &str)> = found.iter().map(|finding| (finding.line, finding.message.split(':').next().unwrap())).collect();
         assert_eq!(
             lines,
             [
                 (1, "Kept"),
-                (9, "a leftover names its evidence before its plain form (S2)"),
+                (9, "a template leftover names before its plain form the sibling routine whose shape it shares, or its family's macro (S2); without it, it is a fake match"),
                 (13, "a tag outside any function"),
             ],
             "{found:?}"
@@ -548,7 +814,7 @@ void New(int id, int cue) {
 #endif
 ";
         let (tags, found) = findings("games/tla/src/x.c", source);
-        assert_eq!(tags, Tags { fakematch: 4, leftover: 0 });
+        assert_eq!(tags, Tags { fakematch: 4, ..Tags::default() });
         assert_eq!(
             found,
             [
