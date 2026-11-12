@@ -10,7 +10,7 @@
 //! is free, else into its first object.
 
 use super::views::{self, Part, Reconciled};
-use super::{included_sources, item_parts, joined, parent, rewrite_includes, statement, top_level_includes, Files};
+use super::{included_sources, includes_source, item_parts, joined, makefile_names, parent, rewrite_includes, statement, top_level_includes, Files};
 use crate::alchemy::layout::Layout;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -36,11 +36,7 @@ pub(super) fn items(root: &Path, game: &str) -> Result<Vec<String>, String> {
         }
         groups.extend((!group.is_empty()).then_some(group));
     }
-    let ours = |stem: &str| {
-        let name = format!("{stem}.c");
-        let file = name.rsplit('/').next().unwrap_or(&name);
-        stem.starts_with(&layout.sources()) && root.join(&name).is_file() && !makefile.contains(file) && !included.contains_key(&name)
-    };
+    let ours = |stem: &str| joinable(root, &layout, &makefile, &included, stem);
     // Each candidate: our objects next to each other placing the same sections.
     let mut candidates: Vec<Vec<String>> = Vec::new();
     for group in &groups {
@@ -94,6 +90,19 @@ pub(super) fn items(root: &Path, game: &str) -> Result<Vec<String>, String> {
         }
     }
     Ok(items)
+}
+
+/// Whether `stem` may stand in a run: C of the game's own sources, never a
+/// file the Makefile names by its path (a route), one another file includes,
+/// or one that includes C as text (its views could not reach what it
+/// includes).
+fn joinable(root: &Path, layout: &Layout, makefile: &str, included: &BTreeMap<String, String>, stem: &str) -> bool {
+    let name = format!("{stem}.c");
+    stem.starts_with(&layout.sources())
+        && root.join(&name).is_file()
+        && !makefile_names(makefile, &name)
+        && !included.contains_key(&name)
+        && !std::fs::read_to_string(root.join(&name)).is_ok_and(|text| includes_source(&text))
 }
 
 /// A run cut before each index of `cuts`, keeping the pieces of two or more.
@@ -165,7 +174,7 @@ struct Job {
 /// Settles each item with views: the runs it joined, each with its text,
 /// and items views cannot take passed on as they are for the merge to
 /// judge. Items are settled in parallel; what each became is printed.
-pub(super) fn settle(root: &Path, files: &mut Files, items: &[String]) -> Result<Vec<(String, Option<String>)>, String> {
+pub(super) fn settle(root: &Path, files: &mut Files, items: &[String], modern: bool) -> Result<Vec<(String, Option<String>)>, String> {
     let mut jobs: Vec<Result<Job, String>> = Vec::new();
     for item in items {
         let read = (|| -> Result<Job, String> {
@@ -176,7 +185,12 @@ pub(super) fn settle(root: &Path, files: &mut Files, items: &[String]) -> Result
             }
             Ok(Job { item: item.clone(), into, objects, sources })
         })();
-        jobs.push(read.map_err(|why| format!("{item}\u{0}{why}")));
+        // A source that includes C as text is refused, not merged as it stands.
+        let read = read.map_err(|why| format!("{item}\u{0}{why}")).and_then(|job| match job.sources.iter().find(|(_, text)| includes_source(text)) {
+            Some((object, _)) => Err(format!("{item}\u{1}{object}.c includes C files as text, which a join with views cannot reach")),
+            None => Ok(job),
+        });
+        jobs.push(read);
     }
     let next = std::sync::atomic::AtomicUsize::new(0);
     let workers = std::thread::available_parallelism().map_or(1, |n| n.get()).min(jobs.len().max(1));
@@ -190,7 +204,7 @@ pub(super) fn settle(root: &Path, files: &mut Files, items: &[String]) -> Result
                         let at = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                         let Some(job) = jobs.get(at) else { break };
                         let Ok(job) = job else { continue };
-                        done.push((at, reconcile(root, job)));
+                        done.push((at, reconcile(root, job, modern)));
                     }
                     done
                 })
@@ -209,6 +223,10 @@ pub(super) fn settle(root: &Path, files: &mut Files, items: &[String]) -> Result
         let job = match job {
             Ok(job) => job,
             Err(error) => {
+                if let Some((item, why)) = error.split_once('\u{1}') {
+                    println!("views: refused {item}: {why}");
+                    continue;
+                }
                 let (item, why) = error.split_once('\u{0}').unwrap_or((error, ""));
                 println!("views: {item} is merged as it stands: {why}");
                 planned.push((item.to_string(), None));
@@ -233,6 +251,10 @@ pub(super) fn settle(root: &Path, files: &mut Files, items: &[String]) -> Result
                     out += 1;
                     println!("views: {stem}.c left out of {}: {why}", job.item.split('=').next().unwrap_or(""));
                 }
+                for (stems, why) in &reconciled.failed {
+                    out += stems.len();
+                    println!("views: {} not joined: {why}", stems.iter().map(|stem| format!("{stem}.c")).collect::<Vec<_>>().join(", "));
+                }
             }
             Some(Err(why)) => println!("views: {} not joined: {why}", job.item),
             None => println!("views: {} not settled", job.item),
@@ -254,10 +276,12 @@ fn group_into(job: &Job, stems: &[String]) -> String {
     }
 }
 
-fn reconcile(root: &Path, job: &Job) -> Result<Reconciled, String> {
+fn reconcile(root: &Path, job: &Job, modern: bool) -> Result<Reconciled, String> {
     let game = Layout::of_path(&job.into).ok_or_else(|| format!("{} names no game", job.into))?.game;
     let editions = crate::alchemy::built::editions(&[game])?;
-    let compiler = views::Recipes::new(root, &job.objects[0], &editions)?;
+    // Each group's own compiler: the recipe of its first object, in the
+    // editions that link every one of its objects.
+    let compilers = |stems: &[String]| -> Result<Box<dyn views::Compiler>, String> { Ok(Box::new(views::Recipes::new(root, stems, &editions, modern)?)) };
     let prepare = |group: &[(String, String)]| {
         let stems: Vec<String> = group.iter().map(|(stem, _)| stem.clone()).collect();
         let into = group_into(job, &stems);
@@ -273,7 +297,7 @@ fn reconcile(root: &Path, job: &Job) -> Result<Reconciled, String> {
         }
         (target, parts)
     };
-    Ok(views::reconcile(&job.sources, &prepare, &compiler))
+    Ok(views::reconcile(&job.sources, &prepare, &compilers))
 }
 
 #[cfg(test)]
@@ -286,6 +310,37 @@ mod tests {
         assert_eq!(cut(&run, vec![2, 2, 3]), [vec!["a".to_string(), "b".into()], vec!["d".into(), "e".into()]]);
         assert_eq!(cut(&run, vec![]).len(), 1);
         assert!(cut(&run, vec![1, 2, 3, 4]).is_empty());
+    }
+
+    /// A scene's own flash.c is not FLASH_C's gamepak/flash/flash.c: the
+    /// Makefile's routes are matched by path. A file that includes C as
+    /// text, and one another file includes, stand in no run.
+    #[test]
+    fn a_run_takes_c_by_its_path_never_a_routed_includer_or_included_file() {
+        let root = tempfile::tempdir().unwrap();
+        let makefile = "SOUND_C := games/tla/src/sound/driver.c\nFLASH_C := $(addprefix games/tbs/src/gamepak/flash/,flash.c sst.c) \\\n           $(addprefix games/tla/src/gamepak/flash/,flash.c sst.c)\nARM_C := $(wildcard games/tla/src/arm/*.c)\n";
+        let files = [
+            ("games/tla/src/gamepak/flash/flash.c", "void Flash(void) {}\n"),
+            ("games/tla/src/gamepak/flash/sst.c", "void Sst(void) {}\n"),
+            ("games/tla/src/scene/mars/flash.c", "void Shine(void) {}\n"),
+            ("games/tla/src/scene/mars/s0100.c", "void S(void) {}\n"),
+            ("games/tla/src/arm/glyph.c", "void G(void) {}\n"),
+            ("games/tla/src/battle/battle.c", "#include \"battle/run.c\"\n"),
+            ("games/tla/src/battle/run.c", "void Run(void) {}\n"),
+        ];
+        for (path, text) in files {
+            std::fs::create_dir_all(root.path().join(path).parent().unwrap()).unwrap();
+            std::fs::write(root.path().join(path), text).unwrap();
+        }
+        let layout = Layout::new("tla");
+        let included = BTreeMap::from([("games/tla/src/battle/run.c".to_string(), "games/tla/src/battle/battle.c".to_string())]);
+        let joins = |stem: &str| joinable(root.path(), &layout, makefile, &included, stem);
+        assert!(joins("games/tla/src/scene/mars/flash") && joins("games/tla/src/scene/mars/s0100"));
+        assert!(!joins("games/tla/src/gamepak/flash/flash") && !joins("games/tla/src/gamepak/flash/sst"));
+        assert!(!joins("games/tla/src/arm/glyph"), "a $(wildcard) route takes it");
+        assert!(!joins("games/tla/src/battle/battle"), "it includes C as text");
+        assert!(!joins("games/tla/src/battle/run"), "another file includes it");
+        assert!(!joins("games/tbs/src/scene/x"), "not the game's");
     }
 
     #[test]

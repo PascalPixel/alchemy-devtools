@@ -24,6 +24,11 @@ pub fn root() -> &'static Path {
         if let Some(found) = folder.as_deref().and_then(checkout_root) {
             return found.canonicalize().unwrap_or(found);
         }
+        // A test that needs a checkout fails on its own; it never ends the
+        // test process, and with it every other test's run.
+        if cfg!(test) {
+            panic!("this test needs an Alchemy checkout: set ALCHEMY_ROOT to its path");
+        }
         eprintln!("alchemy-devtools: run inside an Alchemy checkout or set ALCHEMY_ROOT to its path");
         std::process::exit(1)
     })

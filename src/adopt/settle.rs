@@ -19,11 +19,11 @@
 use super::views::{self, assembly, text, Compiler, Mode};
 use regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Condvar, Mutex};
 
-const USAGE: &str = r#"usage: alchemy-devtools adopt settle --game GAME [--dry-run] [OBJECT.c...]
+const USAGE: &str = r#"usage: alchemy-devtools adopt settle --game GAME [--dry-run] [--no-modern] [OBJECT.c...]
 Takes away the views adopt merge --keep-views wrote, wherever the code does
 not need them. Every object of GAME holding a view marker
   /* VIEW(PART): KIND NAME as THIS; OTHER has THAT. */
@@ -45,14 +45,22 @@ with its marker; one that moves code stays, its marker ending
   ...; tried as the definition's DECLARATION, FUNCTION moves: N of M instructions in EDITION. */
 Objects settle in parallel; the report lists the symbols settled, the views
 deleted and the views left, by symbol, with the functions that moved.
---dry-run writes nothing. Run make compare-editions after: settle compiles
+Each try is also compiled as make modern compiles the object, and must have
+no error; once written, make modern-GAME must pass (--no-modern skips both).
+Scratch files are written outside the checkout; --dry-run writes nothing.
+Otherwise the objects are written with a journal under out/adopt/ that
+adopt --undo reverses. Run make compare-editions after: settle compiles
 each object as the build does but does not link."#;
 
 /// A view as its marker names it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct View {
-    /// The marker's line, trimmed, which finds it again after other edits.
+    /// The marker's line, trimmed, as the source writes it.
     pub marker: String,
+    /// The line that finds the view again after other edits: its marker,
+    /// or while it is settled a line no other view has (two views of one
+    /// name in one part have the same marker).
+    pub key: String,
     pub suffix: String,
     pub kind: &'static str,
     /// The name the view is of (a tag's without `struct`).
@@ -77,7 +85,50 @@ pub(crate) fn marker(line: &str) -> Option<View> {
     let rest = rest.strip_prefix(kind)?.trim_start();
     let named = rest.split_once(" as ")?.0;
     let name = ["struct ", "union ", "enum "].iter().find_map(|tag| named.strip_prefix(tag)).unwrap_or(named);
-    Some(View { marker: line.to_string(), suffix: suffix.to_string(), kind, name: name.to_string() })
+    Some(View { marker: line.to_string(), key: line.to_string(), suffix: suffix.to_string(), kind, name: name.to_string() })
+}
+
+/// A view's own line while it is settled: `/* VIEW#N */` for the view at
+/// index N, a comment the compiler reads as nothing.
+fn key_of(index: usize) -> String {
+    format!("/* VIEW#{index} */")
+}
+
+/// The text with each view's marker written as its key, and the views
+/// keyed: every view found by its own line, whatever its marker repeats.
+fn keyed(text: &str, views: &[View]) -> (String, Vec<View>) {
+    let mut keyed: Vec<View> = views.to_vec();
+    let mut next = 0;
+    let mut out = String::with_capacity(text.len());
+    for line in text.split_inclusive('\n') {
+        let (content, newline) = line.strip_suffix('\n').map_or((line, ""), |content| (content, "\n"));
+        match keyed.get(next).filter(|view| content.trim() == view.marker) {
+            Some(_) => {
+                let indent = &content[..content.len() - content.trim_start().len()];
+                keyed[next].key = key_of(next);
+                out.push_str(&format!("{indent}{}{newline}", keyed[next].key));
+                next += 1;
+            }
+            None => out.push_str(line),
+        }
+    }
+    (out, keyed)
+}
+
+/// The text with every key still standing written as its view's marker.
+fn unkeyed(text: &str, views: &[View]) -> String {
+    let mut out = String::with_capacity(text.len());
+    for line in text.split_inclusive('\n') {
+        let (content, newline) = line.strip_suffix('\n').map_or((line, ""), |content| (content, "\n"));
+        match views.iter().find(|view| view.key != view.marker && content.trim() == view.key) {
+            Some(view) => {
+                let indent = &content[..content.len() - content.trim_start().len()];
+                out.push_str(&format!("{indent}{}{newline}", view.marker));
+            }
+            None => out.push_str(line),
+        }
+    }
+    out
 }
 
 /// What becomes of a view: deleted, the object seeing the name as it does
@@ -156,7 +207,7 @@ fn holds_tag(lines: &[String], range: (usize, usize)) -> bool {
 /// The text with one view taken away as `choice` says.
 pub(crate) fn apply(text: &str, view: &View, choice: &Choice) -> Result<String, String> {
     let mut lines: Vec<String> = text.lines().map(str::to_string).collect();
-    let at = lines.iter().position(|line| line.trim() == view.marker).ok_or_else(|| format!("{}'s marker was not found", view.name))?;
+    let at = lines.iter().position(|line| line.trim() == view.key).ok_or_else(|| format!("{}'s marker was not found", view.name))?;
     let (start, end) = region(&lines, at);
     let mut part = lines[start..end].to_vec();
     edit(&mut part, at - start, view, choice)?;
@@ -168,15 +219,23 @@ pub(crate) fn apply(text: &str, view: &View, choice: &Choice) -> Result<String, 
     Ok(out)
 }
 
-/// Removes, in a part's lines, `#define NAME PRIVATE` and the `#undef NAME`
-/// after it: a header view's wrapper. True if there was one.
-fn unwrap_header(part: &mut Vec<String>, name: &str, private: &str) -> bool {
+/// Where a view's own lines end in a part, from line `at` (where its marker
+/// was): at the next view's marker, or the part's end.
+fn own_end(part: &[String], at: usize) -> usize {
+    part[at.min(part.len())..].iter().position(|line| line.trim_start().starts_with("/* VIEW")).map_or(part.len(), |n| at + n)
+}
+
+/// Removes, in a part's lines from `at` to the next view, `#define NAME
+/// PRIVATE` and the `#undef NAME` after it: a header view's wrapper. True
+/// if there was one.
+fn unwrap_header(part: &mut Vec<String>, at: usize, name: &str, private: &str) -> bool {
     let define = format!("#define {name} {private}");
-    let Some(at) = part.iter().position(|line| line.trim() == define) else { return false };
-    part.remove(at);
+    let end = own_end(part, at);
+    let Some(found) = part[at.min(end)..end].iter().position(|line| line.trim() == define).map(|n| at + n) else { return false };
+    part.remove(found);
     let undefine = format!("#undef {name}");
-    if let Some(n) = part[at..].iter().position(|line| line.trim() == undefine) {
-        part.remove(at + n);
+    if let Some(n) = part[found..].iter().position(|line| line.trim() == undefine) {
+        part.remove(found + n);
     }
     true
 }
@@ -185,7 +244,7 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
     let private = view.private();
     let name = view.name.as_str();
     part.remove(at);
-    let wrapped = unwrap_header(part, name, &private);
+    let wrapped = unwrap_header(part, at, name, &private);
     match view.kind {
         "routine" | "variable" => {
             if wrapped {
@@ -196,7 +255,11 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
             }
             let text = joined(part);
             let all = text::statements(&text);
-            let bound = all.iter().find(|s| s.find(&private).is_some() && s.find("__asm__").is_some() && !s.several());
+            // Its own bound declaration: the first after its marker, before the
+            // next view's; else the part's first.
+            let end = own_end(part, at);
+            let binds = |s: &&text::Statement| s.find(&private).is_some() && s.find("__asm__").is_some() && !s.several();
+            let bound = all.iter().filter(binds).find(|s| s.first_line > at && s.first_line <= end).or_else(|| all.iter().find(binds));
             match bound {
                 Some(statement) => {
                     let (first, last) = (statement.first_line - 1, statement.last_line);
@@ -294,6 +357,17 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
             }
         }
         _ => return Err(format!("no way to settle a {} view", view.kind)),
+    }
+    // Where another view of the part still binds the private name (one
+    // around each of two includes), the part's code keeps calling it by
+    // that name: only the last view of it taken away writes the plain name.
+    if matches!(view.kind, "routine" | "variable") {
+        let define = format!("#define {name} {private}");
+        let text = joined(part);
+        let still = part.iter().any(|line| line.trim() == define) || text::statements(&text).iter().any(|s| s.find(&private).is_some() && s.find("__asm__").is_some());
+        if still {
+            return Ok(());
+        }
     }
     let pattern = word(&private);
     for line in part.iter_mut() {
@@ -450,9 +524,11 @@ impl Failure {
 }
 
 /// What judges an object's text: None when it compiles to the build's own
-/// assembly in every edition.
+/// assembly in every edition, read with `renamed`'s symbols (each private
+/// name a static view gave, of a view the text takes away) written as the
+/// plain name; every other symbol as the build wrote it.
 pub(crate) trait Judge: Sync {
-    fn judge(&self, text: &str) -> Result<Option<Failure>, String>;
+    fn judge(&self, text: &str, renamed: &[(String, String)]) -> Result<Option<Failure>, String>;
 }
 
 /// One symbol's views in one object, and the choices to try, in order.
@@ -491,8 +567,11 @@ impl Solver<'_> {
 
     /// None when `extra` on what is accepted judges clean.
     fn test(&self, extra: &[(usize, Choice)]) -> Result<Option<Failure>, String> {
+        // A static's view taken away gives its symbol the plain name back.
+        let renamed: Vec<(String, String)> =
+            self.accepted.iter().chain(extra).map(|(view, _)| &self.views[*view]).filter(|view| view.kind == "static").map(|view| (view.private(), view.name.clone())).collect();
         match self.text(extra) {
-            Ok(text) => self.judge.judge(&text),
+            Ok(text) => self.judge.judge(&text, &renamed),
             Err(why) => Ok(Some(Failure { edition: "the source".into(), error: Some(why), moved: Vec::new() })),
         }
     }
@@ -577,6 +656,9 @@ impl Solver<'_> {
 /// Settles an object's units: its text with every view gone that moves
 /// nothing, and each kept one's marker saying what was tried.
 pub(crate) fn solve(original: &str, views: &[View], units: &[Unit], judge: &dyn Judge) -> Result<Solved, String> {
+    // Each view found by a line of its own, whatever its marker repeats.
+    let (original, views) = keyed(original, views);
+    let (original, views) = (original.as_str(), views.as_slice());
     let mut solver = Solver { original, views, units, judge, accepted: Vec::new(), solved: Solved::default() };
     // A unit no choice can even be written for stays as it is.
     let mut tried = Vec::new();
@@ -599,6 +681,7 @@ pub(crate) fn solve(original: &str, views: &[View], units: &[Unit], judge: &dyn 
     for (view, note, _) in &kept {
         solver.solved.text = annotate(&solver.solved.text, &views[*view], note);
     }
+    solver.solved.text = unkeyed(&solver.solved.text, views);
     solver.solved.kept = kept;
     solver.solved.deleted.sort_unstable();
     Ok(solver.solved)
@@ -623,7 +706,7 @@ fn annotate(text: &str, view: &View, note: &str) -> String {
     let mut out = String::with_capacity(text.len() + rewritten.len());
     for line in text.split_inclusive('\n') {
         let (content, newline) = line.strip_suffix('\n').map_or((line, ""), |content| (content, "\n"));
-        if content.trim() == view.marker {
+        if content.trim() == view.key {
             let indent = &content[..content.len() - content.trim_start().len()];
             out.push_str(indent);
             out.push_str(&rewritten);
@@ -640,7 +723,7 @@ fn annotate(text: &str, view: &View, note: &str) -> String {
 pub(crate) fn units(views: &[View], lines: &[&str], choices: &dyn Fn(&View) -> Vec<Choice>) -> Vec<Unit> {
     let mut keyed: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     let mut order: Vec<String> = Vec::new();
-    let line_of = |view: &View| lines.iter().position(|line| line.trim() == view.marker).unwrap_or(0);
+    let line_of = |view: &View| lines.iter().position(|line| line.trim() == view.key).unwrap_or(0);
     let mut previous: Option<(usize, String)> = None;
     for (index, view) in views.iter().enumerate() {
         let line = line_of(view);
@@ -650,7 +733,9 @@ pub(crate) fn units(views: &[View], lines: &[&str], choices: &dyn Fn(&View) -> V
                 Some((at, key)) if *at + 1 == line && key.starts_with("enumerator ") => key.clone(),
                 _ => format!("enumerator {} {}", view.suffix, view.name),
             },
-            kind => format!("{kind} {} {}", view.name, if kind == "macro" { view.suffix.as_str() } else { "" }),
+            // A macro's and a tag's views are each part's own: their
+            // choices are worked out from that part's definition.
+            kind => format!("{kind} {} {}", view.name, if matches!(kind, "macro" | "tag") { view.suffix.as_str() } else { "" }),
         };
         previous = Some((line, key.clone()));
         if !keyed.contains_key(&key) {
@@ -835,23 +920,15 @@ impl Gate {
     }
 }
 
-/// An object judged by the build's compiler against the build's assembly.
+/// An object judged by the build's compiler against the build's assembly,
+/// and by `make modern`'s compiler for errors.
 struct Built<'a> {
     root: &'a Path,
     stem: String,
     compiler: views::Recipes,
-    reference: Vec<Vec<assembly::Piece>>,
-    statics: Vec<String>,
+    /// The build's assembly of the object, each edition's, as it reads.
+    reference: Vec<String>,
     gate: &'a Gate,
-}
-
-/// A file beside the object it stands for; it goes when dropped.
-struct Scratch(PathBuf);
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
-    }
 }
 
 /// A function's instructions: its lines that are no label or directive.
@@ -905,36 +982,43 @@ fn first_error(stderr: &str, scratch: &str, object: &str, root: &Path) -> String
 }
 
 impl Judge for Built<'_> {
-    fn judge(&self, text: &str) -> Result<Option<Failure>, String> {
-        static SERIAL: AtomicUsize = AtomicUsize::new(0);
-        let source = self.root.join(format!("{}.c", self.stem));
-        let name = format!(".settle-{}-{}.c", std::process::id(), SERIAL.fetch_add(1, Ordering::Relaxed));
-        let scratch = Scratch(source.with_file_name(name));
-        std::fs::write(&scratch.0, text).map_err(|e| format!("cannot write {}: {e}", scratch.0.display()))?;
+    fn judge(&self, text: &str, renamed: &[(String, String)]) -> Result<Option<Failure>, String> {
+        // Compiled in a private folder, as a file in the object's folder.
+        let scratch = views::Scratch::new(self.root, &format!("{}.c", self.stem))?;
+        scratch.write(text)?;
         let editions = self.compiler.editions();
+        let object = format!("{}.c", self.stem);
         let check = |index: usize, compiled: views::Compiled| -> Option<Failure> {
             let edition = editions[index].clone();
             if !compiled.ok {
-                let scratch_name = scratch.0.to_string_lossy();
-                let error = first_error(&compiled.stderr, &scratch_name, &format!("{}.c", self.stem), self.root);
+                let error = first_error(&compiled.stderr, &scratch.name(), &object, self.root);
                 return Some(Failure { edition, error: Some(error), moved: Vec::new() });
             }
-            let moved = moved_by(&self.reference[index], &assembly::pieces(&compiled.output, &self.statics));
+            let reference = assembly::pieces(&assembly::renamed(&self.reference[index], renamed));
+            let moved = moved_by(&reference, &assembly::pieces(&compiled.output));
             (!moved.is_empty()).then_some(Failure { edition, error: None, moved })
         };
         // The first edition alone, then the rest together: most tries that
         // fail are seen failing in the first.
-        let first = self.gate.hold(|| self.compiler.compile(&editions[0], &scratch.0, Mode::Assembly))?;
+        let first = self.gate.hold(|| self.compiler.compile(&editions[0], &scratch.path, Mode::Assembly))?;
         if let Some(failure) = check(0, first) {
             return Ok(Some(failure));
         }
         let rest: Vec<Result<views::Compiled, String>> = std::thread::scope(|scope| {
-            let handles: Vec<_> = editions[1..].iter().map(|edition| scope.spawn(|| self.gate.hold(|| self.compiler.compile(edition, &scratch.0, Mode::Assembly)))).collect();
+            let handles: Vec<_> = editions[1..].iter().map(|edition| scope.spawn(|| self.gate.hold(|| self.compiler.compile(edition, &scratch.path, Mode::Assembly)))).collect();
             handles.into_iter().map(|handle| handle.join().unwrap_or_else(|_| Err("a compile panicked".into()))).collect()
         });
         for (index, compiled) in rest.into_iter().enumerate() {
             if let Some(failure) = check(index + 1, compiled?) {
                 return Ok(Some(failure));
+            }
+        }
+        // As make modern compiles it: a current GCC must take it too.
+        for edition in &editions {
+            let Some(compiled) = self.gate.hold(|| self.compiler.modern(edition, &scratch.path))? else { continue };
+            if !compiled.ok {
+                let error = first_error(&compiled.stderr, &scratch.name(), &object, self.root);
+                return Ok(Some(Failure { edition: format!("{edition} (make modern)"), error: Some(error), moved: Vec::new() }));
             }
         }
         Ok(None)
@@ -945,24 +1029,28 @@ impl Judge for Built<'_> {
 struct Request {
     game: String,
     dry_run: bool,
+    /// Whether make modern judges too (each try, and the game once written).
+    modern: bool,
     objects: Vec<String>,
 }
 
 fn parse(arguments: &[String]) -> Result<Request, String> {
     let mut game = None;
     let mut dry_run = false;
+    let mut modern = true;
     let mut objects = Vec::new();
     let mut words = arguments.iter();
     while let Some(word) = words.next() {
         match word.as_str() {
             "--game" => game = Some(words.next().filter(|g| !g.starts_with('-')).ok_or_else(|| USAGE.to_string())?.clone()),
             "--dry-run" => dry_run = true,
+            "--no-modern" => modern = false,
             other if other.starts_with('-') => return Err(format!("unknown settle option: {other}\n{USAGE}")),
             other => objects.push(other.strip_suffix(".c").unwrap_or(other).to_string()),
         }
     }
     let game = game.ok_or_else(|| USAGE.to_string())?;
-    Ok(Request { game, dry_run, objects })
+    Ok(Request { game, dry_run, modern, objects })
 }
 
 /// Every `.c` and `.h` under a folder, by its path from the root.
@@ -1005,6 +1093,8 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let all = sources(root, &format!("games/{}", request.game));
     let mut names: BTreeSet<String> = BTreeSet::new();
     let mut jobs: Vec<Job> = Vec::new();
+    // Each object as it was read, for the journal that undoes the settle.
+    let mut files = super::Files::new(root);
     for (path, text) in &all {
         let Some(stem) = path.strip_suffix(".c") else { continue };
         if !request.objects.is_empty() && !request.objects.iter().any(|o| o == stem) {
@@ -1015,7 +1105,8 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             continue;
         }
         names.extend(views.iter().filter(|v| matches!(v.kind, "routine" | "variable")).map(|v| v.name.clone()));
-        jobs.push(Job { stem: stem.to_string(), text: text.clone(), views, units: Vec::new() });
+        let text = files.read(path)?;
+        jobs.push(Job { stem: stem.to_string(), text, views, units: Vec::new() });
     }
     if jobs.is_empty() {
         return Err(format!("no object of games/{} holds a view", request.game));
@@ -1050,32 +1141,36 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let total: usize = jobs.iter().map(|job| job.views.len()).sum();
     println!("settle: {total} views in {} objects", jobs.len());
 
-    // Each edition's recipes from one make -n, and the build's assembly.
+    // Each edition's recipes from one make -n (the build's and make
+    // modern's), and the build's assembly.
     let mut recipes: BTreeMap<String, Vec<EditionRecipe>> = BTreeMap::new();
     let mut objects_of: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    let mut reference: BTreeMap<String, Vec<Vec<assembly::Piece>>> = BTreeMap::new();
-    let statics_of = |job: &Job| -> Vec<String> { job.views.iter().filter(|v| v.kind == "static").map(View::private).collect() };
+    let mut moderns: BTreeMap<String, Vec<views::ModernRecipe>> = BTreeMap::new();
+    let mut reference: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for &id in &editions {
         let linked = crate::alchemy::link::linked(root, id)?;
         let target = crate::alchemy::targets::target_for(id);
-        let wanted: Vec<(String, String)> = jobs.iter().filter(|job| linked.links(&job.stem)).map(|job| (format!("{}.c", job.stem), format!("{}/obj/{}.o", target.output_dir, job.stem))).collect();
-        if wanted.is_empty() {
+        let linking: Vec<&Job> = jobs.iter().filter(|job| linked.links(&job.stem)).collect();
+        if linking.is_empty() {
             continue;
         }
-        let found = crate::gba::recipe::recipes(root, Path::new(target.output_dir), &[format!("EDITION={id}")], &wanted)?;
-        for ((source, object), recipe) in wanted.iter().zip(found) {
+        let mut wanted: Vec<(String, String)> = linking.iter().map(|job| (format!("{}.c", job.stem), format!("{}/obj/{}.o", target.output_dir, job.stem))).collect();
+        wanted.extend(linking.iter().map(|job| (format!("{}.c", job.stem), format!("{}/modern/{}.o", target.output_dir, job.stem))));
+        let mut found = crate::gba::recipe::recipes(root, Path::new(target.output_dir), &[format!("EDITION={id}")], &wanted)?;
+        let modern_found = found.split_off(linking.len());
+        for (((source, object), recipe), ((_, modern_object), modern_recipe)) in wanted.iter().zip(found).zip(wanted[linking.len()..].iter().zip(modern_found)) {
             let stem = source.strip_suffix(".c").unwrap_or(source).to_string();
             let recipe = recipe.map_err(|why| format!("{source} in {id}: {why}"))?;
+            let modern_recipe = modern_recipe.map_err(|why| format!("{source} in {id} (make modern): {why}"))?;
             let built = crate::alchemy::built::output(root, id).join("obj").join(format!("{stem}.s"));
             let modified = |path: &Path| std::fs::metadata(path).and_then(|meta| meta.modified()).ok();
             if modified(&built).is_none() || modified(&root.join(source)) > modified(&built) {
                 return Err(format!("{} is missing or older than {source}: make {id} first", built.display()));
             }
-            let job = jobs.iter().find(|job| job.stem == stem).ok_or("lost an object")?;
-            let pieces = assembly::pieces(&crate::alchemy::built::read_text(&built)?, &statics_of(job));
             recipes.entry(stem.clone()).or_default().push((id.as_str().to_string(), recipe));
             objects_of.entry(stem.clone()).or_default().push(object.clone());
-            reference.entry(stem).or_default().push(pieces);
+            moderns.entry(stem.clone()).or_default().push((modern_recipe, modern_object.clone()));
+            reference.entry(stem).or_default().push(crate::alchemy::built::read_text(&built)?);
         }
     }
 
@@ -1092,7 +1187,8 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
                 let result = (|| -> Result<Solved, String> {
                     let recipe = recipes.get(&job.stem).cloned().ok_or_else(|| format!("{} is linked by no edition", job.stem))?;
                     let compiler = views::Recipes::of(root, &job.stem, recipe, objects_of.get(&job.stem).cloned().unwrap_or_default())?;
-                    let built = Built { root, stem: job.stem.clone(), compiler, reference: reference.get(&job.stem).cloned().unwrap_or_default(), statics: statics_of(job), gate: &gate };
+                    let compiler = if request.modern { compiler.with_modern(moderns.get(&job.stem).cloned().unwrap_or_default()) } else { compiler };
+                    let built = Built { root, stem: job.stem.clone(), compiler, reference: reference.get(&job.stem).cloned().unwrap_or_default(), gate: &gate };
                     solve(&job.text, &job.views, &job.units, &built)
                 })();
                 match &result {
@@ -1132,8 +1228,8 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         }
         deleted += solved.deleted.len();
         kept += solved.kept.len();
-        if !request.dry_run && solved.text != job.text {
-            std::fs::write(root.join(format!("{}.c", job.stem)), &solved.text).map_err(|e| format!("cannot write {}.c: {e}", job.stem))?;
+        if solved.text != job.text {
+            files.write(&format!("{}.c", job.stem), solved.text.clone());
             written += 1;
         }
     }
@@ -1157,6 +1253,16 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         symbols.len(),
         started.elapsed().as_secs_f64()
     );
+    if request.dry_run || written == 0 {
+        return Ok(());
+    }
+    // Written through a journal, as a merge is, so adopt --undo takes it back.
+    let journal = files.commit(&format!("adopt settle {}", arguments.join(" ")), &format!("settle-{}", request.game))?;
+    println!("settle: journal {journal}; undo with alchemy-devtools adopt --undo {journal}");
+    if request.modern {
+        super::modern_gate(root, &request.game).map_err(|why| format!("{why}\nthe settle is written; undo it with alchemy-devtools adopt --undo {journal}"))?;
+    }
+    println!("judge with make compare-editions: settle compiles each object as the build does but does not link");
     Ok(())
 }
 

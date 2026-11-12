@@ -18,10 +18,10 @@ mod runs;
 mod settle;
 pub(crate) mod views;
 
-const USAGE: &str = r#"usage: alchemy-devtools adopt merge [--keep-views] INTO.c=OBJECT.c,OBJECT.c... [--verify | --dry-run]
-       alchemy-devtools adopt merge --keep-views --game GAME [--verify | --dry-run]
+const USAGE: &str = r#"usage: alchemy-devtools adopt merge [--keep-views] INTO.c=OBJECT.c,OBJECT.c... [--verify | --dry-run] [--no-modern]
+       alchemy-devtools adopt merge --keep-views --game GAME [--verify | --dry-run] [--no-modern]
        alchemy-devtools adopt --undo JOURNAL [ITEM...]
-       alchemy-devtools adopt settle --game GAME [--dry-run] [OBJECT.c...]  (adopt settle --help)
+       alchemy-devtools adopt settle --game GAME [--dry-run] [--no-modern] [OBJECT.c...]  (adopt settle --help)
 --keep-views joins without settling any disagreement between the sources:
 each becomes a part of INTO after a `// ---- SOURCE.c ----` line, and where
 a part sees a name otherwise than one before it, it keeps its own view: a
@@ -82,6 +82,12 @@ and builds again. An edition that links nothing the batch wrote is judged by
 the image it kept. It stops, naming the journal, when no edition's failure
 can be blamed on an item: one did not build and make names no item's file,
 or one differs first in something no item wrote.
+A join with views is also compiled as make modern compiles its object, in
+every edition, and must have no error; a part whose code a current GCC
+refuses is left out. Its scratch files are written outside the checkout.
+Once a batch is written (and verified), make modern-GAME builds each of its
+games, and an item whose file its errors name goes back, as --verify sends
+one back; --no-modern skips both.
 --dry-run prints what would change. Otherwise the changes are written with a
 journal under out/adopt/ that --undo reverses: a file changed since (a later
 merge's edits to the same script) has only the journal's own change taken
@@ -100,6 +106,8 @@ struct Options {
     /// Whether the build judges the batch after it is written.
     verify: bool,
     dry_run: bool,
+    /// Whether make modern judges the batch once it is written (not `--no-modern`).
+    modern: bool,
     /// Joins that keep each disagreement as a view (`--keep-views`).
     keep_views: bool,
     /// A game whose every run is joined (`--game GAME`, with `--keep-views`).
@@ -117,6 +125,7 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
     let mut items = Vec::new();
     let mut verify = false;
     let mut dry_run = false;
+    let mut modern = true;
     let mut keep_views = false;
     let mut game = None;
     let mut skip = false;
@@ -126,6 +135,7 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
         }
         match value {
             "--dry-run" => dry_run = true,
+            "--no-modern" => modern = false,
             "--keep-views" => keep_views = true,
             "--game" => {
                 game = Some(arguments.get(i + 1).filter(|g| !g.starts_with('-')).ok_or_else(|| USAGE.to_string())?.clone());
@@ -155,7 +165,7 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
     if form.is_none() || wanted || (verify && dry_run) || (game.is_some() && !keep_views) {
         return Err(USAGE.into());
     }
-    Ok(Request::Adopt(Options { items, verify, dry_run, keep_views, game }))
+    Ok(Request::Adopt(Options { items, verify, dry_run, modern, keep_views, game }))
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
@@ -244,22 +254,68 @@ fn failed(error: &str, edition: &str) -> bool {
 }
 
 fn adopt(root: &Path, options: &Options, command: &str, build: &dyn Build) -> Result<(), String> {
-    let batch = adopt_batch(root, options, command, build)?;
-    match batch.filter(|_| options.verify) {
-        Some(batch) => verify(root, batch, build),
-        None => Ok(()),
+    let Some(mut batch) = adopt_batch(root, options, command, build)? else { return Ok(()) };
+    if options.verify {
+        match verify(root, batch, build)? {
+            Some(rest) => batch = rest,
+            None => return Ok(()),
+        }
+    }
+    if options.modern {
+        modern(root, batch, build)?;
+    }
+    Ok(())
+}
+
+/// `make modern-GAME`: every edition's C of `game` through a current GCC,
+/// which must have no error (the old compilers forgive what it refuses).
+fn modern_gate(root: &Path, game: &str) -> Result<(), String> {
+    let jobs = std::thread::available_parallelism().map_or(1, |n| n.get());
+    let arguments = vec!["make".to_string(), "-k".into(), format!("-j{jobs}"), format!("modern-{game}")];
+    println!("modern: {}", arguments.join(" "));
+    crate::gba::process::run(&arguments, root).map(|_| ())
+}
+
+/// Builds the batch's games with `make modern`, backing out each item whose
+/// file its errors name, until it passes; an error no item's file holds
+/// stops it, naming the journal.
+fn modern(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<(), String> {
+    loop {
+        let Err(error) = build.modern(&batch.games) else {
+            println!("modern: every {} edition's C compiles with a current GCC", batch.games.join(" and "));
+            return Ok(());
+        };
+        let blamed: Vec<String> = batch.items.iter().filter(|(_, stems)| stems.iter().any(|stem| error.contains(&format!("{stem}.c:")))).map(|(item, _)| item.clone()).collect();
+        if blamed.is_empty() {
+            let tail: Vec<&str> = error.lines().filter(|line| line.contains("error")).take(6).collect();
+            return Err(format!(
+                "make modern failed in no file this batch wrote:\n  {}\nundo the batch with adopt --undo {}",
+                tail.join("\n  "),
+                batch.journal
+            ));
+        }
+        for item in &blamed {
+            println!("modern: {item} does not compile with a current GCC: it goes back");
+        }
+        match back_out_batch(root, Path::new(&batch.journal), &blamed, build)? {
+            Some(rest) => batch = rest,
+            None => {
+                println!("modern: every item went back");
+                return Ok(());
+            }
+        }
     }
 }
 
 /// Builds every edition of the batch's game and backs out the item the build
 /// blames, by what placed the first byte an edition differs in or by the file
 /// make's errors name, until every edition compares.
-fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<(), String> {
+fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<Option<Batch>, String> {
     let ids = built::editions(&batch.games)?;
     loop {
         let Err(error) = build.compare(&ids) else {
             println!("verified: every {} edition matches its ROM", batch.games.join(" and "));
-            return Ok(());
+            return Ok(Some(batch));
         };
         let written = std::fs::metadata(root.join(&batch.journal)).and_then(|meta| meta.modified()).map_err(|error| format!("{}: {error}", batch.journal))?;
         let wrote: Vec<&String> = batch.items.iter().flat_map(|(_, stems)| stems).collect();
@@ -329,7 +385,7 @@ fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<(), String
             Some(rest) => batch = rest,
             None => {
                 println!("verify: every item went back");
-                return Ok(());
+                return Ok(None);
             }
         }
     }
@@ -351,7 +407,7 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
     // With views, each item becomes the runs its views settled, each with
     // its text: compiled and judged first, in parallel, writing nothing.
     let planned: Vec<(String, Option<String>)> = match options.keep_views {
-        true => runs::settle(root, &mut files, &items)?,
+        true => runs::settle(root, &mut files, &items, options.modern)?,
         false => items.into_iter().map(|item| (item, None)).collect(),
     };
     for (item, text) in &planned {
@@ -435,6 +491,9 @@ trait Build {
     /// Makes and compares every edition of `ids` (`make -k`): make's
     /// errors when one fails.
     fn compare(&self, ids: &[DecompTargetId]) -> Result<(), String>;
+    /// Makes every edition of `games` with `make modern`: make's errors
+    /// when one fails.
+    fn modern(&self, games: &[String]) -> Result<(), String>;
     /// The objects an edition's last build listed.
     fn linked(&self, id: DecompTargetId) -> Result<link::Linked, String>;
     /// Whether the edition's image was written at `since` or after.
@@ -455,6 +514,54 @@ fn matches(pattern: &str, name: &str) -> bool {
         Some((head, tail)) => name.len() >= head.len() + tail.len() && name.starts_with(head) && name.ends_with(tail),
         None => pattern == name,
     }
+}
+
+/// Every C source a makefile names by its path (`games/tla/src/x.c`), its
+/// `$(addprefix FOLDER/,a.c b.c)` lists written out and its `$(wildcard)`
+/// patterns kept as patterns: what may route a file, matched by path, so a
+/// scene's own `flash.c` is not FLASH_C's `gamepak/flash/flash.c`.
+fn named_sources(makefile: &str) -> Vec<String> {
+    let text = makefile.replace("\\\n", " ");
+    let mut expanded = String::with_capacity(text.len());
+    let mut rest = text.as_str();
+    while let Some(at) = rest.find("$(addprefix ") {
+        expanded.push_str(&rest[..at]);
+        let inside = &rest[at + "$(addprefix ".len()..];
+        let Some(end) = inside.find(')') else {
+            rest = &rest[at..];
+            break;
+        };
+        match inside[..end].split_once(',') {
+            Some((prefix, list)) => {
+                for word in list.split_whitespace() {
+                    expanded.push_str(&format!(" {}{word} ", prefix.trim()));
+                }
+            }
+            None => expanded.push_str(&inside[..end]),
+        }
+        rest = &inside[end + 1..];
+    }
+    expanded.push_str(rest);
+    let mut found: Vec<String> = Vec::new();
+    for word in expanded.split(|c: char| c.is_whitespace() || matches!(c, ',' | '(' | ')')) {
+        if word.ends_with(".c") && word.contains('/') && !word.contains('$') && !found.iter().any(|known| known == word) {
+            found.push(word.to_string());
+        }
+    }
+    found
+}
+
+/// Whether a makefile names `source` (a path from the root) by its path or
+/// a pattern of it.
+fn makefile_names(makefile: &str, source: &str) -> bool {
+    named_sources(makefile).iter().any(|named| matches(named, source))
+}
+
+/// Whether a C text includes another C file as text (`#include "x.c"`):
+/// such a file is more than its own text, so no view of it can be written
+/// in its own text alone.
+fn includes_source(text: &str) -> bool {
+    text.lines().filter_map(|line| include_of(line.trim_start())).any(|named| named.strip_prefix('"').and_then(|n| n.split('"').next()).is_some_and(|n| n.ends_with(".c")))
 }
 
 /// The patterns of a makefile's `$(wildcard ...)` calls that name C files.
@@ -503,10 +610,9 @@ impl Build for Checkout<'_> {
 
     fn alike(&self, game: &str, stems: &[String], into: &str) -> Result<(), String> {
         let makefile = built::read_text(&self.0.join("Makefile"))?;
-        let name = into.rsplit('/').next().unwrap_or(into);
         let anew = !stems.iter().any(|stem| format!("{stem}.c") == into);
-        if anew && makefile.contains(name) {
-            return Err(format!("the Makefile names {name}, so {into} may take another route"));
+        if anew && makefile_names(&makefile, into) {
+            return Err(format!("the Makefile names {into}, so it may take another route"));
         }
         // A $(wildcard) names only the files there when make reads it, so its
         // pattern would catch INTO once it is written.
@@ -579,6 +685,10 @@ impl Build for Checkout<'_> {
         arguments.extend(ids.iter().map(|id| format!("compare-{id}")));
         println!("verify: make {}", arguments[1..].join(" "));
         crate::gba::process::run(&arguments, self.0).map(|_| ())
+    }
+
+    fn modern(&self, games: &[String]) -> Result<(), String> {
+        games.iter().try_for_each(|game| modern_gate(self.0, game))
     }
 
     fn linked(&self, id: DecompTargetId) -> Result<link::Linked, String> {
@@ -735,6 +845,15 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: 
     let included = included_sources(&files.root, &layout.game);
     if let Some((source, by)) = objects.iter().find_map(|object| included.get_key_value(&format!("{object}.c"))) {
         return Err(format!("{by} includes {source}, which stays the file it is"));
+    }
+    // A view is written in a part's own text: one that includes C as text
+    // would leave what it includes seeing the names as before.
+    if joined_text.is_some() {
+        for object in &objects {
+            if includes_source(&files.read(&format!("{object}.c"))?) {
+                return Err(format!("{object}.c includes C files as text, which a join with views cannot reach"));
+            }
+        }
     }
     let target = format!("{into}.c");
     let anew = !objects.contains(&into);
@@ -1288,6 +1407,7 @@ mod tests {
         differs: Vec<(&'static str, &'static str)>,
         compares: std::cell::RefCell<Vec<String>>,
         refreshed: std::cell::RefCell<Vec<String>>,
+        moderns: std::cell::RefCell<Vec<String>>,
     }
 
     impl Build for Stub {
@@ -1310,6 +1430,13 @@ mod tests {
                 return Ok(());
             }
             Err(compares.remove(0))
+        }
+        fn modern(&self, _: &[String]) -> Result<(), String> {
+            let mut moderns = self.moderns.borrow_mut();
+            if moderns.is_empty() {
+                return Ok(());
+            }
+            Err(moderns.remove(0))
         }
         fn linked(&self, id: DecompTargetId) -> Result<link::Linked, String> {
             let main = if self.untouched.contains(&id.as_str()) { Vec::new() } else { self.listed.clone() };
@@ -1470,6 +1597,7 @@ mod tests {
     /// The checkout's own build: a merge keeps every object on its route and
     /// its side of the -O2/-Os line, INTO's own name included.
     #[test]
+    #[ignore = "needs a built Alchemy checkout on main (ALCHEMY_ROOT): it reads make's recipes for scene/kandorean_temple/s00b8"]
     fn the_checkout_refuses_a_merge_that_changes_a_route() {
         let build = Checkout(root());
         let field = |name: &str| format!("games/tla/src/field/{name}");
@@ -1491,6 +1619,7 @@ mod tests {
     /// The checkout's built objects: what places bytes in a statement's
     /// sections, and what no edition links.
     #[test]
+    #[ignore = "needs a built Alchemy checkout on main (ALCHEMY_ROOT): it reads the built scene/kandorean_temple/s00b8.o"]
     fn the_checkout_reads_each_object_s_sections() {
         let build = Checkout(root());
         let stem = "games/tla/src/scene/kandorean_temple/s00b8";
@@ -1505,6 +1634,7 @@ mod tests {
     /// one that failed does not stop the blame, and the back-out makes the
     /// lists and the objects it put back before the first merges again.
     #[test]
+    #[ignore = "needs an Alchemy checkout (ALCHEMY_ROOT): its editions are read from the checkout"]
     fn verify_blames_only_what_an_edition_the_batch_changed_shows() {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
@@ -1545,6 +1675,68 @@ mod tests {
         let error = adopt(root, &options, &command_line(&words), &stub).unwrap_err();
         assert!(error.contains(&format!("{third_id} did not build")) && error.contains("adopt --undo out/adopt/0001-merge-ab.journal"), "{error}");
         assert!(std::fs::read_to_string(root.join("games/tla/src/field/ab.c")).is_ok());
+    }
+
+    /// After a batch is written, make modern judges it: an item whose file
+    /// its errors name goes back and the rest stay; an error in no file the
+    /// batch wrote names the journal. --no-modern skips it.
+    #[test]
+    fn make_modern_sends_back_the_item_whose_file_it_refuses() {
+        let first = "games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c";
+        let second = "games/tla/src/field/fg.c=games/tla/src/field/f.c,games/tla/src/field/g.c";
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        tree(root);
+        let stub = Stub { moderns: std::cell::RefCell::new(vec!["make failed: games/tla/src/field/fg.c:3:1: error: unknown type name 'Thing'".into()]), ..Stub::default() };
+        let words = args(&["merge", first, second]);
+        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        adopt(root, &options, &command_line(&words), &stub).unwrap();
+        let read = |path: &str| std::fs::read_to_string(root.join(path)).ok();
+        assert!(read("games/tla/src/field/ab.c").is_some() && read("games/tla/src/field/fg.c").is_none());
+        assert!(read("games/tla/src/field/f.c").is_some() && read("games/tla/src/field/g.c").is_some());
+
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        tree(root);
+        let stub = Stub { moderns: std::cell::RefCell::new(vec!["make failed: games/tla/include/x.h:3:1: error: unknown type name".into()]), ..Stub::default() };
+        let words = args(&["merge", first]);
+        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        let error = adopt(root, &options, &command_line(&words), &stub).unwrap_err();
+        assert!(error.contains("no file this batch wrote") && error.contains("adopt --undo out/adopt/0001-merge-ab.journal"), "{error}");
+
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        tree(root);
+        let stub = Stub { moderns: std::cell::RefCell::new(vec!["make failed".into()]), ..Stub::default() };
+        let words = args(&["merge", first, "--no-modern"]);
+        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        adopt(root, &options, &command_line(&words), &stub).unwrap();
+        assert_eq!(stub.moderns.borrow().len(), 1, "not run");
+    }
+
+    /// A join with views refuses a source that includes C as text: its
+    /// views could not reach the text it includes.
+    #[test]
+    fn a_join_with_views_refuses_a_source_that_includes_c() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        tree(root);
+        std::fs::write(root.join("games/tla/src/field/b.c"), "#include \"global.h\"\n#include \"b_parts/run.c\"\n").unwrap();
+        let mut files = Files::new(root);
+        let item = "games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c";
+        let error = merge_objects(&mut files, item, &Stub::default(), Some("joined".into())).unwrap_err();
+        assert!(error.contains("b.c includes C files as text"), "{error}");
+        assert!(includes_source("#include \"x/y.c\"\n") && !includes_source("#include \"x.h\"\n#include <y.c>\n"));
+        // A plain merge still takes it.
+        assert!(merge_objects(&mut Files::new(root), item, &Stub::default(), None).is_ok());
+    }
+
+    #[test]
+    fn a_makefile_names_its_sources_by_path() {
+        let makefile = "FLASH_C := $(addprefix games/tla/src/gamepak/flash/,flash.c sst.c) \\\n    games/tla/src/x.c\nARM_C := $(wildcard games/tla/src/arm/*.c)\n";
+        assert_eq!(named_sources(makefile), ["games/tla/src/gamepak/flash/flash.c", "games/tla/src/gamepak/flash/sst.c", "games/tla/src/x.c", "games/tla/src/arm/*.c"]);
+        assert!(makefile_names(makefile, "games/tla/src/gamepak/flash/flash.c") && makefile_names(makefile, "games/tla/src/arm/glyph.c"));
+        assert!(!makefile_names(makefile, "games/tla/src/scene/mars/flash.c"));
     }
 
     #[test]

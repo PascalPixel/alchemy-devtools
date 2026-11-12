@@ -79,7 +79,7 @@ fn a_macro_s_view_goes_with_its_definition_and_undefinition() {
 struct Moves(Vec<&'static str>);
 
 impl Judge for Moves {
-    fn judge(&self, text: &str) -> Result<Option<Failure>, String> {
+    fn judge(&self, text: &str, _: &[(String, String)]) -> Result<Option<Failure>, String> {
         Ok(self.0.iter().find(|word| text.contains(*word)).map(|_| Failure { edition: "tla-en".into(), error: None, moved: vec![("Use".into(), 4, 61)] }))
     }
 }
@@ -179,4 +179,70 @@ fn a_view_that_could_not_be_tried_says_why() {
 fn an_error_names_its_files_from_the_checkout() {
     let stderr = "/r/games/a/.settle-1-2.c: At top level:\n/r/games/a/.settle-1-2.c:3: warning: unused\n/r/games/inc/x.h:9: conflicting types for `F'\n";
     assert_eq!(first_error(stderr, "/r/games/a/.settle-1-2.c", "games/a.c", Path::new("/r")), "games/inc/x.h:9: conflicting types for `F'");
+}
+
+/// Two header views of one name in one part have the same marker. Each is
+/// found by its own line: taking the second away leaves the first's
+/// wrapper, and only the kept one's marker is noted (S9). Before, both
+/// edits and both notes landed on the first.
+#[test]
+fn two_views_with_one_marker_are_each_their_own() {
+    let marker = "/* VIEW(b): routine Go as void Go(struct S *s); go.h has void Go(int). */";
+    let text = format!("// ---- a.c ----\nint x;\n// ---- b.c ----\n{marker}\nextern void Go__b(struct S *s) __asm__(\"Go\");\n#define Go Go__b\n#include \"go.h\"\n#undef Go\n{marker}\nextern void Go__b(struct S *s) __asm__(\"Go\");\n#define Go Go__b\n#include \"go2.h\"\n#undef Go\nvoid Run(void) {{ Go__b(0); }}\n");
+    let views = views_of(&text);
+    assert_eq!(views.len(), 2);
+    let lines: Vec<&str> = text.lines().collect();
+    let units = units(&views, &lines, &|_: &View| vec![Choice::Remove]);
+    // The first wrapper must stay: its removal moves code, the second's does not.
+    struct NeedsFirst;
+    impl Judge for NeedsFirst {
+        fn judge(&self, text: &str, _: &[(String, String)]) -> Result<Option<Failure>, String> {
+            let kept = text.contains("#define Go Go__b\n#include \"go.h\"\n#undef Go\n");
+            Ok((!kept).then(|| Failure { edition: "tla-en".into(), error: None, moved: vec![("Run".into(), 1, 3)] }))
+        }
+    }
+    let solved = solve(&text, &views, &units, &NeedsFirst).unwrap();
+    assert_eq!(solved.deleted, [1], "{}", solved.text);
+    assert_eq!(solved.kept.iter().map(|(view, ..)| *view).collect::<Vec<_>>(), [0]);
+    assert!(solved.text.contains("#include \"go.h\"\n#undef Go\n#include \"go2.h\"\nvoid Run"), "{}", solved.text);
+    assert_eq!(solved.text.matches("; tried ").count(), 1, "{}", solved.text);
+    assert!(!solved.text.contains("VIEW#"), "{}", solved.text);
+}
+
+/// One tag's views from two parts are two units, each with the choices its
+/// own part's definition gives (S10).
+#[test]
+fn a_tag_s_views_in_two_parts_are_two_units() {
+    let text = "// ---- a.c ----\nstruct Box { int a; };\n// ---- b.c ----\n/* VIEW(b): tag struct Box as struct Box__b; a has another definition. */\nstruct Box__b { int w; };\n// ---- c.c ----\n/* VIEW(c): tag struct Box as struct Box__c; a has another definition. */\nstruct Box__c { short a; };\n";
+    let views = views_of(text);
+    let lines: Vec<&str> = text.lines().collect();
+    let asked = std::sync::Mutex::new(Vec::new());
+    let units = units(&views, &lines, &|view: &View| {
+        asked.lock().unwrap().push(view.suffix.clone());
+        member_renames(text, view, text).map_or(vec![Choice::Remove], |renames| vec![Choice::Members { renames }, Choice::Remove])
+    });
+    assert_eq!(units.len(), 2);
+    assert_eq!(*asked.lock().unwrap(), ["b", "c"]);
+    // b's layout is a's under another member name; c's is not.
+    assert!(matches!(&units[0].choices[0], Choice::Members { renames } if renames == &[("w".to_string(), "a".to_string())]));
+    assert_eq!(units[1].choices, [Choice::Remove]);
+}
+
+/// The static a view takes away gives its symbol the plain name back: the
+/// judge is told so, and nothing else is renamed for it.
+#[test]
+fn a_static_taken_away_is_judged_under_its_plain_name() {
+    struct Records(std::sync::Mutex<Vec<Vec<(String, String)>>>);
+    impl Judge for Records {
+        fn judge(&self, _: &str, renamed: &[(String, String)]) -> Result<Option<Failure>, String> {
+            self.0.lock().unwrap().push(renamed.to_vec());
+            Ok(None)
+        }
+    }
+    let views = views_of(JOINED);
+    let lines: Vec<&str> = JOINED.lines().collect();
+    let units = units(&views, &lines, &|_: &View| vec![Choice::Remove]);
+    let records = Records(std::sync::Mutex::new(Vec::new()));
+    solve(JOINED, &views, &units, &records).unwrap();
+    assert_eq!(records.0.lock().unwrap()[0], [("Twice__b".to_string(), "Twice".to_string())]);
 }

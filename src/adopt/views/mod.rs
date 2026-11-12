@@ -66,8 +66,10 @@ pub(crate) struct Part {
     /// The names this part renamed, so a declaration written for it later
     /// says its types the way its text now does.
     renames: Vec<(String, String, Space)>,
-    /// The private names its statics took: their symbols change, their code not.
-    statics: Vec<String>,
+    /// Each static a view renamed, as (its name, its private name): its
+    /// symbol changes, its code not, so the part's own assembly is read
+    /// with the private name.
+    statics: Vec<(String, String)>,
     /// Lines after its macros are undefined, giving later parts back a
     /// macro this part saw its own way.
     restore: Vec<String>,
@@ -107,10 +109,33 @@ pub(crate) trait Compiler: Sync {
     fn editions(&self) -> Vec<String>;
     /// `source` compiled in `edition` by the run's own recipe.
     fn compile(&self, edition: &str, source: &Path, mode: Mode) -> Result<Compiled, String>;
+    /// `source` compiled in `edition` as `make modern` compiles the run's
+    /// object, with a current GCC; None where no such recipe is known.
+    fn modern(&self, _edition: &str, _source: &Path) -> Result<Option<Compiled>, String> {
+        Ok(None)
+    }
     /// The assembly the build made of `stem` in `edition`.
     fn built(&self, edition: &str, stem: &str) -> Result<String, String>;
     /// The checkout, which the compiler's own names for headers are under.
     fn root(&self) -> &Path;
+}
+
+impl<T: Compiler + ?Sized> Compiler for &T {
+    fn editions(&self) -> Vec<String> {
+        (**self).editions()
+    }
+    fn compile(&self, edition: &str, source: &Path, mode: Mode) -> Result<Compiled, String> {
+        (**self).compile(edition, source, mode)
+    }
+    fn modern(&self, edition: &str, source: &Path) -> Result<Option<Compiled>, String> {
+        (**self).modern(edition, source)
+    }
+    fn built(&self, edition: &str, stem: &str) -> Result<String, String> {
+        (**self).built(edition, stem)
+    }
+    fn root(&self) -> &Path {
+        (**self).root()
+    }
 }
 
 /// A run settled: its parts' stems, its joined text and its views by kind.
@@ -121,22 +146,39 @@ pub(crate) struct Settled {
     pub views: BTreeMap<&'static str, usize>,
 }
 
-/// What a run became: the runs joined, and each part left out with why.
+/// What a run became: the runs joined, each part left out with why, and
+/// each group that could not be joined for a reason no part of it owns.
 #[derive(Debug, Default)]
 pub(crate) struct Reconciled {
     pub joined: Vec<Settled>,
     pub alone: Vec<String>,
     pub left_out: Vec<(String, String)>,
+    pub failed: Vec<(Vec<String>, String)>,
+}
+
+/// Why a group did not join: one part could not be reconciled, or the
+/// group as a whole could not be judged (a stale build, a compile that
+/// cannot run, the round limit), which ends it without blaming any part.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Failed {
+    Part(usize, String),
+    Run(String),
 }
 
 /// What makes a group's parts: the object they join into, and their texts.
 pub(crate) type Prepare<'a> = dyn Fn(&[(String, String)]) -> (String, Vec<Part>) + 'a;
 
+/// The compiler for a group, by its stems: the recipe of its own first
+/// object, in the editions that link every one of them.
+pub(crate) type Compilers<'a> = dyn Fn(&[String]) -> Result<Box<dyn Compiler + 'a>, String> + 'a;
+
 /// Joins `sources` (stem and text) with views, in order. `prepare` makes a
 /// group's parts' texts for the object they join into (its includes reached
-/// from its folder), and names that object; a group that keeps a stubborn
-/// part out is joined as the groups either side of it.
-pub(crate) fn reconcile(sources: &[(String, String)], prepare: &Prepare, compiler: &dyn Compiler) -> Reconciled {
+/// from its folder), and names that object; `compilers` gives each group the
+/// compiler of its own first object. A group that keeps a stubborn part out
+/// is joined as the groups either side of it; one that fails as a whole is
+/// not joined, and its parts stay as they are.
+pub(crate) fn reconcile(sources: &[(String, String)], prepare: &Prepare, compilers: &Compilers) -> Reconciled {
     let mut reconciled = Reconciled::default();
     let mut groups: Vec<Vec<(String, String)>> = vec![sources.to_vec()];
     while !groups.is_empty() {
@@ -145,10 +187,14 @@ pub(crate) fn reconcile(sources: &[(String, String)], prepare: &Prepare, compile
             reconciled.alone.extend(group.into_iter().map(|(stem, _)| stem));
             continue;
         }
-        let (into, parts) = prepare(&group);
-        match settle(parts, &into, compiler) {
+        let stems: Vec<String> = group.iter().map(|(stem, _)| stem.clone()).collect();
+        let result = compilers(&stems).map_err(Failed::Run).and_then(|compiler| {
+            let (into, parts) = prepare(&group);
+            settle(parts, &into, compiler.as_ref())
+        });
+        match result {
             Ok(settled) => reconciled.joined.push(settled),
-            Err((index, why)) => {
+            Err(Failed::Part(index, why)) => {
                 // The stubborn part stays its own object; its neighbours
                 // either side are joined without it.
                 reconciled.left_out.push((group[index].0.clone(), why));
@@ -157,6 +203,10 @@ pub(crate) fn reconcile(sources: &[(String, String)], prepare: &Prepare, compile
                 groups.insert(0, group[..index].to_vec());
                 groups.retain(|group| !group.is_empty());
             }
+            Err(Failed::Run(why)) => {
+                reconciled.alone.extend(stems.iter().cloned());
+                reconciled.failed.push((stems, why));
+            }
         }
     }
     reconciled.alone.sort_by_key(|stem| sources.iter().position(|(s, _)| s == stem));
@@ -164,31 +214,53 @@ pub(crate) fn reconcile(sources: &[(String, String)], prepare: &Prepare, compile
     reconciled
 }
 
-/// A file a join is compiled from, beside the object it joins into so its
-/// relative includes reach what they did; it goes when dropped.
-struct Scratch(PathBuf);
+/// A file a join is compiled from, in a private folder outside the checkout
+/// that goes when it is dropped. It stands for a file in `folder` (the
+/// object's): each quoted `#include` that reaches a file there is written
+/// with that file's whole path, so it reaches what it did, and the line
+/// count stays.
+pub(crate) struct Scratch {
+    pub path: PathBuf,
+    folder: PathBuf,
+    _directory: tempfile::TempDir,
+}
 
 impl Scratch {
-    fn new(root: &Path, into: &str) -> Scratch {
-        static SERIAL: AtomicUsize = AtomicUsize::new(0);
+    /// A scratch file for `into` (a path from `root`).
+    pub fn new(root: &Path, into: &str) -> Result<Scratch, String> {
         let folder = root.join(into).parent().map(Path::to_path_buf).unwrap_or_else(|| root.to_path_buf());
-        let serial = SERIAL.fetch_add(1, Ordering::Relaxed);
-        Scratch(folder.join(format!(".views-{}-{serial}.c", std::process::id())))
+        let directory = tempfile::Builder::new().prefix("alchemy-join-").tempdir().map_err(|error| format!("cannot make a scratch folder: {error}"))?;
+        let name = Path::new(into).file_name().map_or_else(|| "join.c".into(), |name| name.to_string_lossy().into_owned());
+        Ok(Scratch { path: directory.path().join(name), folder, _directory: directory })
     }
 
-    fn write(&self, text: &str) -> Result<(), String> {
-        std::fs::write(&self.0, text).map_err(|error| format!("cannot write {}: {error}", self.0.display()))
+    pub fn write(&self, text: &str) -> Result<(), String> {
+        std::fs::write(&self.path, placed(text, &self.folder)).map_err(|error| format!("cannot write {}: {error}", self.path.display()))
     }
 
-    fn name(&self) -> String {
-        self.0.to_string_lossy().into_owned()
+    pub fn name(&self) -> String {
+        self.path.to_string_lossy().into_owned()
     }
 }
 
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
+/// A text's quoted includes that reach a file in `folder`, written with its
+/// whole path: what a file there includes, read from anywhere.
+pub(crate) fn placed(text: &str, folder: &Path) -> String {
+    let mut out = String::with_capacity(text.len());
+    for line in text.split_inclusive('\n') {
+        let rewritten = (|| {
+            let rest = line.trim_start().strip_prefix('#')?.trim_start().strip_prefix("include")?.trim_start();
+            let named = rest.strip_prefix('"')?.split('"').next()?;
+            if Path::new(named).is_absolute() {
+                return None;
+            }
+            let full = super::normalize(&format!("{}/{named}", folder.to_string_lossy()))?;
+            let full = format!("/{full}");
+            Path::new(&full).is_file().then(|| line.replacen(&format!("\"{named}\""), &format!("\"{full}\""), 1))
+        })();
+        out.push_str(rewritten.as_deref().unwrap_or(line));
     }
+    out
 }
 
 /// Where a declaration is: a line of a part's text, or a line of a header
@@ -261,6 +333,10 @@ struct Join<'a> {
     /// Macros a part may define as its headers already do: not undefined
     /// where it ends, so later parts keep them.
     shared: BTreeMap<String, String>,
+    /// For each part, the macros it defines that were in force before it,
+    /// as every edition had them: given back where it ends, so the parts
+    /// after it see them as they did.
+    before: Vec<BTreeMap<String, String>>,
     views: BTreeMap<&'static str, usize>,
 }
 
@@ -296,18 +372,19 @@ impl<'a> Join<'a> {
         Some((line, undefine + 1))
     }
 
-    /// Every static's private name, which the assembly writes for its own.
-    fn statics(&self) -> Vec<String> {
-        self.parts.iter().flat_map(|part| part.statics.iter().cloned()).collect()
-    }
-
     fn render(&self) -> (String, Segments) {
-        self.render_until(self.parts.len())
+        self.render_parts(self.parts.len(), false)
     }
 
     /// The parts before `end` joined, and the part at `end` without what
     /// follows its text: the macros in force where its code is.
     fn render_until(&self, end: usize) -> (String, Segments) {
+        self.render_parts(end + 1, true)
+    }
+
+    /// The first `count` parts joined; with `open`, the last of them
+    /// without what follows its text.
+    fn render_parts(&self, count: usize, open: bool) -> (String, Segments) {
         let mut out = String::new();
         let mut segments = Vec::new();
         let mut line = 1;
@@ -318,7 +395,7 @@ impl<'a> Join<'a> {
             }
             *line += text.lines().count();
         };
-        for (index, part) in self.parts.iter().enumerate().take(end + 1) {
+        for (index, part) in self.parts.iter().enumerate().take(count) {
             // The first part's `/// @file` block stays the file's opening.
             let opening = if index == 0 { part.text.lines().take_while(|l| l.starts_with("///")).count() } else { 0 };
             let start = text::line_start(&part.text, opening + 1);
@@ -333,7 +410,7 @@ impl<'a> Join<'a> {
             let rest = &part.text[start..];
             segments.push((line, index, opening + 1, rest.lines().count()));
             push(&mut out, rest, &mut line);
-            if index == end {
+            if open && index + 1 == count {
                 break;
             }
             let mut undefined: Vec<String> = Vec::new();
@@ -346,6 +423,9 @@ impl<'a> Join<'a> {
             }
             for name in &undefined {
                 push(&mut out, &format!("#undef {name}\n"), &mut line);
+                if let Some(definition) = self.before.get(index).and_then(|before| before.get(name)) {
+                    push(&mut out, &format!("#define {definition}\n"), &mut line);
+                }
             }
             for restored in &part.restore {
                 push(&mut out, &format!("{restored}\n"), &mut line);
@@ -543,7 +623,7 @@ impl<'a> Join<'a> {
                 return Answer::Nothing;
             }
             let other = Other { owner: "another part or header".into(), text: "another definition".into() };
-            return Answer::Fix(Fix::Rename { name, site, space: Space::Ordinary, kind: "macro", other });
+            return Answer::Fix(Fix::Rename { name, site, space: Space::Macro, kind: "macro", other });
         }
         if message.warning {
             Answer::Nothing
@@ -638,7 +718,14 @@ impl<'a> Join<'a> {
             }
         }
         let kind = if late.typedef { "typedef" } else if late.is_static || early.is_static { "static" } else { return Answer::Unknown(" (two external definitions)".into()) };
-        let site = if matches!(later, Site::Part { .. }) || matches!(earlier, Site::Header { .. }) { later } else { earlier };
+        // A static against an external definition: the static's side is
+        // renamed, so the object still exports the external one's symbol.
+        let site = match (late.is_static, early.is_static) {
+            (true, false) if !late.typedef => later,
+            (false, true) if !late.typedef => earlier,
+            _ if matches!(later, Site::Part { .. }) || matches!(earlier, Site::Header { .. }) => later,
+            _ => earlier,
+        };
         let other_site = if site == later { earlier } else { later };
         let other_read = if site == later { &early } else { &late };
         Answer::Fix(Fix::Rename { name: name.to_string(), site: site.clone(), space: Space::Ordinary, kind, other: Other { owner: self.owner(other_site, false), text: other_read.text.clone() } })
@@ -786,8 +873,18 @@ impl<'a> Join<'a> {
                 p.text = insert_before(&text, *include, &[format!("#define {name} {private}")]);
             }
         }
+        // Only a static's symbol changes with its name: the part's own
+        // assembly is read with the private name. A view that renamed
+        // anything else as a static would hide an export it took away.
         if kind == "static" {
-            p.statics.push(private.clone());
+            let is_static = match site {
+                Site::Part { line, .. } => statement_at(&statements(&p.text), *line + 1, &private).is_some_and(|s| s.has("static")),
+                Site::Header { .. } => true,
+            };
+            if !is_static {
+                return Err(format!("{}: {name} was renamed as a static, but its definition there is not static", p.stem));
+            }
+            p.statics.push((name.to_string(), private.clone()));
         }
         p.renames.push((name.to_string(), private, space));
         *self.views.entry(kind).or_default() += 1;
@@ -804,10 +901,9 @@ impl<'a> Join<'a> {
             return Err(format!("{}.c does not use {name}", p.stem));
         }
         let mut declaration = declaration.to_string();
+        // Its types as the part now writes them: every name it renamed.
         for (from, to, space) in &p.renames {
-            if *space == Space::Tag {
-                declaration = rename(&declaration, from, to, Space::Tag);
-            }
+            declaration = rename(&declaration, from, to, *space);
         }
         let declaration = external(&rename(&declaration, name, &private, Space::Ordinary), name);
         let all = statements(&renamed);
@@ -963,112 +1059,219 @@ fn visible<'d>(declared: &'d [Declared], function: &[String], name: &[String]) -
         .or_else(|| declared[..at].iter().rev().find(|d| name.contains(&d.name)))
 }
 
-/// Settles one group: its joined text, or the index of the part it cannot
-/// reconcile and why.
-fn settle(parts: Vec<Part>, into: &str, compiler: &dyn Compiler) -> Result<Settled, (usize, String)> {
-    let scratch = Scratch::new(compiler.root(), into);
+/// Settles one group: its joined text, or the part it cannot reconcile and
+/// why, or why the group as a whole could not be judged.
+fn settle(parts: Vec<Part>, into: &str, compiler: &dyn Compiler) -> Result<Settled, Failed> {
+    let scratch = Scratch::new(compiler.root(), into).map_err(Failed::Run)?;
     let editions = compiler.editions();
-    let first = editions.first().cloned().ok_or((0, "no edition links the run".to_string()))?;
-    let mut join = Join { parts, compiler, shared: BTreeMap::new(), views: BTreeMap::new() };
-    join.shared = shared_macros(&join, &scratch, &first).map_err(|why| (0, why))?;
-    let originals: Vec<Vec<Vec<assembly::Piece>>> = editions
+    if editions.is_empty() {
+        return Err(Failed::Run("no edition links the run".into()));
+    }
+    let mut join = Join { parts, compiler, shared: BTreeMap::new(), before: Vec::new(), views: BTreeMap::new() };
+    // The build's own assembly of each part, in each edition, as it reads.
+    let originals: Vec<Vec<String>> = editions
         .iter()
-        .map(|edition| join.parts.iter().map(|part| compiler.built(edition, &part.stem).map(|asm| assembly::pieces(&asm, &[]))).collect::<Result<Vec<_>, String>>())
+        .map(|edition| join.parts.iter().map(|part| compiler.built(edition, &part.stem)).collect::<Result<Vec<_>, String>>())
         .collect::<Result<_, String>>()
-        .map_err(|why| (0, why))?;
+        .map_err(Failed::Run)?;
+    let (shared, defined) = shared_macros(&join, &scratch, &editions).map_err(Failed::Run)?;
+    join.shared = shared;
+    join.before = macros_before(&join, &scratch, &editions, &defined)?;
     let mut rounds = 0;
     'settle: loop {
-        for edition in &editions {
-            compile_clean(&mut join, &scratch, edition, &mut rounds)?;
+        // Clean in every edition at once: a view one edition asks for can
+        // break another, so the editions go round until none adds one.
+        loop {
+            let mut added = false;
+            for edition in &editions {
+                added |= compile_clean(&mut join, &scratch, edition, &mut rounds)?;
+            }
+            if !added {
+                break;
+            }
         }
         for (index, edition) in editions.iter().enumerate() {
             let moved = verify(&join, &scratch, edition, &originals[index])?;
             let Some((part, function)) = moved.first().cloned() else { continue };
             rounds += 1;
             if rounds > ROUNDS {
-                return Err((part, format!("{function} still differs in {edition} after {ROUNDS} compiles")));
+                return Err(Failed::Part(part, format!("{function} still differs in {edition} after {ROUNDS} compiles")));
             }
             if search(&mut join, &scratch, edition, &originals[index], part, &function, moved.len())? {
                 continue 'settle;
             }
             let others: Vec<&str> = moved.iter().filter(|(p, _)| *p == part).map(|(_, f)| f.as_str()).collect();
-            return Err((part, format!("{} compiles differently joined in {edition}, and no name's meaning was found changed for it", others.join(", "))));
+            return Err(Failed::Part(part, format!("{} compiles differently joined in {edition}, and no name's meaning was found changed for it", others.join(", "))));
         }
+        modern(&join, &scratch, &editions)?;
         let (text, _) = join.render();
         return Ok(Settled { stems: join.parts.iter().map(|p| p.stem.clone()).collect(), text, views: join.views });
     }
 }
 
-/// The macros every part's headers define, read from their includes alone.
-fn shared_macros(join: &Join, scratch: &Scratch, edition: &str) -> Result<BTreeMap<String, String>, String> {
+/// The macros the parts' headers define, read from their includes alone
+/// (with the `#if`s around them) in every edition: those every edition
+/// defines one way, and every name any edition defines.
+fn shared_macros(join: &Join, scratch: &Scratch, editions: &[String]) -> Result<(BTreeMap<String, String>, BTreeSet<String>), String> {
     let mut includes = String::new();
     for part in &join.parts {
-        for line in part.text.lines().filter(|line| line.trim_start().starts_with("#include")) {
-            includes.push_str(line);
-            includes.push('\n');
+        for line in part.text.lines() {
+            let directive = line.trim_start().strip_prefix('#').map(str::trim_start).unwrap_or("");
+            let word = directive.split(|c: char| !c.is_ascii_alphabetic()).next().unwrap_or("");
+            if matches!(word, "include" | "if" | "ifdef" | "ifndef" | "elif" | "else" | "endif") {
+                includes.push_str(line);
+                includes.push('\n');
+            }
         }
     }
     scratch.write(&includes)?;
-    let listing = join.compiler.compile(edition, &scratch.0, Mode::Macros)?;
-    Ok(text::listed_macros(&listing.output))
+    let mut agreed: Option<BTreeMap<String, String>> = None;
+    let mut defined: BTreeSet<String> = BTreeSet::new();
+    for edition in editions {
+        let listing = text::listed_macros(&join.compiler.compile(edition, &scratch.path, Mode::Macros)?.output);
+        defined.extend(listing.keys().cloned());
+        agreed = Some(match agreed {
+            None => listing,
+            Some(mut agreed) => {
+                agreed.retain(|name, definition| listing.get(name) == Some(definition));
+                agreed
+            }
+        });
+    }
+    Ok((agreed.unwrap_or_default(), defined))
+}
+
+/// For each part, the macros it defines that were already in force before
+/// it, as the parts before it leave them, in every edition: what its end
+/// gives back after undefining its own. One that editions see otherwise
+/// before it cannot be given back as one line, and leaves the part out.
+fn macros_before(join: &Join, scratch: &Scratch, editions: &[String], defined: &BTreeSet<String>) -> Result<Vec<BTreeMap<String, String>>, Failed> {
+    let mut before: Vec<BTreeMap<String, String>> = vec![BTreeMap::new(); join.parts.len()];
+    let mut earlier: BTreeSet<String> = BTreeSet::new();
+    for index in 0..join.parts.len() {
+        let part = &join.parts[index];
+        let own: BTreeSet<String> = text::macros(&part.text).into_iter().map(|(name, _, _)| name).collect();
+        // Only a name a header or an earlier part defines can be in force.
+        let wanted: Vec<&String> = own.iter().filter(|name| defined.contains(*name) || earlier.contains(*name)).collect();
+        if !wanted.is_empty() {
+            let prefix = Join { parts: join.parts.clone(), compiler: join.compiler, shared: join.shared.clone(), before: before.clone(), views: BTreeMap::new() };
+            let (text, _) = prefix.render_parts(index, false);
+            scratch.write(&text).map_err(Failed::Run)?;
+            let mut seen: BTreeMap<&String, Vec<Option<String>>> = BTreeMap::new();
+            for edition in editions {
+                let listing = text::listed_macros(&join.compiler.compile(edition, &scratch.path, Mode::Macros).map_err(Failed::Run)?.output);
+                for name in &wanted {
+                    seen.entry(name).or_default().push(listing.get(*name).cloned());
+                }
+            }
+            for (name, definitions) in seen {
+                match definitions.iter().all(|d| *d == definitions[0]) {
+                    true => {
+                        if let Some(definition) = &definitions[0] {
+                            before[index].insert(name.clone(), definition.clone());
+                        }
+                    }
+                    false => return Err(Failed::Part(index, format!("{}.c defines {name}, which the editions see otherwise before it, so it cannot be given back where the part ends", part.stem))),
+                }
+            }
+        }
+        earlier.extend(own);
+    }
+    Ok(before)
 }
 
 /// Compiles the join in one edition, fixing what its messages name, until
-/// it compiles with nothing to fix.
-fn compile_clean(join: &mut Join, scratch: &Scratch, edition: &str, rounds: &mut usize) -> Result<(), (usize, String)> {
+/// it compiles with nothing to fix; true if it wrote any view.
+fn compile_clean(join: &mut Join, scratch: &Scratch, edition: &str, rounds: &mut usize) -> Result<bool, Failed> {
     let mut seen: BTreeSet<String> = BTreeSet::new();
+    let mut added = false;
     loop {
         *rounds += 1;
         if *rounds > ROUNDS {
-            return Err((0, format!("still not clean after {ROUNDS} compiles")));
+            return Err(Failed::Run(format!("still not clean after {ROUNDS} compiles")));
         }
         let (text, segments) = join.render();
-        scratch.write(&text).map_err(|why| (0, why))?;
-        let compiled = join.compiler.compile(edition, &scratch.0, Mode::Assembly).map_err(|why| (0, why))?;
+        scratch.write(&text).map_err(Failed::Run)?;
+        let compiled = join.compiler.compile(edition, &scratch.path, Mode::Assembly).map_err(Failed::Run)?;
         let messages = diagnostics::messages(&compiled.stderr);
         let needs_place = messages.iter().any(|m| m.file != scratch.name());
         let pre = if needs_place || !compiled.ok {
-            let output = join.compiler.compile(edition, &scratch.0, Mode::Preprocess).map_err(|why| (0, why))?;
+            let output = join.compiler.compile(edition, &scratch.path, Mode::Preprocess).map_err(Failed::Run)?;
             Some(diagnostics::preprocessed(&output.output, &scratch.name()))
         } else {
             None
         };
-        let fixes = join.plan(&messages, &segments, &scratch.name(), pre.as_ref())?;
+        let fixes = join.plan(&messages, &segments, &scratch.name(), pre.as_ref()).map_err(|(part, why)| Failed::Part(part, why))?;
         if fixes.is_empty() {
             if compiled.ok {
-                return Ok(());
+                return Ok(added);
             }
-            let first = messages.iter().find(|m| !m.warning).map_or_else(|| compiled.stderr.lines().next().unwrap_or("").to_string(), |m| m.text.clone());
-            return Err((0, format!("{edition}: {first}")));
+            // An error no fix answers: its part's, where it is in one.
+            let error = messages.iter().find(|m| !m.warning);
+            let first = error.map_or_else(|| compiled.stderr.lines().next().unwrap_or("").to_string(), |m| m.text.clone());
+            let site = error.and_then(|m| join.site(&segments, &scratch.name(), pre.as_ref(), &m.file, m.line));
+            return Err(match site {
+                Some(site) => Failed::Part(site.part(), format!("{}: {edition}: {first}", join.describe(&site))),
+                None => Failed::Run(format!("{edition}: {first}")),
+            });
         }
         for fix in fixes {
             let key = format!("{fix:?}");
             if !seen.insert(key) {
-                return Err((fix.part(), format!("{edition}: the same disagreement came back after its view was written: {fix:?}")));
+                return Err(Failed::Part(fix.part(), format!("{edition}: the same disagreement came back after its view was written: {fix:?}")));
             }
-            join.apply(&fix).map_err(|why| (fix.part(), why))?;
+            join.apply(&fix).map_err(|why| Failed::Part(fix.part(), why))?;
+            added = true;
         }
     }
 }
 
+/// Each part's own assembly as the join should hold it: the build's, its
+/// statics written with their private names.
+fn expected(join: &Join, originals: &[String]) -> Vec<Vec<assembly::Piece>> {
+    join.parts.iter().zip(originals).map(|(part, asm)| assembly::pieces(&assembly::renamed(asm, &part.statics))).collect()
+}
+
 /// What moved in one edition: each function or datum that compiles
 /// differently joined, with its part.
-fn verify(join: &Join, scratch: &Scratch, edition: &str, originals: &[Vec<assembly::Piece>]) -> Result<Vec<(usize, String)>, (usize, String)> {
+fn verify(join: &Join, scratch: &Scratch, edition: &str, originals: &[String]) -> Result<Vec<(usize, String)>, Failed> {
     let (text, _) = join.render();
-    scratch.write(&text).map_err(|why| (0, why))?;
-    let compiled = join.compiler.compile(edition, &scratch.0, Mode::Assembly).map_err(|why| (0, why))?;
+    scratch.write(&text).map_err(Failed::Run)?;
+    let compiled = join.compiler.compile(edition, &scratch.path, Mode::Assembly).map_err(Failed::Run)?;
     if !compiled.ok {
-        return Err((0, format!("{edition}: the join no longer compiles: {}", compiled.stderr.lines().next().unwrap_or(""))));
+        return Err(Failed::Run(format!("{edition}: the join no longer compiles: {}", compiled.stderr.lines().next().unwrap_or(""))));
     }
-    Ok(assembly::moved(originals, &assembly::pieces(&compiled.output, &join.statics())))
+    Ok(assembly::moved(&expected(join, originals), &assembly::pieces(&compiled.output)))
+}
+
+/// The join compiled as `make modern` compiles its object, in every
+/// edition: an error is its part's, where it is in one.
+fn modern(join: &Join, scratch: &Scratch, editions: &[String]) -> Result<(), Failed> {
+    let (text, segments) = join.render();
+    scratch.write(&text).map_err(Failed::Run)?;
+    for edition in editions {
+        let Some(compiled) = join.compiler.modern(edition, &scratch.path).map_err(Failed::Run)? else { continue };
+        if compiled.ok {
+            continue;
+        }
+        let messages = diagnostics::messages(&compiled.stderr);
+        let error = messages.iter().find(|m| !m.warning);
+        let first = error.map_or_else(|| compiled.stderr.lines().next().unwrap_or("").to_string(), |m| m.text.clone());
+        let part = error.filter(|m| m.file == scratch.name()).and_then(|m| Join::locate(&segments, m.line));
+        return Err(match part {
+            Some((part, line)) => Failed::Part(part, format!("{}.c:{line}: make modern ({edition}): {first}", join.parts[part].stem)),
+            None => Failed::Run(format!("make modern ({edition}): {}: {first}", error.map_or("", |m| m.file.as_str()))),
+        });
+    }
+    Ok(())
 }
 
 /// Looks for the name whose meaning changed for `function` of `part`: each
 /// routine it calls declared otherwise than its own file declared it, each
 /// macro it uses defined otherwise. Keeps the first view that brings the
 /// function back without moving anything else; true if one did.
-fn search(join: &mut Join, scratch: &Scratch, edition: &str, originals: &[Vec<assembly::Piece>], part: usize, function: &str, moved: usize) -> Result<bool, (usize, String)> {
-    let fail = |why: String| (part, why);
+fn search(join: &mut Join, scratch: &Scratch, edition: &str, originals: &[String], part: usize, function: &str, moved: usize) -> Result<bool, Failed> {
+    let fail = Failed::Run;
     let p = &join.parts[part];
     let original_path = join.compiler.root().join(format!("{}.c", p.stem));
     let original_text = std::fs::read_to_string(&original_path).map_err(|e| fail(format!("{}: {e}", original_path.display())))?;
@@ -1082,7 +1285,7 @@ fn search(join: &mut Join, scratch: &Scratch, edition: &str, originals: &[Vec<as
     let theirs = diagnostics::declarations(&theirs.output);
     let (text, _) = join.render();
     scratch.write(&text).map_err(fail)?;
-    let ours = join.compiler.compile(edition, &scratch.0, Mode::Declarations).map_err(fail)?;
+    let ours = join.compiler.compile(edition, &scratch.path, Mode::Declarations).map_err(fail)?;
     let ours = diagnostics::declarations(&ours.output);
     let suffix = format!("__{}", p.suffix);
     let plain = |text: &str| -> String {
@@ -1112,7 +1315,7 @@ fn search(join: &mut Join, scratch: &Scratch, edition: &str, originals: &[Vec<as
     let theirs = text::listed_macros(&theirs.output);
     let (text, _) = join.render_until(part);
     scratch.write(&text).map_err(fail)?;
-    let ours = join.compiler.compile(edition, &scratch.0, Mode::Macros).map_err(fail)?;
+    let ours = join.compiler.compile(edition, &scratch.path, Mode::Macros).map_err(fail)?;
     let ours = text::listed_macros(&ours.output);
     let whole: BTreeSet<&str> = text::identifiers(&original_text);
     for name in whole {
@@ -1135,7 +1338,7 @@ fn search(join: &mut Join, scratch: &Scratch, edition: &str, originals: &[Vec<as
         trials.push(candidates.clone());
     }
     for trial in trials {
-        let mut tried = Join { parts: join.parts.clone(), compiler: join.compiler, shared: join.shared.clone(), views: join.views.clone() };
+        let mut tried = Join { parts: join.parts.clone(), compiler: join.compiler, shared: join.shared.clone(), before: join.before.clone(), views: join.views.clone() };
         if trial.iter().any(|fix| tried.apply(fix).is_err()) {
             continue;
         }
@@ -1148,6 +1351,9 @@ fn search(join: &mut Join, scratch: &Scratch, edition: &str, originals: &[Vec<as
     Ok(false)
 }
 
+/// One edition's `make modern` recipe of an object, and the object it writes.
+pub(crate) type ModernRecipe = (Vec<Vec<String>>, String);
+
 /// The build's compiler for a run, by the recipe make gives its first
 /// object in each edition, run on a scratch file in its place.
 pub(crate) struct Recipes {
@@ -1156,34 +1362,72 @@ pub(crate) struct Recipes {
     recipes: Vec<(String, Vec<Vec<String>>)>,
     source: String,
     object_of: Vec<String>,
+    /// Each edition's `make modern` recipe of the first object, and the
+    /// object it writes; empty where none was asked for.
+    modern: Vec<ModernRecipe>,
     scratch: tempfile::TempDir,
 }
 
+/// Which editions of `editions` link each of `stems`: the editions that link
+/// the first, refused where another stem is linked by other editions, since
+/// one object is linked by the editions that linked each of its parts.
+pub(crate) fn linking(root: &Path, stems: &[String], editions: &[crate::alchemy::targets::DecompTargetId]) -> Result<Vec<crate::alchemy::targets::DecompTargetId>, String> {
+    let mut linking = Vec::new();
+    for &id in editions {
+        let linked = crate::alchemy::link::linked(root, id)?;
+        let each: Vec<bool> = stems.iter().map(|stem| linked.links(stem)).collect();
+        if let Some(other) = each.iter().position(|&links| links != each[0]) {
+            let (yes, no) = if each[0] { (&stems[0], &stems[other]) } else { (&stems[other], &stems[0]) };
+            return Err(format!("{id} links {yes} but not {no}, so they cannot be one object"));
+        }
+        if each[0] {
+            linking.push(id);
+        }
+    }
+    Ok(linking)
+}
+
 impl Recipes {
-    /// The recipes of `stem`, the run's first object, in each edition of
-    /// `editions` that links it.
-    pub fn new(root: &Path, stem: &str, editions: &[crate::alchemy::targets::DecompTargetId]) -> Result<Recipes, String> {
+    /// The recipes of `stems[0]`, the group's first object, in each edition
+    /// of `editions` that links it; every other stem must be linked by the
+    /// same editions. With `modern`, `make modern`'s recipe too.
+    pub fn new(root: &Path, stems: &[String], editions: &[crate::alchemy::targets::DecompTargetId], modern: bool) -> Result<Recipes, String> {
+        let stem = stems.first().ok_or("no object")?;
         let source = format!("{stem}.c");
         let mut recipes = Vec::new();
         let mut object_of = Vec::new();
-        for &id in editions {
-            if !crate::alchemy::link::linked(root, id)?.links(stem) {
-                continue;
-            }
+        let mut moderns = Vec::new();
+        for id in linking(root, stems, editions)? {
             let target = crate::alchemy::targets::target_for(id);
             let object = format!("{}/obj/{stem}.o", target.output_dir);
-            let recipe = crate::gba::recipe::recipe(root, Path::new(target.output_dir), &[format!("EDITION={id}")], &source, &object)?;
-            recipes.push((id.as_str().to_string(), recipe));
+            let mut wanted = vec![(source.clone(), object.clone())];
+            let modern_object = format!("{}/modern/{stem}.o", target.output_dir);
+            if modern {
+                wanted.push((source.clone(), modern_object.clone()));
+            }
+            let mut found = crate::gba::recipe::recipes(root, Path::new(target.output_dir), &[format!("EDITION={id}")], &wanted)?.into_iter();
+            recipes.push((id.as_str().to_string(), found.next().ok_or("make gave no recipe")??));
             object_of.push(object);
+            if modern {
+                moderns.push((found.next().ok_or("make gave no modern recipe")??, modern_object));
+            }
         }
-        Recipes::of(root, stem, recipes, object_of)
+        let mut made = Recipes::of(root, stem, recipes, object_of)?;
+        made.modern = moderns;
+        Ok(made)
     }
 
     /// `stem`'s recipes as make already gave them: each edition with its
     /// commands, and the object each edition builds.
     pub fn of(root: &Path, stem: &str, recipes: Vec<(String, Vec<Vec<String>>)>, object_of: Vec<String>) -> Result<Recipes, String> {
         let scratch = tempfile::Builder::new().prefix("alchemy-views-").tempdir().map_err(|e| e.to_string())?;
-        Ok(Recipes { root: root.to_path_buf(), recipes, source: format!("{stem}.c"), object_of, scratch })
+        Ok(Recipes { root: root.to_path_buf(), recipes, source: format!("{stem}.c"), object_of, modern: Vec::new(), scratch })
+    }
+
+    /// The same, with each edition's `make modern` recipe and object.
+    pub fn with_modern(mut self, modern: Vec<ModernRecipe>) -> Recipes {
+        self.modern = modern;
+        self
     }
 }
 
@@ -1228,6 +1472,20 @@ impl Compiler for Recipes {
             let _ = std::fs::remove_file(output.with_extension(extension));
         }
         Ok(Compiled { ok, output: text, stderr })
+    }
+
+    fn modern(&self, edition: &str, source: &Path) -> Result<Option<Compiled>, String> {
+        static SERIAL: AtomicUsize = AtomicUsize::new(0);
+        let Some(index) = self.recipes.iter().position(|(e, _)| e == edition) else { return Ok(None) };
+        let Some((recipe, object)) = self.modern.get(index) else { return Ok(None) };
+        let output = self.scratch.path().join(format!("modern{}.o", SERIAL.fetch_add(1, Ordering::Relaxed)));
+        let steps = crate::gba::recipe::retarget(recipe, &self.root, &self.source, object, source, &output);
+        let step = steps.into_iter().find(|step| step.iter().any(|w| w == "-c")).ok_or("the modern recipe has no -c step")?;
+        let (ok, _, stderr) = crate::gba::process::capture(&step, &self.root)?;
+        for extension in ["o", "d"] {
+            let _ = std::fs::remove_file(output.with_extension(extension));
+        }
+        Ok(Some(Compiled { ok, output: String::new(), stderr }))
     }
 
     fn built(&self, edition: &str, stem: &str) -> Result<String, String> {

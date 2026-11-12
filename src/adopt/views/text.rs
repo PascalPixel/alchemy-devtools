@@ -5,11 +5,13 @@
 use crate::gba::clex::{lex, Kind, Token};
 
 /// Which of C's name spaces a rename reaches: an ordinary identifier (a
-/// routine, variable, typedef, enumerator or macro) or a tag (`struct X`,
-/// `union X`, `enum X`).
+/// routine, variable, typedef or enumerator), a macro (an ordinary name the
+/// preprocessor's own lines name too), or a tag (`struct X`, `union X`,
+/// `enum X`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Space {
     Ordinary,
+    Macro,
     Tag,
 }
 
@@ -18,15 +20,31 @@ fn offset(text: &str, token: &Token) -> usize {
     token.text.as_ptr() as usize - text.as_ptr() as usize
 }
 
+/// Macros whose arguments at these places name a link symbol, written into
+/// `__asm__` as a string under MODERN (types.h): a view never renames them,
+/// since a routine's or variable's symbol stays its own.
+const SYMBOL_ARGUMENTS: &[(&str, &[usize])] = &[("FIXED_LINKED", &[0]), ("FIXED_ADDRESS", &[2]), ("FIXED_OFFSET", &[1, 2])];
+
 /// The text with every `from` in `space` written `to`. A member name (after
 /// `.` or `->`) and an `#include` line are left alone; a tag is the name
 /// after `struct`, `union` or `enum`, and an ordinary name is any other.
+/// Only a macro's rename reaches the preprocessor's own names: what
+/// `#if`, `#ifdef`, `#ifndef`, `#elif` and `#undef` test, and the name a
+/// `#define` defines; an ordinary rename leaves them, and an argument that
+/// names a link symbol (`SYMBOL_ARGUMENTS`), alone.
 pub(crate) fn rename(text: &str, from: &str, to: &str, space: Space) -> String {
     let tokens = lex(text);
     let mut out = String::with_capacity(text.len());
     let mut at = 0;
     let mut previous: Option<&Token> = None;
     let mut include = false;
+    // In a directive whose names are the preprocessor's: the first such
+    // token, and whether it is the only one (a `#define`'s name).
+    let mut preprocessor: Option<(usize, bool)> = None;
+    // Each open call of a SYMBOL_ARGUMENTS macro: its places, the depth of
+    // its parenthesis and the argument being read.
+    let mut calls: Vec<(&[usize], usize, usize)> = Vec::new();
+    let mut depth = 0usize;
     // A header view's own wrapper (`#define FROM TO` ... `#undef FROM`) is
     // what makes the rename; it stays as it is.
     let directive = |index: usize| -> Vec<&str> {
@@ -37,19 +55,29 @@ pub(crate) fn rename(text: &str, from: &str, to: &str, space: Space) -> String {
         if token.kind == Kind::PpStart {
             let words = directive(index);
             include = words.first() == Some(&"include") || (wrapped && (words == ["define", from, to] || words == ["undef", from]));
+            preprocessor = match words.first() {
+                Some(&("if" | "ifdef" | "ifndef" | "elif" | "undef")) => Some((index + 1, false)),
+                // `#define NAME`: only the name is the preprocessor's.
+                Some(&"define") => Some((index + 2, true)),
+                _ => None,
+            };
         } else if token.kind == Kind::PpEnd {
             include = false;
+            preprocessor = None;
         }
         if token.kind == Kind::Comment {
             continue;
         }
+        let in_preprocessor = preprocessor.is_some_and(|(first, only)| if only { index == first } else { index >= first });
+        let in_symbol = calls.iter().any(|(places, _, argument)| places.contains(argument));
         if token.kind == Kind::Ident && token.text == from && !include {
             let after = previous.map_or("", |previous| previous.text);
             let tagged = matches!(after, "struct" | "union" | "enum");
             let member = matches!(after, "." | "->");
             let reaches = match space {
                 Space::Tag => tagged,
-                Space::Ordinary => !tagged && !member,
+                Space::Ordinary => !tagged && !member && !in_preprocessor && !in_symbol,
+                Space::Macro => !tagged && !member,
             };
             if reaches {
                 let start = offset(text, token);
@@ -57,6 +85,27 @@ pub(crate) fn rename(text: &str, from: &str, to: &str, space: Space) -> String {
                 out.push_str(to);
                 at = start + token.text.len();
             }
+        }
+        match token.text {
+            "(" => {
+                depth += 1;
+                let called = previous.filter(|p| p.kind == Kind::Ident).and_then(|p| SYMBOL_ARGUMENTS.iter().find(|(name, _)| *name == p.text));
+                if let Some((_, places)) = called {
+                    calls.push((places, depth, 0));
+                }
+            }
+            ")" => {
+                if calls.last().is_some_and(|(_, open, _)| *open == depth) {
+                    calls.pop();
+                }
+                depth = depth.saturating_sub(1);
+            }
+            "," => {
+                if let Some(call) = calls.last_mut().filter(|(_, open, _)| *open == depth) {
+                    call.2 += 1;
+                }
+            }
+            _ => {}
         }
         if token.kind != Kind::PpEnd {
             previous = Some(token);
@@ -336,7 +385,27 @@ mod tests {
         assert_eq!(rename("#define CALL(x) Go(x)\n", "Go", "Go__a", Space::Ordinary), "#define CALL(x) Go__a(x)\n");
         let wrapper = "#define Go Go__a\n#include \"go.h\"\n#undef Go\nvoid Go(int);\n";
         assert_eq!(rename(wrapper, "Go", "Go__a", Space::Ordinary), "#define Go Go__a\n#include \"go.h\"\n#undef Go\nvoid Go__a(int);\n");
-        assert_eq!(rename("#undef Go\n", "Go", "Go__a", Space::Ordinary), "#undef Go__a\n");
+        assert_eq!(rename("#undef Go\n", "Go", "Go__a", Space::Macro), "#undef Go__a\n");
+    }
+
+    /// A routine's, variable's or typedef's rename never reaches what the
+    /// preprocessor tests or defines, nor a link symbol types.h stringifies
+    /// under MODERN; a macro's reaches every line that names it (S2).
+    #[test]
+    fn only_a_macro_s_rename_reaches_the_preprocessor_s_names() {
+        let text = "#ifdef Go\n#if defined(Go) || Go > 1\n#endif\n#endif\n#ifndef Go\n#define Go 2\n#endif\n#undef Go\n#define CALL(x) Go(x)\nvoid Go(int);\n";
+        assert_eq!(
+            rename(text, "Go", "Go__a", Space::Ordinary),
+            "#ifdef Go\n#if defined(Go) || Go > 1\n#endif\n#endif\n#ifndef Go\n#define Go 2\n#endif\n#undef Go\n#define CALL(x) Go__a(x)\nvoid Go__a(int);\n"
+        );
+        assert_eq!(rename(text, "Go", "Go__a", Space::Macro), text.replace("Go", "Go__a"));
+        let fixed = "void *p = FIXED_ADDRESS(Go *, 0x02000000, Go);\nu32 n = FIXED_OFFSET(4, Go, gBase) + FIXED_LINKED(Go) + Go;\n";
+        assert_eq!(
+            rename(fixed, "Go", "Go__a", Space::Ordinary),
+            "void *p = FIXED_ADDRESS(Go__a *, 0x02000000, Go);\nu32 n = FIXED_OFFSET(4, Go, gBase) + FIXED_LINKED(Go) + Go__a;\n"
+        );
+        // A name inside a string or comment is never renamed.
+        assert_eq!(rename("char *s = \"Go\"; /* Go */ int Go;\n", "Go", "Go__a", Space::Ordinary), "char *s = \"Go\"; /* Go */ int Go__a;\n");
     }
 
     #[test]
