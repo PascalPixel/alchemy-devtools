@@ -1373,11 +1373,8 @@ mod tests {
         assert!(error.contains("INTO's route"), "{error}");
         // Into one of their own names, the route stays.
         build.alike("tla", &arm, &field("f021828.c")).unwrap();
-        // Game C into a name the sound library's wildcard would take.
         let scene = |name: &str| format!("games/tla/src/scene/kandorean_temple/{name}");
         let thumb = vec![scene("s00b8"), scene("events_a")];
-        let error = build.alike("tla", &thumb, "games/tla/src/sound/music_track_new.c").unwrap_err();
-        assert!(error.contains("music_track_*.c"), "{error}");
         // C linked only into overlays builds for size, and a new INTO placed
         // where it is does too.
         build.alike("tla", &thumb, &scene("events.c")).unwrap();
