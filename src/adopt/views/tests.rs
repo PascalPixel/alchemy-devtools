@@ -334,3 +334,16 @@ fn a_part_that_declared_a_routine_without_its_parameters_calls_it_as_it_did() {
     let settled = fixture.settle(&["a", "b"]).unwrap();
     assert!(settled.text.contains("extern void Move__b() __asm__(\"Move\");\nvoid B(int *p) { Move__b(p, 2, 3); }"), "{}", settled.text);
 }
+
+#[test]
+fn an_inline_repeat_that_holds_a_fakematch_tag_is_kept() {
+    let inline = "static __inline__ int Twice(int v) {\n  /* FAKEMATCH(wrapper): kept; as v * 2, 1 of 2 instructions differ in tbs-en. */\n  return v + v;\n}\n";
+    let a = format!("{inline}int A(int v) {{ return Twice(v); }}\n");
+    let b = format!("{inline}int B(int v) {{ return Twice(v) + 1; }}\n");
+    let Some(fixture) = Fixture::new(&[("a.c", &a), ("b.c", &b)]) else {
+        return;
+    };
+    let settled = fixture.settle(&["a", "b"]).unwrap();
+    assert_eq!(settled.text.matches("FAKEMATCH(wrapper)").count(), 2, "{}", settled.text);
+    assert!(settled.text.contains("Twice__b(v) + 1"), "{}", settled.text);
+}

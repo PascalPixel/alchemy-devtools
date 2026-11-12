@@ -402,7 +402,7 @@ impl<'a> Join<'a> {
         let text = self.source(site)?;
         let all = statements(&text);
         let statement = statement_at(&all, Join::line(site), name)?;
-        Some(Read::of(statement, name))
+        Some(Read::of(statement, name, &text))
     }
 
     /// A declaration read as `read` reads it, or where its text never spells
@@ -415,7 +415,7 @@ impl<'a> Join<'a> {
             let all = statements(&pre.text);
             let at = |line: usize| pre.origin.get(line.wrapping_sub(1)).is_some_and(|(file, n)| *file == place.file && *n == place.line);
             let statement = all.iter().find(|s| s.find(name).is_some() && (s.first_line..=s.last_line).any(at))?;
-            Some(Read::of(statement, name))
+            Some(Read::of(statement, name, &pre.text))
         })
     }
 
@@ -632,7 +632,7 @@ impl<'a> Join<'a> {
             return Answer::Unknown(" (a definition was not found)".into());
         };
         let same = late.text == early.text;
-        if same && (late.typedef || late.inline) {
+        if same && (late.typedef || late.inline) && !late.tagged {
             if let Site::Part { part, line } = later {
                 return Answer::Fix(Fix::Delete { part: *part, line: *line, name: name.to_string(), tag: false });
             }
@@ -838,6 +838,8 @@ fn tags_named(declaration: &str) -> Vec<String> {
 /// What `Join::read` found of a declaration.
 #[derive(Clone, Debug)]
 struct Read {
+    /// Whether a FAKEMATCH tag is inside it, which a deleted repeat would take with it.
+    tagged: bool,
     text: String,
     declaration: String,
     typedef: bool,
@@ -849,8 +851,9 @@ struct Read {
 }
 
 impl Read {
-    fn of(statement: &text::Statement, name: &str) -> Read {
+    fn of(statement: &text::Statement, name: &str, source: &str) -> Read {
         Read {
+            tagged: source.get(statement.start..statement.end).is_some_and(|code| code.contains("FAKEMATCH")),
             text: statement.squashed(),
             declaration: statement.declaration(),
             typedef: statement.has("typedef"),
