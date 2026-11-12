@@ -179,7 +179,7 @@ impl Symbols {
             background: at("BattleBackground_Load")?,
             build: at("Battle_GatherActions")?,
             commands: at("Battle_CollectPartyCommands")?,
-            opponents: at("Battle_BuildOpponentActions")?,
+            opponents: at("Battle_BuildEnemyActions").or_else(|_| at("Battle_BuildOpponentActions"))?,
             dispatch: at("BattleStaging_DispatchAction")?,
             wait_advance: at("BattleMessage_WaitForAdvance")?,
             message: at("BattleMessage_ShowAndWait")?,

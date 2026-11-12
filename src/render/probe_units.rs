@@ -457,7 +457,7 @@ impl<'a> Guide<'a> {
                 let (units, slots, opponents) = (
                     at("gEnemyUnits")?,
                     at("gHeapSlots")?,
-                    at("Battle_BuildOpponentActions")?,
+                    at("Battle_BuildEnemyActions").or_else(|_| at("Battle_BuildOpponentActions"))?,
                 );
                 for place in [(27u16, 5u16)] {
                     let Ok(mut e) = self.enter_with(place, &[]) else {

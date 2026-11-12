@@ -1374,7 +1374,7 @@ mod tests {
         // Into one of their own names, the route stays.
         build.alike("tla", &arm, &field("f021828.c")).unwrap();
         let scene = |name: &str| format!("games/tla/src/scene/kandorean_temple/{name}");
-        let thumb = vec![scene("s00b8"), scene("events_a")];
+        let thumb = vec![scene("s00b8"), scene("s2ec4")];
         // C linked only into overlays builds for size, and a new INTO placed
         // where it is does too.
         build.alike("tla", &thumb, &scene("events.c")).unwrap();

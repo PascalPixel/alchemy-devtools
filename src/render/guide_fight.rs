@@ -144,7 +144,7 @@ impl<'a> Guide<'a> {
     /// enemies are announced as the camera swings in, and it settles behind
     /// the party as the first menu opens, as `battle/opening.gif`.
     pub fn fight_opening(&mut self) -> Result<(), String> {
-        let menu = self.sym("Battle_BuildUnitActions")?;
+        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let message = self.sym("BattleMessage_ShowAndWait")?;
         let drive = self.party_drive(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], FOUR_ENEMIES, BATTLE_START_SET, vec![menu, message])?;
         let mut frames = Vec::new();
@@ -178,7 +178,7 @@ impl<'a> Guide<'a> {
     /// ends); kept from the menu until `after` frames past the first action,
     /// or with `after` None until the script ends.
     fn menu_run(&self, mut keys: Script, after: Option<usize>) -> Result<Vec<Vec<u16>>, String> {
-        let menu = self.sym("Battle_BuildUnitActions")?;
+        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let dispatch = self.sym("BattleStaging_DispatchAction")?;
         let random = self.sym("Battle_Random")?;
         let drive = self.party_drive(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], FOUR_ENEMIES, BATTLE_START_SET, vec![menu, dispatch, random])?;
@@ -264,7 +264,7 @@ impl<'a> Guide<'a> {
     /// One round from the menu's first frame, every command Attack (A
     /// pressed throughout), until the next round's menu.
     fn one_round(&mut self, party: &[u8], encounter: u32, file: &str, what: &str) -> Result<(), String> {
-        let menu = self.sym("Battle_BuildUnitActions")?;
+        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let dispatch = self.sym("BattleStaging_DispatchAction")?;
         let random = self.sym("Battle_Random")?;
         let drive = self.party_drive(party, encounter, BATTLE_START_SET, vec![menu, dispatch, random])?;
@@ -317,7 +317,7 @@ impl<'a> Guide<'a> {
     /// still, and the next round's menu opens, as `battle/first-strike.gif`.
     pub fn fight_first_strike(&mut self) -> Result<(), String> {
         let random = self.sym("Battle_Random")?;
-        let menu = self.sym("Battle_BuildUnitActions")?;
+        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let message = self.sym("BattleMessage_ShowAndWait")?;
         let drive = self.party_drive(&[plan::ISAAC, plan::GARET], GRYPHONS, BATTLE_TYPE_NORMAL, vec![random, menu, message])?;
         let mut frames = Vec::new();
@@ -368,7 +368,7 @@ impl<'a> Guide<'a> {
     /// gets away, as `battle/flee.gif`.
     pub fn fight_flee(&mut self) -> Result<(), String> {
         let random = self.sym("Random16")?;
-        let menu = self.sym("Battle_BuildUnitActions")?;
+        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let work = self.sym("gBattleWork")?;
         let mut drive = self.party_drive(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], GRYPHONS, BATTLE_START_SET, vec![random, menu])?;
         drive.preset = PRESET_LEVEL_20;
@@ -863,7 +863,7 @@ impl<'a> Guide<'a> {
     /// the enemies' shattering opening and the party fading in, kept until
     /// the first menu has opened, as `battle/storm.gif`.
     pub fn fight_storm(&mut self) -> Result<(), String> {
-        let menu = self.sym("Battle_BuildUnitActions")?;
+        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let message = self.sym("BattleMessage_ShowAndWait")?;
         let drive = self.party_drive(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], FUSION_DRAGON, BATTLE_START_SET, vec![menu, message])?;
         let mut frames = Vec::new();
@@ -966,7 +966,7 @@ impl<'a> Guide<'a> {
         };
         let reconcile = self.sym("DjinnRecovery_Reconcile")?;
         let commands = self.sym("Battle_CollectPartyCommands")?;
-        let opponents = self.sym("Battle_BuildOpponentActions")?;
+        let opponents = self.sym("Battle_BuildEnemyActions").or_else(|_| self.sym("Battle_BuildOpponentActions"))?;
         let action_end = self.sym("BattleUnit_ProcessActionEnd")?;
         let turn_end = self.sym("Battle_ProcessTurnEnd")?;
         let dispatch = self.sym("BattleStaging_DispatchAction")?;
