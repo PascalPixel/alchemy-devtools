@@ -40,7 +40,10 @@ instead (--list provenance is the name provenance worklist, --list
 unused_word the words the game's text never uses, --list door_word the
 words of exit names nothing resolves yet, and --list synonym,
 synonym_referent, abbreviation, family_shape or prefix_twin the names a
-reader could not guess from their siblings).";
+reader could not guess from their siblings). FAKEMATCH devices and
+Camelot's leftovers (the LEFTOVER tags and the // DEAD: marks) are counted
+on rows of their own and never added together; --list fakematch and --list
+leftover take every kind of each.";
 
 /// Both games' DONE parts, where measured.
 fn combined(games: &[Result<Game, String>; 2]) -> (Option<GameDone>, Option<GameDone>) {

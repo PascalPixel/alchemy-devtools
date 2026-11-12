@@ -28,6 +28,12 @@ pub const REPORT: &str = "out/reports/humanity.tsv";
 /// macro expands to is a `dead` device; `one-pass` is no longer a kind.
 pub const DEVICES: [&str; 7] = ["signature", "pin", "barrier", "wrapper", "volatile", "temporary", "dead"];
 
+/// S2's leftover kinds: Camelot's own code that does nothing in an edition
+/// and still shapes it, tagged `LEFTOVER(<kind>)` (12 November 2026). They
+/// are counted beside the devices, never with them; the `// DEAD:` marks are
+/// counted with them as `dead`.
+pub const LEFTOVERS: [&str; 3] = ["frame", "template", "form"];
+
 /// A function body this many tokens long or more takes part in the duplicate search.
 const FUNCTION_TOKENS: usize = 24;
 /// A table initializer this many tokens long or more takes part in the duplicate search.
@@ -1299,7 +1305,7 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
     let object = path.ends_with(".c") && !in_map_folder(path) && !comments.iter().any(|c| c.text.starts_with("// Part of "));
     let long = object && lines > LONG_FILE;
     static TAG: OnceLock<Regex> = OnceLock::new();
-    let tag = TAG.get_or_init(|| Regex::new(r"FAKEMATCH\(([a-z-]+)\)").unwrap());
+    let tag = TAG.get_or_init(|| Regex::new(r"(FAKEMATCH|LEFTOVER)\(([a-z-]+)\)").unwrap());
     if in_map_folder(path) {
         if let Some(opening) = comments.iter().find(|c| clex::is_doc(c.text) && c.text.contains("@file")) {
             // The whole `///` block that holds `@file`.
@@ -1318,9 +1324,15 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
     }
     for comment in &comments {
         for capture in tag.captures_iter(comment.text) {
-            if DEVICES.contains(&&capture[1]) {
-                report.note(&format!("fakematch_{}", &capture[1]), path, comment.line, &capture[1]);
+            let (word, kind) = (&capture[1], &capture[2]);
+            if word == "FAKEMATCH" && DEVICES.contains(&kind) {
+                report.note(&format!("fakematch_{kind}"), path, comment.line, kind);
+            } else if word == "LEFTOVER" && LEFTOVERS.contains(&kind) {
+                report.note(&format!("leftover_{kind}"), path, comment.line, kind);
             }
+        }
+        if comment.text.starts_with("// DEAD:") {
+            report.note("leftover_dead", path, comment.line, "dead");
         }
         questions(report, path, comment.line, comment.text);
     }
@@ -1548,6 +1560,11 @@ const ROWS: &[(&str, &str)] = &[
     ("fakematch_volatile", "  volatile"),
     ("fakematch_temporary", "  temporary"),
     ("fakematch_dead", "  dead"),
+    ("leftover", "LEFTOVERs (Camelot's)"),
+    ("leftover_frame", "  frame"),
+    ("leftover_template", "  template"),
+    ("leftover_form", "  form"),
+    ("leftover_dead", "  dead (// DEAD: marks)"),
     ("goto", "goto"),
     ("if_language", "#if on LANGUAGE"),
     ("if_patch", "#if on a patch level"),
@@ -1589,9 +1606,20 @@ const ROWS: &[(&str, &str)] = &[
     ("undocumented_global", "  globals without ///"),
 ];
 
+/// The metrics a sum adds: `fakematch` its devices, `leftover` its leftovers
+/// and the `// DEAD:` marks; the two sums stay apart (S2). Any other metric
+/// adds none.
+fn kinds(metric: &str) -> Vec<String> {
+    match metric {
+        "fakematch" => DEVICES.iter().map(|kind| format!("fakematch_{kind}")).collect(),
+        "leftover" => LEFTOVERS.iter().chain(&["dead"]).map(|kind| format!("leftover_{kind}")).collect(),
+        _ => Vec::new(),
+    }
+}
+
 /// Metrics whose top files are listed.
 const LISTED: &[&str] = &[
-    "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "goto", "if_language", "if_patch",
+    "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "leftover", "goto", "if_language", "if_patch",
     "if_in_function", "undocumented_entry", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
     "undocumented_global", "provenance_none", "provenance_prose", "provenance_table_mismatch", "unused_word_name",
     "door_word_link", "unit_open", "synonym", "synonym_referent", "abbreviation", "family_shape", "prefix_twin",
@@ -1602,7 +1630,7 @@ impl Report {
         match metric {
             "placeholder_names" => self.distinct("placeholder") as u64,
             "numbered_names" => self.distinct("numbered") as u64,
-            "fakematch" => DEVICES.iter().map(|kind| self.total(&format!("fakematch_{kind}"))).sum(),
+            "fakematch" | "leftover" => kinds(metric).iter().map(|kind| self.total(kind)).sum(),
             "long_file" => self.long_files.len() as u64,
             "units" => self.units.len() as u64,
             "units_done" => self.units.values().filter(|open| **open == 0).count() as u64,
@@ -1616,11 +1644,11 @@ impl Report {
         }
     }
 
-    /// FAKEMATCH devices summed per file.
-    fn fakematch_files(&self) -> BTreeMap<String, u64> {
+    /// A sum's kinds (the FAKEMATCH devices, or the leftovers) added per file.
+    fn kind_files(&self, metric: &str) -> BTreeMap<String, u64> {
         let mut files = BTreeMap::new();
-        for kind in DEVICES {
-            for (file, count) in self.tallies.get(&format!("fakematch_{kind}")).into_iter().flatten() {
+        for kind in kinds(metric) {
+            for (file, count) in self.tallies.get(&kind).into_iter().flatten() {
                 *files.entry(file.clone()).or_default() += count;
             }
         }
@@ -1628,8 +1656,8 @@ impl Report {
     }
 
     fn top_of(&self, metric: &str, count: usize) -> Vec<(String, u64)> {
-        if metric == "fakematch" {
-            let mut files: Vec<(String, u64)> = self.fakematch_files().into_iter().collect();
+        if !kinds(metric).is_empty() {
+            let mut files: Vec<(String, u64)> = self.kind_files(metric).into_iter().collect();
             files.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
             files.truncate(count);
             return files;
@@ -1755,7 +1783,8 @@ fn listable(metric: &str) -> bool {
     WORD_LISTS.contains(&metric) || ROWS.iter().any(|(row, _)| !row.is_empty() && *row == metric)
 }
 
-/// Every counted thing of one metric (`fakematch` takes each device kind),
+/// Every counted thing of one metric (`fakematch` takes each device kind,
+/// `leftover` each leftover kind and the `// DEAD:` marks),
 /// one line each: game, `file:line`, what.
 pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
     let mut text = String::new();
@@ -1793,7 +1822,7 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
             continue;
         }
         for item in &report.items {
-            if item.metric == metric || (metric == "fakematch" && item.metric.starts_with("fakematch_")) {
+            if item.metric == metric || kinds(metric).contains(&item.metric) {
                 let _ = writeln!(text, "{game}\t{}:{}\t{}", item.file, item.line, item.what);
             }
         }
@@ -1961,9 +1990,42 @@ mod tests {
         let rows: Vec<&str> = ROWS.iter().filter_map(|(metric, _)| metric.strip_prefix("fakematch_")).collect();
         assert_eq!(rows, DEVICES, "the table's device rows are S2's, in its order");
         assert!(listable("fakematch_pin") && listable("fakematch_volatile") && !listable("fakematch_one-pass") && !listable("xyz"));
+        assert_eq!(report.value("leftover"), 0);
         assert_eq!(report.total("goto"), 1);
         assert_eq!((report.total("if_language"), report.total("if_patch")), (2, 2));
         assert_eq!(report.total("if_in_function"), 1);
+    }
+
+    #[test]
+    fn leftovers_are_counted_apart_from_devices() {
+        let report = one(concat!(
+            "void F(void) {\n",
+            "    /* LEFTOVER(frame): an idle buffer the Japanese edition fills; as no buffer, 4 of 90 instructions differ in tbs-en. */\n",
+            "    /* LEFTOVER(template): a second blitter, as its siblings have; as one, 6 of 80 instructions differ in tbs-en. */\n",
+            "    /* LEFTOVER(form): the record through a pointer, as The Lost Age's twin needs; as direct, 2 of 40 instructions differ in tbs-en. */\n",
+            "    // LEFTOVER(dead): no kind of leftover, not counted.\n",
+            "    // FAKEMATCH(frame): no kind of device, not counted.\n",
+            "    // DEAD: a read whose value goes unused.\n",
+            "    /* FAKEMATCH(temporary): a copy; as none, 1 of 9 instructions differ in tbs-en. */\n",
+            "}\n",
+        ));
+        assert_eq!(
+            ["leftover_frame", "leftover_template", "leftover_form", "leftover_dead"].map(|metric| report.total(metric)),
+            [1, 1, 1, 1]
+        );
+        assert_eq!((report.value("leftover"), report.value("fakematch")), (4, 1), "never summed together");
+        let rows: Vec<&str> = ROWS.iter().filter_map(|(metric, _)| metric.strip_prefix("leftover_")).collect();
+        assert_eq!(rows, ["frame", "template", "form", "dead"], "the table's leftover rows are S2's, then the DEAD marks");
+        assert!(listable("leftover") && listable("leftover_frame") && !listable("leftover_pin"));
+        assert_eq!(list(&[("tbs", &report)], "leftover"), "tbs\tf.c:2\tframe\ntbs\tf.c:3\ttemplate\ntbs\tf.c:4\tform\ntbs\tf.c:7\tdead\n");
+        assert_eq!(list(&[("tbs", &report)], "fakematch"), "tbs\tf.c:8\ttemporary\n");
+        let tsv = tsv(&[("tbs", &report)]);
+        assert!(tsv.contains("tbs\tleftover\ttotal\t4\n") && tsv.contains("tbs\tleftover_form\ttotal\t1\n"), "{tsv}");
+        assert!(tsv.contains("tbs\tleftover\tf.c\t4\n") && tsv.contains("tbs\tfakematch\tf.c\t1\n"), "{tsv}");
+        let table = summary(&[("tbs", &report)], 0);
+        let devices = table.find("FAKEMATCH devices").unwrap();
+        let leftovers = table.find("LEFTOVERs (Camelot's)").unwrap();
+        assert!(devices < leftovers && table[leftovers..].lines().nth(1).unwrap().trim_start().starts_with("frame"), "{table}");
     }
 
     #[test]
