@@ -8,6 +8,7 @@
 use crate::alchemy::built;
 use crate::alchemy::layout::Layout;
 use crate::alchemy::link::{self, statement_stem};
+use crate::alchemy::targets::DecompTargetId;
 use crate::compile::root;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -18,9 +19,10 @@ const USAGE: &str = r#"usage: alchemy-devtools adopt merge INTO.c=OBJECT.c,OBJEC
        alchemy-devtools adopt --undo JOURNAL [ITEM...]
 merge: the objects become one object built from INTO.c, a new file or one of
 the objects' own. Its source is theirs one after another, in the order given:
-an #include of a header an earlier source includes goes, a later source's
-/// @file comment becomes a // comment, and a relative #include still reaches
-its file from INTO's folder. In the game's linker scripts
+an #include of a header an earlier source includes goes where neither is
+inside an #if, a later source's /// @file comment becomes a // comment, and
+a relative #include still reaches its file from INTO's folder; a #define or
+static of one source reaches the sources after it. In the game's linker scripts
 (games/GAME/ld_script.ld and the overlay.ld it includes) every statement
 that places one of the objects is one of a run: statements on lines next to
 each other (blank lines aside) that place the same sections, the objects in
@@ -39,20 +41,24 @@ name on no route, or game C into one on a route).
 A merge changes no compiler, option or route, but it can move bytes: the
 pool and alignment between functions that were apart, a static's order. The
 build judges: make compare-editions, then check rom. --verify has the build
-judge at once: it makes every edition of the game (make -k compare-EDITION),
-and while one differs, sends back the item that wrote the object placing the
-first byte it differs in (as --undo JOURNAL ITEM does), or the item whose
-file an edition that did not link names in make's errors, and builds again;
-it stops, naming the journal, when an edition does not link or differs first
-in something no item wrote.
+judge at once: it makes every edition of the batch's games (make -k
+compare-EDITION), and while one differs, sends back the item that wrote the
+object placing the first byte it differs in (as --undo JOURNAL ITEM does),
+or the item whose file make's errors name for an edition that did not build,
+and builds again. An edition that links nothing the batch wrote is judged by
+the image it kept. It stops, naming the journal, when no edition's failure
+can be blamed on an item: one did not build and make names no item's file,
+or one differs first in something no item wrote.
 --dry-run prints what would change. Otherwise the changes are written with a
 journal under out/adopt/ that --undo reverses: a file changed since (a later
 merge's edits to the same script) has only the journal's own change taken
 out, by a three-way merge of its lines, and the undo refuses, writing
 nothing, where the two changed the same lines. Journals undo in any order.
 --undo JOURNAL ITEM... backs out only those items (an item, its INTO or one
-of its objects): the journal is undone and its merges run again without
-them, under a new journal. One adopt or undo runs at a time (out/adopt/lock),
+of its objects): the journal is undone, each edition's object list and the
+objects it put back are made again, and its merges run again without them,
+under a new journal. A merge reads the lists and objects the last make
+wrote, and refuses one older than what it is made from. One adopt or undo runs at a time (out/adopt/lock),
 and none writes over a file that changed after it read it."#;
 
 #[derive(Debug)]
@@ -151,18 +157,38 @@ fn back_out_batch(root: &Path, journal: &Path, items: &[String], build: &dyn Bui
     if options.items.is_empty() {
         return Ok(None);
     }
+    // The last build listed the batch's merged objects, not the ones the undo
+    // put back: the lists and those objects are made again before the rest
+    // are judged by them.
+    let mut games: Vec<String> = Vec::new();
+    let mut objects: Vec<String> = Vec::new();
+    for item in &options.items {
+        let (into, stems) = item_parts(item)?;
+        let game = Layout::of_path(&into).ok_or_else(|| format!("{into} names no game"))?.game;
+        if !games.contains(&game) {
+            games.push(game);
+        }
+        objects.extend(stems);
+    }
+    build.refresh(&games, &objects)?;
     // The rest are verified by whoever called for the back-out.
     let words: Vec<String> = words.into_iter().filter(|word| !items.iter().any(|given| names(word, given)) && word != "--verify").collect();
     options.verify = false;
     adopt_batch(root, &options, &command_line(&words), build)
 }
 
-/// A batch written: its journal, its game, and each item with the source
+/// A batch written: its journal, its games, and each item with the source
 /// stems it wrote under games/.
 struct Batch {
     journal: String,
-    game: String,
+    games: Vec<String>,
     items: Vec<(String, Vec<String>)>,
+}
+
+/// Whether make's errors say `edition`'s own build failed: make names a
+/// target it gave up on as `[tla-en]` (3.81) or `[Makefile:55: tla-en]`.
+fn failed(error: &str, edition: &str) -> bool {
+    error.lines().filter(|line| line.contains("*** [")).any(|line| line.contains(&format!("[{edition}]")) || line.contains(&format!(" {edition}]")))
 }
 
 fn adopt(root: &Path, options: &Options, command: &str, build: &dyn Build) -> Result<(), String> {
@@ -177,31 +203,29 @@ fn adopt(root: &Path, options: &Options, command: &str, build: &dyn Build) -> Re
 /// blames, by what placed the first byte an edition differs in or by the file
 /// make's errors name, until every edition compares.
 fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<(), String> {
-    let ids = built::editions(std::slice::from_ref(&batch.game))?;
-    let jobs = std::thread::available_parallelism().map_or(1, |n| n.get());
+    let ids = built::editions(&batch.games)?;
     loop {
-        let mut arguments = vec!["make".to_string(), "-k".into(), format!("-j{jobs}")];
-        arguments.extend(ids.iter().map(|id| format!("compare-{id}")));
-        println!("verify: make {}", arguments[1..].join(" "));
-        let made = crate::gba::process::run(&arguments, root);
-        if made.is_ok() {
-            println!("verified: every {} edition matches its ROM", batch.game);
+        let Err(error) = build.compare(&ids) else {
+            println!("verified: every {} edition matches its ROM", batch.games.join(" and "));
             return Ok(());
-        }
-        let error = made.as_ref().err().map_or("", |error| error.as_str());
-        // An edition the batch changed relinks after its journal was written;
-        // one that did not link keeps an older image.
+        };
         let written = std::fs::metadata(root.join(&batch.journal)).and_then(|meta| meta.modified()).map_err(|error| format!("{}: {error}", batch.journal))?;
+        let wrote: Vec<&String> = batch.items.iter().flat_map(|(_, stems)| stems).collect();
         let mut blamed: Vec<String> = Vec::new();
         let mut blame = |item: &str| {
             if !blamed.iter().any(|known| known == item) {
                 blamed.push(item.to_string());
             }
         };
+        // What no item can be blamed for, edition by edition.
+        let mut unblamed: Vec<String> = Vec::new();
         for &id in &ids {
-            let image = root.join(crate::alchemy::targets::target_for(id).image());
-            let linked = std::fs::metadata(&image).and_then(|meta| meta.modified()).is_ok_and(|time| time >= written);
-            if !linked {
+            let lists = build.linked(id).ok();
+            // An edition the batch changed relinks after its journal was
+            // written; one that links nothing the batch wrote keeps its image
+            // and is judged by it, as one make did not fail on.
+            let changed = lists.as_ref().is_none_or(|lists| wrote.iter().any(|stem| lists.links(stem)));
+            if failed(&error, id.as_str()) || (changed && !build.relinked(id, written)) {
                 // A merged source that does not compile names itself.
                 let named: Vec<&String> = batch
                     .items
@@ -210,12 +234,7 @@ fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<(), String
                     .map(|(item, _)| item)
                     .collect();
                 if named.is_empty() {
-                    let tail: Vec<&str> = error.lines().rev().take(6).collect::<Vec<_>>().into_iter().rev().collect();
-                    return Err(format!(
-                        "{id} did not link, so no byte can be blamed:\n  {}\nback an item out with adopt --undo {} ITEM",
-                        tail.join("\n  "),
-                        batch.journal
-                    ));
+                    unblamed.push(format!("{id} did not build, and make's errors name no item's file"));
                 }
                 for item in named {
                     println!("verify: {id} did not build: {item} goes back");
@@ -223,10 +242,10 @@ fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<(), String
                 }
                 continue;
             }
-            let Some(difference) = crate::check::rom::first_difference(root, id)? else { continue };
+            let Some(difference) = build.difference(id)? else { continue };
             // The object that placed the byte, or an overlay whose stream the
             // ROM lacks that links what the item wrote.
-            let lists = link::linked(root, id).unwrap_or_default();
+            let lists = lists.unwrap_or_default();
             let culprit = batch.items.iter().find(|(_, stems)| {
                 difference.object.as_ref().is_some_and(|object| stems.contains(object))
                     || difference.overlays.iter().filter_map(|overlay| lists.overlay(overlay)).any(|objects| stems.iter().any(|stem| objects.contains(stem)))
@@ -236,16 +255,23 @@ fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<(), String
                     println!("verify: {id} first differs at {}: {item} goes back", difference.label);
                     blame(item);
                 }
-                None => {
-                    return Err(format!(
-                        "{id} first differs at {}, which no item of this batch wrote; adopt --undo {} undoes it",
-                        difference.label, batch.journal
-                    ))
-                }
+                None => unblamed.push(format!("{id} first differs at {}, which no item of this batch wrote", difference.label)),
             }
         }
         if blamed.is_empty() {
-            return Err(format!("make failed, yet every {} edition matches: {error}", batch.game));
+            if unblamed.is_empty() {
+                return Err(format!("make failed, yet every {} edition matches: {error}", batch.games.join(" and ")));
+            }
+            let tail: Vec<&str> = error.lines().rev().take(6).collect::<Vec<_>>().into_iter().rev().collect();
+            return Err(format!(
+                "{}:\n  {}\nback an item out with adopt --undo {journal} ITEM, or undo the batch with adopt --undo {journal}",
+                unblamed.join("\n"),
+                tail.join("\n  "),
+                journal = batch.journal
+            ));
+        }
+        for left in &unblamed {
+            println!("verify: {left}; judged again once the blamed items go back");
         }
         match back_out_batch(root, Path::new(&batch.journal), &blamed, build)? {
             Some(rest) => batch = rest,
@@ -265,7 +291,7 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
     let mut adopted = 0;
     let mut refused = 0;
     let mut written: Vec<(String, Vec<String>)> = Vec::new();
-    let mut game = None;
+    let mut games: Vec<String> = Vec::new();
     for item in &options.items {
         let saved = files.now.clone();
         match merge_objects(&mut files, item, build) {
@@ -284,7 +310,9 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
                     .map(str::to_string)
                     .collect();
                 written.push((item.clone(), stems));
-                game.get_or_insert(merged_game);
+                if !games.contains(&merged_game) {
+                    games.push(merged_game);
+                }
             }
             Err(why) => {
                 files.now = saved;
@@ -293,7 +321,9 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
             }
         }
     }
-    let Some(game) = game else { return Err(format!("nothing adopted ({refused} refused)")) };
+    if games.is_empty() {
+        return Err(format!("nothing adopted ({refused} refused)"));
+    }
     if options.dry_run {
         println!("dry run: {adopted} would be merged, {refused} refused; nothing written");
         return Ok(None);
@@ -303,7 +333,7 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
     if !options.verify {
         println!("judge with make compare-editions, or adopt --verify; undo with alchemy-devtools adopt --undo {journal} [ITEM...]");
     }
-    Ok(Some(Batch { journal, game, items: written }))
+    Ok(Some(Batch { journal, games, items: written }))
 }
 
 /// What a journal is named after: its form and first item's INTO.
@@ -331,9 +361,23 @@ trait Build {
     /// image or none, by the same commands but for the file names; and a new
     /// `into` by those commands too, its name on their route.
     fn alike(&self, game: &str, stems: &[String], into: &str) -> Result<(), String>;
+    /// Makes each of `games`' editions' lists, and the objects of `stems`
+    /// each links, as the tree now is.
+    fn refresh(&self, games: &[String], stems: &[String]) -> Result<(), String>;
+    /// Makes and compares every edition of `ids` (`make -k`): make's
+    /// errors when one fails.
+    fn compare(&self, ids: &[DecompTargetId]) -> Result<(), String>;
+    /// The objects an edition's last build listed.
+    fn linked(&self, id: DecompTargetId) -> Result<link::Linked, String>;
+    /// Whether the edition's image was written at `since` or after.
+    fn relinked(&self, id: DecompTargetId, since: std::time::SystemTime) -> bool;
+    /// The first byte the edition's image differs from its ROM in, and what
+    /// placed it.
+    fn difference(&self, id: DecompTargetId) -> Result<Option<crate::check::rom::Difference>, String>;
 }
 
-/// The checkout's build, as the last make left it.
+/// The checkout's build, as the last make left it: a list or object older
+/// than what it is made from is refused, not read.
 struct Checkout<'a>(&'a Path);
 
 /// Whether a section name matches a linker-script pattern: whole, or with a
@@ -372,6 +416,10 @@ impl Build for Checkout<'_> {
             }
             let path = built::object(self.0, id, stem);
             let data = std::fs::read(&path).map_err(|_| format!("{} is not built: make {id} first", path.display()))?;
+            let modified = |path: &Path| std::fs::metadata(path).and_then(|meta| meta.modified()).ok();
+            if let Some(source) = built::source(self.0, stem).filter(|source| modified(&self.0.join(source)) > modified(&path)) {
+                return Err(format!("{} is older than {source}: make {id} first", path.display()));
+            }
             let headers = crate::gba::elf::headers(&data).map_err(|error| format!("{}: {error}", path.display()))?;
             read += 1;
             let placed = headers.iter().any(|header| header.size > 0 && sections.split_whitespace().any(|pattern| matches(pattern, &header.name)));
@@ -437,6 +485,46 @@ impl Build for Checkout<'_> {
         }
         Ok(())
     }
+
+    fn refresh(&self, games: &[String], stems: &[String]) -> Result<(), String> {
+        for id in built::editions(games)? {
+            let output = crate::alchemy::targets::target_for(id).output_dir;
+            let make = |targets: Vec<String>| {
+                let mut arguments = vec!["make".to_string(), format!("EDITION={id}")];
+                arguments.extend(targets);
+                crate::gba::process::run(&arguments, self.0).map(|_| ())
+            };
+            make(vec![format!("{output}/objects.mk")])?;
+            let linked = link::linked(self.0, id)?;
+            let objects: Vec<String> = stems.iter().filter(|stem| linked.links(stem)).map(|stem| format!("{output}/obj/{stem}.o")).collect();
+            if !objects.is_empty() {
+                println!("back-out: {id} makes {} objects again", objects.len());
+                make(objects)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn compare(&self, ids: &[DecompTargetId]) -> Result<(), String> {
+        let jobs = std::thread::available_parallelism().map_or(1, |n| n.get());
+        let mut arguments = vec!["make".to_string(), "-k".into(), format!("-j{jobs}")];
+        arguments.extend(ids.iter().map(|id| format!("compare-{id}")));
+        println!("verify: make {}", arguments[1..].join(" "));
+        crate::gba::process::run(&arguments, self.0).map(|_| ())
+    }
+
+    fn linked(&self, id: DecompTargetId) -> Result<link::Linked, String> {
+        link::linked(self.0, id)
+    }
+
+    fn relinked(&self, id: DecompTargetId, since: std::time::SystemTime) -> bool {
+        let image = self.0.join(crate::alchemy::targets::target_for(id).image());
+        std::fs::metadata(image).and_then(|meta| meta.modified()).is_ok_and(|time| time >= since)
+    }
+
+    fn difference(&self, id: DecompTargetId) -> Result<Option<crate::check::rom::Difference>, String> {
+        crate::check::rom::first_difference(self.0, id)
+    }
 }
 
 /// One statement of a linker script: the line it is on, the object it
@@ -483,12 +571,16 @@ fn runs(lines: &[&str], objects: &[String]) -> Vec<Vec<Statement>> {
 }
 
 /// A later source as it joins the merged text: an `#include` of a header the
-/// text already includes goes, and its `/// @file` comment becomes `//`.
+/// text already includes, both outside any `#if`, goes, and its `/// @file`
+/// comment becomes `//`.
 fn joined(text: &str, included: &[String]) -> String {
     let mut out = String::new();
     let mut file_comment = false;
+    let mut depth = 0;
     for line in text.split_inclusive('\n') {
         let trimmed = line.trim();
+        let outside = depth == 0;
+        depth = conditional_depth(trimmed, depth);
         if trimmed == "/// @file" {
             file_comment = true;
             continue;
@@ -501,12 +593,37 @@ fn joined(text: &str, included: &[String]) -> String {
             }
             file_comment = false;
         }
-        if include_of(trimmed).is_some_and(|header| header.ends_with(".h\"") && included.iter().any(|known| known == trimmed)) {
+        if outside && include_of(trimmed).is_some_and(|header| header.ends_with(".h\"") && included.iter().any(|known| known == trimmed)) {
             continue;
         }
         out.push_str(line);
     }
     out
+}
+
+/// The `#if` depth after a line, from the depth before it.
+fn conditional_depth(line: &str, depth: usize) -> usize {
+    let Some(directive) = line.strip_prefix('#').map(str::trim_start) else { return depth };
+    if ["if", "ifdef", "ifndef"].iter().any(|word| directive.split_whitespace().next() == Some(word)) {
+        depth + 1
+    } else if directive.starts_with("endif") {
+        depth.saturating_sub(1)
+    } else {
+        depth
+    }
+}
+
+/// The `#include` lines of a text outside any `#if`.
+fn top_level_includes(text: &str) -> Vec<String> {
+    let mut depth = 0;
+    let mut found = Vec::new();
+    for line in text.lines().map(str::trim) {
+        if depth == 0 && include_of(line).is_some() {
+            found.push(line.to_string());
+        }
+        depth = conditional_depth(line, depth);
+    }
+    found
 }
 
 /// The quoted file an `#include` line names.
@@ -515,15 +632,19 @@ fn include_of(line: &str) -> Option<&str> {
     (rest.starts_with('"') || rest.starts_with('<')).then_some(rest)
 }
 
-/// Merges one item, `INTO.c=OBJECT.c,OBJECT.c...`: its game and report.
-fn merge_objects(files: &mut Files, item: &str, build: &dyn Build) -> Result<(String, Vec<String>), String> {
+/// An item's INTO and objects, as stems.
+fn item_parts(item: &str) -> Result<(String, Vec<String>), String> {
     let (into, objects) = item.split_once('=').ok_or("an item is INTO.c=OBJECT.c,OBJECT.c...")?;
     let stem = |path: &str| {
         let path = path.trim_start_matches("./");
         path.strip_suffix(".c").unwrap_or(path).to_string()
     };
-    let into = stem(into);
-    let objects: Vec<String> = objects.split(',').filter(|o| !o.is_empty()).map(stem).collect();
+    Ok((stem(into), objects.split(',').filter(|o| !o.is_empty()).map(stem).collect()))
+}
+
+/// Merges one item, `INTO.c=OBJECT.c,OBJECT.c...`: its game and report.
+fn merge_objects(files: &mut Files, item: &str, build: &dyn Build) -> Result<(String, Vec<String>), String> {
+    let (into, objects) = item_parts(item)?;
     if objects.len() < 2 {
         return Err("a merge takes two objects or more".into());
     }
@@ -607,7 +728,7 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build) -> Result<(St
         let source = format!("{object}.c");
         let own = rewrite_includes(&files.read(&source)?, parent(&source), parent(&target), |path| files.exists(path));
         let part = if text.is_empty() { own } else { joined(&own, &included).trim_start_matches('\n').to_string() };
-        included.extend(part.lines().map(str::trim).filter(|line| include_of(line).is_some()).map(str::to_string));
+        included.extend(top_level_includes(&part));
         if !text.is_empty() && !text.ends_with("\n\n") {
             text.push('\n');
         }
@@ -1051,9 +1172,19 @@ mod tests {
 
     /// A build that says every object outside `placing` places nothing in a
     /// statement's sections, and builds everything alike unless told not to.
+    /// Its editions link `listed` but for those in `untouched`, relink but
+    /// for those in `unlinked`, and differ where `differs` says; each
+    /// compare gives the next of `compares`, then succeeds.
+    #[derive(Default)]
     struct Stub {
         placing: Vec<(&'static str, &'static str)>,
         apart: bool,
+        listed: Vec<String>,
+        untouched: Vec<&'static str>,
+        unlinked: Vec<&'static str>,
+        differs: Vec<(&'static str, &'static str)>,
+        compares: std::cell::RefCell<Vec<String>>,
+        refreshed: std::cell::RefCell<Vec<String>>,
     }
 
     impl Build for Stub {
@@ -1065,6 +1196,31 @@ mod tests {
                 return Err("tla-en links a into its main image and b only into overlays".into());
             }
             Ok(())
+        }
+        fn refresh(&self, games: &[String], stems: &[String]) -> Result<(), String> {
+            self.refreshed.borrow_mut().push(format!("{} {}", games.join(" "), stems.join(" ")));
+            Ok(())
+        }
+        fn compare(&self, _: &[DecompTargetId]) -> Result<(), String> {
+            let mut compares = self.compares.borrow_mut();
+            if compares.is_empty() {
+                return Ok(());
+            }
+            Err(compares.remove(0))
+        }
+        fn linked(&self, id: DecompTargetId) -> Result<link::Linked, String> {
+            let main = if self.untouched.contains(&id.as_str()) { Vec::new() } else { self.listed.clone() };
+            Ok(link::Linked { main, overlays: Vec::new() })
+        }
+        fn relinked(&self, id: DecompTargetId, _: std::time::SystemTime) -> bool {
+            !self.unlinked.contains(&id.as_str()) && !self.untouched.contains(&id.as_str())
+        }
+        fn difference(&self, id: DecompTargetId) -> Result<Option<crate::check::rom::Difference>, String> {
+            Ok(self.differs.iter().find(|(edition, _)| *edition == id.as_str()).map(|(_, object)| crate::check::rom::Difference {
+                label: format!("{object}.o"),
+                object: Some(object.to_string()),
+                overlays: Vec::new(),
+            }))
         }
     }
 
@@ -1112,7 +1268,7 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let stub = Stub { placing: vec![], apart: false };
+        let stub = Stub { placing: vec![], apart: false, ..Stub::default() };
         let words = args(&["merge", "games/tla/src/field/abc.c=games/tla/src/field/a.c,games/tla/src/field/b.c,games/tla/src/field/c.c"]);
         let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
         adopt(root, &options, &command_line(&words), &stub).unwrap();
@@ -1141,7 +1297,7 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let stub = Stub { placing: vec![], apart: false };
+        let stub = Stub { placing: vec![], apart: false, ..Stub::default() };
         let mut files = Files::new(root);
         merge_objects(&mut files, "games/tla/src/field/a.c=games/tla/src/field/a.c,games/tla/src/field/b.c", &stub).unwrap();
         assert!(files.read("games/tla/ld_script.ld").unwrap().contains("    {\n        \"*/games/tla/src/field/a.o\"(.text)\n\n        \"*/games/tla/src/field/c.o\"(.text)"));
@@ -1157,7 +1313,7 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let alike = Stub { placing: vec![("field/c", ".text"), ("field/e", ".text"), ("field/f", ".text"), ("field/g", ".text"), ("field/a", ".text")], apart: false };
+        let alike = Stub { placing: vec![("field/c", ".text"), ("field/e", ".text"), ("field/f", ".text"), ("field/g", ".text"), ("field/a", ".text")], apart: false, ..Stub::default() };
         let merge = |item: &str, build: &dyn Build| merge_objects(&mut Files::new(root), item, build).unwrap_err();
         let field = |names: &str| names.split(',').map(|name| format!("games/tla/src/field/{name}.c")).collect::<Vec<_>>().join(",");
         // A blank line is no bar.
@@ -1172,10 +1328,10 @@ mod tests {
         assert!(merge(&format!("games/tla/src/field/x.c={}", field("c,d")), &alike).contains("is assembly"));
         assert!(merge(&format!("games/tla/src/field/g.c={}", field("a,b")), &alike).contains("exists"));
         assert!(merge(&format!("games/tla/src/field/x.c={}", field("a")), &alike).contains("two objects"));
-        let apart = Stub { placing: vec![], apart: true };
+        let apart = Stub { placing: vec![], apart: true, ..Stub::default() };
         assert!(merge(&format!("games/tla/src/field/x.c={}", field("a,b")), &apart).contains("only into overlays"));
         // An object a run leaves out with nothing in its sections joins it.
-        let empty = Stub { placing: vec![], apart: false };
+        let empty = Stub { placing: vec![], apart: false, ..Stub::default() };
         assert!(merge_objects(&mut Files::new(root), &format!("games/tla/src/field/x.c={}", field("f,g")), &empty).is_ok());
     }
 
@@ -1186,7 +1342,7 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let stub = Stub { placing: vec![], apart: false };
+        let stub = Stub { placing: vec![], apart: false, ..Stub::default() };
         let first = "games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c";
         let second = "games/tla/src/field/fg.c=games/tla/src/field/f.c,games/tla/src/field/g.c";
         let words = args(&["merge", first, second]);
@@ -1227,6 +1383,83 @@ mod tests {
         build.alike("tla", &thumb, &scene("events.c")).unwrap();
         // An ARM_C object and game C.
         assert!(build.alike("tla", &[field("f021470"), scene("s00b8")], &field("mixed.c")).unwrap_err().contains("only into overlays"));
+    }
+
+    /// The checkout's built objects: what places bytes in a statement's
+    /// sections, and what no edition links.
+    #[test]
+    fn the_checkout_reads_each_object_s_sections() {
+        let build = Checkout(root());
+        let stem = "games/tla/src/scene/kandorean_temple/s00b8";
+        assert!(!build.empty(stem, ".text").unwrap());
+        assert!(build.empty(stem, ".no_such_section.*").unwrap());
+        assert!(build.empty("games/tla/src/field/no_such_object", ".text").unwrap_err().contains("no edition links"));
+    }
+
+    /// Two merges, the second blamed: by the byte one edition differs in,
+    /// while another edition links neither and kept its image, and another
+    /// failed with no file named. The untouched edition is no failure, the
+    /// one that failed does not stop the blame, and the back-out makes the
+    /// lists and the objects it put back before the first merges again.
+    #[test]
+    fn verify_blames_only_what_an_edition_the_batch_changed_shows() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        tree(root);
+        let ids = built::editions(&["tla".into()]).unwrap();
+        let (first_id, second_id, third_id) = (ids[0].as_str(), ids[1].as_str(), ids[2].as_str());
+        let field = |name: &str| format!("games/tla/src/field/{name}");
+        let stub = Stub {
+            listed: vec![field("ab"), field("fg")],
+            untouched: vec![first_id],
+            unlinked: vec![third_id],
+            differs: vec![(second_id, "games/tla/src/field/fg")],
+            compares: std::cell::RefCell::new(vec![format!("make failed: make: *** [compare-{second_id}] Error 1\nmake: *** [{third_id}] Error 2")]),
+            ..Stub::default()
+        };
+        let first = "games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c";
+        let second = "games/tla/src/field/fg.c=games/tla/src/field/f.c,games/tla/src/field/g.c";
+        let words = args(&["merge", first, second, "--verify"]);
+        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        adopt(root, &options, &command_line(&words), &stub).unwrap();
+        let read = |path: &str| std::fs::read_to_string(root.join(path)).ok();
+        assert!(read("games/tla/src/field/ab.c").is_some() && read("games/tla/src/field/fg.c").is_none());
+        assert_eq!(read("games/tla/src/field/f.c").as_deref(), Some("void F(void) {}\n"));
+        assert_eq!(*stub.refreshed.borrow(), [format!("tla {} {}", field("a"), field("b"))]);
+
+        // Only what no item wrote: the journal is named and nothing goes back.
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        tree(root);
+        let stub = Stub {
+            listed: vec![field("ab")],
+            unlinked: vec![third_id],
+            compares: std::cell::RefCell::new(vec![format!("make failed: make: *** [Makefile:55: {third_id}] Error 2")]),
+            ..Stub::default()
+        };
+        let words = args(&["merge", first, "--verify"]);
+        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        let error = adopt(root, &options, &command_line(&words), &stub).unwrap_err();
+        assert!(error.contains(&format!("{third_id} did not build")) && error.contains("adopt --undo out/adopt/0001-merge-ab.journal"), "{error}");
+        assert!(std::fs::read_to_string(root.join("games/tla/src/field/ab.c")).is_ok());
+    }
+
+    #[test]
+    fn make_names_the_editions_it_gave_up_on() {
+        let error = "make: *** [compare-tla-en] Error 1\nmake[1]: *** [out/tla-de/tla-de.elf] Error 1\nmake: *** [Makefile:55: tla-de] Error 2";
+        assert!(failed(error, "tla-de") && !failed(error, "tla-en") && !failed(error, "tla-ja"));
+        assert!(failed("make: *** [tla-ja] Error 2", "tla-ja"));
+    }
+
+    /// An include that sits inside an #if stays, in the later source and as
+    /// the one an earlier source had.
+    #[test]
+    fn a_repeated_include_inside_an_if_stays() {
+        let first = "#include \"global.h\"\n#if LANGUAGE == LANGUAGE_GERMAN\n#include \"german.h\"\n#endif\n";
+        let included = top_level_includes(first);
+        assert_eq!(included, ["#include \"global.h\""]);
+        let later = "#include \"global.h\"\n#include \"german.h\"\n#ifdef X\n#include \"global.h\"\n#endif\n";
+        assert_eq!(joined(later, &included), "#include \"german.h\"\n#ifdef X\n#include \"global.h\"\n#endif\n");
     }
 
     #[test]
