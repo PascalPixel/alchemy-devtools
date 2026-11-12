@@ -247,3 +247,32 @@ fn a_definition_a_macro_names_is_read_from_the_expansion() {
     assert!(settled.text.contains("extern void Spawn__b(short x) __asm__(\"Spawn\");"), "{}", settled.text);
     assert_eq!(marked(&settled.text), [("b".into(), "routine".into(), "Spawn".into())]);
 }
+
+#[test]
+fn a_repeat_of_an_inline_renamed_in_the_same_round_is_kept_for_the_next() {
+    let Some(fixture) = Fixture::new(&[
+        ("include/pick.h", "static __inline__ int Pick(int a) { return a; }\n"),
+        ("a.c", "#include \"pick.h\"\nint A(void) { return Pick(1); }\n"),
+        ("b.c", "static __inline__ int Pick(int a, int b) { return a + b; }\nint B(void) { return Pick(1, 2); }\n"),
+        ("c.c", "static __inline__ int Pick(int a, int b) { return a + b; }\nint C(void) { return Pick(3, 4); }\n"),
+    ]) else {
+        return;
+    };
+    let settled = fixture.settle(&["a", "b", "c"]).unwrap();
+    assert!(settled.text.contains("Pick__b(1, 2)") && settled.text.contains("Pick__c(3, 4)"), "{}", settled.text);
+}
+
+#[test]
+fn a_tag_s_repeat_is_judged_by_the_definition_the_message_names() {
+    let Some(fixture) = Fixture::new(&[
+        ("a.c", "struct T { int a; };\nint A(struct T *t) { return t->a; }\n"),
+        ("b.c", "struct T { int a; };\nint B(struct T *t) { return t->a + 1; }\n"),
+        ("c.c", "struct T { short c; };\nint C(struct T *t) { return t->c; }\n"),
+    ]) else {
+        return;
+    };
+    let settled = fixture.settle(&["a", "b", "c"]).unwrap();
+    // b's is a's again and goes; c's is its own.
+    assert_eq!(settled.text.matches("struct T {").count(), 1, "{}", settled.text);
+    assert!(settled.text.contains("struct T__c { short c; };"), "{}", settled.text);
+}

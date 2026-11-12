@@ -446,6 +446,14 @@ impl<'a> Join<'a> {
                 }
             }
         }
+        // A repeat is deleted only while what it repeats stands: where this
+        // round also gives the name another meaning (the first of two
+        // identical inlines renamed for a header's), the next round judges.
+        let renamed: BTreeSet<String> = fixes.iter().filter_map(|fix| match fix {
+            Fix::Alias { name, .. } | Fix::Rename { name, .. } => Some(name.clone()),
+            _ => None,
+        }).collect();
+        fixes.retain(|fix| !matches!(fix, Fix::Delete { name, .. } if renamed.contains(name)));
         Ok(fixes)
     }
 
@@ -478,7 +486,7 @@ impl<'a> Join<'a> {
         }
         if is("redefinition of `struct ") || is("redefinition of `union ") || is("redeclaration of `enum ") {
             let tag = name.split_whitespace().nth(1).unwrap_or(&name).to_string();
-            return self.retag(&tag, later, pre);
+            return self.retag(&tag, later, &places);
         }
         if is("redefinition of") {
             let Some(earlier) = earlier else { return Answer::Unknown(" (no earlier definition named)".into()) };
@@ -556,22 +564,17 @@ impl<'a> Join<'a> {
     }
 
     /// A tag defined twice: deleted when the two are the same, else renamed.
-    fn retag(&self, tag: &str, later: &Site, pre: Option<&Preprocessed>) -> Answer {
-        let Some(pre) = pre else { return Answer::Unknown(" (not preprocessed)".into()) };
+    fn retag(&self, tag: &str, later: &Site, places: &Places) -> Answer {
+        let Some(pre) = places.pre else { return Answer::Unknown(" (not preprocessed)".into()) };
         let definitions = tag_definitions(pre, tag);
-        let late_file = match later {
-            Site::Part { .. } => None,
-            Site::Header { file, .. } => Some(file.as_str()),
-        };
-        let line = Join::line(later);
-        // The later definition: the one the message names; the earlier, the first.
-        let found = definitions.iter().position(|(file, at, _)| *at == line && late_file.is_none_or(|f| f == file));
-        let late = found.or(if definitions.len() >= 2 { Some(1) } else { None });
+        // The later definition: the one at the place the message names (the
+        // joined file's line, or a header's); the earlier, the first.
+        let late = definitions.iter().position(|(file, at, end, _)| *file == places.later.file && (*at..=*end).contains(&places.later.line));
         let (Some(late), Some(first)) = (late, definitions.first()) else { return Answer::Unknown(" (its definitions were not found)".into()) };
         if late == 0 {
             return Answer::Unknown(" (its earlier definition was not found)".into());
         }
-        if definitions[late].2 == first.2 {
+        if definitions[late].3 == first.3 {
             if let Site::Part { part, line } = later {
                 return Answer::Fix(Fix::Delete { part: *part, line: *line, name: tag.to_string(), tag: true });
             }
@@ -862,8 +865,9 @@ fn first_code_line(text: &str) -> usize {
 }
 
 /// Each definition of `struct|union|enum TAG { ... }` in a preprocessed
-/// file: its file and line, and its tokens.
-fn tag_definitions(pre: &Preprocessed, tag: &str) -> Vec<(String, usize, Vec<String>)> {
+/// file: its file, the lines of its tag and of its closing brace there, and
+/// its tokens.
+fn tag_definitions(pre: &Preprocessed, tag: &str) -> Vec<(String, usize, usize, Vec<String>)> {
     use crate::gba::clex::{lex, Kind};
     let tokens: Vec<_> = lex(&pre.text).into_iter().filter(|t| !t.pp && t.kind != Kind::Comment).collect();
     let mut found = Vec::new();
@@ -871,8 +875,10 @@ fn tag_definitions(pre: &Preprocessed, tag: &str) -> Vec<(String, usize, Vec<Str
         if matches!(tokens[at].text, "struct" | "union" | "enum") && tokens[at + 1].text == tag && tokens[at + 2].text == "{" {
             let mut depth = 0;
             let mut words = Vec::new();
+            let mut last = tokens[at + 1].line;
             for token in &tokens[at + 2..] {
                 words.push(token.text.to_string());
+                last = token.line;
                 match token.text {
                     "{" => depth += 1,
                     "}" => {
@@ -885,7 +891,8 @@ fn tag_definitions(pre: &Preprocessed, tag: &str) -> Vec<(String, usize, Vec<Str
                 }
             }
             let (file, line) = pre.origin.get(tokens[at + 1].line - 1).cloned().unwrap_or_default();
-            found.push((file, line, words));
+            let end = pre.origin.get(last - 1).filter(|(f, _)| *f == file).map_or(line, |(_, end)| *end);
+            found.push((file, line, end, words));
         }
     }
     found
