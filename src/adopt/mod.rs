@@ -750,17 +750,16 @@ fn parent(path: &str) -> &str {
     path.rsplit_once('/').map_or("", |(folder, _)| folder)
 }
 
-/// `#include "../..."` lines that reach a file from the draft's folder reach
-/// it from the module's.
+/// Quoted `#include` lines that reach a file beside the draft (`"../x.h"`,
+/// `"local.h"`) reach it from the module's folder.
 fn rewrite_includes(text: &str, from: &str, to: &str, exists: impl Fn(&str) -> bool) -> String {
     let mut out = String::with_capacity(text.len());
     for line in text.split_inclusive('\n') {
         let rewritten = (|| {
             let rest = line.trim_start().strip_prefix('#')?.trim_start().strip_prefix("include")?.trim_start();
             let path = rest.strip_prefix('"')?.split('"').next()?;
-            if !path.starts_with("../") && !path.starts_with("./") {
-                return None;
-            }
+            // A quoted include is looked for beside its file first: one that
+            // is there is reached from INTO's folder too.
             let target = normalize(&format!("{from}/{path}"))?;
             if !exists(&target) {
                 return None;
@@ -1478,8 +1477,9 @@ mod tests {
 
     #[test]
     fn includes_follow_the_move() {
-        let text = "/// @file\n#include \"../a/a.h\"\n#include \"types.h\"\n";
-        let moved = rewrite_includes(text, "games/tla/src/scene/c", "games/tla/src/field/x", |p| p == "games/tla/src/scene/a/a.h");
+        let text = "/// @file\n#include \"../a/a.h\"\n#include \"types.h\"\n#include \"local.h\"\n";
+        let moved = rewrite_includes(text, "games/tla/src/scene/c", "games/tla/src/field/x", |p| p == "games/tla/src/scene/a/a.h" || p == "games/tla/src/scene/c/local.h");
+        assert!(moved.contains("#include \"../../scene/c/local.h\"\n"), "{moved}");
         assert!(moved.contains("#include \"../../scene/a/a.h\"\n"), "{moved}");
         assert!(moved.contains("#include \"types.h\"\n"));
         assert_eq!(relative("games/tla/src/menu/credits", "games/tla/include/x.h"), "../../../include/x.h");
