@@ -50,3 +50,11 @@ ALCHEMY_ROOT=/path/to/alchemy cargo test --locked --workspace --features render
 ```
 
 The tests read a bootstrapped Alchemy checkout with every edition built.
+
+## Credits
+
+- [Simon Lindholm](https://github.com/simonlindholm/decomp-permuter): decomp-permuter, whose search `permute` reimplements.
+- [pret](https://github.com/pret): calcrom, the count `progress` follows.
+- [objdiff](https://github.com/encounter/objdiff): the report format `progress` writes for decomp.dev.
+
+Alchemy's [acknowledgements](https://github.com/PascalPixel/alchemy#acknowledgements) have the rest.
