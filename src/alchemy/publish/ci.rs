@@ -22,11 +22,13 @@ const BASELINE_DIGEST: &str =
 /// A CI record's first line, then the measurement it admits.
 const CI_HEADER: &str = "version\ttree\tmeasured_at\ttla_commit\ttla_source";
 const CI_VERSION: &str = "ci1";
-/// Every path in the tree that The Lost Age's measurement reads: its source,
-/// object list and linker scripts, its scaffolds, the Makefile and the tools
-/// that build it, the pinned compilers, and rom.sha1, which admits its ROMs.
-/// The devtools that count its maps are cloned outside the tree, so a change
-/// to the count itself is not among them.
+/// Every path in the tree that The Lost Age's measurement reads: its source
+/// and linker script, the Makefile and the tools that build it, the pinned
+/// compilers, and rom.sha1, which admits its ROMs. recon/tla, its scaffolds
+/// until they went, stays: a commit is compared with ancestors measured
+/// with them, and a path no commit has lists nothing. The devtools that
+/// count its maps are cloned outside the tree, so a change to the count
+/// itself is not among them.
 const TLA_INPUTS: [&str; 6] = [
     "Makefile",
     "rom.sha1",

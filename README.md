@@ -28,7 +28,7 @@ cargo build --release --features render
 | `adopt` | gathers a game's objects into one (`adopt merge`), editing its linker script, has the build judge it (`--verify`), with a journal that undoes the batch or one item of it |
 | `check` | each built ROM, overlay and PACKER row against the reference ROMs, and the fake-match tags against the project's rule |
 | `diff` | a C draft compiled as the build compiles it, against the listing it would replace |
-| `editions` | what an edition still takes from its scaffold while English links C |
+| `editions` | the objects from `games/` some edition does not link, with the names each defines |
 | `lit` | recolours a picture in alchemy-lit, the colour correction the docs site's filter is fitted to (feature `render`) |
 | `permute` | searches rewrites of a draft toward differ 0 |
 | `progress` | DONE code and data from the linker maps, and what is left to humanize |
@@ -38,7 +38,7 @@ cargo build --release --features render
 | `sweep` | takes out the fake-match devices every edition compiles the same without |
 | `twins` | for each unfinished function (with `--all`, each matched one), the other game's matched function most like it |
 | `variants` | named rewrites of a draft, measured, best first |
-| `where` | the bytes each edition still places from `recon/`, and DONE from the maps |
+| `where` | the bytes each edition still places from `recon/` (none, once it is gone), and DONE from the maps |
 
 Run any command with `--help` for its options.
 

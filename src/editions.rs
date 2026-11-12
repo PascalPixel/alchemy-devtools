@@ -16,8 +16,9 @@ Lists each object from games/ that some edition does not link (each
 edition's object list, out/<edition>/objects.mk, which the Makefile writes
 from games/<game>/ld_script.ld), with the names its built object defines;
 under each name, the scaffold section (recon/<game>/<language>/rom.s) that
-still holds it in an edition that does not link the object, with its size. Then, for each edition with a scaffold, the bytes its scaffold holds:
-in sections with a name English links as C, with names English does not, and
+still holds it in an edition that does not link the object, with its size.
+Then, for each edition with a scaffold, the bytes its scaffold holds: in
+sections with a name English links as C, with names English does not, and
 with no name. With no edition, every game that still has recon/<game>; a game
 names its six editions. --json prints the same as one JSON object.";
 
