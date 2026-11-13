@@ -4,7 +4,7 @@
 
 mod packer;
 pub(crate) mod rom;
-mod tags;
+pub(crate) mod tags;
 
 const USAGE: &str = "usage: alchemy-devtools check overlays [ID...] [--edition EDITION|GAME]...
        alchemy-devtools check packer [EDITION|GAME...]
@@ -28,17 +28,25 @@ before it, and the objects from there on, each marked where its bytes differ;
 everything after a size change differs, so that is where to look. --origin
 prints only that. No edition checks every edition built.
 tags: every FAKEMATCH tag in the C sources and headers under PATH (games/ by
-default) against S2's form, /* FAKEMATCH(<kind>): the form kept; as <plain
-form>, N of M instructions differ in <edition>. */, with kind signature,
-pin, barrier, wrapper, volatile, temporary or dead, in the spellings The
-Broken Seal's finished tags use (the plain form named by what it lacks,
-'without them'; a nested function's instructions; a note after the
-edition); every LEFTOVER tag, Camelot's own idle code, to the same form,
-/* LEFTOVER(<kind>): what remains and the evidence; as <plain form>, N of M
-instructions differ in <edition>. */, with kind frame, template or form,
-its first part naming its evidence (an edition, a language or The Lost Age,
-sibling routines, its family's macro or helper, or the frame); and every
-function or macro with more asm statements than FAKEMATCH tags.
+default), with kind signature, pin, barrier, wrapper, volatile, temporary
+or dead, against H8 and S2: the tag reads /* FAKEMATCH(<kind>): <what the
+device is>. */ and its measurement is a row of this toolkit's
+evidence/GAME-fakematch.tsv for its file, routine and kind, judged as the
+tag it was in S2's form, /* FAKEMATCH(<kind>): the form kept; as <plain
+form>, N of M instructions differ in <edition>. */; or, while a game's tags
+still carry it, the tag in the source holds that whole form, in the
+spellings The Broken Seal's finished tags used (the plain form named by
+what it lacks, 'without them'; a nested function's instructions; a note
+after the edition). Every LEFTOVER tag, Camelot's own idle code, is held to
+the same, /* LEFTOVER(<kind>): what remains and the evidence; as <plain
+form>, N of M instructions differ in <edition>. */, with kind frame or
+template, its first part naming its evidence (an edition, a language or The
+Lost Age, sibling routines, its family's macro or helper, or the frame).
+Each tag takes the first row of its routine and kind not yet taken (a tag
+outside any function, the next function's); a row no tag takes, or for a
+file no longer there, is a finding. It prints how many measurements were
+read from the table and how many from the source, and every function or
+macro with more asm statements than FAKEMATCH tags.
 Each prints what it finds and fails when anything differs or is malformed;
 overlays, packer and rom also fail when an edition named is not built, or
 when none is.";

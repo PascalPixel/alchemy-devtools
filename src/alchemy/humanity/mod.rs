@@ -13,6 +13,7 @@ mod naming;
 mod provenance;
 
 use crate::alchemy::done::commas;
+use crate::alchemy::evidence;
 use crate::gba::clex::{self, Kind, Token};
 use naming::NameKind;
 use provenance::{Analysis, Definition, GameText, Origin, Thing};
@@ -683,7 +684,7 @@ impl<'r, 'a> Walk<'r, 'a> {
             return;
         }
         let file = self.file.to_string();
-        self.report.things.push(Thing { name: name.to_string(), kind, file, line, own, context, tag, value, alone: false });
+        self.report.things.push(Thing { name: name.to_string(), kind, file, line, own, context, tag, value, alone: false, evidence: Vec::new() });
     }
 
     /// An enumerator at `at`: its own comment and notes, up to its `,` or `}`.
@@ -1376,11 +1377,12 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
 /// Count a game from `(path, text)` pairs.
 #[cfg(test)]
 pub fn game<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>) -> Report {
-    game_with_text(files, None)
+    game_with_text(files, None, &[])
 }
 
-/// Count a game, and with its English text check its names' provenance.
-pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, text: Option<&GameText>) -> Report {
+/// Count a game, and with its English text check its names' provenance,
+/// `names` being the game's rows of `evidence/<game>-names.tsv` (H8).
+pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, text: Option<&GameText>, names: &[evidence::Name]) -> Report {
     let mut report = Report::default();
     let mut units = Vec::new();
     for (path, text) in files {
@@ -1403,7 +1405,7 @@ pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, t
     report.finish();
     let text = text.filter(|text| !text.is_empty());
     if let Some(text) = text {
-        report.check_provenance(text);
+        report.check_provenance(text, names);
     }
     let mut findings = naming::check(&report.naming, text);
     findings.sort_by(|a, b| a.metric.cmp(b.metric).then(a.file.cmp(&b.file)).then(a.line.cmp(&b.line)).then(a.what.cmp(&b.what)));
@@ -1414,10 +1416,23 @@ pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, t
 }
 
 impl Report {
-    fn check_provenance(&mut self, text: &GameText) {
+    fn check_provenance(&mut self, text: &GameText, names: &[evidence::Name]) {
         // A map id is declared once for the game, wherever it is repeated.
         let mut maps = BTreeSet::new();
         self.things.retain(|thing| thing.kind != "scene" || maps.insert(thing.name.clone()));
+        // Each name's evidence rows, by the name and the file declaring it;
+        // a map id's by its name alone, being the game's wherever declared.
+        let mut rows: HashMap<(&str, &str), Vec<String>> = HashMap::new();
+        let mut by_name: HashMap<&str, Vec<String>> = HashMap::new();
+        for row in names {
+            rows.entry((row.name.as_str(), row.file.as_str())).or_default().push(row.line());
+            by_name.entry(row.name.as_str()).or_default().push(row.line());
+        }
+        for thing in &mut self.things {
+            let own = rows.get(&(thing.name.as_str(), thing.file.as_str()));
+            let own = own.or_else(|| by_name.get(thing.name.as_str()).filter(|_| thing.kind == "scene"));
+            thing.evidence = own.cloned().unwrap_or_default();
+        }
         let analysis = provenance::analyze(&self.things, &self.places, text, &self.macro_values);
         for row in &analysis.rows {
             let (file, line, name) = (&row.thing.file, row.thing.line, &row.thing.name);
@@ -1584,12 +1599,12 @@ const ROWS: &[(&str, &str)] = &[
     ("duplicate_table", "duplicate table groups"),
     ("duplicate_table_copies", "  copies past the first"),
     ("provenance_names", "game-thing names"),
-    ("provenance_verified", "  verified by a ★ line"),
+    ("provenance_verified", "  verified by row or ★ line"),
     ("provenance_table", "  verified by table"),
     ("provenance_rooms", "  verified by rooms"),
     ("provenance_table_mismatch", "  table name differs"),
     ("provenance_unstarred", "  evidence line without its ★"),
-    ("provenance_failed", "  evidence line failing check"),
+    ("provenance_failed", "  evidence failing check"),
     ("provenance_prose", "  evidence in prose only"),
     ("provenance_none", "  no evidence"),
     ("unused_words", "words the game never uses"),
@@ -1847,8 +1862,9 @@ pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, Stri
             .map(|game| {
                 scope.spawn(move || {
                     let text = game_text(root, game)?;
+                    let names = evidence::names(game)?;
                     sources(root, game)
-                        .map(|files| game_with_text(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref()))
+                        .map(|files| game_with_text(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names))
                 })
             })
             .map(|thread| thread.join().expect("humanity thread"))
@@ -2273,7 +2289,7 @@ mod provenance_tests {
             ("games/tbs/include/flags.h", flags),
             ("games/tbs/src/scene/bilibin.c", scene),
         ];
-        let report = game_with_text(files, Some(&text));
+        let report = game_with_text(files, Some(&text), &[]);
         let names: Vec<&str> = report.things.iter().map(|thing| thing.name.as_str()).collect();
         assert_eq!(
             names,
@@ -2298,6 +2314,51 @@ mod provenance_tests {
         let tsv = tsv(&[("tbs", &report)]);
         assert!(tsv.contains("tbs\tunused_word\twarehouse\t3\n"));
         assert!(game(files).provenance.is_none(), "no text, no check");
+    }
+
+    /// H8: the same names with their ★ lines gone and their evidence in rows
+    /// of the game's names table, matched by name and declaring file, a map
+    /// id's by its name alone.
+    #[test]
+    fn names_take_their_evidence_rows() {
+        let po = concat!(
+            "msgctxt \"MsgSign\"\nmsgid \"00001\"\nmsgstr \"McCoy's Hidden Treasury\"\n\n",
+            "msgctxt \"MsgDebugAreaName\"\nmsgid \"00002\"\nmsgstr \"Bilibin\"\n\n",
+            "msgctxt \"message\"\nmsgid \"00003\"\nmsgstr \"Bilibin Barricade\"\n",
+        );
+        let text = GameText::parse(po, Some(2)).unwrap();
+        let ids = "extern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
+        let flags = "#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_WAREHOUSE_SEEN 0x11\n#define FLAG_GATE_OPEN 0x12\n";
+        let scene = "enum {\n  ACTOR_GUARD,\n  ACTOR_PILLAR,\n  ACTOR_MAN,\n};\n";
+        let files = [
+            ("games/tbs/include/scene_ids.h", ids),
+            ("games/tbs/include/flags.h", flags),
+            ("games/tbs/src/scene/bilibin.c", scene),
+        ];
+        let names = evidence::parse_names(concat!(
+            "name\tkind\tevidence\tfile\n",
+            "SceneId_Bilibin\tits area name\tBilibin\tgames/tbs/include/other_ids.h\n",
+            "FLAG_TREASURY_OPEN\tthe game\t\"Hidden Treasury\" (MsgSign)\tgames/tbs/include/flags.h\n",
+            "FLAG_WAREHOUSE_SEEN\tthe game\t\"Hidden Warehouse\" (MsgSign)\tgames/tbs/include/flags.h\n",
+            "FLAG_GATE_OPEN\tthe game\t\"Hidden Treasury\" (MsgSign)\tgames/tbs/include/gates.h\n",
+            "ACTOR_GUARD\twhat the player sees\ta guard at the barricade (its render)\tgames/tbs/src/scene/bilibin.c\n",
+            "ACTOR_PILLAR\tthe game\t\"no such words\" (MsgSign)\tgames/tbs/src/scene/bilibin.c\n",
+            "ACTOR_PILLAR\twhat the player sees\ta stack of crates (its render)\tgames/tbs/src/scene/bilibin.c\n",
+            "ACTOR_MAN\twhat the player sees\ta man in green\tgames/tbs/src/scene/bilibin.c\n",
+        ))
+        .unwrap();
+        let report = game_with_text(files, Some(&text), &names);
+        let worklist = list(&[("tbs", &report)], "provenance");
+        let evidence = |name: &str| worklist.lines().find(|line| line.split('\t').nth(1) == Some(name)).map(|line| line.rsplit('\t').next().unwrap().to_string());
+        assert_eq!(evidence("SceneId_Bilibin").as_deref(), Some("verified area"), "a map id, by its name wherever declared");
+        assert_eq!(evidence("FLAG_TREASURY_OPEN").as_deref(), Some("verified quote"));
+        assert!(evidence("FLAG_WAREHOUSE_SEEN").unwrap().starts_with("failed: MsgSign does not hold"), "a row the text refutes");
+        assert_eq!(evidence("FLAG_GATE_OPEN").as_deref(), Some("none"), "a row for a name declared in another file");
+        assert_eq!(evidence("ACTOR_GUARD").as_deref(), Some("verified render"));
+        assert_eq!(evidence("ACTOR_PILLAR").as_deref(), Some("verified render"), "one verified row of several");
+        assert_eq!(evidence("ACTOR_MAN").as_deref(), Some("failed: a Named from line out of form"), "a render row names its render");
+        assert_eq!(evidence("SceneId_BilibinWarehouse").as_deref(), Some("none"));
+        assert_eq!((report.value("provenance_verified"), report.value("provenance_failed"), report.value("provenance_none")), (4, 2, 2));
     }
 
     #[test]
@@ -2344,7 +2405,7 @@ mod provenance_tests {
             "  ENEMY_VERMIN = ENEMY_ID_FIRST + 1,\n  ENEMY_VERMIN_2,\n  ENEMY_RAT = 0xb, ///< a rat\n};\n",
             "enum { ENEMY_NOT_IN_A_TABLE = 9 };\n",
         );
-        let report = game_with_text([("games/tbs/include/enemy_ids.h", header)], Some(&text));
+        let report = game_with_text([("games/tbs/include/enemy_ids.h", header)], Some(&text), &[]);
         let values: Vec<(Option<&str>, Option<i64>)> =
             report.things.iter().map(|thing| (thing.tag.as_deref(), thing.value)).collect();
         assert_eq!(values, [(Some("EnemyId"), Some(9)), (Some("EnemyId"), Some(10)), (Some("EnemyId"), Some(11)), (None, Some(9))]);
@@ -2363,7 +2424,7 @@ mod provenance_tests {
         let ids = "/// ★ Named from its area name: Tolbi\nextern char SceneId_Tolbi;\n";
         let links = "enum {\n  TOLBI_FROM_WORLD_MAP_NORTH = 1,\n  TOLBI_FROM_HOUSE = 2,\n  TOLBI_TO_HOUSE = 3,\n};\n";
         let files = [("games/tbs/include/scene_ids.h", ids), ("games/tbs/include/scene_exits.h", links)];
-        let report = game_with_text(files, Some(&text));
+        let report = game_with_text(files, Some(&text), &[]);
         assert_eq!(report.value("provenance_rooms"), 0, "WORLD_MAP is no map here");
         assert_eq!((report.value("door_words"), report.value("door_word_link")), (3, 3), "world, map and house; north is a door word");
         assert_eq!(list(&[("tbs", &report)], "door_word").lines().next(), Some("tbs\thouse\t2\tTOLBI_FROM_HOUSE games/tbs/include/scene_exits.h:3; TOLBI_TO_HOUSE games/tbs/include/scene_exits.h:4"));

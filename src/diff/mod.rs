@@ -1571,7 +1571,7 @@ mod tests {
         assert_eq!(level(&root().join("recon/tla/en/overlays/resource_6aa_c_02000000.c"), Some("resource_6aa")), "-Os");
         assert_eq!(level(&root().join("recon/tla/en/main/08000000.c"), None), "-O2");
         assert!(compile_step(tla, &root().join("games/tla/src/sound/player_work_copy.c"), None)[0].ends_with("old_agbcc"));
-        assert!(compile_step(tla, &root().join("games/tla/src/field/f021470.c"), None)[0].ends_with("gcc2952_arm"));
+        assert!(compile_step(tla, &root().join("games/tla/src/field/world_map_lines.c"), None)[0].ends_with("gcc2952_arm"));
     }
 
     #[test]

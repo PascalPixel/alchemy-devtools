@@ -1,13 +1,20 @@
-//! The fake-match tags against S2: each comment that opens with FAKEMATCH
-//! must read `FAKEMATCH(<kind>): the form kept; as <plain form>, N of M
-//! instructions differ in <edition>.`, or one of the spellings `judge` takes,
-//! inside the function (or macro) whose device it tags; and a function or macro with more asm statements than
-//! tags has a device no tag names. A LEFTOVER tag, Camelot's own idle code,
-//! is held to the same form with its own kinds and must state the evidence
-//! its kind rests on; it never covers an asm statement, since an asm is
-//! always a device. A `// DEAD:` mark, Camelot's own code the ROM keeps,
-//! must say what the ROM keeps (S3).
+//! The fake-match tags against S2 and H8: each comment that opens with
+//! FAKEMATCH sits inside the function (or macro) whose device it tags and
+//! reads `FAKEMATCH(<kind>): <what the device is>.`, its measurement (`as
+//! <plain form>, N of M instructions differ in <edition>`) a row of this
+//! repository's `evidence/<game>-fakematch.tsv` for that file, routine and
+//! kind; or, for a game whose tags still carry it, the whole of S2's form in
+//! the source, `FAKEMATCH(<kind>): the form kept; as <plain form>, N of M
+//! instructions differ in <edition>.`, or one of the spellings `judge`
+//! takes. A row is judged as the tag it was, in full. A function or macro
+//! with more asm statements than tags has a device no tag names. A LEFTOVER
+//! tag, Camelot's own idle code, is held to the same form with its own kinds
+//! and must state the evidence its kind rests on; it never covers an asm
+//! statement, since an asm is always a device. A row no tag of its file
+//! takes is evidence for nothing. A `// DEAD:` mark, Camelot's own code the
+//! ROM keeps, must say what the ROM keeps (S3).
 
+use crate::alchemy::evidence::{self, Measurement};
 use crate::alchemy::humanity::{DEVICES, LEFTOVERS};
 use crate::alchemy::targets::parse_decomp_target;
 use crate::gba::clex::{lex, Kind, Token};
@@ -145,39 +152,111 @@ fn plain(comments: &[&str]) -> String {
 /// way with its own kinds, and its first part must also state the evidence
 /// its kind rests on (see `evidence`): a claim without it is a fake match.
 fn judge(text: &str, broken_seal: bool) -> Option<String> {
+    if let Err(message) = judge_kind(text, broken_seal) {
+        return Some(message);
+    }
+    judge_form(text)
+}
+
+/// A tag's word and kind (`FAKEMATCH`, `dead`), as its text opens; `None`
+/// for a tag with no kind.
+fn word_and_kind(text: &str) -> Option<(&str, &str)> {
     static KIND: OnceLock<Regex> = OnceLock::new();
+    let captures = KIND.get_or_init(|| Regex::new(r"^(FAKEMATCH|LEFTOVER)\(([^)]*)\):").unwrap()).captures(text)?;
+    Some((captures.get(1)?.as_str(), captures.get(2)?.as_str()))
+}
+
+/// Whether a tag's text carries its measurement in S2's whole form.
+fn measured(text: &str) -> bool {
+    form_regex().is_match(text)
+}
+
+fn form_regex() -> &'static Regex {
     static FORM: OnceLock<Regex> = OnceLock::new();
-    let kind = KIND.get_or_init(|| Regex::new(r"^(FAKEMATCH|LEFTOVER)(\(([^)]*)\))?:").unwrap());
-    let form = FORM.get_or_init(|| {
+    FORM.get_or_init(|| {
         Regex::new(r"^[A-Z]+\([^)]*\): (.+)[;.] (?i:as|without|with) (.+?), (\d+) of (\d+) instructions(?: of [^,;]+?)? differ in ([a-z]+-[a-z]+)(?:[ ,][^.]*)?\.$").unwrap()
-    });
+    })
+}
+
+/// What is wrong with a tag's word and kind, if anything: a kind S2 names,
+/// and none The Broken Seal refuses.
+fn judge_kind(text: &str, broken_seal: bool) -> Result<(), String> {
+    static KIND: OnceLock<Regex> = OnceLock::new();
+    let kind = KIND.get_or_init(|| Regex::new(r"^(FAKEMATCH|LEFTOVER)(\(([^)]*)\))?:").unwrap());
     let Some(captures) = kind.captures(text) else {
-        return Some(format!("not S2's form: {}", form_text("FAKEMATCH")));
+        return Err(format!("not S2's form: {}", form_text("FAKEMATCH")));
     };
     let word = captures.get(1).map_or("FAKEMATCH", |word| word.as_str());
     let leftover = word == "LEFTOVER";
     let Some(kind) = captures.get(3).map(|kind| kind.as_str()) else {
-        return Some(format!("unfinished, no kind: give it its kind or remove it with its form (S2): {}", form_text(word)));
+        return Err(format!("unfinished, no kind: give it its kind or remove it with its form (S2): {}", form_text(word)));
     };
     if !leftover && kind == RETIRED {
-        return Some(format!(
+        return Err(format!(
             "{RETIRED} is no kind under S2: a once-only block no macro expands to is FAKEMATCH(dead); a macro's takes no tag"
         ));
     }
     if leftover && kind == RETIRED_LEFTOVER {
-        return Some(format!(
+        return Err(format!(
             "{RETIRED_LEFTOVER} is no kind under S2: a device The Lost Age's ROM also needs is one compiler meeting one \
              reconstruction twice, a fake match with its device's kind"
         ));
     }
     let kinds: &[&str] = if leftover { &LEFTOVERS } else { &DEVICES };
     if !kinds.contains(&kind) {
-        return Some(format!("unknown kind {kind}: {}", kinds.join(", ")));
+        return Err(format!("unknown kind {kind}: {}", kinds.join(", ")));
     }
     if !leftover && broken_seal && NOT_IN_TBS.contains(&kind) {
-        return Some(format!("The Broken Seal takes no {kind} (S2)"));
+        return Err(format!("The Broken Seal takes no {kind} (S2)"));
     }
-    let Some(captures) = form.captures(text) else {
+    Ok(())
+}
+
+/// Where a tag's measurement was read from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Place {
+    /// The tag carries it, in S2's whole form.
+    Source,
+    /// Its row of `evidence/<game>-fakematch.tsv` does (H8).
+    Evidence,
+}
+
+/// What is wrong with a tag, if anything, and where its measurement was
+/// read from: the source when the tag carries S2's whole form, otherwise
+/// `row`, its row of the game's fake-match table, judged as the tag it was,
+/// while the tag itself says in a few words what the device is (H8).
+fn judge_tag(text: &str, broken_seal: bool, row: Option<&Measurement>, table: &str) -> (Option<String>, Option<Place>) {
+    if let Err(message) = judge_kind(text, broken_seal) {
+        let place = if measured(text) { Some(Place::Source) } else { row.map(|_| Place::Evidence) };
+        return (Some(message), place);
+    }
+    if measured(text) {
+        return (judge_form(text), Some(Place::Source));
+    }
+    let word = word_and_kind(text).map_or("FAKEMATCH", |(word, _)| word);
+    let Some(row) = row else {
+        return (
+            Some(format!(
+                "not S2's form: {word}(<kind>): <what the device is>, its measurement a row of {table} for this routine \
+                 and kind; or the whole form in the source, {}",
+                form_text(word)
+            )),
+            None,
+        );
+    };
+    static SHORT: OnceLock<Regex> = OnceLock::new();
+    let short = SHORT.get_or_init(|| Regex::new(r"^[A-Z]+\([^)]*\): \S.*\.$").unwrap());
+    if !short.is_match(text) {
+        return (Some(format!("not H8's form: {word}(<kind>): <what the device is>.")), Some(Place::Evidence));
+    }
+    (judge(&row.tag(), broken_seal).map(|message| format!("its row in {table}: {message}")), Some(Place::Evidence))
+}
+
+/// What is wrong with a tag's measured form, its kind already judged.
+fn judge_form(text: &str) -> Option<String> {
+    let (word, kind) = word_and_kind(text)?;
+    let leftover = word == "LEFTOVER";
+    let Some(captures) = form_regex().captures(text) else {
         return Some(format!("not S2's form: {}", form_text(word)));
     };
     if leftover {
@@ -244,6 +323,12 @@ pub struct Tags {
     pub leftover: usize,
     pub dead: usize,
     pub dead_unformed: usize,
+    /// Tags whose measurement the source carries, and of those, the ones
+    /// with a row in the evidence table as well.
+    pub in_source: usize,
+    pub in_both: usize,
+    /// Tags whose measurement only their row carries (H8).
+    pub in_evidence: usize,
 }
 
 impl Tags {
@@ -252,14 +337,32 @@ impl Tags {
         self.leftover += other.leftover;
         self.dead += other.dead;
         self.dead_unformed += other.dead_unformed;
+        self.in_source += other.in_source;
+        self.in_both += other.in_both;
+        self.in_evidence += other.in_evidence;
     }
+}
+
+/// The game a source path is in (`tbs` for `games/tbs/...`).
+fn game_name(path: &str) -> Option<&str> {
+    path.strip_prefix("games/")?.split_once('/').map(|(game, _)| game)
+}
+
+/// The fake-match table a source path's rows are in, as a finding names it.
+fn table_of(path: &str) -> String {
+    format!("evidence/{}-fakematch.tsv", game_name(path).unwrap_or("<game>"))
 }
 
 /// Every tag and `// DEAD:` mark in one C file judged, and each unit with
 /// more asm than tags. The Broken Seal's marks are held to S3's form; The
 /// Lost Age's are counted where they miss it, for that game to rewrite.
-pub fn findings(path: &str, source: &str) -> (Tags, Vec<Finding>) {
+/// `rows` are the file's rows of its game's fake-match table: each tag
+/// takes the first of its routine and kind not yet taken, and a row none
+/// takes is a finding at line 0, the file's.
+pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Finding>) {
     let broken_seal = path.contains("games/tbs/");
+    let table = table_of(path);
+    let mut taken = vec![false; rows.len()];
     let tokens = lex(source);
     let mut found = Vec::new();
     let mut tags = Tags::default();
@@ -395,7 +498,29 @@ pub fn findings(path: &str, source: &str) -> (Tags, Vec<Finding>) {
             if token.text.starts_with("///") || token.text.starts_with("/**") {
                 found.push(Finding { line: token.line, message: "a tag is a // or /* */ comment, not documentation".to_string() });
             }
-            if let Some(message) = judge(&plain(&comments), broken_seal) {
+            let text = plain(&comments);
+            // Its routine: the unit it is in, or for a tag outside any, the
+            // function defined after it.
+            let routine = match unit {
+                Some(unit) => Some(units[unit].name.clone()),
+                None => bodies.iter().filter(|(start, _, _)| *start > token.line).min_by_key(|(start, _, _)| *start).map(|(_, _, unit)| units[*unit].name.clone()),
+            };
+            let row = word_and_kind(&text).zip(routine).and_then(|((word, kind), routine)| {
+                let kind = format!("{word}({kind})");
+                let at = (0..rows.len()).find(|&at| !taken[at] && rows[at].kind == kind && rows[at].is_for(&routine))?;
+                taken[at] = true;
+                Some(&rows[at])
+            });
+            let (message, place) = judge_tag(&text, broken_seal, row, &table);
+            match place {
+                Some(Place::Source) => {
+                    tags.in_source += 1;
+                    tags.in_both += usize::from(row.is_some());
+                }
+                Some(Place::Evidence) => tags.in_evidence += 1,
+                None => {}
+            }
+            if let Some(message) = message {
                 found.push(Finding { line: token.line, message });
             }
             match unit {
@@ -443,6 +568,9 @@ pub fn findings(path: &str, source: &str) -> (Tags, Vec<Finding>) {
             line: unit.line,
             message: format!("{}: {} asm statements, {} tags{proofs}", unit.name, unit.asm, unit.tags),
         });
+    }
+    for (row, _) in rows.iter().zip(&taken).filter(|(_, taken)| !**taken) {
+        found.push(Finding { line: 0, message: format!("a row of {table} for {} ({}){UNTAKEN}", row.routine, row.kind) });
     }
     found.sort_by_key(|finding| finding.line);
     (tags, found)
@@ -503,10 +631,16 @@ impl Game {
         let views: usize = self.views.values().sum();
         let kinds: Vec<String> = self.views.iter().map(|(kind, n)| format!("{n} {kind}")).collect();
         let kinds = if kinds.is_empty() { String::new() } else { format!(" ({})", kinds.join(", ")) };
+        let table = table_of(&format!("{name}/"));
+        let both = match self.tags.in_both {
+            0 => String::new(),
+            n => format!(", {n} of them with a row there too"),
+        };
         vec![
             format!("{name}: {} files; {} findings", self.files, self.findings),
             format!("{name}: {} FAKEMATCH tags", self.tags.fakematch),
             format!("{name}: {} LEFTOVER tags", self.tags.leftover),
+            format!("{name}: measurements: {} in {table} (H8), {} in the source{both}", self.tags.in_evidence, self.tags.in_source),
             format!("{name}: {} // DEAD: marks{unformed}", self.tags.dead),
             format!("{name}: {views} VIEW markers{kinds}"),
         ]
@@ -523,6 +657,24 @@ fn game_of(path: &str) -> String {
     }
 }
 
+/// The rows of a C file's game's fake-match table that no tag of `source`
+/// takes, each as `routine (KIND(kind))`: for `sweep`, which takes tags out
+/// and says which rows go with them (H8).
+pub(crate) fn untaken_rows(path: &str, source: &str) -> Result<Vec<String>, String> {
+    let Some(game) = game_name(path) else { return Ok(Vec::new()) };
+    let rows: Vec<Measurement> = evidence::measurements(game)?.into_iter().filter(|row| row.file == path).collect();
+    let (_, found) = findings(path, source, &rows);
+    let opening = format!("a row of {} for ", table_of(path));
+    Ok(found
+        .into_iter()
+        .filter(|finding| finding.line == 0)
+        .filter_map(|finding| Some(finding.message.strip_prefix(&opening)?.strip_suffix(UNTAKEN)?.to_string()))
+        .collect())
+}
+
+/// How the finding for a row no tag takes ends.
+const UNTAKEN: &str = " and no such tag in the file";
+
 pub fn run(arguments: &[String]) -> Result<(), String> {
     if let Some(flag) = arguments.iter().find(|argument| argument.starts_with('-')) {
         return Err(format!("unknown option {flag}"));
@@ -530,10 +682,26 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let root = crate::compile::root();
     let paths = if arguments.is_empty() { vec!["games".to_string()] } else { arguments.to_vec() };
     let mut games: BTreeMap<String, Game> = BTreeMap::new();
+    // Each game's fake-match rows by file, read once.
+    let mut tables: BTreeMap<String, BTreeMap<String, Vec<Measurement>>> = BTreeMap::new();
+    let mut scanned: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for file in sources(root, &paths)? {
         let source = String::from_utf8_lossy(&std::fs::read(&file).map_err(|error| format!("{}: {error}", file.display()))?).into_owned();
         let name = file.strip_prefix(root).unwrap_or(&file).display().to_string();
-        let (found_tags, mut found) = findings(&name, &source);
+        let rows = match game_name(&name) {
+            Some(game) => {
+                if !tables.contains_key(game) {
+                    let mut by_file: BTreeMap<String, Vec<Measurement>> = BTreeMap::new();
+                    for row in evidence::measurements(game)? {
+                        by_file.entry(row.file.clone()).or_default().push(row);
+                    }
+                    tables.insert(game.to_string(), by_file);
+                }
+                tables[game].get(&name).map_or(&[][..], Vec::as_slice)
+            }
+            None => &[],
+        };
+        let (found_tags, mut found) = findings(&name, &source, rows);
         let (kinds, malformed) = self::views(&source);
         found.extend(malformed);
         let game = games.entry(game_of(&name)).or_default();
@@ -544,7 +712,23 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         game.files += 1;
         game.findings += found.len();
         for finding in found {
-            println!("{name}:{}: {}", finding.line, finding.message);
+            match finding.line {
+                0 => println!("{name}: {}", finding.message),
+                line => println!("{name}:{line}: {}", finding.message),
+            }
+        }
+        scanned.insert(name);
+    }
+    // A row for a file under the paths read that is not there any more.
+    for (game, by_file) in &tables {
+        for (file, rows) in by_file {
+            let covered = paths.iter().any(|path| Path::new(file).starts_with(path.trim_end_matches('/')));
+            if covered && !scanned.contains(file) {
+                for row in rows {
+                    println!("{file}: a row of evidence/{game}-fakematch.tsv for {} ({}), and no such file", row.routine, row.kind);
+                }
+                games.entry(game_of(file)).or_default().findings += rows.len();
+            }
         }
     }
     for (name, game) in &games {
@@ -571,7 +755,7 @@ mod tests {
         assert_eq!(found.iter().map(|f| f.line).collect::<Vec<_>>(), [4, 5]);
         assert!(found[0].message.starts_with("unknown view kind widget"), "{}", found[0].message);
         // A view's asm label names a symbol in an extern declaration: no device.
-        assert!(findings("games/tla/src/x.c", source).1.is_empty());
+        assert!(findings("games/tla/src/x.c", source, &[]).1.is_empty());
     }
 
     #[test]
@@ -742,7 +926,7 @@ void F(int x) {
 
 // DEAD: outside; the ROM keeps nothing.
 ";
-        let (tags, found) = findings("games/tbs/src/x.c", source);
+        let (tags, found) = findings("games/tbs/src/x.c", source, &[]);
         assert_eq!((tags.dead, tags.dead_unformed), (4, 0));
         let lines: Vec<(usize, &str)> = found.iter().map(|finding| (finding.line, finding.message.as_str())).collect();
         assert_eq!(
@@ -751,7 +935,7 @@ void F(int x) {
             "{found:?}"
         );
         // The Lost Age's marks are counted where they miss the form, not refused.
-        let (tags, found) = findings("games/tla/src/x.c", source);
+        let (tags, found) = findings("games/tla/src/x.c", source, &[]);
         assert_eq!((tags.dead, tags.dead_unformed, found.len()), (4, 2, 0), "{found:?}");
     }
 
@@ -760,22 +944,132 @@ void F(int x) {
         assert_eq!(game_of("games/tbs/src/battle/run.c"), "games/tbs");
         assert_eq!(game_of("games/tla/include/x.h"), "games/tla");
         assert_eq!(game_of("tools/x.c"), "tools");
-        let game = Game { tags: Tags { fakematch: 169, leftover: 48, dead: 33, dead_unformed: 0 }, views: BTreeMap::new(), files: 832, findings: 0 };
+        let tags = Tags { fakematch: 169, leftover: 48, dead: 33, in_evidence: 217, ..Tags::default() };
+        let game = Game { tags, views: BTreeMap::new(), files: 832, findings: 0 };
         assert_eq!(
             game.lines("games/tbs"),
             [
                 "games/tbs: 832 files; 0 findings",
                 "games/tbs: 169 FAKEMATCH tags",
                 "games/tbs: 48 LEFTOVER tags",
+                "games/tbs: measurements: 217 in evidence/tbs-fakematch.tsv (H8), 0 in the source",
                 "games/tbs: 33 // DEAD: marks",
                 "games/tbs: 0 VIEW markers"
             ]
         );
         let views = BTreeMap::from([("routine", 3), ("tag", 2)]);
-        let game = Game { tags: Tags { fakematch: 1, leftover: 0, dead: 60, dead_unformed: 40 }, views, files: 2, findings: 0 };
+        let tags = Tags { fakematch: 1, dead: 60, dead_unformed: 40, in_source: 1, in_both: 1, ..Tags::default() };
+        let game = Game { tags, views, files: 2, findings: 0 };
         let lines = game.lines("games/tla");
-        assert_eq!(lines[3], "games/tla: 60 // DEAD: marks (40 do not yet say what the ROM keeps, S3; counted, not refused)");
-        assert_eq!(lines[4], "games/tla: 5 VIEW markers (3 routine, 2 tag)");
+        assert_eq!(lines[3], "games/tla: measurements: 0 in evidence/tla-fakematch.tsv (H8), 1 in the source, 1 of them with a row there too");
+        assert_eq!(lines[4], "games/tla: 60 // DEAD: marks (40 do not yet say what the ROM keeps, S3; counted, not refused)");
+        assert_eq!(lines[5], "games/tla: 5 VIEW markers (3 routine, 2 tag)");
+    }
+
+    fn row(routine: &str, kind: &str, text: &str) -> Measurement {
+        Measurement { file: "games/tbs/src/x.c".to_string(), routine: routine.to_string(), kind: kind.to_string(), text: text.to_string() }
+    }
+
+    #[test]
+    fn a_tag_without_its_measurement_takes_its_row() {
+        let source = "\
+void F(int x) {
+  /* FAKEMATCH(dead): a store set again. */
+  x = 1;
+  /* FAKEMATCH(temporary): zero held; as 0, 2 of 9 instructions differ in tbs-en. */
+  /* FAKEMATCH(dead): a second store, with no row of its own. */
+  /* FAKEMATCH(volatile): its row out of form. */
+  /* FAKEMATCH(barrier): no sentence */
+}
+
+void G(void) {
+  /* LEFTOVER(frame): an unused local. */
+  /* LEFTOVER(frame): another, its row with no evidence. */
+  /* FAKEMATCH(register): a kind S2 has not. */
+}
+
+// FAKEMATCH(wrapper): before the routine it serves.
+static int H(int x) { return x; }
+";
+        let rows = [
+            row("F", "FAKEMATCH(dead)", "a store set again; as one assignment, 3 of 9 instructions differ in tbs-en."),
+            row("F", "FAKEMATCH(temporary)", "zero held; as 0, 2 of 9 instructions differ in tbs-en."),
+            row("F", "FAKEMATCH(volatile)", "read afresh; as plain, a load moves."),
+            row("F", "FAKEMATCH(barrier)", "held; as no asm, 1 of 9 instructions differ in tbs-en."),
+            row("G", "LEFTOVER(frame)", "an unused local: no instruction addresses the 8 bytes it reserves (sub sp, #8); as without it, 4 of 42 instructions differ in tbs-en."),
+            row("G", "LEFTOVER(frame)", "an unused local; as without it, 4 of 42 instructions differ in tbs-en."),
+            row("G", "FAKEMATCH(register)", "kept; as one expression, 1 of 9 instructions differ in tbs-en."),
+            row("H and its siblings", "FAKEMATCH(wrapper)", "a layer; as the call, 1 of 9 instructions differ in tbs-en."),
+            row("Gone", "FAKEMATCH(dead)", "kept; as none, 1 of 9 instructions differ in tbs-en."),
+        ];
+        let (tags, found) = findings("games/tbs/src/x.c", source, &rows);
+        assert_eq!((tags.fakematch, tags.leftover), (7, 2));
+        assert_eq!((tags.in_evidence, tags.in_source, tags.in_both), (7, 1, 1), "the second dead tag has neither");
+        let lines: Vec<(usize, &str)> = found.iter().map(|finding| (finding.line, finding.message.as_str())).collect();
+        let starts = [
+            (0, "a row of evidence/tbs-fakematch.tsv for Gone (FAKEMATCH(dead)) and no such tag in the file"),
+            (5, "not S2's form: FAKEMATCH(<kind>): <what the device is>, its measurement a row of evidence/tbs-fakematch.tsv"),
+            (6, "its row in evidence/tbs-fakematch.tsv: not S2's form"),
+            (7, "not H8's form"),
+            (12, "its row in evidence/tbs-fakematch.tsv: a frame leftover states its evidence"),
+            (13, "unknown kind register"),
+            (16, "a tag outside any function"),
+        ];
+        assert_eq!(lines.len(), starts.len(), "{lines:#?}");
+        for ((line, message), (want_line, want)) in lines.iter().zip(starts) {
+            assert!(*line == want_line && message.starts_with(want), "{line}: {message}, not {want_line}: {want}");
+        }
+        // A game with no table yet: a tag must carry its measurement.
+        let (tags, found) = findings("games/tla/src/x.c", "void F(void) {\n  /* FAKEMATCH(dead): kept. */\n}\n", &[]);
+        assert_eq!((tags.in_evidence, tags.in_source), (0, 0));
+        assert!(found[0].message.contains("evidence/tla-fakematch.tsv"), "{found:?}");
+    }
+
+    /// The Broken Seal's source with each tag cut to its word, kind and a few
+    /// words, as H8 leaves it: every tag finds its row and is judged by it,
+    /// and the findings are the ones its tags have in full.
+    #[test]
+    fn the_broken_seal_is_judged_by_its_rows_alone() {
+        let root = crate::compile::root();
+        let mut by_file: BTreeMap<String, Vec<Measurement>> = BTreeMap::new();
+        for row in evidence::measurements("tbs").unwrap() {
+            by_file.entry(row.file.clone()).or_default().push(row);
+        }
+        let (mut cut, mut full) = (Tags::default(), Tags::default());
+        let (mut cut_findings, mut full_findings) = (Vec::new(), Vec::new());
+        for file in sources(root, &["games/tbs".to_string()]).unwrap() {
+            let name = file.strip_prefix(root).unwrap().display().to_string();
+            let source = std::fs::read_to_string(&file).unwrap();
+            let mut short = String::new();
+            let mut at = 0;
+            for token in lex(&source).iter().filter(|token| token.kind == Kind::Comment) {
+                let Some((word, kind)) = word_and_kind(&plain(&[token.text])).map(|(w, k)| (w.to_string(), k.to_string())) else { continue };
+                let offset = token.text.as_ptr() as usize - source.as_ptr() as usize;
+                short += &source[at..offset];
+                // The same lines, so the findings keep their places, each
+                // ending as it did in a macro's directive.
+                short += &format!("/* {word}({kind}): the device.");
+                for line in token.text.lines().take(token.text.lines().count().saturating_sub(1)) {
+                    short += if line.ends_with('\\') { " \\\n" } else { "\n" };
+                }
+                short += " */";
+                at = offset + token.text.len();
+            }
+            short += &source[at..];
+            let rows = by_file.get(&name).map_or(&[][..], Vec::as_slice);
+            let (tags, found) = findings(&name, &short, rows);
+            cut.add(tags);
+            cut_findings.extend(found.into_iter().map(|finding| (name.clone(), finding.line, finding.message.replace("its row in evidence/tbs-fakematch.tsv: ", ""))));
+            let (tags, found) = findings(&name, &source, rows);
+            full.add(tags);
+            full_findings.extend(found.into_iter().map(|finding| (name.clone(), finding.line, finding.message.replace("its row in evidence/tbs-fakematch.tsv: ", ""))));
+        }
+        assert!(cut.fakematch > 100 && cut.leftover > 10, "{cut:?}");
+        assert_eq!((cut.fakematch, cut.leftover), (full.fakematch, full.leftover));
+        assert_eq!((cut.in_source, cut.in_evidence), (0, cut.fakematch + cut.leftover), "every tag finds its row");
+        // A tag that misses S2's form in full misses it in its row, and a
+        // tag outside any function is still one, but nothing else is found.
+        assert_eq!(cut_findings, full_findings);
     }
 
     #[test]
@@ -796,8 +1090,8 @@ void Unproven(void) {
 /* LEFTOVER(template): as its sibling Battle_Run; as one, 1 of 2 instructions differ in tbs-en. */
 static const int table[] = { 1, 2 };
 ";
-        let (tags, found) = findings("games/tbs/src/x.c", source);
-        assert_eq!(tags, Tags { fakematch: 0, leftover: 3, dead: 0, dead_unformed: 0 });
+        let (tags, found) = findings("games/tbs/src/x.c", source, &[]);
+        assert_eq!(tags, Tags { fakematch: 0, leftover: 3, in_source: 3, ..Tags::default() });
         let lines: Vec<(usize, &str)> = found.iter().map(|finding| (finding.line, finding.message.split(':').next().unwrap())).collect();
         assert_eq!(
             lines,
@@ -866,8 +1160,8 @@ void New(int id, int cue) {
 #define LINKED(x) (x)
 #endif
 ";
-        let (tags, found) = findings("games/tla/src/x.c", source);
-        assert_eq!(tags, Tags { fakematch: 4, ..Tags::default() });
+        let (tags, found) = findings("games/tla/src/x.c", source, &[]);
+        assert_eq!(tags, Tags { fakematch: 4, in_source: 4, ..Tags::default() });
         assert_eq!(
             found,
             [

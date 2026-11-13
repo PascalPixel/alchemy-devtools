@@ -29,13 +29,13 @@ cargo build --release --features render
 | Command | What it does |
 |---|---|
 | `adopt` | gathers a game's objects into one (`adopt merge`), editing its linker script, with `--keep-views` keeping each disagreement between the sources as a marked view; `adopt settle` deletes the views that move no code; `--verify` has the build judge it, and a journal undoes the batch or one item of it |
-| `check` | each built ROM, overlay and PACKER row against the reference ROMs, and the fake-match tags against the project's rule |
+| `check` | each built ROM, overlay and PACKER row against the reference ROMs, and the fake-match tags against the project's rule, each tag's measurement read from its row of `evidence/<game>-fakematch.tsv` or, while a game's tags still carry it, from the tag |
 | `diff` | a C draft compiled as the build compiles it, against the listing it would replace |
 | `editions` | the objects from `games/` some edition does not link, with the names each defines |
 | `lit` | recolours a picture in alchemy-lit, the colour correction the docs site's filter is fitted to (feature `render`) |
 | `passdiff` | why a form is kept: an object compiled as it stands and with a plain variant, its RTL compared pass by pass |
 | `permute` | searches rewrites of a draft toward differ 0 |
-| `progress` | DONE code and data from the linker maps, and what is left to humanize (`--humanity`) |
+| `progress` | DONE code and data from the linker maps, and what is left to humanize (`--humanity`), a name's evidence read from `evidence/<game>-names.tsv` or, for a game not yet converted, its `★ Named from` line |
 | `rank` | every unfinished piece of a game, furthest first, each with the command that measures it |
 | `regress` | the functions whose assembly differs from a saved build, each classed |
 | `render` | the docs site's pictures and recordings, and the probes the source cites (feature `render`) |
@@ -45,6 +45,8 @@ cargo build --release --features render
 | `where` | the bytes each edition still places from `recon/` (none, once it is gone), and DONE from the maps |
 
 Run any command with `--help` for its options.
+
+`evidence/` holds what Alchemy's source no longer says about itself: what each name was taken from (`<game>-names.tsv`) and what each fake match's plain form costs (`<game>-fakematch.tsv`). The tables are compiled into the program, so after changing a row, build it again.
 
 ## Progress
 

@@ -7,11 +7,13 @@
 //! - words the game never uses: each name is split into words, and a word is
 //!   accounted for when the game's text uses it (after crude stemming) or it
 //!   is on the short programming vocabulary below;
-//! - names without evidence: a name is verified by a `★ Named from ...`
-//!   line in its own comment whose quote or area name the text confirms;
-//!   short of that, evidence in its prose (a quote the text holds, a message
-//!   symbol, an area-name citation, a note on its render) is told apart from
-//!   none at all;
+//! - names without evidence: a name is verified by its row of this
+//!   repository's `evidence/<game>-names.tsv` (H8), matched by name and file,
+//!   or, in a game whose source still holds them, by a `★ Named from ...`
+//!   line in its own comment, either one's quote or area name confirmed by
+//!   the text; short of that, evidence in its prose (a quote the text holds,
+//!   a message symbol, an area-name citation, a note on its render) is told
+//!   apart from none at all;
 //! - names checked mechanically, which need no line: an enumerator of a
 //!   table-indexed enum (`ItemId`) against the game's name for its index,
 //!   and an exit whose words are verified maps, door words and the
@@ -434,6 +436,17 @@ fn evidence_line(comment: &str, text: &GameText) -> Option<Evidence> {
     failed.map(Evidence::Failed)
 }
 
+/// What a name's evidence says, each row judged as the `★` line it stands
+/// for (H8), and then its own comment: a verified row first, then a line in
+/// the comment, then a row that failed.
+fn named(thing: &Thing, own: &str, text: &GameText) -> Option<Evidence> {
+    let rows: Vec<Evidence> = thing.evidence.iter().filter_map(|line| evidence_line(line, text)).collect();
+    if let Some(verified) = rows.iter().find(|row| matches!(row, Evidence::Verified(_))) {
+        return Some(verified.clone());
+    }
+    evidence_line(own, text).or_else(|| rows.into_iter().next())
+}
+
 fn prose_regexes() -> &'static [Regex; 4] {
     static SET: OnceLock<[Regex; 4]> = OnceLock::new();
     SET.get_or_init(|| {
@@ -487,6 +500,9 @@ pub struct Thing {
     /// For an enumerator, whether it is its enum's only one, so that the
     /// enum's comment is its own.
     pub alone: bool,
+    /// Its rows of the game's `evidence/<game>-names.tsv` (H8), each as the
+    /// `★ Named from ...` line it stands for.
+    pub evidence: Vec<String>,
 }
 
 impl Thing {
@@ -842,6 +858,9 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
         }
         if verified(row) {
             rooms.entry(at).or_default().extend(star_stems(&row.thing.own));
+            for line in &row.thing.evidence {
+                rooms.entry(at).or_default().extend(star_stems(line));
+            }
         }
     }
     let door = |word: &str| DOOR_WORDS.contains(&word);
@@ -926,13 +945,13 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
                 // a suffix (`ENEMY_MIMIC_ALTIN_PEAK`, the Mimic of Altin
                 // Peak's chest), is named by its own verified line.
                 if let Evidence::Mismatch { suffixed: true, .. } = table {
-                    if let Some(line @ Evidence::Verified(_)) = evidence_line(&own, text) {
+                    if let Some(line @ Evidence::Verified(_)) = named(thing, &own, text) {
                         return line;
                     }
                 }
                 return table;
             }
-            if let Some(line) = evidence_line(&own, text) {
+            if let Some(line) = named(thing, &own, text) {
                 return line;
             }
             if thing.alone {

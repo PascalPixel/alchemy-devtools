@@ -13,8 +13,10 @@ With no option, counts DONE code and data in each edition built and matching
 rom.sha1 (make compare-editions) and prints a line for each; a game without
 all six editions is pending. Nothing is written, sent or published.
 --humanity counts what is left to humanize in each game's tracked C and
-headers, from the source alone, prints a table and writes
-out/reports/humanity.tsv; --top N also lists the N files leading each count,
+headers, from the source and, for where names come from, this toolkit's
+evidence/GAME-names.tsv (a name's rows, by name and declaring file; for a
+game not yet converted, the ★ Named from lines in its source), prints a
+table and writes out/reports/humanity.tsv; --top N also lists the N files leading each count,
 and --list METRIC prints each counted thing of one of the table's metrics
 instead (--list provenance is the name provenance worklist, --list
 unused_word the words the game's text never uses, --list door_word the
