@@ -28,7 +28,7 @@ cargo build --release --features render
 
 | Command | What it does |
 |---|---|
-| `adopt` | gathers a game's objects into one (`adopt merge`), editing its linker script, with `--keep-views` keeping each disagreement between the sources as a marked view; `adopt settle` deletes the views that move no code; `--verify` has the build judge it, and a journal undoes the batch or one item of it |
+| `adopt` | gathers a game's objects into one (`adopt merge`), editing its linker script, with `--keep-views` keeping each disagreement between the sources as a marked view; `adopt settle` deletes the views that move no code, in the objects that hold them or include their file (a part, a shared file, an internal header), reading a marker clang-format wrapped and writing its own as clang-format wraps them; `--verify` has the build judge it, and a journal undoes the batch or one item of it |
 | `check` | each built ROM, overlay and PACKER row against the reference ROMs, and the fake-match tags against the project's rule, each tag's measurement read from its row of `evidence/<game>-fakematch.tsv` or, while a game's tags still carry it, from the tag |
 | `diff` | a C draft compiled as the build compiles it, against the listing it would replace |
 | `editions` | the objects from `games/` some edition does not link, with the names each defines |

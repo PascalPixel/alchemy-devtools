@@ -5,16 +5,21 @@
 //! where the definition is assembly or not C, as the declaration most files
 //! write) and as whatever the object already declares; a tag's, typedef's,
 //! enumerator's, static's or macro's as the definition the rest of the
-//! object has. The compiler judges: every object holding views is compiled
-//! in every edition with a view gone, and each function held against the
-//! build's own assembly of that object (`.L` labels renumbered). A view
-//! whose removal moves nothing goes, with its marker; one that moves code
-//! stays, its marker saying what moved and by how much, so what is left is
-//! the list of real disagreements.
+//! object has. The compiler judges: every object holding views, or
+//! including a file that holds them (a part, `<object>/<part>.c`, a shared
+//! file a scene includes, an internal header), is compiled in every edition
+//! with a view gone, and each function held against the build's own
+//! assembly of that object (`.L` labels renumbered). A view whose removal
+//! moves nothing goes, with its marker; one that moves code stays, its
+//! marker saying what moved and by how much, so what is left is the list of
+//! real disagreements.
 //!
 //! An object's views are first tried all at once, then by halves, so an
 //! object whose views all go costs one compile an edition; a symbol that
-//! moves code is tried view by view. Objects settle in parallel.
+//! moves code is tried view by view. Objects settle in parallel; objects
+//! that include one file holding views settle as one.
+
+mod bundle;
 
 use super::views::{self, assembly, text, Compiler, Mode};
 use regex::Regex;
@@ -23,40 +28,55 @@ use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Condvar, Mutex};
 
-const USAGE: &str = r#"usage: alchemy-devtools adopt settle --game GAME [--dry-run] [--no-modern] [OBJECT.c...]
+const USAGE: &str = r#"usage: alchemy-devtools adopt settle --game GAME [--dry-run] [--no-modern] [FILE.c...]
 Takes away the views adopt merge --keep-views wrote, wherever the code does
-not need them. Every object of GAME holding a view marker
+not need them. Every view marker of GAME
   /* VIEW(PART): KIND NAME as THIS; OTHER has THAT. */
-(or only the OBJECT.c files named) is settled by symbol. A routine or
-variable's view is tried as the definition's own declaration, written in
+on one line or wrapped by clang-format over several (or only those in the
+FILE.c files named and the files they include) is settled by symbol, in the
+objects that hold it or include its file: a part of a large object
+(<object>/<part>.c, included from <object>.c directly or through another
+included file), a shared file scenes include, an internal header. A routine
+or variable's view is tried as the definition's own declaration, written in
 place of the view's bound one under the plain name (where the definition is
 assembly or absent, the declaration most files write), then with no
 declaration of its own, as the object sees the name elsewhere; a tag,
 typedef, enumerator, static or macro's view is tried as the definition the
 rest of the object has: the part's own definition deleted and its name
-written plainly again. A view whose definition holds a FAKEMATCH tag is not
-tried. The compiler judges: the object is compiled in every edition that
-links it by the build's own recipe, and every function and datum is held
-against the build's assembly of that object (out/EDITION/obj/OBJECT.s, .L
-labels renumbered), which must be newer than its source. An object's views
-are tried all at once, then by halves; a symbol that moves code is tried
-view by view, and each choice in turn. A view that moves nothing is deleted
-with its marker; one that moves code stays, its marker ending
+written plainly again in every file of the object that uses it, and an
+#undef of a wrapper the including file writes deleted with it. A view whose
+definition holds a FAKEMATCH tag is not tried. The compiler judges: each
+object that includes a file the try changed is compiled in every edition
+that links it by the build's own recipe, from scratch copies of its files,
+and every function and datum is held against the build's assembly of that
+object (out/EDITION/obj/OBJECT.s, .L labels renumbered), which must be newer
+than the object and every file it includes. Objects that include one file
+holding views or using a view's name are settled together. Their views are
+tried all at once, then by halves; a symbol that moves code is tried view by
+view, and each choice in turn. A view that moves nothing is deleted with its
+marker; one that moves code stays, its marker ending
   ...; tried as the definition's DECLARATION, FUNCTION moves: N of M instructions in EDITION. */
-Objects settle in parallel; the report lists the symbols settled, the views
-deleted and the views left, by symbol, with the functions that moved.
+written as clang-format wraps it, so the formatter leaves it and the next
+settle reads it again. Settles run in parallel; the report lists the symbols
+settled, the views deleted and the views left, by symbol, with the
+functions that moved, then the views tried and deleted in linked objects
+and in the files they include.
 Each try is also compiled as make modern compiles the object, and must have
 no error; once written, make modern-GAME must pass (--no-modern skips both).
 Scratch files are written outside the checkout; --dry-run writes nothing.
-Otherwise the objects are written with a journal under out/adopt/ that
+Otherwise the files are written with a journal under out/adopt/ that
 adopt --undo reverses. Run make compare-editions after: settle compiles
 each object as the build does but does not link."#;
 
 /// A view as its marker names it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct View {
-    /// The marker's line, trimmed, as the source writes it.
+    /// The marker read as one line, trimmed: a marker the formatter wrapped
+    /// over several comment lines has them joined by single spaces, their
+    /// leading `*` taken off.
     pub marker: String,
+    /// The marker as the source writes it, every line with its indent.
+    pub written: String,
     /// The line that finds the view again after other edits: its marker,
     /// or while it is settled a line no other view has (two views of one
     /// name in one part have the same marker).
@@ -73,8 +93,9 @@ impl View {
     }
 }
 
-/// A view's marker read from its line, or None for any other line.
+/// A view's marker read from one line, or None for any other line.
 pub(crate) fn marker(line: &str) -> Option<View> {
+    let written = line;
     let line = line.trim();
     if !line.starts_with("/* ") || !line.ends_with("*/") {
         return None;
@@ -85,7 +106,81 @@ pub(crate) fn marker(line: &str) -> Option<View> {
     let rest = rest.strip_prefix(kind)?.trim_start();
     let named = rest.split_once(" as ")?.0;
     let name = ["struct ", "union ", "enum "].iter().find_map(|tag| named.strip_prefix(tag)).unwrap_or(named);
-    Some(View { marker: line.to_string(), key: line.to_string(), suffix: suffix.to_string(), kind, name: name.to_string() })
+    Some(View { marker: line.to_string(), written: written.to_string(), key: line.to_string(), suffix: suffix.to_string(), kind, name: name.to_string() })
+}
+
+/// The longest a marker may run over lines before it is taken for no marker.
+const MARKER_LINES: usize = 64;
+
+/// Each view marker of a text with the 0-based lines it covers, first and
+/// last: a marker on one line, or one clang-format wrapped over several
+/// (` * ` before each line after the first, `*/` maybe on a line of its own).
+pub(crate) fn spans(text: &str) -> Vec<(usize, usize, View)> {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut found = Vec::new();
+    let mut at = 0;
+    while at < lines.len() {
+        let first = lines[at].trim();
+        if !first.strip_prefix("/* ").is_some_and(|rest| rest.starts_with(views::MARKER)) {
+            at += 1;
+            continue;
+        }
+        let Some(end) = (at..lines.len().min(at + MARKER_LINES)).find(|&n| lines[n].contains("*/")) else {
+            at += 1;
+            continue;
+        };
+        let mut words = vec![first];
+        for line in &lines[at + 1..=end] {
+            let line = line.trim();
+            let line = if line.starts_with("*/") { line } else { line.strip_prefix('*').unwrap_or(line).trim_start() };
+            if !line.is_empty() {
+                words.push(line);
+            }
+        }
+        match marker(&words.join(" ")) {
+            Some(mut view) => {
+                view.written = lines[at..=end].join("\n");
+                found.push((at, end, view));
+                at = end + 1;
+            }
+            None => at += 1,
+        }
+    }
+    found
+}
+
+/// Each view of a text, in order, whatever lines its marker covers.
+pub(crate) fn markers(text: &str) -> Vec<View> {
+    spans(text).into_iter().map(|(.., view)| view).collect()
+}
+
+/// The column clang-format's LLVM style wraps at.
+const COLUMNS: usize = 80;
+
+/// A one-line block comment written as clang-format's LLVM style wraps it:
+/// filled to 80 columns, each line after the first opened with ` * `, the
+/// closing `*/` on the last line where it fits, else on its own.
+pub(crate) fn wrapped(comment: &str, indent: &str) -> String {
+    let body = comment.trim().strip_prefix("/*").map_or(comment, |body| body.strip_suffix("*/").unwrap_or(body)).trim();
+    let width = |text: &str| text.chars().count();
+    let mut lines: Vec<String> = Vec::new();
+    let mut line = format!("{indent}/*");
+    let mut filled = false;
+    for word in body.split(' ').filter(|word| !word.is_empty()) {
+        if filled && width(&line) + 1 + width(word) > COLUMNS {
+            lines.push(std::mem::replace(&mut line, format!("{indent} *")));
+        }
+        line.push(' ');
+        line.push_str(word);
+        filled = true;
+    }
+    if width(&line) + 3 <= COLUMNS {
+        line.push_str(" */");
+    } else {
+        lines.push(std::mem::replace(&mut line, format!("{indent} */")));
+    }
+    lines.push(line);
+    lines.join("\n")
 }
 
 /// A view's own line while it is settled: `/* VIEW#N */` for the view at
@@ -94,40 +189,83 @@ fn key_of(index: usize) -> String {
     format!("/* VIEW#{index} */")
 }
 
-/// The text with each view's marker written as its key, and the views
-/// keyed: every view found by its own line, whatever its marker repeats.
+/// What stands for each further line of a wrapped marker while it is
+/// settled, so every other line keeps its number and a compiler's message
+/// names the file's own line.
+const CONTINUED: &str = "/* continued VIEW */";
+
+fn continued(line: &str) -> bool {
+    line.trim() == CONTINUED
+}
+
+/// A text's lines, each with its newline.
+fn lines_of(text: &str) -> Vec<&str> {
+    text.split_inclusive('\n').collect()
+}
+
+fn indent_of(line: &str) -> &str {
+    &line[..line.len() - line.trim_start().len()]
+}
+
+/// The text with each view's marker written as its key on one line, and
+/// the views keyed: every view found by its own line, whatever its marker
+/// repeats or however many lines it covers.
 fn keyed(text: &str, views: &[View]) -> (String, Vec<View>) {
     let mut keyed: Vec<View> = views.to_vec();
+    let lines = lines_of(text);
+    let starts: BTreeMap<usize, (usize, View)> = spans(text).into_iter().map(|(first, last, view)| (first, (last, view))).collect();
     let mut next = 0;
     let mut out = String::with_capacity(text.len());
-    for line in text.split_inclusive('\n') {
-        let (content, newline) = line.strip_suffix('\n').map_or((line, ""), |content| (content, "\n"));
-        match keyed.get(next).filter(|view| content.trim() == view.marker) {
-            Some(_) => {
-                let indent = &content[..content.len() - content.trim_start().len()];
+    let mut at = 0;
+    while at < lines.len() {
+        match starts.get(&at).filter(|(_, view)| keyed.get(next).is_some_and(|wanted| wanted.marker == view.marker)) {
+            Some((last, view)) => {
+                let newline = if lines[at].ends_with('\n') { "\n" } else { "" };
                 keyed[next].key = key_of(next);
-                out.push_str(&format!("{indent}{}{newline}", keyed[next].key));
+                keyed[next].written = view.written.clone();
+                out.push_str(&format!("{}{}{newline}", indent_of(lines[at]), keyed[next].key));
+                for line in &lines[at + 1..=*last] {
+                    out.push_str(&format!("{}{CONTINUED}{}", indent_of(line), if line.ends_with('\n') { "\n" } else { "" }));
+                }
                 next += 1;
+                at = last + 1;
             }
-            None => out.push_str(line),
+            None => {
+                out.push_str(lines[at]);
+                at += 1;
+            }
         }
     }
     (out, keyed)
 }
 
-/// The text with every key still standing written as its view's marker.
+/// The text with every key still standing written as its view's marker was.
 fn unkeyed(text: &str, views: &[View]) -> String {
     let mut out = String::with_capacity(text.len());
     for line in text.split_inclusive('\n') {
+        if continued(line) {
+            continue;
+        }
         let (content, newline) = line.strip_suffix('\n').map_or((line, ""), |content| (content, "\n"));
         match views.iter().find(|view| view.key != view.marker && content.trim() == view.key) {
-            Some(view) => {
-                let indent = &content[..content.len() - content.trim_start().len()];
-                out.push_str(&format!("{indent}{}{newline}", view.marker));
-            }
+            Some(view) => out.push_str(&format!("{}{newline}", view.written)),
             None => out.push_str(line),
         }
     }
+    out
+}
+
+/// The text with a view's marker on one line, where it covers several.
+fn collapsed(text: &str, view: &View) -> String {
+    if text.lines().any(|line| line.trim() == view.key) {
+        return text.to_string();
+    }
+    let lines = lines_of(text);
+    let Some((first, last, _)) = spans(text).into_iter().find(|(.., found)| found.marker == view.marker) else { return text.to_string() };
+    let newline = if lines[last].ends_with('\n') { "\n" } else { "" };
+    let mut out: String = lines[..first].concat();
+    out.push_str(&format!("{}{}{newline}", indent_of(lines[first]), view.key));
+    out.push_str(&lines[last + 1..].concat());
     out
 }
 
@@ -167,9 +305,10 @@ fn brief(text: &str) -> String {
     }
 }
 
-/// Whether a line opens a part of a joined object (`// ---- STEM.c ----`).
+/// Whether a line opens a part of a joined object (`// ---- STEM.c ----`)
+/// or a file of an object's files read as one text.
 fn separates(line: &str) -> bool {
-    line.starts_with("// ---- ") && line.ends_with(".c ----")
+    line.starts_with("// ---- ") && line.ends_with(".c ----") || line.starts_with(bundle::FILE)
 }
 
 /// The lines of the part that holds line `at`: from its separator to the next.
@@ -177,6 +316,18 @@ fn region(lines: &[String], at: usize) -> (usize, usize) {
     let start = lines[..=at].iter().rposition(|line| separates(line)).unwrap_or(0);
     let end = lines[at + 1..].iter().position(|line| separates(line)).map_or(lines.len(), |n| at + 1 + n);
     (start, end)
+}
+
+/// Every part's lines, in order: from each separator to the next.
+fn regions(lines: &[String]) -> Vec<(usize, usize)> {
+    let mut starts: Vec<usize> = (0..lines.len()).filter(|&n| n == 0 || separates(&lines[n])).collect();
+    starts.dedup();
+    starts.iter().enumerate().map(|(n, &start)| (start, starts.get(n + 1).copied().unwrap_or(lines.len()))).collect()
+}
+
+/// Whether a line is a view's marker or key, which no rename touches.
+fn marks(line: &str) -> bool {
+    line.trim_start().strip_prefix("/* ").is_some_and(|rest| rest.starts_with(views::MARKER) || rest.starts_with("VIEW#"))
 }
 
 fn word(name: &str) -> Regex {
@@ -204,19 +355,106 @@ fn holds_tag(lines: &[String], range: (usize, usize)) -> bool {
     lines[range.0..range.1].iter().any(|line| line.contains("FAKEMATCH"))
 }
 
-/// The text with one view taken away as `choice` says.
+/// The text with one view taken away as `choice` says. The view's own
+/// lines are its part's; its private name is written plainly wherever the
+/// text uses it, since the parts an object was cut into share their names
+/// (a view of `event_commands` binds a name its sibling files call).
 pub(crate) fn apply(text: &str, view: &View, choice: &Choice) -> Result<String, String> {
+    let text = collapsed(text, view);
     let mut lines: Vec<String> = text.lines().map(str::to_string).collect();
     let at = lines.iter().position(|line| line.trim() == view.key).ok_or_else(|| format!("{}'s marker was not found", view.name))?;
+    let private = view.private();
+    let name = view.name.as_str();
+    let pattern = word(&private);
+    // The parts that see the private name, by their order.
+    let seeing: BTreeSet<usize> = regions(&lines).iter().enumerate().filter(|(_, (start, end))| lines[*start..*end].iter().any(|line| pattern.is_match(line))).map(|(n, _)| n).collect();
     let (start, end) = region(&lines, at);
     let mut part = lines[start..end].to_vec();
-    edit(&mut part, at - start, view, choice)?;
+    let wrapped = edit(&mut part, at - start, view, choice)?;
     lines.splice(start..end, part);
+    if view.kind == "macro" && view.marker.contains(&format!(" as {private};")) {
+        remove_defines(&mut lines, &private);
+        let undefine = format!("#undef {private}");
+        lines.retain(|line| line.trim() != undefine);
+    }
+    // A wrapper's `#undef` the including file writes after a part goes
+    // once nothing defines the name.
+    if wrapped && !lines.iter().any(|line| defines(line, name)) {
+        let undefine = format!("#undef {name}");
+        lines.retain(|line| line.trim() != undefine);
+    }
+    if renames(&lines, view) {
+        for line in lines.iter_mut() {
+            if !marks(line) && pattern.is_match(line) {
+                *line = pattern.replace_all(line, name).into_owned();
+            }
+        }
+    }
+    if let Choice::Members { renames } = choice {
+        let map: BTreeMap<&str, &str> = renames.iter().map(|(from, to)| (from.as_str(), to.as_str())).collect();
+        let alternatives: Vec<String> = map.keys().map(|from| regex::escape(from)).collect();
+        let access = Regex::new(&format!(r"(\.|->)(\s*)({})\b", alternatives.join("|"))).unwrap();
+        for (n, (start, end)) in regions(&lines).into_iter().enumerate() {
+            if !seeing.contains(&n) {
+                continue;
+            }
+            for line in &mut lines[start..end] {
+                if !marks(line) && !line.trim_start().starts_with("//") {
+                    *line = access.replace_all(line, |found: &regex::Captures| format!("{}{}{}", &found[1], &found[2], map[&found[3]])).into_owned();
+                }
+            }
+        }
+    }
     let mut out = lines.join("\n");
     if text.ends_with('\n') {
         out.push('\n');
     }
     Ok(out)
+}
+
+/// Whether the view's private name is written plainly now it is taken
+/// away: not while another view still binds it (one around each of two
+/// includes), whose code keeps calling it by that name; only the last view
+/// of it taken away writes the plain name.
+fn renames(lines: &[String], view: &View) -> bool {
+    if !matches!(view.kind, "routine" | "variable") {
+        return true;
+    }
+    let private = view.private();
+    let define = format!("#define {} {private}", view.name);
+    let text = joined(lines);
+    let still = defined_as(lines, &view.name, &private).is_some() || lines.iter().any(|line| line.trim() == define) || text::statements(&text).iter().any(|s| s.find(&private).is_some() && s.find("__asm__").is_some());
+    !still
+}
+
+/// The first line of `#define NAME PRIVATE` in `lines`, however many
+/// continued lines clang-format wrote it over, with the line after it.
+fn defined_as(lines: &[String], name: &str, private: &str) -> Option<(usize, usize)> {
+    let wanted = format!("#define {name} {private}");
+    let mut at = 0;
+    while at < lines.len() {
+        let mut end = at;
+        let mut logical = String::new();
+        loop {
+            let line = lines[end].trim_end();
+            match line.strip_suffix('\\') {
+                Some(line) if end + 1 < lines.len() => {
+                    logical.push_str(line);
+                    logical.push(' ');
+                    end += 1;
+                }
+                _ => {
+                    logical.push_str(line);
+                    break;
+                }
+            }
+        }
+        if logical.split_whitespace().collect::<Vec<_>>().join(" ") == wanted {
+            return Some((at, end + 1));
+        }
+        at = end + 1;
+    }
+    None
 }
 
 /// Where a view's own lines end in a part, from line `at` (where its marker
@@ -226,13 +464,14 @@ fn own_end(part: &[String], at: usize) -> usize {
 }
 
 /// Removes, in a part's lines from `at` to the next view, `#define NAME
-/// PRIVATE` and the `#undef NAME` after it: a header view's wrapper. True
-/// if there was one.
+/// PRIVATE` (on one line or continued over several) and the `#undef NAME`
+/// after it in the part: a header view's wrapper. True if there was one.
 fn unwrap_header(part: &mut Vec<String>, at: usize, name: &str, private: &str) -> bool {
-    let define = format!("#define {name} {private}");
     let end = own_end(part, at);
-    let Some(found) = part[at.min(end)..end].iter().position(|line| line.trim() == define).map(|n| at + n) else { return false };
-    part.remove(found);
+    let from = at.min(end);
+    let Some((first, last)) = defined_as(&part[from..end], name, private) else { return false };
+    let found = from + first;
+    part.drain(found..from + last);
     let undefine = format!("#undef {name}");
     if let Some(n) = part[found..].iter().position(|line| line.trim() == undefine) {
         part.remove(found + n);
@@ -240,10 +479,14 @@ fn unwrap_header(part: &mut Vec<String>, at: usize, name: &str, private: &str) -
     true
 }
 
-fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Result<(), String> {
+/// Takes a view away in its part's lines; true where it wrapped a header.
+fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Result<bool, String> {
     let private = view.private();
     let name = view.name.as_str();
     part.remove(at);
+    while part.get(at).is_some_and(|line| continued(line)) {
+        part.remove(at);
+    }
     let wrapped = unwrap_header(part, at, name, &private);
     match view.kind {
         "routine" | "variable" => {
@@ -358,34 +601,7 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
         }
         _ => return Err(format!("no way to settle a {} view", view.kind)),
     }
-    // Where another view of the part still binds the private name (one
-    // around each of two includes), the part's code keeps calling it by
-    // that name: only the last view of it taken away writes the plain name.
-    if matches!(view.kind, "routine" | "variable") {
-        let define = format!("#define {name} {private}");
-        let text = joined(part);
-        let still = part.iter().any(|line| line.trim() == define) || text::statements(&text).iter().any(|s| s.find(&private).is_some() && s.find("__asm__").is_some());
-        if still {
-            return Ok(());
-        }
-    }
-    let pattern = word(&private);
-    for line in part.iter_mut() {
-        if marker(line).is_none() && pattern.is_match(line) {
-            *line = pattern.replace_all(line, name).into_owned();
-        }
-    }
-    if let Choice::Members { renames } = choice {
-        let map: BTreeMap<&str, &str> = renames.iter().map(|(from, to)| (from.as_str(), to.as_str())).collect();
-        let alternatives: Vec<String> = map.keys().map(|from| regex::escape(from)).collect();
-        let access = Regex::new(&format!(r"(\.|->)(\s*)({})\b", alternatives.join("|"))).unwrap();
-        for line in part.iter_mut() {
-            if marker(line).is_none() && !line.trim_start().starts_with("//") {
-                *line = access.replace_all(line, |found: &regex::Captures| format!("{}{}{}", &found[1], &found[2], map[&found[3]])).into_owned();
-            }
-        }
-    }
-    Ok(())
+    Ok(wrapped)
 }
 
 /// The members of a `struct` or `union TAG { ... }` a text defines at file
@@ -693,8 +909,11 @@ const TRIED: &str = "; tried ";
 /// What a marker that could not be tried says, the same way.
 const UNTRIED: &str = "; not tried: ";
 
-/// The text with a kept view's marker ending in what was tried.
+/// The text with a kept view's marker ending in what was tried, written as
+/// clang-format wraps it, so the formatter leaves it be and the next settle
+/// reads it again.
 fn annotate(text: &str, view: &View, note: &str) -> String {
+    let text = collapsed(text, view);
     let body = view.marker.strip_suffix("*/").unwrap_or(&view.marker).trim_end();
     let body = body.strip_suffix('.').unwrap_or(body);
     let body = [TRIED, UNTRIED].iter().find_map(|note| body.split_once(note)).map_or(body, |(before, _)| before);
@@ -707,9 +926,7 @@ fn annotate(text: &str, view: &View, note: &str) -> String {
     for line in text.split_inclusive('\n') {
         let (content, newline) = line.strip_suffix('\n').map_or((line, ""), |content| (content, "\n"));
         if content.trim() == view.key {
-            let indent = &content[..content.len() - content.trim_start().len()];
-            out.push_str(indent);
-            out.push_str(&rewritten);
+            out.push_str(&wrapped(&rewritten, indent_of(content)));
             out.push_str(newline);
         } else {
             out.push_str(line);
@@ -730,7 +947,8 @@ pub(crate) fn units(views: &[View], lines: &[&str], choices: &dyn Fn(&View) -> V
         let key = match view.kind {
             "routine" | "variable" => format!("symbol {}", view.name),
             "enumerator" => match &previous {
-                Some((at, key)) if *at + 1 == line && key.starts_with("enumerator ") => key.clone(),
+                // Markers one after another, a wrapped one's further lines between.
+                Some((at, key)) if *at < line && lines[*at + 1..line].iter().all(|line| continued(line)) && key.starts_with("enumerator ") => key.clone(),
                 _ => format!("enumerator {} {}", view.suffix, view.name),
             },
             // A macro's and a tag's views are each part's own: their
@@ -920,14 +1138,23 @@ impl Gate {
     }
 }
 
-/// An object judged by the build's compiler against the build's assembly,
-/// and by `make modern`'s compiler for errors.
+/// One object a joined text is compiled as: its stem, the joined files it
+/// reaches, its compiler, and the build's assembly of it in each edition.
+struct Member {
+    stem: String,
+    reaches: BTreeSet<String>,
+    compiler: views::Recipes,
+    reference: Vec<String>,
+}
+
+/// A joined text judged by the build's compiler against the build's
+/// assembly, as each object that reaches a file the try changed, and by
+/// `make modern`'s compiler for errors.
 struct Built<'a> {
     root: &'a Path,
-    stem: String,
-    compiler: views::Recipes,
-    /// The build's assembly of the object, each edition's, as it reads.
-    reference: Vec<String>,
+    /// The joined files as they were read, each marker written as its key.
+    original: Vec<(String, String)>,
+    members: Vec<Member>,
     gate: &'a Gate,
 }
 
@@ -973,52 +1200,79 @@ pub(crate) fn moved_by(reference: &[assembly::Piece], now: &[assembly::Piece]) -
 }
 
 /// The first error a compile printed, its scratch file's name read as the object's.
+#[cfg(test)]
 fn first_error(stderr: &str, scratch: &str, object: &str, root: &Path) -> String {
+    first_error_of(stderr, &[(scratch.to_string(), object.to_string())], root)
+}
+
+/// The first error a compile printed, each scratch copy's name (`names`,
+/// with the file it stands for) read as its file's.
+fn first_error_of(stderr: &str, names: &[(String, String)], root: &Path) -> String {
     let placed = Regex::new(r":\d+: ").unwrap();
     let line = stderr.lines().find(|line| !line.contains("warning:") && placed.is_match(line)).or_else(|| stderr.lines().next()).unwrap_or("");
+    let mut line = line.to_string();
+    for (copy, file) in names {
+        line = line.replace(copy, file);
+    }
     // Every path from the checkout, a header the build writes too.
-    let line = line.replace(scratch, object).replace(&format!("{}/", root.display()), "");
+    let line = line.replace(&format!("{}/", root.display()), "");
     line.split_once("/out/").map_or(line.clone(), |(_, rest)| format!("out/{rest}"))
 }
 
 impl Judge for Built<'_> {
     fn judge(&self, text: &str, renamed: &[(String, String)]) -> Result<Option<Failure>, String> {
-        // Compiled in a private folder, as a file in the object's folder.
-        let scratch = views::Scratch::new(self.root, &format!("{}.c", self.stem))?;
-        scratch.write(text)?;
-        let editions = self.compiler.editions();
-        let object = format!("{}.c", self.stem);
-        let check = |index: usize, compiled: views::Compiled| -> Option<Failure> {
-            let edition = editions[index].clone();
+        let files = bundle::split(text);
+        let changed: BTreeSet<&str> = files.iter().filter(|(path, now)| self.original.iter().find(|(p, _)| p == path).is_none_or(|(_, was)| was != now)).map(|(path, _)| path.as_str()).collect();
+        let several = self.members.len() > 1;
+        // Each object that sees a change, compiled from copies of its files.
+        let mut copies: Vec<(&Member, bundle::Copies)> = Vec::new();
+        for member in self.members.iter().filter(|member| member.reaches.iter().any(|path| changed.contains(path.as_str()))) {
+            let object = format!("{}.c", member.stem);
+            let own: Vec<(&str, &str)> = files.iter().filter(|(path, _)| member.reaches.contains(path)).map(|(path, text)| (path.as_str(), text.as_str())).collect();
+            copies.push((member, bundle::Copies::write(self.root, &object, &own)?));
+        }
+        let tasks: Vec<(usize, usize)> = copies.iter().enumerate().flat_map(|(n, (member, _))| (0..member.compiler.editions().len()).map(move |e| (n, e))).collect();
+        let named = |n: usize, edition: &str| match several {
+            true => format!("{edition} ({}.c)", copies[n].0.stem.rsplit('/').next().unwrap_or(&copies[n].0.stem)),
+            false => edition.to_string(),
+        };
+        let check = |(n, e): (usize, usize), compiled: views::Compiled| -> Option<Failure> {
+            let (member, copy) = &copies[n];
+            let edition = named(n, &member.compiler.editions()[e]);
             if !compiled.ok {
-                let error = first_error(&compiled.stderr, &scratch.name(), &object, self.root);
-                return Some(Failure { edition, error: Some(error), moved: Vec::new() });
+                return Some(Failure { edition, error: Some(first_error_of(&compiled.stderr, &copy.names, self.root)), moved: Vec::new() });
             }
-            let reference = assembly::pieces(&assembly::renamed(&self.reference[index], renamed));
+            let reference = assembly::pieces(&assembly::renamed(&member.reference[e], renamed));
             let moved = moved_by(&reference, &assembly::pieces(&compiled.output));
             (!moved.is_empty()).then_some(Failure { edition, error: None, moved })
         };
+        let compile = |(n, e): (usize, usize)| {
+            let (member, copy) = &copies[n];
+            self.gate.hold(|| member.compiler.compile(&member.compiler.editions()[e], &copy.object, Mode::Assembly))
+        };
         // The first edition alone, then the rest together: most tries that
         // fail are seen failing in the first.
-        let first = self.gate.hold(|| self.compiler.compile(&editions[0], &scratch.path, Mode::Assembly))?;
-        if let Some(failure) = check(0, first) {
+        let Some(&first) = tasks.first() else { return Ok(None) };
+        if let Some(failure) = check(first, compile(first)?) {
             return Ok(Some(failure));
         }
         let rest: Vec<Result<views::Compiled, String>> = std::thread::scope(|scope| {
-            let handles: Vec<_> = editions[1..].iter().map(|edition| scope.spawn(|| self.gate.hold(|| self.compiler.compile(edition, &scratch.path, Mode::Assembly)))).collect();
+            let handles: Vec<_> = tasks[1..].iter().map(|&task| scope.spawn(move || compile(task))).collect();
             handles.into_iter().map(|handle| handle.join().unwrap_or_else(|_| Err("a compile panicked".into()))).collect()
         });
-        for (index, compiled) in rest.into_iter().enumerate() {
-            if let Some(failure) = check(index + 1, compiled?) {
+        for (&task, compiled) in tasks[1..].iter().zip(rest) {
+            if let Some(failure) = check(task, compiled?) {
                 return Ok(Some(failure));
             }
         }
         // As make modern compiles it: a current GCC must take it too.
-        for edition in &editions {
-            let Some(compiled) = self.gate.hold(|| self.compiler.modern(edition, &scratch.path))? else { continue };
+        for &(n, e) in &tasks {
+            let (member, copy) = &copies[n];
+            let edition = &member.compiler.editions()[e];
+            let Some(compiled) = self.gate.hold(|| member.compiler.modern(edition, &copy.object))? else { continue };
             if !compiled.ok {
-                let error = first_error(&compiled.stderr, &scratch.name(), &object, self.root);
-                return Ok(Some(Failure { edition: format!("{edition} (make modern)"), error: Some(error), moved: Vec::new() }));
+                let error = first_error_of(&compiled.stderr, &copy.names, self.root);
+                return Ok(Some(Failure { edition: format!("{} (make modern)", named(n, edition)), error: Some(error), moved: Vec::new() }));
             }
         }
         Ok(None)
@@ -1073,12 +1327,55 @@ fn sources(root: &Path, folder: &str) -> Vec<(String, String)> {
 /// An edition and the commands that build an object in it.
 type EditionRecipe = (String, Vec<Vec<String>>);
 
-/// One object to settle.
+/// One settle: the objects that reach a set of files holding views, read
+/// as one text.
 struct Job {
-    stem: String,
+    /// Each object compiled, and the joined files it reaches.
+    members: Vec<(String, BTreeSet<String>)>,
+    /// The joined files as they were read.
+    files: Vec<(String, String)>,
     text: String,
     views: Vec<View>,
+    /// The file each view is in.
+    holders: Vec<String>,
+    /// The views asked for, by index; the rest stay as they are.
+    selected: Vec<usize>,
     units: Vec<Unit>,
+}
+
+impl Job {
+    /// How the report names it: its first object, and how many more.
+    fn name(&self) -> String {
+        let first = self.members.first().map_or("", |(stem, _)| stem.as_str());
+        match self.members.len() {
+            0 | 1 => format!("{first}.c"),
+            n => format!("{first}.c and {} more objects", n - 1),
+        }
+    }
+}
+
+/// Which of `count` items are joined, by the pairs given: each item's
+/// group's first item.
+fn grouped(count: usize, pairs: &[(usize, usize)]) -> Vec<usize> {
+    let mut leader: Vec<usize> = (0..count).collect();
+    fn find(leader: &mut [usize], at: usize) -> usize {
+        let mut at = at;
+        while leader[at] != at {
+            leader[at] = leader[leader[at]];
+            at = leader[at];
+        }
+        at
+    }
+    for &(a, b) in pairs {
+        let (a, b) = (find(&mut leader, a), find(&mut leader, b));
+        leader[a.max(b)] = a.min(b);
+    }
+    (0..count).map(|n| find(&mut leader, n)).collect()
+}
+
+/// A regex matching any of `words` as a word, or None for none.
+fn any_word(words: &BTreeSet<String>) -> Option<Regex> {
+    (!words.is_empty()).then(|| Regex::new(&format!(r"\b(?:{})\b", words.iter().map(|w| regex::escape(w)).collect::<Vec<_>>().join("|"))).unwrap())
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
@@ -1091,37 +1388,123 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let _lock = if request.dry_run { None } else { Some(super::Lock::take(root)?) };
     let started = std::time::Instant::now();
     let all = sources(root, &format!("games/{}", request.game));
+    let texts: BTreeMap<&str, &str> = all.iter().map(|(path, text)| (path.as_str(), text.as_str())).collect();
+    let editions = crate::alchemy::built::editions(std::slice::from_ref(&request.game))?;
+    let mut linked = Vec::new();
+    for &id in &editions {
+        linked.push((id, crate::alchemy::link::linked(root, id)?));
+    }
+
+    // The files holding views, and those a settle may change: a file that
+    // uses a view's private name or undefines a view's name.
+    let held: BTreeMap<&str, Vec<View>> = all.iter().map(|(path, text)| (path.as_str(), markers(text))).filter(|(_, views)| !views.is_empty()).collect();
+    if held.is_empty() {
+        return Err(format!("no file of games/{} holds a view", request.game));
+    }
+    let privates: BTreeSet<String> = held.values().flatten().map(View::private).collect();
+    let plain: BTreeSet<String> = held.values().flatten().map(|view| view.name.clone()).collect();
+    let private_word = any_word(&privates);
+    let undefines = any_word(&plain).map(|names| Regex::new(&format!(r"(?m)^\s*#\s*undef\s+{}\s*$", names.as_str())).unwrap());
+    let relevant: BTreeSet<&str> = all
+        .iter()
+        .filter(|(path, text)| held.contains_key(path.as_str()) || private_word.as_ref().is_some_and(|r| r.is_match(text)) || undefines.as_ref().is_some_and(|r| r.is_match(text)))
+        .map(|(path, _)| path.as_str())
+        .collect();
+
+    // Every object some edition links, with the files of its tree it needs.
+    let read = |path: &str| texts.get(path).map(|text| text.to_string());
+    let mut stems: BTreeSet<&str> = BTreeSet::new();
+    for (_, linked) in &linked {
+        stems.extend(linked.all().into_iter().filter(|stem| texts.contains_key(format!("{stem}.c").as_str())));
+    }
+    let mut objects: Vec<(String, BTreeSet<String>, BTreeSet<String>)> = Vec::new();
+    for stem in stems {
+        let object = format!("{stem}.c");
+        let parents = bundle::tree(root, &object, &read);
+        if !parents.keys().any(|path| held.contains_key(path.as_str())) {
+            continue;
+        }
+        let needed = bundle::needed(&object, &parents, &|path| relevant.contains(path));
+        let reached: BTreeSet<String> = parents.into_keys().collect();
+        objects.push((stem.to_string(), needed, reached));
+    }
+    // Objects that need one changeable file are settled together.
+    let mut first_of: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut pairs = Vec::new();
+    for (n, (_, needed, _)) in objects.iter().enumerate() {
+        for path in needed.iter().filter(|path| relevant.contains(path.as_str())) {
+            match first_of.get(path.as_str()) {
+                Some(&other) => pairs.push((other, n)),
+                None => {
+                    first_of.insert(path, n);
+                }
+            }
+        }
+    }
+    let leaders = grouped(objects.len(), &pairs);
+    // The views the request names: those of a file named, or of a file one
+    // it names includes.
+    let named: Option<BTreeSet<String>> = (!request.objects.is_empty()).then(|| {
+        let mut named = BTreeSet::new();
+        for asked in &request.objects {
+            for path in [format!("{asked}.c"), asked.clone()].into_iter().filter(|path| texts.contains_key(path.as_str())) {
+                named.extend(bundle::tree(root, &path, &read).into_keys());
+            }
+        }
+        named
+    });
+    let held_views = held.values().flatten().count();
+    let held_by_objects: usize = held.iter().filter(|(path, _)| path.strip_suffix(".c").is_some_and(|stem| linked.iter().any(|(_, l)| l.links(stem)))).map(|(_, views)| views.len()).sum();
+    let mut reached_views = 0;
+
     let mut names: BTreeSet<String> = BTreeSet::new();
     let mut jobs: Vec<Job> = Vec::new();
-    // Each object as it was read, for the journal that undoes the settle.
+    // Each file as it was read, for the journal that undoes the settle.
     let mut files = super::Files::new(root);
-    for (path, text) in &all {
-        let Some(stem) = path.strip_suffix(".c") else { continue };
-        if !request.objects.is_empty() && !request.objects.iter().any(|o| o == stem) {
+    for leader in leaders.iter().copied().collect::<BTreeSet<usize>>() {
+        let group: Vec<usize> = (0..objects.len()).filter(|&n| leaders[n] == leader).collect();
+        // The objects first, then the files they include.
+        let mut paths: Vec<String> = group.iter().map(|&n| format!("{}.c", objects[n].0)).collect();
+        let mut rest: BTreeSet<String> = group.iter().flat_map(|&n| objects[n].1.iter().cloned()).collect();
+        rest.retain(|path| !paths.contains(path));
+        paths.extend(rest);
+        let mut joined_files = Vec::new();
+        let mut views = Vec::new();
+        let mut holders = Vec::new();
+        for path in &paths {
+            let text = files.read(path)?;
+            for view in markers(&text) {
+                views.push(view);
+                holders.push(path.clone());
+            }
+            joined_files.push((path.clone(), text));
+        }
+        reached_views += views.len();
+        let selected: Vec<bool> = holders.iter().map(|holder| named.as_ref().is_none_or(|named| named.contains(holder))).collect();
+        if !selected.contains(&true) {
             continue;
         }
-        let views: Vec<View> = text.lines().filter_map(marker).collect();
-        if views.is_empty() {
-            continue;
-        }
-        names.extend(views.iter().filter(|v| matches!(v.kind, "routine" | "variable")).map(|v| v.name.clone()));
-        let text = files.read(path)?;
-        jobs.push(Job { stem: stem.to_string(), text, views, units: Vec::new() });
+        names.extend(views.iter().zip(&selected).filter(|(v, &s)| s && matches!(v.kind, "routine" | "variable")).map(|(v, _)| v.name.clone()));
+        let members = group.iter().map(|&n| (objects[n].0.clone(), objects[n].1.clone())).collect();
+        let text = bundle::join(&joined_files);
+        let selected = selected.iter().enumerate().filter(|(_, &s)| s).map(|(n, _)| n).collect();
+        jobs.push(Job { members, files: joined_files, text, views, holders, selected, units: Vec::new() });
     }
     if jobs.is_empty() {
-        return Err(format!("no object of games/{} holds a view", request.game));
+        return Err(format!("no object of games/{} reaches a view it was asked for", request.game));
     }
-    let editions = crate::alchemy::built::editions(std::slice::from_ref(&request.game))?;
     // The headers the build writes (the message ids), as the first edition has them.
-    let mut read = all.clone();
+    let mut read_all = all.clone();
     if let Some(&first) = editions.first() {
         let out = crate::alchemy::built::output(root, first);
         let folder = out.strip_prefix(root).unwrap_or(&out).to_string_lossy().into_owned();
-        read.extend(sources(root, &folder).into_iter().filter(|(path, _)| path.ends_with(".h")));
+        read_all.extend(sources(root, &folder).into_iter().filter(|(path, _)| path.ends_with(".h")));
     }
-    let declarations = Declarations::read(&read, &names);
+    let declarations = Declarations::read(&read_all, &names);
     for job in &mut jobs {
-        let lines: Vec<&str> = job.text.lines().collect();
+        let selected = job.selected.clone();
+        let (keyed_text, keyed_views) = keyed(&job.text, &job.views);
+        let lines: Vec<&str> = keyed_text.lines().collect();
         let text = job.text.clone();
         let choices = |view: &View| match view.kind {
             "routine" | "variable" => declarations.choices(&view.name, &text),
@@ -1134,12 +1517,23 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             }
             _ => vec![Choice::Remove],
         };
-        job.units = units(&job.views, &lines, &choices);
+        let chosen: Vec<View> = selected.iter().map(|&n| keyed_views[n].clone()).collect();
+        job.units = units(&chosen, &lines, &choices)
+            .into_iter()
+            .map(|unit| Unit { views: unit.views.into_iter().map(|n| selected[n]).collect(), choices: unit.choices })
+            .collect();
     }
     // The largest first, so the longest is not left for last.
-    jobs.sort_by_key(|job| std::cmp::Reverse(job.text.len() * job.units.len()));
-    let total: usize = jobs.iter().map(|job| job.views.len()).sum();
-    println!("settle: {total} views in {} objects", jobs.len());
+    jobs.sort_by_key(|job| std::cmp::Reverse(job.text.len() * job.units.len() * job.members.len()));
+    let total: usize = jobs.iter().map(|job| job.units.iter().map(|unit| unit.views.len()).sum::<usize>()).sum();
+    println!(
+        "settle: {total} views in {} settles of {} objects; games/{} holds {held_views}, {held_by_objects} in linked objects, {} in files they include, {} reached by no linked object",
+        jobs.len(),
+        jobs.iter().map(|job| job.members.len()).sum::<usize>(),
+        request.game,
+        held_views - held_by_objects,
+        held_views.saturating_sub(reached_views)
+    );
 
     // Each edition's recipes from one make -n (the build's and make
     // modern's), and the build's assembly.
@@ -1147,25 +1541,29 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let mut objects_of: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut moderns: BTreeMap<String, Vec<views::ModernRecipe>> = BTreeMap::new();
     let mut reference: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for &id in &editions {
-        let linked = crate::alchemy::link::linked(root, id)?;
-        let target = crate::alchemy::targets::target_for(id);
-        let linking: Vec<&Job> = jobs.iter().filter(|job| linked.links(&job.stem)).collect();
+    let members: BTreeMap<&str, &BTreeSet<String>> = jobs.iter().flat_map(|job| job.members.iter().map(|(stem, reaches)| (stem.as_str(), reaches))).collect();
+    let reached_of: BTreeMap<&str, &BTreeSet<String>> = objects.iter().map(|(stem, _, reached)| (stem.as_str(), reached)).collect();
+    for (id, linked) in &linked {
+        let target = crate::alchemy::targets::target_for(*id);
+        let linking: Vec<&str> = members.keys().copied().filter(|stem| linked.links(stem)).collect();
         if linking.is_empty() {
             continue;
         }
-        let mut wanted: Vec<(String, String)> = linking.iter().map(|job| (format!("{}.c", job.stem), format!("{}/obj/{}.o", target.output_dir, job.stem))).collect();
-        wanted.extend(linking.iter().map(|job| (format!("{}.c", job.stem), format!("{}/modern/{}.o", target.output_dir, job.stem))));
+        let mut wanted: Vec<(String, String)> = linking.iter().map(|stem| (format!("{stem}.c"), format!("{}/obj/{stem}.o", target.output_dir))).collect();
+        wanted.extend(linking.iter().map(|stem| (format!("{stem}.c"), format!("{}/modern/{stem}.o", target.output_dir))));
         let mut found = crate::gba::recipe::recipes(root, Path::new(target.output_dir), &[format!("EDITION={id}")], &wanted)?;
         let modern_found = found.split_off(linking.len());
         for (((source, object), recipe), ((_, modern_object), modern_recipe)) in wanted.iter().zip(found).zip(wanted[linking.len()..].iter().zip(modern_found)) {
             let stem = source.strip_suffix(".c").unwrap_or(source).to_string();
             let recipe = recipe.map_err(|why| format!("{source} in {id}: {why}"))?;
             let modern_recipe = modern_recipe.map_err(|why| format!("{source} in {id} (make modern): {why}"))?;
-            let built = crate::alchemy::built::output(root, id).join("obj").join(format!("{stem}.s"));
+            let built = crate::alchemy::built::output(root, *id).join("obj").join(format!("{stem}.s"));
             let modified = |path: &Path| std::fs::metadata(path).and_then(|meta| meta.modified()).ok();
-            if modified(&built).is_none() || modified(&root.join(source)) > modified(&built) {
-                return Err(format!("{} is missing or older than {source}: make {id} first", built.display()));
+            let made = modified(&built);
+            // Every file of games/ the object reaches, its parts too.
+            let newer = reached_of.get(stem.as_str()).into_iter().flat_map(|reached| reached.iter()).find(|path| made.is_none() || modified(&root.join(path)) > made);
+            if let Some(newer) = newer {
+                return Err(format!("{} is missing or older than {newer}: make {id} first", built.display()));
             }
             recipes.entry(stem.clone()).or_default().push((id.as_str().to_string(), recipe));
             objects_of.entry(stem.clone()).or_default().push(object.clone());
@@ -1185,15 +1583,22 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
                 let Some(job) = jobs.get(at) else { break };
                 let begun = std::time::Instant::now();
                 let result = (|| -> Result<Solved, String> {
-                    let recipe = recipes.get(&job.stem).cloned().ok_or_else(|| format!("{} is linked by no edition", job.stem))?;
-                    let compiler = views::Recipes::of(root, &job.stem, recipe, objects_of.get(&job.stem).cloned().unwrap_or_default())?;
-                    let compiler = if request.modern { compiler.with_modern(moderns.get(&job.stem).cloned().unwrap_or_default()) } else { compiler };
-                    let built = Built { root, stem: job.stem.clone(), compiler, reference: reference.get(&job.stem).cloned().unwrap_or_default(), gate: &gate };
+                    let mut members = Vec::new();
+                    for (stem, reaches) in &job.members {
+                        let recipe = recipes.get(stem).cloned().ok_or_else(|| format!("{stem} is linked by no edition"))?;
+                        let compiler = views::Recipes::of(root, stem, recipe, objects_of.get(stem).cloned().unwrap_or_default())?;
+                        let compiler = if request.modern { compiler.with_modern(moderns.get(stem).cloned().unwrap_or_default()) } else { compiler };
+                        members.push(Member { stem: stem.clone(), reaches: reaches.clone(), compiler, reference: reference.get(stem).cloned().unwrap_or_default() });
+                    }
+                    // As solve compiles it: each marker written as its key.
+                    let original = bundle::split(&keyed(&job.text, &job.views).0);
+                    let built = Built { root, original, members, gate: &gate };
                     solve(&job.text, &job.views, &job.units, &built)
                 })();
+                let asked: usize = job.units.iter().map(|unit| unit.views.len()).sum();
                 match &result {
-                    Ok(solved) => println!("settle: {}.c: {} of {} views deleted ({:.0} s)", job.stem, solved.deleted.len(), job.views.len(), begun.elapsed().as_secs_f64()),
-                    Err(why) => println!("settle: {}.c not settled: {why}", job.stem),
+                    Ok(solved) => println!("settle: {}: {} of {asked} views deleted ({:.0} s)", job.name(), solved.deleted.len(), begun.elapsed().as_secs_f64()),
+                    Err(why) => println!("settle: {} not settled: {why}", job.name()),
                 }
                 results.lock().unwrap_or_else(|e| e.into_inner()).push((at, result));
             });
@@ -1208,29 +1613,53 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         deleted: usize,
         kept: Vec<String>,
     }
+    /// Views asked for, tried and deleted, in linked objects and in the
+    /// files they include.
+    #[derive(Default)]
+    struct Count {
+        views: usize,
+        tried: usize,
+        deleted: usize,
+    }
     let mut symbols: BTreeMap<String, Symbol> = BTreeMap::new();
     let (mut deleted, mut kept, mut written) = (0, 0, 0);
+    let mut counts: [Count; 2] = Default::default();
     for (at, result) in &results {
         let job = &jobs[*at];
+        let class = |view: usize| usize::from(!job.members.iter().any(|(stem, _)| job.holders[view] == format!("{stem}.c")));
+        let asked: Vec<usize> = job.units.iter().flat_map(|unit| unit.views.iter().copied()).collect();
+        for &view in &asked {
+            counts[class(view)].views += 1;
+        }
         let Ok(solved) = result else {
-            for view in &job.views {
-                symbols.entry(format!("{} {}", view.kind, view.name)).or_default().kept.push(format!("{}.c ({}): not settled", job.stem, view.suffix));
+            for &view in &asked {
+                let view_of = &job.views[view];
+                symbols.entry(format!("{} {}", view_of.kind, view_of.name)).or_default().kept.push(format!("{} ({}): not settled", job.holders[view], view_of.suffix));
             }
-            kept += job.views.len();
+            kept += asked.len();
             continue;
         };
         for &view in &solved.deleted {
             symbols.entry(format!("{} {}", job.views[view].kind, job.views[view].name)).or_default().deleted += 1;
+            counts[class(view)].tried += 1;
+            counts[class(view)].deleted += 1;
         }
         for (view, note, _) in &solved.kept {
+            if !note.starts_with("not tried: ") {
+                counts[class(*view)].tried += 1;
+            }
+            let holder = &job.holders[*view];
             let view = &job.views[*view];
-            symbols.entry(format!("{} {}", view.kind, view.name)).or_default().kept.push(format!("{}.c ({}): {note}", job.stem, view.suffix));
+            symbols.entry(format!("{} {}", view.kind, view.name)).or_default().kept.push(format!("{holder} ({}): {note}", view.suffix));
         }
         deleted += solved.deleted.len();
         kept += solved.kept.len();
-        if solved.text != job.text {
-            files.write(&format!("{}.c", job.stem), solved.text.clone());
-            written += 1;
+        for ((path, now), (_, was)) in bundle::split(&solved.text).into_iter().zip(&job.files) {
+            let now = bundle::like(was, now);
+            if now != *was {
+                files.write(&path, now);
+                written += 1;
+            }
         }
     }
     let settled = symbols.values().filter(|s| s.kept.is_empty()).count();
@@ -1247,9 +1676,12 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             }
         }
     }
+    for (count, held) in counts.iter().zip(["linked objects", "files they include"]) {
+        println!("settle: in {held}, {} views: {} tried, {} deleted", count.views, count.tried, count.deleted);
+    }
     let action = if request.dry_run { "would be written" } else { "written" };
     println!(
-        "settle: {total} views; {deleted} deleted, {kept} left; {settled} of {} symbols settled; {written} objects {action} ({:.0} s)",
+        "settle: {total} views; {deleted} deleted, {kept} left; {settled} of {} symbols settled; {written} files {action} ({:.0} s)",
         symbols.len(),
         started.elapsed().as_secs_f64()
     );

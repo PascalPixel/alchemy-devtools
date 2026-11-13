@@ -21,7 +21,7 @@ pub(crate) mod views;
 const USAGE: &str = r#"usage: alchemy-devtools adopt merge [--keep-views] INTO.c=OBJECT.c,OBJECT.c... [--verify | --dry-run] [--no-modern]
        alchemy-devtools adopt merge --keep-views --game GAME [--verify | --dry-run] [--no-modern]
        alchemy-devtools adopt --undo JOURNAL [ITEM...]
-       alchemy-devtools adopt settle --game GAME [--dry-run] [--no-modern] [OBJECT.c...]  (adopt settle --help)
+       alchemy-devtools adopt settle --game GAME [--dry-run] [--no-modern] [FILE.c...]  (adopt settle --help)
 --keep-views joins without settling any disagreement between the sources:
 each becomes a part of INTO after a `// ---- SOURCE.c ----` line, and where
 a part sees a name otherwise than one before it, it keeps its own view: a

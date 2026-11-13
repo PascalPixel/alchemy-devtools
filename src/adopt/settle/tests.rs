@@ -99,11 +99,13 @@ fn views_that_move_nothing_go_and_the_rest_say_what_moved() {
     assert_eq!(solved.deleted, [0, 1]);
     assert_eq!(solved.kept.len(), 1);
     assert_eq!(solved.kept[0].2, ["Use"]);
-    assert!(solved.text.contains("/* VIEW(b): static Twice as Twice__b; a has static int Twice(int x) { return x + x; }; tried with the definition the rest of the object has, Use moves: 4 of 61 instructions in tla-en. */"), "{}", solved.text);
-    assert!(views_of(&solved.text).len() == 1 && !solved.text.contains("Helper__b") && solved.text.contains("int Use(struct Box *box)"));
+    // The kept marker is written as clang-format wraps it, and read again whole.
+    assert!(solved.text.contains("/* VIEW(b): static Twice as Twice__b; a has static int Twice(int x) { return x +\n * x; }; tried with the definition the rest of the object has, Use moves: 4 of\n * 61 instructions in tla-en. */\nstatic int Twice__b"), "{}", solved.text);
+    assert_eq!(markers(&solved.text)[0].marker, "/* VIEW(b): static Twice as Twice__b; a has static int Twice(int x) { return x + x; }; tried with the definition the rest of the object has, Use moves: 4 of 61 instructions in tla-en. */");
+    assert!(markers(&solved.text).len() == 1 && !solved.text.contains("Helper__b") && solved.text.contains("int Use(struct Box *box)"));
     // A second settle replaces the note rather than adding one.
-    let again = annotate(&solved.text, &views_of(&solved.text)[0], "tried as before, Use moves");
-    assert!(again.contains("{ return x + x; }; tried as before, Use moves. */"), "{again}");
+    let again = annotate(&solved.text, &markers(&solved.text)[0], "tried as before, Use moves");
+    assert!(again.contains("{ return x +\n * x; }; tried as before, Use moves. */\nstatic"), "{again}");
     // Where the definition's declaration moves code, the object's own is tried.
     let solved = solve(JOINED, &views, &units, &Moves(vec!["b.c ----\nvoid Helper"])).unwrap();
     assert_eq!(solved.deleted, [0, 1, 2]);
@@ -171,8 +173,8 @@ fn a_view_that_could_not_be_tried_says_why() {
     let text = "/* VIEW(b): static F as F__b; a has static int F(int x). */\n";
     let view = &views_of(text)[0];
     let noted = annotate(text, view, "not tried: F's definition holds a FAKEMATCH tag");
-    assert_eq!(noted, "/* VIEW(b): static F as F__b; a has static int F(int x); not tried: F's definition holds a FAKEMATCH tag. */\n");
-    assert_eq!(annotate(&noted, &views_of(&noted)[0], "tried as before, F moves"), "/* VIEW(b): static F as F__b; a has static int F(int x); tried as before, F moves. */\n");
+    assert_eq!(noted, "/* VIEW(b): static F as F__b; a has static int F(int x); not tried: F's\n * definition holds a FAKEMATCH tag. */\n");
+    assert_eq!(annotate(&noted, &markers(&noted)[0], "tried as before, F moves"), "/* VIEW(b): static F as F__b; a has static int F(int x); tried as before, F\n * moves. */\n");
 }
 
 #[test]
@@ -245,4 +247,92 @@ fn a_static_taken_away_is_judged_under_its_plain_name() {
     let records = Records(std::sync::Mutex::new(Vec::new()));
     solve(JOINED, &views, &units, &records).unwrap();
     assert_eq!(records.0.lock().unwrap()[0], [("Twice__b".to_string(), "Twice".to_string())]);
+}
+
+/// clang-format wraps a long marker over comment lines; it is read as the
+/// one line it was written as, and a kept marker is written back the way
+/// clang-format would wrap it, `*/` on a line of its own where it does not fit.
+#[test]
+fn a_wrapped_marker_is_read_whole_and_written_as_clang_format_wraps_it() {
+    let text = "int x;\n/* VIEW(shop): routine Actor_GetByIdFar as void *Actor_GetByIdFar(s32 id);\n * gamepak/far_call/field_sequence.h has struct Actor *Actor_GetByIdFar(s32 id).\n */\nextern void *Actor_GetByIdFar__shop(s32 id) __asm__(\"Actor_GetByIdFar\");\n";
+    let found = spans(text);
+    assert_eq!(found.len(), 1);
+    let (first, last, view) = &found[0];
+    assert_eq!((*first, *last, view.kind, view.name.as_str(), view.suffix.as_str()), (1, 3, "routine", "Actor_GetByIdFar", "shop"));
+    assert_eq!(view.marker, "/* VIEW(shop): routine Actor_GetByIdFar as void *Actor_GetByIdFar(s32 id); gamepak/far_call/field_sequence.h has struct Actor *Actor_GetByIdFar(s32 id). */");
+    assert_eq!(wrapped(&view.marker, ""), view.written);
+    assert_eq!(wrapped("/* VIEW(b): short. */", "  "), "  /* VIEW(b): short. */");
+    // Keyed while it is settled, then given back as it was written.
+    let (keyed_text, keyed_views) = keyed(text, std::slice::from_ref(view));
+    // Its further lines stand in place, so every other line keeps its number.
+    assert_eq!(keyed_text, "int x;\n/* VIEW#0 */\n /* continued VIEW */\n /* continued VIEW */\nextern void *Actor_GetByIdFar__shop(s32 id) __asm__(\"Actor_GetByIdFar\");\n");
+    assert_eq!(unkeyed(&keyed_text, &keyed_views), text);
+    // Taken away, all its lines go.
+    let removed = apply(text, view, &Choice::Remove).unwrap();
+    assert_eq!(removed, "int x;\n");
+}
+
+/// Every marker in the checkout's The Lost Age is wrapped as `wrapped`
+/// writes it, so what settle writes clang-format leaves as it is.
+#[test]
+fn the_checkout_s_markers_are_wrapped_as_settle_writes_them() {
+    let root = crate::compile::root();
+    let all = sources(root, "games/tla");
+    let mut seen = 0;
+    let mut differ = Vec::new();
+    for (path, text) in &all {
+        for (_, _, view) in spans(text) {
+            seen += 1;
+            let indent = indent_of(view.written.lines().next().unwrap_or(""));
+            if wrapped(&view.marker, indent) != view.written {
+                differ.push(format!("{path}:\n{}", view.written));
+            }
+        }
+    }
+    assert!(seen > 0, "no marker under {}", root.display());
+    assert!(differ.is_empty(), "{} of {seen} differ:\n{}", differ.len(), differ.join("\n"));
+}
+
+/// A large object's parts: `big.c` includes `big/one.c`, whose view wraps
+/// a header with `#define` and leaves the `#undef` to `big.c`; its sibling
+/// `big/two.c` calls the view's private name. Taken away, the view's lines
+/// go from its part, the `#undef` from the object, and the sibling calls the
+/// plain name.
+#[test]
+fn a_view_in_a_part_file_is_settled_across_its_object_s_files() {
+    let object = "#include \"big/one.c\"\n#include \"big/two.c\"\n#undef Go\n";
+    let one = "/* VIEW(event): routine Go as void Go(u32 objectId); field/event.h has void\n * Go(s32 actorId). */\nvoid Go__event(u32 objectId) __asm__(\"Go\");\n#define Go                                                                     \\\n  Go__event\nvoid Go(u32 objectId) { }\n";
+    let two = "void Run(void) { Go__event(1); }\n";
+    let files = vec![("big.c".to_string(), object.to_string()), ("big/one.c".to_string(), one.to_string()), ("big/two.c".to_string(), two.to_string())];
+    let text = bundle::join(&files);
+    let views = markers(&text);
+    assert_eq!(views.len(), 1);
+    let lines: Vec<&str> = text.lines().collect();
+    let units = units(&views, &lines, &|_: &View| vec![Choice::Remove]);
+    struct Clean;
+    impl Judge for Clean {
+        fn judge(&self, _: &str, _: &[(String, String)]) -> Result<Option<Failure>, String> {
+            Ok(None)
+        }
+    }
+    let solved = solve(&text, &views, &units, &Clean).unwrap();
+    assert_eq!(solved.deleted, [0]);
+    let back = bundle::split(&solved.text);
+    assert_eq!(back[0].1, "#include \"big/one.c\"\n#include \"big/two.c\"\n");
+    assert_eq!(back[1].1, "void Go(u32 objectId) { }\n");
+    assert_eq!(back[2].1, "void Run(void) { Go(1); }\n");
+    // Where it moves code it stays, its marker noted and wrapped, the other
+    // files as they were.
+    let solved = solve(&text, &views, &units, &Moves(vec!["Go(1)"])).unwrap();
+    let back = bundle::split(&solved.text);
+    assert_eq!(back[0].1, object);
+    assert_eq!(back[2].1, two);
+    assert!(back[1].1.starts_with("/* VIEW(event): routine Go as void Go(u32 objectId); field/event.h has void\n * Go(s32 actorId); tried as the rest of the object declares it, Use moves: 4 of\n * 61 instructions in tla-en. */\nvoid Go__event"), "{}", back[1].1);
+    assert_eq!(markers(&back[1].1).len(), 1);
+}
+
+#[test]
+fn objects_sharing_a_file_are_settled_together() {
+    assert_eq!(grouped(4, &[(1, 3), (3, 2)]), [0, 1, 1, 1]);
+    assert_eq!(grouped(2, &[]), [0, 1]);
 }
