@@ -336,3 +336,17 @@ fn objects_sharing_a_file_are_settled_together() {
     assert_eq!(grouped(4, &[(1, 3), (3, 2)]), [0, 1, 1, 1]);
     assert_eq!(grouped(2, &[]), [0, 1]);
 }
+
+/// A symbol renamed after the join keeps its view bound under the old
+/// name's private form; the view is found by its binding and taken away,
+/// the code calling the symbol's name again.
+#[test]
+fn a_view_of_a_renamed_symbol_is_found_by_its_binding() {
+    let text = "/* VIEW(entrance): routine Ice_Pound as void Ice_Pound(void); the scene has\n * void Ice_Pound(s32 x). */\nextern void Func_02000338__entrance(void) __asm__(\n    \"Ice_Pound\");\n\nvoid Start(void) { Func_02000338__entrance(); }\n";
+    let view = &markers(text)[0];
+    assert_eq!(view.private(), "Func_02000338__entrance");
+    assert_eq!(apply(text, view, &Choice::Remove).unwrap(), "\nvoid Start(void) { Ice_Pound(); }\n");
+    // A view bound under its own name's private form needs nothing more.
+    assert_eq!(views_of(JOINED)[0].private(), "Helper__b");
+    assert_eq!(markers(JOINED)[0].bound, None);
+}

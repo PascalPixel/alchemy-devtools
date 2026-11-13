@@ -85,12 +85,34 @@ pub(crate) struct View {
     pub kind: &'static str,
     /// The name the view is of (a tag's without `struct`).
     pub name: String,
+    /// The private name a routine's or variable's view binds, where it is
+    /// not `NAME__PART`: the symbol was renamed after the join, and the
+    /// view still binds it under the old name's private form.
+    pub bound: Option<String>,
 }
 
 impl View {
     fn private(&self) -> String {
-        format!("{}__{}", self.name, self.suffix)
+        self.bound.clone().unwrap_or_else(|| format!("{}__{}", self.name, self.suffix))
     }
+}
+
+/// The private name a routine's or variable's view binds in the lines
+/// after its marker (up to the next view): the name ending `__PART` in the
+/// first declaration bound to the symbol, or None where that is the plain
+/// `NAME__PART` or no declaration is bound.
+fn bound_in(lines: &[&str], view: &View) -> Option<String> {
+    if !matches!(view.kind, "routine" | "variable") {
+        return None;
+    }
+    let own: Vec<&str> = lines.iter().take(MARKER_LINES).take_while(|line| !line.trim_start().starts_with("/* VIEW")).copied().collect();
+    let text = own.join("\n");
+    let binding = Regex::new(&format!(r#"__asm__\s*\(\s*"{}"\s*\)"#, regex::escape(&view.name))).unwrap();
+    let at = binding.find(&text)?.start();
+    let from = text[..at].rfind([';', '}']).map_or(0, |n| n + 1);
+    let private = Regex::new(&format!(r"\b\w+__{}\b", regex::escape(&view.suffix))).unwrap();
+    let found = private.find(&text[from..at])?.as_str().to_string();
+    (found != format!("{}__{}", view.name, view.suffix)).then_some(found)
 }
 
 /// A view's marker read from one line, or None for any other line.
@@ -106,7 +128,7 @@ pub(crate) fn marker(line: &str) -> Option<View> {
     let rest = rest.strip_prefix(kind)?.trim_start();
     let named = rest.split_once(" as ")?.0;
     let name = ["struct ", "union ", "enum "].iter().find_map(|tag| named.strip_prefix(tag)).unwrap_or(named);
-    Some(View { marker: line.to_string(), written: written.to_string(), key: line.to_string(), suffix: suffix.to_string(), kind, name: name.to_string() })
+    Some(View { marker: line.to_string(), written: written.to_string(), key: line.to_string(), suffix: suffix.to_string(), kind, name: name.to_string(), bound: None })
 }
 
 /// The longest a marker may run over lines before it is taken for no marker.
@@ -140,6 +162,7 @@ pub(crate) fn spans(text: &str) -> Vec<(usize, usize, View)> {
         match marker(&words.join(" ")) {
             Some(mut view) => {
                 view.written = lines[at..=end].join("\n");
+                view.bound = bound_in(&lines[end + 1..], &view);
                 found.push((at, end, view));
                 at = end + 1;
             }
