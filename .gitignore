@@ -1,2 +1,5 @@
 /target/
 .DS_Store
+
+# The two walkthroughs H3 allows, downloaded by hand (their URLs are in AGENTS.md).
+/walkthroughs/
