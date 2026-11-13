@@ -63,8 +63,9 @@ The tests read a bootstrapped Alchemy checkout with every edition built.
 
 ## Credits
 
-- [Simon Lindholm](https://github.com/simonlindholm/decomp-permuter): decomp-permuter, whose search `permute` reimplements.
+- [simonlindholm](https://github.com/simonlindholm): [decomp-permuter](https://github.com/simonlindholm/decomp-permuter), whose search `permute` reimplements.
 - [pret](https://github.com/pret): calcrom, the count `progress` follows.
 - [objdiff](https://github.com/encounter/objdiff): the report format `progress` wrote for decomp.dev while the games were being matched.
+- Telago: the GameFAQs walkthroughs of [The Broken Seal](https://gamefaqs.gamespot.com/gba/468548-golden-sun/faqs/39216) and [The Lost Age](https://gamefaqs.gamespot.com/gba/561356-golden-sun-the-lost-age/faqs/44287), the one outside source naming reads.
 
 Alchemy's [acknowledgements](https://github.com/PascalPixel/alchemy#acknowledgements) have the rest.
