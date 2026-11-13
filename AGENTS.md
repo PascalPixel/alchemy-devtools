@@ -119,6 +119,8 @@ What it has measured, on The Lost Age (12 November 2026):
 
 It joins only what the link order puts side by side: a shared object linked between two of a scene's files, assembly or picture data before a `.data` object, a file another includes and a file the Makefile names all keep a scene in several files. It does not settle a view whose definition holds a FAKEMATCH tag. The joined text is not readable until it is cut into parts, and a view is unfinished humanizing, never a solution.
 
+A boundary the bytes show is evidence, not an obstacle (Pascal, 13 November 2026). Where a scene built for size (`-Os`) has an object built for speed (`-O2`) linked into its middle, one file could not have produced those bytes: Camelot had at least three files there, the scene's first, the shared one compiled once for the main image and linked again, and the scene's second. The same holds where one object's alignment rules out the ROM's layout (German's text speeds at an odd address before a pointer table, 13 November 2026). Such a boundary stays, is said in the first comment of the file it begins, and its files are named for what they hold, never for an address; it is counted apart from the splits that are only ours.
+
 ### What matching has measured
 
 Facts about Alchemy's compiler, alchemy-gcc, not rules.
