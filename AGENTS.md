@@ -182,6 +182,15 @@ Facts about Alchemy's compiler, alchemy-gcc, not rules.
   - A shared tail behind a `goto`, written out in both arms (1).
   - The boundary-after-a-call family has an exact cause and no source form yet (read with `-fsched-verbose=4 -dR`): an empty or once-only `do`-`while` does not end the basic block; its notes attach to the next instruction, every later instruction in the block then depends on that one, and sched2's tie-break changes. Statement order cannot reproduce it, and the copy routine it follows is not a statement macro (wrapping every statement-level call changes routines that match).
   - Still open: volatile stack halfwords, constants hidden from gcse and CSE, two prototypes in conflict within one object, and the scheduling ties above.
+- The third round took it from 118 to 113 (14 November 2026), eight tags out and three untagged views tagged:
+  - A constant's pseudo is born where its block opens: a local naming one constant, declared in a block that opens after the interrupt lock, is built where the ROM builds it (1).
+  - Two devices were a macro's own body: `IRQ_LOCK` assigning inside `IME_SAVE`'s block, and `Io_Write16`'s `value_` (2).
+  - Sign extension through a promoted local: `s8 weight = *(table + index);` (1).
+  - Every member access takes the containing struct's alias set, never the member's own type's; a load waits on a store to a struct only if the load's type is among that struct's members' types.
+  - No jump pass runs between life1 and jump2, and jump2 runs after sched2: a branch whose arm life1 empties stays a block boundary through lreg, greg, reload and sched2. Every dead-branch device supplies that boundary. The one plain form found that leaves it is a computation CSE folds after its rounding test is expanded (`cx + (half * sx) / 8` and `cx - (half * sx) / 8`), which costs a copy where the folded test reads a value that should die: Judgment is 26 of 2455 off that way.
+  - combine joins instructions only within one basic block; a flag kept as a value and tested in each arm means a branch stood between its set and its test.
+  - `alchemy-devtools diff` ignores call targets: a cast removed scored differ 0 and turned `__udivsi3` into `__divsi3`. Compare the object's assembly text, labels normalised, before believing a 0.
+  - Open lead: `gMainRoutineWork + 12` is where `Djinn_GetRecoveryTable` returns the party's table; a named member struct from `summonMask` on should remove both Lucky Wheels views, at about 60 renamed uses.
 - The system `make` on macOS is GNU Make 3.81, which compares file times to the second: a file rewritten in the second of its last build is taken as up to date, and incremental builds have both passed stale trees and failed good ones. Build with GNU Make 4 (`gmake`) or from deleted objects.
 - An overlay's generated import table is rebuilt when the overlay's objects or its script change; before that fix an incremental build passed a compare a clean build refused.
 
