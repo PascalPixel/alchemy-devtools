@@ -340,6 +340,10 @@ pub enum Trigger {
     /// A field Psynergy (its ability id) cast anywhere, which a row for any
     /// target answers (PSYNERGY_ANYWHERE: Reveal, Cloak).
     Cast(u16),
+    /// A field Psynergy (its ability id) cast on the cell ahead with collision
+    /// code N (The Lost Age's PSYNERGY_PHASE_ON_CELL: Lash, Pound,
+    /// Cyclone and others), the leader facing it as he would to search it.
+    PsynergyCell(u16, u16),
     /// The event function at this address, started from the field sequence
     /// as a trigger row's dispatch calls it, for an event no trigger the
     /// renderer can give reaches (a raised trigger, a row nothing calls, an
@@ -433,8 +437,11 @@ pub fn parse_trigger(text: &str) -> Result<Trigger, String> {
     // A Psynergy by its ability id, as the trigger tables read from the
     // running game write it (triggers.rs): `psynergy 141 on 1032`.
     if let Some((ability, actor)) = first.strip_prefix("psynergy ").and_then(|rest| rest.split_once(" on ")) {
-        if actor.starts_with("cell ") {
-            return Err(format!("{first:?} is a Psynergy on a cell, which the renderer does not cast"));
+        if let Some(code) = actor.strip_prefix("cell ") {
+            return match (ability.trim().parse::<u16>(), code.trim().parse::<u16>()) {
+                (Ok(ability), Ok(code)) => Ok(Trigger::PsynergyCell(ability, code)),
+                _ => Err(bad()),
+            };
         }
         return match (ability.trim().parse::<u16>(), actor.trim().parse::<u16>()) {
             (Ok(ability), Ok(actor)) => Ok(Trigger::Psynergy(ability, actor & 0xff)),
@@ -566,7 +573,7 @@ mod tests {
         assert_eq!(parse_trigger("cloak 1"), Ok(Trigger::Cast(CLOAK)));
         assert!(parse_trigger("revealed 0").is_err());
         assert_eq!(parse_trigger("psynergy 141 on 1032"), Ok(Trigger::Psynergy(0x8d, 8)));
-        assert!(parse_trigger("psynergy 136 on cell 40").is_err());
+        assert_eq!(parse_trigger("psynergy 136 on cell 40"), Ok(Trigger::PsynergyCell(136, 40)));
     }
 
     #[test]

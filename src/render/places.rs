@@ -926,7 +926,7 @@ impl Context<'_> {
             let centre = |&(_, cx, cz): &(u8, i32, i32)| (cx * scan.size + scan.size / 2, cz * scan.size + scan.size / 2);
             match trigger {
                 Trigger::Talk(a) | Trigger::Psynergy(_, a) => scan.actors.get(&a).copied().into_iter().collect(),
-                Trigger::Search(c) => scan.cells.get(&c).map_or_else(Vec::new, |v| v.iter().filter(|c| c.0 == 0).map(centre).collect()),
+                Trigger::Search(c) | Trigger::PsynergyCell(_, c) => scan.cells.get(&c).map_or_else(Vec::new, |v| v.iter().filter(|c| c.0 == 0).map(centre).collect()),
                 // A world map place is an actor the leader walks into.
                 Trigger::Touch(c) if scan.size == 32 && c >= 100 && !scan.cells.contains_key(&c) => scan.actors.get(&(c - 100)).copied().into_iter().collect(),
                 Trigger::Touch(c) => scan.cells.get(&c).map_or_else(Vec::new, |v| v.iter().map(centre).collect()),
@@ -943,6 +943,7 @@ impl Context<'_> {
                 Trigger::Touch(c) => row(TRIGGER_STEP, c) || (own.is_empty() && row(TRIGGER_EXIT, c)),
                 Trigger::Psynergy(..) if own.is_empty() => scan.triggers.iter().any(|t| t.0 == TRIGGER_PSYNERGY),
                 Trigger::Psynergy(_, a) => row(TRIGGER_PSYNERGY, a),
+                Trigger::PsynergyCell(_, c) => row(TRIGGER_PSYNERGY, c),
                 Trigger::Direct(_) | Trigger::Message(..) => false,
                 Trigger::Cast(_) => scan.triggers.iter().any(|t| t.0 == TRIGGER_PSYNERGY),
             }
@@ -1018,6 +1019,7 @@ impl Context<'_> {
                 Trigger::Touch(c) => format!("no entrance of {names} leads to a room with a cell with code {c} that its events answer"),
                 Trigger::Talk(a) => format!("no entrance of {names} leads to a room with actor {a} that its events talk to"),
                 Trigger::Psynergy(_, a) => format!("no entrance of {names} leads to a room with actor {a} and a Psynergy event"),
+                Trigger::PsynergyCell(_, c) => format!("no entrance of {names} leads to a room with a ground-layer cell with code {c} that its Psynergy events answer"),
                 Trigger::Direct(_) | Trigger::Message(..) => format!("no entrance of {names} holds its function"),
                 Trigger::Cast(_) => format!("no entrance of {names} answers a cast anywhere"),
             };

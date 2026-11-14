@@ -2642,8 +2642,8 @@ impl<'rom> Field<'rom> {
                     });
                 }
             }
-            Trigger::Search(code) => {
-                // The leader searches the ground layer's cell 16 pixels ahead
+            Trigger::Search(code) | Trigger::PsynergyCell(_, code) => {
+                // The leader searches, or casts on, the ground layer's cell 16 pixels ahead
                 // of him, whichever way he faces
                 // (Actor_GetTriggerCellAheadOfCurrent). He stands on his own
                 // layer, level with the cell or up to 64 pixels below it (a
@@ -2906,6 +2906,7 @@ impl<'rom> Field<'rom> {
             Trigger::Search(code) => (TRIGGER_EXAMINE, code),
             Trigger::Touch(code) => (TRIGGER_STEP, code),
             Trigger::Psynergy(_, id) => (TRIGGER_PSYNERGY, id),
+            Trigger::PsynergyCell(_, code) => (TRIGGER_PSYNERGY, code),
             Trigger::Cast(_) => (TRIGGER_PSYNERGY, 0),
             Trigger::Direct(_) | Trigger::Message(..) => (TRIGGER_DIRECT, 0),
         };
@@ -2942,7 +2943,7 @@ impl<'rom> Field<'rom> {
         let control = (direct || anywhere).then(|| self.save());
         match trigger {
             Trigger::Talk(_) | Trigger::Search(_) => self.press(2)?,
-            Trigger::Psynergy(ability, _) | Trigger::Cast(ability) => {
+            Trigger::Psynergy(ability, _) | Trigger::PsynergyCell(ability, _) | Trigger::Cast(ability) => {
                 let work = self.gba.read32(self.s.field_work);
                 self.gba.write16(work + self.s.l.field_command, ability);
                 self.cut();
@@ -3111,7 +3112,7 @@ impl<'rom> Field<'rom> {
                     let how = match trigger {
                         Trigger::Talk(_) | Trigger::Search(_) => "pressing A",
                         Trigger::Touch(_) => "walking onto the cell",
-                        Trigger::Psynergy(..) | Trigger::Cast(_) => "the cast",
+                        Trigger::Psynergy(..) | Trigger::PsynergyCell(..) | Trigger::Cast(_) => "the cast",
                         Trigger::Direct(_) | Trigger::Message(..) => "the direct start",
                     };
                     return Err(format!("{how} from ({}, {}) started nothing in {} frames", spot.x, spot.z, START_FRAMES));
