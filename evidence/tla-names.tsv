@@ -1,0 +1,1614 @@
+name	kind	evidence	file
+BattleMotion_CallBeast	the game	"Call on a feral ally's aid." (Wild Wolf's description)	games/tla/src/battle/battle/motion_graphics.c
+BattleStaging_PlanDaedalus	the game	"Daedalus" (MsgAbilityName + 403)	games/tla/src/battle/battle/staging.c
+BattleStaging_PlanHighImpact	the game	"High Impact" (MsgAbilityName + 103)	games/tla/src/battle/battle/staging.c
+BattleStaging_PlanAuroraField	the game	"Aurora Field" (MsgAbilityName + 298)	games/tla/src/battle/battle/staging.c
+BattleEffect_RunMeteorBlow	the game	"Meteor Blow" (message 02130)	games/tla/src/battle_effect/battle_effect/meteor_blow.c
+Forge_Run	the game	"Sunshine's smithy" (message 4879)	games/tla/src/shop/shop/item_picker.c
+SuperLuckyDice_Run	the game	"Super Lucky Dice\nThe Rules of the Game." (MsgContigo25)	games/tla/src/field/dice_game.c
+SummonTablet_PlayRunes	the game	"{protagonist_name} examined the stone tablet..." (MsgKey0dc4 + 26)	games/tla/src/field/event_commands/radial/mote_trail.c
+SHOP_TYPE_WEAPONS	the game	"Weapons Shop" (message 4973)	games/tla/src/shop/shop_internal.h
+SHOP_TYPE_GENERAL_STORE	the game	"General Storekeeper" (message 4982)	games/tla/src/shop/shop_internal.h
+ENEMY_MYSTERY_MAN	the game	"Mystery Man" (MsgEnemyName + 344)	games/tla/src/window/window/decode.c
+ENEMY_MYSTERY_WOMAN	the game	"Mystery Woman" (MsgEnemyName + 347)	games/tla/src/window/window/decode.c
+SE_VOICE_OLD_MAN_1	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_OLD_MAN_1 (games/tbs/sound/songs/se_voice_old_man_1.mid)	games/tla/include/sounds.h
+SE_VOICE_WOMAN_1	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_WOMAN_1 (games/tbs/sound/songs/se_voice_woman_1.mid)	games/tla/include/sounds.h
+SE_VOICE_GIRL_1	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_GIRL_1 (games/tbs/sound/songs/se_voice_girl_1.mid)	games/tla/include/sounds.h
+SE_VOICE_MAN_2	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_MAN_2 (games/tbs/sound/songs/se_voice_man_2.mid)	games/tla/include/sounds.h
+SE_VOICE_WOMAN_3	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_WOMAN_3 (games/tbs/sound/songs/se_voice_woman_3.mid)	games/tla/include/sounds.h
+SE_VOICE_WOMAN_2	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_WOMAN_2 (games/tbs/sound/songs/se_voice_woman_2.mid)	games/tla/include/sounds.h
+SE_VOICE_BOY_2	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_BOY_2 (games/tbs/sound/songs/se_voice_boy_2.mid)	games/tla/include/sounds.h
+SE_VOICE_YOUNG_MAN_4	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_YOUNG_MAN_4 (games/tbs/sound/songs/se_voice_young_man_4.mid)	games/tla/include/sounds.h
+SE_VOICE_MAN_4	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_MAN_4 (games/tbs/sound/songs/se_voice_man_4.mid)	games/tla/include/sounds.h
+SE_VOICE_OLD_MAN_4	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_OLD_MAN_4 (games/tbs/sound/songs/se_voice_old_man_4.mid)	games/tla/include/sounds.h
+SE_VOICE_YOUNG_WOMAN_3	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_YOUNG_WOMAN_3 (games/tbs/sound/songs/se_voice_young_woman_3.mid)	games/tla/include/sounds.h
+SE_VOICE_MAN_3	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_MAN_3 (games/tbs/sound/songs/se_voice_man_3.mid)	games/tla/include/sounds.h
+SE_VOICE_BOY_1	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_BOY_1 (games/tbs/sound/songs/se_voice_boy_1.mid)	games/tla/include/sounds.h
+SE_VOICE_MAN_1	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_MAN_1 (games/tbs/sound/songs/se_voice_man_1.mid)	games/tla/include/sounds.h
+SE_VOICE_GIRL_3	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_GIRL_3 (games/tbs/sound/songs/se_voice_girl_3.mid)	games/tla/include/sounds.h
+SE_VOICE_ANIMAL_3	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_ANIMAL_3 (games/tbs/sound/songs/se_voice_animal_3.mid)	games/tla/include/sounds.h
+SE_VOICE_YOUNG_MAN_2	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_YOUNG_MAN_2 (games/tbs/sound/songs/se_voice_young_man_2.mid)	games/tla/include/sounds.h
+MUS_ENDING_LOGO	what the player sees	its sequence is byte-identical to The Broken Seal's MUS_ENDING_LOGO (games/tbs/sound/songs/mus_ending_logo.mid)	games/tla/include/sounds.h
+SE_VOICE_YOUNG_WOMAN_4	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_YOUNG_WOMAN_4 (games/tbs/sound/songs/se_voice_young_woman_4.mid)	games/tla/include/sounds.h
+SE_VOICE_OLD_MAN_3	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_OLD_MAN_3 (games/tbs/sound/songs/se_voice_old_man_3.mid)	games/tla/include/sounds.h
+SE_VOICE_GIRL_4	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_GIRL_4 (games/tbs/sound/songs/se_voice_girl_4.mid)	games/tla/include/sounds.h
+SE_VOICE_OLD_MAN_2	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_OLD_MAN_2 (games/tbs/sound/songs/se_voice_old_man_2.mid)	games/tla/include/sounds.h
+SE_VOICE_YOUNG_MAN_1	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_YOUNG_MAN_1 (games/tbs/sound/songs/se_voice_young_man_1.mid)	games/tla/include/sounds.h
+SE_VOICE_ANIMAL_4	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_ANIMAL_4 (games/tbs/sound/songs/se_voice_animal_4.mid)	games/tla/include/sounds.h
+SE_VOICE_WOMAN_4	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_WOMAN_4 (games/tbs/sound/songs/se_voice_woman_4.mid)	games/tla/include/sounds.h
+SE_VOICE_YOUNG_WOMAN_2	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_YOUNG_WOMAN_2 (games/tbs/sound/songs/se_voice_young_woman_2.mid)	games/tla/include/sounds.h
+SE_VOICE_GIRL_2	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_GIRL_2 (games/tbs/sound/songs/se_voice_girl_2.mid)	games/tla/include/sounds.h
+SE_VOICE_BOY_3	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_BOY_3 (games/tbs/sound/songs/se_voice_boy_3.mid)	games/tla/include/sounds.h
+SE_VOICE_YOUNG_WOMAN_1	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_YOUNG_WOMAN_1 (games/tbs/sound/songs/se_voice_young_woman_1.mid)	games/tla/include/sounds.h
+SE_RUSH	what the player sees	its sequence is byte-identical to The Broken Seal's SE_RUSH (games/tbs/sound/songs/se_rush.mid)	games/tla/include/sounds.h
+SE_VOICE_YOUNG_MAN_3	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_YOUNG_MAN_3 (games/tbs/sound/songs/se_voice_young_man_3.mid)	games/tla/include/sounds.h
+SE_VOICE_ANIMAL_2	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_ANIMAL_2 (games/tbs/sound/songs/se_voice_animal_2.mid)	games/tla/include/sounds.h
+SE_VOICE_BOY_4	what the player sees	its sequence is byte-identical to The Broken Seal's SE_VOICE_BOY_4 (games/tbs/sound/songs/se_voice_boy_4.mid)	games/tla/include/sounds.h
+ACTOR_LOOKOUT	the game	"That guy looked like the mayor of Madra... I'd better go tell the others!" (MsgAlhafra28)	games/tla/src/scene/alhafra.c
+ACTOR_HUNGRY_BOY	the game	"I'm so hungry I can't even move..." (MsgAlhafra65)	games/tla/src/scene/alhafra.c
+LemurianShipDeck_TryHeldDoor	the game	"The door is held closed by a powerful force." (MsgTheDoorIsHeld)	games/tla/src/scene/lemurian_ship_deck.c
+LemurianShipDeck_LeaveToFindCrew	the game	"Well, there's no point in hanging around here all day." (MsgWellThereS)	games/tla/src/scene/lemurian_ship_deck.c
+LemurianShipDeck_CreateBlackCrystal	the game	"Black Crystal" (item 242's name)	games/tla/src/scene/lemurian_ship_deck.c
+LemurianShipDeck_SetOutForMadra	the game	"Then let's waste no time! We should set out for Madra at once!" (MsgThenLetS)	games/tla/src/scene/lemurian_ship_deck.c
+MarsLighthouseEntrance_CheckIce	the game	" checked the ice." (MsgCheckedTheIce)	games/tla/src/scene/mars_lighthouse_entrance.c
+ACTOR_SEA_GODS_TEAR	the game	"Sea God's Tear" (MsgItemName)	games/tla/src/scene/daila_interiors.c
+ACTOR_FIRST_PILLAR	what the player sees	a puddle that Frost turns into a pillar of ice (puddle.png)	games/tla/src/scene/daila_interiors.c
+DailaInteriors_AskGoingToMadra	the game	"Are you going to Madra?" (MsgDailaInteriorsGoingToMadra)	games/tla/src/scene/daila_interiors.c
+DailaInteriors_TalkNoBoats	the game	"Don't tell me you're all looking for a boat, too!" (MsgDailaInteriorsLookingForBoat)	games/tla/src/scene/daila_interiors.c
+DailaInteriors_TalkCaughtPracticing	the game	"Er... Aheh heh... You... weren't watching, were you?" (MsgDailaInteriorsWatchingPractice)	games/tla/src/scene/daila_interiors.c
+ShamanVillageCave_MeetColossoFans	the game	"I found !" (MsgIFound2)	games/tla/src/scene/shaman_village_cave.c
+ShamanVillageCave_LoseToColossoFans	the game	"Hey, these guys aren't very strong at all!" (MsgHeyTheseGuys)	games/tla/src/scene/shaman_village_cave.c
+ShamanVillageCave_BeatColossoFans	the game	"These guys were phenomenal!" (MsgTheseGuysWere)	games/tla/src/scene/shaman_village_cave.c
+ACTOR_LEDGE_LOG	what the player sees	a blue log (fallen_column_north_south.png)	games/tla/src/scene/jupiter_lighthouse_room_3.c
+MarsLighthouseStarRoom_WakeAfterBattle	the game	"Why... Why am I lying here?" (MsgMarsStar01)	games/tla/src/scene/mars_lighthouse_star_room.c
+MarsLighthouseStarRoom_CreateMarsStar	the game	"Mars Star" (item 247's name)	games/tla/src/scene/mars_lighthouse_star_room.c
+MarsLighthouseStarRoom_HoldWarmHand	the game	"Your hand...so warm... People have such warm hands... I had forgotten..." (MsgMarsStar03)	games/tla/src/scene/mars_lighthouse_star_room.c
+MarsLighthouseStarRoom_TakeMarsStar	the game	" got the Mars Star!" (MsgMarsStar08)	games/tla/src/scene/mars_lighthouse_star_room.c
+MarsLighthouseStarRoom_ExamineStatue	the game	"There's a space for you to place something." (MsgMarsStar07)	games/tla/src/scene/mars_lighthouse_star_room.c
+MarsLighthouseStarRoom_UseMarsStar	the game	" used the Mars Star!" (MsgMarsStar09)	games/tla/src/scene/mars_lighthouse_star_room.c
+ACTOR_PUPS_FATHER	the game	"Thanks for looking out for our son last night!" (MsgGarohInteriors35)	games/tla/src/scene/garoh_interiors.c
+ACTOR_PUPS_MOTHER	the game	"Our oldest son is always scampering off late at night... Where is he?" (MsgGarohInteriors02)	games/tla/src/scene/garoh_interiors.c
+ACTOR_PUPS_BROTHER	the game	"No fair! My brother always gets to go out late!" (MsgGarohInteriors03)	games/tla/src/scene/garoh_interiors.c
+ACTOR_REVEAL_SEEKER	the game	"I thought I could become a leader if I learned Reveal. How foolish of me." (MsgGarohInteriors50)	games/tla/src/scene/garoh_interiors.c
+ACTOR_REVEAL_SEEKERS_MATE	the game	"My mate is close to obtaining the power he's been seeking..." (MsgGarohInteriors14)	games/tla/src/scene/garoh_interiors.c
+ACTOR_WEAPON_MERCHANT	the game	"I'll bet these weapons suit you better than any fangs would!" (MsgGarohInteriors52)	games/tla/src/scene/garoh_interiors.c
+ACTOR_ARMOR_MERCHANT	the game	"But when you're human, armor always comes in handy." (MsgGarohInteriors54)	games/tla/src/scene/garoh_interiors.c
+ACTOR_INN_ATTENDANT	the game	"You folks didn't sleep much last night..." (MsgGarohInteriors34)	games/tla/src/scene/garoh_interiors.c
+ACTOR_DISAPPOINTED_TRAVELER	the game	"...Climbed all over that stupid rock, and for what? Nothing!" (MsgGarohInteriors29)	games/tla/src/scene/garoh_interiors.c
+ACTOR_STUBBORN_TRAVELER	the game	"Maybe we should stay and try climbing Air's Rock one more time." (MsgGarohInteriors61)	games/tla/src/scene/garoh_interiors.c
+ACTOR_AIRS_ROCK_GUARDIAN	the game	"Garoh exists to protect Air's Rock." (MsgGarohInteriors07)	games/tla/src/scene/garoh_interiors.c
+ACTOR_WHIRLWIND_TALKER	the game	"So you've heard of Whirlwind? Most people haven't..." (MsgGarohInteriors08)	games/tla/src/scene/garoh_interiors.c
+ACTOR_WIND_STONE_TALKER	the game	"I've heard about the Wind Stone..." (MsgGarohInteriors09)	games/tla/src/scene/garoh_interiors.c
+ACTOR_ITEM_MERCHANT	the game	"I never change my stock, unlike the weapons and armor shopkeeps..." (MsgGarohInteriors22)	games/tla/src/scene/garoh_interiors.c
+MagmaRockInside_ExamineEmberStone	the game	"There's something burning like an ember within the stone." (MsgBlazeStoneEmber)	games/tla/src/scene/magma_rock_inside.c
+YampiDesert_TalkToTraveler	the game	"We followed the pirates here from Madra... Are you going to Alhafra, too?" (MsgWeFollowedThe)	games/tla/src/scene/yampi_desert.c
+YampiDesert_TalkToElderAboutWay	the game	"As you can see, the elder is quite insistent on finding a way through." (MsgAsYouCan)	games/tla/src/scene/yampi_desert.c
+YampiDesert_TalkToElder	the game	"This is where my son must prove himself as mayor..." (MsgThisIsWhere)	games/tla/src/scene/yampi_desert.c
+YampiDesert_ReadSignpost	the game	"North: Alhafra South: Air's Rock Warning: Beyond this point, there is no route back." (MsgNorthAlhafraSouth)	games/tla/src/scene/yampi_desert.c
+YampiDesert_SeeTravelersAbove	the game	"Hey! Look! Up there!" (MsgHeyLookUp)	games/tla/src/scene/yampi_desert.c
+YampiDesert_CreateScoopGem	the game	"Scoop Gem" (item 209's name)	games/tla/src/scene/yampi_desert.c
+ACTOR_VILLAGER_NO_VISITORS	the game	"It's been a long time since we had any visitors in Mikasalla." (MsgFieldItSBeenALong)	games/tla/src/scene/mikasalla.c
+ACTOR_VILLAGER_LOOKING_FOR_SOMEONE	the game	"Are you looking for someone?" (MsgFieldAreYouLookingForSomeone)	games/tla/src/scene/mikasalla.c
+ACTOR_VILLAGER_AFTER_EARTHQUAKE	the game	"I went out to investigate after the earthquake..." (MsgFieldIWentOutToInvestigate)	games/tla/src/scene/mikasalla.c
+ACTOR_VILLAGER_DEEPER_INTO_OSENIA	the game	"If you're going deeper into Osenia, you'd better be ready for trouble." (MsgFieldIfYouReGoingDeeper)	games/tla/src/scene/mikasalla.c
+ACTOR_VILLAGER_AIRS_ROCK	the game	"In the heart of Osenia lies a sacred place, Air's Rock..." (MsgFieldInTheHeartOfOsenia)	games/tla/src/scene/mikasalla.c
+ACTOR_VILLAGER_TWO_WAYS	the game	"If you want to go into the heart of Osenia, there are two ways..." (MsgFieldIfYouWantToGo)	games/tla/src/scene/mikasalla.c
+ACTOR_VILLAGER_TUNDARIA	the game	"If you look across the ocean to the south, you can see Tundaria." (MsgFieldIfYouLookAcrossThe)	games/tla/src/scene/mikasalla.c
+ACTOR_VILLAGER_GAROH	the game	"A town called Garoh lies to the east of us..." (MsgFieldATownCalledGarohLies)	games/tla/src/scene/mikasalla.c
+ACTOR_CHICKEN	the game	"Buk buk buk..." (MsgFieldBukBukBuk)	games/tla/src/scene/mikasalla.c
+ACTOR_SHEEP	the game	"Bah! Baaaaaaa!" (MsgFieldBahBaaaaaaa)	games/tla/src/scene/mikasalla.c
+ACTOR_SPARK	the game	"Spark" (Mikasalla_MeetSpark's Djinni)	games/tla/src/scene/mikasalla.c
+ACTOR_EAST_GUARD	the game	"If you wanna cross here, you'll need permission from the town elder!" (MsgMadraNeedEldersPermission)	games/tla/src/scene/madra_drawbridge.c
+ACTOR_WEST_GUARD	the game	"But try to cross illegally, and we'll throw you in the hoosegow with Mr. Bluehair!" (MsgMadraCanCrossWithPermission)	games/tla/src/scene/madra_drawbridge.c
+ACTOR_GREETER	the game	"You don't look familiar. Have you been to Daila before?" (MsgDailaBeenBefore)	games/tla/src/scene/daila.c
+ACTOR_INDRA_MOVED_MAN	the game	"Didn't it feel like all of Indra moved when that wave hit?" (MsgDailaIndraMoved)	games/tla/src/scene/daila.c
+ACTOR_FALLEN_OLD_MAN	the game	"I bet you thought it was the wave that knocked me over and hurt my hip, huh?" (MsgDailaHurtHip)	games/tla/src/scene/daila.c
+ACTOR_INNKEEPER	the game	"I haven't seen Tavi and Riki around lately..." (MsgDailaTaviRikiWorry)	games/tla/src/scene/daila.c
+ACTOR_FIRST_PUDDLE	what the player sees	a puddle of seawater that Frost turns into a pillar of ice (puddle.png)	games/tla/src/scene/daila.c
+ACTOR_ALEX	the game	"Alex... Where did you go?" (MsgDailaFelixCall)	games/tla/src/scene/daila.c
+ACTOR_KRADEN	the game	"That's what Kraden said..." (MsgDailaFelixCall)	games/tla/src/scene/daila.c
+Daila_MeetAlex	the game	"Well, well... Our happy little family is back together again." (MsgDailaFelixCall)	games/tla/src/scene/daila.c
+JupiterLighthouseBlockId	what the player sees	grey stone blocks (balance_platform.png)	games/tla/src/scene/jupiter_lighthouse_room_4.c
+WorldMap_RefuseToRunAway	the game	"We shouldn't run from anymore, ." (MsgWeShouldnT)	games/tla/src/scene/world_map.c
+WorldMap_GazeIntoPond	the game	" gazed into the pond..." (MsgGazedIntoThe)	games/tla/src/scene/world_map.c
+WorldMap_ExplainGivingDjinn	the game	"To give your Djinni to someone else, move it like this." (MsgDjinnGiveTutorialA)	games/tla/src/scene/world_map.c
+WorldMap_FightBanditAndThieves	the game	"Hey! Wait a minute!" (MsgHeyWaitA)	games/tla/src/scene/world_map.c
+WorldMap_DeliverLohoCannon	the game	"We got the cannon onto your ship with no problems." (MsgYouDonT)	games/tla/src/scene/world_map.c
+WorldMap_MeetEcho	the game	"The Venus Djinni has become 's pal." (MsgTheVenusDjinni)	games/tla/src/scene/world_map.c
+WorldMap_WatchVenusLighthouseCollapse	the game	"They've done it, ! They've lit the beacon!" (MsgTheyVeDone)	games/tla/src/scene/world_map.c
+WorldMap_DriftNorthOfContinent	the game	"We're saved!" (MsgWeReSaved)	games/tla/src/scene/world_map.c
+WorldMap_TakeTheTiller	the game	"Take the tiller, !" (MsgTakeTheTiller)	games/tla/src/scene/world_map.c
+WorldMap_TakeOff	the game	"We did it! The ship took off without a hitch!" (MsgWeDidIt)	games/tla/src/scene/world_map.c
+ACTOR_RAFT_FISHERMAN	the game	"We don't need to live off fish anymore, so we don't need any fishermen, do we?" (MsgWeDonT)	games/tla/src/scene/champa_interiors.c
+ACTOR_RAFT_DWELLER	the game	"Everyone in Champa is poor, but the poorest of us all live on rafts..." (MsgEveryoneInChampa)	games/tla/src/scene/champa_interiors.c
+ACTOR_FISHERMANS_CHILD	the game	"When my father heads out to sea, he takes our home with him" (MsgWhenMyFather)	games/tla/src/scene/champa_interiors.c
+ACTOR_FISHERMANS_YOUNGER_CHILD	the game	"My dad went out to fish, but there were no fish to be caught" (MsgMyDadWent)	games/tla/src/scene/champa_interiors.c
+ACTOR_WAVE_SURVIVOR	the game	"The tidal wave was terrible... It... It nearly swallowed me whole!" (MsgTheTidalWave)	games/tla/src/scene/champa_interiors.c
+ACTOR_SEA_OF_TIME_SAILOR	the game	"It looked to me like the wave came from the Sea of Time." (MsgItLookedTo)	games/tla/src/scene/champa_interiors.c
+ACTOR_CAVE_SHUNNING_SAILOR	the game	"Most of the sailors here live in the cliff dwellings, but I don't like those caves." (MsgMostOfThe)	games/tla/src/scene/champa_interiors.c
+ACTOR_ELDER_SEEKING_A_CHIEF	the game	"I've been wondering about finding a chief for Champa, since we don't have one." (MsgIVeBeenWondering)	games/tla/src/scene/champa_interiors.c
+ACTOR_ELDER	the game	"We village elders have guided Champa for so many years..." (MsgWeVillageElders)	games/tla/src/scene/champa_interiors.c
+ACTOR_WARM_OCEAN_WATCHER	the game	"The ocean has been a lot warmer lately, and the fish population is decreasing." (MsgTheOceanHas)	games/tla/src/scene/champa_interiors.c
+ACTOR_TIDAL_WAVE_RUMORMONGER	the game	"I've heard rumors of a terrible tidal wave striking the lands south of us." (MsgIVeHeardRumors)	games/tla/src/scene/champa_interiors.c
+ACTOR_ARTIFACT_MERCHANT	the game	"I have some lovely artifacts, but it's only because I've been to the Ankohl Ruins." (MsgIHaveSome)	games/tla/src/scene/champa_interiors.c
+ACTOR_ANKOHL_ADVISER	the game	"If you go to the Ankohl Ruins, you might find some nice artifacts for yourself." (MsgIfYouGo)	games/tla/src/scene/champa_interiors.c
+ACTOR_INNKEEPER	the game	"Listen, if you came to Champa looking for good seafood, you came to the wrong place." (MsgListenIfYou)	games/tla/src/scene/champa_interiors.c
+ACTOR_FISH_TRADER	the game	"We used to do good trade with an island east of us." (MsgWeUsedTo)	games/tla/src/scene/champa_interiors.c
+ChampaIsletHouseActorId	the game	"Did you know Indra moved?" (MsgDidYouKnow)	games/tla/src/scene/champa_interiors.c
+VenusLighthouseEntrance_WakeUp	the game	" ... Are... Are you all right?" (MsgAreAreYou)	games/tla/src/scene/venus_lighthouse_entrance.c
+ACTOR_KRADEN	the game	"Kraden has joined your party." (MsgIdejimaGroan)	games/tla/src/scene/idejima.c
+ACTOR_SHIP	the game	"Hm... Menardi said a ship would be here..." (MsgIdejimaIsThisThePlace)	games/tla/src/scene/idejima.c
+ACTOR_ALEX	the game	"By the way... Where has Alex gone?" (MsgIdejimaWhereHasAlexGone)	games/tla/src/scene/idejima.c
+ACTOR_NARRATOR	the game	"Do you want to check yourself for injuries?" (MsgIdejimaCheckForInjuries)	games/tla/src/scene/idejima.c
+Idejima_WakeKraden	the game	"Oooog..." (MsgIdejimaGroan)	games/tla/src/scene/idejima.c
+Idejima_WakeJenna	the game	"What am I doing down here?" (MsgIdejimaAwakeningExclamation)	games/tla/src/scene/idejima.c
+Idejima_WakeSheba	the game	"What happened to the tidal wave?" (MsgIdejimaSecondGroan)	games/tla/src/scene/idejima.c
+Idejima_CatchUpWithFelix	the game	"You weren't planning on leaving me, were you?" (MsgIdejimaHeyFelix)	games/tla/src/scene/idejima.c
+Idejima_RunAlexDeparture	the game	"By the way... Where has Alex gone?" (MsgIdejimaWhereHasAlexGone)	games/tla/src/scene/idejima.c
+Idejima_BreakAwayFromGondowan	the game	"Idejima... It's drifting away from the mainland!" (MsgIdejimaIsThisThePlace)	games/tla/src/scene/idejima.c
+Idejima_FindFelixAndSheba	the game	"They're really alive!" (MsgIdejimaHowLongWillWeDrift)	games/tla/src/scene/idejima.c
+Idejima_RideTheTidalWave	the game	"It's...a tidal wave." (MsgIdejimaThoughtTheyWereInsideLighthouse)	games/tla/src/scene/idejima.c
+Idejima_FelixWakes	the game	"Do you want to check yourself for injuries?" (MsgIdejimaCheckForInjuries)	games/tla/src/scene/idejima.c
+EFFECT_SPAWN	its area name	"Gondowan Settlement", "Hesperia Settlement", "Kalt Island", "SW Atteka Islet".	games/tla/src/scene/settlements.c
+Settlements_WarnOfRiddleOfRock	the game	"Don't tell me, you're here to solve the riddle of the rock!" (MsgSettlements01)	games/tla/src/scene/settlements.c
+TrialRoad_OfferToGiveUp	the game	"Do you want to give up?" (MsgTrialRoadGiveUpPrompt)	games/tla/src/scene/trial_road.c
+TrialRoad_ExamineChest	the game	"Place this item in the chest?" (MsgTrialRoadPlaceItemPrompt)	games/tla/src/scene/trial_road.c
+TrialRoad_ReachPeakFirst	the game	"You were quite swift! You may prove a challenge yet!" (MsgTrialRoadSwiftChallenge)	games/tla/src/scene/trial_road.c
+TrialRoad_ReachPeakSecond	the game	"You may have been slow, but you made it through Trial Road to the mountain's peak!" (MsgTrialRoadSlowArrival)	games/tla/src/scene/trial_road.c
+TrialRoad_BeatMoapa	the game	"All right, all right. You've proven your strength, and you are heroes indeed." (MsgTrialRoadHeroesProven)	games/tla/src/scene/trial_road.c
+TrialRoad_LoseToMoapa	the game	"You've lost. Now leave Shaman village." (MsgTrialRoadLeaveVillage)	games/tla/src/scene/trial_road.c
+TrialRoad_ShowTraps	the game	"The room is filled with traps and snares. Use the power of Contigo to avoid them." (MsgTrialRoadTrapInstructions)	games/tla/src/scene/trial_road.c
+VenusLighthouse_DoubtLeaving	the game	"Are you sure we should be leaving like this?" (MsgVenusLighthouseAreYouSureWeShouldBeLeaving)	games/tla/src/scene/venus_lighthouse.c
+MarsLighthouseAerie_FaceDoomDragon	the game	"Betrayers, you have arrived!" (MsgBetrayersYouHave)	games/tla/src/scene/mars_lighthouse_aerie.c
+MarsLighthouseAerie_FindWhoTheDragonWas	the game	"...Who are they?" (MsgWhoAreThey)	games/tla/src/scene/mars_lighthouse_aerie.c
+MarsLighthouseAerie_LightBeacon	the game	"The beacon is lit!" (MsgTheBeaconIs)	games/tla/src/scene/mars_lighthouse_aerie.c
+MarsLighthouseAerie_WatchGoldenSunRise	the game	"What could he be doing?" (MsgWhatCouldHe)	games/tla/src/scene/mars_lighthouse_aerie.c
+MarsLighthouseAerie_HoldBackFromParents	the game	"Do not let your sadness overwhelm you, ! Go!" (MsgDoNotLet)	games/tla/src/scene/mars_lighthouse_aerie.c
+MarsLighthouseAerie_HoldBackFromParentsAgain	the game	"Do not let your sadness overwhelm you, ! Go!" (MsgDoNotLet)	games/tla/src/scene/mars_lighthouse_aerie.c
+MarsLighthouseAerie_OfferToCastMarsStar	the game	"Will you cast in the Mars Star?" (MsgWillYouCast)	games/tla/src/scene/mars_lighthouse_aerie.c
+MarsLighthouseAerie_TalkToConsoler	the game	", I understand your loss..." (MsgIUnderstandYour)	games/tla/src/scene/mars_lighthouse_aerie.c
+MarsLighthouseAerie_TalkToBlindedParent	the game	"I...can't see you, but I sense that you're nearby..." (MsgUhhhhnnnICan)	games/tla/src/scene/mars_lighthouse_aerie.c
+MarsLighthouseAerie_TalkToCoughingParent	the game	"Tell Dora...to live her life to the fullest...for me..." (MsgKoffKoffYou)	games/tla/src/scene/mars_lighthouse_aerie.c
+MarsLighthouseAerie_TalkToGladParent	the game	"I am so happy...to have one last chance to see you again..." (MsgUnnnnIAm)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_GATES_PILLAR	what the player sees	a grey stone pillar (spr_312.png)	games/tla/src/scene/jupiter_lighthouse_room_1.c
+ACTOR_BRIGGS	the game	"Chaucha... It's good to see you." (MsgYouHereTo)	games/tla/src/scene/alhafran_cave.c
+ACTOR_EOLEO	the game	"And you, too, Eoleo." (MsgYouHereTo)	games/tla/src/scene/alhafran_cave.c
+ACTOR_CHAUCHA	the game	"I'm fine, Chaucha." (MsgYouHereTo)	games/tla/src/scene/alhafran_cave.c
+ACTOR_JAILER	the game	"Did the mean old guard frighten you?" (MsgYouHereTo)	games/tla/src/scene/alhafran_cave.c
+MadraCatacombs_TryLockedDoor	the game	"The door won't budge. ...Must be locked." (MsgFieldDoorWontBudge)	games/tla/src/scene/madra_catacombs.c
+MadraCatacombs_UnlockWithRuinKey	the game	"Ruin Key" (item 459's name)	games/tla/src/scene/madra_catacombs.c
+MadraCatacombs_HearEyesOfTruth	the game	"Look upon me with eyes of truth... Then the door will open..." (MsgFieldEyesOfTruth)	games/tla/src/scene/madra_catacombs.c
+ACTOR_VILLAGER_CHAMPA_BOAT	the game	"This is a Champa boat... You can see their mark on the flag there." (MsgMadraChampaBoat)	games/tla/src/scene/osenia_cliffs.c
+ACTOR_VILLAGER_NOT_CHAMPA	the game	"Wait, if this is the Champa ship, then that must mean Piers isn't a Champa!" (MsgMadraSailorNotChampa)	games/tla/src/scene/osenia_cliffs.c
+ACTOR_VILLAGER_WAVE_DAMAGE	the game	"Look at all the damage... That wave must have been gigantic..." (MsgMadraWaveDamage)	games/tla/src/scene/osenia_cliffs.c
+AlhafraInteriors_MeetAlex	the game	"So, you've finally come." (MsgAlhafraInteriors31)	games/tla/src/scene/alhafra_interiors.c
+AlhafraInteriors_TalkToHostess	the game	"Augh! With all these demanding houseguests, I feel like I've lost control of my own house!" (MsgAlhafraInteriors06)	games/tla/src/scene/alhafra_interiors.c
+AlhafraInteriors_GuestsAskForTea	the game	"Sorry to bother you, but we'd like some tea." (MsgAlhafraInteriors07)	games/tla/src/scene/alhafra_interiors.c
+Prox_AskAboutIgloos	the game	", you like igloos, right?" (MsgProx33)	games/tla/src/scene/prox.c
+Prox_TalkAboutParents	the game	", your parents have gone away... They were very worried about you." (MsgProx56)	games/tla/src/scene/prox.c
+Prox_PraiseReturnedWarrior	the game	"You go away for a little while, and you come back a strong and mighty warrior!" (MsgProx53)	games/tla/src/scene/prox.c
+Prox_FearForWeyard	the game	"Now that the lighthouse has been lit, I fear for what will happen to Weyard." (MsgProx139)	games/tla/src/scene/prox.c
+Prox_TalkToPlayingChild	the game	"Weeee! What fun! Now that it's stopped snowing, we can go outside and play." (MsgProx113)	games/tla/src/scene/prox.c
+Prox_TalkToRestlessChild	the game	"I miss running around outside." (MsgProx114)	games/tla/src/scene/prox.c
+Prox_TalkToTrainingChild	the game	"If I'm going to be a great warrior, like , I'm gonna have to train hard." (MsgProx115)	games/tla/src/scene/prox.c
+Prox_SearchForParents	the game	"They're not here..." (MsgProx47)	games/tla/src/scene/prox.c
+Prox_DecideToGoToLighthouse	the game	"We can't wait for Agatio and his men any longer..." (MsgProx62)	games/tla/src/scene/prox.c
+Prox_MeetPuelle	the game	"You... , it's you..." (MsgProx75)	games/tla/src/scene/prox.c
+Prox_GiveThanksForBeacon	the game	"Thank you, . And you, too, and Kraden." (MsgProx80)	games/tla/src/scene/prox.c
+Prox_SayFarewell	the game	"What took you so long? Mom and Dad are tired of waiting for you..." (MsgProx153)	games/tla/src/scene/prox.c
+ShrineOfTheSeaGod_ExamineStatue	the game	"This statue looks a lot like the one in Daila's Sanctum." (MsgFieldStatueLikeDailaShrine)	games/tla/src/scene/shrine_of_the_sea_god.c
+ShrineOfTheSeaGod_StartleCompanion	the game	"Wah! You scared me!" (MsgFieldStartledCompanion)	games/tla/src/scene/shrine_of_the_sea_god.c
+ShrineOfTheSeaGod_UseSeaGodsTear	the game	"Sea God's Tear" (item 458's name)	games/tla/src/scene/shrine_of_the_sea_god.c
+ShrineOfTheSeaGod_ThrowRopeAgain	the game	"All right! I'm gonna throw the rope again!" (MsgFieldRopeThrownAgain)	games/tla/src/scene/shrine_of_the_sea_god.c
+ShrineOfTheSeaGod_LashRope	the game	"Excellent work, !" (MsgFieldPraiseRopeWork)	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_SHORTCUT_PILLAR	what the player sees	a grey stone pillar (spr_312.png)	games/tla/src/scene/jupiter_lighthouse_room_6.c
+MarsLighthouseRoomM_ReadEarthInscription	the game	"Mankind... With the power of wisdom, they ruled the earth." (MsgMankindWithThe)	games/tla/src/scene/mars_lighthouse_room_m.c
+MarsLighthouseRoomM_ReadWaterInscription	the game	"Fish... With cold courage, they ruled the water." (MsgFishWithCold)	games/tla/src/scene/mars_lighthouse_room_m.c
+MarsLighthouseRoomM_ReadFireInscription	the game	"Dragons... Burning with might, they ruled the fires." (MsgDragonsBurningWith)	games/tla/src/scene/mars_lighthouse_room_m.c
+MarsLighthouseRoomM_ReadWindInscription	the game	"Bird... On the wings of truth, they ruled the winds." (MsgBirdOnThe)	games/tla/src/scene/mars_lighthouse_room_m.c
+ACTOR_ARCHER_STATUE	what the player sees	a stone archer (spr_340.png)	games/tla/src/scene/jupiter_lighthouse_room_8.c
+ACTOR_PILLAR	what the player sees	a grey stone pillar (spr_312.png)	games/tla/src/scene/jupiter_lighthouse_room_8.c
+ACTOR_FIRST_LOG	what the player sees	blue logs (fallen_column_north_south.png, fallen_column_west_east.png)	games/tla/src/scene/jupiter_lighthouse_room_8.c
+ShamanVillage_StopAtClosedEntrance	the game	"The entrance is closed. You probably shouldn't go in." (MsgShamanEntranceClosed)	games/tla/src/scene/shaman_village.c
+ShamanVillage_ReadTrialRoadSign	the game	"Trial Road None may enter without permission from Moapa." (MsgShamanTrialRoadPermissionSign)	games/tla/src/scene/shaman_village.c
+ShamanVillage_TalkToGuard	the game	"Do you need to hear Moapa's explanation again?" (MsgShamanGuardRepeatRulesBeforeTrial)	games/tla/src/scene/shaman_village.c
+ShamanVillage_TalkToOtherGuard	the game	"Do you need to hear Moapa's explanation again?" (MsgShamanOtherGuardRepeatRulesBeforeTrial)	games/tla/src/scene/shaman_village.c
+ShamanVillage_TellOutsidersToLeave	the game	"Then what are you standing around for? Get out of town!" (MsgShamanOutsidersLeaveTown)	games/tla/src/scene/shaman_village.c
+ShamanVillage_WarnOfMoapasPower	the game	"If you anger Moapa, you'll be in for a little taste of his awesome and terrible power." (MsgShamanFearMoapaPower)	games/tla/src/scene/shaman_village.c
+ShamanVillage_SendToMoapa	the game	"If there's something you want to say, say it to Moapa, not to us." (MsgShamanSpeakToMoapa)	games/tla/src/scene/shaman_village.c
+ShamanVillage_TalkToInnkeeper	the game	"The card reads "Put coins on the counter, and you can stay."" (MsgShamanInnPaymentPrompt)	games/tla/src/scene/shaman_village.c
+ShamanVillage_TalkToPriest	the game	"Nothing personal, but nobody in town will talk to you." (MsgShamanTribeForbidsTalking)	games/tla/src/scene/shaman_village.c
+ShamanVillage_AskAboutOtherSide	the game	"After your battle, did you check on the other side of the mountain?" (MsgShamanCheckOtherMountainSide)	games/tla/src/scene/shaman_village.c
+ShamanVillage_TalkToMoapa	the game	"You have defeated me, and yet I still don't know your names..." (MsgShamanMoapaAsksVictorsNames)	games/tla/src/scene/shaman_village.c
+ShamanVillage_TalkToShopkeeper	the game	"Everyone is depressed that Moapa lost his big fight." (MsgShamanWelcomeContigoHero)	games/tla/src/scene/shaman_village.c
+ShamanVillage_TellFortune	the game	"So, you'd like to hear your fortune, would you?" (MsgShamanFortuneOfferBeforeTrial)	games/tla/src/scene/shaman_village.c
+ShamanVillage_ExplainTrialRules	the game	"The rules are simple." (MsgShamanTrialRulesAreSimple)	games/tla/src/scene/shaman_village.c
+ShamanVillage_OfferToGiveUp	the game	"Have you decided to give up this foolishness once and for all?" (MsgShamanGiveUpTrialPrompt)	games/tla/src/scene/shaman_village.c
+ShamanVillage_ChallengeMoapa	the game	"Do you want to challenge me on Trial Road?" (MsgShamanChallengeTrialRoadPrompt)	games/tla/src/scene/shaman_village.c
+ShamanVillage_TakeLeftPath	the game	"If you have chosen, then we shall take the other path." (MsgShamanGuardsTakeOtherPath)	games/tla/src/scene/shaman_village.c
+ShamanVillage_TakeRightPath	the game	"If you have chosen, then we shall take the other path." (MsgShamanGuardsTakeOtherPath)	games/tla/src/scene/shaman_village.c
+ShamanVillage_MeetMoapa	the game	"This is my house. If you're looking for Moapa, here I am. Back up. Give me some room." (MsgShamanMoapaGiveMeRoom)	games/tla/src/scene/shaman_village.c
+ShamanVillage_ShowShamansRod	the game	"That's the Shaman's Rod!" (MsgShamanRecognizeShamanRod)	games/tla/src/scene/shaman_village.c
+ShamanVillage_ShowItemToMoapa	the game	"If you're here offering charity, I won't have it... Or did you want to show me something?" (MsgShamanShowMeSomething)	games/tla/src/scene/shaman_village.c
+ShamanVillage_ShowItemToGuard	the game	"Did you want to sell it? Because I don't have any money." (MsgShamanCannotBuyGift)	games/tla/src/scene/shaman_village.c
+ShamanVillage_ShowItemToOtherGuard	the game	"Show it to Moapa if you must" (MsgShamanShowItToMoapa)	games/tla/src/scene/shaman_village.c
+ShamanVillage_GreetFortuneSeeker	the game	"Hoolabaloo!" (MsgShamanFortuneGreeting)	games/tla/src/scene/shaman_village.c
+ShamanVillage_CheckTrialEntry	the game	"But what's this? You no longer have the Shaman's Rod?" (MsgShamanMissingShamanRod)	games/tla/src/scene/shaman_village.c
+ShamanVillage_ShebaClearsSand	the game	"You can do it, !" (MsgShamanCheerForCompanion)	games/tla/src/scene/shaman_village.c
+ShamanVillage_RestartTrial	the game	"In order to reach the battle at the summit, you cannot fail on Trial Road." (MsgShamanMustFinishTrialRoad)	games/tla/src/scene/shaman_village.c
+ShamanVillage_AdviseQuitting	the game	"It would be wise of you to quit. Even if you reach the top, you cannot beat me." (MsgShamanMoapaAdvisesLeaving)	games/tla/src/scene/shaman_village.c
+ACTOR_FELIX	the game	"Felix" (MsgCharacterName)	games/tla/include/scene_tables.h
+ACTOR_JENNA	the game	"Jenna" (MsgCharacterName)	games/tla/include/scene_tables.h
+ACTOR_SHEBA	the game	"Sheba" (MsgCharacterName)	games/tla/include/scene_tables.h
+ACTOR_PIERS	the game	"Piers" (MsgCharacterName)	games/tla/include/scene_tables.h
+FLAG_GAROH_ASKED_ABOUT_REVEAL	the game	"You... Is it true that you learned Reveal?" (MsgGarohInteriors47)	games/tla/include/flags.h
+FLAG_GAROH_SECRET_SHARED	the game	"We don't have to hide our secret from you any longer!" (MsgGaroh15)	games/tla/include/flags.h
+FLAG_GAROH_NIGHT	the game	"on nights of the full moon, we only sell claws and fangs" (MsgGarohInteriors17)	games/tla/include/flags.h
+FLAG_BRIGGS_SAILED_FROM_ALHAFRA	the game	"I paid for this boat, fair and square. I'm no thief." (MsgBriggs2)	games/tla/include/flags.h
+FLAG_BRIGGS_CAUGHT	the game	"Capturing the dreaded Briggs was a great deed." (MsgAlhafraInteriors86)	games/tla/include/flags.h
+FLAG_ALHAFRA_MAST_CLEARED	the game	"Briggs paid for that boat fair and square." (MsgAlhafraInteriors88)	games/tla/include/flags.h
+FLAG_ALHAFRA_MET_ALEX	the game	"So, you've finally come." (MsgAlhafraInteriors31)	games/tla/include/flags.h
+FLAG_ALEX_LEFT_ALHAFRA	the game	"That cute boy next door left already." (MsgAlhafraInteriors84)	games/tla/include/flags.h
+FLAG_ALHAFRA_MADRANS_ARRIVED	the game	"Finally! We made it!" (MsgAlhafra10)	games/tla/include/flags.h
+FLAG_ALHAFRA_SHIP_GONE	the game	"Alhafra lost its ship." (MsgAlhafra132)	games/tla/include/flags.h
+FLAG_ALHAFRA_HEARD_OF_CROSSBONE_ISLE	the game	"Legends said that Crossbone Isle could be found in the middle of the Karagol Sea." (MsgAlhafraInteriors120)	games/tla/include/flags.h
+FLAG_ISAAC_CLEARED_CROSSBONE_ISLE	the game	"Someone named Isaac picked it clean." (MsgAlhafraInteriors120)	games/tla/include/flags.h
+FLAG_SERPENT_SLAIN	the game	"After the serpent's roar, these warriors appeared." (MsgWarriorsAppearedFrom)	games/tla/include/flags.h
+FLAG_IZUMO_RECOGNIZED_THE_HEROES	the game	"So, it wasn't Susa who defeated the serpent, but those heroes..." (MsgWarriorsAppearedFrom)	games/tla/include/flags.h
+FLAG_UZUME_HAS_THE_DOLL	the game	"With this dancing doll, I can explore Mt. Mikage on my own." (MsgWithThisDancing)	games/tla/include/flags.h
+FLAG_TAVI_RESCUED	the game	"These guys threw me the rope..." (MsgFieldPraiseRopeWork)	games/tla/include/flags.h
+FLAG_SHIP_FLIES	the game	"Now that you have been given wings..." (MsgIVeBeenWaiting)	games/tla/include/flags.h
+FLAG_JUPITER_LIGHTHOUSE_LEFT_ANGEL_ENERGIZED	what the player sees	the arrow and the rising angel (the aerie's JupiterLighthouse events)	games/tla/include/flags.h
+FLAG_IDEJIMA_FELIX_WOKE	the game	"Do you want to check yourself for injuries?" (MsgIdejimaCheckForInjuries)	games/tla/include/flags.h
+FLAG_IDEJIMA_KRADEN_JOINED	the game	"Kraden has joined your party." (MsgIdejimaGroan)	games/tla/include/flags.h
+FLAG_IDEJIMA_JENNA_JOINED	the game	"{actor_name:6} has joined your party." (MsgIdejimaAwakeningExclamation)	games/tla/include/flags.h
+FLAG_IDEJIMA_SHEBA_JOINED	the game	"{actor_name:7} has joined your party." (MsgIdejimaSecondGroan)	games/tla/include/flags.h
+FLAG_IDEJIMA_ASKED_WHERE_ALEX_WENT	the game	"By the way... Where has Alex gone?" (MsgIdejimaWhereHasAlexGone)	games/tla/include/flags.h
+FLAG_DAILA_GREETER_ASKED	the game	"You don't look familiar. Have you been to Daila before?" (MsgDailaBeenBefore)	games/tla/include/flags.h
+FLAG_DAILA_MET_ALEX	the game	"Perhaps you will see me in Madra..." (MsgDailaFelixCall)	games/tla/include/flags.h
+FLAG_DAILA_PSY_CRYSTAL_DUG	the game	"Psy Crystal" (MsgItemName)	games/tla/include/flags.h
+FLAG_DAILA_HEALER_SENT_TO_POI	the game	"Then I suggest you visit the Kandorean Temple to see Master Poi." (MsgDailaInteriorsTravelersFreeTime)	games/tla/include/flags.h
+FLAG_SEA_GODS_TEAR_TAKEN	the game	"Sea God's Tear" (MsgItemName)	games/tla/include/flags.h
+ABILITY_GROWTH	the game	"Growth" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_FROST	the game	"Frost" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_DOUSE	the game	"Douse" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_WHIRLWIND	the game	"Whirlwind" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_LASH	the game	"Lash" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_POUND	the game	"Pound" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_TREMOR	the game	"Tremor" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_SCOOP	the game	"Scoop" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_CYCLONE	the game	"Cyclone" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_PARCH	the game	"Parch" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_SAND	the game	"Sand" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_MOVE	the game	"Move" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_MIND_READ	the game	"Mind Read" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_FORCE	the game	"Force" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_LIFT	the game	"Lift" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_REVEAL	the game	"Reveal" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_HALT	the game	"Halt" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_CLOAK	the game	"Cloak" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_CARRY	the game	"Carry" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_CATCH	the game	"Catch" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_RETREAT	the game	"Retreat" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_AVOID	the game	"Avoid" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_BURST	the game	"Burst" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_GRIND	the game	"Grind" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_HOVER	the game	"Hover" (MsgAbilityName)	games/tla/include/ability_ids.h
+ABILITY_BLAZE	the game	"Blaze" (MsgAbilityName)	games/tla/include/ability_ids.h
+EMOTE_EXCLAMATION	what the player sees	the bubble sheet games/tla/src/graphics/sprite/spr_488.png is The Broken Seal's emote.png picture for picture, with the same animation order	games/tla/include/field/emote.h
+EMOTE_QUESTION	what the player sees	the bubble sheet games/tla/src/graphics/sprite/spr_488.png is The Broken Seal's emote.png picture for picture, with the same animation order	games/tla/include/field/emote.h
+EMOTE_WINCE	what the player sees	the bubble sheet games/tla/src/graphics/sprite/spr_488.png is The Broken Seal's emote.png picture for picture, with the same animation order	games/tla/include/field/emote.h
+EMOTE_ANGER_VEIN	what the player sees	the bubble sheet games/tla/src/graphics/sprite/spr_488.png is The Broken Seal's emote.png picture for picture, with the same animation order	games/tla/include/field/emote.h
+EMOTE_HEART	what the player sees	the bubble sheet games/tla/src/graphics/sprite/spr_488.png is The Broken Seal's emote.png picture for picture, with the same animation order	games/tla/include/field/emote.h
+EMOTE_ELLIPSIS	what the player sees	the bubble sheet games/tla/src/graphics/sprite/spr_488.png is The Broken Seal's emote.png picture for picture, with the same animation order	games/tla/include/field/emote.h
+EMOTE_LIGHT_BULB	what the player sees	the bubble sheet games/tla/src/graphics/sprite/spr_488.png is The Broken Seal's emote.png picture for picture, with the same animation order	games/tla/include/field/emote.h
+EMOTE_SCOWL	what the player sees	the bubble sheet games/tla/src/graphics/sprite/spr_488.png is The Broken Seal's emote.png picture for picture, with the same animation order	games/tla/include/field/emote.h
+EMOTE_SMILE	what the player sees	the bubble sheet games/tla/src/graphics/sprite/spr_488.png is The Broken Seal's emote.png picture for picture, with the same animation order	games/tla/include/field/emote.h
+EMOTE_SWEAT_DROP	what the player sees	the bubble sheet games/tla/src/graphics/sprite/spr_488.png is The Broken Seal's emote.png picture for picture, with the same animation order	games/tla/include/field/emote.h
+IsletCave_ClearScriptedActorSpriteFlags	its twin	The Broken Seal's BilibinCave_ClearScriptedActorSpriteFlags (5), the same routine instruction for instruction (twins, dice 1.000)	games/tla/src/scene/islet_cave.c
+Garoh_ClearScriptedActorSpriteFlags	its twin	The Broken Seal's BilibinCave_ClearScriptedActorSpriteFlags (5), the same routine instruction for instruction (twins, dice 1.000)	games/tla/src/scene/garoh.c
+AnemosInnerSanctum_ClearScriptedActorSpriteFlags	its twin	The Broken Seal's BilibinCave_ClearScriptedActorSpriteFlags (5), the same routine instruction for instruction (twins, dice 1.000)	games/tla/src/scene/anemos_inner_sanctum.c
+ABILITY_NOTHING	the game	"Nothing" (MsgAbilityName + 0)	games/tla/include/ability_ids.h
+ABILITY_ATTACK	the game	"Attack" (MsgAbilityName + 1)	games/tla/include/ability_ids.h
+ABILITY_DEFEND	the game	"Defend" (MsgAbilityName + 2)	games/tla/include/ability_ids.h
+ABILITY_QUAKE	the game	"Quake" (MsgAbilityName + 3)	games/tla/include/ability_ids.h
+ABILITY_EARTHQUAKE	the game	"Earthquake" (MsgAbilityName + 4)	games/tla/include/ability_ids.h
+ABILITY_QUAKE_SPHERE	the game	"Quake Sphere" (MsgAbilityName + 5)	games/tla/include/ability_ids.h
+ABILITY_SPIRE	the game	"Spire" (MsgAbilityName + 6)	games/tla/include/ability_ids.h
+ABILITY_CLAY_SPIRE	the game	"Clay Spire" (MsgAbilityName + 7)	games/tla/include/ability_ids.h
+ABILITY_STONE_SPIRE	the game	"Stone Spire" (MsgAbilityName + 8)	games/tla/include/ability_ids.h
+ABILITY_GAIA	the game	"Gaia" (MsgAbilityName + 9)	games/tla/include/ability_ids.h
+ABILITY_MOTHER_GAIA	the game	"Mother Gaia" (MsgAbilityName + 10)	games/tla/include/ability_ids.h
+ABILITY_GRAND_GAIA	the game	"Grand Gaia" (MsgAbilityName + 11)	games/tla/include/ability_ids.h
+ABILITY_GROWTH	the game	"Growth" (MsgAbilityName + 12)	games/tla/include/ability_ids.h
+ABILITY_MAD_GROWTH	the game	"Mad Growth" (MsgAbilityName + 13)	games/tla/include/ability_ids.h
+ABILITY_WILD_GROWTH	the game	"Wild Growth" (MsgAbilityName + 14)	games/tla/include/ability_ids.h
+ABILITY_THORN	the game	"Thorn" (MsgAbilityName + 15)	games/tla/include/ability_ids.h
+ABILITY_BRIAR	the game	"Briar" (MsgAbilityName + 16)	games/tla/include/ability_ids.h
+ABILITY_NETTLE	the game	"Nettle" (MsgAbilityName + 17)	games/tla/include/ability_ids.h
+ABILITY_FROST	the game	"Frost" (MsgAbilityName + 24)	games/tla/include/ability_ids.h
+ABILITY_TUNDRA	the game	"Tundra" (MsgAbilityName + 25)	games/tla/include/ability_ids.h
+ABILITY_GLACIER	the game	"Glacier" (MsgAbilityName + 26)	games/tla/include/ability_ids.h
+ABILITY_ICE	the game	"Ice" (MsgAbilityName + 27)	games/tla/include/ability_ids.h
+ABILITY_ICE_HORN	the game	"Ice Horn" (MsgAbilityName + 28)	games/tla/include/ability_ids.h
+ABILITY_ICE_MISSILE	the game	"Ice Missile" (MsgAbilityName + 29)	games/tla/include/ability_ids.h
+ABILITY_PRISM	the game	"Prism" (MsgAbilityName + 30)	games/tla/include/ability_ids.h
+ABILITY_HAIL_PRISM	the game	"Hail Prism" (MsgAbilityName + 31)	games/tla/include/ability_ids.h
+ABILITY_FREEZE_PRISM	the game	"Freeze Prism" (MsgAbilityName + 32)	games/tla/include/ability_ids.h
+ABILITY_DOUSE	the game	"Douse" (MsgAbilityName + 33)	games/tla/include/ability_ids.h
+ABILITY_DRENCH	the game	"Drench" (MsgAbilityName + 34)	games/tla/include/ability_ids.h
+ABILITY_DELUGE	the game	"Deluge" (MsgAbilityName + 35)	games/tla/include/ability_ids.h
+ABILITY_FROTH	the game	"Froth" (MsgAbilityName + 36)	games/tla/include/ability_ids.h
+ABILITY_FROTH_SPHERE	the game	"Froth Sphere" (MsgAbilityName + 37)	games/tla/include/ability_ids.h
+ABILITY_FROTH_SPIRAL	the game	"Froth Spiral" (MsgAbilityName + 38)	games/tla/include/ability_ids.h
+ABILITY_COOL	the game	"Cool" (MsgAbilityName + 39)	games/tla/include/ability_ids.h
+ABILITY_SUPERCOOL	the game	"Supercool" (MsgAbilityName + 40)	games/tla/include/ability_ids.h
+ABILITY_MEGACOOL	the game	"Megacool" (MsgAbilityName + 41)	games/tla/include/ability_ids.h
+ABILITY_FLARE	the game	"Flare" (MsgAbilityName + 45)	games/tla/include/ability_ids.h
+ABILITY_FLARE_WALL	the game	"Flare Wall" (MsgAbilityName + 46)	games/tla/include/ability_ids.h
+ABILITY_FLARE_STORM	the game	"Flare Storm" (MsgAbilityName + 47)	games/tla/include/ability_ids.h
+ABILITY_FIRE	the game	"Fire" (MsgAbilityName + 48)	games/tla/include/ability_ids.h
+ABILITY_FIREBALL	the game	"Fireball" (MsgAbilityName + 49)	games/tla/include/ability_ids.h
+ABILITY_INFERNO	the game	"Inferno" (MsgAbilityName + 50)	games/tla/include/ability_ids.h
+ABILITY_VOLCANO	the game	"Volcano" (MsgAbilityName + 51)	games/tla/include/ability_ids.h
+ABILITY_ERUPTION	the game	"Eruption" (MsgAbilityName + 52)	games/tla/include/ability_ids.h
+ABILITY_PYROCLASM	the game	"Pyroclasm" (MsgAbilityName + 53)	games/tla/include/ability_ids.h
+ABILITY_BLAST	the game	"Blast" (MsgAbilityName + 54)	games/tla/include/ability_ids.h
+ABILITY_MAD_BLAST	the game	"Mad Blast" (MsgAbilityName + 55)	games/tla/include/ability_ids.h
+ABILITY_FIERY_BLAST	the game	"Fiery Blast" (MsgAbilityName + 56)	games/tla/include/ability_ids.h
+ABILITY_NOVA	the game	"Nova" (MsgAbilityName + 58)	games/tla/include/ability_ids.h
+ABILITY_SUPERNOVA	the game	"Supernova" (MsgAbilityName + 59)	games/tla/include/ability_ids.h
+ABILITY_FUME	the game	"Fume" (MsgAbilityName + 60)	games/tla/include/ability_ids.h
+ABILITY_SERPENT_FUME	the game	"Serpent Fume" (MsgAbilityName + 61)	games/tla/include/ability_ids.h
+ABILITY_DRAGON_FUME	the game	"Dragon Fume" (MsgAbilityName + 62)	games/tla/include/ability_ids.h
+ABILITY_BEAM	the game	"Beam" (MsgAbilityName + 63)	games/tla/include/ability_ids.h
+ABILITY_CYCLE_BEAM	the game	"Cycle Beam" (MsgAbilityName + 64)	games/tla/include/ability_ids.h
+ABILITY_SEARING_BEAM	the game	"Searing Beam" (MsgAbilityName + 65)	games/tla/include/ability_ids.h
+ABILITY_BOLT	the game	"Bolt" (MsgAbilityName + 66)	games/tla/include/ability_ids.h
+ABILITY_FLASH_BOLT	the game	"Flash Bolt" (MsgAbilityName + 67)	games/tla/include/ability_ids.h
+ABILITY_BLUE_BOLT	the game	"Blue Bolt" (MsgAbilityName + 68)	games/tla/include/ability_ids.h
+ABILITY_RAY	the game	"Ray" (MsgAbilityName + 69)	games/tla/include/ability_ids.h
+ABILITY_STORM_RAY	the game	"Storm Ray" (MsgAbilityName + 70)	games/tla/include/ability_ids.h
+ABILITY_DESTRUCT_RAY	the game	"Destruct Ray" (MsgAbilityName + 71)	games/tla/include/ability_ids.h
+ABILITY_PLASMA	the game	"Plasma" (MsgAbilityName + 72)	games/tla/include/ability_ids.h
+ABILITY_SHINE_PLASMA	the game	"Shine Plasma" (MsgAbilityName + 73)	games/tla/include/ability_ids.h
+ABILITY_SPARK_PLASMA	the game	"Spark Plasma" (MsgAbilityName + 74)	games/tla/include/ability_ids.h
+ABILITY_SLASH	the game	"Slash" (MsgAbilityName + 75)	games/tla/include/ability_ids.h
+ABILITY_WIND_SLASH	the game	"Wind Slash" (MsgAbilityName + 76)	games/tla/include/ability_ids.h
+ABILITY_SONIC_SLASH	the game	"Sonic Slash" (MsgAbilityName + 77)	games/tla/include/ability_ids.h
+ABILITY_WHIRLWIND	the game	"Whirlwind" (MsgAbilityName + 78)	games/tla/include/ability_ids.h
+ABILITY_TORNADO	the game	"Tornado" (MsgAbilityName + 79)	games/tla/include/ability_ids.h
+ABILITY_TEMPEST	the game	"Tempest" (MsgAbilityName + 80)	games/tla/include/ability_ids.h
+ABILITY_AURA	the game	"Aura" (MsgAbilityName + 87)	games/tla/include/ability_ids.h
+ABILITY_HEALING_AURA	the game	"Healing Aura" (MsgAbilityName + 88)	games/tla/include/ability_ids.h
+ABILITY_COOL_AURA	the game	"Cool Aura" (MsgAbilityName + 89)	games/tla/include/ability_ids.h
+ABILITY_CURE	the game	"Cure" (MsgAbilityName + 90)	games/tla/include/ability_ids.h
+ABILITY_CURE_WELL	the game	"Cure Well" (MsgAbilityName + 91)	games/tla/include/ability_ids.h
+ABILITY_POTENT_CURE	the game	"Potent Cure" (MsgAbilityName + 92)	games/tla/include/ability_ids.h
+ABILITY_PLY	the game	"Ply" (MsgAbilityName + 93)	games/tla/include/ability_ids.h
+ABILITY_PLY_WELL	the game	"Ply Well" (MsgAbilityName + 94)	games/tla/include/ability_ids.h
+ABILITY_PURE_PLY	the game	"Pure Ply" (MsgAbilityName + 95)	games/tla/include/ability_ids.h
+ABILITY_WISH	the game	"Wish" (MsgAbilityName + 96)	games/tla/include/ability_ids.h
+ABILITY_WISH_WELL	the game	"Wish Well" (MsgAbilityName + 97)	games/tla/include/ability_ids.h
+ABILITY_PURE_WISH	the game	"Pure Wish" (MsgAbilityName + 98)	games/tla/include/ability_ids.h
+ABILITY_CURE_POISON	the game	"Cure Poison" (MsgAbilityName + 99)	games/tla/include/ability_ids.h
+ABILITY_RESTORE	the game	"Restore" (MsgAbilityName + 100)	games/tla/include/ability_ids.h
+ABILITY_REVIVE	the game	"Revive" (MsgAbilityName + 101)	games/tla/include/ability_ids.h
+ABILITY_IMPACT	the game	"Impact" (MsgAbilityName + 102)	games/tla/include/ability_ids.h
+ABILITY_HIGH_IMPACT	the game	"High Impact" (MsgAbilityName + 103)	games/tla/include/ability_ids.h
+ABILITY_DULL	the game	"Dull" (MsgAbilityName + 104)	games/tla/include/ability_ids.h
+ABILITY_BLUNT	the game	"Blunt" (MsgAbilityName + 105)	games/tla/include/ability_ids.h
+ABILITY_GUARD	the game	"Guard" (MsgAbilityName + 106)	games/tla/include/ability_ids.h
+ABILITY_PROTECT	the game	"Protect" (MsgAbilityName + 107)	games/tla/include/ability_ids.h
+ABILITY_IMPAIR	the game	"Impair" (MsgAbilityName + 108)	games/tla/include/ability_ids.h
+ABILITY_DEBILITATE	the game	"Debilitate" (MsgAbilityName + 109)	games/tla/include/ability_ids.h
+ABILITY_WARD	the game	"Ward" (MsgAbilityName + 110)	games/tla/include/ability_ids.h
+ABILITY_RESIST	the game	"Resist" (MsgAbilityName + 111)	games/tla/include/ability_ids.h
+ABILITY_WEAKEN	the game	"Weaken" (MsgAbilityName + 112)	games/tla/include/ability_ids.h
+ABILITY_ENFEEBLE	the game	"Enfeeble" (MsgAbilityName + 113)	games/tla/include/ability_ids.h
+ABILITY_TAINT	the game	"Taint" (MsgAbilityName + 114)	games/tla/include/ability_ids.h
+ABILITY_POISON	the game	"Poison" (MsgAbilityName + 115)	games/tla/include/ability_ids.h
+ABILITY_DELUDE	the game	"Delude" (MsgAbilityName + 116)	games/tla/include/ability_ids.h
+ABILITY_CONFUSE	the game	"Confuse" (MsgAbilityName + 117)	games/tla/include/ability_ids.h
+ABILITY_CHARM	the game	"Charm" (MsgAbilityName + 118)	games/tla/include/ability_ids.h
+ABILITY_PARALYZE	the game	"Paralyze" (MsgAbilityName + 119)	games/tla/include/ability_ids.h
+ABILITY_SLEEP	the game	"Sleep" (MsgAbilityName + 120)	games/tla/include/ability_ids.h
+ABILITY_BIND	the game	"Bind" (MsgAbilityName + 121)	games/tla/include/ability_ids.h
+ABILITY_HAUNT	the game	"Haunt" (MsgAbilityName + 122)	games/tla/include/ability_ids.h
+ABILITY_CURSE	the game	"Curse" (MsgAbilityName + 123)	games/tla/include/ability_ids.h
+ABILITY_CONDEMN	the game	"Condemn" (MsgAbilityName + 124)	games/tla/include/ability_ids.h
+ABILITY_DRAIN	the game	"Drain" (MsgAbilityName + 125)	games/tla/include/ability_ids.h
+ABILITY_PSY_DRAIN	the game	"Psy Drain" (MsgAbilityName + 126)	games/tla/include/ability_ids.h
+ABILITY_BREAK	the game	"Break" (MsgAbilityName + 127)	games/tla/include/ability_ids.h
+ABILITY_REGENERATE	the game	"Regenerate" (MsgAbilityName + 128)	games/tla/include/ability_ids.h
+ABILITY_REFLECT	the game	"Reflect" (MsgAbilityName + 129)	games/tla/include/ability_ids.h
+ABILITY_LASH	the game	"Lash" (MsgAbilityName + 133)	games/tla/include/ability_ids.h
+ABILITY_POUND	the game	"Pound" (MsgAbilityName + 134)	games/tla/include/ability_ids.h
+ABILITY_TREMOR	the game	"Tremor" (MsgAbilityName + 135)	games/tla/include/ability_ids.h
+ABILITY_SCOOP	the game	"Scoop" (MsgAbilityName + 136)	games/tla/include/ability_ids.h
+ABILITY_CYCLONE	the game	"Cyclone" (MsgAbilityName + 137)	games/tla/include/ability_ids.h
+ABILITY_PARCH	the game	"Parch" (MsgAbilityName + 138)	games/tla/include/ability_ids.h
+ABILITY_SAND	the game	"Sand" (MsgAbilityName + 139)	games/tla/include/ability_ids.h
+ABILITY_MOVE	the game	"Move" (MsgAbilityName + 140)	games/tla/include/ability_ids.h
+ABILITY_MIND_READ	the game	"Mind Read" (MsgAbilityName + 141)	games/tla/include/ability_ids.h
+ABILITY_FORCE	the game	"Force" (MsgAbilityName + 142)	games/tla/include/ability_ids.h
+ABILITY_LIFT	the game	"Lift" (MsgAbilityName + 143)	games/tla/include/ability_ids.h
+ABILITY_REVEAL	the game	"Reveal" (MsgAbilityName + 144)	games/tla/include/ability_ids.h
+ABILITY_HALT	the game	"Halt" (MsgAbilityName + 145)	games/tla/include/ability_ids.h
+ABILITY_CLOAK	the game	"Cloak" (MsgAbilityName + 146)	games/tla/include/ability_ids.h
+ABILITY_CARRY	the game	"Carry" (MsgAbilityName + 147)	games/tla/include/ability_ids.h
+ABILITY_CATCH	the game	"Catch" (MsgAbilityName + 148)	games/tla/include/ability_ids.h
+ABILITY_RETREAT	the game	"Retreat" (MsgAbilityName + 149)	games/tla/include/ability_ids.h
+ABILITY_AVOID	the game	"Avoid" (MsgAbilityName + 150)	games/tla/include/ability_ids.h
+ABILITY_BURST	the game	"Burst" (MsgAbilityName + 151)	games/tla/include/ability_ids.h
+ABILITY_GRIND	the game	"Grind" (MsgAbilityName + 152)	games/tla/include/ability_ids.h
+ABILITY_HOVER	the game	"Hover" (MsgAbilityName + 153)	games/tla/include/ability_ids.h
+ABILITY_BLAZE	the game	"Blaze" (MsgAbilityName + 154)	games/tla/include/ability_ids.h
+ABILITY_TELEPORT	the game	"Teleport" (MsgAbilityName + 156)	games/tla/include/ability_ids.h
+ABILITY_DRAGON_CLOUD	the game	"Dragon Cloud" (MsgAbilityName + 160)	games/tla/include/ability_ids.h
+ABILITY_DEMON_NIGHT	the game	"Demon Night" (MsgAbilityName + 161)	games/tla/include/ability_ids.h
+ABILITY_HELM_SPLITTER	the game	"Helm Splitter" (MsgAbilityName + 162)	games/tla/include/ability_ids.h
+ABILITY_QUICK_STRIKE	the game	"Quick Strike" (MsgAbilityName + 163)	games/tla/include/ability_ids.h
+ABILITY_ROCKFALL	the game	"Rockfall" (MsgAbilityName + 164)	games/tla/include/ability_ids.h
+ABILITY_ROCKSLIDE	the game	"Rockslide" (MsgAbilityName + 165)	games/tla/include/ability_ids.h
+ABILITY_AVALANCHE	the game	"Avalanche" (MsgAbilityName + 166)	games/tla/include/ability_ids.h
+ABILITY_LAVA_SHOWER	the game	"Lava Shower" (MsgAbilityName + 167)	games/tla/include/ability_ids.h
+ABILITY_MOLTEN_BATH	the game	"Molten Bath" (MsgAbilityName + 168)	games/tla/include/ability_ids.h
+ABILITY_MAGMA_STORM	the game	"Magma Storm" (MsgAbilityName + 169)	games/tla/include/ability_ids.h
+ABILITY_DEMON_SPEAR	the game	"Demon Spear" (MsgAbilityName + 170)	games/tla/include/ability_ids.h
+ABILITY_ANGEL_SPEAR	the game	"Angel Spear" (MsgAbilityName + 171)	games/tla/include/ability_ids.h
+ABILITY_GUARDIAN	the game	"Guardian" (MsgAbilityName + 172)	games/tla/include/ability_ids.h
+ABILITY_PROTECTOR	the game	"Protector" (MsgAbilityName + 173)	games/tla/include/ability_ids.h
+ABILITY_MAGIC_SHELL	the game	"Magic Shell" (MsgAbilityName + 174)	games/tla/include/ability_ids.h
+ABILITY_MAGIC_SHIELD	the game	"Magic Shield" (MsgAbilityName + 175)	games/tla/include/ability_ids.h
+ABILITY_DEATH_PLUNGE	the game	"Death Plunge" (MsgAbilityName + 176)	games/tla/include/ability_ids.h
+ABILITY_SHURIKEN	the game	"Shuriken" (MsgAbilityName + 177)	games/tla/include/ability_ids.h
+ABILITY_ANNIHILATION	the game	"Annihilation" (MsgAbilityName + 178)	games/tla/include/ability_ids.h
+ABILITY_PUNJI	the game	"Punji" (MsgAbilityName + 179)	games/tla/include/ability_ids.h
+ABILITY_PUNJI_TRAP	the game	"Punji Trap" (MsgAbilityName + 180)	games/tla/include/ability_ids.h
+ABILITY_PUNJI_STRIKE	the game	"Punji Strike" (MsgAbilityName + 181)	games/tla/include/ability_ids.h
+ABILITY_FIRE_BOMB	the game	"Fire Bomb" (MsgAbilityName + 182)	games/tla/include/ability_ids.h
+ABILITY_CLUSTER_BOMB	the game	"Cluster Bomb" (MsgAbilityName + 183)	games/tla/include/ability_ids.h
+ABILITY_CARPET_BOMB	the game	"Carpet Bomb" (MsgAbilityName + 184)	games/tla/include/ability_ids.h
+ABILITY_GALE	the game	"Gale" (MsgAbilityName + 185)	games/tla/include/ability_ids.h
+ABILITY_TYPHOON	the game	"Typhoon" (MsgAbilityName + 186)	games/tla/include/ability_ids.h
+ABILITY_HURRICANE	the game	"Hurricane" (MsgAbilityName + 187)	games/tla/include/ability_ids.h
+ABILITY_THUNDERCLAP	the game	"Thunderclap" (MsgAbilityName + 188)	games/tla/include/ability_ids.h
+ABILITY_THUNDERBOLT	the game	"Thunderbolt" (MsgAbilityName + 189)	games/tla/include/ability_ids.h
+ABILITY_THUNDERHEAD	the game	"Thunderhead" (MsgAbilityName + 190)	games/tla/include/ability_ids.h
+ABILITY_MIST	the game	"Mist" (MsgAbilityName + 191)	games/tla/include/ability_ids.h
+ABILITY_RAGNAROK	the game	"Ragnarok" (MsgAbilityName + 192)	games/tla/include/ability_ids.h
+ABILITY_CUTTING_EDGE	the game	"Cutting Edge" (MsgAbilityName + 193)	games/tla/include/ability_ids.h
+ABILITY_HEAT_WAVE	the game	"Heat Wave" (MsgAbilityName + 194)	games/tla/include/ability_ids.h
+ABILITY_ASTRAL_BLAST	the game	"Astral Blast" (MsgAbilityName + 195)	games/tla/include/ability_ids.h
+ABILITY_PLANET_DIVER	the game	"Planet Diver" (MsgAbilityName + 196)	games/tla/include/ability_ids.h
+ABILITY_DIAMOND_DUST	the game	"Diamond Dust" (MsgAbilityName + 197)	games/tla/include/ability_ids.h
+ABILITY_ODYSSEY	the game	"Odyssey" (MsgAbilityName + 198)	games/tla/include/ability_ids.h
+ABILITY_LIQUIFIER	the game	"Liquifier" (MsgAbilityName + 199)	games/tla/include/ability_ids.h
+ABILITY_PLUME_EDGE	the game	"Plume Edge" (MsgAbilityName + 200)	games/tla/include/ability_ids.h
+ABILITY_THUNDER_MINE	the game	"Thunder Mine" (MsgAbilityName + 201)	games/tla/include/ability_ids.h
+ABILITY_PLANETARY	the game	"Planetary" (MsgAbilityName + 202)	games/tla/include/ability_ids.h
+ABILITY_DIAMOND_BERG	the game	"Diamond Berg" (MsgAbilityName + 203)	games/tla/include/ability_ids.h
+ABILITY_DEATH_LEAP	the game	"Death Leap" (MsgAbilityName + 204)	games/tla/include/ability_ids.h
+ABILITY_EPICENTER	the game	"Epicenter" (MsgAbilityName + 205)	games/tla/include/ability_ids.h
+ABILITY_THORNY_GRAVE	the game	"Thorny Grave" (MsgAbilityName + 206)	games/tla/include/ability_ids.h
+ABILITY_SKULL_SPLITTER	the game	"Skull Splitter" (MsgAbilityName + 207)	games/tla/include/ability_ids.h
+ABILITY_TERRA_STRIKE	the game	"Terra Strike" (MsgAbilityName + 210)	games/tla/include/ability_ids.h
+ABILITY_POISON_CLOUD	the game	"Poison Cloud" (MsgAbilityName + 211)	games/tla/include/ability_ids.h
+ABILITY_POISON_DEATH	the game	"Poison Death" (MsgAbilityName + 212)	games/tla/include/ability_ids.h
+ABILITY_MORTAL_DANGER	the game	"Mortal Danger" (MsgAbilityName + 213)	games/tla/include/ability_ids.h
+ABILITY_BAD_OMEN	the game	"Bad Omen" (MsgAbilityName + 214)	games/tla/include/ability_ids.h
+ABILITY_LIFE_NOURISH	the game	"Life Nourish" (MsgAbilityName + 215)	games/tla/include/ability_ids.h
+ABILITY_AQUA_SOCK	the game	"Aqua Sock" (MsgAbilityName + 216)	games/tla/include/ability_ids.h
+ABILITY_BLIZZARD	the game	"Blizzard" (MsgAbilityName + 217)	games/tla/include/ability_ids.h
+ABILITY_FROST_BITE	the game	"Frost Bite" (MsgAbilityName + 218)	games/tla/include/ability_ids.h
+ABILITY_DROWN	the game	"Drown" (MsgAbilityName + 219)	games/tla/include/ability_ids.h
+ABILITY_LIFE_LEECH	the game	"Life Leech" (MsgAbilityName + 220)	games/tla/include/ability_ids.h
+ABILITY_PSY_LEECH	the game	"Psy Leech" (MsgAbilityName + 221)	games/tla/include/ability_ids.h
+ABILITY_BROIL	the game	"Broil" (MsgAbilityName + 222)	games/tla/include/ability_ids.h
+ABILITY_MELTDOWN	the game	"Meltdown" (MsgAbilityName + 223)	games/tla/include/ability_ids.h
+ABILITY_HEAT_MIRAGE	the game	"Heat Mirage" (MsgAbilityName + 224)	games/tla/include/ability_ids.h
+ABILITY_BARRAGE	the game	"Barrage" (MsgAbilityName + 225)	games/tla/include/ability_ids.h
+ABILITY_DEMONFIRE	the game	"Demonfire" (MsgAbilityName + 226)	games/tla/include/ability_ids.h
+ABILITY_ACID_BATH	the game	"Acid Bath" (MsgAbilityName + 227)	games/tla/include/ability_ids.h
+ABILITY_VORPAL_SLASH	the game	"Vorpal Slash" (MsgAbilityName + 228)	games/tla/include/ability_ids.h
+ABILITY_STUN_VOLTAGE	the game	"Stun Voltage" (MsgAbilityName + 229)	games/tla/include/ability_ids.h
+ABILITY_BLINDING_SMOG	the game	"Blinding Smog" (MsgAbilityName + 230)	games/tla/include/ability_ids.h
+ABILITY_MURK	the game	"Murk" (MsgAbilityName + 231)	games/tla/include/ability_ids.h
+ABILITY_CYCLONE_SLASH	the game	"Cyclone Slash" (MsgAbilityName + 232)	games/tla/include/ability_ids.h
+ABILITY_PSYPHON_SEAL	the game	"Psyphon Seal" (MsgAbilityName + 233)	games/tla/include/ability_ids.h
+ABILITY_RAPID_SMASH	the game	"Rapid Smash" (MsgAbilityName + 234)	games/tla/include/ability_ids.h
+ABILITY_SONIC_SMASH	the game	"Sonic Smash" (MsgAbilityName + 235)	games/tla/include/ability_ids.h
+ABILITY_ASURA	the game	"Asura" (MsgAbilityName + 236)	games/tla/include/ability_ids.h
+ABILITY_TITAN_BLADE	the game	"Titan Blade" (MsgAbilityName + 237)	games/tla/include/ability_ids.h
+ABILITY_SHINING_STAR	the game	"Shining Star" (MsgAbilityName + 238)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_3_HERB	the game	"{article_class:3}Herb" (MsgAbilityName + 250)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_NUT	the game	"{article_class:2}Nut" (MsgAbilityName + 251)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_VIAL	the game	"{article_class:2}Vial" (MsgAbilityName + 252)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_POTION	the game	"{article_class:2}Potion" (MsgAbilityName + 253)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_5_SOOTHING_WATER	the game	"{article_class:5}Soothing Water" (MsgAbilityName + 254)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_PSY_CRYSTAL	the game	"{article_class:2}Psy Crystal" (MsgAbilityName + 255)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_ANTIDOTE	the game	"{article_class:2}Antidote" (MsgAbilityName + 256)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_3_ELIXIR	the game	"{article_class:3}Elixir" (MsgAbilityName + 257)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_4_WATER_OF_LIFE	the game	"{article_class:4}Water of Life" (MsgAbilityName + 258)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_MIST_POTION	the game	"{article_class:2}Mist Potion" (MsgAbilityName + 259)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_4_POWER_BREAD	the game	"{article_class:4}Power Bread" (MsgAbilityName + 260)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_COOKIE	the game	"{article_class:2}Cookie" (MsgAbilityName + 261)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_3_APPLE	the game	"{article_class:3}Apple" (MsgAbilityName + 262)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_HARD_NUT	the game	"{article_class:2}Hard Nut" (MsgAbilityName + 263)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_MINT	the game	"{article_class:2}Mint" (MsgAbilityName + 264)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_4_LUCKY_PEPPER	the game	"{article_class:4}Lucky Pepper" (MsgAbilityName + 265)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_SMOKE_BOMB	the game	"{article_class:2}Smoke Bomb" (MsgAbilityName + 267)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_2_SLEEP_BOMB	the game	"{article_class:2}Sleep Bomb" (MsgAbilityName + 268)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_3_ADEPT_RING	the game	"{article_class:3}Adept Ring" (MsgAbilityName + 269)	games/tla/include/ability_ids.h
+ABILITY_ARTICLE_CLASS_4_CORN	the game	"{article_class:4}Corn" (MsgAbilityName + 270)	games/tla/include/ability_ids.h
+ABILITY_AURORA_FIELD	the game	"Aurora Field" (MsgAbilityName + 298)	games/tla/include/ability_ids.h
+ABILITY_DJINN_COUNTER	the game	"Djinn Counter" (MsgAbilityName + 299)	games/tla/include/ability_ids.h
+ABILITY_FLINT	the game	"Flint" (MsgAbilityName + 300)	games/tla/include/ability_ids.h
+ABILITY_GRANITE	the game	"Granite" (MsgAbilityName + 301)	games/tla/include/ability_ids.h
+ABILITY_QUARTZ	the game	"Quartz" (MsgAbilityName + 302)	games/tla/include/ability_ids.h
+ABILITY_VINE	the game	"Vine" (MsgAbilityName + 303)	games/tla/include/ability_ids.h
+ABILITY_SAP	the game	"Sap" (MsgAbilityName + 304)	games/tla/include/ability_ids.h
+ABILITY_GROUND	the game	"Ground" (MsgAbilityName + 305)	games/tla/include/ability_ids.h
+ABILITY_BANE	the game	"Bane" (MsgAbilityName + 306)	games/tla/include/ability_ids.h
+ABILITY_ECHO	the game	"Echo" (MsgAbilityName + 307)	games/tla/include/ability_ids.h
+ABILITY_IRON	the game	"Iron" (MsgAbilityName + 308)	games/tla/include/ability_ids.h
+ABILITY_STEEL	the game	"Steel" (MsgAbilityName + 309)	games/tla/include/ability_ids.h
+ABILITY_MUD	the game	"Mud" (MsgAbilityName + 310)	games/tla/include/ability_ids.h
+ABILITY_FLOWER	the game	"Flower" (MsgAbilityName + 311)	games/tla/include/ability_ids.h
+ABILITY_MELD	the game	"Meld" (MsgAbilityName + 312)	games/tla/include/ability_ids.h
+ABILITY_PETRA	the game	"Petra" (MsgAbilityName + 313)	games/tla/include/ability_ids.h
+ABILITY_SALT	the game	"Salt" (MsgAbilityName + 314)	games/tla/include/ability_ids.h
+ABILITY_GEODE	the game	"Geode" (MsgAbilityName + 315)	games/tla/include/ability_ids.h
+ABILITY_MOLD	the game	"Mold" (MsgAbilityName + 316)	games/tla/include/ability_ids.h
+ABILITY_CRYSTAL	the game	"Crystal" (MsgAbilityName + 317)	games/tla/include/ability_ids.h
+ABILITY_EARTH18	the game	"Earth18" (MsgAbilityName + 318)	games/tla/include/ability_ids.h
+ABILITY_EARTH19	the game	"Earth19" (MsgAbilityName + 319)	games/tla/include/ability_ids.h
+ABILITY_FIZZ	the game	"Fizz" (MsgAbilityName + 320)	games/tla/include/ability_ids.h
+ABILITY_SLEET	the game	"Sleet" (MsgAbilityName + 321)	games/tla/include/ability_ids.h
+ABILITY_SPRITZ	the game	"Spritz" (MsgAbilityName + 323)	games/tla/include/ability_ids.h
+ABILITY_HAIL	the game	"Hail" (MsgAbilityName + 324)	games/tla/include/ability_ids.h
+ABILITY_TONIC	the game	"Tonic" (MsgAbilityName + 325)	games/tla/include/ability_ids.h
+ABILITY_DEW	the game	"Dew" (MsgAbilityName + 326)	games/tla/include/ability_ids.h
+ABILITY_FOG	the game	"Fog" (MsgAbilityName + 327)	games/tla/include/ability_ids.h
+ABILITY_SOUR	the game	"Sour" (MsgAbilityName + 328)	games/tla/include/ability_ids.h
+ABILITY_SPRING	the game	"Spring" (MsgAbilityName + 329)	games/tla/include/ability_ids.h
+ABILITY_SHADE	the game	"Shade" (MsgAbilityName + 330)	games/tla/include/ability_ids.h
+ABILITY_CHILL	the game	"Chill" (MsgAbilityName + 331)	games/tla/include/ability_ids.h
+ABILITY_STEAM	the game	"Steam" (MsgAbilityName + 332)	games/tla/include/ability_ids.h
+ABILITY_RIME	the game	"Rime" (MsgAbilityName + 333)	games/tla/include/ability_ids.h
+ABILITY_GEL	the game	"Gel" (MsgAbilityName + 334)	games/tla/include/ability_ids.h
+ABILITY_EDDY	the game	"Eddy" (MsgAbilityName + 335)	games/tla/include/ability_ids.h
+ABILITY_BALM	the game	"Balm" (MsgAbilityName + 336)	games/tla/include/ability_ids.h
+ABILITY_SERAC	the game	"Serac" (MsgAbilityName + 337)	games/tla/include/ability_ids.h
+ABILITY_WATER18	the game	"Water18" (MsgAbilityName + 338)	games/tla/include/ability_ids.h
+ABILITY_WATER19	the game	"Water19" (MsgAbilityName + 339)	games/tla/include/ability_ids.h
+ABILITY_FORGE	the game	"Forge" (MsgAbilityName + 340)	games/tla/include/ability_ids.h
+ABILITY_FEVER	the game	"Fever" (MsgAbilityName + 341)	games/tla/include/ability_ids.h
+ABILITY_CORONA	the game	"Corona" (MsgAbilityName + 342)	games/tla/include/ability_ids.h
+ABILITY_SCORCH	the game	"Scorch" (MsgAbilityName + 343)	games/tla/include/ability_ids.h
+ABILITY_EMBER	the game	"Ember" (MsgAbilityName + 344)	games/tla/include/ability_ids.h
+ABILITY_FLASH	the game	"Flash" (MsgAbilityName + 345)	games/tla/include/ability_ids.h
+ABILITY_TORCH	the game	"Torch" (MsgAbilityName + 346)	games/tla/include/ability_ids.h
+ABILITY_CANNON	the game	"Cannon" (MsgAbilityName + 347)	games/tla/include/ability_ids.h
+ABILITY_SPARK	the game	"Spark" (MsgAbilityName + 348)	games/tla/include/ability_ids.h
+ABILITY_KINDLE	the game	"Kindle" (MsgAbilityName + 349)	games/tla/include/ability_ids.h
+ABILITY_CHAR	the game	"Char" (MsgAbilityName + 350)	games/tla/include/ability_ids.h
+ABILITY_COAL	the game	"Coal" (MsgAbilityName + 351)	games/tla/include/ability_ids.h
+ABILITY_REFLUX	the game	"Reflux" (MsgAbilityName + 352)	games/tla/include/ability_ids.h
+ABILITY_CORE	the game	"Core" (MsgAbilityName + 353)	games/tla/include/ability_ids.h
+ABILITY_TINDER	the game	"Tinder" (MsgAbilityName + 354)	games/tla/include/ability_ids.h
+ABILITY_SHINE	the game	"Shine" (MsgAbilityName + 355)	games/tla/include/ability_ids.h
+ABILITY_FURY	the game	"Fury" (MsgAbilityName + 356)	games/tla/include/ability_ids.h
+ABILITY_FUGUE	the game	"Fugue" (MsgAbilityName + 357)	games/tla/include/ability_ids.h
+ABILITY_FIRE18	the game	"Fire18" (MsgAbilityName + 358)	games/tla/include/ability_ids.h
+ABILITY_FIRE19	the game	"Fire19" (MsgAbilityName + 359)	games/tla/include/ability_ids.h
+ABILITY_GUST	the game	"Gust" (MsgAbilityName + 360)	games/tla/include/ability_ids.h
+ABILITY_BREEZE	the game	"Breeze" (MsgAbilityName + 361)	games/tla/include/ability_ids.h
+ABILITY_ZEPHYR	the game	"Zephyr" (MsgAbilityName + 362)	games/tla/include/ability_ids.h
+ABILITY_SMOG	the game	"Smog" (MsgAbilityName + 363)	games/tla/include/ability_ids.h
+ABILITY_KITE	the game	"Kite" (MsgAbilityName + 364)	games/tla/include/ability_ids.h
+ABILITY_SQUALL	the game	"Squall" (MsgAbilityName + 365)	games/tla/include/ability_ids.h
+ABILITY_LUFF	the game	"Luff" (MsgAbilityName + 366)	games/tla/include/ability_ids.h
+ABILITY_BREATH	the game	"Breath" (MsgAbilityName + 367)	games/tla/include/ability_ids.h
+ABILITY_BLITZ	the game	"Blitz" (MsgAbilityName + 368)	games/tla/include/ability_ids.h
+ABILITY_ETHER	the game	"Ether" (MsgAbilityName + 369)	games/tla/include/ability_ids.h
+ABILITY_WAFT	the game	"Waft" (MsgAbilityName + 370)	games/tla/include/ability_ids.h
+ABILITY_HAZE	the game	"Haze" (MsgAbilityName + 371)	games/tla/include/ability_ids.h
+ABILITY_WHEEZE	the game	"Wheeze" (MsgAbilityName + 372)	games/tla/include/ability_ids.h
+ABILITY_AROMA	the game	"Aroma" (MsgAbilityName + 373)	games/tla/include/ability_ids.h
+ABILITY_WHORL	the game	"Whorl" (MsgAbilityName + 374)	games/tla/include/ability_ids.h
+ABILITY_GASP	the game	"Gasp" (MsgAbilityName + 375)	games/tla/include/ability_ids.h
+ABILITY_LULL	the game	"Lull" (MsgAbilityName + 376)	games/tla/include/ability_ids.h
+ABILITY_WIND18	the game	"Wind18" (MsgAbilityName + 378)	games/tla/include/ability_ids.h
+ABILITY_WIND19	the game	"Wind19" (MsgAbilityName + 379)	games/tla/include/ability_ids.h
+ABILITY_VENUS	the game	"Venus" (MsgAbilityName + 380)	games/tla/include/ability_ids.h
+ABILITY_RAMSES	the game	"Ramses" (MsgAbilityName + 381)	games/tla/include/ability_ids.h
+ABILITY_CYBELE	the game	"Cybele" (MsgAbilityName + 382)	games/tla/include/ability_ids.h
+ABILITY_JUDGMENT	the game	"Judgment" (MsgAbilityName + 383)	games/tla/include/ability_ids.h
+ABILITY_ZAGAN	the game	"Zagan" (MsgAbilityName + 384)	games/tla/include/ability_ids.h
+ABILITY_HAURES	the game	"Haures" (MsgAbilityName + 385)	games/tla/include/ability_ids.h
+ABILITY_CHARON	the game	"Charon" (MsgAbilityName + 386)	games/tla/include/ability_ids.h
+ABILITY_MERCURY	the game	"Mercury" (MsgAbilityName + 388)	games/tla/include/ability_ids.h
+ABILITY_NEREID	the game	"Nereid" (MsgAbilityName + 389)	games/tla/include/ability_ids.h
+ABILITY_NEPTUNE	the game	"Neptune" (MsgAbilityName + 390)	games/tla/include/ability_ids.h
+ABILITY_BOREAS	the game	"Boreas" (MsgAbilityName + 391)	games/tla/include/ability_ids.h
+ABILITY_MOLOCH	the game	"Moloch" (MsgAbilityName + 392)	games/tla/include/ability_ids.h
+ABILITY_COATLICUE	the game	"Coatlicue" (MsgAbilityName + 393)	games/tla/include/ability_ids.h
+ABILITY_AZUL	the game	"Azul" (MsgAbilityName + 394)	games/tla/include/ability_ids.h
+ABILITY_MARS	the game	"Mars" (MsgAbilityName + 396)	games/tla/include/ability_ids.h
+ABILITY_KIRIN	the game	"Kirin" (MsgAbilityName + 397)	games/tla/include/ability_ids.h
+ABILITY_TIAMAT	the game	"Tiamat" (MsgAbilityName + 398)	games/tla/include/ability_ids.h
+ABILITY_METEOR	the game	"Meteor" (MsgAbilityName + 399)	games/tla/include/ability_ids.h
+ABILITY_MEGAERA	the game	"Megaera" (MsgAbilityName + 400)	games/tla/include/ability_ids.h
+ABILITY_ULYSSES	the game	"Ulysses" (MsgAbilityName + 401)	games/tla/include/ability_ids.h
+ABILITY_DAEDALUS	the game	"Daedalus" (MsgAbilityName + 402)	games/tla/include/ability_ids.h
+ABILITY_IRIS	the game	"Iris" (MsgAbilityName + 404)	games/tla/include/ability_ids.h
+ABILITY_JUPITER	the game	"Jupiter" (MsgAbilityName + 406)	games/tla/include/ability_ids.h
+ABILITY_ATALANTA	the game	"Atalanta" (MsgAbilityName + 407)	games/tla/include/ability_ids.h
+ABILITY_PROCNE	the game	"Procne" (MsgAbilityName + 408)	games/tla/include/ability_ids.h
+ABILITY_THOR	the game	"Thor" (MsgAbilityName + 409)	games/tla/include/ability_ids.h
+ABILITY_FLORA	the game	"Flora" (MsgAbilityName + 410)	games/tla/include/ability_ids.h
+ABILITY_ECLIPSE	the game	"Eclipse" (MsgAbilityName + 411)	games/tla/include/ability_ids.h
+ABILITY_CATASTROPHE	the game	"Catastrophe" (MsgAbilityName + 412)	games/tla/include/ability_ids.h
+ABILITY_FIRE_BREATH	the game	"Fire Breath" (MsgAbilityName + 420)	games/tla/include/ability_ids.h
+ABILITY_WATER_BREATH	the game	"Water Breath" (MsgAbilityName + 423)	games/tla/include/ability_ids.h
+ABILITY_ICE_BREATH	the game	"Ice Breath" (MsgAbilityName + 426)	games/tla/include/ability_ids.h
+ABILITY_DARK_BREATH	the game	"Dark Breath" (MsgAbilityName + 429)	games/tla/include/ability_ids.h
+ABILITY_ACID_BREATH	the game	"Acid Breath" (MsgAbilityName + 431)	games/tla/include/ability_ids.h
+ABILITY_STORM_BREATH	the game	"Storm Breath" (MsgAbilityName + 433)	games/tla/include/ability_ids.h
+ABILITY_SONIC_WAVE	the game	"Sonic Wave" (MsgAbilityName + 435)	games/tla/include/ability_ids.h
+ABILITY_SHRIEK	the game	"Shriek" (MsgAbilityName + 437)	games/tla/include/ability_ids.h
+ABILITY_BANSHEE_HOWL	the game	"Banshee Howl" (MsgAbilityName + 438)	games/tla/include/ability_ids.h
+ABILITY_CRAZY_VOICE	the game	"Crazy Voice" (MsgAbilityName + 439)	games/tla/include/ability_ids.h
+ABILITY_WAR_CRY	the game	"War Cry" (MsgAbilityName + 440)	games/tla/include/ability_ids.h
+ABILITY_WICKED_HOWL	the game	"Wicked Howl" (MsgAbilityName + 441)	games/tla/include/ability_ids.h
+ABILITY_WING_BEAT	the game	"Wing Beat" (MsgAbilityName + 442)	games/tla/include/ability_ids.h
+ABILITY_WING_FLUTTER	the game	"Wing Flutter" (MsgAbilityName + 443)	games/tla/include/ability_ids.h
+ABILITY_WING_STROKE	the game	"Wing Stroke" (MsgAbilityName + 444)	games/tla/include/ability_ids.h
+ABILITY_EVIL_BLESSING	the game	"Evil Blessing" (MsgAbilityName + 445)	games/tla/include/ability_ids.h
+ABILITY_DEADLY_GAS	the game	"Deadly Gas" (MsgAbilityName + 446)	games/tla/include/ability_ids.h
+ABILITY_RUMBLE	the game	"Rumble" (MsgAbilityName + 450)	games/tla/include/ability_ids.h
+ABILITY_BONE_CHILLER	the game	"Bone Chiller" (MsgAbilityName + 451)	games/tla/include/ability_ids.h
+ABILITY_SLICE	the game	"Slice" (MsgAbilityName + 452)	games/tla/include/ability_ids.h
+ABILITY_BONE_CHARGE	the game	"Bone Charge" (MsgAbilityName + 453)	games/tla/include/ability_ids.h
+ABILITY_MYSTIC_FLAME	the game	"Mystic Flame" (MsgAbilityName + 454)	games/tla/include/ability_ids.h
+ABILITY_NUMBING_STING	the game	"Numbing Sting" (MsgAbilityName + 455)	games/tla/include/ability_ids.h
+ABILITY_BRUTE_FORCE	the game	"Brute Force" (MsgAbilityName + 456)	games/tla/include/ability_ids.h
+ABILITY_STICKY_GOO	the game	"Sticky Goo" (MsgAbilityName + 457)	games/tla/include/ability_ids.h
+ABILITY_CANNIBAL_FANG	the game	"Cannibal Fang" (MsgAbilityName + 458)	games/tla/include/ability_ids.h
+ABILITY_BEAR_CLAW	the game	"Bear Claw" (MsgAbilityName + 459)	games/tla/include/ability_ids.h
+ABILITY_POISONOUS_BITE	the game	"Poisonous Bite" (MsgAbilityName + 460)	games/tla/include/ability_ids.h
+ABILITY_FLYING_ATTACK	the game	"Flying Attack" (MsgAbilityName + 461)	games/tla/include/ability_ids.h
+ABILITY_UNDEAD_SWORD	the game	"Undead Sword" (MsgAbilityName + 462)	games/tla/include/ability_ids.h
+ABILITY_RANSACK	the game	"Ransack" (MsgAbilityName + 463)	games/tla/include/ability_ids.h
+ABILITY_STICKY_POISON	the game	"Sticky Poison" (MsgAbilityName + 464)	games/tla/include/ability_ids.h
+ABILITY_POISON_FANG	the game	"Poison Fang" (MsgAbilityName + 465)	games/tla/include/ability_ids.h
+ABILITY_ELECTRIC_BITE	the game	"Electric Bite" (MsgAbilityName + 466)	games/tla/include/ability_ids.h
+ABILITY_POISON_TAIL	the game	"Poison Tail" (MsgAbilityName + 467)	games/tla/include/ability_ids.h
+ABILITY_ONSLAUGHT	the game	"Onslaught" (MsgAbilityName + 468)	games/tla/include/ability_ids.h
+ABILITY_VAMPIRIC_FANG	the game	"Vampiric Fang" (MsgAbilityName + 469)	games/tla/include/ability_ids.h
+ABILITY_BACTERIA_RUSH	the game	"Bacteria Rush" (MsgAbilityName + 470)	games/tla/include/ability_ids.h
+ABILITY_SWIFT_STRIKE	the game	"Swift Strike" (MsgAbilityName + 471)	games/tla/include/ability_ids.h
+ABILITY_ROTTEN_BLOOD	the game	"Rotten Blood" (MsgAbilityName + 472)	games/tla/include/ability_ids.h
+ABILITY_FORCIBLE_ARM	the game	"Forcible Arm" (MsgAbilityName + 473)	games/tla/include/ability_ids.h
+ABILITY_DOUBLE_FANG	the game	"Double Fang" (MsgAbilityName + 474)	games/tla/include/ability_ids.h
+ABILITY_MORTAL_BLOW	the game	"Mortal Blow" (MsgAbilityName + 475)	games/tla/include/ability_ids.h
+ABILITY_FREEBITE_RUSH	the game	"Freebite Rush" (MsgAbilityName + 476)	games/tla/include/ability_ids.h
+ABILITY_TWIN_BEAKS	the game	"Twin Beaks" (MsgAbilityName + 477)	games/tla/include/ability_ids.h
+ABILITY_RABID_FANG	the game	"Rabid Fang" (MsgAbilityName + 478)	games/tla/include/ability_ids.h
+ABILITY_ACID_BITE	the game	"Acid Bite" (MsgAbilityName + 479)	games/tla/include/ability_ids.h
+ABILITY_DYNAMITE	the game	"Dynamite" (MsgAbilityName + 480)	games/tla/include/ability_ids.h
+ABILITY_HEADBUTT	the game	"Headbutt" (MsgAbilityName + 481)	games/tla/include/ability_ids.h
+ABILITY_POISON_INK	the game	"Poison Ink" (MsgAbilityName + 482)	games/tla/include/ability_ids.h
+ABILITY_TRUNCHEON_FIST	the game	"Truncheon Fist" (MsgAbilityName + 483)	games/tla/include/ability_ids.h
+ABILITY_COUNTERSTRIKE	the game	"Counterstrike" (MsgAbilityName + 484)	games/tla/include/ability_ids.h
+ABILITY_MAD_DASH	the game	"Mad Dash" (MsgAbilityName + 485)	games/tla/include/ability_ids.h
+ABILITY_SOOTHING_STAR	the game	"Soothing Star" (MsgAbilityName + 486)	games/tla/include/ability_ids.h
+ABILITY_SPIDER_WEB	the game	"Spider Web" (MsgAbilityName + 487)	games/tla/include/ability_ids.h
+ABILITY_HEARTRENDER	the game	"Heartrender" (MsgAbilityName + 488)	games/tla/include/ability_ids.h
+ABILITY_MAD_SPATTER	the game	"Mad Spatter" (MsgAbilityName + 489)	games/tla/include/ability_ids.h
+ABILITY_SPASM	the game	"Spasm" (MsgAbilityName + 490)	games/tla/include/ability_ids.h
+ABILITY_SLEEP_STAR	the game	"Sleep Star" (MsgAbilityName + 491)	games/tla/include/ability_ids.h
+ABILITY_DECOMPOSE	the game	"Decompose" (MsgAbilityName + 492)	games/tla/include/ability_ids.h
+ABILITY_HAUNTING	the game	"Haunting" (MsgAbilityName + 493)	games/tla/include/ability_ids.h
+ABILITY_WORMS	the game	"Worms" (MsgAbilityName + 494)	games/tla/include/ability_ids.h
+ABILITY_BERSERK	the game	"Berserk" (MsgAbilityName + 495)	games/tla/include/ability_ids.h
+ABILITY_LUCID_PROPHECY	the game	"Lucid Prophecy" (MsgAbilityName + 496)	games/tla/include/ability_ids.h
+ABILITY_RECOVERY	the game	"Recovery" (MsgAbilityName + 497)	games/tla/include/ability_ids.h
+ABILITY_FLEE	the game	"Flee" (MsgAbilityName + 498)	games/tla/include/ability_ids.h
+ABILITY_CONTAIN	the game	"Contain" (MsgAbilityName + 499)	games/tla/include/ability_ids.h
+ABILITY_THREATEN	the game	"Threaten" (MsgAbilityName + 500)	games/tla/include/ability_ids.h
+ABILITY_TREMBLE	the game	"Tremble" (MsgAbilityName + 501)	games/tla/include/ability_ids.h
+ABILITY_FORTIFY	the game	"Fortify" (MsgAbilityName + 502)	games/tla/include/ability_ids.h
+ABILITY_SPEED_SURGE	the game	"Speed Surge" (MsgAbilityName + 503)	games/tla/include/ability_ids.h
+ABILITY_ALLY_SEARCH	the game	"Ally Search" (MsgAbilityName + 504)	games/tla/include/ability_ids.h
+ABILITY_SIDESTEP	the game	"Sidestep" (MsgAbilityName + 505)	games/tla/include/ability_ids.h
+ABILITY_TOTAL_DEFENSE	the game	"Total Defense" (MsgAbilityName + 506)	games/tla/include/ability_ids.h
+ABILITY_STAND_READY	the game	"Stand Ready" (MsgAbilityName + 507)	games/tla/include/ability_ids.h
+ABILITY_BATTLE_CRY	the game	"Battle Cry" (MsgAbilityName + 508)	games/tla/include/ability_ids.h
+ABILITY_CANT_USE	the game	"Can't Use" (MsgAbilityName + 509)	games/tla/include/ability_ids.h
+ABILITY_POISON_BEAT	the game	"Poison Beat" (MsgAbilityName + 510)	games/tla/include/ability_ids.h
+ABILITY_SPINNING_BEAT	the game	"Spinning Beat" (MsgAbilityName + 511)	games/tla/include/ability_ids.h
+ABILITY_HEAT_FLASH	the game	"Heat Flash" (MsgAbilityName + 512)	games/tla/include/ability_ids.h
+ABILITY_DEATH_SCYTHE	the game	"Death Scythe" (MsgAbilityName + 513)	games/tla/include/ability_ids.h
+ABILITY_OUTER_SPACE	the game	"Outer Space" (MsgAbilityName + 514)	games/tla/include/ability_ids.h
+ABILITY_DRAGON_DRIVER	the game	"Dragon Driver" (MsgAbilityName + 515)	games/tla/include/ability_ids.h
+ABILITY_DRAIN_FANG	the game	"Drain Fang" (MsgAbilityName + 516)	games/tla/include/ability_ids.h
+ABILITY_SEVERE_BLOW	the game	"Severe Blow" (MsgAbilityName + 517)	games/tla/include/ability_ids.h
+ABILITY_THRASH	the game	"Thrash" (MsgAbilityName + 518)	games/tla/include/ability_ids.h
+ABILITY_STONE_JUSTICE	the game	"Stone Justice" (MsgAbilityName + 520)	games/tla/include/ability_ids.h
+ABILITY_SARCOPHAGUS	the game	"Sarcophagus" (MsgAbilityName + 521)	games/tla/include/ability_ids.h
+ABILITY_EVIL_EYE	the game	"Evil Eye" (MsgAbilityName + 522)	games/tla/include/ability_ids.h
+ABILITY_VEIN_TAP	the game	"Vein Tap" (MsgAbilityName + 523)	games/tla/include/ability_ids.h
+ABILITY_HEAVY_DIVIDE	the game	"Heavy Divide" (MsgAbilityName + 524)	games/tla/include/ability_ids.h
+ABILITY_HAMMERSPHERE	the game	"Hammersphere" (MsgAbilityName + 525)	games/tla/include/ability_ids.h
+ABILITY_MOTHER_EARTH	the game	"Mother Earth" (MsgAbilityName + 526)	games/tla/include/ability_ids.h
+ABILITY_WYRD_CURSE	the game	"Wyrd Curse" (MsgAbilityName + 527)	games/tla/include/ability_ids.h
+ABILITY_HEARTBREAK	the game	"Heartbreak" (MsgAbilityName + 528)	games/tla/include/ability_ids.h
+ABILITY_VENGEANCE	the game	"Vengeance" (MsgAbilityName + 529)	games/tla/include/ability_ids.h
+ABILITY_ACHERONS_GRIEF	the game	"Acheron's Grief" (MsgAbilityName + 530)	games/tla/include/ability_ids.h
+ABILITY_MEGIDDO	the game	"Megiddo" (MsgAbilityName + 531)	games/tla/include/ability_ids.h
+ABILITY_DREAMTIDE	the game	"Dreamtide" (MsgAbilityName + 536)	games/tla/include/ability_ids.h
+ABILITY_STUN_CLOUD	the game	"Stun Cloud" (MsgAbilityName + 537)	games/tla/include/ability_ids.h
+ABILITY_SEARING_FOG	the game	"Searing Fog" (MsgAbilityName + 538)	games/tla/include/ability_ids.h
+ABILITY_ICE_CRUSH	the game	"Ice Crush" (MsgAbilityName + 539)	games/tla/include/ability_ids.h
+ABILITY_FLASH_FORCE	the game	"Flash Force" (MsgAbilityName + 540)	games/tla/include/ability_ids.h
+ABILITY_SARGASSO	the game	"Sargasso" (MsgAbilityName + 541)	games/tla/include/ability_ids.h
+ABILITY_LETHE_ALBION	the game	"Lethe Albion" (MsgAbilityName + 542)	games/tla/include/ability_ids.h
+ABILITY_REVERSE_STAR	the game	"Reverse Star" (MsgAbilityName + 543)	games/tla/include/ability_ids.h
+ABILITY_RISING_DRAGON	the game	"Rising Dragon" (MsgAbilityName + 544)	games/tla/include/ability_ids.h
+ABILITY_POWER_DRIVE	the game	"Power Drive" (MsgAbilityName + 549)	games/tla/include/ability_ids.h
+ABILITY_BOOST_HACK	the game	"Boost Hack" (MsgAbilityName + 550)	games/tla/include/ability_ids.h
+ABILITY_HEAT_SMASH	the game	"Heat Smash" (MsgAbilityName + 551)	games/tla/include/ability_ids.h
+ABILITY_FIRE_DANCE	the game	"Fire Dance" (MsgAbilityName + 552)	games/tla/include/ability_ids.h
+ABILITY_BLAZE_RUSH	the game	"Blaze Rush" (MsgAbilityName + 553)	games/tla/include/ability_ids.h
+ABILITY_FLARE_BURST	the game	"Flare Burst" (MsgAbilityName + 554)	games/tla/include/ability_ids.h
+ABILITY_SHRED	the game	"Shred" (MsgAbilityName + 555)	games/tla/include/ability_ids.h
+ABILITY_CRUCIBLE_FIRE	the game	"Crucible Fire" (MsgAbilityName + 556)	games/tla/include/ability_ids.h
+ABILITY_SCORPIONFISH	the game	"Scorpionfish" (MsgAbilityName + 557)	games/tla/include/ability_ids.h
+ABILITY_PURGATORY	the game	"Purgatory" (MsgAbilityName + 558)	games/tla/include/ability_ids.h
+ABILITY_SOUL_SHATTER	the game	"Soul Shatter" (MsgAbilityName + 559)	games/tla/include/ability_ids.h
+ABILITY_RADIANT_FIRE	the game	"Radiant Fire" (MsgAbilityName + 560)	games/tla/include/ability_ids.h
+ABILITY_LIFE_SHEAR	the game	"Life Shear" (MsgAbilityName + 561)	games/tla/include/ability_ids.h
+ABILITY_MOON_AIR	the game	"Moon Air" (MsgAbilityName + 565)	games/tla/include/ability_ids.h
+ABILITY_FLASH_EDGE	the game	"Flash Edge" (MsgAbilityName + 566)	games/tla/include/ability_ids.h
+ABILITY_AGING_GAS	the game	"Aging Gas" (MsgAbilityName + 567)	games/tla/include/ability_ids.h
+ABILITY_MAD_ZEPHYR	the game	"Mad Zephyr" (MsgAbilityName + 568)	games/tla/include/ability_ids.h
+ABILITY_LUNAR_SLASH	the game	"Lunar Slash" (MsgAbilityName + 569)	games/tla/include/ability_ids.h
+ABILITY_NIRVANA	the game	"Nirvana" (MsgAbilityName + 570)	games/tla/include/ability_ids.h
+ABILITY_HIGH_VITALS	the game	"High Vitals" (MsgAbilityName + 571)	games/tla/include/ability_ids.h
+ABILITY_STUN_BOLT	the game	"Stun Bolt" (MsgAbilityName + 572)	games/tla/include/ability_ids.h
+ABILITY_TRIDENT	the game	"Trident" (MsgAbilityName + 573)	games/tla/include/ability_ids.h
+ABILITY_LIGHT_SURGE	the game	"Light Surge" (MsgAbilityName + 574)	games/tla/include/ability_ids.h
+ABILITY_RAIDENS_WRATH	the game	"Raiden's Wrath" (MsgAbilityName + 575)	games/tla/include/ability_ids.h
+ABILITY_VOID_BEAM	the game	"Void Beam" (MsgAbilityName + 576)	games/tla/include/ability_ids.h
+ABILITY_APOCALYPSE	the game	"Apocalypse" (MsgAbilityName + 578)	games/tla/include/ability_ids.h
+ABILITY_LEGEND	the game	"Legend" (MsgAbilityName + 579)	games/tla/include/ability_ids.h
+ABILITY_SABRE_DANCE	the game	"Sabre Dance" (MsgAbilityName + 584)	games/tla/include/ability_ids.h
+ABILITY_BACKSTAB	the game	"Backstab" (MsgAbilityName + 585)	games/tla/include/ability_ids.h
+ABILITY_JUGGLE	the game	"Juggle" (MsgAbilityName + 587)	games/tla/include/ability_ids.h
+ABILITY_HEAT_JUGGLE	the game	"Heat Juggle" (MsgAbilityName + 588)	games/tla/include/ability_ids.h
+ABILITY_FIERY_JUGGLE	the game	"Fiery Juggle" (MsgAbilityName + 589)	games/tla/include/ability_ids.h
+ABILITY_FLAME_CARD	the game	"Flame Card" (MsgAbilityName + 590)	games/tla/include/ability_ids.h
+ABILITY_THUNDER_CARD	the game	"Thunder Card" (MsgAbilityName + 591)	games/tla/include/ability_ids.h
+ABILITY_BRAMBLE_CARD	the game	"Bramble Card" (MsgAbilityName + 592)	games/tla/include/ability_ids.h
+ABILITY_FROST_CARD	the game	"Frost Card" (MsgAbilityName + 593)	games/tla/include/ability_ids.h
+ABILITY_BAFFLE_CARD	the game	"Baffle Card" (MsgAbilityName + 594)	games/tla/include/ability_ids.h
+ABILITY_SWORD_CARD	the game	"Sword Card" (MsgAbilityName + 595)	games/tla/include/ability_ids.h
+ABILITY_SLEEP_CARD	the game	"Sleep Card" (MsgAbilityName + 596)	games/tla/include/ability_ids.h
+ABILITY_DEATH_CARD	the game	"Death Card" (MsgAbilityName + 597)	games/tla/include/ability_ids.h
+ABILITY_WHIPLASH	the game	"Whiplash" (MsgAbilityName + 599)	games/tla/include/ability_ids.h
+ABILITY_WILD_WOLF	the game	"Wild Wolf" (MsgAbilityName + 600)	games/tla/include/ability_ids.h
+ABILITY_EMU	the game	"Emu" (MsgAbilityName + 601)	games/tla/include/ability_ids.h
+ABILITY_ROC	the game	"Roc" (MsgAbilityName + 602)	games/tla/include/ability_ids.h
+ABILITY_SALAMANDER	the game	"Salamander" (MsgAbilityName + 603)	games/tla/include/ability_ids.h
+ABILITY_ORC	the game	"Orc" (MsgAbilityName + 604)	games/tla/include/ability_ids.h
+ABILITY_HARPY	the game	"Harpy" (MsgAbilityName + 605)	games/tla/include/ability_ids.h
+ABILITY_GRAND_GOLEM	the game	"Grand Golem" (MsgAbilityName + 606)	games/tla/include/ability_ids.h
+ABILITY_CERBERUS	the game	"Cerberus" (MsgAbilityName + 607)	games/tla/include/ability_ids.h
+ABILITY_WYVERN	the game	"Wyvern" (MsgAbilityName + 608)	games/tla/include/ability_ids.h
+ABILITY_PIXIE	the game	"Pixie" (MsgAbilityName + 609)	games/tla/include/ability_ids.h
+ABILITY_DINOX	the game	"Dinox" (MsgAbilityName + 610)	games/tla/include/ability_ids.h
+ABILITY_GRYPHON	the game	"Gryphon" (MsgAbilityName + 611)	games/tla/include/ability_ids.h
+ABILITY_LIVING_ARMOR	the game	"Living Armor" (MsgAbilityName + 612)	games/tla/include/ability_ids.h
+ABILITY_CHIMERA	the game	"Chimera" (MsgAbilityName + 613)	games/tla/include/ability_ids.h
+ABILITY_BLUE_DRAGON	the game	"Blue Dragon" (MsgAbilityName + 614)	games/tla/include/ability_ids.h
+ABILITY_FAERY	the game	"Faery" (MsgAbilityName + 615)	games/tla/include/ability_ids.h
+ABILITY_ELDER_WOOD	the game	"Elder Wood" (MsgAbilityName + 616)	games/tla/include/ability_ids.h
+ABILITY_LICH	the game	"Lich" (MsgAbilityName + 617)	games/tla/include/ability_ids.h
+ABILITY_TROLL	the game	"Troll" (MsgAbilityName + 618)	games/tla/include/ability_ids.h
+ABILITY_MINOTAUR	the game	"Minotaur" (MsgAbilityName + 619)	games/tla/include/ability_ids.h
+ABILITY_GHOST_SOLDIER	the game	"Ghost Soldier" (MsgAbilityName + 620)	games/tla/include/ability_ids.h
+ABILITY_MACETAIL	the game	"Macetail" (MsgAbilityName + 621)	games/tla/include/ability_ids.h
+ABILITY_FIRE_DRAGON	the game	"Fire Dragon" (MsgAbilityName + 622)	games/tla/include/ability_ids.h
+ABILITY_WEIRD_NYMPH	the game	"Weird Nymph" (MsgAbilityName + 623)	games/tla/include/ability_ids.h
+ABILITY_SUCCUBUS	the game	"Succubus" (MsgAbilityName + 624)	games/tla/include/ability_ids.h
+ABILITY_ESTRE_WOOD	the game	"Estre Wood" (MsgAbilityName + 625)	games/tla/include/ability_ids.h
+ABILITY_MANTICORE	the game	"Manticore" (MsgAbilityName + 626)	games/tla/include/ability_ids.h
+ABILITY_PHOENIX	the game	"Phoenix" (MsgAbilityName + 627)	games/tla/include/ability_ids.h
+ABILITY_CALL_ZOMBIE	the game	"Call Zombie" (MsgAbilityName + 629)	games/tla/include/ability_ids.h
+ABILITY_CALL_DEMON	the game	"Call Demon" (MsgAbilityName + 630)	games/tla/include/ability_ids.h
+ABILITY_CALL_DULLAHAN	the game	"Call Dullahan" (MsgAbilityName + 631)	games/tla/include/ability_ids.h
+ABILITY_RAGING_HEAT	the game	"Raging Heat" (MsgAbilityName + 632)	games/tla/include/ability_ids.h
+ABILITY_FIERY_ABYSS	the game	"Fiery Abyss" (MsgAbilityName + 633)	games/tla/include/ability_ids.h
+ABILITY_DIRE_INFERNO	the game	"Dire Inferno" (MsgAbilityName + 634)	games/tla/include/ability_ids.h
+ABILITY_POISON_FLOW	the game	"Poison Flow" (MsgAbilityName + 635)	games/tla/include/ability_ids.h
+ABILITY_FIRE_PUPPET	the game	"Fire Puppet" (MsgAbilityName + 636)	games/tla/include/ability_ids.h
+ABILITY_SAND_BREATH	the game	"Sand Breath" (MsgAbilityName + 640)	games/tla/include/ability_ids.h
+ABILITY_DESERT_GASP	the game	"Desert Gasp" (MsgAbilityName + 641)	games/tla/include/ability_ids.h
+ABILITY_BLACK_ICE	the game	"Black Ice" (MsgAbilityName + 642)	games/tla/include/ability_ids.h
+ABILITY_TOXIC_BREATH	the game	"Toxic Breath" (MsgAbilityName + 643)	games/tla/include/ability_ids.h
+ABILITY_TYPHOON_BLOW	the game	"Typhoon Blow" (MsgAbilityName + 644)	games/tla/include/ability_ids.h
+ABILITY_BLAST_BREATH	the game	"Blast Breath" (MsgAbilityName + 645)	games/tla/include/ability_ids.h
+ABILITY_GRAVEL_BLOW	the game	"Gravel Blow" (MsgAbilityName + 646)	games/tla/include/ability_ids.h
+ABILITY_DARKSOL_GASP	the game	"Darksol Gasp" (MsgAbilityName + 647)	games/tla/include/ability_ids.h
+ABILITY_FLAME_BREATH	the game	"Flame Breath" (MsgAbilityName + 648)	games/tla/include/ability_ids.h
+ABILITY_AQUA_BREATH	the game	"Aqua Breath" (MsgAbilityName + 649)	games/tla/include/ability_ids.h
+ABILITY_CHILL_BREATH	the game	"Chill Breath" (MsgAbilityName + 651)	games/tla/include/ability_ids.h
+ABILITY_FLASH_PUNCH	the game	"Flash Punch" (MsgAbilityName + 660)	games/tla/include/ability_ids.h
+ABILITY_FORMIC_ACID	the game	"Formic Acid" (MsgAbilityName + 661)	games/tla/include/ability_ids.h
+ABILITY_CLAW_ATTACK	the game	"Claw Attack" (MsgAbilityName + 662)	games/tla/include/ability_ids.h
+ABILITY_BEAT_DANCE	the game	"Beat Dance" (MsgAbilityName + 663)	games/tla/include/ability_ids.h
+ABILITY_TWIN_SHEAR	the game	"Twin Shear" (MsgAbilityName + 664)	games/tla/include/ability_ids.h
+ABILITY_PARALYTAIL	the game	"Paralytail" (MsgAbilityName + 665)	games/tla/include/ability_ids.h
+ABILITY_ECHO_CUT	the game	"Echo Cut" (MsgAbilityName + 666)	games/tla/include/ability_ids.h
+ABILITY_CLARION_CRY	the game	"Clarion Cry" (MsgAbilityName + 667)	games/tla/include/ability_ids.h
+ABILITY_TRIPLE_CHOMP	the game	"Triple Chomp" (MsgAbilityName + 668)	games/tla/include/ability_ids.h
+ABILITY_RAGING_FLOOD	the game	"Raging Flood" (MsgAbilityName + 669)	games/tla/include/ability_ids.h
+ABILITY_RISING_VENOM	the game	"Rising Venom" (MsgAbilityName + 670)	games/tla/include/ability_ids.h
+ABILITY_SLAVER	the game	"Slaver" (MsgAbilityName + 671)	games/tla/include/ability_ids.h
+ABILITY_MIGHTY_PRESS	the game	"Mighty Press" (MsgAbilityName + 672)	games/tla/include/ability_ids.h
+ABILITY_STAR_MINE	the game	"Star Mine" (MsgAbilityName + 673)	games/tla/include/ability_ids.h
+ABILITY_HEAT_STUN	the game	"Heat Stun" (MsgAbilityName + 674)	games/tla/include/ability_ids.h
+ABILITY_OCEAN_FIST	the game	"Ocean Fist" (MsgAbilityName + 675)	games/tla/include/ability_ids.h
+ABILITY_WATERY_GRAVE	the game	"Watery Grave" (MsgAbilityName + 676)	games/tla/include/ability_ids.h
+ABILITY_COUNTER_RUSH	the game	"Counter-rush" (MsgAbilityName + 677)	games/tla/include/ability_ids.h
+ABILITY_COUNTER	the game	"Counter" (MsgAbilityName + 678)	games/tla/include/ability_ids.h
+ABILITY_BOSCA_HIT	the game	"Bosca Hit" (MsgAbilityName + 679)	games/tla/include/ability_ids.h
+ABILITY_STRONG_HIT	the game	"Strong Hit" (MsgAbilityName + 680)	games/tla/include/ability_ids.h
+ABILITY_ROLLING_FLAME	the game	"Rolling Flame" (MsgAbilityName + 681)	games/tla/include/ability_ids.h
+ABILITY_METEOR_BLOW	the game	"Meteor Blow" (MsgAbilityName + 683)	games/tla/include/ability_ids.h
+ABILITY_CAGE	the game	"Cage" (MsgAbilityName + 684)	games/tla/include/ability_ids.h
+ABILITY_STUN_MUSCLE	the game	"Stun Muscle" (MsgAbilityName + 685)	games/tla/include/ability_ids.h
+ABILITY_DJINNFEST	the game	"Djinnfest" (MsgAbilityName + 686)	games/tla/include/ability_ids.h
+ABILITY_HEAT_KISS	the game	"Heat Kiss" (MsgAbilityName + 687)	games/tla/include/ability_ids.h
+ABILITY_FATAL_FANG	the game	"Fatal Fang" (MsgAbilityName + 688)	games/tla/include/ability_ids.h
+ABILITY_ANGLE_SPIKE	the game	"Angle Spike" (MsgAbilityName + 689)	games/tla/include/ability_ids.h
+ABILITY_QUICK_SLASH	the game	"Quick Slash" (MsgAbilityName + 690)	games/tla/include/ability_ids.h
+ABILITY_DOUBLESTEP	the game	"Doublestep" (MsgAbilityName + 691)	games/tla/include/ability_ids.h
+ABILITY_MANEATER	the game	"Maneater" (MsgAbilityName + 692)	games/tla/include/ability_ids.h
+ABILITY_CLAW_SLASH	the game	"Claw Slash" (MsgAbilityName + 693)	games/tla/include/ability_ids.h
+ABILITY_MEGA_SLASH	the game	"Mega Slash" (MsgAbilityName + 694)	games/tla/include/ability_ids.h
+ABILITY_VANISH_CLAW	the game	"Vanish Claw" (MsgAbilityName + 695)	games/tla/include/ability_ids.h
+ABILITY_CRUSHER_GRIP	the game	"Crusher Grip" (MsgAbilityName + 696)	games/tla/include/ability_ids.h
+ABILITY_UR_FLASH	the game	"Ur Flash" (MsgAbilityName + 697)	games/tla/include/ability_ids.h
+ABILITY_POWER_BITE	the game	"Power Bite" (MsgAbilityName + 698)	games/tla/include/ability_ids.h
+ABILITY_TERRIBLE_BITE	the game	"Terrible Bite" (MsgAbilityName + 699)	games/tla/include/ability_ids.h
+ABILITY_POISON_STING	the game	"Poison Sting" (MsgAbilityName + 700)	games/tla/include/ability_ids.h
+ABILITY_KILL_STING	the game	"Kill Sting" (MsgAbilityName + 701)	games/tla/include/ability_ids.h
+ABILITY_BEAST_NEEDLE	the game	"Beast Needle" (MsgAbilityName + 702)	games/tla/include/ability_ids.h
+ABILITY_STUN_STING	the game	"Stun Sting" (MsgAbilityName + 704)	games/tla/include/ability_ids.h
+ABILITY_MUCOUS_GEL	the game	"Mucous Gel" (MsgAbilityName + 705)	games/tla/include/ability_ids.h
+ABILITY_POISON_GEL	the game	"Poison Gel" (MsgAbilityName + 706)	games/tla/include/ability_ids.h
+ABILITY_HYDRO_SLASH	the game	"Hydro Slash" (MsgAbilityName + 707)	games/tla/include/ability_ids.h
+ABILITY_REGEN_DANCE	the game	"Regen Dance" (MsgAbilityName + 708)	games/tla/include/ability_ids.h
+ABILITY_POWER_CRUSH	the game	"Power Crush" (MsgAbilityName + 710)	games/tla/include/ability_ids.h
+ABILITY_SACK	the game	"Sack" (MsgAbilityName + 711)	games/tla/include/ability_ids.h
+ABILITY_VITAL_MOON	the game	"Vital Moon" (MsgAbilityName + 712)	games/tla/include/ability_ids.h
+ABILITY_HUMAN_HUNT	the game	"Human Hunt" (MsgAbilityName + 713)	games/tla/include/ability_ids.h
+ABILITY_DEMON_EYE	the game	"Demon Eye" (MsgAbilityName + 714)	games/tla/include/ability_ids.h
+ABILITY_STUN_JIP	the game	"Stun Jip" (MsgAbilityName + 715)	games/tla/include/ability_ids.h
+ABILITY_PIKE_ASSAULT	the game	"Pike Assault" (MsgAbilityName + 716)	games/tla/include/ability_ids.h
+ABILITY_FORMINA_SAGE	the game	"Formina Sage" (MsgAbilityName + 717)	games/tla/include/ability_ids.h
+ABILITY_TRUE_COLLIDE	the game	"True Collide" (MsgAbilityName + 718)	games/tla/include/ability_ids.h
+ABILITY_ARMOR_CRUSH	the game	"Armor Crush" (MsgAbilityName + 719)	games/tla/include/ability_ids.h
+ABILITY_DJINN_BLAST	the game	"Djinn Blast" (MsgAbilityName + 720)	games/tla/include/ability_ids.h
+ABILITY_DJINN_STORM	the game	"Djinn Storm" (MsgAbilityName + 721)	games/tla/include/ability_ids.h
+ABILITY_EARTH_FORCE	the game	"Earth Force" (MsgAbilityName + 722)	games/tla/include/ability_ids.h
+ABILITY_GUARD_AURA	the game	"Guard Aura" (MsgAbilityName + 723)	games/tla/include/ability_ids.h
+ABILITY_CRUEL_RUIN	the game	"Cruel Ruin" (MsgAbilityName + 724)	games/tla/include/ability_ids.h
+ABILITY_MYSTIC_CALL	the game	"Mystic Call" (MsgAbilityName + 725)	games/tla/include/ability_ids.h
+ABILITY_MINE_BALL	the game	"Mine Ball" (MsgAbilityName + 726)	games/tla/include/ability_ids.h
+ABILITY_ANGRY_MINE	the game	"Angry Mine" (MsgAbilityName + 727)	games/tla/include/ability_ids.h
+ABILITY_DJINN_STUN	the game	"Djinn Stun" (MsgAbilityName + 728)	games/tla/include/ability_ids.h
+ABILITY_CRUCIBLE	the game	"Crucible" (MsgAbilityName + 729)	games/tla/include/ability_ids.h
+ABILITY_ELEMENT_SWAP	the game	"Element Swap" (MsgAbilityName + 730)	games/tla/include/ability_ids.h
+ABILITY_EARNEST_PLY	the game	"Earnest Ply" (MsgAbilityName + 731)	games/tla/include/ability_ids.h
+ABILITY_PSY_BOOST	the game	"Psy Boost" (MsgAbilityName + 732)	games/tla/include/ability_ids.h
+ABILITY_PRESSURE	the game	"Pressure" (MsgAbilityName + 733)	games/tla/include/ability_ids.h
+ITEM_LONG_SWORD	the game	"Long Sword" (MsgItemName + 1)	games/tla/include/item_ids.h
+ITEM_BROAD_SWORD	the game	"Broad Sword" (MsgItemName + 2)	games/tla/include/item_ids.h
+ITEM_CLAYMORE	the game	"Claymore" (MsgItemName + 3)	games/tla/include/item_ids.h
+ITEM_GREAT_SWORD	the game	"Great Sword" (MsgItemName + 4)	games/tla/include/item_ids.h
+ITEM_SHAMSHIR	the game	"Shamshir" (MsgItemName + 5)	games/tla/include/item_ids.h
+ITEM_SILVER_BLADE	the game	"Silver Blade" (MsgItemName + 6)	games/tla/include/item_ids.h
+ITEM_FIRE_BRAND	the game	"Fire Brand" (MsgItemName + 7)	games/tla/include/item_ids.h
+ITEM_ARCTIC_BLADE	the game	"Arctic Blade" (MsgItemName + 8)	games/tla/include/item_ids.h
+ITEM_GAIA_BLADE	the game	"Gaia Blade" (MsgItemName + 9)	games/tla/include/item_ids.h
+ITEM_SOL_BLADE	the game	"Sol Blade" (MsgItemName + 10)	games/tla/include/item_ids.h
+ITEM_MURAMASA	the game	"Muramasa" (MsgItemName + 11)	games/tla/include/item_ids.h
+ITEM_MACHETE	the game	"Machete" (MsgItemName + 15)	games/tla/include/item_ids.h
+ITEM_SHORT_SWORD	the game	"Short Sword" (MsgItemName + 16)	games/tla/include/item_ids.h
+ITEM_HUNTERS_SWORD	the game	"Hunter's Sword" (MsgItemName + 17)	games/tla/include/item_ids.h
+ITEM_BATTLE_RAPIER	the game	"Battle Rapier" (MsgItemName + 18)	games/tla/include/item_ids.h
+ITEM_MASTER_RAPIER	the game	"Master Rapier" (MsgItemName + 19)	games/tla/include/item_ids.h
+ITEM_NINJA_BLADE	the game	"Ninja Blade" (MsgItemName + 20)	games/tla/include/item_ids.h
+ITEM_SWIFT_SWORD	the game	"Swift Sword" (MsgItemName + 21)	games/tla/include/item_ids.h
+ITEM_ELVEN_RAPIER	the game	"Elven Rapier" (MsgItemName + 22)	games/tla/include/item_ids.h
+ITEM_ASSASSIN_BLADE	the game	"Assassin Blade" (MsgItemName + 23)	games/tla/include/item_ids.h
+ITEM_MYSTERY_BLADE	the game	"Mystery Blade" (MsgItemName + 24)	games/tla/include/item_ids.h
+ITEM_KIKUICHIMONJI	the game	"Kikuichimonji" (MsgItemName + 25)	games/tla/include/item_ids.h
+ITEM_MASAMUNE	the game	"Masamune" (MsgItemName + 26)	games/tla/include/item_ids.h
+ITEM_BANDITS_SWORD	the game	"Bandit's Sword" (MsgItemName + 27)	games/tla/include/item_ids.h
+ITEM_BATTLE_AXE	the game	"Battle Axe" (MsgItemName + 31)	games/tla/include/item_ids.h
+ITEM_BROAD_AXE	the game	"Broad Axe" (MsgItemName + 32)	games/tla/include/item_ids.h
+ITEM_GREAT_AXE	the game	"Great Axe" (MsgItemName + 33)	games/tla/include/item_ids.h
+ITEM_DRAGON_AXE	the game	"Dragon Axe" (MsgItemName + 34)	games/tla/include/item_ids.h
+ITEM_GIANT_AXE	the game	"Giant Axe" (MsgItemName + 35)	games/tla/include/item_ids.h
+ITEM_VULCAN_AXE	the game	"Vulcan Axe" (MsgItemName + 36)	games/tla/include/item_ids.h
+ITEM_BURNING_AXE	the game	"Burning Axe" (MsgItemName + 37)	games/tla/include/item_ids.h
+ITEM_DEMON_AXE	the game	"Demon Axe" (MsgItemName + 38)	games/tla/include/item_ids.h
+ITEM_MACE	the game	"Mace" (MsgItemName + 43)	games/tla/include/item_ids.h
+ITEM_HEAVY_MACE	the game	"Heavy Mace" (MsgItemName + 44)	games/tla/include/item_ids.h
+ITEM_BATTLE_MACE	the game	"Battle Mace" (MsgItemName + 45)	games/tla/include/item_ids.h
+ITEM_WAR_MACE	the game	"War Mace" (MsgItemName + 46)	games/tla/include/item_ids.h
+ITEM_RIGHTEOUS_MACE	the game	"Righteous Mace" (MsgItemName + 47)	games/tla/include/item_ids.h
+ITEM_GRIEVOUS_MACE	the game	"Grievous Mace" (MsgItemName + 48)	games/tla/include/item_ids.h
+ITEM_BLESSED_MACE	the game	"Blessed Mace" (MsgItemName + 49)	games/tla/include/item_ids.h
+ITEM_WICKED_MACE	the game	"Wicked Mace" (MsgItemName + 50)	games/tla/include/item_ids.h
+ITEM_WOODEN_STICK	the game	"Wooden Stick" (MsgItemName + 55)	games/tla/include/item_ids.h
+ITEM_MAGIC_ROD	the game	"Magic Rod" (MsgItemName + 56)	games/tla/include/item_ids.h
+ITEM_WITCHS_WAND	the game	"Witch's Wand" (MsgItemName + 57)	games/tla/include/item_ids.h
+ITEM_BLESSED_ANKH	the game	"Blessed Ankh" (MsgItemName + 58)	games/tla/include/item_ids.h
+ITEM_PSYNERGY_ROD	the game	"Psynergy Rod" (MsgItemName + 59)	games/tla/include/item_ids.h
+ITEM_FROST_WAND	the game	"Frost Wand" (MsgItemName + 60)	games/tla/include/item_ids.h
+ITEM_ANGELIC_ANKH	the game	"Angelic Ankh" (MsgItemName + 61)	games/tla/include/item_ids.h
+ITEM_DEMONIC_STAFF	the game	"Demonic Staff" (MsgItemName + 62)	games/tla/include/item_ids.h
+ITEM_CRYSTAL_ROD	the game	"Crystal Rod" (MsgItemName + 63)	games/tla/include/item_ids.h
+ITEM_ZODIAC_WAND	the game	"Zodiac Wand" (MsgItemName + 64)	games/tla/include/item_ids.h
+ITEM_SHAMANS_ROD	the game	"Shaman's Rod" (MsgItemName + 65)	games/tla/include/item_ids.h
+ITEM_LEATHER_ARMOR	the game	"Leather Armor" (MsgItemName + 75)	games/tla/include/item_ids.h
+ITEM_PSYNERGY_ARMOR	the game	"Psynergy Armor" (MsgItemName + 76)	games/tla/include/item_ids.h
+ITEM_CHAIN_MAIL	the game	"Chain Mail" (MsgItemName + 77)	games/tla/include/item_ids.h
+ITEM_ARMORED_SHELL	the game	"Armored Shell" (MsgItemName + 78)	games/tla/include/item_ids.h
+ITEM_PLATE_MAIL	the game	"Plate Mail" (MsgItemName + 79)	games/tla/include/item_ids.h
+ITEM_STEEL_ARMOR	the game	"Steel Armor" (MsgItemName + 80)	games/tla/include/item_ids.h
+ITEM_SPIRIT_ARMOR	the game	"Spirit Armor" (MsgItemName + 81)	games/tla/include/item_ids.h
+ITEM_DRAGON_SCALES	the game	"Dragon Scales" (MsgItemName + 82)	games/tla/include/item_ids.h
+ITEM_DEMON_MAIL	the game	"Demon Mail" (MsgItemName + 83)	games/tla/include/item_ids.h
+ITEM_ASURAS_ARMOR	the game	"Asura's Armor" (MsgItemName + 84)	games/tla/include/item_ids.h
+ITEM_SPIKED_ARMOR	the game	"Spiked Armor" (MsgItemName + 85)	games/tla/include/item_ids.h
+ITEM_COTTON_SHIRT	the game	"Cotton Shirt" (MsgItemName + 89)	games/tla/include/item_ids.h
+ITEM_TRAVEL_VEST	the game	"Travel Vest" (MsgItemName + 90)	games/tla/include/item_ids.h
+ITEM_FUR_COAT	the game	"Fur Coat" (MsgItemName + 91)	games/tla/include/item_ids.h
+ITEM_ADEPTS_CLOTHES	the game	"Adept's Clothes" (MsgItemName + 92)	games/tla/include/item_ids.h
+ITEM_ELVEN_SHIRT	the game	"Elven Shirt" (MsgItemName + 93)	games/tla/include/item_ids.h
+ITEM_SILVER_VEST	the game	"Silver Vest" (MsgItemName + 94)	games/tla/include/item_ids.h
+ITEM_WATER_JACKET	the game	"Water Jacket" (MsgItemName + 95)	games/tla/include/item_ids.h
+ITEM_STORM_GEAR	the game	"Storm Gear" (MsgItemName + 96)	games/tla/include/item_ids.h
+ITEM_KIMONO	the game	"Kimono" (MsgItemName + 97)	games/tla/include/item_ids.h
+ITEM_NINJA_GARB	the game	"Ninja Garb" (MsgItemName + 98)	games/tla/include/item_ids.h
+ITEM_ONE_PIECE_DRESS	the game	"One-Piece Dress" (MsgItemName + 103)	games/tla/include/item_ids.h
+ITEM_TRAVEL_ROBE	the game	"Travel Robe" (MsgItemName + 104)	games/tla/include/item_ids.h
+ITEM_SILK_ROBE	the game	"Silk Robe" (MsgItemName + 105)	games/tla/include/item_ids.h
+ITEM_CHINA_DRESS	the game	"China Dress" (MsgItemName + 106)	games/tla/include/item_ids.h
+ITEM_JERKIN	the game	"Jerkin" (MsgItemName + 107)	games/tla/include/item_ids.h
+ITEM_COCKTAIL_DRESS	the game	"Cocktail Dress" (MsgItemName + 108)	games/tla/include/item_ids.h
+ITEM_BLESSED_ROBE	the game	"Blessed Robe" (MsgItemName + 109)	games/tla/include/item_ids.h
+ITEM_MAGICAL_CASSOCK	the game	"Magical Cassock" (MsgItemName + 110)	games/tla/include/item_ids.h
+ITEM_MYSTERIOUS_ROBE	the game	"Mysterious Robe" (MsgItemName + 111)	games/tla/include/item_ids.h
+ITEM_FEATHERED_ROBE	the game	"Feathered Robe" (MsgItemName + 112)	games/tla/include/item_ids.h
+ITEM_ORACLES_ROBE	the game	"Oracle's Robe" (MsgItemName + 113)	games/tla/include/item_ids.h
+ITEM_WOODEN_SHIELD	the game	"Wooden Shield" (MsgItemName + 118)	games/tla/include/item_ids.h
+ITEM_BRONZE_SHIELD	the game	"Bronze Shield" (MsgItemName + 119)	games/tla/include/item_ids.h
+ITEM_IRON_SHIELD	the game	"Iron Shield" (MsgItemName + 120)	games/tla/include/item_ids.h
+ITEM_KNIGHTS_SHIELD	the game	"Knight's Shield" (MsgItemName + 121)	games/tla/include/item_ids.h
+ITEM_MIRRORED_SHIELD	the game	"Mirrored Shield" (MsgItemName + 122)	games/tla/include/item_ids.h
+ITEM_DRAGON_SHIELD	the game	"Dragon Shield" (MsgItemName + 123)	games/tla/include/item_ids.h
+ITEM_EARTH_SHIELD	the game	"Earth Shield" (MsgItemName + 124)	games/tla/include/item_ids.h
+ITEM_PADDED_GLOVES	the game	"Padded Gloves" (MsgItemName + 127)	games/tla/include/item_ids.h
+ITEM_LEATHER_GLOVES	the game	"Leather Gloves" (MsgItemName + 128)	games/tla/include/item_ids.h
+ITEM_GAUNTLETS	the game	"Gauntlets" (MsgItemName + 129)	games/tla/include/item_ids.h
+ITEM_VAMBRACE	the game	"Vambrace" (MsgItemName + 130)	games/tla/include/item_ids.h
+ITEM_WAR_GLOVES	the game	"War Gloves" (MsgItemName + 131)	games/tla/include/item_ids.h
+ITEM_SPIRIT_GLOVES	the game	"Spirit Gloves" (MsgItemName + 132)	games/tla/include/item_ids.h
+ITEM_BATTLE_GLOVES	the game	"Battle Gloves" (MsgItemName + 133)	games/tla/include/item_ids.h
+ITEM_AURA_GLOVES	the game	"Aura Gloves" (MsgItemName + 134)	games/tla/include/item_ids.h
+ITEM_LEATHER_ARMLET	the game	"Leather Armlet" (MsgItemName + 136)	games/tla/include/item_ids.h
+ITEM_ARMLET	the game	"Armlet" (MsgItemName + 137)	games/tla/include/item_ids.h
+ITEM_HEAVY_ARMLET	the game	"Heavy Armlet" (MsgItemName + 138)	games/tla/include/item_ids.h
+ITEM_SILVER_ARMLET	the game	"Silver Armlet" (MsgItemName + 139)	games/tla/include/item_ids.h
+ITEM_SPIRIT_ARMLET	the game	"Spirit Armlet" (MsgItemName + 140)	games/tla/include/item_ids.h
+ITEM_VIRTUOUS_ARMLET	the game	"Virtuous Armlet" (MsgItemName + 141)	games/tla/include/item_ids.h
+ITEM_GUARDIAN_ARMLET	the game	"Guardian Armlet" (MsgItemName + 142)	games/tla/include/item_ids.h
+ITEM_OPEN_HELM	the game	"Open Helm" (MsgItemName + 145)	games/tla/include/item_ids.h
+ITEM_BRONZE_HELM	the game	"Bronze Helm" (MsgItemName + 146)	games/tla/include/item_ids.h
+ITEM_IRON_HELM	the game	"Iron Helm" (MsgItemName + 147)	games/tla/include/item_ids.h
+ITEM_STEEL_HELM	the game	"Steel Helm" (MsgItemName + 148)	games/tla/include/item_ids.h
+ITEM_SILVER_HELM	the game	"Silver Helm" (MsgItemName + 149)	games/tla/include/item_ids.h
+ITEM_KNIGHTS_HELM	the game	"Knight's Helm" (MsgItemName + 150)	games/tla/include/item_ids.h
+ITEM_WARRIORS_HELM	the game	"Warrior's Helm" (MsgItemName + 151)	games/tla/include/item_ids.h
+ITEM_ADEPTS_HELM	the game	"Adept's Helm" (MsgItemName + 152)	games/tla/include/item_ids.h
+ITEM_LEATHER_CAP	the game	"Leather Cap" (MsgItemName + 156)	games/tla/include/item_ids.h
+ITEM_WOODEN_CAP	the game	"Wooden Cap" (MsgItemName + 157)	games/tla/include/item_ids.h
+ITEM_MAIL_CAP	the game	"Mail Cap" (MsgItemName + 158)	games/tla/include/item_ids.h
+ITEM_JEWELED_CROWN	the game	"Jeweled Crown" (MsgItemName + 159)	games/tla/include/item_ids.h
+ITEM_NINJA_HOOD	the game	"Ninja Hood" (MsgItemName + 160)	games/tla/include/item_ids.h
+ITEM_LUCKY_CAP	the game	"Lucky Cap" (MsgItemName + 161)	games/tla/include/item_ids.h
+ITEM_THUNDER_CROWN	the game	"Thunder Crown" (MsgItemName + 162)	games/tla/include/item_ids.h
+ITEM_PROPHETS_HAT	the game	"Prophet's Hat" (MsgItemName + 163)	games/tla/include/item_ids.h
+ITEM_LURE_CAP	the game	"Lure Cap" (MsgItemName + 164)	games/tla/include/item_ids.h
+ITEM_CIRCLET	the game	"Circlet" (MsgItemName + 166)	games/tla/include/item_ids.h
+ITEM_SILVER_CIRCLET	the game	"Silver Circlet" (MsgItemName + 167)	games/tla/include/item_ids.h
+ITEM_GUARDIAN_CIRCLET	the game	"Guardian Circlet" (MsgItemName + 168)	games/tla/include/item_ids.h
+ITEM_PLATINUM_CIRCLET	the game	"Platinum Circlet" (MsgItemName + 169)	games/tla/include/item_ids.h
+ITEM_MYTHRIL_CIRCLET	the game	"Mythril Circlet" (MsgItemName + 170)	games/tla/include/item_ids.h
+ITEM_GLITTERING_TIARA	the game	"Glittering Tiara" (MsgItemName + 171)	games/tla/include/item_ids.h
+ITEM_HERB	the game	"Herb" (MsgItemName + 180)	games/tla/include/item_ids.h
+ITEM_NUT	the game	"Nut" (MsgItemName + 181)	games/tla/include/item_ids.h
+ITEM_VIAL	the game	"Vial" (MsgItemName + 182)	games/tla/include/item_ids.h
+ITEM_POTION	the game	"Potion" (MsgItemName + 183)	games/tla/include/item_ids.h
+ITEM_HERMES_WATER	the game	"Hermes' Water" (MsgItemName + 184)	games/tla/include/item_ids.h
+ITEM_EMPTY_BOTTLE	the game	"Empty Bottle" (MsgItemName + 185)	games/tla/include/item_ids.h
+ITEM_PSY_CRYSTAL	the game	"Psy Crystal" (MsgItemName + 186)	games/tla/include/item_ids.h
+ITEM_ANTIDOTE	the game	"Antidote" (MsgItemName + 187)	games/tla/include/item_ids.h
+ITEM_ELIXIR	the game	"Elixir" (MsgItemName + 188)	games/tla/include/item_ids.h
+ITEM_WATER_OF_LIFE	the game	"Water of Life" (MsgItemName + 189)	games/tla/include/item_ids.h
+ITEM_MIST_POTION	the game	"Mist Potion" (MsgItemName + 190)	games/tla/include/item_ids.h
+ITEM_POWER_BREAD	the game	"Power Bread" (MsgItemName + 191)	games/tla/include/item_ids.h
+ITEM_COOKIE	the game	"Cookie" (MsgItemName + 192)	games/tla/include/item_ids.h
+ITEM_APPLE	the game	"Apple" (MsgItemName + 193)	games/tla/include/item_ids.h
+ITEM_HARD_NUT	the game	"Hard Nut" (MsgItemName + 194)	games/tla/include/item_ids.h
+ITEM_MINT	the game	"Mint" (MsgItemName + 195)	games/tla/include/item_ids.h
+ITEM_LUCKY_PEPPER	the game	"Lucky Pepper" (MsgItemName + 196)	games/tla/include/item_ids.h
+ITEM_LASH_PEBBLE	the game	"Lash Pebble" (MsgItemName + 198)	games/tla/include/item_ids.h
+ITEM_POUND_CUBE	the game	"Pound Cube" (MsgItemName + 199)	games/tla/include/item_ids.h
+ITEM_ORB_OF_FORCE	the game	"Orb of Force" (MsgItemName + 200)	games/tla/include/item_ids.h
+ITEM_DOUSE_DROP	the game	"Douse Drop" (MsgItemName + 201)	games/tla/include/item_ids.h
+ITEM_FROST_JEWEL	the game	"Frost Jewel" (MsgItemName + 202)	games/tla/include/item_ids.h
+ITEM_LIFTING_GEM	the game	"Lifting Gem" (MsgItemName + 203)	games/tla/include/item_ids.h
+ITEM_HALT_GEM	the game	"Halt Gem" (MsgItemName + 204)	games/tla/include/item_ids.h
+ITEM_CLOAK_BALL	the game	"Cloak Ball" (MsgItemName + 205)	games/tla/include/item_ids.h
+ITEM_CARRY_STONE	the game	"Carry Stone" (MsgItemName + 206)	games/tla/include/item_ids.h
+ITEM_CATCH_BEADS	the game	"Catch Beads" (MsgItemName + 207)	games/tla/include/item_ids.h
+ITEM_TREMOR_BIT	the game	"Tremor Bit" (MsgItemName + 208)	games/tla/include/item_ids.h
+ITEM_SCOOP_GEM	the game	"Scoop Gem" (MsgItemName + 209)	games/tla/include/item_ids.h
+ITEM_CYCLONE_CHIP	the game	"Cyclone Chip" (MsgItemName + 210)	games/tla/include/item_ids.h
+ITEM_BURST_BROOCH	the game	"Burst Brooch" (MsgItemName + 213)	games/tla/include/item_ids.h
+ITEM_GRINDSTONE	the game	"Grindstone" (MsgItemName + 214)	games/tla/include/item_ids.h
+ITEM_HOVER_JADE	the game	"Hover Jade" (MsgItemName + 215)	games/tla/include/item_ids.h
+ITEM_TELEPORT_LAPIS	the game	"Teleport Lapis" (MsgItemName + 217)	games/tla/include/item_ids.h
+ITEM_VENUS_STAR	the game	"Venus Star" (MsgItemName + 220)	games/tla/include/item_ids.h
+ITEM_MERCURY_STAR	the game	"Mercury Star" (MsgItemName + 221)	games/tla/include/item_ids.h
+ITEM_MYTHRIL_BAG	the game	"Mythril Bag" (MsgItemName + 222)	games/tla/include/item_ids.h
+ITEM_SMALL_JEWEL	the game	"Small Jewel" (MsgItemName + 225)	games/tla/include/item_ids.h
+ITEM_SMOKE_BOMB	the game	"Smoke Bomb" (MsgItemName + 226)	games/tla/include/item_ids.h
+ITEM_SLEEP_BOMB	the game	"Sleep Bomb" (MsgItemName + 227)	games/tla/include/item_ids.h
+ITEM_GAME_TICKET	the game	"Game Ticket" (MsgItemName + 228)	games/tla/include/item_ids.h
+ITEM_LUCKY_MEDAL	the game	"Lucky Medal" (MsgItemName + 229)	games/tla/include/item_ids.h
+ITEM_DRAGONS_EYE	the game	"Dragon's Eye" (MsgItemName + 230)	games/tla/include/item_ids.h
+ITEM_BONE	the game	"Bone" (MsgItemName + 231)	games/tla/include/item_ids.h
+ITEM_ANCHOR_CHARM	the game	"Anchor Charm" (MsgItemName + 232)	games/tla/include/item_ids.h
+ITEM_CORN	the game	"Corn" (MsgItemName + 233)	games/tla/include/item_ids.h
+ITEM_CELL_KEY	the game	"Cell Key" (MsgItemName + 234)	games/tla/include/item_ids.h
+ITEM_BOAT_TICKET	the game	"Boat Ticket" (MsgItemName + 235)	games/tla/include/item_ids.h
+ITEM_SACRED_FEATHER	the game	"Sacred Feather" (MsgItemName + 236)	games/tla/include/item_ids.h
+ITEM_MYSTIC_DRAUGHT	the game	"Mystic Draught" (MsgItemName + 237)	games/tla/include/item_ids.h
+ITEM_OIL_DROP	the game	"Oil Drop" (MsgItemName + 238)	games/tla/include/item_ids.h
+ITEM_WEASELS_CLAW	the game	"Weasel's Claw" (MsgItemName + 239)	games/tla/include/item_ids.h
+ITEM_BRAMBLE_SEED	the game	"Bramble Seed" (MsgItemName + 240)	games/tla/include/item_ids.h
+ITEM_CRYSTAL_POWDER	the game	"Crystal Powder" (MsgItemName + 241)	games/tla/include/item_ids.h
+ITEM_BLACK_CRYSTAL	the game	"Black Crystal" (MsgItemName + 242)	games/tla/include/item_ids.h
+ITEM_RED_KEY	the game	"Red Key" (MsgItemName + 243)	games/tla/include/item_ids.h
+ITEM_BLUE_KEY	the game	"Blue Key" (MsgItemName + 244)	games/tla/include/item_ids.h
+ITEM_JUPITER_STAR	the game	"Jupiter Star" (MsgItemName + 246)	games/tla/include/item_ids.h
+ITEM_MARS_STAR	the game	"Mars Star" (MsgItemName + 247)	games/tla/include/item_ids.h
+ITEM_MYTHRIL_SHIRT	the game	"Mythril Shirt" (MsgItemName + 250)	games/tla/include/item_ids.h
+ITEM_SILK_SHIRT	the game	"Silk Shirt" (MsgItemName + 251)	games/tla/include/item_ids.h
+ITEM_RUNNING_SHIRT	the game	"Running Shirt" (MsgItemName + 252)	games/tla/include/item_ids.h
+ITEM_HYPER_BOOTS	the game	"Hyper Boots" (MsgItemName + 256)	games/tla/include/item_ids.h
+ITEM_QUICK_BOOTS	the game	"Quick Boots" (MsgItemName + 257)	games/tla/include/item_ids.h
+ITEM_FUR_BOOTS	the game	"Fur Boots" (MsgItemName + 258)	games/tla/include/item_ids.h
+ITEM_TURTLE_BOOTS	the game	"Turtle Boots" (MsgItemName + 259)	games/tla/include/item_ids.h
+ITEM_ADEPT_RING	the game	"Adept Ring" (MsgItemName + 262)	games/tla/include/item_ids.h
+ITEM_WAR_RING	the game	"War Ring" (MsgItemName + 263)	games/tla/include/item_ids.h
+ITEM_SLEEP_RING	the game	"Sleep Ring" (MsgItemName + 264)	games/tla/include/item_ids.h
+ITEM_HEALING_RING	the game	"Healing Ring" (MsgItemName + 265)	games/tla/include/item_ids.h
+ITEM_UNICORN_RING	the game	"Unicorn Ring" (MsgItemName + 266)	games/tla/include/item_ids.h
+ITEM_FAIRY_RING	the game	"Fairy Ring" (MsgItemName + 267)	games/tla/include/item_ids.h
+ITEM_CLERICS_RING	the game	"Cleric's Ring" (MsgItemName + 268)	games/tla/include/item_ids.h
+ITEM_HUGE_SWORD	the game	"Huge Sword" (MsgItemName + 272)	games/tla/include/item_ids.h
+ITEM_MYTHRIL_BLADE	the game	"Mythril Blade" (MsgItemName + 273)	games/tla/include/item_ids.h
+ITEM_LEVATINE	the game	"Levatine" (MsgItemName + 274)	games/tla/include/item_ids.h
+ITEM_DARKSWORD	the game	"Darksword" (MsgItemName + 275)	games/tla/include/item_ids.h
+ITEM_EXCALIBUR	the game	"Excalibur" (MsgItemName + 276)	games/tla/include/item_ids.h
+ITEM_ROBBERS_BLADE	the game	"Robber's Blade" (MsgItemName + 277)	games/tla/include/item_ids.h
+ITEM_SOUL_BRAND	the game	"Soul Brand" (MsgItemName + 278)	games/tla/include/item_ids.h
+ITEM_STORM_BRAND	the game	"Storm Brand" (MsgItemName + 279)	games/tla/include/item_ids.h
+ITEM_HESTIA_BLADE	the game	"Hestia Blade" (MsgItemName + 280)	games/tla/include/item_ids.h
+ITEM_LIGHTNING_SWORD	the game	"Lightning Sword" (MsgItemName + 281)	games/tla/include/item_ids.h
+ITEM_RUNE_BLADE	the game	"Rune Blade" (MsgItemName + 282)	games/tla/include/item_ids.h
+ITEM_CLOUD_BRAND	the game	"Cloud Brand" (MsgItemName + 283)	games/tla/include/item_ids.h
+ITEM_SYLPH_RAPIER	the game	"Sylph Rapier" (MsgItemName + 285)	games/tla/include/item_ids.h
+ITEM_BURNING_SWORD	the game	"Burning Sword" (MsgItemName + 286)	games/tla/include/item_ids.h
+ITEM_PIRATES_SWORD	the game	"Pirate's Sword" (MsgItemName + 287)	games/tla/include/item_ids.h
+ITEM_CORSAIRS_EDGE	the game	"Corsair's Edge" (MsgItemName + 288)	games/tla/include/item_ids.h
+ITEM_PIRATES_SABRE	the game	"Pirate's Sabre" (MsgItemName + 289)	games/tla/include/item_ids.h
+ITEM_HYPNOS_SWORD	the game	"Hypnos' Sword" (MsgItemName + 290)	games/tla/include/item_ids.h
+ITEM_MIST_SABRE	the game	"Mist Sabre" (MsgItemName + 291)	games/tla/include/item_ids.h
+ITEM_PHAETONS_BLADE	the game	"Phaeton's Blade" (MsgItemName + 292)	games/tla/include/item_ids.h
+ITEM_TISIPHONE_EDGE	the game	"Tisiphone Edge" (MsgItemName + 293)	games/tla/include/item_ids.h
+ITEM_APOLLOS_AXE	the game	"Apollo's Axe" (MsgItemName + 295)	games/tla/include/item_ids.h
+ITEM_GAIAS_AXE	the game	"Gaia's Axe" (MsgItemName + 296)	games/tla/include/item_ids.h
+ITEM_STELLAR_AXE	the game	"Stellar Axe" (MsgItemName + 297)	games/tla/include/item_ids.h
+ITEM_CAPTAINS_AXE	the game	"Captain's Axe" (MsgItemName + 298)	games/tla/include/item_ids.h
+ITEM_VIKING_AXE	the game	"Viking Axe" (MsgItemName + 299)	games/tla/include/item_ids.h
+ITEM_DISK_AXE	the game	"Disk Axe" (MsgItemName + 300)	games/tla/include/item_ids.h
+ITEM_THEMIS_AXE	the game	"Themis' Axe" (MsgItemName + 301)	games/tla/include/item_ids.h
+ITEM_MIGHTY_AXE	the game	"Mighty Axe" (MsgItemName + 302)	games/tla/include/item_ids.h
+ITEM_TARTARUS_AXE	the game	"Tartarus Axe" (MsgItemName + 303)	games/tla/include/item_ids.h
+ITEM_COMET_MACE	the game	"Comet Mace" (MsgItemName + 305)	games/tla/include/item_ids.h
+ITEM_TUNGSTEN_MACE	the game	"Tungsten Mace" (MsgItemName + 306)	games/tla/include/item_ids.h
+ITEM_DEMON_MACE	the game	"Demon Mace" (MsgItemName + 307)	games/tla/include/item_ids.h
+ITEM_HAGBONE_MACE	the game	"Hagbone Mace" (MsgItemName + 308)	games/tla/include/item_ids.h
+ITEM_BLOW_MACE	the game	"Blow Mace" (MsgItemName + 309)	games/tla/include/item_ids.h
+ITEM_RISING_MACE	the game	"Rising Mace" (MsgItemName + 310)	games/tla/include/item_ids.h
+ITEM_THANATOS_MACE	the game	"Thanatos Mace" (MsgItemName + 311)	games/tla/include/item_ids.h
+ITEM_CLOUD_WAND	the game	"Cloud Wand" (MsgItemName + 313)	games/tla/include/item_ids.h
+ITEM_SALAMANDER_ROD	the game	"Salamander Rod" (MsgItemName + 314)	games/tla/include/item_ids.h
+ITEM_NEBULA_WAND	the game	"Nebula Wand" (MsgItemName + 315)	games/tla/include/item_ids.h
+ITEM_DRACOMACE	the game	"Dracomace" (MsgItemName + 316)	games/tla/include/item_ids.h
+ITEM_GLOWER_STAFF	the game	"Glower Staff" (MsgItemName + 317)	games/tla/include/item_ids.h
+ITEM_GOBLINS_ROD	the game	"Goblin's Rod" (MsgItemName + 318)	games/tla/include/item_ids.h
+ITEM_MEDITATION_ROD	the game	"Meditation Rod" (MsgItemName + 319)	games/tla/include/item_ids.h
+ITEM_FIREMANS_POLE	the game	"Fireman's Pole" (MsgItemName + 320)	games/tla/include/item_ids.h
+ITEM_ATROPOS_ROD	the game	"Atropos' Rod" (MsgItemName + 321)	games/tla/include/item_ids.h
+ITEM_LACHESIS_RULE	the game	"Lachesis' Rule" (MsgItemName + 322)	games/tla/include/item_ids.h
+ITEM_CLOTHOS_DISTAFF	the game	"Clotho's Distaff" (MsgItemName + 323)	games/tla/include/item_ids.h
+ITEM_STAFF_OF_ANUBIS	the game	"Staff of Anubis" (MsgItemName + 324)	games/tla/include/item_ids.h
+ITEM_TRIDENT	the game	"Trident" (MsgItemName + 326)	games/tla/include/item_ids.h
+ITEM_PLANET_ARMOR	the game	"Planet Armor" (MsgItemName + 328)	games/tla/include/item_ids.h
+ITEM_DRAGON_MAIL	the game	"Dragon Mail" (MsgItemName + 329)	games/tla/include/item_ids.h
+ITEM_CHRONOS_MAIL	the game	"Chronos Mail" (MsgItemName + 330)	games/tla/include/item_ids.h
+ITEM_STEALTH_ARMOR	the game	"Stealth Armor" (MsgItemName + 331)	games/tla/include/item_ids.h
+ITEM_XYLION_ARMOR	the game	"Xylion Armor" (MsgItemName + 332)	games/tla/include/item_ids.h
+ITEM_IXION_MAIL	the game	"Ixion Mail" (MsgItemName + 333)	games/tla/include/item_ids.h
+ITEM_PHANTASMAL_MAIL	the game	"Phantasmal Mail" (MsgItemName + 334)	games/tla/include/item_ids.h
+ITEM_EREBUS_ARMOR	the game	"Erebus Armor" (MsgItemName + 335)	games/tla/include/item_ids.h
+ITEM_VALKYRIE_MAIL	the game	"Valkyrie Mail" (MsgItemName + 336)	games/tla/include/item_ids.h
+ITEM_FAERY_VEST	the game	"Faery Vest" (MsgItemName + 338)	games/tla/include/item_ids.h
+ITEM_MYTHRIL_CLOTHES	the game	"Mythril Clothes" (MsgItemName + 339)	games/tla/include/item_ids.h
+ITEM_FULL_METAL_VEST	the game	"Full Metal Vest" (MsgItemName + 340)	games/tla/include/item_ids.h
+ITEM_WILD_COAT	the game	"Wild Coat" (MsgItemName + 341)	games/tla/include/item_ids.h
+ITEM_FLORAL_DRESS	the game	"Floral Dress" (MsgItemName + 342)	games/tla/include/item_ids.h
+ITEM_FESTIVAL_COAT	the game	"Festival Coat" (MsgItemName + 343)	games/tla/include/item_ids.h
+ITEM_ERINYES_TUNIC	the game	"Erinyes Tunic" (MsgItemName + 344)	games/tla/include/item_ids.h
+ITEM_TRITONS_WARD	the game	"Triton's Ward" (MsgItemName + 345)	games/tla/include/item_ids.h
+ITEM_DRAGON_ROBE	the game	"Dragon Robe" (MsgItemName + 347)	games/tla/include/item_ids.h
+ITEM_ARDAGH_ROBE	the game	"Ardagh Robe" (MsgItemName + 348)	games/tla/include/item_ids.h
+ITEM_MUNI_ROBE	the game	"Muni Robe" (MsgItemName + 349)	games/tla/include/item_ids.h
+ITEM_AEOLIAN_CASSOCK	the game	"Aeolian Cassock" (MsgItemName + 350)	games/tla/include/item_ids.h
+ITEM_IRIS_ROBE	the game	"Iris Robe" (MsgItemName + 351)	games/tla/include/item_ids.h
+ITEM_LUNA_SHIELD	the game	"Luna Shield" (MsgItemName + 353)	games/tla/include/item_ids.h
+ITEM_FLAME_SHIELD	the game	"Flame Shield" (MsgItemName + 355)	games/tla/include/item_ids.h
+ITEM_TERRA_SHIELD	the game	"Terra Shield" (MsgItemName + 356)	games/tla/include/item_ids.h
+ITEM_COSMOS_SHIELD	the game	"Cosmos Shield" (MsgItemName + 357)	games/tla/include/item_ids.h
+ITEM_FUJIN_SHIELD	the game	"Fujin Shield" (MsgItemName + 358)	games/tla/include/item_ids.h
+ITEM_AEGIS_SHIELD	the game	"Aegis Shield" (MsgItemName + 359)	games/tla/include/item_ids.h
+ITEM_AERIAL_GLOVES	the game	"Aerial Gloves" (MsgItemName + 361)	games/tla/include/item_ids.h
+ITEM_TITAN_GLOVES	the game	"Titan Gloves" (MsgItemName + 362)	games/tla/include/item_ids.h
+ITEM_BIG_BANG_GLOVES	the game	"Big Bang Gloves" (MsgItemName + 363)	games/tla/include/item_ids.h
+ITEM_CRAFTED_GLOVES	the game	"Crafted Gloves" (MsgItemName + 364)	games/tla/include/item_ids.h
+ITEM_RIOT_GLOVES	the game	"Riot Gloves" (MsgItemName + 365)	games/tla/include/item_ids.h
+ITEM_CLEAR_BRACELET	the game	"Clear Bracelet" (MsgItemName + 368)	games/tla/include/item_ids.h
+ITEM_MYTHRIL_ARMLET	the game	"Mythril Armlet" (MsgItemName + 369)	games/tla/include/item_ids.h
+ITEM_BONE_ARMLET	the game	"Bone Armlet" (MsgItemName + 370)	games/tla/include/item_ids.h
+ITEM_JESTERS_ARMLET	the game	"Jester's Armlet" (MsgItemName + 371)	games/tla/include/item_ids.h
+ITEM_LEDAS_BRACELET	the game	"Leda's Bracelet" (MsgItemName + 372)	games/tla/include/item_ids.h
+ITEM_DRAGON_HELM	the game	"Dragon Helm" (MsgItemName + 374)	games/tla/include/item_ids.h
+ITEM_MYTHRIL_HELM	the game	"Mythril Helm" (MsgItemName + 375)	games/tla/include/item_ids.h
+ITEM_FEAR_HELM	the game	"Fear Helm" (MsgItemName + 376)	games/tla/include/item_ids.h
+ITEM_MILLENIUM_HELM	the game	"Millenium Helm" (MsgItemName + 377)	games/tla/include/item_ids.h
+ITEM_VIKING_HELM	the game	"Viking Helm" (MsgItemName + 378)	games/tla/include/item_ids.h
+ITEM_GLORIA_HELM	the game	"Gloria Helm" (MsgItemName + 379)	games/tla/include/item_ids.h
+ITEM_MINERVA_HELM	the game	"Minerva Helm" (MsgItemName + 380)	games/tla/include/item_ids.h
+ITEM_FLOATING_HAT	the game	"Floating Hat" (MsgItemName + 382)	games/tla/include/item_ids.h
+ITEM_NURSES_CAP	the game	"Nurse's Cap" (MsgItemName + 383)	games/tla/include/item_ids.h
+ITEM_THORN_CROWN	the game	"Thorn Crown" (MsgItemName + 384)	games/tla/include/item_ids.h
+ITEM_OTAFUKU_MASK	the game	"Otafuku Mask" (MsgItemName + 385)	games/tla/include/item_ids.h
+ITEM_HIOTOKO_MASK	the game	"Hiotoko Mask" (MsgItemName + 386)	games/tla/include/item_ids.h
+ITEM_CROWN_OF_GLORY	the game	"Crown of Glory" (MsgItemName + 387)	games/tla/include/item_ids.h
+ITEM_ALASTORS_HOOD	the game	"Alastor's Hood" (MsgItemName + 388)	games/tla/include/item_ids.h
+ITEM_PURE_CIRCLET	the game	"Pure Circlet" (MsgItemName + 390)	games/tla/include/item_ids.h
+ITEM_ASTRAL_CIRCLET	the game	"Astral Circlet" (MsgItemName + 391)	games/tla/include/item_ids.h
+ITEM_PSYCHIC_CIRCLET	the game	"Psychic Circlet" (MsgItemName + 392)	games/tla/include/item_ids.h
+ITEM_DEMON_CIRCLET	the game	"Demon Circlet" (MsgItemName + 393)	games/tla/include/item_ids.h
+ITEM_CLARITY_CIRCLET	the game	"Clarity Circlet" (MsgItemName + 394)	games/tla/include/item_ids.h
+ITEM_BRILLIANT_CIRCLET	the game	"Brilliant Circlet" (MsgItemName + 395)	games/tla/include/item_ids.h
+ITEM_BERSERKER_BAND	the game	"Berserker Band" (MsgItemName + 396)	games/tla/include/item_ids.h
+ITEM_DIVINE_CAMISOLE	the game	"Divine Camisole" (MsgItemName + 398)	games/tla/include/item_ids.h
+ITEM_HERBED_SHIRT	the game	"Herbed Shirt" (MsgItemName + 399)	games/tla/include/item_ids.h
+ITEM_GOLDEN_SHIRT	the game	"Golden Shirt" (MsgItemName + 400)	games/tla/include/item_ids.h
+ITEM_CASUAL_SHIRT	the game	"Casual Shirt" (MsgItemName + 401)	games/tla/include/item_ids.h
+ITEM_LEATHER_BOOTS	the game	"Leather Boots" (MsgItemName + 402)	games/tla/include/item_ids.h
+ITEM_DRAGON_BOOTS	the game	"Dragon Boots" (MsgItemName + 403)	games/tla/include/item_ids.h
+ITEM_SAFETY_BOOTS	the game	"Safety Boots" (MsgItemName + 404)	games/tla/include/item_ids.h
+ITEM_KNIGHTS_GREAVE	the game	"Knight's Greave" (MsgItemName + 405)	games/tla/include/item_ids.h
+ITEM_SILVER_GREAVE	the game	"Silver Greave" (MsgItemName + 406)	games/tla/include/item_ids.h
+ITEM_NINJA_SANDALS	the game	"Ninja Sandals" (MsgItemName + 407)	games/tla/include/item_ids.h
+ITEM_GOLDEN_BOOTS	the game	"Golden Boots" (MsgItemName + 408)	games/tla/include/item_ids.h
+ITEM_SPIRIT_RING	the game	"Spirit Ring" (MsgItemName + 409)	games/tla/include/item_ids.h
+ITEM_STARDUST_RING	the game	"Stardust Ring" (MsgItemName + 410)	games/tla/include/item_ids.h
+ITEM_AROMA_RING	the game	"Aroma Ring" (MsgItemName + 411)	games/tla/include/item_ids.h
+ITEM_RAINBOW_RING	the game	"Rainbow Ring" (MsgItemName + 412)	games/tla/include/item_ids.h
+ITEM_SOUL_RING	the game	"Soul Ring" (MsgItemName + 413)	games/tla/include/item_ids.h
+ITEM_GUARDIAN_RING	the game	"Guardian Ring" (MsgItemName + 414)	games/tla/include/item_ids.h
+ITEM_GOLDEN_RING	the game	"Golden Ring" (MsgItemName + 415)	games/tla/include/item_ids.h
+ITEM_RUSTY_SWORD	the game	"Rusty Sword" (MsgItemName + 417)	games/tla/include/item_ids.h
+ITEM_RUSTY_AXE	the game	"Rusty Axe" (MsgItemName + 421)	games/tla/include/item_ids.h
+ITEM_RUSTY_MACE	the game	"Rusty Mace" (MsgItemName + 423)	games/tla/include/item_ids.h
+ITEM_RUSTY_STAFF	the game	"Rusty Staff" (MsgItemName + 425)	games/tla/include/item_ids.h
+ITEM_TEAR_STONE	the game	"Tear Stone" (MsgItemName + 429)	games/tla/include/item_ids.h
+ITEM_STAR_DUST	the game	"Star Dust" (MsgItemName + 430)	games/tla/include/item_ids.h
+ITEM_SYLPH_FEATHER	the game	"Sylph Feather" (MsgItemName + 431)	games/tla/include/item_ids.h
+ITEM_DRAGON_SKIN	the game	"Dragon Skin" (MsgItemName + 432)	games/tla/include/item_ids.h
+ITEM_SALAMANDER_TAIL	the game	"Salamander Tail" (MsgItemName + 433)	games/tla/include/item_ids.h
+ITEM_GOLEM_CORE	the game	"Golem Core" (MsgItemName + 434)	games/tla/include/item_ids.h
+ITEM_MYTHRIL_SILVER	the game	"Mythril Silver" (MsgItemName + 435)	games/tla/include/item_ids.h
+ITEM_DARK_MATTER	the game	"Dark Matter" (MsgItemName + 436)	games/tla/include/item_ids.h
+ITEM_ORIHALCON	the game	"Orihalcon" (MsgItemName + 437)	games/tla/include/item_ids.h
+ITEM_RIGHT_PRONG	the game	"Right Prong" (MsgItemName + 439)	games/tla/include/item_ids.h
+ITEM_LEFT_PRONG	the game	"Left Prong" (MsgItemName + 440)	games/tla/include/item_ids.h
+ITEM_CENTER_PRONG	the game	"Center Prong" (MsgItemName + 441)	games/tla/include/item_ids.h
+ITEM_MYSTERIOUS_CARD	the game	"Mysterious Card" (MsgItemName + 443)	games/tla/include/item_ids.h
+ITEM_TRAINERS_WHIP	the game	"Trainer's Whip" (MsgItemName + 444)	games/tla/include/item_ids.h
+ITEM_TOMEGATHERICON	the game	"Tomegathericon" (MsgItemName + 445)	games/tla/include/item_ids.h
+ITEM_HEALING_FUNGUS	the game	"Healing Fungus" (MsgItemName + 448)	games/tla/include/item_ids.h
+ITEM_LAUGHING_FUNGUS	the game	"Laughing Fungus" (MsgItemName + 449)	games/tla/include/item_ids.h
+ITEM_SIGNAL_WHISTLE	the game	"Signal Whistle" (MsgItemName + 450)	games/tla/include/item_ids.h
+ITEM_DANCING_IDOL	the game	"Dancing Idol" (MsgItemName + 451)	games/tla/include/item_ids.h
+ITEM_PRETTY_STONE	the game	"Pretty Stone" (MsgItemName + 452)	games/tla/include/item_ids.h
+ITEM_RED_CLOTH	the game	"Red Cloth" (MsgItemName + 453)	games/tla/include/item_ids.h
+ITEM_MILK	the game	"Milk" (MsgItemName + 454)	games/tla/include/item_ids.h
+ITEM_LIL_TURTLE	the game	"Li'l Turtle" (MsgItemName + 455)	games/tla/include/item_ids.h
+ITEM_AQUARIUS_STONE	the game	"Aquarius Stone" (MsgItemName + 456)	games/tla/include/item_ids.h
+ITEM_LARGE_BREAD	the game	"Large Bread" (MsgItemName + 457)	games/tla/include/item_ids.h
+ITEM_SEA_GODS_TEAR	the game	"Sea God's Tear" (MsgItemName + 458)	games/tla/include/item_ids.h
+ITEM_RUIN_KEY	the game	"Ruin Key" (MsgItemName + 459)	games/tla/include/item_ids.h
+ITEM_MAGMA_BALL	the game	"Magma Ball" (MsgItemName + 460)	games/tla/include/item_ids.h
+Whirlwind_UpdateLower	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Whirlwind_Update)	games/tla/src/scene/jupiter_lighthouse_room_7.c
+Whirlwind_UpdateLower	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Whirlwind_Update)	games/tla/src/scene/jupiter_lighthouse_room_4.c
+CrackedTile_Fall	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was CrackedTile_FallEvent)	games/tla/src/scene/jupiter_lighthouse_room_3.c
+PushTarget_CheckCollision	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Func_02002338_)	games/tla/src/scene/jupiter_lighthouse_room_3.c
+CrackedTile_DropIn	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was CrackedTile_DropInLower)	games/tla/src/scene/jupiter_lighthouse_basement.c
+CrackedTile_DropIn	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was CrackedTile_DropInLower)	games/tla/src/scene/jupiter_lighthouse_room_1.c
+CrackedTile_DropIn	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was CrackedTile_DropInLower)	games/tla/src/scene/jupiter_lighthouse_entrance.c
+CrackedTile_Fall	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was CrackedTile_FallEvent)	games/tla/src/scene/jupiter_lighthouse_aerie_beacon.c
+Actor_Blink	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Func_02002614)	games/tla/src/scene/mars_lighthouse_entrance.c
+gPushKinds	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was gData_02005f58)	games/tla/src/scene/mars_lighthouse_room_f.c
+gPushLeaderSteps	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was gData_02005f7c)	games/tla/src/scene/mars_lighthouse_room_f.c
+gPushFootprints	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was gData_02005f64)	games/tla/src/scene/mars_lighthouse_room_f.c
+PushTarget_CheckCollision	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Func_020054f8_)	games/tla/src/scene/mars_lighthouse_room_f.c
+Actor_IsAbove	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Func_02001a44)	games/tla/src/scene/mars_lighthouse_star_room.c
+MarsLighthouseRoomF_ContinueSlide	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MarsLighthouseStarRoom_ContinueSlide)	games/tla/src/scene/mars_lighthouse_star_room.c
+MarsLighthouseRoomF_SlideOnIce	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MarsLighthouseStarRoom_SlideOnIce)	games/tla/src/scene/mars_lighthouse_star_room.c
+WorldMap_JitterTransitionCamera	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was StaffCredit_JitterTransitionCamera)	games/tla/src/scene/staff_credit.c
+MarsLighthouseRoomF_ContinueSlide	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MarsLighthouseRoomM_ContinueSlide)	games/tla/src/scene/mars_lighthouse_room_m.c
+MarsLighthouseRoomF_SlideOnIce	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MarsLighthouseRoomM_SlideOnIce)	games/tla/src/scene/mars_lighthouse_room_m.c
+TundariaTower_KeepSliding	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Settlements_KeepSliding)	games/tla/src/scene/settlements.c
+gTundariaTower_SlideAngles	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was gSettlements_SlideAngles)	games/tla/src/scene/settlements.c
+TundariaTower_SlideOnIce	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Settlements_SlideOnIce)	games/tla/src/scene/settlements.c
+TundariaTower_StopLeader	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Settlements_StopLeader)	games/tla/src/scene/settlements.c
+gTundariaTower_SlideAnglesByKey	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was gSettlements_SlideAnglesByKey)	games/tla/src/scene/settlements.c
+TundariaTower_SlideOnIceFacing	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Settlements_SlideOnIceFacing)	games/tla/src/scene/settlements.c
+Position_FlatDistance	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MagmaRockInside_FlatDistance)	games/tla/src/scene/magma_rock_inside.c
+Particles_UpdateFalling	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MagmaRockInside_UpdateFallingRocks)	games/tla/src/scene/magma_rock_inside.c
+MapCell_Get	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MagmaRockInside_GetCell)	games/tla/src/scene/magma_rock_inside.c
+MagmaRockInside_PushBlockOnto	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MagmaRock_PushBlockOnto)	games/tla/src/scene/magma_rock.c
+MagmaRockInside_RestorePillars	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MagmaRock_RestorePillars)	games/tla/src/scene/magma_rock.c
+MagmaRockInside_SetPillarMode3	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MagmaRock_SetPillarMode3)	games/tla/src/scene/magma_rock.c
+MagmaRockInside_ClearBlockCells	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MagmaRock_ClearBlockCells)	games/tla/src/scene/magma_rock.c
+MagmaRockInside_RaiseActorCells	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MagmaRock_RaiseActorCells)	games/tla/src/scene/magma_rock.c
+MagmaRockInside_SetCellShape	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MagmaRock_SetCellShape)	games/tla/src/scene/magma_rock.c
+gTaopoSwamp_PuffRises	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was gData_020044c8)	games/tla/src/scene/aqua_rock_inside.c
+Scene_CreateActor	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was TreasureIsle_CreateActor)	games/tla/src/scene/treasure_isle.c
+Position_Distance	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Lemuria_Distance)	games/tla/src/scene/lemuria.c
+Lemuria_Distance	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Position_Distance)	games/tla/src/scene/contigo.c
+gDailaInteriors_PillarFrozenFlags	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was gDaila_PuddleFrozenFlags)	games/tla/src/scene/daila.c
+Pillars_Raise	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MadraCatacombs_RaisePillarCells)	games/tla/src/scene/madra_catacombs.c
+Scene_FadeInAndClearFlag	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MikasallaInteriors_FadeInAndClearFlag)	games/tla/src/scene/mikasalla_interiors.c
+Scene_ShowEntranceLocked	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was ShamanVillage_StopAtLockedEntrance)	games/tla/src/scene/shaman_village.c
+gPushLeaderSteps	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was gPushDirectionSteps)	games/tla/src/scene/eastern_alhafra.c
+MagmaRockInside_CheckCrumblingStep	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was TrialRoad_CheckCrumblingStep)	games/tla/src/scene/trial_road.c
+MagmaRockInside_SpawnRubble	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was TrialRoad_SpawnRubble)	games/tla/src/scene/trial_road.c
+MagmaRockInside_SetLeaderCellShape	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was TrialRoad_SetLeaderCellShape)	games/tla/src/scene/trial_road.c
+MagmaRockInside_SpawnDustRing	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was TrialRoad_SpawnDustRing)	games/tla/src/scene/trial_road.c
+MagmaRockInside_RestorePillars	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was TrialRoad_RestorePillars)	games/tla/src/scene/trial_road.c
+MagmaRockInside_SetPillarMode3	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was TrialRoad_SetPillarMode3)	games/tla/src/scene/trial_road.c
+MagmaRockInside_RestoreCrumblingPillars	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was TrialRoad_RestoreCrumblingPillars)	games/tla/src/scene/trial_road.c
+SceneId_Idejima	its area name	its overlay's scene file, named for the place (was SceneId_Ov650)	games/tla/include/scene_ids.h
+SceneId_KandoreanTemple1	its area name	its overlay's scene file, named for the place (was SceneId_Ov653Room1)	games/tla/include/scene_ids.h
+SceneId_KandoreanTemple2	its area name	its overlay's scene file, named for the place (was SceneId_Ov653Room2)	games/tla/include/scene_ids.h
+SceneId_KandoreanTemple3	its area name	its overlay's scene file, named for the place (was SceneId_Ov653Room3)	games/tla/include/scene_ids.h
+SceneId_KandoreanTemple4	its area name	its overlay's scene file, named for the place (was SceneId_Ov653Room4)	games/tla/include/scene_ids.h
+SceneId_KandoreanTemple5	its area name	its overlay's scene file, named for the place (was SceneId_Ov653Room5)	games/tla/include/scene_ids.h
+SceneId_KandoreanTemple6	its area name	its overlay's scene file, named for the place (was SceneId_Ov653Room6)	games/tla/include/scene_ids.h
+SceneId_KandoreanTemple7	its area name	its overlay's scene file, named for the place (was SceneId_Ov653Room7)	games/tla/include/scene_ids.h
+SceneId_KandoreanTemple8	its area name	its overlay's scene file, named for the place (was SceneId_Ov653Room8)	games/tla/include/scene_ids.h
+SceneId_KandoreanTemple9	its area name	its overlay's scene file, named for the place (was SceneId_Ov653Room9)	games/tla/include/scene_ids.h
+SceneId_DehkanPlateau1	its area name	its overlay's scene file, named for the place (was SceneId_Ov655Room1)	games/tla/include/scene_ids.h
+SceneId_DehkanPlateau2	its area name	its overlay's scene file, named for the place (was SceneId_Ov655Room2)	games/tla/include/scene_ids.h
+SceneId_DehkanPlateau3	its area name	its overlay's scene file, named for the place (was SceneId_Ov655Room3)	games/tla/include/scene_ids.h
+SceneId_DehkanPlateau4	its area name	its overlay's scene file, named for the place (was SceneId_Ov655Room4)	games/tla/include/scene_ids.h
+SceneId_DehkanPlateau5	its area name	its overlay's scene file, named for the place (was SceneId_Ov655Room5)	games/tla/include/scene_ids.h
+SceneId_DehkanPlateau6	its area name	its overlay's scene file, named for the place (was SceneId_Ov655Room6)	games/tla/include/scene_ids.h
+SceneId_LemurianShip1	its area name	its overlay's scene file, named for the place (was SceneId_Ov656Room1)	games/tla/include/scene_ids.h
+SceneId_LemurianShip2	its area name	its overlay's scene file, named for the place (was SceneId_Ov656Room2)	games/tla/include/scene_ids.h
+SceneId_LemurianShipDeck1	its area name	its overlay's scene file, named for the place (was SceneId_Ov657Room1)	games/tla/include/scene_ids.h
+SceneId_LemurianShipDeck2	its area name	its overlay's scene file, named for the place (was SceneId_Ov657Room2)	games/tla/include/scene_ids.h
+SceneId_MadraInteriors1	its area name	its overlay's scene file, named for the place (was SceneId_Ov659Room1)	games/tla/include/scene_ids.h
+SceneId_MadraInteriors2	its area name	its overlay's scene file, named for the place (was SceneId_Ov659Room2)	games/tla/include/scene_ids.h
+SceneId_MadraCatacombs1	its area name	its overlay's scene file, named for the place (was SceneId_Ov65aRoom1)	games/tla/include/scene_ids.h
+SceneId_MadraCatacombs2	its area name	its overlay's scene file, named for the place (was SceneId_Ov65aRoom2)	games/tla/include/scene_ids.h
+SceneId_MadraCatacombs3	its area name	its overlay's scene file, named for the place (was SceneId_Ov65aRoom3)	games/tla/include/scene_ids.h
+SceneId_MadraCatacombs4	its area name	its overlay's scene file, named for the place (was SceneId_Ov65aRoom4)	games/tla/include/scene_ids.h
+SceneId_MadraCatacombs5	its area name	its overlay's scene file, named for the place (was SceneId_Ov65aRoom5)	games/tla/include/scene_ids.h
+SceneId_MadraCatacombs6	its area name	its overlay's scene file, named for the place (was SceneId_Ov65aRoom6)	games/tla/include/scene_ids.h
+SceneId_Mikasalla1	its area name	its overlay's scene file, named for the place (was SceneId_Ov65dRoom1)	games/tla/include/scene_ids.h
+SceneId_Mikasalla2	its area name	its overlay's scene file, named for the place (was SceneId_Ov65dRoom2)	games/tla/include/scene_ids.h
+SceneId_GarohInteriors1	its area name	its overlay's scene file, named for the place (was SceneId_Ov660Room1)	games/tla/include/scene_ids.h
+SceneId_GarohInteriors2	its area name	its overlay's scene file, named for the place (was SceneId_Ov660Room2)	games/tla/include/scene_ids.h
+SceneId_GarohInteriors3	its area name	its overlay's scene file, named for the place (was SceneId_Ov660Room3)	games/tla/include/scene_ids.h
+SceneId_YampiDesertCave1	its area name	its overlay's scene file, named for the place (was SceneId_Ov662Room1)	games/tla/include/scene_ids.h
+SceneId_YampiDesertCave2	its area name	its overlay's scene file, named for the place (was SceneId_Ov662Room2)	games/tla/include/scene_ids.h
+SceneId_YampiDesertCave3	its area name	its overlay's scene file, named for the place (was SceneId_Ov662Room3)	games/tla/include/scene_ids.h
+SceneId_AirsRock1	its area name	its overlay's scene file, named for the place (was SceneId_Ov663Room1)	games/tla/include/scene_ids.h
+SceneId_AirsRock2	its area name	its overlay's scene file, named for the place (was SceneId_Ov663Room2)	games/tla/include/scene_ids.h
+SceneId_AirsRock3	its area name	its overlay's scene file, named for the place (was SceneId_Ov663Room3)	games/tla/include/scene_ids.h
+SceneId_AirsRockInside1	its area name	its overlay's scene file, named for the place (was SceneId_Ov664Room1)	games/tla/include/scene_ids.h
+SceneId_AirsRockInside2	its area name	its overlay's scene file, named for the place (was SceneId_Ov664Room2)	games/tla/include/scene_ids.h
+SceneId_AirsRockInside3	its area name	its overlay's scene file, named for the place (was SceneId_Ov664Room3)	games/tla/include/scene_ids.h
+SceneId_AirsRockInside4	its area name	its overlay's scene file, named for the place (was SceneId_Ov664Room4)	games/tla/include/scene_ids.h
+SceneId_AirsRockInside5	its area name	its overlay's scene file, named for the place (was SceneId_Ov664Room5)	games/tla/include/scene_ids.h
+SceneId_AirsRockInside6	its area name	its overlay's scene file, named for the place (was SceneId_Ov664Room6)	games/tla/include/scene_ids.h
+SceneId_AirsRockInside7	its area name	its overlay's scene file, named for the place (was SceneId_Ov664Room7)	games/tla/include/scene_ids.h
+SceneId_AirsRockInside8	its area name	its overlay's scene file, named for the place (was SceneId_Ov664Room8)	games/tla/include/scene_ids.h
+SceneId_AirsRockInside9	its area name	its overlay's scene file, named for the place (was SceneId_Ov664Room9)	games/tla/include/scene_ids.h
+SceneId_AirsRockInside10	its area name	its overlay's scene file, named for the place (was SceneId_Ov664Room10)	games/tla/include/scene_ids.h
+SceneId_Alhafra1	its area name	its overlay's scene file, named for the place (was SceneId_Ov665Room1)	games/tla/include/scene_ids.h
+SceneId_AlhafraManor	its area name	its overlay's scene file, named for the place (was SceneId_Ov667)	games/tla/include/scene_ids.h
+SceneId_EasternAlhafra1	its area name	its overlay's scene file, named for the place (was SceneId_Ov668Room1)	games/tla/include/scene_ids.h
+SceneId_EasternAlhafraShip	its area name	its overlay's scene file, named for the place (was SceneId_Ov669)	games/tla/include/scene_ids.h
+SceneId_GondowanCliffsHideout	its area name	its overlay's scene file, named for the place (was SceneId_Ov66c)	games/tla/include/scene_ids.h
+SceneId_Naribwe	its area name	its overlay's scene file, named for the place (was SceneId_Ov66d)	games/tla/include/scene_ids.h
+SceneId_KibomboMountains1	its area name	its overlay's scene file, named for the place (was SceneId_Ov66fRoom1)	games/tla/include/scene_ids.h
+SceneId_KibomboMountains2	its area name	its overlay's scene file, named for the place (was SceneId_Ov66fRoom2)	games/tla/include/scene_ids.h
+SceneId_KibomboMountains3	its area name	its overlay's scene file, named for the place (was SceneId_Ov66fRoom3)	games/tla/include/scene_ids.h
+SceneId_GabombaStatueChamber1	its area name	its overlay's scene file, named for the place (was SceneId_Ov672Room1)	games/tla/include/scene_ids.h
+SceneId_GabombaStatueChamber2	its area name	its overlay's scene file, named for the place (was SceneId_Ov672Room2)	games/tla/include/scene_ids.h
+SceneId_GabombaStatueChamber3	its area name	its overlay's scene file, named for the place (was SceneId_Ov672Room3)	games/tla/include/scene_ids.h
+SceneId_GabombaCatacombs1	its area name	its overlay's scene file, named for the place (was SceneId_Ov673Room1)	games/tla/include/scene_ids.h
+SceneId_GabombaCatacombs2	its area name	its overlay's scene file, named for the place (was SceneId_Ov673Room2)	games/tla/include/scene_ids.h
+SceneId_GabombaCatacombs3	its area name	its overlay's scene file, named for the place (was SceneId_Ov673Room3)	games/tla/include/scene_ids.h
+SceneId_GabombaCatacombs4	its area name	its overlay's scene file, named for the place (was SceneId_Ov673Room4)	games/tla/include/scene_ids.h
+SceneId_GabombaCatacombs5	its area name	its overlay's scene file, named for the place (was SceneId_Ov673Room5)	games/tla/include/scene_ids.h
+SceneId_Islets1	its area name	its overlay's scene file, named for the place (was SceneId_Ov674Room1)	games/tla/include/scene_ids.h
+SceneId_Islets2	its area name	its overlay's scene file, named for the place (was SceneId_Ov674Room2)	games/tla/include/scene_ids.h
+SceneId_Islets3	its area name	its overlay's scene file, named for the place (was SceneId_Ov674Room3)	games/tla/include/scene_ids.h
+SceneId_Islets4	its area name	its overlay's scene file, named for the place (was SceneId_Ov674Room4)	games/tla/include/scene_ids.h
+SceneId_Islets5	its area name	its overlay's scene file, named for the place (was SceneId_Ov674Room5)	games/tla/include/scene_ids.h
+SceneId_IsletCave1	its area name	its overlay's scene file, named for the place (was SceneId_Ov675Room1)	games/tla/include/scene_ids.h
+SceneId_IsletCave2	its area name	its overlay's scene file, named for the place (was SceneId_Ov675Room2)	games/tla/include/scene_ids.h
+SceneId_IsletCave3	its area name	its overlay's scene file, named for the place (was SceneId_Ov675Room3)	games/tla/include/scene_ids.h
+SceneId_Yallam1	its area name	its overlay's scene file, named for the place (was SceneId_Ov676Room1)	games/tla/include/scene_ids.h
+SceneId_Yallam2	its area name	its overlay's scene file, named for the place (was SceneId_Ov676Room2)	games/tla/include/scene_ids.h
+SceneId_YallamInteriors1	its area name	its overlay's scene file, named for the place (was SceneId_Ov677Room1)	games/tla/include/scene_ids.h
+SceneId_YallamInteriors2	its area name	its overlay's scene file, named for the place (was SceneId_Ov677Room2)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp1	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room1)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp2	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room2)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp3	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room3)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp4	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room4)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp5	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room5)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp6	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room6)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp7	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room7)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp8	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room8)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp9	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room9)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp10	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room10)	games/tla/include/scene_ids.h
+SceneId_TaopoSwamp11	its area name	its overlay's scene file, named for the place (was SceneId_Ov678Room11)	games/tla/include/scene_ids.h
+SceneId_GaiaRock1	its area name	its overlay's scene file, named for the place (was SceneId_Ov680Room1)	games/tla/include/scene_ids.h
+SceneId_GaiaRock2	its area name	its overlay's scene file, named for the place (was SceneId_Ov680Room2)	games/tla/include/scene_ids.h
+SceneId_GaiaRock3	its area name	its overlay's scene file, named for the place (was SceneId_Ov680Room3)	games/tla/include/scene_ids.h
+SceneId_GaiaRockInside1	its area name	its overlay's scene file, named for the place (was SceneId_Ov681Room1)	games/tla/include/scene_ids.h
+SceneId_GaiaRockInside2	its area name	its overlay's scene file, named for the place (was SceneId_Ov681Room2)	games/tla/include/scene_ids.h
+SceneId_GaiaRockInside3	its area name	its overlay's scene file, named for the place (was SceneId_Ov681Room3)	games/tla/include/scene_ids.h
+SceneId_GaiaRockInside4	its area name	its overlay's scene file, named for the place (was SceneId_Ov681Room4)	games/tla/include/scene_ids.h
+SceneId_GaiaRockInside5	its area name	its overlay's scene file, named for the place (was SceneId_Ov681Room5)	games/tla/include/scene_ids.h
+SceneId_Champa1	its area name	its overlay's scene file, named for the place (was SceneId_Ov682Room1)	games/tla/include/scene_ids.h
+SceneId_ChampaInteriors	its area name	its overlay's scene file, named for the place (was SceneId_Ov683)	games/tla/include/scene_ids.h
+SceneId_AnkohlRuins1	its area name	its overlay's scene file, named for the place (was SceneId_Ov686Room1)	games/tla/include/scene_ids.h
+SceneId_AnkohlRuins2	its area name	its overlay's scene file, named for the place (was SceneId_Ov686Room2)	games/tla/include/scene_ids.h
+SceneId_AnkohlRuins3	its area name	its overlay's scene file, named for the place (was SceneId_Ov686Room3)	games/tla/include/scene_ids.h
+SceneId_AnkohlRuins4	its area name	its overlay's scene file, named for the place (was SceneId_Ov686Room4)	games/tla/include/scene_ids.h
+SceneId_AnkohlRuins5	its area name	its overlay's scene file, named for the place (was SceneId_Ov686Room5)	games/tla/include/scene_ids.h
+SceneId_AnkohlRuins6	its area name	its overlay's scene file, named for the place (was SceneId_Ov686Room6)	games/tla/include/scene_ids.h
+SceneId_AnkohlRuins7	its area name	its overlay's scene file, named for the place (was SceneId_Ov686Room7)	games/tla/include/scene_ids.h
+SceneId_AnkohlRuins8	its area name	its overlay's scene file, named for the place (was SceneId_Ov686Room8)	games/tla/include/scene_ids.h
+SceneId_SeaOfTime1	its area name	its overlay's scene file, named for the place (was SceneId_Ov687Room1)	games/tla/include/scene_ids.h
+SceneId_SeaOfTime2	its area name	its overlay's scene file, named for the place (was SceneId_Ov687Room2)	games/tla/include/scene_ids.h
+SceneId_LemuriaEntrance	its area name	its overlay's scene file, named for the place (was SceneId_Ov688)	games/tla/include/scene_ids.h
+SceneId_Lemuria	its area name	its overlay's scene file, named for the place (was SceneId_Ov68b)	games/tla/include/scene_ids.h
+SceneId_Settlements1	its area name	its overlay's scene file, named for the place (was SceneId_Ov690Room1)	games/tla/include/scene_ids.h
+SceneId_Settlements2	its area name	its overlay's scene file, named for the place (was SceneId_Ov690Room2)	games/tla/include/scene_ids.h
+SceneId_Settlements3	its area name	its overlay's scene file, named for the place (was SceneId_Ov690Room3)	games/tla/include/scene_ids.h
+SceneId_Settlements4	its area name	its overlay's scene file, named for the place (was SceneId_Ov690Room4)	games/tla/include/scene_ids.h
+SceneId_Settlements5	its area name	its overlay's scene file, named for the place (was SceneId_Ov690Room5)	games/tla/include/scene_ids.h
+SceneId_Settlements6	its area name	its overlay's scene file, named for the place (was SceneId_Ov690Room6)	games/tla/include/scene_ids.h
+SceneId_Settlements7	its area name	its overlay's scene file, named for the place (was SceneId_Ov690Room7)	games/tla/include/scene_ids.h
+SceneId_Settlements8	its area name	its overlay's scene file, named for the place (was SceneId_Ov690Room8)	games/tla/include/scene_ids.h
+SceneId_Settlements9	its area name	its overlay's scene file, named for the place (was SceneId_Ov690Room9)	games/tla/include/scene_ids.h
+SceneId_Settlements10	its area name	its overlay's scene file, named for the place (was SceneId_Ov690Room10)	games/tla/include/scene_ids.h
+SceneId_MagmaRock1	its area name	its overlay's scene file, named for the place (was SceneId_Ov691Room1)	games/tla/include/scene_ids.h
+SceneId_MagmaRock2	its area name	its overlay's scene file, named for the place (was SceneId_Ov691Room2)	games/tla/include/scene_ids.h
+SceneId_MagmaRock3	its area name	its overlay's scene file, named for the place (was SceneId_Ov691Room3)	games/tla/include/scene_ids.h
+SceneId_MagmaRockInside1	its area name	its overlay's scene file, named for the place (was SceneId_Ov692Room1)	games/tla/include/scene_ids.h
+SceneId_MagmaRockInside2	its area name	its overlay's scene file, named for the place (was SceneId_Ov692Room2)	games/tla/include/scene_ids.h
+SceneId_MagmaRockInside3	its area name	its overlay's scene file, named for the place (was SceneId_Ov692Room3)	games/tla/include/scene_ids.h
+SceneId_MagmaRockInside4	its area name	its overlay's scene file, named for the place (was SceneId_Ov692Room4)	games/tla/include/scene_ids.h
+SceneId_MagmaRockInside5	its area name	its overlay's scene file, named for the place (was SceneId_Ov692Room5)	games/tla/include/scene_ids.h
+SceneId_MagmaRockInside6	its area name	its overlay's scene file, named for the place (was SceneId_Ov692Room6)	games/tla/include/scene_ids.h
+SceneId_MagmaRockInside7	its area name	its overlay's scene file, named for the place (was SceneId_Ov692Room7)	games/tla/include/scene_ids.h
+SceneId_MagmaRockInside8	its area name	its overlay's scene file, named for the place (was SceneId_Ov692Room8)	games/tla/include/scene_ids.h
+SceneId_AttekaInlet1	its area name	its overlay's scene file, named for the place (was SceneId_Ov693Room1)	games/tla/include/scene_ids.h
+SceneId_AttekaInlet2	its area name	its overlay's scene file, named for the place (was SceneId_Ov693Room2)	games/tla/include/scene_ids.h
+SceneId_Contigo1	its area name	its overlay's scene file, named for the place (was SceneId_Ov694Room1)	games/tla/include/scene_ids.h
+SceneId_Contigo2	its area name	its overlay's scene file, named for the place (was SceneId_Ov694Room2)	games/tla/include/scene_ids.h
+SceneId_Contigo3	its area name	its overlay's scene file, named for the place (was SceneId_Ov694Room3)	games/tla/include/scene_ids.h
+SceneId_Contigo4	its area name	its overlay's scene file, named for the place (was SceneId_Ov694Room4)	games/tla/include/scene_ids.h
+SceneId_ShamanVillageCave	its area name	its overlay's scene file, named for the place (was SceneId_Ov695)	games/tla/include/scene_ids.h
+SceneId_Prox1	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a8Room1)	games/tla/include/scene_ids.h
+SceneId_Prox2	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a8Room2)	games/tla/include/scene_ids.h
+SceneId_Prox3	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a8Room3)	games/tla/include/scene_ids.h
+SceneId_Prox4	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a8Room4)	games/tla/include/scene_ids.h
+SceneId_Prox5	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a8Room5)	games/tla/include/scene_ids.h
+SceneId_Prox6	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a8Room6)	games/tla/include/scene_ids.h
+SceneId_Caverns1	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a9Room1)	games/tla/include/scene_ids.h
+SceneId_Caverns2	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a9Room2)	games/tla/include/scene_ids.h
+SceneId_Caverns3	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a9Room3)	games/tla/include/scene_ids.h
+SceneId_Caverns4	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a9Room4)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseEntrance1	its area name	its overlay's scene file, named for the place (was SceneId_Ov6aaRoom1)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseEntrance2	its area name	its overlay's scene file, named for the place (was SceneId_Ov6aaRoom2)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseEntrance3	its area name	its overlay's scene file, named for the place (was SceneId_Ov6aaRoom3)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseEntrance4	its area name	its overlay's scene file, named for the place (was SceneId_Ov6aaRoom4)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseEntrance5	its area name	its overlay's scene file, named for the place (was SceneId_Ov6aaRoom5)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseEntrance6	its area name	its overlay's scene file, named for the place (was SceneId_Ov6aaRoom6)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseEntrance7	its area name	its overlay's scene file, named for the place (was SceneId_Ov6aaRoom7)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseStarRoom1	its area name	its overlay's scene file, named for the place (was SceneId_Ov6abRoom1)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseAerie1	its area name	its overlay's scene file, named for the place (was SceneId_Ov6aeRoom1)	games/tla/include/scene_ids.h
+SceneId_TreasureIsle1	its area name	its overlay's scene file, named for the place (was SceneId_Ov6afRoom1)	games/tla/include/scene_ids.h
+SceneId_TreasureIsle2	its area name	its overlay's scene file, named for the place (was SceneId_Ov6afRoom2)	games/tla/include/scene_ids.h
+SceneId_TreasureIsle3	its area name	its overlay's scene file, named for the place (was SceneId_Ov6afRoom3)	games/tla/include/scene_ids.h
+SceneId_TreasureIsle4	its area name	its overlay's scene file, named for the place (was SceneId_Ov6afRoom4)	games/tla/include/scene_ids.h
+SceneId_TreasureIsle5	its area name	its overlay's scene file, named for the place (was SceneId_Ov6afRoom5)	games/tla/include/scene_ids.h
+SceneId_MtAlephSummit	its area name	its overlay's scene file, named for the place (was SceneId_Ov6b4)	games/tla/include/scene_ids.h
+SceneId_Clear	its area name	its overlay's scene file, named for the place (was SceneId_Ov64a)	games/tla/include/scene_ids.h
+SceneId_StaffCredit	its area name	its overlay's scene file, named for the place (was SceneId_Ov64c)	games/tla/include/scene_ids.h
+SceneId_Madra	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_MadraDrawbridge	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_OseniaCliffs	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_MikasallaInteriors1	its area name	its overlay's scene file, named for the place (was SceneId_Ov65ERoom1)	games/tla/include/scene_ids.h
+SceneId_MikasallaInteriors2	its area name	its overlay's scene file, named for the place (was SceneId_Ov65ERoom2)	games/tla/include/scene_ids.h
+SceneId_Garoh1	its area name	its overlay's scene file, named for the place (was SceneId_Ov65FRoom1)	games/tla/include/scene_ids.h
+SceneId_Garoh2	its area name	its overlay's scene file, named for the place (was SceneId_Ov65FRoom2)	games/tla/include/scene_ids.h
+SceneId_Garoh3	its area name	its overlay's scene file, named for the place (was SceneId_Ov65FRoom3)	games/tla/include/scene_ids.h
+SceneId_Garoh4	its area name	its overlay's scene file, named for the place (was SceneId_Ov65FRoom4)	games/tla/include/scene_ids.h
+SceneId_Garoh5	its area name	its overlay's scene file, named for the place (was SceneId_Ov65FRoom5)	games/tla/include/scene_ids.h
+SceneId_YampiDesert1	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room1)	games/tla/include/scene_ids.h
+SceneId_YampiDesert2	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room2)	games/tla/include/scene_ids.h
+SceneId_YampiDesert3	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room3)	games/tla/include/scene_ids.h
+SceneId_YampiDesert4	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room4)	games/tla/include/scene_ids.h
+SceneId_YampiDesert5	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room5)	games/tla/include/scene_ids.h
+SceneId_YampiDesert6	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room6)	games/tla/include/scene_ids.h
+SceneId_YampiDesert7	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room7)	games/tla/include/scene_ids.h
+SceneId_YampiDesert8	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room8)	games/tla/include/scene_ids.h
+SceneId_YampiDesert9	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room9)	games/tla/include/scene_ids.h
+SceneId_YampiDesert10	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room10)	games/tla/include/scene_ids.h
+SceneId_YampiDesert11	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room11)	games/tla/include/scene_ids.h
+SceneId_YampiDesert12	its area name	its overlay's scene file, named for the place (was SceneId_Ov661Room12)	games/tla/include/scene_ids.h
+SceneId_AlhafraInteriors	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_NaribweInteriors	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_GabombaStatue1	its area name	its overlay's scene file, named for the place (was SceneId_Ov671Room1)	games/tla/include/scene_ids.h
+SceneId_GabombaStatue2	its area name	its overlay's scene file, named for the place (was SceneId_Ov671Room2)	games/tla/include/scene_ids.h
+SceneId_GabombaStatue3	its area name	its overlay's scene file, named for the place (was SceneId_Ov671Room3)	games/tla/include/scene_ids.h
+SceneId_GabombaStatue4	its area name	its overlay's scene file, named for the place (was SceneId_Ov671Room4)	games/tla/include/scene_ids.h
+SceneId_GabombaStatue5	its area name	its overlay's scene file, named for the place (was SceneId_Ov671Room5)	games/tla/include/scene_ids.h
+SceneId_GabombaStatue6	its area name	its overlay's scene file, named for the place (was SceneId_Ov671Room6)	games/tla/include/scene_ids.h
+SceneId_GabombaStatue7	its area name	its overlay's scene file, named for the place (was SceneId_Ov671Room7)	games/tla/include/scene_ids.h
+SceneId_ApojiiIslands1	its area name	its overlay's scene file, named for the place (was SceneId_Ov679Room1)	games/tla/include/scene_ids.h
+SceneId_ApojiiIslands2	its area name	its overlay's scene file, named for the place (was SceneId_Ov679Room2)	games/tla/include/scene_ids.h
+SceneId_ApojiiIslands3	its area name	its overlay's scene file, named for the place (was SceneId_Ov679Room3)	games/tla/include/scene_ids.h
+SceneId_ApojiiIslandsCave	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_AquaRock1	its area name	its overlay's scene file, named for the place (was SceneId_Ov67bRoom1)	games/tla/include/scene_ids.h
+SceneId_AquaRock2	its area name	its overlay's scene file, named for the place (was SceneId_Ov67bRoom2)	games/tla/include/scene_ids.h
+SceneId_AquaRockInside1	its area name	its overlay's scene file, named for the place (was SceneId_Ov67cRoom1)	games/tla/include/scene_ids.h
+SceneId_AquaRockInside2	its area name	its overlay's scene file, named for the place (was SceneId_Ov67cRoom2)	games/tla/include/scene_ids.h
+SceneId_AquaRockInside3	its area name	its overlay's scene file, named for the place (was SceneId_Ov67cRoom3)	games/tla/include/scene_ids.h
+SceneId_AquaRockInside4	its area name	its overlay's scene file, named for the place (was SceneId_Ov67cRoom4)	games/tla/include/scene_ids.h
+SceneId_AquaRockInside5	its area name	its overlay's scene file, named for the place (was SceneId_Ov67cRoom5)	games/tla/include/scene_ids.h
+SceneId_AquaRockInside6	its area name	its overlay's scene file, named for the place (was SceneId_Ov67cRoom6)	games/tla/include/scene_ids.h
+SceneId_AquaRockInside7	its area name	its overlay's scene file, named for the place (was SceneId_Ov67cRoom7)	games/tla/include/scene_ids.h
+SceneId_AquaRockInside8	its area name	its overlay's scene file, named for the place (was SceneId_Ov67cRoom8)	games/tla/include/scene_ids.h
+SceneId_AquaRockInside9	its area name	its overlay's scene file, named for the place (was SceneId_Ov67cRoom9)	games/tla/include/scene_ids.h
+SceneId_AquaRockInside10	its area name	its overlay's scene file, named for the place (was SceneId_Ov67cRoom10)	games/tla/include/scene_ids.h
+SceneId_IzumoInteriors	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_Izumo	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_ChampaSanctum	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_ChampaCliffCaves1	its area name	its overlay's scene file, named for the place (was SceneId_Ov685Room1)	games/tla/include/scene_ids.h
+SceneId_ChampaCliffCaves2	its area name	its overlay's scene file, named for the place (was SceneId_Ov685Room2)	games/tla/include/scene_ids.h
+SceneId_ChampaCliffCaves3	its area name	its overlay's scene file, named for the place (was SceneId_Ov685Room3)	games/tla/include/scene_ids.h
+SceneId_ChampaCliffCaves4	its area name	its overlay's scene file, named for the place (was SceneId_Ov685Room4)	games/tla/include/scene_ids.h
+SceneId_LemuriaDock	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_AncientLemuria	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_LemuriaInteriors	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_LemuriaPalace	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_LemuriaSpring	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_TundariaTower1	its area name	its overlay's scene file, named for the place (was SceneId_Ov68fRoom1)	games/tla/include/scene_ids.h
+SceneId_TundariaTower2	its area name	its overlay's scene file, named for the place (was SceneId_Ov68fRoom2)	games/tla/include/scene_ids.h
+SceneId_TundariaTower3	its area name	its overlay's scene file, named for the place (was SceneId_Ov68fRoom3)	games/tla/include/scene_ids.h
+SceneId_TundariaTower4	its area name	its overlay's scene file, named for the place (was SceneId_Ov68fRoom4)	games/tla/include/scene_ids.h
+SceneId_TundariaTower5	its area name	its overlay's scene file, named for the place (was SceneId_Ov68fRoom5)	games/tla/include/scene_ids.h
+SceneId_TundariaTower6	its area name	its overlay's scene file, named for the place (was SceneId_Ov68fRoom6)	games/tla/include/scene_ids.h
+SceneId_TundariaTower7	its area name	its overlay's scene file, named for the place (was SceneId_Ov68fRoom7)	games/tla/include/scene_ids.h
+SceneId_TrialRoad1	its area name	its overlay's scene file, named for the place (was SceneId_Ov697Room1)	games/tla/include/scene_ids.h
+SceneId_TrialRoad2	its area name	its overlay's scene file, named for the place (was SceneId_Ov697Room2)	games/tla/include/scene_ids.h
+SceneId_TrialRoad3	its area name	its overlay's scene file, named for the place (was SceneId_Ov697Room3)	games/tla/include/scene_ids.h
+SceneId_TrialRoad4	its area name	its overlay's scene file, named for the place (was SceneId_Ov697Room4)	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseEntrance	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseBasement1	its area name	its overlay's scene file, named for the place (was SceneId_Ov699Room1)	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseBasement2	its area name	its overlay's scene file, named for the place (was SceneId_Ov699Room2)	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseRoom1	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseRoom2	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseRoom3	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseRoom4	its area name	its overlay's scene file, named for the place (was SceneId_Ov69dRoom1)	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseRoom5	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseRoom6	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseRoom7	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseRoom8	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseRoom9	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseRoomM	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a3)	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseAerie	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a4)	games/tla/include/scene_ids.h
+SceneId_JupiterLighthouseAerieBeacon	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a5)	games/tla/include/scene_ids.h
+SceneId_Loho1	its area name	its overlay's scene file, named for the place (was SceneId_Ov6A6Room1)	games/tla/include/scene_ids.h
+SceneId_Loho2	its area name	its overlay's scene file, named for the place (was SceneId_Ov6A6Room2)	games/tla/include/scene_ids.h
+SceneId_NorthernReaches	its area name	its overlay's scene file, named for the place (was SceneId_Ov6a7Room1)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseRoomM1	its area name	its overlay's scene file, named for the place (was SceneId_Ov6ACRoom1)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseRoomM2	its area name	its overlay's scene file, named for the place (was SceneId_Ov6ACRoom2)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseRoomM3	its area name	its overlay's scene file, named for the place (was SceneId_Ov6ACRoom3)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseRoomM4	its area name	its overlay's scene file, named for the place (was SceneId_Ov6ACRoom4)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseRoomM5	its area name	its overlay's scene file, named for the place (was SceneId_Ov6ACRoom5)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseRoomF1	its area name	its overlay's scene file, named for the place (was SceneId_Ov6adRoom1)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseRoomF2	its area name	its overlay's scene file, named for the place (was SceneId_Ov6adRoom2)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseRoomF3	its area name	its overlay's scene file, named for the place (was SceneId_Ov6adRoom3)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseRoomF4	its area name	its overlay's scene file, named for the place (was SceneId_Ov6adRoom4)	games/tla/include/scene_ids.h
+SceneId_MarsLighthouseRoomM6	its area name	its overlay's scene file, named for the place (was SceneId_Ov6ACRoom6)	games/tla/include/scene_ids.h
+SceneId_AnemosInnerSanctum1	its area name	its overlay's scene file, named for the place (was SceneId_Ov6B0Room1)	games/tla/include/scene_ids.h
+SceneId_AnemosInnerSanctum2	its area name	its overlay's scene file, named for the place (was SceneId_Ov6B0Room2)	games/tla/include/scene_ids.h
+SceneId_AnemosInnerSanctum3	its area name	its overlay's scene file, named for the place (was SceneId_Ov6B0Room3)	games/tla/include/scene_ids.h
+SceneId_AnemosInnerSanctum4	its area name	its overlay's scene file, named for the place (was SceneId_Ov6B0Room4)	games/tla/include/scene_ids.h
+SceneId_AnemosInnerSanctum5	its area name	its overlay's scene file, named for the place (was SceneId_Ov6B0Room5)	games/tla/include/scene_ids.h
+SceneId_AnemosInnerSanctumEntrance	its area name	its overlay's scene file, named for the place (was SceneId_Ov6b1Room1)	games/tla/include/scene_ids.h
+SceneId_MercuryLighthouse	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_Epilogue	its area name	its overlay's scene file, named for the place (was SceneId_Ov6b3)	games/tla/include/scene_ids.h
+SceneId_Lobby	its area name	its overlay's scene file, named for the place (was SceneId_Ov6b5)	games/tla/include/scene_ids.h
+SceneId_TestScenes1	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_TestScenes2	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_TestScenes3	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_TestScenes4	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_TestScenes5	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_TestScenes6	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_TestScenes7	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_TestScenes8	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_Level	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_PsynergyTest	its area name	its overlay's scene file, named for the place (was SceneId_Ov6b8Room1)	games/tla/include/scene_ids.h
+SceneId_PsynergyTest2	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
+SceneId_ShopTest	its area name	its overlay's scene file, named for the place	games/tla/include/scene_ids.h
