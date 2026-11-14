@@ -166,6 +166,18 @@ Facts about Alchemy's compiler, alchemy-gcc, not rules.
 - Japanese is often an older layout of a function. A function that saves r9 and never uses it is a nested function storing its static chain.
 - `-mtune=gba`'s multiplies `3 3` (K2), against `5 5`, bring 33 drafts closer and 1 further while every matched function still matches (8 November 2026).
 - To measure a rewrite in seconds, compile its one object to assembly for one edition and diff it against the build's, `.L` numbers ignored; then `make compare-editions`.
+- What took The Broken Seal's fake matches from 171 to 137 in one round (14 November 2026), each a cause written plainly, most used first:
+  - A field read or stored through the type it really has (its true width and signedness), where a cast or a pointer stood in (6).
+  - Spill-slot order: reload hands out stack slots in the order pseudos are made, and a local declared at the top of a function is made at entry. A stand-in pointer that existed only to give an address a lower number goes once the later locals are declared in the block where they begin. Its sign in `diff --show` is two or more spill-slot offsets swapped and nothing else (5).
+  - A local set to its one constant where it is declared, and a pointer to a member with a `zero` local beside it both removed (5).
+  - A once-only block that is a statement macro's own expansion: write the macro (`Io_Write8/16/32`, `Battle_SetRandomSeed`), four sites or more (4).
+  - A loop that had been reduced by hand, written as the loop it is (4).
+  - One object given one type where a union stood; one variable that was really two, split (4).
+  - Argument order follows the callee's type: called through a type that returns a value, the second argument loads after the callee's address. Where the routine really leaves a value in r0, give it that return type; it is an honest type, not a costume (1, and the cause behind several earlier ones).
+  - A stray `u8 *` puts a store in alias set 0 (may alias anything): remove it. Unions do the same and are the largest family still unexplained, with the block or loop boundary straight after a call.
+  - Where the ROM keeps a test's own instructions, it is not a fake match but `// DEAD:` (S2's physical test).
+- The system `make` on macOS is GNU Make 3.81, which compares file times to the second: a file rewritten in the second of its last build is taken as up to date, and incremental builds have both passed stale trees and failed good ones. Build with GNU Make 4 (`gmake`) or from deleted objects.
+- An overlay's generated import table is rebuilt when the overlay's objects or its script change; before that fix an incremental build passed a compare a clean build refused.
 
 ## Rules
 
