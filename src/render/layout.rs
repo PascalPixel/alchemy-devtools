@@ -251,38 +251,11 @@ impl Layout {
 
     /// Compiles every expression of the edition's game with its headers, by
     /// the recipe its build gives any C file, and reads the values back
-    /// from the assembly, one `.word` each, in order.
+    /// from the assembly, in order.
     pub fn read(edition: &str) -> Result<Layout, String> {
         let game = Game::of(edition)?;
-        let target = crate::alchemy::targets::decomp_target(Some(edition))?;
-        let work = tempfile::tempdir().map_err(|e| format!("cannot make a folder for the layout probe: {e}"))?;
-        let source = work.path().join("layout_probe.c");
-        let object = work.path().join("layout_probe.o");
-        let mut text = String::from("/* What alchemy-devtools render reads, from the headers. */\n");
-        for header in headers(game) {
-            text.push_str(&format!("#include \"{header}\"\n"));
-        }
-        text.push_str("#ifndef offsetof\n#define offsetof(type, member) ((u32) & ((type *)0)->member)\n#endif\nconst int gRenderLayout[] = {\n");
-        for (_, tbs, tla) in EXPRESSIONS {
-            text.push_str(&format!("  (int)({}),\n", if game == Game::Tbs { tbs } else { tla }));
-        }
-        text.push_str("};\n");
-        std::fs::write(&source, text).map_err(|e| format!("cannot write {}: {e}", source.display()))?;
-        for step in crate::compile::steps(target, &source, &object, None, false)? {
-            crate::gba::process::run(&step, work.path()).map_err(|e| format!("the layout probe of {}'s headers: {e}", game.dir()))?;
-        }
-        let assembly = std::fs::read_to_string(object.with_extension("s")).map_err(|e| format!("the layout probe wrote no assembly: {e}"))?;
-        let values: Vec<i64> = assembly
-            .lines()
-            .filter_map(|l| l.trim().strip_prefix(".word"))
-            .filter_map(|v| {
-                let v = v.trim();
-                v.strip_prefix("0x").map_or_else(|| v.parse().ok(), |h| i64::from_str_radix(h, 16).ok())
-            })
-            .collect();
-        if values.len() != EXPRESSIONS.len() {
-            return Err(format!("the layout probe gave {} values for {} expressions", values.len(), EXPRESSIONS.len()));
-        }
+        let expressions: Vec<&str> = EXPRESSIONS.iter().map(|(_, tbs, tla)| if game == Game::Tbs { *tbs } else { *tla }).collect();
+        let values = probe(edition, headers(game), &expressions)?;
         let get = |name: &str| -> u32 {
             let i = EXPRESSIONS.iter().position(|(n, ..)| *n == name).expect("a layout value's name");
             values[i] as u32
@@ -336,6 +309,246 @@ impl Layout {
     }
 }
 
+
+/// Compiles `expressions` with `headers` by edition `edition`'s recipe for
+/// any C file (compile::steps), as one array of ints, and reads each value
+/// back from its assembly: a `.word`, or a run of zeros as `.space`.
+fn probe(edition: &str, headers: &[&str], expressions: &[&str]) -> Result<Vec<i64>, String> {
+    let target = crate::alchemy::targets::decomp_target(Some(edition))?;
+    let work = tempfile::tempdir().map_err(|e| format!("cannot make a folder for the layout probe: {e}"))?;
+    let source = work.path().join("layout_probe.c");
+    let object = work.path().join("layout_probe.o");
+    let mut text = String::from("/* What alchemy-devtools render reads, from the headers. */\n");
+    for header in headers {
+        text.push_str(&format!("#include \"{header}\"\n"));
+    }
+    text.push_str("#ifndef offsetof\n#define offsetof(type, member) ((u32) & ((type *)0)->member)\n#endif\nconst int gRenderLayout[] = {\n");
+    for expression in expressions {
+        text.push_str(&format!("  (int)({expression}),\n"));
+    }
+    text.push_str("};\n");
+    std::fs::write(&source, text).map_err(|e| format!("cannot write {}: {e}", source.display()))?;
+    for step in crate::compile::steps(target, &source, &object, None, false)? {
+        crate::gba::process::run(&step, work.path()).map_err(|e| format!("the layout probe of {edition}'s headers: {e}"))?;
+    }
+    let assembly = std::fs::read_to_string(object.with_extension("s")).map_err(|e| format!("the layout probe wrote no assembly: {e}"))?;
+    let number = |v: &str| {
+        let v = v.trim();
+        v.strip_prefix("0x").map_or_else(|| v.parse::<i64>().ok(), |h| i64::from_str_radix(h, 16).ok())
+    };
+    let mut values: Vec<i64> = Vec::new();
+    let mut started = false;
+    for line in assembly.lines().map(str::trim) {
+        if line.starts_with("gRenderLayout:") {
+            started = true;
+        } else if !started {
+            continue;
+        } else if let Some(v) = line.strip_prefix(".word") {
+            values.push(number(v).ok_or_else(|| format!("the layout probe wrote {line:?}"))?);
+        } else if let Some(n) = line.strip_prefix(".space").and_then(number) {
+            values.extend(std::iter::repeat_n(0, (n / 4) as usize));
+        } else if line.starts_with(".size") {
+            break;
+        }
+    }
+    if values.len() != expressions.len() {
+        return Err(format!("the layout probe gave {} values for {} expressions", values.len(), expressions.len()));
+    }
+    Ok(values)
+}
+
+/// What a battle's run reads (battle.rs): the main routine's work, a
+/// unit's record, the battle's work and a battle object.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BattleLayout {
+    /// MainRoutineWork's active party, in order.
+    pub state_active_owners: u32,
+    /// MainRoutineWork.battleType: 1, a set battle, rolls no first strike.
+    pub state_battle_type: u32,
+    /// The party's Djinn recovery list (its four-byte entries), from
+    /// gMainRoutineWork, and where its count is from the list.
+    pub recovery_list: u32,
+    pub recovery_count: u32,
+    /// struct Unit (The Lost Age's BattleUnit): its size and fields.
+    pub unit_size: u32,
+    pub unit_base_hp: u32,
+    pub unit_base_pp: u32,
+    pub unit_hp_gauge: u32,
+    pub unit_base_luck: u32,
+    pub unit_max_hp: u32,
+    pub unit_max_pp: u32,
+    pub unit_hp: u32,
+    pub unit_pp: u32,
+    pub unit_agility: u32,
+    pub unit_luck: u32,
+    pub unit_class_id: u32,
+    pub unit_class_index: u32,
+    pub unit_side: u32,
+    pub unit_poison: u32,
+    pub unit_delusion: u32,
+    pub unit_djinn_active: u32,
+    pub unit_djinn_active_counts: u32,
+    /// struct BattleWork: the party's and the enemies' unit lists, the
+    /// background's colours and id, and the playback's phase.
+    pub work_party_units: u32,
+    pub work_enemy_ids: u32,
+    pub work_palette: u32,
+    pub work_background: u32,
+    pub work_event_phase: u32,
+    /// struct BattleObject: its sprite, the sprite over it, its palette.
+    pub obj_resource: u32,
+    pub obj_overlay: u32,
+    pub obj_palette: u32,
+    /// The heap slots of the battle's work and of the enemies' units, as
+    /// offsets into gHeapSlots.
+    pub heap_battle: u32,
+    pub heap_enemy_units: u32,
+}
+
+/// Each BattleLayout value as each game's C expression.
+const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
+    ("state_active_owners", "offsetof(struct MainRoutineWork, party)", "offsetof(struct MainRoutineWork, activeOwners)"),
+    ("state_battle_type", "offsetof(struct MainRoutineWork, battleType)", "offsetof(struct MainRoutineWork, battleType)"),
+    // The Lost Age's Djinn_GetRecoveryTable returns gMainRoutineWork.unk000
+    // + 0xc (the name wanted is The Broken Seal's summonMask), its list the
+    // offers after 8 bytes.
+    ("recovery_list", "0x0c", "0x0c + offsetof(struct TradeOfferState, offers)"),
+    ("recovery_count", "0x100", "offsetof(struct TradeOfferState, count) - offsetof(struct TradeOfferState, offers)"),
+    ("unit_size", "sizeof(struct Unit)", "sizeof(struct BattleUnit)"),
+    ("unit_base_hp", "offsetof(struct Unit, baseHp)", "offsetof(struct BattleUnit, baseHp)"),
+    ("unit_base_pp", "offsetof(struct Unit, basePp)", "offsetof(struct BattleUnit, basePp)"),
+    ("unit_hp_gauge", "offsetof(struct Unit, hpGauge)", "offsetof(struct BattleUnit, hpGauge)"),
+    ("unit_base_luck", "offsetof(struct Unit, baseLuck)", "offsetof(struct BattleUnit, baseLuck)"),
+    ("unit_max_hp", "offsetof(struct Unit, hpMax)", "offsetof(struct BattleUnit, maxHp)"),
+    ("unit_max_pp", "offsetof(struct Unit, ppMax)", "offsetof(struct BattleUnit, maxPp)"),
+    ("unit_hp", "offsetof(struct Unit, hp)", "offsetof(struct BattleUnit, hp)"),
+    ("unit_pp", "offsetof(struct Unit, pp)", "offsetof(struct BattleUnit, pp)"),
+    ("unit_agility", "offsetof(struct Unit, agi)", "offsetof(struct BattleUnit, agi)"),
+    ("unit_luck", "offsetof(struct Unit, luck)", "offsetof(struct BattleUnit, luck)"),
+    ("unit_class_id", "offsetof(struct Unit, id)", "offsetof(struct BattleUnit, classId)"),
+    ("unit_class_index", "offsetof(struct Unit, classId)", "offsetof(struct BattleUnit, classIndex)"),
+    ("unit_side", "offsetof(struct Unit, side)", "offsetof(struct BattleUnit, side)"),
+    ("unit_poison", "offsetof(struct Unit, poison)", "offsetof(struct BattleUnit, poison)"),
+    ("unit_delusion", "offsetof(struct Unit, delusion)", "offsetof(struct BattleUnit, delusion)"),
+    ("unit_djinn_active", "offsetof(struct Unit, djinnSet)", "offsetof(struct BattleUnit, djinnActive)"),
+    ("unit_djinn_active_counts", "offsetof(struct Unit, djinnSetCounts)", "offsetof(struct BattleUnit, djinnActiveCounts)"),
+    ("work_party_units", "offsetof(struct BattleWork, partyUnits)", "offsetof(struct BattleWork, partyUnits)"),
+    ("work_enemy_ids", "offsetof(struct BattleWork, enemyIds)", "offsetof(struct BattleWork, enemyIds)"),
+    ("work_palette", "offsetof(struct BattleWork, palette)", "offsetof(struct BattleWork, palette)"),
+    // The Lost Age's leaves the background's id unnamed, the first halfword
+    // after the brightness as The Broken Seal's: background is the name
+    // wanted.
+    ("work_background", "offsetof(struct BattleWork, background)", "offsetof(struct BattleWork, unk670)"),
+    ("work_event_phase", "offsetof(struct BattleWork, playback.phase)", "offsetof(struct BattleWork, events.phase)"),
+    ("obj_resource", "offsetof(struct BattleObject, resource)", "offsetof(struct BattleObj, resource)"),
+    ("obj_overlay", "offsetof(struct BattleObject, overlay)", "offsetof(struct BattleObj, overlay)"),
+    ("obj_palette", "offsetof(struct BattleObject, palette)", "offsetof(struct BattleObj, palette)"),
+    // The Lost Age's slot for the enemies' units is unkd0[2] (Unit_Get):
+    // enemyUnits is the name wanted.
+    ("heap_battle", "HEAP_SLOT_BATTLE * 4", "offsetof(struct HeapSlots, battleWork)"),
+    ("heap_enemy_units", "HEAP_SLOT_ENEMY_UNITS * 4", "offsetof(struct HeapSlots, unkd0[2])"),
+];
+
+fn battle_headers(game: Game) -> &'static [&'static str] {
+    match game {
+        Game::Tbs => &["types.h", "system/main_routine_work.h", "battle/battle_unit.h", "battle/battle_work.h", "battle/battle_action.h", "battle/battle_side.h", "system/heap.h"],
+        Game::Tla => &["types.h", "stddef.h", "system/main_routine_work.h", "battle/battle_unit.h", "battle_work.h", "battle/battle_action.h", "owner_state.h", "system/ram_buffer.h"],
+    }
+}
+
+impl BattleLayout {
+    /// The Broken Seal's, as written since the renderer began.
+    pub fn tbs() -> BattleLayout {
+        BattleLayout {
+            state_active_owners: 0x1f8,
+            state_battle_type: 0x22b,
+            recovery_list: 0x0c,
+            recovery_count: 0x100,
+            unit_size: 0x14c,
+            unit_base_hp: 0x10,
+            unit_base_pp: 0x12,
+            unit_hp_gauge: 0x14,
+            unit_base_luck: 0x1e,
+            unit_max_hp: 0x34,
+            unit_max_pp: 0x36,
+            unit_hp: 0x38,
+            unit_pp: 0x3a,
+            unit_agility: 0x40,
+            unit_luck: 0x42,
+            unit_class_id: 0x128,
+            unit_class_index: 0x129,
+            unit_side: 0x12a,
+            unit_poison: 0x131,
+            unit_delusion: 0x138,
+            unit_djinn_active: 0x108,
+            unit_djinn_active_counts: 0x11c,
+            work_party_units: 0x58,
+            work_enemy_ids: 0x66,
+            work_palette: 0x544,
+            work_background: 0x648,
+            work_event_phase: 0x800,
+            obj_resource: 0x04,
+            obj_overlay: 0x06,
+            obj_palette: 0x14,
+            heap_battle: 0x24,
+            heap_enemy_units: 0xd8,
+        }
+    }
+
+    /// The edition's game's: The Broken Seal's as written, The Lost Age's
+    /// read from its headers.
+    pub fn for_edition(edition: &str) -> Result<BattleLayout, String> {
+        match Game::of(edition)? {
+            Game::Tbs => Ok(BattleLayout::tbs()),
+            Game::Tla => BattleLayout::read(edition),
+        }
+    }
+
+    pub fn read(edition: &str) -> Result<BattleLayout, String> {
+        let game = Game::of(edition)?;
+        let expressions: Vec<&str> = BATTLE_EXPRESSIONS.iter().map(|(_, tbs, tla)| if game == Game::Tbs { *tbs } else { *tla }).collect();
+        let values = probe(edition, battle_headers(game), &expressions)?;
+        let get = |name: &str| -> u32 {
+            let i = BATTLE_EXPRESSIONS.iter().position(|(n, ..)| *n == name).expect("a battle layout value's name");
+            values[i] as u32
+        };
+        Ok(BattleLayout {
+            state_active_owners: get("state_active_owners"),
+            state_battle_type: get("state_battle_type"),
+            recovery_list: get("recovery_list"),
+            recovery_count: get("recovery_count"),
+            unit_size: get("unit_size"),
+            unit_base_hp: get("unit_base_hp"),
+            unit_base_pp: get("unit_base_pp"),
+            unit_hp_gauge: get("unit_hp_gauge"),
+            unit_base_luck: get("unit_base_luck"),
+            unit_max_hp: get("unit_max_hp"),
+            unit_max_pp: get("unit_max_pp"),
+            unit_hp: get("unit_hp"),
+            unit_pp: get("unit_pp"),
+            unit_agility: get("unit_agility"),
+            unit_luck: get("unit_luck"),
+            unit_class_id: get("unit_class_id"),
+            unit_class_index: get("unit_class_index"),
+            unit_side: get("unit_side"),
+            unit_poison: get("unit_poison"),
+            unit_delusion: get("unit_delusion"),
+            unit_djinn_active: get("unit_djinn_active"),
+            unit_djinn_active_counts: get("unit_djinn_active_counts"),
+            work_party_units: get("work_party_units"),
+            work_enemy_ids: get("work_enemy_ids"),
+            work_palette: get("work_palette"),
+            work_background: get("work_background"),
+            work_event_phase: get("work_event_phase"),
+            obj_resource: get("obj_resource"),
+            obj_overlay: get("obj_overlay"),
+            obj_palette: get("obj_palette"),
+            heap_battle: get("heap_battle"),
+            heap_enemy_units: get("heap_enemy_units"),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -354,6 +567,7 @@ mod tests {
             return;
         }
         assert_eq!(Layout::read("tbs-en").unwrap(), Layout::tbs());
+        assert_eq!(BattleLayout::read("tbs-en").unwrap(), BattleLayout::tbs());
     }
 
     #[test]

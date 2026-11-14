@@ -82,7 +82,7 @@ fn scalar(name: &str) -> Option<Type> {
     Some(Type::Int { size, signed })
 }
 
-/// The headers of games/tbs/include: their text with comments removed.
+/// The headers of a game's include folder: their text with comments removed.
 struct Headers {
     texts: Vec<(PathBuf, String)>,
     /// Each object-like `#define`'s replacement text, and each enumerator's
@@ -92,9 +92,9 @@ struct Headers {
 }
 
 impl Headers {
-    fn read(root: &Path) -> Result<Headers, String> {
+    fn read(root: &Path, game: &str) -> Result<Headers, String> {
         let mut texts = Vec::new();
-        for entry in walkdir::WalkDir::new(root.join("games/tbs/include")).sort_by_file_name() {
+        for entry in walkdir::WalkDir::new(root.join("games").join(game).join("include")).sort_by_file_name() {
             let entry = entry.map_err(|e| e.to_string())?;
             if entry.path().extension().and_then(|e| e.to_str()) == Some("h") {
                 let text = std::fs::read_to_string(entry.path()).map_err(|e| format!("cannot read {}: {e}", entry.path().display()))?;
@@ -345,23 +345,32 @@ impl Table {
     }
 }
 
-/// The built English edition and the source that describes it.
+/// A built edition and the source that describes it.
 pub struct Game {
-    root: PathBuf,
+    /// The edition's ELF, as errors name it.
+    elf_path: PathBuf,
     elf: crate::gba::elf::Elf,
     headers: Headers,
     catalog: crate::alchemy::po::Catalog,
 }
 
 impl Game {
+    /// The Broken Seal's English edition.
     pub fn read(root: &Path) -> Result<Game, String> {
-        let path = root.join("out/tbs-en/tbs-en.elf");
-        let data = std::fs::read(&path).map_err(|e| format!("cannot read {}: {e} (make tbs-en)", path.display()))?;
+        Game::read_edition(root, "tbs-en")
+    }
+
+    /// Edition `edition` (`tla-en`): its ELF, its game's headers and the
+    /// text of its language.
+    pub fn read_edition(root: &Path, edition: &str) -> Result<Game, String> {
+        let (game, language) = edition.split_once('-').ok_or_else(|| format!("{edition}: no edition"))?;
+        let path = root.join("out").join(edition).join(format!("{edition}.elf"));
+        let data = std::fs::read(&path).map_err(|e| format!("cannot read {}: {e} (make {edition})", path.display()))?;
         Ok(Game {
-            root: root.to_path_buf(),
             elf: crate::gba::elf::Elf::parse(&data)?,
-            headers: Headers::read(root)?,
-            catalog: crate::alchemy::po::read_catalog(&root.join("games/tbs/text/en.po"))?,
+            elf_path: path,
+            headers: Headers::read(root, game)?,
+            catalog: crate::alchemy::po::read_catalog(&root.join("games").join(game).join("text").join(format!("{language}.po")))?,
         })
     }
 
@@ -374,7 +383,7 @@ impl Game {
     /// Table `symbol`, rows of `struct row`.
     pub fn table(&self, symbol: &str, row: &str) -> Result<Table, String> {
         let layout = self.headers.layout(row)?;
-        let found = self.elf.symbols.iter().find(|s| s.name == symbol && s.size > 0).ok_or_else(|| format!("{} has no {symbol}", self.root.join("out/tbs-en/tbs-en.elf").display()))?;
+        let found = self.elf.symbols.iter().find(|s| s.name == symbol && s.size > 0).ok_or_else(|| format!("{} has no {symbol}", self.elf_path.display()))?;
         let (start, size) = (found.value as usize, found.size as usize);
         let bytes = self
             .elf
@@ -392,7 +401,16 @@ impl Game {
     /// name of row n is that message plus n, its control codes left out.
     pub fn names(&self, first: &str, count: usize) -> Result<Vec<String>, String> {
         let key = |e: &crate::alchemy::po::Entry| e.id.parse::<usize>().ok();
-        let base = self.catalog.entries.iter().find(|e| e.context.as_deref() == Some(first)).and_then(key).ok_or_else(|| format!("en.po has no {first}"))?;
+        // The message's number: the text names it, or the edition's ELF holds
+        // it as an absolute symbol.
+        let base = self
+            .catalog
+            .entries
+            .iter()
+            .find(|e| e.context.as_deref() == Some(first))
+            .and_then(key)
+            .or_else(|| self.elf.symbols.iter().find(|y| y.name == first).map(|y| y.value as usize))
+            .ok_or_else(|| format!("neither the text nor {} names {first}", self.elf_path.display()))?;
         let by_key: HashMap<usize, &str> = self.catalog.entries.iter().filter_map(|e| Some((key(e)?, e.value.as_str()))).collect();
         let codes = regex::Regex::new(r"\{[^}]*\}").map_err(|e| e.to_string())?;
         Ok((0..count).map(|n| by_key.get(&(base + n)).map(|v| codes.replace_all(v, "").into_owned()).unwrap_or_default()).collect())

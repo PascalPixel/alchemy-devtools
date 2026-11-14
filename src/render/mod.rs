@@ -206,9 +206,7 @@ fn options(arguments: &[String]) -> Result<Option<Options>, String> {
         return Err(format!("name an --ability or ask for --all\n{USAGE}"));
     }
     crate::alchemy::targets::parse_decomp_target(&o.edition)?;
-    if !o.edition.starts_with("tbs-") {
-        return Err(format!("{}: only the ☀️ editions have this battle setup", o.edition));
-    }
+    layout::Game::of(&o.edition)?;
     Ok(Some(o))
 }
 
@@ -248,7 +246,8 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
         return Ok(());
     };
     let root = crate::compile::root();
-    let mut plan = Tables::read(root)?.plan()?;
+    let tables = Tables::read_edition(root, &o.edition)?;
+    let mut plan = tables.plan()?;
     if o.unlearned {
         // Abilities no party list teaches, and those only enemies use, cast
         // by their element's character as the others are.
@@ -257,7 +256,7 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
             .skipped
             .iter()
             .filter(|(a, skip)| matches!(skip, Skip::Other | Skip::Enemy) && wanted(a))
-            .filter_map(|(a, _)| plan::cast(a.clone(), false))
+            .filter_map(|(a, _)| plan::cast_for(&tables.roster, a.clone(), false))
             .collect();
         plan.casts.extend(extra);
     }
@@ -354,7 +353,7 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<(Vec<Ro
     let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
     let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
     note_modified(edition, &rom);
-    let symbols = battle::Symbols::find(&map)?;
+    let symbols = battle::Symbols::find_for(&map, layout::BattleLayout::for_edition(edition)?)?;
     let mut rows = Vec::new();
     let mut total = 0;
     for cast in casts {

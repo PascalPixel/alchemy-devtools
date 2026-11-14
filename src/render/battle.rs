@@ -33,13 +33,6 @@ const MAX_RECORDED: usize = 2100;
 /// Frames the opening message waits past what a cast lacks, for the
 /// frames the message takes to type once A comes.
 const INTRO_WAIT_MARGIN: usize = 30;
-/// The party's Djinn recovery list, gMainRoutineWork + 12 (Djinn_GetRecoveryTable
-/// is gMainRoutineWork + 4; its list follows 8 bytes on): 64 four-byte entries
-/// (element, index, owner, turns), then the count.
-const STATE_RECOVERY_LIST: u32 = 0x0c;
-const RECOVERY_COUNT: u32 = 0x100;
-const UNIT_DJINN_ACTIVE: u32 = 0x108;
-const UNIT_DJINN_ACTIVE_COUNTS: u32 = 0x11c;
 /// HP of each foe, so every cast leaves it standing.
 const FOE_HP: u16 = 999;
 /// Luck of a foe facing instant death: half of it comes off the effect's
@@ -51,29 +44,14 @@ const CASTER_PP: u16 = 99;
 const ADVANCE: u32 = 45;
 /// A run that is not over by this frame has gone wrong.
 const MAX_FRAMES: u32 = 6000;
+/// Frames Down is held into a chooser that loads no preset first.
+const CHOOSER_DOWN_FRAMES: u32 = 8;
 
-/// struct MainRoutineWork (main_routine_work.h), struct Unit (battle/battle_unit.h),
-/// struct BattleWork (battle_work.h) and struct BattleObject
-/// (battle/battle_session.h) offsets.
-const STATE_ACTIVE_OWNERS: u32 = 0x1f8;
-const STATE_BATTLE_START: u32 = 0x22b;
-const STATE_OWNERS: u32 = 0x2c0;
-const UNIT_SIZE: u32 = 0x14c;
-const UNIT_BASE_HP: u32 = 0x10;
-const UNIT_BASE_PP: u32 = 0x12;
-const UNIT_HP_GAUGE: u32 = 0x14;
-const UNIT_BASE_LUCK: u32 = 0x1e;
-const UNIT_MAX_HP: u32 = 0x34;
-const UNIT_MAX_PP: u32 = 0x36;
-const UNIT_HP: u32 = 0x38;
-const UNIT_PP: u32 = 0x3a;
-const UNIT_AGILITY: u32 = 0x40;
-const UNIT_LUCK: u32 = 0x42;
-const UNIT_CLASS_ID: u32 = 0x128;
-const UNIT_CLASS_INDEX: u32 = 0x129;
-const UNIT_SIDE: u32 = 0x12a;
-const UNIT_POISON: u32 = 0x131;
-const UNIT_DELUSION: u32 = 0x138;
+/// The offsets into the main routine's work, a unit, the battle's work and
+/// a battle object are the game's BattleLayout (layout.rs), in Symbols::b;
+/// the party's Djinn recovery list holds four-byte entries (element, index,
+/// owner, turns).
+///
 /// A status's turns as it lands.
 const STATUS_TURNS: u8 = 7;
 /// A gauge's full share, Unit.hpGauge.
@@ -83,20 +61,12 @@ const SIDE_ENEMY: u8 = 1;
 const FIRST_ENEMY_UNIT: u32 = 128;
 /// Enemy units 128 to 133 (BATTLE_ENEMY_CAPACITY).
 const ENEMY_UNITS: u32 = 6;
-const WORK_PARTY_UNITS: u32 = 0x58;
-const WORK_ENEMY_IDS: u32 = 0x66;
-const WORK_PALETTE: u32 = 0x544;
-const WORK_BACKGROUND: u32 = 0x648;
 /// BG palettes 6 to 13, the battle background's (BATTLE_BG_PALETTE).
 const BATTLE_BG_PALETTE: u32 = 0x0500_00c0;
 /// BattleBackground_Load's darkening step, BACKGROUND_LEVEL_STEP.
 const LEVEL_STEP: i32 = 1092;
 /// gBattleWork->events.phase; PLAY_ADVANCE (5) shows the playback arrow.
-const WORK_EVENT_PHASE: u32 = 0x800;
 const PLAY_ADVANCE: u32 = 5;
-const OBJ_RESOURCE: u32 = 0x04;
-const OBJ_OVERLAY: u32 = 0x06;
-const OBJ_PALETTE: u32 = 0x14;
 const PLACE_PARTY: u16 = 0x100;
 const PLACE_ENEMY: u16 = 0x180;
 /// The battle background's picture: character blocks 2 and 3, below BG1's
@@ -162,32 +132,57 @@ pub struct Symbols {
     game_state: u32,
     game_flags: u32,
     owner_states: u32,
+    /// The characters' unit records, one after another (gCharacterUnits).
+    owners: u32,
+    /// Whether the chooser loads a preset before it waits for A (The Broken
+    /// Seal's DebugParameterSet_Load), which lets Down go; The Lost Age's
+    /// loads the one A picks.
+    preset_first: bool,
+    /// Where the game's structures keep what the run reads.
+    pub b: super::layout::BattleLayout,
 }
 
 impl Symbols {
+    /// The Broken Seal's, from its map.
     pub fn find(map: &Map) -> Result<Symbols, String> {
-        let at = |name: &str| {
-            map.symbol(name).map(|(_, a)| a & !1).ok_or_else(|| format!("the map has no {name}"))
+        Symbols::find_for(map, super::layout::BattleLayout::tbs())
+    }
+
+    /// An edition's, from its map, with its game's layout `b`. Where The
+    /// Lost Age names a thing otherwise, The Broken Seal's name is looked
+    /// for first and The Lost Age's second (DebugParty_LoadPreset,
+    /// Battle_RunEncounter, gOwnerStates), the name its source should
+    /// change; the battle's work and the enemies' units it reaches through
+    /// gHeapSlots.
+    pub fn find_for(map: &Map, b: super::layout::BattleLayout) -> Result<Symbols, String> {
+        let find = |name: &str| map.symbol(name).map(|(_, a)| a & !1);
+        let at = |name: &str| find(name).ok_or_else(|| format!("the map has no {name}"));
+        let either = |name: &str, other: &str| find(name).or_else(|| find(other)).ok_or_else(|| format!("the map has no {name} (nor {other})"));
+        let slot = |name: &str, offset: u32| {
+            find(name).or_else(|| find("gHeapSlots").map(|slots| slots + offset)).ok_or_else(|| format!("the map has no {name} (nor gHeapSlots)"))
         };
         Ok(Symbols {
             start: at("MainRoutine_RunFar")?,
             menu: at("DebugBattle_RunMenu")?,
-            preset: at("DebugParameterSet_Load")?,
-            encounter: at("Battle_Run")?,
+            preset: either("DebugParameterSet_Load", "DebugParty_LoadPreset")?,
+            encounter: either("Battle_Run", "Battle_RunEncounter")?,
             collect: at("BattleUnit_Collect")?,
             obj_make: at("BattleObject_Make")?,
             background: at("BattleBackground_Load")?,
             build: at("Battle_GatherActions")?,
             commands: at("Battle_CollectPartyCommands")?,
-            opponents: at("Battle_BuildEnemyActions").or_else(|_| at("Battle_BuildOpponentActions"))?,
+            opponents: either("Battle_BuildEnemyActions", "Battle_BuildOpponentActions")?,
             dispatch: at("BattleStaging_DispatchAction")?,
             wait_advance: at("BattleMessage_WaitForAdvance")?,
             message: at("BattleMessage_ShowAndWait")?,
             battle_over: at("Battle_ClearSerialTransferPayload")?,
-            battle_work: at("gBattleWork")?,
+            battle_work: slot("gBattleWork", b.heap_battle)?,
             game_state: at("gMainRoutineWork")?,
             game_flags: at("gGameFlagBytes")?,
-            owner_states: at("gEnemyUnits")?,
+            owner_states: slot("gEnemyUnits", b.heap_enemy_units)?,
+            owners: either("gCharacterUnits", "gOwnerStates")?,
+            preset_first: find("DebugParameterSet_Load").is_some(),
+            b,
         })
     }
 }
@@ -280,7 +275,7 @@ pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene
 fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool, menu: Option<&[(u32, u32)]>, hooks: &[u32], watch: &mut dyn FnMut(&mut Gba, Option<u32>), intro_wait: u32) -> Result<Recording, String> {
     let mut gba = Gba::new(rom)?;
     let s = symbols;
-    let owner = |id: u8| s.game_state + STATE_OWNERS + u32::from(id) * UNIT_SIZE;
+    let owner = |id: u8| s.owners + u32::from(id) * s.b.unit_size;
     let caster = cast.caster();
     let say = |frame: u32, text: String| {
         if log {
@@ -292,6 +287,7 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
     let mut phase = Phase::Boot;
     // From power-on: the menu opens its chooser while Down is held.
     let mut hold_down = true;
+    let mut chooser_from = 0;
     let mut frame = 0;
     let mut background_return = 0;
     let mut background_id = 0;
@@ -324,6 +320,7 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             // test menu instead. It reads Down from gKeysHeld at once.
             gba.branch(s.menu);
             phase = Phase::Chooser;
+            chooser_from = frame;
         } else if phase == Phase::Chooser && pc == s.preset {
             // The chooser loads preset 0 first: load ours instead.
             say(frame, format!("DebugParameterSet_Load({}) -> {}", gba.register(0), cast.preset));
@@ -335,13 +332,13 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             let flags = cast.party.iter().fold(0u8, |f, &o| f | 1 << o);
             gba.write8(s.game_flags, flags);
             for (i, &o) in cast.party.iter().enumerate() {
-                gba.write8(s.game_state + STATE_ACTIVE_OWNERS + i as u32, o);
+                gba.write8(s.game_state + s.b.state_active_owners + i as u32, o);
             }
             // A set battle: no first strike or surprise roll.
-            gba.write8(s.game_state + STATE_BATTLE_START, 1);
+            gba.write8(s.game_state + s.b.state_battle_type, 1);
             let unit = owner(caster);
-            if gba.read16(unit + UNIT_PP) < u16::from(cast.ability.pp_cost) {
-                for field in [UNIT_BASE_PP, UNIT_MAX_PP, UNIT_PP] {
+            if gba.read16(unit + s.b.unit_pp) < u16::from(cast.ability.pp_cost) {
+                for field in [s.b.unit_base_pp, s.b.unit_max_pp, s.b.unit_pp] {
                     gba.write16(unit + field, CASTER_PP);
                 }
             }
@@ -349,39 +346,39 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             // the element leave its Set Djinn (Djinn_PutOnStandby) and join the
             // party's recovery list with turns -1 (DjinnRecovery_AddStandby).
             if let Command::Summon { element, count, .. } = cast.command {
-                let (e, list) = (u32::from(element), s.game_state + STATE_RECOVERY_LIST);
+                let (e, list) = (u32::from(element), s.game_state + s.b.recovery_list);
                 for index in 0..u32::from(count) {
-                    let active = unit + UNIT_DJINN_ACTIVE + 4 * e;
+                    let active = unit + s.b.unit_djinn_active + 4 * e;
                     let bits = gba.read32(active);
                     if bits & 1 << index == 0 {
                         continue;
                     }
                     gba.write32(active, bits & !(1 << index));
-                    let counted = gba.read8(unit + UNIT_DJINN_ACTIVE_COUNTS + e);
-                    gba.write8(unit + UNIT_DJINN_ACTIVE_COUNTS + e, counted.saturating_sub(1));
-                    let n = gba.read32(list + RECOVERY_COUNT);
+                    let counted = gba.read8(unit + s.b.unit_djinn_active_counts + e);
+                    gba.write8(unit + s.b.unit_djinn_active_counts + e, counted.saturating_sub(1));
+                    let n = gba.read32(list + s.b.recovery_count);
                     let entry = list + 4 * n;
                     gba.write8(entry, element);
                     gba.write8(entry + 1, index as u8);
                     gba.write8(entry + 2, caster);
                     gba.write8(entry + 3, 0xff);
-                    gba.write32(list + RECOVERY_COUNT, n + 1);
+                    gba.write32(list + s.b.recovery_count, n + 1);
                 }
             }
             if let Some(&ally) = cast.party.get(1) {
                 let unit = owner(ally);
-                let max = u32::from(gba.read16(unit + UNIT_MAX_HP));
+                let max = u32::from(gba.read16(unit + s.b.unit_max_hp));
                 // Unit_Calculate keeps the share of HP the gauge holds.
                 let set_hp = |gba: &mut Gba, hp: u32| {
-                    gba.write16(unit + UNIT_HP, hp as u16);
-                    gba.write16(unit + UNIT_HP_GAUGE, (hp * GAUGE_FULL / max.max(1)) as u16);
+                    gba.write16(unit + s.b.unit_hp, hp as u16);
+                    gba.write16(unit + s.b.unit_hp_gauge, (hp * GAUGE_FULL / max.max(1)) as u16);
                 };
                 match cast.ally {
                     Ally::Healthy => {}
                     Ally::Hurt => set_hp(&mut gba, max / 2),
                     Ally::Downed => set_hp(&mut gba, 0),
-                    Ally::Poisoned => gba.write8(unit + UNIT_POISON, 1),
-                    Ally::Deluded => gba.write8(unit + UNIT_DELUSION, STATUS_TURNS),
+                    Ally::Poisoned => gba.write8(unit + s.b.unit_poison, 1),
+                    Ally::Deluded => gba.write8(unit + s.b.unit_delusion, STATUS_TURNS),
                 }
             }
             for &o in cast.party.iter().chain(&cast.foes) {
@@ -391,12 +388,12 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                     format!(
                         "{}: classId {}, classIndex {}, HP {}/{}, PP {}/{}",
                         plan::character_name(o),
-                        gba.read8(unit + UNIT_CLASS_ID),
-                        gba.read8(unit + UNIT_CLASS_INDEX),
-                        gba.read16(unit + UNIT_HP),
-                        gba.read16(unit + UNIT_MAX_HP),
-                        gba.read16(unit + UNIT_PP),
-                        gba.read16(unit + UNIT_MAX_PP)
+                        gba.read8(unit + s.b.unit_class_id),
+                        gba.read8(unit + s.b.unit_class_index),
+                        gba.read16(unit + s.b.unit_hp),
+                        gba.read16(unit + s.b.unit_max_hp),
+                        gba.read16(unit + s.b.unit_pp),
+                        gba.read16(unit + s.b.unit_max_pp)
                     ),
                 );
             }
@@ -413,7 +410,7 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             // Only the battle's own background changes: some effects load a
             // sky of their own.
             let work = gba.read32(s.battle_work);
-            if background_id == u32::from(gba.read16(work + WORK_BACKGROUND)) {
+            if background_id == u32::from(gba.read16(work + s.b.work_background)) {
                 say(frame, format!("BattleBackground_Load({background_id:#x}, level {background_level}) returned"));
                 match scene {
                     Scene::Game => {}
@@ -427,7 +424,7 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                             gba.write32(a, u32::from_le_bytes([word[0], word[1], word[2], word[3]]));
                         }
                         for (i, &c) in picture.palette.iter().enumerate() {
-                            gba.write16(work + WORK_PALETTE + 2 * i as u32, c);
+                            gba.write16(work + s.b.work_palette + 2 * i as u32, c);
                         }
                         // As BattleBackground_Load darkens it, unless the
                         // level is negative.
@@ -448,26 +445,26 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             if !cast.foes.is_empty() {
                 let enemies = gba.read32(s.owner_states);
                 for unit in 0..ENEMY_UNITS {
-                    let to = enemies + unit * UNIT_SIZE;
+                    let to = enemies + unit * s.b.unit_size;
                     match cast.foes.get(unit as usize) {
                         Some(&foe) => {
-                            for i in (0..UNIT_SIZE).step_by(4) {
+                            for i in (0..s.b.unit_size).step_by(4) {
                                 let word = gba.read32(owner(foe) + i);
                                 gba.write32(to + i, word);
                             }
                             // Unit_Calculate rebuilds hpMax from baseHp and luck
                             // from baseLuck each round
                             // (BattleUnit_ResetGuardLevels), so raise both.
-                            for field in [UNIT_BASE_HP, UNIT_MAX_HP, UNIT_HP] {
+                            for field in [s.b.unit_base_hp, s.b.unit_max_hp, s.b.unit_hp] {
                                 gba.write16(to + field, FOE_HP);
                             }
                             if cast.lucky_foes {
-                                gba.write8(to + UNIT_BASE_LUCK, FOE_LUCK);
-                                gba.write8(to + UNIT_LUCK, FOE_LUCK);
+                                gba.write8(to + s.b.unit_base_luck, FOE_LUCK);
+                                gba.write8(to + s.b.unit_luck, FOE_LUCK);
                             }
-                            gba.write8(to + UNIT_SIDE, SIDE_ENEMY);
+                            gba.write8(to + s.b.unit_side, SIDE_ENEMY);
                         }
-                        None => gba.write8(to + UNIT_SIDE, SIDE_ABSENT),
+                        None => gba.write8(to + s.b.unit_side, SIDE_ABSENT),
                     }
                 }
             }
@@ -481,10 +478,10 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             // BattleObject_Make gives a character on the enemy side palette 1,
             // the link opponent's colours: draw it in its own.
             if obj_unit >= FIRST_ENEMY_UNIT && !cast.foes.is_empty() {
-                gba.write32(obj_actor + OBJ_PALETTE, 0);
+                gba.write32(obj_actor + s.b.obj_palette, 0);
             }
             let unit = if obj_unit >= FIRST_ENEMY_UNIT {
-                gba.read32(s.owner_states) + (obj_unit - FIRST_ENEMY_UNIT) * UNIT_SIZE
+                gba.read32(s.owner_states) + (obj_unit - FIRST_ENEMY_UNIT) * s.b.unit_size
             } else {
                 owner(obj_unit as u8)
             };
@@ -492,11 +489,11 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                 frame,
                 format!(
                     "BattleObject_Make unit {obj_unit}: classId {}, classIndex {}, sprite {}, weapon sprite {}, palette {}",
-                    gba.read8(unit + UNIT_CLASS_ID),
-                    gba.read8(unit + UNIT_CLASS_INDEX),
-                    gba.read16(obj_actor + OBJ_RESOURCE),
-                    gba.read16(obj_actor + OBJ_OVERLAY),
-                    gba.read32(obj_actor + OBJ_PALETTE)
+                    gba.read8(unit + s.b.unit_class_id),
+                    gba.read8(unit + s.b.unit_class_index),
+                    gba.read16(obj_actor + s.b.obj_resource),
+                    gba.read16(obj_actor + s.b.obj_overlay),
+                    gba.read32(obj_actor + s.b.obj_palette)
                 ),
             );
             obj_return = 0;
@@ -516,10 +513,10 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             let record = gba.register(0);
             let work = gba.read32(s.battle_work);
             let place = match cast.aim {
-                Aim::Foe => PLACE_ENEMY + place_of(&gba, work + WORK_ENEMY_IDS, FIRST_ENEMY_UNIT as u16 + cast.target_foe() as u16)?,
-                Aim::Ally => PLACE_PARTY + place_of(&gba, work + WORK_PARTY_UNITS, cast.party[1].into())?,
+                Aim::Foe => PLACE_ENEMY + place_of(&gba, work + s.b.work_enemy_ids, FIRST_ENEMY_UNIT as u16 + cast.target_foe() as u16)?,
+                Aim::Ally => PLACE_PARTY + place_of(&gba, work + s.b.work_party_units, cast.party[1].into())?,
             };
-            let agility = gba.read16(owner(caster) + UNIT_AGILITY);
+            let agility = gba.read16(owner(caster) + s.b.unit_agility);
             let (command, parameter) = match cast.command {
                 Command::Psynergy => (CMD_PSYNERGY, cast.ability.id),
                 Command::Djinni { element, index } => (CMD_DJINN, u16::from(element) << 8 | u16::from(index)),
@@ -590,7 +587,7 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
         // waited: BattleMessage_WaitForAdvance, or the playback task's
         // arrow.
         let work = if phase >= Phase::Battle { gba.read32(s.battle_work) } else { 0 };
-        let waiting = wait_return != 0 || (work != 0 && gba.read32(work + WORK_EVENT_PHASE) == PLAY_ADVANCE);
+        let waiting = wait_return != 0 || (work != 0 && gba.read32(work + s.b.work_event_phase) == PLAY_ADVANCE);
         prompt_frames = if waiting { prompt_frames + 1 } else { 0 };
         if phase == Phase::Menu {
             let script = menu.unwrap_or(&[]);
@@ -605,6 +602,11 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                 None => break,
             }
             continue;
+        }
+        // The Lost Age's chooser reads Down as it opens and loads its preset
+        // only once A has picked it: Down is let go after a few frames.
+        if hold_down && !s.preset_first && phase == Phase::Chooser && frame > chooser_from + CHOOSER_DOWN_FRAMES {
+            hold_down = false;
         }
         let keys = if hold_down {
             KEY_DOWN

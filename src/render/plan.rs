@@ -8,12 +8,15 @@ use super::tables::{Game, Table};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-/// The characters, by owner id (games/tbs/include/game/character_ids.h).
+/// The characters, by owner id (character_ids.h, the same in both games).
 pub const ISAAC: u8 = 0;
 pub const GARET: u8 = 1;
 pub const IVAN: u8 = 2;
 pub const MIA: u8 = 3;
+pub const FELIX: u8 = 4;
 pub const JENNA: u8 = 5;
+pub const SHEBA: u8 = 6;
+pub const PIERS: u8 = 7;
 
 /// The four who travel together, in owner order.
 const FOUR: [u8; 4] = [ISAAC, GARET, IVAN, MIA];
@@ -27,6 +30,48 @@ const JENNA_CLASS: usize = 202;
 /// sprites 480 and 482 instead. Jenna, in no preset but 10 and 11, keeps the
 /// record the debug menu's defaults give her.
 const PRESET_FOUR: u8 = 0;
+
+/// Who casts in a game, and at whom.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Roster {
+    /// Each element's caster (Venus, Mercury, Mars, Jupiter) and the
+    /// opposed element's character, the target.
+    pub by_element: [(u8, u8); 4],
+    /// The four who travel together: a cast that reaches past its aim meets
+    /// two of them beside the target.
+    pub four: [u8; 4],
+    /// The debug party preset that gives them (gDebug_ParameterSets).
+    pub preset: u8,
+    /// A class whose Psynergy another character casts: The Broken Seal's
+    /// Jenna casts her own class's Mars Psynergy.
+    pub special: Option<(usize, u8)>,
+}
+
+impl Roster {
+    /// The Broken Seal's: Isaac, Garet, Ivan and Mia from preset 0, at
+    /// level 35, and Jenna for her own class's Psynergy.
+    pub fn tbs() -> Roster {
+        Roster {
+            by_element: [(ISAAC, IVAN), (MIA, GARET), (GARET, MIA), (IVAN, ISAAC)],
+            four: FOUR,
+            preset: PRESET_FOUR,
+            special: Some((JENNA_CLASS, JENNA)),
+        }
+    }
+
+    /// The Lost Age's: Felix, Jenna, Sheba and Piers from its debug preset
+    /// 3, the four at level 90 with nine Djinn of their own element set
+    /// (games/tla/src/battle/battle_tables.s): Venus Felix against Sheba,
+    /// Mercury Piers against Jenna.
+    pub fn tla() -> Roster {
+        Roster {
+            by_element: [(FELIX, SHEBA), (PIERS, JENNA), (JENNA, PIERS), (SHEBA, FELIX)],
+            four: [FELIX, JENNA, SHEBA, PIERS],
+            preset: 3,
+            special: None,
+        }
+    }
+}
 
 /// AbilityDefinition.flags (struct AbilityDefinition, battle/battle_unit.h).
 const USABLE_IN_BATTLE: u8 = 0x80;
@@ -56,7 +101,10 @@ pub fn character_name(owner: u8) -> &'static str {
         GARET => "Garet",
         IVAN => "Ivan",
         MIA => "Mia",
+        FELIX => "Felix",
         JENNA => "Jenna",
+        SHEBA => "Sheba",
+        PIERS => "Piers",
         _ => "?",
     }
 }
@@ -206,10 +254,11 @@ fn nonzero(table: &Table, path: &str) -> Result<BTreeSet<u16>, String> {
     Ok(values)
 }
 
-/// Every ability by id (gAbilityDefinitions), named from MsgAbilityName.
+/// Every ability by id (gAbilityDefinitions), named from MsgAbilityName (The
+/// Lost Age's first ability name is MsgAbilityNothing, the name to change).
 pub fn abilities(game: &Game) -> Result<Vec<Ability>, String> {
     let table = game.table("gAbilityDefinitions", "AbilityDefinition")?;
-    let names = game.names("MsgAbilityName", table.len())?;
+    let names = game.names("MsgAbilityName", table.len()).or_else(|_| game.names("MsgAbilityNothing", table.len()))?;
     (0..table.len())
         .map(|row| {
             let byte = |field| table.value(row, field).map(|v| v as u8);
@@ -230,7 +279,8 @@ pub fn abilities(game: &Game) -> Result<Vec<Ability>, String> {
 /// What the tables say about the abilities, read from the built edition.
 pub struct Tables {
     pub abilities: Vec<Ability>,
-    /// Every class's Psynergy (gClass_DefinitionTable), and Jenna's.
+    /// Every class's Psynergy (gClass_DefinitionTable), and the special
+    /// caster's class's (Roster::special).
     learned: BTreeSet<u16>,
     jenna: BTreeSet<u16>,
     /// The abilities items teach while equipped (ITEM_USE_TEACHES), those they
@@ -245,37 +295,60 @@ pub struct Tables {
     summons: Vec<(u16, Vec<i64>)>,
     /// What the enemies choose from (gEnemy_Definitions).
     enemy: BTreeSet<u16>,
+    /// Who casts.
+    pub roster: Roster,
+}
+
+/// What a game's source calls the fields and tables The Broken Seal's call
+/// otherwise: the first name is The Broken Seal's, the second The Lost
+/// Age's, the name its source should change.
+fn either(table: &Table, row: usize, names: [&str; 2]) -> Result<i64, String> {
+    table.value(row, names[0]).or_else(|_| table.value(row, names[1]))
 }
 
 impl Tables {
+    /// The Broken Seal's, from tbs-en.
     pub fn read(root: &Path) -> Result<Tables, String> {
-        let game = Game::read(root)?;
+        Tables::read_edition(root, "tbs-en")
+    }
+
+    /// Edition `edition`'s.
+    pub fn read_edition(root: &Path, edition: &str) -> Result<Tables, String> {
+        let game = Game::read_edition(root, edition)?;
+        let roster = if edition.starts_with("tla-") { Roster::tla() } else { Roster::tbs() };
         let classes = game.table("gClass_DefinitionTable", "ClassDefinition")?;
         let items = game.table("gItem_DefinitionTable", "ItemDefinition")?;
         let summons = game.table("gSummon_DefinitionTable", "SummonDefinition")?;
-        let teaches = game.constant("ITEM_USE_TEACHES")?;
+        // The Lost Age's items leave the kind of use that teaches unnamed:
+        // 3, as The Broken Seal's ITEM_USE_TEACHES (its Lash Pebble and Pound
+        // Cube teach Lash and Pound).
+        let teaches = game.constant("ITEM_USE_TEACHES").unwrap_or(3);
         let (mut taught, mut used) = (BTreeSet::new(), BTreeSet::new());
         for row in 0..items.len() {
-            let id = items.value(row, "abilityId")?;
+            let id = either(&items, row, ["abilityId", "actionId"])?;
             if id > 0 {
                 if items.value(row, "useType")? == teaches { &mut taught } else { &mut used }.insert(id as u16);
             }
         }
-        let jenna = if JENNA_CLASS < classes.len() {
-            classes.values(JENNA_CLASS, "abilities.ability")?.into_iter().filter(|&v| v > 0).map(|v| v as u16).collect()
-        } else {
-            BTreeSet::new()
+        let jenna = match roster.special {
+            Some((class, _)) if class < classes.len() => classes.values(class, "abilities.ability")?.into_iter().filter(|&v| v > 0).map(|v| v as u16).collect(),
+            _ => BTreeSet::new(),
         };
+        let unleashed = nonzero(&items, "unleashAbility").or_else(|_| nonzero(&items, "unleashAction"))?;
+        let enemies = game.table("gEnemy_Definitions", "EnemyDefinition").or_else(|_| game.table("gEnemy_DefinitionTable", "EnemyDefinition"))?;
         Ok(Tables {
             abilities: abilities(&game)?,
             learned: nonzero(&classes, "abilities.ability")?,
             jenna,
             taught,
             used,
-            unleashed: nonzero(&items, "unleashAbility")?,
+            unleashed,
             djinn: nonzero(&game.table("gDjinn_DefinitionTable", "DjinnDefinition")?, "abilityId")?,
-            summons: (0..summons.len()).map(|row| Ok((summons.value(row, "abilityId")? as u16, summons.values(row, "djinnRequired")?))).collect::<Result<_, String>>()?,
-            enemy: nonzero(&game.table("gEnemy_Definitions", "EnemyDefinition")?, "abilities")?,
+            summons: (0..summons.len())
+                .map(|row| Ok((either(&summons, row, ["abilityId", "nameMessageId"])? as u16, summons.values(row, "djinnRequired")?)))
+                .collect::<Result<_, String>>()?,
+            enemy: nonzero(&enemies, "abilities")?,
+            roster,
         })
     }
 
@@ -309,13 +382,13 @@ impl Tables {
             // on standby.
             let special = match skip {
                 Some(Skip::Djinni) => id.checked_sub(DJINN_FIRST).and_then(|n| {
-                    let mut c = cast(ability.clone(), false)?;
+                    let mut c = cast_for(&self.roster, ability.clone(), false)?;
                     c.command =
                         Command::Djinni { element: (n / DJINN_PER_ELEMENT) as u8, index: (n % DJINN_PER_ELEMENT) as u8 };
                     Some(c)
                 }),
                 Some(Skip::Summon) => self.summon_row(id).and_then(|(row, element, count)| {
-                    let mut c = cast(ability.clone(), false)?;
+                    let mut c = cast_for(&self.roster, ability.clone(), false)?;
                     c.command = Command::Summon { row, element, count };
                     Some(c)
                 }),
@@ -327,7 +400,7 @@ impl Tables {
             }
             match skip {
                 Some(skip) => skipped.push((ability, skip)),
-                None => match cast(ability.clone(), jenna.contains(&id)) {
+                None => match cast_for(&self.roster, ability.clone(), jenna.contains(&id)) {
                     Some(c) => casts.push(c),
                     None => skipped.push((ability, Skip::Other)),
                 },
@@ -365,21 +438,23 @@ const DJINN_PER_ELEMENT: u16 = 20;
 /// for Revive, poisoned for Cure Poison and deluded for Restore. Foes facing
 /// instant death are made lucky, so they stand.
 pub fn cast(ability: Ability, jenna_casts: bool) -> Option<Cast> {
-    let (caster, opposed) = match ability.element {
-        0 => (ISAAC, IVAN),
-        1 => (MIA, GARET),
-        2 if jenna_casts => (JENNA, MIA),
-        2 => (GARET, MIA),
-        3 => (IVAN, ISAAC),
-        _ => return None,
-    };
-    let preset = PRESET_FOUR;
+    cast_for(&Roster::tbs(), ability, jenna_casts)
+}
+
+/// As `cast`, by `roster`'s casters; `special` has its special caster cast
+/// in place of its element's (The Broken Seal's Jenna, at the same target).
+pub fn cast_for(roster: &Roster, ability: Ability, special: bool) -> Option<Cast> {
+    let (mut caster, opposed) = *roster.by_element.get(usize::from(ability.element))?;
+    if let Some((_, who)) = roster.special.filter(|_| special) {
+        caster = who;
+    }
+    let preset = roster.preset;
     let (party, foes, aim) = if ability.target_mode == TARGET_FOES {
         let mut foes = vec![opposed];
         if ability.range != 1 {
             // The target goes in the middle of the line, so a range reaches
             // the foes on both sides of it.
-            let mut others = FOUR.iter().copied().filter(|&o| o != caster && o != opposed).take(2);
+            let mut others = roster.four.iter().copied().filter(|&o| o != caster && o != opposed).take(2);
             foes = [others.next(), Some(opposed), others.next()].into_iter().flatten().collect();
         }
         (vec![caster], foes, Aim::Foe)
