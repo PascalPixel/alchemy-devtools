@@ -176,11 +176,20 @@ mod tests {
 
     #[test]
     fn goma_cave_entrance_is_entered_from_the_world_map() {
-        let arrivals = read(crate::compile::root()).unwrap();
+        let arrivals = read(crate::compile::root(), "tbs").unwrap();
         let names = map_names(&std::fs::read_to_string(crate::compile::root().join("games/tbs/src/field/scenes.s")).unwrap());
         let number = names.iter().position(|n| n == "GomaCaveEntrance").unwrap() as u16;
         assert!(arrivals[&number].contains(&Arrival { dest: 1, from: "WorldMap".to_string() }), "{:?}", arrivals[&number]);
         assert_eq!(ranked(&arrivals[&number], &[0, 1, 2]), vec![1, 2]);
+    }
+
+    #[test]
+    fn idejima_is_entered_from_the_world_map_and_suhalla_gate() {
+        let arrivals = read(crate::compile::root(), "tla").unwrap();
+        let names = map_names(&std::fs::read_to_string(crate::compile::root().join("games/tla/src/field/scenes.s")).unwrap());
+        let number = names.iter().position(|n| n == "Idejima").unwrap() as u16;
+        assert!(arrivals[&number].contains(&Arrival { dest: 2, from: "WorldMap".to_string() }), "{:?}", arrivals[&number]);
+        assert!(arrivals[&number].contains(&Arrival { dest: 11, from: "SuhallaGate3".to_string() }), "{:?}", arrivals[&number]);
     }
 
     #[test]
