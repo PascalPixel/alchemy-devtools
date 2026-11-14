@@ -176,6 +176,12 @@ Facts about Alchemy's compiler, alchemy-gcc, not rules.
   - Argument order follows the callee's type: called through a type that returns a value, the second argument loads after the callee's address. Where the routine really leaves a value in r0, give it that return type; it is an honest type, not a costume (1, and the cause behind several earlier ones).
   - A stray `u8 *` puts a store in alias set 0 (may alias anything): remove it. Unions do the same and are the largest family still unexplained, with the block or loop boundary straight after a call.
   - Where the ROM keeps a test's own instructions, it is not a fake match but `// DEAD:` (S2's physical test).
+- The round after took it from 137 to 118 (14 November 2026):
+  - The union family is solved (9). A union, like a stray byte pointer, puts every access in alias set 0. An actor's coordinate declared as a struct (`struct FieldCoordinate { part[0]; s32 fixed; }`, read `.part[0].pixel`), its sprite as a plain `struct Sprite *`, and a struct split out where there were two objects give the ROM's bytes with no device. A member of its true pointer type can supply the conflict a load needs to wait on; `.part->X` for `.part[0].X` moves code.
+  - A `for` loop with a `break` inside the compiler's 30-instruction exit scan compiles as the `do`-`while` it is: write that (3).
+  - A shared tail behind a `goto`, written out in both arms (1).
+  - The boundary-after-a-call family has an exact cause and no source form yet (read with `-fsched-verbose=4 -dR`): an empty or once-only `do`-`while` does not end the basic block; its notes attach to the next instruction, every later instruction in the block then depends on that one, and sched2's tie-break changes. Statement order cannot reproduce it, and the copy routine it follows is not a statement macro (wrapping every statement-level call changes routines that match).
+  - Still open: volatile stack halfwords, constants hidden from gcse and CSE, two prototypes in conflict within one object, and the scheduling ties above.
 - The system `make` on macOS is GNU Make 3.81, which compares file times to the second: a file rewritten in the second of its last build is taken as up to date, and incremental builds have both passed stale trees and failed good ones. Build with GNU Make 4 (`gmake`) or from deleted objects.
 - An overlay's generated import table is rebuilt when the overlay's objects or its script change; before that fix an incremental build passed a compare a clean build refused.
 
