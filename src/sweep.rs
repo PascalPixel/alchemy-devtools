@@ -268,10 +268,10 @@ mod tests {
 
     #[test]
     fn a_tag_taken_out_names_its_row() {
-        // The Broken Seal's rows for this routine: one temporary, two dead.
+        // The Broken Seal's row for this routine: one dead.
         let path = "games/tbs/include/system/serial.h";
-        let original = "void Serial_ResetTransferState(void) {\n  /* FAKEMATCH(temporary): zero held. */\n  /* FAKEMATCH(dead): state set again. */\n  /* FAKEMATCH(dead): a loop. */\n  do {\n  } while (0);\n}\n";
-        let kept = without(original, &(3..6));
+        let original = "void Serial_ResetTransferState(void) {\n  state = 0;\n  /* FAKEMATCH(dead): state set again. */\n  state = 0;\n}\n";
+        let kept = without(original, &(2..4));
         assert_eq!(rows_taken_out(path, original, &kept).unwrap(), ["Serial_ResetTransferState (FAKEMATCH(dead))"]);
         assert!(rows_taken_out(path, original, original).unwrap().is_empty());
         assert!(rows_taken_out("games/xyz/src/x.c", original, &kept).unwrap().is_empty(), "a game with no table");

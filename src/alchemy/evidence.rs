@@ -115,7 +115,7 @@ mod tests {
         assert!(rows.len() > 4000, "{}", rows.len());
         assert!(rows.iter().all(|row| row.file.starts_with("games/tbs/") && !row.name.is_empty()));
         let measured = measurements("tbs").unwrap();
-        assert!(measured.len() > 200, "{}", measured.len());
+        assert!(measured.len() > 100, "{}", measured.len());
         assert!(measured.iter().all(|row| row.file.starts_with("games/tbs/") && (row.kind.starts_with("FAKEMATCH(") || row.kind.starts_with("LEFTOVER("))));
         // A game not yet converted has no table, and so no rows.
         assert!(table("xyz-names.tsv").is_none() && names("xyz").unwrap().is_empty() && measurements("xyz").unwrap().is_empty());

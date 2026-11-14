@@ -216,8 +216,19 @@ impl Headers {
             .ok_or_else(|| format!("no header declares struct {name}"))?;
         let mut fields = Vec::new();
         let (mut offset, mut align) = (0usize, 4usize);
+        // The bits of the bit-fields met in a row: they share words, and no
+        // table reads one.
+        let mut bits = 0usize;
         for member in body.split(';').map(str::trim).filter(|m| !m.is_empty()) {
             let member = member.split_whitespace().collect::<Vec<_>>().join(" ");
+            if let Some(width) = member.strip_prefix("unsigned ").and_then(|rest| rest.split_once(':')).and_then(|(_, width)| width.trim().parse::<usize>().ok()) {
+                bits += width;
+                continue;
+            }
+            if bits > 0 {
+                offset = offset.next_multiple_of(4) + bits.div_ceil(32) * 4;
+                bits = 0;
+            }
             if member.contains(':') || member.contains('(') {
                 return Err(format!("struct {name}: cannot lay out `{member}`"));
             }
@@ -249,6 +260,9 @@ impl Headers {
                 fields.push((field.trim_start_matches('*').to_string(), offset, kind));
                 offset += size;
             }
+        }
+        if bits > 0 {
+            offset = offset.next_multiple_of(4) + bits.div_ceil(32) * 4;
         }
         let layout = Layout { fields, size: offset.next_multiple_of(align), align };
         self.check(name, &layout, text).map_err(|e| format!("{}: {e}", path.display()))?;
