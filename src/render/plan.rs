@@ -314,7 +314,8 @@ fn either(table: &Table, row: usize, names: [&str; 2]) -> Result<i64, String> {
 }
 
 impl Tables {
-    /// The Broken Seal's, from tbs-en.
+    /// The Broken Seal's, from tbs-en (the guides' battles).
+    #[cfg(feature = "render")]
     pub fn read(root: &Path) -> Result<Tables, String> {
         Tables::read_edition(root, "tbs-en")
     }
