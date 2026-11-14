@@ -1651,6 +1651,22 @@ impl<'rom> Field<'rom> {
         out
     }
 
+    /// The rows of the trigger table the field holds now, whole: each
+    /// control word, target (its halfword), condition and result.
+    pub fn trigger_rows(&self) -> Vec<super::triggers::Row> {
+        let work = self.gba.read32(self.s.field_work);
+        let mut a = if work == 0 { 0 } else { self.gba.read32(work + self.s.l.field_events) };
+        let mut out = Vec::new();
+        for _ in 0..1024 {
+            if a == 0 || self.gba.read32(a) == u32::MAX {
+                break;
+            }
+            out.push(super::triggers::Row { control: self.gba.read32(a), target: self.gba.read16(a + 4), condition: self.gba.read16(a + 6) as i16, result: self.gba.read32(a + 8) });
+            a += self.s.l.event_row_size;
+        }
+        out
+    }
+
     /// The scene's event rows for `kind` and `target`, in table order.
     fn event_rows(&self, kind: u8, target: u16) -> Vec<EventRow> {
         let work = self.gba.read32(self.s.field_work);

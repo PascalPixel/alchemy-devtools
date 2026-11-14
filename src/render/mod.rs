@@ -79,6 +79,8 @@ mod plan;
 // Read only by the feature's commands and by plan.rs.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 mod tables;
+#[cfg(feature = "render")]
+mod triggers;
 // Read only by the feature's commands; without it they say how to build them.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 mod story;
@@ -629,7 +631,8 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     let events = match &o.events_tsv {
         Some(path) => story::read_events(path)?,
         None if kind == "place" => Vec::new(),
-        None => return Err(format!("--events is needed for event\n{SCENES_USAGE}")),
+        // Read from the running game once its scenes are loaded (triggers.rs).
+        None => Vec::new(),
     };
     let flags = match &o.flags_tsv {
         Some(path) => story::Flags::read(path)?,
@@ -661,6 +664,7 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     };
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
     let request = SceneRequest { kind, scenes: &scene_rows, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags, whole: o.whole,
+        from_triggers: kind == "event" && o.events_tsv.is_none(),
         #[cfg(feature = "render")]
         cut: o.cut,
     };
@@ -678,6 +682,9 @@ struct SceneRequest<'a> {
     events: &'a [story::Event],
     wanted: &'a [String],
     flags: &'a story::Flags,
+    /// Whether the events are read from the scenes' trigger tables in the
+    /// running game (no --events was given), into DIR/triggers.tsv.
+    from_triggers: bool,
     /// Whether each event is also drawn whole (render event --whole), and
     /// how its whole frames are cut and dressed.
     whole: bool,
@@ -778,6 +785,24 @@ impl Outcome {
 fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &jobs::Jobs, arguments: &[String]) -> Result<(), String> {
     let started = std::time::Instant::now();
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+    // Without events.tsv, the events are the trigger tables' rows, read once
+    // by the parent and shared with the --jobs children through the file.
+    let read: Vec<story::Event>;
+    let with_events: SceneRequest;
+    let r = if r.from_triggers {
+        let path = out.join("triggers.tsv");
+        if !jobs.child {
+            let machines = Machines::load(root, edition, r.chosen, false)?;
+            let text = triggers::read(&machines.rom, &machines.symbols, r.chosen, &machines.functions, &machines.messages);
+            std::fs::write(&path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+        }
+        read = story::read_events(&path)?;
+        eprintln!("{} events read from the scenes' trigger tables into {}", read.len(), path.display());
+        with_events = SceneRequest { events: &read, from_triggers: false, ..*r };
+        &with_events
+    } else {
+        r
+    };
     // A place's work is a scene, an event's the scenes of one overlay (an
     // event plays at every scene its row lists).
     let mut units: BTreeMap<String, Vec<&story::Scene>> = BTreeMap::new();
@@ -919,6 +944,8 @@ struct Machines {
     functions: std::collections::HashMap<u16, std::collections::HashMap<String, u32>>,
     /// Each map's arrivals from other maps, by map number, from the source.
     arrivals: std::collections::HashMap<u16, Vec<arrivals::Arrival>>,
+    /// The edition's messages by number, their `Msg` symbols in its ELF.
+    messages: std::collections::HashMap<u32, String>,
 }
 
 #[cfg(feature = "render")]
@@ -964,7 +991,10 @@ impl Machines {
             functions.insert(s.number, named);
         }
         let arrivals = arrivals::read(root, layout::Game::of(edition)?.dir())?;
-        Ok(Machines { rom, symbols, functions, arrivals })
+        let elf = build.join(format!("{edition}.elf"));
+        let elf = std::fs::read(&elf).map_err(|e| format!("cannot read {}: {e}", elf.display()))?;
+        let messages = crate::gba::elf::Elf::parse(&elf)?.symbols.iter().filter(|y| y.name.starts_with("Msg")).map(|y| (y.value, y.name.clone())).collect();
+        Ok(Machines { rom, symbols, functions, arrivals, messages })
     }
 
     /// A fresh context for one piece of work.

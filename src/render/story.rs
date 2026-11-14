@@ -430,6 +430,17 @@ pub fn parse_trigger(text: &str) -> Result<Trigger, String> {
     if let Some(rest) = first.strip_prefix("touch ") {
         return target(rest).map(Trigger::Touch).ok_or_else(bad);
     }
+    // A Psynergy by its ability id, as the trigger tables read from the
+    // running game write it (triggers.rs): `psynergy 141 on 1032`.
+    if let Some((ability, actor)) = first.strip_prefix("psynergy ").and_then(|rest| rest.split_once(" on ")) {
+        if actor.starts_with("cell ") {
+            return Err(format!("{first:?} is a Psynergy on a cell, which the renderer does not cast"));
+        }
+        return match (ability.trim().parse::<u16>(), actor.trim().parse::<u16>()) {
+            (Ok(ability), Ok(actor)) => Ok(Trigger::Psynergy(ability, actor & 0xff)),
+            _ => Err(bad()),
+        };
+    }
     for (name, ability) in PSYNERGY {
         if let Some(rest) = first.strip_prefix(&format!("{name} on ")) {
             // The row's trigger keeps its actor in bits 7..0; bit 10 has the
@@ -554,6 +565,8 @@ mod tests {
         assert_eq!(parse_trigger("reveal 0"), Ok(Trigger::Cast(REVEAL)));
         assert_eq!(parse_trigger("cloak 1"), Ok(Trigger::Cast(CLOAK)));
         assert!(parse_trigger("revealed 0").is_err());
+        assert_eq!(parse_trigger("psynergy 141 on 1032"), Ok(Trigger::Psynergy(0x8d, 8)));
+        assert!(parse_trigger("psynergy 136 on cell 40").is_err());
     }
 
     #[test]
