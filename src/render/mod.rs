@@ -56,6 +56,9 @@ mod guide_take;
 #[cfg(feature = "render")]
 mod guide_world_play;
 mod jobs;
+// Read only by the feature's commands, and by its tests.
+#[cfg_attr(not(feature = "render"), allow(dead_code))]
+pub(crate) mod layout;
 #[cfg(feature = "render")]
 mod mgba;
 #[cfg(feature = "render")]
@@ -614,13 +617,24 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
         }
     }
     crate::alchemy::targets::parse_decomp_target(&o.edition)?;
-    if !o.edition.starts_with("tbs-") {
-        return Err(format!("{}: only the ☀️ editions are read here", o.edition));
-    }
-    let need = |p: &Option<PathBuf>, name: &str| p.clone().ok_or_else(|| format!("{name} is needed\n{SCENES_USAGE}"));
-    let scene_rows = story::read_scenes(&need(&o.places_tsv, "--places")?)?;
-    let events = story::read_events(&need(&o.events_tsv, "--events")?)?;
-    let flags = story::Flags::read(&need(&o.flags_tsv, "--flags")?)?;
+    let game = layout::Game::of(&o.edition)?;
+    // Without the story tools' tables (they are written for The Broken Seal
+    // alone), the scenes come from the tree's scene table, the flags from
+    // flags.h, and no events are known: a place has no story moments.
+    let root = crate::compile::root();
+    let scene_rows = match &o.places_tsv {
+        Some(path) => story::read_scenes(path)?,
+        None => story::scenes_from_tree(root, game.dir(), &o.edition)?,
+    };
+    let events = match &o.events_tsv {
+        Some(path) => story::read_events(path)?,
+        None if kind == "place" => Vec::new(),
+        None => return Err(format!("--events is needed for event\n{SCENES_USAGE}")),
+    };
+    let flags = match &o.flags_tsv {
+        Some(path) => story::Flags::read(path)?,
+        None => story::Flags::from_header(root, game.dir()),
+    };
     if o.scenes.is_empty() && !o.all && o.events.is_empty() {
         return Err(format!("name a --scene or ask for --all\n{SCENES_USAGE}"));
     }
@@ -645,7 +659,6 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     } else {
         chosen
     };
-    let root = crate::compile::root();
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
     let request = SceneRequest { kind, scenes: &scene_rows, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags, whole: o.whole,
         #[cfg(feature = "render")]
@@ -920,7 +933,7 @@ impl Machines {
         if note {
             note_modified(edition, &rom);
         }
-        let mut symbols = field::Symbols::find(&map)?;
+        let mut symbols = field::Symbols::find_for(&map, layout::Layout::for_edition(edition)?)?;
         symbols.read_defeat(&build.join(format!("{edition}.elf")))?;
         let mut functions = std::collections::HashMap::new();
         // A places table without overlay ids (the story tools'): each
@@ -950,7 +963,7 @@ impl Machines {
             let named = elf.symbols.iter().filter(|y| y.kind == 2 && !y.name.is_empty()).map(|y| (y.name.clone(), y.value & !1)).collect();
             functions.insert(s.number, named);
         }
-        let arrivals = arrivals::read(root)?;
+        let arrivals = arrivals::read(root, layout::Game::of(edition)?.dir())?;
         Ok(Machines { rom, symbols, functions, arrivals })
     }
 

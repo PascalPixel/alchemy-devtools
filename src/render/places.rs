@@ -386,7 +386,7 @@ pub fn is_place(scene: &Scene) -> Result<(), String> {
     if scene.file.contains("/debug/") {
         return Err("a debug test room".to_string());
     }
-    let menus = ["scene/title.c", "scene/file_screen.c", "menu/title.c", "menu/file_screen.c"];
+    let menus = ["scene/title.c", "scene/file_screen.c", "menu/title.c", "menu/file_screen.c", "scene/clear.c"];
     if menus.iter().any(|m| scene.file.ends_with(m)) {
         return Err("a menu, not a place".to_string());
     }

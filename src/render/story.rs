@@ -170,15 +170,7 @@ impl Flags {
         // a scene's or place's own names only (FLAG_SCENE_TEMP_FIRST,
         // FLAG_AREA_TEMP_01): a name the table lacks is looked up there, in
         // the checkout the renderer runs from.
-        let mut header = HashMap::new();
-        for line in std::fs::read_to_string("games/tbs/include/flags.h").unwrap_or_default().lines() {
-            let mut words = line.split_whitespace();
-            if let (Some("#define"), Some(name), Some(value)) = (words.next(), words.next(), words.next()) {
-                if let Some(value) = name.starts_with("FLAG_").then(|| parse_number(value)).flatten() {
-                    header.insert(name.to_string(), value as u16);
-                }
-            }
-        }
+        let header = header_flags(Path::new("games/tbs/include/flags.h"));
         Ok(Flags { dir: path.parent().map(Path::to_path_buf).unwrap_or_default(), global, scoped, header })
     }
 
@@ -249,6 +241,81 @@ impl Flags {
         }
         Err(format!("{} has no beat in scene {scene}", path.display()))
     }
+}
+
+
+/// The `FLAG_` names a flags.h defines with a number, by name.
+fn header_flags(path: &Path) -> HashMap<String, u16> {
+    let mut header = HashMap::new();
+    for line in std::fs::read_to_string(path).unwrap_or_default().lines() {
+        let mut words = line.split_whitespace();
+        if let (Some("#define"), Some(name), Some(value)) = (words.next(), words.next(), words.next()) {
+            if let Some(value) = name.starts_with("FLAG_").then(|| parse_number(value)).flatten() {
+                header.insert(name.to_string(), value as u16);
+            }
+        }
+    }
+    header
+}
+
+impl Flags {
+    /// The flag names of a game's flags.h alone, at `root`, for a game the
+    /// story tools write no flags.tsv for (The Lost Age): no flag is a
+    /// scene's own, and the story's order (beats.tsv) is unknown.
+    pub fn from_header(root: &Path, game: &str) -> Flags {
+        let header = header_flags(&root.join("games").join(game).join("include/flags.h"));
+        Flags { dir: std::path::PathBuf::new(), global: HashMap::new(), scoped: HashMap::new(), header }
+    }
+}
+
+/// The scenes of a game as its tree has them, for a game the story tools
+/// write no places.tsv for (The Lost Age): each row of its scene table
+/// (games/GAME/src/field/scenes.s) in order, its number the row's, its
+/// symbol the row's name, its overlay the row's resource and its source the
+/// scene file that overlay's linker map links (out/EDITION/overlays). The
+/// area names are left empty; the world map is the row named WorldMap.
+pub fn scenes_from_tree(root: &Path, game: &str, edition: &str) -> Result<Vec<Scene>, String> {
+    let path = root.join("games").join(game).join("src/field/scenes.s");
+    let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let overlays = root.join("out").join(edition).join("overlays");
+    let mut scenes = Vec::new();
+    for line in text.lines() {
+        let Some(rest) = line.trim_start().strip_prefix("scene ").or_else(|| line.trim_start().strip_prefix("scene\t")) else {
+            continue;
+        };
+        let fields: Vec<&str> = rest.split(',').map(str::trim).collect();
+        if fields.len() < 2 {
+            continue;
+        }
+        let number = scenes.len() as u16;
+        let code = fields[1];
+        let overlay = code.strip_prefix("0x").map_or_else(|| code.parse().ok(), |h| u16::from_str_radix(h, 16).ok());
+        // The overlay's own scene source: the C file its map links from
+        // src/scene or src/debug, not the entry table or its globals.
+        let file = overlay
+            .and_then(|id| std::fs::read_to_string(overlays.join(format!("resource_{id:03x}.map"))).ok())
+            .and_then(|map| {
+                map.split_whitespace()
+                    .filter_map(|w| w.find("games/").map(|i| &w[i..]))
+                    .filter(|w| w.ends_with(".o") && !w.contains("/bss/") && !w.ends_with("/entry.o") && !w.contains("/entry/"))
+                    .find(|w| w.contains("/src/scene/") || w.contains("/src/debug/"))
+                    .map(|w| format!("{}.c", w.trim_end_matches(".o")))
+            })
+            .unwrap_or_default();
+        let name = fields[0];
+        scenes.push(Scene {
+            number,
+            symbol: (!name.is_empty()).then(|| name.to_string()),
+            file,
+            area: String::new(),
+            map: if name == "WorldMap" { "world".to_string() } else { String::new() },
+            overlay,
+        });
+    }
+    if scenes.is_empty() {
+        return Err(format!("{} has no scene rows", path.display()));
+    }
+    Ok(scenes)
 }
 
 fn parse_number(text: &str) -> Option<u32> {

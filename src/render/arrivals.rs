@@ -77,13 +77,15 @@ fn sources(dir: &Path, out: &mut Vec<std::path::PathBuf>) -> Result<(), String> 
     Ok(())
 }
 
-/// Every map's arrivals from other maps, by map number, from the ☀️ source
-/// at `root`.
-pub fn read(root: &Path) -> Result<HashMap<u16, Vec<Arrival>>, String> {
-    let game = root.join("games/tbs");
+/// Every map's arrivals from other maps, by map number, from game `game`'s
+/// source (`tbs` or `tla`) at `root`. The Lost Age numbers its entrances in
+/// its exit rows and has no scene_exits.h.
+pub fn read(root: &Path, game: &str) -> Result<HashMap<u16, Vec<Arrival>>, String> {
+    let game = root.join("games").join(game);
     let read = |path: &Path| std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()));
     let names = map_names(&read(&game.join("src/field/scenes.s"))?);
-    let shared = numbers(&read(&game.join("include/scene_exits.h"))?);
+    let exits = game.join("include/scene_exits.h");
+    let shared = if exits.exists() { numbers(&read(&exits)?) } else { HashMap::new() };
     let mut files = Vec::new();
     sources(&game.join("src"), &mut files)?;
     files.sort();
