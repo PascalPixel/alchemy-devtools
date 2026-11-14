@@ -186,8 +186,9 @@ pub enum Command {
     /// A Djinni Set on the caster: its element and its index in it.
     Djinni { element: u8, index: u8 },
     /// A summon, by its row of gSummon_DefinitionTable, with `count` Djinn of
-    /// `element` on standby.
-    Summon { row: u8, element: u8, count: u8 },
+    /// `element` on standby, and `needs[e]` of each element e in all (The
+    /// Lost Age's summons call on more than one element).
+    Summon { row: u8, element: u8, count: u8, needs: [u8; 4] },
 }
 
 /// Where the cast is aimed.
@@ -389,7 +390,11 @@ impl Tables {
                 }),
                 Some(Skip::Summon) => self.summon_row(id).and_then(|(row, element, count)| {
                     let mut c = cast_for(&self.roster, ability.clone(), false)?;
-                    c.command = Command::Summon { row, element, count };
+                    let mut needs = [0u8; 4];
+                    for (e, &n) in self.summons[usize::from(row)].1.iter().enumerate().take(4) {
+                        needs[e] = n.max(0) as u8;
+                    }
+                    c.command = Command::Summon { row, element, count, needs };
                     Some(c)
                 }),
                 _ => None,

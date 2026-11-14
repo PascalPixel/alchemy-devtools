@@ -961,7 +961,7 @@ impl<'a> Guide<'a> {
         let root = crate::compile::root();
         let plan = Tables::read(root)?.plan()?;
         let venus = plan.casts.into_iter().find(|c| c.ability.name == "Venus" && matches!(c.command, plan::Command::Summon { .. })).ok_or("no Venus summon")?;
-        let plan::Command::Summon { row, element, count } = venus.command else {
+        let plan::Command::Summon { row, element, count, .. } = venus.command else {
             return Err("Venus is no summon".into());
         };
         let reconcile = self.sym("DjinnRecovery_Reconcile")?;

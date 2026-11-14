@@ -44,6 +44,9 @@ const CASTER_PP: u16 = 99;
 const ADVANCE: u32 = 45;
 /// A run that is not over by this frame has gone wrong.
 const MAX_FRAMES: u32 = 6000;
+/// The Djinn of an element a unit can hold, a bit each: twenty in The Broken
+/// Seal's tables, eighteen of them used in The Lost Age's.
+const DJINN_PER_ELEMENT: u32 = 18;
 /// Frames Down is held into a chooser that loads no preset first.
 const CHOOSER_DOWN_FRAMES: u32 = 8;
 
@@ -345,24 +348,60 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             // A summon's Djinn go on standby: the caster's first `count` of
             // the element leave its Set Djinn (Djinn_PutOnStandby) and join the
             // party's recovery list with turns -1 (DjinnRecovery_AddStandby).
-            if let Command::Summon { element, count, .. } = cast.command {
-                let (e, list) = (u32::from(element), s.game_state + s.b.recovery_list);
-                for index in 0..u32::from(count) {
+            // The caster's own set Djinn of each element the summon calls on,
+            // the first it needs of them (The Lost Age's preset sets each
+            // element's from its eighth on); where it holds too few, the
+            // lowest it lacks are given and set first, as a summon of two
+            // elements needs.
+            if let Command::Summon { needs, .. } = cast.command {
+                let list = s.game_state + s.b.recovery_list;
+                for (element, &need) in needs.iter().enumerate().filter(|(_, &n)| n > 0) {
+                    let e = element as u32;
                     let active = unit + s.b.unit_djinn_active + 4 * e;
-                    let bits = gba.read32(active);
-                    if bits & 1 << index == 0 {
-                        continue;
+                    let mut missing = usize::from(need).saturating_sub(gba.read32(active).count_ones() as usize);
+                    for index in 0..DJINN_PER_ELEMENT {
+                        if missing == 0 {
+                            break;
+                        }
+                        if gba.read32(active) & 1 << index == 0 {
+                            for (bits, counts) in [(s.b.unit_djinn_held, s.b.unit_djinn_held_counts), (s.b.unit_djinn_active, s.b.unit_djinn_active_counts)] {
+                                let word = gba.read32(unit + bits + 4 * e);
+                                if word & 1 << index == 0 {
+                                    gba.write32(unit + bits + 4 * e, word | 1 << index);
+                                    let n = gba.read8(unit + counts + e);
+                                    gba.write8(unit + counts + e, n + 1);
+                                }
+                            }
+                            missing -= 1;
+                        }
                     }
-                    gba.write32(active, bits & !(1 << index));
-                    let counted = gba.read8(unit + s.b.unit_djinn_active_counts + e);
-                    gba.write8(unit + s.b.unit_djinn_active_counts + e, counted.saturating_sub(1));
-                    let n = gba.read32(list + s.b.recovery_count);
-                    let entry = list + 4 * n;
-                    gba.write8(entry, element);
-                    gba.write8(entry + 1, index as u8);
-                    gba.write8(entry + 2, caster);
-                    gba.write8(entry + 3, 0xff);
-                    gba.write32(list + s.b.recovery_count, n + 1);
+                    let set: Vec<u32> = (0..32).filter(|&i| gba.read32(active) & 1 << i != 0).take(usize::from(need)).collect();
+                    for index in set {
+                        let bits = gba.read32(active);
+                        gba.write32(active, bits & !(1 << index));
+                        let counted = gba.read8(unit + s.b.unit_djinn_active_counts + e);
+                        gba.write8(unit + s.b.unit_djinn_active_counts + e, counted.saturating_sub(1));
+                        let n = gba.read32(list + s.b.recovery_count);
+                        let entry = list + 4 * n;
+                        gba.write8(entry, element as u8);
+                        gba.write8(entry + 1, index as u8);
+                        gba.write8(entry + 2, caster);
+                        gba.write8(entry + 3, 0xff);
+                        gba.write32(list + s.b.recovery_count, n + 1);
+                    }
+                }
+            }
+            // A Djinni the caster does not hold and set (The Lost Age's preset
+            // gives each element's from its eighth on) is given and set first.
+            if let Command::Djinni { element, index } = cast.command {
+                let e = u32::from(element);
+                for (bits, counts) in [(s.b.unit_djinn_held, s.b.unit_djinn_held_counts), (s.b.unit_djinn_active, s.b.unit_djinn_active_counts)] {
+                    let word = gba.read32(unit + bits + 4 * e);
+                    if word & 1 << index == 0 {
+                        gba.write32(unit + bits + 4 * e, word | 1 << index);
+                        let n = gba.read8(unit + counts + e);
+                        gba.write8(unit + counts + e, n + 1);
+                    }
                 }
             }
             if let Some(&ally) = cast.party.get(1) {
