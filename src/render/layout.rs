@@ -110,15 +110,15 @@ pub struct Layout {
 /// headers: The Broken Seal's, then The Lost Age's.
 const EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("gs_coins", "offsetof(struct MainRoutineWork, coins)", "offsetof(struct MainRoutineWork, coins)"),
-    ("gs_scene", "offsetof(struct MainRoutineWork, next)", "offsetof(struct MainRoutineWork, scene)"),
+    ("gs_scene", "offsetof(struct MainRoutineWork, next)", "offsetof(struct MainRoutineWork, next)"),
     ("gs_entrance", "offsetof(struct MainRoutineWork, entrance)", "offsetof(struct MainRoutineWork, entrance)"),
     ("gs_x", "offsetof(struct MainRoutineWork, x)", "offsetof(struct MainRoutineWork, x)"),
     ("gs_y", "offsetof(struct MainRoutineWork, y)", "offsetof(struct MainRoutineWork, y)"),
     ("gs_z", "offsetof(struct MainRoutineWork, z)", "offsetof(struct MainRoutineWork, z)"),
     ("gs_heading", "offsetof(struct MainRoutineWork, heading)", "offsetof(struct MainRoutineWork, heading)"),
-    ("gs_turn", "offsetof(struct MainRoutineWork, layer)", "offsetof(struct MainRoutineWork, turn)"),
-    ("gs_selected_actor", "offsetof(struct MainRoutineWork, leaderActorId)", "offsetof(struct MainRoutineWork, currentOwner)"),
-    ("gs_active_owners", "offsetof(struct MainRoutineWork, party)", "offsetof(struct MainRoutineWork, activeOwners)"),
+    ("gs_turn", "offsetof(struct MainRoutineWork, layer)", "offsetof(struct MainRoutineWork, layer)"),
+    ("gs_selected_actor", "offsetof(struct MainRoutineWork, leaderActorId)", "offsetof(struct MainRoutineWork, leaderActorId)"),
+    ("gs_active_owners", "offsetof(struct MainRoutineWork, party)", "offsetof(struct MainRoutineWork, party)"),
     ("map_origin", "offsetof(struct MapGridScrollWork, origin)", "offsetof(struct MapWork, origin)"),
     ("map_view_x", "offsetof(struct MapGridScrollWork, view[0])", "offsetof(struct MapWork, viewX)"),
     ("map_view_y", "offsetof(struct MapGridScrollWork, view[1])", "offsetof(struct MapWork, viewZ)"),
@@ -143,14 +143,14 @@ const EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("obj_x", "offsetof(struct Actor, x)", "offsetof(struct Actor, x)"),
     ("obj_y", "offsetof(struct Actor, y)", "offsetof(struct Actor, y)"),
     ("obj_z", "offsetof(struct Actor, z)", "offsetof(struct Actor, z)"),
-    ("obj_terrain_height", "offsetof(struct Actor, groundHeight)", "offsetof(struct Actor, terrainHeight)"),
-    ("obj_terrain_id", "offsetof(struct Actor, layer)", "offsetof(struct Actor, terrainId)"),
+    ("obj_terrain_height", "offsetof(struct Actor, groundHeight)", "offsetof(struct Actor, groundHeight)"),
+    ("obj_terrain_id", "offsetof(struct Actor, layer)", "offsetof(struct Actor, layer)"),
     ("obj_velocity", "offsetof(struct Actor, velocityX)", "offsetof(struct Actor, velocityX)"),
     ("obj_sprite", "offsetof(struct Actor, sprite)", "offsetof(struct Actor, sprite)"),
-    ("obj_kind", "offsetof(struct Actor, spriteStorageKind)", "offsetof(struct Actor, animationKind)"),
+    ("obj_kind", "offsetof(struct Actor, spriteStorageKind)", "offsetof(struct Actor, spriteStorageKind)"),
     ("entrance_size", "sizeof(struct SceneEntrance)", "sizeof(struct SceneEntrance)"),
     ("event_row_size", "sizeof(struct Trigger)", "sizeof(struct Trigger)"),
-    ("unit_action_slots", "offsetof(struct Unit, psynergy)", "offsetof(struct BattleUnit, actionSlots)"),
+    ("unit_action_slots", "offsetof(struct Unit, psynergy)", "offsetof(struct BattleUnit, psynergy)"),
     // The Lost Age's flags.h leaves flag 0x160 unnamed; its encounter roll
     // (Encounter_CountStepsAndSelectFormation) tests it where The Broken
     // Seal's tests FLAG_NO_ENCOUNTERS, the name wanted.
@@ -409,20 +409,19 @@ pub struct BattleLayout {
 
 /// Each BattleLayout value as each game's C expression.
 const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
-    ("state_active_owners", "offsetof(struct MainRoutineWork, party)", "offsetof(struct MainRoutineWork, activeOwners)"),
+    ("state_active_owners", "offsetof(struct MainRoutineWork, party)", "offsetof(struct MainRoutineWork, party)"),
     ("state_battle_type", "offsetof(struct MainRoutineWork, battleType)", "offsetof(struct MainRoutineWork, battleType)"),
-    // The Lost Age's Djinn_GetRecoveryTable returns gMainRoutineWork.unk000
-    // + 0xc (the name wanted is The Broken Seal's summonMask), its list the
-    // offers after 8 bytes.
-    ("recovery_list", "0x0c", "0x0c + offsetof(struct TradeOfferState, offers)"),
-    ("recovery_count", "0x100", "offsetof(struct TradeOfferState, count) - offsetof(struct TradeOfferState, offers)"),
+    // Djinn_GetRecoveryTable returns the main routine work from summonMask
+    // on; The Lost Age's list is its entries after 8 bytes.
+    ("recovery_list", "0x0c", "0x0c + offsetof(struct DjinnRecoveryTable, list.entries)"),
+    ("recovery_count", "0x100", "offsetof(struct DjinnRecoveryTable, list.count) - offsetof(struct DjinnRecoveryTable, list.entries)"),
     ("unit_size", "sizeof(struct Unit)", "sizeof(struct BattleUnit)"),
     ("unit_base_hp", "offsetof(struct Unit, baseHp)", "offsetof(struct BattleUnit, baseHp)"),
     ("unit_base_pp", "offsetof(struct Unit, basePp)", "offsetof(struct BattleUnit, basePp)"),
     ("unit_hp_gauge", "offsetof(struct Unit, hpGauge)", "offsetof(struct BattleUnit, hpGauge)"),
     ("unit_base_luck", "offsetof(struct Unit, baseLuck)", "offsetof(struct BattleUnit, baseLuck)"),
-    ("unit_max_hp", "offsetof(struct Unit, hpMax)", "offsetof(struct BattleUnit, maxHp)"),
-    ("unit_max_pp", "offsetof(struct Unit, ppMax)", "offsetof(struct BattleUnit, maxPp)"),
+    ("unit_max_hp", "offsetof(struct Unit, hpMax)", "offsetof(struct BattleUnit, hpMax)"),
+    ("unit_max_pp", "offsetof(struct Unit, ppMax)", "offsetof(struct BattleUnit, ppMax)"),
     ("unit_hp", "offsetof(struct Unit, hp)", "offsetof(struct BattleUnit, hp)"),
     ("unit_pp", "offsetof(struct Unit, pp)", "offsetof(struct BattleUnit, pp)"),
     ("unit_agility", "offsetof(struct Unit, agi)", "offsetof(struct BattleUnit, agi)"),
@@ -432,9 +431,9 @@ const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("unit_side", "offsetof(struct Unit, side)", "offsetof(struct BattleUnit, side)"),
     ("unit_poison", "offsetof(struct Unit, poison)", "offsetof(struct BattleUnit, poison)"),
     ("unit_delusion", "offsetof(struct Unit, delusion)", "offsetof(struct BattleUnit, delusion)"),
-    ("unit_djinn_held", "offsetof(struct Unit, djinnHeld)", "offsetof(struct BattleUnit, djinnAvailable)"),
+    ("unit_djinn_held", "offsetof(struct Unit, djinnHeld)", "offsetof(struct BattleUnit, djinnHeld)"),
     ("unit_djinn_held_counts", "offsetof(struct Unit, djinnHeldCounts)", "offsetof(struct BattleUnit, djinnOwnedCounts)"),
-    ("unit_djinn_active", "offsetof(struct Unit, djinnSet)", "offsetof(struct BattleUnit, djinnActive)"),
+    ("unit_djinn_active", "offsetof(struct Unit, djinnSet)", "offsetof(struct BattleUnit, djinnSet)"),
     ("unit_djinn_active_counts", "offsetof(struct Unit, djinnSetCounts)", "offsetof(struct BattleUnit, djinnActiveCounts)"),
     ("work_party_units", "offsetof(struct BattleWork, partyUnits)", "offsetof(struct BattleWork, partyUnits)"),
     ("work_enemy_ids", "offsetof(struct BattleWork, enemyIds)", "offsetof(struct BattleWork, enemyIds)"),
@@ -456,7 +455,7 @@ const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
 fn battle_headers(game: Game) -> &'static [&'static str] {
     match game {
         Game::Tbs => &["types.h", "system/main_routine_work.h", "battle/battle_unit.h", "battle/battle_work.h", "battle/battle_action.h", "battle/battle_side.h", "system/heap.h"],
-        Game::Tla => &["types.h", "stddef.h", "system/main_routine_work.h", "battle/battle_unit.h", "battle_work.h", "battle/battle_action.h", "owner_state.h", "system/ram_buffer.h"],
+        Game::Tla => &["types.h", "stddef.h", "system/main_routine_work.h", "battle/battle_unit.h", "battle_work.h", "battle/battle_action.h", "battle/battle_side.h", "system/ram_buffer.h"],
     }
 }
 
@@ -589,5 +588,6 @@ mod tests {
         assert_eq!(layout.entrance_size, 24);
         assert_eq!(layout.event_row_size, 12);
         assert!(layout.gs_x > layout.gs_scene);
+        BattleLayout::read("tla-en").unwrap();
     }
 }
