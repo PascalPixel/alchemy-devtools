@@ -140,6 +140,10 @@ pub fn read(
                 continue;
             };
             let key = result_key(row.result);
+            // A row whose result is 0 runs nothing.
+            if key == 0 {
+                continue;
+            }
             let (name, message) = match named.get(&key) {
                 Some(name) if key >= 0x10000 => ((*name).clone(), None),
                 _ if key >= 0x10000 => continue,
