@@ -1276,10 +1276,10 @@ ITEM_HEALING_RING	the game	"Healing Ring" (MsgItemName)	games/tbs/include/item_i
 ITEM_UNICORN_RING	the game	"Unicorn Ring" (MsgItemName)	games/tbs/include/item_ids.h
 ITEM_FAIRY_RING	the game	"Fairy Ring" (MsgItemName)	games/tbs/include/item_ids.h
 ITEM_CLERICS_RING	the game	"Cleric's Ring" (MsgItemName)	games/tbs/include/item_ids.h
-STRIKE_KIND_BITE	the game	"Poisonous Bite" (MsgAbilityName)	games/tbs/include/module/battle_effect/battle_effect_table.h
-CELL_BEHAVIOR_MERCURY_LIGHTHOUSE_POOL_HEART	what the player sees	the heart at the pool's centre (its render)	games/tbs/include/module/scene/shared/mercury_lighthouse_lights.h
-CELL_BEHAVIOR_MERCURY_LIGHTHOUSE_POOL_WATER	what the player sees	the open water of the pool (its render)	games/tbs/include/module/scene/shared/mercury_lighthouse_lights.h
-CELL_BEHAVIOR_MERCURY_LIGHTHOUSE_POOL_RIM	what the player sees	the rim of the pool (its render)	games/tbs/include/module/scene/shared/mercury_lighthouse_lights.h
+STRIKE_KIND_BITE	the game	"Poisonous Bite" (MsgAbilityName)	games/tbs/include/battle_effect/battle_effect_table.h
+CELL_BEHAVIOR_MERCURY_LIGHTHOUSE_POOL_HEART	what the player sees	the heart at the pool's centre (its render)	games/tbs/include/scene/mercury_lighthouse_lights.h
+CELL_BEHAVIOR_MERCURY_LIGHTHOUSE_POOL_WATER	what the player sees	the open water of the pool (its render)	games/tbs/include/scene/mercury_lighthouse_lights.h
+CELL_BEHAVIOR_MERCURY_LIGHTHOUSE_POOL_RIM	what the player sees	the rim of the pool (its render)	games/tbs/include/scene/mercury_lighthouse_lights.h
 WORLD_MAP_FROM_SUHALLA_DESERT_SANDSTORM	its area name	Suhalla Desert	games/tbs/include/scene_exits.h
 WORLD_MAP_TO_TOLBI_SHIP_DECK_CROSSBONE_ISLE	its area name	Crossbone Isle	games/tbs/include/scene_exits.h
 WORLD_MAP_TO_CROSSBONE_ISLE	its area name	Crossbone Isle	games/tbs/include/scene_exits.h
@@ -2834,8 +2834,8 @@ SPRITE_GANGWAY	what the player sees	a wooden gangway with rails, laid from the w
 SPRITE_WATER_DROP	what the player sees	a drop of water that swells and bursts into a ring of spray (water_drop.png)	games/tbs/include/sprite_ids.h
 SPRITE_WORLD_MAP_ISLAND	what the player sees	an island of green hills around a mountain (world_map_island.png)	games/tbs/include/sprite_ids.h
 SPRITE_BATTLE_SHADOW	what the player sees	the black ellipse under each unit's feet (a battle's render)	games/tbs/include/sprite_ids.h
-ASURA_SHEET_SWUNG	what the player sees	the swordsman's stroke (its render)	games/tbs/src/battle_effect/battle_effect/casting_impact.c
-DragonFireMode	what the player sees	Tiamat's fire (its render)	games/tbs/src/battle_effect/battle_effect/tiamat.c
+ASURA_SHEET_SWUNG	what the player sees	the swordsman's stroke (its render)	games/tbs/src/battle_effect/battle_effect_casting_impact.c
+DragonFireMode	what the player sees	Tiamat's fire (its render)	games/tbs/src/battle_effect/battle_effect_tiamat.c
 ReaperSheetPicture	what the player sees	the Grim Reaper's swing (its render)	games/tbs/src/battle_effect/battle_effect_internal.h
 SUMMON_FORMATION_THOR	the game	"Thor" (MsgDjinnName)	games/tbs/src/battle_effect/battle_effect_internal.h
 SUMMON_FORMATION_NEREID	the game	"Nereid" (MsgDjinnName)	games/tbs/src/battle_effect/battle_effect_internal.h
@@ -3646,10 +3646,10 @@ ACTOR_SECOND_CHEST	the game	"but the chest was empty." (MsgVaultButChestWasEmpty
 ACTOR_THIRD_CHEST	the game	"but the chest was empty." (MsgVaultButChestWasEmpty)	games/tbs/src/scene/log_rooms_a.c
 ACTOR_FOUND_URN	the game	"Found the mayor's precious urn." (MsgVaultYouIsaacRightWontForget)	games/tbs/src/scene/log_rooms_a.c
 ACTOR_FOUND_STATUE	the game	"Found a gold statue." (MsgVaultYouIsaacRightWontForget)	games/tbs/src/scene/log_rooms_a.c
-CELL_BEHAVIOR_LOG_ROOMS_A_FIRST_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/log_rooms_a.h
-CELL_BEHAVIOR_LOG_ROOMS_A_SECOND_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/log_rooms_a.h
-CELL_BEHAVIOR_LOG_ROOMS_A_HISTORY_BOOKCASE	the game	"History of Vault, Vol 1." (MsgVaultTheresABookEntitledHistoryOf)	games/tbs/src/scene/log_rooms_a.h
-CELL_BEHAVIOR_LOG_ROOMS_A_GEMS_BOOKCASE	the game	"Gems of Angara." (MsgVaultTheresABookEntitledGemsOf)	games/tbs/src/scene/log_rooms_a.h
+CELL_BEHAVIOR_LOG_ROOMS_A_FIRST_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/include/scene/log_rooms_a.h
+CELL_BEHAVIOR_LOG_ROOMS_A_SECOND_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/include/scene/log_rooms_a.h
+CELL_BEHAVIOR_LOG_ROOMS_A_HISTORY_BOOKCASE	the game	"History of Vault, Vol 1." (MsgVaultTheresABookEntitledHistoryOf)	games/tbs/include/scene/log_rooms_a.h
+CELL_BEHAVIOR_LOG_ROOMS_A_GEMS_BOOKCASE	the game	"Gems of Angara." (MsgVaultTheresABookEntitledGemsOf)	games/tbs/include/scene/log_rooms_a.h
 ACTOR_GEM_OWNER	the game	"I kept worrying that they would take my gem." (MsgVaultICanSleepWellNowThat)	games/tbs/src/scene/log_rooms_b.c
 ACTOR_GEM_OWNERS_WIFE	the game	"My husband says my cat ate the treasure" (MsgVaultMyHusbandSaysMyCatAte)	games/tbs/src/scene/log_rooms_b.c
 ACTOR_VILLAGER_HEARD_PRISONERS	the game	"The prisoners said they wanted to break out of jail before Colosso began." (MsgVaultThePrisonersSaidTheyWantedTo)	games/tbs/src/scene/log_rooms_b.c
@@ -3692,25 +3692,25 @@ FLAG_LUNPA_FORTRESS_GATES_CLOAK_CAST	the game	"Cloak" (MsgAbilityName)	games/tbs
 FLAG_LUNPA_FORTRESS_GATES_ENTERING_FORTRESS	what the player sees	the golden door set in the cliff at the top of the steps, past the two guards (its render)	games/tbs/src/scene/lunpa.c
 FLAG_LUNPA_FORTRESS_GATES_GARET_WARNING	the game	"Don't be stupid! We can't go in there, remember?" (MsgLunpaGaretRefusesToReturn)	games/tbs/src/scene/lunpa.c
 FLAG_LUNPA_FORTRESS_GATES_GUARDS_CAUGHT_PARTY	the game	"That's strange. I've been on watch this whole time, so how did you get here?" (MsgLunpaGuardsCatchParty)	games/tbs/src/scene/lunpa.c
-CELL_BEHAVIOR_LUNPA_WELL	the game	"peered into the well" (MsgFieldPeeredWell)	games/tbs/src/scene/lunpa.h
-CELL_BEHAVIOR_LUNPA_BARREL_NUT	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/lunpa.h
-CELL_BEHAVIOR_LUNPA_PSYNERGY_STONE	the game	"a Psynergy Stone" (MsgGotPsynergyStone)	games/tbs/src/scene/lunpa.h
-CELL_BEHAVIOR_LUNPA_FORTRESS_GATES_WELL	the game	"peered into the well" (MsgFieldPeeredWell)	games/tbs/src/scene/lunpa.h
-ACTOR_HIDDEN_PUDDLE	what the player sees	its sprite, a small blue puddle (its render)	games/tbs/src/scene/lunpa.h
-ACTOR_MAN_ASKING_HOW_LONG_IN_LUNPA	the game	"Have you been in Lunpa long?" (MsgLunpaVillagerAAsksHowLong)	games/tbs/src/scene/lunpa.h
-ACTOR_WOMAN_WITH_NO_FREEDOM	the game	"We've had no freedom ever since the caravan came to the village." (MsgLunpaVillageVillagerBSealed)	games/tbs/src/scene/lunpa.h
-ACTOR_MAN_ON_HAMMETS_KIDNAPPING	the game	"Is it true that Dodonpa kidnapped Hammet" (MsgLunpaVillagerCAsksAboutKidnapping)	games/tbs/src/scene/lunpa.h
-ACTOR_WOMAN_SAYING_DONPA_IS_TOO_OLD	the game	"Donpa is too old to lead" (MsgLunpaVillageVillagerDSealed)	games/tbs/src/scene/lunpa.h
-ACTOR_OLD_MAN_ON_LUNPA_AND_DONPA	the game	"The righteous thief, Lunpa, and his son, Donpa" (MsgLunpaVillageVillagerESealed)	games/tbs/src/scene/lunpa.h
-ACTOR_OLD_WOMAN_ON_DONPA	the game	"Donpa has no idea what Dodonpa is doing." (MsgLunpaVillageVillagerFSealed)	games/tbs/src/scene/lunpa.h
-ACTOR_BOY_ASKING_TO_SEE_DONPA	the game	"You want to see Donpa?" (MsgLunpaVillagerGAsksAboutDonpa)	games/tbs/src/scene/lunpa.h
-ACTOR_GIRL_ON_THE_CHEFS_MEALS	the game	"The chef from the inn has been delivering meals to the fortress lately." (MsgLunpaVillageVillagerHSealed)	games/tbs/src/scene/lunpa.h
-ACTOR_WEST_GUARD	what the player sees	a soldier with a spear guarding the road (its render)	games/tbs/src/scene/lunpa.h
-ACTOR_EAST_GUARD	what the player sees	a second soldier with a spear (its render)	games/tbs/src/scene/lunpa.h
-ACTOR_SWITCH_SPARKLE	what the player sees	its sprite, a small white sparkle (its render)	games/tbs/src/scene/lunpa.h
-ACTOR_FLOATING_NUT	the game	"Nut" (MsgItemName)	games/tbs/src/scene/lunpa.h
-ACTOR_LEFT_GUARD	the game	"We were on guard the whole time!" (MsgLunpaRightGuardReopenedThoughts)	games/tbs/src/scene/lunpa.h
-ACTOR_RIGHT_GUARD	the game	"We were on guard the whole time!" (MsgLunpaRightGuardReopenedThoughts)	games/tbs/src/scene/lunpa.h
+CELL_BEHAVIOR_LUNPA_WELL	the game	"peered into the well" (MsgFieldPeeredWell)	games/tbs/src/scene/lunpa.c
+CELL_BEHAVIOR_LUNPA_BARREL_NUT	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/lunpa.c
+CELL_BEHAVIOR_LUNPA_PSYNERGY_STONE	the game	"a Psynergy Stone" (MsgGotPsynergyStone)	games/tbs/src/scene/lunpa.c
+CELL_BEHAVIOR_LUNPA_FORTRESS_GATES_WELL	the game	"peered into the well" (MsgFieldPeeredWell)	games/tbs/src/scene/lunpa.c
+ACTOR_HIDDEN_PUDDLE	what the player sees	its sprite, a small blue puddle (its render)	games/tbs/src/scene/lunpa.c
+ACTOR_MAN_ASKING_HOW_LONG_IN_LUNPA	the game	"Have you been in Lunpa long?" (MsgLunpaVillagerAAsksHowLong)	games/tbs/src/scene/lunpa.c
+ACTOR_WOMAN_WITH_NO_FREEDOM	the game	"We've had no freedom ever since the caravan came to the village." (MsgLunpaVillageVillagerBSealed)	games/tbs/src/scene/lunpa.c
+ACTOR_MAN_ON_HAMMETS_KIDNAPPING	the game	"Is it true that Dodonpa kidnapped Hammet" (MsgLunpaVillagerCAsksAboutKidnapping)	games/tbs/src/scene/lunpa.c
+ACTOR_WOMAN_SAYING_DONPA_IS_TOO_OLD	the game	"Donpa is too old to lead" (MsgLunpaVillageVillagerDSealed)	games/tbs/src/scene/lunpa.c
+ACTOR_OLD_MAN_ON_LUNPA_AND_DONPA	the game	"The righteous thief, Lunpa, and his son, Donpa" (MsgLunpaVillageVillagerESealed)	games/tbs/src/scene/lunpa.c
+ACTOR_OLD_WOMAN_ON_DONPA	the game	"Donpa has no idea what Dodonpa is doing." (MsgLunpaVillageVillagerFSealed)	games/tbs/src/scene/lunpa.c
+ACTOR_BOY_ASKING_TO_SEE_DONPA	the game	"You want to see Donpa?" (MsgLunpaVillagerGAsksAboutDonpa)	games/tbs/src/scene/lunpa.c
+ACTOR_GIRL_ON_THE_CHEFS_MEALS	the game	"The chef from the inn has been delivering meals to the fortress lately." (MsgLunpaVillageVillagerHSealed)	games/tbs/src/scene/lunpa.c
+ACTOR_WEST_GUARD	what the player sees	a soldier with a spear guarding the road (its render)	games/tbs/src/scene/lunpa.c
+ACTOR_EAST_GUARD	what the player sees	a second soldier with a spear (its render)	games/tbs/src/scene/lunpa.c
+ACTOR_SWITCH_SPARKLE	what the player sees	its sprite, a small white sparkle (its render)	games/tbs/src/scene/lunpa.c
+ACTOR_FLOATING_NUT	the game	"Nut" (MsgItemName)	games/tbs/src/scene/lunpa.c
+ACTOR_LEFT_GUARD	the game	"We were on guard the whole time!" (MsgLunpaRightGuardReopenedThoughts)	games/tbs/src/scene/lunpa.c
+ACTOR_RIGHT_GUARD	the game	"We were on guard the whole time!" (MsgLunpaRightGuardReopenedThoughts)	games/tbs/src/scene/lunpa.c
 ACTOR_GROUND_FLOOR_ENTRANCE_GUARD	what the player sees	one of Dodonpa's men standing watch by the way in from the Lunpa Fortress Gates, who throws out a party he sees (its render)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_GROUND_FLOOR_FIRST_SENTRY	what the player sees	the first of the two of Dodonpa's men who stand watch together, the one who speaks when they throw the party out (its render)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_GROUND_FLOOR_WOMAN_SEEKING_DODONPA	the game	"Where could Dodonpa be?" (MsgLunpaWhereIsDodonpa)	games/tbs/src/scene/lunpa_fortress.c
@@ -3919,25 +3919,25 @@ FLAG_MOGALL_FOREST_THIRD_AREA_NORTH_LOG_ROLLED	what the player sees	the third ar
 FLAG_MOGALL_FOREST_THIRD_AREA_SOUTH_LOG_ROLLED	what the player sees	the third area's south log rolled into the river (its render)	games/tbs/src/scene/mogall_forest.c
 FLAG_MOGALL_FOREST_PSYNERGY_STONE	the game	"a Psynergy Stone" (MsgGotPsynergyStone)	games/tbs/src/scene/mogall_forest.c
 FLAG_MOGALL_FOREST_SOUTH_ROCK_SETTLED	what the player sees	the third area's south rock, beside the north river log, moved with Move to the ring south of it, where it sinks and stays (its render)	games/tbs/src/scene/mogall_forest.c
-CELL_BEHAVIOR_ROCK_ROOMS_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/rock_rooms.h
-ACTOR_MAN_ON_HIS_LATE_GRANDFATHER	the game	"My late grandfather traveled the continent with Lunpa." (MsgLunpaInteriorsFirstHomeASealed)	games/tbs/src/scene/rock_rooms.h
-ACTOR_WOMAN_NEVER_WORKING_FOR_DODONPA	the game	"We may live in Lunpa, but we'll never work for Dodonpa." (MsgLunpaInteriorsFirstHomeBSealed)	games/tbs/src/scene/rock_rooms.h
-ACTOR_MAN_ON_DONPAS_FORTRESS	the game	"The fortress was built during Donpa's rule." (MsgLunpaInteriorsSecondHomeASealed)	games/tbs/src/scene/rock_rooms.h
-ACTOR_WOMAN_ON_THE_INNS_CHEF	the game	"The inn's chef is the only one in town who can enter the fortress." (MsgLunpaInteriorsSecondHomeBSealed)	games/tbs/src/scene/rock_rooms.h
-ACTOR_OLD_MAN_ON_LUNPAS_DEATH	the game	"Lunpa passed away long ago, when the world was hit by a huge flood." (MsgLunpaInteriorsThirdHomeASealed)	games/tbs/src/scene/rock_rooms.h
-ACTOR_OLD_WOMAN_ON_THE_GREAT_FLOOD	the game	"Lunpa was caught in the great flood while traveling with someone named Babi." (MsgLunpaInteriorsThirdHomeBSealed)	games/tbs/src/scene/rock_rooms.h
-ACTOR_WEAPON_MERCHANT	the game	"The weapons and armor vendors are looking desperate." (MsgLunpaItemMerchantReopened)	games/tbs/src/scene/rock_rooms.h
-ACTOR_ARMOR_MERCHANT	the game	"I'll sell you as much armor as you like, once the village is reopened." (MsgLunpaArmorMerchantSealed)	games/tbs/src/scene/rock_rooms.h
-ACTOR_ITEM_MERCHANT	what the player sees	the merchant behind the item shop's counter (its render)	games/tbs/src/scene/rock_rooms.h
-ACTOR_INNKEEPER	the game	"Do you want rest in our inn?" (MsgLunpaInnkeeperOffersRoom)	games/tbs/src/scene/rock_rooms.h
-ACTOR_WOMAN_ASKING_FOR_DONPAS_GUEST	the game	"Are you Donpa's guest?" (MsgLunpaInnClerkAsksAboutGuest)	games/tbs/src/scene/rock_rooms.h
-ACTOR_INN_WORKER	the game	"He told me to air out the guest-room bedding and change the sheets." (MsgLunpaInteriorsInnWorkerReopened)	games/tbs/src/scene/rock_rooms.h
-ACTOR_CHEF	the game	"The inn's chef is the only one in town who can enter the fortress." (MsgLunpaInteriorsSecondHomeBSealed)	games/tbs/src/scene/rock_rooms.h
-ACTOR_HEALER	the game	"Healer" (MsgDebugGlyphName)	games/tbs/src/scene/rock_rooms.h
-ACTOR_TRAVELING_HEALER	the game	"I have been traveling the lands spreading good will." (MsgLunpaTravelingPriest)	games/tbs/src/scene/rock_rooms.h
-ACTOR_WEAPON_COUNTER	what the player sees	the counter before the weapon merchant (its render)	games/tbs/src/scene/rock_rooms.h
-ACTOR_ARMOR_COUNTER	what the player sees	the counter before the armor merchant (its render)	games/tbs/src/scene/rock_rooms.h
-ACTOR_ITEM_COUNTER	what the player sees	the counter before the item merchant (its render)	games/tbs/src/scene/rock_rooms.h
+CELL_BEHAVIOR_ROCK_ROOMS_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/rock_rooms.c
+ACTOR_MAN_ON_HIS_LATE_GRANDFATHER	the game	"My late grandfather traveled the continent with Lunpa." (MsgLunpaInteriorsFirstHomeASealed)	games/tbs/src/scene/rock_rooms.c
+ACTOR_WOMAN_NEVER_WORKING_FOR_DODONPA	the game	"We may live in Lunpa, but we'll never work for Dodonpa." (MsgLunpaInteriorsFirstHomeBSealed)	games/tbs/src/scene/rock_rooms.c
+ACTOR_MAN_ON_DONPAS_FORTRESS	the game	"The fortress was built during Donpa's rule." (MsgLunpaInteriorsSecondHomeASealed)	games/tbs/src/scene/rock_rooms.c
+ACTOR_WOMAN_ON_THE_INNS_CHEF	the game	"The inn's chef is the only one in town who can enter the fortress." (MsgLunpaInteriorsSecondHomeBSealed)	games/tbs/src/scene/rock_rooms.c
+ACTOR_OLD_MAN_ON_LUNPAS_DEATH	the game	"Lunpa passed away long ago, when the world was hit by a huge flood." (MsgLunpaInteriorsThirdHomeASealed)	games/tbs/src/scene/rock_rooms.c
+ACTOR_OLD_WOMAN_ON_THE_GREAT_FLOOD	the game	"Lunpa was caught in the great flood while traveling with someone named Babi." (MsgLunpaInteriorsThirdHomeBSealed)	games/tbs/src/scene/rock_rooms.c
+ACTOR_WEAPON_MERCHANT	the game	"The weapons and armor vendors are looking desperate." (MsgLunpaItemMerchantReopened)	games/tbs/src/scene/rock_rooms.c
+ACTOR_ARMOR_MERCHANT	the game	"I'll sell you as much armor as you like, once the village is reopened." (MsgLunpaArmorMerchantSealed)	games/tbs/src/scene/rock_rooms.c
+ACTOR_ITEM_MERCHANT	what the player sees	the merchant behind the item shop's counter (its render)	games/tbs/src/scene/rock_rooms.c
+ACTOR_INNKEEPER	the game	"Do you want rest in our inn?" (MsgLunpaInnkeeperOffersRoom)	games/tbs/src/scene/rock_rooms.c
+ACTOR_WOMAN_ASKING_FOR_DONPAS_GUEST	the game	"Are you Donpa's guest?" (MsgLunpaInnClerkAsksAboutGuest)	games/tbs/src/scene/rock_rooms.c
+ACTOR_INN_WORKER	the game	"He told me to air out the guest-room bedding and change the sheets." (MsgLunpaInteriorsInnWorkerReopened)	games/tbs/src/scene/rock_rooms.c
+ACTOR_CHEF	the game	"The inn's chef is the only one in town who can enter the fortress." (MsgLunpaInteriorsSecondHomeBSealed)	games/tbs/src/scene/rock_rooms.c
+ACTOR_HEALER	the game	"Healer" (MsgDebugGlyphName)	games/tbs/src/scene/rock_rooms.c
+ACTOR_TRAVELING_HEALER	the game	"I have been traveling the lands spreading good will." (MsgLunpaTravelingPriest)	games/tbs/src/scene/rock_rooms.c
+ACTOR_WEAPON_COUNTER	what the player sees	the counter before the weapon merchant (its render)	games/tbs/src/scene/rock_rooms.c
+ACTOR_ARMOR_COUNTER	what the player sees	the counter before the armor merchant (its render)	games/tbs/src/scene/rock_rooms.c
+ACTOR_ITEM_COUNTER	what the player sees	the counter before the item merchant (its render)	games/tbs/src/scene/rock_rooms.c
 FLAG_SANCTUM_WARNED_BEFORE_LEAVING	the game	"Once you step outside the village, you cannot take back your decision." (MsgSanctumOnceStepOutsideVillageCannot)	games/tbs/src/scene/sanctum.c
 ACTOR_HEALER	the game	"What is it, Great Healer?" (MsgSanctumWeHadIdeaTrueSanctum)	games/tbs/src/scene/sanctum.c
 ACTOR_WEST_HEALER	the game	"The healers are supposed to guard" (MsgValeTheHealersAreSupposedToGuard)	games/tbs/src/scene/sanctum.c
@@ -3948,11 +3948,11 @@ ACTOR_WISE_ONE	the game	"It must be the Wise One, guardian of the Elemental Star
 ACTOR_HEALER_AFTERIMAGE	what the player sees	a red-tinted copy of the Great Healer beside him while his Psynergy shows, healer-afterimages.gif (its render)	games/tbs/src/scene/sanctum.c
 ACTOR_SANCTUM_MEMBER	the game	"stolen gold statue" (MsgSanctumWonderIfEverSeeOur)	games/tbs/src/scene/sanctum.c
 ACTOR_GOLD_STATUE	the game	"our stolen gold statue" (MsgSanctumWonderIfEverSeeOur)	games/tbs/src/scene/sanctum.c
-COLOSSO_PICTURE_WIN_LOSE	what the player sees	WIN in gold, or LOSE in blue, over the arena after a match's battle (its render)	games/tbs/src/scene/shared/colosso_task.h
-gGlint_TwinkleScript	what the player sees	glints that shrink to a dot and grow back round the party member the water carries up Mercury Lighthouse's waterfall (MercuryLighthouse_PlyOpensWaterfallPassage's render)	games/tbs/src/scene/shared/glint_twinkle_script.h
-Scene_SpawnPsynergyRings	what the player sees	rings of light rise and fall around the elders holding the Boulder and around Sheba at the aerie (ValePrologue_WatchBoulderFall, VenusLighthouseAerie_ConfrontSaturosAndMenardi)	games/tbs/src/scene/shared/psynergy_rings.h
-FLAG_VAULT_LEADER_BESIDE_BONE	the game	"Bone" (MsgItemName)	games/tbs/src/scene/shared/vault_bone_proximity_flag.h
-FLAG_VAULT_ON_BRIDGE	what the player sees	a wooden bridge with rope rails between two ledges, a path running under it (its render)	games/tbs/src/scene/shared/vault_toggle.h
+COLOSSO_PICTURE_WIN_LOSE	what the player sees	WIN in gold, or LOSE in blue, over the arena after a match's battle (its render)	games/tbs/src/scene/shared/colosso_task.c
+gGlint_TwinkleScript	what the player sees	glints that shrink to a dot and grow back round the party member the water carries up Mercury Lighthouse's waterfall (MercuryLighthouse_PlyOpensWaterfallPassage's render)	games/tbs/src/scene/shared/glint_twinkle_script.c
+Scene_SpawnPsynergyRings	what the player sees	rings of light rise and fall around the elders holding the Boulder and around Sheba at the aerie (ValePrologue_WatchBoulderFall, VenusLighthouseAerie_ConfrontSaturosAndMenardi)	games/tbs/src/scene/shared/psynergy_rings.c
+FLAG_VAULT_LEADER_BESIDE_BONE	the game	"Bone" (MsgItemName)	games/tbs/src/scene/shared/vault_bone_proximity_flag.c
+FLAG_VAULT_ON_BRIDGE	what the player sees	a wooden bridge with rope rails between two ledges, a path running under it (its render)	games/tbs/src/scene/shared/vault_toggle.c
 FLAG_TOLBI_SHIP_ANCHOR_CHARM_DRAWN	the game	"Anchor Charm" (MsgItemName)	games/tbs/src/scene/ship_rooms.c
 PASSENGER_HEAD_GUIDE	the game	"I'm the tour group's guide!" (MsgTolbiShipInteriorsNobodyWouldChooseMeAfterAll)	games/tbs/src/scene/ship_rooms.c
 PASSENGER_SECOND_GUIDE	the game	"We had enough trouble just getting passengers!" (MsgTolbiShipInteriorsWeHadEnoughTroubleJustGetting)	games/tbs/src/scene/ship_rooms.c
@@ -4040,36 +4040,36 @@ CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_FIRST_RELIEF	the game	"It's a relief of a mino
 CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_SECOND_RELIEF	the game	"It's a relief of a minotaur." (MsgSolSanctumMinotaurReliefOneEye)	games/tbs/src/scene/sol_sanctum_entrance.c
 CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST	the game	"checked the chest" (MsgVaultIsaacCheckedChest)	games/tbs/src/scene/sol_sanctum_entrance.c
 FLAG_SOL_SANCTUM_IN_SECOND_RELIEF_ROOM	the game	"It's a relief of a minotaur." (MsgSolSanctumMinotaurReliefOneEye)	games/tbs/src/scene/sol_sanctum_entrance.c
-ACTOR_KRADEN	the game	"What's wrong, Kraden?" (MsgSolSanctumWrongKraden)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_WARNING_MAN	the game	"It is very dangerous to go beyond here when Mt. Aleph is active!" (MsgValeItIsVeryDangerousToGo)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_STATUE	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_WEST_STATUE	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_EAST_STATUE	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_FIRST_FIXED_STATUE	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_ROW_STATUE_1	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_ROW_STATUE_2	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_ROW_STATUE_3	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_ROW_STATUE_4	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_ROW_STATUE_5	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.h
-ACTOR_ROW_STATUE_6	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.h
+ACTOR_KRADEN	the game	"What's wrong, Kraden?" (MsgSolSanctumWrongKraden)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_WARNING_MAN	the game	"It is very dangerous to go beyond here when Mt. Aleph is active!" (MsgValeItIsVeryDangerousToGo)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_STATUE	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_WEST_STATUE	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_EAST_STATUE	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_FIRST_FIXED_STATUE	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_ROW_STATUE_1	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_ROW_STATUE_2	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_ROW_STATUE_3	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_ROW_STATUE_4	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_ROW_STATUE_5	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.c
+ACTOR_ROW_STATUE_6	the game	"More statues..." (MsgSolSanctumMoreStatuesOutOfReach)	games/tbs/src/scene/sol_sanctum_entrance.c
 FLAG_SOL_SANCTUM_ERUPTION_SATUROS_LEAVING	the game	"Please...can we go now?" (MsgSolSanctumKradenCouldThatBeThe)	games/tbs/src/scene/sol_sanctum_eruption.c
 ACTOR_WISE_ONE	the game	"Could that be . . . the Wise One?!?" (MsgSolSanctumKradenCouldThatBeThe)	games/tbs/src/scene/sol_sanctum_eruption.c
 ACTOR_FIRST_CRYSTAL	what the player sees	a blue crystal that bursts into sparkles (its render)	games/tbs/src/scene/sol_sanctum_eruption.c
 ACTOR_ELEMENTAL_STAR	its area name	Elemental Star Room	games/tbs/src/scene/sol_sanctum_eruption.c
-ACTOR_PLATFORM_SHADOW	what the player sees	the shadow that shrinks on the platform as each of them rises away (its render)	games/tbs/src/scene/sol_sanctum_eruption.h
-ACTOR_KRADEN	the game	"What's wrong, Kraden?" (MsgSolSanctumWrongKraden)	games/tbs/src/scene/sol_sanctum_eruption.h
-ACTOR_SATUROS	the game	"But, Saturos, there's still a chance they might survive." (MsgSolSanctumKradenCouldThatBeThe)	games/tbs/src/scene/sol_sanctum_eruption.h
-ACTOR_MENARDI	the game	"Menardi!" (MsgSolSanctumKradenCouldThatBeThe)	games/tbs/src/scene/sol_sanctum_eruption.h
-ACTOR_FELIX_MASKED	the game	"Felix" (MsgCharacterName)	games/tbs/src/scene/sol_sanctum_eruption.h
-ACTOR_FELIX	the game	"Felix" (MsgCharacterName)	games/tbs/src/scene/sol_sanctum_eruption.h
-ACTOR_ALEX	the game	"Alex ... Are you breaking our promise?" (MsgSolSanctumKradenCouldThatBeThe)	games/tbs/src/scene/sol_sanctum_eruption.h
+ACTOR_PLATFORM_SHADOW	what the player sees	the shadow that shrinks on the platform as each of them rises away (its render)	games/tbs/src/scene/sol_sanctum_eruption.c
+ACTOR_KRADEN	the game	"What's wrong, Kraden?" (MsgSolSanctumWrongKraden)	games/tbs/src/scene/sol_sanctum_eruption.c
+ACTOR_SATUROS	the game	"But, Saturos, there's still a chance they might survive." (MsgSolSanctumKradenCouldThatBeThe)	games/tbs/src/scene/sol_sanctum_eruption.c
+ACTOR_MENARDI	the game	"Menardi!" (MsgSolSanctumKradenCouldThatBeThe)	games/tbs/src/scene/sol_sanctum_eruption.c
+ACTOR_FELIX_MASKED	the game	"Felix" (MsgCharacterName)	games/tbs/src/scene/sol_sanctum_eruption.c
+ACTOR_FELIX	the game	"Felix" (MsgCharacterName)	games/tbs/src/scene/sol_sanctum_eruption.c
+ACTOR_ALEX	the game	"Alex ... Are you breaking our promise?" (MsgSolSanctumKradenCouldThatBeThe)	games/tbs/src/scene/sol_sanctum_eruption.c
 FLAG_SOL_SANCTUM_LUNA_SOL_ROOMS_UNTINTED	the game	"But a room for Luna and one for Sol?" (MsgSolSanctumRoomLunaOne)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c
 FLAG_SOL_SANCTUM_LUNA_SOL_ROOMS_BLUE_TINTED	the game	"But a room for Luna and one for Sol?" (MsgSolSanctumRoomLunaOne)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c
 FLAG_SOL_SANCTUM_LUNA_SOL_ROOMS_WARM_TINTED	the game	"But a room for Luna and one for Sol?" (MsgSolSanctumRoomLunaOne)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c
 FLAG_SOL_SANCTUM_RESCUE_ARRIVAL_SEEN	the game	"Did that floating eye thing save us?" (MsgSolSanctumFloatingEyeThing)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c
 CELL_BEHAVIOR_SOL_SANCTUM_LUNA_SOL_ROOMS_CHEST	the game	"checked the chest" (MsgVaultIsaacCheckedChest)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c
-ACTOR_FIRST_STATUE	what the player sees	winged stone statues standing at the corners of each room's floor (its render)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.h
-ACTOR_KRADEN	the game	"What's wrong, Kraden?" (MsgSolSanctumWrongKraden)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.h
+ACTOR_FIRST_STATUE	what the player sees	winged stone statues standing at the corners of each room's floor (its render)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c
+ACTOR_KRADEN	the game	"What's wrong, Kraden?" (MsgSolSanctumWrongKraden)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c
 FLAG_SOL_SANCTUM_PSYNERGY_STONE_TAKEN	the game	"a Psynergy Stone" (MsgGotPsynergyStone)	games/tbs/src/scene/sol_sanctum_psynergy_stone.c
 FLAG_SOL_SANCTUM_CENTER_HOLE_OPEN	what the player sees	the statue holding a bowl at the head of the hall, where the beams from the statues beside it meet on the floor before it (its render)	games/tbs/src/scene/sol_sanctum_statue.c
 FLAG_SOL_SANCTUM_TRAP_DISARMED_EXPLAINED	the game	"So the statue puzzle was the trap..." (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/sol_sanctum_statue.c
@@ -4122,44 +4122,44 @@ ACTOR_OURANOS	the game	"Then, Ouranos and I will fight each other" (MsgKalayInte
 ACTOR_SEAN	the game	"I have power, and Sean has speed." (MsgKalayInteriorsIHavePowerAndSeanHas)	games/tbs/src/scene/stucco_rooms_a.c
 ACTOR_HEALER	the game	"Then I call upon my healing powers." (MsgReviveDonation)	games/tbs/src/scene/stucco_rooms_a.c
 FLAG_STUCCO_ROOMS_B_PASSENGERS_SEEN	the game	"He won't sail the ship" (MsgTolbiHeWontSailShipEven)	games/tbs/src/scene/stucco_rooms_b.c
-ACTOR_STUCCO_ROOMS_B_MAKESHIFT_INNKEEPER	the game	"I just line up some beds, and presto! I'm an innkeeper!" (MsgTolbiInteriorsTolbiIsPackedWithTouristsDuring)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_HOST	the game	"Do you want to stay with us?" (MsgTolbiWantStay)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_SLEEPLESS_GUEST	the game	"I couldn't sleep at all last night." (MsgTolbiInteriorsICouldntSleepAtAllLast)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_CROWD_SICK_GUEST	the game	"The crowds at the colosseum made me feel sick" (MsgTolbiInteriorsTheCrowdsAtTheColosseumMade)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_HOUSE_TENANT	the game	"We paid good money to rent this house" (MsgTolbiInteriorsWePaidGoodMoneyToRent)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_FINALS_WATCHER	the game	"so I'm just going to watch the finals." (MsgTolbiInteriorsIReallyWantToSeeColosso)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_CRYING_BOY	the game	"Wahhh! I want to see Colosso, but no one will take me!" (MsgTolbiInteriorsWahhhIWantToSeeColosso)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_SOLDIER_WATCHER	the game	"It's strange that Babi's soldiers are hanging out all around town." (MsgTolbiInteriorsItsStrangeThatBabisSoldiersAre)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_BABI_SKEPTIC	the game	"That sounds ludicrous!" (MsgTolbiInteriorsHuhThenTheyFoundHimIn)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_MERCHANT	the game	"We're going to make some money at Colosso." (MsgTolbiInteriorsWereGoingToMakeSomeMoney)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_TRAVELING_MERCHANT	the game	"selling my wares" (MsgTolbiInteriorsThereWontBeManyCustomersUntil)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_WEAPON_MERCHANT	the game	"Take a look at our fine weapons." (MsgWeaponShopWelcome)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_ARMOR_MERCHANT	the game	"Ask me anything about armor." (MsgArmorShopWelcome)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_ITEM_MERCHANT	the game	"Welcome! We have just the gear you need." (MsgItemShopWelcome)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_INN_MASTER	the game	"If the master slips out, the lady will be upset." (MsgTolbiInteriorsIfTheMasterSlipsOutThe)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_INN_LADY	the game	"If the master slips out, the lady will be upset." (MsgTolbiInteriorsIfTheMasterSlipsOutThe)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_INN_WORKER	the game	"We're so busy running the inn" (MsgTolbiInteriorsWereSoBusyRunningTheInn)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_MEDAL_WOMAN	the game	"Hey, what's this?" (MsgTolbiHeyWhatsThis)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_CHEF	the game	"The innkeeper told me to cook a gourmet meal" (MsgTolbiInteriorsTheInnkeeperToldMeToCook)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_WAITRESS	the game	"I'm not very interested in Colosso. It's so barbaric." (MsgTolbiInteriorsImNotVeryInterestedInColosso)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_LATE_ENTRANT	the game	"we can't even enter Colosso." (MsgTolbiInteriorsOhNoWeBarelyMadeIt)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_SECOND_LATE_ENTRANT	the game	"we could have entered Colosso." (MsgTolbiInteriorsIfWedGottenHereJustA)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_HEALER	the game	"Welcome, weary wanderers. What aid do you seek?" (MsgSanctumWelcome)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_ANGRY_PASSENGER	the game	"Making passengers row their own cruise ship is unprecedented!" (MsgTolbiInteriorsYoureSayingIfWeRowWe)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_PASSENGER_WIFE	the game	"The ships cannot go out for any reason." (MsgTolbiHeWontSailShipEven)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_THIRD_PASSENGER	the game	"What kind of person would refuse such an offer?" (MsgTolbiHeWontSailShipEven)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_BORED_BOY	the game	"Tolbi gets so boring" (MsgTolbiInteriorsTolbiGetsSoBoringOnceThe)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_FELLOW_PASSENGER	the game	"We rode the same ship from Kalay!" (MsgTolbiWarriorRemember)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_COLOSSO_FAN	the game	"I got to see Colosso" (MsgTolbiInteriorsIGotToSeeColossoSo)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_STRANDED_TRAVELER	the game	"I rented my house to a rich family and tried to head east... but Silk Road is blocked" (MsgTolbiInteriorsIRentedMyHouseToA)	games/tbs/src/scene/stucco_rooms_b.h
-ACTOR_STUCCO_ROOMS_B_CAVE_RUMOR_GUEST	the game	"I heard of a cave that leads to the Karagol's far shore" (MsgTolbiInteriorsIHeardOfACaveThat)	games/tbs/src/scene/stucco_rooms_b.h
-CELL_BEHAVIOR_STUCCO_ROOMS_B_INN_SIGN	the game	"checked the sign." (MsgTolbiInteriorsIsaacCheckedTheSignInnFull)	games/tbs/src/scene/stucco_rooms_b.h
-CELL_BEHAVIOR_STUCCO_ROOMS_B_VIAL_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/stucco_rooms_b.h
-CELL_BEHAVIOR_STUCCO_ROOMS_B_MEDAL_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/stucco_rooms_b.h
-CELL_BEHAVIOR_STUCCO_ROOMS_B_HIDDEN_MEDAL_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/stucco_rooms_b.h
-CELL_BEHAVIOR_STUCCO_ROOMS_B_PIZZA_OVEN	the game	"Tolbi pizza." (MsgTolbiInteriorsShesMakingTheWorldRenownedTolbi)	games/tbs/src/scene/stucco_rooms_b.h
-CELL_BEHAVIOR_STUCCO_ROOMS_B_PASTA_OVEN	the game	"boiling the pasta" (MsgTolbiInteriorsHeIsBoilingThePastaIt)	games/tbs/src/scene/stucco_rooms_b.h
-CELL_BEHAVIOR_STUCCO_ROOMS_B_SEAFOOD_PASTA_OVEN	the game	"It's Tolbi seafood pasta!" (MsgTolbiInteriorsItsTolbiSeafoodPastaWithLots)	games/tbs/src/scene/stucco_rooms_b.h
+ACTOR_STUCCO_ROOMS_B_MAKESHIFT_INNKEEPER	the game	"I just line up some beds, and presto! I'm an innkeeper!" (MsgTolbiInteriorsTolbiIsPackedWithTouristsDuring)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_HOST	the game	"Do you want to stay with us?" (MsgTolbiWantStay)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_SLEEPLESS_GUEST	the game	"I couldn't sleep at all last night." (MsgTolbiInteriorsICouldntSleepAtAllLast)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_CROWD_SICK_GUEST	the game	"The crowds at the colosseum made me feel sick" (MsgTolbiInteriorsTheCrowdsAtTheColosseumMade)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_HOUSE_TENANT	the game	"We paid good money to rent this house" (MsgTolbiInteriorsWePaidGoodMoneyToRent)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_FINALS_WATCHER	the game	"so I'm just going to watch the finals." (MsgTolbiInteriorsIReallyWantToSeeColosso)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_CRYING_BOY	the game	"Wahhh! I want to see Colosso, but no one will take me!" (MsgTolbiInteriorsWahhhIWantToSeeColosso)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_SOLDIER_WATCHER	the game	"It's strange that Babi's soldiers are hanging out all around town." (MsgTolbiInteriorsItsStrangeThatBabisSoldiersAre)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_BABI_SKEPTIC	the game	"That sounds ludicrous!" (MsgTolbiInteriorsHuhThenTheyFoundHimIn)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_MERCHANT	the game	"We're going to make some money at Colosso." (MsgTolbiInteriorsWereGoingToMakeSomeMoney)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_TRAVELING_MERCHANT	the game	"selling my wares" (MsgTolbiInteriorsThereWontBeManyCustomersUntil)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_WEAPON_MERCHANT	the game	"Take a look at our fine weapons." (MsgWeaponShopWelcome)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_ARMOR_MERCHANT	the game	"Ask me anything about armor." (MsgArmorShopWelcome)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_ITEM_MERCHANT	the game	"Welcome! We have just the gear you need." (MsgItemShopWelcome)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_INN_MASTER	the game	"If the master slips out, the lady will be upset." (MsgTolbiInteriorsIfTheMasterSlipsOutThe)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_INN_LADY	the game	"If the master slips out, the lady will be upset." (MsgTolbiInteriorsIfTheMasterSlipsOutThe)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_INN_WORKER	the game	"We're so busy running the inn" (MsgTolbiInteriorsWereSoBusyRunningTheInn)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_MEDAL_WOMAN	the game	"Hey, what's this?" (MsgTolbiHeyWhatsThis)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_CHEF	the game	"The innkeeper told me to cook a gourmet meal" (MsgTolbiInteriorsTheInnkeeperToldMeToCook)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_WAITRESS	the game	"I'm not very interested in Colosso. It's so barbaric." (MsgTolbiInteriorsImNotVeryInterestedInColosso)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_LATE_ENTRANT	the game	"we can't even enter Colosso." (MsgTolbiInteriorsOhNoWeBarelyMadeIt)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_SECOND_LATE_ENTRANT	the game	"we could have entered Colosso." (MsgTolbiInteriorsIfWedGottenHereJustA)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_HEALER	the game	"Welcome, weary wanderers. What aid do you seek?" (MsgSanctumWelcome)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_ANGRY_PASSENGER	the game	"Making passengers row their own cruise ship is unprecedented!" (MsgTolbiInteriorsYoureSayingIfWeRowWe)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_PASSENGER_WIFE	the game	"The ships cannot go out for any reason." (MsgTolbiHeWontSailShipEven)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_THIRD_PASSENGER	the game	"What kind of person would refuse such an offer?" (MsgTolbiHeWontSailShipEven)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_BORED_BOY	the game	"Tolbi gets so boring" (MsgTolbiInteriorsTolbiGetsSoBoringOnceThe)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_FELLOW_PASSENGER	the game	"We rode the same ship from Kalay!" (MsgTolbiWarriorRemember)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_COLOSSO_FAN	the game	"I got to see Colosso" (MsgTolbiInteriorsIGotToSeeColossoSo)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_STRANDED_TRAVELER	the game	"I rented my house to a rich family and tried to head east... but Silk Road is blocked" (MsgTolbiInteriorsIRentedMyHouseToA)	games/tbs/src/scene/stucco_rooms_b.c
+ACTOR_STUCCO_ROOMS_B_CAVE_RUMOR_GUEST	the game	"I heard of a cave that leads to the Karagol's far shore" (MsgTolbiInteriorsIHeardOfACaveThat)	games/tbs/src/scene/stucco_rooms_b.c
+CELL_BEHAVIOR_STUCCO_ROOMS_B_INN_SIGN	the game	"checked the sign." (MsgTolbiInteriorsIsaacCheckedTheSignInnFull)	games/tbs/src/scene/stucco_rooms_b.c
+CELL_BEHAVIOR_STUCCO_ROOMS_B_VIAL_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/stucco_rooms_b.c
+CELL_BEHAVIOR_STUCCO_ROOMS_B_MEDAL_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/stucco_rooms_b.c
+CELL_BEHAVIOR_STUCCO_ROOMS_B_HIDDEN_MEDAL_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/stucco_rooms_b.c
+CELL_BEHAVIOR_STUCCO_ROOMS_B_PIZZA_OVEN	the game	"Tolbi pizza." (MsgTolbiInteriorsShesMakingTheWorldRenownedTolbi)	games/tbs/src/scene/stucco_rooms_b.c
+CELL_BEHAVIOR_STUCCO_ROOMS_B_PASTA_OVEN	the game	"boiling the pasta" (MsgTolbiInteriorsHeIsBoilingThePastaIt)	games/tbs/src/scene/stucco_rooms_b.c
+CELL_BEHAVIOR_STUCCO_ROOMS_B_SEAFOOD_PASTA_OVEN	the game	"It's Tolbi seafood pasta!" (MsgTolbiInteriorsItsTolbiSeafoodPastaWithLots)	games/tbs/src/scene/stucco_rooms_b.c
 FLAG_SUHALLA_SPROUT_GROWN	what the player sees	a small green sprout in the sand by the inn (its render)	games/tbs/src/scene/suhalla.c
 ACTOR_MAN_THIS_IS_SUHALLA	the game	"This is Suhalla." (MsgSuhallaThisIsSuhallaDontTryCrossing)	games/tbs/src/scene/suhalla.c
 ACTOR_WOMAN_ASKING_ABOUT_LALIVERO	the game	"Are you trying to get to Lalivero?" (MsgSuhallaTryingGetLalivero)	games/tbs/src/scene/suhalla.c
@@ -4234,36 +4234,36 @@ ACTOR_INNKEEPER	the game	"Welcome to our inn." (MsgInnWelcome)	games/tbs/src/sce
 ACTOR_INN_WORKER	the game	"Working like this keeps my mind occupied." (MsgLaliveroInteriorsWorkingLikeThisKeepsMyMind)	games/tbs/src/scene/timber_rooms_bc.c
 ACTOR_COOK	the game	"We have little to cook when we can't fish." (MsgLaliveroInteriorsFishingIsSoDifficultNowadaysBecause)	games/tbs/src/scene/timber_rooms_bc.c
 FLAG_LALIVERO_INN_WORKER_APOLOGIZED	the game	"Oh, I'm sorry..." (MsgLaliveroImSorry)	games/tbs/src/scene/timber_rooms_bc.c
-FLAG_TOLBI_SPROUT_GROWN	what the player sees	a small green sprout at the foot of a cliff (its render)	games/tbs/src/scene/tolbi.h
-FLAG_TOLBI_PUDDLE_FROZEN	what the player sees	a small puddle of water just north of the sprout (its render)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_SPROUT	what the player sees	a small green sprout (SPRITE_SPROUT) at the foot of a cliff (its render)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_PUDDLE	what the player sees	a small puddle of water (SPRITE_PUDDLE) just north of the sprout (its render)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_EXCITED_YOUNG_MAN	the game	"This festival only happens once a year, so I'm really excited." (MsgTolbiTolbisAlwaysReallyBustlingDuringColosso)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_HURRYING_WOMAN	the game	"If we don't go right now, we won't get good seats!" (MsgTolbiColossoIsHeldInTheColosseum)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_FINALS_FAN	the game	"I'm planning to go watch the finals." (MsgTolbiTryoutsStartedAtTheColosseumToday)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_WORRIED_WOMAN	the game	"What if something's happened to our leader?" (MsgTolbiColossoShouldHaveStartedTodayWhat)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_OLD_MAN	the game	"I'm 65 years old now" (MsgTolbiBabiWasAlreadyPrettyOldBack)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_SUSPICIOUS_OLD_WOMAN	the game	"What if Babi is actually a totally different person now" (MsgTolbiWhatIfBabiIsActuallyA)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_OLDER_BROTHER	the game	"I'm the oldest, so I shouldn't have to share" (MsgTolbiOldestShouldntShare)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_YOUNGER_SISTER	the game	"My big brother is being nice to me again!" (MsgTolbiHaHaHa)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_SOUVENIR_SELLER	the game	"Get your Colosso souvenirs!" (MsgTolbiGetYourColossoSouvenirsTheyMake)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_SNACK_VENDOR	the game	"Get your snacks and drinks" (MsgTolbiGetYourSnacksAndDrinksBefore)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_WOULD_BE_FIGHTER	the game	"I've decided not to fight at Colosso after all." (MsgTolbiIveDecidedNotToFightAt)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_XIAN_VISITOR	the game	"Tolbi is not like Xian." (MsgTolbiTolbiIsNotLikeXianIt)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_OVERSLEEPER	the game	"Rats! We overslept" (MsgTolbiRatsWeOversleptAndNowThe)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_FATHER	the game	"the wife doesn't go in for" (MsgTolbiChildrenLoveSouvenirs)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_MOTHER	the game	"Be patient, little guy." (MsgTolbiPatientLittleGuy)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_CRYING_BOY	the game	"Mom, you said you were all out of money" (MsgTolbiMomYouSaidYouWereAll)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_SCALPER	the game	"us scalpers" (MsgTolbiTodayIsABigDayFor)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_SPRING_VISITOR	the game	"Do you want to test your luck at Tolbi Spring?" (MsgTolbiWantTestLuck)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_SOLDIER_A	the game	"Did you run into any of Babi's soldiers in Town?" (MsgTolbiRunBabisSoldiers)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_SOLDIER_B	the game	"Did you run into any of Babi's soldiers in Town?" (MsgTolbiRunBabisSoldiers)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_EMBER	the game	"Ember" (MsgDjinnName)	games/tbs/src/scene/tolbi.h
-ACTOR_TOLBI_MISSING_PERSON_POSTER	the game	"Missing Person" (MsgTolbiSeenAnyoneWho)	games/tbs/src/scene/tolbi.h
-CELL_BEHAVIOR_TOLBI_SPRING_SIGN	the game	"Face away from Tolbi Spring and toss a coin into it." (MsgTolbiFaceAwayTolbi)	games/tbs/src/scene/tolbi.h
-CELL_BEHAVIOR_TOLBI_LUCKY_MEDAL_SIGN	the game	"If you toss a Lucky Medal" (MsgTolbiTossLuckyMedal)	games/tbs/src/scene/tolbi.h
-CELL_BEHAVIOR_TOLBI_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/tolbi.h
-CELL_BEHAVIOR_TOLBI_HIDDEN_CHEST	the game	"checked the chest" (MsgVaultIsaacCheckedChest)	games/tbs/src/scene/tolbi.h
+FLAG_TOLBI_SPROUT_GROWN	what the player sees	a small green sprout at the foot of a cliff (its render)	games/tbs/src/scene/tolbi.c
+FLAG_TOLBI_PUDDLE_FROZEN	what the player sees	a small puddle of water just north of the sprout (its render)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_SPROUT	what the player sees	a small green sprout (SPRITE_SPROUT) at the foot of a cliff (its render)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_PUDDLE	what the player sees	a small puddle of water (SPRITE_PUDDLE) just north of the sprout (its render)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_EXCITED_YOUNG_MAN	the game	"This festival only happens once a year, so I'm really excited." (MsgTolbiTolbisAlwaysReallyBustlingDuringColosso)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_HURRYING_WOMAN	the game	"If we don't go right now, we won't get good seats!" (MsgTolbiColossoIsHeldInTheColosseum)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_FINALS_FAN	the game	"I'm planning to go watch the finals." (MsgTolbiTryoutsStartedAtTheColosseumToday)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_WORRIED_WOMAN	the game	"What if something's happened to our leader?" (MsgTolbiColossoShouldHaveStartedTodayWhat)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_OLD_MAN	the game	"I'm 65 years old now" (MsgTolbiBabiWasAlreadyPrettyOldBack)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_SUSPICIOUS_OLD_WOMAN	the game	"What if Babi is actually a totally different person now" (MsgTolbiWhatIfBabiIsActuallyA)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_OLDER_BROTHER	the game	"I'm the oldest, so I shouldn't have to share" (MsgTolbiOldestShouldntShare)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_YOUNGER_SISTER	the game	"My big brother is being nice to me again!" (MsgTolbiHaHaHa)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_SOUVENIR_SELLER	the game	"Get your Colosso souvenirs!" (MsgTolbiGetYourColossoSouvenirsTheyMake)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_SNACK_VENDOR	the game	"Get your snacks and drinks" (MsgTolbiGetYourSnacksAndDrinksBefore)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_WOULD_BE_FIGHTER	the game	"I've decided not to fight at Colosso after all." (MsgTolbiIveDecidedNotToFightAt)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_XIAN_VISITOR	the game	"Tolbi is not like Xian." (MsgTolbiTolbiIsNotLikeXianIt)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_OVERSLEEPER	the game	"Rats! We overslept" (MsgTolbiRatsWeOversleptAndNowThe)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_FATHER	the game	"the wife doesn't go in for" (MsgTolbiChildrenLoveSouvenirs)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_MOTHER	the game	"Be patient, little guy." (MsgTolbiPatientLittleGuy)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_CRYING_BOY	the game	"Mom, you said you were all out of money" (MsgTolbiMomYouSaidYouWereAll)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_SCALPER	the game	"us scalpers" (MsgTolbiTodayIsABigDayFor)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_SPRING_VISITOR	the game	"Do you want to test your luck at Tolbi Spring?" (MsgTolbiWantTestLuck)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_SOLDIER_A	the game	"Did you run into any of Babi's soldiers in Town?" (MsgTolbiRunBabisSoldiers)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_SOLDIER_B	the game	"Did you run into any of Babi's soldiers in Town?" (MsgTolbiRunBabisSoldiers)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_EMBER	the game	"Ember" (MsgDjinnName)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_MISSING_PERSON_POSTER	the game	"Missing Person" (MsgTolbiSeenAnyoneWho)	games/tbs/src/scene/tolbi.c
+CELL_BEHAVIOR_TOLBI_SPRING_SIGN	the game	"Face away from Tolbi Spring and toss a coin into it." (MsgTolbiFaceAwayTolbi)	games/tbs/src/scene/tolbi.c
+CELL_BEHAVIOR_TOLBI_LUCKY_MEDAL_SIGN	the game	"If you toss a Lucky Medal" (MsgTolbiTossLuckyMedal)	games/tbs/src/scene/tolbi.c
+CELL_BEHAVIOR_TOLBI_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/tolbi.c
+CELL_BEHAVIOR_TOLBI_HIDDEN_CHEST	the game	"checked the chest" (MsgVaultIsaacCheckedChest)	games/tbs/src/scene/tolbi.c
 FLAG_TOLBI_SPRING_RISEN	its area name	Tolbi Spring	games/tbs/src/scene/tolbi_games.c
 ACTOR_TOLBI_SPRING_WHEELS_ATTENDANT	the game	"Step right up and try your hand at lucky wheels!" (MsgTolbiStepRightTry)	games/tbs/src/scene/tolbi_games.c
 ACTOR_TOLBI_SPRING_DICE_ATTENDANT	the game	"Hey, buddy, wanna try yer luck at the dice?" (MsgTolbiBuddyWannaTry)	games/tbs/src/scene/tolbi_games.c
@@ -4288,9 +4288,9 @@ ACTOR_TOLBI_SPRING_WEST_SIGN_GRASS	what the player sees	a tuft of grass at the f
 ACTOR_TOLBI_SPRING_VISITOR_MYSTERIOUS_POWERS	the game	"Tolbi Spring has mysterious powers." (MsgTolbiSpringTolbiSpringHasMysteriousPowersStand)	games/tbs/src/scene/tolbi_games.c
 ACTOR_TOLBI_SPRING_MEDAL_SEEKER	the game	"Do you have a Lucky Medal?" (MsgTolbiLuckyMedal)	games/tbs/src/scene/tolbi_games.c
 ACTOR_TOLBI_SPRING_VISITOR_ONE_MEDAL	the game	"Too bad I only have one Lucky Medal." (MsgTolbiSpringTooBadIOnlyHaveOne)	games/tbs/src/scene/tolbi_games.c
-FLAG_TOLBI_SHIP_ROWER_CHOSEN	the game	"Looks like you've been chosen to help row" (MsgTolbiShipLooksLikeYouveBeenChosen)	games/tbs/src/scene/tolbi_ship.h
-FLAG_TOLBI_SHIP_MONSTERS_BELOWDECKS	the game	"Monsters belowdecks!" (MsgTolbiShipMonstersBelowdecks)	games/tbs/src/scene/tolbi_ship.h
-FLAG_TOLBI_SHIP_KRAKEN_ON_DECK	the game	"there's a huge sea monster on the ship!" (MsgTolbiShipWonderWhatsWrongShipShouldnt)	games/tbs/src/scene/tolbi_ship.h
+FLAG_TOLBI_SHIP_ROWER_CHOSEN	the game	"Looks like you've been chosen to help row" (MsgTolbiShipLooksLikeYouveBeenChosen)	games/tbs/include/scene/tolbi_ship.h
+FLAG_TOLBI_SHIP_MONSTERS_BELOWDECKS	the game	"Monsters belowdecks!" (MsgTolbiShipMonstersBelowdecks)	games/tbs/include/scene/tolbi_ship.h
+FLAG_TOLBI_SHIP_KRAKEN_ON_DECK	the game	"there's a huge sea monster on the ship!" (MsgTolbiShipWonderWhatsWrongShipShouldnt)	games/tbs/include/scene/tolbi_ship.h
 ACTOR_FIRST_STROKE_OAR	what the player sees	an oar dipping into the water (its render)	games/tbs/src/scene/tolbi_ship_deck.c
 ACTOR_FIRST_OAR	what the player sees	an oar dipping into the water (its render)	games/tbs/src/scene/tolbi_ship_deck.c
 ACTOR_KALAY_CREWMAN	the game	"I didn't do anything..." (MsgTolbiShipDidntDoAnything)	games/tbs/src/scene/tolbi_ship_deck.c
@@ -4573,9 +4573,9 @@ ACTOR_VAULT_DOG	what the player sees	a white dog sitting among the graves (its r
 ACTOR_YOUNG_MAN_FIXING_THE_ROOF	the game	"Why pay for a carpenter when I can just hammer it a bit myself?" (MsgVaultFixTheRoofWhyPayFor)	games/tbs/src/scene/vault.c
 ACTOR_WOMAN_WANTING_THE_ROOF_FIXED	the game	"He should be fixing the roof now, but I can't find him anywhere..." (MsgVaultFixingRoofCant)	games/tbs/src/scene/vault.c
 ACTOR_SAP	the game	"Sap" (MsgDjinnName)	games/tbs/src/scene/vault.c
-CELL_BEHAVIOR_VAULT_BRIDGE_END	what the player sees	the rope bridge the leader walks across (render probe vault-bridge)	games/tbs/src/scene/vault.h
-CELL_BEHAVIOR_VAULT_WEST_OF_BRIDGE	what the player sees	the rope bridge the leader walks across (render probe vault-bridge)	games/tbs/src/scene/vault.h
-CELL_BEHAVIOR_VAULT_WELL	the game	"peered into the well" (MsgFieldPeeredWell)	games/tbs/src/scene/vault.h
+CELL_BEHAVIOR_VAULT_BRIDGE_END	what the player sees	the rope bridge the leader walks across (render probe vault-bridge)	games/tbs/include/scene/vault.h
+CELL_BEHAVIOR_VAULT_WEST_OF_BRIDGE	what the player sees	the rope bridge the leader walks across (render probe vault-bridge)	games/tbs/include/scene/vault.h
+CELL_BEHAVIOR_VAULT_WELL	the game	"peered into the well" (MsgFieldPeeredWell)	games/tbs/include/scene/vault.h
 CELL_BEHAVIOR_VAULT_CAVE_SWITCH	the game	"flipped the switch." (MsgFieldFlippedSwitch)	games/tbs/src/scene/vault_cave.c
 CELL_BEHAVIOR_VAULT_CAVE_LOCKED_DOOR	the game	"The door is tightly locked." (MsgFieldDoorTightlyLocked)	games/tbs/src/scene/vault_cave.c
 CELL_BEHAVIOR_VAULT_CAVE_CHEST	the game	"checked the chest" (MsgVaultIsaacCheckedChest)	games/tbs/src/scene/vault_cave.c
@@ -4671,36 +4671,36 @@ FLAG_VENUS_AERIE_FUSION_GROWING	the game	"Fusion Dragon" (MsgEnemyName)	games/tb
 FLAG_VENUS_AERIE_BEACON_ERUPTED	the game	"At long last, the time has come to light Venus Lighthouse's beacon." (MsgVenusLongLastTime)	games/tbs/src/scene/venus_lighthouse_aerie.c
 FLAG_VENUS_AERIE_PARTY_LIFTED	the game	"At long last, the time has come to light Venus Lighthouse's beacon." (MsgVenusLongLastTime)	games/tbs/src/scene/venus_lighthouse_aerie.c
 FLAG_VENUS_AERIE_ON_PLATFORM	what the player sees	round pale blue platforms floating in the air between the lighthouse and the towers beside it (its render)	games/tbs/src/scene/venus_lighthouse_aerie.c
-ACTOR_BEACON_STATUE_SOUTHWEST	what the player sees	four statues of a woman with a green wreath around the beacon, statue_with_wreath.png (its render)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_BEACON_STATUE_NORTHWEST	the game	"checked the stone statue..." (MsgCheckedGround)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_BEACON_STATUE_NORTHEAST	the game	"checked the stone statue..." (MsgCheckedGround)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_BEACON_STATUE_SOUTHEAST	the game	"checked the stone statue..." (MsgCheckedGround)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_FIRST_PLATFORM	what the player sees	round floating platforms in floating_platform.png (its render)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_LAST_PLATFORM	what the player sees	the last of the round floating platforms (its render)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_RISING_PLATFORM	what the player sees	SPRITE_FLOATING_PLATFORM, the round floating platform the six beside the aerie are drawn as (its render)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_MENARDI	the game	"Menardi!" (MsgSolSanctumKradenCouldThatBeThe)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_SATUROS	the game	"Saturos and Menardi were their names" (MsgValeKradenOhIsaac)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_FELIX	the game	"Felix" (MsgCharacterName)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_VENUS_STAR_SHADOW	what the player sees	a small shadow crossing the floor under the Venus Star as it flies over the beacon's well (its render)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_BEACON_ORB	what the player sees	a great orb of light over the split beacon, white and then green (its render)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_BEAM_BOTTOM	the game	"two beams of light shot out from them" (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_BEAM_LOWER	the game	"two beams of light shot out from them" (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_BEAM_MIDDLE	the game	"two beams of light shot out from them" (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_BEAM_UPPER	the game	"two beams of light shot out from them" (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/venus_lighthouse_aerie.h
-ACTOR_BEAM_TOP	the game	"two beams of light shot out from them" (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/venus_lighthouse_aerie.h
+ACTOR_BEACON_STATUE_SOUTHWEST	what the player sees	four statues of a woman with a green wreath around the beacon, statue_with_wreath.png (its render)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_BEACON_STATUE_NORTHWEST	the game	"checked the stone statue..." (MsgCheckedGround)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_BEACON_STATUE_NORTHEAST	the game	"checked the stone statue..." (MsgCheckedGround)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_BEACON_STATUE_SOUTHEAST	the game	"checked the stone statue..." (MsgCheckedGround)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_FIRST_PLATFORM	what the player sees	round floating platforms in floating_platform.png (its render)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_LAST_PLATFORM	what the player sees	the last of the round floating platforms (its render)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_RISING_PLATFORM	what the player sees	SPRITE_FLOATING_PLATFORM, the round floating platform the six beside the aerie are drawn as (its render)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_MENARDI	the game	"Menardi!" (MsgSolSanctumKradenCouldThatBeThe)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_SATUROS	the game	"Saturos and Menardi were their names" (MsgValeKradenOhIsaac)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_FELIX	the game	"Felix" (MsgCharacterName)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_VENUS_STAR_SHADOW	what the player sees	a small shadow crossing the floor under the Venus Star as it flies over the beacon's well (its render)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_BEACON_ORB	what the player sees	a great orb of light over the split beacon, white and then green (its render)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_BEAM_BOTTOM	the game	"two beams of light shot out from them" (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_BEAM_LOWER	the game	"two beams of light shot out from them" (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_BEAM_MIDDLE	the game	"two beams of light shot out from them" (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_BEAM_UPPER	the game	"two beams of light shot out from them" (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/venus_lighthouse_aerie.c
+ACTOR_BEAM_TOP	the game	"two beams of light shot out from them" (MsgSolSanctumKradenYouFoundIt)	games/tbs/src/scene/venus_lighthouse_aerie.c
 FLAG_WEST_LUNPA_CAVE_GATE_PUDDLE_FROZEN	what the player sees	a small blue puddle beneath the green metal gate across the cave (its render)	games/tbs/src/scene/west_lunpa_cave.c
 FLAG_WEST_LUNPA_CAVE_GATE_LOWERED	the game	"The gate in the cave can only be opened from the inside." (MsgLunpaEastGuardTrustsCaveGate)	games/tbs/src/scene/west_lunpa_cave.c
 FLAG_WEST_LUNPA_CAVE_GATE_RAISED	the game	"The gate in the cave can only be opened from the inside." (MsgLunpaEastGuardTrustsCaveGate)	games/tbs/src/scene/west_lunpa_cave.c
 FLAG_WEST_LUNPA_CAVE_NORTH_PUDDLE_FROZEN	what the player sees	a small blue puddle in the cave's northern passage, past the gate (its render)	games/tbs/src/scene/west_lunpa_cave.c
 FLAG_WEST_LUNPA_CAVE_SOUTH_PUDDLE_FROZEN	what the player sees	a small blue puddle at the foot of the cave's southern passage (its render)	games/tbs/src/scene/west_lunpa_cave.c
-CELL_BEHAVIOR_WEST_LUNPA_CAVE_LOWERING_SWITCH	the game	"flipped the switch." (MsgFieldFlippedSwitch)	games/tbs/src/scene/west_lunpa_cave.h
-CELL_BEHAVIOR_WEST_LUNPA_CAVE_RAISING_SWITCH	the game	"flipped the switch." (MsgFieldFlippedSwitch)	games/tbs/src/scene/west_lunpa_cave.h
-ACTOR_UNUSED_PUDDLE	what the player sees	SPRITE_PUDDLE, the small blue puddle the cave's other three show, map-1.png (its render)	games/tbs/src/scene/west_lunpa_cave.h
-ACTOR_SOUTH_PUDDLE	what the player sees	a small blue puddle in the cave's southwest end (its render)	games/tbs/src/scene/west_lunpa_cave.h
-ACTOR_GATE_PUDDLE	what the player sees	a small blue puddle at the foot of the gate (its render)	games/tbs/src/scene/west_lunpa_cave.h
-ACTOR_NORTH_PUDDLE	what the player sees	a small blue puddle in the cave's north passage (its render)	games/tbs/src/scene/west_lunpa_cave.h
-ACTOR_BUNZA	the game	"Then what should we do, Bunza?" (MsgLunpaBunza)	games/tbs/src/scene/west_lunpa_cave.h
-ACTOR_HAMMET	the game	"So, Dodonpa never had any intention of releasing Hammet?" (MsgLunpaDodonpaNeverIntention)	games/tbs/src/scene/west_lunpa_cave.h
+CELL_BEHAVIOR_WEST_LUNPA_CAVE_LOWERING_SWITCH	the game	"flipped the switch." (MsgFieldFlippedSwitch)	games/tbs/src/scene/west_lunpa_cave.c
+CELL_BEHAVIOR_WEST_LUNPA_CAVE_RAISING_SWITCH	the game	"flipped the switch." (MsgFieldFlippedSwitch)	games/tbs/src/scene/west_lunpa_cave.c
+ACTOR_UNUSED_PUDDLE	what the player sees	SPRITE_PUDDLE, the small blue puddle the cave's other three show, map-1.png (its render)	games/tbs/src/scene/west_lunpa_cave.c
+ACTOR_SOUTH_PUDDLE	what the player sees	a small blue puddle in the cave's southwest end (its render)	games/tbs/src/scene/west_lunpa_cave.c
+ACTOR_GATE_PUDDLE	what the player sees	a small blue puddle at the foot of the gate (its render)	games/tbs/src/scene/west_lunpa_cave.c
+ACTOR_NORTH_PUDDLE	what the player sees	a small blue puddle in the cave's north passage (its render)	games/tbs/src/scene/west_lunpa_cave.c
+ACTOR_BUNZA	the game	"Then what should we do, Bunza?" (MsgLunpaBunza)	games/tbs/src/scene/west_lunpa_cave.c
+ACTOR_HAMMET	the game	"So, Dodonpa never had any intention of releasing Hammet?" (MsgLunpaDodonpaNeverIntention)	games/tbs/src/scene/west_lunpa_cave.c
 FLAG_WORLD_MAP_FALLING_ROCK_LANDED	the game	"being smashed by falling rocks here" (MsgWorldMapWeCantStayAnotherMinute)	games/tbs/src/scene/world_map.c
 FLAG_WORLD_MAP_BLACK_ORB_HANDED_OVER	the game	"Black Orb" (MsgItemName)	games/tbs/src/scene/world_map.c
 FLAG_WORLD_MAP_ORDINARY_ACTORS	its area name	World Map	games/tbs/src/scene/world_map.c
@@ -4811,4 +4811,4 @@ ACTOR_ABILITY_BROWSER	what the player sees	`Psy No:` over an ability's name, wit
 ACTOR_FIRST_EMOTE_TESTER	what the player sees	a wince over the actor, then its message (its render)	games/tbs/src/debug/level.c
 ACTOR_SECOND_EMOTE_TESTER	what the player sees	an ellipsis over the first tester, then the first tester's message (its render)	games/tbs/src/debug/level.c
 FLAG_CREDITS_LINE_DRAWN	what the player sees	the credits text scrolling up the screen one line at a time (its render)	games/tbs/src/menu/credits.c
-FootprintAnimation	what the player sees	prints in Imil's snow (its render)	games/tbs/src/field/field/player_control.c
+FootprintAnimation	what the player sees	prints in Imil's snow (its render)	games/tbs/src/field/field_player_control.c
