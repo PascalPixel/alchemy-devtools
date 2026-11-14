@@ -1,5 +1,6 @@
-//! render: the game's own code at work, recorded from a built ☀️ edition run
-//! in libmgba, for the docs site: each battle Psynergy the party casts
+//! render: the game's own code at work, recorded from a built edition of
+//! either game run in libmgba (place, event and psynergy play The Lost Age's
+//! as well as The Broken Seal's; the rest are The Broken Seal's), for the docs site: each battle Psynergy the party casts
 //! (`psynergy`), each scene's entrance photo, maps and events (`place`,
 //! `event`), the front page's pictures (`story`), the folder guides'
 //! recordings (`guide`), the probes the source cites as evidence (`probe`)
@@ -72,6 +73,8 @@ mod probe_places;
 #[cfg(feature = "render")]
 mod probe_units;
 #[cfg(feature = "render")]
+mod probe_scene;
+#[cfg(feature = "render")]
 mod source;
 #[cfg(feature = "render")]
 mod whole;
@@ -91,7 +94,8 @@ use std::path::{Path, PathBuf};
 
 const USAGE: &str = "usage: alchemy-devtools render psynergy [--ability N|NAME]... [--all] [--djinn] [--summons] [--list] [--unlearned]
          [--out DIR] [--edition tbs-en] [--backdrop gradient|game|PICTURE.png] [--verbose] [--jobs N]
-Plays battle Psynergy in a built ☀️ edition (make tbs-en) under libmgba and
+Plays battle Psynergy in a built edition of either game (make tbs-en, make
+tla-en; --edition names it) under libmgba and
 writes each cast as DIR/<ability>.gif: the whole 240 by 160 screen at 30
 frames a second, looping, from the cast's message to the next round. DIR/index.tsv
 lists each file's ability id, name, caster, target and frames at 30 a
@@ -127,6 +131,12 @@ past its aim strikes three. Healing and support go to that character as the
 caster's ally, in a battle against a Vermin: hurt for healing, downed for
 Revive, poisoned for Cure Poison, deluded for Restore. A caster short of PP
 is given enough, and foes facing instant death enough luck.
+
+In The Lost Age the four are Felix, Jenna, Sheba and Piers from its debug
+party preset 3, at level 90 with nine Djinn of their own element set:
+Venus Felix against Sheba, Mercury Piers against Jenna, Mars Jenna against
+Piers, Jupiter Sheba against Felix. A Djinni the caster does not hold is
+given and set first, and a summon of two elements is given what it lacks.
 
 Needs the `render` feature: cargo build --release --features render, with
 libmgba and its headers installed (MGBA_PREFIX names their prefix).";
@@ -446,20 +456,30 @@ Environment:
   MOMENT_*              guide's moment mode (render guide --help)";
 
 const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene N|NAME]... [--all]
-         --places places.tsv --events events.tsv --flags flags.tsv
+         [--places places.tsv --events events.tsv --flags flags.tsv]
          [--event NAME]... [--whole [--whole-frame L,T,W,H] [--whole-window PLACE]]
          [--out DIR] [--edition tbs-en] [--jobs N]
-Plays a built ☀️ edition (make tbs-en) under libmgba from a new game's
-defaults straight into each scene, and writes into DIR/<scene>/ (DIR
-defaults to out/EDITION/places) PNG files at the GBA's size for place and
-GIFs for event, with DIR/index.tsv listing every picture (scene, number,
-area, variant, kind: entrance, map or event-gif, entrance, event, frames,
-leads_to, note, the event's messages, file; the page, segment, message,
-after and before columns are kept, empty, for the rows earlier versions
-wrote) and DIR/skipped.tsv what was left out and why. --all takes every
-scene but the title, the clear-data screen and the debug test rooms. The
-tables are the story tools' places.tsv (scenes), events.tsv (each event's
-trigger, flags and messages) and flags.tsv (flag names).
+Plays a built edition of either game (make tbs-en, make tla-en) under
+libmgba from a new game's defaults straight into each scene, and writes
+into DIR/<scene>/ (DIR defaults to out/EDITION/places) PNG files at the
+GBA's size for place and GIFs for event, with DIR/index.tsv listing every
+picture (scene, number, area, variant, kind: entrance, map or event-gif,
+entrance, event, frames, leads_to, note, the event's messages, file; the
+page, segment, message, after and before columns are kept, empty, for the
+rows earlier versions wrote) and DIR/skipped.tsv what was left out and
+why. --all takes every scene but the title, the clear-data screen and the
+debug test rooms. The tables are the story tools' places.tsv (scenes),
+events.tsv (each event's trigger, flags and messages) and flags.tsv (flag
+names).
+Without them (they are written for The Broken Seal alone) the scenes are
+the tree's scene table (games/GAME/src/field/scenes.s, each overlay's source
+from its linker map), the flags flags.h's, and for event the events are
+read from the running game into DIR/triggers.tsv, in events.tsv's columns:
+each scene entered by each of its entrances, each row of the trigger table
+its field then holds an event named by the function it runs or the message
+it shows. No story moments are drawn without events.tsv. The Lost Age's
+entrances include its maps' own (Field_PlaceAtEntrance), each in the camera
+box that holds it.
 ALCHEMY_RENDER_DEBUG prints each scan and each spot an event is tried from.
 
 place: the photo of the party arriving, once the player has control
@@ -1170,10 +1190,19 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
 }
 
 const PROBE_USAGE: &str = "usage: alchemy-devtools render probe --flags flags.tsv [--only NAME]... [--out DIR] [--edition tbs-en]
-Plays a built ☀️ edition and prints what it reads for questions only the
+       alchemy-devtools render probe --only scene --scene N|NAME... [--entrance N] [--set FLAG]...
+         [--edition tla-en] [--flags flags.tsv] [--out DIR]
+Plays a built edition and prints what it reads for questions only the
 running game settles, writing any pictures into DIR (default
 out/EDITION/probe). Each probe is evidence The Broken Seal's source or pages
-cite by name (`render probe NAME`):
+cite by name (`render probe NAME`), and `scene` reads either game:
+  scene       what a scene shows, for naming it: entered by --entrance (its
+              first way in when none; in The Lost Age its map's entrances
+              too) with --set's flags (names or 0x numbers; flags.h's
+              without --flags), once the player has control: its entrances
+              and their camera boxes, each actor on stage, each row of the
+              trigger table its field holds, named by the function it runs
+              or the message it shows, and the photo SCENE-ENTRANCE.png
   places      sol-entrance flag-reads vale-gate log-rooms-a vault-revisit
               log-rooms-b vault-bridge vault-ivy maze-exit kraden-lift
   units       hammet flint venus-sockets-a list-tees enemy-slot-509-field
@@ -1193,6 +1222,7 @@ published. --only picks some; flags.tsv is the story tools' flag names.";
 
 fn probe_command(arguments: &[String]) -> Result<(), String> {
     let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
+    let (mut scenes, mut entrance, mut set): (Vec<String>, Option<u16>, Vec<String>) = (Vec::new(), None, Vec::new());
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
         let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{PROBE_USAGE}"));
@@ -1205,13 +1235,56 @@ fn probe_command(arguments: &[String]) -> Result<(), String> {
             "--out" => out = Some(PathBuf::from(value("--out")?)),
             "--edition" => edition = value("--edition")?,
             "--flags" => flags_tsv = Some(PathBuf::from(value("--flags")?)),
+            "--scene" => scenes.push(value("--scene")?),
+            "--entrance" => entrance = Some(value("--entrance")?.parse().map_err(|_| format!("--entrance takes a number\n{PROBE_USAGE}"))?),
+            "--set" => set.push(value("--set")?),
             other => return Err(format!("unexpected argument {other:?}\n{PROBE_USAGE}")),
         }
     }
-    let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{PROBE_USAGE}"))?)?;
     let root = crate::compile::root();
     let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("probe"));
+    if only.iter().any(|o| o == "scene") {
+        if only.len() > 1 || scenes.is_empty() {
+            return Err(format!("probe scene is asked alone, with --scene\n{PROBE_USAGE}"));
+        }
+        let game = layout::Game::of(&edition)?;
+        let flags = match &flags_tsv {
+            Some(path) => story::Flags::read(path)?,
+            None => story::Flags::from_header(root, game.dir()),
+        };
+        let set: Vec<u16> = set.iter().map(|n| flags.resolve(n, None).ok_or_else(|| format!("no flag {n}"))).collect::<Result<_, _>>()?;
+        return play_scene_probe(root, &edition, &scenes, entrance, &set, &out);
+    }
+    if !edition.starts_with("tbs-") {
+        return Err(format!("{edition}: only probe scene reads The Lost Age; the rest are The Broken Seal's"));
+    }
+    let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{PROBE_USAGE}"))?)?;
     play_probe(root, &edition, &only, &flags, &out)
+}
+
+#[cfg(not(feature = "render"))]
+fn play_scene_probe(_: &Path, _: &str, _: &[String], _: Option<u16>, _: &[u16], _: &Path) -> Result<(), String> {
+    Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
+}
+
+/// `render probe scene`: each scene asked for, by its symbol or number.
+#[cfg(feature = "render")]
+fn play_scene_probe(root: &Path, edition: &str, wanted: &[String], entrance: Option<u16>, set: &[u16], out: &Path) -> Result<(), String> {
+    let game = layout::Game::of(edition)?;
+    let all = story::scenes_from_tree(root, game.dir(), edition)?;
+    let chosen: Vec<&story::Scene> = all.iter().filter(|s| wanted.iter().any(|w| w.parse::<u16>().ok() == Some(s.number) || s.symbol.as_deref().is_some_and(|n| n.eq_ignore_ascii_case(w)) || s.slug() == *w)).collect();
+    if chosen.is_empty() {
+        return Err(format!("no scene {}", wanted.join(", ")));
+    }
+    std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+    let machines = Machines::load(root, edition, &chosen, true)?;
+    let none = std::collections::HashMap::new();
+    for s in chosen {
+        let ask = probe_scene::Ask { scene: s, entrance, set: set.to_vec() };
+        let file = probe_scene::scene(&machines.rom, &machines.symbols, &ask, machines.functions.get(&s.number).unwrap_or(&none), &machines.messages, out)?;
+        eprintln!("{}", out.join(file).display());
+    }
+    Ok(())
 }
 
 #[cfg(not(feature = "render"))]

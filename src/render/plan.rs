@@ -45,6 +45,9 @@ pub struct Roster {
     /// A class whose Psynergy another character casts: The Broken Seal's
     /// Jenna casts her own class's Mars Psynergy.
     pub special: Option<(usize, u8)>,
+    /// The Djinn of each element the game has, of the twenty ids each
+    /// element keeps (DJINN_PER_ELEMENT): the rest are unused rows.
+    pub djinn: u16,
 }
 
 impl Roster {
@@ -56,6 +59,7 @@ impl Roster {
             four: FOUR,
             preset: PRESET_FOUR,
             special: Some((JENNA_CLASS, JENNA)),
+            djinn: DJINN_PER_ELEMENT,
         }
     }
 
@@ -69,6 +73,8 @@ impl Roster {
             four: [FELIX, JENNA, SHEBA, PIERS],
             preset: 3,
             special: None,
+            // DebugParty_LoadPreset hands them out modulo 18.
+            djinn: 18,
         }
     }
 }
@@ -382,7 +388,7 @@ impl Tables {
             // A Djinni Set on its element's Adept, or a summon with its Djinn
             // on standby.
             let special = match skip {
-                Some(Skip::Djinni) => id.checked_sub(DJINN_FIRST).and_then(|n| {
+                Some(Skip::Djinni) => id.checked_sub(DJINN_FIRST).filter(|n| n % DJINN_PER_ELEMENT < self.roster.djinn).and_then(|n| {
                     let mut c = cast_for(&self.roster, ability.clone(), false)?;
                     c.command =
                         Command::Djinni { element: (n / DJINN_PER_ELEMENT) as u8, index: (n % DJINN_PER_ELEMENT) as u8 };
