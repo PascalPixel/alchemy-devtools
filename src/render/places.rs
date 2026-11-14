@@ -547,11 +547,27 @@ impl Context<'_> {
             .iter()
             .filter_map(|&n| entrances.iter().find(|e| e.number == n as i16).copied())
             .collect();
-        if ways.is_empty() {
-            if all {
-                self.skip(scene, "entrance.png (kept)", "no exit of another map leads in, so it is taken by the table's first row".to_string());
+        // The Lost Age's first row is often a stand-in (172, 149) with no
+        // camera box, where the debug map select starts: in its place, as a
+        // way in or when none leads in, its lowest entrance past 0 with a box
+        // is taken.
+        let boxed = entrances.iter().filter(|e| e.number > 0 && e.camera != [-1; 4]).min_by_key(|e| e.number).copied();
+        if let Some(b) = boxed.filter(|_| self.symbols.l.game == super::layout::Game::Tla) {
+            for way in ways.iter_mut().filter(|w| w.number == 0 && w.camera == [-1; 4]) {
+                *way = b;
             }
-            ways.push(rooms[0]);
+            ways.dedup_by_key(|w| w.number);
+        }
+        if ways.is_empty() {
+            let way = match boxed {
+                Some(e) if self.symbols.l.game == super::layout::Game::Tla => e,
+                _ => rooms[0],
+            };
+            if all {
+                let what = if way.number == rooms[0].number { "the table's first row".to_string() } else { format!("its lowest entrance with a camera box, {}", way.number) };
+                self.skip(scene, "entrance.png (kept)", format!("no exit of another map leads in, so it is taken by {what}"));
+            }
+            ways.push(way);
         }
         // Each run: the room (named by its first entrance), whether its map
         // is drawn, and whether the photo is taken there. A room is entered
