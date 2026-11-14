@@ -1,4 +1,4 @@
-file	routine	kind	text
+file	routine	kind	measurement
 games/tla/src/field/world_map_lines.c	Transform_UpdateVertices	FAKEMATCH(pin)	x held in r0 from its shift, which keeps the two differences in r1 and r4; as a plain local, 15 of 156 instructions differ in tla-en.
 games/tla/src/field/world_map_lines.c	Transform_UpdateVertices	FAKEMATCH(pin)	the target held in ip, where the stub Transform_CallInThumb reads it; as the plain call through table->atan2.target, 1 of 156 instructions differ in tla-en.
 games/tla/src/field/world_map_lines.c	Transform_UpdateVertices	FAKEMATCH(barrier)	an empty asm reading the arguments and the target, which keeps ip's load alive into the stub's call; without it, 2 of 156 instructions differ in tla-en.
