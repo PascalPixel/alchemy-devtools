@@ -362,14 +362,15 @@ const SANCTUM_DOOR: Walk = Walk {
     what: "up through the sanctum's door, Daila giving way to the sanctum",
 };
 
-/// Walking east behind the house up on the rise in Daila and back: its roof
-/// is drawn over the leader.
+/// Walking east along the grass above the house on the rise in Daila and
+/// back: the top of its roof is drawn over the leader. A row lower (z 195)
+/// the roof stops him, and at z 210 he walks through the house's own cells.
 const BEHIND_ROOF: Walk = Walk {
     file: "world/behind-roof.gif",
     scene: DAILA,
     entrance: 0,
     preset: PARTY_DAILA,
-    stand: Some((420, 210, EAST)),
+    stand: Some((420, 190, EAST)),
     path: &[(0, 10), (KEY_RIGHT, 70), (0, 15), (KEY_LEFT, 70), (0, 10)],
     what: "walking behind a house's roof in Daila",
 };
