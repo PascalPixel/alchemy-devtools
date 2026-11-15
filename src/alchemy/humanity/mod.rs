@@ -423,6 +423,28 @@ impl Report {
         first.get(position)?.clone()
     }
 
+    /// The honest kind of a number by the calls it stands in, whatever their
+    /// parameters are named: a place or size on the map grid in a map-copy
+    /// call (`MapGrid_CopyCells(32, 24, 2, 2, 30, 24)`), a place in an OAM
+    /// word (`OBJ_X(560 - digits * 10)`), and the animation an actor's
+    /// sheet numbers for itself (`Actor_SetAnimation(ACTOR_ALEX, 13)`).
+    /// Decimal only, never a shift's amount, as S3 writes these.
+    fn honest_by_call(candidate: &Candidate) -> Option<&'static str> {
+        if !numbers::is_decimal(&candidate.literal) || candidate.shift {
+            return None;
+        }
+        if candidate.calls.iter().any(|(callee, _)| matches!(callee.as_str(), "OBJ_X" | "OBJ_Y")) {
+            return Some("position");
+        }
+        let (callee, at) = candidate.calls.first()?;
+        if callee.starts_with("MapGrid_Copy") || callee.starts_with("Map_Copy") {
+            return Some("position");
+        }
+        let words = numbers::words(callee);
+        let animation = words.iter().any(|word| word == "animation") && words.iter().all(|word| !matches!(word.as_str(), "speed" | "rate"));
+        (animation && words.iter().any(|word| word == "set") && *at == 1).then_some("animation")
+    }
+
     /// The honest kind of a number by the parameter it fills, where its own
     /// tokens showed none: the argument of a random roll; a parameter whose
     /// words `parameter_words` reads; a decimal offset in a position or
@@ -498,7 +520,7 @@ impl Report {
             let parameter = candidate.calls.first().and_then(|(callee, at)| self.parameter(callee, *at, 0));
             let vetoed = parameter.is_some_and(|(name, _)| numbers::is_other(&name));
             let local = candidate.local.filter(|kind| !(vetoed && matches!(*kind, "position" | "duration")));
-            match local.or_else(|| self.honest_by_parameter(&candidate)) {
+            match local.or_else(|| Self::honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)) {
                 Some(kind) => self.note(&format!("honest_{kind}"), file, line, &what),
                 None => {
                     self.note("magic_code", file, line, literal);
@@ -1017,7 +1039,8 @@ impl<'r, 'a> Walk<'r, 'a> {
                 literal: literal.to_string(),
                 calls,
                 lone: self.is_argument(at),
-                local: numbers::local(tokens, at, floor),
+                // A local array's size is a count of its own elements.
+                local: if numbers::is_array_size(tokens, at, floor) { Some("position") } else { numbers::local(tokens, at, floor) },
                 siblings,
                 random_arguments,
                 pointer: numbers::pointer_call(tokens, at, floor),
@@ -1613,6 +1636,10 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
                 report.note("fakematch_other", path, comment.line, kind);
             } else if word == "LEFTOVER" && LEFTOVERS.contains(&kind) {
                 report.note(&format!("leftover_{kind}"), path, comment.line, kind);
+            } else if word == "LEFTOVER" {
+                // As with FAKEMATCH: a leftover of a kind S2 does not name is
+                // counted, to be given its kind.
+                report.note("leftover_other", path, comment.line, kind);
             }
         }
         if comment.text.starts_with("// DEAD:") {
@@ -1859,6 +1886,8 @@ const ROWS: &[(&str, &str)] = &[
     ("honest_duration", "  honest: durations, cues"),
     ("honest_pointer", "  honest: via pointer calls"),
     ("honest_damping", "  honest: dampings"),
+    ("honest_animation", "  honest: a sheet's animations"),
+    ("honest_level", "  honest: fade, shake levels"),
     ("data_argument", "numbers passed as data"),
     ("data_argument_frames", "  frames"),
     ("data_argument_coordinate", "  coordinates"),
@@ -1883,6 +1912,7 @@ const ROWS: &[(&str, &str)] = &[
     ("leftover", "LEFTOVERs (Camelot's)"),
     ("leftover_frame", "  frame"),
     ("leftover_template", "  template"),
+    ("leftover_other", "  of a kind S2 does not name"),
     ("leftover_dead", "  dead (// DEAD: marks)"),
     ("views", "unsettled views (VIEW markers)"),
     ("goto", "goto"),
@@ -1939,7 +1969,7 @@ const ROWS: &[(&str, &str)] = &[
 fn kinds(metric: &str) -> Vec<String> {
     match metric {
         "fakematch" => DEVICES.iter().chain(&["other"]).map(|kind| format!("fakematch_{kind}")).collect(),
-        "leftover" => LEFTOVERS.iter().chain(&["dead"]).map(|kind| format!("leftover_{kind}")).collect(),
+        "leftover" => LEFTOVERS.iter().chain(&["other", "dead"]).map(|kind| format!("leftover_{kind}")).collect(),
         _ => Vec::new(),
     }
 }
@@ -2362,19 +2392,20 @@ mod tests {
             "}\n",
         ));
         assert_eq!(
-            ["leftover_frame", "leftover_template", "leftover_form", "leftover_dead"].map(|metric| report.total(metric)),
-            [1, 1, 0, 1]
+            ["leftover_frame", "leftover_template", "leftover_other", "leftover_dead"].map(|metric| report.total(metric)),
+            [1, 1, 2, 1]
         );
-        assert_eq!((report.value("leftover"), report.value("fakematch")), (3, 2), "never summed together");
+        assert_eq!((report.value("leftover"), report.value("fakematch")), (5, 2), "never summed together");
+        assert_eq!(list(&[("tbs", &report)], "leftover_other"), "tbs\tf.c:4\tform\ntbs\tf.c:5\tdead\n", "a kind S2 does not name, counted to be given one");
         assert_eq!(list(&[("tbs", &report)], "fakematch_other"), "tbs\tf.c:6\tframe\n");
         let rows: Vec<&str> = ROWS.iter().filter_map(|(metric, _)| metric.strip_prefix("leftover_")).collect();
-        assert_eq!(rows, ["frame", "template", "dead"], "the table's leftover rows are S2's, then the DEAD marks");
+        assert_eq!(rows, ["frame", "template", "other", "dead"], "the table's leftover rows are S2's, those of a kind it does not name, then the DEAD marks");
         assert!(listable("leftover") && listable("leftover_frame") && !listable("leftover_pin"));
-        assert_eq!(list(&[("tbs", &report)], "leftover"), "tbs\tf.c:2\tframe\ntbs\tf.c:3\ttemplate\ntbs\tf.c:7\tdead\n");
+        assert_eq!(list(&[("tbs", &report)], "leftover"), "tbs\tf.c:2\tframe\ntbs\tf.c:3\ttemplate\ntbs\tf.c:4\tform\ntbs\tf.c:5\tdead\ntbs\tf.c:7\tdead\n");
         assert_eq!(list(&[("tbs", &report)], "fakematch"), "tbs\tf.c:6\tframe\ntbs\tf.c:8\ttemporary\n");
         let tsv = tsv(&[("tbs", &report)]);
-        assert!(tsv.contains("tbs\tleftover\ttotal\t3\n") && !tsv.contains("leftover_form"), "{tsv}");
-        assert!(tsv.contains("tbs\tleftover\tf.c\t3\n") && tsv.contains("tbs\tfakematch\tf.c\t2\n"), "{tsv}");
+        assert!(tsv.contains("tbs\tleftover\ttotal\t5\n") && !tsv.contains("leftover_form"), "{tsv}");
+        assert!(tsv.contains("tbs\tleftover\tf.c\t5\n") && tsv.contains("tbs\tfakematch\tf.c\t2\n"), "{tsv}");
         let table = summary(&[("tbs", &report)], 0);
         let devices = table.find("FAKEMATCH devices").unwrap();
         let leftovers = table.find("LEFTOVERs (Camelot's)").unwrap();
@@ -2500,6 +2531,42 @@ mod tests {
         assert!(listed.starts_with("tbs\tf.c:6\t0x8000\tActor_SetSpeed acceleration\ntbs\tf.c:7\t20\tOld #2\n"), "{listed}");
         assert!(listed.ends_with("tbs\tf.c:9\t40\t-\n"), "{listed}");
         assert!(list(&[("tbs", &report)], "data_argument").contains("tbs\tf.c:2\t80\tWAIT n\n"));
+    }
+
+    #[test]
+    fn honest_numbers_by_the_calls_they_stand_in() {
+        let header = concat!(
+            "void MapGrid_CopyCellPictureCellsRect_(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5);\n",
+            "void Actor_SetAnimation(s32 a0, s32 a1);\n",
+            "void Actor_SetAnimationSpeed(void *actor, s32 a1);\n",
+            "#define OBJ_X(x) ((x) << 16)\n",
+        );
+        let source = concat!(
+            "void Run(void) {\n",
+            "    u16 counts[16];\n",
+            "    MapGrid_CopyCellPictureCellsRect_(x, 125, 3, 3, 39, 85);\n",
+            "    Actor_SetAnimation(ACTOR_ALEX, 13);\n",
+            "    Actor_SetAnimation(12, 25);\n",
+            "    Actor_SetAnimationSpeed(leader, 48);\n",
+            "    word = OBJ_X((560 - digits * 10) & 0x1ff);\n",
+            "    fade = -16;\n",
+            "    gTable[12] = 0;\n",
+            "    F(a,\n",
+            "      x - 32);\n",
+            "    F(a, x - 32);\n",
+            "}\n",
+        );
+        let report = game([("f.h", header), ("f.c", source), ("g.h", "void F(void *a, s32 x);\n")]);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.split('\t').next().unwrap().to_string()).collect()
+        };
+        // The array's own size, the map grid's places and sizes, an OAM
+        // word's place (not its hex mask), and a wrapped call's argument
+        // classed as the same call on one line.
+        assert_eq!(listed("honest_position"), ["16", "125", "39", "85", "560", "10", "32", "32"]);
+        assert_eq!(listed("honest_animation"), ["13", "25"], "the second argument only; a speed is a rate");
+        assert_eq!(listed("honest_level"), ["16"]);
+        assert_eq!(listed("magic_code"), ["12", "48", "0x1ff", "12", "16"], "an actor id, a speed, a mask, an index and OBJ_X's own shift");
     }
 
     #[test]

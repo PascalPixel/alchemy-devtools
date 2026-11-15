@@ -24,12 +24,15 @@ words of exit names nothing resolves yet, and --list synonym,
 synonym_referent, abbreviation, family_shape or prefix_twin the names a
 reader could not guess from their siblings). FAKEMATCH devices and
 Camelot's leftovers (the LEFTOVER tags and the // DEAD: marks) are counted
-on rows of their own and never added together; --list fakematch and --list
-leftover take every kind of each. Every number in code counts in
-magic_code_all; the ones its tokens or the parameter it fills show to be
+on rows of their own and never added together, a tag of a kind S2 does
+not name counted among its word's; --list fakematch and --list leftover take
+every kind of each. Every number in code counts in magic_code_all; the ones
+its tokens, the call it stands in or the parameter it fills show to be
 honest under S3 (composed forms, tenths and percentages, random ranges,
-decimal positions and durations, data through a pointer call, dampings) are
-honest_KIND, and magic_code is what is left to name. A numbered name with an
+decimal positions and durations, a local array's size, places on the map
+grid and in OAM words, data through a pointer call, dampings, a sheet's own
+animation numbers, fade and shake levels) are honest_KIND, and magic_code is
+what is left to name. A numbered name with an
 its-number evidence row counts as numbered_honest; a name whose rows are of
 kinds no check reads counts as provenance_unchecked. Files and folders under
 games/GAME count too (--list loose_headers, part_folders, numbered_files),

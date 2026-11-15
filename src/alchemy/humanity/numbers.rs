@@ -25,6 +25,9 @@ const UNIT_CALLS: &[&str] = &["px", "Q16"];
 const POSITION_WORDS: &[&str] = &["x", "y", "z", "dx", "dy", "dz", "row", "column", "width", "height", "radius", "distance"];
 /// Words of a name that hold a duration or a moment in frames.
 const DURATION_WORDS: &[&str] = &["frame", "frames", "timer", "delay", "duration", "countdown", "wait", "ticks", "vblank", "vblanks"];
+/// Words of a name that hold a fade's or a shake's level (`fade = -16`,
+/// `shake = -128`): the brightness or the sway it is set to.
+const LEVEL_WORDS: &[&str] = &["fade", "shake"];
 /// Words that make a name something else whatever its other words say: a
 /// rate (`speedX`), a scale (`scaleX`) or an angle (`angleY`).
 const OTHER_WORDS: &[&str] =
@@ -54,10 +57,11 @@ pub fn words(name: &str) -> Vec<String> {
     words
 }
 
-/// What a name (or a member chain's names) says its value is: a `position`
-/// or a `duration`, none where any word makes it a rate, scale or angle.
+/// What a name (or a member chain's names) says its value is: a `position`,
+/// a `duration` or a fade's or shake's `level`, none where any word makes it a
+/// rate, scale or angle (`fadeStep`).
 pub fn named_kind<'n>(names: impl IntoIterator<Item = &'n str>) -> Option<&'static str> {
-    let (mut position, mut duration) = (false, false);
+    let (mut position, mut duration, mut level) = (false, false, false);
     for name in names {
         let words = words(name);
         if words.iter().any(|word| OTHER_WORDS.contains(&word.as_str())) {
@@ -65,11 +69,14 @@ pub fn named_kind<'n>(names: impl IntoIterator<Item = &'n str>) -> Option<&'stat
         }
         position |= words.iter().any(|word| POSITION_WORDS.contains(&word.as_str()));
         duration |= words.iter().any(|word| DURATION_WORDS.contains(&word.as_str()));
+        level |= words.iter().any(|word| LEVEL_WORDS.contains(&word.as_str()));
     }
     if position {
         Some("position")
     } else if duration {
         Some("duration")
+    } else if level {
+        Some("level")
     } else {
         None
     }
@@ -399,6 +406,33 @@ pub fn local(tokens: &[Token], at: usize, floor: usize) -> Option<&'static str> 
     kinds.iter().find(|&&kind| kind == "position").or(kinds.first()).copied()
 }
 
+/// Whether the number at `at` is the size in a local array's declarator,
+/// `u8 elements[10];` or `struct Actor *shards[20];`: a count of its own
+/// elements. An index into an array (`x = table[10]`) is not one.
+pub fn is_array_size(tokens: &[Token], at: usize, floor: usize) -> bool {
+    let text = |index: usize| (index >= floor && index < tokens.len()).then(|| tokens[index].text);
+    if text(at.wrapping_sub(1)) != Some("[") || text(at + 1) != Some("]") {
+        return false;
+    }
+    // Back over the dimensions before this one: `counts[4][16]`.
+    let mut open = at - 1;
+    while open >= floor + 3 && tokens[open - 1].text == "]" && tokens[open - 2].kind == Kind::Number && tokens[open - 3].text == "[" {
+        open -= 3;
+    }
+    let Some(name) = open.checked_sub(1).filter(|&name| name >= floor && tokens[name].kind == Kind::Ident) else { return false };
+    // Before the name: a type (`u8`, `Actor` of `struct Actor`), perhaps
+    // through pointers.
+    let mut before = name;
+    while before > floor && tokens[before - 1].text == "*" {
+        before -= 1;
+    }
+    let Some(ty) = before.checked_sub(1).filter(|&ty| ty >= floor) else { return false };
+    const NOT_TYPES: &[&str] = &["return", "case", "sizeof", "else", "goto", "do"];
+    let declared = tokens[ty].kind == Kind::Ident && !NOT_TYPES.contains(&tokens[ty].text);
+    // `*p[3]` after an operator is an expression, so a `*` needs a type.
+    declared && (before == name || tokens[ty].kind == Kind::Ident)
+}
+
 /// Whether a lone argument's callee, or a helper it computes with, rolls a
 /// random number: `Random_Below(120)`, `Math_RemainderUnsigned(Random_Next(), 90)`.
 pub fn random_call(callee: &str, random_arguments: bool) -> bool {
@@ -541,6 +575,26 @@ mod tests {
         assert_eq!(kind("Event_ShowMessage(27, 0);", 0), None);
         assert_eq!(kind("if (rangePattern == 255) {}", 0), None);
         assert_eq!(kind("CLAMP(screen.depth, 160, 799);", 0), None, "a tuned depth range");
+        assert_eq!(kind("fade = -16;", 0), Some("level"));
+        assert_eq!(kind("work->shake = i * 2 - 128;", 1), Some("level"));
+        assert_eq!(kind("work->shakeFrames = 12;", 0), Some("duration"));
+        assert_eq!(kind("perspective->fadeStep = 128;", 0), None, "a rate");
+    }
+
+    #[test]
+    fn sizes_of_local_arrays() {
+        let size = |code: &str, n: usize| {
+            let tokens: Vec<Token> = clex::lex(code).into_iter().filter(|t| t.kind != Kind::Comment).collect();
+            let at = tokens.iter().enumerate().filter(|(_, t)| t.kind == Kind::Number).nth(n).expect("a number").0;
+            is_array_size(&tokens, at, 0)
+        };
+        assert!(size("u8 elements[10];", 0));
+        assert!(size("struct Actor *shards[20];", 0));
+        assert!(size("s8 counts[4][16];", 1));
+        assert!(!size("x = table[10];", 0));
+        assert!(!size("return list[3];", 0));
+        assert!(!size("y = *p[3];", 0));
+        assert!(!size("F(a, b[2]);", 0));
     }
 
     #[test]
