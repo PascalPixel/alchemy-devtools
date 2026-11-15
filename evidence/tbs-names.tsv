@@ -5391,3 +5391,11 @@ AltmillerCave_DarkenToLevel3	its number	the darkness level it sets, AltmillerCav
 AltmillerCave_DarkenToLevel4	its number	the darkness level it sets, AltmillerCave_SetFadeLevel(4)	games/tbs/src/scene/altmiller_cave.c
 AltmillerCave_DarkenToLevel5	its number	the darkness level it sets, AltmillerCave_SetFadeLevel(5)	games/tbs/src/scene/altmiller_cave.c
 SPRITE_BLANK_32	its number	the pixel size: a blank 32-pixel square (blank_32.png)	games/tbs/include/sprite_ids.h
+ACTOR_JUMP_KEEPS_MOTION	its code	the motion flags a jump keeps as the actor leaves the ground: all but ACTOR_FOLLOWS_TERRAIN and the spare bit	games/tbs/include/field/actor.h
+ENEMY_LETTER_FIRST_TOO	its code	the bit of a letter that gives the first enemy of its kind its letter too (BattleEnemy_LetterFirstOfKind), before BattleUnit_SetFar	games/tbs/src/battle/battle_internal.h
+ENEMY_SPACING_LARGE	its code	the pixels of the enemy column a large enemy takes, as battle_placement.c spaces the enemies	games/tbs/src/battle/battle_placement.c
+ENEMY_SPACING_SMALL	its code	the pixels of the enemy column a small enemy takes, as battle_placement.c spaces the enemies	games/tbs/src/battle/battle_placement.c
+ENEMY_SPACING_EMPTY	its code	the pixels of the enemy column an empty place takes, as battle_placement.c spaces the enemies	games/tbs/src/battle/battle_placement.c
+FLAG_CROSSBONE_ISLE_STATUE_AFTER_LEADER	its code	set by CrossboneIsleKeys_CheckFirstPursuerTrigger as a statue starts after the leader, and tested there so it starts once	games/tbs/src/scene/crossbone_isle_keys.c
+PSYNERGY_RINGS_SOUND	its code	the sound shared/psynergy_rings.c plays (Sound_Play(PSYNERGY_RINGS_SOUND)), which the scene including it names	games/tbs/src/scene/vale_prologue.c
+PSYNERGY_RINGS_SOUND	its code	the sound shared/psynergy_rings.c plays (Sound_Play(PSYNERGY_RINGS_SOUND)), which the scene including it names	games/tbs/src/scene/venus_lighthouse_aerie.c
