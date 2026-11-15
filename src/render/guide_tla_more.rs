@@ -342,3 +342,32 @@ impl<'a> Guide<'a> {
 
 /// Debug set 19, the party once Piers has joined, as it reaches Yallam.
 const PARTY_PIERS_FORGE: u32 = 19;
+
+/// Contigo's game room (SceneId_Contigo3) and the man who offers Super
+/// Lucky Dice there (contigo.c: Contigo_SendToSuperLuckyDice, actor 8).
+const CONTIGO_GAMES: &str = "Contigo3";
+const SUPER_DICE_MAN: u16 = 8;
+/// Coins given first: a round costs the party's average level times ten.
+const DICE_COINS: u32 = 5000;
+
+/// The modes of Contigo's games.
+pub const DICE_MODES: &[&str] = &["overworld-super-lucky-dice"];
+
+impl<'a> Guide<'a> {
+    /// The man in Contigo's game room talked to, Yes to a round of Super
+    /// Lucky Dice, and the game it runs (SEQUENCE_SUPER_DICE): its four dice
+    /// thrown with A, then the Hi-Lo game, A pressed every second, as
+    /// `overworld/super-lucky-dice.gif`.
+    pub(super) fn tla_super_lucky_dice(&mut self) -> Result<(), String> {
+        let (mut entered, _) = self.tla_stand(CONTIGO_GAMES, 0, PARTY_PIERS_FORGE, Trigger::Talk(SUPER_DICE_MAN), |_| true)?;
+        let field = &mut entered.field;
+        field.set_coins(DICE_COINS);
+        let mut path = vec![(0, 20), (KEY_A, 3), (0, 160), (KEY_A, 3), (0, 120), (KEY_A, 3), (0, 240)];
+        for _ in 0..18 {
+            path.extend([(KEY_A, 3), (0, 60)]);
+        }
+        let mut frames = Self::press_path_cleared(field, &path)?;
+        frames.remove(0);
+        self.world_gif("overworld/super-lucky-dice.gif", &frames, "a round of Super Lucky Dice in Contigo")
+    }
+}

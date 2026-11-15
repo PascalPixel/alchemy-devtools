@@ -37,7 +37,7 @@ pub(super) const PARTY_DAILA: u32 = 7;
 /// The modes The Lost Age plays, in order: the moment mode, then each
 /// recording file's.
 pub fn modes() -> impl Iterator<Item = &'static str> {
-    ["moment"].into_iter().chain(super::guide_tla_town::MODES.iter().copied()).chain(super::guide_tla_town::MORE_MODES.iter().copied()).chain(super::guide_tla_fight::MODES.iter().copied()).chain(super::guide_tla_fight::CAVE_MODES.iter().copied()).chain(super::guide_tla_more::MODES.iter().copied()).chain(super::guide_tla_more::CAST_MODES.iter().copied()).chain(super::guide_tla_more::FORGE_MODES.iter().copied())
+    ["moment"].into_iter().chain(super::guide_tla_town::MODES.iter().copied()).chain(super::guide_tla_town::MORE_MODES.iter().copied()).chain(super::guide_tla_fight::MODES.iter().copied()).chain(super::guide_tla_fight::CAVE_MODES.iter().copied()).chain(super::guide_tla_more::MODES.iter().copied()).chain(super::guide_tla_more::CAST_MODES.iter().copied()).chain(super::guide_tla_more::FORGE_MODES.iter().copied()).chain(super::guide_tla_more::DICE_MODES.iter().copied())
 }
 
 impl<'a> Guide<'a> {
@@ -52,6 +52,7 @@ impl<'a> Guide<'a> {
             _ if super::guide_tla_more::MODES.contains(&name) => self.run_tla_more(name),
             _ if super::guide_tla_more::CAST_MODES.contains(&name) => self.run_tla_cast(name),
             "shop-forge" => self.tla_forge(),
+            "overworld-super-lucky-dice" => self.tla_super_lucky_dice(),
             _ => Err(format!("The Lost Age has no recording {name}")),
         }
     }
