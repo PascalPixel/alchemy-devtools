@@ -26,7 +26,7 @@ const PARTY_PLATEAU: u32 = 9;
 /// Mikasalla (SceneId_Mikasalla1) by the north end of its passage (exit 7
 /// leads there), Spark there (mikasalla.c: ACTOR_SPARK), and the passage's
 /// north mouth, which leads to its south mouth (exit 9) and back (exit 7).
-const MIKASALLA: &str = "Mikasalla1";
+const MIKASALLA: &str = "Mikasalla";
 const MIKASALLA_NORTH: u16 = 9;
 const SPARK: u16 = 18;
 const PASSAGE_NORTH: (i32, i32) = (312, 262);
@@ -261,9 +261,9 @@ enum On {
 /// Temple's first patch of grass (KandoreanTemple_CycloneFirstPatch), and
 /// Scoop digs up the Psy Crystal under Daila's puddle (Daila_DigUpPsyCrystal).
 const FIELD_CASTS: &[FieldCast] = &[
-    FieldCast { file: "field/lash.gif", ability: "ABILITY_LASH", scene: "ShrineOfTheSeaGod1", on: On::Actor(10), what: "Lash cast at the rope at the Shrine of the Sea God" },
-    FieldCast { file: "field/pound.gif", ability: "ABILITY_POUND", scene: "DehkanPlateau1", on: On::Actor(11), what: "Pound cast on a pillar on the Dehkan Plateau" },
-    FieldCast { file: "field/cyclone.gif", ability: "ABILITY_CYCLONE", scene: "KandoreanTemple8", on: On::Cell(30), what: "Cyclone cast on a patch of grass at the Kandorean Temple" },
+    FieldCast { file: "field/lash.gif", ability: "ABILITY_LASH", scene: "ShrineOfTheSeaGodRope", on: On::Actor(10), what: "Lash cast at the rope at the Shrine of the Sea God" },
+    FieldCast { file: "field/pound.gif", ability: "ABILITY_POUND", scene: "DehkanPlateauFullMetalVestChest", on: On::Actor(11), what: "Pound cast on a pillar on the Dehkan Plateau" },
+    FieldCast { file: "field/cyclone.gif", ability: "ABILITY_CYCLONE", scene: "KandoreanTempleGate", on: On::Cell(30), what: "Cyclone cast on a patch of grass at the Kandorean Temple" },
     FieldCast { file: "field/scoop.gif", ability: "ABILITY_SCOOP", scene: "Daila", on: On::Cell(100), what: "Scoop cast on the spot under a puddle in Daila" },
 ];
 /// The entrances a field cast's scene is entered by, in turn, until one
@@ -298,7 +298,7 @@ impl<'a> Guide<'a> {
 /// Sunshine the blacksmith in Yallam's houses (yallam_interiors.c, actor
 /// 14), and the Tear Stone, a material he forges (item 429:
 /// YallamInteriors_PartyHasForgeMaterial).
-const YALLAM_HOUSES: &str = "YallamInteriors1";
+const YALLAM_HOUSES: &str = "YallamInteriorsInn";
 const SUNSHINE: u16 = 14;
 const TEAR_STONE: u16 = 429;
 /// struct BattleUnit's inventory, the same in both games.
@@ -353,7 +353,7 @@ const PARTY_PIERS_FORGE: u32 = 19;
 
 /// Contigo's game room (SceneId_Contigo3) and the man who offers Super
 /// Lucky Dice there (contigo.c: Contigo_SendToSuperLuckyDice, actor 8).
-const CONTIGO_GAMES: &str = "Contigo3";
+const CONTIGO_GAMES: &str = "ContigoLuckyDice";
 const SUPER_DICE_MAN: u16 = 8;
 /// Coins given first: a round costs the party's average level times ten.
 const DICE_COINS: u32 = 5000;

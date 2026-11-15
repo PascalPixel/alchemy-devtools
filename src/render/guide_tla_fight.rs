@@ -6,8 +6,8 @@
 //!
 //! The battle test menu is The Lost Age's own (DebugBattle_RunMenu): it
 //! reads Down as it opens, waits for A, then loads the debug parameter set
-//! A picked (DebugParty_LoadPreset) and runs the formation
-//! (Battle_RunEncounter) over the Colosso's backdrop. The run answers the
+//! A picked (DebugParameterSet_Load) and runs the formation
+//! (Battle_Run) over the Colosso's backdrop. The run answers the
 //! set and the formation as the calls are made, and shows the background of
 //! the scene the formation is met in, as the field would choose it.
 
@@ -70,7 +70,7 @@ impl<'a> Guide<'a> {
     /// the resource BattleBackground_SelectForMap chooses for the scene, the
     /// last marked row of gScene_BattleBackgroundRules before the scene's.
     fn temple_background(&self) -> Result<u16, String> {
-        let scene = Self::tla_scene("KandoreanTemple1")?;
+        let scene = Self::tla_scene("KandoreanTempleLifts")?;
         let table = self.sym("gScene_BattleBackgroundRules")?;
         let word = |i: u32| {
             let at = (table + 4 * i - 0x0800_0000) as usize;
@@ -104,8 +104,8 @@ impl<'a> Guide<'a> {
         let b = super::layout::BattleLayout::for_edition("tla-en")?;
         let start = self.sym("MainRoutine_RunFar")?;
         let menu = self.sym("DebugBattle_RunMenu")?;
-        let preset = self.sym("DebugParty_LoadPreset")?;
-        let encounter = self.sym("Battle_RunEncounter")?;
+        let preset = self.sym("DebugParameterSet_Load")?;
+        let encounter = self.sym("Battle_Run")?;
         let game_state = self.sym("gMainRoutineWork")?;
         let game_flags = self.sym("gGameFlagBytes")?;
         let mut gba = Gba::new(self.rom)?;
@@ -243,7 +243,7 @@ impl<'a> Guide<'a> {
         let dispatch = self.sym("BattleStaging_DispatchAction")?;
         let drive = self.temple_drive(ONE_WILD_WOLF, vec![commands, dispatch])?;
         let b = super::layout::BattleLayout::for_edition("tla-en")?;
-        let owners = self.sym("gOwnerStates")?;
+        let owners = self.sym("gCharacterUnits")?;
         let mut frames = Vec::new();
         let (mut starts, mut turns, mut over) = (0, Vec::new(), None::<usize>);
         let party = drive.party.clone();
@@ -318,7 +318,7 @@ impl<'a> Guide<'a> {
 /// The Kandorean Temple's rooms walked for a random battle, gScenes' rows
 /// (SceneId_KandoreanTemple2 on), as the walkthrough has the party meet
 /// its Wild Wolves, Punch Ants and Giant Bats there.
-const TEMPLE_ROOMS: &[&str] = &["KandoreanTemple2", "KandoreanTemple3", "KandoreanTemple4", "KandoreanTempleStream", "KandoreanTemple6", "KandoreanTemple7"];
+const TEMPLE_ROOMS: &[&str] = &["KandoreanTempleMimic", "KandoreanTempleChestbeaters", "KandoreanTemplePillar", "KandoreanTempleStream", "KandoreanTempleSteam", "KandoreanTempleFog"];
 
 /// The modes of the Kandorean Temple's random battles.
 pub const CAVE_MODES: &[&str] = &["fight-won", "overworld-battle-return", "battle-layers-3d"];

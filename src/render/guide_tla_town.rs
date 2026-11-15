@@ -11,8 +11,8 @@ use super::story::Trigger;
 /// Daila as the party first comes (SceneId_DailaFlooded), from the World Map, and
 /// its houses (SceneId_DailaInteriors1) and sanctum (SceneId_DailaInteriors2).
 const DAILA: &str = "DailaFlooded";
-const DAILA_HOUSES: &str = "DailaInteriors1";
-const DAILA_SANCTUM: &str = "DailaInteriors2";
+const DAILA_HOUSES: &str = "DailaInteriorsHouses";
+const DAILA_SANCTUM: &str = "DailaInteriorsSanctum";
 /// Daila's people (daila.c's trigger table, as `render event` names them):
 /// the man by the well who says the wave left a lot behind, and the
 /// keeper of the stall.
@@ -21,7 +21,7 @@ const DAILA_STALL_KEEPER: u16 = 21;
 /// The innkeeper (daila_interiors.c) and the healer of the sanctum.
 const DAILA_INNKEEPER: u16 = 20;
 const DAILA_HEALER: u16 = 8;
-/// A guest of the inn (DailaInteriors1), who says he hears the seafood in
+/// A guest of the inn (DailaInteriorsHouses), who says he hears the seafood in
 /// Madra is good.
 const DAILA_INN_GUEST: u16 = 23;
 /// The lines of the screen a window at its top covers.

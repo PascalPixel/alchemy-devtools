@@ -5399,3 +5399,7 @@ ENEMY_SPACING_EMPTY	its code	the pixels of the enemy column an empty place takes
 FLAG_CROSSBONE_ISLE_STATUE_AFTER_LEADER	its code	set by CrossboneIsleKeys_CheckFirstPursuerTrigger as a statue starts after the leader, and tested there so it starts once	games/tbs/src/scene/crossbone_isle_keys.c
 PSYNERGY_RINGS_SOUND	its code	the sound shared/psynergy_rings.c plays (Sound_Play(PSYNERGY_RINGS_SOUND)), which the scene including it names	games/tbs/src/scene/vale_prologue.c
 PSYNERGY_RINGS_SOUND	its code	the sound shared/psynergy_rings.c plays (Sound_Play(PSYNERGY_RINGS_SOUND)), which the scene including it names	games/tbs/src/scene/venus_lighthouse_aerie.c
+TREE_ROOMS_FALL_LANDING	its code	tree_rooms.c's fall from TREE_ROOMS_FROM_FIFTH_FLOOR_CENTER_COCOON ends at entrance 10, where the leader lands in front of Tret	games/tbs/include/scene_exits.h
+TREE_ROOMS_FALL_THROUGH_A	its code	the first room fallen through, entrance 40: tree_rooms.c sends the leader on to the entrance numbered ten lower	games/tbs/include/scene_exits.h
+TREE_ROOMS_FALL_THROUGH_B	its code	the second room fallen through, entrance 30, ten above TREE_ROOMS_FALL_THROUGH_C	games/tbs/include/scene_exits.h
+TREE_ROOMS_FALL_THROUGH_C	its code	the third room fallen through, entrance 20, ten above TREE_ROOMS_FALL_LANDING; tree_rooms.c redraws cells near it	games/tbs/include/scene_exits.h
