@@ -227,3 +227,62 @@ const WADING: Walk = Walk {
     path: &[(0, 20), (KEY_DOWN, 60), (KEY_RIGHT, 30), (KEY_DOWN, 50), (0, 60)],
     what: "wading in the Kandorean Temple's stream, each step a splash",
 };
+
+/// A field Psynergy The Lost Age adds, cast where an early scene answers
+/// it: the file, the ability, the scene, what it is cast on (an actor, or a
+/// cell's collision code for one cast at the cell ahead), and in this
+/// renderer's words.
+struct FieldCast {
+    file: &'static str,
+    ability: &'static str,
+    scene: &'static str,
+    on: On,
+    what: &'static str,
+}
+
+/// What a field cast is aimed at.
+enum On {
+    Actor(u16),
+    Cell(u16),
+}
+
+/// The new field Psynergy, each where the walkthrough first meets it: Lash
+/// ties the rope at the Shrine of the Sea God (ShrineOfTheSeaGod_LashRope),
+/// Pound drives down the Dehkan Plateau's first pillar
+/// (DehkanPlateau_PoundRoom1Pillar), Cyclone blows away the Kandorean
+/// Temple's first patch of grass (KandoreanTemple_CycloneFirstPatch), and
+/// Scoop digs up the Psy Crystal under Daila's puddle (Daila_DigUpPsyCrystal).
+const FIELD_CASTS: &[FieldCast] = &[
+    FieldCast { file: "field/lash.gif", ability: "ABILITY_LASH", scene: "ShrineOfTheSeaGod1", on: On::Actor(10), what: "Lash cast at the rope at the Shrine of the Sea God" },
+    FieldCast { file: "field/pound.gif", ability: "ABILITY_POUND", scene: "DehkanPlateau1", on: On::Actor(11), what: "Pound cast on a pillar on the Dehkan Plateau" },
+    FieldCast { file: "field/cyclone.gif", ability: "ABILITY_CYCLONE", scene: "KandoreanTemple8", on: On::Cell(30), what: "Cyclone cast on a patch of grass at the Kandorean Temple" },
+    FieldCast { file: "field/scoop.gif", ability: "ABILITY_SCOOP", scene: "Daila2", on: On::Cell(100), what: "Scoop cast on the spot under a puddle in Daila" },
+];
+/// The entrances a field cast's scene is entered by, in turn, until one
+/// leads to where the cast is answered.
+const CAST_ENTRANCES: u16 = 12;
+
+/// The modes of the new field Psynergy.
+pub const CAST_MODES: &[&str] = &["field-lash", "field-pound", "field-cyclone", "field-scoop"];
+
+impl<'a> Guide<'a> {
+    pub(super) fn run_tla_cast(&mut self, name: &str) -> Result<(), String> {
+        let cast = FIELD_CASTS.iter().find(|c| c.file.trim_start_matches("field/").trim_end_matches(".gif") == name.trim_start_matches("field-")).ok_or_else(|| format!("no mode {name}"))?;
+        let ability = Self::tla_constant(cast.ability)?;
+        let trigger = match cast.on {
+            On::Actor(actor) => Trigger::Psynergy(ability, actor),
+            On::Cell(code) => Trigger::PsynergyCell(ability, code),
+        };
+        let mut last = String::from("no entrance");
+        for entrance in 0..CAST_ENTRANCES {
+            let Ok(mut entered) = self.tla_enter(cast.scene, entrance, PARTY_PLATEAU, &[]) else {
+                continue;
+            };
+            match Self::record_trigger(&mut entered, trigger, None, 40) {
+                Ok(frames) => return self.world_gif(cast.file, &frames, cast.what),
+                Err(e) => last = format!("{} by entrance {entrance}: {e}", cast.scene),
+            }
+        }
+        Err(last)
+    }
+}
