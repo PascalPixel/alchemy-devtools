@@ -35,7 +35,7 @@ cargo build --release --features render
 | `lit` | recolours a picture in alchemy-lit, the colour correction the docs site's filter is fitted to (feature `render`) |
 | `passdiff` | why a form is kept: an object compiled as it stands and with a plain variant, its RTL compared pass by pass |
 | `permute` | searches rewrites of a draft toward differ 0 |
-| `progress` | DONE code and data from the linker maps, and what is left to humanize (`--humanity`), a name's evidence read from `evidence/<game>-names.tsv` or, for a game not yet converted, its `★ Named from` line |
+| `progress` | DONE code and data from the linker maps, and what is left to humanize (`--humanity`): the numbers in code to name apart from the ones S3 keeps as numbers, by kind; placeholder and numbered names, a name numbered by its meaning set apart by its evidence row; fake matches and leftovers; the game's files and folders; and where names come from, a name's evidence read from `evidence/<game>-names.tsv` or, for a game not yet converted, its `★ Named from` line |
 | `rank` | every unfinished piece of a game, furthest first, each with the command that measures it |
 | `regress` | the functions whose assembly differs from a saved build, each classed |
 | `render` | the docs site's pictures and recordings, and the probes the source cites (feature `render`); `place`, `event`, `psynergy`, `guide` (a set of its own for each game) and `probe scene` play either game's edition (`--edition tla-en`), the rest The Broken Seal's |

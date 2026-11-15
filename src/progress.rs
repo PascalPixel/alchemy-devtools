@@ -25,7 +25,15 @@ synonym_referent, abbreviation, family_shape or prefix_twin the names a
 reader could not guess from their siblings). FAKEMATCH devices and
 Camelot's leftovers (the LEFTOVER tags and the // DEAD: marks) are counted
 on rows of their own and never added together; --list fakematch and --list
-leftover take every kind of each.";
+leftover take every kind of each. Every number in code counts in
+magic_code_all; the ones its tokens or the parameter it fills show to be
+honest under S3 (composed forms, tenths and percentages, random ranges,
+decimal positions and durations, data through a pointer call, dampings) are
+honest_KIND, and magic_code is what is left to name. A numbered name with an
+its-number evidence row counts as numbered_honest; a name whose rows are of
+kinds no check reads counts as provenance_unchecked. Files and folders under
+games/GAME count too (--list loose_headers, part_folders, numbered_files),
+and --list unit_open names the unit each question keeps open.";
 
 /// Both games' DONE, a line for each edition and one for the games.
 fn measure(root: &Path) -> String {
