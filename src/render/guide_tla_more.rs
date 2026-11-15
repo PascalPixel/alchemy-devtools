@@ -187,7 +187,14 @@ impl<'a> Guide<'a> {
         Self::through_black(field, KEY_UP, &mut frames)?;
         Self::hold(field, KEY_UP, 30, &mut frames)?;
         Self::run_past_black(field, &mut frames)?;
-        let frames = super::guide_scene_map::cut_between_blacks(&frames, 0)?;
+        // The passage between cut out, from the middle of the black screen
+        // on leaving to the middle of the one on coming back, so the two
+        // halves join into one black screen.
+        let runs = super::guide_scene_map::black_runs(&frames);
+        let (a, b) = (runs.first().ok_or("no black screen on leaving")?, runs.get(1).ok_or("no black screen on coming back")?);
+        let mut kept = frames[..(a.0 + a.1) / 2].to_vec();
+        kept.extend_from_slice(&frames[(b.0 + b.1) / 2..]);
+        let frames = kept;
         self.world_gif("game/djinni-flag.gif", &frames, "Spark joining in Mikasalla, and the spot empty on the next visit")
     }
 

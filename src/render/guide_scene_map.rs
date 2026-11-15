@@ -67,7 +67,7 @@ const UNIT_INVENTORY: u32 = 0xd8;
 const INVENTORY_SLOTS: u32 = 15;
 
 /// Runs of black pictures in `frames`, as (first, past the last).
-fn black_runs(frames: &[Vec<u16>]) -> Vec<(usize, usize)> {
+pub(super) fn black_runs(frames: &[Vec<u16>]) -> Vec<(usize, usize)> {
     let mut runs: Vec<(usize, usize)> = Vec::new();
     for (i, f) in frames.iter().enumerate() {
         if !is_black_bgr555(f) {

@@ -1446,6 +1446,27 @@ modes, and field-psynergy's casts one by one, to N processes of this program
 as each finishes one (default: the number of CPUs; 1 plays them here),
 joining their index.tsv rows.
 
+With --edition tla-en (make tla-en) it plays The Lost Age's set instead,
+--flags not needed (its flag names are its flags.h's), each written under
+the folder and name of The Broken Seal's recording it mirrors, with
+Camelot's debug parameter sets for the party (guide_tla*.rs):
+  Daila (guide_tla_town.rs): field-talk-walk, talk (window/talk.gif), menus,
+  menu-start, summary-screen, djinn-standby, save-game (window/save.gif),
+  runtime-save, message-blanks, sound-inn-fanfare, shop, sanctum-revive,
+  map-talk-twice, windows-zoom, world-door, front-door, world-behind-roof,
+  layers-3d, world-map-layers-3d, scene-log-state (a puddle Frost raises)
+  Battles (guide_tla_fight.rs): fight-opening, fight-turn-order,
+  graphics-monster, fight-unleash from the battle test menu; fight-won,
+  overworld-battle-return, battle-layers-3d in the Kandorean Temple
+  The rest (guide_tla_more.rs): title (story/title.gif),
+  graphics-title-fade, title-intro-layers-3d, tile-animation,
+  game-djinni-flag (Spark in Mikasalla), debug-map-select, field-wading
+  (field/wading.gif, in place of Imil's snow); and what only The Lost Age
+  has: field-lash, field-pound, field-cyclone, field-scoop (field/NAME.gif),
+  shop-forge (shop/forge.gif), overworld-super-lucky-dice
+  (overworld/super-lucky-dice.gif); and moment, MOMENT_PRESET naming the
+  debug set (default 7)
+
 Moment looks at the game at the moment a piece of code needs, for a name
 or a comment; a run without MOMENT_PLACE skips it. Its environment:
   MOMENT_PLACE   scene,entrance: the scene entered from a new game's
@@ -1646,7 +1667,7 @@ mod tests {
     #[test]
     fn every_guide_mode_is_in_the_usage() {
         let words: Vec<&str> = GUIDE_USAGE.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-')).collect();
-        for mode in guide::modes() {
+        for mode in guide::modes().chain(guide_tla::modes()) {
             assert!(words.contains(&mode), "{mode} is not in GUIDE_USAGE");
         }
     }

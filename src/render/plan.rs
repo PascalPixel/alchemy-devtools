@@ -449,6 +449,7 @@ const DJINN_PER_ELEMENT: u16 = 20;
 /// support go to the target as the caster's ally, hurt for healing, downed
 /// for Revive, poisoned for Cure Poison and deluded for Restore. Foes facing
 /// instant death are made lucky, so they stand.
+#[cfg(any(feature = "render", test))]
 pub fn cast(ability: Ability, jenna_casts: bool) -> Option<Cast> {
     cast_for(&Roster::tbs(), ability, jenna_casts)
 }

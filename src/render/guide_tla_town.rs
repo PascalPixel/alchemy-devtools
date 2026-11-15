@@ -237,12 +237,6 @@ impl<'a> Guide<'a> {
     pub(super) fn down(field: &mut super::field::Field, owner: u8) -> Result<(), String> {
         let b = super::layout::BattleLayout::for_edition("tla-en")?;
         let unit = field.unit(owner)?;
-        if std::env::var_os("ALCHEMY_TLA_DEBUG").is_some() {
-            for o in 4..8u8 {
-                let u = field.unit(o)?;
-                eprintln!("owner {o}: unit {u:#x} hp {} max {}", field.read16(u + b.unit_hp), field.read16(u + b.unit_max_hp));
-            }
-        }
         field.write16(unit + b.unit_hp, 0);
         field.write16(unit + b.unit_hp_gauge, 0);
         Ok(())
@@ -326,20 +320,12 @@ impl<'a> Guide<'a> {
         let mut entered = self.tla_enter(DAILA_PUDDLES, 0, PARTY_PIERS, &[FLAG_TAVI_RESCUED])?;
         let mut frames = Self::record_trigger(&mut entered, Trigger::Psynergy(frost, FIRST_PUDDLE), None, 60)?;
         let field = &mut entered.field;
-        if std::env::var_os("ALCHEMY_TLA_DEBUG").is_some() {
-            let at = field.leader().ok_or("no leader")?;
-            eprintln!("after the cast: leader at ({}, {}) facing {:#x}", at.x, at.z, field.read16(field.actor_address(0) + 6));
-        }
         // The pillar a moment, so the game shows CLEARED frames before the
         // house's black screen; then down from it and along to the door.
         Self::hold(field, 0, 150, &mut frames)?;
         let at = field.leader().ok_or("the scene has no leader")?;
         Self::tla_walk_to(field, (at.x, HOUSE_DOOR_BELOW.1), &mut frames)?;
         Self::tla_walk_to(field, HOUSE_DOOR_BELOW, &mut frames)?;
-        if std::env::var_os("ALCHEMY_TLA_DEBUG").is_some() {
-            let at = field.leader().ok_or("no leader")?;
-            eprintln!("below the door: leader at ({}, {})", at.x, at.z);
-        }
         Self::hold(field, KEY_UP, 60, &mut frames)?;
         // Inside: CLEARED frames on this side of each black screen.
         Self::hold(field, 0, super::field::CLEARED as u32 + 60, &mut frames)?;

@@ -22,11 +22,9 @@ pub(super) const KEY_LEFT: u32 = 0x20;
 pub(super) const KEY_UP: u32 = 0x40;
 pub(super) const KEY_DOWN: u32 = 0x80;
 pub(super) const KEY_R: u32 = 0x100;
-pub(super) const KEY_L: u32 = 0x200;
 
 /// Facings, 1/65536 turns.
 pub(super) const EAST: u32 = 0;
-pub(super) const SOUTH: u32 = 0x4000;
 pub(super) const WEST: u32 = 0x8000;
 pub(super) const NORTH: u32 = 0xc000;
 
@@ -178,9 +176,6 @@ impl<'a> Guide<'a> {
         let mut entered = self.tla_enter(scene, entrance, preset, &[])?;
         let first = match entered.field.spots(trigger) {
             Ok(spots) => {
-                if std::env::var_os("ALCHEMY_TLA_DEBUG").is_some() {
-                    eprintln!("{scene} {trigger:?}: spots {:?}", spots.iter().map(|s| (s.x, s.z, s.facing, s.walk)).collect::<Vec<_>>());
-                }
                 match spots.iter().find(|s| pick(s)) {
                     Some(&spot) => {
                         entered.field.stand(&entered.placed, &spot)?;

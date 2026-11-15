@@ -193,6 +193,16 @@ mod tests {
     }
 
     #[test]
+    fn the_lost_age_s_debug_sets_part_at_owner_minus_one() {
+        let text = "gDebug_ParameterSets:\n\t.byte 4, 90, 9; .2byte 8\n\t.byte -1, 0, 0; .2byte 0\n\t.byte 5, 5, 0; .2byte 16\n\t.byte 4, 5, 1; .2byte 1\n\t.global gNext\n";
+        assert_eq!(tla_sets(text), vec![vec![4], vec![5, 4]]);
+        // The checkout's: set 7 is Felix, Jenna and Sheba, set 19 the four
+        // once Piers has joined.
+        assert_eq!(tla(7).unwrap().members, vec![4, 5, 6]);
+        assert_eq!(tla(19).unwrap().members, vec![4, 5, 6, 7]);
+    }
+
+    #[test]
     fn the_flags_decide_the_party() {
         assert_eq!(order(&[0, 1, 2], 0b0011), vec![0, 1]);
         assert_eq!(order(&[0, 1], 0b0111), vec![0, 1, 2]);
