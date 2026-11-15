@@ -9581,3 +9581,98 @@ ACTOR_DJINN	the game	"You have no Djinn." (MsgNoDjinn), which names Djinn	games/
 ACTOR_APOJII_COUNTER	the game	"This is Apojii, the easternmost island in the Eastern Sea!" (MsgThisIsApojii), which names Apojii	games/tla/src/scene/mikasalla_interiors.c
 FLAG_DJINNI_CHASE_OVER	the game	"It's a Djinni!" (MsgGarohAhYouCame), which names Djinni	games/tla/src/scene/shrine_of_the_sea_god.c
 SceneId_AlhafraJail	the game	"It seems that Briggs broke out of jail with the help of his wife, Chaucha." (MsgAlhafraInteriorsItSeemsThatBriggsBroke); the jail of the Alhafran Cave's overlay (alhafran_cave.c)	games/tla/include/scene_ids.h
+ABILITY_FIRE_BREATH_PIERROT	the game	"Pierrot" (MsgClassName + 220), which tells it from the other rows the game names "Fire Breath"	games/tla/include/ability_ids.h
+ABILITY_FIRE_BREATH_PYRODRA	the game	"Pyrodra" (MsgEnemyName + 82), which tells it from the other rows the game names "Fire Breath"	games/tla/include/ability_ids.h
+ABILITY_RISING_DRAGON_AGATIO	the game	"Agatio" (MsgEnemyName + 102), which tells it from the other rows the game names "Rising Dragon"	games/tla/include/ability_ids.h
+ABILITY_POISON_STING_NEEDLE_EGG	the game	"Needle Egg" (MsgEnemyName + 160), which tells it from the other rows the game names "Poison Sting"	games/tla/include/ability_ids.h
+ABILITY_FIRE_DANCE_PHOENIX	the game	"Phoenix" (MsgDjinnName + 327), which tells it from the other rows the game names "Fire Dance"	games/tla/include/ability_ids.h
+ENEMY_VENUS_DJINNI_UNUSED_QUARTZ	the game	"Quartz" (MsgDjinnName + 2), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_UNUSED_VINE	the game	"Vine" (MsgDjinnName + 3), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_UNUSED_BANE	the game	"Bane" (MsgDjinnName + 6), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_UNUSED_ECHO	the game	"Echo" (MsgDjinnName + 7), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_IRON	the game	"Iron" (MsgDjinnName + 8), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_STEEL	the game	"Steel" (MsgDjinnName + 9), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_MUD	the game	"Mud" (MsgDjinnName + 10), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_FLOWER	the game	"Flower" (MsgDjinnName + 11), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_MELD	the game	"Meld" (MsgDjinnName + 12), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_PETRA	the game	"Petra" (MsgDjinnName + 13), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_UNUSED_SALT	the game	"Salt" (MsgDjinnName + 14), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_UNUSED_GEODE	the game	"Geode" (MsgDjinnName + 15), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_UNUSED_MOLD	the game	"Mold" (MsgDjinnName + 16), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_VENUS_DJINNI_CRYSTAL	the game	"Crystal" (MsgDjinnName + 17), which tells it from the other rows the game names "Venus Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_UNUSED_SLEET	the game	"Sleet" (MsgDjinnName + 21), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_UNUSED_SPRITZ	the game	"Spritz" (MsgDjinnName + 23), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_UNUSED_HAIL	the game	"Hail" (MsgDjinnName + 24), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_UNUSED_DEW	the game	"Dew" (MsgDjinnName + 26), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_FOG	the game	"Fog" (MsgDjinnName + 27), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_SOUR	the game	"Sour" (MsgDjinnName + 28), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_UNUSED_SPRING	the game	"Spring" (MsgDjinnName + 29), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_UNUSED_SHADE	the game	"Shade" (MsgDjinnName + 30), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_CHILL	the game	"Chill" (MsgDjinnName + 31), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_STEAM	the game	"Steam" (MsgDjinnName + 32), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_UNUSED_RIME	the game	"Rime" (MsgDjinnName + 33), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_UNUSED_GEL	the game	"Gel" (MsgDjinnName + 34), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_EDDY	the game	"Eddy" (MsgDjinnName + 35), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_BALM	the game	"Balm" (MsgDjinnName + 36), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MERCURY_DJINNI_SERAC	the game	"Serac" (MsgDjinnName + 37), which tells it from the other rows the game names "Mercury Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_UNUSED_FORGE	the game	"Forge" (MsgDjinnName + 40), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_UNUSED_CORONA	the game	"Corona" (MsgDjinnName + 42), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_UNUSED_FLASH	the game	"Flash" (MsgDjinnName + 45), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_CANNON	the game	"Cannon" (MsgDjinnName + 47), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_UNUSED_SPARK	the game	"Spark" (MsgDjinnName + 48), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_KINDLE	the game	"Kindle" (MsgDjinnName + 49), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_UNUSED_CHAR	the game	"Char" (MsgDjinnName + 50), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_UNUSED_COAL	the game	"Coal" (MsgDjinnName + 51), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_REFLUX	the game	"Reflux" (MsgDjinnName + 52), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_CORE	the game	"Core" (MsgDjinnName + 53), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_UNUSED_TINDER	the game	"Tinder" (MsgDjinnName + 54), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_UNUSED_SHINE	the game	"Shine" (MsgDjinnName + 55), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_FURY	the game	"Fury" (MsgDjinnName + 56), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MARS_DJINNI_FUGUE	the game	"Fugue" (MsgDjinnName + 57), which tells it from the other rows the game names "Mars Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_UNUSED_BREEZE	the game	"Breeze" (MsgDjinnName + 61), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_UNUSED_ZEPHYR	the game	"Zephyr" (MsgDjinnName + 62), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_UNUSED_SQUALL	the game	"Squall" (MsgDjinnName + 65), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_UNUSED_LUFF	the game	"Luff" (MsgDjinnName + 66), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_BREATH	the game	"Breath" (MsgDjinnName + 67), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_BLITZ	the game	"Blitz" (MsgDjinnName + 68), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_UNUSED_ETHER	the game	"Ether" (MsgDjinnName + 69), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_WAFT	the game	"Waft" (MsgDjinnName + 70), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_UNUSED_HAZE	the game	"Haze" (MsgDjinnName + 71), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_WHEEZE	the game	"Wheeze" (MsgDjinnName + 72), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_UNUSED_AROMA	the game	"Aroma" (MsgDjinnName + 73), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_WHORL	the game	"Whorl" (MsgDjinnName + 74), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_GASP	the game	"Gasp" (MsgDjinnName + 75), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_UNUSED_LULL	the game	"Lull" (MsgDjinnName + 76), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_JUPITER_DJINNI_GALE	the game	"Gale" (MsgDjinnName + 77), which tells it from the other rows the game names "Jupiter Djinni"	games/tla/include/enemy_ids.h
+ENEMY_MAD_PLANT_GABOMBA_CATACOMBS	the game	"Gabomba Catacombs" (MsgDebugAreaName + 32), which tells it from the other rows the game names "Mad Plant"	games/tla/include/enemy_ids.h
+ENEMY_MAD_PLANT_TAOPO_SWAMP	the game	"Taopo Swamp" (MsgDebugAreaName + 41), which tells it from the other rows the game names "Mad Plant"	games/tla/include/enemy_ids.h
+ENEMY_MAD_PLANT_GAIA_ROCK	the game	"Gaia Rock" (MsgDebugAreaName + 45), which tells it from the other rows the game names "Mad Plant"	games/tla/include/enemy_ids.h
+ENEMY_MAD_PLANT_JUPITER_LIGHTHOUSE	the game	"Jupiter Lighthouse" (MsgDebugAreaName + 69), which tells it from the other rows the game names "Mad Plant"	games/tla/include/enemy_ids.h
+ENEMY_MAD_PLANT_TRIAL_ROAD	the game	"Trial Road" (MsgDebugAreaName + 65), which tells it from the other rows the game names "Mad Plant"	games/tla/include/enemy_ids.h
+ENEMY_VERMIN_WORLD_MAP	the game	"World Map" (MsgDebugAreaName + 2), which tells it from the other rows the game names "Vermin"	games/tla/include/enemy_ids.h
+ENEMY_BAT_WORLD_MAP	the game	"World Map" (MsgDebugAreaName + 2), which tells it from the other rows the game names "Bat"	games/tla/include/enemy_ids.h
+ENEMY_WILD_MUSHROOM_WORLD_MAP	the game	"World Map" (MsgDebugAreaName + 2), which tells it from the other rows the game names "Wild Mushroom"	games/tla/include/enemy_ids.h
+ENEMY_SLIME_WORLD_MAP	the game	"World Map" (MsgDebugAreaName + 2), which tells it from the other rows the game names "Slime"	games/tla/include/enemy_ids.h
+ENEMY_AMAZE_KANDOREAN_TEMPLE	the game	"Kandorean Temple" (MsgDebugAreaName + 9), which tells it from the other rows the game names "Amaze"	games/tla/include/enemy_ids.h
+ENEMY_AZART_IRON_SHIELD	the game	"Iron Shield" (MsgItemName + 120), which tells it from the other rows the game names "Azart"	games/tla/include/enemy_ids.h
+ENEMY_AZART_PADDED_GLOVES	the game	"Padded Gloves" (MsgItemName + 127), which tells it from the other rows the game names "Azart"	games/tla/include/enemy_ids.h
+ENEMY_SATRAGE_CHAIN_MAIL	the game	"Chain Mail" (MsgItemName + 77), which tells it from the other rows the game names "Satrage"	games/tla/include/enemy_ids.h
+ENEMY_SATRAGE_COTTON_SHIRT	the game	"Cotton Shirt" (MsgItemName + 89), which tells it from the other rows the game names "Satrage"	games/tla/include/enemy_ids.h
+ENEMY_NAVAMPA_CLAYMORE	the game	"Claymore" (MsgItemName + 3), which tells it from the other rows the game names "Navampa"	games/tla/include/enemy_ids.h
+ENEMY_NAVAMPA_HUNTERS_SWORD	the game	"Hunter's Sword" (MsgItemName + 17), which tells it from the other rows the game names "Navampa"	games/tla/include/enemy_ids.h
+ENEMY_SATUROS_MERCURY_LIGHTHOUSE	the game	"Mercury Lighthouse" (MsgDebugAreaName + 81), which tells it from the other rows the game names "Saturos"	games/tla/include/enemy_ids.h
+ENEMY_SATUROS_VENUS_LIGHTHOUSE	the game	"Venus Lighthouse" (MsgDebugAreaName + 4), which tells it from the other rows the game names "Saturos"	games/tla/include/enemy_ids.h
+ENEMY_MIMIC_KANDOREAN_TEMPLE	the game	"Kandorean Temple" (MsgDebugAreaName + 9), which tells it from the other rows the game names "Mimic"	games/tla/include/enemy_ids.h
+ENEMY_MIMIC_AIRS_ROCK	the game	"Air's Rock" (MsgDebugAreaName + 23), which tells it from the other rows the game names "Mimic"	games/tla/include/enemy_ids.h
+ENEMY_MIMIC_GABOMBA_STATUE	the game	"Gabomba Statue" (MsgDebugAreaName + 31), which tells it from the other rows the game names "Mimic"	games/tla/include/enemy_ids.h
+ENEMY_MIMIC_AQUA_ROCK	the game	"Aqua Rock" (MsgDebugAreaName + 46), which tells it from the other rows the game names "Mimic"	games/tla/include/enemy_ids.h
+ENEMY_MIMIC_GAIA_ROCK	the game	"Gaia Rock" (MsgDebugAreaName + 45), which tells it from the other rows the game names "Mimic"	games/tla/include/enemy_ids.h
+ENEMY_MIMIC_TREASURE_ISLE	the game	"Treasure Isle" (MsgDebugAreaName + 79), which tells it from the other rows the game names "Mimic"	games/tla/include/enemy_ids.h
+ENEMY_MIMIC_JUPITER_LIGHTHOUSE	the game	"Jupiter Lighthouse" (MsgDebugAreaName + 69), which tells it from the other rows the game names "Mimic"	games/tla/include/enemy_ids.h
+ENEMY_MIMIC_MAGMA_ROCK	the game	"Magma Rock" (MsgDebugAreaName + 61), which tells it from the other rows the game names "Mimic"	games/tla/include/enemy_ids.h
+ENEMY_MIMIC_MARS_LIGHTHOUSE	the game	"Mars Lighthouse" (MsgDebugAreaName + 78), which tells it from the other rows the game names "Mimic"	games/tla/include/enemy_ids.h
+ENEMY_AZART_SHAMAN_VILLAGE_CAVE	the game	"Shaman Village Cave" (MsgDebugAreaName + 63), which tells it from the other rows the game names "Azart"	games/tla/include/enemy_ids.h
+ENEMY_SATRAGE_SHAMAN_VILLAGE_CAVE	the game	"Shaman Village Cave" (MsgDebugAreaName + 63), which tells it from the other rows the game names "Satrage"	games/tla/include/enemy_ids.h
+ENEMY_NAVAMPA_SHAMAN_VILLAGE_CAVE	the game	"Shaman Village Cave" (MsgDebugAreaName + 63), which tells it from the other rows the game names "Navampa"	games/tla/include/enemy_ids.h
+ENEMY_BANDIT_WORLD_MAP	the game	"World Map" (MsgDebugAreaName + 2), which tells it from the other rows the game names "Bandit"	games/tla/include/enemy_ids.h
+ENEMY_THIEF_WORLD_MAP	the game	"World Map" (MsgDebugAreaName + 2), which tells it from the other rows the game names "Thief"	games/tla/include/enemy_ids.h
