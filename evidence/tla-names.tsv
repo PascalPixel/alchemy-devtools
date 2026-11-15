@@ -9676,3 +9676,5 @@ ENEMY_SATRAGE_SHAMAN_VILLAGE_CAVE	the game	"Shaman Village Cave" (MsgDebugAreaNa
 ENEMY_NAVAMPA_SHAMAN_VILLAGE_CAVE	the game	"Shaman Village Cave" (MsgDebugAreaName + 63), which tells it from the other rows the game names "Navampa"	games/tla/include/enemy_ids.h
 ENEMY_BANDIT_WORLD_MAP	the game	"World Map" (MsgDebugAreaName + 2), which tells it from the other rows the game names "Bandit"	games/tla/include/enemy_ids.h
 ENEMY_THIEF_WORLD_MAP	the game	"World Map" (MsgDebugAreaName + 2), which tells it from the other rows the game names "Thief"	games/tla/include/enemy_ids.h
+ACTOR_HAMA	its twin	The Broken Seal's ACTOR_HAMA, the same Hama of Lama Temple; this game's English text spells her "Hamma" (MsgPiers2 + 3)	games/tla/src/scene/atteka_inlet.c
+ACTOR_HAMA	its twin	The Broken Seal's ACTOR_HAMA, the same Hama of Lama Temple; this game's English text spells her "Hamma" (MsgPiers2 + 3)	games/tla/src/scene/contigo.c
