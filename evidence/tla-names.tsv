@@ -67,7 +67,7 @@ ACTOR_VILLAGER_AIRS_ROCK	the game	"In the heart of Osenia lies a sacred place, A
 ACTOR_VILLAGER_TWO_WAYS	the game	"If you want to go into the heart of Osenia, there are two ways..." (MsgFieldIfYouWantToGo)	games/tla/src/scene/mikasalla.c
 ACTOR_VILLAGER_TUNDARIA	the game	"If you look across the ocean to the south, you can see Tundaria." (MsgFieldIfYouLookAcrossThe)	games/tla/src/scene/mikasalla.c
 ACTOR_VILLAGER_GAROH	the game	"A town called Garoh lies to the east of us..." (MsgFieldATownCalledGarohLies)	games/tla/src/scene/mikasalla.c
-ACTOR_CHICKEN	the game	placed actor 23 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
+ACTOR_CHICKEN	the game	"Bukbukbuk" (MsgLemuriaBukbukbuk); its line; placed actor 23 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_SHEEP	the game	"Bah! Baaaaaaa!" (MsgFieldBahBaaaaaaa)	games/tla/src/scene/mikasalla.c
 ACTOR_SPARK	the game	"Spark" (MsgDjinnName); "Spark" (Mikasalla_MeetSpark's Djinni)	games/tla/src/scene/mikasalla.c
 ACTOR_EAST_GUARD	the game	"If you wanna cross here, you'll need permission from the town elder!" (MsgMadraNeedEldersPermission)	games/tla/src/scene/madra_drawbridge.c
@@ -1733,7 +1733,7 @@ ChampaCliffCaves_ObabaSeesAWeapon	the game	"This looks like a weapon!" (MsgThisL
 ChampaCliffCaves_ObabaAsksForSecondPiece	the game	"Ah, have you found the second piece, dear?" (MsgAhHaveYou); "Ah, have you found the second piece, dear?" (9848)	games/tla/src/scene/champa_cliff_caves.c
 ChampaCliffCaves_ObabaForgesTrident	the game	"Well done! You found all three pieces of the trident!" (MsgWellDoneYou); "Well done! You found all three pieces of the trident!" (9853)	games/tla/src/scene/champa_cliff_caves.c
 ChampaCliffCaves_PickUpTrident	the game	Event_PickUpItem with ITEM_TRIDENT (326) and flag 0x978	games/tla/src/scene/champa_cliff_caves.c
-Contigo_TheReunion	the game	Opens "I'm glad you kept your promise, Felix." (11101), the walkthrough's "Jupiter Lighthouse - Reunion!"	games/tla/src/scene/contigo.c
+Contigo_TheReunion	the game	"I'm glad you kept your promise" (MsgGladYouKeptYourPromise); Opens "I'm glad you kept your promise, Felix." (11101), the walkthrough's "Jupiter Lighthouse - Reunion!"	games/tla/src/scene/contigo.c
 Contigo_ReturnToNewHome	the game	"Ah, you've returned! What brings you to my new home?" (MsgReturnedToMyNewHome); "Ah, you've returned! What brings you to my new home?" (11269)	games/tla/src/scene/contigo.c
 Contigo_ExamineWall	the game	"Felix examined the wall. There are characters carved into it." (10532)	games/tla/src/scene/contigo.c
 Contigo_ReadSign	the game	"Felix examined the sign. The characters from the wall are translated there." (10533)	games/tla/src/scene/contigo.c
@@ -3995,7 +3995,7 @@ FLAG_MADRA_ILL_MAN_GROANED	the game	"Uhhhnnn... UHHHNNN!" (MsgMadraUhhhnnnUhhhnn
 ACTOR_MUSHROOM_LOVER	the walkthrough	"the old man inside the biggest home on the left. He is interested in mushrooms from the Gondowan Cliffs"	games/tla/src/scene/madra_interiors.c
 ACTOR_MUSHROOM_COOK	the game	"This here's enough of a mushroom that we'll be eating it for days!" (MsgMadraInteriorsThisHeresEnoughOfMushroom); His wife: "This here's enough of a mushroom that we'll be eating it for days!"	games/tla/src/scene/madra_interiors.c
 ACTOR_STERN_INTERROGATOR	the game	"Speak! Or let your silence condemn you!" (MsgMadraInteriorsAdmitItYoureOne); "Speak! Or let your silence condemn you!" in MadraInteriors_InterrogatePiers	games/tla/src/scene/madra_interiors.c
-ACTOR_ACCUSING_INTERROGATOR	the game	"Admit it! You're one of the Champa, aren't you, Piers?" (MsgMadraInteriors28)	games/tla/src/scene/madra_interiors.c
+ACTOR_ACCUSING_INTERROGATOR	the game	"Admit it! You're one of the Champa, aren't you" (MsgMadraInteriorsAdmitItYoureOne)	games/tla/src/scene/madra_interiors.c
 ACTOR_JAIL_KRADEN	the game	"Kraden" (MsgPiers2 + 2); Sprite 56, launched from the leader in the jail; Kraden's	games/tla/src/scene/madra_interiors.c
 FLAG_YAMPI_DESERT_SCORPION_STIRRED	its code	Set by YampiDesert_StirScorpion, Pound on the first screen's wooden column bursting the sand and sending the scorpion on	games/tla/src/scene/yampi_desert.c
 FLAG_YAMPI_DESERT_SCORPION_STIRRED_AGAIN	its code	The same on the second screen	games/tla/src/scene/yampi_desert.c
@@ -4072,7 +4072,7 @@ ACTOR_ETHER	the game	"Ether" (MsgDjinnName + 69); FLAG_DJINNI(DJINNI_ETHER) row 
 ACTOR_MADRAS_MAYOR	the game	"I'm starting to think the mayor of Alhafra never planned on repairing" (MsgAlhafraManorImStartingToThinkThe); "I'm starting to think the mayor of Alhafra never planned on repairing" through AlhafraManor_GrumbleAboutTheMayor, sprite 20	games/tla/src/scene/alhafra_manor.c
 ACTOR_FIRST_MADRAN_SOLDIER	the game	"Finally! We made it!" (MsgAlhafraFinallyWeMadeIt); sprite 88, the Madra drawbridge guard's (madra_drawbridge.c); "Finally! We made it!"; the second "No doubt about it!"	games/tla/src/scene/alhafra.c
 ACTOR_MADRAN_WAITING_FOR_THE_ELDER	the game	"Where's the Elder?" (MsgAlhafraFinallyWeMadeIt); "Where's the Elder?" "He's coming now..."	games/tla/src/scene/alhafra.c
-ACTOR_ALHAFRAN_GIVING_DIRECTIONS	the game	"Uh... The mayor? Just keep going down this road. It's the last house."	games/tla/src/scene/alhafra.c
+ACTOR_ALHAFRAN_GIVING_DIRECTIONS	the game	"Just keep going down this road." (MsgAlhafraFinallyWeMadeIt); its line; "Uh... The mayor? Just keep going down this road. It's the last house."	games/tla/src/scene/alhafra.c
 ACTOR_SAILOR_BUILDING_HOUSES	the game	"What does a sailor like me know about building houses, anyway?" (MsgAlhafraWhatDoesASailorLike); "What does a sailor like me know about building houses, anyway?" in Alhafra_SailorToldToWork	games/tla/src/scene/alhafra.c
 ACTOR_GOLD_COIN_FINDER	the game	"Why, look at this!" (MsgAlhafraWhyLookAtThis); "Why, look at this!" ... "It's only 5 coins." (Alhafra_FindGoldCoins); husband "Wow, honey! You found some gold coins!"; child "Way to go, Mom!"	games/tla/src/scene/alhafra.c
 ITEM_TYPE_TRIDENT	the game	"A weapon with a unique purpose" (MsgHatBoostsAgility): the Trident is the one row of type 7	games/tla/include/game/item.h
@@ -5091,7 +5091,7 @@ ACTOR_EXPLORERS_SON	the game	"there's another continent west of Gondowan" (MsgMi
 ACTOR_EXPLORERS_WIDOW	the game	"My father-in-law was a great explorer, long ago, as was my husband." (MsgMikasallaInteriorsMyFatherInLaw); row 9 (spr_072, script gMikasallaInteriors_ExplorersWidowPaces) "My father-in-law was a great explorer, long ago, as was my husband."	games/tla/src/scene/mikasalla_interiors.c
 ACTOR_EXPLORERS_GRANDSON	the game	"That boy sure admires his grandpa" (MsgMikasallaInteriorsThatBoySureAdmiresHis); row 10 (spr_077, a boy) runs MikasallaInteriors_AskAreYouExplorer; row 9's Mind Read "That boy sure admires his grandpa"	games/tla/src/scene/mikasalla_interiors.c
 ACTOR_AIRS_ROCK_CLIMBER	the game	"Those who have climbed Air's Rock claim that they can see the unseeable..." (MsgMikasallaInteriorsThoseWhoHaveClimbedAirs); row 11 (spr_075) "Those who have climbed Air's Rock claim that they can see the unseeable..."; row 12 "My husband has tried to climb Air's Rock many times"	games/tla/src/scene/mikasalla_interiors.c
-ACTOR_CLIMBERS_WIFE	the game	row 12 (spr_076, script gMikasallaInteriors_ClimbersWifePaces)	games/tla/src/scene/mikasalla_interiors.c
+ACTOR_CLIMBERS_WIFE	the game	"My husband has tried to climb Air's Rock many times" (MsgMikasallaInteriorsMyHusbandHasTried); its line; row 12 (spr_076, script gMikasallaInteriors_ClimbersWifePaces)	games/tla/src/scene/mikasalla_interiors.c
 ACTOR_MERCHANT	its code	row 13 runs MikasallaInteriors_TalkToMerchant, Shop_Run(13)	games/tla/src/scene/mikasalla_interiors.c
 ACTOR_MAN_ON_THE_ROAD_TO_GAROH	the game	"There aren't any towns between here and Garoh." (MsgMikasallaInteriorsThereArentAnyTownsBetween); row 14 "There aren't any towns between here and Garoh."	games/tla/src/scene/mikasalla_interiors.c
 ACTOR_OLD_MAN_ON_TUNDARIA	the game	"Used to be, you could sail to the other side of Gondowan by skirting the coast of Tundaria." (MsgMikasallaInteriorsUsedToBeYouCould); row 16 "Used to be, you could sail to the other side of Gondowan by skirting the coast of Tundaria."	games/tla/src/scene/mikasalla_interiors.c
@@ -5224,7 +5224,7 @@ ACTOR_PARCHED_TRAVELER	the game	"Water... My throat is so parched!" (MsgWaterMyT
 ACTOR_TRAVELER_WHO_WOULD_TURN_BACK	the game	"Can't we just forget about Briggs?" (MsgCanTWe); YampiDesert_ElderRefusesToQuit: actor 12 says "Can't we just forget about Briggs?"	games/tla/src/scene/yampi_desert.c
 ACTOR_BLITZ	the game	"Blitz" (MsgDjinnName + 68); room 3 row 19 (sprite 246, Jupiter Djinni); talk runs YampiDesert_FightBlitz, Field_RequestDjinnBattle(19, 68)	games/tla/src/scene/yampi_desert.c
 ACTOR_ROPE_POLE	its code	YampiDesert_PlaceRope(0, 0x20c, 8, 9) in room 8; Lash on actor 8	games/tla/src/scene/yampi_desert.c
-ACTOR_SIGNPOST	the game	placed actor 11 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
+ACTOR_SIGNPOST	the game	"House of the Senate" (MsgLemuriaHouseOfSenate); what it reads; placed actor 11 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_KING_SCORPION	its code	YampiDesert_LandAndFightKingScorpion's actor 8 in room 10	games/tla/src/scene/yampi_desert.c
 ACTOR_ROCK_PIT_MARKER	its code	YampiDesert_ScoopCenterPit moves actor 9 to the pit it digs between the four rocks	games/tla/src/scene/yampi_desert.c
 FLAG_YAMPI_DESERT_ROPE_TIED	its code	the Lash trigger's condition and Rope_Place's flag, 0x20c	games/tla/src/scene/yampi_desert.c
@@ -5251,12 +5251,12 @@ ACTOR_PARCHED_MADRAN	the game	row 35 wears sprite 93, the Yampi Desert's parched
 ACTOR_WOMAN_ANGRY_AT_THE_SALE	the game	"I don't care if it WAS broken! The mayor shouldn't have up and sold" (MsgAlhafraInteriorsIDontCareIfIt); talk 10 "I don't care if it WAS broken! The mayor shouldn't have up and sold..."	games/tla/src/scene/alhafra_interiors.c
 ACTOR_WOMAN_ON_THE_BOAT_BUYERS	the game	"Those guys who bought the boat looked kinda shabby..." (MsgAlhafraInteriorsThoseGuysWhoBoughtThe); talk 11 "Those guys who bought the boat looked kinda shabby..."	games/tla/src/scene/alhafra_interiors.c
 ACTOR_HOST	the game	"We're taking care of some people whose house was destroyed by the tidal wave" (MsgAlhafraInteriorsWereTakingCareOfSome); talk 12 "We're taking care of some people whose house was destroyed by the tidal wave"	games/tla/src/scene/alhafra_interiors.c
-ACTOR_HOSTESS	the game	talk 13 runs AlhafraInteriors_TalkToHostess	games/tla/src/scene/alhafra_interiors.c
+ACTOR_HOSTESS	the game	"With all these demanding houseguests" (MsgAlhafraInteriorsAughWithAllTheseDemanding); its line; talk 13 runs AlhafraInteriors_TalkToHostess	games/tla/src/scene/alhafra_interiors.c
 ACTOR_DEMANDING_GUEST	the game	"All I ask is for a little tea" (MsgAlhafraInteriorsAllIAskIsFor); talk 14 runs AlhafraInteriors_GuestsAskForTea / _TalkToDemandingGuest; Mind Read "All I ask is for a little tea"	games/tla/src/scene/alhafra_interiors.c
 ACTOR_DEMANDING_GUESTS_WIFE	the game	"When we lost our house in the tidal wave, the master of this house offered" (MsgAlhafraInteriorsWhenWeLostOurHouse); talk 15 "When we lost our house in the tidal wave, the master of this house offered..."; Mind Read "Is this how a young bride treats her husband"	games/tla/src/scene/alhafra_interiors.c
 ACTOR_MAN_ASKING_FOR_COMPENSATION	the game	"The town ought to give money to all the people who suffered" (MsgAlhafraInteriorsTheTownOughtToGive); talk 18 "The town ought to give money to all the people who suffered..."	games/tla/src/scene/alhafra_interiors.c
 ACTOR_WOMAN_ON_THE_CRAMMED_ROOMS	the game	"I can't believe the innkeeper is renting out more rooms" (MsgAlhafraInteriorsICantBelieveTheInnkeeper); talk 19 "I can't believe the innkeeper is renting out more rooms..."	games/tla/src/scene/alhafra_interiors.c
-ACTOR_INN_COOK	the game	MsgShamanSimpleMeatPotatoesBeans; sprite SPRITE_COOK	games/tla/src/scene/shaman_village.c
+ACTOR_INN_COOK	the game	"people like a nice hot steak and some potatoes and beans" (MsgShamanSimpleMeatPotatoesBeans); its line; MsgShamanSimpleMeatPotatoesBeans; sprite SPRITE_COOK	games/tla/src/scene/shaman_village.c
 ACTOR_MAN_ON_THE_MEALS	the game	"The innkeeper serves his paying guests better meals than we Alhafrans" (MsgAlhafraInteriorsTheInnkeeperServesHisPaying); talk 21 "The innkeeper serves his paying guests better meals than we Alhafrans"	games/tla/src/scene/alhafra_interiors.c
 ACTOR_WOMAN_ON_THE_MEALS	the game	"why is my meal so awful?" (MsgAlhafraInteriorsWereAllGuestsInThe); talk 22 "...why is my meal so awful?"	games/tla/src/scene/alhafra_interiors.c
 ACTOR_HUNGRY_CHILD	the game	"Ohhh... I'm hungry... My tummy hurts..." (MsgAlhafraInteriorsOhhhImHungryMyTummy); talk 23 "Ohhh... I'm hungry... My tummy hurts..."	games/tla/src/scene/alhafra_interiors.c
@@ -5939,7 +5939,7 @@ mars_lighthouse_room_m_5_d	its uses	palette pal_65: brought by its map in the re
 mars_lighthouse_room_m_5_e	its uses	palette pal_66: brought by its map in the resource directory (its map.inc defines its label)	games/tla/src/graphics/tileset/palettes/mars_lighthouse_room_m_5_e.png
 facing.c	its twin	The Broken Seal's src/field/facing.c holds the same gAnimationFacing tables	games/tla/src/field/facing.c
 edition.inc	its twin	The Broken Seal's include/edition.inc is the assembler's edition selection, as ed_asm.h was	games/tla/include/edition.inc
-MsgContigoHeyBuddyWannaTryYer	the game	"Hey, buddy, wanna try yer luck at the dice?It's  coin to pla" (MsgContigoHeyBuddyWannaTryYer)	games/tla/text/en.po
+MsgContigoHeyBuddyWannaTryYer	the game	"Hey, buddy, wanna try yer luck at the" (MsgContigoHeyBuddyWannaTryYer)	games/tla/text/en.po
 MsgContigoReadTheSignIfYa	the game	"Read the sign if ya don't know the rules." (MsgContigoReadTheSignIfYa)	games/tla/text/en.po
 MsgContigoHeyYaDontHaveEnough	the game	"Hey! Ya don't have enough coins! Ya gotta pay to play." (MsgContigoHeyYaDontHaveEnough)	games/tla/text/en.po
 MsgContigoYaWonCoinTalkAbout	the game	"Ya won  coin! Talk about lucky!" (MsgContigoYaWonCoinTalkAbout)	games/tla/text/en.po
@@ -5947,7 +5947,7 @@ MsgContigoYaLostCoinBetterLuck	the game	"Ya lost  coin. Better luck next time." 
 MsgContigoLuckyDice	the game	"Lucky Dice" (MsgContigoLuckyDice)	games/tla/text/en.po
 MsgContigoLuckyDiceB	the game	"Lucky Dice" (MsgContigoLuckyDiceB)	games/tla/text/en.po
 MsgContigoWinningOrLosingIsPure	the game	"Winning or losing is pure luck. I ain't cheatin' nobody." (MsgContigoWinningOrLosingIsPure)	games/tla/text/en.po
-MsgContigoTheRulesForLuckyDice	the game	"The rules for Lucky Dice ain't all that hard.Ya can even lea" (MsgContigoTheRulesForLuckyDice)	games/tla/text/en.po
+MsgContigoTheRulesForLuckyDice	the game	"The rules for Lucky Dice ain't all that" (MsgContigoTheRulesForLuckyDice)	games/tla/text/en.po
 MsgContigoStepRightUpAndTry	the game	"Step right up and try your hand at lucky wheels!" (MsgContigoStepRightUpAndTry)	games/tla/text/en.po
 MsgContigoTheRulesAreListedOn	the game	"The rules are listed on the sign. Take a look, take a look." (MsgContigoTheRulesAreListedOn)	games/tla/text/en.po
 MsgContigoThenGetRidOfSome	the game	"Then get rid of some items and come again." (MsgContigoThenGetRidOfSome)	games/tla/text/en.po
@@ -5969,7 +5969,7 @@ MsgContigoIfYouLoseTheHi	the game	"If you lose the hi-lo game, you don't win any
 MsgContigoIAlmostAlwaysGetAt	the game	"I almost always get at least one pair, but then I lose every" (MsgContigoIAlmostAlwaysGetAt)	games/tla/text/en.po
 MsgContigoWhenTheyLoseTheyCall	the game	"When they lose, they call me a cheater. When they win, they " (MsgContigoWhenTheyLoseTheyCall)	games/tla/text/en.po
 MsgContigoItsNotAToughGame	the game	"It's not a tough game, not if you play enough. You just sort" (MsgContigoItsNotAToughGame)	games/tla/text/en.po
-MsgContigoThisKidsGotUnluckyWritten	the game	"This kid's got unlucky written all over his face.One unlucky" (MsgContigoThisKidsGotUnluckyWritten)	games/tla/text/en.po
+MsgContigoThisKidsGotUnluckyWritten	the game	"This kid's got unlucky written all over his" (MsgContigoThisKidsGotUnluckyWritten)	games/tla/text/en.po
 MsgContigoItsToughToKnowWhen	the game	"It's tough to know when to keep playing and when to cut your" (MsgContigoItsToughToKnowWhen)	games/tla/text/en.po
 MsgContigoICanWinICan	the game	"I can win, I can win, I can win! Whoa! ...I'm going to lose." (MsgContigoICanWinICan)	games/tla/text/en.po
 MsgContigoSorryPalButYouveGotta	the game	"Sorry, pal, but you've gotta have more coins to play." (MsgContigoSorryPalButYouveGotta)	games/tla/text/en.po
@@ -5997,14 +5997,14 @@ MsgAlhafraWhoWouldComeToAlhafra	the game	"Who would come to Alhafra across the Y
 MsgAlhafraThisTidalWavesActuallyBeen	the game	"This tidal wave's actually been good for Alhafra. The town i" (MsgAlhafraThisTidalWavesActuallyBeen)	games/tla/text/en.po
 MsgAlhafraIDontKnowWhyThey	the game	"I don't know why they won't let us kids go down to see the d" (MsgAlhafraIDontKnowWhyThey)	games/tla/text/en.po
 MsgAlhafraIWonderIfMyPartner	the game	"I wonder if my partner has finished up that canoe yet" (MsgAlhafraIWonderIfMyPartner)	games/tla/text/en.po
-MsgAlhafraWeCantRaiseTheMast	the game	"We can't raise the mast until we get rid of the debris.But I" (MsgAlhafraWeCantRaiseTheMast)	games/tla/text/en.po
+MsgAlhafraWeCantRaiseTheMast	the game	"We can't raise the mast until we get rid of the" (MsgAlhafraWeCantRaiseTheMast)	games/tla/text/en.po
 MsgAlhafraIStillCantBelieveThose	the game	"I still can't believe those guys wanted to buy my busted boa" (MsgAlhafraIStillCantBelieveThose)	games/tla/text/en.po
-MsgAlhafraItMayBeNewfangledBut	the game	"It may be newfangled, but it's no good if it's broken.Forget" (MsgAlhafraItMayBeNewfangledBut)	games/tla/text/en.po
+MsgAlhafraItMayBeNewfangledBut	the game	"It may be newfangled, but it's no good if it's" (MsgAlhafraItMayBeNewfangledBut)	games/tla/text/en.po
 MsgAlhafraOooThisAintGood	the game	"Ooo... This ain't good!" (MsgAlhafraOooThisAintGood)	games/tla/text/en.po
 MsgAlhafraInteriorsIDontCareIfIt	the game	"I don't care if it WAS broken! The mayor shouldn't have up a" (MsgAlhafraInteriorsIDontCareIfIt)	games/tla/text/en.po
 MsgAlhafraInteriorsThoseGuysWhoBoughtThe	the game	"Those guys who bought the boat looked kinda shabby" (MsgAlhafraInteriorsThoseGuysWhoBoughtThe)	games/tla/text/en.po
 MsgAlhafraInteriorsIWonderIfTheMayor	the game	"I wonder if the mayor will use that money to repair our poor" (MsgAlhafraInteriorsIWonderIfTheMayor)	games/tla/text/en.po
-MsgAlhafraInteriorsWhyWouldAnyonePaySo	the game	"Why would anyone pay so much for a broken old boat?I know I " (MsgAlhafraInteriorsWhyWouldAnyonePaySo)	games/tla/text/en.po
+MsgAlhafraInteriorsWhyWouldAnyonePaySo	the game	"Why would anyone pay so much for a broken old" (MsgAlhafraInteriorsWhyWouldAnyonePaySo)	games/tla/text/en.po
 MsgAlhafraInteriorsWereTakingCareOfSome	the game	"We're taking care of some people whose house was destroyed b" (MsgAlhafraInteriorsWereTakingCareOfSome)	games/tla/text/en.po
 MsgAlhafraInteriorsAughWithAllTheseDemanding	the game	"Augh! With all these demanding houseguests, I feel like I've" (MsgAlhafraInteriorsAughWithAllTheseDemanding)	games/tla/text/en.po
 MsgAlhafraInteriorsArentYouThirstyMyDear	the game	"Aren't you thirsty, my dear?" (MsgAlhafraInteriorsArentYouThirstyMyDear)	games/tla/text/en.po
@@ -6013,7 +6013,7 @@ MsgAlhafraInteriorsWhenWeLostOurHouse	the game	"When we lost our house in the ti
 MsgAlhafraInteriorsIJustWishThatOld	the game	"I just wish that old man would stop pestering my wife all th" (MsgAlhafraInteriorsIJustWishThatOld)	games/tla/text/en.po
 MsgAlhafraInteriorsIDontMindHelpingPeople	the game	"I don't mind helping people in need, but I won't be taken ad" (MsgAlhafraInteriorsIDontMindHelpingPeople)	games/tla/text/en.po
 MsgAlhafraInteriorsAllIAskIsFor	the game	"All I ask is for a little tea, and that's the behavior I get" (MsgAlhafraInteriorsAllIAskIsFor)	games/tla/text/en.po
-MsgAlhafraInteriorsIsThisHowAYoung	the game	"Is this how a young bride treats her husband these days?Back" (MsgAlhafraInteriorsIsThisHowAYoung)	games/tla/text/en.po
+MsgAlhafraInteriorsIsThisHowAYoung	the game	"Is this how a young bride treats her husband these" (MsgAlhafraInteriorsIsThisHowAYoung)	games/tla/text/en.po
 MsgAlhafraWeWereHitByA	the game	"We were hit by a wave so strong that it swept homes off thei" (MsgAlhafraWeWereHitByA)	games/tla/text/en.po
 MsgAlhafraLosingAllMyMostExpensive	the game	"Losing all my most expensive items may well ruin my business" (MsgAlhafraLosingAllMyMostExpensive)	games/tla/text/en.po
 MsgAlhafraThatTidalWaveMayWell	the game	"That tidal wave may well wash out both my business and the w" (MsgAlhafraThatTidalWaveMayWell)	games/tla/text/en.po
@@ -6032,7 +6032,7 @@ MsgAlhafraInteriorsIDontThinkIveHad	the game	"I don't think I've had a bite of m
 MsgAlhafraInteriorsIllNeverForgiveTheMayor	the game	"I'll never forgive the mayor for failing to come to our aid " (MsgAlhafraInteriorsIllNeverForgiveTheMayor)	games/tla/text/en.po
 MsgAlhafraInteriorsOurGuestsAreVeryUpset	the game	"Our guests are very upset with the mayor. I just hope they d" (MsgAlhafraInteriorsOurGuestsAreVeryUpset)	games/tla/text/en.po
 MsgAlhafraInteriorsMyPopsBeenLookinAround	the game	"My pop's been lookin' around, an' he says the mayor keeps al" (MsgAlhafraInteriorsMyPopsBeenLookinAround)	games/tla/text/en.po
-MsgAlhafraInteriorsWhyDoWeAllHave	the game	"Why do we all have to be cooped up in such a small room?How " (MsgAlhafraInteriorsWhyDoWeAllHave)	games/tla/text/en.po
+MsgAlhafraInteriorsWhyDoWeAllHave	the game	"Why do we all have to be cooped up in such a small" (MsgAlhafraInteriorsWhyDoWeAllHave)	games/tla/text/en.po
 MsgAlhafraInteriorsWeAllHaveToBear	the game	"We all have to bear the discomfort of this place until our h" (MsgAlhafraInteriorsWeAllHaveToBear)	games/tla/text/en.po
 MsgAlhafraInteriorsIHeardTheresOnlyOne	the game	"I heard there's only one person staying in the room next doo" (MsgAlhafraInteriorsIHeardTheresOnlyOne)	games/tla/text/en.po
 MsgAlhafraInteriorsSoYouveFinallyCome	the game	"So, you've finally come." (MsgAlhafraInteriorsSoYouveFinallyCome)	games/tla/text/en.po
@@ -6043,7 +6043,7 @@ MsgAlhafraInteriorsIBetTheMasterOf	the game	"I bet the master of the inn could a
 MsgAlhafraInteriorsICantBelieveTheInnkeeperIs	the game	"I can't believe the innkeeper is cramming all those poor peo" (MsgAlhafraInteriorsICantBelieveTheInnkeeperIs)	games/tla/text/en.po
 MsgAlhafraInteriorsICantBelieveImOnly	the game	"I can't believe I'm only supposed to feed the villagers vege" (MsgAlhafraInteriorsICantBelieveImOnly)	games/tla/text/en.po
 MsgAlhafraInteriorsMaybeItsCauseAllWeve	the game	"Maybe it's 'cause all we've been eating is vegetables, but I" (MsgAlhafraInteriorsMaybeItsCauseAllWeve)	games/tla/text/en.po
-MsgAlhafraInteriorsIThinkIveLostWeight	the game	"I think I've lost weight from all these vegetables!Sure, I'm" (MsgAlhafraInteriorsIThinkIveLostWeight)	games/tla/text/en.po
+MsgAlhafraInteriorsIThinkIveLostWeight	the game	"I think I've lost weight from all these" (MsgAlhafraInteriorsIThinkIveLostWeight)	games/tla/text/en.po
 MsgAlhafraInteriorsMaybeImJustHungryBut	the game	"Maybe I'm just hungry, but everything they put in front of m" (MsgAlhafraInteriorsMaybeImJustHungryBut)	games/tla/text/en.po
 MsgAlhafraInteriorsSniffSniffThatSmellThats	the game	"*Sniff sniff* That smell! That's the smell of fish... No! No" (MsgAlhafraInteriorsSniffSniffThatSmellThats)	games/tla/text/en.po
 MsgAlhafraInteriorsIHopeTheMayorsTreasure	the game	"I hope the mayor's treasure room doesn't run too close to th" (MsgAlhafraInteriorsIHopeTheMayorsTreasure)	games/tla/text/en.po
@@ -6065,18 +6065,18 @@ MsgAlhafraWereAllGoingToWork	the game	"We're all going to work together to rebui
 MsgAlhafraOnceThingsAreBackTo	the game	"Once things are back to normal, we're all going to build ano" (MsgAlhafraOnceThingsAreBackTo)	games/tla/text/en.po
 MsgAlhafraSoTheGuysWhoBought	the game	"So, the guys who bought the boat are the pirates who were te" (MsgAlhafraSoTheGuysWhoBought)	games/tla/text/en.po
 MsgAlhafraEveryoneIsTalkingAboutHow	the game	"Everyone is talking about how you captured the pirates in th" (MsgAlhafraEveryoneIsTalkingAboutHow)	games/tla/text/en.po
-MsgAlhafraTheMayorIsTheOnly	the game	"The mayor is the only one from Madra who stayed in town.They" (MsgAlhafraTheMayorIsTheOnly)	games/tla/text/en.po
+MsgAlhafraTheMayorIsTheOnly	the game	"The mayor is the only one from Madra who stayed in" (MsgAlhafraTheMayorIsTheOnly)	games/tla/text/en.po
 MsgAlhafraTheMayorOfMadraApparently	the game	"The mayor of Madra apparently seized the boat from the pirat" (MsgAlhafraTheMayorOfMadraApparently)	games/tla/text/en.po
 MsgAlhafraINeverThoughtAFine	the game	"I never thought a fine house could be crushed in the blink o" (MsgAlhafraINeverThoughtAFine)	games/tla/text/en.po
 MsgAlhafraICanHelpBuildHouses	the game	"I can help build houses, too. ...At least for a little while" (MsgAlhafraICanHelpBuildHouses)	games/tla/text/en.po
 MsgAlhafraWevePutOffFixingThe	the game	"We've put off fixing the boat for now so we can work on repa" (MsgAlhafraWevePutOffFixingThe)	games/tla/text/en.po
 MsgAlhafraOnceRepairsAreDoneHere	the game	"Once repairs are done here, we have to fix the bridge in the" (MsgAlhafraOnceRepairsAreDoneHere)	games/tla/text/en.po
-MsgAlhafraTheyToldMeTheydHelp	the game	"They told me they'd help get that mast fixed up.Would someon" (MsgAlhafraTheyToldMeTheydHelp)	games/tla/text/en.po
+MsgAlhafraTheyToldMeTheydHelp	the game	"They told me they'd help get that mast fixed" (MsgAlhafraTheyToldMeTheydHelp)	games/tla/text/en.po
 MsgAlhafraWhatDoesASailorLike	the game	"What does a sailor like me know about building houses, anywa" (MsgAlhafraWhatDoesASailorLike)	games/tla/text/en.po
 MsgAlhafraItsSoNiceOfEveryone	the game	"It's so nice of everyone to chip in and help rebuild Alhafra" (MsgAlhafraItsSoNiceOfEveryone)	games/tla/text/en.po
 MsgAlhafraEveryoneInTownIsSo	the game	"Everyone in town is so much happier now that we've started r" (MsgAlhafraEveryoneInTownIsSo)	games/tla/text/en.po
 MsgAlhafraYouKnowPiratesWhoPay	the game	"You know, pirates who pay for stuff instead of stealing must" (MsgAlhafraYouKnowPiratesWhoPay)	games/tla/text/en.po
-MsgAlhafraThosePiratesHaveTheCoolest	the game	"Those pirates have the coolest outfits!Someday, I wanna be a" (MsgAlhafraThosePiratesHaveTheCoolest)	games/tla/text/en.po
+MsgAlhafraThosePiratesHaveTheCoolest	the game	"Those pirates have the coolest" (MsgAlhafraThosePiratesHaveTheCoolest)	games/tla/text/en.po
 MsgAlhafraICantBelieveTheyLeft	the game	"I can't believe they left their mayor behind! Those Madrans " (MsgAlhafraICantBelieveTheyLeft)	games/tla/text/en.po
 MsgAlhafraIfOurMayorThinksIm	the game	"If our mayor thinks I'm going to work on a boat for him, he'" (MsgAlhafraIfOurMayorThinksIm)	games/tla/text/en.po
 MsgAlhafraYouKnowSittingHereFixing	the game	"You know, sitting here fixing houses really makes you think " (MsgAlhafraYouKnowSittingHereFixing)	games/tla/text/en.po
@@ -6094,7 +6094,7 @@ MsgAlhafraInteriorsOoohNotMuchLongerAnd	the game	"Oooh... Not much longer, and t
 MsgAlhafraInteriorsOnceMyOldNeighborsHouse	the game	"Once my old neighbors' house is repaired, my life can finall" (MsgAlhafraInteriorsOnceMyOldNeighborsHouse)	games/tla/text/en.po
 MsgAlhafraInteriorsOnceEveryoneStartedWorkingTo	the game	"Once everyone started working to rebuild the town, our hoste" (MsgAlhafraInteriorsOnceEveryoneStartedWorkingTo)	games/tla/text/en.po
 MsgAlhafraInteriorsIWonderWhatHappenedThats	the game	"I wonder what happened that's making the lady of the house s" (MsgAlhafraInteriorsIWonderWhatHappenedThats)	games/tla/text/en.po
-MsgAlhafraInteriorsAhhItsSoRelievingTo	the game	"Ahh... It's so relieving to see my wife smiling again.I don'" (MsgAlhafraInteriorsAhhItsSoRelievingTo)	games/tla/text/en.po
+MsgAlhafraInteriorsAhhItsSoRelievingTo	the game	"Ahh... It's so relieving to see my wife smiling" (MsgAlhafraInteriorsAhhItsSoRelievingTo)	games/tla/text/en.po
 MsgAlhafraInteriorsItWontBeLongUntil	the game	"It won't be long until our guests go back home" (MsgAlhafraInteriorsItWontBeLongUntil)	games/tla/text/en.po
 MsgAlhafraInteriorsTheLadyOfThisHouse	the game	"The lady of this house is so temperamental. She gets angry a" (MsgAlhafraInteriorsTheLadyOfThisHouse)	games/tla/text/en.po
 MsgAlhafraInteriorsTheLadyOfTheHouse	the game	"The lady of the house is so adorable when she's in a good mo" (MsgAlhafraInteriorsTheLadyOfTheHouse)	games/tla/text/en.po
@@ -6106,11 +6106,11 @@ MsgAlhafraYouKnowSinceWereRebuilding	the game	"You know, since we're rebuilding 
 MsgAlhafraIWishSomeoneWouldJust	the game	"I wish someone would just bring me some food..." (MsgAlhafraIWishSomeoneWouldJust)	games/tla/text/en.po
 MsgAlhafraThanksMister	the game	"Thanks, mister." (MsgAlhafraThanksMister)	games/tla/text/en.po
 MsgAlhafraGeezMisterIDontKnow	the game	"Geez, mister, I don't know how I can repay you..." (MsgAlhafraGeezMisterIDontKnow)	games/tla/text/en.po
-MsgAlhafraImFeelingALotBetter	the game	"I'm feeling a lot better now thanks to you, mister.If you ge" (MsgAlhafraImFeelingALotBetter)	games/tla/text/en.po
+MsgAlhafraImFeelingALotBetter	the game	"I'm feeling a lot better now thanks to you" (MsgAlhafraImFeelingALotBetter)	games/tla/text/en.po
 MsgAlhafraIWonderIfIShould	the game	"I wonder if I should have shared some with my sister." (MsgAlhafraIWonderIfIShould)	games/tla/text/en.po
 MsgAlhafraAllMyNeighborsAreGoing	the game	"All my neighbors are going to work together to help rebuild " (MsgAlhafraAllMyNeighborsAreGoing)	games/tla/text/en.po
 MsgAlhafraWhyLookAtThis	the game	"Why, look at this!" (MsgAlhafraWhyLookAtThis)	games/tla/text/en.po
-MsgAlhafraWhatAStrokeOfLuck	the game	"What a stroke of luck! Right when we really needed it, too!T" (MsgAlhafraWhatAStrokeOfLuck)	games/tla/text/en.po
+MsgAlhafraWhatAStrokeOfLuck	the game	"What a stroke of luck! Right when we really needed it" (MsgAlhafraWhatAStrokeOfLuck)	games/tla/text/en.po
 MsgAlhafraIWonderIfTheresAny	the game	"I wonder if there's any more money hidden around here" (MsgAlhafraIWonderIfTheresAny)	games/tla/text/en.po
 MsgAlhafraMyDadLostTheDraw	the game	"My dad lost the draw, so our house is going to be the last o" (MsgAlhafraMyDadLostTheDraw)	games/tla/text/en.po
 MsgAlhafraLosingTheLotteryAndBeing	the game	"Losing the lottery and being the last house to get fixed tak" (MsgAlhafraLosingTheLotteryAndBeing)	games/tla/text/en.po
@@ -6119,9 +6119,9 @@ MsgAlhafraIReallyShouldntBePeeking	the game	"I really shouldn't be peeking into 
 MsgAlhafraAllBecauseOfMyDads	the game	"All because of my dad's stupid luck, our house is the very l" (MsgAlhafraAllBecauseOfMyDads)	games/tla/text/en.po
 MsgAlhafraWhatBriggsWasTheLeader	the game	"What? Briggs was the leader of a crew of pirates? Aw, but he" (MsgAlhafraWhatBriggsWasTheLeader)	games/tla/text/en.po
 MsgAlhafraBriggsWasVeryGenerousHe	the game	"Briggs was very generous. He bought plenty of weapons. Wait " (MsgAlhafraBriggsWasVeryGenerousHe)	games/tla/text/en.po
-MsgAlhafraThatGroupFromMadraWas	the game	"That group from Madra was incredibly lucky!They didn't do a " (MsgAlhafraThatGroupFromMadraWas)	games/tla/text/en.po
+MsgAlhafraThatGroupFromMadraWas	the game	"That group from Madra was incredibly" (MsgAlhafraThatGroupFromMadraWas)	games/tla/text/en.po
 MsgAlhafraGettingABoatForNothing	the game	"Getting a boat for nothing seems like a pretty good deal to " (MsgAlhafraGettingABoatForNothing)	games/tla/text/en.po
-MsgAlhafraInteriorsTheMadransDroppedInAnd	the game	"The Madrans dropped in and stocked up on items.I guess they'" (MsgAlhafraInteriorsTheMadransDroppedInAnd)	games/tla/text/en.po
+MsgAlhafraInteriorsTheMadransDroppedInAnd	the game	"The Madrans dropped in and stocked up on" (MsgAlhafraInteriorsTheMadransDroppedInAnd)	games/tla/text/en.po
 MsgAlhafraInteriorsTheMadransMustHaveBeen	the game	"The Madrans must have been in quite a hurry" (MsgAlhafraInteriorsTheMadransMustHaveBeen)	games/tla/text/en.po
 MsgAlhafraInteriorsAsSoonAsImDone	the game	"As soon as I'm done fixing up the inn, I'm going to give a h" (MsgAlhafraInteriorsAsSoonAsImDone)	games/tla/text/en.po
 MsgAlhafraInteriorsWereAllTakingTurnsHelping	the game	"We're all taking turns helping out with the repairs in town." (MsgAlhafraInteriorsWereAllTakingTurnsHelping)	games/tla/text/en.po
@@ -6143,7 +6143,7 @@ MsgAlhafraInteriorsOurNeighborIsSoMellow	the game	"Our neighbor is so mellow. He
 MsgAlhafraInteriorsFeelFreeToHelpWhomever	the game	"Feel free to help whomever you like if it truly makes you ha" (MsgAlhafraInteriorsFeelFreeToHelpWhomever)	games/tla/text/en.po
 MsgAlhafraInteriorsThatCuteBoyNextDoor	the game	"That cute boy next door left already. What a shame." (MsgAlhafraInteriorsThatCuteBoyNextDoor)	games/tla/text/en.po
 MsgAlhafraInteriorsTheFellowNextDoorWas	the game	"The fellow next door was so handsome. He was just my type. T" (MsgAlhafraInteriorsTheFellowNextDoorWas)	games/tla/text/en.po
-MsgAlhafraInteriorsCapturingTheDreadedBriggsWas	the game	"Capturing the dreaded Briggs was a great deed.Allow me to th" (MsgAlhafraInteriorsCapturingTheDreadedBriggsWas)	games/tla/text/en.po
+MsgAlhafraInteriorsCapturingTheDreadedBriggsWas	the game	"Capturing the dreaded Briggs was a great" (MsgAlhafraInteriorsCapturingTheDreadedBriggsWas)	games/tla/text/en.po
 MsgAlhafraInteriorsIThinkThisManMight	the game	"I think this man might even be able to defeat the horrible w" (MsgAlhafraInteriorsIThinkThisManMight)	games/tla/text/en.po
 MsgAlhafraAhFelixWelcomeWelcomeListen	the game	"Ah! ! Welcome, welcome" (MsgAlhafraAhFelixWelcomeWelcomeListen); "Ah! ! Welcome, welcome...Listen, sorry about all that "not l" (MsgAlhafraAhFelixWelcomeWelcomeListen)	games/tla/text/en.po
 MsgAlhafraOhFelixGoOnIn	the game	"Oh, ! Go on in! The mayor's been looking forward to meeting " (MsgAlhafraOhFelixGoOnIn)	games/tla/text/en.po
@@ -6151,21 +6151,21 @@ MsgAlhafraIfIdKnownBriggsWas	the game	"If I'd known Briggs was a pirate, I would
 MsgAlhafraTheMayorWasReallyImpressed	the game	"The mayor was really impressed with these guys... He'll prob" (MsgAlhafraTheMayorWasReallyImpressed)	games/tla/text/en.po
 MsgAlhafraNoOneIsAllowedBeyondThis	the game	"No one is allowed beyond this point. Don't even think about " (MsgAlhafraNoOneIsAllowedBeyondThis)	games/tla/text/en.po
 MsgAlhafraTheMayorSaidNoOneGoes	the game	"The mayor said no one goes through, and I mean to make sure " (MsgAlhafraTheMayorSaidNoOneGoes)	games/tla/text/en.po
-MsgAlhafraYoureTheOneWhoGave	the game	"You're the one who gave my son some food, aren't you?Did you" (MsgAlhafraYoureTheOneWhoGave)	games/tla/text/en.po
+MsgAlhafraYoureTheOneWhoGave	the game	"You're the one who gave my son some food, aren't" (MsgAlhafraYoureTheOneWhoGave)	games/tla/text/en.po
 MsgAlhafraNotThatItMattersThe	the game	"Not that it matters. The door to the mayor's treasure room i" (MsgAlhafraNotThatItMattersThe)	games/tla/text/en.po
-MsgAlhafraManorYouShouldGoToThe	the game	"You should go to the watchtower and gaze southward.On a clea" (MsgAlhafraManorYouShouldGoToThe)	games/tla/text/en.po
+MsgAlhafraManorYouShouldGoToThe	the game	"You should go to the watchtower and gaze" (MsgAlhafraManorYouShouldGoToThe)	games/tla/text/en.po
 MsgAlhafraManorWhatDoYouThinkOf	the game	"What do you think of Alhafra? Have you taken a fancy to it?" (MsgAlhafraManorWhatDoYouThinkOf)	games/tla/text/en.po
-MsgAlhafraManorOurTownWasRifeWith	the game	"Our town was rife with pirates until just recently.Your effo" (MsgAlhafraManorOurTownWasRifeWith)	games/tla/text/en.po
+MsgAlhafraManorOurTownWasRifeWith	the game	"Our town was rife with pirates until just" (MsgAlhafraManorOurTownWasRifeWith)	games/tla/text/en.po
 MsgAlhafraManorTheMountainsToTheEast	the game	"The mountains to the east of Alhafra are the Balloo Range. T" (MsgAlhafraManorTheMountainsToTheEast)	games/tla/text/en.po
 MsgAlhafraManorThereAreNumerousTalesAbout	the game	"There are numerous tales about that rocky peak we call Air's" (MsgAlhafraManorThereAreNumerousTalesAbout)	games/tla/text/en.po
 MsgAlhafraManorWhyDoTheyAlwaysTell	the game	"Why do they always tell me to send adventure-seekers to Sout" (MsgAlhafraManorWhyDoTheyAlwaysTell)	games/tla/text/en.po
 MsgAlhafraManorThosePiratesNeverDidUs	the game	"Those pirates never did us any harm, but that's because they" (MsgAlhafraManorThosePiratesNeverDidUs)	games/tla/text/en.po
-MsgAlhafraManorTheresNoWayToCross	the game	"There's no way to cross the Balloo Range from here.I've hear" (MsgAlhafraManorTheresNoWayToCross)	games/tla/text/en.po
+MsgAlhafraManorTheresNoWayToCross	the game	"There's no way to cross the Balloo Range from" (MsgAlhafraManorTheresNoWayToCross)	games/tla/text/en.po
 MsgAlhafraManorLookeeHereCantYouSee	the game	"Lookee here! Can't you see Air's Rock out there?" (MsgAlhafraManorLookeeHereCantYouSee)	games/tla/text/en.po
 MsgAlhafraManorFromHereItJustLooks	the game	"From here, it just looks like a regular old rock, but from u" (MsgAlhafraManorFromHereItJustLooks)	games/tla/text/en.po
 MsgAlhafraManorTheLongerISitHere	the game	"The longer I sit here gazing at Air's Rock, the more I grow " (MsgAlhafraManorTheLongerISitHere)	games/tla/text/en.po
 MsgAlhafraManorIdBeenSayingIndraWasnt	the game	"I'd been saying Indra wasn't in the right place for some tim" (MsgAlhafraManorIdBeenSayingIndraWasnt)	games/tla/text/en.po
-MsgAlhafraManorISatAndGazedAt	the game	"I sat and gazed at that continent every day.I ought to know " (MsgAlhafraManorISatAndGazedAt)	games/tla/text/en.po
+MsgAlhafraManorISatAndGazedAt	the game	"I sat and gazed at that continent every" (MsgAlhafraManorISatAndGazedAt)	games/tla/text/en.po
 MsgAlhafraManorAreYouTheBraveHero	the game	"Are you the brave hero who defeated the pirates?" (MsgAlhafraManorAreYouTheBraveHero)	games/tla/text/en.po
 MsgAlhafraManorIHeardThePiratesTalking	the game	"I heard the pirates talking about the warriors who beat them" (MsgAlhafraManorIHeardThePiratesTalking)	games/tla/text/en.po
 MsgAlhafraManorIWishSomeoneWouldGo	the game	"I wish someone would go do something about that cursed villa" (MsgAlhafraManorIWishSomeoneWouldGo)	games/tla/text/en.po
@@ -6188,13 +6188,13 @@ MsgAlhafraHeSeemsLikeAnHonest	the game	"He seems like an honest, hardworking you
 MsgChampaOhImSoHungryAnd	the game	"Oh, I'm so hungry... And there won't be anything to eat unti" (MsgChampaOhImSoHungryAnd)	games/tla/text/en.po
 MsgChampaWhenIsBriggsGoingTo	the game	"When is Briggs going to return with food for the village? We" (MsgChampaWhenIsBriggsGoingTo)	games/tla/text/en.po
 MsgChampaHowDidYouFindYour	the game	"How did you find your way here, to the edge of Angara? Champ" (MsgChampaHowDidYouFindYour)	games/tla/text/en.po
-MsgChampaChampaIsImpoverishedButSoon	the game	"Champa is impoverished, but soon, we will prosper again.All " (MsgChampaChampaIsImpoverishedButSoon)	games/tla/text/en.po
+MsgChampaChampaIsImpoverishedButSoon	the game	"Champa is impoverished, but soon, we will prosper" (MsgChampaChampaIsImpoverishedButSoon)	games/tla/text/en.po
 MsgChampaYouveTheLookOfA	the game	"You've the look of a traveler about you... Have you been to " (MsgChampaYouveTheLookOfA)	games/tla/text/en.po
 MsgChampaTheRuinsAtAnkohlAre	the game	"The ruins at Ankohl are all that remains of a great sanctum " (MsgChampaTheRuinsAtAnkohlAre)	games/tla/text/en.po
 MsgChampaEoleoBriggssSonHasA	the game	"Eoleo, Briggs's son, has a really strange ability" (MsgChampaEoleoBriggssSonHasA)	games/tla/text/en.po
 MsgChampaOnceBriggsComesBackI	the game	"Once Briggs comes back, I can play with Eoleo again... I hop" (MsgChampaOnceBriggsComesBackI)	games/tla/text/en.po
 MsgChampaTheCliffCavesAreA	the game	"The cliff caves are a lot quieter with Briggs gone... It's a" (MsgChampaTheCliffCavesAreA)	games/tla/text/en.po
-MsgChampaOurMatriarchIsTheLast	the game	"Our matriarch is the last successor of the Ankohl.She's a ma" (MsgChampaOurMatriarchIsTheLast)	games/tla/text/en.po
+MsgChampaOurMatriarchIsTheLast	the game	"Our matriarch is the last successor of the" (MsgChampaOurMatriarchIsTheLast)	games/tla/text/en.po
 MsgChampaTheChampaSailorsArentWell	the game	"The Champa sailors aren't...well liked outside of here, are " (MsgChampaTheChampaSailorsArentWell)	games/tla/text/en.po
 MsgChampaWhereCouldBriggsBeWasting	the game	"Where could Briggs be wasting his time now?" (MsgChampaWhereCouldBriggsBeWasting)	games/tla/text/en.po
 MsgChampaBriggsPromisedToBringEnough	the game	"Briggs promised to bring enough food for the whole village." (MsgChampaBriggsPromisedToBringEnough)	games/tla/text/en.po
@@ -6204,7 +6204,7 @@ MsgChampaIWantSomeoneToSolve	the game	"I want someone to solve the riddle of Ank
 MsgChampaTheySayTheChamberAt	the game	"They say the chamber at the top of the ruins is decorated in" (MsgChampaTheySayTheChamberAt)	games/tla/text/en.po
 MsgChampaIfICouldPickUp	the game	"If I could pick up things without using my hands, life would" (MsgChampaIfICouldPickUp)	games/tla/text/en.po
 MsgChampaEoleosSoMuchYoungerThan	the game	"Eoleo's so much younger than I am, but I can't stop thinking" (MsgChampaEoleosSoMuchYoungerThan)	games/tla/text/en.po
-MsgChampaWhyHaventBriggsAndHis	the game	"Why haven't Briggs and his men returned yet?Obaba said not t" (MsgChampaWhyHaventBriggsAndHis)	games/tla/text/en.po
+MsgChampaWhyHaventBriggsAndHis	the game	"Why haven't Briggs and his men returned" (MsgChampaWhyHaventBriggsAndHis)	games/tla/text/en.po
 MsgChampaObabasLockedHerselfInHer	the game	"Obaba's locked herself in her room until her grandson, Brigg" (MsgChampaObabasLockedHerselfInHer)	games/tla/text/en.po
 MsgChampaIfBriggsWouldJustBring	the game	"If Briggs would just bring the treasure he found back to Cha" (MsgChampaIfBriggsWouldJustBring)	games/tla/text/en.po
 MsgChampaIBetYoureWonderingWhy	the game	"I bet you're wondering why only sailors and their families g" (MsgChampaIBetYoureWonderingWhy)	games/tla/text/en.po
@@ -6254,11 +6254,11 @@ MsgAlhafraAfterWeDidAllThat	the game	"After we did all that work to fix the mast
 MsgAlhafraItWasGreatToSee	the game	"It was great to see everyone in town working to raise the ma" (MsgAlhafraItWasGreatToSee)	games/tla/text/en.po
 MsgAlhafraWhenTheyFindThatTheir	the game	"When they find that their boat was stolen, I'm sure Madra's " (MsgAlhafraWhenTheyFindThatTheir)	games/tla/text/en.po
 MsgAlhafraItsNotLikeTheBoat	the game	"It's not like the boat could even move when the mast was sti" (MsgAlhafraItsNotLikeTheBoat)	games/tla/text/en.po
-MsgAlhafraTheRepairsAreComingAlong	the game	"The repairs are coming along pretty slowly, aren't they?Well" (MsgAlhafraTheRepairsAreComingAlong)	games/tla/text/en.po
+MsgAlhafraTheRepairsAreComingAlong	the game	"The repairs are coming along pretty slowly, aren't" (MsgAlhafraTheRepairsAreComingAlong)	games/tla/text/en.po
 MsgAlhafraWhenIsThisHouseGoing	the game	"When is this house going to be finished once and for all!? T" (MsgAlhafraWhenIsThisHouseGoing)	games/tla/text/en.po
 MsgAlhafraItFeltSoGreatWhen	the game	"It felt so great when the whole town joined together to get " (MsgAlhafraItFeltSoGreatWhen)	games/tla/text/en.po
 MsgAlhafraBackBeforeBriggsDestroyedThe	the game	"Back before Briggs destroyed the bridge to the west, it was " (MsgAlhafraBackBeforeBriggsDestroyedThe)	games/tla/text/en.po
-MsgAlhafraWeFixedTheMastSo	the game	"We fixed the mast so we could use that boat.Now, Briggs has " (MsgAlhafraWeFixedTheMastSo)	games/tla/text/en.po
+MsgAlhafraWeFixedTheMastSo	the game	"We fixed the mast so we could use that" (MsgAlhafraWeFixedTheMastSo)	games/tla/text/en.po
 MsgAlhafraIfTheyCaughtAGood	the game	"If they caught a good breeze, they're probably way off to th" (MsgAlhafraIfTheyCaughtAGood)	games/tla/text/en.po
 MsgAlhafraIfOnlyWeHadThat	the game	"If only we had that ship, Alhafra could have been a powerful" (MsgAlhafraIfOnlyWeHadThat)	games/tla/text/en.po
 MsgAlhafraIHopeTradeDoesntMake	the game	"I hope trade doesn't make Alhafra get all big. I like how qu" (MsgAlhafraIHopeTradeDoesntMake)	games/tla/text/en.po
@@ -6277,7 +6277,7 @@ MsgAlhafraInteriorsBriggsDidntCommitAnyCrimes	the game	"Briggs didn't commit any
 MsgAlhafraInteriorsBriggsPaidForTheBoat	the game	"Briggs paid for the boat and then left in it. Why is everyon" (MsgAlhafraInteriorsBriggsPaidForTheBoat)	games/tla/text/en.po
 MsgAlhafraInteriorsIDontBelieveForOne	the game	"I don't believe for one second that Briggs was a pirate, rai" (MsgAlhafraInteriorsIDontBelieveForOne)	games/tla/text/en.po
 MsgAlhafraInteriorsFixingThatOldGuysHouse	the game	"Fixing that old guy's house is starting to drive us all craz" (MsgAlhafraInteriorsFixingThatOldGuysHouse)	games/tla/text/en.po
-MsgAlhafraInteriorsTheRepairsOnOurNeighbors	the game	"The repairs on our neighbors' house are moving slowly.The lo" (MsgAlhafraInteriorsTheRepairsOnOurNeighbors)	games/tla/text/en.po
+MsgAlhafraInteriorsTheRepairsOnOurNeighbors	the game	"The repairs on our neighbors' house are moving" (MsgAlhafraInteriorsTheRepairsOnOurNeighbors)	games/tla/text/en.po
 MsgAlhafraInteriorsMyHouseIsDamagedMore	the game	"My house is damaged more than I thought. Looks like I'm stil" (MsgAlhafraInteriorsMyHouseIsDamagedMore)	games/tla/text/en.po
 MsgAlhafraInteriorsMyHusbandAndIDont	the game	"My husband and I don't get out much, and it's nice to meet t" (MsgAlhafraInteriorsMyHusbandAndIDont)	games/tla/text/en.po
 MsgAlhafraInteriorsWillTheyEverGetOut	the game	"Will they ever get out of my house? It's starting to worry m" (MsgAlhafraInteriorsWillTheyEverGetOut)	games/tla/text/en.po
@@ -6294,7 +6294,7 @@ MsgAlhafraEvenIfWeFixIt	the game	"Even if we fix it, the columns and the walls w
 MsgAlhafraWithEveryonesHelpWeWere	the game	"With everyone's help, we were somehow able to avoid the wind" (MsgAlhafraWithEveryonesHelpWeWere)	games/tla/text/en.po
 MsgAlhafraMomWasHappyToHear	the game	"Mom was happy to hear that the repairs were coming along nic" (MsgAlhafraMomWasHappyToHear)	games/tla/text/en.po
 MsgAlhafraThereAreALotOf	the game	"There are a lot of houses in need of repair. Until the other" (MsgAlhafraThereAreALotOf)	games/tla/text/en.po
-MsgAlhafraThisIsJustTooMuch	the game	"This is just too much work for one man to get done.I need to" (MsgAlhafraThisIsJustTooMuch)	games/tla/text/en.po
+MsgAlhafraThisIsJustTooMuch	the game	"This is just too much work for one man to get" (MsgAlhafraThisIsJustTooMuch)	games/tla/text/en.po
 MsgAlhafraHesNeverGoingToGet	the game	"He's never going to get finished with that terrible attitude" (MsgAlhafraHesNeverGoingToGet)	games/tla/text/en.po
 MsgAlhafraTheresNoWayDadCan	the game	"There's no way Dad can fix this house up all by himself. It'" (MsgAlhafraTheresNoWayDadCan)	games/tla/text/en.po
 MsgAlhafraCarryingTheseThingsAllOver	the game	"Carrying these things all over has gotten my hands all torn " (MsgAlhafraCarryingTheseThingsAllOver)	games/tla/text/en.po
@@ -6330,7 +6330,7 @@ MsgAlhafraBriggsCameThroughHereAnd	the game	"Briggs came through here and disapp
 MsgAlhafraThePoorGuardWasBlindfolded	the game	"The poor guard was blindfolded when Briggs escaped, so he di" (MsgAlhafraThePoorGuardWasBlindfolded)	games/tla/text/en.po
 MsgChampaBriggsCameBackWithA	the game	"Briggs came back with a giant load of food! I've never been " (MsgChampaBriggsCameBackWithA)	games/tla/text/en.po
 MsgChampaDontTalkToMeAbout	the game	"Don't talk to me about food... I feel like I'm gonna be sick" (MsgChampaDontTalkToMeAbout)	games/tla/text/en.po
-MsgChampaLetsSeeThemCallChampa	the game	"Let's see them call Champa poor now!Ever since Briggs came b" (MsgChampaLetsSeeThemCallChampa)	games/tla/text/en.po
+MsgChampaLetsSeeThemCallChampa	the game	"Let's see them call Champa poor" (MsgChampaLetsSeeThemCallChampa)	games/tla/text/en.po
 MsgChampaHeyYouJustCameTo	the game	"Hey, you just came to Champa not too long ago, didn't you?" (MsgChampaHeyYouJustCameTo)	games/tla/text/en.po
 MsgChampaBriggsTookALongTime	the game	"Briggs took a long time to return to us. You want to know wh" (MsgChampaBriggsTookALongTime)	games/tla/text/en.po
 MsgChampaBriggsLooksSoReliableSo	the game	"Briggs looks so reliable, so sure of himself. I've never see" (MsgChampaBriggsLooksSoReliableSo)	games/tla/text/en.po
@@ -6350,12 +6350,12 @@ MsgChampaAllOfOurStockhousesAre	the game	"All of our stockhouses are so full of 
 MsgChampaEoleoSaidHeCouldntPlay	the game	"Eoleo said he couldn't play with us anymore, even though he'" (MsgChampaEoleoSaidHeCouldntPlay)	games/tla/text/en.po
 MsgChampaIfChampaGetsEnoughMoney	the game	"If Champa gets enough money, maybe we can stop with the loot" (MsgChampaIfChampaGetsEnoughMoney)	games/tla/text/en.po
 MsgChampaIsObabaInAGood	the game	"Is Obaba in a good mood now, or what? I noticed the change a" (MsgChampaIsObabaInAGood)	games/tla/text/en.po
-MsgChampaNobodyReallyLikesToPlay	the game	"Nobody really likes to play the role of a pirate.I'm sure ev" (MsgChampaNobodyReallyLikesToPlay)	games/tla/text/en.po
+MsgChampaNobodyReallyLikesToPlay	the game	"Nobody really likes to play the role of a" (MsgChampaNobodyReallyLikesToPlay)	games/tla/text/en.po
 MsgChampaWhoaYouYoureFelix	the game	"Whoa! You... You're !" (MsgChampaWhoaYouYoureFelix)	games/tla/text/en.po
-MsgChampaWhenBriggsSetSailWe	the game	"When Briggs set sail, we thought we'd never see him again.No" (MsgChampaWhenBriggsSetSailWe)	games/tla/text/en.po
+MsgChampaWhenBriggsSetSailWe	the game	"When Briggs set sail, we thought we'd never see him" (MsgChampaWhenBriggsSetSailWe)	games/tla/text/en.po
 MsgChampaIWasJustGazingOut	the game	"I was just gazing out at sea, and then I saw Briggs's ship.." (MsgChampaIWasJustGazingOut)	games/tla/text/en.po
 MsgContigoDoYouKnowAnythingAbout	the game	"Do you know anything about a legend about these people who c" (MsgContigoDoYouKnowAnythingAbout)	games/tla/text/en.po
-MsgContigoTheBeaconWithinJupiterLighthouse	the game	"The beacon within Jupiter Lighthouse will soon be lit.I know" (MsgContigoTheBeaconWithinJupiterLighthouse)	games/tla/text/en.po
+MsgContigoTheBeaconWithinJupiterLighthouse	the game	"The beacon within Jupiter Lighthouse will soon be" (MsgContigoTheBeaconWithinJupiterLighthouse)	games/tla/text/en.po
 MsgContigoIGuessThePeopleOf	the game	"I guess the people of Contigo lost the power they inherited " (MsgContigoIGuessThePeopleOf)	games/tla/text/en.po
 MsgContigoThePeopleOfAnemosPossessed	the game	"The people of Anemos possessed power over the wind. They cou" (MsgContigoThePeopleOfAnemosPossessed)	games/tla/text/en.po
 MsgContigoWhenThePowerOfAnemos	the game	"When the power of Anemos is lost, a group will come to light" (MsgContigoWhenThePowerOfAnemos)	games/tla/text/en.po
@@ -6364,7 +6364,7 @@ MsgContigoIfYouWantToGet	the game	"If you want to get a look at the Anemos geogl
 MsgContigoOurPeopleHaveLaboredFor	the game	"Our people have labored for some time to build the Wings of " (MsgContigoOurPeopleHaveLaboredFor)	games/tla/text/en.po
 MsgContigoTheAnemosBloodInOur	the game	"The Anemos blood in our veins often brings about strange mir" (MsgContigoTheAnemosBloodInOur)	games/tla/text/en.po
 MsgContigoSurelySomeoneWillComeSoon	the game	"Surely, someone will come soon to light the beacon atop the " (MsgContigoSurelySomeoneWillComeSoon)	games/tla/text/en.po
-MsgContigoThePowerOfTheWind	the game	"The power of the wind is not all that we've lost.We have los" (MsgContigoThePowerOfTheWind)	games/tla/text/en.po
+MsgContigoThePowerOfTheWind	the game	"The power of the wind is not all that we've" (MsgContigoThePowerOfTheWind)	games/tla/text/en.po
 MsgContigoThereWereTwoSiblingsBorn	the game	"There were two siblings born in Contigo. The older held grea" (MsgContigoThereWereTwoSiblingsBorn)	games/tla/text/en.po
 MsgContigoIThinkJupiterLighthouseWill	the game	"I think Jupiter Lighthouse will be lit soon. I don't know wh" (MsgContigoIThinkJupiterLighthouseWill)	games/tla/text/en.po
 MsgContigoItsHardToBelieveBut	the game	"It's hard to believe, but the Anemos really did have the pow" (MsgContigoItsHardToBelieveBut)	games/tla/text/en.po
@@ -6381,7 +6381,7 @@ MsgContigoALongTimeAgoThe	the game	"A long time ago, the tribes of Shaman and Co
 MsgContigoForALongTimeNow	the game	"For a long time now, Contigo has been without a hero. This d" (MsgContigoForALongTimeNow)	games/tla/text/en.po
 MsgContigoEverybodyThinksThePeopleOf	the game	"Everybody thinks the people of Contigo are strong, but we ju" (MsgContigoEverybodyThinksThePeopleOf)	games/tla/text/en.po
 MsgContigoSoonTheSiblingsWithThe	the game	"Soon, the siblings with the power of the Anemos will return " (MsgContigoSoonTheSiblingsWithThe)	games/tla/text/en.po
-MsgContigoThePowerOfTheAnemos	the game	"The power of the Anemos is all but gone in Contigo.However, " (MsgContigoThePowerOfTheAnemos)	games/tla/text/en.po
+MsgContigoThePowerOfTheAnemos	the game	"The power of the Anemos is all but gone in" (MsgContigoThePowerOfTheAnemos)	games/tla/text/en.po
 MsgContigoIDontHaveAnyPowers	the game	"I don't have any powers like the Anemos did, but my sister, " (MsgContigoIDontHaveAnyPowers)	games/tla/text/en.po
 MsgContigoTheBabysForeheadIsFurrowed	the game	"The baby's forehead is furrowed, like it's thinking." (MsgContigoTheBabysForeheadIsFurrowed)	games/tla/text/en.po
 MsgContigoBabuBawabaBibaw	the game	"Babu bawaba bibaw." (MsgContigoBabuBawabaBibaw)	games/tla/text/en.po
@@ -6399,7 +6399,7 @@ MsgContigoWeveHadSoManyPeople	the game	"We've had so many people coming to Conti
 MsgContigoAllTheWorkOnThe	the game	"All the work on the wings means that our inn is always full!" (MsgContigoAllTheWorkOnThe)	games/tla/text/en.po
 MsgContigoGottaMakeAllTheBeds	the game	"Gotta make all the beds before everyone returns from Anemos " (MsgContigoGottaMakeAllTheBeds)	games/tla/text/en.po
 MsgContigoIfIDontMakeDinner	the game	"If I don't make dinner now, it won't be ready in time for al" (MsgContigoIfIDontMakeDinner)	games/tla/text/en.po
-MsgContigoDidYouJustArriveIn	the game	"Did you just arrive in Contigo?Are you connected to the prop" (MsgContigoDidYouJustArriveIn)	games/tla/text/en.po
+MsgContigoDidYouJustArriveIn	the game	"Did you just arrive in" (MsgContigoDidYouJustArriveIn)	games/tla/text/en.po
 MsgContigoThePropheciesOfTheAnemos	the game	"The prophecies of the Anemos tell that someday soon, a true " (MsgContigoThePropheciesOfTheAnemos)	games/tla/text/en.po
 MsgContigoIWorkedMyselfHalfTo	the game	"I worked myself half to death yesterday. I feel miserable, b" (MsgContigoIWorkedMyselfHalfTo)	games/tla/text/en.po
 MsgContigoTheWingsOfAnemosAre	the game	"The Wings of Anemos are nearly complete... I think I'll take" (MsgContigoTheWingsOfAnemosAre)	games/tla/text/en.po
@@ -6420,16 +6420,16 @@ MsgContigoIveBeenReallyBusyLately	the game	"I've been really busy lately, but no
 MsgContigoWhatDoWeDoIf	the game	"What do we do if we made these wings, and then no boat shows" (MsgContigoWhatDoWeDoIf)	games/tla/text/en.po
 MsgContigoThereAreTooManyParts	the game	"There are too many parts! I think I'm going insane from all " (MsgContigoThereAreTooManyParts)	games/tla/text/en.po
 MsgContigoWhenIStartGettingIrritated	the game	"When I start getting irritated, I just go nuts. I think I sh" (MsgContigoWhenIStartGettingIrritated)	games/tla/text/en.po
-MsgContigoHowLongHaveWeBeen	the game	"How long have we been working on these stupid wings?When I s" (MsgContigoHowLongHaveWeBeen)	games/tla/text/en.po
+MsgContigoHowLongHaveWeBeen	the game	"How long have we been working on these stupid" (MsgContigoHowLongHaveWeBeen)	games/tla/text/en.po
 MsgContigoHaveYouTakenAGood	the game	"Have you taken a good look at the Anemos geoglyph?" (MsgContigoHaveYouTakenAGood)	games/tla/text/en.po
-MsgContigoThatSignHasATranslation	the game	"That sign has a translation of the characters on the wall.If" (MsgContigoThatSignHasATranslation)	games/tla/text/en.po
+MsgContigoThatSignHasATranslation	the game	"That sign has a translation of the characters on the" (MsgContigoThatSignHasATranslation)	games/tla/text/en.po
 MsgContigoIWantToGetA	the game	"I want to get a good look at the inside of the sanctum, but " (MsgContigoIWantToGetA)	games/tla/text/en.po
 MsgContigoTheMerchantHammetTookThe	the game	"The merchant Hammet took the gold in this room with him when" (MsgContigoTheMerchantHammetTookThe)	games/tla/text/en.po
 MsgContigoICantEvenImagineHow	the game	"I can't even imagine how cool it would be to see a boat like" (MsgContigoICantEvenImagineHow)	games/tla/text/en.po
 MsgContigoIDontKnowIfAnyone	the game	"I don't know if anyone in Contigo cares about what I'm doing" (MsgContigoIDontKnowIfAnyone)	games/tla/text/en.po
 MsgContigoWouldntThatBeTerribleIf	the game	"Wouldn't that be terrible if I got the door open and there w" (MsgContigoWouldntThatBeTerribleIf)	games/tla/text/en.po
 MsgContigoSomeoneToldMeThatHammet	the game	"Someone told me that Hammet went to a town called Kalay and " (MsgContigoSomeoneToldMeThatHammet)	games/tla/text/en.po
-MsgContigoFelixExaminedTheWallThere	the game	" examined the wall. There are characters carved into it.Hmmm" (MsgContigoFelixExaminedTheWallThere)	games/tla/text/en.po
+MsgContigoFelixExaminedTheWallThere	the game	" examined the wall. There are characters carved into" (MsgContigoFelixExaminedTheWallThere)	games/tla/text/en.po
 MsgContigoFelixExaminedTheSignThe	the game	" examined the sign. The characters from the wall are transla" (MsgContigoFelixExaminedTheSignThe)	games/tla/text/en.po
 MsgContigoTurnTheSlotAndGet	the game	"Turn the slot and get a prize! The lottery slots are over he" (MsgContigoTurnTheSlotAndGet)	games/tla/text/en.po
 MsgContigoDropSomeCashAndDouble	the game	"Drop some cash and double up! The hi-lo dice are over here!" (MsgContigoDropSomeCashAndDouble)	games/tla/text/en.po
@@ -6471,7 +6471,7 @@ MsgContigoAllOfThoseLegendsDid	the game	"All of those legends did nothing but bu
 MsgContigoIGuessTheLighthouseWas	the game	"I guess the lighthouse was lit because  and Hamma finally re" (MsgContigoIGuessTheLighthouseWas)	games/tla/text/en.po
 MsgContigoIvanDoesntRememberHisMother	the game	" doesn't remember his mother, because he was taken away at s" (MsgContigoIvanDoesntRememberHisMother)	games/tla/text/en.po
 MsgContigoFromTheLookOnIvans	the game	"From the look on 's face, whatever happened at the lighthous" (MsgContigoFromTheLookOnIvans)	games/tla/text/en.po
-MsgContigoHammaWillStayWithUs	the game	"Hamma will stay with us, but  is leaving again.The power of " (MsgContigoHammaWillStayWithUs)	games/tla/text/en.po
+MsgContigoHammaWillStayWithUs	the game	"Hamma will stay with us, but  is leaving" (MsgContigoHammaWillStayWithUs)	games/tla/text/en.po
 MsgContigoIWonderHowIvanFeels	the game	"I wonder how  feels now that he knows what happened to his m" (MsgContigoIWonderHowIvanFeels)	games/tla/text/en.po
 MsgContigoSomedayImGonnaFightIvan	the game	"Someday, I'm gonna fight , and then I'll be the legendary he" (MsgContigoSomedayImGonnaFightIvan)	games/tla/text/en.po
 MsgContigoBrrrBrrrItsBeenReally	the game	"Brrr...Brrr... It's been really cold since the lighthouse be" (MsgContigoBrrrBrrrItsBeenReally)	games/tla/text/en.po
@@ -6496,7 +6496,7 @@ MsgContigoWellIfThereArentGoing	the game	"Well, if there aren't going to be any 
 MsgContigoItsAlwaysSuchALetdown	the game	"It's always such a letdown when you finish off a major task " (MsgContigoItsAlwaysSuchALetdown)	games/tla/text/en.po
 MsgContigoNowThatTheWingsAreDone	the game	"Now that the wings are done, everyone who came to help out h" (MsgContigoNowThatTheWingsAreDone)	games/tla/text/en.po
 MsgContigoAllOfOurWorkAnd	the game	"All of our work and all of our celebration are finally at an" (MsgContigoAllOfOurWorkAnd)	games/tla/text/en.po
-MsgContigoTheInnHasBecomeSo	the game	"The inn has become so lonely now that everyone's gone home.W" (MsgContigoTheInnHasBecomeSo)	games/tla/text/en.po
+MsgContigoTheInnHasBecomeSo	the game	"The inn has become so lonely now that everyone's gone" (MsgContigoTheInnHasBecomeSo)	games/tla/text/en.po
 MsgContigoGoshWeWereSoBusy	the game	"Gosh... We were so busy, and now we're totally empty. I don'" (MsgContigoGoshWeWereSoBusy)	games/tla/text/en.po
 MsgContigoNowsMyChanceToExperiment	the game	"Now's my chance to experiment with some exciting new dishes!" (MsgContigoNowsMyChanceToExperiment)	games/tla/text/en.po
 MsgContigoItsGoingToBeA	the game	"It's going to be a little slow for a while, but I can't real" (MsgContigoItsGoingToBeA)	games/tla/text/en.po
@@ -6504,11 +6504,11 @@ MsgContigoTheInnIsBoundTo	the game	"The inn is bound to be slow for a little whi
 MsgContigoWhatAreWeGoingTo	the game	"What are we going to do? All the excitement is over, and I'm" (MsgContigoWhatAreWeGoingTo)	games/tla/text/en.po
 MsgContigoSeeingThatShipTakeFlight	the game	"Seeing that ship take flight was the most moving thing I've " (MsgContigoSeeingThatShipTakeFlight)	games/tla/text/en.po
 MsgContigoItWasAMiracleThat	the game	"It was a miracle that made all of the legends of the Anemos " (MsgContigoItWasAMiracleThat)	games/tla/text/en.po
-MsgContigoItWasAShockTo	the game	"It was a shock to see such a huge ship float.It made me real" (MsgContigoItWasAShockTo)	games/tla/text/en.po
+MsgContigoItWasAShockTo	the game	"It was a shock to see such a huge ship" (MsgContigoItWasAShockTo)	games/tla/text/en.po
 MsgContigoICantBelieveThatA	the game	"I can't believe that a ship just like the one in the geoglyp" (MsgContigoICantBelieveThatA)	games/tla/text/en.po
 MsgContigoThatFlyingShipLookedSo	the game	"That flying ship looked so fake... It didn't look anything l" (MsgContigoThatFlyingShipLookedSo)	games/tla/text/en.po
 MsgContigoLookCloselyAtTheGeoglyph	the game	"Look closely at the geoglyph. Study it, examine its details." (MsgContigoLookCloselyAtTheGeoglyph)	games/tla/text/en.po
-MsgContigoImConvincedTheresSomethingHidden	the game	"I'm convinced there's something hidden in the Sanctum.I just" (MsgContigoImConvincedTheresSomethingHidden)	games/tla/text/en.po
+MsgContigoImConvincedTheresSomethingHidden	the game	"I'm convinced there's something hidden in the" (MsgContigoImConvincedTheresSomethingHidden)	games/tla/text/en.po
 MsgContigoAllTheAmazingThingsWeve	the game	"All the amazing things we've seen and done, all the legends " (MsgContigoAllTheAmazingThingsWeve)	games/tla/text/en.po
 MsgContigoHesAnOddBoyBut	the game	"He's an odd boy, but I'm glad that  has returned to Contigo " (MsgContigoHesAnOddBoyBut)	games/tla/text/en.po
 MsgContigoWeAllCameTogetherAnd	the game	"We all came together and worked to make the legends come tru" (MsgContigoWeAllCameTogetherAnd)	games/tla/text/en.po
@@ -6525,14 +6525,14 @@ MsgContigoTheCityOfTheAnemos	the game	"The city of the Anemos rose up into the s
 MsgContigoWaitTheCityOfAnemos	the game	"Wait" (MsgContigoWaitTheCityOfAnemos)	games/tla/text/en.po
 MsgChampaIsaac	the game	"!" (MsgChampaIsaac)	games/tla/text/en.po
 MsgAlhafraInteriorsLegendsSaidThatCrossboneIsle	the game	"Legends said that Crossbone Isle could be found in the middl" (MsgAlhafraInteriorsLegendsSaidThatCrossboneIsle)	games/tla/text/en.po
-MsgAlhafraItLooksLikeThisWell	the game	"It looks like this well doesn't get a lot of use.I guess it'" (MsgAlhafraItLooksLikeThisWell)	games/tla/text/en.po
-MsgAlhafraInteriorsSeasonalVeggiesBoilingWithSome	the game	"Seasonal veggies boiling with some lamb meat.The oyster seas" (MsgAlhafraInteriorsSeasonalVeggiesBoilingWithSome)	games/tla/text/en.po
-MsgAlhafraInteriorsThereIsASeafoodPie	the game	"There is a seafood pie baking in the oven.Its reputation for" (MsgAlhafraInteriorsThereIsASeafoodPie)	games/tla/text/en.po
-MsgAlhafraInteriorsItLooksLikeSomeKind	the game	"It looks like some kind of seafood soup.It smells like the o" (MsgAlhafraInteriorsItLooksLikeSomeKind)	games/tla/text/en.po
-MsgAlhafraInteriorsItsAlhafrasFamousBroiledLobsterits	the game	"It's Alhafra's famous broiled lobster!It's bigger than I cou" (MsgAlhafraInteriorsItsAlhafrasFamousBroiledLobsterits)	games/tla/text/en.po
-MsgAlhafraInteriorsThatSeafoodStewHasAn	the game	"That seafood stew has an abundant variety of fish.One bite o" (MsgAlhafraInteriorsThatSeafoodStewHasAn)	games/tla/text/en.po
+MsgAlhafraItLooksLikeThisWell	the game	"It looks like this well doesn't get a lot of" (MsgAlhafraItLooksLikeThisWell)	games/tla/text/en.po
+MsgAlhafraInteriorsSeasonalVeggiesBoilingWithSome	the game	"Seasonal veggies boiling with some lamb" (MsgAlhafraInteriorsSeasonalVeggiesBoilingWithSome)	games/tla/text/en.po
+MsgAlhafraInteriorsThereIsASeafoodPie	the game	"There is a seafood pie baking in the" (MsgAlhafraInteriorsThereIsASeafoodPie)	games/tla/text/en.po
+MsgAlhafraInteriorsItLooksLikeSomeKind	the game	"It looks like some kind of seafood" (MsgAlhafraInteriorsItLooksLikeSomeKind)	games/tla/text/en.po
+MsgAlhafraInteriorsItsAlhafrasFamousBroiledLobsterits	the game	"It's Alhafra's famous broiled" (MsgAlhafraInteriorsItsAlhafrasFamousBroiledLobsterits)	games/tla/text/en.po
+MsgAlhafraInteriorsThatSeafoodStewHasAn	the game	"That seafood stew has an abundant variety of" (MsgAlhafraInteriorsThatSeafoodStewHasAn)	games/tla/text/en.po
 MsgContigoTheresABrightRedSoup	the game	"There's a bright-red soup full of beans and tomatoes simmeri" (MsgContigoTheresABrightRedSoup)	games/tla/text/en.po
-MsgContigoAhTheSmellOfFresh	the game	"Ah, the smell of fresh corn bread cooking in the oven!One wh" (MsgContigoAhTheSmellOfFresh)	games/tla/text/en.po
+MsgContigoAhTheSmellOfFresh	the game	"Ah, the smell of fresh corn bread cooking in the" (MsgContigoAhTheSmellOfFresh)	games/tla/text/en.po
 MsgContigoContigosFamousForTheseCookies	the game	"Contigo's famous for these cookies they make" (MsgContigoContigosFamousForTheseCookies)	games/tla/text/en.po
 ACTOR_MANOR_GUARD	the game	"The mayor is in a meeting" through Alhafra_MayorInAMeeting; a soldier at the manor door (its render)	games/tla/src/scene/alhafra.c
 ACTOR_HUNGRY_BOYS_FATHER	the game	"No one is allowed beyond this point." (MsgAlhafraNoOneIsAllowedBeyondThis); Alhafra_FatherLetsPartyToCave talks through him once Briggs is caught	games/tla/src/scene/alhafra.c
@@ -6554,7 +6554,7 @@ ACTOR_MAN_UNMOVED_BY_THE_SHIP	the game	"I don't know why everyone's so excited a
 ACTOR_WOMAN_ON_ALHAFRAS_FUTURE	the game	"Alhafra" (MsgDebugAreaName + 24); "With that ship, Alhafra's going to become a big, important town"	games/tla/src/scene/alhafra.c
 ACTOR_OLD_MAN_WAITING_FOR_THIS_DAY	the game	"I've been waiting for this day for years!" (MsgAlhafraIveBeenWaitingForThis); "I've been waiting for this day for years!"	games/tla/src/scene/alhafra.c
 ACTOR_OLD_MAN_ON_SAILS	the game	"The secret to harnessing the wind's power is building a small" (MsgAlhafraTheSecretToHarnessingThe); "The secret to harnessing the wind's power is building a small"	games/tla/src/scene/alhafra.c
-ACTOR_OLD_WOMAN_ON_FISHING_BOATS	the game	"Huge boats carry more, but we need smaller ships to catch the fish"	games/tla/src/scene/alhafra.c
+ACTOR_OLD_WOMAN_ON_FISHING_BOATS	the game	"Huge boats carry more, but we need smaller ships to catch the" (MsgAlhafraHugeBoatsCarryMoreBut); "Huge boats carry more, but we need smaller ships to catch the fish"	games/tla/src/scene/alhafra.c
 ACTOR_ROPE_POST	its uses	Rope_Place(0, FLAG_ROPE_LASHED, 8, 9) strings the Lash rope between rows 8 and 9, sprite 407 posts (render probe --scene EasternAlhafra)	games/tla/src/scene/eastern_alhafra.c
 ACTOR_FIRST_CRATE	what the player sees	rows 10 and 11 wear sprite 287, a wooden crate (its render); flag 0x8a0 and 0x8a1 sink them	games/tla/src/scene/eastern_alhafra.c
 ACTOR_TIGHTROPE_START	its uses	Tightrope_Place(0, 8, 9) in Champa's Scene_Initialize	games/tla/src/scene/champa.c
@@ -6663,7 +6663,7 @@ ACTOR_LEMURIAN	the game	"Why, that was Psynergy, wasn't it?" (MsgLemuriaRecogniz
 ACTOR_RIMES_STATUE	its uses	row 13 wears SPRITE_BLUE_STATUE and takes AncientLemuria_ShakeTheStatue while Rime hides; was ACTOR_HIDING_RIME, whose XXX this settles	games/tla/src/scene/ancient_lemuria.c
 ACTOR_BOY_ON_THE_WINGS	the game	"I wonder if these giant wings will really make it fly..." (MsgIWonderIfThese), row 16 (sprite 106, a boy)	games/tla/src/scene/atteka_inlet.c
 ACTOR_CANNON	what the player sees	lemuria_dock.c's actor 9 wears sprite 420, a cannon (spr_420.png, its render), shown from patch 1 once flag 0x90a is set, the flag Loho's diggers read once the cannon is gone	games/tla/src/scene/lemuria_dock.c
-ACTOR_HAMMETS_MESSENGER	the game	"Master Hammet requested that I deliver this to Isaac" in AttekaInlet_HammetsMessengerArrives, row 24	games/tla/src/scene/atteka_inlet.c
+ACTOR_HAMMETS_MESSENGER	the game	"Master Hammet requested that I deliver this to" (MsgHeyWait2); its line in AttekaInlet_HammetsMessengerArrives; "Master Hammet requested that I deliver this to Isaac" in AttekaInlet_HammetsMessengerArrives, row 24	games/tla/src/scene/atteka_inlet.c
 ACTOR_SHIPWRIGHT	the game	"Where do you think you're going?" (MsgWhereDoYouThink); "Where do you think you're going?" ... "We worked really hard on that ship of yours!" in AttekaInlet_ShipwrightsStopTheParty, rows 9 and 10 (sprite 79)	games/tla/src/scene/atteka_inlet.c
 ACTOR_SHORE_SCHOLAR	what the player sees	row 11 of the shore wears SPRITE_BEARDED_MAN_IN_LONG_ROBE (its render)	games/tla/src/scene/atteka_inlet.c
 ACTOR_GEODE	its code	row 14 is SPRITE_VENUS_DJINNI; Djinn_JoinParty(14, ... DJINNI_GEODE)	games/tla/src/scene/atteka_inlet.c
@@ -6732,7 +6732,7 @@ MsgGaiaRockInsideWhoAreYouHowDid	the game	"Who are you? How did you get here?" (
 MsgGaiaRockInsideIfYouUnderstandThenGet	the game	"If you understand, then get out of my way. Stand over there." (MsgGaiaRockInsideIfYouUnderstandThenGet)	games/tla/src/scene/gaia_rock_inside.c
 MsgGaiaRockInsideHowManyCasksDoesIt	the game	"How many casks does it take to weaken this stupid serpent?" (MsgGaiaRockInsideHowManyCasksDoesIt)	games/tla/src/scene/gaia_rock_inside.c
 MsgGaiaRockInsideMoveOutOfTheWay	the game	"Move out of the way there." (MsgGaiaRockInsideMoveOutOfTheWay)	games/tla/src/scene/gaia_rock_inside.c
-MsgGaiaRockInsideTheSerpentIsStillToo	the game	"The serpent is still too strong.If only there were a way t" (MsgGaiaRockInsideTheSerpentIsStillToo)	games/tla/src/scene/gaia_rock_inside.c
+MsgGaiaRockInsideTheSerpentIsStillToo	the game	"The serpent is still too" (MsgGaiaRockInsideTheSerpentIsStillToo)	games/tla/src/scene/gaia_rock_inside.c
 MsgGaiaRockInsideWhoDoTheyThinkThey	the game	"Who do they think they are? I'm the only one who can save Kushinada.{e" (MsgGaiaRockInsideWhoDoTheyThinkThey)	games/tla/src/scene/gaia_rock_inside.c
 MsgGaiaRockInsideTheSerpentWithItsEyes	the game	"The serpent, with its eyes closed, looks almost alive." (MsgGaiaRockInsideTheSerpentWithItsEyes)	games/tla/src/scene/gaia_rock_inside.c
 MsgGaiaRockInsideSearchedTheSlateThereIs	the game	" searched the slate. There is an inscription.{page_break" (MsgGaiaRockInsideSearchedTheSlateThereIs)	games/tla/src/scene/gaia_rock_inside.c
@@ -6746,7 +6746,7 @@ MsgGarohDontYouLoveTheSight	the game	"Don't you love the sight of the full moon?
 MsgGarohItsGrimLuckThatBrings	the game	"It's grim luck that brings strangers here in the gloom of the full moo" (MsgGarohItsGrimLuckThatBrings)	games/tla/src/scene/garoh.c
 MsgGarohSuchGorgeousMoonlightIfOnly	the game	"Such gorgeous moonlight... If only I could take off this hood...{end_w" (MsgGarohSuchGorgeousMoonlightIfOnly)	games/tla/src/scene/garoh.c
 MsgGarohWhichOneOfUsWas	the game	"Which one of us was it who removed his hood in front of these stranger" (MsgGarohWhichOneOfUsWas)	games/tla/src/scene/garoh.c
-MsgGarohForeignersOnlyComeHereEn	the game	"Foreigners only come here en route to Air's Rock.Only a ch" (MsgGarohForeignersOnlyComeHereEn)	games/tla/src/scene/garoh.c
+MsgGarohForeignersOnlyComeHereEn	the game	"Foreigners only come here en route to Air's" (MsgGarohForeignersOnlyComeHereEn)	games/tla/src/scene/garoh.c
 MsgGarohTheNightOfTheFull	the game	"The night of the full moon is usually so festive" (MsgGarohTheNightOfTheFull)	games/tla/src/scene/garoh.c
 MsgGarohWhatOutsidersHere	the game	"What!? Outsiders, here?" (MsgGarohWhatOutsidersHere)	games/tla/src/scene/garoh.c
 MsgGarohHaowooo	the game	"Haowooo!!!" (MsgGarohHaowooo)	games/tla/src/scene/garoh.c
@@ -6757,7 +6757,7 @@ MsgGarohMahaSaidThatYouWere	the game	"Maha said that you were the only outsiders
 MsgGarohIHeardThereWereOther	the game	"I heard there were other werecreatures in Osenia, in a few places...{p" (MsgGarohIHeardThereWereOther)	games/tla/src/scene/garoh.c
 MsgGarohHeyItsYouGuysThanks	the game	"Hey, it's you guys! Thanks for last night!" (MsgGarohHeyItsYouGuysThanks)	games/tla/src/scene/garoh.c
 MsgGarohImTheReasonYouCan	the game	"I'm the reason you can stay in our village and we don't have to wear h" (MsgGarohImTheReasonYouCan)	games/tla/src/scene/garoh.c
-MsgGarohHowCouldTheseOutsidersHave	the game	"How could these outsiders have learned Reveal?These guys m" (MsgGarohHowCouldTheseOutsidersHave)	games/tla/src/scene/garoh.c
+MsgGarohHowCouldTheseOutsidersHave	the game	"How could these outsiders have learned" (MsgGarohHowCouldTheseOutsidersHave)	games/tla/src/scene/garoh.c
 MsgGarohIThoughtWedNeverBe	the game	"I thought we'd never be able to talk to outsiders about our secret...{" (MsgGarohIThoughtWedNeverBe)	games/tla/src/scene/garoh.c
 MsgGarohINeverThoughtIdBe	the game	"I never thought I'd be so happy to have our secret out in the open!{en" (MsgGarohINeverThoughtIdBe)	games/tla/src/scene/garoh.c
 MsgGarohMahaSaidTheseTravelersWere	the game	"Maha said these travelers were like us" (MsgGarohMahaSaidTheseTravelersWere)	games/tla/src/scene/garoh.c
@@ -6772,12 +6772,12 @@ MsgGarohInteriorsOurOldestSonIsAlways	the game	"Our oldest son is always scamper
 MsgGarohInteriorsNoFairMyBrotherAlways	the game	"No fair! My brother always gets to go out late!" (MsgGarohInteriorsNoFairMyBrotherAlways)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsOutsidersCouldNeverUnderstandThe	the game	"Outsiders could never understand the gift the moon has given us...{end" (MsgGarohInteriorsOutsidersCouldNeverUnderstandThe)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsThatPupOfMineJust	the game	"That pup of mine just won't listen. He went out when he shouldn't have" (MsgGarohInteriorsThatPupOfMineJust)	games/tla/src/scene/garoh_interiors.c
-MsgGarohInteriorsWhatMadeMasterMahaTake	the game	"What made Master Maha take my brother into the rock?I want" (MsgGarohInteriorsWhatMadeMasterMahaTake)	games/tla/src/scene/garoh_interiors.c
-MsgGarohInteriorsGarohExistsToProtectAirs	the game	"Garoh exists to protect Air's Rock.In exchange, we gain it" (MsgGarohInteriorsGarohExistsToProtectAirs)	games/tla/src/scene/garoh_interiors.c
+MsgGarohInteriorsWhatMadeMasterMahaTake	the game	"What made Master Maha take my brother into the" (MsgGarohInteriorsWhatMadeMasterMahaTake)	games/tla/src/scene/garoh_interiors.c
+MsgGarohInteriorsGarohExistsToProtectAirs	the game	"Garoh exists to protect Air's" (MsgGarohInteriorsGarohExistsToProtectAirs)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsSoYouveHeardOfWhirlwind	the game	"So you've heard of Whirlwind? Most people haven't" (MsgGarohInteriorsSoYouveHeardOfWhirlwind)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsIveHeardAboutTheWind	the game	"I've heard about the Wind Stone" (MsgGarohInteriorsIveHeardAboutTheWind)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsWeHaveOtherPowersThan	the game	"We have other powers than just Whirlwind" (MsgGarohInteriorsWeHaveOtherPowersThan)	games/tla/src/scene/garoh_interiors.c
-MsgGarohInteriorsAndDifferentPeopleUseWhirlwind	the game	"And different people use Whirlwind different ways.Master M" (MsgGarohInteriorsAndDifferentPeopleUseWhirlwind)	games/tla/src/scene/garoh_interiors.c
+MsgGarohInteriorsAndDifferentPeopleUseWhirlwind	the game	"And different people use Whirlwind different" (MsgGarohInteriorsAndDifferentPeopleUseWhirlwind)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsIWishIKnewWhat	the game	"I wish I knew what would happen... Something weird, I guess." (MsgGarohInteriorsIWishIKnewWhat)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsWhenOurPeopleGrowOlder	the game	"When our people grow older, they generate strange powers...{page_break" (MsgGarohInteriorsWhenOurPeopleGrowOlder)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsMyMateIsCloseTo	the game	"My mate is close to obtaining the power he's been seeking..." (MsgGarohInteriorsMyMateIsCloseTo)	games/tla/src/scene/garoh_interiors.c
@@ -6793,14 +6793,14 @@ MsgGarohInteriorsAirsRockCanGetQuite	the game	"Air's Rock can get quite desolate
 MsgGarohInteriorsZzzzZzzzWhatAWaste	the game	"Zzzz... Zzzz... What a waste... Just a big rock..." (MsgGarohInteriorsZzzzZzzzWhatAWaste)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsZzzWhuzzaWhirlwindWindStone	the game	"Zzz... Whuzza? Whirlwind? Wind Stone? Zzzzrrrgg..." (MsgGarohInteriorsZzzWhuzzaWhirlwindWindStone)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsItOnlyRainsAFew	the game	"It only rains a few times a year there" (MsgGarohInteriorsItOnlyRainsAFew)	games/tla/src/scene/garoh_interiors.c
-MsgGarohInteriorsMostPeopleSeeNothingOf	the game	"Most people see nothing of the true Air's Rock.Our current" (MsgGarohInteriorsMostPeopleSeeNothingOf)	games/tla/src/scene/garoh_interiors.c
+MsgGarohInteriorsMostPeopleSeeNothingOf	the game	"Most people see nothing of the true Air's" (MsgGarohInteriorsMostPeopleSeeNothingOf)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsClimbedAllOverThatStupid	the game	"...Climbed all over that stupid rock, and for what? Nothing!" (MsgGarohInteriorsClimbedAllOverThatStupid)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsThatRockWasHugeHow	the game	"That rock was huge. How was I supposed to make it spin?" (MsgGarohInteriorsThatRockWasHugeHow)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsThePeopleHereMayBe	the game	"The people here may be different, but they certainly are nice...{page_" (MsgGarohInteriorsThePeopleHereMayBe)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsAndPartyStayedTheNight	the game	" and party stayed the night at the inn." (MsgGarohInteriorsAndPartyStayedTheNight)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsYouFolksDidntSleepMuch	the game	"You folks didn't sleep much last night... You don't look like you got " (MsgGarohInteriorsYouFolksDidntSleepMuch)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsHeyItsYouThanksFor	the game	"Hey! It's you! Thanks for looking out for our son last night!{page_bre" (MsgGarohInteriorsHeyItsYouThanksFor)	games/tla/src/scene/garoh_interiors.c
-MsgGarohInteriorsEveryoneIsAmazedThatYou	the game	"Everyone is amazed that you learned Reveal at Air's Rock!I" (MsgGarohInteriorsEveryoneIsAmazedThatYou)	games/tla/src/scene/garoh_interiors.c
+MsgGarohInteriorsEveryoneIsAmazedThatYou	the game	"Everyone is amazed that you learned Reveal at Air's" (MsgGarohInteriorsEveryoneIsAmazedThatYou)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsMyBrotherShouldHaveGotten	the game	"My brother should have gotten in trouble, but they barely even got mad" (MsgGarohInteriorsMyBrotherShouldHaveGotten)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsTheYoungerTheWerewolfThe	the game	"The younger the werewolf, the less control he has over his wolf form.." (MsgGarohInteriorsTheYoungerTheWerewolfThe)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsOhThankGoodnessEverythingWorked	the game	"Oh, thank goodness! Everything worked out, and my husband's not mad..." (MsgGarohInteriorsOhThankGoodnessEverythingWorked)	games/tla/src/scene/garoh_interiors.c
@@ -6818,7 +6818,7 @@ MsgGarohInteriorsIThoughtICouldBecome	the game	"I thought I could become a leade
 MsgGarohInteriorsSoNowEvenOutsidersAre	the game	"So now, even outsiders are learning Reveal" (MsgGarohInteriorsSoNowEvenOutsidersAre)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsWhatDoYouThinkIll	the game	"What do you think? I'll bet these weapons suit you better than any fan" (MsgGarohInteriorsWhatDoYouThinkIll)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsIPreferTheToothAnd	the game	"I prefer the tooth and claw, myself, but whatever..." (MsgGarohInteriorsIPreferTheToothAnd)	games/tla/src/scene/garoh_interiors.c
-MsgGarohInteriorsWhenWeChangeFormIts	the game	"When we change form, it's best to be unclothed.But when yo" (MsgGarohInteriorsWhenWeChangeFormIts)	games/tla/src/scene/garoh_interiors.c
+MsgGarohInteriorsWhenWeChangeFormIts	the game	"When we change form, it's best to be" (MsgGarohInteriorsWhenWeChangeFormIts)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsMahaSaysThatWhenWere	the game	"Maha says that when we're wolves, we don't need to wear armor...{page_" (MsgGarohInteriorsMahaSaysThatWhenWere)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsIveHeardStoriesAboutOther	the game	"I've heard stories about other mountains like our own Air's Rock...{pa" (MsgGarohInteriorsIveHeardStoriesAboutOther)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsIHeardThatOneThats	the game	"I heard that one that's across the Eastern Sea is really pretty, too.{" (MsgGarohInteriorsIHeardThatOneThats)	games/tla/src/scene/garoh_interiors.c
@@ -6830,11 +6830,11 @@ MsgGarohInteriorsIveHeardStoriesAboutOtherPlaces	the game	"I've heard stories ab
 MsgGarohInteriorsHeSaidIfTheyWere	the game	"He said if they were werewolves, he'd want them to take his place...{p" (MsgGarohInteriorsHeSaidIfTheyWere)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsIfIUsedALever	the game	"If I used a lever, I could probably make that rock spin..." (MsgGarohInteriorsIfIUsedALever)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsIveHeardAboutYouThey	the game	"I've heard about you. They say you're special, like the people in this" (MsgGarohInteriorsIveHeardAboutYouThey)	games/tla/src/scene/garoh_interiors.c
-MsgGarohInteriorsAmITheOnlyOne	the game	"Am I the only one here who isn't special!?Please, won't so" (MsgGarohInteriorsAmITheOnlyOne)	games/tla/src/scene/garoh_interiors.c
-MsgGarohInteriorsEeeeewTheyreFryingUpBug	the game	"Eeeeew! They're frying up bug larvae!!It looks awful! But " (MsgGarohInteriorsEeeeewTheyreFryingUpBug)	games/tla/src/scene/garoh_interiors.c
+MsgGarohInteriorsAmITheOnlyOne	the game	"Am I the only one here who isn't" (MsgGarohInteriorsAmITheOnlyOne)	games/tla/src/scene/garoh_interiors.c
+MsgGarohInteriorsEeeeewTheyreFryingUpBug	the game	"Eeeeew! They're frying up bug" (MsgGarohInteriorsEeeeewTheyreFryingUpBug)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsItsLambOnTheBone	the game	"It's lamb on the bone, broiled over an open flame. The lamb is golden " (MsgGarohInteriorsItsLambOnTheBone)	games/tla/src/scene/garoh_interiors.c
-MsgGarohInteriorsHuhWhatIsThatLobster	the game	"Huh, what is that!? Lobster grilled in the shell!I'd like " (MsgGarohInteriorsHuhWhatIsThatLobster)	games/tla/src/scene/garoh_interiors.c
-MsgGarohInteriorsNewtsSkeweredOverAnOpen	the game	"Newts skewered over an open flame.Are they making food or " (MsgGarohInteriorsNewtsSkeweredOverAnOpen)	games/tla/src/scene/garoh_interiors.c
+MsgGarohInteriorsHuhWhatIsThatLobster	the game	"Huh, what is that!? Lobster grilled in the" (MsgGarohInteriorsHuhWhatIsThatLobster)	games/tla/src/scene/garoh_interiors.c
+MsgGarohInteriorsNewtsSkeweredOverAnOpen	the game	"Newts skewered over an open" (MsgGarohInteriorsNewtsSkeweredOverAnOpen)	games/tla/src/scene/garoh_interiors.c
 MsgGarohInteriorsThereAreLotsOfStrange	the game	"There are lots of strange- looking plants boiling in that large pot.{p" (MsgGarohInteriorsThereAreLotsOfStrange)	games/tla/src/scene/garoh_interiors.c
 gGaroh_VillageActorPlacements	its uses	Scene_GetActorPlacements returns it for SceneId_Garoh, the village itself	games/tla/src/scene/garoh.c
 gGaroh_HypnosSwordChestActorPlacements	its uses	returned for SceneId_GarohHypnosSwordChest, the room's scene id	games/tla/src/scene/garoh.c
@@ -7007,8 +7007,8 @@ ACTOR_KUSHINADA	what the player sees	actor 17 wears sprite 32, the girl in red; 
 ACTOR_WOMAN_ON_SUSA	the game	"Susa's not here. I believe he went to Mt. Mikage." (MsgSusaSNot), actor 8 of Susa's house, sprite 30	games/tla/src/scene/izumo_interiors.c
 ACTOR_PENGUS	what the player sees	actor 9 of the icebergs' islet wears sprite 399, a penguin; Islets_TalkToPengus speaks through it, "Pen pen!" (its render)	games/tla/src/scene/islets.c
 ACTOR_PENGULINA	what the player sees	actor 19 wears sprite 400, a penguin with a bow; Islets_TalkToPengulina (its render)	games/tla/src/scene/islets.c
-ACTOR_COW	the game	placed actor 22 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
-ACTOR_DOG	the game	placed actor 21 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
+ACTOR_COW	the game	"Moo." (MsgLemuriaMoo); its line; placed actor 22 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
+ACTOR_DOG	the game	"Woof!" (MsgLemuriaWoofRrrrrroof); its line; placed actor 21 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_BIRD	the game	placed actor 11; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_LONESOME_GEORGE	what the player sees	actor 9 of the turtle's islet wears sprite 162, a turtle; Islets_RideOnLonesomeGeorge (its render)	games/tla/src/scene/islets.c
 ACTOR_WITCH_DOCTOR	what the player sees	actor 14 of the final chamber wears sprite 27, Akafubu with the feathered headdress (its render), in GabombaStatueChamber_GabombaNamesWitchDoctor	games/tla/src/scene/gabomba_statue_chamber.c
@@ -7046,14 +7046,14 @@ MsgLemuriaInteriorsAllOfMembersOfSenate	the game	"All of the members of the sena
 MsgLemuriaInteriorsCertainlyLemuriaHasLostSome	the game	"Certainly, Lemuria has lost some of the splendor that once filled its " (MsgLemuriaInteriorsCertainlyLemuriaHasLostSome; was MsgLemuriaInteriors24)	games/tla/src/scene/lemuria_interiors.c
 MsgLemuriaInteriorsEvenThoughWeNoLonger	the game	"Even though we no longer prepare the draught, the water of our spring " (MsgLemuriaInteriorsEvenThoughWeNoLonger; was MsgLemuriaInteriors25)	games/tla/src/scene/lemuria_interiors.c
 MsgLemuriaInteriorsHonestlyImAmazedThatAnyone	the game	"Honestly, I'm amazed that anyone can travel so far across the world in" (MsgLemuriaInteriorsHonestlyImAmazedThatAnyone; was MsgLemuriaInteriors26)	games/tla/src/scene/lemuria_interiors.c
-MsgLemuriaInteriorsTheresBookCalledGreatAdventures	the game	"There's a book called The Great Adventures of Lunpa. ...Written by Lun" (MsgLemuriaInteriorsTheresBookCalledGreatAdventures; was MsgLemuriaInteriors27)	games/tla/src/scene/lemuria_interiors.c
-MsgLemuriaInteriorsIFoundLetterFromBabi	the game	"I found a letter from Babi. On the outside, it reads, To my dear frien" (MsgLemuriaInteriorsIFoundLetterFromBabi; was MsgLemuriaInteriors28)	games/tla/src/scene/lemuria_interiors.c
-MsgLemuriaInteriorsHeresBookCalledHistory	the game	"Here's a book called The History of Lemuria. An excerpt: Only traces o" (MsgLemuriaInteriorsHeresBookCalledHistory; was MsgLemuriaInteriors29)	games/tla/src/scene/lemuria_interiors.c
-MsgLemuriaInteriorsHeresBookCalledElementalLighthouses	the game	"Here's a book called Elemental Lighthouses. It reads, The beacons of t" (MsgLemuriaInteriorsHeresBookCalledElementalLighthouses; was MsgLemuriaInteriors30)	games/tla/src/scene/lemuria_interiors.c
-MsgLemuriaInteriorsHeresBookCalledGreatLemurian	the game	"Here's a book called The Great Lemurian People. The chosen master of w" (MsgLemuriaInteriorsHeresBookCalledGreatLemurian; was MsgLemuriaInteriors31)	games/tla/src/scene/lemuria_interiors.c
-MsgLemuriaInteriorsHeresBookCalledAlchemy	the game	"Here's a book called Alchemy and Ancient Civilization: Part I. Through" (MsgLemuriaInteriorsHeresBookCalledAlchemy; was MsgLemuriaInteriors32)	games/tla/src/scene/lemuria_interiors.c
-MsgLemuriaInteriorsHeresBookCalledAlchemyAndAncient	the game	"Here's a book called Alchemy and Ancient Civilization: Part II. Those " (MsgLemuriaInteriorsHeresBookCalledAlchemyAndAncient; was MsgLemuriaInteriors33)	games/tla/src/scene/lemuria_interiors.c
-MsgLemuriaInteriorsHeresBookCalledDiary	the game	"Here's a book called The Diary of Hydros. is most definitely still ali" (MsgLemuriaInteriorsHeresBookCalledDiary; was MsgLemuriaInteriors34)	games/tla/src/scene/lemuria_interiors.c
+MsgLemuriaInteriorsTheresBookCalledGreatAdventures	the game	"There's a book called" (MsgLemuriaInteriorsTheresBookCalledGreatAdventures; was MsgLemuriaInteriors27)	games/tla/src/scene/lemuria_interiors.c
+MsgLemuriaInteriorsIFoundLetterFromBabi	the game	"I found a letter from Babi. On the outside, it reads" (MsgLemuriaInteriorsIFoundLetterFromBabi; was MsgLemuriaInteriors28)	games/tla/src/scene/lemuria_interiors.c
+MsgLemuriaInteriorsHeresBookCalledHistory	the game	"Here's a book called" (MsgLemuriaInteriorsHeresBookCalledHistory; was MsgLemuriaInteriors29)	games/tla/src/scene/lemuria_interiors.c
+MsgLemuriaInteriorsHeresBookCalledElementalLighthouses	the game	"Here's a book called" (MsgLemuriaInteriorsHeresBookCalledElementalLighthouses; was MsgLemuriaInteriors30)	games/tla/src/scene/lemuria_interiors.c
+MsgLemuriaInteriorsHeresBookCalledGreatLemurian	the game	"Here's a book called" (MsgLemuriaInteriorsHeresBookCalledGreatLemurian; was MsgLemuriaInteriors31)	games/tla/src/scene/lemuria_interiors.c
+MsgLemuriaInteriorsHeresBookCalledAlchemy	the game	"Here's a book called" (MsgLemuriaInteriorsHeresBookCalledAlchemy; was MsgLemuriaInteriors32)	games/tla/src/scene/lemuria_interiors.c
+MsgLemuriaInteriorsHeresBookCalledAlchemyAndAncient	the game	"Here's a book called" (MsgLemuriaInteriorsHeresBookCalledAlchemyAndAncient; was MsgLemuriaInteriors33)	games/tla/src/scene/lemuria_interiors.c
+MsgLemuriaInteriorsHeresBookCalledDiary	the game	"Here's a book called" (MsgLemuriaInteriorsHeresBookCalledDiary; was MsgLemuriaInteriors34)	games/tla/src/scene/lemuria_interiors.c
 MsgLemuriaInteriorsWhatInWhatsWithAll	the game	"What in°!!! What's with all these bathrobes?!? Where are the baths? " (MsgLemuriaInteriorsWhatInWhatsWithAll; was MsgLemuriaInteriors35)	games/tla/src/scene/lemuria_interiors.c
 MsgLemuriaPalaceHeIsStillInChambers	the game	"He is still in chambers with Lord Conservato. Why is he granting them " (MsgLemuriaPalaceHeIsStillInChambers; was MsgLemuriaPalace01)	games/tla/src/scene/lemuria_palace.c
 MsgLemuriaPalaceIfYouSeekCounsel	the game	"If you seek the counsel of His Highness, the king, follow this passage" (MsgLemuriaPalaceIfYouSeekCounsel; was MsgLemuriaPalace02)	games/tla/src/scene/lemuria_palace.c
@@ -7142,7 +7142,7 @@ MsgLohoYouveAcquiredSplendidCannonJust	the game	"You've acquired a splendid cann
 MsgLohoItWorriesMeToNo	the game	"It worries me to no end, thinking of the evils one could do with that " (MsgLohoItWorriesMeToNo; was MsgLoho54)	games/tla/src/scene/loho.c
 MsgLohoISawSomeOfVillage	the game	"I saw some of the village men carrying the cannon out of town... " (MsgLohoISawSomeOfVillage; was MsgLoho55)	games/tla/src/scene/loho.c
 MsgLohoIDontKnowWhereThey	the game	"I don't know where they were taking it, but I'm glad the cannon's gone" (MsgLohoIDontKnowWhereThey; was MsgLoho56)	games/tla/src/scene/loho.c
-MsgLohoCheckedSignItReadsPeople	the game	"checked the sign It reads People staying at the inn can check in at th" (MsgLohoCheckedSignItReadsPeople; was MsgLoho57)	games/tla/src/scene/loho.c
+MsgLohoCheckedSignItReadsPeople	the game	"checked the sign It reads" (MsgLohoCheckedSignItReadsPeople; was MsgLoho57)	games/tla/src/scene/loho.c
 MsgLohoThisWellLooksReallyOld	the game	"This well looks really old. I'll bet this is exactly how it looked bac" (MsgLohoThisWellLooksReallyOld; was MsgLoho58)	games/tla/src/scene/loho.c
 MsgMadraInteriorsInAllThisChaosEveryone	the game	"In all this chaos, everyone here has clean forgotten about Alhafra... " (MsgMadraInteriorsInAllThisChaosEveryone; was MsgMadraInteriors01)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsMadraAndAlhafraOff	the game	"Madra and Alhafra, off in Osenia, have a long history together... Alha" (MsgMadraInteriorsMadraAndAlhafraOff; was MsgMadraInteriors02)	games/tla/src/scene/madra_interiors.c
@@ -7203,7 +7203,7 @@ MsgMadraInteriorsIWishTheydTellMe	the game	"I wish they'd tell me all about thei
 MsgMadraInteriorsImSoGladDaddyGot	the game	"I'm so glad Daddy got home safely. " (MsgMadraInteriorsImSoGladDaddyGot; was MsgMadraInteriors142)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsOhPiersAfterWay	the game	"Oh! ! After the way we treated you, I thought you'd never come to Madr" (MsgMadraInteriorsOhPiersAfterWay; was MsgMadraInteriors143)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsShinsDevelopedTerribleFear	the game	"Shin's developed a terrible fear of the cold. He's afraid of being tur" (MsgMadraInteriorsShinsDevelopedTerribleFear; was MsgMadraInteriors144)	games/tla/src/scene/madra_interiors.c
-MsgMadraInteriorsEvenSoundOfNamePiers	the game	"Even the sound of the name sends a chill down my spine. " (MsgMadraInteriorsEvenSoundOfNamePiers; was MsgMadraInteriors145)	games/tla/src/scene/madra_interiors.c
+MsgMadraInteriorsEvenSoundOfNamePiers	the game	"Even the sound of the name" (MsgMadraInteriorsEvenSoundOfNamePiers; was MsgMadraInteriors145)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsIUnderstandWhyShinsScared	the game	"I understand why Shin's scared of , but I think he might be overdoing " (MsgMadraInteriorsIUnderstandWhyShinsScared; was MsgMadraInteriors146)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsIveToldMySisterNot	the game	"I've told my sister not to worry about Shin. He's tough. At least...he" (MsgMadraInteriorsIveToldMySisterNot; was MsgMadraInteriors147)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsShinsNormallySoKind	the game	"Shin's normally so kind and gentle. I hope he gets over whatever's bot" (MsgMadraInteriorsShinsNormallySoKind; was MsgMadraInteriors148)	games/tla/src/scene/madra_interiors.c
@@ -7278,7 +7278,7 @@ MsgMadraInteriorsWhatCanWeDo	the game	"What can we do to stop the Kibombo from a
 MsgMadraInteriorsKibomboApparentlyUsedRopes	the game	"The Kibombo apparently used ropes to climb down the cliffs. But we can" (MsgMadraInteriorsKibomboApparentlyUsedRopes; was MsgMadraInteriors57)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsMyHusbandPursuedKibomboAfter	the game	"My husband pursued the Kibombo after the attack, but he had to turn ba" (MsgMadraInteriorsMyHusbandPursuedKibomboAfter; was MsgMadraInteriors58)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsIfIWereJustLittle	the game	"If I were just a little bit younger, I think I might have been able to" (MsgMadraInteriorsIfIWereJustLittle; was MsgMadraInteriors59)	games/tla/src/scene/madra_interiors.c
-MsgMadraInteriorsInHisYouthMyHusband	the game	"In his youth, my husband was a very fast runner. They called him The C" (MsgMadraInteriorsInHisYouthMyHusband; was MsgMadraInteriors60)	games/tla/src/scene/madra_interiors.c
+MsgMadraInteriorsInHisYouthMyHusband	the game	"In his youth, my husband was a very fast runner. They called him" (MsgMadraInteriorsInHisYouthMyHusband; was MsgMadraInteriors60)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsPiersLeftThatBoat	the game	"left that boat of his behind when he took off... That thing wasn't goi" (MsgMadraInteriorsPiersLeftThatBoat; was MsgMadraInteriors61)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsICantStopThinkingAbout	the game	"I can't stop thinking about that ship left by the eastern shore. " (MsgMadraInteriorsICantStopThinkingAbout; was MsgMadraInteriors62)	games/tla/src/scene/madra_interiors.c
 MsgMadraInteriorsSomePeopleInTownSaw	the game	"Some people in town saw heading toward the Gondowan cliffs. " (MsgMadraInteriorsSomePeopleInTownSaw; was MsgMadraInteriors63)	games/tla/src/scene/madra_interiors.c
@@ -7343,7 +7343,7 @@ MsgMikasallaInteriorsIDontKnowMuchAbout	the game	"I don't know much about weapon
 MsgMikasallaInteriorsThereArentAnyTownsBetween	the game	"There aren't any towns between here and Garoh. You should rest here an" (MsgMikasallaInteriorsThereArentAnyTownsBetween; was MsgMikasallaInteriors13)	games/tla/src/scene/mikasalla_interiors.c
 MsgMikasallaInteriorsYouveComeLongWayFriends	the game	"You've come a long way, friends. Stay a while, and rest your feet. " (MsgMikasallaInteriorsYouveComeLongWayFriends; was MsgMikasallaInteriors14)	games/tla/src/scene/mikasalla_interiors.c
 MsgMikasallaInteriorsTheresNoReasonToGo	the game	"There's no reason to go to Garoh unless you were heading to Air's Rock" (MsgMikasallaInteriorsTheresNoReasonToGo; was MsgMikasallaInteriors15)	games/tla/src/scene/mikasalla_interiors.c
-MsgMikasallaInteriorsWhyAreTravelersAlways	the game	"Why are travelers always in such a hurry? Like my mum used to say, Foo" (MsgMikasallaInteriorsWhyAreTravelersAlways; was MsgMikasallaInteriors16)	games/tla/src/scene/mikasalla_interiors.c
+MsgMikasallaInteriorsWhyAreTravelersAlways	the game	"Why are travelers always in such a hurry? Like my mum used to say" (MsgMikasallaInteriorsWhyAreTravelersAlways; was MsgMikasallaInteriors16)	games/tla/src/scene/mikasalla_interiors.c
 MsgMikasallaInteriorsHaveYouBeenToGaroh	the game	"Have you been to Garoh? " (MsgMikasallaInteriorsHaveYouBeenToGaroh; was MsgMikasallaInteriors17)	games/tla/src/scene/mikasalla_interiors.c
 MsgMikasallaInteriorsIWonderIfThere	the game	"I wonder if there are werewolves beyond those in Garoh... I also wonde" (MsgMikasallaInteriorsIWonderIfThere; was MsgMikasallaInteriors18)	games/tla/src/scene/mikasalla_interiors.c
 MsgMikasallaInteriorsForgiveMyManners	the game	"Forgive my manners... " (MsgMikasallaInteriorsForgiveMyManners; was MsgMikasallaInteriors19)	games/tla/src/scene/mikasalla_interiors.c
@@ -7625,9 +7625,9 @@ ACTOR_VILLAGER_WATCHING_THE_SKIES	the game	"I've been keeping a close eye on the
 ACTOR_VILLAGER_ASKING_FOR_SATUROS	the game	"Have you seen Saturos or Menardi?" (MsgProxHaveYouSeenSaturos); its talk line; placed actor 13 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_SENSING_FELIXS_POWER	the game	"I can sense the power inside of you..." (MsgProxFelixYoureBack); its talk line; placed actor 14 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_ON_THE_WINDS	the game	"Once the final lighthouse is lit, the winds should weaken." (MsgProxOnceFinalLighthouseIsLit); its talk line; placed actor 15 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_PLAYING_CHILD	the game	placed actor 16 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_PLAYING_CHILD	the game	"Now that the lighthouse is lit, we don't have to play in that stupid" (MsgProxNowThatLighthouseIsLit); its line in Prox_TalkToPlayingChild; placed actor 16 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_RESTLESS_CHILD	the game	placed actor 17 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_TRAINING_CHILD	the game	placed actor 18 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_TRAINING_CHILD	the game	"You get more exercise running in the snow" (MsgProxYouGetMoreExerciseRunning); its line; placed actor 18 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_BOULDER	the game	placed actor 22 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_TOWN_CRATE	the game	placed actor 20 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_WARRIOR_SENT_FOR_PARENTS	the game	"Puelle ordered me to set your parents free." (MsgProxPuelleOrderedMeToSet); its talk line; placed actor 8 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
@@ -7670,7 +7670,7 @@ ACTOR_OLD_MAN_FEARING_FOR_WEYARD	the game	placed actor 8 of Prox; its lines in t
 ACTOR_GIRL_WHO_NEVER_LEFT	the game	"I have never been outside of Lemuria." (MsgLemuriaInteriorsIHaveNeverBeenOutside); its talk line; placed actor 8; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_WOMAN_AWAITING_PIERS_TALES	the game	"Now that has returned, maybe he'll share his tales of the outside world with me." (MsgLemuriaInteriorsNowThatPiersHasReturned); its talk line; placed actor 9; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_PIERS_UNCLE	the game	"Piers" (MsgPiers2); placed actor 10; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
-ACTOR_OLD_MAN_ASKING_OF_THE_OUTSIDE	the game	placed actor 13; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
+ACTOR_OLD_MAN_ASKING_OF_THE_OUTSIDE	the game	"Are you the warriors from beyond the Sea of Time" (MsgLemuriaInteriorsAreYouWarriorsFromBeyond); its line; placed actor 13; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_OLD_MAN_ON_ALCHEMYS_ABUSE	the game	"Long ago, the power of Alchemy was abused in ways that might bring about the end of the world." (MsgLemuriaInteriorsLongAgoPowerOfAlchemy); its talk line; placed actor 14; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_OLD_MAN_ON_THE_RUMORS	the game	"And now, rumors abound of a group of fools who are actually attempting to restore Alchemy." (MsgLemuriaInteriorsAndNowRumorsAbound); its talk line; placed actor 15; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_OLD_MAN_AGAINST_ALCHEMY	the game	"Come what may, I cannot approve of anyone setting Alchemy loose on the world." (MsgLemuriaInteriorsComeWhatMayICannot); its talk line; placed actor 16; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
@@ -7678,11 +7678,11 @@ ACTOR_OLD_MAN_DENYING_DECAY	the game	"Has Lemuria fallen into decay, I ask you!?
 ACTOR_MAN_ASKING_FOR_PIERS	the game	"Piers" (MsgPiers2); placed actor 18; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_OLD_MAN_ON_THE_DRAUGHTS	the game	"Even though we no longer prepare the draught, the water of our spring sustains us..." (MsgLemuriaInteriorsEvenThoughWeNoLonger); its Mind Read line; placed actor 19; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_GIRL_WAITING_ON_THE_KING	the game	"I'll bet that is a constant annoyance to the king..." (MsgLemuriaPalaceSenatesReportsUsuallyTend); its Mind Read line; placed actor 8; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
-ACTOR_WOMAN_SHOWING_THE_WAY	the game	placed actor 9; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
+ACTOR_WOMAN_SHOWING_THE_WAY	the game	"follow this passage" (MsgLemuriaPalaceIfYouSeekCounsel); its line; placed actor 9; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 ACTOR_MAN_ON_THE_KINGS_MOOD	the game	"Maybe once you have left, the king and Conservato will come to an accord." (MsgLemuriaPalaceMaybeOnceYouHaveLeft); its talk line; placed actor 10; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 ACTOR_LEMURIAN_WHO_HEARD_THE_YELLING	the game	"Conservato and the king were yelling so loudly that I could hear them from out here." (MsgLemuriaPalaceConservatoAndKingWereYelling); its talk line; placed actor 11; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 ACTOR_LEMURIAN_PRAISING_HYDROS	the game	"King Hydros is the wisest of all the Lemurian kings..." (MsgLemuriaPalaceKingHydrosIsWisest); its talk line; placed actor 12; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
-ACTOR_HYDROS	the game	placed actor 13; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
+ACTOR_HYDROS	the game	"King Hydros" (MsgFortuneTeller2); the name its lines are shown under; placed actor 13; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 ACTOR_LUNPA	the game	"Lunpa" (MsgFortuneTeller2 + 18); placed actor 14; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 ACTOR_CONSERVATO	the game	"Conservato" (MsgFortuneTeller2 + 12); placed actor 15; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 ACTOR_PALACE_GUARD	the game	placed actor 16; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
@@ -7700,14 +7700,14 @@ ACTOR_MAN_KEEPING_THE_CANNON	the game	"Well, you did what we asked, so the canno
 ACTOR_MINER_PUZZLED_BY_THE_CANNON	the game	"What idiot said that we'd be able to destroy that wall if we dragged the cannon up here?" (MsgLohoWhatIdiotSaidThatWed); its Mind Read line; placed actor 18 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
 ACTOR_LULL	the game	"Lull" (MsgDjinnName + 76); placed actor 19 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
 ACTOR_MAGMA_BALL	the game	"Magma Ball" (MsgRustySword2 + 43); placed actor 21 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
-ACTOR_VILLAGER_ON_COMMERCE	the game	placed actor 8 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
+ACTOR_VILLAGER_ON_COMMERCE	the game	"Commerce really took off when we started this mining colony in Loho" (MsgLohoCommerceReallyTookOffWhen); its line in Loho_TalkAboutCommerce; placed actor 8 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
 ACTOR_BEARDED_MAN_ON_THE_CANNON	the game	"If the cannon is truly as powerful as the people say, we can't just give it away." (MsgLohoIfCannonIsTruly); its Mind Read line; placed actor 10 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
 ACTOR_BONFIRE	the game	placed actor 8 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_WEST_BRAZIER	the game	placed actor 9 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_EAST_BRAZIER	the game	placed actor 10 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_WEST_BRAZIER_FLAME	the game	placed actor 11 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_EAST_BRAZIER_FLAME	the game	placed actor 12 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
-ACTOR_MAN_AMAZED_BY_THE_RETURN	the game	placed actor 13 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
+ACTOR_MAN_AMAZED_BY_THE_RETURN	the game	"Don't tell me you just came back from Kibombo!" (MsgNaribweDontTellMeYouJust); its line; placed actor 13 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_WOMAN_ON_THE_KIBOMBO_EXPEDITION	the game	"Kibombo" (MsgDebugAreaName + 30); placed actor 14 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_MAN_WARNING_OF_THE_NORTH	the game	"I would not venture far north of here if I were you..." (MsgNaribweIWouldNotVentureFar); its talk line; placed actor 15 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_OLD_WOMAN	the game	"Who are those two kids talking to?" (MsgImilVoicesDisbeliefReply); "Who are those two kids talking to?"; SPRITE_OLD_WOMAN	games/tla/src/scene/mercury_lighthouse.c
@@ -7723,7 +7723,7 @@ ACTOR_ROPE_POST_B	the game	placed actor 9 of the settlements; its lines, events 
 ACTOR_PILGRIM	the game	"Pilgrim" (MsgClassName + 130); placed actor 26 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_STONE	the game	placed actor 27 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_MAN_DIRECTING_TO_THE_FORTUNE_TELLER	the game	"The fortune-teller lives at the highest house in Naribwe..." (MsgNaribweInteriorsFortuneTellerLivesAtHighest); its talk line; placed actor 8 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
-ACTOR_WOMAN_ON_COOPERATION	the game	placed actor 9 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
+ACTOR_WOMAN_ON_COOPERATION	the game	"if we all cooperate, we can get almost anything done" (MsgNaribweInteriorsWereSmallVillage); its line; placed actor 9 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
 ACTOR_FORTUNE_TELLER	the game	"Fortune-teller" (MsgFortuneTeller2) (the name its lines are shown under); placed actor 10 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
 ACTOR_FORTUNE_TELLERS_CHILD	the game	"My father is a fortune-teller, not a witch doctor." (MsgNaribweInteriorsMyFatherIsFortuneTeller); its talk line; placed actor 11 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
 ACTOR_VILLAGER_ON_BODY_PAINT	the game	"By painting our bodies, we bring about good luck." (MsgNaribweInteriorsByPaintingOurBodies); its talk line; placed actor 12 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
@@ -8100,14 +8100,14 @@ MsgLemuriaSpringYouWonCoin	the game	"You won coin ! " (MsgLemuriaSpringYouWonCoi
 MsgLobbyYourOpponentHasArrived	the game	"Your opponent has arrived! " (MsgLobbyYourOpponentHasArrived; was MsgYourOpponentHas)	games/tla/src/scene/lobby.c
 ACTOR_KRADEN_STAND_IN	the game	"Kraden" (MsgPiers2 + 2); placed actor 12 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_WOMAN_ON_PARADISE	the game	"Anyone who saw it would think it a paradise." (MsgLemuriaHasNo); its talk line; placed actor 13 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
-ACTOR_MAN_ON_LEMURIAN_WAYS	the game	placed actor 14 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
+ACTOR_MAN_ON_LEMURIAN_WAYS	the game	"In Lemuria, we do not grow old." (MsgLemuriaInLemuriaWeDoNot); its line; placed actor 14 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_LEMURIAN_ON_UNCHANGING_LIFE	the game	"Life never changes here in Lemuria." (MsgLemuriaLifeNeverChangesHere); its talk line; placed actor 15 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
-ACTOR_GIRL_FORGETTING_HER_AGE	the game	placed actor 17 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
+ACTOR_GIRL_FORGETTING_HER_AGE	the game	"How old am I again?" (MsgLemuriaHowOldAmIAgain); its line; placed actor 17 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_SPOILED_CHILD	the game	"Everyone spoils me so much..." (MsgLemuriaEveryoneSpoilsMeSoMuch); its line in Lemuria_TalkToSpoiledChild; placed actor 18 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
-ACTOR_LONELY_CHILD	the game	placed actor 19 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
+ACTOR_LONELY_CHILD	the game	"Are there other children in the lands beyond the Sea of Time?" (MsgLemuriaAreThereOtherChildren); its line; placed actor 19 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_CAT	the game	"They're lazier than a cat in a sunbeam." (MsgLemuriaNoOneInLemuriaFeels); its Mind Read line; placed actor 20 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
-ACTOR_WEST_PALACE_GUARD	the game	placed actor 24 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
-ACTOR_EAST_PALACE_GUARD	the game	placed actor 25 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
+ACTOR_WEST_PALACE_GUARD	the game	"King Hydros awaits you. You are free to enter." (MsgLemuriaKingHydrosAwaits); its line; placed actor 24 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
+ACTOR_EAST_PALACE_GUARD	the game	"has instructed that we let you pass" (MsgLemuriaHisHighnessKingHasInstructed); its line; placed actor 25 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_GIRL_ON_LUNPA	the game	"If you and Lunpa were all to leave Lemuria, I think we'd have peace and quiet here again." (MsgLemuriaIfYouAndLunpa); its talk line; placed actor 26 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_LET_DOWN_ROPE_HIGH_POST	the game	placed actor 27 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_LET_DOWN_ROPE_LOW_POST	the game	placed actor 28 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
@@ -8210,8 +8210,8 @@ ACTOR_DRAGON_HEAD_A	its uses	three rows of sprite 183 (a dragon head, three fram
 ACTOR_JENNA_STAND_IN	the game	"Jenna" (MsgFieldJenna); after the battle actors 20 to 26 wear sheets 48 to 54, the party drawn smaller (48 Jenna, 49 Sheba, 50 Piers, 51 Isaac, 52 Garet, 53 Ivan, 54 Mia), and speak the party's lines (its render of the sheets)	games/tla/src/scene/mars_lighthouse_aerie.c
 ACTOR_BEAM_BOTTOM	its twin	five SPRITE_PIPE_NORTH_SOUTH rows that widen and shoot up as the beacon is lit, as venus_lighthouse_aerie.c's ACTOR_BEAM_BOTTOM to _TOP	games/tla/src/scene/mars_lighthouse_aerie.c
 ACTOR_FIRST_PLATFORM	its twin	seven SPRITE_FLOATING_PLATFORM rows, as venus_lighthouse_aerie.c's ACTOR_FIRST_PLATFORM	games/tla/src/scene/mars_lighthouse_aerie.c
-ACTOR_BOY	the game	"Hey! I know that voice! It's Mia, I just know it! Mia!!!" (MsgImilVoicesDisbeliefReply + 1); SPRITE_BOY_WITH_FAIR_HAIR	games/tla/src/scene/mercury_lighthouse.c
-ACTOR_GIRL	the game	"Of course it's us! We can hear you, Mia!"; SPRITE_GIRL_WITH_PIGTAILS	games/tla/src/scene/mercury_lighthouse.c
+ACTOR_BOY	the game	"Hey! I know that voice! It's" (MsgImilVoicesDisbeliefReply + 1); SPRITE_BOY_WITH_FAIR_HAIR	games/tla/src/scene/mercury_lighthouse.c
+ACTOR_GIRL	the game	"Of course it's us! We can hear you" (MsgImilVoicesDisbeliefReply); "Of course it's us! We can hear you, Mia!"; SPRITE_GIRL_WITH_PIGTAILS	games/tla/src/scene/mercury_lighthouse.c
 ACTOR_ROCK_A	its uses	five rows of sprite 424 in SeaOfTimeToLemuria, each removed by its SeaOfTime_Grind*Rock	games/tla/src/scene/sea_of_time.c
 FLAG_ROCK_A_CLEARED	its uses	0xa90 to 0xa95, set by the six Grind rock events and tested before each rock is placed again	games/tla/src/scene/sea_of_time.c
 ACTOR_ATTENDANT	its twin	battle_arena.c's ACTOR_ATTENDANT, the same row running LinkLobby_ChooseBattleMode as BattleArena_ChooseBattleMode	games/tla/src/scene/lobby.c
@@ -8271,7 +8271,7 @@ ACTOR_BOATMAN_TAUGHT_BY_YEPP	the game	"Yepp was the one who taught me how to han
 ACTOR_BOATMAN_TAUGHT_LITTLE	the game	"Yepp told me the only thing he could teach me was how" (MsgYeppToldMe), actor 18	games/tla/src/scene/yallam.c
 ACTOR_FALLING_LOG	its code	Yallam_ForcePillarDown topples actor 9 with SE_LOG_FALL; its sprite is FALLING_LOG	games/tla/src/scene/yallam.c
 gYallam_CaveTriggers	what the player sees	probe Yallam2: a grey cave with a ladder reached from Yallam's exits 9 and 13 (its render)	games/tla/src/scene/yallam.c
-ACTOR_SUNSHINE	the game	YallamInteriors_TalkToSunshine and MindReadSunshine on actor 14 of the inn's table; Forge_Run(14)	games/tla/src/scene/yallam_interiors.c
+ACTOR_SUNSHINE	the game	"What does Sunshine want in Taopo Swamp?" (MsgYallamInteriorsWhatDoesSunshineWant); the item merchant's line, of him; YallamInteriors_TalkToSunshine and MindReadSunshine on actor 14 of the inn's table; Forge_Run(14)	games/tla/src/scene/yallam_interiors.c
 ACTOR_YEPP_SONGS_VILLAGER	the game	"Yepp had three different songs he used to sing." (MsgYallamInteriorsYeppHadThreeDifferent), actor 8 of the inn (probe)	games/tla/src/scene/yallam_interiors.c
 TaopoSwamp_DripInPillarGap	what the player sees	probe TaopoSwamp7: the pillar gap, where the drops fall (its render)	games/tla/src/scene/taopo_swamp.c
 ACTOR_FLOWER	its code	Field_RequestDjinnBattle(8, DJINNI_FLOWER) on actor 8 of the Flower room; the same row in the vents room is blown off its ledge (TaopoSwamp_BlowFlowerOffLedge); probe actor 8 wears SPRITE_VENUS_DJINNI	games/tla/src/scene/taopo_swamp.c
@@ -9196,3 +9196,22 @@ ACTOR_CRYSTAL_ROOM_SECOND_LOG	the game	"Crystal" (MsgDjinnName + 17)	games/tla/s
 ACTOR_CRYSTAL_ROOM_THIRD_LOG	the game	"Crystal" (MsgDjinnName + 17)	games/tla/src/scene/yampi_desert_cave.c
 ACTOR_CRYSTAL_ROOM_FOURTH_LOG	the game	"Crystal" (MsgDjinnName + 17)	games/tla/src/scene/yampi_desert_cave.c
 ACTOR_CRYSTAL_ROOM_BURST_PILLAR	the game	"Crystal" (MsgDjinnName + 17)	games/tla/src/scene/yampi_desert_cave.c
+ACTOR_ARMOR_MERCHANT	the game	"Mining materials in the ruins is dangerous work, so my armor is" (MsgContigoMiningMaterialsInTheRuins); its line in Contigo_TalkToArmorMerchant	games/tla/src/scene/contigo.c
+ACTOR_WEAPON_SHOPKEEPER	the game	"The weapons I sell in this shop are ones we do not use in Kibombo" (MsgTheWeaponsI); its line in Kibombo_OpenWeaponShop	games/tla/src/scene/kibombo.c
+ACTOR_INN_COUNTER	the game	"coins on the counter, and you can" (MsgShamanInnPaymentPrompt); its line in ShamanVillage_TalkToInnkeeper	games/tla/src/scene/shaman_village.c
+ACTOR_HAMMETS_MESSENGER	the game	"Master Hammet requested that I deliver this to" (MsgHeyWait2); its line in AttekaInlet_HammetsMessengerArrives	games/tla/src/scene/atteka_inlet.c
+ACTOR_VILLAGER_ON_COMMERCE	the game	"Commerce really took off when we started this mining colony in Loho" (MsgLohoCommerceReallyTookOffWhen); its line in Loho_TalkAboutCommerce	games/tla/src/scene/loho.c
+ACTOR_PLAYING_CHILD	the game	"Now that the lighthouse is lit, we don't have to play in that stupid" (MsgProxNowThatLighthouseIsLit); its line in Prox_TalkToPlayingChild	games/tla/src/scene/prox.c
+ACTOR_GOLD_COIN_FINDERS_CHILD	the game	"Way to go, Mom!" (MsgAlhafraWhyLookAtThis); its line	games/tla/src/scene/alhafra.c
+ACTOR_INN_COOK	the game	"The innkeeper told me to use only the cheapest ingredients" (MsgAlhafraInteriorsTheInnkeeperToldMeTo); its line	games/tla/src/scene/alhafra_interiors.c
+ACTOR_SECOND_SHIPWRIGHT	the game	"We worked really hard on that ship of yours!" (MsgWhereDoYouThink); its line	games/tla/src/scene/atteka_inlet.c
+ACTOR_ITEM_MERCHANT	the game	"I never change my stock, unlike the weapons and armor shopkeeps" (MsgGarohInteriorsINeverChangeMyStock); its line	games/tla/src/scene/garoh_interiors.c
+ACTOR_DOG	the game	"Rrruff! Rrruff!" (MsgRrruffRrruff2); its line	games/tla/src/scene/gondowan_cliffs.c
+ACTOR_BIRD	the game	"Chirp chirp!" (MsgChirpChirp2); its line	games/tla/src/scene/islets.c
+ACTOR_GREETER	the game	"Welcome to Battle Arena" (MsgLobbyWelcomeToBattleArenaWhere); its line	games/tla/src/scene/lobby.c
+ACTOR_DEBUG_HELPER	the game	"Choose your parameters here." (MsgLobbyChooseYourParametersHere); its line	games/tla/src/scene/lobby.c
+ACTOR_WARY_VISITOR	the game	"Should I enter or not?" (MsgLobbyIDontHaveGuts); its line	games/tla/src/scene/lobby.c
+ACTOR_WEST_GUARD	the game	"If you have permission, you can cross anytime." (MsgMadraCanCrossWithPermission); its line	games/tla/src/scene/madra_drawbridge.c
+ACTOR_CHICKEN	the game	"Buk buk buk" (MsgFieldBukBukBuk); its line	games/tla/src/scene/mikasalla.c
+ACTOR_SUNSHINES_CHILD	the game	"Everyone thinks Dad is stubborn" (MsgYallamInteriorsEveryoneThinksDadIs); its line	games/tla/src/scene/yallam_interiors.c
+ACTOR_SIGNPOST	the game	"North: Alhafra" (MsgNorthAlhafraSouth); what it reads	games/tla/src/scene/yampi_desert.c
