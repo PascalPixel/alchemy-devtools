@@ -123,28 +123,18 @@ pub fn order(members: &[u8], flags: u8) -> Vec<u8> {
 }
 
 /// The Lost Age's debug parameter sets (gDebug_ParameterSets in
-/// games/tla/src/battle/battle_tables.s): each set's members, in its rows'
-/// order, the sets parted by a row whose owner is -1, as
-/// DebugParty_LoadPreset counts them.
+/// games/tla/src/battle/debug_parameter_sets.c): each set's members, in its
+/// rows' order, the sets parted by a row whose owner is
+/// DEBUG_PARAMETER_SET_END, as DebugParty_LoadPreset counts them.
 fn tla_sets(text: &str) -> Vec<Vec<u8>> {
+    const CHARACTERS: [&str; 8] = ["ISAAC", "GARET", "IVAN", "MIA", "FELIX", "JENNA", "SHEBA", "PIERS"];
     let mut sets = vec![Vec::new()];
-    let mut rows = false;
-    for line in text.lines() {
-        let line = line.trim();
-        if line.starts_with("gDebug_ParameterSets:") {
-            rows = true;
-            continue;
-        }
-        if !rows {
-            continue;
-        }
-        let Some(values) = line.strip_prefix(".byte ") else {
-            break;
-        };
-        match values.split(',').next().map(str::trim).and_then(|o| o.parse::<i16>().ok()) {
-            Some(-1) => sets.push(Vec::new()),
-            Some(owner) => sets.last_mut().expect("a set").push(owner as u8),
-            None => break,
+    let rows = text.split_once("gDebug_ParameterSets[]").map_or("", |(_, rows)| rows);
+    for line in rows.lines() {
+        let Some(owner) = line.trim().strip_prefix(".owner = ") else { continue };
+        match CHARACTERS.iter().position(|&name| name == owner.trim_end_matches(',')) {
+            Some(character) => sets.last_mut().expect("a set").push(character as u8),
+            None => sets.push(Vec::new()),
         }
     }
     sets
@@ -157,7 +147,7 @@ pub fn tla(preset: u32) -> Result<&'static Party, String> {
     static SETS: OnceLock<Result<Vec<Party>, String>> = OnceLock::new();
     let sets = SETS
         .get_or_init(|| {
-            let path = crate::compile::root().join("games/tla/src/battle/battle_tables.s");
+            let path = crate::compile::root().join("games/tla/src/battle/debug_parameter_sets.c");
             let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
             Ok(tla_sets(&text)
                 .into_iter()
@@ -194,7 +184,7 @@ mod tests {
 
     #[test]
     fn the_lost_age_s_debug_sets_part_at_owner_minus_one() {
-        let text = "gDebug_ParameterSets:\n\t.byte 4, 90, 9; .2byte 8\n\t.byte -1, 0, 0; .2byte 0\n\t.byte 5, 5, 0; .2byte 16\n\t.byte 4, 5, 1; .2byte 1\n\t.global gNext\n";
+        let text = "struct DebugPartyEntry gDebug_ParameterSets[] ALIGNED(4) = {\n    {\n        .owner = FELIX,\n        .level = 90,\n    },\n    {\n        .owner = DEBUG_PARAMETER_SET_END,\n    },\n    {\n        .owner = JENNA,\n    },\n    {\n        .owner = FELIX,\n    },\n};\n";
         assert_eq!(tla_sets(text), vec![vec![4], vec![5, 4]]);
         // The checkout's: set 7 is Felix, Jenna and Sheba, set 19 the four
         // once Piers has joined.

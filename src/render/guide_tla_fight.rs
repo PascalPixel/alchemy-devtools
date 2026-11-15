@@ -17,7 +17,7 @@ use super::guide_tla::{KEY_A, KEY_DOWN};
 use super::mgba::{Gba, LR};
 use super::plan;
 
-/// gBattleFormation_Records rows (battle_tables.s): a Wild Wolf, a Punch
+/// gBattleFormation_Records rows (formations.c): a Wild Wolf, a Punch
 /// Ant and a Giant Bat, met in the Kandorean Temple; and one Wild Wolf.
 const WOLF_ANT_BAT: u32 = 248;
 const ONE_WILD_WOLF: u32 = 129;

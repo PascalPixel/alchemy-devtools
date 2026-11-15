@@ -65,7 +65,7 @@ impl Roster {
 
     /// The Lost Age's: Felix, Jenna, Sheba and Piers from its debug preset
     /// 3, the four at level 90 with nine Djinn of their own element set
-    /// (games/tla/src/battle/battle_tables.s): Venus Felix against Sheba,
+    /// (games/tla/src/battle/debug_parameter_sets.c): Venus Felix against Sheba,
     /// Mercury Piers against Jenna.
     pub fn tla() -> Roster {
         Roster {
