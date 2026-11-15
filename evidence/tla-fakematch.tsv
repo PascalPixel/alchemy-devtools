@@ -230,7 +230,7 @@ games/tla/src/field/field_sprite_draw.c	Render_PlaceSpritePartPair	FAKEMATCH(tem
 games/tla/src/field/field_sprite_viewer.c	SpriteViewer_Run	FAKEMATCH(dead)	Once-only block: the animation index is read before i moves into r0.
 games/tla/src/field/lucky_dice.c	LuckyDice_Run	LEFTOVER(frame)	not measured: the tag came after the last measurement (line 329 at the targets join of 15 November 2026)
 games/tla/src/field/lucky_dice.c	LuckyDice_Run	FAKEMATCH(volatile)	volatile: four halfwords stored to sp+166..160 and each reloaded with ldrh, the form the bytes prove; as plain u16 locals, 888 of 2055 instructions differ in tla-en.
-games/tla/src/field/world_map_lines.c	Transform_UpdateVertices	FAKEMATCH(pin)	x held in r0 from its shift, which keeps the two differences in r1 and r4; as a plain local, 15 of 156 instructions differ in tla-en.
+games/tla/src/field/world_map_lines.c	Matrix_UpdateVertices	FAKEMATCH(pin)	x held in r0 from its shift, which keeps the two differences in r1 and r4; as a plain local, 15 of 156 instructions differ in tla-en.
 games/tla/src/game/game_snapshot.c	InventorySnapshot_Restore	FAKEMATCH(temporary)	both party-order halfwords stored through one cursor over activeOwners; as stores through *(u16 *)&gMainRoutineWork.activeOwners[0] and [2], 4 of 58 instructions differ in tla-en.
 games/tla/src/game/game_units.c	MainRoutineWork_InitializeDefaults	FAKEMATCH(pin)	the channel kept in r3 through the transfer and copied from there for the wait, r3 then holding the busy bit; as START_DMA and WaitDma(DMA3), 10 of 320 instructions differ in tla-ja.
 games/tla/src/menu/credits.c	Credits_DrawLine	LEFTOVER(frame)	an unused local the ROM's frame reserves and never touches: of the 44 bytes it reserves (sub sp, #44), no instruction addresses the 32 at sp+12 to sp+43, as in The Broken Seal's Credits_DrawLine; as without it, 4 of 279 instructions differ in tla-en.
@@ -368,10 +368,10 @@ games/tla/src/shop/shop_sell.c	Shop_ChooseMember	FAKEMATCH(barrier)	an empty asm
 games/tla/src/shop/shop_stock.c	ShopStock_CopyItems	FAKEMATCH(volatile)	The row's halfword read through a volatile pointer, a load apart from the end test's; as *src, 41 of 28 instructions differ in tla-en.
 games/tla/src/system/system_frame.c	System_Reset	FAKEMATCH(pin)	entry held in r4, where the restart's bx takes it; as a plain local, 83 of 326 instructions of wait differ in tla-en.
 games/tla/src/system/system_serial.c	Serial_StepBlockTransfer	FAKEMATCH(temporary)	the 1 kept in a halfword record, loaded from the pool into r8 at entry; as the constant 1 at both stores, 86 of 268 instructions differ in tla-en.
-games/tla/src/system/system_transform.c	Transform_BuildLookAt	FAKEMATCH(pin)	dot held in r10; as a plain local, 175 of 228 instructions differ in tla-en.
-games/tla/src/system/system_transform.c	Transform_BuildLookAt	FAKEMATCH(pin)	divide held in r9; as a plain local, 141 of 228 instructions differ in tla-en.
-games/tla/src/system/system_transform.c	Transform_BuildLookAt	FAKEMATCH(pin)	mul held in r11; as a plain local, 209 of 228 instructions differ in tla-en.
-games/tla/src/system/system_transform.c	Transform_BuildLookAt	FAKEMATCH(dead)	the normalization in a once-only block, so the axis is negated before the third product spills; as plain statements, 2 of 228 instructions differ in tla-en.
+games/tla/src/system/system_matrix.c	Matrix_BuildLookAt	FAKEMATCH(pin)	dot held in r10; as a plain local, 175 of 228 instructions differ in tla-en.
+games/tla/src/system/system_matrix.c	Matrix_BuildLookAt	FAKEMATCH(pin)	divide held in r9; as a plain local, 141 of 228 instructions differ in tla-en.
+games/tla/src/system/system_matrix.c	Matrix_BuildLookAt	FAKEMATCH(pin)	mul held in r11; as a plain local, 209 of 228 instructions differ in tla-en.
+games/tla/src/system/system_matrix.c	Matrix_BuildLookAt	FAKEMATCH(dead)	the normalization in a once-only block, so the axis is negated before the third product spills; as plain statements, 2 of 228 instructions differ in tla-en.
 games/tla/src/window/screens_battle_djinn_menu.c	BattleDjinnMenu_Run	LEFTOVER(template)	not measured: the tag came after the last measurement (line 167 at the targets join of 15 November 2026)
 games/tla/src/window/screens_battle_djinn_preview.c	BattleDjinnMenu_ShowChangePreview	FAKEMATCH(dead)	advancing and restoring the captured pointer keeps the window chain in r9; as no pair, 32 of 80 instructions differ in tla-en.
 games/tla/src/window/screens_battle_item_menu.c	BattleItemMenu_Run	FAKEMATCH(dead)	an empty once-only block after the row, which keeps it and the zero ahead of the stores; without it, 56 of 790 instructions differ in tla-en.

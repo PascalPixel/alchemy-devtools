@@ -321,9 +321,9 @@ impl Report {
 
     /// The kind of data a lone argument is, from the calls around it: the
     /// parameter it fills, or, where that is a macro that only converts its
-    /// value (`PIXELS(value)`, `((value) << 16)`), the parameter the macro's
+    /// value (`INTtoFIXED(value)`, `((value) << 16)`), the parameter the macro's
     /// result fills.
-    /// A number composed by one of S3's forms (`PIXELS(24)`, `RGB(31, 0, 0)`)
+    /// A number composed by one of S3's forms (`INTtoFIXED(24)`, `RGB(31, 0, 0)`)
     /// is a plain quantity in the unit its macro names: it is data, unless a
     /// parameter further out says which kind (a coordinate, a size).
     fn argument_kind(&self, calls: &[(String, usize)]) -> Option<&'static str> {
@@ -722,8 +722,10 @@ fn is_keyword(text: &str) -> bool {
 /// parameters, as S3's composed forms do: parameters, numbers and constants
 /// joined by shifts, ors and multiplies (`((value) << 16)`,
 /// `(((b) << 10) | ((g) << 5) | (r))`, `((DMA_ENABLE | DMA_32BIT) << 16 | (n))`).
-/// An offset (`0x180 + (group)`, an id's range), a cast, an index, a call or
-/// an assignment is not a composition: what it is passed may be an id.
+/// SGL's `toFIXED` and `DEGtoANG` are compositions too: a multiply typed
+/// `s32`, and a multiply divided by a constant.
+/// An offset (`0x180 + (group)`, an id's range), a pointer cast, an index, a
+/// call or an assignment is not a composition: what it is passed may be an id.
 fn is_composition<'a>(parameters: &[&str], body: impl Iterator<Item = &'a str>) -> bool {
     let (mut operator, mut used, mut name) = (false, false, false);
     for word in body.filter(|&word| word != "\\") {
@@ -733,6 +735,9 @@ fn is_composition<'a>(parameters: &[&str], body: impl Iterator<Item = &'a str>) 
             "(" if was_name => return false,
             "(" | ")" => {}
             "<<" | "|" | "*" => operator = true,
+            // A divisor (`(degrees) * TRIG_TURN / 360`) and the whole number's type
+            // (`(s32)((value) * FIXED_ONE)`) change nothing of what is composed.
+            "/" | "s32" => {}
             _ if parameters.contains(&word) => used = true,
             _ if word.starts_with(|c: char| c.is_ascii_digit()) => {}
             // A constant: `DMA_ENABLE`.
@@ -2328,8 +2333,8 @@ mod tests {
             assert!(is_numbered(name), "{name}");
         }
         for name in [
-            "u8", "vu16", "s32", "BG2", "Bg2", "Dma3", "REG_DMA3", "Random16", "Dma_Fill32", "MulQ16", "Q_8_8",
-            "FLAG_SCENE_TEMP_01", "TBS_PATCH_1", "DISPCNT_MODE_1", "BLDCNT_TGT1_BG2", "x1", "ArcTan2", "attr2",
+            "u8", "vu16", "s32", "BG2", "Bg2", "Dma3", "REG_DMA3", "Random16", "Dma_Fill32", "MulFX", "Q_8_8",
+            "FLAG_SCENE_TEMP_01", "TBS_PATCH_1", "DISPCNT_MODE_1", "BLDCNT_TGT1_BG2", "x1", "Trig_Atan", "attr2",
             "Vector3", "unk_14", "MapGridCell", "SE_138", "FLAG_SCENE_TEMP_0E", "__divsi3", "rgb555", "OBJ_VRAM0",
         ] {
             assert!(!is_numbered(name), "{name}");
@@ -2501,7 +2506,7 @@ mod tests {
         let header = concat!(
             "void Event_Wait(s32 frames);\n",
             "#define WAIT(n) Event_Wait(n)\n",
-            "#define PIXELS(value) ((value) << 16)\n",
+            "#define INTtoFIXED(value) ((value) << 16)\n",
             "#define BLEND(top, bottom) Blend((top) | ((bottom) << 8))\n",
             "void Actor_SetPosition(s32 actor, s32 fixed_x, s32 fixed_z);\n",
             "static inline void Actor_SetSpeed(s32 actor, s32 speed, s32 acceleration) { Engine(actor, speed); }\n",
@@ -2512,8 +2517,8 @@ mod tests {
             "void Run(void) {\n",
             "    WAIT(80);\n",
             "    Event_Wait(\n        40);\n",
-            "    Actor_SetPosition(ACTOR_LEADER, PIXELS(312), (416) << 16);\n",
-            "    Actor_SetSpeed(ACTOR_LEADER, PIXELS(24), 0x8000);\n",
+            "    Actor_SetPosition(ACTOR_LEADER, INTtoFIXED(312), (416) << 16);\n",
+            "    Actor_SetSpeed(ACTOR_LEADER, INTtoFIXED(24), 0x8000);\n",
             "    Old(1, 20);\n",
             "    BLEND(10, 12);\n",
             "    draw[0](canvas, 64, 40);\n",
@@ -2522,7 +2527,7 @@ mod tests {
         let report = game([("f.h", header), ("f.c", source)]);
         assert_eq!(report.total("data_argument_frames"), 2, "WAIT(80) and 40");
         assert_eq!(report.total("data_argument_coordinate"), 2, "312 and 416, through PIXELS and a group");
-        assert_eq!(report.total("data_argument_composed"), 1, "PIXELS(24), a speed in pixels");
+        assert_eq!(report.total("data_argument_composed"), 1, "INTtoFIXED(24), a speed in pixels");
         assert_eq!(report.total("data_argument"), 5);
         // 0x8000 (an acceleration), 20, 10 and 12 (BLEND calls Blend), 64 and 40;
         // the shifts' 16, in PIXELS and in Run, are no arguments.
@@ -2644,6 +2649,8 @@ mod tests {
         assert!(composed("(((b) << 10) | ((g) << 5) | (r))", &["r", "g", "b"]));
         assert!(composed("((DMA_ENABLE | DMA_32BIT) << 16 | (n)) ///< n words", &["n"]));
         assert!(composed("((value) * (1 << (bits)))", &["value", "bits"]));
+        assert!(composed("((s32)((value) * FIXED_ONE))", &["value"]), "toFIXED");
+        assert!(composed("((degrees) * TRIG_TURN / 360)", &["degrees"]), "DEGtoANG");
         assert!(!composed("(0x180 + (group))", &["group"]), "an offset into a range of ids");
         assert!(!composed("(BG_PLTT[(palette) * 16 + (color)])", &["palette", "color"]));
         assert!(!composed("((u8 *)VRAM + (n) * BG_SCREEN_SIZE)", &["n"]));

@@ -101,7 +101,7 @@ mod tests {
         for name in ["map_108", "jupiter_lighthouse_room_5.c", "unnamed_28.c", "set_03", "spr_12.tsv", "keyboard_j2.png", "a9_motion.s"] {
             assert!(named_by_number(name), "{name}");
         }
-        for name in ["decompress_4bpp.s", "mul_q16.h", "iwram_ratio_q14.s", "m4a_interfaces.h", "vector3.h", "vale.c", "field"] {
+        for name in ["decompress_4bpp.s", "mul_fx.h", "iwram_ratio_q14.s", "m4a_interfaces.h", "vector3.h", "vale.c", "field"] {
             assert!(!named_by_number(name), "{name}");
         }
         let paths: Vec<String> = [

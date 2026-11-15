@@ -1,7 +1,7 @@
 //! Numbers in code that S3 lets stay numbers. S3's "Numbers" keeps a number
 //! where it is the quantity itself: a position or size in plain pixels, a
 //! duration in frames, a random range, a fraction written by its own composed
-//! forms (`Q16_ONE * 7 / 10`, `px(3) / 10`, `TRIG_TURN * 9 / 128`), tenths and
+//! forms (`FIXED_ONE * 7 / 10`, `INTtoFIXED(3) / 10`, `TRIG_TURN * 9 / 128`), tenths and
 //! percentages. `progress --humanity` still counts every such number among
 //! all the numbers in code (`magic_code_all`), and here tells apart the ones
 //! the source itself shows to be honest, by kind, so that what is left
@@ -16,10 +16,10 @@
 
 use crate::gba::clex::{Kind, Token};
 
-/// The units S3 composes a fraction from (`Q16_ONE * n / d`), and the calls
-/// that compose one (`px(n) / d`).
-const UNITS: &[&str] = &["Q16_ONE", "TRIG_TURN", "FACING_STEP", "DAMPING_SCALE"];
-const UNIT_CALLS: &[&str] = &["px", "Q16"];
+/// The units S3 composes a fraction from (`FIXED_ONE * n / d`), and the calls
+/// that compose one (`INTtoFIXED(n) / d`).
+const UNITS: &[&str] = &["FIXED_ONE", "TRIG_TURN", "FACING_STEP", "DAMPING_SCALE"];
+const UNIT_CALLS: &[&str] = &["toFIXED", "INTtoFIXED", "DEGtoANG"];
 
 /// Words of a name that hold a position or a size in pixels (or cells).
 const POSITION_WORDS: &[&str] = &["x", "y", "z", "dx", "dy", "dz", "row", "column", "width", "height", "radius", "distance"];
@@ -88,7 +88,7 @@ pub fn is_other(name: &str) -> bool {
 }
 
 /// A decimal literal (not hex, not octal): S3 writes positions and durations
-/// in decimal, so a hex one (`0x80000`) still wants `px()` or a name.
+/// in decimal, so a hex one (`0x80000`) still wants `INTtoFIXED()` or a name.
 pub fn is_decimal(text: &str) -> bool {
     let digits = text.trim_end_matches(['u', 'U', 'l', 'L']);
     digits.bytes().all(|b| b.is_ascii_digit()) && (digits == "0" || !digits.starts_with('0'))
@@ -540,11 +540,11 @@ mod tests {
 
     #[test]
     fn honest_numbers_by_what_surrounds_them() {
-        assert_eq!(kind("x = Q16_ONE * 31 / 20;", 0), Some("composed"));
-        assert_eq!(kind("x = Q16_ONE * 31 / 20;", 1), Some("composed"));
-        assert_eq!(kind("s = 7 * Q16_ONE / 10;", 0), Some("composed"));
+        assert_eq!(kind("x = FIXED_ONE * 31 / 20;", 0), Some("composed"));
+        assert_eq!(kind("x = FIXED_ONE * 31 / 20;", 1), Some("composed"));
+        assert_eq!(kind("s = 7 * FIXED_ONE / 10;", 0), Some("composed"));
         assert_eq!(kind("F(TRIG_TURN * 9 / 128);", 1), Some("composed"));
-        assert_eq!(kind("a = px(3) / 10;", 1), Some("composed"));
+        assert_eq!(kind("a = INTtoFIXED(3) / 10;", 1), Some("composed"));
         assert_eq!(kind("hp += unit->hpMax * 60 / 100;", 0), Some("decimal"));
         assert_eq!(kind("hp += unit->hpMax * 60 / 100;", 1), Some("decimal"));
         assert_eq!(kind("v = levels * 97 / 10;", 0), Some("decimal"));
@@ -564,7 +564,7 @@ mod tests {
         assert_eq!(kind("if (column >= 94 && row > 23) {}", 0), Some("position"));
         assert_eq!(kind("u32 *src = buffer + (srcY * 128 + srcX);", 0), Some("position"));
         assert_eq!(kind("switch (frame) { case 25: break; }", 0), Some("duration"));
-        // Hex wants px() or a name; a call's arguments and an index say nothing.
+        // Hex wants INTtoFIXED() or a name; a call's arguments and an index say nothing.
         assert_eq!(kind("leader->x.fixed = 0x80000;", 0), None);
         assert_eq!(kind("if (Map_GetBehavior(x, z) == 13) {}", 0), None);
         assert_eq!(kind("v = gTable[x] + 40;", 0), None);

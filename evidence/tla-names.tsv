@@ -2724,19 +2724,19 @@ gIris_RightStripCorners	its code	BattleEffect_RunIris: ten corners of the right 
 gIris_StripMesh	its code	BattleEffect_RunIris: model->mesh of both strips, eight triangles	games/tla/src/battle_effect/battle_effect_moloch.c
 gIris_ConeCorners	its code	BattleEffect_RunIris: eight corners from a point (0, -40) widening to 40 at y 32, from frame 758	games/tla/src/battle_effect/battle_effect_moloch.c
 gIris_ConeMesh	its code	BattleEffect_RunIris: model->mesh of the cone	games/tla/src/battle_effect/battle_effect_moloch.c
-gCruelRuin_UnitScale	its code	BattleEffect_RunCruelRuin: {Q16_ONE, Q16_ONE}, a placement's scale (as The Broken Seal's unitScale locals)	games/tla/src/battle_effect/fxconst.s
+gCruelRuin_UnitScale	its code	BattleEffect_RunCruelRuin: {FIXED_ONE, FIXED_ONE}, a placement's scale (as The Broken Seal's unitScale locals)	games/tla/src/battle_effect/fxconst.s
 gEclipse_Scales	its code	BattleEffect_RunEclipse: a unit scale, then two of a third	games/tla/src/battle_effect/fxconst.s
 gProcne_UnitScale	its code	BattleEffect_RunProcne: the comets' unit scale (its comment)	games/tla/src/battle_effect/fxconst.s
-gZagan_UnitScale	its code	BattleEffect_RunZagan: the summon's placement scale, {Q16_ONE, Q16_ONE}	games/tla/src/battle_effect/fxconst.s
-gBoreas_UnitScale	its twin	The Broken Seal's BattleEffect_RunBoreas: static unitScale, the same {Q16_ONE, Q16_ONE}	games/tla/src/battle_effect/fxconst.s
+gZagan_UnitScale	its code	BattleEffect_RunZagan: the summon's placement scale, {FIXED_ONE, FIXED_ONE}	games/tla/src/battle_effect/fxconst.s
+gBoreas_UnitScale	its twin	The Broken Seal's BattleEffect_RunBoreas: static unitScale, the same {FIXED_ONE, FIXED_ONE}	games/tla/src/battle_effect/fxconst.s
 gThor_Points	its twin	The Broken Seal's BattleEffect_RunThor: its points (comment in fxconst.s)	games/tla/src/battle_effect/fxconst.s
-gGaia_UnitScale	its code	BattleEffect_RunGaia: {Q16_ONE, Q16_ONE}	games/tla/src/battle_effect/fxconst.s
+gGaia_UnitScale	its code	BattleEffect_RunGaia: {FIXED_ONE, FIXED_ONE}	games/tla/src/battle_effect/fxconst.s
 gUlysses_ParticleScale	its code	Ulysses_MoveLastParticle: the particle object's unit scale	games/tla/src/battle_effect/fxconst.s
 gUlysses_ShipScale	its code	BattleEffect_RunUlysses: the ship's placement scale, frames 108 to 287	games/tla/src/battle_effect/fxconst.s
 gFormationObjects_Scale	its code	BattleEffect_PlaceFormationObjects: the normal objects' unit scale	games/tla/src/battle_effect/fxconst.s
 gFormationObjects_LargeScale	its code	BattleEffect_PlaceFormationObjects: the big objects' scale, 1.25	games/tla/src/battle_effect/fxconst.s
-gRamses_UnitScale	its twin	The Broken Seal's BattleEffect_RunRamses: static unitScale, {Q16_ONE, Q16_ONE}	games/tla/src/battle_effect/fxconst.s
-gJudgment_UnitScale	its code	BattleEffect_RunJudgment: {Q16_ONE, Q16_ONE}	games/tla/src/battle_effect/fxconst.s
+gRamses_UnitScale	its twin	The Broken Seal's BattleEffect_RunRamses: static unitScale, {FIXED_ONE, FIXED_ONE}	games/tla/src/battle_effect/fxconst.s
+gJudgment_UnitScale	its code	BattleEffect_RunJudgment: {FIXED_ONE, FIXED_ONE}	games/tla/src/battle_effect/fxconst.s
 gKirin_ChargeScale	its code	BattleEffect_RunKirin: the second pass's unit scale	games/tla/src/battle_effect/fxconst.s
 gNeptune_UnitScale	its twin	The Broken Seal's BattleEffect_RunNeptune: static unitScale, the same 1.5	games/tla/src/battle_effect/fxconst.s
 gMegaera_UnitScale	its code	BattleEffect_RunMegaera: a 1.5 scale, as Neptune's	games/tla/src/battle_effect/fxconst.s
@@ -2745,21 +2745,21 @@ gCharon_SwarmScale	its code	BattleEffect_RunCharon: the scale of frames 132 to 2
 gCharon_PulseScale	its code	BattleEffect_RunCharon: frames 56 to 132, the scale pulsing on a sine	games/tla/src/battle_effect/fxconst.s
 gCharon_RevealScale	its code	BattleEffect_RunCharon: frames 244 to 310, the reveal	games/tla/src/battle_effect/fxconst.s
 gCharon_FinaleScale	its code	BattleEffect_RunCharon: frames 330 to 351	games/tla/src/battle_effect/fxconst.s
-gFlora_UnitScale	its code	BattleEffect_RunFlora: {Q16_ONE, Q16_ONE}	games/tla/src/battle_effect/fxconst.s
+gFlora_UnitScale	its code	BattleEffect_RunFlora: {FIXED_ONE, FIXED_ONE}	games/tla/src/battle_effect/fxconst.s
 gDaedalus_WaveScale	its code	BattleEffect_RunDaedalus: the waves' placement scale	games/tla/src/battle_effect/fxconst.s
 gDaedalus_ShipScale	its code	BattleEffect_RunDaedalus: the ship's placement scale	games/tla/src/battle_effect/fxconst.s
 gDaedalus_ParticleScale	its code	BattleEffect_RunDaedalus: 1.1, the late particles' placement scale	games/tla/src/battle_effect/fxconst.s
 gDaedalusAlt_SummonScale	its code	BattleEffect_RunDaedalusAlt: the summon's placement scale, 2 (its comment: placement source)	games/tla/src/battle_effect/fxconst.s
-gCoatlicue_UnitScale	its code	BattleEffect_RunCoatlicue: {Q16_ONE, Q16_ONE}	games/tla/src/battle_effect/fxconst.s
-gCatastrophe_UnitScale	its code	BattleEffect_RunCatastrophe: {Q16_ONE, Q16_ONE}	games/tla/src/battle_effect/fxconst.s
+gCoatlicue_UnitScale	its code	BattleEffect_RunCoatlicue: {FIXED_ONE, FIXED_ONE}	games/tla/src/battle_effect/fxconst.s
+gCatastrophe_UnitScale	its code	BattleEffect_RunCatastrophe: {FIXED_ONE, FIXED_ONE}	games/tla/src/battle_effect/fxconst.s
 gHaures_ChargeScale	its code	BattleEffect_RunHaures: the placement scale while it charges, from frame 149	games/tla/src/battle_effect/fxconst.s
 gHaures_OrbitScale	its code	BattleEffect_RunHaures: the scale while it circles on a sine	games/tla/src/battle_effect/fxconst.s
 gHaures_OpeningScale	its code	BattleEffect_RunHaures: frames 0 to 73	games/tla/src/battle_effect/fxconst.s
-gTrident_UnitScale	its code	BattleEffect_RunTrident: {Q16_ONE, Q16_ONE}	games/tla/src/battle_effect/fxconst.s
-gMeteorBlow_DoubleScale	its code	BattleEffect_RunMeteorBlow: {Q16_ONE * 2, Q16_ONE * 2}	games/tla/src/battle_effect/fxconst.s
+gTrident_UnitScale	its code	BattleEffect_RunTrident: {FIXED_ONE, FIXED_ONE}	games/tla/src/battle_effect/fxconst.s
+gMeteorBlow_DoubleScale	its code	BattleEffect_RunMeteorBlow: {FIXED_ONE * 2, FIXED_ONE * 2}	games/tla/src/battle_effect/fxconst.s
 gMoloch_MoteSizes	its code	BattleEffect_RunMoloch: a mote's size, by i & 7	games/tla/src/battle_effect/fxconst.s
 gIris_PillarVertices	its code	Iris_DrawPillar: the pillar strip's six vertices before it sets their widths and height	games/tla/src/battle_effect/fxconst.s
-gIris_UnitScale	its code	BattleEffect_RunIris: {Q16_ONE, Q16_ONE}, frames 177 to 393	games/tla/src/battle_effect/fxconst.s
+gIris_UnitScale	its code	BattleEffect_RunIris: {FIXED_ONE, FIXED_ONE}, frames 177 to 393	games/tla/src/battle_effect/fxconst.s
 gIris_RisingPillarWidths	its code	BattleEffect_RunIris: the second pillar's half width as it rises, from frame 375	games/tla/src/battle_effect/fxconst.s
 gIris_WideningPillarWidths	its code	BattleEffect_RunIris: the third pillar's half width as it rises, from frame 380	games/tla/src/battle_effect/fxconst.s
 gIris_NarrowingPillarWidths	its code	BattleEffect_RunIris: the fourth pillar's half width, shrinking as it rises, from frame 382	games/tla/src/battle_effect/fxconst.s
@@ -3111,7 +3111,7 @@ gHaures_BandMesh	its code	BattleEffect_RunHaures: model->mesh over a 64x32 textu
 gHaures_BandStarts	its code	BattleEffect_RunHaures: the frame each of two 16-frame bands starts	games/tla/src/battle_effect/battle_effect_haures.c
 gHaures_BurstMesh	its code	BattleEffect_RunHaures: model->mesh over a 64x128 texture, drawn for frames 267 to 272	games/tla/src/battle_effect/battle_effect_haures.c
 gHaures_ParticleX	its code	BattleEffect_RunHaures: the x each of four particles starts at	games/tla/src/battle_effect/battle_effect_haures.c
-gHaures_UnitScale	its code	BattleEffect_RunHaures: {Q16_ONE, Q16_ONE}, the wing objects' placement scale	games/tla/src/battle_effect/battle_effect_haures.c
+gHaures_UnitScale	its code	BattleEffect_RunHaures: {FIXED_ONE, FIXED_ONE}, the wing objects' placement scale	games/tla/src/battle_effect/battle_effect_haures.c
 gHaures_WingShapes	its code	BattleEffect_RunHaures: each wing shape's 32 heights, the wings morphing from one to the next	games/tla/src/battle_effect/battle_effect_haures.c
 gHaures_WingMorphSteps	its code	BattleEffect_RunHaures: how many steps the morph from each wing shape takes	games/tla/src/battle_effect/battle_effect_haures.c
 gHaures_PartPoints	its code	BattleEffect_RunHaures: ten bytes a row for the 31 particles after BattleEffect_SpawnObjects(11, ...): each row's start, then its points	games/tla/src/battle_effect/battle_effect_haures.c
@@ -3164,10 +3164,10 @@ gBreaths_RingGrowth	its code	BattleEffect_RunBreaths: how fast each ring grows	g
 gBreaths_RingX	its code	BattleEffect_RunBreaths: each ring's x from the mouth	games/tla/src/battle_effect/battle_effect_breaths.c
 gBreaths_FlashFrames	its code	BattleEffect_RunBreaths: the frame of the mode's one-off step	games/tla/src/battle_effect/battle_effect_breaths.c
 gAzul_PartPoints	its code	BattleEffect_RunAzul: five points a row, each row's start then its corners, for the quads it builds	games/tla/src/battle_effect/battle_effect_azul.c
-gAzul_UnitScale	its code	BattleEffect_RunAzul: {Q16_ONE, Q16_ONE}, the first objects' placement scale	games/tla/src/battle_effect/battle_effect_azul.c
+gAzul_UnitScale	its code	BattleEffect_RunAzul: {FIXED_ONE, FIXED_ONE}, the first objects' placement scale	games/tla/src/battle_effect/battle_effect_azul.c
 gAzul_ObjectX	its code	BattleEffect_RunAzul: x of each of twelve objects (subtracted from 40)	games/tla/src/battle_effect/battle_effect_azul.c
 gAzul_ObjectZ	its code	BattleEffect_RunAzul: their depth	games/tla/src/battle_effect/battle_effect_azul.c
-gAzul_LateUnitScale	its code	BattleEffect_RunAzul: {Q16_ONE, Q16_ONE}, the later objects' placement scale	games/tla/src/battle_effect/battle_effect_azul.c
+gAzul_LateUnitScale	its code	BattleEffect_RunAzul: {FIXED_ONE, FIXED_ONE}, the later objects' placement scale	games/tla/src/battle_effect/battle_effect_azul.c
 gAzul_LateObjectX	its code	BattleEffect_RunAzul: x of each of eight later objects	games/tla/src/battle_effect/battle_effect_azul.c
 gAzul_LateObjectZ	its code	BattleEffect_RunAzul: their depth	games/tla/src/battle_effect/battle_effect_azul.c
 gHeartbreak_SwingWidths	its code	BattleEffect_RunHeartbreak: each of the four swing pictures' width (the FIGURE_SWING pictures)	games/tla/src/battle_effect/battle_effect_rising_dragon.c
@@ -3368,7 +3368,7 @@ PsynergyTest_ShowRings	its code	talking to Mia: PsynergyTest_StartRings on her a
 PsynergyTest_OpenIconBrowser	its twin	MenuTest_OpenIconBrowser: DebugBrowser_Icons	games/tla/src/debug/psynergy_test.c
 PsynergyTest_OpenSanctum	its code	Sanctum_Run, talking to actor 10	games/tla/src/debug/psynergy_test.c
 PsynergyTest_DigCells	its code	MapGrid_CopyCells at dig stage 1	games/tla/src/debug/psynergy_test.c
-PsynergyTest_GrowActor	its code	stage 1 places the actor at no size, stage 2 grows it to Q16_ONE	games/tla/src/debug/psynergy_test.c
+PsynergyTest_GrowActor	its code	stage 1 places the actor at no size, stage 2 grows it to FIXED_ONE	games/tla/src/debug/psynergy_test.c
 PsynergyTest_DropActor	its code	stage 2 places the actor 32 pixels up with gravity	games/tla/src/debug/psynergy_test.c
 PsynergyTest_RaiseMonster	its code	stage 2 grows actor kind 252 turning, then Field_RequestBattleFromEncounterTable	games/tla/src/debug/psynergy_test.c
 PsynergyTest_UpdateRings	its code	the actor's update hook: two rings of EffectSprites climbing 32 pixels, SE_598 each 16 frames	games/tla/src/debug/psynergy_test.c
@@ -3509,7 +3509,7 @@ WorldMapView.tintRegion	its code	WorldMap_UpdateRegionTint chooses tintTarget ag
 WorldMapView.tint	its code	WorldMap_UpdateRegionTint steps it toward tintTarget and writes it to the brightness registers	games/tla/include/field/perspective.h
 WorldMapView.tintTarget	its code	12 in region 9, -6 in region 18 until flag 0x8ef, else 0 (WorldMap_UpdateRegionTint)	games/tla/include/field/perspective.h
 WorldMapView.fixedEye	its code	WorldMap_InitializePerspective and WorldMap_UpdateView place the eye only when it is 0	games/tla/include/field/perspective.h
-WorldMapView.zoom	its twin	The Broken Seal's WorldMapView.zoom, Q16_ONE at load, at the same distance after farPlane	games/tla/include/field/perspective.h
+WorldMapView.zoom	its twin	The Broken Seal's WorldMapView.zoom, FIXED_ONE at load, at the same distance after farPlane	games/tla/include/field/perspective.h
 WorldMapView.zoomTransitionFrames	its twin	The Broken Seal's WorldMapView.zoomTransitionFrames, 0 at load	games/tla/include/field/perspective.h
 WorldMapCell	its twin	The Broken Seal's struct WorldMapCell (field_world_map.c): a 24-bit tile and the encounter region above it, 32 by 32 of them at Ram_MapBlocks	games/tla/include/field/field.h
 WorldMap_PresentStillPicture	its twin	The Broken Seal's WorldMap_PresentStillPicture (twins 0.364): the VBlank callback MapAnimation_Start sets	games/tla/src/field/field_tile_animation.c
@@ -3749,7 +3749,7 @@ gBattleAI_DullahanForms	the game	"Dullahan" (MsgEnemyName); enemies 218, 219 and
 BattleCamera_SetDefaultView	its twin	The Broken Seal's BattleCamera_SetDefaultView (battle_objects.c): the same yaw, pitch and distance and the same transform (twins 0.727) (was Camera_InitializeDefaultTransform)	games/tla/src/battle/battle_objects.c
 LinkBattle_SendActions	its twin	The Broken Seal's LinkBattle_SendActions (battle_turn.c), the same nested routine (twins 1.000) (was BattleLink_SendActions)	games/tla/src/battle/battle_turn.c
 LinkBattle_ReceiveActions	its twin	The Broken Seal's LinkBattle_ReceiveActions (battle_turn.c), the same nested routine (twins 0.791) (was BattleLink_ReceiveActions)	games/tla/src/battle/battle_turn.c
-BATTLE_CAMERA_DISTANCE	its twin	The Broken Seal's BATTLE_CAMERA_DISTANCE (battle_camera.h), px(510), the distance BattleCamera_SetDefaultView sets	games/tla/src/battle/battle_internal.h
+BATTLE_CAMERA_DISTANCE	its twin	The Broken Seal's BATTLE_CAMERA_DISTANCE (battle_camera.h), INTtoFIXED(510), the distance BattleCamera_SetDefaultView sets	games/tla/src/battle/battle_internal.h
 ICON_BROKEN	its twin	The Broken Seal's ICON_BROKEN (8): ItemIcon_Compose draws mark 1, the cross, for it on an item with INVENTORY_BROKEN; the names of bits 8 and 16 had been swapped	games/tla/src/window/window_icons.c
 ICON_EQUIPPED	its twin	The Broken Seal's ICON_EQUIPPED (16): mark 0, the equip mark, on an item with INVENTORY_EQUIPPED	games/tla/src/window/window_icons.c
 gBattleCamera_CommandMatrix	its twin	The Broken Seal's gBattleCamera_CommandMatrix (battle_tables.c): the same rows, applied by BattleCamera_ApplyTransform while commands are chosen (was gData_08128868)	games/tla/src/battle/battle_tables.s
@@ -4267,7 +4267,7 @@ gScreenFadeTargetLevel	its twin	The Broken Seal's name, at the same places of th
 gScreenFadeStartLevel	its twin	The Broken Seal's name, at the same places of the same-named routines (token alignment of system/system/*.c against system_*.c); was gBlendStartLevel	games/tla/src/system
 gScreenFadeToWhite	its twin	The Broken Seal's name, at the same places of the same-named routines (token alignment of system/system/*.c against system_*.c); was gBlendBrighten	games/tla/src/system
 gScreenFadeVBlanksLeft	its twin	The Broken Seal's name, at the same places of the same-named routines (token alignment of system/system/*.c against system_*.c); was gBlendVBlanksLeft	games/tla/src/system
-TRANSFORM_DMA	its twin	The Broken Seal's name, at the same places of the same-named routines (token alignment of system/system/*.c against system_*.c); was MTX_DMA	games/tla/src/system
+MATRIX_DMA	its twin	The Broken Seal's name, at the same places of the same-named routines (token alignment of system/system/*.c against system_*.c); was MTX_DMA	games/tla/src/system
 Cart_Start	its twin	The Broken Seal's name, at the same places of the same-named routines (token alignment of system/system/*.c against system_*.c); was Cart_Restart	games/tla/src/system
 Rom_Start	its twin	The Broken Seal's name, at the same places of the same-named routines (token alignment of system/system/*.c against system_*.c); was Cartridge_Restart	games/tla/src/system
 Resource_PatchThumbBranch	its twin	The Broken Seal's name, at the same places of the same-named routines (token alignment of system/system/*.c against system_*.c); was Resource_PatchThumbBranchCode	games/tla/src/system
@@ -4337,7 +4337,7 @@ HeapSlots.mindRead	its twin	HEAP_SLOT_MIND_READ (slot 22): mind_read.c wave work
 HeapSlots.battleEffect	its twin	HEAP_SLOT_BATTLE_EFFECT (TBS 39, here 23): every effect work block, the dice games work 0x7b7c	games/tla/include/system/heap.h
 HeapSlots.battleCanvas	its twin	HEAP_SLOT_BATTLE_CANVAS (TBS 40, here 24): the effect canvas	games/tla/include/system/heap.h
 HeapSlots.battleSheet	its twin	HEAP_SLOT_BATTLE_SHEET (TBS 41, here 25): every effect loads its sheet there	games/tla/include/system/heap.h
-HeapSlots.ramCode	its twin	HEAP_SLOT_RAM_CODE (TBS 46, here 26): BattleEffect_LoadBlitter builds the first blitter there; Transform_UpdateVertices copy	games/tla/include/system/heap.h
+HeapSlots.ramCode	its twin	HEAP_SLOT_RAM_CODE (TBS 46, here 26): BattleEffect_LoadBlitter builds the first blitter there; Matrix_UpdateVertices copy	games/tla/include/system/heap.h
 HeapSlots.paletteCycles	its twin	HEAP_SLOT_PALETTE_CYCLES (slot 28): tile_animation.c PaletteSnapshotWork	games/tla/include/system/heap.h
 HeapSlots.weather	its twin	HEAP_SLOT_WEATHER (slot 29): motes, ground particles, dust	games/tla/include/system/heap.h
 HeapSlots.fieldBlend	its twin	HEAP_SLOT_FIELD_BLEND (slot 30): motes.c FieldBlendWork	games/tla/include/system/heap.h
@@ -4410,8 +4410,8 @@ SAVE_IMAGE_UNITS	its code	gCharacterUnits at 0x520 from gSaveBuffer (0x240 + siz
 Djinn_GetRecoveryTable.enemySide	its twin	☀️'s game_units.c parameter, text adopted (all six editions' objects unchanged)	games/tla/src/game/game_units.c
 TASK_PRIORITY_EMPTY	its twin	☀️'s task.h: the priority Task_ResetAll gives an empty slot (0xffff)	games/tla/include/system/task.h
 TASK_PRIORITY_REMOVED	its twin	☀️'s task.h: the priority Task_Remove gives a removed task (0x7fff)	games/tla/include/system/task.h
-Projection_SetFieldOfView.fieldOfView	its twin	☀️'s parameter names (fieldOfView, nearDepth, farDepth) and locals (halfAngle, sine, focal); the same three stores into the projection's focal, near and far words	games/tla/src/system/system_transform.c
-Projection_Set.focal	its twin	☀️'s parameter names (focal, nearDepth, farDepth)	games/tla/src/system/system_transform.c
+Projection_SetFieldOfView.fieldOfView	its twin	☀️'s parameter names (fieldOfView, nearDepth, farDepth) and locals (halfAngle, sine, focal); the same three stores into the projection's focal, near and far words	games/tla/src/system/system_matrix.c
+Projection_Set.focal	its twin	☀️'s parameter names (focal, nearDepth, farDepth)	games/tla/src/system/system_matrix.c
 EnemyTargetStrategy	its twin	☀️ character.h enum (MOST_HP 0, MOST_MAX_HP 1, RANDOM 2); TLA targeting.c tests the column the same way (0 for COMMAND_ITEM, != 0 skips Psynergy without PP, 2 skips Psynergy while sealed)	games/tla/include/game/character.h
 TARGET_STRATEGY_MOST_HP	its twin	tbs battle_internal.h / game/character.h, BattleAI_ChooseTarget	games/tla/src/battle/battle_targeting.c
 TARGET_STRATEGY_MOST_MAX_HP	its twin	tbs battle_internal.h / game/character.h, BattleAI_ChooseTarget	games/tla/src/battle/battle_targeting.c
@@ -4431,7 +4431,7 @@ EnemyId	its code	MsgEnemyName plus the row (message 1068 + id - 8), uppercased; 
 ENEMY_ROW	its twin	☀️ enemy_ids.h	games/tla/include/enemy_ids.h
 ActorPriorityFlag	its twin	☀️ field/actor.h enums ActorPriorityFlag, ActorMotionFlag, ActorCollisionFlag, ActorSteeringFlag and actor_update_arm.h's ArrivalAxis; the field lane read every bit used the same way in ⚓️ (for-shared, field lane round 2)	games/tla/include/field/actor.h
 FLAG_IGNORE_ENCOUNTER_CHECKS	its twin	☀️ flags.h 351; ⚓️ encounter.c runs its encounter tests only while flag 351 is clear (field lane, for-shared)	games/tla/include/flags.h
-SC_SPEED	its twin	☀️ actor_script.h, over SC_SET(SW_SPEED, Q16(x)); SC_ACCELERATION likewise over SW_ACCEL	games/tla/include/field/actor_script.h
+SC_SPEED	its twin	☀️ actor_script.h, over SC_SET(SW_SPEED, toFIXED(x)); SC_ACCELERATION likewise over SW_ACCEL	games/tla/include/field/actor_script.h
 GAME_FLAG_BIT	its twin	☀️ game/game_flags.h; GAME_FLAG_BYTE now written at every flag routine of flags.c	games/tla/include/game/game_flags.h
 WaitDma	its code	waits while DMA3_BUSY is set in the channel's control word	games/tla/src/game/game_units.c
 SAVE_SECTORS_PER_PART	its code	every sector loop steps by 3, Save_ReadSector and Save_WriteSector move sectors n, n + 1 and n + 2, sectorTotal is 3 (6 with the old copy)	games/tla/src/system/system_save.c
@@ -4629,7 +4629,7 @@ BurstWork	its code	the heap work FieldPsynergy_Burst (field Psynergy kind 21, FI
 ParticleBurstWork	its code	the work of ParticleBurst_Start's 96 particles (renamed from BurstWork, which Burst's own work now takes)	games/tla/include/field/event_commands.h
 FieldPsynergyParticle	its code	the seven-word particle (position, velocity, timer) seven field Psynergy parts declared each under its own name, read by BattleEffect_IntegrateVector2/3	games/tla/src/field/field_psynergy_internal.h
 TreasureSpot_CloseChest	its twin	TreasureSpot_CloseChest (games/tbs/src/field/field_sequence_treasure_spots.c), the same animation 5, SE_CHEST_CLOSE and 12-frame wait	games/tla/src/field/field_sequence_treasure_spots.c
-TreasureSpot_LaunchMimic	its twin	TreasureSpot_LaunchMimic (games/tbs), the same 18 frames, animation 7, SE_ENEMY_CRY and velocityY px(8)	games/tla/src/field/field_sequence_treasure_spots.c
+TreasureSpot_LaunchMimic	its twin	TreasureSpot_LaunchMimic (games/tbs), the same 18 frames, animation 7, SE_ENEMY_CRY and velocityY INTtoFIXED(8)	games/tla/src/field/field_sequence_treasure_spots.c
 TreasureSpot_OpenChest	its twin	TreasureSpot_OpenChest (games/tbs), animation 4 and SE_CHEST_OPEN	games/tla/src/field/field_sequence_treasure_spots.c
 TreasureSpot_ShowOpened	its twin	TreasureSpot_ShowOpened (games/tbs), animation 2 with no sound	games/tla/src/field/field_sequence_treasure_spots.c
 TreasureSpot_GetActor	its twin	TreasureSpot_GetActor (games/tbs)	games/tla/src/field/field_sequence_treasure_spots.c
@@ -5463,7 +5463,7 @@ ORBITING_SPIRALS_LIFE	its twin	The Broken Seal writes ORBITING_SPIRALS_LIFE (gam
 PARTICLE_DAMPING_NONE	its twin	The Broken Seal writes PARTICLE_DAMPING_NONE (games/tbs/src/battle_effect/battle_effect_internal.h) at the number aligned with this one in BattleEffect_RunMars; the twin routine BattleEffect_RunMars writes 64	games/tla/src/battle_effect/battle_effect_djinn_attacks.c
 PROJECTILE_VOLLEY_COMET_PICTURES	its twin	The Broken Seal writes PROJECTILE_VOLLEY_COMET_PICTURES (games/tbs/src/battle_effect/battle_effect_projectiles.c) at the number aligned with this one in BattleEffect_RunProjectileVolley; the twin routine BattleEffect_RunProjectileVolley writes 4096	games/tla/src/battle_effect/battle_effect_projectiles.c
 PROJECTILE_VOLLEY_COMET_WIDTH	its twin	The Broken Seal writes PROJECTILE_VOLLEY_COMET_WIDTH (games/tbs/src/battle_effect/battle_effect_projectiles.c) at the number aligned with this one in BattleEffect_RunProjectileVolley; the twin routine BattleEffect_RunProjectileVolley writes 32	games/tla/src/battle_effect/battle_effect_projectiles.c
-Q16_ONE	its twin	The Broken Seal writes Q16_ONE (games/tbs/include/fixed_math.h) at the number aligned with this one in BattleEffect_RunParticleStreams; the twin routine BattleEffect_RunParticleStreams writes 65536	games/tla/src/battle_effect/battle_effect_particle_streams.c
+FIXED_ONE	its twin	The Broken Seal writes FIXED_ONE (games/tbs/include/fixed_math.h) at the number aligned with this one in BattleEffect_RunParticleStreams; the twin routine BattleEffect_RunParticleStreams writes 65536	games/tla/src/battle_effect/battle_effect_particle_streams.c
 REAPER_SHEET_RAISED_HEIGHT	its twin	The Broken Seal writes REAPER_SHEET_RAISED_HEIGHT (games/tbs/src/battle_effect/battle_effect_internal.h) at the number aligned with this one in BattleEffect_RunCondemn; the twin routine BattleEffect_RunCondemn writes 98	games/tla/src/battle_effect/battle_effect_condemn.c
 ROCK_SPIRE_WIDTH	its twin	The Broken Seal writes ROCK_SPIRE_WIDTH (games/tbs/src/battle_effect/battle_effect_casting_impact.c) at the number aligned with this one in BattleEffect_RunCastingImpact; the twin routine BattleEffect_RunCastingImpact writes 32	games/tla/src/battle_effect/battle_effect_casting_impact.c
 RUNE_HALF_WIDTH	its twin	The Broken Seal writes RUNE_HALF_WIDTH (games/tbs/src/battle_effect/battle_effect_internal.h) at the number aligned with this one in BattleEffect_RunBind; the twin routine BattleEffect_RunBind writes 24	games/tla/src/battle_effect/battle_effect_bind.c
@@ -5540,9 +5540,9 @@ ACTOR_PRIORITY_OWN_DEPTH	its code	field_actors.c: with priorityFlags bit 3 the a
 ACTOR_PRIORITY_NOT_DRAWN	its code	field_actors.c: bit 4 set skips the on-screen placement and Render_PlaceProjectedSprite, as if off screen	games/tla/include/field/actor.h
 ACTOR_PRIORITY_IGNORES_RISES	its code	field_actors.c: bit 5 set skips the probe that puts an automatic-priority actor behind rising ground 16 and 32 pixels in front; scenes set it on actors on ledges and logs (jupiter_lighthouse_room_3 ACTOR_LEDGE_LOG)	games/tla/include/field/actor.h
 Actor_IgnoreRises	its code	the SC_CALL hook sets ACTOR_PRIORITY_IGNORES_RISES	games/tla/src/field/event_commands_movement_types.c
-Math_MulQ8	its code	multiplies two 8.8 values with rounding toward zero, beside Math_MulQ16 (16.16)	games/tla/src/field/lucky_dice.c
+Math_MulQ8	its code	multiplies two 8.8 values with rounding toward zero, beside Math_MulFX (16.16)	games/tla/src/field/lucky_dice.c
 MIND_READ_GREY	its twin	The Broken Seal's event_commands_mind_read.c MIND_READ_GREY RGB(28, 28, 28), same use	games/tla/src/field/event_commands_field_psynergy_work.c
-AFTERIMAGE_SCALE	its twin	The Broken Seal's event_commands_internal.h, Q16_ONE * 15 / 16 on the Mercury afterimages and Force's hand	games/tla/src/field/event_commands_internal.h
+AFTERIMAGE_SCALE	its twin	The Broken Seal's event_commands_internal.h, FIXED_ONE * 15 / 16 on the Mercury afterimages and Force's hand	games/tla/src/field/event_commands_internal.h
 WeatherWork	its twin	The Broken Seal's ground_mask.h struct WeatherWork, heap slot weather with 64 ground particles	games/tla/include/field/ground_mask.h
 homeX	its twin	The Broken Seal's Actor union member at 0x64, set from the creation place, read by SC_WANDER_HOME	games/tla/include/field/actor.h
 spinRampFrames	its twin	The Broken Seal's Actor union member, FieldEffect_AdvanceAngleWithRamp	games/tla/include/field/actor.h
@@ -8172,7 +8172,7 @@ ShrineOfTheSeaGod_InitializeFootprints	what the player sees	probe ShrineOfTheSea
 ShrineOfTheSeaGod_InitializePillarHole	what the player sees	probe ShrineOfTheSeaGod6: a pillar over the water that Move pushes into a hole, PushPillarIntoHole (its render)	games/tla/src/scene/shrine_of_the_sea_god.c
 ShrineOfTheSeaGod_InitializeStatue	the game	"This statue looks a lot like the one in Daila's Sanctum." (MsgFieldStatueLikeDailaShrine), probe ShrineOfTheSeaGod9 shows the crystal statue (its render)	games/tla/src/scene/shrine_of_the_sea_god.c
 gShrineOfTheSeaGodLaddersExitRegions	what the player sees	probe ShrineOfTheSeaGod10: a golden tower of ladders between the statue room and the Right Prong (its render)	games/tla/src/scene/shrine_of_the_sea_god.c
-MapGrid_SetShakeFixed	its twin	event.h's inline of the same name and body; the shrine does not include event.h	games/tla/src/scene/shrine_of_the_sea_god.c
+MapGrid_SetShakeFX	its twin	event.h's inline of the same name and body; the shrine does not include event.h	games/tla/src/scene/shrine_of_the_sea_god.c
 ACTOR_FIRST_SPROUT	its code	five placements wear SPRITE_SPROUT (row 299, SPROUT) on the cliffs, movement MOVEMENT_TYPE_CLEAR_COLLISION	games/tla/src/scene/suhalla_gate.c
 YampiDesert_SetUpScorpionPit	its code	the room where YampiDesert_LandAndFightKingScorpion drops the leader to fight the King Scorpion and DropScoopGem leaves the Scoop Gem	games/tla/src/scene/yampi_desert.c
 YampiDesert_ClimbOutOfOasisCave	what the player sees	probe YampiDesert11: a narrow cave with a ladder whose exits lead to the oasis (its render)	games/tla/src/scene/yampi_desert.c
@@ -8275,7 +8275,7 @@ SW_USER_VALUE	its twin	work value 36, ActorScript_SetOrCompareUserValue	games/tl
 SW_RISE_COUNTER	its twin	work value 39, ActorScript_SetOrCompareRiseCounter	games/tla/include/field/actor_script.h
 ActorScriptCommand	its twin	The Broken Seal's enum, numbered by gActorScript_CommandTable (field/map_grid_data.c)	games/tla/include/field/actor_script.h
 ActorScriptValue	its twin	The Broken Seal's name for the work-value enum	games/tla/include/field/actor_script.h
-FieldVector_AddPolarOffsetFixed	its twin	The Broken Seal's event_inline.h pair FieldVector_AddPolarOffsetFixed and the whole-pixel FieldVector_AddPolarOffset	games/tla/include/field/event_inline.h
+FieldVector_AddPolarOffsetFX	its twin	The Broken Seal's event_inline.h pair FieldVector_AddPolarOffsetFX and the whole-pixel FieldVector_AddPolarOffset	games/tla/include/field/event_inline.h
 plan	its twin	BattleWork 0x67c is The Broken Seal's actionRun (struct BattleActionRun), here struct BattlePlan; the staging and playback read it as the action being carried out	games/tla/include/battle/battle_work.h
 debugValue	its twin	The Broken Seal's BattleWork.debugValue, stepped by Battle_AdjustDebugValue	games/tla/include/battle/battle_work.h
 daedalusFromEnemies	its uses	battle_action.c sets a bit per Daedalus summon by an enemy (unitId > ALLY_MAX); battle_run.c plays a COMMAND_DAEDALUS action per queued strike at the turn's end, enemy side when the bit is set	games/tla/include/battle/battle_work.h
@@ -8416,9 +8416,9 @@ SCENE_JUPITER_LIGHTHOUSE_ROOM_BLUE_KEY	its uses	Scoop digs up the Blue Key	games
 SCENE_JUPITER_LIGHTHOUSE_ROOM_PHAETONS_BLADE_CHEST	its uses	its chest holds Phaeton's Blade	games/tla/include/scene_ids.h
 SCENE_ISLETS_TURTLE	its uses	Islets_GiveTurtle, Islets_RideBackToIsland	games/tla/include/scene_ids.h
 SCENE_TEST_0	the game	"Test 0" (MsgDebugAreaName); "Test 0" to "Test 7" (messages 03757 to 03764, "TEST0" to "TEST7"), The Broken Seal's SCENE_TEST_0..7	games/tla/include/scene_ids.h
-Transform_ApplyPosition	its twin	The Broken Seal's Transform_ApplyPosition and Transform_ApplyScale, same bodies	games/tla/src/system/system_transform.c
-Transform_ApplyTranslation	its code	builds the identity with x, y and z as its translation and multiplies it in; the twin's Transform_ApplyRotationTranslation calls a position so	games/tla/src/system/system_transform.c
-Transform_ApplyAxisScale	its code	builds the identity with x, y and z on its diagonal and multiplies it in	games/tla/src/system/system_transform.c
+Matrix_TranslateVector	its twin	The Broken Seal's Matrix_TranslateVector and Matrix_ScaleVector, same bodies	games/tla/src/system/system_matrix.c
+Matrix_Translate	its code	builds the identity with x, y and z as its translation and multiplies it in; the twin's Matrix_RotateTranslate calls a position so	games/tla/src/system/system_matrix.c
+Matrix_Scale	its code	builds the identity with x, y and z on its diagonal and multiplies it in	games/tla/src/system/system_matrix.c
 HEAP_SLOT_RAM_CODE_PAIRED	its twin	The Broken Seal's slot for the second blitter of a pair (battle_effect.h)	games/tla/include/system/heap.h
 SCENE_GAROH	its uses	the village itself: its doors (Garoh_OpenDoorAndEnter), villagers and the werewolf crevice	games/tla/include/scene_ids.h
 SCENE_CONTIGO	its uses	the village itself: Contigo_TeleportOut, the bushes, the Mars Djinni	games/tla/include/scene_ids.h
@@ -12912,7 +12912,7 @@ gBattleSprites	its twin	The Broken Seal's gBattleSprites, read by BattleSprite_G
 ENEMY_CLASS_LAST	its twin	The Broken Seal's ENEMY_CLASS_LAST; gBattleSprites has 387 rows here, 0 to 386	games/tla/src/battle/battle_formation.c
 ICON_ANIMATION_NARROW	its twin	The Broken Seal's, SPRITE_STATUS_POISON (702) here	games/tla/src/battle/battle_objects.c
 ICON_ANIMATION_WIDE	its twin	The Broken Seal's, SPRITE_STATUS_WIDE_POISON (688) here	games/tla/src/battle/battle_objects.c
-BATTLE_UNIT_GRAVITY	its twin	The Broken Seal's BATTLE_UNIT_GRAVITY, px(67) / 100 = 0xab85, set by the same return-to-spot routines	games/tla/src/battle/battle_internal.h
+BATTLE_UNIT_GRAVITY	its twin	The Broken Seal's BATTLE_UNIT_GRAVITY, INTtoFIXED(67) / 100 = 0xab85, set by the same return-to-spot routines	games/tla/src/battle/battle_internal.h
 DEBUG_VALUE_R	its code	Battle_AdjustDebugValue returns 399 while R is held, in every edition	games/tla/src/battle/battle_background.c
 ITEM_TARGET_USE	its twin	The Broken Seal's enum ItemTargetMode; ItemMenu_RunCommands' Use step passes 0	games/tla/src/menu/menu_item.c
 ITEM_TARGET_GIVE	its twin	The Broken Seal's enum ItemTargetMode; the Give step passes 1	games/tla/src/menu/menu_item.c

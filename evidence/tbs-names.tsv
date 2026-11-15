@@ -4983,7 +4983,7 @@ WINDOW_EDGE_RIGHT	its code	BattleEffect_BuildWindowEdgeTable reads the u16 at Ra
 WINDOW_EDGE_INSETS	its code	the bytes at Ram_MapGridCellBuffer + 2, subtracted from the right edge on lines 8 to 135; Boreas and Neptune fill 128 of them with Random16() & 63	games/tbs/src/battle_effect/battle_effect_internal.h
 WINDOW_EDGE_INSET_LINES	its code	the 128 insets, one for each of lines 8 to 135	games/tbs/src/battle_effect/battle_effect_internal.h
 WINDOW_EDGE_LINES	its code	the u16 table at Ram_MapGridCellBuffer + 130 the builder writes for every screen line and DMA 0 copies to REG_WIN0H each HBlank	games/tbs/src/battle_effect/battle_effect_internal.h
-FIELD_PIXEL	its code	px() undone on a 16.16 coordinate or distance; the field lane's macro (claude/tbs-targets-field, same text in field_sequence.h) used at 45 scene sites	games/tbs/include/field/field_sequence.h
+FIELD_PIXEL	its code	INTtoFIXED() undone on a 16.16 coordinate or distance; the field lane's macro (claude/tbs-targets-field, same text in field_sequence.h) used at 45 scene sites	games/tbs/include/field/field_sequence.h
 MAPGRID_SIZE	its code	field_map_grid.c wraps cell rows and columns with & 127 and steps rows by 128 (MAPGRID_CELLS, "The map's 128 by 128 cell words")	games/tbs/include/field/map_grid.h
 MAPGRID_CELL_PIXELS	its code	glossary: a cell is one 16-pixel square; FIELD_CELL is >> 20, 16 pixels in 16.16; terrain reads x / 16 and x & 15	games/tbs/include/field/map_grid.h
 MAPGRID_SHAPE_KIND_MASK	its code	MapGridCell.shape's comment: the shape's kind in the first byte's low four bits; & 15 indexes gMapGrid_TerrainHeightFunctions	games/tbs/include/field/map_grid.h
@@ -5001,7 +5001,7 @@ TRANSITION_CLOSED	its code	ScreenTransition_Finish closes from 32 to 64; at end 
 TRANSITION_SHOW_ALL	the hardware	0x7f7f written to WININ/WINOUT: every layer and the colour effect in both windows (GBATEK WININ bits 0..5, 8..13), with unused bits 6 and 14	games/tbs/src/field/field_sequence_screen_transition.c
 WORLD_MAP_TILE_SET_BYTES	its code	the four world map tile resources decode 0x2000 bytes apart and copy with DMA_COPY_WORDS(2048) to char blocks 2 and 3 in halves	games/tbs/src/field/field_world_map.c
 WORLD_MAP_TILE_CELLS	its code	WorldMap_WriteLayerCellTile's comment: a tile is 16 by 16 cells of 4 bytes	games/tbs/src/field/field_world_map.c
-WORLD_MAP_TILES_ACROSS	its code	tileIds index ((y & 15) << 4) + (x & 15); a tile is 512 pixels (>> 25) and limitX is px(8160)	games/tbs/src/field/field_world_map.c
+WORLD_MAP_TILES_ACROSS	its code	tileIds index ((y & 15) << 4) + (x & 15); a tile is 512 pixels (>> 25) and limitX is INTtoFIXED(8160)	games/tbs/src/field/field_world_map.c
 WORLD_MAP_LAYER_TILES	its code	layer 1's tile ids follow layer 0's 320 (tileId + 320, layerTileBase += 320)	games/tbs/src/field/field_world_map.c
 MAPGRID_ANIMATION_SCRIPT	its code	moved from field_map_grid.c to field_internal.h: the world map decodes its tileset animation to the same Ram_MapGridShapes + 0x1000	games/tbs/src/field/field_internal.h
 FIELD_PROBE_ANGLE	its code	the step probes TRIG_TURN / 16 either side and tries headings 1/16, 1/8, 3/16 turn off; the comment's 22.5, 45, 67.5 degrees	games/tbs/src/field/field_player_control.c
@@ -5014,14 +5014,14 @@ HUE_CIRCLE	its code	the same 360 degrees as 16.16 (360 << 16)	games/tbs/src/fiel
 DISPLAY_TILE_WIDTH	the hardware	the speech window and portrait are placed in 8-pixel tiles within columns 0 to 29 (240 / 8)	games/tbs/src/field/event_commands_messages.c
 DISPLAY_TILE_HEIGHT	the hardware	rows 0 to 19 (160 / 8); off-screen speakers get the centre, column 15 and row 10	games/tbs/src/field/event_commands_messages.c
 unusedA	its code	two parameters of Event_ShowMessageAtPosition and its forwarder that nothing reads; only their order tells them apart	games/tbs/src/field/event_commands_messages.c
-FixedPoint_MulQ8	its code	the routine multiplies two 8.8 fixed-point values; named as Iwram_MulQ16 is for 16.16	games/tbs/src/field/lucky_dice.c
+FixedPoint_MulQ8	its code	the routine multiplies two 8.8 fixed-point values; named as Iwram_MulFX is for 16.16	games/tbs/src/field/lucky_dice.c
 SpriteArcOamView.link	its code	the views over struct Sprite take its own member names at the same offsets (link, attr3, shadow, scale, rotation, width, height, offsetX, offsetY, lastNo, dirty, count), STATIC_ASSERTs in sprite.h	games/tbs/src/field/event_commands_arcs.c
 DescendingArcSprite.shadow	its code	as SpriteArcOamView: struct Sprite's members at 0x0c..0x1b and 0x1e..0x25	games/tbs/src/field/event_commands_retreat.c
 BurstParticleVisual.xLow	its code	the byte at offset 6 is attribute 1's low byte, x; flagsBLow holds x's top bit	games/tbs/src/field/event_commands_growth.c
 WorldPictureWork.unreadAfterCursor	its code	six bytes after cursorY nothing on the screen reads, named by what they follow	games/tbs/src/field/event_commands_world_picture.c
 ScriptOperands.layer	its code	struct Actor's layer and priorityFlags at 0x22 and 0x23, which no work value reaches	games/tbs/include/field/script_operands.h
 SceneEntrance.unusedAfterFacing	its code	0 in every table and never read; named by the member it follows	games/tbs/include/field/scene_tables.h
-FarCallSystemTable.arcTan2	its code	the entry at 64 is ArcTan2's far call (FarCallArcTanVeneer), named as the system routine is	games/tbs/src/field/world_map_lines.c
+FarCallSystemTable.arcTan2	its code	the entry at 64 is Trig_Atan's far call (FarCallArcTanVeneer), named as the system routine is	games/tbs/src/field/world_map_lines.c
 ActorScriptCommand	its code	gActorScript_CommandTable's rows and the SC_ macros' first words: each command is its handler's place in the table (SCRIPT_CMD_WAIT 0 to SCRIPT_CMD_KEY_COUNT 35; 36 to 46 run ActorScript_End)	games/tbs/include/field/actor_script.h
 SCRIPT_CMD_COUNT	its code	the first number past SC_KEY_COUNT; the table's remaining rows act as SC_END	games/tbs/include/field/actor_script.h
 TILESET_ANIM_WIDE_TILE_BYTES	its code	a layout with wideTiles copies 64-byte tiles (256 colours, GBATEK) to char block 2	games/tbs/src/field/field_tile_animation.c
@@ -5057,7 +5057,7 @@ DISPLAY_TILE_WIDTH	the hardware	the screen is 240 / 8 = 30 tiles across (GBATEK)
 DISPLAY_TILE_HEIGHT	the hardware	160 / 8 = 20 tile rows; the minigames' and the world map's BG map loops run 20 rows	games/tbs/include/field/field.h
 BG_SCREEN_WIDTH	the hardware	a text background's 256-pixel map is 32 entries a row (GBATEK BG screen size 0); the minigames' map fills step 32 entries a row, the last two off screen	games/tbs/include/field/field.h
 BG_PLTT_COLORS	the hardware	BG_PLTT_SIZE / 2: each half of palette RAM, background and sprites, holds 256 colours; both minigames scale and copy 256 colours of each	games/tbs/include/field/field.h
-LUCKY_WHEELS_FADE_FRAMES	its code	the machine fades in while frame <= 16 at frame << 12 (a sixteenth of Q16_ONE a frame) and out over 17 steps to 0; the win darkens the screen while timer < 16 and starts the sparks after 16	games/tbs/src/field/lucky_wheels.c
+LUCKY_WHEELS_FADE_FRAMES	its code	the machine fades in while frame <= 16 at frame << 12 (a sixteenth of FIXED_ONE a frame) and out over 17 steps to 0; the win darkens the screen while timer < 16 and starts the sparks after 16	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_CYCLE_FRAMES	its code	while the win shows, phase = frame % 80 steps the background toward five palettes in turn, 16 frames each (<= 15, 31, 47, 63, else)	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_CYCLE_PALETTES	its code	as LUCKY_WHEELS_CYCLE_FRAMES: Mercury, Venus, ember, lime and Jupiter palettes	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_BURST_SPARKS	its code	every 8 frames 256 sparks start from one random point, in one of four blocks ((frame / 8 & 3) * 256); the update walks all 1024	games/tbs/src/field/lucky_wheels.c
@@ -5075,8 +5075,8 @@ SPEAKER_ACTOR_MASK	its code	as SPEAKER_FLAGS: the actor id below them; Actor_Get
 TRIGGER_SUBJECT_FACING	its code	the item and Psynergy trigger lookups (field_sequence_items.c) take subject & 0xf000 as a facing, compared with the leader's within 0x17ff, when subject & 0x0800; subject & 0xff is the actor or cell behavior matched	games/tbs/include/field/scene_tables.h
 TRIGGER_SUBJECT_NEEDS_FACING	its code	as TRIGGER_SUBJECT_FACING	games/tbs/include/field/scene_tables.h
 TRIGGER_SUBJECT_TARGET	its code	as TRIGGER_SUBJECT_FACING	games/tbs/include/field/scene_tables.h
-AFTERIMAGE_SCALE	its code	the copies trailing a Djinni (event_commands_djinni.c, event_commands_mercury.c, MERCURY_AFTERIMAGE_MAX) and Force's hand ("Three afterimages", event_commands_force.c) are each set to scale Q16_ONE * 15 / 16	games/tbs/src/field/event_commands_internal.h
-FIELD_CELL_CENTER	its code	(cell << 20) + px(8), the middle of a map grid cell; the field lane's macro, same text	games/tbs/include/field/field_sequence.h
+AFTERIMAGE_SCALE	its code	the copies trailing a Djinni (event_commands_djinni.c, event_commands_mercury.c, MERCURY_AFTERIMAGE_MAX) and Force's hand ("Three afterimages", event_commands_force.c) are each set to scale FIXED_ONE * 15 / 16	games/tbs/src/field/event_commands_internal.h
+FIELD_CELL_CENTER	its code	(cell << 20) + INTtoFIXED(8), the middle of a map grid cell; the field lane's macro, same text	games/tbs/include/field/field_sequence.h
 TREASURE_SPOT_FIRST_ID	its code	the map's spot list places a spot only for ids 100 to 239 (field_sequence_treasure_spots.c) and the marker search skips the rest (field_sequence_item_display.c); TreasureSpot.id's comment	games/tbs/include/field/field_sequence.h
 TREASURE_SPOT_LAST_ID	its code	as TREASURE_SPOT_FIRST_ID	games/tbs/include/field/field_sequence.h
 TREASURE_SPOT_LIST_END	its code	both readers of the map's spot list stop at column and row 255	games/tbs/include/field/field_sequence.h
@@ -5224,7 +5224,7 @@ INVENTORY_STACK_MAX	its code	item.h's comment: a stack grows to 30 (Inventory_Ad
 MENU_ENTRY_ICONS	its code	ItemMenuWork.entryIcons and the Psynergy, Djinn and status views of the menu work hold 32 icons; the menus loop over 32	games/tbs/include/menu/item_menu.h
 STAR_FIELD_SIZE	its code	the element glow's canvas is allocated and cleared as 128 * 128 bytes, its centre STAR_FIELD_CENTER 64	games/tbs/src/battle/battle_element_glow.c
 STAR_FIELD_FRAMES	its code	the star field runs frames 0 to 44 (the struct comment: 45 frames)	games/tbs/src/battle/battle_element_glow.c
-BATTLE_PROJECTION_CENTER_X	its code	both battle camera setups set gProjection.centerX and centerY to 120 and pass px(120) to BattleCamera_SetRange	games/tbs/src/battle/battle_background.c
+BATTLE_PROJECTION_CENTER_X	its code	both battle camera setups set gProjection.centerX and centerY to 120 and pass INTtoFIXED(120) to BattleCamera_SetRange	games/tbs/src/battle/battle_background.c
 BACKGROUND_PADDED_SCREEN	its code	BACKGROUND_PLANE_OFF reads screen block 31, which BattleTransition_BuildTilemap fills	games/tbs/src/battle/battle_background.c
 BATTLE_ZOOM_NORMAL	its code	BattleCamera_SetView's zoom is in percent ((zoom << 16) / 100); the battle returns to 100 after every effect and opening; the curtain zooms from 180 = 100 + 80 frames	games/tbs/include/battle/battle.h
 PLAY_TIME_HOURS_MAX	its code	String_FormatPlayTime clamps at 999:59 (its comment)	games/tbs/src/window/screens_save.c
@@ -5265,8 +5265,8 @@ STATUS_ELEMENT_X	its code	the element icons at tiles 15, 19, 23, 27 and their co
 MENU_ICON_HIDDEN_X	its code	ItemMenu_PositionCategory and Menu_SpawnIconEntries park icons at (248, 168), DISPLAY_WIDTH + 8 and DISPLAY_HEIGHT + 8, off screen	games/tbs/include/menu/item_menu.h
 MENU_ICON_HIDDEN_Y	its code	as MENU_ICON_HIDDEN_X	games/tbs/include/menu/item_menu.h
 SELECTION_ICON_SPACING	its code	SelectionMenu's row: x steps 16 an icon, the arrows and scrolling move icons 16 at a time (the file's own comment "Icons are 16 pixels apart")	games/tbs/src/window/window_selection.c
-TRANSFORM_TRANSLATION_X	its code	the transform's words 9 to 11 take position[0] to [2] in Transform_ApplyPosition and the look-at's eye products	games/tbs/include/system/transform.h
-TRANSFORM_WORDS	its code	gTransform and every local matrix are 12 s32, copied with DMA_COPY_WORDS(12)	games/tbs/include/system/transform.h
+MATRIX_TRANSLATION_X	its code	the transform's words 9 to 11 take position[0] to [2] in Matrix_TranslateVector and the look-at's eye products	games/tbs/include/system/matrix.h
+MATRIX_WORDS	its code	gCurrentMatrix and every local matrix are 12 s32, copied with DMA_COPY_WORDS(12)	games/tbs/include/system/matrix.h
 UNIT_NAME_SIZE	its code	Unit.name is 15 bytes, name[14] always 0; BattleUnit_Set and the name loops stop at 14 characters	games/tbs/include/battle/battle_unit.h
 CURSOR_BOB_Y	its code	the same sine of gFrameCount over 16 frames, two pixels each way, at the battle prompt and the target cursors (the queue's own comment)	games/tbs/include/window/window.h
 TEXT_ACTOR_NAME	its code	Message_DecodeRaw keeps MESSAGE_ACTOR_NAME (17) bare with its operand as the next entry; the drawing and measuring switches skip one operand after code 17; en.po uses {actor_name 1,083 times	games/tbs/src/window/window_internal.h

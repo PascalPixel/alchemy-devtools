@@ -3509,7 +3509,7 @@ fn beside_layers(own: u8, actor: u8) -> Vec<u8> {
 const AROUND: [(i32, i32); 8] = [(0, 1), (-1, 0), (1, 0), (0, -1), (-1, 1), (1, 1), (-1, -1), (1, -1)];
 
 /// The heading (1/65536 turns, 0 east, 0x4000 south) from a point toward
-/// one (dx, dz) pixels away, as ArcTan2 gives it.
+/// one (dx, dz) pixels away, as Trig_Atan gives it.
 fn facing_toward(dx: i32, dz: i32) -> u32 {
     let turns = f64::from(dz).atan2(f64::from(dx)) / std::f64::consts::TAU;
     ((turns * 65536.0).round() as i64).rem_euclid(65536) as u32

@@ -42,8 +42,8 @@ line ends a replacement, so that a FIND can follow one with no + lines.
 Lines starting with # are comments. Each FIND must occur when its turn
 comes. For example:
   reuse_dx
-  - if (Iwram_MulQ16(dx, dx) + Iwram_MulQ16(dz, dz) < 0x40000) {
-  + dx = Iwram_MulQ16(dx, dx) + Iwram_MulQ16(dz, dz);
+  - if (Iwram_MulFX(dx, dx) + Iwram_MulFX(dz, dz) < 0x40000) {
+  + dx = Iwram_MulFX(dx, dx) + Iwram_MulFX(dz, dz);
   +   if (dx < 0x40000) {
 
   unsigned_counts
