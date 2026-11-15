@@ -223,8 +223,9 @@ impl<'a> Guide<'a> {
 /// How many times the selector steps down from Daila's number with Left.
 const DEBUG_STEPS: u32 = 12;
 
-/// Walking down into the Kandorean Temple's stream and along it: each step
-/// in the water leaves a splash, an actor of its own.
+/// Walking down into the Kandorean Temple's stream and along it: the map's
+/// ground effect is wading (MapFlagsWork.groundEffects), and each step in
+/// the water starts a splash (Actor_SpawnWaterSplash).
 const WADING: Walk = Walk {
     file: "field/wading.gif",
     scene: TEMPLE_STREAM,
@@ -232,7 +233,7 @@ const WADING: Walk = Walk {
     preset: PARTY_DAILA,
     stand: None,
     path: &[(0, 20), (KEY_DOWN, 60), (KEY_RIGHT, 30), (KEY_DOWN, 50), (0, 60)],
-    what: "wading in the Kandorean Temple's stream, each step a splash",
+    what: "wading in the Kandorean Temple's stream",
 };
 
 /// A field Psynergy The Lost Age adds, cast where an early scene answers

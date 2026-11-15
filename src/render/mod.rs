@@ -1450,7 +1450,7 @@ With --edition tla-en (make tla-en) it plays The Lost Age's set instead,
 --flags not needed (its flag names are its flags.h's), each written under
 the folder and name of The Broken Seal's recording it mirrors, with
 Camelot's debug parameter sets for the party (guide_tla*.rs):
-  Daila (guide_tla_town.rs): field-talk-walk, talk (window/talk.gif), menus,
+  Daila (guide_tla_town.rs): world-map (field/world-map-walk.gif), field-talk-walk, talk (window/talk.gif), menus,
   menu-start, summary-screen, djinn-standby, save-game (window/save.gif),
   runtime-save, message-blanks, sound-inn-fanfare, shop, sanctum-revive,
   map-talk-twice, windows-zoom, world-door, front-door, world-behind-roof,

@@ -165,7 +165,9 @@ impl<'a> Guide<'a> {
         let (mut entered, _) = self.tla_stand(DAILA_HOUSES, 0, PARTY_DAILA, Trigger::Talk(DAILA_INNKEEPER), |s| s.facing == WEST)?;
         entered.field.set_coins(500);
         let path = [(0, 10), (KEY_A, 3), (0, 60), (KEY_A, 3), (0, 80), (KEY_A, 3), (0, 70), (KEY_A, 3), (0, 640)];
-        let frames = Self::press_path_cleared(&mut entered.field, &path)?;
+        let mut frames = Self::press_path_cleared(&mut entered.field, &path)?;
+        // The first picture of a path played again is the one before it.
+        frames.remove(0);
         self.world_gif("sound/inn-fanfare.gif", &frames, "a night at Daila's inn")
     }
 
@@ -271,11 +273,12 @@ const WORLD_MAP: (&str, u16) = ("WorldMap", 2);
 const HOUSE_DOOR_BELOW: (i32, i32) = (120, 344);
 
 /// The modes of the second batch.
-pub const MORE_MODES: &[&str] = &["windows-zoom", "world-door", "front-door", "world-behind-roof", "layers-3d", "world-map-layers-3d", "scene-log-state"];
+pub const MORE_MODES: &[&str] = &["world-map", "windows-zoom", "world-door", "front-door", "world-behind-roof", "layers-3d", "world-map-layers-3d", "scene-log-state"];
 
 impl<'a> Guide<'a> {
     pub(super) fn run_tla_town_more(&mut self, name: &str) -> Result<(), String> {
         match name {
+            "world-map" => self.tla_walk(&WORLD_MAP_WALK),
             "windows-zoom" => self.tla_window_zoom(),
             "world-door" => self.tla_walk(&DOOR),
             "front-door" => self.tla_walk(&SANCTUM_DOOR),
@@ -369,4 +372,16 @@ const BEHIND_ROOF: Walk = Walk {
     stand: Some((420, 210, EAST)),
     path: &[(0, 10), (KEY_RIGHT, 70), (0, 15), (KEY_LEFT, 70), (0, 10)],
     what: "walking behind a house's roof in Daila",
+};
+
+/// The World Map outside Daila: walking south-west down the road, then
+/// running west with B held, then north, as `field/world-map-walk.gif`.
+const WORLD_MAP_WALK: Walk = Walk {
+    file: "field/world-map-walk.gif",
+    scene: WORLD_MAP.0,
+    entrance: WORLD_MAP.1,
+    preset: PARTY_DAILA,
+    stand: None,
+    path: &[(KEY_DOWN | KEY_LEFT, 60), (KEY_LEFT | KEY_B, 60), (KEY_UP, 40)],
+    what: "walking and running on the World Map outside Daila",
 };
