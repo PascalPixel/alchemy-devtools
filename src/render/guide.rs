@@ -603,6 +603,9 @@ pub fn modes() -> impl Iterator<Item = &'static str> {
 impl Guide<'_> {
     /// Plays one mode; `casts` picks field Psynergy by name.
     pub fn run(&mut self, name: &str, casts: &[String]) -> Result<(), String> {
+        if self.symbols.l.game == super::layout::Game::Tla {
+            return self.run_tla(name);
+        }
         match name {
             "walk" => self.walk(),
             "snow" => self.snow(),

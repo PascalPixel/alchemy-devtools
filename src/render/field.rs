@@ -303,9 +303,10 @@ impl Symbols {
             map_cell_pictures: either("gCellPictures", "gMapBlocks")?,
             map_collision: either("gMapGridShapes", "gMapCollision")?,
             map_cell_buffer: either("gMapGridCellBuffer", "gMapCellBuffer")?,
-            // Only The Broken Seal's story chapters load a debug preset
-            // (party.rs).
-            preset: find("DebugParameterSet_Load").unwrap_or(0),
+            // The Broken Seal's story chapters load a debug preset, and The
+            // Lost Age's guide recordings (party.rs); DebugParty_LoadPreset
+            // is The Lost Age's name for it.
+            preset: find("DebugParameterSet_Load").or_else(|| find("DebugParty_LoadPreset")).unwrap_or(0),
             restore: at("Party_RestoreHpPp")?,
             unit_get: at("Unit_Get")?,
             defeat: Vec::new(),
@@ -591,6 +592,14 @@ impl<'rom> Field<'rom> {
 
     /// Boots the ROM and runs until Scene_ApplyEntrance has placed the party.
     pub fn enter(rom: &'rom [u8], s: &'rom Symbols, setup: &Setup) -> Result<Field<'rom>, String> {
+        let party = if s.l.game == super::layout::Game::Tbs { chapter(setup.scene)? } else { None };
+        Field::enter_with_party(rom, s, setup, party)
+    }
+
+    /// As `enter`, with `party` in place of the chapter the scene falls in:
+    /// The Lost Age's guide recordings name a debug preset of their own
+    /// (party::tla).
+    pub fn enter_with_party(rom: &'rom [u8], s: &'rom Symbols, setup: &Setup, party: Option<&'static Party>) -> Result<Field<'rom>, String> {
         let t = Track {
             phase: Phase::Boot,
             frame: 0,
@@ -641,7 +650,7 @@ impl<'rom> Field<'rom> {
             party_saved: [0; 5],
             cuts: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, party: if s.l.game == super::layout::Game::Tbs { chapter(setup.scene)? } else { None } };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, party };
         while !field.t.applied {
             field.run_instruction()?;
         }

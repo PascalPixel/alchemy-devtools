@@ -122,6 +122,57 @@ pub fn order(members: &[u8], flags: u8) -> Vec<u8> {
     out
 }
 
+/// The Lost Age's debug parameter sets (gDebug_ParameterSets in
+/// games/tla/src/battle/battle_tables.s): each set's members, in its rows'
+/// order, the sets parted by a row whose owner is -1, as
+/// DebugParty_LoadPreset counts them.
+fn tla_sets(text: &str) -> Vec<Vec<u8>> {
+    let mut sets = vec![Vec::new()];
+    let mut rows = false;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.starts_with("gDebug_ParameterSets:") {
+            rows = true;
+            continue;
+        }
+        if !rows {
+            continue;
+        }
+        let Some(values) = line.strip_prefix(".byte ") else {
+            break;
+        };
+        match values.split(',').next().map(str::trim).and_then(|o| o.parse::<i16>().ok()) {
+            Some(-1) => sets.push(Vec::new()),
+            Some(owner) => sets.last_mut().expect("a set").push(owner as u8),
+            None => break,
+        }
+    }
+    sets
+}
+
+/// The party of The Lost Age's debug set `preset`, as a guide recording
+/// enters a scene with it: the set loaded as a new game is set up, its
+/// members the party in owner order.
+pub fn tla(preset: u32) -> Result<&'static Party, String> {
+    static SETS: OnceLock<Result<Vec<Party>, String>> = OnceLock::new();
+    let sets = SETS
+        .get_or_init(|| {
+            let path = crate::compile::root().join("games/tla/src/battle/battle_tables.s");
+            let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+            Ok(tla_sets(&text)
+                .into_iter()
+                .enumerate()
+                .map(|(set, mut members)| {
+                    members.sort_unstable();
+                    Party { maps: Vec::new(), members, preset: Some(set as u32) }
+                })
+                .collect())
+        })
+        .as_ref()
+        .map_err(Clone::clone)?;
+    sets.get(preset as usize).filter(|p| !p.members.is_empty()).ok_or_else(|| format!("The Lost Age has no debug set {preset}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

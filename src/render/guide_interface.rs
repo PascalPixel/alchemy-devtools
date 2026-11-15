@@ -321,6 +321,14 @@ impl<'a> Guide<'a> {
         let brother = source::actor_id("Vale", "ACTOR_GARETS_BROTHER")?;
         let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(brother), brother)?;
         let frames = Self::press_path(&mut entered.field, &[(0, 20), (KEY_A, 3), (0, 150), (KEY_A, 3), (0, 50)])?;
+        self.window_close_up(&frames, HEIGHT)
+    }
+
+    /// `frames` of a talk whose window opens and closes, written as
+    /// `window/window-zoom.gif`: the close-up window_zoom describes, of the
+    /// changes in the screen's first `rows` lines (where the window is, when
+    /// something else on screen moves too).
+    pub(super) fn window_close_up(&mut self, frames: &[Vec<u16>], rows: usize) -> Result<(), String> {
         // The speaker turns to the party as A is pressed, a change of a few
         // hundred pixels; the window at full size changes thousands. Its
         // zoom open is the eight frames up to the first full-size picture,
@@ -335,7 +343,7 @@ impl<'a> Guide<'a> {
         let (mut x0, mut y0, mut x1, mut y1) = (WIDTH, HEIGHT, 0, 0);
         for f in &frames[opens..closed] {
             for (i, (a, b)) in f.iter().zip(still).enumerate() {
-                if a != b {
+                if a != b && i / WIDTH < rows {
                     let (x, y) = (i % WIDTH, i / WIDTH);
                     (x0, y0, x1, y1) = (x0.min(x), y0.min(y), x1.max(x), y1.max(y));
                 }

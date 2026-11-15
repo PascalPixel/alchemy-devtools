@@ -420,9 +420,9 @@ impl<'a> Guide<'a> {
             None => self.flag(n),
         };
         let set = set.iter().map(resolve).collect::<Result<Vec<u16>, String>>()?;
-        let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
+        let clear = self.story_clears()?;
         let setup = super::field::Setup { scene, entrance, set, clear };
-        let mut entered = Field::enter(self.rom, self.symbols, &setup)?;
+        let mut entered = self.moment_enter(&setup)?;
         let field = &mut entered;
         // MOMENT_CELLS: where the map holds each of these collision codes
         // (the event rows' cell codes): each cell's top-left corner in

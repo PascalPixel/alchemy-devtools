@@ -55,6 +55,10 @@ mod guide_scene_map;
 #[cfg(feature = "render")]
 mod guide_take;
 #[cfg(feature = "render")]
+mod guide_tla;
+#[cfg(feature = "render")]
+mod guide_tla_town;
+#[cfg(feature = "render")]
 mod guide_world_play;
 mod jobs;
 // Read only by the feature's commands, and by its tests.
@@ -1496,8 +1500,13 @@ fn guide_pictures(arguments: &[String]) -> Result<(), String> {
             }
         }
     }
-    let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{GUIDE_USAGE}"))?)?;
     let root = crate::compile::root();
+    // The Lost Age has no story tables: its flags are its flags.h's names.
+    let flags = match flags_tsv {
+        Some(path) => story::Flags::read(&path)?,
+        None if layout::Game::of(&edition)? == layout::Game::Tla => story::Flags::from_header(root, "tla"),
+        None => return Err(format!("--flags is needed\n{GUIDE_USAGE}")),
+    };
     let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("guide"));
     play_guide(root, &edition, &only, &casts, &flags, &out, &jobs, arguments)
 }
@@ -1524,14 +1533,17 @@ fn play_guide(
     jobs: &jobs::Jobs,
     arguments: &[String],
 ) -> Result<(), String> {
-    if let Some(unknown) = only.iter().find(|o| !guide::modes().any(|m| m == o.as_str())) {
+    // The Lost Age's recordings are a set of their own (guide_tla.rs).
+    let tla = layout::Game::of(edition)? == layout::Game::Tla;
+    let modes: Vec<&str> = if tla { guide_tla::modes().collect() } else { guide::modes().collect() };
+    if let Some(unknown) = only.iter().find(|o| !modes.contains(&o.as_str())) {
         return Err(format!("render guide has no mode {unknown:?}: render guide --help lists them"));
     }
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     // The work in pieces: each mode, and field-psynergy's casts one by one.
     let mut units: Vec<String> = Vec::new();
-    for name in guide::modes().filter(|&name| wanted(name)) {
-        if name == "field-psynergy" {
+    for name in modes.iter().copied().filter(|&name| wanted(name)) {
+        if name == "field-psynergy" && !tla {
             let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
             units.extend(guide::field_cast_names()?.into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
         } else {
@@ -1564,7 +1576,7 @@ fn play_guide(
             }
         }
         // Failures in the order the modes play.
-        failed.sort_by_key(|name| guide::modes().position(|m| m == name));
+        failed.sort_by_key(|name| modes.iter().position(|m| m == name));
         failed.dedup();
     } else {
         let build = root.join("out").join(edition);
@@ -1574,7 +1586,7 @@ fn play_guide(
         if !jobs.child {
             note_modified(edition, &rom);
         }
-        let symbols = field::Symbols::find(&map)?;
+        let symbols = field::Symbols::find_for(&map, layout::Layout::for_edition(edition)?)?;
         std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
         let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
         if jobs.child {
@@ -1596,7 +1608,7 @@ fn play_guide(
                 Ok(records)
             });
         }
-        for name in guide::modes() {
+        for name in modes.iter().copied() {
             if wanted(name) {
                 if let Err(e) = guide.run(name, casts) {
                     eprintln!("{name}: {e}");
