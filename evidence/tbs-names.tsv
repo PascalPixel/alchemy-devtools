@@ -5403,3 +5403,8 @@ TREE_ROOMS_FALL_LANDING	its code	tree_rooms.c's fall from TREE_ROOMS_FROM_FIFTH_
 TREE_ROOMS_FALL_THROUGH_A	its code	the first room fallen through, entrance 40: tree_rooms.c sends the leader on to the entrance numbered ten lower	games/tbs/include/scene_exits.h
 TREE_ROOMS_FALL_THROUGH_B	its code	the second room fallen through, entrance 30, ten above TREE_ROOMS_FALL_THROUGH_C	games/tbs/include/scene_exits.h
 TREE_ROOMS_FALL_THROUGH_C	its code	the third room fallen through, entrance 20, ten above TREE_ROOMS_FALL_LANDING; tree_rooms.c redraws cells near it	games/tbs/include/scene_exits.h
+Irq_Lock	its twin	The Lost Age's inline of the same name (include/system/irq_lock.h), taking a pointer to the saved word; BattleBackground_SetPaletteLevel	games/tbs/include/system/irq_lock.h
+Irq_Unlock	its twin	Irq_Lock's pair, as in The Lost Age	games/tbs/include/system/irq_lock.h
+IWRAM_COPY_WORDS	its twin	The Lost Age's statement macro of the IWRAM_FILL_WORDS family; LinkBattle_SendParty and BattleArena_SendPartyRecords, whose twins (battle_link.c, lobby.c) use it	games/tbs/include/system/iwram_call.h
+Io_Read16	its twin	The Lost Age's register read beside Io_Write16; BattleTransition_RunMosaicFadeOut's BGxCNT saves, as its twin	games/tbs/include/system/io_write.h
+DjinnTutorial_SetCursor	its twin	The Lost Age's one-store statement macro at the Djinn tutorial's four cursor stores (PsynergyList_RunCompareLoop)	games/tbs/src/menu/menu_djinn_preview.c

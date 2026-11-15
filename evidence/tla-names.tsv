@@ -13390,3 +13390,13 @@ Event_GiveItemTo	its code	ShopTest_GiveEquipmentTestStock builds each of its 32 
 MapGrid_CopyRawCells	its uses	a typed event inline over Map_CopyRawCellsRect, as field/event.h's four map-copy inlines; one site, GaiaRockInside_DrawMazeRoom	games/tla/src/scene/gaia_rock_inside.c
 DjinnTutorial_SetCursor	its uses	a one-store statement macro at the four cursor stores of PsynergyList_RunCompareLoop (ICON_SHOWN, ICON_HIDDEN); the same macro makes The Broken Seal's two tagged blocks plain (tbs-en, scratch); the name is ours	games/tla/src/menu/menu_djinn_preview.c
 HallColors	its twin	struct HallColors { u16 colors[2 * PALETTE_COLORS]; }, the form Treasure Isle's colour arrays have: a halfword array inside a struct takes the struct's alias set, which keeps the hall flames' re-reads	games/tla/src/scene/mars_lighthouse_room_m.c
+GabombaActor	its uses	one struct for the Gabomba statue's actor, with every member the two deleted views (gabomba_statue, find_near) named; their layouts agree, link is void *	games/tla/src/scene/gabomba_statue.c
+WorldMapBlocks	its uses	gCellPictures read as the world map's blocks by field_tile_animation.c (blocks[x + z * 32].place), in place of VIEW(f02c58c)	games/tla/include/field/map.h
+enemyKinds	its twin	The Broken Seal's BattleWork.enemyKinds; five u16 kinds in The Lost Age, "at most five" (BattleEnemy_ClaimNameLetter)	games/tla/include/battle/battle_work.h
+kindsEnd	its uses	the halfword after the five enemy kinds, which the defeat search in battle_spoils.c reads as a sixth kind (marked UB)	games/tla/include/battle/battle_work.h
+BeamWork.largeTile	its uses	the large beam sprite's tile, from the deleted VIEW(s17a8)'s BeamSprite.tile, which is the EffectSprite's oam.index	games/tla/src/scene/jupiter_lighthouse_aerie.c
+BeamWork.smallTile	its uses	the small beam sprite's tile, as largeTile	games/tla/src/scene/jupiter_lighthouse_aerie.c
+BATTLE_MENU_WORK	its twin	The Broken Seal's battle menus' work pointer; replaces eight file-local NAVIGATION defines	games/tla/include/window/menu_list.h
+BATTLE_MENU_GET_CURSOR	its twin	The Broken Seal's name for the battle list's cursor read; replaces MENU_GET_CURSOR, DJINN_MENU_GET_CURSOR and two written-out blocks	games/tla/include/window/menu_list.h
+BATTLE_MENU_SET_CURSOR	its twin	The Broken Seal's name for the battle list's cursor store; replaces MENU_SET_CURSOR and SET_CURSOR	games/tla/include/window/menu_list.h
+WINDOW_MARK_TILEMAP_ROW	its uses	the Psynergy list's existing name, moved to the shared header with the row as its caller types it; five sites (DJINN_MENU_MARK_ROW and three written-out blocks)	games/tla/include/window/menu_list.h
