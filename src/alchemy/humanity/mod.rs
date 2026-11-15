@@ -128,11 +128,11 @@ pub struct Report {
     /// Each type of pointer to functions whose parameters are named
     /// (`typedef s32 (*BattleEffectDrawRectangle)(..., s32 x, ...)`), and
     /// each name a typedef gives another type (`DrawRectangle`).
-    function_types: HashMap<String, Vec<Option<String>>>,
-    type_aliases: HashMap<String, String>,
+    function_types: HashMap<String, Vec<(String, Vec<Option<String>>)>>,
+    type_aliases: HashMap<String, Vec<(String, String)>>,
     /// The named types each variable, parameter or member is declared with
     /// (`DrawRectangle draw[2];`), for a call through it.
-    typed_variables: HashMap<String, BTreeSet<String>>,
+    typed_variables: HashMap<String, BTreeSet<(String, String)>>,
     /// For each function that calls a pointer it is passed with its own
     /// parameters (`Call1(f, a0) { f(a0); }`): for each parameter, the
     /// pointer parameter it is passed to and in which place.
@@ -390,20 +390,37 @@ impl Report {
     /// The parameter a call through a variable fills, from the one type of
     /// pointer to functions the variable is declared with: `draw[0](canvas,
     /// picture, 48, 24, ...)` with `DrawRectangle draw[2];` fills `x` with 48.
-    fn pointer_parameter(&self, variable: &str, position: usize) -> Option<String> {
-        let resolve = |name: &str| {
+    /// A typedef or declaration is seen where C sees it: in the calling file,
+    /// else in a header; two that disagree, or a typedef that names no
+    /// parameter, resolve nothing.
+    fn pointer_parameter(&self, variable: &str, position: usize, file: &str) -> Option<String> {
+        // What `file` sees of a name declared in several places.
+        fn seen<'a, T: PartialEq>(entries: &'a [(String, T)], file: &str) -> Option<&'a T> {
+            let own: Vec<&T> = entries.iter().filter(|(at, _)| at == file).map(|(_, value)| value).collect();
+            let shared: Vec<&T> = entries.iter().filter(|(at, _)| at.ends_with(".h")).map(|(_, value)| value).collect();
+            let visible = if own.is_empty() { shared } else { own };
+            let first = *visible.first()?;
+            visible.iter().all(|value| *value == first).then_some(first)
+        }
+        let resolve = |name: &str| -> Option<&Vec<Option<String>>> {
             let mut name = name;
             for _ in 0..8 {
-                if self.function_types.contains_key(name) {
-                    return Some(name.to_string());
+                // A typedef another file keeps to itself is not seen here.
+                if let Some(list) = self.function_types.get(name).and_then(|entries| seen(entries, file)) {
+                    return Some(list);
                 }
-                name = self.type_aliases.get(name)?;
+                name = seen(self.type_aliases.get(name)?, file)?;
             }
             None
         };
-        let types: BTreeSet<Option<String>> = self.typed_variables.get(variable)?.iter().map(|name| resolve(name)).collect();
-        let [Some(function)] = &types.into_iter().collect::<Vec<_>>()[..] else { return None };
-        self.function_types[function].get(position)?.clone()
+        let declared: Vec<(String, String)> = self.typed_variables.get(variable)?.iter().map(|(ty, at)| (at.clone(), ty.clone())).collect();
+        let own = declared.iter().any(|(at, _)| at == file);
+        let mut lists = declared.iter().filter(|(at, _)| if own { at == file } else { at.ends_with(".h") }).map(|(_, ty)| resolve(ty));
+        let first = lists.next()??;
+        if !lists.all(|list| list == Some(first)) {
+            return None;
+        }
+        first.get(position)?.clone()
     }
 
     /// The honest kind of a number by the parameter it fills, where its own
@@ -434,7 +451,7 @@ impl Report {
                 }
                 // `draw(canvas, ...)` with `DrawRectangle draw`.
                 None => {
-                    if self.pointer_parameter(callee, *at).is_some_and(|name| data(callee, &name)) && plain {
+                    if self.pointer_parameter(callee, *at, &candidate.file).is_some_and(|name| data(callee, &name)) && plain {
                         return Some("pointer");
                     }
                 }
@@ -446,7 +463,7 @@ impl Report {
             }
         }
         let (variable, at) = candidate.pointer.as_ref()?;
-        (plain && self.pointer_parameter(variable, *at).is_some_and(|name| data(variable, &name))).then_some("pointer")
+        (plain && self.pointer_parameter(variable, *at, &candidate.file).is_some_and(|name| data(variable, &name))).then_some("pointer")
     }
 
     /// Settle what needs the whole game: numbers in code by the parameters
@@ -1278,7 +1295,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                         && self.code.tokens.get(after + 1).is_some_and(|t| matches!(t.text, ";" | "[" | "," | "=" | ")"))
                     {
                         let variable = next.map_or("", |t| t.text).to_string();
-                        self.report.typed_variables.entry(variable).or_default().insert(name.to_string());
+                        self.report.typed_variables.entry(variable).or_default().insert((name.to_string(), self.file.to_string()));
                     }
                 }
                 (Kind::Number, _) if self.stack.is_empty() && self.square > 0 => {}
@@ -1446,18 +1463,20 @@ impl<'r, 'a> Walk<'r, 'a> {
         // `typedef DrawRectangle BlitterPair[2];` is a pair of the same.
         let array = statement.len() > 4 && text(3) == "[" && text(statement.len() - 2) == "]";
         if (statement.len() == 4 || array) && (1..3).all(|at| self.code.tokens[statement[at]].kind == Kind::Ident) && text(statement.len() - 1) == ";" {
-            self.report.type_aliases.insert(text(2).to_string(), text(1).to_string());
+            let alias = (self.file.to_string(), text(1).to_string());
+            self.report.type_aliases.entry(text(2).to_string()).or_default().push(alias);
             return;
         }
-        let Some(at) = (0..statement.len().saturating_sub(4)).find(|&at| {
+        // The type's own declarator, before any struct body it holds.
+        let body = (0..statement.len()).find(|&at| text(at) == "{").unwrap_or(statement.len());
+        let Some(at) = (0..body.saturating_sub(4)).find(|&at| {
             text(at) == "(" && text(at + 1) == "*" && self.code.tokens[statement[at + 2]].kind == Kind::Ident && text(at + 3) == ")" && text(at + 4) == "("
         }) else {
             return;
         };
         let names: Vec<Option<String>> = self.parameter_tokens(statement, at + 4).iter().map(|tokens| self.parameter_name(tokens)).collect();
-        if names.iter().any(Option::is_some) {
-            self.report.function_types.insert(text(at + 2).to_string(), names);
-        }
+        // One that names no parameter is kept too: it hides another of its name.
+        self.report.function_types.entry(text(at + 2).to_string()).or_default().push((self.file.to_string(), names));
     }
 
     /// The structs and enums a statement defines, named by their tag or else
@@ -2520,6 +2539,15 @@ mod tests {
             "    gSine = Trig_Sin(row * 3553);\n",
             "}\n",
         );
+        // A file's own typedef, naming no parameter, hides the header's from
+        // that file alone.
+        let other = concat!(
+            "typedef s32 (*DrawRectangle)(void *, const void *, s32, s32, s32, s32);\n",
+            "void Other(void) { DrawRectangle draw; draw(canvas, sheet, 40, 50, 60, 70); }\n",
+        );
+        let hidden = game([("f.h", header), ("f.c", source), ("g.c", other)]);
+        assert_eq!(hidden.items.iter().filter(|item| item.file == "g.c" && item.metric == "magic_code").count(), 4);
+        assert_eq!(hidden.total("honest_pointer"), 9);
         let report = game([("f.h", header), ("f.c", source)]);
         let listed = |metric: &str| -> Vec<String> {
             report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.split('\t').next().unwrap().to_string()).collect()

@@ -461,6 +461,10 @@ pub fn pointer_call(tokens: &[Token], at: usize, floor: usize) -> Option<(String
             "(" => {
                 // `name[...](` or `(*name)(`.
                 let before = index.checked_sub(1)?;
+                if tokens[before].text == ")" && before >= floor + 3 && tokens[before - 2].text == "*" && tokens[before - 3].text == "(" {
+                    let name = &tokens[before - 1];
+                    return (name.kind == Kind::Ident).then(|| (name.text.to_string(), position));
+                }
                 if tokens[before].text != "]" {
                     return None;
                 }
@@ -544,6 +548,9 @@ mod tests {
         let tokens: Vec<Token> = clex::lex("draw[0](canvas, picture + 4, 48, 24);").into_iter().collect();
         let at = tokens.iter().position(|t| t.text == "48").unwrap();
         assert_eq!(pointer_call(&tokens, at, 0), Some(("draw".to_string(), 2)));
+        let tokens: Vec<Token> = clex::lex("(*draw)(canvas, cells, sway, 64, 96, 52);").into_iter().collect();
+        let at = tokens.iter().position(|t| t.text == "96").unwrap();
+        assert_eq!(pointer_call(&tokens, at, 0), Some(("draw".to_string(), 4)));
         let tokens: Vec<Token> = clex::lex("Call1((void (*)())Event_Wait, 15); F(Random16(), 9, x + 1)").into_iter().collect();
         assert_eq!(arguments(&tokens, 1), (vec![Some("Event_Wait".to_string()), None], false));
         let open = tokens.iter().position(|t| t.text == "F").unwrap() + 1;
