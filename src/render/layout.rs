@@ -150,12 +150,12 @@ const EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("obj_kind", "offsetof(struct Actor, spriteStorageKind)", "offsetof(struct Actor, spriteStorageKind)"),
     ("entrance_size", "sizeof(struct SceneEntrance)", "sizeof(struct SceneEntrance)"),
     ("event_row_size", "sizeof(struct Trigger)", "sizeof(struct Trigger)"),
-    ("unit_action_slots", "offsetof(struct Unit, psynergy)", "offsetof(struct BattleUnit, psynergy)"),
+    ("unit_action_slots", "offsetof(struct Unit, psynergy)", "offsetof(struct Unit, psynergy)"),
     // The Lost Age's flags.h leaves flag 0x160 unnamed; its encounter roll
     // (Encounter_CountStepsAndSelectFormation) tests it where The Broken
     // Seal's tests FLAG_NO_ENCOUNTERS, the name wanted.
     ("flag_no_encounters", "FLAG_NO_ENCOUNTERS", "0x160"),
-    ("heap_map", "HEAP_SLOT_MAP_GRID * 4", "offsetof(struct HeapSlots, mapWork)"),
+    ("heap_map", "HEAP_SLOT_MAP_GRID * 4", "offsetof(struct HeapSlots, mapGrid)"),
     ("heap_field", "HEAP_SLOT_FIELD * 4", "offsetof(struct HeapSlots, fieldWork)"),
 ];
 
@@ -419,41 +419,39 @@ const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
     // on; The Lost Age's list is its entries after 8 bytes.
     ("recovery_list", "0x0c", "0x0c + offsetof(struct DjinnRecoveryTable, list.entries)"),
     ("recovery_count", "0x100", "offsetof(struct DjinnRecoveryTable, list.count) - offsetof(struct DjinnRecoveryTable, list.entries)"),
-    ("unit_size", "sizeof(struct Unit)", "sizeof(struct BattleUnit)"),
-    ("unit_base_hp", "offsetof(struct Unit, baseHp)", "offsetof(struct BattleUnit, baseHp)"),
-    ("unit_base_pp", "offsetof(struct Unit, basePp)", "offsetof(struct BattleUnit, basePp)"),
-    ("unit_hp_gauge", "offsetof(struct Unit, hpGauge)", "offsetof(struct BattleUnit, hpGauge)"),
-    ("unit_base_luck", "offsetof(struct Unit, baseLuck)", "offsetof(struct BattleUnit, baseLuck)"),
-    ("unit_max_hp", "offsetof(struct Unit, hpMax)", "offsetof(struct BattleUnit, hpMax)"),
-    ("unit_max_pp", "offsetof(struct Unit, ppMax)", "offsetof(struct BattleUnit, ppMax)"),
-    ("unit_hp", "offsetof(struct Unit, hp)", "offsetof(struct BattleUnit, hp)"),
-    ("unit_pp", "offsetof(struct Unit, pp)", "offsetof(struct BattleUnit, pp)"),
-    ("unit_agility", "offsetof(struct Unit, agi)", "offsetof(struct BattleUnit, agi)"),
-    ("unit_luck", "offsetof(struct Unit, luck)", "offsetof(struct BattleUnit, luck)"),
-    ("unit_class_id", "offsetof(struct Unit, id)", "offsetof(struct BattleUnit, classId)"),
-    ("unit_class_index", "offsetof(struct Unit, classId)", "offsetof(struct BattleUnit, classIndex)"),
-    ("unit_side", "offsetof(struct Unit, side)", "offsetof(struct BattleUnit, side)"),
-    ("unit_poison", "offsetof(struct Unit, poison)", "offsetof(struct BattleUnit, poison)"),
-    ("unit_delusion", "offsetof(struct Unit, delusion)", "offsetof(struct BattleUnit, delusion)"),
-    ("unit_djinn_held", "offsetof(struct Unit, djinnHeld)", "offsetof(struct BattleUnit, djinnHeld)"),
-    ("unit_djinn_held_counts", "offsetof(struct Unit, djinnHeldCounts)", "offsetof(struct BattleUnit, djinnOwnedCounts)"),
-    ("unit_djinn_active", "offsetof(struct Unit, djinnSet)", "offsetof(struct BattleUnit, djinnSet)"),
-    ("unit_djinn_active_counts", "offsetof(struct Unit, djinnSetCounts)", "offsetof(struct BattleUnit, djinnActiveCounts)"),
+    ("unit_size", "sizeof(struct Unit)", "sizeof(struct Unit)"),
+    ("unit_base_hp", "offsetof(struct Unit, baseHp)", "offsetof(struct Unit, baseHp)"),
+    ("unit_base_pp", "offsetof(struct Unit, basePp)", "offsetof(struct Unit, basePp)"),
+    ("unit_hp_gauge", "offsetof(struct Unit, hpGauge)", "offsetof(struct Unit, hpGauge)"),
+    ("unit_base_luck", "offsetof(struct Unit, baseLuck)", "offsetof(struct Unit, baseLuck)"),
+    ("unit_max_hp", "offsetof(struct Unit, hpMax)", "offsetof(struct Unit, hpMax)"),
+    ("unit_max_pp", "offsetof(struct Unit, ppMax)", "offsetof(struct Unit, ppMax)"),
+    ("unit_hp", "offsetof(struct Unit, hp)", "offsetof(struct Unit, hp)"),
+    ("unit_pp", "offsetof(struct Unit, pp)", "offsetof(struct Unit, pp)"),
+    ("unit_agility", "offsetof(struct Unit, agi)", "offsetof(struct Unit, agi)"),
+    ("unit_luck", "offsetof(struct Unit, luck)", "offsetof(struct Unit, luck)"),
+    ("unit_class_id", "offsetof(struct Unit, id)", "offsetof(struct Unit, id)"),
+    ("unit_class_index", "offsetof(struct Unit, classId)", "offsetof(struct Unit, classId)"),
+    ("unit_side", "offsetof(struct Unit, side)", "offsetof(struct Unit, side)"),
+    ("unit_poison", "offsetof(struct Unit, poison)", "offsetof(struct Unit, poison)"),
+    ("unit_delusion", "offsetof(struct Unit, delusion)", "offsetof(struct Unit, delusion)"),
+    ("unit_djinn_held", "offsetof(struct Unit, djinnHeld)", "offsetof(struct Unit, djinnHeld)"),
+    ("unit_djinn_held_counts", "offsetof(struct Unit, djinnHeldCounts)", "offsetof(struct Unit, djinnOwnedCounts)"),
+    ("unit_djinn_active", "offsetof(struct Unit, djinnSet)", "offsetof(struct Unit, djinnSet)"),
+    ("unit_djinn_active_counts", "offsetof(struct Unit, djinnSetCounts)", "offsetof(struct Unit, djinnActiveCounts)"),
     ("work_party_units", "offsetof(struct BattleWork, partyUnits)", "offsetof(struct BattleWork, partyUnits)"),
     ("work_enemy_ids", "offsetof(struct BattleWork, enemyIds)", "offsetof(struct BattleWork, enemyIds)"),
     ("work_palette", "offsetof(struct BattleWork, palette)", "offsetof(struct BattleWork, palette)"),
     // The Lost Age's leaves the background's id unnamed, the first halfword
     // after the brightness as The Broken Seal's: background is the name
     // wanted.
-    ("work_background", "offsetof(struct BattleWork, background)", "offsetof(struct BattleWork, unk670)"),
+    ("work_background", "offsetof(struct BattleWork, background)", "offsetof(struct BattleWork, background)"),
     ("work_event_phase", "offsetof(struct BattleWork, playback.phase)", "offsetof(struct BattleWork, events.phase)"),
-    ("obj_resource", "offsetof(struct BattleObject, resource)", "offsetof(struct BattleObj, resource)"),
-    ("obj_overlay", "offsetof(struct BattleObject, overlay)", "offsetof(struct BattleObj, overlay)"),
-    ("obj_palette", "offsetof(struct BattleObject, palette)", "offsetof(struct BattleObj, palette)"),
-    // The Lost Age's slot for the enemies' units is unkd0[2] (Unit_Get):
-    // enemyUnits is the name wanted.
+    ("obj_resource", "offsetof(struct BattleObject, resource)", "offsetof(struct BattleObject, resource)"),
+    ("obj_overlay", "offsetof(struct BattleObject, overlay)", "offsetof(struct BattleObject, overlay)"),
+    ("obj_palette", "offsetof(struct BattleObject, palette)", "offsetof(struct BattleObject, palette)"),
     ("heap_battle", "HEAP_SLOT_BATTLE * 4", "offsetof(struct HeapSlots, battleWork)"),
-    ("heap_enemy_units", "HEAP_SLOT_ENEMY_UNITS * 4", "offsetof(struct HeapSlots, unkd0[2])"),
+    ("heap_enemy_units", "HEAP_SLOT_ENEMY_UNITS * 4", "offsetof(struct HeapSlots, enemyUnits)"),
 ];
 
 fn battle_headers(game: Game) -> &'static [&'static str] {
