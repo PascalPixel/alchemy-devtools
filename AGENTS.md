@@ -241,6 +241,17 @@ The devices left after the round of 15 November 2026 (The Lost Age 307, The Brok
 - **Post-reload CSE**, **loop.c's invariant threshold** (6 temporaries, four in `DjinnMenu_ShowMemberStatus`, turning on a life of 25 against 26), **if-conversion** (Bolt Trail) and **`pointer_int_sum`'s operand order** (djinni_charge) hold the rest.
 - The leads of that round were applied the same day (The Lost Age 290, The Broken Seal 80): the stack-halfword forms, `DjinnTutorial_SetCursor`, the `Irq_Lock` pair and `IWRAM_COPY_WORDS` held in The Broken Seal; `LOAD_BG_PALETTE` fits only the effects that hold the copy routine in a block local; the pool barriers, the pins by declaration order and most plain twins did not yield. What remains is listed by family in the table of that round's join, and the lists above still stand.
 
+### Open questions settled on 15 November 2026
+
+Pascal left the open questions of the two rounds to be decided ("You decide on everything including open questions"). Settled so:
+
+- The lanes' rulings stand as landed; each has the commit that would put it back in the round's `rulings.md`.
+- `*&x = value` on a local narrower than a word is plain source: the address taken is what keeps it in the frame, and a programmer writes it through an inline such as `Io_Read16`. On a word-sized local it has no such effect and stays a FAKEMATCH(dead), as The Lost Age's Casting Impact and Streak Volley are.
+- A callee-saved register the ROM saves and never reads (the Icon pair, both games) proves a removed read but not its shape: the four tags stay FAKEMATCH(dead) until a sibling or an edition shows the read. `LemurianShipDeck_HoldOnToTiller` stays tagged for the same reason. No new LEFTOVER kind.
+- The 19 frame locals of The Lost Age that two or more untouched words prove are LEFTOVER(frame), each measured. The 34 that rest on one word stay untagged, and the six LEFTOVER(frame) tags that rest on one word alone are to be rechecked against a sibling before they are trusted.
+- ☀️'s two FAKEMATCH(type) tags keep their kind, which `check tags` reports as unknown: one is a value call and one a store through pointer types, `make test` refuses `signature` in The Broken Seal, and neither has a plain form yet. They are two known findings, not a kind to add.
+- A table the C reads is a C file named for what it holds, also where it sits among other objects' data: The Broken Seal's `element_glow_tables.s` and `knockback_tables.s` became six C files and two picture files, and The Lost Age's `battle_tables.s` follows.
+
 ### How the two games relate
 
 Read from the source on 15 November 2026; use it when a device in one game might be the other's code. Camelot's public statements were not checked for this.
