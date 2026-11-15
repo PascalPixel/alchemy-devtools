@@ -5408,3 +5408,9 @@ Irq_Unlock	its twin	Irq_Lock's pair, as in The Lost Age	games/tbs/include/system
 IWRAM_COPY_WORDS	its twin	The Lost Age's statement macro of the IWRAM_FILL_WORDS family; LinkBattle_SendParty and BattleArena_SendPartyRecords, whose twins (battle_link.c, lobby.c) use it	games/tbs/include/system/iwram_call.h
 Io_Read16	its twin	The Lost Age's register read beside Io_Write16; BattleTransition_RunMosaicFadeOut's BGxCNT saves, as its twin	games/tbs/include/system/io_write.h
 DjinnTutorial_SetCursor	its twin	The Lost Age's one-store statement macro at the Djinn tutorial's four cursor stores (PsynergyList_RunCompareLoop)	games/tbs/src/menu/menu_djinn_preview.c
+gBattle_UnusedCounting	its code	sixteen bytes, 0 to 15 in order, after gBattleParty_TurnEndSideOrder; no code names them	games/tbs/src/battle/turn_end_tables.c
+gBattle_UnusedUnitMatrix	its code	twelve words after the counting bytes, FIXED_ONE on the diagonal: a unit MATRIX no code names	games/tbs/src/battle/turn_end_tables.c
+gElementGlow_UnusedWords	its code	the four words 0, 10, 20, 0 after gElementGlow_RingPictures; no code names them	games/tbs/src/battle/element_glow_tables.c
+gBattleKnockback_UnusedWords	its code	the three words 0, 20, 27 after gBattleKnockback_DistancePercent; no code names them	games/tbs/src/battle/knockback_tables.c
+gBattleHighlight_UnusedWords	its code	the two words 1, 27 after gBattleHighlight_BlendRamp; no code names them	games/tbs/src/battle/highlight_tables.c
+WEAPON	its uses	a row of gBattleUnit_WeaponKinds: the item id with its BattleWeaponKind above bit 9, as BattleUnit_GetWeaponKind unpacks it; the name is ours	games/tbs/include/battle/weapon_kind.h
