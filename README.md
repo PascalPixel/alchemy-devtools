@@ -38,7 +38,7 @@ cargo build --release --features render
 | `progress` | DONE code and data from the linker maps, and what is left to humanize (`--humanity`), a name's evidence read from `evidence/<game>-names.tsv` or, for a game not yet converted, its `★ Named from` line |
 | `rank` | every unfinished piece of a game, furthest first, each with the command that measures it |
 | `regress` | the functions whose assembly differs from a saved build, each classed |
-| `render` | the docs site's pictures and recordings, and the probes the source cites (feature `render`); `place`, `event`, `psynergy` and `probe scene` play either game's edition (`--edition tla-en`), the rest The Broken Seal's |
+| `render` | the docs site's pictures and recordings, and the probes the source cites (feature `render`); `place`, `event`, `psynergy`, `guide` (a set of its own for each game) and `probe scene` play either game's edition (`--edition tla-en`), the rest The Broken Seal's |
 | `sweep` | takes out the fake-match devices every edition compiles the same without |
 | `twins` | for each unfinished function (with `--all`, each matched one), the other game's matched function most like it |
 | `variants` | named rewrites of a draft, measured, best first |
