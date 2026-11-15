@@ -10,6 +10,7 @@
 //! worklist for people (H5).
 
 mod naming;
+mod numbers;
 mod provenance;
 
 use crate::alchemy::done::commas;
@@ -121,8 +122,20 @@ pub struct Report {
     /// Object-like macros whose value is a number or a simple sum, for the
     /// tables' first numbers (`ENEMY_ID_FIRST`).
     pub macro_values: HashMap<String, i64>,
-    /// Each lone argument in code, settled once every declaration is read.
-    arguments: Vec<Argument>,
+    /// Each number in code, settled once every declaration is read.
+    candidates: Vec<Candidate>,
+    /// Each type of pointer to functions whose parameters are named
+    /// (`typedef s32 (*BattleEffectDrawRectangle)(..., s32 x, ...)`), and
+    /// each name a typedef gives another type (`DrawRectangle`).
+    function_types: HashMap<String, Vec<Option<String>>>,
+    type_aliases: HashMap<String, String>,
+    /// The named types each variable, parameter or member is declared with
+    /// (`DrawRectangle draw[2];`), for a call through it.
+    typed_variables: HashMap<String, BTreeSet<String>>,
+    /// For each function that calls a pointer it is passed with its own
+    /// parameters (`Call1(f, a0) { f(a0); }`): for each parameter, the
+    /// pointer parameter it is passed to and in which place.
+    forwards: HashMap<String, Vec<Option<(usize, usize)>>>,
     /// Each declared function's parameter names.
     parameters: HashMap<String, Vec<Option<String>>>,
     /// Each function-like macro's parameters and the call each is passed to.
@@ -136,14 +149,29 @@ pub struct Report {
     pub naming: naming::Names,
 }
 
-/// A lone number passed to a call, with each call around it and the
-/// argument it fills (from 0), innermost first, as far as the lexer can tell.
+/// A number in code, with each call around it and the argument it fills
+/// (from 0), innermost first, as far as the lexer can tell, and what its
+/// tokens show of its kind (`numbers`).
 #[derive(Clone, Debug)]
-struct Argument {
+struct Candidate {
     file: String,
     line: usize,
     literal: String,
     calls: Vec<(String, usize)>,
+    /// A lone argument (`Event_Wait(40)`), which the parameter it fills may
+    /// make data.
+    lone: bool,
+    /// The honest kind its own tokens show.
+    local: Option<&'static str>,
+    /// The innermost call's arguments that are one name each, for a
+    /// call layer (`Call1(Event_Wait, 15)`), and whether a random roll is
+    /// among them.
+    siblings: Vec<Option<String>>,
+    random_arguments: bool,
+    /// A call through a pointer it is an argument of (`draw[0](...)`).
+    pointer: Option<(String, usize)>,
+    /// The right operand of a shift: an amount of bits, never a position.
+    shift: bool,
 }
 
 /// The words of parameter names that hold data S3 lets stay a number: a
@@ -309,26 +337,150 @@ impl Report {
         composed
     }
 
-    /// Settle what needs the whole game: lone arguments by the parameters
+    /// What a parameter's name says beyond `data_parameter`'s words, for a
+    /// number that would otherwise want a name: a duration counted in VBlanks
+    /// or by a timer (`ScreenFade_ToBlack(s32 vblanks)`), a damping out of
+    /// DAMPING_SCALE, and the edges of a rectangle in pixels, where the
+    /// routine takes both a left or right and a top or bottom edge
+    /// (`Window_ClearInteriorTiles(window, left, top, right, bottom)`; a
+    /// `BLEND(top, bottom)` is no rectangle).
+    fn parameter_words(&self, callee: &str, name: &str) -> Option<&'static str> {
+        let words = numbers::words(name);
+        let has = |list: &[&str]| words.iter().any(|word| list.contains(&word.as_str()));
+        if has(&["velocity", "speed", "step", "acceleration"]) {
+            return None;
+        }
+        if has(&["vblank", "vblanks", "timer", "countdown", "wait"]) {
+            return Some("duration");
+        }
+        if has(&["damping"]) {
+            return Some("damping");
+        }
+        let names: Vec<String> = match self.parameters.get(callee) {
+            Some(names) => names.iter().flatten().cloned().collect(),
+            None => self.macro_parameters.get(callee).map(|list| list.iter().map(|(name, _)| name.clone()).collect()).unwrap_or_default(),
+        };
+        let edge = |list: &[&str]| names.iter().any(|name| numbers::words(name).iter().any(|word| list.contains(&word.as_str())));
+        (has(&["left", "top", "right", "bottom"]) && edge(&["left", "right"]) && edge(&["top", "bottom"])).then_some("position")
+    }
+
+    /// The routine a call layer passes an argument on to, and in which
+    /// place: `C1(Event_Wait, 15)` is a macro for `Call1((void (*)())f, a)`,
+    /// and `Call1(f, a0)` calls `f(a0)`, so its 15 is `Event_Wait`'s first.
+    /// `siblings` are the call's arguments that are one name each.
+    fn forward(&self, callee: &str, position: usize, siblings: &[Option<String>]) -> Option<(String, usize)> {
+        if let Some(list) = self.forwards.get(callee) {
+            let (function, at) = (*list.get(position)?)?;
+            return Some((siblings.get(function)?.clone()?, at));
+        }
+        let parameters = self.macro_parameters.get(callee)?;
+        let (inner, inner_at) = parameters.get(position)?.1.clone()?;
+        let (function, at) = (*self.forwards.get(&inner)?.get(inner_at)?)?;
+        let feeding = parameters.iter().position(|(_, call)| call.as_ref().is_some_and(|(name, place)| *name == inner && *place == function))?;
+        Some((siblings.get(feeding)?.clone()?, at))
+    }
+
+    /// The parameter a call through a variable fills, from the one type of
+    /// pointer to functions the variable is declared with: `draw[0](canvas,
+    /// picture, 48, 24, ...)` with `DrawRectangle draw[2];` fills `x` with 48.
+    fn pointer_parameter(&self, variable: &str, position: usize) -> Option<String> {
+        let resolve = |name: &str| {
+            let mut name = name;
+            for _ in 0..8 {
+                if self.function_types.contains_key(name) {
+                    return Some(name.to_string());
+                }
+                name = self.type_aliases.get(name)?;
+            }
+            None
+        };
+        let types: BTreeSet<Option<String>> = self.typed_variables.get(variable)?.iter().map(|name| resolve(name)).collect();
+        let [Some(function)] = &types.into_iter().collect::<Vec<_>>()[..] else { return None };
+        self.function_types[function].get(position)?.clone()
+    }
+
+    /// The honest kind of a number by the parameter it fills, where its own
+    /// tokens showed none: the argument of a random roll; a parameter whose
+    /// words `parameter_words` reads; a decimal offset in a position or
+    /// duration argument (`attendantX - 16`, never a shift's amount); and
+    /// data passed through a pointer or a call layer. A lone argument takes
+    /// any literal there, as `data_argument` does; anything else a decimal.
+    fn honest_by_parameter(&self, candidate: &Candidate) -> Option<&'static str> {
+        let plain = candidate.lone || (numbers::is_decimal(&candidate.literal) && !candidate.shift);
+        let data = |callee: &str, name: &str| data_parameter(name).is_some() || self.parameter_words(callee, name).is_some();
+        if let Some((callee, at)) = candidate.calls.first() {
+            if numbers::random_call(callee, candidate.random_arguments) {
+                return Some("random");
+            }
+            match self.parameter(callee, *at, 0) {
+                Some((name, kind)) => {
+                    if let Some(kind) = self.parameter_words(callee, &name).filter(|_| plain) {
+                        return Some(kind);
+                    }
+                    if !candidate.lone && plain {
+                        match kind {
+                            Some("coordinate" | "size") => return Some("position"),
+                            Some("frames") => return Some("duration"),
+                            _ => {}
+                        }
+                    }
+                }
+                // `draw(canvas, ...)` with `DrawRectangle draw`.
+                None => {
+                    if self.pointer_parameter(callee, *at).is_some_and(|name| data(callee, &name)) && plain {
+                        return Some("pointer");
+                    }
+                }
+            }
+            if let Some((target, place)) = self.forward(callee, *at, &candidate.siblings) {
+                if self.parameter(&target, place, 0).is_some_and(|(name, kind)| kind.is_some() || data(&target, &name)) && plain {
+                    return Some("pointer");
+                }
+            }
+        }
+        let (variable, at) = candidate.pointer.as_ref()?;
+        (plain && self.pointer_parameter(variable, *at).is_some_and(|name| data(variable, &name))).then_some("pointer")
+    }
+
+    /// Settle what needs the whole game: numbers in code by the parameters
     /// they fill, documentation across declarations, and the duplicate groups.
+    /// A lone argument whose parameter holds data is data, as it always was;
+    /// every other number counts among all the numbers in code
+    /// (`magic_code_all`), and is honest (`honest_<kind>`) where its tokens or
+    /// the parameter it fills show it to be, else a number to name
+    /// (`magic_code`).
     fn finish(&mut self) {
-        for argument in std::mem::take(&mut self.arguments) {
-            let (file, line, literal) = (&argument.file, argument.line, &argument.literal);
-            let what = match argument.calls.first() {
+        for candidate in std::mem::take(&mut self.candidates) {
+            let (file, line, literal) = (&candidate.file, candidate.line, &candidate.literal);
+            let what = match candidate.calls.first() {
                 Some((callee, at)) => match self.parameter(callee, *at, 0) {
                     Some((name, _)) => format!("{literal}\t{callee} {name}"),
                     None => format!("{literal}\t{callee} #{}", at + 1),
                 },
                 None => format!("{literal}\t-"),
             };
-            match self.argument_kind(&argument.calls) {
-                Some(kind) => {
+            if candidate.lone {
+                if let Some(kind) = self.argument_kind(&candidate.calls) {
                     self.note("data_argument", file, line, &what);
                     self.note(&format!("data_argument_{kind}"), file, line, &what);
+                    continue;
                 }
+            }
+            let what = if candidate.lone { what } else { literal.clone() };
+            self.note("magic_code_all", file, line, &what);
+            // A position or duration reckoned in an argument whose parameter
+            // is a rate, scale or angle is that, not a position: `Trig_Sin(row
+            // * 3553)`, `SceneTransform_ApplyScale3(frame * 1500 - ...)`.
+            let parameter = candidate.calls.first().and_then(|(callee, at)| self.parameter(callee, *at, 0));
+            let vetoed = parameter.is_some_and(|(name, _)| numbers::is_other(&name));
+            let local = candidate.local.filter(|kind| !(vetoed && matches!(*kind, "position" | "duration")));
+            match local.or_else(|| self.honest_by_parameter(&candidate)) {
+                Some(kind) => self.note(&format!("honest_{kind}"), file, line, &what),
                 None => {
                     self.note("magic_code", file, line, literal);
-                    self.note("magic_argument", file, line, &what);
+                    if candidate.lone {
+                        self.note("magic_argument", file, line, &what);
+                    }
                 }
             }
         }
@@ -818,19 +970,34 @@ impl<'r, 'a> Walk<'r, 'a> {
         };
         let line = self.code.tokens[at].line;
         let literal = self.code.text(at);
-        if metric == "magic_code" && self.is_argument(at) {
-            // Whether it is data depends on the parameter it fills, which may be
-            // declared in a file read later.
+        if metric == "magic_code" {
+            // Whether it is data or honest may depend on the parameter it
+            // fills, which may be declared in a file read later.
             let floor = if function_macro.is_some() { self.directive_start } else { 0 };
+            let tokens = &self.code.tokens;
             // The calls around it, innermost first: `PIXELS` and then `Actor_SetPosition`.
             let mut calls = Vec::new();
             let mut inside = at;
-            while let Some((callee, position)) = call_site(&self.code.tokens, inside, floor) {
+            let mut innermost = None;
+            while let Some((callee, position)) = call_site(tokens, inside, floor) {
+                innermost.get_or_insert(callee + 1);
                 calls.push((self.code.text(callee).to_string(), position));
                 inside = callee;
             }
-            let (file, literal) = (self.file.to_string(), literal.to_string());
-            self.report.arguments.push(Argument { file, line, literal, calls });
+            let (siblings, random_arguments) = innermost.map_or_else(|| (Vec::new(), false), |open| numbers::arguments(tokens, open));
+            let candidate = Candidate {
+                file: self.file.to_string(),
+                line,
+                literal: literal.to_string(),
+                calls,
+                lone: self.is_argument(at),
+                local: numbers::local(tokens, at, floor),
+                siblings,
+                random_arguments,
+                pointer: numbers::pointer_call(tokens, at, floor),
+                shift: at > floor && matches!(self.code.text(at - 1), "<<" | ">>"),
+            };
+            self.report.candidates.push(candidate);
             return;
         }
         self.report.note(metric, self.file, line, literal);
@@ -955,23 +1122,7 @@ impl<'r, 'a> Walk<'r, 'a> {
             return;
         };
         let open = statement.iter().position(|&at| at == open[1]).expect("its own token");
-        let (mut names, mut current, mut depth) = (Vec::new(), Vec::new(), 0);
-        for &at in &statement[open + 1..] {
-            let text = self.code.text(at);
-            match text {
-                "(" => depth += 1,
-                ")" if depth == 0 => break,
-                ")" => depth -= 1,
-                "," if depth == 0 => {
-                    names.push(self.parameter_name(&current));
-                    current.clear();
-                    continue;
-                }
-                _ => {}
-            }
-            current.push(at);
-        }
-        names.push(self.parameter_name(&current));
+        let names: Vec<Option<String>> = self.parameter_tokens(statement, open).iter().map(|tokens| self.parameter_name(tokens)).collect();
         if names.iter().all(Option::is_none) {
             return;
         }
@@ -979,6 +1130,65 @@ impl<'r, 'a> Walk<'r, 'a> {
         let entry = self.report.parameters.entry(name.to_string()).or_default();
         if named(&names) > named(entry) {
             *entry = names;
+        }
+    }
+
+    /// The tokens of each parameter in the list whose `(` is `statement[open]`.
+    fn parameter_tokens(&self, statement: &[usize], open: usize) -> Vec<Vec<usize>> {
+        let (mut list, mut current, mut depth) = (Vec::new(), Vec::new(), 0);
+        for &at in &statement[open + 1..] {
+            match self.code.text(at) {
+                "(" => depth += 1,
+                ")" if depth == 0 => break,
+                ")" => depth -= 1,
+                "," if depth == 0 => {
+                    list.push(std::mem::take(&mut current));
+                    continue;
+                }
+                _ => {}
+            }
+            current.push(at);
+        }
+        list.push(current);
+        list
+    }
+
+    /// The name of a parameter that is a pointer to functions: `f` in
+    /// `void (*f)()`.
+    fn pointer_name(&self, tokens: &[usize]) -> Option<String> {
+        tokens.windows(4).find_map(|window| {
+            let text = |at: usize| self.code.text(window[at]);
+            (text(0) == "(" && text(1) == "*" && self.code.tokens[window[2]].kind == Kind::Ident && text(3) == ")").then(|| text(2).to_string())
+        })
+    }
+
+    /// A function that calls a pointer it is passed, with its own parameters
+    /// as arguments (`static __inline__ void Call1(void (*f)(), s32 a0) {
+    /// f(a0); }`), forwards those parameters: kept for the numbers its
+    /// callers pass (`Call1(Event_Wait, 15)`).
+    fn forwards(&mut self, name: &str, statement: &[usize], open: usize, close: usize) {
+        let Some(list) = statement.windows(2).find(|pair| self.code.text(pair[0]) == name && self.code.text(pair[1]) == "(") else {
+            return;
+        };
+        let list = statement.iter().position(|&at| at == list[1]).expect("its own token");
+        let parameters = self.parameter_tokens(statement, list);
+        let names: Vec<Option<String>> = parameters.iter().map(|tokens| self.parameter_name(tokens).or_else(|| self.pointer_name(tokens))).collect();
+        let mut forwards = vec![None; names.len()];
+        for at in open + 1..close {
+            let token = &self.code.tokens[at];
+            let Some(function) = names.iter().position(|name| name.as_deref() == Some(token.text)) else { continue };
+            if token.kind != Kind::Ident || self.code.tokens.get(at + 1).is_none_or(|t| t.text != "(") {
+                continue;
+            }
+            let (arguments, _) = numbers::arguments(&self.code.tokens, at + 1);
+            for (place, argument) in arguments.iter().enumerate() {
+                if let Some(parameter) = argument.as_ref().and_then(|argument| names.iter().position(|name| name.as_ref() == Some(argument))) {
+                    forwards[parameter] = Some((function, place));
+                }
+            }
+        }
+        if forwards.iter().any(Option::is_some) {
+            self.report.forwards.insert(name.to_string(), forwards);
         }
     }
 
@@ -1046,6 +1256,20 @@ impl<'r, 'a> Walk<'r, 'a> {
                     }
                     if matches!(name, "struct" | "union") {
                         self.typed(at);
+                    }
+                    // `DrawRectangle draw[2];`: a variable of a named type.
+                    let mut after = at + 1;
+                    while self.code.tokens.get(after).is_some_and(|t| t.text == "*") {
+                        after += 1;
+                    }
+                    let next = self.code.tokens.get(after);
+                    let named_type = name.starts_with(|c: char| c.is_ascii_uppercase()) && !is_macro_name(name);
+                    if named_type
+                        && next.is_some_and(|t| t.kind == Kind::Ident && !is_keyword(t.text))
+                        && self.code.tokens.get(after + 1).is_some_and(|t| matches!(t.text, ";" | "[" | "," | "=" | ")"))
+                    {
+                        let variable = next.map_or("", |t| t.text).to_string();
+                        self.report.typed_variables.entry(variable).or_default().insert(name.to_string());
                     }
                 }
                 (Kind::Number, _) if self.stack.is_empty() && self.square > 0 => {}
@@ -1151,6 +1375,7 @@ impl<'r, 'a> Walk<'r, 'a> {
         let line = self.code.tokens[first].line;
         self.tags(&opened, if lead == "typedef" { second_last } else { "" }, line);
         if lead == "typedef" {
+            self.function_type(&statement);
             self.types(&opened, second_last, line, documented);
             return;
         }
@@ -1159,6 +1384,8 @@ impl<'r, 'a> Walk<'r, 'a> {
                 let name = name.to_string();
                 self.parameters(&name, &statement);
                 self.report.declare(true, &name, file, line, documented, true);
+                let close = self.braces[&open].close;
+                self.forwards(&name, &statement, open, close);
                 self.named(&name, NameKind::Function, line, None);
                 self.duplicate(true, open, &name);
                 let own = self.code.doc_text[first].clone();
@@ -1198,6 +1425,29 @@ impl<'r, 'a> Walk<'r, 'a> {
                 }
             }
             None => {}
+        }
+    }
+
+    /// A typedef of a pointer to functions with named parameters
+    /// (`typedef s32 (*BattleEffectDrawRectangle)(void *destination, ...,
+    /// s32 x, s32 y, s32 width, s32 height);`), or another name for a type
+    /// (`typedef BattleEffectDrawRectangle DrawRectangle;`).
+    fn function_type(&mut self, statement: &[usize]) {
+        let text = |at: usize| self.code.text(statement[at]);
+        // `typedef DrawRectangle BlitterPair[2];` is a pair of the same.
+        let array = statement.len() > 4 && text(3) == "[" && text(statement.len() - 2) == "]";
+        if (statement.len() == 4 || array) && (1..3).all(|at| self.code.tokens[statement[at]].kind == Kind::Ident) && text(statement.len() - 1) == ";" {
+            self.report.type_aliases.insert(text(2).to_string(), text(1).to_string());
+            return;
+        }
+        let Some(at) = (0..statement.len().saturating_sub(4)).find(|&at| {
+            text(at) == "(" && text(at + 1) == "*" && self.code.tokens[statement[at + 2]].kind == Kind::Ident && text(at + 3) == ")" && text(at + 4) == "("
+        }) else {
+            return;
+        };
+        let names: Vec<Option<String>> = self.parameter_tokens(statement, at + 4).iter().map(|tokens| self.parameter_name(tokens)).collect();
+        if names.iter().any(Option::is_some) {
+            self.report.function_types.insert(text(at + 2).to_string(), names);
         }
     }
 
@@ -1558,8 +1808,16 @@ fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
 /// The rows of the summary, as `(metric, label)`; a metric's TSV total is its value. A row
 /// with no metric is a heading.
 const ROWS: &[(&str, &str)] = &[
-    ("magic_code", "magic numbers in code"),
+    ("magic_code", "numbers in code to name"),
     ("magic_argument", "  of those, lone arguments"),
+    ("magic_code_all", "numbers in code, all"),
+    ("honest_composed", "  honest: composed (S3)"),
+    ("honest_decimal", "  honest: tenths, percents"),
+    ("honest_random", "  honest: random ranges"),
+    ("honest_position", "  honest: positions, sizes"),
+    ("honest_duration", "  honest: durations, cues"),
+    ("honest_pointer", "  honest: via pointer calls"),
+    ("honest_damping", "  honest: dampings"),
     ("data_argument", "numbers passed as data"),
     ("data_argument_frames", "  frames"),
     ("data_argument_coordinate", "  coordinates"),
@@ -1638,7 +1896,7 @@ fn kinds(metric: &str) -> Vec<String> {
 
 /// Metrics whose top files are listed.
 const LISTED: &[&str] = &[
-    "magic_code", "magic_argument", "magic_table", "placeholder", "numbered", "fakematch", "leftover", "views", "goto", "if_language", "if_patch",
+    "magic_code", "magic_argument", "magic_code_all", "magic_table", "placeholder", "numbered", "fakematch", "leftover", "views", "goto", "if_language", "if_patch",
     "if_in_function", "undocumented_entry", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
     "undocumented_global", "provenance_none", "provenance_prose", "provenance_table_mismatch", "unused_word_name",
     "door_word_link", "unit_open", "synonym", "synonym_referent", "abbreviation", "family_shape", "prefix_twin",
@@ -1950,8 +2208,10 @@ mod tests {
             "    G(\"77\", (8 * 8), 1000u);\n",
             "}\n",
         ));
-        // 0x10, 100, 1000u and SCALE's 12; 8 * 8 is a size.
-        assert_eq!(report.total("magic_code"), 4);
+        // 0x10, 100, 1000u and SCALE's 12; 8 * 8 is a size. 100 is assigned
+        // to an x and 12 multiplies one: positions.
+        assert_eq!(report.total("magic_code_all"), 4);
+        assert_eq!((report.total("magic_code"), report.total("honest_position")), (2, 2));
         assert_eq!(report.total("magic_argument"), 1, "1000u");
         // 0x30, 40 and the local table's 99.
         assert_eq!(report.total("magic_table"), 3);
@@ -2173,6 +2433,62 @@ mod tests {
     }
 
     #[test]
+    fn honest_numbers_by_the_parameters_they_fill() {
+        let header = concat!(
+            "typedef s32 (*BattleEffectDrawRectangle)(void *destination, const void *source,\n",
+            "                                         s32 x, s32 y, s32 width, s32 height);\n",
+            "typedef BattleEffectDrawRectangle DrawRectangle;\n",
+            "typedef DrawRectangle BlitterPair[2];\n",
+            "static __inline__ void Call1(void (*f)(), s32 a0) { f(a0); }\n",
+            "static __inline__ void Call3(void (*f)(), s32 a0, s32 a1, s32 a2) { f(a0, a1, a2); }\n",
+            "#define C1(f, a) Call1((void (*)())f, a)\n",
+            "void Event_Wait(s32 frames);\n",
+            "void Actor_Face(s32 actorId, s32 facing, s32 delay);\n",
+            "void Actor_WalkBy(s32 actorId, s32 dx, s32 dz);\n",
+            "void ScreenFade_ToBlack(s32 vblanks);\n",
+            "void Window_Clear(void *window, s32 left, s32 top, s32 right, s32 bottom);\n",
+            "void Blend(s32 top, s32 bottom);\n",
+            "void Particle_Advance(void *particle, s32 damping, s32 gravity);\n",
+            "u32 Random_Below(u32 n);\n",
+            "s32 Math_Remainder(u32 value, u32 divisor);\n",
+            "s32 Trig_Sin(s32 angle);\n",
+        );
+        let source = concat!(
+            "void Run(BlitterPair blitters, DrawRectangle *draw) {\n",
+            "    blitters[0](canvas, sheet, 48, 24, 104, 120);\n",
+            "    draw[1](canvas, sheet, 12, 0, 58, 16);\n",
+            "    C1(Event_Wait, 60);\n",
+            "    Call3((void (*)())Actor_Face, 30, 2, 20);\n",
+            "    Actor_WalkBy(ACTOR_IODEM, -16, 0);\n",
+            "    Actor_WalkBy(ACTOR_IODEM, x - 32, z << 16);\n",
+            "    ScreenFade_ToBlack(30);\n",
+            "    Window_Clear(window, 0, 96, 224, 104);\n",
+            "    Blend(10, 12);\n",
+            "    Particle_Advance(mote, 60, 0);\n",
+            "    if (Random_Below(120) == 0) { gTimer = Math_Remainder(Random_Next(), 90) + 60; }\n",
+            "    gSine = Trig_Sin(row * 3553);\n",
+            "}\n",
+        );
+        let report = game([("f.h", header), ("f.c", source)]);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.split('\t').next().unwrap().to_string()).collect()
+        };
+        // Through the pointers' type: x, y, width and height, and the second
+        // call's 12, 58 and 16; through the call layers: Event_Wait's frames
+        // and Actor_Face's delay, not its actor 30.
+        assert_eq!(listed("honest_pointer"), ["48", "24", "104", "120", "12", "58", "16", "60", "20"]);
+        // -16 fills dx; 32 is an offset in dx; 16 is a shift's amount; the
+        // window's edges are a rectangle's, Blend's are not.
+        assert_eq!(listed("honest_position"), ["16", "32", "96", "224", "104"]);
+        assert_eq!(listed("honest_duration"), ["30"]);
+        assert_eq!(listed("honest_damping"), ["60"]);
+        assert_eq!(listed("honest_random"), ["120", "90", "60"]);
+        // An angle reckoned from a row is no position.
+        assert_eq!(listed("magic_code"), ["30", "16", "10", "12", "3553"]);
+        assert_eq!(report.total("magic_code_all"), 24);
+    }
+
+    #[test]
     fn composed_numbers_are_data() {
         let composed = |body: &str, parameters: &[&str]| {
             let tokens = clex::lex(body);
@@ -2227,7 +2543,7 @@ mod tests {
             "const u8 gA[] = { 0,\n",
             "#endif\n",
             "    50 };\n",
-            "void F(void) { x = 50; }\n",
+            "void F(void) { gB = 50; }\n",
         ));
         assert_eq!((report.total("magic_table"), report.total("magic_code")), (1, 1));
     }
