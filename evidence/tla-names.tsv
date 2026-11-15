@@ -9215,3 +9215,302 @@ ACTOR_WEST_GUARD	the game	"If you have permission, you can cross anytime." (MsgM
 ACTOR_CHICKEN	the game	"Buk buk buk" (MsgFieldBukBukBuk); its line	games/tla/src/scene/mikasalla.c
 ACTOR_SUNSHINES_CHILD	the game	"Everyone thinks Dad is stubborn" (MsgYallamInteriorsEveryoneThinksDadIs); its line	games/tla/src/scene/yallam_interiors.c
 ACTOR_SIGNPOST	the game	"North: Alhafra" (MsgNorthAlhafraSouth); what it reads	games/tla/src/scene/yampi_desert.c
+FLAG_RETREAT_BLOCKED	its code	set by MarsLighthouseEntrance_BlockRetreatAtChest	games/tla/include/flags.h
+FLAG_LINK_BATTLE	its code	used in BattleEffect_SelectBattleCue; set by LinkLobby_ChooseBattleMode	games/tla/include/flags.h
+FLAG_DJINN_LESSON_PART_A	its code	set by WorldMap_ExplainGivingDjinn	games/tla/include/flags.h
+FLAG_DJINN_LESSON_PART_B	its code	set by WorldMap_ExplainGivingDjinn	games/tla/include/flags.h
+FLAG_MONSTER_BATTLE	its code	used in LinkLobby_EnterBattle; set by LinkLobby_ChooseBattleMode	games/tla/include/flags.h
+FLAG_SHOP_ARTIFACTS_STOCKED	its code	used in ShopStock_AddArtifacts	games/tla/include/flags.h
+ACTOR_ITEM_BROWSER	its code	used in IncreaseItemAndLevel_SelectItem	games/tla/src/debug/level.c
+ACTOR_GROWING	its code	used in PsynergyTest_DigUpGrowingActor	games/tla/src/debug/psynergy_test.c
+ACTOR_FALLING	its code	used in PsynergyTest_DigUpFallingActor	games/tla/src/debug/psynergy_test.c
+ACTOR_PILLAR	its code	used in PsynergyTest_LowerPillar; used in PsynergyTest_PoundPillar	games/tla/src/debug/psynergy_test.c
+FLAG_BATTLE_FOUGHT	its code	set by PsynergyTest2_StepIntoBattle	games/tla/src/debug/psynergy_test_2.c
+ACTOR_EQUIPMENT	its code	used in ShopTest_GiveEquipmentTestStock	games/tla/src/debug/shop_test.c
+ACTOR_FLINT	its code	Test_ReceiveFlint, which its trigger row runs	games/tla/src/debug/test_scenes.c
+ACTOR_FIZZ	its code	Test_ReceiveFizz, which its trigger row runs	games/tla/src/debug/test_scenes.c
+ACTOR_FORGE	its code	Test_ReceiveForge, which its trigger row runs	games/tla/src/debug/test_scenes.c
+ACTOR_GUST	its code	Test_ReceiveGust, which its trigger row runs	games/tla/src/debug/test_scenes.c
+FLAG_CREDITS_LINE_DRAWN	its code	set by Credits_DrawLine	games/tla/src/menu/credits.c
+ACTOR_FIRST_PILLAR	its code	used in AirsRock_MoveFirstPillar	games/tla/src/scene/airs_rock.c
+ACTOR_SECOND_PILLAR	its code	used in AirsRock_MoveSecondPillar	games/tla/src/scene/airs_rock.c
+ACTOR_THIRD_PILLAR	its code	used in AirsRock_MoveThirdPillar	games/tla/src/scene/airs_rock.c
+ACTOR_HALL_WEST_STATUE	its code	used in AirsRockInside_WakeHallStatue	games/tla/src/scene/airs_rock_inside.c
+ACTOR_HALL_EAST_STATUE	its code	used in AirsRockInside_WakeHallStatue	games/tla/src/scene/airs_rock_inside.c
+ACTOR_HALL_TWISTER_STATUE	its code	used in AirsRockInside_WakeHallStatue	games/tla/src/scene/airs_rock_inside.c
+ACTOR_HALL_TWISTER_ROCK	its code	used in AirsRockInside_WakeHallStatue	games/tla/src/scene/airs_rock_inside.c
+ACTOR_PAIRED_STATUES_PILLAR_A	its code	used in AirsRockInside_FinishPushingPillar	games/tla/src/scene/airs_rock_inside.c
+ACTOR_PAIRED_STATUES_PILLAR_B	its code	used in AirsRockInside_FinishPushingPillar	games/tla/src/scene/airs_rock_inside.c
+ACTOR_PAIRED_STATUES_PILLAR_C	its code	used in AirsRockInside_FinishPushingPillar	games/tla/src/scene/airs_rock_inside.c
+ACTOR_FACE_WARP_FIRST_PILLAR	its code	used in AirsRockInside_FinishPushingPillar	games/tla/src/scene/airs_rock_inside.c
+ACTOR_FACE_WARP_SECOND_PILLAR	its code	used in AirsRockInside_FinishPushingPillar	games/tla/src/scene/airs_rock_inside.c
+FLAG_TOLD_INDRA_MOVED	its code	set by Alhafra_AskWhetherIndraMoved	games/tla/src/scene/alhafra.c
+FLAG_LOOKOUT_LEFT	its code	set by Alhafra_LookoutSeesMadrasMayor	games/tla/src/scene/alhafra.c
+FLAG_HUNGRY_BOY_FED	its code	set by Alhafra_GiveBreadToHungryBoy; used in Alhafra_TalkToHungryBoy	games/tla/src/scene/alhafra.c
+FLAG_BOY_TOLD_OF_CAVE	its code	set by Alhafra_TalkToHungryBoy	games/tla/src/scene/alhafra.c
+FLAG_GOLD_COINS_FOUND	its code	set by Alhafra_FindGoldCoins	games/tla/src/scene/alhafra.c
+FLAG_LET_INTO_CAVE	its code	set by Alhafra_FatherLetsPartyToCave	games/tla/src/scene/alhafra.c
+ACTOR_SECOND_MADRAN_SOLDIER	its code	used in Alhafra_MadransArrive	games/tla/src/scene/alhafra.c
+ACTOR_PARCHED_MADRAN	its code	used in Alhafra_MadransArrive	games/tla/src/scene/alhafra.c
+FLAG_HOST_TOLD_OF_REPAIRS	its code	set by AlhafraInteriors_HostTellsOfRepairs	games/tla/src/scene/alhafra_interiors.c
+FLAG_GRUMBLED_ABOUT_THE_MAYOR	its code	set by AlhafraManor_GrumbleAboutTheMayor	games/tla/src/scene/alhafra_manor.c
+FLAG_DEFENDED_THE_MAYOR	its code	set by AlhafraManor_DefendTheMayor	games/tla/src/scene/alhafra_manor.c
+FLAG_WAY_TO_JAIL_OPEN	its code	set by AlhafranCave_OpenWayToJail	games/tla/src/scene/alhafran_cave.c
+ACTOR_CAVE_SECOND_PILLAR	its code	used in AlhafranCave_SetUpCave	games/tla/src/scene/alhafran_cave.c
+ACTOR_CAVE_THIRD_PILLAR	its code	used in AlhafranCave_SetUpCave	games/tla/src/scene/alhafran_cave.c
+ACTOR_CAVE_SECOND_PILLAR_PIECE	its code	used in AlhafranCave_SetUpCave	games/tla/src/scene/alhafran_cave.c
+ACTOR_CAVE_SECOND_PUSHED_PILLAR	its code	used in AlhafranCave_SetUpCave	games/tla/src/scene/alhafran_cave.c
+ACTOR_CRATE	its code	used in AlhafranCave_DrawCrateSprite; AlhafranCave_StartMovingCrate, which its trigger row runs; AlhafranCave_FinishMovingCrate, which its trigger row runs	games/tla/src/scene/alhafran_cave.c
+ACTOR_JAIL_ROPE_OTHER_POLE	its code	used in AlhafranCave_SetUpJail	games/tla/src/scene/alhafran_cave.c
+ACTOR_JAIL_FIRST_PILLAR_PIECE	its code	used in AlhafranCave_SetUpJail	games/tla/src/scene/alhafran_cave.c
+ACTOR_JAIL_SECOND_PILLAR_PIECE	its code	used in AlhafranCave_SetUpJail	games/tla/src/scene/alhafran_cave.c
+ACTOR_JAIL_LEANING_PILLAR	its code	used in AlhafranCave_SetUpJail	games/tla/src/scene/alhafran_cave.c
+ACTOR_SECOND_LEMURIAN	its code	used in AncientLemuria_MeetTheLemurians	games/tla/src/scene/ancient_lemuria.c
+ACTOR_ELEVATOR_STATUE	its code	used in AnemosInnerSanctum_RaiseFirstStatue	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_SWITCHES_FIRST_SWITCH	its code	used in AnemosInnerSanctum_PressFirstSwitch; used in AnemosInnerSanctum_PressSecondSwitch	games/tla/src/scene/anemos_inner_sanctum.c
+FLAG_THIRD_ROOM_PILLAR_MOVED	its code	set by AnkohlRuins_FinishMovingFace	games/tla/src/scene/ankohl_ruins.c
+FLAG_FOURTH_ROOM_PILLAR_MOVED	its code	set by AnkohlRuins_FinishMovingFace	games/tla/src/scene/ankohl_ruins.c
+FLAG_FOURTH_ROOM_SECOND_PILLAR_MOVED	its code	set by AnkohlRuins_FinishMovingFace	games/tla/src/scene/ankohl_ruins.c
+FLAG_FOURTH_ROOM_THIRD_PILLAR_MOVED	its code	set by AnkohlRuins_FinishMovingFace	games/tla/src/scene/ankohl_ruins.c
+FLAG_FIFTH_ROOM_PILLAR_MOVED	its code	set by AnkohlRuins_FinishMovingFace	games/tla/src/scene/ankohl_ruins.c
+FLAG_LEFT_FACE_HALF_PLACED	its code	set by AnkohlRuins_PlacePillarPair	games/tla/src/scene/ankohl_ruins.c
+FLAG_RIGHT_FACE_HALF_PLACED	its code	set by AnkohlRuins_PlacePillarPair	games/tla/src/scene/ankohl_ruins.c
+FLAG_FACE_HALF_PUSHED_INTO_GAP	its code	set by AnkohlRuins_PushStatueIntoGap	games/tla/src/scene/ankohl_ruins.c
+FLAG_THANATOS_FACE_HALF_PLACED	its code	set by AnkohlRuins_PlaceFacePiece	games/tla/src/scene/ankohl_ruins.c
+FLAG_APOJII_AQUA_STONE_DOUSED	its code	set by ApojiiIslands_DouseAquaStone	games/tla/src/scene/apojii_islands.c
+ACTOR_FIRST_PILLAR	its code	used in AquaRock_MovePillarBeforeMoai	games/tla/src/scene/aqua_rock.c
+ACTOR_SECOND_PILLAR	its code	used in AquaRock_MovePillarBeforeMoai	games/tla/src/scene/aqua_rock.c
+FLAG_SET_OUT_WITH_WINGS	its code	set by AttekaInlet_AskPiersToSetSail; set by AttekaInlet_PiersAsksToSetSail; used in AttekaInlet_SetUpTheHarbour	games/tla/src/scene/atteka_inlet.c
+FLAG_HAMMETS_GIFT_DELIVERED	its code	used in AttekaInlet_CheckForHammetsMessenger; set by AttekaInlet_HammetsMessengerArrives	games/tla/src/scene/atteka_inlet.c
+FLAG_ANGARA_BLOCKS_STACKED	its code	set by Caverns_FinishMovingAngaraBlock	games/tla/src/scene/caverns.c
+FLAG_ANGARA_CELLS_RAISED	its code	set by Caverns_ShiftAngaraCellHeights	games/tla/src/scene/caverns.c
+FLAG_FEIZHIS_GIFT_WAITING	its code	set by Champa_TakeFeizhisGift; set by Champa_FeizhiHoldsHerGift	games/tla/src/scene/champa.c
+FLAG_FEIZHI_CAME	its code	set by Champa_FeizhiArrives	games/tla/src/scene/champa.c
+ACTOR_SECOND_SAILOR	its code	used in Champa_SailorsSpotFelix	games/tla/src/scene/champa.c
+ACTOR_ITEM_MERCHANT	its code	used in Contigo_TalkToItemMerchant	games/tla/src/scene/contigo.c
+ACTOR_WEAPON_MERCHANT	its code	used in Contigo_TalkToWeaponMerchant	games/tla/src/scene/contigo.c
+ACTOR_HEALER	its code	used in Contigo_TalkToHealer	games/tla/src/scene/contigo.c
+ACTOR_WEAPON_MERCHANT	its code	DailaInteriors_TalkToWeaponMerchant, which its trigger row runs; DailaInteriors_TalkToWeaponMerchantOnceTaviIsRescued, which its trigger row runs	games/tla/src/scene/daila_interiors.c
+ACTOR_ARMOR_MERCHANT	its code	used in DailaInteriors_ReadArmorMerchantsMind; used in DailaInteriors_ReadArmorMerchantsMindAfterRescue; DailaInteriors_TalkToArmorMerchant, which its trigger row runs	games/tla/src/scene/daila_interiors.c
+ACTOR_HEALER	its code	DailaInteriors_TalkToHealer, which its trigger row runs; DailaInteriors_TalkToHealerOnceTaviIsRescued, which its trigger row runs	games/tla/src/scene/daila_interiors.c
+ACTOR_TEAR_SPOT	its code	used in DailaInteriors_TakeSeaGodsTear	games/tla/src/scene/daila_interiors.c
+FLAG_TIGHTROPES_SECOND_PILLAR_PLACED	its code	set by DehkanPlateau_SetTightropesSecondPillarInPlace	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_FIRST_TIGHTROPE_WEST_POST	its code	used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_FIRST_TIGHTROPE_EAST_POST	its code	used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_SECOND_TIGHTROPE_WEST_POST	its code	used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_SECOND_TIGHTROPE_EAST_POST	its code	used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_ROPE_LOW_POST	its code	used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_ROPE_HIGH_POST	its code	used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_FIRST_RAISED_PILLAR	its code	used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_SECOND_RAISED_PILLAR	its code	used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_THIRD_RAISED_PILLAR	its code	used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_FOURTH_RAISED_PILLAR	its code	used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_PILLAR	its code	used in DehkanPlateau_PlaceTightropesPillar	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_SECOND_PILLAR	its code	used in DehkanPlateau_SetTightropesSecondPillarInPlace; used in DehkanPlateau_MoveTightropesSecondPillar; used in DehkanPlateau_PushTightropesSecondPillar	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_FIRST_CRUMBLING_PILLAR	its code	used in DehkanPlateau_CannonCrumblesPillars	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_FIRST_COVER	its code	used in DehkanPlateau_HideTightropesActors; used in DehkanPlateau_InitializeTightropes	games/tla/src/scene/dehkan_plateau.c
+FLAG_ACTORS_HIDDEN	its code	set by DehkanPlateau_HideActors; set by DehkanPlateau_ShowActors	games/tla/src/scene/dehkan_plateau.c
+FLAG_IN_CONE_CELL	its code	set by DehkanPlateau_EnterConeCell; set by DehkanPlateau_LeaveConeCell	games/tla/src/scene/dehkan_plateau.c
+FLAG_TIGHTROPES_PILLAR_POUNDED	its code	set by DehkanPlateau_SinkPoundedPillar	games/tla/src/scene/dehkan_plateau.c
+FLAG_LOG_ROLLED	its code	set by EasternAlhafra_RollLog	games/tla/src/scene/eastern_alhafra.c
+FLAG_TALKED_TO_SAILOR	its code	set by EasternAlhafra_TalkToSailor	games/tla/src/scene/eastern_alhafra.c
+FLAG_ASKED_TO_HELP	its code	set by EasternAlhafra_AskToHelpWithMast	games/tla/src/scene/eastern_alhafra.c
+FLAG_REACHED_ROCK	its code	used in EasternAlhafra_GiveUpOnRock	games/tla/src/scene/eastern_alhafra.c
+FLAG_GAVE_UP_ON_ROCK	its code	set by EasternAlhafra_GiveUpOnRock	games/tla/src/scene/eastern_alhafra.c
+FLAG_WORKERS_TOLD_MAYOR	its code	set by EasternAlhafra_WorkersTellMayor	games/tla/src/scene/eastern_alhafra.c
+ACTOR_FIRST_CONE_ROPE_END	its code	used in EasternAlhafra_PoundCone	games/tla/src/scene/eastern_alhafra.c
+ACTOR_SECOND_CONE_ROPE_START	its code	used in EasternAlhafra_PoundCone	games/tla/src/scene/eastern_alhafra.c
+ACTOR_SECOND_CONE_ROPE_END	its code	used in EasternAlhafra_PoundCone	games/tla/src/scene/eastern_alhafra.c
+FLAG_GABOMBA_COGS_TURNED_BACK	its code	set by GabombaStatue_CogsTurnBack	games/tla/src/scene/gabomba_statue.c
+FLAG_GABOMBA_FIRST_CONE_POUNDED	its code	used in GabombaStatue_PoundConePillar	games/tla/src/scene/gabomba_statue.c
+FLAG_GABOMBA_SECOND_CONE_POUNDED	its code	used in GabombaStatue_PoundConePillar	games/tla/src/scene/gabomba_statue.c
+FLAG_GABOMBA_MOUSE_SEEN	its code	set by GabombaStatue_MouseShowsTheWay	games/tla/src/scene/gabomba_statue.c
+FLAG_WEST_ALTAR_STREAM_OPEN	its code	set by GaiaRockInside_PlaceDollOnWestAltar	games/tla/src/scene/gaia_rock_inside.c
+FLAG_EAST_ALTAR_STREAM_OPEN	its code	set by GaiaRockInside_PlaceDollOnEastAltar	games/tla/src/scene/gaia_rock_inside.c
+FLAG_BUSHES_STREAM_OPEN	its code	set by GaiaRockInside_CycloneClearsHallBushes; used in GaiaRockInside_OpenHallPassages	games/tla/src/scene/gaia_rock_inside.c
+FLAG_ALTAR_ROOM_STREAM_TO_SHOW	its code	set by GaiaRockInside_PlaceDollOnAltarAltar	games/tla/src/scene/gaia_rock_inside.c
+FLAG_WEST_ALTAR_STREAM_TO_SHOW	its code	set by GaiaRockInside_PlaceDollOnWestAltar	games/tla/src/scene/gaia_rock_inside.c
+FLAG_EAST_ALTAR_STREAM_TO_SHOW	its code	set by GaiaRockInside_PlaceDollOnEastAltar	games/tla/src/scene/gaia_rock_inside.c
+FLAG_BUSHES_STREAM_TO_SHOW	its code	set by GaiaRockInside_CycloneClearsHallBushes	games/tla/src/scene/gaia_rock_inside.c
+FLAG_FIRST_ALTAR_FACES_MOVED	its code	set by GaiaRockInside_PlaceDollOnFirstAltar	games/tla/src/scene/gaia_rock_inside.c
+FLAG_PLATFORMS_SWAYING	its code	set by GaiaRockInside_CycloneStartsPlatforms	games/tla/src/scene/gaia_rock_inside.c
+FLAG_STATUE_A_RISEN	its code	used in GaiaRockInside_StepOnFirstStatueSpot	games/tla/src/scene/gaia_rock_inside.c
+FLAG_STATUE_B_RISEN	its code	used in GaiaRockInside_StepOnSecondStatueSpot	games/tla/src/scene/gaia_rock_inside.c
+FLAG_STATUE_C_RISEN	its code	used in GaiaRockInside_StepOnThirdStatueSpot	games/tla/src/scene/gaia_rock_inside.c
+FLAG_ROCK_SPOTS	its code	set by GaiaRockInside_RecordRockSpots	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_FIRST_ALTAR_WEST_FACE	its code	used in GaiaRockInside_PlaceDollOnFirstAltar	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_FIRST_ALTAR_EAST_FACE	its code	used in GaiaRockInside_PlaceDollOnFirstAltar	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_ROCK_A	its code	used in GaiaRockInside_RecordRockSpots	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_ROCK_B	its code	used in GaiaRockInside_RecordRockSpots	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_FIRST_ALTAR_DOLL	its code	used in GaiaRockInside_PlaceDollOnFirstAltar	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_EAST_FACE	its code	used in GaiaRockInside_PlaceDollOnEastAltar	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_TWIN_ALTARS_DOLL	its code	used in GaiaRockInside_PlaceDollOnWestAltar; used in GaiaRockInside_PlaceDollOnEastAltar	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_FIRST_PLATFORM	its code	used in GaiaRockInside_SwayPlatforms; used in GaiaRockInside_StartPlatforms	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_LAST_PLATFORM	its code	used in GaiaRockInside_SwayPlatforms; used in GaiaRockInside_StartPlatforms	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_ALTAR_FACE	its code	used in GaiaRockInside_PlaceDollOnAltarAltar	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_STATUE_A	its code	used in GaiaRockInside_StepOnFirstStatueSpot	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_STATUE_B	its code	used in GaiaRockInside_StepOnSecondStatueSpot	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_STATUE_C	its code	used in GaiaRockInside_StepOnThirdStatueSpot	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_ALTAR_DOLL	its code	used in GaiaRockInside_PlaceDollOnAltarAltar	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_THIRD_PILLAR	its code	used in Garoh_CheckThirdPillar	games/tla/src/scene/garoh.c
+ACTOR_FOURTH_PILLAR	its code	used in Garoh_RaiseFourthPillarOnCell	games/tla/src/scene/garoh.c
+FLAG_WEREWOLF_PEERED_OUT	its code	set by Garoh_WerewolfPeersFromCrevice	games/tla/src/scene/garoh.c
+FLAG_LITTLE_WEREWOLF_THANKED	its code	set by Garoh_LittleWerewolfThanks	games/tla/src/scene/garoh.c
+FLAG_IN_DARK_CAVE	its code	set by Garoh_RestoreBlocksDark	games/tla/src/scene/garoh.c
+FLAG_ROPE_LASHED	its code	set by Garoh_LashRope	games/tla/src/scene/garoh.c
+FLAG_FOURTH_PILLAR_RAISED	its code	set by Garoh_RaiseFourthPillarOnCell	games/tla/src/scene/garoh.c
+FLAG_CROSSED_EAST_THRESHOLD	its code	set by Garoh_CrossBlocksEastThreshold	games/tla/src/scene/garoh.c
+ACTOR_HEALER	its code	used in GarohInteriors_TalkToHealer	games/tla/src/scene/garoh_interiors.c
+ACTOR_FIRST_PUDDLE	its code	used in GondowanCliffs_FreezeFirstPuddle	games/tla/src/scene/gondowan_cliffs.c
+ACTOR_SECOND_PUDDLE	its code	used in GondowanCliffs_FreezeSecondPuddle	games/tla/src/scene/gondowan_cliffs.c
+FLAG_FIRST_PUDDLE_FROZEN	its code	set by GondowanCliffs_FreezeFirstPuddle	games/tla/src/scene/gondowan_cliffs.c
+FLAG_SECOND_PUDDLE_FROZEN	its code	set by GondowanCliffs_FreezeSecondPuddle	games/tla/src/scene/gondowan_cliffs.c
+ACTOR_FIRST_LOG	its code	used in IsletCave_RideLog	games/tla/src/scene/islet_cave.c
+ACTOR_SECOND_LOG	its code	used in IsletCave_RideLog; used in IsletCave_RideSecondLogEast; used in IsletCave_RideSecondLogWest	games/tla/src/scene/islet_cave.c
+ACTOR_THIRD_LOG	its code	used in IsletCave_RideLog	games/tla/src/scene/islet_cave.c
+ACTOR_FOURTH_LOG	its code	used in IsletCave_RideLog	games/tla/src/scene/islet_cave.c
+ACTOR_FIFTH_LOG	its code	used in IsletCave_RideLog	games/tla/src/scene/islet_cave.c
+ACTOR_SIXTH_LOG	its code	used in IsletCave_RideLog	games/tla/src/scene/islet_cave.c
+ACTOR_SEVENTH_LOG	its code	used in IsletCave_RideSeventhLogNorth; used in IsletCave_RideSeventhLogSouth	games/tla/src/scene/islet_cave.c
+ACTOR_DOG	its code	used in Islets_TradeWithDog; used in Islets_InitializeDog	games/tla/src/scene/islets.c
+ACTOR_LOG	its code	used in Islets_PushLogIntoWater	games/tla/src/scene/islets.c
+ACTOR_HEALER	its code	used in Islets_TalkToHealer	games/tla/src/scene/islets.c
+ACTOR_COW	its code	used in Islets_TradeWithCow; used in Islets_InitializeCow	games/tla/src/scene/islets.c
+ACTOR_TREASURE_HUNTER	its code	used in Islets_TalkToTreasureHunters	games/tla/src/scene/islets.c
+ACTOR_CRATE_A	its code	used in Islets_StartPushingCrate; used in Islets_FinishPushingCrate; used in Islets_SaveCratePositions	games/tla/src/scene/islets.c
+ACTOR_CRATE_B	its code	used in Islets_StartPushingCrate; used in Islets_FinishPushingCrate; used in Islets_SaveCratePositions	games/tla/src/scene/islets.c
+FLAG_GUARD_SAW_STONE_MOVED	its code	set by Izumo_FinishMovingStone; set by Izumo_TalkToStoneCircleGuard; set by Izumo_TalkToFestivalStoneCircleGuard	games/tla/src/scene/izumo.c
+FLAG_STONE_IN_PLACE	its code	set by Izumo_FinishMovingStone; used in Izumo_RevealTheStoneCircle	games/tla/src/scene/izumo.c
+FLAG_REVEALING	its code	set by Izumo_RevealTheStoneCircle	games/tla/src/scene/izumo.c
+FLAG_STOPPED_TO_THANK_THE_PARTY	its code	set by Izumo_StopThePartyToThankThem	games/tla/src/scene/izumo.c
+FLAG_TOKEN_OFFERED	its code	used in Izumo_OfferATokenOfGratitude	games/tla/src/scene/izumo.c
+FLAG_ENERGY_BLOCK_IN_GAP	its code	set by JupiterLighthouse_DropEnergyBlock	games/tla/src/scene/jupiter_lighthouse_room_beam.c
+FLAG_PILLAR_DROPPED	its code	set by JupiterLighthouse_DropBlockIntoHole	games/tla/src/scene/jupiter_lighthouse_room_blue_key.c
+FLAG_DOOR_BUTTON_HELD	its code	set by JupiterLighthouse_StepOnButton; set by JupiterLighthouse_StepOffButton	games/tla/src/scene/jupiter_lighthouse_room_cracked_floor.c
+FLAG_LOG_OFF_LEDGE	its code	set by JupiterLighthouse_PushLogOffTheLedge	games/tla/src/scene/jupiter_lighthouse_room_erinyes_tunic_chest.c
+FLAG_LEFT_PILLAR_IN_GAP	its code	set by JupiterLighthouse_FinishMovingPillar	games/tla/src/scene/jupiter_lighthouse_room_erinyes_tunic_chest.c
+FLAG_RIGHT_PILLAR_IN_GAP	its code	set by JupiterLighthouse_FinishMovingPillar	games/tla/src/scene/jupiter_lighthouse_room_erinyes_tunic_chest.c
+FLAG_GATES_BUTTON_HELD	its code	set by JupiterLighthouse_StepOnButton; set by JupiterLighthouse_StepOffButton	games/tla/src/scene/jupiter_lighthouse_room_gate_button.c
+FLAG_RED_DOOR_OPENED	its code	set by JupiterLighthouse_UseRedKey	games/tla/src/scene/jupiter_lighthouse_room_locked_doors.c
+FLAG_BLUE_DOOR_OPENED	its code	set by JupiterLighthouse_UseBlueKey	games/tla/src/scene/jupiter_lighthouse_room_locked_doors.c
+FLAG_BRIDGE_BLOCK_RAISED	its code	set by JupiterLighthouse_FinishMovingBlock	games/tla/src/scene/jupiter_lighthouse_room_locked_doors.c
+ACTOR_BRIDGE_BLOCK	its code	JupiterLighthouse_StartMovingBlock, which its trigger row runs; JupiterLighthouse_FinishMovingBlock, which its trigger row runs	games/tla/src/scene/jupiter_lighthouse_room_locked_doors.c
+ACTOR_WEST_UPPER_GUST	its code	used in JupiterLighthouse_RideUpperWhirlwind	games/tla/src/scene/jupiter_lighthouse_room_m.c
+ACTOR_WHIRLWIND_SOURCE	its code	used in JupiterLighthouse_RaiseWhirlwind; used in JupiterLighthouse_RaiseUpperWhirlwind	games/tla/src/scene/jupiter_lighthouse_room_phaetons_blade_chest.c
+ACTOR_FIRST_PUSHED_BLOCK	its code	JupiterLighthouse_LiftPushedBlock, which its trigger row runs; JupiterLighthouse_PlacePushedBlock, which its trigger row runs	games/tla/src/scene/jupiter_lighthouse_room_red_key.c
+ACTOR_LAST_PUSHED_BLOCK	its code	JupiterLighthouse_LiftPushedBlock, which its trigger row runs; JupiterLighthouse_PlacePushedBlock, which its trigger row runs	games/tla/src/scene/jupiter_lighthouse_room_red_key.c
+ACTOR_EAST_LIFT	its code	used in KandoreanTemple_RunEastLift; used in KandoreanTemple_RideEastLiftUp	games/tla/src/scene/kandorean_temple.c
+ACTOR_WEST_LIFT_COLUMN	its code	used in KandoreanTemple_RunWestLift; used in KandoreanTemple_RideWestLiftUp	games/tla/src/scene/kandorean_temple.c
+ACTOR_EAST_LIFT_COLUMN	its code	used in KandoreanTemple_RunEastLift; used in KandoreanTemple_RideEastLiftUp	games/tla/src/scene/kandorean_temple.c
+ACTOR_NORTH_ROPE_EAST_POLE	its code	used in KandoreanTemple_PoiWaitsByTheNorthRope	games/tla/src/scene/kandorean_temple.c
+ACTOR_NORTH_ROPE_WEST_POLE	its code	used in KandoreanTemple_PoiWaitsByTheNorthRope	games/tla/src/scene/kandorean_temple.c
+FLAG_ASKED_ABOUT_POI	its code	set by KandoreanTemple_AskAboutPoi	games/tla/src/scene/kandorean_temple.c
+FLAG_TOLD_OF_THE_MEDITATION	its code	set by KandoreanTemple_TellOfTheMeditation	games/tla/src/scene/kandorean_temple.c
+FLAG_STUDENTS_TESTED	its code	set by KandoreanTemple_TestTheStudents	games/tla/src/scene/kandorean_temple.c
+FLAG_MET_POI	its code	used in KandoreanTemple_StartPoisHall; set by KandoreanTemple_MeetPoi	games/tla/src/scene/kandorean_temple.c
+FLAG_FIRST_MARKING_DUG	its code	set by Kibombo_DigFirstMarking	games/tla/src/scene/kibombo.c
+FLAG_SECOND_MARKING_DUG	its code	set by Kibombo_DigSecondMarking	games/tla/src/scene/kibombo.c
+FLAG_THIRD_MARKING_DUG	its code	set by Kibombo_DigThirdMarking	games/tla/src/scene/kibombo.c
+FLAG_FOURTH_MARKING_DUG	its code	set by Kibombo_DigFourthMarking	games/tla/src/scene/kibombo.c
+FLAG_SCOOPING_FIRST_MARKING	its code	used in Kibombo_DigMarkingUnderLeader	games/tla/src/scene/kibombo.c
+FLAG_SCOOPING_SECOND_MARKING	its code	used in Kibombo_DigMarkingUnderLeader	games/tla/src/scene/kibombo.c
+FLAG_SCOOPING_THIRD_MARKING	its code	used in Kibombo_DigMarkingUnderLeader	games/tla/src/scene/kibombo.c
+FLAG_SCOOPING_FOURTH_MARKING	its code	used in Kibombo_DigMarkingUnderLeader	games/tla/src/scene/kibombo.c
+ACTOR_STATUE_JAW_A	its code	used in Kibombo_SetStatueMouth; used in Kibombo_InitializeStatueGrounds	games/tla/src/scene/kibombo.c
+ACTOR_STATUE_JAW_B	its code	used in Kibombo_SetStatueMouth; used in Kibombo_InitializeStatueGrounds	games/tla/src/scene/kibombo.c
+ACTOR_STATUE_TONGUE	its code	used in Kibombo_SetStatueTongue	games/tla/src/scene/kibombo.c
+ACTOR_ARMOR_SHOPKEEPER	its code	used in Kibombo_OpenArmorShop	games/tla/src/scene/kibombo.c
+FLAG_GUARD_KNOCKED_OUT	its code	used in KibomboMountains_StepBeforeLowerGuard; used in KibomboMountains_StepBeforeLowerGuardAgain	games/tla/src/scene/kibombo_mountains.c
+FLAG_DOG_SHUT_SOUTH	its code	used in KibomboMountains_StepNorthOfDog	games/tla/src/scene/kibombo_mountains.c
+FLAG_DOG_SHUT_NORTH	its code	used in KibomboMountains_StepSouthOfDog	games/tla/src/scene/kibombo_mountains.c
+FLAG_TURNED_BACK	its code	set by KibomboMountains_GuardsTurnPartyBack	games/tla/src/scene/kibombo_mountains.c
+FLAG_FIRST_PUDDLE_FROZEN	its code	set by KibomboMountains_FreezeFirstPuddle	games/tla/src/scene/kibombo_mountains.c
+FLAG_SECOND_PUDDLE_FROZEN	its code	set by KibomboMountains_FreezeSecondPuddle	games/tla/src/scene/kibombo_mountains.c
+FLAG_DOG_PILLAR_DROPPED	its code	set by KibomboMountains_DropCrate	games/tla/src/scene/kibombo_mountains.c
+FLAG_GUARD_CRATE_DROPPED	its code	set by KibomboMountains_DropCrate	games/tla/src/scene/kibombo_mountains.c
+ACTOR_THIRD_LOOKOUT	its code	used in KibomboMountains_StepBeforeThirdLookout; used in KibomboMountains_StepBeforeThirdLookoutAgain	games/tla/src/scene/kibombo_mountains.c
+ACTOR_WEST_CRATE	its code	used in KibomboMountains_StepWestOfCrate	games/tla/src/scene/kibombo_mountains.c
+ACTOR_EAST_CRATE	its code	used in KibomboMountains_StepEastOfCrate	games/tla/src/scene/kibombo_mountains.c
+ACTOR_LOWER_WEST_CRATE	its code	used in KibomboMountains_StartPushingChestRoomCrate; used in KibomboMountains_FinishPushingChestRoomCrate	games/tla/src/scene/kibombo_mountains.c
+ACTOR_LOWER_EAST_CRATE	its code	used in KibomboMountains_StartPushingChestRoomCrate; used in KibomboMountains_FinishPushingChestRoomCrate	games/tla/src/scene/kibombo_mountains.c
+ACTOR_FIRST_PUDDLE	its code	KibomboMountains_FreezeFirstPuddle, which its trigger row runs	games/tla/src/scene/kibombo_mountains.c
+ACTOR_SECOND_PUDDLE	its code	KibomboMountains_FreezeSecondPuddle, which its trigger row runs	games/tla/src/scene/kibombo_mountains.c
+ACTOR_ROCK	its code	used in LemuriaEntrance_GrindRock	games/tla/src/scene/lemuria_entrance.c
+FLAG_LEFT_PILLAR_SUNK	its code	set by LemurianShip_CheckPillarsOnDroplets; used in LemurianShip_WatchPillarPuddles; set by LemurianShip_SetUpPillarRoom	games/tla/src/scene/lemurian_ship.c
+FLAG_LEFT_PILLAR_FULL	its code	used in LemurianShip_CheckPillarsOnDroplets; set by LemurianShip_SetUpPillarRoom	games/tla/src/scene/lemurian_ship.c
+FLAG_PUDDLE_FROZEN	its code	set by LemurianShip_FreezeLiftPuddle	games/tla/src/scene/lemurian_ship.c
+FLAG_FIGHTING_JELLY	its code	set by LemurianShip_FightAquaHydra	games/tla/src/scene/lemurian_ship.c
+ACTOR_CANNON	its code	used in Loho_FireCannon; Loho_ExamineCannon, which its trigger row runs	games/tla/src/scene/loho.c
+ACTOR_ARMOR_MERCHANT	its code	used in Madra_TalkToArmorMerchant	games/tla/src/scene/madra.c
+ACTOR_VILLAGE_ROPE_HIGH_POST	its code	used in MadraCatacombs_SetUpVillage	games/tla/src/scene/madra_catacombs.c
+ACTOR_TUNNEL_ROPE_WEST_POST	its code	used in MadraCatacombs_SetUpChampaTunnel	games/tla/src/scene/madra_catacombs.c
+ACTOR_HEALER	its code	MadraInteriors_TalkToHealer, which its trigger row runs	games/tla/src/scene/madra_interiors.c
+ACTOR_BEACON_GLOW	its code	used in MarsLighthouseAerie_SetUpBeacon	games/tla/src/scene/mars_lighthouse_aerie.c
+FLAG_ROOM3_SECOND_SHEET_SHOWN	its code	set by MarsLighthouseEntrance_CrackRoom3IceSheet	games/tla/src/scene/mars_lighthouse_entrance.c
+ACTOR_WALL_FIREBALL_ROLL	its code	used in MarsLighthouseRoomF_ShootFireballAtWall	games/tla/src/scene/mars_lighthouse_room_f.c
+ACTOR_ICEBERG_FIREBALL_ROLL	its code	used in MarsLighthouseRoomF_ShootFireballAtIcebergs	games/tla/src/scene/mars_lighthouse_room_f.c
+ACTOR_DROP_FIREBALL_ROLL	its code	used in MarsLighthouseRoomF_DropFireball	games/tla/src/scene/mars_lighthouse_room_f.c
+ACTOR_VOICES_SOURCE	its code	used in MercuryLighthouse_HearVoices	games/tla/src/scene/mercury_lighthouse.c
+ACTOR_VOICES_TARGET	its code	used in MercuryLighthouse_HearVoices	games/tla/src/scene/mercury_lighthouse.c
+FLAG_ROPE_LASHED	its code	set by OseniaCliffs_LashRope	games/tla/src/scene/osenia_cliffs.c
+ACTOR_SAND_MOUND	its code	used in ShamanVillage_BlowAwaySand	games/tla/src/scene/shaman_village.c
+ACTOR_EAST_GUARD	its code	used in ShamanVillage_TalkToGuard; used in ShamanVillage_ShowItemToOtherGuard	games/tla/src/scene/shaman_village.c
+ACTOR_SHOPKEEPER	its code	used in ShamanVillage_TalkToShopkeeper	games/tla/src/scene/shaman_village.c
+ACTOR_OVERGROWTH	its code	ShamanVillageCave_BlowAwayOvergrowth, which its trigger row runs	games/tla/src/scene/shaman_village_cave.c
+ACTOR_LOWER_OVERGROWTH	its code	ShamanVillageCave_BlowAwayOvergrowth, which its trigger row runs	games/tla/src/scene/shaman_village_cave.c
+ACTOR_PILLAR	its code	ShamanVillageCave_StartMovingPillar, which its trigger row runs; ShamanVillageCave_FinishMovingPillar, which its trigger row runs	games/tla/src/scene/shaman_village_cave.c
+ACTOR_PUDDLE	its code	ShamanVillageCave_FreezePuddle, which its trigger row runs	games/tla/src/scene/shaman_village_cave.c
+FLAG_CROSSROADS_PILLAR_MOVED	its code	set by ShrineOfTheSeaGod_MovePillar	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_DJINNI_FLED_EAST	its code	set by ShrineOfTheSeaGod_DjinniFleesEast	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_DJINNI_FLED_SOUTH	its code	set by ShrineOfTheSeaGod_DjinniFleesSouth	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_DJINNI_RAN_PAST	its code	set by ShrineOfTheSeaGod_DjinniRunsNorth; set by ShrineOfTheSeaGod_DjinniRunsWest	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_DJINNI_BY_LEDGE	its code	used in ShrineOfTheSeaGod_DjinniHopsOntoLedge	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_DJINNI_ON_LEDGE	its code	set by ShrineOfTheSeaGod_DjinniHopsOntoLedge	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_FIRST_PUDDLE_FROZEN	its code	set by ShrineOfTheSeaGod_FreezeFirstPuddle	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_SECOND_PUDDLE_FROZEN	its code	set by ShrineOfTheSeaGod_FreezeSecondPuddle	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_THIRD_PUDDLE_FROZEN	its code	set by ShrineOfTheSeaGod_FreezeThirdPuddle	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_ROPE_TIED	its code	used in ShrineOfTheSeaGod_InitializeRope	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_LEADER_IN_FRONT	its code	set by ShrineOfTheSeaGod_DrawLeaderInFront	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_CROSSROADS_PILLAR_TOPPLED	its code	set by ShrineOfTheSeaGod_TopplePillarIntoWater	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_FIRST_PILLAR_TOPPLED	its code	set by ShrineOfTheSeaGod_ToppleFirstPillar	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_SECOND_PILLAR_TOPPLED	its code	set by ShrineOfTheSeaGod_ToppleSecondPillar	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_SECOND_PUDDLE	its code	used in ShrineOfTheSeaGod_LayerPuddles	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_THIRD_PUDDLE	its code	used in ShrineOfTheSeaGod_LayerPuddles	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_PILLAR_ROOM_SECOND_PILLAR	its code	used in ShrineOfTheSeaGod_ToppleFirstPillar; used in ShrineOfTheSeaGod_InitializePillars	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_PILLAR_ROOM_THIRD_PILLAR	its code	used in ShrineOfTheSeaGod_InitializePillars	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_PILLAR_ROOM_FOURTH_PILLAR	its code	used in ShrineOfTheSeaGod_ToppleFirstPillar; used in ShrineOfTheSeaGod_InitializePillars	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_PILLAR_ROOM_FIFTH_PILLAR	its code	used in ShrineOfTheSeaGod_InitializePillars	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_SECOND_PILLAR_STUMP	its code	used in ShrineOfTheSeaGod_InitializePillars	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_SECOND_TOPPLING_PILLAR	its code	used in ShrineOfTheSeaGod_ToppleSecondPillar	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_FIRST_PILLAR_OTHER_LOG	its code	used in ShrineOfTheSeaGod_ToppleFirstPillar; used in ShrineOfTheSeaGod_InitializePillars	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_SECOND_PILLAR_LOG	its code	used in ShrineOfTheSeaGod_ToppleSecondPillar; used in ShrineOfTheSeaGod_InitializePillars	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_SECOND_PILLAR_OTHER_LOG	its code	used in ShrineOfTheSeaGod_ToppleSecondPillar; used in ShrineOfTheSeaGod_InitializePillars	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_GAP_PILLAR	its code	used in TaopoSwamp_DropPillarIntoGap	games/tla/src/scene/taopo_swamp.c
+ACTOR_DRIP_PUDDLE	its code	used in TaopoSwamp_LandDrip	games/tla/src/scene/taopo_swamp.c
+ACTOR_LEFT_OUTER_CHEST	its code	used in TrialRoad_OpenChests	games/tla/src/scene/trial_road.c
+ACTOR_RIGHT_INNER_CHEST	its code	used in TrialRoad_OpenChests	games/tla/src/scene/trial_road.c
+ACTOR_RIGHT_OUTER_CHEST	its code	used in TrialRoad_OpenChests	games/tla/src/scene/trial_road.c
+ACTOR_LOWER_LOG	its code	used in TrialRoad_PushLowerLogWest; used in TrialRoad_PushLowerLogEast	games/tla/src/scene/trial_road.c
+ACTOR_INNER_WEST_PILLAR	its code	used in TrialRoad_PoundInnerWestPillar; used in TrialRoad_StepOnInnerWestPillar	games/tla/src/scene/trial_road.c
+ACTOR_INNER_EAST_PILLAR	its code	used in TrialRoad_PoundInnerEastPillar; used in TrialRoad_StepOnInnerEastPillar	games/tla/src/scene/trial_road.c
+ACTOR_EAST_PILLAR	its code	used in TrialRoad_PoundEastPillar; used in TrialRoad_StepOnInnerEastPillar; used in TrialRoad_StepOnEastPillar	games/tla/src/scene/trial_road.c
+ACTOR_WEST_CRUMBLING_PILLAR	its code	used in TrialRoad_CrumbleWestPillar	games/tla/src/scene/trial_road.c
+ACTOR_EAST_CRUMBLING_PILLAR	its code	used in TrialRoad_CrumbleEastPillar	games/tla/src/scene/trial_road.c
+ACTOR_PILLAR_B	its code	used in TrialRoad_BlowBushOffPoundPillar; used in TrialRoad_SetUpPillarStage; used in TrialRoad_SetUpBushPillarStage	games/tla/src/scene/trial_road.c
+ACTOR_PILLAR_C	its code	used in TrialRoad_BlowBushOffLonePillar; used in TrialRoad_SetUpPillarStage; used in TrialRoad_SetUpBushPillarStage	games/tla/src/scene/trial_road.c
+ACTOR_PILLAR_D	its code	used in TrialRoad_SetUpPillarStage; used in TrialRoad_SetUpBushPillarStage	games/tla/src/scene/trial_road.c
+ACTOR_PILLAR_E	its code	used in TrialRoad_SetUpPillarStage; used in TrialRoad_SetUpBushPillarStage	games/tla/src/scene/trial_road.c
+ACTOR_BUSH_B	its code	used in TrialRoad_SetUpBushPillarStage	games/tla/src/scene/trial_road.c
+ACTOR_PEAK_PILLAR	its code	used in TrialRoad_SetUpPeak	games/tla/src/scene/trial_road.c
+ACTOR_MIDDLE_SPOUT	its code	used in TrialRoad_UncoverMiddleSpout	games/tla/src/scene/trial_road.c
+ACTOR_EAST_SPOUT	its code	used in TrialRoad_UncoverEastSpout	games/tla/src/scene/trial_road.c
+FLAG_LEFT_WATER_PARCHED	its code	set by TundariaTower_ParchLeftWater	games/tla/src/scene/tundaria_tower.c
+FLAG_RIGHT_WATER_PARCHED	its code	set by TundariaTower_ParchRightWater	games/tla/src/scene/tundaria_tower.c
+ACTOR_SHIP	its code	used in WorldMap_SetUpShip; used in WorldMap_BoardShip; used in WorldMap_LeaveShip	games/tla/src/scene/world_map.c
+ACTOR_SUNSHINES_COUNTER	its code	used in YallamInteriors_TalkToSunshine	games/tla/src/scene/yallam_interiors.c
+ACTOR_ARMOR_MERCHANT	its code	used in YallamInteriors_MindReadArmorMerchant	games/tla/src/scene/yallam_interiors.c
+ACTOR_ITEM_MERCHANT	its code	used in YallamInteriors_MindReadItemMerchant	games/tla/src/scene/yallam_interiors.c
+ACTOR_WHIP_CHEST_ROOM_FIRST_SLIDE	its code	used in YampiDesert_SetUpTrainersWhipChestSlideActors	games/tla/src/scene/yampi_desert.c
+ACTOR_WHIP_CHEST_ROOM_SECOND_SLIDE	its code	used in YampiDesert_SetUpTrainersWhipChestSlideActors	games/tla/src/scene/yampi_desert.c
+ACTOR_EAST_PILLAR	its code	used in YampiDesertCave_StartMovingPillar; used in YampiDesertCave_FinishMovingPillar	games/tla/src/scene/yampi_desert_cave.c
+ACTOR_WEST_PILLAR	its code	used in YampiDesertCave_StartMovingPillar; used in YampiDesertCave_FinishMovingPillar	games/tla/src/scene/yampi_desert_cave.c
