@@ -8,9 +8,9 @@ use super::guide::Guide;
 use super::guide_tla::{Walk, EAST, KEY_A, KEY_B, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_START, KEY_UP, NORTH, PARTY_DAILA, WEST};
 use super::story::Trigger;
 
-/// Daila as the party first comes (SceneId_Daila1), from the World Map, and
+/// Daila as the party first comes (SceneId_DailaFlooded), from the World Map, and
 /// its houses (SceneId_DailaInteriors1) and sanctum (SceneId_DailaInteriors2).
-const DAILA: &str = "Daila1";
+const DAILA: &str = "DailaFlooded";
 const DAILA_HOUSES: &str = "DailaInteriors1";
 const DAILA_SANCTUM: &str = "DailaInteriors2";
 /// Daila's people (daila.c's trigger table, as `render event` names them):
@@ -260,13 +260,13 @@ const TWO_PAGES: [(u32, u32); 6] = [(KEY_A, 3), (0, 150), (KEY_A, 3), (0, 120), 
 /// Debug parameter set 19: Felix, Jenna, Sheba and Piers at level 19, the
 /// party once Piers has joined, who knows Frost.
 const PARTY_PIERS: u32 = 19;
-/// Daila once the puddles stand in it (SceneId_Daila2), the first puddle
+/// Daila once the puddles stand in it (SceneId_Daila), the first puddle
 /// Frost raises (daila.c: actor 22, by house 1), and the World Map outside
 /// Daila's south road (WORLD_MAP from Daila's exit 8).
-const DAILA_PUDDLES: &str = "Daila2";
+const DAILA_PUDDLES: &str = "Daila";
 const FIRST_PUDDLE: u16 = 22;
 /// Tavi home again (daila_interiors.c names it): Daila's houses lead out to
-/// Daila2, the puddles' Daila, and not to Daila1.
+/// Daila, the puddles' Daila, and not to DailaFlooded.
 const FLAG_TAVI_RESCUED: u16 = 0x873;
 const WORLD_MAP: (&str, u16) = ("WorldMap", 2);
 /// House 1's door cell in Daila (exit 1), and where to stand below it.

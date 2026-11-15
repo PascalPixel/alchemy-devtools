@@ -318,7 +318,7 @@ impl<'a> Guide<'a> {
 /// The Kandorean Temple's rooms walked for a random battle, gScenes' rows
 /// (SceneId_KandoreanTemple2 on), as the walkthrough has the party meet
 /// its Wild Wolves, Punch Ants and Giant Bats there.
-const TEMPLE_ROOMS: &[&str] = &["KandoreanTemple2", "KandoreanTemple3", "KandoreanTemple4", "KandoreanTemple5", "KandoreanTemple6", "KandoreanTemple7"];
+const TEMPLE_ROOMS: &[&str] = &["KandoreanTemple2", "KandoreanTemple3", "KandoreanTemple4", "KandoreanTempleStream", "KandoreanTemple6", "KandoreanTemple7"];
 
 /// The modes of the Kandorean Temple's random battles.
 pub const CAVE_MODES: &[&str] = &["fight-won", "overworld-battle-return", "battle-layers-3d"];

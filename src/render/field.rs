@@ -242,7 +242,7 @@ pub struct Symbols {
     pub render_pending: u32,
     pub bg_scroll: u32,
     /// The Lost Age's map entrance list and camera boxes, as loaded with
-    /// its map (Field_PlaceAtEntrance; gData_0202e000, the name wanted is
+    /// its map (Field_PlaceAtEntrance; gMapScene, the name wanted is
     /// one that says so); 0 for The Broken Seal.
     pub map_entrances: u32,
     /// Where the game's structures keep what the run reads.
@@ -325,7 +325,7 @@ impl Symbols {
             frame_count: at("gFrameCount")?,
             render_pending: at("gFrameRenderPending")?,
             bg_scroll: at("gBgScroll")?,
-            map_entrances: if l.game == super::layout::Game::Tla { at("gData_0202e000")? } else { 0 },
+            map_entrances: if l.game == super::layout::Game::Tla { at("gMapScene")? } else { 0 },
             l,
         })
     }

@@ -189,7 +189,7 @@ mod tests {
         let names = map_names(&std::fs::read_to_string(crate::compile::root().join("games/tla/src/field/scenes.s")).unwrap());
         let number = names.iter().position(|n| n == "Idejima").unwrap() as u16;
         assert!(arrivals[&number].contains(&Arrival { dest: 2, from: "WorldMap".to_string() }), "{:?}", arrivals[&number]);
-        assert!(arrivals[&number].contains(&Arrival { dest: 11, from: "SuhallaGate3".to_string() }), "{:?}", arrivals[&number]);
+        assert!(arrivals[&number].contains(&Arrival { dest: 11, from: "SuhallaGatePsynergyStone".to_string() }), "{:?}", arrivals[&number]);
     }
 
     #[test]

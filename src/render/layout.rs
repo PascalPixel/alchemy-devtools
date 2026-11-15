@@ -109,7 +109,7 @@ pub struct Layout {
 /// Each value of a Layout, by name, as a C expression of each game's
 /// headers: The Broken Seal's, then The Lost Age's.
 const EXPRESSIONS: &[(&str, &str, &str)] = &[
-    ("gs_coins", "offsetof(struct MainRoutineWork, coins)", "offsetof(struct MainRoutineWork, coins)"),
+    ("gs_coins", "offsetof(struct MainRoutineWork, holdings.coins)", "offsetof(struct MainRoutineWork, coins)"),
     ("gs_scene", "offsetof(struct MainRoutineWork, next)", "offsetof(struct MainRoutineWork, next)"),
     ("gs_entrance", "offsetof(struct MainRoutineWork, entrance)", "offsetof(struct MainRoutineWork, entrance)"),
     ("gs_x", "offsetof(struct MainRoutineWork, x)", "offsetof(struct MainRoutineWork, x)"),
@@ -128,11 +128,11 @@ const EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("map_layer_cells", "offsetof(struct MapGridLayerScroll, cells)", "offsetof(struct MapLayer, cells)"),
     // The Lost Age's layer leaves these unnamed: offsetX, scaleX, speedX,
     // phaseX and maskX are the names wanted.
-    ("layer_offset", "offsetof(struct MapGridLayerScroll, offsetX)", "offsetof(struct MapLayer, unk08)"),
-    ("layer_scale", "offsetof(struct MapGridLayerScroll, scaleX)", "offsetof(struct MapLayer, unk10)"),
-    ("layer_speed", "offsetof(struct MapGridLayerScroll, speedX)", "offsetof(struct MapLayer, unk18)"),
-    ("layer_phase", "offsetof(struct MapGridLayerScroll, phaseX)", "offsetof(struct MapLayer, unk20)"),
-    ("layer_mask", "offsetof(struct MapGridLayerScroll, maskX)", "offsetof(struct MapLayer, unk28)"),
+    ("layer_offset", "offsetof(struct MapGridLayerScroll, offsetX)", "offsetof(struct MapLayer, offsetX)"),
+    ("layer_scale", "offsetof(struct MapGridLayerScroll, scaleX)", "offsetof(struct MapLayer, scaleX)"),
+    ("layer_speed", "offsetof(struct MapGridLayerScroll, speedX)", "offsetof(struct MapLayer, speedX)"),
+    ("layer_phase", "offsetof(struct MapGridLayerScroll, phaseX)", "offsetof(struct MapLayer, phaseX)"),
+    ("layer_mask", "offsetof(struct MapGridLayerScroll, maskX)", "offsetof(struct MapLayer, maskX)"),
     ("field_events", "offsetof(struct FieldWork, triggers)", "offsetof(struct FieldWork, triggers)"),
     ("field_actors", "offsetof(struct FieldWork, actors)", "offsetof(struct FieldWork, actors)"),
     ("field_actor_count", "ACTOR_ID_COUNT", "FIELD_ACTOR_COUNT"),
@@ -177,10 +177,10 @@ fn headers(game: Game) -> &'static [&'static str] {
             "types.h",
             "stddef.h",
             "system/main_routine_work.h",
-            "map.h",
+            "field/map_grid.h",
             "field/field_work.h",
-            "actor.h",
-            "scene_tables.h",
+            "field/actor.h",
+            "field/scene_tables.h",
             "battle/battle_unit.h",
             "system/ram_buffer.h",
             "flags.h",
@@ -457,7 +457,7 @@ const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
 fn battle_headers(game: Game) -> &'static [&'static str] {
     match game {
         Game::Tbs => &["types.h", "system/main_routine_work.h", "battle/battle_unit.h", "battle/battle_work.h", "battle/battle_action.h", "battle/battle_side.h", "system/heap.h"],
-        Game::Tla => &["types.h", "stddef.h", "system/main_routine_work.h", "battle/battle_unit.h", "battle_work.h", "battle/battle_action.h", "battle/battle_side.h", "system/ram_buffer.h"],
+        Game::Tla => &["types.h", "stddef.h", "system/main_routine_work.h", "battle/battle_unit.h", "battle/battle_work.h", "battle/battle_action.h", "battle/battle_side.h", "system/ram_buffer.h"],
     }
 }
 

@@ -30,9 +30,9 @@ const MIKASALLA: &str = "Mikasalla1";
 const MIKASALLA_NORTH: u16 = 9;
 const SPARK: u16 = 18;
 const PASSAGE_NORTH: (i32, i32) = (312, 262);
-/// The Kandorean Temple's room with a stream (SceneId_KandoreanTemple5),
+/// The Kandorean Temple's room with a stream (SceneId_KandoreanTempleStream),
 /// a map whose ground effects (MapFlagsWork.groundEffects) are wading.
-const TEMPLE_STREAM: &str = "KandoreanTemple5";
+const TEMPLE_STREAM: &str = "KandoreanTempleStream";
 
 /// The modes this file plays.
 pub const MODES: &[&str] = &["title", "graphics-title-fade", "title-intro-layers-3d", "tile-animation", "game-djinni-flag", "debug-map-select", "field-wading"];
@@ -44,7 +44,7 @@ impl<'a> Guide<'a> {
             "graphics-title-fade" => self.tla_title_fade(),
             "title-intro-layers-3d" => self.tla_title_intro_exploded(),
             "tile-animation" => {
-                let mut entered = self.tla_enter("Daila1", 0, PARTY_DAILA, &[])?;
+                let mut entered = self.tla_enter("DailaFlooded", 0, PARTY_DAILA, &[])?;
                 let bgcnt = Self::animated_background(&mut entered.field)?;
                 self.tile_animation_of(&mut entered.field, bgcnt, "map/tile-animation.gif", "Daila beside the tiles of its layer the tile animation rewrites")
             }
@@ -204,7 +204,7 @@ impl<'a> Guide<'a> {
     /// party there, as `debug/map-select.gif`.
     fn tla_map_select(&mut self) -> Result<(), String> {
         let mode = self.sym("gDebugMode")?;
-        let mut entered = self.tla_enter("Daila1", 0, PARTY_DAILA, &[])?;
+        let mut entered = self.tla_enter("DailaFlooded", 0, PARTY_DAILA, &[])?;
         let field = &mut entered.field;
         field.write8(mode, 1);
         let mut path = vec![(0, 20), (KEY_B, 4), (KEY_B | KEY_START, 4), (0, 40)];
@@ -264,7 +264,7 @@ const FIELD_CASTS: &[FieldCast] = &[
     FieldCast { file: "field/lash.gif", ability: "ABILITY_LASH", scene: "ShrineOfTheSeaGod1", on: On::Actor(10), what: "Lash cast at the rope at the Shrine of the Sea God" },
     FieldCast { file: "field/pound.gif", ability: "ABILITY_POUND", scene: "DehkanPlateau1", on: On::Actor(11), what: "Pound cast on a pillar on the Dehkan Plateau" },
     FieldCast { file: "field/cyclone.gif", ability: "ABILITY_CYCLONE", scene: "KandoreanTemple8", on: On::Cell(30), what: "Cyclone cast on a patch of grass at the Kandorean Temple" },
-    FieldCast { file: "field/scoop.gif", ability: "ABILITY_SCOOP", scene: "Daila2", on: On::Cell(100), what: "Scoop cast on the spot under a puddle in Daila" },
+    FieldCast { file: "field/scoop.gif", ability: "ABILITY_SCOOP", scene: "Daila", on: On::Cell(100), what: "Scoop cast on the spot under a puddle in Daila" },
 ];
 /// The entrances a field cast's scene is entered by, in turn, until one
 /// leads to where the cast is answered.
