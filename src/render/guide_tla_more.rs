@@ -286,3 +286,59 @@ impl<'a> Guide<'a> {
         Err(last)
     }
 }
+
+/// Sunshine the blacksmith in Yallam's houses (yallam_interiors.c, actor
+/// 14), and the Tear Stone, a material he forges (item 429:
+/// YallamInteriors_PartyHasForgeMaterial).
+const YALLAM_HOUSES: &str = "YallamInteriors1";
+const SUNSHINE: u16 = 14;
+const TEAR_STONE: u16 = 429;
+/// struct BattleUnit's inventory, the same in both games.
+const UNIT_INVENTORY: u32 = 0xd8;
+const INVENTORY_SLOTS: u32 = 15;
+
+/// The modes of The Lost Age's forge.
+pub const FORGE_MODES: &[&str] = &["shop-forge"];
+
+impl<'a> Guide<'a> {
+    /// Felix, a Tear Stone at the front of his bag, talks to Sunshine: Yes
+    /// to his offer, the two walk to the anvil, and the forge's screen
+    /// (Forge_Run), the selling screen aimed at materials, takes the Tear
+    /// Stone, as `shop/forge.gif`.
+    pub(super) fn tla_forge(&mut self) -> Result<(), String> {
+        // The houses' rooms are entered by each door in turn until one is
+        // the smithy.
+        let mut entered = None;
+        let mut last = String::from("no door");
+        for door in 0..8 {
+            let Ok(mut e) = self.tla_enter(YALLAM_HOUSES, door, PARTY_PIERS_FORGE, &[]) else {
+                continue;
+            };
+            // Below him, facing him: the field's search for a spot finds
+            // none across the smithy's floor.
+            let Some(at) = e.field.actor(SUNSHINE) else {
+                last = format!("door {door} shows no Sunshine");
+                continue;
+            };
+            let spot = Self::spot_at(&mut e.field, (at.x, at.z + 16, super::guide_tla::NORTH))?;
+            if e.field.stand(&e.placed, &spot).is_ok() && e.field.leader().is_some_and(|l| (l.x - spot.x).abs() <= 2 && (l.z - spot.z).abs() <= 2) {
+                entered = Some(e);
+                break;
+            }
+            last = format!("door {door}: the leader could not stand below Sunshine");
+        }
+        let mut entered = entered.ok_or(last)?;
+        let field = &mut entered.field;
+        let unit = field.unit(super::plan::FELIX)?;
+        let held: Vec<u16> = (0..INVENTORY_SLOTS).map(|i| field.read16(unit + UNIT_INVENTORY + 2 * i)).filter(|&e| e != 0).collect();
+        for (i, entry) in std::iter::once(TEAR_STONE).chain(held).take(INVENTORY_SLOTS as usize).enumerate() {
+            field.write16(unit + UNIT_INVENTORY + 2 * i as u32, entry);
+        }
+        let path = [(0, 20), (KEY_A, 3), (0, 140), (KEY_A, 3), (0, 150), (KEY_A, 3), (0, 220), (KEY_A, 3), (0, 80), (KEY_A, 3), (0, 80), (KEY_A, 3), (0, 120), (KEY_A, 3), (0, 120), (KEY_A, 3), (0, 120), (KEY_A, 3), (0, 200)];
+        let frames = Self::press_path(field, &path)?;
+        self.world_gif("shop/forge.gif", &frames, "a Tear Stone forged by Sunshine in Yallam")
+    }
+}
+
+/// Debug set 19, the party once Piers has joined, as it reaches Yallam.
+const PARTY_PIERS_FORGE: u32 = 19;
