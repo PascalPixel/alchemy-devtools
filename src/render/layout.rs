@@ -365,6 +365,9 @@ pub struct BattleLayout {
     pub state_active_owners: u32,
     /// MainRoutineWork.battleType: 1, a set battle, rolls no first strike.
     pub state_battle_type: u32,
+    /// The battle background the next battle draws (the scene whose
+    /// background it is).
+    pub state_battle_background: u32,
     /// The party's Djinn recovery list (its four-byte entries), from
     /// gMainRoutineWork, and where its count is from the list.
     pub recovery_list: u32,
@@ -411,6 +414,7 @@ pub struct BattleLayout {
 const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("state_active_owners", "offsetof(struct MainRoutineWork, party)", "offsetof(struct MainRoutineWork, party)"),
     ("state_battle_type", "offsetof(struct MainRoutineWork, battleType)", "offsetof(struct MainRoutineWork, battleType)"),
+    ("state_battle_background", "offsetof(struct MainRoutineWork, battleBackground)", "offsetof(struct MainRoutineWork, battleBackground)"),
     // Djinn_GetRecoveryTable returns the main routine work from summonMask
     // on; The Lost Age's list is its entries after 8 bytes.
     ("recovery_list", "0x0c", "0x0c + offsetof(struct DjinnRecoveryTable, list.entries)"),
@@ -465,6 +469,7 @@ impl BattleLayout {
         BattleLayout {
             state_active_owners: 0x1f8,
             state_battle_type: 0x22b,
+            state_battle_background: 0x1d6,
             recovery_list: 0x0c,
             recovery_count: 0x100,
             unit_size: 0x14c,
@@ -520,6 +525,7 @@ impl BattleLayout {
         Ok(BattleLayout {
             state_active_owners: get("state_active_owners"),
             state_battle_type: get("state_battle_type"),
+            state_battle_background: get("state_battle_background"),
             recovery_list: get("recovery_list"),
             recovery_count: get("recovery_count"),
             unit_size: get("unit_size"),

@@ -57,6 +57,8 @@ mod guide_take;
 #[cfg(feature = "render")]
 mod guide_tla;
 #[cfg(feature = "render")]
+mod guide_tla_fight;
+#[cfg(feature = "render")]
 mod guide_tla_town;
 #[cfg(feature = "render")]
 mod guide_world_play;

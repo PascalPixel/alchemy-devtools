@@ -784,7 +784,7 @@ impl<'a> Guide<'a> {
     /// off the line, every frame checked as Guide::walk_stretch checks it,
     /// and the ends STRETCH_MARGIN short of where he got to, so the walk
     /// never runs into what stopped him. The field is put back as it was.
-    fn measure_stretch(field: &mut Field, across: bool) -> Result<Stretch, String> {
+    pub(super) fn measure_stretch(field: &mut Field, across: bool) -> Result<Stretch, String> {
         let saved = field.save();
         let scene = field.scene();
         let start = field.leader().ok_or("the scene has no leader")?;
@@ -881,7 +881,7 @@ pub(super) struct Stretch {
 const GOMA_CAVE_ROOMS: (&str, &str) = ("GomaCavePond", "GomaCaveBridge");
 /// The most of the 32 by 32 pixels around the leader that may be black as a
 /// random battle is walked into: an eighth.
-const DARK_LIMIT: u32 = 128;
+pub(super) const DARK_LIMIT: u32 = 128;
 /// How far short of where the game stops the leader a stretch ends
 /// (Guide::measure_stretch), pixels.
 const STRETCH_MARGIN: i32 = 8;

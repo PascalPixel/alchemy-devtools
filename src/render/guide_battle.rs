@@ -175,7 +175,7 @@ impl<'a> Guide<'a> {
 
 /// The keys that make Isaac attack from the battle's first menu: Fight,
 /// Attack, the aimed enemy.
-const ATTACK_MENU: [(u32, u32); 7] = [(0, 20), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 320)];
+pub(super) const ATTACK_MENU: [(u32, u32); 7] = [(0, 20), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 30), (KEY_A, 4), (0, 320)];
 
 /// struct Unit's inventory (battle_unit.h) and an entry's parts
 /// (enum InventoryEncoding).

@@ -103,7 +103,7 @@ impl Script {
 
 /// `frames` without the black ones it opens with, and cut STILL_KEPT frames
 /// after the screen last changed by more than STILL_PIXELS.
-fn trimmed(frames: &[Vec<u16>]) -> Vec<Vec<u16>> {
+pub(super) fn trimmed(frames: &[Vec<u16>]) -> Vec<Vec<u16>> {
     let lit = |f: &Vec<u16>| f.iter().filter(|&&c| c & 0x7fff != 0).count() > 2000;
     let first = frames.iter().position(lit).unwrap_or(0);
     let last = frames.len().saturating_sub(1);
@@ -113,7 +113,7 @@ fn trimmed(frames: &[Vec<u16>]) -> Vec<Vec<u16>> {
 }
 
 impl<'a> Guide<'a> {
-    fn fight_gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
+    pub(super) fn fight_gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
         let path = self.out.join(file);
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
