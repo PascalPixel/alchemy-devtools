@@ -9,6 +9,7 @@
 //! (`naming`). Nothing here counts toward DONE (C2); the figures are a
 //! worklist for people (H5).
 
+mod layout;
 mod naming;
 mod numbers;
 mod provenance;
@@ -1798,24 +1799,28 @@ fn unit(report: &mut Report, path: &str) {
     report.units.insert(path.to_string(), found.len() as u64);
 }
 
-/// The tracked C, headers and folder guides of a game, never build output.
-fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
+/// The files git tracks under each of `folders`, from the checkout's root.
+fn tracked(root: &Path, folders: &[String]) -> Result<Vec<String>, String> {
     let output = std::process::Command::new("git")
         .arg("-C")
         .arg(root)
         .args(["ls-files", "-z", "--"])
-        .arg(format!("games/{game}/src"))
-        .arg(format!("games/{game}/include"))
+        .args(folders)
         .output()
         .map_err(|error| format!("cannot run git: {error}"))?;
     if !output.status.success() {
         return Err(format!("git ls-files failed: {}", String::from_utf8_lossy(&output.stderr).trim()));
     }
+    Ok(String::from_utf8_lossy(&output.stdout).split('\0').filter(|path| !path.is_empty()).map(str::to_string).collect())
+}
+
+/// The tracked C, headers and folder guides of a game, never build output.
+fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     let mut files = Vec::new();
-    for path in String::from_utf8_lossy(&output.stdout).split('\0') {
-        if path.ends_with(".c") || path.ends_with(".h") || is_folder_guide(path) {
-            let bytes = std::fs::read(root.join(path)).map_err(|error| format!("cannot read {path}: {error}"))?;
-            files.push((path.to_string(), String::from_utf8_lossy(&bytes).into_owned()));
+    for path in tracked(root, &[format!("games/{game}/src"), format!("games/{game}/include")])? {
+        if path.ends_with(".c") || path.ends_with(".h") || is_folder_guide(&path) {
+            let bytes = std::fs::read(root.join(&path)).map_err(|error| format!("cannot read {path}: {error}"))?;
+            files.push((path, String::from_utf8_lossy(&bytes).into_owned()));
         }
     }
     Ok(files)
@@ -1867,6 +1872,12 @@ const ROWS: &[(&str, &str)] = &[
     ("if_in_function", "  of those inside functions"),
     ("undocumented_entry", "far-call entries without ///"),
     ("long_file", "objects over 3,000 lines"),
+    ("source_files", "source files (C, headers, asm)"),
+    ("folders", "folders"),
+    ("loose_headers", "  headers loose in include/"),
+    ("part_folders", "  part folders beside an object"),
+    ("numbered_files", "files, folders named by number"),
+    ("numbered_files_honest", "  apart: its number, by row"),
     ("units", "units (places and folder guides)"),
     ("units_done", "  done under H4"),
     ("unit_open", "  XXX: questions in them"),
@@ -2120,7 +2131,12 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
         }
         for item in &report.items {
             if item.metric == metric || kinds(metric).contains(&item.metric) {
-                let _ = writeln!(text, "{game}\t{}:{}\t{}", item.file, item.line, item.what);
+                // A file or folder is listed by its path alone.
+                if item.line == 0 {
+                    let _ = writeln!(text, "{game}\t{}\t{}", item.file, item.what);
+                } else {
+                    let _ = writeln!(text, "{game}\t{}:{}\t{}", item.file, item.line, item.what);
+                }
             }
         }
     }
@@ -2141,8 +2157,11 @@ pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, Stri
                 scope.spawn(move || {
                     let text = game_text(root, game)?;
                     let names = evidence::names(game)?;
-                    sources(root, game)
-                        .map(|files| game_with_text(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names))
+                    let files = sources(root, game)?;
+                    let mut report = game_with_text(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names);
+                    let rows: Vec<String> = names.iter().filter(|row| row.kind == "its number").map(|row| row.name.clone()).collect();
+                    layout::count(&mut report, game, &tracked(root, &[format!("games/{game}")])?, &rows);
+                    Ok::<Report, String>(report)
                 })
             })
             .map(|thread| thread.join().expect("humanity thread"))
