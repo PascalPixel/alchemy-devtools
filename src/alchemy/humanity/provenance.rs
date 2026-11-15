@@ -644,7 +644,12 @@ fn field_sequence_bank(file: &str) -> bool {
         "/src/field/world_map_encounter_rules.c",
         "/src/field/scene_rules.s",
         "/src/field/battle_music.c",
-        "/src/field/scripts.s",
+        "/src/field/battle_background_rules.c",
+        "/src/field/leader_placement.c",
+        "/src/field/screen_transition_shapes.c",
+        "/src/field/movement_scripts.c",
+        "/src/field/field_effect_tables.c",
+        "/src/field/world_picture_markers.c",
         "/src/field/lucky_wheels.c",
         "/src/system/main_routine.c",
     ];
