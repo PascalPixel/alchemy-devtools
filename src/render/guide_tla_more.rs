@@ -1,0 +1,229 @@
+//! The Lost Age's other recordings, the mirrors of The Broken Seal's front
+//! page, graphics, map, game and debug ones: the title and its intro,
+//! Daila's tiles as the tile animation repaints them, the Djinni Spark
+//! joining in Mikasalla and gone on the next visit, the debug scene
+//! selector, and the splashes the leader leaves wading in the Kandorean
+//! Temple.
+
+use super::animation::is_black_bgr555;
+use super::field::{Field, Setup, CLEARED};
+use super::guide::Guide;
+use super::guide_tla::{Walk, KEY_A, KEY_B, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_START, KEY_UP, PARTY_DAILA};
+use super::story::Trigger;
+
+/// The title overlay's entrances (title.c): 2 plays the intro before the
+/// prologue, 3 the title after it, which leads on to Idejima.
+const TITLE_INTRO: (u16, u16) = (0, 2);
+const TITLE_AFTER_PROLOGUE: (u16, u16) = (0, 3);
+/// DISPCNT, whose bits 8 to 11 show BG0 to BG3.
+const DISPCNT: u32 = 0x0400_0000;
+/// The intro's frame, from its start, at which the bird crosses the valley
+/// below the tower.
+const INTRO_VALLEY: u32 = 1180;
+/// Debug set 9: Felix, Jenna and Sheba at level 9, as they reach
+/// Mikasalla.
+const PARTY_PLATEAU: u32 = 9;
+/// Mikasalla (SceneId_Mikasalla1) by the north end of its passage (exit 7
+/// leads there), Spark there (mikasalla.c: ACTOR_SPARK), and the passage's
+/// north mouth, which leads to its south mouth (exit 9) and back (exit 7).
+const MIKASALLA: &str = "Mikasalla1";
+const MIKASALLA_NORTH: u16 = 9;
+const SPARK: u16 = 18;
+const PASSAGE_NORTH: (i32, i32) = (312, 262);
+/// The Kandorean Temple's room with a stream (SceneId_KandoreanTemple5),
+/// a map whose ground effects (MapFlagsWork.groundEffects) are wading.
+const TEMPLE_STREAM: &str = "KandoreanTemple5";
+
+/// The modes this file plays.
+pub const MODES: &[&str] = &["title", "graphics-title-fade", "title-intro-layers-3d", "tile-animation", "game-djinni-flag", "debug-map-select", "field-wading"];
+
+impl<'a> Guide<'a> {
+    pub(super) fn run_tla_more(&mut self, name: &str) -> Result<(), String> {
+        match name {
+            "title" => self.tla_title(),
+            "graphics-title-fade" => self.tla_title_fade(),
+            "title-intro-layers-3d" => self.tla_title_intro_exploded(),
+            "tile-animation" => {
+                let mut entered = self.tla_enter("Daila1", 0, PARTY_DAILA, &[])?;
+                let bgcnt = Self::animated_background(&mut entered.field)?;
+                self.tile_animation_of(&mut entered.field, bgcnt, "map/tile-animation.gif", "Daila beside the tiles of its layer the tile animation rewrites")
+            }
+            "game-djinni-flag" => self.tla_djinni_flag(),
+            "debug-map-select" => self.tla_map_select(),
+            "field-wading" => self.tla_walk(&WADING),
+            _ => Err(format!("no mode {name}")),
+        }
+    }
+
+    /// The control register of the background shown whose first 512 tiles
+    /// change most over two seconds: the layer the tile animation repaints.
+    /// The field is put back as it was.
+    fn animated_background(field: &mut Field) -> Result<u32, String> {
+        let saved = field.save();
+        let shown = field.read16(DISPCNT);
+        let tiles = |field: &Field, bg: u32| -> Vec<u8> {
+            let base = 0x0600_0000 + u32::from((field.read16(super::guide_take::BG0CNT + 2 * bg) >> 2) & 3) * 0x4000;
+            (0..512 * 32).map(|k| field.read8(base + k)).collect()
+        };
+        let before: Vec<Vec<u8>> = (0..4).map(|bg| tiles(field, bg)).collect();
+        let mut changed = [0usize; 4];
+        for _ in 0..120 {
+            field.frames(1)?;
+            for bg in 0..4u32 {
+                let now = tiles(field, bg);
+                changed[bg as usize] += now.chunks(32).zip(before[bg as usize].chunks(32)).filter(|(a, b)| a != b).count();
+            }
+        }
+        field.load(&saved);
+        let bg = (0..4u32).filter(|&bg| shown & (0x100 << bg) != 0).max_by_key(|&bg| changed[bg as usize]).ok_or("no background is shown")?;
+        Ok(super::guide_take::BG0CNT + 2 * bg)
+    }
+
+    /// The title overlay entered by `place`, every picture of `frames`.
+    fn title_frames(&self, place: (u16, u16), frames: u32) -> Result<Vec<Vec<u16>>, String> {
+        let setup = Setup { scene: place.0, entrance: place.1, set: Vec::new(), clear: Vec::new() };
+        let mut field = Field::enter_with_party(self.rom, self.symbols, &setup, None)?;
+        let mut out = Vec::new();
+        Self::hold(&mut field, 0, frames, &mut out)?;
+        Ok(out)
+    }
+
+    /// The title after the prologue: the Golden Sun logo fades in from
+    /// white over the valley and its lighthouse and is held, until it
+    /// starts to fade towards Idejima, as `story/title.gif`.
+    fn tla_title(&mut self) -> Result<(), String> {
+        let frames = self.title_frames(TITLE_AFTER_PROLOGUE, 1200)?;
+        let first = frames.iter().position(|f| !is_black_bgr555(f)).ok_or("the title stayed black")?;
+        // Held once two seconds pass unchanged; it ends where the picture
+        // first changes after that.
+        let held = first + 240;
+        let differs = |a: &[u16], b: &[u16]| a.iter().zip(b).filter(|(x, y)| x != y).count() > 200;
+        let end = (held..frames.len()).find(|&i| differs(&frames[i], &frames[held])).ok_or("the title never faded")?;
+        self.world_gif("story/title.gif", &frames[first..end], "the title after the prologue: the Golden Sun logo over the valley and its lighthouse")
+    }
+
+    /// The intro's clouds after `Camelot presents`, every colour on screen
+    /// brightening from dark red towards its own, as
+    /// `graphics/title-fade.gif`: from ten frames before the first frame
+    /// after the black that is no longer black, for 110 frames.
+    fn tla_title_fade(&mut self) -> Result<(), String> {
+        let frames = self.title_frames(TITLE_INTRO, 700)?;
+        // Each picture's brightness, the mean of its channels (0 to 93).
+        let light = |f: &[u16]| f.iter().map(|&c| u32::from(c & 31) + u32::from((c >> 5) & 31) + u32::from((c >> 10) & 31)).sum::<u32>() / f.len() as u32;
+        let brightest = frames.iter().map(|f| light(f)).max().unwrap_or(0);
+        // The clouds back after `Camelot presents`: the first picture past
+        // half the brightest's light, once the clouds the intro opens on have
+        // dimmed to near black.
+        let first = frames.iter().position(|f| light(f) * 2 > brightest).ok_or("the intro never lit")?;
+        let dimmed = first + frames[first..].iter().position(|f| light(f) < 3).ok_or("the intro never darkened")?;
+        let back = dimmed + frames[dimmed..].iter().position(|f| light(f) * 2 > brightest).ok_or("the clouds never came back")?;
+        // The fade from its darkest picture, in the second and a half before
+        // the clouds are back.
+        let from = back.saturating_sub(90).max(dimmed);
+        let fade = (from..back).min_by_key(|&i| (light(&frames[i]), std::cmp::Reverse(i))).unwrap_or(back);
+        self.world_gif("graphics/title-fade.gif", &frames[fade..(fade + 110).min(frames.len())], "the intro's clouds fading in from dark red")
+    }
+
+    /// The intro's valley below the tower as the bird crosses it, pulled
+    /// apart, as `graphics/title-intro-layers-3d.gif`.
+    fn tla_title_intro_exploded(&mut self) -> Result<(), String> {
+        let setup = Setup { scene: TITLE_INTRO.0, entrance: TITLE_INTRO.1, set: Vec::new(), clear: Vec::new() };
+        let mut field = Field::enter_with_party(self.rom, self.symbols, &setup, None)?;
+        field.frames(INTRO_VALLEY)?;
+        self.explode_now(&mut field, "graphics/title-intro-layers-3d.gif", "the intro's valley below the tower")
+    }
+
+    /// Holds `keys` until the screen turns black, then lets go and runs on
+    /// until the game has shown 30 frames since, keeping every picture: a
+    /// way out of the map walked into and the map beyond.
+    fn through_black(field: &mut Field, keys: u32, frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
+        field.hold(keys);
+        let mut seen = false;
+        let mut since = 0;
+        for _ in 0..1200 {
+            field.frames(1)?;
+            let picture = field.picture();
+            if is_black_bgr555(&picture) {
+                seen = true;
+                field.hold(0);
+                since = 0;
+            } else if seen {
+                since += 1;
+            }
+            frames.push(picture);
+            if seen && since >= 30 {
+                return Ok(());
+            }
+        }
+        field.hold(0);
+        Err("the screen never went black and came back".to_string())
+    }
+
+    /// Spark, a Mars Djinni, joining in Mikasalla (Mikasalla_MeetSpark),
+    /// then the party through the passage below and back: Spark's placement
+    /// holds only while its flag is clear, so the second visit finds no one
+    /// there. The passage between is cut, joining its two black screens.
+    fn tla_djinni_flag(&mut self) -> Result<(), String> {
+        let mut entered = self.tla_enter(MIKASALLA, MIKASALLA_NORTH, PARTY_PLATEAU, &[])?;
+        let mut frames = Self::record_trigger(&mut entered, Trigger::Talk(SPARK), None, 40)?;
+        let field = &mut entered.field;
+        let after = field.save();
+        let kept = frames.len();
+        let mut idle = 0;
+        loop {
+            Self::hold(field, 0, idle, &mut frames)?;
+            Self::tla_walk_to(field, PASSAGE_NORTH, &mut frames)?;
+            Self::through_black(field, KEY_DOWN, &mut frames)?;
+            let first = frames.iter().position(|f| is_black_bgr555(f)).ok_or("no black screen on leaving")?;
+            if first >= CLEARED {
+                break;
+            }
+            idle = (CLEARED - first) as u32;
+            field.load(&after);
+            frames.truncate(kept);
+        }
+        // Back up through the passage, and Spark's spot again.
+        Self::hold(field, 0, 20, &mut frames)?;
+        Self::through_black(field, KEY_UP, &mut frames)?;
+        Self::hold(field, KEY_UP, 30, &mut frames)?;
+        Self::run_past_black(field, &mut frames)?;
+        let frames = super::guide_scene_map::cut_between_blacks(&frames, 0)?;
+        self.world_gif("game/djinni-flag.gif", &frames, "Spark joining in Mikasalla, and the spot empty on the next visit")
+    }
+
+    /// The debug scene selector in Daila with gDebugMode set: Start pressed
+    /// with B held (FieldSequence_Run), the scene stepped down past the
+    /// first to the developers' rooms with Left, then A, which takes the
+    /// party there, as `debug/map-select.gif`.
+    fn tla_map_select(&mut self) -> Result<(), String> {
+        let mode = self.sym("gDebugMode")?;
+        let mut entered = self.tla_enter("Daila1", 0, PARTY_DAILA, &[])?;
+        let field = &mut entered.field;
+        field.write8(mode, 1);
+        let mut path = vec![(0, 20), (KEY_B, 4), (KEY_B | KEY_START, 4), (0, 40)];
+        for _ in 0..DEBUG_STEPS {
+            path.extend([(KEY_LEFT, 3), (0, 20)]);
+        }
+        path.extend([(0, 20), (KEY_A, 3), (0, 110)]);
+        let mut frames = Self::press_path_cleared(field, &path)?;
+        // The first picture of a path played again is the one before it.
+        frames.remove(0);
+        self.world_gif("debug/map-select.gif", &frames, "the debug scene selector opened in Daila, warping to a test room")
+    }
+
+}
+
+/// How many times the selector steps down from Daila's number with Left.
+const DEBUG_STEPS: u32 = 12;
+
+/// Walking down into the Kandorean Temple's stream and along it: each step
+/// in the water leaves a splash, an actor of its own.
+const WADING: Walk = Walk {
+    file: "field/wading.gif",
+    scene: TEMPLE_STREAM,
+    entrance: 1,
+    preset: PARTY_DAILA,
+    stand: None,
+    path: &[(0, 20), (KEY_DOWN, 60), (KEY_RIGHT, 30), (KEY_DOWN, 50), (0, 60)],
+    what: "wading in the Kandorean Temple's stream, each step a splash",
+};

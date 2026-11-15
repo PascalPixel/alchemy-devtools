@@ -84,7 +84,7 @@ fn black_runs(frames: &[Vec<u16>]) -> Vec<(usize, usize)> {
 /// `frames` with what lies between its first black screen and the next cut
 /// out, so that the two black screens join into one: a scene left and
 /// come back to, without the place between.
-fn cut_between_blacks(frames: &[Vec<u16>], first: usize) -> Result<Vec<Vec<u16>>, String> {
+pub(super) fn cut_between_blacks(frames: &[Vec<u16>], first: usize) -> Result<Vec<Vec<u16>>, String> {
     let runs = black_runs(frames);
     let (a, b) = (runs.get(first).ok_or("no black screen to cut from")?, runs.get(first + 1).ok_or("no second black screen to cut to")?);
     let mut kept = frames[..a.1].to_vec();

@@ -9,6 +9,10 @@ use super::guide::Guide;
 use super::guide_more::{canvas, outline, paste, screen};
 use super::mgba::WIDTH;
 
+/// The background control registers: BG0CNT, and BG3CNT, the ground's in
+/// Vale.
+pub(super) const BG0CNT: u32 = 0x0400_0008;
+const BG3CNT: u32 = 0x0400_000e;
 /// DISPCNT and its layer bits: 8 to 11 turn BG0 to BG3 on, 12 the sprites.
 const DISPCNT: u32 = 0x0400_0000;
 const LAYER_BITS: u16 = 0x1f00;
@@ -147,7 +151,13 @@ impl Guide<'_> {
     pub fn tile_animation(&mut self) -> Result<(), String> {
         let (mut entered, _) = self.stand_for(VALE_SCENE, super::story::Trigger::Talk(GARETS_SISTER_ACTOR), GARETS_SISTER_ACTOR)?;
         let field = &mut entered.field;
-        let control = field.read16(0x0400_000e);
+        self.tile_animation_of(field, BG3CNT, "tile-animation.gif", "Vale beside its ground layer's tiles as the tile animation rewrites them")
+    }
+
+    /// `field` beside the character block of the background whose control
+    /// register is `bgcnt`, as tile_animation draws Vale's ground, as `file`.
+    pub(super) fn tile_animation_of(&mut self, field: &mut Field, bgcnt: u32, file: &str, what: &str) -> Result<(), String> {
+        let control = field.read16(bgcnt);
         let base = 0x0600_0000 + u32::from((control >> 2) & 3) * 0x4000;
         let grey: Vec<u32> = (0..16).map(|i| { let v = i * 17; v << 16 | v << 8 | v }).collect();
         let (w, h) = (WIDTH + 8 + 256, 160usize.max(128));
@@ -177,8 +187,8 @@ impl Guide<'_> {
             last = tiles;
             frames.push(c.pixels);
         }
-        let written = animation::write(&self.out.join("tile-animation.gif"), &frames, w)?;
-        self.written.push(("tile-animation.gif".to_string(), written.bytes, format!("Vale beside its ground layer's tiles as the tile animation rewrites them; {} frames", written.frames)));
+        let written = animation::write(&self.out.join(file), &frames, w)?;
+        self.written.push((file.to_string(), written.bytes, format!("{what}; {} frames", written.frames)));
         Ok(())
     }
 }

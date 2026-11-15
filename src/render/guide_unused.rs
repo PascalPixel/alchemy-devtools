@@ -69,7 +69,7 @@ const STAGES: &[Stage] = &[
 ];
 
 /// The address of a function in the overlay that defines it.
-fn overlay_function(overlays: &std::path::Path, name: &str) -> Result<u32, String> {
+pub(super) fn overlay_function(overlays: &std::path::Path, name: &str) -> Result<u32, String> {
     for entry in std::fs::read_dir(overlays).map_err(|e| format!("{}: {e}", overlays.display()))?.flatten() {
         let path = entry.path();
         if path.extension().and_then(|e| e.to_str()) != Some("elf") {
