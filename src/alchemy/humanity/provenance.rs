@@ -194,6 +194,16 @@ impl GameText {
         self.words.contains(&lower) || self.stems.contains(&stem(&lower))
     }
 
+    /// The symbols whose own message says `word` (any case): `MsgDetailsUnknown`,
+    /// "Details are unknown", says `unknown`.
+    pub fn symbols_saying(&self, word: &str) -> impl Iterator<Item = &str> {
+        let word = word.to_lowercase();
+        self.symbols.iter().filter_map(move |(symbol, &at)| {
+            let body = self.messages[at].1.to_lowercase();
+            body.split(|c: char| !c.is_alphanumeric()).any(|w| w == word).then_some(symbol.as_str())
+        })
+    }
+
     /// Some message holds the quote, commands aside.
     pub fn holds(&self, quote: &str) -> bool {
         let quote = flatten(quote);

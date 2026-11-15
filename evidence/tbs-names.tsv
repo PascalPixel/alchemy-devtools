@@ -5350,3 +5350,44 @@ ARRAY_COUNT	plain English	pret's global.h has ARRAY_COUNT; battle_formation.c's 
 ICON_TILE_BYTES	its code	a 16 by 16 icon at 4 bits a pixel, what VramCache_Load takes of GlyphTransfer.tiles; menu_shared.c and lalivero.c each defined it, now glyph.h's	games/tbs/include/graphics/glyph.h
 BATTLE_BACKGROUND_SCROLL_Y	its code	the effects lane's name, moved to battle.h at the join; battle_transition.c sets gBgScroll[1].y = 32 as the effects do	games/tbs/include/battle/battle.h
 WindowSprite.depth	its code	its comment: the depth slot Oam_AddSpriteAtDepth draws it at; the menus write OAM_DEPTH_FRONT - 1 and OAM_DEPTH_FRONT into it	games/tbs/include/graphics/render_input.h
+SCENE_TEST_0	its number	the game's text: "Test 0", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SCENE_TEST_1	its number	the game's text: "Test 1", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SCENE_TEST_2	its number	the game's text: "Test 2", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SCENE_TEST_3	its number	the game's text: "Test 3", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SCENE_TEST_4	its number	the game's text: "Test 4", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SCENE_TEST_5	its number	the game's text: "Test 5", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SCENE_TEST_6	its number	the game's text: "Test 6", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SCENE_TEST_7	its number	the game's text: "Test 7", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneId_Test0	its number	the game's text: "Test 0", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneId_Test1	its number	the game's text: "Test 1", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneId_Test2	its number	the game's text: "Test 2", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneId_Test3	its number	the game's text: "Test 3", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneId_Test4	its number	the game's text: "Test 4", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneId_Test5	its number	the game's text: "Test 5", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneId_Test6	its number	the game's text: "Test 6", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneId_Test7	its number	the game's text: "Test 7", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+Test0	its number	the game's text: "Test 0", the debug room of that name (message 02557)	games/tbs/src/debug/test_scenes.c
+Test1	its number	the game's text: "Test 1", the debug room of that name (message 02558)	games/tbs/src/debug/test_scenes.c
+Test2	its number	the game's text: "Test 2", the debug room of that name (message 02559)	games/tbs/src/debug/test_scenes.c
+Test3	its number	the game's text: "Test 3", the debug room of that name (message 02560)	games/tbs/src/debug/test_scenes.c
+SPRITE_STATUS_GRIM_REAPER_1	its number	the curse's turns left, drawn as one flame (status_grim_reaper_1.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_GRIM_REAPER_2	its number	the curse's turns left, drawn as two flames (status_grim_reaper_2.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_GRIM_REAPER_3	its number	the curse's turns left, drawn as three flames (status_grim_reaper_3.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_GRIM_REAPER_4	its number	the curse's turns left, drawn as four flames (status_grim_reaper_4.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_GRIM_REAPER_5	its number	the curse's turns left, drawn as five flames (status_grim_reaper_5.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_GRIM_REAPER_6	its number	the curse's turns left, drawn as six flames (status_grim_reaper_6.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_GRIM_REAPER_7	its number	the curse's turns left, drawn as seven flames (status_grim_reaper_7.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_WIDE_GRIM_REAPER_1	its number	the curse's turns left, drawn as one flame (status_wide_grim_reaper_1.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_WIDE_GRIM_REAPER_2	its number	the curse's turns left, drawn as two flames (status_wide_grim_reaper_2.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_WIDE_GRIM_REAPER_3	its number	the curse's turns left, drawn as three flames (status_wide_grim_reaper_3.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_WIDE_GRIM_REAPER_4	its number	the curse's turns left, drawn as four flames (status_wide_grim_reaper_4.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_WIDE_GRIM_REAPER_5	its number	the curse's turns left, drawn as five flames (status_wide_grim_reaper_5.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_WIDE_GRIM_REAPER_6	its number	the curse's turns left, drawn as six flames (status_wide_grim_reaper_6.png)	games/tbs/include/sprite_ids.h
+SPRITE_STATUS_WIDE_GRIM_REAPER_7	its number	the curse's turns left, drawn as seven flames (status_wide_grim_reaper_7.png)	games/tbs/include/sprite_ids.h
+AltmillerCave_DarkenToLevel0	its number	the darkness level it sets, AltmillerCave_SetFadeLevel(0)	games/tbs/src/scene/altmiller_cave.c
+AltmillerCave_DarkenToLevel1	its number	the darkness level it sets, AltmillerCave_SetFadeLevel(1)	games/tbs/src/scene/altmiller_cave.c
+AltmillerCave_DarkenToLevel2	its number	the darkness level it sets, AltmillerCave_SetFadeLevel(2)	games/tbs/src/scene/altmiller_cave.c
+AltmillerCave_DarkenToLevel3	its number	the darkness level it sets, AltmillerCave_SetFadeLevel(3)	games/tbs/src/scene/altmiller_cave.c
+AltmillerCave_DarkenToLevel4	its number	the darkness level it sets, AltmillerCave_SetFadeLevel(4)	games/tbs/src/scene/altmiller_cave.c
+AltmillerCave_DarkenToLevel5	its number	the darkness level it sets, AltmillerCave_SetFadeLevel(5)	games/tbs/src/scene/altmiller_cave.c
+SPRITE_BLANK_32	its number	the pixel size: a blank 32-pixel square (blank_32.png)	games/tbs/include/sprite_ids.h

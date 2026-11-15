@@ -147,6 +147,12 @@ pub struct Report {
     table_bodies: HashMap<String, Group>,
     /// Every name the source defines or declares, for the naming checks.
     pub naming: naming::Names,
+    /// Numbered names whose number is their meaning, by a row of kind `its
+    /// number` in `evidence/<game>-names.tsv`: counted apart (`numbered_honest`).
+    numbered_by_row: HashSet<String>,
+    /// Message symbols whose own text says `unknown` (`MsgDetailsUnknown`):
+    /// the game's word, no placeholder.
+    text_unknown: HashSet<String>,
 }
 
 /// A number in code, with each call around it and the argument it fills
@@ -893,10 +899,12 @@ impl<'r, 'a> Walk<'r, 'a> {
             return;
         }
         for (kind, test) in [("placeholder", is_placeholder as fn(&str) -> bool), ("numbered", is_numbered)] {
-            if test(name) {
-                self.report.note(kind, self.file, line, name);
-                self.report.names.entry(kind).or_default().insert(name.to_string());
+            if !test(name) || (kind == "placeholder" && self.report.text_unknown.contains(name)) {
+                continue;
             }
+            let kind = if kind == "numbered" && self.report.numbered_by_row.contains(name) { "numbered_honest" } else { kind };
+            self.report.note(kind, self.file, line, name);
+            self.report.names.entry(kind).or_default().insert(name.to_string());
         }
     }
 
@@ -1638,6 +1646,10 @@ pub fn game<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>) -> Report {
 /// `names` being the game's rows of `evidence/<game>-names.tsv` (H8).
 pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, text: Option<&GameText>, names: &[evidence::Name]) -> Report {
     let mut report = Report::default();
+    report.numbered_by_row = names.iter().filter(|row| row.kind == "its number").map(|row| row.name.clone()).collect();
+    if let Some(text) = text {
+        report.text_unknown = text.symbols_saying("unknown").map(str::to_string).collect();
+    }
     let mut units = Vec::new();
     for (path, text) in files {
         if path.ends_with("/README.md") {
@@ -1833,6 +1845,7 @@ const ROWS: &[(&str, &str)] = &[
     ("placeholder", "  their uses"),
     ("numbered_names", "numbered names"),
     ("numbered", "  their uses"),
+    ("numbered_honest", "  apart: its number, by row"),
     ("fakematch", "FAKEMATCH devices"),
     ("fakematch_signature", "  signature"),
     ("fakematch_pin", "  pin"),
@@ -1912,6 +1925,7 @@ impl Report {
         match metric {
             "placeholder_names" => self.distinct("placeholder") as u64,
             "numbered_names" => self.distinct("numbered") as u64,
+            "numbered_honest" => self.distinct("numbered_honest") as u64,
             "fakematch" | "leftover" => kinds(metric).iter().map(|kind| self.total(kind)).sum(),
             "long_file" => self.long_files.len() as u64,
             "units" => self.units.len() as u64,
@@ -2683,6 +2697,34 @@ mod provenance_tests {
         assert_eq!(evidence("ACTOR_MAN").as_deref(), Some("failed: a Named from line out of form"), "a render row names its render");
         assert_eq!(evidence("SceneId_BilibinWarehouse").as_deref(), Some("none"));
         assert_eq!((report.value("provenance_verified"), report.value("provenance_failed"), report.value("provenance_none")), (4, 2, 2));
+    }
+
+
+    #[test]
+    fn numbered_names_whose_number_is_their_meaning() {
+        let po = concat!(
+            "msgctxt \"MsgDetailsUnknown\"\nmsgid \"00001\"\nmsgstr \"Details are unknown\"\n\n",
+            "msgctxt \"MsgUnknownThing\"\nmsgid \"00002\"\nmsgstr \"A thing\"\n",
+        );
+        let text = GameText::parse(po, None).unwrap();
+        let source = concat!(
+            "enum { SCENE_TEST_0, SCENE_TEST_1, ACTOR_8 };\n",
+            "void Run(void) { Show(MsgDetailsUnknown); Show(MsgUnknownThing); Go(SCENE_TEST_1); }\n",
+        );
+        let names = evidence::parse_names(concat!(
+            "name\tkind\tevidence\tfile\n",
+            "SCENE_TEST_0\tits number\tthe game's text: Test 0 to Test 7\tgames/tbs/include/scene_ids.h\n",
+            "SCENE_TEST_1\tits number\tthe game's text: Test 0 to Test 7\tgames/tbs/include/scene_ids.h\n",
+        ))
+        .unwrap();
+        let report = game_with_text([("games/tbs/include/scene_ids.h", source)], Some(&text), &names);
+        assert_eq!((report.value("numbered_names"), report.value("numbered")), (1, 1), "ACTOR_8 alone");
+        assert_eq!((report.value("numbered_honest"), report.total("numbered_honest")), (2, 3), "the tests, by their rows");
+        assert!(listable("numbered_honest"));
+        // A message named from its own text's "unknown" is the game's word;
+        // one whose text never says it is still a placeholder.
+        assert_eq!(report.names.get("placeholder").map(|names| names.iter().cloned().collect::<Vec<_>>()), Some(vec!["MsgUnknownThing".to_string()]));
+        assert!(is_placeholder("MsgDetailsUnknown"), "without the text, it looks like one");
     }
 
     #[test]
