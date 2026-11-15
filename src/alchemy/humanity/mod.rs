@@ -1793,8 +1793,9 @@ fn unit(report: &mut Report, path: &str) {
             found.extend(questions.iter().map(|(line, question)| (file.clone(), *line, question.clone())));
         }
     }
+    // Listed with the unit each belongs to, so a unit that reopens is named.
     for (file, line, question) in &found {
-        report.note("unit_open", file, *line, question);
+        report.note("unit_open", file, *line, &format!("{path}\t{question}"));
     }
     report.units.insert(path.to_string(), found.len() as u64);
 }
@@ -2213,6 +2214,14 @@ mod tests {
         let listed: Vec<(&str, usize)> =
             report.items.iter().filter(|item| item.metric == "unit_open").map(|item| (item.file.as_str(), item.line)).collect();
         assert_eq!(listed, [("games/tbs/src/scene/vale.c", 5), ("games/tbs/src/shop/shop/run.c", 1)]);
+        assert_eq!(
+            list(&[("tbs", &report)], "unit_open"),
+            concat!(
+                "tbs\tgames/tbs/src/scene/vale.c:5\tgames/tbs/src/scene/vale.c\tXXX: what this is; its render. */\n",
+                "tbs\tgames/tbs/src/shop/shop/run.c:1\tgames/tbs/src/shop/README.md\tXXX: why three; a probe would settle it.\n",
+            ),
+            "each question with its unit"
+        );
     }
 
     #[test]
