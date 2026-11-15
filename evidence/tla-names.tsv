@@ -75,7 +75,7 @@ ACTOR_WEST_GUARD	the game	"Just ahead lies Trial Road, where Hoabna and Yegelos 
 ACTOR_GREETER	the game	"You don't look familiar. Have you been to Daila before?" (MsgDailaBeenBefore)	games/tla/src/scene/daila.c
 ACTOR_INDRA_MOVED_MAN	the game	"Didn't it feel like all of Indra moved when that wave hit?" (MsgDailaIndraMoved)	games/tla/src/scene/daila.c
 ACTOR_FALLEN_OLD_MAN	the game	"I bet you thought it was the wave that knocked me over and hurt my hip, huh?" (MsgDailaHurtHip)	games/tla/src/scene/daila.c
-ACTOR_INNKEEPER	the game	placed actor 16 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18); placed actor 16 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
 ACTOR_FIRST_PUDDLE	the game	Frost on actors 10 to 12 of room 5 runs ShrineOfTheSeaGod_Freeze*Puddle; sprite 290	games/tla/src/scene/shrine_of_the_sea_god.c
 ACTOR_ALEX	the game	"Alex... How can you stay so calm at a time like this?" (MsgWeReSaved); "Alex... How can you stay so calm at a time like this?" answered by actor 9 (WorldMap_DriftNorthOfContinent)	games/tla/src/scene/world_map.c
 ACTOR_KRADEN	the game	"Ah, yes" (MsgKandoreanTempleTestPassed); "Ah, yes... Well... I'm afraid we don't know where you can find Isaac..." (placement 17, SPRITE_KRADEN)	games/tla/src/scene/world_map.c
@@ -99,7 +99,7 @@ ACTOR_WAVE_SURVIVOR	the game	"The tidal wave was terrible... It... It nearly swa
 ACTOR_SEA_OF_TIME_SAILOR	the game	"It looked to me like the wave came from the Sea of Time." (MsgItLookedTo)	games/tla/src/scene/champa_interiors.c
 ACTOR_CAVE_SHUNNING_SAILOR	the game	"Most of the sailors here live in the cliff dwellings, but I don't like those caves." (MsgMostOfThe)	games/tla/src/scene/champa_interiors.c
 ACTOR_ELDER_SEEKING_A_CHIEF	the game	"I've been wondering about finding a chief for Champa, since we don't have one." (MsgIVeBeenWondering)	games/tla/src/scene/champa_interiors.c
-ACTOR_ELDER	the game	placed actor 11 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_ELDER	the game	"Elder" (MsgClassName + 181); placed actor 11 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_WARM_OCEAN_WATCHER	the game	"The ocean has been a lot warmer lately, and the fish population is decreasing." (MsgTheOceanHas)	games/tla/src/scene/champa_interiors.c
 ACTOR_TIDAL_WAVE_RUMORMONGER	the game	"I've heard rumors of a terrible tidal wave striking the lands south of us." (MsgIVeHeardRumors)	games/tla/src/scene/champa_interiors.c
 ACTOR_ARTIFACT_MERCHANT	the game	"I have some lovely artifacts, but it's only because I've been to the Ankohl Ruins." (MsgIHaveSome)	games/tla/src/scene/champa_interiors.c
@@ -219,13 +219,13 @@ FLAG_ALHAFRA_MET_ALEX	the game	"So, you've finally come." (MsgAlhafraInteriorsSo
 FLAG_ALHAFRA_MADRANS_ARRIVED	the game	"Finally! We made it!" (MsgAlhafraFinallyWeMadeIt)	games/tla/include/flags.h
 FLAG_ALHAFRA_SHIP_GONE	the game	"Alhafra lost its ship." (MsgAlhafraAlhafraLostItsShipNow)	games/tla/include/flags.h
 FLAG_ALHAFRA_HEARD_OF_CROSSBONE_ISLE	the game	"Legends said that Crossbone Isle could be found in the middle of the Karagol Sea." (MsgAlhafraInteriorsLegendsSaidThatCrossboneIsle)	games/tla/include/flags.h
-FLAG_ISAAC_CLEARED_CROSSBONE_ISLE	the game	"Someone named Isaac picked it clean." (MsgAlhafraInteriors120)	games/tla/include/flags.h
+FLAG_ISAAC_CLEARED_CROSSBONE_ISLE	the game	"Isaac" (MsgCharacterName); "Someone named Isaac picked it clean." (MsgAlhafraInteriors120)	games/tla/include/flags.h
 FLAG_SERPENT_SLAIN	the game	"After the serpent's roar, these warriors appeared." (MsgWarriorsAppearedFrom)	games/tla/include/flags.h
 FLAG_IZUMO_RECOGNIZED_THE_HEROES	the game	"So, it wasn't Susa who defeated the serpent, but those heroes..." (MsgWarriorsAppearedFrom)	games/tla/include/flags.h
 FLAG_UZUME_HAS_THE_DOLL	the game	"With this dancing doll, I can explore Mt. Mikage on my own." (MsgWithThisDancing)	games/tla/include/flags.h
 FLAG_TAVI_RESCUED	the game	"These guys threw me the rope..." (MsgFieldPraiseRopeWork)	games/tla/include/flags.h
 FLAG_SHIP_FLIES	the game	"Now that you have been given wings" (MsgIVeBeenWaiting)	games/tla/include/flags.h
-FLAG_JUPITER_LIGHTHOUSE_LEFT_ANGEL_ENERGIZED	what the player sees	the arrow and the rising angel (the aerie's JupiterLighthouse events)	games/tla/include/flags.h
+FLAG_JUPITER_LIGHTHOUSE_LEFT_ANGEL_ENERGIZED	the game	"Jupiter Lighthouse" (MsgDebugAreaName + 69); the arrow and the rising angel (the aerie's JupiterLighthouse events)	games/tla/include/flags.h
 FLAG_IDEJIMA_FELIX_WOKE	the game	"Do you want to check yourself for injuries?" (MsgIdejimaCheckForInjuries)	games/tla/include/flags.h
 FLAG_IDEJIMA_KRADEN_JOINED	the game	"Kraden has joined your party." (MsgIdejimaGroan)	games/tla/include/flags.h
 FLAG_IDEJIMA_JENNA_JOINED	the game	"{actor_name:6} has joined your party." (MsgIdejimaAwakeningExclamation)	games/tla/include/flags.h
@@ -1579,8 +1579,8 @@ Garoh_HowlAtNight	the game	Plays SE_525 every 1,024 frames of gGaroh_HowlCounter
 Garoh_RevealSanctuaryCrevice	the walkthrough	Room 1's Reveal: "use Reveal on the big rock to the right of the sanctuary. A crevice opens up"	games/tla/src/scene/garoh.c
 Garoh_EnterCrevice	the game	Room 1's step trigger 12 facing north and room 5's 6: SE_MAP_EXIT and the trigger's exit	games/tla/src/scene/garoh.c
 Garoh_OpenDoorAndEnter	its twin	EasternAlhafra_OpenDoorAndEnter's door, with gGaroh_Doors' frames	games/tla/src/scene/garoh.c
-FLAG_GAROH_MET_WEREWOLVES	the game	0x91e, set by Garoh_WerewolvesRevealThemselves	games/tla/src/scene/garoh.c
-FLAG_GAROH_HEARD_MAHA	the game	0x91f, set by Garoh_MahaTellsTheLegend	games/tla/src/scene/garoh.c
+FLAG_GAROH_MET_WEREWOLVES	the game	"Garoh" (MsgDebugAreaName + 20); 0x91e, set by Garoh_WerewolvesRevealThemselves	games/tla/src/scene/garoh.c
+FLAG_GAROH_HEARD_MAHA	the game	"Garoh" (MsgDebugAreaName + 20); 0x91f, set by Garoh_MahaTellsTheLegend	games/tla/src/scene/garoh.c
 AirsRock_ExamineWindStone	the game	Room 1's examine trigger 20, showing MsgFieldWindStoneWarning	games/tla/src/scene/airs_rock.c
 AirsRock_BlowGust	the walkthrough	Whirlwind on room 1's actors 9 to 13: "walk up to the Wind Stone and cast Whirlwind on it. This will amplify its power and removes the sand barrier"; sets 0x850 + the barrier hit	games/tla/src/scene/airs_rock.c
 gAirsRock_WindStoneScript	the walkthrough	The movement script of room 1's five placements of sprite 325, the Wind Stones the Whirlwind triggers act on	games/tla/src/scene/airs_rock.c
@@ -1615,7 +1615,7 @@ KibomboMountains_TremorDropsBone	the walkthrough	Tremor on the chest: "use Tremo
 KibomboMountains_DropCrate	the walkthrough	"make the crate fall on top of the Kibombo guy the moment he is right beneath the edge"; "Drop the pillar to trap the dog on either side"	games/tla/src/scene/kibombo_mountains.c
 KibomboMountains_GrowVine	the walkthrough	Growth on actor 12: "use Growth on the plant. Use it to reach a Jupiter Djinni named Waft"	games/tla/src/scene/kibombo_mountains.c
 KibomboMountains_WhirlwindClearsOvergrowth	the walkthrough	Whirlwind on actor 13: "Cast Whirlwind on the overgrowth to open up a small cavern"	games/tla/src/scene/kibombo_mountains.c
-FLAG_KIBOMBO_LETS_PARTY_PASS	the game	0x8ff: the placement condition of every warrior and the dog, and the condition of every sighting trigger	games/tla/src/scene/kibombo_mountains.c
+FLAG_KIBOMBO_LETS_PARTY_PASS	the game	"Kibombo" (MsgDebugAreaName + 30); 0x8ff: the placement condition of every warrior and the dog, and the condition of every sighting trigger	games/tla/src/scene/kibombo_mountains.c
 Kibombo_DigFirstMarking	the walkthrough	Scoop on one of four cells sets FLAG_SCENE_TEMP_04 to 07 and draws a dug cell: "the markings on the ground... Felix does it for you"	games/tla/src/scene/kibombo.c
 Kibombo_CastScoop	the walkthrough	Kibombo_DeadEndByTheStatue's effect 136 cast by the leader with the marking's flag set: "you know what to do next, or actually Felix does it for you"	games/tla/src/scene/kibombo.c
 Kibombo_MoveBlockForPiers	the walkthrough	Move or push on actor 11 to (6, 18), then Kibombo_PiersJoinsParty unless 0x8f4: "Piers seems to be in trouble... lend a hand with Move"	games/tla/src/scene/kibombo.c
@@ -1820,7 +1820,7 @@ FLAG_JUPITER_LIGHTHOUSE_LID_LIFTED	the walkthrough	0xa1f set in the aerie once b
 FLAG_JUPITER_LIGHTHOUSE_FIGHT_WATCHED	the walkthrough	0xa24 set in room M as the party arrives by entrance 3 and the fight is placed; cleared when Isaac and Ivan fall; room 5's Alex event needs it	games/tla/include/flags.h
 FLAG_ISAAC_AND_IVAN_FELL	the walkthrough	0xa23 set in room M at entrance 77 after BATTLE_TYPE_LOST (JupiterLighthouse_IsaacAndIvanFall); the beacon's Karst and Agatio wait on it; room M's TalkToReunitedParty needs it	games/tla/include/flags.h
 FLAG_JUPITER_BEACON_LIT	the game	0xa21 set in JupiterLighthouse_CastTheJupiterStar as the Jupiter Star is thrown in; Contigo's tables switch on it	games/tla/include/flags.h
-FLAG_JUPITER_LIGHTHOUSE_ALEX_HEALED_THE_PARTY	the game	0xa25 set at the end of the room 5 event after Party_RestoreHpPp and 'Everyone recovered fully.'; Scene_SetArrivalFlags keeps encounters off while set	games/tla/include/flags.h
+FLAG_JUPITER_LIGHTHOUSE_ALEX_HEALED_THE_PARTY	the game	"Everyone recovered fully." (MsgFieldWaitingForCompanion); 0xa25 set at the end of the room 5 event after Party_RestoreHpPp and 'Everyone recovered fully.'; Scene_SetArrivalFlags keeps encounters off while set	games/tla/include/flags.h
 JupiterLighthouse_AlexHealsTheParty	the game	actor 22 (sprite 57) speaks MsgFieldWaitingForCompanion, MsgFieldFollowTrueFeelings and, to Mind Read, MsgFieldPartWithAgatio (part ways with Agatio and Karst); Telago: Alex appears and fully heals the party	games/tla/src/scene/jupiter_lighthouse_room_red_key.c
 JupiterLighthouse_AlexAppears	the game	actor 22 (sprite 57) speaks MsgFieldWaitingForCompanion, MsgFieldFollowTrueFeelings and, to Mind Read, MsgFieldPartWithAgatio (part ways with Agatio and Karst); Telago: Alex appears and fully heals the party	games/tla/src/scene/jupiter_lighthouse_room_red_key.c
 JupiterLighthouse_HearTheVoice	the game	step trigger 21 shows MsgFieldShowAnemosPower (Holder of the star... Show the power of Anemos!); 0xa0e cleared by step trigger 22	games/tla/src/scene/jupiter_lighthouse_room_red_key.c
@@ -1860,12 +1860,12 @@ ACTOR_LEFT_ARCHER	the walkthrough	placements 9-14 in pairs west/east (sprites 33
 ACTOR_RIGHT_ARCHER	the walkthrough	placements 9-14 in pairs west/east (sprites 339, 340, 428); JupiterLighthouse_StartBeam(archer, angel); actor 23 (sprite 425) rises and shifts with each angel; Telago: push the energy path block into the gap and the Archer will shoot an arrow towards the left angel ... lift the left half of the lid	games/tla/src/scene/jupiter_lighthouse_aerie.c
 ACTOR_LEFT_PATH_BLOCK	the walkthrough	placements 9-14 in pairs west/east (sprites 339, 340, 428); JupiterLighthouse_StartBeam(archer, angel); actor 23 (sprite 425) rises and shifts with each angel; Telago: push the energy path block into the gap and the Archer will shoot an arrow towards the left angel ... lift the left half of the lid	games/tla/src/scene/jupiter_lighthouse_aerie.c
 ACTOR_RIGHT_PATH_BLOCK	the walkthrough	placements 9-14 in pairs west/east (sprites 339, 340, 428); JupiterLighthouse_StartBeam(archer, angel); actor 23 (sprite 425) rises and shifts with each angel; Telago: push the energy path block into the gap and the Archer will shoot an arrow towards the left angel ... lift the left half of the lid	games/tla/src/scene/jupiter_lighthouse_aerie.c
-FLAG_CANNON_FLED_OVER_CRACKS	the game	0x86c-0x871 each set at the end of the Cannon event of the same name and tested on entering its room to leave Cannon where it went	games/tla/src/scene/dehkan_plateau.c
-FLAG_CANNON_CRUMBLED_PILLARS	the game	0x86c-0x871 each set at the end of the Cannon event of the same name and tested on entering its room to leave Cannon where it went	games/tla/src/scene/dehkan_plateau.c
-FLAG_CANNON_DROPPED_POUND_CUBE	the game	0x86c-0x871 each set at the end of the Cannon event of the same name and tested on entering its room to leave Cannon where it went	games/tla/src/scene/dehkan_plateau.c
-FLAG_POUND_CUBE_TAKEN	the game	0x878 set in DehkanPlateau_TakePoundCube after PartyInventory_GiveItem(ITEM_POUND_CUBE)	games/tla/src/scene/dehkan_plateau.c
-FLAG_CANNOT_SAVE_HERE	the game	PauseMenu_Run refuses saving with MsgCannotSaveHere under 0x17c and MsgNoPlaceForThat ('This is no place for that!') under 0x17d; scenes set 0x17d while riding lifts, vents and rafts	games/tla/include/flags.h
-FLAG_NO_PLACE_TO_SAVE	the game	PauseMenu_Run refuses saving with MsgCannotSaveHere under 0x17c and MsgNoPlaceForThat ('This is no place for that!') under 0x17d; scenes set 0x17d while riding lifts, vents and rafts	games/tla/include/flags.h
+FLAG_CANNON_FLED_OVER_CRACKS	the game	"Cannon" (MsgDjinnName + 47); 0x86c-0x871 each set at the end of the Cannon event of the same name and tested on entering its room to leave Cannon where it went	games/tla/src/scene/dehkan_plateau.c
+FLAG_CANNON_CRUMBLED_PILLARS	the game	"Cannon" (MsgDjinnName + 47); 0x86c-0x871 each set at the end of the Cannon event of the same name and tested on entering its room to leave Cannon where it went	games/tla/src/scene/dehkan_plateau.c
+FLAG_CANNON_DROPPED_POUND_CUBE	the game	"Pound Cube" (MsgItemName + 199); 0x86c-0x871 each set at the end of the Cannon event of the same name and tested on entering its room to leave Cannon where it went	games/tla/src/scene/dehkan_plateau.c
+FLAG_POUND_CUBE_TAKEN	the game	"Pound Cube" (MsgItemName + 199); 0x878 set in DehkanPlateau_TakePoundCube after PartyInventory_GiveItem(ITEM_POUND_CUBE)	games/tla/src/scene/dehkan_plateau.c
+FLAG_CANNOT_SAVE_HERE	the game	"This is no place for that!" (MsgCannotSaveHere + 1); PauseMenu_Run refuses saving with MsgCannotSaveHere under 0x17c and MsgNoPlaceForThat ('This is no place for that!') under 0x17d; scenes set 0x17d while riding lifts, vents and rafts	games/tla/include/flags.h
+FLAG_NO_PLACE_TO_SAVE	the game	"This is no place for that!" (MsgCannotSaveHere + 1); PauseMenu_Run refuses saving with MsgCannotSaveHere under 0x17c and MsgNoPlaceForThat ('This is no place for that!') under 0x17d; scenes set 0x17d while riding lifts, vents and rafts	games/tla/include/flags.h
 FLAG_HIDDEN_PASSAGE_FOUND	the game	Kandorean Temple's 0x842-0x84a and 0x92d each set at the end of the routine of the same name (FindTheHiddenPassage, AskAboutPoi, TellOfTheMeditation, TestTheStudents, MeetPoi, ReceiveLash, LowerTheLadder)	games/tla/src/scene/kandorean_temple.c
 FLAG_LADDER_LOWERED	the game	Kandorean Temple's 0x842-0x84a and 0x92d each set at the end of the routine of the same name (FindTheHiddenPassage, AskAboutPoi, TellOfTheMeditation, TestTheStudents, MeetPoi, ReceiveLash, LowerTheLadder)	games/tla/src/scene/kandorean_temple.c
 FLAG_IN_PARTY	its twin	games/tbs/include/flags.h FLAG_IN_PARTY; Garoh, Daila and Eastern Alhafra test flag 7 before moving or talking with actor 7, Piers; Champa (patch 1) skips Feizhi with flag 0 set, Isaac	games/tla/include/flags.h
@@ -1887,37 +1887,37 @@ FLAG_SAVE_RESTARTED_AT_SANCTUM	its twin	TBS 0x13e, 0x13f, 0x143, 0x145; TLA item
 FLAG_SAVE_RECOVERED_AT_SANCTUM	its twin	TBS 0x13e, 0x13f, 0x143, 0x145; TLA items.c clears 0x143 and sets 0x145 as TBS's	games/tla/include/flags.h
 FLAG_MENU_START_PRESSED	the game	the Psynergy menu part's own name for 0x150, moved to flags.h	games/tla/include/flags.h
 FLAG_GABOMBA_MESSAGE_CARRIED	the game	0x8ff set right after MsgCarriedTheMessage ('Felix carried the message of the Gabomba to Akafubu.') in the Gabomba Statue chamber; Madra then shows MsgItLooksLikeThe (the Kibombo ... the raids), Kibombo Mountains' guards step aside	games/tla/include/flags.h
-FLAG_KIBOMBO_WARRIORS_FOUND	the game	2447 (0x98f) set as the Gondowan Cliffs hideout's warriors are found (GondowanCliffsHideout_WarriorsAreFound); Madra then asks Felix MsgItWasThem ('It was them, wasn't it?')	games/tla/include/flags.h
-FLAG_RIME_REVEALED	the game	0x96c and 0x96e set by AncientLemuria_CycloneRevealsRime, 0x96d set and 0x96e cleared by AncientLemuria_TremorShakesOutRime; only Ancient Lemuria reads them	games/tla/src/scene/ancient_lemuria.c
-FLAG_RIME_SHAKEN_OUT	the game	0x96c and 0x96e set by AncientLemuria_CycloneRevealsRime, 0x96d set and 0x96e cleared by AncientLemuria_TremorShakesOutRime; only Ancient Lemuria reads them	games/tla/src/scene/ancient_lemuria.c
-FLAG_RIME_IN_THE_STATUE	the game	0x96c and 0x96e set by AncientLemuria_CycloneRevealsRime, 0x96d set and 0x96e cleared by AncientLemuria_TremorShakesOutRime; only Ancient Lemuria reads them	games/tla/src/scene/ancient_lemuria.c
-ACTOR_RIME	the game	actor 12 hops away and joins (Djinn_JoinParty(12, Mercury, 13) = DJINNI_RIME); actor 13 is a Mercury Djinni sprite placed under FLAG_DJINNI(DJINNI_RIME) that shakes while Rime hides; XXX at the code	games/tla/src/scene/ancient_lemuria.c
-Islets	the game	ITEM_PRETTY_STONE removed and ITEM_RED_CLOTH given in Islets_TradeWithBird; MsgOhThatRed ('Oh! That red neckerchief') in Islets_TradeWithCow; MsgWellHereWe in Islets_ArriveBackAtIsland	games/tla/src/scene/islets.c
+FLAG_KIBOMBO_WARRIORS_FOUND	the game	"Kibombo" (MsgDebugAreaName + 30); 2447 (0x98f) set as the Gondowan Cliffs hideout's warriors are found (GondowanCliffsHideout_WarriorsAreFound); Madra then asks Felix MsgItWasThem ('It was them, wasn't it?')	games/tla/include/flags.h
+FLAG_RIME_REVEALED	the game	"Rime" (MsgDjinnName + 33); 0x96c and 0x96e set by AncientLemuria_CycloneRevealsRime, 0x96d set and 0x96e cleared by AncientLemuria_TremorShakesOutRime; only Ancient Lemuria reads them	games/tla/src/scene/ancient_lemuria.c
+FLAG_RIME_SHAKEN_OUT	the game	"Rime" (MsgDjinnName + 33); 0x96c and 0x96e set by AncientLemuria_CycloneRevealsRime, 0x96d set and 0x96e cleared by AncientLemuria_TremorShakesOutRime; only Ancient Lemuria reads them	games/tla/src/scene/ancient_lemuria.c
+FLAG_RIME_IN_THE_STATUE	the game	"Rime" (MsgDjinnName + 33); 0x96c and 0x96e set by AncientLemuria_CycloneRevealsRime, 0x96d set and 0x96e cleared by AncientLemuria_TremorShakesOutRime; only Ancient Lemuria reads them	games/tla/src/scene/ancient_lemuria.c
+ACTOR_RIME	the game	"Rime" (MsgDjinnName + 33); actor 12 hops away and joins (Djinn_JoinParty(12, Mercury, 13) = DJINNI_RIME); actor 13 is a Mercury Djinni sprite placed under FLAG_DJINNI(DJINNI_RIME) that shakes while Rime hides; XXX at the code	games/tla/src/scene/ancient_lemuria.c
+Islets	the game	"Oh! That red neckerchief" (MsgOhThatRed); ITEM_PRETTY_STONE removed and ITEM_RED_CLOTH given in Islets_TradeWithBird; MsgOhThatRed ('Oh! That red neckerchief') in Islets_TradeWithCow; MsgWellHereWe in Islets_ArriveBackAtIsland	games/tla/src/scene/islets.c
 FLAG_MAYOR_ARRIVED_AT_THE_SHIP	the game	0x8aa guards EasternAlhafraShip_MayorArrives' step trigger and is set with FLAG_BRIGGS_CAUGHT on entrance 99 after the battle; the debug presets set it	games/tla/include/flags.h
-FLAG_FAMILY_VISITED_BRIGGS	the game	Alhafran Cave's own name for 0x8bd, moved to flags.h as the ship reads it too	games/tla/include/flags.h
+FLAG_FAMILY_VISITED_BRIGGS	the game	"Briggs" (MsgEnemyName + 72); Alhafran Cave's own name for 0x8bd, moved to flags.h as the ship reads it too	games/tla/include/flags.h
 FLAG_CRATE_MOVED	the game	0x900 set on the crate reaching (24,40); 0x901 by ShakeDownTheBread (Tremor); 0x902 by Event_PickUpItem(ITEM_LARGE_BREAD); 0x8ae the first time EoleoLifts runs	games/tla/src/scene/eastern_alhafra_ship.c
 FLAG_BREAD_SHAKEN_DOWN	the game	0x900 set on the crate reaching (24,40); 0x901 by ShakeDownTheBread (Tremor); 0x902 by Event_PickUpItem(ITEM_LARGE_BREAD); 0x8ae the first time EoleoLifts runs	games/tla/src/scene/eastern_alhafra_ship.c
 FLAG_BREAD_TAKEN	the game	0x900 set on the crate reaching (24,40); 0x901 by ShakeDownTheBread (Tremor); 0x902 by Event_PickUpItem(ITEM_LARGE_BREAD); 0x8ae the first time EoleoLifts runs	games/tla/src/scene/eastern_alhafra_ship.c
-FLAG_EOLEO_LIFTED	the game	0x900 set on the crate reaching (24,40); 0x901 by ShakeDownTheBread (Tremor); 0x902 by Event_PickUpItem(ITEM_LARGE_BREAD); 0x8ae the first time EoleoLifts runs	games/tla/src/scene/eastern_alhafra_ship.c
+FLAG_EOLEO_LIFTED	the game	"Eoleo" (MsgFortuneTeller2 + 6); 0x900 set on the crate reaching (24,40); 0x901 by ShakeDownTheBread (Tremor); 0x902 by Event_PickUpItem(ITEM_LARGE_BREAD); 0x8ae the first time EoleoLifts runs	games/tla/src/scene/eastern_alhafra_ship.c
 FLAG_GUESTS_ASKED_FOR_TEA	the game	each set at the end of the talk routine of the same name and guarding its talk trigger	games/tla/src/scene/alhafra_interiors.c
 FLAG_TOLD_OF_THE_EASTERN_SEA	the game	each set at the end of the talk routine of the same name and guarding its talk trigger	games/tla/src/scene/alhafra_manor.c
 FLAG_GABOMBA_CEREMONY_UNDER_WAY	the game	0x8f2 set by Kibombo_CeremonyBegins and cleared with FLAG_GABOMBA_MESSAGE_CARRIED's set, tested by cue_rules.s; 0x8fb by Kibombo_GabombaRespondsToGift; 0x8ef by Kibombo_CeremonyEnds, read by the Gondowan Cliffs; 0x8fd by GabombaStatueChamber_AkafubuOffersToHelp	games/tla/include/flags.h
 FLAG_GABOMBA_RESPONDED	the game	0x8f2 set by Kibombo_CeremonyBegins and cleared with FLAG_GABOMBA_MESSAGE_CARRIED's set, tested by cue_rules.s; 0x8fb by Kibombo_GabombaRespondsToGift; 0x8ef by Kibombo_CeremonyEnds, read by the Gondowan Cliffs; 0x8fd by GabombaStatueChamber_AkafubuOffersToHelp	games/tla/include/flags.h
 FLAG_GABOMBA_CEREMONY_ENDED	the game	0x8f2 set by Kibombo_CeremonyBegins and cleared with FLAG_GABOMBA_MESSAGE_CARRIED's set, tested by cue_rules.s; 0x8fb by Kibombo_GabombaRespondsToGift; 0x8ef by Kibombo_CeremonyEnds, read by the Gondowan Cliffs; 0x8fd by GabombaStatueChamber_AkafubuOffersToHelp	games/tla/include/flags.h
-FLAG_AKAFUBU_OFFERED_HELP	the game	0x8f2 set by Kibombo_CeremonyBegins and cleared with FLAG_GABOMBA_MESSAGE_CARRIED's set, tested by cue_rules.s; 0x8fb by Kibombo_GabombaRespondsToGift; 0x8ef by Kibombo_CeremonyEnds, read by the Gondowan Cliffs; 0x8fd by GabombaStatueChamber_AkafubuOffersToHelp	games/tla/include/flags.h
-FLAG_KIBOMBO_CEREMONY_BEGUN	the game	0x8f1 by Kibombo_CeremonyBegins; 0x8f4 at the end of Kibombo_PiersJoinsParty before Party_GivePiersDjinn; 0x9df by Kibombo_TalkForeignCeremony	games/tla/src/scene/kibombo.c
-FLAG_PIERS_JOINED	the game	0x8f1 by Kibombo_CeremonyBegins; 0x8f4 at the end of Kibombo_PiersJoinsParty before Party_GivePiersDjinn; 0x9df by Kibombo_TalkForeignCeremony	games/tla/src/scene/kibombo.c
+FLAG_AKAFUBU_OFFERED_HELP	the game	"Akafubu" (MsgFortuneTeller2 + 1); 0x8f2 set by Kibombo_CeremonyBegins and cleared with FLAG_GABOMBA_MESSAGE_CARRIED's set, tested by cue_rules.s; 0x8fb by Kibombo_GabombaRespondsToGift; 0x8ef by Kibombo_CeremonyEnds, read by the Gondowan Cliffs; 0x8fd by GabombaStatueChamber_AkafubuOffersToHelp	games/tla/include/flags.h
+FLAG_KIBOMBO_CEREMONY_BEGUN	the game	"Kibombo" (MsgDebugAreaName + 30); 0x8f1 by Kibombo_CeremonyBegins; 0x8f4 at the end of Kibombo_PiersJoinsParty before Party_GivePiersDjinn; 0x9df by Kibombo_TalkForeignCeremony	games/tla/src/scene/kibombo.c
+FLAG_PIERS_JOINED	the game	"Piers" (MsgPiers2); 0x8f1 by Kibombo_CeremonyBegins; 0x8f4 at the end of Kibombo_PiersJoinsParty before Party_GivePiersDjinn; 0x9df by Kibombo_TalkForeignCeremony	games/tla/src/scene/kibombo.c
 FLAG_HEARD_OF_THE_FOREIGN_CEREMONY	the game	0x8f1 by Kibombo_CeremonyBegins; 0x8f4 at the end of Kibombo_PiersJoinsParty before Party_GivePiersDjinn; 0x9df by Kibombo_TalkForeignCeremony	games/tla/src/scene/kibombo.c
-Kibombo_PiersJoinsParty	the game	its messages: 'That power... Was that Psynergy?', 'Yes, my name is Piers, and I too am an Adept', 'Lemuria is an island that lies in the center of the Eastern Sea'	games/tla/src/scene/kibombo.c
-FLAG_GABOMBA_SAW_HOW_IT_WORKS	the game	0x8f6 by GabombaStatue_SeeHowItWorks; 0x9ec by GabombaStatue_FixTheChannel, after MsgGabombaChannelTiming ('just fixing the channel should do the trick')	games/tla/src/scene/gabomba_statue.c
-FLAG_GABOMBA_CHANNEL_FIXED	the game	0x8f6 by GabombaStatue_SeeHowItWorks; 0x9ec by GabombaStatue_FixTheChannel, after MsgGabombaChannelTiming ('just fixing the channel should do the trick')	games/tla/src/scene/gabomba_statue.c
+Kibombo_PiersJoinsParty	the game	"That power... Was that Psynergy?" (MsgBlank7); its messages: 'That power... Was that Psynergy?', 'Yes, my name is Piers, and I too am an Adept', 'Lemuria is an island that lies in the center of the Eastern Sea'	games/tla/src/scene/kibombo.c
+FLAG_GABOMBA_SAW_HOW_IT_WORKS	the game	"just fixing the channel should do the trick" (MsgGabombaChannelTiming); 0x8f6 by GabombaStatue_SeeHowItWorks; 0x9ec by GabombaStatue_FixTheChannel, after MsgGabombaChannelTiming ('just fixing the channel should do the trick')	games/tla/src/scene/gabomba_statue.c
+FLAG_GABOMBA_CHANNEL_FIXED	the game	"just fixing the channel should do the trick" (MsgGabombaChannelTiming); 0x8f6 by GabombaStatue_SeeHowItWorks; 0x9ec by GabombaStatue_FixTheChannel, after MsgGabombaChannelTiming ('just fixing the channel should do the trick')	games/tla/src/scene/gabomba_statue.c
 FLAG_GREY_BLOCK_DROPPED	the walkthrough	2572 (0xa0c) set as actor 20 (lit, sprite 428) reaches (63,15); 2573 (0xa0d) as the grey block (actor 23, sprite 316) drops through the opened floor; Telago: push the grey block one square to the right, next stand on the button to make the block fall down a few layers ... a shortcut	games/tla/src/scene/jupiter_lighthouse_room_m.c
 FLAG_REUNITED_AT_CONTIGO	the walkthrough	2512 (0x9d0) set at the end of Contigo_TheReunion; Atteka Inlet's shipwrights and Hamma's wings wait on it; Telago: in Contigo the story of Mt. Aleph is brought up again, then the ship	games/tla/include/flags.h
 FLAG_FIRST_PILLAR_DROPPED	the game	0x920 set as actor 16 is Moved to x cell 11 or less and drops; 0x921 as actor 19 drops at (79,12); both guard the pillars' Move triggers	games/tla/src/scene/gaia_rock.c
 FLAG_SECOND_PILLAR_DROPPED	the game	0x920 set as actor 16 is Moved to x cell 11 or less and drops; 0x921 as actor 19 drops at (79,12); both guard the pillars' Move triggers	games/tla/src/scene/gaia_rock.c
-Champa	the game	MsgMySalamanderYou ('My salamander! You... beat my salamander...'), MsgWarriorsAppearedFrom ('Warriors appeared from within Mt. Mikage?')	games/tla/src/scene/champa_cliff_caves.c
-cliff	the game	MsgMySalamanderYou ('My salamander! You... beat my salamander...'), MsgWarriorsAppearedFrom ('Warriors appeared from within Mt. Mikage?')	games/tla/src/scene/champa_cliff_caves.c
-Izumo	the game	MsgMySalamanderYou ('My salamander! You... beat my salamander...'), MsgWarriorsAppearedFrom ('Warriors appeared from within Mt. Mikage?')	games/tla/src/scene/izumo_interiors.c
+Champa	the game	"My salamander! You... beat my salamander..." (MsgWarriorsAppearedFrom + 737); MsgMySalamanderYou ('My salamander! You... beat my salamander...'), MsgWarriorsAppearedFrom ('Warriors appeared from within Mt. Mikage?')	games/tla/src/scene/champa_cliff_caves.c
+cliff	the game	"My salamander! You... beat my salamander..." (MsgWarriorsAppearedFrom + 737); MsgMySalamanderYou ('My salamander! You... beat my salamander...'), MsgWarriorsAppearedFrom ('Warriors appeared from within Mt. Mikage?')	games/tla/src/scene/champa_cliff_caves.c
+Izumo	the game	"My salamander! You... beat my salamander..." (MsgWarriorsAppearedFrom + 737); MsgMySalamanderYou ('My salamander! You... beat my salamander...'), MsgWarriorsAppearedFrom ('Warriors appeared from within Mt. Mikage?')	games/tla/src/scene/izumo_interiors.c
 ShrineOfTheSeaGod_FightBreath	the game	Talking to the Djinni (actor 14, sprite 246, placed unless flag 0x73) while trapped starts Field_RequestDjinnBattle; the walkthrough: "Attack it and you'll have to fight it ... Breath joins your group"	games/tla/src/scene/shrine_of_the_sea_god.c
 gShrineOfTheSeaGod_RikiLooksAround	the game	"Sorry, Tavi... I can't do it!" (MsgFieldRopeThrownAgain); Riki's movement in room 2 (turns west, east, south with pauses) after "Sorry, Tavi... I can't do it!"; he greets the party with "Wah! You scared me!" (MsgFieldStartledCompanion)	games/tla/src/scene/shrine_of_the_sea_god.c
 FLAG_RIKI_GAVE_UP	the game	"Sorry, Tavi... I can't do it!" (MsgFieldRopeThrownAgain); set at the end of ShrineOfTheSeaGod_ThrowRopeAgain after Riki's "Sorry, Tavi... I can't do it!"; room 2 then places Riki	games/tla/src/scene/shrine_of_the_sea_god.c
@@ -2013,7 +2013,7 @@ FLAG_JELLY_FLED	the walkthrough	as LemurianShip_JellyFlees	games/tla/src/scene/l
 LemurianShip_FightAquaHydra	the game	"Aqua Hydra" (MsgEnemyName); "Aqua Hydra" (the boss); the walkthrough: "touch the Aqua Jelly ... it merges with the other Jellies into an Aqua Hydra!": jellies 9 to 13 leap into jelly 8, which swells (SE_BEAST_CRY) before the battle	games/tla/src/scene/lemurian_ship.c
 LemurianShip_LeapIntoHydra	the walkthrough	as LemurianShip_FightAquaHydra	games/tla/src/scene/lemurian_ship.c
 gLemurianShip_HydraSwells	the walkthrough	as LemurianShip_FightAquaHydra	games/tla/src/scene/lemurian_ship.c
-FLAG_AQUA_HYDRA_BEATEN	the game	jelly 15's beaten flag, set by the Hydra's battle (FLAG_FIGHTING_JELLY + 15)	games/tla/src/scene/lemurian_ship.c
+FLAG_AQUA_HYDRA_BEATEN	the game	"Aqua Hydra" (MsgEnemyName + 80); jelly 15's beaten flag, set by the Hydra's battle (FLAG_FIGHTING_JELLY + 15)	games/tla/src/scene/lemurian_ship.c
 LemurianShip_FloodHold	the walkthrough	"After you beat this goon the water floods the entire lower level": SE_SCATTER on the first arrival after the battle	games/tla/src/scene/lemurian_ship.c
 LemurianShip_ParchHold	the game	Parch (PSYNERGY_PHASE_ON_CELL(ABILITY_PARCH)) in the hold; the walkthrough: Mist Potion "reachable after learning Parch"	games/tla/src/scene/lemurian_ship.c
 LemurianShip_BeginParch	the game	Parch's first phase in the hold	games/tla/src/scene/lemurian_ship.c
@@ -2072,7 +2072,7 @@ TundariaTower_BurstCrystal	the walkthrough	"you'll reach an ice crystal with som
 TundariaTower_FreeCenterProng	the game	after Burst the crystal's actor 8, shown with item icon 441 (ITEM_CENTER_PRONG), falls; the walkthrough: "you'll obtain the center prong from the broken icy spike"	games/tla/src/scene/tundaria_tower.c
 TundariaTower_SparkleCenterProng	the walkthrough	actor 68 (a treasure spot's) sheds particles (sprite 673) where the prong lies	games/tla/src/scene/tundaria_tower.c
 FLAG_CRYSTAL_BROKEN	the walkthrough	as TundariaTower_FreeCenterProng	games/tla/src/scene/tundaria_tower.c
-FLAG_CENTER_PRONG_TAKEN	the game	room 2 places the Center Prong's icon only while it is clear	games/tla/src/scene/tundaria_tower.c
+FLAG_CENTER_PRONG_TAKEN	the game	"Center Prong" (MsgRustySword2 + 24); room 2 places the Center Prong's icon only while it is clear	games/tla/src/scene/tundaria_tower.c
 TundariaTower_ScatterIceShards	what the player sees	effect 279 scattered with random turns and velocities	games/tla/src/scene/tundaria_tower.c
 TundariaTower_AdvanceIceShard	what the player sees	each shard's motion, falling by its gravity	games/tla/src/scene/tundaria_tower.c
 TundariaTower_PoundIceColumn	the walkthrough	"use Pound on the icy column": Pound's acting phase on actors 8 to 11 (sprite 406)	games/tla/src/scene/tundaria_tower.c
@@ -2319,9 +2319,9 @@ FLAG_MARS_STAR_TAKEN	the game	"{actor_name:5} got the Mars Star!" (MsgMarsLighth
 FLAG_ADEPTS_WOKE	the game	"Why... Why am I lying here?" (MsgMarsLighthouseStarRoomWhyWhyAmILying); set at the end of the talk after the battle (MsgMarsStar01, "Why... Why am I lying here?")	games/tla/src/scene/mars_lighthouse_star_room.c
 FLAG_DRAGON_ICE_CRACKED	the walkthrough	"use Blaze and Burst they will unfreeze": set when the second fireball reaches the ice and the crack shows whole	games/tla/src/scene/mars_lighthouse_star_room.c
 FLAG_FLAME_DRAGONS_BEATEN	the game	"Flame Dragon" (MsgEnemyName); set on returning by the battle's entrance; the battle is the Flame Dragons' (enemy names "Flame Dragon")	games/tla/src/scene/mars_lighthouse_star_room.c
-FLAG_MARS_STAR_SET	what the player sees	patch 1 only: set with 0xa30 when the star is set; once set, using the bag again only shows the star rise and fall	games/tla/src/scene/mars_lighthouse_star_room.c
-FLAG_DRAGON_ICE_BURSTABLE	what the player sees	the Burst trigger's condition (IF_FLAG_SET), set when the second fireball cracks the ice	games/tla/src/scene/mars_lighthouse_star_room.c
-FLAG_DRAGON_ICE_BURST	what the player sees	patch 1: set by Burst; the fireball routines stop cracking the ice once it is set	games/tla/src/scene/mars_lighthouse_star_room.c
+FLAG_MARS_STAR_SET	the game	"Mars Star" (MsgItemName + 247); patch 1 only: set with 0xa30 when the star is set; once set, using the bag again only shows the star rise and fall	games/tla/src/scene/mars_lighthouse_star_room.c
+FLAG_DRAGON_ICE_BURSTABLE	the game	"Dragon" (MsgEnemyName + 185); the Burst trigger's condition (IF_FLAG_SET), set when the second fireball cracks the ice	games/tla/src/scene/mars_lighthouse_star_room.c
+FLAG_DRAGON_ICE_BURST	the game	"Dragon" (MsgEnemyName + 185); patch 1: set by Burst; the fireball routines stop cracking the ice once it is set	games/tla/src/scene/mars_lighthouse_star_room.c
 ENTRANCE_AFTER_BATTLE	its code	The entrance every battle in the scene is given by Event_SetAfterBattleDestination	games/tla/src/scene/suhalla_gate.c
 ENTRANCE_FROM_CRACK	what the player sees	entrance 11 places the leader from the cracked tile's saved column and row and drops him in (CrackedTile_DropIn)	games/tla/src/scene/mars_lighthouse_star_room.c
 BLANK_SPRITE	what the player sees	sprite 489: CreateMarsStar loads the Mars Star's icon into it, ScatterCrumbs another sprite's frame	games/tla/src/scene/mars_lighthouse_star_room.c
@@ -2331,11 +2331,11 @@ ACTOR_EAST_DRAGON_STATUE	the walkthrough	"use Blaze ... they will unfreeze": spr
 ACTOR_WEST_DRAGON_STATUE	the walkthrough	sprite 419 at x 648, Blaze's HITS actor, the fireballs' source	games/tla/src/scene/mars_lighthouse_star_room.c
 ACTOR_ICE_CRACK	its twin	sprite 291, the entrance's cracked ice sheet, shown where the fireballs end and removed by Burst	games/tla/src/scene/mars_lighthouse_star_room.c
 ACTOR_AGATIO_DRAGON	the game	"I feel the cold too, Karst..." (MsgMarsLighthouseStarRoomWhyWhyAmILying); sprite 181, the Flame Dragon whose light sinks onto actor 13; actor 13 is Agatio: Karst answers "I feel the cold too, Karst..." spoken by 13 (MsgMarsStar01's seventh message)	games/tla/src/scene/mars_lighthouse_star_room.c
-ACTOR_KARST_DRAGON	the game	the mirrored Flame Dragon whose light sinks onto actor 14, Karst	games/tla/src/scene/mars_lighthouse_star_room.c
+ACTOR_KARST_DRAGON	the game	"Karst" (MsgEnemyName + 105); the mirrored Flame Dragon whose light sinks onto actor 14, Karst	games/tla/src/scene/mars_lighthouse_star_room.c
 ACTOR_AGATIO	what the player sees	render probe of JupiterLighthouseAerieBeacon with FLAG_ISAAC_AND_IVAN_FELL: actor 27 wears sprite 33, actor 28 sprite 23 (Karst) (its render)	games/tla/src/scene/jupiter_lighthouse_aerie_beacon.c
 ACTOR_KARST	the game	"Me? Why, I'm Karst." (MsgAhhhh2); "Me? Why, I'm Karst." spoken by actor 27; placed with SPRITE_KARST	games/tla/src/scene/jupiter_lighthouse_room_m.c
-ACTOR_AGATIO_LIGHT	what the player sees	sprite 303 moved onto the dragon, rises (LightRiseScript) and sinks (LightSinkScript) as the Adepts appear	games/tla/src/scene/mars_lighthouse_star_room.c
-ACTOR_KARST_LIGHT	what the player sees	as above	games/tla/src/scene/mars_lighthouse_star_room.c
+ACTOR_AGATIO_LIGHT	the game	"Agatio" (MsgEnemyName + 102); sprite 303 moved onto the dragon, rises (LightRiseScript) and sinks (LightSinkScript) as the Adepts appear	games/tla/src/scene/mars_lighthouse_star_room.c
+ACTOR_KARST_LIGHT	the game	"Karst" (MsgEnemyName + 105); as above	games/tla/src/scene/mars_lighthouse_star_room.c
 ACTOR_EAST_FIREBALL	its twin	sprite 673 sent by Actor_Attach along the east route, as the entrance's fireballs	games/tla/src/scene/mars_lighthouse_star_room.c
 ACTOR_WEST_FIREBALL	its twin	as above, the west route	games/tla/src/scene/mars_lighthouse_star_room.c
 ACTOR_EAST_FIREBALL_ROLL	its twin	sprite 412, the actor Actor_LaunchAhead would roll ahead (its kind in Actor_Attach)	games/tla/src/scene/mars_lighthouse_star_room.c
@@ -2388,7 +2388,7 @@ FLAME_ANIMATION_VENUS	what the player sees	as above with the Venus flame's	games
 FLAME_ANIMATION_MERCURY	what the player sees	as above with the Mercury flame's	games/tla/src/scene/mars_lighthouse_room_m.c
 ACTOR_LEDGE_TORCH	the walkthrough	sprite 418 (one of Blaze's torch sprites in blaze.c), the Blaze BEFORE_CAST actor, tinted per tower	games/tla/src/scene/mars_lighthouse_room_m.c
 ACTOR_LEDGE_FLAME	what the player sees	sprite 365 on the torch in its element's animation	games/tla/src/scene/mars_lighthouse_room_m.c
-ACTOR_LEDGE_BLAZE_TARGET	what the player sees	sprite 489 above the torch, Blaze's HITS actor the camera moves to	games/tla/src/scene/mars_lighthouse_room_m.c
+ACTOR_LEDGE_BLAZE_TARGET	the game	"Blaze" (MsgAbilityName + 154); sprite 489 above the torch, Blaze's HITS actor the camera moves to	games/tla/src/scene/mars_lighthouse_room_m.c
 ACTOR_VENUS_FLAME	what the player sees	M1's sprite 365 on a torch, shown only with FLAG_VENUS_FLAME_LIT, in the Venus animation	games/tla/src/scene/mars_lighthouse_room_m.c
 ACTOR_MERCURY_FLAME	what the player sees	as above	games/tla/src/scene/mars_lighthouse_room_m.c
 ACTOR_MARS_FLAME	what the player sees	as above	games/tla/src/scene/mars_lighthouse_room_m.c
@@ -2673,10 +2673,10 @@ Map_CopyCellAttributeRect_	its twin	inline in scene/shared/mars_lighthouse_entra
 MapGrid_CopyCellPictureCellsRect_	its twin	as above, over MapGrid_CopyCellPictureCellsRect	games/tla/src/scene/shared/mars_lighthouse_entrance_room.h
 Actor_SetHorizontalPositionWithTerrain_	its twin	as above, over Actor_SetHorizontalPositionWithTerrain	games/tla/src/scene/shared/mars_lighthouse_entrance_room.h
 MarsLighthouseRoomM_ScatterCrumbs	its twin	scene/shared/actor_roll_and_crumble.h calls it, and only the central hall includes that header; the twin of MarsLighthouseEntrance_ScatterCrumbs	games/tla/src/scene/mars_lighthouse_room_m.c
-FLAG_IN_VENUS_LIGHTHOUSE	the game	each lighthouse scene sets its flag on every arrival and Scene_Arrive clears all four on leaving: it means the party is inside, not that the beacon is lit (every Mars room sets the Mars flag while the lighthouse is still frozen)	games/tla/include/flags.h
-FLAG_IN_MERCURY_LIGHTHOUSE	the game	as above	games/tla/include/flags.h
-FLAG_IN_MARS_LIGHTHOUSE	the game	as above	games/tla/include/flags.h
-FLAG_IN_JUPITER_LIGHTHOUSE	the game	as above	games/tla/include/flags.h
+FLAG_IN_VENUS_LIGHTHOUSE	the game	"Venus Lighthouse" (MsgDebugAreaName + 4); each lighthouse scene sets its flag on every arrival and Scene_Arrive clears all four on leaving: it means the party is inside, not that the beacon is lit (every Mars room sets the Mars flag while the lighthouse is still frozen)	games/tla/include/flags.h
+FLAG_IN_MERCURY_LIGHTHOUSE	the game	"Mercury Lighthouse" (MsgDebugAreaName + 81); as above	games/tla/include/flags.h
+FLAG_IN_MARS_LIGHTHOUSE	the game	"Mars Lighthouse" (MsgDebugAreaName + 78); as above	games/tla/include/flags.h
+FLAG_IN_JUPITER_LIGHTHOUSE	the game	"Jupiter Lighthouse" (MsgDebugAreaName + 69); as above	games/tla/include/flags.h
 FLAG_MARS_BEACON_LIT	the game	"Will you cast in the Mars Star" (MsgMarsLighthouseAerieWillYouCastInMars); set in the aerie as the talk after the Doom Dragon's battle ends, before "Will you cast in the Mars Star"; Prox's people say "only Mars Lighthouse still needs lighting" while it is clear and "Thank you for lighting the fires of the lighthouse beacon" once set (MsgProx01, MsgProx81); FLAG_JUPITER_BEACON_LIT is its twin	games/tla/include/flags.h
 ITEM_MYTHRIL_BAG_MARS_STAR	the game	"Holds the Mars Star" (MsgHatBoostsAgility); item 222's description is "Holds the Mars Star"	games/tla/include/item_ids.h
 ITEM_MYTHRIL_BAG_JUPITER_STAR	the game	"Holds the Jupiter Star" (MsgHatBoostsAgility); item 223's description is "Holds the Jupiter Star"	games/tla/include/item_ids.h
@@ -3955,7 +3955,7 @@ FLAG_VENUS_LIGHTHOUSE_SWITCH_PRESSED	its code	Set by VenusLighthouse_StepOnFloor
 FLAG_MADRA_WORKER_SEEN_AT_HOLE	its code	Set by Madra_WorkerBlocksHole as the worker pops up the first time; set, he is placed at the hole	games/tla/src/scene/madra.c
 FLAG_MADRA_TOLD_WORKER_COMING_THROUGH	the game	"You comin' through here?" (MsgMadraYouCominThroughHere); Set on Yes to "You comin' through here?" (MsgYouCominThrough); set, he answers "Yeah, well, we..." (MsgYeahWellWe)	games/tla/src/scene/madra.c
 FLAG_MADRA_BOY_HAS_ASKED	its code	Set at the end of Madra_AskAboutBriggs; while clear the boy turns to the leader first	games/tla/src/scene/madra.c
-FLAG_MADRA_TOLD_OF_JENNA	the game	Set on Yes to "Is there by any chance a girl named Jenna with you?" (MsgIsThereBy); the condition of that talk row	games/tla/src/scene/madra.c
+FLAG_MADRA_TOLD_OF_JENNA	the game	"Madra" (MsgDebugAreaName + 12); Set on Yes to "Is there by any chance a girl named Jenna with you?" (MsgIsThereBy); the condition of that talk row	games/tla/src/scene/madra.c
 FLAG_MADRA_RAID_QUESTIONING_DONE	the game	"Hey! You lot! Hold it right there!" (MsgMadraHeyYouLotHold); Set at the end of the event opening "Hey! You lot! Hold it right there!" (MsgHeyYouLot); the condition of its step triggers	games/tla/src/scene/madra.c
 FLAG_MADRA_CYCLONE_CHIP_GIVEN	the game	"I believe I promised you a reward for helping with the boat" (MsgMadraFelixWait); Set as ITEM_CYCLONE_CHIP is given after "I believe I promised you a reward for helping with the boat"; walkthrough: "Cyclone Chip, Get it from the young Mayor"	games/tla/src/scene/madra.c
 FLAG_MADRA_KARST_MET	its code	Set as Madra_MeetKarst runs on entrance 7; set, Karst's row is cleared	games/tla/src/scene/madra.c
@@ -3996,7 +3996,7 @@ ACTOR_MUSHROOM_LOVER	the walkthrough	"the old man inside the biggest home on the
 ACTOR_MUSHROOM_COOK	the game	"This here's enough of a mushroom that we'll be eating it for days!" (MsgMadraInteriorsThisHeresEnoughOfMushroom); His wife: "This here's enough of a mushroom that we'll be eating it for days!"	games/tla/src/scene/madra_interiors.c
 ACTOR_STERN_INTERROGATOR	the game	"Speak! Or let your silence condemn you!" (MsgMadraInteriorsAdmitItYoureOne); "Speak! Or let your silence condemn you!" in MadraInteriors_InterrogatePiers	games/tla/src/scene/madra_interiors.c
 ACTOR_ACCUSING_INTERROGATOR	the game	"Admit it! You're one of the Champa, aren't you, Piers?" (MsgMadraInteriors28)	games/tla/src/scene/madra_interiors.c
-ACTOR_JAIL_KRADEN	the game	Sprite 56, launched from the leader in the jail; Kraden's	games/tla/src/scene/madra_interiors.c
+ACTOR_JAIL_KRADEN	the game	"Kraden" (MsgPiers2 + 2); Sprite 56, launched from the leader in the jail; Kraden's	games/tla/src/scene/madra_interiors.c
 FLAG_YAMPI_DESERT_SCORPION_STIRRED	its code	Set by YampiDesert_StirScorpion, Pound on the first screen's wooden column bursting the sand and sending the scorpion on	games/tla/src/scene/yampi_desert.c
 FLAG_YAMPI_DESERT_SCORPION_STIRRED_AGAIN	its code	The same on the second screen	games/tla/src/scene/yampi_desert.c
 FLAG_YAMPI_DESERT_SCORPION_CORNERED	its code	Set by YampiDesert_CornerScorpion; the condition of the raised trigger YampiDesert_WatchScorpionStop	games/tla/src/scene/yampi_desert.c
@@ -4010,7 +4010,7 @@ FLAG_YAMPI_DESERT_SLIDE_ACTORS_SHOWN	its code	Set by YampiDesert_ShowSlideActors
 FLAG_MIKASALLA_LADDER_DUG_UP	its code	Set by Mikasalla_DigUpLadder (Scoop on the patch by the sheep); Scene_PrepareMap redraws the ladder while set	games/tla/src/scene/mikasalla.c
 FLAG_MIKASALLA_TUNNELS_PARCHED	its code	Set by Mikasalla_CastParch; the condition of its Parch row and of Scene_PrepareMap's redraw	games/tla/src/scene/mikasalla.c
 FLAG_MIKASALLA_GALAHAD_MET	the game	"I am the warrior Galahad. I am looking for someone, and I need your" (MsgMikasallaInteriorsForgiveMyManners); Set by MikasallaInteriors_MeetGalahad: "I am the warrior Galahad. I am looking for someone, and I need your..."	games/tla/src/scene/mikasalla_interiors.c
-FLAG_MIKASALLA_TOLD_GALAHAD_OF_ISAAC	the game	Set on Yes to Galahad's question whether the party knows Isaac	games/tla/src/scene/mikasalla_interiors.c
+FLAG_MIKASALLA_TOLD_GALAHAD_OF_ISAAC	the game	"Mikasalla" (MsgDebugAreaName + 19); Set on Yes to Galahad's question whether the party knows Isaac	games/tla/src/scene/mikasalla_interiors.c
 FLAG_MIKASALLA_GALAHAD_MET_THIS_VISIT	its code	An area flag set with FLAG_MIKASALLA_GALAHAD_MET; Scene_Initialize keeps Galahad while it is set	games/tla/src/scene/mikasalla_interiors.c
 FLAG_AIRS_ROCK_PILLAR_PLACED_FIRST	its code	Set in games/tla/src/scene/airs_rock.c where Move leaves the pillar or statue: Set once Move has left the second room's first pillar on its ledge, cell (16, 43).	games/tla/src/scene/airs_rock.c
 FLAG_AIRS_ROCK_PILLAR_PLACED_SECOND	its code	Set in games/tla/src/scene/airs_rock.c where Move leaves the pillar or statue: As FLAG_AIRS_ROCK_PILLAR_PLACED_FIRST, the second, cell (45, 45).	games/tla/src/scene/airs_rock.c
@@ -4021,19 +4021,19 @@ FLAG_AIRS_ROCK_THIRD_PILLAR_MOVED	its code	Set in games/tla/src/scene/airs_rock.
 FLAG_KIBOMBO_DEAD_END_SEEN	its code	Set once the party has found the dead end by the statue and turned back (Kibombo_DeadEndByTheStatue). (0x8f5)	games/tla/src/scene/kibombo.c
 FLAG_KIBOMBO_PIERS_WITH_PARTY	its code	Set while Piers goes about Kibombo with the party: as he joins it, and as he thanks it; cleared when he stays behind. (0x92e)	games/tla/src/scene/kibombo.c
 FLAG_KIBOMBO_PIERS_STAYED_BEHIND	its code	Set once Piers has refused to leave the village without the orb and stayed behind (Kibombo_PiersRefusesToLeave). (0x92f)	games/tla/src/scene/kibombo.c
-FLAG_LEMURIA_SPRING_LUCK_TRIED	the game	Set once the party has taken the test of luck offered at the Spring of Lemuria (Lemuria_OfferSpringLuck). (0x908)	games/tla/src/scene/lemuria.c
-FLAG_LEMURIA_VINE_GROWN	the game	Set once Growth has grown the vine (Lemuria_GrowVine); the set-up grows it again on every visit. (0x963)	games/tla/src/scene/lemuria.c
+FLAG_LEMURIA_SPRING_LUCK_TRIED	the game	"Lemuria" (MsgDebugAreaName + 55); Set once the party has taken the test of luck offered at the Spring of Lemuria (Lemuria_OfferSpringLuck). (0x908)	games/tla/src/scene/lemuria.c
+FLAG_LEMURIA_VINE_GROWN	the game	"Lemuria" (MsgDebugAreaName + 55); Set once Growth has grown the vine (Lemuria_GrowVine); the set-up grows it again on every visit. (0x963)	games/tla/src/scene/lemuria.c
 FLAG_LEMURIA_CITY_ADMIRED	the game	"This place is remarkable... Truly remarkable..." (MsgLemuriaThisPlaceIsRemarkableTruly); Set once the party has marvelled at the city ("This place is remarkable... Truly remarkable..."). (0x964)	games/tla/src/scene/lemuria.c
 FLAG_LEMURIA_TOLD_DOOR_IS_BROKEN	the game	"The door's broken, I'm afraid." (MsgLemuriaAreYouKidsPierssTraveling); Set once the Lemurian at the window has told the party the door is broken and to climb through ("The door's broken, I'm afraid."). (0x968)	games/tla/src/scene/lemuria.c
 FLAG_LEMURIA_ROPE_LET_DOWN	the game	"There! Is that better? Now climb up here." (MsgLemuriaWhatsMatterCantYouClimb); Set once the Lemurian has let a rope down from the window ("There! Is that better? Now climb up here."). (0x96f)	games/tla/src/scene/lemuria.c
-FLAG_SHAMAN_VILLAGE_SAND_CLEARED	the game	Set once Sheba has cast Whirlwind on the purple rock for Moapa's first test and blown the sand away. (0x94c)	games/tla/src/scene/shaman_village.c
-FLAG_SHAMAN_VILLAGE_PILLAR_BRIDGE_DROPPED	the game	Set once Move has dropped the pillar onto cell (32, 11) as a bridge. (0x94e)	games/tla/src/scene/shaman_village.c
-FLAG_SHAMAN_VILLAGE_MOAPA_MET	the game	Set as Moapa comes out of his cabin to meet the party (ShamanVillage_MeetMoapa). (0x94f)	games/tla/src/scene/shaman_village.c
-FLAG_SHAMAN_VILLAGE_TRIAL_RULES_HEARD	the game	Set once Moapa has told the party the rules of the trial: the Shaman's Rod and eight pieces of equipment. (0x9e0)	games/tla/src/scene/shaman_village.c
-FLAG_SHAMAN_VILLAGE_SHAMANS_ROD_SHOWN	the game	Set once the party has shown Moapa the Shaman's Rod. (0x9e1)	games/tla/src/scene/shaman_village.c
-FLAG_SHAMAN_VILLAGE_MOAPA_KNOWS_NAMES	the game	Set once Moapa has asked the party's names after the battle; he remembers them from then on. (0x9ed)	games/tla/src/scene/shaman_village.c
-FLAG_MOAPA_BEATEN	the game	Set as the party comes back from beating Moapa on the Trial Road (entrance 30); the inn and the sanctum serve the party from then on. (0x9fe)	games/tla/src/scene/shaman_village.c
-FLAG_SHAMAN_VILLAGE_FORTUNE_TOLD	the game	Set once the fortune-teller has read the party's fortune (ShamanVillage_TellFortune). (FLAG_AREA_TEMP_01)	games/tla/src/scene/shaman_village.c
+FLAG_SHAMAN_VILLAGE_SAND_CLEARED	the game	"Shaman Village" (MsgDebugAreaName + 64); Set once Sheba has cast Whirlwind on the purple rock for Moapa's first test and blown the sand away. (0x94c)	games/tla/src/scene/shaman_village.c
+FLAG_SHAMAN_VILLAGE_PILLAR_BRIDGE_DROPPED	the game	"Shaman Village" (MsgDebugAreaName + 64); Set once Move has dropped the pillar onto cell (32, 11) as a bridge. (0x94e)	games/tla/src/scene/shaman_village.c
+FLAG_SHAMAN_VILLAGE_MOAPA_MET	the game	"Shaman Village" (MsgDebugAreaName + 64); Set as Moapa comes out of his cabin to meet the party (ShamanVillage_MeetMoapa). (0x94f)	games/tla/src/scene/shaman_village.c
+FLAG_SHAMAN_VILLAGE_TRIAL_RULES_HEARD	the game	"Shaman Village" (MsgDebugAreaName + 64); Set once Moapa has told the party the rules of the trial: the Shaman's Rod and eight pieces of equipment. (0x9e0)	games/tla/src/scene/shaman_village.c
+FLAG_SHAMAN_VILLAGE_SHAMANS_ROD_SHOWN	the game	"Shaman Village" (MsgDebugAreaName + 64); Set once the party has shown Moapa the Shaman's Rod. (0x9e1)	games/tla/src/scene/shaman_village.c
+FLAG_SHAMAN_VILLAGE_MOAPA_KNOWS_NAMES	the game	"Shaman Village" (MsgDebugAreaName + 64); Set once Moapa has asked the party's names after the battle; he remembers them from then on. (0x9ed)	games/tla/src/scene/shaman_village.c
+FLAG_MOAPA_BEATEN	the game	"Moapa" (MsgEnemyName + 96); Set as the party comes back from beating Moapa on the Trial Road (entrance 30); the inn and the sanctum serve the party from then on. (0x9fe)	games/tla/src/scene/shaman_village.c
+FLAG_SHAMAN_VILLAGE_FORTUNE_TOLD	the game	"Shaman Village" (MsgDebugAreaName + 64); Set once the fortune-teller has read the party's fortune (ShamanVillage_TellFortune). (FLAG_AREA_TEMP_01)	games/tla/src/scene/shaman_village.c
 ANIM_STILL	its twin	The Broken Seal's enum ActorAnimation (field/sprite.h) numbers a person's sprite the same: in the scenes 3 follows a speaker's line as a nod 1,456 times (The Broken Seal 1,775 ANIM_NOD), 4 458 times (577), 2 sends a person walking to the leader, 1 stands one up after getting up (idejima.c)	games/tla/include/field/sprite.h
 ANIM_STAND	its twin	The Broken Seal's enum ActorAnimation (field/sprite.h) numbers a person's sprite the same: in the scenes 3 follows a speaker's line as a nod 1,456 times (The Broken Seal 1,775 ANIM_NOD), 4 458 times (577), 2 sends a person walking to the leader, 1 stands one up after getting up (idejima.c)	games/tla/include/field/sprite.h
 ANIM_WALK	its twin	The Broken Seal's enum ActorAnimation (field/sprite.h) numbers a person's sprite the same: in the scenes 3 follows a speaker's line as a nod 1,456 times (The Broken Seal 1,775 ANIM_NOD), 4 458 times (577), 2 sends a person walking to the leader, 1 stands one up after getting up (idejima.c)	games/tla/include/field/sprite.h
@@ -4045,12 +4045,12 @@ ACTOR_STUDENT_ON_GUARD_DUTY	the game	"Once the period of meditation has begun, n
 ACTOR_STUDENT_WARY_OF_OUTSIDERS	the game	"Hey, what's an outsider doing on the temple grounds?" (MsgFieldHeyWhatsAnOutsiderDoingOn), meditating until Poi is met	games/tla/src/scene/kandorean_temple.c
 ACTOR_STUDENT_ON_THE_FAILED_TEST	the game	"Looks like none of our brothers passed this time, either." (MsgFieldLooksLikeNoneOfOurBrothers)	games/tla/src/scene/kandorean_temple.c
 ACTOR_STUDENT_WHO_WOULD_BE_A_MONK	the game	"Someday, I'm going to be a great monk, like Master Poi." (MsgFieldSomedayImGoingToBeA)	games/tla/src/scene/kandorean_temple.c
-ACTOR_GATE_KRADEN	the game	sprite 56 (Kraden's, as Idejima's first row), "This wall looks rather suspicious, wouldn't you say, Felix?"	games/tla/src/scene/kandorean_temple.c
+ACTOR_GATE_KRADEN	the game	"Kraden" (MsgPiers2 + 2); sprite 56 (Kraden's, as Idejima's first row), "This wall looks rather suspicious, wouldn't you say, Felix?"	games/tla/src/scene/kandorean_temple.c
 ACTOR_POI	the game	"This is the power and the secret of our temple!" (MsgKandoreanTempleSecretOfLash); "This is the power and the secret of our temple!" ... Party_GiveItem(ITEM_LASH_PEBBLE) in KandoreanTemple_ReceiveLash; "Take the power of Lash" on talking	games/tla/src/scene/kandorean_temple.c
 ACTOR_FIRST_TESTED_STUDENT	the game	"HE went in before ME? What nonsense!" (MsgFieldHeWentInBeforeMeWhat); tested first in KandoreanTemple_TestTheStudents; later "HE went in before ME? What nonsense!"	games/tla/src/scene/kandorean_temple.c
 ACTOR_SECOND_TESTED_STUDENT	the game	"I hear that someone passed the test... No matter, though..." (MsgFieldIHearThatSomeonePassedThe); tested second; "I hear that someone passed the test... No matter, though..."	games/tla/src/scene/kandorean_temple.c
 ACTOR_THIRD_TESTED_STUDENT	the walkthrough	"Only the third one's ability to levitate is good enough to undergo the final test"; walks through the trapdoor at the end of the test	games/tla/src/scene/kandorean_temple.c
-ACTOR_HALL_KRADEN	the game	row 14 wears Kraden's sprite 56, as the other scenes' Kraden rows	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_HALL_KRADEN	the game	"Kraden" (MsgPiers2 + 2); row 14 wears Kraden's sprite 56, as the other scenes' Kraden rows	games/tla/src/scene/shrine_of_the_sea_god.c
 ACTOR_SOUTH_ROPE_WEST_POLE	its code	Rope_Place(0, ..., 8, 9) and Lash on 8; rows at (456, 676) and (504, 676); the north pair (10, 11) at z 376	games/tla/src/scene/kandorean_temple.c
 ACTOR_WEST_LIFT	its code	KandoreanTemple_RunWestLift raises actor 13 with its column 15; RunEastLift 14 and 16	games/tla/src/scene/kandorean_temple.c
 ACTOR_LIFT_ROOM_PILLAR	its code	gKandoreanTemple_BlockActors holds 12; Move on 12 runs StartMovingBlock	games/tla/src/scene/kandorean_temple.c
@@ -4067,8 +4067,8 @@ ACTOR_LITTLE_WEREWOLF	the game	"I was in the cave with Maha! I was that little w
 ACTOR_MAHA_AT_THE_CREVICE	the walkthrough	"an old looking werewolf pops up from a crevice"; sprite 42, the sprite of gGaroh_Room5Placements' row 10 who says "Take care in your travels, Felix." (MsgGaroh29) and tells the legend	games/tla/src/scene/garoh.c
 ACTOR_SANCTUARY_CREVICE	its code	Garoh_OpenCrevice/CloseCrevice run effect 144 on actor 22 before and after the werewolf peers out	games/tla/src/scene/garoh.c
 ACTOR_WEREWOLF	the walkthrough	"A lycanthrope Werewolf will move along the path"; "Gaaaroooooo!" in Garoh_WerewolfProwls, "Haowooo!!!" leading into the cave	games/tla/src/scene/garoh.c
-ACTOR_MAHA	the game	MahaTellsTheLegend's speaker; talk "Take care in your travels, Felix." (MsgGaroh29)	games/tla/src/scene/garoh.c
-ACTOR_ETHER	the game	FLAG_DJINNI(DJINNI_ETHER) row of gGaroh_Room5Placements	games/tla/src/scene/garoh.c
+ACTOR_MAHA	the game	"Maha" (MsgFortuneTeller2 + 3); MahaTellsTheLegend's speaker; talk "Take care in your travels, Felix." (MsgGaroh29)	games/tla/src/scene/garoh.c
+ACTOR_ETHER	the game	"Ether" (MsgDjinnName + 69); FLAG_DJINNI(DJINNI_ETHER) row of gGaroh_Room5Placements	games/tla/src/scene/garoh.c
 ACTOR_MADRAS_MAYOR	the game	"I'm starting to think the mayor of Alhafra never planned on repairing" (MsgAlhafraManorImStartingToThinkThe); "I'm starting to think the mayor of Alhafra never planned on repairing" through AlhafraManor_GrumbleAboutTheMayor, sprite 20	games/tla/src/scene/alhafra_manor.c
 ACTOR_FIRST_MADRAN_SOLDIER	the game	"Finally! We made it!" (MsgAlhafraFinallyWeMadeIt); sprite 88, the Madra drawbridge guard's (madra_drawbridge.c); "Finally! We made it!"; the second "No doubt about it!"	games/tla/src/scene/alhafra.c
 ACTOR_MADRAN_WAITING_FOR_THE_ELDER	the game	"Where's the Elder?" (MsgAlhafraFinallyWeMadeIt); "Where's the Elder?" "He's coming now..."	games/tla/src/scene/alhafra.c
@@ -4302,8 +4302,8 @@ FarCall_LuckyWheelsTable	its twin	The Broken Seal's label for the same bank's fa
 FarCall_SoundTable	its twin	The Broken Seal's label for the same bank's far-call table, at the same row of Resource_DirectoryTable; was Resource_FarCall0xx	games/tla/src/gamepak/far_call/sound.s
 FarCall_SuperLuckyDiceTable	its twin	The Broken Seal's FarCall_<Bank>Table form for The Lost Age's extra bank, directory row 0x0f; was Resource_FarCall00F	games/tla/src/gamepak/far_call/super_lucky_dice.s
 EXIT_KEEP_DESTINATION	its twin	The Broken Seal's field_sequence.h EXIT_KEEP_DESTINATION 999	games/tla/include/field/field_sequence.h
-FLAG_MADRA_GATE_INSPECTED	what the player sees	set as Madra's gate guards let the party through ("You there! Hold your ground!", Madra_InspectPartyAtGate); the scenes lane's evidence	games/tla/include/flags.h
-FLAG_PIERS_INTERROGATED	what the player sees	set at the end of MadraInteriors_InterrogatePiers, the jail scene with Piers's Frost; the scenes lane's evidence	games/tla/include/flags.h
+FLAG_MADRA_GATE_INSPECTED	the game	"Madra" (MsgDebugAreaName + 12); set as Madra's gate guards let the party through ("You there! Hold your ground!", Madra_InspectPartyAtGate); the scenes lane's evidence	games/tla/include/flags.h
+FLAG_PIERS_INTERROGATED	the game	"Piers" (MsgPiers2); set at the end of MadraInteriors_InterrogatePiers, the jail scene with Piers's Frost; the scenes lane's evidence	games/tla/include/flags.h
 FLAG_OSENIA_PASSAGE_GRANTED	the game	"Then I hereby grant my permission to these four travelers!" (MsgMadraHasPiersEscaped); "Then I hereby grant my permission to these four travelers!", Madra_GrantPassageToOsenia; the drawbridge guards test it; the scenes lane's evidence	games/tla/include/flags.h
 FIND_ITEM	its twin	The Broken Seal's scene_tables.h; the Suhalla Gate's Mint chest writes 0x100000 | ITEM_MINT	games/tla/include/field/scene_tables.h
 FIND_COINS	its twin	The Broken Seal's scene_tables.h, type 0x2 of a search's value	games/tla/include/field/scene_tables.h
@@ -5051,7 +5051,7 @@ ACTOR_WOMAN_OF_THE_SANCTUM	the game	"We must pass this test. Now is the time to 
 ACTOR_OLD_WOMAN_OF_THE_SANCTUM	the game	"A wave that moves the very earth... This is no act of man..." (MsgMadraInteriorsWaveThatMovesVeryEarth); row 21 (spr_076) "A wave that moves the very earth... This is no act of man..."	games/tla/src/scene/madra_interiors.c
 ACTOR_INN_HELPER	the game	"You see how full our inn is?" (MsgAlhafraInteriorsYouSeeHowFullOur); talk 17 "You see how full our inn is?"	games/tla/src/scene/alhafra_interiors.c
 ACTOR_GIRL_STAYING_AT_THE_INN	the game	"I hid under my bed on the night of the attack." (MsgMadraInteriorsIHidUnderMyBed); row 24 (spr_072) "I hid under my bed on the night of the attack."	games/tla/src/scene/madra_interiors.c
-ACTOR_CHAR	the game	row 25 is mars_djinni; MadraInteriors_GiveHealingFungus joins it as DJINNI_CHAR	games/tla/src/scene/madra_interiors.c
+ACTOR_CHAR	the game	"Char" (MsgDjinnName + 50); row 25 is mars_djinni; MadraInteriors_GiveHealingFungus joins it as DJINNI_CHAR	games/tla/src/scene/madra_interiors.c
 ACTOR_BLACK_CRYSTAL	its code	row 26, a blank sprite on the mantel, shows ITEM_BLACK_CRYSTAL (Actor_SetItemIcon) until FLAG_BRIGGS_CAUGHT	games/tla/src/scene/madra_interiors.c
 ACTOR_TRAVELER_WHO_SLEPT_THROUGH_THE_RAID	the game	"I slept right through the pirate raid!" (MsgMadraInteriorsISleptRightThroughPirate); row 27 (man_carrying_a_pack) "I slept right through the pirate raid!"	games/tla/src/scene/madra_interiors.c
 ACTOR_TRAVELERS_PARTNER	the game	"I'm glad my partner and I weren't injured" (MsgMadraInteriorsImGladMyPartner); row 28 (the same sprite, recoloured by Scene_Initialize) "I'm glad my partner and I weren't injured"	games/tla/src/scene/madra_interiors.c
@@ -5166,7 +5166,7 @@ ACTOR_POIS_SIGN	the game	"Extinguish your desire, and the fire will cool" (MsgKa
 ACTOR_FOG_ROPE_POLE	its code	KandoreanTemple_StartFogRoom: Rope_Place(0, flag, 8, 9); Lash on actor 8 while FLAG_SCENE_TEMP_0F clear	games/tla/src/scene/kandorean_temple.c
 ACTOR_FOG_ROPE_OTHER_POLE	its code	as ACTOR_FOG_ROPE_POLE	games/tla/src/scene/kandorean_temple.c
 ACTOR_STUDENT_WHO_GAVE_UP	the game	"It seems I may not have been ready after all..." (MsgFieldItSeemsIMayNotHave); fog room talk 10: MsgFieldItSeemsIMayNotHave "It seems I may not have been ready after all..."	games/tla/src/scene/kandorean_temple.c
-ACTOR_FOG	the game	fog room row 11 SPRITE_MERCURY_DJINNI with FLAG_DJINNI(DJINNI_FOG); talk runs KandoreanTemple_FightFog	games/tla/src/scene/kandorean_temple.c
+ACTOR_FOG	the game	"Fog" (MsgDjinnName + 27); fog room row 11 SPRITE_MERCURY_DJINNI with FLAG_DJINNI(DJINNI_FOG); talk runs KandoreanTemple_FightFog	games/tla/src/scene/kandorean_temple.c
 FLAG_ON_WEST_LIFT	its code	KandoreanTemple_WatchLifts and _WatchVentPlatforms set 0x208/0x209 while the leader stands on the west/east lift or platform cell	games/tla/src/scene/kandorean_temple.c
 FLAG_ON_EAST_LIFT	its code	as FLAG_ON_WEST_LIFT	games/tla/src/scene/kandorean_temple.c
 FLAG_PILLAR_LIFTED_OFF_PLATFORM	its code	KandoreanTemple_StartMovingPillar sets 0x20a when the pillar's cell column is 13 or 23 (a platform)	games/tla/src/scene/kandorean_temple.c
@@ -5200,10 +5200,10 @@ ACTOR_GREAT_HALL_PUSHED_PILLAR	the game	sprite 272, the pillar sprite Move pushe
 ACTOR_GREAT_HALL_FIRST_PILLAR	its code	room 3 rows 9 to 12, sprites 370 and 369, layered by ShrineOfTheSeaGod_LayerRoom3Props	games/tla/src/scene/shrine_of_the_sea_god.c
 ACTOR_GREAT_HALL_PILLAR_STUMP	its code	rows 13 and 14 at one place; 13 stays in animation 0, 14 (animation 2) topples into the water	games/tla/src/scene/shrine_of_the_sea_god.c
 ACTOR_GREAT_HALL_TOPPLING_PILLAR	its code	ShrineOfTheSeaGod_KeepRoom3PillarWithLeader carries actor 14 as it topples	games/tla/src/scene/shrine_of_the_sea_god.c
-ACTOR_GREAT_HALL_BREATH	the game	room 3 row 15, sprite 246 as Breath's row in room 5 (FLAG_DJINNI(DJINNI_BREATH)); DjinniFleesEast/South move it	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_GREAT_HALL_BREATH	the game	"Breath" (MsgDjinnName + 67); room 3 row 15, sprite 246 as Breath's row in room 5 (FLAG_DJINNI(DJINNI_BREATH)); DjinniFleesEast/South move it	games/tla/src/scene/shrine_of_the_sea_god.c
 ACTOR_FIRST_FOOTPRINT	the game	probe ShrineOfTheSeaGod4: sixteen sprite-270 actors in a trail, every other one mirrored; walkthrough "follow the footsteps in the next room"	games/tla/src/scene/shrine_of_the_sea_god.c
 ACTOR_LEDGE_ROOM_PILLAR	its code	room 5 row 13, pillar sprite 369	games/tla/src/scene/shrine_of_the_sea_god.c
-ACTOR_BREATH	the game	row 14 with FLAG_DJINNI(DJINNI_BREATH); talk starts ShrineOfTheSeaGod_FightBreath	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_BREATH	the game	"Breath" (MsgDjinnName + 67); row 14 with FLAG_DJINNI(DJINNI_BREATH); talk starts ShrineOfTheSeaGod_FightBreath	games/tla/src/scene/shrine_of_the_sea_god.c
 ACTOR_HOLE_ROOM_PILLAR	its code	room 6 actor 8 (sprite 272) that ShrineOfTheSeaGod_PushPillarIntoHole drops into the hole	games/tla/src/scene/shrine_of_the_sea_god.c
 ACTOR_FIRST_SLIDE	its code	room 6 rows 9 to 11 shown and hidden together by ShrineOfTheSeaGod_SetSlideActorsShown, as the routine was already named	games/tla/src/scene/shrine_of_the_sea_god.c
 ACTOR_PILLAR_ROOM_FIRST_PILLAR	its code	room 7 rows 8 to 12, pillar sprites 369 and 370	games/tla/src/scene/shrine_of_the_sea_god.c
@@ -5222,7 +5222,7 @@ ACTOR_TRAVELER_SEEKING_EVIDENCE	the game	"My job is to find evidence that is a C
 ACTOR_DIZZY_TRAVELER	the game	"It's so hot out here! I feel dizzy!" (MsgOooohThisDesert); talk 10: MsgOooohThisDesert "It's so hot out here! I feel dizzy!"	games/tla/src/scene/yampi_desert.c
 ACTOR_PARCHED_TRAVELER	the game	"Water... My throat is so parched!" (MsgWaterMyThroat); talk 11: MsgWaterMyThroat "Water... My throat is so parched!"	games/tla/src/scene/yampi_desert.c
 ACTOR_TRAVELER_WHO_WOULD_TURN_BACK	the game	"Can't we just forget about Briggs?" (MsgCanTWe); YampiDesert_ElderRefusesToQuit: actor 12 says "Can't we just forget about Briggs?"	games/tla/src/scene/yampi_desert.c
-ACTOR_BLITZ	the game	room 3 row 19 (sprite 246, Jupiter Djinni); talk runs YampiDesert_FightBlitz, Field_RequestDjinnBattle(19, 68)	games/tla/src/scene/yampi_desert.c
+ACTOR_BLITZ	the game	"Blitz" (MsgDjinnName + 68); room 3 row 19 (sprite 246, Jupiter Djinni); talk runs YampiDesert_FightBlitz, Field_RequestDjinnBattle(19, 68)	games/tla/src/scene/yampi_desert.c
 ACTOR_ROPE_POLE	its code	YampiDesert_PlaceRope(0, 0x20c, 8, 9) in room 8; Lash on actor 8	games/tla/src/scene/yampi_desert.c
 ACTOR_SIGNPOST	the game	placed actor 11 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_KING_SCORPION	its code	YampiDesert_LandAndFightKingScorpion's actor 8 in room 10	games/tla/src/scene/yampi_desert.c
@@ -6551,7 +6551,7 @@ ACTOR_WOMAN_WAITING_AT_THE_INN	the game	"I was afraid my house would never get r
 ACTOR_BOY_HUNTING_FOR_COINS	the game	"I wonder if there's any more money hidden around here" (MsgAlhafraIWonderIfTheresAny); "I wonder if there's any more money hidden around here" and "I'm going to start looking, too!" in Alhafra_FindGoldCoins	games/tla/src/scene/alhafra.c
 ACTOR_WOMAN_ADMIRING_THE_MAST	the game	"Our sailboat looks fabulous with its mast repaired!" (MsgAlhafraOurSailboatLooksFabulousWith); "Our sailboat looks fabulous with its mast repaired!" (render probe --scene Alhafra --set FLAG_ALHAFRA_MAST_CLEARED)	games/tla/src/scene/alhafra.c
 ACTOR_MAN_UNMOVED_BY_THE_SHIP	the game	"I don't know why everyone's so excited about fixing the ship" (MsgAlhafraIDontKnowWhyEveryones); "I don't know why everyone's so excited about fixing the ship"	games/tla/src/scene/alhafra.c
-ACTOR_WOMAN_ON_ALHAFRAS_FUTURE	the game	"With that ship, Alhafra's going to become a big, important town"	games/tla/src/scene/alhafra.c
+ACTOR_WOMAN_ON_ALHAFRAS_FUTURE	the game	"Alhafra" (MsgDebugAreaName + 24); "With that ship, Alhafra's going to become a big, important town"	games/tla/src/scene/alhafra.c
 ACTOR_OLD_MAN_WAITING_FOR_THIS_DAY	the game	"I've been waiting for this day for years!" (MsgAlhafraIveBeenWaitingForThis); "I've been waiting for this day for years!"	games/tla/src/scene/alhafra.c
 ACTOR_OLD_MAN_ON_SAILS	the game	"The secret to harnessing the wind's power is building a small" (MsgAlhafraTheSecretToHarnessingThe); "The secret to harnessing the wind's power is building a small"	games/tla/src/scene/alhafra.c
 ACTOR_OLD_WOMAN_ON_FISHING_BOATS	the game	"Huge boats carry more, but we need smaller ships to catch the fish"	games/tla/src/scene/alhafra.c
@@ -6613,11 +6613,11 @@ ACTOR_UNWELCOMING_SAILOR	its uses	row 22 talks through Champa_SailorsNotWelcome	
 ACTOR_ROCK	its uses	row 23 wears SPRITE_ROCK, drawn at half scale in Scene_Initialize	games/tla/src/scene/champa.c
 ACTOR_WOMAN_ON_THE_CLIFF	the game	"I bet you're wondering why only sailors and their families" (MsgChampaIBetYoureWonderingWhy)	games/tla/src/scene/champa.c
 ACTOR_FEIZHI	the game	"Me? I am Feizhi..." (MsgChampaIsaac); "Me? I am Feizhi..." (message 12172), row 29 (SPRITE_FEIZHI)	games/tla/src/scene/champa.c
-ACTOR_KRADEN_MEETING_FEIZHI	the game	"Young lady, are you looking for someone by the name of Isaac?" (message 12166), row 30 (sprite 56)	games/tla/src/scene/champa.c
+ACTOR_KRADEN_MEETING_FEIZHI	the game	"Kraden" (MsgPiers2 + 2); "Young lady, are you looking for someone by the name of Isaac?" (message 12166), row 30 (sprite 56)	games/tla/src/scene/champa.c
 ACTOR_FEIZHIS_GIFT	its uses	Champa_TakeFeizhisGift is row 31's talk trigger	games/tla/src/scene/champa.c
 ACTOR_SAILOR_WHO_SPOTS_FELIX	the game	"Whoa! You" (MsgChampaWhoaYouYoureFelix); "Whoa! You... You're Felix!" in Champa_SailorsSpotFelix	games/tla/src/scene/champa.c
-ACTOR_VIKING_HELM_CHEST	the game	the walkthrough's Viking Helm, "use Reveal on the 6 gravestones to the east"; Champa_RevealTreasureSpot moves treasure spot 64	games/tla/src/scene/champa.c
-ACTOR_PSY_CRYSTAL_CHEST	the game	the walkthrough's Psy Crystal, "Use Reveal on the six gravestones"; Alhafra_RevealTreasureSpot moves treasure spot 64	games/tla/src/scene/alhafra.c
+ACTOR_VIKING_HELM_CHEST	the game	"Viking Helm" (MsgItemName + 378); the walkthrough's Viking Helm, "use Reveal on the 6 gravestones to the east"; Champa_RevealTreasureSpot moves treasure spot 64	games/tla/src/scene/champa.c
+ACTOR_PSY_CRYSTAL_CHEST	the game	"Psy Crystal" (MsgItemName + 186); the walkthrough's Psy Crystal, "Use Reveal on the six gravestones"; Alhafra_RevealTreasureSpot moves treasure spot 64	games/tla/src/scene/alhafra.c
 ACTOR_OBABA	the game	"Well done! You found all three pieces of the trident!" (MsgWellDoneYou); "Well done! You found all three pieces of the trident!" ... "Heart of the earth, fury of the forge's flames" from row 8 (sprite 36, an old woman)	games/tla/src/scene/champa_cliff_caves.c
 ACTOR_HELD_ITEM	its code	row 10 shows ITEM_TRIDENT and each prong as an item icon (Actor_ShowItemIconById)	games/tla/src/scene/champa_cliff_caves.c
 ACTOR_SALAMANDER	what the player sees	row 12 wears sprite 338, a small salamander (its render); "My salamander! You... beat my salamander..."	games/tla/src/scene/champa_cliff_caves.c
@@ -6677,7 +6677,7 @@ ACTOR_GREAT_FACE	what the player sees	row 9 of the third room wears sprite 390, 
 ACTOR_GREAT_FACE_HALF	what the player sees	row 10 of the third room wears sprite 393, the right part of a stone face (its render); Move runs AnkohlRuins_PushRaftPillar on it	games/tla/src/scene/ankohl_ruins.c
 ACTOR_LEFT_FACE_HALF	what the player sees	rows 9 and 10 of the fourth room wear sprites 391 and 393, a stone face's halves (its render); flags 0x9d9 and 0x9da place them	games/tla/src/scene/ankohl_ruins.c
 ACTOR_FACE_HALF_FOR_THE_GAP	the game	row 9 of the fifth room (sprite 393) takes Move's AnkohlRuins_PushStatueIntoGap: the walkthrough's "Use Reveal to make a gap appear and then push the statue into it"	games/tla/src/scene/ankohl_ruins.c
-ACTOR_LEFT_PRONG_CHEST	the game	treasure spot 64 of SCENE_ANKOHL_RUINS_LEFT_PRONG, raised with AnkohlRuins_RaiseDust; the walkthrough's Left Prong "outside on top of Ankohl Ruins"	games/tla/src/scene/ankohl_ruins.c
+ACTOR_LEFT_PRONG_CHEST	the game	"Left Prong" (MsgRustySword2 + 23); treasure spot 64 of SCENE_ANKOHL_RUINS_LEFT_PRONG, raised with AnkohlRuins_RaiseDust; the walkthrough's Left Prong "outside on top of Ankohl Ruins"	games/tla/src/scene/ankohl_ruins.c
 AquaRockStream	its uses	AquaRock_UpdateStreams copies three cells a row from (unk00 + flag * 3, unk02 + row) to (unk08, unk0A + row) and from (unk04, unk06) to (unk0C, unk0E), a row every fourth frame, as flag unk12 (0x1000 inverting) changes; was struct Unk02003450	games/tla/src/scene/aqua_rock.c
 STREAM_SET	its uses	sets an AquaRockStream's fields in AquaRock_SetUpStreams; was UNK02003450_SET	games/tla/src/scene/aqua_rock.c
 ACTOR_FIRST_MOAI	the game	rows 8 to 23 wear sprite 380, a green stone head (its render); the game's text and the walkthrough call them Moai statues	games/tla/src/scene/aqua_rock.c
@@ -7609,14 +7609,14 @@ ACTOR_DOG_PILLAR	its code	sprite STONE_PILLAR; dropped beside the dog it shuts t
 ACTOR_GUARD_CRATE	its code	sprite 287 a crate (spr_287.png), dropped onto the lower guard	games/tla/src/scene/kibombo_mountains.c
 ACTOR_BONE_CRATE	its code	sprite 288 a crate (spr_288.png) under the bone; Tremor shifts it	games/tla/src/scene/kibombo_mountains.c
 ACTOR_BONE	the game	"A bone! That's my favruff!" (MsgKibomboMountainsBoneThatsMyFavruffLick); Actor_ShowItemIconById shows ITEM_BONE on it; "A bone! That's my favruff!" (MsgABoneThat)	games/tla/src/scene/kibombo_mountains.c
-ACTOR_WAFT	the game	FLAG_DJINNI(DJINNI_WAFT), Field_RequestDjinnBattle(ACTOR_WAFT, DJINNI_WAFT)	games/tla/src/scene/kibombo_mountains.c
+ACTOR_WAFT	the game	"Waft" (MsgDjinnName + 70); FLAG_DJINNI(DJINNI_WAFT), Field_RequestDjinnBattle(ACTOR_WAFT, DJINNI_WAFT)	games/tla/src/scene/kibombo_mountains.c
 ACTOR_FIRST_LOOKOUT	its code	gKibomboMountains_FirstLookoutScript; "Guards! An intruder!" (MsgGuardsAnIntruder) when the crates do not hide the party	games/tla/src/scene/kibombo_mountains.c
 ACTOR_SECOND_LOOKOUT	the game	"This area is clear! The strange one has not been seen!" (MsgKibomboMountainsIsWayClear); "This area is clear! The strange one has not been seen!" in KibomboMountains_GuardsReport	games/tla/src/scene/kibombo_mountains.c
 FLAG_KIBOMBO_FIRST_PILLAR_DROPPED	its code	set as ACTOR_FIRST_DROPPED_PILLAR (sprite STONE_PILLAR) lands at cell (4, 28)	games/tla/src/scene/kibombo_mountains.c
 ACTOR_KYLE	the game	"*Koff! Koff!*" (MsgKoffKoffYou); sprite 62, Kyle	games/tla/src/scene/mars_lighthouse_aerie.c
 ACTOR_JENNAS_FATHER	the game	"Unnnn" (MsgUnnnnIAm); sprite 60, Jenna's father	games/tla/src/scene/mars_lighthouse_aerie.c
 ACTOR_JENNAS_MOTHER	the game	"Uhhhhnnn" (MsgUhhhhnnnICan); sprite 61, Jenna's mother in Prox's farewell	games/tla/src/scene/mars_lighthouse_aerie.c
-ACTOR_SOUTH_GATE_KRADEN	the game	placed actor 11 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_SOUTH_GATE_KRADEN	the game	"Kraden" (MsgPiers2 + 2); placed actor 11 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_WELCOMING_FELIX	the game	"Welcome back to Prox!" (MsgProxFelixWelcomeBackToProx); its talk line; placed actor 8 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_ON_AGATIO_AND_KARST	the game	"Agatio and Karst left for Mars Lighthouse a little while ago..." (MsgProxAgatioAndKarstLeft); its talk line; placed actor 9 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_ON_THE_ICE	the game	"The ice is making it very difficult for anyone to sail here." (MsgProxImGladYouMade); its talk line; placed actor 10 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
@@ -7632,7 +7632,7 @@ ACTOR_BOULDER	the game	placed actor 22 of the settlements; its lines, events and
 ACTOR_TOWN_CRATE	the game	placed actor 20 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_WARRIOR_SENT_FOR_PARENTS	the game	"Puelle ordered me to set your parents free." (MsgProxPuelleOrderedMeToSet); its talk line; placed actor 8 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_WARRIOR_SEARCHING_FOR_PARENTS	the game	"took the trouble of coming back for his parents, and now they're just gone?" (MsgProxFelixTookTroubleOfComing); its talk line; placed actor 9 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_PUELLE	the game	placed actor 10 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_PUELLE	the game	"Puelle" (MsgFortuneTeller2 + 19); placed actor 10 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_CLANSMAN_GUARDING_THE_ROAD	the game	"Sorry, , but this road is blocked off right now." (MsgProxSorryFelixButThisRoad); its talk line; placed actor 12 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_CLANSMAN_WISHING_FOR_BETTER_ADEPTS	the game	"If we were better Adepts, we could try to enter the lighthouse ourselves..." (MsgProxIfWeWereBetterAdepts); its talk line; placed actor 13 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_CLANSMAN_FEELING_HELPLESS	the game	"I feel so helpless..." (MsgProxIFeelSoHelplessAgatio); its talk line; placed actor 14 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
@@ -7640,8 +7640,8 @@ ACTOR_CLANSMAN_WAITING_FOR_AGATIO	the game	"All we can do now is wait for Agatio
 ACTOR_CLANSMAN_WITH_WEAK_PSYNERGY	the game	"Our Psynergy feels weak..." (MsgProxOurPsynergyFeelsWeak); its talk line; placed actor 16 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_CLANSMAN_ON_THE_HOSTAGES	the game	"Puelle promised that he would return our hostages to Vale." (MsgProxPuellePromisedThatHeWould); its talk line; placed actor 17 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_MOLD_KRADEN	the game	"I am Kraden." (MsgGarohAhYouCame); its line in Prox_MeetPuelle; placed actor 18 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_MOLD_CRATE	the game	placed actor 19 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_MOLD	the game	placed actor 20 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_MOLD_CRATE	the game	"Mold" (MsgDjinnName + 16); placed actor 19 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_MOLD	the game	"Mold" (MsgDjinnName + 16); placed actor 20 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_ON_THE_WIDENING_RIFT	the game	"The rift at Mars Lighthouse gets wider every day." (MsgProxRiftAtMarsLighthouseGets); its talk line; placed actor 8 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_TOLD_OF_THE_RIFT	the game	"Our chieftain told me that the rift is growing larger by the day, just like Gaia Falls is." (MsgProxOurChieftainToldMe); its talk line; placed actor 9 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_WHO_SAW_THE_RIFT	the game	"Not too long ago, I climbed the mountains to the north to look at the rift." (MsgProxNotTooLongAgo); its talk line; placed actor 10 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
@@ -7658,24 +7658,24 @@ ACTOR_VILLAGER_ON_THE_RESCUED	the game	"The people Saturos rescued from the stor
 ACTOR_VILLAGER_POINTING_TO_PARENTS	the game	"Saturos used 's parents to force to follow him on his mission." (MsgProxSaturosUsedFelixsParents); its Mind Read line; placed actor 21 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_ON_FELIXS_PARENTS	the game	"'s parents were worried about him when they heard Saturos was dead." (MsgProxFelixsParentsWereWorriedAbout); its Mind Read line; placed actor 22 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_ON_FELIXS_MOTHER	the game	"Your mother knows that you're strong and healthy, so I'm sure she's very relieved..." (MsgProxYourMotherKnowsThatYoure); its talk line; placed actor 23 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_MERCURY_DJINNI	the game	placed actor 24 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_HOUSES_PUELLE	the game	placed actor 25 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_HOUSES_ELDER	the game	placed actor 26 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_HOUSES_KRADEN	the game	placed actor 27 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_MERCURY_DJINNI	the game	"Mercury Djinni" (MsgEnemyName + 15); placed actor 24 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_HOUSES_PUELLE	the game	"Puelle" (MsgFortuneTeller2 + 19); placed actor 25 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_HOUSES_ELDER	the game	"Elder" (MsgClassName + 181); placed actor 26 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_HOUSES_KRADEN	the game	"Kraden" (MsgPiers2 + 2); placed actor 27 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_VILLAGER_ON_PROXS_PURPOSE	the game	"Prox originally flourished because concerned Adepts lit the fires of the Mars Lighthouse." (MsgProxProxOriginallyFlourishedBecauseConcerned); its talk line; placed actor 8 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_VILLAGER_REMEMBERING_YOUNG_FELIX	the game	placed actor 9 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
-ACTOR_VILLAGER_PRAISING_FELIX	the game	placed actor 10 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_VILLAGER_REMEMBERING_YOUNG_FELIX	the game	"Felix" (MsgCharacterName + 4); placed actor 9 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
+ACTOR_VILLAGER_PRAISING_FELIX	the game	"Felix" (MsgCharacterName + 4); placed actor 10 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_OLD_WOMAN_ON_HER_COOKING	the game	"Think of your old grandma's cooking every now and then when you're back home in Vale." (MsgProxThinkOfYourOldGrandmas); its talk line; placed actor 11 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_OLD_MAN_FEARING_FOR_WEYARD	the game	placed actor 8 of Prox; its lines in the trigger table and events (render probe Prox, ProxMold, Prox4, Prox5, Prox6)	games/tla/src/scene/prox.c
 ACTOR_GIRL_WHO_NEVER_LEFT	the game	"I have never been outside of Lemuria." (MsgLemuriaInteriorsIHaveNeverBeenOutside); its talk line; placed actor 8; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_WOMAN_AWAITING_PIERS_TALES	the game	"Now that has returned, maybe he'll share his tales of the outside world with me." (MsgLemuriaInteriorsNowThatPiersHasReturned); its talk line; placed actor 9; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
-ACTOR_PIERS_UNCLE	the game	placed actor 10; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
+ACTOR_PIERS_UNCLE	the game	"Piers" (MsgPiers2); placed actor 10; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_OLD_MAN_ASKING_OF_THE_OUTSIDE	the game	placed actor 13; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_OLD_MAN_ON_ALCHEMYS_ABUSE	the game	"Long ago, the power of Alchemy was abused in ways that might bring about the end of the world." (MsgLemuriaInteriorsLongAgoPowerOfAlchemy); its talk line; placed actor 14; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_OLD_MAN_ON_THE_RUMORS	the game	"And now, rumors abound of a group of fools who are actually attempting to restore Alchemy." (MsgLemuriaInteriorsAndNowRumorsAbound); its talk line; placed actor 15; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_OLD_MAN_AGAINST_ALCHEMY	the game	"Come what may, I cannot approve of anyone setting Alchemy loose on the world." (MsgLemuriaInteriorsComeWhatMayICannot); its talk line; placed actor 16; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_OLD_MAN_DENYING_DECAY	the game	"Has Lemuria fallen into decay, I ask you!?" (MsgLemuriaInteriorsHasLemuriaFallenIntoDecay); its talk line; placed actor 17; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
-ACTOR_MAN_ASKING_FOR_PIERS	the game	placed actor 18; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
+ACTOR_MAN_ASKING_FOR_PIERS	the game	"Piers" (MsgPiers2); placed actor 18; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_OLD_MAN_ON_THE_DRAUGHTS	the game	"Even though we no longer prepare the draught, the water of our spring sustains us..." (MsgLemuriaInteriorsEvenThoughWeNoLonger); its Mind Read line; placed actor 19; its lines in the trigger table and events	games/tla/src/scene/lemuria_interiors.c
 ACTOR_GIRL_WAITING_ON_THE_KING	the game	"I'll bet that is a constant annoyance to the king..." (MsgLemuriaPalaceSenatesReportsUsuallyTend); its Mind Read line; placed actor 8; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 ACTOR_WOMAN_SHOWING_THE_WAY	the game	placed actor 9; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
@@ -7683,8 +7683,8 @@ ACTOR_MAN_ON_THE_KINGS_MOOD	the game	"Maybe once you have left, the king and Con
 ACTOR_LEMURIAN_WHO_HEARD_THE_YELLING	the game	"Conservato and the king were yelling so loudly that I could hear them from out here." (MsgLemuriaPalaceConservatoAndKingWereYelling); its talk line; placed actor 11; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 ACTOR_LEMURIAN_PRAISING_HYDROS	the game	"King Hydros is the wisest of all the Lemurian kings..." (MsgLemuriaPalaceKingHydrosIsWisest); its talk line; placed actor 12; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 ACTOR_HYDROS	the game	placed actor 13; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
-ACTOR_LUNPA	the game	placed actor 14; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
-ACTOR_CONSERVATO	the game	placed actor 15; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
+ACTOR_LUNPA	the game	"Lunpa" (MsgFortuneTeller2 + 18); placed actor 14; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
+ACTOR_CONSERVATO	the game	"Conservato" (MsgFortuneTeller2 + 12); placed actor 15; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 ACTOR_PALACE_GUARD	the game	placed actor 16; its lines in the trigger table and events	games/tla/src/scene/lemuria_palace.c
 FLAG_PIERS_AT_MOTHERS_GRAVE	the game	"His mother passed away... He's gone to visit her grave." (MsgLemuriaInteriorsHonestlyImAmazedThatAnyone); "His mother passed away... He's gone to visit her grave." (Sheba, in LemuriaInteriors_AskWherePiersIs)	games/tla/src/scene/lemuria_interiors.c
 ACTOR_MINER_WELCOMING_TO_LOHO	the game	"Welcome to Loho!" (MsgLohoWelcomeToLohoWeveBeen); its talk line; placed actor 8 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
@@ -7698,8 +7698,8 @@ ACTOR_DIGGER_FINDING_NOTHING	the game	"I'm going to find myself a new spot insid
 ACTOR_MINER_BY_THE_CANNON	the game	"We brought the cannon up here to break down the old wall, but we don't have any ammunition..." (MsgLohoWeBroughtCannonUpHere); its talk line; placed actor 16 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
 ACTOR_MAN_KEEPING_THE_CANNON	the game	"Well, you did what we asked, so the cannon's all yours!" (MsgLohoIsEveryoneAllRight); its line in Loho_FireCannon; placed actor 17 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
 ACTOR_MINER_PUZZLED_BY_THE_CANNON	the game	"What idiot said that we'd be able to destroy that wall if we dragged the cannon up here?" (MsgLohoWhatIdiotSaidThatWed); its Mind Read line; placed actor 18 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
-ACTOR_LULL	the game	placed actor 19 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
-ACTOR_MAGMA_BALL	the game	placed actor 21 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
+ACTOR_LULL	the game	"Lull" (MsgDjinnName + 76); placed actor 19 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
+ACTOR_MAGMA_BALL	the game	"Magma Ball" (MsgRustySword2 + 43); placed actor 21 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
 ACTOR_VILLAGER_ON_COMMERCE	the game	placed actor 8 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
 ACTOR_BEARDED_MAN_ON_THE_CANNON	the game	"If the cannon is truly as powerful as the people say, we can't just give it away." (MsgLohoIfCannonIsTruly); its Mind Read line; placed actor 10 of Loho; its lines in the trigger table and events	games/tla/src/scene/loho.c
 ACTOR_BONFIRE	the game	placed actor 8 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
@@ -7708,7 +7708,7 @@ ACTOR_EAST_BRAZIER	the game	placed actor 10 of Naribwe; its lines and events, it
 ACTOR_WEST_BRAZIER_FLAME	the game	placed actor 11 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_EAST_BRAZIER_FLAME	the game	placed actor 12 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_MAN_AMAZED_BY_THE_RETURN	the game	placed actor 13 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
-ACTOR_WOMAN_ON_THE_KIBOMBO_EXPEDITION	the game	placed actor 14 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
+ACTOR_WOMAN_ON_THE_KIBOMBO_EXPEDITION	the game	"Kibombo" (MsgDebugAreaName + 30); placed actor 14 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_MAN_WARNING_OF_THE_NORTH	the game	"I would not venture far north of here if I were you..." (MsgNaribweIWouldNotVentureFar); its talk line; placed actor 15 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_OLD_WOMAN	the game	"Who are those two kids talking to?" (MsgImilVoicesDisbeliefReply); "Who are those two kids talking to?"; SPRITE_OLD_WOMAN	games/tla/src/scene/mercury_lighthouse.c
 ACTOR_OLD_MAN	the game	"I don't know. They've been standing here telling everyone to leave" (MsgImilVoicesDisbeliefReply); "I don't know. They've been standing here telling everyone to leave..."; SPRITE_OLD_MAN_WITH_CANE	games/tla/src/scene/mercury_lighthouse.c
@@ -7720,11 +7720,11 @@ ACTOR_GIRL_PRAISING_THE_FORTUNE_TELLER	the game	"Those who become lost should of
 ACTOR_IVY	the game	placed actor 23 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_ROPE_POST_A	the game	placed actor 8 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_ROPE_POST_B	the game	placed actor 9 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
-ACTOR_PILGRIM	the game	placed actor 26 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
+ACTOR_PILGRIM	the game	"Pilgrim" (MsgClassName + 130); placed actor 26 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_STONE	the game	placed actor 27 of Naribwe; its lines and events, its sprite	games/tla/src/scene/naribwe.c
 ACTOR_MAN_DIRECTING_TO_THE_FORTUNE_TELLER	the game	"The fortune-teller lives at the highest house in Naribwe..." (MsgNaribweInteriorsFortuneTellerLivesAtHighest); its talk line; placed actor 8 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
 ACTOR_WOMAN_ON_COOPERATION	the game	placed actor 9 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
-ACTOR_FORTUNE_TELLER	the game	placed actor 10 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
+ACTOR_FORTUNE_TELLER	the game	"Fortune-teller" (MsgFortuneTeller2) (the name its lines are shown under); placed actor 10 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
 ACTOR_FORTUNE_TELLERS_CHILD	the game	"My father is a fortune-teller, not a witch doctor." (MsgNaribweInteriorsMyFatherIsFortuneTeller); its talk line; placed actor 11 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
 ACTOR_VILLAGER_ON_BODY_PAINT	the game	"By painting our bodies, we bring about good luck." (MsgNaribweInteriorsByPaintingOurBodies); its talk line; placed actor 12 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
 ACTOR_WEAPON_SHOPKEEPER	the game	"I can look at any weapon and see the monsters it faced, but I cannot read its future." (MsgNaribweInteriorsICanLookAtAny); its Mind Read line; placed actor 13 of Naribwe's houses; its lines, shop and inn calls	games/tla/src/scene/naribwe_interiors.c
@@ -8098,7 +8098,7 @@ MsgLobbyYouWonBattleITold	the game	"You won battle . I told you our monsters wer
 MsgLobbyYouWonBattlePleaseSpeak	the game	"You won battle . Please speak to me when you wish to battle again. " (MsgLobbyYouWonBattlePleaseSpeak; was MsgYouWonBattlePlease)	games/tla/src/scene/lobby.c
 MsgLemuriaSpringYouWonCoin	the game	"You won coin ! " (MsgLemuriaSpringYouWonCoin; was MsgYouWonCoin)	games/tla/src/scene/lemuria_spring.c
 MsgLobbyYourOpponentHasArrived	the game	"Your opponent has arrived! " (MsgLobbyYourOpponentHasArrived; was MsgYourOpponentHas)	games/tla/src/scene/lobby.c
-ACTOR_KRADEN_STAND_IN	the game	placed actor 12 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
+ACTOR_KRADEN_STAND_IN	the game	"Kraden" (MsgPiers2 + 2); placed actor 12 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_WOMAN_ON_PARADISE	the game	"Anyone who saw it would think it a paradise." (MsgLemuriaHasNo); its talk line; placed actor 13 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_MAN_ON_LEMURIAN_WAYS	the game	placed actor 14 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
 ACTOR_LEMURIAN_ON_UNCHANGING_LIFE	the game	"Life never changes here in Lemuria." (MsgLemuriaLifeNeverChangesHere); its talk line; placed actor 15 of Lemuria; its lines, events and sprite (render probe Lemuria)	games/tla/src/scene/lemuria.c
@@ -8119,11 +8119,11 @@ ACTOR_GONDOWAN_BOY	the game	placed actor 9 of the settlements; its lines, events
 ACTOR_WOMAN_ON_THE_KIBOMBO	the game	"I hear Kibombo has finally chosen a new witch doctor." (MsgSettlementsIHearKibomboHasFinally); its talk line; placed actor 8 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_HESPERIA_MAN	the game	placed actor 8 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_WALL_CRATE	the game	placed actor 10 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
-ACTOR_TINDER	the game	placed actor 11 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
+ACTOR_TINDER	the game	"Tinder" (MsgDjinnName + 54); placed actor 11 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_WOMAN_ON_SHAMAN_VILLAGE	the game	"There's a place called Shaman Village in the middle of the continent." (MsgSettlementsTheresPlaceCalledShamanVillage); its talk line; placed actor 8 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_BOY_ON_THE_SHAMANS	the game	"The people of Shaman Village are very wary of strangers." (MsgSettlementsPeopleOfShamanVillage); its talk line; placed actor 9 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
-ACTOR_GEL	the game	placed actor 10 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
-ACTOR_APPLE	the game	placed actor 11 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
+ACTOR_GEL	the game	"Gel" (MsgDjinnName + 34); placed actor 10 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
+ACTOR_APPLE	the game	"Apple" (MsgItemName + 193); placed actor 11 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_OLD_MAN_ON_THE_GLACIERS	the game	"If you want to cross the glaciers of the Northern Sea, you'll need magma balls..." (MsgSettlementsIfYouWantToCross); its talk line; placed actor 8 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_OLD_WOMAN_ON_PROX_TRADE	the game	"A long time ago, we used to trade with a village named Prox to the north of us." (MsgSettlementsLongTimeAgoWeUsed); its talk line; placed actor 9 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_ISLANDER	the game	placed actor 8 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
@@ -8139,7 +8139,7 @@ ACTOR_RIVER_STONE_H	the game	placed actor 18 of the settlements; its lines, even
 ACTOR_RIVER_STONE_I	the game	placed actor 19 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_RIVER_STONE_J	the game	placed actor 20 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_RIVER_STONE_K	the game	placed actor 21 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
-ACTOR_JUPITER_DJINNI	the game	placed actor 23 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
+ACTOR_JUPITER_DJINNI	the game	"Jupiter Djinni" (MsgEnemyName + 44); placed actor 23 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_ISLANDER_ON_THE_WEST	the game	"There's nothing to the west of here." (MsgSettlementsTheresNothingToWest); its talk line; placed actor 8 of the settlements; its lines, events and sprite	games/tla/src/scene/settlements.c
 ACTOR_TWO_JELLY_ROOM_JELLY_A	its code	placed actor 8 of the Lemurian Ship; its sprite (jellyfish, puddle, crate, pillar) and the events its triggers run	games/tla/src/scene/lemurian_ship.c
 ACTOR_TWO_JELLY_ROOM_JELLY_B	its code	placed actor 9 of the Lemurian Ship; its sprite (jellyfish, puddle, crate, pillar) and the events its triggers run	games/tla/src/scene/lemurian_ship.c
@@ -8203,11 +8203,11 @@ ACTOR_LEMURIA_SPRING_MAN_WITH_PACK	its twin	placed actor 27 of Lemuria's spring,
 ACTOR_LEMURIA_SPRING_VISITOR_REMEMBERING_OUTSIDER	its twin	placed actor 28 of Lemuria's spring, as The Broken Seal's Tolbi spring numbers its actors (tolbi_games.c)	games/tla/src/scene/lemuria_spring.c
 ACTOR_LEMURIA_SPRING_PRIZE	its twin	placed actor 29 of Lemuria's spring, as The Broken Seal's Tolbi spring numbers its actors (tolbi_games.c)	games/tla/src/scene/lemuria_spring.c
 ACTOR_WISE_ONE	the game	"In time, one man will seek to rule over all." (MsgMarsLighthouseAerieBetrayersYouHaveArrived); its line in MarsLighthouseAerie_FaceDoomDragon; the aerie's actor 18 wears sprite 311, the great eye Mt. Aleph's summit places as the Wise One; it speaks "Betrayers, you have arrived!" (MsgMarsLighthouseAerieBetrayersYouHaveArrived)	games/tla/src/scene/mars_lighthouse_aerie.c
-ACTOR_MAGMA_BALL_SHOT	what the player sees	placed actor 9 of the Northern Reaches, sprite 263 a fireball (spr_263.png), sent at the ice wall in NorthernReaches_FireMagmaBall	games/tla/src/scene/northern_reaches.c
+ACTOR_MAGMA_BALL_SHOT	the game	"Magma Ball" (MsgRustySword2 + 43); placed actor 9 of the Northern Reaches, sprite 263 a fireball (spr_263.png), sent at the ice wall in NorthernReaches_FireMagmaBall	games/tla/src/scene/northern_reaches.c
 ACTOR_BLAST	what the player sees	placed actor 10, sprite 285 a burst of smoke (spr_285.png), shown where the shot strikes	games/tla/src/scene/northern_reaches.c
 FIELD_TREASURE_ACTOR	its uses	actors 64 and on, the map's treasure spots (field_work.h), at the lane's Actor_ and Event_DigUpTreasure calls	games/tla/src/scene/lemuria.c
 ACTOR_DRAGON_HEAD_A	its uses	three rows of sprite 183 (a dragon head, three frames) over the three it was, flickering with the dragon in FindWhoTheDragonWas	games/tla/src/scene/mars_lighthouse_aerie.c
-ACTOR_JENNA_STAND_IN	what the player sees	after the battle actors 20 to 26 wear sheets 48 to 54, the party drawn smaller (48 Jenna, 49 Sheba, 50 Piers, 51 Isaac, 52 Garet, 53 Ivan, 54 Mia), and speak the party's lines (its render of the sheets)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_JENNA_STAND_IN	the game	"Jenna" (MsgFieldJenna); after the battle actors 20 to 26 wear sheets 48 to 54, the party drawn smaller (48 Jenna, 49 Sheba, 50 Piers, 51 Isaac, 52 Garet, 53 Ivan, 54 Mia), and speak the party's lines (its render of the sheets)	games/tla/src/scene/mars_lighthouse_aerie.c
 ACTOR_BEAM_BOTTOM	its twin	five SPRITE_PIPE_NORTH_SOUTH rows that widen and shoot up as the beacon is lit, as venus_lighthouse_aerie.c's ACTOR_BEAM_BOTTOM to _TOP	games/tla/src/scene/mars_lighthouse_aerie.c
 ACTOR_FIRST_PLATFORM	its twin	seven SPRITE_FLOATING_PLATFORM rows, as venus_lighthouse_aerie.c's ACTOR_FIRST_PLATFORM	games/tla/src/scene/mars_lighthouse_aerie.c
 ACTOR_BOY	the game	"Hey! I know that voice! It's Mia, I just know it! Mia!!!" (MsgImilVoicesDisbeliefReply + 1); SPRITE_BOY_WITH_FAIR_HAIR	games/tla/src/scene/mercury_lighthouse.c
@@ -8252,7 +8252,7 @@ ACTOR_FIRST_SPROUT	what the player sees	five placements wear SPRITE_SPROUT (row 
 YampiDesert_SetUpScorpionPit	its code	the room where YampiDesert_LandAndFightKingScorpion drops the leader to fight the King Scorpion and DropScoopGem leaves the Scoop Gem	games/tla/src/scene/yampi_desert.c
 YampiDesert_ClimbOutOfOasisCave	what the player sees	probe YampiDesert11: a narrow cave with a ladder whose exits lead to the oasis (its render)	games/tla/src/scene/yampi_desert.c
 ACTOR_VALUKAR	the game	"I am the" (MsgIAmThe), YampiDesertCave_MeetGuardianOfFire; placed while FLAG_VALUKAR_BEATEN (0x9cd) is clear; probe YampiDesertCaveGuardian actor 9 sprite 177 (its render)	games/tla/src/scene/yampi_desert_cave.c
-ACTOR_CRYSTAL	the game	placed while FLAG_DJINNI(DJINNI_CRYSTAL) (65) is clear, wears SPRITE_VENUS_DJINNI, talk target of YampiDesertCave_FightCrystal	games/tla/src/scene/yampi_desert_cave.c
+ACTOR_CRYSTAL	the game	"Crystal" (MsgDjinnName + 17); placed while FLAG_DJINNI(DJINNI_CRYSTAL) (65) is clear, wears SPRITE_VENUS_DJINNI, talk target of YampiDesertCave_FightCrystal	games/tla/src/scene/yampi_desert_cave.c
 ACTOR_SAND_RIPPLE	its code	moved along gYampiDesertCave_RipplePath by YampiDesertCave_MoveSandRipple; talk target of WonderAtRipple; probe actor 16 sprite 251	games/tla/src/scene/yampi_desert_cave.c
 ACTOR_CHEST_ROOM_BURST_PILLAR	its code	DEFINE_BURST_PILLAR moves actor 11 (15 in Crystal's room) away as Burst acts; both wear sprite 404, a cracked pillar	games/tla/src/scene/yampi_desert_cave.c
 FLAG_VALUKAR_BEATEN	its code	the guardian's placement and step trigger hold while 0x9cd is clear; his battle sets pendingDjinni = IF_FLAG_SET(0x9cd), the flag set on winning	games/tla/src/scene/yampi_desert_cave.c
@@ -8309,7 +8309,7 @@ gTrialRoad_PoundPartners	its code	bytes 19,18,21,20: the pillar each pounded pil
 WorldMap_FlashPoweringUp	its uses	flight mode 1, set by Leader_Search after SE_POWER_UP	games/tla/src/scene/world_map.c
 WorldMap_GlowInFlight	its uses	flight mode 2, set with SE_TAKE_FLIGHT	games/tla/src/scene/world_map.c
 WorldMap_EndFlight	its code	sets the leader's flight mode 0, as StaffCredit_EndFlight	games/tla/src/scene/world_map.c
-ACTOR_ECHO	the game	"Mmm! I'm Echo!" (WorldMap_MeetEcho's messages); placement 1 is a Venus Djinni shown while FLAG_DJINNI(DJINNI_ECHO) is clear	games/tla/src/scene/world_map.c
+ACTOR_ECHO	the game	"Echo" (MsgDjinnName + 7); "Mmm! I'm Echo!" (WorldMap_MeetEcho's messages); placement 1 is a Venus Djinni shown while FLAG_DJINNI(DJINNI_ECHO) is clear	games/tla/src/scene/world_map.c
 ACTOR_IRON	its code	placement 2, a Venus Djinni while FLAG_DJINNI(DJINNI_IRON) (0x38) is clear; its trigger requests a battle with DJINNI_IRON	games/tla/src/scene/world_map.c
 ACTOR_SOUR	its code	placement 3, Mercury Djinni, flag 0x4c, battle DJINNI_SOUR	games/tla/src/scene/world_map.c
 ACTOR_CHILL	its code	placement 4, Mercury Djinni, flag 0x4f, battle DJINNI_CHILL	games/tla/src/scene/world_map.c
@@ -8318,7 +8318,7 @@ ACTOR_PETRA	its code	placement 6, Venus Djinni, flag 0x3d, battle DJINNI_PETRA	g
 ACTOR_CORE	its code	placement 7, Mars Djinni, flag 0x65, battle DJINNI_CORE	games/tla/src/scene/world_map.c
 ACTOR_LOHO_WORKER_A	the game	"You don't have anything to worry about. We got the cannon onto your" (MsgYouDonT), WorldMap_DeliverLohoCannon	games/tla/src/scene/world_map.c
 ACTOR_GOLDEN_BOOTS	its code	WorldMap_ShowGoldenBoots shows ITEM_GOLDEN_BOOTS at actor 19; its talk trigger picks the item up	games/tla/src/scene/world_map.c
-ACTOR_BANDIT	the game	"You were talking about Isaac, weren't you?" and "Isaac took good care of us when we were in Vault" (WorldMap_FightBanditAndThieves)	games/tla/src/scene/world_map.c
+ACTOR_BANDIT	the game	"Bandit" (MsgEnemyName + 237); "You were talking about Isaac, weren't you?" and "Isaac took good care of us when we were in Vault" (WorldMap_FightBanditAndThieves)	games/tla/src/scene/world_map.c
 WorldMap_ShowIdejimaDrifting	its uses	entrance 77, which exit 64 of the collapse leads to; actor 8 there is SPRITE_WORLD_MAP_ISLAND, and it leaves by exit 77 to Idejima	games/tla/src/scene/world_map.c
 WorldMap_CarryPartyToAquaRock	its uses	entrance 78 from Apojii Islands; it leaves by exit 78 to Aqua Rock	games/tla/src/scene/world_map.c
 WorldMap_EnterDaila	its uses	step trigger 100; its exits 2 and 3 lead to Daila	games/tla/src/scene/world_map.c
@@ -8333,8 +8333,8 @@ ACTOR_BEACON	its code	the staff credits' one placement, sprite 666 at the Mars L
 ACTOR_WATER_GUARDIAN	the game	"I am the guardian of water. If you would claim my power, you must prove your worth." (MsgIAmTheGuardian); "I am the guardian of water. If you would claim my power, you must prove your worth." (TreasureIsle_MeetWaterGuardian)	games/tla/src/scene/treasure_isle.c
 ACTOR_GALE	its code	Gale's room's last placement, SPRITE_JUPITER_DJINNI while FLAG_DJINNI(DJINNI_GALE) is clear	games/tla/src/scene/treasure_isle.c
 ACTOR_MOAPAS_MAN_A	the game	"Moapa said that he doesn't even know the names of the heroes who beat him..." (MsgShamanMoapaWantsToKnowNames); its talk line; "Moapa wants to know names" (MsgShamanMoapaWantsToKnowNames), house row 0	games/tla/src/scene/shaman_village.c
-ACTOR_PICNIC_SHAMAN_A	the game	MsgShamanEnjoyGettingOutside and MsgShamanPlanPicnicMeal, hidden until Moapa is beaten	games/tla/src/scene/shaman_village.c
-ACTOR_SANCTUM_SHAMAN_A	the game	MsgShamanThreatenContigoRematch, sanctum row 1	games/tla/src/scene/shaman_village.c
+ACTOR_PICNIC_SHAMAN_A	the game	"Shaman" (MsgClassName + 102); MsgShamanEnjoyGettingOutside and MsgShamanPlanPicnicMeal, hidden until Moapa is beaten	games/tla/src/scene/shaman_village.c
+ACTOR_SANCTUM_SHAMAN_A	the game	"Shaman" (MsgClassName + 102); MsgShamanThreatenContigoRematch, sanctum row 1	games/tla/src/scene/shaman_village.c
 ACTOR_MOUNTAIN_SIDE_SHAMAN	the game	"If I had the power to break down walls of sand, I'd climb to the other side of the mountain." (MsgShamanWishToBreakSandWalls); its Mind Read line; MsgShamanCheckOtherMountainSide, village row 5	games/tla/src/scene/shaman_village.c
 ACTOR_HIDDEN_TREASURE	its uses	slot 64, which Reveal and Scoop move to the hint, the medal's spot and the pit	games/tla/src/scene/yampi_desert.c
 ShamanVillage_EnterDoorA	its code	the five inn doors, exits 4 to 7 and 12, alike but for their cells	games/tla/src/scene/shaman_village.c
@@ -8853,3 +8853,346 @@ ACTOR_SANCTUM_SHAMAN_B	the game	"Let a true warrior be born in Shaman." (MsgSham
 ACTOR_FORTUNE_TELLER	the game	"So, you'd like to hear your fortune, would you?" (MsgShamanFortuneOfferBeforeTrial); its line in ShamanVillage_TellFortune	games/tla/src/scene/shaman_village.c
 ACTOR_IDEJIMA_KRADEN	the game	"Idejima..." (MsgTheyVeDone); its line in WorldMap_WatchVenusLighthouseCollapse	games/tla/src/scene/world_map.c
 ACTOR_SUNSHINES_WIFE	the game	"Sunshine's a pretty stubborn guy." (MsgYallamInteriorsSunshinesAPrettyStubborn); its line in YallamInteriors_MindReadSunshinesWife	games/tla/src/scene/yallam_interiors.c
+FLAG_GONDOWAN_CLIFFS_PILLAR_IN_WATER	the game	"Gondowan Cliffs" (MsgDebugAreaName + 27)	games/tla/include/flags.h
+FLAG_GONDOWAN_CLIFFS_FOLIAGE_BLOWN	the game	"Gondowan Cliffs" (MsgDebugAreaName + 27)	games/tla/include/flags.h
+FLAG_GONDOWAN_CLIFFS_GEYSER_DUG	the game	"Gondowan Cliffs" (MsgDebugAreaName + 27)	games/tla/include/flags.h
+FLAG_GONDOWAN_CLIFFS_ROCK_GROUND	the game	"Gondowan Cliffs" (MsgDebugAreaName + 27)	games/tla/include/flags.h
+FLAG_JUPITER_LIGHTHOUSE_GATES_PILLAR_PLACED	the game	"Jupiter Lighthouse" (MsgDebugAreaName + 69)	games/tla/include/flags.h
+FLAG_JUPITER_LIGHTHOUSE_SHORTCUT_PILLAR_PLACED	the game	"Jupiter Lighthouse" (MsgDebugAreaName + 69)	games/tla/include/flags.h
+FLAG_JUPITER_LIGHTHOUSE_ACTIVATED	the game	"Jupiter Lighthouse" (MsgDebugAreaName + 69)	games/tla/include/flags.h
+FLAG_JUPITER_LIGHTHOUSE_RIGHT_ANGEL_ENERGIZED	the game	"Jupiter Lighthouse" (MsgDebugAreaName + 69)	games/tla/include/flags.h
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/debug/psynergy_test.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/debug/shop_test.c
+ACTOR_SANCTUM_PRIEST	the game	"Priest" (MsgPiers2 + 5)	games/tla/src/debug/shop_test.c
+ACTOR_ITEM_SHOPKEEPER	the game	"Item Shopkeeper" (MsgPiers2 + 16)	games/tla/src/debug/shop_test.c
+ACTOR_GENERAL_STOREKEEPER	the game	"General Storekeeper" (MsgPiers2 + 17)	games/tla/src/debug/shop_test.c
+ACTOR_ARMOR_SHOP_MESSAGES	the game	"Armor Shop" (MsgPiers2 + 9)	games/tla/src/debug/shop_test.c
+ACTOR_ITEM_SHOP_MESSAGES	the game	"Item Shop" (MsgPiers2 + 10)	games/tla/src/debug/shop_test.c
+ACTOR_MURAMASA_AND_SUMMON	the game	"Muramasa" (MsgItemName + 11)	games/tla/src/debug/shop_test.c
+FLAG_AIRS_ROCK_FIRST_BARRIER_BLOWN	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock.c
+FLAG_AIRS_ROCK_WALL_CLEARED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock.c
+FLAG_AIRS_ROCK_FOG_CLEARED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock.c
+FLAG_AIRS_ROCK_TOP_OPENED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock.c
+FLAG_RIDING_WHIRLWIND	the game	"Whirlwind" (MsgAbilityName + 78)	games/tla/src/scene/airs_rock.c
+FLAG_AIRS_ROCK_HALL_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_VIAL_CHEST_WEST_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_VIAL_CHEST_EAST_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_CLARITY_CIRCLET_CHEST_FIRST_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_CLARITY_CIRCLET_CHEST_SECOND_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_CLARITY_CIRCLET_CHEST_THIRD_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_TIGHTROPES_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_ELIXIR_CHEST_PILLAR_MOVED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_PAIRED_STATUES_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_FACE_WARP_FIRST_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_FACE_WARP_SECOND_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_FACE_WARP_THIRD_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_COINS_CHEST_PILLAR_PLACED	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_HALL_STATUE_WOKEN	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_AIRS_ROCK_VIAL_CHEST_STATUE_WOKEN	the game	"Air's Rock" (MsgDebugAreaName + 23)	games/tla/src/scene/airs_rock_inside.c
+FLAG_REVEAL_TABLET_READ	the game	"Reveal" (MsgAbilityName + 144)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_VIAL_CHEST_STATUE	the game	"Vial" (MsgItemName + 182)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_VIAL_CHEST_EAST_PILLAR	the game	"Vial" (MsgItemName + 182)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_VIAL_CHEST_TWISTER_ROCK	the game	"Vial" (MsgItemName + 182)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_VIAL_CHEST_WEST_PILLAR	the game	"Vial" (MsgItemName + 182)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_CLARITY_CIRCLET_CHEST_FIRST_PILLAR	the game	"Clarity Circlet" (MsgItemName + 394)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_CLARITY_CIRCLET_CHEST_STATUE_A	the game	"Clarity Circlet" (MsgItemName + 394)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_CLARITY_CIRCLET_CHEST_STATUE_B	the game	"Clarity Circlet" (MsgItemName + 394)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_CLARITY_CIRCLET_CHEST_SECOND_PILLAR	the game	"Clarity Circlet" (MsgItemName + 394)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_CLARITY_CIRCLET_CHEST_THIRD_PILLAR	the game	"Clarity Circlet" (MsgItemName + 394)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_CLARITY_CIRCLET_CHEST_STATUE_C	the game	"Clarity Circlet" (MsgItemName + 394)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_ELIXIR_CHEST_PILLAR	the game	"Elixir" (MsgItemName + 188)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_ELIXIR_CHEST_SOUTH_GUST_STATUE	the game	"Elixir" (MsgItemName + 188)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_ELIXIR_CHEST_NORTH_GUST_STATUE	the game	"Elixir" (MsgItemName + 188)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_ELIXIR_CHEST_POST_A	the game	"Elixir" (MsgItemName + 188)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_ELIXIR_CHEST_POST_B	the game	"Elixir" (MsgItemName + 188)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_ELIXIR_CHEST_POST_C	the game	"Elixir" (MsgItemName + 188)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_ELIXIR_CHEST_POST_D	the game	"Elixir" (MsgItemName + 188)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_ELIXIR_CHEST_POST_E	the game	"Elixir" (MsgItemName + 188)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_ELIXIR_CHEST_POST_F	the game	"Elixir" (MsgItemName + 188)	games/tla/src/scene/airs_rock_inside.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/alhafra_interiors.c
+ACTOR_ALEX	the game	"Alex" (MsgPiers2 + 1)	games/tla/src/scene/alhafra_interiors.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/alhafra_manor.c
+ACTOR_BRIGGS	the game	"Briggs" (MsgEnemyName + 72)	games/tla/src/scene/alhafran_cave.c
+ACTOR_EOLEO	the game	"Eoleo" (MsgFortuneTeller2 + 6)	games/tla/src/scene/alhafran_cave.c
+ACTOR_CHAUCHA	the game	"Chaucha" (MsgFortuneTeller2 + 5)	games/tla/src/scene/alhafran_cave.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/ancient_lemuria.c
+ACTOR_ORIHALCON_CHEST_STATUE	the game	"Orihalcon" (MsgRustySword2 + 20)	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_ORIHALCON_CHEST_FIRST_PILLAR	the game	"Orihalcon" (MsgRustySword2 + 20)	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_ORIHALCON_CHEST_SECOND_PILLAR	the game	"Orihalcon" (MsgRustySword2 + 20)	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_GUARDIAN_ROOM_STATUE	the game	"Guardian" (MsgClassName + 43)	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_MIST_SABRE_WATER_STONE	the game	"Mist Sabre" (MsgItemName + 291)	games/tla/src/scene/aqua_rock.c
+ACTOR_WATER_OF_LIFE_CHEST_MOAI	the game	"Water of Life" (MsgItemName + 189)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_WATER_OF_LIFE_CHEST_WATER_STONE	the game	"Water of Life" (MsgItemName + 189)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_WATER_OF_LIFE_CHEST_WEST_VENT_PILLAR	the game	"Water of Life" (MsgItemName + 189)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_WATER_OF_LIFE_CHEST_EAST_VENT_PILLAR	the game	"Water of Life" (MsgItemName + 189)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_WATER_OF_LIFE_CHEST_WATER_PILLAR	the game	"Water of Life" (MsgItemName + 189)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_WATER_OF_LIFE_CHEST_PUDDLE	the game	"Water of Life" (MsgItemName + 189)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_STEAM_ROOM_MOAI	the game	"Steam" (MsgDjinnName + 32)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_STEAM_ROOM_PILLAR	the game	"Steam" (MsgDjinnName + 32)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_AQUARIUS_STONE_MOAI	the game	"Aquarius Stone" (MsgRustySword2 + 39)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_AQUARIUS_STONE_BASE	the game	"Aquarius Stone" (MsgRustySword2 + 39)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_AQUARIUS_STONE	the game	"Aquarius Stone" (MsgRustySword2 + 39)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_RUSTY_SWORD_CHEST_MOAI	the game	"Rusty Sword" (MsgRustySword2)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_RUSTY_SWORD_CHEST_WATER_STONE	the game	"Rusty Sword" (MsgRustySword2)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_RUSTY_SWORD_CHEST_MOAI_A	the game	"Rusty Sword" (MsgRustySword2)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_RUSTY_SWORD_CHEST_MOAI_B	the game	"Rusty Sword" (MsgRustySword2)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_RUSTY_SWORD_CHEST_WATER_PILLAR_A	the game	"Rusty Sword" (MsgRustySword2)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_RUSTY_SWORD_CHEST_WATER_PILLAR_B	the game	"Rusty Sword" (MsgRustySword2)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_RUSTY_SWORD_CHEST_WATER_PILLAR_C	the game	"Rusty Sword" (MsgRustySword2)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_MOAI	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_WATER_STONE	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_WATER_PILLAR_A	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_WATER_PILLAR_B	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_WATER_PILLAR_C	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_WATER_PILLAR_D	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_WATER_PILLAR_E	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_WATER_PILLAR_F	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_WATER_PILLAR_G	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_WATER_PILLAR_H	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_WATER_PILLAR_I	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_PILLAR_A	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+ACTOR_TEAR_STONE_PILLAR_B	the game	"Tear Stone" (MsgRustySword2 + 12)	games/tla/src/scene/aqua_rock_inside.c
+FLAG_HAMMA_SHOWED_THE_WINGS	the game	"Hamma" (MsgPiers2 + 3)	games/tla/src/scene/atteka_inlet.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/atteka_inlet.c
+FLAG_TOLD_OF_OBABA	the game	"Obaba" (MsgFortuneTeller2 + 7)	games/tla/src/scene/champa.c
+FLAG_SAILORS_SPOTTED_FELIX	the game	"Felix" (MsgCharacterName + 4)	games/tla/src/scene/champa.c
+ACTOR_ALEX	the game	"Alex" (MsgPiers2 + 1)	games/tla/src/scene/champa.c
+ACTOR_KARST	the game	"Karst" (MsgEnemyName + 105)	games/tla/src/scene/champa.c
+ACTOR_AGATIO	the game	"Agatio" (MsgEnemyName + 102)	games/tla/src/scene/champa.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/champa.c
+ACTOR_BRIGGS	the game	"Briggs" (MsgEnemyName + 72)	games/tla/src/scene/champa.c
+FLAG_CHAMPA_AVIMANDER_BEATEN	the game	"Champa" (MsgDebugAreaName + 51)	games/tla/src/scene/champa_cliff_caves.c
+FLAG_OBABA_SAW_SECOND_PRONG	the game	"Obaba" (MsgFortuneTeller2 + 7)	games/tla/src/scene/champa_cliff_caves.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/champa_cliff_caves.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/champa_interiors.c
+FLAG_SHINE_FREED	the game	"Shine" (MsgDjinnName + 55)	games/tla/src/scene/contigo.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/contigo.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/contigo.c
+ACTOR_FIRST_SCHOLAR	the game	"Scholar" (MsgClassName + 182)	games/tla/src/scene/contigo.c
+FLAG_DAILA_FIRST_PUDDLE_PARCHED	the game	"Daila" (MsgDebugAreaName + 8)	games/tla/src/scene/daila.c
+FLAG_DAILA_SECOND_PUDDLE_PARCHED	the game	"Daila" (MsgDebugAreaName + 8)	games/tla/src/scene/daila.c
+FLAG_DAILA_THIRD_PUDDLE_PARCHED	the game	"Daila" (MsgDebugAreaName + 8)	games/tla/src/scene/daila.c
+FLAG_DAILA_FOURTH_PUDDLE_PARCHED	the game	"Daila" (MsgDebugAreaName + 8)	games/tla/src/scene/daila.c
+FLAG_DAILA_FIFTH_PUDDLE_PARCHED	the game	"Daila" (MsgDebugAreaName + 8)	games/tla/src/scene/daila.c
+FLAG_DAILA_SIXTH_PUDDLE_PARCHED	the game	"Daila" (MsgDebugAreaName + 8)	games/tla/src/scene/daila.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/daila.c
+ACTOR_ALEX	the game	"Alex" (MsgPiers2 + 1)	games/tla/src/scene/daila.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/daila.c
+ACTOR_PSY_CRYSTAL	the game	"Psy Crystal" (MsgItemName + 186)	games/tla/src/scene/daila.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/daila_interiors.c
+FLAG_DAILA_PRACTICE_AT_DOOR	the game	"Daila" (MsgDebugAreaName + 8)	games/tla/src/scene/daila_interiors.c
+FLAG_CANNON_FLED_EAST	the game	"Cannon" (MsgDjinnName + 47)	games/tla/src/scene/dehkan_plateau.c
+FLAG_CANNON_LEAPT_AWAY	the game	"Cannon" (MsgDjinnName + 47)	games/tla/src/scene/dehkan_plateau.c
+FLAG_CANNON_POUNDED_PILLAR	the game	"Cannon" (MsgDjinnName + 47)	games/tla/src/scene/dehkan_plateau.c
+FLAG_THEMIS_AXE_CHEST_PILLAR_PLACED	the game	"Axe" (MsgItemPlainName + 31)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_FULL_METAL_VEST_CHEST_FIRST_CRUMBLING_PILLAR	the game	"Full Metal Vest" (MsgItemName + 340)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_FULL_METAL_VEST_CHEST_POUND_PILLAR	the game	"Full Metal Vest" (MsgItemName + 340)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_FULL_METAL_VEST_CHEST_PILLAR	the game	"Full Metal Vest" (MsgItemName + 340)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_FULL_METAL_VEST_CHEST_FIRST_COVER	the game	"Full Metal Vest" (MsgItemName + 340)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_FULL_METAL_VEST_CHEST	the game	"Full Metal Vest" (MsgItemName + 340)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_THEMIS_AXE_CHEST_FIRST_CRUMBLING_PILLAR	the game	"Axe" (MsgItemPlainName + 31)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_THEMIS_AXE_CHEST_POUND_PILLAR	the game	"Axe" (MsgItemPlainName + 31)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_THEMIS_AXE_CHEST_PILLAR	the game	"Axe" (MsgItemPlainName + 31)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_THEMIS_AXE_CHEST_CANNON	the game	"Axe" (MsgItemPlainName + 31)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_THEMIS_AXE_CHEST_FIRST_COVER	the game	"Axe" (MsgItemPlainName + 31)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_POUND_PILLAR	the game	"Pound" (MsgAbilityName + 134)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_TIGHTROPES_CANNON	the game	"Cannon" (MsgDjinnName + 47)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_MINT_CHEST_FIRST_COVER	the game	"Mint" (MsgItemName + 195)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_POUND_CUBE_POUND_PILLAR	the game	"Pound Cube" (MsgItemName + 199)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_POUND_CUBE_CANNON	the game	"Pound Cube" (MsgItemName + 199)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_CANNON_ROOM_POUND_PILLAR	the game	"Cannon" (MsgDjinnName + 47)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_CANNON_ROOM_CRUMBLING_PILLAR	the game	"Cannon" (MsgDjinnName + 47)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_CANNON_ROOM_FIRST_COVER	the game	"Cannon" (MsgDjinnName + 47)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_CANNON	the game	"Cannon" (MsgDjinnName + 47)	games/tla/src/scene/dehkan_plateau.c
+FLAG_FULL_METAL_VEST_CHEST_PILLAR_POUNDED	the game	"Full Metal Vest" (MsgItemName + 340)	games/tla/src/scene/dehkan_plateau.c
+FLAG_THEMIS_AXE_CHEST_PILLAR_POUNDED	the game	"Axe" (MsgItemPlainName + 31)	games/tla/src/scene/dehkan_plateau.c
+FLAG_POUND_CUBE_PILLAR_POUNDED	the game	"Pound Cube" (MsgItemName + 199)	games/tla/src/scene/dehkan_plateau.c
+FLAG_CANNON_MET	the game	"Cannon" (MsgDjinnName + 47)	games/tla/src/scene/dehkan_plateau.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/eastern_alhafra.c
+ACTOR_BRIGGS	the game	"Briggs" (MsgEnemyName + 72)	games/tla/src/scene/eastern_alhafra.c
+ACTOR_CHAUCHA	the game	"Chaucha" (MsgFortuneTeller2 + 5)	games/tla/src/scene/eastern_alhafra.c
+ACTOR_EOLEO	the game	"Eoleo" (MsgFortuneTeller2 + 6)	games/tla/src/scene/eastern_alhafra.c
+ACTOR_BRIGGS	the game	"Briggs" (MsgEnemyName + 72)	games/tla/src/scene/eastern_alhafra_ship.c
+ACTOR_CHAUCHA	the game	"Chaucha" (MsgFortuneTeller2 + 5)	games/tla/src/scene/eastern_alhafra_ship.c
+ACTOR_ALHAFRAS_MAYOR	the game	"Alhafra" (MsgDebugAreaName + 24)	games/tla/src/scene/eastern_alhafra_ship.c
+ACTOR_MADRAS_MAYOR	the game	"Madra" (MsgDebugAreaName + 12)	games/tla/src/scene/eastern_alhafra_ship.c
+ACTOR_MADRAS_ELDER	the game	"Madra" (MsgDebugAreaName + 12)	games/tla/src/scene/eastern_alhafra_ship.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/eastern_alhafra_ship.c
+ACTOR_MUD	the game	"Mud" (MsgDjinnName + 10)	games/tla/src/scene/gabomba_catacombs.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/gabomba_statue.c
+ACTOR_STEEL	the game	"Steel" (MsgDjinnName + 9)	games/tla/src/scene/gabomba_statue.c
+FLAG_AKAFUBU_REACHED_CHAMBER	the game	"Akafubu" (MsgFortuneTeller2 + 1)	games/tla/src/scene/gabomba_statue_chamber.c
+FLAG_SAND_TABLET_RAISED	the game	"Sand" (MsgAbilityName + 139)	games/tla/src/scene/gaia_rock_inside.c
+FLAG_CLOUD_BRAND_FOUND	the game	"Cloud Brand" (MsgItemName + 283)	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_SUSA	the game	"Susa" (MsgFortuneTeller2 + 8)	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/gaia_rock_inside.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/garoh.c
+FLAG_GAROH_REACHED_VILLAGE	the game	"Garoh" (MsgDebugAreaName + 20)	games/tla/src/scene/garoh.c
+FLAG_GAROH_SAW_WEREWOLF_PROWL	the game	"Garoh" (MsgDebugAreaName + 20)	games/tla/src/scene/garoh.c
+FLAG_GAROH_FOLLOWED_WEREWOLF	the game	"Garoh" (MsgDebugAreaName + 20)	games/tla/src/scene/garoh.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/garoh_interiors.c
+ACTOR_KINDLE	the game	"Kindle" (MsgDjinnName + 49)	games/tla/src/scene/gondowan_cliffs.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/gondowan_cliffs.c
+ACTOR_WARRIOR_BLAMING_THE_COLLISION	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/gondowan_cliffs_hideout.c
+FLAG_IDEJIMA_LEADER_WALKED_BACK	the game	"Idejima" (MsgDebugAreaName + 6)	games/tla/src/scene/idejima.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/idejima.c
+ACTOR_ALEX	the game	"Alex" (MsgPiers2 + 1)	games/tla/src/scene/idejima.c
+ACTOR_MELD	the game	"Meld" (MsgDjinnName + 12)	games/tla/src/scene/islet_cave.c
+ACTOR_SERAC	the game	"Serac" (MsgDjinnName + 37)	games/tla/src/scene/islet_cave.c
+FLAG_IZUMO_RUINS_POOL_PARCHED	the game	"Izumo Ruins" (MsgDebugAreaName + 48)	games/tla/src/scene/izumo_ruins.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/jupiter_lighthouse_room_m.c
+ACTOR_GARETS_GRIP	the game	"Garet" (MsgCharacterName + 1)	games/tla/src/scene/jupiter_lighthouse_room_m.c
+FLAG_ALEX_WAITING	the game	"Alex" (MsgPiers2 + 1)	games/tla/src/scene/jupiter_lighthouse_room_red_key.c
+ACTOR_ALEX	the game	"Alex" (MsgPiers2 + 1)	games/tla/src/scene/jupiter_lighthouse_room_red_key.c
+ACTOR_WEST_CHESTBEATER	the game	"Chestbeater" (MsgEnemyName + 66)	games/tla/src/scene/kandorean_temple.c
+ACTOR_EAST_CHESTBEATER	the game	"Chestbeater" (MsgEnemyName + 66)	games/tla/src/scene/kandorean_temple.c
+ACTOR_HALL_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/kandorean_temple.c
+FLAG_LASH_RECEIVED	the game	"Lash" (MsgAbilityName + 133)	games/tla/src/scene/kandorean_temple.c
+FLAG_KIBOMBO_VENT_UNCOVERED	the game	"Kibombo" (MsgDebugAreaName + 30)	games/tla/src/scene/kibombo.c
+FLAG_KIBOMBO_BLOCK_MOVED_FOR_PIERS	the game	"Kibombo" (MsgDebugAreaName + 30)	games/tla/src/scene/kibombo.c
+ACTOR_WARRIOR_A	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo.c
+ACTOR_WARRIOR_B	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo.c
+ACTOR_WARRIOR_C	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo.c
+ACTOR_WARRIOR_D	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo.c
+ACTOR_WARRIOR_E	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo.c
+ACTOR_WARRIOR_F	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo.c
+ACTOR_WARRIOR_G	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo.c
+ACTOR_WARRIOR_H	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/kibombo.c
+ACTOR_KRADEN_AT_HOME	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/kibombo.c
+ACTOR_ITEM_SHOPKEEPER	the game	"Item Shopkeeper" (MsgPiers2 + 16)	games/tla/src/scene/kibombo.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/kibombo.c
+FLAG_KIBOMBO_GUARDS_REPORTED	the game	"Kibombo" (MsgDebugAreaName + 30)	games/tla/src/scene/kibombo_mountains.c
+FLAG_KIBOMBO_OVERGROWTH_CLEARED	the game	"Kibombo" (MsgDebugAreaName + 30)	games/tla/src/scene/kibombo_mountains.c
+FLAG_KIBOMBO_SECOND_PILLAR_DROPPED	the game	"Kibombo" (MsgDebugAreaName + 30)	games/tla/src/scene/kibombo_mountains.c
+FLAG_DOG_EATING_BONE	the game	"Bone" (MsgItemName + 231)	games/tla/src/scene/kibombo_mountains.c
+ACTOR_WARRIOR_B	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo_mountains.c
+ACTOR_WARRIOR_C	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo_mountains.c
+ACTOR_WARRIOR_D	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo_mountains.c
+ACTOR_WARRIOR_E	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo_mountains.c
+ACTOR_WARRIOR_F	the game	"Warrior" (MsgClassName + 12)	games/tla/src/scene/kibombo_mountains.c
+FLAG_PIERS_AT_MOTHERS_GRAVE	the game	"Piers" (MsgPiers2)	games/tla/src/scene/lemuria.c
+FLAG_TOLD_OF_PIERS_MOTHER	the game	"Piers" (MsgPiers2)	games/tla/src/scene/lemuria.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/lemuria_dock.c
+FLAG_PIERS_VISITED_UNCLE	the game	"Piers" (MsgPiers2)	games/tla/src/scene/lemuria_interiors.c
+FLAG_TOLD_OF_PIERS_MOTHER	the game	"Piers" (MsgPiers2)	games/tla/src/scene/lemuria_interiors.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/lemuria_interiors.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/lemuria_palace.c
+ACTOR_LEMURIA_SPRING_FIRST_OBSTACLE	the game	"Lemuria" (MsgDebugAreaName + 55)	games/tla/src/scene/lemuria_spring.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/lemurian_ship_deck.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/loho.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/madra.c
+ACTOR_KARST	the game	"Karst" (MsgEnemyName + 105)	games/tla/src/scene/madra.c
+FLAG_GUARDS_BLOCKED_BRIDGE	the game	"Guard" (MsgClassName + 10)	games/tla/src/scene/madra_drawbridge.c
+FLAG_GUARDS_ASKED_FOR_PERMISSION	the game	"Guard" (MsgClassName + 10)	games/tla/src/scene/madra_drawbridge.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/madra_interiors.c
+ACTOR_ELDER	the game	"Elder" (MsgClassName + 181)	games/tla/src/scene/madra_interiors.c
+ACTOR_UNUSED_FIRST_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/madra_interiors.c
+ACTOR_UNUSED_SECOND_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/madra_interiors.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/madra_interiors.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_SHEBA_STAND_IN	the game	"Sheba" (MsgFieldJenna + 1)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_PIERS_STAND_IN	the game	"Piers" (MsgPiers2)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_ISAAC_STAND_IN	the game	"Isaac" (MsgCharacterName)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_GARET_STAND_IN	the game	"Garet" (MsgCharacterName + 1)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_MIA_STAND_IN	the game	"Mia" (MsgCharacterName + 3)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_IVAN_STAND_IN	the game	"Ivan" (MsgCharacterName + 2)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_DRAGON_HEAD_B	the game	"Dragon" (MsgEnemyName + 185)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_DRAGON_HEAD_C	the game	"Dragon" (MsgEnemyName + 185)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_FREED_JENNAS_MOTHER	the game	"Jenna's Mother" (MsgFortuneTeller2 + 16)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_FREED_JENNAS_FATHER	the game	"Jenna's Father" (MsgFortuneTeller2 + 15)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_FREED_KYLE	the game	"Kyle" (MsgFortuneTeller2 + 17)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_JENNAS_MOTHER_TALK_SPOT	the game	"Jenna's Mother" (MsgFortuneTeller2 + 16)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_JENNAS_FATHER_TALK_SPOT	the game	"Jenna's Father" (MsgFortuneTeller2 + 15)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_KYLE_TALK_SPOT	the game	"Kyle" (MsgFortuneTeller2 + 17)	games/tla/src/scene/mars_lighthouse_aerie.c
+ACTOR_LEFT_ANGEL	the game	"Angel" (MsgClassName + 34)	games/tla/src/scene/mars_lighthouse_room_f.c
+ACTOR_RIGHT_ANGEL	the game	"Angel" (MsgClassName + 34)	games/tla/src/scene/mars_lighthouse_room_f.c
+ACTOR_AGATIO	the game	"Agatio" (MsgEnemyName + 102)	games/tla/src/scene/mars_lighthouse_star_room.c
+ACTOR_KARST	the game	"Karst" (MsgEnemyName + 105)	games/tla/src/scene/mars_lighthouse_star_room.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/mikasalla_interiors.c
+ACTOR_MIKASALLA_COUNTER	the game	"Mikasalla" (MsgDebugAreaName + 19)	games/tla/src/scene/mikasalla_interiors.c
+ACTOR_ALEX	the game	"Alex" (MsgPiers2 + 1)	games/tla/src/scene/mt_aleph_summit.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/northern_reaches.c
+ACTOR_JENNAS_FATHER	the game	"Jenna's Father" (MsgFortuneTeller2 + 15)	games/tla/src/scene/prox.c
+ACTOR_JENNAS_MOTHER	the game	"Jenna's Mother" (MsgFortuneTeller2 + 16)	games/tla/src/scene/prox.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/shaman_village.c
+ACTOR_MOAPA_AT_HOME	the game	"Moapa" (MsgEnemyName + 96)	games/tla/src/scene/shaman_village.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/shaman_village.c
+ACTOR_MOAPAS_MAN_B	the game	"Moapa" (MsgEnemyName + 96)	games/tla/src/scene/shaman_village.c
+ACTOR_MOAPAS_MAN_C	the game	"Moapa" (MsgEnemyName + 96)	games/tla/src/scene/shaman_village.c
+ACTOR_PRIEST	the game	"Priest" (MsgPiers2 + 5)	games/tla/src/scene/shaman_village.c
+ACTOR_AROMA_ROOM_PILLAR	the game	"Aroma" (MsgDjinnName + 73)	games/tla/src/scene/shaman_village.c
+ACTOR_AROMA	the game	"Aroma" (MsgDjinnName + 73)	games/tla/src/scene/shaman_village.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/shaman_village_cave.c
+ACTOR_GOLDEN_SHIRT	the game	"Golden Shirt" (MsgItemName + 400)	games/tla/src/scene/shaman_village_cave.c
+FLAG_FIGHTING_BREATH	the game	"Breath" (MsgDjinnName + 67)	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_BREATH_TRAPPED_EAST	the game	"Breath" (MsgDjinnName + 67)	games/tla/src/scene/shrine_of_the_sea_god.c
+FLAG_BREATH_TRAPPED_WEST	the game	"Breath" (MsgDjinnName + 67)	games/tla/src/scene/shrine_of_the_sea_god.c
+ACTOR_TREMOR_LAVA_ROCK	the game	"Tremor" (MsgAbilityName + 135)	games/tla/src/scene/taopo_swamp.c
+ACTOR_TREMOR_PILLAR_ROCK	the game	"Tremor" (MsgAbilityName + 135)	games/tla/src/scene/taopo_swamp.c
+ACTOR_TREMOR_PILLAR	the game	"Tremor" (MsgAbilityName + 135)	games/tla/src/scene/taopo_swamp.c
+FLAG_TAOPO_SWAMP_BUSH_BLOWN	the game	"Taopo Swamp" (MsgDebugAreaName + 41)	games/tla/src/scene/taopo_swamp.c
+FLAG_TAOPO_SWAMP_STUMP_SUNK	the game	"Taopo Swamp" (MsgDebugAreaName + 41)	games/tla/src/scene/taopo_swamp.c
+FLAG_TAOPO_SWAMP_WEST_PILLAR_OVER_VENT	the game	"Taopo Swamp" (MsgDebugAreaName + 41)	games/tla/src/scene/taopo_swamp.c
+FLAG_TAOPO_SWAMP_EAST_PILLAR_OVER_VENT	the game	"Taopo Swamp" (MsgDebugAreaName + 41)	games/tla/src/scene/taopo_swamp.c
+FLAG_TAOPO_SWAMP_PILLAR_IN_GAP	the game	"Taopo Swamp" (MsgDebugAreaName + 41)	games/tla/src/scene/taopo_swamp.c
+FLAG_TAOPO_SWAMP_STAR_DUST_DUG_UP	the game	"Taopo Swamp" (MsgDebugAreaName + 41)	games/tla/src/scene/taopo_swamp.c
+ACTOR_GALE_ROOM_PILLAR	the game	"Gale" (MsgDjinnName + 77)	games/tla/src/scene/treasure_isle.c
+ACTOR_GALE_ROOM_POST_A	the game	"Gale" (MsgDjinnName + 77)	games/tla/src/scene/treasure_isle.c
+ACTOR_GALE_ROOM_POST_B	the game	"Gale" (MsgDjinnName + 77)	games/tla/src/scene/treasure_isle.c
+ACTOR_GALE_ROOM_POST_C	the game	"Gale" (MsgDjinnName + 77)	games/tla/src/scene/treasure_isle.c
+ACTOR_GALE_ROOM_POST_D	the game	"Gale" (MsgDjinnName + 77)	games/tla/src/scene/treasure_isle.c
+ACTOR_GALE_ROOM_POST_E	the game	"Gale" (MsgDjinnName + 77)	games/tla/src/scene/treasure_isle.c
+ACTOR_GALE_ROOM_POST_F	the game	"Gale" (MsgDjinnName + 77)	games/tla/src/scene/treasure_isle.c
+ACTOR_MOAPA	the game	"Moapa" (MsgEnemyName + 96)	games/tla/src/scene/trial_road.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/trial_road.c
+ACTOR_POUND_STAGE_BUSH	the game	"Pound" (MsgAbilityName + 134)	games/tla/src/scene/trial_road.c
+ACTOR_SAND_STAGE_BUSH	the game	"Sand" (MsgAbilityName + 139)	games/tla/src/scene/trial_road.c
+ACTOR_FALLEN_CENTER_PRONG	the game	"Center Prong" (MsgRustySword2 + 24)	games/tla/src/scene/tundaria_tower.c
+FLAG_REFLUX_APPEARED	the game	"Reflux" (MsgDjinnName + 52)	games/tla/src/scene/tundaria_tower.c
+FLAG_FIGHTING_REFLUX	the game	"Reflux" (MsgDjinnName + 52)	games/tla/src/scene/tundaria_tower.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/venus_lighthouse.c
+ACTOR_ALEX	the game	"Alex" (MsgPiers2 + 1)	games/tla/src/scene/venus_lighthouse.c
+ACTOR_SCHOLAR_B	the game	"Scholar" (MsgClassName + 182)	games/tla/src/scene/venus_lighthouse.c
+ACTOR_SCHOLAR_C	the game	"Scholar" (MsgClassName + 182)	games/tla/src/scene/venus_lighthouse.c
+ACTOR_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/venus_lighthouse_entrance.c
+ACTOR_ALEX	the game	"Alex" (MsgPiers2 + 1)	games/tla/src/scene/venus_lighthouse_entrance.c
+ACTOR_LOHO_WORKER_B	the game	"Loho" (MsgDebugAreaName + 70)	games/tla/src/scene/world_map.c
+ACTOR_LOHO_WORKER_C	the game	"Loho" (MsgDebugAreaName + 70)	games/tla/src/scene/world_map.c
+ACTOR_THIEF_A	the game	"Thief" (MsgEnemyName + 238)	games/tla/src/scene/world_map.c
+ACTOR_THIEF_B	the game	"Thief" (MsgEnemyName + 238)	games/tla/src/scene/world_map.c
+ACTOR_IDEJIMA	the game	"Idejima" (MsgDebugAreaName + 6)	games/tla/src/scene/world_map.c
+ACTOR_VOYAGE_KRADEN	the game	"Kraden" (MsgPiers2 + 2)	games/tla/src/scene/world_map.c
+ACTOR_DRIFTING_IDEJIMA	the game	"Idejima" (MsgDebugAreaName + 6)	games/tla/src/scene/world_map.c
+AREA_DAILA	the game	"Daila" (MsgDebugAreaName + 8)	games/tla/src/scene/world_map.c
+AREA_YALLAM	the game	"Yallam" (MsgDebugAreaName + 17)	games/tla/src/scene/world_map.c
+AREA_PROX	the game	"Prox" (MsgDebugAreaName + 72)	games/tla/src/scene/world_map.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgPiers2 + 18)	games/tla/src/scene/yallam_interiors.c
+FLAG_YAMPI_DESERT_ENTERED_BY_GUARDIAN_RING_CHEST	the game	"Yampi Desert" (MsgDebugAreaName + 21)	games/tla/src/scene/yampi_desert.c
+FLAG_YAMPI_DESERT_ENTERED_BY_TRAINERS_WHIP_CHEST	the game	"Yampi Desert" (MsgDebugAreaName + 21)	games/tla/src/scene/yampi_desert.c
+FLAG_YAMPI_DESERT_ENTERED_BY_MEDAL_SPOT	the game	"Yampi Desert" (MsgDebugAreaName + 21)	games/tla/src/scene/yampi_desert.c
+ACTOR_ELDER	the game	"Elder" (MsgClassName + 181)	games/tla/src/scene/yampi_desert.c
+ACTOR_PSYNERGY_STONE_ROOM_KING_SCORPION	the game	"King Scorpion" (MsgEnemyName + 69)	games/tla/src/scene/yampi_desert.c
+ACTOR_PSYNERGY_STONE_ROOM_SAND_RIPPLE	the game	"Sand" (MsgAbilityName + 139)	games/tla/src/scene/yampi_desert.c
+ACTOR_KING_SCORPION_ROOM_KING_SCORPION	the game	"King Scorpion" (MsgEnemyName + 69)	games/tla/src/scene/yampi_desert.c
+ACTOR_KING_SCORPION_ROOM_SAND_RIPPLE	the game	"King Scorpion" (MsgEnemyName + 69)	games/tla/src/scene/yampi_desert.c
+ACTOR_MACE_CHEST_ROOM_FIRST_SLIDE	the game	"Mace" (MsgItemName + 43)	games/tla/src/scene/yampi_desert.c
+ACTOR_MACE_CHEST_ROOM_LAST_SLIDE	the game	"Mace" (MsgItemName + 43)	games/tla/src/scene/yampi_desert.c
+FLAG_YAMPI_DESERT_CAVE_CHEST_ROOM_PILLAR_BURST	the game	"Yampi Desert Cave" (MsgDebugAreaName + 22)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_CAVE_CRYSTAL_ROOM_PILLAR_BURST	the game	"Yampi Desert Cave" (MsgDebugAreaName + 22)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_CAVE_TREASURE_DUG_UP	the game	"Yampi Desert Cave" (MsgDebugAreaName + 22)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_CAVE_GUARDIAN_PILLAR_MOVED	the game	"Yampi Desert Cave" (MsgDebugAreaName + 22)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_CAVE_WEST_PILLAR_MOVED	the game	"Yampi Desert Cave" (MsgDebugAreaName + 22)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_CAVE_EAST_PILLAR_MOVED	the game	"Yampi Desert Cave" (MsgDebugAreaName + 22)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_CAVE_STAKE_POUNDED	the game	"Yampi Desert Cave" (MsgDebugAreaName + 22)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_CAVE_RIPPLE_RUNNING	the game	"Yampi Desert Cave" (MsgDebugAreaName + 22)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_CAVE_CRYSTAL_DUG_UP	the game	"Yampi Desert Cave" (MsgDebugAreaName + 22)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_ENTERED_BY_GUARDIAN_RING_CHEST	the game	"Yampi Desert" (MsgDebugAreaName + 21)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_ENTERED_BY_TRAINERS_WHIP_CHEST	the game	"Yampi Desert" (MsgDebugAreaName + 21)	games/tla/src/scene/yampi_desert_cave.c
+FLAG_YAMPI_DESERT_ENTERED_BY_MEDAL_SPOT	the game	"Yampi Desert" (MsgDebugAreaName + 21)	games/tla/src/scene/yampi_desert_cave.c
+ACTOR_GUARDIAN_ROOM_PILLAR	the game	"Guardian" (MsgClassName + 43)	games/tla/src/scene/yampi_desert_cave.c
+ACTOR_CRYSTAL_ROOM_FIRST_LOG	the game	"Crystal" (MsgDjinnName + 17)	games/tla/src/scene/yampi_desert_cave.c
+ACTOR_CRYSTAL_ROOM_SECOND_LOG	the game	"Crystal" (MsgDjinnName + 17)	games/tla/src/scene/yampi_desert_cave.c
+ACTOR_CRYSTAL_ROOM_THIRD_LOG	the game	"Crystal" (MsgDjinnName + 17)	games/tla/src/scene/yampi_desert_cave.c
+ACTOR_CRYSTAL_ROOM_FOURTH_LOG	the game	"Crystal" (MsgDjinnName + 17)	games/tla/src/scene/yampi_desert_cave.c
+ACTOR_CRYSTAL_ROOM_BURST_PILLAR	the game	"Crystal" (MsgDjinnName + 17)	games/tla/src/scene/yampi_desert_cave.c
