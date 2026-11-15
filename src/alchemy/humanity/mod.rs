@@ -1880,6 +1880,7 @@ const ROWS: &[(&str, &str)] = &[
     ("provenance_rooms", "  verified by rooms"),
     ("provenance_table_mismatch", "  table name differs"),
     ("provenance_unstarred", "  evidence line without its ★"),
+    ("provenance_unchecked", "  evidence by row, unchecked"),
     ("provenance_failed", "  evidence failing check"),
     ("provenance_prose", "  evidence in prose only"),
     ("provenance_none", "  no evidence"),
@@ -2667,7 +2668,7 @@ mod provenance_tests {
         let text = GameText::parse(po, Some(2)).unwrap();
         let ids = "extern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
         let flags = "#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_WAREHOUSE_SEEN 0x11\n#define FLAG_GATE_OPEN 0x12\n";
-        let scene = "enum {\n  ACTOR_GUARD,\n  ACTOR_PILLAR,\n  ACTOR_MAN,\n};\n";
+        let scene = "enum {\n  ACTOR_GUARD,\n  ACTOR_PILLAR,\n  ACTOR_MAN,\n  ACTOR_DOOR,\n  ACTOR_ODD,\n};\n";
         let files = [
             ("games/tbs/include/scene_ids.h", ids),
             ("games/tbs/include/flags.h", flags),
@@ -2683,6 +2684,8 @@ mod provenance_tests {
             "ACTOR_PILLAR\tthe game\t\"no such words\" (MsgSign)\tgames/tbs/src/scene/bilibin.c\n",
             "ACTOR_PILLAR\twhat the player sees\ta stack of crates (its render)\tgames/tbs/src/scene/bilibin.c\n",
             "ACTOR_MAN\twhat the player sees\ta man in green\tgames/tbs/src/scene/bilibin.c\n",
+            "ACTOR_DOOR\tits twin\tThe Lost Age's ACTOR_DOOR, the same routine\tgames/tbs/src/scene/bilibin.c\n",
+            "ACTOR_ODD\tits vibe\ta feeling\tgames/tbs/src/scene/bilibin.c\n",
         ))
         .unwrap();
         let report = game_with_text(files, Some(&text), &names);
@@ -2696,7 +2699,10 @@ mod provenance_tests {
         assert_eq!(evidence("ACTOR_PILLAR").as_deref(), Some("verified render"), "one verified row of several");
         assert_eq!(evidence("ACTOR_MAN").as_deref(), Some("failed: a Named from line out of form"), "a render row names its render");
         assert_eq!(evidence("SceneId_BilibinWarehouse").as_deref(), Some("none"));
-        assert_eq!((report.value("provenance_verified"), report.value("provenance_failed"), report.value("provenance_none")), (4, 2, 2));
+        assert_eq!(evidence("ACTOR_DOOR").as_deref(), Some("unchecked its twin"), "a row no check reads");
+        assert_eq!(evidence("ACTOR_ODD").as_deref(), Some("failed: a row of no known kind: its vibe"));
+        assert_eq!((report.value("provenance_verified"), report.value("provenance_failed"), report.value("provenance_none")), (4, 3, 2));
+        assert_eq!(report.value("provenance_unchecked"), 1);
     }
 
 
@@ -2725,6 +2731,16 @@ mod provenance_tests {
         // one whose text never says it is still a placeholder.
         assert_eq!(report.names.get("placeholder").map(|names| names.iter().cloned().collect::<Vec<_>>()), Some(vec!["MsgUnknownThing".to_string()]));
         assert!(is_placeholder("MsgDetailsUnknown"), "without the text, it looks like one");
+    }
+
+    #[test]
+    fn every_evidence_row_is_of_a_known_kind() {
+        for game in ["tbs", "tla"] {
+            for row in evidence::names(game).unwrap() {
+                let known = provenance::CHECKED_KINDS.contains(&row.kind.as_str()) || provenance::UNCHECKED_KINDS.contains(&row.kind.as_str());
+                assert!(known, "{game}: {} has a row of kind {}", row.name, row.kind);
+            }
+        }
     }
 
     #[test]

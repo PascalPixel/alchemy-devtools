@@ -1526,8 +1526,8 @@ PoundWork	its code	the heap work FieldPsynergy_Pound allocates; FieldPsynergy_Up
 TeleportWhirlWork	plain English	the work Teleport_PlayWhirl allocates	games/tla/src/field/event_commands/radial/scoop.c
 ChasingMote	plain English	one mote of SummonTablet_UpdateMotes and the mote trail: a position chasing its target through Motion_StepTowardTarget	games/tla/src/field/event_commands/radial/hover.c
 TremorSprite	plain English	an object's sprite as FieldPsynergy_Tremor and FieldPsynergy_TremorOnTarget sway it by its offset	games/tla/src/field/event_commands/radial/tremor.c
-WorldMapWork.scrollX	its use	the picture's scroll the World Map picture reads at 0x630, from the view it replaces	games/tla/include/field/world_map.h
-WorldMapMarker	its use	moved to field/world_map_marker.h so world_map.h's work can hold the marker sprites as structs	games/tla/include/field/world_map_marker.h
+WorldMapWork.scrollX	its uses	the picture's scroll the World Map picture reads at 0x630, from the view it replaces	games/tla/include/field/world_map.h
+WorldMapMarker	its uses	moved to field/world_map_marker.h so world_map.h's work can hold the marker sprites as structs	games/tla/include/field/world_map_marker.h
 Event_DigUpTreasure	its uses	the Scoop spots of Lemuria, Loho, Taopo Swamp, the Yampi Desert Cave and Prox call it with their treasure actor and flag (games/tla/src/scene/lemuria.c, loho.c); Actor_ReturnHome with mode 2 places the actor at its home and sets the flag (games/tla/src/field/field_sequence/treasure_spots.c)	games/tla/include/field/event_inline.h
 gSlideOnIce_AnglesByKey	its twin	the same heading-by-pad-direction table in each of the six scenes that slide the leader over ice; read by Leader_SlideOnIce and Leader_SlideOnIceFromEdge (was gTundariaTower_SlideAnglesByKey and four addresses)	games/tla/src/scene/tundaria_tower.c
 gSlideOnIce_Stopped	its twin	the flag Leader_SetSlideStopped sets to end the slide, the same in the six ice scenes (was each scene's own _SlideStopped)	games/tla/src/scene/bss/tundaria_tower.s

@@ -337,6 +337,9 @@ pub enum Evidence {
     Unstarred(&'static str),
     /// A `Named from ...` line the text does not confirm, and why.
     Failed(String),
+    /// No line the text confirms or refutes, but a row of a kind no check
+    /// reads (`its code`, `its twin`, `the walkthrough`): a person looked.
+    Unchecked(&'static str),
     /// No line, but its prose quotes the game, cites a message or the area
     /// names, or describes its render.
     Prose(Vec<&'static str>),
@@ -352,6 +355,7 @@ impl Evidence {
             Evidence::Rooms => "provenance_rooms",
             Evidence::Unstarred(_) => "provenance_unstarred",
             Evidence::Failed(_) => "provenance_failed",
+            Evidence::Unchecked(_) => "provenance_unchecked",
             Evidence::Prose(_) => "provenance_prose",
             Evidence::None => "provenance_none",
         }
@@ -368,6 +372,7 @@ impl Evidence {
             Evidence::Rooms => "rooms".to_string(),
             Evidence::Unstarred(kind) => format!("unstarred {kind}"),
             Evidence::Failed(why) => format!("failed: {why}"),
+            Evidence::Unchecked(kind) => format!("unchecked {kind}"),
             Evidence::Prose(kinds) => format!("prose {}", kinds.join("+")),
             Evidence::None => "none".to_string(),
         }
@@ -446,15 +451,37 @@ fn evidence_line(comment: &str, text: &GameText) -> Option<Evidence> {
     failed.map(Evidence::Failed)
 }
 
+/// The kinds of evidence row the text checks (`the game`, `its area name`,
+/// `what the player sees`), and those no check here can read, which a person
+/// looked at: the code, the other game's twin, the walkthrough and so on.
+pub const CHECKED_KINDS: &[&str] = &["the game", "its area name", "what the player sees"];
+pub const UNCHECKED_KINDS: &[&str] = &[
+    "its code", "its twin", "its uses", "the walkthrough", "plain English", "where it plays", "the hardware", "its picture",
+    "its sound data", "its number",
+];
+
+/// The kind of a row's `★ Named from <kind>: ...` line.
+fn row_kind(line: &str) -> Option<&str> {
+    line.strip_prefix("★ Named from ")?.split_once(": ").map(|(kind, _)| kind)
+}
+
 /// What a name's evidence says, each row judged as the `★` line it stands
 /// for (H8), and then its own comment: a verified row first, then a line in
-/// the comment, then a row that failed.
+/// the comment, then a row that failed, then a row of a kind no check reads
+/// (`Unchecked`). A row of a kind nobody named fails.
 fn named(thing: &Thing, own: &str, text: &GameText) -> Option<Evidence> {
     let rows: Vec<Evidence> = thing.evidence.iter().filter_map(|line| evidence_line(line, text)).collect();
     if let Some(verified) = rows.iter().find(|row| matches!(row, Evidence::Verified(_))) {
         return Some(verified.clone());
     }
-    evidence_line(own, text).or_else(|| rows.into_iter().next())
+    if let Some(line) = evidence_line(own, text).or_else(|| rows.into_iter().next()) {
+        return Some(line);
+    }
+    let kinds: Vec<&str> = thing.evidence.iter().filter_map(|line| row_kind(line)).collect();
+    if let Some(unknown) = kinds.iter().find(|kind| !CHECKED_KINDS.contains(kind) && !UNCHECKED_KINDS.contains(kind)) {
+        return Some(Evidence::Failed(format!("a row of no known kind: {unknown}")));
+    }
+    kinds.iter().find_map(|kind| UNCHECKED_KINDS.iter().find(|known| *known == kind)).map(|kind| Evidence::Unchecked(kind))
 }
 
 fn prose_regexes() -> &'static [Regex; 4] {
