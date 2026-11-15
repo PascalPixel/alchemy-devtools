@@ -1744,8 +1744,8 @@ impl Report {
 
 /// The files a game keeps its area-name rules in: The Broken Seal's
 /// `gArea_NameRules` in `src/field/scene_rules.s`, The Lost Age's
-/// `gScene_AreaNameRules` in `src/field/event_commands/area_name_rules.s`.
-const AREA_RULES: [&str; 2] = ["src/field/scene_rules.s", "src/field/event_commands/area_name_rules.s"];
+/// `gScene_AreaNameRules` in `src/field/area_name_rules.s`.
+const AREA_RULES: [&str; 2] = ["src/field/scene_rules.s", "src/field/area_name_rules.s"];
 
 /// How many area names the area-name rules read: their highest name index
 /// plus one, from the `scene_name`, `area_name` and `group_name` rows.

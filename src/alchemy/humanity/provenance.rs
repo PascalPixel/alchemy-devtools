@@ -406,7 +406,7 @@ fn line_regexes() -> &'static [Regex; 4] {
     static SET: OnceLock<[Regex; 4]> = OnceLock::new();
     SET.get_or_init(|| {
         [
-            Regex::new(r#"(★\s*)?Named from the game:\s*"([^"]+)"\s*\(\s*(Msg[A-Za-z0-9_]+)[^)]*\)"#).unwrap(),
+            Regex::new(r#"(★\s*)?Named from the game:\s*"([^"]+)"\s*\(\s*(Msg[A-Za-z0-9_]+)([^)]*)\)"#).unwrap(),
             Regex::new(r"(★\s*)?Named from its area name:\s*(.+)").unwrap(),
             Regex::new(r"(★\s*)?Named from what the player sees:\s*(.*?)\(its render\)").unwrap(),
             Regex::new(r"Named from (?:the game|its area name|what the player sees)").unwrap(),
@@ -420,10 +420,23 @@ fn evidence_line(comment: &str, text: &GameText) -> Option<Evidence> {
     let mut found: Vec<(bool, &'static str)> = Vec::new();
     let mut failed = None;
     for capture in game.captures_iter(comment) {
-        match text.symbol_holds(&capture[3], &capture[2]) {
+        // `(MsgAbilityName + 455)` names one message of a table, which other
+        // symbols may fall inside (the Djinn's names are the abilities' from
+        // 300 on): that message is the one checked.
+        let offset = capture[4].trim().strip_prefix('+').and_then(|n| n.trim().parse::<i64>().ok());
+        let (symbol, quote) = (&capture[3], &capture[2]);
+        let holds = match offset {
+            Some(offset) => text.table_entry(symbol, offset).map(|body| {
+                let quote = flatten(quote);
+                !quote.is_empty() && body.contains(&quote)
+            }),
+            None => text.symbol_holds(symbol, quote),
+        };
+        let at = offset.map_or(symbol.to_string(), |offset| format!("{symbol} + {offset}"));
+        match holds {
             Some(true) => found.push((capture.get(1).is_some(), "quote")),
-            Some(false) => failed = Some(format!("{} does not hold \"{}\"", &capture[3], &capture[2])),
-            None => failed = Some(format!("no message {}", &capture[3])),
+            Some(false) => failed = Some(format!("{at} does not hold \"{quote}\"")),
+            None => failed = Some(format!("no message {at}")),
         }
     }
     for capture in area.captures_iter(comment) {
@@ -1104,6 +1117,8 @@ mod tests {
             thing("ACTOR_K", "", ""),
             thing("ACTOR_L", "/// ★ Named from the game: \"The trees are moving.\" (MsgSignMcCoy)", ""),
             thing("ACTOR_M", "/// ★ Named from the game: \"Kolima Forest\" (MsgSignMcCoy)", ""),
+            thing("ACTOR_N", "/// ★ Named from the game: \"Kolima Forest\" (MsgSignMcCoy + 4)", ""),
+            thing("ACTOR_O", "/// ★ Named from the game: \"The trees\" (MsgSignMcCoy + 2)", ""),
         ];
         let places = [(
             "games/tbs/src/scene/bilibin.c".to_string(),
@@ -1124,6 +1139,8 @@ mod tests {
         assert_eq!(evidence[10], "prose area");
         assert_eq!(evidence[11], "verified quote", "an unnamed message after the symbol's own");
         assert!(evidence[12].starts_with("failed"), "not past the next named message");
+        assert_eq!(evidence[13], "verified quote", "a table's message by its offset, past the next named one");
+        assert_eq!(evidence[14], "failed: MsgSignMcCoy + 2 does not hold \"The trees\"", "that message only");
     }
 
     #[test]
