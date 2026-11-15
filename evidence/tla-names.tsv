@@ -9514,3 +9514,71 @@ ACTOR_WHIP_CHEST_ROOM_FIRST_SLIDE	its code	used in YampiDesert_SetUpTrainersWhip
 ACTOR_WHIP_CHEST_ROOM_SECOND_SLIDE	its code	used in YampiDesert_SetUpTrainersWhipChestSlideActors	games/tla/src/scene/yampi_desert.c
 ACTOR_EAST_PILLAR	its code	used in YampiDesertCave_StartMovingPillar; used in YampiDesertCave_FinishMovingPillar	games/tla/src/scene/yampi_desert_cave.c
 ACTOR_WEST_PILLAR	its code	used in YampiDesertCave_StartMovingPillar; used in YampiDesertCave_FinishMovingPillar	games/tla/src/scene/yampi_desert_cave.c
+FLAG_NOTHING_HAPPENS	its twin	The Broken Seal's FLAG_NOTHING_HAPPENS in include/flags.h (the game: "But nothing happens." (MsgNothingHappens))	games/tla/include/flags.h
+FLAG_DJINN_LESSON	its twin	The Broken Seal's FLAG_DJINN_LESSON in include/flags.h (the game: "Now, I'll briefly teach you how to use Djinn." (MsgWorldMapAbilityVenusDjinni))	games/tla/include/flags.h
+ACTOR_ICON_BROWSER	its twin	The Broken Seal's ACTOR_ICON_BROWSER in src/debug/level.c (what the player sees: a page of 32 item icons headed `ITEM PAGE:0` (its render))	games/tla/src/debug/level.c
+ACTOR_PORTRAIT_BROWSER	its twin	The Broken Seal's ACTOR_PORTRAIT_BROWSER in src/debug/level.c (what the player sees: Isaac's portrait over `0 Isaac`, the first of the portraits Left and Right step through (its render))	games/tla/src/debug/level.c
+ACTOR_LEVEL_EDITOR	its twin	The Broken Seal's ACTOR_LEVEL_EDITOR in src/debug/level.c (what the player sees: `Raise everyone's level.` over the leader's name and level, A raising it one and Start five (its render))	games/tla/src/debug/level.c
+ACTOR_TIGHTROPES_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 1 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_TIGHTROPES_POST_A	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 3 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_TIGHTROPES_POST_B	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 4 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_TIGHTROPES_POST_C	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 5 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_TIGHTROPES_POST_D	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 6 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_TIGHTROPES_POST_E	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 7 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_TIGHTROPES_POST_F	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 8 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_TIGHTROPES_POST_G	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 9 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_TIGHTROPES_POST_H	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 10 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_TIGHTROPES_POST_I	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 11 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_TIGHTROPES_POST_J	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 12 of gAirsRockInside_TightropesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_PAIRED_STATUES_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 0 of gAirsRockInside_PairedStatuesPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_FACE_WARP_STATUE	its picture	a small statue: graphics/sprite/wind_statue.png, the sheet row 3 of gAirsRockInside_FaceWarpPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_FACE_WARP_THIRD_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 4 of gAirsRockInside_FaceWarpPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_FACE_WARP_PILLAR_A	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 5 of gAirsRockInside_FaceWarpPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_FACE_WARP_PILLAR_B	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 6 of gAirsRockInside_FaceWarpPlacements gives it	games/tla/src/scene/airs_rock_inside.c
+ACTOR_ELEVATOR_FIRST_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 0 of gAnemosInnerSanctum_ElevatorPlacements gives it	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_ELEVATOR_SECOND_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 2 of gAnemosInnerSanctum_ElevatorPlacements gives it	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_SWITCHES_FIRST_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 0 of gAnemosInnerSanctum_SwitchesPlacements gives it	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_SWITCHES_BOULDER	its picture	a round boulder: graphics/sprite/round_boulder.png, the sheet row 1 of gAnemosInnerSanctum_SwitchesPlacements gives it	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_SWITCHES_SECOND_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 2 of gAnemosInnerSanctum_SwitchesPlacements gives it	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_SWITCHES_PILLAR_A	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 3 of gAnemosInnerSanctum_SwitchesPlacements gives it	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_SWITCHES_PILLAR_B	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 4 of gAnemosInnerSanctum_SwitchesPlacements gives it	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_SWITCHES_THIRD_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 5 of gAnemosInnerSanctum_SwitchesPlacements gives it	games/tla/src/scene/anemos_inner_sanctum.c
+ACTOR_FIRST_FOLIAGE	its picture	a clump of leaves: graphics/sprite/ivy.png, the sheet row 0 of gActorPlacements gives it	games/tla/src/scene/apojii_islands_cave.c
+ACTOR_SECOND_FOLIAGE	its picture	a clump of leaves: graphics/sprite/ivy.png, the sheet row 1 of gActorPlacements gives it	games/tla/src/scene/apojii_islands_cave.c
+ACTOR_PASSAGE_FOLIAGE	its picture	a clump of leaves: graphics/sprite/ivy.png, the sheet row 2 of gActorPlacements gives it	games/tla/src/scene/apojii_islands_cave.c
+ACTOR_FOURTH_FOLIAGE	its picture	a clump of leaves: graphics/sprite/ivy.png, the sheet row 3 of gActorPlacements gives it	games/tla/src/scene/apojii_islands_cave.c
+ACTOR_ROPE_POST	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 0 of gCaverns_IndraPlacements gives it	games/tla/src/scene/caverns.c
+ACTOR_SECOND_ROPE_POST	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 1 of gCaverns_IndraPlacements gives it	games/tla/src/scene/caverns.c
+ACTOR_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 2 of gCaverns_IndraPlacements gives it	games/tla/src/scene/caverns.c
+ACTOR_FIRST_BLOCK	its picture	square stone blocks carved with a spiral: graphics/sprite/spiral_pillar.png, the sheet row 0 of gCaverns_AngaraPlacements gives it	games/tla/src/scene/caverns.c
+ACTOR_SECOND_BLOCK	its picture	square stone blocks carved with a spiral: graphics/sprite/spiral_pillar.png, the sheet row 1 of gCaverns_AngaraPlacements gives it	games/tla/src/scene/caverns.c
+ACTOR_SECOND_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 1 of gGaroh_BlocksActorPlacements gives it	games/tla/src/scene/garoh.c
+ACTOR_PUDDLE	its picture	a puddle, and the ice pillar it freezes into: graphics/sprite/puddle.png, the sheet row 3 of gKibomboMountains_WaftPlacements gives it	games/tla/src/scene/kibombo_mountains.c
+ACTOR_SPROUT	its picture	a sprout growing into a vine: graphics/sprite/sprout.png, the sheet row 4 of gKibomboMountains_WaftPlacements gives it	games/tla/src/scene/kibombo_mountains.c
+ACTOR_ROPE_WEST_POST	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 0 of gKibomboMountains_DiskAxeChestPlacements gives it	games/tla/src/scene/kibombo_mountains.c
+ACTOR_ROPE_EAST_POST	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 1 of gKibomboMountains_DiskAxeChestPlacements gives it	games/tla/src/scene/kibombo_mountains.c
+ACTOR_SECOND_DROPPED_PILLAR	its picture	a pillar wound with a vine: graphics/sprite/spr_250.png, the sheet row 5 of gKibomboMountains_DiskAxeChestPlacements gives it	games/tla/src/scene/kibombo_mountains.c
+ACTOR_FIRST_DROPPED_PILLAR	its picture	a stone pillar: graphics/sprite/stone_pillar.png, the sheet row 12 of gKibomboMountains_DiskAxeChestPlacements gives it	games/tla/src/scene/kibombo_mountains.c
+ACTOR_WEST_TORCH	its picture	a torch on a stand: graphics/sprite/torch.png, the sheet row 13 of gKibomboMountains_DiskAxeChestPlacements gives it	games/tla/src/scene/kibombo_mountains.c
+ACTOR_EAST_TORCH	its picture	a torch on a stand: graphics/sprite/torch.png, the sheet row 14 of gKibomboMountains_DiskAxeChestPlacements gives it	games/tla/src/scene/kibombo_mountains.c
+ACTOR_MOORED_BOAT_A	its picture	a small sailboat: graphics/sprite/spr_342.png, the sheet row 1 of gActorPlacements gives it	games/tla/src/scene/lemuria_entrance.c
+ACTOR_MOORED_BOAT_B	its picture	a small sailboat: graphics/sprite/spr_342.png, the sheet row 2 of gActorPlacements gives it	games/tla/src/scene/lemuria_entrance.c
+ACTOR_MOORED_BOAT_C	its picture	a small sailboat: graphics/sprite/spr_342.png, the sheet row 3 of gActorPlacements gives it	games/tla/src/scene/lemuria_entrance.c
+ACTOR_MOORED_BOAT_D	its picture	a small sailboat: graphics/sprite/spr_342.png, the sheet row 4 of gActorPlacements gives it	games/tla/src/scene/lemuria_entrance.c
+ACTOR_MOORED_SHIP_B	its picture	the ship with wings: graphics/sprite/winged_ship.png, the sheet row 6 of gActorPlacements gives it	games/tla/src/scene/lemuria_entrance.c
+ACTOR_MOORED_SHIP_C	its picture	the ship with wings: graphics/sprite/winged_ship.png, the sheet row 7 of gActorPlacements gives it	games/tla/src/scene/lemuria_entrance.c
+ACTOR_MOORED_SHIP_D	its picture	the ship with wings: graphics/sprite/winged_ship.png, the sheet row 8 of gActorPlacements gives it	games/tla/src/scene/lemuria_entrance.c
+ACTOR_MOORED_SHIP_E	its picture	the ship with wings: graphics/sprite/winged_ship.png, the sheet row 9 of gActorPlacements gives it	games/tla/src/scene/lemuria_entrance.c
+ACTOR_MOORED_SHIP_F	its picture	the ship with wings: graphics/sprite/winged_ship.png, the sheet row 10 of gActorPlacements gives it	games/tla/src/scene/lemuria_entrance.c
+ACTOR_WISE_ONE	its picture	a rock with one eye: graphics/sprite/wise_one.png, the sheet row 1 of gActorPlacements gives it	games/tla/src/scene/mt_aleph_summit.c
+ACTOR_FIRST_ROPE_POST	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 3 of gActorPlacements gives it	games/tla/src/scene/osenia_cliffs.c
+ACTOR_SECOND_ROPE_POST	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 4 of gActorPlacements gives it	games/tla/src/scene/osenia_cliffs.c
+ACTOR_THIRD_ROPE_POST	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 5 of gActorPlacements gives it	games/tla/src/scene/osenia_cliffs.c
+ACTOR_FOURTH_ROPE_POST	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 6 of gActorPlacements gives it	games/tla/src/scene/osenia_cliffs.c
+ACTOR_BOULDER	its picture	a round boulder: graphics/sprite/round_boulder.png, the sheet row 11 of gProx_TownPlacements gives it	games/tla/src/scene/prox.c
+ACTOR_GAP_PUDDLE	its picture	a puddle, and the ice pillar it freezes into: graphics/sprite/puddle.png, the sheet row 0 of gTaopoSwampPillarGapActorPlacements gives it	games/tla/src/scene/taopo_swamp.c
+ACTOR_CHEST_ROCK	its picture	a rock, glowing hot and cooling: graphics/sprite/spr_292.png, the sheet row 0 of gTaopoSwampLavaRocksActorPlacements gives it	games/tla/src/scene/taopo_swamp.c
+ACTOR_EXIT_ROCK	its picture	a rock, glowing hot and cooling: graphics/sprite/spr_292.png, the sheet row 1 of gTaopoSwampLavaRocksActorPlacements gives it	games/tla/src/scene/taopo_swamp.c
+ACTOR_LAST_ROCK	its picture	a rock, glowing hot and cooling: graphics/sprite/spr_292.png, the sheet row 1 of gTaopoSwampStarDustActorPlacements gives it	games/tla/src/scene/taopo_swamp.c
+ACTOR_ROPE_OTHER_POLE	its picture	a wooden post with a rope's ring: graphics/sprite/tightrope_post.png, the sheet row 1 of gYampiDesertTrainersWhipChestActorPlacements gives it	games/tla/src/scene/yampi_desert.c
+ACTOR_STAKE	its picture	a wooden stake: graphics/sprite/stake.png, the sheet row 6 of gYampiDesertCaveCrystalPlacements gives it	games/tla/src/scene/yampi_desert_cave.c
