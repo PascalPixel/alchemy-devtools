@@ -1579,6 +1579,10 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
             let (word, kind) = (&capture[1], &capture[2]);
             if word == "FAKEMATCH" && DEVICES.contains(&kind) {
                 report.note(&format!("fakematch_{kind}"), path, comment.line, kind);
+            } else if word == "FAKEMATCH" {
+                // A tag is a fake match whatever its word: one S2 does not
+                // name (`FAKEMATCH(type)`) is counted, to be given its kind.
+                report.note("fakematch_other", path, comment.line, kind);
             } else if word == "LEFTOVER" && LEFTOVERS.contains(&kind) {
                 report.note(&format!("leftover_{kind}"), path, comment.line, kind);
             }
@@ -1837,6 +1841,7 @@ const ROWS: &[(&str, &str)] = &[
     ("fakematch_volatile", "  volatile"),
     ("fakematch_temporary", "  temporary"),
     ("fakematch_dead", "  dead"),
+    ("fakematch_other", "  of a kind S2 does not name"),
     ("leftover", "LEFTOVERs (Camelot's)"),
     ("leftover_frame", "  frame"),
     ("leftover_template", "  template"),
@@ -1888,7 +1893,7 @@ const ROWS: &[(&str, &str)] = &[
 /// adds none.
 fn kinds(metric: &str) -> Vec<String> {
     match metric {
-        "fakematch" => DEVICES.iter().map(|kind| format!("fakematch_{kind}")).collect(),
+        "fakematch" => DEVICES.iter().chain(&["other"]).map(|kind| format!("fakematch_{kind}")).collect(),
         "leftover" => LEFTOVERS.iter().chain(&["dead"]).map(|kind| format!("leftover_{kind}")).collect(),
         _ => Vec::new(),
     }
@@ -2256,7 +2261,7 @@ mod tests {
             "    /* FAKEMATCH(wrapper): kept; as plain, 2 of 9 instructions differ in tbs-en. */\n",
             "    // FAKEMATCH(dead): kept. FAKEMATCH(<kind>) is the form.\n",
             "    // FAKEMATCH(volatile): read afresh; as a plain local, 2 of 9 instructions differ in tla-en.\n",
-            "    // FAKEMATCH(one-pass): no longer a kind, not counted.\n",
+            "    // FAKEMATCH(one-pass): no longer a kind, counted to be given one.\n",
             "    /* VIEW(s0b84): routine Helper as int Helper(int); the definition has void Helper(void). */\n",
             "#if LANGUAGE != LANGUAGE_JAPANESE && TBS_PATCH_2\n",
             "    goto done;\n",
@@ -2266,10 +2271,12 @@ mod tests {
         ));
         assert_eq!(
             (report.total("fakematch_wrapper"), report.total("fakematch_volatile"), report.total("fakematch_dead"), report.value("fakematch")),
-            (1, 1, 1, 3)
+            (1, 1, 1, 4)
         );
+        assert_eq!(list(&[("tbs", &report)], "fakematch_other"), "tbs\tf.c:12\tone-pass\n");
         let rows: Vec<&str> = ROWS.iter().filter_map(|(metric, _)| metric.strip_prefix("fakematch_")).collect();
-        assert_eq!(rows, DEVICES, "the table's device rows are S2's, in its order");
+        assert_eq!(rows[..7], DEVICES, "the table's device rows are S2's, in its order");
+        assert_eq!(rows[7..], ["other"], "then the tags of a kind S2 does not name");
         assert!(listable("fakematch_pin") && listable("fakematch_volatile") && !listable("fakematch_one-pass") && !listable("xyz"));
         assert_eq!(report.value("leftover"), 0);
         assert_eq!(report.total("views"), 1);
@@ -2287,7 +2294,7 @@ mod tests {
             "    /* LEFTOVER(template): a second blitter, as its siblings have; as one, 6 of 80 instructions differ in tbs-en. */\n",
             "    /* LEFTOVER(form): a retired kind, not counted; as direct, 2 of 40 instructions differ in tbs-en. */\n",
             "    // LEFTOVER(dead): no kind of leftover, not counted.\n",
-            "    // FAKEMATCH(frame): no kind of device, not counted.\n",
+            "    // FAKEMATCH(frame): no kind of device, counted to be given one.\n",
             "    // DEAD: a read whose value goes unused.\n",
             "    /* FAKEMATCH(temporary): a copy; as none, 1 of 9 instructions differ in tbs-en. */\n",
             "}\n",
@@ -2296,15 +2303,16 @@ mod tests {
             ["leftover_frame", "leftover_template", "leftover_form", "leftover_dead"].map(|metric| report.total(metric)),
             [1, 1, 0, 1]
         );
-        assert_eq!((report.value("leftover"), report.value("fakematch")), (3, 1), "never summed together");
+        assert_eq!((report.value("leftover"), report.value("fakematch")), (3, 2), "never summed together");
+        assert_eq!(list(&[("tbs", &report)], "fakematch_other"), "tbs\tf.c:6\tframe\n");
         let rows: Vec<&str> = ROWS.iter().filter_map(|(metric, _)| metric.strip_prefix("leftover_")).collect();
         assert_eq!(rows, ["frame", "template", "dead"], "the table's leftover rows are S2's, then the DEAD marks");
         assert!(listable("leftover") && listable("leftover_frame") && !listable("leftover_pin"));
         assert_eq!(list(&[("tbs", &report)], "leftover"), "tbs\tf.c:2\tframe\ntbs\tf.c:3\ttemplate\ntbs\tf.c:7\tdead\n");
-        assert_eq!(list(&[("tbs", &report)], "fakematch"), "tbs\tf.c:8\ttemporary\n");
+        assert_eq!(list(&[("tbs", &report)], "fakematch"), "tbs\tf.c:6\tframe\ntbs\tf.c:8\ttemporary\n");
         let tsv = tsv(&[("tbs", &report)]);
         assert!(tsv.contains("tbs\tleftover\ttotal\t3\n") && !tsv.contains("leftover_form"), "{tsv}");
-        assert!(tsv.contains("tbs\tleftover\tf.c\t3\n") && tsv.contains("tbs\tfakematch\tf.c\t1\n"), "{tsv}");
+        assert!(tsv.contains("tbs\tleftover\tf.c\t3\n") && tsv.contains("tbs\tfakematch\tf.c\t2\n"), "{tsv}");
         let table = summary(&[("tbs", &report)], 0);
         let devices = table.find("FAKEMATCH devices").unwrap();
         let leftovers = table.find("LEFTOVERs (Camelot's)").unwrap();
