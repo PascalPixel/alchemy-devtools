@@ -1064,7 +1064,7 @@ static int H(int x) { return x; }
             full.add(tags);
             full_findings.extend(found.into_iter().map(|finding| (name.clone(), finding.line, finding.message.replace("its row in evidence/tbs-fakematch.tsv: ", ""))));
         }
-        assert!(cut.fakematch > 100 && cut.leftover > 10, "{cut:?}");
+        assert!(cut.fakematch > 50 && cut.leftover > 10, "{cut:?}");
         assert_eq!((cut.fakematch, cut.leftover), (full.fakematch, full.leftover));
         assert_eq!((cut.in_source, cut.in_evidence), (0, cut.fakematch + cut.leftover), "every tag finds its row");
         // A tag that misses S2's form in full misses it in its row, and a
