@@ -5508,7 +5508,7 @@ ActorCreateKind	its twin	The Broken Seal's field.h enum	games/tla/include/field/
 ANIM_LEADER_ARMS_RAISED	its twin	The Broken Seal's 28; ItemDisplay_RaiseAboveLeader plays it where the twin does, and felix.tsv's animation 28 is one held kind-17 picture as isaac.tsv's	games/tla/include/field/sprite.h
 SPEAKER_VOICE_NONE	its twin	The Broken Seal's speaker.h 0xff	games/tla/include/field/screen_transition.h
 VRAM_CACHE_ENTRY_FADE_OVERLAY	its twin	The Broken Seal's vram_cache.h 94, the entry FieldEffect_StartFadeOverlay loads	games/tla/include/field/ground_mask.h
-HEADING_COLUMNS	its code	Heading_Show draws 26 tiles a row, 5 rows (Tile_ClearLeftPixels's 26-wide grid)	games/tla/src/field/field_sequence_heading.c
+HEADING_COLUMNS	its code	Heading_Show draws 26 tiles a row, 5 rows (Heading_WipeTilePixel's 26-wide grid)	games/tla/src/field/field_sequence_heading.c
 Actor_InitializeSparkle	its twin	The Broken Seal's inline in field_sequence_item_display.c	games/tla/src/field/field_sequence_item_display.c
 FIELD_PROBE_ANGLE	its twin	The Broken Seal's field_player_control.c, TRIG_TURN / 16 off the heading	games/tla/src/field/field_internal.h
 LuckyDiceState	its twin	The Broken Seal's lucky_dice.c enum; LuckyDice_Run's states 0 to 3 as the twin's	games/tla/src/field/lucky_dice.c
