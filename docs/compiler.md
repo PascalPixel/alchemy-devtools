@@ -95,6 +95,28 @@ loop note. With constant bounds the copy folds away. An entry jump to a
 bottom test in the ROM is therefore either such a test, or the copy joined
 again by `jump2`.
 
+**The statements at a loop's top are copied ahead of it, in source order.
+Read in the dumps (`DjinnMenu_ShowMemberStatus`, The Lost Age, 16 November
+2026).** When the loop's first exit is near its top, everything before that
+exit is part of the test that is copied ahead. The copy is the first pass
+through those statements with the entry values folded in, and it stays in the
+order the source has them. The allocator and reload then take those
+instructions in that order, so the order shows in which registers the values
+get.
+
+In this routine the ROM's copy holds, in order, a pointer taken from another
+pointer, the address of the count array, and the address of `pairMember`.
+That is the loop top as it is written now, with its two pointers
+(`selectedPage = &selected[side]`, `pageCount = &pageCounts[side]`) before
+`pairMember = menu->pairMember`. Written as The Broken Seal's twin is, with
+the arrays used directly, the copy holds `pairMember`'s address first and the
+count array's address fifth, and 22 instruction lines differ, all one block
+of eleven with its four registers rotated. So the four tags on this routine
+do not steer the compiler: they are statements the original had at the top
+of its loop, in that order. Whether a pointer to the current side's entry,
+set at the top of a loop, is a device is a question of S2's wording, not of
+matching.
+
 **Jump threading stops at any instruction between two tests. Read (`jump.c`,
 `thread_jumps`).** It runs after each CSE. A store between two blocks that
 test one condition keeps them apart, but only a store to a variable used
