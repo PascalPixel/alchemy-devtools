@@ -159,7 +159,7 @@ Facts about Alchemy's compiler, alchemy-gcc, not rules.
 - `p[n]` and `*(p + n)` can compile differently; each site keeps the spelling it matches with.
 - A struct declared before its type is complete keeps a smaller alignment: a header includes its structs' headers first. alchemy-gcc pads every struct to 4 bytes, so a table read by columns is a `[][N]` array.
 - Locals declared in an inner block take their pseudos later and change allocation. Allocation order is r3, r2, r1, r0, ip, lr, r4 to r7, r8, r10, r9, r11; global.c ranks pseudos by refs over live length; a constant `REG_EQUAL` note doubles a pseudo's live length.
-- A loop built from labels and `goto` has no loop notes, so loop.c and jump.c leave it alone; an empty C loop is deleted.
+- A loop built from labels and `goto` has no loop notes, so loop.c and jump.c leave it alone. An empty C loop counted in a word is deleted at 256 passes or fewer and kept above that; counted in a short it is kept, and reversed up to 256 passes (reproduced 16 November 2026, `docs/compiler.md`).
 - An empty asm counts 4 bytes when literal pools are placed and emits none; a one-pass block's loop-end note ends CSE's block and is a scheduling barrier; sched2 breaks ties by RTL order. CSE reuses a register holding 0 or 1.
 - A file that tests `LANGUAGE` without including `edition.h` silently gets the Japanese branch.
 - Within an object, code and data follow definition order; only the linker script orders objects.
@@ -226,6 +226,9 @@ Facts about Alchemy's compiler, alchemy-gcc, not rules.
 - An overlay's generated import table is rebuilt when the overlay's objects or its script change; before that fix an incremental build passed a compare a clean build refused.
 
 ### What the compiler decides
+
+`docs/compiler.md` is the study of both hard rounds (15 and 16 November 2026), pass by pass, with the compiler's own source for each decision and the small programs that reproduce six of them. Read it before working a device that has resisted reshaping. What it adds to the list below: the first CSE forgets everything after 1,000 instructions on a path (reproduced: a routine of 1,002 instructions shares a product, one of 1,006 does not), which is the likely cause of the once-only blocks in very long routines, so a routine's blocks are removed together; a routine's devices hold one another up, so its tags are measured all removed at once and the evidence tables' one-at-a-time figures may be stale; `u16 facing` on `Actor_SetPositionAndFacing` is the source of 97 facing locals in The Lost Age; a counter the body does not read is reversed only for a `<` test, so a downward `for` whose body never reads its counter is an upward loop; a `(u16 *)` cast on `BG_PLTT` hides a volatile and makes a loop reducible; a `do { } while (0)` left by `break` is a device and its shared exit a `goto` (Pascal, 16 November 2026: as pret does).
+
 
 The devices left after the round of 15 November 2026 (The Lost Age 307, The Broken Seal 87), by the pass that decides each. For these no source form is known, and a search that only permutes the C will not find one: each needs either evidence of removed code (then it is a LEFTOVER or `// DEAD:`) or a ruling from Pascal on the compiler. "Measured" means the pass's dump was read or its decision replayed; the rest is read from the assembly.
 
