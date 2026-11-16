@@ -748,6 +748,12 @@ fn is_composition<'a>(parameters: &[&str], body: impl Iterator<Item = &'a str>) 
     operator && used
 }
 
+/// A hex number token's value.
+fn hex_value(token: &Token) -> Option<u64> {
+    let digits = token.text.strip_prefix("0x").or_else(|| token.text.strip_prefix("0X"))?;
+    (token.kind == Kind::Number).then(|| u64::from_str_radix(digits.trim_end_matches(['u', 'U', 'l', 'L']), 16).unwrap_or(u64::MAX))
+}
+
 /// A name written in capitals, as macros are: `UNUSED`, `ALIGNED`.
 fn is_macro_name(text: &str) -> bool {
     text.bytes().any(|b| b.is_ascii_uppercase()) && !text.bytes().any(|b| b.is_ascii_lowercase())
@@ -1281,20 +1287,76 @@ impl<'r, 'a> Walk<'r, 'a> {
     }
 
 
+    /// The hex number a `#define NAME 0x...` or an enumerator `NAME = 0x...`
+    /// gives a name alone, with that name.
+    fn hex_definition(&self, at: usize) -> Option<&'a str> {
+        let text = |offset: isize| at.checked_add_signed(offset).and_then(|index| self.code.tokens.get(index));
+        let (before, after) = (text(-1)?, text(1)?);
+        if before.kind == Kind::Ident && text(-2)?.text == "define" && after.kind == Kind::PpEnd {
+            return Some(before.text);
+        }
+        let name = text(-2)?;
+        (before.text == "=" && name.kind == Kind::Ident && matches!(after.text, "," | "}") && !after.pp).then_some(name.text)
+    }
+
+    /// The names a file defines as bits: in a family of defines or
+    /// enumerators sharing the name's prefix (`SPEAKER_` of `SPEAKER_FLAGS`),
+    /// two or more of which are a single bit, each whose bits the family's
+    /// single bits cover (the single bits themselves, and masks of them).
+    fn bit_families(&self) -> BTreeSet<&'a str> {
+        let mut families: BTreeMap<&str, Vec<(&str, u64)>> = BTreeMap::new();
+        for at in 0..self.code.tokens.len() {
+            let token = &self.code.tokens[at];
+            let Some(value) = hex_value(token) else { continue };
+            let Some(name) = self.hex_definition(at) else { continue };
+            if let Some((prefix, _)) = name.rsplit_once('_') {
+                families.entry(prefix).or_default().push((name, value));
+            }
+        }
+        let mut bits = BTreeSet::new();
+        for members in families.values() {
+            let singles: Vec<u64> = members.iter().map(|&(_, value)| value).filter(|value| value.is_power_of_two()).collect();
+            let covered = singles.iter().fold(0, |all, value| all | value);
+            if singles.len() >= 2 {
+                bits.extend(members.iter().filter(|&&(_, value)| value != 0 && value & !covered == 0).map(|&(name, _)| name));
+            }
+        }
+        bits
+    }
+
+    /// The call a number is a whole argument of: `GameFlag_Set` of
+    /// `GameFlag_Set(0x9eb)`.
+    fn argument_of(&self, at: usize) -> Option<&'a str> {
+        let tokens = &self.code.tokens;
+        if !matches!(tokens.get(at + 1).map(|t| t.text), Some(")" | ",")) || !matches!(tokens.get(at.checked_sub(1)?).map(|t| t.text), Some("(" | ",")) {
+            return None;
+        }
+        let mut depth = 0;
+        for index in (0..at).rev() {
+            match tokens[index].text {
+                ")" => depth += 1,
+                "(" if depth == 0 => return tokens.get(index.checked_sub(1)?).filter(|t| t.kind == Kind::Ident).map(|t| t.text),
+                "(" => depth -= 1,
+                ";" | "{" | "}" => return None,
+                _ => {}
+            }
+        }
+        None
+    }
+
     /// Counts the file's hex numbers, by what S3 lets stay hex: flag numbers
-    /// (flags.h), addresses and values from 0x02000000 up, masks (a number
-    /// beside a bitwise operator or a shift) and the sound driver's. The
-    /// rest are listed, to be judged: a register bit or a packed field
-    /// stays, an offset, a count or a 16.16 value is written otherwise.
+    /// (flags.h, a FLAG_ name's, a flag call's argument), addresses and values
+    /// from 0x02000000 up, masks and bits (a number beside a bitwise operator
+    /// or a shift, io_reg.h's register values, a name in a family of bits)
+    /// and the sound driver's. The rest are listed, to be judged: a packed
+    /// field stays, an offset, a count or a 16.16 value is written otherwise.
     fn hex(&mut self) {
         const BITWISE: &[&str] = &["&", "|", "^", "~", "<<", ">>", "&=", "|=", "^=", "<<=", ">>="];
+        let bits = self.bit_families();
+        let registers = self.file.ends_with("/io_reg.h");
         for at in 0..self.code.tokens.len() {
             let token = self.code.tokens[at].clone();
-            let Some(digits) = token.text.strip_prefix("0x").or_else(|| token.text.strip_prefix("0X")) else { continue };
-            if token.kind != Kind::Number {
-                continue;
-            }
-            let value = u64::from_str_radix(digits.trim_end_matches(['u', 'U', 'l', 'L']), 16).unwrap_or(u64::MAX);
+            let Some(value) = hex_value(&token) else { continue };
             let beside = |offset: usize, back: bool| {
                 let index = if back { at.checked_sub(offset) } else { at.checked_add(offset) };
                 index.and_then(|index| self.code.tokens.get(index)).map_or("", |t| t.text)
@@ -1304,13 +1366,19 @@ impl<'r, 'a> Walk<'r, 'a> {
                 || BITWISE.contains(&beside(1, false))
                 || shift(beside(2, true), beside(1, true))
                 || shift(beside(1, false), beside(2, false));
-            let metric = if self.file.ends_with("/flags.h") {
+            let name = self.hex_definition(at);
+            // A flag number: flags.h's, a FLAG_ name's, or the whole argument
+            // of a call or macro whose name says it takes a flag.
+            let flag = self.file.ends_with("/flags.h")
+                || name.is_some_and(|name| name.starts_with("FLAG_"))
+                || self.argument_of(at).is_some_and(|call| call.to_ascii_lowercase().contains("flag"));
+            let metric = if flag {
                 "hex_flag"
             } else if self.file.contains("/sound/") {
                 "hex_driver"
             } else if value >= 0x0200_0000 {
                 "hex_address"
-            } else if mask {
+            } else if mask || registers || name.is_some_and(|name| bits.contains(name)) {
                 "hex_mask"
             } else {
                 "hex_other"
@@ -1967,9 +2035,9 @@ const ROWS: &[(&str, &str)] = &[
     ("views", "unsettled views (VIEW markers)"),
     ("goto", "goto"),
     ("hex", "hex numbers"),
-    ("hex_flag", "  flags (flags.h)"),
+    ("hex_flag", "  flag numbers"),
     ("hex_address", "  addresses, high values"),
-    ("hex_mask", "  masks and shifts"),
+    ("hex_mask", "  masks, bits and registers"),
     ("hex_driver", "  the sound driver's"),
     ("hex_other", "  the rest, to judge"),
     ("if_language", "#if on LANGUAGE"),
@@ -2433,6 +2501,16 @@ mod tests {
         let hex = one("#define MASK 0x3f\nint F(int a) { return (a & 0xff) + (a << 0x10) + 0x1c + *(int *)0x04000130 + 26; }\n");
         assert_eq!((hex.total("hex"), hex.total("hex_mask"), hex.total("hex_address"), hex.total("hex_other")), (5, 2, 1, 2));
         assert_eq!(list(&[("tbs", &hex)], "hex_other"), "tbs\tf.c:1\t0x3f\ntbs\tf.c:2\t0x1c\n");
+        // Bits by family, flag numbers by name or call, register values by header.
+        let kinds = one(concat!(
+            "#define SPEAKER_LEFT 0x1000\n#define SPEAKER_RIGHT 0x2000\n#define SPEAKER_FLAGS 0x3000\n#define SPEAKER_SIZE 0x30\n",
+            "enum { TILE_HFLIP = 0x400, TILE_VFLIP = 0x800 };\n#define LONE_BIT 0x80\n#define FLAG_DOOR_OPEN 0x9eb\n",
+            "void F(void) { GameFlag_Set(0x8ee); Actor_Move(0x8ee); GameFlag_Set(0x10 + 1); }\n",
+        ));
+        assert_eq!((kinds.total("hex_mask"), kinds.total("hex_flag"), kinds.total("hex_other")), (5, 2, 4));
+        assert_eq!(list(&[("tbs", &kinds)], "hex_other"), "tbs\tf.c:4\t0x30\ntbs\tf.c:6\t0x80\ntbs\tf.c:8\t0x8ee\ntbs\tf.c:8\t0x10\n");
+        let registers = game([("games/tbs/include/system/io_reg.h", "#define REG_DISPCNT_MODE_1 0x0001\n#define WINOUT_ALL 0x3f\n")]);
+        assert_eq!((registers.total("hex_mask"), registers.total("hex_other")), (2, 0));
         assert_eq!((report.total("if_language"), report.total("if_patch")), (2, 2));
         assert_eq!(report.total("if_in_function"), 1);
     }
