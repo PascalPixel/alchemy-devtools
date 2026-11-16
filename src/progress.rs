@@ -32,7 +32,11 @@ honest under S3 (composed forms, tenths and percentages, random ranges,
 decimal positions and durations, a local array's size, places on the map
 grid and in OAM words, data through a pointer call, dampings, a sheet's own
 animation numbers, fade and shake levels) are honest_KIND, and magic_code is
-what is left to name. A numbered name with an
+what is left to name. Every hex number counts in hex: flag numbers (flags.h),
+addresses and values from 0x02000000 up, masks (beside a bitwise operator or a
+shift) and the sound driver's are the kinds S3 keeps, and hex_other is the
+rest, to judge (a register bit or a packed field stays; an offset, a count or
+a 16.16 value is written otherwise). A numbered name with an
 its-number evidence row counts as numbered_honest; a name whose rows are of
 kinds no check reads counts as provenance_unchecked. Files and folders under
 games/GAME count too (--list loose_headers, part_folders, numbered_files),
