@@ -1280,6 +1280,50 @@ impl<'r, 'a> Walk<'r, 'a> {
         }
     }
 
+
+    /// Counts the file's hex numbers, by what S3 lets stay hex: flag numbers
+    /// (flags.h), addresses and values from 0x02000000 up, masks (a number
+    /// beside a bitwise operator or a shift) and the sound driver's. The
+    /// rest are listed, to be judged: a register bit or a packed field
+    /// stays, an offset, a count or a 16.16 value is written otherwise.
+    fn hex(&mut self) {
+        const BITWISE: &[&str] = &["&", "|", "^", "~", "<<", ">>", "&=", "|=", "^=", "<<=", ">>="];
+        for at in 0..self.code.tokens.len() {
+            let token = self.code.tokens[at].clone();
+            let Some(digits) = token.text.strip_prefix("0x").or_else(|| token.text.strip_prefix("0X")) else { continue };
+            if token.kind != Kind::Number {
+                continue;
+            }
+            let value = u64::from_str_radix(digits.trim_end_matches(['u', 'U', 'l', 'L']), 16).unwrap_or(u64::MAX);
+            let beside = |offset: usize, back: bool| {
+                let index = if back { at.checked_sub(offset) } else { at.checked_add(offset) };
+                index.and_then(|index| self.code.tokens.get(index)).map_or("", |t| t.text)
+            };
+            let shift = |a: &str, b: &str| (a == "<" && b == "<") || (a == ">" && b == ">");
+            let mask = BITWISE.contains(&beside(1, true))
+                || BITWISE.contains(&beside(1, false))
+                || shift(beside(2, true), beside(1, true))
+                || shift(beside(1, false), beside(2, false));
+            let metric = if self.file.ends_with("/flags.h") {
+                "hex_flag"
+            } else if self.file.contains("/sound/") {
+                "hex_driver"
+            } else if value >= 0x0200_0000 {
+                "hex_address"
+            } else if mask {
+                "hex_mask"
+            } else {
+                "hex_other"
+            };
+            self.report.add("hex", self.file, 1);
+            if metric == "hex_other" {
+                self.report.note(metric, self.file, token.line, token.text);
+            } else {
+                self.report.add(metric, self.file, 1);
+            }
+        }
+    }
+
     fn walk(&mut self) {
         let (mut prev, mut prev2) = (None, None);
         let mut at = 0;
@@ -1675,6 +1719,7 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         functions: 0,
     };
     walk.walk();
+    walk.hex();
     // An enum of one enumerator documents it: its comment is that name's own.
     for (count, things) in walk.enum_members.values() {
         if *count == 1 {
@@ -1921,6 +1966,12 @@ const ROWS: &[(&str, &str)] = &[
     ("leftover_dead", "  dead (// DEAD: marks)"),
     ("views", "unsettled views (VIEW markers)"),
     ("goto", "goto"),
+    ("hex", "hex numbers"),
+    ("hex_flag", "  flags (flags.h)"),
+    ("hex_address", "  addresses, high values"),
+    ("hex_mask", "  masks and shifts"),
+    ("hex_driver", "  the sound driver's"),
+    ("hex_other", "  the rest, to judge"),
     ("if_language", "#if on LANGUAGE"),
     ("if_patch", "#if on a patch level"),
     ("if_edition_name", "#if on an edition name"),
@@ -1981,7 +2032,7 @@ fn kinds(metric: &str) -> Vec<String> {
 
 /// Metrics whose top files are listed.
 const LISTED: &[&str] = &[
-    "magic_code", "magic_argument", "magic_code_all", "magic_table", "placeholder", "numbered", "fakematch", "leftover", "views", "goto", "if_language", "if_patch",
+    "magic_code", "magic_argument", "magic_code_all", "magic_table", "placeholder", "numbered", "fakematch", "leftover", "views", "goto", "hex_other", "if_language", "if_patch",
     "if_in_function", "undocumented_entry", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
     "undocumented_global", "provenance_none", "provenance_prose", "provenance_table_mismatch", "unused_word_name",
     "door_word_link", "unit_open", "synonym", "synonym_referent", "abbreviation", "family_shape", "prefix_twin",
@@ -2379,6 +2430,9 @@ mod tests {
         assert_eq!(report.total("views"), 1);
         assert!(listable("views"));
         assert_eq!(report.total("goto"), 1);
+        let hex = one("#define MASK 0x3f\nint F(int a) { return (a & 0xff) + (a << 0x10) + 0x1c + *(int *)0x04000130 + 26; }\n");
+        assert_eq!((hex.total("hex"), hex.total("hex_mask"), hex.total("hex_address"), hex.total("hex_other")), (5, 2, 1, 2));
+        assert_eq!(list(&[("tbs", &hex)], "hex_other"), "tbs\tf.c:1\t0x3f\ntbs\tf.c:2\t0x1c\n");
         assert_eq!((report.total("if_language"), report.total("if_patch")), (2, 2));
         assert_eq!(report.total("if_in_function"), 1);
     }
