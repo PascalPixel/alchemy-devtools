@@ -295,10 +295,10 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// Sunshine the blacksmith in Yallam's houses (yallam_interiors.c, actor
+/// Sunshine the blacksmith in Yallam's houses (yallam_rooms.c, actor
 /// 14), and the Tear Stone, a material he forges (item 429:
-/// YallamInteriors_PartyHasForgeMaterial).
-const YALLAM_HOUSES: &str = "YallamInteriorsInn";
+/// YallamRooms_PartyHasForgeMaterial).
+const YALLAM_HOUSES: &str = "YallamRoomsInn";
 const SUNSHINE: u16 = 14;
 const TEAR_STONE: u16 = 429;
 /// struct BattleUnit's inventory, the same in both games.

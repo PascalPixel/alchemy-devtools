@@ -9,19 +9,19 @@ use super::guide_tla::{Walk, EAST, KEY_A, KEY_B, KEY_DOWN, KEY_LEFT, KEY_RIGHT, 
 use super::story::Trigger;
 
 /// Daila as the party first comes (SceneId_DailaFlooded), from the World Map, and
-/// its houses (SceneId_DailaInteriors1) and sanctum (SceneId_DailaInteriors2).
+/// its houses (SceneId_DailaRoomsHouses) and sanctum (SceneId_DailaRoomsSanctum).
 const DAILA: &str = "DailaFlooded";
-const DAILA_HOUSES: &str = "DailaInteriorsHouses";
-const DAILA_SANCTUM: &str = "DailaInteriorsSanctum";
+const DAILA_HOUSES: &str = "DailaRoomsHouses";
+const DAILA_SANCTUM: &str = "DailaRoomsSanctum";
 /// Daila's people (daila.c's trigger table, as `render event` names them):
 /// the man by the well who says the wave left a lot behind, and the
 /// keeper of the stall.
 const DAILA_WAVE_MAN: u16 = 18;
 const DAILA_STALL_KEEPER: u16 = 21;
-/// The innkeeper (daila_interiors.c) and the healer of the sanctum.
+/// The innkeeper (daila_rooms.c) and the healer of the sanctum.
 const DAILA_INNKEEPER: u16 = 20;
 const DAILA_HEALER: u16 = 8;
-/// A guest of the inn (DailaInteriorsHouses), who says he hears the seafood in
+/// A guest of the inn (DailaRoomsHouses), who says he hears the seafood in
 /// Madra is good.
 const DAILA_INN_GUEST: u16 = 23;
 /// The lines of the screen a window at its top covers.
@@ -265,7 +265,7 @@ const PARTY_PIERS: u32 = 19;
 /// Daila's south road (WORLD_MAP from Daila's exit 8).
 const DAILA_PUDDLES: &str = "Daila";
 const FIRST_PUDDLE: u16 = 22;
-/// Tavi home again (daila_interiors.c names it): Daila's houses lead out to
+/// Tavi home again (daila_rooms.c names it): Daila's houses lead out to
 /// Daila, the puddles' Daila, and not to DailaFlooded.
 const FLAG_TAVI_RESCUED: u16 = 0x873;
 const WORLD_MAP: (&str, u16) = ("WorldMap", 2);
