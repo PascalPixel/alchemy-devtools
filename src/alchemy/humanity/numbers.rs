@@ -363,10 +363,10 @@ fn switch_subject(tokens: &[Token], at: usize, floor: usize) -> Option<(usize, u
 
 /// The honest kind the tokens around the number at `at` show, reading back
 /// no further than `floor` and on no further than `limit` (the end of the
-/// routine it is in): a composed form, a decimal fraction, a random range,
-/// a decimal position or duration by the names it is reckoned with, or the
-/// frames a loop counts. The parameter a number fills is judged by the
-/// caller, who knows every declaration.
+/// routine it is in): a composed form, a decimal fraction, a random range
+/// (one held in a local first included), a decimal position or duration by
+/// the names it is reckoned with, or the frames a loop counts. The parameter
+/// a number fills is judged by the caller, who knows every declaration.
 pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<&'static str> {
     let text = tokens[at].text;
     let factors = factors(tokens, at, floor);
@@ -382,7 +382,7 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
     }
     let (start, end, left) = span(tokens, at, floor);
     let (mut found, random) = chains(tokens, start, end);
-    if random {
+    if random || random_local(tokens, at, floor, limit) {
         return Some("random");
     }
     // A shift's amount is bits, never a position or a duration.
@@ -592,6 +592,44 @@ pub fn frame_count(tokens: &[Token], at: usize, floor: usize, limit: usize) -> b
     false
 }
 
+/// Whether the number at `at` is the range of a random roll held in a local
+/// first, up to `limit`: `s32 mask = 15; ... dx = mask & Random16();`, `speed
+/// = 255; speed &= Random16();`, `mask = 64 - 1; ... (Battle_RandomFar() &
+/// mask) == 0`. It is the whole value given to a plain local, and the local's
+/// next read rolls with it; a read that only sets it again (`mask = 31;`, a
+/// sibling `case`'s) is passed over.
+pub fn random_local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool {
+    let (start, end, left) = span(tokens, at, floor);
+    let Some(op) = left.filter(|&left| tokens[left].text == "=" && left >= floor + 2) else { return false };
+    let value: Vec<&str> = tokens[start..=end].iter().map(|t| t.text).collect();
+    if start != at || !(value.len() == 1 || value[1..] == ["-", "1"]) {
+        return false;
+    }
+    let variable = &tokens[op - 1];
+    if variable.kind != Kind::Ident || matches!(tokens[op - 2].text, "." | "->" | "]") {
+        return false;
+    }
+    for index in end + 1..=limit.min(tokens.len() - 1) {
+        let token = &tokens[index];
+        if token.kind != Kind::Ident || token.text != variable.text || matches!(tokens[index - 1].text, "." | "->") {
+            continue;
+        }
+        let next = tokens.get(index + 1).map_or("", |t| t.text);
+        if next == "=" {
+            continue;
+        }
+        let (read_start, read_end) = if ASSIGNMENTS.contains(&next) {
+            // `speed &= Random16()`: the whole statement rolls.
+            statement(tokens, index, floor)
+        } else {
+            let (read_start, read_end, _) = span(tokens, index, floor);
+            (read_start, read_end)
+        };
+        return chains(tokens, read_start, read_end).1;
+    }
+    false
+}
+
 /// Whether the number at `at` is the size in a local array's declarator,
 /// `u8 elements[10];` or `struct Actor *shards[20];`: a count of its own
 /// elements. An index into an array (`x = table[10]`) is not one.
@@ -796,6 +834,19 @@ mod tests {
         assert_eq!(kind_of("void F(void) { for (angle = 360, i = 21; i >= 0; i--) { angle -= 8; wait(1); } }", "360", 0), None, "not the loop's condition");
         assert_eq!(kind_of("void F(void) { for (i = 0; i < 20; i++) { v = i * 16 + 32; wait(1); } }", "32", 0), None, "reckoned with more than the counter");
         assert_eq!(kind_of("void F(void) { for (i = 0; i < 20; i++) { wait(1); } if (i == 20) G(); }", "20", 1), None, "after the loop");
+    }
+
+    #[test]
+    fn random_ranges_held_in_a_local() {
+        assert_eq!(kind_of("void F(void) { { s32 mask = 15; dx = mask & Random16(); } }", "15", 0), Some("random"));
+        assert_eq!(kind_of("void F(void) { s32 speed; speed = 255; speed &= Random16(); speed += 64; }", "255", 0), Some("random"));
+        assert_eq!(kind_of("void F(void) { s32 speed; speed = 255; speed &= Random16(); speed += 64; }", "64", 0), None, "an offset after the roll");
+        let critical = "void F(void) { s32 mask; switch (e) { case A: mask = 64 - 1; break; default: mask = 4 - 1; } if ((Battle_RandomFar() & mask) == 0) Hit(); }";
+        assert_eq!(kind_of(critical, "64", 0), Some("random"), "a sibling case's setting passed over");
+        assert_eq!(kind_of("void F(void) { s32 spread = 15; x = INTtoFIXED((Random16() & spread) - 8); }", "15", 0), Some("random"));
+        assert_eq!(kind_of("void F(void) { s32 size = 10; Draw(size); x = Random16(); }", "10", 0), None, "read without a roll");
+        assert_eq!(kind_of("void F(void) { a->mask = 15; x = a->mask & Random16(); }", "15", 0), None, "no plain local");
+        assert_eq!(kind_of("void F(void) { s32 m = 15 + n; x = m & Random16(); }", "15", 0), None, "not its whole value");
     }
 
     #[test]
