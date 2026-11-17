@@ -46,7 +46,7 @@ cargo build --release --features render
 
 Run any command with `--help` for its options.
 
-`evidence/` holds what Alchemy's source no longer says about itself: what each name was taken from (`<game>-names.tsv`) and what each fake match's plain form costs (`<game>-fakematch.tsv`). The tables are compiled into the program, so after changing a row, build it again.
+`evidence/` holds what Alchemy's source no longer says about itself: what each name was taken from (`<game>-names.tsv`) and what each fake match's plain form costs (`<game>-fakematch.tsv`). The tables are compiled into the program, so after changing a row, build it again, or point `ALCHEMY_EVIDENCE` at a folder holding the changed tables, which are then read in place of the compiled ones.
 
 ## Progress
 

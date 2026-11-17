@@ -5,15 +5,38 @@
 //! the tag's word and kind, the tag's text after them). Both are compiled in
 //! from this repository's `evidence/` folder by `build.rs`, so a program
 //! reads the evidence of its own revision; a changed row needs a rebuild.
+//! `ALCHEMY_EVIDENCE` names a folder whose tables are read in their place
+//! as the program runs, so rows being written in a working copy of
+//! `evidence/` are judged without rebuilding; a table the folder lacks is
+//! still the compiled one.
+
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 
 mod tables {
     include!(concat!(env!("OUT_DIR"), "/evidence.rs"));
 }
 
+/// The environment variable naming a folder of tables read at run time.
+pub const OVERRIDE: &str = "ALCHEMY_EVIDENCE";
+
 /// A table of `evidence/` by its file name (`tbs-names.tsv`), or `None`
-/// for a game not yet converted.
+/// for a game not yet converted: the one in `ALCHEMY_EVIDENCE`'s folder
+/// when it is set and holds the file, else the one compiled in.
 pub fn table(name: &str) -> Option<&'static str> {
+    if let Some(folder) = std::env::var_os(OVERRIDE) {
+        if let Some(text) = read_once(&std::path::Path::new(&folder).join(name)) {
+            return Some(text);
+        }
+    }
     tables::TABLES.iter().find(|(file, _)| *file == name).map(|(_, text)| *text)
+}
+
+/// A table read from a file once per run and kept for the rest of it.
+fn read_once(path: &std::path::Path) -> Option<&'static str> {
+    static READ: OnceLock<Mutex<HashMap<std::path::PathBuf, Option<&'static str>>>> = OnceLock::new();
+    let mut read = READ.get_or_init(Default::default).lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    *read.entry(path.to_path_buf()).or_insert_with(|| std::fs::read_to_string(path).ok().map(|text| &*Box::leak(text.into_boxed_str())))
 }
 
 /// A table's rows, its header line left out, each split at its tabs into
@@ -119,6 +142,16 @@ mod tests {
         assert!(measured.iter().all(|row| row.file.starts_with("games/tbs/") && (row.kind.starts_with("FAKEMATCH(") || row.kind.starts_with("LEFTOVER("))));
         // A game not yet converted has no table, and so no rows.
         assert!(table("xyz-names.tsv").is_none() && names("xyz").unwrap().is_empty() && measurements("xyz").unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_folder_of_tables_read_as_the_program_runs() {
+        let folder = std::env::temp_dir().join(format!("alchemy-evidence-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        std::fs::write(folder.join("xyz-names.tsv"), "name\tkind\tevidence\tfile\nA\tthe game\t\"A\" (MsgA)\tgames/xyz/a.c\n").unwrap();
+        assert!(read_once(&folder.join("xyz-names.tsv")).is_some_and(|text| text.contains("MsgA")));
+        assert!(read_once(&folder.join("tbs-names.tsv")).is_none(), "a table the folder lacks is not read from it");
+        std::fs::remove_dir_all(&folder).unwrap();
     }
 
     #[test]
