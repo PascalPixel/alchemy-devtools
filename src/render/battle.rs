@@ -137,9 +137,8 @@ pub struct Symbols {
     owner_states: u32,
     /// The characters' unit records, one after another (gCharacterUnits).
     owners: u32,
-    /// Whether the chooser loads a preset before it waits for A (The Broken
-    /// Seal's DebugParameterSet_Load), which lets Down go; The Lost Age's
-    /// loads the one A picks.
+    /// Whether the chooser loads a preset before it waits for A, which lets
+    /// Down go (the layout's, by game).
     preset_first: bool,
     /// Where the game's structures keep what the run reads.
     pub b: super::layout::BattleLayout,
@@ -184,7 +183,7 @@ impl Symbols {
             game_flags: at("gGameFlagBytes")?,
             owner_states: slot("gEnemyUnits", b.heap_enemy_units)?,
             owners: either("gCharacterUnits", "gOwnerStates")?,
-            preset_first: find("DebugParameterSet_Load").is_some(),
+            preset_first: b.preset_first,
             b,
         })
     }

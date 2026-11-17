@@ -408,6 +408,11 @@ pub struct BattleLayout {
     /// offsets into gHeapSlots.
     pub heap_battle: u32,
     pub heap_enemy_units: u32,
+    /// Whether the debug chooser loads a preset before it waits for A (The
+    /// Broken Seal's), which lets Down go; The Lost Age's loads the one A
+    /// picks. A property of the game, not of what its source calls the
+    /// routine: The Lost Age's took The Broken Seal's name.
+    pub preset_first: bool,
 }
 
 /// Each BattleLayout value as each game's C expression.
@@ -500,6 +505,7 @@ impl BattleLayout {
             obj_palette: 0x14,
             heap_battle: 0x24,
             heap_enemy_units: 0xd8,
+            preset_first: true,
         }
     }
 
@@ -556,6 +562,7 @@ impl BattleLayout {
             obj_palette: get("obj_palette"),
             heap_battle: get("heap_battle"),
             heap_enemy_units: get("heap_enemy_units"),
+            preset_first: game == Game::Tbs,
         })
     }
 }
