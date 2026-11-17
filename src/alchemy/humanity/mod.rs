@@ -1134,9 +1134,11 @@ impl<'r, 'a> Walk<'r, 'a> {
         self.report.note(metric, self.file, line, literal);
     }
 
-    /// A literal standing alone between `(` or `,` and `,` or `)`: an argument or list element.
+    /// A literal standing alone between `(` or `,` and `,` or `)`, its sign
+    /// included (`toFIXED(-32)`): an argument or list element.
     fn is_argument(&self, at: usize) -> bool {
-        let before = at.checked_sub(1).map_or("", |at| self.code.text(at));
+        let text = |offset: usize| at.checked_sub(offset).map_or("", |at| self.code.text(at));
+        let before = if text(1) == "-" { text(2) } else { text(1) };
         let after = self.code.tokens.get(at + 1).map_or("", |t| t.text);
         matches!(before, "(" | ",") && matches!(after, ")" | ",")
     }
@@ -2907,15 +2909,17 @@ mod tests {
         // call's 12, 58 and 16; through the call layers: Event_Wait's frames
         // and Actor_Face's delay, not its actor 30.
         assert_eq!(listed("honest_pointer"), ["48", "24", "104", "120", "12", "58", "16", "60", "20"]);
-        // -16 fills dx; 32 is an offset in dx; 16 is a shift's amount; the
-        // window's edges are a rectangle's, Blend's are not.
-        assert_eq!(listed("honest_position"), ["16", "32", "96", "224", "104"]);
+        // -16 is passed alone, as 16 would be: dx's data. 32 is an offset in
+        // dx; 16 is a shift's amount; the window's edges are a rectangle's,
+        // Blend's are not.
+        assert_eq!(listed("honest_position"), ["32", "96", "224", "104"]);
+        assert_eq!(listed("data_argument_coordinate"), ["16"]);
         assert_eq!(listed("honest_duration"), ["30"]);
         assert_eq!(listed("honest_damping"), ["60"]);
         assert_eq!(listed("honest_random"), ["120", "90", "60"]);
         // An angle reckoned from a row is no position.
         assert_eq!(listed("magic_code"), ["30", "16", "10", "12", "3553"]);
-        assert_eq!(report.total("magic_code_all"), 24);
+        assert_eq!(report.total("magic_code_all"), 23);
     }
 
     #[test]
@@ -2978,6 +2982,16 @@ mod tests {
         assert_eq!(listed("honest_position"), ["28"]);
         // A force, a shift that is no shake, and a unit's level.
         assert_eq!(listed("magic_code"), ["12", "12", "16", "16", "10"]);
+    }
+
+    #[test]
+    fn a_signed_number_passed_alone_is_an_argument() {
+        let header = "#define toFIXED(a) ((s32)((a) * FIXED_ONE))\nvoid Unit_AddPp(s32 unit, s32 amount);\n";
+        let source = "void Run(void) {\n    actor->groundHeight = toFIXED(-240);\n    Unit_AddPp(IVAN, -35);\n    F(a - 16);\n}\n";
+        let report = game([("f.h", header), ("f.c", source)]);
+        assert_eq!(report.total("data_argument_composed"), 1, "toFIXED(-240)");
+        assert_eq!(list(&[("tbs", &report)], "magic_argument"), "tbs\tf.c:3\t35\tUnit_AddPp amount\n", "a lone amount, still to name");
+        assert_eq!(report.total("magic_code"), 2, "35 and the 16 a difference takes");
     }
 
     #[test]
