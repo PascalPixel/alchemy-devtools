@@ -32,14 +32,16 @@ const POSITION_WORDS: &[&str] = &["x", "y", "z", "dx", "dy", "dz", "row", "colum
 /// Words of a name that hold a duration or a moment in frames.
 const DURATION_WORDS: &[&str] = &["frame", "frames", "timer", "delay", "duration", "countdown", "wait", "ticks", "vblank", "vblanks"];
 /// Words of a name that hold a fade's or a shake's level (`fade = -16`,
-/// `shake = -128`): the brightness or the sway it is set to, a model's shade
-/// on the canvas (`shade = -16`) included.
-const LEVEL_WORDS: &[&str] = &["fade", "shake", "shade", "brightness"];
-/// Words of a variable that holds a colour channel's level, 0 to 31 in
-/// RGB555 (`if (blue > 26)`), as `RGB(r, g, b)` takes it: a level, as a
-/// fade's is. Only a variable's own words: a constant's (`ACTOR_RED_COGS`)
-/// name a thing.
-const CHANNEL_WORDS: &[&str] = &["red", "green", "blue"];
+/// `shake = -128`): the brightness or the sway it is set to.
+const LEVEL_WORDS: &[&str] = &["fade", "shake"];
+/// Words of a variable that holds a tone: a model's shade on the canvas, a
+/// brightness, or a colour channel's level, 0 to 31 in RGB555, as `RGB(r, g,
+/// b)` takes it. Read only where the number is the level itself
+/// (`tone_level`).
+const TONE_WORDS: &[&str] = &["shade", "brightness", "red", "green", "blue"];
+/// Words that make a tone's name something other than its level:
+/// `redPhase`, `shadeScale`, `blueIndex`.
+const NOT_TONE_WORDS: &[&str] = &["scale", "phase", "mode", "state", "count", "index"];
 /// Words of a name that holds a percentage (`maxHpPercent = 12`).
 const PERCENT_WORDS: &[&str] = &["percent"];
 /// Words that make a name something else whatever its other words say: a
@@ -89,9 +91,8 @@ fn split(name: &str, letters: bool) -> Vec<String> {
 }
 
 /// What a name (or a member chain's names) says its value is: a `position`,
-/// a `duration`, a fade's, shake's or colour channel's `level` or a
-/// percentage (`decimal`), none where any word makes it a rate, scale or angle
-/// (`fadeStep`).
+/// a `duration`, a fade's or shake's `level` or a percentage (`decimal`), none
+/// where any word makes it a rate, scale or angle (`fadeStep`).
 pub fn named_kind<'n>(names: impl IntoIterator<Item = &'n str>) -> Option<&'static str> {
     let (mut position, mut duration, mut level, mut percent) = (false, false, false, false);
     for name in names {
@@ -102,7 +103,7 @@ pub fn named_kind<'n>(names: impl IntoIterator<Item = &'n str>) -> Option<&'stat
         }
         position |= has(POSITION_WORDS);
         duration |= has(DURATION_WORDS);
-        level |= has(LEVEL_WORDS) || (has(CHANNEL_WORDS) && name.bytes().any(|b| b.is_ascii_lowercase()));
+        level |= has(LEVEL_WORDS);
         percent |= has(PERCENT_WORDS);
     }
     if position {
@@ -455,7 +456,47 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
     }
     let kinds: Vec<&str> = found.iter().filter_map(|chain| named_kind(chain.iter().copied())).collect();
     let named = kinds.iter().find(|&&kind| kind == "position").or(kinds.first()).copied();
-    named.or_else(|| frame_count(tokens, at, floor, limit).then_some("duration"))
+    named.or_else(|| tone_level(tokens, at, floor).then_some("level")).or_else(|| frame_count(tokens, at, floor, limit).then_some("duration"))
+}
+
+/// Whether a member chain names a tone's variable (`blue`, `model->shade`,
+/// `greenLift`): a variable's own words, never a constant's
+/// (`ACTOR_RED_COGS` names a thing).
+fn is_tone(chain: &[&str]) -> bool {
+    let Some(name) = chain.last() else { return false };
+    let words = all_words(name);
+    let has = |list: &[&str]| words.iter().any(|word| list.contains(&word.as_str()));
+    name.bytes().any(|b| b.is_ascii_lowercase()) && has(TONE_WORDS) && !has(NOT_TONE_WORDS) && !has(OTHER_WORDS)
+}
+
+/// Whether the number at `at` is a tone's level: the whole value set to a
+/// tone's variable (`blue = 26`, `shade = -16`, `red += 22`), an addend of it
+/// in its own new value (`shade = shade - i * 4 + 40`), or a bound compared
+/// with tones alone (`if (blue > 26)`, `if (red + green + blue > 60)`). Never
+/// a factor or divisor (`* index / 64`), and never a number in a value given
+/// to something else (`*pixel = 63 - red`).
+fn tone_level(tokens: &[Token], at: usize, floor: usize) -> bool {
+    if factors(tokens, at, floor).0.len() > 1 {
+        return false;
+    }
+    let (start, end, left) = span(tokens, at, floor);
+    let (found, _) = chains(tokens, start, end);
+    if let Some(op) = left.filter(|&left| ASSIGNMENTS.contains(&tokens[left].text) && left > floor) {
+        let (target_start, target_end, _) = span(tokens, op - 1, floor);
+        let (target, _) = chains(tokens, target_start, target_end);
+        let Some(target) = target.last().filter(|target| target_end + 1 == op && is_tone(target)) else { return false };
+        let whole = (start..=end).all(|index| index == at || (index + 1 == at && tokens[index].text == "-"));
+        return match tokens[op].text {
+            "+=" | "-=" => whole,
+            "=" => whole || found.iter().any(|chain| chain == target),
+            _ => false,
+        };
+    }
+    let comparison = (start..=end).any(|index| matches!(tokens[index].text, "<" | "<=" | ">" | ">=" | "==" | "!="));
+    let plain = (start..=end).all(|index| {
+        matches!(tokens[index].kind, Kind::Ident | Kind::Number) || matches!(tokens[index].text, "+" | "-" | "<" | "<=" | ">" | ">=" | "==" | "!=" | "." | "->")
+    });
+    comparison && plain && !found.is_empty() && found.iter().all(|chain| is_tone(chain))
 }
 
 /// The bracket that closes the one opening at `open`, no further than `limit`.
@@ -952,7 +993,21 @@ mod tests {
         assert_eq!(kind_of("void F(void) { if (blue > 26) blue = 26; }", "26", 0), Some("level"));
         assert_eq!(kind_of("void F(void) { model->shade = -16; }", "16", 0), Some("level"));
         assert_eq!(kind_of("void F(void) { brightnessDelta = -12; }", "12", 0), Some("level"));
+        assert_eq!(kind_of("void F(void) { red += 22; }", "22", 0), Some("level"));
+        assert_eq!(kind_of("void F(void) { shade = shade - i * 4 + 40; }", "40", 0), Some("level"), "an addend of it");
+        assert_eq!(kind_of("void F(void) { if (red + green + blue > 60) {} }", "60", 0), Some("level"));
         assert_eq!(kind_of("void F(void) { if (id == ACTOR_RED_COGS + 12) {} }", "12", 0), None, "a constant's word names a thing");
+        // The ramp's last palette index, its 64 entries, an RGB555 field's
+        // factor, a shade's floor reckoned from a frame, a phase, and a
+        // number given to something else.
+        assert_eq!(kind_of("void F(void) { *pixel = 63 - red; }", "63", 0), None);
+        assert_eq!(kind_of("void F(void) { red = (redOffset + 16) * index / 64; }", "64", 0), None);
+        assert_eq!(kind_of("void F(void) { s32 green = grey * 32; }", "32", 0), None);
+        assert_eq!(kind_of("void F(void) { shade = t * 4 - 64; }", "64", 0), None);
+        assert_eq!(kind_of("void F(void) { redPhase = 40; }", "40", 0), None);
+        assert_eq!(kind_of("void F(void) { x2 = blue + 12; }", "12", 0), Some("position"), "the target's own words");
+        assert_eq!(kind_of("void F(void) { v = blue + 12; }", "12", 0), None);
+        assert_eq!(kind_of("void F(void) { if (Get(blue) > 26) {} }", "26", 0), None, "an argument says nothing");
         assert_eq!(kind_of("void F(void) { if (logEColumn == 24) {} }", "24", 0), Some("position"));
         assert_eq!(kind_of("void F(void) { if (logJRow == 15) {} }", "15", 0), Some("position"));
         assert_eq!(kind_of("void F(void) { if (gVBlankCount % 80 == 0) {} }", "80", 0), Some("duration"), "VBlank is one word");
