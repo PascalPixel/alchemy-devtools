@@ -21,10 +21,16 @@ use crate::gba::clex::{Kind, Token};
 const UNITS: &[&str] = &["FIXED_ONE", "TRIG_TURN", "FACING_STEP", "DAMPING_SCALE"];
 const UNIT_CALLS: &[&str] = &["toFIXED", "INTtoFIXED", "DEGtoANG", "Q_8_8"];
 
-/// A constant that is a scale's unit, as `FIXED_ONE` is a 16.16 number's:
-/// `SOUND_TEMPO_SCALE_NORMAL * 15 / 16`.
+/// A constant that is a scale's one, as `FIXED_ONE` is a 16.16 number's
+/// (`SOUND_TEMPO_SCALE_NORMAL`, `AFFINE_SCALE_ONE`, `STAT_SCALE_ONE`): it
+/// composes a fraction only with a divisor, `SOUND_TEMPO_SCALE_NORMAL * 15 /
+/// 16`. A scale's other constants (`BGM_UNITY_SCALE`, `BOUNCE_SCALE_STEPS`)
+/// are not its one.
 fn is_scale(name: &str) -> bool {
-    name.bytes().all(|b| !b.is_ascii_lowercase()) && words(name).iter().any(|word| word == "scale")
+    let words = words(name);
+    name.bytes().all(|b| !b.is_ascii_lowercase())
+        && words.iter().any(|word| word == "scale")
+        && words.last().is_some_and(|word| matches!(word.as_str(), "one" | "normal" | "unity"))
 }
 
 /// Words of a name that hold a position or a size in pixels (or cells).
@@ -410,13 +416,19 @@ fn switch_subject(tokens: &[Token], at: usize, floor: usize) -> Option<(usize, u
 pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<&'static str> {
     let text = tokens[at].text;
     let (factors, own) = factors(tokens, at, floor);
-    if factors.iter().any(|(_, operand)| UNITS.contains(operand) || UNIT_CALLS.contains(operand) || is_scale(operand)) {
+    let divided = factors.iter().any(|(op, _)| *op == "/");
+    if factors.iter().any(|(_, operand)| UNITS.contains(operand) || UNIT_CALLS.contains(operand) || (divided && is_scale(operand))) {
         return Some("composed");
     }
     let (start, end, left) = span(tokens, at, floor);
-    // A fraction a unit's own call composes: `Q_8_8(11.0 / 16)`.
-    let unit_call = left.is_some_and(|left| tokens[left].text == "(" && left > floor && UNIT_CALLS.contains(&tokens[left - 1].text));
-    if unit_call && factors[own].0 == "/" {
+    // A fraction a unit's own call composes, its whole argument two numbers:
+    // `Q_8_8(11.0 / 16)`.
+    let fraction = |open: usize| {
+        let texts: Vec<&Token> = tokens.iter().skip(open + 1).take(4).collect();
+        matches!(texts[..], [a, b, c, d] if a.kind == Kind::Number && b.text == "/" && c.kind == Kind::Number && d.text == ")")
+    };
+    let unit_call = left.is_some_and(|left| tokens[left].text == "(" && left > floor && UNIT_CALLS.contains(&tokens[left - 1].text) && fraction(left));
+    if unit_call {
         return Some("composed");
     }
     let (statement_start, statement_end) = statement(tokens, at, floor);
@@ -986,6 +998,13 @@ mod tests {
         assert_eq!(kind_of("void F(void) { scale = Q_8_8(1) / 16; }", "16", 0), Some("composed"));
         assert_eq!(kind_of("void F(void) { Sound_SetBgmTempo(SOUND_TEMPO_SCALE_NORMAL * 15 / 16); }", "15", 0), Some("composed"));
         assert_eq!(kind_of("void F(void) { pos.y = INTtoFIXED(i / 3 * 32) + z; }", "32", 0), None, "a factor, not the fraction's divisor");
+        assert_eq!(kind_of("void F(void) { pos.y = INTtoFIXED(i / 3 * 32) + z; }", "3", 0), None, "no fraction of two numbers");
+        assert_eq!(kind_of("void F(void) { x = AFFINE_SCALE_ONE * 15 / 16; }", "15", 0), Some("composed"));
+        // Semitones in an octave, and a scale's constant that is not its one.
+        let tempo = "void F(void) { pitch = (s16)gBgmTempoPitch * 12 - 12 * BGM_UNITY_SCALE; }";
+        assert_eq!(kind_of(tempo, "12", 0), None);
+        assert_eq!(kind_of(tempo, "12", 1), None, "no divisor");
+        assert_eq!(kind_of("void F(void) { v = BOUNCE_SCALE_STEPS * 12 / 16; }", "12", 0), None, "not a scale's one");
     }
 
     #[test]
