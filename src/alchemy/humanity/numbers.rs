@@ -630,6 +630,38 @@ pub fn random_local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> 
     false
 }
 
+/// The calls a decimal number is reckoned with at expression level, when it
+/// is compared with them or offsets them, not a factor or a shift's amount:
+/// `FIELD_CELL` of `FIELD_CELL(actor->x.fixed) == 15` and of
+/// `FIELD_CELL(x) - 42`, none of `FIELD_CELL(x) + FIELD_CELL(z) * 128`.
+pub fn operand_calls(tokens: &[Token], at: usize, floor: usize) -> Vec<String> {
+    let shift = at > floor && matches!(tokens[at - 1].text, "<<" | ">>");
+    if !is_decimal(tokens[at].text) || shift || factors(tokens, at, floor).len() > 1 {
+        return Vec::new();
+    }
+    let (start, end, _) = span(tokens, at, floor);
+    // Whether each open bracket hides what it holds: a call's arguments and
+    // an index do, a group or a cast does not (`(u32)(FIELD_CELL(x) - 15) > 6`).
+    let mut opaque: Vec<bool> = Vec::new();
+    let mut calls = Vec::new();
+    for index in start..=end {
+        match tokens[index].text {
+            "(" | "[" => {
+                let call = tokens[index].text == "(" && index > start && tokens[index - 1].kind == Kind::Ident;
+                if call && !opaque.contains(&true) {
+                    calls.push(tokens[index - 1].text.to_string());
+                }
+                opaque.push(call || tokens[index].text == "[");
+            }
+            ")" | "]" => {
+                opaque.pop();
+            }
+            _ => {}
+        }
+    }
+    calls
+}
+
 /// Whether the number at `at` is the size in a local array's declarator,
 /// `u8 elements[10];` or `struct Actor *shards[20];`: a count of its own
 /// elements. An index into an array (`x = table[10]`) is not one.
@@ -847,6 +879,21 @@ mod tests {
         assert_eq!(kind_of("void F(void) { s32 size = 10; Draw(size); x = Random16(); }", "10", 0), None, "read without a roll");
         assert_eq!(kind_of("void F(void) { a->mask = 15; x = a->mask & Random16(); }", "15", 0), None, "no plain local");
         assert_eq!(kind_of("void F(void) { s32 m = 15 + n; x = m & Random16(); }", "15", 0), None, "not its whole value");
+    }
+
+    #[test]
+    fn calls_a_number_is_reckoned_with() {
+        let calls = |code: &str, number: &str| {
+            let tokens: Vec<Token> = clex::lex(code).into_iter().filter(|t| t.kind != Kind::Comment).collect();
+            let at = tokens.iter().position(|t| t.text == number).expect("the number");
+            operand_calls(&tokens, at, 0)
+        };
+        assert_eq!(calls("if (FIELD_CELL(a->x.fixed) == 15) {}", "15"), ["FIELD_CELL"]);
+        assert_eq!(calls("Set(FIELD_CELL(a->x.fixed) - 42, 0);", "42"), ["FIELD_CELL"]);
+        assert_eq!(calls("if ((u32)(FIELD_CELL(x) - 15) > 16) {}", "16"), ["FIELD_CELL"], "through a cast and a group");
+        assert!(calls("i = FIELD_CELL(x) + FIELD_CELL(z) * 128;", "128").is_empty(), "a factor");
+        assert!(calls("if (F(G(x) == 15)) {}", "15") == ["G"], "the call holding it is no operand");
+        assert!(calls("if (FIELD_CELL(x) << 12) {}", "12").is_empty(), "a shift's amount");
     }
 
     #[test]

@@ -144,6 +144,9 @@ pub struct Report {
     /// Function-like macros that only compose a number from their parameters
     /// (`PIXELS`, `RGB`, `DMA_COPY_WORDS`): S3's composed forms.
     compositions: HashSet<String>,
+    /// Function-like macros that bring a coordinate down to the map grid's
+    /// cells or tiles (`FIELD_CELL(coordinate)`, `CELL_HEIGHT_STEPS(height)`).
+    grid_conversions: HashSet<String>,
     function_bodies: HashMap<String, Group>,
     table_bodies: HashMap<String, Group>,
     /// Every name the source defines or declares, for the naming checks.
@@ -182,6 +185,9 @@ struct Candidate {
     /// Inside a function-like macro's own definition, which names it
     /// (`#define FIELD_HALF_CELL(v) ((v) >> 19)`).
     definition: bool,
+    /// The calls it is compared with or offsets at expression level
+    /// (`FIELD_CELL` of `FIELD_CELL(x) == 15`).
+    operand_calls: Vec<String>,
 }
 
 /// The words of parameter names that hold data S3 lets stay a number: a
@@ -428,15 +434,21 @@ impl Report {
 
     /// The honest kind of a number by the calls it stands in, whatever their
     /// parameters are named: a place or size on the map grid in a map-copy
-    /// call (`MapGrid_CopyCells(32, 24, 2, 2, 30, 24)`), a place in an OAM
-    /// word (`OBJ_X(560 - digits * 10)`), and the animation an actor's
-    /// sheet numbers for itself (`Actor_SetAnimation(ACTOR_ALEX, 13)`).
+    /// call (`MapGrid_CopyCells(32, 24, 2, 2, 30, 24)`) or beside a cell the
+    /// grid's own macro gives (`FIELD_CELL(x) == 15`), a place in an OAM word
+    /// (`OBJ_X(560 - digits * 10)`), and the animation an actor's sheet
+    /// numbers for itself (`Actor_SetAnimation(ACTOR_ALEX, 13)`).
     /// Decimal only, never a shift's amount, as S3 writes these.
-    fn honest_by_call(candidate: &Candidate) -> Option<&'static str> {
+    fn honest_by_call(&self, candidate: &Candidate) -> Option<&'static str> {
         if !numbers::is_decimal(&candidate.literal) || candidate.shift {
             return None;
         }
         if candidate.calls.iter().any(|(callee, _)| matches!(callee.as_str(), "OBJ_X" | "OBJ_Y")) {
+            return Some("position");
+        }
+        // Compared with a cell or tile of the map grid, or offsetting one:
+        // `FIELD_CELL(actor->x.fixed) == 15`, `FIELD_CELL(x) - 42`.
+        if candidate.operand_calls.iter().any(|callee| self.grid_conversions.contains(callee)) {
             return Some("position");
         }
         let (callee, at) = candidate.calls.first()?;
@@ -526,7 +538,7 @@ impl Report {
             // A number in a function-like macro's own body is the name's
             // definition: the macro is the name S3 asks for.
             let definition = candidate.definition.then_some("definition");
-            match local.or_else(|| Self::honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)).or(definition) {
+            match local.or_else(|| self.honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)).or(definition) {
                 Some(kind) => self.note(&format!("honest_{kind}"), file, line, &what),
                 None => {
                     self.note("magic_code", file, line, literal);
@@ -752,6 +764,34 @@ fn is_composition<'a>(parameters: &[&str], body: impl Iterator<Item = &'a str>) 
         }
     }
     operator && used
+}
+
+/// Whether a function-like macro brings a coordinate down to the map grid:
+/// its name says cell or tile, its one parameter a coordinate, position or
+/// height, and its body only scales that down by a shift or a divisor
+/// (`FIELD_CELL(coordinate) ((coordinate) >> FIELD_CELL_SHIFT)`,
+/// `TILE(position) ((position) / toFIXED(16))`, `CELL_HEIGHT_STEPS(height)`).
+/// A cell's code or a packed word's tile (`CELL_CODE(attributes)`) is no
+/// place.
+fn is_grid_conversion<'a>(name: &str, parameters: &[&str], body: impl Iterator<Item = &'a str>) -> bool {
+    let named = numbers::words(name).iter().any(|word| matches!(word.as_str(), "cell" | "tile"));
+    let [parameter] = parameters else { return false };
+    let coordinate = numbers::words(parameter).iter().any(|word| matches!(word.as_str(), "coordinate" | "position" | "height"));
+    if !named || !coordinate {
+        return false;
+    }
+    let (mut scaled, mut used) = (false, false);
+    for word in body.filter(|&word| word != "\\") {
+        match word {
+            ">>" | "/" => scaled = true,
+            "(" | ")" | "u32" | "s32" | "toFIXED" | "INTtoFIXED" => {}
+            _ if word == *parameter => used = true,
+            _ if word.starts_with(|c: char| c.is_ascii_digit()) => {}
+            _ if is_macro_name(word) => {}
+            _ => return false,
+        }
+    }
+    scaled && used
 }
 
 /// A hex number token's value.
@@ -1069,6 +1109,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 pointer: numbers::pointer_call(tokens, at, floor),
                 shift: at > floor && matches!(self.code.text(at - 1), "<<" | ">>"),
                 definition: function_macro == Some(true),
+                operand_calls: numbers::operand_calls(tokens, at, floor),
             };
             self.report.candidates.push(candidate);
             return;
@@ -1210,8 +1251,12 @@ impl<'r, 'a> Walk<'r, 'a> {
             })
             .collect();
         self.report.macro_parameters.entry(name.to_string()).or_insert(parameters);
-        if is_composition(&names, (body..end).filter(|&at| self.code.tokens[at].kind != Kind::Comment).map(|at| self.code.text(at))) {
+        let words = || (body..end).filter(|&at| self.code.tokens[at].kind != Kind::Comment).map(|at| self.code.text(at));
+        if is_composition(&names, words()) {
             self.report.compositions.insert(name.to_string());
+        }
+        if is_grid_conversion(name, &names, words()) {
+            self.report.grid_conversions.insert(name.to_string());
         }
     }
 
@@ -2854,6 +2899,35 @@ mod tests {
         // An angle reckoned from a row is no position.
         assert_eq!(listed("magic_code"), ["30", "16", "10", "12", "3553"]);
         assert_eq!(report.total("magic_code_all"), 24);
+    }
+
+    #[test]
+    fn places_on_the_map_grid_by_its_own_macros() {
+        let header = concat!(
+            "#define FIELD_CELL(coordinate) ((coordinate) >> FIELD_CELL_SHIFT)\n",
+            "#define CELL_HEIGHT_STEPS(height) ((height) >> 19)\n",
+            "#define TILE(position) ((position) / toFIXED(16))\n",
+            "#define CELL_CODE(attributes) ((attributes) >> 8)\n",
+            "#define FIELD_CELL_ORIGIN(cell) ((cell) << FIELD_CELL_SHIFT)\n",
+        );
+        let source = concat!(
+            "void Run(void) {\n",
+            "    if (FIELD_CELL(actor->x.fixed) == 15 && FIELD_CELL(actor->z.fixed) != 37) {}\n",
+            "    Set(FIELD_CELL(actor->x.fixed) - 42, 0);\n",
+            "    if (CELL_HEIGHT_STEPS(actor->y.fixed) > 12 || TILE(x) <= 45) {}\n",
+            "    index = FIELD_CELL(x) + FIELD_CELL(z) * 128;\n",
+            "    if (CELL_CODE(cell) == 13) {}\n",
+            "    if (FIELD_CELL_ORIGIN(cell) == 20) {}\n",
+            "}\n",
+        );
+        let report = game([("f.h", header), ("f.c", source)]);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.file == "f.c" && item.metric == metric).map(|item| item.what.clone()).collect()
+        };
+        assert_eq!(listed("honest_position"), ["15", "37", "42", "12", "45"]);
+        // The map's width a row is reckoned by, a cell's code, and a number
+        // compared with a coordinate brought up from a cell.
+        assert_eq!(listed("magic_code"), ["128", "13", "20"]);
     }
 
     #[test]
