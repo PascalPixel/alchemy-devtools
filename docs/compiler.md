@@ -137,6 +137,19 @@ need its `counts` pointer at all. When a loop's set-up block is rotated
 against the ROM, read the loop dump's `moved to` lines of both forms before
 trying stand-ins: they say which value has to reach the loop's top first.
 
+**A reversed loop sets its counter after what was moved out of it.
+Measured, 17 November 2026.** When the loop pass reverses an upward loop
+whose body never reads the counter, it writes the counter's new start just
+ahead of the loop, after the invariants it has already moved there. A loop
+written as a countdown has its start in the source, ahead of them. So a
+ROM that takes a local's address and then sets a countdown's start had an
+upward loop in its source. Six routines in The Lost Age carried a pointer
+to a local, set just above a countdown, to get that order; written upward
+(`for (n = 0; n < 5; n++)`) they need none. Twenty-six more countdowns of
+the kind, with nothing leaning on them, compile the same upward in every
+edition. A pointer that only stands for a local and is set right above a
+countdown is the sign to look for.
+
 **Jump threading stops at any instruction between two tests. Read (`jump.c`,
 `thread_jumps`).** It runs after each CSE. A store between two blocks that
 test one condition keeps them apart, but only a store to a variable used
