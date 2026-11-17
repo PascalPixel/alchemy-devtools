@@ -151,8 +151,10 @@ pub struct Report {
     /// stands for in the editions (`MENU_DRAW_STATUS_LABEL`).
     aliases: HashMap<String, BTreeSet<String>>,
     /// Names written beside a bitwise operator anywhere in the game
-    /// (`flags & PLACE_ENEMY_SIDE`, `~CELL_CODE_BITS`).
+    /// (`flags & PLACE_ENEMY_SIDE`, `~CELL_CODE_BITS`), and those written
+    /// beside arithmetic or an ordering (`CANVAS_SIZE + WIPE_LAG_MAX`).
     bitwise_names: HashSet<String>,
+    arithmetic_names: HashSet<String>,
     /// Each hex number a `#define` or enumerator gives a name alone that no
     /// rule of its file keeps, settled once every use of its name is read:
     /// file, line, number and name.
@@ -547,11 +549,14 @@ impl Report {
     /// (`magic_code`).
     fn finish(&mut self) {
         // A hex number named alone is a mask or a bit, which S3 keeps hex,
-        // where its name says so (`CELL_CODE_BITS`, `TRIGGER_KIND_MASK`) or
-        // is written beside `&`, `|`, `^` or `~` (`flags & PLACE_ENEMY_SIDE`).
+        // where its name says so (`CELL_CODE_BITS`, `TRIGGER_KIND_MASK`), or
+        // where it is written beside `&`, `|`, `^` or `~` (`flags &
+        // PLACE_ENEMY_SIDE`) and never reckoned with as a quantity
+        // (`front <= CANVAS_SIZE + WIPE_LAG_MAX` is a distance).
         for (file, line, text, name) in std::mem::take(&mut self.hex_definitions) {
             let said = numbers::words(&name).iter().any(|word| matches!(word.as_str(), "mask" | "bit" | "bits"));
-            if said || self.bitwise_names.contains(&name) {
+            let used = self.bitwise_names.contains(&name) && !self.arithmetic_names.contains(&name);
+            if said || used {
                 self.add("hex_mask", &file, 1);
             } else {
                 self.note("hex_other", &file, line, &text);
@@ -1521,14 +1526,22 @@ impl<'r, 'a> Walk<'r, 'a> {
     /// field stays, an offset, a count or a 16.16 value is written otherwise.
     fn hex(&mut self) {
         const BITWISE: &[&str] = &["&", "|", "^", "~", "<<", ">>", "&=", "|=", "^=", "<<=", ">>="];
-        // A name beside `&`, `|`, `^` or `~` is a mask or a bit wherever it
-        // is defined; one beside a shift is an amount of bits.
+        // A name beside `&`, `|`, `^` or `~` may be a mask or a bit wherever
+        // it is defined, one beside a shift is an amount of bits, and one
+        // beside arithmetic or an ordering is a quantity.
         const MASKING: &[&str] = &["&", "|", "^", "~", "&=", "|=", "^="];
+        const RECKONING: &[&str] = &["+", "-", "*", "/", "%", "<", "<=", ">", ">=", "+=", "-=", "*=", "/=", "%="];
         for at in 0..self.code.tokens.len() {
             let token = &self.code.tokens[at];
-            let beside = |index: Option<usize>| index.and_then(|index| self.code.tokens.get(index)).is_some_and(|t| MASKING.contains(&t.text));
-            if token.kind == Kind::Ident && (beside(at.checked_sub(1)) || beside(Some(at + 1))) {
+            let beside = |list: &[&str]| {
+                let near = |index: Option<usize>| index.and_then(|index| self.code.tokens.get(index)).is_some_and(|t| list.contains(&t.text));
+                near(at.checked_sub(1)) || near(Some(at + 1))
+            };
+            if token.kind == Kind::Ident && beside(MASKING) {
                 self.report.bitwise_names.insert(token.text.to_string());
+            }
+            if token.kind == Kind::Ident && beside(RECKONING) {
+                self.report.arithmetic_names.insert(token.text.to_string());
             }
         }
         let bits = self.bit_families();
@@ -3061,11 +3074,12 @@ mod tests {
     #[test]
     fn hex_named_alone_is_a_mask_by_its_name_or_its_uses() {
         let report = game([
-            ("a.h", "#define CELL_CODE_BITS 0xff00\n#define PLACE_ENEMY_SIDE 0x80\nenum { ICON_PSY_SEAL = 0x08 };\n#define LONE_VALUE 0x80\n"),
+            ("a.h", "#define CELL_CODE_BITS 0xff00\n#define PLACE_ENEMY_SIDE 0x80\nenum { ICON_PSY_SEAL = 0x08 };\n#define LONE_VALUE 0x80\n#define WIPE_LAG_MAX 0x3f\n"),
             ("b.c", "s32 F(s32 place, s32 icons) { return (place & PLACE_ENEMY_SIDE) + (icons | ICON_PSY_SEAL) + LONE_VALUE; }\n"),
+            ("c.c", "void G(void) { delay = Random16() & WIPE_LAG_MAX; while (front <= CANVAS_SIZE + WIPE_LAG_MAX) front++; }\n"),
         ]);
-        assert_eq!((report.total("hex_mask"), report.total("hex_other")), (3, 1));
-        assert_eq!(list(&[("tbs", &report)], "hex_other"), "tbs\ta.h:4\t0x80\n", "a value nothing masks with");
+        assert_eq!((report.total("hex_mask"), report.total("hex_other")), (3, 2));
+        assert_eq!(list(&[("tbs", &report)], "hex_other"), "tbs\ta.h:4\t0x80\ntbs\ta.h:5\t0x3f\n", "a value nothing masks with, and a distance reckoned with");
     }
 
     #[test]
