@@ -198,6 +198,9 @@ struct Candidate {
     /// The calls it is compared with or offsets at expression level
     /// (`FIELD_CELL` of `FIELD_CELL(x) == 15`).
     operand_calls: Vec<String>,
+    /// In a routine of the m4a sound driver, which keeps pret's own names
+    /// (`MidiKeyToCgbFreq`, `ply_xcmd`) and numbers.
+    driver: bool,
 }
 
 /// The words of parameter names that hold data S3 lets stay a number: a
@@ -584,7 +587,9 @@ impl Report {
             // A number in a function-like macro's own body is the name's
             // definition: the macro is the name S3 asks for.
             let definition = candidate.definition.then_some("definition");
-            match local.or_else(|| self.honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)).or(definition) {
+            // The m4a driver's own numbers, as pret's m4a.c writes them (W3).
+            let driver = candidate.driver.then_some("driver");
+            match local.or_else(|| self.honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)).or(definition).or(driver) {
                 Some(kind) => self.note(&format!("honest_{kind}"), file, line, &what),
                 None => {
                     self.note("magic_code", file, line, literal);
@@ -1156,6 +1161,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 shift: at > floor && matches!(self.code.text(at - 1), "<<" | ">>"),
                 definition: function_macro == Some(true),
                 operand_calls: numbers::operand_calls(tokens, at, floor),
+                driver: function_macro.is_none() && self.in_driver(),
             };
             self.report.candidates.push(candidate);
             return;
@@ -1170,6 +1176,21 @@ impl<'r, 'a> Walk<'r, 'a> {
         let before = if text(1) == "-" { text(2) } else { text(1) };
         let after = self.code.tokens.get(at + 1).map_or("", |t| t.text);
         matches!(before, "(" | ",") && matches!(after, ")" | ",")
+    }
+
+    /// Whether the routine being read is the m4a sound driver's: in the
+    /// sound folder, and named as m4a names its routines (`CgbSound`,
+    /// `m4aSoundMode`, `ply_xcmd`), not as S3 names the game's
+    /// (`Sound_Play`).
+    fn in_driver(&self) -> bool {
+        if !self.file.contains("/sound/") {
+            return false;
+        }
+        let Some(Declarator::Function(name)) = self.declarator(&self.statement) else { return false };
+        let module = name.split_once('_').is_some_and(|(module, rest)| {
+            module.starts_with(|c: char| c.is_ascii_uppercase()) && rest.starts_with(|c: char| c.is_ascii_uppercase())
+        });
+        !module
     }
 
     /// The last token of the routine being read: its closing brace, or the
@@ -2192,6 +2213,7 @@ const ROWS: &[(&str, &str)] = &[
     ("honest_animation", "  honest: a sheet's animations"),
     ("honest_level", "  honest: fade, shake levels"),
     ("honest_definition", "  honest: a macro's own definition"),
+    ("honest_driver", "  honest: the m4a driver's own"),
     ("data_argument", "numbers passed as data"),
     ("data_argument_frames", "  frames"),
     ("data_argument_coordinate", "  coordinates"),
@@ -3066,6 +3088,20 @@ mod tests {
         ]);
         assert_eq!((report.total("hex_mask"), report.total("hex_other")), (3, 1));
         assert_eq!(list(&[("tbs", &report)], "hex_other"), "tbs\ta.h:4\t0x80\n", "a value nothing masks with");
+    }
+
+    #[test]
+    fn the_sound_drivers_own_numbers() {
+        let driver = concat!(
+            "u32 MidiKeyToCgbFreq(u8 key) {\n    if (key <= 20)\n        key = 0;\n    key -= 21;\n    return key;\n}\n",
+            "void Sound_Play(s32 sound) {\n    if (sound >= 80)\n        Jingle();\n}\n",
+        );
+        let report = game([("games/tla/src/sound/driver.c", driver), ("games/tla/src/field/f.c", "u32 CgbSound(u8 key) { return key - 21; }\n")]);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.metric == metric).map(|item| format!("{}:{}", item.file.rsplit('/').next().unwrap(), item.line)).collect()
+        };
+        assert_eq!(listed("honest_driver"), ["driver.c:2", "driver.c:4"], "m4a's routine, named as m4a names them");
+        assert_eq!(listed("magic_code"), ["f.c:1", "driver.c:8"], "the game's own routine, and a routine outside the sound folder");
     }
 
     #[test]
