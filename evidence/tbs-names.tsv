@@ -3292,10 +3292,6 @@ ACTOR_FIRST_ISLE_LOG	what the player sees	two logs lying on the island's grass (
 ACTOR_FIRST_PLANT	what the player sees	small sprouts on the cliff ledges (its render)	games/tbs/src/scene/crossbone_isle.c
 ACTOR_FIRST_IVY	what the player sees	leafy ivy growing against the cliffs (its render)	games/tbs/src/scene/crossbone_isle.c
 FLAG_CROSSBONE_ISLE_FIRST_PLANT_GROWN	what the player sees	small sprouts on the cliff ledges (its render)	games/tbs/src/scene/crossbone_isle.c
-ACTOR_FIRST_LOG	what the player sees	yellow logs floating on green water (its render)	games/tbs/src/scene/crossbone_isle.c
-ACTOR_SECOND_LOG	what the player sees	a yellow log lying east-west in the west pool, at its south shore (its render)	games/tbs/src/scene/crossbone_isle.c
-ACTOR_THIRD_LOG	what the player sees	a yellow log lying east-west in the east pool, south of its middle (its render)	games/tbs/src/scene/crossbone_isle.c
-ACTOR_FOURTH_LOG	what the player sees	a yellow log lying north-south in the east pool, by its east wall (its render)	games/tbs/src/scene/crossbone_isle.c
 ACTOR_LOG_E	what the player sees	a yellow log lying north-south in the middle of the east pool (its render)	games/tbs/src/scene/crossbone_isle.c
 ACTOR_LOG_F	what the player sees	a yellow log lying north-south in the east pool, at its north-east corner (its render)	games/tbs/src/scene/crossbone_isle.c
 ACTOR_LOG_G	what the player sees	a yellow log lying north-south in the west pool, by its east wall (its render)	games/tbs/src/scene/crossbone_isle.c
@@ -3716,20 +3712,16 @@ ACTOR_GROUND_FLOOR_WOMAN_SEEKING_DODONPA	the game	"Where could Dodonpa be?" (Msg
 ACTOR_GROUND_FLOOR_FEASTING_MAN	the game	"Thanks to Hammet we can enjoy food and drink all day long!" (MsgLunpaHammetBuysDrink)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_GROUND_FLOOR_BOASTING_MAN	the game	"He's a money tree for us, hic!" (MsgLunpaHammetMoneyTree)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_GROUND_FLOOR_UPPER_HALL_GUARD	what the player sees	one of Dodonpa's men standing watch deeper in the floor, who throws out a party he sees (its render)	games/tbs/src/scene/lunpa_fortress.c
-ACTOR_GROUND_FLOOR_PATROL_GUARD	what the player sees	one of Dodonpa's men walking his rounds (gGroundFloorPatrolRoute), who throws out a party he sees (its render)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_GROUND_FLOOR_MAN_WONDERING_ABOUT_DONPA	the game	"Donpa is supposed to be old. I wonder what he's fighting with" (MsgLunpaDonpaResting)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_GROUND_FLOOR_STARTLED_OLD_MAN	the game	"Who goes there!" (MsgLunpaWhWhWho)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_GROUND_FLOOR_SECOND_SENTRY	the game	"I was told to stand guard" (MsgLunpaToldStandGuard)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_CELL_KEY	what the player sees	a golden key (SPRITE_KEY) in the south of the floor, which the party takes as the Cell Key (its render)	games/tbs/src/scene/lunpa_fortress.c
-ACTOR_UPPER_FLOOR_FIRST_PATROL	what the player sees	the first of the pair of Dodonpa's men who walk east and west together in the west passage, carrying a circle of light (gFirstPatrolRoute) (its render)	games/tbs/src/scene/lunpa_fortress.c
-ACTOR_UPPER_FLOOR_SECOND_PATROL	what the player sees	the second of the pair, a row of cells below the first (gSecondPatrolRoute) (its render)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_HALL_GUARD	what the player sees	one of Dodonpa's men standing in the hall, who challenges the party to a battle as it comes up to him (LunpaFortress_FightHallGuard) (its render)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_THREE_GUARDS_WEST	the game	"You guys are tougher than we thought" (MsgLunpaGuysTougherThought)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_THREE_GUARDS_MIDDLE	the game	"All right, all right. We give up!" (MsgLunpaRightRightGive)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_THREE_GUARDS_EAST	the game	"Don't hurt me again, you thieving scoundrel!" (MsgLunpaOwwwDontHurt)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_WEST_GUARD	what the player sees	one of Dodonpa's men standing in the west, who challenges the party to a battle as it comes up to him (LunpaFortress_FightWestGuard) (its render)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_EAST_GUARD	what the player sees	one of Dodonpa's men standing in the east, who challenges the party to a battle as it comes up to him (LunpaFortress_FightEastGuard) (its render)	games/tbs/src/scene/lunpa_fortress.c
-ACTOR_UPPER_FLOOR_HALL_PATROL	what the player sees	one of Dodonpa's men walking his rounds of the east hall, carrying a circle of light (gHallPatrolRoute) (its render)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_DODONPAS_WIFE	the game	"Dodonpa's wife was looking for him" (MsgLunpaWifeSeeksDodonpa)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_DONPAPPA	the game	"When my Papa's gone, I, Donpappa, shall protect Lunpa myself." (MsgLunpaDonpappaProtectsFortress)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_DODONPAS_DAUGHTER	the game	"I'm not going to marry anyone like my Papa when I grow up!" (MsgLunpaDaughterWillNotMarryPapa)	games/tbs/src/scene/lunpa_fortress.c
@@ -4852,13 +4844,6 @@ ASURA_CRESCENT_FADE_A_HEIGHT	its code	RedCrescentSheetB drawn 128 wide, 91, 59, 
 BLUE_FLAME_COLUMN_WIDTH	its code	Aqua Sock's column: width = 17, 104 tall, scrolled by 104; the splash at 17 * 104 drawn 34x65	games/tbs/src/battle_effect/battle_effect_casting_impact.c
 ROCK_SPIRE_WIDTH	its code	Terra Strike's spire drawn 32 wide, its height capped at 96	games/tbs/src/battle_effect/battle_effect_casting_impact.c
 FALLING_FLAME_WIDTH	its code	the comment's 32x64 flame of Forcible Arm and Truncheon Fist	games/tbs/src/battle_effect/battle_effect_casting_impact.c
-JUDGMENT_MOTES	its code	the gathering's 128 motes in PARTICLES, then its 128 sparks (JUDGMENT_SPARKS was &PARTICLES[128])	games/tbs/src/battle_effect/battle_effect_judgment.c
-JUDGMENT_RING_MOTES	its code	the ring of 128 motes at angle i * (TRIG_TURN / 128); the flash's of 256	games/tbs/src/battle_effect/battle_effect_judgment.c
-JUDGMENT_BEAM_WIDTH	its code	the comment's 24x64 beam at the sheet start, drawn twice mirrored	games/tbs/src/battle_effect/battle_effect_judgment.c
-JUDGMENT_FLARE_WIDTH	its code	the comment's two 24x24 flare pictures, drawn as four mirrored quarters	games/tbs/src/battle_effect/battle_effect_judgment.c
-JUDGMENT_EXPLOSION_WIDTH	its code	JUDGMENT_EXPLOSION_PICTURE_BYTES was 32 * 54	games/tbs/src/battle_effect/battle_effect_judgment.c
-JUDGMENT_SWEEP_BEACH	its code	the sweep loads RESOURCE_BEACH_BACKDROP on frame 150, RESOURCE_FOREST_BACKDROP on 214, returns to the battle on 280; A or B jumps to these frames	games/tbs/src/battle_effect/battle_effect_judgment.c
-JUDGMENT_SWEEP_EXPLOSION	its code	frame 64 loads the explosion sheet and the flashes; the falling flare draws until then	games/tbs/src/battle_effect/battle_effect_judgment.c
 THOR_SPARK_COUNT	its code	the spark launcher walks 910 particles from THOR_PARTICLES	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_BOLT_WIDTH	its code	the bolts drawn 72x72 at i % 3 * (72 * 72)	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_LIGHT_FAN_WIDTH	its code	LightFanSheet drawn 32x96 twice, mirrored	games/tbs/src/battle_effect/battle_effect_thor.c
@@ -4948,8 +4933,6 @@ BOREAS_TORRENT_RISE_FRAME	its code	from frame 16 the rising crystals count up (f
 BOREAS_TORRENT_CRASH_FRAME	its code	frame 72: SE_CRASH, the rising crystals become falling ones, the camera shakes 8 for 8 frames	games/tbs/src/battle_effect/battle_effect_boreas.c
 THOR_BEAM_FRAME	its code	frame 151 of the opening: SE_CRASH, then the beam drawn (frame - 151) * 20 + 44 lines tall with the light fans	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_BOLTS_FRAME	its code	stormFrame = frame - 80: SE_HEAVY_IMPACT every 8 frames, the 30 bolts drawn every 2 frames from 80 with the targets' tints	games/tbs/src/battle_effect/battle_effect_thor.c
-PROCNE_ARRIVAL_FRAME	its code	frame 160: RESOURCE_VIOLET_SKY_BACKDROP loads and SPRITE_PROCNE's objects spawn; A or B skips to it	games/tbs/src/battle_effect/battle_effect_procne.c
-PROCNE_DROP_FRAME	its code	frame 395: the lifted targets get BATTLE_UNIT_GRAVITY back; A or B after the arrival skips to it	games/tbs/src/battle_effect/battle_effect_procne.c
 NEPTUNE_FLARES_FRAME	its code	frame 152: the existing comment "Flares converge on Neptune's head", drawn from i / 4 + 152, with the background's darkening	games/tbs/src/battle_effect/battle_effect_neptune.c
 NEPTUNE_BURST_FRAME	its code	frame 222: SE_CRASH, the 64 burst flares seeded and the splash pictures drawn after it	games/tbs/src/battle_effect/battle_effect_neptune.c
 BIND_RUNE_FRAME	its code	the triangle of flares shrinks and turns while memberFrame < 64 ((64 - memberFrame) << 9 turns), the rune halves draw from 64, the damage shows at 64	games/tbs/src/battle_effect/battle_effect_bind.c
@@ -4974,7 +4957,6 @@ PARTICLE_STREAMS_SMALL_GLOW_SIZE	its picture	FlameSheetB's 8x8 glows	games/tbs/s
 GAIA_WALL_STAND_FRAME	its code	the existing comments "The rising wall widens a row at a time" (12 to 87) and "The standing wall" (88 to 159); dust rises and rocks respawn from 88	games/tbs/src/battle_effect/battle_effect_gaia.c
 GAIA_WALL_SINK_FRAME	its code	the existing comment "The wall sinks away", rows 7 down to 0 from frame 160, three frames each; rocks stop respawning	games/tbs/src/battle_effect/battle_effect_gaia.c
 CYBELE_LANDING_FRAME	its code	member i drops (gravity) at i * 5 + 286 and is tinted with SE_HEAVY_IMPACT at i * 5 + 302; the existing comment "Each target lands on a spreading ring" from 302; the ring and blast sheets load at 302	games/tbs/src/battle_effect/battle_effect_cybele.c
-JUDGMENT_BEAM_FRAME	its code	frame 143: the canvas fills and SE_CRASH; from 144 the two JUDGMENT_BEAM pictures fall (top = frame * 16 - 2272) and the zoom resets	games/tbs/src/battle_effect/battle_effect_judgment.c
 DJINN_ATTACK_DAMAGE_FRAME	its code	EFFECT_SHOW_DAMAGE(SE_IMPACT) at frame 56 in each of the four Djinn attacks	games/tbs/src/battle_effect/battle_effect_djinn_attacks.c
 TITAN_BLADE_STRIKE_FRAME	its code	frame 60: SE_CRASH, EFFECT_SHOW_DAMAGE(SE_HEAVY_IMPACT), a shake of 16, the canvas filled at its brightest, the sword dropping from then	games/tbs/src/battle_effect/battle_effect_titan_blade.c
 DEATH_PLUNGE_STRIKE_FRAME	its code	frame 54: the target tinted white with POSE_DAMAGE (existing comment "The target flashes and both bounce"), the flash on the user on 54 and 55, the damage shown	games/tbs/src/battle_effect/battle_effect_death_plunge.c
@@ -5159,8 +5141,6 @@ TILE_SIZE_8BPP	the hardware	GBATEK: an 8x8 tile of 256 colours is 64 bytes	games
 BLEND_WEIGHT_MAX	the hardware	GBATEK: BLDALPHA's EVA and EVB coefficients run 0 to 16 (16/16 full); the game writes BLEND_ALPHA(16 - i, 16) fades	games/tbs/include/system/io_reg.h
 FRAMES_PER_SECOND	the hardware	GBATEK: 59.73 Hz refresh; the title's comments count its waits of 60, 120 and 180 frames as one, two and three seconds	games/tbs/include/system/frame.h
 INTRO_OBJECT_COUNT	its code	IntroWork's OAM shadow is 120 entries; Title_UpdateIntroSprites hides the entries after its sprites up to 120	games/tbs/src/menu/title_intro.c
-INTRO_SLOPE_LEFT	its code	PLACE_ON_SLOPE interpolates y between slopeBaseY at x 104 and slopeTopY at x 184	games/tbs/src/menu/title_intro.c
-INTRO_SLOPE_RIGHT	its code	as INTRO_SLOPE_LEFT	games/tbs/src/menu/title_intro.c
 INTRO_SKIP_AFTER_FRAME	its code	Title_ShowIntro ignores A and START until frame 21	games/tbs/src/menu/title_intro.c
 INTRO_APPROACH_FRAME	its code	a skip jumps to frame 239, where INTRO_STATE_APPROACH is set	games/tbs/src/menu/title_intro.c
 INTRO_FLASH_FRAME	its code	at frame 280 Title_ShowIntro fades to white and loads the title picture	games/tbs/src/menu/title_intro.c
@@ -5414,3 +5394,203 @@ gElementGlow_UnusedWords	its code	the four words 0, 10, 20, 0 after gElementGlow
 gBattleKnockback_UnusedWords	its code	the three words 0, 20, 27 after gBattleKnockback_DistancePercent; no code names them	games/tbs/src/battle/knockback_tables.c
 gBattleHighlight_UnusedWords	its code	the two words 1, 27 after gBattleHighlight_BlendRamp; no code names them	games/tbs/src/battle/highlight_tables.c
 WEAPON	its uses	a row of gBattleUnit_WeaponKinds: the item id with its BattleWeaponKind above bit 9, as BattleUnit_GetWeaponKind unpacks it; the name is ours	games/tbs/include/battle/weapon_kind.h
+ACTOR_GROUND_FLOOR_PATROL_GUARD	what the player sees	one of Dodonpa's men walking his rounds (gLunpaFortressGroundFloorPatrolRoute), who throws out a party he sees (its render)	games/tbs/src/scene/lunpa_fortress.c
+ACTOR_UPPER_FLOOR_FIRST_PATROL	what the player sees	the first of the pair of Dodonpa's men who walk east and west together in the west passage, carrying a circle of light (gLunpaFortressFirstPatrolRoute) (its render)	games/tbs/src/scene/lunpa_fortress.c
+ACTOR_UPPER_FLOOR_SECOND_PATROL	what the player sees	the second of the pair, a row of cells below the first (gLunpaFortressSecondPatrolRoute) (its render)	games/tbs/src/scene/lunpa_fortress.c
+ACTOR_UPPER_FLOOR_HALL_PATROL	what the player sees	one of Dodonpa's men walking his rounds of the east hall, carrying a circle of light (gLunpaFortressHallPatrolRoute) (its render)	games/tbs/src/scene/lunpa_fortress.c
+FLARE_LINE_LEFT	what the player sees	the lens flare's discs and rings stand on one line running down and right from the sun in the gap in the clouds over the peak (its render)	games/tbs/src/menu/title_intro.c
+FLARE_LINE_RIGHT	what the player sees	the lens flare's line ends lowest at the right, its largest ring there (its render)	games/tbs/src/menu/title_intro.c
+gTitle_FlareColumns	what the player sees	the lens flare's discs and rings stand at six places along its line from the sun (its render)	games/tbs/src/menu/title_intro.c
+FLARE_OBJECT_COUNT	its code	the flare's pieces take 9 OAM entries on even VBlanks and 12 on odd ones; Title_UpdateIntroSprites builds the sun in entry 12, which the hiding loop has always hidden	games/tbs/src/menu/title_intro.c
+SUN_TILE	what the player sees	a white sun blazing in the gap in the clouds above the peak, the 64 by 64 sprite at OAM tile 0 (its render)	games/tbs/src/menu/title_intro.c
+SUN_X	what the player sees	the sun stands over the peak's tip in the gap in the clouds (its render)	games/tbs/src/menu/title_intro.c
+SUN_Y	what the player sees	the sun stands above the peak's tip and moves down with the clouds (its render)	games/tbs/src/menu/title_intro.c
+FLARE_ORANGE_DISC_TILE	its picture	intro_sun_2.png's first 32 by 32 picture, drawn whole: an orange disc ringed in dark red	games/tbs/src/menu/title_intro.c
+FLARE_RAINBOW_RING_TILE	its picture	intro_sun_2.png's second 32 by 32 picture, a quarter of a rainbow ring, mirrored into a 64 by 64 ring	games/tbs/src/menu/title_intro.c
+FLARE_GREEN_RING_TILE	its picture	intro_sun_2.png's third 32 by 32 picture, a quarter of a yellow-green ring, mirrored into a 64 by 64 ring	games/tbs/src/menu/title_intro.c
+FLARE_GREEN_DISC_TILE	its picture	intro_sun_3.png's first 16 by 16 picture, a quarter of a green disc with a cyan heart, mirrored into a 32 by 32 disc	games/tbs/src/menu/title_intro.c
+FLARE_WHITE_DISC_TILE	its picture	intro_sun_3.png's second 16 by 16 picture, a quarter of a white-hot disc edged in orange, mirrored into a 32 by 32 disc	games/tbs/src/menu/title_intro.c
+FLARE_DISC_RADIUS	its code	the discs are four 16x16 quarters or one 32x32 sprite, placed half their width left and up of their point on the line	games/tbs/src/menu/title_intro.c
+FLARE_RING_RADIUS	its code	the rings are four 32x32 quarters, placed half their width left and up of their point on the line	games/tbs/src/menu/title_intro.c
+OFFSCREEN_TILE	its twin	The Lost Age's title_intro.c names the same 511 OFFSCREEN_TILE (hz/ui): the map entry of the two columns past the screen's edge	games/tbs/src/menu/title_intro.c
+NINTENDO_LOGO_TILE	its twin	The Lost Age's title_intro.c names the same first tile of character block 1 NINTENDO_LOGO_TILE (hz/ui)	games/tbs/src/menu/title_intro.c
+CAMELOT_FLAG_TILE	its twin	The Lost Age's title_intro.c names the same tile, picture size and copy CAMELOT_FLAG_* (hz/ui); camelot_logo.tsv's CAMELOT_FLAG pictures start at tile 4, 16 tiles each	games/tbs/src/menu/title_intro.c
+CAMELOT_FLAG_PICTURE_BYTES	its twin	as CAMELOT_FLAG_TILE	games/tbs/src/menu/title_intro.c
+CAMELOT_FLAG_BYTES	its twin	as CAMELOT_FLAG_TILE	games/tbs/src/menu/title_intro.c
+SCREEN_TILE_BYTES	its twin	The Lost Age's title_intro.c names a screen of 256-colour tiles SCREEN_TILE_BYTES (hz/ui)	games/tbs/src/menu/title_intro.c
+TITLE_PICTURE_TILE	its picture	screen.png, the Golden Sun logo over the peak, which Title_ShowIntro unpacks into character block 1 after the flash	games/tbs/src/menu/title_intro.c
+CLOUDS_ROWS	what the player sees	BG1 is lilac clouds parting round a gap of blue sky, intro_clouds.png, 33 rows of tiles (its render)	games/tbs/src/menu/title_intro.c
+PEAK_MAP_ROW	what the player sees	BG2 is a tall rocky peak rising into the gap in the clouds, intro_peak.png (its render)	games/tbs/src/menu/title_intro.c
+PEAK_ROWS_ABOVE	its code	the peak's rows 4 to 1 are copied in as the view rises; intro_peak.png's rows 0 and 1 are blank	games/tbs/src/menu/title_intro.c
+INTRO_VRAM_ROWS	its code	each picture keeps 21 rows of tiles in VRAM (DISPLAY_TILE_HEIGHT + 1), the map wrapping round them	games/tbs/src/menu/title_intro.c
+INTRO_FIRST_MAP_ROW	its code	the pictures start scrolled 96 pixels down, so map row 11 is the one just above the screen and shows VRAM row 0	games/tbs/src/menu/title_intro.c
+SEPIA_LEVEL_MIN	its code	the sepia tint of TitlePaletteFade_BuildColors and PaletteFade_Build raises each channel below 8 to 8	games/tbs/include/graphics/palette_buffers.h
+SEPIA_LEVEL_MAX	its code	the sepia tint of TitlePaletteFade_BuildColors and PaletteFade_Build lowers each channel above 28 to 28	games/tbs/include/graphics/palette_buffers.h
+MUTED_RED_MIN	its code	the muted tint of TitlePaletteFade_BuildColors and PaletteFade_Build holds red to 10 to 28, green to 16 to 24 and blue to 16 to 26	games/tbs/include/graphics/palette_buffers.h
+MUTED_RED_MAX	its code	as MUTED_RED_MIN	games/tbs/include/graphics/palette_buffers.h
+MUTED_GREEN_MIN	its code	as MUTED_RED_MIN	games/tbs/include/graphics/palette_buffers.h
+MUTED_GREEN_MAX	its code	as MUTED_RED_MIN	games/tbs/include/graphics/palette_buffers.h
+MUTED_BLUE_MIN	its code	as MUTED_RED_MIN	games/tbs/include/graphics/palette_buffers.h
+MUTED_BLUE_MAX	its code	as MUTED_RED_MIN	games/tbs/include/graphics/palette_buffers.h
+FileScreen_GetPasswordCharacter	its twin	The Lost Age's clear.c names the same mapping of a password symbol to its character Clear_GetPasswordCharacter (hz/s3)	games/tbs/src/scene/file_screen.c
+FileScreen_IsRetreatBlocked	its twin	The Lost Age's clear.c names the same test Clear_IsRetreatBlocked (hz/s3); it reads FLAG_RETREAT_BLOCKED	games/tbs/src/scene/file_screen.c
+FileScreen_FadeInBlend	its twin	The Lost Age's clear.c names the same task Clear_FadeInBlend (hz/s3)	games/tbs/src/scene/file_screen.c
+FileScreen_FillTileGrid	its code	unused: fills 16 by 8 entries of the window tilemap, each its row times the window's width plus its column, after unpacking tiles it never copies	games/tbs/src/scene/file_screen.c
+FileScreen_FillTileBlock	its code	unused: fills 16 by 8 entries of the window tilemap with WINDOW_TILE(32) onward, sixteen to a row	games/tbs/src/scene/file_screen.c
+PASSWORD_GOLD_BYTES	its twin	The Lost Age's clear.c (hz/s3) names the bytes a level decodes to, checksum included, PASSWORD_GOLD_BYTES, _SILVER_ and _BRONZE_; FileScreen_PackPasswordData packs 173, 39 or 9 and two checksum bytes follow	games/tbs/src/scene/file_screen.c
+PASSWORD_SILVER_BYTES	its twin	as PASSWORD_GOLD_BYTES	games/tbs/src/scene/file_screen.c
+PASSWORD_BRONZE_BYTES	its twin	as PASSWORD_GOLD_BYTES	games/tbs/src/scene/file_screen.c
+PASSWORD_CRC_BYTES	its twin	The Lost Age's clear.c (hz/s3) names the checksum's two bytes, its seed 0xffff, polynomial 0x1021 and top bit PASSWORD_CRC_*	games/tbs/src/scene/file_screen.c
+PASSWORD_CRC_SEED	its twin	as PASSWORD_CRC_BYTES	games/tbs/src/scene/file_screen.c
+PASSWORD_CRC_POLYNOMIAL	its twin	as PASSWORD_CRC_BYTES	games/tbs/src/scene/file_screen.c
+PASSWORD_CRC_TOP_BIT	its twin	as PASSWORD_CRC_BYTES	games/tbs/src/scene/file_screen.c
+PASSWORD_ITEMS_BYTE	its twin	The Lost Age's clear.c (hz/s3) names where a Gold password's items, quantities and coins start: bytes 39, 107 and 165, with 23 stacking items	games/tbs/src/scene/file_screen.c
+PASSWORD_QUANTITIES_BYTE	its twin	as PASSWORD_ITEMS_BYTE	games/tbs/src/scene/file_screen.c
+PASSWORD_COINS_BYTE	its twin	as PASSWORD_ITEMS_BYTE	games/tbs/src/scene/file_screen.c
+PASSWORD_STACK_ITEMS	its twin	as PASSWORD_ITEMS_BYTE; gFileScreen_PasswordStackItems holds 23 items	games/tbs/src/scene/file_screen.c
+PASSWORD_SYMBOLS_PER_ROW	its twin	The Lost Age's clear.c (hz/s3) names the password's rows of ten PASSWORD_SYMBOLS_PER_ROW; the page draws index % 10 and a checksum symbol follows every nine	games/tbs/src/scene/file_screen.c
+PASSWORD_FLAGS_BYTE	its code	FileScreen_PackPasswordData writes the six flag bits to byte 7	games/tbs/src/scene/file_screen.c
+PASSWORD_KEY_ITEMS_BYTE	its code	FileScreen_PackPasswordData writes the Psynergy item bits to byte 8 unless Gold, whose stats rows start there, Silver's at 9	games/tbs/src/scene/file_screen.c
+PASSWORD_STATS_ROW_BYTES	its code	each stats row packs two party members' 60 bits into 15 bytes	games/tbs/src/scene/file_screen.c
+PASSWORD_HP_SHIFT	its code	packedStats's first word: base HP << 21, base PP << 10, base Attack; the second: Defense << 22, Agility << 12, Luck << 4	games/tbs/src/scene/file_screen.c
+PASSWORD_PP_SHIFT	its code	as PASSWORD_HP_SHIFT	games/tbs/src/scene/file_screen.c
+PASSWORD_DEFENSE_SHIFT	its code	as PASSWORD_HP_SHIFT	games/tbs/src/scene/file_screen.c
+PASSWORD_AGILITY_SHIFT	its code	as PASSWORD_HP_SHIFT	games/tbs/src/scene/file_screen.c
+PASSWORD_LUCK_SHIFT	its code	as PASSWORD_HP_SHIFT	games/tbs/src/scene/file_screen.c
+SYMBOL_DIGITS	its code	symbols 24 to 31 draw cell + 26, the characters 2 to 9	games/tbs/src/scene/file_screen.c
+SYMBOL_SMALL_LETTERS	its code	symbols 32 to 55 draw a to z without l and o	games/tbs/src/scene/file_screen.c
+SYMBOL_SIGNS	its code	symbols 56 to 63 draw ! ? # & $ % + and =	games/tbs/src/scene/file_screen.c
+SYMBOL_TA	its picture	charmap_ja.tsv: symbol 15 draws code 0xe0, た, the first after あ to そ	games/tbs/src/scene/file_screen.c
+SYMBOL_WO	its picture	charmap_ja.tsv: symbol 45 draws code 0x86, を	games/tbs/src/scene/file_screen.c
+SYMBOL_GA	its picture	charmap_ja.tsv: symbol 46 draws か (0x96) with the voiced mark, が	games/tbs/src/scene/file_screen.c
+SYMBOL_DA	its picture	charmap_ja.tsv: symbol 56 draws た (0xe0) with the voiced mark, だ	games/tbs/src/scene/file_screen.c
+SYMBOL_BA	its picture	charmap_ja.tsv: symbol 59 draws は (0xea) with the voiced mark, ば	games/tbs/src/scene/file_screen.c
+KANA_WO	its picture	charmap_ja.tsv: code 0x86 is を	games/tbs/src/scene/file_screen.c
+KANA_A	its picture	charmap_ja.tsv: code 0x91 is あ	games/tbs/src/scene/file_screen.c
+KANA_KA	its picture	charmap_ja.tsv: code 0x96 is か	games/tbs/src/scene/file_screen.c
+KANA_TA	its picture	charmap_ja.tsv: code 0xe0 is た	games/tbs/src/scene/file_screen.c
+KANA_TE	its picture	charmap_ja.tsv: code 0xe3 is て	games/tbs/src/scene/file_screen.c
+KANA_TO	its picture	charmap_ja.tsv: code 0xe4 is と	games/tbs/src/scene/file_screen.c
+KANA_HA	its picture	charmap_ja.tsv: code 0xea is は	games/tbs/src/scene/file_screen.c
+LINK_SEND_FRAMES	its code	the send loop waits a frame a pass for up to 600000 passes	games/tbs/src/scene/file_screen.c
+LINK_SILENT_FRAMES	its code	ten frames in a row without LINK_STATUS_HEARD_BOTH end the send with "Communication Error" (MsgClearCommunicationError)	games/tbs/src/scene/file_screen.c
+LOGO_PALETTE_COLORS	its twin	The Lost Age's clear.c (hz/s3) names the logo resource's 224 leading colours LOGO_PALETTE_COLORS	games/tbs/include/scene/title.h
+TILE_BLOCK_COLUMNS	its code	the two unused fills write 16 entries a row for 8 rows, then skip the map row's other 16	games/tbs/src/scene/file_screen.c
+TILE_BLOCK_ROWS	its code	as TILE_BLOCK_COLUMNS	games/tbs/src/scene/file_screen.c
+TILE_BLOCK_FIRST_TILE	its code	FileScreen_FillTileBlock's tiles start at 32	games/tbs/src/scene/file_screen.c
+PAGE_DIGITS_TILE	its code	Graphics_ExpandVramTilesByColorTable builds 20 digit tiles at tile 768 for the File Screen's and the battle lists' page numbers (LIST_PAGE_DIGITS_TILE in window/screens_internal.h)	games/tbs/include/window/window.h
+PAGE_NUMBER_TILE	its code	the File Screen draws page n's number with tile 769 + n and the page shown with 779 + n, as screens_internal.h's LIST_TILE_PAGE_NUMBER and _LIT	games/tbs/include/window/window.h
+PAGE_NUMBER_LIT_TILE	its code	as PAGE_NUMBER_TILE	games/tbs/include/window/window.h
+CrossboneIsle_RideLog	the game	"to ride the logs as quickly as possible." (MsgColossoHereYourObjectiveRideLogs)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_RideLog	its twin	The Lost Age's IsletCave_RideLog, the same routine for its floating logs; The Broken Seal's ColosseumSatrageMatch_RideLog on the Log-Rolling Stage	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_PlaceWestEastLog	its twin	The Lost Age's IsletCave_PlaceWestEastLog (twins, dice 0.289), for SPRITE_FLOATING_LOG_WEST_EAST	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_PlaceNorthSouthLog	its twin	The Lost Age's IsletCave_PlaceNorthSouthLog (twins, dice 0.373), for SPRITE_FLOATING_LOG_NORTH_SOUTH	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_PlaceLogs	its twin	The Lost Age's IsletCave_PlaceLogs, which places its seven logs the same way	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_SettleLog	its twin	The Lost Age's IsletCave_SettleLog, the same two animation calls when the leader steps onto a log	games/tbs/src/scene/crossbone_isle.c
+LIES_ACROSS	its code	each lane test compares another log's middle with the riding log's line, one cell either side: log C at column 32 tests 31 to 33, log K at 7 tests 6 to 8	games/tbs/src/scene/crossbone_isle.c
+LOG_B_COLUMN	its code	gCrossboneIsle_FloatingLogsActorPlacements puts log B's middle at x 168, column 10, and its ride routines only move it north and south; LOG_C_COLUMN (x 520), LOG_J_COLUMN (x 72), LOG_K_COLUMN (x 120), LOG_G_ROW (z 216) and LOG_I_ROW (z 168) likewise	games/tbs/src/scene/crossbone_isle.c
+gCrossboneIsle_UnusedEntrances	its code	twelve words after gFieldEffect_DurationScripts's three, read as a SceneEntrance and its end row; nothing refers to them	games/tbs/src/scene/crossbone_isle.c
+gCrossboneIsle_FloorActorPlacements	its uses	Scene_GetActorPlacements hands it to SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor	games/tbs/src/scene/crossbone_isle.c
+gCrossboneIsle_FloorTriggers	its uses	Scene_GetTriggers hands it to SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_PIRATE_SHIP_DEMON_MAIL	its code	the examine trigger that finds ITEM_DEMON_MAIL, its treasure spot placed once FLAG_CROSSBONE_ISLE_DEADBEARD_DEFEATED is set	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_PIRATE_SHIP_MIMIC	its code	the examine trigger that finds FIND_MIMIC until FLAG_PIRATE_SHIP_MIMIC_BEATEN	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_CROSSBONE_ISLE_FIRST_FLOOR_MIMIC	its code	the examine trigger that finds FIND_MIMIC until FLAG_CROSSBONE_ISLE_FIRST_FLOOR_MIMIC_BEATEN, placed on the first floor alone	games/tbs/src/scene/crossbone_isle.c
+SPROUT_ANIMATION_GROWN	its picture	sprout.tsv's animation 4 ends on picture 6, the sprout grown tall, as suhalla.c names it	games/tbs/src/scene/crossbone_isle.c
+FLOATING_LOG_ANIMATION_FLOAT	its picture	floating_log_west_east.tsv's animation 1 alternates pictures 0 and 1, the log riding high and low on its blue ripple line	games/tbs/include/sprite_ids.h
+FLOATING_LOG_ANIMATION_SETTLE	its picture	animation 2 shows pictures 1, 0 and 1 for 5, 3 and 5 frames, then plays animation 1: a quick dip; CrossboneIsle_SettleLog plays it when the leader steps on	games/tbs/include/sprite_ids.h
+FLOATING_LOG_ANIMATION_ROLL_EAST_OR_SOUTH	its picture	animation 3 loops pictures 2, 3 and 4, the log turning over in white spray; CrossboneIsle_RideLog plays it riding east or south	games/tbs/include/sprite_ids.h
+FLOATING_LOG_ANIMATION_ROLL_WEST_OR_NORTH	its picture	animation 4 loops pictures 4, 3 and 2, the same turn reversed; CrossboneIsle_RideLog plays it riding west or north	games/tbs/include/sprite_ids.h
+SOUND_MODE_DA_BIT_RESOLUTION	its code	m4aSoundMode moves mode bits 21..20 to REG_SOUNDBIAS_H bits 7..6; SOUND_MODE_DA_BIT_SHIFT is the shift pret's m4a_internal.h gives the field	games/tbs/include/sound/sound_driver_types.h
+NRX2_ENVELOPE_UP	the hardware	GBATEK SOUND1CNT_H bit 3, envelope direction: 1 increases; CgbOscOff writes it alone (volume 0) to silence a channel	games/tbs/include/sound/sound_driver_types.h
+NRX4_LENGTH_STOP	the hardware	GBATEK SOUND1CNT_X bit 14 (NRx4 bit 6), length flag: stops the sound when the length expires	games/tbs/include/sound/sound_driver_types.h
+NRX4_RESTART	the hardware	GBATEK SOUND1CNT_X bit 15 (NRx4 bit 7), initial: restarts the sound	games/tbs/include/sound/sound_driver_types.h
+NR30_SECOND_BANK	the hardware	GBATEK SOUND3CNT_L bit 6, wave RAM bank number: the bank played, the CPU reaching the other	games/tbs/include/sound/sound_driver_types.h
+NR30_PLAY	the hardware	GBATEK SOUND3CNT_L bit 7, sound channel 3 off/on	games/tbs/include/sound/sound_driver_types.h
+NR51_RIGHT_ALL	the hardware	GBATEK SOUNDCNT_L bits 8..11 (NR51 bits 0..3), sound 1 to 4 to the right; NR51_LEFT_ALL bits 12..15 to the left	games/tbs/include/sound/sound_driver_types.h
+SOUNDBIAS_H_RESOLUTION	the hardware	GBATEK SOUNDBIAS bits 14..15, amplitude resolution: 0 9 bits at 32.768 kHz, 1 8 bits at 65.536 kHz, 2 7 bits at 131.072 kHz, 3 6 bits at 262.144 kHz; SOUNDBIAS_H_LEVEL the bits below	games/tbs/include/sound/sound_driver_types.h
+SOUND_TEMPO_PER_TICK	its code	MPlayStart sets tempo and tempoStep to 150, and clear_buffer.s's MPlayMain runs a tick for each 150 in tempoCount	games/tbs/include/sound/sound_driver_types.h
+SOUND_TEMPO_SCALE_NORMAL	its code	m4aMPlayTempoControl's tempoStep is tempo * tempoScale >> 8, so 256 keeps the song's tempo	games/tbs/include/sound/sound_driver_types.h
+SOUND_DMA_LAST_TRANSFER	the hardware	GBATEK DMA: a sound FIFO transfer moves four words; written without repeat and with no start timing, the channel moves them at once and stops	games/tbs/src/sound/driver.c
+SOUND_IDENT_VSYNC_OFF	its code	m4aSoundVSyncOff adds 10 to the ident and m4aSoundVSyncOn takes it off; every other routine runs only while the ident is ID_NUMBER	games/tbs/src/sound/driver.c
+SOUND_RATE_E4_UNIT	its code	SampleFreqSet divides SOUND_VBLANK_RATE_E4, in ten-thousandths of a hertz, by 10000, rounding with 5000	games/tbs/src/sound/driver.c
+SOUND_PAN_LEFT	its code	TrkVolPitSet clamps a pan to -128 and 127 and shares the volume by pan + 128 and 127 - pan	games/tbs/src/sound/driver.c
+SOUND_PITCH_SEMITONE	its code	TrkVolPitSet multiplies the key offsets by 256, tune and bend by 4 (1/64 semitone) and the LFO by 16 (1/16), into pitchHi and pitchLo	games/tbs/src/sound/driver.c
+CGB_NOISE_LOWEST_KEY	its code	MidiKeyToCgbFreq indexes gNoiseTable (60 entries) by key - 21; gCgbScaleTable (132 entries) by key - 36	games/tbs/src/sound/driver.c
+CGB_FREQUENCY_RANGE	the hardware	GBATEK SOUND1CNT_X: the 11-bit frequency value x plays 131072 / (2048 - x) Hz; gCgbFreqTable holds -period, and MidiKeyToCgbFreq adds 2048	games/tbs/src/sound/driver.c
+CGB_EXTRA_STEP_PERIOD	its code	CgbSound counts c15 down from 14 and steps the envelopes a second time when it reaches 0	games/tbs/src/sound/driver.c
+SOUND_ECHO_LEVEL_ONE	its code	CgbSound holds peak * echoLevel / 256, rounded up, after release	games/tbs/src/sound/driver.c
+ShipRooms_TalkToWaitingMuscleAdmirer	the game	"Muscles rippling everywhere... looks great!" (MsgTolbiShipInteriorsMusclesRipplingEverywhereLooksGreatIf)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_AskMuscleAdmirerToRow	the game	"Muscles rippling everywhere... looks great!" (MsgTolbiShipInteriorsMusclesRipplingEverywhereLooksGreatIf)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_TalkToMuscleAdmirerAtOars	the game	"Muscles rippling everywhere... looks great!" (MsgTolbiShipInteriorsMusclesRipplingEverywhereLooksGreatIf)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_ReadMuscleAdmirerMindAtOars	the game	"Muscles rippling everywhere... looks great!" (MsgTolbiShipInteriorsMusclesRipplingEverywhereLooksGreatIf)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_AskTicketGrumblerToRow	the game	"All that money on tickets, and now we have to row the ship? Madness!" (MsgTolbiShipInteriorsAllThatMoneyOnTicketsAnd)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_TalkToTicketGrumblerAtOars	the game	"All that money on tickets, and now we have to row the ship? Madness!" (MsgTolbiShipInteriorsAllThatMoneyOnTicketsAnd)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_ReadTicketGrumblerMindAtOars	the game	"All that money on tickets, and now we have to row the ship? Madness!" (MsgTolbiShipInteriorsAllThatMoneyOnTicketsAnd)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_FindOarsmanMissing	the game	"We're missing an oarsman!" (MsgTolbiShipHeyAreYouOk + 2)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_SwitchLeftAndRightTeams	the game	"we need to switch the left and right teams!" (MsgTolbiShipSorryEveryoneButWeNeed)	games/tbs/src/scene/ship_rooms.c
+gShipRooms_Tremble	the game	"Foul beast! I may be trembling..." (MsgTolbiShipInteriorsFoulBeastIMayBeTrembling)	games/tbs/src/scene/ship_rooms.c
+gShipRooms_RowingDeckTriggersMonstersBelowdecks	the game	"Monsters belowdecks!" (MsgTolbiShipMonstersBelowdecks)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_WatchKaja	the game	"Say, Kaja, how are the oarsmen doing?" (MsgTolbiShipWonderCouldHaveHappened)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_Float	what the player sees	the Man o' War jellyfish on the rowing deck floating above their shadows, rising and sinking from frame to frame (its render)	games/tbs/src/scene/ship_rooms.c
+gShipRooms_MonsterFloat	what the player sees	the Man o' War jellyfish on the rowing deck floating above their shadows, rising and sinking from frame to frame (its render)	games/tbs/src/scene/ship_rooms.c
+ShipRooms_CallLeaderBackToBeasts	the game	"Slay the beasts and save my mates!" (MsgTolbiShipWhereGoingSlay)	games/tbs/src/scene/ship_rooms.c
+gShipRooms_GoUpstairs	what the player sees	a wooden stair rising from the north end of the rowing deck, the oarsmen's seats below it (its render)	games/tbs/src/scene/ship_rooms.c
+LunpaFortress_CryIntruder	the game	"Hey! Intruder!" (MsgLunpaIntruder)	games/tbs/src/scene/lunpa_fortress.c
+LunpaFortress_AskWhosThat	the game	"Huh? Who's that?" (MsgLunpaGuardWhosThat)	games/tbs/src/scene/lunpa_fortress.c
+LunpaFortress_AskIfShiftIsUp	the game	"Is my shift up already?" (MsgLunpaShiftAlready)	games/tbs/src/scene/lunpa_fortress.c
+LunpaFortress_CallPartyScoundrel	the game	"You scoundrel!" (MsgLunpaScoundrel)	games/tbs/src/scene/lunpa_fortress.c
+TREASURE_SPOT_VULCAN_AXE	the game	"Vulcan Axe" (MsgItemName + 36)	games/tbs/src/scene/lamakan_desert.c
+TREASURE_SPOT_FIRST_PSYNERGY_STONE	the game	"a Psynergy Stone." (MsgGotPsynergyStone)	games/tbs/src/scene/lamakan_desert.c
+TREASURE_SPOT_LUCKY_PEPPER	the game	"Lucky Pepper" (MsgItemName + 196)	games/tbs/src/scene/lamakan_desert.c
+TREASURE_SPOT_SECOND_PSYNERGY_STONE	the game	"a Psynergy Stone." (MsgGotPsynergyStone)	games/tbs/src/scene/lamakan_desert.c
+TREASURE_SPOT_UNDER_SMOG	the game	"Smog" (MsgDjinnName)	games/tbs/src/scene/lamakan_desert.c
+TREASURE_SPOT_POTION	the game	"Potion" (MsgItemName + 183)	games/tbs/src/scene/lamakan_desert.c
+TREASURE_SPOT_MINT	the game	"Mint" (MsgItemName + 195)	games/tbs/src/scene/lamakan_desert.c
+gHeatGauge_Sprites	what the player sees	a thermometer down the screen's left edge: a blue cap, a black tube and a blue bulb (its render)	games/tbs/src/scene/lamakan_desert.c
+PROCNE_FRAMES	the game	"Procne" (MsgDjinnName)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_ARRIVAL_FRAME	what the player sees	the yellow whirlwind gives way to a violet sky and Procne, a great white and gold winged bird, appears at its right (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_DROP_FRAME	what the player sees	after the fourth comet the violet sky is gone and the lifted targets stand on the ground again as the damage is told (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_COMET_FRAME	what the player sees	once violet sparks have gathered on Procne's chest, a violet comet shoots from it into the targets (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_COMET_INTERVAL	what the player sees	four violet comets shoot from Procne one after another, each ending in a white flash and a burst of sparks at the targets (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_SPRITES	the game	"Procne" (MsgDjinnName)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_WHIRLWIND_WIDTH	what the player sees	a yellow whirlwind rises from the ground around the targets, first low, then tall (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_WHIRLWIND_HEIGHT	what the player sees	a yellow whirlwind rises from the ground around the targets, first low, then tall (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_WHIRLWIND_CEL	what the player sees	the yellow whirlwind's streaks shift as it turns (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_WHIRLWIND_FOOT_HEIGHT	what the player sees	the yellow whirlwind rises from the ground in a low band first, then stands tall (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_DUST	what the player sees	puffs of dust swirl around the foot of the yellow whirlwind (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_DUST_MOTES	what the player sees	puffs of dust swirl around the foot of the yellow whirlwind (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_COMETS	what the player sees	violet comets shoot from Procne into the targets (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_CORE_RADIUS	what the player sees	the targets are drawn in to the middle of the whirlwind and spin there, lifted (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_GATHERING_SPARKS	what the player sees	violet sparks fly in from around Procne and gather on its chest into one bright spark (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_RING	what the player sees	light flares at Procne's chest as each comet leaves it (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_RING_MOTES	what the player sees	light flares at Procne's chest as each comet leaves it (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_COMET_PARTICLES	what the player sees	each violet comet flies from Procne's chest down and left into the targets (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_STRIKES	what the player sees	four times a comet strikes the targets, which flash white as sparks burst from them (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_STRIKE_SPARKS	what the player sees	streaks of violet sparks burst out from the targets at each strike (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_STRIKE_SPARK_ROWS	what the player sees	streaks of violet sparks burst out from the targets at each strike (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+JUDGMENT_MOTES	what the player sees	blue motes swarm in over the violet sky and gather on Judgment's lion shield (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_RING_MOTES	what the player sees	after the flash a flat ring of light spreads out under Judgment and fades as it widens (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_BEAM_WIDTH	what the player sees	after the flash a column of white light falls from Judgment's shield as the ring spreads (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_FLARE_WIDTH	what the player sees	a small blue-white flare falls onto the aerial view of green land (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_EXPLOSION_WIDTH	what the player sees	a blue-white explosion swells over the aerial view until it fills the screen (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_SWEEP_BEACH	what the player sees	the scene changes to a beach that a white wave sweeps across (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_SWEEP_EXPLOSION	what the player sees	the falling flare bursts and the aerial view's colours turn inverted for a moment (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_BEAM_FRAME	what the player sees	the screen flashes pale blue and white, then light falls from Judgment's shield (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_RAMP_COPIES	what the player sees	after the flash a flat ring of light spreads out under Judgment and fades as it widens (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_FORMATION_COLUMNS	what the player sees	Judgment, a winged knight in armour with a lion shield, is drawn far larger than any battler as it flies forward (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_FORMATION_SPRITE_SIZE	what the player sees	Judgment, a winged knight in armour with a lion shield, is drawn far larger than any battler as it flies forward (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_POSE_SHIELD_SWINGING	what the player sees	Judgment swings its lion shield round from its side (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_POSE_SHIELD_FORWARD	what the player sees	Judgment holds its lion shield before it, its sword out to the side (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_BURST_X	what the player sees	blue motes converge and burst in light just below Judgment's lion shield (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_BURST_Y	what the player sees	blue motes converge and burst in light just below Judgment's lion shield (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_SHARD_RADIUS	what the player sees	jagged blue shards of light flicker around the burst under the shield (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_RING_LEVEL	what the player sees	a white blast spreads from where the flare landed until it fills the aerial view (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_SWEEP_CANVAS_X	what the player sees	the blast spreads from the middle of the screen (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_FLARE_X	what the player sees	the flare falls down the middle of the aerial view and the blast spreads from there (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
+WORLD_MAP_ALTERNATE_TILES	what the player sees	the World Map at its entrance 9, (5928, 296), in grid row 0, column 11, is snow-covered ground with a lighthouse beyond (its render)	games/tbs/src/field/field_world_map.c
+WORLD_MAP_USE_ALTERNATE_TILE	what the player sees	the World Map at its entrance 9, (5928, 296), in grid row 0, column 11, is snow-covered ground with a lighthouse beyond (its render)	games/tbs/src/field/field_world_map.c
+WORLD_PICTURE_MARKER_PARTY	the game	"Present location." (MsgPresentLocation)	games/tbs/src/field/event_commands_world_picture.c
+WORLD_PICTURE_MARKER_LIGHTHOUSE	its area name	Mercury Lighthouse	games/tbs/src/field/event_commands_world_picture.c
+WorldPicture_Show	what the player sees	R on the World Map near Vale shows a picture of the whole world, a white pointing hand as its cursor, and "Present location." beside the party's place (its render)	games/tbs/src/field/event_commands_world_picture.c
+WORLD_PICTURE_WIDTH	what the player sees	the picture of the whole world R shows fills the screen (its render)	games/tbs/src/field/event_commands_world_picture.c
+WORLD_PICTURE_HEIGHT	what the player sees	the picture of the whole world R shows fills the screen (its render)	games/tbs/src/field/event_commands_world_picture.c
