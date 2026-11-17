@@ -576,18 +576,52 @@ fn waits_a_frame(tokens: &[Token], open: usize, close: usize) -> bool {
     false
 }
 
-/// The words a loop's own counter is named with: a letter (`i`, `j`), an
-/// index or count, or the frames themselves. A counter named for what it
-/// steps through (`mosaicSize`, `pose`, `step`) is that, whatever the loop
-/// waits.
-const COUNTER_WORDS: &[&str] = &["i", "j", "k", "n", "t", "index", "count", "counter", "remaining", "elapsed", "frame", "frames", "time"];
+/// The words a loop's own counter is named with: a letter (`i`, `j`), or the
+/// frames themselves. A counter named for what it steps through
+/// (`mosaicSize`, `pose`, `step`) or counts (`count`, `index`) is that,
+/// whatever the loop waits.
+const COUNTER_WORDS: &[&str] = &["i", "j", "k", "t", "counter", "remaining", "elapsed", "frame", "frames", "time"];
+
+/// Whether the body between `open` and `close` uses `counter` as more than
+/// a count of passes: an array's index (`gPartyActors[i]`), a call's
+/// argument (`Spark_Spawn(i)`) or an addend of a name (`ACTOR_HERB + count`),
+/// where it numbers things, not frames.
+fn numbers_things(tokens: &[Token], counter: &str, open: usize, close: usize) -> bool {
+    // Whether each open bracket is an index or a call's arguments.
+    let mut enclosing: Vec<bool> = Vec::new();
+    for index in open + 1..close {
+        let token = &tokens[index];
+        match token.text {
+            "[" => enclosing.push(true),
+            "(" => {
+                let before = &tokens[index - 1];
+                let call = before.kind == Kind::Ident && !matches!(before.text, "if" | "while" | "for" | "switch" | "return" | "sizeof");
+                enclosing.push(call);
+            }
+            ")" | "]" => {
+                enclosing.pop();
+            }
+            _ => {}
+        }
+        if token.kind != Kind::Ident || token.text != counter || matches!(tokens[index - 1].text, "." | "->") {
+            continue;
+        }
+        let name = |at: Option<usize>| at.and_then(|at| tokens.get(at)).is_some_and(|t| t.kind == Kind::Ident);
+        let added = (matches!(tokens[index - 1].text, "+" | "-") && name(index.checked_sub(2)))
+            || (tokens.get(index + 1).is_some_and(|t| matches!(t.text, "+" | "-")) && name(Some(index + 2)));
+        if enclosing.contains(&true) || added {
+            return true;
+        }
+    }
+    false
+}
 
 /// Whether the loop with its header between `header_open` and `header_close`
 /// and its body between `body_open` and `body_close` counts frames on
 /// `counter`: the loop's condition reads the counter (a `for`'s middle
-/// clause), the loop moves it on (`i++`, `++i`, `i += 2`), and the body waits
-/// a frame each pass. A body that is one statement has `body_open` just
-/// before it.
+/// clause), the loop moves it on (`i++`, `++i`, `i += 2`), the body waits a
+/// frame each pass and does not number things with it. A body that is one
+/// statement has `body_open` just before it.
 fn counts_frames(tokens: &[Token], counter: &str, header: (usize, usize), body: (usize, usize)) -> bool {
     // The condition: a `for`'s clause between its semicolons.
     let mut condition = (header.0, header.1);
@@ -613,7 +647,7 @@ fn counts_frames(tokens: &[Token], counter: &str, header: (usize, usize), body: 
             && (matches!(tokens[index - 1].text, "++" | "--")
                 || tokens.get(index + 1).is_some_and(|next| matches!(next.text, "++" | "--" | "+=" | "-=")))
     });
-    reads && moves && waits_a_frame(tokens, body.0, body.1)
+    reads && moves && waits_a_frame(tokens, body.0, body.1) && !numbers_things(tokens, counter, body.0, body.1)
 }
 
 /// Whether the number at `at` counts the frames of a loop that waits one
@@ -996,6 +1030,15 @@ mod tests {
         assert_eq!(kind_of("void F(void) { for (angle = 360, i = 21; i >= 0; i--) { angle -= 8; wait(1); } }", "360", 0), None, "not the loop's condition");
         assert_eq!(kind_of("void F(void) { for (i = 0; i < 20; i++) { v = i * 16 + 32; wait(1); } }", "32", 0), None, "reckoned with more than the counter");
         assert_eq!(kind_of("void F(void) { for (i = 0; i < 20; i++) { wait(1); } if (i == 20) G(); }", "20", 1), None, "after the loop");
+        // A counter that numbers things: an index, an argument, an addend of
+        // a name; and counters named for a count or an index.
+        assert_eq!(kind_of("void F(void) { for (i = 0; i < 20; i++) { Draw(gPartyActors[i]->x); wait(1); } }", "20", 0), None);
+        assert_eq!(kind_of("void F(void) { for (i = 0; i < 30; i++) { Spark_Spawn(i); wait(1); } }", "30", 0), None);
+        assert_eq!(kind_of("void F(void) { for (k = 0; k < 30; k++) { id = ACTOR_HERB + k; wait(1); } }", "30", 0), None);
+        assert_eq!(kind_of("void F(void) { for (count = 0; count < 20; count++) { wait(1); } }", "20", 0), None);
+        assert_eq!(kind_of("void F(void) { for (index = 0; index < 20; index++) { wait(1); } }", "20", 0), None);
+        assert_eq!(kind_of("void F(void) { for (n = 0; n < 20; n++) wait(1); }", "20", 0), None);
+        assert_eq!(kind_of("void F(void) { for (i = 0; i < 20; i++) { x = i - 12; wait(1); } }", "20", 0), Some("duration"), "less a number is still a count of frames");
     }
 
     #[test]
