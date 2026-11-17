@@ -26,8 +26,16 @@ const POSITION_WORDS: &[&str] = &["x", "y", "z", "dx", "dy", "dz", "row", "colum
 /// Words of a name that hold a duration or a moment in frames.
 const DURATION_WORDS: &[&str] = &["frame", "frames", "timer", "delay", "duration", "countdown", "wait", "ticks", "vblank", "vblanks"];
 /// Words of a name that hold a fade's or a shake's level (`fade = -16`,
-/// `shake = -128`): the brightness or the sway it is set to.
-const LEVEL_WORDS: &[&str] = &["fade", "shake"];
+/// `shake = -128`): the brightness or the sway it is set to, a model's shade
+/// on the canvas (`shade = -16`) included.
+const LEVEL_WORDS: &[&str] = &["fade", "shake", "shade", "brightness"];
+/// Words of a variable that holds a colour channel's level, 0 to 31 in
+/// RGB555 (`if (blue > 26)`), as `RGB(r, g, b)` takes it: a level, as a
+/// fade's is. Only a variable's own words: a constant's (`ACTOR_RED_COGS`)
+/// name a thing.
+const CHANNEL_WORDS: &[&str] = &["red", "green", "blue"];
+/// Words of a name that holds a percentage (`maxHpPercent = 12`).
+const PERCENT_WORDS: &[&str] = &["percent"];
 /// Words that make a name something else whatever its other words say: a
 /// rate (`speedX`), a scale (`scaleX`) or an angle (`angleY`).
 const OTHER_WORDS: &[&str] =
@@ -38,13 +46,30 @@ const OTHER_WORDS: &[&str] =
 const ARITHMETIC: &[&str] = &["Remainder", "Divide", "Modulo", "Mul", "Div", "Mod"];
 
 /// A name's words, lowercase, its digits dropped: `transitionFrames` is
-/// `transition` and `frames`, `gAltinPeak_FlickerTimer` ends in `timer`.
+/// `transition` and `frames`, `gAltinPeak_FlickerTimer` ends in `timer`, and
+/// a word in mixed case is one (`gVBlankCount` holds `vblank`).
 pub fn words(name: &str) -> Vec<String> {
+    split(name, false)
+}
+
+/// A name's words as `words` gives them, and also each capital that may be a
+/// word of one letter before a word in mixed case taken apart from it:
+/// `logEColumn` holds `ecolumn`, and also `e` and `column`.
+fn all_words(name: &str) -> Vec<String> {
+    let mut all = split(name, false);
+    all.extend(split(name, true));
+    all
+}
+
+fn split(name: &str, letters: bool) -> Vec<String> {
     let mut words = Vec::new();
     let mut word = String::new();
     let mut previous = '_';
-    for c in name.chars() {
-        if c == '_' || c.is_ascii_digit() || (c.is_ascii_uppercase() && previous.is_ascii_lowercase()) {
+    let mut chars = name.chars().peekable();
+    while let Some(c) = chars.next() {
+        let next = chars.peek().copied().unwrap_or('_');
+        let letter = letters && c.is_ascii_uppercase() && previous.is_ascii_uppercase() && next.is_ascii_lowercase();
+        if c == '_' || c.is_ascii_digit() || (c.is_ascii_uppercase() && previous.is_ascii_lowercase()) || letter {
             words.push(std::mem::take(&mut word));
         }
         if c.is_ascii_alphabetic() {
@@ -58,18 +83,21 @@ pub fn words(name: &str) -> Vec<String> {
 }
 
 /// What a name (or a member chain's names) says its value is: a `position`,
-/// a `duration` or a fade's or shake's `level`, none where any word makes it a
-/// rate, scale or angle (`fadeStep`).
+/// a `duration`, a fade's, shake's or colour channel's `level` or a
+/// percentage (`decimal`), none where any word makes it a rate, scale or angle
+/// (`fadeStep`).
 pub fn named_kind<'n>(names: impl IntoIterator<Item = &'n str>) -> Option<&'static str> {
-    let (mut position, mut duration, mut level) = (false, false, false);
+    let (mut position, mut duration, mut level, mut percent) = (false, false, false, false);
     for name in names {
-        let words = words(name);
-        if words.iter().any(|word| OTHER_WORDS.contains(&word.as_str())) {
+        let words = all_words(name);
+        let has = |list: &[&str]| words.iter().any(|word| list.contains(&word.as_str()));
+        if has(OTHER_WORDS) {
             return None;
         }
-        position |= words.iter().any(|word| POSITION_WORDS.contains(&word.as_str()));
-        duration |= words.iter().any(|word| DURATION_WORDS.contains(&word.as_str()));
-        level |= words.iter().any(|word| LEVEL_WORDS.contains(&word.as_str()));
+        position |= has(POSITION_WORDS);
+        duration |= has(DURATION_WORDS);
+        level |= has(LEVEL_WORDS) || (has(CHANNEL_WORDS) && name.bytes().any(|b| b.is_ascii_lowercase()));
+        percent |= has(PERCENT_WORDS);
     }
     if position {
         Some("position")
@@ -77,6 +105,8 @@ pub fn named_kind<'n>(names: impl IntoIterator<Item = &'n str>) -> Option<&'stat
         Some("duration")
     } else if level {
         Some("level")
+    } else if percent {
+        Some("decimal")
     } else {
         None
     }
@@ -879,6 +909,18 @@ mod tests {
         assert_eq!(kind_of("void F(void) { s32 size = 10; Draw(size); x = Random16(); }", "10", 0), None, "read without a roll");
         assert_eq!(kind_of("void F(void) { a->mask = 15; x = a->mask & Random16(); }", "15", 0), None, "no plain local");
         assert_eq!(kind_of("void F(void) { s32 m = 15 + n; x = m & Random16(); }", "15", 0), None, "not its whole value");
+    }
+
+    #[test]
+    fn levels_and_one_letter_words() {
+        assert_eq!(kind_of("void F(void) { if (blue > 26) blue = 26; }", "26", 0), Some("level"));
+        assert_eq!(kind_of("void F(void) { model->shade = -16; }", "16", 0), Some("level"));
+        assert_eq!(kind_of("void F(void) { brightnessDelta = -12; }", "12", 0), Some("level"));
+        assert_eq!(kind_of("void F(void) { if (id == ACTOR_RED_COGS + 12) {} }", "12", 0), None, "a constant's word names a thing");
+        assert_eq!(kind_of("void F(void) { if (logEColumn == 24) {} }", "24", 0), Some("position"));
+        assert_eq!(kind_of("void F(void) { if (logJRow == 15) {} }", "15", 0), Some("position"));
+        assert_eq!(kind_of("void F(void) { if (gVBlankCount % 80 == 0) {} }", "80", 0), Some("duration"), "VBlank is one word");
+        assert_eq!(words("logEColumn"), ["log", "ecolumn"], "words() keeps a word in mixed case whole");
     }
 
     #[test]
