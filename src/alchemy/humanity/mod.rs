@@ -874,8 +874,11 @@ struct Walk<'r, 'a> {
     /// Each enum's enumerators, by its brace: how many, and the game things
     /// among them (their places in the report).
     enum_members: HashMap<usize, (usize, Vec<usize>)>,
-    /// Where the directive being read starts.
+    /// Where the directive being read starts and ends.
     directive_start: usize,
+    directive_end: usize,
+    /// The routine last measured: its opening and closing braces.
+    routine: Option<(usize, usize)>,
     /// How many functions this file defines.
     functions: usize,
 }
@@ -1039,6 +1042,9 @@ impl<'r, 'a> Walk<'r, 'a> {
             // Whether it is data or honest may depend on the parameter it
             // fills, which may be declared in a file read later.
             let floor = if function_macro.is_some() { self.directive_start } else { 0 };
+            // How far on its local may be read: its routine's end, or its
+            // directive's.
+            let limit = if function_macro.is_some() { self.directive_end } else { self.routine_end() };
             let tokens = &self.code.tokens;
             // The calls around it, innermost first: `PIXELS` and then `Actor_SetPosition`.
             let mut calls = Vec::new();
@@ -1057,7 +1063,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 calls,
                 lone: self.is_argument(at),
                 // A local array's size is a count of its own elements.
-                local: if numbers::is_array_size(tokens, at, floor) { Some("position") } else { numbers::local(tokens, at, floor) },
+                local: if numbers::is_array_size(tokens, at, floor) { Some("position") } else { numbers::local(tokens, at, floor, limit) },
                 siblings,
                 random_arguments,
                 pointer: numbers::pointer_call(tokens, at, floor),
@@ -1075,6 +1081,33 @@ impl<'r, 'a> Walk<'r, 'a> {
         let before = at.checked_sub(1).map_or("", |at| self.code.text(at));
         let after = self.code.tokens.get(at + 1).map_or("", |t| t.text);
         matches!(before, "(" | ",") && matches!(after, ")" | ",")
+    }
+
+    /// The last token of the routine being read: its closing brace, or the
+    /// file's end outside one.
+    fn routine_end(&mut self) -> usize {
+        let last = self.code.tokens.len() - 1;
+        let Some(open) = self.stack.iter().position(|kind| *kind == Brace::Func).and_then(|at| self.open.get(at).copied()) else {
+            return last;
+        };
+        if let Some(&(known, close)) = self.routine.as_ref() {
+            if known == open {
+                return close;
+            }
+        }
+        let mut depth = 0;
+        let close = (open..=last)
+            .find(|&index| {
+                match self.code.text(index) {
+                    "{" => depth += 1,
+                    "}" => depth -= 1,
+                    _ => {}
+                }
+                depth == 0
+            })
+            .unwrap_or(last);
+        self.routine = Some((open, close));
+        close
     }
 
     fn directive(&mut self, start: usize, end: usize) {
@@ -1120,6 +1153,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                     self.macro_parameters(name.text, start, end);
                 }
                 self.directive_start = start;
+                self.directive_end = end;
                 for at in start + 3..end {
                     if self.code.tokens[at].kind == Kind::Number {
                         self.number(at, Some(function_like));
@@ -1820,6 +1854,8 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         enum_values: HashMap::new(),
         enum_members: HashMap::new(),
         directive_start: 0,
+        directive_end: 0,
+        routine: None,
         functions: 0,
     };
     walk.walk();

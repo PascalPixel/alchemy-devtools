@@ -362,11 +362,12 @@ fn switch_subject(tokens: &[Token], at: usize, floor: usize) -> Option<(usize, u
 }
 
 /// The honest kind the tokens around the number at `at` show, reading back
-/// no further than `floor`: a composed form, a decimal fraction, a random
-/// range, or a decimal position or duration by the names it is reckoned
-/// with. The parameter a number fills is judged by the caller, who knows
-/// every declaration.
-pub fn local(tokens: &[Token], at: usize, floor: usize) -> Option<&'static str> {
+/// no further than `floor` and on no further than `limit` (the end of the
+/// routine it is in): a composed form, a decimal fraction, a random range,
+/// a decimal position or duration by the names it is reckoned with, or the
+/// frames a loop counts. The parameter a number fills is judged by the
+/// caller, who knows every declaration.
+pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<&'static str> {
     let text = tokens[at].text;
     let factors = factors(tokens, at, floor);
     if factors.iter().any(|(_, operand)| UNITS.contains(operand) || UNIT_CALLS.contains(operand)) {
@@ -403,7 +404,192 @@ pub fn local(tokens: &[Token], at: usize, floor: usize) -> Option<&'static str> 
         }
     }
     let kinds: Vec<&str> = found.iter().filter_map(|chain| named_kind(chain.iter().copied())).collect();
-    kinds.iter().find(|&&kind| kind == "position").or(kinds.first()).copied()
+    let named = kinds.iter().find(|&&kind| kind == "position").or(kinds.first()).copied();
+    named.or_else(|| frame_count(tokens, at, floor, limit).then_some("duration"))
+}
+
+/// The bracket that closes the one opening at `open`, no further than `limit`.
+fn close_of(tokens: &[Token], open: usize, limit: usize) -> Option<usize> {
+    let mut depth = 0;
+    for (index, token) in tokens.iter().enumerate().take(limit.min(tokens.len() - 1) + 1).skip(open) {
+        match token.text {
+            "(" | "[" | "{" => depth += 1,
+            ")" | "]" | "}" => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(index);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// The bracket that opens the one closing at `close`, no further back than `floor`.
+fn open_of(tokens: &[Token], close: usize, floor: usize) -> Option<usize> {
+    let mut depth = 0;
+    let mut index = close;
+    loop {
+        match tokens[index].text {
+            ")" | "]" | "}" => depth += 1,
+            "(" | "[" | "{" => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(index);
+                }
+            }
+            _ => {}
+        }
+        if index <= floor {
+            return None;
+        }
+        index -= 1;
+    }
+}
+
+/// Whether the body between `open` and `close` (exclusive) waits one frame,
+/// every pass: a statement of its own, at its own level, that calls a wait
+/// with 1 (`wait(1);`, `System_Wait(1);`).
+fn waits_a_frame(tokens: &[Token], open: usize, close: usize) -> bool {
+    let mut depth = 0;
+    for index in open + 1..close {
+        match tokens[index].text {
+            "(" | "[" | "{" => depth += 1,
+            ")" | "]" | "}" => depth -= 1,
+            _ => {}
+        }
+        let texts = |offset: usize| tokens.get(index + offset).map_or("", |t| t.text);
+        let statement = index == open + 1 || matches!(tokens[index - 1].text, ";" | "{" | "}");
+        if depth == 0
+            && statement
+            && tokens[index].kind == Kind::Ident
+            && words(tokens[index].text).last().is_some_and(|word| word == "wait")
+            && (texts(1), texts(2), texts(3), texts(4)) == ("(", "1", ")", ";")
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// The words a loop's own counter is named with: a letter (`i`, `j`), an
+/// index or count, or the frames themselves. A counter named for what it
+/// steps through (`mosaicSize`, `pose`, `step`) is that, whatever the loop
+/// waits.
+const COUNTER_WORDS: &[&str] = &["i", "j", "k", "n", "t", "index", "count", "counter", "remaining", "elapsed", "frame", "frames", "time"];
+
+/// Whether the loop with its header between `header_open` and `header_close`
+/// and its body between `body_open` and `body_close` counts frames on
+/// `counter`: the loop's condition reads the counter (a `for`'s middle
+/// clause), the loop moves it on (`i++`, `++i`, `i += 2`), and the body waits
+/// a frame each pass. A body that is one statement has `body_open` just
+/// before it.
+fn counts_frames(tokens: &[Token], counter: &str, header: (usize, usize), body: (usize, usize)) -> bool {
+    // The condition: a `for`'s clause between its semicolons.
+    let mut condition = (header.0, header.1);
+    if header.0 > 0 && tokens[header.0 - 1].text == "for" {
+        let mut depth = 0;
+        let mut semicolons = Vec::new();
+        for index in header.0 + 1..header.1 {
+            match tokens[index].text {
+                "(" | "[" => depth += 1,
+                ")" | "]" => depth -= 1,
+                ";" if depth == 0 => semicolons.push(index),
+                _ => {}
+            }
+        }
+        let [first, second] = semicolons[..] else { return false };
+        condition = (first, second);
+    }
+    let reads = (condition.0..condition.1).any(|index| tokens[index].text == counter);
+    let moves = (header.0..header.1).chain(body.0..body.1).any(|index| {
+        let token = &tokens[index];
+        token.text == counter
+            && token.kind == Kind::Ident
+            && (matches!(tokens[index - 1].text, "++" | "--")
+                || tokens.get(index + 1).is_some_and(|next| matches!(next.text, "++" | "--" | "+=" | "-=")))
+    });
+    reads && moves && waits_a_frame(tokens, body.0, body.1)
+}
+
+/// Whether the number at `at` counts the frames of a loop that waits one
+/// frame each pass, up to `limit`: its bound (`for (i = 0; i < 20; i++) {
+/// ...; System_Wait(1); }`, `} while (++i < 45);`), its start (`for (i =
+/// 40; i != 0; i--)`), a cue on its counter inside it (`if (i == 10)`) or a
+/// period of it (`if (i % 16 == 0)`). The counter is the one name the number
+/// is compared with or divides; nothing else may be reckoned with them.
+pub fn frame_count(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool {
+    let (start, end, left) = span(tokens, at, floor);
+    let (mut counter, mut compared) = (None, false);
+    for (index, token) in tokens.iter().enumerate().take(end + 1).skip(start) {
+        match token.text {
+            _ if index == at => {}
+            "<" | "<=" | ">" | ">=" | "==" | "!=" => compared = true,
+            "%" if index + 1 == at => compared = true,
+            "++" | "--" | "(" | ")" | "0" => {}
+            _ if token.kind == Kind::Ident && counter.is_none_or(|counter| counter == token.text) => counter = Some(token.text),
+            _ => return false,
+        }
+    }
+    // `for (i = 40; ...)`: the counter's start.
+    let start_of = left.filter(|&left| start == at && end == at && tokens[left].text == "=" && left >= floor + 3);
+    if let Some(left) = start_of.filter(|&left| tokens[left - 2].text == "(" && tokens[left - 3].text == "for") {
+        counter = (tokens[left - 1].kind == Kind::Ident).then_some(tokens[left - 1].text);
+        compared = true;
+    }
+    let (Some(counter), true) = (counter, compared) else { return false };
+    if !words(counter).iter().all(|word| COUNTER_WORDS.contains(&word.as_str())) {
+        return false;
+    }
+    // Outwards through the brackets around the number, each loop in turn.
+    let mut depth = 0;
+    let mut index = start;
+    while index > floor {
+        index -= 1;
+        match tokens[index].text {
+            ")" | "]" | "}" => depth += 1,
+            "(" | "[" | "{" if depth > 0 => depth -= 1,
+            "(" if index > floor && matches!(tokens[index - 1].text, "for" | "while") => {
+                let Some(header_close) = close_of(tokens, index, limit) else { return false };
+                let body = if index >= floor + 2 && tokens[index - 1].text == "while" && tokens[index - 2].text == "}" {
+                    // `do { ... } while (...)`.
+                    let Some(open) = open_of(tokens, index - 2, floor) else { return false };
+                    (open, index - 2)
+                } else if tokens.get(header_close + 1).is_some_and(|t| t.text == "{") {
+                    let Some(close) = close_of(tokens, header_close + 1, limit) else { return false };
+                    (header_close + 1, close)
+                } else {
+                    let Some(semicolon) = (header_close + 1..=limit.min(tokens.len() - 1)).find(|&i| tokens[i].text == ";") else { return false };
+                    (header_close, semicolon + 1)
+                };
+                if counts_frames(tokens, counter, (index, header_close), body) {
+                    return true;
+                }
+            }
+            "{" if index > floor => {
+                let Some(close) = close_of(tokens, index, limit) else { return false };
+                let header = if tokens[index - 1].text == "do" {
+                    // `do { ... } while (...)`.
+                    let open = close + 2;
+                    (tokens.get(close + 1).is_some_and(|t| t.text == "while") && tokens.get(open).is_some_and(|t| t.text == "("))
+                        .then(|| close_of(tokens, open, limit).map(|header_close| (open, header_close)))
+                        .flatten()
+                } else if tokens[index - 1].text == ")" {
+                    open_of(tokens, index - 1, floor)
+                        .filter(|&open| open > floor && matches!(tokens[open - 1].text, "for" | "while"))
+                        .map(|open| (open, index - 1))
+                } else {
+                    None
+                };
+                if header.is_some_and(|header| counts_frames(tokens, counter, header, (index, close))) {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
 }
 
 /// Whether the number at `at` is the size in a local array's declarator,
@@ -535,7 +721,7 @@ mod tests {
     fn kind(code: &str, n: usize) -> Option<&'static str> {
         let tokens: Vec<Token> = clex::lex(code).into_iter().filter(|t| t.kind != Kind::Comment).collect();
         let at = tokens.iter().enumerate().filter(|(_, t)| t.kind == Kind::Number).nth(n).expect("a number").0;
-        local(&tokens, at, 0)
+        local(&tokens, at, 0, tokens.len() - 1)
     }
 
     #[test]
@@ -579,6 +765,37 @@ mod tests {
         assert_eq!(kind("work->shake = i * 2 - 128;", 1), Some("level"));
         assert_eq!(kind("work->shakeFrames = 12;", 0), Some("duration"));
         assert_eq!(kind("perspective->fadeStep = 128;", 0), None, "a rate");
+    }
+
+    /// The kind `local` gives the number `number` (its `n`th writing) in a
+    /// routine's `code`.
+    fn kind_of(code: &str, number: &str, n: usize) -> Option<&'static str> {
+        let tokens: Vec<Token> = clex::lex(code).into_iter().filter(|t| t.kind != Kind::Comment).collect();
+        let at = tokens.iter().enumerate().filter(|(_, t)| t.text == number).nth(n).expect("the number").0;
+        local(&tokens, at, 0, tokens.len() - 1)
+    }
+
+    #[test]
+    fn frames_a_loop_counts() {
+        let drop = "void F(void) { for (i = 0; i < 20; i++) { a->y -= 3; System_Wait(1); if (i == 10) Sound(); if (i % 16 == 0) Puff(); } }";
+        assert_eq!(kind_of(drop, "20", 0), Some("duration"), "the loop's bound");
+        assert_eq!(kind_of(drop, "10", 0), Some("duration"), "a cue on its counter");
+        assert_eq!(kind_of(drop, "16", 0), Some("duration"), "a period of it");
+        assert_eq!(kind_of("void F(void) { do { wait(1); } while (++i < 45); }", "45", 0), Some("duration"));
+        assert_eq!(kind_of("void F(void) { for (i = 40; i != 0; i--) { x++; Event_Wait(1); } }", "40", 0), Some("duration"));
+        assert_eq!(kind_of("void F(void) { while (i != 68) { i++; wait(1); } }", "68", 0), Some("duration"));
+        assert_eq!(kind_of("void F(void) { for (i = 0; i < 30; i++) wait(1); }", "30", 0), Some("duration"));
+        // A cue on the frame loop's counter, inside a loop over particles.
+        let nested = "void F(void) { for (i = 0; i < 60; i++) { for (k = 0; k != 64; k++) { if (i == 12) p[k] = 0; } wait(1); } }";
+        assert_eq!(kind_of(nested, "12", 0), Some("duration"));
+        assert_eq!(kind_of(nested, "64", 0), None, "the particles are counted, not frames");
+        assert_eq!(kind_of("void F(void) { for (i = 0; i != 64; i++) { p[i] = 0; } }", "64", 0), None, "no wait");
+        assert_eq!(kind_of("void F(void) { for (i = 0; i < 30; i++) { if (x) wait(1); } }", "30", 0), None, "a wait that may not come");
+        assert_eq!(kind_of("void F(void) { for (i = 0; i < 30; i++) { wait(2); } }", "30", 0), None, "two frames a pass");
+        assert_eq!(kind_of("void F(void) { for (mosaicSize = 0; mosaicSize <= 15; mosaicSize++) { wait(1); } }", "15", 0), None, "a counter named for what it steps through");
+        assert_eq!(kind_of("void F(void) { for (angle = 360, i = 21; i >= 0; i--) { angle -= 8; wait(1); } }", "360", 0), None, "not the loop's condition");
+        assert_eq!(kind_of("void F(void) { for (i = 0; i < 20; i++) { v = i * 16 + 32; wait(1); } }", "32", 0), None, "reckoned with more than the counter");
+        assert_eq!(kind_of("void F(void) { for (i = 0; i < 20; i++) { wait(1); } if (i == 20) G(); }", "20", 1), None, "after the loop");
     }
 
     #[test]
