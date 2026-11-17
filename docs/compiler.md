@@ -95,27 +95,47 @@ loop note. With constant bounds the copy folds away. An entry jump to a
 bottom test in the ROM is therefore either such a test, or the copy joined
 again by `jump2`.
 
-**The statements at a loop's top are copied ahead of it, in source order.
-Read in the dumps (`DjinnMenu_ShowMemberStatus`, The Lost Age, 16 November
-2026).** When the loop's first exit is near its top, everything before that
-exit is part of the test that is copied ahead. The copy is the first pass
-through those statements with the entry values folded in, and it stays in the
-order the source has them. The allocator and reload then take those
-instructions in that order, so the order shows in which registers the values
-get.
+**The loop pass moves invariants out on a budget, in the loop's own order.
+Read in `loop.c` and the dumps (`DjinnMenu_ShowMemberStatus`, The Lost Age,
+17 November 2026).** `move_movables` walks the values a loop never changes
+in the order their instructions stand in the loop, and moves one ahead of
+the loop when `threshold * savings * lifetime >= instructions in the loop`.
+`threshold` starts at one more than the number of registers that are not
+fixed (twice that in a loop with no call), and every move takes 3 from it. So the first few
+invariants in a long loop move and the later, short-lived ones do not. The
+pass runs twice at `-O2`; what the second run moves is placed after what
+the first moved. Reload then deals its registers in that order, so the
+order shows in the bytes even where every instruction is otherwise the same.
 
-In this routine the ROM's copy holds, in order, a pointer taken from another
-pointer, the address of the count array, and the address of `pairMember`.
-That is the loop top as it is written now, with its two pointers
-(`selectedPage = &selected[side]`, `pageCount = &pageCounts[side]`) before
-`pairMember = menu->pairMember`. Written as The Broken Seal's twin is, with
-the arrays used directly, the copy holds `pairMember`'s address first and the
-count array's address fifth, and 22 instruction lines differ, all one block
-of eleven with its four registers rotated. So the four tags on this routine
-do not steer the compiler: they are statements the original had at the top
-of its loop, in that order. Whether a pointer to the current side's entry,
-set at the top of a loop, is a device is a question of S2's wording, not of
-matching.
+In this routine the ROM sets up, ahead of the loop, a pointer to the page
+array, then the count array's address, then `pairMember`'s address. With
+both arrays indexed directly, as The Broken Seal's twin is written,
+`pairMember`'s address is the first invariant the loop reaches and moves in
+the first run; the two array addresses turn up at the page turn, far down
+the loop, and land after it: one block of eleven instructions with four
+registers rotated. The ROM's order needs two invariants ahead of
+`pairMember` at the loop's top (with the zero both share, three moves,
+which spends the budget and leaves `pairMember` for the second run).
+
+**A declaration's initialiser takes its registers before the next
+declaration does, and stack slots go out in register order.** A local is
+given its register where it is declared, and an initialiser is expanded
+there too, so `s32 *a = &x[i]; s32 *b = &y[i];` numbers the address of `x`
+before `b`. Reload hands stack slots to the values left without a register
+in number order. In the same routine the ROM keeps the page array's address
+in the slot above the count pointer's; assigned after both declarations
+(`s32 *a; s32 *b; a = &x[i];`) the two slots swap, 12 lines. The routine
+had carried `selected = selectedPages` to force that order; with the two
+pointers declared with their initialisers at the top of the loop's block,
+in the ROM's order, it matches without it. Swapped, 18 lines differ.
+
+What that left: the routine went from four tagged pointers to one
+(`counts = pageCounts`, now set once before the loop; without it the loop's
+first read of the count folds into the count pointer and loses its index
+register, one instruction). The twin in The Broken Seal turned out not to
+need its `counts` pointer at all. When a loop's set-up block is rotated
+against the ROM, read the loop dump's `moved to` lines of both forms before
+trying stand-ins: they say which value has to reach the loop's top first.
 
 **Jump threading stops at any instruction between two tests. Read (`jump.c`,
 `thread_jumps`).** It runs after each CSE. A store between two blocks that
