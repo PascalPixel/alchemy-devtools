@@ -33,9 +33,8 @@ also one held in a local first, decimal positions and durations, the
 frames a loop that waits a frame each pass counts, a local array's size,
 places on the map grid, beside its own cell macros too, and in OAM words,
 data through a pointer call, dampings and decays, a sheet's own animation
-numbers, fade, shake, shade and colour levels, a function-like macro's own
-definition, and the m4a driver's own numbers, as pret writes them) are
-honest_KIND, and magic_code is
+numbers, fade, shake, shade and colour levels, and a function-like macro's
+own definition) are honest_KIND, and magic_code is
 what is left to name. Every hex number counts in hex: flag numbers (flags.h, a FLAG_
 name, the whole argument of a call or macro named for a flag or filling a
 parameter named for one), addresses and
