@@ -699,8 +699,11 @@ pub fn frame_count(tokens: &[Token], at: usize, floor: usize, limit: usize) -> b
 /// first, up to `limit`: `s32 mask = 15; ... dx = mask & Random16();`, `speed
 /// = 255; speed &= Random16();`, `mask = 64 - 1; ... (Battle_RandomFar() &
 /// mask) == 0`. It is the whole value given to a plain local, and the local's
-/// next read rolls with it; a read that only sets it again (`mask = 31;`, a
-/// sibling `case`'s) is passed over.
+/// next read is the range of a roll: an operand of `&` or `%` whose other
+/// operand rolls, or the local masked by `&=` or `%=` with a roll. A
+/// threshold compared with a roll (`(Battle_RandomFar() & 255) < chance`) and
+/// an addend of one (`id + Random16() % 3`) are not ranges. A read that only
+/// sets it again (`mask = 31;`, a sibling `case`'s) is passed over.
 pub fn random_local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool {
     let (start, end, left) = span(tokens, at, floor);
     let Some(op) = left.filter(|&left| tokens[left].text == "=" && left >= floor + 2) else { return false };
@@ -721,14 +724,38 @@ pub fn random_local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> 
         if next == "=" {
             continue;
         }
-        let (read_start, read_end) = if ASSIGNMENTS.contains(&next) {
-            // `speed &= Random16()`: the whole statement rolls.
-            statement(tokens, index, floor)
-        } else {
-            let (read_start, read_end, _) = span(tokens, index, floor);
-            (read_start, read_end)
+        let rolls = |first: usize, last: usize| {
+            (first..=last).any(|at| tokens[at].kind == Kind::Ident && words(tokens[at].text).iter().any(|word| word == "random"))
         };
-        return chains(tokens, read_start, read_end).1;
+        if matches!(next, "&=" | "%=") {
+            // `speed &= Random16()`.
+            let (_, read_end) = statement(tokens, index, floor);
+            return rolls(index + 2, read_end);
+        }
+        if matches!(next, "&" | "%") {
+            // `mask & Random16()`: the operand after it.
+            let first = index + 2;
+            let Some(token) = tokens.get(first) else { return false };
+            let open = if token.text == "(" { Some(first) } else { tokens.get(first + 1).filter(|t| t.text == "(").map(|_| first + 1) };
+            let last = match open {
+                Some(open) => close_of(tokens, open, limit),
+                None => (token.kind == Kind::Ident).then_some(first),
+            };
+            return last.is_some_and(|last| rolls(first, last));
+        }
+        let previous = tokens[index - 1].text;
+        let binary = index >= floor + 2 && (matches!(tokens[index - 2].kind, Kind::Ident | Kind::Number) || matches!(tokens[index - 2].text, ")" | "]"));
+        if matches!(previous, "&" | "%") && binary {
+            // `Battle_RandomFar() & mask`: the operand before it.
+            let last = index - 2;
+            let first = if tokens[last].text == ")" {
+                open_of(tokens, last, floor).map(|open| if open > floor && tokens[open - 1].kind == Kind::Ident { open - 1 } else { open })
+            } else {
+                Some(last)
+            };
+            return first.is_some_and(|first| rolls(first, last));
+        }
+        return false;
     }
     false
 }
@@ -982,6 +1009,12 @@ mod tests {
         assert_eq!(kind_of("void F(void) { s32 size = 10; Draw(size); x = Random16(); }", "10", 0), None, "read without a roll");
         assert_eq!(kind_of("void F(void) { a->mask = 15; x = a->mask & Random16(); }", "15", 0), None, "no plain local");
         assert_eq!(kind_of("void F(void) { s32 m = 15 + n; x = m & Random16(); }", "15", 0), None, "not its whole value");
+        // A threshold compared with a roll, which The Lost Age names
+        // (CHANCE_BLOW), and an addend of a roll.
+        assert_eq!(kind_of("void F(void) { s32 chance; chance = 32; if ((Battle_RandomFar() & 255) < chance) Hit(); }", "32", 0), None);
+        assert_eq!(kind_of("void F(void) { s32 id = 112; Message_Show(id + Random16() % 3); }", "112", 0), None);
+        assert_eq!(kind_of("void F(void) { s32 m = 12; x = (m & y) + Random16(); }", "12", 0), None, "masking something else");
+        assert_eq!(kind_of("void F(void) { s32 n = 90; x = Random16() % n; }", "90", 0), Some("random"));
     }
 
     #[test]
