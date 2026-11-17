@@ -150,6 +150,13 @@ pub struct Report {
     /// Object-like macros that stand for a routine, each with the routines it
     /// stands for in the editions (`MENU_DRAW_STATUS_LABEL`).
     aliases: HashMap<String, BTreeSet<String>>,
+    /// Names written beside a bitwise operator anywhere in the game
+    /// (`flags & PLACE_ENEMY_SIDE`, `~CELL_CODE_BITS`).
+    bitwise_names: HashSet<String>,
+    /// Each hex number a `#define` or enumerator gives a name alone that no
+    /// rule of its file keeps, settled once every use of its name is read:
+    /// file, line, number and name.
+    hex_definitions: Vec<(String, usize, String, String)>,
     function_bodies: HashMap<String, Group>,
     table_bodies: HashMap<String, Group>,
     /// Every name the source defines or declares, for the naming checks.
@@ -539,6 +546,17 @@ impl Report {
     /// the parameter it fills show it to be, else a number to name
     /// (`magic_code`).
     fn finish(&mut self) {
+        // A hex number named alone is a mask or a bit, which S3 keeps hex,
+        // where its name says so (`CELL_CODE_BITS`, `TRIGGER_KIND_MASK`) or
+        // is written beside `&`, `|`, `^` or `~` (`flags & PLACE_ENEMY_SIDE`).
+        for (file, line, text, name) in std::mem::take(&mut self.hex_definitions) {
+            let said = numbers::words(&name).iter().any(|word| matches!(word.as_str(), "mask" | "bit" | "bits"));
+            if said || self.bitwise_names.contains(&name) {
+                self.add("hex_mask", &file, 1);
+            } else {
+                self.note("hex_other", &file, line, &text);
+            }
+        }
         for candidate in std::mem::take(&mut self.candidates) {
             let (file, line, literal) = (&candidate.file, candidate.line, &candidate.literal);
             let what = match candidate.calls.first() {
@@ -1503,6 +1521,16 @@ impl<'r, 'a> Walk<'r, 'a> {
     /// field stays, an offset, a count or a 16.16 value is written otherwise.
     fn hex(&mut self) {
         const BITWISE: &[&str] = &["&", "|", "^", "~", "<<", ">>", "&=", "|=", "^=", "<<=", ">>="];
+        // A name beside `&`, `|`, `^` or `~` is a mask or a bit wherever it
+        // is defined; one beside a shift is an amount of bits.
+        const MASKING: &[&str] = &["&", "|", "^", "~", "&=", "|=", "^="];
+        for at in 0..self.code.tokens.len() {
+            let token = &self.code.tokens[at];
+            let beside = |index: Option<usize>| index.and_then(|index| self.code.tokens.get(index)).is_some_and(|t| MASKING.contains(&t.text));
+            if token.kind == Kind::Ident && (beside(at.checked_sub(1)) || beside(Some(at + 1))) {
+                self.report.bitwise_names.insert(token.text.to_string());
+            }
+        }
         let bits = self.bit_families();
         let registers = self.file.ends_with("/io_reg.h");
         for at in 0..self.code.tokens.len() {
@@ -1536,7 +1564,10 @@ impl<'r, 'a> Walk<'r, 'a> {
                 "hex_other"
             };
             self.report.add("hex", self.file, 1);
-            if metric == "hex_other" {
+            if let Some(name) = name.filter(|_| metric == "hex_other") {
+                // Its name's uses, in any file, may show it a mask or a bit.
+                self.report.hex_definitions.push((self.file.to_string(), token.line, token.text.to_string(), name.to_string()));
+            } else if metric == "hex_other" {
                 self.report.note(metric, self.file, token.line, token.text);
             } else {
                 self.report.add(metric, self.file, 1);
@@ -2654,12 +2685,12 @@ mod tests {
         assert!(listable("views"));
         assert_eq!(report.total("goto"), 1);
         let hex = one("#define MASK 0x3f\nint F(int a) { return (a & 0xff) + (a << 0x10) + 0x1c + *(int *)0x04000130 + 26; }\n");
-        assert_eq!((hex.total("hex"), hex.total("hex_mask"), hex.total("hex_address"), hex.total("hex_other")), (5, 2, 1, 2));
-        assert_eq!(list(&[("tbs", &hex)], "hex_other"), "tbs\tf.c:1\t0x3f\ntbs\tf.c:2\t0x1c\n");
+        assert_eq!((hex.total("hex"), hex.total("hex_mask"), hex.total("hex_address"), hex.total("hex_other")), (5, 3, 1, 1), "MASK by its name");
+        assert_eq!(list(&[("tbs", &hex)], "hex_other"), "tbs\tf.c:2\t0x1c\n");
         // Bits by family, flag numbers by name or call, register values by header.
         let kinds = one(concat!(
             "#define SPEAKER_LEFT 0x1000\n#define SPEAKER_RIGHT 0x2000\n#define SPEAKER_FLAGS 0x3000\n#define SPEAKER_SIZE 0x30\n",
-            "enum { TILE_HFLIP = 0x400, TILE_VFLIP = 0x800 };\n#define LONE_BIT 0x80\n#define FLAG_DOOR_OPEN 0x9eb\n",
+            "enum { TILE_HFLIP = 0x400, TILE_VFLIP = 0x800 };\n#define LONE_VALUE 0x80\n#define FLAG_DOOR_OPEN 0x9eb\n",
             "void F(void) { GameFlag_Set(0x8ee); Actor_Move(0x8ee); GameFlag_Set(0x10 + 1); }\n",
         ));
         assert_eq!((kinds.total("hex_mask"), kinds.total("hex_flag"), kinds.total("hex_other")), (5, 2, 4));
@@ -3025,6 +3056,16 @@ mod tests {
         assert_eq!(report.total("data_argument_composed"), 1, "toFIXED(-240)");
         assert_eq!(list(&[("tbs", &report)], "magic_argument"), "tbs\tf.c:3\t35\tUnit_AddPp amount\n", "a lone amount, still to name");
         assert_eq!(report.total("magic_code"), 2, "35 and the 16 a difference takes");
+    }
+
+    #[test]
+    fn hex_named_alone_is_a_mask_by_its_name_or_its_uses() {
+        let report = game([
+            ("a.h", "#define CELL_CODE_BITS 0xff00\n#define PLACE_ENEMY_SIDE 0x80\nenum { ICON_PSY_SEAL = 0x08 };\n#define LONE_VALUE 0x80\n"),
+            ("b.c", "s32 F(s32 place, s32 icons) { return (place & PLACE_ENEMY_SIDE) + (icons | ICON_PSY_SEAL) + LONE_VALUE; }\n"),
+        ]);
+        assert_eq!((report.total("hex_mask"), report.total("hex_other")), (3, 1));
+        assert_eq!(list(&[("tbs", &report)], "hex_other"), "tbs\ta.h:4\t0x80\n", "a value nothing masks with");
     }
 
     #[test]
