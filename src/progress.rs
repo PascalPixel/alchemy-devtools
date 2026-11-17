@@ -31,9 +31,11 @@ its tokens, the call it stands in or the parameter it fills show to be
 honest under S3 (composed forms, tenths and percentages, random ranges,
 decimal positions and durations, a local array's size, places on the map
 grid and in OAM words, data through a pointer call, dampings, a sheet's own
-animation numbers, fade and shake levels) are honest_KIND, and magic_code is
+animation numbers, fade and shake levels, a function-like macro's own
+definition) are honest_KIND, and magic_code is
 what is left to name. Every hex number counts in hex: flag numbers (flags.h, a FLAG_
-name, the whole argument of a call or macro named for a flag), addresses and
+name, the whole argument of a call or macro named for a flag or filling a
+parameter named for one), addresses and
 values from 0x02000000 up, masks and bits (beside a bitwise operator or a
 shift, io_reg.h's register values, a define or enumerator in a family of
 single bits) and the sound driver's are the kinds S3 keeps, and hex_other is

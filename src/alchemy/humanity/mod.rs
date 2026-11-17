@@ -179,6 +179,9 @@ struct Candidate {
     pointer: Option<(String, usize)>,
     /// The right operand of a shift: an amount of bits, never a position.
     shift: bool,
+    /// Inside a function-like macro's own definition, which names it
+    /// (`#define FIELD_HALF_CELL(v) ((v) >> 19)`).
+    definition: bool,
 }
 
 /// The words of parameter names that hold data S3 lets stay a number: a
@@ -520,7 +523,10 @@ impl Report {
             let parameter = candidate.calls.first().and_then(|(callee, at)| self.parameter(callee, *at, 0));
             let vetoed = parameter.is_some_and(|(name, _)| numbers::is_other(&name));
             let local = candidate.local.filter(|kind| !(vetoed && matches!(*kind, "position" | "duration")));
-            match local.or_else(|| Self::honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)) {
+            // A number in a function-like macro's own body is the name's
+            // definition: the macro is the name S3 asks for.
+            let definition = candidate.definition.then_some("definition");
+            match local.or_else(|| Self::honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)).or(definition) {
                 Some(kind) => self.note(&format!("honest_{kind}"), file, line, &what),
                 None => {
                     self.note("magic_code", file, line, literal);
@@ -1056,6 +1062,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 random_arguments,
                 pointer: numbers::pointer_call(tokens, at, floor),
                 shift: at > floor && matches!(self.code.text(at - 1), "<<" | ">>"),
+                definition: function_macro == Some(true),
             };
             self.report.candidates.push(candidate);
             return;
@@ -1344,6 +1351,34 @@ impl<'r, 'a> Walk<'r, 'a> {
         None
     }
 
+    /// The call a number is a whole argument of, and which argument it is:
+    /// `(SCENE_ITEM, 2)` of `SCENE_ITEM(CONTAINER_CHEST, ITEM_HERB, 0x9eb)`.
+    fn argument_position(&self, at: usize) -> Option<(&'a str, usize)> {
+        let call = self.argument_of(at)?;
+        let tokens = &self.code.tokens;
+        let (mut depth, mut position) = (0, 0);
+        for index in (0..at).rev() {
+            match tokens[index].text {
+                ")" | "]" | "}" => depth += 1,
+                "(" if depth == 0 => return Some((call, position)),
+                "(" | "[" | "{" => depth -= 1,
+                "," if depth == 0 => position += 1,
+                _ => {}
+            }
+        }
+        None
+    }
+
+    /// Whether a function's or function-like macro's parameter at `position`
+    /// is named for a flag (`flag`, `doneFlag`), as far as the files read so
+    /// far declare it: a header is read before the code that includes it.
+    fn fills_flag_parameter(&self, call: &str, position: usize) -> bool {
+        let is_flag = |name: &str| numbers::words(name).iter().any(|word| word == "flag");
+        let report = &self.report;
+        report.parameters.get(call).and_then(|names| names.get(position)).is_some_and(|name| name.as_deref().is_some_and(is_flag))
+            || report.macro_parameters.get(call).and_then(|names| names.get(position)).is_some_and(|(name, _)| is_flag(name))
+    }
+
     /// Counts the file's hex numbers, by what S3 lets stay hex: flag numbers
     /// (flags.h, a FLAG_ name's, a flag call's argument), addresses and values
     /// from 0x02000000 up, masks and bits (a number beside a bitwise operator
@@ -1371,7 +1406,8 @@ impl<'r, 'a> Walk<'r, 'a> {
             // of a call or macro whose name says it takes a flag.
             let flag = self.file.ends_with("/flags.h")
                 || name.is_some_and(|name| name.starts_with("FLAG_"))
-                || self.argument_of(at).is_some_and(|call| call.to_ascii_lowercase().contains("flag"));
+                || self.argument_of(at).is_some_and(|call| call.to_ascii_lowercase().contains("flag"))
+                || self.argument_position(at).is_some_and(|(call, position)| self.fills_flag_parameter(call, position));
             let metric = if flag {
                 "hex_flag"
             } else if self.file.contains("/sound/") {
@@ -2006,6 +2042,7 @@ const ROWS: &[(&str, &str)] = &[
     ("honest_damping", "  honest: dampings"),
     ("honest_animation", "  honest: a sheet's animations"),
     ("honest_level", "  honest: fade, shake levels"),
+    ("honest_definition", "  honest: a macro's own definition"),
     ("data_argument", "numbers passed as data"),
     ("data_argument_frames", "  frames"),
     ("data_argument_coordinate", "  coordinates"),
@@ -2662,12 +2699,23 @@ mod tests {
         assert_eq!(report.total("data_argument_composed"), 1, "INTtoFIXED(24), a speed in pixels");
         assert_eq!(report.total("data_argument"), 5);
         // 0x8000 (an acceleration), 20, 10 and 12 (BLEND calls Blend), 64 and 40;
-        // the shifts' 16, in PIXELS and in Run, are no arguments.
-        assert_eq!((report.total("magic_argument"), report.total("magic_code")), (6, 8));
+        // the shifts' 16, in PIXELS and in Run, are no arguments, and
+        // INTtoFIXED's own 16 is its definition.
+        assert_eq!((report.total("magic_argument"), report.total("magic_code")), (6, 7));
+        assert_eq!(report.total("honest_definition"), 1);
         let listed = list(&[("tbs", &report)], "magic_argument");
         assert!(listed.starts_with("tbs\tf.c:6\t0x8000\tActor_SetSpeed acceleration\ntbs\tf.c:7\t20\tOld #2\n"), "{listed}");
         assert!(listed.ends_with("tbs\tf.c:9\t40\t-\n"), "{listed}");
         assert!(list(&[("tbs", &report)], "data_argument").contains("tbs\tf.c:2\t80\tWAIT n\n"));
+    }
+
+    #[test]
+    fn hex_flags_by_the_parameter_they_fill() {
+        let report = game([
+            ("a.h", "#define SCENE_ITEM(kind, contents, flag) {kind, contents, flag}\nvoid Chest_Open(s32 actor, s32 doneFlag);\n"),
+            ("b.c", "void Run(void) {\n    Chest_Open(3, 0x9eb);\n    Other(3, 0x9ec);\n}\nstruct Item gItems[] = {\n    SCENE_ITEM(2, 4, 0x010),\n};\n"),
+        ]);
+        assert_eq!((report.total("hex_flag"), report.total("hex_other")), (2, 1), "a flag parameter's argument, a macro's and a function's, and Other's unknown one");
     }
 
     #[test]
@@ -2703,7 +2751,8 @@ mod tests {
         assert_eq!(listed("honest_position"), ["16", "125", "39", "85", "560", "10", "32", "32"]);
         assert_eq!(listed("honest_animation"), ["13", "25"], "the second argument only; a speed is a rate");
         assert_eq!(listed("honest_level"), ["16"]);
-        assert_eq!(listed("magic_code"), ["12", "48", "0x1ff", "12", "16"], "an actor id, a speed, a mask, an index and OBJ_X's own shift");
+        assert_eq!(listed("magic_code"), ["12", "48", "0x1ff", "12"], "an actor id, a speed, a mask and an index");
+        assert_eq!(listed("honest_definition"), ["16"], "OBJ_X's own shift is the macro's definition");
     }
 
     #[test]
