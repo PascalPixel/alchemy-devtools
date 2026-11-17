@@ -29,16 +29,20 @@ not name counted among its word's; --list fakematch and --list leftover take
 every kind of each. Every number in code counts in magic_code_all; the ones
 its tokens, the call it stands in or the parameter it fills show to be
 honest under S3 (composed forms, tenths and percentages, random ranges,
-decimal positions and durations, a local array's size, places on the map
-grid and in OAM words, data through a pointer call, dampings, a sheet's own
-animation numbers, fade and shake levels, a function-like macro's own
-definition) are honest_KIND, and magic_code is
+also one held in a local first, decimal positions and durations, the
+frames a loop that waits a frame each pass counts, a local array's size,
+places on the map grid, beside its own cell macros too, and in OAM words,
+data through a pointer call, dampings and decays, a sheet's own animation
+numbers, fade, shake, shade and colour levels, a function-like macro's own
+definition, and the m4a driver's own numbers, as pret writes them) are
+honest_KIND, and magic_code is
 what is left to name. Every hex number counts in hex: flag numbers (flags.h, a FLAG_
 name, the whole argument of a call or macro named for a flag or filling a
 parameter named for one), addresses and
 values from 0x02000000 up, masks and bits (beside a bitwise operator or a
 shift, io_reg.h's register values, a define or enumerator in a family of
-single bits) and the sound driver's are the kinds S3 keeps, and hex_other is
+single bits, named a mask or bit, or written beside a bitwise operator
+anywhere) and the sound driver's are the kinds S3 keeps, and hex_other is
 the rest, to judge (a packed field stays; an offset, a count or a 16.16 value
 is written otherwise). A numbered name with an
 its-number evidence row counts as numbered_honest; a name whose rows are of
