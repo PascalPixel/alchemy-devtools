@@ -649,7 +649,7 @@ fn regexes() -> &'static [Regex; 3] {
         [
             // Placeholders.
             Regex::new(concat!(
-                r"^(?:[gs]?(?:unk|Unk|UNK)(?:nown)?(?:$|[_0-9A-Z]))",
+                r"^(?:(?:unk|Unk|UNK|[gs]Unk|[gs]UNK)(?:nown)?(?:$|[_0-9A-Z]))",
                 r"|^(?:sub|func|Func|data|loc|off|byte|word|dword|nullsub|D)_[0-9A-Fa-f]{2,}",
                 r"|^field_[0-9A-Fa-f]+",
                 r"|[_a-z0-9]Unk(?:nown)?(?:$|[_0-9A-Z])|_unk(?:$|[_0-9])|_UNK(?:$|[_0-9])",
@@ -2648,12 +2648,12 @@ mod tests {
 
     #[test]
     fn placeholder_and_numbered_names() {
-        for name in ["unk_14", "unk14", "unkC", "gUnk_0203", "gUnknown_0203", "sub_08012345", "field_1C", "Foo_Unk"]
+        for name in ["unk_14", "unk14", "unkC", "gUnk_0203", "gUnknown_0203", "sUnk_10", "sub_08012345", "field_1C", "Foo_Unk"]
         {
             assert!(is_placeholder(name), "{name}");
         }
         assert!(is_placeholder("SE_138") && is_placeholder("ITEM_034") && is_placeholder("DJINNI_07") && is_placeholder("Battle_08012345") && is_placeholder("UnkThing"));
-        for name in ["Unkempt", "Unknowable", "Trunk", "FunkyUnkle", "SE_JUMP"] {
+        for name in ["Unkempt", "Unknowable", "Trunk", "FunkyUnkle", "SE_JUMP", "sunkRows"] {
             assert!(!is_placeholder(name), "{name}");
         }
         for name in ["ColosseumFinal1", "Event_LeaveByExit10", "ACTOR_8", "gEffectScript0", "VenusLighthouse2", "arg0"] {
