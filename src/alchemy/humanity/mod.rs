@@ -396,17 +396,23 @@ impl Report {
         if has(&["damping"]) {
             return Some("damping");
         }
-        if has(&["percent"]) {
+        // A percentage, a level or an edge, unless another word makes the
+        // parameter a scale, an angle, a phase, a mode or an id
+        // (`redScale`, `redPhase`, `fadeMode`).
+        let other = has(&[
+            "scale", "angle", "rotation", "zoom", "shift", "flip", "freq", "phase", "mode", "kind", "style", "state", "id", "index",
+        ]);
+        if !other && has(&["percent"]) {
             return Some("decimal");
         }
-        if has(&["fade", "shade", "brightness", "red", "green", "blue"]) {
+        if !other && has(&["fade", "shade", "brightness", "red", "green", "blue"]) {
             return Some("level");
         }
         let shake = numbers::words(callee).iter().any(|word| word == "shake");
-        if shake && has(&["horizontal", "vertical", "amplitude"]) {
+        if !other && shake && has(&["horizontal", "vertical", "amplitude"]) {
             return Some("level");
         }
-        if has(&["edge"]) {
+        if matches!(name.to_ascii_lowercase().as_str(), "edge" | "leftedge" | "rightedge" | "topedge" | "bottomedge") {
             return Some("position");
         }
         let names: Vec<String> = match self.parameters.get(callee) {
@@ -3022,6 +3028,7 @@ mod tests {
             "#define MapGrid_SetShake(horizontal, vertical, decay) Shake((horizontal), (vertical), (decay))\n",
             "#define CameraShift(horizontal, vertical) Shift((horizontal), (vertical))\n",
             "void Unit_LevelUpTo(s32 owner, s32 level);\n",
+            "void Tint(s32 redScale, s32 redPhase, s32 fadeMode, s32 edgeStyle, s32 percentIndex);\n",
         );
         let source = concat!(
             "void Run(void) {\n",
@@ -3032,6 +3039,7 @@ mod tests {
             "    MapGrid_SetShake(16, 16, 1);\n",
             "    CameraShift(16, 16);\n",
             "    Unit_LevelUpTo(ISAAC, 10);\n",
+            "    Tint(12, 40, 16, 20, 30);\n",
             "}\n",
         );
         let report = game([("f.h", header), ("f.c", source)]);
@@ -3042,8 +3050,10 @@ mod tests {
         assert_eq!(listed("honest_duration"), ["52"], "its own words first: a frame");
         assert_eq!(listed("honest_decimal"), ["150", "10", "110"]);
         assert_eq!(listed("honest_position"), ["28"]);
-        // A force, a shift that is no shake, and a unit's level.
-        assert_eq!(listed("magic_code"), ["12", "12", "16", "16", "10"]);
+        // A force, a shift that is no shake, a unit's level, and a scale, a
+        // phase, a mode, a count and an index named with a tone's, an edge's
+        // or a percent's word.
+        assert_eq!(listed("magic_code"), ["12", "12", "16", "16", "10", "12", "40", "16", "20", "30"]);
     }
 
     #[test]
