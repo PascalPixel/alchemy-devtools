@@ -1841,12 +1841,12 @@ mod tests {
     /// adoption stopped partway still undoes what it did write.
     #[test]
     fn a_failed_write_changes_nothing_and_a_partial_adoption_still_undoes() {
-        use std::os::unix::fs::PermissionsExt;
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         std::fs::write(root.join("a.txt"), "a\n").unwrap();
-        std::fs::write(root.join("b.txt"), "b\n").unwrap();
-        std::fs::set_permissions(root.join("b.txt"), std::fs::Permissions::from_mode(0o444)).unwrap();
+        // A folder where the file should be: no write can replace it, even
+        // one a read-only file would not stop (root's).
+        std::fs::create_dir(root.join("b.txt")).unwrap();
         let mut files = Files::new(root);
         files.write("a.txt", "a2\n".into());
         files.write("b.txt", "b2\n".into());
@@ -1857,7 +1857,12 @@ mod tests {
         assert!(!root.join("new").exists());
         assert_eq!(std::fs::read_dir(root.join("out/adopt")).unwrap().count(), 0);
 
-        std::fs::set_permissions(root.join("b.txt"), std::fs::Permissions::from_mode(0o644)).unwrap();
+        std::fs::remove_dir(root.join("b.txt")).unwrap();
+        std::fs::write(root.join("b.txt"), "b\n").unwrap();
+        let mut files = Files::new(root);
+        files.write("a.txt", "a2\n".into());
+        files.write("b.txt", "b2\n".into());
+        files.write("new/c.txt", "c\n".into());
         let journal = files.commit("adopt test", "test").unwrap();
         std::fs::write(root.join("b.txt"), "b\n").unwrap();
         undo(root, Path::new(&journal)).unwrap();

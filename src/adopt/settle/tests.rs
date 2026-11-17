@@ -289,7 +289,9 @@ fn the_checkout_s_markers_are_wrapped_as_settle_writes_them() {
             }
         }
     }
-    assert!(seen > 0, "no marker under {}", root.display());
+    // The views are settled as the game is humanized; with none left the
+    // rule holds, so only the sources must have been read.
+    assert!(!all.is_empty(), "no sources under {}", root.display());
     assert!(differ.is_empty(), "{} of {seen} differ:\n{}", differ.len(), differ.join("\n"));
 }
 
