@@ -19,7 +19,13 @@ use crate::gba::clex::{Kind, Token};
 /// The units S3 composes a fraction from (`FIXED_ONE * n / d`), and the calls
 /// that compose one (`INTtoFIXED(n) / d`).
 const UNITS: &[&str] = &["FIXED_ONE", "TRIG_TURN", "FACING_STEP", "DAMPING_SCALE"];
-const UNIT_CALLS: &[&str] = &["toFIXED", "INTtoFIXED", "DEGtoANG"];
+const UNIT_CALLS: &[&str] = &["toFIXED", "INTtoFIXED", "DEGtoANG", "Q_8_8"];
+
+/// A constant that is a scale's unit, as `FIXED_ONE` is a 16.16 number's:
+/// `SOUND_TEMPO_SCALE_NORMAL * 15 / 16`.
+fn is_scale(name: &str) -> bool {
+    name.bytes().all(|b| !b.is_ascii_lowercase()) && words(name).iter().any(|word| word == "scale")
+}
 
 /// Words of a name that hold a position or a size in pixels (or cells).
 const POSITION_WORDS: &[&str] = &["x", "y", "z", "dx", "dy", "dz", "row", "column", "width", "height", "radius", "distance"];
@@ -252,8 +258,9 @@ fn chains<'a>(tokens: &[Token<'a>], start: usize, end: usize) -> (Vec<Vec<&'a st
 /// The multiplicative chain the number at `at` is a factor of, as
 /// `(operator before, operand)` pairs, the number's own included:
 /// `hpMax * 60 / 100` is `[("", "hpMax"), ("*", "60"), ("/", "100")]`. A
-/// call or group is one operand, named by its call (`px`) or `()`.
-fn factors<'a>(tokens: &[Token<'a>], at: usize, floor: usize) -> Vec<(&'a str, &'a str)> {
+/// call or group is one operand, named by its call (`px`) or `()`. Also
+/// which of them is the number's own.
+fn factors<'a>(tokens: &[Token<'a>], at: usize, floor: usize) -> (Vec<(&'a str, &'a str)>, usize) {
     let pp = tokens[at].pp;
     let same = |index: usize| tokens[index].pp == pp && !matches!(tokens[index].kind, Kind::PpStart | Kind::PpEnd);
     // The operand ending at `end`: its first token and its name.
@@ -324,6 +331,7 @@ fn factors<'a>(tokens: &[Token<'a>], at: usize, floor: usize) -> Vec<(&'a str, &
         Some((last, name))
     };
     let mut out = vec![("", tokens[at].text)];
+    let mut own = 0;
     // Leftwards: `operand op` pairs.
     let mut first = at;
     while first >= floor + 2 && same(first - 1) && matches!(tokens[first - 1].text, "*" | "/" | "%") {
@@ -331,6 +339,7 @@ fn factors<'a>(tokens: &[Token<'a>], at: usize, floor: usize) -> Vec<(&'a str, &
         let Some((begin, name)) = operand_before(first - 2) else { break };
         out[0].0 = op;
         out.insert(0, ("", name));
+        own += 1;
         first = begin;
     }
     let mut last = at;
@@ -340,7 +349,7 @@ fn factors<'a>(tokens: &[Token<'a>], at: usize, floor: usize) -> Vec<(&'a str, &
         out.push((op, name));
         last = end;
     }
-    out
+    (out, own)
 }
 
 /// The statement around `at`: from after the last `;`, `{` or `}` to the next.
@@ -393,24 +402,36 @@ fn switch_subject(tokens: &[Token], at: usize, floor: usize) -> Option<(usize, u
 
 /// The honest kind the tokens around the number at `at` show, reading back
 /// no further than `floor` and on no further than `limit` (the end of the
-/// routine it is in): a composed form, a decimal fraction, a random range
-/// (one held in a local first included), a decimal position or duration by
-/// the names it is reckoned with, or the frames a loop counts. The parameter
-/// a number fills is judged by the caller, who knows every declaration.
+/// routine it is in): a composed form, a decimal fraction or percentage, a
+/// random range, a decimal position, duration or level by the names it is
+/// reckoned with, a decay's divisor, or the frames a loop counts. The
+/// parameter a number fills is judged by the caller, who knows every
+/// declaration.
 pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<&'static str> {
     let text = tokens[at].text;
-    let factors = factors(tokens, at, floor);
-    if factors.iter().any(|(_, operand)| UNITS.contains(operand) || UNIT_CALLS.contains(operand)) {
+    let (factors, own) = factors(tokens, at, floor);
+    if factors.iter().any(|(_, operand)| UNITS.contains(operand) || UNIT_CALLS.contains(operand) || is_scale(operand)) {
+        return Some("composed");
+    }
+    let (start, end, left) = span(tokens, at, floor);
+    // A fraction a unit's own call composes: `Q_8_8(11.0 / 16)`.
+    let unit_call = left.is_some_and(|left| tokens[left].text == "(" && left > floor && UNIT_CALLS.contains(&tokens[left - 1].text));
+    if unit_call && factors[own].0 == "/" {
         return Some("composed");
     }
     let (statement_start, statement_end) = statement(tokens, at, floor);
-    let digits = tokens[statement_start..=statement_end].iter().any(|t| t.kind == Kind::Char && t.text == "'0'");
+    let char_in_statement = |c: &str| tokens[statement_start..=statement_end].iter().any(|t| t.kind == Kind::Char && t.text == c);
+    let digits = char_in_statement("'0'");
     let tenths = factors.iter().any(|(op, operand)| matches!(*op, "/" | "%") && is_power_of_ten(operand));
     let base = digits && factors.iter().any(|(op, operand)| *op == "*" && is_power_of_ten(operand));
-    if tenths || base || (digits && is_power_of_ten(text) && factors.len() == 1) {
+    // A percentage: `hazardSteps * 100 / hazardLimit`.
+    let multiplied = factors[own].0 == "*" || factors.get(own + 1).is_some_and(|(op, _)| *op == "*");
+    let percent = is_power_of_ten(text) && multiplied && factors[own + 1..].iter().any(|(op, _)| *op == "/");
+    // The value of a hex digit's letter: `digit + 'A' - 10`.
+    let letter = text == "10" && factors.len() == 1 && (char_in_statement("'A'") || char_in_statement("'a'"));
+    if tenths || base || percent || letter || (digits && is_power_of_ten(text) && factors.len() == 1) {
         return Some("decimal");
     }
-    let (start, end, left) = span(tokens, at, floor);
     let (mut found, random) = chains(tokens, start, end);
     if random || random_local(tokens, at, floor, limit) {
         return Some("random");
@@ -435,7 +456,7 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
     }
     let kinds: Vec<&str> = found.iter().filter_map(|chain| named_kind(chain.iter().copied())).collect();
     let named = kinds.iter().find(|&&kind| kind == "position").or(kinds.first()).copied();
-    named.or_else(|| frame_count(tokens, at, floor, limit).then_some("duration"))
+    named.or_else(|| decay(tokens, at, floor).then_some("damping")).or_else(|| frame_count(tokens, at, floor, limit).then_some("duration"))
 }
 
 /// The bracket that closes the one opening at `open`, no further than `limit`.
@@ -660,13 +681,33 @@ pub fn random_local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> 
     false
 }
 
+/// Whether the number at `at` divides a value by what it loses each time,
+/// a decay: `velocity.x -= velocity.x / 18`, `vx = vx - vx / 256`.
+fn decay(tokens: &[Token], at: usize, floor: usize) -> bool {
+    if at <= floor || tokens[at - 1].text != "/" {
+        return false;
+    }
+    let (start, end) = statement(tokens, at, floor);
+    if end != at {
+        return false;
+    }
+    let texts: Vec<&str> = tokens[start..=end].iter().map(|t| t.text).collect();
+    let Some(op) = texts.iter().position(|text| matches!(*text, "=" | "-=")) else { return false };
+    let (target, value) = (&texts[..op], &texts[op + 1..texts.len() - 2]);
+    match texts[op] {
+        "-=" => value == target,
+        // `A - A`.
+        _ => value.len() % 2 == 1 && value[value.len() / 2] == "-" && value[..value.len() / 2] == value[value.len() / 2 + 1..],
+    }
+}
+
 /// The calls a decimal number is reckoned with at expression level, when it
 /// is compared with them or offsets them, not a factor or a shift's amount:
 /// `FIELD_CELL` of `FIELD_CELL(actor->x.fixed) == 15` and of
 /// `FIELD_CELL(x) - 42`, none of `FIELD_CELL(x) + FIELD_CELL(z) * 128`.
 pub fn operand_calls(tokens: &[Token], at: usize, floor: usize) -> Vec<String> {
     let shift = at > floor && matches!(tokens[at - 1].text, "<<" | ">>");
-    if !is_decimal(tokens[at].text) || shift || factors(tokens, at, floor).len() > 1 {
+    if !is_decimal(tokens[at].text) || shift || factors(tokens, at, floor).0.len() > 1 {
         return Vec::new();
     }
     let (start, end, _) = span(tokens, at, floor);
@@ -909,6 +950,21 @@ mod tests {
         assert_eq!(kind_of("void F(void) { s32 size = 10; Draw(size); x = Random16(); }", "10", 0), None, "read without a roll");
         assert_eq!(kind_of("void F(void) { a->mask = 15; x = a->mask & Random16(); }", "15", 0), None, "no plain local");
         assert_eq!(kind_of("void F(void) { s32 m = 15 + n; x = m & Random16(); }", "15", 0), None, "not its whole value");
+    }
+
+    #[test]
+    fn decays_percentages_and_composed_fractions() {
+        assert_eq!(kind_of("void F(void) { effect->velocity.x -= effect->velocity.x / 18; }", "18", 0), Some("damping"));
+        assert_eq!(kind_of("void F(void) { p->velocityX = velocityX - velocityX / 256; }", "256", 0), Some("damping"));
+        assert_eq!(kind_of("void F(void) { p->velocityX = velocityY - velocityX / 256; }", "256", 0), None, "not what it divides");
+        assert_eq!(kind_of("void F(void) { share = gWork.hazardSteps * 100 / gWork.hazardLimit; }", "100", 0), Some("decimal"));
+        assert_eq!(kind_of("void F(void) { share = steps * 100; }", "100", 0), None, "no division");
+        assert_eq!(kind_of("void F(void) { maxHpPercent = 12; }", "12", 0), Some("decimal"));
+        assert_eq!(kind_of("void F(void) { c = digit + 'A' - 10; }", "10", 0), Some("decimal"));
+        assert_eq!(kind_of("void F(void) { e.scaleX = Q_8_8(11.0 / 16); }", "16", 0), Some("composed"));
+        assert_eq!(kind_of("void F(void) { scale = Q_8_8(1) / 16; }", "16", 0), Some("composed"));
+        assert_eq!(kind_of("void F(void) { Sound_SetBgmTempo(SOUND_TEMPO_SCALE_NORMAL * 15 / 16); }", "15", 0), Some("composed"));
+        assert_eq!(kind_of("void F(void) { pos.y = INTtoFIXED(i / 3 * 32) + z; }", "32", 0), None, "a factor, not the fraction's divisor");
     }
 
     #[test]
