@@ -404,9 +404,8 @@ fn switch_subject(tokens: &[Token], at: usize, floor: usize) -> Option<(usize, u
 /// no further than `floor` and on no further than `limit` (the end of the
 /// routine it is in): a composed form, a decimal fraction or percentage, a
 /// random range, a decimal position, duration or level by the names it is
-/// reckoned with, a decay's divisor, or the frames a loop counts. The
-/// parameter a number fills is judged by the caller, who knows every
-/// declaration.
+/// reckoned with, or the frames a loop counts. The parameter a number fills
+/// is judged by the caller, who knows every declaration.
 pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<&'static str> {
     let text = tokens[at].text;
     let (factors, own) = factors(tokens, at, floor);
@@ -456,7 +455,7 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
     }
     let kinds: Vec<&str> = found.iter().filter_map(|chain| named_kind(chain.iter().copied())).collect();
     let named = kinds.iter().find(|&&kind| kind == "position").or(kinds.first()).copied();
-    named.or_else(|| decay(tokens, at, floor).then_some("damping")).or_else(|| frame_count(tokens, at, floor, limit).then_some("duration"))
+    named.or_else(|| frame_count(tokens, at, floor, limit).then_some("duration"))
 }
 
 /// The bracket that closes the one opening at `open`, no further than `limit`.
@@ -679,26 +678,6 @@ pub fn random_local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> 
         return chains(tokens, read_start, read_end).1;
     }
     false
-}
-
-/// Whether the number at `at` divides a value by what it loses each time,
-/// a decay: `velocity.x -= velocity.x / 18`, `vx = vx - vx / 256`.
-fn decay(tokens: &[Token], at: usize, floor: usize) -> bool {
-    if at <= floor || tokens[at - 1].text != "/" {
-        return false;
-    }
-    let (start, end) = statement(tokens, at, floor);
-    if end != at {
-        return false;
-    }
-    let texts: Vec<&str> = tokens[start..=end].iter().map(|t| t.text).collect();
-    let Some(op) = texts.iter().position(|text| matches!(*text, "=" | "-=")) else { return false };
-    let (target, value) = (&texts[..op], &texts[op + 1..texts.len() - 2]);
-    match texts[op] {
-        "-=" => value == target,
-        // `A - A`.
-        _ => value.len() % 2 == 1 && value[value.len() / 2] == "-" && value[..value.len() / 2] == value[value.len() / 2 + 1..],
-    }
 }
 
 /// The calls a decimal number is reckoned with at expression level, when it
@@ -953,10 +932,11 @@ mod tests {
     }
 
     #[test]
-    fn decays_percentages_and_composed_fractions() {
-        assert_eq!(kind_of("void F(void) { effect->velocity.x -= effect->velocity.x / 18; }", "18", 0), Some("damping"));
-        assert_eq!(kind_of("void F(void) { p->velocityX = velocityX - velocityX / 256; }", "256", 0), Some("damping"));
-        assert_eq!(kind_of("void F(void) { p->velocityX = velocityY - velocityX / 256; }", "256", 0), None, "not what it divides");
+    fn percentages_and_composed_fractions() {
+        // A drag's divisor is to name (PARTICLE_DRAG_X): S3 keeps a decay only
+        // as the composed factor `FIXED_ONE * n / d`.
+        assert_eq!(kind_of("void F(void) { effect->velocity.x -= effect->velocity.x / 18; }", "18", 0), None);
+        assert_eq!(kind_of("void F(void) { p->velocityX = velocityX - velocityX / 256; }", "256", 0), None);
         assert_eq!(kind_of("void F(void) { share = gWork.hazardSteps * 100 / gWork.hazardLimit; }", "100", 0), Some("decimal"));
         assert_eq!(kind_of("void F(void) { share = steps * 100; }", "100", 0), None, "no division");
         assert_eq!(kind_of("void F(void) { maxHpPercent = 12; }", "12", 0), Some("decimal"));
