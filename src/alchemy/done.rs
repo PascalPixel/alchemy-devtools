@@ -152,9 +152,12 @@ fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
         let games = stem.is_some_and(|stem| stem.starts_with("games/"));
         let library = object.contains("libgcc.a");
         let own = object.contains("/overlays/resource_");
+        // An overlay's import table, which the build writes from the game's
+        // `src/system/overlay/imports.inc`: far-call stubs from the source.
+        let imports = object.contains("/overlays/") && object.ends_with("/imports.o");
         let done = &mut tally.counted.done;
         if !name.starts_with(".text") {
-            if !(games || library || own) {
+            if !(games || library || own || imports) {
                 tally.data_todo += size;
             }
             continue;
@@ -164,6 +167,10 @@ fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
             _ if library => {
                 done.game_asm += size;
                 tally.counted.library += size;
+            }
+            _ if imports => {
+                done.game_asm += size;
+                done.veneers += size;
             }
             Some(stem) if games => {
                 if root.join(format!("{stem}.c")).is_file() {

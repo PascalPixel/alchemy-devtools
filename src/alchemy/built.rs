@@ -100,6 +100,10 @@ pub fn stem(id: DecompTargetId, path: &str) -> String {
     }
     let marker = format!("{}/overlays/", target_for(id).output_dir);
     if let Some((_, tail)) = path.split_once(&marker) {
+        // An overlay's import table is written by the build from the game's one list.
+        if tail.ends_with("/imports.o") {
+            return format!("games/{}/src/system/overlay/imports", id.game());
+        }
         return format!("{}/{}", Layout::new(id.game()).overlays(), tail.strip_suffix(".o").unwrap_or(tail));
     }
     path.to_string()
