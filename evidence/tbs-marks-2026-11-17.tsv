@@ -1,0 +1,367 @@
+file	line	mark	comment
+games/tbs/include/battle_effect/battle_effect.h	248	UB	/ The whole pixels of a stored 16.16 value, read as its upper halfword, as / the impact burst, Neptune and the spark groups' ring flashes read them. UB: the s32 is read through an s16.
+games/tbs/include/field/actor_arm_view.h	14	UB	UB: scripts have variable lengths, so a one-word member cannot describe them.
+games/tbs/include/field/field_sequence.h	134	XXX	XXX: what bits 19..16's other values mean; a chest table with another value would settle it. / Bits 19..16 of a chest's search result, which Field_ExamineCell compares / only with FIND_CHEST_LOCKED.
+games/tbs/include/field/field_sequence.h	260	UB	UB: event_commands.c calls PaletteFade_Build with no declaration in scope, as a function returning int. UBFIX declares it.
+games/tbs/include/field/particle.h	35	UB	/ Returns the particle's three coordinates as an array. UB: indexing from &x crosses the particle's separate scalar members. UBFIX supplies a real coordinate array without including motion state.
+games/tbs/include/field/particle.h	66	UB	/ Returns the position's three coordinates as an array. UB: indexing from &x crosses separate scalar members of the point. UBFIX provides a real array while keeping the animations' named coordinates.
+games/tbs/include/field/sprite.h	215	XXX	/@} / ANIM_WALK's six pictures in reverse order, three frames each. XXX: what the player sees as Actor_PlacePairAtOffset or Crossbone Isle's logs move the leader, or a torn cocoon drops him; a recording of TreeRooms_StepOnCocoon's fall or of a log push would settle it.
+games/tbs/include/flags.h	136	XXX	XXX: likely a debug switch at the Colosseum too, because Jenna is never in the party there in normal play; a reader outside the debug keys would say otherwise. / In debug mode, with it set, holding R as an action is planned defeats every / enemy, and R with Select the party (BattleActionRun_Build); that is its only / reader. The debug story preset for Vale's plaza sets it, and so do the / Colosseum's escorts as they swap Mia in for Jenna.
+games/tbs/include/flags.h	517	XXX	XXX: no code of this game reads it; a reader would say what it changes. / The soldiers have taken the party into the Colosseum on the finals day.
+games/tbs/include/flags.h	972	XXX	XXX: no code of this game reads it; a reader would say what it changes. / The party lost a battle at sea and is back in the passenger hold, where the / voyage starts over.
+games/tbs/include/flags.h	1003	XXX	XXX: no code of this game reads it; a reader would say what it records. / The party has entered TunnelRuinsLadyStatues' room of four paths over a pit.
+games/tbs/include/flags.h	1016	XXX	XXX: the patched editions also set it on beating Lamakan Desert's Manticore; why is not known. / The party has reached Kalay: every Kalay scene sets it on entry. Vale's / villagers then talk of the journey, Garet's homecoming plays, Vault leads to / its later scene and the Sanctum's talk changes.
+games/tbs/include/graphics/render_placement.h	31	UB	/ Returns the placement's values as an array. UB: the legacy renderer walks across the scalar members as an array. UBFIX supplies a real array; an always-on union changes producer scheduling.
+games/tbs/include/menu/menu.h	404	UB	UB: Menu_OpenBackdropScreen returns the result of DjinnMenu_DrawElementList, called with no prototype though it returns nothing; nothing reads it.
+games/tbs/include/menu/title_intro.h	24	UB	UB: the early call implicitly returns int, but the definition returns void. A plain prototype reverses the two argument moves in Title_ShowIntro (EN).
+games/tbs/include/scene/colosso_marker.h	6	UB	UB: the scenes call these before their definitions with no prototype, as functions returning int.
+games/tbs/include/scene/colosso_setup.h	15	UB	UB: the scenes call this before its definition with no prototype, as a function returning int.
+games/tbs/include/scene/colosso_solo.h	33	UB	UB: the scenes call this before its definition with no prototype, as a function returning int.
+games/tbs/include/scene_exits.h	3024	XXX	XXX: likely a debug start. / In no table row and led to by no exit: arriving by it sets / FLAG_BABI_SAVED.
+games/tbs/include/scene_exits.h	3028	XXX	XXX: likely a debug start. / In no table row and led to by no exit: arriving by it sets FLAG_BABI_SAVED / and FLAG_COLOSSO_OVER.
+games/tbs/include/scene_exits.h	3590	XXX	XXX: likely a debug start into the story after the audience, because Babi's Palace (BABI_PALACE_AFTER_COLOSSO) and Suhalla's buildings (TIMBER_ROOMS_A_AFTER_BABI_SPOKE) have entrances that set story flags the same way. / In no table row and led to by no exit: arriving by it sets / FLAG_BABI_SPOKE_AFTER_COLOSSO, marking Babi's audience as held.
+games/tbs/include/scene_exits.h	3632	XXX	XXX: likely a debug start into the story after the audience. / In no table row and led to by no exit: arriving by it also marks Babi's / audience as held, as SUHALLA_AFTER_BABI_SPOKE does.
+games/tbs/include/sounds.h	451	XXX	XXX: likely wind, because none of the three has the water SE_AMBIENT_WATER plays beside; the sequence alone can't tell wind from water, so a recording of one of the three scenes would settle it. / The ambient sound a scene queues in Lama Temple, Xian and the Manticore's / part of Lamakan Desert (Scene_QueueMusic). It sounds like a steady quiet / hiss, a little darker and softer than SE_AMBIENT_WATER on the same noise / voice.
+games/tbs/include/system/serial.h	214	FAKEMATCH	FAKEMATCH(dead): state set again.
+games/tbs/include/system/vector3.h	28	UB	/ Returns the vector's three coordinates as an array. UB: transform routines index three coordinates from separate scalar members. UBFIX gives those routines a real array while preserving named components.
+games/tbs/include/window/node_chain.h	11	XXX	XXX: likely a SelectionNode, because next sits where SelectionNode.next does; see SelectionMenuCursorView. / A chain node seen only as its link to the next.
+games/tbs/include/window/node_chain.h	19	XXX	XXX: likely a SelectionMenuWork (its row's first icon and the entry under the hand), because head and cursorIndex sit at these offsets (840 and 926); a caller of NodeChain_GetNodeAtIndex would settle it. / A chain's first node and how many links to follow from it, which the unused / NodeChain_GetNodeAtIndex reads.
+games/tbs/include/window/window.h	727	UB	UB: FieldMenu_Run calls it with no prototype and uses the result, though it returns nothing.
+games/tbs/src/battle/battle_ability.c	543	BUG	BUG: another id with summon-kind data leaves this uninitialized. It has no known summon bonus, so use its base power alone.
+games/tbs/src/battle/battle_ability.c	751	UB	UB: a pointer walks from hp down past it to hpMax, reading each stat twice, unsigned and signed; the member reads behind UBFIX share one load each.
+games/tbs/src/battle/battle_action.c	508	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/battle/battle_auto_battle.c	56	BUG	Bubble the faster units forward. BUG: one pass short of a full sort; with two actions nothing is sorted.
+games/tbs/src/battle/battle_auto_battle.c	424	LEFTOVER	LEFTOVER(template): the choice of runner BattleStaging_RunAttack, RunItem and RunPsynergyCast make, under their test of the kind, which is 0 here.
+games/tbs/src/battle/battle_background.c	248	UB	UB: zoom is never set, so the scale is whatever its register held; UBFIX takes it as a parameter.
+games/tbs/src/battle/battle_element_glow.c	191	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/battle/battle_element_glow.c	198	FAKEMATCH	FAKEMATCH(dead): an empty once-only loop.
+games/tbs/src/battle/battle_element_glow.c	318	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/battle/battle_enemy_ai.c	125	BUG	BUG: the ability Can't Use, read by the item command as inventory slot 509; the enemy defends (README.md, "The party's commands").
+games/tbs/src/battle/battle_formation.c	24	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/battle/battle_formation.c	499	DEAD	DEAD: the unit is fetched and not used; the ROM keeps the call.
+games/tbs/src/battle/battle_link.c	174	BUG	BUG: the original buffer is on the stack, gone once this returns. UBFIX keeps the result until the next call in private scratch storage.
+games/tbs/src/battle/battle_link.c	228	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/battle/battle_motion.c	288	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/battle/battle_objects.c	421	LEFTOVER	LEFTOVER(template): actor = battleObject->actor, never read here.
+games/tbs/src/battle/battle_playback_queue.c	65	LEFTOVER	LEFTOVER(template): prompt holds &promptStorage, as the PLAY_ADVANCE step of BattlePlayback_Run's prompt holds its arrow.
+games/tbs/src/battle/battle_playback_queue.c	111	LEFTOVER	LEFTOVER(template): prompt holds &promptStorage, as the PLAY_ADVANCE step of BattlePlayback_Run's prompt holds its arrow.
+games/tbs/src/battle/battle_run.c	35	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/battle/battle_sprite_slots.c	66	FAKEMATCH	FAKEMATCH(dead): spritePart set again to the 0 it holds, from result.
+games/tbs/src/battle/battle_staging.c	215	UB	UB: indexing past scalar gBattleWork reaches another heap slot.
+games/tbs/src/battle/battle_staging.c	408	FAKEMATCH	FAKEMATCH(dead): plan cleared and restored under tests that emit nothing.
+games/tbs/src/battle/battle_staging.c	866	DEAD	DEAD: the unit, fetched and not used; the ROM keeps the call.
+games/tbs/src/battle/battle_targeting.c	20	UB	UB: the view treats distinct BattleWork members as one array.
+games/tbs/src/battle/battle_targeting.c	381	BUG	Sort the targets by HP, the most first. BUG: each pass starts one place later, so HP 1, 2 and 3 end as 2, 3 and 1.
+games/tbs/src/battle/battle_transition.c	291	BUG	BUG: unitIds is never read; the index is taken as a unit id, and a gap among the party's ids makes the scale store go near address 0.
+games/tbs/src/battle/battle_turn_end.c	589	DEAD	DEAD: *poison is nonzero here, so the hit's sound is always SE_HEAVY_IMPACT; the ROM keeps the reread of *poison, the compare and both stores.
+games/tbs/src/battle_effect/battle_effect_atalanta.c	319	UB	UB: width is assigned in one argument and read in another.
+games/tbs/src/battle_effect/battle_effect_beams.c	274	DEAD	DEAD: never true, as only kinds from EFFECT_RANGE_RING_AND_SPARK reach this runner (BattleEffect_RunByIdRange), so big stays 1; the ROM keeps the compare and the store.
+games/tbs/src/battle_effect/battle_effect_beams.c	371	DEAD	DEAD: the depth is clamped to -60..60 and moved to 0..120 but never read; the ROM keeps the clamp and the move.
+games/tbs/src/battle_effect/battle_effect_bolt.c	31	LEFTOVER	LEFTOVER(frame): draw[1], the idle half of the pair.
+games/tbs/src/battle_effect/battle_effect_boreas.c	125	DEAD	DEAD: a copy of gBoreas_Points into crystalPoints that nothing reads; the ROM keeps the loop and its stores. UB: the copy takes 32 rows from a table of 16, so rows 16 to 31 come from the 32 bytes after the table.
+games/tbs/src/battle_effect/battle_effect_boreas.c	212	DEAD	DEAD: stores of the 1.0 the copy of unitScale already holds; the ROM keeps the stores.
+games/tbs/src/battle_effect/battle_effect_boreas.c	337	DEAD	DEAD: a fleck's variant, random from frame 224, is never read (the second half sets 0 to 63 anew); the ROM keeps the count.
+games/tbs/src/battle_effect/battle_effect_boreas.c	437	DEAD	DEAD: always true inside the crash's test; the ROM keeps the second compare.
+games/tbs/src/battle_effect/battle_effect_canvas.c	430	UB	UB: indexing past gBattleWork reaches the heap slots after it.
+games/tbs/src/battle_effect/battle_effect_canvas.c	505	LEFTOVER	LEFTOVER(template): dy recomputed after the swap and never read again.
+games/tbs/src/battle_effect/battle_effect_canvas.c	533	LEFTOVER	LEFTOVER(template): dx recomputed after the swap and never read again.
+games/tbs/src/battle_effect/battle_effect_casting_impact.c	369	DEAD	DEAD: the depth is clamped to -60..60 and moved to 0..120 but never read; the ROM keeps the clamp and the move.
+games/tbs/src/battle_effect/battle_effect_casting_impact.c	395	FAKEMATCH	FAKEMATCH(dead): position set again to the &djinnPos it holds.
+games/tbs/src/battle_effect/battle_effect_condemn.c	32	LEFTOVER	LEFTOVER(frame): position[1], which the ROM's frame reserves and never touches.
+games/tbs/src/battle_effect/battle_effect_condemn.c	157	FAKEMATCH	FAKEMATCH(dead): i is 160 here.
+games/tbs/src/battle_effect/battle_effect_death_plunge.c	26	LEFTOVER	LEFTOVER(frame): draw[1], the idle half of the pair.
+games/tbs/src/battle_effect/battle_effect_death_plunge.c	250	UB	UB: width is assigned in one argument and read in another.
+games/tbs/src/battle_effect/battle_effect_death_plunge.c	415	DEAD	DEAD: a lookup whose result is dropped; the ROM keeps the call.
+games/tbs/src/battle_effect/battle_effect_death_plunge.c	473	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/battle_effect/battle_effect_death_plunge.c	734	DEAD	DEAD: v is never below 0; the ROM keeps the test.
+games/tbs/src/battle_effect/battle_effect_death_plunge.c	911	DEAD	DEAD: never true, as the variant is not negative here; the ROM keeps the test and the store.
+games/tbs/src/battle_effect/battle_effect_djinn_attacks.c	131	DEAD	DEAD: velocityX keeps the launch x, which nothing reads; the ROM keeps the store.
+games/tbs/src/battle_effect/battle_effect_djinn_attacks.c	457	DEAD	DEAD: nothing reads velocityZ; the ROM keeps the store.
+games/tbs/src/battle_effect/battle_effect_djinn_attacks.c	501	UB	UB: width is assigned in one argument and read in another.
+games/tbs/src/battle_effect/battle_effect_djinn_heal.c	188	LEFTOVER	LEFTOVER(template): the clamp and size by depth, idle here.
+games/tbs/src/battle_effect/battle_effect_eruption.c	43	LEFTOVER	LEFTOVER(frame): draw[1], the idle half of the pair.
+games/tbs/src/battle_effect/battle_effect_eruption.c	149	UB	UB: width is assigned in one argument and read in another.
+games/tbs/src/battle_effect/battle_effect_fire.c	141	UB	UB: width is assigned in one argument and read in another.
+games/tbs/src/battle_effect/battle_effect_flare.c	75	UB	UB: width is assigned in one argument and read in another.
+games/tbs/src/battle_effect/battle_effect_frost.c	99	UB	UB: width is assigned in one argument and read in another.
+games/tbs/src/battle_effect/battle_effect_frost.c	175	BUG	Chips fly up at the burst. BUG: velocityX is never set, so a chip drifts sideways by whatever word its PARTICLES slot last held. Nothing in a battle clears that buffer, the map grid's cells, so the word is the field's cells or an earlier effect's particles or pictures.
+games/tbs/src/battle_effect/battle_effect_gaia.c	269	DEAD	DEAD: scale copied from unitScale before both its fields are set; the ROM keeps the copy.
+games/tbs/src/battle_effect/battle_effect_gaia.c	284	DEAD	DEAD: slot != -1 always holds, slot being a remainder of a positive count; the ROM keeps the test.
+games/tbs/src/battle_effect/battle_effect_hail.c	102	UB	UB: width is assigned in one argument and read in another.
+games/tbs/src/battle_effect/battle_effect_helm_splitter.c	299	UB	UB: width is assigned in one argument and read in another.
+games/tbs/src/battle_effect/battle_effect_judgment.c	730	FAKEMATCH	FAKEMATCH(dead): a branch whose store the next line overwrites.
+games/tbs/src/battle_effect/battle_effect_judgment.c	757	FAKEMATCH	FAKEMATCH(dead): a branch whose store the next line overwrites.
+games/tbs/src/battle_effect/battle_effect_kirin.c	339	LEFTOVER	LEFTOVER(template): size holds 3, the mote's size.
+games/tbs/src/battle_effect/battle_effect_lobbed_shells.c	204	FAKEMATCH	FAKEMATCH(dead): an empty once-only loop ends CSE's block.
+games/tbs/src/battle_effect/battle_effect_neptune.c	284	LEFTOVER	LEFTOVER(template): r holds 1, the smallest flare's size.
+games/tbs/src/battle_effect/battle_effect_neptune.c	309	DEAD	DEAD: never true, as n is 5, 40 or 60 here; the ROM keeps the compare and the store.
+games/tbs/src/battle_effect/battle_effect_orbiting.c	104	LEFTOVER	LEFTOVER(frame): draw[1], the idle half of the pair.
+games/tbs/src/battle_effect/battle_effect_orbiting.c	130	FAKEMATCH	FAKEMATCH(dead): the scroll's store in a once-only block.
+games/tbs/src/battle_effect/battle_effect_orbiting.c	160	FAKEMATCH	FAKEMATCH(dead): an empty once-only loop.
+games/tbs/src/battle_effect/battle_effect_particle_streams.c	289	FAKEMATCH	FAKEMATCH(temporary): the division written out on a copy of count.
+games/tbs/src/battle_effect/battle_effect_particle_streams.c	291	FAKEMATCH	FAKEMATCH(dead): updates that cancel out end CSE's knowledge of count.
+games/tbs/src/battle_effect/battle_effect_particle_streams.c	300	FAKEMATCH	FAKEMATCH(barrier): count and sheet through an empty asm clobbering r1 and r3.
+games/tbs/src/battle_effect/battle_effect_particle_streams.c	314	FAKEMATCH	FAKEMATCH(barrier): hold set by an empty asm takes r7 across the call.
+games/tbs/src/battle_effect/battle_effect_particle_streams.c	317	FAKEMATCH	FAKEMATCH(barrier): an empty asm that clobbers r6 before the call.
+games/tbs/src/battle_effect/battle_effect_particle_streams.c	321	FAKEMATCH	FAKEMATCH(dead): updates of hold that cancel out, under a test of hold.
+games/tbs/src/battle_effect/battle_effect_particle_streams.c	337	FAKEMATCH	FAKEMATCH(dead): updates of quarter that cancel out, under a test of quarter, keep it live past level's sum.
+games/tbs/src/battle_effect/battle_effect_particle_streams.c	540	UB	UB: from depth 736 the size is 0, a picture 0 pixels wide, and its picture is read from gBattleEffect_MotePictures[-1], the last halfword of the blitter template, which ends at the table (BattleEffect_BuildBlitter). No UBFIX form yet.
+games/tbs/src/battle_effect/battle_effect_planet_diver.c	311	XXX	XXX: do these spirals circle each target as the doc above says? Staging this function, which render guide --only unused has no stage for yet, would settle it.
+games/tbs/src/battle_effect/battle_effect_positions.c	69	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/battle_effect/battle_effect_prism.c	42	DEAD	DEAD: x keeps a first random number, drawn and never read; the ROM keeps the mask and the store.
+games/tbs/src/battle_effect/battle_effect_procne.c	211	DEAD	DEAD: always true, as a mote restarts once past 48 pixels up and climbs little more than 2 pixels a frame; the ROM keeps the test.
+games/tbs/src/battle_effect/battle_effect_projectiles.c	639	FAKEMATCH	FAKEMATCH(dead): two updates that cancel, under a test that emits nothing.
+games/tbs/src/battle_effect/battle_effect_projectiles.c	649	FAKEMATCH	FAKEMATCH(dead): the same pair for the other side.
+games/tbs/src/battle_effect/battle_effect_quake.c	101	DEAD	DEAD: never true, as the left side is 32 or more and riseFrame at most 24; the ROM keeps the test and its store.
+games/tbs/src/battle_effect/battle_effect_ramses.c	221	DEAD	DEAD: the strike frame tested a second time; the ROM keeps the second compare.
+games/tbs/src/battle_effect/battle_effect_spider_web.c	32	LEFTOVER	LEFTOVER(frame): draw[1], the idle half of the pair.
+games/tbs/src/battle_effect/battle_effect_spire.c	82	UB	UB: width is assigned in one argument and read in another.
+games/tbs/src/battle_effect/battle_effect_stars.c	28	LEFTOVER	LEFTOVER(frame): draw[1], the idle half of the pair.
+games/tbs/src/battle_effect/battle_effect_stars.c	191	LEFTOVER	LEFTOVER(frame): draw[1], the idle half of the pair.
+games/tbs/src/battle_effect/battle_effect_stars.c	240	LEFTOVER	LEFTOVER(template): size holds 2.
+games/tbs/src/battle_effect/battle_effect_stat_change.c	507	DEAD	DEAD: the view set from the camera a first time, which the second call repeats; the ROM keeps both calls.
+games/tbs/src/battle_effect/battle_effect_target_motes.c	404	BUG	BUG: meant to bounce a sheep off the ground (y 92), tumbling faster, but it tests for a speed of exactly 0 just after gravity was added, so the sheep almost always fall on through. BUGFIX bounces any sheep that is falling.
+games/tbs/src/battle_effect/battle_effect_target_motes.c	439	LEFTOVER	LEFTOVER(frame): draw[1], the idle half of the pair.
+games/tbs/src/battle_effect/battle_effect_target_strike.c	181	LEFTOVER	LEFTOVER(template): a per-target loop whose count is 1, the first target only.
+games/tbs/src/battle_effect/battle_effect_target_strike.c	432	LEFTOVER	LEFTOVER(template): a per-target loop whose count is 1, the user only.
+games/tbs/src/battle_effect/battle_effect_thor.c	78	LEFTOVER	LEFTOVER(frame): blit[1], the idle half of the pair.
+games/tbs/src/battle_effect/battle_effect_thor.c	297	FAKEMATCH	FAKEMATCH(dead): the width set to 0 and at once to 32.
+games/tbs/src/battle_effect/battle_effect_thor.c	377	DEAD	The pillar of lightning, throwing sparks up from its foot. DEAD: a loop over one pillar, j being 0; the ROM keeps its counter, the step of start by 128 and its exit test.
+games/tbs/src/battle_effect/battle_effect_tiamat.c	100	DEAD	DEAD: the halved x is replaced below; the ROM keeps the halving and its store.
+games/tbs/src/battle_effect/battle_effect_tiamat.c	274	LEFTOVER	LEFTOVER(template): the dot's size held in a local, 1.
+games/tbs/src/battle_effect/battle_effect_tiamat.c	372	LEFTOVER	LEFTOVER(template): the ball's size held in a local, 10.
+games/tbs/src/debug/level.c	453	UB	UB: details is never created, but the browser closes it.
+games/tbs/src/debug/level.c	498	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/debug/test.c	459	LEFTOVER	LEFTOVER(frame): the buffer tbs-ja's loop below fills sixteen times.
+games/tbs/src/field/actor_update_arm.c	91	UB	UB: frozen actors skip the initialization below, but still test arrival.
+games/tbs/src/field/event_commands_actor_commands.c	338	DEAD	DEAD: saved lives in a word on the stack, which nothing here needs; the ROM keeps its str and the ldr of each compare.
+games/tbs/src/field/event_commands_actor_commands.c	634	UB	UB: the getter accepts slots through 191, past the 66 actors.
+games/tbs/src/field/event_commands_actor_commands.c	825	BUG	BUG: the -1 sentinel becomes index 4095, beyond the field work. All indices from ACTOR_ID_COUNT to 4095 lie outside the actor table.
+games/tbs/src/field/event_commands_arcs.c	127	BUG	Arc B in front of everything, arc A at the caster's priority. BUG: allocation failures above leave a missing arc or sprite here.
+games/tbs/src/field/event_commands_carry.c	218	DEAD	DEAD: nothing reads the shards back; the ROM keeps the stores.
+games/tbs/src/field/event_commands_climbing.c	28	LEFTOVER	LEFTOVER(template): position holds &positionStorage, as Field_ClimbDown and Field_ClimbUp point position at their stack vector.
+games/tbs/src/field/event_commands_event.c	287	FAKEMATCH	FAKEMATCH(dead): unit and the picked item read through it.
+games/tbs/src/field/event_commands_field_particles.c	162	BUG	BUG: Sprite_CreateFar can return NULL, but this and the animation setup below still require a sprite. Callers also immediately use it, so guarding this store alone would not establish allocation-failure recovery.
+games/tbs/src/field/event_commands_field_psynergy.c	340	BUG	BUG: one past the actor table: Actor_Lookup(ACTOR_ID_COUNT) is the first treasure spot's actor, so the map's first chest or Psynergy Stone is paused too.
+games/tbs/src/field/event_commands_messages.c	207	DEAD	DEAD: both arms open the same portrait behind a test of win->mindRead; the ROM keeps the test's load of mindRead.
+games/tbs/src/field/event_commands_messages.c	301	BUG	BUG: the lookup's result is discarded, and pos is left unset.
+games/tbs/src/field/event_commands_move.c	284	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/field/event_commands_move.c	294	FAKEMATCH	FAKEMATCH(dead): an empty once-only loop before the call.
+games/tbs/src/field/event_commands_ply.c	146	FAKEMATCH	FAKEMATCH(dead): target set again to actor.
+games/tbs/src/field/event_commands_retreat.c	302	BUG	BUG: failed allocations above leave a missing arc or sprite here.
+games/tbs/src/field/event_commands_weather.c	24	BUG	BUG: freezing a timer of 16 indexes past the 16-frame table.
+games/tbs/src/field/event_commands_weather.c	322	UB	UB: this drops volatile and reads a u32 as unsigned long. UBFIX reads the declared type.
+games/tbs/src/field/event_commands_world_picture.c	34	BUG	BUG: the original reserves 32 bytes but writes and uploads 128. The bump allocator takes bytes, not words; reserve the whole tile buffer with BUGFIX.
+games/tbs/src/field/event_commands_world_picture.c	221	UB	UB: with no selected actor the ROM leaves this frame's cursor coordinates unset; UBFIX skips the frame.
+games/tbs/src/field/event_commands_world_picture.c	305	UB	UB: marker 0 has no table message.
+games/tbs/src/field/field_actor_camera.c	36	LEFTOVER	LEFTOVER(frame): three unused points the ROM's frame reserves and never touches.
+games/tbs/src/field/field_actor_camera.c	182	LEFTOVER	LEFTOVER(frame): two unused points the ROM's frame reserves and never touches.
+games/tbs/src/field/field_actor_motion.c	505	UB	UB: a frozen actor otherwise reads an uninitialized arrival flag, or inherits the preceding actor's flag.
+games/tbs/src/field/field_actors.c	213	DEAD	DEAD: a first search whose result is dropped; the ROM keeps its call.
+games/tbs/src/field/field_map_grid.c	674	FAKEMATCH	FAKEMATCH(temporary): the end test reads a copy of source, and the updates that cancel out end CSE's knowledge of it.
+games/tbs/src/field/field_player_control.c	827	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/field/field_script_commands.c	351	BUG	BUG: offset is never set, so the target is the position plus whatever the stack held.
+games/tbs/src/field/field_script_commands.c	386	UB	UB: the bounds read the leader's height before the null check below.
+games/tbs/src/field/field_script_commands.c	423	LEFTOVER	LEFTOVER(template): this whole-pixel dy, overwritten below and not used for the distance.
+games/tbs/src/field/field_script_commands.c	548	BUG	BUG: the probe straight ahead is placed but never tested, so only the two at 45 degrees need clear ground; SC_WANDER_HOME tests all three.
+games/tbs/src/field/field_script_commands.c	570	FAKEMATCH	FAKEMATCH(dead): the offsets in both arms of a test of actor.
+games/tbs/src/field/field_sequence_actors.c	153	UB	UB: sprite creation can fail while the actor slot stays live.
+games/tbs/src/field/field_sequence_encounter.c	100	UB	UB: FLAG_IGNORE_ENCOUNTER_CHECKS reaches the draw without setting entry.
+games/tbs/src/field/field_sequence_encounter.c	208	UB	UB: no return statement; the result of the call is left in r0.
+games/tbs/src/field/field_sequence_ground_mask.c	27	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/field/field_sequence_items.c	165	FAKEMATCH	FAKEMATCH(type): called as returning a value, as a C89 call with no prototype is.
+games/tbs/src/field/field_sequence_screen_transition.c	280	DEAD	DEAD: the frame counter is read here, where WINDOW_TRANSITION_RIPPLE forms its index, and the value is not used; the ROM keeps the load.
+games/tbs/src/field/field_sequence_screen_transition.c	392	DEAD	DEAD: as in WINDOW_TRANSITION_LEADER_INVERSE, the frame counter is read and not used; the ROM keeps the load.
+games/tbs/src/field/field_sequence_screen_transition.c	442	DEAD	DEAD: as in WINDOW_TRANSITION_LEADER_INVERSE, the frame counter is read and not used; the ROM keeps the load.
+games/tbs/src/field/field_sequence_targets.c	50	BUG	BUG: one past the actor table: Actor_Lookup(ACTOR_ID_COUNT) is the first treasure spot's actor, so the map's first chest or Psynergy Stone is a candidate too.
+games/tbs/src/field/field_sequence_targets.c	134	BUG	BUG: one past the actor table: Actor_Lookup(ACTOR_ID_COUNT) is the first treasure spot's actor, so the map's first chest or Psynergy Stone is a candidate too.
+games/tbs/src/field/field_sequence_triggers.c	54	BUG	BUG: a missing actor leaves entry NULL if the final table is absent.
+games/tbs/src/field/field_sequence_walking.c	32	BUG	BUG: a sum can be 0 with requests pending. Field_UpdateWalking raises FIELD_RAISED_TRIGGER_PARTY_FELL (-1) on the frame a party member falls to poison, and the step trigger request is the cell's cell behavior, 1 on step trigger 1's cells (154 scenes have them); together they sum to 0, and both wait until another request breaks the tie, by which time a later cell's behavior may have replaced the step trigger. BUGFIX tests each request instead.
+games/tbs/src/field/field_sprite_animation.c	554	UB	Part 0 is the image; part 1 is its shadow, from the shared shadow tiles. UB: the word cursor aliases the sprite and crosses its members. UBFIX copies the same representation from an actual word array.
+games/tbs/src/field/field_sprite_animation.c	577	DEAD	DEAD: a test of the call's result for -1 that does nothing either way; the ROM keeps the -1 it builds after the call.
+games/tbs/src/field/field_sprite_animation.c	580	FAKEMATCH	FAKEMATCH(dead): a store of the byte it reloads.
+games/tbs/src/field/field_sprite_draw.c	360	LEFTOVER	LEFTOVER(frame): two unused locals the ROM's frame reserves and never touches.
+games/tbs/src/field/field_sprite_viewer.c	131	FAKEMATCH	FAKEMATCH(temporary): the native adds the flags offset to the sprite's own register (r5) in place.
+games/tbs/src/field/field_sprite_viewer.c	177	DEAD	DEAD: a read of gKeysRepeat whose value goes unused; the ROM keeps the load.
+games/tbs/src/field/field_sprite_viewer.c	586	DEAD	DEAD: the sprite's metadata looked up and not used; the ROM keeps the call.
+games/tbs/src/field/field_terrain.c	315	UB	UB: read the kind byte before passing the remaining samples.
+games/tbs/src/field/field_terrain.c	432	UB	UB: read the kind byte before passing the remaining samples.
+games/tbs/src/field/field_tile_animation.c	345	BUG	BUG: four queued cycles become zero here, so none advance.
+games/tbs/src/field/lucky_dice.c	286	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/field/lucky_dice.c	293	UB	UB: three equal numbers produce three pairs, so the unused result list needs a third slot.
+games/tbs/src/field/lucky_dice.c	605	DEAD	Aiming: Up and Down raise and lower the dice between 32 and 160. B quits, as does running out of coins for a bet; A throws. DEAD: gKeysRepeat is read twice and discarded before the KEY_UP test; the ROM keeps both loads.
+games/tbs/src/field/lucky_dice.c	655	DEAD	DEAD: never true with DICE_COUNT 2 (a third die would start further back and higher up); the ROM keeps the test and its stores.
+games/tbs/src/field/lucky_dice.c	802	UB	UB: signed separation components may be negative; touching dice are at most 49 pixels apart, so multiplication fits. Coincident dice also need to avoid division by zero.
+games/tbs/src/field/lucky_wheels.c	224	LEFTOVER	LEFTOVER(template): dy recomputed after the swap and never read again.
+games/tbs/src/field/lucky_wheels.c	252	LEFTOVER	LEFTOVER(template): dx recomputed after the swap and never read again.
+games/tbs/src/field/lucky_wheels.c	812	DEAD	DEAD: both arms set the out-of-spins state, so the ticket count cannot change it; the ROM keeps the compare and both stores.
+games/tbs/src/field/world_map_lines.c	130	UB	UB: affine coefficients can be negative, and shifting a negative value left is undefined; UBFIX multiplies by 256.
+games/tbs/src/field/world_map_lines.c	156	FAKEMATCH	FAKEMATCH(temporary): sampleOffset takes a copy of line->u for the second sum.
+games/tbs/src/game/game_levels.c	21	BUG	BUG: the bound is one past the table's rows, so id ABILITY_COUNT reads the enemy table's first bytes as an action.
+games/tbs/src/game/game_party.c	32	BUG	BUG: one too many: unit FIRST_ENEMY_UNIT + 6 passes, but Unit_Get has no seventh enemy unit and gives NULL. No caller passes it.
+games/tbs/src/game/game_units.c	81	DEAD	DEAD: the return address, read and never used; the ROM keeps its copy of lr into r3.
+games/tbs/src/game/game_units.c	86	FAKEMATCH	FAKEMATCH(dead): the party return repeated under a test of the return address.
+games/tbs/src/game/game_units.c	110	BUG	BUG: only rows past 249 are refused, so those from ENEMY_DEFINITION_COUNT (165) to 249 read the tables after it. BattleUnit_Set refuses them itself.
+games/tbs/src/game/game_units.c	202	FAKEMATCH	FAKEMATCH(dead): an empty once-only loop after the Attack bonus.
+games/tbs/src/menu/credits.c	241	UB	ewram.s reserves four bytes for each cell. The credits replace the task table and borrow them while flash operations are inactive: a sprite-buffer pointer, the last rendered pixel position, and a zero/-1 end-of-text latch. Borrowing them is harmless because the flash library sets them again before it reads them: IdentifyFlash, which Save_InitializeWork runs before each use of the save, writes gFlash, gProgramFlashSector and gWaitForFlashWrite, and each program routine sets gFlashNumRemainingBytes. UB: the casts alias the flash declarations and store a pointer through a declared u16. UBFIX gives these assembler-backed cells their credits views.
+games/tbs/src/menu/credits.c	1050	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/menu/credits.c	1055	BUG	BUG: the end marker is checked after allocation, leaking one line buffer. Heap_Release rewinds this bump pool to the allocation's start.
+games/tbs/src/menu/credits.c	1088	LEFTOVER	LEFTOVER(template): sourceBytes rewound to text; Camelot's template, from a sibling loop: Credits_DrawLine's measuring pass above opens with the same sourceBytes = text; textAdvance = 0 and walks sourceBytes, while this pass walks text itself (The Lost Age's Credits_DrawLine keeps the same store); as no store, 20 of 277 instructions differ in tbs-en.
+games/tbs/src/menu/menu_djinn.c	476	UB	UB: the implicit int call conflicts with DrawElementList's void definition. The sole caller ignores this wrapper's result.
+games/tbs/src/menu/menu_djinn.c	693	BUG	BUG: tests the bottom against the screen's width but clips to its rows, so a rectangle ending in rows 20 to 28 is kept whole and recolours past the 32 by 20 tilemap.
+games/tbs/src/menu/menu_djinn_figures.c	129	FAKEMATCH	FAKEMATCH(dead): the scale's x assigned to itself while rowY is live.
+games/tbs/src/menu/menu_djinn_preview.c	524	BUG	BUG: no window is ever made in unopenedWindow (DjinnMenuWork), so this redraws through NULL; see the field. BUGFIX skips it.
+games/tbs/src/menu/menu_djinn_preview.c	682	BUG	BUG: no window is ever made in unopenedWindow (DjinnMenuWork), so this redraws through NULL; see the field. BUGFIX skips it.
+games/tbs/src/menu/menu_icons.c	93	FAKEMATCH	FAKEMATCH(dead): a test whose two arms both return -1.
+games/tbs/src/menu/menu_icons.c	123	FAKEMATCH	FAKEMATCH(dead): a test whose two arms both return -1.
+games/tbs/src/menu/menu_item.c	234	DEAD	DEAD: selection and command cleared though the menu ends before reading either; the ROM keeps the 0 and its store to selection.
+games/tbs/src/menu/menu_item.c	244	DEAD	DEAD: chosen, selection and member cleared though the menu ends before reading them; the ROM keeps the 0 and its three stores.
+games/tbs/src/menu/menu_psynergy.c	146	FAKEMATCH	FAKEMATCH(dead): a redundant copy of -1 and an XOR test.
+games/tbs/src/menu/menu_psynergy.c	931	BUG	BUG: clears FLAG_SCENE_TEMP_FF instead of FLAG_MENU_INFO_KEPT, so a kept message keeps the descriptions away until another screen clears it.
+games/tbs/src/menu/menu_shared.c	417	BUG	BUG: block 0 is a valid block, and VramCache_FindFreeEntry says none is free with VRAM_CACHE_ENTRY_COUNT (96), which ItemMenu_SelectGiveQuantity tests. With none free, the sprite is created on block 96, which VramCache_Load refuses; with block 0 free, no hand is made.
+games/tbs/src/menu/menu_shared.c	1043	BUG	BUG: tests the bottom against the screen's width but clips to its rows, so a rectangle ending in rows 20 to 28 is kept whole and writes past the 32 by 20 tilemap into the windows after it.
+games/tbs/src/menu/menu_status.c	149	FAKEMATCH	FAKEMATCH(dead): StatusScreen_RunPages's loop over its steps, with its first step alone: it runs once.
+games/tbs/src/menu/menu_status.c	410	UB	UB: returns no value.
+games/tbs/src/menu/menu_status.c	639	UB	UB: the pointer walk below forms reordered - 1 after its last store and compares the addresses as signed numbers; this clear counts an index down instead.
+games/tbs/src/menu/menu_use.c	82	FAKEMATCH	FAKEMATCH(dead): a test that is never true (partyResultShown is still 0).
+games/tbs/src/menu/title_intro.c	835	FAKEMATCH	FAKEMATCH(dead): two XORs with red that cancel fold late.
+games/tbs/src/menu/title_intro.c	842	FAKEMATCH	FAKEMATCH(dead): two XORs that cancel, green being 8.
+games/tbs/src/scene/altin.c	225	UB	UB: the facing test overflows a signed left shift for many headings.
+games/tbs/src/scene/altin.c	234	UB	UB: the random wobble can be negative. Both factors fit in signed32 bits for the actor's signed16-bit timer and wobble values.
+games/tbs/src/scene/altin.c	363	BUG	BUG: FACING_SOUTH's value is passed as an actor id. No actor has it, so the leader does not turn south toward the beast.
+games/tbs/src/scene/altmiller_cave.c	2054	UB	UB: the last is stored through a word view of the routine pointer.
+games/tbs/src/scene/battle_arena.c	635	FAKEMATCH	FAKEMATCH(dead): the sends in a once-only block; as a goto to done from each break, 78 of 256 instructions differ in tbs-en.
+games/tbs/src/scene/battle_arena.c	739	FAKEMATCH	FAKEMATCH(dead): an empty once-only loop after result's zero loads it ahead of the call.
+games/tbs/src/scene/battle_arena.c	930	UB	UB: returns no value, so its result is whatever the last call returned.
+games/tbs/src/scene/battle_arena.c	1233	UB	UB: the handlers below return no value, so their result is whatever Event_End returned.
+games/tbs/src/scene/colosseum_azart_match.c	161	UB	UB: each of these calls a void function through an s32 function type, the call the bytes show; UBFIX calls it as declared.
+games/tbs/src/scene/colosseum_azart_match.c	631	BUG	BUG: FACING_SOUTH is passed where Actor_FaceActor takes an actor id; Actor_Lookup has no actor past 191, so neither turns.
+games/tbs/src/scene/colosseum_azart_match.c	877	BUG	BUG: FACING_SOUTHWEST is passed where an actor id belongs; no actor has it, so the guide does not turn.
+games/tbs/src/scene/colosseum_navampa_match.c	167	UB	UB: this calls a void function through an s32 function type, the call the bytes show; UBFIX calls it as declared.
+games/tbs/src/scene/colosseum_satrage_match.c	140	UB	UB: the scene calls this before its definition with no prototype, as a function returning int.
+games/tbs/src/scene/colosseum_satrage_match.c	175	UB	UB: westward log travel passes -64, which cannot be shifted left as signed C. Both callers supply only -64, 0 or 64, so fixed-point multiplication fits.
+games/tbs/src/scene/colosseum_satrage_match.c	183	UB	UB: each of these calls a void function through an s32 function type, the call the bytes show; UBFIX calls it as declared.
+games/tbs/src/scene/colosseum_satrage_match.c	860	BUG	BUG: FACING_SOUTH is passed where Actor_FaceActor takes an actor id; Actor_Lookup has no actor past 191, so neither turns.
+games/tbs/src/scene/crossbone_isle.c	720	BUG	BUG: no fourth ivy is placed, so its slot is empty (Actor_ClearAll) and this writes to address 0x18, in the BIOS, where the write is lost.
+games/tbs/src/scene/crossbone_isle_stepping_stones.c	445	FAKEMATCH	FAKEMATCH(dead): an empty once-only loop.
+games/tbs/src/scene/crossbone_isle_stepping_stones.c	935	UB	UB: the original 12-byte scratch receives a 16-byte DMA transfer.
+games/tbs/src/scene/file_screen.c	132	UB	UB: the second code's held flag, a word, is read and written as its low halfword.
+games/tbs/src/scene/file_screen.c	825	FAKEMATCH	FAKEMATCH(dead): a once-only block round the draw call.
+games/tbs/src/scene/file_screen.c	1117	FAKEMATCH	FAKEMATCH(dead): a halfword copy of the quantity nothing reads.
+games/tbs/src/scene/fuchin_temple.c	2225	BUG	BUG: ACTOR_FEIZHI is Feizhi's number in the school's table. Hama's room places no actor at that number, so Feizhi does not bounce before she speaks.
+games/tbs/src/scene/goma_cave_pillar.c	456	LEFTOVER	LEFTOVER(template): destination holds &target, the landing reached through a pointer.
+games/tbs/src/scene/imil.c	1432	FAKEMATCH	FAKEMATCH(temporary): the flags set through a byte pointer.
+games/tbs/src/scene/kalay.c	1295	DEAD	DEAD: a lookup whose actor goes unused; the ROM keeps the call.
+games/tbs/src/scene/kalay.c	1324	DEAD	DEAD: the draining's stages, drawn a column at a time, twice over, where the event shows three of them with a wait between, all covered by the drained floor copied below; the ROM keeps the calls.
+games/tbs/src/scene/kalay.c	1368	DEAD	DEAD: the draining's stages again, covered by the drained floor below; the ROM keeps the calls.
+games/tbs/src/scene/kalay.c	2133	UB	UB: the routine returns nothing, so SC_CALL takes whatever value is left as its status, which is not 0. Repeat once per frame until the actor is released, with an explicit status in the modern build. Advance a particle, damp its velocity, and expire its lifetime.
+games/tbs/src/scene/kolima_forest_entrance.c	1106	UB	UB: this routine returns void; call it through its declared type.
+games/tbs/src/scene/kolima_forest_floodgate.c	94	UB	UB: the scene calls this before its definition with no prototype, so as a function returning int.
+games/tbs/src/scene/lamakan_desert.c	279	XXX	XXX: what this patch fixed; every Kalay scene sets the flag on entry (kalay.c) and Vale, the Vault and the Sanctum read it, so a save in an unpatched edition that reaches this battle with it clear would settle it.
+games/tbs/src/scene/lamakan_desert.c	587	FAKEMATCH	FAKEMATCH(dead): two self-tests of offset, each with updates that cancel out, rank it above count in allocation.
+games/tbs/src/scene/lemurian_ship.c	835	UB	UB: the parts are written through a word cursor, the link among them.
+games/tbs/src/scene/log_rooms_a.c	2980	FAKEMATCH	FAKEMATCH(volatile): the stop is tested through a volatile read.
+games/tbs/src/scene/log_rooms_a.c	3097	FAKEMATCH	FAKEMATCH(dead): a dead store.
+games/tbs/src/scene/lunpa.c	907	BUG	BUG: the town's guards, whose actor ids no actor at the gates holds, so the gates' guards keep their headings.
+games/tbs/src/scene/lunpa_fortress.c	587	BUG	BUG: the third door's trigger and flag (GROUND_FLOOR_DOOR_FLAG + 2) ask for index 2, past the two doors gLunpaFortressGroundFloorDoorCells holds.
+games/tbs/src/scene/lunpa_fortress.c	2867	BUG	BUG: the line is the attendant's, but it names Dodonpa's wife, in the family room at the far side of the fortress, as the speaker: the window opens at the screen's lower left, away from the attendant, where her other lines open beside her.
+games/tbs/src/scene/mercury_lighthouse.c	170	UB	UB: this calls a void function through an s32 function type, the call the bytes show; UBFIX calls it as declared.
+games/tbs/src/scene/mercury_lighthouse.c	316	UB	UB: the fountain rows include negative pixel offsets. Their range is -23..0, so multiplication is defined and fits the fixed-point coordinate.
+games/tbs/src/scene/rock_rooms.c	597	BUG	BUG: the temple's Healer, not the traveling one. The Sanctum only takes its keeper's portrait from the actor (Sanctum_Run), and both Healers are placed in this scene in the same sprite, so the player sees no difference.
+games/tbs/src/scene/sanctum.c	500	DEAD	DEAD: a byte nothing reads set to 1; the ROM keeps its store.
+games/tbs/src/scene/shared/actor_distance.c	6	UB	/ The distance in whole pixels between two positions, each given by its x / and read on through the y and z that follow it, as an actor holds them. UB: an actor's x, y and z are separate members, read here as an array.
+games/tbs/src/scene/shared/actor_find_at_position.c	16	UB	UB: Actor_ClearAll leaves unused slots null.
+games/tbs/src/scene/shared/colosso_finish.c	7	UB	UB: calls a void function through an s32 function type, the call the bytes show; UBFIX calls it as declared.
+games/tbs/src/scene/shared/colosso_lettering.c	94	UB	UB: the result calls Colosso_StartLettering through an s32 function type, the call the bytes show; UBFIX calls it as declared.
+games/tbs/src/scene/shared/colosso_marker.c	33	BUG	BUG: FACING_SOUTH is passed where an actor id belongs; no actor has it, so the leader does not turn.
+games/tbs/src/scene/shared/colosso_solo.c	128	BUG	Choose the nearest matching speaker whose Z is at least the supporter's. BUG: one past the actor table: Actor_Lookup(ACTOR_ID_COUNT) is the first treasure spot's actor, which is looked at too; it is never the speaker.
+games/tbs/src/scene/shared/map_grid_panel.c	38	FAKEMATCH	FAKEMATCH(temporary): end takes the row's bound where the loop tests it, apart from the guard's.
+games/tbs/src/scene/shared/staged_actor.c	40	UB	UB: Actor_ClearAll leaves unfilled slots null.
+games/tbs/src/scene/shared/staged_actor.c	175	UB	UB: the same empty slots are scanned here.
+games/tbs/src/scene/shared/staged_actor.c	328	UB	UB: the heap slot is read as a word rather than as the pointer it holds.
+games/tbs/src/scene/ship_rooms.c	3070	BUG	BUG: the mask keeps only bits 0, 4, 8 and 12 of the wait, so the callers' waits of 20 and 40 frames become 16 and none; SHIP_CAMERA_JUMP also adds a frame.
+games/tbs/src/scene/suhalla_desert.c	289	DEAD	DEAD: the storm looked up and dropped; the ROM keeps its call.
+games/tbs/src/scene/suhalla_desert.c	399	BUG	BUG: a heading where Actor_FaceActor takes an actor id.
+games/tbs/src/scene/suhalla_desert.c	487	BUG	BUG: a heading where Actor_FaceActor takes an actor id.
+games/tbs/src/scene/suhalla_desert.c	649	BUG	BUG: this passes an actor id where the sprite helper needs a pointer.
+games/tbs/src/scene/suhalla_gate.c	230	UB	UB: the scene places only actors up to ACTOR_DEW, so there is no actor 15 and Actor_GetById returns NULL (watched in tbs-en as the scene loads from each of its entrances); the store goes to the BIOS, which ignores it.
+games/tbs/src/scene/tolbi_games.c	94	UB	UB: the coin prizes are read through a one-element view of their table; UBFIX reads the table.
+games/tbs/src/scene/tolbi_games.c	870	FAKEMATCH	FAKEMATCH(dead): stepping routine away and back.
+games/tbs/src/scene/tolbi_games.c	879	FAKEMATCH	FAKEMATCH(dead): the halving in both arms of a test of slot.
+games/tbs/src/scene/tolbi_games.c	935	BUG	BUG: actor is read even when Actor_Get found none.
+games/tbs/src/scene/tolbi_games.c	996	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/scene/tolbi_games.c	1035	BUG	BUG: an exact center position leaves a zero divisor below.
+games/tbs/src/scene/tolbi_games.c	1305	BUG	BUG: coincident positions leave a zero divisor below.
+games/tbs/src/scene/tolbi_ship_deck.c	1860	UB	UB: the field work's pointer is read through a u32 lvalue, which keeps the facing store ahead of its load; UBFIX reads it as declared.
+games/tbs/src/scene/tolbi_ship_deck.c	2973	UB	UB: a table the event writes (its talkFacing), defined const and kept with the constants; UBFIX makes it writable.
+games/tbs/src/scene/vale_plaza.c	893	BUG	BUG: the test is meant for the stormy night, but the flag stays set, and by day these numbers are ACTOR_HUT_OWNER and a strongman already out of sight: the hut's owner is hidden from the prologue's end until Kalay, and his talk and ValePlaza_TalkAboutFallenStone never play.
+games/tbs/src/scene/vault.c	941	UB	UB: Sprite_Create makes no sprite for SPRITE_172, which has no image, so sprite is NULL and the two stores through it below write near address 0.
+games/tbs/src/scene/vault_cave.c	274	UB	UB: map creation leaves unused actor slots NULL.
+games/tbs/src/scene/vault_cave.c	306	UB	UB: the pillar's collisionFlags is read before the test for no pillar.
+games/tbs/src/scene/venus_lighthouse.c	239	UB	UB: passage offsets and dust directions can be negative. The callers use bounded pixel offsets or directions -1..1, so these products fit s32.
+games/tbs/src/scene/venus_lighthouse.c	247	UB	UB: this calls a void function through an s32 function type, the call the bytes show; UBFIX calls it as declared.
+games/tbs/src/scene/venus_lighthouse.c	1408	BUG	BUG: the fall set up above is the leader's, but the wait is given a null pointer, so it reads velocityY from the BIOS, which outside a BIOS call reads as its last instruction, never 0: the wait always takes its full second, however soon the leader lands.
+games/tbs/src/scene/venus_lighthouse_aerie.c	1923	BUG	BUG: Saturos's test is overwritten by Menardi's, so only Menardi needs to be parked.
+games/tbs/src/scene/world_map.c	1932	BUG	BUG: iodem is NULL here; this branch reads its height through null.
+games/tbs/src/scene/world_map.c	1954	LEFTOVER	LEFTOVER(template): the motion flags cleared again after the sprite resets, as ImilFuchinFalls_PlaceDragonsEye clears them.
+games/tbs/src/shop/shop_cursor.c	117	UB	UB: slot 32 lies past scalar gFieldWork.
+games/tbs/src/shop/shop_internal.h	111	BUG	BUG: the original item picker tests its selection result rather than the discard error, so it never shows the cannot-remove message for error -3.
+games/tbs/src/shop/shop_item_picker.c	180	BUG	BUG: default code selects the error using selectionResult, still zero.
+games/tbs/src/system/system_frame.c	230	FAKEMATCH	FAKEMATCH(barrier): the read also takes the old base as an input ("+r").
+games/tbs/src/system/system_frame.c	234	FAKEMATCH	FAKEMATCH(volatile): the size read again, a load apart from the test's.
+games/tbs/src/system/system_frame.c	241	FAKEMATCH	FAKEMATCH(dead): size dropped and the copy's size taken under complementary tests.
+games/tbs/src/system/system_matrix.c	258	FAKEMATCH	FAKEMATCH(dead): the normalization in a once-only block.
+games/tbs/src/system/system_save.c	382	UB	UB: nothing is returned, and no caller reads the result
+games/tbs/src/system/system_serial.c	343	UB	The four consoles' halfwords, SIOMULTI0 to 3. UB: the u16 array is written through one doubleword store
+games/tbs/src/system/system_serial.c	525	FAKEMATCH	FAKEMATCH(temporary): the 1 kept in a halfword record, loaded from the pool into r8 at entry.
+games/tbs/src/system/system_start_up.c	170	UB	UB: the walk starts a halfword before the block.
+games/tbs/src/system/system_task.c	49	BUG	BUG: the last pass, which would settle the first two tasks, never runs, so the tasks in slots 0 and 1 can stay out of order
+games/tbs/src/system/system_task.c	100	DEAD	DEAD: nothing uses the status read here; the ROM keeps the load, as The Lost Age's Task_Add does.
+games/tbs/src/system/system_task.c	286	UB	UB: tasks return void, and the stored word is not a pointer object.
+games/tbs/src/window/glyph_arm.c	65	LEFTOVER	LEFTOVER(frame): an unused local the tbs-ja ROM's frame reserves and never touches.
+games/tbs/src/window/screens_battle_command_row.c	83	UB	UB: with all six commands this -1 lands in commandKinds[6], one word past the end of the block; the loops below stop at six and never read it.
+games/tbs/src/window/screens_battle_command_row.c	363	BUG	BUG: tests the bottom against the screen's width, so a window reaching below the screen draws into the map's unseen rows.
+games/tbs/src/window/screens_battle_djinn_menu.c	138	FAKEMATCH	FAKEMATCH(temporary): sprite holds &cursorStorage.
+games/tbs/src/window/screens_battle_djinn_preview.c	150	FAKEMATCH	FAKEMATCH(type): the two words stored through pointer types.
+games/tbs/src/window/screens_battle_djinn_preview.c	157	FAKEMATCH	FAKEMATCH(dead): advancing and restoring the captured pointer.
+games/tbs/src/window/screens_battle_item_menu.c	105	FAKEMATCH	FAKEMATCH(temporary): sprite holds &cursorStorage.
+games/tbs/src/window/screens_battle_party_commands.c	223	UB	UB: Unit_GetFar returns a pointer, not the cast's doubleword result.
+games/tbs/src/window/screens_battle_party_commands.c	372	FAKEMATCH	FAKEMATCH(barrier): counted as 4 bytes, the empty asm.
+games/tbs/src/window/screens_battle_party_commands.c	454	FAKEMATCH	FAKEMATCH(barrier): counted as 4 bytes, the empty asm.
+games/tbs/src/window/screens_battle_party_commands.c	640	FAKEMATCH	FAKEMATCH(barrier): counted as 4 bytes, the empty asm.
+games/tbs/src/window/screens_battle_party_commands.c	718	UB	Keep the completion wait visible while the peer finishes its commands. UB: declared to return a value it never returns.
+games/tbs/src/window/screens_battle_status.c	348	FAKEMATCH	FAKEMATCH(barrier): an empty asm.
+games/tbs/src/window/screens_battle_status.c	360	FAKEMATCH	FAKEMATCH(barrier): counted as 4 bytes, the empty asm.
+games/tbs/src/window/screens_battle_summon_menu.c	80	FAKEMATCH	FAKEMATCH(dead): the first scan in a once-only block.
+games/tbs/src/window/screens_battle_summon_menu.c	113	FAKEMATCH	FAKEMATCH(temporary): cur holds &cursorStorage.
+games/tbs/src/window/screens_battle_targets.c	84	FAKEMATCH	FAKEMATCH(dead): a null derived from selection, with no constant equivalence.
+games/tbs/src/window/screens_battle_targets.c	184	FAKEMATCH	FAKEMATCH(barrier): an empty asm clobbering r8 and r10 once selection and mode are dead.
+games/tbs/src/window/screens_battle_targets.c	197	FAKEMATCH	FAKEMATCH(dead): a test that cannot change t.
+games/tbs/src/window/screens_battle_targets.c	252	FAKEMATCH	FAKEMATCH(dead): eighteen dead stores restore the native stack frame's spill slots from sp+16 to sp+36, the eighteenth only for the test above.
+games/tbs/src/window/screens_debug.c	440	FAKEMATCH	FAKEMATCH(dead): a zero from the count.
+games/tbs/src/window/screens_icon_menu.c	50	UB	UB: edge steps from one line's window 1 edges to the next line's, past the member it points into.
+games/tbs/src/window/screens_joined.c	7	UB	UB: the joined messages pass five of Message_Start' six arguments, so its flags are whatever the stack slot of the sixth holds; UBFIX passes 0, as the window object's own messages do.
+games/tbs/src/window/screens_joined.c	222	BUG	BUG: from (8, 0) to (4, 4) is neither across nor down, so Window_DrawDividerLine draws nothing and the window has no divider. The single joins draw (4, 0, 4, 4), half a tile before their text at x 36; column 8 is the same place before this one's text at x 68.
+games/tbs/src/window/screens_name_entry.c	105	BUG	BUG: tests the bottom against the screen's width, so a window reaching below the screen draws into the map's unseen rows.
+games/tbs/src/window/screens_name_entry.c	452	FAKEMATCH	FAKEMATCH(dead): no-op saves.
+games/tbs/src/window/screens_name_entry.c	754	FAKEMATCH	FAKEMATCH(dead): no-op saves.
+games/tbs/src/window/screens_party_status.c	7	UB	UB: the standby counts pass four of Window_PutGlyph's five arguments, so its mode is whatever the stack slot of the fifth holds; UBFIX passes 0, as the summon lists do.
+games/tbs/src/window/screens_party_status.c	167	UB	UB: at a length of zero the shift below is by 32, which the GBA takes as zero.
+games/tbs/src/window/screens_party_status.c	364	BUG	BUG: tests the bottom against the screen's width, so a window reaching below the screen draws into the map's unseen rows.
+games/tbs/src/window/screens_save.c	214	FAKEMATCH	FAKEMATCH(dead): a never-taken null arm, whose updates cancel, and an else arm whose frame load is reloaded below.
+games/tbs/src/window/screens_save.c	313	BUG	BUG: returns without freeing the part buffer.
+games/tbs/src/window/screens_save.c	348	UB	UB: on No, result is returned without ever being set.
+games/tbs/src/window/screens_save.c	838	BUG	Start on the first file the mode allows. BUG: when none is, the jump to done returns FILE_LIST_NO_FILE without releasing spriteWork's HEAP_SLOT_MENU block.
+games/tbs/src/window/screens_window_sprites.c	29	UB	UB: attributes 0 and 1, then attribute 2, are written as words through the bitfields; UBFIX copies the words.
+games/tbs/src/window/screens_window_sprites.c	238	BUG	BUG: the fill is one halfword for each of the DISPLAY_HEIGHT lines, but each line takes two, so the lower 80 lines keep the window 1 edges this page held when it was last built.
+games/tbs/src/window/window_borders.c	41	FAKEMATCH	FAKEMATCH(temporary): the flag through a local.
+games/tbs/src/window/window_borders.c	365	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/window/window_decode.c	341	FAKEMATCH	FAKEMATCH(temporary): messageReader holds &reader.
+games/tbs/src/window/window_decode.c	832	FAKEMATCH	FAKEMATCH(temporary): messageReader holds &reader.
+games/tbs/src/window/window_internal.h	119	XXX	XXX: codes 11 and 12 (one operand), 14 (two) and 28 (one) reach decoded text with their operands, which drawing and measuring skip, but no message of any edition uses them. A message that did, or Camelot's name for them, would name them.
+games/tbs/src/window/window_selection.c	1354	UB	UB: the original reads a void return. The default result is ignored by the only caller, so give it a defined value after closing the window.
+games/tbs/src/window/window_sprites.c	249	FAKEMATCH	FAKEMATCH(dead): two XORs with tile that cancel.
+games/tbs/src/window/window_sprites.c	279	UB	UB: row is written twice without a sequence point.
+games/tbs/src/window/window_text_tiles.c	85	LEFTOVER	LEFTOVER(frame): an unused local the ROM's frame reserves and never touches.
+games/tbs/src/window/window_typing.c	94	DEAD	DEAD: gKeysHeld read and not used; the ROM keeps the load.
+games/tbs/src/window/window_windows.c	461	UB	UB: the new tail is stored as node (next is its first member) through a WindowSprite * view of tailLink, which keeps both stores in one alias set and in this order.
