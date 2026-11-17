@@ -147,6 +147,9 @@ pub struct Report {
     /// Function-like macros that bring a coordinate down to the map grid's
     /// cells or tiles (`FIELD_CELL(coordinate)`, `CELL_HEIGHT_STEPS(height)`).
     grid_conversions: HashSet<String>,
+    /// Object-like macros that stand for a routine, each with the routines it
+    /// stands for in the editions (`MENU_DRAW_STATUS_LABEL`).
+    aliases: HashMap<String, BTreeSet<String>>,
     function_bodies: HashMap<String, Group>,
     table_bodies: HashMap<String, Group>,
     /// Every name the source defines or declares, for the naming checks.
@@ -322,7 +325,15 @@ impl Report {
             let kind = data_parameter(&name);
             return Some((name, kind));
         }
-        let (name, call) = self.macro_parameters.get(callee)?.get(position)?;
+        let Some(list) = self.macro_parameters.get(callee) else {
+            // An alias (`#define MENU_DRAW_STATUS_LABEL Text_DrawStringInWindowFar`)
+            // takes its routines' parameter, where every edition's agrees on
+            // its kind: `x` in one and `offsetX` in another are coordinates.
+            let mut found = self.aliases.get(callee)?.iter().filter(|_| depth < 8).map(|target| self.parameter(target, position, depth + 1));
+            let first = found.next()??;
+            return found.all(|other| other.is_some_and(|(_, kind)| kind == first.1)).then_some(first);
+        };
+        let (name, call) = list.get(position)?;
         let inner = call.as_ref().filter(|_| depth < 8).and_then(|(callee, at)| self.parameter(callee, *at, depth + 1));
         let kind = data_parameter(name).or_else(|| inner.as_ref().and_then(|(_, kind)| *kind));
         Some((name.clone(), kind))
@@ -1211,6 +1222,13 @@ impl<'r, 'a> Walk<'r, 'a> {
                 let function_like = tokens.get(2).is_some_and(|t| t.text == "(" && t.glued);
                 if function_like {
                     self.macro_parameters(name.text, start, end);
+                }
+                // `#define MENU_DRAW_STATUS_LABEL Text_DrawStringInWindowFar`.
+                let body: Vec<&Token> = tokens[2..].iter().filter(|t| t.kind != Kind::Comment).collect();
+                if let [routine] = body[..] {
+                    if routine.kind == Kind::Ident && routine.text.bytes().any(|b| b.is_ascii_lowercase()) {
+                        self.report.aliases.entry(name.text.to_string()).or_default().insert(routine.text.to_string());
+                    }
                 }
                 self.directive_start = start;
                 self.directive_end = end;
@@ -2982,6 +3000,21 @@ mod tests {
         assert_eq!(listed("honest_position"), ["28"]);
         // A force, a shift that is no shake, and a unit's level.
         assert_eq!(listed("magic_code"), ["12", "12", "16", "16", "10"]);
+    }
+
+    #[test]
+    fn an_alias_takes_its_routines_parameters() {
+        let header = concat!(
+            "void Text_DrawStringInWindowFar(u8 *text, s32 window, u32 x, u32 y);\n",
+            "void Text_DrawStringAtOffsetFar(u8 *text, s32 window, s32 offsetX, s32 offsetY);\n",
+            "void Text_DrawCount(u8 *text, s32 window, s32 count, s32 tone);\n",
+            "#if LANGUAGE == LANGUAGE_JAPANESE\n#define LABEL Text_DrawStringInWindowFar\n#else\n#define LABEL Text_DrawStringAtOffsetFar\n#endif\n",
+            "#if LANGUAGE == LANGUAGE_JAPANESE\n#define MIXED Text_DrawStringInWindowFar\n#else\n#define MIXED Text_DrawCount\n#endif\n",
+        );
+        let source = "void Run(void) {\n    LABEL(text, window, 40, 16);\n    MIXED(text, window, 40, 16);\n}\n";
+        let report = game([("f.h", header), ("f.c", source)]);
+        assert_eq!(report.total("data_argument_coordinate"), 2, "x and offsetX agree");
+        assert_eq!(list(&[("tbs", &report)], "magic_argument"), "tbs\tf.c:3\t40\tMIXED #3\ntbs\tf.c:3\t16\tMIXED #4\n", "a coordinate in one edition, a count in the other");
     }
 
     #[test]
