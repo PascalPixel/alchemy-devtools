@@ -356,10 +356,14 @@ impl Report {
     /// What a parameter's name says beyond `data_parameter`'s words, for a
     /// number that would otherwise want a name: a duration counted in VBlanks
     /// or by a timer (`ScreenFade_ToBlack(s32 vblanks)`), a damping out of
-    /// DAMPING_SCALE, and the edges of a rectangle in pixels, where the
-    /// routine takes both a left or right and a top or bottom edge
-    /// (`Window_ClearInteriorTiles(window, left, top, right, bottom)`; a
-    /// `BLEND(top, bottom)` is no rectangle).
+    /// DAMPING_SCALE, a percentage (`BattleEffect_StartActorMotion(...,
+    /// s32 percent)`), a fade's level or a colour channel's
+    /// (`Palette_BrightenSavedBattleBg(s32 red, s32 green, s32 blue)`), a
+    /// shake's amplitude (`MapGrid_SetShake(horizontal, vertical, decay)`),
+    /// an edge (`PagedList_DrawPageNumbers(..., s32 rightEdge)`), and the
+    /// edges of a rectangle in pixels, where the routine takes both a left or
+    /// right and a top or bottom edge (`Window_ClearInteriorTiles(window,
+    /// left, top, right, bottom)`; a `BLEND(top, bottom)` is no rectangle).
     fn parameter_words(&self, callee: &str, name: &str) -> Option<&'static str> {
         let words = numbers::words(name);
         let has = |list: &[&str]| words.iter().any(|word| list.contains(&word.as_str()));
@@ -371,6 +375,19 @@ impl Report {
         }
         if has(&["damping"]) {
             return Some("damping");
+        }
+        if has(&["percent"]) {
+            return Some("decimal");
+        }
+        if has(&["fade", "shade", "brightness", "red", "green", "blue"]) {
+            return Some("level");
+        }
+        let shake = numbers::words(callee).iter().any(|word| word == "shake");
+        if shake && has(&["horizontal", "vertical", "amplitude"]) {
+            return Some("level");
+        }
+        if has(&["edge"]) {
+            return Some("position");
         }
         let names: Vec<String> = match self.parameters.get(callee) {
             Some(names) => names.iter().flatten().cloned().collect(),
@@ -2928,6 +2945,39 @@ mod tests {
         // The map's width a row is reckoned by, a cell's code, and a number
         // compared with a coordinate brought up from a cell.
         assert_eq!(listed("magic_code"), ["128", "13", "20"]);
+    }
+
+    #[test]
+    fn levels_percentages_and_edges_by_the_parameters_they_fill() {
+        let header = concat!(
+            "void Palette_BrightenSavedBattleBg(s32 red, s32 green, s32 blue);\n",
+            "void BattleEffect_StartActorMotion(s32 id, s32 force, s32 percent);\n",
+            "void PagedList_DrawPageNumbers(void *window, s32 count, s32 rows, s32 page, s32 rightEdge);\n",
+            "#define MapGrid_SetShake(horizontal, vertical, decay) Shake((horizontal), (vertical), (decay))\n",
+            "#define CameraShift(horizontal, vertical) Shift((horizontal), (vertical))\n",
+            "void Unit_LevelUpTo(s32 owner, s32 level);\n",
+        );
+        let source = concat!(
+            "void Run(void) {\n",
+            "    Palette_BrightenSavedBattleBg(0, -20, frame - 52);\n",
+            "    BattleEffect_StartActorMotion(id, 12, 150);\n",
+            "    BattleEffect_StartActorMotion(id, 12, i * 10 + 110);\n",
+            "    PagedList_DrawPageNumbers(window, count, 4, page, 28);\n",
+            "    MapGrid_SetShake(16, 16, 1);\n",
+            "    CameraShift(16, 16);\n",
+            "    Unit_LevelUpTo(ISAAC, 10);\n",
+            "}\n",
+        );
+        let report = game([("f.h", header), ("f.c", source)]);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.split('\t').next().unwrap().to_string()).collect()
+        };
+        assert_eq!(listed("honest_level"), ["20", "16", "16"], "a colour channel's and a shake's");
+        assert_eq!(listed("honest_duration"), ["52"], "its own words first: a frame");
+        assert_eq!(listed("honest_decimal"), ["150", "10", "110"]);
+        assert_eq!(listed("honest_position"), ["28"]);
+        // A force, a shift that is no shake, and a unit's level.
+        assert_eq!(listed("magic_code"), ["12", "12", "16", "16", "10"]);
     }
 
     #[test]
