@@ -4983,7 +4983,6 @@ WORLD_MAP_TILE_SET_BYTES	its code	the four world map tile resources decode 0x200
 WORLD_MAP_TILE_CELLS	its code	WorldMap_WriteLayerCellTile's comment: a tile is 16 by 16 cells of 4 bytes	games/tbs/src/field/field_world_map.c
 WORLD_MAP_TILES_ACROSS	its code	tileIds index ((y & 15) << 4) + (x & 15); a tile is 512 pixels (>> 25) and limitX is INTtoFIXED(8160)	games/tbs/src/field/field_world_map.c
 WORLD_MAP_LAYER_TILES	its code	layer 1's tile ids follow layer 0's 320 (tileId + 320, layerTileBase += 320)	games/tbs/src/field/field_world_map.c
-MAPGRID_ANIMATION_SCRIPT	its code	moved from field_map_grid.c to field_internal.h: the world map decodes its tileset animation to the same Ram_MapGridShapes + 0x1000	games/tbs/src/field/field_internal.h
 FIELD_PROBE_ANGLE	its code	the step probes TRIG_TURN / 16 either side and tries headings 1/16, 1/8, 3/16 turn off; the comment's 22.5, 45, 67.5 degrees	games/tbs/src/field/field_player_control.c
 FIELD_BLOCKED_TURN_MAX	its code	a blocked leader's facing moves toward the pad's angle clamped to +-TRIG_TURN / 16 a frame	games/tbs/src/field/field_player_control.c
 WORLD_MAP_YAW_STEP_MAX	its code	the camera yaw step is clamped to +-TRIG_TURN / 128 (the comment's about 2.8 degrees)	games/tbs/src/field/field_player_control.c
@@ -5675,6 +5674,7 @@ FLAG_KOLIMA_LUCKY_MEDAL	the game	"Lucky Medal" (MsgItemName)	games/tbs/include/f
 FLAG_KOLIMA_COINS	the game	"coin" (MsgGotCoins)	games/tbs/include/flags.h
 FLAG_MCCOY_PALACE_UNUSED_PICK_OFFERED	the game	"Pick any one of the four treasures." (MsgBilibinDoThinkTheseBilibinsGreat + 1)	games/tbs/src/scene/mccoy_palace.c
 ACTOR_UNPLACED	what the player sees	the scene's actors on stage are 8 to 13, five sprouts and Dew, with no actor 15 (its render)	games/tbs/src/scene/suhalla_gate.c
+MAPGRID_ANIMATION_SCRIPT	its code	field_map_grid.c decodes a layout's tileset animation script to Ram_MapGridShapes + 4096 and starts it there, and field_world_map.c the world map's; the blend script follows at + 7680 (MAPGRID_BLEND_SCRIPT)	games/tbs/src/field/field_internal.h
 DICE_FLASH_FRAMES	its code	a two pair or triple win sets one die's flashTimer to 60, four alike both to 120	games/tbs/src/field/lucky_dice.c
 ENEMY_SPACING_LARGE	what the player sees	two Gryphons, large enemies, stand side by side in the enemies' column without overlapping (its render)	games/tbs/src/battle/battle_placement.c
 ENEMY_SPACING_SMALL	what the player sees	the small Fighter Bee moves aside as Fighter Bee2 appears, and the two stand close together in the enemies' column (its render)	games/tbs/src/battle/battle_placement.c
