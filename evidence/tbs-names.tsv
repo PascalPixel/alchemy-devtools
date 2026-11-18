@@ -4950,7 +4950,6 @@ WORLD_MAP_YAW_STEP_MAX	its code	the camera yaw step is clamped to +-TRIG_TURN / 
 FOOTPRINT_RUN_INTERVAL	its code	actor->timer between footprints is 12 when movementAnimation is ANIM_LEADER_RUN, else 18	games/tbs/src/field/field_player_control.c
 FOOTPRINT_WALK_INTERVAL	its code	as FOOTPRINT_RUN_INTERVAL	games/tbs/src/field/field_player_control.c
 HUE_DEGREES	its code	FieldEffect_CalculateHueChannels takes a hue in degrees: channels a third (120) apart, ramps at 60, 180, 240, wrapping at 360	games/tbs/src/field/event_commands_mind_read.c
-HUE_CIRCLE	its code	the same 360 degrees as 16.16 (360 << 16)	games/tbs/src/field/event_commands_mind_read.c
 DISPLAY_TILE_WIDTH	the hardware	the speech window and portrait are placed in 8-pixel tiles within columns 0 to 29 (240 / 8)	games/tbs/src/field/event_commands_messages.c
 DISPLAY_TILE_HEIGHT	the hardware	rows 0 to 19 (160 / 8); off-screen speakers get the centre, column 15 and row 10	games/tbs/src/field/event_commands_messages.c
 unusedA	its code	two parameters of Event_ShowMessageAtPosition and its forwarder that nothing reads; only their order tells them apart	games/tbs/src/field/event_commands_messages.c
@@ -6532,3 +6531,4 @@ BATTLE_DJINN_ENTRY_RECOVERY_MASK	its code	BattleDjinnMenu_Run stores the recover
 BATTLE_DJINN_ENTRY_RECOVERY_SHIFT	its code	as BATTLE_DJINN_ENTRY_RECOVERY_MASK	games/tbs/src/window/screens_battle_djinn_menu.c
 BATTLE_DJINN_ENTRY_END	its code	BattleDjinnMenu_Run writes 0x80000000 after the last entry and the drawing loop stops at it	games/tbs/src/window/screens_battle_djinn_menu.c
 TREE_ROOMS_SPEAKER	its code	all 26 messages in Tret Tree's rooms (Tret, its second face, Garet, Ivan and Mia, by Event_ShowMessage and its kin) give SPEAKER_WINDOW_BELOW | the actor, so every window opens below; the voyage's SPEAKER (scene/tolbi_ship.h) takes the bits as an argument instead	games/tbs/src/scene/tree_rooms.c
+HUE_CIRCLE	its code	the same 360 degrees as 16.16, toFIXED(HUE_DEGREES)	games/tbs/src/field/event_commands_mind_read.c
