@@ -5667,12 +5667,10 @@ SE_UNUSED_BLACK_CRYSTAL_SET_LOW	its twin	The Lost Age's SE_UNUSED_BLACK_CRYSTAL_
 SE_UNUSED_TAKE_FLIGHT_HIGH	its twin	The Lost Age's SE_UNUSED_TAKE_FLIGHT_HIGH is byte for byte the same sequence as row 290 here (games/tbs/sound/songs/se_290.mid against games/tla/sound/songs/se_290.mid), SE_TAKE_FLIGHT higher, which nothing plays there either	games/tbs/include/sounds.h
 SE_UNUSED_ERUPTION_COLUMNS_LOW	its twin	The Lost Age's SE_UNUSED_ERUPTION_COLUMNS_LOW is byte for byte the same sequence as row 293 here (games/tbs/sound/songs/se_293.mid against games/tla/sound/songs/se_293.mid), SE_ERUPTION_COLUMNS four semitones lower, which nothing plays there either	games/tbs/include/sounds.h
 FLAG_SANCTUM_QUEST_RESTARTED	the game	"From the Great Healer" (MsgSanctumGreatHealer)	games/tbs/src/scene/sanctum.c
-gSprite_UnusedSelfPointers1	its number	the second of the sprite bank's three self-pointing arrays, numbered in ROM order from gSprite_UnusedSelfPointers0 (self_pointers_0.c, after the first block of animations); this one and the third follow the second block (games/tbs/ld_script.ld)	games/tbs/src/graphics/sprite/self_pointers_1.c
-gSprite_UnusedSelfPointers2	its number	the third of the sprite bank's three self-pointing arrays, numbered in ROM order from gSprite_UnusedSelfPointers0 (self_pointers_0.c); it follows gSprite_UnusedSelfPointers1 after the second block of animations (games/tbs/ld_script.ld)	games/tbs/src/graphics/sprite/self_pointers_1.c
 AREA_LALIVERO	its area name	Lalivero	games/tbs/src/scene/suhalla_desert.c
 FLAG_KOLIMA_LUCKY_MEDAL	the game	"Lucky Medal" (MsgItemName)	games/tbs/include/flags.h
 FLAG_KOLIMA_COINS	the game	"coin" (MsgGotCoins)	games/tbs/include/flags.h
-FLAG_MCCOY_PALACE_UNUSED_PICK_OFFERED	the game	"Pick any one of the four treasures." (MsgBilibinDoThinkTheseBilibinsGreat + 1)	games/tbs/src/scene/mccoy_palace.c
+FLAG_MCCOY_PALACE_UNUSED_PICK_OFFERED	the game	"Pick any one of the four treasures." (MsgBilibinDoThinkTheseBilibinsGreat + 1)	games/tbs/include/flags.h
 ACTOR_UNPLACED	what the player sees	the scene's actors on stage are 8 to 13, five sprouts and Dew, with no actor 15 (its render)	games/tbs/src/scene/suhalla_gate.c
 MAPGRID_ANIMATION_SCRIPT	its code	field_map_grid.c decodes a layout's tileset animation script to Ram_MapGridShapes + 4096 and starts it there, and field_world_map.c the world map's; the blend script follows at + 7680 (MAPGRID_BLEND_SCRIPT)	games/tbs/src/field/field_internal.h
 DICE_FLASH_FRAMES	its code	a two pair or triple win sets one die's flashTimer to 60, four alike both to 120	games/tbs/src/field/lucky_dice.c
