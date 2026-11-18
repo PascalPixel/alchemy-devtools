@@ -1143,7 +1143,6 @@ MagmaRockInside_SetCellShape	its twin	the same routine as the other overlays' co
 gTaopoSwamp_PuffRises	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was gData_020044c8)	games/tla/src/scene/aqua_rock_inside.c
 Scene_CreateActor	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was TreasureIsle_CreateActor)	games/tla/src/scene/treasure_isle.c
 Position_Distance	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Lemuria_Distance)	games/tla/src/scene/lemuria.c
-Lemuria_Distance	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was Position_Distance)	games/tla/src/scene/contigo.c
 gDailaRooms_PillarFrozenFlags	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was gDaila_PuddleFrozenFlags)	games/tla/src/scene/daila.c
 Pillar_Raise	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MadraCatacombs_RaisePillarCells)	games/tla/src/scene/shared/pillar_raise.h
 Scene_FadeInAndClearFlag	its twin	the same routine as the other overlays' copy of shared/, which it now includes (was MikasallaInteriors_FadeInAndClearFlag)	games/tla/src/scene/shared/scene_fade_in_and_clear_flag.h
@@ -1601,7 +1600,6 @@ Field_RequestDjinnBattle	its twin	games/tbs/src/field/event_commands_requests.c;
 DJINNI_GEODE	the walkthrough	Atteka Inlet: Cyclone on the bush uncovers Geode; flag 63 = 48 + 15	games/tla/src/scene/atteka_inlet.c
 AttekaInlet_CycloneUncoversGeode	the walkthrough	Atteka Inlet: Cyclone on the bush uncovers Geode; flag 63 = 48 + 15	games/tla/src/scene/atteka_inlet.c
 DJINNI_SALT	the walkthrough	Contigo: Scoop finds Salt; flag 62 = 48 + 14	games/tla/src/scene/contigo.c
-Contigo_ScoopForSalt	the walkthrough	Contigo: Scoop finds Salt; flag 62 = 48 + 14	games/tla/src/scene/contigo.c
 DJINNI_SERAC	its code	flags 85 and 165 are 48 + 37 and 128 + 37, Serac's own and hiding flags	games/tla/src/scene/islet_cave.c
 battleType	its twin	games/tbs/include/system/main_routine_work.h battleType and BATTLE_TYPE_NORMAL/NO_ESCAPE/LINK/DEBUG; ⚓️ sets 2 for Mimics (triggers.c), 4 under FLAG_LINK_BATTLE (battle/run.c), 5 in the debug battle menu	games/tla/include/system/main_routine_work.h
 BattleType	its twin	games/tbs/include/system/main_routine_work.h battleType and BATTLE_TYPE_NORMAL/NO_ESCAPE/LINK/DEBUG; ⚓️ sets 2 for Mimics (triggers.c), 4 under FLAG_LINK_BATTLE (battle/run.c), 5 in the debug battle menu	games/tla/include/system/main_routine_work.h
@@ -5603,8 +5601,6 @@ ACTOR_LUCKY_DICE_GUIDE	the game	"Read the sign if ya don't know the rules." (Msg
 ACTOR_VISITOR_FROM_AFAR	the game	"I've come a long way to see the flying boat." (MsgContigoIveComeALongWay)	games/tla/src/scene/contigo.c
 ACTOR_WOMAN_ON_THE_WINGS	the game	"The wings are almost done." (MsgContigoTheWingsAreAlmostDone)	games/tla/src/scene/contigo.c
 ACTOR_SIGN	what the player sees	row 18 wears sprite 450, a wooden sign (its render); talks through Contigo_ReadSign	games/tla/src/scene/contigo.c
-Contigo_PlaceWingPart	its uses	lays rows 19 to 26, the wings' frames and feathers, flat; was Contigo_PlaceStatue	games/tla/src/scene/contigo.c
-Contigo_SetUpWingParts	its uses	sets up rows 19 to 33, the wings' parts; was Contigo_SetUpStatues	games/tla/src/scene/contigo.c
 ACTOR_LEMURIAN	the game	"Why, that was Psynergy, wasn't it?" (MsgLemuriaRecognizePsynergy); "Why, that was Psynergy, wasn't it?" ... "King Hydros has decreed that Lemuria must be kept safe from dangerous outsiders" from rows 9 and 10 (sprite 157)	games/tla/src/scene/ancient_lemuria.c
 ACTOR_BOY_ON_THE_WINGS	the game	"I wonder if these giant wings will really make it fly..." (MsgIWonderIfThese), row 16 (sprite 106, a boy)	games/tla/src/scene/atteka_inlet.c
 ACTOR_SHIPWRIGHT	the game	"Where do you think you're going?" (MsgWhereDoYouThink); "Where do you think you're going?" ... "We worked really hard on that ship of yours!" in AttekaInlet_ShipwrightsStopTheParty, rows 9 and 10 (sprite 79)	games/tla/src/scene/atteka_inlet.c
@@ -13692,6 +13688,40 @@ CONDEMN_PICTURES	its picture	graphics/battle_effects/counter_reveal_00.png to co
 CONDEMN_PICTURE_X	its twin	games/tbs/src/battle_effect/battle_effect_condemn.c CONDEMN_PICTURE_X, where one of the reaper's seven pictures is drawn by the casting side's column	games/tla/src/battle_effect/battle_effect_condemn.c
 CONDEMN_PICTURE_Y	its twin	games/tbs/src/battle_effect/battle_effect_condemn.c CONDEMN_PICTURE_Y, where one of the reaper's seven pictures is drawn by the casting side's row	games/tla/src/battle_effect/battle_effect_condemn.c
 CANVAS_WAVE_BG2X	its twin	games/tbs/src/battle_effect/battle_effect_condemn.c CANVAS_WAVE_BG2X, a line's 16.16 sideways sway as its BG2X value in work->bg2xLines	games/tla/src/battle_effect/battle_effect_condemn.c
+BattleEffect_RunRay	the game	"Ray" (MsgAbilityName + 69)	games/tla/src/battle_effect/battle_effect_ray.c
+BattleEffect_RunRay	what the player sees	Sheba casts Ray at Felix's side: four bolts of lightning strike among the three and close in, sparks burst up from their feet and fall, and the view flashes violet and blue while they strike; Destruct Ray's spread twice as wide across the screen (its render)	games/tla/src/battle_effect/battle_effect_ray.c
+RAY_COUNT	what the player sees	Sheba casts Ray: four bolts of lightning strike among the targets and close in (its render)	games/tla/src/battle_effect/battle_effect_ray.c
+RAY_COUNT	its twin	games/tbs/src/battle_effect/battle_effect_ray.c RAY_COUNT, the four bolts	games/tla/src/battle_effect/battle_effect_ray.c
+RAY_FLASH_LEVEL	what the player sees	Sheba casts Ray: the whole view flashes violet, then blue, every few frames while the bolts strike (its render)	games/tla/src/battle_effect/battle_effect_ray.c
+RAY_WIDE_CANVAS_SHIFT	what the player sees	Sheba casts Destruct Ray at Felix's side: the canvas shown at twice its width puts the bolts and sparks over the left of the screen where the targets stand, not over Sheba (its render)	games/tla/src/battle_effect/battle_effect_ray.c
+RAY_PICTURES	its twin	games/tbs/src/battle_effect/battle_effect_ray.c RAY_PICTURES 1550, where the bolt pictures go in the effect's sheet	games/tla/src/battle_effect/battle_effect_ray.c
+RAY_SPARK_COUNT	its twin	games/tbs/src/battle_effect/battle_effect_ray.c RAY_SPARK_COUNT, the sparks in PARTICLES	games/tla/src/battle_effect/battle_effect_ray.c
+RAY_FRAMES	its twin	games/tbs/src/battle_effect/battle_effect_ray.c RAY_FRAMES, the frames of the bolts' approach	games/tla/src/battle_effect/battle_effect_ray.c
+BattleEffect_RunFlare	the game	"Flare" (MsgAbilityName + 45)	games/tla/src/battle_effect/battle_effect_flare.c
+BattleEffect_RunFlare	what the player sees	Jenna casts Flare at Felix's side: bursts of flame flare up one after another in a low arc from the screen's left edge across the three and burn out, and the targets flash red in turn; Flare Storm's flames stand in a wall three high (its render)	games/tla/src/battle_effect/battle_effect_flare.c
+FLARE_ARC_COUNT	its twin	games/tbs/src/battle_effect/battle_effect_flare.c FLARE_ARC_COUNT, the nine flames on the arc	games/tla/src/battle_effect/battle_effect_flare.c
+FLARE_ARC_RADIUS_X	its twin	games/tbs/src/battle_effect/battle_effect_flare.c FLARE_ARC_RADIUS_X, the half ellipse's radius across, in canvas pixels	games/tla/src/battle_effect/battle_effect_flare.c
+FLARE_ARC_RADIUS_Y	its twin	games/tbs/src/battle_effect/battle_effect_flare.c FLARE_ARC_RADIUS_Y, the half ellipse's radius up and down, in canvas pixels	games/tla/src/battle_effect/battle_effect_flare.c
+FLARE_FLAME_PICTURES	its picture	graphics/battle_effects/ember_streak_00.png to ember_streak_05.png: six pictures, 24x23 to 16x52, of a ball of flame swelling and rising into a tall plume that thins as it burns out	games/tla/src/battle_effect/battle_effect_flare.c
+FLARE_FLAME_PICTURES	its twin	games/tbs/src/battle_effect/battle_effect_flare.c FLARE_FLAME_PICTURES, a flame's six pictures before it goes out	games/tla/src/battle_effect/battle_effect_flare.c
+FLARE_PICTURE_FRAMES	its twin	games/tbs/src/battle_effect/battle_effect_flare.c FLARE_PICTURE_FRAMES, four frames each picture	games/tla/src/battle_effect/battle_effect_flare.c
+FLARE_FRAMES	its twin	games/tbs/src/battle_effect/battle_effect_flare.c FLARE_FRAMES, the frames of the flare (80 there, 60 here)	games/tla/src/battle_effect/battle_effect_flare.c
+BattleEffect_RunBolt	the game	"Bolt" (MsgAbilityName + 66)	games/tla/src/battle_effect/battle_effect_bolt.c
+BattleEffect_RunBolt	what the player sees	Sheba casts Bolt at Felix: the view flashes violet, a bolt of lightning drops from the top onto him as he flashes white, and sparks scatter from its foot along the ground and fall; Flash Bolt strikes each of the three in turn with crackling glints at their feet (its render)	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_INTERVAL	what the player sees	Sheba casts Flash Bolt at Felix's side: a bolt strikes each of the three in turn, a moment apart (its render)	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_GROUND_Y	what the player sees	Sheba casts Bolt: the bolt reaches down to the ground at Felix's feet, and its sparks bounce along that line (its render)	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_FLASH_LEVEL	what the player sees	Sheba casts Bolt: the whole view flashes violet and then blue as the bolt starts (its render)	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_SPARKS_PER_TARGET	its twin	games/tbs/src/battle_effect/battle_effect_bolt.c BOLT_SPARKS, at most the 128 of its target's run of PARTICLES	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_GLINT_BLITTER	its twin	games/tbs/src/battle_effect/battle_effect_bolt.c BOLT_GLINT_BLITTER, the second blitter, made anew for each glint with its random flip	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_SPARKS	its twin	games/tbs/src/battle_effect/battle_effect_bolt.c BOLT_SPARKS, the gBolt_Counts column of sparks thrown from each bolt's foot	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_GLINTS	what the player sees	Sheba casts Flash Bolt: crackling glints flicker at each target's feet after its bolt lands; Bolt's row has none (its render)	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_GLINTS	its twin	games/tbs/src/battle_effect/battle_effect_bolt.c BOLT_GLINTS, the gBolt_Counts column of glints a frame around each target	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_GLINT_SPREAD	its twin	games/tbs/src/battle_effect/battle_effect_bolt.c BOLT_GLINT_SPREAD, how high and wide the glints spread, in pixels	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_STRIKES	what the player sees	Sheba casts Blue Bolt: each bolt that drops is a thicker tangle of lightning than Bolt's single one, its pictures laid over each other (its render)	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_STRIKES	its twin	games/tbs/src/battle_effect/battle_effect_bolt.c BOLT_STRIKES, the gBolt_Counts column of bolts drawn over each other	games/tla/src/battle_effect/battle_effect_bolt.c
+BOLT_PICTURES	its twin	games/tbs/src/battle_effect/battle_effect_bolt.c BOLT_PICTURES GLINT_SET_BYTES, where the bolt pictures start in the sheet, after the six glints	games/tla/src/battle_effect/battle_effect_bolt.c
+BattleEffect_BuildCenteredIndexList	its twin	games/tbs/src/battle_effect/battle_effect_flare.c BattleEffect_BuildCenteredIndexList, UNUSED there too, with the same body	games/tla/src/battle_effect/battle_effect_flare.c
+CONDEMN_FRAMES	its twin	games/tbs/src/battle_effect/battle_effect_condemn.c CONDEMN_FRAMES, the frames of the effect (132 there, 104 here)	games/tla/src/battle_effect/battle_effect_condemn.c
 ShamanVillageCave_LoseToGladiators	the game	"Hey, these guys aren't very strong at all!" (MsgHeyTheseGuys)	games/tla/src/scene/shaman_village_cave.c
 ShamanVillageCave_BeatGladiators	the game	"These guys were phenomenal!" (MsgTheseGuysWere)	games/tla/src/scene/shaman_village_cave.c
 FLAG_YAMPI_DESERT_SCORPION_STIRRED	what the player sees	the Psynergy Stone's room entered by its north door: clear, the buried King Scorpion and its sand ripple are on stage among the stakes; set, neither is (its render)	games/tla/src/scene/yampi_desert.c
@@ -15159,6 +15189,17 @@ FLAG_PILLAR_BLOCKS_SHAFT	its code	KandoreanTemple_FinishMovingBlock sets it when
 FLAG_WEST_VENT_BLOWING	its code	KandoreanTemple_StartWestVent sets it as the west vent starts blowing (gKandoreanTemple_WestVentBlowing), and KandoreanTemple_RunWestVent clears it as the cover settles; KandoreanTemple_WatchVents plays the vents' sound while it or FLAG_EAST_VENT_BLOWING is set	games/tla/src/scene/kandorean_temple.c
 FLAG_EAST_VENT_BLOWING	its code	as FLAG_WEST_VENT_BLOWING, for the east vent (KandoreanTemple_StartEastVent, KandoreanTemple_RunEastVent)	games/tla/src/scene/kandorean_temple.c
 FLAG_VENT_SOUND_PLAYING	its code	KandoreanTemple_WatchVents queues SE_WAVE and sets it once a vent blows, and stops the sound and clears it once neither does	games/tla/src/scene/kandorean_temple.c
+ANIM_LEADER_STILL	its picture	felix.tsv's animation 38 holds picture 115, which felix.png draws as Felix standing still facing the viewer, the picture ANIM_STILL (animation 0) holds; GaiaRockInside_StatueRisesUnderLeader stands the leader so as he lands on the risen statue	games/tla/src/scene/gaia_rock_inside.c
+GaiaRockInside_MeetSusa	the game	"Who are you? How did you get here?" (MsgGaiaRockInsideWhoAreYouHowDid), Susa's first words to the party, shown by ACTOR_SUSA as he turns on them; the lair's step trigger runs it while FLAG_MET_SUSA is clear (render probe GaiaRockInsideMaze --entrance 9)	games/tla/src/scene/gaia_rock_inside.c
+GaiaRockInside_SusaSaysMoveAside	the game	"Move out of the way there." (MsgGaiaRockInsideMoveOutOfTheWay), shown by ACTOR_SUSA when the raised trigger RAISED_SUSA_BLOCKED runs it	games/tla/src/scene/gaia_rock_inside.c
+GaiaRockInside_TalkToSusa	the game	"If you understand, then get out of my way. Stand over there." (MsgGaiaRockInsideIfYouUnderstandThenGet), shown by ACTOR_SUSA; the lair's talk trigger on actor 10 runs it (render probe GaiaRockInsideMaze --entrance 9)	games/tla/src/scene/gaia_rock_inside.c
+GaiaRockInside_ReadSusasMind	the game	"How many casks does it take to weaken this stupid serpent?" (MsgGaiaRockInsideHowManyCasksDoesIt), Susa's thought; the lair's Psynergy trigger on actor 10 runs it (render probe GaiaRockInsideMaze --entrance 9)	games/tla/src/scene/gaia_rock_inside.c
+GaiaRockInside_ChallengeSerpent	the game	"The serpent, with its eyes closed, looks almost alive." (MsgGaiaRockInsideTheSerpentWithItsEyes) once FLAG_SERPENT_SLAIN is set; until then it starts the Serpent's battle (Field_RequestBattleFromEncounterTable, slots ENEMY_SERPENT to ENEMY_SERPENT_FOUR_BEAMS)	games/tla/src/scene/gaia_rock_inside.c
+GaiaRockInside_CheckAltar	the game	"checked the altar." (MsgCheckedTheAltar)	games/tla/src/scene/gaia_rock_inside.c
+GaiaRockInside_PlaceDollOnFirstAltar	the game	"placed a doll on the altar." (MsgGaiaRockInsidePlacedADollOnThe), shown as it starts; the doll is then set down at (496, 712), on ACTOR_FIRST_ALTAR	games/tla/src/scene/gaia_rock_inside.c
+GaiaRockInside_PlaceDollOnWestAltar	the game	"placed a doll on the altar." (MsgGaiaRockInsidePlacedADollOnThe), shown as it starts; the doll is then set down at (528, 372), on ACTOR_WEST_ALTAR	games/tla/src/scene/gaia_rock_inside.c
+GaiaRockInside_PlaceDollOnEastAltar	the game	"placed a doll on the altar." (MsgGaiaRockInsidePlacedADollOnThe), shown as it starts; the doll is then set down at (672, 372), on ACTOR_EAST_ALTAR	games/tla/src/scene/gaia_rock_inside.c
+GaiaRockInside_ReadSandTablet	the game	"searched the slate. There is an inscription." (MsgGaiaRockInsideSearchedTheSlateThereIs), shown as it starts; the lair's talk trigger on ACTOR_SAND_TABLET runs it (render probe GaiaRockInsideMaze --entrance 9)	games/tla/src/scene/gaia_rock_inside.c
 ACTOR_ALEX	the game	"Alex" (MsgNamesPiers + 1)	games/tla/src/scene/venus_lighthouse_entrance.c
 ACTOR_KRADEN	the game	"Kraden" (MsgNamesPiers + 2)	games/tla/src/scene/venus_lighthouse_entrance.c
 Daila_MeetAlex	the game	"Well, well... Our happy little family is back together again." (MsgDailaFelixCall + 1)	games/tla/src/scene/daila.c
@@ -16904,6 +16945,177 @@ FLAG_BROKEN_SEAL_VISITED_SICK_DORA	its twin	games/tbs/include/flags.h: FLAG_VISI
 FLAG_BROKEN_SEAL_VAULT_WARNED_OF_ESCAPED_THIEVES	its twin	games/tbs/include/flags.h: FLAG_VAULT_WARNED_OF_ESCAPED_THIEVES 0x868	games/tla/src/scene/clear.c
 gClear_DecodedPassword	its code	Clear_EnterPassword passes it to Clear_DecodePassword as dst, checks its last two bytes against Clear_CalculatePasswordCrc16 and hands it to Clear_ApplyImportedData	games/tla/src/scene/clear.c
 PASSWORD_BUFFER_SIZE	its twin	games/tbs/src/scene/file_screen.c: FILE_SCREEN_PASSWORD_BUFFER_SIZE, 320 from TBS_PATCH_1 and 260 in Japanese	games/tla/src/scene/clear.c
+ACTOR_HAMMA	the game	"Hamma" (MsgNamesPiers + 3)	games/tla/src/scene/contigo.c
+ACTOR_KRADEN	the game	"Kraden" (MsgNamesPiers + 2)	games/tla/src/scene/contigo.c
+FLAG_HAMMA_WELCOMED_PARTY	the game	"Ah, you've returned! What brings you to my new home?" (MsgReturnedToMyNewHome)	games/tla/src/scene/contigo.c
+FLAG_WHOLE_VILLAGE_IN_VIEW	what the player sees	entering the village from the world map, which sets it, the camera follows the leader east past x 512 to the field of bushes south-east of the village, its view's left edge at 520 with the leader at (640, 960) (its render)	games/tla/src/scene/contigo.c
+ACTOR_WOMAN_FORESEEING_THE_BEACON	the game	"The beacon within Jupiter Lighthouse will soon be lit." (MsgContigoTheBeaconWithinJupiterLighthouse)	games/tla/src/scene/contigo.c
+ACTOR_MAN_ON_THE_FLYING_SHIP	the game	"It must be so exciting to travel around the world in a flying ship." (MsgContigoItMustBeSoExciting)	games/tla/src/scene/contigo.c
+ACTOR_OLD_MAN_ON_THE_RISEN_CITY	the game	"If a ship can rise up from the sea, why can't a city rise up from the ground?" (MsgContigoIfAShipCanRise)	games/tla/src/scene/contigo.c
+ACTOR_BOY_DOUBTING_THE_LEGENDS	the game	"Cities flying up into the sky? I don't buy that for a second!" (MsgContigoCitiesFlyingUpIntoThe)	games/tla/src/scene/contigo.c
+ACTOR_BOY_DOUBTING_THE_LEGENDS	what the player sees	actor 14, a boy with black hair walking with the girl round the tree stump in the middle of the village (its render)	games/tla/src/scene/contigo.c
+ACTOR_GIRL_ON_THE_SHIP	the game	"It wasn't what I expected, but seeing the ship take off was still amazing." (MsgContigoItWasntWhatIExpected)	games/tla/src/scene/contigo.c
+ACTOR_SALT	the game	"Salt" (MsgDjinnName + 14)	games/tla/src/scene/contigo.c
+ACTOR_SHINE	the game	"Shine" (MsgDjinnName + 55)	games/tla/src/scene/contigo.c
+ACTOR_MAN_ON_IVANS_RETURN	the game	"Hamma finally returned to Contigo." (MsgContigoIGuessTheLighthouseWas)	games/tla/src/scene/contigo.c
+ACTOR_WOMAN_ON_IVANS_MOTHER	the game	"doesn't remember his mother, because he was taken away at such an early age." (MsgContigoIvanDoesntRememberHisMother)	games/tla/src/scene/contigo.c
+ACTOR_BOY_WHO_WOULD_FIGHT_IVAN	the game	"Someday, I'm gonna fight" (MsgContigoSomedayImGonnaFightIvan)	games/tla/src/scene/contigo.c
+ACTOR_OLD_WOMAN_FEELING_THE_COLD	the game	"Winter just ended, but it keeps getting colder." (MsgContigoWinterJustEndedButIt)	games/tla/src/scene/contigo.c
+ACTOR_ITEM_MERCHANT	what the player sees	actor 13, a woman in a teal headband behind the counter of a shop of baskets of fruit, pots and barrels, whose talk facing the counter opens shop 28 (its render)	games/tla/src/scene/contigo.c
+ACTOR_BABYS_BROTHER	the game	"I don't have any powers like the Anemos did, but my sister, Ahri, is different." (MsgContigoIDontHaveAnyPowers)	games/tla/src/scene/contigo.c
+ACTOR_WEAPON_MERCHANT	what the player sees	actor 18, the western of the two men behind the counter beside a rack of swords and shields, whose talk facing the counter opens shop 26 (its render)	games/tla/src/scene/contigo.c
+ACTOR_ARMOR_MERCHANT	the game	"Mining materials in the ruins is dangerous work, so my armor is selling well." (MsgContigoMiningMaterialsInTheRuins)	games/tla/src/scene/contigo.c
+ACTOR_INNKEEPER	the game	"Innkeeper" (MsgNamesPiers + 18)	games/tla/src/scene/contigo.c
+ACTOR_INNKEEPER	what the player sees	actor 20 stands behind the green-covered counter at the head of the inn's entry hall, a bed to its west (its render)	games/tla/src/scene/contigo.c
+ACTOR_INN_WORKER	the game	"All the work on the wings means that our inn is always full!" (MsgContigoAllTheWorkOnThe)	games/tla/src/scene/contigo.c
+ACTOR_WOMAN_MAKING_THE_BEDS	the game	"Gotta make all the beds before everyone returns from Anemos Sanctum..." (MsgContigoGottaMakeAllTheBeds)	games/tla/src/scene/contigo.c
+ACTOR_COOK	the game	"I must be the greatest chef in the world!" (MsgContigoIMustBeTheGreatest)	games/tla/src/scene/contigo.c
+ACTOR_HEALER	what the player sees	actor 28, a robed man behind the counter at the head of a red carpet between two blue braziers, the Sanctum Sanctum_Run opens (its render)	games/tla/src/scene/contigo.c
+ACTOR_SUPER_LUCKY_DICE_HOST	the game	"Welcome, welcome, step right up! Care for a round of Super Lucky Dice?" (MsgContigoWelcomeWelcomeStepRightUp)	games/tla/src/scene/contigo.c
+ACTOR_MAN_WARY_OF_UNLUCKY_PLAYERS	the game	"One unlucky person can spoil it for everyone... I hope he doesn't ruin my lucky streak." (MsgContigoThisKidsGotUnluckyWritten)	games/tla/src/scene/contigo.c
+ACTOR_OLD_MAN_ON_THE_HI_LO_GAME	the game	"If you lose the hi-lo game, you don't win anything..." (MsgContigoIfYouLoseTheHi)	games/tla/src/scene/contigo.c
+ACTOR_WOMAN_WHO_LOSES_AT_HI_LO	the game	"I almost always get at least one pair, but then I lose everything on the hi-lo game!" (MsgContigoIAlmostAlwaysGetAt)	games/tla/src/scene/contigo.c
+ACTOR_SUPER_LUCKY_DICE_SIGN	the game	"Super Lucky Dice The Rules of the Game." (MsgContigoSuperLuckyDiceTheRules)	games/tla/src/scene/contigo.c
+ACTOR_LUCKY_DICE_HOST	the game	"Hey, buddy, wanna try yer luck at the dice?" (MsgContigoHeyBuddyWannaTryYer)	games/tla/src/scene/contigo.c
+ACTOR_LUCKY_DICE_SIGN	the game	"Throw the dice on the table and try to get the same numbers." (MsgContigoLuckyDice + 1)	games/tla/src/scene/contigo.c
+ACTOR_SECOND_LUCKY_DICE_SIGN	the game	"If two numbers match on either the dice or the table..." (MsgContigoLuckyDiceB + 1)	games/tla/src/scene/contigo.c
+ACTOR_LUCKY_WHEELS_ATTENDANT	the game	"Step right up and try your hand at lucky wheels!" (MsgContigoStepRightUpAndTry)	games/tla/src/scene/contigo.c
+ACTOR_LUCKY_WHEELS_SIGN	the game	"Lucky Wheels Rules" (MsgContigoLuckyWheelsRules)	games/tla/src/scene/contigo.c
+ACTOR_LUCKY_WHEELS_PRIZE_SIGN	the game	"Lucky Wheels Prizes" (MsgContigoLuckyWheelsPrizes)	games/tla/src/scene/contigo.c
+ACTOR_WING_WORKER_A	the game	"The wings will be finished shortly." (MsgContigoTheWingsWillBeFinished)	games/tla/src/scene/contigo.c
+ACTOR_WING_WORKER_B	the game	"Does this metal feather connect to that wooden post?" (MsgContigoWhichPartGoesWhereDoes)	games/tla/src/scene/contigo.c
+ACTOR_WING_WORKER_C	the game	"You've gotta watch out, 'cause you don't want to break anything... It's delicate work!" (MsgContigoYouveGottaWatchOutCause)	games/tla/src/scene/contigo.c
+ACTOR_WING_WORKER_D	the game	"Just a few more touches, and the wings are done." (MsgContigoJustAFewMoreTouches)	games/tla/src/scene/contigo.c
+ACTOR_MAN_ON_THE_GEOGLYPH	the game	"Have you taken a good look at the Anemos geoglyph?" (MsgContigoHaveYouTakenAGood)	games/tla/src/scene/contigo.c
+ACTOR_MAN_WHO_TRANSLATED_THE_WALL	the game	"But I know that devoted pilgrims will appreciate having this translation." (MsgContigoIDontKnowIfAnyone)	games/tla/src/scene/contigo.c
+ACTOR_MAN_LOCKED_OUT_OF_THE_SANCTUM	the game	"I want to get a good look at the inside of the sanctum, but I can't get this door open." (MsgContigoIWantToGetA)	games/tla/src/scene/contigo.c
+ACTOR_MAN_ON_HAMMET	the game	"The merchant Hammet took the gold in this room with him when he left Contigo." (MsgContigoTheMerchantHammetTookThe)	games/tla/src/scene/contigo.c
+ACTOR_CORN	the game	"Corn" (MsgItemName + 233)	games/tla/src/scene/contigo.c
+ACTOR_BRAMBLE_SEED	the game	"Bramble Seed" (MsgItemName + 240)	games/tla/src/scene/contigo.c
+Contigo_TalkToDoubtingBoy	the game	"Wait... The city of Anemos flew up into the sky? All right, that's just stupid!" (MsgContigoWaitTheCityOfAnemos)	games/tla/src/scene/contigo.c
+gContigo_DoubtingBoyScript	what the player sees	actor 14, a boy with black hair walking with the girl round the tree stump in the middle of the village (its render)	games/tla/src/scene/contigo.c
+gContigo_GirlOnTheShipScript	what the player sees	actor 15, a girl walking with the boy round the tree stump in the middle of the village (its render)	games/tla/src/scene/contigo.c
+CHILD_SEES_CHILD_RANGE	what the player sees	actors 14 and 15, a boy and a girl walking round the tree stump in the middle of the village (its render)	games/tla/src/scene/contigo.c
+CHILD_SEES_CHILD_RANGE	its twin	lemuria.c's CHILD_SEES_CHILD_RANGE, CHILD_SEES_LEADER_RANGE and CHILD_WALKS_ON_RANGE, the same routine's ranges for its two walking children	games/tla/src/scene/contigo.c
+Contigo_OpenSanctumDoor	what the player sees	the geoglyph scene's north is the Sanctum's front, three flights of steps up to doors at x 688, 784 and 880; the west and east doors' cells (codes 13 and 15) are where its trigger rows open them (its render)	games/tla/src/scene/contigo.c
+Contigo_OpenSanctumDoor	its area name	SceneId_ContigoGeoglyph's area is AREA_ANEMOS_SANCTUM (scenes.s), and its exits 22 to 24 lead to AnemosInnerSanctumEntrance	games/tla/src/scene/contigo.c
+Contigo_EnterSanctumWestDoor	what the player sees	cell code 13 lies at x 672 and 688, z 320, the head of the Sanctum's western steps (its render)	games/tla/src/scene/contigo.c
+Contigo_EnterSanctumEastDoor	what the player sees	cell code 15 lies at x 864 and 880, z 320, the head of the Sanctum's eastern steps (its render)	games/tla/src/scene/contigo.c
+Contigo_EnterSanctumMiddleDoor	its code	no trigger row runs it; it opens the door at cells (48, 12), the middle steps', and asks for exit 23	games/tla/src/scene/contigo.c
+Contigo_RevealMiddleDoor	what the player sees	cell code 14, the exit to the Anemos Inner Sanctum's entrance, lies only at x 768 and 784, z 16, out of reach; Reveal copies that row's attributes to (48, 19), the foot of the Sanctum's middle steps (its render)	games/tla/src/scene/contigo.c
+gContigo_EnterSanctumDoorScript	its code	Contigo_OpenSanctumDoor walks the leader north through the opened door with it	games/tla/src/scene/contigo.c
+LUCKY_DICE_COINS_PER_LEVEL	its twin	games/tbs/src/scene/tolbi_games.c's LUCKY_DICE_COINS_PER_LEVEL, LUCKY_DICE_MEDIUM_WIN and LUCKY_DICE_LARGE_WIN, the same fee and jingle thresholds	games/tla/src/scene/contigo.c
+REUNION_HAMMA_PORTRAIT_Y	its code	the second speaker of Contigo_TheReunion's two-message window is actor 8, SPRITE_HAMMA in gContigo_ShopsPlacementsReunion	games/tla/src/scene/contigo.c
+ACTOR_WING_FRAME_A	what the player sees	actors 19 to 21 (sprite 422) are brown wooden wing frames ribbed with white metal, laid on the ground by the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_METAL_FEATHER_A	the game	"Does this metal feather connect to that wooden post?" (MsgContigoWhichPartGoesWhereDoes)	games/tla/src/scene/contigo.c
+ACTOR_METAL_FEATHER_A	what the player sees	actors 22 to 26 (sprite 423) are long white metal feathers lying beside the wing frames by the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_A	what the player sees	actors 27 to 33 (sprite 680) are grey metal lumps lying about the wing frames and the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_A	the game	"There are too many parts! I think I'm going insane from all these stupid parts!" (MsgContigoThereAreTooManyParts)	games/tla/src/scene/contigo.c
+ACTOR_WING_FRAME_B	what the player sees	actors 19 to 21 (sprite 422) are brown wooden wing frames ribbed with white metal, laid on the ground by the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_WING_FRAME_C	what the player sees	actors 19 to 21 (sprite 422) are brown wooden wing frames ribbed with white metal, laid on the ground by the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_METAL_FEATHER_B	the game	"Does this metal feather connect to that wooden post?" (MsgContigoWhichPartGoesWhereDoes)	games/tla/src/scene/contigo.c
+ACTOR_METAL_FEATHER_B	what the player sees	actors 22 to 26 (sprite 423) are long white metal feathers lying beside the wing frames by the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_METAL_FEATHER_C	the game	"Does this metal feather connect to that wooden post?" (MsgContigoWhichPartGoesWhereDoes)	games/tla/src/scene/contigo.c
+ACTOR_METAL_FEATHER_C	what the player sees	actors 22 to 26 (sprite 423) are long white metal feathers lying beside the wing frames by the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_METAL_FEATHER_D	the game	"Does this metal feather connect to that wooden post?" (MsgContigoWhichPartGoesWhereDoes)	games/tla/src/scene/contigo.c
+ACTOR_METAL_FEATHER_D	what the player sees	actors 22 to 26 (sprite 423) are long white metal feathers lying beside the wing frames by the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_METAL_FEATHER_E	the game	"Does this metal feather connect to that wooden post?" (MsgContigoWhichPartGoesWhereDoes)	games/tla/src/scene/contigo.c
+ACTOR_METAL_FEATHER_E	what the player sees	actors 22 to 26 (sprite 423) are long white metal feathers lying beside the wing frames by the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_B	what the player sees	actors 27 to 33 (sprite 680) are grey metal lumps lying about the wing frames and the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_B	the game	"There are too many parts! I think I'm going insane from all these stupid parts!" (MsgContigoThereAreTooManyParts)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_C	what the player sees	actors 27 to 33 (sprite 680) are grey metal lumps lying about the wing frames and the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_C	the game	"There are too many parts! I think I'm going insane from all these stupid parts!" (MsgContigoThereAreTooManyParts)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_D	what the player sees	actors 27 to 33 (sprite 680) are grey metal lumps lying about the wing frames and the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_D	the game	"There are too many parts! I think I'm going insane from all these stupid parts!" (MsgContigoThereAreTooManyParts)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_E	what the player sees	actors 27 to 33 (sprite 680) are grey metal lumps lying about the wing frames and the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_E	the game	"There are too many parts! I think I'm going insane from all these stupid parts!" (MsgContigoThereAreTooManyParts)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_F	what the player sees	actors 27 to 33 (sprite 680) are grey metal lumps lying about the wing frames and the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_F	the game	"There are too many parts! I think I'm going insane from all these stupid parts!" (MsgContigoThereAreTooManyParts)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_G	what the player sees	actors 27 to 33 (sprite 680) are grey metal lumps lying about the wing frames and the geoglyph (its render)	games/tla/src/scene/contigo.c
+ACTOR_LOOSE_PART_G	the game	"There are too many parts! I think I'm going insane from all these stupid parts!" (MsgContigoThereAreTooManyParts)	games/tla/src/scene/contigo.c
+CHILD_SEES_LEADER_RANGE	what the player sees	actors 14 and 15, a boy and a girl walking round the tree stump in the middle of the village (its render)	games/tla/src/scene/contigo.c
+CHILD_SEES_LEADER_RANGE	its twin	lemuria.c's CHILD_SEES_CHILD_RANGE, CHILD_SEES_LEADER_RANGE and CHILD_WALKS_ON_RANGE, the same routine's ranges for its two walking children	games/tla/src/scene/contigo.c
+CHILD_WALKS_ON_RANGE	what the player sees	actors 14 and 15, a boy and a girl walking round the tree stump in the middle of the village (its render)	games/tla/src/scene/contigo.c
+CHILD_WALKS_ON_RANGE	its twin	lemuria.c's CHILD_SEES_CHILD_RANGE, CHILD_SEES_LEADER_RANGE and CHILD_WALKS_ON_RANGE, the same routine's ranges for its two walking children	games/tla/src/scene/contigo.c
+LUCKY_DICE_MEDIUM_WIN	its twin	games/tbs/src/scene/tolbi_games.c's LUCKY_DICE_COINS_PER_LEVEL, LUCKY_DICE_MEDIUM_WIN and LUCKY_DICE_LARGE_WIN, the same fee and jingle thresholds	games/tla/src/scene/contigo.c
+LUCKY_DICE_LARGE_WIN	its twin	games/tbs/src/scene/tolbi_games.c's LUCKY_DICE_COINS_PER_LEVEL, LUCKY_DICE_MEDIUM_WIN and LUCKY_DICE_LARGE_WIN, the same fee and jingle thresholds	games/tla/src/scene/contigo.c
+Contigo_HideMiddleDoor	what the player sees	cell code 14, the exit to the Anemos Inner Sanctum's entrance, lies only at x 768 and 784, z 16, out of reach; Reveal copies that row's attributes to (48, 19), the foot of the Sanctum's middle steps (its render)	games/tla/src/scene/contigo.c
+Teleport_StartShimmer	what the player sees	a carved stone circle in the middle of the village, west of the tree stump, where Teleport's trigger (cell code 30) lies at (256, 800) and (272, 800) (its render)	games/tla/src/scene/contigo.c
+Teleport_StartShimmer	its twin	shared/teleport_shimmer.c, the Mars Lighthouse overlays' copy of the same routines: Teleport_StartShimmer, Teleport_StopShimmer, Teleport_StartFastShimmer and Teleport_ArriveWhirling	games/tla/src/scene/contigo.c
+Teleport_StopShimmer	what the player sees	a carved stone circle in the middle of the village, west of the tree stump, where Teleport's trigger (cell code 30) lies at (256, 800) and (272, 800) (its render)	games/tla/src/scene/contigo.c
+Teleport_StopShimmer	its twin	shared/teleport_shimmer.c, the Mars Lighthouse overlays' copy of the same routines: Teleport_StartShimmer, Teleport_StopShimmer, Teleport_StartFastShimmer and Teleport_ArriveWhirling	games/tla/src/scene/contigo.c
+Teleport_StartFastShimmer	what the player sees	a carved stone circle in the middle of the village, west of the tree stump, where Teleport's trigger (cell code 30) lies at (256, 800) and (272, 800) (its render)	games/tla/src/scene/contigo.c
+Teleport_StartFastShimmer	its twin	shared/teleport_shimmer.c, the Mars Lighthouse overlays' copy of the same routines: Teleport_StartShimmer, Teleport_StopShimmer, Teleport_StartFastShimmer and Teleport_ArriveWhirling	games/tla/src/scene/contigo.c
+Teleport_ArriveWhirling	what the player sees	a carved stone circle in the middle of the village, west of the tree stump, where Teleport's trigger (cell code 30) lies at (256, 800) and (272, 800) (its render)	games/tla/src/scene/contigo.c
+Teleport_ArriveWhirling	its twin	shared/teleport_shimmer.c, the Mars Lighthouse overlays' copy of the same routines: Teleport_StartShimmer, Teleport_StopShimmer, Teleport_StartFastShimmer and Teleport_ArriveWhirling	games/tla/src/scene/contigo.c
+gContigo_ShimmerColors	what the player sees	a carved stone circle in the middle of the village, west of the tree stump, where Teleport's trigger (cell code 30) lies at (256, 800) and (272, 800) (its render)	games/tla/src/scene/contigo.c
+gContigo_ShimmerColors	its twin	shared/teleport_shimmer.c, the Mars Lighthouse overlays' copy of the same routines: Teleport_StartShimmer, Teleport_StopShimmer, Teleport_StartFastShimmer and Teleport_ArriveWhirling	games/tla/src/scene/contigo.c
+Contigo_LockDoors	what the player sees	with FLAG_JUPITER_BEACON_LIT set, the two houses' doorways south of the Teleport circle show shut green doors where they were open, and cell code 19 (Scene_ShowEntranceLocked) lies on their cells and on the item shop's and the weapon and armor shop's (its render)	games/tla/src/scene/contigo.c
+Contigo_LockDoors	the game	"Everyone's left town for the time being. They're transporting the wings..." (MsgContigoEveryonesLeftTownForThe)	games/tla/src/scene/contigo.c
+Contigo_ScatterWeedsOverBrambleSeed	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterWeedsOverBrambleSeed	its code	its trigger is Cyclone on cell code 41 at (272, 656); it shows ACTOR_BRAMBLE_SEED at (280, 664) unless FLAG_CONTIGO_BRAMBLE_SEED_TAKEN	games/tla/src/scene/contigo.c
+Contigo_ShowWorkerPuzzled	the game	"Which part goes where? Does this metal feather connect to that wooden post? It's like a puzzle, and it's getting rather complicated." (MsgContigoWhichPartGoesWhereDoes)	games/tla/src/scene/contigo.c
+gContigo_PuzzledWorkerScript	the game	"Which part goes where? Does this metal feather connect to that wooden post? It's like a puzzle, and it's getting rather complicated." (MsgContigoWhichPartGoesWhereDoes)	games/tla/src/scene/contigo.c
+gContigo_ShiverScript	the game	"Brrr...Brrr... It's been really cold since the lighthouse beacon was lit!" (MsgContigoBrrrBrrrItsBeenReally)	games/tla/src/scene/contigo.c
+Contigo_ScoopForSalt	what the player sees	cell code 32, where Scoop's trigger row runs it, lies at (656, 944), the one gap in the middle of the rows of weeds south-east of the village (its render)	games/tla/src/scene/contigo.c
+Contigo_ScoopForSalt	the game	"Salt" (MsgDjinnName + 14)	games/tla/src/scene/contigo.c
+Contigo_PlaceWingPart	what the player sees	actors 19 to 26 lie flat on the ground by the geoglyph: brown wooden wing frames ribbed with white metal and long white metal feathers (its render)	games/tla/src/scene/contigo.c
+Contigo_SetUpWingParts	what the player sees	actors 19 to 33 by the geoglyph: wooden wing frames, white metal feathers and grey metal lumps (its render)	games/tla/src/scene/contigo.c
+Contigo_ScatterFirstWeeds	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterSecondWeeds	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterFourthWeeds	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterFifthWeeds	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterSixthWeeds	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterSeventhWeeds	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterEighthWeeds	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterFirstWeedRow	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterFirstWeedRow	what the player sees	south-east of the village, rows of weeds (cell codes 47 to 51, x 624 to 688, z 912 to 976) where Cyclone's trigger rows run these (its render)	games/tla/src/scene/contigo.c
+Contigo_ScatterSecondWeedRow	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterSecondWeedRow	what the player sees	south-east of the village, rows of weeds (cell codes 47 to 51, x 624 to 688, z 912 to 976) where Cyclone's trigger rows run these (its render)	games/tla/src/scene/contigo.c
+Contigo_ScatterThirdWeedRow	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterThirdWeedRow	what the player sees	south-east of the village, rows of weeds (cell codes 47 to 51, x 624 to 688, z 912 to 976) where Cyclone's trigger rows run these (its render)	games/tla/src/scene/contigo.c
+Contigo_ScatterFourthWeedRow	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterFourthWeedRow	what the player sees	south-east of the village, rows of weeds (cell codes 47 to 51, x 624 to 688, z 912 to 976) where Cyclone's trigger rows run these (its render)	games/tla/src/scene/contigo.c
+Contigo_ScatterFifthWeedRow	the game	"Conjure wind to scatter weeds." (MsgAbilityDescription + 137)	games/tla/src/scene/contigo.c
+Contigo_ScatterFifthWeedRow	what the player sees	south-east of the village, rows of weeds (cell codes 47 to 51, x 624 to 688, z 912 to 976) where Cyclone's trigger rows run these (its render)	games/tla/src/scene/contigo.c
+COINS_WON_MESSAGE	the game	"Talk about lucky!" (MsgContigoYaWonCoinTalkAbout)	games/tla/src/scene/contigo.c
+COINS_LOST_MESSAGE	the game	"Better luck next time." (MsgContigoYaLostCoinBetterLuck)	games/tla/src/scene/contigo.c
+READ_SIGN_MESSAGE	the game	"The rules are listed on the sign. Take a look, take a look." (MsgContigoTheRulesAreListedOn)	games/tla/src/scene/contigo.c
+CONGRATULATIONS_MESSAGE	the game	"Congratulations!" (MsgContigoCongratulations)	games/tla/src/scene/contigo.c
+FIRST_PRIZE_MESSAGE	the game	"Here you go." (MsgContigoYouWonHereYouGo)	games/tla/src/scene/contigo.c
+NEXT_PRIZE_MESSAGE	the game	"And you won" (MsgContigoAndYouWonHereYou)	games/tla/src/scene/contigo.c
+COME_AGAIN_MESSAGE	the game	"Come again!" (MsgContigoComeAgain)	games/tla/src/scene/contigo.c
+WHEELS_ICON_MOON	the game	"And Moons are wild" (MsgContigoLuckyWheelsPrizes + 4)	games/tla/src/scene/contigo.c
+WHEELS_PRIZE_ICONS	the game	"Shirts win undershirts, Rings win rings, Boots win boots," (MsgContigoLuckyWheelsPrizes + 2)	games/tla/src/scene/contigo.c
+WHEELS_PRIZE_ICONS	the game	"Stars and Hearts win you items..." (MsgContigoLuckyWheelsPrizes + 3)	games/tla/src/scene/contigo.c
+gContigo_WheelsPrizes	the game	"Shirts win undershirts, Rings win rings, Boots win boots," (MsgContigoLuckyWheelsPrizes + 2)	games/tla/src/scene/contigo.c
+gContigo_WheelsPrizes	the game	"Stars and Hearts win you items..." (MsgContigoLuckyWheelsPrizes + 3)	games/tla/src/scene/contigo.c
+Contigo_PickPrize	the game	"Prizes are determined by which icons you match." (MsgContigoLuckyWheelsPrizes + 1)	games/tla/src/scene/contigo.c
+ENTRANCE_FROM_LUCKY_DICE	its uses	Event_SetAfterBattleDestination(SCENE_CONTIGO_LUCKY_DICE, ENTRANCE_FROM_LUCKY_DICE) beside Event_LeaveFor(SEQUENCE_DICE) in Contigo_SendToLuckyDice	games/tla/src/scene/contigo.c
+ENTRANCE_FROM_LUCKY_WHEELS	its uses	Event_SetAfterBattleDestination(SCENE_CONTIGO_LUCKY_DICE, ENTRANCE_FROM_LUCKY_WHEELS) beside Event_LeaveFor(SEQUENCE_SLOTS) in Contigo_SendToLuckyWheels	games/tla/src/scene/contigo.c
+Contigo_ReadSuperDiceSign	the game	"You never know what the dice will do next! Come and give our dice a toss!" (MsgContigoYouNeverKnowWhatThe)	games/tla/src/scene/contigo.c
+Contigo_TalkToItemMerchant	what the player sees	actor 13, a woman in a teal headband behind the counter of a shop of baskets of fruit, pots and barrels (its render)	games/tla/src/scene/contigo.c
+Contigo_TalkToWeaponMerchant	what the player sees	actor 18, the western of the two men behind the counter beside a rack of swords and shields (its render)	games/tla/src/scene/contigo.c
+Contigo_TalkToArmorMerchant	the game	"Mining materials in the ruins is dangerous work, so my armor is selling well." (MsgContigoMiningMaterialsInTheRuins)	games/tla/src/scene/contigo.c
+Contigo_TalkToInnkeeper	the game	"We've had so many people coming to Contigo lately that we're full" (MsgContigoWeveHadSoManyPeople)	games/tla/src/scene/contigo.c
+Contigo_TalkToHealer	what the player sees	actor 28, a robed man behind the counter at the head of a red carpet between two blue braziers (its render)	games/tla/src/scene/contigo.c
+Contigo_AskAboutSuperDice	the game	"So, tell me, pal... Have you ever played Superdice before?" (MsgContigoSoTellMePalHave)	games/tla/src/scene/contigo.c
+Contigo_ExplainLuckyDice	the game	"Throw the dice on the table and try to get the same numbers." (MsgContigoLuckyDice + 1)	games/tla/src/scene/contigo.c
+Contigo_ExplainLuckyDiceAgain	the game	"If two numbers match on either the dice or the table..." (MsgContigoLuckyDiceB + 1)	games/tla/src/scene/contigo.c
+Contigo_TalkToWheelsAttendant	the game	"Step right up and try your hand at lucky wheels!" (MsgContigoStepRightUpAndTry)	games/tla/src/scene/contigo.c
+Contigo_SendToLuckyWheels	the game	"Step right up and try your hand at lucky wheels!" (MsgContigoStepRightUpAndTry)	games/tla/src/scene/contigo.c
+Contigo_ListLuckyWheelsPrizes	the game	"Lucky Wheels Prizes" (MsgContigoLuckyWheelsPrizes)	games/tla/src/scene/contigo.c
+Contigo_TalkAboutTheShip	the game	"It wasn't what I expected, but seeing the ship take off was still amazing." (MsgContigoItWasntWhatIExpected)	games/tla/src/scene/contigo.c
+Contigo_SendToSuperLuckyDice	the game	"Welcome, welcome, step right up! Care for a round of Super Lucky Dice?" (MsgContigoWelcomeWelcomeStepRightUp)	games/tla/src/scene/contigo.c
+Contigo_ForceFreesDjinni	the game	"Shine" (MsgDjinnName + 55)	games/tla/src/scene/contigo.c
+Contigo_FreedDjinniJoinsParty	the game	"Shine" (MsgDjinnName + 55)	games/tla/src/scene/contigo.c
+Contigo_SaltJoinsParty	the game	"Salt" (MsgDjinnName + 14)	games/tla/src/scene/contigo.c
+Contigo_TeleportOut	what the player sees	a carved stone circle in the middle of the village, west of the tree stump, where Teleport's trigger (cell code 30) lies at (256, 800) and (272, 800) (its render)	games/tla/src/scene/contigo.c
+Contigo_PauseWhenFaced	what the player sees	actors 14 and 15, a boy and a girl walking round the tree stump in the middle of the village (its render)	games/tla/src/scene/contigo.c
+gContigo_JoinLeaderScript	its code	run on Isaac, Garet, Mia, Ivan, Kraden, Jenna, Sheba and Piers just before Party_AddIsaacsParty and FLAG_REUNITED_AT_CONTIGO; each walks to (160, 382) and is put at the origin	games/tla/src/scene/contigo.c
+gContigo_RejoinLeaderScript	its code	run on Ivan, Isaac and Kraden at the end of Contigo_ReturnToNewHome; each walks to (132, 359), where gContigo_LeaderVisitsScript stood the leader, and is put at the origin	games/tla/src/scene/contigo.c
+FLAG_SHINE_FREED	what the player sees	actor 17, Shine, sits unseen in the tree stump at (56, 706) in the west of the village, where Force's trigger row on it runs Contigo_ForceFreesDjinni (its render)	games/tla/src/scene/contigo.c
+Contigo_ForceFreesDjinni	what the player sees	actor 17, Shine, sits unseen in the tree stump at (56, 706) in the west of the village (its render)	games/tla/src/scene/contigo.c
 BattleEffect_RunMeteorBlow	the game	"Meteor Blow" (MsgAbilityName + 683)	games/tla/src/battle_effect/battle_effect_meteor_blow.c
 gCruelRuin_PillarSways	its code	BattleEffect_RunCruelRuin: how far each of the ribbon's two strips sways	games/tla/src/battle_effect/battle_effect_cruel_ruin.c
 CASTING_IMPACT_IMPACT_BANE	the game	"Bane" (MsgAbilityName + 306)	games/tla/src/battle_effect/battle_effect_casting_impact.c
@@ -18251,6 +18463,9 @@ CAMELOT_FLAG_BYTES	what the player sees	the Camelot Software Planning logo, a re
 TITLE_SCREEN_TILE	what the player sees	the title screen: the Golden Sun The Lost Age logo over the valley and its lighthouse (render guide --only moment, MOMENT_PLACE=0,3, frames 60 to 300) (its render)	games/tla/src/menu/title_intro.c
 PROMPT_TILES	its picture	PRESS START BUTTON in five 32 by 8 pieces, DRUCKE START in German and APPUYEZ SUR START in French (games/tla/src/graphics/title/prompt.png, prompt_de.png, prompt_fr.png)	games/tla/src/menu/title_intro.c
 PROMPT_SPRITES	its picture	PRESS START BUTTON in five 32 by 8 pieces, DRUCKE START in German and APPUYEZ SUR START in French (games/tla/src/graphics/title/prompt.png, prompt_de.png, prompt_fr.png)	games/tla/src/menu/title_intro.c
+BUILD_STAMP_MARK	its twin	The Broken Seal's BUILD_STAMP_MARK (games/tbs/src/game/game_units.c), 0x1000 set in every stamp by its BuildStamp_GetTime as by this one	games/tla/src/game/game_units.c
+BUILD_STAMP_DEBUG	its twin	The Broken Seal's BUILD_STAMP_DEBUG (games/tbs/src/game/game_units.c), (s16)0x8000 set on top when gDebugMode is set, by its BuildStamp_GetTime as by this one	games/tla/src/game/game_units.c
+ACTOR_SNAPSHOT_EMPTY	its twin	The Broken Seal's ACTOR_SNAPSHOT_EMPTY (games/tbs/include/field/actor.h), which its MainRoutineWork_InitializeDefaults writes to the actor snapshot's first slot as this one writes 255 to gSceneLocalState[4], ACTOR_SNAPSHOT_CAPACITY bytes before gSnapshotObjects (the slot ids Actor_Restore reads, field_sequence_actors.c)	games/tla/src/game/game_units.c
 Whirlwind_CarryLeader	its twin	shared/whirlwind_carry_leader.h	games/tla/src/scene/shared/whirlwind_carry_leader.h
 Speaker_GetHaltedLines	its twin	The Broken Seal field_sequence_speakers.c Speaker_GetHaltedLines: the same lookup through Speaker_GetActorSprite, read by Scene_TalkToActor for a Halted actor and FieldPsynergy_FilterHaltTarget	games/tla/src/field/field_sequence_speakers.c
 ANIMCMD_SOUND	its code	command 252 calls Sound_PlayFar with its argument	games/tla/src/field/field_internal.h
@@ -18662,10 +18877,26 @@ EDITOR_SWATCH_TILE	its picture	swatch.png: its first 16 tiles are colour swatche
 PSYNERGY_STONE_PP	the game	"The party's PP is fully restored!" (MsgGotPsynergyStone + 1)	games/tla/src/field/field_sequence_triggers.c
 ENCOUNTER_ZONE_MIMIC	the game	"The treasure chest was really a Mimic!" (MsgChestWasMimic)	games/tla/src/field/field_sequence_triggers.c
 EXAMINE_TARGET	its twin	The Broken Seal's EXAMINE_TARGET (games/tbs/src/field/field_sequence_triggers.c), the same bits	games/tla/src/field/field_sequence_triggers.c
-FIELD_PUSH_FRAMES	its twin	The Broken Seal's FIELD_PUSH_FRAMES (games/tbs/src/field/field_sequence_triggers.c), the same 12	games/tla/src/field/field_sequence_triggers.c
 Scene_TalkToActor	its twin	The Broken Seal's Scene_TalkToActor (games/tbs/src/field/field_sequence_triggers.c)	games/tla/src/field/field_sequence_triggers.c
 WorldMap_IsFlyable	the game	"Use your Psynergy to raise your ship and fly over reefs." (MsgUseYourPsynergy)	games/tla/src/field/field_tile_animation.c
 WorldMap_IsSailable	the game	"If you have a big enough ship, you can sail anywhere in the world!" (MsgMadraIfYouHaveBigEnough)	games/tla/src/field/field_tile_animation.c
+FieldPsynergy_Douse	the game	"Douse" (MsgAbilityName + 33)	games/tla/src/field/event_commands_cloak.c
+FieldPsynergy_DouseOnTarget	the game	"Douse" (MsgAbilityName + 33)	games/tla/src/field/event_commands_cloak.c
+FieldPsynergy_StartCloak	the game	"Cloak" (MsgAbilityName + 146)	games/tla/src/field/event_commands_cloak.c
+CARRY_SHARDS	the game	"Carry" (MsgAbilityName + 147)	games/tla/src/field/event_commands_cloak.c
+CLOAK_END	its twin	The Broken Seal's CLOAK_END (games/tbs/src/field/event_commands_cloak.c), the same request	games/tla/src/field/event_commands_cloak.c
+GROW_STEPS	its twin	The Broken Seal's GROW_STEPS (games/tbs/src/field/event_commands_internal.h), the same 10	games/tla/src/field/event_commands_cloak.c
+DOUSE_DROPS	its twin	The Broken Seal's DOUSE_DROPS (games/tbs/src/field/event_commands_douse.c), the same 10	games/tla/src/field/event_commands_cloak.c
+DOUSE_DROPS_ON_TARGET	its twin	The Broken Seal's DOUSE_DROPS_ON_TARGET (games/tbs/src/field/event_commands_douse.c), the same 24	games/tla/src/field/event_commands_cloak.c
+DOUSE_SWAYING_DROPS_ON_TARGET	its twin	The Broken Seal's DOUSE_SWAYING_DROPS_ON_TARGET (games/tbs/src/field/event_commands_douse.c), the same 30	games/tla/src/field/event_commands_cloak.c
+Weather_UpdateLightning	its twin	The Broken Seal's Weather_UpdateLightning (games/tbs/src/field/event_commands_weather.c), case for case	games/tla/src/field/event_commands_weather.c
+GroundParticles_Update	its twin	The Broken Seal's Weather_UpdateRain (games/tbs/src/field/event_commands_weather.c), line for line	games/tla/src/field/event_commands_weather.c
+GROUND_PARTICLE_FRAMES	its twin	The Broken Seal's GROUND_PARTICLE_FRAMES (games/tbs/src/field/event_commands_weather.c), the same 16	games/tla/src/field/event_commands_weather.c
+DUST_PUFF_DRAG_X	its twin	The Broken Seal's DUST_PUFF_DRAG_X (games/tbs/src/field/event_commands_actor_commands.c), the same 18 in the same FieldEffect_UpdateDustPuff	games/tla/src/field/field_sequence_actor_commands.c
+DUST_PUFF_DRAG_Z	its twin	The Broken Seal's DUST_PUFF_DRAG_Z (games/tbs/src/field/event_commands_actor_commands.c), the same 16 in the same FieldEffect_UpdateDustPuff	games/tla/src/field/field_sequence_actor_commands.c
+ACTOR_WATCH_ACTOR_MASK	its twin	The Broken Seal's ACTOR_WATCH_ACTOR_MASK (games/tbs/src/field/event_commands_actor_commands.c), the same 0xff in the same Actor_WatchAndStartScript	games/tla/src/field/field_sequence_actor_commands.c
+ActorWatchFlag	its twin	The Broken Seal's enum ActorWatchFlag (games/tbs/include/field/actor.h), read by the same Actor_WatchAndStartScript	games/tla/src/field/field_sequence_actor_commands.c
+ACTOR_WATCH_KEEP_MOTION	its twin	The Broken Seal's ACTOR_WATCH_KEEP_MOTION (games/tbs/include/field/actor.h), the same 0x10000 in the same Actor_WatchAndStartScript	games/tla/src/field/field_sequence_actor_commands.c
 gTitleIntro_ChannelCurveContrast	its twin	games/tbs/src/menu/title_intro.c gTitleIntro_ChannelCurveContrast, the same 32 values, the third response curve (Data_081a87fa before)	games/tla/src/menu/title_intro_tables.c
 ACTOR_FLINT	the game	"Flint" (MsgDjinnName)	games/tla/src/debug/test_scenes.c
 ACTOR_FIZZ	the game	"Fizz" (MsgDjinnName + 20)	games/tla/src/debug/test_scenes.c
@@ -19206,6 +19437,32 @@ SPARK_GROUPS_FLASH_DRAWN	what the player sees	render psynergy --ability Blast (a
 SPARK_GROUPS_FLASH_LIFE	what the player sees	render psynergy --ability Blast (ability 57) and Supernova (Jenna at Felix, Piers and Sheba): each burst is ringed with smaller flashes that spread from it and fade (its render)	games/tla/src/battle_effect/battle_effect_plasma.c
 SPARK_GROUPS_GROUND_Y	what the player sees	render psynergy --ability Blast (ability 57) and Supernova (Jenna at Felix, Piers and Sheba): the sparks fall and bounce off the ground below the bursts (its render)	games/tla/src/battle_effect/battle_effect_plasma.c
 PLASMA_SECOND_PICTURE	its picture	lightning_pillar.png (LightningPillarSheet), looked at enlarged: two 48x112 pictures of a violet-white bolt of lightning, the second thinner; render psynergy --ability Plasma: each pillar of lightning shows the first for a frame, then the second (its render)	games/tla/src/battle_effect/battle_effect_plasma.c
+BattleEffect_WipeCanvas	what the player sees	render psynergy --ability Boreas (Piers at Jenna): as the summon opens, black sweeps over the battle from left to right in ragged rows, each row's edge lagging its own way behind the front, which speeds up until the whole view is black (its render)	games/tla/src/battle_effect/battle_effect_canvas_routine.c
+BattleEffect_WipeCanvas	its twin	The Broken Seal's BattleEffect_WipeCanvas (games/tbs/src/battle_effect/battle_effect_canvas.c), the same routine but for the test that skips direction 3 (twins, 0.857)	games/tla/src/battle_effect/battle_effect_canvas_routine.c
+BattleEffect_TintBattler	what the player sees	render psynergy --ability Boreas (Piers at Jenna): as the ice crashes down Felix, Jenna and Sheba turn blue in their damage poses (SPRITE_COLOR_BLUE_TINT, POSE_DAMAGE); as each one's damage shows it flashes white, then gets its own colours back (its render)	games/tla/src/battle_effect/battle_effect_battler_tint.c
+BattleEffect_TintBattler	its twin	The Broken Seal's BattleEffect_TintBattler (games/tbs/src/battle_effect/battle_effect_dispatch.c), its parameters unitId, palette, animation, timerSlot and timerFrames; this game's clears a layer's picture only when its palette changes (twins, 0.550)	games/tla/src/battle_effect/battle_effect_battler_tint.c
+BattleEffect_SetupBlendedDisplay	its twin	The Broken Seal's BattleEffect_SetupBlendedDisplay (games/tbs/src/battle_effect/battle_effect_dispatch.c), the same routine with SOUND_FADE_OUT_ACTION_SE played at its end	games/tla/src/battle_effect/battle_effect_battler_tint.c
+BattleEffect_SetupBlendedDisplay	what the player sees	render psynergy --ability Boreas --backdrop game (Piers at Jenna): when Boreas's picture over the purple sky ends, the battlefield and the party are back behind the torrent of ice that sweeps over them (BattleEffect_RunBoreas calls it there) (its render)	games/tla/src/battle_effect/battle_effect_battler_tint.c
+BattleEffect_RunHail	the game	"Hail" (MsgAbilityName + 324)	games/tla/src/battle_effect/battle_effect_hail.c
+BattleEffect_RunHail	what the player sees	render psynergy --djinn --ability Hail (Piers at Jenna): after the Mercury Djinni's entrance, waves of water rise along the bottom of the battle, ice chips burst up out of Jenna as she is thrown into the air, and a small pale Djinni hovers over Piers's raised hand (its render)	games/tla/src/battle_effect/battle_effect_hail.c
+BattleEffect_RunGround	the game	"Ground" (MsgAbilityName + 305)	games/tla/src/battle_effect/battle_effect_hail.c
+BattleEffect_RunGround	what the player sees	render psynergy --djinn --ability Ground (Felix at Sheba): after the Venus Djinni's entrance, glowing discs crackling with white lightning leave Felix one after another, turn from yellow to violet, swirl across the battle and close in on Sheba, striking her one by one (its render)	games/tla/src/battle_effect/battle_effect_hail.c
+HAIL_CHIPS	what the player sees	render psynergy --djinn --ability Hail (Piers at Jenna): a spray of pale blue ice chips bursts up out of Jenna and spreads as it falls (its render)	games/tla/src/battle_effect/battle_effect_hail.c
+HAIL_CHIP_PICTURES	what the player sees	render psynergy --djinn --ability Hail (Piers at Jenna): the pale blue ice chips that burst out of Jenna, drawn from IceChipSheet, which loads after the wave's picture (its render)	games/tla/src/battle_effect/battle_effect_hail.c
+HAIL_DJINNI_PICTURE	what the player sees	render psynergy --djinn --ability Hail (Piers at Jenna): a small pale Djinni circles over Piers's raised hand while the chips fly (MercuryDjinnSmallSheet) (its render)	games/tla/src/battle_effect/battle_effect_hail.c
+GROUND_DJINNI_PICTURE	what the player sees	render psynergy --djinn --ability Ground (Felix at Sheba): a small pale spiny Djinni hovers over Felix beside the first discs, then rises off the top of the battle (VenusDjinnSmallSheet) (its render)	games/tla/src/battle_effect/battle_effect_hail.c
+GROUND_PORTALS	what the player sees	render psynergy --djinn --ability Ground (Felix at Sheba): glowing discs drawn from PortalSheet leave Felix one after another and strike Sheba one by one (its render)	games/tla/src/battle_effect/battle_effect_hail.c
+GROUND_PORTALS	its twin	The Broken Seal's BattleEffect_RunGround (games/tbs/src/battle_effect/battle_effect_hail.c) calls the same six discs portals ("six glowing portals leave the user")	games/tla/src/battle_effect/battle_effect_hail.c
+GROUND_CRACKLES	what the player sees	render psynergy --djinn --ability Ground (Felix at Sheba): white lightning crackles over each disc, changing shape every other frame (its render)	games/tla/src/battle_effect/battle_effect_hail.c
+GROUND_CRACKLES	its twin	The Broken Seal's GROUND_CRACKLES (games/tbs/src/battle_effect/battle_effect_hail.c)	games/tla/src/battle_effect/battle_effect_hail.c
+GROUND_FIRST_CRACKLE	its twin	The Broken Seal's GROUND_FIRST_CRACKLE (games/tbs/src/battle_effect/battle_effect_hail.c)	games/tla/src/battle_effect/battle_effect_hail.c
+GROUND_CRACKLES_PER_PORTAL	its twin	The Broken Seal's GROUND_CRACKLES_PER_PORTAL (games/tbs/src/battle_effect/battle_effect_hail.c)	games/tla/src/battle_effect/battle_effect_hail.c
+BattleCamera_Shake	its twin	The Broken Seal's BattleCamera_Shake (games/tbs/src/battle_effect/battle_effect_hail.c), the same routine	games/tla/src/battle_effect/battle_effect_hail.c
+Camera_ApplyVerticalShake	its code	moves only BG1's y and the projection's centre y by a random offset while work->shakeFrames lasts, then restores them (BattleCamera_Shake's vertical half); Odyssey, Charon and Catastrophe call it	games/tla/src/battle_effect/battle_effect_hail.c
+BattleEffect_RunAnnihilation	the game	"Annihilation" (MsgAbilityName + 178)	games/tla/src/battle_effect/battle_effect_annihilation.c
+BattleEffect_RunAnnihilation	what the player sees	render psynergy --ability Annihilation --unlearned (Felix at Sheba): Felix dashes up to Sheba, the battle flashes white, Sheba turns red and is thrown back, and a burst of fire swells on her while a shower of glowing shards flies out of her and falls away (its render)	games/tla/src/battle_effect/battle_effect_annihilation.c
+SHARD_COUNT	what the player sees	render psynergy --ability Annihilation --unlearned (Felix at Sheba): the shower of glowing orange shards that flies out of Sheba as she is struck, each shrinking as it falls (its render)	games/tla/src/battle_effect/battle_effect_annihilation.c
+BattleEffect_RunAnnihilation	its twin	The Broken Seal's BattleEffect_RunAnnihilation (games/tbs/src/battle_effect/battle_effect_annihilation.c), its locals and comments	games/tla/src/battle_effect/battle_effect_annihilation.c
 SPRITE_UNSEEN_BLOCK	its picture	unseen_block.png is a 16-pixel square of colour 1, black, in every pixel, not the twin's blank.png (colour 0 throughout), so the row calling its sheet empty is wrong: the Gabomba Statue draws its three hole covers in SPRITE_COLOR_HIDDEN so that nothing of them shows	games/tla/include/sprite_ids.h
 DJINNI_WATER19	its number	the spare Mercury Djinni the game's text names "Water19" (message 01786 in MsgDjinnName's list), which Prox's houses place and Prox_MercuryDjinniJoins gives	games/tla/include/djinn_ids.h
 FLAG_MARS_BEACON_BURNING	its uses	mercury_lighthouse.c sets it as the event that ends on Sheba's "The... The Wise One!" takes the party to the Mars Lighthouse aerie (MERCURY_LIGHTHOUSE_TO_MARS_LIGHTHOUSE_AERIE_EAST_B); mars_lighthouse_aerie.c's Scene_Initialize places the beacon's fire (ACTOR_BEACON_FIRE) and its flames only while it is set (a probe of MarsLighthouseAerie from entrance 1 with and without 0xa3c shows no change, the beacon being north of the view)	games/tla/include/flags.h
@@ -19280,6 +19537,7 @@ TITLE_FROM_IDEJIMA	its code	title.c's Scene_Initialize: entered by it, the title
 SPRITE_BURST_PILLAR	its picture	games/tla/src/graphics/sprite/burst_pillar.png: pictures 0 and 1 a grey stone pillar glowing red and gold in its cracks, picture 2 its broken stump; burst_pillar.tsv's animation 3 shows the three in turn, 41 frames each, as Burst breaks one (magma_rock_inside.c's CRACKED_PILLAR_ANIMATION_CRUMBLE)	games/tla/include/sprite_ids.h
 SPRITE_WHITE_PLATFORM	what the player sees	MagmaRockInsideLuckyMedalChest by entrance 4 (the leader stood at (776, 600)): actor 8 (sprite 319) is a white square slab in a dry channel, and with FLAG_ENTRANCE_FLOODED (0x300) set it floats on the lava that fills the room (its render)	games/tla/include/sprite_ids.h
 SPRITE_YELLOW_BLOCK	what the player sees	MagmaRockInsideEntrance by entrance 1 (the leader stood at (344, 300)): actor 15 (sprite 312) is a grey stone pillar with a yellow top, pushed by Move; with FLAG_ENTRANCE_FLOODED set it sinks into the lava to its yellow top (its render)	games/tla/include/sprite_ids.h
+SPRITE_SIGNAL_FIRE	what the player sees	KandoreanTempleChestbeaters entered by entrance 1, the leader stood at (360, 520): actors 8 and 9 (sprite 368) are a pot of blue water boiling over red embers, steam puffing from it, and, once Move has chucked the pot aside (0x302 or 0x303, with 0x304), the embers alone glowing where it stood; the same sheet is Kibombo's signal fire, so the Kandorean Temple names its actors ACTOR_BOILING_POT and ACTOR_EMBERS_UNDER_THE_POT (its render)	games/tla/include/sprite_ids.h
 SPRITE_STAKE	what the player sees	tall grey stone stakes, two raised and two sunk to their tops, in Air's Rock's paired statues room: actors 12 to 15 in render guide moment 91,1 stood at (620, 400) (its render)	games/tla/include/sprite_ids.h
 SPRITE_STONE_PILLAR	what the player sees	a tall mossy stone pillar, in every room of Air's Rock's inside that Move works in: actor 9 in render guide moment 88,4 stood at (580, 300) (its render)	games/tla/include/sprite_ids.h
 SPRITE_TWISTER_ROCK	what the player sees	a purple rock shaped as a twister, below the great stone face of Air's Rock's hall: actor 11 in render guide moment 85,16 stood at (312, 760) (its render)	games/tla/include/sprite_ids.h
@@ -19405,6 +19663,7 @@ SE_CRUMBLE	its uses	Actor_RollAndCrumble (shared/actor_roll_and_crumble.c) plays
 SE_LAUNCH	its uses	Actor_LaunchAhead (shared/actor_launch_ahead.h) plays it as a dragon statue's fireball (SPRITE_FIREBALL) is launched to roll ahead, where its row says a rolling block	games/tla/include/sounds.h
 SPRITE_MOAI_WATER	its picture	games/tla/src/graphics/sprite/spr_381.png: a pool of water that fits the hollow top of moai.png's stone head, and water pouring from its mouth (pictures 0 to 2); sprite_ids.h's enumerator for sprite 381, which scene/shared/actor_show_parts.h's Moai_AddWater adds to a moai's sprite	games/tla/include/sprite_ids.h
 SPRITE_SPLASH_RING	its picture	games/tla/src/graphics/sprite/splash_ring.png: rings that widen and fade, five grey and five blue; Actor_MoveOnWorldMap (field_pad_movement.c) creates it behind the leader or the ship in the World Map's shallow water on gActor_RippleScript, and the scenes for a splash	games/tla/include/sprite_ids.h
+FIELD_PUSH_FRAMES	its twin	The Broken Seal's FIELD_PUSH_FRAMES (games/tbs/src/field/field_sequence_triggers.c), the same 12	games/tla/include/field/field_work.h
 gTitleIntro_GullFrames	what the player sees	the frames of the one gull that flies up from the foot of the screen towards the lighthouse, smaller each frame, after the intro's scroll down (its render)	games/tla/src/menu/logo.c
 gTitleIntro_GullPath	what the player sees	the gull's way from the foot of the screen up towards the lighthouse (its render)	games/tla/src/menu/logo.c
 ResourceId_IntroGullSprites	its picture	one gull, wings beating, drawn in sizes from large to tiny (intro_gulls.png)	games/tla/include/resource_ids.h

@@ -6050,7 +6050,6 @@ CANVAS_BG1_BLANK_TILE	its code	the rows around the canvas are filled with tile 2
 CANVAS_BG1_FIRST_TILE	its code	the canvas tiles are numbered from BG_CHAR_SIZE / TILE_SIZE_8BPP, character block 1 as BG1 counts from block 0	games/tbs/src/battle_effect/battle_effect_canvas.c
 CANVAS_BG1_TOP_ROW	its code	the canvas starts at map row 12; the beams scroll BG1 to y 80 to show it from line 16	games/tbs/src/battle_effect/battle_effect_canvas.c
 MOSAIC_SIZE_MAX	the hardware	REG_MOSAIC's block sizes are 4-bit fields of the size less one (GBATEK): 15 is 16 pixels	games/tbs/src/battle/battle_transition.c
-MAP_ENTRY_PAIR	its code	BattleTransition_BuildTilemap fills BG1's map a word, two entries, at a time, adding 2 to each entry per word	games/tbs/src/battle/battle_transition.c
 TRANSITION_BG0_BAND	its code	BG0 starts scrolled up 32; the VCount interrupt at line 32 clears the scroll for the lines below, and the scroll counts down from frame 20 to 52	games/tbs/src/battle/battle_transition.c
 TRANSITION_CURTAIN_FIRST_TILE	its code	CURTAIN_TILE(0) is BG_CHAR_BLOCK(1) + 128 * TILE_SIZE_4BPP; the curtain's map entries number tiles from 128	games/tbs/src/battle/battle_transition.c
 TRANSITION_CURTAIN_ENTRY	its code	the curtain's rows are WINDOW_TILE(128 + n) entries in screen block 12	games/tbs/src/battle/battle_transition.c
@@ -6405,3 +6404,13 @@ PROCNE_DUST_SPIN_MAX	its twin	as PROCNE_DUST_SPIN_GAIN	games/tbs/src/battle_effe
 PROCNE_SWAY	what the player sees	Procne drifts across the right of the violet sky as it gathers the sparks (its render); The Lost Age's name for the 32 the wave's sine is scaled by across	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_BOB	its twin	The Lost Age's name for the 16 (32 over Procne's first 64 frames) the wave's sine is scaled by up and down	games/tbs/src/battle_effect/battle_effect_procne.c
 BAD_OMEN_SKULL_LIFT_SHIFT	its code	Bad Omen's sixteen skulls rise by Particle_AdvanceWithGravity3D with an upward pull of 1 << ((i & 3) + 11): toFIXED(1) / 32 for every fourth skull from the first and twice that for each next; the render tool leaves Bad Omen out as a weapon unleash	games/tbs/src/battle_effect/battle_effect_casting_impact.c
+DJINNI_AFTERIMAGES	what the player sees	talked to in Altin Peak, Spritz hops back from the leader and leaps at the party trailing a column of tinted copies of itself before its battle (its render)	games/tbs/src/field/event_commands_djinni.c
+DJINNI_LIGHT_RADIUS_FRAMES	its code	FieldEffect_RunAngledApproachPhases widens a light by a pixel a frame until age 60 and closes it by a pixel a frame until age 60 again, so it ends at its first radius	games/tbs/src/field/event_commands_djinni.c
+DJINNI_LIGHT_CIRCLING_FRAMES	its code	DJINNI_LIGHT_CIRCLING ends at age 40	games/tbs/src/field/event_commands_djinni.c
+DJINNI_LIGHT_DRIFTING_FRAMES	its code	DJINNI_LIGHT_DRIFTING ends at age 40, its centre an eighth of the way nearer the point over the leader each frame	games/tbs/src/field/event_commands_djinni.c
+AFFINE_MAP_ENTRIES	its code	Graphics_BuildSequentialTileTable writes the zoomed background's affine map (a byte an entry) a word at a time, from tiles 0, 1, 2, 3 adding 4 to each byte	games/tbs/src/battle/battle_transition.c
+BACKGROUND_SCROLL_X	its code	BattleTransition_Run sets BG1's x scroll to 8 as the curtain opens and at its end; the picture is 32 tiles (256 pixels) wide on the 240-pixel screen, and battle_background.c's BACKGROUND_PAN_X is Q_8_8(8)	games/tbs/src/battle/battle_transition.c
+BLADE_RAIN_WAIT_Y	its code	each sword starts at y 24 - i / 4 and waits there until frame i * 4 + 16	games/tbs/src/battle_effect/battle_effect_death_plunge.c
+ELEMENT_BURST_MOTE_LIFE	its code	a burst mote's variant starts at (i & 15) + 16 and counts down a frame, the mote drawn while it is not negative	games/tbs/src/battle_effect/battle_effect_death_plunge.c
+ORBITING_SPIRALS_PARTY_START_X	its code	on the party side the spirals set REG_BG2X to -(104 << 8), 8 pixels short of NARROW_CANVAS_PARTY_X (112), before the HBlank DMA of the wave rows takes BG2X over	games/tbs/src/battle_effect/battle_effect_planet_diver.c
+MAP_ENTRY_PAIR	its code	BattleTransition_BuildTilemap fills BG1's map a word, two entries, at a time, adding MAP_ENTRY_PAIR(2, 2) to each word	games/tbs/include/system/io_reg.h
