@@ -5346,10 +5346,6 @@ SPRITE_BLANK_32	its number	the pixel size: a blank 32-pixel square (blank_32.png
 ENEMY_LETTER_FIRST_TOO	its code	the bit of a letter that gives the first enemy of its kind its letter too (BattleEnemy_LetterFirstOfKind), before BattleUnit_SetFar	games/tbs/src/battle/battle_internal.h
 ENEMY_SPACING_EMPTY	its code	the pixels of the enemy column an empty place takes, as battle_placement.c spaces the enemies	games/tbs/src/battle/battle_placement.c
 FLAG_CROSSBONE_ISLE_STATUE_AFTER_LEADER	its code	set by CrossboneIsleKeys_CheckFirstPursuerTrigger as a statue starts after the leader, and tested there so it starts once	games/tbs/src/scene/crossbone_isle_keys.c
-TREE_ROOMS_FALL_LANDING	its code	tree_rooms.c's fall from TREE_ROOMS_FROM_FIFTH_FLOOR_CENTER_COCOON ends at entrance 10, where the leader lands in front of Tret	games/tbs/include/scene_exits.h
-TREE_ROOMS_FALL_THROUGH_A	its code	the first room fallen through, entrance 40: tree_rooms.c sends the leader on to the entrance numbered ten lower	games/tbs/include/scene_exits.h
-TREE_ROOMS_FALL_THROUGH_B	its code	the second room fallen through, entrance 30, ten above TREE_ROOMS_FALL_THROUGH_C	games/tbs/include/scene_exits.h
-TREE_ROOMS_FALL_THROUGH_C	its code	the third room fallen through, entrance 20, ten above TREE_ROOMS_FALL_LANDING; tree_rooms.c redraws cells near it	games/tbs/include/scene_exits.h
 Irq_Lock	its twin	The Lost Age's inline of the same name (include/system/irq_lock.h), taking a pointer to the saved word; BattleBackground_SetPaletteLevel	games/tbs/include/system/irq_lock.h
 Irq_Unlock	its twin	Irq_Lock's pair, as in The Lost Age	games/tbs/include/system/irq_lock.h
 IWRAM_COPY_WORDS	its twin	The Lost Age's statement macro of the IWRAM_FILL_WORDS family; LinkBattle_SendParty and BattleArena_SendPartyRecords, whose twins (battle_link.c, lobby.c) use it	games/tbs/include/system/iwram_call.h
@@ -5949,6 +5945,29 @@ gVenusLighthouseAerie_OrbPulseAction	its code	the script ACTOR_BEACON_ORB runs f
 gVenusLighthouseAerie_LookAboutAction	its code	runs Scene_LookAboutRandomly every frame, for the party as the aerie crumbles under them	games/tbs/src/scene/venus_lighthouse_aerie.c
 sBeaconRiseStep	its code	the frame counter VenusLighthouseAerie_UpdateBeaconRise switches on, held at 25 and 26 while the orb rises	games/tbs/src/scene/venus_lighthouse_aerie.c
 sBeaconRiseTimer	its code	set to 240 as the beacon rise starts; nothing reads it	games/tbs/src/scene/venus_lighthouse_aerie.c
+EAST_SECRET_OASIS_NORTH	its code	the first secret, the 4x2 patch at cell (22, 7) of lamakan_desert_east's map.txt, is oasis water (behavior 20) around (384, 128), the northmost middle in gLamakanDesertEast_Oases	games/tbs/src/scene/lamakan_desert.c
+EAST_SECRET_VULCAN_AXE	its code	the patch at cell (8, 10) holds treasure spot 100, TREASURE_SPOT_VULCAN_AXE, whose examine trigger finds the Vulcan Axe	games/tbs/src/scene/lamakan_desert.c
+EAST_SECRET_PIT	its code	the patch at cell (23, 21) is pit cells (behavior 22) around ACTOR_FIRST_PIT's (400, 364), and Reveal also shows the row south of it as it does for every pit	games/tbs/src/scene/lamakan_desert.c
+EAST_SECRET_OASIS_SOUTHWEST	its code	the patch at cell (16, 42) is oasis water around (288, 688), the southwestern middle in gLamakanDesertEast_Oases	games/tbs/src/scene/lamakan_desert.c
+EAST_SECRET_OASIS_SOUTHEAST	its code	the patch at cell (36, 44) is oasis water around (608, 720), the southeastern middle in gLamakanDesertEast_Oases	games/tbs/src/scene/lamakan_desert.c
+EAST_SECRET_FIRST_PSYNERGY_STONE	its code	the patch at cell (14, 55) holds treasure spot 101, TREASURE_SPOT_FIRST_PSYNERGY_STONE	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_OASIS_NORTHEAST	its code	the first secret, the 4x2 patch at cell (42, 5) of lamakan_desert_smog's map.txt, is oasis water (behavior 20) around (704, 96), the northeastern middle in gLamakanDesertSmog_Oases	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_PIT_NORTH	its code	the patch at cell (20, 11) is pit cells (behavior 22) around the northmost pit actor, (352, 204)	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_LUCKY_PEPPER	its code	the patch at cell (14, 12) holds treasure spot 102, TREASURE_SPOT_LUCKY_PEPPER, whose examine trigger finds the Lucky Pepper	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_SECOND_PSYNERGY_STONE	its code	the patch at cell (56, 18) holds treasure spot 103, TREASURE_SPOT_SECOND_PSYNERGY_STONE	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_PIT_WEST	its code	the patch at cell (7, 22) is pit cells around the westmost pit actor, (144, 380)	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_PIT_EAST	its code	the patch at cell (44, 23) is pit cells around the eastmost pit actor, (736, 396)	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_SMOG	its code	the patch at cell (38, 24) holds treasure spot 104, TREASURE_SPOT_UNDER_SMOG, where Reveal_ShowSecrets places ACTOR_SMOG (648, 408)	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_OASIS_MIDDLE	its code	the patch at cell (26, 28) is oasis water around (448, 464), the middle of the map, in gLamakanDesertSmog_Oases	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_777_COINS	its code	the patch at cell (17, 35) holds treasure spot 105, TREASURE_SPOT_777_COINS, whose examine trigger finds 777 coins	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_OASIS_EAST	its code	the patch at cell (50, 36) is oasis water around (832, 592), the eastmost middle in gLamakanDesertSmog_Oases	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_PIT_SOUTH	its code	the patch at cell (34, 43) is pit cells around the southmost pit actor, (576, 716)	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_OASIS_SOUTHWEST	its code	the patch at cell (6, 46) is oasis water around (128, 752), the southwestern middle in gLamakanDesertSmog_Oases	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_OASIS_SOUTH	its code	the patch at cell (27, 55) is oasis water around (464, 896), the southmost middle in gLamakanDesertSmog_Oases	games/tbs/src/scene/lamakan_desert.c
+SMOG_SECRET_POTION	its code	the patch at cell (43, 56) holds treasure spot 106, TREASURE_SPOT_POTION, whose examine trigger finds a Potion	games/tbs/src/scene/lamakan_desert.c
+CELL_BEHAVIOR_LAMAKAN_DESERT_TO_WORLD_MAP	its code	lamakan_desert_cave's map.txt has one cell of behavior 9, at (8, 19), beside LAMAKAN_DESERT_CAVE_FROM_WORLD_MAP's (136, 296); its step trigger runs LamakanDesert_LeaveForTheWorldMap, which takes LAMAKAN_DESERT_CAVE_TO_WORLD_MAP	games/tbs/src/scene/lamakan_desert.c
+CELL_BEHAVIOR_LAMAKAN_DESERT_MANTICORE	its code	lamakan_desert_manticore's cells of behavior 40 are only the spare 3x3 at (6, 0), which Reveal_ShowSecrets copies to (9, 6), just south of the west slope's head (9, 5) where the Manticore rises to (168, 92); its step trigger runs LamakanDesert_MeetManticore	games/tbs/src/scene/lamakan_desert.c
+CELL_BEHAVIOR_LAMAKAN_DESERT_MANTICORE	what the player sees	a curtain of falling sand over a passage north of the leader, entering LamakanDesertManticore by entrance 4 (167, 120) and entrance 2 (727, 104) (its render)	games/tbs/src/scene/lamakan_desert.c
 MAPGRID_ANIMATION_SCRIPT	its code	field_map_grid.c decodes a layout's tileset animation script to Ram_MapGridShapes + 4096 and starts it there, and field_world_map.c the world map's; the blend script follows at + 7680 (MAPGRID_BLEND_SCRIPT)	games/tbs/src/field/field_internal.h
 DICE_FLASH_FRAMES	its code	a two pair or triple win sets one die's flashTimer to 60, four alike both to 120	games/tbs/src/field/lucky_dice.c
 COMMAND_ROW_TOP	its code	the battle command window is created at tile row 17 and its panel rows are 17 + n	games/tbs/src/window/screens_internal.h
@@ -6413,4 +6432,8 @@ BACKGROUND_SCROLL_X	its code	BattleTransition_Run sets BG1's x scroll to 8 as th
 BLADE_RAIN_WAIT_Y	its code	each sword starts at y 24 - i / 4 and waits there until frame i * 4 + 16	games/tbs/src/battle_effect/battle_effect_death_plunge.c
 ELEMENT_BURST_MOTE_LIFE	its code	a burst mote's variant starts at (i & 15) + 16 and counts down a frame, the mote drawn while it is not negative	games/tbs/src/battle_effect/battle_effect_death_plunge.c
 ORBITING_SPIRALS_PARTY_START_X	its code	on the party side the spirals set REG_BG2X to -(104 << 8), 8 pixels short of NARROW_CANVAS_PARTY_X (112), before the HBlank DMA of the wave rows takes BG2X over	games/tbs/src/battle_effect/battle_effect_planet_diver.c
+TREE_ROOMS_FALL_LANDING	what the player sees	the end of the fall from the fifth floor's centre cocoon: the leader drops into a maze of root walls, onto the spot where the way from the entrance room arrives, and lands on his feet (its render)	games/tbs/include/scene_exits.h
+TREE_ROOMS_FALL_THROUGH_A	what the player sees	the first room fallen through, the third floor: the leader drops past webbed pits holding golden cocoons, to the hole in the floor below a red chest (its render)	games/tbs/include/scene_exits.h
+TREE_ROOMS_FALL_THROUGH_B	what the player sees	the second room fallen through, the second floor: the leader drops past webs strung with golden cocoons, down through the hole in the floor at its middle (its render)	games/tbs/include/scene_exits.h
+TREE_ROOMS_FALL_THROUGH_C	what the player sees	the third room fallen through, the entrance room: the leader drops into a maze of root walls with no webs, down through the hole in the floor at its middle (its render)	games/tbs/include/scene_exits.h
 MAP_ENTRY_PAIR	its code	BattleTransition_BuildTilemap fills BG1's map a word, two entries, at a time, adding MAP_ENTRY_PAIR(2, 2) to each word	games/tbs/include/system/io_reg.h
