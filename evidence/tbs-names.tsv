@@ -5074,9 +5074,6 @@ SE_VOICE_ANIMAL_C	its sound data	the four blips of a voice, picked by the letter
 SE_VOICE_ANIMAL_D	its sound data	the four blips of a voice, picked by the letter code's low two bits (Message_Type); each sequence a little lower than the one before	games/tbs/include/sounds.h
 SE_STOP_EXIT_SE	its sound data	a trackless sequence on player 5, where gSongTable plays SE_MAP_EXIT, SE_STAIRS_UP and SE_STAIRS_DOWN; played by Scene_QueueMusic before each queued scene sound	games/tbs/include/sounds.h
 ENEMY_NONE	its code	row 0, named "???", in no formation; formations fill their empty places with row 0	games/tbs/include/enemy_ids.h
-ENEMY_SLIME_WORLD_MAP	its code	level 3 Slime of formations 23 and 27, the world map around Vale and Vault (and Goma Cave), against ENEMY_SLIME_SOL_SANCTUM	games/tbs/include/enemy_ids.h
-ENEMY_UNUSED_CHIMERA	its picture	name "?", in no formation; gBattleSprites draws SPRITE_BATTLE_CHIMERA in palette 3; abilities Fire Blessing, Rabid Fang, Mad Dash, Eruption, Recovery	games/tbs/include/enemy_ids.h
-ENEMY_UNUSED_TOADONPA	its picture	name "?", in no formation; draws SPRITE_BATTLE_TOADONPA in palette 5; only Attack	games/tbs/include/enemy_ids.h
 RESOURCE_EMPTY_MAP	its code	gMaps rows 0 and 1 (the title and File Screen, and MapIndex_World) use this layout, whose grid map.txt is one fill of 0	games/tbs/include/resource_ids.h
 ABILITY_EFFECT_ATTACK_UP_SHARPLY	its code	BattleAbility_ApplyToTarget moves the stage by 2 where ABILITY_EFFECT_ATTACK_UP moves it by 1 (Impact, Dull, Guard, Impair, Ward, Weaken against their party-wide forms)	games/tbs/include/battle/battle_unit.h
 ABILITY_EFFECT_ATTACK_DOWN_SHARPLY	its code	BattleAbility_ApplyToTarget moves the stage by 2 where ABILITY_EFFECT_ATTACK_DOWN moves it by 1 (Impact, Dull, Guard, Impair, Ward, Weaken against their party-wide forms)	games/tbs/include/battle/battle_unit.h
@@ -5099,9 +5096,6 @@ DEBUG_ABILITY_COUNT	its code	the debug level editor's browser bounds (270), rena
 DEBUG_ITEM_COUNT	its code	the debug level editor's browser bounds (270), renamed from ABILITY_COUNT and ITEM_COUNT as test.c names its own	games/tbs/src/debug/level.c
 CLASS_SERIES_FIXED	its code	series 11 holds classes 200 to 202, which Class_Determine returns outright for Isaac and Garet in childhood and for Jenna, never from gClass_SeriesByElements	games/tbs/include/game/character.h
 CLASS_SERIES_NPC	the game	series 12 holds only class 0, MsgClassName "NPC"	games/tbs/include/game/character.h
-CLASS_ISAAC_CHILD	its code	Class_Determine returns 200 for ISAAC while FLAG_CHILDHOOD is set; MsgClassName + 200 is "?"	games/tbs/include/game/character.h
-CLASS_GARET_CHILD	its code	Class_Determine returns 201 for GARET while FLAG_CHILDHOOD is set	games/tbs/include/game/character.h
-CLASS_FLAME_USER	its code	MsgClassName + 202 is "Flame User"; Class_Determine returns it for JENNA	games/tbs/include/game/character.h
 CLASS_COUNT	its code	gClass_DefinitionTable has 203 rows; Class_Determine searches from the last	games/tbs/include/game/character.h
 ENEMY_ELEMENT_PRESET_COUNT	its code	gEnemy_ElementPresetTable has 44 rows; a preset past 43 reads as row 0	games/tbs/include/game/enemy_element_preset.h
 DISPLAY_TILE_WIDTH	the hardware	GBATEK: the 240x160 screen is 30 by 20 tiles of 8 pixels; loops over a screen's map row run 30 columns	games/tbs/include/system/io_reg.h
@@ -5989,6 +5983,12 @@ CELL_BEHAVIOR_LAMAKAN_DESERT_MANTICORE	its code	lamakan_desert_manticore's cells
 CELL_BEHAVIOR_LAMAKAN_DESERT_MANTICORE	what the player sees	a curtain of falling sand over a passage north of the leader, entering LamakanDesertManticore by entrance 4 (167, 120) and entrance 2 (727, 104) (its render)	games/tbs/src/scene/lamakan_desert.c
 MAPGRID_ANIMATION_SCRIPT	its code	field_map_grid.c decodes a layout's tileset animation script to Ram_MapGridShapes + 4096 and starts it there, and field_world_map.c the world map's; the blend script follows at + 7680 (MAPGRID_BLEND_SCRIPT)	games/tbs/src/field/field_internal.h
 DICE_FLASH_FRAMES	its code	a two pair or triple win sets one die's flashTimer to 60, four alike both to 120	games/tbs/src/field/lucky_dice.c
+ENEMY_SLIME_WORLD_MAP	the game	"Slime" (MsgEnemyName + 11)	games/tbs/include/enemy_ids.h
+ENEMY_UNUSED_CHIMERA	the game	"Chimera" (MsgEnemyName + 102)	games/tbs/include/enemy_ids.h
+ENEMY_UNUSED_TOADONPA	the game	"Toadonpa" (MsgEnemyName + 133)	games/tbs/include/enemy_ids.h
+CLASS_ISAAC_CHILD	what the player sees	with FLAG_CHILDHOOD set, the stormy night in Vale (ValePrologue) shows the leader Isaac as a small blond boy in the rain by his house and the boulder, and beside the boy Garet at Garet's chest; then Class_Determine gives Isaac this class (its render)	games/tbs/include/game/character.h
+CLASS_GARET_CHILD	what the player sees	on the stormy night in Vale (ValePrologue_TalkToGaret), Garet is a red-haired boy with a child's portrait who asks "What, you want me to just dump my stuff?" by his chest, drops it on Yes, and "Garet joined" shows: he joins the party a child, while Class_Determine gives him this class (its render)	games/tbs/include/game/character.h
+CLASS_FLAME_USER	the game	"Flame User" (MsgClassName + 202)	games/tbs/include/game/character.h
 COMMAND_ROW_TOP	its code	the battle command window is created at tile row 17 and its panel rows are 17 + n	games/tbs/src/window/screens_internal.h
 ENEMY_SPACING_LARGE	what the player sees	two Gryphons, large enemies, stand side by side in the enemies' column without overlapping (its render)	games/tbs/src/battle/battle_placement.c
 ENEMY_SPACING_SMALL	what the player sees	the small Fighter Bee moves aside as Fighter Bee2 appears, and the two stand close together in the enemies' column (its render)	games/tbs/src/battle/battle_placement.c
@@ -6463,3 +6463,5 @@ BACKGROUND_RESTORE_STEP	its twin	The Lost Age (hz/fx battle_effect_canvas.c) nam
 MAP_ENTRY_PAIR	its code	BattleTransition_BuildTilemap fills BG1's map a word, two entries, at a time, adding MAP_ENTRY_PAIR(2, 2) to each word	games/tbs/include/system/io_reg.h
 BACKGROUND_LEVEL_STEP	its code	Palette_StepFadeTransfer scales BG palettes 6 to 13 by FIXED_ONE - step * (FIXED_ONE / 60); battle_internal.h's BACKGROUND_LEVEL_STEP is the same 1092	games/tbs/include/battle/battle_work.h
 BATTLE_BACKGROUND_COLORS	its code	Palette_StepFadeTransfer scales 8 * 16 colours from BG palette 6, the battle background's	games/tbs/include/battle/battle_work.h
+SPRITE_ISAAC_CHILD	what the player sees	with FLAG_CHILDHOOD set, the stormy night in Vale (ValePrologue) draws the leader, actor 0 of sprite 18, as Isaac a small blond boy in the rain by his house and the boulder (its render)	games/tbs/include/sprite_ids.h
+SPRITE_GARET_CHILD	what the player sees	on the stormy night in Vale (ValePrologue_TalkToGaret), actor 22 of sprite 19 is Garet a red-haired boy with a child's portrait, who asks "What, you want me to just dump my stuff?" by his chest before "Garet joined" (its render)	games/tbs/include/sprite_ids.h
