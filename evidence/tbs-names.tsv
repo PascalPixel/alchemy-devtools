@@ -3093,7 +3093,6 @@ FLAG_PIPES_MOVED	the game	"See the water pipes?" (MsgColossoAreaCalledPipeworks)
 FLAG_PIPEWORKS_PIPE_PUSHED	the game	"This area is called the Pipeworks." (MsgColossoAreaCalledPipeworks)	games/tbs/src/scene/colosseum_azart_match.c
 FLAG_PLANT_GROWN	the game	"Growth" (MsgAbilityName)	games/tbs/src/scene/colosseum_azart_match.c
 FLAG_SECOND_ROCK_COLUMN	the game	"They call this the Rock Challenge." (MsgColossoCallRockChallenge)	games/tbs/src/scene/colosseum_azart_match.c
-FLAG_ARENA_REACHED	the game	"You must get through several stages before you reach the arena." (MsgColossoWarriorsEnterFinalsWithoutAny)	games/tbs/src/scene/colosseum_azart_match.c
 FLAG_COLOSSEUM_AZART_MATCH_OIL_DROP_CHEST_OPENED	the game	"Oil Drop" (MsgItemName)	games/tbs/src/scene/colosseum_azart_match.c
 ACTOR_VILLAGER_PRELIMINARY_HEATS	the game	"They're holding the preliminary Colosso heats right now." (MsgColosseumEntranceTheyreHoldingThePreliminaryColossoHeats)	games/tbs/src/scene/colosseum_entrance.c
 ACTOR_WOMAN_CANNOT_GET_IN	the game	"I'll never get in there." (MsgColosseumEntranceSighTheColosseumIsPackedWith)	games/tbs/src/scene/colosseum_entrance.c
@@ -3167,7 +3166,6 @@ FLAG_ON_SCALES	the game	"This stage is called the Scales of Justice." (MsgColoss
 FLAG_WEIGHT_ON_SCALES	the game	"This stage is called the Scales of Justice." (MsgColossoStageCalledScales)	games/tbs/src/scene/colosseum_navampa_match.c
 FLAG_LONG_LOG_IN_PLACE	the game	"To get across the tank, you'll need to roll the logs." (MsgColossoAnotherLogRollingArea)	games/tbs/src/scene/colosseum_navampa_match.c
 FLAG_STONE_COLUMN	the game	"You can get through quickly by moving the logs and stones." (MsgColossoAnotherLogRollingArea)	games/tbs/src/scene/colosseum_navampa_match.c
-FLAG_ARENA_REACHED	the game	"You must get through several stages before you reach the arena." (MsgColossoWarriorsEnterFinalsWithoutAny)	games/tbs/src/scene/colosseum_navampa_match.c
 FLAG_FIRST_LOG_AREA_STONE_SETTLED	the game	"You can get through quickly by moving the logs and stones." (MsgColossoAnotherLogRollingArea)	games/tbs/src/scene/colosseum_navampa_match.c
 FLAG_COLOSSEUM_NAVAMPA_MATCH_SMOKE_BOMB_CHEST_OPENED	the game	"Smoke Bomb" (MsgItemName)	games/tbs/src/scene/colosseum_navampa_match.c
 FLAG_COLOSSEUM_NAVAMPA_MATCH_NUT_CHEST_OPENED	the game	"Nut" (MsgItemName)	games/tbs/src/scene/colosseum_navampa_match.c
@@ -3208,7 +3206,6 @@ FLAG_WALL_PILLAR_MOVED	the game	"The fans just call this The Wall." (MsgColossoF
 FLAG_MINI_MAZE_FIRST_PILLAR_COLUMN	the game	"This stage is dubbed the Mini-Maze." (MsgColossoStageDubbedMini)	games/tbs/src/scene/colosseum_satrage_match.c
 FLAG_MINI_MAZE_SECOND_PILLAR_COLUMN	the game	"This stage is dubbed the Mini-Maze." (MsgColossoStageDubbedMini)	games/tbs/src/scene/colosseum_satrage_match.c
 FLAG_MINI_MAZE_THIRD_PILLAR_COLUMN	the game	"This stage is dubbed the Mini-Maze." (MsgColossoStageDubbedMini)	games/tbs/src/scene/colosseum_satrage_match.c
-FLAG_ARENA_REACHED	the game	"You must get through several stages before you reach the arena." (MsgColossoWarriorsEnterFinalsWithoutAny)	games/tbs/src/scene/colosseum_satrage_match.c
 FLAG_COLOSSEUM_SATRAGE_MATCH_SMOKE_BOMB_CHEST_OPENED	the game	"Smoke Bomb" (MsgItemName)	games/tbs/src/scene/colosseum_satrage_match.c
 ACTOR_GARETS_GRANDFATHER	the game	"please take care of my grandson" (MsgValeIsaacPleaseTakeCareOfMy)	games/tbs/src/scene/cottage_rooms_a.c
 ACTOR_GARETS_GRANDMOTHER	the game	"Are you choking" (MsgValeHeyEllipsis)	games/tbs/src/scene/cottage_rooms_a.c
@@ -5482,7 +5479,6 @@ gCrossboneIsle_FloorTriggers	its uses	Scene_GetTriggers hands it to SceneId_Cros
 TREASURE_SPOT_PIRATE_SHIP_DEMON_MAIL	its code	the examine trigger that finds ITEM_DEMON_MAIL, its treasure spot placed once FLAG_CROSSBONE_ISLE_DEADBEARD_DEFEATED is set	games/tbs/src/scene/crossbone_isle.c
 TREASURE_SPOT_PIRATE_SHIP_MIMIC	its code	the examine trigger that finds FIND_MIMIC until FLAG_PIRATE_SHIP_MIMIC_BEATEN	games/tbs/src/scene/crossbone_isle.c
 TREASURE_SPOT_CROSSBONE_ISLE_FIRST_FLOOR_MIMIC	its code	the examine trigger that finds FIND_MIMIC until FLAG_CROSSBONE_ISLE_FIRST_FLOOR_MIMIC_BEATEN, placed on the first floor alone	games/tbs/src/scene/crossbone_isle.c
-SPROUT_ANIMATION_GROWN	its picture	sprout.tsv's animation 4 ends on picture 6, the sprout grown tall, as suhalla.c names it	games/tbs/src/scene/crossbone_isle.c
 FLOATING_LOG_ANIMATION_FLOAT	its picture	floating_log_west_east.tsv's animation 1 alternates pictures 0 and 1, the log riding high and low on its blue ripple line	games/tbs/include/sprite_ids.h
 FLOATING_LOG_ANIMATION_SETTLE	its picture	animation 2 shows pictures 1, 0 and 1 for 5, 3 and 5 frames, then plays animation 1: a quick dip; CrossboneIsle_SettleLog plays it when the leader steps on	games/tbs/include/sprite_ids.h
 FLOATING_LOG_ANIMATION_ROLL_EAST_OR_SOUTH	its picture	animation 3 loops pictures 2, 3 and 4, the log turning over in white spray; CrossboneIsle_RideLog plays it riding east or south	games/tbs/include/sprite_ids.h
@@ -6304,7 +6300,6 @@ HEAVY_IMPACT_SPARKLES	its code	the heavy impact spawns HEAVY_IMPACT_SPARKLES act
 TARGET_MOTES_PER_TARGET	its code	count = TARGET_MOTES_PER_TARGET motes about each target unless the effect gives Demon Fire's orbs or Drown's drops (battle_effect_target_motes.c)	games/tbs/src/battle_effect/battle_effect_target_motes.c
 COUNT_STUN_SLOT	its code	the count's place for stun: under BUGFIX it counts unit->stun; as the game ships it counts confusion and charm instead (battle_targeting.c's BUG)	games/tbs/src/battle/battle_targeting.c
 WORLD_MAP_BLOCK	its code	as WORLD_MAP_BLOCK_SHIFT: a 16.16 coordinate's block	games/tbs/src/field/event_commands_cloak.c
-ACTOR_COUNT	its code	field_internal.h's enum: ACTOR_COUNT = 64, gActors, HEAP_SLOT_ACTORS; the event commands walk gActors up to it (event_commands_movement_types.c, event_commands_reveal.c, event_commands_field_psynergy_work.c)	games/tbs/src/field/event_commands_internal.h
 GROUND_PORTALS_DRAWN	what the player sees	after a Venus Djinni flies in, a row of six glowing portals, white then violet with crackles inside, streams from above the user across to the target (its render)	games/tbs/src/battle_effect/battle_effect_hail.c
 COMMAND_ICON_BYTES	its code	BattleCommandRow_LoadIconTiles and the icon menu step a command icon's pixels COMMAND_ICON_BYTES apart, 32 by 32 at a byte a pixel (screens_menu_titles.c, screens_icon_menu.c)	games/tbs/src/window/screens_internal.h
 GLYPH_PAIR_FIRST	its code	Text_DrawGlyphPair's code holds two characters, the first in its low byte (code & 0xff) and the second in bits 8 to 23 (GLYPH_PAIR_SECOND); it draws the pair's two glyphs side by side	games/tbs/src/window/window_glyphs.c
@@ -6532,3 +6527,7 @@ BATTLE_DJINN_ENTRY_RECOVERY_SHIFT	its code	as BATTLE_DJINN_ENTRY_RECOVERY_MASK	g
 BATTLE_DJINN_ENTRY_END	its code	BattleDjinnMenu_Run writes 0x80000000 after the last entry and the drawing loop stops at it	games/tbs/src/window/screens_battle_djinn_menu.c
 TREE_ROOMS_SPEAKER	its code	all 26 messages in Tret Tree's rooms (Tret, its second face, Garet, Ivan and Mia, by Event_ShowMessage and its kin) give SPEAKER_WINDOW_BELOW | the actor, so every window opens below; the voyage's SPEAKER (scene/tolbi_ship.h) takes the bits as an argument instead	games/tbs/src/scene/tree_rooms.c
 HUE_CIRCLE	its code	the same 360 degrees as 16.16, toFIXED(HUE_DEGREES)	games/tbs/src/field/event_commands_mind_read.c
+FLAG_ARENA_REACHED	the game	"You must get through several stages before you reach the arena." (MsgColossoWarriorsEnterFinalsWithoutAny)	games/tbs/include/scene/colosso_solo.h
+SPROUT_ANIMATION_GROWN	its picture	sprout.tsv's animation 4 shows picture 6, the sprout grown tall, and goes on to animation 0, which holds it there	games/tbs/include/sprite_ids.h
+SPROUT_ANIMATION_HALF_GROWN	its picture	sprout.tsv's animation 3 holds picture 3, the sprout half grown, midway through animation 2's growth from picture 0 to 6	games/tbs/include/sprite_ids.h
+ACTOR_COUNT	its code	gActors' actors: field_actors.c allocates ACTOR_COUNT * sizeof(struct Actor) in HEAP_SLOT_ACTORS, and the event commands walk gActors up to it (event_commands_movement_types.c, event_commands_reveal.c, event_commands_field_psynergy_work.c)	games/tbs/include/field/actor.h
