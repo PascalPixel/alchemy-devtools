@@ -4972,7 +4972,6 @@ MAPGRID_SCREEN_ROW_BYTES	its code	a cell picture's bottom tile entries are writt
 RED_BITS	the hardware	RGB555: red in bits 4..0 (GBATEK); palette fade work holds each channel at bits 14..10	games/tbs/src/field/field_sequence_palette_fade.c
 GREEN_BITS	the hardware	RGB555: green in bits 9..5 (GBATEK)	games/tbs/src/field/field_sequence_palette_fade.c
 BLUE_BITS	the hardware	RGB555: blue in bits 14..10 (GBATEK)	games/tbs/src/field/field_sequence_palette_fade.c
-EDITOR_MAP_ROW	its code	the editor writes the channel rows one BG map row (32 entries) apart	games/tbs/src/field/field_sequence_palette_editor.c
 EDITOR_SWATCH_TILE	its code	the swatch tiles are decompressed to tile 208 of char block 0, colour n drawn with tile 208 + n	games/tbs/src/field/field_sequence_palette_editor.c
 EDITOR_PALETTES	its code	L and R wrap the palette at 0..13; MapGrid_LoadMap loads 448 bytes, 14 of the 16 BG palettes	games/tbs/src/field/field_sequence_palette_editor.c
 EDITOR_BLINK_FRAMES	its code	START blinks white, the colour, black, the colour at frames 0, 10, 20, 30 of a 40-frame cycle	games/tbs/src/field/field_sequence_palette_editor.c
@@ -4994,8 +4993,6 @@ DISPLAY_TILE_WIDTH	the hardware	the speech window and portrait are placed in 8-p
 DISPLAY_TILE_HEIGHT	the hardware	rows 0 to 19 (160 / 8); off-screen speakers get the centre, column 15 and row 10	games/tbs/src/field/event_commands_messages.c
 unusedA	its code	two parameters of Event_ShowMessageAtPosition and its forwarder that nothing reads; only their order tells them apart	games/tbs/src/field/event_commands_messages.c
 FixedPoint_MulQ8	its code	the routine multiplies two 8.8 fixed-point values; named as Iwram_MulFX is for 16.16	games/tbs/src/field/lucky_dice.c
-SpriteArcOamView.link	its code	the views over struct Sprite take its own member names at the same offsets (link, attr3, shadow, scale, rotation, width, height, offsetX, offsetY, lastNo, dirty, count), STATIC_ASSERTs in sprite.h	games/tbs/src/field/event_commands_arcs.c
-DescendingArcSprite.shadow	its code	as SpriteArcOamView: struct Sprite's members at 0x0c..0x1b and 0x1e..0x25	games/tbs/src/field/event_commands_retreat.c
 BurstParticleVisual.xLow	its code	the byte at offset 6 is attribute 1's low byte, x; flagsBLow holds x's top bit	games/tbs/src/field/event_commands_growth.c
 WorldPictureWork.unreadAfterCursor	its code	six bytes after cursorY nothing on the screen reads, named by what they follow	games/tbs/src/field/event_commands_world_picture.c
 ScriptOperands.layer	its code	struct Actor's layer and priorityFlags at 0x22 and 0x23, which no work value reaches	games/tbs/include/field/script_operands.h
@@ -5414,7 +5411,7 @@ OBJ_AFFINE_PARAMETER	the hardware	OAM keeps the affine parameters in the fourth 
 OBJ_POSITION	the hardware	attribute 1's nine bits of x and attribute 0's eight of y (GBATEK): lucky_dice.c's bonus signs, result lettering and aiming hand	games/tbs/include/system/io_reg.h
 ACT_ID_MASK	its twin	The Lost Age's field_sequence.h; field_sequence_items.c and field_sequence_psynergy.c keep the Psynergy or item in bits 9..0 of FieldWork.psynergy and FieldWork.item	games/tbs/include/field/field_sequence.h
 ACT_UNIT_SHIFT	its twin	The Lost Age's field_sequence.h; the user above the Psynergy or item, bits 13..10 (event_commands_event.c's (shortcut >> 10) & 0xf)	games/tbs/include/field/field_sequence.h
-FLAG_ALTIN_STATUE_MOVED	its area name	Altin	games/tbs/include/flags.h
+FLAG_ALTIN_STATUE_MOVED	what the player sees	in Altin, a grey stone statue on a pedestal on the ledge above the houses (its render)	games/tbs/include/flags.h
 ACTOR_FIRST_SLEEP_Z	what the player sees	a "z" (letter_z.png) rising from Isaac as he sleeps (its render)	games/tbs/src/scene/colosseum_navampa_match.c
 ACTOR_GROUND_FLOOR_PATROL_GUARD	what the player sees	one of Dodonpa's men walking his rounds (gLunpaFortressGroundFloorPatrolRoute), who throws out a party he sees (its render)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_FIRST_PATROL	what the player sees	the first of the pair of Dodonpa's men who walk east and west together in the west passage, carrying a circle of light (gLunpaFortressFirstPatrolRoute) (its render)	games/tbs/src/scene/lunpa_fortress.c
@@ -5437,7 +5434,6 @@ FLARE_WHITE_DISC_TILE	its picture	intro_sun_3.png's second 16 by 16 picture, a q
 FLARE_DISC_RADIUS	its code	the discs are four 16x16 quarters or one 32x32 sprite, placed half their width left and up of their point on the line	games/tbs/src/menu/title_intro.c
 FLARE_RING_RADIUS	its code	the rings are four 32x32 quarters, placed half their width left and up of their point on the line	games/tbs/src/menu/title_intro.c
 OFFSCREEN_TILE	its twin	The Lost Age's title_intro.c names the same 511 OFFSCREEN_TILE (hz/ui): the map entry of the two columns past the screen's edge, as the title intro, the Nintendo logo and the File Screen's logo write it	games/tbs/include/graphics/graphics.h
-CHAR_BLOCK_1_TILE_8BPP	its code	BG_CHAR_SIZE / TILE_SIZE_8BPP, the first tile of character block 1 in BG2's 256-colour numbering, where Title_ShowNintendoLogo and Title_ShowIntro copy their pictures' tiles (BG_CHAR_BLOCK(1))	games/tbs/src/menu/title_intro.c
 CAMELOT_FLAG_TILE	its twin	The Lost Age's title_intro.c names the same tile, picture size and copy CAMELOT_FLAG_* (hz/ui); camelot_logo.tsv's CAMELOT_FLAG pictures start at tile 4, 16 tiles each	games/tbs/src/menu/title_intro.c
 CAMELOT_FLAG_PICTURE_BYTES	its twin	as CAMELOT_FLAG_TILE	games/tbs/src/menu/title_intro.c
 CAMELOT_FLAG_BYTES	its twin	as CAMELOT_FLAG_TILE	games/tbs/src/menu/title_intro.c
@@ -5448,8 +5444,8 @@ PEAK_ROWS_ABOVE	its code	the peak's rows 4 to 1 are copied in as the view rises;
 INTRO_VRAM_ROWS	its code	each picture keeps 21 rows of tiles in VRAM (DISPLAY_TILE_HEIGHT + 1), the map wrapping round them	games/tbs/src/menu/title_intro.c
 INTRO_FIRST_MAP_ROW	its code	the pictures start scrolled 96 pixels down, so map row 11 is the one just above the screen and shows VRAM row 0	games/tbs/src/menu/title_intro.c
 LOGO_PALETTE_BYTES	its code	LOGO_PALETTE_COLORS * 2, the bytes of colour both logo resources begin with, copied to BG_PLTT	games/tbs/src/menu/title_intro.c
-PSYNERGY_RINGS_SOUND	what the player sees	rings of light rising round the four elders who hold the Boulder over Vale, their colours cycling, the sound shared/psynergy_rings.c plays with each ring set (its render)	games/tbs/src/scene/vale_prologue.c
-PSYNERGY_RINGS_SOUND	what the player sees	rings of light rising and falling round Sheba at the aerie's west edge, her colours flashing and cycling, the sound shared/psynergy_rings.c plays with each ring set (its render)	games/tbs/src/scene/venus_lighthouse_aerie.c
+PSYNERGY_RINGS_SOUND	its code	the sound shared/psynergy_rings.c plays with each ring set (Sound_Play(PSYNERGY_RINGS_SOUND)), which this scene names as SE_JUMP	games/tbs/src/scene/vale_prologue.c
+PSYNERGY_RINGS_SOUND	its code	the sound shared/psynergy_rings.c plays with each ring set (Sound_Play(PSYNERGY_RINGS_SOUND)), which this scene names as SE_PSYNERGY_SPARKLE	games/tbs/src/scene/venus_lighthouse_aerie.c
 SEPIA_LEVEL_MIN	its code	the sepia tint of TitlePaletteFade_BuildColors and PaletteFade_Build raises each channel below 8 to 8	games/tbs/include/graphics/palette_buffers.h
 SEPIA_LEVEL_MAX	its code	the sepia tint of TitlePaletteFade_BuildColors and PaletteFade_Build lowers each channel above 28 to 28	games/tbs/include/graphics/palette_buffers.h
 MUTED_RED_MIN	its code	the muted tint of TitlePaletteFade_BuildColors and PaletteFade_Build holds red to 10 to 28, green to 16 to 24 and blue to 16 to 26	games/tbs/include/graphics/palette_buffers.h
@@ -5461,8 +5457,8 @@ MUTED_BLUE_MAX	its code	as MUTED_RED_MIN	games/tbs/include/graphics/palette_buff
 FileScreen_GetPasswordCharacter	its twin	The Lost Age's clear.c names the same mapping of a password symbol to its character Clear_GetPasswordCharacter (hz/s3)	games/tbs/src/scene/file_screen.c
 FileScreen_IsRetreatBlocked	its twin	The Lost Age's clear.c names the same test Clear_IsRetreatBlocked (hz/s3); it reads FLAG_RETREAT_BLOCKED	games/tbs/src/scene/file_screen.c
 FileScreen_FadeInBlend	its twin	The Lost Age's clear.c names the same task Clear_FadeInBlend (hz/s3)	games/tbs/src/scene/file_screen.c
-FileScreen_FillTileGrid	its code	unused: fills 16 by 8 entries of the window tilemap, each its row times the window's width plus its column, after unpacking tiles it never copies	games/tbs/src/scene/file_screen.c
-FileScreen_FillTileGridInOrder	its code	unused: fills 16 by 8 entries of the window tilemap with WINDOW_TILE(32) onward, in order, sixteen to a row	games/tbs/src/scene/file_screen.c
+FileScreen_FillTileGridByWindowWidth	its code	unused: fills 16 by 8 entries of the window tilemap, each its row times the window's width plus its column, after unpacking tiles it never copies	games/tbs/src/scene/file_screen.c
+FileScreen_FillTileGridByGridWidth	its code	unused: fills 16 by 8 entries of the window tilemap with WINDOW_TILE(32) onward, in order, sixteen to a row	games/tbs/src/scene/file_screen.c
 PASSWORD_GOLD_BYTES	its twin	The Lost Age's clear.c (hz/s3) names the bytes a level decodes to, checksum included, PASSWORD_GOLD_BYTES, _SILVER_ and _BRONZE_; FileScreen_PackPasswordData packs 173, 39 or 9 and two checksum bytes follow	games/tbs/src/scene/file_screen.c
 PASSWORD_SILVER_BYTES	its twin	as PASSWORD_GOLD_BYTES	games/tbs/src/scene/file_screen.c
 PASSWORD_BRONZE_BYTES	its twin	as PASSWORD_GOLD_BYTES	games/tbs/src/scene/file_screen.c
@@ -5491,19 +5487,19 @@ SYMBOL_WO	its picture	charmap_ja.tsv: symbol 45 draws code 0x86, を	games/tbs/s
 SYMBOL_GA	its picture	charmap_ja.tsv: symbol 46 draws か (0x96) with the voiced mark, が	games/tbs/src/scene/file_screen.c
 SYMBOL_DA	its picture	charmap_ja.tsv: symbol 56 draws た (0xe0) with the voiced mark, だ	games/tbs/src/scene/file_screen.c
 SYMBOL_BA	its picture	charmap_ja.tsv: symbol 59 draws は (0xea) with the voiced mark, ば	games/tbs/src/scene/file_screen.c
-KANA_WO	its picture	charmap_ja.tsv: code 0x86 is を	games/tbs/include/window/text_font.h
-KANA_A	its picture	charmap_ja.tsv: code 0x91 is あ	games/tbs/include/window/text_font.h
-KANA_KA	its picture	charmap_ja.tsv: code 0x96 is か	games/tbs/include/window/text_font.h
-KANA_TA	its picture	charmap_ja.tsv: code 0xe0 is た	games/tbs/include/window/text_font.h
-KANA_TE	its picture	charmap_ja.tsv: code 0xe3 is て	games/tbs/include/window/text_font.h
-KANA_TO	its picture	charmap_ja.tsv: code 0xe4 is と	games/tbs/include/window/text_font.h
-KANA_HA	its picture	charmap_ja.tsv: code 0xea is は	games/tbs/include/window/text_font.h
+KANA_WO	its picture	text_ja.png glyph 0x86 (row 6, column 6) is を	games/tbs/include/window/text_font.h
+KANA_A	its picture	text_ja.png glyph 0x91 (row 7, column 1) is あ	games/tbs/include/window/text_font.h
+KANA_KA	its picture	text_ja.png glyph 0x96 (row 7, column 6) is か	games/tbs/include/window/text_font.h
+KANA_TA	its picture	text_ja.png glyph 0xe0 (row 12, column 0) is た	games/tbs/include/window/text_font.h
+KANA_TE	its picture	text_ja.png glyph 0xe3 (row 12, column 3) is て	games/tbs/include/window/text_font.h
+KANA_TO	its picture	text_ja.png glyph 0xe4 (row 12, column 4) is と	games/tbs/include/window/text_font.h
+KANA_HA	its picture	text_ja.png glyph 0xea (row 12, column 10) is は	games/tbs/include/window/text_font.h
 LINK_SEND_FRAMES	its code	the send loop waits a frame a pass for up to 600000 passes	games/tbs/src/scene/file_screen.c
 LINK_SILENT_FRAMES	its code	ten frames in a row without LINK_STATUS_HEARD_BOTH end the send with "Communication Error" (MsgClearCommunicationError)	games/tbs/src/scene/file_screen.c
 LOGO_PALETTE_COLORS	its twin	The Lost Age's clear.c (hz/s3) names the logo resource's 224 leading colours LOGO_PALETTE_COLORS; title_intro.c's Nintendo and Camelot logos and file_screen.c's Golden Sun logo copy the same 224 to BG_PLTT	games/tbs/include/graphics/graphics.h
 TILE_GRID_COLUMNS	its code	the two unused fills write 16 entries a row for 8 rows, then skip the map row's other 16	games/tbs/src/scene/file_screen.c
 TILE_GRID_ROWS	its code	as TILE_GRID_COLUMNS	games/tbs/src/scene/file_screen.c
-TILE_GRID_FIRST_TILE	its code	FileScreen_FillTileGridInOrder's tiles start at 32	games/tbs/src/scene/file_screen.c
+TILE_GRID_FIRST_TILE	its code	FileScreen_FillTileGridByGridWidth's tiles start at 32	games/tbs/src/scene/file_screen.c
 PAGE_DIGITS_TILE	its code	Graphics_ExpandVramTilesByColorTable builds 20 digit tiles at tile 768 for the File Screen's and the battle lists' page numbers (LIST_PAGE_DIGITS_TILE in window/screens_internal.h)	games/tbs/include/window/window.h
 PAGE_NUMBER_TILE	its code	the File Screen draws page n's number with tile 769 + n and the page shown with 779 + n, as screens_internal.h's LIST_TILE_PAGE_NUMBER and _LIT	games/tbs/include/window/window.h
 PAGE_NUMBER_LIT_TILE	its code	as PAGE_NUMBER_TILE	games/tbs/include/window/window.h
@@ -5518,9 +5514,9 @@ LOG_B_COLUMN	its code	gCrossboneIsle_FloatingLogsActorPlacements puts log B's mi
 gCrossboneIsle_UnusedEntrances	its code	twelve words after gFieldEffect_DurationScripts's three, read as a SceneEntrance and its end row; nothing refers to them	games/tbs/src/scene/crossbone_isle.c
 gCrossboneIsle_FloorActorPlacements	its uses	Scene_GetActorPlacements hands it to SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor	games/tbs/src/scene/crossbone_isle.c
 gCrossboneIsle_FloorTriggers	its uses	Scene_GetTriggers hands it to SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor	games/tbs/src/scene/crossbone_isle.c
-CELL_BEHAVIOR_PIRATE_SHIP_DEMON_MAIL	its code	the examine trigger that finds ITEM_DEMON_MAIL, its treasure spot placed once FLAG_CROSSBONE_ISLE_DEADBEARD_DEFEATED is set	games/tbs/src/scene/crossbone_isle.c
-CELL_BEHAVIOR_PIRATE_SHIP_MIMIC	its code	the examine trigger that finds FIND_MIMIC until FLAG_PIRATE_SHIP_MIMIC_BEATEN	games/tbs/src/scene/crossbone_isle.c
-CELL_BEHAVIOR_CROSSBONE_ISLE_FIRST_FLOOR_MIMIC	its code	the examine trigger that finds FIND_MIMIC until FLAG_CROSSBONE_ISLE_FIRST_FLOOR_MIMIC_BEATEN, placed on the first floor alone	games/tbs/src/scene/crossbone_isle.c
+TREASURE_SPOT_PIRATE_SHIP_DEMON_MAIL	its code	the examine trigger that finds ITEM_DEMON_MAIL, its treasure spot placed once FLAG_CROSSBONE_ISLE_DEADBEARD_DEFEATED is set	games/tbs/src/scene/crossbone_isle.c
+TREASURE_SPOT_PIRATE_SHIP_MIMIC	its code	the examine trigger that finds FIND_MIMIC until FLAG_PIRATE_SHIP_MIMIC_BEATEN	games/tbs/src/scene/crossbone_isle.c
+TREASURE_SPOT_CROSSBONE_ISLE_FIRST_FLOOR_MIMIC	its code	the examine trigger that finds FIND_MIMIC until FLAG_CROSSBONE_ISLE_FIRST_FLOOR_MIMIC_BEATEN, placed on the first floor alone	games/tbs/src/scene/crossbone_isle.c
 SPROUT_ANIMATION_GROWN	its picture	sprout.tsv's animation 4 ends on picture 6, the sprout grown tall, as suhalla.c names it	games/tbs/src/scene/crossbone_isle.c
 FLOATING_LOG_ANIMATION_FLOAT	its picture	floating_log_west_east.tsv's animation 1 alternates pictures 0 and 1, the log riding high and low on its blue ripple line	games/tbs/include/sprite_ids.h
 FLOATING_LOG_ANIMATION_SETTLE	its picture	animation 2 shows pictures 1, 0 and 1 for 5, 3 and 5 frames, then plays animation 1: a quick dip; CrossboneIsle_SettleLog plays it when the leader steps on	games/tbs/include/sprite_ids.h
@@ -5590,7 +5586,7 @@ SE_WATER_COLUMN	its twin	The Lost Age's SE_WATER_COLUMN is byte for byte the sam
 SE_WHIRLWIND	its twin	The Lost Age's SE_WHIRLWIND is byte for byte the same sequence as row 222 here (games/tbs/sound/songs/se_222.mid against games/tla/sound/songs/se_whirlwind.mid), played there for the whirlwinds of Air's Rock and the gusts of Jupiter Lighthouse appearing (hz/hd)	games/tbs/include/sounds.h
 SE_GUST	its twin	The Lost Age's SE_GUST is byte for byte the same sequence as row 235 here (games/tbs/sound/songs/se_235.mid against games/tla/sound/songs/se_gust.mid), played there for Air's Rock blowing its gusts (hz/hd)	games/tbs/include/sounds.h
 SE_LEMURIAN_SHIP_LIFT	its twin	The Lost Age's SE_LEMURIAN_SHIP_LIFT is byte for byte the same sequence as row 243 here (games/tbs/sound/songs/se_243.mid against games/tla/sound/songs/se_lemurian_ship_lift.mid), played there for LemurianShip_StepOnLift (hz/hd)	games/tbs/include/sounds.h
-SE_AMBIENT_STREAM	its twin	The Lost Age's SE_AMBIENT_STREAM is the same notes as row 245 here (games/tbs/sound/songs/se_245.mid against games/tla/sound/songs/se_ambient_stream.mid), played there for queued with Air's Rock's inner rooms and the Kandorean Temple's lift room (hz/hd); the same notes, its program change voice 23 here against 108 there	games/tbs/include/sounds.h
+SE_AMBIENT_STREAM	its twin	The Lost Age's SE_AMBIENT_STREAM is the same notes as row 245 here (games/tbs/sound/songs/se_245.mid against games/tla/sound/songs/se_ambient_stream.mid), queued there with Air's Rock's inner rooms and the Kandorean Temple's lift room, and played as the Shrine of the Sea God's water falls (hz/hd); the same notes as row 245 here, voice 108 there against 23 here	games/tbs/include/sounds.h
 SE_GABOMBA_STATUE_ARROW	its twin	The Lost Age's SE_GABOMBA_STATUE_ARROW is byte for byte the same sequence as row 248 here (games/tbs/sound/songs/se_248.mid against games/tla/sound/songs/se_gabomba_statue_arrow.mid), played there for an arrow of the Gabomba Statue raised or lowered (hz/hd)	games/tbs/include/sounds.h
 SE_BLACK_CRYSTAL_SET	its twin	The Lost Age's SE_BLACK_CRYSTAL_SET is byte for byte the same sequence as row 251 here (games/tbs/sound/songs/se_251.mid against games/tla/sound/songs/se_black_crystal_set.mid), played there for the Black Crystal set on the Lemurian Ship (hz/hd)	games/tbs/include/sounds.h
 SE_TAKE_FLIGHT	its twin	The Lost Age's SE_TAKE_FLIGHT is byte for byte the same sequence as row 291 here (games/tbs/sound/songs/se_291.mid against games/tla/sound/songs/se_take_flight.mid), played there for an actor taking flight (hz/hd)	games/tbs/include/sounds.h
@@ -5653,12 +5649,12 @@ BLUE_SHIFT	the hardware	RGB555: blue from bit 10 (GBATEK); The Lost Age's field 
 OBJ_Y_RANGE	the hardware	OAM attribute 0 holds a sprite's y in its eight low bits (GBATEK), so y wraps at 256	games/tbs/include/system/io_reg.h
 BRIGHTNESS_RED_SHIFT	its twin	The Lost Age's field_sequence_palette_fade.c (hz/fd) names the same BLUE_SHIFT + 1, red doubled in blue's place for 2R + 4G + B	games/tbs/include/graphics/palette_buffers.h
 BRIGHTNESS_GREEN_SHIFT	its twin	The Lost Age's field_sequence_palette_fade.c (hz/fd) names the same BLUE_SHIFT - GREEN_SHIFT + 2, green doubled twice in blue's place	games/tbs/include/graphics/palette_buffers.h
-CELL_BEHAVIOR_CROSSBONE_ISLE_COIN	the game	"coin" (MsgCoinsGained), the coin its examine trigger finds (FIND_COINS(1), FLAG_CROSSBONE_ISLE_COIN)	games/tbs/src/scene/crossbone_isle.c
-CELL_BEHAVIOR_CROSSBONE_ISLE_MINT	the game	"Mint" (MsgItemName), the item its examine trigger finds (FLAG_CROSSBONE_ISLE_MINT)	games/tbs/src/scene/crossbone_isle.c
-CELL_BEHAVIOR_CROSSBONE_ISLE_FLOATING_LOGS_999_COINS	the game	"coin" (MsgCoinsGained), the 999 coins its examine trigger finds (FIND_COINS(999))	games/tbs/src/scene/crossbone_isle.c
-CELL_BEHAVIOR_CROSSBONE_ISLE_FLOATING_LOGS_WATER_OF_LIFE	the game	"Water of Life" (MsgItemName), the item its examine trigger finds	games/tbs/src/scene/crossbone_isle.c
-CELL_BEHAVIOR_CROSSBONE_ISLE_FLOATING_LOGS_MURAMASA	the game	"Muramasa" (MsgItemName), the item its examine trigger finds	games/tbs/src/scene/crossbone_isle.c
-CELL_BEHAVIOR_CROSSBONE_ISLE_FLOATING_LOGS_SLEEP_BOMB	the game	"Sleep Bomb" (MsgItemName), the item its examine trigger finds	games/tbs/src/scene/crossbone_isle.c
+TREASURE_SPOT_CROSSBONE_ISLE_COIN	the game	"coin" (MsgCoinsGained), the coin its examine trigger finds (FIND_COINS(1), FLAG_CROSSBONE_ISLE_COIN)	games/tbs/src/scene/crossbone_isle.c
+TREASURE_SPOT_CROSSBONE_ISLE_MINT	the game	"Mint" (MsgItemName), the item its examine trigger finds (FLAG_CROSSBONE_ISLE_MINT)	games/tbs/src/scene/crossbone_isle.c
+TREASURE_SPOT_CROSSBONE_ISLE_FLOATING_LOGS_999_COINS	the game	"coin" (MsgCoinsGained), the 999 coins its examine trigger finds (FIND_COINS(999))	games/tbs/src/scene/crossbone_isle.c
+TREASURE_SPOT_CROSSBONE_ISLE_FLOATING_LOGS_WATER_OF_LIFE	the game	"Water of Life" (MsgItemName), the item its examine trigger finds	games/tbs/src/scene/crossbone_isle.c
+TREASURE_SPOT_CROSSBONE_ISLE_FLOATING_LOGS_MURAMASA	the game	"Muramasa" (MsgItemName), the item its examine trigger finds	games/tbs/src/scene/crossbone_isle.c
+TREASURE_SPOT_CROSSBONE_ISLE_FLOATING_LOGS_SLEEP_BOMB	the game	"Sleep Bomb" (MsgItemName), the item its examine trigger finds	games/tbs/src/scene/crossbone_isle.c
 MUS_UNUSED_SILENCE_JINGLE	its twin	The Lost Age's MUS_UNUSED_SILENCE_JINGLE is byte for byte the same sequence as row 95 here (games/tbs/sound/songs/mus_095.s against games/tla/sound/songs/mus_095.s), MUS_SILENCE's song of no tracks on the jingle player, which nothing plays there either	games/tbs/include/sounds.h
 SE_191	its twin	The Lost Age's SE_SHUDDER is byte for byte the same sequence as row 191 here (games/tbs/sound/songs/se_191.mid against games/tla/sound/songs/se_191.mid), played there as Gaia Rock's altar faces part (gaia_rock_inside.c), as Zagan gallops in (BattleEffect_RunZagan) and in Megiddo's dive (battle_effect_megiddo.c)	games/tbs/include/sounds.h
 SE_UNUSED_AMBIENT_STREAM_HIGH	its twin	The Lost Age's SE_UNUSED_AMBIENT_STREAM_HIGH is byte for byte the same sequence as row 205 here (games/tbs/sound/songs/se_205.mid against games/tla/sound/songs/se_205.mid), SE_AMBIENT_STREAM ten semitones higher on a noise voice and not held, which nothing plays there either	games/tbs/include/sounds.h
@@ -5668,10 +5664,15 @@ SE_UNUSED_TAKE_FLIGHT_HIGH	its twin	The Lost Age's SE_UNUSED_TAKE_FLIGHT_HIGH is
 SE_UNUSED_ERUPTION_COLUMNS_LOW	its twin	The Lost Age's SE_UNUSED_ERUPTION_COLUMNS_LOW is byte for byte the same sequence as row 293 here (games/tbs/sound/songs/se_293.mid against games/tla/sound/songs/se_293.mid), SE_ERUPTION_COLUMNS four semitones lower, which nothing plays there either	games/tbs/include/sounds.h
 FLAG_SANCTUM_QUEST_RESTARTED	the game	"From the Great Healer" (MsgSanctumGreatHealer)	games/tbs/src/scene/sanctum.c
 AREA_LALIVERO	its area name	Lalivero	games/tbs/src/scene/suhalla_desert.c
-FLAG_KOLIMA_LUCKY_MEDAL	the game	"Lucky Medal" (MsgItemName)	games/tbs/include/flags.h
+FLAG_KOLIMA_LUCKY_MEDAL	the game	"Lucky Medal" (MsgItemName + 229)	games/tbs/include/flags.h
 FLAG_KOLIMA_COINS	the game	"coin" (MsgGotCoins)	games/tbs/include/flags.h
 FLAG_MCCOY_PALACE_UNUSED_PICK_OFFERED	the game	"Pick any one of the four treasures." (MsgBilibinDoThinkTheseBilibinsGreat + 1)	games/tbs/include/flags.h
-ACTOR_UNPLACED	what the player sees	the scene's actors on stage are 8 to 13, five sprouts and Dew, with no actor 15 (its render)	games/tbs/src/scene/suhalla_gate.c
+ACTOR_UNPLACED	its code	gSuhallaGate's placements list six actors from ACTOR_FIRST_PLACED, the sprouts and ACTOR_DEW; Scene_Initialize stretches ACTOR_FIRST_PLACED + 7, which none fills	games/tbs/src/scene/suhalla_gate.c
+ACTOR_JUMP_KEEPS_MOTION	its code	the motion flags a jump keeps as the actor leaves the ground: all but ACTOR_FOLLOWS_TERRAIN and the spare bit (enum ActorMotionFlag, (u8)~(ACTOR_FOLLOWS_TERRAIN | ACTOR_MOTION_SPARE))	games/tbs/include/field/actor.h
+YOUNG_MAN_WITH_BROWN_HAIR_ANIMATION_LIE	its picture	young_man_with_brown_hair.tsv's animation 5 holds picture 33, the young man lying on the ground	games/tbs/include/sprite_ids.h
+YOUNG_MAN_WITH_BROWN_HAIR_ANIMATION_LOOK_HIMSELF_OVER	its picture	young_man_with_brown_hair.tsv's animation 6 alternates pictures 34 and 35, the young man standing with his arms held out	games/tbs/include/sprite_ids.h
+TITLE_PICTURE_TILE	its code	BG_CHAR_SIZE / TILE_SIZE_8BPP, the first tile of character block 1 in BG2's 256-colour numbering, where Title_ShowIntro copies the title picture's tiles	games/tbs/src/menu/title_intro.c
+NINTENDO_LOGO_TILE	its twin	games/tla/src/menu/title_intro.c:1109 (hz/ui) names the same BG_CHAR_SIZE / TILE_SIZE_8BPP, where Title_ShowNintendoLogo copies the Nintendo logo's tiles, NINTENDO_LOGO_TILE	games/tbs/src/menu/title_intro.c
 MAPGRID_ANIMATION_SCRIPT	its code	field_map_grid.c decodes a layout's tileset animation script to Ram_MapGridShapes + 4096 and starts it there, and field_world_map.c the world map's; the blend script follows at + 7680 (MAPGRID_BLEND_SCRIPT)	games/tbs/src/field/field_internal.h
 DICE_FLASH_FRAMES	its code	a two pair or triple win sets one die's flashTimer to 60, four alike both to 120	games/tbs/src/field/lucky_dice.c
 ENEMY_SPACING_LARGE	what the player sees	two Gryphons, large enemies, stand side by side in the enemies' column without overlapping (its render)	games/tbs/src/battle/battle_placement.c
@@ -5709,7 +5710,6 @@ JUDGMENT_SWEEP_CANVAS_X	what the player sees	the blast spreads from the middle o
 JUDGMENT_FLARE_X	what the player sees	the flare falls down the middle of the aerial view and the blast spreads from there (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
 WORLD_MAP_USE_ALTERNATE_TILE	what the player sees	the World Map at its entrance 9, (5928, 296), in grid row 0, column 11, is snow-covered ground with a lighthouse beyond (its render)	games/tbs/src/field/field_world_map.c
 WORLD_PICTURE_MARKER_PARTY	the game	"Present location." (MsgPresentLocation)	games/tbs/src/field/event_commands_world_picture.c
-WORLD_PICTURE_MARKER_LIGHTHOUSE	its area name	Mercury Lighthouse	games/tbs/src/field/event_commands_world_picture.c
 WorldPicture_Show	what the player sees	R on the World Map near Vale shows a picture of the whole world, a white pointing hand as its cursor, and "Present location." beside the party's place (its render)	games/tbs/src/field/event_commands_world_picture.c
 WORLD_PICTURE_WIDTH	what the player sees	the picture of the whole world R shows fills the screen (its render)	games/tbs/src/field/event_commands_world_picture.c
 WORLD_PICTURE_HEIGHT	what the player sees	the picture of the whole world R shows fills the screen (its render)	games/tbs/src/field/event_commands_world_picture.c
@@ -5731,7 +5731,6 @@ MAP_ENTRY_PAIR	its code	screen block 6 is numbered a word (two entries) at a tim
 DISPCNT_MODE_MASK	the hardware	REG_DISPCNT bits 0..2 are the BG mode (GBATEK); WorldMap_ApplyAffinePage clears them before choosing mode 0 or 2	games/tbs/src/field/field_world_map.c
 WORLD_MAP_STILL_FIRST_TILE	its code	WorldMap_LoadGraphics numbers screen block 6 from tile 424 for a 30 by 20 picture; BG_CHAR_BLOCK(1) + 0x2a00 = BG_CHAR_BLOCK(0) + 424 * TILE_SIZE_8BPP	games/tbs/src/field/field_world_map.c
 WORLD_MAP_STILL_FIRST_TILE	its code	WorldPicture_Show copies the world picture's 240 by 160 pixels to BG_CHAR_BLOCK(0) + 424 * TILE_SIZE_8BPP, the tiles WorldMap_LoadGraphics numbers screen block 6 from	games/tbs/src/field/event_commands_world_picture.c
-WORLD_PICTURE_MARKER_AREA	its area name	Vale	games/tbs/src/field/event_commands_world_picture.c
 WORLD_PICTURE_MARKER_NEAREST	its code	marker tile 3, the larger dot WorldPicture_UpdateMarkers puts over the marker nearest the cursor, whose area's name it shows	games/tbs/src/field/event_commands_world_picture.c
 THOR_RING_MOTES	what the player sees	over dusk clouds a ring draws itself and turns, its colour cycling through violet, green, gold, blue and pink (its render)	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_RING_MOTES	its code	the ring is 128 motes at angle i * (TRIG_TURN / 128), two more each frame	games/tbs/src/battle_effect/battle_effect_thor.c
@@ -5786,18 +5785,12 @@ TRANSITION_CURTAIN_COLOR	its code	the closed curtain's tile is filled with colou
 TRANSITION_CURTAIN_VARIANTS	its code	BattleTransition_UploadTileVariant copies variant frame / 4 into the curtain's first tile while frame is below 8 * 4	games/tbs/src/battle/battle_transition.c
 TRANSITION_VARIANT_FRAMES	its code	a new variant every 4 frames: gBattleTransition_CurtainVariants + frame / 4 * TILE_SIZE_4BPP	games/tbs/src/battle/battle_transition.c
 SETTINGS_ROW_WINDOW_COLOR	the game	"Window color" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
-SETTINGS_ROW_WINDOW_BRIGHTNESS	the game	"Window brightness" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
-SETTINGS_ROW_MESSAGE_SPEED	the game	"Message speed" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
 SETTINGS_ROW_SPEECH	the game	"Speech" (MsgSpeechLabel)	games/tbs/src/window/window_settings_menu.c
 SETTINGS_ROW_AUTO_SLEEP	the game	"Auto-Sleep" (MsgAutoSleepLabel)	games/tbs/src/window/window_settings_menu.c
 SETTINGS_MENU_ROWS	its code	SettingsMenu_Run fills option and optionCount for rows 0 to 4 and shows MsgOptionHelp + row for each	games/tbs/src/window/window_settings_menu.c
-OPTION_ROW_MESSAGE_SPEED	the game	"Message speed" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
 OPTION_ROW_WINDOW_COLOR	the game	"Window color" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
-OPTION_ROW_WINDOW_BRIGHTNESS	the game	"Window brightness" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
 WINDOW_COLOR_SLIDER_PALETTE	the game	"Window color" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
 WINDOW_COLOR_SLIDER_PALETTE	its code	sprite palette 14, which gSettingsMenu_SliderPalette fills with 15 for the two sliders' ends	games/tbs/src/window/window_settings_menu.c
-WINDOW_BRIGHTNESS_SLIDER_PALETTE	the game	"Window brightness" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
-WINDOW_COLOR_SHADE	the game	"Change the window's color." (MsgOptionHelp)	games/tbs/src/window/window_settings_menu.c
 WINDOW_COLOR_SHADE	its code	WindowColor_Apply sets BG_PLTT_COLOR(WINDOW_PALETTE, WINDOW_BACKGROUND_COLOR + n) for n 0 to 6	games/tbs/src/window/window_settings_menu.c
 ICON_MENU_BOTTOM_ROW	its code	IconMenu_Center(17, ...) for most menus, and IconMenu_AddIcon starts each icon at y 17 * 8; a Yes or No may stand at row 0	games/tbs/src/window/screens_icon_menu.c
 ICON_MENU_MAX_ICONS	its code	IconMenuWork.entries[6], and gFileList_ActionByPosition's rows of 6	games/tbs/src/window/screens_icon_menu.c
@@ -5830,7 +5823,6 @@ LUCKY_WHEELS_CLEAR_TILE	its code	tile 422 (0xa1a6 less the palette), which BG1's
 LUCKY_WHEELS_IN_OPENING	its code	the map cells LuckyWheels_Run leaves out of the machine's tiles, columns 5 to 24 and rows 3 to 13, where the symbols are drawn (x 40 to 200, y 24 on)	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_ICON_COLORS	its code	icons.gbapal is 480 bytes, 240 colours, which LuckyWheels_Run copies to OBJ_PLTT before the tiles; Palette_DarkenScreenStep darkens colours 1 to 239	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_JACKPOT_PALETTE	its code	LuckyWheels_Run loads RESOURCE_LUCKY_WHEELS_JACKPOT's palette into sprite palette 15; the title letters drawn from its tiles take it	games/tbs/src/field/lucky_wheels.c
-OBJ_Y_RANGE	its twin	the name hz/ta gives The Broken Seal's io_reg.h for attribute 0's 256 lines of y; the title letters' y is (y + 256) & 255	games/tbs/src/field/lucky_wheels.c
 PALETTE_BYTES	its code	each 16-colour picture LuckyWheels_Run loads begins with 32 bytes of palette (DMA_COPY_WORDS(8)) before its tiles, as The Lost Age's lucky_wheels.c names it	games/tbs/src/field/lucky_wheels.c
 SPRITE_TILES	its code	the tile steps LuckyWheels_Update takes through a 16-colour picture: 16 for the 32 by 32 title letters (<< 4 before), as The Lost Age's lucky_wheels.c names it	games/tbs/src/field/lucky_wheels.c
 SPRITE_TILES_8BPP	its code	the steps through icons.png, 256 colours, 32 pixels wide: 16 for a 32 by 16 symbol, arrow, pull number or slot piece (<< 4, + 16, + 32 before)	games/tbs/src/field/lucky_wheels.c
@@ -5840,7 +5832,6 @@ LUCKY_WHEELS_LEVER_SLOT_PIECES	its code	LuckyWheels_Update draws the lever's slo
 LUCKY_WHEELS_LEVER_SLOT_X	its code	the slot's eight pieces are drawn at x 206, two pixels left of the lever (LUCKY_WHEELS_LEVER_X 208)	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_LEVER_SLOT_Y	its code	the slot's first piece is drawn at y 12, each next 16 lower	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_SPARK_SHRINK_FRAMES	its code	a spark starts with 16 to 31 frames to live and is drawn variant / 12 + 1 pixels each way, so its size steps down every 12 frames	games/tbs/src/field/lucky_wheels.c
-DAMPING_SCALE	its twin	battle_effect_internal.h's DAMPING_SCALE, 64; a spark's speed keeps 60 / 64 a frame, as The Lost Age's lucky_wheels.c names it	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_WHEELS_TOP	its code	LuckyWheels_InitializeTitle shades BLDY from line 23 down; the opening's top is y 24	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_WHEELS_BOTTOM	its code	LuckyWheels_InitializeTitle shades BLDY from line 110 up; the opening ends at row 13, y 111	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_SHADE_LINES	its code	LuckyWheels_InitializeTitle shades 40 lines from each edge, the cosine over a quarter turn (409 = DEGtoANG(90) / 40 a line)	games/tbs/src/field/lucky_wheels.c
@@ -5896,7 +5887,6 @@ OBJ_POSITION	its twin	The Lost Age's field.h macro, x in attribute 1's nine bits
 OBJ_AFFINE_MATRIX	its twin	The Lost Age's field.h macro, an affine sprite's matrix in its attr01 word: each die and shadow takes its own (<< 25 before)	games/tbs/src/field/lucky_dice.c
 OBJ_AFFINE_PARAMETER	its code	LuckyDice_Run ORs each matrix element into the high half of attr2 of entries 4n to 4n + 3 (<< 16 before), as The Lost Age's lucky_dice.c names it	games/tbs/src/field/lucky_dice.c
 DICE_NEAREST_SCALE	its code	a die's and a shadow's affine scale is depth / 2 + 128 in 256ths from DICE_NEAREST_DEPTH, so at the nearest a die is drawn at twice its size; The Lost Age's lucky_dice.c names it so	games/tbs/src/field/lucky_dice.c
-DAMPING_SCALE	its twin	battle_effect_internal.h's DAMPING_SCALE, 64: a bounce keeps 48/64 of a die's speed off a side or the floor, 56/64 along the floor, and every frame 63/64	games/tbs/src/field/lucky_dice.c
 TIAMAT_HEAD	what the player sees	piece 0 of Tiamat's sheet is its snout and green eye, which the breath lights red with its mouth open (its render)	games/tbs/src/battle_effect/battle_effect_tiamat.c
 TIAMAT_HORNS	what the player sees	piece 1 is the horns behind the head, lit red as Tiamat breathes fire (its render)	games/tbs/src/battle_effect/battle_effect_tiamat.c
 TIAMAT_JAW	what the player sees	piece 3 is the lower jaw and teeth, opened round the fire as Tiamat breathes (its render)	games/tbs/src/battle_effect/battle_effect_tiamat.c
@@ -5939,7 +5929,6 @@ PLACE_ENEMY_SIDE	its twin	The Lost Age's battle_turn.c (hz/ui) names it so: Batt
 PLACE_INDEX_MASK	its twin	as PLACE_ENEMY_SIDE: the place in the list is the place code's low four bits	games/tbs/src/battle/battle_internal.h
 EXAMINE_TARGET	its code	EXAMINE_TRIGGER(target) packs target as (target) << 4 and enum ExamineTarget is "EXAMINE_TRIGGER()'s control bits 8..4" (field/scene_tables.h); Scene_RunExamineTrigger reads it back as (kind >> 4) & 31 to show MsgTileChecked + target	games/tbs/src/field/field_sequence_triggers.c
 FIND_ITEM_MASK	its code	an item search result is FIND_ITEM(item), 0x00100000 | item (field/scene_tables.h); the item shown and named is value & 0xfff	games/tbs/src/field/field_sequence_triggers.c
-PSYNERGY_STONE_PP	the game	"The party's PP is fully restored!" (MsgGotPsynergyStone)	games/tbs/src/field/field_sequence_triggers.c
 MESSAGE_CAPACITY_UNLIMITED	its code	Message_DecodeRawUnbounded passes 0x7fffffff, the largest s32, as Message_DecodeRaw's capacity, which counts down per entry and stops at 0	games/tbs/src/window/window_messages.c
 SYMBOL_TREE_MASK	its code	Text_DecodeSymbol picks the context bank by previousCode >> 8 and the tree in it by the low byte (Text_MessageContexts[bank][1][code & 0xff])	games/tbs/src/window/window_messages.c
 BIT_STREAM_STOP	its code	each byte loaded for the text and tree bits is taken one bit at once and kept as (byte >> 1) | 0x80; a 1 read with nothing left loads the next byte	games/tbs/src/window/window_messages.c
@@ -5987,11 +5976,6 @@ MOTE_FOUNTAIN_LARGEST	its code	as FLARE_DEPTH_NEAR: size 6 at the nearest, drawn
 MOTE_FOUNTAIN_DEPTH_STEP	its code	as FLARE_DEPTH_NEAR: a pixel narrower for every 64 of depth	games/tbs/src/battle_effect/battle_effect_streaks.c
 ANIM_LEADER_LIE_FLAT	its picture	isaac.tsv's animation 37 is "kind 17, picture 209 10, hold", the picture ANIM_LEADER_FALL (36) ends on; isaac.png picture 209 draws him lying flat on the ground	games/tbs/src/field/field_sequence_run.c
 ISAAC_CHILD_ANIMATION_STAND_BRACED	its picture	isaac_child.tsv's animation 21 is "kind 17, picture 95 30, hold", as its 16 (ANIM_LEADER_STRIDE); isaac_child.png picture 95 draws him standing square to the front, feet apart, arms at his sides	games/tbs/src/field/field_sequence_run.c
-Speaker_FindDefinition	what the player sees	talking to a girl in Vale (render guide --only talk, talk.gif) opens her line, "You guys are so lucky, Garet.", in a window above her with her portrait beside it, its letters typed one by one as she speaks: she is the message's speaker, and the row of gSpeakerDefinitions for her sprite gives her voice (its render)	games/tbs/src/field/field_sequence_speakers.c
-Speaker_GetActorSprite	what the player sees	talking to a girl in Vale (render guide --only talk, talk.gif) opens her line, "You guys are so lucky, Garet.", in a window above her with her portrait beside it, its letters typed one by one as she speaks: she is the message's speaker, known by the sprite her actor shows (its render)	games/tbs/src/field/field_sequence_speakers.c
-Speaker_GetVoice	what the player sees	talking to a girl in Vale (render guide --only talk, talk.gif) opens her line, "You guys are so lucky, Garet.", in a window above her with her portrait beside it, its letters typed one by one as she speaks: she is the message's speaker, whose voice sounds the letters (its render)	games/tbs/src/field/field_sequence_speakers.c
-Speaker_GetVoice	the game	"Turn voice sounds on or off." (MsgOptionHelp)	games/tbs/src/field/field_sequence_speakers.c
-Speaker_GetHaltedLines	what the player sees	talking to a girl in Vale (render guide --only talk, talk.gif) opens her line, "You guys are so lucky, Garet.", in a window above her with her portrait beside it, its letters typed one by one as she speaks: she is the message's speaker, and what a speaker says while Halted is read from her sprite's row too (its render)	games/tbs/src/field/field_sequence_speakers.c
 SPEAKER_DEFINITION_COUNT	its code	gSpeakerDefinitions has 131 rows: Speaker_FindDefinition stops after the first 130 and returns the last, Isaac, for any other sprite; The Lost Age names its 243 the same	games/tbs/src/field/field_sequence_speakers.c
 TARGET_RANGE_DEFAULT	its code	Field_GetPsynergyTargetRange returns it for a kind gFieldEffect_TargetRangeByMode does not list (Reveal, Cloak, Retreat, Avoid, none of which aims); The Lost Age ends gFieldPsynergy_Reach with the same 16 pixels as the reach of any kind it does not list	games/tbs/src/field/field_sequence_targets.c
 WORLD_MAP_TILE_SET_BYTES	its code	TileMap_DrawRowsFromRam hands the RAM routine gBgTileBuffer plus two of them (16 KB, 256 tiles of 64 bytes), BG2's tiles; field_world_map.c decodes the four 8 KB tile sets one after another there under the same name, and The Lost Age's map.h writes the same offset WORLD_MAP_TILE_SET(2)	games/tbs/src/field/field_view.c
@@ -6001,3 +5985,29 @@ NUMBER_TEXT_THREE_PLACES	its code	the widened text from 8 on, the last three of 
 DJINN_PREVIEW_ABILITIES_PER_PAGE	its code	BattleDjinnMenu_ShowChangePreview lists at most 5 abilities on a page, two tile rows each, counts its pages as (count - 1) / 5 + 1 and starts page n at (n - 1) * 5	games/tbs/src/window/screens_battle_djinn_preview.c
 RANGE_ICON_ALL	its code	the twelfth of the range icons Window_DrawThreeTileColumn draws (screens_menu_titles.c builds twelve), drawn for ABILITY_RANGE_ALL where range n takes icon n - 1; screens_battle_psynergy_menu.c and The Lost Age (hz/ui) name it the same	games/tbs/src/window/screens_battle_djinn_preview.c
 gBattleTables_UnusedWord	its code	the word 16 at the head of battle_tables.o: no source, linker script or overlay names it, so nothing reads it; The Lost Age (hz/ui battle_tables.c) names its twin, 17 there, the same	games/tbs/src/battle/battle_tables.c
+Speaker_GetVoice	the game	"Turn voice sounds on or off." (MsgOptionHelp + 3)	games/tbs/src/field/field_sequence_speakers.c
+Speaker_GetHaltedLines	the game	"Halt" (MsgAbilityName + 145)	games/tbs/src/field/field_sequence_speakers.c
+Speaker_GetHaltedLines	the game	"Stop a moving object." (MsgAbilityDescription + 145)	games/tbs/src/field/field_sequence_speakers.c
+Speaker_GetHaltedLines	its code	Scene_TalkToActor shows MsgPonderEllipsis + haltedLines * 2 + 0 or 1 at random for a stopped actor whose talk trigger runs a function; pair 0 is "..." (MsgPonderEllipsis) and "..." (MsgPonderEllipsis + 1)	games/tbs/src/field/field_sequence_speakers.c
+PSYNERGY_STONE_PP	the game	"got a Psynergy Stone." (MsgGotPsynergyStone)	games/tbs/src/field/field_sequence_triggers.c
+PSYNERGY_STONE_PP	the game	"The party's PP is fully restored!" (MsgGotPsynergyStone + 1)	games/tbs/src/field/field_sequence_triggers.c
+SETTINGS_ROW_WINDOW_BRIGHTNESS	the game	"Window brightness" (MsgWindowColorLabel + 1)	games/tbs/src/window/window_settings_menu.c
+OPTION_ROW_WINDOW_BRIGHTNESS	the game	"Window brightness" (MsgWindowColorLabel + 1)	games/tbs/src/window/window_settings_menu.c
+WINDOW_BRIGHTNESS_SLIDER_PALETTE	the game	"Window brightness" (MsgWindowColorLabel + 1)	games/tbs/src/window/window_settings_menu.c
+SETTINGS_ROW_MESSAGE_SPEED	the game	"Message" (MsgMessageSpeedLabel)	games/tbs/src/window/window_settings_menu.c
+SETTINGS_ROW_MESSAGE_SPEED	the game	"speed" (MsgMessageSpeedLabel + 1)	games/tbs/src/window/window_settings_menu.c
+SETTINGS_ROW_MESSAGE_SPEED	the game	"Set text display speed." (MsgOptionHelp + 2)	games/tbs/src/window/window_settings_menu.c
+OPTION_ROW_MESSAGE_SPEED	the game	"Message" (MsgMessageSpeedLabel)	games/tbs/src/window/window_settings_menu.c
+OPTION_ROW_MESSAGE_SPEED	the game	"speed" (MsgMessageSpeedLabel + 1)	games/tbs/src/window/window_settings_menu.c
+OPTION_ROW_MESSAGE_SPEED	the game	"Set text display speed." (MsgOptionHelp + 2)	games/tbs/src/window/window_settings_menu.c
+OBJ_Y_RANGE	its code	attribute 0 holds eight bits of y, so the title letters' y wraps as (y + OBJ_Y_RANGE) & (OBJ_Y_RANGE - 1) (lucky_wheels.c:985)	games/tbs/src/field/lucky_wheels.c
+DAMPING_SCALE	its code	a spark's speed keeps velocity * 60 / DAMPING_SCALE a frame (lucky_wheels.c:1509), as the battle effects damp a particle by speed * damping / 64	games/tbs/src/field/lucky_wheels.c
+DAMPING_SCALE	its code	a bounce keeps velocity * 48 / DAMPING_SCALE of a die's speed off a side or the floor, * 56 / DAMPING_SCALE along the floor, and every frame * 63 / DAMPING_SCALE (lucky_dice.c:890, 921, 944)	games/tbs/src/field/lucky_dice.c
+WORLD_PICTURE_MARKER_AREA	its code	gWorldPicture_AreaMarkers (world_picture_markers.c) gives tile 1 to the towns and the places on the way (Vale, Vault, Altin, Bilibin, Kolima, the Lama Temple, Gondowan Passage...) and tile 2 to the lighthouses and Sol Sanctum	games/tbs/src/field/event_commands_world_picture.c
+WORLD_PICTURE_MARKER_LIGHTHOUSE	its code	gWorldPicture_AreaMarkers (world_picture_markers.c) gives tile 2 to Mercury Lighthouse, Venus Lighthouse and Babi Lighthouse, and to Sol Sanctum, which shares the lighthouses' tile	games/tbs/src/field/event_commands_world_picture.c
+WORLD_PICTURE_MARKER_LIGHTHOUSE	its area name	Mercury Lighthouse	games/tbs/src/field/event_commands_world_picture.c
+DescendingArcSprite.shadow	its code	the view over struct Sprite takes its own member names at the same places (attr, shadow and the rest), read and written as the Sprite's	games/tbs/src/field/event_commands_retreat.c
+EDITOR_NUMBER_TILE	its picture	games/tbs/src/graphics/palette_editor/swatch.png: the 16 swatches, then 32 tiles showing the numbers 0 to 31; the editor draws level n with tile EDITOR_NUMBER_TILE + n	games/tbs/src/field/field_sequence_palette_editor.c
+TEXT_ACTOR_NAME_START	its twin	The Lost Age's window_internal.h names decoded code 28 so (MESSAGE_ACTOR_NAME_START in its decoder); here drawing and measuring skip it and its two entries	games/tbs/src/window/window_internal.h
+ANIM_CAST_PSYNERGY_BEGIN	its twin	The Lost Age's field/sprite.h names animation 20 so, ANIM_CAST_PSYNERGY's first two pictures held on the second; isaac.tsv's 20 is pictures 159 and 164 held	games/tbs/src/field/event_commands_field_psynergy_work.c
+ANIM_CAST_PSYNERGY_END	its twin	The Lost Age's field/sprite.h names animation 21 so, ANIM_CAST_PSYNERGY's last pictures held; isaac.tsv's 21 is pictures 164, 169 and 174 held	games/tbs/src/field/event_commands_field_psynergy_work.c
