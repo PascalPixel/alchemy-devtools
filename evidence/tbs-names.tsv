@@ -5942,6 +5942,13 @@ ISLAND_REACTION_OTHERS	its code	ShipRooms_ReachIsland picks the first seat's row
 ISLAND_REACTION_LADY_OR_ADMIRER	its code	as ISLAND_REACTION_OTHERS: "What do you mean, island? Aren't we in Tolbi?" is MsgTolbiShipReachedIslandRowers + 2	games/tbs/src/scene/ship_rooms.c
 ISLAND_REACTION_OLD_MAN	its code	as ISLAND_REACTION_OTHERS: "Uh... Tolbi's not an island, is it?" is MsgTolbiShipReachedIslandRowers + 3	games/tbs/src/scene/ship_rooms.c
 ISLAND_REACTION_GUIDE	its code	as ISLAND_REACTION_OTHERS: "I'm going to check on the other passengers." is MsgTolbiShipShipWentOff + 2	games/tbs/src/scene/ship_rooms.c
+LIGHTHOUSE_PP_REGEN	its code	LIGHTHOUSE_PP_REGEN is 4 (game_units.c): Unit_Calculate adds it to the ppRegen of a character whose element's lighthouse flag is set, and battle_turn_end.c restores ppRegen PP at the end of each battle turn	games/tbs/src/game/game_units.c
+gVenusLighthouseAerie_ShebaFallAction	the game	"fell after that last tremor..." (MsgVenusWhyHappeningProtectVenusLighthouse + 6)	games/tbs/src/scene/venus_lighthouse_aerie.c
+gVenusLighthouseAerie_FelixDiveAction	the game	"didn't dive into the sea after her, did he?" (MsgVenusWhyHappeningProtectVenusLighthouse + 7)	games/tbs/src/scene/venus_lighthouse_aerie.c
+gVenusLighthouseAerie_OrbPulseAction	its code	the script ACTOR_BEACON_ORB runs from the beacon rise's frame 24: its width shrinks and grows by 3 * FIXED_ONE / 128 a frame, four frames each, for ever	games/tbs/src/scene/venus_lighthouse_aerie.c
+gVenusLighthouseAerie_LookAboutAction	its code	runs Scene_LookAboutRandomly every frame, for the party as the aerie crumbles under them	games/tbs/src/scene/venus_lighthouse_aerie.c
+sBeaconRiseStep	its code	the frame counter VenusLighthouseAerie_UpdateBeaconRise switches on, held at 25 and 26 while the orb rises	games/tbs/src/scene/venus_lighthouse_aerie.c
+sBeaconRiseTimer	its code	set to 240 as the beacon rise starts; nothing reads it	games/tbs/src/scene/venus_lighthouse_aerie.c
 MAPGRID_ANIMATION_SCRIPT	its code	field_map_grid.c decodes a layout's tileset animation script to Ram_MapGridShapes + 4096 and starts it there, and field_world_map.c the world map's; the blend script follows at + 7680 (MAPGRID_BLEND_SCRIPT)	games/tbs/src/field/field_internal.h
 DICE_FLASH_FRAMES	its code	a two pair or triple win sets one die's flashTimer to 60, four alike both to 120	games/tbs/src/field/lucky_dice.c
 COMMAND_ROW_TOP	its code	the battle command window is created at tile row 17 and its panel rows are 17 + n	games/tbs/src/window/screens_internal.h
@@ -5955,7 +5962,7 @@ PROCNE_WHIRLWIND_CEL	what the player sees	the yellow whirlwind's streaks shift a
 PROCNE_WHIRLWIND_FOOT_HEIGHT	what the player sees	the yellow whirlwind rises from the ground in a low band first, then stands tall (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_DUST	what the player sees	puffs of dust swirl around the foot of the yellow whirlwind (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_DUST_MOTES	what the player sees	puffs of dust swirl around the foot of the yellow whirlwind (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
-PROCNE_COMETS	what the player sees	violet comets shoot from Procne into the targets (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_COMET_PICTURES	what the player sees	violet comets shoot from Procne into the targets (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_CORE_RADIUS	what the player sees	the targets are drawn in to the middle of the whirlwind and spin there, lifted (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_GATHERING_SPARKS	what the player sees	violet sparks fly in from around Procne and gather on its chest into one bright spark (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_RING	what the player sees	light flares at Procne's chest as each comet leaves it (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
@@ -6390,3 +6397,11 @@ window0	its number	a struct WindowLine's WIN0H value, the console's window 0 as 
 window1	its number	a struct WindowLine's WIN1H value, the console's window 1 as REG_WIN1H names it; IconMenu_DrawIcons widens it over the icon row	games/tbs/src/window/screens_icon_menu.c
 GLYPH_PAIR_WIDTH_MAX	its code	two characters other than spaces are drawn in one 16-pixel cell when their font widths sum to 15 or less, in Message_Type and Text_DrawWideStringAtOffset alike (outside Japanese)	games/tbs/src/window/window_glyphs.c
 GLYPH_PAIR_OUTLINED_WIDTH_MAX	its code	Spanish alone pairs outlined characters only up to 14, each outlined glyph drawn a pixel wider (Text_DrawGlyphPair width++)	games/tbs/src/window/window_glyphs.c
+PROCNE_COMET_PICTURES	its twin	The Lost Age's battle_effect_procne.c names the violet comet sheet's place in work->sheet so; the comets drawn from it are gProcne_Pictures offsets past it	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_SPIN_GAIN	what the player sees	the targets circle into the yellow whirlwind, facing every way as they rise out of sight (its render); The Lost Age's name for the 48 added to their spin each frame	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_SKY_SPIN	what the player sees	once the violet sky is up the targets whirl fast in the middle of the violet whirlwind beneath Procne (its render); The Lost Age's name for the spin of 6000 set at the arrival	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_DUST_SPIN_GAIN	its twin	The Lost Age's name for the 50 a dust mote's circling speed gains each frame, up to TRIG_TURN / 16	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_DUST_SPIN_MAX	its twin	as PROCNE_DUST_SPIN_GAIN	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_SWAY	what the player sees	Procne drifts across the right of the violet sky as it gathers the sparks (its render); The Lost Age's name for the 32 the wave's sine is scaled by across	games/tbs/src/battle_effect/battle_effect_procne.c
+PROCNE_BOB	its twin	The Lost Age's name for the 16 (32 over Procne's first 64 frames) the wave's sine is scaled by up and down	games/tbs/src/battle_effect/battle_effect_procne.c
+BAD_OMEN_SKULL_LIFT_SHIFT	its code	Bad Omen's sixteen skulls rise by Particle_AdvanceWithGravity3D with an upward pull of 1 << ((i & 3) + 11): toFIXED(1) / 32 for every fourth skull from the first and twice that for each next; the render tool leaves Bad Omen out as a weapon unleash	games/tbs/src/battle_effect/battle_effect_casting_impact.c
