@@ -4847,7 +4847,6 @@ WATER_SPLASH_WIDTH	its code	the splash's pictures drawn 48x48 at NEPTUNE_SPLASH 
 LIGHTNING_PILLAR_WIDTH	its code	LightningPillarSheet drawn 48x112 in two pictures (Thor, Plasma; PLASMA_SECOND_PICTURE was 48 * 112)	games/tbs/src/battle_effect/battle_effect_internal.h
 FIRE_PILLAR_WIDTH	its code	FirePillarSheetA: the 34x104 pillar, then two 20x37 flames (VOLCANO_FLAME_PICTURE_ODD was 34 * 104)	games/tbs/src/battle_effect/battle_effect_internal.h
 SPIRAL_WIDTH	its code	SpiralSheet drawn 32x32, centred (the orbiting spirals)	games/tbs/src/battle_effect/battle_effect_internal.h
-CURSE_FLAME_WIDTH	its code	FlameColumnSheet's nine 16x12 flames, then the 16x20 marker at 1728 (9 * 16 * 12)	games/tbs/src/battle_effect/battle_effect_target_motes.c
 SHEEP_WIDTH	its code	SheepSheet drawn 32x32, four pictures upright and four flipped (picture << 10)	games/tbs/src/battle_effect/battle_effect_target_motes.c
 GAIA_ROW_HEIGHT	its code	the rising wall's rows drawn 32 tall, i * 32 apart; the comment's 48x96 top and 48x21 foot	games/tbs/src/battle_effect/battle_effect_gaia.c
 PORTAL_WIDTH	its code	PortalSheet drawn 24x48, centred (Ground's portals)	games/tbs/src/battle_effect/battle_effect_hail.c
@@ -6460,6 +6459,35 @@ WIPE_ACROSS_END	its code	BattleEffect_WipeCanvas: the across front grows by 1, 2
 BATTLE_BACKGROUND_PALETTE	its code	Palette_StepFadeTransfer scales BATTLE_BACKGROUND_COLORS colours into BG_PLTT_COLOR(6, 0) on, the eight palettes battle/battle_internal.h calls BATTLE_BG_PALETTE	games/tbs/src/battle_effect/battle_effect_canvas.c
 BACKGROUND_DARKENED_LEVEL	its twin	The Lost Age (hz/fx battle_effect_internal.h) names the level a canvas darkens the battle background to BACKGROUND_DARKENED_LEVEL, BACKGROUND_DARKEN_FRAMES; BattleEffect_EndCanvasLayer brightens it back from there	games/tbs/src/battle_effect/battle_effect_canvas.c
 BACKGROUND_RESTORE_STEP	its twin	The Lost Age (hz/fx battle_effect_canvas.c) names the 3 levels a frame BattleEffect_EndCanvasLayer brightens the background by BACKGROUND_RESTORE_STEP: levels 21, 18 ... 0 over eight frames	games/tbs/src/battle_effect/battle_effect_canvas.c
+CURSE_FLAME_WIDTH	what the player sees	a small flame flickers on top of the white candle standing on the target's head (its render)	games/tbs/src/battle_effect/battle_effect_target_motes.c
+CURSE_FLAME_WIDTH	its code	FlameColumnSheet's nine 16x12 flames, then the 16x20 candle at CURSE_FLAME_PICTURES * PICTURE_BYTES(CURSE_FLAME)	games/tbs/src/battle_effect/battle_effect_target_motes.c
+CURSE_CANDLE_PICTURE	what the player sees	a white candle stands on the target's head in turn, a small flame burning on it (its render)	games/tbs/src/battle_effect/battle_effect_target_motes.c
+CURSE_CANDLE_PICTURE	its twin	The Lost Age's Curse names the same picture CURSE_CANDLE_PICTURE (hz/fx battle_effect_target_motes.c)	games/tbs/src/battle_effect/battle_effect_target_motes.c
+CURSE_CANDLE_WIDTH	what the player sees	a white candle stands on the target's head in turn, a small flame burning on it (its render)	games/tbs/src/battle_effect/battle_effect_target_motes.c
+CURSE_CANDLE_FRAMES	what the player sees	each target's candle stands on its head with its flame burning, then goes (its render)	games/tbs/src/battle_effect/battle_effect_target_motes.c
+CURSE_CANDLE_FRAMES	its code	a target's candle is drawn from start to start + 72; The Lost Age names it CURSE_CANDLE_FRAMES	games/tbs/src/battle_effect/battle_effect_target_motes.c
+CURSE_STAGGER	its code	start = i * 16: target i's candle and SE_CRACK come 16 frames after the last; The Lost Age names it CURSE_STAGGER	games/tbs/src/battle_effect/battle_effect_target_motes.c
+CURSE_FLICKER_FRAMES	its code	picture = (frame - start + variant) / 6 % CURSE_FLAME_PICTURES: a picture every 6 frames	games/tbs/src/battle_effect/battle_effect_target_motes.c
+CURSE_FLAME_PICTURES	its code	the flame cycles % 9 pictures, and the candle follows nine flame pictures in FlameColumnSheet	games/tbs/src/battle_effect/battle_effect_target_motes.c
+TARGET_MOTES_DAMAGE_END_FRAMES	its code	EFFECT_SHOW_DAMAGE at frame total - 32 in every style	games/tbs/src/battle_effect/battle_effect_target_motes.c
+DEMON_FIRE_LEAP_FRAMES	its code	BattleMotion_ApproachTargetFar starts at total - 46, 14 frames before the strike at total - 32	games/tbs/src/battle_effect/battle_effect_target_motes.c
+DEMON_FIRE_APPROACH_FRAMES	its code	the third argument of BattleMotion_ApproachTargetFar, the frames the leap takes (battle_motion.c: speed = distance / frames)	games/tbs/src/battle_effect/battle_effect_target_motes.c
+SLEEP_SHEEP_STAGGER	its code	sheep i is drawn once frame > i * 4	games/tbs/src/battle_effect/battle_effect_target_motes.c
+SLEEP_ASLEEP_FRAME	its code	target i is tinted back to SPRITE_COLOR_NORMAL in POSE_DAMAGE at frame i * 16 + 64	games/tbs/src/battle_effect/battle_effect_target_motes.c
+SLEEP_TARGET_STAGGER	its code	target i is tinted back to SPRITE_COLOR_NORMAL in POSE_DAMAGE at frame i * 16 + 64	games/tbs/src/battle_effect/battle_effect_target_motes.c
+SLEEP_DAMAGE_FRAME	its code	EFFECT_SHOW_DAMAGE(0) at frame 80	games/tbs/src/battle_effect/battle_effect_target_motes.c
+SLEEP_GROUND_Y	its code	a sheep below y 92 falling at speed 0 is set back to 92 and bounced; The Lost Age names it GROUND_Y	games/tbs/src/battle_effect/battle_effect_target_motes.c
+THOR_BEAM_FLASH_LEVEL	what the player sees	the frame before the beam falls the whole sky floods with yellow light, and the beam drops through it (its render)	games/tbs/src/battle_effect/battle_effect_thor.c
+THOR_BEAM_FLASH_LEVEL	its twin	The Lost Age's Thor names the same level THOR_BEAM_FLASH_LEVEL (hz/fx battle_effect_thor.c)	games/tbs/src/battle_effect/battle_effect_thor.c
+THOR_BOLT_FLASH_LEVEL	what the player sees	the whole screen flashes blue in time with the first bolts (its render)	games/tbs/src/battle_effect/battle_effect_thor.c
+THOR_BOLT_FLASH_LEVEL	its twin	The Lost Age's Thor names the same level THOR_BOLT_FLASH_LEVEL (hz/fx battle_effect_thor.c)	games/tbs/src/battle_effect/battle_effect_thor.c
+LEDGE_JUMP_SINK_FRAMES	its code	Actor_JumpDownLedge lowers the actor 2 pixels a frame while pose counts to 14, a dust puff on odd frames; The Lost Age writes the same 14 (hz/fd field_sequence_actor_commands.c)	games/tbs/src/field/event_commands_actor_commands.c
+LEDGE_JUMP_LANDING_FRAMES	its code	after the jump, Actor_JumpDownLedge waits a frame at a time while the actor is above the ground, at most 180 times	games/tbs/src/field/event_commands_actor_commands.c
+ACTOR_FOLLOW_DISTANCE	its code	Actor_MoveTowardTarget walks the follower toward its watched actor while their distance in pixels is at least its timer, and stands it otherwise; Actor_WatchAndStartScript sets the timer to 40 (The Lost Age says a follow distance of 40 pixels)	games/tbs/src/field/event_commands_actor_commands.c
+REPEATED_MOTION_MAX	its code	count is capped at 3 and the script started (3 - count) motions in	games/tbs/src/field/event_commands_actor_commands.c
+REPEATED_MOTION_SCRIPT_BYTES	its code	each motion of gActor_VariantScripts is (3 - count) << 7 bytes in, 32 words	games/tbs/src/field/event_commands_actor_commands.c
+DUST_PUFF_DRAG_X	its code	FieldEffect_UpdateDustPuff takes velocityX / 18 off the puff's x velocity each frame	games/tbs/src/field/event_commands_actor_commands.c
+DUST_PUFF_DRAG_Z	its code	FieldEffect_UpdateDustPuff takes velocityZ / 16 off the puff's z velocity each frame	games/tbs/src/field/event_commands_actor_commands.c
 MAP_ENTRY_PAIR	its code	BattleTransition_BuildTilemap fills BG1's map a word, two entries, at a time, adding MAP_ENTRY_PAIR(2, 2) to each word	games/tbs/include/system/io_reg.h
 BACKGROUND_LEVEL_STEP	its code	Palette_StepFadeTransfer scales BG palettes 6 to 13 by FIXED_ONE - step * (FIXED_ONE / 60); battle_internal.h's BACKGROUND_LEVEL_STEP is the same 1092	games/tbs/include/battle/battle_work.h
 BATTLE_BACKGROUND_COLORS	its code	Palette_StepFadeTransfer scales 8 * 16 colours from BG palette 6, the battle background's	games/tbs/include/battle/battle_work.h
