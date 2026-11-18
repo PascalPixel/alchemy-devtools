@@ -3002,7 +3002,6 @@ ACTOR_SECOND_GUARD	the game	"Some of the rooms in the palace are available to Co
 FLAG_BABI_PALACE_ATTENDANT_SHOWED_BEDS	the game	"We have just enough extra beds in this room for everybody." (MsgTolbiWeHaveJustEnoughExtra)	games/tbs/src/scene/babi_palace.c
 CELL_BEHAVIOR_BABI_PALACE_WELL	the game	"peered into the well" (MsgFieldPeeredWell)	games/tbs/src/scene/babi_palace.c
 FLAG_BATTLE_ARENA_ATTENDANT_ASKED	the game	"Would you like to apply?" (MsgLobbyPleaseSpeakWhen)	games/tbs/src/scene/battle_arena.c
-FLAG_BATTLE_ARENA_PARTNER_ASKED	the game	"Your opponent has asked for a battle. Do you accept?" (MsgLobbyPleaseSpeakWhen)	games/tbs/src/scene/battle_arena.c
 FLAG_BATTLE_ARENA_PLAYER_AGREED	the game	"When you finish your preparations, please step into the circle!" (MsgLobbyPleaseSpeakWhen)	games/tbs/src/scene/battle_arena.c
 FLAG_BATTLE_ARENA_ENTERING_BATTLE	the game	"Good luck!" (MsgLobbyGoodLuck)	games/tbs/src/scene/battle_arena.c
 FLAG_BATTLE_ARENA_PARTY_ORDER_NEXT	the game	"You can change the order of your party in the status screen." (MsgLobbyChangeOrderParty)	games/tbs/src/scene/battle_arena.c
@@ -5850,6 +5849,15 @@ PILLAR_EAST_X	its code	PILLAR_EAST_X is 394 (vale.c): Where the pillar stands in
 PILLAR_Z	its code	PILLAR_Z is 584 (vale.c): Where the pillar stands in the west of the three columns it can be pushed to below the cliff (cells 22 to 24 of row 36), two pixels east of each cell's middle	games/tbs/src/scene/vale.c
 BRIDGE_DUST_PUFFS	its code	BRIDGE_DUST_PUFFS is 10 (kolima.c): The puffs of dust the drawbridge throws up where it lands	games/tbs/src/scene/kolima.c
 LEVEL_BONUS_MAX	its code	LEVEL_BONUS_MAX is 90 (battle_arena.c): The most monster battles won in a row that count: each adds a level to the next monster's over the party's average (battle_formation.c)	games/tbs/src/scene/battle_arena.c
+FLAG_BATTLE_ARENA_OPPONENT_ASKED	the game	"Your opponent has asked for a battle. Do you accept?" (MsgLobbyPleaseSpeakWhen)	games/tbs/src/scene/battle_arena.c
+BattleArena_WatchOpponent	the game	"Your opponent has asked for a battle. Do you accept?" (MsgLobbyPleaseSpeakWhen)	games/tbs/src/scene/battle_arena.c
+BattleArena_RestartLink	the game	"The link was disconnected." (MsgLobbyLinkDisconnected)	games/tbs/src/scene/battle_arena.c
+BattleArena_AskToParticipate	the game	"If you want to participate, please step into the circle!" (MsgLobbyWantParticipatePlease)	games/tbs/src/scene/battle_arena.c
+BattleArena_ReportLinkDisconnected	the game	"The link was disconnected." (MsgLobbyLinkDisconnected)	games/tbs/src/scene/battle_arena.c
+BattleArena_TellLinkedWins	the game	"I will tell you your total wins when you finish the linked finals." (MsgLobbyTellTotalWins)	games/tbs/src/scene/battle_arena.c
+WALL_BOARD_DIGITS	the game	"Check the board on the wall for the best records so far." (MsgLobbyLooksLikeFirstTime)	games/tbs/src/scene/battle_arena.c
+WALL_BOARD_MAX	the game	"Check the board on the wall for the best records so far." (MsgLobbyLooksLikeFirstTime)	games/tbs/src/scene/battle_arena.c
+MONSTER_OFFER_LAST_NEXT	the game	"Unbelievable!!! Would you like to fight the next monster?" (MsgLobbyNotBadNextMonster + 14)	games/tbs/src/scene/battle_arena.c
 STORM_FRAMES_IN_AIR	its code	STORM_FRAMES_IN_AIR is 180 (world_map.c): The frames the storm holds the party in the air before it drops them outside Suhalla	games/tbs/src/scene/world_map.c
 FLINT_GROW_FRAMES	its code	FLINT_GROW_FRAMES is 16 (world_map.c): The frames Flint takes to grow to full size as he comes down to the party	games/tbs/src/scene/world_map.c
 LIGHT_BALL_TILES	its code	LIGHT_BALL_TILES is 128 (world_map.c): The ball of light's tiles (lighthouse_transition.png), first in the unpacked buffer: LIGHT_BALL_TILES 4-bit tiles, loaded into BG0's character block from tile LIGHT_BALL_FIRST_TILE, which its pictures count from, and shown in BG palette LIGHT_BALL_PALETTE	games/tbs/src/scene/world_map.c
@@ -5928,6 +5936,17 @@ WAY_UP_ANIMATION_B	its code	TilesetAnim_Resume(10) once the floor opens the way 
 PASSAGE_FIRST_FRAME_COLUMN	its code	Kalay's passage opening copies map columns 67 to 74 in turn over the doorway, five cells tall from row 58	games/tbs/src/scene/kalay.c
 PASSAGE_OPEN_FRAME_COLUMN	its code	Kalay's passage sets its open flag (FLAG_TUNNEL_FIRST_PASSAGE_OPEN, FLAG_TUNNEL_SECOND_PASSAGE_OPEN) when the frame copied is column 70's	games/tbs/src/scene/kalay.c
 PASSAGE_LAST_FRAME_COLUMN	its code	Kalay's passage opening ends with map column 74's frame	games/tbs/src/scene/kalay.c
+Kalay_UpdateWaitingTourist	the game	"Who's missing? Come on, we're all waiting!" (MsgKalayDecideEnteringColosso + 7)	games/tbs/src/scene/kalay.c
+Kalay_StartTouristsWaiting	the game	"Who's missing? Come on, we're all waiting!" (MsgKalayDecideEnteringColosso + 7)	games/tbs/src/scene/kalay.c
+Kalay_StartTouristWaiting	the game	"Who's missing? Come on, we're all waiting!" (MsgKalayDecideEnteringColosso + 7)	games/tbs/src/scene/kalay.c
+gKalay_WaitingTouristScript	the game	"Who's missing? Come on, we're all waiting!" (MsgKalayDecideEnteringColosso + 7)	games/tbs/src/scene/kalay.c
+Kalay_UpdatePacingGuides	the game	"Hey? What's up? Why are the guides pacing back and forth?" (MsgKalayShortOnePerson + 3)	games/tbs/src/scene/kalay.c
+gKalay_PacingStep	the game	"Hey? What's up? Why are the guides pacing back and forth?" (MsgKalayShortOnePerson + 3)	games/tbs/src/scene/kalay.c
+gKalay_UnusedBeforePacingStep	its code	twelve bytes of the overlay's globals before gKalay_PacingStep that nothing reads or writes	games/tbs/src/scene/kalay.c
+gKalay_PartyLookAboutScript	its code	the party's script while Hammet comes home: Scene_LookAboutRandomly each frame (shared/actor_heading.c)	games/tbs/src/scene/kalay.c
+Kalay_AskAboutGoingToCave	the game	"Do you want to go to the cave up ahead?" (MsgKalayDoWantGoCaveUp)	games/tbs/src/scene/kalay.c
+Kalay_FixLeaderPriority	its code	step trigger 18 clears ACTOR_PRIORITY_AUTOMATIC on the leader, so his depth priority stays where it is	games/tbs/src/scene/kalay.c
+Kalay_FreeLeaderPriority	its code	step trigger 19 sets ACTOR_PRIORITY_AUTOMATIC on the leader, so his depth priority follows his position	games/tbs/src/scene/kalay.c
 DRIFT_HELD	its code	TolbiShipMast_DriftBird holds a bird's drift or bob at zero while its timer or work is 9, which nothing sets	games/tbs/src/scene/tolbi_ship_mast.c
 DRIFT_INCREASING	its code	TolbiShipMast_DriftBird keeps 0 in a bird's timer (its drift) or work (its bob) while the drift speeds up or the bob rises	games/tbs/src/scene/tolbi_ship_mast.c
 DRIFT_DECREASING	its code	TolbiShipMast_DriftBird keeps 1 in a bird's timer or work while the drift slows or the bob sinks	games/tbs/src/scene/tolbi_ship_mast.c
@@ -6061,9 +6080,7 @@ THOR_HAMMER_GLOW_SPARKS	its code	four free sparks a frame launched from the glow
 THOR_SPARK_SHRINK_FRAMES	its code	a spark's mote size is variant / 16 + 1	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_STRAY_PARTICLES	its code	work->particles[0..15] get random x, y and variant at the storm's start; nothing in Thor reads them and BattleEffect_RunImpactBurst overwrites them	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_DIMMED_MOTES	its code	the eight dimmed copies are written at work->sheet + 10000 and the ring draws from there	games/tbs/src/battle_effect/battle_effect_thor.c
-WIPE_LAG_MAX	its code	delay[x] = Random16() & 63, and the wipe runs until its front passes CANVAS_SIZE + 63	games/tbs/src/battle_effect/battle_effect_canvas.c
-BACKGROUND_LEVEL_STEP	its code	Palette_StepFadeTransfer scales BG palettes 6 to 13 by FIXED_ONE - step * (FIXED_ONE / 60); battle_internal.h's BACKGROUND_LEVEL_STEP is the same 1092	games/tbs/src/battle_effect/battle_effect_canvas.c
-BATTLE_BACKGROUND_COLORS	its code	Palette_StepFadeTransfer scales 8 * 16 colours from BG palette 6, the battle background's	games/tbs/src/battle_effect/battle_effect_canvas.c
+WIPE_LAG_MAX	its code	delay[x] = Random16() & WIPE_LAG_MAX (63), and the down wipe runs until its front passes CANVAS_SIZE + WIPE_LAG_MAX	games/tbs/src/battle_effect/battle_effect_canvas.c
 CANVAS_BG1_SCREEN	its code	BattleEffect_SetupCanvasTileMap writes BG1's map in screen block 31, the battle's own BG1 map	games/tbs/src/battle_effect/battle_effect_canvas.c
 CANVAS_BG1_BLANK_TILE	its code	the rows around the canvas are filled with tile 255, which is cleared	games/tbs/src/battle_effect/battle_effect_canvas.c
 CANVAS_BG1_FIRST_TILE	its code	the canvas tiles are numbered from BG_CHAR_SIZE / TILE_SIZE_8BPP, character block 1 as BG1 counts from block 0	games/tbs/src/battle_effect/battle_effect_canvas.c
@@ -6436,4 +6453,13 @@ TREE_ROOMS_FALL_LANDING	what the player sees	the end of the fall from the fifth 
 TREE_ROOMS_FALL_THROUGH_A	what the player sees	the first room fallen through, the third floor: the leader drops past webbed pits holding golden cocoons, to the hole in the floor below a red chest (its render)	games/tbs/include/scene_exits.h
 TREE_ROOMS_FALL_THROUGH_B	what the player sees	the second room fallen through, the second floor: the leader drops past webs strung with golden cocoons, down through the hole in the floor at its middle (its render)	games/tbs/include/scene_exits.h
 TREE_ROOMS_FALL_THROUGH_C	what the player sees	the third room fallen through, the entrance room: the leader drops into a maze of root walls with no webs, down through the hole in the floor at its middle (its render)	games/tbs/include/scene_exits.h
+DEBUG_VALUE_SELECT	its twin	The Lost Age names the value Select picks in Battle_AdjustDebugValue DEBUG_VALUE_SELECT (hz/ui battle_background.c)	games/tbs/src/battle/battle_background.c
+DEBUG_VALUE_COARSE_STEP	its code	Battle_AdjustDebugValue: KEY_UP and KEY_DOWN step battle->debugValue by 100, KEY_LEFT and KEY_RIGHT by one	games/tbs/src/battle/battle_background.c
+SUMMON_MASK_BITS	its code	BattleSummon_UpdateAvailability tests summon ids 0 to 31, one bit each of the u32 summonMask; SummonDefinition_Get gives NULL past ARRAY_COUNT(gSummon_OrderList), 16	games/tbs/src/battle/battle_setup.c
+WIPE_ACROSS_END	its code	BattleEffect_WipeCanvas: the across front grows by 1, 2, 3 ... a frame while it is at most 256, 23 frames, where CANVAS_SIZE + WIPE_LAG_MAX (191) is passed after 20	games/tbs/src/battle_effect/battle_effect_canvas.c
+BATTLE_BACKGROUND_PALETTE	its code	Palette_StepFadeTransfer scales BATTLE_BACKGROUND_COLORS colours into BG_PLTT_COLOR(6, 0) on, the eight palettes battle/battle_internal.h calls BATTLE_BG_PALETTE	games/tbs/src/battle_effect/battle_effect_canvas.c
+BACKGROUND_DARKENED_LEVEL	its twin	The Lost Age (hz/fx battle_effect_internal.h) names the level a canvas darkens the battle background to BACKGROUND_DARKENED_LEVEL, BACKGROUND_DARKEN_FRAMES; BattleEffect_EndCanvasLayer brightens it back from there	games/tbs/src/battle_effect/battle_effect_canvas.c
+BACKGROUND_RESTORE_STEP	its twin	The Lost Age (hz/fx battle_effect_canvas.c) names the 3 levels a frame BattleEffect_EndCanvasLayer brightens the background by BACKGROUND_RESTORE_STEP: levels 21, 18 ... 0 over eight frames	games/tbs/src/battle_effect/battle_effect_canvas.c
 MAP_ENTRY_PAIR	its code	BattleTransition_BuildTilemap fills BG1's map a word, two entries, at a time, adding MAP_ENTRY_PAIR(2, 2) to each word	games/tbs/include/system/io_reg.h
+BACKGROUND_LEVEL_STEP	its code	Palette_StepFadeTransfer scales BG palettes 6 to 13 by FIXED_ONE - step * (FIXED_ONE / 60); battle_internal.h's BACKGROUND_LEVEL_STEP is the same 1092	games/tbs/include/battle/battle_work.h
+BATTLE_BACKGROUND_COLORS	its code	Palette_StepFadeTransfer scales 8 * 16 colours from BG palette 6, the battle background's	games/tbs/include/battle/battle_work.h
