@@ -340,7 +340,6 @@ games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEM
 games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEMATCH(barrier)	an empty asm on next; as no asm, 7 of 260 instructions differ in tla-en.
 games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEMATCH(barrier)	an empty asm on leader; as no asm, 16 of 260 instructions differ in tla-en.
 games/tla/src/battle/battle_placement.c	BattleObject_Reset	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 36 of 63 instructions differ in tla-en.
-games/tla/src/battle/battle_targeting.c	BattleUnit_ClearStatuses	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 86 of 97 instructions differ in tla-en.
 games/tla/src/battle/battle_transition.c	BattleTransition_Run	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 38 of 490 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_catastrophe.c	BattleEffect_RunCatastrophe	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 4580 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_cruel_ruin.c	BattleEffect_RunCruelRuin	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 156 of 2579 instructions differ in tla-en.
@@ -355,7 +354,6 @@ games/tla/src/battle_effect/battle_effect_vengeance.c	BattleEffect_RunCoatlicue	
 games/tla/src/field/field_actors.c	ActorSystem_PlaceSprites	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 4 of 606 instructions differ in tla-en.
 games/tla/src/field/field_psynergy_world_map_picture.c	WorldPicture_Show	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 233 of 548 instructions differ in tla-en.
 games/tla/src/field/field_psynergy_world_map_picture.c	WorldPicture_Show	FAKEMATCH(temporary)	none holds -1 for its uses; as -1 written at them, 40 of 548 instructions differ in tla-en.
-games/tla/src/menu/menu_status.c	PartyMemberChooser_MoveEntry	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 2 of 129 instructions differ in tla-en.
 games/tla/src/scene/dehkan_plateau.c	DehkanPlateau_CreatePoundCube	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 48 instructions differ in tla-en.
 games/tla/src/scene/jupiter_lighthouse_room_red_key.c	JupiterLighthouse_StartSparkRing	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 6 of 145 instructions differ in tla-en.
 games/tla/src/scene/kandorean_temple.c	KandoreanTemple_CreateLashPebble	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 51 instructions differ in tla-en.
