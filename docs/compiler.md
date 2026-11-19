@@ -87,6 +87,41 @@ becomes a byte or halfword operation whose constant is then shared
 canonical order, so `Ram_MapCellBuffer + picture * 6000` is plain; this
 corrects the first round, which put it down to `pointer_int_sum`.
 
+**The order of a sum's operands. Read (`expr.c`, `expand_expr`,
+`both_summands`; `optabs.c`, `expand_binop`) and measured, 19 November
+2026.** Two rules decide which of a pointer and its index comes first, and
+the order reaches the bytes as the operand order of an `add` or of a
+register-indexed load.
+
+In an address (a memory access, expanded with `EXPAND_SUM`) a sum with a
+constant is put last and a multiplication first. So `p[i].member`, whose
+offset is one tree `i * size + offset`, is base + (i × size + offset), and
+`(p + i)->member` is (base + i × size) + offset:
+
+```c
+return work->entries[index].flags;     /* lsl r0, #4; add r0, #24; ldrsh r0, [r3, r0] */
+return (work->entries + index)->flags; /* lsl r0, #4; add r0, r0, r3; mov r3, #24; ldrsh r0, [r0, r3] */
+```
+
+In a value (a sum assigned or passed) `expand_binop` keeps the source's
+order, pointer first, but swaps the two when the first is not a register and
+the second is: a global's address or a member read from memory is not one
+yet, a local pointer is. So `gMaps + map` is (map × size, gMaps) and
+`maps + map`, with `maps` a local, is (maps, map × size).
+
+This is the whole of "the address summed as an integer, its offset first":
+the cast to an integer only puts the index first. Where the pointer is a
+global the plain sum already does. Where the ROM also keeps that pointer in
+one register for the routine, the integer local is doing two things and no
+pointer form does both.
+
+**A store to a bit-field reads and writes the smallest unit that holds it,
+and builds its mask negated. Measured, 19 November 2026.**
+`sprite->priority = 1`, with `priority` two bits of a halfword, compiles in
+`FieldEffect_SetAttached` to `ldrb r3, [r6, #9]; mov r2, #13; neg r2, r2;
+and r2, r2, r3; mov r3, #4; orr r2, r2, r3; strb r2, [r6, #9]`. A device
+that masks a byte by hand with `-(mask + 1)` is that store written out.
+
 ## Jump, and the loop's test
 
 **A rotated loop's test is copied ahead of the loop. Read (`jump.c`,
