@@ -340,7 +340,6 @@ games/tla/src/scene/mars_lighthouse_star_room.c	MarsLighthouseStarRoom_TakeMarsS
 games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEMATCH(pin)	work fixed to a register; as a plain local, 18 of 260 instructions differ in tla-en.
 games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEMATCH(barrier)	an empty asm on next; as no asm, 7 of 260 instructions differ in tla-en.
 games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEMATCH(barrier)	an empty asm on leader; as no asm, 16 of 260 instructions differ in tla-en.
-games/tla/src/battle/battle_motion.c	BattleMotion_ReturnToSpot	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 15 of 43 instructions differ in tla-en.
 games/tla/src/battle/battle_placement.c	BattleObject_Reset	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 36 of 63 instructions differ in tla-en.
 games/tla/src/battle/battle_targeting.c	BattleUnit_ClearStatuses	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 86 of 97 instructions differ in tla-en.
 games/tla/src/battle/battle_transition.c	BattleTransition_Run	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 38 of 490 instructions differ in tla-en.
