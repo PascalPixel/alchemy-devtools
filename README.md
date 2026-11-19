@@ -48,12 +48,6 @@ Run any command with `--help` for its options.
 
 `evidence/` holds what Alchemy's source no longer says about itself: what each name was taken from (`<game>-names.tsv`) and what each fake match's plain form costs (`<game>-fakematch.tsv`). The tables are compiled into the program, so after changing a row, build it again, or point `ALCHEMY_EVIDENCE` at a folder holding the changed tables, which are then read in place of the compiled ones.
 
-## Progress
-
-Both games reached 100%: every byte of all twelve editions, The Broken Seal's six and The Lost Age's six, builds from Alchemy's source. This chart, drawn from each landing's measurement, is the record of how they got there. It is no longer updated.
-
-<img src="docs/progress.png" width="838" alt="How much of each game's code was rebuilt, day by day from 16 July 2026, until both reached 100% in November" />
-
 ## Test
 
 ```sh
