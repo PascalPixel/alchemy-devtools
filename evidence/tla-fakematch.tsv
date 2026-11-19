@@ -342,10 +342,8 @@ games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEM
 games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEMATCH(barrier)	an empty asm on leader; as no asm, 16 of 260 instructions differ in tla-en.
 games/tla/src/battle/battle_motion.c	BattleMotion_ReturnToSpot	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 15 of 43 instructions differ in tla-en.
 games/tla/src/battle/battle_placement.c	BattleObject_Reset	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 36 of 63 instructions differ in tla-en.
-games/tla/src/battle/battle_setup.c	Battle_ClearBg0Vofs	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 10 of 6 instructions differ in tla-en.
 games/tla/src/battle/battle_staging.c	BattleStaging_PlanAuroraField	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 18 of 69 instructions differ in tla-en.
 games/tla/src/battle/battle_targeting.c	BattleUnit_ClearStatuses	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 86 of 97 instructions differ in tla-en.
-games/tla/src/battle/battle_transition.c	BattleTransition_ResetBg0Scroll	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 10 of 6 instructions differ in tla-en.
 games/tla/src/battle/battle_transition.c	BattleTransition_Run	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 38 of 490 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_catastrophe.c	BattleEffect_RunCatastrophe	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 4580 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_cruel_ruin.c	BattleEffect_RunCruelRuin	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 156 of 2579 instructions differ in tla-en.
