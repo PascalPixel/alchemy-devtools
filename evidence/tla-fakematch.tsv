@@ -342,7 +342,6 @@ games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEM
 games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEMATCH(barrier)	an empty asm on leader; as no asm, 16 of 260 instructions differ in tla-en.
 games/tla/src/battle/battle_motion.c	BattleMotion_ReturnToSpot	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 15 of 43 instructions differ in tla-en.
 games/tla/src/battle/battle_placement.c	BattleObject_Reset	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 36 of 63 instructions differ in tla-en.
-games/tla/src/battle/battle_staging.c	BattleStaging_PlanAuroraField	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 18 of 69 instructions differ in tla-en.
 games/tla/src/battle/battle_targeting.c	BattleUnit_ClearStatuses	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 86 of 97 instructions differ in tla-en.
 games/tla/src/battle/battle_transition.c	BattleTransition_Run	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 38 of 490 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_catastrophe.c	BattleEffect_RunCatastrophe	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 4580 instructions differ in tla-en.
@@ -365,11 +364,9 @@ games/tla/src/scene/jupiter_lighthouse_room_red_key.c	JupiterLighthouse_StartSpa
 games/tla/src/scene/kandorean_temple.c	KandoreanTemple_CreateLashPebble	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 51 instructions differ in tla-en.
 games/tla/src/scene/kibombo.c	Kibombo_CreateBlackCrystal	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 55 instructions differ in tla-en.
 games/tla/src/scene/lemuria_spring.c	LemuriaSpring_InitializeTossSimulation	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 4 of 52 instructions differ in tla-en.
-games/tla/src/scene/magma_rock_inside.c	MagmaRockInside_StartStepCells	FAKEMATCH(temporary)	none holds -1 for its uses; as -1 written at them, 8 of 10 instructions differ in tla-en.
 games/tla/src/scene/mars_lighthouse_star_room.c	MarsLighthouseStarRoom_CreateMarsStar	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 25 of 80 instructions differ in tla-en.
 games/tla/src/scene/trial_road.c	TrialRoad_StartPaletteCycle	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 6 of 25 instructions differ in tla-en.
 games/tla/src/scene/trial_road.c	TrialRoad_ShowRaceMap	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 15 of 81 instructions differ in tla-en.
-games/tla/src/scene/trial_road.c	TrialRoad_PlayRivalRecording	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 12 of 15 instructions differ in tla-en.
 games/tla/src/scene/tundaria_tower.c	TundariaTower_OpenDoor	FAKEMATCH(temporary)	one holds 1 for its uses; as 1 written at them, 19 of 105 instructions differ in tla-en.
 games/tla/src/scene/world_map.c	WorldMap_MeetEcho	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 87 of 714 instructions differ in tla-en.
 games/tla/src/scene/world_map.c	WorldMap_MeetEcho	FAKEMATCH(temporary)	one holds 1 for its uses; as 1 written at them, 65 of 714 instructions differ in tla-en.
