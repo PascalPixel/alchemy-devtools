@@ -320,7 +320,6 @@ games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEM
 games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEMATCH(barrier)	an empty asm on next; as no asm, 7 of 260 instructions differ in tla-en.
 games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEMATCH(barrier)	an empty asm on leader; as no asm, 16 of 260 instructions differ in tla-en.
 games/tla/src/battle/battle_placement.c	BattleObject_Reset	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 36 of 63 instructions differ in tla-en.
-games/tla/src/battle/battle_transition.c	BattleTransition_Run	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 38 of 490 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_catastrophe.c	BattleEffect_RunCatastrophe	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 4580 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_liquifier.c	BattleEffect_RunLiquifier	FAKEMATCH(temporary)	one holds 1 for its uses; as 1 written at them, 4 of 895 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_liquifier.c	BattleEffect_RunLiquifier	FAKEMATCH(temporary)	one holds 1 for its uses; as 1 written at them, 4 of 895 instructions differ in tla-en.
