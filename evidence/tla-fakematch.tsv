@@ -323,11 +323,8 @@ games/tla/src/scene/shared/world_map_objects.c	WorldMap_UpdatePlacedActors	FAKEM
 games/tla/src/battle/battle_placement.c	BattleObject_Reset	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 36 of 63 instructions differ in tla-en.
 games/tla/src/battle/battle_transition.c	BattleTransition_Run	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 38 of 490 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_catastrophe.c	BattleEffect_RunCatastrophe	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 4580 instructions differ in tla-en.
-games/tla/src/battle_effect/battle_effect_cruel_ruin.c	BattleEffect_RunCruelRuin	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 156 of 2579 instructions differ in tla-en.
-games/tla/src/battle_effect/battle_effect_cruel_ruin.c	BattleEffect_RunCruelRuin	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 46 of 2579 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_liquifier.c	BattleEffect_RunLiquifier	FAKEMATCH(temporary)	one holds 1 for its uses; as 1 written at them, 4 of 895 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_liquifier.c	BattleEffect_RunLiquifier	FAKEMATCH(temporary)	one holds 1 for its uses; as 1 written at them, 4 of 895 instructions differ in tla-en.
-games/tla/src/battle_effect/battle_effect_liquifier.c	BattleEffect_RunLiquifier	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 4 of 895 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_odyssey.c	BattleEffect_RunOdyssey	FAKEMATCH(temporary)	none holds 0 for its uses; as 0 written at them, 86 of 1075 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_rushing_strike.c	BattleEffect_RunRisingDragonEnemy	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 14 of 1034 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_vengeance.c	BattleEffect_RunLifeShear	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 10 of 602 instructions differ in tla-en.
