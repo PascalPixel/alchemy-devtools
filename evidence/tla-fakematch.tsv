@@ -142,7 +142,8 @@ games/tla/src/scene/caverns.c	Caverns_FinishMovingAngaraBlock	FAKEMATCH(dead)	su
 games/tla/src/scene/clear.c	Clear_EnterPassword	FAKEMATCH(barrier)	the count is not known to be the length, whose remainder the native reloads from the stack; as no asm, 2 of 1077 instructions differ in tla-en.
 games/tla/src/scene/clear.c	Clear_EnterPassword	FAKEMATCH(barrier)	r2 no longer holds the length; as no asm, 2 of 1077 instructions differ in tla-en.
 games/tla/src/scene/clear.c	Clear_PackPasswordData	FAKEMATCH(dead)	the form kept; as no quantity copy, 133 of 479 instructions differ in tla-en.
-games/tla/src/scene/dehkan_plateau.c	DEFINE_DEHKAN_PLATEAU_PLACE_BY_FLAG	FAKEMATCH(pin)	flag in r5, which leaves r6 to the entry; as a plain local, 61 of 79 instructions differ in tla-en.
+games/tla/src/scene/dehkan_plateau.c	DEFINE_DEHKAN_PLATEAU_PLACE_BY_FLAG	FAKEMATCH(temporary)	the fall's number held in a local; as flag == FLAG_FELL_THROUGH_FIRST + 1 at its test, 83 of 79 instructions differ in tla-en.
+games/tla/src/scene/dehkan_plateau.c	DEFINE_DEHKAN_PLATEAU_PLACE_BY_FLAG	FAKEMATCH(barrier)	an empty asm on entry before the landing's last copy; as no asm, 30 of 79 instructions differ in tla-en.
 games/tla/src/scene/gaia_rock_inside.c	GaiaRockInside_FelixLearnsSand	LEFTOVER(frame)	an unused local the ROM's frame reserves and never touches: no instruction addresses any of the 12 bytes it reserves (sub sp, #12); as without it, 16 of 402 instructions differ in tla-en.
 games/tla/src/scene/garoh.c	Garoh_WaveHypnosSwordChestLayer	FAKEMATCH(barrier)	i and line held through an empty asm before the waves start; as no asm, 74 of 110 instructions differ in tla-en.
 games/tla/src/scene/garoh.c	Garoh_WaveHypnosSwordChestLayer	FAKEMATCH(dead)	a store to z, which nothing reads again, under a test of i and x in the wave loop; as without it, 48 of 110 instructions differ in tla-en.
@@ -163,7 +164,7 @@ games/tla/src/scene/settlements.c	Settlements_SplashCrate	LEFTOVER(frame)	an unu
 games/tla/src/scene/shared/slide_on_ice_from_edge.c	Leader_SlideOnIceFromEdge	FAKEMATCH(dead)	the form kept; as q set once, at the head of the loop, 33 of 345 instructions differ in tla-en.
 games/tla/src/scene/shared/whirlwind_update.h	Whirlwind_Update	FAKEMATCH(dead)	the routine address taken inside a once-only block, so the speed loads first; as a plain call, 2 of 197 instructions differ in tla-en.
 games/tla/src/scene/trial_road.c	TrialRoad_PushLog	LEFTOVER(frame)	an unused local the ROM's frame reserves and never touches: of the 36 bytes it reserves (sub sp, #36), no instruction addresses 12; as without it, 4 of 240 instructions differ in tla-en.
-games/tla/src/scene/trial_road.c	TrialRoad_PushLog	FAKEMATCH(pin)	the 2 held in r2 while the address takes r3; as object->priorityFlags = 2, 8 of 240 instructions differ in tla-en.
+games/tla/src/scene/trial_road.c	TrialRoad_PushLog	FAKEMATCH(barrier)	an empty asm writing value after the pushed log's last store, before the wait; as no asm, 8 of 240 instructions differ in tla-en.
 games/tla/src/scene/trial_road.c	MARKER	FAKEMATCH(pin)	originZ in r6; as a plain s32 *, 304 of 497 instructions differ in tla-en.
 games/tla/src/scene/trial_road.c	MARKER	FAKEMATCH(barrier)	an empty asm on arg after the side's test, before originZ is set; as no asm, 44 of 497 instructions differ in tla-en.
 games/tla/src/scene/world_map.c	WorldMap_GazeIntoPond	FAKEMATCH(dead)	the store and the call in a once-only block; as plain statements, 6 of 129 instructions differ in tla-en.
