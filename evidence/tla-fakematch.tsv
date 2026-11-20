@@ -336,5 +336,4 @@ games/tla/src/scene/trial_road.c	TrialRoad_ShowRaceMap	FAKEMATCH(temporary)	zero
 games/tla/src/scene/tundaria_tower.c	TundariaTower_OpenDoor	FAKEMATCH(temporary)	one holds 1 for its uses; as 1 written at them, 19 of 105 instructions differ in tla-en.
 games/tla/src/scene/world_map.c	WorldMap_MeetEcho	FAKEMATCH(temporary)	one holds 1 for its uses; as 1 written at them, 65 of 714 instructions differ in tla-en.
 games/tla/src/scene/mars_lighthouse_star_room.c	MarsLighthouseStarRoom_UseMarsStar	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 21 of 382 instructions differ in tla-ja.
-games/tla/src/scene/trial_road.c	TrialRoad_ChallengeMoapa	FAKEMATCH(dead)	an empty once-only block after the battle type; as no block, 4 of 48 instructions differ in tla-en.
 games/tla/src/menu/menu_djinn.c	DjinnMenu_DrawStatPreview	FAKEMATCH(dead)	an empty once-only block after the tile loop; as no block, 7 of 906 instructions differ in tla-en.
