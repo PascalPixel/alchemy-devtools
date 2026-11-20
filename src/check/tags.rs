@@ -32,6 +32,8 @@ const RETIRED: &str = "one-pass";
 const RETIRED_LEFTOVER: &str = "form";
 /// The kinds The Broken Seal refuses (S2).
 const NOT_IN_TBS: [&str; 2] = ["pin", "signature"];
+/// The kinds The Lost Age refuses (S2): its last pin went on 20 November 2026.
+const NOT_IN_TLA: [&str; 1] = ["pin"];
 /// A measurement inside a tag ("4 of 549 instructions differing in tla-en"),
 /// taken out of a leftover's evidence before it is read: a measured edition
 /// is no evidence that the edition uses the thing.
@@ -208,6 +210,9 @@ fn judge_kind(text: &str, broken_seal: bool) -> Result<(), String> {
     }
     if !leftover && broken_seal && NOT_IN_TBS.contains(&kind) {
         return Err(format!("The Broken Seal takes no {kind} (S2)"));
+    }
+    if !leftover && !broken_seal && NOT_IN_TLA.contains(&kind) {
+        return Err(format!("The Lost Age takes no {kind} (S2)"));
     }
     Ok(())
 }
@@ -1166,8 +1171,22 @@ void New(int id, int cue) {
             found,
             [
                 Finding { line: 7, message: "Untagged: 2 asm statements, 0 tags".to_string() },
+                Finding { line: 14, message: "The Lost Age takes no pin (S2)".to_string() },
                 Finding { line: 32, message: "a tag outside any function".to_string() },
+                Finding { line: 40, message: "The Lost Age takes no pin (S2)".to_string() },
             ]
         );
+    }
+
+    /// Each game refuses its own kinds: The Broken Seal a pin and a
+    /// signature, The Lost Age a pin alone.
+    #[test]
+    fn each_game_refuses_its_own_kinds() {
+        let pin = "FAKEMATCH(pin): r pinned; as a plain local, 2 of 9 instructions differ in tla-en.";
+        let signature = "FAKEMATCH(signature): j typed s32; as a pointer, 2 of 9 instructions differ in tla-en.";
+        assert_eq!(judge_kind(pin, true), Err("The Broken Seal takes no pin (S2)".to_string()));
+        assert_eq!(judge_kind(signature, true), Err("The Broken Seal takes no signature (S2)".to_string()));
+        assert_eq!(judge_kind(pin, false), Err("The Lost Age takes no pin (S2)".to_string()));
+        assert_eq!(judge_kind(signature, false), Ok(()));
     }
 }
