@@ -335,10 +335,7 @@ games/tla/src/battle_effect/battle_effect_vengeance.c	BattleEffect_RunCoatlicue	
 games/tla/src/field/field_actors.c	ActorSystem_PlaceSprites	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 4 of 606 instructions differ in tla-en.
 games/tla/src/field/field_psynergy_world_map_picture.c	WorldPicture_Show	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 233 of 548 instructions differ in tla-en.
 games/tla/src/field/field_psynergy_world_map_picture.c	WorldPicture_Show	FAKEMATCH(temporary)	none holds -1 for its uses; as -1 written at them, 40 of 548 instructions differ in tla-en.
-games/tla/src/scene/dehkan_plateau.c	DehkanPlateau_CreatePoundCube	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 48 instructions differ in tla-en.
 games/tla/src/scene/jupiter_lighthouse_room_red_key.c	JupiterLighthouse_StartSparkRing	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 6 of 145 instructions differ in tla-en.
-games/tla/src/scene/kandorean_temple.c	KandoreanTemple_CreateLashPebble	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 51 instructions differ in tla-en.
-games/tla/src/scene/kibombo.c	Kibombo_CreateBlackCrystal	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 22 of 55 instructions differ in tla-en.
 games/tla/src/scene/lemuria_spring.c	LemuriaSpring_InitializeTossSimulation	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 4 of 52 instructions differ in tla-en.
 games/tla/src/scene/mars_lighthouse_star_room.c	MarsLighthouseStarRoom_CreateMarsStar	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 25 of 80 instructions differ in tla-en.
 games/tla/src/scene/trial_road.c	TrialRoad_StartPaletteCycle	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 6 of 25 instructions differ in tla-en.
