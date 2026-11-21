@@ -15,7 +15,7 @@
 //! ROM keeps, must say what the ROM keeps (S3).
 
 use crate::alchemy::evidence::{self, Measurement};
-use crate::alchemy::humanity::{DEVICES, LEFTOVERS};
+use crate::alchemy::humanity::{DEVICES, LEFTOVERS, WEIGHTS};
 use crate::alchemy::targets::parse_decomp_target;
 use crate::gba::clex::{lex, Kind, Token};
 use regex::Regex;
@@ -334,6 +334,8 @@ pub struct Tags {
     pub in_both: usize,
     /// Tags whose measurement only their row carries (H8).
     pub in_evidence: usize,
+    /// The fake-match tags' weights summed (S2's score).
+    pub score: usize,
 }
 
 impl Tags {
@@ -345,7 +347,14 @@ impl Tags {
         self.in_source += other.in_source;
         self.in_both += other.in_both;
         self.in_evidence += other.in_evidence;
+        self.score += other.score;
     }
+}
+
+/// A fake-match kind's weight in its game's score (S2); 0 for a kind S2 has
+/// not, which is a finding of its own.
+fn weight(kind: &str) -> usize {
+    DEVICES.iter().position(|device| *device == kind).map_or(0, |at| WEIGHTS[at])
 }
 
 /// The game a source path is in (`tbs` for `games/tbs/...`).
@@ -499,6 +508,7 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
                 tags.leftover += 1;
             } else {
                 tags.fakematch += 1;
+                tags.score += word_and_kind(&plain(&comments)).map_or(0, |(_, kind)| weight(kind));
             }
             if token.text.starts_with("///") || token.text.starts_with("/**") {
                 found.push(Finding { line: token.line, message: "a tag is a // or /* */ comment, not documentation".to_string() });
@@ -643,7 +653,7 @@ impl Game {
         };
         vec![
             format!("{name}: {} files; {} findings", self.files, self.findings),
-            format!("{name}: {} FAKEMATCH tags", self.tags.fakematch),
+            format!("{name}: {} FAKEMATCH tags, score {}", self.tags.fakematch, self.tags.score),
             format!("{name}: {} LEFTOVER tags", self.tags.leftover),
             format!("{name}: measurements: {} in {table} (H8), {} in the source{both}", self.tags.in_evidence, self.tags.in_source),
             format!("{name}: {} // DEAD: marks{unformed}", self.tags.dead),
@@ -679,6 +689,22 @@ pub(crate) fn untaken_rows(path: &str, source: &str) -> Result<Vec<String>, Stri
 
 /// How the finding for a row no tag takes ends.
 const UNTAKEN: &str = " and no such tag in the file";
+
+/// What is wrong with a game's fake-match score against the one
+/// `evidence/fakematch-score.tsv` records, if anything (S2): the score only
+/// ever goes down, each fall recorded with the change that makes it.
+fn score_finding(game: &str, score: usize, recorded: Option<usize>) -> Option<String> {
+    match recorded {
+        None => Some(format!("no fake-match score recorded: add `{game}\t{score}` to evidence/fakematch-score.tsv (S2)")),
+        Some(recorded) if score > recorded => {
+            Some(format!("fake-match score {score} is above the {recorded} recorded in evidence/fakematch-score.tsv: a device came in or got worse (S2)"))
+        }
+        Some(recorded) if score < recorded => {
+            Some(format!("fake-match score {score} is below the {recorded} recorded in evidence/fakematch-score.tsv: record {score} there (S2)"))
+        }
+        Some(_) => None,
+    }
+}
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
     if let Some(flag) = arguments.iter().find(|argument| argument.starts_with('-')) {
@@ -734,6 +760,20 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
                 }
                 games.entry(game_of(file)).or_default().findings += rows.len();
             }
+        }
+    }
+    // Each whole game read is held to its recorded score: a rise is refused,
+    // and a fall is recorded in the same commit (S2).
+    let recorded = evidence::scores()?;
+    for (name, game) in games.iter_mut() {
+        let Some(short) = name.strip_prefix("games/") else { continue };
+        let whole = paths.iter().any(|path| matches!(path.trim_end_matches('/'), "games") || path.trim_end_matches('/') == name);
+        if !whole {
+            continue;
+        }
+        if let Some(message) = score_finding(short, game.tags.score, recorded.iter().find(|(game, _)| game == short).map(|(_, score)| *score)) {
+            println!("{name}: {message}");
+            game.findings += 1;
         }
     }
     for (name, game) in &games {
@@ -955,7 +995,7 @@ void F(int x) {
             game.lines("games/tbs"),
             [
                 "games/tbs: 832 files; 0 findings",
-                "games/tbs: 169 FAKEMATCH tags",
+                "games/tbs: 169 FAKEMATCH tags, score 0",
                 "games/tbs: 48 LEFTOVER tags",
                 "games/tbs: measurements: 217 in evidence/tbs-fakematch.tsv (H8), 0 in the source",
                 "games/tbs: 33 // DEAD: marks",
@@ -1166,7 +1206,8 @@ void New(int id, int cue) {
 #endif
 ";
         let (tags, found) = findings("games/tla/src/x.c", source, &[]);
-        assert_eq!(tags, Tags { fakematch: 4, in_source: 4, ..Tags::default() });
+        // A barrier, two pins and a dead store: 3 + 4 + 4 + 1.
+        assert_eq!(tags, Tags { fakematch: 4, in_source: 4, score: 12, ..Tags::default() });
         assert_eq!(
             found,
             [
@@ -1176,6 +1217,29 @@ void New(int id, int cue) {
                 Finding { line: 40, message: "The Lost Age takes no pin (S2)".to_string() },
             ]
         );
+    }
+
+    /// Each tag weighs its kind's place in S2's ranking, and a game's score
+    /// may neither rise above the recorded one nor fall below it unrecorded.
+    #[test]
+    fn the_score_weighs_each_kind_and_only_goes_down() {
+        let source = "\
+void F(int x) {
+  /* FAKEMATCH(signature): a. */
+  /* FAKEMATCH(volatile): b. */
+  /* FAKEMATCH(barrier): c. */
+  asm(\"\");
+  /* FAKEMATCH(wrapper): d. */
+  /* FAKEMATCH(temporary): e. */
+  /* FAKEMATCH(dead): f. */
+}
+";
+        let (tags, _) = findings("games/tla/src/x.c", source, &[]);
+        assert_eq!((tags.fakematch, tags.score), (6, 6 + 5 + 3 + 2 + 1 + 1));
+        assert_eq!(score_finding("tla", 18, Some(18)), None);
+        assert!(score_finding("tla", 19, Some(18)).unwrap().contains("above the 18"));
+        assert!(score_finding("tla", 17, Some(18)).unwrap().contains("record 17 there"));
+        assert!(score_finding("tla", 17, None).unwrap().contains("tla\t17"));
     }
 
     /// Each game refuses its own kinds: The Broken Seal a pin and a

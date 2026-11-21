@@ -29,7 +29,11 @@ pub const REPORT: &str = "out/reports/humanity.tsv";
 
 /// S2's fake-match kinds, in its ranking, worst first. A once-only block no
 /// macro expands to is a `dead` device; `one-pass` is no longer a kind.
-pub const DEVICES: [&str; 7] = ["signature", "pin", "barrier", "wrapper", "volatile", "temporary", "dead"];
+pub const DEVICES: [&str; 7] = ["signature", "volatile", "pin", "barrier", "wrapper", "temporary", "dead"];
+
+/// Each kind's weight in a game's fake-match score, in `DEVICES`' order (S2,
+/// 20 November 2026): the score is the sum of a game's tags' weights.
+pub const WEIGHTS: [usize; 7] = [6, 5, 4, 3, 2, 1, 1];
 
 /// S2's leftover kinds: Camelot's own code that does nothing in an edition
 /// and still shapes it, tagged `LEFTOVER(<kind>)` (12 November 2026). They
@@ -2225,10 +2229,10 @@ const ROWS: &[(&str, &str)] = &[
     ("numbered_honest", "  apart: its number, by row"),
     ("fakematch", "FAKEMATCH devices"),
     ("fakematch_signature", "  signature"),
+    ("fakematch_volatile", "  volatile"),
     ("fakematch_pin", "  pin"),
     ("fakematch_barrier", "  barrier"),
     ("fakematch_wrapper", "  wrapper"),
-    ("fakematch_volatile", "  volatile"),
     ("fakematch_temporary", "  temporary"),
     ("fakematch_dead", "  dead"),
     ("fakematch_other", "  of a kind S2 does not name"),

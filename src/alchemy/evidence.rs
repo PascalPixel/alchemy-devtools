@@ -123,6 +123,19 @@ pub fn parse_measurements(text: &str) -> Result<Vec<Measurement>, String> {
 }
 
 /// A game's fake-match table, empty for a game that has none yet.
+/// Each game's fake-match score as `evidence/fakematch-score.tsv` records
+/// it (S2): the score `check tags` holds the game to, by game (`tla`).
+pub fn scores() -> Result<Vec<(String, usize)>, String> {
+    let Some(text) = table("fakematch-score.tsv") else { return Ok(Vec::new()) };
+    rows(text, 2)
+        .and_then(|rows| {
+            rows.into_iter()
+                .map(|cells| cells[1].parse().map(|score| (cells[0].to_string(), score)).map_err(|_| format!("{}: no score", cells[1])))
+                .collect()
+        })
+        .map_err(|error| format!("evidence/fakematch-score.tsv: {error}"))
+}
+
 pub fn measurements(game: &str) -> Result<Vec<Measurement>, String> {
     table(&format!("{game}-fakematch.tsv"))
         .map_or(Ok(Vec::new()), |text| parse_measurements(text).map_err(|error| format!("evidence/{game}-fakematch.tsv: {error}")))
