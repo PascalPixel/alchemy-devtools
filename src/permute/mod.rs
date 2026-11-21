@@ -239,11 +239,12 @@ impl Job {
                 }
             }
         }
-        // Moving a draft must not move its quoted-header search root.
-        // GCC's -I- makes this prefix quote-only and disables the scratch
-        // source directory; the build's ordinary include paths follow it.
+        // Moving a draft must not move its quoted-header search root: the
+        // draft's own folder is searched first, before the build's paths.
+        // No -I-: that would also stop every header from finding its own
+        // siblings (system/dma.h's "io_reg.h"), as the build lets it.
         let source_directory = root().join(problem.draft.parent().unwrap_or_else(|| Path::new("")));
-        steps[0].splice(1..1, [format!("-I{}", source_directory.display()), "-I-".into()]);
+        steps[0].splice(1..1, [format!("-I{}", source_directory.display())]);
         Ok(Job { candidate, object, steps })
     }
 
@@ -1269,20 +1270,21 @@ mod tests {
         let directory = work.path().join("drafts");
         std::fs::create_dir(&directory).unwrap();
         std::fs::write(work.path().join("value.h"), "#define VALUE 37\n").unwrap();
-        std::fs::write(directory.join("local.h"), "#include \"../value.h\"\n").unwrap();
-        // An angle include still searches the build's paths, not the draft's.
-        std::fs::write(directory.join("types.h"), "#error wrong angle-header root\n").unwrap();
+        std::fs::write(directory.join("local.h"), "#include \"../value.h\"\n#include \"part/outer.h\"\n").unwrap();
+        // A header finds its own siblings by quote, as in the build.
+        std::fs::create_dir(directory.join("part")).unwrap();
+        std::fs::write(directory.join("part/outer.h"), "#include \"inner.h\"\n").unwrap();
+        std::fs::write(directory.join("part/inner.h"), "#define INNER 5\n").unwrap();
         let draft = directory.join("sample.c");
-        let source = "#include \"local.h\"\n#include <types.h>\nu32 F(void) { return VALUE; }\n";
+        let source = "#include \"local.h\"\n#include \"types.h\"\nu32 F(void) { return VALUE + INNER; }\n";
         std::fs::write(&draft, source).unwrap();
         for arm in [false, true] {
             let mut problem = test_problem(&draft, source, Vec::new(), Some("F"));
             problem.arm = arm;
             let scratch = work.path().join(if arm { "arm" } else { "thumb" });
             let job = Job::new(&problem, &scratch).unwrap();
-            std::fs::write(scratch.join("local.h"), "#error wrong scratch root\n").unwrap();
             job.compile(source).unwrap();
-            assert!(job.preprocess().unwrap().contains("return 37;"));
+            assert!(job.preprocess().unwrap().contains("return 37 + 5;"));
             let expected_object = job.object.with_file_name("original.o");
             let steps = if arm {
                 crate::diff::arm_steps(problem.target, &draft, &expected_object).unwrap()
