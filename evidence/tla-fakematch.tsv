@@ -297,17 +297,12 @@ games/tla/src/scene/jupiter_lighthouse_room_red_key.c	JupiterLighthouse_StartSpa
 games/tla/src/scene/mars_lighthouse_star_room.c	MarsLighthouseStarRoom_UseMarsStar	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 21 of 382 instructions differ in tla-ja.
 games/tla/src/menu/menu_djinn.c	DjinnMenu_DrawStatPreview	FAKEMATCH(dead)	an empty once-only block after the tile loop; as no block, 7 of 906 instructions differ in tla-en.
 games/tla/src/battle_effect/battle_effect_rushing_strike.c	BattleEffect_RunRisingDragonEnemy	FAKEMATCH(temporary)	max holds RGB_LEVEL_MAX, set in the for; as RGB_LEVEL_MAX at its use, 324 of 1034 instructions differ in tla-en.
-games/tla/src/field/field_psynergy_pound.c	FieldPsynergy_UpdatePound	FAKEMATCH(temporary)	base holds 9 and is then made 16.16; as INTtoFIXED(9) at its uses, 12 of 302 instructions differ in tla-en.
-games/tla/src/field/field_psynergy_pound.c	FieldPsynergy_UpdatePound	FAKEMATCH(temporary)	blue holds RGB(0, 0, RGB_LEVEL_MAX); as the constant at its use, 37 of 302 instructions differ in tla-en.
 games/tla/src/field/field_sequence_run.c	FieldSequence_Run	FAKEMATCH(dead)	teleportState set to 2 through its address; as gMainRoutineWork.teleportState = 2, 4 of 1300 instructions differ in tla-en.
 games/tla/src/field/field_sequence_run.c	FieldSequence_Run	FAKEMATCH(temporary)	zero holds 0 across the arrival for the owner override; as 0 at its use, 87 of 1300 instructions differ in tla-en.
 games/tla/src/scene/apojii_islands.c	ApojiiIslands_DrawCellMarkers	FAKEMATCH(temporary)	view points at map->viewX and reads viewX and viewZ as view[0] and view[1]; as map->viewX and map->viewZ by name, 30 of 189 instructions differ in tla-en.
 games/tla/src/scene/apojii_islands.c	ApojiiIslands_DrawCellMarkers	FAKEMATCH(temporary)	clear holds 0 for the sprite's last attribute word; as 0 at its use, 58 of 189 instructions differ in tla-en.
-games/tla/src/scene/apojii_islands.c	ApojiiIslands_AddCellMarkers	FAKEMATCH(temporary)	second points at map->layers[1]; as map->layers[1] by name, 4 of 159 instructions differ in tla-en.
-games/tla/src/scene/apojii_islands.c	ApojiiIslands_AddCellMarkers	FAKEMATCH(temporary)	layer points at map->layers[0]; as map->layers[0] by name, 80 of 159 instructions differ in tla-en.
 games/tla/src/scene/apojii_islands.c	ApojiiIslands_AddCellMarkers	FAKEMATCH(temporary)	slot points at the marked shape's entry; as the entry written through its cast address, 36 of 159 instructions differ in tla-en.
 games/tla/src/scene/lobby.c	LinkLobby_Initialize	FAKEMATCH(temporary)	name holds the payload's address as halfwords; as the payload written through its cast at each store, 8 of 438 instructions differ in tla-en.
-games/tla/src/scene/trial_road.c	TrialRoad_PushLog	FAKEMATCH(temporary)	the priority flags' address held in a local for the store; as actor->priorityFlags, 2 of 240 instructions differ in tla-en.
 games/tla/src/scene/trial_road.c	TrialRoad_PushLog	FAKEMATCH(temporary)	mode reused to hold ACTOR_PRIORITY_UNDERFOOT for the store; as the constant stored, 8 of 240 instructions differ in tla-en.
 games/tla/src/scene/aqua_rock.c	AquaRock_PickRandomSpot	FAKEMATCH(temporary)	spot.y passed to the move target through coordinate; as spot.y, 16 of 107 instructions differ in tla-en.
 games/tla/src/field/field_player_control.c	Actor_UpdateWalkingControl	FAKEMATCH(temporary)	withinHalfCell holds toFIXED(8) - 1, set after other; as the constant in the test, 58 of 713 instructions differ in tla-en.
@@ -341,3 +336,7 @@ games/tla/src/scene/airs_rock.c	Scene_Initialize	FAKEMATCH(temporary)	layer, a b
 games/tla/src/scene/airs_rock.c	Scene_Initialize	FAKEMATCH(temporary)	layer, a block's pointer standing in for the map work's layers[2] at the Fujin Shield chest; as that layer by name, 52 of 1266 instructions differ in tla-en.
 games/tla/src/scene/airs_rock.c	AirsRock_BlowGust	FAKEMATCH(temporary)	cell, a map cell's pair, takes the gust's pixel target; as newX and newZ at the move target, 62 of 632 instructions differ in tla-en.
 games/tla/src/scene/airs_rock_inside.c	AirsRockInside_BlowGust	FAKEMATCH(temporary)	cell, a map cell's pair, takes the gust's pixel target; as x and z at the move target, 75 of 1527 instructions differ in tla-en.
+games/tla/src/scene/trial_road.c	TrialRoad_PushLog	FAKEMATCH(dead)	the priority flags stored through their taken address; as actor->priorityFlags, 2 of 240 instructions differ in tla-en.
+games/tla/src/scene/apojii_islands.c	ApojiiIslands_AddCellMarkers	FAKEMATCH(dead)	layer 1's cells read through its taken address; as map->layers[1].cells, 4 of 159 instructions differ in tla-en.
+games/tla/src/scene/apojii_islands.c	ApojiiIslands_AddCellMarkers	FAKEMATCH(dead)	layer 0's offsets read through its taken address; as map->layers[0].offsetX and offsetY, 80 of 159 instructions differ in tla-en.
+games/tla/src/scene/apojii_islands.c	ApojiiIslands_AddCellMarkers	FAKEMATCH(temporary)	markers, a pointer standing in for gApojiiIslands_CellMarkers's address; as the table by name, 71 of 159 instructions differ in tla-en.
