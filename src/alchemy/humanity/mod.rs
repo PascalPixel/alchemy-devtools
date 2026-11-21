@@ -28,8 +28,14 @@ use std::sync::OnceLock;
 pub const REPORT: &str = "out/reports/humanity.tsv";
 
 /// S2's fake-match kinds, in its ranking, worst first. A once-only block no
-/// macro expands to is a `dead` device; `one-pass` is no longer a kind.
-pub const DEVICES: [&str; 7] = ["signature", "pin", "barrier", "wrapper", "volatile", "temporary", "dead"];
+/// macro expands to is a `dead` device; `one-pass` is no longer a kind, and a
+/// register pin is none: no game takes one.
+pub const DEVICES: [&str; 6] = ["signature", "volatile", "barrier", "wrapper", "temporary", "dead"];
+
+/// Each kind's weight in a game's fake-match score, in `DEVICES`' order, each
+/// twice the next (S2, 20 November 2026): the score is the sum of a game's
+/// tags' weights.
+pub const WEIGHTS: [usize; 6] = [64, 32, 16, 8, 4, 2];
 
 /// S2's leftover kinds: Camelot's own code that does nothing in an edition
 /// and still shapes it, tagged `LEFTOVER(<kind>)` (12 November 2026). They
@@ -2225,10 +2231,9 @@ const ROWS: &[(&str, &str)] = &[
     ("numbered_honest", "  apart: its number, by row"),
     ("fakematch", "FAKEMATCH devices"),
     ("fakematch_signature", "  signature"),
-    ("fakematch_pin", "  pin"),
+    ("fakematch_volatile", "  volatile"),
     ("fakematch_barrier", "  barrier"),
     ("fakematch_wrapper", "  wrapper"),
-    ("fakematch_volatile", "  volatile"),
     ("fakematch_temporary", "  temporary"),
     ("fakematch_dead", "  dead"),
     ("fakematch_other", "  of a kind S2 does not name"),
@@ -2696,9 +2701,9 @@ mod tests {
         );
         assert_eq!(list(&[("tbs", &report)], "fakematch_other"), "tbs\tf.c:12\tone-pass\n");
         let rows: Vec<&str> = ROWS.iter().filter_map(|(metric, _)| metric.strip_prefix("fakematch_")).collect();
-        assert_eq!(rows[..7], DEVICES, "the table's device rows are S2's, in its order");
-        assert_eq!(rows[7..], ["other"], "then the tags of a kind S2 does not name");
-        assert!(listable("fakematch_pin") && listable("fakematch_volatile") && !listable("fakematch_one-pass") && !listable("xyz"));
+        assert_eq!(rows[..DEVICES.len()], DEVICES, "the table's device rows are S2's, in its order");
+        assert_eq!(rows[DEVICES.len()..], ["other"], "then the tags of a kind S2 does not name");
+        assert!(listable("fakematch_barrier") && listable("fakematch_volatile") && !listable("fakematch_one-pass") && !listable("xyz"));
         assert_eq!(report.value("leftover"), 0);
         assert_eq!(report.total("views"), 1);
         assert!(listable("views"));
