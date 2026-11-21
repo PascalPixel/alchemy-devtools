@@ -283,6 +283,8 @@ struct Unit {
     name: String,
     line: usize,
     tags: usize,
+    /// Of the tags, the barriers: only a barrier tag names an asm statement.
+    barriers: usize,
     asm: usize,
     /// CAMELOT_ASM marks inside: each a proven handwritten asm statement (S1).
     proofs: usize,
@@ -420,6 +422,7 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
                     name: function_name(&code, code.len() - 1).unwrap_or_else(|| "a function".to_string()),
                     line: token.line,
                     tags: 0,
+                    barriers: 0,
                     asm: 0,
                     proofs: 0,
                     proven: code[declaration.min(code.len())..].iter().any(|t| t.text == "CAMELOT_ASM"),
@@ -476,7 +479,7 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
             }
             if tokens.get(at + 1).is_some_and(|t| t.text == "define") {
                 let name = tokens.get(at + 2).map_or("a macro", |t| t.text).to_string();
-                units.push(Unit { name, line: token.line, tags: 0, asm: 0, proofs: 0, proven: false });
+                units.push(Unit { name, line: token.line, tags: 0, barriers: 0, asm: 0, proofs: 0, proven: false });
                 macro_unit = Some(units.len() - 1);
             }
         } else if token.kind == Kind::PpEnd {
@@ -541,7 +544,10 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
             match unit {
                 // A leftover is never what an asm statement needs.
                 Some(_) if leftover => {}
-                Some(unit) => units[unit].tags += 1,
+                Some(unit) => {
+                    units[unit].tags += 1;
+                    units[unit].barriers += usize::from(word_and_kind(&text).is_some_and(|(_, kind)| kind == "barrier"));
+                }
                 None => found.push(Finding { line: token.line, message: "a tag outside any function".to_string() }),
             }
         } else if token.kind == Kind::Comment && token.text.starts_with("// DEAD:") {
@@ -574,14 +580,16 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
         }
         at += 1;
     }
-    for unit in units.iter().filter(|unit| !unit.proven && unit.asm > unit.tags + unit.proofs) {
+    // Each asm statement is a barrier's, or a proven helper's (S1, S2): an
+    // asm under a tag of another kind is a barrier given a milder name.
+    for unit in units.iter().filter(|unit| !unit.proven && unit.asm > unit.barriers + unit.proofs) {
         let proofs = match unit.proofs {
             0 => String::new(),
             n => format!(" and {n} CAMELOT_ASM"),
         };
         found.push(Finding {
             line: unit.line,
-            message: format!("{}: {} asm statements, {} tags{proofs}", unit.name, unit.asm, unit.tags),
+            message: format!("{}: {} asm statements, {} barrier tags{proofs}", unit.name, unit.asm, unit.barriers),
         });
     }
     for (row, _) in rows.iter().zip(&taken).filter(|(_, taken)| !**taken) {
@@ -1181,9 +1189,11 @@ void New(int id, int cue) {
         assert_eq!(
             found,
             [
-                Finding { line: 7, message: "Untagged: 2 asm statements, 0 tags".to_string() },
+                Finding { line: 7, message: "Untagged: 2 asm statements, 0 barrier tags".to_string() },
+                Finding { line: 12, message: "PINNED: 1 asm statements, 0 barrier tags".to_string() },
                 Finding { line: 14, message: "The Lost Age takes no pin (S2)".to_string() },
                 Finding { line: 32, message: "a tag outside any function".to_string() },
+                Finding { line: 36, message: "Old: 1 asm statements, 0 barrier tags".to_string() },
                 Finding { line: 40, message: "The Lost Age takes no pin (S2)".to_string() },
             ]
         );
@@ -1206,6 +1216,25 @@ void F(int x) {
 ";
         let (tags, _) = findings("games/tla/src/x.c", source, &[]);
         assert_eq!((tags.fakematch, tags.score), (6, 6 + 5 + 3 + 2 + 1 + 1));
+    }
+
+    /// An asm statement is a barrier's: under a tag of a milder kind it is
+    /// still counted as untagged.
+    #[test]
+    fn an_asm_is_named_only_by_a_barrier() {
+        let source = "\
+void Relabelled(int x) {
+  /* FAKEMATCH(dead): an empty asm called dead; as no asm, 2 of 9 instructions differ in tla-en. */
+  asm(\"\" : \"+r\"(x));
+}
+
+void Named(int x) {
+  /* FAKEMATCH(barrier): an empty asm on x; as no asm, 2 of 9 instructions differ in tla-en. */
+  asm(\"\" : \"+r\"(x));
+}
+";
+        let (_, found) = findings("games/tla/src/x.c", source, &[]);
+        assert_eq!(found, [Finding { line: 1, message: "Relabelled: 1 asm statements, 0 barrier tags".to_string() }]);
     }
 
     /// Each game refuses its own kinds: The Broken Seal a pin and a
