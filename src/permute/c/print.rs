@@ -126,7 +126,7 @@ impl Generator {
         match node {
             Node::Constant { value, .. } => value.clone(),
             Node::Id { name } => name.clone(),
-            Node::Pragma { string } => if string.is_empty() { "#pragma".into() } else { format!("#pragma {string}") },
+            Node::Pragma { string } => if let Some(text) = string.strip_prefix(super::parser::VERBATIM) { text.to_string() } else if string.is_empty() { "#pragma".into() } else { format!("#pragma {string}") },
             Node::ArrayRef { name, subscript } => format!("{}[{}]", self.simple(name), self.visit(subscript)),
             Node::StructRef { name, op, field } => format!("{}{}{}", self.simple(name), op, self.visit(field)),
             Node::FuncCall { name, args } => format!("{}({})", self.simple(name), self.optional(args)),

@@ -234,6 +234,16 @@ mod tests {
     }
 
     #[test]
+    fn nested_functions_survive_as_written() {
+        let source = "int F(int a) {\n    int G(int b) { if (b) return b + 1; return 0; }\n    while (a) { a = G(a); }\n    return G(a);\n}\n";
+        let printed = parse(source).unwrap().print();
+        assert!(printed.contains("int G(int b) { if (b) return b + 1; return 0; }"), "{printed}");
+        assert!(printed.contains("return G(a);"), "{printed}");
+        let marked = source.replace("int G(", "__attribute__((unused)) int G(");
+        assert!(parse(&marked).unwrap().print().contains("__attribute__((unused)) int G(int b)"));
+    }
+
+    #[test]
     fn empty_for_clauses_survive_an_enclosing_struct_cast() {
         let source = "struct S { int x; }; void F(void *p) { if (((struct S *)p)->x) { for (;;) { break; } } }";
         assert!(parse(source).unwrap().print().contains("for (;;)"));

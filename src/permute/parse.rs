@@ -416,6 +416,56 @@ impl<'a> Parser<'a> {
         Ok(Decl { specs, items })
     }
 
+    /// A GNU nested function definition at this statement: its tokens to the
+    /// closing brace, joined, or None (and nothing consumed) when the
+    /// declaration here is an ordinary one.
+    fn nested_function(&mut self) -> Result<Option<String>> {
+        let (position, comments, trailing, anonymous) =
+            (self.position, self.comments.clone(), self.trailing.clone(), self.anonymous);
+        let typedefs = self.typedefs.clone();
+        let restore = |parser: &mut Self| {
+            parser.position = position;
+            parser.comments = comments.clone();
+            parser.trailing = trailing.clone();
+            parser.anonymous = anonymous;
+            *parser.typedefs = typedefs.clone();
+        };
+        let header = self.specifiers().and_then(|_| self.declarator(false));
+        let is_definition = header.is_ok() && self.is_punct("{");
+        if !is_definition {
+            restore(self);
+            return Ok(None);
+        }
+        let mut depth = 0usize;
+        let mut end = self.position;
+        while let Some(token) = self.tokens.get(end) {
+            match &token.tok {
+                Tok::Punct("{") => depth += 1,
+                Tok::Punct("}") => {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+            end += 1;
+        }
+        if depth != 0 {
+            return self.error("a nested function's body does not close");
+        }
+        let text: Vec<String> = self.tokens[position..=end]
+            .iter()
+            .filter_map(|token| match &token.tok {
+                Tok::Ident(s) | Tok::Number(s) | Tok::Char(s) | Tok::Str(s) => Some(s.clone()),
+                Tok::Punct(p) => Some(p.to_string()),
+                Tok::Comment(_) => None,
+            })
+            .collect();
+        self.position = end + 1;
+        Ok(Some(text.join(" ")))
+    }
+
     fn type_name(&mut self) -> Result<TypeName> {
         let mut tokens = self.specifiers()?;
         let declarator = self.declarator(true)?;
@@ -589,6 +639,9 @@ impl<'a> Parser<'a> {
                     _ => {}
                 }
                 if self.starts_declaration() {
+                    if let Some(text) = self.nested_function()? {
+                        return Ok(Stmt::Verbatim(text));
+                    }
                     return Ok(Stmt::Decl(self.declaration()?));
                 }
             }
