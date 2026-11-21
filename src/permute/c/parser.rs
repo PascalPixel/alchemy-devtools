@@ -348,6 +348,16 @@ fn preserve_nested_functions(input: &mut String, prefix: &str, pragmas: &mut Has
             let mut words = 0;
             while let Some(token) = tokens.get(cursor) {
                 match &token.tok {
+                    // An attribute (UNUSED's __attribute__((unused))) is part
+                    // of the header: step over its parenthesised list.
+                    Tok::Ident(word) if word == "__attribute__" && tokens.get(cursor + 1).is_some_and(|t| t.tok == Tok::Punct("(")) => {
+                        let mut parens = 0usize;
+                        cursor += 1;
+                        while let Some(token) = tokens.get(cursor) {
+                            match token.tok { Tok::Punct("(") => parens += 1, Tok::Punct(")") => { parens -= 1; if parens == 0 { break; } } _ => {} }
+                            cursor += 1;
+                        }
+                    }
                     Tok::Ident(word) if !CONTROL.contains(&word.as_str()) => words += 1,
                     Tok::Punct("*") => {}
                     _ => break,

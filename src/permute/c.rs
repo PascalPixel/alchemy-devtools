@@ -239,6 +239,8 @@ mod tests {
         let printed = parse(source).unwrap().print();
         assert!(printed.contains("int G(int b) { if (b) return b + 1; return 0; }"), "{printed}");
         assert!(printed.contains("return G(a);"), "{printed}");
+        let marked = source.replace("int G(", "__attribute__((unused)) int G(");
+        assert!(parse(&marked).unwrap().print().contains("__attribute__((unused)) int G(int b)"));
     }
 
     #[test]
