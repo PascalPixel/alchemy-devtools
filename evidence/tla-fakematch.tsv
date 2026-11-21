@@ -308,3 +308,4 @@ games/tla/src/scene/jupiter_lighthouse_room_red_key.c	JupiterLighthouse_StartSpa
 games/tla/src/scene/trial_road.c	TrialRoad_ShowRaceMap	FAKEMATCH(dead)	owner set to 0 after its last read, before the fades are cleared; as no store, 15 of 81 instructions differ in tla-en.
 games/tla/src/scene/mars_lighthouse_star_room.c	MarsLighthouseStarRoom_UseMarsStar	FAKEMATCH(temporary)	zero holds 0 for its uses; as 0 written at them, 21 of 382 instructions differ in tla-ja.
 games/tla/src/menu/menu_djinn.c	DjinnMenu_DrawStatPreview	FAKEMATCH(dead)	an empty once-only block after the tile loop; as no block, 7 of 906 instructions differ in tla-en.
+games/tla/src/scene/lobby.c	LinkLobby_Initialize	FAKEMATCH(signature)	score, a u32, holds a row's address and then the score read through it; as the tallies read and written by name at its three sites, 22 of 438 instructions differ in tla-en.
