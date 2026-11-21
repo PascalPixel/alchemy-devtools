@@ -710,9 +710,21 @@ pub(crate) fn untaken_rows(path: &str, source: &str) -> Result<Vec<String>, Stri
 /// How the finding for a row no tag takes ends.
 const UNTAKEN: &str = " and no such tag in the file";
 
-/// Each game's fake-match score in the C as it stood at `rev`, read through
-/// git from the same paths (S2): the score is the code's, kept nowhere.
-fn scores_at(root: &Path, rev: &str, paths: &[String]) -> Result<BTreeMap<String, usize>, String> {
+/// A file's code as the compiler reads it, its comments left out: two
+/// sources with the same code differ only in their comments, tags among them.
+fn code_of(source: &str) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    for token in lex(source).iter().filter(|token| token.kind != Kind::Comment) {
+        token.text.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
+/// Each C file under `paths` as it stood at `rev`, read through git: its
+/// tags' weights summed (S2's score) and its code (`code_of`). The score is
+/// the code's own, kept nowhere.
+fn files_at(root: &Path, rev: &str, paths: &[String]) -> Result<BTreeMap<String, (usize, u64)>, String> {
     let git = |args: &[&str]| {
         std::process::Command::new("git").arg("-C").arg(root).args(args).output().map_err(|error| format!("git: {error}"))
     };
@@ -722,13 +734,14 @@ fn scores_at(root: &Path, rev: &str, paths: &[String]) -> Result<BTreeMap<String
     if !listed.status.success() {
         return Err(format!("--against {rev}: {}", String::from_utf8_lossy(&listed.stderr).trim()));
     }
-    let mut scores: BTreeMap<String, usize> = BTreeMap::new();
+    let mut files = BTreeMap::new();
     for name in String::from_utf8_lossy(&listed.stdout).lines().filter(|name| name.ends_with(".c") || name.ends_with(".h")) {
         let shown = git(&["show", &format!("{rev}:{name}")])?;
-        let (tags, _) = findings(name, &String::from_utf8_lossy(&shown.stdout), &[]);
-        *scores.entry(game_of(name)).or_default() += tags.score;
+        let source = String::from_utf8_lossy(&shown.stdout);
+        let (tags, _) = findings(name, &source, &[]);
+        files.insert(name.to_string(), (tags.score, code_of(&source)));
     }
-    Ok(scores)
+    Ok(files)
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
@@ -748,6 +761,8 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     // Each game's fake-match rows by file, read once.
     let mut tables: BTreeMap<String, BTreeMap<String, Vec<Measurement>>> = BTreeMap::new();
     let mut scanned: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    // Each file's score and code now, to hold against the earlier commit's.
+    let mut now_files: BTreeMap<String, (usize, u64)> = BTreeMap::new();
     for file in sources(root, &paths)? {
         let source = String::from_utf8_lossy(&std::fs::read(&file).map_err(|error| format!("{}: {error}", file.display()))?).into_owned();
         let name = file.strip_prefix(root).unwrap_or(&file).display().to_string();
@@ -765,6 +780,9 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             None => &[],
         };
         let (found_tags, mut found) = findings(&name, &source, rows);
+        if against.is_some() {
+            now_files.insert(name.clone(), (found_tags.score, code_of(&source)));
+        }
         let (kinds, malformed) = self::views(&source);
         found.extend(malformed);
         let game = games.entry(game_of(&name)).or_default();
@@ -794,16 +812,42 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             }
         }
     }
-    // Against an earlier commit, a game's score may not have risen (S2).
+    // Against an earlier commit, a game's score may not have risen (S2). A
+    // file whose code has not changed since then holds the same devices: a tag
+    // added or made heavier there is a device found, and does not count as a
+    // rise; a tag taken off or lightened there hides one, and is refused.
     if let Some(rev) = &against {
-        let before = scores_at(root, rev, &paths)?;
+        let before = files_at(root, rev, &paths)?;
+        let mut then: BTreeMap<String, usize> = BTreeMap::new();
+        for (name, (score, _)) in &before {
+            *then.entry(game_of(name)).or_default() += score;
+        }
+        let mut found: BTreeMap<String, usize> = BTreeMap::new();
+        for (name, (score, code)) in &now_files {
+            let Some((earlier, earlier_code)) = before.get(name) else { continue };
+            if code != earlier_code {
+                continue;
+            }
+            if score < earlier {
+                println!("{name}: its tags weigh {score} where they weighed {earlier} at {rev}, and its code is the same: a tag taken off or lightened on unchanged code hides a device (S2)");
+                games.entry(game_of(name)).or_default().findings += 1;
+            } else {
+                *found.entry(game_of(name)).or_default() += score - earlier;
+            }
+        }
         for (name, game) in games.iter_mut() {
-            let then = before.get(name).copied().unwrap_or(0);
-            if game.tags.score > then {
-                println!("{name}: fake-match score {} is above the {then} at {rev}: a device came in or got worse (S2)", game.tags.score);
+            let then = then.get(name).copied().unwrap_or(0);
+            let found = found.get(name).copied().unwrap_or(0);
+            let counted = game.tags.score - found;
+            let found_text = match found {
+                0 => String::new(),
+                n => format!(", {n} of it devices found on code unchanged since"),
+            };
+            if counted > then {
+                println!("{name}: fake-match score {} is above the {then} at {rev}{found_text}: a device came in or got worse (S2)", game.tags.score);
                 game.findings += 1;
             } else {
-                println!("{name}: fake-match score {then} at {rev}, {} now", game.tags.score);
+                println!("{name}: fake-match score {then} at {rev}, {} now{found_text}", game.tags.score);
             }
         }
     }
@@ -1291,6 +1335,16 @@ void Named(int x) {
 ";
         let (_, found) = findings("games/tla/src/x.c", source, &[]);
         assert_eq!(found, [Finding { line: 1, message: "Relabelled: 1 asm statements, 0 barrier tags".to_string() }]);
+    }
+
+    /// A file's code is compared without its comments, so a tag added to
+    /// unchanged code is seen as a device found, not a device come in.
+    #[test]
+    fn code_is_compared_without_its_comments() {
+        let plain = "void F(int x) {\n  x = 1;\n}\n";
+        let tagged = "void F(int x) {\n  /* FAKEMATCH(dead): a store. */\n  x = 1;\n}\n";
+        assert_eq!(code_of(plain), code_of(tagged));
+        assert_ne!(code_of(plain), code_of("void F(int x) {\n  x = 2;\n}\n"));
     }
 
     /// No game takes a pin, and The Broken Seal no signature either.
