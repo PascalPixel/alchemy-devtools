@@ -30,10 +30,11 @@ const RETIRED: &str = "one-pass";
 /// (removed 12 November 2026): one compiler meeting one reconstruction
 /// twice is no evidence that Camelot wrote it.
 const RETIRED_LEFTOVER: &str = "form";
-/// The kinds The Broken Seal refuses (S2).
-const NOT_IN_TBS: [&str; 2] = ["pin", "signature"];
-/// The kinds The Lost Age refuses (S2): its last pin went on 20 November 2026.
-const NOT_IN_TLA: [&str; 1] = ["pin"];
+/// The kind The Broken Seal refuses besides a pin (S2).
+const NOT_IN_TBS: [&str; 1] = ["signature"];
+/// A register pin, which no game takes (S2): The Lost Age's last went on 20
+/// November 2026.
+const PIN: &str = "pin";
 /// A measurement inside a tag ("4 of 549 instructions differing in tla-en"),
 /// taken out of a leftover's evidence before it is read: a measured edition
 /// is no evidence that the edition uses the thing.
@@ -204,15 +205,15 @@ fn judge_kind(text: &str, broken_seal: bool) -> Result<(), String> {
              reconstruction twice, a fake match with its device's kind"
         ));
     }
+    if !leftover && kind == PIN {
+        return Err("no game takes a pin, a variable fixed to a register (S2)".to_string());
+    }
     let kinds: &[&str] = if leftover { &LEFTOVERS } else { &DEVICES };
     if !kinds.contains(&kind) {
         return Err(format!("unknown kind {kind}: {}", kinds.join(", ")));
     }
     if !leftover && broken_seal && NOT_IN_TBS.contains(&kind) {
         return Err(format!("The Broken Seal takes no {kind} (S2)"));
-    }
-    if !leftover && !broken_seal && NOT_IN_TLA.contains(&kind) {
-        return Err(format!("The Lost Age takes no {kind} (S2)"));
     }
     Ok(())
 }
@@ -338,6 +339,8 @@ pub struct Tags {
     pub in_evidence: usize,
     /// The fake-match tags' weights summed (S2's score).
     pub score: usize,
+    /// The fake-match tags of each kind, in `DEVICES`' order.
+    pub kinds: [usize; DEVICES.len()],
 }
 
 impl Tags {
@@ -350,14 +353,12 @@ impl Tags {
         self.in_both += other.in_both;
         self.in_evidence += other.in_evidence;
         self.score += other.score;
+        for (mine, theirs) in self.kinds.iter_mut().zip(other.kinds) {
+            *mine += theirs;
+        }
     }
 }
 
-/// A fake-match kind's weight in its game's score (S2); 0 for a kind S2 has
-/// not, which is a finding of its own.
-fn weight(kind: &str) -> usize {
-    DEVICES.iter().position(|device| *device == kind).map_or(0, |at| WEIGHTS[at])
-}
 
 /// The game a source path is in (`tbs` for `games/tbs/...`).
 fn game_name(path: &str) -> Option<&str> {
@@ -511,7 +512,11 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
                 tags.leftover += 1;
             } else {
                 tags.fakematch += 1;
-                tags.score += word_and_kind(&plain(&comments)).map_or(0, |(_, kind)| weight(kind));
+                // A kind S2 has not weighs nothing: it is a finding of its own.
+                if let Some(at) = word_and_kind(&plain(&comments)).and_then(|(_, kind)| DEVICES.iter().position(|device| *device == kind)) {
+                    tags.kinds[at] += 1;
+                    tags.score += WEIGHTS[at];
+                }
             }
             if token.text.starts_with("///") || token.text.starts_with("/**") {
                 found.push(Finding { line: token.line, message: "a tag is a // or /* */ comment, not documentation".to_string() });
@@ -661,12 +666,19 @@ impl Game {
         };
         vec![
             format!("{name}: {} files; {} findings", self.files, self.findings),
-            format!("{name}: {} FAKEMATCH tags, score {}", self.tags.fakematch, self.tags.score),
+            format!("{name}: {} FAKEMATCH tags, score {} ({})", self.tags.fakematch, self.tags.score, self.kinds()),
             format!("{name}: {} LEFTOVER tags", self.tags.leftover),
             format!("{name}: measurements: {} in {table} (H8), {} in the source{both}", self.tags.in_evidence, self.tags.in_source),
             format!("{name}: {} // DEAD: marks{unformed}", self.tags.dead),
             format!("{name}: {views} VIEW markers{kinds}"),
         ]
+    }
+}
+
+impl Game {
+    /// Each kind's count, worst first, as `signature 8, volatile 3, ...`.
+    fn kinds(&self) -> String {
+        DEVICES.iter().zip(self.tags.kinds).map(|(kind, n)| format!("{kind} {n}")).collect::<Vec<_>>().join(", ")
     }
 }
 
@@ -698,12 +710,40 @@ pub(crate) fn untaken_rows(path: &str, source: &str) -> Result<Vec<String>, Stri
 /// How the finding for a row no tag takes ends.
 const UNTAKEN: &str = " and no such tag in the file";
 
+/// Each game's fake-match score in the C as it stood at `rev`, read through
+/// git from the same paths (S2): the score is the code's, kept nowhere.
+fn scores_at(root: &Path, rev: &str, paths: &[String]) -> Result<BTreeMap<String, usize>, String> {
+    let git = |args: &[&str]| {
+        std::process::Command::new("git").arg("-C").arg(root).args(args).output().map_err(|error| format!("git: {error}"))
+    };
+    let mut listing = vec!["ls-tree", "-r", "--name-only", rev, "--"];
+    listing.extend(paths.iter().map(String::as_str));
+    let listed = git(&listing)?;
+    if !listed.status.success() {
+        return Err(format!("--against {rev}: {}", String::from_utf8_lossy(&listed.stderr).trim()));
+    }
+    let mut scores: BTreeMap<String, usize> = BTreeMap::new();
+    for name in String::from_utf8_lossy(&listed.stdout).lines().filter(|name| name.ends_with(".c") || name.ends_with(".h")) {
+        let shown = git(&["show", &format!("{rev}:{name}")])?;
+        let (tags, _) = findings(name, &String::from_utf8_lossy(&shown.stdout), &[]);
+        *scores.entry(game_of(name)).or_default() += tags.score;
+    }
+    Ok(scores)
+}
+
 pub fn run(arguments: &[String]) -> Result<(), String> {
-    if let Some(flag) = arguments.iter().find(|argument| argument.starts_with('-')) {
-        return Err(format!("unknown option {flag}"));
+    let mut against = None;
+    let mut paths = Vec::new();
+    let mut arguments = arguments.iter();
+    while let Some(argument) = arguments.next() {
+        match argument.as_str() {
+            "--against" => against = Some(arguments.next().ok_or("--against takes a commit")?.clone()),
+            flag if flag.starts_with('-') => return Err(format!("unknown option {flag}")),
+            path => paths.push(path.to_string()),
+        }
     }
     let root = crate::compile::root();
-    let paths = if arguments.is_empty() { vec!["games".to_string()] } else { arguments.to_vec() };
+    let paths = if paths.is_empty() { vec!["games".to_string()] } else { paths };
     let mut games: BTreeMap<String, Game> = BTreeMap::new();
     // Each game's fake-match rows by file, read once.
     let mut tables: BTreeMap<String, BTreeMap<String, Vec<Measurement>>> = BTreeMap::new();
@@ -754,6 +794,19 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             }
         }
     }
+    // Against an earlier commit, a game's score may not have risen (S2).
+    if let Some(rev) = &against {
+        let before = scores_at(root, rev, &paths)?;
+        for (name, game) in games.iter_mut() {
+            let then = before.get(name).copied().unwrap_or(0);
+            if game.tags.score > then {
+                println!("{name}: fake-match score {} is above the {then} at {rev}: a device came in or got worse (S2)", game.tags.score);
+                game.findings += 1;
+            } else {
+                println!("{name}: fake-match score {then} at {rev}, {} now", game.tags.score);
+            }
+        }
+    }
     for (name, game) in &games {
         for line in game.lines(name) {
             println!("{line}");
@@ -795,7 +848,8 @@ mod tests {
         let ok = "FAKEMATCH(barrier): dmg held; as no asm, 2 of 3451 instructions differ in tla-en.";
         assert_eq!(judge(ok, false), None);
         assert_eq!(judge(&ok.replace("barrier", "temporary"), true), None);
-        assert!(judge(&ok.replace("barrier", "pin"), true).unwrap().contains("Broken Seal"));
+        assert!(judge(&ok.replace("barrier", "pin"), true).unwrap().contains("no game takes a pin"));
+        assert!(judge(&ok.replace("barrier", "pin"), false).unwrap().contains("no game takes a pin"));
         assert!(judge(&ok.replace("barrier", "signature"), true).unwrap().contains("Broken Seal"));
         assert!(judge(&ok.replace("barrier", "signature"), false).is_none());
         // Revised S2 (11 November 2026): volatile is a kind, in both games.
@@ -973,7 +1027,7 @@ void F(int x) {
             game.lines("games/tbs"),
             [
                 "games/tbs: 832 files; 0 findings",
-                "games/tbs: 169 FAKEMATCH tags, score 0",
+                "games/tbs: 169 FAKEMATCH tags, score 0 (signature 0, volatile 0, barrier 0, wrapper 0, temporary 0, dead 0)",
                 "games/tbs: 48 LEFTOVER tags",
                 "games/tbs: measurements: 217 in evidence/tbs-fakematch.tsv (H8), 0 in the source",
                 "games/tbs: 33 // DEAD: marks",
@@ -1184,17 +1238,18 @@ void New(int id, int cue) {
 #endif
 ";
         let (tags, found) = findings("games/tla/src/x.c", source, &[]);
-        // A barrier, two pins and a dead store: 3 + 4 + 4 + 1.
-        assert_eq!(tags, Tags { fakematch: 4, in_source: 4, score: 12, ..Tags::default() });
+        // A barrier and a dead store, 16 + 2; the two pins weigh nothing,
+        // being no kind.
+        assert_eq!(tags, Tags { fakematch: 4, in_source: 4, score: 18, kinds: [0, 0, 1, 0, 0, 1], ..Tags::default() });
         assert_eq!(
             found,
             [
                 Finding { line: 7, message: "Untagged: 2 asm statements, 0 barrier tags".to_string() },
                 Finding { line: 12, message: "PINNED: 1 asm statements, 0 barrier tags".to_string() },
-                Finding { line: 14, message: "The Lost Age takes no pin (S2)".to_string() },
+                Finding { line: 14, message: "no game takes a pin, a variable fixed to a register (S2)".to_string() },
                 Finding { line: 32, message: "a tag outside any function".to_string() },
                 Finding { line: 36, message: "Old: 1 asm statements, 0 barrier tags".to_string() },
-                Finding { line: 40, message: "The Lost Age takes no pin (S2)".to_string() },
+                Finding { line: 40, message: "no game takes a pin, a variable fixed to a register (S2)".to_string() },
             ]
         );
     }
@@ -1215,7 +1270,8 @@ void F(int x) {
 }
 ";
         let (tags, _) = findings("games/tla/src/x.c", source, &[]);
-        assert_eq!((tags.fakematch, tags.score), (6, 6 + 5 + 3 + 2 + 1 + 1));
+        assert_eq!((tags.fakematch, tags.score), (6, 64 + 32 + 16 + 8 + 4 + 2));
+        assert_eq!(tags.kinds, [1; 6]);
     }
 
     /// An asm statement is a barrier's: under a tag of a milder kind it is
@@ -1237,15 +1293,15 @@ void Named(int x) {
         assert_eq!(found, [Finding { line: 1, message: "Relabelled: 1 asm statements, 0 barrier tags".to_string() }]);
     }
 
-    /// Each game refuses its own kinds: The Broken Seal a pin and a
-    /// signature, The Lost Age a pin alone.
+    /// No game takes a pin, and The Broken Seal no signature either.
     #[test]
     fn each_game_refuses_its_own_kinds() {
         let pin = "FAKEMATCH(pin): r pinned; as a plain local, 2 of 9 instructions differ in tla-en.";
         let signature = "FAKEMATCH(signature): j typed s32; as a pointer, 2 of 9 instructions differ in tla-en.";
-        assert_eq!(judge_kind(pin, true), Err("The Broken Seal takes no pin (S2)".to_string()));
+        let refused = Err("no game takes a pin, a variable fixed to a register (S2)".to_string());
+        assert_eq!(judge_kind(pin, true), refused);
         assert_eq!(judge_kind(signature, true), Err("The Broken Seal takes no signature (S2)".to_string()));
-        assert_eq!(judge_kind(pin, false), Err("The Lost Age takes no pin (S2)".to_string()));
+        assert_eq!(judge_kind(pin, false), refused);
         assert_eq!(judge_kind(signature, false), Ok(()));
     }
 }
