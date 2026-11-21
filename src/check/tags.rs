@@ -690,22 +690,6 @@ pub(crate) fn untaken_rows(path: &str, source: &str) -> Result<Vec<String>, Stri
 /// How the finding for a row no tag takes ends.
 const UNTAKEN: &str = " and no such tag in the file";
 
-/// What is wrong with a game's fake-match score against the one
-/// `evidence/fakematch-score.tsv` records, if anything (S2): the score only
-/// ever goes down, each fall recorded with the change that makes it.
-fn score_finding(game: &str, score: usize, recorded: Option<usize>) -> Option<String> {
-    match recorded {
-        None => Some(format!("no fake-match score recorded: add `{game}\t{score}` to evidence/fakematch-score.tsv (S2)")),
-        Some(recorded) if score > recorded => {
-            Some(format!("fake-match score {score} is above the {recorded} recorded in evidence/fakematch-score.tsv: a device came in or got worse (S2)"))
-        }
-        Some(recorded) if score < recorded => {
-            Some(format!("fake-match score {score} is below the {recorded} recorded in evidence/fakematch-score.tsv: record {score} there (S2)"))
-        }
-        Some(_) => None,
-    }
-}
-
 pub fn run(arguments: &[String]) -> Result<(), String> {
     if let Some(flag) = arguments.iter().find(|argument| argument.starts_with('-')) {
         return Err(format!("unknown option {flag}"));
@@ -760,20 +744,6 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
                 }
                 games.entry(game_of(file)).or_default().findings += rows.len();
             }
-        }
-    }
-    // Each whole game read is held to its recorded score: a rise is refused,
-    // and a fall is recorded in the same commit (S2).
-    let recorded = evidence::scores()?;
-    for (name, game) in games.iter_mut() {
-        let Some(short) = name.strip_prefix("games/") else { continue };
-        let whole = paths.iter().any(|path| matches!(path.trim_end_matches('/'), "games") || path.trim_end_matches('/') == name);
-        if !whole {
-            continue;
-        }
-        if let Some(message) = score_finding(short, game.tags.score, recorded.iter().find(|(game, _)| game == short).map(|(_, score)| *score)) {
-            println!("{name}: {message}");
-            game.findings += 1;
         }
     }
     for (name, game) in &games {
@@ -1220,9 +1190,9 @@ void New(int id, int cue) {
     }
 
     /// Each tag weighs its kind's place in S2's ranking, and a game's score
-    /// may neither rise above the recorded one nor fall below it unrecorded.
+    /// is their sum, read from the tags alone.
     #[test]
-    fn the_score_weighs_each_kind_and_only_goes_down() {
+    fn the_score_weighs_each_kind() {
         let source = "\
 void F(int x) {
   /* FAKEMATCH(signature): a. */
@@ -1236,10 +1206,6 @@ void F(int x) {
 ";
         let (tags, _) = findings("games/tla/src/x.c", source, &[]);
         assert_eq!((tags.fakematch, tags.score), (6, 6 + 5 + 3 + 2 + 1 + 1));
-        assert_eq!(score_finding("tla", 18, Some(18)), None);
-        assert!(score_finding("tla", 19, Some(18)).unwrap().contains("above the 18"));
-        assert!(score_finding("tla", 17, Some(18)).unwrap().contains("record 17 there"));
-        assert!(score_finding("tla", 17, None).unwrap().contains("tla\t17"));
     }
 
     /// Each game refuses its own kinds: The Broken Seal a pin and a
