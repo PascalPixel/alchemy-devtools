@@ -42,6 +42,7 @@ pub fn parse(source: &str) -> Result<Node> {
         }
     }
     let global_asm = preserve_global_asm(&mut input, &prefix)?;
+    preserve_nested_functions(&mut input, &prefix, &mut pragmas)?;
     let aliases = permissive_input(&mut input, &prefix)?;
     let mut parsed = parse_input(input)?;
     while let Some((open, close)) = sizeof_cast_ambiguity(&parsed)? {
@@ -324,6 +325,64 @@ fn preserve_global_asm(input: &mut String, prefix: &str) -> Result<HashMap<Strin
     }
     for (start, end, replacement) in patches.into_iter().rev() { input.replace_range(start..end, &replacement); }
     Ok(statements)
+}
+
+/// The text a GNU nested function definition keeps in its placeholder: the
+/// printer writes it back as read, and no rewrite looks inside it.
+pub const VERBATIM: &str = "_alchemy verbatim ";
+
+/// lang-c has no GNU nested functions. Each definition inside a function body
+/// becomes a placeholder declaration whose pragma text is the definition.
+fn preserve_nested_functions(input: &mut String, prefix: &str, pragmas: &mut HashMap<String, String>) -> Result<()> {
+    use crate::permute::lex::{lex, Tok};
+    let tokens: Vec<_> = lex(input)?.into_iter().filter(|t| !matches!(t.tok, Tok::Comment(_))).collect();
+    const CONTROL: &[&str] = &["if", "else", "while", "for", "switch", "do", "return", "case", "goto", "sizeof"];
+    let mut depth = 0usize;
+    let mut patches = Vec::new();
+    let mut index = 0;
+    while index < tokens.len() {
+        let at_boundary = index > 0 && matches!(tokens[index - 1].tok, Tok::Punct(";" | "{" | "}"));
+        if depth >= 1 && at_boundary {
+            // A header: words and stars, a name, a parenthesised list, then "{".
+            let mut cursor = index;
+            let mut words = 0;
+            while let Some(token) = tokens.get(cursor) {
+                match &token.tok {
+                    Tok::Ident(word) if !CONTROL.contains(&word.as_str()) => words += 1,
+                    Tok::Punct("*") => {}
+                    _ => break,
+                }
+                cursor += 1;
+            }
+            if words >= 2 && tokens.get(cursor).is_some_and(|t| t.tok == Tok::Punct("(")) && matches!(tokens[cursor - 1].tok, Tok::Ident(_)) {
+                let mut parens = 0usize;
+                let mut close = cursor;
+                while let Some(token) = tokens.get(close) {
+                    match token.tok { Tok::Punct("(") => parens += 1, Tok::Punct(")") => { parens -= 1; if parens == 0 { break; } } _ => {} }
+                    close += 1;
+                }
+                if tokens.get(close + 1).is_some_and(|t| t.tok == Tok::Punct("{")) {
+                    let mut braces = 0usize;
+                    let mut end = close + 1;
+                    while let Some(token) = tokens.get(end) {
+                        match token.tok { Tok::Punct("{") => braces += 1, Tok::Punct("}") => { braces -= 1; if braces == 0 { break; } } _ => {} }
+                        end += 1;
+                    }
+                    if braces != 0 { return Err("a nested function's body does not close".into()); }
+                    let name = format!("{prefix}nested{}", pragmas.len());
+                    let text = input[tokens[index].start..tokens[end].end].to_string();
+                    pragmas.insert(name.clone(), format!("{VERBATIM}{text}"));
+                    patches.push((tokens[index].start, tokens[end].end, format!("int {name};")));
+                    index = end + 1;
+                    continue;
+                }
+            }
+        }
+        match tokens[index].tok { Tok::Punct("{") => depth += 1, Tok::Punct("}") => depth = depth.saturating_sub(1), _ => {} }
+        index += 1;
+    }
+    for (start, end, replacement) in patches.into_iter().rev() { input.replace_range(start..end, &replacement); }
+    Ok(())
 }
 
 fn string_literal(strings: &[String]) -> Node {

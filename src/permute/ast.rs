@@ -217,6 +217,9 @@ pub enum Stmt {
     Goto(String),
     Empty,
     Comment(String),
+    /// A GNU nested function definition, kept as its tokens: printed as
+    /// read and never rewritten.
+    Verbatim(String),
 }
 
 /// A parsed function: its header as written, and its body.
@@ -592,6 +595,10 @@ fn print_stmt(stmt: &Stmt, level: usize, out: &mut String) {
             out.push_str(";\n");
         }
         Stmt::Empty => out.push_str(";\n"),
+        Stmt::Verbatim(text) => {
+            out.push_str(text);
+            out.push('\n');
+        }
         Stmt::Comment(text) => {
             let mut lines = text.lines();
             if let Some(first) = lines.next() {
