@@ -176,6 +176,16 @@ impl Flags {
 
     /// A flag by name (as in scene `scene` when it names one there), or a
     /// number written in hex.
+    /// A flag's name, by its number: flags.tsv's, else flags.h's.
+    pub fn name(&self, flag: u16) -> Option<String> {
+        let mut names: Vec<&String> = self.global.iter().filter(|(_, &v)| v == flag).map(|(n, _)| n).collect();
+        if names.is_empty() {
+            names = self.header.iter().filter(|(_, &v)| v == flag).map(|(n, _)| n).collect();
+        }
+        names.sort();
+        names.first().map(|n| n.to_string())
+    }
+
     pub fn resolve(&self, name: &str, scene: Option<&str>) -> Option<u16> {
         if let Some(n) = name.strip_prefix("0x").and_then(|h| u16::from_str_radix(h, 16).ok()) {
             return Some(n);
@@ -434,6 +444,11 @@ pub fn parse_trigger(text: &str) -> Result<Trigger, String> {
     if let Some(rest) = first.strip_prefix("touch ") {
         return target(rest).map(Trigger::Touch).ok_or_else(bad);
     }
+    // A cast for any target, as the trigger tables read from the running
+    // game write it: `psynergy 144 anywhere`.
+    if let Some(ability) = first.strip_prefix("psynergy ").and_then(|rest| rest.strip_suffix(" anywhere")) {
+        return ability.trim().parse::<u16>().map(Trigger::Cast).map_err(|_| bad());
+    }
     // A Psynergy by its ability id, as the trigger tables read from the
     // running game write it (triggers.rs): `psynergy 141 on 1032`.
     if let Some((ability, actor)) = first.strip_prefix("psynergy ").and_then(|rest| rest.split_once(" on ")) {
@@ -614,6 +629,15 @@ mod tests {
         assert!(alts[1].conditions.is_empty());
         // One trigger listed under several conditions is one alternative each.
         assert_eq!(alternatives("search 70", "search 70: FLAG_D set | search 70: FLAG_D clear", "").len(), 2);
+    }
+
+    #[test]
+    fn a_flag_is_named_by_its_number() {
+        let header = HashMap::from([("FLAG_B".to_string(), 3u16), ("FLAG_A".to_string(), 3), ("FLAG_C".to_string(), 4)]);
+        let flags = Flags { dir: std::path::PathBuf::new(), global: HashMap::new(), scoped: HashMap::new(), header };
+        assert_eq!(flags.name(3).as_deref(), Some("FLAG_A"));
+        assert_eq!(flags.name(4).as_deref(), Some("FLAG_C"));
+        assert_eq!(flags.name(5), None);
     }
 
     #[test]

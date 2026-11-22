@@ -87,6 +87,9 @@ mod probe_units;
 mod probe_scene;
 #[cfg(feature = "render")]
 mod source;
+// Its options are read with or without the feature; what they stage needs it.
+#[cfg_attr(not(feature = "render"), allow(dead_code))]
+mod stage;
 #[cfg(feature = "render")]
 mod whole;
 mod plan;
@@ -470,6 +473,9 @@ const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene 
          [--places places.tsv --events events.tsv --flags flags.tsv]
          [--event NAME]... [--whole [--whole-frame L,T,W,H] [--whole-window PLACE]]
          [--out DIR] [--edition tbs-en] [--jobs N]
+       event only: [--set FLAG]... [--clear FLAG]... [--give ITEM]...
+         [--entrance N] [--at X,Y[,LAYER]] [--face WAY] [--hold KEYS:N,...]
+         [--then KEYS:N,...]
 Plays a built edition of either game (make tbs-en, make tla-en) under
 libmgba from a new game's defaults straight into each scene, and writes
 into DIR/<scene>/ (DIR defaults to out/EDITION/places) PNG files at the
@@ -605,6 +611,53 @@ skipped.tsv names the other's.
 With ALCHEMY_RENDER_DEBUG, each walk prints the keys held, as MOMENT_HOLD
 (render guide) takes them.
 
+An event's own function that does nothing unless story flags hold (its
+whole body inside `if (GameFlag_Get(F) && !GameFlag_Get(G)) { ... }`, or
+after `if (!Event_GetFlag(F)) return;`) is played with those flags, read
+from the scene's source, as its row's condition is: the shipwrights stop
+the party only once it is reunited at Contigo. A Psynergy row for any
+target (PSYNERGY_ANYWHERE) is a cast anywhere. A cast anywhere, or on a
+cell, whose function draws on the map (its map copies' destinations, an
+actor it puts at given pixels: a door Reveal shows, a clump of weeds drawn
+rows north of the cell Cyclone answers on) is cast from ground the leader
+can walk to within 3 cells of what it draws, and of the cell it answers
+on, first. A push tries the best push of each thing it could move before
+the second of any (a scene's second log). Where a recording's note says
+nothing visible happens, it goes on with what the event does instead, as
+far as the run reads it: the flags it sets and clears, the camera's bounds
+changed, cells whose behaviour changed, the leader put on another layer or
+moved far; where the run reads none of these, what the event's own function
+assigns to, read from its source (Crossbone Isle's rise counter).
+
+Staging (event only), for what the walk-up cannot find; each is kept for
+every event and every try of the run, and the note column says what was
+staged:
+  --set FLAG, --clear FLAG (repeatable): story flags set or cleared for
+    every try, after the row's conditions and the function's guard (a name
+    from flags.h, one the scene's source #defines, or a 0x number).
+  --give ITEM (repeatable): the item put in the leader's bag on entering
+    (ITEM_MAGMA_BALL, magma_ball or a number, from item_ids.h): a talk
+    whose branch needs it.
+  --entrance N: the scene is entered by entrance N alone, even where its
+    room does not hold the trigger as the scene is entered first.
+  --at X,Y[,LAYER]: the leader starts on map cell (X, Y), on that map layer
+    (his own as he arrives when none), instead of a spot found around the
+    trigger; no walk up is planned, and he is not refused for standing
+    before it. He faces --face WAY (north, north-east, east ... or n, ne,
+    e ...), else toward the trigger's actor or nearest cell; a touch is
+    walked into that way, and Move and Carry push that way.
+  --hold KEYS:N,... (repeatable, appended): keys held before the trigger,
+    each for N frames, KEYS key names joined by + (up, down, left, right,
+    a, b, l, r, start, select) or wait (up:40,wait:20,a:2). For a touch
+    the keys are what gives the trigger: he walks into it (a pipe, a
+    stream held across); for an event the game raises itself (a fireball
+    rolling into him) the keys play while the field sequence's answer to
+    the trigger is awaited, counted as its start once it runs the event's
+    own function. Before a talk, a search or a cast the keys walk him to
+    where it is given.
+  --then KEYS:N,...: keys held once the player has control again, recorded
+    too: he walks on after the trigger, or waits to see what comes.
+
 --whole also draws each event's GIF whole, as <event>-whole.gif: every
 second frame of the same run, from the trigger until it leaves the scene
 or a battle begins, shows the room's whole camera box (the map's scroll
@@ -645,6 +698,7 @@ struct SceneOptions {
     events_tsv: Option<PathBuf>,
     flags_tsv: Option<PathBuf>,
     jobs: jobs::Jobs,
+    stage: stage::Stage,
 }
 
 fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
@@ -661,6 +715,7 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
         events_tsv: None,
         flags_tsv: None,
         jobs: jobs::Jobs::new(),
+        stage: stage::Stage::default(),
     };
     let mut options = arguments.iter();
     while let Some(argument) = options.next() {
@@ -684,6 +739,9 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             "--places" => o.places_tsv = Some(PathBuf::from(value("--places")?)),
             "--events" => o.events_tsv = Some(PathBuf::from(value("--events")?)),
             "--flags" => o.flags_tsv = Some(PathBuf::from(value("--flags")?)),
+            other if kind == "event" && stage::Stage::is_option(other) => {
+                o.stage.option(other, &mut |name| value(name))?;
+            }
             other => {
                 if !o.jobs.option(other, &mut value)? {
                     return Err(format!("unexpected argument {other:?}\n{SCENES_USAGE}"));
@@ -736,7 +794,7 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
         chosen
     };
     let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
-    let request = SceneRequest { kind, scenes: &scene_rows, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags, whole: o.whole,
+    let request = SceneRequest { kind, scenes: &scene_rows, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags, whole: o.whole, stage: &o.stage,
         from_triggers: kind == "event" && o.events_tsv.is_none(),
         #[cfg(feature = "render")]
         cut: o.cut,
@@ -763,6 +821,8 @@ struct SceneRequest<'a> {
     whole: bool,
     #[cfg(feature = "render")]
     cut: whole::Cut,
+    /// What `render event`'s staging options ask for (stage.rs).
+    stage: &'a stage::Stage,
 }
 
 /// What a scene's work is part of: the scene itself for places, its
@@ -1107,6 +1167,7 @@ impl Machines {
             every_place: std::cell::Cell::new(false),
             whole: r.whole,
             cut: r.cut,
+            stage: r.stage,
         }
     }
 }
@@ -1717,6 +1778,15 @@ fn play_guide(
 #[cfg(all(test, feature = "render"))]
 mod tests {
     use super::*;
+
+    /// Every staging option of `render event` is read and named in its usage.
+    #[test]
+    fn every_staging_option_is_in_the_usage() {
+        for option in ["--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then"] {
+            assert!(stage::Stage::is_option(option));
+            assert!(SCENES_USAGE.contains(&format!("{option} ")), "{option} is not in SCENES_USAGE");
+        }
+    }
 
     /// Every mode `render guide` plays is named in its usage, so a new one
     /// or a renamed one can be found from `--help`.

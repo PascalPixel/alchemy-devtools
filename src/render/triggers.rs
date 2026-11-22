@@ -26,6 +26,9 @@ const RAISED: u32 = 6;
 /// A Psynergy row on the actor the leader faces (TRIGGER_PSYNERGY_ON_ACTOR);
 /// its ability in control bits 15..8.
 const ON_ACTOR: u32 = 0x10;
+/// A Psynergy row for any target (TRIGGER_PSYNERGY_ANYWHERE: Reveal cast
+/// anywhere in the room).
+const ANYWHERE: u32 = 0x80;
 /// A condition's flag must be set (CONDITION_FLAG_SET); -1 is none.
 const CONDITION_FLAG_SET: i16 = 0x1000;
 
@@ -49,7 +52,9 @@ fn trigger_text(row: &Row) -> Option<String> {
         EXAMINE => Some(format!("search {target}")),
         PSYNERGY => {
             let ability = (row.control >> 8) & 0xff;
-            if row.control & ON_ACTOR != 0 {
+            if row.control & ANYWHERE != 0 {
+                Some(format!("psynergy {ability} anywhere"))
+            } else if row.control & ON_ACTOR != 0 {
                 Some(format!("psynergy {ability} on {}", row.target))
             } else {
                 Some(format!("psynergy {ability} on cell {target}"))
@@ -202,6 +207,9 @@ mod tests {
         assert_eq!(trigger_text(&row(0x602, 3, -1)).as_deref(), Some("touch 3"));
         assert_eq!(trigger_text(&row(3, 11, -1)).as_deref(), Some("search 11"));
         assert_eq!(trigger_text(&row(5 | 0x10 | 0x8d << 8, 0x408, -1)).as_deref(), Some("psynergy 141 on 1032"));
+        // Reveal for any target (PSYNERGY_ANYWHERE) is no cell's.
+        assert_eq!(trigger_text(&row(0x5000_0000 | 5 | 0x80 | 0x90 << 8, 0, -1)).as_deref(), Some("psynergy 144 anywhere"));
+        assert_eq!(super::super::story::parse_trigger("psynergy 144 anywhere"), Ok(super::super::story::Trigger::Cast(0x90)));
         assert_eq!(trigger_text(&row(1, 4, -1)), None);
         assert_eq!(condition_text(-1), None);
         assert_eq!(condition_text(0x1000 | 0x823).as_deref(), Some("0x823 set"));

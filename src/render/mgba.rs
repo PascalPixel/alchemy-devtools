@@ -188,3 +188,26 @@ impl Drop for Gba<'_> {
         unsafe { alchemy_mgba_close(self.machine.as_ptr()) }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The shim reads libmgba's structures as the library was built: a
+    /// layer shown or hidden is the renderer's, and each of the five can be
+    /// (enableVideoLayer once landed on loadSymbols, which crashed).
+    #[test]
+    fn every_layer_can_be_shown_and_hidden() {
+        let rom = vec![0u8; 0x400];
+        let mut gba = Gba::new(&rom).unwrap();
+        for layer in 0..5 {
+            gba.show_layer(layer, false);
+            gba.show_layer(layer, true);
+        }
+        for _ in 0..1000 {
+            gba.step();
+        }
+        let state = gba.save();
+        gba.load(&state);
+    }
+}

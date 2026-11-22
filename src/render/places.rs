@@ -427,6 +427,9 @@ pub struct Context<'a> {
     /// <event>-whole.gif, and how its whole frames are cut and dressed.
     pub whole: bool,
     pub cut: super::whole::Cut,
+    /// What `render event`'s staging options ask for: flags, items, the
+    /// way in, the leader's start and keys held (stage.rs).
+    pub stage: &'a super::stage::Stage,
 }
 
 /// Whether a scene is a place: not the title, the clear-data screen or the
@@ -976,7 +979,15 @@ impl Context<'_> {
                     }
                 };
                 let mut rooms: Vec<Entrance> = Vec::new();
-                for e in first.entrances.iter().filter(|e| e.number >= 0 && !stands_in(e, &first.entrances)) {
+                // A cast for what its event draws somewhere is made in the
+                // room that holds it, entered by its entrance nearest it.
+                let aim = if let Trigger::Cast(_) = trigger { super::stage::drawn_cells(&self.source(scene), &event.name) } else { Vec::new() };
+                let mut ways: Vec<&Entrance> = first.entrances.iter().filter(|e| e.number >= 0 && !stands_in(e, &first.entrances)).collect();
+                if let Some(&(ax, az)) = aim.first() {
+                    let (x, z) = (ax * first.size + first.size / 2, az * first.size + first.size / 2);
+                    ways.sort_by_key(|e| (!box_holds(e.camera, first.header, x, z), (i32::from(e.x) - x).pow(2) + (i32::from(e.z) - z).pow(2)));
+                }
+                for e in ways {
                     if !rooms.iter().any(|r| r.camera == e.camera) && rooms.len() < MAX_ENTRANCES {
                         rooms.push(*e);
                     }
@@ -1094,6 +1105,49 @@ impl Context<'_> {
         Ok(out)
     }
 
+    /// places(), by the entrance --entrance names alone when it names one,
+    /// which is entered even where places() finds the trigger in no room it
+    /// enters (a start --at stages).
+    fn staged_places(
+        &self,
+        scenes: &[&Scene],
+        trigger: Trigger,
+        event: &Event,
+        set: &[u16],
+        clear: &[u16],
+        scans: &mut HashMap<ScanKey, Result<Scan, String>>,
+    ) -> Result<Vec<(u16, Entrance)>, Failure> {
+        let found = self.places(scenes, trigger, event, set, clear, scans);
+        let Some(number) = self.stage.entrance else {
+            return found;
+        };
+        let places = self.by_entrance(found.unwrap_or_default(), scenes, set, clear, scans);
+        if places.is_empty() {
+            return Err(Failure::new(format!("no scene of its overlay has entrance {number}")));
+        }
+        Ok(places)
+    }
+
+    /// The places to try, by the entrance --entrance names alone when it
+    /// names one: those of `places` it enters by, or else that entrance of
+    /// each scene, wherever its room is.
+    fn by_entrance(&self, places: Vec<(u16, Entrance)>, scenes: &[&Scene], set: &[u16], clear: &[u16], scans: &mut HashMap<ScanKey, Result<Scan, String>>) -> Vec<(u16, Entrance)> {
+        let Some(number) = self.stage.entrance else {
+            return places;
+        };
+        let chosen: Vec<(u16, Entrance)> = places.iter().filter(|(_, e)| e.number == number as i16).copied().collect();
+        if !chosen.is_empty() {
+            return chosen;
+        }
+        let mut out = Vec::new();
+        for scene in scenes.iter().filter(|s| is_place(s).is_ok()) {
+            if let Ok(scan) = self.scanned(scans, scene.number, 0, set, clear) {
+                out.extend(scan.entrances.iter().filter(|e| e.number == number as i16).map(|e| (scene.number, *e)));
+            }
+        }
+        out
+    }
+
     /// Plays every chosen event of `scenes` and writes its pages and one GIF
     /// of the whole event. Rows of the scenes with the same name are one
     /// event. Each event is tried by each of its triggers in turn, with its
@@ -1169,13 +1223,23 @@ impl Context<'_> {
 
     /// The flags an alternative sets and clears, with the stormy night's
     /// childhood.
-    fn alternative_flags(&self, alternative: &Alternative, first: &Scene) -> Result<(Vec<u16>, Vec<u16>), String> {
+    /// What its own function's guard needs comes first (stage::guard), then
+    /// the row's conditions, then the flags --set and --clear name.
+    fn alternative_flags(&self, alternative: &Alternative, first: &Scene, event: &Event) -> Result<(Vec<u16>, Vec<u16>), String> {
         let (mut set, mut clear) = (Vec::new(), Vec::new());
+        let mut needs: Vec<(u16, bool)> = self.guard_flags(event, first);
         for (name, on) in &alternative.conditions {
-            let flag = self.flags.resolve(name, first.symbol.as_deref()).ok_or_else(|| format!("unknown flag {name}"))?;
+            needs.push((self.flags.resolve(name, first.symbol.as_deref()).ok_or_else(|| format!("unknown flag {name}"))?, *on));
+        }
+        for (names, on) in [(&self.stage.set, true), (&self.stage.clear, false)] {
+            for name in names {
+                needs.push((self.resolve_flag(name, first).ok_or_else(|| format!("unknown flag {name}"))?, on));
+            }
+        }
+        for (flag, on) in needs {
             set.retain(|&f| f != flag);
             clear.retain(|&f| f != flag);
-            if *on { &mut set } else { &mut clear }.push(flag);
+            if on { &mut set } else { &mut clear }.push(flag);
         }
         // The stormy night is the prologue: Isaac and Garet are children
         // then, and the party's sprites follow FLAG_CHILDHOOD
@@ -1189,6 +1253,37 @@ impl Context<'_> {
         set.sort_unstable();
         clear.sort_unstable();
         Ok((set, clear))
+    }
+
+    /// A flag by name or 0x number, as flags.h has it or as the scene's
+    /// own source defines it (`#define FLAG_TOLD_INDRA_MOVED 0x8b0`, or a
+    /// name for another flag).
+    fn resolve_flag(&self, name: &str, scene: &Scene) -> Option<u16> {
+        let mut name = name.trim().to_string();
+        let defines = super::stage::defines(&self.source(scene));
+        for _ in 0..4 {
+            if let Some(f) = self.flags.resolve(&name, scene.symbol.as_deref()) {
+                return Some(f);
+            }
+            name = defines.get(&name)?.trim_matches(|c| c == '(' || c == ')').to_string();
+        }
+        None
+    }
+
+    /// The text of a scene's own source, empty when it cannot be read.
+    fn source(&self, scene: &Scene) -> String {
+        std::fs::read_to_string(crate::compile::root().join(&scene.file)).unwrap_or_default()
+    }
+
+    /// The flags the event's own function tests before it does anything
+    /// (stage::guard), which a run must give or it plays nothing: the
+    /// shipwrights stop the party only once it is reunited at Contigo.
+    /// Flags no name resolves are left out.
+    fn guard_flags(&self, event: &Event, scene: &Scene) -> Vec<(u16, bool)> {
+        if is_message_row(&event.name) {
+            return Vec::new();
+        }
+        super::stage::guard(&self.source(scene), &event.name).into_iter().filter_map(|(name, on)| self.resolve_flag(&name, scene).map(|f| (f, on))).collect()
     }
 
     /// The story flags tried one at a time when an event's own do not put
@@ -1260,7 +1355,7 @@ impl Context<'_> {
                     continue;
                 }
             };
-            let (mut set, mut clear) = match self.alternative_flags(alternative, first) {
+            let (mut set, mut clear) = match self.alternative_flags(alternative, first, event) {
                 Ok(flags) => flags,
                 Err(e) => {
                     failure.get_or_insert_with(|| Failure::new(e));
@@ -1292,7 +1387,7 @@ impl Context<'_> {
                 .chain(together);
             let mut placed = false;
             for flags in flag_sets {
-                let places = match self.places(scenes, trigger, event, &flags, &clear, &mut job.scans) {
+                let places = match self.staged_places(scenes, trigger, event, &flags, &clear, &mut job.scans) {
                     Ok(places) => places,
                     Err(f) => {
                         // A story flag that puts nothing on stage says less
@@ -1477,10 +1572,10 @@ impl Context<'_> {
             }
         };
         let (set, clear) = match event.alternatives.first() {
-            Some(alternative) => self.alternative_flags(alternative, first)?,
-            None => (Vec::new(), Vec::new()),
+            Some(alternative) => self.alternative_flags(alternative, first, event)?,
+            None => self.alternative_flags(&Alternative { trigger: Err(String::new()), conditions: Vec::new() }, first, event)?,
         };
-        let mut places = self.places(scenes, trigger, event, &set, &clear, &mut job.scans).map_err(|f| f.reason)?;
+        let mut places = self.staged_places(scenes, trigger, event, &set, &clear, &mut job.scans).map_err(|f| f.reason)?;
         // Entrance 0 is where a scene puts the party with no way in: often a
         // debug default out in the sky or on water, sometimes the one place an
         // opening plays. A start tries it after every other.
@@ -1547,6 +1642,20 @@ impl Context<'_> {
         field.whole = self.whole && record.is_some();
         field.has_trigger = event.trigger().is_ok();
         field.walk_up = true;
+        field.staged = self.stage.staged();
+        if matches!(trigger, Trigger::Cast(_) | Trigger::PsynergyCell(..)) {
+            if let Some(scene) = self.scenes.iter().find(|s| s.number == setup.scene) {
+                field.aim = super::stage::drawn_cells(&self.source(scene), &event.name);
+            }
+        }
+        field.script = self.stage.hold.clone();
+        field.then = self.stage.then.clone();
+        if !self.stage.give.is_empty() {
+            let header = std::fs::read_to_string(crate::compile::root().join("games").join(self.symbols.l.game.dir()).join("include/item_ids.h")).unwrap_or_default();
+            for name in &self.stage.give {
+                field.give(super::stage::item_id(&header, name)?)?;
+            }
+        }
         let entered: Saved = field.save();
         match after {
             Some(saved) => field.load(saved),
@@ -1556,7 +1665,10 @@ impl Context<'_> {
             }
         }
         field.play_as(&own);
-        let spots = field.spots(trigger)?;
+        let spots = match self.stage.at {
+            Some((cx, cz, layer)) => vec![field.staged_spot(trigger, (cx, cz), layer, self.stage.face)?],
+            None => field.spots(trigger)?,
+        };
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
             let first: Vec<String> = spots.iter().take(MAX_SPOTS).map(|s| format!("({},{})L{}k{:#x}", s.x, s.z, s.layer, s.walk)).collect();
             eprintln!("    {} spots at scene {} entrance {}: {}", event.name, setup.scene, setup.entrance, first.join(" "));
@@ -1735,6 +1847,25 @@ impl Context<'_> {
     }
 
     /// An event's GIF.
+    /// The run's note, and where it says nothing visible happens, what the
+    /// event does instead as far as the run read it: the flags it sets and
+    /// clears, by name, then its other effects (Field::effects).
+    /// Where the run read nothing, what the event's own function assigns
+    /// to, from its source (stage::assigned).
+    fn note_with_effects(&self, run: &EventRun, scene: &Scene, event: &Event) -> String {
+        let name = |flag: u16| self.flags.name(flag).unwrap_or_else(|| format!("flag {flag:#05x}"));
+        let flags: Vec<(String, bool)> = run.flags_changed.iter().map(|&(f, on)| (name(f), on)).collect();
+        let mut effects = run.effects.clone();
+        let nothing = run.note.as_deref().is_some_and(|n| n.contains("nothing visible happens") && !n.contains("moves the leader and the camera"));
+        if nothing && flags.is_empty() && effects.is_empty() {
+            let assigned = super::stage::assigned(&self.source(scene), &event.name);
+            if !assigned.is_empty() {
+                effects.push(format!("its code changes {}, which nothing on the screen shows (read from its source)", assigned.join(", ")));
+            }
+        }
+        instead(run.note.clone().unwrap_or_default(), &flags, &effects)
+    }
+
     fn write_event(&mut self, scene: &Scene, entrance: i16, event: &Event, run: &EventRun) -> Result<(), String> {
         let base = file_name(&event.name);
         let messages = event.messages.iter().map(|m| format!("{m:05}")).collect::<Vec<_>>().join(", ");
@@ -1756,7 +1887,7 @@ impl Context<'_> {
             event: event.name.clone(),
             frames: written,
             leads_to: leads_to.unwrap_or_default(),
-            note: run.note.clone().unwrap_or_default(),
+            note: self.note_with_effects(run, scene, event),
             messages,
             file,
             ..Row::default()
@@ -1775,6 +1906,23 @@ impl Context<'_> {
         }
         Ok(())
     }
+}
+
+/// `note` with what an event that shows nothing does instead: the flags
+/// it sets and clears, then its other effects.
+fn instead(mut note: String, flags: &[(String, bool)], effects: &[String]) -> String {
+    let mut out: Vec<String> = Vec::new();
+    for (on, verb) in [(true, "sets"), (false, "clears")] {
+        let names: Vec<&str> = flags.iter().filter(|f| f.1 == on).map(|f| f.0.as_str()).collect();
+        if !names.is_empty() {
+            out.push(format!("it {verb} {}", names.join(", ")));
+        }
+    }
+    out.extend(effects.iter().cloned());
+    if !out.is_empty() {
+        note.push_str(&format!("; what it does instead: {}", out.join("; ")));
+    }
+    note
 }
 
 /// An event's name as a file name: letters, digits and underscores kept,
@@ -1818,6 +1966,17 @@ mod tests {
         let line = same_columns(old, "vale\t4\tVale\t\tevent-gif\t0\tEvent_X\t\t\t\t\t\t90\t00001\tvale/events/Event_X.gif");
         assert_eq!(line, "vale\t4\tVale\t\tevent-gif\t0\tEvent_X\t\t\t\t\t\t90\t\t\t00001\tvale/events/Event_X.gif");
         assert_eq!(same_columns(INDEX_HEADER, "a\tb"), "a\tb");
+    }
+
+    #[test]
+    fn a_note_of_nothing_visible_says_what_happens_instead() {
+        let flags = vec![("FLAG_A".to_string(), true), ("FLAG_B".to_string(), false), ("FLAG_C".to_string(), true)];
+        let effects = vec!["it changes the camera's bounds from (0, 0)-(240, 160) to (0, 0)-(480, 160) pixels".to_string()];
+        assert_eq!(
+            instead("nothing visible happens".to_string(), &flags, &effects),
+            "nothing visible happens; what it does instead: it sets FLAG_A, FLAG_C; it clears FLAG_B; it changes the camera's bounds from (0, 0)-(240, 160) to (0, 0)-(480, 160) pixels"
+        );
+        assert_eq!(instead("nothing visible happens".to_string(), &[], &[]), "nothing visible happens");
     }
 
     #[test]

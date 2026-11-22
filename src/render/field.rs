@@ -110,6 +110,9 @@ pub(super) const CELL_WALL: i32 = 255;
 /// North, east, south and west: a cell's step, the heading that faces that
 /// way and the direction key that walks it.
 const STEP: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
+/// struct Unit's Psynergy slots and, after them, its items (INVENTORY_SLOTS).
+const PSYNERGY_SLOTS: u32 = 32;
+const INVENTORY_SLOTS: u32 = 15;
 const FACING: [u32; 4] = [0xc000, 0x0000, 0x4000, 0x8000];
 const KEYS: [u32; 4] = [KEY_UP, KEY_RIGHT, KEY_DOWN, KEY_LEFT];
 /// MapGrid_CheckCollision's limits: ground up to 8 pixels higher or 12 lower
@@ -489,6 +492,10 @@ pub(super) struct Track {
     /// it began (Field::cut): a whole picture never pins a view from one
     /// side of a change and draws it on the other.
     cuts: u32,
+    /// Whether the field sequence's answer to a trigger it raised itself
+    /// (Scene_RunRaisedTrigger) counts as a dispatch: a staged event the game
+    /// raises (render event --hold).
+    catch_raised: bool,
 }
 
 /// What makes a field (Field::recipe): its ROM, symbols and setup, and the
@@ -608,6 +615,18 @@ pub struct Field<'rom> {
     party: Option<&'static Party>,
     /// The keys held at the end of each frame, while they are kept.
     keys_kept: Option<Vec<u32>>,
+    /// A start staged by hand (render event --at, --hold): the leader is
+    /// where the stage put him, no walk up to the trigger is planned, and
+    /// he is not refused for standing before it.
+    pub staged: bool,
+    /// The cells the event's own function draws on (stage::drawn_cells):
+    /// a cast for it is made where it reaches them.
+    pub aim: Vec<(i32, i32)>,
+    /// Keys held before the trigger (--hold): for a touch, or a trigger
+    /// the game raises itself (a fireball's), they are what gives it.
+    pub script: Vec<super::stage::Held>,
+    /// Keys held once the player has control again (--then).
+    pub then: Vec<super::stage::Held>,
 }
 
 impl<'rom> Field<'rom> {
@@ -698,8 +717,9 @@ impl<'rom> Field<'rom> {
             party_calls: 0,
             party_saved: [0; 5],
             cuts: 0,
+            catch_raised: false,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new() };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -785,6 +805,21 @@ impl<'rom> Field<'rom> {
     pub fn abilities(&mut self, owner: u8) -> Result<Vec<u16>, String> {
         let unit = self.eval(self.s.unit_get, [u32::from(owner), 0, 0, 0])?;
         Ok((0..32).map(|i| self.gba.read16(unit + self.s.l.unit_action_slots + 4 * i) & 0x3fff).filter(|&a| a != 0).collect())
+    }
+
+    /// Puts item `item` in the leader's bag, in its first empty slot (struct
+    /// Unit's inventory, after its 32 Psynergy slots), unless he holds it.
+    pub fn give(&mut self, item: u16) -> Result<(), String> {
+        let owner = self.gba.read8(self.s.game_state + self.s.l.gs_active_owners);
+        let unit = self.unit(owner)?;
+        let bag = unit + self.s.l.unit_action_slots + 4 * PSYNERGY_SLOTS;
+        let held: Vec<u16> = (0..INVENTORY_SLOTS).map(|i| self.gba.read16(bag + 2 * i)).collect();
+        if held.iter().any(|&h| h & 0x1ff == item) {
+            return Ok(());
+        }
+        let free = held.iter().position(|&h| h == 0).ok_or("the leader's bag is full")?;
+        self.gba.write16(bag + 2 * free as u32, item);
+        Ok(())
     }
 
     /// The address of character `owner`'s struct Unit (Unit_Get).
@@ -1077,6 +1112,12 @@ impl<'rom> Field<'rom> {
             self.gba.set_register(LR, if last { self.t.raise_lr } else { s.run_raised | 1 });
             self.gba.branch(target);
             return Ok(frame_done);
+        }
+        // A trigger the game raised while a staged event waits for it.
+        if pc == s.run_raised && self.t.catch_raised && self.t.raise_len == 0 && self.t.dispatched.is_none() {
+            self.t.dispatched = Some((TRIGGER_DIRECT, 0, self.t.frame));
+            self.t.dispatch_return = lr(&self.gba);
+            self.t.dispatch_result = None;
         }
         if pc == s.step && self.t.calling {
             for (i, &v) in self.t.call_saved.iter().enumerate().take(4) {
@@ -2819,6 +2860,42 @@ impl<'rom> Field<'rom> {
     /// The cells (x, z) whose word in any layer differs from `before`
     /// (cell_codes, taken earlier in the same scene): what an event drew or
     /// opened in the map.
+    /// What an event did since the moment of `flags`, `bounds`, `cells` and
+    /// `leader` that the screen may not show: the flags set (true) and
+    /// cleared, past the one that keeps battles away; and in words, the
+    /// camera's bounds changed, cells whose words changed, and the leader
+    /// put on another layer or moved far.
+    fn effects(&self, flags: &[u8], bounds: [i32; 4], cells: &[i32], leader: Option<Actor>) -> (Vec<(u16, bool)>, Vec<String>) {
+        let mut changed = Vec::new();
+        for (i, (now, was)) in self.flag_bytes().iter().zip(flags).enumerate() {
+            for bit in 0..8 {
+                let flag = (i * 8 + bit) as u16;
+                if (now ^ was) & (1 << bit) != 0 && flag != self.s.l.flag_no_encounters {
+                    changed.push((flag, now & (1 << bit) != 0));
+                }
+            }
+        }
+        let mut out = Vec::new();
+        let now = self.bounds();
+        if now != bounds {
+            let b = |v: [i32; 4]| format!("({}, {})-({}, {})", v[0] >> 16, v[1] >> 16, v[2] >> 16, v[3] >> 16);
+            out.push(format!("it changes the camera's bounds from {} to {} pixels", b(bounds), b(now)));
+        }
+        let cells = self.changed_cells(cells);
+        if let Some(&(cx, cz)) = cells.first() {
+            out.push(format!("it changes {} cell{} of the map, from cell ({cx}, {cz}), in what {} rather than what {} drawn", cells.len(), if cells.len() == 1 { "" } else { "s" }, if cells.len() == 1 { "it does" } else { "they do" }, if cells.len() == 1 { "is" } else { "are" }));
+        }
+        if let (Some(from), Some(to)) = (leader, self.leader()) {
+            if from.layer != to.layer {
+                out.push(format!("it puts the leader on map layer {} (from {})", to.layer, from.layer));
+            }
+            if (to.x - from.x).abs().max((to.z - from.z).abs()) >= TELEPORT {
+                out.push(format!("it moves the leader from ({}, {}) to ({}, {})", from.x, from.z, to.x, to.z));
+            }
+        }
+        (changed, out)
+    }
+
     fn changed_cells(&self, before: &[i32]) -> Vec<(i32, i32)> {
         let now = self.cell_codes();
         if now.len() != before.len() || now.is_empty() {
@@ -3164,6 +3241,21 @@ impl<'rom> Field<'rom> {
             if !out.is_empty() {
                 return Ok(out);
             }
+            // A cast anywhere for what its event draws somewhere (Reveal on a
+            // hidden door) is made where it reaches that, then where he is.
+            if let Trigger::Cast(_) = trigger {
+                if !self.aim.is_empty() {
+                    let reach = self.reach(None)?;
+                    let mut aimed = self.aimed_spots(&reach, &[]);
+                    if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+                        eprintln!("    aimed at {:?}: {} spots on layer {}", self.aim, aimed.len(), reach.layer);
+                    }
+                    if !aimed.is_empty() {
+                        aimed.push(here);
+                        return Ok(aimed);
+                    }
+                }
+            }
             let wrong = Self::wrong_for_a_placed_start(self.misplaced()?);
             if wrong.is_empty() {
                 return Ok(vec![here]);
@@ -3176,6 +3268,23 @@ impl<'rom> Field<'rom> {
             Trigger::Touch(code) => Some(code),
             _ => None,
         })?;
+        // A cast on a cell whose event draws elsewhere (a clump of weeds
+        // drawn rows north of the cell it answers on) is made from between
+        // the two, where its whirl reaches both, first.
+        if let (Trigger::PsynergyCell(_, code), false) = (trigger, self.aim.is_empty()) {
+            let size = self.cell_size();
+            let cells: Vec<(i32, i32)> = self.cells_with_code(code)?.into_iter().filter(|c| c.0 == 0).map(|(_, cx, cz)| (cx, cz)).collect();
+            let mut aimed = self.aimed_spots(&reach, &cells);
+            if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+                eprintln!("    aimed at {:?} from {:?}: {} spots on layer {}", self.aim, cells, aimed.len(), reach.layer);
+            }
+            if !aimed.is_empty() {
+                if let Ok(more) = self.spots_in(trigger, &reach) {
+                    aimed.extend(more.into_iter().filter(|s| !aimed.iter().any(|a| (a.x / size, a.z / size) == (s.x / size, s.z / size))).collect::<Vec<_>>());
+                }
+                return Ok(aimed);
+            }
+        }
         match self.spots_in(trigger, &reach) {
             Err(e) if self.relaxed && e.contains("cannot walk") => {
                 let anywhere = reach.anywhere();
@@ -3185,6 +3294,88 @@ impl<'rom> Field<'rom> {
             }
             spots => spots,
         }
+    }
+
+    /// Spots on ground the leader can walk to within AIM_CELLS cells of
+    /// what the event draws (`self.aim`), and of a cell of `on` when it
+    /// gives any (the cell the cast answers on), not on either: those nearest
+    /// both first, facing the cell answered on, else what is drawn.
+    fn aimed_spots(&mut self, reach: &Reach, on: &[(i32, i32)]) -> Vec<Spot> {
+        let size = self.cell_size();
+        let layer = reach.layer;
+        let near = |cells: &[(i32, i32)], c: (i32, i32)| cells.iter().map(|&(x, z)| (x - c.0).abs().max((z - c.1).abs())).min().unwrap_or(0);
+        let mut ranked: Vec<(i32, i32, (i32, i32))> = Vec::new();
+        let aim = self.aim.clone();
+        for &(ax, az) in &aim {
+            for dz in -AIM_CELLS..=AIM_CELLS {
+                for dx in -AIM_CELLS..=AIM_CELLS {
+                    let c = (ax + dx, az + dz);
+                    if aim.contains(&c) || on.contains(&c) || ranked.iter().any(|r| r.2 == c) {
+                        continue;
+                    }
+                    let (to_aim, to_on) = (near(&aim, c), near(on, c));
+                    if to_aim > AIM_CELLS || to_on > AIM_CELLS {
+                        continue;
+                    }
+                    let (x, z) = (c.0 * size + size / 2, c.1 * size + size / 2);
+                    if !self.inside(x, z, 0) || !Self::standable(self.code_at(layer, x, z)) || !reach.holds(layer, x, z) {
+                        continue;
+                    }
+                    ranked.push((to_aim.max(to_on), to_aim + to_on, c));
+                }
+            }
+        }
+        ranked.sort();
+        let toward = |c: (i32, i32)| -> (i32, i32) {
+            let target = if on.is_empty() { &aim } else { on };
+            let t = target.iter().min_by_key(|&&(x, z)| (x - c.0).pow(2) + (z - c.1).pow(2)).copied().unwrap_or(c);
+            (t.0 - c.0, t.1 - c.1)
+        };
+        let mut out = Vec::new();
+        for (_, _, c) in ranked.into_iter().take(MAX_AIMED) {
+            let (x, z) = (c.0 * size + size / 2, c.1 * size + size / 2);
+            let Ok(height) = self.ground(layer, x, z) else {
+                continue;
+            };
+            let (dx, dz) = toward(c);
+            let facing = if (dx, dz) == (0, 0) { 0x4000 } else { FACING[nearest_way(facing_toward(dx, dz))] };
+            out.push(Spot { x, z, layer, height, facing, walk: 0, cell: None });
+        }
+        out
+    }
+
+    /// The spot a start staged by hand (render event --at) stands on: the
+    /// middle of cell `cell` on map layer `layer` (the leader's own when
+    /// none), facing `face`, else toward what the trigger names (its actor,
+    /// the nearest cell with its code). A touch is walked into the d-pad way
+    /// nearest that facing, and Move and Carry push that way.
+    pub fn staged_spot(&mut self, trigger: Trigger, cell: (i32, i32), layer: Option<u8>, face: Option<u32>) -> Result<Spot, String> {
+        let size = self.cell_size();
+        let (x, z) = (cell.0 * size + size / 2, cell.1 * size + size / 2);
+        if !self.inside(x, z, 0) {
+            return Err(format!("cell ({}, {}) lies outside the map", cell.0, cell.1));
+        }
+        let leader = self.leader().ok_or("the leader has no actor")?;
+        let layer = layer.unwrap_or(leader.layer.min(2));
+        let height = if self.world() { 0 } else { self.ground(layer, x, z)? };
+        let toward = match trigger {
+            Trigger::Talk(id) | Trigger::Psynergy(_, id) => self.present(id).ok().map(|a| (a.x - x, a.z - z)),
+            Trigger::Search(code) | Trigger::PsynergyCell(_, code) | Trigger::Touch(code) => self
+                .cells_with_code(code)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(_, cx, cz)| (cx * size + size / 2 - x, cz * size + size / 2 - z))
+                .min_by_key(|&(dx, dz)| dx * dx + dz * dz),
+            _ => None,
+        };
+        let facing = face
+            .or_else(|| toward.filter(|&d| d != (0, 0)).map(|(dx, dz)| facing_toward(dx, dz)))
+            .unwrap_or_else(|| self.gba.read32(self.s.game_state + self.s.l.gs_heading) & 0xffff);
+        let walk = match trigger {
+            Trigger::Touch(_) | Trigger::Psynergy(MOVE | CARRY, _) => KEYS[nearest_way(facing)],
+            _ => 0,
+        };
+        Ok(Spot { x, z, layer, height, facing, walk, cell: None })
     }
 
     fn spots_in(&mut self, trigger: Trigger, reach: &Reach) -> Result<Vec<Spot>, String> {
@@ -3367,7 +3558,7 @@ impl<'rom> Field<'rom> {
                 // Pushes go toward what lies in the next cell first: an
                 // actor (a statue, a crate, a log whose footprint covers
                 // it), then a wall.
-                let mut pushed: Vec<(i32, usize, Spot)> = Vec::new();
+                let mut pushed: Vec<(i32, usize, Option<u16>, Spot)> = Vec::new();
                 let mut walked = Vec::new();
                 for (layer, cx, cz) in cells {
                     let (tx, tz) = (cx * size + size / 2, cz * size + size / 2);
@@ -3380,7 +3571,9 @@ impl<'rom> Field<'rom> {
                         let pushes = if facing.is_some() { &ways[..1] } else { &ways[..] };
                         for &d in pushes {
                             let (nx, nz) = (tx + STEP[d].0 * 16, tz + STEP[d].1 * 16);
-                            let near = others.iter().map(|(_, a)| (a.x - nx).abs().max((a.z - nz).abs())).min().unwrap_or(i32::MAX);
+                            let nearest = others.iter().map(|(id, a)| ((a.x - nx).abs().max((a.z - nz).abs()), *id)).min();
+                            let near = nearest.map_or(i32::MAX, |n| n.0);
+                            let ahead_id = nearest.filter(|n| n.0 <= 24).map(|n| n.1);
                             let rank = if near <= 12 {
                                 0
                             } else if near <= 24 {
@@ -3396,7 +3589,7 @@ impl<'rom> Field<'rom> {
                             // push toward the cell most of them border first.
                             let ahead = (cx + STEP[d].0, cz + STEP[d].1);
                             let around = if facing.is_some() { STEP.iter().filter(|s| (ahead.0 + s.0, ahead.1 + s.1) != (cx, cz) && self.cell(layer, ahead.0 + s.0, ahead.1 + s.1) == i32::from(code)).count() } else { 0 };
-                            pushed.push((rank, around, Spot { x: tx, z: tz, layer, height: target, facing: FACING[d], walk: KEYS[d], cell: Some((cx, cz)) }));
+                            pushed.push((rank, around, ahead_id, Spot { x: tx, z: tz, layer, height: target, facing: FACING[d], walk: KEYS[d], cell: Some((cx, cz)) }));
                         }
                     }
                     for (rank, &d) in ways.iter().enumerate() {
@@ -3418,10 +3611,14 @@ impl<'rom> Field<'rom> {
                 }
                 // Cells on the layer the leader walks come first: he stands on
                 // another only where a scene puts him there (a bridge).
-                pushed.sort_by_key(|(rank, around, s)| (s.layer != reach.layer, std::cmp::Reverse(*around), *rank));
+                pushed.sort_by_key(|(rank, around, _, s)| (s.layer != reach.layer, std::cmp::Reverse(*around), *rank));
+                // Each thing that could be pushed has its best push tried
+                // before any has its second: of a scene's two logs, the
+                // river's is pushed too, not only the first one's every way.
+                let pushed = best_of_each(pushed, |p| p.2);
                 // The way the row faces first, then spots in the open.
                 walked.sort_by_key(|(rank, s)| (s.layer != reach.layer, *rank, std::cmp::Reverse(reach.open(s.layer, s.x, s.z))));
-                out.extend(pushed.into_iter().map(|(_, _, spot)| spot));
+                out.extend(pushed.into_iter().map(|(_, _, _, spot)| spot));
                 out.extend(walked.into_iter().map(|(_, spot)| spot));
                 if out.is_empty() {
                     return Err(match unreached {
@@ -3540,13 +3737,16 @@ impl<'rom> Field<'rom> {
         // Beside an actor or in a tight spot is the game's own place for him
         // when he walked there (peering into a well); only a start that placed
         // him can be wrong.
-        let placed_him = self.unwalked || matches!(trigger, Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..));
+        let placed_him = self.unwalked || self.staged || matches!(trigger, Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..));
         if self.hide_leader {
             let selected = self.gba.read32(self.s.game_state + self.s.l.gs_selected_actor) as u16;
             self.hide_actor(selected);
         } else if record.is_some() {
             let mut wrong = Self::wrong_for_a_placed_start(self.misplaced()?);
-            wrong.retain(|why| placed_him || !(why.starts_with("he stands on actor") || why.starts_with("he can walk to") || why.starts_with("he has no sprite")));
+            // A start staged by hand may be a tight spot (a stream's bank,
+            // a moored iceberg): the stage answers for it.
+            let checked = placed_him && !self.staged;
+            wrong.retain(|why| checked || !(why.starts_with("he stands on actor") || why.starts_with("he can walk to") || why.starts_with("he has no sprite")));
             if !wrong.is_empty() {
                 return Err(format!("the leader is misplaced at ({}, {}): {}", spot.x, spot.z, wrong.join(", ")));
             }
@@ -3568,7 +3768,7 @@ impl<'rom> Field<'rom> {
         // The layer he walks up on, when it is not the spot's (see
         // plan_approach): he is put on the spot's as he comes onto its cell.
         let mut walk_layer = spot.layer;
-        if walks && spot.walk != 0 && !self.hide_leader && !self.world() {
+        if walks && spot.walk != 0 && !self.hide_leader && !self.world() && !self.staged {
             match self.plan_approach(spot, origin)? {
                 Ok((path, layer)) => {
                     way_up = Some(path);
@@ -3688,6 +3888,24 @@ impl<'rom> Field<'rom> {
             }
             None => self.frames(self.lead_in)?,
         }
+        // A pad script staged by hand (--hold): for a touch, or a trigger the
+        // game raises itself, the keys are what gives the trigger (below);
+        // before any other they walk him up to where it is given.
+        let script = super::stage::script_frames(&self.script);
+        let script_gives = matches!(trigger, Trigger::Touch(_) | Trigger::Direct(_));
+        if !script_gives && !script.is_empty() {
+            for &keys in &script {
+                self.hold(keys);
+                if record.is_some() {
+                    self.step_watching(&mut moving, &mut pad)?;
+                } else {
+                    self.frames(1)?;
+                }
+            }
+            self.hold(0);
+        }
+        let script = if script_gives { script } else { Vec::new() };
+        let mut script_at = 0;
         let cap = record.unwrap_or(EVENT_LIMIT as usize);
         self.t.dispatched = None;
         let trigger_frame = self.t.frame;
@@ -3760,7 +3978,16 @@ impl<'rom> Field<'rom> {
                 self.gba.write16(work + self.s.l.field_command, ability);
                 self.cut();
             }
+            // The script walks him into it.
+            Trigger::Touch(_) if !script.is_empty() => {}
             Trigger::Touch(_) => self.hold(spot.walk),
+            // A trigger the game raises (a fireball rolling into him) comes
+            // while the script plays: the field sequence's answer to it is
+            // the dispatch (see run_instruction).
+            Trigger::Direct(_) if !script.is_empty() => {
+                self.t.catch_raised = true;
+                self.cut();
+            }
             // Raised for the field sequence to start (see run_instruction):
             // the function, called as a row's dispatch calls it with the
             // value it would pass, here the raised one; or, for a message
@@ -3793,6 +4020,8 @@ impl<'rom> Field<'rom> {
         let cells_before = self.cell_codes();
         let palette_before = self.palette();
         let flags_before = self.flag_bytes();
+        let bounds_before = self.bounds();
+        let leader_before = self.leader();
         let mut moved = false;
         let mut fought = false;
         // Where in the recording a battle the event starts began, and whether
@@ -3817,7 +4046,9 @@ impl<'rom> Field<'rom> {
         // The frame the trigger was last given, and whether it was given
         // again after another row for the cell ran first.
         let mut pushed_from = trigger_frame;
-        let mut pushed_again = false;
+        // How many times he has gone on pushing; a staged run goes on
+        // longer, its keys played again each time.
+        let mut pushed_again = 0;
         // The frame the dispatch that began the event returned.
         let mut returned: Option<u32> = None;
         // Whether the field sequence stopped stepping for a while once the event
@@ -3865,6 +4096,14 @@ impl<'rom> Field<'rom> {
             if arrival.is_none() && self.recorded.as_ref().map_or(length as usize, |f| f.len()) >= cap {
                 capped = true;
                 break;
+            }
+            // The staged keys play on while another row for the cell runs
+            // first (a pipe's knock-back, run at every step): he goes on
+            // pushing until the walking row's own function runs.
+            if (began.is_none() || (self.staged && !self.t.own_ran && !self.own.is_empty())) && !script.is_empty() {
+                let keys = script.get(script_at).copied().unwrap_or(0);
+                script_at += 1;
+                self.hold(keys);
             }
             self.frames(1)?;
             // A recorded event that speaks from an actor not on stage is
@@ -3939,6 +4178,13 @@ impl<'rom> Field<'rom> {
                     self.t.dispatch_result = None;
                 }
                 if let Some((kind, value, frame)) = self.t.dispatched {
+                    // A start staged by hand walks where it walks: a cell of
+                    // another event on the way (a mask that follows him) is
+                    // stepped across, as the player would.
+                    if self.staged && !script.is_empty() && (kind != want.0 || want.1.is_some_and(|v| v != value)) && self.t.frame - pushed_from <= START_FRAMES + script.len() as u32 {
+                        self.t.dispatched = None;
+                        continue;
+                    }
                     if kind != want.0 || want.1.is_some_and(|v| v != value) {
                         self.hold(0);
                         return Err(format!("another event began ({} {value})", kind_name(kind)));
@@ -3946,11 +4192,13 @@ impl<'rom> Field<'rom> {
                     began = Some(frame);
                     lead = self.recorded.as_ref().map_or(0, Vec::len);
                     returned = (self.t.dispatch_return == 0).then_some(self.t.dispatch_end);
-                    self.hold(if steer.is_some() { spot.walk } else { 0 });
+                    if script.is_empty() {
+                        self.hold(if steer.is_some() { spot.walk } else { 0 });
+                    }
                     leader_from = self.actor(self.gba.read32(self.s.game_state + self.s.l.gs_selected_actor) as u16);
                     quiet_start = self.t.frame;
                     // What he does by walking shows him walking to it.
-                    if walks {
+                    if walks && !self.staged {
                         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
                             eprintln!("    walk up from ({}, {}): {} keys held (MOMENT_HOLD): {pad}", spot.x, spot.z, walk_note.as_deref().unwrap_or("walked"));
                         }
@@ -3970,7 +4218,7 @@ impl<'rom> Field<'rom> {
                             break;
                         }
                     }
-                } else if self.t.frame - pushed_from > START_FRAMES {
+                } else if self.t.frame - pushed_from > START_FRAMES + script.len() as u32 {
                     self.hold(0);
                     let how = match trigger {
                         Trigger::Talk(_) | Trigger::Search(_) => "pressing A",
@@ -4007,7 +4255,7 @@ impl<'rom> Field<'rom> {
             let shows_him = placed_him && !teleported && record.is_some() && !self.hide_leader && arrival.is_none() && self.scene() == self.setup.scene && !self.recorded.as_ref().and_then(|f| f.last()).is_some_and(|p| is_black_bgr555(p));
             // A direct start staged nothing: if the script walks the leader, the
             // event is about him, and he is walking from the wrong place.
-            if shows_him && self.has_trigger && matches!(trigger, Trigger::Direct(_)) {
+            if shows_him && self.has_trigger && matches!(trigger, Trigger::Direct(_)) && !self.staged {
                 if let (Some(from), Some(now)) = (leader_from, self.leader()) {
                     if (now.x - from.x).abs().max((now.z - from.z).abs()) >= DIRECT_WALK {
                         self.hold(0);
@@ -4111,9 +4359,11 @@ impl<'rom> Field<'rom> {
                 // Another row for the cell ran first and gave back control (a
                 // floor switch under the pillar the leader pushes from it):
                 // he goes on pushing, once, for the event's own.
-                if !self.own.is_empty() && !self.t.own_ran && spot.walk != 0 && !pushed_again {
-                    pushed_again = true;
+                if !self.own.is_empty() && !self.t.own_ran && spot.walk != 0 && pushed_again < if self.staged { STAGED_PUSHES } else { 1 } {
+                    pushed_again += 1;
                     pushed_from = self.t.frame;
+                    // A staged run plays its keys again from the start.
+                    script_at = 0;
                     began = None;
                     returned = None;
                     self.t.dispatched = None;
@@ -4150,6 +4400,16 @@ impl<'rom> Field<'rom> {
             if self.t.frame - quiet_start >= 120 && self.t.step_frame + 1 < self.t.frame {
                 self.press(3)?;
                 quiet_start = self.t.frame;
+            }
+        }
+        self.t.catch_raised = false;
+        // Keys staged for once the player has control again (--then): he
+        // walks on, or waits to see what comes.
+        let then_played = record.is_some() && !self.then.is_empty() && began.is_some() && !capped && !left && !fought && !defeated && arrival.is_none();
+        if then_played {
+            for keys in super::stage::script_frames(&self.then) {
+                self.hold(keys);
+                self.frames(1)?;
             }
         }
         self.hold(0);
@@ -4249,7 +4509,10 @@ impl<'rom> Field<'rom> {
         // after the last one (animation::check_black_clearance); the state
         // is put back after, so what plays next starts as it would have.
         let unfinished = capped && fought && self.scene() == MAP_BATTLE;
-        if record.is_some() && !capped && !defeated {
+        // A battle the party loses is cut to its opening below, which keeps
+        // the clearance after the battle's own black screen: the battle is
+        // played on for it too, as the party is downed.
+        if record.is_some() && !capped {
             let since = self.recorded.as_ref().and_then(|f| f.iter().rposition(|p| is_black_bgr555(p)).map(|i| f.len() - 1 - i));
             if let Some(since) = since.filter(|&s| s < CLEARED) {
                 let resume = self.save();
@@ -4308,7 +4571,7 @@ impl<'rom> Field<'rom> {
         // was refused.
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
             let moved_now: Vec<_> = watched.iter().filter_map(|&(id, x, z)| self.actor(id).map(|a| (id, a.x - x, a.z - z))).filter(|m| m.1 != 0 || m.2 != 0).collect();
-            eprintln!("    spot ({}, {}) layer {} walk {:#x}: began {began:?} ran {:#x} pages {} left {left} fought {fought} moved {moved} {moved_now:?} cells {} leader {:?}", spot.x, spot.z, spot.layer, spot.walk, self.t.ran, pages.len(), self.cell_codes() != cells_before, leader_from.map(|f| (f.x, f.z)));
+            eprintln!("    spot ({}, {}) layer {} walk {:#x}: began {began:?} capped {capped} defeated {defeated} unseen {unseen_move:?} ran {:#x} pages {} left {left} fought {fought} moved {moved} {moved_now:?} cells {} leader {:?}", spot.x, spot.z, spot.layer, spot.walk, self.t.ran, pages.len(), self.cell_codes() != cells_before, leader_from.map(|f| (f.x, f.z)));
         }
         if beyond {
             let past = "the camera shows past the room's box, where the map has no ground".to_string();
@@ -4318,7 +4581,18 @@ impl<'rom> Field<'rom> {
             let placed = "the arrival leaves the leader where the party cannot be, so he starts on the nearest open ground".to_string();
             note = Some(note.map_or(placed.clone(), |n| format!("{placed}; {n}")));
         }
-        if matches!(trigger, Trigger::Direct(_)) {
+        if self.staged {
+            let size = self.cell_size();
+            let mut how = format!("staged: the leader starts on cell ({}, {}) of layer {}", spot.x.div_euclid(size), spot.z.div_euclid(size), spot.layer);
+            if !self.script.is_empty() {
+                how.push_str(&format!(", keys held {}", super::stage::describe(&self.script)));
+            }
+            if then_played {
+                how.push_str(&format!(", then {} once the player has control again", super::stage::describe(&self.then)));
+            }
+            note = Some(note.map_or(how.clone(), |n| format!("{how}; {n}")));
+        }
+        if matches!(trigger, Trigger::Direct(_)) && script.is_empty() {
             let started = "started directly: nothing staged the moment its code needs, so what it does may be off camera or missing".to_string();
             note = Some(note.map_or(started.clone(), |n| format!("{started}; {n}")));
         }
@@ -4342,11 +4616,19 @@ impl<'rom> Field<'rom> {
             let why = "nothing visible happens: played again from the same moment with its row taken out of the scene's table, the screen shows the same".to_string();
             note = Some(note.map_or(why.clone(), |n| format!("{why}; {n}")));
         }
+        // What an event that shows nothing does instead, as far as the run
+        // can read it: the flags it sets and clears (named by places.rs),
+        // the camera's bounds, what cells do, where the leader is.
+        let (flags_changed, effects) = if note.as_deref().is_some_and(|n| n.contains("nothing visible happens")) && unseen_move.is_none() {
+            self.effects(&flags_before, bounds_before, &cells_before, leader_before)
+        } else {
+            (Vec::new(), Vec::new())
+        };
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() && walks {
             eprintln!("    keys held (MOMENT_HOLD): {pad}");
         }
         let frames_len = frames.len();
-        Ok(EventRun { pages, frames, states, whole: None, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, battle: fought.then(|| (battle_start, battle_end.unwrap_or(frames_len))), absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker), lead, unseen, goal, blank })
+        Ok(EventRun { pages, frames, states, whole: None, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, battle: fought.then(|| (battle_start, battle_end.unwrap_or(frames_len))), absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker), lead, unseen, goal, blank, flags_changed, effects })
     }
 
     /// One frame of an exit's arrival in the scene it leads to, which began
@@ -4481,6 +4763,34 @@ const AROUND: [(i32, i32); 8] = [(0, 1), (-1, 0), (1, 0), (0, -1), (-1, 1), (1, 
 
 /// The heading (1/65536 turns, 0 east, 0x4000 south) from a point toward
 /// one (dx, dz) pixels away, as Trig_Atan gives it.
+/// `items` in order, the first of each thing `of` names (what a push
+/// moves) before the rest; those that name none after them.
+fn best_of_each<T>(items: Vec<T>, of: impl Fn(&T) -> Option<u16>) -> Vec<T> {
+    let mut firsts: Vec<u16> = Vec::new();
+    let (best, rest): (Vec<T>, Vec<T>) = items.into_iter().partition(|item| match of(item) {
+        Some(id) if !firsts.contains(&id) => {
+            firsts.push(id);
+            true
+        }
+        _ => false,
+    });
+    best.into_iter().chain(rest).collect()
+}
+
+/// Times a staged run goes on pushing (its keys played again) after
+/// another row for the cell ran first.
+const STAGED_PUSHES: u32 = 4;
+
+/// How far from what its event draws, and from the cell it answers on, a
+/// cast is made, in cells; and how many such spots are tried.
+const AIM_CELLS: i32 = 3;
+const MAX_AIMED: usize = 6;
+
+/// The d-pad way (an index of KEYS) nearest a facing angle.
+fn nearest_way(facing: u32) -> usize {
+    (0..4).min_by_key(|&d| (FACING[d] as u16).wrapping_sub(facing as u16).min((facing as u16).wrapping_sub(FACING[d] as u16))).unwrap_or(2)
+}
+
 fn facing_toward(dx: i32, dz: i32) -> u32 {
     let turns = f64::from(dz).atan2(f64::from(dx)) / std::f64::consts::TAU;
     ((turns * 65536.0).round() as i64).rem_euclid(65536) as u32
@@ -4704,6 +5014,10 @@ pub struct EventRun {
     /// taken out of the scene's table, every frame looks the same
     /// (Field::looks_the_same). Only a recorded touch is judged.
     pub blank: bool,
+    /// For an event that shows nothing: the flags it set (true) and
+    /// cleared, and what else it changed that the screen does not show.
+    pub flags_changed: Vec<(u16, bool)>,
+    pub effects: Vec<String>,
 }
 
 /// Whether entrance `e` only stands in for a room another entrance gives
@@ -4830,6 +5144,22 @@ mod tests {
         assert_eq!(facing_toward(-5, 0), 0x8000);
         assert_eq!(facing_toward(0, -5), 0xc000);
         assert_eq!(facing_toward(5, 5), 0x2000);
+    }
+
+    #[test]
+    fn each_thing_pushed_has_its_best_push_first() {
+        let pushes = vec![(1, Some(8)), (2, Some(8)), (3, None), (4, Some(9)), (5, Some(8)), (6, Some(9))];
+        let order: Vec<i32> = best_of_each(pushes, |p| p.1).into_iter().map(|p| p.0).collect();
+        assert_eq!(order, vec![1, 4, 2, 3, 5, 6]);
+    }
+
+    #[test]
+    fn a_way_is_the_nearest_to_a_facing() {
+        assert_eq!(KEYS[nearest_way(0xc000)], KEY_UP);
+        assert_eq!(KEYS[nearest_way(0x0800)], KEY_RIGHT);
+        assert_eq!(KEYS[nearest_way(0xf800)], KEY_RIGHT);
+        assert_eq!(KEYS[nearest_way(0x4100)], KEY_DOWN);
+        assert_eq!(KEYS[nearest_way(0x8000)], KEY_LEFT);
     }
 
     #[test]
