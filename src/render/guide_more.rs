@@ -448,8 +448,8 @@ impl<'a> Guide<'a> {
         // for that many frames, one pair after another, as the player would
         // walk him. The leader's place and the camera's are printed after.
         let stand: Vec<i64> = var("MOMENT_STAND").split(',').filter_map(|v| v.trim().parse().ok()).collect();
-        let hold: Vec<u32> = var("MOMENT_HOLD").split(',').filter_map(|v| v.trim().parse().ok()).collect();
-        if !stand.is_empty() || !hold.is_empty() {
+        let hold = super::approach::Pad::parse(&var("MOMENT_HOLD")).map_err(|e| format!("MOMENT_HOLD: {e}"))?;
+        if !stand.is_empty() || !hold.0.is_empty() {
             let placed = field.save();
             field.until_control()?;
             field.frames(20)?;
@@ -459,8 +459,7 @@ impl<'a> Guide<'a> {
                 field.stand(&placed, &spot)?;
             }
         }
-        for pair in hold.chunks(2) {
-            let [keys, count] = pair[..] else { break };
+        for &(keys, count) in &hold.0 {
             field.hold(keys);
             field.frames(count)?;
             field.hold(0);

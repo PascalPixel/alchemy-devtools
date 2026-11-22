@@ -299,6 +299,51 @@ pub fn write_index(out: &Path, rows: &[(String, String)]) -> Result<(), String> 
     std::fs::write(&path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 
+/// The event recordings of `rows` (index.tsv's lines, by file, in
+/// INDEX_HEADER's columns) that are another event's recording byte for
+/// byte: two events share one only when they are one routine, which shows
+/// as the same messages. The first of each kept, the rest are taken out of
+/// `rows` and deleted from `out`, and returned as (scene number, event,
+/// the event whose recording it is).
+pub fn shared_recordings(out: &Path, rows: &mut Vec<(String, String)>) -> Vec<(u16, String, String)> {
+    let column = |line: &str, name: &str| -> String {
+        let i = INDEX_HEADER.split('\t').position(|c| c == name).unwrap_or(usize::MAX);
+        line.split('\t').nth(i).unwrap_or_default().to_string()
+    };
+    let mut seen: HashMap<Vec<u8>, (String, String)> = HashMap::new();
+    let mut shared = Vec::new();
+    let mut sorted: Vec<usize> = (0..rows.len()).collect();
+    sorted.sort_by(|&a, &b| rows[a].0.cmp(&rows[b].0));
+    let mut gone: HashSet<usize> = HashSet::new();
+    for i in sorted {
+        let line = &rows[i].1;
+        if column(line, "kind") != "event-gif" {
+            continue;
+        }
+        let Ok(bytes) = std::fs::read(out.join(&rows[i].0)) else {
+            continue;
+        };
+        let (event, messages) = (column(line, "event"), column(line, "messages"));
+        match seen.get(&bytes) {
+            Some((other, theirs)) if *other != event && (messages.is_empty() || *theirs != messages) => {
+                shared.push((column(line, "number").parse().unwrap_or_default(), event, other.clone()));
+                let _ = std::fs::remove_file(out.join(&rows[i].0));
+                gone.insert(i);
+            }
+            Some(_) => {}
+            None => {
+                seen.insert(bytes, (event, messages));
+            }
+        }
+    }
+    let mut i = 0;
+    rows.retain(|_| {
+        i += 1;
+        !gone.contains(&(i - 1))
+    });
+    shared
+}
+
 /// Writes an image as a PNG: indexed when it has at most 256 colours.
 pub fn write_png(path: &Path, image: &Image) -> Result<u64, String> {
     let error = |e: &dyn std::fmt::Display| format!("{}: {e}", path.display());
@@ -1084,11 +1129,12 @@ impl Context<'_> {
                 }
             }
             // An event that reaches a black screen sooner than
-            // BLACK_CLEARANCE is played again with the leader standing ready
-            // for longer before its trigger, so the recording clears it.
-            let first_black = played.as_ref().ok().and_then(|p| p.run.frames.iter().position(|f| is_black_bgr555(f)));
-            if let Some(first_black) = first_black.filter(|&b| b < CLEARED) {
-                self.lead_in.set(LEAD_IN + (CLEARED - first_black) as u32);
+            // BLACK_CLEARANCE is played again with a longer lead-in before
+            // its trigger (the leader walking up from further back, or
+            // standing ready for longer), so the recording clears it.
+            let first_black = played.as_ref().ok().and_then(|p| p.run.frames.iter().position(|f| is_black_bgr555(f)).map(|b| (b, p.run.lead)));
+            if let Some((first_black, lead)) = first_black.filter(|&(b, _)| b < CLEARED) {
+                self.lead_in.set(lead.max(LEAD_IN as usize) as u32 + (CLEARED - first_black) as u32);
                 self.relaxed.set(relaxed);
                 let longer = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
                 self.relaxed.set(false);
@@ -1427,6 +1473,7 @@ impl Context<'_> {
         field.lead_in = self.lead_in.get();
         field.whole = self.whole && record.is_some();
         field.has_trigger = event.trigger().is_ok();
+        field.walk_up = true;
         let entered: Saved = field.save();
         match after {
             Some(saved) => field.load(saved),
@@ -1486,8 +1533,8 @@ impl Context<'_> {
                     let shown = run.seen.map_or(String::new(), |m| format!(" (message {m:05}{})", self.shows(m, setup.scene)));
                     error = format!("another row for its trigger played instead{shown}");
                 }
-                Ok(run) if run.instant && !run.shown => error = "its dispatch returned at once from every spot: it ran no script".to_string(),
-                Ok(run) if silent && messages.is_empty() && !run.shown => {
+                Ok(run) if run.instant && !run.shown && run.unseen.is_none() => error = "its dispatch returned at once from every spot: it ran no script".to_string(),
+                Ok(run) if silent && messages.is_empty() && !run.shown && run.unseen.is_none() => {
                     error = "it ran, but nothing moved, showed or changed from any spot".to_string();
                 }
                 Ok(mut run) => {
@@ -1759,6 +1806,31 @@ mod tests {
         // The scene's own arrival comes first.
         let moments = story_moments(&candidates, &names(&["STORM"]), &events, &number);
         assert_eq!(moments[0].flag, "STORM");
+    }
+
+    #[test]
+    fn two_events_never_share_one_recording() {
+        let out = std::env::temp_dir().join(format!("alchemy-shared-recordings-{}", std::process::id()));
+        std::fs::create_dir_all(out.join("tret/events")).unwrap();
+        let row = |event: &str, messages: &str, bytes: &[u8]| {
+            let file = format!("tret/events/{event}.gif");
+            std::fs::write(out.join(&file), bytes).unwrap();
+            let line = Row { scene: "tret".to_string(), number: 46, kind: "event-gif", event: event.to_string(), messages: messages.to_string(), file: file.clone(), ..Row::default() }.line();
+            (file, line)
+        };
+        let mut rows = vec![
+            row("GoUpWestVine", "", b"west"),
+            row("GoUpNortheastVine", "", b"west"),
+            row("GoDownWestVine", "", b"down"),
+            row("MsgA", "00012", b"same"),
+            row("MsgB", "00012", b"same"),
+        ];
+        let shared = shared_recordings(&out, &mut rows);
+        assert_eq!(shared, vec![(46, "GoUpWestVine".to_string(), "GoUpNortheastVine".to_string())]);
+        assert_eq!(rows.len(), 4);
+        assert!(!out.join("tret/events/GoUpWestVine.gif").exists());
+        assert!(out.join("tret/events/GoUpNortheastVine.gif").exists());
+        std::fs::remove_dir_all(&out).unwrap();
     }
 
     #[test]
