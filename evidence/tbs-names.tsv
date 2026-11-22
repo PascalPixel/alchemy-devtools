@@ -3195,9 +3195,6 @@ ACTOR_WALL_ATTENDANT	the game	"The fans just call this The Wall." (MsgColossoFan
 ACTOR_BOARD_WALK_ATTENDANT	the game	"This place is called the Board Walk." (MsgColossoPlaceCalledBoard)	games/tbs/src/scene/colosseum_satrage_match.c
 ACTOR_PRIZE_A	what the player sees	the Chain Mail's icon at the arena's finish, taken by whoever reaches it first (its render)	games/tbs/src/scene/colosseum_satrage_match.c
 ACTOR_PRIZE_B	what the player sees	the Cotton Shirt's icon at the arena's finish, taken by whoever reaches it second (its render)	games/tbs/src/scene/colosseum_satrage_match.c
-FLAG_OBSTACLE_KNOCKED_DOWN	the game	"This place is called the Board Walk." (MsgColossoPlaceCalledBoard)	games/tbs/src/scene/colosseum_satrage_match.c
-FLAG_WEST_TARGET_FROZEN	the game	"Bestows Frost when equipped" (MsgItemPlainName)	games/tbs/src/scene/colosseum_satrage_match.c
-FLAG_EAST_TARGET_FROZEN	the game	"Bestows Frost when equipped" (MsgItemPlainName)	games/tbs/src/scene/colosseum_satrage_match.c
 FLAG_PLANT_GROWN	the game	"Growth" (MsgAbilityName)	games/tbs/src/scene/colosseum_satrage_match.c
 FLAG_LIFTS_HALTED	the game	"Halt" (MsgAbilityName)	games/tbs/src/scene/colosseum_satrage_match.c
 FLAG_WALL_PILLAR_MOVED	the game	"The fans just call this The Wall." (MsgColossoFansJustCallWall)	games/tbs/src/scene/colosseum_satrage_match.c
@@ -3303,7 +3300,6 @@ ACTOR_SECOND_PILLAR_CHEST	what the player sees	a red chest standing on the secon
 ACTOR_BANE	the game	"Bane" (MsgDjinnName)	games/tbs/src/scene/crossbone_isle_keys.c
 FLAG_CROSSBONE_ISLE_BANE_PUDDLE_FROZEN	what the player sees	a small blue puddle on the floor of the lowest hall (its render)	games/tbs/src/scene/crossbone_isle_keys.c
 FLAG_CROSSBONE_ISLE_BANE_CHEST_AT_LADDER	what the player sees	a chest on top of a pillar between two rows of spikes, below a ladder (its render)	games/tbs/src/scene/crossbone_isle_keys.c
-FLAG_CROSSBONE_ISLE_BANE_LOOKED_EAST	what the player sees	the ladder up the ledge beside the second pillar, from which the leader can face east and jump across (its render)	games/tbs/src/scene/crossbone_isle_keys.c
 ACTOR_FIRST_PILLAR	what the player sees	tan stone pillars over the pit, pillars of ice on the spikes, and grey carved pillars stacked two high (its render)	games/tbs/src/scene/crossbone_isle_stepping_stones.c
 ACTOR_FIRST_LOG	what the player sees	logs lying on the cave floor (its render)	games/tbs/src/scene/crossbone_isle_stepping_stones.c
 ACTOR_SINKING_BOULDER	what the player sees	a round grey boulder below the logs (its render)	games/tbs/src/scene/crossbone_isle_stepping_stones.c
@@ -4216,7 +4212,6 @@ CELL_BEHAVIOR_TOLBI_SPRING_SIGN	the game	"Face away from Tolbi Spring and toss a
 CELL_BEHAVIOR_TOLBI_LUCKY_MEDAL_SIGN	the game	"If you toss a Lucky Medal" (MsgTolbiTossLuckyMedal)	games/tbs/src/scene/tolbi.c
 CELL_BEHAVIOR_TOLBI_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/tolbi.c
 CELL_BEHAVIOR_TOLBI_HIDDEN_CHEST	the game	"checked the chest" (MsgVaultIsaacCheckedChest)	games/tbs/src/scene/tolbi.c
-FLAG_TOLBI_SPRING_RISEN	its area name	Tolbi Spring	games/tbs/src/scene/tolbi_games.c
 ACTOR_TOLBI_SPRING_WHEELS_ATTENDANT	the game	"Step right up and try your hand at lucky wheels!" (MsgTolbiStepRightTry)	games/tbs/src/scene/tolbi_games.c
 ACTOR_TOLBI_SPRING_DICE_ATTENDANT	the game	"Hey, buddy, wanna try yer luck at the dice?" (MsgTolbiBuddyWannaTry)	games/tbs/src/scene/tolbi_games.c
 ACTOR_TOLBI_SPRING_DICE_RULES_ATTENDANT	the game	"Read the sign if ya don't know the rules." (MsgTolbiSpringReadTheSignIfYaDont)	games/tbs/src/scene/tolbi_games.c
@@ -4282,27 +4277,6 @@ ACTOR_LANDING_MONSTER_SHADOW	what the player sees	a black shadow that grows on t
 CELL_BEHAVIOR_TOLBI_SHIP_MAST_ANCHOR_CHARM	the game	"I hid it on top of the mast." (MsgTolbiShipInteriorsIWaitedTooLongIllGet)	games/tbs/src/scene/tolbi_ship_mast.c
 ACTOR_TRET	the game	"Tret was once a kindly forest king." (MsgKolimaWatchOutItsHappeningAgain)	games/tbs/src/scene/tree_rooms.c
 ACTOR_SECOND_TRET	the game	"We can't let Tret die like this!" (MsgTretMmmmm)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_SECOND_FLOOR_COCOON_A_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_SECOND_FLOOR_COCOON_B_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_SECOND_FLOOR_COCOON_C_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_SECOND_FLOOR_COCOON_D_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_SECOND_FLOOR_COCOON_E_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_SECOND_FLOOR_COCOON_F_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_SECOND_FLOOR_COCOON_G_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_SECOND_FLOOR_COCOON_H_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_SECOND_FLOOR_COCOON_I_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_THIRD_FLOOR_WEST_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_THIRD_FLOOR_EAST_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_FIFTH_FLOOR_CENTER_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_FIFTH_FLOOR_NORTHWEST_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_FIFTH_FLOOR_NORTH_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_FIFTH_FLOOR_NORTHEAST_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_FIFTH_FLOOR_WEST_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_FIFTH_FLOOR_EAST_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_FIFTH_FLOOR_SOUTHWEST_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_FIFTH_FLOOR_SOUTH_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_FIFTH_FLOOR_SOUTHEAST_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
-FLAG_TRET_TREE_FIFTH_FLOOR_FAR_SOUTHEAST_COCOON_TORN	what the player sees	golden cocoons on a spider web stretched across the floor (its render)	games/tbs/src/scene/tree_rooms.c
 ACTOR_BREEZE	the game	"Breeze" (MsgDjinnName)	games/tbs/src/scene/tret_tree_branch.c
 ACTOR_FIRST_PILLAR_A	what the player sees	one of a pair of grey pillars with gold tops, side by side (its render)	games/tbs/src/scene/tunnel_ruins.c
 ACTOR_FIRST_PILLAR_B	what the player sees	the other pillar of the first pair (its render)	games/tbs/src/scene/tunnel_ruins.c
@@ -4400,9 +4374,7 @@ FLAG_KITE	the game	"Kite" (MsgDjinnName)	games/tbs/src/scene/vale_cave.c
 FLAG_VALE_CAVE_WEST_CRATES_SUNK	what the player sees	stacks of wooden crates at the edge of the cave's water (its render)	games/tbs/src/scene/vale_cave.c
 FLAG_VALE_CAVE_EAST_CRATES_SUNK	what the player sees	stacks of wooden crates at the edge of the cave's water (its render)	games/tbs/src/scene/vale_cave.c
 FLAG_VALE_CAVE_KITE_RAN_OFF	the game	"Kite" (MsgDjinnName)	games/tbs/src/scene/vale_cave.c
-FLAG_VALE_CAVE_KITE_RAN_BEHIND_LEDGE	the game	"Kite" (MsgDjinnName)	games/tbs/src/scene/vale_cave.c
 FLAG_VALE_CAVE_RIDING_LOG_EAST	what the player sees	the log floating in the water of the second room, which carries the leader along its passage (its render)	games/tbs/src/scene/vale_cave.c
-FLAG_VALE_CAVE_KITE_BEHIND_LEDGE	the game	"Kite" (MsgDjinnName)	games/tbs/src/scene/vale_cave.c
 FLAG_VALE_CAVE_WEST_LOG_PUSHED_OFF_LEDGE	what the player sees	two logs lying north to south on the ledges either side of the water, and a third lying west to east south of it (its render)	games/tbs/src/scene/vale_cave.c
 FLAG_VALE_CAVE_EAST_LOG_PUSHED_OVER_EDGE	what the player sees	two logs lying north to south on the ledges either side of the water, and a third lying west to east south of it (its render)	games/tbs/src/scene/vale_cave.c
 FLAG_VALE_CAVE_SOUTH_LOG_ON_NORTH_ROW	what the player sees	two logs lying north to south on the ledges either side of the water, and a third lying west to east south of it (its render)	games/tbs/src/scene/vale_cave.c
@@ -5371,7 +5343,6 @@ FLAG_LUNPA_FORTRESS_REWARD_SHOWN	the game	"I have a little something for you, fo
 FLAG_LUNPA_FORTRESS_ENTRANCE_GUARD_CAUGHT_PARTY	the game	"No matter! You're on your way out now!" (MsgLunpaWhoAreYou + 2)	games/tbs/src/scene/lunpa_fortress.c
 FLAG_LUNPA_FORTRESS_SENTRIES_CAUGHT_PARTY	the game	"No matter! You're on your way out now!" (MsgLunpaWhoAreYou + 2)	games/tbs/src/scene/lunpa_fortress.c
 FLAG_LUNPA_FORTRESS_FINDING_HAMMET	the game	"I am a little late, but I have come to save you." (MsgLunpaTimeEat + 6)	games/tbs/src/scene/lunpa_fortress.c
-FLAG_SOL_SANCTUM_LUNA_SOL_ROOMS_NOT_TINTED	the game	"But a room for Luna and one for Sol?" (MsgSolSanctumRoomLunaOne)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c
 TREASURE_SPOT_ORACLES_ROBE	the game	"Oracle's Robe" (MsgItemName + 113)	games/tbs/src/scene/tunnel_ruins.c
 TREASURE_SPOT_ASURAS_ARMOR	the game	"Asura's Armor" (MsgItemName + 84)	games/tbs/src/scene/tunnel_ruins.c
 FLARE_LINE_LEFT	what the player sees	the lens flare's discs and rings stand on one line running down and right from the sun in the gap in the clouds over the peak (its render)	games/tbs/src/menu/title_intro.c
@@ -5555,7 +5526,6 @@ FLOOR_TO_PREVIOUS_ROOM	its uses	exit 1 of gCrossboneIsle_FloorTriggers, which sc
 FLOOR_TO_NEXT_ROOM	its uses	exit 2 of gCrossboneIsle_FloorTriggers (CROSSBONE_ISLE_FIRST_FLOOR_TO_CROSSBONE_ISLE_SECOND_FLOOR in the first); the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
 FLOOR_TO_SIDE_ROOM_EAST	its uses	exit 3, which CrossboneIsle_OpenEastDoor leaves by once the door is open; the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
 FLOOR_TO_SIDE_ROOM_WEST	its uses	exit 4, which CrossboneIsle_OpenWestDoor leaves by once the door is open; the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
-CrossboneIsle_RideLogANorth	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_A, ridden north by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_A	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogASouth	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_A, ridden south by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_A	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogBNorth	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_B, ridden north by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_B	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogBSouth	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_B, ridden south by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_B	games/tbs/src/scene/crossbone_isle.c
@@ -5572,14 +5542,12 @@ CrossboneIsle_RideLogGWest	its code	as CrossboneIsle_RideLog, lettered as ACTOR_
 CrossboneIsle_RideLogHEast	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_H, ridden east by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_H	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogHWest	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_H, ridden west by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_H	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogIEast	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_I, ridden east by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_I	games/tbs/src/scene/crossbone_isle.c
-CrossboneIsle_RideLogIWest	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_I, ridden west by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_I	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogJNorth	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_J, ridden north by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_J	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogJSouth	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_J, ridden south by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_J	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogKNorth	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_K, ridden north by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_K	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogKSouth	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_K, ridden south by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_K	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogLEast	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_L, ridden east by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_L	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_RideLogLWest	its code	as CrossboneIsle_RideLog, lettered as ACTOR_LOG_L, ridden west by the step trigger of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_L	games/tbs/src/scene/crossbone_isle.c
-CrossboneIsle_StepOnLogA	its code	as CrossboneIsle_SettleLog, lettered as ACTOR_LOG_A, run by the TRIGGER_STEP row of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_A	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_StepOnLogB	its code	as CrossboneIsle_SettleLog, lettered as ACTOR_LOG_B, run by the TRIGGER_STEP row of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_B	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_StepOnLogC	its code	as CrossboneIsle_SettleLog, lettered as ACTOR_LOG_C, run by the TRIGGER_STEP row of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_C	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_StepOnLogD	its code	as CrossboneIsle_SettleLog, lettered as ACTOR_LOG_D, run by the TRIGGER_STEP row of CELL_BEHAVIOR_CROSSBONE_ISLE_LOG_D	games/tbs/src/scene/crossbone_isle.c
@@ -5643,7 +5611,6 @@ FEIZHI_ROW	the game	"He is speaking with his daughter, Feizhi." (MsgFuchinTemple
 TREASURY_WAY_COLUMN	its area name	Bilibin Treasury	games/tbs/src/scene/bilibin.c
 TREASURY_WAY_ROW	its area name	Bilibin Treasury	games/tbs/src/scene/bilibin.c
 TREASURE_SPOT_DEMON_AXE	the game	"Demon Axe" (MsgItemName + 38)	games/tbs/src/scene/crossbone_isle_keys.c
-BANE_CORNER_FIRST_STEP	the game	"Bane" (MsgDjinnName + 6)	games/tbs/src/scene/crossbone_isle_keys.c
 ELDERS_FLASH_FRAMES	the game	"The elders are holding it back" (MsgValeSureHelp + 2)	games/tbs/src/scene/vale_prologue.c
 SOLDIER_SLOW_BLINKS	the game	"Those soldiers kept mumbling about monsters..." (MsgSuhallaThoseSoldiersKeptMumblingAboutMonsters)	games/tbs/src/scene/suhalla_gate.c
 SOLDIER_FAST_BLINKS	the game	"Those soldiers kept mumbling about monsters..." (MsgSuhallaThoseSoldiersKeptMumblingAboutMonsters)	games/tbs/src/scene/suhalla_gate.c
@@ -5699,7 +5666,6 @@ CART_COUNTDOWN_TURN	its code	CART_COUNTDOWN_TURN is 20 (altin_peak.c): A countdo
 LUCKY_DICE_COINS_PER_LEVEL	its code	LUCKY_DICE_COINS_PER_LEVEL is 10 (tolbi_games.c): Lucky Dice costs this many coins for each level of the party's average level; a win of LUCKY_DICE_MEDIUM_WIN coins or more, or of LUCKY_DICE_LARGE_WIN, is greeted with a bigger jingle	games/tbs/src/scene/tolbi_games.c
 LUCKY_DICE_MEDIUM_WIN	its code	LUCKY_DICE_MEDIUM_WIN is 5000 (tolbi_games.c): Lucky Dice costs this many coins for each level of the party's average level; a win of LUCKY_DICE_MEDIUM_WIN coins or more, or of LUCKY_DICE_LARGE_WIN, is greeted with a bigger jingle	games/tbs/src/scene/tolbi_games.c
 LUCKY_DICE_LARGE_WIN	its code	LUCKY_DICE_LARGE_WIN is 20000 (tolbi_games.c): Lucky Dice costs this many coins for each level of the party's average level; a win of LUCKY_DICE_MEDIUM_WIN coins or more, or of LUCKY_DICE_LARGE_WIN, is greeted with a bigger jingle	games/tbs/src/scene/tolbi_games.c
-SPRING_RISE_PIXELS	its code	SPRING_RISE_PIXELS is 16 (tolbi_games.c): The pixels the spring's layer moves as it rises, one every fourth frame	games/tbs/src/scene/tolbi_games.c
 SPRING_MEDAL_PRIZES	its code	SPRING_MEDAL_PRIZES is 15 (tolbi_games.c): A medal's prizes (MainRoutineWork's prizeWeights): its ring allows three more for each ring out from the centre	games/tbs/src/scene/tolbi_games.c
 SPRING_MEDAL_PRIZES_PER_RING	its code	SPRING_MEDAL_PRIZES_PER_RING is 3 (tolbi_games.c): A medal's prizes (MainRoutineWork's prizeWeights): its ring allows three more for each ring out from the centre	games/tbs/src/scene/tolbi_games.c
 SPRING_CRAB_REST_FRAMES	its code	SPRING_CRAB_REST_FRAMES is 30 (tolbi_games.c): The second crab rests this many frames at each end of its run	games/tbs/src/scene/tolbi_games.c
@@ -5793,8 +5759,6 @@ LOG_STOPS_ORIGIN_Z	its code	LOG_STOPS_ORIGIN_Z is 624 (log_rooms_a.c): The chase
 LOG_STOP_X	its code	LOG_STOP_X(stop) is  (FIELD_HALF_CELL_ORIGIN((stop)->gridX) + toFIXED(LOG_STOPS_ORIGIN_X + 8)) (log_rooms_a.c): The 16.16 middle of a stop	games/tbs/src/scene/log_rooms_a.c
 LOG_STOP_Z	its code	LOG_STOP_Z(stop) is  (FIELD_HALF_CELL_ORIGIN((stop)->gridZ) + toFIXED(LOG_STOPS_ORIGIN_Z + 8)) (log_rooms_a.c): The 16.16 middle of a stop	games/tbs/src/scene/log_rooms_a.c
 CRATE_MOVED_COLUMN	its code	CRATE_MOVED_COLUMN is 42 (log_rooms_a.c): Where Move leaves the crate aside, its map column, which opens the way up to the inn's loft	games/tbs/src/scene/log_rooms_a.c
-NORTHWEST_PILLAR_SINK_COLUMN	its code	NORTHWEST_PILLAR_SINK_COLUMN is 46 (tunnel_ruins.c): The column each sinking pillar sinks in once it is moved there	games/tbs/src/scene/tunnel_ruins.c
-SOUTHEAST_PILLAR_SINK_COLUMN	its code	SOUTHEAST_PILLAR_SINK_COLUMN is 48 (tunnel_ruins.c): The column each sinking pillar sinks in once it is moved there	games/tbs/src/scene/tunnel_ruins.c
 EAST_PILLAR_A_PUSHED_COLUMN	its code	EAST_PILLAR_A_PUSHED_COLUMN is 45 (tunnel_ruins.c): The columns the east pillars stand in once each is pushed a cell west of its place	games/tbs/src/scene/tunnel_ruins.c
 EAST_PILLAR_B_PUSHED_COLUMN	its code	EAST_PILLAR_B_PUSHED_COLUMN is 46 (tunnel_ruins.c): The columns the east pillars stand in once each is pushed a cell west of its place	games/tbs/src/scene/tunnel_ruins.c
 MARKS_WEST_COLUMN	its code	MARKS_WEST_COLUMN is 23 (tunnel_ruins.c): The five marks before the door the statues must stand on: the corners and middle of a square of cells	games/tbs/src/scene/tunnel_ruins.c
@@ -6791,3 +6755,189 @@ SolSanctumLunaSolRooms_ClearBackdropColor	what the player sees	walking towards t
 SolSanctumLunaSolRooms_KradenFindsHeartOfSanctum	what the player sees	Isaac walks north into the room of Sol, the sun on the floor glows, and Kraden hurries out to it saying 'This is it! We've found it!' (recording of SolSanctumLunaSolRooms_KradenFindsHeartOfSanctum) (its render)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c
 StuccoRoomsB_EnterDoor	what the player sees	Tolbi's inn basement, down stairs from the inn, is a passage with two wooden doors in its north wall; the lower guest rooms have wooden doors in their north walls (probe of StuccoRoomsB entrances 11 and 16 to 19) (its render)	games/tbs/src/scene/stucco_rooms_b.c
 StuccoRoomsB_AskWhetherBabiWasMissing	what the player sees	the strongman who asks stands in the storeroom of hay bales and barrels (probe of StuccoRoomsB entrance 4) (its render)	games/tbs/src/scene/stucco_rooms_b.c
+FLAG_SOL_SANCTUM_LUNA_SOL_ROOMS_UNTINTED	the game	"But a room for Luna and one for Sol?" (MsgSolSanctumRoomLunaOne)	games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c
+FLAG_LOG_KNOCKED_DOWN	what the player sees	Force knocks a tall log standing on end over into the Board Walk's channel (its render)	games/tbs/src/scene/colosseum_satrage_match.c
+FLAG_WEST_PUDDLE_FROZEN	the game	"Bestows Frost when equipped" (MsgItemPlainName)	games/tbs/src/scene/colosseum_satrage_match.c
+FLAG_EAST_PUDDLE_FROZEN	the game	"Bestows Frost when equipped" (MsgItemPlainName)	games/tbs/src/scene/colosseum_satrage_match.c
+FLAG_CROSSBONE_ISLE_BANE_JUMPED_EAST_FROM_LADDER	what the player sees	the ladder up the ledge beside the second pillar, from which the leader can face east and jump across (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CELL_BEHAVIOR_BANE_CORNER_FIRST	the game	"Bane" (MsgDjinnName + 6)	games/tbs/src/scene/crossbone_isle_keys.c
+ColosseumNavampaMatch_ShovedByPiston	its code	ColosseumNavampaMatch_UpdateWallWedge raises it (raisedTrigger = PISTON_ANIMATION_PUSH_HALF_OUT) when the leader stands in a piston's column on row 11 as it starts to push halfway out; it runs him 24 pixels south	games/tbs/src/scene/colosseum_navampa_match.c
+ColosseumNavampaMatch_ShovedOffWalkway	the game	the Wall Wedge attendant's demonstration waits for PISTON_ANIMATION_PUSH_OUT, calls it, and Isaac turns north with an anger vein before "The pistons move back and forth." (MsgColossoPlaceCalledWall)	games/tbs/src/scene/colosseum_navampa_match.c
+ColosseumNavampaMatch_JustMoveRock	its code	an empty event run by Move on ACTOR_ROCK, the pillar by the Wall Wedge's operator	games/tbs/src/scene/colosseum_navampa_match.c
+ColosseumNavampaMatch_UpdateLogAreaStoneCells	its code	for each log-area pillar at terrain height 0 draws it underfoot and copies the hop cell (83, 13) onto its cell and the cell 52 rows below	games/tbs/src/scene/colosseum_navampa_match.c
+ColosseumNavampaMatch_HopFromLogAreaEnd	its code	cell (83, 13) at the log-rolling area's east end runs Field_TryJumpForward when Colosso_FindActorAhead finds nothing	games/tbs/src/scene/colosseum_navampa_match.c
+ColosseumNavampaMatch_PushWeightOrHopAcross	its code	cell (8, 12) east of the weight's square pushes the weight (Colosso_FindActorAhead) or runs Field_TryJumpForward	games/tbs/src/scene/colosseum_navampa_match.c
+ColosseumSatrageMatch_PushBoardWalkPillar	what the player sees	Isaac on the ledge along the north edge of the Board Walk's pool walks into one of its two stone pillars, which does not move (its render)	games/tbs/src/scene/colosseum_satrage_match.c
+ColosseumSatrageMatch_KeepLogStillForForce	its code	sets the Force effect's childMode, which keeps the fist from shoving its target 16 pixels (field/event_commands_force.c), so the tall log topples where it stands	games/tbs/src/scene/colosseum_satrage_match.c
+ColosseumSatrageMatch_KnockDownLog	what the player sees	Force's fist strikes a tall log standing on end, which topples west into the Board Walk's channel beside the white platforms (its render)	games/tbs/src/scene/colosseum_satrage_match.c
+ColosseumSatrageMatch_FreezeWestPuddle	the game	"Use Frost on the left puddle" (the walkthrough, round 2); SPRITE_PUDDLE at x 712	games/tbs/src/scene/colosseum_satrage_match.c
+ColosseumSatrageMatch_FreezeEastPuddle	the game	SPRITE_PUDDLE at x 808, the Log-Rolling Stage's eastern puddle	games/tbs/src/scene/colosseum_satrage_match.c
+ColosseumSatrageMatch_JumpDownFromPost	what the player sees	Isaac standing on a narrow stone post at the foot of The Wall, west of the sprout, jumps down to the ground with Down held (its render)	games/tbs/src/scene/colosseum_satrage_match.c
+ColosseumSatrageMatch_HopWestFromPost	what the player sees	Isaac on a stone post at the foot of The Wall hops to the next post west with Left held (its render)	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_WALL_POST	what the player sees	cell (31, 16) is the top of a narrow stone post at the foot of The Wall, west of the sprout (its render)	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_BOARD_WALK_LEDGE	what the player sees	cells (13..17, 10) and (21..24, 10) are the ledge along the north edge of the Board Walk's pool, either side of its stone pillars (its render)	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_WALL_LEDGE	what the player sees	cell (37, 16) is the ledge at the foot of The Wall east of its stone pillar and the Smoke Bomb chest (its render)	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_WALL_LEDGE_UNUSED	its code	the second step-trigger row for ColosseumSatrageMatch_PushWallPillar; no cell of map.txt holds behaviour 26	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_RIDING_LOG	its code	Scene_Initialize and ColosseumSatrageMatch_RideLog copy it under the Log-Rolling Stage's two logs, three cells each	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_WEST_LOG_EAST_SIDE	its code	cells (17, 11) and (17, 14), east of the Board Walk's western log at x 264; its row rolls the log west	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_WEST_LOG_WEST_SIDE	its code	column 13, west of the Board Walk's western log once rolled to x 232; its row rolls the log east	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_EAST_LOG_WEST_SIDE	its code	column 21, west of the Board Walk's eastern log once rolled to x 360; its row rolls the log east	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_EAST_LOG_EAST_SIDE	its code	column 25, east of the Board Walk's eastern log at x 392; its row rolls it west, as the attendant's demonstration does	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_ARENA	the game	cells (8, 13..18) at the arena's east edge run ColosseumSatrageMatch_ReachArena, where the prizes are taken; "reach the middle" (the walkthrough, round 2)	games/tbs/src/scene/colosseum_satrage_match.c
+CottageRoomsB_HurryToThePlaza	what the player sees	downstairs in Isaac's house Kyle comes in at the front door, the candle glowing on the table flares and goes out, and Isaac and Dora run out (its render, a moment at entrance 21)	games/tbs/src/scene/cottage_rooms_b.c
+CottageRoomsB_ExitToValePlazaNorthwest	what the player sees	the forge's way out is a doorway at the south of the room (its render, a probe at entrance 1)	games/tbs/src/scene/cottage_rooms_b.c
+CottageRoomsB_ExitToValeKradensCottageNorth	what the player sees	Kraden's study's way out is a doorway at the south of the room (its render, a probe at entrance 2)	games/tbs/src/scene/cottage_rooms_b.c
+CottageRoomsB_ExitToValePlazaNortheast	what the player sees	the second forge room's way out is a doorway at the south of the room (its render, a probe at entrance 3)	games/tbs/src/scene/cottage_rooms_b.c
+CottageRoomsB_ExitToValePlazaWest	what the player sees	the inn's way out is a doorway at the south of the room with the counter (its render, a probe at entrance 4)	games/tbs/src/scene/cottage_rooms_b.c
+CottageRoomsB_ExitToVale	what the player sees	the front door of Isaac's house is a doorway at the south of the ground floor (its render, a probe at entrance 6)	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_CROSSBONE_ISLE_BESIDE_EAST_LOG	its code	crossbone_isle/map.txt holds it at (23, 22), (20, 26), (21, 26) and (23, 26), around ACTOR_FIRST_ISLE_LOG + 1 at (352, 376); its step row runs CrossboneIsle_PushIsleLog	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_CROSSBONE_ISLE_BESIDE_WEST_LOG	its code	crossbone_isle/map.txt holds it at (8, 23) to (10, 23), (7, 26), (8, 26) and (10, 26), around ACTOR_FIRST_ISLE_LOG at (144, 392); its step row runs CrossboneIsle_PushIsleLog	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_CROSSBONE_ISLE_WEST_OF_PILLAR	its code	crossbone_isle_cave/map.txt holds it at (38, 10) alone, the cell west of ACTOR_SINKING_PILLAR at (632, 168), column 39; its walking step row runs CrossboneIsle_PushPillar	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_CROSSBONE_ISLE_SHORE_HOP_WEST	its code	crossbone_isle_floating_logs/map.txt holds 40 at (14, 8..19) and (37, 7..18), the shore cells east of both pools; its STEP_TRIGGER_WALKING_INTO(FACING_WEST) row runs CrossboneIsle_HopWest	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_CROSSBONE_ISLE_SHORE_HOP_EAST	its code	crossbone_isle_floating_logs/map.txt holds 41 at (5, 9..14) and (2, 15..19), the west pool's west shore; its STEP_TRIGGER_WALKING_INTO(FACING_EAST) row runs CrossboneIsle_HopEast	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_CROSSBONE_ISLE_SHORE_HOP_SOUTH	its code	crossbone_isle_floating_logs/map.txt holds 42 at (6..8, 8), the west pool's north shore; its STEP_TRIGGER_WALKING_INTO(FACING_SOUTH) row runs CrossboneIsle_HopSouth	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_CROSSBONE_ISLE_SHORE_HOP_NORTH	its code	crossbone_isle_floating_logs/map.txt holds 43 at (3..13, 20), the west pool's south shore; its STEP_TRIGGER_WALKING_INTO(FACING_NORTH) row runs CrossboneIsle_HopNorth	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_PIRATE_SHIP_TOP_OF_WEST_STAIRS	what the player sees	cell (11, 34), at the top of the west stairs up to the Pirate Ship's raised foredeck at the bow (its render)	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_PIRATE_SHIP_BESIDE_MIMIC	what the player sees	cell (15, 40), between the Mimic's chest at the foot of the ladder and the deck's grating; walking south there, Isaac hops across the hole in the deck, from z 648 to past 678 (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_FightDeadbeard	what the player sees	its step cell (11, 34) is the top of the west stairs up to the Pirate Ship's raised foredeck at the bow (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_CatchNut	what the player sees	Catch's hand reaches the Nut in the tree above the waterfall, the Nut drops to Isaac and 'Isaac got a Nut.' shows (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_MovePillar	what the player sees	Move pushes the pillar east off the west ledge; it drops into the gap between the two ledges in a ring of dust, its top left level with them (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_PushPillar	what the player sees	Isaac walks east into the pillar on the west ledge, it slides a cell east and drops into the gap in a ring of dust (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_OpenWestDoor	what the player sees	walking north into the door on the west ledge opens it and the party comes out in the side room (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_GrowSecondPlant	what the player sees	Growth on the sprout at the foot of the west cliff grows a green vine up the cliff face (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_GrowThirdPlant	what the player sees	Growth on the sprout on the first ledge, above the first vine, grows a vine up to the next ledge (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_BlowAwayFirstIvy	what the player sees	Whirlwind blows the clump of ivy at the foot of the cliff away and a dark cave mouth is left in the cliff (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_BlowAwayThirdIvy	what the player sees	Whirlwind blows the clump of ivy on the top ledge away, leaving bare cliff (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_RideLogANorth	what the player sees	walking north on the east pool's south-west log, it rolls north up the pool's west side, darker as it turns, with Isaac walking backwards on top, and stops just south of the north-west log (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_RideLogIWest	what the player sees	walking west on the west pool's north side log rolls it across to the pool's west side, under the north ledge (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsle_StepOnLogA	what the player sees	with Isaac just standing on the east pool's south-west log, white foam rings its edges in the water (its render)	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsleKeys_BaneFirstEscape	what the player sees	as Isaac comes along the back ledge, the camera pans to Bane at its west end; Bane turns and hops down onto the low ledge beside the first pillar (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_BaneSecondEscape	what the player sees	with Isaac in the west passage, the camera pans to Bane on the low ledge; it hops back up onto the back ledge and dashes east along it out of sight (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_BaneLastEscape	what the player sees	Bane, tipped over at the east end of the back ledge, hops down and scurries south down the east side out of sight, wobbling (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_ThirdStatueShadowsLeader	what the player sees	with Isaac on the rug in front of the west alcove of the south walkway, the statue has slid sideways to stand right in front of him (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_CastRevealInStatueRoom	what the player sees	while Reveal lasts the dark hall shows evenly in grey, not only the lit circles round the braziers (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_CatchFirstBlueKey	what the player sees	a hand of light reaches from Isaac to the key icon on a post in the pit and brings it to him; "Isaac got the Blue Key." (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_TouchThirdPillar	what the player sees	pushing south at the edge of the south-west platform, Isaac jumps down to the floor below in a puff of dust (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_UseLadder	what the player sees	Isaac climbs down one of the two ladders from the back ledge, beside the spiked channel (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_PushSecondPillar	what the player sees	Isaac pushes the pillar with the chest on top north up the channel between two rows of spikes (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_OpenBlueDoor	what the player sees	with the four doors opened, each blue doorway on the walkway along the pit's north wall leads straight through to a small room with a chest (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_OpenRedDoor	what the player sees	the orange-red door on the ledge west of the pit, and once opened a doorway north into the passage behind it (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CELL_BEHAVIOR_GOMA_CAVE_JUMP_TO_PILLAR	what the player sees	Isaac walks west from beside Forge on its ledge and jumps across the gap to where the east pillar stands in its socket, by the man (its render)	games/tbs/src/scene/goma_cave_pillar.c
+GomaCaveEntrance_MoveEastPillar	what the player sees	Move pulls the pillar off its ledge into the gap to the west, where it drops until its top is level with the ground on either side (its render)	games/tbs/src/scene/goma_cave_entrance.c
+GomaCaveEntrance_BlowAwayIvy	what the player sees	the tall ivy (ACTOR_IVY) hangs over the cave mouth high on the column of rock beside the waterfall, the exit into Goma Cave (its render)	games/tbs/src/scene/goma_cave_entrance.c
+FLAG_TOLBI_SPRING_DRAINED	its area name	Tolbi Spring	games/tbs/src/scene/tolbi_games.c
+FLAG_TRET_TREE_SECOND_FLOOR_LEAF_A_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_SECOND_FLOOR_LEAF_B_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_SECOND_FLOOR_LEAF_C_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_SECOND_FLOOR_LEAF_D_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_SECOND_FLOOR_LEAF_E_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_SECOND_FLOOR_LEAF_F_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_SECOND_FLOOR_LEAF_G_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_SECOND_FLOOR_LEAF_H_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_SECOND_FLOOR_LEAF_I_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_THIRD_FLOOR_WEST_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_THIRD_FLOOR_EAST_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_FIFTH_FLOOR_CENTER_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_FIFTH_FLOOR_NORTHWEST_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_FIFTH_FLOOR_NORTH_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_FIFTH_FLOOR_NORTHEAST_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_FIFTH_FLOOR_WEST_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_FIFTH_FLOOR_EAST_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_FIFTH_FLOOR_SOUTHWEST_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_FIFTH_FLOOR_SOUTH_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_FIFTH_FLOOR_SOUTHEAST_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_TRET_TREE_FIFTH_FLOOR_FAR_SOUTHEAST_LEAF_TORN	what the player sees	yellow leaves lying on a spider web stretched across the floor, which tear at the first landing and break at the next; the walkthrough calls them leaves (its render)	games/tbs/src/scene/tree_rooms.c
+FLAG_VALE_CAVE_KITE_RAN_BEHIND_ROCKS	the game	"Kite" (MsgDjinnName)	games/tbs/src/scene/vale_cave.c
+FLAG_VALE_CAVE_KITE_BEHIND_ROCKS	the game	"Kite" (MsgDjinnName)	games/tbs/src/scene/vale_cave.c
+SPRING_WATER_SINK_PIXELS	its code	SPRING_WATER_SINK_PIXELS is 16 (tolbi_games.c): the overhead layer, the water, scrolled one pixel every fourth frame before it fades	games/tbs/src/scene/tolbi_games.c
+NORTHWEST_PILLAR_CREST_COLUMN	what the player sees	the blue-filled pillar on the north walkway sinks flush onto the green water crest in this column, cell (46, 8), and a stepping stone rises from the pit east of it (its render)	games/tbs/src/scene/tunnel_ruins.c
+SOUTHEAST_PILLAR_CREST_COLUMN	what the player sees	the south walkway's pillar, once watered, sinks flush onto the green water crest in this column, cell (48, 14), and a stepping stone rises from the pit west of it (its render)	games/tbs/src/scene/tunnel_ruins.c
+SolSanctumStatue_LeftBeamStatueMoved	what the player sees	Move's hand, with the room tinted red, slides the left beam statue one cell along its dotted track (recording of SolSanctumStatue_LeftBeamStatueMoved) (its render)	games/tbs/src/scene/sol_sanctum_statue.c
+Suhalla_GrowSprout	what the player sees	Growth on the sprout beside the inn door grows a green vine up the inn wall (its render)	games/tbs/src/scene/suhalla.c
+Suhalla_EnterSanctumDoor	what the player sees	the arched double door in the north of Suhalla, inside a ring of purple water, leads to the Sanctum (its render)	games/tbs/src/scene/suhalla.c
+CELL_BEHAVIOR_SUHALLA_WEST_EDGE	what the player sees	behaviours 10, 11, 12 line the west, north and east edges of map.txt and lead to SUHALLA_TO_WORLD_MAP, _NORTH, _EAST; the party enters from the west (entrance 10 at x 40) (its render)	games/tbs/src/scene/suhalla.c
+SuhallaGate_GuardsBlockPassage	what the player sees	Suhalla Gate is a log palisade across the path north; the two guards stand either side of its opening and the house door is in the cliff just past it (its render)	games/tbs/src/scene/suhalla_gate.c
+SuhallaGate_TalkToEastGuard	what the player sees	the east guard asks "Do you want to go to Babi Lighthouse?"; Yes gets "Show me your travel papers" then "What! You don't have travel papers?" (its render)	games/tbs/src/scene/suhalla_gate.c
+CELL_BEHAVIOR_SUHALLA_GATE_APPROACH	what the player sees	behaviour 10 at map.txt (7..9, 26..27), just south of the palisade where the guards stand at z 384 (its render)	games/tbs/src/scene/suhalla_gate.c
+ACTOR_FIRST_SPROUT	what the player sees	the SPRITE_SPROUT actors in SuhallaGateDew are drawn as green vines up the cliffs (its render)	games/tbs/src/scene/suhalla_gate.c
+TimberRoomsA_TalkToMerchant	what the player sees	the shop is the room behind Suhalla's south-west door (entrance 3), a woman with a ponytail behind its counter (its render)	games/tbs/src/scene/timber_rooms_a.c
+TimberRoomsA_TalkToInnkeeper	what the player sees	Suhalla's inn: the dark-haired innkeeper behind a curved counter, the woman in a pink apron beside it (its render)	games/tbs/src/scene/timber_rooms_a.c
+TimberRoomsA_TalkToHealer	what the player sees	Suhalla Sanctum: rows of stools before the Healer at his altar (its render)	games/tbs/src/scene/timber_rooms_a.c
+CELL_BEHAVIOR_TIMBER_ROOMS_A_BEFORE_WOUNDED	what the player sees	behaviour 50 at map.txt (21..23, 9) in the south-east house (entrance 5), below the two beds where the soldiers lie after the audience (its render)	games/tbs/src/scene/timber_rooms_a.c
+TimberRoomsA_AskIfBlownHere	what the player sees	the stout man (SPRITE_STOUT_MAN at 136, 616) stands in the inn loft camera box after the audience (its render)	games/tbs/src/scene/timber_rooms_a.c
+SuhallaDesert_FirstStormRises	what the player sees	stepping beside a storm cell makes a white whirlwind rise out of the sand and blowing sand speckles fill the screen (its render)	games/tbs/src/scene/suhalla_desert.c
+SuhallaDesert_CaughtByFourthStorm	what the player sees	the south half's fourth storm is a great red-pink whirlwind in a sunken hollow beside a cave mouth; walking into it draws Isaac to its centre and lifts him (its render)	games/tbs/src/scene/suhalla_desert.c
+SuhallaDesert_StormCarriesPartyAway	what the player sees	Isaac rises out of sight, the screen closes, and he drops onto the World Map beside Suhalla (its render)	games/tbs/src/scene/suhalla_desert.c
+CELL_BEHAVIOR_SUHALLA_DESERT_STORM_CHASES	what the player sees	behaviour 81 cells lie on the wide sandy plain of the south half, rows 48 to 62, near a half-buried stone head at about (8..11, 53..56) (its render)	games/tbs/src/scene/suhalla_desert.c
+CELL_BEHAVIOR_SUHALLA_DESERT_SOUTH_STORM	what the player sees	behaviours 51 to 53 sit in three ways north out of the south half's long sandy valley, toward the Cookie chest (12, 14) and the Lucky Medal chest (28, 8) (its render)	games/tbs/src/scene/suhalla_desert.c
+Tolbi_FreezePuddle	what the player sees	Frost on the puddle on the ledge above the vine on Tolbi's east side raises an ice pillar there (its render)	games/tbs/src/scene/tolbi.c
+Tolbi_MeetSearchingSoldiers	what the player sees	two soldiers come down the palace stairs to Isaac at their foot and show a Missing Person portrait of Babi (its render)	games/tbs/src/scene/tolbi.c
+Tolbi_AskWhetherPartyWasInFinals	what the player sees	after Colosso the burly man behind the market stall asks "You were in the finals, weren't you?" in a window low on the screen (render guide moment, MOMENT_PLACE=135,1 MOMENT_SET=0x950,0x962 MOMENT_STAND=360,246 MOMENT_HOLD=64,6,1,3) (its render)	games/tbs/src/scene/tolbi.c
+CELL_BEHAVIOR_TOLBI_EDGE	what the player sees	behaviour 12 lines map.txt column 37 rows 18 to 28 and row 29 at x 15 to 18, the town's east and south edges (its render)	games/tbs/src/scene/tolbi.c
+TolbiSpring_DrainSpring	what the player sees	searching Tolbi Spring from the white step, the water sinks in the basin and fades away, uncovering a purple and yellow target of rings with crabs and turtles (its render)	games/tbs/src/scene/tolbi_games.c
+LUCKY_WHEELS_MOON	the game	"Moons can win you anything." (MsgTolbiLuckyWheelsPrizesPrizesDetermined)	games/tbs/src/scene/tolbi_games.c
+LUCKY_WHEELS_KINDS	the game	"Shirts win undershirts, Rings win rings, Boots win boots, Stars and Hearts win items" (MsgTolbiLuckyWheelsPrizesPrizesDetermined)	games/tbs/src/scene/tolbi_games.c
+CELL_BEHAVIOR_TOLBI_SHIP_DECK_WEST_OF_CABIN_DOOR	what the player sees	at Kalay, Isaac walking east onto map.txt (12, 50) beside the south cabin's door brings the blue-bandana crewman out, and he sidles away east (its render)	games/tbs/src/scene/tolbi_ship_deck.c
+CELL_BEHAVIOR_TOLBI_SHIP_DECK_EAST_OF_CABIN_DOOR	its code	map.txt (14, 50) and (14, 51), east of the cabin door at column 13; its event walks the crewman west, to x 202 and 180	games/tbs/src/scene/tolbi_ship_deck.c
+TolbiShipDeck_CatchCrewmanFromWest	what the player sees	Isaac comes up from the west of the south cabin's door; the crewman bursts out, says "I didn't do anything...", sidles east and runs off up the east side (its render)	games/tbs/src/scene/tolbi_ship_deck.c
+TolbiShipDeck_CatchCrewmanFromEast	its code	runs on the cells east of the cabin door (14, 50..51) and walks the crewman west, the mirror of TolbiShipDeck_CatchCrewmanFromWest	games/tbs/src/scene/tolbi_ship_deck.c
+CELL_BEHAVIOR_TREE_ROOMS_BEFORE_TRET	what the player sees	walking north onto cells (9..11, 5) in the lowest room, below the face in the north wall, starts the roar and the battle with Tret (its render)	games/tbs/src/scene/tree_rooms.c
+CELL_BEHAVIOR_TREE_ROOMS_HEALING_RING_CHEST	the game	"Healing Ring" (FIND_ITEM(ITEM_HEALING_RING) on cell (10, 24)), the red chest between the third floor's two webs (its render)	games/tbs/src/scene/tree_rooms.c
+CELL_BEHAVIOR_TREE_ROOMS_NUT_CHEST	the game	"Nut" (FIND_ITEM(ITEM_NUT) on cell (54, 25)), the red chest east of the fifth floor's web (its render)	games/tbs/src/scene/tree_rooms.c
+CELL_BEHAVIOR_TREE_ROOMS_PSYNERGY_STONE	what the player sees	the purple Psynergy Stone by the third floor's north wall, at cell (9, 21) (its render)	games/tbs/src/scene/tree_rooms.c
+TreeRooms_StepOnLeaf	what the player sees	landing on a torn leaf: Isaac starts, spins and drops through the web, a hole is left where the leaf lay, and he drops into the room below (its render)	games/tbs/src/scene/tree_rooms.c
+TreeRooms_JumpOffLeaf	what the player sees	pushing a way while standing on a leaf: Isaac jumps two cells over the web onto the next leaf (its render)	games/tbs/src/scene/tree_rooms.c
+TreeRooms_CastReveal	what the player sees	the light inside Tret Tree slowly brightens and warms by a few steps over about four seconds and fades back, again and again, until Reveal stops it (its render)	games/tbs/src/scene/tree_rooms.c
+TretTreeBranch_JoinWestVine	what the player sees	walking west along the upper branch over cell (7, 12) beside the west vine's top: nothing on screen changes, then holding Down on the vine climbs Isaac down to the lower branch (its render)	games/tbs/src/scene/tret_tree_branch.c
+TretTreeBranch_LeaveWestVine	what the player sees	walking east off the west vine's top after climbing it: nothing on screen changes as the hidden copy of the branch gives way to the one drawn in the same place (its render)	games/tbs/src/scene/tret_tree_branch.c
+TretTreeBranch_JoinNortheastVine	what the player sees	walking onto the northeast vine's top at cell (37, 11): nothing on screen changes, then holding Down climbs Isaac down the vine (its render)	games/tbs/src/scene/tret_tree_branch.c
+TretTreeBranch_LeaveNortheastVine	what the player sees	walking west off the northeast vine's top after climbing it: nothing on screen changes (its render)	games/tbs/src/scene/tret_tree_branch.c
+TretTreeBranch_JoinSoutheastVine	what the player sees	walking east along the branch over cell (41, 20) to the southeast vine's top: nothing on screen changes, then holding Down at the vine climbs Isaac down it (its render)	games/tbs/src/scene/tret_tree_branch.c
+TretTreeBranch_LeaveSoutheastVine	what the player sees	walking west off the southeast vine's top after climbing it: nothing on screen changes (its render)	games/tbs/src/scene/tret_tree_branch.c
+CELL_BEHAVIOR_TRET_JOIN_WEST_VINE	what the player sees	the cell (7, 12) on the upper branch beside the west vine's top, where Isaac is moved onto the hidden copy that joins the vine with nothing visible (its render)	games/tbs/src/scene/tret_tree_branch.c
+CELL_BEHAVIOR_TRET_LEAVE_WEST_VINE	what the player sees	the cell (8, 17) on the hidden copy east of the west vine's top, where Isaac is moved back onto the drawn branch with nothing visible (its render)	games/tbs/src/scene/tret_tree_branch.c
+CELL_BEHAVIOR_TRET_JOIN_NORTHEAST_VINE	what the player sees	the cell (37, 11) on the upper branch over the northeast vine's top (its render)	games/tbs/src/scene/tret_tree_branch.c
+CELL_BEHAVIOR_TRET_LEAVE_NORTHEAST_VINE	what the player sees	the cell (36, 16) on the hidden copy west of the northeast vine's top (its render)	games/tbs/src/scene/tret_tree_branch.c
+CELL_BEHAVIOR_TRET_JOIN_SOUTHEAST_VINE	what the player sees	the cell (41, 20) on the branch west of the southeast vine's top (its render)	games/tbs/src/scene/tret_tree_branch.c
+CELL_BEHAVIOR_TRET_LEAVE_SOUTHEAST_VINE	what the player sees	the cell (40, 26) on the hidden copy west of the southeast vine's top (its render)	games/tbs/src/scene/tret_tree_branch.c
+TretTreeBranch_CastReveal	what the player sees	on Tret's branches an oval round Isaac shows the leaves in front of the branches see-through, as the scene sets it up again after Reveal (its render)	games/tbs/src/scene/tret_tree_branch.c
+CELL_BEHAVIOR_VALE_SANCTUM_DOOR	what the player sees	cells (15, 27) and (16, 27) at the door of the small stone shrine in the north of Vale; walking into them takes Isaac into the Sanctum (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_STEPS_UP_MT_ALEPH	what the player sees	cells (5, 16) to (8, 16) on the stone steps in the north-west of Vale, where Jenna steps out and says Kraden is waiting (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_NORTH_WAY_TO_KRADEN	what the player sees	cells (0, 38) to (0, 40) at the west edge of Vale, by the woman with fair hair; walking out there leads to the part of Vale around Kraden's cottage (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_SOUTH_WAY_TO_KRADEN	what the player sees	cells (0, 49) and (0, 50) at the west edge of Vale beside the three puppies playing on the path (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_WAY_TO_THE_PLAZA	what the player sees	cells (29, 86) and (29, 87) at the east edge of Vale in the south, leading out to the plaza (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_GARETS_DOOR	what the player sees	cell (25, 46) at the door of the thatched house below the training stone's cliff, north-east of Isaac's (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_NORTHWEST_HOUSE_DOOR	what the player sees	cell (16, 51) at the door of the thatched house up a step north-west of Isaac's (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_ISAACS_DOOR	what the player sees	cell (21, 56) at the door of the house with holes in its thatched roof, where Dora stands (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_GRANDPARENTS_DOOR	what the player sees	cell (20, 71) at the door of the upper of the two thatched houses east of the river in the south (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_SOUTH_HOUSE_DOOR	what the player sees	cell (23, 78) at the door of the lower of the two thatched houses east of the river in the south (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_UNUSED_WRECKED_HOUSE_DOOR	what the player sees	no cell of map/vale or map/vale_prologue carries it; the wrecked house's door cell (6, 74) carries CELL_BEHAVIOR_VALE_WRECKED_HOUSE_DOOR instead (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_OFF_BRIDGE	what the player sees	cells a step back from each end of the two rope bridges over the river; walking off the south bridge Isaac sees nothing change (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_ONTO_BRIDGE	what the player sees	cells at each end of the two rope bridges over the river; stepping on, nothing changes on screen and Isaac walks across the south bridge (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_NORTH_OF_PUPPIES	what the player sees	cells (1, 47) to (5, 47) and (1, 48) on the ledge north of the puppies; the view slides south to them as they bark (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_SOUTH_OF_PUPPIES	what the player sees	cells (3, 53) and (4, 53) on the path south of the puppies (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_WRECKED_HOUSE_DOOR	what the player sees	cell (6, 74) at the door of the house with broken planks on the west bank; searching it shows "The door won't open." (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_WEST_OF_TRAINING_STONE	what the player sees	cells west of the stone pillar below the cliff; walking into the pillar from there pushes it east (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_EAST_OF_TRAINING_STONE	what the player sees	cells east of the stone pillar below the cliff, the side that pushes it west (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_GUARD_JUMPS_OUT	what the player sees	cell (10, 23) on the path between the Sanctum and the steps up Mt. Aleph, where the robed man jumps out from the trees by the river (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_PATH_UP_MT_ALEPH	what the player sees	cells (11, 23) to (13, 27) on the strip of grass between the river and the Sanctum's west wall, where the robed man walks part of his beat (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_BESIDE_THE_SANCTUM	what the player sees	cells (14, 28) and (14, 29) at the corner west of the Sanctum's front (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_FOOT_OF_THE_PATH	what the player sees	cells (12, 28) to (13, 29) at the south end of the strip of grass west of the Sanctum (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_LADDER_FOOT	what the player sees	cell (24, 55) at the foot of the ladder against the front of Isaac's house, east of the door; walking into it climbs Isaac onto the roof (its render)	games/tbs/src/scene/vale.c
+CELL_BEHAVIOR_VALE_LADDER_TOP	what the player sees	the top of the ladder on the roof of Isaac's house (its render)	games/tbs/src/scene/vale.c
+GUARD_ON_THE_PATH	what the player sees	the robed man walking up and down the strip of grass between the river and the Sanctum's west wall (its render)	games/tbs/src/scene/vale.c
+GUARD_BEFORE_THE_SANCTUM	what the player sees	the robed man walking past and standing before the Sanctum's door (its render)	games/tbs/src/scene/vale.c
+GUARD_BEHIND_THE_SANCTUM	what the player sees	the robed man walking off up the east side of the Sanctum, out of the way (its render)	games/tbs/src/scene/vale.c
+Vale_CatchSneakingOnThePath	its code	its row answers CELL_BEHAVIOR_VALE_PATH_UP_MT_ALEPH while the man's SW_TIMER is GUARD_ON_THE_PATH, and plays the chase of Vale_WarnAgainstSneakingUpMtAleph's recording again (vale.c)	games/tbs/src/scene/vale.c
+Vale_CatchSneakingBesideTheSanctum	its code	its row answers CELL_BEHAVIOR_VALE_BESIDE_THE_SANCTUM while the man's SW_TIMER is GUARD_BEFORE_THE_SANCTUM (vale.c)	games/tbs/src/scene/vale.c
+Vale_CatchSneakingAtThePathsFoot	its code	its row answers CELL_BEHAVIOR_VALE_FOOT_OF_THE_PATH while the man's SW_TIMER is GUARD_ON_THE_PATH or GUARD_BEFORE_THE_SANCTUM (vale.c)	games/tbs/src/scene/vale.c
+gVale_GuardComesDownThePath	its code	moves the man from (216, 458) to (256, 456), before the Sanctum's door at cells (15, 27) and (16, 27) (vale.c)	games/tbs/src/scene/vale.c
+gVale_GuardStepsBeforeTheDoor	its code	moves the man to (256, 456), before the Sanctum's door (vale.c)	games/tbs/src/scene/vale.c
+gVale_LeaderRunsBackFromThePath	its code	runs the leader from (224, 458) east to (256, 458) and south to (256, 474), before the Sanctum's door (vale.c)	games/tbs/src/scene/vale.c
+gVale_LeaderRunsBackBeforeTheDoor	its code	runs the leader from (256, 458) south to (256, 474), before the Sanctum's door (vale.c)	games/tbs/src/scene/vale.c
+Vale_PlayPsynergySparkleSound	its code	plays SE_PSYNERGY_SPARKLE every 16 frames while Isaac's Psynergy lifts a board (vale.c)	games/tbs/src/scene/vale.c
+ValeCave_KiteRunsBehindRocks	what the player sees	Kite hops off the south end of the ridge onto a round floor with three mossy rocks in a row in its middle, which the ring of trigger cells (46..52, 17..20) surrounds (ValeCave_KiteRunsOff recording, frame 110) (its render)	games/tbs/src/scene/vale_cave.c
+ValeCave_LeapOffRidingLog	what the player sees	with the riding log at the pool's east end (area flag 0x301), holding Down at its south end makes Isaac leap off it onto the rock bank south of the pool (render guide moment, MOMENT_PLACE=94,8 MOMENT_STAND=568,568 MOMENT_HOLD=128,40) (its render)	games/tbs/src/scene/vale_cave.c
+ValeCave_RideLogEast	what the player sees	standing at the log's west end and holding Right, the upright log floats east along the pool's north wall with Isaac on it to a post by the ledge with the passage into the room of logs (render guide moment, MOMENT_PLACE=94,8 MOMENT_STAND=368,560 MOMENT_HOLD=16,60) (its render)	games/tbs/src/scene/vale_cave.c
+ValeCave_MoveEastCratesIntoWater	what the player sees	Move slides the tall stack of crates at the foot of the rock pillar one cell west into the water, where it sinks in white spray until its top is level with the water (its render)	games/tbs/src/scene/vale_cave.c
+ValeCave_PushLogNorth	what the player sees	pushed north, the log lying south of the pool tips into the pool's south end with a splash and floats there, level with the floor (its render)	games/tbs/src/scene/vale_cave.c
