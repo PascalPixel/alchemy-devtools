@@ -419,6 +419,10 @@ pub struct Context<'a> {
     /// Frames of the leader standing ready before a recorded event's
     /// trigger (Field::lead_in).
     pub lead_in: std::cell::Cell<u32>,
+    /// Whether places() gives every entrance whose room holds the trigger,
+    /// not the first few: an event that changed nothing from those is tried
+    /// from the rest.
+    pub every_place: std::cell::Cell<bool>,
     /// Whether each event recorded is also drawn whole (whole::event), as
     /// <event>-whole.gif, and how its whole frames are cut and dressed.
     pub whole: bool,
@@ -1041,7 +1045,8 @@ impl Context<'_> {
             let mut tried: Vec<i16> = Vec::new();
             let mut found = 0;
             for e in order {
-                if tried.contains(&e.number) || found >= PLACES_PER_SCENE || tried.len() >= MAX_ENTRANCES {
+                let enough = found >= PLACES_PER_SCENE && !self.every_place.get();
+                if tried.contains(&e.number) || enough || tried.len() >= MAX_ENTRANCES {
                     continue;
                 }
                 tried.push(e.number);
@@ -1065,7 +1070,7 @@ impl Context<'_> {
                     found += 1;
                 }
             }
-            if out.len() >= MAX_PLACES {
+            if out.len() >= MAX_PLACES && !self.every_place.get() {
                 out.truncate(MAX_PLACES);
                 break;
             }
@@ -1243,6 +1248,10 @@ impl Context<'_> {
         // their flags: those that found a place first.
         let mut retry: Vec<(Trigger, Vec<u16>, Vec<u16>)> = Vec::new();
         let mut unplaced: Vec<(Trigger, Vec<u16>, Vec<u16>)> = Vec::new();
+        // A run that changed nothing on the screen, kept while other places
+        // are tried.
+        let mut blank: Option<Played> = None;
+        let mut tried: Vec<Setup> = Vec::new();
         for alternative in &event.alternatives {
             let trigger = match &alternative.trigger {
                 Ok(t) => *t,
@@ -1302,14 +1311,69 @@ impl Context<'_> {
                         set.sort_unstable();
                     }
                     let setup = Setup { scene, entrance: entrance.number as u16, set, clear: clear.clone() };
+                    tried.push(setup.clone());
                     match self.play_at(&setup, None, trigger, event, record, strict) {
+                        // Changing nothing on the screen, it may do
+                        // something entered another way (Kraden stepping
+                        // out of Felix only as the party arrives from the
+                        // ship's other side): the other places come first.
+                        Ok(run) if run.blank => {
+                            blank.get_or_insert(Played { setup, run });
+                        }
                         Ok(run) => return Ok(Played { setup, run }),
-                        Err(e) => failure = Some(Failure::new(e)),
+                        Err(e) => {
+                            if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+                                eprintln!("    {} at scene {} entrance {}: {e}", event.name, setup.scene, setup.entrance);
+                            }
+                            // Tried again where he could be put (see below).
+                            if e.contains("cannot walk") {
+                                tried.retain(|t| *t != setup);
+                            }
+                            failure = Some(Failure::new(e));
+                        }
                     }
                 }
             }
             let entry = (trigger, set.clone(), clear.clone());
             if placed { &mut retry } else { &mut unplaced }.push(entry);
+        }
+        // Every other way in, for an event that changed nothing from the
+        // first few.
+        if let Some(played) = blank {
+            self.every_place.set(true);
+            let mut more = Vec::new();
+            for (trigger, set, clear) in &retry {
+                more.extend(self.places(scenes, *trigger, event, set, clear, &mut job.scans).unwrap_or_default().into_iter().map(|p| (*trigger, set.clone(), clear.clone(), p)));
+            }
+            self.every_place.set(false);
+            for (trigger, set, clear, (scene, entrance)) in more {
+                let mut set = set;
+                if entrance.required_flag >= 0 && !set.contains(&(entrance.required_flag as u16)) {
+                    set.push(entrance.required_flag as u16);
+                    set.sort_unstable();
+                }
+                let setup = Setup { scene, entrance: entrance.number as u16, set, clear };
+                if tried.contains(&setup) {
+                    continue;
+                }
+                tried.push(setup.clone());
+                let mut run = self.play_at(&setup, None, trigger, event, record, strict);
+                // Entered this way, what lets him walk there may not be open.
+                if run.as_ref().is_err_and(|e| e.contains("cannot walk")) {
+                    self.relaxed.set(true);
+                    run = self.play_at(&setup, None, trigger, event, record, strict);
+                    self.relaxed.set(false);
+                }
+                if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+                    eprintln!("    {} at scene {} entrance {}, tried as nothing showed: {:?}", event.name, setup.scene, setup.entrance, run.as_ref().map(|r| r.blank));
+                }
+                if let Some(mut run) = run.ok().filter(|run| !run.blank) {
+                    let way = format!("entered by entrance {}, since entered by the first ways in it changed nothing on the screen", setup.entrance);
+                    run.note = Some(run.note.map_or(way.clone(), |n| format!("{way}; {n}")));
+                    return Ok(Played { setup, run });
+                }
+            }
+            return Ok(played);
         }
         let mut failure = failure.unwrap_or_else(|| Failure::new("the row has no trigger".to_string()));
         // The event does not play as the scene is entered: its actor only
@@ -1493,10 +1557,17 @@ impl Context<'_> {
         }
         field.play_as(&own);
         let spots = field.spots(trigger)?;
+        if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+            let first: Vec<String> = spots.iter().take(MAX_SPOTS).map(|s| format!("({},{})L{}k{:#x}", s.x, s.z, s.layer, s.walk)).collect();
+            eprintln!("    {} spots at scene {} entrance {}: {}", event.name, setup.scene, setup.entrance, first.join(" "));
+        }
         let mut error = String::new();
         // A push gone on with that set no flag (rolled no log into the
         // river), kept in case no other spot's push does.
         let mut short_of_goal: Option<EventRun> = None;
+        // A run whose event changed nothing on the screen, kept in case no
+        // other spot's does.
+        let mut blank: Option<EventRun> = None;
         // A direct start has no button press or step to show for it: it must
         // show itself as a silent trigger must.
         let silent = matches!(trigger, Trigger::Touch(_) | Trigger::Psynergy(MOVE, _) | Trigger::Direct(_) | Trigger::Cast(_));
@@ -1550,6 +1621,16 @@ impl Context<'_> {
                 Ok(run) if silent && messages.is_empty() && !run.shown && run.unseen.is_none() => {
                     error = "it ran, but nothing moved, showed or changed from any spot".to_string();
                 }
+                Ok(mut run) if strict && run.blank => {
+                    if blank.is_none() {
+                        if field.whole {
+                            let states = run.states.take().ok_or("no states were kept to draw it whole");
+                            run.whole = Some(states.map_err(String::from).and_then(|states| super::whole::event(&mut field, &states, &run.frames, self.cut)));
+                        }
+                        blank = Some(run);
+                    }
+                    error = "nothing it does shows on the screen".to_string();
+                }
                 Ok(mut run) if run.goal == Some(false) => {
                     if short_of_goal.is_none() {
                         if field.whole {
@@ -1574,7 +1655,7 @@ impl Context<'_> {
                 }
             }
         }
-        if let Some(run) = short_of_goal {
+        if let Some(run) = short_of_goal.or(blank) {
             return Ok(run);
         }
         Err(error)

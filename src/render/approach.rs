@@ -115,6 +115,63 @@ pub fn route(moves: &[Move], from: Cell, to: Cell) -> Option<Vec<Move>> {
     None
 }
 
+/// A walk along `moves` from `from` on into the room: to a cell `wanted`
+/// moves away, or the farthest there is, the way that turns least. None
+/// when no cell lies two moves away.
+pub fn away(moves: &[Move], from: Cell, wanted: usize) -> Option<Vec<Move>> {
+    use std::collections::{HashMap, VecDeque};
+    let mut out_of: HashMap<Cell, Vec<&Move>> = HashMap::new();
+    for m in moves.iter().filter(|m| m.how == How::Walk) {
+        out_of.entry(m.from).or_default().push(m);
+    }
+    let mut via: HashMap<Cell, (usize, Move)> = HashMap::new();
+    let mut queue = VecDeque::from([(from, 0usize)]);
+    while let Some((cell, distance)) = queue.pop_front() {
+        if distance == wanted {
+            continue;
+        }
+        for m in out_of.get(&cell).map(Vec::as_slice).unwrap_or(&[]) {
+            if m.to != from && !via.contains_key(&m.to) {
+                via.insert(m.to, (distance + 1, **m));
+                queue.push_back((m.to, distance + 1));
+            }
+        }
+    }
+    let far = via.values().map(|v| v.0).max().filter(|&d| d >= APPROACH_LEAST)?;
+    let path = |end: Cell| -> Vec<Move> {
+        let mut out = Vec::new();
+        let mut at = end;
+        while let Some(&(_, m)) = via.get(&at) {
+            out.push(m);
+            at = m.from;
+        }
+        out.reverse();
+        out
+    };
+    let turns = |p: &[Move]| p.windows(2).filter(|w| w[0].keys != w[1].keys).count();
+    let mut ends: Vec<Cell> = via.iter().filter(|(_, v)| v.0 == far).map(|(c, _)| *c).collect();
+    ends.sort_unstable();
+    ends.into_iter().map(path).min_by_key(|p| turns(p))
+}
+
+/// `path` begun `cells` moves farther back, where the way up to the trigger
+/// is too short to fill the lead-in: from a cell off it, out along a side
+/// way where one leads off its start, else back along the path itself (a
+/// walk to and fro), so the leader is seen walking rather than standing.
+/// The path as it was when nothing lies farther.
+pub fn lengthen(moves: &[Move], path: &[Move], cells: usize) -> Vec<Move> {
+    let Some(start) = path.first().map(|m| m.from) else {
+        return path.to_vec();
+    };
+    let on_path: Vec<Cell> = path.iter().map(|m| m.to).collect();
+    let aside: Vec<Move> = moves.iter().filter(|m| !on_path.contains(&m.to) && !on_path.contains(&m.from)).copied().collect();
+    let out = away(&aside, start, cells).filter(|w| w.len() * 2 >= cells).or_else(|| away(moves, start, cells));
+    let Some(back) = out.and_then(|w| route(moves, w.last()?.to, start)) else {
+        return path.to_vec();
+    };
+    back.into_iter().chain(path.iter().copied()).collect()
+}
+
 /// The climb `moves` let the leader make from `from`: up to `walks` walks
 /// and then a climb, fewest walks first. None when no climb is that near.
 pub fn onward(moves: &[Move], from: Cell, walks: usize) -> Option<Vec<Move>> {
@@ -166,6 +223,11 @@ pub fn describe(path: &[Move], padding: u32) -> Option<String> {
     } else if path.iter().any(|m| m.how == How::Drop) {
         parts.push("the recording begins with the way up to it, which drops down a ledge".to_string());
     }
+    // Begun farther back than the way up goes (lengthen): he passes a cell
+    // twice, walking off from it and back.
+    if path.iter().enumerate().any(|(i, m)| path[i + 1..].iter().any(|n| n.to == m.to)) {
+        parts.push("the way up is shorter than ten seconds before the black screen, so he walks a way off along it and back first".to_string());
+    }
     if padding >= 60 {
         parts.push(format!(
             "he stands at the start of the way for {:.1} seconds before walking {} cells up to it, so that ten seconds of the game come before the black screen",
@@ -180,14 +242,44 @@ pub fn describe(path: &[Move], padding: u32) -> Option<String> {
 /// lead-ins say nothing either way.
 const STILL_LEAST: usize = 8;
 
+/// What the leader did in a frame before his event began.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Frame {
+    /// He stood still.
+    Stood,
+    /// He walked or climbed.
+    Walked,
+    /// He held a direction into a cell whose row fires only once he has
+    /// pushed against it a while (STEP_TRIGGER_FLAG_WALKING: a ladder's foot,
+    /// a pillar, the edge of a gap), without moving: the game's own wait
+    /// before what he does, which a player sees him push through.
+    Pushed,
+}
+
 /// Why a recording of something the leader does by walking shows him
-/// standing instead, from whether he moved in each frame before its event
-/// began (`moving`): he stood still for most of them. None when he walked.
-pub fn stands_still(moving: &[bool]) -> Option<String> {
-    let walked = moving.iter().filter(|&&m| m).count();
-    (moving.len() >= STILL_LEAST && walked * 2 < moving.len()).then(|| {
-        format!("the leader stands still for {} of the {} frames before it begins, so the recording shows nothing coming to it", moving.len() - walked, moving.len())
-    })
+/// standing instead, from what he did in each frame before its event began:
+/// he stood still for most of them. Pushing into the cell counts as doing
+/// it. None when he walked or pushed.
+pub fn stands_still(frames: &[Frame]) -> Option<String> {
+    let stood = frames.iter().filter(|&&f| f == Frame::Stood).count();
+    (frames.len() >= STILL_LEAST && stood * 2 > frames.len())
+        .then(|| format!("the leader stands still for {stood} of the {} frames before it begins, so the recording shows nothing coming to it", frames.len()))
+}
+
+/// Pixels of a frame that may differ from another's with the two still
+/// showing the same: a stray pixel of a sparkle or a ripple.
+const SAME_PIXELS: usize = 24;
+/// Frames that may differ (by more than SAME_PIXELS) with a recording still
+/// showing the same as another.
+const SAME_FRAMES: usize = 2;
+
+/// Whether the frames `played` show what `idle` (the same moment played
+/// with the same keys and the event's rows taken out of the scene's table)
+/// shows, frame by frame: the event changed nothing on the screen. Water and
+/// cycling colours run alike in both.
+pub fn looks_the_same(played: &[Vec<u16>], idle: &[Vec<u16>]) -> bool {
+    let differ = played.iter().zip(idle).filter(|(a, b)| a.len() != b.len() || a.iter().zip(b.iter()).filter(|(p, q)| p != q).count() > SAME_PIXELS).count();
+    differ <= SAME_FRAMES
 }
 
 /// A pad script: keys (KEYINPUT bits) held for so many frames, one pair
@@ -302,15 +394,66 @@ mod tests {
     }
 
     #[test]
+    fn after_arriving_he_walks_on_into_the_room() {
+        // In at the door of a room four cells across: he walks on, the
+        // straightest way, as far as asked or as the room goes.
+        let grid = ["######", "#....#", "#....#", "##.###"];
+        let all = moves(&grid);
+        let walk = away(&all, (2, 3), 2).unwrap();
+        assert_eq!(walk.len(), 2);
+        assert!(walk.iter().all(|m| m.keys == UP));
+        let walk = away(&all, (2, 3), 30).unwrap();
+        assert_eq!(walk.len(), 4);
+        assert_eq!(walk[0].from, (2, 3));
+        // A cell with nowhere to go has no walk.
+        assert_eq!(away(&moves(&["###", "#.#", "###"]), (1, 1), 4), None);
+    }
+
+    #[test]
+    fn a_way_too_short_is_begun_farther_back() {
+        // A branch two cells long up to the trigger at (3, 1), with a side
+        // way south from its start.
+        let grid = ["#####", "#...#", "#.###", "#.###", "#.###"];
+        let all = moves(&grid);
+        // Two cells asked to be five: begun three cells down the side way,
+        // he walks up it and along the branch.
+        let short = vec![Move { from: (1, 1), to: (2, 1), keys: RIGHT, how: How::Walk }, Move { from: (2, 1), to: (3, 1), keys: RIGHT, how: How::Walk }];
+        let longer = lengthen(&all, &short, 3);
+        assert_eq!(longer.len(), 5);
+        assert_eq!(longer[0].from, (1, 4));
+        assert_eq!(&longer[3..], &short[..]);
+        // Nowhere to go: as it was.
+        let lone = moves(&["####", "#..#", "####"]);
+        let step = vec![Move { from: (1, 1), to: (2, 1), keys: RIGHT, how: How::Walk }];
+        assert_eq!(lengthen(&lone, &step, 4), step);
+    }
+
+    #[test]
     fn a_leader_who_never_moves_is_refused_and_one_who_walks_up_is_kept() {
-        assert!(stands_still(&[false; 40]).is_some());
+        use Frame::{Stood, Walked};
+        assert!(stands_still(&[Stood; 40]).is_some());
         // Standing twelve frames, then walking a cell onto the trigger.
-        let walked: Vec<bool> = std::iter::repeat_n(false, 12).chain(std::iter::repeat_n(true, 16)).collect();
+        let walked: Vec<Frame> = std::iter::repeat_n(Stood, 12).chain(std::iter::repeat_n(Walked, 16)).collect();
         assert_eq!(stands_still(&walked), None);
         // Ten seconds stood before a short step is standing.
-        let stood: Vec<bool> = std::iter::repeat_n(false, 600).chain(std::iter::repeat_n(true, 16)).collect();
+        let stood: Vec<Frame> = std::iter::repeat_n(Stood, 600).chain(std::iter::repeat_n(Walked, 16)).collect();
         assert!(stands_still(&stood).unwrap().contains("600 of the 616"));
-        assert_eq!(stands_still(&[false; 4]), None);
+        assert_eq!(stands_still(&[Stood; 4]), None);
+    }
+
+    #[test]
+    fn pushing_into_a_cell_that_waits_for_a_push_is_doing_it() {
+        use Frame::{Pushed, Stood, Walked};
+        // Started beside Goma Cave's gap: three frames turning, then
+        // twenty-seven of West held into the cell before the jump.
+        let pushed: Vec<Frame> = std::iter::repeat_n(Stood, 3).chain(std::iter::repeat_n(Pushed, 27)).collect();
+        assert_eq!(stands_still(&pushed), None);
+        // A walk of two cells to a ladder's foot, then the push up it.
+        let walked: Vec<Frame> = std::iter::repeat_n(Walked, 32).chain(std::iter::repeat_n(Pushed, 27)).collect();
+        assert_eq!(stands_still(&walked), None);
+        // Standing is still standing however it ends.
+        let stood: Vec<Frame> = std::iter::repeat_n(Stood, 40).chain(std::iter::repeat_n(Pushed, 10)).collect();
+        assert!(stands_still(&stood).is_some());
     }
 
     #[test]
@@ -322,6 +465,10 @@ mod tests {
         assert!(said.contains("climbs up a vine or ladder (Up held"), "{said}");
         let walk = route(&all, (3, 2), (0, 2)).unwrap();
         assert_eq!(describe(&walk, 12), None);
+        // Begun farther back, back along itself.
+        let there = route(&all, (0, 2), (3, 2)).unwrap();
+        let fro: Vec<Move> = route(&all, (3, 2), (0, 2)).unwrap().into_iter().chain(there).collect();
+        assert!(describe(&fro, 0).unwrap().contains("walks a way off along it and back"));
         // Stood at the start for the rest of a black screen's ten seconds.
         let said = describe(&walk, 480).unwrap();
         assert!(said.contains("8.0 seconds before walking 3 cells"), "{said}");
@@ -331,10 +478,27 @@ mod tests {
     fn standing_at_the_start_before_walking_up_is_not_standing_at_the_trigger() {
         // As Field::event judges it: the frames stood at the start of a way
         // shorter than the lead-in are left out, the walk is kept.
-        let stood: Vec<bool> = std::iter::repeat_n(false, 500).collect();
+        let stood = vec![Frame::Stood; 500];
         assert!(stands_still(&stood).is_some());
-        let walk: Vec<bool> = std::iter::repeat_n(true, 48).chain(std::iter::repeat_n(false, 16)).collect();
+        let walk: Vec<Frame> = std::iter::repeat_n(Frame::Walked, 48).chain(std::iter::repeat_n(Frame::Stood, 16)).collect();
         assert_eq!(stands_still(&walk), None);
+    }
+
+    #[test]
+    fn an_event_that_changes_nothing_on_the_screen_looks_the_same() {
+        let still = vec![vec![7u16; 64]; 30];
+        assert!(looks_the_same(&still, &still));
+        // A leader who jumps: thirty pixels of him elsewhere for ten frames.
+        let mut jumped = still.clone();
+        for frame in &mut jumped[10..20] {
+            frame[..30].fill(1);
+        }
+        assert!(!looks_the_same(&jumped, &still));
+        // A sparkle of a few pixels in a frame or two is no change.
+        let mut sparkled = still.clone();
+        sparkled[3][..30].fill(1);
+        sparkled[4][..5].fill(1);
+        assert!(looks_the_same(&sparkled, &still));
     }
 
     #[test]

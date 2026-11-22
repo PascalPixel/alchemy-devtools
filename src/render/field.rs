@@ -39,7 +39,9 @@
 //! a player would come along the ground he can walk and the vines he can
 //! climb (approach.rs), and the pad walks him there and on into the trigger,
 //! so the lead-in is the walk. A recording in which he mostly stands before
-//! it begins is refused. An event the screen does not show (the game moving
+//! it begins is refused; pushing into a cell whose row waits for a push is
+//! doing it. A touch that changes nothing on the screen (Field::looks_the_same)
+//! says so. An event the screen does not show (the game moving
 //! him and the camera together, as Tret Tree's vines do) is kept with a note
 //! saying so, and goes on to the climb it lets him make. A touch that leaves
 //! him on a ladder is held on down it (Field::event), a push is gone on with
@@ -47,7 +49,7 @@
 //! step back (Field::step_back).
 
 use super::animation::{is_black_bgr555, BLACK_CLEARANCE};
-use super::approach::{self, How, Move, Pad};
+use super::approach::{self, Frame, How, Move, Pad};
 use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, LR, SP, WIDTH};
 use super::party::{chapter, order, Party};
 use super::story::{Trigger, CARRY, MOVE};
@@ -120,6 +122,8 @@ const JUMP_DROP: i32 = 96 << 16;
 /// in bits 15..12 with TRIGGER_FLAG_FACING), its target and its result.
 const STEP_TRIGGER_FLAG_WALKING: u32 = 0x200;
 const TRIGGER_FLAG_FACING: u32 = 0x400;
+/// With STEP_TRIGGER_FLAG_WALKING, two frames of pushing are enough.
+const STEP_TRIGGER_FLAG_QUICK: u32 = 0x800;
 /// The TriggerKind of each dispatch.
 pub const TRIGGER_TALK: u8 = 0;
 pub const TRIGGER_EXIT: u8 = 1;
@@ -602,6 +606,8 @@ pub struct Field<'rom> {
     pub walk_up: bool,
     /// The story chapter the scene falls in (party.rs), if any.
     party: Option<&'static Party>,
+    /// The keys held at the end of each frame, while they are kept.
+    keys_kept: Option<Vec<u32>>,
 }
 
 impl<'rom> Field<'rom> {
@@ -693,7 +699,7 @@ impl<'rom> Field<'rom> {
             party_saved: [0; 5],
             cuts: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -1167,6 +1173,9 @@ impl<'rom> Field<'rom> {
         }
         if frame_done {
             self.gba.set_keys(self.t.keys);
+            if let Some(keys) = self.keys_kept.as_mut() {
+                keys.push(self.t.keys);
+            }
             if let Some(mut states) = self.states.take() {
                 states.push(self.save());
                 self.states = Some(states);
@@ -2152,21 +2161,19 @@ impl<'rom> Field<'rom> {
     }
 
     /// The facings in which walking on a cell with collision code `code`
-    /// starts its rows, when every row that holds now fires only as he
-    /// walks into it facing one way (STEP_TRIGGER_WALKING_INTO); None when
-    /// one fires however he steps on it, or leaves the scene.
+    /// starts its rows (Scene_FindTrigger), when every row that holds now
+    /// either needs him facing one way or waits for a push: None when one
+    /// fires however he steps on it, or leaves the scene. A row that waits
+    /// for him to push against something while he stands on the cell
+    /// (STEP_TRIGGER_FLAG_WALKING, FIELD_PUSH_FRAMES of being blocked) never
+    /// fires as he walks across it, whichever way: Crossbone Isle's floor
+    /// of pillars, every cell of it a pillar's push.
     fn facings(&self, code: i32) -> Option<Vec<u32>> {
         if !(1..=CELL_EVENT_LAST).contains(&code) || self.event_rows(TRIGGER_EXIT, code as u16).iter().any(|r| self.condition_holds(r.condition)) {
             return None;
         }
-        let mut out = Vec::new();
-        for r in self.event_rows(TRIGGER_STEP, code as u16).iter().filter(|r| self.condition_holds(r.condition)) {
-            if r.flags & STEP_TRIGGER_FLAG_WALKING == 0 || r.flags & TRIGGER_FLAG_FACING == 0 {
-                return None;
-            }
-            out.push(r.flags & 0xf000);
-        }
-        Some(out)
+        let rows: Vec<u32> = self.event_rows(TRIGGER_STEP, code as u16).iter().filter(|r| self.condition_holds(r.condition)).map(|r| r.flags).collect();
+        crossings(&rows)
     }
 
     /// Whether a climb cell whose north holds code `code` is the top of its
@@ -2193,12 +2200,14 @@ impl<'rom> Field<'rom> {
 
     /// Whether the leader walking on crosses a cell with collision code
     /// `code`: not an exit's cell while an exit row for it holds, nor one
-    /// with the code `target` being played.
+    /// with the code `target` being played, unless its rows wait for him to
+    /// push against something there (a floor of pillars to push).
     fn crossable(&self, code: i32, target: Option<u16>) -> bool {
         if !(1..=CELL_EVENT_LAST).contains(&code) {
             return true;
         }
-        target != Some(code as u16) && self.event_rows(TRIGGER_EXIT, code as u16).iter().all(|r| !self.condition_holds(r.condition))
+        let exit = self.event_rows(TRIGGER_EXIT, code as u16).iter().any(|r| self.condition_holds(r.condition));
+        !exit && (target != Some(code as u16) || self.facings(code).is_some_and(|f| f.is_empty()))
     }
 
     /// Whether (x, z) pixels lie within the map's bounds, `margin` pixels in.
@@ -2212,7 +2221,10 @@ impl<'rom> Field<'rom> {
     /// it, so a leader outside it is off the screen.
     pub fn room(&self) -> [i32; 4] {
         let entrances = self.entrances();
-        let entrance = entrances.iter().find(|e| e.number as u16 == self.setup.entrance).or_else(|| entrances.first());
+        // In the scene an exit led to, the room is the one he stands in.
+        let elsewhere = self.scene() != self.setup.scene;
+        let here = self.leader().filter(|_| elsewhere).and_then(|a| entrances.iter().find(|e| box_holds(e.camera, self.header(), a.x, a.z)));
+        let entrance = here.or_else(|| entrances.iter().find(|e| !elsewhere && e.number as u16 == self.setup.entrance)).or_else(|| entrances.first());
         let h = self.header();
         let side = |i: usize| match entrance {
             Some(e) if e.camera[i] != -1 => i32::from(e.camera[i]),
@@ -2671,8 +2683,34 @@ impl<'rom> Field<'rom> {
 
     /// The way the leader walks up to `spot` from some cells back
     /// (approach::approach): enough of them to fill the lead-in, at least
-    /// approach::APPROACH_CELLS. Or why he has none.
-    fn plan_approach(&mut self, spot: &Spot, origin: Option<approach::Cell>) -> Result<Result<Vec<Move>, String>, String> {
+    /// approach::APPROACH_CELLS, and the map layer he walks it on. That is
+    /// the spot's own layer, else another whose cell there is ground at the
+    /// same height, where he is put on the spot's layer as he arrives: Goma
+    /// Cave's gap has its code on a layer that only it and the jump's cells
+    /// fill, over the ledge he walks to. Or why he has none.
+    fn plan_approach(&mut self, spot: &Spot, origin: Option<approach::Cell>) -> Result<Result<(Vec<Move>, u8), String>, String> {
+        let cell = (spot.x >> 4, spot.z >> 4);
+        if let Some(way) = self.way_up(spot, origin)? {
+            return Ok(Ok((way, spot.layer)));
+        }
+        let height = self.ground(spot.layer, spot.x, spot.z)?;
+        for layer in (0..3u8).filter(|&l| l != spot.layer) {
+            let code = self.cell(layer, cell.0, cell.1);
+            if !Self::standable(code) || !self.quiet(code) || !(-STEP_DOWN..=STEP_UP).contains(&(self.ground(layer, spot.x, spot.z)? - height)) {
+                continue;
+            }
+            self.set_leader_layer(layer);
+            let way = self.way_up(spot, origin);
+            self.set_leader_layer(spot.layer);
+            if let Some(way) = way? {
+                return Ok(Ok((way, layer)));
+            }
+        }
+        Ok(Err(format!("no walk of {} cells or more leads up to it", approach::APPROACH_LEAST)))
+    }
+
+    /// The way up to `spot` on the layer the leader stands on (plan_approach).
+    fn way_up(&mut self, spot: &Spot, origin: Option<approach::Cell>) -> Result<Option<Vec<Move>>, String> {
         // Reached past the trigger's other cells (a hole three cells wide,
         // entered from any side): the moves never step on a cell that
         // starts something but the spot.
@@ -2684,10 +2722,28 @@ impl<'rom> Field<'rom> {
         // (up the vine to a branch only the vine reaches); else the way up
         // from any side.
         if let Some(way) = origin.and_then(|o| approach::route(&moves, o, cell)).filter(|way| way.len() >= wanted) {
-            return Ok(Ok(way[way.len() - wanted..].to_vec()));
+            return Ok(Some(way[way.len() - wanted..].to_vec()));
         }
-        Ok(approach::approach(&moves, cell, spot.walk, wanted, approach::APPROACH_LEAST)
-            .ok_or_else(|| format!("no walk of {} cells or more leads up to it", approach::APPROACH_LEAST)))
+        let Some(path) = approach::approach(&moves, cell, spot.walk, wanted, approach::APPROACH_LEAST) else {
+            return Ok(None);
+        };
+        // Shorter than the lead-in (ten seconds before a black screen), it
+        // is begun farther back rather than stood at.
+        let short = self.lead_in.saturating_sub(Self::walk_frames(&path)) / approach::FRAMES_PER_CELL;
+        Ok(Some(if short >= 2 { approach::lengthen(&moves, &path, short as usize) } else { path }))
+    }
+
+    /// About how many frames the leader takes over `path`.
+    fn walk_frames(path: &[Move]) -> u32 {
+        path.iter().map(|m| if m.how == How::Walk { approach::FRAMES_PER_CELL } else { CLIMB_FRAMES / 3 }).sum()
+    }
+
+    /// Puts the leader on map layer `layer`, where he stands.
+    fn set_leader_layer(&mut self, layer: u8) {
+        let a = self.leader_object();
+        if a != 0 {
+            self.gba.write8(a + self.s.l.obj_terrain_id, layer);
+        }
     }
 
     /// The leader's place as it changes from frame to frame: pixels, and his
@@ -2698,12 +2754,12 @@ impl<'rom> Field<'rom> {
 
     /// Runs a frame with the keys held now, noting whether the leader moved
     /// in it (`moving`) and what was held (`pad`).
-    fn step_watching(&mut self, moving: &mut Vec<bool>, pad: &mut Pad) -> Result<bool, String> {
+    fn step_watching(&mut self, moving: &mut Vec<Frame>, pad: &mut Pad) -> Result<bool, String> {
         let before = self.leader_place();
         pad.push(self.t.keys);
         self.frames(1)?;
         let moved = self.leader_place() != before;
-        moving.push(moved);
+        moving.push(if moved { Frame::Walked } else { Frame::Stood });
         Ok(moved)
     }
 
@@ -2795,7 +2851,9 @@ impl<'rom> Field<'rom> {
     /// two cells where he can and else one, or aside, with the pad, so what
     /// it drew shows instead of his back. Whether he did.
     fn step_back(&mut self, changed: &[(i32, i32)], pad: &mut Pad) -> Result<bool, String> {
-        let Some(a) = self.leader() else { return Ok(false) };
+        let Some(a) = self.leader() else {
+            return Ok(false);
+        };
         let (lx, lz) = (a.x >> 4, a.z >> 4);
         // His sprite stands about two cells tall over his own.
         if !changed.iter().any(|&(cx, cz)| (cx - lx).abs() <= 1 && (-1..=2).contains(&(lz - cz))) {
@@ -2859,6 +2917,75 @@ impl<'rom> Field<'rom> {
         self.frames(2)
     }
 
+    /// Whether what was recorded since `from` (the moment a touch was given,
+    /// `kept` frames into the recording) looks the same, frame by frame, as
+    /// the same moment played again with the same `keys` and the scene's
+    /// step rows for `code` taken out of its table: the event changed
+    /// nothing on the screen. The state and the recording are put back.
+    /// False where the table cannot be changed (it lies in the cartridge).
+    fn looks_the_same(&mut self, from: &Saved, kept: usize, keys: &[u32], code: u16) -> Result<bool, String> {
+        let after = self.save();
+        let recorded = self.recorded.take();
+        let states = self.states.take();
+        self.resume(from);
+        let work = self.gba.read32(self.s.field_work);
+        let mut a = if work == 0 { 0 } else { self.gba.read32(work + self.s.l.field_events) };
+        let in_ram = (0x0200_0000..0x0400_0000).contains(&a);
+        for _ in 0..1024 {
+            if !in_ram || self.gba.read32(a) == u32::MAX {
+                break;
+            }
+            let control = self.gba.read32(a);
+            if control & 15 == u32::from(TRIGGER_STEP) && u16::from(self.gba.read8(a + 4)) == code {
+                self.gba.write32(a, control | 15);
+            }
+            a += self.s.l.event_row_size;
+        }
+        let mut same = in_ram;
+        if in_ram {
+            self.recorded = Some(Vec::new());
+            for &k in keys {
+                self.hold(k);
+                self.frames(1)?;
+            }
+            let idle = self.recorded.take().unwrap_or_default();
+            let played = recorded.as_deref().unwrap_or_default().get(kept..).unwrap_or_default();
+            same = approach::looks_the_same(played, &idle);
+        }
+        self.load(&after);
+        self.recorded = recorded;
+        self.states = states;
+        Ok(same)
+    }
+
+    /// Walks the leader on from where he stands, about `frames` frames'
+    /// worth of cells (approach::away), along ground that starts nothing,
+    /// as a player walks into a room he has just entered. How many frames
+    /// it took; it ends early where the walk goes wrong or leaves the
+    /// screen.
+    fn walk_about(&mut self, frames: u32) -> Result<u32, String> {
+        let Some(leader) = self.leader() else {
+            return Ok(0);
+        };
+        if self.world() {
+            return Ok(0);
+        }
+        let reach = self.reach(None)?;
+        let moves = self.moves(&reach, &[])?;
+        let wanted = (frames / approach::FRAMES_PER_CELL) as usize;
+        let Some(path) = approach::away(&moves, (leader.x >> 4, leader.z >> 4), wanted) else {
+            return Ok(0);
+        };
+        let start = self.t.frame;
+        let (mut moving, mut pad) = (Vec::new(), Pad::default());
+        let walked = self.follow(&path, 0, &mut moving, &mut pad);
+        self.hold(0);
+        if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+            eprintln!("    walks about {} cells after arriving: {:?} keys held (MOMENT_HOLD): {pad}", path.len(), walked);
+        }
+        Ok(self.t.frame - start)
+    }
+
     /// Whether the leader is climbing (MainRoutineWork.movementMode).
     fn climbing(&self) -> bool {
         self.gba.read8(self.s.game_state + self.s.l.gs_movement_mode) != 0
@@ -2895,7 +3022,7 @@ impl<'rom> Field<'rom> {
     /// is off its line), each climb or drop with its key held until he stands
     /// on its far cell. The last walk hands over two cells early when it goes
     /// the way `then` pushes on, so he walks on into the trigger without a stop.
-    fn follow(&mut self, path: &[Move], then: u32, moving: &mut Vec<bool>, pad: &mut Pad) -> Result<(), String> {
+    fn follow(&mut self, path: &[Move], then: u32, moving: &mut Vec<Frame>, pad: &mut Pad) -> Result<(), String> {
         let layer = self.leader().ok_or("the leader has no actor")?.layer;
         let mut i = 0;
         while i < path.len() {
@@ -2983,7 +3110,7 @@ impl<'rom> Field<'rom> {
     /// After an event that moved the leader without showing it, the climb
     /// it lets him make from where it put him (approach::onward), walked and
     /// climbed with the pad: what the move was for. Whether there was one.
-    fn climb_onward(&mut self, moving: &mut Vec<bool>, pad: &mut Pad) -> Result<Option<u32>, String> {
+    fn climb_onward(&mut self, moving: &mut Vec<Frame>, pad: &mut Pad) -> Result<Option<u32>, String> {
         let reach = self.reach(None)?;
         let leader = self.leader().ok_or("the leader has no actor")?;
         let moves = self.moves(&reach, &[])?;
@@ -3375,6 +3502,7 @@ impl<'rom> Field<'rom> {
         // in place when the trigger comes are watched for the event moving
         // them; those that move on their own meanwhile (a sparkle, a
         // wanderer) are not.
+        self.keys_kept = None;
         // Where the party was before the leader was put at the spot: where
         // the entrance placed it, or where the event before left him. A walk
         // up to the spot comes the way from there.
@@ -3437,15 +3565,21 @@ impl<'rom> Field<'rom> {
         let walks = self.walk_up && record.is_some() && matches!(trigger, Trigger::Touch(_));
         let mut way_up = None;
         let mut walk_note = None;
+        // The layer he walks up on, when it is not the spot's (see
+        // plan_approach): he is put on the spot's as he comes onto its cell.
+        let mut walk_layer = spot.layer;
         if walks && spot.walk != 0 && !self.hide_leader && !self.world() {
             match self.plan_approach(spot, origin)? {
-                Ok(path) => way_up = Some(path),
+                Ok((path, layer)) => {
+                    way_up = Some(path);
+                    walk_layer = layer;
+                }
                 Err(why) => walk_note = Some(format!("{why}, so he starts beside it")),
             }
         }
         // Whether the leader moved in each frame before the event began, and
         // the keys held meanwhile.
-        let mut moving: Vec<bool> = Vec::new();
+        let mut moving: Vec<Frame> = Vec::new();
         let mut pad = Pad::default();
         let beside = self.save();
         if let Some(full) = way_up.take() {
@@ -3464,9 +3598,9 @@ impl<'rom> Field<'rom> {
             for path in tries {
                 let first = path[0].from;
                 let (x, z) = (first.0 * 16 + 8, first.1 * 16 + 8);
-                let height = self.ground(spot.layer, x, z)?;
+                let height = self.ground(walk_layer, x, z)?;
                 let d = KEYS.iter().position(|&k| k == path[0].keys).unwrap_or(2);
-                let start = Spot { x, z, layer: spot.layer, height, facing: FACING[d], walk: 0, cell: None };
+                let start = Spot { x, z, layer: walk_layer, height, facing: FACING[d], walk: 0, cell: None };
                 self.put_leader(&start);
                 self.frames(SETTLE_MOVED)?;
                 // The camera has come to rest on him before the walk is recorded.
@@ -3503,6 +3637,10 @@ impl<'rom> Field<'rom> {
             }
         }
         if record.is_some() {
+            // The first frame drawn after a state is loaded (the checks of
+            // the start above load one) shows the leader's sprite half
+            // drawn: it is played before the recording starts.
+            self.frames(1)?;
             self.recorded = Some(Vec::new());
             self.keep_states(self.whole);
         }
@@ -3511,7 +3649,7 @@ impl<'rom> Field<'rom> {
                 // The walk is the lead-in; where the way up is shorter than
                 // the lead-in asks (a black screen to clear), he stands at
                 // its start for the rest.
-                let walk = path.iter().map(|m| if m.how == How::Walk { approach::FRAMES_PER_CELL } else { CLIMB_FRAMES / 3 }).sum::<u32>();
+                let walk = Self::walk_frames(&path);
                 let mut walked = Ok(());
                 let padding = self.lead_in.saturating_sub(walk);
                 for _ in 0..padding {
@@ -3523,6 +3661,13 @@ impl<'rom> Field<'rom> {
                 // first step.
                 moving.clear();
                 walk_note = approach::describe(&path, padding);
+                if walk_layer != spot.layer {
+                    let put = format!(
+                        "its code lies on map layer {}, where no walk leads up to its cell, so he walks onto the cell on layer {walk_layer}, over the same ground, and is put on layer {} there",
+                        spot.layer, spot.layer
+                    );
+                    walk_note = Some(walk_note.map_or(put.clone(), |n| format!("{n}; {put}")));
+                }
                 if let Err(why) = walked.and_then(|()| self.follow(&path, spot.walk, &mut moving, &mut pad)) {
                     walk_note = Some(format!("the walk up to it stopped ({why}), so he starts beside it"));
                     self.load(&beside);
@@ -3556,6 +3701,8 @@ impl<'rom> Field<'rom> {
         // another scene: the arrival is followed from there.
         let mut leads_to: Option<u16> = None;
         let mut arrival: Option<u32> = None;
+        // Whether the player had control in the scene it led to.
+        let mut arrived = false;
         let mut note = None;
         let (kind, target) = match trigger {
             Trigger::Talk(id) => (TRIGGER_TALK, id),
@@ -3574,6 +3721,9 @@ impl<'rom> Field<'rom> {
         // A direct start reads no table.
         let table = if direct { Vec::new() } else { self.event_rows(kind, target) };
         let rows = table.len();
+        // Whether its row fires only once the leader has pushed against the
+        // cell a while (STEP_TRIGGER_FLAG_WALKING).
+        let waits_for_push = matches!(trigger, Trigger::Touch(_)) && table.iter().any(|r| r.flags & STEP_TRIGGER_FLAG_WALKING != 0);
         if !direct && !anywhere && !own.is_empty() && !self.has_row(kind, target, own) {
             return Err(format!("the event table here has no row of its own for {} {target}", kind_name(kind)));
         }
@@ -3597,6 +3747,12 @@ impl<'rom> Field<'rom> {
         // A direct start is judged against the same moment left alone (see
         // `shown` below).
         let control = (direct || anywhere).then(|| self.save());
+        // A recorded touch is played again from here without its rows, to
+        // see whether it changed anything on the screen.
+        let unplayed = (record.is_some() && matches!(trigger, Trigger::Touch(_))).then(|| {
+            self.keys_kept = Some(Vec::new());
+            (self.save(), self.recorded.as_ref().map_or(0, Vec::len))
+        });
         match trigger {
             Trigger::Talk(_) | Trigger::Search(_) => self.press(2)?,
             Trigger::Psynergy(ability, _) | Trigger::PsynergyCell(ability, _) | Trigger::Cast(ability) => {
@@ -3723,6 +3879,7 @@ impl<'rom> Field<'rom> {
                         // The scene it leads to, held a moment once it is
                         // all on screen.
                         self.frames(ARRIVAL_HOLD)?;
+                        arrived = true;
                         break;
                     }
                     Arrival::Ended(why) => {
@@ -3758,7 +3915,19 @@ impl<'rom> Field<'rom> {
             }
             let Some(b) = began else {
                 let place = screen_place(self);
-                moving.push(place.map(|p| p.0) != last_place.map(|p| p.0));
+                let moved = place.map(|p| p.0) != last_place.map(|p| p.0);
+                // Held into a cell whose row waits for a push, he is doing
+                // what the row asks.
+                let on_spot = place.is_some_and(|((x, z), _)| (x >> 4, z >> 4) == (spot.x >> 4, spot.z >> 4));
+                if on_spot && self.leader().is_some_and(|a| a.layer != spot.layer) {
+                    self.set_leader_layer(spot.layer);
+                    self.cut();
+                }
+                moving.push(match (moved, waits_for_push && on_spot && spot.walk != 0 && self.t.keys == spot.walk) {
+                    (true, _) => Frame::Walked,
+                    (false, true) => Frame::Pushed,
+                    (false, false) => Frame::Stood,
+                });
                 pad.push(self.t.keys);
                 let before = std::mem::replace(&mut last_place, place);
                 // Before the event begins, nothing is pressed for it but
@@ -3984,6 +4153,11 @@ impl<'rom> Field<'rom> {
             }
         }
         self.hold(0);
+        let kept_keys = self.keys_kept.take().unwrap_or_default();
+        let blank = match unplayed {
+            Some((from, kept)) if pages.is_empty() && !left && !fought && !capped && !defeated && unseen_move.is_none() => self.looks_the_same(&from, kept, &kept_keys, target)?,
+            _ => false,
+        };
         // A push goes on the same way, as a player pushes a log on until it
         // stops: each push the game's own, until what was pushed lies still
         // or the event's flags are set (the log rolled into the river).
@@ -4079,7 +4253,12 @@ impl<'rom> Field<'rom> {
             let since = self.recorded.as_ref().and_then(|f| f.iter().rposition(|p| is_black_bgr555(p)).map(|i| f.len() - 1 - i));
             if let Some(since) = since.filter(|&s| s < CLEARED) {
                 let resume = self.save();
-                self.frames((CLEARED - since) as u32)?;
+                let rest = (CLEARED - since) as u32;
+                // What a player does on arriving: he walks on into the
+                // scene, rather than stand for the seconds the recording
+                // still needs.
+                let walked = if arrived && self.walk_up { self.walk_about(rest)? } else { 0 };
+                self.frames(rest.saturating_sub(walked))?;
                 self.load(&resume);
             }
         }
@@ -4159,11 +4338,15 @@ impl<'rom> Field<'rom> {
         if let Some(why) = hidden_note {
             note = Some(note.map_or(why.clone(), |n| format!("{n}; {why}")));
         }
+        if blank && hidden_note_free(&note) {
+            let why = "nothing visible happens: played again from the same moment with its row taken out of the scene's table, the screen shows the same".to_string();
+            note = Some(note.map_or(why.clone(), |n| format!("{why}; {n}")));
+        }
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() && walks {
             eprintln!("    keys held (MOMENT_HOLD): {pad}");
         }
         let frames_len = frames.len();
-        Ok(EventRun { pages, frames, states, whole: None, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, battle: fought.then(|| (battle_start, battle_end.unwrap_or(frames_len))), absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker), lead, unseen, goal })
+        Ok(EventRun { pages, frames, states, whole: None, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, battle: fought.then(|| (battle_start, battle_end.unwrap_or(frames_len))), absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker), lead, unseen, goal, blank })
     }
 
     /// One frame of an exit's arrival in the scene it leads to, which began
@@ -4516,6 +4699,11 @@ pub struct EventRun {
     /// a flag, what a pushed log or pillar is for (the log rolled into the
     /// river). None for anything else.
     pub goal: Option<bool>,
+    /// Whether the event changed nothing on the screen: played again from
+    /// the moment its trigger was given, with the same keys and its rows
+    /// taken out of the scene's table, every frame looks the same
+    /// (Field::looks_the_same). Only a recorded touch is judged.
+    pub blank: bool,
 }
 
 /// Whether entrance `e` only stands in for a room another entrance gives
@@ -4533,6 +4721,30 @@ pub fn stands_in(e: &Entrance, all: &[Entrance]) -> bool {
 
 /// Whether facing `a` lies within an eighth of a turn of `b` (16-bit
 /// angles): the same quarter turn.
+/// The facings in which walking across a cell starts one of the step rows
+/// whose control words are `rows` (Field::facings): a row that waits for a
+/// push starts nothing, one that needs a facing starts in that facing, and
+/// any other starts however he comes (None).
+fn crossings(rows: &[u32]) -> Option<Vec<u32>> {
+    let mut out = Vec::new();
+    for &flags in rows {
+        let walking = flags & STEP_TRIGGER_FLAG_WALKING != 0;
+        if walking && flags & STEP_TRIGGER_FLAG_QUICK == 0 {
+            continue;
+        }
+        if flags & TRIGGER_FLAG_FACING == 0 {
+            return None;
+        }
+        out.push(flags & 0xf000);
+    }
+    Some(out)
+}
+
+/// Whether a recording's note says nothing yet of nothing visible happening.
+fn hidden_note_free(note: &Option<String>) -> bool {
+    !note.as_deref().is_some_and(|n| n.contains("nothing visible happens"))
+}
+
 fn facing_within(a: u32, b: u32) -> bool {
     (a as u16).wrapping_sub(b as u16).wrapping_add(0x1fff) <= 0x3ffe
 }
@@ -4559,7 +4771,13 @@ pub fn in_rooms(cells: Vec<(u8, i32, i32)>, cameras: &[[i16; 4]], header: [i32; 
 /// Whether box `b` (pixels, -1 sides taking the header's, 16.16) holds the
 /// point (x, z).
 pub fn box_holds(camera: [i16; 4], header: [i32; 4], x: i32, z: i32) -> bool {
-    let side = |i: usize| if camera[i] == -1 { header[i] >> 16 } else { i32::from(camera[i]) };
+    let side = |i: usize| {
+        if camera[i] == -1 {
+            header[i] >> 16
+        } else {
+            i32::from(camera[i])
+        }
+    };
     x >= side(0) && x < side(2) && z >= side(1) && z < side(3)
 }
 
@@ -4585,6 +4803,24 @@ mod tests {
         // The room entered comes first.
         let (kept, _) = in_rooms(vec![(0, 10, 45), (0, 8, 12)], &cameras, header, [32, 48, 416, 464], 16);
         assert_eq!(kept[0], (0, 8, 12));
+    }
+
+    #[test]
+    fn a_cell_that_waits_for_a_push_is_walked_across_any_way() {
+        let step = u32::from(TRIGGER_STEP);
+        // Crossbone Isle's floor: a pillar's push on every cell, and the
+        // ladder's foot, pushed into north or south.
+        assert_eq!(crossings(&[step | STEP_TRIGGER_FLAG_WALKING]), Some(vec![]));
+        let north = step | STEP_TRIGGER_FLAG_WALKING | TRIGGER_FLAG_FACING | 0xc000;
+        let south = step | STEP_TRIGGER_FLAG_WALKING | TRIGGER_FLAG_FACING | 0x4000;
+        assert_eq!(crossings(&[north, south, step | STEP_TRIGGER_FLAG_WALKING]), Some(vec![]));
+        // A row that needs only a facing starts as he comes that way.
+        assert_eq!(crossings(&[step | TRIGGER_FLAG_FACING | 0x8000]), Some(vec![0x8000]));
+        // Two frames of pushing are as good as stepping on it facing so.
+        assert_eq!(crossings(&[north | STEP_TRIGGER_FLAG_QUICK]), Some(vec![0xc000]));
+        // A plain step starts however he comes.
+        assert_eq!(crossings(&[step]), None);
+        assert_eq!(crossings(&[step | STEP_TRIGGER_FLAG_WALKING, step]), None);
     }
 
     #[test]
