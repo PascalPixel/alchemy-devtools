@@ -979,7 +979,15 @@ impl Context<'_> {
                     }
                 };
                 let mut rooms: Vec<Entrance> = Vec::new();
-                for e in first.entrances.iter().filter(|e| e.number >= 0 && !stands_in(e, &first.entrances)) {
+                // A cast for what its event draws somewhere is made in the
+                // room that holds it, entered by its entrance nearest it.
+                let aim = if let Trigger::Cast(_) = trigger { super::stage::drawn_cells(&self.source(scene), &event.name) } else { Vec::new() };
+                let mut ways: Vec<&Entrance> = first.entrances.iter().filter(|e| e.number >= 0 && !stands_in(e, &first.entrances)).collect();
+                if let Some(&(ax, az)) = aim.first() {
+                    let (x, z) = (ax * first.size + first.size / 2, az * first.size + first.size / 2);
+                    ways.sort_by_key(|e| (!box_holds(e.camera, first.header, x, z), (i32::from(e.x) - x).pow(2) + (i32::from(e.z) - z).pow(2)));
+                }
+                for e in ways {
                     if !rooms.iter().any(|r| r.camera == e.camera) && rooms.len() < MAX_ENTRANCES {
                         rooms.push(*e);
                     }

@@ -3247,6 +3247,9 @@ impl<'rom> Field<'rom> {
                 if !self.aim.is_empty() {
                     let reach = self.reach(None)?;
                     let mut aimed = self.aimed_spots(&reach, &[]);
+                    if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+                        eprintln!("    aimed at {:?}: {} spots on layer {}", self.aim, aimed.len(), reach.layer);
+                    }
                     if !aimed.is_empty() {
                         aimed.push(here);
                         return Ok(aimed);
@@ -3272,6 +3275,9 @@ impl<'rom> Field<'rom> {
             let size = self.cell_size();
             let cells: Vec<(i32, i32)> = self.cells_with_code(code)?.into_iter().filter(|c| c.0 == 0).map(|(_, cx, cz)| (cx, cz)).collect();
             let mut aimed = self.aimed_spots(&reach, &cells);
+            if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+                eprintln!("    aimed at {:?} from {:?}: {} spots on layer {}", self.aim, cells, aimed.len(), reach.layer);
+            }
             if !aimed.is_empty() {
                 if let Ok(more) = self.spots_in(trigger, &reach) {
                     aimed.extend(more.into_iter().filter(|s| !aimed.iter().any(|a| (a.x / size, a.z / size) == (s.x / size, s.z / size))).collect::<Vec<_>>());
