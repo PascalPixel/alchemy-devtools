@@ -283,10 +283,10 @@ impl Symbols {
             load_layered: at("MapGrid_LoadMap")?,
             // The Lost Age places the party in three tries, its scene's table
             // by number, its map's entrances, the table's first row
-            // (BattleMap_ApplySceneEntranceView, which names it wrongly: it
+            // (Field_ApplyEntrance, BattleMap_ApplySceneEntranceView before 22 November: it
             // is The Broken Seal's Scene_ApplyEntrance grown); the run takes
             // the scene as entered once all three are done.
-            apply_entrance: if l.game == super::layout::Game::Tla { at("BattleMap_ApplySceneEntranceView")? } else { at("Scene_ApplyEntrance")? },
+            apply_entrance: if l.game == super::layout::Game::Tla { at("Field_ApplyEntrance").or_else(|_| at("BattleMap_ApplySceneEntranceView"))? } else { at("Scene_ApplyEntrance")? },
             notice: at("AreaNameWindow_Show")?,
             field_menu: at("FieldMenu_Run")?,
             step: at("Field_UpdateWalking")?,
