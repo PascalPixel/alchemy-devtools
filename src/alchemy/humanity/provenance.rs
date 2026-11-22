@@ -45,7 +45,7 @@ pub const VOCABULARY: &[&str] = &[
     "buf", "buffer", "data", "state", "mode", "kind", "type", "init", "initialize", "update", "updates", "get",
     "set", "run", "runs", "handle", "reset", "clear", "check", "load", "draw", "render", "spawn", "tick", "frame",
     "frames", "timer", "pos", "max", "min", "prev", "cur", "unused", "debug", "util", "func", "sub", "args", "arg",
-    "src", "dst", "len", "info", "ctx", "cfg", "config", "rng", "random", "rom", "ram", "iwram", "ewram", "dma",
+    "src", "dst", "len", "info", "ctx", "cfg", "config", "rng", "random", "rom", "ram", "iwram", "ewram", "bss", "dma",
     "irq", "params", "param", "struct", "enum", "macro", "lut", "offset", "addr", "ov", "alloc", "mem", "var", "cb",
     "attr", "byte", "clr", "ui", "setup", "cached", "engine", "scheduler", "dispatch", "op", "noop", "placement",
     "placements", "template", "templates", "dest", "dests", "coord",
@@ -55,6 +55,9 @@ pub const VOCABULARY: &[&str] = &[
     "dither", "contrast", "zoom", "rotation", "backdrop", "foreground", "background", "visibility", "occluding",
     "collidable", "pixel", "scanline", "hofs", "canvas", "glyph", "graphics", "rgb", "radial", "orbit", "pulse",
     "squash", "jitter", "emitter", "emission", "spawner", "cue", "audio",
+    // The hardware's own words for drawing, as GBATEK writes them: a
+    // sprite's or layer's priority, a layer's scroll, the serial port.
+    "priority", "scroll", "serial",
     // What code does with its data.
     "pointer", "sync", "synchronize", "toggle", "variant", "default", "definition", "install", "queued", "pending",
     "remap", "suspend", "compute", "clamp", "allocate", "address", "header", "heap", "storage", "descriptor",
@@ -62,7 +65,9 @@ pub const VOCABULARY: &[&str] = &[
     "fallback", "override", "refresh", "redraw", "repaint", "context", "configure", "enable", "activate",
     "resource", "lz", "hex", "dpad", "interpolation", "linear", "inverse", "magnitude", "ratio", "remainder", "sine",
     "negative", "positive", "relative", "length", "width", "grid", "node", "cursor", "selector", "periodic",
-    "frequency",
+    "frequency", "duration", "cos", "crc", "encode", "decode",
+    // A bump allocator, which hands out memory by moving one pointer on.
+    "bump",
     // Positions.
     "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth", "eleventh",
     "twelfth", "last", "north",
@@ -1509,7 +1514,7 @@ mod tests {
             of("ACTOR_WAREHOUSE", "actor", &[row("its picture", "a shed")]),
             of("Bilibin_OpenWarehouse", "function", &[]),
             of("ACTOR_CRATE", "actor", &[row("what the player sees", "a crate, no render cited")]),
-            of("ACTOR_PRIORITY", "actor", &[row("its code", "sorted first")]),
+            of("ACTOR_SHELF", "actor", &[row("its code", "drawn first")]),
             of("SceneId_BilibinCellar", "scene", &[row("its code", "the room below")]),
             of("BILIBIN_CELLAR_TO_BILIBIN_TIGHTROPES", "exit", &[]),
             Thing { file: "games/tbs/src/scene/bilibin.c".to_string(), ..of("ACTOR_TIGHTROPES_POST", "actor", &[]) },
@@ -1527,7 +1532,7 @@ mod tests {
         assert!(seen.contains(&"ladder") && seen.contains(&"footprints"), "its picture, the walkthrough");
         assert!(flagged.contains(&"warehouse"), "one name of two has no seen row");
         assert!(flagged.contains(&"crate"), "a render not cited is no render");
-        assert!(flagged.contains(&"priority"), "its code is no look");
+        assert!(flagged.contains(&"shelf"), "its code is no look");
         assert!(flagged.contains(&"cellar"), "a map named from its code");
         assert!(analysis.rows[10].words.contains(&"cellar".to_string()), "its unseen word stays on the exit");
         assert!(!analysis.rows[10].words.contains(&"tightropes".to_string()));
