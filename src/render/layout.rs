@@ -56,6 +56,8 @@ pub struct Layout {
     pub gs_turn: u32,
     pub gs_selected_actor: u32,
     pub gs_active_owners: u32,
+    /// Whether the leader walks or climbs (movementMode: 1 while he climbs).
+    pub gs_movement_mode: u32,
     /// The map's work: the followed point, the view's top left (x, then y),
     /// the scroll bounds (minX, minY, maxX, maxY), the scrolling layers and
     /// each one's size, and a layer's cells pointer.
@@ -119,6 +121,7 @@ const EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("gs_turn", "offsetof(struct MainRoutineWork, layer)", "offsetof(struct MainRoutineWork, layer)"),
     ("gs_selected_actor", "offsetof(struct MainRoutineWork, leaderActorId)", "offsetof(struct MainRoutineWork, leaderActorId)"),
     ("gs_active_owners", "offsetof(struct MainRoutineWork, party)", "offsetof(struct MainRoutineWork, party)"),
+    ("gs_movement_mode", "offsetof(struct MainRoutineWork, movementMode)", "offsetof(struct MainRoutineWork, movementMode)"),
     ("map_origin", "offsetof(struct MapGridScrollWork, origin)", "offsetof(struct MapWork, origin)"),
     ("map_view_x", "offsetof(struct MapGridScrollWork, view[0])", "offsetof(struct MapWork, viewX)"),
     ("map_view_y", "offsetof(struct MapGridScrollWork, view[1])", "offsetof(struct MapWork, viewZ)"),
@@ -204,6 +207,7 @@ impl Layout {
             gs_turn: 0x1ec,
             gs_selected_actor: 0x1f4,
             gs_active_owners: 0x1f8,
+            gs_movement_mode: 0x1f2,
             map_origin: 0x00,
             map_view_x: 0xe4,
             map_view_y: 0xe8,
@@ -272,6 +276,7 @@ impl Layout {
             gs_turn: get("gs_turn"),
             gs_selected_actor: get("gs_selected_actor"),
             gs_active_owners: get("gs_active_owners"),
+            gs_movement_mode: get("gs_movement_mode"),
             map_origin: get("map_origin"),
             map_view_x: get("map_view_x"),
             map_view_y: get("map_view_y"),

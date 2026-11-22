@@ -10,6 +10,9 @@
 
 #[cfg(feature = "render")]
 mod animation;
+// Read only by the feature's commands, and by its tests.
+#[cfg_attr(not(feature = "render"), allow(dead_code))]
+mod approach;
 #[cfg(feature = "render")]
 mod arrivals;
 #[cfg(feature = "render")]
@@ -558,6 +561,35 @@ index.tsv's note column says so. index.tsv's leads_to column names the
 scene an event places the party in next by its SceneId symbol (its own
 scene for a staircase to another of its entrances). An event that runs
 past four minutes gets no GIF, noted in skipped.tsv.
+What the leader does by walking (a touch: a step trigger, an exit) is
+recorded as he walks up to it: he starts some cells back, at the end of
+the way from where the party entered (else on any way up to it), along
+ground he can walk and vines and ladders he can climb (the climb key held
+on a climb cell until he stands at its other end), never across a cell
+that starts something (a cell whose rows fire only as he walks into it
+one way is crossed the other ways); the map is drawn again around him
+where he starts. The walk fills the lead-in, as many cells as it asks;
+where the way is shorter than a black screen's ten seconds, he stands at
+its start for the rest, and the note column says for how long. The pad
+walks him on into the trigger, and on down a ladder the trigger puts him
+on until he is off it. Where no way of 2 cells leads up, or the walk
+fails, he starts beside it, and the note column says so. A recording in
+which he stands still for most of the frames before the event begins
+goes to skipped.tsv instead, as does a touch that no walk starts and
+that would be started directly. A touch's cells that lie in no room an
+entrance shows (a copy a scene keeps beside its map) are not its
+trigger. A push goes on the same way while what was pushed keeps moving,
+and another spot is tried where that sets no flag. An event that moves
+the leader and the camera together with no script, so that the picture
+does not change (Tret Tree's vines), is kept with a note that nothing
+visible happens, and goes on to the climb that move lets him make, or a
+few steps on; one that changes the map under the leader has him step
+back from it, and one whose only change is off the screen is noted as
+showing nothing. Two events whose recordings are the same frame for
+frame keep only the first unless they show the same messages;
+skipped.tsv names the other's.
+With ALCHEMY_RENDER_DEBUG, each walk prints the keys held, as MOMENT_HOLD
+(render guide) takes them.
 
 --whole also draws each event's GIF whole, as <event>-whole.gif: every
 second frame of the same run, from the trigger until it leaves the scene
@@ -917,6 +949,15 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
         }
         let path = out.join("variant-flags.tsv");
         std::fs::write(&path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+    }
+    // No two events' recordings are one, unless they are one routine.
+    if r.kind == "event" {
+        for (number, event, other) in places::shared_recordings(out, &mut outcome.rows) {
+            let scene = r.chosen.iter().find(|s| s.number == number).map_or_else(|| format!("#{number}"), |s| s.name());
+            eprintln!("  left out: {scene} event {event}: its recording is {other}'s");
+            let reason = format!("its recording is the same as {other}'s, frame for frame: two events never share one recording unless they are one routine");
+            outcome.skipped.push(places::Skip { scene, what: format!("event {event}"), reason });
+        }
     }
     places::write_index(out, &outcome.rows)?;
     let path = out.join("skipped.tsv");
