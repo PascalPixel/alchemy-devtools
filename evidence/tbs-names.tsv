@@ -5314,7 +5314,6 @@ AltmillerCave_DarkenToLevel5	its number	the darkness level it sets, AltmillerCav
 SPRITE_BLANK_32	its number	the pixel size: a blank 32-pixel square (blank_32.png)	games/tbs/include/sprite_ids.h
 ENEMY_LETTER_FIRST_TOO	its code	the bit of a letter that gives the first enemy of its kind its letter too (BattleEnemy_LetterFirstOfKind), before BattleUnit_SetFar	games/tbs/src/battle/battle_internal.h
 ENEMY_SPACING_EMPTY	its code	the pixels of the enemy column an empty place takes, as battle_placement.c spaces the enemies	games/tbs/src/battle/battle_placement.c
-FLAG_CROSSBONE_ISLE_STATUE_AFTER_LEADER	its code	set by CrossboneIsleKeys_CheckFirstPursuerTrigger as a statue starts after the leader, and tested there so it starts once	games/tbs/src/scene/crossbone_isle_keys.c
 Irq_Lock	its twin	The Lost Age's inline of the same name (include/system/irq_lock.h), taking a pointer to the saved word; BattleBackground_SetPaletteLevel	games/tbs/include/system/irq_lock.h
 Irq_Unlock	its twin	Irq_Lock's pair, as in The Lost Age	games/tbs/include/system/irq_lock.h
 IWRAM_COPY_WORDS	its twin	The Lost Age's statement macro of the IWRAM_FILL_WORDS family; LinkBattle_SendParty and BattleArena_SendPartyRecords, whose twins (battle_link.c, lobby.c) use it	games/tbs/include/system/iwram_call.h
@@ -5619,7 +5618,6 @@ TREASURE_SPOT_CROSSBONE_ISLE_FLOATING_LOGS_SLEEP_BOMB	the game	"Sleep Bomb" (Msg
 MUS_UNUSED_SILENCE_JINGLE	its twin	The Lost Age's MUS_UNUSED_SILENCE_JINGLE is byte for byte the same sequence as row 95 here (games/tbs/sound/songs/mus_095.s against games/tla/sound/songs/mus_095.s), MUS_SILENCE's song of no tracks on the jingle player, which nothing plays there either	games/tbs/include/sounds.h
 SE_191	its twin	The Lost Age's SE_SHUDDER is byte for byte the same sequence as row 191 here (games/tbs/sound/songs/se_191.mid against games/tla/sound/songs/se_191.mid), played there as Gaia Rock's altar faces part (gaia_rock_inside.c), as Zagan gallops in (BattleEffect_RunZagan) and in Megiddo's dive (battle_effect_megiddo.c)	games/tbs/include/sounds.h
 SE_UNUSED_AMBIENT_STREAM_HIGH	its twin	The Lost Age's SE_UNUSED_AMBIENT_STREAM_HIGH is byte for byte the same sequence as row 205 here (games/tbs/sound/songs/se_205.mid against games/tla/sound/songs/se_205.mid), SE_AMBIENT_STREAM ten semitones higher on a noise voice and not held, which nothing plays there either	games/tbs/include/sounds.h
-SE_225	its twin	The Lost Age's SE_MOTES_GATHER is byte for byte the same sequence as row 225 here (games/tbs/sound/songs/se_225.mid against games/tla/sound/songs/se_225.mid), played there as Moloch's motes start to gather (battle_effect_moloch.c)	games/tbs/include/sounds.h
 SE_UNUSED_BLACK_CRYSTAL_SET_LOW	its twin	The Lost Age's SE_UNUSED_BLACK_CRYSTAL_SET_LOW is byte for byte the same sequence as row 250 here (games/tbs/sound/songs/se_250.mid against games/tla/sound/songs/se_250.mid), SE_BLACK_CRYSTAL_SET seven semitones lower, which nothing plays there either	games/tbs/include/sounds.h
 SE_UNUSED_TAKE_FLIGHT_HIGH	its twin	The Lost Age's SE_UNUSED_TAKE_FLIGHT_HIGH is byte for byte the same sequence as row 290 here (games/tbs/sound/songs/se_290.mid against games/tla/sound/songs/se_290.mid), SE_TAKE_FLIGHT higher, which nothing plays there either	games/tbs/include/sounds.h
 SE_UNUSED_ERUPTION_COLUMNS_LOW	its twin	The Lost Age's SE_UNUSED_ERUPTION_COLUMNS_LOW is byte for byte the same sequence as row 293 here (games/tbs/sound/songs/se_293.mid against games/tla/sound/songs/se_293.mid), SE_ERUPTION_COLUMNS four semitones lower, which nothing plays there either	games/tbs/include/sounds.h
@@ -6531,3 +6529,130 @@ FLAG_ARENA_REACHED	the game	"You must get through several stages before you reac
 SPROUT_ANIMATION_GROWN	its picture	sprout.tsv's animation 4 shows picture 6, the sprout grown tall, and goes on to animation 0, which holds it there	games/tbs/include/sprite_ids.h
 SPROUT_ANIMATION_HALF_GROWN	its picture	sprout.tsv's animation 3 holds picture 3, the sprout half grown, midway through animation 2's growth from picture 0 to 6	games/tbs/include/sprite_ids.h
 ACTOR_COUNT	its code	gActors' actors: field_actors.c allocates ACTOR_COUNT * sizeof(struct Actor) in HEAP_SLOT_ACTORS, and the event commands walk gActors up to it (event_commands_movement_types.c, event_commands_reveal.c, event_commands_field_psynergy_work.c)	games/tbs/include/field/actor.h
+FLAG_CROSSBONE_ISLE_STATUE_AFTER_LEADER	what the player sees	a pink statue of a robed woman glides down out of the dark onto the leader, pushes him back south and glides home again (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+PISTON_ANIMATION_TIP	its picture	piston.tsv's animations 8 to 15 are the tip's, each the body's plus 8: picture 7, blank, but for 11, the tip when all the way out, which holds picture 9, the block's riveted end, and 13 and 14, which pass through picture 8	games/tbs/src/scene/colosseum_navampa_match.c
+TREE_STANDING_STEP	what the player sees	the training tree's trunk standing upright on its stone base on the wooden floor of Feh's school (its render)	games/tbs/src/scene/fuchin_temple.c
+TREE_FALLEN_WEST_STEP	the game	"Look! The tree fell." (MsgXianLookTreeFell)	games/tbs/src/scene/fuchin_temple.c
+TREE_FALLEN_EAST_STEP	the game	"Look! The tree fell." (MsgXianLookTreeFell)	games/tbs/src/scene/fuchin_temple.c
+SNOWMAN_MOVED_COLUMN	what the player sees	in Imil, the snowman's round white foot and green scarf at the top of the view, on the snow just east of the frozen river above the bridge (its render)	games/tbs/src/scene/imil.c
+SNOWMAN_MOVED_ROW	what the player sees	in Imil, the snowman's round white foot and green scarf at the top of the view, on the snow just east of the frozen river above the bridge (its render)	games/tbs/src/scene/imil.c
+CrossboneIsleKeys_FirstStatuePushesLeaderBack	what the player sees	a pink statue of a robed woman glides down out of the dark onto the leader, pushes him back south over the ledge and glides home again (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_SecondStatuePushesLeaderBack	what the player sees	as the leader walks north up the room's west side, a pink statue glides down onto him and pushes him back south, then glides home (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_FifthStatuePushesLeaderBack	what the player sees	a pink statue glides onto the leader and pushes him back south out through the room's door (its render)	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_ThirdStatuePushesLeaderBack	its code	the same moves as CrossboneIsleKeys_FirstStatuePushesLeaderBack's (the statue to the leader, the leader CROSSBONE_LEADER_STEP_Z south, the statue 16 after him, then home); render event could not stage its step trigger	games/tbs/src/scene/crossbone_isle_keys.c
+CrossboneIsleKeys_FourthStatuePushesLeaderBack	its code	the same moves as CrossboneIsleKeys_FirstStatuePushesLeaderBack's after lining up with the leader's column; render event could not stage its step trigger	games/tbs/src/scene/crossbone_isle_keys.c
+SE_CLOUD_BILLOW	its twin	The Lost Age plays the same sequence (games/tla/sound/songs/se_225.mid, byte for byte row 225 here) only at Moloch's frame 90 (battle_effect_moloch.c, BattleEffect_RunMoloch); its render (render psynergy --ability Moloch --edition tla-en) shows the white cloud's first puff rising from the ground at the lower right about 90 frames after the first flakes fall, under the falling flakes, and filling the right of the screen some 25 frames later; hz/fx proposes the same name for both games	games/tbs/include/sounds.h
+ENEMY_UNUSED_CHIMERA	its code	battle_sprites.c draws it with SPRITE_BATTLE_CHIMERA, the Chimera's and the Chimera Mage's battle sprite, in palette 3; MsgEnemyName + 104 names it "?" and no formation of formations.c lists it	games/tbs/include/enemy_ids.h
+ENEMY_UNUSED_TOADONPA	its code	battle_sprites.c draws it with SPRITE_BATTLE_TOADONPA, Toadonpa's and the Poison Toad's battle sprite, in palette 5; MsgEnemyName + 135 names it "?" and no formation of formations.c lists it	games/tbs/include/enemy_ids.h
+FIELD_PSYNERGY_MOVE	the game	"Move" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_MIND_READ	the game	"Mind Read" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_PLY	the game	"Ply" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_FORCE	the game	"Force" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_DOUSE	the game	"Douse" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_FROST	the game	"Frost" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_LIFT	the game	"Lift" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_REVEAL	the game	"Reveal" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_HALT	the game	"Halt" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_CLOAK	the game	"Cloak" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_CARRY	the game	"Carry" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_GROWTH	the game	"Growth" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_CATCH	the game	"Catch" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_WHIRLWIND	the game	"Whirlwind" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_RETREAT	the game	"Retreat" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+FIELD_PSYNERGY_AVOID	the game	"Avoid" (MsgAbilityName)	games/tbs/include/field/event_commands.h
+EMOTE_EXCLAMATION	its picture	games/tbs/src/graphics/sprite/emote.png picture 1, a speech bubble holding a red "!", which animation 0 of emote.tsv shows	games/tbs/include/field/event_commands.h
+EMOTE_QUESTION	its picture	games/tbs/src/graphics/sprite/emote.png picture 2, a speech bubble holding a grey "?", which animation 1 of emote.tsv shows	games/tbs/include/field/event_commands.h
+EMOTE_WINCE	its picture	games/tbs/src/graphics/sprite/emote.png picture 0, a speech bubble holding a face with its eyes squeezed shut and its mouth turned down, which animation 2 of emote.tsv shows	games/tbs/include/field/event_commands.h
+EMOTE_ANGER_VEIN	its picture	games/tbs/src/graphics/sprite/emote.png picture 6, a speech bubble holding the grey four-armed cross of an anger vein, which animation 3 of emote.tsv shows	games/tbs/include/field/event_commands.h
+EMOTE_HEART	its picture	games/tbs/src/graphics/sprite/emote.png picture 3, a speech bubble holding a red heart, which animation 4 of emote.tsv shows	games/tbs/include/field/event_commands.h
+EMOTE_ELLIPSIS	its picture	games/tbs/src/graphics/sprite/emote.png picture 7, a speech bubble holding three grey dots, which animation 5 of emote.tsv shows	games/tbs/include/field/event_commands.h
+EMOTE_LIGHT_BULB	its picture	games/tbs/src/graphics/sprite/emote.png picture 5, a speech bubble holding a lit yellow light bulb, which animation 6 of emote.tsv shows	games/tbs/include/field/event_commands.h
+EMOTE_SCOWL	its picture	games/tbs/src/graphics/sprite/emote.png picture 4, a speech bubble holding a face with slanted brows and a frown, which animation 7 of emote.tsv shows	games/tbs/include/field/event_commands.h
+EMOTE_SMILE	its picture	games/tbs/src/graphics/sprite/emote.png picture 8, a speech bubble holding a face with closed smiling eyes and a smile, which animation 8 of emote.tsv shows	games/tbs/include/field/event_commands.h
+EMOTE_SWEAT_DROP	its picture	games/tbs/src/graphics/sprite/emote.png picture 9, a speech bubble holding a blue drop of water, which animation 9 of emote.tsv shows	games/tbs/include/field/event_commands.h
+ENCOUNTER_ZONE_SCRIPTED_VALE_VAULT	its area name	Vale	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_SCRIPTED_VALE_VAULT	its area name	Vault	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_SCRIPTED_TRET_MERCURY	its area name	Tret Tree	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_SCRIPTED_TRET_MERCURY	its area name	Mercury Lighthouse	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_SCRIPTED_MOGALL_ALTIN_LAMAKAN	its area name	Mogall Forest	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_SCRIPTED_MOGALL_ALTIN_LAMAKAN	its area name	Altin Peak	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_SCRIPTED_MOGALL_ALTIN_LAMAKAN	its area name	Lamakan Desert	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_TOLBI_SHIP	its area name	Tolbi-bound Ship	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_CROSSBONE_ISLE_FIRST_GUARDS	its area name	Crossbone Isle Cave	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_CROSSBONE_ISLE_LAST_GUARDS	its area name	Crossbone Isle Cave	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_COLOSSO	the game	"the Colosso finals are finally here" (MsgTolbiColossoFinalsFinally)	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_MIMIC	the game	"The treasure chest was really a Mimic!" (MsgChestWasMimic)	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_VENUS_DJINN	the game	"Venus Djinni" (MsgEnemyName + 150)	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_MERCURY_DJINN	the game	"Mercury Djinni" (MsgEnemyName + 153)	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_MARS_DJINN	the game	"Mars Djinni" (MsgEnemyName + 157)	games/tbs/include/field/field_sequence.h
+ENCOUNTER_ZONE_JUPITER_DJINN	the game	"Jupiter Djinni" (MsgEnemyName + 160)	games/tbs/include/field/field_sequence.h
+EXAMINE_SILENT	its code	Field_ExamineCell shows MsgTileChecked + target only for a target other than 0, and MsgTileChecked itself holds no words, so a search of target 0 says nothing before its result	games/tbs/include/field/scene_tables.h
+EXAMINE_CHEST	the game	"checked the chest" (MsgTileChecked + 1)	games/tbs/include/field/scene_tables.h
+EXAMINE_JAR	the game	"checked the jar" (MsgTileChecked + 2)	games/tbs/include/field/scene_tables.h
+EXAMINE_BARREL	the game	"checked the barrel" (MsgTileChecked + 3)	games/tbs/include/field/scene_tables.h
+EXAMINE_WALL	the game	"checked the wall" (MsgTileChecked + 4)	games/tbs/include/field/scene_tables.h
+EXAMINE_GROUND	the game	"checked on the ground" (MsgTileChecked + 5)	games/tbs/include/field/scene_tables.h
+EXAMINE_ROCK	the game	"examined the rock" (MsgTileChecked + 6)	games/tbs/include/field/scene_tables.h
+EXAMINE_HOLE	the game	"peered into the hole" (MsgTileChecked + 7)	games/tbs/include/field/scene_tables.h
+EXAMINE_GRAVE	the game	"examined the grave" (MsgTileChecked + 8)	games/tbs/include/field/scene_tables.h
+EXAMINE_TREE	the game	"checked the tree" (MsgTileChecked + 9)	games/tbs/include/field/scene_tables.h
+EXAMINE_UNDERBRUSH	the game	"searched the underbrush" (MsgTileChecked + 10)	games/tbs/include/field/scene_tables.h
+EXAMINE_DOOR	the game	"checked the door" (MsgTileChecked + 11)	games/tbs/include/field/scene_tables.h
+EXAMINE_CHIMNEY	the game	"looked in the chimney" (MsgTileChecked + 12)	games/tbs/include/field/scene_tables.h
+EXAMINE_WOODEN_BOX	the game	"checked the wooden box" (MsgTileChecked + 13)	games/tbs/include/field/scene_tables.h
+EXAMINE_BED	the game	"checked the bed" (MsgTileChecked + 14)	games/tbs/include/field/scene_tables.h
+EXAMINE_BOOKCASE	the game	"searched the bookcase" (MsgTileChecked + 15)	games/tbs/include/field/scene_tables.h
+EXAMINE_STONE_COFFIN	the game	"inspected the stone coffin" (MsgTileChecked + 16)	games/tbs/include/field/scene_tables.h
+EXAMINE_FIREPLACE	the game	"checked the fireplace" (MsgTileChecked + 17)	games/tbs/include/field/scene_tables.h
+EXAMINE_WATER	the game	"peered into the water" (MsgTileChecked + 18)	games/tbs/include/field/scene_tables.h
+EXAMINE_STONE_PILLAR	the game	"checked the stone pillar" (MsgTileChecked + 19)	games/tbs/include/field/scene_tables.h
+EXAMINE_STALACTITE	the game	"examined the stalactite" (MsgTileChecked + 20)	games/tbs/include/field/scene_tables.h
+EXAMINE_BOARDS	the game	"checked the boards" (MsgTileChecked + 21)	games/tbs/include/field/scene_tables.h
+EXAMINE_FOUNTAIN	the game	"peered into the fountain" (MsgTileChecked + 22)	games/tbs/include/field/scene_tables.h
+EXAMINE_OVEN	the game	"looked in the oven" (MsgTileChecked + 23)	games/tbs/include/field/scene_tables.h
+EXAMINE_TABLE	the game	"looked on the table" (MsgTileChecked + 24)	games/tbs/include/field/scene_tables.h
+EXAMINE_STONE_STATUE	the game	"checked the stone statue" (MsgTileChecked + 25)	games/tbs/include/field/scene_tables.h
+EXAMINE_STONE_TABLET	the game	"examined the stone tablet" (MsgTileChecked + 26)	games/tbs/include/field/scene_tables.h
+EXAMINE_SHELF	the game	"searched the shelf" (MsgTileChecked + 27)	games/tbs/include/field/scene_tables.h
+EXAMINE_WARDROBE	the game	"peeked into the wardrobe" (MsgTileChecked + 28)	games/tbs/include/field/scene_tables.h
+EXAMINE_FIREWOOD	the game	"checked the firewood" (MsgTileChecked + 29)	games/tbs/include/field/scene_tables.h
+EXAMINE_BOOKS	the game	"looked through the books" (MsgTileChecked + 30)	games/tbs/include/field/scene_tables.h
+EXAMINE_WELL	the game	"peered into the well" (MsgTileChecked + 31)	games/tbs/include/field/scene_tables.h
+EQUIP_EFFECT_NONE	the game	"No effect" (MsgEquipEffectName)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_HP	the game	"Max HP" (MsgEquipEffectName + 1)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_HP_REGEN	the game	"HP recovery" (MsgEquipEffectName + 2)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_PP	the game	"Max PP" (MsgEquipEffectName + 3)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_PP_REGEN	the game	"PP recovery" (MsgEquipEffectName + 4)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_AGILITY	the game	"Agility" (MsgEquipEffectName + 5)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_LUCK	the game	"Luck" (MsgEquipEffectName + 6)	games/tbs/include/game/item.h
+EQUIP_EFFECT_SCALE_HP	the game	"Max HP" (MsgEquipEffectName + 7)	games/tbs/include/game/item.h
+EQUIP_EFFECT_SCALE_HP_REGEN	the game	"HP recovery" (MsgEquipEffectName + 8)	games/tbs/include/game/item.h
+EQUIP_EFFECT_SCALE_PP	the game	"Max PP" (MsgEquipEffectName + 9)	games/tbs/include/game/item.h
+EQUIP_EFFECT_SCALE_PP_REGEN	the game	"PP recovery" (MsgEquipEffectName + 10)	games/tbs/include/game/item.h
+EQUIP_EFFECT_SCALE_ATTACK	the game	"Attack" (MsgEquipEffectName + 11)	games/tbs/include/game/item.h
+EQUIP_EFFECT_SCALE_DEFENSE	the game	"Defense" (MsgEquipEffectName + 12)	games/tbs/include/game/item.h
+EQUIP_EFFECT_SCALE_AGILITY	the game	"Agility" (MsgEquipEffectName + 13)	games/tbs/include/game/item.h
+EQUIP_EFFECT_SCALE_LUCK	the game	"Luck" (MsgEquipEffectName + 14)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_VENUS_POWER	the game	"Power" (MsgEquipEffectName + 15)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_MERCURY_POWER	the game	"Power" (MsgEquipEffectName + 16)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_MARS_POWER	the game	"Power" (MsgEquipEffectName + 17)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_JUPITER_POWER	the game	"Power" (MsgEquipEffectName + 18)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_VENUS_RESIST	the game	"Resist" (MsgEquipEffectName + 19)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_MERCURY_RESIST	the game	"Resist" (MsgEquipEffectName + 20)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_MARS_RESIST	the game	"Resist" (MsgEquipEffectName + 21)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_JUPITER_RESIST	the game	"Resist" (MsgEquipEffectName + 22)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_UNLEASH_CHANCE	the game	"Critical Hits increase" (MsgEquipEffectName + 23)	games/tbs/include/game/item.h
+EQUIP_EFFECT_CURSE_REMOVABLE	the game	"The curse can be removed" (MsgEquipEffectName + 25)	games/tbs/include/game/item.h
+EQUIP_EFFECT_ADD_ACTIONS	the game	"Turns" (MsgEquipEffectName + 26)	games/tbs/include/game/item.h
+EQUIP_EFFECT_LURE	the game	"Boosts monster encounters" (MsgEquipEffectName + 27)	games/tbs/include/game/item.h
+ITEM_CURSED	the game	"It's cursed" (MsgItemCursed)	games/tbs/include/game/item.h
+ITEM_RARE	the game	"A rare item" (MsgRareItem)	games/tbs/include/game/item.h
+ITEM_INDISPENSABLE	the game	"An important item" (MsgImportantItem)	games/tbs/include/game/item.h
+ITEM_CANNOT_UNEQUIP	the game	"Can't remove it!" (MsgCannotRemoveItem)	games/tbs/include/game/item.h
+ITEM_TYPE_ARMOR	the game	"Armor" (MsgItemPlainName + 75)	games/tbs/include/game/item.h
+ITEM_TYPE_SHIELD	the game	"Shield" (MsgItemPlainName + 118)	games/tbs/include/game/item.h
+ITEM_TYPE_HELM	the game	"Helm" (MsgItemPlainName + 145)	games/tbs/include/game/item.h
+ITEM_TYPE_BOOTS	the game	"Boots" (MsgItemPlainName + 256)	games/tbs/include/game/item.h
+ITEM_TYPE_PSYNERGY	the game	"Bestows Psynergy" (MsgBestowsPsynergy)	games/tbs/include/game/item.h
+ITEM_TYPE_RING	the game	"Ring" (MsgItemPlainName + 262)	games/tbs/include/game/item.h
+ITEM_TYPE_SHIRT	the game	"Shirt" (MsgItemPlainName + 250)	games/tbs/include/game/item.h
