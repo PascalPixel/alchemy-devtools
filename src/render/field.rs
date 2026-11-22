@@ -3751,7 +3751,10 @@ impl<'rom> Field<'rom> {
             self.hide_actor(selected);
         } else if record.is_some() {
             let mut wrong = Self::wrong_for_a_placed_start(self.misplaced()?);
-            wrong.retain(|why| placed_him || !(why.starts_with("he stands on actor") || why.starts_with("he can walk to") || why.starts_with("he has no sprite")));
+            // A start staged by hand may be a tight spot (a stream's bank,
+            // a moored iceberg): the stage answers for it.
+            let checked = placed_him && !self.staged;
+            wrong.retain(|why| checked || !(why.starts_with("he stands on actor") || why.starts_with("he can walk to") || why.starts_with("he has no sprite")));
             if !wrong.is_empty() {
                 return Err(format!("the leader is misplaced at ({}, {}): {}", spot.x, spot.z, wrong.join(", ")));
             }
@@ -4051,7 +4054,9 @@ impl<'rom> Field<'rom> {
         // The frame the trigger was last given, and whether it was given
         // again after another row for the cell ran first.
         let mut pushed_from = trigger_frame;
-        let mut pushed_again = false;
+        // How many times he has gone on pushing; a staged run goes on
+        // longer, its keys played again each time.
+        let mut pushed_again = 0;
         // The frame the dispatch that began the event returned.
         let mut returned: Option<u32> = None;
         // Whether the field sequence stopped stepping for a while once the event
@@ -4100,7 +4105,10 @@ impl<'rom> Field<'rom> {
                 capped = true;
                 break;
             }
-            if began.is_none() && !script.is_empty() {
+            // The staged keys play on while another row for the cell runs
+            // first (a pipe's knock-back, run at every step): he goes on
+            // pushing until the walking row's own function runs.
+            if (began.is_none() || (self.staged && !self.t.own_ran && !self.own.is_empty())) && !script.is_empty() {
                 let keys = script.get(script_at).copied().unwrap_or(0);
                 script_at += 1;
                 self.hold(keys);
@@ -4178,6 +4186,13 @@ impl<'rom> Field<'rom> {
                     self.t.dispatch_result = None;
                 }
                 if let Some((kind, value, frame)) = self.t.dispatched {
+                    // A start staged by hand walks where it walks: a cell of
+                    // another event on the way (a mask that follows him) is
+                    // stepped across, as the player would.
+                    if self.staged && !script.is_empty() && (kind != want.0 || want.1.is_some_and(|v| v != value)) && self.t.frame - pushed_from <= START_FRAMES + script.len() as u32 {
+                        self.t.dispatched = None;
+                        continue;
+                    }
                     if kind != want.0 || want.1.is_some_and(|v| v != value) {
                         self.hold(0);
                         return Err(format!("another event began ({} {value})", kind_name(kind)));
@@ -4185,7 +4200,9 @@ impl<'rom> Field<'rom> {
                     began = Some(frame);
                     lead = self.recorded.as_ref().map_or(0, Vec::len);
                     returned = (self.t.dispatch_return == 0).then_some(self.t.dispatch_end);
-                    self.hold(if steer.is_some() { spot.walk } else { 0 });
+                    if script.is_empty() {
+                        self.hold(if steer.is_some() { spot.walk } else { 0 });
+                    }
                     leader_from = self.actor(self.gba.read32(self.s.game_state + self.s.l.gs_selected_actor) as u16);
                     quiet_start = self.t.frame;
                     // What he does by walking shows him walking to it.
@@ -4350,9 +4367,11 @@ impl<'rom> Field<'rom> {
                 // Another row for the cell ran first and gave back control (a
                 // floor switch under the pillar the leader pushes from it):
                 // he goes on pushing, once, for the event's own.
-                if !self.own.is_empty() && !self.t.own_ran && spot.walk != 0 && !pushed_again {
-                    pushed_again = true;
+                if !self.own.is_empty() && !self.t.own_ran && spot.walk != 0 && pushed_again < if self.staged { STAGED_PUSHES } else { 1 } {
+                    pushed_again += 1;
                     pushed_from = self.t.frame;
+                    // A staged run plays its keys again from the start.
+                    script_at = 0;
                     began = None;
                     returned = None;
                     self.t.dispatched = None;
@@ -4498,7 +4517,10 @@ impl<'rom> Field<'rom> {
         // after the last one (animation::check_black_clearance); the state
         // is put back after, so what plays next starts as it would have.
         let unfinished = capped && fought && self.scene() == MAP_BATTLE;
-        if record.is_some() && !capped && !defeated {
+        // A battle the party loses is cut to its opening below, which keeps
+        // the clearance after the battle's own black screen: the battle is
+        // played on for it too, as the party is downed.
+        if record.is_some() && !capped {
             let since = self.recorded.as_ref().and_then(|f| f.iter().rposition(|p| is_black_bgr555(p)).map(|i| f.len() - 1 - i));
             if let Some(since) = since.filter(|&s| s < CLEARED) {
                 let resume = self.save();
@@ -4557,7 +4579,7 @@ impl<'rom> Field<'rom> {
         // was refused.
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
             let moved_now: Vec<_> = watched.iter().filter_map(|&(id, x, z)| self.actor(id).map(|a| (id, a.x - x, a.z - z))).filter(|m| m.1 != 0 || m.2 != 0).collect();
-            eprintln!("    spot ({}, {}) layer {} walk {:#x}: began {began:?} ran {:#x} pages {} left {left} fought {fought} moved {moved} {moved_now:?} cells {} leader {:?}", spot.x, spot.z, spot.layer, spot.walk, self.t.ran, pages.len(), self.cell_codes() != cells_before, leader_from.map(|f| (f.x, f.z)));
+            eprintln!("    spot ({}, {}) layer {} walk {:#x}: began {began:?} capped {capped} defeated {defeated} unseen {unseen_move:?} ran {:#x} pages {} left {left} fought {fought} moved {moved} {moved_now:?} cells {} leader {:?}", spot.x, spot.z, spot.layer, spot.walk, self.t.ran, pages.len(), self.cell_codes() != cells_before, leader_from.map(|f| (f.x, f.z)));
         }
         if beyond {
             let past = "the camera shows past the room's box, where the map has no ground".to_string();
@@ -4749,6 +4771,10 @@ const AROUND: [(i32, i32); 8] = [(0, 1), (-1, 0), (1, 0), (0, -1), (-1, 1), (1, 
 
 /// The heading (1/65536 turns, 0 east, 0x4000 south) from a point toward
 /// one (dx, dz) pixels away, as Trig_Atan gives it.
+/// Times a staged run goes on pushing (its keys played again) after
+/// another row for the cell ran first.
+const STAGED_PUSHES: u32 = 4;
+
 /// How far from what its event draws, and from the cell it answers on, a
 /// cast is made, in cells; and how many such spots are tried.
 const AIM_CELLS: i32 = 3;
