@@ -2842,7 +2842,6 @@ ACTOR_MONK_ASKING_ABOUT_THE_EAST	the game	"Young warriors, do you come from the 
 ACTOR_MEDITATING_MONK	the game	"Do you know what meditation is?" (MsgMountainDoKnowMeditation)	games/tbs/src/scene/alpine_crossing_lama_temple.c
 ACTOR_MONK_SENSING_ANXIETY	the game	"I sense great insecurity and anxiety within you." (MsgAlpineCrossingLamaTempleYouWhoSpeakToMeI)	games/tbs/src/scene/alpine_crossing_lama_temple.c
 ACTOR_CHI_MONK	the game	"Did you know that Master Hama is the greatest master of Chi?" (MsgMountainDidKnowMasterHamaGreatest)	games/tbs/src/scene/alpine_crossing_lama_temple.c
-ACTOR_PASSAGE_ROCK	what the player sees	a round, moss-green rock on the grass east of the waterfall (its render)	games/tbs/src/scene/alpine_crossing_lama_temple.c
 ACTOR_TRAVELING_HEALER	the game	"I am traveling around the world to spread good will." (MsgMountainAmTravelingAroundWorldSpread)	games/tbs/src/scene/alpine_crossing_lama_temple.c
 ACTOR_HAMA	the game	"Master Hama, I am okay." (MsgMountainHsuOkay)	games/tbs/src/scene/alpine_crossing_lama_temple.c
 ACTOR_HSU	the game	"Hsu, are you okay?" (MsgMountainHsuOkay)	games/tbs/src/scene/alpine_crossing_lama_temple.c
@@ -6656,3 +6655,54 @@ ITEM_TYPE_BOOTS	the game	"Boots" (MsgItemPlainName + 256)	games/tbs/include/game
 ITEM_TYPE_PSYNERGY	the game	"Bestows Psynergy" (MsgBestowsPsynergy)	games/tbs/include/game/item.h
 ITEM_TYPE_RING	the game	"Ring" (MsgItemPlainName + 262)	games/tbs/include/game/item.h
 ITEM_TYPE_SHIRT	the game	"Shirt" (MsgItemPlainName + 250)	games/tbs/include/game/item.h
+ACTOR_MOSSY_ROCK	what the player sees	a round, moss-green rock on the grass east of the waterfall (its render)	games/tbs/src/scene/alpine_crossing_lama_temple.c
+TREASURE_SPOT_WATER_OF_LIFE	the game	"Water of Life" (FIND_ITEM(ITEM_WATER_OF_LIFE) on the chest cell (21, 9), the spot's own id)	games/tbs/src/scene/alpine_crossing_lama_temple.c
+LamaTemple_RevealChest	its code	takes the mossy rock off cell (21, 9) and gives the cell back the chest behaviour of FIND_ITEM(ITEM_WATER_OF_LIFE); the walkthrough: 'Chest; Use "Reveal" on the lone rock'	games/tbs/src/scene/alpine_crossing_lama_temple.c
+LamaTemple_HideChest	its code	puts the mossy rock back on the chest cell (21, 9), hides the chest's spot and clears the cell's chest behaviour, as Reveal fades and on entry	games/tbs/src/scene/alpine_crossing_lama_temple.c
+CELL_BEHAVIOR_LAMA_TEMPLE_SOUTH_ROAD	what the player sees	the path at the south edge of the valley, cells (12..14, 33), leaving to the World Map (its render)	games/tbs/src/scene/alpine_crossing_lama_temple.c
+CELL_BEHAVIOR_ALPINE_CROSSING_EAST_ROAD	what the player sees	the road at the east edge, cells (32, 12..14), leaving to the World Map east (its render)	games/tbs/src/scene/alpine_crossing_lama_temple.c
+CELL_BEHAVIOR_ALPINE_CROSSING_NORTH_ROAD	what the player sees	the road at the top of the valley, cells (23..24, 2), leaving to the World Map north (its render)	games/tbs/src/scene/alpine_crossing_lama_temple.c
+CELL_BEHAVIOR_ALPINE_CROSSING_WEST_ROAD	what the player sees	the road at the west edge, cells (1, 16..18), leaving to the World Map west (its render)	games/tbs/src/scene/alpine_crossing_lama_temple.c
+CELL_BEHAVIOR_ALPINE_CROSSING_EAST_CAVE_MOUTH	what the player sees	the dark cave mouth at cell (13, 14), just north-east of Hsu's boulder (its render)	games/tbs/src/scene/alpine_crossing_lama_temple.c
+CELL_BEHAVIOR_ALPINE_CROSSING_WEST_CAVE_MOUTH	its code	only on the cell kept at (5, 29), which AlpineCrossing_RevealPath copies to (5, 14) in the cliff west of Hsu; the walkthrough: 'use Reveal to open a hidden path that leads to Hsu'	games/tbs/src/scene/alpine_crossing_lama_temple.c
+CELL_BEHAVIOR_ALTIN_EAST_ROAD	what the player sees	the road at the village's east edge, cells (31, 11) and (31, 12), where the party arrives from the World Map (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_INN_DOOR	what the player sees	the door under the INN sign on the north-west ledge, cell (10, 13); entrance 2 puts Isaac before it, and CottageRoomsD entrance 7 is the inn with its innkeeper (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_SANCTUM_DOOR	what the player sees	the wide wooden double door in the cliff below the stone statue, cells (20, 12) and (21, 12) (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_EAST_HOUSE_DOOR	what the player sees	the thatched house on the east side, door cell (26, 21); its room (CottageRoomsD entrance 1) is where ACTOR_ROOM_ONE_GUEST is placed (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_CLIFF_HOUSE_DOOR	what the player sees	the door in the cliff north-west of the armor shop, cell (8, 19); its room (CottageRoomsD entrance 2, with a fireplace) is where ACTOR_ROOM_TWO_GUEST is placed (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_SOUTH_HOUSE_DOOR	what the player sees	the thatched house by the rails at the south, door cell (17, 25); its room (CottageRoomsD entrance 3) holds the girl with pigtails and her parents (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_ITEM_SHOP_DOOR	what the player sees	the small door in the east cliff, cell (28, 13); its room (CottageRoomsD entrance 5) has the item merchant behind a counter (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_ARMOR_SHOP_DOOR	what the player sees	the house with a round red sign in the middle of the village, door cell (11, 25); its room (CottageRoomsD entrance 6) has the armor merchant behind a counter (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_WEAPON_SHOP_DOOR	what the player sees	the door with a sword sign at the south, cell (10, 27); its room (CottageRoomsD entrance 4) has an empty counter while the weapon merchant waits in the inn (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_WEST_MINE_DOORWAY	what the player sees	the dark doorway in the west cliff by the water beast, cell (1, 28), where the beast hops in when scared off (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_RAIL_TUNNEL	what the player sees	the tunnel mouth in the north cliff where the rails start, cell (16, 13) (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_MIDDLE_MINE_DOORWAY	what the player sees	the doorway in the middle of the village with rails running south from it, cell (20, 16) (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_PASSAGE_BEHIND_STATUE	what the player sees	the dark opening Move uncovers behind the stone statue on the top ledge, cell (21, 9) (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_COTTAGE_ROOMS_D_NUT_BARREL	the game	Nut (FIND_ITEM(ITEM_NUT) at cell (10, 13), in the Room One family's house); the walkthrough: 'Barrel in home accessible after receding water once'	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_COTTAGE_ROOMS_D_COINS_BARREL	the game	9 coins (FIND_COINS(9) at cell (10, 30), in the weapon shop); the walkthrough: 'Barrel in weapon shop'	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_COTTAGE_ROOMS_D_SLEEP_BOMB_BED	the game	Sleep Bomb (FIND_ITEM(ITEM_SLEEP_BOMB) at cell (52, 45), in the inn's upstairs camera box)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_COTTAGE_ROOMS_D_RUSTED_POTS	the game	"The pots and pans are rusted" (MsgAltinThePotsAndPansAreRusted), cells (24..25, 7) in the Room Two family's house	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_COTTAGE_ROOMS_D_ROAST_BEEF	the game	"He is making roast beef" (MsgAltinHeIsMakingRoastBeefEven), cells (23..24, 45) by the cook in the inn	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_COTTAGE_ROOMS_D_SHRIMP	the game	"He is making shrimp" (MsgAltinHeIsMakingShrimpInA), cells (21..22, 45) by the cook in the inn	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_COTTAGE_ROOMS_D_BOOKCASE	the game	"There is a book titled Altin" (MsgAltinThereIsABookTitledAltin), cells (3..4, 43) in the inn	games/tbs/src/scene/altin.c
+DOOR_ARMOR_SHOP	its code	gAltin_Doors index of CELL_BEHAVIOR_ALTIN_ARMOR_SHOP_DOOR, the one door Altin_EnterDoor walks Isaac 0 px into	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_ALTIN_NEAR_BEAST	what the player sees	the path down the west ledge just above the water beast, cell (4, 26); stepping on it scares the beast off (its render)	games/tbs/src/scene/altin.c
+CELL_BEHAVIOR_BEACON_STAIRS	what the player sees	the wide stairs up to the beacon, where the party finds it lit and Saturos waits (its render)	games/tbs/src/scene/mercury_lighthouse_aerie.c
+CELL_BEHAVIOR_LIFT_LANDING	what the player sees	the stairs on the west side of the beacon's tower, where walking down brings the lift up into view (its render)	games/tbs/src/scene/mercury_lighthouse_aerie.c
+CELL_BEHAVIOR_PLATFORM	what the player sees	the white floating dishes in the gaps between the tower tops (its render)	games/tbs/src/scene/mercury_lighthouse_aerie.c
+CELL_BEHAVIOR_PLATFORM_EDGE	what the player sees	the foot of the stairs beside the floating dishes, where stepping off them shows nothing (its render)	games/tbs/src/scene/mercury_lighthouse_aerie.c
+CELL_BEHAVIOR_LIFT	what the player sees	the west tower top, which sinks down a long shaft to the ground with Isaac on it (its render)	games/tbs/src/scene/mercury_lighthouse_aerie.c
+CELL_BEHAVIOR_PSYNERGY_STONE	what the player sees	the purple Psynergy Stone on the east tower top (its render)	games/tbs/src/scene/mercury_lighthouse_aerie.c
+MercuryLighthouseEntrance_WaterfallToDryFountain	what the player sees	Isaac walks into a waterfall of the west waterfall room, vanishes in sparkles and comes out in the dry room (its render)	games/tbs/src/scene/mercury_lighthouse_entrance.c
+MercuryLighthouseEntrance_WaterfallToTwinFountains	what the player sees	Isaac walks into the left waterfall of the east waterfall room and comes out by the twin fountains' dragon spout (its render)	games/tbs/src/scene/mercury_lighthouse_entrance.c
+MercuryLighthouseEntrance_WaterfallToChestFountain	what the player sees	Isaac walks into the waterfall beside the east room's chest and comes out in the pool room with a chest on its ledge (its render)	games/tbs/src/scene/mercury_lighthouse_entrance.c
+CELL_BEHAVIOR_HEART_INSCRIPTION	what the player sees	the white stone post at the south edge of the goddess's pool that reads He who honors the heart (its render)	games/tbs/src/scene/mercury_lighthouse_entrance.c
+CELL_BEHAVIOR_UNUSED_RETURN_TO_DOORWAY	its code	no cell of map.txt has behaviour 10 and no copy writes one	games/tbs/src/scene/mercury_lighthouse_entrance.c
+CELL_BEHAVIOR_BEFORE_LIZARD_MAN	its code	template cell (1, 1) copied to (8, 10), straight before the Lizard Man at x 136	games/tbs/src/scene/mercury_lighthouse_entrance.c
+CELL_BEHAVIOR_BESIDE_LIZARD_MAN	its code	template cells (0, 1), (2, 1) copied to (7, 10), (9, 10), the columns he sidesteps to	games/tbs/src/scene/mercury_lighthouse_entrance.c
+CELL_BEHAVIOR_BEHIND_BESIDE_LIZARD_MAN	its code	template cells (0, 2), (2, 2) copied to (7, 11), (9, 11)	games/tbs/src/scene/mercury_lighthouse_entrance.c
+CELL_BEHAVIOR_WATERFALL_TO_DRY_FOUNTAIN	what the player sees	a waterfall of the west waterfall room Isaac walks into (its render)	games/tbs/src/scene/mercury_lighthouse_entrance.c
+CELL_BEHAVIOR_WATERFALL_TO_TWIN_FOUNTAINS	what the player sees	the left waterfall of the east waterfall room (its render)	games/tbs/src/scene/mercury_lighthouse_entrance.c
+CELL_BEHAVIOR_WATERFALL_TO_CHEST_FOUNTAIN	what the player sees	the waterfall beside the east room's chest (its render)	games/tbs/src/scene/mercury_lighthouse_entrance.c
+CELL_BEHAVIOR_PSYNERGY_ARMOR_CHEST	the game	the chest's FIND_ITEM(ITEM_PSYNERGY_ARMOR); the red chest on the pool room's ledge (its render)	games/tbs/src/scene/mercury_lighthouse_entrance.c
+CELL_BEHAVIOR_MIMIC_CHEST	the game	FIND_MIMIC; the walkthrough's Mimic chest on the right of the three-waterfall room	games/tbs/src/scene/mercury_lighthouse_entrance.c
