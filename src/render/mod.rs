@@ -566,17 +566,25 @@ recorded as he walks up to it: he starts some cells back, at the end of
 the way from where the party entered (else on any way up to it), along
 ground he can walk and vines and ladders he can climb (the climb key held
 on a climb cell until he stands at its other end), never across a cell
-that starts something (a cell whose rows fire only as he walks into it
-one way is crossed the other ways); the map is drawn again around him
-where he starts. The walk fills the lead-in, as many cells as it asks;
-where the way is shorter than a black screen's ten seconds, he stands at
-its start for the rest, and the note column says for how long. The pad
-walks him on into the trigger, and on down a ladder the trigger puts him
-on until he is off it. Where no way of 2 cells leads up, or the walk
-fails, he starts beside it, and the note column says so. A recording in
-which he stands still for most of the frames before the event begins
-goes to skipped.tsv instead, as does a touch that no walk starts and
-that would be started directly. A touch's cells that lie in no room an
+that starts something as he steps on it (a cell whose rows wait for him
+to push against something there, a floor of pillars or a ladder's foot,
+is crossed any way); where the trigger's code lies on a map layer no
+walk reaches, he walks onto its cell on the layer below and is put on
+the trigger's there. The map is drawn again around him where he starts.
+The walk fills the lead-in, as many cells as it asks; where the way is
+shorter than a black screen's ten seconds, it is begun farther back,
+along a side way or back along itself, and what is still short he
+stands at its start, the note column saying for how long. The pad walks
+him on into the trigger (holding it while a row waits for his push), and
+on down a ladder the trigger puts him on until he is off it. Where no
+way of 2 cells leads up, or the walk fails, he starts beside it, and the
+note column says so. A recording in which he stands still for most of
+the frames before the event begins (pushing into the trigger counts as
+doing it) goes to skipped.tsv instead, as does a touch that no walk
+starts and that would be started directly. After a black screen, once
+the player has control in the scene it led to, he walks on into it for
+the seconds the recording still needs, rather than stand. A touch's
+cells that lie in no room an
 entrance shows (a copy a scene keeps beside its map) are not its
 trigger. A push goes on the same way while what was pushed keeps moving,
 and another spot is tried where that sets no flag. An event that moves
@@ -585,7 +593,13 @@ does not change (Tret Tree's vines), is kept with a note that nothing
 visible happens, and goes on to the climb that move lets him make, or a
 few steps on; one that changes the map under the leader has him step
 back from it, and one whose only change is off the screen is noted as
-showing nothing. Two events whose recordings are the same frame for
+showing nothing. A touch is played again from the moment its trigger is
+given, with the same keys and its rows taken out of the scene's table:
+where every frame looks the same, the event changed nothing on the
+screen, and the other spots and ways in (every entrance whose room holds
+it) are tried for one where it does; where none does, the first is kept
+and the note column says nothing visible happens. Two events whose
+recordings are the same frame for
 frame keep only the first unless they show the same messages;
 skipped.tsv names the other's.
 With ALCHEMY_RENDER_DEBUG, each walk prints the keys held, as MOMENT_HOLD
@@ -1090,6 +1104,7 @@ impl Machines {
             capped: 0,
             relaxed: std::cell::Cell::new(false),
             lead_in: std::cell::Cell::new(field::LEAD_IN),
+            every_place: std::cell::Cell::new(false),
             whole: r.whole,
             cut: r.cut,
         }
