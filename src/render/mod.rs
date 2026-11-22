@@ -566,17 +566,28 @@ recorded as he walks up to it: he starts some cells back, at the end of
 the way from where the party entered (else on any way up to it), along
 ground he can walk and vines and ladders he can climb (the climb key held
 on a climb cell until he stands at its other end), never across a cell
-that starts something; the walk fills the lead-in, as many cells as it
-asks (a black screen asks for ten seconds), and the pad walks him on into
-the trigger. Where no way of 3 cells leads up, or the walk fails, he
-starts beside it, and the note column says so. A recording in which he
-stands still for most of the frames before the event begins goes to
-skipped.tsv instead. An event that moves the leader and the camera
-together with no script, so that the picture does not change (Tret
-Tree's vines), is kept with a note that nothing visible happens, and goes
-on to the climb that move lets him make, or a few steps on. Two events
-whose recordings are the same frame for frame keep only the first unless
-they show the same messages; skipped.tsv names the other's.
+that starts something (a cell whose rows fire only as he walks into it
+one way is crossed the other ways); the map is drawn again around him
+where he starts. The walk fills the lead-in, as many cells as it asks;
+where the way is shorter than a black screen's ten seconds, he stands at
+its start for the rest, and the note column says for how long. The pad
+walks him on into the trigger, and on down a ladder the trigger puts him
+on until he is off it. Where no way of 2 cells leads up, or the walk
+fails, he starts beside it, and the note column says so. A recording in
+which he stands still for most of the frames before the event begins
+goes to skipped.tsv instead, as does a touch that no walk starts and
+that would be started directly. A touch's cells that lie in no room an
+entrance shows (a copy a scene keeps beside its map) are not its
+trigger. A push goes on the same way while what was pushed keeps moving,
+and another spot is tried where that sets no flag. An event that moves
+the leader and the camera together with no script, so that the picture
+does not change (Tret Tree's vines), is kept with a note that nothing
+visible happens, and goes on to the climb that move lets him make, or a
+few steps on; one that changes the map under the leader has him step
+back from it, and one whose only change is off the screen is noted as
+showing nothing. Two events whose recordings are the same frame for
+frame keep only the first unless they show the same messages;
+skipped.tsv names the other's.
 With ALCHEMY_RENDER_DEBUG, each walk prints the keys held, as MOMENT_HOLD
 (render guide) takes them.
 

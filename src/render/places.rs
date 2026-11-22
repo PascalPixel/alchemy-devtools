@@ -1388,6 +1388,15 @@ impl Context<'_> {
         if event.name.contains("_Unused") {
             return Err("code the game never reaches is shown only staged by hand".to_string());
         }
+        // What the leader does by walking (a step, an exit, a cell he
+        // touches) is shown as he walks onto it; started directly, nothing
+        // walks him there and the code that reads where he stepped reads
+        // nothing, so the recording would be him standing still.
+        if record.is_some() {
+            if let Ok(Trigger::Touch(code)) = event.trigger() {
+                return Err(format!("it is started by walking onto a cell with code {code}, and started directly nothing walks the leader onto one, so the recording would show him standing still"));
+            }
+        }
         let first = scenes[0];
         let function = scenes.iter().find_map(|s| self.functions.get(&s.number).and_then(|f| f.get(&event.name)).copied());
         let trigger = match function {
@@ -1482,8 +1491,12 @@ impl Context<'_> {
                 field.frames(SETTLE)?;
             }
         }
+        field.play_as(&own);
         let spots = field.spots(trigger)?;
         let mut error = String::new();
+        // A push gone on with that set no flag (rolled no log into the
+        // river), kept in case no other spot's push does.
+        let mut short_of_goal: Option<EventRun> = None;
         // A direct start has no button press or step to show for it: it must
         // show itself as a silent trigger must.
         let silent = matches!(trigger, Trigger::Touch(_) | Trigger::Psynergy(MOVE, _) | Trigger::Direct(_) | Trigger::Cast(_));
@@ -1537,6 +1550,15 @@ impl Context<'_> {
                 Ok(run) if silent && messages.is_empty() && !run.shown && run.unseen.is_none() => {
                     error = "it ran, but nothing moved, showed or changed from any spot".to_string();
                 }
+                Ok(mut run) if run.goal == Some(false) => {
+                    if short_of_goal.is_none() {
+                        if field.whole {
+                            let states = run.states.take().ok_or("no states were kept to draw it whole");
+                            run.whole = Some(states.map_err(String::from).and_then(|states| super::whole::event(&mut field, &states, &run.frames, self.cut)));
+                        }
+                        short_of_goal = Some(run);
+                    }
+                }
                 Ok(mut run) => {
                     if field.whole {
                         let states = run.states.take().ok_or("no states were kept to draw it whole");
@@ -1544,8 +1566,16 @@ impl Context<'_> {
                     }
                     return Ok(run);
                 }
-                Err(e) => error = self.name_other(e, setup.scene),
+                Err(e) => {
+                    if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+                        eprintln!("    {} at scene {} entrance {} spot ({}, {}) walk {:#x}: {e}", event.name, setup.scene, setup.entrance, spot.x, spot.z, spot.walk);
+                    }
+                    error = self.name_other(e, setup.scene);
+                }
             }
+        }
+        if let Some(run) = short_of_goal {
+            return Ok(run);
         }
         Err(error)
     }

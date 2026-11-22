@@ -32,7 +32,7 @@ pub struct Move {
 
 /// The fewest cells a walk up to a trigger takes: fewer is no walk, and the
 /// recorder falls back to standing the leader beside the trigger.
-pub const APPROACH_LEAST: usize = 3;
+pub const APPROACH_LEAST: usize = 2;
 /// The fewest the walk is made of where the lead-in asks for less: a few
 /// cells back, as a player comes to it.
 pub const APPROACH_CELLS: usize = 4;
@@ -148,6 +148,32 @@ pub fn onward(moves: &[Move], from: Cell, walks: usize) -> Option<Vec<Move>> {
         }
     }
     None
+}
+
+/// What a recording's row says of the way up to its trigger, where the page
+/// needs it to make sense of the picture: a way that climbs or drops is most
+/// of what the recording shows, and `padding` frames stood at its start (a
+/// way shorter than a black screen's lead-in) are seconds of nothing
+/// happening. None for a plain walk.
+pub fn describe(path: &[Move], padding: u32) -> Option<String> {
+    let mut parts = Vec::new();
+    let climbs: Vec<&Move> = path.iter().filter(|m| m.how == How::Climb).collect();
+    if let Some(first) = climbs.first() {
+        let way = if first.keys == 0x40 { "up" } else { "down" };
+        let key = if first.keys == 0x40 { "Up" } else { "Down" };
+        let cells = if climbs.len() == 1 { "a cell".to_string() } else { format!("{} cells", climbs.len()) };
+        parts.push(format!("the recording begins with the way up to it, which climbs {way} a vine or ladder ({key} held, {cells} of climbing)"));
+    } else if path.iter().any(|m| m.how == How::Drop) {
+        parts.push("the recording begins with the way up to it, which drops down a ledge".to_string());
+    }
+    if padding >= 60 {
+        parts.push(format!(
+            "he stands at the start of the way for {:.1} seconds before walking {} cells up to it, so that ten seconds of the game come before the black screen",
+            f64::from(padding) / 60.0,
+            path.len()
+        ));
+    }
+    (!parts.is_empty()).then(|| parts.join("; "))
 }
 
 /// Frames before a trigger looked at for the leader standing still: shorter
@@ -285,6 +311,30 @@ mod tests {
         let stood: Vec<bool> = std::iter::repeat_n(false, 600).chain(std::iter::repeat_n(true, 16)).collect();
         assert!(stands_still(&stood).unwrap().contains("600 of the 616"));
         assert_eq!(stands_still(&[false; 4]), None);
+    }
+
+    #[test]
+    fn a_way_that_climbs_says_so_and_a_plain_walk_says_nothing() {
+        let grid = ["#C..", "#C##", "....", "####"];
+        let all = moves(&grid);
+        let up = route(&all, (3, 2), (2, 0)).unwrap();
+        let said = describe(&up, 0).unwrap();
+        assert!(said.contains("climbs up a vine or ladder (Up held"), "{said}");
+        let walk = route(&all, (3, 2), (0, 2)).unwrap();
+        assert_eq!(describe(&walk, 12), None);
+        // Stood at the start for the rest of a black screen's ten seconds.
+        let said = describe(&walk, 480).unwrap();
+        assert!(said.contains("8.0 seconds before walking 3 cells"), "{said}");
+    }
+
+    #[test]
+    fn standing_at_the_start_before_walking_up_is_not_standing_at_the_trigger() {
+        // As Field::event judges it: the frames stood at the start of a way
+        // shorter than the lead-in are left out, the walk is kept.
+        let stood: Vec<bool> = std::iter::repeat_n(false, 500).collect();
+        assert!(stands_still(&stood).is_some());
+        let walk: Vec<bool> = std::iter::repeat_n(true, 48).chain(std::iter::repeat_n(false, 16)).collect();
+        assert_eq!(stands_still(&walk), None);
     }
 
     #[test]
