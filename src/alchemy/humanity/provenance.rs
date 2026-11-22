@@ -837,6 +837,9 @@ pub struct Row {
     /// using them takes from what someone saw (`seen_word`), set apart from
     /// `words`.
     pub seen_words: Vec<String>,
+    /// Its flagged words it takes from what someone saw, though another
+    /// name using them does not.
+    pub seen_uses: Vec<String>,
 }
 
 /// Both checks over a game's things.
@@ -1057,11 +1060,22 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
         for word in &flagged {
             words.entry(word.clone()).or_default().push(analysis.rows.len());
         }
-        analysis.rows.push(Row { thing: thing.clone(), words: flagged, evidence, door_words: Vec::new(), seen_words: Vec::new() });
+        analysis.rows.push(Row { thing: thing.clone(), words: flagged, evidence, door_words: Vec::new(), seen_words: Vec::new(), seen_uses: Vec::new() });
     }
     let seen = Seen::new(&analysis.rows);
-    let (mut flagged, mut apart): (Vec<_>, Vec<_>) =
-        words.into_iter().partition(|(word, uses)| !uses.iter().all(|&at| seen.word(&analysis.rows, at, word)));
+    let mut flagged = Vec::new();
+    let mut apart = Vec::new();
+    for (word, uses) in words {
+        let seen_at: Vec<usize> = uses.iter().copied().filter(|&at| seen.word(&analysis.rows, at, &word)).collect();
+        if seen_at.len() == uses.len() {
+            apart.push((word, uses));
+        } else {
+            for at in seen_at {
+                analysis.rows[at].seen_uses.push(word.clone());
+            }
+            flagged.push((word, uses));
+        }
+    }
     for (word, uses) in &apart {
         for &at in uses {
             let row = &mut analysis.rows[at];
@@ -1519,5 +1533,7 @@ mod tests {
         assert!(!analysis.rows[10].words.contains(&"tightropes".to_string()));
         assert_eq!(analysis.rows[10].seen_words, ["tightropes"]);
         assert!(analysis.rows[0].words.is_empty());
+        assert_eq!(analysis.rows[5].seen_uses, ["warehouse"], "a seen use of a word another name leaves unseen");
+        assert!(analysis.rows[6].seen_uses.is_empty());
     }
 }

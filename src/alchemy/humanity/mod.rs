@@ -2637,7 +2637,9 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
         if WORD_LISTS.contains(&metric) {
             let Some(analysis) = &report.provenance else { continue };
             if metric != "provenance" {
-                // Each flagged or unresolved word, how many names use it and where.
+                // Each flagged or unresolved word, how many names use it and
+                // where, a flagged word's use marked `(seen)` where its name
+                // takes it from what someone saw.
                 let words = match metric {
                     "unused_word" => &analysis.words,
                     "seen_word" => &analysis.seen_words,
@@ -2647,8 +2649,10 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
                     let uses: Vec<String> = rows
                         .iter()
                         .map(|&at| {
-                            let thing = &analysis.rows[at].thing;
-                            format!("{} {}:{}", thing.name, thing.file, thing.line)
+                            let row = &analysis.rows[at];
+                            let thing = &row.thing;
+                            let seen = if metric == "unused_word" && row.seen_uses.contains(word) { " (seen)" } else { "" };
+                            format!("{} {}:{}{seen}", thing.name, thing.file, thing.line)
                         })
                         .collect();
                     let _ = writeln!(text, "{game}\t{word}\t{}\t{}", rows.len(), uses.join("; "));
