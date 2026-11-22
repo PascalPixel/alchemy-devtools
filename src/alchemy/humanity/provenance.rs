@@ -6,7 +6,11 @@
 //!
 //! - words the game never uses: each name is split into words, and a word is
 //!   accounted for when the game's text uses it (after crude stemming) or it
-//!   is on the short programming vocabulary below;
+//!   is on the short programming vocabulary below, and set apart as plain
+//!   English for what the player sees when every name using it has a row
+//!   saying someone saw it (its render, its picture, the walkthrough), or
+//!   takes it from a map that has one: its name, its short name in its own
+//!   scene file, or its seen line (H3);
 //! - names without evidence: a name is verified by its row of this
 //!   repository's `evidence/<game>-names.tsv` (H8), matched by name and file,
 //!   or, in a game whose source still holds them, by a `★ Named from ...`
@@ -41,7 +45,7 @@ pub const VOCABULARY: &[&str] = &[
     "buf", "buffer", "data", "state", "mode", "kind", "type", "init", "initialize", "update", "updates", "get",
     "set", "run", "runs", "handle", "reset", "clear", "check", "load", "draw", "render", "spawn", "tick", "frame",
     "frames", "timer", "pos", "max", "min", "prev", "cur", "unused", "debug", "util", "func", "sub", "args", "arg",
-    "src", "dst", "len", "info", "ctx", "cfg", "config", "rng", "random", "rom", "ram", "iwram", "ewram", "dma",
+    "src", "dst", "len", "info", "ctx", "cfg", "config", "rng", "random", "rom", "ram", "iwram", "ewram", "bss", "dma",
     "irq", "params", "param", "struct", "enum", "macro", "lut", "offset", "addr", "ov", "alloc", "mem", "var", "cb",
     "attr", "byte", "clr", "ui", "setup", "cached", "engine", "scheduler", "dispatch", "op", "noop", "placement",
     "placements", "template", "templates", "dest", "dests", "coord",
@@ -51,6 +55,9 @@ pub const VOCABULARY: &[&str] = &[
     "dither", "contrast", "zoom", "rotation", "backdrop", "foreground", "background", "visibility", "occluding",
     "collidable", "pixel", "scanline", "hofs", "canvas", "glyph", "graphics", "rgb", "radial", "orbit", "pulse",
     "squash", "jitter", "emitter", "emission", "spawner", "cue", "audio",
+    // The hardware's own words for drawing, as GBATEK writes them: a
+    // sprite's or layer's priority, a layer's scroll, the serial port.
+    "priority", "scroll", "serial",
     // What code does with its data.
     "pointer", "sync", "synchronize", "toggle", "variant", "default", "definition", "install", "queued", "pending",
     "remap", "suspend", "compute", "clamp", "allocate", "address", "header", "heap", "storage", "descriptor",
@@ -58,7 +65,9 @@ pub const VOCABULARY: &[&str] = &[
     "fallback", "override", "refresh", "redraw", "repaint", "context", "configure", "enable", "activate",
     "resource", "lz", "hex", "dpad", "interpolation", "linear", "inverse", "magnitude", "ratio", "remainder", "sine",
     "negative", "positive", "relative", "length", "width", "grid", "node", "cursor", "selector", "periodic",
-    "frequency",
+    "frequency", "duration", "cos", "crc", "encode", "decode",
+    // A bump allocator, which hands out memory by moving one pointer on.
+    "bump",
     // Positions.
     "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth", "eleventh",
     "twelfth", "last", "north",
@@ -829,6 +838,13 @@ pub struct Row {
     /// For an exit not verified otherwise, the words that are neither a
     /// verified map nor door vocabulary.
     pub door_words: Vec<String>,
+    /// The words the text and vocabulary leave unexplained that every name
+    /// using them takes from what someone saw (`seen_word`), set apart from
+    /// `words`.
+    pub seen_words: Vec<String>,
+    /// Its flagged words it takes from what someone saw, though another
+    /// name using them does not.
+    pub seen_uses: Vec<String>,
 }
 
 /// Both checks over a game's things.
@@ -837,6 +853,9 @@ pub struct Analysis {
     pub rows: Vec<Row>,
     /// Each flagged word and the rows that use it, most used first.
     pub words: Vec<(String, Vec<usize>)>,
+    /// Each word set apart as plain English for what the player sees, and
+    /// the rows that use it, most used first.
+    pub seen_words: Vec<(String, Vec<usize>)>,
     /// Each unresolved door word and the links that use it, most used first.
     pub door_words: Vec<(String, Vec<usize>)>,
 }
@@ -870,22 +889,39 @@ fn link_words(name: &str) -> Vec<String> {
 /// words left over, lowercase, in order. Words are compared run together, so
 /// `MCCOY_PALACE` is `SceneId_McCoyPalace`.
 fn resolve(words: &[String], scenes: &HashMap<String, usize>, longest: usize) -> Vec<Result<usize, String>> {
+    spans(words, scenes, longest)
+        .into_iter()
+        .map(|(range, map)| map.ok_or_else(|| words[range.start].to_ascii_lowercase()))
+        .collect()
+}
+
+/// The same, as the words each part spans and the map it names, if any.
+fn spans(words: &[String], scenes: &HashMap<String, usize>, longest: usize) -> Vec<(std::ops::Range<usize>, Option<usize>)> {
     let mut out = Vec::new();
     let mut at = 0;
     while at < words.len() {
         let found = (1..=longest.min(words.len() - at)).rev().find_map(|len| scenes.get(&words[at..at + len].concat()).map(|&row| (row, len)));
-        match found {
-            Some((row, len)) => {
-                out.push(Ok(row));
-                at += len;
-            }
-            None => {
-                out.push(Err(words[at].to_ascii_lowercase()));
-                at += 1;
-            }
-        }
+        let (map, len) = found.map_or((None, 1), |(row, len)| (Some(row), len));
+        out.push((at..at + len, map));
+        at += len;
     }
     out
+}
+
+/// The maps' names as an exit spells them, run together and uppercase
+/// (`SceneId_TolbiShip` is `TOLBISHIP`), each with its row, and the most
+/// words one has.
+fn scene_words(rows: &[Row]) -> (HashMap<String, usize>, usize) {
+    let mut scenes: HashMap<String, usize> = HashMap::new();
+    let mut longest = 0;
+    for (at, row) in rows.iter().enumerate().filter(|(_, row)| row.thing.kind == "scene") {
+        let words = link_words(&row.thing.name);
+        if words.len() > 2 {
+            scenes.entry(words[2..].concat()).or_insert(at);
+            longest = longest.max(words.len() - 2);
+        }
+    }
+    (scenes, longest)
 }
 
 /// The words of a comment's ★ line onwards, as stems.
@@ -902,15 +938,9 @@ fn star_stems(comment: &str) -> impl Iterator<Item = String> + '_ {
 fn check_doors(analysis: &mut Analysis, text: &GameText) {
     let rows = &mut analysis.rows;
     let verified = |row: &Row| matches!(row.evidence, Some(Evidence::Verified(_)));
-    let mut scenes: HashMap<String, usize> = HashMap::new();
-    let mut longest = 0;
+    let (scenes, longest) = scene_words(rows);
     let mut rooms: HashMap<usize, HashSet<String>> = HashMap::new();
     for (at, row) in rows.iter().enumerate().filter(|(_, row)| row.thing.kind == "scene") {
-        let words = link_words(&row.thing.name);
-        if words.len() > 2 {
-            scenes.entry(words[2..].concat()).or_insert(at);
-            longest = longest.max(words.len() - 2);
-        }
         if verified(row) {
             rooms.entry(at).or_default().extend(star_stems(&row.thing.own));
             for line in &row.thing.evidence {
@@ -1035,12 +1065,158 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
         for word in &flagged {
             words.entry(word.clone()).or_default().push(analysis.rows.len());
         }
-        analysis.rows.push(Row { thing: thing.clone(), words: flagged, evidence, door_words: Vec::new() });
+        analysis.rows.push(Row { thing: thing.clone(), words: flagged, evidence, door_words: Vec::new(), seen_words: Vec::new(), seen_uses: Vec::new() });
     }
-    analysis.words = words.into_iter().collect();
-    analysis.words.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
+    let seen = Seen::new(&analysis.rows);
+    let mut flagged = Vec::new();
+    let mut apart = Vec::new();
+    for (word, uses) in words {
+        let seen_at: Vec<usize> = uses.iter().copied().filter(|&at| seen.word(&analysis.rows, at, &word)).collect();
+        if seen_at.len() == uses.len() {
+            apart.push((word, uses));
+        } else {
+            for at in seen_at {
+                analysis.rows[at].seen_uses.push(word.clone());
+            }
+            flagged.push((word, uses));
+        }
+    }
+    for (word, uses) in &apart {
+        for &at in uses {
+            let row = &mut analysis.rows[at];
+            row.words.retain(|flagged| flagged != word);
+            row.seen_words.push(word.clone());
+        }
+    }
+    for list in [&mut flagged, &mut apart] {
+        list.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
+    }
+    (analysis.words, analysis.seen_words) = (flagged, apart);
     check_doors(&mut analysis, text);
     analysis
+}
+
+/// The kinds of evidence row, besides a `what the player sees` row that
+/// cites its render, that say someone looked at the thing: its picture, or
+/// what the walkthrough says the player sees there (H3).
+pub const SEEN_KINDS: &[&str] = &["its picture", "the walkthrough"];
+
+/// A name's evidence that says someone saw what it names: a row or ★ line
+/// of `what the player sees` citing its render, or a row of a `SEEN_KINDS`
+/// kind, each as its ★ line.
+fn seen_lines(thing: &Thing) -> Vec<String> {
+    let sees = &line_regexes()[2];
+    let rendered = |line: &str| sees.captures_iter(line).any(|capture| capture.get(1).is_some() && !capture[2].trim().is_empty());
+    let mut lines: Vec<String> = thing
+        .evidence
+        .iter()
+        .filter(|line| rendered(line) || row_kind(line).is_some_and(|kind| SEEN_KINDS.contains(&kind)))
+        .cloned()
+        .collect();
+    let own = comment_words(&thing.own);
+    if rendered(&own) {
+        lines.push(own);
+    }
+    lines
+}
+
+/// What the names say someone saw, for setting apart the words that are
+/// plain English for it (H3, H5): the names with a seen line, and for each
+/// map with one, the words of those lines and the words its seen exits add
+/// to its own, as `check_doors` gathers a map's room words.
+struct Seen {
+    scenes: HashMap<String, usize>,
+    longest: usize,
+    named: HashSet<usize>,
+    rooms: HashMap<usize, HashSet<String>>,
+}
+
+impl Seen {
+    fn new(rows: &[Row]) -> Seen {
+        let (scenes, longest) = scene_words(rows);
+        let mut seen = Seen { scenes, longest, named: HashSet::new(), rooms: HashMap::new() };
+        for (at, row) in rows.iter().enumerate() {
+            let lines = seen_lines(&row.thing);
+            if lines.is_empty() {
+                continue;
+            }
+            seen.named.insert(at);
+            if row.thing.kind == "scene" {
+                seen.rooms.entry(at).or_default().extend(lines.iter().flat_map(|line| star_stems(line)));
+            } else if row.thing.kind == "exit" {
+                let parts = resolve(&link_words(&row.thing.name), &seen.scenes, seen.longest);
+                let maps: Vec<usize> = parts.iter().filter_map(|part| part.as_ref().ok().copied()).collect();
+                for word in parts.iter().filter_map(|part| part.as_ref().err()).filter(|word| !DOOR_WORDS.contains(&word.as_str())) {
+                    for map in &maps {
+                        seen.rooms.entry(*map).or_default().insert(stem(word));
+                    }
+                }
+            }
+        }
+        seen
+    }
+
+    /// Whether row `at` takes `word` from what someone saw: the name has a
+    /// seen line of its own, or each place it uses the word is inside a map's
+    /// name that has one (`DEHKAN_PLATEAU_TIGHTROPES_TO_WORLD_MAP`), inside
+    /// such a map's short name in its own file (`ACTOR_TIGHTROPES_PILLAR`),
+    /// or is a word of a seen line of a map the name names (`Tolbi_OpenDeck`).
+    fn word(&self, rows: &[Row], at: usize, word: &str) -> bool {
+        if self.named.contains(&at) {
+            return true;
+        }
+        let thing = &rows[at].thing;
+        let words = link_words(&thing.name);
+        let spans = spans(&words, &self.scenes, self.longest);
+        let maps: Vec<usize> = spans.iter().filter_map(|(_, map)| *map).collect();
+        let short = self.short_names(rows, &thing.file, &words);
+        let mut used = false;
+        for (range, map) in &spans {
+            if !words[range.clone()].iter().any(|piece| piece.eq_ignore_ascii_case(word)) {
+                continue;
+            }
+            used = true;
+            let seen = match map {
+                Some(map) => self.named.contains(map),
+                None => {
+                    short.contains(&range.start)
+                        || maps.iter().any(|map| self.rooms.get(map).is_some_and(|room| room.contains(&stem(word))))
+                }
+            };
+            if !seen {
+                return false;
+            }
+        }
+        used
+    }
+
+    /// The places among `words` that a seen map of the scene file `file`
+    /// is called by its short name, its words after the file's own
+    /// (`TIGHTROPES` in `games/tla/src/scene/dehkan_plateau.c`, for
+    /// `SceneId_DehkanPlateauTightropes`), as that file's names call it.
+    fn short_names(&self, rows: &[Row], file: &str, words: &[String]) -> HashSet<usize> {
+        let mut out = HashSet::new();
+        let Some(stem) = file.rsplit_once("/src/scene/").and_then(|(_, rest)| rest.strip_suffix(".c")).filter(|rest| !rest.contains('/')) else {
+            return out;
+        };
+        let prefix = stem.replace('_', "").to_ascii_uppercase();
+        for &scene in &self.named {
+            let row = &rows[scene];
+            if row.thing.kind != "scene" {
+                continue;
+            }
+            let name = link_words(&row.thing.name);
+            let Some(name) = name.get(2..) else { continue };
+            let Some(cut) = (1..name.len()).find(|&cut| name[..cut].concat() == prefix) else { continue };
+            let rest = &name[cut..];
+            for start in 0..words.len().saturating_sub(rest.len() - 1) {
+                if words[start..start + rest.len()] == *rest {
+                    out.extend(start..start + rest.len());
+                }
+            }
+        }
+        out
+    }
 }
 
 #[cfg(test)]
@@ -1316,5 +1492,53 @@ mod tests {
         assert!(analysis.door_words.contains(&("attacked".to_string(), vec![11])));
         assert_eq!(analysis.rows[5].evidence.as_ref().unwrap().metric(), "provenance_rooms");
         assert_eq!(evidence[15], "rooms", "MCCOY is McCoy");
+    }
+
+    #[test]
+    fn words_for_what_the_player_sees() {
+        let text = GameText::parse(PO, Some(2)).unwrap();
+        let row = |kind: &str, evidence: &str| format!("★ Named from {kind}: {evidence}");
+        let of = |name: &str, kind: &'static str, rows: &[String]| Thing {
+            name: name.to_string(),
+            kind,
+            evidence: rows.to_vec(),
+            ..Thing::default()
+        };
+        let rendered = row("what the player sees", "ropes strung between the cliffs, a ledge below (its render)");
+        let things = [
+            of("SceneId_BilibinTightropes", "scene", &[rendered.clone()]),
+            of("BILIBIN_TIGHTROPES_TO_BILIBIN", "exit", &[]),
+            of("BilibinTightropes_DropToLedge", "function", &[]),
+            of("ACTOR_LADDER", "actor", &[row("its picture", "a rope ladder (ladder.png)")]),
+            of("ACTOR_FOOTPRINTS", "actor", &[row("the walkthrough", "\"follow the footprints\"")]),
+            of("ACTOR_WAREHOUSE", "actor", &[row("its picture", "a shed")]),
+            of("Bilibin_OpenWarehouse", "function", &[]),
+            of("ACTOR_CRATE", "actor", &[row("what the player sees", "a crate, no render cited")]),
+            of("ACTOR_SHELF", "actor", &[row("its code", "drawn first")]),
+            of("SceneId_BilibinCellar", "scene", &[row("its code", "the room below")]),
+            of("BILIBIN_CELLAR_TO_BILIBIN_TIGHTROPES", "exit", &[]),
+            Thing { file: "games/tbs/src/scene/bilibin.c".to_string(), ..of("ACTOR_TIGHTROPES_POST", "actor", &[]) },
+            Thing { file: "games/tbs/src/scene/bilibin.c".to_string(), ..of("ACTOR_CELLAR_DOOR", "actor", &[]) },
+            Thing { file: "games/tbs/src/scene/vale.c".to_string(), ..of("ACTOR_TIGHTROPES_HOOK", "actor", &[]) },
+        ];
+        let all = analyze(&things, &[], &text, &HashMap::new());
+        assert!(all.words.iter().any(|(word, _)| word == "tightropes"), "another file's TIGHTROPES is not that map's");
+        let analysis = analyze(&things[..13], &[], &text, &HashMap::new());
+        let seen: Vec<&str> = analysis.seen_words.iter().map(|(word, _)| word.as_str()).collect();
+        let flagged: Vec<&str> = analysis.words.iter().map(|(word, _)| word.as_str()).collect();
+        assert_eq!(analysis.seen_words[0], ("tightropes".to_string(), vec![0, 1, 2, 10, 11]), "inside a seen map's name, or its short name in its file");
+        assert!(flagged.contains(&"cellar"), "an unseen map's short name");
+        assert!(seen.contains(&"ledge"), "a word of the seen map's line, after its name");
+        assert!(seen.contains(&"ladder") && seen.contains(&"footprints"), "its picture, the walkthrough");
+        assert!(flagged.contains(&"warehouse"), "one name of two has no seen row");
+        assert!(flagged.contains(&"crate"), "a render not cited is no render");
+        assert!(flagged.contains(&"shelf"), "its code is no look");
+        assert!(flagged.contains(&"cellar"), "a map named from its code");
+        assert!(analysis.rows[10].words.contains(&"cellar".to_string()), "its unseen word stays on the exit");
+        assert!(!analysis.rows[10].words.contains(&"tightropes".to_string()));
+        assert_eq!(analysis.rows[10].seen_words, ["tightropes"]);
+        assert!(analysis.rows[0].words.is_empty());
+        assert_eq!(analysis.rows[5].seen_uses, ["warehouse"], "a seen use of a word another name leaves unseen");
+        assert!(analysis.rows[6].seen_uses.is_empty());
     }
 }
