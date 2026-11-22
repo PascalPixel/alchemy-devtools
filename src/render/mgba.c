@@ -13,6 +13,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+// The library's build options first: they decide which members struct
+// mCore and struct GBA hold (USE_DEBUGGERS adds seven of mCore's), and no
+// header of the library includes them itself. Without them every member
+// past the first such option is read at the wrong place: enableVideoLayer
+// was loadSymbols, which crashed the map pictures.
+#include <mgba/flags.h>
 #include <mgba-util/vfs.h>
 #include <mgba/core/core.h>
 #include <mgba/core/log.h>
