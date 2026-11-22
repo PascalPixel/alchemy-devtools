@@ -277,6 +277,26 @@ pub fn drawn_cells(text: &str, name: &str) -> Vec<(i32, i32)> {
     out
 }
 
+/// What function `name` of C source `text` assigns to, as its statements
+/// write it (`leader->riseCounter`, `gFadeOverlayWork->actor`), its own
+/// locals left out: for an event that shows nothing, what it changes
+/// instead.
+pub fn assigned(text: &str, name: &str) -> Vec<String> {
+    let Some(body) = function_body(text, name) else {
+        return Vec::new();
+    };
+    let plain = strip_comments(&body);
+    let statement = regex::Regex::new(r"(?m)^\s*([A-Za-z_][\w]*(?:\s*(?:->|\.)\s*\w+|\[[^\]]*\])+|g[A-Z]\w*)\s*(?:[-+|&]?=)[^=]").expect("an assignment pattern");
+    let mut out: Vec<String> = Vec::new();
+    for found in statement.captures_iter(&plain) {
+        let target: String = found[1].split_whitespace().collect();
+        if !out.contains(&target) {
+            out.push(target);
+        }
+    }
+    out
+}
+
 /// One flag test: the flag's name and whether it must be set.
 fn flag_test(term: &str) -> Option<(String, bool)> {
     let mut t = term.trim();
@@ -467,6 +487,12 @@ mod tests {
         assert_eq!(drawn_cells(text, "C_Idol"), vec![(41, 15)]);
         assert_eq!(drawn_cells(text, "C_Door"), vec![(7, 14)]);
         assert!(drawn_cells(text, "C_Unknown").is_empty());
+    }
+
+    #[test]
+    fn what_a_function_assigns_is_read() {
+        let text = "static void S_Start(void) {\n  struct Actor *leader = Actor_Get(0);\n  s32 i;\n  gFadeOverlayWork->actor = leader;\n  leader->riseCounter = 1;\n  i = 2;\n  gCount += 1;\n  if (leader->x == 3)\n    gWork.flags[i] |= 4;\n}\n";
+        assert_eq!(assigned(text, "S_Start"), vec!["gFadeOverlayWork->actor", "leader->riseCounter", "gCount", "gWork.flags[i]"]);
     }
 
     #[test]

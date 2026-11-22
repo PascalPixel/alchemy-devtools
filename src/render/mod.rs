@@ -626,7 +626,8 @@ the second of any (a scene's second log). Where a recording's note says
 nothing visible happens, it goes on with what the event does instead, as
 far as the run reads it: the flags it sets and clears, the camera's bounds
 changed, cells whose behaviour changed, the leader put on another layer or
-moved far.
+moved far; where the run reads none of these, what the event's own function
+assigns to, read from its source (Crossbone Isle's rise counter).
 
 Staging (event only), for what the walk-up cannot find; each is kept for
 every event and every try of the run, and the note column says what was

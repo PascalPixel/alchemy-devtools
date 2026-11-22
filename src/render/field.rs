@@ -3615,15 +3615,7 @@ impl<'rom> Field<'rom> {
                 // Each thing that could be pushed has its best push tried
                 // before any has its second: of a scene's two logs, the
                 // river's is pushed too, not only the first one's every way.
-                let mut firsts: Vec<Option<u16>> = Vec::new();
-                let (best, rest): (Vec<_>, Vec<_>) = pushed.into_iter().partition(|p| {
-                    let fresh = p.2.is_some() && !firsts.contains(&p.2);
-                    if fresh {
-                        firsts.push(p.2);
-                    }
-                    fresh
-                });
-                let pushed: Vec<_> = best.into_iter().chain(rest).collect();
+                let pushed = best_of_each(pushed, |p| p.2);
                 // The way the row faces first, then spots in the open.
                 walked.sort_by_key(|(rank, s)| (s.layer != reach.layer, *rank, std::cmp::Reverse(reach.open(s.layer, s.x, s.z))));
                 out.extend(pushed.into_iter().map(|(_, _, _, spot)| spot));
@@ -4771,6 +4763,20 @@ const AROUND: [(i32, i32); 8] = [(0, 1), (-1, 0), (1, 0), (0, -1), (-1, 1), (1, 
 
 /// The heading (1/65536 turns, 0 east, 0x4000 south) from a point toward
 /// one (dx, dz) pixels away, as Trig_Atan gives it.
+/// `items` in order, the first of each thing `of` names (what a push
+/// moves) before the rest; those that name none after them.
+fn best_of_each<T>(items: Vec<T>, of: impl Fn(&T) -> Option<u16>) -> Vec<T> {
+    let mut firsts: Vec<u16> = Vec::new();
+    let (best, rest): (Vec<T>, Vec<T>) = items.into_iter().partition(|item| match of(item) {
+        Some(id) if !firsts.contains(&id) => {
+            firsts.push(id);
+            true
+        }
+        _ => false,
+    });
+    best.into_iter().chain(rest).collect()
+}
+
 /// Times a staged run goes on pushing (its keys played again) after
 /// another row for the cell ran first.
 const STAGED_PUSHES: u32 = 4;
@@ -5138,6 +5144,22 @@ mod tests {
         assert_eq!(facing_toward(-5, 0), 0x8000);
         assert_eq!(facing_toward(0, -5), 0xc000);
         assert_eq!(facing_toward(5, 5), 0x2000);
+    }
+
+    #[test]
+    fn each_thing_pushed_has_its_best_push_first() {
+        let pushes = vec![(1, Some(8)), (2, Some(8)), (3, None), (4, Some(9)), (5, Some(8)), (6, Some(9))];
+        let order: Vec<i32> = best_of_each(pushes, |p| p.1).into_iter().map(|p| p.0).collect();
+        assert_eq!(order, vec![1, 4, 2, 3, 5, 6]);
+    }
+
+    #[test]
+    fn a_way_is_the_nearest_to_a_facing() {
+        assert_eq!(KEYS[nearest_way(0xc000)], KEY_UP);
+        assert_eq!(KEYS[nearest_way(0x0800)], KEY_RIGHT);
+        assert_eq!(KEYS[nearest_way(0xf800)], KEY_RIGHT);
+        assert_eq!(KEYS[nearest_way(0x4100)], KEY_DOWN);
+        assert_eq!(KEYS[nearest_way(0x8000)], KEY_LEFT);
     }
 
     #[test]

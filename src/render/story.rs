@@ -632,6 +632,15 @@ mod tests {
     }
 
     #[test]
+    fn a_flag_is_named_by_its_number() {
+        let header = HashMap::from([("FLAG_B".to_string(), 3u16), ("FLAG_A".to_string(), 3), ("FLAG_C".to_string(), 4)]);
+        let flags = Flags { dir: std::path::PathBuf::new(), global: HashMap::new(), scoped: HashMap::new(), header };
+        assert_eq!(flags.name(3).as_deref(), Some("FLAG_A"));
+        assert_eq!(flags.name(4).as_deref(), Some("FLAG_C"));
+        assert_eq!(flags.name(5), None);
+    }
+
+    #[test]
     fn conditions_are_flag_states() {
         assert_eq!(
             parse_conditions("FLAG_A set and FLAG_B clear"),

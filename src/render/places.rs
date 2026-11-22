@@ -1850,23 +1850,20 @@ impl Context<'_> {
     /// The run's note, and where it says nothing visible happens, what the
     /// event does instead as far as the run read it: the flags it sets and
     /// clears, by name, then its other effects (Field::effects).
-    fn note_with_effects(&self, run: &EventRun) -> String {
-        let mut note = run.note.clone().unwrap_or_default();
-        let mut instead: Vec<String> = Vec::new();
+    /// Where the run read nothing, what the event's own function assigns
+    /// to, from its source (stage::assigned).
+    fn note_with_effects(&self, run: &EventRun, scene: &Scene, event: &Event) -> String {
         let name = |flag: u16| self.flags.name(flag).unwrap_or_else(|| format!("flag {flag:#05x}"));
-        let set: Vec<String> = run.flags_changed.iter().filter(|f| f.1).map(|f| name(f.0)).collect();
-        let cleared: Vec<String> = run.flags_changed.iter().filter(|f| !f.1).map(|f| name(f.0)).collect();
-        if !set.is_empty() {
-            instead.push(format!("it sets {}", set.join(", ")));
+        let flags: Vec<(String, bool)> = run.flags_changed.iter().map(|&(f, on)| (name(f), on)).collect();
+        let mut effects = run.effects.clone();
+        let nothing = run.note.as_deref().is_some_and(|n| n.contains("nothing visible happens") && !n.contains("moves the leader and the camera"));
+        if nothing && flags.is_empty() && effects.is_empty() {
+            let assigned = super::stage::assigned(&self.source(scene), &event.name);
+            if !assigned.is_empty() {
+                effects.push(format!("its code changes {}, which nothing on the screen shows (read from its source)", assigned.join(", ")));
+            }
         }
-        if !cleared.is_empty() {
-            instead.push(format!("it clears {}", cleared.join(", ")));
-        }
-        instead.extend(run.effects.iter().cloned());
-        if !instead.is_empty() {
-            note.push_str(&format!("; what it does instead: {}", instead.join("; ")));
-        }
-        note
+        instead(run.note.clone().unwrap_or_default(), &flags, &effects)
     }
 
     fn write_event(&mut self, scene: &Scene, entrance: i16, event: &Event, run: &EventRun) -> Result<(), String> {
@@ -1890,7 +1887,7 @@ impl Context<'_> {
             event: event.name.clone(),
             frames: written,
             leads_to: leads_to.unwrap_or_default(),
-            note: self.note_with_effects(run),
+            note: self.note_with_effects(run, scene, event),
             messages,
             file,
             ..Row::default()
@@ -1909,6 +1906,23 @@ impl Context<'_> {
         }
         Ok(())
     }
+}
+
+/// `note` with what an event that shows nothing does instead: the flags
+/// it sets and clears, then its other effects.
+fn instead(mut note: String, flags: &[(String, bool)], effects: &[String]) -> String {
+    let mut out: Vec<String> = Vec::new();
+    for (on, verb) in [(true, "sets"), (false, "clears")] {
+        let names: Vec<&str> = flags.iter().filter(|f| f.1 == on).map(|f| f.0.as_str()).collect();
+        if !names.is_empty() {
+            out.push(format!("it {verb} {}", names.join(", ")));
+        }
+    }
+    out.extend(effects.iter().cloned());
+    if !out.is_empty() {
+        note.push_str(&format!("; what it does instead: {}", out.join("; ")));
+    }
+    note
 }
 
 /// An event's name as a file name: letters, digits and underscores kept,
@@ -1952,6 +1966,17 @@ mod tests {
         let line = same_columns(old, "vale\t4\tVale\t\tevent-gif\t0\tEvent_X\t\t\t\t\t\t90\t00001\tvale/events/Event_X.gif");
         assert_eq!(line, "vale\t4\tVale\t\tevent-gif\t0\tEvent_X\t\t\t\t\t\t90\t\t\t00001\tvale/events/Event_X.gif");
         assert_eq!(same_columns(INDEX_HEADER, "a\tb"), "a\tb");
+    }
+
+    #[test]
+    fn a_note_of_nothing_visible_says_what_happens_instead() {
+        let flags = vec![("FLAG_A".to_string(), true), ("FLAG_B".to_string(), false), ("FLAG_C".to_string(), true)];
+        let effects = vec!["it changes the camera's bounds from (0, 0)-(240, 160) to (0, 0)-(480, 160) pixels".to_string()];
+        assert_eq!(
+            instead("nothing visible happens".to_string(), &flags, &effects),
+            "nothing visible happens; what it does instead: it sets FLAG_A, FLAG_C; it clears FLAG_B; it changes the camera's bounds from (0, 0)-(240, 160) to (0, 0)-(480, 160) pixels"
+        );
+        assert_eq!(instead("nothing visible happens".to_string(), &[], &[]), "nothing visible happens");
     }
 
     #[test]
