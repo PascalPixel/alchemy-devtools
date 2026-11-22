@@ -2431,6 +2431,7 @@ const ROWS: &[(&str, &str)] = &[
     ("provenance_none", "  no evidence"),
     ("unused_words", "words the game never uses"),
     ("unused_word_name", "  names using them"),
+    ("seen_words", "words for what the player sees, by a render"),
     ("door_words", "door words unresolved"),
     ("door_word_link", "  links using them"),
     ("", "names to guess (one word per idea):"),
@@ -2481,6 +2482,7 @@ impl Report {
             "duplicate_table" => self.table_groups.len() as u64,
             "duplicate_table_copies" => Report::copies(&self.table_groups) as u64,
             "unused_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.words.len() as u64),
+            "seen_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.seen_words.len() as u64),
             "door_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.door_words.len() as u64),
             _ => self.total(metric),
         }
@@ -2617,8 +2619,9 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
 }
 
 /// The lists `--list` takes beside the table's metrics: the name provenance
-/// worklist, and the words the game never uses or that no door resolves.
-const WORD_LISTS: [&str; 3] = ["provenance", "unused_word", "door_word"];
+/// worklist, the words the game never uses, those set apart as what the
+/// player sees, and those no door resolves.
+const WORD_LISTS: [&str; 4] = ["provenance", "unused_word", "seen_word", "door_word"];
 
 /// Whether `--list` knows a metric: one the table counts, or a word list.
 fn listable(metric: &str) -> bool {
@@ -2635,7 +2638,11 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
             let Some(analysis) = &report.provenance else { continue };
             if metric != "provenance" {
                 // Each flagged or unresolved word, how many names use it and where.
-                let words = if metric == "unused_word" { &analysis.words } else { &analysis.door_words };
+                let words = match metric {
+                    "unused_word" => &analysis.words,
+                    "seen_word" => &analysis.seen_words,
+                    _ => &analysis.door_words,
+                };
                 for (word, rows) in words {
                     let uses: Vec<String> = rows
                         .iter()
@@ -2682,7 +2689,7 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
 pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, String> {
     if let Some(metric) = metric.filter(|metric| !listable(metric)) {
         return Err(format!(
-            "--list takes a metric of the table, as humanity.tsv names it, or provenance, unused_word or door_word, not {metric}"
+            "--list takes a metric of the table, as humanity.tsv names it, or provenance, unused_word, seen_word or door_word, not {metric}"
         ));
     }
     let reports = std::thread::scope(|scope| {
@@ -3565,6 +3572,13 @@ mod provenance_tests {
         assert_eq!(evidence("ACTOR_ODD").as_deref(), Some("failed: a row of no known kind: its vibe"));
         assert_eq!((report.value("provenance_verified"), report.value("provenance_failed"), report.value("provenance_none")), (4, 3, 2));
         assert_eq!(report.value("provenance_unchecked"), 1);
+        // GUARD and PILLAR are words for what a render showed; MAN's row cites
+        // none, and the rest are evidence of no look.
+        let seen = list(&[("tbs", &report)], "seen_word");
+        assert_eq!(seen, "tbs\tguard\t1\tACTOR_GUARD games/tbs/src/scene/bilibin.c:2\ntbs\tpillar\t1\tACTOR_PILLAR games/tbs/src/scene/bilibin.c:3\n");
+        assert_eq!(report.value("seen_words"), 2);
+        let flagged = list(&[("tbs", &report)], "unused_word");
+        assert!(flagged.contains("\tman\t") && flagged.contains("\twarehouse\t") && !flagged.contains("\tguard\t"), "{flagged}");
     }
 
 
