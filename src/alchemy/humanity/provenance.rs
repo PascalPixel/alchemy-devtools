@@ -9,7 +9,8 @@
 //!   is on the short programming vocabulary below, and set apart as plain
 //!   English for what the player sees when every name using it has a row
 //!   saying someone saw it (its render, its picture, the walkthrough), or
-//!   takes it from a map's name or seen line that has one (H3);
+//!   takes it from a map that has one: its name, its short name in its own
+//!   scene file, or its seen line (H3);
 //! - names without evidence: a name is verified by its row of this
 //!   repository's `evidence/<game>-names.tsv` (H8), matched by name and file,
 //!   or, in a game whose source still holds them, by a `★ Named from ...`
@@ -1138,15 +1139,18 @@ impl Seen {
 
     /// Whether row `at` takes `word` from what someone saw: the name has a
     /// seen line of its own, or each place it uses the word is inside a map's
-    /// name that has one (`DEHKAN_PLATEAU_TIGHTROPES_TO_WORLD_MAP`), or is a
-    /// word of a seen line of a map the name names (`Tolbi_OpenDeck`).
+    /// name that has one (`DEHKAN_PLATEAU_TIGHTROPES_TO_WORLD_MAP`), inside
+    /// such a map's short name in its own file (`ACTOR_TIGHTROPES_PILLAR`),
+    /// or is a word of a seen line of a map the name names (`Tolbi_OpenDeck`).
     fn word(&self, rows: &[Row], at: usize, word: &str) -> bool {
         if self.named.contains(&at) {
             return true;
         }
-        let words = link_words(&rows[at].thing.name);
+        let thing = &rows[at].thing;
+        let words = link_words(&thing.name);
         let spans = spans(&words, &self.scenes, self.longest);
         let maps: Vec<usize> = spans.iter().filter_map(|(_, map)| *map).collect();
+        let short = self.short_names(rows, &thing.file, &words);
         let mut used = false;
         for (range, map) in &spans {
             if !words[range.clone()].iter().any(|piece| piece.eq_ignore_ascii_case(word)) {
@@ -1155,13 +1159,44 @@ impl Seen {
             used = true;
             let seen = match map {
                 Some(map) => self.named.contains(map),
-                None => maps.iter().any(|map| self.rooms.get(map).is_some_and(|room| room.contains(&stem(word)))),
+                None => {
+                    short.contains(&range.start)
+                        || maps.iter().any(|map| self.rooms.get(map).is_some_and(|room| room.contains(&stem(word))))
+                }
             };
             if !seen {
                 return false;
             }
         }
         used
+    }
+
+    /// The places among `words` that a seen map of the scene file `file`
+    /// is called by its short name, its words after the file's own
+    /// (`TIGHTROPES` in `games/tla/src/scene/dehkan_plateau.c`, for
+    /// `SceneId_DehkanPlateauTightropes`), as that file's names call it.
+    fn short_names(&self, rows: &[Row], file: &str, words: &[String]) -> HashSet<usize> {
+        let mut out = HashSet::new();
+        let Some(stem) = file.rsplit_once("/src/scene/").and_then(|(_, rest)| rest.strip_suffix(".c")).filter(|rest| !rest.contains('/')) else {
+            return out;
+        };
+        let prefix = stem.replace('_', "").to_ascii_uppercase();
+        for &scene in &self.named {
+            let row = &rows[scene];
+            if row.thing.kind != "scene" {
+                continue;
+            }
+            let name = link_words(&row.thing.name);
+            let Some(name) = name.get(2..) else { continue };
+            let Some(cut) = (1..name.len()).find(|&cut| name[..cut].concat() == prefix) else { continue };
+            let rest = &name[cut..];
+            for start in 0..words.len().saturating_sub(rest.len() - 1) {
+                if words[start..start + rest.len()] == *rest {
+                    out.extend(start..start + rest.len());
+                }
+            }
+        }
+        out
     }
 }
 
@@ -1463,11 +1498,17 @@ mod tests {
             of("ACTOR_PRIORITY", "actor", &[row("its code", "sorted first")]),
             of("SceneId_BilibinCellar", "scene", &[row("its code", "the room below")]),
             of("BILIBIN_CELLAR_TO_BILIBIN_TIGHTROPES", "exit", &[]),
+            Thing { file: "games/tbs/src/scene/bilibin.c".to_string(), ..of("ACTOR_TIGHTROPES_POST", "actor", &[]) },
+            Thing { file: "games/tbs/src/scene/bilibin.c".to_string(), ..of("ACTOR_CELLAR_DOOR", "actor", &[]) },
+            Thing { file: "games/tbs/src/scene/vale.c".to_string(), ..of("ACTOR_TIGHTROPES_HOOK", "actor", &[]) },
         ];
-        let analysis = analyze(&things, &[], &text, &HashMap::new());
+        let all = analyze(&things, &[], &text, &HashMap::new());
+        assert!(all.words.iter().any(|(word, _)| word == "tightropes"), "another file's TIGHTROPES is not that map's");
+        let analysis = analyze(&things[..13], &[], &text, &HashMap::new());
         let seen: Vec<&str> = analysis.seen_words.iter().map(|(word, _)| word.as_str()).collect();
         let flagged: Vec<&str> = analysis.words.iter().map(|(word, _)| word.as_str()).collect();
-        assert_eq!(analysis.seen_words[0], ("tightropes".to_string(), vec![0, 1, 2, 10]), "inside a seen map's name");
+        assert_eq!(analysis.seen_words[0], ("tightropes".to_string(), vec![0, 1, 2, 10, 11]), "inside a seen map's name, or its short name in its file");
+        assert!(flagged.contains(&"cellar"), "an unseen map's short name");
         assert!(seen.contains(&"ledge"), "a word of the seen map's line, after its name");
         assert!(seen.contains(&"ladder") && seen.contains(&"footprints"), "its picture, the walkthrough");
         assert!(flagged.contains(&"warehouse"), "one name of two has no seen row");
