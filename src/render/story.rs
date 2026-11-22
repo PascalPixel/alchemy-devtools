@@ -287,7 +287,7 @@ impl Flags {
 pub fn scenes_from_tree(root: &Path, game: &str, edition: &str) -> Result<Vec<Scene>, String> {
     let path = root.join("games").join(game).join("src/field/scenes.s");
     let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-    let overlays = root.join("out").join(edition).join("overlays");
+    let overlays = super::snapshot::build(root, edition)?.join("overlays");
     let mut scenes = Vec::new();
     for line in text.lines() {
         let Some(rest) = line.trim_start().strip_prefix("scene ").or_else(|| line.trim_start().strip_prefix("scene\t")) else {

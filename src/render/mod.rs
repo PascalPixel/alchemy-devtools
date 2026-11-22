@@ -90,6 +90,8 @@ mod source;
 // Its options are read with or without the feature; what they stage needs it.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 mod stage;
+// The private copy of the build a run reads, with or without the feature.
+mod snapshot;
 #[cfg(feature = "render")]
 mod whole;
 mod plan;
@@ -157,6 +159,12 @@ libmgba and its headers installed (MGBA_PREFIX names their prefix).";
 
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
+    let result = dispatch(arguments);
+    snapshot::release();
+    result
+}
+
+fn dispatch(arguments: &[String]) -> Result<(), String> {
     match arguments.first().map(String::as_str) {
         Some("psynergy") => psynergy(&arguments[1..]),
         Some(kind @ ("place" | "event")) => scenes(kind, &arguments[1..]),
@@ -370,7 +378,7 @@ fn play(_: &Path, _: &Options, _: &[&Cast], _: &Path) -> Result<(Vec<Row>, u64),
 fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<(Vec<Row>, u64), String> {
     let edition = &o.edition;
     let scene = backdrop::scene(&o.backdrop)?;
-    let build = root.join("out").join(edition);
+    let build = snapshot::build(root, edition)?;
     let map_path = build.join(format!("{edition}.map"));
     let rom_path = build.join(format!("{edition}.gba"));
     let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
@@ -682,6 +690,12 @@ pictures took in an earlier run's index.tsv. The scenes' old event
 pictures are cleared first. The parent joins their index.tsv, skipped.tsv
 and variant-flags.tsv lines into the files one process would write.
 
+The run reads a private copy of out/EDITION (its ROM, ELF, linker map and
+overlays; snapshot.rs), taken as it starts once the files have lain still
+for five seconds and checked whole, so a build writing out/EDITION
+meanwhile does not end the run; while one is writing it, the run waits
+(up to 15 minutes) and says so.
+
 Needs the `render` feature: cargo build --release --features render, with
 libmgba and its headers installed (MGBA_PREFIX names their prefix).";
 
@@ -985,7 +999,7 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
                 outcome.cleared.extend(places::clear_events(out, &units[key], r.wanted, r.only));
             }
         }
-        let rom_path = root.join("out").join(edition).join(format!("{edition}.gba"));
+        let rom_path = snapshot::build(root, edition)?.join(format!("{edition}.gba"));
         let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
         note_modified(edition, &rom);
         processes = jobs.count.min(pieces.len());
@@ -1093,7 +1107,7 @@ struct Machines {
 #[cfg(feature = "render")]
 impl Machines {
     fn load(root: &Path, edition: &str, chosen: &[&story::Scene], note: bool) -> Result<Machines, String> {
-        let build = root.join("out").join(edition);
+        let build = snapshot::build(root, edition)?;
         let map_path = build.join(format!("{edition}.map"));
         let rom_path = build.join(format!("{edition}.gba"));
         let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
@@ -1277,7 +1291,7 @@ fn play_story(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Re
 
 #[cfg(feature = "render")]
 fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
-    let build = root.join("out").join(edition);
+    let build = snapshot::build(root, edition)?;
     let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
     let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
     let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
@@ -1423,7 +1437,7 @@ fn play_probe(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
     if let Some(unknown) = only.iter().find(|name| !all.contains(&name.as_str())) {
         return Err(format!("no probe {unknown:?}\n{PROBE_USAGE}"));
     }
-    let build = root.join("out").join(edition);
+    let build = snapshot::build(root, edition)?;
     let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
     let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
     let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
@@ -1698,7 +1712,7 @@ fn play_guide(
     let mut children_failed = Vec::new();
     if jobs.split(units.len()) {
         let pieces: Vec<(String, u64)> = units.iter().map(|u| (u.clone(), 1)).collect();
-        let rom = std::fs::read(root.join("out").join(edition).join(format!("{edition}.gba")))
+        let rom = std::fs::read(snapshot::build(root, edition)?.join(format!("{edition}.gba")))
             .map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
         note_modified(edition, &rom);
         std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
@@ -1721,7 +1735,7 @@ fn play_guide(
         failed.sort_by_key(|name| modes.iter().position(|m| m == name));
         failed.dedup();
     } else {
-        let build = root.join("out").join(edition);
+        let build = snapshot::build(root, edition)?;
         let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
         let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
         let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
