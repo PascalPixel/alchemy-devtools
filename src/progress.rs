@@ -28,20 +28,28 @@ on rows of their own and never added together, a tag of a kind S2 does
 not name counted among its word's; --list fakematch and --list leftover take
 every kind of each. Every number in code counts in magic_code_all; the ones
 its tokens, the call it stands in or the parameter it fills show to be
-honest under S3 (composed forms, tenths and percentages, random ranges,
-also one held in a local first, decimal positions and durations, the
-frames a loop that waits a frame each pass counts, a local array's size,
-places on the map grid, beside its own cell macros too, and in OAM words,
-data through a pointer call, dampings, a sheet's own animation
-numbers, fade, shake, shade and colour levels, and a function-like macro's
-own definition) are honest_KIND, and magic_code is
-what is left to name. Every hex number counts in hex: flag numbers (flags.h, a FLAG_
-name, the whole argument of a call or macro named for a flag or filling a
-parameter named for one), addresses and
+honest under S3 (composed forms, tenths and percentages, decimal digits'
+radix and place values, random ranges, also one held in a local first,
+decimal positions and durations, read out through a group or a
+toFIXED/INTtoFIXED/FIXEDtoINT they fill, the frames a loop that waits a
+frame each pass counts, its counter started in the statement before it
+too, a local array's size, places on the map grid, beside its own cell
+macros too, and in OAM words, data through a pointer call, a cast one
+too, dampings, a sheet's own animation numbers, fade, shake, shade,
+colour and REG_BLDY levels, masks of whole fields beside &, the sign bit's
+>> 31, hardware addresses from 0x02000000 to 0x0fffffff, and a
+function-like macro's own definition) are honest_KIND, and
+magic_code is what is left to name; a lone plain speed a routine turns
+into 16.16 itself counts as data. Every hex number counts in hex: flag
+numbers (flags.h, a FLAG_ name, the whole argument of a call or macro named
+for a flag or filling a parameter named for one), addresses and
 values from 0x02000000 up, masks and bits (beside a bitwise operator or a
-shift, io_reg.h's register values, a define or enumerator in a family of
-single bits, named a mask or bit, or written beside a bitwise operator
-anywhere) and the sound driver's are the kinds S3 keeps, and hex_other is
+shift, io_reg.h's and the flash chip's flash.h's register values, a define
+or enumerator in a family of single bits or within its prefix's _MASK,
+named a mask or bit, an all-ones value with a name, or written beside a
+bitwise operator anywhere and, unless a single bit, never reckoned with), a
+picture's pixel words (in a table named for tiles or pixels) and the sound
+driver's are the kinds S3 keeps, and hex_other is
 the rest, to judge (a packed field stays; an offset, a count or a 16.16 value
 is written otherwise). A numbered name with an
 its-number evidence row counts as numbered_honest; a name whose rows are of

@@ -143,6 +143,9 @@ pub struct Report {
     /// parameters (`Call1(f, a0) { f(a0); }`): for each parameter, the
     /// pointer parameter it is passed to and in which place.
     forwards: HashMap<String, Vec<Option<(usize, usize)>>>,
+    /// For each function defined, the parameters it turns into 16.16 itself
+    /// (`velocityY = toFIXED(speed)`), by place.
+    converted: HashMap<String, HashSet<usize>>,
     /// Each declared function's parameter names.
     parameters: HashMap<String, Vec<Option<String>>>,
     /// Each function-like macro's parameters and the call each is passed to.
@@ -196,8 +199,10 @@ struct Candidate {
     /// among them.
     siblings: Vec<Option<String>>,
     random_arguments: bool,
-    /// A call through a pointer it is an argument of (`draw[0](...)`).
-    pointer: Option<(String, usize)>,
+    /// A call through a pointer it is an argument of (`draw[0](...)`), and
+    /// whether the name is the type the pointer is cast to
+    /// (`((DrawRectangle)draw[0])(...)`).
+    pointer: Option<(String, usize, bool)>,
     /// The right operand of a shift: an amount of bits, never a position.
     shift: bool,
     /// Inside a function-like macro's own definition, which names it
@@ -206,6 +211,12 @@ struct Candidate {
     /// The calls it is compared with or offsets at expression level
     /// (`FIELD_CELL` of `FIELD_CELL(x) == 15`).
     operand_calls: Vec<String>,
+    /// Reckoned in a group of its own inside its argument (`(frame - 486) *
+    /// STEP`), before the argument becomes what its parameter takes.
+    grouped: bool,
+    /// The hardware register the innermost call writes it to, by address
+    /// (`REG_BLDY` of `Io_Write16(31, &REG_BLDY)`).
+    register: Option<String>,
 }
 
 /// The words of parameter names that hold data S3 lets stay a number: a
@@ -379,6 +390,31 @@ impl Report {
         composed
     }
 
+    /// Whether a lone decimal argument is a plain speed, as S3 has a call take
+    /// one (`Actor_Jump(ACTOR_RIME, 11, 0)`, `FieldCamera_SetSpeed(16)`): it
+    /// fills a parameter named for a speed or a velocity that the routine or
+    /// macro itself turns into 16.16 with `toFIXED()` or `INTtoFIXED()`. A
+    /// speed the callee keeps as it comes (an animation's, a step's) is no
+    /// plain speed in pixels.
+    fn plain_speed(&self, candidate: &Candidate) -> bool {
+        let Some((callee, at)) = candidate.calls.first().filter(|_| numbers::is_decimal(&candidate.literal)) else { return false };
+        let Some((name, _)) = self.parameter(callee, *at, 0) else { return false };
+        let words = numbers::words(&name);
+        let has = |list: &[&str]| words.iter().any(|word| list.contains(&word.as_str()));
+        if !has(&["speed", "velocity"]) || has(&["animation", "anim", "step", "steps", "rate", "scale", "acceleration"]) {
+            return false;
+        }
+        let by_macro = self
+            .macro_parameters
+            .get(callee)
+            .and_then(|list| list.get(*at))
+            .and_then(|(_, call)| call.as_ref())
+            .is_some_and(|(inner, place)| {
+                (*place == 0 && matches!(inner.as_str(), "toFIXED" | "INTtoFIXED")) || self.converted.get(inner).is_some_and(|places| places.contains(place))
+            });
+        by_macro || self.converted.get(callee).is_some_and(|places| places.contains(at))
+    }
+
     /// What a parameter's name says beyond `data_parameter`'s words, for a
     /// number that would otherwise want a name: a duration counted in VBlanks
     /// or by a timer (`ScreenFade_ToBlack(s32 vblanks)`), a damping out of
@@ -450,8 +486,9 @@ impl Report {
     /// picture, 48, 24, ...)` with `DrawRectangle draw[2];` fills `x` with 48.
     /// A typedef or declaration is seen where C sees it: in the calling file,
     /// else in a header; two that disagree, or a typedef that names no
-    /// parameter, resolve nothing.
-    fn pointer_parameter(&self, variable: &str, position: usize, file: &str) -> Option<String> {
+    /// parameter, resolve nothing. A pointer cast to a type (`cast`) is called
+    /// as that type: `((DrawRectangle)draw[0])(...)`.
+    fn pointer_parameter(&self, variable: &str, position: usize, cast: bool, file: &str) -> Option<String> {
         // What `file` sees of a name declared in several places.
         fn seen<'a, T: PartialEq>(entries: &'a [(String, T)], file: &str) -> Option<&'a T> {
             let own: Vec<&T> = entries.iter().filter(|(at, _)| at == file).map(|(_, value)| value).collect();
@@ -471,6 +508,9 @@ impl Report {
             }
             None
         };
+        if cast {
+            return resolve(variable)?.get(position)?.clone();
+        }
         let declared: Vec<(String, String)> = self.typed_variables.get(variable)?.iter().map(|(ty, at)| (at.clone(), ty.clone())).collect();
         let own = declared.iter().any(|(at, _)| at == file);
         let mut lists = declared.iter().filter(|(at, _)| if own { at == file } else { at.ends_with(".h") }).map(|(_, ty)| resolve(ty));
@@ -495,6 +535,11 @@ impl Report {
         if candidate.calls.iter().any(|(callee, _)| matches!(callee.as_str(), "OBJ_X" | "OBJ_Y")) {
             return Some("position");
         }
+        // A level written to the brightness register (`Io_Write16(31,
+        // &REG_BLDY)`), GBATEK's fade coefficient.
+        if candidate.register.as_deref().is_some_and(|register| numbers::named_kind([register]) == Some("level")) {
+            return Some("level");
+        }
         // Compared with a cell or tile of the map grid, or offsetting one:
         // `FIELD_CELL(actor->x.fixed) == 15`, `FIELD_CELL(x) - 42`.
         if candidate.operand_calls.iter().any(|callee| self.grid_conversions.contains(callee)) {
@@ -518,7 +563,11 @@ impl Report {
     fn honest_by_parameter(&self, candidate: &Candidate) -> Option<&'static str> {
         let plain = candidate.lone || (numbers::is_decimal(&candidate.literal) && !candidate.shift);
         let data = |callee: &str, name: &str| data_parameter(name).is_some() || self.parameter_words(callee, name).is_some();
-        if let Some((callee, at)) = candidate.calls.first() {
+        // Through S3's conversions to the parameter their result fills:
+        // `toFIXED(118 - offset)` as `BattleCamera_SetRange`'s `centerY`.
+        let mut calls = candidate.calls.iter().peekable();
+        while calls.next_if(|(callee, _)| numbers::CONVERSIONS.contains(&callee.as_str()) && !candidate.lone).is_some() {}
+        if let Some((callee, at)) = calls.next().or(candidate.calls.first()) {
             if numbers::random_call(callee, candidate.random_arguments) {
                 return Some("random");
             }
@@ -537,7 +586,7 @@ impl Report {
                 }
                 // `draw(canvas, ...)` with `DrawRectangle draw`.
                 None => {
-                    if self.pointer_parameter(callee, *at, &candidate.file).is_some_and(|name| data(callee, &name)) && plain {
+                    if self.pointer_parameter(callee, *at, false, &candidate.file).is_some_and(|name| data(callee, &name)) && plain {
                         return Some("pointer");
                     }
                 }
@@ -548,8 +597,8 @@ impl Report {
                 }
             }
         }
-        let (variable, at) = candidate.pointer.as_ref()?;
-        (plain && self.pointer_parameter(variable, *at, &candidate.file).is_some_and(|name| data(variable, &name))).then_some("pointer")
+        let (variable, at, cast) = candidate.pointer.as_ref()?;
+        (plain && self.pointer_parameter(variable, *at, *cast, &candidate.file).is_some_and(|name| data(variable, &name))).then_some("pointer")
     }
 
     /// Settle what needs the whole game: numbers in code by the parameters
@@ -567,7 +616,11 @@ impl Report {
         // (`front <= CANVAS_SIZE + WIPE_LAG_MAX` is a distance).
         for (file, line, text, name) in std::mem::take(&mut self.hex_definitions) {
             let said = numbers::words(&name).iter().any(|word| matches!(word.as_str(), "mask" | "bit" | "bits"));
-            let used = self.bitwise_names.contains(&name) && !self.arithmetic_names.contains(&name);
+            // A single bit stays a bit where it is also reckoned with
+            // (`SCOOPED_COINS + 1`, `EPILOGUE_NO_PORTRAIT - 1`, the bits
+            // below it).
+            let single = text.strip_prefix("0x").or_else(|| text.strip_prefix("0X")).and_then(|digits| u64::from_str_radix(digits.trim_end_matches(['u', 'U', 'l', 'L']), 16).ok()).is_some_and(u64::is_power_of_two);
+            let used = self.bitwise_names.contains(&name) && (single || !self.arithmetic_names.contains(&name));
             if said || used {
                 self.add("hex_mask", &file, 1);
             } else {
@@ -584,7 +637,7 @@ impl Report {
                 None => format!("{literal}\t-"),
             };
             if candidate.lone {
-                if let Some(kind) = self.argument_kind(&candidate.calls) {
+                if let Some(kind) = self.argument_kind(&candidate.calls).or_else(|| self.plain_speed(&candidate).then_some("speed")) {
                     self.note("data_argument", file, line, &what);
                     self.note(&format!("data_argument_{kind}"), file, line, &what);
                     continue;
@@ -594,10 +647,16 @@ impl Report {
             self.note("magic_code_all", file, line, &what);
             // A position or duration reckoned in an argument whose parameter
             // is a rate, scale or angle is that, not a position: `Trig_Sin(row
-            // * 3553)`, `SceneTransform_ApplyScale3(frame * 1500 - ...)`.
+            // * 3553)`, `SceneTransform_ApplyScale3(frame * 1500 - ...)`; one
+            // reckoned in a group of its own first stays what it is
+            // (`Trig_Sin((frame - 486) * STEP)`).
             let parameter = candidate.calls.first().and_then(|(callee, at)| self.parameter(callee, *at, 0));
-            let vetoed = parameter.is_some_and(|(name, _)| numbers::is_other(&name));
+            let vetoed = !candidate.grouped && parameter.is_some_and(|(name, _)| numbers::is_other(&name));
             let local = candidate.local.filter(|kind| !(vetoed && matches!(*kind, "position" | "duration")));
+            // A mask in an OAM word's place is the field io_reg.h names
+            // (`OBJ_X_MASK`).
+            let oam = candidate.calls.iter().any(|(callee, _)| matches!(callee.as_str(), "OBJ_X" | "OBJ_Y"));
+            let local = local.filter(|kind| !(oam && *kind == "mask"));
             // A number in a function-like macro's own body is the name's
             // definition: the macro is the name S3 asks for.
             let definition = candidate.definition.then_some("definition");
@@ -1166,13 +1225,19 @@ impl<'r, 'a> Walk<'r, 'a> {
                 calls,
                 lone: self.is_argument(at),
                 // A local array's size is a count of its own elements.
-                local: if numbers::is_array_size(tokens, at, floor) { Some("position") } else { numbers::local(tokens, at, floor, limit) },
+                local: if numbers::is_array_size(tokens, at, floor) {
+                    Some("position")
+                } else {
+                    numbers::local(tokens, at, floor, limit).or_else(|| numbers::is_hardware_address(literal).then_some("address"))
+                },
                 siblings,
                 random_arguments,
                 pointer: numbers::pointer_call(tokens, at, floor),
                 shift: at > floor && matches!(self.code.text(at - 1), "<<" | ">>"),
                 definition: function_macro == Some(true),
                 operand_calls: numbers::operand_calls(tokens, at, floor),
+                grouped: numbers::in_group(tokens, at, floor),
+                register: innermost.and_then(|open| numbers::written_register(tokens, open)).map(str::to_string),
             };
             self.report.candidates.push(candidate);
             return;
@@ -1340,9 +1405,23 @@ impl<'r, 'a> Walk<'r, 'a> {
             return;
         };
         let open = statement.iter().position(|&at| at == open[1]).expect("its own token");
-        let names: Vec<Option<String>> = self.parameter_tokens(statement, open).iter().map(|tokens| self.parameter_name(tokens)).collect();
+        let lists = self.parameter_tokens(statement, open);
+        let mut names: Vec<Option<String>> = lists.iter().map(|tokens| self.parameter_name(tokens)).collect();
         if names.iter().all(Option::is_none) {
-            return;
+            // A definition of the old style names its parameters alone and
+            // declares them after the list: `void Garoh_PopQuestionMark(x, y,
+            // z, rotation, frames) s32 x, y, z; ...`. A prototype's unnamed
+            // types (`void F(s32, u8);`) have no declarations after.
+            let close = lists.iter().flatten().max().and_then(|&last| statement.iter().position(|&at| at == last)).map(|at| at + 1);
+            let declared = close.and_then(|close| statement.get(close + 1)).is_some_and(|&at| {
+                let token = &self.code.tokens[at];
+                token.kind == Kind::Ident && !matches!(token.text, "__attribute__" | "asm" | "__asm__")
+            });
+            let alone = lists.iter().all(|tokens| matches!(tokens[..], [at] if self.code.tokens[at].kind == Kind::Ident && !is_keyword(self.code.text(at))));
+            if !(declared && alone) {
+                return;
+            }
+            names = lists.iter().map(|tokens| Some(self.code.text(tokens[0]).to_string())).collect();
         }
         let named = |list: &[Option<String>]| list.iter().filter(|n| n.is_some()).count();
         let entry = self.report.parameters.entry(name.to_string()).or_default();
@@ -1410,6 +1489,22 @@ impl<'r, 'a> Walk<'r, 'a> {
         }
     }
 
+    /// The parameters a function's body between `open` and `close` turns
+    /// into 16.16 itself, each passed alone to `toFIXED()` or `INTtoFIXED()`
+    /// (`actor->velocityY = toFIXED(speed)`), as S3 has a call take plain
+    /// pixels and speeds.
+    fn conversions(&mut self, name: &str, open: usize, close: usize) {
+        let Some(names) = self.report.parameters.get(name) else { return };
+        let text = |at: usize| self.code.tokens.get(at).map_or("", |t| t.text);
+        let places: HashSet<usize> = (open + 1..close)
+            .filter(|&at| matches!(text(at), "toFIXED" | "INTtoFIXED") && text(at + 1) == "(" && text(at + 3) == ")")
+            .filter_map(|at| names.iter().position(|parameter| parameter.as_deref() == Some(text(at + 2))))
+            .collect();
+        if !places.is_empty() {
+            self.report.converted.entry(name.to_string()).or_default().extend(places);
+        }
+    }
+
     /// The name one parameter's tokens end in, when they name it: not `s32`,
     /// `struct Actor *` or a pointer to functions.
     fn parameter_name(&self, tokens: &[usize]) -> Option<String> {
@@ -1457,6 +1552,33 @@ impl<'r, 'a> Walk<'r, 'a> {
         (before.text == "=" && name.kind == Kind::Ident && matches!(after.text, "," | "}") && !after.pp).then_some(name.text)
     }
 
+    /// The variable whose brace initializer holds the token at `at`:
+    /// `gContigo_SparkleTiles` of `const u32 gContigo_SparkleTiles[] = {
+    /// 0x00007777, ... }`, through nested braces.
+    fn initialized(&self, at: usize) -> Option<&'a str> {
+        let tokens = &self.code.tokens;
+        let mut depth = 0usize;
+        for index in (0..at).rev() {
+            match tokens[index].text {
+                "}" => depth += 1,
+                "{" if depth > 0 => depth -= 1,
+                "{" => {
+                    if index == 0 || tokens[index - 1].text != "=" {
+                        continue;
+                    }
+                    let mut name = index.checked_sub(2)?;
+                    while tokens[name].text == "]" {
+                        name = (0..name).rev().find(|&open| tokens[open].text == "[")?.checked_sub(1)?;
+                    }
+                    return (tokens[name].kind == Kind::Ident).then_some(tokens[name].text);
+                }
+                ";" if depth == 0 => return None,
+                _ => {}
+            }
+        }
+        None
+    }
+
     /// The names a file defines as bits: in a family of defines or
     /// enumerators sharing the name's prefix (`SPEAKER_` of `SPEAKER_FLAGS`),
     /// two or more of which are a single bit, each whose bits the family's
@@ -1472,6 +1594,18 @@ impl<'r, 'a> Walk<'r, 'a> {
             }
         }
         let mut bits = BTreeSet::new();
+        // A packed field's values, within the mask a name of their prefix
+        // gives it: `EXIT_STYLE_SILENT = 0x10` beside `EXIT_STYLE_MASK =
+        // 0x70`, the field's value 0 too.
+        let all: Vec<(&str, u64)> = families.values().flatten().copied().collect();
+        for &(mask_name, mask) in &all {
+            let Some(prefix) = mask_name.strip_suffix("_MASK") else { continue };
+            bits.extend(
+                all.iter()
+                    .filter(|&&(name, value)| name != mask_name && name.strip_prefix(prefix).is_some_and(|rest| rest.starts_with('_')) && value & !mask == 0)
+                    .map(|&(name, _)| name),
+            );
+        }
         for members in families.values() {
             let singles: Vec<u64> = members.iter().map(|&(_, value)| value).filter(|value| value.is_power_of_two()).collect();
             let covered = singles.iter().fold(0, |all, value| all | value);
@@ -1557,7 +1691,9 @@ impl<'r, 'a> Walk<'r, 'a> {
             }
         }
         let bits = self.bit_families();
-        let registers = self.file.ends_with("/io_reg.h");
+        // A hardware header's register values and addresses: the console's,
+        // and the flash chip's commands and unlock addresses.
+        let registers = self.file.ends_with("/io_reg.h") || self.file.ends_with("/gamepak/flash.h");
         for at in 0..self.code.tokens.len() {
             let token = self.code.tokens[at].clone();
             let Some(value) = hex_value(&token) else { continue };
@@ -1571,20 +1707,28 @@ impl<'r, 'a> Walk<'r, 'a> {
                 || shift(beside(2, true), beside(1, true))
                 || shift(beside(1, false), beside(2, false));
             let name = self.hex_definition(at);
+            // An all-ones marker with a name, as S3 writes one
+            // (`PASSWORD_CRC_SEED 0xffff`): a byte's, halfword's or word's.
+            let all_ones = name.is_some() && matches!(value, 0xff | 0xffff | 0xffff_ffff);
             // A flag number: flags.h's, a FLAG_ name's, or the whole argument
             // of a call or macro whose name says it takes a flag.
             let flag = self.file.ends_with("/flags.h")
                 || name.is_some_and(|name| name.starts_with("FLAG_"))
                 || self.argument_of(at).is_some_and(|call| call.to_ascii_lowercase().contains("flag"))
                 || self.argument_position(at).is_some_and(|(call, position)| self.fills_flag_parameter(call, position));
+            // A picture's pixel words, a hex digit or byte a pixel
+            // (`gContigo_SparkleTiles`): packed fields S3 keeps hex.
+            let pixels = self.initialized(at).is_some_and(|table| numbers::words(table).last().is_some_and(|word| matches!(word.as_str(), "tiles" | "pixels")));
             let metric = if flag {
                 "hex_flag"
             } else if self.file.contains("/sound/") {
                 "hex_driver"
             } else if value >= 0x0200_0000 {
                 "hex_address"
-            } else if mask || registers || name.is_some_and(|name| bits.contains(name)) {
+            } else if mask || registers || all_ones || name.is_some_and(|name| bits.contains(name)) {
                 "hex_mask"
+            } else if pixels {
+                "hex_pixels"
             } else {
                 "hex_other"
             };
@@ -1760,6 +1904,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 self.report.declare(true, &name, file, line, documented, true);
                 let close = self.braces[&open].close;
                 self.forwards(&name, &statement, open, close);
+                self.conversions(&name, open, close);
                 self.named(&name, NameKind::Function, line, None);
                 self.duplicate(true, open, &name);
                 let own = self.code.doc_text[first].clone();
@@ -2208,7 +2353,7 @@ const ROWS: &[(&str, &str)] = &[
     ("magic_argument", "  of those, lone arguments"),
     ("magic_code_all", "numbers in code, all"),
     ("honest_composed", "  honest: composed (S3)"),
-    ("honest_decimal", "  honest: tenths, percents"),
+    ("honest_decimal", "  honest: tenths, percents, digits"),
     ("honest_random", "  honest: random ranges"),
     ("honest_position", "  honest: positions, sizes"),
     ("honest_duration", "  honest: durations, cues"),
@@ -2216,12 +2361,16 @@ const ROWS: &[(&str, &str)] = &[
     ("honest_damping", "  honest: dampings"),
     ("honest_animation", "  honest: a sheet's animations"),
     ("honest_level", "  honest: fade, shake levels"),
+    ("honest_mask", "  honest: masks of whole fields"),
+    ("honest_sign", "  honest: the sign bit"),
+    ("honest_address", "  honest: hardware addresses"),
     ("honest_definition", "  honest: a macro's own definition"),
     ("data_argument", "numbers passed as data"),
     ("data_argument_frames", "  frames"),
     ("data_argument_coordinate", "  coordinates"),
     ("data_argument_size", "  sizes"),
     ("data_argument_count", "  counts"),
+    ("data_argument_speed", "  plain speeds"),
     ("data_argument_composed", "  composed quantities"),
     ("magic_table", "numbers in table data"),
     ("placeholder_names", "placeholder names"),
@@ -2247,7 +2396,8 @@ const ROWS: &[(&str, &str)] = &[
     ("hex", "hex numbers"),
     ("hex_flag", "  flag numbers"),
     ("hex_address", "  addresses, high values"),
-    ("hex_mask", "  masks, bits and registers"),
+    ("hex_mask", "  masks, bits, registers, all-ones"),
+    ("hex_pixels", "  a picture's pixel words"),
     ("hex_driver", "  the sound driver's"),
     ("hex_other", "  the rest, to judge"),
     ("if_language", "#if on LANGUAGE"),
@@ -3059,6 +3209,121 @@ mod tests {
         // phase, a mode, a count and an index named with a tone's, an edge's
         // or a percent's word.
         assert_eq!(listed("magic_code"), ["12", "12", "16", "16", "10", "12", "40", "16", "20", "30"]);
+    }
+
+    #[test]
+    fn speeds_masks_levels_and_old_style_parameters_by_the_calls_they_fill() {
+        let header = concat!(
+            "#define toFIXED(a) ((s32)((a) * FIXED_ONE))\n",
+            "#define OBJ_X(x) ((x) << 16)\n",
+            "#define Io_Write16(v, reg) (*(reg) = (v))\n",
+            "#define FieldCamera_SetSpeed(speed) FieldCamera_SetSpeedFX(toFIXED(speed), toFIXED(speed) / 8)\n",
+            "void Actor_Jump(s32 actorId, s32 speed, s32 frames);\n",
+            "void Actor_SetAnimationSpeed(s32 actorId, s32 speed);\n",
+            "s32 Trig_Sin(s32 angle);\n",
+            "void Camera_SetRange(s32 centerX, s32 centerY);\n",
+            "void Quiet(s32, s32);\n",
+            "typedef s32 (*DrawRectangle)(void *destination, const void *source, s32 x, s32 y, s32 width, s32 height);\n",
+            "typedef s32 (*Unnamed)(void *, const void *, s32, s32);\n",
+        );
+        let source = concat!(
+            "void Actor_Jump(s32 actorId, s32 speed, s32 frames) { gActor.velocityY = toFIXED(speed); }\n",
+            "void Actor_SetAnimationSpeed(s32 actorId, s32 speed) { gActor.animationSpeed = speed; }\n",
+            "void Pop(x, frames) s32 x;\ns32 frames;\n{\n}\n",
+            "void Run(void) {\n",
+            "    Actor_Jump(ACTOR_RIME, 11, 0);\n",
+            "    FieldCamera_SetSpeed(16);\n",
+            "    Actor_SetAnimationSpeed(ACTOR_RIME, 12);\n",
+            "    word = OBJ_X(x & 0x1ff);\n",
+            "    v = (step & 0xff) * STEP;\n",
+            "    Io_Write16(31, &REG_BLDY);\n",
+            "    Io_Write16(30, &REG_BG0VOFS);\n",
+            "    sway = Trig_Sin((frame - 486) * STEP);\n",
+            "    sway = Trig_Sin(frame * 487);\n",
+            "    Camera_SetRange(toFIXED(120), toFIXED(118 - offset));\n",
+            "    Pop(28, 20);\n",
+            "    Quiet(29, 21);\n",
+            "    ((DrawRectangle)draw[0])(canvas, sheet, px + 101, py + 26, 4, 8);\n",
+            "    ((Unnamed)draw[0])(canvas, sheet, px + 102, py + 27);\n",
+            "}\n",
+        );
+        let report = game([("f.h", header), ("f.c", source)]);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.split('\t').next().unwrap().to_string()).collect()
+        };
+        // A plain speed the routine or macro turns into 16.16 itself, as S3
+        // has a call take one; an animation's speed kept as it comes is not.
+        assert_eq!(listed("data_argument_speed"), ["11", "16"]);
+        assert_eq!(listed("honest_mask"), ["0xff"], "the OAM word's mask is io_reg.h's OBJ_X_MASK");
+        assert_eq!(listed("honest_level"), ["31"], "written to the brightness register");
+        assert_eq!(listed("honest_duration"), ["486"], "a moment reckoned in its own group before it turns an angle");
+        assert_eq!(listed("honest_position"), ["118"], "through toFIXED to the camera's centerY");
+        // An old-style definition's parameters, by their names; a prototype
+        // of unnamed types names none.
+        assert_eq!(listed("data_argument_coordinate"), ["120", "28"]);
+        assert_eq!(listed("data_argument_frames"), ["20"]);
+        // Through a pointer cast to a type that names its parameters.
+        assert_eq!(listed("honest_pointer"), ["101", "26"]);
+        assert_eq!(listed("magic_code"), ["12", "0x1ff", "30", "487", "29", "21", "102", "27"]);
+    }
+
+    #[test]
+    fn hex_kept_as_a_chips_registers_and_a_named_all_ones() {
+        let report = game([
+            ("games/tla/include/gamepak/flash.h", "#define FLASH_COMMAND_RESET 0xF0\n#define FLASH_UNLOCK_ADDRESS 0x2AAA\n"),
+            ("games/tla/include/field/flash_menu.h", "#define MENU_FLASH_ROW 0x2AAA\n"),
+            ("a.h", "#define PASSWORD_CRC_SEED 0xffff\n#define CRC_POLYNOMIAL 0x1021\n"),
+            ("b.c", "void F(void) { gSeed = 0xffff; }\n"),
+        ]);
+        assert_eq!((report.total("hex_mask"), report.total("hex_other")), (3, 3));
+        assert_eq!(
+            list(&[("tla", &report)], "hex_other"),
+            "tla\ta.h:2\t0x1021\ntla\tb.c:1\t0xffff\ntla\tgames/tla/include/field/flash_menu.h:1\t0x2AAA\n",
+            "a polynomial, an all-ones value with no name, and a header that is not the chip's"
+        );
+    }
+
+    #[test]
+    fn hex_kept_as_a_fields_values_a_reckoned_bit_and_pixel_words() {
+        let header = concat!(
+            "enum ExitStyle {\n",
+            "  EXIT_STYLE_NORMAL = 0x00,\n",
+            "  EXIT_STYLE_SILENT = 0x10,\n",
+            "  EXIT_STYLE_HIDDEN_LAYER = 0x50,\n",
+            "  EXIT_STYLE_MASK = 0x70,\n",
+            "  EXIT_STYLE_WIDE = 0x180\n",
+            "};\n",
+            "#define SCOOPED_COINS 0x8000\n",
+            "#define COIN_LIMIT 0xc000\n",
+            "#define HALF_TURN 0x4000\n",
+        );
+        let source = concat!(
+            "const u32 gSparkleTiles[] = { 0x00007777, 0x0000e9eb };\n",
+            "const u32 gRoom_Offsets[] = { 0x1234 };\n",
+            "void F(void) {\n",
+            "    if (item & SCOOPED_COINS) item = SCOOPED_COINS + 1;\n",
+            "    v = (v & COIN_LIMIT) + COIN_LIMIT;\n",
+            "    n = HALF_TURN + 1;\n",
+            "}\n",
+        );
+        let report = game([("f.h", header), ("f.c", source)]);
+        // A field's values within its mask; a single bit also reckoned with;
+        // a picture's pixel words. Not: a value past the field's mask, two
+        // bits reckoned with, a bit never used as one, a table of offsets.
+        assert_eq!(report.total("hex_pixels"), 2);
+        assert_eq!(list(&[("tla", &report)], "hex_other"), "tla\tf.c:2\t0x1234\ntla\tf.h:6\t0x180\ntla\tf.h:9\t0xc000\ntla\tf.h:10\t0x4000\n");
+    }
+
+    #[test]
+    fn hardware_addresses_in_code() {
+        let source = "void F(void) {\n    Dma_Set((const void *)0x06000290, (void *)0x0e000000, 16);\n    v = 0x01ffffff;\n    w = 0x10000000;\n    m = 0x0ffff000 & draw;\n}\n";
+        let report = game([("f.c", source)]);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.split('\t').next().unwrap().to_string()).collect()
+        };
+        assert_eq!(listed("honest_address"), ["0x06000290", "0x0e000000"]);
+        assert_eq!(listed("magic_code"), ["16", "0x01ffffff", "0x10000000"], "below EWRAM and past the save memory");
+        assert_eq!(listed("honest_mask"), ["0x0ffff000"], "a mask first");
     }
 
     #[test]

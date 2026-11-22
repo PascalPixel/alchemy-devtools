@@ -1,8 +1,9 @@
 //! Numbers in code that S3 lets stay numbers. S3's "Numbers" keeps a number
 //! where it is the quantity itself: a position or size in plain pixels, a
 //! duration in frames, a random range, a fraction written by its own composed
-//! forms (`FIXED_ONE * 7 / 10`, `INTtoFIXED(3) / 10`, `TRIG_TURN * 9 / 128`), tenths and
-//! percentages. `progress --humanity` still counts every such number among
+//! forms (`FIXED_ONE * 7 / 10`, `INTtoFIXED(3) / 10`, `TRIG_TURN * 9 / 128`), tenths,
+//! percentages and decimal digits; and, among the hex S3 keeps, a mask of
+//! whole fields and the sign bit. `progress --humanity` still counts every such number among
 //! all the numbers in code (`magic_code_all`), and here tells apart the ones
 //! the source itself shows to be honest, by kind, so that what is left
 //! (`magic_code`) is the numbers that want a name.
@@ -21,6 +22,10 @@ use crate::gba::clex::{Kind, Token};
 const UNITS: &[&str] = &["FIXED_ONE", "TRIG_TURN", "FACING_STEP", "DAMPING_SCALE"];
 const UNIT_CALLS: &[&str] = &["toFIXED", "INTtoFIXED", "DEGtoANG", "Q_8_8"];
 
+/// S3's conversions between plain pixels and 16.16, which keep a quantity
+/// what it is: a position stays a position through `INTtoFIXED(i * 2 + 96)`.
+pub const CONVERSIONS: &[&str] = &["toFIXED", "INTtoFIXED", "FIXEDtoINT"];
+
 /// A constant that is a scale's one, as `FIXED_ONE` is a 16.16 number's
 /// (`SOUND_TEMPO_SCALE_NORMAL`, `AFFINE_SCALE_ONE`, `STAT_SCALE_ONE`): it
 /// composes a fraction only with a divisor, `SOUND_TEMPO_SCALE_NORMAL * 15 /
@@ -34,12 +39,13 @@ fn is_scale(name: &str) -> bool {
 }
 
 /// Words of a name that hold a position or a size in pixels (or cells).
-const POSITION_WORDS: &[&str] = &["x", "y", "z", "dx", "dy", "dz", "row", "column", "width", "height", "radius", "distance"];
+const POSITION_WORDS: &[&str] = &["x", "y", "z", "dx", "dy", "dz", "row", "rows", "column", "columns", "width", "height", "radius", "distance"];
 /// Words of a name that hold a duration or a moment in frames.
 const DURATION_WORDS: &[&str] = &["frame", "frames", "timer", "delay", "duration", "countdown", "wait", "ticks", "vblank", "vblanks"];
 /// Words of a name that hold a fade's or a shake's level (`fade = -16`,
-/// `shake = -128`): the brightness or the sway it is set to.
-const LEVEL_WORDS: &[&str] = &["fade", "shake"];
+/// `shake = -128`): the brightness or the sway it is set to, and the
+/// brightness register's (`REG_BLDY`, GBATEK's fade coefficient).
+const LEVEL_WORDS: &[&str] = &["fade", "shake", "bldy"];
 /// Words of a variable that holds a tone: a model's shade on the canvas, a
 /// brightness, or a colour channel's level, 0 to 31 in RGB555, as `RGB(r, g,
 /// b)` takes it. Read only where the number is the level itself
@@ -154,9 +160,12 @@ fn is_stop(text: &str) -> bool {
 /// The bounds of the operand around `at` (both ends inclusive), and the
 /// token that stopped it on the left, if any: `frame == 140` in
 /// `if (frame == 140 && x)`, `(Random16() & 127) + 127` after `speed =`.
+/// From a closing bracket it takes the whole bracket: `menu->memberX[0]`
+/// from its `]`.
 fn span(tokens: &[Token], at: usize, floor: usize) -> (usize, usize, Option<usize>) {
     let pp = tokens[at].pp;
-    let (mut start, mut left, mut depth) = (at, None, 0);
+    let closer = usize::from(matches!(tokens[at].text, ")" | "]"));
+    let (mut start, mut left, mut depth) = (at, None, closer);
     while start > floor {
         let token = &tokens[start - 1];
         if token.pp != pp || matches!(token.kind, Kind::PpStart | Kind::PpEnd) {
@@ -224,6 +233,9 @@ fn chains<'a>(tokens: &[Token<'a>], start: usize, end: usize) -> (Vec<Vec<&'a st
         let opaque = open.iter().any(|open| *open != Open::Group);
         let in_index = open.contains(&Open::Index);
         match token.text {
+            // S3's conversions keep their value's kind, as a group does:
+            // `FIXEDtoINT(cos * RADIUS_Y) + 40` is reckoned with a radius.
+            "(" if at > start && CONVERSIONS.contains(&tokens[at - 1].text) => open.push(Open::Group),
             "(" => open.push(if at > start && tokens[at - 1].kind == Kind::Ident { Open::Call } else { Open::Group }),
             "[" => open.push(Open::Index),
             ")" | "]" => {
@@ -441,12 +453,38 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
     let percent = is_power_of_ten(text) && multiplied && factors[own + 1..].iter().any(|(op, _)| *op == "/");
     // The value of a hex digit's letter: `digit + 'A' - 10`.
     let letter = text == "10" && factors.len() == 1 && (char_in_statement("'A'") || char_in_statement("'a'"));
-    if tenths || base || percent || letter || (digits && is_power_of_ten(text) && factors.len() == 1) {
+    if tenths || base || percent || letter || (digits && is_power_of_ten(text) && factors.len() == 1) || decimal_digit(tokens, at, floor, limit) {
         return Some("decimal");
     }
+    // Its own operand's names first, then, out through each group or S3
+    // conversion the operand fills, which keeps a quantity's kind, what it is
+    // reckoned with or given to: `y = -(i * spacing + 16)`, `rock->y =
+    // INTtoFIXED(i * 2 + 96)`. A group that holds more than the operand
+    // (`(z >= 36 && column >= 22)`) or is a shift's amount (`1 << (16 -
+    // variant)`, bits) is not passed, and a roll counts only in the number's
+    // own operand.
     let (mut found, random) = chains(tokens, start, end);
+    let (mut inner, mut left) = ((start, end), left);
+    let shifted = |open: usize| open > floor && matches!(tokens[open - 1].text, "<<" | ">>");
+    while let Some(open) = left.filter(|&open| (is_group(tokens, open, floor) && !shifted(open)) || is_conversion(tokens, open, floor)) {
+        let Some(close) = close_of(tokens, open, limit).filter(|&close| inner == (open + 1, close - 1)) else { break };
+        let (outer_start, outer_end, outer_left) = span(tokens, close, floor);
+        found.extend(chains(tokens, outer_start, outer_end).0);
+        (inner, left) = ((outer_start, outer_end), outer_left);
+    }
+    // A conditional's arm is the value its target is given: `y = i == 0 ? 8
+    // : 40`.
+    if let Some(question) = left.and_then(|arm| conditional(tokens, arm, floor)).filter(|&question| question > floor) {
+        left = span(tokens, question - 1, floor).2;
+    }
     if random || random_local(tokens, at, floor, limit) {
         return Some("random");
+    }
+    if is_mask(tokens, at, floor, limit) {
+        return Some("mask");
+    }
+    if is_sign_bit(tokens, at, floor) {
+        return Some("sign");
     }
     // A shift's amount is bits, never a position or a duration.
     let shift = at > floor && matches!(tokens[at - 1].text, "<<" | ">>");
@@ -469,6 +507,176 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
     let kinds: Vec<&str> = found.iter().filter_map(|chain| named_kind(chain.iter().copied())).collect();
     let named = kinds.iter().find(|&&kind| kind == "position").or(kinds.first()).copied();
     named.or_else(|| tone_level(tokens, at, floor).then_some("level")).or_else(|| frame_count(tokens, at, floor, limit).then_some("duration"))
+}
+
+/// Whether the `(` at `open` only groups (`-(i * k + 16)`, the cast's operand
+/// in `(u32)(x + 15)`): no call's, and no statement's (`if (`, `while (`).
+pub fn is_group(tokens: &[Token], open: usize, floor: usize) -> bool {
+    const STATEMENTS: &[&str] = &["if", "while", "for", "switch", "sizeof", "return"];
+    tokens[open].text == "("
+        && (open == floor || !(tokens[open - 1].kind == Kind::Ident || STATEMENTS.contains(&tokens[open - 1].text)))
+}
+
+/// Whether the number at `at` is reckoned in a group of its own
+/// (`(frame - 486) * STEP`), which its operand ends.
+pub fn in_group(tokens: &[Token], at: usize, floor: usize) -> bool {
+    let (_, _, left) = span(tokens, at, floor);
+    left.is_some_and(|left| is_group(tokens, left, floor))
+}
+
+/// The hardware register whose address another argument of the call whose
+/// `(` is at `open` takes: `REG_BLDY` of `Io_Write16(31, &REG_BLDY)` and of
+/// `IO_WRITE_QUEUE_PUSH((u32)&REG_BLDY, 12, ...)`.
+pub fn written_register<'a>(tokens: &[Token<'a>], open: usize) -> Option<&'a str> {
+    let mut depth = 0;
+    for at in open + 1..tokens.len() {
+        match tokens[at].text {
+            "(" | "[" => depth += 1,
+            ")" | "]" if depth == 0 => return None,
+            ")" | "]" => depth -= 1,
+            ";" | "{" | "}" => return None,
+            "&" if tokens.get(at + 1).is_some_and(|t| t.kind == Kind::Ident && t.text.starts_with("REG_")) => return Some(tokens[at + 1].text),
+            _ => {}
+        }
+    }
+    None
+}
+
+/// The `?` of the conditional whose arm the `?` or `:` at `arm` opens: none
+/// for a `case`'s or a label's colon.
+fn conditional(tokens: &[Token], arm: usize, floor: usize) -> Option<usize> {
+    match tokens[arm].text {
+        "?" => return Some(arm),
+        ":" => {}
+        _ => return None,
+    }
+    let (mut depth, mut index) = (0, arm);
+    while index > floor {
+        index -= 1;
+        match tokens[index].text {
+            ")" | "]" => depth += 1,
+            "(" | "[" if depth > 0 => depth -= 1,
+            "(" | "[" => return None,
+            "?" if depth == 0 => return Some(index),
+            text if depth == 0 && (matches!(text, ";" | "{" | "}" | "," | ":" | "case") || ASSIGNMENTS.contains(&text)) => return None,
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Whether the `(` at `open` is the argument list of one of S3's conversions
+/// (`INTtoFIXED(`).
+fn is_conversion(tokens: &[Token], open: usize, floor: usize) -> bool {
+    tokens[open].text == "(" && open > floor && CONVERSIONS.contains(&tokens[open - 1].text)
+}
+
+/// A hex literal's value.
+fn hex_value(text: &str) -> Option<u64> {
+    let digits = text.trim_end_matches(['u', 'U', 'l', 'L']);
+    let hex = digits.strip_prefix("0x").or_else(|| digits.strip_prefix("0X"))?;
+    u64::from_str_radix(hex, 16).ok()
+}
+
+/// Whether the hex number at `at` is a mask of whole fields, which S3 keeps
+/// in hex: an operand of `&` or `&=` (`(step & 0xff)`, `*cell &= 0xfff0`,
+/// `x &= ~0xff`), or the whole value given to a variable named for a mask
+/// (`u32 byteMask = 0xff;`), whose every hex digit is 0 or f (`0xff00`,
+/// `0x0ff00ff0`) or which keeps a value's low bits (`0x1ff`, `0x7f`). A lone
+/// bit (`& 0x8000`), two or three bits (`& 0xc000`), and a field cleared by
+/// its complement (`&= 0xfcff`) are things with names.
+pub fn is_mask(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool {
+    let Some(value) = hex_value(tokens[at].text) else { return false };
+    let whole_digits = (0..16).all(|digit| matches!((value >> (4 * digit)) & 0xf, 0 | 0xf));
+    let low_bits = value & value.wrapping_add(1) == 0;
+    if value == 0 || !(whole_digits || low_bits) {
+        return false;
+    }
+    let text = |index: Option<usize>| index.filter(|&index| index >= floor && index <= limit).map_or("", |index| tokens[index].text);
+    let before = if text(at.checked_sub(1)) == "~" { text(at.checked_sub(2)) } else { text(at.checked_sub(1)) };
+    if matches!(before, "&" | "&=") || text(Some(at + 1)) == "&" {
+        return true;
+    }
+    // `u32 byteMask = 0xff;`.
+    let (start, end, left) = span(tokens, at, floor);
+    let Some(op) = left.filter(|&left| start == at && end == at && tokens[left].text == "=" && left > floor) else { return false };
+    let (target_start, target_end, _) = span(tokens, op - 1, floor);
+    let (target, _) = chains(tokens, target_start, target_end);
+    target.last().and_then(|chain| chain.last()).is_some_and(|name| words(name).last().is_some_and(|word| matches!(word.as_str(), "mask" | "masks")))
+}
+
+/// Whether a hex literal is an address in the console's memory map, which
+/// S3 keeps hex: from EWRAM at `0x02000000` to the Game Pak's save memory
+/// below `0x10000000` (`(const void *)0x06000290`, in VRAM). The BIOS's
+/// low addresses are a number like any other, and values from
+/// `0x80000000` up are no address.
+pub fn is_hardware_address(text: &str) -> bool {
+    hex_value(text).is_some_and(|value| (0x0200_0000..0x1000_0000).contains(&value))
+}
+
+/// Whether the number at `at` is the amount of a right shift by 31, which
+/// takes the sign bit of a word (`(u32)drift >> 31`, `isActive >>= 31`): the
+/// bit S3 keeps as `0x80000000`. Any other amount is a shift's own.
+pub fn is_sign_bit(tokens: &[Token], at: usize, floor: usize) -> bool {
+    at > floor && tokens[at].text.trim_end_matches(['u', 'U']) == "31" && matches!(tokens[at - 1].text, ">>" | ">>=")
+}
+
+/// Whether the call whose `(` is at `open` takes a reciprocal
+/// (`RECIPROCAL_OF(10)`), which divides by its argument.
+fn is_reciprocal(tokens: &[Token], open: usize, floor: usize) -> bool {
+    open > floor && tokens[open].text == "(" && words(tokens[open - 1].text).iter().any(|word| word == "reciprocal")
+}
+
+/// Whether the number at `at` is a power of ten in decimal digit work: the
+/// divisor of `/=` or `%=` (`digit /= 10`, the plain `/ 10` being tenths
+/// already), the whole argument of a reciprocal (`RECIPROCAL_OF(10)`), a
+/// factor in a routine that writes digits as text and divides by it
+/// (`value -= quotient * 10` beside `RECIPROCAL_OF(10)` and `value + '0'`),
+/// or a place value compared with a name the routine divides by ten or
+/// compares with another power of ten (`if (winnings < 10) ... else if
+/// (winnings < 100)`). A lone bound (`if (hp < 100)`) is a threshold, and
+/// stays to name.
+fn decimal_digit(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool {
+    let text = tokens[at].text;
+    if !is_power_of_ten(text) {
+        return false;
+    }
+    let limit = limit.min(tokens.len() - 1);
+    let (start, end, left) = span(tokens, at, floor);
+    let alone = start == at && end == at;
+    let previous = (at > floor).then(|| tokens[at - 1].text).unwrap_or("");
+    if alone && matches!(previous, "/=" | "%=") {
+        return true;
+    }
+    let reciprocal_argument = |index: usize| {
+        index > floor + 1 && tokens[index - 1].text == "(" && is_reciprocal(tokens, index - 1, floor) && tokens.get(index + 1).is_some_and(|t| t.text == ")")
+    };
+    if reciprocal_argument(at) {
+        return true;
+    }
+    // Whether the routine writes digits as text (`value + '0'`) and divides
+    // by this power of ten.
+    let digit_text = (floor..=limit).any(|index| tokens[index].kind == Kind::Char && tokens[index].text == "'0'");
+    let divides = (floor + 1..=limit)
+        .any(|index| tokens[index].text == text && (matches!(tokens[index - 1].text, "/" | "%" | "/=" | "%=") || reciprocal_argument(index)));
+    let (factors, own) = factors(tokens, at, floor);
+    let multiplied = factors[own].0 == "*" || factors.get(own + 1).is_some_and(|(op, _)| *op == "*");
+    if multiplied && digit_text && divides {
+        return true;
+    }
+    // A place value: `name < 100`, the name alone on the other side.
+    let compared = matches!(previous, "<" | "<=" | ">" | ">=") && at >= floor + 2 && tokens[at - 2].kind == Kind::Ident;
+    if !compared || left.is_none() || end != at {
+        return false;
+    }
+    let name = tokens[at - 2].text;
+    (floor..=limit.saturating_sub(2)).any(|index| {
+        let (next, after) = (tokens[index + 1].text, tokens[index + 2].text);
+        tokens[index].text == name
+            && index != at - 2
+            && ((matches!(next, "<" | "<=" | ">" | ">=") && is_power_of_ten(after) && after != text)
+                || (matches!(next, "/" | "%" | "/=" | "%=") && after == "10"))
+    })
 }
 
 /// Whether a member chain names a tone's variable (`blue`, `model->shade`,
@@ -674,6 +882,33 @@ pub fn frame_count(tokens: &[Token], at: usize, floor: usize, limit: usize) -> b
     if let Some(left) = start_of.filter(|&left| tokens[left - 2].text == "(" && tokens[left - 3].text == "for") {
         counter = (tokens[left - 1].kind == Kind::Ident).then_some(tokens[left - 1].text);
         compared = true;
+    }
+    // `i = 60; do { ...; wait(1); i--; } while (i != 0);`: the counter's
+    // start, given in the statement just before its loop.
+    let before_loop = start_of.filter(|&left| {
+        tokens[left - 1].kind == Kind::Ident && matches!(tokens[left - 2].text, ";" | "{" | "}") && tokens.get(at + 1).is_some_and(|t| t.text == ";")
+    });
+    if let Some(left) = before_loop {
+        let counter = tokens[left - 1].text;
+        let limit = limit.min(tokens.len() - 1);
+        let text = |index: usize| tokens.get(index).filter(|_| index <= limit).map_or("", |t| t.text);
+        let counted = words(counter).iter().all(|word| COUNTER_WORDS.contains(&word.as_str()));
+        let (header, body) = match text(at + 2) {
+            "do" if text(at + 3) == "{" => {
+                let Some(close) = close_of(tokens, at + 3, limit) else { return false };
+                let Some(header_close) = (text(close + 1) == "while" && text(close + 2) == "(").then(|| close_of(tokens, close + 2, limit)).flatten() else {
+                    return false;
+                };
+                ((close + 2, header_close), (at + 3, close))
+            }
+            "while" if text(at + 3) == "(" => {
+                let Some(header_close) = close_of(tokens, at + 3, limit) else { return false };
+                let Some(close) = (text(header_close + 1) == "{").then(|| close_of(tokens, header_close + 1, limit)).flatten() else { return false };
+                ((at + 3, header_close), (header_close + 1, close))
+            }
+            _ => return false,
+        };
+        return counted && counts_frames(tokens, counter, header, body);
     }
     let (Some(counter), true) = (counter, compared) else { return false };
     if !words(counter).iter().all(|word| COUNTER_WORDS.contains(&word.as_str())) {
@@ -898,8 +1133,11 @@ pub fn arguments(tokens: &[Token], open: usize) -> (Vec<Option<String>>, bool) {
 }
 
 /// A call through a pointer that the number at `at` is an argument of:
-/// `draw[0](canvas, picture, 48, 24, 104, 120)` gives `draw` and 2.
-pub fn pointer_call(tokens: &[Token], at: usize, floor: usize) -> Option<(String, usize)> {
+/// `draw[0](canvas, picture, 48, 24, 104, 120)` gives `draw` and 2, and
+/// whether the name is the type the pointer is cast to:
+/// `((DrawRectangle)draw[0])(canvas, sheet, px + 101, ...)` gives
+/// `DrawRectangle`, 2 and true.
+pub fn pointer_call(tokens: &[Token], at: usize, floor: usize) -> Option<(String, usize, bool)> {
     let pp = tokens[at].pp;
     let (mut depth, mut position) = (0, 0);
     let mut index = at;
@@ -913,11 +1151,20 @@ pub fn pointer_call(tokens: &[Token], at: usize, floor: usize) -> Option<(String
             ")" | "]" => depth += 1,
             "(" | "[" if depth > 0 => depth -= 1,
             "(" => {
-                // `name[...](` or `(*name)(`.
+                // `name[...](`, `(*name)(` or `((Type)name...)(`.
                 let before = index.checked_sub(1)?;
                 if tokens[before].text == ")" && before >= floor + 3 && tokens[before - 2].text == "*" && tokens[before - 3].text == "(" {
                     let name = &tokens[before - 1];
-                    return (name.kind == Kind::Ident).then(|| (name.text.to_string(), position));
+                    return (name.kind == Kind::Ident).then(|| (name.text.to_string(), position, false));
+                }
+                if tokens[before].text == ")" {
+                    let open = open_of(tokens, before, floor)?;
+                    let cast = |offset: usize| tokens.get(open + offset).filter(|_| open + offset < before);
+                    if cast(1).is_some_and(|t| t.text == "(") && cast(3).is_some_and(|t| t.text == ")") {
+                        let ty = cast(2).filter(|t| t.kind == Kind::Ident)?;
+                        return Some((ty.text.to_string(), position, true));
+                    }
+                    return None;
                 }
                 if tokens[before].text != "]" {
                     return None;
@@ -936,7 +1183,7 @@ pub fn pointer_call(tokens: &[Token], at: usize, floor: usize) -> Option<(String
                     open = open.checked_sub(1).filter(|&o| o >= floor)?;
                 }
                 let name = open.checked_sub(1).map(|n| &tokens[n]).filter(|t| t.kind == Kind::Ident)?;
-                return Some((name.text.to_string(), position));
+                return Some((name.text.to_string(), position, false));
             }
             "," if depth == 0 => position += 1,
             "{" | "}" | ";" | "[" => return None,
@@ -1073,8 +1320,9 @@ mod tests {
         assert_eq!(kind_of("void F(void) { e.scaleX = Q_8_8(11.0 / 16); }", "16", 0), Some("composed"));
         assert_eq!(kind_of("void F(void) { scale = Q_8_8(1) / 16; }", "16", 0), Some("composed"));
         assert_eq!(kind_of("void F(void) { Sound_SetBgmTempo(SOUND_TEMPO_SCALE_NORMAL * 15 / 16); }", "15", 0), Some("composed"));
-        assert_eq!(kind_of("void F(void) { pos.y = INTtoFIXED(i / 3 * 32) + z; }", "32", 0), None, "a factor, not the fraction's divisor");
-        assert_eq!(kind_of("void F(void) { pos.y = INTtoFIXED(i / 3 * 32) + z; }", "3", 0), None, "no fraction of two numbers");
+        assert_eq!(kind_of("void F(void) { v = INTtoFIXED(i / 3 * 32) + w; }", "32", 0), None, "a factor, not the fraction's divisor");
+        assert_eq!(kind_of("void F(void) { v = INTtoFIXED(i / 3 * 32) + w; }", "3", 0), None, "no fraction of two numbers");
+        assert_eq!(kind_of("void F(void) { pos.y = INTtoFIXED(i / 3 * 32) + z; }", "32", 0), Some("position"), "the place it is given to");
         assert_eq!(kind_of("void F(void) { x = AFFINE_SCALE_ONE * 15 / 16; }", "15", 0), Some("composed"));
         // Semitones in an octave, and a scale's constant that is not its one.
         let tempo = "void F(void) { pitch = (s16)gBgmTempoPitch * 12 - 12 * BGM_UNITY_SCALE; }";
@@ -1107,6 +1355,92 @@ mod tests {
         assert_eq!(kind_of("void F(void) { if (logJRow == 15) {} }", "15", 0), Some("position"));
         assert_eq!(kind_of("void F(void) { if (gVBlankCount % 80 == 0) {} }", "80", 0), Some("duration"), "VBlank is one word");
         assert_eq!(words("logEColumn"), ["log", "ecolumn"], "words() keeps a word in mixed case whole");
+    }
+
+    #[test]
+    fn masks_of_whole_fields() {
+        let mask = |code: &str| {
+            let hex = code.find("0x").expect("a hex number");
+            kind_of(&format!("void F(void) {{ {code} }}"), code[hex..].split(|c: char| !c.is_ascii_alphanumeric()).next().unwrap(), 0)
+        };
+        assert_eq!(mask("v = (step & 0xff) * GUST_LAP_STEP;"), Some("mask"), "a value's low bits");
+        assert_eq!(mask("v = Trig_Sin((gFrameCount & 0x1ff) * FACING_STEP);"), Some("mask"));
+        assert_eq!(mask("*cell &= 0xfff0;"), Some("mask"), "whole hex digits");
+        assert_eq!(mask("bits &= 0x00FF00FF;"), Some("mask"));
+        assert_eq!(mask("x = 0x0ffff000 & draw;"), Some("mask"), "on the left of the &");
+        assert_eq!(mask("x &= ~0xff;"), Some("mask"), "its complement cleared");
+        assert_eq!(mask("u32 byteMask = 0xff;"), Some("mask"), "held in a variable named for a mask");
+        // A bit, two bits, a field cleared by a complement written out, a bit
+        // set, and a hex value given to something else.
+        assert_eq!(mask("if (flags & 0x8000) {}"), None);
+        assert_eq!(mask("angle = (facing + DEGtoANG(45)) & 0xc000;"), None);
+        assert_eq!(mask("*cell &= 0xfcff;"), None);
+        assert_eq!(mask("x = y | 0xff;"), None);
+        assert_eq!(mask("u32 glyphMask = 0x80;"), None, "one bit, named or not");
+        assert_eq!(mask("x = 0xff;"), None);
+    }
+
+    #[test]
+    fn the_sign_bit() {
+        assert_eq!(kind("blit[(u32)drift >> 31](canvas);", 0), Some("sign"));
+        assert_eq!(kind("isActive >>= 31;", 0), Some("sign"));
+        assert_eq!(kind("half = (b + (s32)((u32)b >> 31)) >> 1;", 0), Some("sign"));
+        // FIXEDtoINT's shift, another bit, and the bit set by a left shift.
+        assert_eq!(kind("x = y >> 16;", 0), None);
+        assert_eq!(kind("x = y >> 30;", 0), None);
+        assert_eq!(kind("x = y << 31;", 0), None);
+    }
+
+    #[test]
+    fn decimal_digits() {
+        assert_eq!(kind_of("void F(void) { digit /= 10; }", "10", 0), Some("decimal"), "the radix");
+        assert_eq!(kind_of("void F(void) { digit %= 10; }", "10", 0), Some("decimal"));
+        assert_eq!(kind_of("void F(void) { v = Mul(v, RECIPROCAL_OF(10)); }", "10", 0), Some("decimal"));
+        let text = "void F(void) { q = Mul(v, RECIPROCAL_OF(10)); v -= q * 10; s[i] = v + '0'; }";
+        assert_eq!(kind_of(text, "10", 1), Some("decimal"), "a quotient multiplied back where digits are written");
+        let ladder = "void F(void) { if (winnings < 10) d = 1; else if (winnings < 100) d = 2; }";
+        assert_eq!(kind_of(ladder, "10", 0), Some("decimal"), "place values");
+        assert_eq!(kind_of(ladder, "100", 0), Some("decimal"));
+        assert_eq!(kind_of("void F(void) { for (;;) { n /= 10; if (n < 10) break; } }", "10", 1), Some("decimal"), "a name divided by ten");
+        // A lone threshold, a product where no digit is written, and a
+        // divisor that is no power of ten.
+        assert_eq!(kind_of("void F(void) { if (hp < 100) Heal(); }", "100", 0), None);
+        assert_eq!(kind_of("void F(void) { v = n * 10; w = n / 10; }", "10", 0), None);
+        assert_eq!(kind_of("void F(void) { digit /= 16; }", "16", 0), None);
+    }
+
+    #[test]
+    fn through_groups_and_conversions_to_what_a_number_is_given() {
+        assert_eq!(kind_of("void F(void) { y = -(i * spacing + 16); }", "16", 0), Some("position"));
+        assert_eq!(kind_of("void F(void) { rock->y = INTtoFIXED(i * 2 + 96); }", "96", 0), Some("position"));
+        assert_eq!(kind_of("void F(void) { v = FIXEDtoINT(c * PUFF_RADIUS) + 40; }", "40", 0), Some("position"), "a conversion's own names");
+        assert_eq!(kind_of("void F(void) { v = INTtoFIXED(frame - 16); }", "16", 0), Some("duration"), "its own operand's names first");
+        assert_eq!(kind_of("void F(void) { menu->memberX[0] = 16; }", "16", 0), Some("position"), "a target ending in an index");
+        assert_eq!(kind_of("void F(void) { y = i == 0 ? 8 : 40; }", "40", 0), Some("position"), "a conditional's arm");
+        assert_eq!(kind_of("void F(void) { y = i == 0 ? 40 : 8; }", "40", 0), Some("position"));
+        assert_eq!(kind_of("void F(void) { v = i == 0 ? 8 : 40; }", "40", 0), None, "given to nothing that says");
+        assert_eq!(kind_of("void F(void) { scroll.rows = 11; }", "11", 0), Some("position"), "a size in rows");
+        assert_eq!(kind_of("void F(void) { scroll.limit = 176; }", "176", 0), None);
+        // A group holding more than the number's operand, a shift's amount,
+        // a roll outside the number's own operand, and an index's name.
+        assert_eq!(kind_of("void F(void) { if ((cell >= 36 && column >= 22)) {} }", "36", 0), None);
+        assert_eq!(kind_of("void F(void) { y = (Random16() & 63) - (1 << (16 - n)); }", "16", 0), None);
+        assert_eq!(kind_of("void F(void) { cues[row] += 10; }", "10", 0), None);
+    }
+
+    #[test]
+    fn a_frame_loops_counter_started_before_it() {
+        assert_eq!(kind_of("void F(void) { i = 60; do { wait(1); i--; } while (i != 0); }", "60", 0), Some("duration"));
+        assert_eq!(kind_of("void F(void) { i = 60; while (i != 0) { i--; wait(1); } }", "60", 0), Some("duration"));
+        assert_eq!(kind_of("void F(void) { i = 60; do { x++; i--; } while (i != 0); }", "60", 0), None, "no wait");
+        assert_eq!(kind_of("void F(void) { i = 60; Foo(); do { wait(1); i--; } while (i != 0); }", "60", 0), None, "not just before its loop");
+        assert_eq!(kind_of("void F(void) { count = 60; do { wait(1); count--; } while (count != 0); }", "60", 0), None, "a counter named for a count");
+    }
+
+    #[test]
+    fn the_brightness_registers_level() {
+        assert_eq!(kind_of("void F(void) { REG_BLDY = 12; }", "12", 0), Some("level"));
+        assert_eq!(kind_of("void F(void) { REG_BLDALPHA = 12; }", "12", 0), None, "a blend's two coefficients");
     }
 
     #[test]
@@ -1144,10 +1478,16 @@ mod tests {
     fn calls_through_pointers_and_their_arguments() {
         let tokens: Vec<Token> = clex::lex("draw[0](canvas, picture + 4, 48, 24);").into_iter().collect();
         let at = tokens.iter().position(|t| t.text == "48").unwrap();
-        assert_eq!(pointer_call(&tokens, at, 0), Some(("draw".to_string(), 2)));
+        assert_eq!(pointer_call(&tokens, at, 0), Some(("draw".to_string(), 2, false)));
         let tokens: Vec<Token> = clex::lex("(*draw)(canvas, cells, sway, 64, 96, 52);").into_iter().collect();
         let at = tokens.iter().position(|t| t.text == "96").unwrap();
-        assert_eq!(pointer_call(&tokens, at, 0), Some(("draw".to_string(), 4)));
+        assert_eq!(pointer_call(&tokens, at, 0), Some(("draw".to_string(), 4, false)));
+        let tokens: Vec<Token> = clex::lex("((DrawRectangle)draw[0])(canvas, sheet, px + 101, py + 26);").into_iter().collect();
+        let at = tokens.iter().position(|t| t.text == "26").unwrap();
+        assert_eq!(pointer_call(&tokens, at, 0), Some(("DrawRectangle".to_string(), 3, true)), "the type it is cast to");
+        let tokens: Vec<Token> = clex::lex("Get(x)(canvas, 26);").into_iter().collect();
+        let at = tokens.iter().position(|t| t.text == "26").unwrap();
+        assert_eq!(pointer_call(&tokens, at, 0), None, "a call's result is no cast");
         let tokens: Vec<Token> = clex::lex("Call1((void (*)())Event_Wait, 15); F(Random16(), 9, x + 1)").into_iter().collect();
         assert_eq!(arguments(&tokens, 1), (vec![Some("Event_Wait".to_string()), None], false));
         let open = tokens.iter().position(|t| t.text == "F").unwrap() + 1;
