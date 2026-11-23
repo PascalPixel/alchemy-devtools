@@ -355,8 +355,9 @@ impl GameText {
 
 /// A name's words as it writes them: `SceneId_SolSanctumLunaSolRooms` is
 /// Map, Id, Sol, Sanctum, Luna, Sol, Rooms; `ACTOR_TREE_MAN` is ACTOR, TREE,
-/// MAN. Digits, hex letters after them and single letters (`g`, `s`)
-/// are left out.
+/// MAN. Digits, hex letters after them, single letters (`g`, `s`) and the
+/// sheet letters right after `Rooms` (`TimberRoomsBC`, as `LogRoomsA`: a
+/// scene of rooms drawn on sheets A, B and C) are left out.
 pub fn pieces(name: &str) -> Vec<&str> {
     let mut out = Vec::new();
     for segment in name.split('_') {
@@ -364,6 +365,8 @@ pub fn pieces(name: &str) -> Vec<&str> {
         let mut start = 0;
         // Hex digits after a number belong to it: `Ov6aaRoom1`.
         let mut after_digits = false;
+        // The piece before, in this segment.
+        let mut before = "";
         for at in 1..=bytes.len() {
             let boundary = at == bytes.len() || {
                 let (a, b) = (bytes[at - 1], bytes[at]);
@@ -377,9 +380,11 @@ pub fn pieces(name: &str) -> Vec<&str> {
                 let piece = &segment[start..at];
                 let digits = piece.bytes().all(|b| b.is_ascii_digit());
                 let hex = after_digits && piece.len() <= 2 && piece.bytes().all(|b| b.is_ascii_hexdigit());
-                if piece.len() > 1 && !digits && !hex {
+                let sheets = before == "Rooms" && piece.bytes().all(|b| b.is_ascii_uppercase());
+                if piece.len() > 1 && !digits && !hex && !sheets {
                     out.push(piece);
                 }
+                before = piece;
                 after_digits = digits;
                 start = at;
             }
@@ -1362,6 +1367,10 @@ mod tests {
         assert_eq!(pieces("ACTOR_TREE_MAN_2"), ["ACTOR", "TREE", "MAN"]);
         assert_eq!(pieces("HTMLParser"), ["HTML", "Parser"]);
         assert_eq!(pieces("SceneId_Ov6aaRoom1"), ["Scene", "Id", "Ov", "Room"]);
+        // Sheet letters after `Rooms`, one or a run, are no word.
+        assert_eq!(pieces("TimberRoomsBC_TalkToInnWorker"), ["Timber", "Rooms", "Talk", "To", "Inn", "Worker"]);
+        assert_eq!(pieces("gTimberRoomsBCActorPlacements"), ["Timber", "Rooms", "Actor", "Placements"]);
+        assert_eq!(pieces("IZUMO_ROOMS_TO_IZUMO"), ["IZUMO", "ROOMS", "TO", "IZUMO"]);
         let text = GameText::parse(PO, Some(2)).unwrap();
         assert_eq!(unused_words("Bilibin_UpdateWarehouseApproach", &text), ["warehouse", "approach"]);
         assert_eq!(unused_words("ACTOR_MCCOY_TREES", &text), Vec::<String>::new());
