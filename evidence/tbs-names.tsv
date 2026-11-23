@@ -3237,7 +3237,6 @@ ACTOR_LOG_I	what the player sees	a yellow log lying north-south in the west pool
 ACTOR_LOG_J	what the player sees	a yellow log lying east-west in the west pool, at its south-west corner (its render)	games/tbs/src/scene/crossbone_isle.c
 ACTOR_LOG_K	what the player sees	a yellow log lying east-west in the west pool, at its south shore (its render)	games/tbs/src/scene/crossbone_isle.c
 ACTOR_LOG_L	what the player sees	a yellow log lying north-south in the west pool, by its east wall, at its south end (its render)	games/tbs/src/scene/crossbone_isle.c
-ACTOR_SINKING_PILLAR	what the player sees	a stone pillar between the two doors in the north wall (its render)	games/tbs/src/scene/crossbone_isle.c
 FLAG_CROSSBONE_ISLE_THIRD_PILLAR_LOWERED	the game	"It's just a stone pillar." (MsgValeWoodenBoxEmpty)	games/tbs/src/scene/crossbone_isle_keys.c
 ACTOR_FIRST_BLUE_KEY	the game	"Blue Key" (MsgItemName), a key icon lying among the room's stone posts	games/tbs/src/scene/crossbone_isle_keys.c
 ACTOR_SECOND_BLUE_KEY	the game	"Blue Key" (MsgItemName), the second key icon	games/tbs/src/scene/crossbone_isle_keys.c
@@ -4867,8 +4866,6 @@ WorldPictureWork.unreadAfterCursor	its code	six bytes after cursorY nothing on t
 ScriptOperands.layer	its code	struct Actor's layer and priorityFlags at 0x22 and 0x23, which no work value reaches	games/tbs/include/field/script_operands.h
 SceneEntrance.unusedAfterFacing	its code	0 in every table and never read; named by the member it follows	games/tbs/include/field/scene_tables.h
 FarCallSystemTable.arcTan2	its code	the entry at 64 is Trig_Atan's far call (FarCallArcTanVeneer), named as the system routine is	games/tbs/src/field/world_map_lines.c
-ActorScriptCommand	its code	gActorScript_CommandTable's rows and the SC_ macros' first words: each command is its handler's place in the table (SCRIPT_CMD_WAIT 0 to SCRIPT_CMD_KEY_COUNT 35; 36 to 46 run ActorScript_End)	games/tbs/include/field/actor_script.h
-SCRIPT_CMD_COUNT	its code	the first number past SC_KEY_COUNT; the table's remaining rows act as SC_END	games/tbs/include/field/actor_script.h
 TILESET_ANIM_WIDE_TILE_BYTES	its code	a layout with wideTiles copies 64-byte tiles (256 colours, GBATEK) to char block 2	games/tbs/src/field/field_tile_animation.c
 LUCKY_WHEELS_LEVER_PULL_FRAMES	its code	the lever sprite's y is 40 + 64 sin(timer * 682) while timer <= 47: half a turn over 48 frames, down and back	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_LEVER_SETTLE_FRAMES	its code	then a 4-pixel wobble while timer <= 55; the wheels can be stopped once timer > 56	games/tbs/src/field/lucky_wheels.c
@@ -5300,7 +5297,6 @@ CAMELOT_FLAG_TILE	its twin	The Lost Age's title_intro.c names the same tile, pic
 CAMELOT_FLAG_PICTURE_BYTES	its twin	as CAMELOT_FLAG_TILE	games/tbs/src/menu/title_intro.c
 CAMELOT_FLAG_BYTES	its twin	as CAMELOT_FLAG_TILE	games/tbs/src/menu/title_intro.c
 SCREEN_TILE_BYTES	its twin	The Lost Age's title_intro.c names a screen of 256-colour tiles SCREEN_TILE_BYTES (hz/ui); DISPLAY_TILE_HEIGHT * DISPLAY_TILE_WIDTH * TILE_SIZE_8BPP	games/tbs/include/system/io_reg.h
-CLOUDS_ROWS	what the player sees	BG1 is lilac clouds parting round a gap of blue sky, intro_clouds.png, 33 rows of tiles (its render)	games/tbs/src/menu/title_intro.c
 PEAK_MAP_ROW	what the player sees	BG2 is a tall rocky peak rising into the gap in the clouds, intro_peak.png (its render)	games/tbs/src/menu/title_intro.c
 PEAK_ROWS_ABOVE	its code	the peak's rows 4 to 1 are copied in as the view rises; intro_peak.png's rows 0 and 1 are blank	games/tbs/src/menu/title_intro.c
 INTRO_VRAM_ROWS	its code	each picture keeps 21 rows of tiles in VRAM (DISPLAY_TILE_HEIGHT + 1), the map wrapping round them	games/tbs/src/menu/title_intro.c
@@ -5497,7 +5493,6 @@ CrossboneIsle_StepOnLogL	its code	as CrossboneIsle_SettleLog, lettered as ACTOR_
 gCrossboneIsle_DoorOpens	its code	as gXian_InnDoorOpens, the map edit CrossboneIsle_OpenWestDoor and CrossboneIsle_OpenEastDoor play at the door the party walks into	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_MoveWestEastLogCells	its code	copies a west-east log's three cells (3 by 1) from its old row to the row its actor now lies on, and clears the old ones with the cells at (0, 0)	games/tbs/src/scene/crossbone_isle.c
 CrossboneIsle_MoveNorthSouthLogCells	its code	copies a north-south log's three cells (1 by 3) from its old column to the column its actor now lies on, and clears the old ones with the cells at (0, 0)	games/tbs/src/scene/crossbone_isle.c
-CrossboneIsle_RestorePillar	its code	on a floor whose FLAG_CROSSBONE_ISLE_FIRST_PASSAGE_OPENED + n is set, puts ACTOR_SINKING_PILLAR back 32 pixels into the floor at x 650	games/tbs/src/scene/crossbone_isle.c
 RED_BITS	the hardware	RGB555: red in bits 4..0 (GBATEK)	games/tbs/include/system/io_reg.h
 GREEN_BITS	the hardware	RGB555: green in bits 9..5 (GBATEK)	games/tbs/include/system/io_reg.h
 BLUE_BITS	the hardware	RGB555: blue in bits 14..10 (GBATEK)	games/tbs/include/system/io_reg.h
@@ -6703,7 +6698,6 @@ CottageRoomsB_ExitToValeKradensCottageNorth	what the player sees	Kraden's study'
 CottageRoomsB_ExitToValePlazaNortheast	what the player sees	the second forge room's way out is a doorway at the south of the room (its render, a probe at entrance 3)	games/tbs/src/scene/cottage_rooms_b.c
 CottageRoomsB_ExitToValePlazaWest	what the player sees	the inn's way out is a doorway at the south of the room with the counter (its render, a probe at entrance 4)	games/tbs/src/scene/cottage_rooms_b.c
 CottageRoomsB_ExitToVale	what the player sees	the front door of Isaac's house is a doorway at the south of the ground floor (its render, a probe at entrance 6)	games/tbs/src/scene/cottage_rooms_b.c
-CELL_BEHAVIOR_CROSSBONE_ISLE_WEST_OF_PILLAR	its code	crossbone_isle_cave/map.txt holds it at (38, 10) alone, the cell west of ACTOR_SINKING_PILLAR at (632, 168), column 39; its walking step row runs CrossboneIsle_PushPillar	games/tbs/src/scene/crossbone_isle.c
 CELL_BEHAVIOR_CROSSBONE_ISLE_SHORE_HOP_WEST	its code	crossbone_isle_floating_logs/map.txt holds 40 at (14, 8..19) and (37, 7..18), the shore cells east of both pools; its STEP_TRIGGER_WALKING_INTO(FACING_WEST) row runs CrossboneIsle_HopWest	games/tbs/src/scene/crossbone_isle.c
 CELL_BEHAVIOR_CROSSBONE_ISLE_SHORE_HOP_EAST	its code	crossbone_isle_floating_logs/map.txt holds 41 at (5, 9..14) and (2, 15..19), the west pool's west shore; its STEP_TRIGGER_WALKING_INTO(FACING_EAST) row runs CrossboneIsle_HopEast	games/tbs/src/scene/crossbone_isle.c
 CELL_BEHAVIOR_CROSSBONE_ISLE_SHORE_HOP_SOUTH	its code	crossbone_isle_floating_logs/map.txt holds 42 at (6..8, 8), the west pool's north shore; its STEP_TRIGGER_WALKING_INTO(FACING_SOUTH) row runs CrossboneIsle_HopSouth	games/tbs/src/scene/crossbone_isle.c
@@ -7385,7 +7379,6 @@ CELL_BEHAVIOR_SEALED_GATE	what the player sees	the sealed arch at the top of the
 MercuryLighthouse_ChargeLightsOnLower	what the player sees	Isaac stepping onto a cross-marked stepping square and golden rings appearing over his head (its render)	games/tbs/src/scene/mercury_lighthouse.c
 MercuryLighthouse_MiaJoinsAfterRescue	what the player sees	Move pushes the blue statue off the ledge into the gap at Mia's feet; she talks and walks into Isaac (its render)	games/tbs/src/scene/mercury_lighthouse.c
 MercuryLighthouse_PlyOpensWaterfallPassage	what the player sees	Ply on the blue statue: the rainbow fades, the waterfall streams upward, and Mia, Isaac, Garet and Ivan rise up it one by one (its render)	games/tbs/src/scene/mercury_lighthouse.c
-MercuryLighthouse_LeaveUpperByPassage	what the player sees	Isaac walking into the third waterfall from the west and coming out in Sleet's small room (its render)	games/tbs/src/scene/mercury_lighthouse.c
 ALTIN_TO_COTTAGE_ROOMS_D_INN	what the player sees	the inn's door under the INN sign on Altin's north-west ledge, cell (10, 13), and the inn with its innkeeper behind it (CottageRoomsD entrance 7) (its render); renamed from the compass word SOUTHWEST, which was where the room sits on the CottageRoomsD sheet	games/tbs/include/scene_exits.h
 ALTIN_FROM_COTTAGE_ROOMS_D_INN	what the player sees	the inn's door under the INN sign on Altin's north-west ledge, cell (10, 13), and the inn with its innkeeper behind it (CottageRoomsD entrance 7) (its render); renamed from the compass word SOUTHWEST, which was where the room sits on the CottageRoomsD sheet	games/tbs/include/scene_exits.h
 COTTAGE_ROOMS_D_INN_FROM_ALTIN	what the player sees	the inn's door under the INN sign on Altin's north-west ledge, cell (10, 13), and the inn with its innkeeper behind it (CottageRoomsD entrance 7) (its render); renamed from the compass word SOUTHWEST, which was where the room sits on the CottageRoomsD sheet	games/tbs/include/scene_exits.h
@@ -7544,3 +7537,123 @@ TunnelRuins_FreezeDousePillarFrostTarget	what the player sees	Isaac on the pit's
 Xian_UpdatePuddlePriority	what the player sees	after the water carrier spills her water, Isaac north of the puddle at the cliff's foot casts Frost: as the ice rises it is drawn over the left of his Psynergy ring, where with this function skipped the ring passes in front of it; the frames are otherwise the same (render event --scene Xian --event Xian_TalkToWaterCarrier --at 23,14 --face west --hold wait:430 --then wait:120,up:10,left:3,down+left:1,wait:10,cast:frost,wait:300, and again with --skip Xian_UpdatePuddlePriority) (its render)	games/tbs/src/scene/xian.c
 Xian_TalkToWaterCarrier	what the player sees	the water carrier on the east of her round, stopped by Isaac standing in her way: a puddle spreads at her feet, an ellipsis, an anger vein, "What are you doing! You made me spill my water!", and she walks back west to the pool (render event --scene Xian --at 23,14 --face west --hold wait:430) (its render)	games/tbs/src/scene/xian.c
 TolbiSpring_RevealPrize	what the player sees	with a Lucky Medal tossed, it settles on a ring; a roar, Isaac turns to the spring, a green-blue sea dragon rises from its north edge, its neck stretching south over the rings until its head reaches the rim before him; he raises his arms with the prize over his head, "Isaac got an Adept's Helm.", and the dragon draws back north (render event --scene TolbiSpring --event TolbiSpring_TossCoinOrMedal --entrance 1 --give lucky_medal --during wait:200,right:3,wait:30,a:3,wait:100,a:3,wait:900 --limit 300) (its render)	games/tbs/src/scene/tolbi_games.c
+REUNION_HAMMET_ASKS_IF_TIME_TO_EAT	the game	"Is it time to eat?" (MsgLunpaTimeEat + 0)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_HAMMET_ASKS_WHO	the game	"...Who are you?" (MsgLunpaTimeEat + 1)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_IVAN_NAMES_HAMMET	the game	"Hammet..." (MsgLunpaTimeEat + 2)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_HAMMET_KNOWS_IVAN	the game	", is that you?" (MsgLunpaTimeEat + 3)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_HAMMET_ASKS_ABOUT_FRIENDS	the game	"These people... Are they friends of yours?" (MsgLunpaTimeEat + 4)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_HAMMET_SEES_JOURNEY_BEGUN	the game	"Then it would appear your journey has begun, ." (MsgLunpaTimeEat + 5)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_IVAN_COMES_TO_SAVE_HAMMET	the game	"I am a little late, but I have come to save you." (MsgLunpaTimeEat + 6)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_HAMMET_WARNS_OF_RISK	the game	"You shouldn't have risked yourself, ." (MsgLunpaTimeEat + 7)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_DODONPA_HALTS_PARTY	the game	"Hold it right there!" (MsgLunpaTimeEat + 8)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_HAMMET_NAMES_DODONPA	the game	"Dodonpa!" (MsgLunpaTimeEat + 9)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_DODONPA_INTERRUPTS	the game	"Sorry to interrupt your teary little reunion, Hammet!" (MsgLunpaTimeEat + 10)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_DODONPA_MOCKS_IVAN	the game	"This must be your little rat, you always did claim he'd rescue you!" (MsgLunpaTimeEat + 11)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_DODONPA_SCORNS_CHILD	the game	"Look at him. He's just a child!" (MsgLunpaTimeEat + 12)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_DODONPA_MARVELS_AT_KIDS	the game	"But to think these kids could get this far!" (MsgLunpaTimeEat + 13)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_GARET_TAUNTS_DODONPA	the game	"Hey, yeah! If we're just kids, what does that make your pathetic thugs?" (MsgLunpaTimeEat + 14)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_IVAN_ACCUSES_DODONPA	the game	"What kind of scum takes ransom money and then doesn't free his hostage?" (MsgLunpaTimeEat + 15)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_HAMMET_LEARNS_OF_EXTORTION	the game	"I see. So, you've been extorting money from Layana, have you?" (MsgLunpaTimeEat + 16)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_MIA_TAKES_HAMMET_HOME	the game	"Now that we've found Hammet, we'll be taking him home!" (MsgLunpaTimeEat + 17)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_DODONPA_REFUSES	the game	"I'm afraid I can't let you do that." (MsgLunpaTimeEat + 18)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_DODONPA_CALLS_HAMMET_MONEY_TREE	the game	"Hammet is what I like to call my little money tree." (MsgLunpaTimeEat + 19)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_GARET_CALLS_DODONPA_SCOUNDREL	the game	"You dirty scoundrel!" (MsgLunpaTimeEat + 20)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_DODONPA_KEEPS_HAMMET	the game	"Name-calling won't help you! I'm not giving Hammet up!" (MsgLunpaTimeEat + 21)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_DODONPA_PULLS_LEVER	the game	"Dodonpa pulled a lever." (MsgLunpaTimeEat + 22)	games/tbs/src/scene/lunpa_fortress.c
+REUNION_DODONPA_SPRINGS_TRAP	the game	"This little trap here marks the end of your good fortune!" (MsgLunpaTimeEat + 23)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_DODONPA_CRIES_OUT	the game	"Uhnn! Get it off me!" (MsgLunpaUhnnGetOff + 0)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_GARET_ASKS_HOW_DODONPA_WAS_TRAPPED	the game	"How did Dodonpa get trapped under the monster?" (MsgLunpaUhnnGetOff + 1)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_HAMMET_TELLS_OF_TRICK	the game	"He tried to pull another dirty trick on you!" (MsgLunpaUhnnGetOff + 2)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_HAMMET_EXPLAINS_TRICK	the game	"When Dodonpa saw his monster was losing, he tried to get behind you." (MsgLunpaUhnnGetOff + 3)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_DODONPA_BOASTS	the game	"Just a second longer, and you'd have been history!" (MsgLunpaUhnnGetOff + 4)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_IVAN_CALLS_DODONPA_SNAKE	the game	"You dirty snake!" (MsgLunpaUhnnGetOff + 5)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_MIA_CALLS_DODONPA_ROTTEN	the game	"Dodonpa, you are rotten to the core!" (MsgLunpaUhnnGetOff + 6)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_DODONPA_APOLOGIZES	the game	"Yeah, OK! I'm sorry! Now, get this thing off of me!" (MsgLunpaUhnnGetOff + 7)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_GARET_REPEATS_DEMAND	the game	"\"Get this thing off of me\"!?" (MsgLunpaUhnnGetOff + 8)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_IVAN_DOUBTS_STRENGTH	the game	"I don't know. That thing looks awfully heavy for us kids to lift." (MsgLunpaUhnnGetOff + 9)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_MIA_ASKS_TO_MOVE_MONSTER	the game	"What should we do, ? Should we try to move it?" (MsgLunpaUhnnGetOff + 10)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_MIA_ASKS_HAMMET	the game	"I agree.What do you think, Hammet?" (MsgLunpaUhnnGetOff + 11)	games/tbs/src/scene/lunpa_fortress.c
+AFTERMATH_HAMMET_WILL_TRY	the game	"I think we have to try, at least." (MsgLunpaUhnnGetOff + 12)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_GARET_FREES_DODONPA	the game	"There. You should be able to get up now!" (MsgLunpaAbleGet + 0)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_DODONPA_CANNOT_STAND	the game	"I... I can't." (MsgLunpaAbleGet + 1)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_MIA_ASKS_ABOUT_LEG	the game	"Did you break your leg or something?" (MsgLunpaAbleGet + 2)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_DODONPA_WILL_STAND	the game	"It's not broken... I should be able to stand after a bit." (MsgLunpaAbleGet + 3)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_IVAN_IS_RELIEVED	the game	"Thank goodness..." (MsgLunpaAbleGet + 4)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_GARET_QUESTIONS_RELIEF	the game	"What do you mean, \"thank goodness\"!?" (MsgLunpaAbleGet + 5)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_GARET_RECALLS_ATTACK	the game	"Didn't he just try to kill us?" (MsgLunpaAbleGet + 6)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_HAMMET_FORGIVES	the game	"Can't we just forgive and forget?" (MsgLunpaAbleGet + 7)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_GARET_RECALLS_KIDNAPPING	the game	"Dodonpa kidnapped you, remember!?" (MsgLunpaAbleGet + 8)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_HAMMET_REMEMBERS	the game	"Oh, that's right..." (MsgLunpaAbleGet + 9)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_GARET_LOSES_PATIENCE	the game	"Get a grip, you guys!" (MsgLunpaAbleGet + 10)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_IVAN_POINTS_TO_SAFETY	the game	"But Hammet is safe now, isn't he?" (MsgLunpaAbleGet + 11)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_GARET_DOUBTS_REFORM	the game	"Yeah, but do you really think Dodonpa will reform if Hammet forgives him?" (MsgLunpaAbleGet + 12)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_MIA_WONDERS	the game	"Hmm... I wonder..." (MsgLunpaAbleGet + 13)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_MIA_ASKS_DODONPA	the game	"How about it, Dodonpa?" (MsgLunpaAbleGet + 14)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_HAMMET_DEFENDS_DODONPA	the game	"He already said he wouldn't do anything!" (MsgLunpaAbleGet + 15)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_GARET_DISTRUSTS_DODONPA	the game	"Of course, he's going to say that! He wants us to forgive him!" (MsgLunpaAbleGet + 16)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_IVAN_ASKS_GARET	the game	"What do you think we should do with him, ?" (MsgLunpaAbleGet + 17)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_GARET_WANTS_DODONPA_LOCKED_UP	the game	"We should lock him up here, just like he did to Hammet." (MsgLunpaAbleGet + 18)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_DODONPA_PLEADS	the game	"No! How can you be so cruel!" (MsgLunpaAbleGet + 19)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_MIA_SCOLDS_DODONPA	the game	"Oh? And yet you have no problem being that cruel to Hammet!" (MsgLunpaAbleGet + 20)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_IVAN_ASKS_TO_LOCK_DODONPA_UP	the game	"What should we do, ? Should we lock Dodonpa up?" (MsgLunpaAbleGet + 21)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_DONPA_APPROVES	the game	"Serves the little punk right!" (MsgLunpaAbleGet + 22)	games/tbs/src/scene/lunpa_fortress.c
+PUNISHMENT_DONPA_LEAVES_DODONPA	the game	"Just leave him here like this for a while!" (MsgLunpaAbleGet + 23)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DODONPA_CALLS_FATHER	the game	"Dad!" (MsgLunpaDad + 0)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_PITIES_DODONPA	the game	"Dodonpa... You pitiful wretch." (MsgLunpaDad + 1)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_RECALLS_WARNING	the game	"I always told you that if you did evil to others...others would do evil to you." (MsgLunpaDad + 2)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_DEMANDS_AMENDS	the game	"You must right all of the misdeeds you've done!" (MsgLunpaDad + 3)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_REGRETS_SPOILING	the game	"I feel bad for spoiling you. Look at the trouble it has caused..." (MsgLunpaDad + 4)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DODONPA_BLAMES_DONPA	the game	"See! It's all your fault that all this happened!" (MsgLunpaDad + 5)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_WILL_PUNISH	the game	"Yes, which is why this is going to hurt you more than it does me!" (MsgLunpaDad + 6)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DODONPA_DOUBTS_DONPA	the game	"You're not serious, are you, Dad?" (MsgLunpaDad + 7)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_INSISTS	the game	"I most certainly am!" (MsgLunpaDad + 8)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_SENTENCES_DODONPA	the game	"You're going to spend some time here thinking about all that you've done!" (MsgLunpaDad + 9)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_ASKS_ABOUT_TROUBLE	the game	"Dodonpa has caused you all sorts of trouble, hasn't he?" (MsgLunpaDad + 10)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_HAMMET_DENIES_TROUBLE	the game	"No, not at all!" (MsgLunpaDad + 11)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_APOLOGIZES	the game	"I must apologize deeply for all of this." (MsgLunpaDad + 12)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_HAMMET_DECLINES_APOLOGY	the game	"Thank you, Donpa, but you do not need to apologize." (MsgLunpaDad + 13)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_ASKS_FORGIVENESS	the game	"Then you forgive me?" (MsgLunpaDad + 14)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_HAS_REQUEST	the game	"I am sorry about the trouble, but I do have one request." (MsgLunpaDad + 15)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_HAMMET_ASKS_ABOUT_REQUEST	the game	"A request?" (MsgLunpaDad + 16)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_ASKS_PARTY_TO_LEAVE	the game	"I don't know how you got in here, but please leave by the same means." (MsgLunpaDad + 17)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_GARET_QUESTIONS_SECRECY	the game	"Huh? Donpa, didn't you just say you're going to lock up Dodonpa?" (MsgLunpaDad + 18)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_IVAN_QUESTIONS_SNEAKING	the game	"So we shouldn't have to sneak around, should we?" (MsgLunpaDad + 19)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_WARNS_OF_HENCHMEN	the game	"Some of Dodonpa's henchmen are still loyal to him." (MsgLunpaDad + 20)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_IS_ASHAMED	the game	"I'm ashamed to say it, but they won't listen to any of my orders." (MsgLunpaDad + 21)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_WARNS_OF_ATTACK	the game	"This new gang of thieves will attack Hammet if they find him in the fortress." (MsgLunpaDad + 22)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_FEARS_CELL_CHECK	the game	"And they may come to check his cell, right?" (MsgLunpaDad + 23)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_HAMMET_FORESEES_RELEASE	the game	"I see. Then they'd free Dodonpa, wouldn't they?" (MsgLunpaDad + 24)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_FORESEES_REVENGE	the game	"And then he'd head straight for Kalay seeking his revenge!" (MsgLunpaDad + 25)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_GARET_AGREES	the game	"I see. Yes, you're right." (MsgLunpaDad + 26)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_MIA_FEARS_FOR_KALAY	the game	"It would be terrible if Kalay were attacked." (MsgLunpaDad + 27)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_URGES_HASTE	the game	"That's why you must go while you still can!" (MsgLunpaDad + 28)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_IVAN_ASKS_IF_NOW	the game	"You mean immediately?" (MsgLunpaDad + 29)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_SPREAD_RUMORS	the game	"I heard of your intrusion, so I spread some rumors through the fortress." (MsgLunpaDad + 30)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_HAMMET_ASKS_ABOUT_RUMORS	the game	"Rumors?" (MsgLunpaDad + 31)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_TELLS_RUMOR	the game	"I said brigands had snuck in to kidnap Hammet, but failed and ran off." (MsgLunpaDad + 32)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_GARET_ASKS_WHY	the game	"Why in the world did you do that?" (MsgLunpaDad + 33)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_EXPLAINS_RUMOR	the game	"Now, they won't let anyone down here at all.Plus, many of Dodonpa's men have left to find the intruders." (MsgLunpaDad + 34)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_MIA_PRAISES_DONPA	the game	"Donpa, you are a shrewd one!" (MsgLunpaDad + 35)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_OFFERS_HELP	the game	"I just thought I'd try to help however I could..." (MsgLunpaDad + 36)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_IVAN_URGES_ESCAPE	the game	"With Dodonpa's henchmen gone, this is our chance to escape, right?" (MsgLunpaDad + 37)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_HURRIES_PARTY	the game	"Why did I even bother asking? Let's get a move on!" (MsgLunpaDad + 38)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DONPA_PROMISES_CHANGE	the game	"The next time you meet Dodonpa, he will be a changed man." (MsgLunpaDad + 39)	games/tbs/src/scene/lunpa_fortress.c
+JUDGMENT_DODONPA_PROMISES_TO_BEHAVE	the game	"I get it already! I won't do anything wrong! Come on, let me go!" (MsgLunpaDad + 40)	games/tbs/src/scene/lunpa_fortress.c
+DICE_LABEL_THROW	the game	"{button_icon:1}:Throw" (MsgLuckyDiceThrow, MsgLuckyDiceCoins + 10)	games/tbs/src/field/lucky_dice.c
+DICE_LABEL_QUIT	the game	"{button_icon:2}:Quit" (MsgLuckyDiceQuit, MsgLuckyDiceCoins + 11)	games/tbs/src/field/lucky_dice.c
+IVAN_JOINING_ISAAC_CLASPS_HANDS	the game	"{actor_name:3} and {actor_name:1} clasped their hands together." (MsgVaultThankHelpBelieve + 5)	games/tbs/src/scene/log_rooms_a.c
+IVAN_JOINING_GARET_FEELS_MIND_READ	the game	"Ahh! My mind... Stop reading my mind, {actor_name:3}!!!" (MsgVaultThankHelpBelieve + 6)	games/tbs/src/scene/log_rooms_a.c
+IVAN_JOINING_GARET_CLASPS_HANDS	the game	"{actor_name:3} and {actor_name:2} clasped their hands together." (MsgVaultThankHelpBelieve + 13)	games/tbs/src/scene/log_rooms_a.c
+IVAN_JOINING_GARET_READS_MIND	the game	"Whoa! I did it! I read your mind, {actor_name:1}!" (MsgVaultThankHelpBelieve + 14)	games/tbs/src/scene/log_rooms_a.c
+IVAN_JOINING_IVAN_WILL_READ_TOWN	the game	"Let me read the minds of the townspeople to find the rod." (MsgVaultThankHelpBelieve + 22)	games/tbs/src/scene/log_rooms_a.c
+EAVESDROP_MENARDI_FORBIDS_SPYING	the game	"Oh ho! Well... I can't permit you to continue your spying." (MsgValeTheyKnowLittleOfThe + 10)	games/tbs/src/scene/vale_kradens_cottage.c
+EAVESDROP_MENARDI_TAKES_WORD	the game	"Hmph! I guess that I should take you at your word..." (MsgValeTheyKnowLittleOfThe + 11)	games/tbs/src/scene/vale_kradens_cottage.c
+FLAG_TRET_TREE_HEALING_RING	the game	"Healing Ring" (MsgItemName), the chest trigger FIND_ITEM(ITEM_HEALING_RING) in Tret Tree (gArea name "Tret Tree")	games/tbs/include/flags.h
+FLAG_TRET_TREE_NUT	the game	"Nut" (MsgItemName), the chest trigger FIND_ITEM(ITEM_NUT) in Tret Tree (gArea name "Tret Tree")	games/tbs/include/flags.h
+ACTOR_PILLAR	what the player sees	a stone pillar between the two doors in the north wall (its render)	games/tbs/src/scene/crossbone_isle.c
+ActorScriptCommand	its code	gActorScript_CommandTable's rows and the SC_ macros' first words: each command is its handler's place in the table (SCRIPT_COMMAND_WAIT 0 to SCRIPT_COMMAND_KEY_COUNT 35; 36 to 46 run ActorScript_End)	games/tbs/include/field/actor_script.h
+SCRIPT_COMMAND_COUNT	its code	the first number past SC_KEY_COUNT; the table's remaining rows act as SC_END	games/tbs/include/field/actor_script.h
+CLOUD_ROWS	what the player sees	BG1 is lilac clouds parting round a gap of blue sky, intro_clouds.png, 33 rows of tiles (its render)	games/tbs/src/menu/title_intro.c
+CrossboneIsle_RestorePillar	its code	on a floor whose FLAG_CROSSBONE_ISLE_FIRST_PASSAGE_OPENED + n is set, puts ACTOR_PILLAR back 32 pixels into the floor at x 650	games/tbs/src/scene/crossbone_isle.c
+CELL_BEHAVIOR_CROSSBONE_ISLE_WEST_OF_PILLAR	its code	crossbone_isle_cave/map.txt holds it at (38, 10) alone, the cell west of ACTOR_PILLAR at (632, 168), column 39; its walking step row runs CrossboneIsle_PushPillar	games/tbs/src/scene/crossbone_isle.c
+MercuryLighthouse_WaterfallToSleetsRoom	what the player sees	Isaac walking into the third waterfall from the west and coming out in Sleet's small room (its render)	games/tbs/src/scene/mercury_lighthouse.c
