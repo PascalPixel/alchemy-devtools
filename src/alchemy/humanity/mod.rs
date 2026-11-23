@@ -833,11 +833,61 @@ impl Report {
         for (file, line, name) in entries {
             self.note("undocumented_entry", &file, line, &name);
         }
+        self.unused_placeholders();
         let objects = self.objects();
         let referred = std::mem::take(&mut self.macro_words);
         (self.function_groups, self.table_groups, self.said_groups) =
             duplicates::groups(&std::mem::take(&mut self.copies), FUNCTION_TOKENS, TABLE_TOKENS, &objects, &referred);
         self.long_files.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    }
+
+    /// Sets apart a placeholder nothing uses (`placeholder_unused`): its one
+    /// use in the C and headers is where it is defined (an enumerator, a
+    /// macro, a global, a function), and no assembly or macro body writes
+    /// it. Its table row and its file list are that definition and the
+    /// linker's (`SE_120,` in `sounds.h`, a sound nothing plays): S3 keeps
+    /// an unknown a placeholder, and with nothing using it nothing will
+    /// settle it.
+    fn unused_placeholders(&mut self) {
+        let Some(names) = self.names.get("placeholder").cloned() else { return };
+        let mut uses: HashMap<&str, Vec<usize>> = HashMap::new();
+        for (at, item) in self.items.iter().enumerate() {
+            if item.metric == "placeholder" {
+                uses.entry(item.what.as_str()).or_default().push(at);
+            }
+        }
+        let defined: HashSet<(&str, &str, usize)> = self
+            .naming
+            .names
+            .iter()
+            .filter(|name| {
+                matches!(name.kind, NameKind::Enumerator | NameKind::Macro | NameKind::FunctionMacro | NameKind::Global | NameKind::Function)
+            })
+            .map(|name| (name.name.as_str(), name.file.as_str(), name.line))
+            .collect();
+        let mut unused = Vec::new();
+        for name in &names {
+            let Some(&[at]) = uses.get(name.as_str()).map(Vec::as_slice) else { continue };
+            let item = &self.items[at];
+            if defined.contains(&(name.as_str(), item.file.as_str(), item.line)) && !self.macro_words.contains(name) {
+                unused.push((name.clone(), at));
+            }
+        }
+        for (name, at) in unused {
+            let file = self.items[at].file.clone();
+            self.items[at].metric = "placeholder_unused".to_string();
+            if let Some(files) = self.tallies.get_mut("placeholder") {
+                if let Some(count) = files.get_mut(&file) {
+                    *count -= 1;
+                    if *count == 0 {
+                        files.remove(&file);
+                    }
+                }
+            }
+            self.add("placeholder_unused", &file, 1);
+            self.names.entry("placeholder").or_default().remove(&name);
+            self.names.entry("placeholder_unused").or_default().insert(name);
+        }
     }
 
     /// The objects each file is part of: the files that include it, through
@@ -3049,6 +3099,7 @@ const ROWS: &[(&str, &str)] = &[
     ("magic_table", "numbers in table data"),
     ("placeholder_names", "placeholder names"),
     ("placeholder", "  their uses"),
+    ("placeholder_unused", "  apart: placeholders nothing uses"),
     ("numbered_names", "numbered names"),
     ("numbered", "  their uses"),
     ("numbered_honest", "  apart: its number, by row"),
@@ -3162,6 +3213,7 @@ impl Report {
     pub fn value(&self, metric: &str) -> u64 {
         match metric {
             "placeholder_names" => self.distinct("placeholder") as u64,
+            "placeholder_unused" => self.distinct("placeholder_unused") as u64,
             "numbered_names" => self.distinct("numbered") as u64,
             "numbered_honest" => self.distinct("numbered_honest") as u64,
             "fakematch" | "leftover" => kinds(metric).iter().map(|kind| self.total(kind)).sum(),
@@ -3550,6 +3602,22 @@ mod tests {
         let report = one("void ColosseumFinal1(void) { unk_14 = ColosseumFinal1 + gUnk_0203; } // unk_99 Exit10\n");
         assert_eq!((report.distinct("placeholder"), report.total("placeholder")), (2, 2));
         assert_eq!((report.distinct("numbered"), report.total("numbered")), (1, 2));
+    }
+
+    #[test]
+    fn placeholders_nothing_uses() {
+        let report = game([
+            ("games/tla/include/sounds.h", "enum SoundId {\n  SE_JUMP,\n  SE_120,\n  SE_121,\n  SE_122,\n  SE_123,\n};\n#define SE_LATE SE_123\n"),
+            ("games/tla/src/a.c", "void Jump(void) { Sound_Play(SE_121); }\n"),
+            ("games/tla/src/b.s", "\t.2byte SE_122\n"),
+        ]);
+        let names = |kind: &str| report.names.get(kind).map(|names| names.iter().cloned().collect::<Vec<_>>()).unwrap_or_default();
+        assert_eq!(names("placeholder_unused"), ["SE_120"], "written only in its own row");
+        assert_eq!(names("placeholder"), ["SE_121", "SE_122", "SE_123"], "played, in a script, in a macro");
+        assert_eq!((report.value("placeholder_names"), report.value("placeholder_unused")), (3, 1));
+        assert_eq!(report.total("placeholder"), 5, "SE_121 and SE_123 twice, SE_122 once: a script is no C");
+        let listing = list(&[("tla", &report)], "placeholder_unused");
+        assert_eq!(listing, "tla\tgames/tla/include/sounds.h:3\tSE_120\n");
     }
 
     #[test]
