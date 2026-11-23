@@ -6,7 +6,11 @@
 //!
 //! - words the game never uses: each name is split into words, and a word is
 //!   accounted for when the game's text uses it (after crude stemming) or it
-//!   is on the short programming vocabulary below, and set apart as plain
+//!   is on the short programming vocabulary below, set apart as the
+//!   glossary's when the game's glossary defines it (an entry's heading or
+//!   the words its evidence quotes), as the twin's when the twin's text uses
+//!   it (The Broken Seal's, for The Lost Age:
+//!   H6), and set apart as plain
 //!   English for what the player sees when every name using it has a row
 //!   saying someone saw it (its render, its picture, the walkthrough), or
 //!   takes it from a map that has one: its name, its short name in its own
@@ -55,6 +59,15 @@ pub const VOCABULARY: &[&str] = &[
     "dither", "contrast", "zoom", "rotation", "backdrop", "foreground", "background", "visibility", "occluding",
     "collidable", "pixel", "scanline", "hofs", "canvas", "glyph", "graphics", "rgb", "radial", "orbit", "pulse",
     "squash", "jitter", "emitter", "emission", "spawner", "cue", "audio",
+    // The same, as the shared code names them: an actor's or a cursor's bob
+    // (`Actor_Bob`, `gMenuCursor_BobOffsets`), a position's horizontal and
+    // vertical parts, a diagonal step or line, a rectangle of cells or
+    // pixels, a model's vertices and a sphere's radius, the orbiters the rock
+    // dungeons spiral (`struct Orbiter`), two spheres' overlap, the overhead
+    // layer of a map, and the portrait a message or menu shows for its
+    // speaker (`PortraitId`, as `sprite`).
+    "bob", "horizontal", "vertical", "diagonal", "rectangle", "vertex", "vertices", "radius", "orbiter", "overlap",
+    "overhead", "portrait",
     // The hardware's own words for drawing, as GBATEK writes them: a
     // sprite's or layer's priority, a layer's scroll, the serial port.
     "priority", "scroll", "serial",
@@ -66,6 +79,16 @@ pub const VOCABULARY: &[&str] = &[
     "resource", "lz", "hex", "dpad", "interpolation", "linear", "inverse", "magnitude", "ratio", "remainder", "sine",
     "negative", "positive", "relative", "length", "width", "grid", "node", "cursor", "selector", "periodic",
     "frequency", "duration", "cos", "crc", "encode", "decode",
+    // The same, as the shared code names it: calculate (`Battle_Calculate*`),
+    // format a number (`String_Format*`), poll a port, prompt for an answer,
+    // filter items or targets (`ITEM_FILTER_ANY`), a toss's simulation, a
+    // code (a cell's collision code, a picture's, a button code), a cell
+    // stamped from another, cells unblocked or made pushable
+    // (`MAP_CELL_PUSH`), and an actor parked out of sight (`Actor_Park`).
+    "calculate", "format", "poll", "prompt", "filter", "simulation", "code", "stamp", "unblock", "pushable", "park",
+    // The debug menus' tools: a browser of icons or portraits, an editor of
+    // flags or palettes, a picker of items (`ItemPicker_Run`).
+    "browser", "editor", "picker",
     // A bump allocator, which hands out memory by moving one pointer on.
     "bump",
     // Positions.
@@ -91,6 +114,14 @@ pub struct GameText {
     numbers: HashMap<u32, usize>,
     /// The area names (`gArea_NameRules`, from `MsgDebugAreaName`).
     areas: Vec<String>,
+    /// The twin's words and their stems: for The Lost Age, The Broken
+    /// Seal's, whose names and words it takes where it keeps a thing of
+    /// that game (H6).
+    twin_words: HashSet<String>,
+    twin_stems: HashSet<String>,
+    /// The stems of the words the game's glossary (`games/<game>/glossary.md`)
+    /// defines, which the owner settles (Alchemy's Vocabulary rule).
+    glossary: HashSet<String>,
 }
 
 /// A message's text without its `{...}` commands, on one line.
@@ -110,6 +141,22 @@ fn flatten(text: &str) -> String {
         }
     }
     out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The words of some English, lowercase: `Li'l` is `li'l`, `li` and `l`,
+/// and `lil` as a name writes it, the apostrophe dropped (`ITEM_LIL_TURTLE`).
+fn words_of(body: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for word in body.split(|c: char| !(c.is_alphanumeric() || c == '\'')) {
+        let word = word.trim_matches('\'').to_lowercase();
+        let dropped = word.replace('\'', "");
+        for part in [word.as_str(), dropped.as_str()].into_iter().chain(word.split('\'')) {
+            if !part.is_empty() {
+                out.push(part.to_string());
+            }
+        }
+    }
+    out
 }
 
 /// `McCoy's` is `mccoy`; `Storms` is `storm`; `moving` and `move` meet at
@@ -168,17 +215,9 @@ impl GameText {
             }
         }
         for (_, body) in &text.messages {
-            for word in body.split(|c: char| !(c.is_alphanumeric() || c == '\'')) {
-                let word = word.trim_matches('\'').to_lowercase();
-                if word.is_empty() {
-                    continue;
-                }
-                for part in std::iter::once(word.as_str()).chain(word.split('\'')) {
-                    if !part.is_empty() {
-                        text.stems.insert(stem(part));
-                        text.words.insert(part.to_string());
-                    }
-                }
+            for word in words_of(body) {
+                text.stems.insert(stem(&word));
+                text.words.insert(word);
             }
         }
         text.joined = text.messages.iter().map(|(_, body)| body.as_str()).collect::<Vec<_>>().join("\u{1}");
@@ -197,10 +236,49 @@ impl GameText {
         Ok(text)
     }
 
-    /// The game's text uses the word, or a word with its stem.
+    /// The same text, its twin's words taken from `twin`.
+    pub fn with_twin(mut self, twin: &GameText) -> GameText {
+        self.twin_words = twin.words.clone();
+        self.twin_stems = twin.stems.clone();
+        self
+    }
+
+    /// The same text, with the words a glossary defines: each entry's
+    /// heading (`### Main routine`), and the words its `Evidence:` line
+    /// quotes as the source of the term (the credits' "Music").
+    pub fn with_glossary(mut self, glossary: &str) -> GameText {
+        for paragraph in glossary.split("\n\n").map(str::trim) {
+            let defined = if let Some(heading) = paragraph.strip_prefix("### ") {
+                words_of(heading)
+            } else if paragraph.starts_with("Evidence:") {
+                paragraph.split('"').skip(1).step_by(2).flat_map(words_of).collect()
+            } else {
+                continue;
+            };
+            self.glossary.extend(defined.iter().map(|word| stem(word)));
+        }
+        self
+    }
+
+    /// The game's glossary defines the word, or a word with its stem.
+    pub fn glossary_defines(&self, word: &str) -> bool {
+        self.glossary.contains(&stem(word))
+    }
+
+    /// The twin's text uses the word, or a word with its stem.
+    pub fn twin_uses(&self, word: &str) -> bool {
+        let lower = word.to_lowercase();
+        self.twin_words.contains(&lower) || self.twin_stems.contains(&stem(&lower))
+    }
+
+    /// The game's text uses the word, or a word with its stem, or it is the
+    /// plural in -us of a word the text uses (`menus`), which the stem keeps
+    /// whole so that `status` is not `statue`.
     pub fn uses(&self, word: &str) -> bool {
         let lower = word.to_lowercase();
-        self.words.contains(&lower) || self.stems.contains(&stem(&lower))
+        self.words.contains(&lower)
+            || self.stems.contains(&stem(&lower))
+            || lower.strip_suffix("us").is_some_and(|base| self.words.contains(&format!("{base}u")))
     }
 
     /// The symbols whose own message says `word` (any case): `MsgDetailsUnknown`,
@@ -856,6 +934,12 @@ pub struct Analysis {
     /// Each word set apart as plain English for what the player sees, and
     /// the rows that use it, most used first.
     pub seen_words: Vec<(String, Vec<usize>)>,
+    /// Each word set apart as the twin's: its text uses it (H6). Most used
+    /// first.
+    pub twin_words: Vec<(String, Vec<usize>)>,
+    /// Each word set apart as the glossary's, which the owner settles. Most
+    /// used first.
+    pub glossary_words: Vec<(String, Vec<usize>)>,
     /// Each unresolved door word and the links that use it, most used first.
     pub door_words: Vec<(String, Vec<usize>)>,
 }
@@ -1067,7 +1151,20 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
         }
         analysis.rows.push(Row { thing: thing.clone(), words: flagged, evidence, door_words: Vec::new(), seen_words: Vec::new(), seen_uses: Vec::new() });
     }
+    // A word the glossary defines is settled, and one the twin's text uses
+    // is the game's (H6): each is set apart. A name taking a word from what
+    // someone saw uses it for that, not in the sense the glossary gives
+    // (a pool of water, not a heap's), so such a word stays.
     let seen = Seen::new(&analysis.rows);
+    let (mut glossary, words): (Vec<_>, Vec<_>) = words.into_iter().partition(|(word, uses)| {
+        text.glossary_defines(word) && !uses.iter().any(|&at| seen.word(&analysis.rows, at, word))
+    });
+    let (mut twin, words): (Vec<_>, Vec<_>) = words.into_iter().partition(|(word, _)| text.twin_uses(word));
+    for (word, uses) in glossary.iter().chain(&twin) {
+        for &at in uses {
+            analysis.rows[at].words.retain(|flagged| flagged != word);
+        }
+    }
     let mut flagged = Vec::new();
     let mut apart = Vec::new();
     for (word, uses) in words {
@@ -1088,10 +1185,10 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
             row.seen_words.push(word.clone());
         }
     }
-    for list in [&mut flagged, &mut apart] {
+    for list in [&mut flagged, &mut apart, &mut twin, &mut glossary] {
         list.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
     }
-    (analysis.words, analysis.seen_words) = (flagged, apart);
+    (analysis.words, analysis.seen_words, analysis.twin_words, analysis.glossary_words) = (flagged, apart, twin, glossary);
     check_doors(&mut analysis, text);
     analysis
 }
@@ -1243,6 +1340,8 @@ mod tests {
         assert_eq!(stem("Storms"), "storm");
         assert_eq!(stem("moving"), stem("move"));
         assert_eq!(stem("bodies"), "body");
+        let menu = GameText::parse("msgctxt \"MsgMenu\"\nmsgid \"00001\"\nmsgstr \"Menu and statue\"\n", None).unwrap();
+        assert!(menu.uses("menus") && !menu.uses("status"), "a plural in -us, not -us itself");
     }
 
     #[test]
@@ -1256,6 +1355,34 @@ mod tests {
         assert_eq!(unused_words("Bilibin_UpdateWarehouseApproach", &text), ["warehouse", "approach"]);
         assert_eq!(unused_words("ACTOR_MCCOY_TREES", &text), Vec::<String>::new());
         assert_eq!(unused_words("Event_McCoyTreasury", &text), Vec::<String>::new(), "Mc and Coy are one word");
+    }
+
+    #[test]
+    fn the_shared_codes_words() {
+        let text = GameText::parse(PO, Some(2)).unwrap();
+        for (name, word) in [
+            ("Actor_Bob", "bob"), ("Actor_IsParked", "parked"), ("Orbiter_Step", "orbiter"), ("Event_CheckSpheresOverlap", "overlap"),
+            ("Clear_CalculatePasswordCrc16", "calculate"), ("LinkLobby_PollPeerReady", "poll"), ("ACTOR_ITEM_PICKER", "picker"),
+            ("ACTOR_LEVEL_EDITOR", "editor"), ("ACTOR_PORTRAIT_BROWSER", "portrait"), ("ACTOR_PORTRAIT_BROWSER", "browser"),
+            ("DJINNI_CHARGE_RING_VERTICES", "vertices"), ("gClear_ButtonCodes", "codes"), ("gAirsRockInside_StampedCell", "stamped"),
+            ("Settlements_UnblockCrate", "unblock"),
+        ] {
+            assert!(!unused_words(name, &text).contains(&word.to_string()), "{name}: {word}");
+        }
+        assert_eq!(unused_words("Actor_Shimmer", &text), ["shimmer"], "what the player sees stays");
+    }
+
+    #[test]
+    fn a_word_with_its_apostrophe_dropped() {
+        let po = concat!(
+            "msgctxt \"MsgItemName\"\nmsgid \"00001\"\nmsgstr \"{article_class:2}Li'l Turtle\"\n\n",
+            "msgctxt \"message\"\nmsgid \"00002\"\nmsgstr \"Can't Use\"\n",
+        );
+        let text = GameText::parse(po, None).unwrap();
+        assert_eq!(unused_words("ACTOR_LIL_TURTLE", &text), Vec::<String>::new());
+        assert_eq!(unused_words("FLAG_CANT_USE", &text), Vec::<String>::new());
+        assert!(text.uses("li'l") && text.uses("can"), "the word and its parts stay");
+        assert_eq!(unused_words("ACTOR_LILT_TURTLE", &text), ["lilt"]);
     }
 
     fn thing(name: &str, own: &str, context: &str) -> Thing {
@@ -1342,6 +1469,42 @@ mod tests {
         assert_eq!(kind("Vale_Init", "games/tbs/src/scene/vale.c", Origin::Function), Some("function"));
         assert_eq!(kind("Battle_Init", "games/tbs/src/battle/x.c", Origin::Function), None);
         assert_eq!(kind("ACTOR_unk_14", "a.h", Origin::Enumerator), None);
+    }
+
+    #[test]
+    fn words_of_the_twins_text() {
+        let twin = GameText::parse("msgctxt \"MsgHealer\"\nmsgid \"00001\"\nmsgstr \"I am the healer here. Hsu fell.\"\n", None).unwrap();
+        let text = GameText::parse(PO, Some(2)).unwrap();
+        let things = [thing("ACTOR_HEALER", "", ""), thing("FLAG_HEALERS_WAREHOUSE", "", ""), thing("ACTOR_HSU", "", "")];
+        let alone = analyze(&things, &[], &text, &HashMap::new());
+        assert!(alone.words.iter().any(|(word, _)| word == "healer") && alone.twin_words.is_empty(), "no twin, no twin's words");
+        let analysis = analyze(&things, &[], &GameText::parse(PO, Some(2)).unwrap().with_twin(&twin), &HashMap::new());
+        let flagged: Vec<&str> = analysis.words.iter().map(|(word, _)| word.as_str()).collect();
+        assert_eq!(flagged, ["warehouse"]);
+        assert_eq!(analysis.twin_words, [("healer".to_string(), vec![0]), ("healers".to_string(), vec![1]), ("hsu".to_string(), vec![2])]);
+        assert_eq!(analysis.rows[1].words, ["warehouse"], "the twin's word leaves the name");
+        assert!(text.uses("tree") && !twin.with_twin(&text).uses("tree"), "the twin's words are not the game's own");
+    }
+
+    #[test]
+    fn words_the_glossary_defines() {
+        let glossary = concat!(
+            "# Glossary\n\n### Main routine\n\nThe main routine starts the next sequence and the music.\n\n",
+            "Evidence: tradition.\n\n### Heap and pools\n\nMemory.\n\n### Sound\n\nBelow 80 it is music.\n\nEvidence: Camelot: the credits'\n\"Music\" and \"Sound\nEffects\".\n",
+        );
+        let text = GameText::parse(PO, Some(2)).unwrap().with_glossary(glossary);
+        assert!(text.glossary_defines("routine") && text.glossary_defines("Music") && text.glossary_defines("effects"));
+        assert!(!text.glossary_defines("sequence"), "a word of an entry's prose is not defined by it");
+        assert!(!text.glossary_defines("credits"), "the evidence's own words are not quoted");
+        let function = |name: &str| Thing { kind: "function", ..thing(name, "", "") };
+        let seen = Thing { evidence: vec!["★ Named from its picture: a pool of water".to_string()], ..thing("ACTOR_POOL", "", "") };
+        let things = [function("MainRoutine_Run"), function("Scene_PlayWarehouseMusic"), function("Scene_ReturnFromSequence"), seen, function("Sound_PlayFromPool")];
+        let analysis = analyze(&things, &[], &text, &HashMap::new());
+        let flagged: Vec<&str> = analysis.words.iter().map(|(word, _)| word.as_str()).collect();
+        assert_eq!(flagged, ["from", "play", "pool", "return", "sequence", "warehouse"], "a word a seen name uses stays");
+        assert!(!flagged.contains(&"sound"), "the glossary's word, not seen in its other use");
+        assert_eq!(analysis.glossary_words, [("main".to_string(), vec![0]), ("music".to_string(), vec![1]), ("routine".to_string(), vec![0]), ("sound".to_string(), vec![4])]);
+        assert_eq!(analysis.rows[1].words, ["play", "warehouse"]);
     }
 
     #[test]

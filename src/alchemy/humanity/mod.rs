@@ -2259,8 +2259,29 @@ pub fn area_count(rules: &str) -> Option<usize> {
         .map(|max| max + 1)
 }
 
-/// A game's English text, if git tracks one.
+/// The game whose text a game's twin words come from: The Lost Age is
+/// written as The Broken Seal expanded and takes its words (H6), not the
+/// other way round.
+const TWIN: [(&str, &str); 1] = [("tla", "tbs")];
+
+/// A game's English text, if git tracks one, with the words its glossary
+/// (`games/<game>/glossary.md`, which the docs site prints) defines and its
+/// twin's words.
 fn game_text(root: &Path, game: &str) -> Result<Option<GameText>, String> {
+    let glossary = std::fs::read(root.join(format!("games/{game}/glossary.md"))).ok();
+    let text = own_text(root, game)?.map(|text| match &glossary {
+        Some(glossary) => text.with_glossary(&String::from_utf8_lossy(glossary)),
+        None => text,
+    });
+    let Some(&(_, twin)) = TWIN.iter().find(|(of, _)| *of == game) else { return Ok(text) };
+    Ok(match (text, own_text(root, twin)?) {
+        (Some(text), Some(twin)) => Some(text.with_twin(&twin)),
+        (text, _) => text,
+    })
+}
+
+/// A game's own English text, if git tracks one.
+fn own_text(root: &Path, game: &str) -> Result<Option<GameText>, String> {
     let path = format!("games/{game}/text/en.po");
     let tracked = std::process::Command::new("git").arg("-C").arg(root).args(["ls-files", "--"]).arg(&path).output();
     let Some(po) = tracked.ok().filter(|tracked| !tracked.stdout.is_empty()).and_then(|_| std::fs::read(root.join(&path)).ok()) else {
@@ -2432,6 +2453,8 @@ const ROWS: &[(&str, &str)] = &[
     ("unused_words", "words the game never uses"),
     ("unused_word_name", "  names using them"),
     ("seen_words", "words for what the player sees, by a render"),
+    ("twin_words", "words from The Broken Seal's text"),
+    ("glossary_words", "words the glossary defines"),
     ("door_words", "door words unresolved"),
     ("door_word_link", "  links using them"),
     ("", "names to guess (one word per idea):"),
@@ -2483,6 +2506,8 @@ impl Report {
             "duplicate_table_copies" => Report::copies(&self.table_groups) as u64,
             "unused_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.words.len() as u64),
             "seen_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.seen_words.len() as u64),
+            "twin_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.twin_words.len() as u64),
+            "glossary_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.glossary_words.len() as u64),
             "door_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.door_words.len() as u64),
             _ => self.total(metric),
         }
@@ -2620,8 +2645,9 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
 
 /// The lists `--list` takes beside the table's metrics: the name provenance
 /// worklist, the words the game never uses, those set apart as what the
-/// player sees, and those no door resolves.
-const WORD_LISTS: [&str; 4] = ["provenance", "unused_word", "seen_word", "door_word"];
+/// player sees, the twin's text's or the glossary's, and those no door
+/// resolves.
+const WORD_LISTS: [&str; 6] = ["provenance", "unused_word", "seen_word", "twin_word", "glossary_word", "door_word"];
 
 /// Whether `--list` knows a metric: one the table counts, or a word list.
 fn listable(metric: &str) -> bool {
@@ -2643,6 +2669,8 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
                 let words = match metric {
                     "unused_word" => &analysis.words,
                     "seen_word" => &analysis.seen_words,
+                    "twin_word" => &analysis.twin_words,
+                    "glossary_word" => &analysis.glossary_words,
                     _ => &analysis.door_words,
                 };
                 for (word, rows) in words {
@@ -2693,7 +2721,7 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
 pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, String> {
     if let Some(metric) = metric.filter(|metric| !listable(metric)) {
         return Err(format!(
-            "--list takes a metric of the table, as humanity.tsv names it, or provenance, unused_word, seen_word or door_word, not {metric}"
+            "--list takes a metric of the table, as humanity.tsv names it, or provenance, unused_word, seen_word, twin_word, glossary_word or door_word, not {metric}"
         ));
     }
     let reports = std::thread::scope(|scope| {
