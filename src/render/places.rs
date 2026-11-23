@@ -2032,7 +2032,7 @@ impl Context<'_> {
     fn set_off(&self, started: &[(u8, u32, u32)], scene: u16) -> String {
         let named: Vec<String> = started
             .iter()
-            .map(|&(kind, value, ran)| format!("{} ({} {value})", self.name_of(scene, ran), super::field::kind_label(kind)))
+            .map(|&(kind, _, ran)| format!("{} ({})", self.name_of(scene, ran), super::field::kind_label(kind)))
             .collect();
         named.join(", ")
     }
@@ -2144,6 +2144,16 @@ pub fn variant_candidates(events: &[Event], flags: &Flags) -> BTreeMap<u16, Vec<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_start_by_cells_plays_the_row_they_answer() {
+        // Apojii: the stream bank's row (33) first, the weeds' (21) second.
+        assert_eq!(row_for_cells(&[33, 21], 33, &[21, 255]), Some(21));
+        assert_eq!(row_for_cells(&[33, 21], 21, &[21, 255]), None);
+        assert_eq!(row_for_cells(&[33, 21], 33, &[33, 21]), None);
+        assert_eq!(row_for_cells(&[33, 21], 33, &[5]), None);
+        assert_eq!(row_for_cells(&[33], 33, &[21]), None);
+    }
 
     #[test]
     fn an_older_index_keeps_its_columns_by_name() {

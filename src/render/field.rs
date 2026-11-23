@@ -104,6 +104,11 @@ const GRID: i32 = 128;
 /// leader pushes against, and the wall.
 const CELL_EVENT_LAST: i32 = 239;
 const CELL_LEDGE: i32 = 252;
+/// The overhead layer's code for ground Sand can move on (The Lost Age's
+/// CELL_BEHAVIOR_SAND).
+const CELL_SAND: u16 = 232;
+/// The Lost Age's Sand (ABILITY_SAND).
+const SAND: u16 = 0x8b;
 const CELL_CLIMB: i32 = 253;
 const CELL_JUMP: i32 = 254;
 pub(super) const CELL_WALL: i32 = 255;
@@ -3529,6 +3534,27 @@ impl<'rom> Field<'rom> {
             }
             if !out.is_empty() {
                 return Ok(out);
+            }
+            // Sand finds its events only cast on sand (MapGrid_IsSandCell:
+            // the overhead layer's CELL_BEHAVIOR_SAND): it is cast on the
+            // sand cells he can walk to, the nearest first.
+            if trigger == Trigger::Cast(SAND) && self.s.l.game == super::layout::Game::Tla {
+                let reach = self.reach(None)?;
+                let mut sand: Vec<Spot> = Vec::new();
+                for (_, cx, cz) in self.cells_with_code(CELL_SAND)?.into_iter().filter(|&(layer, _, _)| layer == 2) {
+                    let (x, z) = (cx * 16 + 8, cz * 16 + 8);
+                    if reach.holds(reach.layer, x, z) && self.cell(reach.layer, cx, cz) != CELL_WALL {
+                        let height = self.ground(reach.layer, x, z)?;
+                        sand.push(Spot { x, z, layer: reach.layer, height, facing, walk: 0, cell: Some((cx, cz)) });
+                    }
+                }
+                sand.sort_by_key(|s| (s.x - here.x).pow(2) + (s.z - here.z).pow(2));
+                if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+                    eprintln!("    sand: {} cells he can walk to", sand.len());
+                }
+                if !sand.is_empty() {
+                    return Ok(sand);
+                }
             }
             // A cast anywhere for what its event draws somewhere (Reveal on a
             // hidden door) is made where it reaches that, then where he is.

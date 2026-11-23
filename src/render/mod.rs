@@ -1866,9 +1866,17 @@ mod tests {
     /// Every staging option of `render event` is read and named in its usage.
     #[test]
     fn every_staging_option_is_in_the_usage() {
-        for option in ["--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then"] {
+        for option in ["--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party"] {
             assert!(stage::Stage::is_option(option));
             assert!(SCENES_USAGE.contains(&format!("{option} ")), "{option} is not in SCENES_USAGE");
+        }
+    }
+
+    /// Every option of `render probe --only scene` is named in its usage.
+    #[test]
+    fn every_scene_probe_option_is_in_the_usage() {
+        for option in ["--hide-actor", "--mark-cells", "--cells", "--map"] {
+            assert!(PROBE_USAGE.contains(&format!("{option} ")), "{option} is not in PROBE_USAGE");
         }
     }
 
