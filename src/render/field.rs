@@ -2002,6 +2002,20 @@ impl<'rom> Field<'rom> {
         i32::from(self.gba.read8(cells + (((cx + (cz << 7)) << 2) + 2) as u32))
     }
 
+    /// The collision code of cell (cx, cz) as a walk is planned over it
+    /// (Field::reach, Field::moves): The Lost Age marks a ledge, a wall he
+    /// can climb and a gap he jumps across by MapCell.attributeB's bits
+    /// (MAP_CELL_LEDGE, MAP_CELL_CLIMBABLE, MAP_CELL_JUMP) on open ground,
+    /// where The Broken Seal gives them codes of their own; they are read
+    /// as those codes.
+    fn walk_cell(&self, layer: u8, cx: i32, cz: i32) -> i32 {
+        let code = self.cell(layer, cx, cz);
+        if code != 0 || self.s.l.game != super::layout::Game::Tla || self.world() {
+            return code;
+        }
+        tla_walk_code(code, (self.cell_word(layer, cx, cz) >> 24) as u8)
+    }
+
     /// Where map layer `layer`'s cells begin in the map's cell buffer (the
     /// grid map.txt and the scenes' sources number cells by): its window's
     /// origin, (column, row). The game reads and draws a layer's cell
@@ -2493,10 +2507,12 @@ impl<'rom> Field<'rom> {
             return Ok(format!("--walk-to {},{} is on layer {layer}, and he walks on layer {}: no walk is planned across layers", to.0, to.1, leader.layer));
         }
         self.cross_events = true;
-        let planned = self.reach(None).and_then(|reach| self.moves(&reach, &[Some(cell)]));
+        let reach = self.reach(None);
+        let planned = reach.as_ref().map_err(String::clone).and_then(|reach| self.moves(reach, &[Some(cell)]));
         self.cross_events = false;
         let Some(path) = approach::route(&planned?, from, cell) else {
-            return Ok(format!("no walk leads from cell ({}, {}) to cell ({}, {}) of layer {layer} in his room", from.0, from.1, cell.0, cell.1));
+            let cells = reach.map_or(0, |r| r.cells.iter().filter(|&&c| c).count());
+            return Ok(format!("no walk leads from cell ({}, {}) to cell ({}, {}) of layer {layer} in his room: he can walk to {cells} cells from there", from.0, from.1, cell.0, cell.1));
         };
         let (mut moving, mut pad) = (Vec::new(), Pad::default());
         let followed = self.follow(&path, 0, &mut moving, &mut pad);
@@ -2895,7 +2911,7 @@ impl<'rom> Field<'rom> {
         let mut crossed: HashMap<i32, bool> = HashMap::new();
         let mut stops = Vec::new();
         while let Some(c) = queue.pop_front() {
-            let here = self.cell(layer, c.0, c.1);
+            let here = self.walk_cell(layer, c.0, c.1);
             // An exit's cell, and one with the code of the touch being
             // played, are reached but not crossed: stepping on it would
             // leave or start the event, so what lies only beyond it (the
@@ -2913,7 +2929,7 @@ impl<'rom> Field<'rom> {
                 if !within(n) {
                     continue;
                 }
-                let code = self.cell(layer, n.0, n.1);
+                let code = self.walk_cell(layer, n.0, n.1);
                 if !cells[index(n)] && code >= 0 && code != CELL_WALL && self.passable(layer, c, d)? {
                     cells[index(n)] = true;
                     queue.push_back(n);
@@ -2959,7 +2975,7 @@ impl<'rom> Field<'rom> {
                 }
                 for k in reach_cells {
                     let m = (c.0 + STEP[d].0 * k, c.1 + STEP[d].1 * k);
-                    let beyond = self.cell(layer, m.0, m.1);
+                    let beyond = self.walk_cell(layer, m.0, m.1);
                     if !within(m) || beyond < 0 {
                         break;
                     }
@@ -3227,7 +3243,7 @@ impl<'rom> Field<'rom> {
             open.entry(c)
                 .or_insert_with(|| {
                     let (x, z) = (c.0 * 16 + 8, c.1 * 16 + 8);
-                    let code = field.cell(layer, c.0, c.1);
+                    let code = field.walk_cell(layer, c.0, c.1);
                     let free = !stage.iter().any(|&(_, ax, az)| (ax - x).abs() < 16 && (az - z).abs() < 16);
                     if !reach.holds(layer, x, z) || !field.inside(x, z, 8) || !free {
                         return None;
@@ -3251,13 +3267,13 @@ impl<'rom> Field<'rom> {
                 if ways(self, c).is_none() {
                     continue;
                 }
-                let here = self.cell(layer, cx, cz);
+                let here = self.walk_cell(layer, cx, cz);
                 for d in 0..4 {
                     let n = (cx + STEP[d].0, cz + STEP[d].1);
                     if !allows(ways(self, c), d) || !allows(ways(self, n), d) {
                         continue;
                     }
-                    let there = self.cell(layer, n.0, n.1);
+                    let there = self.walk_cell(layer, n.0, n.1);
                     if here == CELL_CLIMB && there == CELL_CLIMB && STEP[d].1 != 0 {
                         out.push(Move { from: c, to: n, keys: KEYS[d], how: How::Climb });
                         continue;
@@ -3277,7 +3293,7 @@ impl<'rom> Field<'rom> {
                     let from = height(self, cx * 16 + 8, cz * 16 + 8)?;
                     for k in 1..=4 {
                         let m = (cx, cz + k);
-                        let beyond = self.cell(layer, m.0, m.1);
+                        let beyond = self.walk_cell(layer, m.0, m.1);
                         if beyond == CELL_WALL || beyond == CELL_LEDGE {
                             continue;
                         }
@@ -5434,6 +5450,18 @@ fn shorten_blanks(frames: Vec<Vec<u16>>, keep: usize) -> Vec<Vec<u16>> {
 /// A field Psynergy's reach by its ability id: its range
 /// (gFieldEffect_TargetRangeByMode, by field kind) and the height between the
 /// leader and the actor it allows, in pixels and 16.16 pixels.
+/// The Lost Age's cell on open ground (`code` 0) read by its attribute
+/// bits (MapCell.attributeB) as the code The Broken Seal gives the same
+/// ground: a wall he climbs, a gap he jumps, a ledge he drops from.
+fn tla_walk_code(code: i32, attributes: u8) -> i32 {
+    match code {
+        0 if attributes & 0x40 != 0 => CELL_CLIMB,
+        0 if attributes & 0x80 != 0 => CELL_JUMP,
+        0 if attributes & 0x20 != 0 => CELL_LEDGE,
+        _ => code,
+    }
+}
+
 fn psynergy_reach(ability: u16) -> (i32, i32) {
     match ability {
         // Mind Read: 32 pixels, 16 high.
@@ -5950,6 +5978,16 @@ mod tests {
         assert_eq!(KEYS[nearest_way(0xf800)], KEY_RIGHT);
         assert_eq!(KEYS[nearest_way(0x4100)], KEY_DOWN);
         assert_eq!(KEYS[nearest_way(0x8000)], KEY_LEFT);
+    }
+
+    #[test]
+    fn the_lost_age_s_attribute_bits_read_as_codes_for_a_walk() {
+        assert_eq!(tla_walk_code(0, 0x40), CELL_CLIMB);
+        assert_eq!(tla_walk_code(0, 0xc0), CELL_CLIMB);
+        assert_eq!(tla_walk_code(0, 0x80), CELL_JUMP);
+        assert_eq!(tla_walk_code(0, 0x20), CELL_LEDGE);
+        assert_eq!(tla_walk_code(0, 0x02), 0);
+        assert_eq!(tla_walk_code(34, 0x40), 34);
     }
 
     #[test]
