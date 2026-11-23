@@ -4164,8 +4164,13 @@ pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, Stri
                     let mut report = game_all(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names, &judged, &duplicates);
                     let rows: Vec<String> = names.iter().filter(|row| row.kind == "its number").map(|row| row.name.clone()).collect();
                     let paths = tracked(root, &[format!("games/{game}")])?;
-                    let symbols = layout::numbered_symbols(&symbol_texts(root, &paths)?);
-                    layout::count(&mut report, game, &paths, &rows, &symbols);
+                    let texts = symbol_texts(root, &paths)?;
+                    let symbols = layout::numbered_symbols(&texts);
+                    let mut songs = Vec::new();
+                    for path in paths.iter().filter(|path| path.contains("/sound/songs/") && path.ends_with(".mid")) {
+                        songs.push((path.clone(), std::fs::read(root.join(path)).map_err(|error| format!("cannot read {path}: {error}"))?));
+                    }
+                    layout::count(&mut report, game, &paths, &rows, &symbols, &layout::uses(&texts, &songs));
                     Ok::<Report, String>(report)
                 })
             })
