@@ -63,6 +63,232 @@ const KEYWORDS: &[&str] = &[
     "__attribute__", "__inline__", "__volatile__", "typeof", "__typeof__", "_Bool", "__extension__", "defined",
 ];
 
+/// The macros standard C or its compilers give every program, which a
+/// game's headers write out because it builds without the C library: their
+/// names are their documentation.
+const STANDARD_MACROS: &[&str] = &["NULL", "TRUE", "FALSE", "offsetof", "UNUSED"];
+
+/// Whether a routine is the compiler's, the C library's or the BIOS's,
+/// named as those name it (`__divsi3`, `_call_via_r0`, `abs`, `Bios_CpuSet`):
+/// its documentation is theirs.
+fn is_library_routine(name: &str) -> bool {
+    name.starts_with("__")
+        || name.starts_with("_call_via_")
+        || name.starts_with("Bios_")
+        || matches!(name, "abs" | "labs" | "memcpy" | "memset" | "memcmp" | "memmove" | "strlen" | "strcmp" | "strcpy")
+}
+
+/// Whether a word names a type: C's own, or the game's integer, fixed-point
+/// and boolean types (`u8`, `vs16`, `FIXED`, `bool8`).
+fn is_type_word(text: &str) -> bool {
+    static TYPE: OnceLock<Regex> = OnceLock::new();
+    let pattern = TYPE.get_or_init(|| Regex::new(r"^(?:v?[us](?:8|16|32|64)|FIXED|bool(?:8|16|32)?|size_t)$").unwrap());
+    pattern.is_match(text) || matches!(text, "struct" | "union" | "enum" | "void" | "const" | "volatile" | "unsigned" | "signed" | "char" | "int" | "short" | "long")
+}
+
+/// The name an object-like macro's body views, and how many casts it
+/// takes to: `gWindowWork` of `((struct WindowWork *)gWindowWork[0])`,
+/// `gHeapSlots` of `(*(struct BattleMenuWork **)&gHeapSlots[HEAP_SLOT_BATTLE_MENU])`,
+/// `gWaitForFlashWrite` of `gWaitForFlashWrite`. Any other body, a
+/// number or a computation, views nothing.
+fn view_target<'t>(body: &[&'t str]) -> Option<(&'t str, usize)> {
+    let close_of = |tokens: &[&str]| -> Option<usize> {
+        let mut depth = 0;
+        for (at, text) in tokens.iter().enumerate() {
+            match *text {
+                "(" => depth += 1,
+                ")" => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(at);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    };
+    let is_name = |text: &str| text.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') && !is_keyword(text) && !is_type_word(text);
+    let mut tokens = body;
+    let mut casts = 0;
+    loop {
+        match tokens.first().copied() {
+            Some("*" | "&") => tokens = &tokens[1..],
+            Some("(") => {
+                let close = close_of(tokens)?;
+                if close == tokens.len() - 1 {
+                    tokens = &tokens[1..close];
+                    continue;
+                }
+                let inner = &tokens[1..close];
+                let typed = inner.first().is_some_and(|first| is_type_word(first) || first.starts_with(|c: char| c.is_ascii_uppercase()));
+                let plain = inner.iter().all(|text| matches!(*text, "*" | "(" | ")" | ",") || text.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_'));
+                if !(typed && plain) {
+                    return None;
+                }
+                casts += 1;
+                tokens = &tokens[close + 1..];
+            }
+            _ => break,
+        }
+    }
+    let (&target, mut rest) = tokens.split_first()?;
+    if !is_name(target) {
+        return None;
+    }
+    while let Some((&first, after)) = rest.split_first() {
+        match first {
+            "->" | "." if after.first().is_some_and(|name| is_name(name)) => rest = &after[1..],
+            "[" => {
+                let mut depth = 0;
+                let close = rest.iter().position(|text| {
+                    match *text {
+                        "[" => depth += 1,
+                        "]" => depth -= 1,
+                        _ => {}
+                    }
+                    depth == 0
+                })?;
+                rest = &rest[close + 1..];
+            }
+            _ => return None,
+        }
+    }
+    Some((target, casts))
+}
+
+/// The routine a function body is one call to, its result returned or
+/// not, its arguments calling nothing (`return Party_ListMembers(owners);`).
+fn one_call<'t>(body: &[&'t str]) -> Option<&'t str> {
+    let body = body.strip_prefix(&["return"]).unwrap_or(body);
+    let [callee, "(", arguments @ .., ")", ";"] = body else { return None };
+    if !callee.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') || is_keyword(callee) {
+        return None;
+    }
+    let mut depth = 0;
+    for (at, text) in arguments.iter().enumerate() {
+        match *text {
+            "(" => {
+                // A call among the arguments: more than one call.
+                if at > 0 && arguments[at - 1].starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') && !is_keyword(arguments[at - 1]) {
+                    return None;
+                }
+                depth += 1;
+            }
+            ")" => {
+                depth -= 1;
+                if depth < 0 {
+                    return None;
+                }
+            }
+            _ => {}
+        }
+    }
+    (depth == 0).then_some(*callee)
+}
+
+/// The text's arguments of a call, split at its top-level commas, from just
+/// after its `(`: `ACTOR_PLACEMENT(SPRITE_STAKE, ..., 0, 0, 0, ...)`.
+fn call_arguments(text: &str) -> Vec<String> {
+    let mut arguments = vec![String::new()];
+    let mut depth = 0;
+    for c in text.chars() {
+        match c {
+            '(' => depth += 1,
+            ')' if depth == 0 => break,
+            ')' => depth -= 1,
+            ',' if depth == 0 => {
+                arguments.push(String::new());
+                continue;
+            }
+            _ => {}
+        }
+        arguments.last_mut().expect("one").push(c);
+    }
+    arguments.into_iter().map(|argument| argument.split_whitespace().collect::<Vec<_>>().join(" ")).collect()
+}
+
+/// The actors a scene file places at its map's origin, (0, 0), where no
+/// camera of the map looks: each enum of its placed actors (`=
+/// ACTOR_FIRST_PLACED`) is matched to the placement table whose name's
+/// words its tag holds most of (`gMarsLighthouseEntrance_FuguePlacements`
+/// for `enum MarsLighthouseEntranceFugueActorId`), and its n-th actor to the
+/// table's n-th row, the first branch of an `#if` read. A row placed at a
+/// scene point instead (`ACTOR_PLACEMENT_AT_SCENE_POINT`) is not at the
+/// origin.
+pub fn placed_at_origin(text: &str) -> Vec<String> {
+    static ENUM: OnceLock<Regex> = OnceLock::new();
+    static TABLE: OnceLock<Regex> = OnceLock::new();
+    let enums = ENUM.get_or_init(|| Regex::new(r"enum\s+(\w+)\s*\{([^}]*)\}").unwrap());
+    let tables = TABLE.get_or_init(|| Regex::new(r"struct\s+ActorPlacement\s+(\w+)\s*\[\s*\]\s*=\s*\{").unwrap());
+    let words = |name: &str| -> BTreeSet<String> {
+        provenance::pieces(name)
+            .into_iter()
+            .map(str::to_ascii_lowercase)
+            .filter(|word| !matches!(word.as_str(), "g" | "actor" | "id" | "placements"))
+            .collect()
+    };
+    // Each table's rows, as (x, z), and the words of its name.
+    let mut rows: Vec<(BTreeSet<String>, Vec<Option<(String, String)>>)> = Vec::new();
+    for found in tables.captures_iter(text) {
+        let body_start = found.get(0).expect("match").end();
+        let body = &text[body_start..text[body_start..].find("};").map_or(text.len(), |end| body_start + end)];
+        let mut placed = Vec::new();
+        let mut skipping: Vec<bool> = Vec::new();
+        let mut line_start = 0;
+        for line in body.split_inclusive('\n') {
+            let at = line_start;
+            line_start += line.len();
+            let directive = line.trim_start().strip_prefix('#').map(str::trim_start);
+            match directive {
+                Some(rest) if rest.starts_with("if") => skipping.push(false),
+                Some(rest) if rest.starts_with("el") => {
+                    if let Some(last) = skipping.last_mut() {
+                        *last = true;
+                    }
+                }
+                Some(rest) if rest.starts_with("endif") => {
+                    skipping.pop();
+                }
+                _ if skipping.iter().any(|skip| *skip) => {}
+                _ => {
+                    for (offset, _) in line.match_indices("ACTOR_PLACEMENT(") {
+                        let arguments = call_arguments(&body[at + offset + "ACTOR_PLACEMENT(".len()..]);
+                        let at_point = arguments.last().is_some_and(|flags| flags.contains("SCENE_POINT"));
+                        placed.push((arguments.len() > 5 && !at_point).then(|| (arguments[3].clone(), arguments[5].clone())));
+                    }
+                }
+            }
+        }
+        rows.push((words(&found[1]), placed));
+    }
+    let mut out = Vec::new();
+    for found in enums.captures_iter(text) {
+        let tag = words(&found[1]);
+        let Some((_, placed)) = rows.iter().filter(|(table, _)| !table.is_empty() && table.is_subset(&tag)).max_by_key(|(table, _)| table.len()) else {
+            continue;
+        };
+        let body: String = found[2].lines().map(|line| line.split("//").next().unwrap_or("")).collect::<Vec<_>>().join(" ");
+        let mut index: Option<usize> = None;
+        for entry in body.split(',') {
+            let (name, value) = entry.split_once('=').map_or((entry.trim(), None), |(name, value)| (name.trim(), Some(value.trim())));
+            if name.is_empty() {
+                continue;
+            }
+            index = match (index, value) {
+                (_, Some("ACTOR_FIRST_PLACED")) => Some(0),
+                (Some(_), Some(_)) | (None, _) => None,
+                (Some(at), None) => Some(at + 1),
+            };
+            let Some(at) = index else { continue };
+            if placed.get(at).cloned().flatten().is_some_and(|(x, z)| x == "0" && z == "0") {
+                out.push(name.to_string());
+            }
+        }
+    }
+    out
+}
+
 /// Word stems before a digit run that name hardware or a convention, not a
 /// meaning still to find: `BG2`, `Dma3`, `TM0`, `DISPCNT_MODE_1`, `TBS_PATCH_1`.
 const NUMBERED_STEMS: &[&str] = &[
@@ -102,6 +328,8 @@ struct Declared {
     /// The row that sets it apart when it has no `///` of its own (D9's
     /// rules: `undocumented_run` and the rest).
     apart: Option<&'static str>,
+    /// The routine its body is one call to, for a forwarder.
+    forward: Option<String>,
 }
 
 /// One game's counts.
@@ -125,6 +353,11 @@ pub struct Report {
     /// One body under several names the ROM keeps apart, said so in its
     /// comments (`duplicates`).
     pub said_groups: Vec<Group>,
+    /// The groups someone judged not to be one text, by a row of
+    /// `evidence/<game>-duplicates.tsv`, each with its row's kind and why.
+    pub judged_groups: Vec<(Group, String, String)>,
+    /// Those rows, by the group's key (`group_key`).
+    duplicate_rows: HashMap<String, (String, String)>,
     /// Each file and what it `#include`s, as written.
     includes: Vec<(String, String)>,
     /// Every file read.
@@ -212,6 +445,30 @@ pub struct Report {
     /// Message symbols whose own text says `unknown` (`MsgDetailsUnknown`):
     /// the game's word, no placeholder.
     text_unknown: HashSet<String>,
+    /// Each macro, whether it has its `///` or a rule sets it apart that
+    /// leaves nothing to mark, for what a view views.
+    macro_docs: HashMap<String, bool>,
+    /// Each undocumented object-like macro that views one name (file, line,
+    /// name, the name it views, how many casts), settled once every
+    /// declaration is read.
+    views: Vec<(String, usize, String, String, usize)>,
+    /// Each routine a scene's overlay defines (file, name, marked `UNUSED`),
+    /// and how many times each scene file writes each name, for the routines
+    /// nothing runs.
+    scene_routines: Vec<(String, String, bool)>,
+    scene_names: HashMap<String, HashMap<String, usize>>,
+    /// The routines nothing runs: marked `UNUSED`, or a scene's that its
+    /// overlay writes only where it defines it (file, name).
+    pub never_run: HashSet<(String, String)>,
+    /// Each routine's copies of the same body in other files (file, name),
+    /// by its file and name.
+    pub same_body: HashMap<(String, String), Vec<(String, String)>>,
+    /// The actors a scene places at its map's origin and no routine of its
+    /// file names, so never moved into any camera's sight (file, name).
+    pub at_origin: HashSet<(String, String)>,
+    /// The names a scene file's routines write, for the actors no routine
+    /// moves.
+    moved: HashSet<(String, String)>,
 }
 
 /// A number in code, with each call around it and the argument it fills
@@ -372,11 +629,8 @@ impl Report {
         self.names.get(kind).map_or(0, BTreeSet::len)
     }
 
-    fn declare(&mut self, function: bool, name: &str, file: &str, line: usize, documented: bool, defined: bool) {
-        self.declare_apart(function, name, file, line, documented, defined, None);
-    }
-
-    /// `declare`, with the row that sets it apart if it has no `///`.
+    /// Keep a routine or global's declaration, with the row that sets it
+    /// apart if it has no `///`.
     #[allow(clippy::too_many_arguments)]
     fn declare_apart(&mut self, function: bool, name: &str, file: &str, line: usize, documented: bool, defined: bool, apart: Option<&'static str>) {
         let map = if function { &mut self.functions } else { &mut self.globals };
@@ -387,6 +641,9 @@ impl Report {
         }
         entry.entry |= file.contains("/include/gamepak/far_call/") || file.contains("/include/farcall/");
         if defined && !entry.defined {
+            // Counted where it is defined, so set apart as it is there, else
+            // as it is where first declared.
+            entry.apart = apart.or(entry.apart);
             entry.defined = true;
             entry.file = file.to_string();
             entry.line = line;
@@ -808,6 +1065,11 @@ impl Report {
         let far = |functions: &BTreeMap<String, Declared>, name: &str| {
             name.strip_suffix("Far").and_then(|routine| functions.get(routine)).is_some_and(|routine| routine.documented)
         };
+        // A routine is said where it has its `///`, as a far call by its
+        // target's, or as the compiler's, the C library's or the BIOS's.
+        let said = |functions: &BTreeMap<String, Declared>, name: &str| {
+            functions.get(name).is_some_and(|routine| routine.documented) || far(functions, name) || is_library_routine(name)
+        };
         for (function, kind) in [(true, "undocumented_function"), (false, "undocumented_global")] {
             let missing: Vec<(String, usize, String, &str)> = (if function { &self.functions } else { &self.globals })
                 .iter()
@@ -815,12 +1077,33 @@ impl Report {
                 .map(|(name, declared)| {
                     let apart = if function && far(&self.functions, name) { Some("undocumented_far") } else { declared.apart };
                     let apart = apart.or_else(|| (!function && self.id_externs.contains(name)).then_some("undocumented_id"));
+                    let apart = apart.or_else(|| (function && is_library_routine(name)).then_some("undocumented_library"));
+                    // A forwarder: its body one call to a routine said
+                    // elsewhere (`return Party_ListMembers(owners);`).
+                    let forwards = declared.forward.as_deref().is_some_and(|target| target != name && said(&self.functions, target));
+                    let apart = apart.or_else(|| (function && forwards).then_some("undocumented_forward"));
                     (declared.file.clone(), declared.line, name.clone(), apart.unwrap_or(kind))
                 })
                 .collect();
             for (file, line, name, kind) in missing {
                 self.note(kind, &file, line, &name);
             }
+        }
+        // A typed view of one name (`((struct WindowWork *)gWindowWork[0])`),
+        // that name said where it is declared: through a cast, any routine,
+        // global or macro; as it is, a global (`#define gLzPackWork
+        // gWaitForFlashWrite`), since a routine's bare name is a parameter of
+        // what it is passed to.
+        for (file, line, name, target, casts) in std::mem::take(&mut self.views) {
+            let global = self.globals.get(&target).is_some_and(|global| {
+                global.documented || global.apart.is_some_and(|apart| !matches!(apart, "undocumented_plain" | "undocumented_note"))
+            });
+            // A routine viewed under its own name (`#define Actor_StartIdleFar
+            // ((void (*)(struct MotionObject *))Actor_StartIdleFar)`) is the
+            // routine's.
+            let other = said(&self.functions, &target) || (target != name && self.macro_docs.get(&target).copied().unwrap_or(false));
+            let viewed = (target != name && global) || (casts > 0 && other);
+            self.note(if viewed { "undocumented_view" } else { "undocumented_macro" }, &file, line, &name);
         }
         // D9 asks every entry point for its summary; any other declaration only
         // where it has something to say, which no count can tell.
@@ -833,11 +1116,106 @@ impl Report {
         for (file, line, name) in entries {
             self.note("undocumented_entry", &file, line, &name);
         }
+        self.unused_placeholders();
         let objects = self.objects();
+        self.never_run(&objects);
+        let moved = std::mem::take(&mut self.moved);
+        self.at_origin.retain(|actor| !moved.contains(actor));
+        // Each routine's copies of the same body, its parameters and locals
+        // renamed aside, in other files.
+        let mut bodies: HashMap<&[String], Vec<(String, String)>> = HashMap::new();
+        for copy in self.copies.iter().filter(|copy| copy.function && !copy.tokens.is_empty()) {
+            bodies.entry(&copy.tokens[..]).or_default().push((copy.file.clone(), copy.name.clone()));
+        }
+        for members in bodies.values().filter(|members| members.len() > 1) {
+            for member in members {
+                let others: Vec<(String, String)> = members.iter().filter(|other| other.0 != member.0).cloned().collect();
+                if !others.is_empty() {
+                    self.same_body.entry(member.clone()).or_default().extend(others);
+                }
+            }
+        }
         let referred = std::mem::take(&mut self.macro_words);
         (self.function_groups, self.table_groups, self.said_groups) =
             duplicates::groups(&std::mem::take(&mut self.copies), FUNCTION_TOKENS, TABLE_TOKENS, &objects, &referred);
+        // A group someone judged, by its row, is counted apart.
+        for groups in [&mut self.function_groups, &mut self.table_groups] {
+            let mut kept = Vec::new();
+            for group in std::mem::take(groups) {
+                match self.duplicate_rows.get(&group_key(&group)) {
+                    Some((kind, why)) => self.judged_groups.push((group, kind.clone(), why.clone())),
+                    None => kept.push(group),
+                }
+            }
+            *groups = kept;
+        }
         self.long_files.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    }
+
+    /// Sets apart a placeholder nothing uses (`placeholder_unused`): its one
+    /// use in the C and headers is where it is defined (an enumerator, a
+    /// macro, a global, a function), and no assembly or macro body writes
+    /// it. Its table row and its file list are that definition and the
+    /// linker's (`SE_120,` in `sounds.h`, a sound nothing plays): S3 keeps
+    /// an unknown a placeholder, and with nothing using it nothing will
+    /// settle it.
+    fn unused_placeholders(&mut self) {
+        let Some(names) = self.names.get("placeholder").cloned() else { return };
+        let mut uses: HashMap<&str, Vec<usize>> = HashMap::new();
+        for (at, item) in self.items.iter().enumerate() {
+            if item.metric == "placeholder" {
+                uses.entry(item.what.as_str()).or_default().push(at);
+            }
+        }
+        let defined: HashSet<(&str, &str, usize)> = self
+            .naming
+            .names
+            .iter()
+            .filter(|name| {
+                matches!(name.kind, NameKind::Enumerator | NameKind::Macro | NameKind::FunctionMacro | NameKind::Global | NameKind::Function)
+            })
+            .map(|name| (name.name.as_str(), name.file.as_str(), name.line))
+            .collect();
+        let mut unused = Vec::new();
+        for name in &names {
+            let Some(&[at]) = uses.get(name.as_str()).map(Vec::as_slice) else { continue };
+            let item = &self.items[at];
+            if defined.contains(&(name.as_str(), item.file.as_str(), item.line)) && !self.macro_words.contains(name) {
+                unused.push((name.clone(), at));
+            }
+        }
+        for (name, at) in unused {
+            let file = self.items[at].file.clone();
+            self.items[at].metric = "placeholder_unused".to_string();
+            if let Some(files) = self.tallies.get_mut("placeholder") {
+                if let Some(count) = files.get_mut(&file) {
+                    *count -= 1;
+                    if *count == 0 {
+                        files.remove(&file);
+                    }
+                }
+            }
+            self.add("placeholder_unused", &file, 1);
+            self.names.entry("placeholder").or_default().remove(&name);
+            self.names.entry("placeholder_unused").or_default().insert(name);
+        }
+    }
+
+    /// The routines nothing runs (`never_run`): marked `UNUSED`, or one a
+    /// scene's overlay writes only where it defines it, in all the files it
+    /// includes, and that no macro or assembly names.
+    fn never_run(&mut self, objects: &HashMap<String, BTreeSet<String>>) {
+        for (file, name, unused) in std::mem::take(&mut self.scene_routines) {
+            let written: usize = objects
+                .iter()
+                .filter(|(_, includers)| includers.contains(&file))
+                .filter_map(|(part, _)| self.scene_names.get(part).and_then(|names| names.get(&name)))
+                .sum();
+            if unused || (is_map_overlay(&file) && written == 1 && !self.macro_words.contains(&name)) {
+                self.never_run.insert((file, name));
+            }
+        }
+        self.scene_names.clear();
     }
 
     /// The objects each file is part of: the files that include it, through
@@ -885,6 +1263,34 @@ impl Report {
     pub fn copies(groups: &[Group]) -> usize {
         groups.iter().map(|group| group.members.len() - 1).sum()
     }
+
+    /// The rows of `evidence/<game>-duplicates.tsv` that judge no group the
+    /// count finds: a member gone, or the members no longer one group. Each
+    /// with what is wrong.
+    pub fn stale_duplicates(&self) -> Vec<(String, String)> {
+        let found: HashSet<String> =
+            self.function_groups.iter().chain(&self.table_groups).chain(&self.said_groups).chain(self.judged_groups.iter().map(|(group, ..)| group)).map(group_key).collect();
+        let mut out = Vec::new();
+        for (members, (kind, _)) in &self.duplicate_rows {
+            if found.contains(members) {
+                continue;
+            }
+            let gone: Vec<&str> = members.split(' ').filter(|name| !self.functions.contains_key(*name) && !self.globals.contains_key(*name)).collect();
+            let what = if gone.is_empty() { "no longer one group".to_string() } else { format!("{} gone", gone.join(", ")) };
+            out.push((members.clone(), format!("{kind}: {what}")));
+        }
+        out.sort();
+        out
+    }
+}
+
+/// A duplicate group's key, as its row of `evidence/<game>-duplicates.tsv`
+/// writes it: its members' names, without their files, sorted and joined
+/// with a space.
+pub fn group_key(group: &Group) -> String {
+    let mut names: Vec<&str> = group.members.iter().map(|member| member.rsplit_once(':').map_or(member.as_str(), |(_, name)| name)).collect();
+    names.sort_unstable();
+    names.join(" ")
 }
 
 /// Whether a line is a comment's (`//`, `/*`, a block's inner or closing
@@ -901,12 +1307,70 @@ fn is_condition_line(line: &str) -> bool {
     ["if", "elif", "else", "endif"].iter().any(|word| rest.starts_with(word))
 }
 
+/// The comment heading a run of declarations: `///`, a `//` to be marked
+/// `///`, or a `//` note D9 keeps as it is (`// UB:`, `// BUG:`, `// DEAD:`,
+/// an `XXX` question, a FAKEMATCH tag), which heads nothing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Head {
+    Doc,
+    Plain,
+    Note,
+}
+
+/// Whether a comment is one D9 keeps as `//` over a declaration: a note of
+/// undefined behaviour, a bug or dead code, an open question or a fake
+/// match's tag.
+fn is_kept_note(comment: &str) -> bool {
+    ["// UB:", "// BUG:", "// DEAD:", "XXX", "FAKEMATCH("].iter().any(|mark| comment.contains(mark))
+}
+
+/// The first line of the logical line `at` is part of, past the lines a
+/// `\` continues.
+fn logical_start(lines: &[&str], mut at: usize) -> usize {
+    while at > 0 && lines[at - 1].trim_end().ends_with('\\') {
+        at -= 1;
+    }
+    at
+}
+
+/// The comment block right above line `at` (from 0), past `#if` lines (a
+/// condition written over several lines too) and `clang-format` switches:
+/// its kind, if there is one.
+fn head_above(lines: &[&str], mut above: usize) -> Option<Head> {
+    while above > 0 {
+        let start = logical_start(lines, above - 1);
+        if is_condition_line(lines[start]) || lines[start].contains("clang-format") {
+            above = start;
+        } else {
+            break;
+        }
+    }
+    let mut head = None;
+    while above > 0 && is_comment_line(lines[above - 1]) {
+        above -= 1;
+        let line = lines[above].trim_start();
+        let own = if line.starts_with("///") || line.starts_with("/**") {
+            Head::Doc
+        } else if is_kept_note(line) {
+            Head::Note
+        } else {
+            Head::Plain
+        };
+        head = Some(match (head, own) {
+            (Some(Head::Doc), _) | (_, Head::Doc) => Head::Doc,
+            (Some(Head::Note), _) | (_, Head::Note) => Head::Note,
+            _ => Head::Plain,
+        });
+    }
+    head
+}
+
 /// The comment over the run of `#define`s each `#define` line belongs to,
-/// by line (from 1): `true` for `///`, `false` for `//`. A run is
-/// consecutive `#define`s, their continuation lines and `#if` lines
-/// between them; a blank line, a comment or any other line ends it. Its
-/// comment is the one right above it, past `#if` and `clang-format` lines.
-fn define_heads(text: &str) -> HashMap<usize, bool> {
+/// by line (from 1). A run is consecutive `#define`s, their continuation
+/// lines and `#if` lines between them; a blank line, a comment or any other
+/// line ends it. Its comment is the one right above it, past `#if` lines
+/// (a `///` over an `#if` heads the run inside it) and `clang-format` lines.
+fn define_heads(text: &str) -> HashMap<usize, Head> {
     let lines: Vec<&str> = text.lines().collect();
     let is_define = |line: &str| line.trim_start().strip_prefix('#').is_some_and(|rest| rest.trim_start().starts_with("define"));
     let mut heads = HashMap::new();
@@ -916,17 +1380,7 @@ fn define_heads(text: &str) -> HashMap<usize, bool> {
             at += 1;
             continue;
         }
-        let mut above = at;
-        while above > 0 && (is_condition_line(lines[above - 1]) || lines[above - 1].contains("clang-format")) {
-            above -= 1;
-        }
-        let mut doc = None;
-        while above > 0 && is_comment_line(lines[above - 1]) {
-            above -= 1;
-            let line = lines[above].trim_start();
-            let own = line.starts_with("///") || line.starts_with("/**");
-            doc = Some(doc.unwrap_or(false) || own);
-        }
+        let head = head_above(&lines, at);
         let mut members = Vec::new();
         while at < lines.len() && (is_define(lines[at]) || is_condition_line(lines[at])) {
             if is_define(lines[at]) {
@@ -937,8 +1391,8 @@ fn define_heads(text: &str) -> HashMap<usize, bool> {
             }
             at += 1;
         }
-        if let Some(doc) = doc {
-            heads.extend(members.into_iter().map(|line| (line, doc)));
+        if let Some(head) = head {
+            heads.extend(members.into_iter().map(|line| (line, head)));
         }
     }
     heads
@@ -1345,12 +1799,24 @@ struct Walk<'r, 'a> {
     lines: Vec<&'a str>,
     /// The comment over each `#define` line's run of `#define`s: `///`
     /// (true) or `//` (false).
-    heads: HashMap<usize, bool>,
+    heads: HashMap<usize, Head>,
     /// The name the last directive, an `#ifndef`, tested: an include guard
     /// if the next defines it.
     guard: Option<String>,
-    /// The last global's last line and the comment over its run.
-    last_global: Option<(usize, Option<bool>)>,
+    /// The last declaration's last line, the comment over its run, and the
+    /// routine its body calls if it is one call (a run of such bodies may
+    /// keep a blank line between them).
+    last_global: Option<(usize, Option<Head>, Option<String>)>,
+    /// The last struct or union this file defined outside a declaration of
+    /// anything else: its tag, whether a `///` documents it, and its last
+    /// line, for a global declared right under it.
+    last_type: Option<(String, bool, usize)>,
+    /// Within an old-style definition's parameter declarations (`void f(x,
+    /// y) s32 x; s16 y; {`), which declare no global.
+    old_style: bool,
+    /// Each object-like macro of this file that views one name through a
+    /// cast or as it is, and how many casts (`view_target`).
+    views: HashMap<String, (String, usize)>,
     /// A file-scope definer's invocation (`DEFINE_LIFT_ROCK(Name, ...)`,
     /// no semicolon): its closing parenthesis, the routine it defines, and
     /// whether a `///` documents it.
@@ -1449,6 +1915,12 @@ impl<'r, 'a> Walk<'r, 'a> {
     fn name(&mut self, name: &str, line: usize) {
         if is_keyword(name) {
             return;
+        }
+        if in_map_folder(self.file) {
+            *self.report.scene_names.entry(self.file.to_string()).or_default().entry(name.to_string()).or_default() += 1;
+            if self.stack.contains(&Brace::Func) {
+                self.report.moved.insert((self.file.to_string(), name.to_string()));
+            }
         }
         for (kind, test) in [("placeholder", is_placeholder as fn(&str) -> bool), ("numbered", is_numbered)] {
             if !test(name) || (kind == "placeholder" && self.report.text_unknown.contains(name)) {
@@ -1760,13 +2232,32 @@ impl<'r, 'a> Walk<'r, 'a> {
                     if let Some(target) = id {
                         self.report.id_externs.insert(target.to_string());
                     }
-                    let apart = if name.text.starts_with("REG_") {
+                    // A macro a routine defines for its own body is no
+                    // declaration, and its comments stay `//` (D9).
+                    let local = self.stack.contains(&Brace::Func);
+                    let apart = if local {
+                        Some("undocumented_local")
+                    } else if name.text.starts_with("REG_") {
                         Some("undocumented_register")
                     } else if id.is_some() {
                         Some("undocumented_id")
+                    } else if STANDARD_MACROS.contains(&name.text) {
+                        Some("undocumented_standard")
                     } else {
-                        self.heads.get(&line).map(|&doc| if doc { "undocumented_run" } else { "undocumented_plain" })
+                        self.heads.get(&line).map(|head| match head {
+                            Head::Doc => "undocumented_run",
+                            Head::Plain => "undocumented_plain",
+                            Head::Note => "undocumented_note",
+                        })
                     };
+                    // One cast of a name (`#define WINDOW_WORK ((struct
+                    // WindowWork *)gWindowWork[0])`), settled once every
+                    // declaration is read.
+                    if apart.is_none() && !function_like {
+                        if let Some((target, casts)) = view_target(&texts) {
+                            self.views.insert(name.text.to_string(), (target.to_string(), casts));
+                        }
+                    }
                     let entry = self.macros.entry(name.text.to_string()).or_insert((false, line, None));
                     entry.0 |= documented;
                     if entry.2.is_none() {
@@ -1989,6 +2480,8 @@ impl<'r, 'a> Walk<'r, 'a> {
             _ if tagged(&["enum"]) => Brace::Enum,
             _ if tagged(&["struct", "union"]) => Brace::Struct,
             None if text(prev) == ")" => Brace::Func,
+            // An old-style definition's body, after its parameters' declarations.
+            None if text(prev) == ";" && self.old_style => Brace::Func,
             _ => Brace::Block,
         }
     }
@@ -2316,8 +2809,11 @@ impl<'r, 'a> Walk<'r, 'a> {
             // defines the routine it names.
             if let Some((close, name, documented)) = self.definer.take() {
                 if close == at {
-                    let line = self.statement.first().map_or(self.code.tokens[at].line, |&first| self.code.tokens[first].line);
-                    self.report.declare(true, &name, self.file, line, documented, true);
+                    let first = self.statement.first().copied().unwrap_or(at);
+                    let line = self.code.tokens[first].line;
+                    let (_, run) = self.run_head(first, at, documented, None);
+                    let apart = (run == Some(Head::Doc)).then_some("undocumented_run");
+                    self.report.declare_apart(true, &name, self.file, line, documented, true, apart);
                     self.named(&name, NameKind::Function, line, None);
                     self.statement.clear();
                 } else {
@@ -2333,8 +2829,16 @@ impl<'r, 'a> Walk<'r, 'a> {
         }
         let file = self.file;
         for (name, (documented, line, apart)) in std::mem::take(&mut self.macros) {
-            if !documented {
-                self.report.note(apart.unwrap_or("undocumented_macro"), file, line, &name);
+            // What a view may view: a macro with its `///`, or one set apart
+            // by a rule that is not a `//` to mark.
+            let said = documented || apart.is_some_and(|apart| !matches!(apart, "undocumented_plain" | "undocumented_note" | "undocumented_local"));
+            *self.report.macro_docs.entry(name.clone()).or_default() |= said;
+            if documented {
+                continue;
+            }
+            match (apart, self.views.remove(&name)) {
+                (None, Some((target, casts))) => self.report.views.push((file.to_string(), line, name, target, casts)),
+                (apart, _) => self.report.note(apart.unwrap_or("undocumented_macro"), file, line, &name),
             }
         }
     }
@@ -2404,16 +2908,34 @@ impl<'r, 'a> Walk<'r, 'a> {
             self.types(&opened, second_last, line, documented);
             return;
         }
+        let old_style = std::mem::take(&mut self.old_style);
         if let Some(&(open, _)) = opened.iter().find(|(_, kind)| *kind == Brace::Func) {
             if let Some(Declarator::Function(name)) = self.declarator(&statement) {
                 let name = name.to_string();
                 self.parameters(&name, &statement, true);
-                self.report.declare(true, &name, file, line, documented, true);
                 let close = self.braces[&open].close;
+                let body: Vec<&str> = self.code.tokens[open + 1..close].iter().filter(|token| !token.pp).map(|token| token.text).collect();
+                let call = one_call(&body).filter(|callee| !self.declares(&statement, callee)).map(str::to_string);
+                let (_, run) = self.run_head(first, last, documented, call.clone());
+                let apart = if body.is_empty() {
+                    Some("undocumented_empty")
+                } else if run == Some(Head::Doc) {
+                    Some("undocumented_run")
+                } else {
+                    None
+                };
+                self.report.declare_apart(true, &name, file, line, documented, true, apart);
+                if let Some(call) = call {
+                    self.report.functions.get_mut(&name).expect("declared").forward.get_or_insert(call);
+                }
                 self.forwards(&name, &statement, open, close);
                 self.conversions(&name, open, close);
                 self.named(&name, NameKind::Function, line, None);
                 self.duplicate(&statement, true, open, &name);
+                if in_map_folder(file) {
+                    let unused = statement.iter().any(|&at| self.code.text(at) == "UNUSED");
+                    self.report.scene_routines.push((file.to_string(), name.clone(), unused));
+                }
                 let own = self.code.doc_text[first].clone();
                 self.thing(&name, Origin::Function, line, own, String::new(), (None, None));
             }
@@ -2426,6 +2948,12 @@ impl<'r, 'a> Walk<'r, 'a> {
             statement.iter().position(|&at| at == close).and_then(|at| statement.get(at + 1)).map(|&at| self.code.text(at))
         });
         if matches!(lead, "struct" | "union" | "enum") && (matches!(after_body, Some(";" | "__attribute__")) || statement.len() == 3) {
+            // `struct BilibinRippleTimer { ... };`, for a global declared
+            // right under it.
+            if lead != "enum" && after_body.is_some() {
+                let tag = self.code.tokens.get(first + 1).filter(|t| t.kind == Kind::Ident).map(|t| t.text.to_string());
+                self.last_type = tag.map(|tag| (tag, documented, self.code.tokens[last].line));
+            }
             return;
         }
         let defined = lead != "extern";
@@ -2433,9 +2961,29 @@ impl<'r, 'a> Walk<'r, 'a> {
             Some(Declarator::Function(name)) => {
                 let name = name.to_string();
                 self.parameters(&name, &statement, false);
-                self.report.declare(true, &name, file, line, documented, false);
+                let (_, run) = self.run_head(first, last, documented, None);
+                let apart = (run == Some(Head::Doc)).then_some("undocumented_run");
+                self.report.declare_apart(true, &name, file, line, documented, false, apart);
                 self.named(&name, NameKind::Prototype, line, None);
+                // `void f(x, y) s32 x;`: an old-style definition, whose
+                // parameters' declarations follow up to its body.
+                let close = statement.iter().position(|&at| self.code.text(at) == name).and_then(|open| {
+                    let mut depth = 0;
+                    statement[open + 1..]
+                        .iter()
+                        .position(|&at| {
+                            match self.code.text(at) {
+                                "(" => depth += 1,
+                                ")" => depth -= 1,
+                                _ => {}
+                            }
+                            depth == 0
+                        })
+                        .map(|close| open + 1 + close)
+                });
+                self.old_style = close.is_some_and(|close| close + 2 < statement.len() && is_type_word(self.code.text(statement[close + 1])));
             }
+            Some(Declarator::Global(_)) if old_style => self.old_style = true,
             Some(Declarator::Global(name)) => {
                 let name = name.to_string();
                 let apart = self.global_apart(&statement, &name, documented);
@@ -2453,6 +3001,12 @@ impl<'r, 'a> Walk<'r, 'a> {
             }
             None => {}
         }
+    }
+
+    /// Whether a function's declaration (its tokens before its body) names
+    /// `name`, as a parameter it calls (`Call1(void (*f)(), s32 a0) { f(a0); }`).
+    fn declares(&self, statement: &[usize], name: &str) -> bool {
+        statement.iter().take_while(|&&at| self.code.text(at) != "{").any(|&at| self.code.text(at) == name)
     }
 
     /// A file-scope invocation of a definer macro at `at`, which takes no
@@ -2476,8 +3030,11 @@ impl<'r, 'a> Walk<'r, 'a> {
         })?;
         let next = (close + 1..tokens.len()).find(|&i| !tokens[i].pp || tokens[i].kind == Kind::PpStart).map(|i| &tokens[i]);
         let ends = next.is_none_or(|next| next.line > tokens[close].line && !matches!(next.text, ";" | "{" | "," | ")" | "=" | "("));
-        let name = tokens.get(at + 2).filter(|t| t.kind == Kind::Ident && t.text.bytes().any(|b| b.is_ascii_lowercase()));
-        let named = name.is_some() && tokens.get(at + 3).is_some_and(|t| matches!(t.text, "," | ")"));
+        // A definer may take the routine's type first (`UNIT_DEFINE_ADD(s32,
+        // Unit_AddHp, hp, hpMax)`).
+        let first = if tokens.get(at + 2).is_some_and(|t| is_type_word(t.text)) && tokens.get(at + 3).is_some_and(|t| t.text == ",") { at + 4 } else { at + 2 };
+        let name = tokens.get(first).filter(|t| t.kind == Kind::Ident && t.text.bytes().any(|b| b.is_ascii_lowercase()));
+        let named = name.is_some() && tokens.get(first + 1).is_some_and(|t| matches!(t.text, "," | ")"));
         (ends && named).then(|| (close, name.map_or(String::new(), |t| t.text.to_string()), self.code.doc_before[at]))
     }
 
@@ -2491,21 +3048,8 @@ impl<'r, 'a> Walk<'r, 'a> {
     /// marked `///` (`undocumented_plain`).
     fn global_apart(&mut self, statement: &[usize], name: &str, documented: bool) -> Option<&'static str> {
         let (first, last) = (statement[0], statement[statement.len() - 1]);
-        let (first_line, last_line) = (self.code.tokens[first].line, self.code.tokens[last].line);
-        // A `///` above heads a run; a `///<` note beside is its own.
-        let own = if self.code.doc_before[first] {
-            Some(true)
-        } else if documented {
-            None
-        } else {
-            let mut above = first_line.saturating_sub(1);
-            while above > 0 && self.lines.get(above - 1).is_some_and(|line| line.contains("clang-format")) {
-                above -= 1;
-            }
-            (above > 0 && self.lines.get(above - 1).is_some_and(|line| is_comment_line(line))).then_some(false)
-        };
-        let run = self.last_global.filter(|(end, _)| end + 1 == first_line).and_then(|(_, head)| head);
-        self.last_global = Some((last_line, own.or(run)));
+        let (own, run) = self.run_head(first, last, documented, None);
+        let first_line = self.code.tokens[first].line;
         let equals = statement.iter().position(|&at| self.code.text(at) == "=");
         let value = equals.and_then(|at| statement.get(at + 1)).map(|&at| &self.code.tokens[at]);
         let script = equals.is_some_and(|at| {
@@ -2517,19 +3061,76 @@ impl<'r, 'a> Walk<'r, 'a> {
         });
         let scene = (self.file.contains("/src/scene/") || self.file.contains("/src/debug/"))
             && (typed || ["Entrances", "Exits", "Triggers", "ActorPlacements", "Regions"].iter().any(|kind| name.contains(kind)));
+        // Declared right under its type, whose `///` says what it holds
+        // (`struct BilibinRippleTimer gBilibin_RippleTimer;` under the
+        // struct's), nothing but blank lines between.
+        let under_type = self.last_type.as_ref().is_some_and(|(tag, said, end)| {
+            *said
+                && statement.windows(2).any(|pair| matches!(self.code.text(pair[0]), "struct" | "union") && self.code.text(pair[1]) == tag)
+                && (*end..first_line.saturating_sub(1)).all(|line| self.lines.get(line).is_some_and(|text| text.trim().is_empty()))
+        });
+        self.last_type = None;
         if documented {
             None
-        } else if run == Some(true) {
+        } else if run == Some(Head::Doc) {
             Some("undocumented_run")
         } else if scene || script {
             Some("undocumented_scene")
         } else if value.is_some_and(|t| t.kind == Kind::Str) {
             Some("undocumented_string")
-        } else if own.or(run) == Some(false) {
-            Some("undocumented_plain")
+        } else if under_type && own.is_none() {
+            Some("undocumented_typed")
         } else {
-            None
+            match own.or(run) {
+                Some(Head::Plain) => Some("undocumented_plain"),
+                Some(Head::Note) => Some("undocumented_note"),
+                _ => None,
+            }
         }
+    }
+
+    /// The comment a declaration from token `first` to `last` has right
+    /// above it (`///`, or a `//` to mark or a note D9 keeps), and the one
+    /// over the run it continues: the declaration ending on the line before,
+    /// or, where both are one call to the same routine (`call`), the one
+    /// before a blank line (`Test_ReceiveFizz` after `Test_ReceiveFlint`).
+    /// A `///<` note beside it is its own.
+    fn run_head(&mut self, first: usize, last: usize, documented: bool, call: Option<String>) -> (Option<Head>, Option<Head>) {
+        let (first_line, last_line) = (self.code.tokens[first].line, self.code.tokens[last].line);
+        let own = if self.code.doc_before[first] {
+            Some(Head::Doc)
+        } else if documented {
+            None
+        } else {
+            let mut above = first_line.saturating_sub(1);
+            while above > 0 && self.lines.get(above - 1).is_some_and(|line| line.contains("clang-format")) {
+                above -= 1;
+            }
+            let mut head = None;
+            while above > 0 && self.lines.get(above - 1).is_some_and(|line| is_comment_line(line)) {
+                above -= 1;
+                let kept = is_kept_note(self.lines[above]);
+                head = Some(if kept || head == Some(Head::Note) { Head::Note } else { Head::Plain });
+            }
+            head
+        };
+        let blank = |from: usize, to: usize, lines: &[&str]| (from..to.saturating_sub(1)).all(|line| lines.get(line).is_some_and(|text| text.trim().is_empty()));
+        let run = self
+            .last_global
+            .as_ref()
+            .filter(|(end, _, before)| {
+                end + 1 == first_line || (call.is_some() && *before == call && *end < first_line && blank(*end, first_line, &self.lines))
+            })
+            .and_then(|(_, head, _)| *head);
+        // A note D9 keeps heads no run, nor a declaration a `///<` beside
+        // it documents.
+        let head = match own.or(run) {
+            Some(Head::Note) => None,
+            _ if documented && own.is_none() => None,
+            head => head,
+        };
+        self.last_global = Some((last_line, head, call));
+        (own, run)
     }
 
     /// A typedef of a pointer to functions with named parameters
@@ -2714,7 +3315,23 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         if let Some(Ok(kind)) = crate::adopt::views::view_kind(comment.text) {
             report.note("views", path, comment.line, kind);
         }
-        questions(report, path, comment.line, comment.text);
+    }
+    // A question with the `//` lines that go on with it, for its whole text.
+    for (at, comment) in comments.iter().enumerate() {
+        if !comment.text.contains("XXX:") {
+            continue;
+        }
+        let mut text = comment.text.to_string();
+        let mut last = comment.line;
+        for next in &comments[at + 1..] {
+            if next.line != last + 1 || !next.text.starts_with("//") || next.text.starts_with("///") || next.text.contains("XXX") {
+                break;
+            }
+            text.push('\n');
+            text.push_str(next.text);
+            last = next.line;
+        }
+        questions(report, path, comment.line, &text);
     }
     let owners = clex::owners(&code.tokens);
     let mut walk = Walk {
@@ -2733,6 +3350,9 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         heads: define_heads(text),
         guard: None,
         last_global: None,
+        last_type: None,
+        old_style: false,
+        views: HashMap::new(),
         definer: None,
         enum_docs: HashMap::new(),
         defined: BTreeSet::new(),
@@ -2774,13 +3394,27 @@ pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, t
 
 /// `game_with_text`, with the game's rows of `evidence/<game>-numbers.tsv`:
 /// the numbers in code someone judged by reading them.
+#[cfg(test)]
 pub fn game_judged<'a>(
     files: impl IntoIterator<Item = (&'a str, &'a str)>,
     text: Option<&GameText>,
     names: &[evidence::Name],
     judged: &[evidence::Judged],
 ) -> Report {
+    game_all(files, text, names, judged, &[])
+}
+
+/// `game_judged`, with the game's rows of `evidence/<game>-duplicates.tsv`:
+/// the duplicate groups someone judged not to be one text.
+pub fn game_all<'a>(
+    files: impl IntoIterator<Item = (&'a str, &'a str)>,
+    text: Option<&GameText>,
+    names: &[evidence::Name],
+    judged: &[evidence::Judged],
+    duplicates: &[evidence::JudgedGroup],
+) -> Report {
     let mut report = Report::default();
+    report.duplicate_rows = duplicates.iter().map(|row| (row.members.clone(), (row.kind.clone(), row.why.clone()))).collect();
     report.numbered_by_row = names.iter().filter(|row| row.kind == "its number").map(|row| row.name.clone()).collect();
     report.judged = judged.iter().map(|row| ((row.file.clone(), row.routine.clone(), row.number.clone()), row.kind == "honest")).collect();
     if let Some(text) = text {
@@ -2806,6 +3440,7 @@ pub fn game_judged<'a>(
         file(&mut report, path, text);
         if is_map_overlay(path) {
             units.push(path);
+            report.at_origin.extend(placed_at_origin(text).into_iter().map(|name| (path.to_string(), name)));
         }
         if naming::is_pret_flash(path) {
             report.naming.pret.extend(naming::identifiers(text).map(str::to_string));
@@ -2848,7 +3483,8 @@ impl Report {
             let own = own.or_else(|| by_name.get(thing.name.as_str()).filter(|_| thing.kind == "scene"));
             thing.evidence = own.cloned().unwrap_or_default();
         }
-        let analysis = provenance::analyze(&self.things, &self.places, text, &self.macro_values);
+        let lenders = self.lenders();
+        let analysis = provenance::analyze_with(&self.things, &self.places, text, &self.macro_values, &lenders);
         for row in &analysis.rows {
             let (file, line, name) = (&row.thing.file, row.thing.line, &row.thing.name);
             if let Some(evidence) = &row.evidence {
@@ -2868,6 +3504,53 @@ impl Report {
             }
         }
         self.provenance = Some(analysis);
+    }
+
+    /// The things whose seen rows may lend each thing its words, by place:
+    /// for a routine nothing runs (`never_run`), its namesakes in other files
+    /// (by its whole name, or its name after its scene's prefix) and its
+    /// copies of the same body; for an actor placed at its map's
+    /// origin (`at_origin`), its siblings of the same name with another
+    /// letter (`ACTOR_FUGUE_ICE_CONE_B` for `_A`).
+    fn lenders(&self) -> HashMap<usize, Vec<usize>> {
+        let mut by_name: HashMap<&str, Vec<usize>> = HashMap::new();
+        let mut by_place: HashMap<(&str, &str), usize> = HashMap::new();
+        // A routine's name after its scene's or module's prefix
+        // (`SlideFromEdge` of `MarsLighthouseRoomF_SlideFromEdge`).
+        let unprefixed = |name: &str| name.split_once('_').filter(|(prefix, _)| prefix.starts_with(|c: char| c.is_ascii_uppercase()) && prefix.bytes().any(|b| b.is_ascii_lowercase())).map(|(_, rest)| rest.to_string());
+        let mut by_rest: HashMap<String, Vec<usize>> = HashMap::new();
+        for (at, thing) in self.things.iter().enumerate() {
+            by_name.entry(thing.name.as_str()).or_default().push(at);
+            by_place.insert((thing.file.as_str(), thing.name.as_str()), at);
+            if let Some(rest) = unprefixed(&thing.name) {
+                by_rest.entry(rest).or_default().push(at);
+            }
+        }
+        let mut lenders: HashMap<usize, Vec<usize>> = HashMap::new();
+        for (at, thing) in self.things.iter().enumerate() {
+            let key = (thing.file.clone(), thing.name.clone());
+            let mut found = Vec::new();
+            if self.never_run.contains(&key) {
+                found.extend(by_name.get(thing.name.as_str()).into_iter().flatten().filter(|&&other| self.things[other].file != thing.file));
+                let namesakes = unprefixed(&thing.name).and_then(|rest| by_rest.get(&rest));
+                found.extend(namesakes.into_iter().flatten().filter(|&&other| self.things[other].file != thing.file));
+                for (file, name) in self.same_body.get(&key).into_iter().flatten() {
+                    found.extend(by_place.get(&(file.as_str(), name.as_str())));
+                }
+            }
+            if self.at_origin.contains(&key) {
+                let letter = thing.name.rsplit_once('_').filter(|(_, letter)| letter.len() == 1 && letter.bytes().all(|b| b.is_ascii_uppercase()));
+                if let Some((stem, own)) = letter {
+                    for other in ('A'..='Z').filter(|other| other.to_string() != own) {
+                        found.extend(by_place.get(&(thing.file.as_str(), format!("{stem}_{other}").as_str())));
+                    }
+                }
+            }
+            if !found.is_empty() {
+                lenders.insert(at, found);
+            }
+        }
+        lenders
     }
 }
 
@@ -2945,8 +3628,24 @@ fn is_folder_guide(path: &str) -> bool {
 fn questions(report: &mut Report, path: &str, line: usize, text: &str) {
     for (offset, _) in text.match_indices("XXX:") {
         let at = line + text[..offset].matches('\n').count();
-        let question = text[offset..].lines().next().unwrap_or_default().trim_end();
-        report.questions.entry(path.to_string()).or_default().push((at, question.to_string()));
+        // Its whole text, the lines a comment or paragraph goes on with up to
+        // the sentence's end, so the next reader sees what would settle it.
+        let mut question = String::new();
+        for (index, piece) in text[offset..].lines().enumerate() {
+            let piece = if index == 0 { piece } else { piece.trim_start().trim_start_matches(['/', '*']) };
+            let piece = piece.trim().trim_end_matches("*/").trim_end();
+            if piece.is_empty() || (index > 0 && piece.contains("XXX")) {
+                break;
+            }
+            if !question.is_empty() {
+                question.push(' ');
+            }
+            question.push_str(piece);
+            if question.ends_with(['.', '?', '!']) {
+                break;
+            }
+        }
+        report.questions.entry(path.to_string()).or_default().push((at, question));
     }
 }
 
@@ -3049,6 +3748,7 @@ const ROWS: &[(&str, &str)] = &[
     ("magic_table", "numbers in table data"),
     ("placeholder_names", "placeholder names"),
     ("placeholder", "  their uses"),
+    ("placeholder_unused", "  apart: placeholders nothing uses"),
     ("numbered_names", "numbered names"),
     ("numbered", "  their uses"),
     ("numbered_honest", "  apart: its number, by row"),
@@ -3099,6 +3799,7 @@ const ROWS: &[(&str, &str)] = &[
     ("duplicate_table", "duplicate table groups"),
     ("duplicate_table_copies", "  copies past the first"),
     ("duplicate_said", "one body under two names, said so"),
+    ("duplicate_judged", "duplicates judged by row"),
     ("provenance_names", "game-thing names"),
     ("provenance_verified", "  verified by row or ★ line"),
     ("provenance_table", "  verified by table"),
@@ -3113,6 +3814,8 @@ const ROWS: &[(&str, &str)] = &[
     ("unused_words", "words the game never uses"),
     ("unused_word_name", "  names using them"),
     ("seen_words", "words for what the player sees, by a render"),
+    ("lent_words", "  of those, from a seen copy or sibling"),
+    ("unseen_words", "words of things nothing shows"),
     ("twin_words", "words from The Broken Seal's text"),
     ("glossary_words", "words the glossary defines"),
     ("door_words", "door words unresolved"),
@@ -3123,6 +3826,7 @@ const ROWS: &[(&str, &str)] = &[
     ("abbreviation", "  shortened, spelled elsewhere"),
     ("family_shape", "  off their family's pattern"),
     ("prefix_twin", "  one idea under two prefixes"),
+    ("prefix_twin_apart", "  apart: a place's or a group's plural"),
     ("", "to review, not to fill (D9):"),
     ("undocumented_function", "  functions without ///"),
     ("undocumented_struct", "  structs without ///"),
@@ -3130,7 +3834,15 @@ const ROWS: &[(&str, &str)] = &[
     ("undocumented_macro", "  macros without ///"),
     ("undocumented_global", "  globals without ///"),
     ("undocumented_run", "  apart: in a run under ///"),
+    ("undocumented_empty", "  apart: empty functions"),
+    ("undocumented_forward", "  apart: one call to a documented routine"),
+    ("undocumented_library", "  apart: library and BIOS routines"),
+    ("undocumented_standard", "  apart: standard C macros"),
+    ("undocumented_view", "  apart: a typed view of a documented name"),
+    ("undocumented_typed", "  apart: right under its type's ///"),
     ("undocumented_plain", "  apart: under //, mark ///"),
+    ("undocumented_note", "  apart: under a // note D9 keeps"),
+    ("undocumented_local", "  apart: macros inside a function"),
     ("undocumented_far", "  apart: XFar, by X's ///"),
     ("undocumented_id", "  apart: ids, by their extern"),
     ("undocumented_register", "  apart: hardware registers"),
@@ -3162,6 +3874,7 @@ impl Report {
     pub fn value(&self, metric: &str) -> u64 {
         match metric {
             "placeholder_names" => self.distinct("placeholder") as u64,
+            "placeholder_unused" => self.distinct("placeholder_unused") as u64,
             "numbered_names" => self.distinct("numbered") as u64,
             "numbered_honest" => self.distinct("numbered_honest") as u64,
             "fakematch" | "leftover" => kinds(metric).iter().map(|kind| self.total(kind)).sum(),
@@ -3173,8 +3886,11 @@ impl Report {
             "duplicate_table" => self.table_groups.len() as u64,
             "duplicate_table_copies" => Report::copies(&self.table_groups) as u64,
             "duplicate_said" => self.said_groups.len() as u64,
+            "duplicate_judged" => self.judged_groups.len() as u64,
             "unused_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.words.len() as u64),
-            "seen_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.seen_words.len() as u64),
+            "seen_words" => self.provenance.as_ref().map_or(0, |analysis| (analysis.seen_words.len() + analysis.lent_words.len()) as u64),
+            "lent_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.lent_words.len() as u64),
+            "unseen_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.unseen_words.len() as u64),
             "twin_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.twin_words.len() as u64),
             "glossary_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.glossary_words.len() as u64),
             "door_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.door_words.len() as u64),
@@ -3324,7 +4040,7 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
 /// worklist, the words the game never uses, those set apart as what the
 /// player sees, the twin's text's or the glossary's, and those no door
 /// resolves.
-const WORD_LISTS: [&str; 6] = ["provenance", "unused_word", "seen_word", "twin_word", "glossary_word", "door_word"];
+const WORD_LISTS: [&str; 8] = ["provenance", "unused_word", "seen_word", "lent_word", "unseen_word", "twin_word", "glossary_word", "door_word"];
 
 /// Whether `--list` knows a metric: one the table counts, or a word list.
 fn listable(metric: &str) -> bool {
@@ -3346,6 +4062,8 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
                 let words = match metric {
                     "unused_word" => &analysis.words,
                     "seen_word" => &analysis.seen_words,
+                    "lent_word" => &analysis.lent_words,
+                    "unseen_word" => &analysis.unseen_words,
                     "twin_word" => &analysis.twin_words,
                     "glossary_word" => &analysis.glossary_words,
                     _ => &analysis.door_words,
@@ -3356,7 +4074,12 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
                         .map(|&at| {
                             let row = &analysis.rows[at];
                             let thing = &row.thing;
-                            let seen = if metric == "unused_word" && row.seen_uses.contains(word) { " (seen)" } else { "" };
+                            let seen = match metric {
+                                "unused_word" if row.seen_uses.contains(word) => " (seen)",
+                                "unused_word" if row.lent_uses.contains(word) => " (from a seen copy or sibling)",
+                                "unused_word" if row.unseen_uses.contains(word) => " (nothing on screen)",
+                                _ => "",
+                            };
                             format!("{} {}:{}{seen}", thing.name, thing.file, thing.line)
                         })
                         .collect();
@@ -3389,6 +4112,11 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
         for group in groups {
             let _ = writeln!(text, "{game}\t{}\t{}", group.tokens, group.members.join(" "));
         }
+        if metric == "duplicate_judged" {
+            for (group, kind, why) in &report.judged_groups {
+                let _ = writeln!(text, "{game}\t{}\t{}\t{kind}: {why}", group.tokens, group.members.join(" "));
+            }
+        }
         for item in &report.items {
             if item.metric == metric || kinds(metric).contains(&item.metric) {
                 // A file or folder is listed by its path alone.
@@ -3403,12 +4131,25 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
     text
 }
 
+/// The rows of a game's `evidence/<game>-duplicates.tsv` that judge no group
+/// its duplicate count finds now, for `check tags`: each row's members and
+/// what is wrong.
+pub fn stale_duplicates(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
+    let duplicates = evidence::duplicates(game)?;
+    if duplicates.is_empty() {
+        return Ok(Vec::new());
+    }
+    let files = sources(root, game)?;
+    let report = game_all(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), None, &[], &[], &duplicates);
+    Ok(report.stale_duplicates())
+}
+
 /// `progress --humanity [--top N] [--list METRIC]`: count both games, write
 /// the TSV and return the table, or with `list` that metric's items.
 pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, String> {
     if let Some(metric) = metric.filter(|metric| !listable(metric)) {
         return Err(format!(
-            "--list takes a metric of the table, as humanity.tsv names it, or provenance, unused_word, seen_word, twin_word, glossary_word or door_word, not {metric}"
+            "--list takes a metric of the table, as humanity.tsv names it, or provenance, unused_word, seen_word, lent_word, unseen_word, twin_word, glossary_word or door_word, not {metric}"
         ));
     }
     let reports = std::thread::scope(|scope| {
@@ -3418,12 +4159,18 @@ pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, Stri
                     let text = game_text(root, game)?;
                     let names = evidence::names(game)?;
                     let judged = evidence::judged(game)?;
+                    let duplicates = evidence::duplicates(game)?;
                     let files = sources(root, game)?;
-                    let mut report = game_judged(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names, &judged);
+                    let mut report = game_all(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names, &judged, &duplicates);
                     let rows: Vec<String> = names.iter().filter(|row| row.kind == "its number").map(|row| row.name.clone()).collect();
                     let paths = tracked(root, &[format!("games/{game}")])?;
-                    let symbols = layout::numbered_symbols(&symbol_texts(root, &paths)?);
-                    layout::count(&mut report, game, &paths, &rows, &symbols);
+                    let texts = symbol_texts(root, &paths)?;
+                    let symbols = layout::numbered_symbols(&texts);
+                    let mut songs = Vec::new();
+                    for path in paths.iter().filter(|path| path.contains("/sound/songs/") && path.ends_with(".mid")) {
+                        songs.push((path.clone(), std::fs::read(root.join(path)).map_err(|error| format!("cannot read {path}: {error}"))?));
+                    }
+                    layout::count(&mut report, game, &paths, &rows, &symbols, &layout::uses(&texts, &songs));
                     Ok::<Report, String>(report)
                 })
             })
@@ -3454,7 +4201,7 @@ mod tests {
     fn a_unit_is_open_while_its_files_hold_an_xxx() {
         let report = game([
             ("games/tbs/src/shop/README.md", "# Shops\n\n## Evidence\n\nNamed from the counters.\n"),
-            ("games/tbs/src/shop/shop/run.c", "// XXX: why three; a probe would settle it.\nvoid Shop_Run(void) {}\n"),
+            ("games/tbs/src/shop/shop/run.c", "// XXX: why three; a probe of the\n// counter would settle it.\nvoid Shop_Run(void) {}\n"),
             ("games/tbs/src/shop/shop/inn.c", "void Inn_Run(void) {\n  // XXX (no evidence): why; only the source says.\n}\n"),
             ("games/tbs/src/scene/README.md", "# Maps\n"),
             ("games/tbs/src/scene/shared/door.h", "/// A door.\nstruct Door { int x; };\n"),
@@ -3479,8 +4226,8 @@ mod tests {
         assert_eq!(
             list(&[("tbs", &report)], "unit_open"),
             concat!(
-                "tbs\tgames/tbs/src/scene/vale.c:5\tgames/tbs/src/scene/vale.c\tXXX: what this is; its render. */\n",
-                "tbs\tgames/tbs/src/shop/shop/run.c:1\tgames/tbs/src/shop/README.md\tXXX: why three; a probe would settle it.\n",
+                "tbs\tgames/tbs/src/scene/vale.c:5\tgames/tbs/src/scene/vale.c\tXXX: what this is; its render.\n",
+                "tbs\tgames/tbs/src/shop/shop/run.c:1\tgames/tbs/src/shop/README.md\tXXX: why three; a probe of the counter would settle it.\n",
             ),
             "each question with its unit"
         );
@@ -3550,6 +4297,22 @@ mod tests {
         let report = one("void ColosseumFinal1(void) { unk_14 = ColosseumFinal1 + gUnk_0203; } // unk_99 Exit10\n");
         assert_eq!((report.distinct("placeholder"), report.total("placeholder")), (2, 2));
         assert_eq!((report.distinct("numbered"), report.total("numbered")), (1, 2));
+    }
+
+    #[test]
+    fn placeholders_nothing_uses() {
+        let report = game([
+            ("games/tla/include/sounds.h", "enum SoundId {\n  SE_JUMP,\n  SE_120,\n  SE_121,\n  SE_122,\n  SE_123,\n};\n#define SE_LATE SE_123\n"),
+            ("games/tla/src/a.c", "void Jump(void) { Sound_Play(SE_121); }\n"),
+            ("games/tla/src/b.s", "\t.2byte SE_122\n"),
+        ]);
+        let names = |kind: &str| report.names.get(kind).map(|names| names.iter().cloned().collect::<Vec<_>>()).unwrap_or_default();
+        assert_eq!(names("placeholder_unused"), ["SE_120"], "written only in its own row");
+        assert_eq!(names("placeholder"), ["SE_121", "SE_122", "SE_123"], "played, in a script, in a macro");
+        assert_eq!((report.value("placeholder_names"), report.value("placeholder_unused")), (3, 1));
+        assert_eq!(report.total("placeholder"), 5, "SE_121 and SE_123 twice, SE_122 once: a script is no C");
+        let listing = list(&[("tla", &report)], "placeholder_unused");
+        assert_eq!(listing, "tla\tgames/tla/include/sounds.h:3\tSE_120\n");
     }
 
     #[test]
@@ -3644,7 +4407,7 @@ mod tests {
             "#ifndef ALCHEMY_F_H\n",
             "#define ALCHEMY_F_H\n",
             "/// Documented in its header.\n",
-            "void Documented(void);\n",
+            "void Documented(void);\n\n",
             "void Plain(void);\n",
             "extern u8 gTable[]; ///< Noted.\n",
             "extern u8 gBare;\n",
@@ -3665,9 +4428,9 @@ mod tests {
         );
         let source = concat!(
             "void Documented(void) {}\n",
-            "void Plain(void) {}\n",
+            "void Plain(void) { Run(); }\n",
             "/// Its own.\n",
-            "static void Local(void) {}\n",
+            "static void Local(void) {}\n\n",
             "UNUSED static int Helper(int x) { return x; }\n",
             "u8 gTable[] = { 1, 2 };\n",
             "u8 gBare;\n",
@@ -3782,6 +4545,56 @@ mod tests {
     }
 
     #[test]
+    fn declarations_their_neighbours_or_kind_say() {
+        let header = concat!(
+            "#define NULL ((void *)0)\n#define TRUE 1\n\n",
+            "/// The window's work.\nextern struct WindowWork *gWindowWork[2];\n\n",
+            "#define WINDOW_WORK ((struct WindowWork *)gWindowWork[0])\n",
+            "#define BARE_WORK ((struct WindowWork *)gBare)\n",
+            "#define ALIAS gWindowWork\n#define ROUTINE_ALIAS Math_DivideBy\n\n",
+            "extern void *gBare;\n\n",
+            "/// Picks the width by edition.\n#if LANGUAGE == 1 || \\\n    LANGUAGE == 2\n#define WIDE 1\n#define NARROW 3\n#else\n#define WIDE 2\n#define NARROW 4\n#endif\n\n",
+            "/// Divides.\ns32 Math_DivideBy(s32 a, s32 b);\n\n",
+            "s32 __divsi3(s32 a, s32 b);\nvoid Bios_CpuSet(void);\n\n",
+            "/// Sends, as a far call takes it.\ns32 Send(s32 a);\ns32 SendAgain(s32 a);\n\n",
+            "static inline s32 Field_Send(s32 a) { return Send(a); }\n\n",
+            "static inline s32 Field_Twice(s32 a) { return Send(Send(a)); }\n\n",
+            "static inline void Call1(void (*f)(), s32 a0) { f(a0); }\n",
+        );
+        let code = concat!(
+            "/// Does nothing, twice.\nvoid NoOpA(void) {}\nvoid NoOpB(void) {}\n\n",
+            "void Empty(void) {\n}\n\n",
+            "/// Gives Flint.\nstatic void Test_ReceiveFlint(void) {\n  Test_Give(1, 2);\n}\n\n",
+            "static void Test_ReceiveFizz(void) {\n  Test_Give(3, 4);\n}\n\n",
+            "static void Test_Other(void) {\n  Test_Take(3);\n}\n\n",
+            "/// Counts frames between ripples.\nstruct Ripple {\n  s16 frames;\n};\n\nstruct Ripple gRipple;\n\n",
+            "// UB: the shift overflows.\n#ifdef UBFIX\n#define SHIFTED(x) ((x) * 2)\n#else\n#define SHIFTED(x) ((x) << 1)\n#endif\n\n",
+            "/// Builds.\nvoid Build(void) {\n  s32 count = 0;\n#define PUT(word) count++\n  PUT(1);\n#undef PUT\n}\n\n",
+            "void Kr(x, y) s32 x;\ns16 y;\n{\n  Test_Give(x, y);\n}\n\n",
+            "#define UNIT_DEFINE(type, name) type name(void) { return 0; }\n\n",
+            "UNIT_DEFINE(s32, Unit_GetZero)\n",
+        );
+        let report = game([("games/tbs/include/a.h", header), ("games/tbs/src/a.c", code)]);
+        let names = |metric: &str| -> Vec<String> {
+            let mut names: Vec<String> = report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.clone()).collect();
+            names.sort();
+            names
+        };
+        assert_eq!(names("undocumented_empty"), ["Empty", "NoOpB"], "NoOpB is also in NoOpA's run");
+        assert_eq!(names("undocumented_run"), ["NARROW", "SendAgain", "Test_ReceiveFizz"], "a /// over a two-line #if; one call to the same routine past a blank line");
+        assert_eq!(names("undocumented_forward"), ["Field_Send"]);
+        assert_eq!(names("undocumented_library"), ["Bios_CpuSet", "__divsi3"]);
+        assert_eq!(names("undocumented_standard"), ["NULL", "TRUE"]);
+        assert_eq!(names("undocumented_view"), ["ALIAS", "WINDOW_WORK"]);
+        assert_eq!(names("undocumented_typed"), ["gRipple"]);
+        assert_eq!(names("undocumented_note"), ["SHIFTED"]);
+        assert_eq!(names("undocumented_local"), ["PUT"]);
+        assert_eq!(names("undocumented_macro"), ["BARE_WORK", "ROUTINE_ALIAS", "UNIT_DEFINE"], "gBare is undocumented; a routine's bare name is no view");
+        assert_eq!(names("undocumented_function"), ["Call1", "Field_Twice", "Kr", "Test_Other", "Unit_GetZero"]);
+        assert_eq!(names("undocumented_global"), ["gBare"], "an old-style definition's parameters are no globals");
+    }
+
+    #[test]
     fn one_body_under_two_names_in_one_object() {
         let body = "{ int i; for (i = 0; i < 4; i++) { gA[i] = Load(i) + 3; Store(gB, i); } }\n";
         let scene = format!(
@@ -3796,6 +4609,34 @@ mod tests {
         let report = game([("games/tla/src/scene/a.c", apart.as_str()), ("games/tla/src/field/p.c", part.as_str())]);
         assert_eq!(members(&report), (1, vec![]), "two objects: a copy to write once");
         assert_eq!(normalized("games/tla/src/scene/../field/p.c"), "games/tla/src/field/p.c");
+    }
+
+    #[test]
+    fn duplicates_judged_by_row() {
+        let body = "{ int i; for (i = 0; i < 4; i++) { gA[i] = Load(i) + 3; Store(gB, i); } }\n";
+        let (one, two, three) = (format!("void A_Step(void) {body}"), format!("void B_Step(void) {body}"), format!("void C_Walk(void) {body}"));
+        let files = [("games/tla/src/a.c", one.as_str()), ("games/tla/src/b.c", two.as_str()), ("games/tla/src/c.c", three.as_str())];
+        let rows = evidence::parse_duplicates(concat!(
+            "members\tkind\twhy\n",
+            "A_Step B_Step C_Walk\tkept apart\tthree main-image objects\n",
+            "A_Step B_Step\tdifferent things\tno longer one group\n",
+            "D_Gone E_Gone\tdifferent things\tgone\n",
+        ))
+        .unwrap();
+        let report = game_all(files, None, &[], &[], &rows);
+        assert_eq!((report.value("duplicate_function"), report.value("duplicate_judged")), (0, 1));
+        assert_eq!(report.judged_groups[0].1, "kept apart");
+        let listed = list(&[("tla", &report)], "duplicate_judged");
+        assert!(listed.ends_with("games/tla/src/c.c:C_Walk\tkept apart: three main-image objects\n"), "{listed}");
+        assert_eq!(
+            report.stale_duplicates(),
+            [
+                ("A_Step B_Step".to_string(), "different things: no longer one group".to_string()),
+                ("D_Gone E_Gone".to_string(), "different things: D_Gone, E_Gone gone".to_string()),
+            ]
+        );
+        let unjudged = game_all(files, None, &[], &[], &[]);
+        assert_eq!((unjudged.value("duplicate_function"), unjudged.value("duplicate_judged")), (1, 0), "a group no one judged stays counted");
     }
 
     #[test]
@@ -4359,8 +5200,8 @@ mod tests {
 
     #[test]
     fn entry_points_need_their_summary() {
-        let far = "/// Draws a number.\nvoid Text_DrawNumberFar(s32 number);\nvoid UiText_ClearFar(void);\n";
-        let source = "void UiText_ClearFar(void) {}\nvoid Helper(void) {}\n";
+        let far = "/// Draws a number.\nvoid Text_DrawNumberFar(s32 number);\n\nvoid UiText_ClearFar(void);\n";
+        let source = "void UiText_ClearFar(void) { Clear(); }\nvoid Helper(void) { Clear(); }\n";
         let report = game([("games/tbs/include/gamepak/far_call/window.h", far), ("games/tbs/src/window/text.c", source)]);
         assert_eq!(list(&[("tbs", &report)], "undocumented_entry"), "tbs\tgames/tbs/src/window/text.c:1\tUiText_ClearFar\n");
         assert_eq!(report.total("undocumented_function"), 2, "UiText_ClearFar and Helper, to review");
@@ -4525,6 +5366,53 @@ mod provenance_tests {
         assert!(flagged.contains("\tman\t") && flagged.contains("\twarehouse\t") && !flagged.contains("\tguard\t"), "{flagged}");
     }
 
+
+    #[test]
+    fn words_no_render_can_name() {
+        let po = "msgctxt \"MsgDebugAreaName\"\nmsgid \"00001\"\nmsgstr \"Hall\"\n\nmsgctxt \"message\"\nmsgid \"00002\"\nmsgstr \"Hello there.\"\n";
+        let text = GameText::parse(po, Some(1)).unwrap();
+        let hall = concat!(
+            "enum HallActorId {\n  ACTOR_ICE_CONE_A = ACTOR_FIRST_PLACED,\n  ACTOR_ICE_CONE_B,\n  ACTOR_SPARKLE_A,\n  ACTOR_SPARKLE_B,\n};\n\n",
+            "struct ActorPlacement gHall_Placements[] = {\n",
+            "    ACTOR_PLACEMENT(SPRITE_STAKE, CONDITION_ALWAYS, 0, 0, 0, 0, FACING_SOUTH, 0, 0),\n",
+            "#if TLA_PATCH_1\n    ACTOR_PLACEMENT(SPRITE_STAKE, CONDITION_ALWAYS, 0, 136, 0, 424, FACING_SOUTH, 0, 0),\n",
+            "#else\n    ACTOR_PLACEMENT(SPRITE_STAKE, CONDITION_ALWAYS, 0, 0, 0, 0, FACING_SOUTH, 0, 0),\n#endif\n",
+            "    ACTOR_PLACEMENT(SPRITE_SPARK, CONDITION_ALWAYS, 0, 0, 0, 0, FACING_SOUTH, 0, 0),\n",
+            "    ACTOR_PLACEMENT(SPRITE_SPARK, CONDITION_ALWAYS, 0, 8, 0, 8, FACING_SOUTH, 0, 0),\n",
+            "    {SCENE_TABLE_END},\n};\n\n",
+            "/// Slides on from the ice's edge.\nvoid Hall_SlideFromEdge(void) {\n  Leader_Go();\n}\n\n",
+            "/// Lights the sparkle.\nvoid Hall_Light(void) {\n  Actor_Show(ACTOR_SPARKLE_A);\n}\n\n",
+            "/// Calls it.\nvoid Hall_Run(void) {\n  Hall_SlideFromEdge();\n}\n",
+        );
+        let room = concat!(
+            "/// Unused: slides on from the edge.\nUNUSED void Room_SlideFromEdge(void) {\n  Leader_Go();\n  Room_Other();\n}\n\n",
+            "/// Never called here.\nvoid Hall_Light(void) {\n  Actor_Show(3);\n}\n\n",
+            "/// Keeps the drip.\nvoid Room_KeepDrip(void) {\n  Room_Other();\n}\n",
+        );
+        assert_eq!(placed_at_origin(hall), ["ACTOR_ICE_CONE_A", "ACTOR_SPARKLE_A"], "an #if's first branch read; a row away from the origin");
+        let files = [("games/tla/src/scene/hall.c", hall), ("games/tla/src/scene/room.c", room)];
+        let names = evidence::parse_names(concat!(
+            "name\tkind\tevidence\tfile\n",
+            "ACTOR_ICE_CONE_B\twhat the player sees\tan upright cone of ice (its render)\tgames/tla/src/scene/hall.c\n",
+            "ACTOR_SPARKLE_B\twhat the player sees\ta sparkle running along the floor (its render)\tgames/tla/src/scene/hall.c\n",
+            "Hall_SlideFromEdge\twhat the player sees\tFelix slides across the ice from its edge (its render)\tgames/tla/src/scene/hall.c\n",
+            "Hall_Light\twhat the player sees\tthe sparkle lights up (its render)\tgames/tla/src/scene/hall.c\n",
+            "Room_KeepDrip\tits code\tnothing on screen: keeps a counter no routine reads\tgames/tla/src/scene/room.c\n",
+        ))
+        .unwrap();
+        let report = game_with_text(files, Some(&text), &names);
+        let words = |metric: &str| -> Vec<String> { list(&[("tla", &report)], metric).lines().map(|line| line.split('\t').nth(1).unwrap().to_string()).collect() };
+        assert_eq!(
+            words("lent_word"),
+            ["cone", "edge", "from", "ice", "light", "slide"],
+            "cone A off camera beside B; Room's unused copy of Hall's routine; Hall_Light, which nothing in room.c calls"
+        );
+        assert_eq!(words("unseen_word"), ["drip", "keep"]);
+        assert_eq!(words("unused_word"), ["room", "sparkle"], "sparkle A is moved by a routine, so B lends it nothing; Room is no map's name");
+        assert_eq!((report.value("lent_words"), report.value("unseen_words")), (6, 2));
+        assert!(report.never_run.contains(&("games/tla/src/scene/room.c".to_string(), "Hall_Light".to_string())), "written only where it is defined");
+        assert!(!report.never_run.contains(&("games/tla/src/scene/hall.c".to_string(), "Hall_SlideFromEdge".to_string())));
+    }
 
     #[test]
     fn numbered_names_whose_number_is_their_meaning() {

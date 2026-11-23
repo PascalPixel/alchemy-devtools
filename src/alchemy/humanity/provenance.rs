@@ -133,6 +133,10 @@ pub struct GameText {
     /// The stems of the words the game's glossary (`games/<game>/glossary.md`)
     /// defines, which the owner settles (Alchemy's Vocabulary rule).
     glossary: HashSet<String>,
+    /// The words the text writes capitalized right after another
+    /// capitalized word, lowercase: the last words of names (`falls` of
+    /// "Gaia Falls").
+    name_ends: HashSet<String>,
 }
 
 /// A message's text without its `{...}` commands, on one line.
@@ -232,6 +236,15 @@ impl GameText {
             }
         }
         text.joined = text.messages.iter().map(|(_, body)| body.as_str()).collect::<Vec<_>>().join("\u{1}");
+        for (_, body) in &text.messages {
+            let capitalized = |word: &str| word.starts_with(|c: char| c.is_uppercase()) && word.chars().skip(1).any(|c| c.is_lowercase());
+            let found: Vec<&str> = body.split(' ').map(|word| word.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'')).collect();
+            for pair in found.windows(2) {
+                if capitalized(pair[0]) && capitalized(pair[1]) {
+                    text.name_ends.insert(pair[1].to_lowercase());
+                }
+            }
+        }
         if let Some(&start) = text.symbols.get("MsgDebugAreaName").or_else(|| text.symbols.get("MsgDebugEntryName")) {
             let end = match areas {
                 Some(count) => (start + count).min(text.messages.len()),
@@ -290,6 +303,12 @@ impl GameText {
         self.words.contains(&lower)
             || self.stems.contains(&stem(&lower))
             || lower.strip_suffix("us").is_some_and(|base| self.words.contains(&format!("{base}u")))
+    }
+
+    /// Whether the text writes a word capitalized after another capitalized
+    /// word, as the last word of a name (`Falls` of "Gaia Falls").
+    pub fn ends_a_name(&self, word: &str) -> bool {
+        self.name_ends.contains(&word.to_lowercase())
     }
 
     /// Whether the text writes a word, and writes it only capitalized: a
@@ -619,13 +638,18 @@ fn named(thing: &Thing, own: &str, text: &GameText) -> Option<Evidence> {
     }
     // A row of `its code` saying the thing shows nothing on screen: nothing
     // a render could check.
-    let unseen = thing.evidence.iter().any(|line| {
-        line.strip_prefix("★ Named from its code: ").is_some_and(|text| text.contains("nothing on screen") || text.contains("nothing visible"))
-    });
-    if unseen {
+    if shows_nothing(thing) {
         return Some(Evidence::Unseen);
     }
     kinds.iter().find_map(|kind| UNCHECKED_KINDS.iter().find(|known| *known == kind)).map(|kind| Evidence::Unchecked(kind))
+}
+
+/// Whether a thing's `its code` row says it shows nothing on screen: no
+/// render can check its name, nor name its words.
+fn shows_nothing(thing: &Thing) -> bool {
+    thing.evidence.iter().any(|line| {
+        line.strip_prefix("★ Named from its code: ").is_some_and(|text| text.contains("nothing on screen") || text.contains("nothing visible"))
+    })
 }
 
 fn prose_regexes() -> &'static [Regex; 4] {
@@ -967,6 +991,11 @@ pub struct Row {
     /// Its flagged words it takes from what someone saw, though another
     /// name using them does not.
     pub seen_uses: Vec<String>,
+    /// Its flagged words it takes from a seen copy or sibling, or that no
+    /// render can name since it shows nothing on screen, though another name
+    /// using them is not explained.
+    pub lent_uses: Vec<String>,
+    pub unseen_uses: Vec<String>,
 }
 
 /// Both checks over a game's things.
@@ -986,6 +1015,13 @@ pub struct Analysis {
     pub glossary_words: Vec<(String, Vec<usize>)>,
     /// Each unresolved door word and the links that use it, most used first.
     pub door_words: Vec<(String, Vec<usize>)>,
+    /// Each word set apart as taken from a seen copy of a routine nothing
+    /// runs, or a seen sibling of an actor placed out of sight, where some
+    /// use has no seen row of its own. Most used first.
+    pub lent_words: Vec<(String, Vec<usize>)>,
+    /// Each word set apart as one of things nothing shows, by their `its
+    /// code` rows, where some use has no seen row of its own. Most used first.
+    pub unseen_words: Vec<(String, Vec<usize>)>,
 }
 
 /// The name as prose writes it: `SceneId_Bilibin` is `Bilibin`.
@@ -1135,7 +1171,21 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
 /// Run both checks. `places` are the opening comments of the map overlays
 /// (raw); a paragraph of one that mentions a name counts as its prose.
 /// `macros` are the source's numeric macros, for a table's first number.
+#[cfg(test)]
 pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, macros: &HashMap<String, i64>) -> Analysis {
+    analyze_with(things, places, text, macros, &HashMap::new())
+}
+
+/// `analyze`, with each thing's lenders, by place: the things whose seen
+/// row may lend it its words (a routine nothing runs, its copy's; an actor
+/// placed out of sight, its lettered sibling's).
+pub fn analyze_with(
+    things: &[Thing],
+    places: &[(String, String)],
+    text: &GameText,
+    macros: &HashMap<String, i64>,
+    lenders: &HashMap<usize, Vec<usize>>,
+) -> Analysis {
     let paragraphs: Vec<String> = places
         .iter()
         .flat_map(|(_, raw)| {
@@ -1193,7 +1243,7 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
         for word in &flagged {
             words.entry(word.clone()).or_default().push(analysis.rows.len());
         }
-        analysis.rows.push(Row { thing: thing.clone(), words: flagged, evidence, door_words: Vec::new(), seen_words: Vec::new(), seen_uses: Vec::new() });
+        analysis.rows.push(Row { thing: thing.clone(), words: flagged, evidence, door_words: Vec::new(), seen_words: Vec::new(), seen_uses: Vec::new(), lent_uses: Vec::new(), unseen_uses: Vec::new() });
     }
     // A word the glossary defines is settled, and one the twin's text uses
     // is the game's (H6): each is set apart. A name taking a word from what
@@ -1211,28 +1261,53 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
     }
     let mut flagged = Vec::new();
     let mut apart = Vec::new();
+    let mut borrowed = Vec::new();
+    let mut unseen = Vec::new();
     for (word, uses) in words {
         let seen_at: Vec<usize> = uses.iter().copied().filter(|&at| seen.word(&analysis.rows, at, &word)).collect();
-        if seen_at.len() == uses.len() {
+        // A use no render can name: the thing shows nothing on screen, by
+        // its `its code` row; or it takes the word from a seen copy or
+        // sibling (`lenders`).
+        let rest: Vec<(usize, bool, bool)> = uses
+            .iter()
+            .copied()
+            .filter(|at| !seen_at.contains(at))
+            .map(|at| (at, shows_nothing(&analysis.rows[at].thing), seen.lent(&analysis.rows, lenders, at, &word)))
+            .collect();
+        if rest.is_empty() {
             apart.push((word, uses));
+        } else if rest.iter().all(|&(_, nothing, lent)| nothing || lent) {
+            if rest.iter().any(|&(_, nothing, _)| nothing) {
+                unseen.push((word, uses));
+            } else {
+                borrowed.push((word, uses));
+            }
         } else {
             for at in seen_at {
                 analysis.rows[at].seen_uses.push(word.clone());
             }
+            for (at, nothing, lent) in rest {
+                if nothing {
+                    analysis.rows[at].unseen_uses.push(word.clone());
+                } else if lent {
+                    analysis.rows[at].lent_uses.push(word.clone());
+                }
+            }
             flagged.push((word, uses));
         }
     }
-    for (word, uses) in &apart {
+    for (word, uses) in apart.iter().chain(&borrowed).chain(&unseen) {
         for &at in uses {
             let row = &mut analysis.rows[at];
             row.words.retain(|flagged| flagged != word);
             row.seen_words.push(word.clone());
         }
     }
-    for list in [&mut flagged, &mut apart, &mut twin, &mut glossary] {
+    for list in [&mut flagged, &mut apart, &mut borrowed, &mut unseen, &mut twin, &mut glossary] {
         list.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
     }
     (analysis.words, analysis.seen_words, analysis.twin_words, analysis.glossary_words) = (flagged, apart, twin, glossary);
+    (analysis.lent_words, analysis.unseen_words) = (borrowed, unseen);
     check_doors(&mut analysis, text);
     analysis
 }
@@ -1329,6 +1404,13 @@ impl Seen {
             }
         }
         used
+    }
+
+    /// Whether row `at` takes `word` from a seen lender (`lenders`) whose
+    /// name uses it too.
+    fn lent(&self, rows: &[Row], lenders: &HashMap<usize, Vec<usize>>, at: usize, word: &str) -> bool {
+        let uses = |row: usize| link_words(&rows[row].thing.name).iter().any(|piece| piece.eq_ignore_ascii_case(word));
+        uses(at) && lenders.get(&at).is_some_and(|lenders| lenders.iter().any(|&lender| self.named.contains(&lender) && uses(lender)))
     }
 
     /// The places among `words` that a seen map of the scene file `file`

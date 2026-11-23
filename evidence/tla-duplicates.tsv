@@ -1,0 +1,21 @@
+members	kind	why
+LinkBattle_ResetTransferState Lobby_ResetTransferState	kept apart	the Lobby's is a static inline its caller expands, the system's a called routine of the main image
+LuckyDice_ScaleRgb555Buffer LuckyWheels_ScaleRgb555	kept apart	two main-image objects, and no main-image object shares a fragment with another
+MPlayContinue MPlayContinueWorkCopy	kept apart	the m4a driver's own second copy, kept as the driver has it
+Map_ReadEditU16 Stream_ReadU16	kept apart	two main-image objects (field.c's and field_sequence.c's parts), and no main-image object shares a fragment
+PsynergyTest_StartleAfterBlaze PsynergyTest_StartleAgain	kept apart	one body under two names in one file, each a trigger's event the ROM keeps; the second says it is the same
+Render_SetTilemapFlagRect Window_SetTextTileRect	kept apart	two main-image objects, and no main-image object shares a fragment with another
+Vent_SetBlowing Vent_SetBlowing	kept apart	Aqua Rock's returns s32 and Taopo Swamp's void; either type in the other moves its callers' bytes
+gAnemosInnerSanctumEntrance_GlowGrowsScript gMarsLighthouseStarRoom_LightRiseScript	different things	one motion made by a glow and a rising light in two events
+gAnemosInnerSanctumEntrance_GlowShrinksScript gMarsLighthouseStarRoom_LightSinkScript	different things	one motion made by a glow and a sinking light in two events
+gAnemosInnerSanctumEntrance_ShadowScript gMarsLighthouseStarRoom_AgatioDragonShrinkScript	different things	one motion made by a shadow and Agatio's shrinking dragon
+gAnemosInnerSanctum_LongScript gFieldEffect_LongScript	kept apart	Anemos Inner Sanctum keeps its own beside the shared one it also includes; the ROM keeps both
+gAnemosInnerSanctum_MediumScript gFieldEffect_MediumScript gFieldEffect_MediumScript gGaiaRockInside_SerpentGlowScript gGaiaRockInside_SerpentSmokeScript	kept apart	the medium lifetime in overlays that also include the shared three (Anemos, Gaia Rock's serpent) or hold it alone (Gabomba Catacombs); the ROM keeps each
+gBattleEffect_EightWayHeadingWords gWorldMap_CursorDirectionAngles	kept apart	two main-image objects, and no main-image object shares a fragment; each says the other is the same
+gBubbleColumn_PictureWidths gCoatlicue_PictureWidths	different things	the layouts of two effects' own sheets, of the same sizes
+gBubbleColumn_Pictures gCoatlicue_Pictures	different things	the layouts of two effects' own sheets, of the same sizes
+gCastingImpact_PictureX gCondemn_PictureX	kept apart	each effect's own table of the reaper's panels, both the ROM's in one file
+gCrumbs_Script gEmbers_Script	different things	crumbs of rock and embers falling the same way, each a script of its own
+gFieldEffect_CyclePatternWords gRope_KeyHeadings	kept apart	two main-image objects, and no main-image object shares a fragment; the second says it is the same table
+gHoverGlow_Levels gWindowColor_WaveTable	different things	Hover's glow level by frame and the window colour wheel's level by hue step
+gLuckyDice_FaceTiles gSuperLuckyDice_FaceTiles	kept apart	two main-image objects (dice_game.c and lucky_dice.c), and no main-image object shares a fragment

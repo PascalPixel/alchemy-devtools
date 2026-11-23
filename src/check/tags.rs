@@ -846,6 +846,20 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             }
         }
     }
+    // A row of a game's judged duplicates for a group its count no longer
+    // finds (H5): a member gone, or the members no longer one group.
+    for game in ["tbs", "tla"] {
+        let folder = format!("games/{game}");
+        let covered = paths.iter().any(|path| Path::new(&folder).starts_with(path.trim_end_matches('/')));
+        if !covered || !root.join(&folder).is_dir() {
+            continue;
+        }
+        let stale = crate::alchemy::humanity::stale_duplicates(root, game)?;
+        for (members, what) in &stale {
+            println!("evidence/{game}-duplicates.tsv: a row for {members} ({what}), and no such group");
+        }
+        games.entry(folder).or_default().findings += stale.len();
+    }
     // Against an earlier commit, a game's score may not have risen (S2). A
     // file whose code has not changed since then holds the same devices: a tag
     // added or made heavier there is a device found, and does not count as a
