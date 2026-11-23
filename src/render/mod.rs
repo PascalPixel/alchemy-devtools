@@ -1372,7 +1372,7 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
 
 const PROBE_USAGE: &str = "usage: alchemy-devtools render probe --flags flags.tsv [--only NAME]... [--out DIR] [--edition tbs-en]
        alchemy-devtools render probe --only scene --scene N|NAME... [--entrance N] [--set FLAG]...
-         [--hide-actor N]... [--mark-cells X0,Y0,X1,Y1[,LAYER]]... [--cells X0,Y0,X1,Y1[,LAYER]]...
+         [--hide-actor N]... [--skip FUNCTION]... [--mark-cells X0,Y0,X1,Y1[,LAYER]]... [--cells X0,Y0,X1,Y1[,LAYER]]...
          [--map] [--edition tla-en] [--flags flags.tsv] [--out DIR]
 Plays a built edition and prints what it reads for questions only the
 running game settles, writing any pictures into DIR (default
@@ -1386,7 +1386,10 @@ cite by name (`render probe NAME`), and `scene` reads either game:
               trigger table its field holds, named by the function it runs
               or the message it shows, and the photo SCENE-ENTRANCE.png.
               --hide-actor N (repeatable) hides actor N before the photo,
-              to compare it with one where it shows; --cells prints each
+              to compare it with one where it shows; --skip FUNCTION
+              (repeatable) makes the scene's function of that name return
+              at once (an actor's update that draws a second sprite);
+              --cells prints each
               cell of the rectangle (corners included, on LAYER, 0 when
               none) as behaviour/attribute bits in hex/ground height in
               pixels, by row; --mark-cells outlines its cells in magenta
@@ -1417,6 +1420,7 @@ published. --only picks some; flags.tsv is the story tools' flag names.";
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 struct SceneProbe {
     hide: Vec<u16>,
+    skip: Vec<String>,
     mark: Vec<String>,
     cells: Vec<String>,
     map: bool,
@@ -1441,6 +1445,7 @@ fn probe_command(arguments: &[String]) -> Result<(), String> {
             "--scene" => scenes.push(value("--scene")?),
             "--entrance" => entrance = Some(value("--entrance")?.parse().map_err(|_| format!("--entrance takes a number\n{PROBE_USAGE}"))?),
             "--set" => set.push(value("--set")?),
+            "--skip" => extra.skip.push(value("--skip")?),
             "--hide-actor" => extra.hide.push(value("--hide-actor")?.parse().map_err(|_| format!("--hide-actor takes an actor's number\n{PROBE_USAGE}"))?),
             "--mark-cells" => extra.mark.push(value("--mark-cells")?),
             "--cells" => extra.cells.push(value("--cells")?),
@@ -1489,7 +1494,7 @@ fn play_scene_probe(root: &Path, edition: &str, wanted: &[String], entrance: Opt
     let machines = Machines::load(root, edition, &chosen, true)?;
     let none = std::collections::HashMap::new();
     for s in chosen {
-        let ask = probe_scene::Ask { scene: Some(s), entrance, set: set.to_vec(), hide: extra.hide.clone(), mark: mark.clone(), cells: cells.clone(), map: extra.map };
+        let ask = probe_scene::Ask { scene: Some(s), entrance, set: set.to_vec(), hide: extra.hide.clone(), skip: extra.skip.clone(), mark: mark.clone(), cells: cells.clone(), map: extra.map };
         let file = probe_scene::scene(&machines.rom, &machines.symbols, &ask, machines.functions.get(&s.number).unwrap_or(&none), &machines.messages, out)?;
         eprintln!("{}", out.join(file).display());
     }
@@ -1875,7 +1880,7 @@ mod tests {
     /// Every option of `render probe --only scene` is named in its usage.
     #[test]
     fn every_scene_probe_option_is_in_the_usage() {
-        for option in ["--hide-actor", "--mark-cells", "--cells", "--map"] {
+        for option in ["--hide-actor", "--skip", "--mark-cells", "--cells", "--map"] {
             assert!(PROBE_USAGE.contains(&format!("{option} ")), "{option} is not in PROBE_USAGE");
         }
     }

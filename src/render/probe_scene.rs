@@ -21,6 +21,9 @@ pub struct Ask<'a> {
     pub entrance: Option<u16>,
     pub set: Vec<u16>,
     pub hide: Vec<u16>,
+    /// The scene's functions made to return at once, by name (--skip): an
+    /// actor's update that draws a second sprite.
+    pub skip: Vec<String>,
     pub mark: Vec<Cells>,
     pub cells: Vec<Cells>,
     pub map: bool,
@@ -83,6 +86,11 @@ pub fn scene(rom: &[u8], symbols: &Symbols, ask: &Ask, functions: &HashMap<Strin
     }
     let entrance = ask.entrance.or_else(|| entrances.iter().find(|e| e.number > 0).or(entrances.first()).map(|e| e.number as u16)).unwrap_or(0);
     let mut field = Field::enter(rom, symbols, &Setup { scene: s.number, entrance, set: ask.set.clone(), clear: Vec::new() })?;
+    for name in &ask.skip {
+        let address = functions.get(name).ok_or_else(|| format!("{} has no function {name}", s.name()))?;
+        field.returns.push((address & !1, 0));
+        println!("  {name} returns at once");
+    }
     field.until_control()?;
     field.frames(SETTLE)?;
     if field.scene() != s.number {
