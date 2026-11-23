@@ -5,7 +5,10 @@
 //! the tag's word and kind, the tag's text after them), and the numbers in
 //! code someone judged by reading it, `evidence/<game>-numbers.tsv` (file,
 //! routine, the number as written, `honest` or `unsettled`, what it is in a
-//! few words). All are compiled in
+//! few words), and the duplicate groups someone judged not to be one text,
+//! `evidence/<game>-duplicates.tsv` (the members' names sorted and joined
+//! with a space, `different things` or `kept apart`, why in a few words).
+//! All are compiled in
 //! from this repository's `evidence/` folder by `build.rs`, so a program
 //! reads the evidence of its own revision; a changed row needs a rebuild.
 //! `ALCHEMY_EVIDENCE` names a folder whose tables are read in their place
@@ -181,9 +184,67 @@ pub fn judged(game: &str) -> Result<Vec<Judged>, String> {
     table(&format!("{game}-numbers.tsv")).map_or(Ok(Vec::new()), |text| parse_judged(text).map_err(|error| format!("evidence/{game}-numbers.tsv: {error}")))
 }
 
+/// The kinds a judged duplicate group's row may be: copies that are
+/// different things the same by chance (each creature's gravity, each
+/// overlay's lone entrance, one motion made by different things), or one
+/// thing kept as several copies the ROM holds that no shared text could give
+/// (two main-image objects with no precedent for sharing, a library's own
+/// copy, two return types).
+pub const DUPLICATE_KINDS: &[&str] = &["different things", "kept apart"];
+
+/// One row of a game's judged duplicates: a group of copies the duplicate
+/// count finds, judged by someone who read them not to be one text.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct JudgedGroup {
+    /// The group's member names, sorted and joined with a space.
+    pub members: String,
+    /// One of `DUPLICATE_KINDS`.
+    pub kind: String,
+    /// Why, in a few words.
+    pub why: String,
+}
+
+/// The rows of a judged duplicates table's text; a row of a kind not in
+/// `DUPLICATE_KINDS`, with an empty cell or with members out of order, is an
+/// error naming its line.
+pub fn parse_duplicates(text: &str) -> Result<Vec<JudgedGroup>, String> {
+    let mut out = Vec::new();
+    for (at, cells) in rows(text, 3)?.into_iter().enumerate() {
+        let row = JudgedGroup { members: cells[0].to_string(), kind: cells[1].to_string(), why: cells[2].to_string() };
+        if !DUPLICATE_KINDS.contains(&row.kind.as_str()) {
+            return Err(format!("row {}: kind {}, not one of {}", at + 1, row.kind, DUPLICATE_KINDS.join(", ")));
+        }
+        if cells.iter().any(|cell| cell.trim().is_empty()) {
+            return Err(format!("row {}: an empty cell", at + 1));
+        }
+        let names: Vec<&str> = row.members.split(' ').collect();
+        if names.len() < 2 || names.windows(2).any(|pair| pair[0] > pair[1]) {
+            return Err(format!("row {}: members not two or more names in order", at + 1));
+        }
+        out.push(row);
+    }
+    Ok(out)
+}
+
+/// A game's judged duplicates, empty for a game that has none yet.
+pub fn duplicates(game: &str) -> Result<Vec<JudgedGroup>, String> {
+    table(&format!("{game}-duplicates.tsv"))
+        .map_or(Ok(Vec::new()), |text| parse_duplicates(text).map_err(|error| format!("evidence/{game}-duplicates.tsv: {error}")))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn judged_duplicates_are_read_and_checked() {
+        let rows = parse_duplicates("members\tkind\twhy\ngA gB\tdifferent things\teach creature's gravity\n").unwrap();
+        assert_eq!(rows, [JudgedGroup { members: "gA gB".into(), kind: "different things".into(), why: "each creature's gravity".into() }]);
+        assert!(parse_duplicates("members\tkind\twhy\ngA gB\tthe same\tno\n").unwrap_err().contains("kind the same"));
+        assert!(parse_duplicates("members\tkind\twhy\ngB gA\tkept apart\ttwo objects\n").unwrap_err().contains("in order"));
+        assert!(parse_duplicates("members\tkind\twhy\ngA\tkept apart\ttwo objects\n").unwrap_err().contains("two or more"));
+        assert!(duplicates("tla").unwrap().len() > 10);
+    }
 
     #[test]
     fn the_tables_are_compiled_in_and_read_whole() {

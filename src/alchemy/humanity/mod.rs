@@ -353,6 +353,11 @@ pub struct Report {
     /// One body under several names the ROM keeps apart, said so in its
     /// comments (`duplicates`).
     pub said_groups: Vec<Group>,
+    /// The groups someone judged not to be one text, by a row of
+    /// `evidence/<game>-duplicates.tsv`, each with its row's kind and why.
+    pub judged_groups: Vec<(Group, String, String)>,
+    /// Those rows, by the group's key (`group_key`).
+    duplicate_rows: HashMap<String, (String, String)>,
     /// Each file and what it `#include`s, as written.
     includes: Vec<(String, String)>,
     /// Every file read.
@@ -1133,6 +1138,17 @@ impl Report {
         let referred = std::mem::take(&mut self.macro_words);
         (self.function_groups, self.table_groups, self.said_groups) =
             duplicates::groups(&std::mem::take(&mut self.copies), FUNCTION_TOKENS, TABLE_TOKENS, &objects, &referred);
+        // A group someone judged, by its row, is counted apart.
+        for groups in [&mut self.function_groups, &mut self.table_groups] {
+            let mut kept = Vec::new();
+            for group in std::mem::take(groups) {
+                match self.duplicate_rows.get(&group_key(&group)) {
+                    Some((kind, why)) => self.judged_groups.push((group, kind.clone(), why.clone())),
+                    None => kept.push(group),
+                }
+            }
+            *groups = kept;
+        }
         self.long_files.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
     }
 
@@ -1247,6 +1263,34 @@ impl Report {
     pub fn copies(groups: &[Group]) -> usize {
         groups.iter().map(|group| group.members.len() - 1).sum()
     }
+
+    /// The rows of `evidence/<game>-duplicates.tsv` that judge no group the
+    /// count finds: a member gone, or the members no longer one group. Each
+    /// with what is wrong.
+    pub fn stale_duplicates(&self) -> Vec<(String, String)> {
+        let found: HashSet<String> =
+            self.function_groups.iter().chain(&self.table_groups).chain(&self.said_groups).chain(self.judged_groups.iter().map(|(group, ..)| group)).map(group_key).collect();
+        let mut out = Vec::new();
+        for (members, (kind, _)) in &self.duplicate_rows {
+            if found.contains(members) {
+                continue;
+            }
+            let gone: Vec<&str> = members.split(' ').filter(|name| !self.functions.contains_key(*name) && !self.globals.contains_key(*name)).collect();
+            let what = if gone.is_empty() { "no longer one group".to_string() } else { format!("{} gone", gone.join(", ")) };
+            out.push((members.clone(), format!("{kind}: {what}")));
+        }
+        out.sort();
+        out
+    }
+}
+
+/// A duplicate group's key, as its row of `evidence/<game>-duplicates.tsv`
+/// writes it: its members' names, without their files, sorted and joined
+/// with a space.
+pub fn group_key(group: &Group) -> String {
+    let mut names: Vec<&str> = group.members.iter().map(|member| member.rsplit_once(':').map_or(member.as_str(), |(_, name)| name)).collect();
+    names.sort_unstable();
+    names.join(" ")
 }
 
 /// Whether a line is a comment's (`//`, `/*`, a block's inner or closing
@@ -3334,13 +3378,27 @@ pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, t
 
 /// `game_with_text`, with the game's rows of `evidence/<game>-numbers.tsv`:
 /// the numbers in code someone judged by reading them.
+#[cfg(test)]
 pub fn game_judged<'a>(
     files: impl IntoIterator<Item = (&'a str, &'a str)>,
     text: Option<&GameText>,
     names: &[evidence::Name],
     judged: &[evidence::Judged],
 ) -> Report {
+    game_all(files, text, names, judged, &[])
+}
+
+/// `game_judged`, with the game's rows of `evidence/<game>-duplicates.tsv`:
+/// the duplicate groups someone judged not to be one text.
+pub fn game_all<'a>(
+    files: impl IntoIterator<Item = (&'a str, &'a str)>,
+    text: Option<&GameText>,
+    names: &[evidence::Name],
+    judged: &[evidence::Judged],
+    duplicates: &[evidence::JudgedGroup],
+) -> Report {
     let mut report = Report::default();
+    report.duplicate_rows = duplicates.iter().map(|row| (row.members.clone(), (row.kind.clone(), row.why.clone()))).collect();
     report.numbered_by_row = names.iter().filter(|row| row.kind == "its number").map(|row| row.name.clone()).collect();
     report.judged = judged.iter().map(|row| ((row.file.clone(), row.routine.clone(), row.number.clone()), row.kind == "honest")).collect();
     if let Some(text) = text {
@@ -3709,6 +3767,7 @@ const ROWS: &[(&str, &str)] = &[
     ("duplicate_table", "duplicate table groups"),
     ("duplicate_table_copies", "  copies past the first"),
     ("duplicate_said", "one body under two names, said so"),
+    ("duplicate_judged", "duplicates judged by row"),
     ("provenance_names", "game-thing names"),
     ("provenance_verified", "  verified by row or ★ line"),
     ("provenance_table", "  verified by table"),
@@ -3795,6 +3854,7 @@ impl Report {
             "duplicate_table" => self.table_groups.len() as u64,
             "duplicate_table_copies" => Report::copies(&self.table_groups) as u64,
             "duplicate_said" => self.said_groups.len() as u64,
+            "duplicate_judged" => self.judged_groups.len() as u64,
             "unused_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.words.len() as u64),
             "seen_words" => self.provenance.as_ref().map_or(0, |analysis| (analysis.seen_words.len() + analysis.lent_words.len()) as u64),
             "lent_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.lent_words.len() as u64),
@@ -4020,6 +4080,11 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
         for group in groups {
             let _ = writeln!(text, "{game}\t{}\t{}", group.tokens, group.members.join(" "));
         }
+        if metric == "duplicate_judged" {
+            for (group, kind, why) in &report.judged_groups {
+                let _ = writeln!(text, "{game}\t{}\t{}\t{kind}: {why}", group.tokens, group.members.join(" "));
+            }
+        }
         for item in &report.items {
             if item.metric == metric || kinds(metric).contains(&item.metric) {
                 // A file or folder is listed by its path alone.
@@ -4032,6 +4097,19 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
         }
     }
     text
+}
+
+/// The rows of a game's `evidence/<game>-duplicates.tsv` that judge no group
+/// its duplicate count finds now, for `check tags`: each row's members and
+/// what is wrong.
+pub fn stale_duplicates(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
+    let duplicates = evidence::duplicates(game)?;
+    if duplicates.is_empty() {
+        return Ok(Vec::new());
+    }
+    let files = sources(root, game)?;
+    let report = game_all(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), None, &[], &[], &duplicates);
+    Ok(report.stale_duplicates())
 }
 
 /// `progress --humanity [--top N] [--list METRIC]`: count both games, write
@@ -4049,8 +4127,9 @@ pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, Stri
                     let text = game_text(root, game)?;
                     let names = evidence::names(game)?;
                     let judged = evidence::judged(game)?;
+                    let duplicates = evidence::duplicates(game)?;
                     let files = sources(root, game)?;
-                    let mut report = game_judged(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names, &judged);
+                    let mut report = game_all(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names, &judged, &duplicates);
                     let rows: Vec<String> = names.iter().filter(|row| row.kind == "its number").map(|row| row.name.clone()).collect();
                     let paths = tracked(root, &[format!("games/{game}")])?;
                     let symbols = layout::numbered_symbols(&symbol_texts(root, &paths)?);
@@ -4493,6 +4572,34 @@ mod tests {
         let report = game([("games/tla/src/scene/a.c", apart.as_str()), ("games/tla/src/field/p.c", part.as_str())]);
         assert_eq!(members(&report), (1, vec![]), "two objects: a copy to write once");
         assert_eq!(normalized("games/tla/src/scene/../field/p.c"), "games/tla/src/field/p.c");
+    }
+
+    #[test]
+    fn duplicates_judged_by_row() {
+        let body = "{ int i; for (i = 0; i < 4; i++) { gA[i] = Load(i) + 3; Store(gB, i); } }\n";
+        let (one, two, three) = (format!("void A_Step(void) {body}"), format!("void B_Step(void) {body}"), format!("void C_Walk(void) {body}"));
+        let files = [("games/tla/src/a.c", one.as_str()), ("games/tla/src/b.c", two.as_str()), ("games/tla/src/c.c", three.as_str())];
+        let rows = evidence::parse_duplicates(concat!(
+            "members\tkind\twhy\n",
+            "A_Step B_Step C_Walk\tkept apart\tthree main-image objects\n",
+            "A_Step B_Step\tdifferent things\tno longer one group\n",
+            "D_Gone E_Gone\tdifferent things\tgone\n",
+        ))
+        .unwrap();
+        let report = game_all(files, None, &[], &[], &rows);
+        assert_eq!((report.value("duplicate_function"), report.value("duplicate_judged")), (0, 1));
+        assert_eq!(report.judged_groups[0].1, "kept apart");
+        let listed = list(&[("tla", &report)], "duplicate_judged");
+        assert!(listed.ends_with("games/tla/src/c.c:C_Walk\tkept apart: three main-image objects\n"), "{listed}");
+        assert_eq!(
+            report.stale_duplicates(),
+            [
+                ("A_Step B_Step".to_string(), "different things: no longer one group".to_string()),
+                ("D_Gone E_Gone".to_string(), "different things: D_Gone, E_Gone gone".to_string()),
+            ]
+        );
+        let unjudged = game_all(files, None, &[], &[], &[]);
+        assert_eq!((unjudged.value("duplicate_function"), unjudged.value("duplicate_judged")), (1, 0), "a group no one judged stays counted");
     }
 
     #[test]
