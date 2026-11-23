@@ -80,8 +80,13 @@ provenance_unseen where its its-code row says the thing shows nothing on
 screen. Files and folders under games/GAME count too (--list
 loose_headers, part_folders, numbered_files; a numbered file whose symbol
 the C and assembly write only where it is defined is
-numbered_files_unused),
-and --list unit_open names the unit each question keeps open.";
+numbered_files_unused), and a placeholder only its own definition writes
+is placeholder_unused. A duplicate group with a row of this toolkit's
+evidence/GAME-duplicates.tsv is duplicate_judged. A word the game never
+uses that a seen copy of a routine nothing runs or a seen lettered sibling
+of an actor placed out of sight lends is lent_word, one of things nothing
+shows (its-code rows) unseen_word. --list unit_open names the unit each
+question keeps open, with the question's whole text.";
 
 /// Both games' DONE, a line for each edition and one for the games.
 fn measure(root: &Path) -> String {

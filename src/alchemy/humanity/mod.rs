@@ -3315,7 +3315,23 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         if let Some(Ok(kind)) = crate::adopt::views::view_kind(comment.text) {
             report.note("views", path, comment.line, kind);
         }
-        questions(report, path, comment.line, comment.text);
+    }
+    // A question with the `//` lines that go on with it, for its whole text.
+    for (at, comment) in comments.iter().enumerate() {
+        if !comment.text.contains("XXX:") {
+            continue;
+        }
+        let mut text = comment.text.to_string();
+        let mut last = comment.line;
+        for next in &comments[at + 1..] {
+            if next.line != last + 1 || !next.text.starts_with("//") || next.text.starts_with("///") || next.text.contains("XXX") {
+                break;
+            }
+            text.push('\n');
+            text.push_str(next.text);
+            last = next.line;
+        }
+        questions(report, path, comment.line, &text);
     }
     let owners = clex::owners(&code.tokens);
     let mut walk = Walk {
@@ -3612,8 +3628,24 @@ fn is_folder_guide(path: &str) -> bool {
 fn questions(report: &mut Report, path: &str, line: usize, text: &str) {
     for (offset, _) in text.match_indices("XXX:") {
         let at = line + text[..offset].matches('\n').count();
-        let question = text[offset..].lines().next().unwrap_or_default().trim_end();
-        report.questions.entry(path.to_string()).or_default().push((at, question.to_string()));
+        // Its whole text, the lines a comment or paragraph goes on with up to
+        // the sentence's end, so the next reader sees what would settle it.
+        let mut question = String::new();
+        for (index, piece) in text[offset..].lines().enumerate() {
+            let piece = if index == 0 { piece } else { piece.trim_start().trim_start_matches(['/', '*']) };
+            let piece = piece.trim().trim_end_matches("*/").trim_end();
+            if piece.is_empty() || (index > 0 && piece.contains("XXX")) {
+                break;
+            }
+            if !question.is_empty() {
+                question.push(' ');
+            }
+            question.push_str(piece);
+            if question.ends_with(['.', '?', '!']) {
+                break;
+            }
+        }
+        report.questions.entry(path.to_string()).or_default().push((at, question));
     }
 }
 
@@ -4164,7 +4196,7 @@ mod tests {
     fn a_unit_is_open_while_its_files_hold_an_xxx() {
         let report = game([
             ("games/tbs/src/shop/README.md", "# Shops\n\n## Evidence\n\nNamed from the counters.\n"),
-            ("games/tbs/src/shop/shop/run.c", "// XXX: why three; a probe would settle it.\nvoid Shop_Run(void) {}\n"),
+            ("games/tbs/src/shop/shop/run.c", "// XXX: why three; a probe of the\n// counter would settle it.\nvoid Shop_Run(void) {}\n"),
             ("games/tbs/src/shop/shop/inn.c", "void Inn_Run(void) {\n  // XXX (no evidence): why; only the source says.\n}\n"),
             ("games/tbs/src/scene/README.md", "# Maps\n"),
             ("games/tbs/src/scene/shared/door.h", "/// A door.\nstruct Door { int x; };\n"),
@@ -4189,8 +4221,8 @@ mod tests {
         assert_eq!(
             list(&[("tbs", &report)], "unit_open"),
             concat!(
-                "tbs\tgames/tbs/src/scene/vale.c:5\tgames/tbs/src/scene/vale.c\tXXX: what this is; its render. */\n",
-                "tbs\tgames/tbs/src/shop/shop/run.c:1\tgames/tbs/src/shop/README.md\tXXX: why three; a probe would settle it.\n",
+                "tbs\tgames/tbs/src/scene/vale.c:5\tgames/tbs/src/scene/vale.c\tXXX: what this is; its render.\n",
+                "tbs\tgames/tbs/src/shop/shop/run.c:1\tgames/tbs/src/shop/README.md\tXXX: why three; a probe of the counter would settle it.\n",
             ),
             "each question with its unit"
         );
