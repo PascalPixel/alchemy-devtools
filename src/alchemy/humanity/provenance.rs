@@ -173,7 +173,10 @@ impl GameText {
                 if word.is_empty() {
                     continue;
                 }
-                for part in std::iter::once(word.as_str()).chain(word.split('\'')) {
+                // `Li'l` is `li'l`, `li` and `l`, and `lil` as a name
+                // writes it, the apostrophe dropped (`ITEM_LIL_TURTLE`).
+                let dropped = word.replace('\'', "");
+                for part in [word.as_str(), dropped.as_str()].into_iter().chain(word.split('\'')) {
                     if !part.is_empty() {
                         text.stems.insert(stem(part));
                         text.words.insert(part.to_string());
@@ -1256,6 +1259,19 @@ mod tests {
         assert_eq!(unused_words("Bilibin_UpdateWarehouseApproach", &text), ["warehouse", "approach"]);
         assert_eq!(unused_words("ACTOR_MCCOY_TREES", &text), Vec::<String>::new());
         assert_eq!(unused_words("Event_McCoyTreasury", &text), Vec::<String>::new(), "Mc and Coy are one word");
+    }
+
+    #[test]
+    fn a_word_with_its_apostrophe_dropped() {
+        let po = concat!(
+            "msgctxt \"MsgItemName\"\nmsgid \"00001\"\nmsgstr \"{article_class:2}Li'l Turtle\"\n\n",
+            "msgctxt \"message\"\nmsgid \"00002\"\nmsgstr \"Can't Use\"\n",
+        );
+        let text = GameText::parse(po, None).unwrap();
+        assert_eq!(unused_words("ACTOR_LIL_TURTLE", &text), Vec::<String>::new());
+        assert_eq!(unused_words("FLAG_CANT_USE", &text), Vec::<String>::new());
+        assert!(text.uses("li'l") && text.uses("can"), "the word and its parts stay");
+        assert_eq!(unused_words("ACTOR_LILT_TURTLE", &text), ["lilt"]);
     }
 
     fn thing(name: &str, own: &str, context: &str) -> Thing {
