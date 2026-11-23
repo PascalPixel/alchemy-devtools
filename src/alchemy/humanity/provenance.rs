@@ -6,7 +6,9 @@
 //!
 //! - words the game never uses: each name is split into words, and a word is
 //!   accounted for when the game's text uses it (after crude stemming) or it
-//!   is on the short programming vocabulary below, and set apart as plain
+//!   is on the short programming vocabulary below, set apart as the twin's
+//!   when the twin's text uses it (The Broken Seal's, for The Lost Age:
+//!   H6), and set apart as plain
 //!   English for what the player sees when every name using it has a row
 //!   saying someone saw it (its render, its picture, the walkthrough), or
 //!   takes it from a map that has one: its name, its short name in its own
@@ -91,6 +93,11 @@ pub struct GameText {
     numbers: HashMap<u32, usize>,
     /// The area names (`gArea_NameRules`, from `MsgDebugAreaName`).
     areas: Vec<String>,
+    /// The twin's words and their stems: for The Lost Age, The Broken
+    /// Seal's, whose names and words it takes where it keeps a thing of
+    /// that game (H6).
+    twin_words: HashSet<String>,
+    twin_stems: HashSet<String>,
 }
 
 /// A message's text without its `{...}` commands, on one line.
@@ -198,6 +205,19 @@ impl GameText {
             }
         }
         Ok(text)
+    }
+
+    /// The same text, its twin's words taken from `twin`.
+    pub fn with_twin(mut self, twin: &GameText) -> GameText {
+        self.twin_words = twin.words.clone();
+        self.twin_stems = twin.stems.clone();
+        self
+    }
+
+    /// The twin's text uses the word, or a word with its stem.
+    pub fn twin_uses(&self, word: &str) -> bool {
+        let lower = word.to_lowercase();
+        self.twin_words.contains(&lower) || self.twin_stems.contains(&stem(&lower))
     }
 
     /// The game's text uses the word, or a word with its stem.
@@ -859,6 +879,9 @@ pub struct Analysis {
     /// Each word set apart as plain English for what the player sees, and
     /// the rows that use it, most used first.
     pub seen_words: Vec<(String, Vec<usize>)>,
+    /// Each word set apart as the twin's: its text uses it (H6). Most used
+    /// first.
+    pub twin_words: Vec<(String, Vec<usize>)>,
     /// Each unresolved door word and the links that use it, most used first.
     pub door_words: Vec<(String, Vec<usize>)>,
 }
@@ -1070,6 +1093,13 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
         }
         analysis.rows.push(Row { thing: thing.clone(), words: flagged, evidence, door_words: Vec::new(), seen_words: Vec::new(), seen_uses: Vec::new() });
     }
+    // A word the twin's text uses is the game's, and set apart (H6).
+    let (mut twin, words): (Vec<_>, Vec<_>) = words.into_iter().partition(|(word, _)| text.twin_uses(word));
+    for (word, uses) in &twin {
+        for &at in uses {
+            analysis.rows[at].words.retain(|flagged| flagged != word);
+        }
+    }
     let seen = Seen::new(&analysis.rows);
     let mut flagged = Vec::new();
     let mut apart = Vec::new();
@@ -1091,10 +1121,10 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
             row.seen_words.push(word.clone());
         }
     }
-    for list in [&mut flagged, &mut apart] {
+    for list in [&mut flagged, &mut apart, &mut twin] {
         list.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
     }
-    (analysis.words, analysis.seen_words) = (flagged, apart);
+    (analysis.words, analysis.seen_words, analysis.twin_words) = (flagged, apart, twin);
     check_doors(&mut analysis, text);
     analysis
 }
@@ -1358,6 +1388,21 @@ mod tests {
         assert_eq!(kind("Vale_Init", "games/tbs/src/scene/vale.c", Origin::Function), Some("function"));
         assert_eq!(kind("Battle_Init", "games/tbs/src/battle/x.c", Origin::Function), None);
         assert_eq!(kind("ACTOR_unk_14", "a.h", Origin::Enumerator), None);
+    }
+
+    #[test]
+    fn words_of_the_twins_text() {
+        let twin = GameText::parse("msgctxt \"MsgHealer\"\nmsgid \"00001\"\nmsgstr \"I am the healer here. Hsu fell.\"\n", None).unwrap();
+        let text = GameText::parse(PO, Some(2)).unwrap();
+        let things = [thing("ACTOR_HEALER", "", ""), thing("FLAG_HEALERS_WAREHOUSE", "", ""), thing("ACTOR_HSU", "", "")];
+        let alone = analyze(&things, &[], &text, &HashMap::new());
+        assert!(alone.words.iter().any(|(word, _)| word == "healer") && alone.twin_words.is_empty(), "no twin, no twin's words");
+        let analysis = analyze(&things, &[], &GameText::parse(PO, Some(2)).unwrap().with_twin(&twin), &HashMap::new());
+        let flagged: Vec<&str> = analysis.words.iter().map(|(word, _)| word.as_str()).collect();
+        assert_eq!(flagged, ["warehouse"]);
+        assert_eq!(analysis.twin_words, [("healer".to_string(), vec![0]), ("healers".to_string(), vec![1]), ("hsu".to_string(), vec![2])]);
+        assert_eq!(analysis.rows[1].words, ["warehouse"], "the twin's word leaves the name");
+        assert!(text.uses("tree") && !twin.with_twin(&text).uses("tree"), "the twin's words are not the game's own");
     }
 
     #[test]
