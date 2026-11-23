@@ -63,6 +63,130 @@ const KEYWORDS: &[&str] = &[
     "__attribute__", "__inline__", "__volatile__", "typeof", "__typeof__", "_Bool", "__extension__", "defined",
 ];
 
+/// The macros standard C or its compilers give every program, which a
+/// game's headers write out because it builds without the C library: their
+/// names are their documentation.
+const STANDARD_MACROS: &[&str] = &["NULL", "TRUE", "FALSE", "offsetof", "UNUSED"];
+
+/// Whether a routine is the compiler's, the C library's or the BIOS's,
+/// named as those name it (`__divsi3`, `_call_via_r0`, `abs`, `Bios_CpuSet`):
+/// its documentation is theirs.
+fn is_library_routine(name: &str) -> bool {
+    name.starts_with("__")
+        || name.starts_with("_call_via_")
+        || name.starts_with("Bios_")
+        || matches!(name, "abs" | "labs" | "memcpy" | "memset" | "memcmp" | "memmove" | "strlen" | "strcmp" | "strcpy")
+}
+
+/// Whether a word names a type: C's own, or the game's integer, fixed-point
+/// and boolean types (`u8`, `vs16`, `FIXED`, `bool8`).
+fn is_type_word(text: &str) -> bool {
+    static TYPE: OnceLock<Regex> = OnceLock::new();
+    let pattern = TYPE.get_or_init(|| Regex::new(r"^(?:v?[us](?:8|16|32|64)|FIXED|bool(?:8|16|32)?|size_t)$").unwrap());
+    pattern.is_match(text) || matches!(text, "struct" | "union" | "enum" | "void" | "const" | "volatile" | "unsigned" | "signed" | "char" | "int" | "short" | "long")
+}
+
+/// The name an object-like macro's body views, and how many casts it
+/// takes to: `gWindowWork` of `((struct WindowWork *)gWindowWork[0])`,
+/// `gHeapSlots` of `(*(struct BattleMenuWork **)&gHeapSlots[HEAP_SLOT_BATTLE_MENU])`,
+/// `gWaitForFlashWrite` of `gWaitForFlashWrite`. Any other body, a
+/// number or a computation, views nothing.
+fn view_target<'t>(body: &[&'t str]) -> Option<(&'t str, usize)> {
+    let close_of = |tokens: &[&str]| -> Option<usize> {
+        let mut depth = 0;
+        for (at, text) in tokens.iter().enumerate() {
+            match *text {
+                "(" => depth += 1,
+                ")" => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(at);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    };
+    let is_name = |text: &str| text.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') && !is_keyword(text) && !is_type_word(text);
+    let mut tokens = body;
+    let mut casts = 0;
+    loop {
+        match tokens.first().copied() {
+            Some("*" | "&") => tokens = &tokens[1..],
+            Some("(") => {
+                let close = close_of(tokens)?;
+                if close == tokens.len() - 1 {
+                    tokens = &tokens[1..close];
+                    continue;
+                }
+                let inner = &tokens[1..close];
+                let typed = inner.first().is_some_and(|first| is_type_word(first) || first.starts_with(|c: char| c.is_ascii_uppercase()));
+                let plain = inner.iter().all(|text| matches!(*text, "*" | "(" | ")" | ",") || text.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_'));
+                if !(typed && plain) {
+                    return None;
+                }
+                casts += 1;
+                tokens = &tokens[close + 1..];
+            }
+            _ => break,
+        }
+    }
+    let (&target, mut rest) = tokens.split_first()?;
+    if !is_name(target) {
+        return None;
+    }
+    while let Some((&first, after)) = rest.split_first() {
+        match first {
+            "->" | "." if after.first().is_some_and(|name| is_name(name)) => rest = &after[1..],
+            "[" => {
+                let mut depth = 0;
+                let close = rest.iter().position(|text| {
+                    match *text {
+                        "[" => depth += 1,
+                        "]" => depth -= 1,
+                        _ => {}
+                    }
+                    depth == 0
+                })?;
+                rest = &rest[close + 1..];
+            }
+            _ => return None,
+        }
+    }
+    Some((target, casts))
+}
+
+/// The routine a function body is one call to, its result returned or
+/// not, its arguments calling nothing (`return Party_ListMembers(owners);`).
+fn one_call<'t>(body: &[&'t str]) -> Option<&'t str> {
+    let body = body.strip_prefix(&["return"]).unwrap_or(body);
+    let [callee, "(", arguments @ .., ")", ";"] = body else { return None };
+    if !callee.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') || is_keyword(callee) {
+        return None;
+    }
+    let mut depth = 0;
+    for (at, text) in arguments.iter().enumerate() {
+        match *text {
+            "(" => {
+                // A call among the arguments: more than one call.
+                if at > 0 && arguments[at - 1].starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') && !is_keyword(arguments[at - 1]) {
+                    return None;
+                }
+                depth += 1;
+            }
+            ")" => {
+                depth -= 1;
+                if depth < 0 {
+                    return None;
+                }
+            }
+            _ => {}
+        }
+    }
+    (depth == 0).then_some(*callee)
+}
+
 /// Word stems before a digit run that name hardware or a convention, not a
 /// meaning still to find: `BG2`, `Dma3`, `TM0`, `DISPCNT_MODE_1`, `TBS_PATCH_1`.
 const NUMBERED_STEMS: &[&str] = &[
@@ -102,6 +226,8 @@ struct Declared {
     /// The row that sets it apart when it has no `///` of its own (D9's
     /// rules: `undocumented_run` and the rest).
     apart: Option<&'static str>,
+    /// The routine its body is one call to, for a forwarder.
+    forward: Option<String>,
 }
 
 /// One game's counts.
@@ -212,6 +338,13 @@ pub struct Report {
     /// Message symbols whose own text says `unknown` (`MsgDetailsUnknown`):
     /// the game's word, no placeholder.
     text_unknown: HashSet<String>,
+    /// Each macro, whether it has its `///` or a rule sets it apart that
+    /// leaves nothing to mark, for what a view views.
+    macro_docs: HashMap<String, bool>,
+    /// Each undocumented object-like macro that views one name (file, line,
+    /// name, the name it views, how many casts), settled once every
+    /// declaration is read.
+    views: Vec<(String, usize, String, String, usize)>,
 }
 
 /// A number in code, with each call around it and the argument it fills
@@ -372,11 +505,8 @@ impl Report {
         self.names.get(kind).map_or(0, BTreeSet::len)
     }
 
-    fn declare(&mut self, function: bool, name: &str, file: &str, line: usize, documented: bool, defined: bool) {
-        self.declare_apart(function, name, file, line, documented, defined, None);
-    }
-
-    /// `declare`, with the row that sets it apart if it has no `///`.
+    /// Keep a routine or global's declaration, with the row that sets it
+    /// apart if it has no `///`.
     #[allow(clippy::too_many_arguments)]
     fn declare_apart(&mut self, function: bool, name: &str, file: &str, line: usize, documented: bool, defined: bool, apart: Option<&'static str>) {
         let map = if function { &mut self.functions } else { &mut self.globals };
@@ -387,6 +517,9 @@ impl Report {
         }
         entry.entry |= file.contains("/include/gamepak/far_call/") || file.contains("/include/farcall/");
         if defined && !entry.defined {
+            // Counted where it is defined, so set apart as it is there, else
+            // as it is where first declared.
+            entry.apart = apart.or(entry.apart);
             entry.defined = true;
             entry.file = file.to_string();
             entry.line = line;
@@ -808,6 +941,11 @@ impl Report {
         let far = |functions: &BTreeMap<String, Declared>, name: &str| {
             name.strip_suffix("Far").and_then(|routine| functions.get(routine)).is_some_and(|routine| routine.documented)
         };
+        // A routine is said where it has its `///`, as a far call by its
+        // target's, or as the compiler's, the C library's or the BIOS's.
+        let said = |functions: &BTreeMap<String, Declared>, name: &str| {
+            functions.get(name).is_some_and(|routine| routine.documented) || far(functions, name) || is_library_routine(name)
+        };
         for (function, kind) in [(true, "undocumented_function"), (false, "undocumented_global")] {
             let missing: Vec<(String, usize, String, &str)> = (if function { &self.functions } else { &self.globals })
                 .iter()
@@ -815,12 +953,33 @@ impl Report {
                 .map(|(name, declared)| {
                     let apart = if function && far(&self.functions, name) { Some("undocumented_far") } else { declared.apart };
                     let apart = apart.or_else(|| (!function && self.id_externs.contains(name)).then_some("undocumented_id"));
+                    let apart = apart.or_else(|| (function && is_library_routine(name)).then_some("undocumented_library"));
+                    // A forwarder: its body one call to a routine said
+                    // elsewhere (`return Party_ListMembers(owners);`).
+                    let forwards = declared.forward.as_deref().is_some_and(|target| target != name && said(&self.functions, target));
+                    let apart = apart.or_else(|| (function && forwards).then_some("undocumented_forward"));
                     (declared.file.clone(), declared.line, name.clone(), apart.unwrap_or(kind))
                 })
                 .collect();
             for (file, line, name, kind) in missing {
                 self.note(kind, &file, line, &name);
             }
+        }
+        // A typed view of one name (`((struct WindowWork *)gWindowWork[0])`),
+        // that name said where it is declared: through a cast, any routine,
+        // global or macro; as it is, a global (`#define gLzPackWork
+        // gWaitForFlashWrite`), since a routine's bare name is a parameter of
+        // what it is passed to.
+        for (file, line, name, target, casts) in std::mem::take(&mut self.views) {
+            let global = self.globals.get(&target).is_some_and(|global| {
+                global.documented || global.apart.is_some_and(|apart| !matches!(apart, "undocumented_plain" | "undocumented_note"))
+            });
+            // A routine viewed under its own name (`#define Actor_StartIdleFar
+            // ((void (*)(struct MotionObject *))Actor_StartIdleFar)`) is the
+            // routine's.
+            let other = said(&self.functions, &target) || (target != name && self.macro_docs.get(&target).copied().unwrap_or(false));
+            let viewed = (target != name && global) || (casts > 0 && other);
+            self.note(if viewed { "undocumented_view" } else { "undocumented_macro" }, &file, line, &name);
         }
         // D9 asks every entry point for its summary; any other declaration only
         // where it has something to say, which no count can tell.
@@ -951,12 +1110,70 @@ fn is_condition_line(line: &str) -> bool {
     ["if", "elif", "else", "endif"].iter().any(|word| rest.starts_with(word))
 }
 
+/// The comment heading a run of declarations: `///`, a `//` to be marked
+/// `///`, or a `//` note D9 keeps as it is (`// UB:`, `// BUG:`, `// DEAD:`,
+/// an `XXX` question, a FAKEMATCH tag), which heads nothing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Head {
+    Doc,
+    Plain,
+    Note,
+}
+
+/// Whether a comment is one D9 keeps as `//` over a declaration: a note of
+/// undefined behaviour, a bug or dead code, an open question or a fake
+/// match's tag.
+fn is_kept_note(comment: &str) -> bool {
+    ["// UB:", "// BUG:", "// DEAD:", "XXX", "FAKEMATCH("].iter().any(|mark| comment.contains(mark))
+}
+
+/// The first line of the logical line `at` is part of, past the lines a
+/// `\` continues.
+fn logical_start(lines: &[&str], mut at: usize) -> usize {
+    while at > 0 && lines[at - 1].trim_end().ends_with('\\') {
+        at -= 1;
+    }
+    at
+}
+
+/// The comment block right above line `at` (from 0), past `#if` lines (a
+/// condition written over several lines too) and `clang-format` switches:
+/// its kind, if there is one.
+fn head_above(lines: &[&str], mut above: usize) -> Option<Head> {
+    while above > 0 {
+        let start = logical_start(lines, above - 1);
+        if is_condition_line(lines[start]) || lines[start].contains("clang-format") {
+            above = start;
+        } else {
+            break;
+        }
+    }
+    let mut head = None;
+    while above > 0 && is_comment_line(lines[above - 1]) {
+        above -= 1;
+        let line = lines[above].trim_start();
+        let own = if line.starts_with("///") || line.starts_with("/**") {
+            Head::Doc
+        } else if is_kept_note(line) {
+            Head::Note
+        } else {
+            Head::Plain
+        };
+        head = Some(match (head, own) {
+            (Some(Head::Doc), _) | (_, Head::Doc) => Head::Doc,
+            (Some(Head::Note), _) | (_, Head::Note) => Head::Note,
+            _ => Head::Plain,
+        });
+    }
+    head
+}
+
 /// The comment over the run of `#define`s each `#define` line belongs to,
-/// by line (from 1): `true` for `///`, `false` for `//`. A run is
-/// consecutive `#define`s, their continuation lines and `#if` lines
-/// between them; a blank line, a comment or any other line ends it. Its
-/// comment is the one right above it, past `#if` and `clang-format` lines.
-fn define_heads(text: &str) -> HashMap<usize, bool> {
+/// by line (from 1). A run is consecutive `#define`s, their continuation
+/// lines and `#if` lines between them; a blank line, a comment or any other
+/// line ends it. Its comment is the one right above it, past `#if` lines
+/// (a `///` over an `#if` heads the run inside it) and `clang-format` lines.
+fn define_heads(text: &str) -> HashMap<usize, Head> {
     let lines: Vec<&str> = text.lines().collect();
     let is_define = |line: &str| line.trim_start().strip_prefix('#').is_some_and(|rest| rest.trim_start().starts_with("define"));
     let mut heads = HashMap::new();
@@ -966,17 +1183,7 @@ fn define_heads(text: &str) -> HashMap<usize, bool> {
             at += 1;
             continue;
         }
-        let mut above = at;
-        while above > 0 && (is_condition_line(lines[above - 1]) || lines[above - 1].contains("clang-format")) {
-            above -= 1;
-        }
-        let mut doc = None;
-        while above > 0 && is_comment_line(lines[above - 1]) {
-            above -= 1;
-            let line = lines[above].trim_start();
-            let own = line.starts_with("///") || line.starts_with("/**");
-            doc = Some(doc.unwrap_or(false) || own);
-        }
+        let head = head_above(&lines, at);
         let mut members = Vec::new();
         while at < lines.len() && (is_define(lines[at]) || is_condition_line(lines[at])) {
             if is_define(lines[at]) {
@@ -987,8 +1194,8 @@ fn define_heads(text: &str) -> HashMap<usize, bool> {
             }
             at += 1;
         }
-        if let Some(doc) = doc {
-            heads.extend(members.into_iter().map(|line| (line, doc)));
+        if let Some(head) = head {
+            heads.extend(members.into_iter().map(|line| (line, head)));
         }
     }
     heads
@@ -1395,12 +1602,24 @@ struct Walk<'r, 'a> {
     lines: Vec<&'a str>,
     /// The comment over each `#define` line's run of `#define`s: `///`
     /// (true) or `//` (false).
-    heads: HashMap<usize, bool>,
+    heads: HashMap<usize, Head>,
     /// The name the last directive, an `#ifndef`, tested: an include guard
     /// if the next defines it.
     guard: Option<String>,
-    /// The last global's last line and the comment over its run.
-    last_global: Option<(usize, Option<bool>)>,
+    /// The last declaration's last line, the comment over its run, and the
+    /// routine its body calls if it is one call (a run of such bodies may
+    /// keep a blank line between them).
+    last_global: Option<(usize, Option<Head>, Option<String>)>,
+    /// The last struct or union this file defined outside a declaration of
+    /// anything else: its tag, whether a `///` documents it, and its last
+    /// line, for a global declared right under it.
+    last_type: Option<(String, bool, usize)>,
+    /// Within an old-style definition's parameter declarations (`void f(x,
+    /// y) s32 x; s16 y; {`), which declare no global.
+    old_style: bool,
+    /// Each object-like macro of this file that views one name through a
+    /// cast or as it is, and how many casts (`view_target`).
+    views: HashMap<String, (String, usize)>,
     /// A file-scope definer's invocation (`DEFINE_LIFT_ROCK(Name, ...)`,
     /// no semicolon): its closing parenthesis, the routine it defines, and
     /// whether a `///` documents it.
@@ -1810,13 +2029,32 @@ impl<'r, 'a> Walk<'r, 'a> {
                     if let Some(target) = id {
                         self.report.id_externs.insert(target.to_string());
                     }
-                    let apart = if name.text.starts_with("REG_") {
+                    // A macro a routine defines for its own body is no
+                    // declaration, and its comments stay `//` (D9).
+                    let local = self.stack.contains(&Brace::Func);
+                    let apart = if local {
+                        Some("undocumented_local")
+                    } else if name.text.starts_with("REG_") {
                         Some("undocumented_register")
                     } else if id.is_some() {
                         Some("undocumented_id")
+                    } else if STANDARD_MACROS.contains(&name.text) {
+                        Some("undocumented_standard")
                     } else {
-                        self.heads.get(&line).map(|&doc| if doc { "undocumented_run" } else { "undocumented_plain" })
+                        self.heads.get(&line).map(|head| match head {
+                            Head::Doc => "undocumented_run",
+                            Head::Plain => "undocumented_plain",
+                            Head::Note => "undocumented_note",
+                        })
                     };
+                    // One cast of a name (`#define WINDOW_WORK ((struct
+                    // WindowWork *)gWindowWork[0])`), settled once every
+                    // declaration is read.
+                    if apart.is_none() && !function_like {
+                        if let Some((target, casts)) = view_target(&texts) {
+                            self.views.insert(name.text.to_string(), (target.to_string(), casts));
+                        }
+                    }
                     let entry = self.macros.entry(name.text.to_string()).or_insert((false, line, None));
                     entry.0 |= documented;
                     if entry.2.is_none() {
@@ -2039,6 +2277,8 @@ impl<'r, 'a> Walk<'r, 'a> {
             _ if tagged(&["enum"]) => Brace::Enum,
             _ if tagged(&["struct", "union"]) => Brace::Struct,
             None if text(prev) == ")" => Brace::Func,
+            // An old-style definition's body, after its parameters' declarations.
+            None if text(prev) == ";" && self.old_style => Brace::Func,
             _ => Brace::Block,
         }
     }
@@ -2366,8 +2606,11 @@ impl<'r, 'a> Walk<'r, 'a> {
             // defines the routine it names.
             if let Some((close, name, documented)) = self.definer.take() {
                 if close == at {
-                    let line = self.statement.first().map_or(self.code.tokens[at].line, |&first| self.code.tokens[first].line);
-                    self.report.declare(true, &name, self.file, line, documented, true);
+                    let first = self.statement.first().copied().unwrap_or(at);
+                    let line = self.code.tokens[first].line;
+                    let (_, run) = self.run_head(first, at, documented, None);
+                    let apart = (run == Some(Head::Doc)).then_some("undocumented_run");
+                    self.report.declare_apart(true, &name, self.file, line, documented, true, apart);
                     self.named(&name, NameKind::Function, line, None);
                     self.statement.clear();
                 } else {
@@ -2383,8 +2626,16 @@ impl<'r, 'a> Walk<'r, 'a> {
         }
         let file = self.file;
         for (name, (documented, line, apart)) in std::mem::take(&mut self.macros) {
-            if !documented {
-                self.report.note(apart.unwrap_or("undocumented_macro"), file, line, &name);
+            // What a view may view: a macro with its `///`, or one set apart
+            // by a rule that is not a `//` to mark.
+            let said = documented || apart.is_some_and(|apart| !matches!(apart, "undocumented_plain" | "undocumented_note" | "undocumented_local"));
+            *self.report.macro_docs.entry(name.clone()).or_default() |= said;
+            if documented {
+                continue;
+            }
+            match (apart, self.views.remove(&name)) {
+                (None, Some((target, casts))) => self.report.views.push((file.to_string(), line, name, target, casts)),
+                (apart, _) => self.report.note(apart.unwrap_or("undocumented_macro"), file, line, &name),
             }
         }
     }
@@ -2454,12 +2705,26 @@ impl<'r, 'a> Walk<'r, 'a> {
             self.types(&opened, second_last, line, documented);
             return;
         }
+        let old_style = std::mem::take(&mut self.old_style);
         if let Some(&(open, _)) = opened.iter().find(|(_, kind)| *kind == Brace::Func) {
             if let Some(Declarator::Function(name)) = self.declarator(&statement) {
                 let name = name.to_string();
                 self.parameters(&name, &statement, true);
-                self.report.declare(true, &name, file, line, documented, true);
                 let close = self.braces[&open].close;
+                let body: Vec<&str> = self.code.tokens[open + 1..close].iter().filter(|token| !token.pp).map(|token| token.text).collect();
+                let call = one_call(&body).filter(|callee| !self.declares(&statement, callee)).map(str::to_string);
+                let (_, run) = self.run_head(first, last, documented, call.clone());
+                let apart = if body.is_empty() {
+                    Some("undocumented_empty")
+                } else if run == Some(Head::Doc) {
+                    Some("undocumented_run")
+                } else {
+                    None
+                };
+                self.report.declare_apart(true, &name, file, line, documented, true, apart);
+                if let Some(call) = call {
+                    self.report.functions.get_mut(&name).expect("declared").forward.get_or_insert(call);
+                }
                 self.forwards(&name, &statement, open, close);
                 self.conversions(&name, open, close);
                 self.named(&name, NameKind::Function, line, None);
@@ -2476,6 +2741,12 @@ impl<'r, 'a> Walk<'r, 'a> {
             statement.iter().position(|&at| at == close).and_then(|at| statement.get(at + 1)).map(|&at| self.code.text(at))
         });
         if matches!(lead, "struct" | "union" | "enum") && (matches!(after_body, Some(";" | "__attribute__")) || statement.len() == 3) {
+            // `struct BilibinRippleTimer { ... };`, for a global declared
+            // right under it.
+            if lead != "enum" && after_body.is_some() {
+                let tag = self.code.tokens.get(first + 1).filter(|t| t.kind == Kind::Ident).map(|t| t.text.to_string());
+                self.last_type = tag.map(|tag| (tag, documented, self.code.tokens[last].line));
+            }
             return;
         }
         let defined = lead != "extern";
@@ -2483,9 +2754,29 @@ impl<'r, 'a> Walk<'r, 'a> {
             Some(Declarator::Function(name)) => {
                 let name = name.to_string();
                 self.parameters(&name, &statement, false);
-                self.report.declare(true, &name, file, line, documented, false);
+                let (_, run) = self.run_head(first, last, documented, None);
+                let apart = (run == Some(Head::Doc)).then_some("undocumented_run");
+                self.report.declare_apart(true, &name, file, line, documented, false, apart);
                 self.named(&name, NameKind::Prototype, line, None);
+                // `void f(x, y) s32 x;`: an old-style definition, whose
+                // parameters' declarations follow up to its body.
+                let close = statement.iter().position(|&at| self.code.text(at) == name).and_then(|open| {
+                    let mut depth = 0;
+                    statement[open + 1..]
+                        .iter()
+                        .position(|&at| {
+                            match self.code.text(at) {
+                                "(" => depth += 1,
+                                ")" => depth -= 1,
+                                _ => {}
+                            }
+                            depth == 0
+                        })
+                        .map(|close| open + 1 + close)
+                });
+                self.old_style = close.is_some_and(|close| close + 2 < statement.len() && is_type_word(self.code.text(statement[close + 1])));
             }
+            Some(Declarator::Global(_)) if old_style => self.old_style = true,
             Some(Declarator::Global(name)) => {
                 let name = name.to_string();
                 let apart = self.global_apart(&statement, &name, documented);
@@ -2503,6 +2794,12 @@ impl<'r, 'a> Walk<'r, 'a> {
             }
             None => {}
         }
+    }
+
+    /// Whether a function's declaration (its tokens before its body) names
+    /// `name`, as a parameter it calls (`Call1(void (*f)(), s32 a0) { f(a0); }`).
+    fn declares(&self, statement: &[usize], name: &str) -> bool {
+        statement.iter().take_while(|&&at| self.code.text(at) != "{").any(|&at| self.code.text(at) == name)
     }
 
     /// A file-scope invocation of a definer macro at `at`, which takes no
@@ -2526,8 +2823,11 @@ impl<'r, 'a> Walk<'r, 'a> {
         })?;
         let next = (close + 1..tokens.len()).find(|&i| !tokens[i].pp || tokens[i].kind == Kind::PpStart).map(|i| &tokens[i]);
         let ends = next.is_none_or(|next| next.line > tokens[close].line && !matches!(next.text, ";" | "{" | "," | ")" | "=" | "("));
-        let name = tokens.get(at + 2).filter(|t| t.kind == Kind::Ident && t.text.bytes().any(|b| b.is_ascii_lowercase()));
-        let named = name.is_some() && tokens.get(at + 3).is_some_and(|t| matches!(t.text, "," | ")"));
+        // A definer may take the routine's type first (`UNIT_DEFINE_ADD(s32,
+        // Unit_AddHp, hp, hpMax)`).
+        let first = if tokens.get(at + 2).is_some_and(|t| is_type_word(t.text)) && tokens.get(at + 3).is_some_and(|t| t.text == ",") { at + 4 } else { at + 2 };
+        let name = tokens.get(first).filter(|t| t.kind == Kind::Ident && t.text.bytes().any(|b| b.is_ascii_lowercase()));
+        let named = name.is_some() && tokens.get(first + 1).is_some_and(|t| matches!(t.text, "," | ")"));
         (ends && named).then(|| (close, name.map_or(String::new(), |t| t.text.to_string()), self.code.doc_before[at]))
     }
 
@@ -2541,21 +2841,8 @@ impl<'r, 'a> Walk<'r, 'a> {
     /// marked `///` (`undocumented_plain`).
     fn global_apart(&mut self, statement: &[usize], name: &str, documented: bool) -> Option<&'static str> {
         let (first, last) = (statement[0], statement[statement.len() - 1]);
-        let (first_line, last_line) = (self.code.tokens[first].line, self.code.tokens[last].line);
-        // A `///` above heads a run; a `///<` note beside is its own.
-        let own = if self.code.doc_before[first] {
-            Some(true)
-        } else if documented {
-            None
-        } else {
-            let mut above = first_line.saturating_sub(1);
-            while above > 0 && self.lines.get(above - 1).is_some_and(|line| line.contains("clang-format")) {
-                above -= 1;
-            }
-            (above > 0 && self.lines.get(above - 1).is_some_and(|line| is_comment_line(line))).then_some(false)
-        };
-        let run = self.last_global.filter(|(end, _)| end + 1 == first_line).and_then(|(_, head)| head);
-        self.last_global = Some((last_line, own.or(run)));
+        let (own, run) = self.run_head(first, last, documented, None);
+        let first_line = self.code.tokens[first].line;
         let equals = statement.iter().position(|&at| self.code.text(at) == "=");
         let value = equals.and_then(|at| statement.get(at + 1)).map(|&at| &self.code.tokens[at]);
         let script = equals.is_some_and(|at| {
@@ -2567,19 +2854,76 @@ impl<'r, 'a> Walk<'r, 'a> {
         });
         let scene = (self.file.contains("/src/scene/") || self.file.contains("/src/debug/"))
             && (typed || ["Entrances", "Exits", "Triggers", "ActorPlacements", "Regions"].iter().any(|kind| name.contains(kind)));
+        // Declared right under its type, whose `///` says what it holds
+        // (`struct BilibinRippleTimer gBilibin_RippleTimer;` under the
+        // struct's), nothing but blank lines between.
+        let under_type = self.last_type.as_ref().is_some_and(|(tag, said, end)| {
+            *said
+                && statement.windows(2).any(|pair| matches!(self.code.text(pair[0]), "struct" | "union") && self.code.text(pair[1]) == tag)
+                && (*end..first_line.saturating_sub(1)).all(|line| self.lines.get(line).is_some_and(|text| text.trim().is_empty()))
+        });
+        self.last_type = None;
         if documented {
             None
-        } else if run == Some(true) {
+        } else if run == Some(Head::Doc) {
             Some("undocumented_run")
         } else if scene || script {
             Some("undocumented_scene")
         } else if value.is_some_and(|t| t.kind == Kind::Str) {
             Some("undocumented_string")
-        } else if own.or(run) == Some(false) {
-            Some("undocumented_plain")
+        } else if under_type && own.is_none() {
+            Some("undocumented_typed")
         } else {
-            None
+            match own.or(run) {
+                Some(Head::Plain) => Some("undocumented_plain"),
+                Some(Head::Note) => Some("undocumented_note"),
+                _ => None,
+            }
         }
+    }
+
+    /// The comment a declaration from token `first` to `last` has right
+    /// above it (`///`, or a `//` to mark or a note D9 keeps), and the one
+    /// over the run it continues: the declaration ending on the line before,
+    /// or, where both are one call to the same routine (`call`), the one
+    /// before a blank line (`Test_ReceiveFizz` after `Test_ReceiveFlint`).
+    /// A `///<` note beside it is its own.
+    fn run_head(&mut self, first: usize, last: usize, documented: bool, call: Option<String>) -> (Option<Head>, Option<Head>) {
+        let (first_line, last_line) = (self.code.tokens[first].line, self.code.tokens[last].line);
+        let own = if self.code.doc_before[first] {
+            Some(Head::Doc)
+        } else if documented {
+            None
+        } else {
+            let mut above = first_line.saturating_sub(1);
+            while above > 0 && self.lines.get(above - 1).is_some_and(|line| line.contains("clang-format")) {
+                above -= 1;
+            }
+            let mut head = None;
+            while above > 0 && self.lines.get(above - 1).is_some_and(|line| is_comment_line(line)) {
+                above -= 1;
+                let kept = is_kept_note(self.lines[above]);
+                head = Some(if kept || head == Some(Head::Note) { Head::Note } else { Head::Plain });
+            }
+            head
+        };
+        let blank = |from: usize, to: usize, lines: &[&str]| (from..to.saturating_sub(1)).all(|line| lines.get(line).is_some_and(|text| text.trim().is_empty()));
+        let run = self
+            .last_global
+            .as_ref()
+            .filter(|(end, _, before)| {
+                end + 1 == first_line || (call.is_some() && *before == call && *end < first_line && blank(*end, first_line, &self.lines))
+            })
+            .and_then(|(_, head, _)| *head);
+        // A note D9 keeps heads no run, nor a declaration a `///<` beside
+        // it documents.
+        let head = match own.or(run) {
+            Some(Head::Note) => None,
+            _ if documented && own.is_none() => None,
+            head => head,
+        };
+        self.last_global = Some((last_line, head, call));
+        (own, run)
     }
 
     /// A typedef of a pointer to functions with named parameters
@@ -2783,6 +3127,9 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         heads: define_heads(text),
         guard: None,
         last_global: None,
+        last_type: None,
+        old_style: false,
+        views: HashMap::new(),
         definer: None,
         enum_docs: HashMap::new(),
         defined: BTreeSet::new(),
@@ -3181,7 +3528,15 @@ const ROWS: &[(&str, &str)] = &[
     ("undocumented_macro", "  macros without ///"),
     ("undocumented_global", "  globals without ///"),
     ("undocumented_run", "  apart: in a run under ///"),
+    ("undocumented_empty", "  apart: empty functions"),
+    ("undocumented_forward", "  apart: one call to a documented routine"),
+    ("undocumented_library", "  apart: library and BIOS routines"),
+    ("undocumented_standard", "  apart: standard C macros"),
+    ("undocumented_view", "  apart: a typed view of a documented name"),
+    ("undocumented_typed", "  apart: right under its type's ///"),
     ("undocumented_plain", "  apart: under //, mark ///"),
+    ("undocumented_note", "  apart: under a // note D9 keeps"),
+    ("undocumented_local", "  apart: macros inside a function"),
     ("undocumented_far", "  apart: XFar, by X's ///"),
     ("undocumented_id", "  apart: ids, by their extern"),
     ("undocumented_register", "  apart: hardware registers"),
@@ -3712,7 +4067,7 @@ mod tests {
             "#ifndef ALCHEMY_F_H\n",
             "#define ALCHEMY_F_H\n",
             "/// Documented in its header.\n",
-            "void Documented(void);\n",
+            "void Documented(void);\n\n",
             "void Plain(void);\n",
             "extern u8 gTable[]; ///< Noted.\n",
             "extern u8 gBare;\n",
@@ -3733,9 +4088,9 @@ mod tests {
         );
         let source = concat!(
             "void Documented(void) {}\n",
-            "void Plain(void) {}\n",
+            "void Plain(void) { Run(); }\n",
             "/// Its own.\n",
-            "static void Local(void) {}\n",
+            "static void Local(void) {}\n\n",
             "UNUSED static int Helper(int x) { return x; }\n",
             "u8 gTable[] = { 1, 2 };\n",
             "u8 gBare;\n",
@@ -3847,6 +4202,56 @@ mod tests {
         assert_eq!(names("undocumented_global"), ["gVale_Bare"]);
         assert_eq!(names("undocumented_far"), ["Vale_RunFar"]);
         assert_eq!((report.total("undocumented_function"), report.total("undocumented_entry"), report.total("undocumented_enum")), (0, 0, 0));
+    }
+
+    #[test]
+    fn declarations_their_neighbours_or_kind_say() {
+        let header = concat!(
+            "#define NULL ((void *)0)\n#define TRUE 1\n\n",
+            "/// The window's work.\nextern struct WindowWork *gWindowWork[2];\n\n",
+            "#define WINDOW_WORK ((struct WindowWork *)gWindowWork[0])\n",
+            "#define BARE_WORK ((struct WindowWork *)gBare)\n",
+            "#define ALIAS gWindowWork\n#define ROUTINE_ALIAS Math_DivideBy\n\n",
+            "extern void *gBare;\n\n",
+            "/// Picks the width by edition.\n#if LANGUAGE == 1 || \\\n    LANGUAGE == 2\n#define WIDE 1\n#define NARROW 3\n#else\n#define WIDE 2\n#define NARROW 4\n#endif\n\n",
+            "/// Divides.\ns32 Math_DivideBy(s32 a, s32 b);\n\n",
+            "s32 __divsi3(s32 a, s32 b);\nvoid Bios_CpuSet(void);\n\n",
+            "/// Sends, as a far call takes it.\ns32 Send(s32 a);\ns32 SendAgain(s32 a);\n\n",
+            "static inline s32 Field_Send(s32 a) { return Send(a); }\n\n",
+            "static inline s32 Field_Twice(s32 a) { return Send(Send(a)); }\n\n",
+            "static inline void Call1(void (*f)(), s32 a0) { f(a0); }\n",
+        );
+        let code = concat!(
+            "/// Does nothing, twice.\nvoid NoOpA(void) {}\nvoid NoOpB(void) {}\n\n",
+            "void Empty(void) {\n}\n\n",
+            "/// Gives Flint.\nstatic void Test_ReceiveFlint(void) {\n  Test_Give(1, 2);\n}\n\n",
+            "static void Test_ReceiveFizz(void) {\n  Test_Give(3, 4);\n}\n\n",
+            "static void Test_Other(void) {\n  Test_Take(3);\n}\n\n",
+            "/// Counts frames between ripples.\nstruct Ripple {\n  s16 frames;\n};\n\nstruct Ripple gRipple;\n\n",
+            "// UB: the shift overflows.\n#ifdef UBFIX\n#define SHIFTED(x) ((x) * 2)\n#else\n#define SHIFTED(x) ((x) << 1)\n#endif\n\n",
+            "/// Builds.\nvoid Build(void) {\n  s32 count = 0;\n#define PUT(word) count++\n  PUT(1);\n#undef PUT\n}\n\n",
+            "void Kr(x, y) s32 x;\ns16 y;\n{\n  Test_Give(x, y);\n}\n\n",
+            "#define UNIT_DEFINE(type, name) type name(void) { return 0; }\n\n",
+            "UNIT_DEFINE(s32, Unit_GetZero)\n",
+        );
+        let report = game([("games/tbs/include/a.h", header), ("games/tbs/src/a.c", code)]);
+        let names = |metric: &str| -> Vec<String> {
+            let mut names: Vec<String> = report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.clone()).collect();
+            names.sort();
+            names
+        };
+        assert_eq!(names("undocumented_empty"), ["Empty", "NoOpB"], "NoOpB is also in NoOpA's run");
+        assert_eq!(names("undocumented_run"), ["NARROW", "SendAgain", "Test_ReceiveFizz"], "a /// over a two-line #if; one call to the same routine past a blank line");
+        assert_eq!(names("undocumented_forward"), ["Field_Send"]);
+        assert_eq!(names("undocumented_library"), ["Bios_CpuSet", "__divsi3"]);
+        assert_eq!(names("undocumented_standard"), ["NULL", "TRUE"]);
+        assert_eq!(names("undocumented_view"), ["ALIAS", "WINDOW_WORK"]);
+        assert_eq!(names("undocumented_typed"), ["gRipple"]);
+        assert_eq!(names("undocumented_note"), ["SHIFTED"]);
+        assert_eq!(names("undocumented_local"), ["PUT"]);
+        assert_eq!(names("undocumented_macro"), ["BARE_WORK", "ROUTINE_ALIAS", "UNIT_DEFINE"], "gBare is undocumented; a routine's bare name is no view");
+        assert_eq!(names("undocumented_function"), ["Call1", "Field_Twice", "Kr", "Test_Other", "Unit_GetZero"]);
+        assert_eq!(names("undocumented_global"), ["gBare"], "an old-style definition's parameters are no globals");
     }
 
     #[test]
@@ -4427,8 +4832,8 @@ mod tests {
 
     #[test]
     fn entry_points_need_their_summary() {
-        let far = "/// Draws a number.\nvoid Text_DrawNumberFar(s32 number);\nvoid UiText_ClearFar(void);\n";
-        let source = "void UiText_ClearFar(void) {}\nvoid Helper(void) {}\n";
+        let far = "/// Draws a number.\nvoid Text_DrawNumberFar(s32 number);\n\nvoid UiText_ClearFar(void);\n";
+        let source = "void UiText_ClearFar(void) { Clear(); }\nvoid Helper(void) { Clear(); }\n";
         let report = game([("games/tbs/include/gamepak/far_call/window.h", far), ("games/tbs/src/window/text.c", source)]);
         assert_eq!(list(&[("tbs", &report)], "undocumented_entry"), "tbs\tgames/tbs/src/window/text.c:1\tUiText_ClearFar\n");
         assert_eq!(report.total("undocumented_function"), 2, "UiText_ClearFar and Helper, to review");
