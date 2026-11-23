@@ -2,7 +2,10 @@
 //! name was taken from, `evidence/<game>-names.tsv` (name, kind of evidence,
 //! the evidence, the file the name is declared in), and each fake match's and
 //! leftover's measurement, `evidence/<game>-fakematch.tsv` (file, routine,
-//! the tag's word and kind, the tag's text after them). Both are compiled in
+//! the tag's word and kind, the tag's text after them), and the numbers in
+//! code someone judged by reading it, `evidence/<game>-numbers.tsv` (file,
+//! routine, the number as written, `honest` or `unsettled`, what it is in a
+//! few words). All are compiled in
 //! from this repository's `evidence/` folder by `build.rs`, so a program
 //! reads the evidence of its own revision; a changed row needs a rebuild.
 //! `ALCHEMY_EVIDENCE` names a folder whose tables are read in their place
@@ -128,6 +131,56 @@ pub fn measurements(game: &str) -> Result<Vec<Measurement>, String> {
         .map_or(Ok(Vec::new()), |text| parse_measurements(text).map_err(|error| format!("evidence/{game}-fakematch.tsv: {error}")))
 }
 
+/// The kinds a judged number's row may be: a number S3 keeps as it is,
+/// which only reading its code shows (`honest`), or one whose meaning
+/// nothing in reach settles yet (`unsettled`, its row saying what would).
+pub const JUDGED_KINDS: &[&str] = &["honest", "unsettled"];
+
+/// One row of a game's judged numbers: a number in code the count cannot
+/// tell from a private id by its form, judged by someone who read it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Judged {
+    pub file: String,
+    /// The function, macro or definition the number is in: a function's or
+    /// a function-like macro's name, or the name a `#define`, an enumerator
+    /// or a global's initializer gives.
+    pub routine: String,
+    /// The number as written (`0x169`, `16`, `249U`), without its sign.
+    pub number: String,
+    /// One of `JUDGED_KINDS`.
+    pub kind: String,
+    /// What it is, in a few words; for an unsettled one, what would settle it.
+    pub what: String,
+}
+
+/// The rows of a judged numbers table's text; a row of a kind not in
+/// `JUDGED_KINDS`, or with an empty cell, is an error naming its line.
+pub fn parse_judged(text: &str) -> Result<Vec<Judged>, String> {
+    let mut out = Vec::new();
+    for (at, cells) in rows(text, 5)?.into_iter().enumerate() {
+        let row = Judged {
+            file: cells[0].to_string(),
+            routine: cells[1].to_string(),
+            number: cells[2].to_string(),
+            kind: cells[3].to_string(),
+            what: cells[4].to_string(),
+        };
+        if !JUDGED_KINDS.contains(&row.kind.as_str()) {
+            return Err(format!("row {}: kind {}, not one of {}", at + 1, row.kind, JUDGED_KINDS.join(", ")));
+        }
+        if cells.iter().any(|cell| cell.trim().is_empty()) {
+            return Err(format!("row {}: an empty cell", at + 1));
+        }
+        out.push(row);
+    }
+    Ok(out)
+}
+
+/// A game's judged numbers, empty for a game that has none yet.
+pub fn judged(game: &str) -> Result<Vec<Judged>, String> {
+    table(&format!("{game}-numbers.tsv")).map_or(Ok(Vec::new()), |text| parse_judged(text).map_err(|error| format!("evidence/{game}-numbers.tsv: {error}")))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,8 +193,17 @@ mod tests {
         let measured = measurements("tbs").unwrap();
         assert!(measured.len() > 100, "{}", measured.len());
         assert!(measured.iter().all(|row| row.file.starts_with("games/tbs/") && (row.kind.starts_with("FAKEMATCH(") || row.kind.starts_with("LEFTOVER("))));
+        for game in ["tbs", "tla"] {
+            let judged = judged(game).unwrap();
+            assert!(judged.iter().any(|row| row.kind == "honest") && judged.iter().any(|row| row.kind == "unsettled"), "{game}");
+            let root = crate::compile::root();
+            for row in &judged {
+                assert!(row.file.starts_with(&format!("games/{game}/")) && root.join(&row.file).is_file(), "{game}: {}", row.file);
+                assert!(row.number.bytes().next().is_some_and(|b| b.is_ascii_digit()), "{game}: {} {}", row.file, row.number);
+            }
+        }
         // A game not yet converted has no table, and so no rows.
-        assert!(table("xyz-names.tsv").is_none() && names("xyz").unwrap().is_empty() && measurements("xyz").unwrap().is_empty());
+        assert!(table("xyz-names.tsv").is_none() && names("xyz").unwrap().is_empty() && measurements("xyz").unwrap().is_empty() && judged("xyz").unwrap().is_empty());
     }
 
     #[test]
@@ -164,5 +226,10 @@ mod tests {
         let rows = parse_measurements("file\troutine\tkind\tmeasurement\na.c\tF and its siblings\tFAKEMATCH(dead)\tkept; as none, 1 of 2 instructions differ in tbs-en.\n").unwrap();
         assert_eq!(rows[0].tag(), "FAKEMATCH(dead): kept; as none, 1 of 2 instructions differ in tbs-en.");
         assert!(rows[0].is_for("F") && !rows[0].is_for("F_2") && !rows[0].is_for("G"));
+        let header = "file\troutine\tnumber\tkind\twhat\n";
+        let rows = parse_judged(&format!("{header}a.c\tF\t0x169\tunsettled\ta flag nothing reads; a reader would settle it\n")).unwrap();
+        assert_eq!((rows[0].routine.as_str(), rows[0].number.as_str(), rows[0].kind.as_str()), ("F", "0x169", "unsettled"));
+        assert_eq!(parse_judged(&format!("{header}a.c\tF\t16\tnamed\tx\n")).unwrap_err(), "row 1: kind named, not one of honest, unsettled");
+        assert_eq!(parse_judged(&format!("{header}a.c\tF\t16\thonest\t \n")).unwrap_err(), "row 1: an empty cell");
     }
 }

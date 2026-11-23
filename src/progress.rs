@@ -44,10 +44,18 @@ and indices a .c file's own macros take and the steps of the switch they
 write, the cases of a counter moved by one each pass, a product of
 numbers, degrees for DEGtoANG and a fraction of a named constant, the
 percentages a routine named for a chance returns, amounts in a debug
-room's code, hardware addresses from 0x02000000 to 0x0fffffff, and a
-function-like macro's own definition) are honest_KIND, and
-magic_code is what is left to name, listed with the callee and the
-parameter each fills; a lone plain speed a routine turns into 16.16
+room's code, hardware addresses from 0x02000000 to 0x0fffffff, a
+function-like macro's own definition, a place or a slant's start, a half
+cell beside the grid's own macro, the period of a cue on the counter of a
+loop whose bound is frames, a cap of decimal digits (> 99), a byte cut by
+% 256 or from a cast value by / 256, the shift scaling an Iwram_MulFX
+product or a sine, a canvas, palette or fade call's level and a colour
+channel's offset, and an index or stride going on from the ones before it
+in its routine) are honest_KIND, a number with an honest row of this
+toolkit's evidence/GAME-numbers.tsv (by file, routine and number) is
+honest_judged, and magic_code is what is left to name, listed with the
+callee and the parameter each fills, its numbers with an unsettled row
+counted again in magic_unsettled; a lone plain speed a routine turns into 16.16
 itself counts as data. A parameter is named as its definition names it
 (a far call's as its routine's), or, where that name says nothing of
 what it holds, as another declaration does. Every hex number counts in hex: flag
@@ -58,10 +66,14 @@ shift, io_reg.h's and the flash chip's flash.h's register values, a define
 or enumerator in a family of single bits or within its prefix's _MASK,
 named a mask or bit, an all-ones value with a name, or written beside a
 bitwise operator anywhere and, unless a single bit, never reckoned with), a
-picture's pixel words (in a table named for tiles or pixels) and the sound
-driver's are the kinds S3 keeps, and hex_other is
+picture's pixel words (in a table named for tiles or pixels), the sound
+driver's, a function-like macro's own (hex_definition), an instruction's
+encoding or a CRC's polynomial by its name (hex_encoding) and one with an
+honest row of evidence/GAME-numbers.tsv (hex_judged) are the kinds S3
+keeps, and hex_other is
 the rest, to judge (a packed field stays; an offset, a count or a 16.16 value
-is written otherwise). A numbered name with an
+is written otherwise; hex_unsettled counts again those with an unsettled
+row). A numbered name with an
 its-number evidence row counts as numbered_honest; a name whose rows are of
 kinds no check reads counts as provenance_unchecked, and apart as
 provenance_unseen where its its-code row says the thing shows nothing on

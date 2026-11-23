@@ -157,6 +157,132 @@ pub fn lex(text: &str) -> Vec<Token<'_>> {
     tokens
 }
 
+/// The routine or definition each token is in, by its place: a function's
+/// name for its body, a `#define`'s name for its directive (a function-like
+/// macro's body included), an enumerator's name for its value, and a
+/// global's name for its initializer (`gTable` of `const u8 gTable[] = {...}`).
+/// Anything else, a function's parameter list and a struct's members
+/// among them, is in none.
+pub fn owners<'a>(tokens: &[Token<'a>]) -> Vec<Option<&'a str>> {
+    /// Where the reading stands: braces deep and what the outermost pair
+    /// belongs to; the top-level statement's declarator, whether `=` gave
+    /// it a value, whether it is an enum's, and how deep its parentheses
+    /// and brackets are; and the last token that is no comment.
+    #[derive(Clone, Default)]
+    struct State<'a> {
+        depth: usize,
+        owner: Option<&'a str>,
+        in_enum: bool,
+        enumerator: Option<&'a str>,
+        expect: bool,
+        declarator: Option<&'a str>,
+        assigned: bool,
+        is_enum: bool,
+        nested: usize,
+        previous: Option<usize>,
+    }
+    let mut out = vec![None; tokens.len()];
+    let mut state = State::default();
+    // Each `#if`'s state, and the state its first branch ended in: the
+    // branches after it are read from where it started, and the reading
+    // goes on from where the first ended.
+    let mut conditions: Vec<(State, Option<State>)> = Vec::new();
+    let mut at = 0;
+    while at < tokens.len() {
+        let token = &tokens[at];
+        if token.kind == Kind::PpStart {
+            let end = (at..tokens.len()).find(|&end| tokens[end].kind == Kind::PpEnd).unwrap_or(tokens.len() - 1);
+            let words: Vec<&Token> = tokens[at + 1..end].iter().filter(|t| t.kind != Kind::Comment).collect();
+            let name = match words[..] {
+                [define, name, ..] if define.text == "define" && name.kind == Kind::Ident => Some(name.text),
+                _ => None,
+            };
+            match words.first().map(|word| word.text) {
+                Some("if" | "ifdef" | "ifndef") => conditions.push((state.clone(), None)),
+                Some("elif" | "else") => {
+                    if let Some((start, first)) = conditions.last_mut() {
+                        first.get_or_insert_with(|| state.clone());
+                        state = start.clone();
+                    }
+                }
+                Some("endif") => {
+                    if let Some((_, Some(first))) = conditions.pop() {
+                        state = first;
+                    }
+                }
+                _ => {}
+            }
+            out[at..=end].fill(name);
+            at = end + 1;
+            continue;
+        }
+        if token.kind == Kind::Comment {
+            at += 1;
+            continue;
+        }
+        let s = &mut state;
+        if s.depth == 0 {
+            match token.text {
+                "{" => {
+                    s.owner = None;
+                    if let Some(previous) = s.previous.filter(|&p| tokens[p].text == ")") {
+                        // A function's body: the name before its parameters.
+                        let (mut parens, mut index) = (0, previous);
+                        loop {
+                            match tokens[index].text {
+                                ")" => parens += 1,
+                                "(" => parens -= 1,
+                                _ => {}
+                            }
+                            if parens == 0 || index == 0 {
+                                break;
+                            }
+                            index -= 1;
+                        }
+                        s.owner = index.checked_sub(1).map(|i| &tokens[i]).filter(|t| t.kind == Kind::Ident).map(|t| t.text);
+                    } else if s.assigned {
+                        s.owner = s.declarator;
+                    } else if s.is_enum {
+                        (s.in_enum, s.expect) = (true, true);
+                    }
+                    s.depth = 1;
+                }
+                ";" => (s.declarator, s.assigned, s.is_enum, s.nested) = (None, false, false, 0),
+                "(" | "[" => s.nested += 1,
+                ")" | "]" => s.nested = s.nested.saturating_sub(1),
+                "=" if s.nested == 0 => s.assigned = true,
+                "enum" => s.is_enum = true,
+                _ if token.kind == Kind::Ident && s.nested == 0 && !s.assigned => s.declarator = Some(token.text),
+                _ => {}
+            }
+            if s.assigned && token.text != "=" && token.text != ";" {
+                out[at] = s.declarator;
+            }
+        } else {
+            match token.text {
+                "{" => s.depth += 1,
+                "}" => s.depth -= 1,
+                "," if s.in_enum && s.depth == 1 => s.expect = true,
+                _ if s.in_enum && s.expect && token.kind == Kind::Ident => (s.enumerator, s.expect) = (Some(token.text), false),
+                _ => {}
+            }
+            if s.depth == 0 {
+                // A function's body ends its statement; an initializer's or
+                // an enum's goes on to its `;`.
+                if !s.assigned && !s.is_enum {
+                    (s.declarator, s.nested) = (None, 0);
+                }
+                (s.owner, s.in_enum, s.enumerator, s.expect) = (None, false, None, false);
+            } else {
+                out[at] = if s.in_enum { s.enumerator } else { s.owner };
+            }
+        }
+        s.previous = Some(at);
+        at += 1;
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,5 +303,29 @@ mod tests {
         assert_eq!(texts, ["0x1e", "+", "1", "'a"]);
         assert_eq!(tokens.last().unwrap().line, 3);
         assert!(is_doc("/// x") && !is_doc("//// x") && !is_doc("// x") && is_trailing_doc("///< x"));
+    }
+
+    #[test]
+    fn what_each_token_is_in() {
+        let text = concat!(
+            "#define HALF(v) ((v) + 0x600)\n",
+            "enum { TAG = 0x212, OTHER = 3 };\n",
+            "static const struct Info gInfo = {.id = {.joined = 0x3d1f}};\n",
+            "struct S { int a; };\n",
+            "s32 F(s32 x) { if (x) { return x / 16; } return 0x80; }\n",
+            "u32 gWord = 0x10;\n",
+            "#if EDITION\nvoid G(void) {\n#else\nvoid G(s32 b) {\n#endif\n  return 0x20; }\n",
+            "void H(void) { 0x30; }\n",
+        );
+        let tokens = lex(text);
+        let owners = owners(&tokens);
+        let of = |text: &str| tokens.iter().zip(&owners).filter(|(t, _)| t.text == text).map(|(_, owner)| *owner).collect::<Vec<_>>();
+        assert_eq!(of("0x600"), [Some("HALF")]);
+        assert_eq!((of("0x212"), of("3")), (vec![Some("TAG")], vec![Some("OTHER")]));
+        assert_eq!(of("0x3d1f"), [Some("gInfo")]);
+        assert_eq!((of("16"), of("0x80"), of("a")), (vec![Some("F")], vec![Some("F")], vec![None]));
+        assert_eq!(of("0x10"), [Some("gWord")]);
+        // Each branch of an `#if` opens the same body.
+        assert_eq!((of("0x20"), of("0x30")), (vec![Some("G")], vec![Some("H")]));
     }
 }

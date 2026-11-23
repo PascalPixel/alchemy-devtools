@@ -46,7 +46,9 @@ Each tag takes the first row of its routine and kind not yet taken (a tag
 outside any function, the next function's); a row no tag takes, or for a
 file no longer there, is a finding. It prints how many measurements were
 read from the table and how many from the source, and every function or
-macro with more asm statements than FAKEMATCH tags.
+macro with more asm statements than FAKEMATCH tags. A row of
+evidence/GAME-numbers.tsv (a number judged by reading it, H5) whose number
+is no longer in its routine, or whose file is gone, is a finding too.
 Each prints what it finds and fails when anything differs or is malformed;
 overlays, packer and rom also fail when an edition named is not built, or
 when none is.";

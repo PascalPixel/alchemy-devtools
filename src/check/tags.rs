@@ -14,10 +14,10 @@
 //! takes is evidence for nothing. A `// DEAD:` mark, Camelot's own code the
 //! ROM keeps, must say what the ROM keeps (S3).
 
-use crate::alchemy::evidence::{self, Measurement};
+use crate::alchemy::evidence::{self, Judged, Measurement};
 use crate::alchemy::humanity::{DEVICES, LEFTOVERS, WEIGHTS};
 use crate::alchemy::targets::parse_decomp_target;
-use crate::gba::clex::{lex, Kind, Token};
+use crate::gba::clex::{lex, owners, Kind, Token};
 use regex::Regex;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -620,6 +620,19 @@ pub fn views(source: &str) -> (Vec<&'static str>, Vec<Finding>) {
     (kinds, found)
 }
 
+/// The rows of a file's game's judged numbers (`evidence/<game>-numbers.tsv`)
+/// whose number no longer occurs in their routine of `source`: each a
+/// finding at line 0, the file's, for the row to be judged again or deleted.
+pub fn stale_judged(path: &str, source: &str, rows: &[Judged]) -> Vec<Finding> {
+    let tokens = lex(source);
+    let owners = owners(&tokens);
+    let table = format!("evidence/{}-numbers.tsv", game_name(path).unwrap_or("<game>"));
+    rows.iter()
+        .filter(|row| !tokens.iter().zip(&owners).any(|(token, owner)| token.kind == Kind::Number && token.text == row.number && *owner == Some(row.routine.as_str())))
+        .map(|row| Finding { line: 0, message: format!("a row of {table} for {} in {} ({}), and no such number there", row.number, row.routine, row.kind) })
+        .collect()
+}
+
 /// The C sources and headers under each path, sorted.
 fn sources(root: &Path, paths: &[String]) -> Result<Vec<PathBuf>, String> {
     let mut files = Vec::new();
@@ -760,6 +773,8 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let mut games: BTreeMap<String, Game> = BTreeMap::new();
     // Each game's fake-match rows by file, read once.
     let mut tables: BTreeMap<String, BTreeMap<String, Vec<Measurement>>> = BTreeMap::new();
+    // And its judged numbers' rows by file.
+    let mut judged: BTreeMap<String, BTreeMap<String, Vec<Judged>>> = BTreeMap::new();
     let mut scanned: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     // Each file's score and code now, to hold against the earlier commit's.
     let mut now_files: BTreeMap<String, (usize, u64)> = BTreeMap::new();
@@ -774,6 +789,11 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
                         by_file.entry(row.file.clone()).or_default().push(row);
                     }
                     tables.insert(game.to_string(), by_file);
+                    let mut by_file: BTreeMap<String, Vec<Judged>> = BTreeMap::new();
+                    for row in evidence::judged(game)? {
+                        by_file.entry(row.file.clone()).or_default().push(row);
+                    }
+                    judged.insert(game.to_string(), by_file);
                 }
                 tables[game].get(&name).map_or(&[][..], Vec::as_slice)
             }
@@ -785,6 +805,9 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         }
         let (kinds, malformed) = self::views(&source);
         found.extend(malformed);
+        if let Some(rows) = game_name(&name).and_then(|game| judged.get(game)).and_then(|by_file| by_file.get(&name)) {
+            found.extend(stale_judged(&name, &source, rows));
+        }
         let game = games.entry(game_of(&name)).or_default();
         game.tags.add(found_tags);
         for kind in kinds {
@@ -807,6 +830,17 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             if covered && !scanned.contains(file) {
                 for row in rows {
                     println!("{file}: a row of evidence/{game}-fakematch.tsv for {} ({}), and no such file", row.routine, row.kind);
+                }
+                games.entry(game_of(file)).or_default().findings += rows.len();
+            }
+        }
+    }
+    for (game, by_file) in &judged {
+        for (file, rows) in by_file {
+            let covered = paths.iter().any(|path| Path::new(file).starts_with(path.trim_end_matches('/')));
+            if covered && !scanned.contains(file) {
+                for row in rows {
+                    println!("{file}: a row of evidence/{game}-numbers.tsv for {} in {} ({}), and no such file", row.number, row.routine, row.kind);
                 }
                 games.entry(game_of(file)).or_default().findings += rows.len();
             }
@@ -866,6 +900,45 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_judged_number_no_longer_in_its_routine() {
+        let source = "s32 F(s32 x) { return x / 16; }\n#define G(x) ((x) + 0x600)\n";
+        let row = |routine: &str, number: &str| Judged {
+            file: "games/tla/src/f.c".to_string(),
+            routine: routine.to_string(),
+            number: number.to_string(),
+            kind: "honest".to_string(),
+            what: "w".to_string(),
+        };
+        let rows = [row("F", "16"), row("G", "0x600"), row("F", "0x600"), row("H", "16")];
+        let found = stale_judged("games/tla/src/f.c", source, &rows);
+        let messages: Vec<&str> = found.iter().map(|finding| finding.message.as_str()).collect();
+        assert_eq!(
+            messages,
+            [
+                "a row of evidence/tla-numbers.tsv for 0x600 in F (honest), and no such number there",
+                "a row of evidence/tla-numbers.tsv for 16 in H (honest), and no such number there"
+            ]
+        );
+    }
+
+    /// Every row of both games' judged numbers still finds its number in its
+    /// routine (H8): a row left behind by a rename or a name given is stale.
+    #[test]
+    fn every_judged_number_is_where_its_row_says() {
+        let root = crate::compile::root();
+        for game in ["tbs", "tla"] {
+            let mut by_file: BTreeMap<String, Vec<Judged>> = BTreeMap::new();
+            for row in evidence::judged(game).unwrap() {
+                by_file.entry(row.file.clone()).or_default().push(row);
+            }
+            for (file, rows) in by_file {
+                let source = std::fs::read_to_string(root.join(&file)).unwrap();
+                assert_eq!(stale_judged(&file, &source, &rows), [], "{file}");
+            }
+        }
+    }
 
     #[test]
     fn views_are_counted_apart_and_their_markers_judged() {

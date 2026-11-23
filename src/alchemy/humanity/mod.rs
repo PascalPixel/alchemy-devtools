@@ -186,8 +186,8 @@ pub struct Report {
     arithmetic_names: HashSet<String>,
     /// Each hex number a `#define` or enumerator gives a name alone that no
     /// rule of its file keeps, settled once every use of its name is read:
-    /// file, line, number and name.
-    hex_definitions: Vec<(String, usize, String, String)>,
+    /// file, line, number, name and the definition it is in (`clex::owners`).
+    hex_definitions: Vec<(String, usize, String, String, Option<String>)>,
     /// Every function body and table initializer, for the duplicate search.
     copies: Vec<duplicates::Copy>,
     /// Every name the source defines or declares, for the naming checks.
@@ -195,6 +195,10 @@ pub struct Report {
     /// Numbered names whose number is their meaning, by a row of kind `its
     /// number` in `evidence/<game>-names.tsv`: counted apart (`numbered_honest`).
     numbered_by_row: HashSet<String>,
+    /// Numbers in code someone judged by reading them, by file, routine and
+    /// the number as written: `true` honest, `false` unsettled
+    /// (`evidence/<game>-numbers.tsv`).
+    judged: HashMap<(String, String, String), bool>,
     /// Each `.c` file's own function-like macros that number a route's steps
     /// or count from a named first, by what each parameter numbers
     /// (`own_macro_kinds`).
@@ -247,6 +251,9 @@ struct Candidate {
     /// The hardware register the innermost call writes it to, by address
     /// (`REG_BLDY` of `Io_Write16(31, &REG_BLDY)`).
     register: Option<String>,
+    /// The routine or definition it is in (`clex::owners`), for its row of
+    /// judged numbers.
+    routine: Option<String>,
 }
 
 /// The words of parameter names that hold data S3 lets stay a number: a
@@ -340,6 +347,12 @@ impl Report {
     fn note(&mut self, metric: &str, file: &str, line: usize, what: &str) {
         self.add(metric, file, 1);
         self.items.push(Item { metric: metric.to_string(), file: file.to_string(), line, what: what.to_string() });
+    }
+
+    /// How a number someone judged by reading it was judged: `Some(true)`
+    /// honest, `Some(false)` unsettled, by its file, routine and text.
+    fn judged(&self, file: &str, routine: Option<&str>, number: &str) -> Option<bool> {
+        self.judged.get(&(file.to_string(), routine?.to_string(), number.to_string())).copied()
     }
 
     pub fn total(&self, metric: &str) -> u64 {
@@ -500,6 +513,12 @@ impl Report {
         if !other && has(&["fade", "shade", "brightness", "red", "green", "blue"]) {
             return Some("level");
         }
+        // A level a canvas, palette or fade call fills or fades to:
+        // `CANVAS_FILL_WORD(level)`.
+        let toned = numbers::words(callee).iter().any(|word| matches!(word.as_str(), "canvas" | "fill" | "fade" | "palette" | "brightness"));
+        if !other && toned && words.last().is_some_and(|word| word == "level") {
+            return Some("level");
+        }
         let shake = numbers::words(callee).iter().any(|word| word == "shake");
         if !other && shake && has(&["horizontal", "vertical", "amplitude"]) {
             return Some("level");
@@ -588,6 +607,11 @@ impl Report {
         // Degrees reckoned for DEGtoANG, S3's composed angle: `DEGtoANG(i * 60)`.
         if candidate.calls.first().is_some_and(|(callee, _)| callee == "DEGtoANG") {
             return Some("composed");
+        }
+        // A colour channel's level, offsetting or compared with the channel
+        // RGB555's own macro takes out: `RGB_BLUE(value) - 20`.
+        if candidate.operand_calls.iter().any(|callee| matches!(callee.as_str(), "RGB_RED" | "RGB_GREEN" | "RGB_BLUE")) {
+            return Some("level");
         }
         // A level written to the brightness register (`Io_Write16(31,
         // &REG_BLDY)`), GBATEK's fade coefficient.
@@ -687,7 +711,7 @@ impl Report {
         // where it is written beside `&`, `|`, `^` or `~` (`flags &
         // PLACE_ENEMY_SIDE`) and never reckoned with as a quantity
         // (`front <= CANVAS_SIZE + WIPE_LAG_MAX` is a distance).
-        for (file, line, text, name) in std::mem::take(&mut self.hex_definitions) {
+        for (file, line, text, name, routine) in std::mem::take(&mut self.hex_definitions) {
             let said = numbers::words(&name).iter().any(|word| matches!(word.as_str(), "mask" | "bit" | "bits"));
             // A single bit stays a bit where it is also reckoned with
             // (`SCOOPED_COINS + 1`, `EPILOGUE_NO_PORTRAIT - 1`, the bits
@@ -696,8 +720,18 @@ impl Report {
             let used = self.bitwise_names.contains(&name) && (single || !self.arithmetic_names.contains(&name));
             if said || used {
                 self.add("hex_mask", &file, 1);
-            } else {
-                self.note("hex_other", &file, line, &text);
+                continue;
+            }
+            // An instruction's encoding or a CRC's polynomial, by its name;
+            // else as someone who read it judged it, by its row.
+            match self.judged(&file, routine.as_deref(), &text) {
+                _ if is_encoding(&name) => self.add("hex_encoding", &file, 1),
+                Some(true) => self.note("hex_judged", &file, line, &text),
+                Some(false) => {
+                    self.note("hex_other", &file, line, &text);
+                    self.note("hex_unsettled", &file, line, &text);
+                }
+                None => self.note("hex_other", &file, line, &text),
             }
         }
         for candidate in std::mem::take(&mut self.candidates) {
@@ -718,6 +752,10 @@ impl Report {
             }
             let what = if candidate.lone { what } else { literal.clone() };
             self.note("magic_code_all", file, line, &what);
+            // Judged by someone who read it, by its row: honest, or, where no
+            // rule finds it honest, still to name and unsettled, counted
+            // apart among those.
+            let judged = self.judged(file, candidate.routine.as_deref(), literal);
             // A position or duration reckoned in an argument whose parameter
             // is a rate, scale or angle is that, not a position: `Trig_Sin(row
             // * 3553)`, `SceneTransform_ApplyScale3(frame * 1500 - ...)`; one
@@ -737,7 +775,11 @@ impl Report {
             // -100)`, `coins = 777777`): a test's figure, nothing the game
             // plays.
             let debug = (numbers::is_decimal(literal) && is_debug_room(file)).then_some("debug");
-            match local.or_else(|| self.honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)).or(definition).or(debug) {
+            let honest = match judged {
+                Some(true) => Some("judged"),
+                _ => local.or_else(|| self.honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)).or(definition).or(debug),
+            };
+            match honest {
                 Some(kind) => self.note(&format!("honest_{kind}"), file, line, &what),
                 None => {
                     // The callee and the parameter it fills, so the next
@@ -753,6 +795,9 @@ impl Report {
                     self.note("magic_code", file, line, &described);
                     if candidate.lone {
                         self.note("magic_argument", file, line, &what);
+                    }
+                    if judged == Some(false) {
+                        self.note("magic_unsettled", file, line, &described);
                     }
                 }
             }
@@ -1116,7 +1161,8 @@ fn is_grid_conversion<'a>(name: &str, parameters: &[&str], body: impl Iterator<I
     for word in body.filter(|&word| word != "\\") {
         match word {
             ">>" | "/" => scaled = true,
-            "(" | ")" | "u32" | "s32" | "toFIXED" | "INTtoFIXED" => {}
+            // A shift less one: a half cell's (`FIELD_CELL_SHIFT - 1`).
+            "(" | ")" | "u32" | "s32" | "toFIXED" | "INTtoFIXED" | "-" | "+" => {}
             _ if word == *parameter => used = true,
             _ if word.starts_with(|c: char| c.is_ascii_digit()) => {}
             _ if is_macro_name(word) => {}
@@ -1159,6 +1205,16 @@ fn own_macro_kinds(names: &[&str], body: &[&str]) -> Vec<Option<&'static str>> {
 fn hex_value(token: &Token) -> Option<u64> {
     let digits = token.text.strip_prefix("0x").or_else(|| token.text.strip_prefix("0X"))?;
     (token.kind == Kind::Number).then(|| u64::from_str_radix(digits.trim_end_matches(['u', 'U', 'l', 'L']), 16).unwrap_or(u64::MAX))
+}
+
+/// Whether a hex number's name says it is an instruction's encoding
+/// (`THUMB_BL_HIGH`, an instruction set's name first) or a CRC's polynomial
+/// (`PASSWORD_CRC_POLYNOMIAL`): fields and bits S3 keeps hex.
+fn is_encoding(name: &str) -> bool {
+    let words = numbers::words(name);
+    words.first().is_some_and(|word| matches!(word.as_str(), "thumb" | "arm")) && name.bytes().all(|b| !b.is_ascii_lowercase())
+        || words.iter().any(|word| word == "polynomial")
+        || (words.iter().any(|word| word == "crc") && words.last().is_some_and(|word| matches!(word.as_str(), "poly" | "generator")))
 }
 
 /// A name written in capitals, as macros are: `UNUSED`, `ALIGNED`.
@@ -1272,6 +1328,8 @@ struct Walk<'r, 'a> {
     report: &'r mut Report,
     file: &'a str,
     code: Code<'a>,
+    /// The routine or definition each token is in (`clex::owners`).
+    owners: Vec<Option<&'a str>>,
     stack: Vec<Brace>,
     /// For each `#if`: the open braces at it and at the end of its first branch.
     conditions: Vec<(Snapshot, Option<Snapshot>)>,
@@ -1497,6 +1555,11 @@ impl<'r, 'a> Walk<'r, 'a> {
                 numbers::local(tokens, at, floor, limit).or_else(|| numbers::is_hardware_address(literal).then_some("address"))
             };
             let own = own.or_else(|| self.own_macro_number(&calls, at, floor, limit)).or_else(|| self.chance_returned(at));
+            // An index or stride continuing a routine's own, in order.
+            let routine_open = self.stack.iter().position(|kind| *kind == Brace::Func).and_then(|at| self.open.get(at).copied());
+            let own = own.or_else(|| {
+                routine_open.filter(|_| function_macro.is_none()).filter(|&open| numbers::continues_indices(&self.code.tokens, at, open, limit)).map(|_| "index")
+            });
             let tokens = &self.code.tokens;
             let candidate = Candidate {
                 file: self.file.to_string(),
@@ -1513,6 +1576,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 operand_calls: numbers::operand_calls(tokens, at, floor),
                 grouped: numbers::in_group(tokens, at, floor),
                 register: innermost.and_then(|open| numbers::written_register(tokens, open)).map(str::to_string),
+                routine: self.owners.get(at).copied().flatten().map(str::to_string),
             };
             self.report.candidates.push(candidate);
             return;
@@ -2123,15 +2187,40 @@ impl<'r, 'a> Walk<'r, 'a> {
                 "hex_other"
             };
             self.report.add("hex", self.file, 1);
-            if let Some(name) = name.filter(|_| metric == "hex_other") {
+            // A function-like macro's own body defines its name: S3's hex.
+            let metric = if metric == "hex_other" && self.in_function_macro(at) { "hex_definition" } else { metric };
+            // Judged by someone who read it, by its row.
+            let routine = self.owners.get(at).copied().flatten();
+            // A named one's uses are read first (`finish`).
+            let judged = if metric == "hex_other" && name.is_none() { self.report.judged(self.file, routine, token.text) } else { None };
+            if let Some(honest) = judged {
+                if honest {
+                    self.report.note("hex_judged", self.file, token.line, token.text);
+                } else {
+                    self.report.note("hex_other", self.file, token.line, token.text);
+                    self.report.note("hex_unsettled", self.file, token.line, token.text);
+                }
+            } else if let Some(name) = name.filter(|_| metric == "hex_other") {
                 // Its name's uses, in any file, may show it a mask or a bit.
-                self.report.hex_definitions.push((self.file.to_string(), token.line, token.text.to_string(), name.to_string()));
+                self.report.hex_definitions.push((self.file.to_string(), token.line, token.text.to_string(), name.to_string(), routine.map(str::to_string)));
             } else if metric == "hex_other" {
                 self.report.note(metric, self.file, token.line, token.text);
             } else {
                 self.report.add(metric, self.file, 1);
             }
         }
+    }
+
+    /// Whether the token at `at` is in a function-like macro's definition
+    /// (`#define PIXELS_4BPP_HALFWORD(color) ((color) * 0x1111)`).
+    fn in_function_macro(&self, at: usize) -> bool {
+        let tokens = &self.code.tokens;
+        if !tokens[at].pp {
+            return false;
+        }
+        let Some(start) = (0..at).rev().find(|&index| tokens[index].kind == Kind::PpStart) else { return false };
+        let words: Vec<&Token> = tokens[start + 1..at].iter().filter(|t| t.kind != Kind::Comment).collect();
+        matches!(words[..], [define, name, open, ..] if define.text == "define" && name.kind == Kind::Ident && open.text == "(" && open.glued)
     }
 
     fn walk(&mut self) {
@@ -2627,10 +2716,12 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         }
         questions(report, path, comment.line, comment.text);
     }
+    let owners = clex::owners(&code.tokens);
     let mut walk = Walk {
         report,
         file: path,
         code,
+        owners,
         stack: Vec::new(),
         conditions: Vec::new(),
         square: 0,
@@ -2676,9 +2767,22 @@ pub fn game<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>) -> Report {
 
 /// Count a game, and with its English text check its names' provenance,
 /// `names` being the game's rows of `evidence/<game>-names.tsv` (H8).
+#[cfg(test)]
 pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, text: Option<&GameText>, names: &[evidence::Name]) -> Report {
+    game_judged(files, text, names, &[])
+}
+
+/// `game_with_text`, with the game's rows of `evidence/<game>-numbers.tsv`:
+/// the numbers in code someone judged by reading them.
+pub fn game_judged<'a>(
+    files: impl IntoIterator<Item = (&'a str, &'a str)>,
+    text: Option<&GameText>,
+    names: &[evidence::Name],
+    judged: &[evidence::Judged],
+) -> Report {
     let mut report = Report::default();
     report.numbered_by_row = names.iter().filter(|row| row.kind == "its number").map(|row| row.name.clone()).collect();
+    report.judged = judged.iter().map(|row| ((row.file.clone(), row.routine.clone(), row.number.clone()), row.kind == "honest")).collect();
     if let Some(text) = text {
         report.text_unknown = text.symbols_saying("unknown").map(str::to_string).collect();
     }
@@ -2914,6 +3018,7 @@ fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
 const ROWS: &[(&str, &str)] = &[
     ("magic_code", "numbers in code to name"),
     ("magic_argument", "  of those, lone arguments"),
+    ("magic_unsettled", "  of those, unsettled, by row"),
     ("magic_code_all", "numbers in code, all"),
     ("honest_composed", "  honest: composed (S3)"),
     ("honest_decimal", "  honest: tenths, percents, digits"),
@@ -2932,6 +3037,8 @@ const ROWS: &[(&str, &str)] = &[
     ("honest_debug", "  honest: amounts in the debug rooms"),
     ("honest_address", "  honest: hardware addresses"),
     ("honest_definition", "  honest: a macro's own definition"),
+    ("honest_scaling", "  honest: shifts scaling a 16.16 product"),
+    ("honest_judged", "  honest: judged by row"),
     ("data_argument", "numbers passed as data"),
     ("data_argument_frames", "  frames"),
     ("data_argument_coordinate", "  coordinates"),
@@ -2966,7 +3073,11 @@ const ROWS: &[(&str, &str)] = &[
     ("hex_mask", "  masks, bits, registers, all-ones"),
     ("hex_pixels", "  a picture's pixel words"),
     ("hex_driver", "  the sound driver's"),
+    ("hex_definition", "  a function-like macro's own definition"),
+    ("hex_encoding", "  instruction encodings, CRC polynomials"),
+    ("hex_judged", "  honest: judged by row"),
     ("hex_other", "  the rest, to judge"),
+    ("hex_unsettled", "    of those, unsettled, by row"),
     ("if_language", "#if on LANGUAGE"),
     ("if_patch", "#if on a patch level"),
     ("if_edition_name", "#if on an edition name"),
@@ -3041,7 +3152,7 @@ fn kinds(metric: &str) -> Vec<String> {
 
 /// Metrics whose top files are listed.
 const LISTED: &[&str] = &[
-    "magic_code", "magic_argument", "magic_code_all", "magic_table", "placeholder", "numbered", "fakematch", "leftover", "views", "goto", "hex_other", "if_language", "if_patch",
+    "magic_code", "magic_argument", "magic_unsettled", "magic_code_all", "magic_table", "placeholder", "numbered", "fakematch", "leftover", "views", "goto", "hex_other", "hex_unsettled", "if_language", "if_patch",
     "if_in_function", "undocumented_entry", "undocumented_function", "undocumented_struct", "undocumented_enum", "undocumented_macro",
     "undocumented_global", "undocumented_plain", "provenance_none", "provenance_prose", "provenance_table_mismatch", "unused_word_name",
     "door_word_link", "unit_open", "synonym", "synonym_referent", "abbreviation", "family_shape", "prefix_twin",
@@ -3306,8 +3417,9 @@ pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, Stri
                 scope.spawn(move || {
                     let text = game_text(root, game)?;
                     let names = evidence::names(game)?;
+                    let judged = evidence::judged(game)?;
                     let files = sources(root, game)?;
-                    let mut report = game_with_text(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names);
+                    let mut report = game_judged(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names, &judged);
                     let rows: Vec<String> = names.iter().filter(|row| row.kind == "its number").map(|row| row.name.clone()).collect();
                     let paths = tracked(root, &[format!("games/{game}")])?;
                     let symbols = layout::numbered_symbols(&symbol_texts(root, &paths)?);
@@ -3742,6 +3854,86 @@ mod tests {
     }
 
     #[test]
+    fn levels_of_a_canvas_or_a_channel_and_half_cells() {
+        let header = concat!(
+            "#define PIXELS_8BPP(byte) ((byte) * 0x01010101)\n",
+            "#define CANVAS_FILL_WORD(level) PIXELS_8BPP(level)\n",
+            "#define RGB_BLUE(color) (((color) >> 10) & 31)\n",
+            "#define FIELD_CELL_SHIFT 20\n",
+            "#define FIELD_HALF_CELL(coordinate) ((coordinate) >> (FIELD_CELL_SHIFT - 1))\n",
+            "void Fill(void *canvas, s32 size, u32 word);\n",
+            "void Pick(s32 level);\n",
+        );
+        let source = concat!(
+            "void Run(void) {\n",
+            "    Fill(canvas, 64, CANVAS_FILL_WORD(47));\n",
+            "    blue = RGB_BLUE(value) - 20;\n",
+            "    if (FIELD_HALF_CELL(actor->z.fixed) >= 36) {}\n",
+            "    Pick(33);\n",
+            "}\n",
+        );
+        let report = game([("f.h", header), ("f.c", source)]);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.split('\t').next().unwrap().to_string()).collect()
+        };
+        assert_eq!(listed("honest_level"), ["47", "20"], "a canvas fill's level, a channel's");
+        assert_eq!(listed("honest_position"), ["36"], "a half cell, its shift less one");
+        assert_eq!(listed("magic_code"), ["33"], "a level no canvas, palette or fade takes");
+    }
+
+    #[test]
+    fn numbers_judged_by_their_rows() {
+        let source = concat!(
+            "#define PIXELS(c) ((c) * 0x1111)\n",
+            "#define THUMB_BL_HIGH 0xf000\n",
+            "#define PASSWORD_CRC_POLYNOMIAL 0x1021\n",
+            "#define TASK_PASS_FRAME 0x480\n",
+            "enum { VENUS_TAG = 0x212 };\n",
+            "void Run(void) {\n",
+            "    GameFlag_Set(0x169);\n",
+            "    Wait(20);\n",
+            "    Wait(20);\n",
+            "    Other(20);\n",
+            "    if (frame == 140) {}\n",
+            "    x = gTable[37];\n",
+            "}\n",
+            "void Next(void) { Wait(20); }\n",
+        );
+        let row = |routine: &str, number: &str, kind: &str| evidence::Judged {
+            file: "f.c".to_string(),
+            routine: routine.to_string(),
+            number: number.to_string(),
+            kind: kind.to_string(),
+            what: "w".to_string(),
+        };
+        let rows = [
+            row("Run", "20", "honest"),
+            row("Run", "0x169", "unsettled"),
+            row("Run", "140", "unsettled"),
+            row("TASK_PASS_FRAME", "0x480", "honest"),
+            row("VENUS_TAG", "0x212", "unsettled"),
+        ];
+        let report = game_judged([("f.c", source)], None, &[], &rows);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.split('\t').next().unwrap().to_string()).collect()
+        };
+        // Every 20 in its routine, and no other routine's; a number a rule
+        // finds honest stays so whatever its row says.
+        assert_eq!(listed("honest_judged"), ["20", "20", "20"]);
+        assert_eq!(listed("magic_code"), ["0x169", "37", "20"]);
+        assert_eq!(listed("magic_unsettled"), ["0x169"]);
+        assert_eq!(listed("honest_duration"), ["140"]);
+        // A function-like macro's own hex, an instruction's encoding and a
+        // CRC's polynomial by their names, and the rest by their rows.
+        assert_eq!((report.total("hex_definition"), report.total("hex_encoding")), (1, 2));
+        assert_eq!(listed("hex_judged"), ["0x480"]);
+        assert_eq!((listed("hex_other"), listed("hex_unsettled")), (vec!["0x212".to_string()], vec!["0x212".to_string()]));
+        // Without the rows, both are to judge.
+        let plain = game([("f.c", source)]);
+        assert_eq!((plain.total("hex_other"), plain.total("magic_unsettled"), plain.total("honest_judged")), (2, 0, 0));
+    }
+
+    #[test]
     fn honest_numbers_by_the_calls_they_stand_in() {
         let header = concat!(
             "void MapGrid_CopyCellPictureCellsRect_(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5);\n",
@@ -3975,11 +4167,11 @@ mod tests {
             ("a.h", "#define PASSWORD_CRC_SEED 0xffff\n#define CRC_POLYNOMIAL 0x1021\n"),
             ("b.c", "void F(void) { gSeed = 0xffff; }\n"),
         ]);
-        assert_eq!((report.total("hex_mask"), report.total("hex_other")), (3, 3));
+        assert_eq!((report.total("hex_mask"), report.total("hex_encoding"), report.total("hex_other")), (3, 1, 2), "a CRC's polynomial by its name");
         assert_eq!(
             list(&[("tla", &report)], "hex_other"),
-            "tla\ta.h:2\t0x1021\ntla\tb.c:1\t0xffff\ntla\tgames/tla/include/field/flash_menu.h:1\t0x2AAA\n",
-            "a polynomial, an all-ones value with no name, and a header that is not the chip's"
+            "tla\tb.c:1\t0xffff\ntla\tgames/tla/include/field/flash_menu.h:1\t0x2AAA\n",
+            "an all-ones value with no name, and a header that is not the chip's"
         );
     }
 

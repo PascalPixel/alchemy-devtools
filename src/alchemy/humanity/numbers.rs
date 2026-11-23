@@ -39,8 +39,10 @@ fn is_scale(name: &str) -> bool {
         && words.last().is_some_and(|word| matches!(word.as_str(), "one" | "normal" | "unity"))
 }
 
-/// Words of a name that hold a position or a size in pixels (or cells).
-const POSITION_WORDS: &[&str] = &["x", "y", "z", "dx", "dy", "dz", "row", "rows", "column", "columns", "width", "height", "radius", "distance"];
+/// Words of a name that hold a position or a size in pixels (or cells): a
+/// place (`position[0] == 16`) and a slant's start too.
+const POSITION_WORDS: &[&str] =
+    &["x", "y", "z", "dx", "dy", "dz", "row", "rows", "column", "columns", "width", "height", "radius", "distance", "position", "slant"];
 /// Words of a name that hold a duration or a moment in frames, or in beats
 /// of a few frames each (`beat == 32`).
 const DURATION_WORDS: &[&str] = &["frame", "frames", "timer", "delay", "duration", "countdown", "wait", "ticks", "vblank", "vblanks", "beat", "beats"];
@@ -471,7 +473,9 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
     let percent = is_power_of_ten(text) && multiplied && factors[own + 1..].iter().any(|(op, _)| *op == "/");
     // The value of a hex digit's letter: `digit + 'A' - 10`.
     let letter = text == "10" && factors.len() == 1 && (char_in_statement("'A'") || char_in_statement("'a'"));
-    if tenths || base || percent || letter || (digits && is_power_of_ten(text) && factors.len() == 1) || decimal_digit(tokens, at, floor, limit) {
+    // A cap of decimal digits a count is held to: `magnitude > 99`.
+    let nines = text.len() > 1 && text.bytes().all(|b| b == b'9') && at > floor && matches!(tokens[at - 1].text, "<" | "<=" | ">" | ">=");
+    if tenths || base || percent || letter || nines || (digits && is_power_of_ten(text) && factors.len() == 1) || decimal_digit(tokens, at, floor, limit) {
         return Some("decimal");
     }
     // Its own operand's names first, then, out through each group or S3
@@ -509,6 +513,24 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
     }
     // A shift's amount is bits, never a position or a duration.
     let shift = at > floor && matches!(tokens[at - 1].text, "<<" | ">>");
+    // A packed value's low byte or the bytes above it: `crc % 256`, and
+    // `(s32)control / 256` of a value cast to be cut (a plain `velocityX /
+    // 256` is a fraction).
+    let cast = at >= floor + 2 && tokens[at - 2].kind == Kind::Ident && {
+        let mut first = at - 2;
+        while first >= floor + 2 && matches!(tokens[first - 1].text, "." | "->") && tokens[first - 2].kind == Kind::Ident {
+            first -= 2;
+        }
+        first >= floor + 3 && tokens[first - 1].text == ")" && tokens[first - 3].text == "(" && matches!(tokens[first - 2].text, "u8" | "s8" | "u16" | "s16" | "u32" | "s32")
+    };
+    if text == "256" && (factors[own].0 == "%" || (factors[own].0 == "/" && cast)) {
+        return Some("packing");
+    }
+    // A 16.16 product or a sine scaled to its unit: `Iwram_MulFX(a, b) >>
+    // 11`, `Trig_Sin(angle) >> 14`.
+    if shift && shifts_product(tokens, at, floor) {
+        return Some("scaling");
+    }
     if !is_decimal(text) || shift {
         return None;
     }
@@ -534,7 +556,112 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
     }
     let kinds: Vec<&str> = found.iter().filter_map(|chain| named_kind(chain.iter().copied())).collect();
     let named = kinds.iter().find(|&&kind| kind == "position").or(kinds.first()).copied();
-    named.or_else(|| tone_level(tokens, at, floor).then_some("level")).or_else(|| frame_count(tokens, at, floor, limit).then_some("duration"))
+    named
+        .or_else(|| tone_level(tokens, at, floor).then_some("level"))
+        .or_else(|| frame_count(tokens, at, floor, limit).then_some("duration"))
+        .or_else(|| cadence(tokens, at, floor, limit).then_some("duration"))
+}
+
+/// The operand a shift at `at - 1` moves, when it ends right before the
+/// shift: its first token and its last.
+fn shifted(tokens: &[Token], at: usize, floor: usize) -> Option<(usize, usize)> {
+    let last = at.checked_sub(2).filter(|&last| last >= floor)?;
+    let mut first = last;
+    if matches!(tokens[last].text, ")" | "]") {
+        first = open_of(tokens, last, floor)?;
+        if first > floor && tokens[first - 1].kind == Kind::Ident {
+            first -= 1;
+        }
+    } else if tokens[last].kind != Kind::Ident {
+        return None;
+    }
+    while first >= floor + 2 && matches!(tokens[first - 1].text, "." | "->") && tokens[first - 2].kind == Kind::Ident {
+        first -= 2;
+    }
+    Some((first, last))
+}
+
+/// Whether the shift whose amount is at `at` scales a 16.16 product or a
+/// sine to its unit: what `Iwram_MulFX`, `Trig_Sin` or `Trig_Cos` returns.
+fn shifts_product(tokens: &[Token], at: usize, floor: usize) -> bool {
+    let Some((first, last)) = shifted(tokens, at, floor) else { return false };
+    tokens[last].text == ")" && matches!(tokens[first].text, "Iwram_MulFX" | "Trig_Sin" | "Trig_Cos")
+}
+
+/// Whether the number at `at` is the period of a cue on the counter of a
+/// loop that counts frames by its bound's name, up to `limit`: `if (i % 64
+/// == 0)` or `if ((i & 31) == 0)` inside `for (i = 0; i != PUFF_SHOWER_FRAMES;
+/// i++)`, a loop that need not wait every pass. A mask is one less than a
+/// power of two.
+pub fn cadence(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool {
+    let Some(value) = decimal_value(tokens[at].text) else { return false };
+    if at < floor + 2 || tokens[at - 2].kind != Kind::Ident || (at >= floor + 3 && matches!(tokens[at - 3].text, "." | "->")) {
+        return false;
+    }
+    let counter = tokens[at - 2].text;
+    match tokens[at - 1].text {
+        "%" => {}
+        "&" if (value + 1).is_power_of_two() => {}
+        _ => return false,
+    }
+    if !words(counter).iter().all(|word| COUNTER_WORDS.contains(&word.as_str())) {
+        return false;
+    }
+    // Outwards through the braces around it to a `for` whose condition
+    // reads the counter and a name of frames.
+    let mut depth = 0;
+    let mut index = at;
+    while index > floor {
+        index -= 1;
+        match tokens[index].text {
+            "}" => depth += 1,
+            "{" if depth > 0 => depth -= 1,
+            "{" if index > floor && tokens[index - 1].text == ")" => {
+                let Some(open) = open_of(tokens, index - 1, floor) else { continue };
+                if open == floor || tokens[open - 1].text != "for" || close_of(tokens, index, limit).is_none() {
+                    continue;
+                }
+                let header = &tokens[open + 1..index - 1];
+                let clauses: Vec<&[Token]> = header.split(|t| t.text == ";").collect();
+                let [_, condition, _] = clauses[..] else { continue };
+                let reads = condition.iter().any(|t| t.text == counter);
+                let frames = condition.iter().any(|t| t.kind == Kind::Ident && t.text != counter && named_kind([t.text]) == Some("duration"));
+                if reads && frames {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+/// Whether the number at `at` is an index or a stride continuing the ones
+/// before it in the routine whose body opens at `open`, up to `limit`: the
+/// 10 of `src[10]` where `src[0]` to `src[9]` are read there too, and the 12
+/// of `src += 12` past `src[11]`, as a code generator copies a template's
+/// words in order.
+pub fn continues_indices(tokens: &[Token], at: usize, open: usize, limit: usize) -> bool {
+    let Some(value) = decimal_value(tokens[at].text) else { return false };
+    if at < open + 2 || tokens[at - 2].kind != Kind::Ident || value == 0 {
+        return false;
+    }
+    let array = tokens[at - 2].text;
+    let index = tokens[at - 1].text == "[" && tokens.get(at + 1).is_some_and(|t| t.text == "]");
+    let stride = tokens[at - 1].text == "+=" && tokens.get(at + 1).is_some_and(|t| t.text == ";");
+    if !index && !stride {
+        return false;
+    }
+    let end = limit.min(tokens.len() - 1);
+    let mut seen = BTreeSet::new();
+    for at in open..end.saturating_sub(2) {
+        if tokens[at].text == array && tokens[at + 1].text == "[" && tokens[at + 3].text == "]" {
+            if let Some(value) = decimal_value(tokens[at + 2].text) {
+                seen.insert(value);
+            }
+        }
+    }
+    (0..value).all(|before| seen.contains(&before)) && (index || seen.contains(&(value - 1)))
 }
 
 /// Whether the `(` at `open` only groups (`-(i * k + 16)`, the cast's operand
@@ -1830,6 +1957,55 @@ mod tests {
         assert_eq!(kind_of("void F(void) { c[o + ((y >> 3) << 10)] = 0; }", "10", 0), None);
         assert_eq!(kind_of("void F(void) { v = a << 10 | b; }", "10", 0), None);
         assert_eq!(kind_of("void F(void) { out[12] = stats >> 16; }", "12", 0), None, "one amount");
+    }
+
+    #[test]
+    fn places_digit_caps_bytes_and_scaled_products() {
+        // A place, a slant's start and a scroll's limit, in pixels or cells.
+        assert_eq!(kind_of("void F(void) { if (position[0] == 16 && position[2] == 36) {} }", "36", 0), Some("position"));
+        assert_eq!(kind_of("void F(void) { for (i = 0, y = -128, slant = -16; i != N; i++) {} }", "16", 0), Some("position"));
+        // A cap of decimal digits; any other bound stays.
+        assert_eq!(kind_of("void F(void) { if (magnitude > 99) {} }", "99", 0), Some("decimal"));
+        assert_eq!(kind_of("void F(void) { if (magnitude > 98) {} }", "98", 0), None);
+        assert_eq!(kind_of("void F(void) { magnitude = 99; }", "99", 0), None, "only a bound");
+        // A packed value's byte by division or remainder.
+        assert_eq!(kind_of("void F(void) { s32 item = (u16)((s32)trigger->control / 256); }", "256", 0), Some("packing"));
+        assert_eq!(kind_of("void F(void) { ok = out[k] == (u16)crc % 256; }", "256", 0), Some("packing"));
+        assert_eq!(kind_of("void F(void) { v = a * 256; }", "256", 0), None);
+        assert_eq!(kind_of("void F(void) { v = a / 256; }", "256", 0), None, "a fraction, no cast byte");
+        // A 16.16 product or a sine scaled to its unit.
+        assert_eq!(kind_of("void F(void) { *line = (Iwram_MulFX(Trig_Sin(a), b) >> 11) - 4; }", "11", 0), Some("scaling"));
+        assert_eq!(kind_of("void F(void) { y = (Trig_Cos(angle + TRIG_TURN * 13 / 32) >> 14) - 2; }", "14", 0), Some("scaling"));
+        assert_eq!(kind_of("void F(void) { y = (Other(angle) >> 14) - 2; }", "14", 0), None);
+        assert_eq!(kind_of("void F(void) { y = (angle >> 14) - 2; }", "14", 0), None);
+    }
+
+    #[test]
+    fn the_cadence_of_a_loop_of_frames() {
+        let shower = "void F(void) { for (i = 0; i != PUFF_SHOWER_FRAMES; i++) { if (i % 64 == 0) Sound(); if (i % 16) continue; { Spawn(); wait(1); } } }";
+        assert_eq!(kind_of(shower, "64", 0), Some("duration"), "a loop that need not wait every pass, its bound frames");
+        assert_eq!(kind_of(shower, "16", 0), Some("duration"));
+        let blast = "void F(void) { for (i = 0; i < LOHO_BLAST_FRAMES; i++) { if ((i & 31) == 0) { Crash(); } Draw(); } }";
+        assert_eq!(kind_of(blast, "31", 0), Some("duration"), "a mask one less than a power of two");
+        assert_eq!(kind_of(&blast.replace("31", "30"), "30", 0), None);
+        assert_eq!(kind_of(&blast.replace("LOHO_BLAST_FRAMES", "SPARK_COUNT"), "31", 0), None, "a loop over things");
+        assert_eq!(kind_of(&shower.replace("i % 64", "slot % 64"), "64", 0), None, "another name's");
+    }
+
+    #[test]
+    fn indices_and_strides_continuing_a_template() {
+        let code = "void F(void) { PUT(src[0]); PUT(src[1]); PUT(src[2]); PUT(src[3]); PUT(src[4]); PUT(src[5]); PUT(src[6]); PUT(src[7]); PUT(src[8]); if (a) { PUT(src[9]); } else { PUT(src[10]); } PUT(src[11] + b); src += 12; x = gTable[12]; }";
+        let tokens: Vec<Token> = clex::lex(code).into_iter().filter(|t| t.kind != Kind::Comment).collect();
+        let open = tokens.iter().position(|t| t.text == "{").unwrap();
+        let at = |text: &str, n: usize| tokens.iter().enumerate().filter(|(_, t)| t.text == text).nth(n).unwrap().0;
+        let limit = tokens.len() - 1;
+        assert!(continues_indices(&tokens, at("10", 0), open, limit) && continues_indices(&tokens, at("11", 0), open, limit));
+        assert!(continues_indices(&tokens, at("12", 0), open, limit), "the stride past src[11]");
+        assert!(!continues_indices(&tokens, at("12", 1), open, limit), "another array's index");
+        let gap = code.replace("PUT(src[5]); ", "");
+        let tokens: Vec<Token> = clex::lex(&gap).into_iter().filter(|t| t.kind != Kind::Comment).collect();
+        let ten = tokens.iter().position(|t| t.text == "10").unwrap();
+        assert!(!continues_indices(&tokens, ten, open, tokens.len() - 1), "src[5] is missing");
     }
 
     #[test]
