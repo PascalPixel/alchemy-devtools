@@ -156,6 +156,12 @@ impl Stage {
         (start, end.max(start))
     }
 
+    /// Whether only a window of the recording is written (--from,
+    /// --for): one that runs past the limit is written all the same.
+    pub fn windowed(&self) -> bool {
+        self.from.is_some() || self.length.is_some()
+    }
+
     /// The most frames a recording runs (--limit), `default` when none.
     pub fn limit_frames(&self, default: u32) -> u32 {
         self.limit.map_or(default, |s| s.saturating_mul(60))
@@ -733,6 +739,7 @@ mod tests {
         assert_eq!(stage.window(1000), (750, 1000));
         assert_eq!(stage.window(100), (100, 100));
         assert_eq!(Stage::default().window(90), (0, 90));
+        assert!(stage.windowed() && !Stage::default().windowed());
         assert_eq!(stage.at_px, Some((676, 792, Some(0))));
         assert_eq!(stage.start(), Some((42, 49, Some(0))));
         assert!(stage.staged());

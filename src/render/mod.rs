@@ -714,7 +714,8 @@ staged:
   --limit SECONDS: a run is given up past SECONDS rather than 240.
   --from SECONDS, --for SECONDS: only that window of the recording is
     written (a long cutscene in parts); the note gives the window and the
-    whole run's length.
+    whole run's length. A run that goes past the limit is written all the
+    same, its window, the note saying it never gave back control.
   --keep-short: a recording with under ten seconds of the game before,
     between or after its black screens is written anyway, its note saying
     how long the stretch is; render check still refuses it.

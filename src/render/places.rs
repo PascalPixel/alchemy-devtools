@@ -1263,7 +1263,7 @@ impl Context<'_> {
             lead += (CLEARED - first) as u32;
             run = field.walk(&entered, at, lead, &keys)?;
         }
-        if run.capped {
+        if run.capped && !self.stage.windowed() {
             return Err(format!("it runs past {} seconds (--limit SECONDS asks for longer)", self.stage.limit_frames(EVENT_LIMIT) / 60));
         }
         let mut note = vec![format!("staged walk, no event: entered by entrance {entrance}")];
@@ -1271,6 +1271,9 @@ impl Context<'_> {
             note.push(format!("walked after {name}, which is not recorded"));
         }
         note.extend(skip_note(&self.stage.skip));
+        if run.capped {
+            note.push(format!("it runs past {} seconds, so only its window is written", self.stage.limit_frames(EVENT_LIMIT) / 60));
+        }
         note.extend(run.notes.iter().cloned());
         let played = super::stage::describe(&self.stage.hold.iter().chain(&self.stage.then).cloned().collect::<Vec<_>>());
         note.push(format!("keys held {played}"));
@@ -1340,7 +1343,8 @@ impl Context<'_> {
                         self.cleared.push((s.name(), label.clone()));
                     }
                     // A GIF shows the whole event or is not written.
-                    if played.run.capped {
+                    // A window of it (--from, --for) is written all the same.
+                    if played.run.capped && !self.stage.windowed() {
                         let limit = self.stage.limit_frames(EVENT_LIMIT) / 60;
                         self.skip(scene, &label, format!("it runs past {limit} seconds without the player having control again (--limit SECONDS asks for longer)"));
                     } else if let Err(e) = self.write_event(scene, played.setup.entrance as i16, &event, &played.run) {
@@ -2093,6 +2097,15 @@ impl Context<'_> {
     /// Where the run read nothing, what the event's own function assigns
     /// to, from its source (stage::assigned).
     fn note_with_effects(&self, run: &EventRun, scene: &Scene, event: &Event) -> String {
+        let mut note = self.note_of_effects(run, scene, event);
+        if run.capped {
+            let capped = format!("it runs past {} seconds without the player having control again, so only its window is written", self.stage.limit_frames(EVENT_LIMIT) / 60);
+            note = if note.is_empty() { capped } else { format!("{capped}; {note}") };
+        }
+        note
+    }
+
+    fn note_of_effects(&self, run: &EventRun, scene: &Scene, event: &Event) -> String {
         let name = |flag: u16| self.flags.name(flag).unwrap_or_else(|| format!("flag {flag:#05x}"));
         let flags: Vec<(String, bool)> = run.flags_changed.iter().map(|&(f, on)| (name(f), on)).collect();
         let mut effects = run.effects.clone();
