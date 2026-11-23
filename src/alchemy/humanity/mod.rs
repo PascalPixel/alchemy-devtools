@@ -187,6 +187,108 @@ fn one_call<'t>(body: &[&'t str]) -> Option<&'t str> {
     (depth == 0).then_some(*callee)
 }
 
+/// The text's arguments of a call, split at its top-level commas, from just
+/// after its `(`: `ACTOR_PLACEMENT(SPRITE_STAKE, ..., 0, 0, 0, ...)`.
+fn call_arguments(text: &str) -> Vec<String> {
+    let mut arguments = vec![String::new()];
+    let mut depth = 0;
+    for c in text.chars() {
+        match c {
+            '(' => depth += 1,
+            ')' if depth == 0 => break,
+            ')' => depth -= 1,
+            ',' if depth == 0 => {
+                arguments.push(String::new());
+                continue;
+            }
+            _ => {}
+        }
+        arguments.last_mut().expect("one").push(c);
+    }
+    arguments.into_iter().map(|argument| argument.split_whitespace().collect::<Vec<_>>().join(" ")).collect()
+}
+
+/// The actors a scene file places at its map's origin, (0, 0), where no
+/// camera of the map looks: each enum of its placed actors (`=
+/// ACTOR_FIRST_PLACED`) is matched to the placement table whose name's
+/// words its tag holds most of (`gMarsLighthouseEntrance_FuguePlacements`
+/// for `enum MarsLighthouseEntranceFugueActorId`), and its n-th actor to the
+/// table's n-th row, the first branch of an `#if` read. A row placed at a
+/// scene point instead (`ACTOR_PLACEMENT_AT_SCENE_POINT`) is not at the
+/// origin.
+pub fn placed_at_origin(text: &str) -> Vec<String> {
+    static ENUM: OnceLock<Regex> = OnceLock::new();
+    static TABLE: OnceLock<Regex> = OnceLock::new();
+    let enums = ENUM.get_or_init(|| Regex::new(r"enum\s+(\w+)\s*\{([^}]*)\}").unwrap());
+    let tables = TABLE.get_or_init(|| Regex::new(r"struct\s+ActorPlacement\s+(\w+)\s*\[\s*\]\s*=\s*\{").unwrap());
+    let words = |name: &str| -> BTreeSet<String> {
+        provenance::pieces(name)
+            .into_iter()
+            .map(str::to_ascii_lowercase)
+            .filter(|word| !matches!(word.as_str(), "g" | "actor" | "id" | "placements"))
+            .collect()
+    };
+    // Each table's rows, as (x, z), and the words of its name.
+    let mut rows: Vec<(BTreeSet<String>, Vec<Option<(String, String)>>)> = Vec::new();
+    for found in tables.captures_iter(text) {
+        let body_start = found.get(0).expect("match").end();
+        let body = &text[body_start..text[body_start..].find("};").map_or(text.len(), |end| body_start + end)];
+        let mut placed = Vec::new();
+        let mut skipping: Vec<bool> = Vec::new();
+        let mut line_start = 0;
+        for line in body.split_inclusive('\n') {
+            let at = line_start;
+            line_start += line.len();
+            let directive = line.trim_start().strip_prefix('#').map(str::trim_start);
+            match directive {
+                Some(rest) if rest.starts_with("if") => skipping.push(false),
+                Some(rest) if rest.starts_with("el") => {
+                    if let Some(last) = skipping.last_mut() {
+                        *last = true;
+                    }
+                }
+                Some(rest) if rest.starts_with("endif") => {
+                    skipping.pop();
+                }
+                _ if skipping.iter().any(|skip| *skip) => {}
+                _ => {
+                    for (offset, _) in line.match_indices("ACTOR_PLACEMENT(") {
+                        let arguments = call_arguments(&body[at + offset + "ACTOR_PLACEMENT(".len()..]);
+                        let at_point = arguments.last().is_some_and(|flags| flags.contains("SCENE_POINT"));
+                        placed.push((arguments.len() > 5 && !at_point).then(|| (arguments[3].clone(), arguments[5].clone())));
+                    }
+                }
+            }
+        }
+        rows.push((words(&found[1]), placed));
+    }
+    let mut out = Vec::new();
+    for found in enums.captures_iter(text) {
+        let tag = words(&found[1]);
+        let Some((_, placed)) = rows.iter().filter(|(table, _)| !table.is_empty() && table.is_subset(&tag)).max_by_key(|(table, _)| table.len()) else {
+            continue;
+        };
+        let body: String = found[2].lines().map(|line| line.split("//").next().unwrap_or("")).collect::<Vec<_>>().join(" ");
+        let mut index: Option<usize> = None;
+        for entry in body.split(',') {
+            let (name, value) = entry.split_once('=').map_or((entry.trim(), None), |(name, value)| (name.trim(), Some(value.trim())));
+            if name.is_empty() {
+                continue;
+            }
+            index = match (index, value) {
+                (_, Some("ACTOR_FIRST_PLACED")) => Some(0),
+                (Some(_), Some(_)) | (None, _) => None,
+                (Some(at), None) => Some(at + 1),
+            };
+            let Some(at) = index else { continue };
+            if placed.get(at).cloned().flatten().is_some_and(|(x, z)| x == "0" && z == "0") {
+                out.push(name.to_string());
+            }
+        }
+    }
+    out
+}
+
 /// Word stems before a digit run that name hardware or a convention, not a
 /// meaning still to find: `BG2`, `Dma3`, `TM0`, `DISPCNT_MODE_1`, `TBS_PATCH_1`.
 const NUMBERED_STEMS: &[&str] = &[
@@ -345,6 +447,23 @@ pub struct Report {
     /// name, the name it views, how many casts), settled once every
     /// declaration is read.
     views: Vec<(String, usize, String, String, usize)>,
+    /// Each routine a scene's overlay defines (file, name, marked `UNUSED`),
+    /// and how many times each scene file writes each name, for the routines
+    /// nothing runs.
+    scene_routines: Vec<(String, String, bool)>,
+    scene_names: HashMap<String, HashMap<String, usize>>,
+    /// The routines nothing runs: marked `UNUSED`, or a scene's that its
+    /// overlay writes only where it defines it (file, name).
+    pub never_run: HashSet<(String, String)>,
+    /// Each routine's copies of the same body in other files (file, name),
+    /// by its file and name.
+    pub same_body: HashMap<(String, String), Vec<(String, String)>>,
+    /// The actors a scene places at its map's origin and no routine of its
+    /// file names, so never moved into any camera's sight (file, name).
+    pub at_origin: HashSet<(String, String)>,
+    /// The names a scene file's routines write, for the actors no routine
+    /// moves.
+    moved: HashSet<(String, String)>,
 }
 
 /// A number in code, with each call around it and the argument it fills
@@ -994,6 +1113,23 @@ impl Report {
         }
         self.unused_placeholders();
         let objects = self.objects();
+        self.never_run(&objects);
+        let moved = std::mem::take(&mut self.moved);
+        self.at_origin.retain(|actor| !moved.contains(actor));
+        // Each routine's copies of the same body, its parameters and locals
+        // renamed aside, in other files.
+        let mut bodies: HashMap<&[String], Vec<(String, String)>> = HashMap::new();
+        for copy in self.copies.iter().filter(|copy| copy.function && !copy.tokens.is_empty()) {
+            bodies.entry(&copy.tokens[..]).or_default().push((copy.file.clone(), copy.name.clone()));
+        }
+        for members in bodies.values().filter(|members| members.len() > 1) {
+            for member in members {
+                let others: Vec<(String, String)> = members.iter().filter(|other| other.0 != member.0).cloned().collect();
+                if !others.is_empty() {
+                    self.same_body.entry(member.clone()).or_default().extend(others);
+                }
+            }
+        }
         let referred = std::mem::take(&mut self.macro_words);
         (self.function_groups, self.table_groups, self.said_groups) =
             duplicates::groups(&std::mem::take(&mut self.copies), FUNCTION_TOKENS, TABLE_TOKENS, &objects, &referred);
@@ -1047,6 +1183,23 @@ impl Report {
             self.names.entry("placeholder").or_default().remove(&name);
             self.names.entry("placeholder_unused").or_default().insert(name);
         }
+    }
+
+    /// The routines nothing runs (`never_run`): marked `UNUSED`, or one a
+    /// scene's overlay writes only where it defines it, in all the files it
+    /// includes, and that no macro or assembly names.
+    fn never_run(&mut self, objects: &HashMap<String, BTreeSet<String>>) {
+        for (file, name, unused) in std::mem::take(&mut self.scene_routines) {
+            let written: usize = objects
+                .iter()
+                .filter(|(_, includers)| includers.contains(&file))
+                .filter_map(|(part, _)| self.scene_names.get(part).and_then(|names| names.get(&name)))
+                .sum();
+            if unused || (is_map_overlay(&file) && written == 1 && !self.macro_words.contains(&name)) {
+                self.never_run.insert((file, name));
+            }
+        }
+        self.scene_names.clear();
     }
 
     /// The objects each file is part of: the files that include it, through
@@ -1718,6 +1871,12 @@ impl<'r, 'a> Walk<'r, 'a> {
     fn name(&mut self, name: &str, line: usize) {
         if is_keyword(name) {
             return;
+        }
+        if in_map_folder(self.file) {
+            *self.report.scene_names.entry(self.file.to_string()).or_default().entry(name.to_string()).or_default() += 1;
+            if self.stack.contains(&Brace::Func) {
+                self.report.moved.insert((self.file.to_string(), name.to_string()));
+            }
         }
         for (kind, test) in [("placeholder", is_placeholder as fn(&str) -> bool), ("numbered", is_numbered)] {
             if !test(name) || (kind == "placeholder" && self.report.text_unknown.contains(name)) {
@@ -2729,6 +2888,10 @@ impl<'r, 'a> Walk<'r, 'a> {
                 self.conversions(&name, open, close);
                 self.named(&name, NameKind::Function, line, None);
                 self.duplicate(&statement, true, open, &name);
+                if in_map_folder(file) {
+                    let unused = statement.iter().any(|&at| self.code.text(at) == "UNUSED");
+                    self.report.scene_routines.push((file.to_string(), name.clone(), unused));
+                }
                 let own = self.code.doc_text[first].clone();
                 self.thing(&name, Origin::Function, line, own, String::new(), (None, None));
             }
@@ -3203,6 +3366,7 @@ pub fn game_judged<'a>(
         file(&mut report, path, text);
         if is_map_overlay(path) {
             units.push(path);
+            report.at_origin.extend(placed_at_origin(text).into_iter().map(|name| (path.to_string(), name)));
         }
         if naming::is_pret_flash(path) {
             report.naming.pret.extend(naming::identifiers(text).map(str::to_string));
@@ -3245,7 +3409,8 @@ impl Report {
             let own = own.or_else(|| by_name.get(thing.name.as_str()).filter(|_| thing.kind == "scene"));
             thing.evidence = own.cloned().unwrap_or_default();
         }
-        let analysis = provenance::analyze(&self.things, &self.places, text, &self.macro_values);
+        let lenders = self.lenders();
+        let analysis = provenance::analyze_with(&self.things, &self.places, text, &self.macro_values, &lenders);
         for row in &analysis.rows {
             let (file, line, name) = (&row.thing.file, row.thing.line, &row.thing.name);
             if let Some(evidence) = &row.evidence {
@@ -3265,6 +3430,53 @@ impl Report {
             }
         }
         self.provenance = Some(analysis);
+    }
+
+    /// The things whose seen rows may lend each thing its words, by place:
+    /// for a routine nothing runs (`never_run`), its namesakes in other files
+    /// (by its whole name, or its name after its scene's prefix) and its
+    /// copies of the same body; for an actor placed at its map's
+    /// origin (`at_origin`), its siblings of the same name with another
+    /// letter (`ACTOR_FUGUE_ICE_CONE_B` for `_A`).
+    fn lenders(&self) -> HashMap<usize, Vec<usize>> {
+        let mut by_name: HashMap<&str, Vec<usize>> = HashMap::new();
+        let mut by_place: HashMap<(&str, &str), usize> = HashMap::new();
+        // A routine's name after its scene's or module's prefix
+        // (`SlideFromEdge` of `MarsLighthouseRoomF_SlideFromEdge`).
+        let unprefixed = |name: &str| name.split_once('_').filter(|(prefix, _)| prefix.starts_with(|c: char| c.is_ascii_uppercase()) && prefix.bytes().any(|b| b.is_ascii_lowercase())).map(|(_, rest)| rest.to_string());
+        let mut by_rest: HashMap<String, Vec<usize>> = HashMap::new();
+        for (at, thing) in self.things.iter().enumerate() {
+            by_name.entry(thing.name.as_str()).or_default().push(at);
+            by_place.insert((thing.file.as_str(), thing.name.as_str()), at);
+            if let Some(rest) = unprefixed(&thing.name) {
+                by_rest.entry(rest).or_default().push(at);
+            }
+        }
+        let mut lenders: HashMap<usize, Vec<usize>> = HashMap::new();
+        for (at, thing) in self.things.iter().enumerate() {
+            let key = (thing.file.clone(), thing.name.clone());
+            let mut found = Vec::new();
+            if self.never_run.contains(&key) {
+                found.extend(by_name.get(thing.name.as_str()).into_iter().flatten().filter(|&&other| self.things[other].file != thing.file));
+                let namesakes = unprefixed(&thing.name).and_then(|rest| by_rest.get(&rest));
+                found.extend(namesakes.into_iter().flatten().filter(|&&other| self.things[other].file != thing.file));
+                for (file, name) in self.same_body.get(&key).into_iter().flatten() {
+                    found.extend(by_place.get(&(file.as_str(), name.as_str())));
+                }
+            }
+            if self.at_origin.contains(&key) {
+                let letter = thing.name.rsplit_once('_').filter(|(_, letter)| letter.len() == 1 && letter.bytes().all(|b| b.is_ascii_uppercase()));
+                if let Some((stem, own)) = letter {
+                    for other in ('A'..='Z').filter(|other| other.to_string() != own) {
+                        found.extend(by_place.get(&(thing.file.as_str(), format!("{stem}_{other}").as_str())));
+                    }
+                }
+            }
+            if !found.is_empty() {
+                lenders.insert(at, found);
+            }
+        }
+        lenders
     }
 }
 
@@ -3511,6 +3723,8 @@ const ROWS: &[(&str, &str)] = &[
     ("unused_words", "words the game never uses"),
     ("unused_word_name", "  names using them"),
     ("seen_words", "words for what the player sees, by a render"),
+    ("lent_words", "  of those, from a seen copy or sibling"),
+    ("unseen_words", "words of things nothing shows"),
     ("twin_words", "words from The Broken Seal's text"),
     ("glossary_words", "words the glossary defines"),
     ("door_words", "door words unresolved"),
@@ -3582,7 +3796,9 @@ impl Report {
             "duplicate_table_copies" => Report::copies(&self.table_groups) as u64,
             "duplicate_said" => self.said_groups.len() as u64,
             "unused_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.words.len() as u64),
-            "seen_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.seen_words.len() as u64),
+            "seen_words" => self.provenance.as_ref().map_or(0, |analysis| (analysis.seen_words.len() + analysis.lent_words.len()) as u64),
+            "lent_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.lent_words.len() as u64),
+            "unseen_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.unseen_words.len() as u64),
             "twin_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.twin_words.len() as u64),
             "glossary_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.glossary_words.len() as u64),
             "door_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.door_words.len() as u64),
@@ -3732,7 +3948,7 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
 /// worklist, the words the game never uses, those set apart as what the
 /// player sees, the twin's text's or the glossary's, and those no door
 /// resolves.
-const WORD_LISTS: [&str; 6] = ["provenance", "unused_word", "seen_word", "twin_word", "glossary_word", "door_word"];
+const WORD_LISTS: [&str; 8] = ["provenance", "unused_word", "seen_word", "lent_word", "unseen_word", "twin_word", "glossary_word", "door_word"];
 
 /// Whether `--list` knows a metric: one the table counts, or a word list.
 fn listable(metric: &str) -> bool {
@@ -3754,6 +3970,8 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
                 let words = match metric {
                     "unused_word" => &analysis.words,
                     "seen_word" => &analysis.seen_words,
+                    "lent_word" => &analysis.lent_words,
+                    "unseen_word" => &analysis.unseen_words,
                     "twin_word" => &analysis.twin_words,
                     "glossary_word" => &analysis.glossary_words,
                     _ => &analysis.door_words,
@@ -3764,7 +3982,12 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
                         .map(|&at| {
                             let row = &analysis.rows[at];
                             let thing = &row.thing;
-                            let seen = if metric == "unused_word" && row.seen_uses.contains(word) { " (seen)" } else { "" };
+                            let seen = match metric {
+                                "unused_word" if row.seen_uses.contains(word) => " (seen)",
+                                "unused_word" if row.lent_uses.contains(word) => " (from a seen copy or sibling)",
+                                "unused_word" if row.unseen_uses.contains(word) => " (nothing on screen)",
+                                _ => "",
+                            };
                             format!("{} {}:{}{seen}", thing.name, thing.file, thing.line)
                         })
                         .collect();
@@ -3816,7 +4039,7 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
 pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, String> {
     if let Some(metric) = metric.filter(|metric| !listable(metric)) {
         return Err(format!(
-            "--list takes a metric of the table, as humanity.tsv names it, or provenance, unused_word, seen_word, twin_word, glossary_word or door_word, not {metric}"
+            "--list takes a metric of the table, as humanity.tsv names it, or provenance, unused_word, seen_word, lent_word, unseen_word, twin_word, glossary_word or door_word, not {metric}"
         ));
     }
     let reports = std::thread::scope(|scope| {
@@ -4999,6 +5222,53 @@ mod provenance_tests {
         assert!(flagged.contains("\tman\t") && flagged.contains("\twarehouse\t") && !flagged.contains("\tguard\t"), "{flagged}");
     }
 
+
+    #[test]
+    fn words_no_render_can_name() {
+        let po = "msgctxt \"MsgDebugAreaName\"\nmsgid \"00001\"\nmsgstr \"Hall\"\n\nmsgctxt \"message\"\nmsgid \"00002\"\nmsgstr \"Hello there.\"\n";
+        let text = GameText::parse(po, Some(1)).unwrap();
+        let hall = concat!(
+            "enum HallActorId {\n  ACTOR_ICE_CONE_A = ACTOR_FIRST_PLACED,\n  ACTOR_ICE_CONE_B,\n  ACTOR_SPARKLE_A,\n  ACTOR_SPARKLE_B,\n};\n\n",
+            "struct ActorPlacement gHall_Placements[] = {\n",
+            "    ACTOR_PLACEMENT(SPRITE_STAKE, CONDITION_ALWAYS, 0, 0, 0, 0, FACING_SOUTH, 0, 0),\n",
+            "#if TLA_PATCH_1\n    ACTOR_PLACEMENT(SPRITE_STAKE, CONDITION_ALWAYS, 0, 136, 0, 424, FACING_SOUTH, 0, 0),\n",
+            "#else\n    ACTOR_PLACEMENT(SPRITE_STAKE, CONDITION_ALWAYS, 0, 0, 0, 0, FACING_SOUTH, 0, 0),\n#endif\n",
+            "    ACTOR_PLACEMENT(SPRITE_SPARK, CONDITION_ALWAYS, 0, 0, 0, 0, FACING_SOUTH, 0, 0),\n",
+            "    ACTOR_PLACEMENT(SPRITE_SPARK, CONDITION_ALWAYS, 0, 8, 0, 8, FACING_SOUTH, 0, 0),\n",
+            "    {SCENE_TABLE_END},\n};\n\n",
+            "/// Slides on from the ice's edge.\nvoid Hall_SlideFromEdge(void) {\n  Leader_Go();\n}\n\n",
+            "/// Lights the sparkle.\nvoid Hall_Light(void) {\n  Actor_Show(ACTOR_SPARKLE_A);\n}\n\n",
+            "/// Calls it.\nvoid Hall_Run(void) {\n  Hall_SlideFromEdge();\n}\n",
+        );
+        let room = concat!(
+            "/// Unused: slides on from the edge.\nUNUSED void Room_SlideFromEdge(void) {\n  Leader_Go();\n  Room_Other();\n}\n\n",
+            "/// Never called here.\nvoid Hall_Light(void) {\n  Actor_Show(3);\n}\n\n",
+            "/// Keeps the drip.\nvoid Room_KeepDrip(void) {\n  Room_Other();\n}\n",
+        );
+        assert_eq!(placed_at_origin(hall), ["ACTOR_ICE_CONE_A", "ACTOR_SPARKLE_A"], "an #if's first branch read; a row away from the origin");
+        let files = [("games/tla/src/scene/hall.c", hall), ("games/tla/src/scene/room.c", room)];
+        let names = evidence::parse_names(concat!(
+            "name\tkind\tevidence\tfile\n",
+            "ACTOR_ICE_CONE_B\twhat the player sees\tan upright cone of ice (its render)\tgames/tla/src/scene/hall.c\n",
+            "ACTOR_SPARKLE_B\twhat the player sees\ta sparkle running along the floor (its render)\tgames/tla/src/scene/hall.c\n",
+            "Hall_SlideFromEdge\twhat the player sees\tFelix slides across the ice from its edge (its render)\tgames/tla/src/scene/hall.c\n",
+            "Hall_Light\twhat the player sees\tthe sparkle lights up (its render)\tgames/tla/src/scene/hall.c\n",
+            "Room_KeepDrip\tits code\tnothing on screen: keeps a counter no routine reads\tgames/tla/src/scene/room.c\n",
+        ))
+        .unwrap();
+        let report = game_with_text(files, Some(&text), &names);
+        let words = |metric: &str| -> Vec<String> { list(&[("tla", &report)], metric).lines().map(|line| line.split('\t').nth(1).unwrap().to_string()).collect() };
+        assert_eq!(
+            words("lent_word"),
+            ["cone", "edge", "from", "ice", "light", "slide"],
+            "cone A off camera beside B; Room's unused copy of Hall's routine; Hall_Light, which nothing in room.c calls"
+        );
+        assert_eq!(words("unseen_word"), ["drip", "keep"]);
+        assert_eq!(words("unused_word"), ["room", "sparkle"], "sparkle A is moved by a routine, so B lends it nothing; Room is no map's name");
+        assert_eq!((report.value("lent_words"), report.value("unseen_words")), (6, 2));
+        assert!(report.never_run.contains(&("games/tla/src/scene/room.c".to_string(), "Hall_Light".to_string())), "written only where it is defined");
+        assert!(!report.never_run.contains(&("games/tla/src/scene/hall.c".to_string(), "Hall_SlideFromEdge".to_string())));
+    }
 
     #[test]
     fn numbered_names_whose_number_is_their_meaning() {
