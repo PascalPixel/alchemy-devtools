@@ -4780,7 +4780,6 @@ GROWTH_DUST	its code	512 puffs of dust in PARTICLES, set up and drawn	games/tbs/
 HAIL_CHIPS	its code	the comment's chips: 64 in PARTICLES, burst up and drawn	games/tbs/src/battle_effect/battle_effect_hail.c
 NARROW_CANVAS_PARTY_X	its code	REG_BG2X = -(112 << 8) with BG2PA 1.0 (the narrow canvas) on the party's side: 112 is DISPLAY_WIDTH - CANVAS_SIZE, the canvas against the screen's right edge; the same 112 subtracted from the effects' screen x there	games/tbs/src/battle_effect/battle_effect_internal.h
 STAT_BOOST_BURST_FRAME	its code	the GlowOrb bursts drawn from member * 8 + 52 for six pictures of four frames	games/tbs/src/battle_effect/battle_effect_stat_change.c
-STAT_BOOST_PICTURE_FRAME	its code	frame 80: EFFECT_SHOW_DAMAGE, SE_POWER_UP at member * 8 + 80, and the mode's picture (dagger, streak, wisp, shield) drawn from there	games/tbs/src/battle_effect/battle_effect_stat_change.c
 DRAGON_FIRE_BREATH_FRAME	its code	frame 128: Tiamat's sprites start animations 8 to 11 (the open mouth, per the existing comment), SE_CRASH, the puffs of fire thrown from 129, shake of 48	games/tbs/src/battle_effect/battle_effect_tiamat.c
 DRAGON_FIRE_FLASH_FRAME	its code	A or B skips to frame 160; from 160 to 175 the canvas clears to bright and the background brightens	games/tbs/src/battle_effect/battle_effect_tiamat.c
 DRAGON_FIRE_FLASH_END_FRAME	its code	frame 176: the canvas darkens, Tiamat's sprites return to animations 0 to 4; the fire and embers stop drawing after 175	games/tbs/src/battle_effect/battle_effect_tiamat.c
@@ -4852,7 +4851,6 @@ DISPLAY_TILE_HEIGHT	the hardware	rows 0 to 19 (160 / 8); off-screen speakers get
 unusedA	its code	two parameters of Event_ShowMessageAtPosition and its forwarder that nothing reads; only their order tells them apart	games/tbs/src/field/event_commands_messages.c
 FixedPoint_MulQ8	its code	the routine multiplies two 8.8 fixed-point values; named as Iwram_MulFX is for 16.16	games/tbs/src/field/lucky_dice.c
 BurstParticleVisual.xLow	its code	the byte at offset 6 is attribute 1's low byte, x; flagsBLow holds x's top bit	games/tbs/src/field/event_commands_growth.c
-WorldPictureWork.unreadAfterCursor	its code	six bytes after cursorY nothing on the screen reads, named by what they follow	games/tbs/src/field/event_commands_world_picture.c
 ScriptOperands.layer	its code	struct Actor's layer and priorityFlags at 0x22 and 0x23, which no work value reaches	games/tbs/include/field/script_operands.h
 SceneEntrance.unusedAfterFacing	its code	0 in every table and never read; named by the member it follows	games/tbs/include/field/scene_tables.h
 FarCallSystemTable.arcTan2	its code	the entry at 64 is Trig_Atan's far call (FarCallArcTanVeneer), named as the system routine is	games/tbs/src/field/world_map_lines.c
@@ -5221,7 +5219,6 @@ WINDOW_BORDER_LIGHT_COLOR	its picture	window_tiles.png's colour 12, (160, 160, 1
 GLYPH_PALETTE_SLOT_UNSET	its code	screens_battle_command_row.c sets all 256 GlyphPalette.slot entries to 255 as the row opens; screens_menu_titles.c's BattleCommandRow_LoadIconTiles gives an icon colour a slot when its entry is still 255	games/tbs/include/graphics/glyph.h
 PORTRAIT_SPRITE_MAP_FIRST	its code	window_messages.c's Portrait_GetForSpeaker adds 128 to a speaker's gPortrait_SpriteMap index; window_icons.c's Icon_LoadWithPalette takes a portrait up to 127 as its row; screens_debug.c's portrait browser	games/tbs/include/game/character_ids.h
 PROJECTION_FAR_DEPTH_MAX	its code	Projection_Set's farDepth toFIXED(32767), the largest whole 16.16 number: battle_staging.c's BattleStaging_DispatchAction, battle_effect_thor.c and lucky_dice.c	games/tbs/include/system/system.h
-WORLD_MAP_STILL_FIRST_TILE	its code	field_world_map.c's WorldMap_LoadGraphics numbers screen block 6 from tile 424, the 30 by 20 picture that WorldMap_StartStillPicture and event_commands_world_picture.c's WorldPicture_Show load at BG_CHAR_BLOCK(0) + 424 * TILE_SIZE_8BPP	games/tbs/include/field/perspective.h
 SCENE_TRANSITION_STYLE	its code	field_sequence_screen_transition.c's ScreenTransition_Start and ScreenTransition_Finish read (mode >> 8) & 0xff as the enum ScreenTransitionStyle, SCENE_TRANSITION's high byte	games/tbs/include/field/actor.h
 SCENE_TRANSITION_VARIANT	its code	ScreenTransition_Start and ScreenTransition_Finish read mode & 0xff as the variant the style reads, SCENE_TRANSITION's low byte	games/tbs/include/field/actor.h
 MESSAGE_DECODE_HALTING_SPEECH	its twin	The Lost Age's window.h enum MessageDecodeFlag; window_borders.c's Message_SetDecodeFlags sets WindowWork.haltingSpeech from bit 0	games/tbs/include/window/window.h
@@ -5860,10 +5857,6 @@ JUDGMENT_SHARD_RADIUS	what the player sees	jagged blue shards of light flicker a
 JUDGMENT_SWEEP_CANVAS_X	what the player sees	the blast spreads from the middle of the screen (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_FLARE_X	what the player sees	the flare falls down the middle of the aerial view and the blast spreads from there (its render)	games/tbs/src/battle_effect/battle_effect_judgment.c
 WORLD_MAP_USE_ALTERNATE_TILE	what the player sees	the World Map at its entrance 9, (5928, 296), in grid row 0, column 11, is snow-covered ground with a lighthouse beyond (its render)	games/tbs/src/field/field_world_map.c
-WORLD_PICTURE_MARKER_PARTY	the game	"Present location." (MsgPresentLocation)	games/tbs/src/field/event_commands_world_picture.c
-WorldPicture_Show	what the player sees	R on the World Map near Vale shows a picture of the whole world, a white pointing hand as its cursor, and "Present location." beside the party's place (its render)	games/tbs/src/field/event_commands_world_picture.c
-WORLD_PICTURE_WIDTH	what the player sees	the picture of the whole world R shows fills the screen (its render)	games/tbs/src/field/event_commands_world_picture.c
-WORLD_PICTURE_HEIGHT	what the player sees	the picture of the whole world R shows fills the screen (its render)	games/tbs/src/field/event_commands_world_picture.c
 JUDGMENT_FORMATION_COLUMNS	its code	place.x is i % 4 * 32 and place.y i / 4 * 32: the 16 sprites stand as a 4 by 4 formation of 32-pixel squares	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_FORMATION_SPRITE_SIZE	its code	place.x is i % 4 * 32 and place.y i / 4 * 32: the 16 sprites stand as a 4 by 4 formation of 32-pixel squares	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_RING_LEVEL	its code	JUDGMENT_PLOT_RING_POINTS writes level 20 at the wave rings' points in the square wave picture	games/tbs/src/battle_effect/battle_effect_judgment.c
@@ -5878,7 +5871,6 @@ WORLD_MAP_SCREEN_ROW_HALFWORDS	its code	the affine map's 64-byte rows are writte
 MAP_ENTRY_PAIR	its code	screen block 6 is numbered a word (two entries) at a time from WORLD_MAP_STILL_FIRST_TILE, adding 2 to each entry per word	games/tbs/src/field/field_world_map.c
 DISPCNT_MODE_MASK	the hardware	REG_DISPCNT bits 0..2 are the BG mode (GBATEK); WorldMap_ApplyAffinePage clears them before choosing mode 0 or 2	games/tbs/src/field/field_world_map.c
 WORLD_MAP_STILL_FIRST_TILE	its code	WorldMap_LoadGraphics numbers screen block 6 from tile 424 for a 30 by 20 picture; BG_CHAR_BLOCK(1) + 0x2a00 = BG_CHAR_BLOCK(0) + 424 * TILE_SIZE_8BPP	games/tbs/src/field/field_world_map.c
-WORLD_PICTURE_MARKER_NEAREST	its code	marker tile 3, the larger dot WorldPicture_UpdateMarkers puts over the marker nearest the cursor, whose area's name it shows	games/tbs/src/field/event_commands_world_picture.c
 THOR_RING_MOTES	what the player sees	over dusk clouds a ring draws itself and turns, its colour cycling through violet, green, gold, blue and pink (its render)	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_RING_MOTES	its code	the ring is 128 motes at angle i * (TRIG_TURN / 128), two more each frame	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_RING_RADIUS	its code	the ring's points are sin and cos times 96; lineEnds less 96 lie on it (the chord at z 39 ends at x 88)	games/tbs/src/battle_effect/battle_effect_thor.c
@@ -6123,9 +6115,6 @@ OPTION_ROW_MESSAGE_SPEED	the game	"Set text display speed." (MsgOptionHelp + 2)	
 OBJ_Y_RANGE	its code	attribute 0 holds eight bits of y, so the title letters' y wraps as (y + OBJ_Y_RANGE) & (OBJ_Y_RANGE - 1) (lucky_wheels.c:985)	games/tbs/src/field/lucky_wheels.c
 DAMPING_SCALE	its code	a spark's speed keeps velocity * 60 / DAMPING_SCALE a frame (lucky_wheels.c:1509), as the battle effects damp a particle by speed * damping / 64	games/tbs/src/field/lucky_wheels.c
 DAMPING_SCALE	its code	a bounce keeps velocity * 48 / DAMPING_SCALE of a die's speed off a side or the floor, * 56 / DAMPING_SCALE along the floor, and every frame * 63 / DAMPING_SCALE (lucky_dice.c:890, 921, 944)	games/tbs/src/field/lucky_dice.c
-WORLD_PICTURE_MARKER_AREA	its code	gWorldPicture_AreaMarkers (world_picture_markers.c) gives tile 1 to the towns and the places on the way (Vale, Vault, Altin, Bilibin, Kolima, the Lama Temple, Gondowan Passage...) and tile 2 to the lighthouses and Sol Sanctum	games/tbs/src/field/event_commands_world_picture.c
-WORLD_PICTURE_MARKER_LIGHTHOUSE	its code	gWorldPicture_AreaMarkers (world_picture_markers.c) gives tile 2 to Mercury Lighthouse, Venus Lighthouse and Babi Lighthouse, and to Sol Sanctum, which shares the lighthouses' tile	games/tbs/src/field/event_commands_world_picture.c
-WORLD_PICTURE_MARKER_LIGHTHOUSE	its area name	Mercury Lighthouse	games/tbs/src/field/event_commands_world_picture.c
 DescendingArcSprite.shadow	its code	the view over struct Sprite takes its own member names at the same places (attr, shadow and the rest), read and written as the Sprite's	games/tbs/src/field/event_commands_retreat.c
 EDITOR_NUMBER_TILE	its picture	games/tbs/src/graphics/palette_editor/swatch.png: the 16 swatches, then 32 tiles showing the numbers 0 to 31; the editor draws level n with tile EDITOR_NUMBER_TILE + n	games/tbs/src/field/field_sequence_palette_editor.c
 TEXT_ACTOR_NAME_START	its twin	The Lost Age's window_internal.h names decoded code 28 so (MESSAGE_ACTOR_NAME_START in its decoder); here drawing and measuring skip it and its two entries	games/tbs/src/window/window_internal.h
@@ -7779,7 +7768,6 @@ FLAG_ARRIVAL_CLEARED_LAST	its twin	The Lost Age's FLAG_ARRIVAL_CLEARED_LAST (0xd
 DJINN_TUTORIAL_SET_AFTER_GIVE	the game	"After choosing who will take the Djinni, you can set it." (MsgDjinnTutorialSetAfterGive), the message the step shows (DjinnMenu_SelectDjinn)	games/tbs/src/menu/menu_internal.h
 DJINN_TUTORIAL_SET_CHANGES	the game	"Setting a Djinni changes your attributes and maybe even your class." (MsgDjinnTutorialSetChanges), the message the step shows (PsynergyList_RunCompareLoop)	games/tbs/src/menu/menu_internal.h
 DJINN_TUTORIAL_CLASS_PSYNERGY	the game	"When your class changes, the Psynergy you can use may also change." (MsgDjinnTutorialClassPsynergy), the message the step shows (PsynergyList_RunCompareLoop)	games/tbs/src/menu/menu_internal.h
-FLAG_BATTLE_ARENA_AGREED_TO_BATTLE	the game	"When you finish your preparations, please step into the circle!" (MsgLobbyPleaseSpeakWhen)	games/tbs/src/scene/battle_arena.c
 FLAG_BATTLE_ARENA_LINK_DISCONNECTED	the game	"The link was disconnected." (MsgLobbyLinkDisconnected)	games/tbs/src/scene/battle_arena.c
 ACTOR_DEBUG_PARAMETERS_MAN	the game	"Choose your parameters here." (MsgLobbyChooseParameters)	games/tbs/src/scene/battle_arena.c
 FLAG_GUARD_ASKED_WHERE_YOU_WERE	the game	"Where were you?" (MsgBilibinWhere)	games/tbs/src/scene/mccoy_palace_grounds.c
@@ -7888,3 +7876,70 @@ SPRITE_PART_PLAIN	the hardware	OAM attribute 0 bits 8 and 9 clear: no affine mat
 SPRITE_PART_AFFINE	the hardware	OAM attribute 0 bit 8: rotation and scaling (GBATEK)	games/tbs/src/field/field_sprite_draw.c
 SPRITE_PART_AFFINE_DOUBLE	the hardware	OAM attribute 0 bits 8 and 9: rotation and scaling in a double-size box (GBATEK)	games/tbs/src/field/field_sprite_draw.c
 SPRITE_PART_MIRRORED	the hardware	OAM attribute 1 bit 12, the horizontal flip, the matrix field's 8 when bit 8 of attribute 0 is clear (GBATEK)	games/tbs/src/field/field_sprite_draw.c
+ELEMENT_PRESET_DEFAULT	its code	games/tbs/src/game/game_classes.c: Unit_GetElementLevels, Enemy_GetAttackElement and Unit_CalculateBaseElements read row 0 for a preset from ENEMY_ELEMENT_PRESET_COUNT on	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_BANDIT	the game	"Bandit" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_AZART	the game	"Azart" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_VERMIN	the game	"Vermin" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_GRISLY	the game	"Grisly" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_SPIDER	the game	"Spider" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_WILD_MUSHROOM	the game	"Wild Mushroom" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_TRET	the game	"Tret" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_DRONE_BEE	the game	"Drone Bee" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_BAT	the game	"Bat" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_HARRIDAN	the game	"Harridan" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_ZOMBIE	the game	"Zombie" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_SKELETON	the game	"Skeleton" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_GHOST	the game	"Ghost" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_LICH	the game	"Lich" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_GARGOYLE	the game	"Gargoyle" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_CEREBUS	the game	"Cerebus" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_MANTICORE	the game	"Manticore" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_TORNADO_LIZARD	the game	"Tornado Lizard" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_EARTH_LIZARD	the game	"Earth Lizard" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_SLIME	the game	"Slime" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_LIVING_STATUE	the game	"Living Statue" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_STONE_SOLDIER	the game	"Stone Soldier" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_SALAMANDER	the game	"Salamander" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_THUNDER_LIZARD	the game	"Thunder Lizard" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_GNOME_WIZARD	the game	"Gnome Wizard" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_ORC_LORD	the game	"Orc Lord" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_RAT_SOLDIER	the game	"Rat Soldier" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_SIREN	the game	"Siren" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_GNOME	the game	"Gnome" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_GNOME_MAGE	the game	"Gnome Mage" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_NIGHTMARE	the game	"Nightmare" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_MIMIC	the game	"Mimic" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_SATUROS	the game	"Mystery Man" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_MENARDI	the game	"Mystery Woman" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_FUSION_DRAGON	the game	"Fusion Dragon" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_DEADBEARD	the game	"Deadbeard" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+ELEMENT_PRESET_GRYPHON	the game	"Gryphon" (MsgEnemyName), the first enemy whose row has this preset	games/tbs/include/game/enemy_element_preset.h
+gItem_RareItemStockIndex	its code	game_inventory.c: Item_AdjustCounter reads an item's place in gRareItemStock plus one from it; shop_run.c lists the shop's Artifacts from that stock; "Artifacts" (message 50)	games/tbs/src/game/artifact_slots.c
+RARE_ITEM_STOCK_COUNT	its code	game_inventory.c: RareItemStock_Adjust refuses an index from 128 on; gRareItemStock holds 128 bytes	games/tbs/include/game/game.h
+RARE_ITEM_STOCK_MAX	its code	game_inventory.c: RareItemStock_Adjust caps a stock at 99	games/tbs/include/game/game.h
+gCharacter_LighthouseGroupTable	its code	game_units.c: Party_RestorePpOfLitElements refills PP for group 0 inside Venus or Mars Lighthouse (FLAG_VENUS_LIGHTHOUSE_LIT, FLAG_MARS_LIGHTHOUSE_LIT), for the others inside Mercury or Jupiter	games/tbs/src/game/experience_table.c
+LIGHTHOUSE_GROUP_VENUS_MARS	its code	game_units.c: Party_RestorePpOfLitElements tests the Venus and Mars lighthouse flags for group 0 (Isaac, Garet, Felix, Jenna)	games/tbs/include/game/game.h
+LIGHTHOUSE_GROUP_MERCURY_JUPITER	its code	game_units.c: Party_RestorePpOfLitElements tests the Mercury and Jupiter lighthouse flags for group 1 (Ivan, Mia, Sheba, Piers)	games/tbs/include/game/game.h
+GAME_FLAG_COUNT	its code	game_units.c: a new game clears 512 bytes of gGameFlagBytes; GAME_FLAG_BYTE keeps bits 3 to 11 of a flag number	games/tbs/include/game/game_flags.h
+INVENTORY_EQUIP_DONE	its code	game_inventory.c: Inventory_Equip returns 0 once the item is equipped or was already	games/tbs/include/game/item.h
+INVENTORY_EQUIP_REFUSED	its code	game_inventory.c: Inventory_Equip returns -1 when Item_CanUnitEquipDirect refuses the character	games/tbs/include/game/item.h
+INVENTORY_EQUIP_STUCK	its code	game_inventory.c: Inventory_Equip returns -2 when the equipped item of that type has ITEM_CANNOT_UNEQUIP; menu_item.c then shows MsgCannotRemoveItem	games/tbs/include/game/item.h
+INVENTORY_DISCARD_ALLOWED	its code	game_inventory.c: Inventory_CheckDiscard returns 0 for an item that may go	games/tbs/include/game/item.h
+INVENTORY_DISCARD_EMPTY_SLOT	its code	game_inventory.c: Inventory_CheckDiscard returns -1 for an empty slot	games/tbs/include/game/item.h
+INVENTORY_DISCARD_STUCK	the game	"Can't remove." (MsgCannotRemove), which shop_item_picker.c draws for Inventory_CheckDiscard's -3, an equipped item with ITEM_CANNOT_UNEQUIP	games/tbs/include/game/item.h
+INVENTORY_DISCARD_INDISPENSABLE	the game	"Can't drop." (MsgCannotDrop), which shop_item_picker.c draws for Inventory_CheckDiscard's -4, an ITEM_INDISPENSABLE item	games/tbs/include/game/item.h
+STAT_BOOST_SPRITE_FRAME	its code	frame 80: EFFECT_SHOW_DAMAGE, SE_POWER_UP at member * 8 + 80, and the mode's picture (dagger, streak, wisp, shield) drawn from there	games/tbs/src/battle_effect/battle_effect_stat_change.c
+MapScreenWork.unreadAfterCursor	its code	six bytes after cursorY nothing on the screen reads, named by what they follow; named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
+WORLD_MAP_STILL_FIRST_TILE	its code	field_world_map.c's WorldMap_LoadGraphics numbers screen block 6 from tile 424, the 30 by 20 image that WorldMap_StartStillImage and event_commands_map_screen.c's MapScreen_Show load at BG_CHAR_BLOCK(0) + 424 * TILE_SIZE_8BPP	games/tbs/include/field/perspective.h
+MAP_SCREEN_MARKER_PARTY	the game	"Present location." (MsgPresentLocation); named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
+MapScreen_Show	what the player sees	R on the World Map near Vale shows a map of the whole world, a white pointing hand as its cursor, and "Present location." beside the party's place (its render); named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
+MAP_SCREEN_WIDTH	what the player sees	the map of the whole world R shows fills the screen (its render); named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
+MAP_SCREEN_HEIGHT	what the player sees	the map of the whole world R shows fills the screen (its render); named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
+MAP_SCREEN_MARKER_NEAREST	its code	marker tile 3, the larger dot MapScreen_UpdateMarkers puts over the marker nearest the cursor, whose area's name it shows; named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
+MAP_SCREEN_MARKER_AREA	its code	gMapScreen_AreaMarkers (map_screen_markers.c) gives tile 1 to the towns and the places on the way (Vale, Vault, Altin, Bilibin, Kolima, the Lama Temple, Gondowan Passage...) and tile 2 to the lighthouses and Sol Sanctum; named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
+MAP_SCREEN_MARKER_LIGHTHOUSE	its code	gMapScreen_AreaMarkers (map_screen_markers.c) gives tile 2 to Mercury Lighthouse, Venus Lighthouse and Babi Lighthouse, and to Sol Sanctum, which shares the lighthouses' tile; named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
+MAP_SCREEN_MARKER_LIGHTHOUSE	its area name	Mercury Lighthouse; named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
+FLAG_BATTLE_ARENA_PLAYER_APPLIED	the game	"Would you like to apply?" (MsgLobbyPleaseSpeakWhen + 1), the attendant's question whose yes sets the flag; "When you finish your preparations, please step into the circle!" (MsgLobbyPleaseSpeakWhen)	games/tbs/src/scene/battle_arena.c
+PATH_START	its code	battle_effect_atalanta.c and battle_effect_dragon_cloud.c read a path's first four bytes as x and y, each (high << 8) + low byte, then one x, y move a frame	games/tbs/src/graphics/battle_effects/paths.c
+PSYNERGY_MENU_BACK_TO_LIST	its code	PsynergyMenu_RunSteps sets PsynergyMenuWork.flags bit 0 on each return to PSYNERGY_STEP_LIST after a use or a cancelled target; no code reads the bit	games/tbs/src/menu/menu_psynergy.c
+WINDOW_ATTRS_MASK	its code	Window_UpdateOrCreate passes flags & 0xff to Window_CreateFar as its WINDOW_FLAG_ attrs, bit 8 being its own WINDOW_KEEP_EXISTING	games/tbs/src/menu/menu_shared.c
