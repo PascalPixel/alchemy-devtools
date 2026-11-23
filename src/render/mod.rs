@@ -489,6 +489,8 @@ const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene 
          [--at-px X,Z[,LAYER]] [--during KEYS:N,...] [--skip FUNCTION]...
          [--limit SECONDS] [--from SECONDS] [--for SECONDS] [--keep-short]
          [--walk-to X,Y[,LAYER]] [--crop X,Y,W,H] [--zoom N] [--frames A-B]
+         [--at-height H] [--arrive-as after-battle|entrance] [--until FUNCTION]
+         [--follow-scenes N]
 Plays a built edition of either game (make tbs-en, make tla-en) under
 libmgba from a new game's defaults straight into each scene, and writes
 into DIR/<scene>/ (DIR defaults to out/EDITION/places) PNG files at the
@@ -736,6 +738,38 @@ staged:
     cells, which run as he crosses them, but no exit) and followed with the
     pad. LAYER's cells are numbered as the map numbers them, as --at's.
     The note says the moves walked, or where and why he stopped.
+    The Lost Age's climbs are its MAP_CELL_CLIMBABLE pairs (up to higher
+    ground, down to lower, a closed overhead cell on the wall's face
+    stopping him), its jumps MAP_CELL_JUMP and its ledges MAP_CELL_LEDGE,
+    several on one cell; a pillar whose top its cell carries is walked
+    onto, a climb an actor stands on (a vine) is climbed. A way in that
+    leaves him on a ladder is climbed off first. After each climb, jump or
+    drop, and when one does not happen or a walk makes no headway, the
+    rest is planned again from where he stands without it (rooms whose
+    cells change as he climbs: Air's Rock's levels). ALCHEMY_RENDER_DEBUG
+    prints each plan; ALCHEMY_WALK_DEBUG=X,Y also the moves into a cell.
+  --at-height H: a staged start puts the leader H pixels up rather than on
+    the ground the cells give there before he arrives (Air's Rock swaps in
+    each level's ledges by his height: --at 30,54 --at-height 208 stands
+    him on the second level by its pillars).
+  --arrive-as after-battle: a staged walk arrives as after a battle fought
+    where it starts: there the game's own actor snapshot is taken
+    (Actor_Snapshot, ObjectTable_Snapshot) and the scene entered again
+    with FLAG_KEEP_PARTY_POSITION (a warp's exit), so its after-battle
+    branches run and the leader is put back as he was. --set
+    FLAG_KEEP_PARTY_POSITION alone has no battle before it: the run starts
+    the party at its way in from an empty snapshot, and scenes that leave
+    the leader's priority to the snapshot (Dehkan Plateau, Hesperia) draw
+    his sprite cut. `entrance`, the default, arrives by the way in.
+  --until FUNCTION: a staged walk plays on after its keys, the player
+    still, until the game reaches that function of the scene's overlay by
+    itself (a statue's fireball bursting, MagmaRock_BurstStatue; a
+    fireball carrying Felix, MarsLighthouseEntrance_RideFireball), and
+    three seconds past it, within --limit; the note says when, or that it
+    never came, and the run is written either way.
+  --follow-scenes N: an event's recording follows it across up to N scene
+    changes (1 to 8), each arrival for as long as --limit lets the run go
+    rather than the ten seconds an exit's arrival is otherwise followed.
   --crop X,Y,W,H: only that part of the screen (pixels of its 240 by 160)
     is written, drawn --zoom N times as large (2 when not given; 1 to 4),
     for a small sprite change; a staged walk holds the camera still from
