@@ -73,7 +73,6 @@ games/tbs/src/scene/gondowan_cave.c	GondowanCave_LeaveToWorldMapEast	0x9a6	unset
 games/tbs/src/scene/log_rooms_c.c	Scene_Initialize	16	honest	a halfword range test, (x << 16) <= (1u << 16): the entrance or the one after it
 games/tbs/src/scene/mercury_lighthouse_entrance.c	MercuryLighthouseEntrance_ActivateWithPly	100	honest	a percentage's divisor
 games/tbs/src/scene/shared/colosso_task.c	COLOSSO_LETTERING_WAIT	0x7fff	honest	a lettering command's opcode beside 0x1000 and 0x2000, the highest s16
-games/tbs/src/scene/shared/sol_sanctum_elemental_star_ring_setup.c	SolSanctum_UpdateRing	24	honest	a hold of 24 frames
 games/tbs/src/scene/ship_rooms.c	ShipRooms_AskForReplacementOarsmen	20	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
 games/tbs/src/scene/ship_rooms.c	ShipRooms_AskForReplacementOarsmen	40	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
 games/tbs/src/scene/ship_rooms.c	ShipRooms_AskForReplacementOarsmen	60	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one

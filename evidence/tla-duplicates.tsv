@@ -6,8 +6,8 @@ Map_ReadEditU16 Stream_ReadU16	kept apart	two main-image objects (field.c's and 
 PsynergyTest_StartleAfterBlaze PsynergyTest_StartleAgain	kept apart	one body under two names in one file, each a trigger's event the ROM keeps; the second says it is the same
 Render_SetTilemapFlagRect Window_SetTextTileRect	kept apart	two main-image objects, and no main-image object shares a fragment with another
 Vent_SetBlowing Vent_SetBlowing	kept apart	Aqua Rock's returns s32 and Taopo Swamp's void; either type in the other moves its callers' bytes
-gAnemosInnerSanctumEntrance_GlowGrowsScript gMarsLighthouseStarRoom_LightRiseScript	different things	one motion made by a glow and a rising light in two events
-gAnemosInnerSanctumEntrance_GlowShrinksScript gMarsLighthouseStarRoom_LightSinkScript	different things	one motion made by a glow and a sinking light in two events
+gAnemosInnerSanctumEntrance_LightGrowsScript gMarsLighthouseStarRoom_LightRiseScript	different things	one motion made by a light in each of two events in two events
+gAnemosInnerSanctumEntrance_LightShrinksScript gMarsLighthouseStarRoom_LightSinkScript	different things	one motion made by a light in each of two events in two events
 gAnemosInnerSanctumEntrance_ShadowScript gMarsLighthouseStarRoom_AgatioDragonShrinkScript	different things	one motion made by a shadow and Agatio's shrinking dragon
 gAnemosInnerSanctum_LongScript gFieldEffect_LongScript	kept apart	Anemos Inner Sanctum keeps its own beside the shared one it also includes; the ROM keeps both
 gAnemosInnerSanctum_MediumScript gFieldEffect_MediumScript gFieldEffect_MediumScript gGaiaRockInside_SerpentGlowScript gGaiaRockInside_SerpentSmokeScript	kept apart	the medium lifetime in overlays that also include the shared three (Anemos, Gaia Rock's serpent) or hold it alone (Gabomba Catacombs); the ROM keeps each
