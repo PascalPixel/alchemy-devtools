@@ -41,7 +41,7 @@ pub const VOCABULARY: &[&str] = &[
     // Kinds and prefixes.
     "map", "mapsec", "localid", "area", "scene", "id", "ids", "actor", "actors", "flag", "flags", "event", "events", "trigger", "triggers", "script", "scripts", "handler",
     "handlers", "callback", "table", "tables", "entry", "entries", "index", "count", "num", "interiors", "interior",
-    // The interior styles a sheet of rooms is named for, the words the game's
+    // The interior styles a rooms map is named for, the words the game's
     // text lacks.
     "stucco", "timber", "lacquer",
     "temp", "tmp", "msg", "obj", "npc", "fx", "se", "mus", "bg", "gfx", "anim", "oam", "vram", "sprite", "sprites",
