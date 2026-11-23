@@ -6,8 +6,10 @@
 //!
 //! - words the game never uses: each name is split into words, and a word is
 //!   accounted for when the game's text uses it (after crude stemming) or it
-//!   is on the short programming vocabulary below, set apart as the twin's
-//!   when the twin's text uses it (The Broken Seal's, for The Lost Age:
+//!   is on the short programming vocabulary below, set apart as the
+//!   glossary's when the game's glossary defines it (an entry's heading or
+//!   the words its evidence quotes), as the twin's when the twin's text uses
+//!   it (The Broken Seal's, for The Lost Age:
 //!   H6), and set apart as plain
 //!   English for what the player sees when every name using it has a row
 //!   saying someone saw it (its render, its picture, the walkthrough), or
@@ -98,6 +100,9 @@ pub struct GameText {
     /// that game (H6).
     twin_words: HashSet<String>,
     twin_stems: HashSet<String>,
+    /// The stems of the words the game's glossary (`games/<game>/glossary.md`)
+    /// defines, which the owner settles (Alchemy's Vocabulary rule).
+    glossary: HashSet<String>,
 }
 
 /// A message's text without its `{...}` commands, on one line.
@@ -117,6 +122,22 @@ fn flatten(text: &str) -> String {
         }
     }
     out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The words of some English, lowercase: `Li'l` is `li'l`, `li` and `l`,
+/// and `lil` as a name writes it, the apostrophe dropped (`ITEM_LIL_TURTLE`).
+fn words_of(body: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for word in body.split(|c: char| !(c.is_alphanumeric() || c == '\'')) {
+        let word = word.trim_matches('\'').to_lowercase();
+        let dropped = word.replace('\'', "");
+        for part in [word.as_str(), dropped.as_str()].into_iter().chain(word.split('\'')) {
+            if !part.is_empty() {
+                out.push(part.to_string());
+            }
+        }
+    }
+    out
 }
 
 /// `McCoy's` is `mccoy`; `Storms` is `storm`; `moving` and `move` meet at
@@ -175,20 +196,9 @@ impl GameText {
             }
         }
         for (_, body) in &text.messages {
-            for word in body.split(|c: char| !(c.is_alphanumeric() || c == '\'')) {
-                let word = word.trim_matches('\'').to_lowercase();
-                if word.is_empty() {
-                    continue;
-                }
-                // `Li'l` is `li'l`, `li` and `l`, and `lil` as a name
-                // writes it, the apostrophe dropped (`ITEM_LIL_TURTLE`).
-                let dropped = word.replace('\'', "");
-                for part in [word.as_str(), dropped.as_str()].into_iter().chain(word.split('\'')) {
-                    if !part.is_empty() {
-                        text.stems.insert(stem(part));
-                        text.words.insert(part.to_string());
-                    }
-                }
+            for word in words_of(body) {
+                text.stems.insert(stem(&word));
+                text.words.insert(word);
             }
         }
         text.joined = text.messages.iter().map(|(_, body)| body.as_str()).collect::<Vec<_>>().join("\u{1}");
@@ -212,6 +222,28 @@ impl GameText {
         self.twin_words = twin.words.clone();
         self.twin_stems = twin.stems.clone();
         self
+    }
+
+    /// The same text, with the words a glossary defines: each entry's
+    /// heading (`### Main routine`), and the words its `Evidence:` line
+    /// quotes as the source of the term (the credits' "Music").
+    pub fn with_glossary(mut self, glossary: &str) -> GameText {
+        for paragraph in glossary.split("\n\n").map(str::trim) {
+            let defined = if let Some(heading) = paragraph.strip_prefix("### ") {
+                words_of(heading)
+            } else if paragraph.starts_with("Evidence:") {
+                paragraph.split('"').skip(1).step_by(2).flat_map(words_of).collect()
+            } else {
+                continue;
+            };
+            self.glossary.extend(defined.iter().map(|word| stem(word)));
+        }
+        self
+    }
+
+    /// The game's glossary defines the word, or a word with its stem.
+    pub fn glossary_defines(&self, word: &str) -> bool {
+        self.glossary.contains(&stem(word))
     }
 
     /// The twin's text uses the word, or a word with its stem.
@@ -882,6 +914,9 @@ pub struct Analysis {
     /// Each word set apart as the twin's: its text uses it (H6). Most used
     /// first.
     pub twin_words: Vec<(String, Vec<usize>)>,
+    /// Each word set apart as the glossary's, which the owner settles. Most
+    /// used first.
+    pub glossary_words: Vec<(String, Vec<usize>)>,
     /// Each unresolved door word and the links that use it, most used first.
     pub door_words: Vec<(String, Vec<usize>)>,
 }
@@ -1093,14 +1128,20 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
         }
         analysis.rows.push(Row { thing: thing.clone(), words: flagged, evidence, door_words: Vec::new(), seen_words: Vec::new(), seen_uses: Vec::new() });
     }
-    // A word the twin's text uses is the game's, and set apart (H6).
+    // A word the glossary defines is settled, and one the twin's text uses
+    // is the game's (H6): each is set apart. A name taking a word from what
+    // someone saw uses it for that, not in the sense the glossary gives
+    // (a pool of water, not a heap's), so such a word stays.
+    let seen = Seen::new(&analysis.rows);
+    let (mut glossary, words): (Vec<_>, Vec<_>) = words.into_iter().partition(|(word, uses)| {
+        text.glossary_defines(word) && !uses.iter().any(|&at| seen.word(&analysis.rows, at, word))
+    });
     let (mut twin, words): (Vec<_>, Vec<_>) = words.into_iter().partition(|(word, _)| text.twin_uses(word));
-    for (word, uses) in &twin {
+    for (word, uses) in glossary.iter().chain(&twin) {
         for &at in uses {
             analysis.rows[at].words.retain(|flagged| flagged != word);
         }
     }
-    let seen = Seen::new(&analysis.rows);
     let mut flagged = Vec::new();
     let mut apart = Vec::new();
     for (word, uses) in words {
@@ -1121,10 +1162,10 @@ pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, m
             row.seen_words.push(word.clone());
         }
     }
-    for list in [&mut flagged, &mut apart, &mut twin] {
+    for list in [&mut flagged, &mut apart, &mut twin, &mut glossary] {
         list.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
     }
-    (analysis.words, analysis.seen_words, analysis.twin_words) = (flagged, apart, twin);
+    (analysis.words, analysis.seen_words, analysis.twin_words, analysis.glossary_words) = (flagged, apart, twin, glossary);
     check_doors(&mut analysis, text);
     analysis
 }
@@ -1403,6 +1444,27 @@ mod tests {
         assert_eq!(analysis.twin_words, [("healer".to_string(), vec![0]), ("healers".to_string(), vec![1]), ("hsu".to_string(), vec![2])]);
         assert_eq!(analysis.rows[1].words, ["warehouse"], "the twin's word leaves the name");
         assert!(text.uses("tree") && !twin.with_twin(&text).uses("tree"), "the twin's words are not the game's own");
+    }
+
+    #[test]
+    fn words_the_glossary_defines() {
+        let glossary = concat!(
+            "# Glossary\n\n### Main routine\n\nThe main routine starts the next sequence and the music.\n\n",
+            "Evidence: tradition.\n\n### Heap and pools\n\nMemory.\n\n### Sound\n\nBelow 80 it is music.\n\nEvidence: Camelot: the credits'\n\"Music\" and \"Sound\nEffects\".\n",
+        );
+        let text = GameText::parse(PO, Some(2)).unwrap().with_glossary(glossary);
+        assert!(text.glossary_defines("routine") && text.glossary_defines("Music") && text.glossary_defines("effects"));
+        assert!(!text.glossary_defines("sequence"), "a word of an entry's prose is not defined by it");
+        assert!(!text.glossary_defines("credits"), "the evidence's own words are not quoted");
+        let function = |name: &str| Thing { kind: "function", ..thing(name, "", "") };
+        let seen = Thing { evidence: vec!["★ Named from its picture: a pool of water".to_string()], ..thing("ACTOR_POOL", "", "") };
+        let things = [function("MainRoutine_Run"), function("Scene_PlayWarehouseMusic"), function("Scene_ReturnFromSequence"), seen, function("Sound_PlayFromPool")];
+        let analysis = analyze(&things, &[], &text, &HashMap::new());
+        let flagged: Vec<&str> = analysis.words.iter().map(|(word, _)| word.as_str()).collect();
+        assert_eq!(flagged, ["from", "play", "pool", "return", "sequence", "warehouse"], "a word a seen name uses stays");
+        assert!(!flagged.contains(&"sound"), "the glossary's word, not seen in its other use");
+        assert_eq!(analysis.glossary_words, [("main".to_string(), vec![0]), ("music".to_string(), vec![1]), ("routine".to_string(), vec![0]), ("sound".to_string(), vec![4])]);
+        assert_eq!(analysis.rows[1].words, ["play", "warehouse"]);
     }
 
     #[test]
