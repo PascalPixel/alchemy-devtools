@@ -86,6 +86,17 @@ pub const VOCABULARY: &[&str] = &[
     // stamped from another, cells unblocked or made pushable
     // (`MAP_CELL_PUSH`), and an actor parked out of sight (`Actor_Park`).
     "calculate", "format", "poll", "prompt", "filter", "simulation", "code", "stamp", "unblock", "pushable", "park",
+    // The same, as the field code names it: an actor's movement type, a
+    // message's speaker, the Adept casting Psynergy (`caster`), the bubble an
+    // actor shows (`Actor_ShowEmote`), a sprite's blink, a step of a sequence
+    // (`phase`), a curve or ramp of values, a repeating pattern of tiles or
+    // words, steering by the pad, a lookup by id, an actor left idle, the
+    // depth sort's `automatic` and `underfoot` priorities, a dissolve, a
+    // battle's environment and an encounter zone, an effect attached to an
+    // actor, a value snapped to its target, a choice made randomly, a string
+    // of characters, and what cannot be used (`ITEM_USE_MODE_UNUSABLE`).
+    "movement", "speaker", "caster", "emote", "blink", "phase", "curve", "ramp", "pattern", "steer", "lookup", "idle",
+    "automatic", "underfoot", "dissolve", "environment", "zone", "attach", "snap", "randomly", "string", "unusable",
     // The debug menus' tools: a browser of icons or portraits, an editor of
     // flags or palettes, a picker of items (`ItemPicker_Run`).
     "browser", "editor", "picker",
@@ -1365,11 +1376,14 @@ mod tests {
             ("Clear_CalculatePasswordCrc16", "calculate"), ("LinkLobby_PollPeerReady", "poll"), ("ACTOR_ITEM_PICKER", "picker"),
             ("ACTOR_LEVEL_EDITOR", "editor"), ("ACTOR_PORTRAIT_BROWSER", "portrait"), ("ACTOR_PORTRAIT_BROWSER", "browser"),
             ("DJINNI_CHARGE_RING_VERTICES", "vertices"), ("gClear_ButtonCodes", "codes"), ("gAirsRockInside_StampedCell", "stamped"),
-            ("Settlements_UnblockCrate", "unblock"),
+            ("Settlements_UnblockCrate", "unblock"), ("Actor_SetMovementTypeById", "movement"), ("Speaker_GetVoice", "speaker"),
+            ("FieldEffect_UpdateRetreatCaster", "caster"), ("Sanctum_ShowAllEmotes", "emotes"), ("FieldEffect_RunAngledApproachPhases", "phases"),
+            ("Encounter_SelectMapZones", "zones"), ("FieldEffect_SetAttached", "attached"), ("ACTOR_PRIORITY_UNDERFOOT", "underfoot"),
         ] {
             assert!(!unused_words(name, &text).contains(&word.to_string()), "{name}: {word}");
         }
         assert_eq!(unused_words("Actor_Shimmer", &text), ["shimmer"], "what the player sees stays");
+        assert!(unused_words("Vault_UpdateBoneProximityFlag", &text).contains(&"proximity".to_string()), "a word one name uses stays");
     }
 
     #[test]
