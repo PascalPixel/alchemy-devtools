@@ -3521,6 +3521,7 @@ const ROWS: &[(&str, &str)] = &[
     ("abbreviation", "  shortened, spelled elsewhere"),
     ("family_shape", "  off their family's pattern"),
     ("prefix_twin", "  one idea under two prefixes"),
+    ("prefix_twin_apart", "  apart: a place's or a group's plural"),
     ("", "to review, not to fill (D9):"),
     ("undocumented_function", "  functions without ///"),
     ("undocumented_struct", "  structs without ///"),

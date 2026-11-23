@@ -133,6 +133,10 @@ pub struct GameText {
     /// The stems of the words the game's glossary (`games/<game>/glossary.md`)
     /// defines, which the owner settles (Alchemy's Vocabulary rule).
     glossary: HashSet<String>,
+    /// The words the text writes capitalized right after another
+    /// capitalized word, lowercase: the last words of names (`falls` of
+    /// "Gaia Falls").
+    name_ends: HashSet<String>,
 }
 
 /// A message's text without its `{...}` commands, on one line.
@@ -232,6 +236,15 @@ impl GameText {
             }
         }
         text.joined = text.messages.iter().map(|(_, body)| body.as_str()).collect::<Vec<_>>().join("\u{1}");
+        for (_, body) in &text.messages {
+            let capitalized = |word: &str| word.starts_with(|c: char| c.is_uppercase()) && word.chars().skip(1).any(|c| c.is_lowercase());
+            let found: Vec<&str> = body.split(' ').map(|word| word.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'')).collect();
+            for pair in found.windows(2) {
+                if capitalized(pair[0]) && capitalized(pair[1]) {
+                    text.name_ends.insert(pair[1].to_lowercase());
+                }
+            }
+        }
         if let Some(&start) = text.symbols.get("MsgDebugAreaName").or_else(|| text.symbols.get("MsgDebugEntryName")) {
             let end = match areas {
                 Some(count) => (start + count).min(text.messages.len()),
@@ -290,6 +303,12 @@ impl GameText {
         self.words.contains(&lower)
             || self.stems.contains(&stem(&lower))
             || lower.strip_suffix("us").is_some_and(|base| self.words.contains(&format!("{base}u")))
+    }
+
+    /// Whether the text writes a word capitalized after another capitalized
+    /// word, as the last word of a name (`Falls` of "Gaia Falls").
+    pub fn ends_a_name(&self, word: &str) -> bool {
+        self.name_ends.contains(&word.to_lowercase())
     }
 
     /// Whether the text writes a word, and writes it only capitalized: a

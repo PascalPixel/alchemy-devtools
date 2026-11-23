@@ -1188,6 +1188,18 @@ fn twin_prefixes(
         }
     }
     let rate = |name: &Name| segments(&name.name).get(1).is_some_and(|segment| segment.eq_ignore_ascii_case("per"));
+    // The last word of each scene's name (`grounds` of
+    // `SceneId_KibomboStatueGrounds`): a place's own word.
+    let scene_ends: HashSet<String> =
+        all.iter().filter_map(|name| name.name.strip_prefix("SceneId_")).filter_map(|scene| words(scene).last().cloned()).collect();
+    // Each segment a name writes after its first, by file (`SPARKS` of
+    // `WEST_SPARKS_X`).
+    let inner: HashSet<(&str, String)> = all
+        .iter()
+        .flat_map(|name| segments(&name.name).into_iter().skip(1).map(move |segment| (name.file.as_str(), segment.to_ascii_uppercase())))
+        .collect();
+    // The plurals set apart as a place's or a group's own word, and why.
+    let mut kept: Vec<(&str, &Name, usize, &'static str)> = Vec::new();
     by_prefix.retain(|family, members| {
         let plural = words(family).last().is_some_and(|word| singular(word) != *word);
         if plural {
@@ -1196,9 +1208,20 @@ fn twin_prefixes(
         let last = words(family).last().cloned().unwrap_or_default();
         let functions = members.iter().all(|name| matches!(name.kind, NameKind::Function | NameKind::Prototype));
         let possessive = text.is_some_and(|text| text.is_proper(&singular(&last)));
-        !members.is_empty()
-            && !(plural
-                && (members.iter().all(|name| PRET_PLURALS.contains(&name.name.as_str())) || functions || assets.contains(&last) || possessive))
+        // A plural that ends a place's own name, a scene's or one the text
+        // writes (`GROUNDS_` of Kibombo Statue Grounds, `FALLS_` of the
+        // falls, as "Gaia Falls"): the place, not many of the singular's
+        // (`FALL_`, a falling).
+        let place = scene_ends.contains(&last) || text.is_some_and(|text| text.ends_a_name(&last));
+        // A plural its own file writes inside its siblings' names
+        // (`SPARKS_Z` beside `WEST_SPARKS_X`): the group's word, as the file
+        // names the group.
+        let group = members.iter().all(|name| inner.contains(&(name.file.as_str(), family.to_ascii_uppercase())));
+        let other = members.iter().all(|name| PRET_PLURALS.contains(&name.name.as_str())) || functions || assets.contains(&last) || possessive;
+        if plural && !other && !members.is_empty() && (place || group) {
+            kept.push((*family, members[0], members.len(), if place { "a place's own word" } else { "the group's word in its file" }));
+        }
+        !members.is_empty() && !(plural && (other || place || group))
     });
     // The words of a SPELLINGS set the game's own text tells apart.
     let apart: HashSet<&str> = SPELLINGS
@@ -1215,6 +1238,18 @@ fn twin_prefixes(
         let idea: Vec<String> =
             family_words.iter().map(|word| if apart.contains(singular(word).as_str()) { singular(word) } else { meaning(word) }).collect();
         ideas.entry(idea).or_default().push((family, members));
+    }
+    // Counted apart where a singular spelling is there to twin with.
+    for (family, first, count, why) in kept {
+        let singular_words: Vec<String> = words(family).iter().map(|word| meaning(word)).collect();
+        // The other spellings, those differing only in case taken together.
+        let others: Vec<&(&str, &Vec<&Name>)> =
+            ideas.get(&singular_words).into_iter().flatten().filter(|(other, _)| words(other) != words(family)).collect();
+        let total: usize = others.iter().map(|(_, members)| members.len()).sum();
+        if let Some((other, _)) = others.iter().max_by_key(|(other, members)| (members.len(), std::cmp::Reverse(*other))) {
+            let what = format!("{count} names; {why}, beside {other}_ ({total} names)");
+            out.push(Finding { metric: "prefix_twin_apart", file: first.file.clone(), line: first.line, what: format!("{family}_\t{what}") });
+        }
     }
     let areas = area_words(text);
     let mut twins = HashSet::new();
@@ -1553,7 +1588,7 @@ mod tests {
 
     #[test]
     fn prefix_twins_the_rules_keep() {
-        let po = "msgctxt \"MsgArena\"\nmsgid \"00001\"\nmsgstr \"Fight the next monster? The enemy waits. Isaac sleeps.\"\n\n\
+        let po = "msgctxt \"MsgArena\"\nmsgid \"00001\"\nmsgstr \"Fight the next monster? The enemy waits. Isaac sleeps by Gaia Falls.\"\n\n\
                   msgctxt \"MsgDebugAreaName\"\nmsgid \"00002\"\nmsgstr \"Islet Cave\"\n";
         let text = GameText::parse(po, Some(1)).unwrap();
         let file = "games/tla/src/scene/a.c";
@@ -1571,13 +1606,27 @@ mod tests {
         add(&["ISAACS_BED", "ISAAC_WALK"], NameKind::Enumerator);
         add(&["ISLET_CAVE_EXIT", "ISLETS_EXIT"], NameKind::Macro);
         add(&["STREAKS_HIT", "STREAK_WIDTH", "STREAK_HEIGHT"], NameKind::Macro);
+        add(&["FALLS_PALETTE", "FALL_FRAMES", "FALL_TRAILS"], NameKind::Macro);
+        add(&["SceneId_KibomboStatueGrounds"], NameKind::Extern);
+        add(&["GROUNDS_FIRE", "GROUND_LEVEL", "GROUND_HEIGHT"], NameKind::Macro);
+        add(&["SPARKS_Z", "WEST_SPARKS_X", "SPARK_LIFE", "SPARK_SPEED"], NameKind::Macro);
         let mut names = Names { names: list, ..Names::default() };
         names.assets.insert("crates".to_string());
         let twins: Vec<String> = check(&names, Some(&text)).into_iter().filter(|f| f.metric == "prefix_twin").map(|f| f.what).collect();
+        let apart: Vec<String> = check(&names, Some(&text)).into_iter().filter(|f| f.metric == "prefix_twin_apart").map(|f| f.what).collect();
+        assert_eq!(
+            apart,
+            [
+                "FALLS_\t1 names; a place's own word, beside FALL_ (2 names)",
+                "GROUNDS_\t1 names; a place's own word, beside GROUND_ (2 names)",
+                "SPARKS_\t1 names; the group's word in its file, beside SPARK_ (2 names)",
+            ]
+        );
         assert_eq!(
             twins,
             ["STREAKS_\t1 names; one idea with STREAK_ (2 names)"],
-            "the text tells monster from enemy; a rate; a routine over a list; a picture; Isaac's; a place"
+            "the text tells monster from enemy; a rate; a routine over a list; a picture; Isaac's; a place; the last word of a place's \
+             name in the text or a scene's; a group its file names so inside other names"
         );
     }
 
