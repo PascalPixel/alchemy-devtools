@@ -59,6 +59,15 @@ pub const VOCABULARY: &[&str] = &[
     "dither", "contrast", "zoom", "rotation", "backdrop", "foreground", "background", "visibility", "occluding",
     "collidable", "pixel", "scanline", "hofs", "canvas", "glyph", "graphics", "rgb", "radial", "orbit", "pulse",
     "squash", "jitter", "emitter", "emission", "spawner", "cue", "audio",
+    // The same, as the shared code names them: an actor's or a cursor's bob
+    // (`Actor_Bob`, `gMenuCursor_BobOffsets`), a position's horizontal and
+    // vertical parts, a diagonal step or line, a rectangle of cells or
+    // pixels, a model's vertices and a sphere's radius, the orbiters the rock
+    // dungeons spiral (`struct Orbiter`), two spheres' overlap, the overhead
+    // layer of a map, and the portrait a message or menu shows for its
+    // speaker (`PortraitId`, as `sprite`).
+    "bob", "horizontal", "vertical", "diagonal", "rectangle", "vertex", "vertices", "radius", "orbiter", "overlap",
+    "overhead", "portrait",
     // The hardware's own words for drawing, as GBATEK writes them: a
     // sprite's or layer's priority, a layer's scroll, the serial port.
     "priority", "scroll", "serial",
@@ -70,6 +79,16 @@ pub const VOCABULARY: &[&str] = &[
     "resource", "lz", "hex", "dpad", "interpolation", "linear", "inverse", "magnitude", "ratio", "remainder", "sine",
     "negative", "positive", "relative", "length", "width", "grid", "node", "cursor", "selector", "periodic",
     "frequency", "duration", "cos", "crc", "encode", "decode",
+    // The same, as the shared code names it: calculate (`Battle_Calculate*`),
+    // format a number (`String_Format*`), poll a port, prompt for an answer,
+    // filter items or targets (`ITEM_FILTER_ANY`), a toss's simulation, a
+    // code (a cell's collision code, a picture's, a button code), a cell
+    // stamped from another, cells unblocked or made pushable
+    // (`MAP_CELL_PUSH`), and an actor parked out of sight (`Actor_Park`).
+    "calculate", "format", "poll", "prompt", "filter", "simulation", "code", "stamp", "unblock", "pushable", "park",
+    // The debug menus' tools: a browser of icons or portraits, an editor of
+    // flags or palettes, a picker of items (`ItemPicker_Run`).
+    "browser", "editor", "picker",
     // A bump allocator, which hands out memory by moving one pointer on.
     "bump",
     // Positions.
@@ -252,10 +271,14 @@ impl GameText {
         self.twin_words.contains(&lower) || self.twin_stems.contains(&stem(&lower))
     }
 
-    /// The game's text uses the word, or a word with its stem.
+    /// The game's text uses the word, or a word with its stem, or it is the
+    /// plural in -us of a word the text uses (`menus`), which the stem keeps
+    /// whole so that `status` is not `statue`.
     pub fn uses(&self, word: &str) -> bool {
         let lower = word.to_lowercase();
-        self.words.contains(&lower) || self.stems.contains(&stem(&lower))
+        self.words.contains(&lower)
+            || self.stems.contains(&stem(&lower))
+            || lower.strip_suffix("us").is_some_and(|base| self.words.contains(&format!("{base}u")))
     }
 
     /// The symbols whose own message says `word` (any case): `MsgDetailsUnknown`,
@@ -1317,6 +1340,8 @@ mod tests {
         assert_eq!(stem("Storms"), "storm");
         assert_eq!(stem("moving"), stem("move"));
         assert_eq!(stem("bodies"), "body");
+        let menu = GameText::parse("msgctxt \"MsgMenu\"\nmsgid \"00001\"\nmsgstr \"Menu and statue\"\n", None).unwrap();
+        assert!(menu.uses("menus") && !menu.uses("status"), "a plural in -us, not -us itself");
     }
 
     #[test]
@@ -1330,6 +1355,21 @@ mod tests {
         assert_eq!(unused_words("Bilibin_UpdateWarehouseApproach", &text), ["warehouse", "approach"]);
         assert_eq!(unused_words("ACTOR_MCCOY_TREES", &text), Vec::<String>::new());
         assert_eq!(unused_words("Event_McCoyTreasury", &text), Vec::<String>::new(), "Mc and Coy are one word");
+    }
+
+    #[test]
+    fn the_shared_codes_words() {
+        let text = GameText::parse(PO, Some(2)).unwrap();
+        for (name, word) in [
+            ("Actor_Bob", "bob"), ("Actor_IsParked", "parked"), ("Orbiter_Step", "orbiter"), ("Event_CheckSpheresOverlap", "overlap"),
+            ("Clear_CalculatePasswordCrc16", "calculate"), ("LinkLobby_PollPeerReady", "poll"), ("ACTOR_ITEM_PICKER", "picker"),
+            ("ACTOR_LEVEL_EDITOR", "editor"), ("ACTOR_PORTRAIT_BROWSER", "portrait"), ("ACTOR_PORTRAIT_BROWSER", "browser"),
+            ("DJINNI_CHARGE_RING_VERTICES", "vertices"), ("gClear_ButtonCodes", "codes"), ("gAirsRockInside_StampedCell", "stamped"),
+            ("Settlements_UnblockCrate", "unblock"),
+        ] {
+            assert!(!unused_words(name, &text).contains(&word.to_string()), "{name}: {word}");
+        }
+        assert_eq!(unused_words("Actor_Shimmer", &text), ["shimmer"], "what the player sees stays");
     }
 
     #[test]
