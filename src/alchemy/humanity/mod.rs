@@ -2700,6 +2700,20 @@ fn tracked(root: &Path, folders: &[String]) -> Result<Vec<String>, String> {
     Ok(String::from_utf8_lossy(&output.stdout).split('\0').filter(|path| !path.is_empty()).map(str::to_string).collect())
 }
 
+/// The tracked text of a game that may write a file's symbol
+/// (`layout::SYMBOL_TEXT`), for which numbered files nothing uses.
+fn symbol_texts(root: &Path, paths: &[String]) -> Result<Vec<(String, String)>, String> {
+    let mut files = Vec::new();
+    for path in paths {
+        let extension = path.rsplit_once('.').map_or("", |(_, extension)| extension);
+        if layout::SYMBOL_TEXT.contains(&extension) {
+            let bytes = std::fs::read(root.join(path)).map_err(|error| format!("cannot read {path}: {error}"))?;
+            files.push((path.clone(), String::from_utf8_lossy(&bytes).into_owned()));
+        }
+    }
+    Ok(files)
+}
+
 /// The tracked C, headers and folder guides of a game, never build output,
 /// its assembly, and its pictures by path alone (their text empty).
 fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
@@ -2781,6 +2795,7 @@ const ROWS: &[(&str, &str)] = &[
     ("part_folders", "  part folders beside an object"),
     ("numbered_files", "files, folders named by number"),
     ("numbered_files_honest", "  apart: its number, by row"),
+    ("numbered_files_unused", "  unused, kept by number"),
     ("units", "units (places and folder guides)"),
     ("units_done", "  done under H4"),
     ("unit_open", "  XXX: questions in them"),
@@ -3110,7 +3125,9 @@ pub fn run(root: &Path, top: usize, metric: Option<&str>) -> Result<String, Stri
                     let files = sources(root, game)?;
                     let mut report = game_with_text(files.iter().map(|(p, t)| (p.as_str(), t.as_str())), text.as_ref(), &names);
                     let rows: Vec<String> = names.iter().filter(|row| row.kind == "its number").map(|row| row.name.clone()).collect();
-                    layout::count(&mut report, game, &tracked(root, &[format!("games/{game}")])?, &rows);
+                    let paths = tracked(root, &[format!("games/{game}")])?;
+                    let symbols = layout::numbered_symbols(&symbol_texts(root, &paths)?);
+                    layout::count(&mut report, game, &paths, &rows, &symbols);
                     Ok::<Report, String>(report)
                 })
             })
