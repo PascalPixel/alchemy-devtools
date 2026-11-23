@@ -1,0 +1,136 @@
+file	routine	number	kind	what
+games/tbs/include/field/field_sequence.h	FIND_CHEST_LOCKED	0x10000	honest	a packed field's bit: a chest that stays shut while a party member leads
+games/tbs/include/field/scene_tables.h	FIND_PSYNERGY_STONE	0x00300000	honest	a find's type in an examine trigger's top twelve bits
+games/tbs/include/graphics/palette_buffers.h	PALETTE_TINT_FROM_SOURCE	0x8000	honest	a palette fade's build mode above the RGB555 colours below it
+games/tbs/include/menu/djinn_menu.h	DJINN_ENTRY_MEMBER	0xf00	honest	the field of a Djinni entry that holds its party member
+games/tbs/include/system/task.h	TASK_PASS_FRAME	0xc80	honest	a pass in the high byte and the middle rank 0x80 in the low byte
+games/tbs/include/system/task.h	TASK_PASS_VBLANK	0x480	honest	a pass in the high byte and the middle rank 0x80 in the low byte
+games/tbs/include/system/task.h	TASK_PRIORITY_REMOVED	0x7fff	honest	the highest s16 priority, a removed task's
+games/tbs/src/battle/battle_background.c	BattleBackground_DivideBy16	16	honest	the divisor the UNUSED routine BattleBackground_DivideBy16 is named for
+games/tbs/src/battle/battle_run.c	Battle_Run	0x169	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tbs/src/battle/battle_turn_end.c	DjinnRecovery_CountDownTwenty	20	honest	the twenty turns DjinnRecovery_CountDownTwenty counts down, as its name says
+games/tbs/src/battle_effect/battle_effect_drain.c	BattleEffect_RunBreak	10	honest	a 64th of a pixel shifted into 16.16
+games/tbs/src/battle_effect/battle_effect_drain.c	BattleEffect_RunBreak	128	honest	half the 0-255 range of the roll in lift, so the throw is 128 to 383 64ths of a pixel a frame
+games/tbs/src/battle_effect/battle_effect_falling.c	BattleEffect_RunDouse	103	honest	the last screen line the slanted window covers, in pixels
+games/tbs/src/battle_effect/battle_effect_falling.c	BattleEffect_RunDouse	112	honest	a band's left edge, in screen pixels
+games/tbs/src/battle_effect/battle_effect_falling.c	BattleEffect_RunDouse	52	honest	a band's left edge, in screen pixels
+games/tbs/src/battle_effect/battle_effect_falling.c	BattleEffect_RunDouse	60	honest	a band's left edge, in screen pixels
+games/tbs/src/battle_effect/battle_effect_falling.c	BattleEffect_RunIce	103	honest	the last screen line the slanted window covers, in pixels
+games/tbs/src/battle_effect/battle_effect_falling.c	BattleEffect_RunIce	112	honest	a band's left edge, in screen pixels
+games/tbs/src/battle_effect/battle_effect_falling.c	BattleEffect_RunIce	120	honest	a band's left edge, in screen pixels
+games/tbs/src/battle_effect/battle_effect_falling.c	BattleEffect_RunIce	24	honest	a band's left edge, in screen pixels
+games/tbs/src/battle_effect/battle_effect_falling.c	BattleEffect_RunIce	95	honest	the last screen line the slanted window covers, in pixels
+games/tbs/src/battle_effect/battle_effect_gaia.c	BattleEffect_RunGaia	12	honest	a DEAD counter of velocityX wrapping from 12 back to 1, which nothing reads
+games/tbs/src/battle_effect/battle_effect_projectiles.c	BattleEffect_RunDjinniEntrance	15	honest	a screen pixel shifted to the mote's 16.16 x, halved
+games/tbs/src/field/event_commands_event.c	Event_Start	0x132	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tbs/src/field/event_commands_weather.c	FieldEffect_UpdateSparkles	32	honest	a sparkle's screen y in pixels: drawn from 32 above the screen's top
+games/tbs/src/field/field_player_control.c	Actor_UpdatePlayerControl	512	honest	a debug stall loop's count of passes
+games/tbs/src/field/field_player_control.c	Actor_UpdatePlayerControl	64	honest	a debug stall loop's count of passes
+games/tbs/src/field/field_player_control.c	Actor_UpdatePlayerControl	96	honest	a debug stall loop's count of passes
+games/tbs/src/field/field_sequence_encounter.c	Encounter_CountStepsAndSelectFormation	16	honest	the factor of the encounter-step formula its comment derives
+games/tbs/src/field/field_sequence_internal.h	TRANSITION_SHOW_ALL	0x7f7f	honest	a WININ/WINOUT register value: every layer shown in both windows
+games/tbs/src/field/field_sequence_internal.h	TRANSITION_SHOW_LOW_BYTE	0x007f	honest	a WININ/WINOUT register value: every layer shown in the low window
+games/tbs/src/field/field_tile_animation.c	BLEND_SCRIPT_JUMP	0xfe00	honest	a blend script opcode in a halfword's high byte
+games/tbs/src/field/field_tile_animation.c	TILESET_ANIM_JUMP	0xfe00	honest	an opcode in a script halfword's high byte
+games/tbs/src/field/field_tile_animation.c	TILESET_ANIM_MARKER	0xfd00	honest	an opcode in a script halfword's high byte
+games/tbs/src/game/game_units.c	BuildStamp_GetTime	16	honest	the build stamp's packed time, (hours * 16 + minutes) * 64 + seconds
+games/tbs/src/game/game_units.c	BuildStamp_GetTime	64	honest	the build stamp's packed time, (hours * 16 + minutes) * 64 + seconds
+games/tbs/src/gamepak/flash/flashat.c	gFlash_ChipAtmel	0x3d1f	honest	the flash chip's maker and device id, as the chip reports them
+games/tbs/src/gamepak/flash/flashat.c	gFlash_ChipAtmelLayout	0x3d1f	honest	the flash chip's maker and device id, as the chip reports them
+games/tbs/src/gamepak/flash/flashmx.c	Flash_ChipMacronix	0x1cc2	honest	the flash chip's maker and device id, as the chip reports them
+games/tbs/src/gamepak/flash/flashmx.c	Flash_ChipPanasonic	0x1b32	honest	the flash chip's maker and device id, as the chip reports them
+games/tbs/src/gamepak/flash/flashsst.c	Flash_ChipSst	0xd4bf	honest	the flash chip's maker and device id, as the chip reports them
+games/tbs/src/menu/credits.c	Credits_DrawLine	0x80	honest	the top bit of a glyph row's byte, its first column
+games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	13	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	15	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects; step 15 shows three messages after POWERS = 14, so it has no single word of its own
+games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	16	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	17	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	18	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	20	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	21	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	22	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	24	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	25	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_djinn.c	Window_SetRectPalette	0xf	honest	the whole palette field of a screen entry, BG_TILE_PALETTE(0xf) as its mask
+games/tbs/src/menu/menu_djinn_figures.c	DjinnFigures_SetSlotPosition	0xffff8000	honest	the sign extension of a negative 16-bit y
+games/tbs/src/menu/menu_djinn_preview.c	PsynergyList_RunCompareLoop	12	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_djinn_preview.c	PsynergyList_RunCompareLoop	23	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
+games/tbs/src/menu/menu_shared.c	CountDigitsAtLeastTwo	16	honest	the digit loop's bound: no count has 16 digits
+games/tbs/src/menu/menu_status.c	Menu_BusyWait	256	honest	Menu_BusyWait's passes
+games/tbs/src/scene/altmiller_cave.c	AltmillerCave_RestoreBabiAndInviteParty	30	honest	the 30 flickers of Babi's restoring
+games/tbs/src/scene/colosseum_azart_match.c	ColosseumAzartMatch_ReachArena	10	honest	ten waits a player could count
+games/tbs/src/scene/colosseum_entrance.c	ColosseumEntrance_InitializeContestants	10	honest	an animation speed in steps, against ANIM_STEP_NORMAL's 16
+games/tbs/src/scene/colosseum_entrance.c	ColosseumEntrance_InitializeContestants	20	honest	an animation speed in steps, against ANIM_STEP_NORMAL's 16
+games/tbs/src/scene/colosseum_entrance.c	ColosseumEntrance_InitializeContestants	40	honest	an animation speed in steps, against ANIM_STEP_NORMAL's 16
+games/tbs/src/scene/colosseum_entrance.c	ColosseumEntrance_InitializeContestants	50	honest	an animation speed in steps, against ANIM_STEP_NORMAL's 16
+games/tbs/src/scene/colosseum_entrance.c	ColosseumEntrance_InitializeContestants	60	honest	an animation speed in steps, against ANIM_STEP_NORMAL's 16
+games/tbs/src/scene/colosseum_navampa_match.c	ColosseumNavampaMatch_ReachArena	10	honest	ten waits a player could count
+games/tbs/src/scene/colosseum_satrage_match.c	ColosseumSatrageMatch_ReachArena	10	honest	ten waits a player could count
+games/tbs/src/scene/crossbone_isle_stepping_stones.c	CrossboneIsleSteppingStones_AnimateWaterLevel	100	honest	a chance in percent, counted from 0 to 100
+games/tbs/src/scene/gondowan_cave.c	GondowanCave_LeaveToWorldMapEast	0x9a3	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tbs/src/scene/gondowan_cave.c	GondowanCave_LeaveToWorldMapEast	0x9a4	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tbs/src/scene/gondowan_cave.c	GondowanCave_LeaveToWorldMapEast	0x9a6	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tbs/src/scene/log_rooms_c.c	Scene_Initialize	16	honest	a halfword range test, (x << 16) <= (1u << 16): the entrance or the one after it
+games/tbs/src/scene/mercury_lighthouse_entrance.c	MercuryLighthouseEntrance_ActivateWithPly	100	honest	a percentage's divisor
+games/tbs/src/scene/shared/colosso_task.c	COLOSSO_LETTERING_WAIT	0x7fff	honest	a lettering command's opcode beside 0x1000 and 0x2000, the highest s16
+games/tbs/src/scene/shared/sol_sanctum_elemental_star_ring_setup.c	SolSanctum_UpdateRing	24	honest	a hold of 24 frames
+games/tbs/src/scene/ship_rooms.c	ShipRooms_AskForReplacementOarsmen	20	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_AskForReplacementOarsmen	40	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_AskForReplacementOarsmen	60	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_AskForReplacementOarsmen	80	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_FindOarsmanMissing	20	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_FindOarsmanMissing	40	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_FindOarsmanMissing	60	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_MoveCameraAndWaitFX	0x1111	honest	the BUG's own mask, its named form behind BUGFIX
+games/tbs/src/scene/ship_rooms.c	ShipRooms_NoticeShipRocking	20	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_ReachIsland	20	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_ReportMonstersBelowdecks	20	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_ReportMonstersBelowdecks	40	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_ShowCaptainsQuartersBeforeIsland	20	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/ship_rooms.c	ShipRooms_ShowRowing	20	honest	a wait in frames, ShipRooms_RunEventCommand's opt, which its brief says is most often one
+games/tbs/src/scene/sol_sanctum_eruption.c	SolSanctumEruption_PlayWiseOneRescue	0x100	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c	SolSanctumLunaSolRooms_SpringTrap	10	honest	the trap's flashes, a count a player could check
+games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c	SolSanctumLunaSolRooms_SpringTrap	12	honest	the trap's flashes, a count a player could check
+games/tbs/src/scene/sol_sanctum_statue.c	SolSanctumStatue_CenterStatueMoved	17	honest	the leader's half cell on the map grid, from the near edge
+games/tbs/src/scene/sol_sanctum_statue.c	SolSanctumStatue_UpdateScrollingSprites	10	honest	the scroll offset's 1024ths of a pixel shifted to pixels
+games/tbs/src/scene/tolbi_ship_deck.c	TolbiShipDeck_IdleTurn	100	honest	a threshold of a 0-255 roll
+games/tbs/src/scene/tolbi_ship_deck.c	TolbiShipDeck_IdleTurn	200	honest	a threshold of a 0-255 roll
+games/tbs/src/scene/vale.c	Vale_HaveGuardWatchTheLeader	18	honest	Vale_TestFacing's range, in pixels
+games/tbs/src/scene/vault.c	Vault_SpawnDriftingEffect	16	honest	the whole pixels of an unsigned 16.16 place, by a logical shift FIXEDtoINT does not make
+games/tbs/src/scene/venus_lighthouse.c	VENUS_COLOR_MARK_TAG	0x212	unsettled	a tag in the actor timer's upper bits nothing explains yet; a reader of those bits would settle it
+games/tbs/src/scene/venus_lighthouse_aerie.c	VenusLighthouseAerie_SpawnSideOrbitParticles	129	honest	the camera's y in pixels, below which the side orbits spawn
+games/tbs/src/scene/venus_lighthouse_aerie.c	VenusLighthouseAerie_SpawnSideOrbitParticles	24	honest	the sway's amplitude in pixels, the FIXEDtoINT of a sine times 24
+games/tbs/src/scene/world_map.c	Scene_Initialize	0x85c	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tbs/src/shop/shop_buy.c	Shop_DrawStock	10	honest	a step into the 32-step swell table the icon starts at
+games/tbs/src/shop/shop_sanctum.c	Sanctum_RunMemberIconBurst	24	honest	a DEAD shift of a flag byte to the word's top
+games/tbs/src/sound/sound.c	SoundTest_Run	10	honest	the sound test's R and L step of the cue number shown
+games/tbs/src/system/system_oam.c	OamMatrix_AllocFromTransform	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
+games/tbs/src/system/system_serial.c	SERIAL_IDLE_HALFWORD	0xfefe	honest	the idle halfword on the serial wire between packets
+games/tbs/src/window/glyph_arm.c	Glyph_DrawArm	16	honest	a glyph row moved to the word's upper halfword
+games/tbs/src/window/menu_title_tables.c	gMenu_BarPatternRows	0x00000000	honest	a picture's 4bpp pixel word
+games/tbs/src/window/menu_title_tables.c	gMenu_BarPatternRows	0x00000005	honest	a picture's 4bpp pixel word
+games/tbs/src/window/menu_title_tables.c	gMenu_BarPatternRows	0x00000505	honest	a picture's 4bpp pixel word
+games/tbs/src/window/menu_title_tables.c	gMenu_BarPatternRows	0x00050505	honest	a picture's 4bpp pixel word
+games/tbs/src/window/menu_title_tables.c	gMenu_BarPatternRows	0x00055000	honest	a picture's 4bpp pixel word
+games/tbs/src/window/screens_battle_item_menu.c	BattleItemMenu_Run	16	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
+games/tbs/src/window/screens_battle_item_menu.c	BattleItemMenu_Run	17	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
+games/tbs/src/window/screens_battle_psynergy_menu.c	BattlePsynergyMenu_Run	16	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
+games/tbs/src/window/screens_battle_psynergy_menu.c	BattlePsynergyMenu_Run	17	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
+games/tbs/src/window/screens_menu_titles.c	WindowSprite_Pulse	256	honest	a 16.16 pulse scale cut to 8.8
+games/tbs/src/window/window_glyphs.c	Text_DrawWideStringAtOffset	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_glyphs.c	Text_DrawWideStringAtOffset	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_glyphs.c	Text_DrawWideStringAtOffset	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_glyphs.c	Text_DrawWideStringInWindow	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_glyphs.c	Text_DrawWideStringInWindow	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_glyphs.c	Text_DrawWideStringInWindow	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_icons.c	ItemIcon_Compose	256	unsettled	ItemIcon_Compose's result, which no caller reads; a reader of it would settle what it stands for
+games/tbs/src/window/window_measure.c	Text_MeasureAllPages	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_measure.c	Text_MeasureDecoded	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_messages.c	Message_DecodeRaw	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_messages.c	Message_DecodeRaw	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_messages.c	Message_DecodeRaw	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_settings_menu.c	Color_ScaleComponents	10	honest	RGB555 packing: blue above green's five bits and red's five
+games/tbs/src/window/window_settings_menu.c	WindowColor_ScaleTint	10	honest	RGB555 packing: blue above green's five bits and red's five
+games/tbs/src/window/window_text_tiles.c	Text_DrawStringAsTiles	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_text_tiles.c	Text_DrawStringAsTiles	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tbs/src/window/window_text_tiles.c	Text_DrawStringAsTiles	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
