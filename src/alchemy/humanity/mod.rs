@@ -2796,6 +2796,7 @@ const ROWS: &[(&str, &str)] = &[
     ("provenance_table_mismatch", "  table name differs"),
     ("provenance_unstarred", "  evidence line without its ★"),
     ("provenance_unchecked", "  evidence by row, unchecked"),
+    ("provenance_unseen", "  its code: nothing on screen"),
     ("provenance_failed", "  evidence failing check"),
     ("provenance_prose", "  evidence in prose only"),
     ("provenance_none", "  no evidence"),
@@ -4028,7 +4029,7 @@ mod provenance_tests {
         let text = GameText::parse(po, Some(2)).unwrap();
         let ids = "extern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
         let flags = "#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_WAREHOUSE_SEEN 0x11\n#define FLAG_GATE_OPEN 0x12\n";
-        let scene = "enum {\n  ACTOR_GUARD,\n  ACTOR_PILLAR,\n  ACTOR_MAN,\n  ACTOR_DOOR,\n  ACTOR_ODD,\n};\n";
+        let scene = "enum {\n  ACTOR_GUARD,\n  ACTOR_PILLAR,\n  ACTOR_MAN,\n  ACTOR_DOOR,\n  ACTOR_ODD,\n  ACTOR_SHADOW,\n  ACTOR_MARK,\n};\n";
         let files = [
             ("games/tbs/include/scene_ids.h", ids),
             ("games/tbs/include/flags.h", flags),
@@ -4046,6 +4047,8 @@ mod provenance_tests {
             "ACTOR_MAN\twhat the player sees\ta man in green\tgames/tbs/src/scene/bilibin.c\n",
             "ACTOR_DOOR\tits twin\tThe Lost Age's ACTOR_DOOR, the same routine\tgames/tbs/src/scene/bilibin.c\n",
             "ACTOR_ODD\tits vibe\ta feeling\tgames/tbs/src/scene/bilibin.c\n",
+            "ACTOR_SHADOW\tits code\tplaced under the coin; it changes nothing on screen\tgames/tbs/src/scene/bilibin.c\n",
+            "ACTOR_MARK\tits code\tplaced where the guard stands, drawn zero wide\tgames/tbs/src/scene/bilibin.c\n",
         ))
         .unwrap();
         let report = game_with_text(files, Some(&text), &names);
@@ -4062,7 +4065,9 @@ mod provenance_tests {
         assert_eq!(evidence("ACTOR_DOOR").as_deref(), Some("unchecked its twin"), "a row no check reads");
         assert_eq!(evidence("ACTOR_ODD").as_deref(), Some("failed: a row of no known kind: its vibe"));
         assert_eq!((report.value("provenance_verified"), report.value("provenance_failed"), report.value("provenance_none")), (4, 3, 2));
-        assert_eq!(report.value("provenance_unchecked"), 1);
+        assert_eq!(evidence("ACTOR_SHADOW").as_deref(), Some("unchecked its code: nothing on screen"), "a thing the player never sees");
+        assert_eq!(evidence("ACTOR_MARK").as_deref(), Some("unchecked its code"));
+        assert_eq!((report.value("provenance_unchecked"), report.value("provenance_unseen")), (2, 1));
         // GUARD and PILLAR are words for what a render showed; MAN's row cites
         // none, and the rest are evidence of no look.
         let seen = list(&[("tbs", &report)], "seen_word");
