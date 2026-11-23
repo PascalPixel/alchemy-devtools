@@ -56,6 +56,9 @@ pub struct Stage {
     /// by name (character_ids.h, FELIX or felix).
     pub leader: Option<String>,
     pub party: Vec<String>,
+    /// An event played first, unrecorded, each event then recorded from
+    /// where it leaves the player (--first).
+    pub first: Option<String>,
 }
 
 impl Stage {
@@ -87,6 +90,7 @@ impl Stage {
             "--then" => self.then.extend(parse_script(&value(option)?)?),
             "--answer" => self.answer.extend(parse_answers(&value(option)?)?),
             "--leader" => self.leader = Some(value(option)?),
+            "--first" => self.first = Some(value(option)?),
             "--party" => self.party.extend(value(option)?.split(',').map(|n| n.trim().to_string()).filter(|n| !n.is_empty())),
             _ => return Ok(false),
         }
@@ -95,7 +99,7 @@ impl Stage {
 
     /// The options again, as a child of --jobs is given them.
     pub fn is_option(option: &str) -> bool {
-        matches!(option, "--set" | "--clear" | "--give" | "--entrance" | "--at" | "--face" | "--hold" | "--then" | "--answer" | "--leader" | "--party")
+        matches!(option, "--set" | "--clear" | "--give" | "--entrance" | "--at" | "--face" | "--hold" | "--then" | "--answer" | "--leader" | "--party" | "--first")
     }
 }
 
@@ -481,6 +485,9 @@ mod tests {
             assert!(stage.option(option, &mut |_| Ok(value.to_string())).unwrap());
         }
         assert_eq!((stage.answer, stage.leader.as_deref(), stage.party), (vec![2], Some("jenna"), vec!["JENNA".to_string(), "FELIX".to_string()]));
+        let mut chained = Stage::default();
+        assert!(chained.option("--first", &mut |_| Ok("Garoh_PlaceFirstPillar".to_string())).unwrap());
+        assert_eq!(chained.first.as_deref(), Some("Garoh_PlaceFirstPillar"));
     }
 
     #[test]

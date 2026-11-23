@@ -484,7 +484,7 @@ const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene 
        event only: [--set FLAG]... [--clear FLAG]... [--give ITEM]...
          [--entrance N] [--at X,Y[,LAYER]] [--face WAY] [--hold KEYS:N,...]
          [--then KEYS:N,...] [--answer yes|no|KEYS,...] [--leader NAME]
-         [--party NAME,...]
+         [--party NAME,...] [--first EVENT]
 Plays a built edition of either game (make tbs-en, make tla-en) under
 libmgba from a new game's defaults straight into each scene, and writes
 into DIR/<scene>/ (DIR defaults to out/EDITION/places) PNG files at the
@@ -678,6 +678,10 @@ staged:
     run's A, except while --then plays, which backs out of it with B.
   --leader NAME: NAME (felix, jenna ... from character_ids.h) leads the
     party, which he joins if he is not in it.
+  --first EVENT: EVENT is played first, unrecorded, with each recorded
+    event's flags, and each event is recorded from where EVENT leaves the
+    player (a pillar moved, then the walk on it); the note says so. The
+    file holds the second event alone.
   --party NAME,...: the party is these members, in order, the first
     leading; in The Lost Age at the strength of the first of the story's
     debug sets that holds them all (gDebug_ParameterSets).
@@ -1871,7 +1875,7 @@ mod tests {
     /// Every staging option of `render event` is read and named in its usage.
     #[test]
     fn every_staging_option_is_in_the_usage() {
-        for option in ["--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party"] {
+        for option in ["--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party", "--first"] {
             assert!(stage::Stage::is_option(option));
             assert!(SCENES_USAGE.contains(&format!("{option} ")), "{option} is not in SCENES_USAGE");
         }

@@ -1438,6 +1438,12 @@ impl Context<'_> {
         record: Option<usize>,
         within: Option<(&[u16], &[u16])>,
     ) -> Result<Played, Failure> {
+        // --first: the event is recorded from where that one leaves him.
+        if let (Some(name), None, Some(_)) = (&self.stage.first, within, record) {
+            if *name != event.name {
+                return self.play_after_first(name, event, scenes, job, record).map_err(Failure::new);
+            }
+        }
         let first = scenes[0];
         // On the way to another event, any run that leaves the player in
         // control will do; an event shown must show itself.
@@ -1644,6 +1650,33 @@ impl Context<'_> {
             }
         }
         Err(failure)
+    }
+
+    /// Plays event `name` first, unrecorded, with each of `event`'s rows'
+    /// flags, and records `event` from where it leaves the player (--first);
+    /// the note says so.
+    fn play_after_first(&self, name: &str, event: &Event, scenes: &[&Scene], job: &mut Job, record: Option<usize>) -> Result<Played, String> {
+        let before = self.events.iter().find(|e| e.name == name && scenes.iter().any(|s| e.scenes.contains(&s.number))).ok_or_else(|| format!("--first names {name}, which no scene of its overlay has"))?;
+        let mut error = format!("{name}, played first, never gave the player control again");
+        for alternative in &event.alternatives {
+            let Ok(trigger) = alternative.trigger else {
+                continue;
+            };
+            let (set, clear) = self.alternative_flags(alternative, scenes[0], event)?;
+            let end = self.play_event(before, scenes, job, None, Some((&set, &clear))).map_err(|f| format!("{name}, played first: {}", f.reason))?;
+            let Some(saved) = end.run.end.as_ref() else {
+                continue;
+            };
+            match self.play_at(&end.setup, Some(saved), trigger, event, record, true) {
+                Ok(mut run) => {
+                    let after = format!("played after {name}, which is not recorded");
+                    run.note = Some(run.note.map_or(after.clone(), |n| format!("{after}; {n}")));
+                    return Ok(Played { setup: end.setup, run });
+                }
+                Err(e) => error = format!("after {name}: {e}"),
+            }
+        }
+        Err(error)
     }
 
     /// Plays an event by starting its function directly (Trigger::Direct),
