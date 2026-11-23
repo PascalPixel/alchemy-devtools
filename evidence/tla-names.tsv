@@ -22709,3 +22709,48 @@ SPARK_GROUPS_CENTRE_SHIFT	its code	BattleEffect_RunSparkGroups: burst i's sparks
 RISING_DRAGON_ENEMY_SEGMENTS	what the player sees	render psynergy --ability 682 --unlearned (Rising Dragon, Jenna at Piers): a column of flame bursts up under Piers in a shower of sparks and carries him up between its jaws into a teal cloudy sky that scrolls past, bursts at the top into fireballs and falling sparks as the screen whitens, and Piers drops back to the field (its render)	games/tla/src/battle_effect/battle_effect_rushing_strike.c
 MEGAERA_PICTURES	what the player sees	megaera.gif: Megaera's summon: two swords fall point down among the foes, each landing with a white flash, a bolt of lightning and a burst of sparks, and stand buried in the ground (1.3 to 1.9 s) (its render)	games/tla/src/battle_effect/battle_effect_thunder_mine.c
 VOID_BEAM_SEGMENTS	its code	BattleEffect_RunVoidBeam: the beam's head and nine lengths of its body, 32 pixels apart along its line	games/tla/src/battle_effect/battle_effect_thunder_mine.c
+CELL_BEHAVIOR_OUCH_TILE	what the player sees	render probe PsynergyTest: psynergy_test/map.txt behaviour 10 at (11, 2), a white floor tile with Japanese marks; its examine row runs PsynergyTest_DamageAndAfflictParty, "The body is being torn apart." (its render)	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_LV_TILE	what the player sees	render probe PsynergyTest: behaviour 11 at (11, 4), a tile marked LV in red; its examine row raises levels, "You went up a level!" (its render)	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_TREASURE_TILE	what the player sees	render probe PsynergyTest: behaviour 12 at (11, 6), a tile marked with the red kanji for treasure; its examine row runs "You got treasure!" (its render)	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_RED_CROSS_TILE	what the player sees	render probe PsynergyTest: behaviour 13 at (11, 8), a tile marked with a red cross in a square; examined, "You got a Djinni!"; Cyclone at it runs PsynergyTest_ArriveInRing (its render)	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_HOLE_EXIT	its code	psynergy_test/map.txt behaviour 20 at (36, 28), the cell PsynergyTest_DigUpHole copies to (10, 10); TRIGGER_EXIT row 20 and psynergy_test_exits.c SCENE_EXIT(20, PsynergyTest, 2)	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_HOLE_SPOT	its code	psynergy_test/map.txt behaviour 50 at (10, 10); its Scoop row runs PsynergyTest_DigUpHole	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_PUDDLE_SPOT	its code	behaviour 51 at (11, 11); its Scoop row runs PsynergyTest_DigUpPuddle	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_WICKED_MACE_SPOT	its code	behaviour 52 at (12, 12); its Scoop row runs PsynergyTest_DigUpWickedMace	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_STATUE_SPOT	its code	behaviour 53 at (13, 13); its Scoop row runs PsynergyTest_DigUpStatue	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_LEAVES	its code	behaviour 55 on 17 cells of the 5 by 4 patch at (2, 10); its Cyclone row runs PsynergyTest_BlowAwayLeaves	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_RING_LEAF	its code	behaviour 56 at (5, 11), inside the patch; its Cyclone row runs PsynergyTest_DepartInRing	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_MAD_PLANT_LEAF	its code	behaviour 57 at (2, 10), the patch's top left cell; its Cyclone row runs PsynergyTest_FightMadPlant	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_POOL	its code	behaviour 60 on the 2 by 4 cells at (16, 10); its Parch row runs PsynergyTest_ParchCells	games/tla/src/debug/psynergy_test.c
+CELL_BEHAVIOR_CHEST	its code	behaviour 100 at (14, 9); its EXAMINE_CHEST row finds 333 coins	games/tla/src/debug/psynergy_test.c
+SCOOP_STAGE_AFTER_DIG	its code	field_psynergy_scoop.c passes stage 2 to a Scoop trigger's event on frame 50 of the dig, 20 frames after SCOOP_DUG_FRAME	games/tla/src/debug/psynergy_test.c
+POUND_STAGE_LANDS	its code	field_psynergy_pound.c passes PoundWork.fading, set to 1 on the frame the fist lands, to a Pound trigger's event	games/tla/src/debug/psynergy_test.c
+ACTOR_WINGED_STATUE	its code	PsynergyTest gActorPlacements row of actor 20, SPRITE_WINGED_STATUE at (-64, -64); no trigger or routine names actor 20	games/tla/src/debug/psynergy_test.c
+SCOOP_STAGE_DUG	its code	field_psynergy_scoop.c passes stage 1 to a Scoop trigger's event on SCOOP_DUG_FRAME, the frame the dig opens the ground	games/tla/src/debug/psynergy_test.c
+PsynergyTest2_BurstCells	its code	its Burst row on cell behavior 50 copies the 1 by 2 block at (49, 1) over (34, 1) as the blast dies down; the room's camera box starts at x 280, east of behavior 50 at x 160	games/tla/src/debug/psynergy_test_2.c
+PsynergyTest2_GrindStake	its code	its Grind row on ACTOR_STAKE (SPRITE_STAKE) sets the stake's animation 3	games/tla/src/debug/psynergy_test_2.c
+PsynergyTest2_DouseFire	its code	its Douse row on ACTOR_FIRE (SPRITE_FIRE) moves the fire to (0, 0)	games/tla/src/debug/psynergy_test_2.c
+PsynergyTest2_PoundFire	its code	its Pound row on ACTOR_FIRE moves the fire to (0, 0) as the fist lands	games/tla/src/debug/psynergy_test_2.c
+CELL_BEHAVIOR_BATTLE_STEP	its code	its TRIGGER_STEP row on behavior 30 runs PsynergyTest2_StepIntoBattle; psynergy_test/map.txt, the room's map, holds no 30	games/tla/src/debug/psynergy_test_2.c
+CELL_BEHAVIOR_HOLE_SPOT	its code	psynergy_test/map.txt behaviour 50 at (10, 10), the Psynergy test's first Scoop spot; render probe PsynergyTest2: the room's camera box starts at x 280, east of the cell	games/tla/src/debug/psynergy_test_2.c
+POUND_STAGE_LANDS	its code	field_psynergy_pound.c passes PoundWork.fading, set to 1 on the frame the fist lands	games/tla/src/debug/psynergy_test_2.c
+SCOOP_STAGE_DUG	its code	field_psynergy_scoop.c passes stage 1 on SCOOP_DUG_FRAME	games/tla/src/debug/psynergy_test_2.c
+SCOOP_STAGE_AFTER_DIG	its code	field_psynergy_scoop.c passes stage 2 on frame 50 of the dig	games/tla/src/debug/psynergy_test_2.c
+SCOOP_STAGE_DUG	its code	field_psynergy_scoop.c passes stage 1 on SCOOP_DUG_FRAME; the unused ShopTest_ copies of the Psynergy test's dig helpers test it	games/tla/src/debug/shop_test.c
+SCOOP_STAGE_AFTER_DIG	its code	field_psynergy_scoop.c passes stage 2 on frame 50 of the dig	games/tla/src/debug/shop_test.c
+EntranceArrival	its code	Entrance_PlayArrival returns 0 to 3 by which of FLAG_ARRIVAL_STAIRS_UP, FLAG_ARRIVAL_STAIRS_DOWN and FLAG_ARRIVE_FALLING it found set (event_commands_exit_animations.c)	games/tla/include/field/object.h
+ARRIVAL_NONE	its code	Entrance_PlayArrival's result when none of the arrival flags is set; FieldSequence_Run then plays the scene's own (field_sequence_run.c)	games/tla/include/field/object.h
+ARRIVAL_STAIRS_UP	its code	Entrance_PlayArrival's result after FLAG_ARRIVAL_STAIRS_UP and ANIM_LEADER_ARRIVE (event_commands_exit_animations.c)	games/tla/include/field/object.h
+ARRIVAL_STAIRS_DOWN	its code	Entrance_PlayArrival's result after FLAG_ARRIVAL_STAIRS_DOWN and ANIM_LEADER_ARRIVE_ALTERNATE (event_commands_exit_animations.c)	games/tla/include/field/object.h
+ARRIVAL_FALLING	its code	Entrance_PlayArrival's result after FLAG_ARRIVE_FALLING, the leader dropped 160 pixels onto the ground (event_commands_exit_animations.c)	games/tla/include/field/object.h
+PSYNERGY_TINT_BLUE	its code	gFieldEffect_TargetColors' entry RGB(4, 4, 16), the colour FieldPsynergy_FadeToCastColor fades the field toward (field_effect_data.c, event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
+PSYNERGY_TINT_GREEN	its code	gFieldEffect_TargetColors' entry RGB(4, 16, 4), the colour FieldPsynergy_FadeToCastColor fades the field toward (field_effect_data.c, event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
+PSYNERGY_TINT_RED	its code	gFieldEffect_TargetColors' entry RGB(16, 4, 4), the colour FieldPsynergy_FadeToCastColor fades the field toward (field_effect_data.c, event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
+PSYNERGY_TINT_CYAN	its code	gFieldEffect_TargetColors' entry RGB(2, 10, 10), the colour FieldPsynergy_FadeToCastColor fades the field toward (field_effect_data.c, event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
+PSYNERGY_TINT_MAGENTA	its code	gFieldEffect_TargetColors' entry RGB(12, 2, 12), the colour FieldPsynergy_FadeToCastColor fades the field toward (field_effect_data.c, event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
+PSYNERGY_TINT_YELLOW	its code	gFieldEffect_TargetColors' entry RGB(12, 12, 2), the colour FieldPsynergy_FadeToCastColor fades the field toward (field_effect_data.c, event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
+PSYNERGY_TINT_DARK_GREY	its code	gFieldEffect_TargetColors' entry RGB(8, 8, 8), the colour FieldPsynergy_FadeToCastColor fades the field toward (field_effect_data.c, event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
+PSYNERGY_TINT_GREY	its code	gFieldEffect_TargetColors' entry RGB(16, 16, 16), the colour FieldPsynergy_FadeToCastColor fades the field toward (field_effect_data.c, event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
+PsynergyTint	its code	the index into gFieldEffect_TargetColors and FLAG_PSYNERGY_TINT that FieldPsynergy_FadeToCastColor picks (event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
+PSYNERGY_TINT_COUNT	its code	gFieldEffect_TargetColors holds eight colours (field_effect_data.c)	games/tla/include/field/field_effect.h
+MAP_CELL_SCOOP	its code	MapGrid_CanScoop lets Scoop dig on a cell with attributeB bit 0 set, or clear where FieldWork.sceneAttributeLow is set (event_commands_field_psynergy.c)	games/tla/include/field/map_grid.h

@@ -7860,3 +7860,11 @@ UNDEAD_SWORD_FOOT_Y	what the player sees	the pointed lime blade rises from the g
 FROTH_VORTEX_TURNS	its code	the vortex picture is (variant / 2) % 3 of the sheet's 16x64 halves, ahead of the bubble at 3 halves in	games/tbs/src/battle_effect/battle_effect_vortices.c
 WHIRLWIND_GLINTS_EACH	its code	each tornado i draws work->particles i * 4 + j for j 0 to 3	games/tbs/src/battle_effect/battle_effect_vortices.c
 WHIRLWIND_GLINT_FRAMES	its code	a glint restarts at variant 6, its picture variant / 2 of three	games/tbs/src/battle_effect/battle_effect_vortices.c
+DEFINE_CLAPPING_HANDS_CAST	its code	the two hands spawned 32 pixels either side move 24 pixels toward each other, SE_HEAVY_IMPACT plays as they meet and 24 SPRITE_SPARKLE actors scatter (event_commands_internal.h); Lift's and Carry's cast with no target	games/tbs/src/field/event_commands_internal.h
+CLAP_SPARKLE_COUNT	its code	the loop bound of SPRITE_SPARKLE actors DEFINE_CLAPPING_HANDS_CAST spawns	games/tbs/src/field/event_commands_internal.h
+CARRY_SPARKLE_COUNT	its code	the loop bound of SPRITE_SPARKLE actors FieldPsynergy_SteerLiftedTarget scatters as Carry drops its target	games/tbs/src/field/event_commands_carry.c
+SW_RISE_BASE_Y	its code	gActorScript_OperandHandlerTable[23] is ActorScript_SetOrCompareRiseBaseY, on Actor.riseBaseY	games/tbs/include/field/actor_script.h
+SW_SPRITE	its code	gActorScript_OperandHandlerTable[24] is ActorScript_SetOrCompareSprite, on Actor.sprite	games/tbs/include/field/actor_script.h
+SW_SPRITE_KIND	its code	gActorScript_OperandHandlerTable[25] is ActorScript_SetOrCompareSpriteStorageKind, on Actor.spriteStorageKind	games/tbs/include/field/actor_script.h
+SW_WATCHED_ACTOR	its code	gActorScript_OperandHandlerTable[37] is ActorScript_SetOrCompareWatchedActor, on Actor.watchedActor	games/tbs/include/field/actor_script.h
+CELL_BEHAVIOR_CLOAK	its code	FieldPsynergy_CheckCloakTile requests CLOAK_END when the cell under the leader has any other behavior (event_commands_cloak.c)	games/tbs/include/field/map_grid.h
