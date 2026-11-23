@@ -106,6 +106,13 @@ pub fn write_bgr555(path: &Path, frames: &[&[u16]], width: usize) -> Result<Writ
     encode(path, &shown.iter().collect::<Vec<_>>(), width)
 }
 
+/// Writes `frames` as `write_bgr555` does, without the black-screen rule
+/// (render event --keep-short): `render check` still refuses it.
+pub fn write_bgr555_unchecked(path: &Path, frames: &[&[u16]], width: usize) -> Result<Written, String> {
+    let shown: Vec<Vec<u32>> = frames.iter().step_by(STRIDE).map(|f| f.iter().map(|&c| rgb(c)).collect()).collect();
+    encode(path, &shown.iter().collect::<Vec<_>>(), width)
+}
+
 /// Writes the frames shown, at 30 a second.
 fn encode(path: &Path, shown: &[&Vec<u32>], width: usize) -> Result<Written, String> {
     let first = shown.first().ok_or("no frames")?;

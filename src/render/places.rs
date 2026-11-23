@@ -430,6 +430,11 @@ pub struct Context<'a> {
     /// What `render event`'s staging options ask for: flags, items, the
     /// way in, the leader's start and keys held (stage.rs).
     pub stage: &'a super::stage::Stage,
+    /// The staging of the event --first plays (Stage::for_first), and
+    /// whether it is the one playing: --at, --hold and --then stage the
+    /// recorded event alone.
+    pub first_stage: super::stage::Stage,
+    pub in_first: std::cell::Cell<bool>,
 }
 
 /// Whether a scene is a place: not the title, the clear-data screen or the
@@ -1175,12 +1180,12 @@ impl Context<'_> {
         };
         self.remove_event_files(scene, "walk");
         self.cleared.push((scene.name(), "walk".to_string()));
-        match self.play_walk(scene) {
+        match self.play_walk(scene, scenes) {
             Ok((entrance, run, note)) => {
                 let file = format!("{}/events/walk.gif", scene.slug());
                 let leads_to = run.leads_to.map(|n| self.scenes.iter().find(|s| s.number == n).and_then(|s| s.symbol.clone()).map_or(format!("#{n}"), |s| format!("SceneId_{s}")));
                 match self.gif(&file, &run.frames) {
-                    Ok(written) => self.rows.push(Row {
+                    Ok((written, more)) => self.rows.push(Row {
                         scene: scene.slug(),
                         number: scene.number,
                         area: scene.area.clone(),
@@ -1189,7 +1194,7 @@ impl Context<'_> {
                         event: "walk".to_string(),
                         frames: written,
                         leads_to: leads_to.unwrap_or_default(),
-                        note,
+                        note: std::iter::once(note).chain(more).collect::<Vec<_>>().join("; "),
                         file,
                         ..Row::default()
                     }),
@@ -1201,7 +1206,7 @@ impl Context<'_> {
     }
 
     /// Plays the walk `walk` records: its way in, its run, and its note.
-    fn play_walk(&self, scene: &Scene) -> Result<(u16, super::field::WalkRun, String), String> {
+    fn play_walk(&self, scene: &Scene, scenes: &[&Scene]) -> Result<(u16, super::field::WalkRun, String), String> {
         let (mut set, mut clear) = (Vec::new(), Vec::new());
         for (names, on) in [(&self.stage.set, true), (&self.stage.clear, false)] {
             for name in names {
@@ -1228,8 +1233,26 @@ impl Context<'_> {
                 field.give(super::stage::item_id(&header, name)?)?;
             }
         }
-        let entered = field.save();
-        let at = self.stage.at.map(|(x, z, layer)| (x, z, layer, self.stage.face));
+        self.stage_field(&mut field, scene.number)?;
+        let mut entered = field.save();
+        // --first: the walk starts where that event leaves the player.
+        let mut after_first = None;
+        if let Some(name) = &self.stage.first {
+            let overlay: Vec<&Scene> = std::iter::once(scene).chain(scenes.iter().copied().filter(|s| s.number != scene.number)).collect();
+            let before = self.events.iter().find(|e| e.name == *name && e.scenes.contains(&scene.number)).ok_or_else(|| format!("--first names {name}, which scene {} has no row of", scene.name()))?;
+            self.in_first.set(true);
+            let end = self.play_event(before, &overlay, &mut Job::default(), None, Some((&setup.set, &setup.clear)));
+            self.in_first.set(false);
+            let end = end.map_err(|f| format!("{name}, played first: {}", f.reason))?;
+            entered = end.run.end.ok_or_else(|| format!("{name}, played first, never gave the player control again in {}", scene.name()))?;
+            after_first = Some(name.clone());
+        }
+        let face = self.stage.face;
+        let at = match (self.stage.at_px, self.stage.at) {
+            (Some((x, z, layer)), _) => Some(super::field::WalkStart { x, z, layer, face, cell: false }),
+            (None, Some((x, z, layer))) => Some(super::field::WalkStart { x, z, layer, face, cell: true }),
+            (None, None) => None,
+        };
         let mut keys = super::stage::script_frames(&self.stage.hold);
         keys.extend(super::stage::script_frames(&self.stage.then));
         // A walk that reaches a black screen sooner than BLACK_CLEARANCE is
@@ -1240,12 +1263,19 @@ impl Context<'_> {
             lead += (CLEARED - first) as u32;
             run = field.walk(&entered, at, lead, &keys)?;
         }
-        if run.capped {
-            return Err(format!("it runs past {} seconds", EVENT_LIMIT / 60));
+        if run.capped && !self.stage.windowed() {
+            return Err(format!("it runs past {} seconds (--limit SECONDS asks for longer)", self.stage.limit_frames(EVENT_LIMIT) / 60));
         }
         let mut note = vec![format!("staged walk, no event: entered by entrance {entrance}")];
+        if let Some(name) = after_first {
+            note.push(format!("walked after {name}, which is not recorded"));
+        }
+        note.extend(skip_note(&self.stage.skip));
+        if run.capped {
+            note.push(format!("it runs past {} seconds, so only its window is written", self.stage.limit_frames(EVENT_LIMIT) / 60));
+        }
         note.extend(run.notes.iter().cloned());
-        let played = super::stage::describe(&self.stage.hold.iter().chain(&self.stage.then).copied().collect::<Vec<_>>());
+        let played = super::stage::describe(&self.stage.hold.iter().chain(&self.stage.then).cloned().collect::<Vec<_>>());
         note.push(format!("keys held {played}"));
         if !self.stage.set.is_empty() || !self.stage.clear.is_empty() {
             note.push(format!("flags set {}, cleared {}", self.stage.set.join(" "), self.stage.clear.join(" ")));
@@ -1280,11 +1310,11 @@ impl Context<'_> {
             for scene in &candidates {
                 self.remove_event_files(scene, &event.name);
             }
-            let mut played = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
+            let mut played = self.play_event(&event, &candidates, job, Some(self.stage.limit_frames(EVENT_LIMIT) as usize), None);
             let mut relaxed = false;
             if played.as_ref().is_err_and(|f| f.reason.contains("cannot walk")) {
                 self.relaxed.set(true);
-                let again = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
+                let again = self.play_event(&event, &candidates, job, Some(self.stage.limit_frames(EVENT_LIMIT) as usize), None);
                 self.relaxed.set(false);
                 if again.is_ok() {
                     played = again;
@@ -1299,7 +1329,7 @@ impl Context<'_> {
             if let Some((first_black, lead)) = first_black.filter(|&(b, _)| b < CLEARED) {
                 self.lead_in.set(lead.max(LEAD_IN as usize) as u32 + (CLEARED - first_black) as u32);
                 self.relaxed.set(relaxed);
-                let longer = self.play_event(&event, &candidates, job, Some(EVENT_LIMIT as usize), None);
+                let longer = self.play_event(&event, &candidates, job, Some(self.stage.limit_frames(EVENT_LIMIT) as usize), None);
                 self.relaxed.set(false);
                 self.lead_in.set(LEAD_IN);
                 if longer.is_ok() {
@@ -1313,9 +1343,10 @@ impl Context<'_> {
                         self.cleared.push((s.name(), label.clone()));
                     }
                     // A GIF shows the whole event or is not written.
-                    if played.run.capped {
-                        let limit = EVENT_LIMIT / 60;
-                        self.skip(scene, &label, format!("it runs past {limit} seconds without the player having control again"));
+                    // A window of it (--from, --for) is written all the same.
+                    if played.run.capped && !self.stage.windowed() {
+                        let limit = self.stage.limit_frames(EVENT_LIMIT) / 60;
+                        self.skip(scene, &label, format!("it runs past {limit} seconds without the player having control again (--limit SECONDS asks for longer)"));
                     } else if let Err(e) = self.write_event(scene, played.setup.entrance as i16, &event, &played.run) {
                         self.skip(scene, &label, e);
                     }
@@ -1544,7 +1575,7 @@ impl Context<'_> {
         }
         // Every other way in, for an event that changed nothing from the
         // first few.
-        if self.stage.staged() {
+        if self.st().staged() {
             if let Some(played) = blank.take() {
                 return Ok(played);
             }
@@ -1663,7 +1694,10 @@ impl Context<'_> {
                 continue;
             };
             let (set, clear) = self.alternative_flags(alternative, scenes[0], event)?;
-            let end = self.play_event(before, scenes, job, None, Some((&set, &clear))).map_err(|f| format!("{name}, played first: {}", f.reason))?;
+            self.in_first.set(true);
+            let end = self.play_event(before, scenes, job, None, Some((&set, &clear)));
+            self.in_first.set(false);
+            let end = end.map_err(|f| format!("{name}, played first: {}", f.reason))?;
             let Some(saved) = end.run.end.as_ref() else {
                 continue;
             };
@@ -1779,23 +1813,24 @@ impl Context<'_> {
         let own_function = own.iter().copied().find(|&r| r >= 0x10000);
         let message_row = !own.is_empty() && own_function.is_none();
         let mut field = Field::enter_staged(self.rom, self.symbols, setup, self.lineup()?.as_ref())?;
-        field.answers.clone_from(&self.stage.answer);
+        field.answers.clone_from(&self.st().answer);
         field.relaxed = self.relaxed.get();
         field.lead_in = self.lead_in.get();
         field.whole = self.whole && record.is_some();
         field.has_trigger = event.trigger().is_ok();
         field.walk_up = true;
-        field.staged = self.stage.staged();
+        field.staged = self.st().staged();
         if matches!(trigger, Trigger::Cast(_) | Trigger::PsynergyCell(..)) {
             if let Some(scene) = self.scenes.iter().find(|s| s.number == setup.scene) {
                 field.aim = super::stage::drawn_cells(&self.source(scene), &event.name);
             }
         }
-        field.script = self.stage.hold.clone();
-        field.then = self.stage.then.clone();
-        if !self.stage.give.is_empty() {
+        field.script = self.st().hold.clone();
+        field.then = self.st().then.clone();
+        self.stage_field(&mut field, setup.scene)?;
+        if !self.st().give.is_empty() {
             let header = std::fs::read_to_string(crate::compile::root().join("games").join(self.symbols.l.game.dir()).join("include/item_ids.h")).unwrap_or_default();
-            for name in &self.stage.give {
+            for name in &self.st().give {
                 field.give(super::stage::item_id(&header, name)?)?;
             }
         }
@@ -1810,7 +1845,7 @@ impl Context<'_> {
         field.play_as(&own);
         // Staged beside cells, an event of several touch rows plays the row
         // whose cells they are (the weeds', not the stream bank's).
-        if let (Some((cx, cz, _)), Trigger::Touch(code)) = (self.stage.at, trigger) {
+        if let (Some((cx, cz, _)), Trigger::Touch(code)) = (self.st().start(), trigger) {
             let codes: Vec<u16> = event.alternatives.iter().filter_map(|a| match a.trigger {
                 Ok(Trigger::Touch(c)) => Some(c),
                 _ => None,
@@ -1820,9 +1855,10 @@ impl Context<'_> {
                 return Err(format!("cell ({cx}, {cz}) lies by cells of code {other}, not {code}: its row for code {other} is played instead"));
             }
         }
-        let spots = match self.stage.at {
-            Some((cx, cz, layer)) => vec![field.staged_spot(trigger, (cx, cz), layer, self.stage.face)?],
-            None => field.spots(trigger)?,
+        let spots = match (self.st().at_px, self.st().at) {
+            (Some((x, z, layer)), _) => vec![field.staged_spot_px(trigger, (x, z), layer, self.st().face)?],
+            (None, Some((cx, cz, layer))) => vec![field.staged_spot(trigger, (cx, cz), layer, self.st().face)?],
+            _ => field.spots(trigger)?,
         };
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
             let first: Vec<String> = spots.iter().take(MAX_SPOTS).map(|s| format!("({},{})L{}k{:#x}", s.x, s.z, s.layer, s.walk)).collect();
@@ -1962,6 +1998,25 @@ impl Context<'_> {
         super::party::lineup(&self.stage.party, self.stage.leader.as_deref(), self.symbols.l.game == super::layout::Game::Tla)
     }
 
+    /// The staging of the event playing: --first's own (--first-at and the
+    /// rest) while the event it names plays, else the run's.
+    fn st(&self) -> &super::stage::Stage {
+        if self.in_first.get() { &self.first_stage } else { self.stage }
+    }
+
+    /// Stages what `field` plays as the options ask: --skip's functions of
+    /// scene `scene` made to return at once, --during's keys and --limit.
+    fn stage_field(&self, field: &mut Field, scene: u16) -> Result<(), String> {
+        let st = self.st();
+        for name in &st.skip {
+            let address = self.functions.get(&scene).and_then(|f| f.get(name)).ok_or_else(|| format!("--skip names {name}, which scene {scene}'s overlay has no function of"))?;
+            field.returns.push((address & !1, 0));
+        }
+        field.during.clone_from(&st.during);
+        field.limit = st.limit_frames(EVENT_LIMIT);
+        Ok(())
+    }
+
     /// The results of an event's own row in scene `scene`, as the table
     /// holds them (field::result_key): the function it is named by, from
     /// the overlay's symbols, or for a message row the message it shows.
@@ -2042,6 +2097,15 @@ impl Context<'_> {
     /// Where the run read nothing, what the event's own function assigns
     /// to, from its source (stage::assigned).
     fn note_with_effects(&self, run: &EventRun, scene: &Scene, event: &Event) -> String {
+        let mut note = self.note_of_effects(run, scene, event);
+        if run.capped {
+            let capped = format!("it runs past {} seconds without the player having control again, so only its window is written", self.stage.limit_frames(EVENT_LIMIT) / 60);
+            note = if note.is_empty() { capped } else { format!("{capped}; {note}") };
+        }
+        note
+    }
+
+    fn note_of_effects(&self, run: &EventRun, scene: &Scene, event: &Event) -> String {
         let name = |flag: u16| self.flags.name(flag).unwrap_or_else(|| format!("flag {flag:#05x}"));
         let flags: Vec<(String, bool)> = run.flags_changed.iter().map(|&(f, on)| (name(f), on)).collect();
         let mut effects = run.effects.clone();
@@ -2056,6 +2120,9 @@ impl Context<'_> {
         if !run.set_off.is_empty() {
             let set_off = format!("the keys held afterwards set off {}", self.set_off(&run.set_off, scene.number));
             note = if note.is_empty() { set_off } else { format!("{note}; {set_off}") };
+        }
+        if let Some(skipped) = skip_note(&self.stage.skip) {
+            note = if note.is_empty() { skipped } else { format!("{note}; {skipped}") };
         }
         note
     }
@@ -2077,7 +2144,7 @@ impl Context<'_> {
             return Err("no frame was recorded".to_string());
         }
         let file = format!("{}/events/{base}.gif", scene.slug());
-        let written = self.gif(&file, &run.frames)?;
+        let (written, more) = self.gif(&file, &run.frames)?;
         let leads_to = run.leads_to.map(|n| match self.scenes.iter().find(|s| s.number == n).and_then(|s| s.symbol.as_deref()) {
             Some(symbol) => format!("SceneId_{symbol}"),
             None => format!("#{n}"),
@@ -2091,7 +2158,7 @@ impl Context<'_> {
             event: event.name.clone(),
             frames: written,
             leads_to: leads_to.unwrap_or_default(),
-            note: self.note_with_effects(run, scene, event),
+            note: std::iter::once(self.note_with_effects(run, scene, event)).filter(|n| !n.is_empty()).chain(more).collect::<Vec<_>>().join("; "),
             messages,
             file,
             ..Row::default()
@@ -2110,6 +2177,17 @@ impl Context<'_> {
         }
         Ok(())
     }
+}
+
+/// What a note says of a recording written in part (--from, --for): the
+/// frames kept, in seconds.
+fn window_note(start: usize, end: usize) -> String {
+    format!("written from {:.1} to {:.1} seconds (--from, --for)", start as f64 / 60.0, end as f64 / 60.0)
+}
+
+/// What a note says of the functions --skip made return at once.
+fn skip_note(skip: &[String]) -> Option<String> {
+    (!skip.is_empty()).then(|| format!("played with {} returning at once (--skip)", skip.join(" and ")))
 }
 
 /// Frames a staged walk shows the leader standing before its keys.
@@ -2340,17 +2418,34 @@ mod tests {
 }
 
 impl Context<'_> {
-    fn gif(&mut self, file: &str, frames: &[Vec<u16>]) -> Result<usize, String> {
+    /// Writes a recording's GIF: the window --from and --for ask for, and
+    /// under the black-screen rule unless --keep-short keeps it anyway.
+    /// The frames written, and what the note must add.
+    fn gif(&mut self, file: &str, frames: &[Vec<u16>]) -> Result<(usize, Vec<String>), String> {
         let path = self.out.join(file);
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
-        let pictures: Vec<&[u16]> = frames.iter().map(Vec::as_slice).collect();
-        let written = super::animation::write_bgr555(&path, &pictures, super::mgba::WIDTH)?;
+        let mut notes = Vec::new();
+        let (start, end) = self.stage.window(frames.len());
+        if (start, end) != (0, frames.len()) {
+            notes.push(format!("{}; the whole recording runs {:.1} seconds", window_note(start, end), frames.len() as f64 / 60.0));
+        }
+        let pictures: Vec<&[u16]> = frames[start..end].iter().map(Vec::as_slice).collect();
+        if pictures.is_empty() {
+            return Err(format!("--from and --for leave no frame of its {:.1} seconds", frames.len() as f64 / 60.0));
+        }
+        let written = match super::animation::write_bgr555(&path, &pictures, super::mgba::WIDTH) {
+            Err(why) if self.stage.keep_short && why.contains("under the") => {
+                notes.push(format!("kept short (--keep-short): {why}, which render check refuses"));
+                super::animation::write_bgr555_unchecked(&path, &pictures, super::mgba::WIDTH)?
+            }
+            other => other?,
+        };
         self.bytes += written.bytes;
         self.images += 1;
         self.gifs += 1;
         self.gif_bytes += written.bytes;
-        Ok(written.frames)
+        Ok((written.frames, notes))
     }
 }

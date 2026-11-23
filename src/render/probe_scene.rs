@@ -101,6 +101,12 @@ pub fn scene(rom: &[u8], symbols: &Symbols, ask: &Ask, functions: &HashMap<Strin
     }
     let leader = field.leader().map_or("none".to_string(), |l| format!("({}, {}) layer {}", l.x, l.z, l.layer));
     println!("  entered by entrance {entrance}; the leader at {leader}; the view's top left {:?}", field.view());
+    for layer in 1..=2u8 {
+        let (column, row) = field.layer_origin(layer);
+        if (column, row) != (0, 0) {
+            println!("  map layer {layer}'s cells begin at the map's cell ({column}, {row}): its cell (x, y) is the map's (x + {column}, y + {row})");
+        }
+    }
     for id in 0..symbols.l.field_actor_count as u16 {
         if field.present(id).is_ok() {
             println!("  {}", super::probe::describe(&field, id));

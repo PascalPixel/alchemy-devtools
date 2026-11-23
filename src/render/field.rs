@@ -665,6 +665,14 @@ pub struct Field<'rom> {
     pub script: Vec<super::stage::Held>,
     /// Keys held once the player has control again (--then).
     pub then: Vec<super::stage::Held>,
+    /// Keys held from the moment the event begins until they are over,
+    /// while it runs (--during).
+    pub during: Vec<super::stage::Held>,
+    /// The most frames a recording runs (--limit; EVENT_LIMIT).
+    pub limit: u32,
+    /// What --at's cell was taken to be, when it was refolded onto
+    /// another layer's cell (Field::fold_cell), for the note.
+    pub fold_note: Option<String>,
     /// The keys that answer each prompt in turn (--answer): a yes or no
     /// choice, a menu of icons. A choice past them is answered Yes.
     pub answers: Vec<u32>,
@@ -792,7 +800,7 @@ impl<'rom> Field<'rom> {
             cuts: 0,
             catch_raised: false,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), answers: Vec::new(), lineup };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), during: Vec::new(), limit: EVENT_LIMIT, fold_note: None, answers: Vec::new(), lineup };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -1416,6 +1424,22 @@ impl<'rom> Field<'rom> {
         self.t.keys = keys;
     }
 
+    /// Plays one frame's step of a pad script (stage::script_frames): its
+    /// keys held, or, for a cast (stage::CAST_FRAME), the Psynergy asked
+    /// for as the field's shortcut keys ask for it (FieldWork.psynergy,
+    /// which the field sequence casts where the leader stands and faces
+    /// once it next looks), nothing held.
+    pub fn play_key(&mut self, keys: u32) {
+        if keys & super::stage::CAST_FRAME != 0 {
+            let work = self.gba.read32(self.s.field_work);
+            self.gba.write16(work + self.s.l.field_command, (keys & 0xffff) as u16);
+            self.cut();
+            self.hold(0);
+        } else {
+            self.hold(keys);
+        }
+    }
+
     /// Plays the keys of a pad script, one step a frame, while the run is
     /// recorded, as a player would: while a page waits for the button, a
     /// choice or a menu of icons is open, the script waits and the prompt
@@ -1456,7 +1480,7 @@ impl<'rom> Field<'rom> {
                 }
             } else {
                 waited = 0;
-                self.hold(script.get(at).copied().unwrap_or(0));
+                self.play_key(script.get(at).copied().unwrap_or(0));
                 if at < script.len() {
                     at += 1;
                 }
@@ -1823,6 +1847,23 @@ impl<'rom> Field<'rom> {
         }
         let cells = self.gba.read32(self.map_work() + self.s.l.map_layers + self.s.l.map_layer_cells + self.s.l.map_layer_size * u32::from(layer));
         i32::from(self.gba.read8(cells + (((cx + (cz << 7)) << 2) + 2) as u32))
+    }
+
+    /// Where map layer `layer`'s cells begin in the map's cell buffer (the
+    /// grid map.txt and the scenes' sources number cells by): its window's
+    /// origin, (column, row). The game reads and draws a layer's cell
+    /// (cx, cz), the one under pixel (cx * 16, cz * 16) of the screen's
+    /// plane, from the buffer's cell (cx + column, cz + row)
+    /// (MapGrid_SetCameraCenter, MapLayer.cells): The Lost Age's overhead
+    /// layer often lies 64 rows down (Settlements' wall top) or 32
+    /// (Jupiter Lighthouse's Hover pad).
+    pub fn layer_origin(&self, layer: u8) -> (i32, i32) {
+        if self.world() || layer > 2 {
+            return (0, 0);
+        }
+        let cells = |l: u32| self.gba.read32(self.map_work() + self.s.l.map_layers + self.s.l.map_layer_cells + self.s.l.map_layer_size * l);
+        let words = (cells(u32::from(layer)).wrapping_sub(cells(0)) as i32) / 4;
+        (words.rem_euclid(GRID), words.div_euclid(GRID))
     }
 
     /// The codes of the cells on and around cell (cx, cz), one cell away
@@ -2213,13 +2254,16 @@ impl<'rom> Field<'rom> {
     /// play_on: its prompts answered, the events it sets off played), on
     /// until the player has control and, past a black screen, for
     /// BLACK_CLEARANCE frames more.
-    pub fn walk(&mut self, entered: &Saved, at: Option<(i32, i32, Option<u8>, Option<u32>)>, lead: u32, script: &[u32]) -> Result<WalkRun, String> {
+    pub fn walk(&mut self, entered: &Saved, at: Option<WalkStart>, lead: u32, script: &[u32]) -> Result<WalkRun, String> {
         self.load(entered);
         let mut notes = Vec::new();
         match at {
-            Some((cx, cz, layer, face)) => {
+            Some(WalkStart { x, z, layer, face, cell }) => {
                 self.until_control()?;
-                let spot = self.staged_spot(Trigger::Cast(0), (cx, cz), layer, face)?;
+                let spot = if cell { self.staged_spot(Trigger::Cast(0), (x, z), layer, face)? } else { self.staged_spot_px(Trigger::Cast(0), (x, z), layer, face)? };
+                let size = self.cell_size();
+                let (px, pz) = (spot.x, spot.z);
+                let (cx, cz) = (px.div_euclid(size), pz.div_euclid(size));
                 let gs = self.s.game_state;
                 self.load(entered);
                 self.gba.write32(gs + self.s.l.gs_x, fx(spot.x) as u32);
@@ -2232,7 +2276,9 @@ impl<'rom> Field<'rom> {
                 if self.fit_camera() {
                     notes.push("no camera box of the way in holds the cell, so the camera's bounds are those of the box that does, or the map's".to_string());
                 }
-                notes.push(format!("the leader starts on cell ({cx}, {cz}) of layer {}", spot.layer));
+                let pixel = if (px, pz) == (cx * size + size / 2, cz * size + size / 2) { String::new() } else { format!(", at pixel ({px}, {pz})") };
+                notes.push(format!("the leader starts on cell ({cx}, {cz}) of layer {}{pixel}", spot.layer));
+                notes.extend(self.fold_note.take());
             }
             None => self.until_control()?,
         }
@@ -2247,8 +2293,8 @@ impl<'rom> Field<'rom> {
         self.recorded = Some(Vec::new());
         let scene = self.scene();
         self.frames(lead)?;
-        let started = self.play_on(script, EVENT_LIMIT)?;
-        let capped = self.recorded.as_ref().map_or(0, Vec::len) >= EVENT_LIMIT as usize;
+        let started = self.play_on(script, self.limit)?;
+        let capped = self.recorded.as_ref().map_or(0, Vec::len) >= self.limit as usize;
         let since = self.recorded.as_ref().and_then(|f| f.iter().rposition(|p| is_black_bgr555(p)).map(|i| f.len() - 1 - i));
         if let Some(since) = since.filter(|&s| s < CLEARED) {
             self.frames((CLEARED - since) as u32)?;
@@ -3297,9 +3343,44 @@ impl<'rom> Field<'rom> {
     /// scene keeps beside its map of cells it draws in later (Osenia's hole
     /// in Caverns, the log's crossing in Mogall Forest), which no player
     /// reaches and no trigger fires from.
-    fn in_rooms(&self, cells: Vec<(u8, i32, i32)>) -> (Vec<(u8, i32, i32)>, usize) {
+    fn in_rooms(&mut self, cells: Vec<(u8, i32, i32)>) -> Result<(Vec<(u8, i32, i32)>, usize), String> {
         let cameras: Vec<[i16; 4]> = self.entrances().iter().map(|e| e.camera).collect();
-        in_rooms(cells, &cameras, self.header(), self.room(), self.cell_size())
+        let size = self.cell_size();
+        let mut raised = HashMap::new();
+        for &(layer, cx, cz) in &cells {
+            raised.insert((layer, cx, cz), self.ground(layer, cx * size + size / 2, cz * size + size / 2)? >> 16);
+        }
+        Ok(in_rooms(cells, &cameras, self.header(), self.room(), size, &|c| raised.get(c).copied().unwrap_or(0)))
+    }
+
+    /// Cell (cx, cz) as --at gives it, numbered as the map's buffer
+    /// numbers it (map.txt, the scenes' sources), on the layer whose cell
+    /// the game shows there: as given where its middle, raised by its
+    /// ground, lies in a room an entrance shows; else, where a layer's
+    /// cells begin further on in the buffer (Field::layer_origin), that
+    /// layer's own cell where it does (Jupiter Lighthouse's Hover pad, the
+    /// map's (65, 42), is the overhead layer's (65, 10)). The cell, its
+    /// layer, and a note when it was refolded.
+    pub fn fold_cell(&mut self, cell: (i32, i32), layer: Option<u8>) -> Result<((i32, i32), Option<u8>, Option<String>), String> {
+        if self.world() {
+            return Ok((cell, layer, None));
+        }
+        let cameras: Vec<[i16; 4]> = self.entrances().iter().map(|e| e.camera).filter(|c| c.iter().all(|&s| s != -1)).collect();
+        if cameras.is_empty() {
+            return Ok((cell, layer, None));
+        }
+        let header = self.header();
+        let size = self.cell_size();
+        let origins = [0u8, 1, 2].map(|l| self.layer_origin(l));
+        for (i, (c, l)) in fold_candidates(cell, layer, origins).into_iter().enumerate() {
+            let (x, z) = (c.0 * size + size / 2, c.1 * size + size / 2);
+            let plane = z - (self.ground(l, x, z)? >> 16);
+            if cameras.iter().any(|&b| box_holds(b, header, x, plane)) {
+                let note = (i > 0).then(|| format!("the map's cell ({}, {}) is layer {l}'s cell ({}, {}), its cells beginning at the map's ({}, {})", cell.0, cell.1, c.0, c.1, origins[usize::from(l)].0, origins[usize::from(l)].1));
+                return Ok((c, if i > 0 { Some(l) } else { layer }, note));
+            }
+        }
+        Ok((cell, layer, None))
     }
 
     /// Draws every layer of the map again around the point the camera
@@ -3693,9 +3774,16 @@ impl<'rom> Field<'rom> {
     /// nearest that facing, and Move and Carry push that way.
     pub fn staged_spot(&mut self, trigger: Trigger, cell: (i32, i32), layer: Option<u8>, face: Option<u32>) -> Result<Spot, String> {
         let size = self.cell_size();
-        let (x, z) = (cell.0 * size + size / 2, cell.1 * size + size / 2);
+        let (cell, layer, note) = self.fold_cell(cell, layer)?;
+        self.fold_note = note;
+        self.staged_spot_px(trigger, (cell.0 * size + size / 2, cell.1 * size + size / 2), layer, face)
+    }
+
+    /// The same at pixel (x, z) of the map (render event --at-px).
+    pub fn staged_spot_px(&mut self, trigger: Trigger, (x, z): (i32, i32), layer: Option<u8>, face: Option<u32>) -> Result<Spot, String> {
+        let size = self.cell_size();
         if !self.inside(x, z, 0) {
-            return Err(format!("cell ({}, {}) lies outside the map", cell.0, cell.1));
+            return Err(format!("cell ({}, {}) lies outside the map", x.div_euclid(size), z.div_euclid(size)));
         }
         let leader = self.leader().ok_or("the leader has no actor")?;
         let layer = layer.unwrap_or(leader.layer.min(2));
@@ -3891,7 +3979,7 @@ impl<'rom> Field<'rom> {
                 if cells.is_empty() {
                     return Err(format!("no cell holds code {code}"));
                 }
-                let (cells, templates) = self.in_rooms(cells);
+                let (cells, templates) = self.in_rooms(cells)?;
                 if cells.is_empty() {
                     return Err(format!(
                         "the {templates} cells with code {code} lie outside every room an entrance shows: a copy the scene keeps beside the map, drawn in where something opens the way (MapGrid_CopyCellAttributes), and nothing here has opened it"
@@ -4242,7 +4330,7 @@ impl<'rom> Field<'rom> {
         let script_gives = matches!(trigger, Trigger::Touch(_) | Trigger::Direct(_));
         if !script_gives && !script.is_empty() {
             for &keys in &script {
-                self.hold(keys);
+                self.play_key(keys);
                 if record.is_some() {
                     self.step_watching(&mut moving, &mut pad)?;
                 } else {
@@ -4253,7 +4341,11 @@ impl<'rom> Field<'rom> {
         }
         let script = if script_gives { script } else { Vec::new() };
         let mut script_at = 0;
-        let cap = record.unwrap_or(EVENT_LIMIT as usize);
+        let cap = record.unwrap_or(self.limit as usize);
+        // Keys held while the event runs (--during), from the frame it
+        // begins.
+        let during = super::stage::script_frames(&self.during);
+        let mut during_at = 0;
         self.t.dispatched = None;
         let trigger_frame = self.t.frame;
         self.t.absent_speaker = 0;
@@ -4453,7 +4545,11 @@ impl<'rom> Field<'rom> {
             if (began.is_none() || (self.staged && !self.t.own_ran && !self.own.is_empty())) && !script.is_empty() {
                 let keys = script.get(script_at).copied().unwrap_or(0);
                 script_at += 1;
-                self.hold(keys);
+                self.play_key(keys);
+            }
+            if began.is_some() && during_at <= during.len() && !during.is_empty() {
+                self.play_key(during.get(during_at).copied().unwrap_or(0));
+                during_at += 1;
             }
             self.frames(1)?;
             // A recorded event that speaks from an actor not on stage is
@@ -4732,7 +4828,7 @@ impl<'rom> Field<'rom> {
             let typing = self.t.frame - self.t.last_typing <= 2;
             let run = self.t.stepping_since.max(b + 1);
             let resting = self.t.frame >= last_motion + STILL_FRAMES || self.t.frame >= run + CONTROL_FRAMES + SLIDE_FRAMES;
-            if !typing && self.t.step_frame + 1 >= self.t.frame && self.t.frame >= run + CONTROL_FRAMES && resting {
+            if !typing && self.t.step_frame + 1 >= self.t.frame && self.t.frame >= run + CONTROL_FRAMES && resting && during_at >= during.len() {
                 // Another row for the cell ran first and gave back control (a
                 // floor switch under the pillar the leader pushes from it):
                 // he goes on pushing, once, for the event's own.
@@ -4791,7 +4887,7 @@ impl<'rom> Field<'rom> {
             }
             if self.t.own_ran {
                 fade_note = Some(format!("its row answers a later phase of the cast: the player stands still {} frames until it comes", self.t.frame - from));
-                self.play_on(&[], EVENT_LIMIT)?;
+                self.play_on(&[], self.limit)?;
             }
         }
         // Keys staged for once the player has control again (--then): he
@@ -4804,7 +4900,7 @@ impl<'rom> Field<'rom> {
             // The player has control: A may open the field menu again.
             self.t.block_menu = false;
             let keys = super::stage::script_frames(&self.then);
-            then_started = self.play_on(&keys, EVENT_LIMIT)?;
+            then_started = self.play_on(&keys, self.limit)?;
         }
         self.hold(0);
         let kept_keys = self.keys_kept.take().unwrap_or_default();
@@ -4980,6 +5076,10 @@ impl<'rom> Field<'rom> {
             let then = format!("{} held once the player has control again", super::stage::describe(&self.then));
             note = Some(note.map_or(then.clone(), |n| format!("{n}; {then}")));
         }
+        if !self.during.is_empty() && began.is_some() {
+            let during = format!("{} held from the moment it begins (--during)", super::stage::describe(&self.during));
+            note = Some(note.map_or(during.clone(), |n| format!("{n}; {during}")));
+        }
         if self.staged {
             let size = self.cell_size();
             let mut how = format!("staged: the leader starts on cell ({}, {}) of layer {}", spot.x.div_euclid(size), spot.z.div_euclid(size), spot.layer);
@@ -4988,6 +5088,9 @@ impl<'rom> Field<'rom> {
             }
             if then_played {
                 how.push_str(&format!(", then {} once the player has control again", super::stage::describe(&self.then)));
+            }
+            if let Some(fold) = self.fold_note.take() {
+                how.push_str(&format!(" ({fold})"));
             }
             note = Some(note.map_or(how.clone(), |n| format!("{how}; {n}")));
         }
@@ -5359,6 +5462,17 @@ const PAGE_HOLD: u32 = 45;
 /// under two.
 pub const EVENT_LIMIT: u32 = 14400;
 
+/// Where a staged walk starts (render event --at, --at-px): a cell (folded
+/// as Field::fold_cell reads it) or a pixel, its layer, the way he faces.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WalkStart {
+    pub x: i32,
+    pub z: i32,
+    pub layer: Option<u8>,
+    pub face: Option<u32>,
+    pub cell: bool,
+}
+
 /// What an event left: its pages, when recorded its frames, and the moment
 /// the player had control again, when that was in the same scene.
 /// A walk staged by hand (Field::walk): its frames, the events it set off
@@ -5498,10 +5612,12 @@ fn facing_within(a: u32, b: u32) -> bool {
 /// camera boxes) shows, those in `room` first, and how many lie in none.
 /// Where any entrance gives a whole box, an entrance that gives none (a
 /// scene's default, which no exit leads to) shows no room of its own.
-pub fn in_rooms(cells: Vec<(u8, i32, i32)>, cameras: &[[i16; 4]], header: [i32; 4], room: [i32; 4], size: i32) -> (Vec<(u8, i32, i32)>, usize) {
+pub fn in_rooms(cells: Vec<(u8, i32, i32)>, cameras: &[[i16; 4]], header: [i32; 4], room: [i32; 4], size: i32, raised: &dyn Fn(&(u8, i32, i32)) -> i32) -> (Vec<(u8, i32, i32)>, usize) {
     let boxed: Vec<[i16; 4]> = cameras.iter().copied().filter(|c| c.iter().all(|&s| s != -1)).collect();
     let boxes = if boxed.is_empty() { cameras.to_vec() } else { boxed };
-    let centre = |&(_, cx, cz): &(u8, i32, i32)| (cx * size + size / 2, cz * size + size / 2);
+    // A cell's middle on the screen's plane: raised by its ground, as the
+    // game draws it.
+    let centre = |c: &(u8, i32, i32)| (c.1 * size + size / 2, c.2 * size + size / 2 - raised(c));
     let (mut kept, left): (Vec<_>, Vec<_>) = cells.into_iter().partition(|c| {
         let (x, z) = centre(c);
         boxes.is_empty() || boxes.iter().any(|&b| box_holds(b, header, x, z))
@@ -5511,6 +5627,23 @@ pub fn in_rooms(cells: Vec<(u8, i32, i32)>, cameras: &[[i16; 4]], header: [i32; 
         !(x >= room[0] && x < room[2] && z >= room[1] && z < room[3])
     });
     (kept, left.len())
+}
+
+/// The cells --at's cell (the map buffer's numbering) may be, in turn:
+/// itself on its layer (layer 0 when none is given), then on each layer
+/// whose cells begin further on in the buffer (`origins`, Field::
+/// layer_origin), that layer's own cell, the given layer's alone when one
+/// is given.
+pub fn fold_candidates(cell: (i32, i32), layer: Option<u8>, origins: [(i32, i32); 3]) -> Vec<((i32, i32), u8)> {
+    let mut out = vec![(cell, layer.unwrap_or(0))];
+    for l in 1..=2u8 {
+        let o = origins[usize::from(l)];
+        if layer.is_some_and(|given| given != l) || o == (0, 0) || cell.0 < o.0 || cell.1 < o.1 {
+            continue;
+        }
+        out.push(((cell.0 - o.0, cell.1 - o.1), l));
+    }
+    out
 }
 
 /// Whether box `b` (pixels, -1 sides taking the header's, 16.16) holds the
@@ -5537,17 +5670,37 @@ mod tests {
         // the default entrance with no box of its own.
         let header = [0, 0, 640 << 16, 480 << 16];
         let cameras = [[-1, -1, -1, -1], [32, 48, 416, 464], [80, 608, 368, 768]];
-        let (kept, beside) = in_rooms(vec![(0, 35, 12), (0, 8, 12), (0, 9, 12)], &cameras, header, [32, 48, 416, 464], 16);
+        let (kept, beside) = in_rooms(vec![(0, 35, 12), (0, 8, 12), (0, 9, 12)], &cameras, header, [32, 48, 416, 464], 16, &|_| 0);
         assert_eq!(kept, vec![(0, 8, 12), (0, 9, 12)]);
         assert_eq!(beside, 1);
         // Only the spare: no trigger is left.
-        assert_eq!(in_rooms(vec![(0, 35, 12)], &cameras, header, [32, 48, 416, 464], 16), (vec![], 1));
+        assert_eq!(in_rooms(vec![(0, 35, 12)], &cameras, header, [32, 48, 416, 464], 16, &|_| 0), (vec![], 1));
         // A scene whose entrances give no box: the whole map is the room.
-        let (kept, beside) = in_rooms(vec![(0, 35, 12)], &[[-1, -1, -1, -1]], header, [0, 0, 640, 480], 16);
+        let (kept, beside) = in_rooms(vec![(0, 35, 12)], &[[-1, -1, -1, -1]], header, [0, 0, 640, 480], 16, &|_| 0);
         assert_eq!((kept.len(), beside), (1, 0));
         // The room entered comes first.
-        let (kept, _) = in_rooms(vec![(0, 10, 45), (0, 8, 12)], &cameras, header, [32, 48, 416, 464], 16);
+        let (kept, _) = in_rooms(vec![(0, 10, 45), (0, 8, 12)], &cameras, header, [32, 48, 416, 464], 16, &|_| 0);
         assert_eq!(kept[0], (0, 8, 12));
+        // A raised cell lies on the screen as high as its ground: row 29's
+        // middle (472) is below the box, 32 pixels up it is in it.
+        let (kept, beside) = in_rooms(vec![(0, 9, 29)], &cameras, header, [32, 48, 416, 464], 16, &|_| 32);
+        assert_eq!((kept.len(), beside), (1, 0));
+        assert_eq!(in_rooms(vec![(0, 9, 29)], &cameras, header, [32, 48, 416, 464], 16, &|_| 0).1, 1);
+    }
+
+    #[test]
+    fn a_cell_of_a_layer_folded_further_into_the_map_is_that_layer_s() {
+        // Jupiter Lighthouse: the overhead layer's cells begin 32 rows down,
+        // the top layer's 64; the pad, the map's (65, 42), is layer 1's
+        // (65, 10).
+        let origins = [(0, 0), (0, 32), (0, 64)];
+        assert_eq!(fold_candidates((65, 42), None, origins), vec![((65, 42), 0), ((65, 10), 1)]);
+        assert_eq!(fold_candidates((65, 70), None, origins), vec![((65, 70), 0), ((65, 38), 1), ((65, 6), 2)]);
+        assert_eq!(fold_candidates((65, 70), Some(2), origins), vec![((65, 70), 2), ((65, 6), 2)]);
+        // A cell before a layer's origin is no cell of it.
+        assert_eq!(fold_candidates((65, 10), None, origins), vec![((65, 10), 0)]);
+        // Ankohl Ruins: the overhead layer begins 64 columns on.
+        assert_eq!(fold_candidates((70, 3), Some(1), [(0, 0), (64, 0), (0, 64)]), vec![((70, 3), 1), ((6, 3), 1)]);
     }
 
     #[test]

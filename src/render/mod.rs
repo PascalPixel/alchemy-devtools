@@ -484,7 +484,10 @@ const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene 
        event only: [--set FLAG]... [--clear FLAG]... [--give ITEM]...
          [--entrance N] [--at X,Y[,LAYER]] [--face WAY] [--hold KEYS:N,...]
          [--then KEYS:N,...] [--answer yes|no|KEYS,...] [--leader NAME]
-         [--party NAME,...] [--first EVENT]
+         [--party NAME,...] [--first EVENT] [--first-at X,Y[,LAYER]]
+         [--first-face WAY] [--first-hold KEYS:N,...] [--first-then KEYS:N,...]
+         [--at-px X,Z[,LAYER]] [--during KEYS:N,...] [--skip FUNCTION]...
+         [--limit SECONDS] [--from SECONDS] [--for SECONDS] [--keep-short]
 Plays a built edition of either game (make tbs-en, make tla-en) under
 libmgba from a new game's defaults straight into each scene, and writes
 into DIR/<scene>/ (DIR defaults to out/EDITION/places) PNG files at the
@@ -685,6 +688,37 @@ staged:
   --party NAME,...: the party is these members, in order, the first
     leading; in The Lost Age at the strength of the first of the story's
     debug sets that holds them all (gDebug_ParameterSets).
+  A pad script's step may be cast:ABILITY (cast:hover, cast:burst): the
+    Psynergy is cast where the leader stands and faces, through the
+    game's own cast path (FieldWork.psynergy, as a shortcut key casts it,
+    not the field menu), then the script goes on; cast:ABILITY:WAY holds
+    north, east, south or west after it for 60 frames (cast:move:east,
+    Move steered), cast:ABILITY:WAY:N for N. The ability is ability_ids.h's
+    (hover, HOVER or ABILITY_HOVER).
+  --first-at X,Y[,LAYER], --first-face WAY, --first-hold KEYS:N,...,
+    --first-then KEYS:N,...: the start, the way faced and the keys of the
+    event --first plays; --at, --at-px, --face, --hold, --then and
+    --during stage the recorded event alone. With no --event, --first
+    plays before a staged walk, which starts where it leaves the player.
+  --at-px X,Z[,LAYER]: the leader starts on pixel (X, Z) of the map, the
+    plane his x and z are in (a cell is 16 pixels, its middle at 8), as
+    --at does with a cell's middle; for a spot inside a cell (a switch
+    that counts only in its middle).
+  --during KEYS:N,...: keys held from the frame the event begins, while
+    it runs and before the player has control again (moving while sunk
+    in Sand, a press timed in a mini-game); the run waits for the player's
+    control only once they are over. Casts may be among them.
+  --skip FUNCTION (repeatable): the scene's function of that name returns
+    at once, as render probe --skip makes it: the same event with and
+    without what it does. The note names it.
+  --limit SECONDS: a run is given up past SECONDS rather than 240.
+  --from SECONDS, --for SECONDS: only that window of the recording is
+    written (a long cutscene in parts); the note gives the window and the
+    whole run's length. A run that goes past the limit is written all the
+    same, its window, the note saying it never gave back control.
+  --keep-short: a recording with under ten seconds of the game before,
+    between or after its black screens is written anyway, its note saying
+    how long the stretch is; render check still refuses it.
 With --at, --hold or --then and no --event, the run is a walk staged by
 hand: the scene first named (--scene) is entered by --entrance (else its
 first way in) with --set's and --clear's flags and --give's items, the
@@ -807,6 +841,11 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     }
     crate::alchemy::targets::parse_decomp_target(&o.edition)?;
     let game = layout::Game::of(&o.edition)?;
+    let casts = o.stage.hold.iter().chain(&o.stage.then).chain(&o.stage.during).chain(&o.stage.first_hold).chain(&o.stage.first_then).any(|h| h.cast.is_some());
+    if casts {
+        let header = crate::compile::root().join("games").join(game.dir()).join("include/ability_ids.h");
+        o.stage.resolve(&std::fs::read_to_string(&header).map_err(|e| format!("cannot read {}: {e}", header.display()))?)?;
+    }
     // Without the story tools' tables (they are written for The Broken Seal
     // alone), the scenes come from the tree's scene table, the flags from
     // flags.h, and no events are known: a place has no story moments.
@@ -1228,6 +1267,8 @@ impl Machines {
             whole: r.whole,
             cut: r.cut,
             stage: r.stage,
+            first_stage: r.stage.for_first(),
+            in_first: std::cell::Cell::new(false),
         }
     }
 }
@@ -1875,9 +1916,9 @@ mod tests {
     /// Every staging option of `render event` is read and named in its usage.
     #[test]
     fn every_staging_option_is_in_the_usage() {
-        for option in ["--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party", "--first"] {
+        for option in stage::OPTIONS {
             assert!(stage::Stage::is_option(option));
-            assert!(SCENES_USAGE.contains(&format!("{option} ")), "{option} is not in SCENES_USAGE");
+            assert!(SCENES_USAGE.contains(&format!("{option} ")) || SCENES_USAGE.contains(&format!("{option}]")), "{option} is not in SCENES_USAGE");
         }
     }
 
