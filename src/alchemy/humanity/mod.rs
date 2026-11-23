@@ -9,6 +9,7 @@
 //! (`naming`). Nothing here counts toward DONE (C2); the figures are a
 //! worklist for people (H5).
 
+mod duplicates;
 mod layout;
 mod naming;
 mod numbers;
@@ -168,8 +169,8 @@ pub struct Report {
     /// rule of its file keeps, settled once every use of its name is read:
     /// file, line, number and name.
     hex_definitions: Vec<(String, usize, String, String)>,
-    function_bodies: HashMap<String, Group>,
-    table_bodies: HashMap<String, Group>,
+    /// Every function body and table initializer, for the duplicate search.
+    copies: Vec<duplicates::Copy>,
     /// Every name the source defines or declares, for the naming checks.
     pub naming: naming::Names,
     /// Numbered names whose number is their meaning, by a row of kind `its
@@ -693,18 +694,8 @@ impl Report {
         for (file, line, name) in entries {
             self.note("undocumented_entry", &file, line, &name);
         }
-        let groups = |bodies: &mut HashMap<String, Group>| {
-            let mut groups: Vec<Group> = bodies.drain().map(|(_, group)| group).filter(|g| g.members.len() > 1).collect();
-            for group in &mut groups {
-                group.members.sort();
-            }
-            groups.sort_by(|a, b| {
-                (b.tokens * (b.members.len() - 1)).cmp(&(a.tokens * (a.members.len() - 1))).then(a.members.cmp(&b.members))
-            });
-            groups
-        };
-        self.function_groups = groups(&mut self.function_bodies);
-        self.table_groups = groups(&mut self.table_bodies);
+        (self.function_groups, self.table_groups) =
+            duplicates::groups(&std::mem::take(&mut self.copies), FUNCTION_TOKENS, TABLE_TOKENS);
         self.long_files.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
     }
 
@@ -1845,35 +1836,27 @@ impl<'r, 'a> Walk<'r, 'a> {
         }
     }
 
-    /// Normalized tokens between a brace pair, for the duplicate search.
-    fn body(&self, open: usize, keep_names: bool) -> (String, usize) {
+    /// The tokens between a brace pair, preprocessor lines aside, a
+    /// function's parameters and locals bound, for the duplicate search
+    /// (`duplicates`).
+    fn duplicate(&mut self, statement: Option<&[usize]>, open: usize, name: &str) {
         let close = self.braces[&open].close;
-        let mut key = String::new();
-        let mut count = 0;
-        for token in &self.code.tokens[open + 1..close] {
-            if token.pp {
-                continue;
+        let tokens: Vec<&str> = self.code.tokens[open + 1..close].iter().filter(|token| !token.pp).map(|token| token.text).collect();
+        let function = statement.is_some();
+        let tokens = match statement {
+            Some(statement) => {
+                let open = statement.windows(2).position(|pair| self.code.text(pair[0]) == name && self.code.text(pair[1]) == "(");
+                let parameters: Vec<String> = open
+                    .map(|open| self.parameter_tokens(statement, open + 1))
+                    .unwrap_or_default()
+                    .iter()
+                    .filter_map(|tokens| self.parameter_name(tokens))
+                    .collect();
+                duplicates::bind(&parameters, &tokens)
             }
-            let text = match token.kind {
-                Kind::Ident if !keep_names && !is_keyword(token.text) => "$",
-                Kind::Str if !keep_names => "\"",
-                _ => token.text,
-            };
-            key.push_str(text);
-            key.push('\u{1f}');
-            count += 1;
-        }
-        (key, count)
-    }
-
-    fn duplicate(&mut self, function: bool, open: usize, name: &str) {
-        let (key, tokens) = self.body(open, !function);
-        if tokens < if function { FUNCTION_TOKENS } else { TABLE_TOKENS } {
-            return;
-        }
-        let bodies = if function { &mut self.report.function_bodies } else { &mut self.report.table_bodies };
-        let group = bodies.entry(key).or_insert_with(|| Group { tokens, members: Vec::new() });
-        group.members.push(format!("{}:{name}", self.file));
+            None => tokens.iter().map(|text| text.to_string()).collect(),
+        };
+        self.report.copies.push(duplicates::Copy { function, file: self.file.to_string(), name: name.to_string(), tokens });
     }
 
     /// One statement outside every brace: a function, prototype, global,
@@ -1906,7 +1889,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 self.forwards(&name, &statement, open, close);
                 self.conversions(&name, open, close);
                 self.named(&name, NameKind::Function, line, None);
-                self.duplicate(true, open, &name);
+                self.duplicate(Some(&statement), open, &name);
                 let own = self.code.doc_text[first].clone();
                 self.thing(&name, Origin::Function, line, own, String::new(), (None, None));
             }
@@ -1940,7 +1923,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                     self.thing(&name, Origin::Global, line, own, String::new(), (None, None));
                 }
                 if let Some(&(open, _)) = opened.iter().find(|(_, kind)| *kind == Brace::Init) {
-                    self.duplicate(false, open, &name);
+                    self.duplicate(None, open, &name);
                 }
             }
             None => {}
@@ -2702,6 +2685,15 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
             }
             continue;
         }
+        // A duplicate group: its tokens and every copy.
+        let groups = match metric {
+            "duplicate_function" | "duplicate_function_copies" => &report.function_groups[..],
+            "duplicate_table" | "duplicate_table_copies" => &report.table_groups[..],
+            _ => &[],
+        };
+        for group in groups {
+            let _ = writeln!(text, "{game}\t{}\t{}", group.tokens, group.members.join(" "));
+        }
         for item in &report.items {
             if item.metric == metric || kinds(metric).contains(&item.metric) {
                 // A file or folder is listed by its path alone.
@@ -2992,11 +2984,30 @@ mod tests {
     }
 
     #[test]
+    fn a_shared_file_scenes_include_is_one_copy() {
+        let shared = "void Actor_Blink(struct Actor *actor) {\n  switch (gFrameCount & 7) {\n  case 0:\n    Actor_SetColor(actor, 1);\n    break;\n  case 4:\n    Actor_SetColor(actor, 0);\n    break;\n  }\n}\n";
+        let scene = "#include \"shared/actor_blink.h\"\n";
+        let report = game([
+            ("games/tla/src/scene/shared/actor_blink.h", shared),
+            ("games/tla/src/scene/garoh.c", scene),
+            ("games/tla/src/scene/madra.c", scene),
+        ]);
+        assert!(report.function_groups.is_empty());
+        let copy = format!("{scene}{}", shared.replace("Actor_Blink", "Madra_Blink"));
+        let report = game([("games/tla/src/scene/shared/actor_blink.h", shared), ("games/tla/src/scene/madra.c", copy.as_str())]);
+        assert_eq!(report.function_groups[0].members, ["games/tla/src/scene/madra.c:Madra_Blink", "games/tla/src/scene/shared/actor_blink.h:Actor_Blink"]);
+    }
+
+    #[test]
     fn duplicates_long_files_and_report() {
-        let body = "{ int i; for (i = 0; i < 4; i++) { gA[i] = Load(i) + 3; Store(gB, i); } }\n";
-        let renamed = body.replace("gA", "gC").replace("Load", "Fetch");
+        let body = "{ int idx; for (idx = 0; idx < 4; idx++) { gA[idx] = Load(idx) + 3; Store(gB, idx); } }\n";
+        // A local renamed is the same routine; another table or callee is not.
+        let renamed = body.replace("idx", "k");
+        let other = body.replace("gA", "gC").replace("Load", "Fetch");
         let table = "= { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };\n";
-        let first = format!("void Alpha(void) {body}void Beta(void) {renamed}void Gamma(void) {{ int i; }}\nconst u8 gT1[] {table}");
+        let first = format!(
+            "void Alpha(void) {body}void Beta(void) {renamed}void Eta(void) {other}void Gamma(void) {{ int i; }}\nconst u8 gT1[] {table}"
+        );
         let long = "\n".repeat(3001);
         let second = format!("const u8 gT2[] {table}void Delta(void) {{}}{long}");
         // A map overlay, a part, a header and a data object stay one file however long.
@@ -3016,6 +3027,7 @@ mod tests {
         assert_eq!(report.table_groups.len(), 1);
         assert_eq!(report.table_groups[0].members, vec!["a.c:gT1", "b.c:gT2"]);
         assert_eq!(report.long_files, vec![("b.c".to_string(), 3002)]);
+        assert_eq!(list(&[("tbs", &report)], "duplicate_table"), "tbs\t19\ta.c:gT1 b.c:gT2\n");
         let tsv = tsv(&[("tbs", &report)]);
         assert!(tsv.starts_with("game\tmetric\tscope\tcount\ntbs\tfiles\ttotal\t6\n"));
         assert!(tsv.contains("tbs\tduplicate_function\ttotal\t1\n"));
