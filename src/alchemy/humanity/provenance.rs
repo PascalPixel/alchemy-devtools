@@ -292,6 +292,19 @@ impl GameText {
             || lower.strip_suffix("us").is_some_and(|base| self.words.contains(&format!("{base}u")))
     }
 
+    /// Whether the text writes a word, and writes it only capitalized: a
+    /// proper name (`Isaac`, `Dora`).
+    pub fn is_proper(&self, word: &str) -> bool {
+        let mut seen = false;
+        for found in self.joined.split(|c: char| !c.is_alphanumeric()).filter(|found| found.eq_ignore_ascii_case(word)) {
+            if !found.starts_with(|c: char| c.is_uppercase()) {
+                return false;
+            }
+            seen = true;
+        }
+        seen
+    }
+
     /// The symbols whose own message says `word` (any case): `MsgDetailsUnknown`,
     /// "Details are unknown", says `unknown`.
     pub fn symbols_saying(&self, word: &str) -> impl Iterator<Item = &str> {

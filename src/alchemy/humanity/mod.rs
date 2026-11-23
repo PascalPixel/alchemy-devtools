@@ -1852,6 +1852,11 @@ impl<'r, 'a> Walk<'r, 'a> {
                     .iter()
                     .filter_map(|tokens| self.parameter_name(tokens))
                     .collect();
+                // Every name the function gives a parameter or local, for
+                // whether a rename would clash (`naming`).
+                let scope = (self.file.to_string(), statement[0]);
+                let names = duplicates::bound(&parameters, &tokens).into_keys().map(str::to_string);
+                self.report.naming.scopes.entry(scope).or_default().extend(names);
                 duplicates::bind(&parameters, &tokens)
             }
             None => tokens.iter().map(|text| text.to_string()).collect(),
@@ -2160,12 +2165,20 @@ pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, t
             units.push(path);
             continue;
         }
+        // A picture: its stem, for the names taken from it.
+        if let Some(picture) = path.strip_suffix(".png") {
+            report.naming.assets.insert(picture.rsplit('/').next().unwrap_or(picture).to_ascii_lowercase());
+            continue;
+        }
         file(&mut report, path, text);
         if is_map_overlay(path) {
             units.push(path);
         }
         if naming::is_pret_flash(path) {
             report.naming.pret.extend(naming::identifiers(text).map(str::to_string));
+        }
+        if naming::is_m4a(path) {
+            report.naming.pret.extend(naming::code_identifiers(text).into_iter().map(str::to_string));
         }
     }
     for path in units {
@@ -2338,11 +2351,14 @@ fn tracked(root: &Path, folders: &[String]) -> Result<Vec<String>, String> {
     Ok(String::from_utf8_lossy(&output.stdout).split('\0').filter(|path| !path.is_empty()).map(str::to_string).collect())
 }
 
-/// The tracked C, headers and folder guides of a game, never build output.
+/// The tracked C, headers and folder guides of a game, never build output,
+/// and its pictures by path alone (their text empty).
 fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     let mut files = Vec::new();
     for path in tracked(root, &[format!("games/{game}/src"), format!("games/{game}/include")])? {
-        if path.ends_with(".c") || path.ends_with(".h") || is_folder_guide(&path) {
+        if path.ends_with(".png") {
+            files.push((path, String::new()));
+        } else if path.ends_with(".c") || path.ends_with(".h") || is_folder_guide(&path) {
             let bytes = std::fs::read(root.join(&path)).map_err(|error| format!("cannot read {path}: {error}"))?;
             files.push((path, String::from_utf8_lossy(&bytes).into_owned()));
         }

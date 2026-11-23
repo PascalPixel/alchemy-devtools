@@ -34,6 +34,20 @@ const TYPE_WORDS: &[&str] =
 /// each local as it is first declared. A member after `.` or `->` keeps its
 /// name.
 pub(super) fn bind(parameters: &[String], tokens: &[&str]) -> Vec<String> {
+    let bound = bound(parameters, tokens);
+    tokens
+        .iter()
+        .enumerate()
+        .map(|(at, text)| match bound.get(text) {
+            Some(number) if !(at > 0 && matches!(tokens[at - 1], "." | "->")) => format!("${number}"),
+            _ => text.to_string(),
+        })
+        .collect()
+}
+
+/// The names a function body gives its parameters and locals, as `bind`
+/// finds them, each with its number.
+pub(super) fn bound<'a>(parameters: &'a [String], tokens: &[&'a str]) -> HashMap<&'a str, usize> {
     let ident = |text: &str| text.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') && !is_keyword(text);
     let mut bound: HashMap<&str, usize> = HashMap::new();
     for name in parameters {
@@ -99,14 +113,7 @@ pub(super) fn bind(parameters: &[String], tokens: &[&str]) -> Vec<String> {
         start = false;
         at += 1;
     }
-    tokens
-        .iter()
-        .enumerate()
-        .map(|(at, text)| match bound.get(text) {
-            Some(number) if !(at > 0 && matches!(tokens[at - 1], "." | "->")) => format!("${number}"),
-            _ => text.to_string(),
-        })
-        .collect()
+    bound
 }
 
 /// A name's `g` or `s` storage letter, if it has one, and the rest.

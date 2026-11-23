@@ -76,13 +76,21 @@ pub struct Typed {
     pub scope: Option<usize>,
 }
 
-/// What the checks read: every name, the struct-typed variables and the
-/// identifiers pret's flash library uses (`PRET_FLASH`).
+/// What the checks read: every name, the struct-typed variables, the
+/// identifiers pret's flash library uses (`PRET_FLASH`) and those the m4a
+/// sound driver's code uses (`M4A`), every name each function gives its
+/// parameters and locals, and the file stems of the game's pictures.
 #[derive(Default)]
 pub struct Names {
     pub names: Vec<Name>,
     pub typed: Vec<Typed>,
     pub pret: HashSet<String>,
+    /// The parameters and locals of each function, of any type, by its file
+    /// and the token that starts it (`Typed::scope`).
+    pub scopes: HashMap<(String, usize), HashSet<String>>,
+    /// The stems of the game's pictures (`crates` of `sprite/crates.png`),
+    /// lowercase.
+    pub assets: HashSet<String>,
 }
 
 /// Names pret spells with a plural prefix beside a singular one
@@ -116,6 +124,66 @@ pub const PRET_FLASH: &[&str] = &[
 /// Whether a file is one of pret's flash library's.
 pub fn is_pret_flash(path: &str) -> bool {
     PRET_FLASH.iter().any(|file| path.ends_with(file))
+}
+
+/// The files of the m4a sound driver, the third-party library S3 keeps under
+/// its own names (`SoundMain`, `MPlayMainNext`, `numTracks`,
+/// `MAX_DIRECTSOUND_CHANNELS`): the C the Makefile's `SOUND_C` routes
+/// through pret's `old_agbcc`, and the driver's own headers. Every
+/// identifier their code uses (comments and strings aside, which name the
+/// game's routines that call them) is left out of the checks.
+pub const M4A: &[&str] = &[
+    "tbs/src/sound/audio.c",
+    "tbs/src/sound/tables.c",
+    "tbs/src/sound/driver.c",
+    "tla/src/sound/sound.c",
+    "tla/src/sound/tables.c",
+    "tla/src/sound/player_work_copy.c",
+    "tla/src/sound/driver.c",
+    "/include/sound/sound_driver.h",
+    "/include/sound/sound_driver_types.h",
+    "/include/sound/sound_driver_symbols.h",
+];
+
+/// Whether a file is one of the m4a sound driver's.
+pub fn is_m4a(path: &str) -> bool {
+    M4A.iter().any(|file| path.ends_with(file))
+}
+
+/// The identifiers a file's code uses: its comments, strings and character
+/// constants left out.
+pub fn code_identifiers(text: &str) -> Vec<&str> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::new();
+    let (mut at, mut start) = (0, None);
+    while at < bytes.len() {
+        let b = bytes[at];
+        if b.is_ascii_alphanumeric() || b == b'_' {
+            start.get_or_insert(at);
+            at += 1;
+            continue;
+        }
+        if let Some(from) = start.take() {
+            out.push(&text[from..at]);
+        }
+        match (b, bytes.get(at + 1)) {
+            (b'/', Some(b'/')) => at = text[at..].find('\n').map_or(bytes.len(), |end| at + end),
+            (b'/', Some(b'*')) => at = text[at + 2..].find("*/").map_or(bytes.len(), |end| at + 2 + end + 2),
+            (b'"' | b'\'', _) => {
+                at += 1;
+                while at < bytes.len() && bytes[at] != b {
+                    at += if bytes[at] == b'\\' { 2 } else { 1 };
+                }
+                at += 1;
+            }
+            _ => at += 1,
+        }
+    }
+    if let Some(from) = start {
+        out.push(&text[from..]);
+    }
+    out.retain(|word| word.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_'));
+    out
 }
 
 /// The identifiers a file's text uses, comments and strings included.
@@ -217,18 +285,18 @@ fn in_pret_term(words: &[String], at: usize) -> bool {
 /// Words that name one idea, as the code has used them, each set marked by
 /// whose words they are. A game thing's word is the game's (H3): where its
 /// text uses exactly one word of a set, that is the word; where it uses
-/// several, the game itself tells them apart (`ivy` and the Djinni Vine,
-/// `gold` and `coins`), so the set doesn't apply; where it uses none, the
+/// several, the game itself tells them apart (`gold` and `coins`, `monster`
+/// and `enemy`), so the set doesn't apply, to words or prefixes; where it uses none, the
 /// word most names use. A code idea's word is the one most names use, its
 /// shortened forms counted with it. Words that only look alike, or that the
 /// code uses for different things (`player`, the person playing, and the
 /// leader the player controls; `draw` and `render`, two stages; `destroy`
-/// an object and `delete` a save), are not here.
+/// an object and `delete` a save; the ivy Growth raises and a vine), are not
+/// here.
 pub const SPELLINGS: &[(Words, &[&str])] = &[
     (Words::Game, &["merchant", "shopkeeper", "shopkeep", "clerk", "vendor"]),
     (Words::Game, &["enemy", "monster", "foe"]),
     (Words::Game, &["rival", "opponent"]),
-    (Words::Game, &["ivy", "vine"]),
     (Words::Game, &["coin", "gold", "money"]),
     (Words::Code, &["start", "begin"]),
     (Words::Code, &["calculate", "compute"]),
@@ -294,7 +362,9 @@ fn meaning(word: &str) -> String {
 
 /// Names the checks leave alone: placeholders, the compiler's and the
 /// hardware's names (`__`, `REG_`, `io_reg.h`), message symbols (`Msg...`,
-/// AGENTS.md's S3), the temporary flags, and the `OWN_` guards, which
+/// AGENTS.md's S3), the temporary flags, the m4a driver's music players
+/// (`gMPlayInfo_BGM`, `gMPlayInfo_SE5`: the driver's own scheme, wherever
+/// declared), and the `OWN_` guards, which
 /// repeat the name of the symbol they guard (`OWN_gFlash`) and are
 /// measured there.
 fn exempt(name: &Name) -> bool {
@@ -303,6 +373,7 @@ fn exempt(name: &Name) -> bool {
         || n.starts_with("__")
         || n.starts_with("REG_")
         || n.starts_with("OWN_")
+        || n.starts_with("gMPlayInfo_")
         || n.starts_with("FLAG_SCENE_TEMP_")
         || n.starts_with("FLAG_MAPSEC_TEMP_")
         || n.starts_with("FLAG_AREA_TEMP_")
@@ -450,7 +521,7 @@ pub fn check(names: &Names, text: Option<&GameText>) -> Vec<Finding> {
     let families = collect_families(&all);
     let runs = Runs::new(&all);
     let hardware = hardware_segments(&names.names);
-    let twins = twin_prefixes(&all, &hardware, &mut out);
+    let twins = twin_prefixes(&all, &hardware, text, &names.assets, &mut out);
     words_of_one_idea(&all, &usage, &runs, &twins, &hardware, text, &mut out);
     referents(names, &mut out);
     shapes(&all, &families, text, &mut out);
@@ -556,6 +627,15 @@ fn sibling<'a>(name: &Name, users: &[&'a Name]) -> Option<&'a Name> {
         .copied()
 }
 
+/// Whether a word is SGL's `FX` suffix, which S3 sets for a routine's or a
+/// value's 16.16 fixed-point form (`Math_MulFX`, `Actor_SetPositionFX`,
+/// `IRIS_HALF_PIXELS_FX`), not a shortened `effect`: `FX` in capitals in a
+/// name of mixed case, or a constant's last segment. A constant's `FX`
+/// elsewhere (`BATTLE_FX_NOVA`), and `Fx`, are still measured.
+fn is_sgl_suffix(piece: &str, upper: bool, segment: &str, last: bool) -> bool {
+    piece == "FX" && (!upper || (last && segment == "FX"))
+}
+
 /// `abbreviation` and `synonym`: a word with a second spelling in the game.
 /// A word in a family's lead (its prefix, or its enum's shared leading
 /// segments) is reported once for the lead, at its first name, rather than
@@ -594,16 +674,27 @@ fn words_of_one_idea(
     }
     let mut leads_done = HashSet::new();
     for &name in all {
-        // Each word with the segment it is in.
-        let placed: Vec<(usize, &str, String)> = segments(&name.name)
+        // Each word with the segment it is in, and as the name writes it.
+        let segments_of = segments(&name.name);
+        let last = segments_of.len() - 1;
+        let placed: Vec<(usize, &str, &str, String)> = segments_of
             .into_iter()
             .enumerate()
-            .flat_map(|(at, segment)| words(segment).into_iter().map(move |word| (at, segment, word)))
+            .flat_map(|(at, segment)| {
+                provenance::pieces(segment).into_iter().map(move |piece| (at, segment, piece, piece.to_ascii_lowercase()))
+            })
             .collect();
-        let singulars: Vec<String> = placed.iter().map(|(_, _, word)| singular(word)).collect();
-        for (index, (at, segment, word)) in placed.into_iter().enumerate() {
+        let singulars: Vec<String> = placed.iter().map(|(_, _, _, word)| singular(word)).collect();
+        let upper = Style::of(&name.name) == Style::Upper;
+        for (index, (at, segment, piece, word)) in placed.into_iter().enumerate() {
             let (metric, full) = if let Some(&(_, full)) = ABBREVIATIONS.iter().find(|(short, _)| *short == singular(&word)) {
-                if in_pret_term(&singulars, index) || is_pret_word(&word) || text.is_some_and(|text| text.uses(&word)) || usage.count(full) == 0 || hardware.contains(segment) {
+                if in_pret_term(&singulars, index)
+                    || is_pret_word(&word)
+                    || is_sgl_suffix(piece, upper, segment, at == last)
+                    || text.is_some_and(|text| text.uses(&word))
+                    || usage.count(full) == 0
+                    || hardware.contains(segment)
+                {
                     continue;
                 }
                 ("abbreviation", full)
@@ -639,26 +730,38 @@ fn words_of_one_idea(
 /// when each of its words means one of the type's (`object` and `obj` for
 /// `struct Object`, `work` and `fieldWork` for `struct FieldWork`),
 /// or it is the type's initials; names for a role (`leader`, `target`) are
-/// not spellings and are left alone, and so are struct members and arrays,
-/// as `prefix_twin` leaves out members: a member names its place in a record
-/// and an array a set, not one of the type. The spelling most variables use
+/// not spellings and are left alone, and so are struct members, arrays and
+/// plurals, as `prefix_twin` leaves out members: a member names its place in
+/// a record, and an array or a pointer named in the plural (`objects`,
+/// indexed as the whole battle's objects) a set, not one of the type. A
+/// spelling another type owns (it is that type's most used, and that type
+/// uses it more: `work`, `struct FieldWork`'s in 263 places) is that type's,
+/// neither proposed nor measured here, since a `struct FieldEffectWork`
+/// called `work` would be misread. The spelling most variables use
 /// is the type's, and each other spelling is listed once, at its first use
-/// in a function that doesn't already give that name to another variable.
+/// in a function that doesn't already give that name to another variable,
+/// parameter or local of any type.
 fn referents(names: &Names, out: &mut Vec<Finding>) {
     let mut by_tag: BTreeMap<&str, Vec<&Typed>> = BTreeMap::new();
     // The names each declaration (a function, with its parameters) uses.
-    let mut scopes: HashMap<(&str, usize), Vec<&Typed>> = HashMap::new();
+    let mut scopes: HashMap<(&str, usize), Vec<&str>> = HashMap::new();
+    for ((file, scope), all) in &names.scopes {
+        scopes.entry((file.as_str(), *scope)).or_default().extend(all.iter().map(String::as_str));
+    }
     for typed in &names.typed {
         if let Some(scope) = typed.scope {
-            scopes.entry((typed.file.as_str(), scope)).or_default().push(typed);
+            scopes.entry((typed.file.as_str(), scope)).or_default().push(typed.name.as_str());
         }
         let bytes = typed.name.as_bytes();
         let pret = bytes.len() > 1 && matches!(bytes[0], b'g' | b's') && bytes[1].is_ascii_uppercase();
-        if typed.member || typed.array || pret || super::is_placeholder(&typed.name) || !bytes[0].is_ascii_lowercase() {
+        let plural = words(&typed.name).last().is_some_and(|word| singular(word) != *word);
+        if typed.member || typed.array || plural || pret || super::is_placeholder(&typed.name) || !bytes[0].is_ascii_lowercase() {
             continue;
         }
         by_tag.entry(typed.tag.as_str()).or_default().push(typed);
     }
+    // Each type's spellings (its words' meanings) and the variables using each.
+    let mut spellings_of: BTreeMap<&str, BTreeMap<String, Vec<&Typed>>> = BTreeMap::new();
     for (tag, variables) in by_tag {
         let type_words: HashSet<String> = words(tag).iter().map(|word| meaning(word)).collect();
         let initials: String = words(tag).iter().filter_map(|word| word.chars().next()).collect();
@@ -672,12 +775,25 @@ fn referents(names: &Names, out: &mut Vec<Finding>) {
                 name_words.iter().all(|word| type_words.contains(&meaning(word)))
             };
             if spells {
-                // `entry` and `entries` are one spelling: one thing and a list of them.
                 let key: Vec<String> = provenance::pieces(&typed.name).iter().map(|word| singular(word)).collect();
                 let key = if key.is_empty() { typed.name.to_ascii_lowercase() } else { key.join(" ") };
                 spellings.entry(key).or_default().push(typed);
             }
         }
+        spellings_of.insert(tag, spellings);
+    }
+    // The type each spelling is the most used of, with how many use it there.
+    let mut owners: HashMap<String, (&str, usize)> = HashMap::new();
+    for (tag, spellings) in &spellings_of {
+        if let Some((spelling, uses)) = spellings.iter().max_by_key(|(spelling, uses)| (uses.len(), std::cmp::Reverse(spelling.len()))) {
+            let owner = owners.entry(spelling.clone()).or_insert((tag, uses.len()));
+            if uses.len() > owner.1 {
+                *owner = (tag, uses.len());
+            }
+        }
+    }
+    for (tag, mut spellings) in spellings_of {
+        spellings.retain(|spelling, uses| owners.get(spelling).is_none_or(|&(owner, count)| owner == tag || count <= uses.len()));
         if spellings.len() < 2 {
             continue;
         }
@@ -703,9 +819,7 @@ fn referents(names: &Names, out: &mut Vec<Finding>) {
             // Where its function already calls another variable `best`, the
             // rename would clash.
             let taken = |typed: &Typed| {
-                typed.scope.and_then(|scope| scopes.get(&(typed.file.as_str(), scope))).is_some_and(|others| {
-                    others.iter().any(|other| other.name == best)
-                })
+                typed.scope.and_then(|scope| scopes.get(&(typed.file.as_str(), scope))).is_some_and(|others| others.contains(&best.as_str()))
             };
             let Some(first) = uses.iter().copied().find(|typed| !taken(typed)) else { continue };
             let what = format!("struct {tag}: {} uses -> {best} ({most} uses)", uses.len());
@@ -791,7 +905,11 @@ fn common_prefix(members: &[(&Name, &str)]) -> Option<String> {
 /// The area names' words, for finding a place in a name: `Kolima Forest` is
 /// `kolima`, `forest`. Only proper names count, every word capitalized but
 /// short ones (`Road to Babi Lighthouse`) and no number, which leaves out the debug rooms' labels (`Test 0`,
-/// `Menu test`, `Title screen`).
+/// `Menu test`, `Title screen`). A compass point the text writes as letters
+/// is its word (`E Tundaria Islet` is `east`, `tundaria`, `islet`, as
+/// `AREA_EAST_TUNDARIA_ISLET` writes it), and an area of one word that ends
+/// other areas' names (`Sanctum`, beside `Vale Sanctum` and `Sol Sanctum`)
+/// names a kind of place, not one place, so it is left out.
 fn area_words(text: Option<&GameText>) -> Vec<Vec<String>> {
     let proper = |area: &str| {
         let capitalized = |word: &str| word.chars().next().is_some_and(|c| c.is_ascii_uppercase());
@@ -805,14 +923,34 @@ fn area_words(text: Option<&GameText>) -> Vec<Vec<String>> {
             text.areas()
                 .iter()
                 .filter(|area| proper(area))
-                .map(|area| words(&area.replace(|c: char| !c.is_ascii_alphanumeric(), "_")))
+                .map(|area| {
+                    let spelled: Vec<&str> = area.split(' ').map(|word| compass(word).unwrap_or(word)).collect();
+                    words(&spelled.join(" ").replace(|c: char| !c.is_ascii_alphanumeric(), "_"))
+                })
                 .filter(|w| !w.is_empty())
                 .collect()
         })
         .unwrap_or_default();
-    let mut areas: Vec<Vec<String>> = areas.into_iter().collect();
+    let kinds: BTreeSet<&String> =
+        areas.iter().filter(|area| area.len() == 1).filter(|one| areas.iter().any(|area| area.len() > 1 && area.last() == one.last())).map(|one| &one[0]).collect();
+    let mut areas: Vec<Vec<String>> = areas.iter().filter(|area| !(area.len() == 1 && kinds.contains(&area[0]))).cloned().collect();
     areas.sort_by_key(|area| std::cmp::Reverse(area.len()));
     areas
+}
+
+/// The compass point a word of letters writes (`SE`), spelled out.
+fn compass(word: &str) -> Option<&'static str> {
+    let points = [
+        ("N", "North"),
+        ("S", "South"),
+        ("E", "East"),
+        ("W", "West"),
+        ("NE", "Northeast"),
+        ("NW", "Northwest"),
+        ("SE", "Southeast"),
+        ("SW", "Southwest"),
+    ];
+    points.iter().find(|(short, _)| *short == word).map(|(_, full)| *full)
 }
 
 /// Whether a prefix is a place's name, or the start of one (`Fuchin` of
@@ -826,6 +964,17 @@ fn is_place(family: &str, areas: &[Vec<String>]) -> bool {
 fn place_at(name_words: &[String], areas: &[Vec<String>]) -> Option<(usize, String)> {
     (0..name_words.len())
         .find_map(|at| areas.iter().find(|area| name_words[at..].starts_with(area)).map(|area| (at, area.join("_").to_ascii_uppercase())))
+}
+
+/// Whether a member that lacks its enum's shared lead names a place of its
+/// own where the lead names one: a scene file serving two places
+/// (`CELL_BEHAVIOR_IMIL_FALLS_CAVE_ICE` beside `CELL_BEHAVIOR_FUCHIN_FALLS_`)
+/// starts with its own place, as its siblings start with theirs.
+fn own_place(part: &str, common: &str, areas: &[Vec<String>]) -> bool {
+    let (part_segments, common_segments): (Vec<&str>, Vec<&str>) = (part.split('_').collect(), common.split('_').collect());
+    let shared = part_segments.iter().zip(&common_segments).take_while(|(a, b)| a == b).count();
+    let (theirs, own) = (common_segments[shared..].join("_"), words(&part_segments[shared..].join("_")));
+    shared < common_segments.len() && is_place(&theirs, areas) && matches!(place_at(&own, areas), Some((0, _)))
 }
 
 /// `family_shape`: members whose shape the rest of their family doesn't
@@ -873,16 +1022,19 @@ fn shapes(all: &[&Name], families: &[Family], text: Option<&GameText>, out: &mut
                 }
             }
         }
-        // An enum's shared leading segments.
+        // An enum's shared leading segments. An enum of actor ids numbers
+        // one room's actors, each named for what it is, so its family is
+        // `ACTOR_` alone, whatever a run of one kind inside it shares
+        // (`ACTOR_STONE_FACE_A` to `_F` beside `ACTOR_NUT_CHEST_PILLAR`).
         if family.label.starts_with("enum ") {
-            if let Some(common) = common_prefix(members) {
+            if let Some(common) = common_prefix(members).filter(|common| !common.starts_with("ACTOR_")) {
                 let lead = format!("{common}_");
                 let sharing = members.iter().filter(|(_, part)| part.starts_with(&lead)).count();
                 let example = members.iter().find(|(_, part)| part.starts_with(&lead)).map_or("", |(name, _)| name.name.as_str());
                 for (name, part) in members {
                     // The family's base (`CANVAS_COPY` beside `CANVAS_COPY_AND_CLEAR`) has its own shape.
                     let base = common.starts_with(part) && common.as_bytes().get(part.len()) == Some(&b'_');
-                    if !part.starts_with(&lead) && *part != common && !base {
+                    if !part.starts_with(&lead) && *part != common && !base && !own_place(part, &common, &areas) {
                         let what = format!("missing part: {lead}... as {sharing} of the {size} in its enum are (as {example})");
                         note(out, name, "part", what);
                     }
@@ -933,6 +1085,12 @@ fn shapes(all: &[&Name], families: &[Family], text: Option<&GameText>, out: &mut
         .collect();
     for &name in all.iter().filter(|name| matches!(name.kind, NameKind::Function | NameKind::Prototype) && !name.name.contains('_')) {
         let n = name.name.as_str();
+        // A routine resident in IWRAM, which C only declares, is named by its
+        // linked symbol, `IwramName`; `Iwram_Name` is its entry at the fixed
+        // address (`IwramMulFX` beside `Iwram_MulFX`), so the two differ on purpose.
+        if name.kind == NameKind::Prototype && n.starts_with("Iwram") {
+            continue;
+        }
         let found = function_prefixes
             .iter()
             .filter(|(prefix, _)| n.len() > prefix.len() && n.starts_with(**prefix) && n.as_bytes()[prefix.len()].is_ascii_uppercase())
@@ -948,14 +1106,24 @@ fn shapes(all: &[&Name], families: &[Family], text: Option<&GameText>, out: &mut
 /// `family_shape`, game-wide: a count or bound (`MEASURE_WORDS`) first in a
 /// name where the game's other names put it last, or the other way round.
 /// Functions and the macros written as calls are left out, since there
-/// `Count` is a verb (`COUNT_ALL_CURES(unit, count)`).
+/// `Count` is a verb (`COUNT_ALL_CURES(unit, count)`), and so are a name of
+/// two things joined by `and` (`countAndShadow`, which holds a count and
+/// then a shadow) and a measure word with a number joined to it, which names
+/// an operation (`MAX4_WORDS`, keep the brightest of four, beside
+/// `COPY8_WORDS`).
 fn measures(all: &[&Name], out: &mut Vec<Finding>) {
     let meanings: BTreeSet<String> = MEASURE_WORDS.iter().map(|word| meaning(word)).collect();
+    let operation = |name: &str| {
+        name.split('_').any(|segment| {
+            let letters = segment.trim_end_matches(|c: char| c.is_ascii_digit());
+            letters.len() < segment.len() && MEASURE_WORDS.contains(&letters.to_ascii_lowercase().as_str())
+        })
+    };
     for measure in &meanings {
         let (mut leading, mut trailing) = (Vec::new(), Vec::new());
         for &name in all.iter().filter(|name| !matches!(name.kind, NameKind::Function | NameKind::Prototype | NameKind::FunctionMacro)) {
             let name_words = words(&name.name);
-            if name_words.len() < 2 {
+            if name_words.len() < 2 || name_words.iter().any(|word| word == "and") || operation(&name.name) {
                 continue;
             }
             if meaning(&name_words[0]) == *measure {
@@ -984,16 +1152,32 @@ fn measures(all: &[&Name], out: &mut Vec<Finding>) {
 /// `prefix_twin`: two prefixes for one idea, their words the same once each
 /// shortened word is spelled out, each `SPELLINGS` word is its set's and
 /// plurals are singular (`BattleObj_` and `BattleObject_`, `ANIM_` and
-/// `ANIMATION_`, `Projectiles_` and `PROJECTILE_`). Prefixes that differ
+/// `ANIMATION_`, `STREAKS_` and `STREAK_`). Prefixes that differ
 /// only in case (`Battle_` and `BATTLE_`) are one spelling, struct members
 /// are left out, so are macros written as calls, which may start with a
 /// verb (`COUNT_ALL_CURES` counts, beside pret's `NUM_MUSIC_PLAYERS`), and so is a shortened word that is a hardware register's
 /// segment (`OBJ_` of `OBJ_AFFINE_MATRIX_COUNT`, the hardware's OBJ, not a
 /// shortened object). A plural prefix whose names are all pret's
 /// (`PRET_PLURALS`: `PALETTES_ALL` beside `PALETTE_`) is pret's set and left
-/// out. The spelling fewer names use is reported, at its first name;
+/// out. Where the game's text uses two words of a `SPELLINGS` set of its
+/// own (`monster` and `enemy`, `opponent` and `rival`), it tells them apart,
+/// so their prefixes are two ideas. A plural is no second spelling where
+/// English or the game writes one: a rate (`SECONDS_PER_MINUTE` beside
+/// `SECOND_`, whose names `_PER_` are left out of their prefix), a function
+/// prefix that walks a list (`Actors_SetCellsOpen` beside `Actor_SetCellOpen`),
+/// a picture's own name (`CRATES_` of `sprite/crates.png`) and a proper
+/// name's possessive (`ISAACS_`, Isaac's bed, where the text writes Isaac
+/// only capitalized); nor where one of the two is a place's name or the
+/// start of one (`ISLET_` of Islet Cave beside the Islets' `ISLETS_`), two
+/// places. The spelling fewer names use is reported, at its first name;
 /// the set of those prefixes is returned.
-fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, out: &mut Vec<Finding>) -> HashSet<String> {
+fn twin_prefixes(
+    all: &[&Name],
+    hardware: &HashSet<String>,
+    text: Option<&GameText>,
+    assets: &HashSet<String>,
+    out: &mut Vec<Finding>,
+) -> HashSet<String> {
     let mut by_prefix: BTreeMap<&str, Vec<&Name>> = BTreeMap::new();
     for &name in all.iter().filter(|name| !matches!(name.kind, NameKind::Field | NameKind::FunctionMacro)) {
         if let Some(family) = prefix(&name.name)
@@ -1003,19 +1187,36 @@ fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, out: &mut Vec<Findin
             by_prefix.entry(family).or_default().push(name);
         }
     }
+    let rate = |name: &Name| segments(&name.name).get(1).is_some_and(|segment| segment.eq_ignore_ascii_case("per"));
     by_prefix.retain(|family, members| {
         let plural = words(family).last().is_some_and(|word| singular(word) != *word);
-        !(plural && members.iter().all(|name| PRET_PLURALS.contains(&name.name.as_str())))
+        if plural {
+            members.retain(|name| !rate(name));
+        }
+        let last = words(family).last().cloned().unwrap_or_default();
+        let functions = members.iter().all(|name| matches!(name.kind, NameKind::Function | NameKind::Prototype));
+        let possessive = text.is_some_and(|text| text.is_proper(&singular(&last)));
+        !members.is_empty()
+            && !(plural
+                && (members.iter().all(|name| PRET_PLURALS.contains(&name.name.as_str())) || functions || assets.contains(&last) || possessive))
     });
+    // The words of a SPELLINGS set the game's own text tells apart.
+    let apart: HashSet<&str> = SPELLINGS
+        .iter()
+        .filter(|(whose, set)| *whose == Words::Game && set.iter().filter(|word| text.is_some_and(|text| text.uses(word))).count() > 1)
+        .flat_map(|(_, set)| set.iter().copied())
+        .collect();
     let mut ideas: BTreeMap<Vec<String>, Vec<(&str, &Vec<&Name>)>> = BTreeMap::new();
     for (family, members) in &by_prefix {
         let family_words = words(family);
         if family_words.is_empty() {
             continue;
         }
-        let idea: Vec<String> = family_words.iter().map(|word| meaning(word)).collect();
+        let idea: Vec<String> =
+            family_words.iter().map(|word| if apart.contains(singular(word).as_str()) { singular(word) } else { meaning(word) }).collect();
         ideas.entry(idea).or_default().push((family, members));
     }
+    let areas = area_words(text);
     let mut twins = HashSet::new();
     for spellings in ideas.values() {
         let mut distinct: BTreeMap<String, (usize, &str, &Name)> = BTreeMap::new();
@@ -1024,7 +1225,7 @@ fn twin_prefixes(all: &[&Name], hardware: &HashSet<String>, out: &mut Vec<Findin
             let entry = distinct.entry(key).or_insert((0, family, members[0]));
             entry.0 += members.len();
         }
-        if distinct.len() < 2 {
+        if distinct.len() < 2 || spellings.iter().any(|(family, _)| is_place(family, &areas)) {
             continue;
         }
         // pret's spelling where one uses a word of pret's (`ANIM_`, not
@@ -1203,7 +1404,8 @@ mod tests {
                 typed("FieldWork", "work", 6),
                 typed("FieldWork", "fieldWork", 7),
                 typed("FieldWork", "work", 8),
-                typed("FieldWork", "works", 8),
+                typed("FieldWork", "work", 8),
+                typed("FieldWork", "works", 10),
                 typed("FieldWork", "fw", 9),
             ],
             ..Names::default()
@@ -1216,7 +1418,166 @@ mod tests {
                 "f.c:9 fw\tstruct FieldWork: 1 uses -> work (3 uses)",
                 "f.c:3 obj\tstruct Object: 1 uses -> object (3 uses)",
             ],
-            "a role (leader) and a global are not spellings of the type; a list of works is work"
+            "a role (leader) and a global are not spellings of the type; works, named in the plural, names a set"
+        );
+    }
+
+    #[test]
+    fn one_type_one_name_takes_no_spelling_another_type_owns() {
+        let typed = |tag: &str, name: &str, line, scope| Typed {
+            tag: tag.to_string(),
+            name: name.to_string(),
+            file: "f.c".to_string(),
+            line,
+            scope: Some(scope),
+            ..Typed::default()
+        };
+        let mut names = Names {
+            typed: vec![
+                // `work` is FieldWork's.
+                typed("FieldWork", "work", 1, 1),
+                typed("FieldWork", "work", 2, 2),
+                typed("FieldWork", "work", 3, 3),
+                typed("FieldWork", "work", 4, 4),
+                typed("FieldWork", "work", 5, 5),
+                typed("FieldEffectWork", "work", 6, 6),
+                typed("FieldEffectWork", "work", 7, 7),
+                typed("FieldEffectWork", "work", 8, 8),
+                typed("FieldEffectWork", "work", 9, 9),
+                typed("FieldEffectWork", "effectWork", 10, 10),
+                typed("FieldEffectWork", "effectWork", 11, 11),
+                typed("FieldEffectWork", "effectWork", 12, 12),
+                typed("FieldEffectWork", "fieldEffectWork", 13, 13),
+                // A plural pointer names the set it is indexed in.
+                typed("BattleObject", "battleObject", 20, 20),
+                typed("BattleObject", "battleObject", 21, 21),
+                typed("BattleObject", "battleObject", 22, 22),
+                typed("BattleObject", "objects", 23, 23),
+                // `layer` where the function already has an `s32 layer`.
+                typed("MapLayer", "layer", 30, 30),
+                typed("MapLayer", "layer", 31, 31),
+                typed("MapLayer", "layer", 32, 32),
+                typed("MapLayer", "mapLayer", 33, 33),
+            ],
+            ..Names::default()
+        };
+        names.scopes.insert(("f.c".to_string(), 33), ["layer".to_string(), "mapLayer".to_string()].into());
+        let findings: Vec<String> = check(&names, None).into_iter().map(|f| format!("{}:{} {}", f.file, f.line, f.what)).collect();
+        assert_eq!(
+            findings,
+            ["f.c:13 fieldEffectWork\tstruct FieldEffectWork: 1 uses -> effectWork (3 uses)"],
+            "FieldEffectWork's work is FieldWork's, neither proposed nor measured; objects names a set; mapLayer's function has a layer"
+        );
+    }
+
+    #[test]
+    fn the_sgl_suffix_and_the_sound_driver() {
+        let file = "games/tbs/src/field/a.c";
+        let names = Names {
+            names: vec![
+                name("Actor_SetAttachedEffect", NameKind::Function, file, 1),
+                name("Actor_SetPositionFX", NameKind::FunctionMacro, file, 2),
+                name("Math_SqrtFXFar", NameKind::Function, file, 3),
+                name("IRIS_HALF_PIXELS_FX", NameKind::Macro, file, 4),
+                name("BATTLE_FX_NOVA", NameKind::Macro, file, 5),
+                name("SoundTest_FxString", NameKind::Global, file, 6),
+                name("gMPlayInfo_SE5", NameKind::Extern, file, 7),
+                name("gMPlayInfo_ActionSE", NameKind::Extern, file, 8),
+                name("gMPlayInfo_Jingle", NameKind::Extern, file, 9),
+            ],
+            ..Names::default()
+        };
+        let findings: Vec<String> =
+            check(&names, None).into_iter().map(|f| format!("{} {}", f.metric, f.what.split('\t').next().unwrap())).collect();
+        assert_eq!(
+            findings,
+            ["abbreviation BATTLE_FX_NOVA", "abbreviation SoundTest_FxString"],
+            "FX in a mixed-case name or a constant's last segment is SGL's; the music players are the driver's"
+        );
+        let code = "void SoundMain(void); // Sound_Play calls it\nchar *s = \"Sound_Stop\"; /* Sound_X */ u8 c = 'a'; MPlayMain(p);";
+        assert_eq!(code_identifiers(code), ["void", "SoundMain", "void", "char", "s", "u8", "c", "MPlayMain", "p"]);
+        assert!(is_m4a("games/tla/src/sound/driver.c") && is_m4a("games/tbs/include/sound/sound_driver_types.h"));
+        assert!(!is_m4a("games/tla/src/sound/sound_play.c") && !is_m4a("games/tla/include/sound/sound.h"));
+    }
+
+    #[test]
+    fn family_shapes_the_rules_keep() {
+        let po = "msgctxt \"MsgDebugAreaName\"\nmsgid \"00001\"\nmsgstr \"E Tundaria Islet\"\n\nmsgid \"00002\"\nmsgstr \"Vale Sanctum\"\n\n\
+                  msgid \"00003\"\nmsgstr \"Sanctum\"\n\nmsgid \"00004\"\nmsgstr \"Fuchin Falls\"\n\nmsgid \"00005\"\nmsgstr \"Imil\"\n\n\
+                  msgid \"00006\"\nmsgstr \"Vale\"\n\nmsgid \"00007\"\nmsgstr \"Bilibin\"\n\nmsgid \"00008\"\nmsgstr \"Kolima\"\n";
+        let text = GameText::parse(po, Some(8)).unwrap();
+        assert_eq!(area_words(Some(&text)).iter().map(|area| area.join(" ")).collect::<Vec<_>>()[0], "east tundaria islet");
+        assert!(!area_words(Some(&text)).contains(&vec!["sanctum".to_string()]), "Sanctum alone ends other areas' names");
+        let flags = "games/tbs/include/flags.h";
+        let mut list: Vec<Name> = ["FLAG_VALE_A", "FLAG_VALE_B", "FLAG_BILIBIN_C", "FLAG_KOLIMA_D", "FLAG_IMIL_E", "FLAG_SAVE_RESTARTED_AT_SANCTUM"]
+            .iter()
+            .enumerate()
+            .map(|(at, n)| name(n, NameKind::Macro, flags, at + 1))
+            .collect();
+        for (at, n) in ["AREA_VALE", "AREA_BILIBIN", "AREA_KOLIMA", "AREA_IMIL", "AREA_FUCHIN_FALLS", "AREA_EAST_TUNDARIA_ISLET"].iter().enumerate() {
+            list.push(name(n, NameKind::Enumerator, "games/tla/include/area_ids.h", 10 + at));
+        }
+        let scene = "games/tbs/src/scene/imil_fuchin_falls.c";
+        for (at, n) in ["CB_FUCHIN_FALLS_A", "CB_FUCHIN_FALLS_B", "CB_FUCHIN_FALLS_C", "CB_FUCHIN_FALLS_D", "CB_FUCHIN_FALLS_E", "CB_IMIL_CAVE_ICE"]
+            .iter()
+            .enumerate()
+        {
+            list.push(Name { group: Some("falls.c#1".to_string()), ..name(n, NameKind::Enumerator, scene, 20 + at) });
+        }
+        for (at, n) in ["ACTOR_STONE_FACE_A", "ACTOR_STONE_FACE_B", "ACTOR_STONE_FACE_C", "ACTOR_STONE_FACE_D", "ACTOR_STONE_FACE_E", "ACTOR_NUT_CHEST"]
+            .iter()
+            .enumerate()
+        {
+            list.push(Name { group: Some("ruins.c#1".to_string()), ..name(n, NameKind::Enumerator, scene, 30 + at) });
+        }
+        let iwram = "games/tla/include/system/iwram_call.h";
+        for (at, n) in ["Iwram_CopyWords", "Iwram_FillWords", "Iwram_Sqrt"].iter().enumerate() {
+            list.push(name(n, NameKind::Function, iwram, 40 + at));
+        }
+        list.push(name("IwramMulFX", NameKind::Prototype, iwram, 45));
+        list.push(name("IwramRun", NameKind::Function, iwram, 46));
+        for (at, n) in ["ITEM_COUNT", "ENEMY_COUNT", "UNIT_COUNT", "ACTOR_COUNT", "SLOT_COUNT", "countAndShadow", "MAX4_WORDS", "LINE_MAX"]
+            .iter()
+            .enumerate()
+        {
+            list.push(name(n, NameKind::Macro, "games/tbs/include/counts.h", 50 + at));
+        }
+        let findings = check(&Names { names: list, ..Names::default() }, Some(&text));
+        let shapes: Vec<String> = findings.iter().filter(|f| f.metric == "family_shape").map(|f| f.what.clone()).collect();
+        assert_eq!(
+            shapes,
+            ["IwramRun\tseparator: Iwram_Run, as the 3 Iwram_ functions are, or a prefix of its own"],
+            "a Sanctum is no one place; E is east; a cell of Imil's own place; an actor enum's run; IWRAM's linked symbol; two things joined by and; an operation"
+        );
+    }
+
+    #[test]
+    fn prefix_twins_the_rules_keep() {
+        let po = "msgctxt \"MsgArena\"\nmsgid \"00001\"\nmsgstr \"Fight the next monster? The enemy waits. Isaac sleeps.\"\n\n\
+                  msgctxt \"MsgDebugAreaName\"\nmsgid \"00002\"\nmsgstr \"Islet Cave\"\n";
+        let text = GameText::parse(po, Some(1)).unwrap();
+        let file = "games/tla/src/scene/a.c";
+        let mut list = Vec::new();
+        let mut add = |names: &[&str], kind: NameKind| {
+            for n in names {
+                list.push(name(n, kind, file, list.len() + 1));
+            }
+        };
+        add(&["MONSTER_BATTLE", "ENEMY_A", "ENEMY_B"], NameKind::Macro);
+        add(&["SECONDS_PER_MINUTE", "SECOND_HAND", "SECOND_ROW"], NameKind::Macro);
+        add(&["Actors_SetCellsOpen", "Actor_SetCellOpen", "Actor_Run"], NameKind::Function);
+        add(&["ACTOR_A", "ACTOR_B"], NameKind::Enumerator);
+        add(&["CRATES_LANE", "CRATE_MOVED"], NameKind::Macro);
+        add(&["ISAACS_BED", "ISAAC_WALK"], NameKind::Enumerator);
+        add(&["ISLET_CAVE_EXIT", "ISLETS_EXIT"], NameKind::Macro);
+        add(&["STREAKS_HIT", "STREAK_WIDTH", "STREAK_HEIGHT"], NameKind::Macro);
+        let mut names = Names { names: list, ..Names::default() };
+        names.assets.insert("crates".to_string());
+        let twins: Vec<String> = check(&names, Some(&text)).into_iter().filter(|f| f.metric == "prefix_twin").map(|f| f.what).collect();
+        assert_eq!(
+            twins,
+            ["STREAKS_\t1 names; one idea with STREAK_ (2 names)"],
+            "the text tells monster from enemy; a rate; a routine over a list; a picture; Isaac's; a place"
         );
     }
 
