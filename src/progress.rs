@@ -92,7 +92,9 @@ before an #include of a file that uses its name, used nowhere else in its
 file or #undef'd right after, is a parameter of the shared file, and so is
 what that file declares under such a name: undocumented_shared where the
 shared file's comments name it, else still counted, listed with the shared
-file as where to say it.";
+file as where to say it. A message's extern whose symbol is a msgctxt of any of
+the game's text/*.po counts with the strings (undocumented_string), said by its
+text.";
 
 /// Both games' DONE, a line for each edition and one for the games.
 fn measure(root: &Path) -> String {

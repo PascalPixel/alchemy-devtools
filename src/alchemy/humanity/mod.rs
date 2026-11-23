@@ -453,6 +453,9 @@ pub struct Report {
     /// Message symbols whose own text says `unknown` (`MsgDetailsUnknown`):
     /// the game's word, no placeholder.
     text_unknown: HashSet<String>,
+    /// Every message's symbol in the game's text (`msgctxt "MsgCanYouImagine"`):
+    /// a message declared in C is said by its text, as a string is.
+    message_symbols: HashSet<String>,
     /// Each macro, whether it has its `///` or a rule sets it apart that
     /// leaves nothing to mark, for what a view views.
     macro_docs: HashMap<String, bool>,
@@ -1096,6 +1099,10 @@ impl Report {
                     // elsewhere (`return Party_ListMembers(owners);`).
                     let forwards = declared.forward.as_deref().is_some_and(|target| target != name && said(&self.functions, target));
                     let apart = apart.or_else(|| (function && forwards).then_some("undocumented_forward"));
+                    // A message's extern (`extern u8 MsgCanYouImagine[];`): its
+                    // text in the game's .po files says it, as a string's
+                    // initializer does.
+                    let apart = apart.or_else(|| (!function && self.message_symbols.contains(name)).then_some("undocumented_string"));
                     // A shared file's parameter (`extern s16 WAVE_SCROLL_LINES[];`):
                     // a name a macro gives, declared in a file another
                     // includes.
@@ -3561,6 +3568,7 @@ pub fn game_all<'a>(
     report.judged = judged.iter().map(|row| ((row.file.clone(), row.routine.clone(), row.number.clone()), row.kind == "honest")).collect();
     if let Some(text) = text {
         report.text_unknown = text.symbols_saying("unknown").map(str::to_string).collect();
+        report.message_symbols = text.symbols().map(str::to_string).collect();
     }
     let mut units = Vec::new();
     for (path, text) in files {
@@ -3737,13 +3745,19 @@ fn game_text(root: &Path, game: &str) -> Result<Option<GameText>, String> {
 /// A game's own English text, if git tracks one.
 fn own_text(root: &Path, game: &str) -> Result<Option<GameText>, String> {
     let path = format!("games/{game}/text/en.po");
-    let tracked = std::process::Command::new("git").arg("-C").arg(root).args(["ls-files", "--"]).arg(&path).output();
-    let Some(po) = tracked.ok().filter(|tracked| !tracked.stdout.is_empty()).and_then(|_| std::fs::read(root.join(&path)).ok()) else {
+    let listed = std::process::Command::new("git").arg("-C").arg(root).args(["ls-files", "--"]).arg(&path).output();
+    let Some(po) = listed.ok().filter(|listed| !listed.stdout.is_empty()).and_then(|_| std::fs::read(root.join(&path)).ok()) else {
         return Ok(None);
     };
     let rules = AREA_RULES.iter().find_map(|rules| std::fs::read(root.join(format!("games/{game}/{rules}"))).ok());
     let areas = rules.and_then(|rules| area_count(&String::from_utf8_lossy(&rules)));
-    GameText::parse(&String::from_utf8_lossy(&po), areas).map(Some).map_err(|error| format!("{path}: {error}"))
+    let mut text = GameText::parse(&String::from_utf8_lossy(&po), areas).map_err(|error| format!("{path}: {error}"))?;
+    // The other editions' text, for the messages only they show.
+    for other in tracked(root, &[format!("games/{game}/text")])?.iter().filter(|other| other.ends_with(".po") && **other != path) {
+        let po = std::fs::read(root.join(other)).map_err(|error| format!("cannot read {other}: {error}"))?;
+        text = text.with_edition_text(&String::from_utf8_lossy(&po));
+    }
+    Ok(Some(text))
 }
 
 /// A scene's overlay, `games/<game>/src/scene/<scene>.c` (⚓️'s overlays are
@@ -4769,6 +4783,19 @@ mod tests {
             "OTHER is used again, NONE not by the shared file"
         );
         assert_eq!(names("undocumented_global"), ["LINES\ta parameter of games/tla/src/field/spawn.c, whose comments do not name it"]);
+    }
+
+    /// A message declared in C is said by its text in the game's .po files.
+    #[test]
+    fn a_message_extern_is_said_by_its_text() {
+        let po = "msgctxt \"MsgCanYouImagine\"\nmsgid \"00001\"\nmsgstr \"Can you imagine?\"\n";
+        let ja = "msgctxt \"MsgFieldPasswordKana\"\nmsgid \"00002\"\nmsgstr \"kana\"\n";
+        let text = GameText::parse(po, None).unwrap().with_edition_text(ja);
+        let scene = "extern u8 MsgCanYouImagine[];\n\nextern u8 MsgFieldPasswordKana[];\n\nextern u8 MsgNoSuchText[];\n\nextern u8 gIzumo_Stones[];\n";
+        let report = game_with_text([("games/tla/src/scene/izumo.c", scene)], Some(&text), &[]);
+        let names = |metric: &str| -> Vec<String> { report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.clone()).collect() };
+        assert_eq!(names("undocumented_string"), ["MsgCanYouImagine", "MsgFieldPasswordKana"], "one only another edition's text holds too");
+        assert_eq!(names("undocumented_global"), ["MsgNoSuchText", "gIzumo_Stones"], "a symbol the text does not hold stays");
     }
 
     #[test]

@@ -121,6 +121,9 @@ pub struct GameText {
     /// The messages joined by U+0001, for quotes.
     joined: String,
     symbols: HashMap<String, usize>,
+    /// The symbols only another edition's text holds (`MsgFieldPasswordKana`,
+    /// Japanese alone), from the game's other .po files.
+    edition_symbols: HashSet<String>,
     /// Each message's place by its number (`msgid`).
     numbers: HashMap<u32, usize>,
     /// The area names (`gArea_NameRules`, from `MsgDebugAreaName`).
@@ -270,6 +273,19 @@ impl GameText {
     /// The same text, with the words a glossary defines: each entry's
     /// heading (`### Main routine`), and the words its `Evidence:` line
     /// quotes as the source of the term (the credits' "Music").
+    /// With the message symbols of the game's other .po files (each
+    /// `msgctxt`), for a message only another edition shows.
+    pub fn with_edition_text(mut self, po: &str) -> GameText {
+        for line in po.lines() {
+            if let Some(symbol) = line.strip_prefix("msgctxt \"").and_then(|rest| rest.strip_suffix('"')) {
+                if symbol != "message" && !self.symbols.contains_key(symbol) {
+                    self.edition_symbols.insert(symbol.to_string());
+                }
+            }
+        }
+        self
+    }
+
     pub fn with_glossary(mut self, glossary: &str) -> GameText {
         for paragraph in glossary.split("\n\n").map(str::trim) {
             let defined = if let Some(heading) = paragraph.strip_prefix("### ") {
@@ -332,6 +348,12 @@ impl GameText {
             let body = self.messages[at].1.to_lowercase();
             body.split(|c: char| !c.is_alphanumeric()).any(|w| w == word).then_some(symbol.as_str())
         })
+    }
+
+    /// Every message's symbol (`MsgCanYouImagine`), from its `msgctxt` in
+    /// any of the game's .po files.
+    pub fn symbols(&self) -> impl Iterator<Item = &str> {
+        self.symbols.keys().chain(&self.edition_symbols).map(String::as_str)
     }
 
     /// Some message holds the quote, commands aside.
