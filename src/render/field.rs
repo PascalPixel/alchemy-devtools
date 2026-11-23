@@ -2765,7 +2765,7 @@ impl<'rom> Field<'rom> {
     /// and drops, and the cells he can reach.
     fn debug_walk_plan(reach: &Reach, moves: &[Move], from: (i32, i32), cell: (i32, i32), layer: u8) {
         eprintln!("    walk-to: from {from:?} to {cell:?} on layer {layer}; {} moves", moves.len());
-        for m in moves.iter().filter(|m| m.how != How::Walk) {
+        for m in moves.iter().filter(|m| m.how != How::Walk || std::env::var_os("ALCHEMY_WALK_DEBUG").is_some_and(|v| v.to_str().is_some_and(|v| v.split(',').filter_map(|n| n.parse().ok()).collect::<Vec<i32>>() == [m.to.0, m.to.1]))) {
             eprintln!("      {:?} {:?} -> {:?}", m.how, m.from, m.to);
         }
         let held: Vec<(i32, i32)> = (0..GRID * GRID).filter(|&i| reach.cells.get(i as usize).copied().unwrap_or(false)).map(|i| (i % GRID, i / GRID)).collect();
@@ -3518,7 +3518,9 @@ impl<'rom> Field<'rom> {
                     let cell = field.walk_cell(layer, c.0, c.1);
                     let code = cell.code;
                     let free = !stage.iter().any(|&(_, ax, az)| (ax - x).abs() < 16 && (az - z).abs() < 16);
-                    if !reach.holds(layer, x, z) || !field.inside(x, z, 8) || !free {
+                    // An actor on a climb is the vine or ladder itself
+                    // (Growth's vine at The Wall), which he climbs.
+                    if !reach.holds(layer, x, z) || !field.inside(x, z, 8) || !(free || cell.climb) {
                         return None;
                     }
                     if keep.contains(&Some(c)) || cell.climb || (Self::standable(code) && field.quiet(code)) {
@@ -3552,7 +3554,9 @@ impl<'rom> Field<'rom> {
                             out.push(Move { from: c, to: n, keys: KEYS[d], how: How::Climb });
                             continue;
                         }
-                    } else if here.climb && there.climb && STEP[d].1 != 0 {
+                    } else if here.climb && (there.climb && STEP[d].1 != 0 || d == 0 && Self::over_the_top(there.code)) {
+                        // Up and down a vine or ladder, and at its top over
+                        // onto the ground north of it, as Field::reach has it.
                         out.push(Move { from: c, to: n, keys: KEYS[d], how: How::Climb });
                         continue;
                     }
