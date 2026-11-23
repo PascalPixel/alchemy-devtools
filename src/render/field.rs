@@ -125,6 +125,8 @@ const ACTOR_SNAPSHOT_EMPTY: u8 = 255;
 /// FieldWork.exit's value for a warp: the scene the main routine's work
 /// names is entered again (EXIT_KEEP_DESTINATION).
 const EXIT_KEEP_DESTINATION: u16 = 999;
+/// Frames a staged walk plays on past the function --until names.
+const UNTIL_TAIL: u32 = 180;
 /// Frames the scene may take to be entered again as after a battle.
 const ARRIVE_FRAMES: u32 = 600;
 /// North, east, south and west: a cell's step, the heading that faces that
@@ -750,6 +752,15 @@ pub struct Field<'rom> {
     /// where it starts, the game's own snapshot of the actors is taken and
     /// the scene entered again with FLAG_KEEP_PARTY_POSITION.
     pub after_battle: bool,
+    /// The scene function a staged walk plays on until (--until): its
+    /// address, and the frame it was first reached on.
+    pub until: Option<(u32, String)>,
+    until_hit: Option<u32>,
+    /// How many scene changes an event's recording follows, each arrival
+    /// as long as --limit lets the run go (--follow-scenes); 0 follows one
+    /// for ARRIVAL_LIMIT.
+    pub follow_scenes: u32,
+    arrival_base: u32,
 }
 
 /// The party `render event --party` and `--leader` stage: its members in
@@ -877,7 +888,7 @@ impl<'rom> Field<'rom> {
             steer_from: [0; 2],
             untargeted_frame: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), during: Vec::new(), limit: EVENT_LIMIT, fold_note: None, answers: Vec::new(), lineup, moves: Vec::new(), walk_to: None, cross_events: false, hold_camera: false, after_battle: false };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), during: Vec::new(), limit: EVENT_LIMIT, fold_note: None, answers: Vec::new(), lineup, moves: Vec::new(), walk_to: None, cross_events: false, hold_camera: false, after_battle: false, until: None, until_hit: None, follow_scenes: 0, arrival_base: 0 };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -1291,6 +1302,9 @@ impl<'rom> Field<'rom> {
                 probe(&self.gba, 0, self.t.frame);
             }
             self.probe = Some(probe);
+        }
+        if self.until_hit.is_none() && self.until.as_ref().is_some_and(|(address, _)| *address == pc) {
+            self.until_hit = Some(self.t.frame);
         }
         for i in 0..self.pokes.len() {
             let (at, address, value) = self.pokes[i];
@@ -1709,7 +1723,11 @@ impl<'rom> Field<'rom> {
                 // The player has control: the field sequence steps, with
                 // nothing to read.
                 let stepping = self.t.step_frame + 1 >= self.t.frame && self.t.frame - self.t.last_typing > 2;
-                if stepping {
+                // With --until, the run goes on, the player still, until
+                // the game reaches that function itself, and UNTIL_TAIL
+                // frames past it.
+                let waiting = self.until.is_some() && self.until_hit.is_none_or(|hit| self.t.frame < hit + UNTIL_TAIL);
+                if stepping && !waiting {
                     let since = *control_since.get_or_insert(self.t.frame);
                     if self.t.frame - since >= CONTROL_FRAMES {
                         break;
@@ -2545,9 +2563,17 @@ impl<'rom> Field<'rom> {
             self.recorded = Some(Vec::new());
             notes.push(format!("the camera is held still from the keys' start, its view's top left at ({vx}, {vy}); the frames before are left out"));
         }
+        self.until_hit = None;
+        let begun = self.t.frame;
         let started = self.play_on(script, self.limit);
         self.t.pin_focus = false;
         let started = started?;
+        if let Some((_, name)) = &self.until {
+            notes.push(match self.until_hit {
+                Some(hit) => format!("played on until the game ran {name} itself, {:.1} seconds in, and {} seconds past it", f64::from(hit.saturating_sub(begun)) / 60.0, UNTIL_TAIL / 60),
+                None => format!("played on for {} seconds waiting for {name}, which the game never ran", self.limit / 60),
+            });
+        }
         notes.append(&mut self.moves);
         let capped = self.recorded.as_ref().map_or(0, Vec::len) >= self.limit as usize;
         let since = self.recorded.as_ref().and_then(|f| f.iter().rposition(|p| is_black_bgr555(p)).map(|i| f.len() - 1 - i));
@@ -5084,6 +5110,9 @@ impl<'rom> Field<'rom> {
                     break;
                 }
                 arrival = Some(self.t.frame);
+                // The scene changes counted from here (--follow-scenes):
+                // this one's entry is the first.
+                self.arrival_base = self.t.entries - 1;
                 (wait_start, press_frame, quiet_start) = (0, 0, self.t.frame);
                 continue;
             }
@@ -5646,8 +5675,12 @@ impl<'rom> Field<'rom> {
         if self.scene() == MAP_BATTLE {
             return Ok(Arrival::Ended("ends as a battle begins".to_string()));
         }
-        if frame - at >= ARRIVAL_LIMIT {
-            return Ok(Arrival::Ended(format!("the arrival runs past {} seconds; the recording ends there", ARRIVAL_LIMIT / 60)));
+        let limit = if self.follow_scenes > 0 { self.limit } else { ARRIVAL_LIMIT };
+        if frame - at >= limit {
+            return Ok(Arrival::Ended(format!("the arrival runs past {} seconds; the recording ends there", limit / 60)));
+        }
+        if self.follow_scenes > 0 && self.t.entries > self.arrival_base + self.follow_scenes {
+            return Ok(Arrival::Ended(format!("it goes on to a scene change past the {} --follow-scenes follows; the recording ends there", self.follow_scenes)));
         }
         if self.t.last_dismiss > at && frame - self.t.last_dismiss <= 2 {
             *quiet_start = frame;
