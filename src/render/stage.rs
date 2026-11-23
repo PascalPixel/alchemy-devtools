@@ -54,6 +54,11 @@ impl Held {
 /// is the ability's number.
 pub const CAST_FRAME: u32 = 1 << 31;
 
+/// The bit of a frame of keys that marks the way held after a cast: it is
+/// held only once the cast's hand grips (Move's, Carry's: the game reads
+/// the d-pad while the cast runs), so the script waits for that first.
+pub const CAST_WAY: u32 = 1 << 30;
+
 /// Frames a cast's way is held after it when `cast:ABILITY:WAY` gives
 /// none: the hand of Move waits for the d-pad.
 pub const CAST_WAY_FRAMES: u32 = 60;
@@ -112,6 +117,14 @@ pub struct Stage {
     /// A recording with under ten seconds between two screen changes is
     /// written anyway, its note saying so (--keep-short).
     pub keep_short: bool,
+    /// The cell a staged walk first walks the leader to, the way planned
+    /// as the player would walk it (--walk-to X,Y[,LAYER]).
+    pub walk_to: Option<(i32, i32, Option<u8>)>,
+    /// The part of the screen written (--crop X,Y,W,H, screen pixels), the
+    /// camera held still from the keys' start, each pixel drawn `zoom`
+    /// times as wide and high (--zoom; 2 with a crop when none).
+    pub crop: Option<[i32; 4]>,
+    pub zoom: Option<u32>,
 }
 
 impl Stage {
@@ -183,7 +196,7 @@ impl Stage {
     /// Whether, with no event named, the run is a walk: the keys played
     /// from the start given, recorded, whatever they set off.
     pub fn walks(&self, events: &[String]) -> bool {
-        events.is_empty() && (self.start().is_some() || !self.hold.is_empty() || !self.then.is_empty())
+        events.is_empty() && (self.start().is_some() || !self.hold.is_empty() || !self.then.is_empty() || self.walk_to.is_some())
     }
 
     /// Reads one staging option and its value; false when `option` is none.
@@ -222,6 +235,18 @@ impl Stage {
                 if option == "--from" { self.from = frames } else { self.length = frames }
             }
             "--keep-short" => self.keep_short = true,
+            "--crop" => self.crop = Some(parse_crop(&value(option)?)?),
+            "--zoom" => {
+                let v = value(option)?;
+                self.zoom = Some(v.parse().ok().filter(|z: &u32| (1..=4).contains(z)).ok_or_else(|| format!("--zoom takes 1, 2, 3 or 4, not {v:?}"))?);
+            }
+            "--frames" => {
+                let v = value(option)?;
+                let (a, b) = parse_frames(&v)?;
+                self.from = Some(a);
+                self.length = Some(b - a + 1);
+            }
+            "--walk-to" => self.walk_to = Some(parse_cell(&value(option)?).map_err(|e| e.replace("--at takes", "--walk-to takes"))?),
             _ => return Ok(false),
         }
         Ok(true)
@@ -234,9 +259,47 @@ impl Stage {
 }
 
 /// Every staging option `render event` reads (Stage::option).
-pub const OPTIONS: [&str; 23] = [
-    "--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party", "--first", "--first-at", "--first-face", "--first-hold", "--first-then", "--at-px", "--during", "--skip", "--limit", "--from", "--for", "--keep-short",
+pub const OPTIONS: [&str; 27] = [
+    "--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party", "--first", "--first-at", "--first-face", "--first-hold", "--first-then", "--at-px", "--during", "--skip", "--limit", "--from", "--for", "--keep-short", "--walk-to", "--crop", "--zoom", "--frames",
 ];
+
+/// The screen's size, which a crop lies within.
+const SCREEN: [i32; 2] = [240, 160];
+
+/// `X,Y,W,H`: a rectangle of the screen, in its pixels, within it.
+pub fn parse_crop(text: &str) -> Result<[i32; 4], String> {
+    let bad = || format!("--crop takes X,Y,W,H in the screen's pixels (240 by 160), not {text:?}");
+    let n: Vec<i32> = text.split(',').map(|p| p.trim().parse().map_err(|_| bad())).collect::<Result<_, _>>()?;
+    match n[..] {
+        [x, y, w, h] if x >= 0 && y >= 0 && w > 0 && h > 0 && x + w <= SCREEN[0] && y + h <= SCREEN[1] => Ok([x, y, w, h]),
+        _ => Err(bad()),
+    }
+}
+
+/// `A-B`: the first and last frame of a recording kept, 60 a second.
+pub fn parse_frames(text: &str) -> Result<(u32, u32), String> {
+    let bad = || format!("--frames takes A-B, the first and last frame kept (60 a second), not {text:?}");
+    let (a, b) = text.split_once('-').ok_or_else(bad)?;
+    let (a, b): (u32, u32) = (a.trim().parse().map_err(|_| bad())?, b.trim().parse().map_err(|_| bad())?);
+    if b < a {
+        return Err(bad());
+    }
+    Ok((a, b))
+}
+
+/// `frame`, a screen's pixels in rows of `width`, cut to `crop` (X, Y, W,
+/// H) and each pixel drawn `zoom` times as wide and high.
+pub fn crop_frame(frame: &[u16], width: usize, crop: [i32; 4], zoom: usize) -> Vec<u16> {
+    let [x, y, w, h] = crop.map(|v| v as usize);
+    let mut out = Vec::with_capacity(w * h * zoom * zoom);
+    for row in y..y + h {
+        let line: Vec<u16> = frame[row * width + x..row * width + x + w].iter().flat_map(|&p| std::iter::repeat_n(p, zoom)).collect();
+        for _ in 0..zoom {
+            out.extend_from_slice(&line);
+        }
+    }
+    out
+}
 
 /// `X,Y` or `X,Y,LAYER`: a map cell, and its layer.
 pub fn parse_cell(text: &str) -> Result<(i32, i32, Option<u8>), String> {
@@ -375,11 +438,15 @@ pub fn parse_answers(text: &str) -> Result<Vec<u32>, String> {
 }
 
 /// The keys a script holds in each frame, in order; a cast is one frame,
-/// CAST_FRAME with the ability's number, before its way's frames.
+/// CAST_FRAME with the ability's number, before its way's frames, each
+/// marked CAST_WAY.
 pub fn script_frames(script: &[Held]) -> Vec<u32> {
     script
         .iter()
-        .flat_map(|h| h.cast.as_ref().map(|c| CAST_FRAME | u32::from(c.id)).into_iter().chain(std::iter::repeat_n(h.keys, h.frames as usize)))
+        .flat_map(|h| {
+            let way = if h.cast.is_some() { CAST_WAY } else { 0 };
+            h.cast.as_ref().map(|c| CAST_FRAME | u32::from(c.id)).into_iter().chain(std::iter::repeat_n(h.keys | way, h.frames as usize))
+        })
         .collect()
 }
 
@@ -696,7 +763,9 @@ mod tests {
         let frames = script_frames(&stage.then);
         assert_eq!(frames.len(), 30 + 1 + 1 + 60 + 1 + 5 + 2);
         assert_eq!(frames[30], CAST_FRAME | 0x8d);
-        assert_eq!((frames[31], frames[32]), (CAST_FRAME | 0x8c, 0x10));
+        assert_eq!((frames[31], frames[32]), (CAST_FRAME | 0x8c, 0x10 | CAST_WAY));
+        assert_eq!(frames[29], 0);
+        assert_eq!(frames[98], 0x40);
         assert_eq!(frames[92], CAST_FRAME | 24);
         assert_eq!(describe(&stage.then), "wait:30,cast:hover,cast:move:right:60,cast:frost:down:5,up:2");
         assert_eq!(parse_script(&describe(&stage.then)).unwrap().len(), 5);
@@ -747,6 +816,29 @@ mod tests {
         assert!(stage.option("--limit", &mut |_| Ok("0".to_string())).is_err());
         assert!(stage.option("--from", &mut |_| Ok("-1".to_string())).is_err());
         assert!(stage.option("--at-px", &mut |_| Ok("3".to_string())).unwrap_err().contains("--at-px"));
+    }
+
+    #[test]
+    fn a_walk_to_a_cell_a_crop_and_a_frame_range_are_read() {
+        let mut stage = Stage::default();
+        for (option, value) in [("--walk-to", "17,13"), ("--crop", "100,40,64,48"), ("--zoom", "3"), ("--frames", "120-299")] {
+            assert!(Stage::is_option(option));
+            assert!(stage.option(option, &mut |_| Ok(value.to_string())).unwrap());
+        }
+        assert_eq!(stage.walk_to, Some((17, 13, None)));
+        assert!(stage.walks(&[]) && !Stage { walk_to: None, ..stage.clone() }.walks(&[]));
+        assert_eq!((stage.crop, stage.zoom), (Some([100, 40, 64, 48]), Some(3)));
+        assert_eq!(stage.window(1000), (120, 300));
+        assert_eq!(stage.window(200), (120, 200));
+        assert!(parse_crop("200,0,64,16").is_err());
+        assert!(parse_crop("0,0,0,16").is_err());
+        assert!(parse_frames("30-10").is_err() && parse_frames("30").is_err());
+        assert!(stage.option("--zoom", &mut |_| Ok("5".to_string())).is_err());
+        assert!(stage.option("--walk-to", &mut |_| Ok("3".to_string())).unwrap_err().contains("--walk-to"));
+        // A 4 by 2 screen cut to its middle 2 by 1, drawn twice as large.
+        let frame = [0, 1, 2, 3, 4, 5, 6, 7];
+        assert_eq!(crop_frame(&frame, 4, [1, 1, 2, 1], 2), vec![5, 5, 6, 6, 5, 5, 6, 6]);
+        assert_eq!(crop_frame(&frame, 4, [0, 0, 4, 2], 1), frame.to_vec());
     }
 
     #[test]

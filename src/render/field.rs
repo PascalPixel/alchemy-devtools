@@ -249,6 +249,14 @@ const PUSH_ON_FRAMES: u32 = 1200;
 /// Frames what was pushed may lie still before pushing on has ended.
 const PUSH_REST_FRAMES: u32 = 60;
 
+/// The most frames a cast's way waits for its hand to grip (the cast's
+/// own animation comes first) before it is held all the same.
+const GRIP_WAIT: u32 = 600;
+
+/// The presses of B (a frame each, a frame apart) that let go of a hand
+/// still waiting for the d-pad once a script's way is over.
+const LET_GO_PRESSES: u32 = 8;
+
 fn fx(px: i32) -> i32 {
     px << 16
 }
@@ -292,6 +300,13 @@ pub struct Symbols {
     touch: u32,
     search: u32,
     psynergy: u32,
+    /// Move's two ends (FieldPsynergy_SteerPushedTarget, the hand on the
+    /// target the scene's row names; FieldPsynergy_Move, the hand on
+    /// nothing) and Input_GetDpadAngle, which only Move's and Carry's hands
+    /// call, each frame they wait for the d-pad; 0 where the map has none.
+    move_steer: u32,
+    move_none: u32,
+    dpad_angle: u32,
     /// Scene_RunRaisedTrigger, where a direct start begins.
     run_raised: u32,
     /// What a trigger row's dispatch calls to show a message row
@@ -384,6 +399,9 @@ impl Symbols {
             touch: at("Scene_RunStepTriggerOrExit")?,
             search: at("Field_ExamineCell")?,
             psynergy: at("Field_UsePsynergy")?,
+            move_steer: find("FieldPsynergy_SteerPushedTarget").unwrap_or(0),
+            move_none: find("FieldPsynergy_Move").unwrap_or(0),
+            dpad_angle: find("Input_GetDpadAngle").unwrap_or(0),
             run_raised: either("Scene_RunRaisedTrigger", "Scene_RunRaisedEvent")?,
             show_row: [at("Event_Start")?, at("Event_SetMessageId")?, at("Event_ShowMessageAndWait")?, at("Event_End")?],
             game_state: at("gMainRoutineWork")?,
@@ -534,6 +552,17 @@ pub(super) struct Track {
     /// (Scene_RunRaisedTrigger) counts as a dispatch: a staged event the game
     /// raises (render event --hold).
     catch_raised: bool,
+    /// The frame the last cast of a pad script was asked for, and the last
+    /// frame since that a hand read the d-pad (it grips and waits).
+    cast_frame: u32,
+    dpad_frame: u32,
+    /// While Move's hand holds a target: where the steering returns to
+    /// (0 when it is not running), the actor and where it stood.
+    steer_return: u32,
+    steer_target: u16,
+    steer_from: [i32; 2],
+    /// The last frame Move's hand was put on nothing.
+    untargeted_frame: u32,
 }
 
 /// What makes a field (Field::recipe): its ROM, symbols and setup, and the
@@ -679,6 +708,18 @@ pub struct Field<'rom> {
     /// The party a run is staged with (--party, --leader), set as a new
     /// game is set up.
     lineup: Option<Lineup>,
+    /// What each Move cast took and did, for the run's note
+    /// (Field::move_note), in order.
+    pub moves: Vec<String>,
+    /// The cell a staged walk first walks the leader to (--walk-to), the
+    /// way planned over the cells he can reach, before its keys.
+    pub walk_to: Option<(i32, i32, Option<u8>)>,
+    /// Whether the moves planned cross the cells of the scene's events (a
+    /// walk to a cell, as the player crosses them), not only quiet ground.
+    cross_events: bool,
+    /// Whether a staged walk holds the camera still from its keys' start
+    /// (--crop), its frames before them left out.
+    pub hold_camera: bool,
 }
 
 /// The party `render event --party` and `--leader` stage: its members in
@@ -799,8 +840,14 @@ impl<'rom> Field<'rom> {
             party_saved: [0; 5],
             cuts: 0,
             catch_raised: false,
+            cast_frame: 0,
+            dpad_frame: 0,
+            steer_return: 0,
+            steer_target: 0,
+            steer_from: [0; 2],
+            untargeted_frame: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), during: Vec::new(), limit: EVENT_LIMIT, fold_note: None, answers: Vec::new(), lineup };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), during: Vec::new(), limit: EVENT_LIMIT, fold_note: None, answers: Vec::new(), lineup, moves: Vec::new(), walk_to: None, cross_events: false, hold_camera: false };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -1271,6 +1318,7 @@ impl<'rom> Field<'rom> {
             }
             self.t.step_frame = self.t.frame;
         }
+        self.watch_move(pc);
         let dispatch = [(s.talk, TRIGGER_TALK), (s.touch, TRIGGER_STEP), (s.search, TRIGGER_EXAMINE), (s.psynergy, TRIGGER_PSYNERGY)];
         if let Some(&(_, kind)) = dispatch.iter().find(|(a, _)| *a == pc) {
             self.t.dispatched = Some((kind, self.gba.register(0), self.t.frame));
@@ -1435,9 +1483,87 @@ impl<'rom> Field<'rom> {
             self.gba.write16(work + self.s.l.field_command, (keys & 0xffff) as u16);
             self.cut();
             self.hold(0);
+            self.t.cast_frame = self.t.frame;
         } else {
-            self.hold(keys);
+            self.hold(keys & !super::stage::CAST_WAY);
         }
+    }
+
+    /// Follows Move's hand as the CPU reaches `pc`: the d-pad read by a
+    /// hand that grips; the hand put on a target (r0, the actor the
+    /// scene's row names) and, once it lets go, whether the actor moved;
+    /// or the hand put on nothing, with the scene's Move rows on actors and
+    /// how far each is, for the note (Field::moves).
+    fn watch_move(&mut self, pc: u32) {
+        let s = self.s;
+        if s.dpad_angle != 0 && pc == s.dpad_angle {
+            self.t.dpad_frame = self.t.frame;
+        }
+        if s.move_steer != 0 && pc == s.move_steer && self.t.steer_return == 0 {
+            let id = self.gba.register(0) as u16;
+            self.t.steer_return = self.gba.register(LR) & !1;
+            self.t.steer_target = id;
+            self.t.steer_from = self.actor(id).map_or([0; 2], |a| [a.x, a.z]);
+        } else if self.t.steer_return != 0 && pc == self.t.steer_return {
+            self.t.steer_return = 0;
+            let id = self.t.steer_target;
+            let [x, z] = self.t.steer_from;
+            let note = match self.actor(id) {
+                Some(a) if (a.x, a.z) != (x, z) => format!("Move: the hand took actor {id} at ({x}, {z}) and it moved to ({}, {})", a.x, a.z),
+                _ => format!("Move: the hand took actor {id} at ({x}, {z}) and it did not move"),
+            };
+            self.moves.push(note);
+        }
+        if s.move_none != 0 && pc == s.move_none {
+            self.t.untargeted_frame = self.t.frame;
+            self.moves.push(self.untargeted_move_note());
+        }
+    }
+
+    /// Why Move's hand took nothing: the scene's Move rows on actors
+    /// (TRIGGER_PSYNERGY_ON_ACTOR), each actor and how far it stands from
+    /// the leader, or that it has none.
+    fn untargeted_move_note(&self) -> String {
+        let leader = self.leader();
+        let mut rows: Vec<String> = Vec::new();
+        for row in self.trigger_rows() {
+            if row.control & 15 != u32::from(TRIGGER_PSYNERGY) || (row.control >> 8) as u16 & 0x3ff != super::story::MOVE || row.control & 0x10 == 0 {
+                continue;
+            }
+            let id = row.target & 0xff;
+            let at = match (self.actor(id), leader) {
+                (Some(a), Some(l)) => {
+                    // As Field_MeasurePsynergyReach weighs it: how far over
+                    // the ground, how far above or below, and how far off
+                    // the way he faces.
+                    let (dx, dz) = (a.x - l.x, a.z - l.z);
+                    let facing = u32::from(self.gba.read16(self.leader_object() + self.s.l.obj_angle));
+                    let toward = (f64::from(dz).atan2(f64::from(dx)).to_degrees().rem_euclid(360.0)) - f64::from(facing) * 360.0 / 65536.0;
+                    let off = (toward + 180.0).rem_euclid(360.0) - 180.0;
+                    format!("actor {id} at ({}, {}), {} pixels off, {} above him, {}\u{b0} off his facing", a.x, a.z, f64::from(dx * dx + dz * dz).sqrt().round(), (a.y - l.y) >> 16, off.round())
+                }
+                _ => format!("actor {id}"),
+            };
+            if !rows.contains(&at) {
+                rows.push(at);
+            }
+        }
+        let place = leader.map_or(String::new(), |l| format!(" from ({}, {})", l.x, l.z));
+        match rows.is_empty() {
+            true => format!("Move: the hand took nothing{place}: the scene has no Move row on an actor"),
+            false => format!("Move: the hand took nothing{place} (FieldPsynergy_Move): no Move row answered what he faces; the scene's Move rows are on {}", rows.join(", ")),
+        }
+    }
+
+    /// Whether Move's hand was put on nothing since the last cast.
+    fn moves_untargeted_since_cast(&self) -> bool {
+        self.t.cast_frame != 0 && self.t.untargeted_frame >= self.t.cast_frame
+    }
+
+    /// Whether a hand has read the d-pad since the last cast: Move's or
+    /// Carry's hand grips and waits for the way.
+    fn gripped(&self) -> bool {
+        self.t.cast_frame != 0 && self.t.dpad_frame > self.t.cast_frame
     }
 
     /// Plays the keys of a pad script, one step a frame, while the run is
@@ -1459,6 +1585,11 @@ impl<'rom> Field<'rom> {
         let mut dispatched = self.t.dispatched;
         let mut out: Vec<(u8, u32, u32)> = Vec::new();
         let mut control_since: Option<u32> = None;
+        // The frames a cast's way has waited for its hand to grip, and the
+        // presses of B that let go of a hand still waiting once its way is
+        // over.
+        let mut way_wait = 0;
+        let mut let_go = 0;
         while self.t.frame - started < cap {
             let page = self.t.last_dismiss > started && self.t.last_dismiss + 2 >= self.t.frame;
             let prompt = page || self.t.choice_return != 0 || self.t.menu_return != 0;
@@ -1480,9 +1611,31 @@ impl<'rom> Field<'rom> {
                 }
             } else {
                 waited = 0;
-                self.play_key(script.get(at).copied().unwrap_or(0));
-                if at < script.len() {
-                    at += 1;
+                let next = script.get(at).copied().unwrap_or(0);
+                let way = next & super::stage::CAST_WAY != 0 && next & super::stage::CAST_FRAME == 0;
+                if way && !self.gripped() && self.moves_untargeted_since_cast() {
+                    // The hand took nothing: there is nothing to steer.
+                    while script.get(at).is_some_and(|&k| k & super::stage::CAST_WAY != 0 && k & super::stage::CAST_FRAME == 0) {
+                        at += 1;
+                    }
+                    self.hold(0);
+                } else if way && !self.gripped() && way_wait < GRIP_WAIT {
+                    // The way is pressed once the hand grips, as a player
+                    // presses it.
+                    way_wait += 1;
+                    self.hold(0);
+                } else if !way && self.t.steer_return != 0 && self.gripped() && self.t.dpad_frame + 1 >= self.t.frame && let_go < LET_GO_PRESSES {
+                    // The way is over and the hand still waits: B lets go.
+                    let_go += 1;
+                    self.hold(if let_go % 2 == 1 { KEY_B } else { 0 });
+                } else {
+                    if !way {
+                        way_wait = 0;
+                    }
+                    self.play_key(next);
+                    if at < script.len() {
+                        at += 1;
+                    }
                 }
             }
             self.frames(1)?;
@@ -1847,6 +2000,20 @@ impl<'rom> Field<'rom> {
         }
         let cells = self.gba.read32(self.map_work() + self.s.l.map_layers + self.s.l.map_layer_cells + self.s.l.map_layer_size * u32::from(layer));
         i32::from(self.gba.read8(cells + (((cx + (cz << 7)) << 2) + 2) as u32))
+    }
+
+    /// The collision code of cell (cx, cz) as a walk is planned over it
+    /// (Field::reach, Field::moves): The Lost Age marks a ledge, a wall he
+    /// can climb and a gap he jumps across by MapCell.attributeB's bits
+    /// (MAP_CELL_LEDGE, MAP_CELL_CLIMBABLE, MAP_CELL_JUMP) on open ground,
+    /// where The Broken Seal gives them codes of their own; they are read
+    /// as those codes.
+    fn walk_cell(&self, layer: u8, cx: i32, cz: i32) -> i32 {
+        let code = self.cell(layer, cx, cz);
+        if code != 0 || self.s.l.game != super::layout::Game::Tla || self.world() {
+            return code;
+        }
+        tla_walk_code(code, (self.cell_word(layer, cx, cz) >> 24) as u8)
     }
 
     /// Where map layer `layer`'s cells begin in the map's cell buffer (the
@@ -2256,6 +2423,7 @@ impl<'rom> Field<'rom> {
     /// BLACK_CLEARANCE frames more.
     pub fn walk(&mut self, entered: &Saved, at: Option<WalkStart>, lead: u32, script: &[u32]) -> Result<WalkRun, String> {
         self.load(entered);
+        self.moves.clear();
         let mut notes = Vec::new();
         match at {
             Some(WalkStart { x, z, layer, face, cell }) => {
@@ -2293,7 +2461,22 @@ impl<'rom> Field<'rom> {
         self.recorded = Some(Vec::new());
         let scene = self.scene();
         self.frames(lead)?;
-        let started = self.play_on(script, self.limit)?;
+        if let Some(to) = self.walk_to {
+            notes.push(self.walk_to_cell(to)?);
+        }
+        if self.hold_camera {
+            // The view where the keys begin, held: a part of the screen
+            // shows the same part of the map throughout.
+            let (vx, vy) = self.view();
+            self.t.focus = [fx(vx + 120), 0, fx(vy + 96)];
+            self.t.pin_focus = true;
+            self.recorded = Some(Vec::new());
+            notes.push(format!("the camera is held still from the keys' start, its view's top left at ({vx}, {vy}); the frames before are left out"));
+        }
+        let started = self.play_on(script, self.limit);
+        self.t.pin_focus = false;
+        let started = started?;
+        notes.append(&mut self.moves);
         let capped = self.recorded.as_ref().map_or(0, Vec::len) >= self.limit as usize;
         let since = self.recorded.as_ref().and_then(|f| f.iter().rposition(|p| is_black_bgr555(p)).map(|i| f.len() - 1 - i));
         if let Some(since) = since.filter(|&s| s < CLEARED) {
@@ -2305,6 +2488,42 @@ impl<'rom> Field<'rom> {
             frames = shorten_blanks(frames, BLANK_KEEP);
         }
         Ok(WalkRun { frames, started, leads_to, capped, notes })
+    }
+
+    /// Walks the leader to cell `to` (--walk-to: X, Y as the map numbers
+    /// it, on LAYER's window when given, else his own layer) as the player
+    /// would: the way planned over the cells he can reach in his room
+    /// (Field::reach, Field::moves: walks, ladders and vines, ledges and
+    /// jumps, across the scene's event cells but no exit) and followed with
+    /// the pad (Field::follow). What came of it, for the note: the cells
+    /// walked, or why he stopped where he did.
+    fn walk_to_cell(&mut self, to: (i32, i32, Option<u8>)) -> Result<String, String> {
+        let leader = self.leader().ok_or("the scene has no leader")?;
+        let layer = to.2.unwrap_or(leader.layer.min(2));
+        let (ox, oz) = self.layer_origin(layer);
+        let cell = if layer != 0 && to.0 >= ox && to.1 >= oz { (to.0 - ox, to.1 - oz) } else { (to.0, to.1) };
+        let from = (leader.x >> 4, leader.z >> 4);
+        if layer != leader.layer.min(2) {
+            return Ok(format!("--walk-to {},{} is on layer {layer}, and he walks on layer {}: no walk is planned across layers", to.0, to.1, leader.layer));
+        }
+        self.cross_events = true;
+        let reach = self.reach(None);
+        let planned = reach.as_ref().map_err(String::clone).and_then(|reach| self.moves(reach, &[Some(cell)]));
+        self.cross_events = false;
+        let Some(path) = approach::route(&planned?, from, cell) else {
+            let cells = reach.map_or(0, |r| r.cells.iter().filter(|&&c| c).count());
+            return Ok(format!("no walk leads from cell ({}, {}) to cell ({}, {}) of layer {layer} in his room: he can walk to {cells} cells from there", from.0, from.1, cell.0, cell.1));
+        };
+        let (mut moving, mut pad) = (Vec::new(), Pad::default());
+        let followed = self.follow(&path, 0, &mut moving, &mut pad);
+        self.hold(0);
+        self.frames(SETTLE)?;
+        let at = self.leader().map(|a| format!("({}, {}) on layer {}", a.x, a.z, a.layer)).unwrap_or_default();
+        let kinds = path.iter().filter(|m| m.how != How::Walk).count();
+        Ok(match followed {
+            Ok(()) => format!("he walks from cell ({}, {}) to cell ({}, {}) of layer {layer}, {} moves ({kinds} climbs or drops), and stands at {at}", from.0, from.1, cell.0, cell.1, path.len()),
+            Err(e) => format!("the walk planned from cell ({}, {}) to cell ({}, {}) of layer {layer} stopped: {e}; he stands at {at}", from.0, from.1, cell.0, cell.1),
+        })
     }
 
     /// What of `misplaced` counts against a start that placed the leader:
@@ -2692,7 +2911,7 @@ impl<'rom> Field<'rom> {
         let mut crossed: HashMap<i32, bool> = HashMap::new();
         let mut stops = Vec::new();
         while let Some(c) = queue.pop_front() {
-            let here = self.cell(layer, c.0, c.1);
+            let here = self.walk_cell(layer, c.0, c.1);
             // An exit's cell, and one with the code of the touch being
             // played, are reached but not crossed: stepping on it would
             // leave or start the event, so what lies only beyond it (the
@@ -2710,7 +2929,7 @@ impl<'rom> Field<'rom> {
                 if !within(n) {
                     continue;
                 }
-                let code = self.cell(layer, n.0, n.1);
+                let code = self.walk_cell(layer, n.0, n.1);
                 if !cells[index(n)] && code >= 0 && code != CELL_WALL && self.passable(layer, c, d)? {
                     cells[index(n)] = true;
                     queue.push_back(n);
@@ -2756,7 +2975,7 @@ impl<'rom> Field<'rom> {
                 }
                 for k in reach_cells {
                     let m = (c.0 + STEP[d].0 * k, c.1 + STEP[d].1 * k);
-                    let beyond = self.cell(layer, m.0, m.1);
+                    let beyond = self.walk_cell(layer, m.0, m.1);
                     if !within(m) || beyond < 0 {
                         break;
                     }
@@ -3024,12 +3243,15 @@ impl<'rom> Field<'rom> {
             open.entry(c)
                 .or_insert_with(|| {
                     let (x, z) = (c.0 * 16 + 8, c.1 * 16 + 8);
-                    let code = field.cell(layer, c.0, c.1);
+                    let code = field.walk_cell(layer, c.0, c.1);
                     let free = !stage.iter().any(|&(_, ax, az)| (ax - x).abs() < 16 && (az - z).abs() < 16);
                     if !reach.holds(layer, x, z) || !field.inside(x, z, 8) || !free {
                         return None;
                     }
                     if keep.contains(&Some(c)) || code == CELL_CLIMB || (Self::standable(code) && field.quiet(code)) {
+                        return Some(Vec::new());
+                    }
+                    if field.cross_events && (1..=CELL_EVENT_LAST).contains(&code) && field.crossable(code, None) {
                         return Some(Vec::new());
                     }
                     field.facings(code)
@@ -3045,13 +3267,13 @@ impl<'rom> Field<'rom> {
                 if ways(self, c).is_none() {
                     continue;
                 }
-                let here = self.cell(layer, cx, cz);
+                let here = self.walk_cell(layer, cx, cz);
                 for d in 0..4 {
                     let n = (cx + STEP[d].0, cz + STEP[d].1);
                     if !allows(ways(self, c), d) || !allows(ways(self, n), d) {
                         continue;
                     }
-                    let there = self.cell(layer, n.0, n.1);
+                    let there = self.walk_cell(layer, n.0, n.1);
                     if here == CELL_CLIMB && there == CELL_CLIMB && STEP[d].1 != 0 {
                         out.push(Move { from: c, to: n, keys: KEYS[d], how: How::Climb });
                         continue;
@@ -3071,7 +3293,7 @@ impl<'rom> Field<'rom> {
                     let from = height(self, cx * 16 + 8, cz * 16 + 8)?;
                     for k in 1..=4 {
                         let m = (cx, cz + k);
-                        let beyond = self.cell(layer, m.0, m.1);
+                        let beyond = self.walk_cell(layer, m.0, m.1);
                         if beyond == CELL_WALL || beyond == CELL_LEDGE {
                             continue;
                         }
@@ -5228,6 +5450,18 @@ fn shorten_blanks(frames: Vec<Vec<u16>>, keep: usize) -> Vec<Vec<u16>> {
 /// A field Psynergy's reach by its ability id: its range
 /// (gFieldEffect_TargetRangeByMode, by field kind) and the height between the
 /// leader and the actor it allows, in pixels and 16.16 pixels.
+/// The Lost Age's cell on open ground (`code` 0) read by its attribute
+/// bits (MapCell.attributeB) as the code The Broken Seal gives the same
+/// ground: a wall he climbs, a gap he jumps, a ledge he drops from.
+fn tla_walk_code(code: i32, attributes: u8) -> i32 {
+    match code {
+        0 if attributes & 0x40 != 0 => CELL_CLIMB,
+        0 if attributes & 0x80 != 0 => CELL_JUMP,
+        0 if attributes & 0x20 != 0 => CELL_LEDGE,
+        _ => code,
+    }
+}
+
 fn psynergy_reach(ability: u16) -> (i32, i32) {
     match ability {
         // Mind Read: 32 pixels, 16 high.
@@ -5744,6 +5978,16 @@ mod tests {
         assert_eq!(KEYS[nearest_way(0xf800)], KEY_RIGHT);
         assert_eq!(KEYS[nearest_way(0x4100)], KEY_DOWN);
         assert_eq!(KEYS[nearest_way(0x8000)], KEY_LEFT);
+    }
+
+    #[test]
+    fn the_lost_age_s_attribute_bits_read_as_codes_for_a_walk() {
+        assert_eq!(tla_walk_code(0, 0x40), CELL_CLIMB);
+        assert_eq!(tla_walk_code(0, 0xc0), CELL_CLIMB);
+        assert_eq!(tla_walk_code(0, 0x80), CELL_JUMP);
+        assert_eq!(tla_walk_code(0, 0x20), CELL_LEDGE);
+        assert_eq!(tla_walk_code(0, 0x02), 0);
+        assert_eq!(tla_walk_code(34, 0x40), 34);
     }
 
     #[test]
