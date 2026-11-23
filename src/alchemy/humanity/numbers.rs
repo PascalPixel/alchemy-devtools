@@ -16,6 +16,7 @@
 //! offset) stays counted.
 
 use crate::gba::clex::{Kind, Token};
+use std::collections::BTreeSet;
 
 /// The units S3 composes a fraction from (`FIXED_ONE * n / d`), and the calls
 /// that compose one (`INTtoFIXED(n) / d`).
@@ -40,8 +41,9 @@ fn is_scale(name: &str) -> bool {
 
 /// Words of a name that hold a position or a size in pixels (or cells).
 const POSITION_WORDS: &[&str] = &["x", "y", "z", "dx", "dy", "dz", "row", "rows", "column", "columns", "width", "height", "radius", "distance"];
-/// Words of a name that hold a duration or a moment in frames.
-const DURATION_WORDS: &[&str] = &["frame", "frames", "timer", "delay", "duration", "countdown", "wait", "ticks", "vblank", "vblanks"];
+/// Words of a name that hold a duration or a moment in frames, or in beats
+/// of a few frames each (`beat == 32`).
+const DURATION_WORDS: &[&str] = &["frame", "frames", "timer", "delay", "duration", "countdown", "wait", "ticks", "vblank", "vblanks", "beat", "beats"];
 /// Words of a name that hold a fade's or a shake's level (`fade = -16`,
 /// `shake = -128`): the brightness or the sway it is set to, and the
 /// brightness register's (`REG_BLDY`, GBATEK's fade coefficient).
@@ -439,6 +441,22 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
         let texts: Vec<&Token> = tokens.iter().skip(open + 1).take(4).collect();
         matches!(texts[..], [a, b, c, d] if a.kind == Kind::Number && b.text == "/" && c.kind == Kind::Number && d.text == ")")
     };
+    // A product of numbers alone, as S3 composes `240 * 160`, and a fraction
+    // of a named quantity, a constant's own (`ATAN_ENTRIES / 16`).
+    let numeral = |operand: &str| operand.bytes().next().is_some_and(|b| b.is_ascii_digit());
+    if factors.len() > 1 && factors.iter().all(|(op, operand)| matches!(*op, "" | "*") && numeral(operand)) {
+        return Some("composed");
+    }
+    let constant = |index: usize| {
+        let token = &tokens[index];
+        token.kind == Kind::Ident
+            && token.text.bytes().any(|b| b.is_ascii_uppercase())
+            && token.text.bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_')
+            && (index == floor || !matches!(tokens[index - 1].text, "." | "->"))
+    };
+    if factors.len() == 2 && own == 1 && factors[1].0 == "/" && is_decimal(text) && at >= floor + 2 && constant(at - 2) {
+        return Some("composed");
+    }
     let unit_call = left.is_some_and(|left| tokens[left].text == "(" && left > floor && UNIT_CALLS.contains(&tokens[left - 1].text) && fraction(left));
     if unit_call {
         return Some("composed");
@@ -486,15 +504,25 @@ pub fn local(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<
     if is_sign_bit(tokens, at, floor) {
         return Some("sign");
     }
+    if packing(tokens, at, floor, limit) {
+        return Some("packing");
+    }
     // A shift's amount is bits, never a position or a duration.
     let shift = at > floor && matches!(tokens[at - 1].text, "<<" | ">>");
     if !is_decimal(text) || shift {
         return None;
     }
+    if filled_in_order(tokens, at, floor, limit) {
+        return Some("index");
+    }
+    if weight(tokens, at, floor, limit) {
+        return Some("random");
+    }
     if left.is_some_and(|left| tokens[left].text == "case") {
         let (subject_start, subject_end) = switch_subject(tokens, at, floor)?;
         let (subject, _) = chains(tokens, subject_start, subject_end);
-        return subject.iter().find_map(|chain| named_kind(chain.iter().copied()));
+        let named = subject.iter().find_map(|chain| named_kind(chain.iter().copied()));
+        return named.or_else(|| counted_each_pass(tokens, (subject_start, subject_end), limit).then_some("duration"));
     }
     // An assignment's target: `actor->timer = 60`, `s32 frames = 180`.
     if let Some(op) = left.filter(|&left| ASSIGNMENTS.contains(&tokens[left].text)) {
@@ -619,6 +647,344 @@ pub fn is_hardware_address(text: &str) -> bool {
 /// bit S3 keeps as `0x80000000`. Any other amount is a shift's own.
 pub fn is_sign_bit(tokens: &[Token], at: usize, floor: usize) -> bool {
     at > floor && tokens[at].text.trim_end_matches(['u', 'U']) == "31" && matches!(tokens[at - 1].text, ">>" | ">>=")
+}
+
+const SHIFTS: &[&str] = &["<<", ">>", "<<=", ">>="];
+
+/// A decimal literal's value.
+fn decimal_value(text: &str) -> Option<u64> {
+    is_decimal(text).then(|| text.trim_end_matches(['u', 'U', 'l', 'L']).parse().ok()).flatten()
+}
+
+/// Tokens that end a shift's operand: what binds less tightly than a shift.
+fn ends_shift_operand(text: &str) -> bool {
+    matches!(
+        text,
+        "|" | "^" | "&" | "&&" | "||" | "?" | ":" | "," | ";" | "{" | "}" | "<" | ">" | "<=" | ">=" | "==" | "!=" | "<<" | ">>" | "return" | "case"
+    ) || ASSIGNMENTS.contains(&text)
+}
+
+/// Whether the shift whose operator is at `op` and whose amount ends at
+/// `last` is an operand of `|`, out through the groups that hold it alone:
+/// `in[1] << 8 | in[2] << 16`, `RGB(21, 10, 21) << 16 | RGB(21, 10, 21)`,
+/// `((u32)count >> 16) | KEY_B`.
+fn joined_by_or(tokens: &[Token], op: usize, last: usize, floor: usize, limit: usize) -> bool {
+    let limit = limit.min(tokens.len() - 1);
+    let (mut left, mut right) = (op, last);
+    loop {
+        let (mut depth, mut index) = (0, right + 1);
+        let right_stop = loop {
+            if index > limit {
+                break None;
+            }
+            match tokens[index].text {
+                "(" | "[" => depth += 1,
+                ")" | "]" if depth == 0 => break Some(index),
+                ")" | "]" => depth -= 1,
+                text if depth == 0 && ends_shift_operand(text) => break Some(index),
+                _ => {}
+            }
+            index += 1;
+        };
+        let (mut depth, mut index) = (0, left);
+        let left_stop = loop {
+            if index <= floor {
+                break None;
+            }
+            index -= 1;
+            match tokens[index].text {
+                ")" | "]" => depth += 1,
+                "(" | "[" if depth == 0 => break Some(index),
+                "(" | "[" => depth -= 1,
+                text if depth == 0 && ends_shift_operand(text) => break Some(index),
+                _ => {}
+            }
+        };
+        let or = |stop: Option<usize>| stop.is_some_and(|stop| matches!(tokens[stop].text, "|" | "|="));
+        if or(left_stop) || or(right_stop) {
+            return true;
+        }
+        match (left_stop, right_stop) {
+            (Some(open), Some(close)) if tokens[open].text == "(" && tokens[close].text == ")" && is_group(tokens, open, floor) => {
+                (left, right) = (open, close);
+            }
+            _ => return false,
+        }
+    }
+}
+
+/// Whether the shift amount at `at` is one of two shifts, left and then
+/// right, that cut a bit field out of a word: `(seed << 8) >> 16`, `x << 23 >> 7`, `((u32)grey << 16) >> 16`.
+fn double_shift(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool {
+    let limit = limit.min(tokens.len() - 1);
+    let number = |index: usize| index <= limit && tokens[index].kind == Kind::Number;
+    // A shift after this one: past the groups this amount closes.
+    let mut next = at + 1;
+    while next <= limit && tokens[next].text == ")" && open_of(tokens, next, floor).is_some_and(|open| is_group(tokens, open, floor)) {
+        next += 1;
+    }
+    let left = |text: &str| matches!(text, "<<" | "<<=");
+    if left(tokens[at - 1].text) && next < limit && tokens[next].text == ">>" && number(next + 1) {
+        return true;
+    }
+    // A left shift before it: its operand is one, or a group ending in one.
+    if at < floor + 3 || !matches!(tokens[at - 1].text, ">>" | ">>=") {
+        return false;
+    }
+    let operand = at - 2;
+    if tokens[operand].kind == Kind::Number && left(tokens[operand - 1].text) {
+        return true;
+    }
+    // `return (seed << 8) >> 16` groups as any other bracket does.
+    let group = |open: usize| is_group(tokens, open, floor) || (open > floor && tokens[open - 1].text == "return");
+    tokens[operand].text == ")"
+        && operand >= floor + 3
+        && open_of(tokens, operand, floor).is_some_and(group)
+        && tokens[operand - 1].kind == Kind::Number
+        && left(tokens[operand - 2].text)
+}
+
+/// The array an assignment in the statement around `at` stores to, when its
+/// target is an element (`out[statsOffset + 4] = ...`), and where its
+/// operator is.
+fn stored_element<'a>(tokens: &[Token<'a>], at: usize, floor: usize) -> Option<(&'a str, usize)> {
+    let (start, end) = statement(tokens, at, floor);
+    let mut depth = 0;
+    for index in start..=end {
+        match tokens[index].text {
+            "(" | "[" => depth += 1,
+            ")" | "]" => depth -= 1,
+            text if depth == 0 && ASSIGNMENTS.contains(&text) => {
+                let close = index.checked_sub(1).filter(|&close| close > start && tokens[close].text == "]")?;
+                let open = open_of(tokens, close, start)?;
+                let name = open.checked_sub(1).filter(|&name| name >= start && tokens[name].kind == Kind::Ident)?;
+                return Some((tokens[name].text, index));
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// The shift amounts the routine (up to `limit`) stores into elements of
+/// `array`: `out[k] = word >> 24; out[k + 1] = word >> 16;` gives 24 and 16.
+fn stored_amounts(tokens: &[Token], array: &str, floor: usize, limit: usize) -> BTreeSet<u64> {
+    let limit = limit.min(tokens.len() - 1);
+    let mut amounts = BTreeSet::new();
+    for index in floor..=limit {
+        if tokens[index].text != array || tokens[index].kind != Kind::Ident || tokens.get(index + 1).is_none_or(|t| t.text != "[") {
+            continue;
+        }
+        let Some((name, op)) = stored_element(tokens, index + 1, floor) else { continue };
+        if name != array {
+            continue;
+        }
+        let (_, end) = statement(tokens, op, floor);
+        for shift in op + 1..end.min(limit) {
+            if SHIFTS.contains(&tokens[shift].text) {
+                amounts.extend(decimal_value(tokens[shift + 1].text));
+            }
+        }
+    }
+    amounts
+}
+
+/// Whether the number at `at` packs a word into bytes or unpacks it, or cuts
+/// a bit field out of one: a shift's amount, at a nibble's boundary, of an
+/// element joined to others by `|` (`in[statsOffset + 1] << 16 | ...`), of
+/// halves or bytes joined by `|` (`RGB(...) << 16 | RGB(...)`), or stored into
+/// an array the routine fills with two or more such amounts (`out[k] = stats
+/// >> 24`); one of two shifts that cut a field (`(seed << 8) >> 16`); or a
+/// byte's index in such an element (`out[statsOffset + 11]`). A shift stored
+/// alone (`rows[1] = reciprocal << 16`, `x = (u32)x >> 16`) may be a 16.16
+/// conversion, and stays.
+pub fn packing(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool {
+    let Some(value) = decimal_value(tokens[at].text) else { return false };
+    let previous = if at > floor { tokens[at - 1].text } else { "" };
+    if SHIFTS.contains(&previous) {
+        if !(1..32).contains(&value) {
+            return false;
+        }
+        if double_shift(tokens, at, floor, limit) {
+            return true;
+        }
+        if value % 4 != 0 {
+            return false;
+        }
+        let joined = joined_by_or(tokens, at - 1, at, floor, limit);
+        // An element, or a field of one: `in[3] << 8`, `(in[3] & 0xf0) << 20`.
+        let element = at >= floor + 2
+            && (tokens[at - 2].text == "]"
+                || (tokens[at - 2].text == ")"
+                    && open_of(tokens, at - 2, floor).is_some_and(|open| is_group(tokens, open, floor) && tokens[open..at - 2].iter().any(|t| t.text == "["))));
+        if joined && (element || value % 8 == 0) {
+            return true;
+        }
+        return stored_element(tokens, at, floor)
+            .is_some_and(|(array, op)| op < at && stored_amounts(tokens, array, floor, limit).len() >= 2);
+    }
+    // A byte's index: `out[statsOffset + 11] = ...`, `in[statsOffset + 13] << 12`.
+    let mut open = at;
+    while open > floor && (matches!(tokens[open - 1].kind, Kind::Ident | Kind::Number) || matches!(tokens[open - 1].text, "+" | "-" | "*")) {
+        open -= 1;
+    }
+    if open <= floor || tokens[open - 1].text != "[" || tokens[open - 2].kind != Kind::Ident {
+        return false;
+    }
+    let (open, array) = (open - 1, tokens[open - 2].text);
+    let Some(close) = close_of(tokens, open, limit) else { return false };
+    let after = tokens.get(close + 1).map_or("", |t| t.text);
+    if ASSIGNMENTS.contains(&after) {
+        return stored_amounts(tokens, array, floor, limit).len() >= 2;
+    }
+    SHIFTS.contains(&after)
+        && tokens.get(close + 2).and_then(|t| decimal_value(t.text)).is_some_and(|amount| amount % 4 == 0)
+        && joined_by_or(tokens, close + 1, close + 2, floor, limit)
+}
+
+/// The array and index of the element assigned at `at`'s index, as in
+/// `name[at] = ...`: the tokens of its name (`gWork.weights`), from the start
+/// of its statement.
+fn element_target<'a>(tokens: &[Token<'a>], at: usize, floor: usize) -> Option<Vec<&'a str>> {
+    if at < floor + 2 || tokens[at - 1].text != "[" || tokens.get(at + 1).is_none_or(|t| t.text != "]") || tokens.get(at + 2).is_none_or(|t| t.text != "=") {
+        return None;
+    }
+    let mut start = at - 1;
+    while start > floor && (tokens[start - 1].kind == Kind::Ident || matches!(tokens[start - 1].text, "." | "->")) {
+        start -= 1;
+    }
+    let statement = start == floor || matches!(tokens[start - 1].text, ";" | "{" | "}") || tokens[start - 1].kind == Kind::PpEnd;
+    (statement && start < at - 1 && tokens[start].kind == Kind::Ident).then(|| tokens[start..at - 1].iter().map(|t| t.text).collect())
+}
+
+/// Whether the number at `at` is the index of an array the routine fills
+/// element by element, every index from 0 to this one set by a statement of
+/// its own (`pageHeights[0] = ...; ... pageHeights[15] = ...;`): its place in
+/// the array, as a row's in a table.
+pub fn filled_in_order(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool {
+    let Some(name) = element_target(tokens, at, floor) else { return false };
+    let Some(value) = decimal_value(tokens[at].text) else { return false };
+    let limit = limit.min(tokens.len() - 1);
+    let mut found = BTreeSet::new();
+    for index in floor..=limit {
+        if index > floor && tokens[index].kind == Kind::Number && tokens[index - 1].text == "[" && element_target(tokens, index, floor).is_some_and(|other| other == name) {
+            found.extend(decimal_value(tokens[index].text));
+        }
+    }
+    (0..=value).all(|index| found.contains(&index))
+}
+
+/// Whether the number at `at` is a random weight: the whole value given to
+/// an element of an array named for its weights, filled in order
+/// (`prizeWeights[9] = 32;`).
+pub fn weight(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool {
+    if at < floor + 4 || tokens[at - 1].text != "=" || tokens.get(at + 1).is_none_or(|t| t.text != ";") || tokens[at - 2].text != "]" {
+        return false;
+    }
+    let index = at - 3;
+    let Some(name) = element_target(tokens, index, floor) else { return false };
+    let weights = name.last().is_some_and(|last| words(last).iter().any(|word| matches!(word.as_str(), "weight" | "weights")));
+    weights && filled_in_order(tokens, index, floor, limit)
+}
+
+/// Whether a `switch`'s subject is a counter moved by one every pass: a
+/// statement after the switch, before `limit`, moves it by one (`step++`,
+/// `perspective->reloadSteps--`), and nothing in the file sets it to a
+/// number but 0, so that each `case` is a moment of its count
+/// (`sBeaconRiseStep`, `reloadSteps` counting down from
+/// `WORLD_MAP_RELOAD_STEPS`). A step machine that jumps to a numbered step
+/// (`tutorialStep = 16`) is no count.
+fn counted_each_pass(tokens: &[Token], subject: (usize, usize), limit: usize) -> bool {
+    let (start, end) = subject;
+    let name = &tokens[end];
+    let plain = (start..=end).all(|index| tokens[index].kind == Kind::Ident || matches!(tokens[index].text, "." | "->" | "*"));
+    if name.kind != Kind::Ident || !plain || tokens.get(end + 2).is_none_or(|t| t.text != "{") {
+        return false;
+    }
+    let limit = limit.min(tokens.len() - 1);
+    let Some(close) = close_of(tokens, end + 2, limit) else { return false };
+    let named = |index: usize| tokens[index].kind == Kind::Ident && tokens[index].text == name.text;
+    let text = |index: usize| tokens.get(index).map_or("", |t| t.text);
+    let moved = (close + 1..=limit).any(|index| {
+        named(index)
+            && (matches!(text(index + 1), "++" | "--")
+                || matches!(text(index - 1), "++" | "--")
+                || (matches!(text(index + 1), "+=" | "-=") && text(index + 2) == "1" && text(index + 3) == ";"))
+    });
+    let numbered = (1..tokens.len().saturating_sub(1)).any(|index| {
+        named(index)
+            && ASSIGNMENTS.contains(&text(index + 1))
+            && tokens[index + 2].kind == Kind::Number
+            && !(text(index + 1) == "=" && text(index + 2) == "0")
+            && !(matches!(text(index + 1), "+=" | "-=") && text(index + 2) == "1")
+    });
+    moved && !numbered
+}
+
+/// Whether the number at `at` is the whole value a routine returns
+/// (`return 70;`, `return -100;`), or the whole value given to a local it
+/// returns (`fixedChance = 60; ... return -fixedChance;`), between `open`
+/// and `close`, its braces.
+pub fn returned_whole(tokens: &[Token], at: usize, open: usize, close: usize) -> bool {
+    let text = |index: usize| tokens.get(index).map_or("", |t| t.text);
+    if text(at + 1) != ";" || at < open + 2 {
+        return false;
+    }
+    let before = if text(at - 1) == "-" { at - 2 } else { at - 1 };
+    if text(before) == "return" {
+        return true;
+    }
+    let local = &tokens[before - 1];
+    if text(before) != "=" || local.kind != Kind::Ident || !matches!(text(before - 2), ";" | "{" | "}" | ":") {
+        return false;
+    }
+    (open..close).any(|index| {
+        text(index) == "return"
+            && (text(index + 1) == local.text && text(index + 2) == ";" || text(index + 1) == "-" && text(index + 2) == local.text && text(index + 3) == ";")
+    })
+}
+
+/// The innermost `switch` around `at`: its subject's bounds and its body's
+/// braces.
+fn enclosing_switch(tokens: &[Token], at: usize, floor: usize, limit: usize) -> Option<((usize, usize), usize, usize)> {
+    let mut depth = 0;
+    let mut index = at;
+    while index > floor {
+        index -= 1;
+        match tokens[index].text {
+            "}" => depth += 1,
+            "{" if depth > 0 => depth -= 1,
+            "{" => {
+                if let Some(subject) = switch_subject(tokens, index + 1, floor).filter(|&(_, end)| end + 2 == index) {
+                    return Some((subject, index, close_of(tokens, index, limit)?));
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Whether the number at `at` is a step of a `switch` whose steps the file's
+/// own macros write (`WALK(16, 232, 744)`, `ARRIVE(17, 18)`, which `steps`
+/// tells): a `case` of it or a value given to its subject (`case 17: ...
+/// *state = 18;`), as a step of the same route.
+pub fn route_step(tokens: &[Token], at: usize, floor: usize, limit: usize, steps: &dyn Fn(&str) -> bool) -> bool {
+    let Some(((start, end), open, close)) = enclosing_switch(tokens, at, floor, limit) else { return false };
+    let written = (open + 1..close).any(|index| tokens[index].kind == Kind::Ident && steps(tokens[index].text) && tokens[index + 1].text == "(");
+    if !written {
+        return false;
+    }
+    let text = |index: usize| tokens.get(index).map_or("", |t| t.text);
+    if text(at - 1) == "case" && text(at + 1) == ":" {
+        return true;
+    }
+    let length = end + 1 - start;
+    text(at + 1) == ";"
+        && text(at - 1) == "="
+        && at >= length + 2
+        && matches!(text(at - 2 - length), ";" | "{" | "}" | ")" | "else" | ":")
+        && (0..length).all(|offset| tokens[at - 1 - length + offset].text == tokens[start + offset].text)
 }
 
 /// Whether the call whose `(` is at `open` takes a reciprocal
@@ -1159,6 +1525,11 @@ pub fn pointer_call(tokens: &[Token], at: usize, floor: usize) -> Option<(String
                 }
                 if tokens[before].text == ")" {
                     let open = open_of(tokens, before, floor)?;
+                    // `EFFECT_BLITTER(slot)(canvas, ...)`: a macro's result,
+                    // called as the type it may cast to.
+                    if open > floor && tokens[open - 1].kind == Kind::Ident {
+                        return Some((tokens[open - 1].text.to_string(), position, true));
+                    }
                     let cast = |offset: usize| tokens.get(open + offset).filter(|_| open + offset < before);
                     if cast(1).is_some_and(|t| t.text == "(") && cast(3).is_some_and(|t| t.text == ")") {
                         let ty = cast(2).filter(|t| t.kind == Kind::Ident)?;
@@ -1438,6 +1809,90 @@ mod tests {
     }
 
     #[test]
+    fn packed_bytes_and_bit_fields() {
+        let unpack = "void F(void) { levels = in[0] | in[1] << 8 | in[2] << 16 | (in[3] & 0xf0) << 20; stats = in[k] << 24 | in[k + 13] << 12; }";
+        assert_eq!(kind_of(unpack, "16", 0), Some("packing"), "an element joined to others by |");
+        assert_eq!(kind_of(unpack, "20", 0), Some("packing"), "a field of an element");
+        assert_eq!(kind_of(unpack, "24", 0), Some("packing"));
+        assert_eq!(kind_of(unpack, "13", 0), Some("packing"), "a byte's index in a loaded element");
+        let pack = "void F(void) { out[k] = stats >> 24; out[k + 1] = stats >> 16; out[k + 11] = stats << 4; }";
+        assert_eq!(kind_of(pack, "24", 0), Some("packing"), "stored into an array filled with two or more amounts");
+        assert_eq!(kind_of(pack, "16", 0), Some("packing"));
+        assert_eq!(kind_of(pack, "11", 0), Some("packing"), "a byte's index in a stored element");
+        assert_eq!(kind_of("void F(void) { v = RGB(21, 10, 21) << 16 | RGB(21, 10, 21); }", "16", 0), Some("packing"), "two halves joined");
+        assert_eq!(kind_of("void F(void) { key = ((u32)(u16)count >> 16) | KEY_B; }", "16", 0), Some("packing"), "out through a group");
+        assert_eq!(kind_of("void F(void) { return (seed << 8) >> 16; }", "16", 0), Some("packing"), "a field cut by two shifts");
+        assert_eq!(kind_of("void F(void) { x = (u32)(a - b) << 23 >> 7; }", "23", 0), Some("packing"));
+        // A shift stored alone may be a 16.16 conversion; a right shift then
+        // a left one is a scale; an amount off a nibble; a lone byte array.
+        assert_eq!(kind_of("void F(void) { matrix->rows[1] = (u32)reciprocal << 16; }", "16", 0), None);
+        assert_eq!(kind_of("void F(void) { x = (u32)x >> 16; }", "16", 0), None);
+        assert_eq!(kind_of("void F(void) { c[o + ((y >> 3) << 10)] = 0; }", "10", 0), None);
+        assert_eq!(kind_of("void F(void) { v = a << 10 | b; }", "10", 0), None);
+        assert_eq!(kind_of("void F(void) { out[12] = stats >> 16; }", "12", 0), None, "one amount");
+    }
+
+    #[test]
+    fn arrays_filled_in_order_and_their_weights() {
+        let fill = "void F(void) { w.prizeWeights[0] = 4; w.prizeWeights[1] = 4; x = 0; w.prizeWeights[2] = 16; w.prizeWeights[3] = 16; w.prizeWeights[4] = 16; w.prizeWeights[5] = 16; w.prizeWeights[6] = 16; w.prizeWeights[7] = 32; w.prizeWeights[8] = 32; w.prizeWeights[9] = 32; w.prizeWeights[10] = 64; }";
+        assert_eq!(kind_of(fill, "10", 0), Some("index"), "every index from 0 to it set");
+        assert_eq!(kind_of(fill, "64", 0), Some("random"), "a weight");
+        assert_eq!(kind_of(fill, "16", 0), Some("random"));
+        let heights = "void F(void) { h[0] = L; h[1] = L; h[2] = L; h[3] = L; h[4] = L; h[5] = L; h[6] = L; h[7] = L; h[8] = L; h[9] = L; h[10] = L; h[11] = 12; }";
+        assert_eq!(kind_of(heights, "11", 0), Some("index"));
+        assert_eq!(kind_of(heights, "12", 0), None, "not an array of weights");
+        assert_eq!(kind_of("void F(void) { h[0] = L; h[10] = L; }", "10", 0), None, "indices skipped");
+        assert_eq!(kind_of("void F(void) { x = h[10]; }", "10", 0), None, "read, not filled");
+    }
+
+    #[test]
+    fn a_counter_moved_each_pass_and_its_cases() {
+        let rise = "static s32 sStep; void F(void) { switch (sStep) { case 16: A(); break; case 24: sStep--; break; } sStep++; }";
+        assert_eq!(kind_of(rise, "16", 0), Some("duration"));
+        let reload = "void F(P *p) { if (p->steps == 0) return; switch (p->steps) { case RELOAD_STEPS: A(); break; case 11: B(); break; } p->steps--; }";
+        assert_eq!(kind_of(reload, "11", 0), Some("duration"), "a countdown");
+        let tutorial = "void F(W *w) { switch (w->step) { case 16: w->step = 21; break; case 21: break; } w->step++; }";
+        assert_eq!(kind_of(tutorial, "16", 0), None, "a step machine that jumps to a numbered step");
+        let machine = "void F(W *w) { switch (w->step) { case 16: w->step++; break; } }";
+        assert_eq!(kind_of(machine, "16", 0), None, "moved inside its own cases only");
+    }
+
+    #[test]
+    fn products_of_numbers_degrees_and_fractions_of_a_named_quantity() {
+        assert_eq!(kind_of("void F(void) { p = (Buffer + 32 * 1024)[i]; }", "1024", 0), Some("composed"));
+        assert_eq!(kind_of("void F(void) { table -= ATAN_ENTRIES / 16; }", "16", 0), Some("composed"));
+        assert_eq!(kind_of("void F(void) { v = value / 16; }", "16", 0), None, "a variable's");
+        assert_eq!(kind_of("void F(void) { v = w->LIMIT / 16; }", "16", 0), None, "a member");
+        assert_eq!(kind_of("void F(void) { v = COUNT(x) / 16; }", "16", 0), None, "a call's");
+        assert_eq!(kind_of("void F(void) { if (beat == 32) {} }", "32", 0), Some("duration"), "a beat of a few frames");
+    }
+
+    #[test]
+    fn whole_values_returned_and_steps_of_a_route() {
+        let returned = |code: &str, number: &str| {
+            let tokens: Vec<Token> = clex::lex(code).into_iter().filter(|t| t.kind != Kind::Comment).collect();
+            let at = tokens.iter().position(|t| t.text == number).expect("the number");
+            let open = tokens.iter().position(|t| t.text == "{").unwrap();
+            returned_whole(&tokens, at, open, tokens.len() - 1)
+        };
+        let rate = "s32 F(s32 e) { s32 fixed; switch (e) { case A: return 70; case B: fixed = 60; break; } return -fixed; }";
+        assert!(returned(rate, "70"));
+        assert!(returned(rate, "60"), "a local returned");
+        assert!(!returned("s32 F(void) { s32 x; x = 60; return x + 1; }", "60"));
+        assert!(!returned("s32 F(void) { return 60 + x; }", "60"));
+        let step = |code: &str, number: &str| {
+            let tokens: Vec<Token> = clex::lex(code).into_iter().filter(|t| t.kind != Kind::Comment).collect();
+            let at = tokens.iter().position(|t| t.text == number).expect("the number");
+            route_step(&tokens, at, 0, tokens.len() - 1, &|name| name == "WALK")
+        };
+        let route = "void F(u8 *state) { switch (*state) { WALK(16, 232, 744) case 17: if (A()) *state = 18; break; } }";
+        assert!(step(route, "17"));
+        assert!(step(route, "18"), "a step given to the switch's subject");
+        assert!(!step("void F(u8 *state) { switch (*state) { case 17: *state = 18; break; } }", "17"), "no step macro writes this switch");
+        assert!(!step("void F(u8 *state) { switch (*state) { WALK(1, 2, 3) case 17: x = 18; break; } }", "18"), "given to something else");
+    }
+
+    #[test]
     fn the_brightness_registers_level() {
         assert_eq!(kind_of("void F(void) { REG_BLDY = 12; }", "12", 0), Some("level"));
         assert_eq!(kind_of("void F(void) { REG_BLDALPHA = 12; }", "12", 0), None, "a blend's two coefficients");
@@ -1487,7 +1942,7 @@ mod tests {
         assert_eq!(pointer_call(&tokens, at, 0), Some(("DrawRectangle".to_string(), 3, true)), "the type it is cast to");
         let tokens: Vec<Token> = clex::lex("Get(x)(canvas, 26);").into_iter().collect();
         let at = tokens.iter().position(|t| t.text == "26").unwrap();
-        assert_eq!(pointer_call(&tokens, at, 0), None, "a call's result is no cast");
+        assert_eq!(pointer_call(&tokens, at, 0), Some(("Get".to_string(), 1, true)), "a macro's result, called as the type it may cast to");
         let tokens: Vec<Token> = clex::lex("Call1((void (*)())Event_Wait, 15); F(Random16(), 9, x + 1)").into_iter().collect();
         assert_eq!(arguments(&tokens, 1), (vec![Some("Event_Wait".to_string()), None], false));
         let open = tokens.iter().position(|t| t.text == "F").unwrap() + 1;

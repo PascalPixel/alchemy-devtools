@@ -195,6 +195,16 @@ pub struct Report {
     /// Numbered names whose number is their meaning, by a row of kind `its
     /// number` in `evidence/<game>-names.tsv`: counted apart (`numbered_honest`).
     numbered_by_row: HashSet<String>,
+    /// Each `.c` file's own function-like macros that number a route's steps
+    /// or count from a named first, by what each parameter numbers
+    /// (`own_macro_kinds`).
+    own_macros: HashMap<String, HashMap<String, Vec<Option<&'static str>>>>,
+    /// The functions whose parameters a definition named, which a prototype
+    /// elsewhere does not rename.
+    defined_parameters: HashSet<String>,
+    /// Every declaration's parameter names, by function, for a parameter the
+    /// chosen one names vaguely (`rate` where a prototype says `percent`).
+    parameter_lists: HashMap<String, Vec<Vec<Option<String>>>>,
     /// Message symbols whose own text says `unknown` (`MsgDetailsUnknown`):
     /// the game's word, no placeholder.
     text_unknown: HashSet<String>,
@@ -375,6 +385,12 @@ impl Report {
     /// that of the parameter it is passed to (`WAIT(n)` is
     /// `Event_Wait(s32 frames)`).
     fn parameter(&self, callee: &str, position: usize, depth: usize) -> Option<(String, Option<&'static str>)> {
+        // A far call, `XFar`, is X itself: X's definition names its parameters.
+        if let Some(routine) = callee.strip_suffix("Far").filter(|routine| self.defined_parameters.contains(*routine) && depth < 8) {
+            if let Some(found) = self.parameter(routine, position, depth + 1) {
+                return Some(found);
+            }
+        }
         if let Some(names) = self.parameters.get(callee) {
             let name = names.get(position)?.clone()?;
             let kind = data_parameter(&name);
@@ -476,6 +492,11 @@ impl Report {
         if !other && has(&["percent"]) {
             return Some("decimal");
         }
+        // A sheet's own animation number: `Actor_FallOverWithAnimationById(id,
+        // angle, s32 animation)`; its speed or step is a rate.
+        if !other && words.last().is_some_and(|word| word == "animation") {
+            return Some("animation");
+        }
         if !other && has(&["fade", "shade", "brightness", "red", "green", "blue"]) {
             return Some("level");
         }
@@ -564,6 +585,10 @@ impl Report {
         if candidate.calls.iter().any(|(callee, _)| matches!(callee.as_str(), "OBJ_X" | "OBJ_Y")) {
             return Some("position");
         }
+        // Degrees reckoned for DEGtoANG, S3's composed angle: `DEGtoANG(i * 60)`.
+        if candidate.calls.first().is_some_and(|(callee, _)| callee == "DEGtoANG") {
+            return Some("composed");
+        }
         // A level written to the brightness register (`Io_Write16(31,
         // &REG_BLDY)`), GBATEK's fade coefficient.
         if candidate.register.as_deref().is_some_and(|register| numbers::named_kind([register]) == Some("level")) {
@@ -638,6 +663,25 @@ impl Report {
     /// the parameter it fills show it to be, else a number to name
     /// (`magic_code`).
     fn finish(&mut self) {
+        // A parameter the chosen declaration names without saying what it
+        // holds takes the name another declaration gives it that does say:
+        // `BattleEffect_SetApproachMotion(..., s32 rate)`, written where it
+        // divides by 100, is the header's `percent`.
+        for (function, lists) in std::mem::take(&mut self.parameter_lists) {
+            let Some(chosen) = self.parameters.get(&function).cloned() else { continue };
+            let says = |report: &Report, name: &str| data_parameter(name).is_some() || report.parameter_words(&function, name).is_some() || numbers::is_other(name);
+            let mut merged = chosen.clone();
+            for (position, name) in chosen.iter().enumerate() {
+                if name.as_deref().is_some_and(|name| says(self, name)) {
+                    continue;
+                }
+                let other = lists.iter().filter(|list| list.len() == chosen.len()).filter_map(|list| list[position].clone()).find(|other| says(self, other));
+                if let Some(other) = other {
+                    merged[position] = Some(other);
+                }
+            }
+            self.parameters.insert(function, merged);
+        }
         // A hex number named alone is a mask or a bit, which S3 keeps hex,
         // where its name says so (`CELL_CODE_BITS`, `TRIGGER_KIND_MASK`), or
         // where it is written beside `&`, `|`, `^` or `~` (`flags &
@@ -689,10 +733,24 @@ impl Report {
             // A number in a function-like macro's own body is the name's
             // definition: the macro is the name S3 asks for.
             let definition = candidate.definition.then_some("definition");
-            match local.or_else(|| self.honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)).or(definition) {
+            // An amount in a debug room's own code (`FieldUnit_AddHp(ISAAC,
+            // -100)`, `coins = 777777`): a test's figure, nothing the game
+            // plays.
+            let debug = (numbers::is_decimal(literal) && is_debug_room(file)).then_some("debug");
+            match local.or_else(|| self.honest_by_call(&candidate)).or_else(|| self.honest_by_parameter(&candidate)).or(definition).or(debug) {
                 Some(kind) => self.note(&format!("honest_{kind}"), file, line, &what),
                 None => {
-                    self.note("magic_code", file, line, literal);
+                    // The callee and the parameter it fills, so the next
+                    // reader sees why it is counted: `ShipRooms_RunEventCommand
+                    // opt`, `F #3 (unnamed)`.
+                    let described = match candidate.calls.first() {
+                        Some((callee, at)) => match self.parameter(callee, *at, 0) {
+                            Some((name, _)) => format!("{literal}\t{callee} {name}"),
+                            None => format!("{literal}\t{callee} #{} (unnamed)", at + 1),
+                        },
+                        None => literal.clone(),
+                    };
+                    self.note("magic_code", file, line, &described);
                     if candidate.lone {
                         self.note("magic_argument", file, line, &what);
                     }
@@ -932,6 +990,16 @@ pub fn is_numbered(name: &str) -> bool {
     !NUMBERED_STEMS.contains(&lower.as_str())
 }
 
+/// Whether a file is a debug room's code: a test scene under `src/debug/`
+/// (`test.c`, `psynergy_test.c`, `psynergy_test_2.c`, `shop_test.c`), not its
+/// tables of scenes or rows (`test_scenes.c`) or the level tool.
+fn is_debug_room(path: &str) -> bool {
+    let Some((folder, name)) = path.rsplit_once('/') else { return false };
+    let stem = name.strip_suffix(".c").unwrap_or("");
+    let stem = stem.trim_end_matches(|c: char| c.is_ascii_digit()).trim_end_matches('_');
+    folder.ends_with("/src/debug") && (stem == "test" || stem.ends_with("_test"))
+}
+
 /// A number that wants a name: hex from 0x10, decimal from 10.
 pub fn is_magic(literal: &str) -> bool {
     let digits = literal.trim_end_matches(['u', 'U', 'l', 'L']);
@@ -1059,6 +1127,35 @@ fn is_grid_conversion<'a>(name: &str, parameters: &[&str], body: impl Iterator<I
 }
 
 /// A hex number token's value.
+/// What each parameter of a file's own function-like macro numbers, from its
+/// body: a step of a route the macro writes as a `case` (`#define WALK(state_,
+/// x, z) case state_: ... *state = state_ + 1;`), or the step it goes on to
+/// (`ARRIVE(state_, next)`'s `*state = next;`), and the index of a macro that
+/// counts from a named first (`#define STAKE(n) (ACTOR_FIRST_PLACED + (n))`).
+fn own_macro_kinds(names: &[&str], body: &[&str]) -> Vec<Option<&'static str>> {
+    let cased = body.contains(&"case");
+    let indexed = |parameter: &str| {
+        let base = |text: &str| text.starts_with(|c: char| c.is_ascii_uppercase()) && is_macro_name(text);
+        match body {
+            ["(", first, "+", "(", p, ")", ")"] | [first, "+", "(", p, ")"] | ["(", first, "+", p, ")"] | [first, "+", p] => base(first) && *p == parameter,
+            _ => false,
+        }
+    };
+    names
+        .iter()
+        .map(|&parameter| {
+            let step = body.windows(3).any(|w| (w[0] == "case" && w[1] == parameter && w[2] == ":") || (cased && w[0] == "=" && w[1] == parameter && w[2] == ";"));
+            if step {
+                Some("step")
+            } else if names.len() == 1 && indexed(parameter) {
+                Some("index")
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 fn hex_value(token: &Token) -> Option<u64> {
     let digits = token.text.strip_prefix("0x").or_else(|| token.text.strip_prefix("0X"))?;
     (token.kind == Kind::Number).then(|| u64::from_str_radix(digits.trim_end_matches(['u', 'U', 'l', 'L']), 16).unwrap_or(u64::MAX))
@@ -1393,18 +1490,21 @@ impl<'r, 'a> Walk<'r, 'a> {
                 inside = callee;
             }
             let (siblings, random_arguments) = innermost.map_or_else(|| (Vec::new(), false), |open| numbers::arguments(tokens, open));
+            // A local array's size is a count of its own elements.
+            let own = if numbers::is_array_size(tokens, at, floor) {
+                Some("position")
+            } else {
+                numbers::local(tokens, at, floor, limit).or_else(|| numbers::is_hardware_address(literal).then_some("address"))
+            };
+            let own = own.or_else(|| self.own_macro_number(&calls, at, floor, limit)).or_else(|| self.chance_returned(at));
+            let tokens = &self.code.tokens;
             let candidate = Candidate {
                 file: self.file.to_string(),
                 line,
                 literal: literal.to_string(),
                 calls,
                 lone: self.is_argument(at),
-                // A local array's size is a count of its own elements.
-                local: if numbers::is_array_size(tokens, at, floor) {
-                    Some("position")
-                } else {
-                    numbers::local(tokens, at, floor, limit).or_else(|| numbers::is_hardware_address(literal).then_some("address"))
-                },
+                local: own,
                 siblings,
                 random_arguments,
                 pointer: numbers::pointer_call(tokens, at, floor),
@@ -1418,6 +1518,63 @@ impl<'r, 'a> Walk<'r, 'a> {
             return;
         }
         self.report.note(metric, self.file, line, literal);
+    }
+
+    /// What a number in this file's own macros numbers: the lone argument a
+    /// macro takes as a route's step or an index from its named first
+    /// (`WALK(16, 232, 744)`, `STAKE(10)`, also through another macro,
+    /// `STAKE_ROW(10)`), or a step of the switch those macros write (`case
+    /// 17:`, `*state = 18;`).
+    fn own_macro_number(&self, calls: &[(String, usize)], at: usize, floor: usize, limit: usize) -> Option<&'static str> {
+        let own = self.report.own_macros.get(self.file)?;
+        let mut call = calls.first().filter(|_| self.is_argument(at)).cloned();
+        for _ in 0..4 {
+            let Some((callee, position)) = call else { break };
+            if let Some(kind) = own.get(&callee).and_then(|kinds| kinds.get(position).copied().flatten()) {
+                let _ = kind;
+                return Some("own_macro");
+            }
+            call = self.report.macro_parameters.get(&callee).and_then(|list| list.get(position)).and_then(|(_, inner)| inner.clone());
+        }
+        let steps = |name: &str| own.get(name).is_some_and(|kinds| kinds.contains(&Some("step")));
+        numbers::route_step(&self.code.tokens, at, floor, limit, &steps).then_some("own_macro")
+    }
+
+    /// The routine being read: its name, as its definition's declarator
+    /// names it (`s32 Battle_GetEffectBaseSuccessRate(s32 effectId) {`), and
+    /// its braces.
+    fn routine_name(&mut self) -> Option<(&'a str, usize, usize)> {
+        let open = self.stack.iter().position(|kind| *kind == Brace::Func).and_then(|at| self.open.get(at).copied())?;
+        let close = self.routine_end();
+        let tokens = &self.code.tokens;
+        let mut index = open.checked_sub(1).filter(|&index| tokens[index].text == ")")?;
+        let mut depth = 0;
+        loop {
+            match tokens[index].text {
+                ")" => depth += 1,
+                "(" => depth -= 1,
+                _ => {}
+            }
+            if depth == 0 {
+                break;
+            }
+            index = index.checked_sub(1)?;
+        }
+        let name = index.checked_sub(1).map(|at| &tokens[at]).filter(|t| t.kind == Kind::Ident)?;
+        Some((name.text, open, close))
+    }
+
+    /// A percentage a routine named for a chance returns: the whole value it
+    /// returns, or gives a local it returns, in a routine whose name holds
+    /// `chance`, `percent` or a success `rate` (`Battle_GetEffectBaseSuccessRate`'s
+    /// `return 70;`, `fixedChance = 60; ... return -fixedChance;`). A rate
+    /// alone may be a speed, and stays.
+    fn chance_returned(&mut self, at: usize) -> Option<&'static str> {
+        let (name, open, close) = self.routine_name()?;
+        let words = numbers::words(name);
+        let has = |word: &str| words.iter().any(|w| w == word);
+        let chance = has("chance") || has("percent") || (has("success") && has("rate"));
+        (chance && numbers::is_decimal(self.code.text(at)) && numbers::returned_whole(&self.code.tokens, at, open, close)).then_some("decimal")
     }
 
     /// A literal standing alone between `(` or `,` and `,` or `)`, its sign
@@ -1605,11 +1762,28 @@ impl<'r, 'a> Walk<'r, 'a> {
         if is_grid_conversion(name, &names, words()) {
             self.report.grid_conversions.insert(name.to_string());
         }
+        let body: Vec<&str> = words().collect();
+        // `#define EFFECT_BLITTER(slot) ((DrawRectangle)gHeapSlots[slot])`: a
+        // call through it is a call through the type it casts to.
+        if let ["(", "(", ty, ")", ..] = body[..] {
+            if ty.starts_with(|c: char| c.is_ascii_uppercase()) && !is_macro_name(ty) {
+                self.report.type_aliases.entry(name.to_string()).or_default().push((self.file.to_string(), ty.to_string()));
+            }
+        }
+        if self.file.ends_with(".c") {
+            let kinds = own_macro_kinds(&names, &body);
+            if kinds.iter().any(Option::is_some) {
+                self.report.own_macros.entry(self.file.to_string()).or_default().insert(name.to_string(), kinds);
+            }
+        }
     }
 
     /// The parameter names of the function a declaration names, `None` where
-    /// a parameter is unnamed: `void Map_CopyCells(s32 srcX, ...)`.
-    fn parameters(&mut self, name: &str, statement: &[usize]) {
+    /// a parameter is unnamed: `void Map_CopyCells(s32 srcX, ...)`. A
+    /// definition's names stand over a prototype's (`travelDivisor` in a
+    /// header, `frames` where the routine is written); among prototypes, or
+    /// among definitions, the one that names most.
+    fn parameters(&mut self, name: &str, statement: &[usize], definition: bool) {
         let Some(open) = statement.windows(2).find(|pair| self.code.text(pair[0]) == name && self.code.text(pair[1]) == "(")
         else {
             return;
@@ -1634,9 +1808,15 @@ impl<'r, 'a> Walk<'r, 'a> {
             names = lists.iter().map(|tokens| Some(self.code.text(tokens[0]).to_string())).collect();
         }
         let named = |list: &[Option<String>]| list.iter().filter(|n| n.is_some()).count();
+        let defined = self.report.defined_parameters.contains(name);
+        self.report.parameter_lists.entry(name.to_string()).or_default().push(names.clone());
         let entry = self.report.parameters.entry(name.to_string()).or_default();
-        if named(&names) > named(entry) {
+        let named_definition = definition && named(&names) > 0;
+        if (named_definition && !defined) || (named_definition == defined && named(&names) > named(entry)) {
             *entry = names;
+        }
+        if named_definition {
+            self.report.defined_parameters.insert(name.to_string());
         }
     }
 
@@ -2138,7 +2318,7 @@ impl<'r, 'a> Walk<'r, 'a> {
         if let Some(&(open, _)) = opened.iter().find(|(_, kind)| *kind == Brace::Func) {
             if let Some(Declarator::Function(name)) = self.declarator(&statement) {
                 let name = name.to_string();
-                self.parameters(&name, &statement);
+                self.parameters(&name, &statement, true);
                 self.report.declare(true, &name, file, line, documented, true);
                 let close = self.braces[&open].close;
                 self.forwards(&name, &statement, open, close);
@@ -2163,7 +2343,7 @@ impl<'r, 'a> Walk<'r, 'a> {
         match self.declarator(&statement) {
             Some(Declarator::Function(name)) => {
                 let name = name.to_string();
-                self.parameters(&name, &statement);
+                self.parameters(&name, &statement, false);
                 self.report.declare(true, &name, file, line, documented, false);
                 self.named(&name, NameKind::Prototype, line, None);
             }
@@ -2746,6 +2926,10 @@ const ROWS: &[(&str, &str)] = &[
     ("honest_level", "  honest: fade, shake levels"),
     ("honest_mask", "  honest: masks of whole fields"),
     ("honest_sign", "  honest: the sign bit"),
+    ("honest_packing", "  honest: packed bytes, bit fields"),
+    ("honest_index", "  honest: indices of an array filled in order"),
+    ("honest_own_macro", "  honest: steps, indices of a file's own macros"),
+    ("honest_debug", "  honest: amounts in the debug rooms"),
     ("honest_address", "  honest: hardware addresses"),
     ("honest_definition", "  honest: a macro's own definition"),
     ("data_argument", "numbers passed as data"),
@@ -3865,6 +4049,61 @@ mod tests {
         assert_eq!(report.total("data_argument_composed"), 1, "toFIXED(-240)");
         assert_eq!(list(&[("tbs", &report)], "magic_argument"), "tbs\tf.c:3\t35\tUnit_AddPp amount\n", "a lone amount, still to name");
         assert_eq!(report.total("magic_code"), 2, "35 and the 16 a difference takes");
+    }
+
+    #[test]
+    fn steps_and_indices_of_a_files_own_macros() {
+        let scene = concat!(
+            "#define STAKE(n) (ACTOR_FIRST_PLACED + (n))\n",
+            "#define STAKE_ROW(n) STAKE(n), 0\n",
+            "#define WALK(state_, x, z) \\\n  case state_: \\\n    Move((s32)actor, x, 0, z); \\\n    *state = state_ + 1; \\\n    break;\n",
+            "#define ARRIVE(state_, next) \\\n  case state_: \\\n    if (Arrived(actor)) \\\n      *state = next; \\\n    break;\n",
+            "void Move(s32 actor, s32 x, s32 y, s32 z);\n",
+            "void Roam(struct Actor *actor) {\n  u8 *state = &actor->riseCounter;\n  switch (*state) {\n",
+            "    WALK(16, 232, 744)\n    ARRIVE(17, 18)\n  case 19:\n    *state = 32;\n    break;\n  }\n",
+            "  Sink(STAKE(10));\n  Sink(Get(11));\n}\n",
+        );
+        let shared = "#define FLOOR(n) (FLOOR_FIRST + (n))\nvoid Climb(void) {\n  Go(FLOOR(12));\n}\n";
+        let report = game([("games/tla/src/scene/yampi.c", scene), ("games/tla/include/floors.h", shared)]);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.split('\t').next().unwrap().to_string()).collect()
+        };
+        assert_eq!(listed("honest_own_macro"), ["16", "17", "18", "19", "32", "10"], "the route's steps, its plain steps too, and the stake's index");
+        assert_eq!(listed("magic_code"), ["12", "11"], "a header's macro, which is no file's own, and another call's");
+    }
+
+    #[test]
+    fn chances_debug_rooms_and_the_parameters_a_definition_names() {
+        let header = concat!(
+            "void Approach(s32 unit, s32 target, s32 travelDivisor, s32 vy);\n",
+            "void ApproachFar(s32 unit, s32 target, s32 travel_divisor, s32 vy);\n",
+            "void Push(s32 actor, s32 percent);\n",
+            "void FallOver(s32 id, u32 angle, s32 animation);\n",
+            "typedef void (*DrawRectangle)(void *canvas, s32 x, s32 y);\n",
+            "#define BLITTER(slot) ((DrawRectangle)gSlots[slot])\n",
+        );
+        let motion = concat!(
+            "void Approach(s32 unit, s32 target, s32 frames, s32 vy) {\n  Wait(frames);\n}\n",
+            "void Push(s32 actor, s32 rate) {\n  x = rate * d / 100;\n}\n",
+            "s32 Battle_GetEffectBaseSuccessRate(s32 effect) {\n  s32 fixedChance;\n  switch (effect) {\n  case A:\n    return 70;\n  default:\n    fixedChance = 100;\n  }\n  return -fixedChance;\n}\n",
+            "s32 Battle_GetMultiplier(s32 effect) {\n  return 70;\n}\n",
+            "void Run(void) {\n  Approach(a, b, 13, 0);\n  ApproachFar(a, b, 24, 0);\n  Push(a, 20);\n  FallOver(a, 0, 13);\n  BLITTER(2)(canvas, fall + 47, 48);\n  Opt(a, 0, 20);\n}\n",
+        );
+        let debug = "void Test(void) {\n  FieldUnit_AddHp(ISAAC, -100);\n  coins = 777777;\n  GameFlag_Set(0x169);\n}\n";
+        let report = game([("f.h", header), ("motion.c", motion), ("games/tbs/src/debug/test.c", debug), ("games/tbs/src/debug/test_scenes.c", debug)]);
+        let listed = |metric: &str| -> Vec<String> {
+            report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.split('\t').next().unwrap().to_string()).collect()
+        };
+        assert_eq!(listed("data_argument_frames"), ["13", "24"], "the definition's frames, for its far call too");
+        assert_eq!(listed("honest_decimal"), ["100", "70", "100", "20"], "a routine's own percent, the chances it returns, a vague rate by the header's percent");
+        assert_eq!(listed("honest_animation"), ["13"]);
+        assert_eq!(listed("honest_pointer"), ["47", "48"], "through the type a macro casts to");
+        assert_eq!(listed("honest_debug"), ["100", "777777"], "a debug room's amounts, not its hex flag");
+        let magic = list(&[("tbs", &report)], "magic_code");
+        assert!(magic.contains("motion.c:18\t70\n"), "not a chance's routine: {magic}");
+        assert!(magic.contains("motion.c:26\t20\tOpt #3 (unnamed)\n"), "the callee and its parameter beside the number: {magic}");
+        assert!(magic.contains("test_scenes.c:3\t777777\n"), "a debug room's table of scenes is no room: {magic}");
+        assert!(magic.contains("test.c:4\t0x169\tGameFlag_Set #1 (unnamed)\n"), "{magic}");
     }
 
     #[test]

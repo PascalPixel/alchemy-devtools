@@ -37,10 +37,20 @@ too, a local array's size, places on the map grid, beside its own cell
 macros too, and in OAM words, data through a pointer call, a cast one
 too, dampings, a sheet's own animation numbers, fade, shake, shade,
 colour and REG_BLDY levels, masks of whole fields beside &, the sign bit's
->> 31, hardware addresses from 0x02000000 to 0x0fffffff, and a
+>> 31, the shift amounts and byte indices of a word packed into bytes and
+the two shifts that cut a bit field, the indices of an array filled in
+order from 0 and the weights an array named for them holds, the steps
+and indices a .c file's own macros take and the steps of the switch they
+write, the cases of a counter moved by one each pass, a product of
+numbers, degrees for DEGtoANG and a fraction of a named constant, the
+percentages a routine named for a chance returns, amounts in a debug
+room's code, hardware addresses from 0x02000000 to 0x0fffffff, and a
 function-like macro's own definition) are honest_KIND, and
-magic_code is what is left to name; a lone plain speed a routine turns
-into 16.16 itself counts as data. Every hex number counts in hex: flag
+magic_code is what is left to name, listed with the callee and the
+parameter each fills; a lone plain speed a routine turns into 16.16
+itself counts as data. A parameter is named as its definition names it
+(a far call's as its routine's), or, where that name says nothing of
+what it holds, as another declaration does. Every hex number counts in hex: flag
 numbers (flags.h, a FLAG_ name, the whole argument of a call or macro named
 for a flag or filling a parameter named for one), addresses and
 values from 0x02000000 up, masks and bits (beside a bitwise operator or a
@@ -53,8 +63,12 @@ driver's are the kinds S3 keeps, and hex_other is
 the rest, to judge (a packed field stays; an offset, a count or a 16.16 value
 is written otherwise). A numbered name with an
 its-number evidence row counts as numbered_honest; a name whose rows are of
-kinds no check reads counts as provenance_unchecked. Files and folders under
-games/GAME count too (--list loose_headers, part_folders, numbered_files),
+kinds no check reads counts as provenance_unchecked, and apart as
+provenance_unseen where its its-code row says the thing shows nothing on
+screen. Files and folders under games/GAME count too (--list
+loose_headers, part_folders, numbered_files; a numbered file whose symbol
+the C and assembly write only where it is defined is
+numbered_files_unused),
 and --list unit_open names the unit each question keeps open.";
 
 /// Both games' DONE, a line for each edition and one for the games.
