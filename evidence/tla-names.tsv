@@ -2719,7 +2719,6 @@ userValue	its twin	struct ScriptOperands at offset of ☀️ struct Actor.userVa
 watchedActor	its twin	struct ScriptOperands at offset of ☀️ struct Actor.watchedActor (field/actor.h), the member its ActorScript_SetOrCompare handler (gActorScript_OperandHandlerTable) reads	games/tla/include/field/actor.h
 update	its twin	struct ScriptOperands at offset of ☀️ struct Actor.update (field/actor.h), the member its ActorScript_SetOrCompare handler (gActorScript_OperandHandlerTable) reads	games/tla/include/battle/battle_camera.h
 gTestScenes_UnusedRow	its twin	as ☀️'s gTest_UnusedRows (games/tbs/src/debug/test_rows.c), data after the room's tables that nothing reads	games/tla/src/debug/test_scenes.c
-VanishSparksWork	its uses	the heap slot 92 work Actor_VanishInSparks allocates: the picture, the sparks and their sprites	games/tla/src/field/field_psynergy_step_vector.c
 WorldMapView	its twin	The Broken Seal's struct WorldMapView (games/tbs/include/field/perspective.h): the same members at the same offsets to 0xfc, read by the same routines (WorldMap_InitializePerspective, WorldMap_UpdateView, WorldMap_ApplyAffinePage); replaces the views WorldView, MapTileWindow, MapTileWindow_08010d48, PerspectiveWindow, PerspectiveTiles and WorldTint	games/tla/include/field/perspective.h
 WorldMapView.reloadSteps	its code	counts 12 down, one graphics step a frame, after the region's graphics set changes (WorldMap_PreloadCurrentTileBlock)	games/tla/include/field/perspective.h
 WorldMapView.tileBufferUsed	its code	set by FieldPsynergy_MarkWorldMapTilesUsed when FieldWork.mode is 3; MapAnimation_Start then decodes resources[4] into Ram_BgTileBuffer + 0x2000 again and clears it	games/tla/include/field/perspective.h
@@ -10405,7 +10404,6 @@ ANIM_LEADER_CLIMB	its twin	The Broken Seal's 10, played climbing a ladder and wh
 ANIM_LEADER_CLING	its twin	The Broken Seal's 12	games/tla/include/field/sprite.h
 ANIM_LEADER_CLIMB_OVER_TOP	its twin	The Broken Seal's 11, at a ladder's top	games/tla/include/field/sprite.h
 ANIM_LEADER_CLIMB_DOWN_FROM_TOP	its twin	The Broken Seal's 13, stepping from a ladder's top onto it	games/tla/include/field/sprite.h
-cacheEntry	its uses	ParticleBurstWork offset 0x1b00: ParticleBurst_Start stores VramCache_FindFreeEntry's entry there and BattleEffect_EndX frees it	games/tla/include/field/event_commands.h
 UI_SPRITE_VIEWER_SPRITE_LIMIT	its code	the sprite viewer wraps the sprite id at 716, the rows of this game's sprite table	games/tla/src/field/field_sprite_viewer.c
 DJINN_PENDING_KIND_MASK	its twin	The Broken Seal's event_commands_internal.h: pendingDjinni bits 15..12	games/tla/src/field/event_commands_internal.h
 DJINN_PENDING_BATTLE_EVENT_MASK	its twin	The Broken Seal's 0x7ff: a Djinni battle's event without DJINN_NO_HOP	games/tla/src/field/event_commands_internal.h
@@ -22754,3 +22752,65 @@ PSYNERGY_TINT_GREY	its code	gFieldEffect_TargetColors' entry RGB(16, 16, 16), th
 PsynergyTint	its code	the index into gFieldEffect_TargetColors and FLAG_PSYNERGY_TINT that FieldPsynergy_FadeToCastColor picks (event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
 PSYNERGY_TINT_COUNT	its code	gFieldEffect_TargetColors holds eight colours (field_effect_data.c)	games/tla/include/field/field_effect.h
 MAP_CELL_SCOOP	its code	MapGrid_CanScoop lets Scoop dig on a cell with attributeB bit 0 set, or clear where FieldWork.sceneAttributeLow is set (event_commands_field_psynergy.c)	games/tla/include/field/map_grid.h
+SpriteLayerView	its code	Actor_SpawnWaterSplash copies the wader's sprite layer to its splash a byte at a time through it	games/tla/src/field/field_internal.h
+ConvertMapRoutine	its code	TileMap_ConvertBuffer copies Render_ConvertMapCode to RAM and calls it as this	games/tla/src/field/field_internal.h
+GrowthTargetKind	its code	FieldPsynergy_GrowthOnTarget: SPRITE_SPROUTING_LEAVES hangs a vine (HangingVine_Hang), SPRITE_ARROW_PLANT only plays SE_RECOVERY, any other takes animation 2	games/tla/src/field/event_commands_mind_read.c
+GROWTH_ON_PLANT	its code	FieldPsynergy_GrowthOnTarget: a target neither sprouting leaves nor an arrow plant takes its animation 2 and the underfoot priority	games/tla/src/field/event_commands_mind_read.c
+GROWTH_ON_SPROUTING_LEAVES	its code	FieldPsynergy_GrowthOnTarget: SPRITE_SPROUTING_LEAVES drops five vines and calls HangingVine_Hang	games/tla/src/field/event_commands_mind_read.c
+GROWTH_ON_ARROW_PLANT	its code	FieldPsynergy_GrowthOnTarget: SPRITE_ARROW_PLANT only plays SE_RECOVERY	games/tla/src/field/event_commands_mind_read.c
+RopeState	its code	RopeSlot.state: Rope_Throw and Rope_LayTied set 1, Rope_Recoil sets 0 and returns at once on 0	games/tla/src/field/event_commands_ropes.c
+ROPE_COILED	its code	Rope_Recoil sets RopeSlot.state 0 as it pulls the rope back into its coil	games/tla/src/field/event_commands_ropes.c
+ROPE_THROWN	its code	Rope_Throw and Rope_LayTied set RopeSlot.state 1	games/tla/src/field/event_commands_ropes.c
+OamAffineMode	its code	EffectSprite_Draw writes 0, 1 or 3 into the OAM entry's affine mode bits (GBATEK: off, on, double size)	games/tla/src/field/field_psynergy_actor_cells.c
+OAM_AFFINE_OFF	its code	EffectSprite_Draw: an unscaled, unrotated sprite	games/tla/src/field/field_psynergy_actor_cells.c
+OAM_AFFINE_NORMAL	its code	EffectSprite_Draw: a scaled or turned sprite, through its matrix	games/tla/src/field/field_psynergy_actor_cells.c
+OAM_AFFINE_DOUBLE	its code	EffectSprite_Draw: a sprite grown past full size, in a box twice its size	games/tla/src/field/field_psynergy_actor_cells.c
+BlazeLook	its code	FieldPsynergy_Blaze picks the flame's resource and gBlaze_TintColors entry by the lit torch's colour mode	games/tla/src/field/field_psynergy_blaze.c
+BLAZE_RED	its code	FieldPsynergy_Blaze: RESOURCE_RED_FLAME_BURST, the look with no torch or a torch in its own colours	games/tla/src/field/field_psynergy_blaze.c
+BLAZE_VIOLET	its code	FieldPsynergy_Blaze: SPRITE_COLOR_GBR torch, RESOURCE_VIOLET_FLAME_BURST	games/tla/src/field/field_psynergy_blaze.c
+BLAZE_YELLOW	its code	FieldPsynergy_Blaze: SPRITE_COLOR_GRB torch, RESOURCE_YELLOW_FLAME_BURST	games/tla/src/field/field_psynergy_blaze.c
+BLAZE_BLUE	its code	FieldPsynergy_Blaze: SPRITE_COLOR_BGR torch, RESOURCE_BLUE_FLAME_BURST	games/tla/src/field/field_psynergy_blaze.c
+BurstPaletteMode	its code	FieldPsynergy_UpdateBurst: paletteMode 1 cycles CANVAS_PALETTE's greens, 2 loads gBurst_ExplosionPalette once and clears to 0	games/tla/src/field/field_psynergy_burst.c
+BURST_PALETTE_KEPT	its code	FieldPsynergy_UpdateBurst leaves the palettes alone at 0	games/tla/src/field/field_psynergy_burst.c
+BURST_PALETTE_SHINE	its code	FieldPsynergy_UpdateBurst cycles the glow's greens on a sine each frame at 1	games/tla/src/field/field_psynergy_burst.c
+BURST_PALETTE_EXPLOSIONS	its code	FieldPsynergy_UpdateBurst loads gBurst_ExplosionPalette into BURST_EXPLOSION_PALETTE at 2	games/tla/src/field/field_psynergy_burst.c
+BurstPhase	its code	FieldPsynergy_UpdateBurst's switch on BurstWork.phase, 0 to 6, moved on by BURST_NEXT_PHASE	games/tla/src/field/field_psynergy_burst.c
+BURST_PHASE_START	its code	phase 0: SE_SPIN, 10 frames	games/tla/src/field/field_psynergy_burst.c
+BURST_PHASE_SWELL	its code	phase 1: the canvas glow scales up to half size	games/tla/src/field/field_psynergy_burst.c
+BURST_PHASE_GATHER	its code	phase 2: 40 frames (16 at nothing) while the sparks fly in	games/tla/src/field/field_psynergy_burst.c
+BURST_PHASE_FIRST_BLASTS	its code	phase 3: explosions' palette, SE_CLATTER, a blast every 8 frames, CANVAS_UPLOAD_AND_DARKEN_FOUR_LEVELS	games/tla/src/field/field_psynergy_burst.c
+BURST_PHASE_BLASTS	its code	phase 4: a blast and a 3-pixel shake every 8 frames for 128 frames; at nothing the cast ends	games/tla/src/field/field_psynergy_burst.c
+BURST_PHASE_HUSH	its code	phase 5: 35 frames with nothing started	games/tla/src/field/field_psynergy_burst.c
+BURST_PHASE_GREAT_BLAST	its code	phase 6: 10 explosions at 0 and 4 frames, a 12-pixel shake, SE_CRASH, then FIELD_PSYNERGY_FINISHED at 72	games/tla/src/field/field_psynergy_burst.c
+ENCOUNTER_ZONE_VENUS_DJINN	its code	gEncounter_AreaEntryTable gives this zone to DJINNI_FLINT through DJINNI_SALT, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_FLINT to DJINNI_SALT"	games/tla/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_VENUS_DJINN_LAST	its code	gEncounter_AreaEntryTable gives this zone to DJINNI_GEODE through DJINNI_EARTH19, the element's last three Djinn and its two spares	games/tla/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_MERCURY_DJINN	its code	gEncounter_AreaEntryTable gives this zone to DJINNI_FIZZ through DJINNI_GEL, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_FIZZ to DJINNI_GEL"	games/tla/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_MERCURY_DJINN_LAST	its code	gEncounter_AreaEntryTable gives this zone to DJINNI_EDDY through DJINNI_WATER19, the element's last three Djinn and its two spares	games/tla/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_MARS_DJINN	its code	gEncounter_AreaEntryTable gives this zone to DJINNI_FORGE through DJINNI_TINDER, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_FORGE to DJINNI_TINDER"	games/tla/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_MARS_DJINN_LAST	its code	gEncounter_AreaEntryTable gives this zone to DJINNI_SHINE through DJINNI_FIRE19, the element's last three Djinn and its two spares	games/tla/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_JUPITER_DJINN	its code	gEncounter_AreaEntryTable gives this zone to DJINNI_GUST through DJINNI_WHORL, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_GUST to DJINNI_WHORL"	games/tla/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_JUPITER_DJINN_LAST	its code	gEncounter_AreaEntryTable gives this zone to DJINNI_GASP through DJINNI_WIND19, the element's last three Djinn and its two spares	games/tla/src/field/world_map_encounter_rules.c
+SPAN_FILL	its twin	The Broken Seal's screen_transition_shapes.c, the same macro for the same rows	games/tla/src/field/screen_transition_shapes.c
+SPAN_SLOPE	its twin	The Broken Seal's screen_transition_shapes.c, the same macro; ScreenTransition_UpdateScanlineTable slides the left edge from x0 to x1 and the right from y0 to y1	games/tla/src/field/screen_transition_shapes.c
+AppearSparksWork	its uses	the heap slot 92 work Actor_VanishInSparks (Alex appearing on Venus Lighthouse) allocates: the picture, the sparks and their sprites	games/tla/src/field/field_psynergy_step_vector.c
+cacheEntry	its uses	ParticleBurstWork offset 0x1b00: ParticleBurst_Start stores VramCache_FindFreeEntry's entry there and ParticleBurst_End frees it	games/tla/include/field/event_commands.h
+ParticleBurst_End	its code	stops ParticleBurst_Update's task and frees the tiles ParticleBurst_Start loaded; called where Cyclone ends with the burst (lines 75-80)	games/tla/src/field/field_psynergy_cyclone.c
+Actor_UpdateSpin	its code	per-frame update that turns the actor 1/16 turn, set while Cyclone, Actor_DepartInRing and Actor_ArriveInRing spin it	games/tla/src/field/field_psynergy_cyclone.c
+Pound_SinkFist	its code	task of a Pound out of reach: the fist (SPRITE_POUND_FIST) sinks 2.5 pixels and shrinks 1/64 a frame for 8 frames before BattleEffect_SpawnScatterParticle shatters it (FieldPsynergy_Pound)	games/tla/src/field/field_psynergy_pound.c
+PSYNERGY_DRAW_NO_SCENE_SPRITE	its code	FieldWork.psynergyDrawFlags bit 0x1: Pound and Scoop skip FieldPsynergy_StartSceneSprite and Pound skips drawing its glow	games/tla/src/field/field_psynergy_internal.h
+PSYNERGY_DRAW_FIXED_PRIORITY	its code	FieldWork.psynergyDrawFlags bit 0x2: Pound's fist and Scoop's hand take OAM priority 1 and lose ACTOR_PRIORITY_AUTOMATIC	games/tla/src/field/field_psynergy_internal.h
+SceneEncounterRule	its code	a row of gScene_EncounterRules, which Encounter_SelectMapZones reads into FieldWork.encounterZones (renamed from SceneMusicEntry, which no music code reads)	games/tla/src/field/field_sequence_internal.h
+groundZone	its code	SceneEncounterRule byte Encounter_SelectMapZones stores as encounterZones[0], the zone Encounter_RollMapStep takes for ordinary ground	games/tla/src/field/field_sequence_internal.h
+secondZone	its code	SceneEncounterRule byte stored as encounterZones[1], the zone Encounter_RollMapStep takes on a MAP_CELL_SECOND_ZONE cell	games/tla/src/field/field_sequence_internal.h
+ViewedPlacement	its code	the actor placement rows Scene_AssignViewFlags walks: a sprite (-1 ends), a condition it fills with FLAG_IN_VIEW or FLAG_OUT_OF_VIEW when 0, and x and z (renamed from SceneRegionEntry)	games/tla/src/field/field_sequence_internal.h
+PLACEMENT_SHIP	its code	Party_GetCharacterSprite turns placement character 8 into SPRITE_WINGED_SHIP_SMALL or SPRITE_WINGED_SHIP	games/tla/src/field/field_sequence_actors.c
+PsynergyEndSkip	its code	Event_ResolvePendingActions tests bits 1, 2 and 4 of skip before ending Reveal (revealActive), the ring of light (ringActive, ABILITY_MAGNET) and Sand (sandActive)	games/tla/src/field/field_sequence_items.c
+EditorChannel	its code	PaletteEditor_Run: UP and DOWN cycle channel 1 to 3, and A and B raise or lower the red, green or blue level of the colour by it	games/tla/src/field/field_sequence_palette_editor.c
+FADE_HALF_COLORS	its code	PaletteFade_Update queues 224 colours to BG_PLTT and the next 224 to OBJ_PLTT	games/tla/src/field/field_sequence_palette_fade.c
+TeleportState	its code	FieldSequence_Run: state 1 (set when the World Picture returns a place for FIELD_RAISED_TRIGGER_TELEPORT) plays Teleport_PlaySparksAndFade and sets 2; state 2 plays Teleport_PlayWhirl and clears it	games/tla/src/field/field_sequence_run.c
+MAP_ENTRANCE_ROW_BYTES	its code	Field_PlaceAtEntrance reads an entrance byte, x and z halfwords and a flags byte per row, stepping 6 bytes	games/tla/src/field/field_sequence_run.c
+OamAffineMode	the hardware	GBATEK's OBJ attribute 0 bits 8-9: 0 normal, 1 rotation/scaling, 3 rotation/scaling with double size; the placing routines set 3 for a scale above 1	games/tla/src/field/field_sprite_draw.c
+WorldMapGraphicsResource	its code	the nine columns of gWorldMap_GraphicsResources (facing.c): a palette, a tileset animation, cell picture attributes and six tile sets, loaded by WorldMap_LoadGraphics in that order	games/tla/src/field/field_world_map.c
+ENCOUNTER_ZONE_SLOTS	its code	Encounter_GetFormationAtSlot takes slots 0 to 7 of a zone; a Mimic's contents past 7 take slot contents - 8 of the next zone	games/tla/src/field/field_sequence_triggers.c
+UI_SPRITE_VIEWER_SKIP_STOPS	its code	gSpriteViewer_SkipStops is declared [10] (map_grid_data.c), its last entry the (u16)-1 end	games/tla/src/field/field_sprite_viewer.c
+LuckyWheelsPrompt	its code	LuckyWheels_Update (TLA_PATCH_1): phase 1 and 2 while the all-locked prompt (MsgSlotsAllHeld, MsgSlotsCannotPull) opens over two frames, 3 MsgSlotsStart, 4 MsgSlotsHold, 5 MsgSlotsRelease; after a loss 0 to 1 once MsgSlotsPullLever is drawn	games/tla/src/field/lucky_wheels.c

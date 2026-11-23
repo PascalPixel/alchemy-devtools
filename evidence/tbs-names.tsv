@@ -4665,8 +4665,6 @@ ACTOR_ICON_BROWSER	what the player sees	a page of 32 item icons headed `ITEM PAG
 ACTOR_PORTRAIT_BROWSER	what the player sees	Isaac's portrait over `0 Isaac`, the first of the portraits Left and Right step through (its render)	games/tbs/src/debug/level.c
 ACTOR_LEVEL_EDITOR	what the player sees	`Raise everyone's level.` over the leader's name and level, A raising it one and Start five (its render)	games/tbs/src/debug/level.c
 ACTOR_ABILITY_BROWSER	what the player sees	`Psy No:` over an ability's name, with `B:Return` (its render)	games/tbs/src/debug/level.c
-ACTOR_FIRST_EMOTE_TESTER	what the player sees	a wince over the actor, then its message (its render)	games/tbs/src/debug/level.c
-ACTOR_SECOND_EMOTE_TESTER	what the player sees	an ellipsis over the first tester, then the first tester's message (its render)	games/tbs/src/debug/level.c
 FLAG_CREDITS_LINE_DRAWN	what the player sees	the credits text scrolling up the screen one line at a time (its render)	games/tbs/src/menu/credits.c
 FootprintAnimation	what the player sees	prints in Imil's snow (its render)	games/tbs/src/field/field_player_control.c
 BLEND_WEIGHT_MAX	the hardware	GBATEK: BLDALPHA's EVA/EVB and BLDY's EVY are 0 to 16 sixteenths; every effect writes 16 for a whole weight	games/tbs/src/battle_effect/battle_effect_internal.h
@@ -7868,3 +7866,25 @@ SW_SPRITE	its code	gActorScript_OperandHandlerTable[24] is ActorScript_SetOrComp
 SW_SPRITE_KIND	its code	gActorScript_OperandHandlerTable[25] is ActorScript_SetOrCompareSpriteStorageKind, on Actor.spriteStorageKind	games/tbs/include/field/actor_script.h
 SW_WATCHED_ACTOR	its code	gActorScript_OperandHandlerTable[37] is ActorScript_SetOrCompareWatchedActor, on Actor.watchedActor	games/tbs/include/field/actor_script.h
 CELL_BEHAVIOR_CLOAK	its code	FieldPsynergy_CheckCloakTile requests CLOAK_END when the cell under the leader has any other behavior (event_commands_cloak.c)	games/tbs/include/field/map_grid.h
+ACTOR_ELLIPSIS_BUBBLE	its code	a SPRITE_EMOTE actor whose animation Scene_Initialize sets to EMOTE_ELLIPSIS, the "..." bubble's animation in that sheet (enum Emote; Actor_ShowEmoteById selects it the same way)	games/tbs/src/debug/level.c
+ACTOR_WINCE_BUBBLE	its code	a SPRITE_EMOTE actor whose animation Scene_Initialize sets to EMOTE_WINCE, the wince bubble's animation in that sheet (enum Emote; Actor_ShowEmoteById selects it the same way)	games/tbs/src/debug/level.c
+ITEM_DISPLAY_SPARKLES	its code	ItemDisplay_ShowPicture and ItemDisplay_ShowItem: flag 1 gives the picture ItemDisplay_EmitSparkles, which spawns SPRITE_SPARKLE round it	games/tbs/src/field/field_sequence_item_display.c
+ITEM_DISPLAY_RAISED	its code	ItemDisplay_ShowPicture and ItemDisplay_ShowItem: flag 2 calls ItemDisplay_RaiseAboveLeader, the leader in ANIM_LEADER_ARMS_RAISED with the picture 36 pixels above him	games/tbs/src/field/field_sequence_item_display.c
+ItemTriggerCallback	its code	Field_UseItem calls a TRIGGER_ITEM value at or above TRIGGER_RESULT_MESSAGE_END as this function, with the item, its user and its slot	games/tbs/src/field/field_sequence_items.c
+FIELD_PARTICLE_LIFTED_BY_Z	its code	FieldEffect_DrawScaledActor raises a particle with this bit by 508 pixels less its z; FieldParticle_Initialize sets it	games/tbs/include/field/field_particle.h
+PENDING_DJINNI_BATTLE	its code	Djinn_ResolvePending's kind 0, a pendingDjinni of DJINNI_BATTLE_EVENT_FIRST plus the Djinni (event_commands_requests.c)	games/tbs/src/field/event_commands_internal.h
+PENDING_MIMIC_CHEST	its code	field_sequence_triggers.c stores a mimic chest's flag in pendingDjinni with CONDITION_FLAG_SET; Djinn_ResolvePending sets it once the battle is won	games/tbs/src/field/event_commands_internal.h
+Entrance_PlayArrivalAnimation	its code	plays ANIM_LEADER_ARRIVE or its alternate with the doorway part, then walks the leader 8 pixels south (event_commands_exit_animations.c); was Entrance_EndArrivalAnimation	games/tbs/src/field/event_commands_exit_animations.c
+LUCKY_WHEELS_PROMPT_NONE	its code	LuckyWheels_Update: no prompt drawn yet; set after a pull that won nothing and when its window is opened	games/tbs/src/field/lucky_wheels.c
+LUCKY_WHEELS_PROMPT_ALL_HELD	the game	"If you lock all the slots," (MsgSlotsAllHeld), drawn by LuckyWheels_Update on the lever with every wheel locked	games/tbs/src/field/lucky_wheels.c
+LUCKY_WHEELS_PROMPT_ALL_HELD_BOTH_LINES	the game	"you can't pull the lever!" (MsgSlotsCannotPull), drawn under MsgSlotsAllHeld the next frame	games/tbs/src/field/lucky_wheels.c
+LUCKY_WHEELS_PROMPT_START	the game	":Start machine" (MsgSlotsStart), drawn with the cursor on the lever	games/tbs/src/field/lucky_wheels.c
+LUCKY_WHEELS_PROMPT_HOLD	the game	":Stop" (MsgSlotsHold), drawn with the cursor on a wheel not locked	games/tbs/src/field/lucky_wheels.c
+LUCKY_WHEELS_PROMPT_RELEASE	the game	":Spin" (MsgSlotsRelease), drawn with the cursor on a locked wheel	games/tbs/src/field/lucky_wheels.c
+LUCKY_WHEELS_PROMPT_PULL_LEVER	the game	"to lock, pull the lever!" (MsgSlotsPullLever), drawn once after a pull that won nothing	games/tbs/src/field/lucky_wheels.c
+LUCKY_WHEELS_PRIZE_LIST_END	its code	lucky_wheels.c ends wonPrizes with -1 after the winning lines' prizes and puts it first at the start; tolbi_games.c stops giving prizes at -1 and offers the game again when it is first	games/tbs/src/field/lucky_wheels.c
+LUCKY_WHEELS_PRIZE_LIST_DONE	its code	lucky_wheels.c puts -2 first when B leaves at the bet; tolbi_games.c gives nothing for it and puts it first once the prizes are given	games/tbs/src/field/lucky_wheels.c
+SPRITE_PART_PLAIN	the hardware	OAM attribute 0 bits 8 and 9 clear: no affine matrix (GBATEK)	games/tbs/src/field/field_sprite_draw.c
+SPRITE_PART_AFFINE	the hardware	OAM attribute 0 bit 8: rotation and scaling (GBATEK)	games/tbs/src/field/field_sprite_draw.c
+SPRITE_PART_AFFINE_DOUBLE	the hardware	OAM attribute 0 bits 8 and 9: rotation and scaling in a double-size box (GBATEK)	games/tbs/src/field/field_sprite_draw.c
+SPRITE_PART_MIRRORED	the hardware	OAM attribute 1 bit 12, the horizontal flip, the matrix field's 8 when bit 8 of attribute 0 is clear (GBATEK)	games/tbs/src/field/field_sprite_draw.c
