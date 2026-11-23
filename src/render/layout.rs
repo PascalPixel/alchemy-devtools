@@ -82,6 +82,8 @@ pub struct Layout {
     pub field_actor_count: u32,
     pub field_command: u32,
     pub field_raised: u32,
+    /// FieldWork.exit: the exit taken, which ends the scene.
+    pub field_exit: u32,
     pub field_mode: u32,
     /// struct Actor: facing, x, y, z, ground height, layer, velocity, sprite
     /// and sprite kind.
@@ -141,6 +143,7 @@ const EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("field_actor_count", "ACTOR_ID_COUNT", "FIELD_ACTOR_COUNT"),
     ("field_command", "offsetof(struct FieldWork, psynergy)", "offsetof(struct FieldWork, psynergy)"),
     ("field_raised", "offsetof(struct FieldWork, raisedTrigger)", "offsetof(struct FieldWork, raisedTrigger)"),
+    ("field_exit", "offsetof(struct FieldWork, exit)", "offsetof(struct FieldWork, exit)"),
     ("field_mode", "offsetof(struct FieldWork, mode)", "offsetof(struct FieldWork, mode)"),
     ("obj_angle", "offsetof(struct Actor, facing)", "offsetof(struct Actor, facing)"),
     ("obj_x", "offsetof(struct Actor, x)", "offsetof(struct Actor, x)"),
@@ -225,6 +228,7 @@ impl Layout {
             field_actor_count: 66,
             field_command: 0x17e,
             field_raised: 0x182,
+            field_exit: 0x170,
             field_mode: 0x19e,
             obj_angle: 0x06,
             obj_x: 0x08,
@@ -294,6 +298,7 @@ impl Layout {
             field_actor_count: get("field_actor_count"),
             field_command: get("field_command"),
             field_raised: get("field_raised"),
+            field_exit: get("field_exit"),
             field_mode: get("field_mode"),
             obj_angle: get("obj_angle"),
             obj_x: get("obj_x"),

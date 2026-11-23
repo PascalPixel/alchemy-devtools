@@ -102,6 +102,20 @@ pub struct Stage {
     /// The pixel the leader starts on, and its layer (--at-px): finer than
     /// --at's cell.
     pub at_px: Option<(i32, i32, Option<u8>)>,
+    /// The height a staged walk puts the leader at (--at-height, pixels):
+    /// where a room's cells change with the height he stands at (Air's
+    /// Rock's levels), the ground they give before he is there is not his.
+    pub at_height: Option<i32>,
+    /// A staged walk arrives as after a battle fought where it starts
+    /// (--arrive-as after-battle).
+    pub after_battle: bool,
+    /// A staged walk plays on, the player still, until the game reaches
+    /// this scene function itself (--until FUNCTION): a fireball a statue
+    /// throws, a timer the scene keeps.
+    pub until: Option<String>,
+    /// An event's recording follows up to this many scene changes, each as
+    /// long as --limit lets it (--follow-scenes N).
+    pub follow_scenes: u32,
     /// Keys held from the moment the event begins, while it runs and
     /// before the player has control again (--during).
     pub during: Vec<Held>,
@@ -196,7 +210,7 @@ impl Stage {
     /// Whether, with no event named, the run is a walk: the keys played
     /// from the start given, recorded, whatever they set off.
     pub fn walks(&self, events: &[String]) -> bool {
-        events.is_empty() && (self.start().is_some() || !self.hold.is_empty() || !self.then.is_empty() || self.walk_to.is_some())
+        events.is_empty() && (self.start().is_some() || !self.hold.is_empty() || !self.then.is_empty() || self.walk_to.is_some() || self.until.is_some())
     }
 
     /// Reads one staging option and its value; false when `option` is none.
@@ -221,6 +235,20 @@ impl Stage {
             "--first-face" => self.first_face = Some(parse_face(&value(option)?)?),
             "--first-hold" => self.first_hold.extend(parse_script(&value(option)?)?),
             "--first-then" => self.first_then.extend(parse_script(&value(option)?)?),
+            "--until" => self.until = Some(value(option)?.trim().to_string()),
+            "--follow-scenes" => {
+                let v = value(option)?;
+                self.follow_scenes = v.trim().parse().ok().filter(|&n| (1..=8).contains(&n)).ok_or_else(|| format!("--follow-scenes takes a number of scene changes, 1 to 8, not {v:?}"))?;
+            }
+            "--arrive-as" => {
+                let how = value(option)?;
+                self.after_battle = match how.trim() {
+                    "after-battle" => true,
+                    "entrance" => false,
+                    other => return Err(format!("--arrive-as takes after-battle or entrance, not {other}")),
+                };
+            }
+            "--at-height" => self.at_height = Some(value(option)?.trim().parse().map_err(|_| "--at-height takes a height in pixels, as 208".to_string())?),
             "--at-px" => self.at_px = Some(parse_cell(&value(option)?).map_err(|e| e.replace("--at takes a cell as X,Y or X,Y,LAYER", "--at-px takes a pixel as X,Z or X,Z,LAYER"))?),
             "--during" => self.during.extend(parse_script(&value(option)?)?),
             "--skip" => self.skip.push(value(option)?),
@@ -259,8 +287,8 @@ impl Stage {
 }
 
 /// Every staging option `render event` reads (Stage::option).
-pub const OPTIONS: [&str; 27] = [
-    "--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party", "--first", "--first-at", "--first-face", "--first-hold", "--first-then", "--at-px", "--during", "--skip", "--limit", "--from", "--for", "--keep-short", "--walk-to", "--crop", "--zoom", "--frames",
+pub const OPTIONS: [&str; 31] = [
+    "--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party", "--first", "--first-at", "--first-face", "--first-hold", "--first-then", "--at-px", "--during", "--skip", "--limit", "--from", "--for", "--keep-short", "--walk-to", "--at-height", "--arrive-as", "--until", "--follow-scenes", "--crop", "--zoom", "--frames",
 ];
 
 /// The screen's size, which a crop lies within.
@@ -816,6 +844,38 @@ mod tests {
         assert!(stage.option("--limit", &mut |_| Ok("0".to_string())).is_err());
         assert!(stage.option("--from", &mut |_| Ok("-1".to_string())).is_err());
         assert!(stage.option("--at-px", &mut |_| Ok("3".to_string())).unwrap_err().contains("--at-px"));
+    }
+
+    #[test]
+    fn a_height_to_start_at_is_read() {
+        let mut stage = Stage::default();
+        assert!(Stage::is_option("--at-height"));
+        assert!(stage.option("--at-height", &mut |_| Ok("208".to_string())).unwrap());
+        assert_eq!(stage.at_height, Some(208));
+        assert!(stage.option("--at-height", &mut |_| Ok("high".to_string())).unwrap_err().contains("--at-height"));
+    }
+
+    #[test]
+    fn a_function_to_wait_for_and_scene_changes_to_follow_are_read() {
+        let mut stage = Stage::default();
+        assert!(Stage::is_option("--until") && Stage::is_option("--follow-scenes"));
+        assert!(stage.option("--until", &mut |_| Ok("MagmaRock_BurstStatue".to_string())).unwrap());
+        assert_eq!(stage.until.as_deref(), Some("MagmaRock_BurstStatue"));
+        assert!(stage.option("--follow-scenes", &mut |_| Ok("2".to_string())).unwrap());
+        assert_eq!(stage.follow_scenes, 2);
+        assert!(stage.option("--follow-scenes", &mut |_| Ok("0".to_string())).is_err());
+        assert!(stage.option("--follow-scenes", &mut |_| Ok("many".to_string())).is_err());
+    }
+
+    #[test]
+    fn an_arrival_as_after_a_battle_is_read() {
+        let mut stage = Stage::default();
+        assert!(Stage::is_option("--arrive-as"));
+        assert!(stage.option("--arrive-as", &mut |_| Ok("after-battle".to_string())).unwrap());
+        assert!(stage.after_battle);
+        assert!(stage.option("--arrive-as", &mut |_| Ok("entrance".to_string())).unwrap());
+        assert!(!stage.after_battle);
+        assert!(stage.option("--arrive-as", &mut |_| Ok("battle".to_string())).is_err());
     }
 
     #[test]

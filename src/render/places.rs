@@ -1229,6 +1229,11 @@ impl Context<'_> {
         field.staged = true;
         field.walk_to = self.stage.walk_to;
         field.hold_camera = self.stage.crop.is_some();
+        field.after_battle = self.stage.after_battle;
+        if let Some(name) = &self.stage.until {
+            let address = self.functions.get(&scene.number).and_then(|f| f.get(name)).ok_or_else(|| format!("--until names {name}, which scene {}'s overlay has no function of", scene.number))?;
+            field.until = Some((address & !1, name.clone()));
+        }
         if !self.stage.give.is_empty() {
             let header = std::fs::read_to_string(crate::compile::root().join("games").join(self.symbols.l.game.dir()).join("include/item_ids.h")).unwrap_or_default();
             for name in &self.stage.give {
@@ -1251,8 +1256,8 @@ impl Context<'_> {
         }
         let face = self.stage.face;
         let at = match (self.stage.at_px, self.stage.at) {
-            (Some((x, z, layer)), _) => Some(super::field::WalkStart { x, z, layer, face, cell: false }),
-            (None, Some((x, z, layer))) => Some(super::field::WalkStart { x, z, layer, face, cell: true }),
+            (Some((x, z, layer)), _) => Some(super::field::WalkStart { x, z, layer, face, cell: false, height: self.stage.at_height }),
+            (None, Some((x, z, layer))) => Some(super::field::WalkStart { x, z, layer, face, cell: true, height: self.stage.at_height }),
             (None, None) => None,
         };
         let mut keys = super::stage::script_frames(&self.stage.hold);
@@ -1265,7 +1270,7 @@ impl Context<'_> {
             lead += (CLEARED - first) as u32;
             run = field.walk(&entered, at, lead, &keys)?;
         }
-        if run.capped && !self.stage.windowed() {
+        if run.capped && !self.stage.windowed() && self.stage.until.is_none() {
             return Err(format!("it runs past {} seconds (--limit SECONDS asks for longer)", self.stage.limit_frames(EVENT_LIMIT) / 60));
         }
         let mut note = vec![format!("staged walk, no event: entered by entrance {entrance}")];
@@ -2015,6 +2020,7 @@ impl Context<'_> {
             field.returns.push((address & !1, 0));
         }
         field.during.clone_from(&st.during);
+        field.follow_scenes = st.follow_scenes;
         field.limit = st.limit_frames(EVENT_LIMIT);
         Ok(())
     }

@@ -112,6 +112,23 @@ const SAND: u16 = 0x8b;
 const CELL_CLIMB: i32 = 253;
 const CELL_JUMP: i32 = 254;
 pub(super) const CELL_WALL: i32 = 255;
+/// How many times --walk-to plans its walk again when a climb, jump or drop
+/// it planned does not happen.
+const WALK_TO_PLANS: usize = 24;
+/// Both games' FLAG_KEEP_PARTY_POSITION: the party arrives where it stood,
+/// as after a battle.
+const FLAG_KEEP_PARTY_POSITION: u16 = 0x109;
+/// The actor snapshot's capacity and its empty slot, which ends its list
+/// (ACTOR_SNAPSHOT_CAPACITY, ACTOR_SNAPSHOT_EMPTY).
+const ACTOR_SNAPSHOT_CAPACITY: u32 = 32;
+const ACTOR_SNAPSHOT_EMPTY: u8 = 255;
+/// FieldWork.exit's value for a warp: the scene the main routine's work
+/// names is entered again (EXIT_KEEP_DESTINATION).
+const EXIT_KEEP_DESTINATION: u16 = 999;
+/// Frames a staged walk plays on past the function --until names.
+const UNTIL_TAIL: u32 = 180;
+/// Frames the scene may take to be entered again as after a battle.
+const ARRIVE_FRAMES: u32 = 600;
 /// North, east, south and west: a cell's step, the heading that faces that
 /// way and the direction key that walks it.
 const STEP: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
@@ -263,6 +280,12 @@ fn fx(px: i32) -> i32 {
 
 /// The addresses the run stops at, from the edition's map.
 pub struct Symbols {
+    /// The actor snapshot's ids (ActorSnapshot.slots), which Actor_Restore
+    /// reads when the party arrives as after a battle.
+    snapshot_slots: u32,
+    /// The function that takes the actor snapshot as a battle begins:
+    /// The Broken Seal's Actor_Snapshot, The Lost Age's ObjectTable_Snapshot.
+    snapshot_take: u32,
     init: u32,
     glow: u32,
     load_layered: u32,
@@ -414,6 +437,11 @@ impl Symbols {
             render_pending: at("gFrameRenderPending")?,
             bg_scroll: at("gBgScroll")?,
             map_entrances: if l.game == super::layout::Game::Tla { at("gMapScene")? } else { 0 },
+            // The actor snapshot's list of actor ids: The Broken Seal's
+            // struct ActorSnapshot begins with it; The Lost Age keeps it in
+            // the 32 bytes before gSnapshotObjects.
+            snapshot_take: find("Actor_Snapshot").or_else(|| find("ObjectTable_Snapshot")).unwrap_or(0),
+            snapshot_slots: find("gActorSnapshot").or_else(|| find("gSnapshotObjects").map(|a| a - ACTOR_SNAPSHOT_CAPACITY)).unwrap_or(0),
             l,
         })
     }
@@ -720,6 +748,19 @@ pub struct Field<'rom> {
     /// Whether a staged walk holds the camera still from its keys' start
     /// (--crop), its frames before them left out.
     pub hold_camera: bool,
+    /// A staged walk arrives as after a battle (--arrive-as after-battle):
+    /// where it starts, the game's own snapshot of the actors is taken and
+    /// the scene entered again with FLAG_KEEP_PARTY_POSITION.
+    pub after_battle: bool,
+    /// The scene function a staged walk plays on until (--until): its
+    /// address, and the frame it was first reached on.
+    pub until: Option<(u32, String)>,
+    until_hit: Option<u32>,
+    /// How many scene changes an event's recording follows, each arrival
+    /// as long as --limit lets the run go (--follow-scenes); 0 follows one
+    /// for ARRIVAL_LIMIT.
+    pub follow_scenes: u32,
+    arrival_base: u32,
 }
 
 /// The party `render event --party` and `--leader` stage: its members in
@@ -847,7 +888,7 @@ impl<'rom> Field<'rom> {
             steer_from: [0; 2],
             untargeted_frame: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), during: Vec::new(), limit: EVENT_LIMIT, fold_note: None, answers: Vec::new(), lineup, moves: Vec::new(), walk_to: None, cross_events: false, hold_camera: false };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), during: Vec::new(), limit: EVENT_LIMIT, fold_note: None, answers: Vec::new(), lineup, moves: Vec::new(), walk_to: None, cross_events: false, hold_camera: false, after_battle: false, until: None, until_hit: None, follow_scenes: 0, arrival_base: 0 };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -1133,6 +1174,15 @@ impl<'rom> Field<'rom> {
     }
 
     fn apply_flags(&mut self) {
+        // Arriving as after a battle (FLAG_KEEP_PARTY_POSITION), the scene
+        // puts back the actors the snapshot taken as the battle began holds
+        // (Actor_Restore). A new game's snapshot is zeros, which put a blank
+        // copy over actor 0 again and again, the leader in a new game, and
+        // scramble his sprite (Dehkan Plateau, Hesperia): the snapshot is
+        // made empty, as one taken where no actor was kept.
+        if keeps_party_position(&self.setup.set) && self.s.snapshot_slots != 0 {
+            self.gba.write8(self.s.snapshot_slots, ACTOR_SNAPSHOT_EMPTY);
+        }
         for f in self.setup.set.clone() {
             self.set_flag(f, true);
         }
@@ -1215,6 +1265,19 @@ impl<'rom> Field<'rom> {
             self.t.apply_return = 0;
             self.apply_flags();
             self.list_party();
+            // Arriving as after a battle, the entrance does not place the
+            // party (FLAG_KEEP_PARTY_POSITION keeps where it stood), and a
+            // new game has it nowhere: the leader's actor, made next from
+            // that place (Actor_ResetForLeader), would stand at (0, 0) with
+            // no sprite. It stands at the way in, as if the battle had been
+            // fought there.
+            if keeps_party_position(&self.setup.set) {
+                if let Some(e) = self.entrances().into_iter().find(|e| e.number == self.setup.entrance as i16) {
+                    let gs = self.s.game_state;
+                    self.gba.write32(gs + self.s.l.gs_x, fx(i32::from(e.x)) as u32);
+                    self.gba.write32(gs + self.s.l.gs_z, fx(i32::from(e.z)) as u32);
+                }
+            }
             self.t.applied = true;
             self.t.phase = Phase::Entered;
         }
@@ -1239,6 +1302,9 @@ impl<'rom> Field<'rom> {
                 probe(&self.gba, 0, self.t.frame);
             }
             self.probe = Some(probe);
+        }
+        if self.until_hit.is_none() && self.until.as_ref().is_some_and(|(address, _)| *address == pc) {
+            self.until_hit = Some(self.t.frame);
         }
         for i in 0..self.pokes.len() {
             let (at, address, value) = self.pokes[i];
@@ -1657,7 +1723,11 @@ impl<'rom> Field<'rom> {
                 // The player has control: the field sequence steps, with
                 // nothing to read.
                 let stepping = self.t.step_frame + 1 >= self.t.frame && self.t.frame - self.t.last_typing > 2;
-                if stepping {
+                // With --until, the run goes on, the player still, until
+                // the game reaches that function itself, and UNTIL_TAIL
+                // frames past it.
+                let waiting = self.until.is_some() && self.until_hit.is_none_or(|hit| self.t.frame < hit + UNTIL_TAIL);
+                if stepping && !waiting {
                     let since = *control_since.get_or_insert(self.t.frame);
                     if self.t.frame - since >= CONTROL_FRAMES {
                         break;
@@ -1984,6 +2054,20 @@ impl<'rom> Field<'rom> {
     }
 
     /// The actors on stage other than the party, with their places (pixels).
+    /// The actors of `stage` that stand in the leader's way on `layer`:
+    /// not one sunk below the ground its cells give (a pillar Blocks_MarkCells
+    /// has raised its cell to the top of, which he climbs or walks onto).
+    fn standing_stage(&mut self, layer: u8) -> Result<Vec<(u16, i32, i32)>, String> {
+        let mut out = Vec::new();
+        for (id, x, z) in self.stage() {
+            let y = self.actor(id).map_or(0, |a| a.y >> 16);
+            if !sunk_below(y, self.ground(layer, x, z)?) {
+                out.push((id, x, z));
+            }
+        }
+        Ok(out)
+    }
+
     fn stage(&self) -> Vec<(u16, i32, i32)> {
         (FIRST_PLACED..self.s.l.field_actor_count as u16).filter_map(|id| self.present(id).ok().map(|a| (id, a.x, a.z))).collect()
     }
@@ -2002,18 +2086,17 @@ impl<'rom> Field<'rom> {
         i32::from(self.gba.read8(cells + (((cx + (cz << 7)) << 2) + 2) as u32))
     }
 
-    /// The collision code of cell (cx, cz) as a walk is planned over it
-    /// (Field::reach, Field::moves): The Lost Age marks a ledge, a wall he
-    /// can climb and a gap he jumps across by MapCell.attributeB's bits
-    /// (MAP_CELL_LEDGE, MAP_CELL_CLIMBABLE, MAP_CELL_JUMP) on open ground,
-    /// where The Broken Seal gives them codes of their own; they are read
-    /// as those codes.
-    fn walk_cell(&self, layer: u8, cx: i32, cz: i32) -> i32 {
+    /// Cell (cx, cz) as a walk is planned over it (Field::reach,
+    /// Field::moves): its collision code and whether he climbs, jumps or
+    /// drops from it. The Broken Seal gives a climb, a jump and a ledge
+    /// codes of their own; The Lost Age marks them by MapCell.attributeB's
+    /// bits (MAP_CELL_CLIMBABLE, MAP_CELL_JUMP, MAP_CELL_LEDGE) on a cell
+    /// that keeps its own code, several at once (Magma Rock's pillar top
+    /// is a climb and a jump).
+    fn walk_cell(&self, layer: u8, cx: i32, cz: i32) -> WalkCell {
         let code = self.cell(layer, cx, cz);
-        if code != 0 || self.s.l.game != super::layout::Game::Tla || self.world() {
-            return code;
-        }
-        tla_walk_code(code, (self.cell_word(layer, cx, cz) >> 24) as u8)
+        let tla = self.s.l.game == super::layout::Game::Tla && !self.world();
+        WalkCell::read(code, if tla { Some((self.cell_word(layer, cx, cz) >> 24) as u8) } else { None })
     }
 
     /// Where map layer `layer`'s cells begin in the map's cell buffer (the
@@ -2426,9 +2509,13 @@ impl<'rom> Field<'rom> {
         self.moves.clear();
         let mut notes = Vec::new();
         match at {
-            Some(WalkStart { x, z, layer, face, cell }) => {
+            Some(WalkStart { x, z, layer, face, cell, height }) => {
                 self.until_control()?;
-                let spot = if cell { self.staged_spot(Trigger::Cast(0), (x, z), layer, face)? } else { self.staged_spot_px(Trigger::Cast(0), (x, z), layer, face)? };
+                let mut spot = if cell { self.staged_spot(Trigger::Cast(0), (x, z), layer, face)? } else { self.staged_spot_px(Trigger::Cast(0), (x, z), layer, face)? };
+                if let Some(h) = height {
+                    notes.push(format!("he is put {h} pixels up, where the cells there now give {}", spot.height >> 16));
+                    spot.height = fx(h);
+                }
                 let size = self.cell_size();
                 let (px, pz) = (spot.x, spot.z);
                 let (cx, cz) = (px.div_euclid(size), pz.div_euclid(size));
@@ -2451,6 +2538,9 @@ impl<'rom> Field<'rom> {
             None => self.until_control()?,
         }
         self.frames(SETTLE)?;
+        if self.after_battle {
+            notes.push(self.arrive_after_battle()?);
+        }
         let wrong = self.misplaced()?;
         if !wrong.is_empty() {
             notes.push(format!("where he starts, {}", wrong.join(", ")));
@@ -2473,9 +2563,17 @@ impl<'rom> Field<'rom> {
             self.recorded = Some(Vec::new());
             notes.push(format!("the camera is held still from the keys' start, its view's top left at ({vx}, {vy}); the frames before are left out"));
         }
+        self.until_hit = None;
+        let begun = self.t.frame;
         let started = self.play_on(script, self.limit);
         self.t.pin_focus = false;
         let started = started?;
+        if let Some((_, name)) = &self.until {
+            notes.push(match self.until_hit {
+                Some(hit) => format!("played on until the game ran {name} itself, {:.1} seconds in, and {} seconds past it", f64::from(hit.saturating_sub(begun)) / 60.0, UNTIL_TAIL / 60),
+                None => format!("played on for {} seconds waiting for {name}, which the game never ran", self.limit / 60),
+            });
+        }
         notes.append(&mut self.moves);
         let capped = self.recorded.as_ref().map_or(0, Vec::len) >= self.limit as usize;
         let since = self.recorded.as_ref().and_then(|f| f.iter().rposition(|p| is_black_bgr555(p)).map(|i| f.len() - 1 - i));
@@ -2490,6 +2588,52 @@ impl<'rom> Field<'rom> {
         Ok(WalkRun { frames, started, leads_to, capped, notes })
     }
 
+    /// Has the party arrive where the leader stands as it does after a
+    /// battle fought there (--arrive-as after-battle): the game's own
+    /// snapshot of the actors is taken as a battle's start takes it
+    /// (Actor_Snapshot, ObjectTable_Snapshot), the party's place kept in
+    /// the main routine's work, and the scene entered again with
+    /// FLAG_KEEP_PARTY_POSITION (FieldWork.exit EXIT_KEEP_DESTINATION, as a
+    /// warp leaves), so its initialization takes the after-battle branches
+    /// and Actor_Restore puts the leader back as he was. A new game's empty
+    /// snapshot would leave him as the scene's first entry never made him
+    /// (Dehkan Plateau's and Hesperia's priority flags), his sprite cut.
+    fn arrive_after_battle(&mut self) -> Result<String, String> {
+        if self.s.snapshot_take == 0 {
+            return Err("the map has no actor snapshot function (Actor_Snapshot, ObjectTable_Snapshot)".to_string());
+        }
+        let leader = self.leader().ok_or("the scene has no leader")?;
+        let gs = self.s.game_state;
+        let origin = [fx(leader.x), fx(leader.z)];
+        self.call(self.s.snapshot_take, origin)?;
+        let object = self.leader_object();
+        let heading = u32::from(self.gba.read16(object + self.s.l.obj_angle));
+        self.gba.write32(gs + self.s.l.gs_x, fx(leader.x) as u32);
+        self.gba.write32(gs + self.s.l.gs_y, leader.y as u32);
+        self.gba.write32(gs + self.s.l.gs_z, fx(leader.z) as u32);
+        self.gba.write32(gs + self.s.l.gs_heading, heading);
+        self.gba.write16(gs + self.s.l.gs_turn, u16::from(leader.layer));
+        self.set_flag(FLAG_KEEP_PARTY_POSITION, true);
+        let work = self.gba.read32(self.s.field_work);
+        self.gba.write16(work + self.s.l.field_exit, EXIT_KEEP_DESTINATION);
+        let entries = self.t.entries;
+        let mut waited = 0;
+        while self.t.entries == entries {
+            self.frames(1)?;
+            waited += 1;
+            if waited > ARRIVE_FRAMES {
+                return Err("the scene was not entered again as after a battle".to_string());
+            }
+        }
+        self.until_control()?;
+        // The way in's camera box again, which a staged start outside it
+        // had widened (Field::fit_camera).
+        self.fit_camera();
+        self.frames(SETTLE)?;
+        let at = self.leader().map(|a| format!("({}, {}) on layer {}", a.x, a.z, a.layer)).unwrap_or_default();
+        Ok(format!("he arrives as after a battle (the game's actor snapshot taken where he stood, the scene entered again with FLAG_KEEP_PARTY_POSITION), at {at}"))
+    }
+
     /// Walks the leader to cell `to` (--walk-to: X, Y as the map numbers
     /// it, on LAYER's window when given, else his own layer) as the player
     /// would: the way planned over the cells he can reach in his room
@@ -2502,28 +2646,135 @@ impl<'rom> Field<'rom> {
         let layer = to.2.unwrap_or(leader.layer.min(2));
         let (ox, oz) = self.layer_origin(layer);
         let cell = if layer != 0 && to.0 >= ox && to.1 >= oz { (to.0 - ox, to.1 - oz) } else { (to.0, to.1) };
-        let from = (leader.x >> 4, leader.z >> 4);
         if layer != leader.layer.min(2) {
             return Ok(format!("--walk-to {},{} is on layer {layer}, and he walks on layer {}: no walk is planned across layers", to.0, to.1, leader.layer));
         }
-        self.cross_events = true;
-        let reach = self.reach(None);
-        let planned = reach.as_ref().map_err(String::clone).and_then(|reach| self.moves(reach, &[Some(cell)]));
-        self.cross_events = false;
-        let Some(path) = approach::route(&planned?, from, cell) else {
-            let cells = reach.map_or(0, |r| r.cells.iter().filter(|&&c| c).count());
-            return Ok(format!("no walk leads from cell ({}, {}) to cell ({}, {}) of layer {layer} in his room: he can walk to {cells} cells from there", from.0, from.1, cell.0, cell.1));
-        };
-        let (mut moving, mut pad) = (Vec::new(), Pad::default());
-        let followed = self.follow(&path, 0, &mut moving, &mut pad);
-        self.hold(0);
-        self.frames(SETTLE)?;
+        // A way in that leaves him clinging to a ladder (Magma Rock's
+        // entrance 4) is climbed off first, down, else up, as the player
+        // would before walking anywhere.
+        let mut off_a_climb = String::new();
+        if self.climbing() {
+            for (keys, way) in [(KEY_DOWN, "down"), (KEY_UP, "up")] {
+                let mut frames = 0;
+                while self.climbing() && frames < CLIMB_FRAMES {
+                    self.hold(keys);
+                    self.frames(1)?;
+                    frames += 1;
+                }
+                if !self.climbing() {
+                    self.hold(0);
+                    self.frames(SETTLE)?;
+                    let a = self.leader().ok_or("the scene has no leader")?;
+                    off_a_climb = format!("he arrives clinging to a climb and climbs {way} off it onto cell ({}, {}); ", a.x >> 4, a.z >> 4);
+                    break;
+                }
+            }
+            self.hold(0);
+        }
+        let leader = self.leader().ok_or("the scene has no leader")?;
+        let from = (leader.x >> 4, leader.z >> 4);
+        // Planned, followed, and planned again from where he stands when a
+        // climb, jump or drop the cells promised does not happen (a statue's
+        // cap he cannot jump off, a wall's face the overhead layer closes),
+        // without that move.
+        let scene = self.scene();
+        let start = from;
+        let (mut banned, mut failed, mut walked, mut kinds): (Vec<Move>, Vec<String>, usize, usize) = (Vec::new(), Vec::new(), 0, 0);
+        let mut ended = None;
+        for _ in 0..WALK_TO_PLANS {
+            let leader = self.leader().ok_or("the scene has no leader")?;
+            let from = (leader.x >> 4, leader.z >> 4);
+            if from == cell {
+                ended = Some(Ok(()));
+                break;
+            }
+            self.cross_events = true;
+            let reach = self.reach(None);
+            let planned = reach.as_ref().map_err(String::clone).and_then(|reach| self.moves(reach, &[Some(cell)]));
+            self.cross_events = false;
+            let planned: Vec<Move> = planned?.into_iter().filter(|m| !banned.contains(m)).collect();
+            if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
+                if let Ok(reach) = &reach {
+                    Self::debug_walk_plan(reach, &planned, from, cell, layer);
+                }
+            }
+            let Some(path) = approach::route(&planned, from, cell) else {
+                let cells = reach.map_or(0, |r| r.cells.iter().filter(|&&c| c).count());
+                ended = Some(Err(format!("no walk leads from cell ({}, {}) to cell ({}, {}) of layer {layer} in his room: he can walk to {cells} cells from there", from.0, from.1, cell.0, cell.1)));
+                break;
+            };
+            let (mut moving, mut pad) = (Vec::new(), Pad::default());
+            let mut stopped = None;
+            for segment in walk_segments(&path) {
+                let followed = self.follow(segment, 0, &mut moving, &mut pad);
+                if self.scene() != scene || self.leader().is_none() {
+                    stopped = Some((segment[0], format!("he left the scene for scene {} on the way from cell ({}, {}) to ({}, {})", self.scene(), segment[0].from.0, segment[0].from.1, segment[segment.len() - 1].to.0, segment[segment.len() - 1].to.1)));
+                    break;
+                }
+                match followed {
+                    Ok(()) => {
+                        walked += segment.len();
+                        kinds += segment.iter().filter(|m| m.how != How::Walk).count();
+                        // A climb, jump or drop may change the cells ahead
+                        // (Air's Rock swaps in each level's ledges as he
+                        // climbs): the rest is planned again from there.
+                        if segment[0].how != How::Walk && segment[segment.len() - 1].to != cell {
+                            stopped = Some((segment[0], String::new()));
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        // The move he was making when he stopped: the walk
+                        // out of the cell he stands on.
+                        let here = self.leader().map(|a| (a.x >> 4, a.z >> 4));
+                        let m = segment.iter().find(|m| Some(m.from) == here).copied().unwrap_or(segment[0]);
+                        stopped = Some((m, e));
+                        break;
+                    }
+                }
+            }
+            self.hold(0);
+            self.frames(SETTLE)?;
+            match stopped {
+                None => {
+                    ended = Some(Ok(()));
+                    break;
+                }
+                Some((_, e)) if e.is_empty() => {}
+                Some((m, e)) if self.scene() == scene && self.leader().is_some() => {
+                    failed.push(e);
+                    banned.push(m);
+                }
+                Some((_, e)) => {
+                    ended = Some(Err(e));
+                    break;
+                }
+            }
+        }
         let at = self.leader().map(|a| format!("({}, {}) on layer {}", a.x, a.z, a.layer)).unwrap_or_default();
-        let kinds = path.iter().filter(|m| m.how != How::Walk).count();
-        Ok(match followed {
-            Ok(()) => format!("he walks from cell ({}, {}) to cell ({}, {}) of layer {layer}, {} moves ({kinds} climbs or drops), and stands at {at}", from.0, from.1, cell.0, cell.1, path.len()),
-            Err(e) => format!("the walk planned from cell ({}, {}) to cell ({}, {}) of layer {layer} stopped: {e}; he stands at {at}", from.0, from.1, cell.0, cell.1),
-        })
+        let replanned = if failed.is_empty() { String::new() } else { format!(" (planned again without what did not happen: {})", failed.join("; ")) };
+        Ok(off_a_climb
+            + &match ended {
+                Some(Ok(())) => format!("he walks from cell ({}, {}) to cell ({}, {}) of layer {layer}, {walked} moves ({kinds} climbs, jumps or drops), and stands at {at}{replanned}", start.0, start.1, cell.0, cell.1),
+                Some(Err(e)) => format!("the walk from cell ({}, {}) to cell ({}, {}) of layer {layer} stopped: {e}; he stands at {at}{replanned}", start.0, start.1, cell.0, cell.1),
+                None => format!("the walk from cell ({}, {}) to cell ({}, {}) of layer {layer} was planned {WALK_TO_PLANS} times and did not get there; he stands at {at}{replanned}", start.0, start.1, cell.0, cell.1),
+            })
+    }
+
+    /// ALCHEMY_RENDER_DEBUG's print of a --walk-to plan: its climbs, jumps
+    /// and drops, and the cells he can reach.
+    fn debug_walk_plan(reach: &Reach, moves: &[Move], from: (i32, i32), cell: (i32, i32), layer: u8) {
+        eprintln!("    walk-to: from {from:?} to {cell:?} on layer {layer}; {} moves", moves.len());
+        for m in moves.iter().filter(|m| m.how != How::Walk || std::env::var_os("ALCHEMY_WALK_DEBUG").is_some_and(|v| v.to_str().is_some_and(|v| v.split(',').filter_map(|n| n.parse().ok()).collect::<Vec<i32>>() == [m.to.0, m.to.1]))) {
+            eprintln!("      {:?} {:?} -> {:?}", m.how, m.from, m.to);
+        }
+        let held: Vec<(i32, i32)> = (0..GRID * GRID).filter(|&i| reach.cells.get(i as usize).copied().unwrap_or(false)).map(|i| (i % GRID, i / GRID)).collect();
+        if let (Some(x0), Some(x1), Some(z0), Some(z1)) = (held.iter().map(|c| c.0).min(), held.iter().map(|c| c.0).max(), held.iter().map(|c| c.1).min(), held.iter().map(|c| c.1).max()) {
+            for z in z0..=z1 {
+                let row: String = (x0..=x1).map(|x| if (x, z) == from { 'S' } else if (x, z) == cell { 'T' } else if reach.cells[(z * GRID + x) as usize] { '#' } else { '.' }).collect();
+                eprintln!("      {z:3} {row}  (from x {x0})");
+            }
+        }
     }
 
     /// What of `misplaced` counts against a start that placed the leader:
@@ -2804,6 +3055,22 @@ impl<'rom> Field<'rom> {
     /// Whether a climb cell whose north holds code `code` is the top of its
     /// ladder, which Up climbs him over onto that cell: ground, or a cell
     /// that starts something (the mast's way back down).
+    /// Whether, on The Lost Age's climb cell `c` (`here`), holding the way
+    /// `d` climbs him onto the next cell (`there`): north up to higher
+    /// ground (Field_ClimbUp: both cells climbable, the north one higher)
+    /// or south down to lower (Field_ClimbDown), where he cannot walk it
+    /// (he climbs only once walking that way stops him).
+    fn climbs_to(&mut self, layer: u8, c: (i32, i32), d: usize, here: WalkCell, there: WalkCell) -> Result<bool, String> {
+        if !here.climb || !there.climb || STEP[d].1 == 0 || there.code < 0 || there.code == CELL_WALL || self.passable(layer, c, d)? {
+            return Ok(false);
+        }
+        let n = (c.0 + STEP[d].0, c.1 + STEP[d].1);
+        let (from, to) = (self.ground(layer, c.0 * 16 + 8, c.1 * 16 + 8)? >> 16, self.ground(layer, n.0 * 16 + 8, n.1 * 16 + 8)? >> 16);
+        // The wall's face as the overhead layer draws it (MapGrid_IsWallAt):
+        // a closed cell there (a pillar standing on the climb) stops him.
+        Ok(climb_way(d, to - from) && climb_clear(c, n, from, to, |cx, row| self.cell(2, cx, row) == CELL_WALL))
+    }
+
     fn over_the_top(code: i32) -> bool {
         code >= 0 && code != CELL_WALL && code != CELL_CLIMB && code != CELL_LEDGE && code != CELL_JUMP
     }
@@ -2918,9 +3185,9 @@ impl<'rom> Field<'rom> {
             // dark behind a door, the way behind the crate in Vault's inn) is
             // not his to stand on. Other events' cells are crossed, as the
             // player crosses them once their story has played.
-            if c != start && !*crossed.entry(here).or_insert_with(|| self.crossable(here, target)) {
-                if !stops.contains(&here) {
-                    stops.push(here);
+            if c != start && !*crossed.entry(here.code).or_insert_with(|| self.crossable(here.code, target)) {
+                if !stops.contains(&here.code) {
+                    stops.push(here.code);
                 }
                 continue;
             }
@@ -2929,7 +3196,8 @@ impl<'rom> Field<'rom> {
                 if !within(n) {
                     continue;
                 }
-                let code = self.walk_cell(layer, n.0, n.1);
+                let there = self.walk_cell(layer, n.0, n.1);
+                let code = there.code;
                 if !cells[index(n)] && code >= 0 && code != CELL_WALL && self.passable(layer, c, d)? {
                     cells[index(n)] = true;
                     queue.push_back(n);
@@ -2949,25 +3217,29 @@ impl<'rom> Field<'rom> {
                 // ground), Up climbs him over it onto that ground
                 // (Field_ClimbUp while he climbs): the mast's ladder up to
                 // Tolbi's crow's nest.
-                if here == CELL_CLIMB {
+                // The Lost Age marks both ends of a climb (WalkCell::marked):
+                // he climbs from one to the other, up to higher ground or
+                // down to lower, and may also jump or drop from the same cell.
+                if here.climb && here.marked {
+                    if self.climbs_to(layer, c, d, here, there)? && !cells[index(n)] {
+                        cells[index(n)] = true;
+                        queue.push_back(n);
+                    }
+                } else if here.climb {
                     let over_the_top = d == 0 && Self::over_the_top(code);
-                    if ((d == 0 || d == 2) && code == CELL_CLIMB || over_the_top) && !cells[index(n)] {
+                    if ((d == 0 || d == 2) && there.climb || over_the_top) && !cells[index(n)] {
                         cells[index(n)] = true;
                         queue.push_back(n);
                     }
                     continue;
                 }
-                let way = match here {
-                    CELL_LEDGE => d == 2,
-                    CELL_JUMP => true,
-                    _ => false,
-                };
-                if !way {
+                let jump = here.jump;
+                if !(jump || here.ledge && d == 2) {
                     continue;
                 }
                 let from = self.ground(layer, c.0 * 16 + 8, c.1 * 16 + 8)?;
-                let reach_cells = if here == CELL_JUMP { 2..=2 } else { 1..=4 };
-                if here == CELL_JUMP {
+                let reach_cells = if jump { 2..=2 } else { 1..=4 };
+                if jump {
                     let over = self.ground(layer, n.0 * 16 + 8, n.1 * 16 + 8)?;
                     if code != CELL_WALL && over - from > STEP_UP {
                         continue;
@@ -2976,10 +3248,10 @@ impl<'rom> Field<'rom> {
                 for k in reach_cells {
                     let m = (c.0 + STEP[d].0 * k, c.1 + STEP[d].1 * k);
                     let beyond = self.walk_cell(layer, m.0, m.1);
-                    if !within(m) || beyond < 0 {
+                    if !within(m) || beyond.code < 0 {
                         break;
                     }
-                    if beyond == CELL_WALL || (beyond == here && here != CELL_JUMP) {
+                    if beyond.code == CELL_WALL || (!jump && beyond.ledge) {
                         continue;
                     }
                     let rise = self.ground(layer, m.0 * 16 + 8, m.1 * 16 + 8)? - from;
@@ -3223,7 +3495,7 @@ impl<'rom> Field<'rom> {
     /// onto a cell an actor stands on.
     fn moves(&mut self, reach: &Reach, keep: &[Option<approach::Cell>]) -> Result<Vec<Move>, String> {
         let layer = reach.layer;
-        let stage = self.stage();
+        let stage = self.standing_stage(layer)?;
         let mut ground: HashMap<(i32, i32), i32> = HashMap::new();
         let mut height = |field: &mut Self, x: i32, z: i32| -> Result<i32, String> {
             if let Some(&h) = ground.get(&(x, z)) {
@@ -3243,12 +3515,15 @@ impl<'rom> Field<'rom> {
             open.entry(c)
                 .or_insert_with(|| {
                     let (x, z) = (c.0 * 16 + 8, c.1 * 16 + 8);
-                    let code = field.walk_cell(layer, c.0, c.1);
+                    let cell = field.walk_cell(layer, c.0, c.1);
+                    let code = cell.code;
                     let free = !stage.iter().any(|&(_, ax, az)| (ax - x).abs() < 16 && (az - z).abs() < 16);
-                    if !reach.holds(layer, x, z) || !field.inside(x, z, 8) || !free {
+                    // An actor on a climb is the vine or ladder itself
+                    // (Growth's vine at The Wall), which he climbs.
+                    if !reach.holds(layer, x, z) || !field.inside(x, z, 8) || !(free || cell.climb) {
                         return None;
                     }
-                    if keep.contains(&Some(c)) || code == CELL_CLIMB || (Self::standable(code) && field.quiet(code)) {
+                    if keep.contains(&Some(c)) || cell.climb || (Self::standable(code) && field.quiet(code)) {
                         return Some(Vec::new());
                     }
                     if field.cross_events && (1..=CELL_EVENT_LAST).contains(&code) && field.crossable(code, None) {
@@ -3274,7 +3549,14 @@ impl<'rom> Field<'rom> {
                         continue;
                     }
                     let there = self.walk_cell(layer, n.0, n.1);
-                    if here == CELL_CLIMB && there == CELL_CLIMB && STEP[d].1 != 0 {
+                    if here.climb && here.marked {
+                        if self.climbs_to(layer, c, d, here, there)? {
+                            out.push(Move { from: c, to: n, keys: KEYS[d], how: How::Climb });
+                            continue;
+                        }
+                    } else if here.climb && (there.climb && STEP[d].1 != 0 || d == 0 && Self::over_the_top(there.code)) {
+                        // Up and down a vine or ladder, and at its top over
+                        // onto the ground north of it, as Field::reach has it.
                         out.push(Move { from: c, to: n, keys: KEYS[d], how: How::Climb });
                         continue;
                     }
@@ -3288,13 +3570,36 @@ impl<'rom> Field<'rom> {
                         out.push(Move { from: c, to: n, keys: KEYS[d], how: How::Walk });
                     }
                 }
+                // Across a jump: two cells on, as Field::reach has it, the
+                // key held into the gap until he lands.
+                if here.jump {
+                    let from = height(self, cx * 16 + 8, cz * 16 + 8)?;
+                    for d in 0..4 {
+                        let (n, m) = ((cx + STEP[d].0, cz + STEP[d].1), (cx + 2 * STEP[d].0, cz + 2 * STEP[d].1));
+                        let (over, beyond) = (self.walk_cell(layer, n.0, n.1), self.walk_cell(layer, m.0, m.1));
+                        if beyond.code < 0 || beyond.code == CELL_WALL || !allows(ways(self, m), d) {
+                            continue;
+                        }
+                        if over.code != CELL_WALL && height(self, n.0 * 16 + 8, n.1 * 16 + 8)? - from > STEP_UP {
+                            continue;
+                        }
+                        // A step he walks is no jump.
+                        if out.iter().any(|w: &Move| w.from == c && w.to == n && w.how == How::Walk) {
+                            continue;
+                        }
+                        let rise = height(self, m.0 * 16 + 8, m.1 * 16 + 8)? - from;
+                        if (-JUMP_DROP..=STEP_UP).contains(&rise) {
+                            out.push(Move { from: c, to: m, keys: KEYS[d], how: How::Drop });
+                        }
+                    }
+                }
                 // Down a ledge: the first cell beyond on the ground below.
-                if here == CELL_LEDGE {
+                if here.ledge {
                     let from = height(self, cx * 16 + 8, cz * 16 + 8)?;
                     for k in 1..=4 {
                         let m = (cx, cz + k);
                         let beyond = self.walk_cell(layer, m.0, m.1);
-                        if beyond == CELL_WALL || beyond == CELL_LEDGE {
+                        if beyond.code == CELL_WALL || beyond.ledge {
                             continue;
                         }
                         let rise = height(self, m.0 * 16 + 8, m.1 * 16 + 8)? - from;
@@ -4809,6 +5114,9 @@ impl<'rom> Field<'rom> {
                     break;
                 }
                 arrival = Some(self.t.frame);
+                // The scene changes counted from here (--follow-scenes):
+                // this one's entry is the first.
+                self.arrival_base = self.t.entries - 1;
                 (wait_start, press_frame, quiet_start) = (0, 0, self.t.frame);
                 continue;
             }
@@ -5371,8 +5679,12 @@ impl<'rom> Field<'rom> {
         if self.scene() == MAP_BATTLE {
             return Ok(Arrival::Ended("ends as a battle begins".to_string()));
         }
-        if frame - at >= ARRIVAL_LIMIT {
-            return Ok(Arrival::Ended(format!("the arrival runs past {} seconds; the recording ends there", ARRIVAL_LIMIT / 60)));
+        let limit = if self.follow_scenes > 0 { self.limit } else { ARRIVAL_LIMIT };
+        if frame - at >= limit {
+            return Ok(Arrival::Ended(format!("the arrival runs past {} seconds; the recording ends there", limit / 60)));
+        }
+        if self.follow_scenes > 0 && self.t.entries > self.arrival_base + self.follow_scenes {
+            return Ok(Arrival::Ended(format!("it goes on to a scene change past the {} --follow-scenes follows; the recording ends there", self.follow_scenes)));
         }
         if self.t.last_dismiss > at && frame - self.t.last_dismiss <= 2 {
             *quiet_start = frame;
@@ -5447,21 +5759,117 @@ fn shorten_blanks(frames: Vec<Vec<u16>>, keep: usize) -> Vec<Vec<u16>> {
         .collect()
 }
 
-/// A field Psynergy's reach by its ability id: its range
-/// (gFieldEffect_TargetRangeByMode, by field kind) and the height between the
-/// leader and the actor it allows, in pixels and 16.16 pixels.
-/// The Lost Age's cell on open ground (`code` 0) read by its attribute
-/// bits (MapCell.attributeB) as the code The Broken Seal gives the same
-/// ground: a wall he climbs, a gap he jumps, a ledge he drops from.
-fn tla_walk_code(code: i32, attributes: u8) -> i32 {
-    match code {
-        0 if attributes & 0x40 != 0 => CELL_CLIMB,
-        0 if attributes & 0x80 != 0 => CELL_JUMP,
-        0 if attributes & 0x20 != 0 => CELL_LEDGE,
-        _ => code,
+/// Whether a run's flags have the party arrive as after a battle.
+fn keeps_party_position(set: &[u16]) -> bool {
+    set.contains(&FLAG_KEEP_PARTY_POSITION)
+}
+
+/// A --walk-to path cut where it is followed and planned again: each climb,
+/// jump or drop alone, the walks between them together.
+fn walk_segments(path: &[Move]) -> Vec<&[Move]> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < path.len() {
+        let mut j = i + 1;
+        if path[i].how == How::Walk {
+            while j < path.len() && path[j].how == How::Walk {
+                j += 1;
+            }
+        }
+        out.push(&path[i..j]);
+        i = j;
+    }
+    out
+}
+
+/// Whether an actor standing at height `y` lies under ground `ground` its
+/// cell gives (a pillar whose top the cell carries): 16 pixels or more.
+fn sunk_below(y: i32, ground: i32) -> bool {
+    ground - y >= 16
+}
+
+/// Whether a climb the way `d` (an index of STEP) onto ground `rise` pixels
+/// higher is one Field_ClimbUp (north, higher) or Field_ClimbDown (south,
+/// lower) makes.
+fn climb_way(d: usize, rise: i32) -> bool {
+    match d {
+        0 => rise > 0,
+        2 => rise < 0,
+        _ => false,
     }
 }
 
+/// Whether The Lost Age's climb from cell `c` at height `from` to the next
+/// cell `n` at height `to` meets no closed cell of the overhead layer
+/// (`wall(column, row)`), which stands for the wall's face: Field_ClimbUp
+/// and Field_ClimbDown test the cell above or below his head as he starts,
+/// and Actor_MoveByKeys tests each 8-pixel step (MapGrid_IsWallAt: the
+/// overhead layer's cell at his x and his cell's top z less his height).
+fn climb_clear(c: (i32, i32), n: (i32, i32), from: i32, to: i32, wall: impl Fn(i32, i32) -> bool) -> bool {
+    let row = |z: i32, y: i32| (z * 16 - y).div_euclid(16);
+    if to > from {
+        // Up: the start's test, then each step while the top is 16 or more above.
+        if wall(c.0, c.1 - (from >> 4) - 1) {
+            return false;
+        }
+        let mut y = from;
+        while to - y >= 16 {
+            if wall(c.0, row(c.1, y + 8)) {
+                return false;
+            }
+            y += 8;
+        }
+        true
+    } else {
+        // Down: the start's tests, then the steps on the cell below while
+        // its ground is 8 or more below him.
+        if wall(c.0, c.1 - (from >> 4) + 1) || wall(c.0, row(c.1, from - 16)) {
+            return false;
+        }
+        let mut y = from - 16;
+        while y - to >= 8 {
+            if wall(n.0, row(n.1, y - 8)) {
+                return false;
+            }
+            y -= 8;
+        }
+        true
+    }
+}
+
+/// A cell as a walk is planned over it (Field::walk_cell): its collision
+/// code and what pushing on from it does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct WalkCell {
+    code: i32,
+    /// A wall he climbs (Field_ClimbUp, Field_ClimbDown).
+    climb: bool,
+    /// A gap he jumps across (Field_TryJumpForward).
+    jump: bool,
+    /// A ledge he jumps down with Down held (Actor_JumpDownLedge).
+    ledge: bool,
+    /// Climbs as The Lost Age's do: both cells of a climb carry the bit,
+    /// the one at the wall's foot and the one at its top, and he climbs
+    /// only up to higher ground or down to lower, landing on the other cell
+    /// (Field_ClimbUp's climb over the top is that cell, not the one past
+    /// it, as in The Broken Seal).
+    marked: bool,
+}
+
+impl WalkCell {
+    /// The cell with collision code `code`, and The Lost Age's attribute
+    /// bits when `attributes` gives them.
+    fn read(code: i32, attributes: Option<u8>) -> WalkCell {
+        match attributes {
+            Some(bits) => WalkCell { code, climb: bits & 0x40 != 0, jump: bits & 0x80 != 0, ledge: bits & 0x20 != 0, marked: true },
+            None => WalkCell { code, climb: code == CELL_CLIMB, jump: code == CELL_JUMP, ledge: code == CELL_LEDGE, marked: false },
+        }
+    }
+}
+
+/// A field Psynergy's reach by its ability id: its range
+/// (gFieldEffect_TargetRangeByMode, by field kind) and the height between the
+/// leader and the actor it allows, in pixels and 16.16 pixels.
 fn psynergy_reach(ability: u16) -> (i32, i32) {
     match ability {
         // Mind Read: 32 pixels, 16 high.
@@ -5705,6 +6113,9 @@ pub struct WalkStart {
     pub layer: Option<u8>,
     pub face: Option<u32>,
     pub cell: bool,
+    /// The height he is put at (--at-height, pixels), rather than the
+    /// ground the cells give there now.
+    pub height: Option<i32>,
 }
 
 /// What an event left: its pages, when recorded its frames, and the moment
@@ -5981,13 +6392,57 @@ mod tests {
     }
 
     #[test]
-    fn the_lost_age_s_attribute_bits_read_as_codes_for_a_walk() {
-        assert_eq!(tla_walk_code(0, 0x40), CELL_CLIMB);
-        assert_eq!(tla_walk_code(0, 0xc0), CELL_CLIMB);
-        assert_eq!(tla_walk_code(0, 0x80), CELL_JUMP);
-        assert_eq!(tla_walk_code(0, 0x20), CELL_LEDGE);
-        assert_eq!(tla_walk_code(0, 0x02), 0);
-        assert_eq!(tla_walk_code(34, 0x40), 34);
+    fn arriving_as_after_a_battle_is_the_kept_party_position_flag() {
+        assert!(keeps_party_position(&[0x8d5, FLAG_KEEP_PARTY_POSITION]));
+        assert!(!keeps_party_position(&[0x8d5]));
+    }
+
+    #[test]
+    fn a_walk_is_cut_at_each_climb_jump_and_drop() {
+        let m = |how, x| Move { from: (x, 0), to: (x + 1, 0), keys: KEY_RIGHT, how };
+        let path = [m(How::Walk, 0), m(How::Walk, 1), m(How::Climb, 2), m(How::Drop, 3), m(How::Walk, 4)];
+        let lens: Vec<usize> = walk_segments(&path).iter().map(|s| s.len()).collect();
+        assert_eq!(lens, vec![2, 1, 1, 1]);
+        assert!(walk_segments(&[]).is_empty());
+    }
+
+    #[test]
+    fn a_pillar_whose_top_its_cell_carries_is_walked_onto() {
+        assert!(sunk_below(288, 320));
+        assert!(!sunk_below(160, 160) && !sunk_below(160, 168));
+    }
+
+    #[test]
+    fn a_closed_overhead_cell_on_the_wall_s_face_stops_a_climb() {
+        // Magma Rock's slide: from (15, 23) at 256 up to (15, 22) at 320,
+        // the upper pillar drawn on overhead rows 3 and 5 of column 15.
+        let pillar = |cx: i32, row: i32| cx == 15 && (row == 3 || row == 5);
+        assert!(!climb_clear((15, 23), (15, 22), 256, 320, pillar));
+        assert!(climb_clear((15, 23), (15, 22), 256, 320, |_, _| false));
+        assert!(!climb_clear((15, 22), (15, 23), 320, 256, |cx, row| cx == 15 && row == 5));
+        assert!(climb_clear((15, 22), (15, 23), 320, 256, |_, _| false));
+    }
+
+    #[test]
+    fn a_lost_age_climb_goes_up_north_and_down_south() {
+        assert!(climb_way(0, 64) && !climb_way(0, -64) && !climb_way(0, 0));
+        assert!(climb_way(2, -96) && !climb_way(2, 32));
+        assert!(!climb_way(1, 64) && !climb_way(3, -64));
+    }
+
+    #[test]
+    fn the_lost_age_s_attribute_bits_read_as_ways_for_a_walk() {
+        let tla = |code, bits| WalkCell::read(code, Some(bits));
+        assert!(tla(0, 0x40).climb && !tla(0, 0x40).jump);
+        // Magma Rock's pillar top: a climb and a jump at once.
+        assert!(tla(0, 0xc0).climb && tla(0, 0xc0).jump);
+        assert!(tla(0, 0x80).jump && tla(0, 0x20).ledge);
+        assert_eq!(tla(0, 0x02), WalkCell { code: 0, climb: false, jump: false, ledge: false, marked: true });
+        // An event cell keeps its code and its climb.
+        assert!(tla(35, 0x40).climb && tla(35, 0x40).code == 35);
+        let tbs = WalkCell::read(CELL_CLIMB, None);
+        assert!(tbs.climb && !tbs.marked);
+        assert!(WalkCell::read(CELL_LEDGE, None).ledge && WalkCell::read(CELL_JUMP, None).jump);
     }
 
     #[test]
