@@ -378,7 +378,7 @@ impl Game {
     /// text of its language.
     pub fn read_edition(root: &Path, edition: &str) -> Result<Game, String> {
         let (game, language) = edition.split_once('-').ok_or_else(|| format!("{edition}: no edition"))?;
-        let path = root.join("out").join(edition).join(format!("{edition}.elf"));
+        let path = super::snapshot::build(root, edition)?.join(format!("{edition}.elf"));
         let data = std::fs::read(&path).map_err(|e| format!("cannot read {}: {e} (make {edition})", path.display()))?;
         Ok(Game {
             elf: crate::gba::elf::Elf::parse(&data)?,

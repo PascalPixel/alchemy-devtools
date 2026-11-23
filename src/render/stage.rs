@@ -49,6 +49,16 @@ pub struct Stage {
     pub hold: Vec<Held>,
     /// Keys held once the player has control again.
     pub then: Vec<Held>,
+    /// The keys that answer each prompt in turn (a yes or no choice, a
+    /// menu of icons): A for yes, B for no.
+    pub answer: Vec<u32>,
+    /// The character who leads the party, and the party itself, in order,
+    /// by name (character_ids.h, FELIX or felix).
+    pub leader: Option<String>,
+    pub party: Vec<String>,
+    /// An event played first, unrecorded, each event then recorded from
+    /// where it leaves the player (--first).
+    pub first: Option<String>,
 }
 
 impl Stage {
@@ -56,6 +66,12 @@ impl Stage {
     /// or the trigger comes from `--hold`, and the walk-up is not planned.
     pub fn staged(&self) -> bool {
         self.at.is_some() || !self.hold.is_empty()
+    }
+
+    /// Whether, with no event named, the run is a walk: the keys played
+    /// from the start given, recorded, whatever they set off.
+    pub fn walks(&self, events: &[String]) -> bool {
+        events.is_empty() && (self.at.is_some() || !self.hold.is_empty() || !self.then.is_empty())
     }
 
     /// Reads one staging option and its value; false when `option` is none.
@@ -72,6 +88,10 @@ impl Stage {
             "--face" => self.face = Some(parse_face(&value(option)?)?),
             "--hold" => self.hold.extend(parse_script(&value(option)?)?),
             "--then" => self.then.extend(parse_script(&value(option)?)?),
+            "--answer" => self.answer.extend(parse_answers(&value(option)?)?),
+            "--leader" => self.leader = Some(value(option)?),
+            "--first" => self.first = Some(value(option)?),
+            "--party" => self.party.extend(value(option)?.split(',').map(|n| n.trim().to_string()).filter(|n| !n.is_empty())),
             _ => return Ok(false),
         }
         Ok(true)
@@ -79,7 +99,7 @@ impl Stage {
 
     /// The options again, as a child of --jobs is given them.
     pub fn is_option(option: &str) -> bool {
-        matches!(option, "--set" | "--clear" | "--give" | "--entrance" | "--at" | "--face" | "--hold" | "--then")
+        matches!(option, "--set" | "--clear" | "--give" | "--entrance" | "--at" | "--face" | "--hold" | "--then" | "--answer" | "--leader" | "--party" | "--first")
     }
 }
 
@@ -130,6 +150,25 @@ pub fn parse_script(text: &str) -> Result<Vec<Held>, String> {
             bits |= KEY_NAMES.iter().find(|(n, _)| *n == key).map(|(_, b)| *b).ok_or_else(|| format!("{key:?} is no key (up, down, left, right, a, b, l, r, start, select, wait)"))?;
         }
         out.push(Held { keys: bits, frames });
+    }
+    Ok(out)
+}
+
+/// `--answer`'s list: each prompt's answer in turn, `yes` (A), `no` (B,
+/// which a yes or no choice and a menu take as No or backing out) or keys
+/// joined by `+` (`right+a`).
+pub fn parse_answers(text: &str) -> Result<Vec<u32>, String> {
+    let mut out = Vec::new();
+    for answer in text.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+        let keys = match answer.to_ascii_lowercase().as_str() {
+            "yes" | "y" => 1,
+            "no" | "n" => 2,
+            other => parse_script(&format!("{other}:1"))?.first().map_or(0, |h| h.keys),
+        };
+        if keys == 0 {
+            return Err(format!("--answer takes yes, no or keys (a, b, right+a), not {answer:?}"));
+        }
+        out.push(keys);
     }
     Ok(out)
 }
@@ -434,6 +473,32 @@ mod tests {
         assert_eq!(describe(&script), "up:40,wait:20,a+right:2");
         assert!(parse_script("up").is_err());
         assert!(parse_script("jump:3").is_err());
+    }
+
+    #[test]
+    fn a_prompt_is_answered_yes_no_or_by_keys() {
+        assert_eq!(parse_answers("no, yes,right+a").unwrap(), vec![2, 1, 0x11]);
+        assert!(parse_answers("maybe").is_err());
+        assert!(parse_answers("wait").is_err());
+        let mut stage = Stage::default();
+        for (option, value) in [("--answer", "no"), ("--leader", "jenna"), ("--party", "JENNA, FELIX")] {
+            assert!(stage.option(option, &mut |_| Ok(value.to_string())).unwrap());
+        }
+        assert_eq!((stage.answer, stage.leader.as_deref(), stage.party), (vec![2], Some("jenna"), vec!["JENNA".to_string(), "FELIX".to_string()]));
+        let mut chained = Stage::default();
+        assert!(chained.option("--first", &mut |_| Ok("Garoh_PlaceFirstPillar".to_string())).unwrap());
+        assert_eq!(chained.first.as_deref(), Some("Garoh_PlaceFirstPillar"));
+    }
+
+    #[test]
+    fn keys_with_no_event_named_are_a_walk() {
+        let mut stage = Stage::default();
+        assert!(!stage.walks(&[]));
+        stage.then = parse_script("up:30").unwrap();
+        assert!(stage.walks(&[]));
+        assert!(!stage.walks(&["Garoh_IsNight".to_string()]));
+        stage.set.push("FLAG_GAROH_NIGHT".to_string());
+        assert!(!Stage { set: stage.set.clone(), ..Stage::default() }.walks(&[]));
     }
 
     #[test]

@@ -1162,12 +1162,116 @@ impl Context<'_> {
         self.play_events(scenes, None, &mut Job::default());
     }
 
+    /// Records a walk staged by hand with no event (render event with --at,
+    /// --hold or --then and no --event) in the first scene asked for, as
+    /// DIR/<scene>/events/walk.gif: entered by --entrance (else its first
+    /// way in), with --set's and --clear's flags, the leader put at --at,
+    /// the keys of --hold and --then played from there, whatever they set
+    /// off. Its note says where he started, what was played and what it
+    /// set off, or that nothing visible happens.
+    pub fn walk(&mut self, scenes: &[&Scene]) {
+        let Some(scene) = scenes.iter().find(|s| self.only.contains(&s.number)).or(scenes.first()).copied() else {
+            return;
+        };
+        self.remove_event_files(scene, "walk");
+        self.cleared.push((scene.name(), "walk".to_string()));
+        match self.play_walk(scene) {
+            Ok((entrance, run, note)) => {
+                let file = format!("{}/events/walk.gif", scene.slug());
+                let leads_to = run.leads_to.map(|n| self.scenes.iter().find(|s| s.number == n).and_then(|s| s.symbol.clone()).map_or(format!("#{n}"), |s| format!("SceneId_{s}")));
+                match self.gif(&file, &run.frames) {
+                    Ok(written) => self.rows.push(Row {
+                        scene: scene.slug(),
+                        number: scene.number,
+                        area: scene.area.clone(),
+                        kind: "walk-gif",
+                        entrance: entrance as i16,
+                        event: "walk".to_string(),
+                        frames: written,
+                        leads_to: leads_to.unwrap_or_default(),
+                        note,
+                        file,
+                        ..Row::default()
+                    }),
+                    Err(e) => self.skip(scene, "walk", e),
+                }
+            }
+            Err(e) => self.skip(scene, "walk", e),
+        }
+    }
+
+    /// Plays the walk `walk` records: its way in, its run, and its note.
+    fn play_walk(&self, scene: &Scene) -> Result<(u16, super::field::WalkRun, String), String> {
+        let (mut set, mut clear) = (Vec::new(), Vec::new());
+        for (names, on) in [(&self.stage.set, true), (&self.stage.clear, false)] {
+            for name in names {
+                let flag = self.resolve_flag(name, scene).ok_or_else(|| format!("unknown flag {name}"))?;
+                set.retain(|&f| f != flag);
+                clear.retain(|&f| f != flag);
+                if on { &mut set } else { &mut clear }.push(flag);
+            }
+        }
+        let entrance = match self.stage.entrance {
+            Some(n) => n,
+            None => {
+                let (entrances, _) = self.entrances(scene, &set, &clear)?;
+                entrances.iter().find(|e| e.number > 0).or(entrances.first()).map_or(0, |e| e.number as u16)
+            }
+        };
+        let setup = Setup { scene: scene.number, entrance, set, clear };
+        let mut field = Field::enter_staged(self.rom, self.symbols, &setup, self.lineup()?.as_ref())?;
+        field.answers.clone_from(&self.stage.answer);
+        field.staged = true;
+        if !self.stage.give.is_empty() {
+            let header = std::fs::read_to_string(crate::compile::root().join("games").join(self.symbols.l.game.dir()).join("include/item_ids.h")).unwrap_or_default();
+            for name in &self.stage.give {
+                field.give(super::stage::item_id(&header, name)?)?;
+            }
+        }
+        let entered = field.save();
+        let at = self.stage.at.map(|(x, z, layer)| (x, z, layer, self.stage.face));
+        let mut keys = super::stage::script_frames(&self.stage.hold);
+        keys.extend(super::stage::script_frames(&self.stage.then));
+        // A walk that reaches a black screen sooner than BLACK_CLEARANCE is
+        // played again, standing longer first.
+        let mut lead = WALK_LEAD;
+        let mut run = field.walk(&entered, at, lead, &keys)?;
+        if let Some(first) = run.frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b < CLEARED) {
+            lead += (CLEARED - first) as u32;
+            run = field.walk(&entered, at, lead, &keys)?;
+        }
+        if run.capped {
+            return Err(format!("it runs past {} seconds", EVENT_LIMIT / 60));
+        }
+        let mut note = vec![format!("staged walk, no event: entered by entrance {entrance}")];
+        note.extend(run.notes.iter().cloned());
+        let played = super::stage::describe(&self.stage.hold.iter().chain(&self.stage.then).copied().collect::<Vec<_>>());
+        note.push(format!("keys held {played}"));
+        if !self.stage.set.is_empty() || !self.stage.clear.is_empty() {
+            note.push(format!("flags set {}, cleared {}", self.stage.set.join(" "), self.stage.clear.join(" ")));
+        }
+        match run.started.is_empty() {
+            true => note.push("nothing visible happens beyond the walk: the keys set off no event".to_string()),
+            false => note.push(format!("the keys set off {}", self.set_off(&run.started, scene.number))),
+        }
+        Ok((entrance, run, note.join("; ")))
+    }
+
     /// Plays the events `events` would for these scenes (one overlay's),
     /// or only the one named, keeping what it finds in `job` for the next
     /// events of the same scenes. The old pictures are not cleared first.
     pub fn play_events(&mut self, scenes: &[&Scene], name: Option<&str>, job: &mut Job) {
         for event in job_events(self.events, self.wanted, self.only, scenes).into_iter().filter(|e| name.is_none_or(|n| e.name == n)) {
-            let candidates: Vec<&Scene> = scenes.iter().copied().filter(|s| event.scenes.contains(&s.number)).collect();
+            let mut candidates: Vec<&Scene> = scenes.iter().copied().filter(|s| event.scenes.contains(&s.number)).collect();
+            // The scenes --scene names come first, and alone where the
+            // leader's start is staged there.
+            candidates.sort_by_key(|s| !self.only.contains(&s.number));
+            if self.stage.staged() || self.stage.entrance.is_some() {
+                let named: Vec<&Scene> = candidates.iter().copied().filter(|s| self.only.contains(&s.number)).collect();
+                if !named.is_empty() {
+                    candidates = named;
+                }
+            }
             let Some(&first) = candidates.first() else {
                 continue;
             };
@@ -1334,6 +1438,12 @@ impl Context<'_> {
         record: Option<usize>,
         within: Option<(&[u16], &[u16])>,
     ) -> Result<Played, Failure> {
+        // --first: the event is recorded from where that one leaves him.
+        if let (Some(name), None, Some(_)) = (&self.stage.first, within, record) {
+            if *name != event.name {
+                return self.play_after_first(name, event, scenes, job, record).map_err(Failure::new);
+            }
+        }
         let first = scenes[0];
         // On the way to another event, any run that leaves the player in
         // control will do; an event shown must show itself.
@@ -1434,6 +1544,11 @@ impl Context<'_> {
         }
         // Every other way in, for an event that changed nothing from the
         // first few.
+        if self.stage.staged() {
+            if let Some(played) = blank.take() {
+                return Ok(played);
+            }
+        }
         if let Some(played) = blank {
             self.every_place.set(true);
             let mut more = Vec::new();
@@ -1537,6 +1652,33 @@ impl Context<'_> {
         Err(failure)
     }
 
+    /// Plays event `name` first, unrecorded, with each of `event`'s rows'
+    /// flags, and records `event` from where it leaves the player (--first);
+    /// the note says so.
+    fn play_after_first(&self, name: &str, event: &Event, scenes: &[&Scene], job: &mut Job, record: Option<usize>) -> Result<Played, String> {
+        let before = self.events.iter().find(|e| e.name == name && scenes.iter().any(|s| e.scenes.contains(&s.number))).ok_or_else(|| format!("--first names {name}, which no scene of its overlay has"))?;
+        let mut error = format!("{name}, played first, never gave the player control again");
+        for alternative in &event.alternatives {
+            let Ok(trigger) = alternative.trigger else {
+                continue;
+            };
+            let (set, clear) = self.alternative_flags(alternative, scenes[0], event)?;
+            let end = self.play_event(before, scenes, job, None, Some((&set, &clear))).map_err(|f| format!("{name}, played first: {}", f.reason))?;
+            let Some(saved) = end.run.end.as_ref() else {
+                continue;
+            };
+            match self.play_at(&end.setup, Some(saved), trigger, event, record, true) {
+                Ok(mut run) => {
+                    let after = format!("played after {name}, which is not recorded");
+                    run.note = Some(run.note.map_or(after.clone(), |n| format!("{after}; {n}")));
+                    return Ok(Played { setup: end.setup, run });
+                }
+                Err(e) => error = format!("after {name}: {e}"),
+            }
+        }
+        Err(error)
+    }
+
     /// Plays an event by starting its function directly (Trigger::Direct),
     /// or a message row by showing its message as its row's dispatch would
     /// (Trigger::Message), with the flags its first row needs, at each room
@@ -1636,7 +1778,8 @@ impl Context<'_> {
         let own = self.own(event, setup.scene);
         let own_function = own.iter().copied().find(|&r| r >= 0x10000);
         let message_row = !own.is_empty() && own_function.is_none();
-        let mut field = Field::enter(self.rom, self.symbols, setup)?;
+        let mut field = Field::enter_staged(self.rom, self.symbols, setup, self.lineup()?.as_ref())?;
+        field.answers.clone_from(&self.stage.answer);
         field.relaxed = self.relaxed.get();
         field.lead_in = self.lead_in.get();
         field.whole = self.whole && record.is_some();
@@ -1665,6 +1808,18 @@ impl Context<'_> {
             }
         }
         field.play_as(&own);
+        // Staged beside cells, an event of several touch rows plays the row
+        // whose cells they are (the weeds', not the stream bank's).
+        if let (Some((cx, cz, _)), Trigger::Touch(code)) = (self.stage.at, trigger) {
+            let codes: Vec<u16> = event.alternatives.iter().filter_map(|a| match a.trigger {
+                Ok(Trigger::Touch(c)) => Some(c),
+                _ => None,
+            }).collect();
+            let near = field.codes_near(cx, cz);
+            if let Some(other) = row_for_cells(&codes, code, &near) {
+                return Err(format!("cell ({cx}, {cz}) lies by cells of code {other}, not {code}: its row for code {other} is played instead"));
+            }
+        }
         let spots = match self.stage.at {
             Some((cx, cz, layer)) => vec![field.staged_spot(trigger, (cx, cz), layer, self.stage.face)?],
             None => field.spots(trigger)?,
@@ -1683,6 +1838,19 @@ impl Context<'_> {
         // A direct start has no button press or step to show for it: it must
         // show itself as a silent trigger must.
         let silent = matches!(trigger, Trigger::Touch(_) | Trigger::Psynergy(MOVE, _) | Trigger::Direct(_) | Trigger::Cast(_));
+        // An event named on the command line that runs and shows nothing is
+        // recorded all the same, its note saying so, where nothing better
+        // plays: "nothing happens" is an answer too.
+        let asked = self.wanted.iter().any(|w| *w == event.name);
+        let mut quiet: Option<EventRun> = None;
+        let mut keep_quiet = |mut run: EventRun, why: &str| {
+            if quiet.is_none() {
+                let why = format!("nothing visible happens: {why}");
+                run.note = Some(run.note.take().map_or(why.clone(), |n| format!("{why}; {n}")));
+                run.blank = true;
+                quiet = Some(run);
+            }
+        };
         for spot in spots.iter().take(MAX_SPOTS) {
             let start = match after {
                 Some(saved) => Start::InControl(saved),
@@ -1690,6 +1858,14 @@ impl Context<'_> {
             };
             match field.event(start, trigger, spot, &own, messages, MAX_PAGES, record) {
                 Ok(run) if !strict => return Ok(run),
+                // A start staged by hand that set nothing off: kept, to show
+                // that nothing happens, unless another spot does better.
+                Ok(run) if run.nothing.is_some() => {
+                    error = run.nothing.clone().unwrap_or_default();
+                    if blank.is_none() {
+                        blank = Some(run);
+                    }
+                }
                 // Its messages open beside an actor the scene does not
                 // place here: another entrance, or a moment before, has the
                 // cast on stage.
@@ -1729,9 +1905,17 @@ impl Context<'_> {
                     let shown = run.seen.map_or(String::new(), |m| format!(" (message {m:05}{})", self.shows(m, setup.scene)));
                     error = format!("another row for its trigger played instead{shown}");
                 }
-                Ok(run) if run.instant && !run.shown && run.unseen.is_none() => error = "its dispatch returned at once from every spot: it ran no script".to_string(),
+                Ok(run) if run.instant && !run.shown && run.unseen.is_none() => {
+                    error = "its dispatch returned at once from every spot: it ran no script".to_string();
+                    if asked && record.is_some() {
+                        keep_quiet(run, "its dispatch returned at once: it ran no script");
+                    }
+                }
                 Ok(run) if silent && messages.is_empty() && !run.shown && run.unseen.is_none() => {
                     error = "it ran, but nothing moved, showed or changed from any spot".to_string();
+                    if asked && record.is_some() {
+                        keep_quiet(run, "it ran, but nothing moved, showed or changed on the screen");
+                    }
                 }
                 Ok(mut run) if strict && run.blank => {
                     if blank.is_none() {
@@ -1767,10 +1951,15 @@ impl Context<'_> {
                 }
             }
         }
-        if let Some(run) = short_of_goal.or(blank) {
+        if let Some(run) = short_of_goal.or(blank).or(quiet) {
             return Ok(run);
         }
         Err(error)
+    }
+
+    /// The party --party and --leader stage, if they stage one.
+    fn lineup(&self) -> Result<Option<super::field::Lineup>, String> {
+        super::party::lineup(&self.stage.party, self.stage.leader.as_deref(), self.symbols.l.game == super::layout::Game::Tla)
     }
 
     /// The results of an event's own row in scene `scene`, as the table
@@ -1863,7 +2052,22 @@ impl Context<'_> {
                 effects.push(format!("its code changes {}, which nothing on the screen shows (read from its source)", assigned.join(", ")));
             }
         }
-        instead(run.note.clone().unwrap_or_default(), &flags, &effects)
+        let mut note = instead(run.note.clone().unwrap_or_default(), &flags, &effects);
+        if !run.set_off.is_empty() {
+            let set_off = format!("the keys held afterwards set off {}", self.set_off(&run.set_off, scene.number));
+            note = if note.is_empty() { set_off } else { format!("{note}; {set_off}") };
+        }
+        note
+    }
+
+    /// The events a pad script set off (Field::play_on), named by the
+    /// function that ran for each or else by its trigger.
+    fn set_off(&self, started: &[(u8, u32, u32)], scene: u16) -> String {
+        let named: Vec<String> = started
+            .iter()
+            .map(|&(kind, _, ran)| format!("{} ({})", self.name_of(scene, ran), super::field::kind_label(kind)))
+            .collect();
+        named.join(", ")
     }
 
     fn write_event(&mut self, scene: &Scene, entrance: i16, event: &Event, run: &EventRun) -> Result<(), String> {
@@ -1906,6 +2110,20 @@ impl Context<'_> {
         }
         Ok(())
     }
+}
+
+/// Frames a staged walk shows the leader standing before its keys.
+const WALK_LEAD: u32 = 30;
+
+/// Which of an event's touch codes `codes` a start staged beside cells
+/// whose codes are `near` plays instead of `code`: one of them, where the
+/// cells hold it and not `code`. None where `code` is right, or the cells
+/// hold none of them.
+fn row_for_cells(codes: &[u16], code: u16, near: &[u16]) -> Option<u16> {
+    if codes.len() < 2 || near.contains(&code) {
+        return None;
+    }
+    codes.iter().copied().find(|c| near.contains(c))
 }
 
 /// `note` with what an event that shows nothing does instead: the flags
@@ -1959,6 +2177,16 @@ pub fn variant_candidates(events: &[Event], flags: &Flags) -> BTreeMap<u16, Vec<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_start_by_cells_plays_the_row_they_answer() {
+        // Apojii: the stream bank's row (33) first, the weeds' (21) second.
+        assert_eq!(row_for_cells(&[33, 21], 33, &[21, 255]), Some(21));
+        assert_eq!(row_for_cells(&[33, 21], 21, &[21, 255]), None);
+        assert_eq!(row_for_cells(&[33, 21], 33, &[33, 21]), None);
+        assert_eq!(row_for_cells(&[33, 21], 33, &[5]), None);
+        assert_eq!(row_for_cells(&[33], 33, &[21]), None);
+    }
 
     #[test]
     fn an_older_index_keeps_its_columns_by_name() {

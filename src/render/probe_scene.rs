@@ -11,17 +11,71 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// What the probe is asked: the scene, the entrance (the first way in when
-/// none), and the flags to set first.
+/// none), and the flags to set first; the actors to hide before the photo
+/// (--hide-actor), the cells to outline on it (--mark-cells) and to print
+/// (--cells), each X0,Y0,X1,Y1 and a layer, and whether the room is drawn
+/// whole too (--map).
+#[derive(Default)]
 pub struct Ask<'a> {
-    pub scene: &'a Scene,
+    pub scene: Option<&'a Scene>,
     pub entrance: Option<u16>,
     pub set: Vec<u16>,
+    pub hide: Vec<u16>,
+    /// The scene's functions made to return at once, by name (--skip): an
+    /// actor's update that draws a second sprite.
+    pub skip: Vec<String>,
+    pub mark: Vec<Cells>,
+    pub cells: Vec<Cells>,
+    pub map: bool,
+}
+
+/// A rectangle of map cells, corners included, on one map layer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Cells {
+    pub x0: i32,
+    pub z0: i32,
+    pub x1: i32,
+    pub z1: i32,
+    pub layer: u8,
+}
+
+impl Cells {
+    /// `X0,Y0,X1,Y1` or `X0,Y0,X1,Y1,LAYER` (layer 0 when none), corners in
+    /// either order.
+    pub fn parse(text: &str) -> Result<Cells, String> {
+        let bad = || format!("cells are X0,Y0,X1,Y1 or X0,Y0,X1,Y1,LAYER, not {text:?}");
+        let n: Vec<i32> = text.split(',').map(|p| p.trim().parse().map_err(|_| bad())).collect::<Result<_, _>>()?;
+        let (layer, corners) = match n[..] {
+            [a, b, c, d] => (0, [a, b, c, d]),
+            [a, b, c, d, l] if (0..=2).contains(&l) => (l as u8, [a, b, c, d]),
+            _ => return Err(bad()),
+        };
+        Ok(Cells { x0: corners[0].min(corners[2]), z0: corners[1].min(corners[3]), x1: corners[0].max(corners[2]), z1: corners[1].max(corners[3]), layer })
+    }
+}
+
+/// Outlines each cell of `cells` on `image`, whose top left is map pixel
+/// `origin`, at the cell's ground height (`height`, in pixels).
+pub fn outline(image: &mut super::field::Image, origin: (i32, i32), cells: &Cells, height: &dyn Fn(i32, i32) -> i32) {
+    const MARK: u32 = 0xff00ff;
+    for cz in cells.z0..=cells.z1 {
+        for cx in cells.x0..=cells.x1 {
+            let (left, top) = (cx * 16 - origin.0, cz * 16 - height(cx, cz) - origin.1);
+            for i in 0..16 {
+                for (x, y) in [(left + i, top), (left + i, top + 15), (left, top + i), (left + 15, top + i)] {
+                    if (0..image.width as i32).contains(&x) && (0..image.height as i32).contains(&y) {
+                        image.pixels[y as usize * image.width + x as usize] = MARK;
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Plays the scene and prints what it shows; writes `<scene>-<entrance>.png`
 /// into `out` and returns its file name.
 pub fn scene(rom: &[u8], symbols: &Symbols, ask: &Ask, functions: &HashMap<String, u32>, messages: &HashMap<u32, String>, out: &Path) -> Result<String, String> {
-    let s = ask.scene;
+    let s = ask.scene.ok_or("no scene asked")?;
     let first = Field::enter(rom, symbols, &Setup { scene: s.number, entrance: 0, set: ask.set.clone(), clear: Vec::new() })?;
     let entrances = first.entrances();
     drop(first);
@@ -32,10 +86,18 @@ pub fn scene(rom: &[u8], symbols: &Symbols, ask: &Ask, functions: &HashMap<Strin
     }
     let entrance = ask.entrance.or_else(|| entrances.iter().find(|e| e.number > 0).or(entrances.first()).map(|e| e.number as u16)).unwrap_or(0);
     let mut field = Field::enter(rom, symbols, &Setup { scene: s.number, entrance, set: ask.set.clone(), clear: Vec::new() })?;
+    for name in &ask.skip {
+        let address = functions.get(name).ok_or_else(|| format!("{} has no function {name}", s.name()))?;
+        field.returns.push((address & !1, 0));
+        println!("  {name} returns at once");
+    }
     field.until_control()?;
     field.frames(SETTLE)?;
     if field.scene() != s.number {
         println!("  entered by entrance {entrance}, the game went on to scene {}", field.scene());
+    }
+    for &f in &ask.set {
+        println!("  flag {f:#05x} is {} once the player has control", if field.flag_is_set(f) { "set" } else { "clear" });
     }
     let leader = field.leader().map_or("none".to_string(), |l| format!("({}, {}) layer {}", l.x, l.z, l.layer));
     println!("  entered by entrance {entrance}; the leader at {leader}; the view's top left {:?}", field.view());
@@ -62,7 +124,78 @@ pub fn scene(rom: &[u8], symbols: &Symbols, ask: &Ask, functions: &HashMap<Strin
         };
         println!("  trigger kind {} control {:#06x} target {}{condition}: {name}", row.control & 15, row.control, row.target);
     }
+    for &id in &ask.hide {
+        field.hide_actor(id);
+        println!("  actor {id} hidden");
+    }
+    if !ask.hide.is_empty() {
+        field.frames(2)?;
+    }
+    // Each cell's behaviour (its collision code), attribute bits and ground
+    // height in pixels, by layer and row.
+    for c in &ask.cells {
+        println!("  cells ({}, {}) to ({}, {}) of layer {}, each code/attributes/height:", c.x0, c.z0, c.x1, c.z1, c.layer);
+        println!("    {}", (c.x0..=c.x1).map(|x| format!("{x:>11}")).collect::<String>());
+        for cz in c.z0..=c.z1 {
+            let mut line = format!("  {cz:>3}");
+            for cx in c.x0..=c.x1 {
+                let word = field.cell_word(c.layer, cx, cz) as u32;
+                let height = field.ground(c.layer, cx * 16 + 8, cz * 16 + 8)? >> 16;
+                line.push_str(&format!(" {:>3}/{:02x}/{:<3}", (word >> 16) & 0xff, word >> 24, height));
+            }
+            println!("{line}");
+        }
+    }
+    let mut heights: HashMap<(u8, i32, i32), i32> = HashMap::new();
+    for c in &ask.mark {
+        for cz in c.z0..=c.z1 {
+            for cx in c.x0..=c.x1 {
+                heights.insert((c.layer, cx, cz), field.ground(c.layer, cx * 16 + 8, cz * 16 + 8)? >> 16);
+            }
+        }
+    }
+    let mut photo = field.screen();
+    let view = field.view();
+    for c in &ask.mark {
+        outline(&mut photo, view, c, &|x, z| heights.get(&(c.layer, x, z)).copied().unwrap_or(0));
+    }
     let file = format!("{}-{entrance}.png", s.slug());
-    super::places::write_png(&out.join(&file), &field.screen())?;
+    super::places::write_png(&out.join(&file), &photo)?;
+    if ask.map {
+        let settled = field.save();
+        let bounds = field.bounds();
+        let mut map = field.stitch(&settled, bounds, false)?;
+        for c in &ask.mark {
+            outline(&mut map, (bounds[0] >> 16, bounds[1] >> 16), c, &|x, z| heights.get(&(c.layer, x, z)).copied().unwrap_or(0));
+        }
+        let name = format!("{}-{entrance}-map.png", s.slug());
+        super::places::write_png(&out.join(&name), &map)?;
+        println!("  the room whole, leader hidden: {name}");
+    }
     Ok(file)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cells_are_a_rectangle_on_a_layer() {
+        assert_eq!(Cells::parse("114,47,110,16").unwrap(), Cells { x0: 110, z0: 16, x1: 114, z1: 47, layer: 0 });
+        assert_eq!(Cells::parse("1,2,3,4,2").unwrap().layer, 2);
+        assert!(Cells::parse("1,2,3").is_err());
+        assert!(Cells::parse("1,2,3,4,5").is_err());
+    }
+
+    #[test]
+    fn a_marked_cell_is_outlined_at_its_height() {
+        let mut image = super::super::field::Image { width: 64, height: 64, pixels: vec![0; 64 * 64] };
+        let cell = Cells { x0: 1, z0: 1, x1: 1, z1: 1, layer: 0 };
+        // Cell (1, 1) at height 8, the image's top left at map pixel (0, 0):
+        // its outline runs from (16, 8) to (31, 23).
+        outline(&mut image, (0, 0), &cell, &|_, _| 8);
+        assert_eq!(image.pixels[8 * 64 + 16], 0xff00ff);
+        assert_eq!(image.pixels[23 * 64 + 31], 0xff00ff);
+        assert_eq!(image.pixels[15 * 64 + 20], 0);
+    }
 }
