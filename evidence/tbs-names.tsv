@@ -5835,7 +5835,6 @@ PROCNE_ARRIVAL_FRAME	what the player sees	the yellow whirlwind gives way to a vi
 PROCNE_DROP_FRAME	what the player sees	after the fourth comet the violet sky is gone and the lifted targets stand on the ground again as the damage is told (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_COMET_FRAME	what the player sees	once violet sparks have gathered on Procne's chest, a violet comet shoots from it into the targets (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_COMET_INTERVAL	what the player sees	four violet comets shoot from Procne one after another, each ending in a white flash and a burst of sparks at the targets (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
-PROCNE_WHIRLWIND_CEL	what the player sees	the yellow whirlwind's streaks shift as it turns (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_WHIRLWIND_FOOT_HEIGHT	what the player sees	the yellow whirlwind rises from the ground in a low band first, then stands tall (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_DUST	what the player sees	puffs of dust swirl around the foot of the yellow whirlwind (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_DUST_MOTES	what the player sees	puffs of dust swirl around the foot of the yellow whirlwind (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
@@ -6097,10 +6096,7 @@ WINDOW_SPAN_EMPTY	the hardware	ScanlineWindow_FillSpans fills a page with 0xe0e0
 CRITICAL_ZOOM_START	its code	on a critical hit BattleStaging_Attack calls BattleCamera_SetViewAtPairMidpoint, whose zoom is "in percent" (battle_background.c), with index * 30 / frames + 100 over the run up's frames	games/tbs/src/battle/battle_staging.c
 CRITICAL_ZOOM_GAIN	its code	as CRITICAL_ZOOM_START: the zoom grows by 30 percent	games/tbs/src/battle/battle_staging.c
 VIOLET_LIGHTNING_PICTURE_BYTES	its code	BattleEffect_RunBurstShower steps through the bolts at (n * 9) << 9 bytes, 4608, a 72 by 64 picture of which 62 rows are drawn	games/tbs/src/battle_effect/battle_effect_burst_shower.c
-FLARE_DEPTH_NEAR	its code	the mote fountain raises a mote's projected depth to 314 and lowers it to 634 before sizing it 6 - (depth - 314) / 64, as battle_effect_stat_change.c sizes its flares; the lane's proposals.tsv puts FLARE_DEPTH_NEAR and FLARE_DEPTH_FAR in battle_effect_internal.h	games/tbs/src/battle_effect/battle_effect_streaks.c
-FLARE_DEPTH_FAR	its code	as FLARE_DEPTH_NEAR	games/tbs/src/battle_effect/battle_effect_streaks.c
 MOTE_FOUNTAIN_LARGEST	its code	as FLARE_DEPTH_NEAR: size 6 at the nearest, drawn by EFFECT_DRAW_MOTE size wide and twice as tall	games/tbs/src/battle_effect/battle_effect_streaks.c
-MOTE_FOUNTAIN_DEPTH_STEP	its code	as FLARE_DEPTH_NEAR: a pixel narrower for every 64 of depth	games/tbs/src/battle_effect/battle_effect_streaks.c
 ANIM_LEADER_LIE_FLAT	its picture	isaac.tsv's animation 37 is "kind 17, picture 209 10, hold", the picture ANIM_LEADER_FALL (36) ends on; isaac.png picture 209 draws him lying flat on the ground	games/tbs/src/field/field_sequence_run.c
 ISAAC_CHILD_ANIMATION_STAND_BRACED	its picture	isaac_child.tsv's animation 21 is "kind 17, picture 95 30, hold", as its 16 (ANIM_LEADER_STRIDE); isaac_child.png picture 95 draws him standing square to the front, feet apart, arms at his sides	games/tbs/src/field/field_sequence_run.c
 SPEAKER_DEFINITION_COUNT	its code	gSpeakerDefinitions has 131 rows: Speaker_FindDefinition stops after the first 130 and returns the last, Isaac, for any other sprite; The Lost Age names its 243 the same	games/tbs/src/field/field_sequence_speakers.c
@@ -7838,3 +7834,29 @@ MONSTER_BATTLE_OPEN_LEVEL	its code	BattleFormation_AverageLevel tests enemy->lev
 ICON_GRIM_REAPER_SHIFT	its code	BattleUnit_BuildStatusFlags sets 1 << (grimReaper + 6), the countdown 1 to 7 as bits 7 to 13	games/tbs/src/battle/battle_objects.c
 BATTLE_SPRITE_ROW_LAST	its code	the BattleSprite_ getters test index > 171, gBattleSprites' last row	games/tbs/src/battle/battle_sprite.c
 DEBUG_SECOND_RANGE_FIRST	its code	DebugBattle_ViewMessages opens index + this message when B or Up picks its second range	games/tbs/src/battle/battle_debug.c
+PROCNE_WHIRLWIND_PICTURE	what the player sees	the yellow whirlwind's streaks shift as it turns (its render)	games/tbs/src/battle_effect/battle_effect_procne.c
+MOTE_FOUNTAIN_DEPTH_NEAR	its code	the mote fountain raises a mote's projected depth to 314 and lowers it to 634 before sizing it 6 - (depth - 314) / 64, as battle_effect_stat_change.c sizes its flares (once FLARE_DEPTH_NEAR, renamed for the fountain whose motes it sizes); the lane's proposals.tsv puts FLARE_DEPTH_NEAR and FLARE_DEPTH_FAR in battle_effect_internal.h	games/tbs/src/battle_effect/battle_effect_streaks.c
+MOTE_FOUNTAIN_DEPTH_FAR	its code	as MOTE_FOUNTAIN_DEPTH_NEAR	games/tbs/src/battle_effect/battle_effect_streaks.c
+MOTE_FOUNTAIN_DEPTH_STEP	its code	as MOTE_FOUNTAIN_DEPTH_NEAR: a pixel narrower for every 64 of depth	games/tbs/src/battle_effect/battle_effect_streaks.c
+DOUSE_DROP_COUNT	its code	BattleEffect_RunDouse draws and lands this many of the 64 drops it lines up (gFalling_Counts column 0)	games/tbs/include/battle_effect/battle_effect_table.h
+DOUSE_DROPLETS_PER_DROP	its code	each drop that lands sets this many droplets flying from DOUSE_SPLASH_BUFFER (gFalling_Counts column 1)	games/tbs/include/battle_effect/battle_effect_table.h
+DOUSE_DROP_SPACING	its code	BattleEffect_RunDouse lines drop i up i times this many pixels higher (gFalling_Counts column 2)	games/tbs/include/battle_effect/battle_effect_table.h
+DOUSE_FRAMES	its code	the frame loop of BattleEffect_RunDouse runs this many frames, the damage shown 64 before the end (gFalling_Counts column 3)	games/tbs/include/battle_effect/battle_effect_table.h
+WINDOW_EDGE_FIRST_LINE	its code	BattleEffect_BuildWindowEdgeTable insets window 0's right edge on the WINDOW_EDGE_INSET_LINES lines from line 8 and leaves the others empty	games/tbs/src/battle_effect/battle_effect_dispatch.c
+BattleEffect_OpenAndCloseTiledCanvas	its code	calls BattleEffect_StartTiledCanvas(BGCNT_PRIORITY(1)) then BattleEffect_EndCanvasLayer; nothing calls it	games/tbs/src/battle_effect/battle_effect_dispatch.c
+ATALANTA_SPRITE_ROWS	its code	BattleEffect_RunAtalanta places its sprites in 3 rows of 3, 32 pixels apart	games/tbs/src/battle_effect/battle_effect_atalanta.c
+ATALANTA_SPRITES	its code	the nine sprites BattleEffect_SpawnObjects makes from SPRITE_ATALANTA and the run destroys	games/tbs/src/battle_effect/battle_effect_atalanta.c
+CYBELE_FACE_LEFT_SPRITE	its code	work->sprites[3] plays gCybele_ObjectPoses' CYBELE_POSE_FACE_LEFT column, the half of her face with the mouth	games/tbs/src/battle_effect/battle_effect_cybele.c
+CYBELE_FACE_RIGHT_SPRITE	its code	work->sprites[4] plays gCybele_ObjectPoses' CYBELE_POSE_FACE_RIGHT column	games/tbs/src/battle_effect/battle_effect_cybele.c
+TITAN_BLADE_DRAWN_FLASHES	its code	the flash loop from frame 56 draws work->particles 0 to 15 of the 32 set out, at radius i * 2 and lit i / 2 frames apart	games/tbs/src/battle_effect/battle_effect_titan_blade.c
+TITAN_BLADE_RISE_START	its code	frame 32: SE_SCATTER, the dust lit 16 a frame and the pillar drawn for 32 frames from it, the sword top riseFrame / 2 below its hold from it	games/tbs/src/battle_effect/battle_effect_titan_blade.c
+TITAN_BLADE_LIGHT_DUST	its code	the two dust-lighting blocks (frame 28, and each rise frame): a random spot round (originX, 96), thrown at random, variant 0	games/tbs/src/battle_effect/battle_effect_titan_blade.c
+VOLCANO_MOST_PILLARS	its code	the pillar setup loop places work->particles 0 to 3; gVolcano_Counts is {1, 2, 4}	games/tbs/src/battle_effect/battle_effect_volcano.c
+UNDEAD_SWORD_PUFFS	what the player sees	clouds of lime smoke billow up round the blade under the target, the blast sheet's cloud pictures in the lime palette (its render)	games/tbs/src/battle_effect/battle_effect_undead_sword.c
+UNDEAD_SWORD_PUFF_SHEET	what the player sees	the cloud pictures loaded after the half blade (its render)	games/tbs/src/battle_effect/battle_effect_undead_sword.c
+UNDEAD_SWORD_PUFF_PICTURES	what the player sees	a cloud grows and fades through seven blast pictures (its render)	games/tbs/src/battle_effect/battle_effect_undead_sword.c
+UNDEAD_SWORD_PUFF_FRAMES	its code	a cloud is drawn while variant < 29, three frames a picture, the seventh held	games/tbs/src/battle_effect/battle_effect_undead_sword.c
+UNDEAD_SWORD_FOOT_Y	what the player sees	the pointed lime blade rises from the ground under Ivan, canvas row 112 its foot, where the clouds start (its render)	games/tbs/src/battle_effect/battle_effect_undead_sword.c
+FROTH_VORTEX_TURNS	its code	the vortex picture is (variant / 2) % 3 of the sheet's 16x64 halves, ahead of the bubble at 3 halves in	games/tbs/src/battle_effect/battle_effect_vortices.c
+WHIRLWIND_GLINTS_EACH	its code	each tornado i draws work->particles i * 4 + j for j 0 to 3	games/tbs/src/battle_effect/battle_effect_vortices.c
+WHIRLWIND_GLINT_FRAMES	its code	a glint restarts at variant 6, its picture variant / 2 of three	games/tbs/src/battle_effect/battle_effect_vortices.c
