@@ -294,8 +294,8 @@ impl<'a> Guide<'a> {
 
     /// Talking to `actor` of scene `map`, pressing A along `path`, as
     /// `file`. The scene is entered by the first of its entrances, from 1,
-    /// that places the actor: a sheet of rooms places only the actors the
-    /// camera shows (CONDITION_IN_VIEW).
+    /// that places the actor: a rooms map places only the actors the camera
+    /// shows (CONDITION_IN_VIEW).
     fn talk_into(&mut self, map: &str, actor: &str, path: &[(u32, u32)], file: &str, what: &str) -> Result<(), String> {
         let scene = source::map_id(map)?;
         let id = source::actor_id(map, actor)?;
