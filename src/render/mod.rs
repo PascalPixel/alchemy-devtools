@@ -488,6 +488,7 @@ const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene 
          [--first-face WAY] [--first-hold KEYS:N,...] [--first-then KEYS:N,...]
          [--at-px X,Z[,LAYER]] [--during KEYS:N,...] [--skip FUNCTION]...
          [--limit SECONDS] [--from SECONDS] [--for SECONDS] [--keep-short]
+         [--walk-to X,Y[,LAYER]] [--crop X,Y,W,H] [--zoom N] [--frames A-B]
 Plays a built edition of either game (make tbs-en, make tla-en) under
 libmgba from a new game's defaults straight into each scene, and writes
 into DIR/<scene>/ (DIR defaults to out/EDITION/places) PNG files at the
@@ -694,7 +695,16 @@ staged:
     not the field menu), then the script goes on; cast:ABILITY:WAY holds
     north, east, south or west after it for 60 frames (cast:move:east,
     Move steered), cast:ABILITY:WAY:N for N. The ability is ability_ids.h's
-    (hover, HOVER or ABILITY_HOVER).
+    (hover, HOVER or ABILITY_HOVER). The way is pressed once the cast's
+    hand grips (Move's and Carry's hands read the d-pad, Input_GetDpadAngle,
+    once the cast's animation is over and the hand is on its target), as a
+    player presses it, and a hand still waiting once the way is over is
+    let go with B. Move's hand takes the actor of the scene's Move row in
+    reach of the way he faces (Scene_SelectPsynergyTarget: within its
+    reach and height, and in front beyond 11 pixels); the note says which
+    actor it took, where it stood and whether it moved, or that it took
+    nothing (FieldPsynergy_Move) and where each actor of the scene's Move
+    rows stands from him: how far, how far above, how far off his facing.
   --first-at X,Y[,LAYER], --first-face WAY, --first-hold KEYS:N,...,
     --first-then KEYS:N,...: the start, the way faced and the keys of the
     event --first plays; --at, --at-px, --face, --hold, --then and
@@ -719,6 +729,19 @@ staged:
   --keep-short: a recording with under ten seconds of the game before,
     between or after its black screens is written anyway, its note saying
     how long the stretch is; render check still refuses it.
+  --walk-to X,Y[,LAYER]: before its keys, a staged walk walks the leader
+    from where he starts (--at, else his way in) to cell (X, Y) as the
+    player would: the way planned over the cells he can reach in his room
+    (walks, ladders and vines, ledges, jumps, across the scene's event
+    cells, which run as he crosses them, but no exit) and followed with the
+    pad. LAYER's cells are numbered as the map numbers them, as --at's.
+    The note says the moves walked, or where and why he stopped.
+  --crop X,Y,W,H: only that part of the screen (pixels of its 240 by 160)
+    is written, drawn --zoom N times as large (2 when not given; 1 to 4),
+    for a small sprite change; a staged walk holds the camera still from
+    the start of its keys and leaves out the frames before.
+  --frames A-B: only frames A to B of the recording are written (60 a
+    second), as --from and --for write a window in seconds.
 With --at, --hold or --then and no --event, the run is a walk staged by
 hand: the scene first named (--scene) is entered by --entrance (else its
 first way in) with --set's and --clear's flags and --give's items, the

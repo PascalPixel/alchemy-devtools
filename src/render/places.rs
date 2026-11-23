@@ -1227,6 +1227,8 @@ impl Context<'_> {
         let mut field = Field::enter_staged(self.rom, self.symbols, &setup, self.lineup()?.as_ref())?;
         field.answers.clone_from(&self.stage.answer);
         field.staged = true;
+        field.walk_to = self.stage.walk_to;
+        field.hold_camera = self.stage.crop.is_some();
         if !self.stage.give.is_empty() {
             let header = std::fs::read_to_string(crate::compile::root().join("games").join(self.symbols.l.game.dir()).join("include/item_ids.h")).unwrap_or_default();
             for name in &self.stage.give {
@@ -2431,14 +2433,23 @@ impl Context<'_> {
         if (start, end) != (0, frames.len()) {
             notes.push(format!("{}; the whole recording runs {:.1} seconds", window_note(start, end), frames.len() as f64 / 60.0));
         }
-        let pictures: Vec<&[u16]> = frames[start..end].iter().map(Vec::as_slice).collect();
+        // --crop: a part of the screen, drawn --zoom times as large.
+        let (cropped, width) = match self.stage.crop {
+            Some(crop) => {
+                let zoom = self.stage.zoom.unwrap_or(2) as usize;
+                notes.push(format!("the screen's {}x{} pixels from ({}, {}), drawn {zoom} times as large", crop[2], crop[3], crop[0], crop[1]));
+                (frames[start..end].iter().map(|f| super::stage::crop_frame(f, super::mgba::WIDTH, crop, zoom)).collect(), crop[2] as usize * zoom)
+            }
+            None => (Vec::new(), super::mgba::WIDTH),
+        };
+        let pictures: Vec<&[u16]> = if self.stage.crop.is_some() { cropped.iter().map(Vec::as_slice).collect() } else { frames[start..end].iter().map(Vec::as_slice).collect() };
         if pictures.is_empty() {
             return Err(format!("--from and --for leave no frame of its {:.1} seconds", frames.len() as f64 / 60.0));
         }
-        let written = match super::animation::write_bgr555(&path, &pictures, super::mgba::WIDTH) {
+        let written = match super::animation::write_bgr555(&path, &pictures, width) {
             Err(why) if self.stage.keep_short && why.contains("under the") => {
                 notes.push(format!("kept short (--keep-short): {why}, which render check refuses"));
-                super::animation::write_bgr555_unchecked(&path, &pictures, super::mgba::WIDTH)?
+                super::animation::write_bgr555_unchecked(&path, &pictures, width)?
             }
             other => other?,
         };
