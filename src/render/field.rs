@@ -115,6 +115,18 @@ pub(super) const CELL_WALL: i32 = 255;
 /// How many times --walk-to plans its walk again when a climb, jump or drop
 /// it planned does not happen.
 const WALK_TO_PLANS: usize = 24;
+/// Both games' FLAG_KEEP_PARTY_POSITION: the party arrives where it stood,
+/// as after a battle.
+const FLAG_KEEP_PARTY_POSITION: u16 = 0x109;
+/// The actor snapshot's capacity and its empty slot, which ends its list
+/// (ACTOR_SNAPSHOT_CAPACITY, ACTOR_SNAPSHOT_EMPTY).
+const ACTOR_SNAPSHOT_CAPACITY: u32 = 32;
+const ACTOR_SNAPSHOT_EMPTY: u8 = 255;
+/// FieldWork.exit's value for a warp: the scene the main routine's work
+/// names is entered again (EXIT_KEEP_DESTINATION).
+const EXIT_KEEP_DESTINATION: u16 = 999;
+/// Frames the scene may take to be entered again as after a battle.
+const ARRIVE_FRAMES: u32 = 600;
 /// North, east, south and west: a cell's step, the heading that faces that
 /// way and the direction key that walks it.
 const STEP: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
@@ -266,6 +278,12 @@ fn fx(px: i32) -> i32 {
 
 /// The addresses the run stops at, from the edition's map.
 pub struct Symbols {
+    /// The actor snapshot's ids (ActorSnapshot.slots), which Actor_Restore
+    /// reads when the party arrives as after a battle.
+    snapshot_slots: u32,
+    /// The function that takes the actor snapshot as a battle begins:
+    /// The Broken Seal's Actor_Snapshot, The Lost Age's ObjectTable_Snapshot.
+    snapshot_take: u32,
     init: u32,
     glow: u32,
     load_layered: u32,
@@ -417,6 +435,11 @@ impl Symbols {
             render_pending: at("gFrameRenderPending")?,
             bg_scroll: at("gBgScroll")?,
             map_entrances: if l.game == super::layout::Game::Tla { at("gMapScene")? } else { 0 },
+            // The actor snapshot's list of actor ids: The Broken Seal's
+            // struct ActorSnapshot begins with it; The Lost Age keeps it in
+            // the 32 bytes before gSnapshotObjects.
+            snapshot_take: find("Actor_Snapshot").or_else(|| find("ObjectTable_Snapshot")).unwrap_or(0),
+            snapshot_slots: find("gActorSnapshot").or_else(|| find("gSnapshotObjects").map(|a| a - ACTOR_SNAPSHOT_CAPACITY)).unwrap_or(0),
             l,
         })
     }
@@ -723,6 +746,10 @@ pub struct Field<'rom> {
     /// Whether a staged walk holds the camera still from its keys' start
     /// (--crop), its frames before them left out.
     pub hold_camera: bool,
+    /// A staged walk arrives as after a battle (--arrive-as after-battle):
+    /// where it starts, the game's own snapshot of the actors is taken and
+    /// the scene entered again with FLAG_KEEP_PARTY_POSITION.
+    pub after_battle: bool,
 }
 
 /// The party `render event --party` and `--leader` stage: its members in
@@ -850,7 +877,7 @@ impl<'rom> Field<'rom> {
             steer_from: [0; 2],
             untargeted_frame: 0,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), during: Vec::new(), limit: EVENT_LIMIT, fold_note: None, answers: Vec::new(), lineup, moves: Vec::new(), walk_to: None, cross_events: false, hold_camera: false };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), during: Vec::new(), limit: EVENT_LIMIT, fold_note: None, answers: Vec::new(), lineup, moves: Vec::new(), walk_to: None, cross_events: false, hold_camera: false, after_battle: false };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -1136,6 +1163,15 @@ impl<'rom> Field<'rom> {
     }
 
     fn apply_flags(&mut self) {
+        // Arriving as after a battle (FLAG_KEEP_PARTY_POSITION), the scene
+        // puts back the actors the snapshot taken as the battle began holds
+        // (Actor_Restore). A new game's snapshot is zeros, which put a blank
+        // copy over actor 0 again and again, the leader in a new game, and
+        // scramble his sprite (Dehkan Plateau, Hesperia): the snapshot is
+        // made empty, as one taken where no actor was kept.
+        if keeps_party_position(&self.setup.set) && self.s.snapshot_slots != 0 {
+            self.gba.write8(self.s.snapshot_slots, ACTOR_SNAPSHOT_EMPTY);
+        }
         for f in self.setup.set.clone() {
             self.set_flag(f, true);
         }
@@ -1218,6 +1254,19 @@ impl<'rom> Field<'rom> {
             self.t.apply_return = 0;
             self.apply_flags();
             self.list_party();
+            // Arriving as after a battle, the entrance does not place the
+            // party (FLAG_KEEP_PARTY_POSITION keeps where it stood), and a
+            // new game has it nowhere: the leader's actor, made next from
+            // that place (Actor_ResetForLeader), would stand at (0, 0) with
+            // no sprite. It stands at the way in, as if the battle had been
+            // fought there.
+            if keeps_party_position(&self.setup.set) {
+                if let Some(e) = self.entrances().into_iter().find(|e| e.number == self.setup.entrance as i16) {
+                    let gs = self.s.game_state;
+                    self.gba.write32(gs + self.s.l.gs_x, fx(i32::from(e.x)) as u32);
+                    self.gba.write32(gs + self.s.l.gs_z, fx(i32::from(e.z)) as u32);
+                }
+            }
             self.t.applied = true;
             self.t.phase = Phase::Entered;
         }
@@ -2471,6 +2520,9 @@ impl<'rom> Field<'rom> {
             None => self.until_control()?,
         }
         self.frames(SETTLE)?;
+        if self.after_battle {
+            notes.push(self.arrive_after_battle()?);
+        }
         let wrong = self.misplaced()?;
         if !wrong.is_empty() {
             notes.push(format!("where he starts, {}", wrong.join(", ")));
@@ -2508,6 +2560,52 @@ impl<'rom> Field<'rom> {
             frames = shorten_blanks(frames, BLANK_KEEP);
         }
         Ok(WalkRun { frames, started, leads_to, capped, notes })
+    }
+
+    /// Has the party arrive where the leader stands as it does after a
+    /// battle fought there (--arrive-as after-battle): the game's own
+    /// snapshot of the actors is taken as a battle's start takes it
+    /// (Actor_Snapshot, ObjectTable_Snapshot), the party's place kept in
+    /// the main routine's work, and the scene entered again with
+    /// FLAG_KEEP_PARTY_POSITION (FieldWork.exit EXIT_KEEP_DESTINATION, as a
+    /// warp leaves), so its initialization takes the after-battle branches
+    /// and Actor_Restore puts the leader back as he was. A new game's empty
+    /// snapshot would leave him as the scene's first entry never made him
+    /// (Dehkan Plateau's and Hesperia's priority flags), his sprite cut.
+    fn arrive_after_battle(&mut self) -> Result<String, String> {
+        if self.s.snapshot_take == 0 {
+            return Err("the map has no actor snapshot function (Actor_Snapshot, ObjectTable_Snapshot)".to_string());
+        }
+        let leader = self.leader().ok_or("the scene has no leader")?;
+        let gs = self.s.game_state;
+        let origin = [fx(leader.x), fx(leader.z)];
+        self.call(self.s.snapshot_take, origin)?;
+        let object = self.leader_object();
+        let heading = u32::from(self.gba.read16(object + self.s.l.obj_angle));
+        self.gba.write32(gs + self.s.l.gs_x, fx(leader.x) as u32);
+        self.gba.write32(gs + self.s.l.gs_y, leader.y as u32);
+        self.gba.write32(gs + self.s.l.gs_z, fx(leader.z) as u32);
+        self.gba.write32(gs + self.s.l.gs_heading, heading);
+        self.gba.write16(gs + self.s.l.gs_turn, u16::from(leader.layer));
+        self.set_flag(FLAG_KEEP_PARTY_POSITION, true);
+        let work = self.gba.read32(self.s.field_work);
+        self.gba.write16(work + self.s.l.field_exit, EXIT_KEEP_DESTINATION);
+        let entries = self.t.entries;
+        let mut waited = 0;
+        while self.t.entries == entries {
+            self.frames(1)?;
+            waited += 1;
+            if waited > ARRIVE_FRAMES {
+                return Err("the scene was not entered again as after a battle".to_string());
+            }
+        }
+        self.until_control()?;
+        // The way in's camera box again, which a staged start outside it
+        // had widened (Field::fit_camera).
+        self.fit_camera();
+        self.frames(SETTLE)?;
+        let at = self.leader().map(|a| format!("({}, {}) on layer {}", a.x, a.z, a.layer)).unwrap_or_default();
+        Ok(format!("he arrives as after a battle (the game's actor snapshot taken where he stood, the scene entered again with FLAG_KEEP_PARTY_POSITION), at {at}"))
     }
 
     /// Walks the leader to cell `to` (--walk-to: X, Y as the map numbers
@@ -5624,6 +5722,11 @@ fn shorten_blanks(frames: Vec<Vec<u16>>, keep: usize) -> Vec<Vec<u16>> {
         .collect()
 }
 
+/// Whether a run's flags have the party arrive as after a battle.
+fn keeps_party_position(set: &[u16]) -> bool {
+    set.contains(&FLAG_KEEP_PARTY_POSITION)
+}
+
 /// A --walk-to path cut where it is followed and planned again: each climb,
 /// jump or drop alone, the walks between them together.
 fn walk_segments(path: &[Move]) -> Vec<&[Move]> {
@@ -6249,6 +6352,12 @@ mod tests {
         assert_eq!(KEYS[nearest_way(0xf800)], KEY_RIGHT);
         assert_eq!(KEYS[nearest_way(0x4100)], KEY_DOWN);
         assert_eq!(KEYS[nearest_way(0x8000)], KEY_LEFT);
+    }
+
+    #[test]
+    fn arriving_as_after_a_battle_is_the_kept_party_position_flag() {
+        assert!(keeps_party_position(&[0x8d5, FLAG_KEEP_PARTY_POSITION]));
+        assert!(!keeps_party_position(&[0x8d5]));
     }
 
     #[test]

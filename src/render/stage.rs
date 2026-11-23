@@ -106,6 +106,9 @@ pub struct Stage {
     /// where a room's cells change with the height he stands at (Air's
     /// Rock's levels), the ground they give before he is there is not his.
     pub at_height: Option<i32>,
+    /// A staged walk arrives as after a battle fought where it starts
+    /// (--arrive-as after-battle).
+    pub after_battle: bool,
     /// Keys held from the moment the event begins, while it runs and
     /// before the player has control again (--during).
     pub during: Vec<Held>,
@@ -225,6 +228,14 @@ impl Stage {
             "--first-face" => self.first_face = Some(parse_face(&value(option)?)?),
             "--first-hold" => self.first_hold.extend(parse_script(&value(option)?)?),
             "--first-then" => self.first_then.extend(parse_script(&value(option)?)?),
+            "--arrive-as" => {
+                let how = value(option)?;
+                self.after_battle = match how.trim() {
+                    "after-battle" => true,
+                    "entrance" => false,
+                    other => return Err(format!("--arrive-as takes after-battle or entrance, not {other}")),
+                };
+            }
             "--at-height" => self.at_height = Some(value(option)?.trim().parse().map_err(|_| "--at-height takes a height in pixels, as 208".to_string())?),
             "--at-px" => self.at_px = Some(parse_cell(&value(option)?).map_err(|e| e.replace("--at takes a cell as X,Y or X,Y,LAYER", "--at-px takes a pixel as X,Z or X,Z,LAYER"))?),
             "--during" => self.during.extend(parse_script(&value(option)?)?),
@@ -264,8 +275,8 @@ impl Stage {
 }
 
 /// Every staging option `render event` reads (Stage::option).
-pub const OPTIONS: [&str; 28] = [
-    "--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party", "--first", "--first-at", "--first-face", "--first-hold", "--first-then", "--at-px", "--during", "--skip", "--limit", "--from", "--for", "--keep-short", "--walk-to", "--at-height", "--crop", "--zoom", "--frames",
+pub const OPTIONS: [&str; 29] = [
+    "--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party", "--first", "--first-at", "--first-face", "--first-hold", "--first-then", "--at-px", "--during", "--skip", "--limit", "--from", "--for", "--keep-short", "--walk-to", "--at-height", "--arrive-as", "--crop", "--zoom", "--frames",
 ];
 
 /// The screen's size, which a crop lies within.
@@ -830,6 +841,17 @@ mod tests {
         assert!(stage.option("--at-height", &mut |_| Ok("208".to_string())).unwrap());
         assert_eq!(stage.at_height, Some(208));
         assert!(stage.option("--at-height", &mut |_| Ok("high".to_string())).unwrap_err().contains("--at-height"));
+    }
+
+    #[test]
+    fn an_arrival_as_after_a_battle_is_read() {
+        let mut stage = Stage::default();
+        assert!(Stage::is_option("--arrive-as"));
+        assert!(stage.option("--arrive-as", &mut |_| Ok("after-battle".to_string())).unwrap());
+        assert!(stage.after_battle);
+        assert!(stage.option("--arrive-as", &mut |_| Ok("entrance".to_string())).unwrap());
+        assert!(!stage.after_battle);
+        assert!(stage.option("--arrive-as", &mut |_| Ok("battle".to_string())).is_err());
     }
 
     #[test]

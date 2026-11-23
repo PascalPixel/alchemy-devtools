@@ -1229,6 +1229,7 @@ impl Context<'_> {
         field.staged = true;
         field.walk_to = self.stage.walk_to;
         field.hold_camera = self.stage.crop.is_some();
+        field.after_battle = self.stage.after_battle;
         if !self.stage.give.is_empty() {
             let header = std::fs::read_to_string(crate::compile::root().join("games").join(self.symbols.l.game.dir()).join("include/item_ids.h")).unwrap_or_default();
             for name in &self.stage.give {
