@@ -87,7 +87,12 @@ evidence/GAME-duplicates.tsv is duplicate_judged. A word the game never
 uses that a seen copy of a routine nothing runs or a seen lettered sibling
 of an actor placed out of sight lends is lent_word, one of things nothing
 shows (its-code rows) unseen_word. --list unit_open names the unit each
-question keeps open, with the question's whole text.";
+question keeps open, with the question's whole text. A macro defined right
+before an #include of a file that uses its name, used nowhere else in its
+file or #undef'd right after, is a parameter of the shared file, and so is
+what that file declares under such a name: undocumented_shared where the
+shared file's comments name it, else still counted, listed with the shared
+file as where to say it.";
 
 /// Both games' DONE, a line for each edition and one for the games.
 fn measure(root: &Path) -> String {

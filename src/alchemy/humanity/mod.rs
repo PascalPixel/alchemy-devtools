@@ -360,6 +360,14 @@ pub struct Report {
     duplicate_rows: HashMap<String, (String, String)>,
     /// Each file and what it `#include`s, as written.
     includes: Vec<(String, String)>,
+    /// Each file's identifiers and the words of its comments, for a shared
+    /// file's parameters: which names it uses, and which it says.
+    file_words: HashMap<String, (HashSet<String>, HashSet<String>)>,
+    /// Each undocumented macro defined right before an `#include` (file,
+    /// line, name, the include as written, and the name it views), settled
+    /// once every file is read: a parameter of the included file where that
+    /// file uses the name (`shared_parameters`).
+    parameter_candidates: Vec<(String, usize, String, String, Option<(String, usize)>)>,
     /// Every file read.
     paths: BTreeSet<String>,
     /// The externs an id macro takes the address of (`extern char
@@ -1059,6 +1067,7 @@ impl Report {
                 }
             }
         }
+        self.shared_parameters();
         // Each list in file and line order, as the files were read.
         self.items.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)));
         // A far call, `XFar`, is documented by X's comment.
@@ -1070,6 +1079,11 @@ impl Report {
         let said = |functions: &BTreeMap<String, Declared>, name: &str| {
             functions.get(name).is_some_and(|routine| routine.documented) || far(functions, name) || is_library_routine(name)
         };
+        // The files another includes as text, whose macro-named declarations
+        // are the names their includers give them.
+        let by_suffix = self.suffixes();
+        let included: HashSet<String> = self.includes.iter().filter_map(|(file, spec)| self.resolve(&by_suffix, file, spec)).map(str::to_string).collect();
+        drop(by_suffix);
         for (function, kind) in [(true, "undocumented_function"), (false, "undocumented_global")] {
             let missing: Vec<(String, usize, String, &str)> = (if function { &self.functions } else { &self.globals })
                 .iter()
@@ -1082,7 +1096,17 @@ impl Report {
                     // elsewhere (`return Party_ListMembers(owners);`).
                     let forwards = declared.forward.as_deref().is_some_and(|target| target != name && said(&self.functions, target));
                     let apart = apart.or_else(|| (function && forwards).then_some("undocumented_forward"));
-                    (declared.file.clone(), declared.line, name.clone(), apart.unwrap_or(kind))
+                    // A shared file's parameter (`extern s16 WAVE_SCROLL_LINES[];`):
+                    // a name a macro gives, declared in a file another
+                    // includes.
+                    let shared = apart.is_none() && is_macro_name(name) && self.macro_docs.contains_key(name) && included.contains(&declared.file);
+                    match shared {
+                        true => {
+                            let (metric, what) = self.parameter_said(name, &declared.file);
+                            (declared.file.clone(), declared.line, what, if metric == "undocumented_macro" { kind } else { metric })
+                        }
+                        false => (declared.file.clone(), declared.line, name.clone(), apart.unwrap_or(kind)),
+                    }
                 })
                 .collect();
             for (file, line, name, kind) in missing {
@@ -1222,24 +1246,10 @@ impl Report {
     /// others or not, and itself. An include is found beside the file that
     /// writes it, else under the game's `src` or `include`.
     fn objects(&self) -> HashMap<String, BTreeSet<String>> {
-        let mut by_suffix: HashMap<&str, Vec<&str>> = HashMap::new();
-        for path in &self.paths {
-            for (at, _) in path.match_indices('/') {
-                by_suffix.entry(&path[at + 1..]).or_default().push(path);
-            }
-        }
+        let by_suffix = self.suffixes();
         let mut includers: HashMap<&str, Vec<&str>> = HashMap::new();
         for (file, spec) in &self.includes {
-            let beside = file.rsplit_once('/').map_or(spec.clone(), |(folder, _)| normalized(&format!("{folder}/{spec}")));
-            let found = self.paths.get(&beside).map(String::as_str).or_else(|| {
-                let candidates = by_suffix.get(spec.as_str())?;
-                let game = file.split('/').take(2).collect::<Vec<_>>().join("/");
-                let mut own = candidates.iter().filter(|path| {
-                    [format!("{game}/src/{spec}"), format!("{game}/include/{spec}")].iter().any(|full| **path == full)
-                });
-                own.next().copied()
-            });
-            if let Some(found) = found {
+            if let Some(found) = self.resolve(&by_suffix, file, spec) {
                 includers.entry(found).or_default().push(file);
             }
         }
@@ -1257,6 +1267,66 @@ impl Report {
             objects.insert(path.clone(), seen);
         }
         objects
+    }
+
+    /// Every file read, by each tail of its path (`field/call.h`, `call.h`),
+    /// for `resolve`.
+    fn suffixes(&self) -> HashMap<&str, Vec<&str>> {
+        let mut by_suffix: HashMap<&str, Vec<&str>> = HashMap::new();
+        for path in &self.paths {
+            for (at, _) in path.match_indices('/') {
+                by_suffix.entry(&path[at + 1..]).or_default().push(path);
+            }
+        }
+        by_suffix
+    }
+
+    /// The file an `#include` of `spec` in `file` reads: beside `file`, else
+    /// under the game's `src` or `include`.
+    fn resolve<'s>(&'s self, by_suffix: &HashMap<&str, Vec<&'s str>>, file: &str, spec: &str) -> Option<&'s str> {
+        let beside = file.rsplit_once('/').map_or(spec.to_string(), |(folder, _)| normalized(&format!("{folder}/{spec}")));
+        self.paths.get(&beside).map(String::as_str).or_else(|| {
+            let candidates = by_suffix.get(spec)?;
+            let game = file.split('/').take(2).collect::<Vec<_>>().join("/");
+            let mut own = candidates.iter().filter(|path| [format!("{game}/src/{spec}"), format!("{game}/include/{spec}")].iter().any(|full| **path == full));
+            own.next().copied()
+        })
+    }
+
+    /// Settles each macro defined right before an `#include`: where the
+    /// included file uses its name, a parameter of that file, set apart
+    /// (`undocumented_shared`) when that file's comments name it and else
+    /// counted with that file given as where to say it; any other, as an
+    /// undocumented macro is.
+    fn shared_parameters(&mut self) {
+        let candidates = std::mem::take(&mut self.parameter_candidates);
+        let by_suffix = self.suffixes();
+        let mut settled = Vec::new();
+        for (file, line, name, spec, view) in candidates {
+            let shared = self.resolve(&by_suffix, &file, &spec).filter(|shared| self.file_words.get(*shared).is_some_and(|(idents, _)| idents.contains(&name)));
+            settled.push(match shared {
+                Some(shared) => Ok((file, line, self.parameter_said(&name, shared))),
+                None => Err((file, line, name, view)),
+            });
+        }
+        for found in settled {
+            match found {
+                Ok((file, line, (metric, what))) => self.note(metric, &file, line, &what),
+                Err((file, line, name, Some((target, casts)))) => self.views.push((file, line, name, target, casts)),
+                Err((file, line, name, None)) => self.note("undocumented_macro", &file, line, &name),
+            }
+        }
+    }
+
+    /// How a parameter of a shared file is counted: apart where the shared
+    /// file's comments name it, else to review, the shared file given as
+    /// where to say it.
+    fn parameter_said(&self, name: &str, shared: &str) -> (&'static str, String) {
+        if self.file_words.get(shared).is_some_and(|(_, said)| said.contains(name)) {
+            ("undocumented_shared", name.to_string())
+        } else {
+            ("undocumented_macro", format!("{name}\ta parameter of {shared}, whose comments do not name it"))
+        }
     }
 
     /// Copies past the first in each group.
@@ -1817,6 +1887,8 @@ struct Walk<'r, 'a> {
     /// Each object-like macro of this file that views one name through a
     /// cast or as it is, and how many casts (`view_target`).
     views: HashMap<String, (String, usize)>,
+    /// Where each macro is first defined: its directive's first token.
+    macro_starts: HashMap<String, usize>,
     /// A file-scope definer's invocation (`DEFINE_LIFT_ROCK(Name, ...)`,
     /// no semicolon): its closing parenthesis, the routine it defines, and
     /// whether a `///` documents it.
@@ -2258,6 +2330,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                             self.views.insert(name.text.to_string(), (target.to_string(), casts));
                         }
                     }
+                    self.macro_starts.entry(name.text.to_string()).or_insert(start);
                     let entry = self.macros.entry(name.text.to_string()).or_insert((false, line, None));
                     entry.0 |= documented;
                     if entry.2.is_none() {
@@ -2836,11 +2909,66 @@ impl<'r, 'a> Walk<'r, 'a> {
             if documented {
                 continue;
             }
-            match (apart, self.views.remove(&name)) {
+            let view = self.views.remove(&name);
+            if apart.is_none() {
+                if let Some(spec) = self.parameter_of(&name) {
+                    self.report.parameter_candidates.push((file.to_string(), line, name, spec, view));
+                    continue;
+                }
+            }
+            match (apart, view) {
                 (None, Some((target, casts))) => self.report.views.push((file.to_string(), line, name, target, casts)),
                 (apart, _) => self.report.note(apart.unwrap_or("undocumented_macro"), file, line, &name),
             }
         }
+    }
+
+    /// The file a macro is a parameter of, as its `#include` writes it: the
+    /// macro's first definition is followed, past comments and the other
+    /// `#define`s it is set with, by that `#include`, and this file uses the
+    /// name nowhere else or `#undef`s it right after (`#define
+    /// EFFECT_SET_MODE Actor_SelectAnimation` over `#include
+    /// "../field/field_effect_spawn.c"`). Whether the included file uses it
+    /// is settled once every file is read.
+    fn parameter_of(&self, name: &str) -> Option<String> {
+        let tokens = &self.code.tokens;
+        let start = *self.macro_starts.get(name)?;
+        let directive_end = |from: usize| (from..tokens.len()).find(|&at| tokens[at].kind == Kind::PpEnd).unwrap_or(tokens.len());
+        let words = |from: usize| -> Vec<&str> { tokens[from + 1..directive_end(from)].iter().filter(|t| t.kind != Kind::Comment).map(|t| t.text).collect() };
+        let next = |from: usize| (directive_end(from) + 1..tokens.len()).find(|&at| tokens[at].kind != Kind::Comment);
+        let mut at = next(start)?;
+        let spec = loop {
+            if tokens[at].kind != Kind::PpStart {
+                return None;
+            }
+            match words(at)[..] {
+                ["define", ..] => at = next(at)?,
+                ["include", spec] if spec.starts_with('"') => break spec.trim_matches('"').to_string(),
+                _ => return None,
+            }
+        };
+        let mut undone = false;
+        let mut after = next(at);
+        while let Some(undef) = after.filter(|&at| tokens[at].kind == Kind::PpStart && words(at).first() == Some(&"undef")) {
+            undone |= words(undef).get(1) == Some(&name);
+            after = next(undef);
+        }
+        // Its uses outside its `#define`s and `#undef`s.
+        let mut inside = false;
+        let mut directive = "";
+        let mut elsewhere = false;
+        for (index, token) in tokens.iter().enumerate() {
+            match token.kind {
+                Kind::PpStart => {
+                    inside = true;
+                    directive = tokens.get(index + 1).map_or("", |t| t.text);
+                }
+                Kind::PpEnd => inside = false,
+                Kind::Ident if token.text == name && !(inside && matches!(directive, "define" | "undef")) => elsewhere = true,
+                _ => {}
+            }
+        }
+        (undone || !elsewhere).then_some(spec)
     }
 
     /// The tokens between a brace pair, preprocessor lines aside, a
@@ -3231,6 +3359,16 @@ impl<'r, 'a> Walk<'r, 'a> {
                         Some(name) if name.kind == Kind::Ident && !is_keyword(name.text) && !is_macro_name(name.text) => {
                             return Some(Declarator::Function(name.text));
                         }
+                        // A routine a shared file names by its includer's
+                        // macro, right after its type (`struct Actor
+                        // *EFFECT_CREATE(s32 type, ...)`, `void EFFECT_SPAWN(`).
+                        Some(name)
+                            if name.kind == Kind::Ident
+                                && index >= 2
+                                && (tokens[index - 2].text == "*" || is_type_word(tokens[index - 2].text)) =>
+                        {
+                            return Some(Declarator::Function(name.text));
+                        }
                         _ => depth += 1,
                     }
                 }
@@ -3267,6 +3405,9 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
     }
     report.files += 1;
     report.paths.insert(path.to_string());
+    let idents = code.tokens.iter().filter(|t| t.kind == Kind::Ident).map(|t| t.text.to_string()).collect();
+    let said = comments.iter().flat_map(|c| c.text.split(|ch: char| !ch.is_ascii_alphanumeric() && ch != '_')).filter(|w| !w.is_empty()).map(str::to_string).collect();
+    report.file_words.insert(path.to_string(), (idents, said));
     let lines = text.lines().count();
     report.lines += lines;
     // S3 splits only an object holding more than one family: never a header, a
@@ -3353,6 +3494,7 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         last_type: None,
         old_style: false,
         views: HashMap::new(),
+        macro_starts: HashMap::new(),
         definer: None,
         enum_docs: HashMap::new(),
         defined: BTreeSet::new(),
@@ -3849,6 +3991,7 @@ const ROWS: &[(&str, &str)] = &[
     ("undocumented_scene", "  apart: scene tables, scripts"),
     ("undocumented_string", "  apart: strings, their text"),
     ("undocumented_guard", "  apart: include guards"),
+    ("undocumented_shared", "  apart: a shared file's parameters"),
 ];
 
 /// The metrics a sum adds: `fakematch` its devices, `leftover` its leftovers
@@ -4592,6 +4735,40 @@ mod tests {
         assert_eq!(names("undocumented_macro"), ["BARE_WORK", "ROUTINE_ALIAS", "UNIT_DEFINE"], "gBare is undocumented; a routine's bare name is no view");
         assert_eq!(names("undocumented_function"), ["Call1", "Field_Twice", "Kr", "Test_Other", "Unit_GetZero"]);
         assert_eq!(names("undocumented_global"), ["gBare"], "an old-style definition's parameters are no globals");
+    }
+
+    #[test]
+    fn a_shared_files_parameters() {
+        let shared = concat!(
+            "/// @file\n/// The spawner each scene copies: the includer gives SET_MODE and\n/// names the copy SPAWN.\n#include \"types.h\"\n\n",
+            "extern s16 LINES[];\n\nvoid SET_MODE(s32 mode);\n\n",
+            "void SPAWN(void) { SET_MODE(LINES[UNSAID]); }\n",
+        );
+        let scene = concat!(
+            "#define SET_MODE Actor_Select\n#define UNSAID 3\n#include \"../field/spawn.c\"\n#undef SET_MODE\n\n",
+            "#define SPAWN A_Spawn\n#define LINES gA_Lines\n#include \"../field/spawn.c\"\n\n",
+            "#define OTHER 4\n#include \"../field/spawn.c\"\n\n",
+            "#define NONE 5\n#include \"../field/spawn.c\"\n\n",
+            "void A_Run(void) { Run(OTHER); }\n",
+        );
+        let report = game([("games/tla/src/field/spawn.c", shared), ("games/tla/src/scene/a.c", scene)]);
+        let names = |metric: &str| -> Vec<String> {
+            let mut names: Vec<String> = report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.clone()).collect();
+            names.sort();
+            names
+        };
+        assert_eq!(names("undocumented_shared"), ["SET_MODE", "SET_MODE", "SPAWN", "SPAWN"], "the includer's macros and the shared file's declarations under them");
+        assert_eq!(
+            names("undocumented_macro"),
+            [
+                "LINES\ta parameter of games/tla/src/field/spawn.c, whose comments do not name it",
+                "NONE",
+                "OTHER",
+                "UNSAID\ta parameter of games/tla/src/field/spawn.c, whose comments do not name it",
+            ],
+            "OTHER is used again, NONE not by the shared file"
+        );
+        assert_eq!(names("undocumented_global"), ["LINES\ta parameter of games/tla/src/field/spawn.c, whose comments do not name it"]);
     }
 
     #[test]
