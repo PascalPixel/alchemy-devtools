@@ -1251,8 +1251,8 @@ impl Context<'_> {
         }
         let face = self.stage.face;
         let at = match (self.stage.at_px, self.stage.at) {
-            (Some((x, z, layer)), _) => Some(super::field::WalkStart { x, z, layer, face, cell: false }),
-            (None, Some((x, z, layer))) => Some(super::field::WalkStart { x, z, layer, face, cell: true }),
+            (Some((x, z, layer)), _) => Some(super::field::WalkStart { x, z, layer, face, cell: false, height: self.stage.at_height }),
+            (None, Some((x, z, layer))) => Some(super::field::WalkStart { x, z, layer, face, cell: true, height: self.stage.at_height }),
             (None, None) => None,
         };
         let mut keys = super::stage::script_frames(&self.stage.hold);

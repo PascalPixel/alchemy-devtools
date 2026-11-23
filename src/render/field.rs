@@ -114,7 +114,7 @@ const CELL_JUMP: i32 = 254;
 pub(super) const CELL_WALL: i32 = 255;
 /// How many times --walk-to plans its walk again when a climb, jump or drop
 /// it planned does not happen.
-const WALK_TO_PLANS: usize = 6;
+const WALK_TO_PLANS: usize = 24;
 /// North, east, south and west: a cell's step, the heading that faces that
 /// way and the direction key that walks it.
 const STEP: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
@@ -2442,9 +2442,13 @@ impl<'rom> Field<'rom> {
         self.moves.clear();
         let mut notes = Vec::new();
         match at {
-            Some(WalkStart { x, z, layer, face, cell }) => {
+            Some(WalkStart { x, z, layer, face, cell, height }) => {
                 self.until_control()?;
-                let spot = if cell { self.staged_spot(Trigger::Cast(0), (x, z), layer, face)? } else { self.staged_spot_px(Trigger::Cast(0), (x, z), layer, face)? };
+                let mut spot = if cell { self.staged_spot(Trigger::Cast(0), (x, z), layer, face)? } else { self.staged_spot_px(Trigger::Cast(0), (x, z), layer, face)? };
+                if let Some(h) = height {
+                    notes.push(format!("he is put {h} pixels up, where the cells there now give {}", spot.height >> 16));
+                    spot.height = fx(h);
+                }
                 let size = self.cell_size();
                 let (px, pz) = (spot.x, spot.z);
                 let (cx, cz) = (px.div_euclid(size), pz.div_euclid(size));
@@ -2587,9 +2591,20 @@ impl<'rom> Field<'rom> {
                     Ok(()) => {
                         walked += segment.len();
                         kinds += segment.iter().filter(|m| m.how != How::Walk).count();
+                        // A climb, jump or drop may change the cells ahead
+                        // (Air's Rock swaps in each level's ledges as he
+                        // climbs): the rest is planned again from there.
+                        if segment[0].how != How::Walk && segment[segment.len() - 1].to != cell {
+                            stopped = Some((segment[0], String::new()));
+                            break;
+                        }
                     }
                     Err(e) => {
-                        stopped = Some((segment[0], e));
+                        // The move he was making when he stopped: the walk
+                        // out of the cell he stands on.
+                        let here = self.leader().map(|a| (a.x >> 4, a.z >> 4));
+                        let m = segment.iter().find(|m| Some(m.from) == here).copied().unwrap_or(segment[0]);
+                        stopped = Some((m, e));
                         break;
                     }
                 }
@@ -2601,7 +2616,8 @@ impl<'rom> Field<'rom> {
                     ended = Some(Ok(()));
                     break;
                 }
-                Some((m, e)) if m.how != How::Walk && self.scene() == scene && self.leader().is_some() => {
+                Some((_, e)) if e.is_empty() => {}
+                Some((m, e)) if self.scene() == scene && self.leader().is_some() => {
                     failed.push(e);
                     banned.push(m);
                 }
@@ -5957,6 +5973,9 @@ pub struct WalkStart {
     pub layer: Option<u8>,
     pub face: Option<u32>,
     pub cell: bool,
+    /// The height he is put at (--at-height, pixels), rather than the
+    /// ground the cells give there now.
+    pub height: Option<i32>,
 }
 
 /// What an event left: its pages, when recorded its frames, and the moment
