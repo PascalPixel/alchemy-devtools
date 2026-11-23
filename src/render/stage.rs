@@ -23,12 +23,40 @@ const KEY_NAMES: [(&str, u32); 10] = [
 ];
 
 /// One step of a pad script: keys held (KEYINPUT bits, 0 for none) for a
-/// number of frames.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// number of frames, or a Psynergy cast (`cast:hover`, `cast:move:east`).
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Held {
     pub keys: u32,
     pub frames: u32,
+    /// The Psynergy cast at this step, where the leader stands and faces,
+    /// as the field's shortcut keys cast it (FieldWork.psynergy); `keys`
+    /// are then the way held after it for `frames` frames (a Move
+    /// steered), none for none.
+    pub cast: Option<Cast>,
 }
+
+/// A Psynergy a pad script casts: its name as given and its number in the
+/// game's ability_ids.h, 0 until Stage::resolve has read it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Cast {
+    pub name: String,
+    pub id: u16,
+}
+
+impl Held {
+    /// Keys held for frames, no cast.
+    pub const fn keys(keys: u32, frames: u32) -> Held {
+        Held { keys, frames, cast: None }
+    }
+}
+
+/// The bit of a frame of keys (script_frames) that marks a cast: the rest
+/// is the ability's number.
+pub const CAST_FRAME: u32 = 1 << 31;
+
+/// Frames a cast's way is held after it when `cast:ABILITY:WAY` gives
+/// none: the hand of Move waits for the d-pad.
+pub const CAST_WAY_FRAMES: u32 = 60;
 
 /// What `render event`'s staging options ask for.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -59,19 +87,97 @@ pub struct Stage {
     /// An event played first, unrecorded, each event then recorded from
     /// where it leaves the player (--first).
     pub first: Option<String>,
+    /// The start, the way faced and the keys of the event played first
+    /// (--first-at, --first-face, --first-hold, --first-then): --at and
+    /// the rest stage the recorded event alone.
+    pub first_at: Option<(i32, i32, Option<u8>)>,
+    pub first_face: Option<u32>,
+    pub first_hold: Vec<Held>,
+    pub first_then: Vec<Held>,
+    /// The pixel the leader starts on, and its layer (--at-px): finer than
+    /// --at's cell.
+    pub at_px: Option<(i32, i32, Option<u8>)>,
+    /// Keys held from the moment the event begins, while it runs and
+    /// before the player has control again (--during).
+    pub during: Vec<Held>,
+    /// Functions of the scene made to return at once (--skip).
+    pub skip: Vec<String>,
+    /// The most seconds a recording runs before it is given up
+    /// (--limit; EVENT_LIMIT's 240 when none).
+    pub limit: Option<u32>,
+    /// The window of the recording written, in frames: from this one, for
+    /// this many (--from, --for, given in seconds).
+    pub from: Option<u32>,
+    pub length: Option<u32>,
+    /// A recording with under ten seconds between two screen changes is
+    /// written anyway, its note saying so (--keep-short).
+    pub keep_short: bool,
 }
 
 impl Stage {
     /// Whether the leader's start is staged by hand: he starts at `--at`,
     /// or the trigger comes from `--hold`, and the walk-up is not planned.
     pub fn staged(&self) -> bool {
-        self.at.is_some() || !self.hold.is_empty()
+        self.start().is_some() || !self.hold.is_empty()
+    }
+
+    /// The cell the leader starts on, and its layer: --at's, or the cell
+    /// --at-px's pixel lies in.
+    pub fn start(&self) -> Option<(i32, i32, Option<u8>)> {
+        self.at.or(self.at_px.map(|(x, z, layer)| (x.div_euclid(16), z.div_euclid(16), layer)))
+    }
+
+    /// The same staging for the event --first plays: its own start, way
+    /// and keys, the flags, items and party shared.
+    pub fn for_first(&self) -> Stage {
+        Stage {
+            at: self.first_at,
+            at_px: None,
+            face: self.first_face,
+            hold: self.first_hold.clone(),
+            then: self.first_then.clone(),
+            during: Vec::new(),
+            first: None,
+            first_at: None,
+            first_face: None,
+            first_hold: Vec::new(),
+            first_then: Vec::new(),
+            from: None,
+            length: None,
+            ..self.clone()
+        }
+    }
+
+    /// The frames the recording written keeps of `total` (--from, --for):
+    /// the first and one past the last.
+    pub fn window(&self, total: usize) -> (usize, usize) {
+        let start = self.from.map_or(0, |f| f as usize).min(total);
+        let end = self.length.map_or(total, |l| start + l as usize).min(total);
+        (start, end.max(start))
+    }
+
+    /// The most frames a recording runs (--limit), `default` when none.
+    pub fn limit_frames(&self, default: u32) -> u32 {
+        self.limit.map_or(default, |s| s.saturating_mul(60))
+    }
+
+    /// Reads each cast's ability number from the game's ability_ids.h
+    /// (`header`'s text): `hover`, `HOVER` or `ABILITY_HOVER`.
+    pub fn resolve(&mut self, header: &str) -> Result<(), String> {
+        for script in [&mut self.hold, &mut self.then, &mut self.during, &mut self.first_hold, &mut self.first_then] {
+            for step in script.iter_mut() {
+                if let Some(cast) = step.cast.as_mut() {
+                    cast.id = ability_id(header, &cast.name)?;
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Whether, with no event named, the run is a walk: the keys played
     /// from the start given, recorded, whatever they set off.
     pub fn walks(&self, events: &[String]) -> bool {
-        events.is_empty() && (self.at.is_some() || !self.hold.is_empty() || !self.then.is_empty())
+        events.is_empty() && (self.start().is_some() || !self.hold.is_empty() || !self.then.is_empty())
     }
 
     /// Reads one staging option and its value; false when `option` is none.
@@ -92,6 +198,24 @@ impl Stage {
             "--leader" => self.leader = Some(value(option)?),
             "--first" => self.first = Some(value(option)?),
             "--party" => self.party.extend(value(option)?.split(',').map(|n| n.trim().to_string()).filter(|n| !n.is_empty())),
+            "--first-at" => self.first_at = Some(parse_cell(&value(option)?)?),
+            "--first-face" => self.first_face = Some(parse_face(&value(option)?)?),
+            "--first-hold" => self.first_hold.extend(parse_script(&value(option)?)?),
+            "--first-then" => self.first_then.extend(parse_script(&value(option)?)?),
+            "--at-px" => self.at_px = Some(parse_cell(&value(option)?).map_err(|e| e.replace("--at takes a cell as X,Y or X,Y,LAYER", "--at-px takes a pixel as X,Z or X,Z,LAYER"))?),
+            "--during" => self.during.extend(parse_script(&value(option)?)?),
+            "--skip" => self.skip.push(value(option)?),
+            "--limit" => {
+                let v = value(option)?;
+                self.limit = Some(v.parse().ok().filter(|&s: &u32| s > 0).ok_or_else(|| format!("--limit takes a number of seconds, not {v:?}"))?);
+            }
+            "--from" | "--for" => {
+                let v = value(option)?;
+                let seconds: f64 = v.parse().ok().filter(|s: &f64| s.is_finite() && *s >= 0.0).ok_or_else(|| format!("{option} takes a number of seconds, not {v:?}"))?;
+                let frames = Some((seconds * 60.0).round() as u32);
+                if option == "--from" { self.from = frames } else { self.length = frames }
+            }
+            "--keep-short" => self.keep_short = true,
             _ => return Ok(false),
         }
         Ok(true)
@@ -99,9 +223,14 @@ impl Stage {
 
     /// The options again, as a child of --jobs is given them.
     pub fn is_option(option: &str) -> bool {
-        matches!(option, "--set" | "--clear" | "--give" | "--entrance" | "--at" | "--face" | "--hold" | "--then" | "--answer" | "--leader" | "--party" | "--first")
+        OPTIONS.contains(&option)
     }
 }
+
+/// Every staging option `render event` reads (Stage::option).
+pub const OPTIONS: [&str; 23] = [
+    "--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party", "--first", "--first-at", "--first-face", "--first-hold", "--first-then", "--at-px", "--during", "--skip", "--limit", "--from", "--for", "--keep-short",
+];
 
 /// `X,Y` or `X,Y,LAYER`: a map cell, and its layer.
 pub fn parse_cell(text: &str) -> Result<(i32, i32, Option<u8>), String> {
@@ -136,22 +265,88 @@ pub fn parse_face(text: &str) -> Result<u32, String> {
 
 /// A pad script: steps `KEYS:FRAMES` apart by commas, KEYS key names joined
 /// by `+` (up, down, left, right, a, b, l, r, start, select), or `wait` for
-/// none (`up:40,wait:20,a:2`).
+/// none (`up:40,wait:20,a:2`); or `cast:ABILITY`, a Psynergy cast where the
+/// leader stands and faces, `cast:ABILITY:WAY` with the way (north, east,
+/// south, west or up, right, down, left) held after it for
+/// CAST_WAY_FRAMES frames, and `cast:ABILITY:WAY:FRAMES` for as many.
 pub fn parse_script(text: &str) -> Result<Vec<Held>, String> {
     let mut out = Vec::new();
     for step in text.split(',').map(str::trim).filter(|s| !s.is_empty()) {
-        let (keys, frames) = step.split_once(':').ok_or_else(|| format!("a pad step is KEYS:FRAMES (up:40), not {step:?}"))?;
-        let frames: u32 = frames.trim().parse().map_err(|_| format!("{step:?} holds its keys for no number of frames"))?;
-        let mut bits = 0;
-        for key in keys.split('+').map(|k| k.trim().to_ascii_lowercase()) {
-            if key == "wait" || key == "none" {
-                continue;
-            }
-            bits |= KEY_NAMES.iter().find(|(n, _)| *n == key).map(|(_, b)| *b).ok_or_else(|| format!("{key:?} is no key (up, down, left, right, a, b, l, r, start, select, wait)"))?;
+        if let Some(rest) = step.strip_prefix("cast:") {
+            out.push(parse_cast(rest)?);
+            continue;
         }
-        out.push(Held { keys: bits, frames });
+        let (keys, frames) = step.split_once(':').ok_or_else(|| format!("a pad step is KEYS:FRAMES (up:40) or cast:ABILITY, not {step:?}"))?;
+        let frames: u32 = frames.trim().parse().map_err(|_| format!("{step:?} holds its keys for no number of frames"))?;
+        out.push(Held::keys(parse_keys(keys)?, frames));
     }
     Ok(out)
+}
+
+/// KEYS: key names joined by `+`, or `wait`.
+fn parse_keys(keys: &str) -> Result<u32, String> {
+    let mut bits = 0;
+    for key in keys.split('+').map(|k| k.trim().to_ascii_lowercase()) {
+        if key == "wait" || key == "none" {
+            continue;
+        }
+        bits |= KEY_NAMES.iter().find(|(n, _)| *n == key).map(|(_, b)| *b).ok_or_else(|| format!("{key:?} is no key (up, down, left, right, a, b, l, r, start, select, wait)"))?;
+    }
+    Ok(bits)
+}
+
+/// `ABILITY[:WAY[:FRAMES]]` of a `cast:` step.
+fn parse_cast(text: &str) -> Result<Held, String> {
+    let parts: Vec<&str> = text.split(':').map(str::trim).collect();
+    let name = parts[0];
+    if name.is_empty() || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        return Err(format!("cast: names an ability (cast:hover, cast:move:east), not {text:?}"));
+    }
+    let keys = match parts.get(1) {
+        None => 0,
+        Some(way) => match way.to_ascii_lowercase().as_str() {
+            "north" | "n" | "up" => 0x40,
+            "south" | "s" | "down" => 0x80,
+            "east" | "e" | "right" => 0x10,
+            "west" | "w" | "left" => 0x20,
+            other => return Err(format!("cast:{name}: takes a way (north, east, south, west), not {other:?}")),
+        },
+    };
+    let frames = match parts.get(2) {
+        None if keys == 0 => 0,
+        None => CAST_WAY_FRAMES,
+        Some(n) => n.parse().map_err(|_| format!("cast:{text} holds its way for no number of frames"))?,
+    };
+    if parts.len() > 3 {
+        return Err(format!("a cast step is cast:ABILITY[:WAY[:FRAMES]], not cast:{text}"));
+    }
+    Ok(Held { keys, frames, cast: Some(Cast { name: name.to_string(), id: 0 }) })
+}
+
+/// An ability's number from the game's ability_ids.h (`enum AbilityId`),
+/// by its name with or without ABILITY_, in either case.
+pub fn ability_id(header: &str, name: &str) -> Result<u16, String> {
+    let upper = name.trim().to_ascii_uppercase();
+    let wanted = if upper.starts_with("ABILITY_") { upper } else { format!("ABILITY_{upper}") };
+    // The value each enumerator takes: its own number, else one past the
+    // last; one given by an expression (ABILITY_DJINNI_FIRST + ...) leaves
+    // those after it unknown until a number comes.
+    let mut next = Some(0i64);
+    let item = regex::Regex::new(r"^\s*(ABILITY_\w+)\s*(?:=\s*([^,/]+?))?\s*(?:,|$|//)").expect("an enumerator pattern");
+    for line in header.lines() {
+        let Some(found) = item.captures(line) else {
+            continue;
+        };
+        let value = match found.get(2).map(|v| v.as_str().trim()) {
+            Some(v) => v.strip_prefix("0x").map_or_else(|| v.parse().ok(), |h| i64::from_str_radix(h, 16).ok()),
+            None => next,
+        };
+        next = value.map(|v| v + 1);
+        if found[1] == wanted {
+            return value.map(|v| v as u16).ok_or_else(|| format!("ability_ids.h gives {wanted} no plain number"));
+        }
+    }
+    Err(format!("ability_ids.h has no {wanted}"))
 }
 
 /// `--answer`'s list: each prompt's answer in turn, `yes` (A), `no` (B,
@@ -173,9 +368,13 @@ pub fn parse_answers(text: &str) -> Result<Vec<u32>, String> {
     Ok(out)
 }
 
-/// The keys a script holds in each frame, in order.
+/// The keys a script holds in each frame, in order; a cast is one frame,
+/// CAST_FRAME with the ability's number, before its way's frames.
 pub fn script_frames(script: &[Held]) -> Vec<u32> {
-    script.iter().flat_map(|h| std::iter::repeat_n(h.keys, h.frames as usize)).collect()
+    script
+        .iter()
+        .flat_map(|h| h.cast.as_ref().map(|c| CAST_FRAME | u32::from(c.id)).into_iter().chain(std::iter::repeat_n(h.keys, h.frames as usize)))
+        .collect()
 }
 
 /// The script as `--hold` writes it, for a note.
@@ -184,7 +383,11 @@ pub fn describe(script: &[Held]) -> String {
         .iter()
         .map(|h| {
             let keys: Vec<&str> = KEY_NAMES.iter().filter(|(_, b)| h.keys & b != 0).map(|(n, _)| *n).collect();
-            format!("{}:{}", if keys.is_empty() { "wait".to_string() } else { keys.join("+") }, h.frames)
+            match &h.cast {
+                Some(c) if h.frames == 0 => format!("cast:{}", c.name.to_ascii_lowercase()),
+                Some(c) => format!("cast:{}:{}:{}", c.name.to_ascii_lowercase(), keys.join("+"), h.frames),
+                None => format!("{}:{}", if keys.is_empty() { "wait".to_string() } else { keys.join("+") }, h.frames),
+            }
         })
         .collect::<Vec<_>>()
         .join(",")
@@ -468,11 +671,90 @@ mod tests {
     #[test]
     fn a_pad_script_is_keys_held_for_frames() {
         let script = parse_script("up:40, wait:20,a+right:2").unwrap();
-        assert_eq!(script, vec![Held { keys: 0x40, frames: 40 }, Held { keys: 0, frames: 20 }, Held { keys: 0x11, frames: 2 }]);
+        assert_eq!(script, vec![Held::keys(0x40, 40), Held::keys(0, 20), Held::keys(0x11, 2)]);
         assert_eq!(script_frames(&script).len(), 62);
         assert_eq!(describe(&script), "up:40,wait:20,a+right:2");
         assert!(parse_script("up").is_err());
         assert!(parse_script("jump:3").is_err());
+    }
+
+    #[test]
+    fn a_cast_is_a_step_of_a_pad_script() {
+        let header = "enum AbilityId {\n  ABILITY_NONE,\n  ABILITY_FROST = 24,\n  ABILITY_DOUSE, // a comment\n  ABILITY_MOVE = 0x8c,\n  ABILITY_HOVER\n  ABILITY_FIZZ = ABILITY_DJINNI_FIRST + 20,\n  ABILITY_SLEET,\n  ABILITY_LAST = 700,\n  ABILITY_AFTER\n};";
+        let mut stage = Stage::default();
+        assert!(stage.option("--then", &mut |_| Ok("wait:30, cast:hover, cast:Move:east, cast:frost:s:5, up:2".to_string())).unwrap());
+        assert_eq!(stage.then[1], Held { keys: 0, frames: 0, cast: Some(Cast { name: "hover".to_string(), id: 0 }) });
+        assert_eq!((stage.then[2].keys, stage.then[2].frames), (0x10, CAST_WAY_FRAMES));
+        assert_eq!((stage.then[3].keys, stage.then[3].frames), (0x80, 5));
+        stage.resolve(header).unwrap();
+        let frames = script_frames(&stage.then);
+        assert_eq!(frames.len(), 30 + 1 + 1 + 60 + 1 + 5 + 2);
+        assert_eq!(frames[30], CAST_FRAME | 0x8d);
+        assert_eq!((frames[31], frames[32]), (CAST_FRAME | 0x8c, 0x10));
+        assert_eq!(frames[92], CAST_FRAME | 24);
+        assert_eq!(describe(&stage.then), "wait:30,cast:hover,cast:move:right:60,cast:frost:down:5,up:2");
+        assert_eq!(parse_script(&describe(&stage.then)).unwrap().len(), 5);
+        assert!(Stage { then: parse_script("cast:sand").unwrap(), ..Stage::default() }.resolve(header).is_err());
+        assert!(parse_script("cast:move:sideways").is_err());
+        assert!(parse_script("cast:").is_err());
+        assert_eq!(ability_id(header, "ABILITY_DOUSE").unwrap(), 25);
+        assert_eq!(ability_id(header, "douse").unwrap(), 25);
+        assert!(ability_id(header, "sleet").is_err());
+        assert_eq!(ability_id(header, "after").unwrap(), 701);
+    }
+
+    #[test]
+    fn the_run_s_other_options_are_read() {
+        let mut stage = Stage::default();
+        let given = [
+            ("--during", "up:60"),
+            ("--skip", "Settlements_StepOntoWall"),
+            ("--limit", "600"),
+            ("--from", "12.5"),
+            ("--for", "30"),
+            ("--at-px", "676,792,0"),
+            ("--first-at", "15,23"),
+            ("--first-face", "south"),
+            ("--first-hold", "down:20"),
+            ("--first-then", "wait:10"),
+        ];
+        for (option, value) in given {
+            assert!(Stage::is_option(option));
+            assert!(stage.option(option, &mut |_| Ok(value.to_string())).unwrap());
+        }
+        assert!(stage.option("--keep-short", &mut |_| Err("no value".to_string())).unwrap());
+        assert!(stage.keep_short);
+        assert_eq!(stage.during, vec![Held::keys(0x40, 60)]);
+        assert_eq!(stage.skip, vec!["Settlements_StepOntoWall"]);
+        assert_eq!(stage.limit_frames(14400), 36000);
+        assert_eq!(Stage::default().limit_frames(14400), 14400);
+        assert_eq!((stage.from, stage.length), (Some(750), Some(1800)));
+        assert_eq!(stage.window(5000), (750, 2550));
+        assert_eq!(stage.window(1000), (750, 1000));
+        assert_eq!(stage.window(100), (100, 100));
+        assert_eq!(Stage::default().window(90), (0, 90));
+        assert_eq!(stage.at_px, Some((676, 792, Some(0))));
+        assert_eq!(stage.start(), Some((42, 49, Some(0))));
+        assert!(stage.staged());
+        assert!(stage.walks(&[]));
+        assert!(stage.option("--limit", &mut |_| Ok("0".to_string())).is_err());
+        assert!(stage.option("--from", &mut |_| Ok("-1".to_string())).is_err());
+        assert!(stage.option("--at-px", &mut |_| Ok("3".to_string())).unwrap_err().contains("--at-px"));
+    }
+
+    #[test]
+    fn the_event_played_first_has_its_own_start() {
+        let mut stage = Stage { at: Some((10, 9, None)), hold: parse_script("up:8").unwrap(), then: parse_script("down:8").unwrap(), during: parse_script("a:1").unwrap(), set: vec!["FLAG_X".to_string()], first: Some("E_First".to_string()), ..Stage::default() };
+        let first = stage.for_first();
+        assert_eq!((first.at, first.hold.len(), first.then.len(), first.during.len()), (None, 0, 0, 0));
+        assert_eq!((first.set.clone(), first.first.clone()), (vec!["FLAG_X".to_string()], None));
+        assert!(!first.staged());
+        stage.first_at = Some((15, 23, Some(1)));
+        stage.first_face = Some(0x4000);
+        stage.first_hold = parse_script("down:20").unwrap();
+        let first = stage.for_first();
+        assert_eq!((first.at, first.face, first.hold.clone(), first.first_at), (Some((15, 23, Some(1))), Some(0x4000), vec![Held::keys(0x80, 20)], None));
+        assert!(first.staged());
     }
 
     #[test]
@@ -525,7 +807,7 @@ mod tests {
         assert_eq!(stage.set, vec!["FLAG_A"]);
         assert_eq!(stage.entrance, Some(4));
         assert_eq!(stage.at, Some((3, 4, None)));
-        assert_eq!(stage.hold, vec![Held { keys: 0x20, frames: 16 }]);
+        assert_eq!(stage.hold, vec![Held::keys(0x20, 16)]);
         assert!(stage.staged());
         assert!(!Stage::default().staged());
     }
