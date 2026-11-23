@@ -214,6 +214,12 @@ const START_FRAMES: u32 = 180;
 /// Frames a start staged by hand is played on, once its keys have all been
 /// held, before it has set nothing off.
 const STAGED_QUIET: u32 = 60;
+/// Frames after a press of A within which a field menu opening is that
+/// press's, not the game's own.
+const PRESS_REACH: u32 = 8;
+/// Frames the field menu the game opened itself is shown before B leaves
+/// each of its screens.
+const FIELD_MENU_HOLD: u32 = 90;
 /// Frames a cast's later phase (Reveal wearing off) is waited for once the
 /// player has control again.
 const CAST_PHASE_FRAMES: u32 = 1800;
@@ -461,6 +467,12 @@ pub(super) struct Track {
     /// the frame it opened.
     menu_return: u32,
     menu_opened: u32,
+    /// While the field menu the game opened itself is open: where
+    /// FieldMenu_Run returns to, and the frame it opened.
+    field_menu_return: u32,
+    field_menu_opened: u32,
+    /// The last frame the run pressed A.
+    pressed_a: u32,
     /// The prompts answered from Field::answers so far.
     answered: u8,
     last_message: u32,
@@ -748,6 +760,9 @@ impl<'rom> Field<'rom> {
             choice_frame: 0,
             menu_return: 0,
             menu_opened: 0,
+            field_menu_return: 0,
+            field_menu_opened: 0,
+            pressed_a: 0,
             answered: 0,
             last_message: 0,
             keys: 0,
@@ -1077,6 +1092,11 @@ impl<'rom> Field<'rom> {
         let step = self.gba.step();
         let frame_done = step.frame != self.t.frame;
         self.t.frame = step.frame;
+        // A held with no page waiting and no choice open: a press that
+        // may open the field menu.
+        if frame_done && self.t.keys & KEY_A != 0 && !self.waiting() && self.t.menu_return == 0 {
+            self.t.pressed_a = self.t.frame;
+        }
         let pc = step.pc;
         self.t.pc = pc;
         self.t.halted = step.halted != 0;
@@ -1146,9 +1166,16 @@ impl<'rom> Field<'rom> {
         if pc == s.notice && !self.show_notice {
             self.gba.return_now(0);
         }
-        if pc == s.field_menu && self.t.block_menu {
+        // The field menu a press of A opens is not opened while an event
+        // plays; one the game opens itself (an event's `fieldMenu`) is.
+        if pc == s.field_menu && self.t.block_menu && self.t.frame.saturating_sub(self.t.pressed_a) <= PRESS_REACH {
             self.gba.return_now(0);
             self.t.menu_frame = self.t.frame;
+        } else if pc == s.field_menu && self.t.field_menu_return == 0 {
+            self.t.field_menu_return = lr(&self.gba);
+            self.t.field_menu_opened = self.t.frame;
+        } else if self.t.field_menu_return != 0 && pc == self.t.field_menu_return {
+            self.t.field_menu_return = 0;
         }
         if (frame_done || self.probe_pcs.contains(&pc)) && self.probe.is_some() {
             let mut probe = self.probe.take().unwrap();
@@ -4679,6 +4706,15 @@ impl<'rom> Field<'rom> {
                 }
                 continue;
             }
+            // The field menu the game opened itself: shown, then left with
+            // B (its menus of icons answered by --answer's keys first).
+            if self.t.field_menu_return != 0 && usize::from(self.t.answered) >= self.answers.len() {
+                quiet_start = self.t.frame;
+                if (self.t.frame - self.t.field_menu_opened) % FIELD_MENU_HOLD == FIELD_MENU_HOLD - 1 {
+                    self.press_keys(KEY_B, 3)?;
+                }
+                continue;
+            }
             // A menu of icons (a shop's commands) is answered by --answer's
             // keys while they last: B backs out of it.
             if let Some(open) = self.menu_open().filter(|_| usize::from(self.t.answered) < self.answers.len()) {
@@ -4765,6 +4801,8 @@ impl<'rom> Field<'rom> {
         let then_played = record.is_some() && !self.then.is_empty() && (began.is_some() || nothing.is_some()) && !capped && !defeated && (arrival.is_none() || arrived) && self.scene() != MAP_BATTLE;
         let mut then_started = Vec::new();
         if then_played {
+            // The player has control: A may open the field menu again.
+            self.t.block_menu = false;
             let keys = super::stage::script_frames(&self.then);
             then_started = self.play_on(&keys, EVENT_LIMIT)?;
         }
