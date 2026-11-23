@@ -50,8 +50,8 @@
 
 use super::animation::{is_black_bgr555, BLACK_CLEARANCE};
 use super::approach::{self, Frame, How, Move, Pad};
-use super::mgba::{Gba, HEIGHT, KEY_A, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, LR, SP, WIDTH};
-use super::party::{chapter, order, Party};
+use super::mgba::{Gba, HEIGHT, KEY_A, KEY_B, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, LR, SP, WIDTH};
+use super::party::{chapter, lead, order, Party};
 use super::story::{Trigger, CARRY, MOVE};
 use crate::gba::ld_map::Map;
 use std::collections::HashMap;
@@ -206,6 +206,12 @@ const SLIDE_FRAMES: u32 = 240;
 /// Frames a trigger may take to start its event: the leader walking onto a
 /// cell and pushing against what is beyond it.
 const START_FRAMES: u32 = 180;
+/// Frames a start staged by hand is played on, once its keys have all been
+/// held, before it has set nothing off.
+const STAGED_QUIET: u32 = 60;
+/// Frames a cast's later phase (Reveal wearing off) is waited for once the
+/// player has control again.
+const CAST_PHASE_FRAMES: u32 = 1800;
 /// Frames the leader may make no headway on a walk before it has failed (a
 /// wanderer in the way, a corner the cells did not show).
 const STUCK_FRAMES: u32 = 40;
@@ -242,6 +248,9 @@ pub struct Symbols {
     glow: u32,
     load_layered: u32,
     apply_entrance: u32,
+    /// Scene_Arrive, which clears the scene's and, entering another area,
+    /// the area's flags as a scene is entered.
+    arrive: u32,
     notice: u32,
     field_menu: u32,
     step: u32,
@@ -253,6 +262,9 @@ pub struct Symbols {
     objects: u32,
     typing: u32,
     choice: u32,
+    /// IconMenu_Run: a menu of icons (a shop's commands; a yes or no
+    /// choice runs one too).
+    icon_menu: u32,
     lookup: u32,
     terrain_height: u32,
     write_cell_tile: u32,
@@ -326,6 +338,7 @@ impl Symbols {
             init: at("MainRoutineWork_InitializeDefaults")?,
             glow: at("WindowColor_Apply")?,
             load_layered: at("MapGrid_LoadMap")?,
+            arrive: at("Scene_Arrive")?,
             // The Lost Age places the party in three tries, its scene's table
             // by number, its map's entrances, the table's first row
             // (Field_ApplyEntrance, BattleMap_ApplySceneEntranceView before 22 November: it
@@ -342,6 +355,7 @@ impl Symbols {
             objects: at("Actor_UpdateAllThumb")?,
             typing: at("Message_Type")?,
             choice: at("YesNoMenu_Run")?,
+            icon_menu: at("IconMenu_Run")?,
             lookup: at("Message_Find")?,
             terrain_height: at("MapGrid_GetTerrainHeight")?,
             write_cell_tile: at("WorldMap_WriteLayerCellTile")?,
@@ -411,6 +425,7 @@ pub(super) struct Track {
     phase: Phase,
     frame: u32,
     init_return: u32,
+    arrive_return: u32,
     load_return: u32,
     apply_return: u32,
     entrances_fn: u32,
@@ -437,6 +452,12 @@ pub(super) struct Track {
     last_typing: u32,
     choice_return: u32,
     choice_frame: u32,
+    /// While a menu of icons is open: where IconMenu_Run returns to, and
+    /// the frame it opened.
+    menu_return: u32,
+    menu_opened: u32,
+    /// The prompts answered from Field::answers so far.
+    answered: u8,
     last_message: u32,
     keys: u32,
     /// A function to call at the next Field_UpdateWalking entry (0 for none),
@@ -627,6 +648,23 @@ pub struct Field<'rom> {
     pub script: Vec<super::stage::Held>,
     /// Keys held once the player has control again (--then).
     pub then: Vec<super::stage::Held>,
+    /// The keys that answer each prompt in turn (--answer): a yes or no
+    /// choice, a menu of icons. A choice past them is answered Yes.
+    pub answers: Vec<u32>,
+    /// The party a run is staged with (--party, --leader), set as a new
+    /// game is set up.
+    lineup: Option<Lineup>,
+}
+
+/// The party `render event --party` and `--leader` stage: its members in
+/// order, the leader first (none: the party the run would have, the
+/// leader moved to its head), and the debug preset that sets their
+/// strength.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Lineup {
+    pub members: Vec<u8>,
+    pub leader: Option<u8>,
+    pub preset: Option<u32>,
 }
 
 impl<'rom> Field<'rom> {
@@ -668,10 +706,22 @@ impl<'rom> Field<'rom> {
     /// The Lost Age's guide recordings name a debug preset of their own
     /// (party::tla).
     pub fn enter_with_party(rom: &'rom [u8], s: &'rom Symbols, setup: &Setup, party: Option<&'static Party>) -> Result<Field<'rom>, String> {
+        Field::enter_lined_up(rom, s, setup, party, None)
+    }
+
+    /// As `enter`, with the party `lineup` stages (render event --party,
+    /// --leader) when it stages one.
+    pub fn enter_staged(rom: &'rom [u8], s: &'rom Symbols, setup: &Setup, lineup: Option<&Lineup>) -> Result<Field<'rom>, String> {
+        let party = if s.l.game == super::layout::Game::Tbs { chapter(setup.scene)? } else { None };
+        Field::enter_lined_up(rom, s, setup, party, lineup.cloned())
+    }
+
+    fn enter_lined_up(rom: &'rom [u8], s: &'rom Symbols, setup: &Setup, party: Option<&'static Party>, lineup: Option<Lineup>) -> Result<Field<'rom>, String> {
         let t = Track {
             phase: Phase::Boot,
             frame: 0,
             init_return: 0,
+            arrive_return: 0,
             load_return: 0,
             apply_return: 0,
             entrances_fn: 0,
@@ -691,6 +741,9 @@ impl<'rom> Field<'rom> {
             last_typing: 0,
             choice_return: 0,
             choice_frame: 0,
+            menu_return: 0,
+            menu_opened: 0,
+            answered: 0,
             last_message: 0,
             keys: 0,
             call_target: 0,
@@ -719,7 +772,7 @@ impl<'rom> Field<'rom> {
             cuts: 0,
             catch_raised: false,
         };
-        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new() };
+        let mut field = Field { gba: Gba::new(rom)?, rom, s, t, setup: setup.clone(), recorded: None, hide_leader: false, states: None, whole: false, watch: Vec::new(), own: Vec::new(), world_cells: None, relaxed: false, unwalked: false, resettled: false, has_trigger: false, lead_in: LEAD_IN, probe_pcs: Vec::new(), probe: None, returns: Vec::new(), pokes: Vec::new(), show_notice: false, walk_up: false, party, keys_kept: None, staged: false, aim: Vec::new(), script: Vec::new(), then: Vec::new(), answers: Vec::new(), lineup };
         while !field.t.applied {
             field.run_instruction()?;
         }
@@ -934,7 +987,7 @@ impl<'rom> Field<'rom> {
     /// the scene loads: Camelot's debug preset, then every member's HP and PP
     /// restored (Party_RestoreHpPp).
     fn party_calls(&self) -> Vec<(u32, u32)> {
-        match self.party.and_then(|c| c.preset) {
+        match self.lineup.as_ref().and_then(|l| l.preset).or_else(|| self.party.and_then(|c| c.preset)) {
             Some(preset) => vec![(self.s.preset, preset), (self.s.restore, 1)],
             None => Vec::new(),
         }
@@ -974,16 +1027,31 @@ impl<'rom> Field<'rom> {
     /// now, the chapter's members first (party::order); before the run's
     /// flags decide, the chapter's members are the party flags.
     fn list_party(&mut self) {
-        let Some(chapter) = self.party else {
-            return;
+        let staged = self.lineup.as_ref().map(|l| l.members.clone()).filter(|m| !m.is_empty());
+        let members = match (staged, self.party) {
+            (Some(members), _) => members,
+            (None, Some(chapter)) => chapter.members.clone(),
+            // The leader alone is staged: the game's own party.
+            (None, None) if self.lineup.is_some() => Vec::new(),
+            (None, None) => return,
         };
-        if self.t.phase == Phase::Defaults {
-            let bits = chapter.members.iter().fold(0u8, |b, &o| b | 1 << o);
+        if self.t.phase == Phase::Defaults && !members.is_empty() {
+            let bits = members.iter().fold(0u8, |b, &o| b | 1 << o);
             self.gba.write8(self.s.flag_bytes, bits);
             self.apply_flags();
         }
-        let flags = self.gba.read8(self.s.flag_bytes);
-        let party = order(&chapter.members, flags);
+        let mut flags = self.gba.read8(self.s.flag_bytes);
+        let leader = self.lineup.as_ref().and_then(|l| l.leader.or_else(|| l.members.first().copied()));
+        if let Some(leader) = leader {
+            flags |= 1 << leader;
+            self.gba.write8(self.s.flag_bytes, flags);
+        }
+        let party = lead(order(&members, flags), leader);
+        // The leader staged walks the field: his actor is the leader's (a
+        // character's actor is its number).
+        if let Some(leader) = leader {
+            self.gba.write32(self.s.game_state + self.s.l.gs_selected_actor, u32::from(leader));
+        }
         for (i, &owner) in party.iter().enumerate() {
             self.gba.write8(self.s.game_state + self.s.l.gs_active_owners + i as u32, owner);
         }
@@ -1025,6 +1093,16 @@ impl<'rom> Field<'rom> {
             self.apply_flags();
             self.list_party();
             self.t.phase = Phase::Loading;
+        }
+        // Scene_Arrive clears the scene's flags, and the area's when the
+        // scene lies in another area than the last (a new game's): the
+        // run's flags are set again as it returns, before the map loads
+        // and the scene's initialization reads them (Garoh's night).
+        if self.t.phase == Phase::Loading && pc == s.arrive && self.t.arrive_return == 0 {
+            self.t.arrive_return = lr(&self.gba);
+        } else if self.t.arrive_return != 0 && pc == self.t.arrive_return {
+            self.t.arrive_return = 0;
+            self.apply_flags();
         }
         if pc == s.load_layered {
             self.t.loads += 1;
@@ -1180,6 +1258,12 @@ impl<'rom> Field<'rom> {
             self.t.arm_center = false;
             self.gba.branch(s.center);
         }
+        if pc == s.icon_menu && self.t.menu_return == 0 {
+            self.t.menu_return = lr(&self.gba);
+            self.t.menu_opened = self.t.frame;
+        } else if self.t.menu_return != 0 && pc == self.t.menu_return {
+            self.t.menu_return = 0;
+        }
         if pc == s.choice && self.t.choice_return == 0 {
             self.t.choice_return = lr(&self.gba);
             self.t.choice_frame = self.t.frame;
@@ -1298,6 +1382,107 @@ impl<'rom> Field<'rom> {
     /// Holds `keys` (KEYINPUT bits) from the next frame until changed.
     pub fn hold(&mut self, keys: u32) {
         self.t.keys = keys;
+    }
+
+    /// Plays the keys of a pad script, one step a frame, while the run is
+    /// recorded, as a player would: while a page waits for the button, a
+    /// choice or a menu of icons is open, the script waits and the prompt
+    /// is answered (a page with A after PAGE_HOLD frames; a choice or menu
+    /// by Field::answers, a choice past them Yes, a menu past them backed
+    /// out of with B). Once the script is over, plays on until the player
+    /// has control again, for at most `cap` frames. Returns each row of the
+    /// scene's that ran meanwhile, once for a run of the same: the kind of
+    /// its dispatch, the value it was dispatched for, and its function.
+    pub fn play_on(&mut self, script: &[u32], cap: u32) -> Result<Vec<(u8, u32, u32)>, String> {
+        let rows: Vec<u32> = self.trigger_rows().iter().map(|r| result_key(r.result)).filter(|&r| r >= 0x10000).collect();
+        let watch = std::mem::replace(&mut self.watch, rows);
+        let (scene, loads) = (self.scene(), self.t.loads);
+        let started = self.t.frame;
+        let mut at = 0;
+        let mut waited = 0;
+        let mut dispatched = self.t.dispatched;
+        let mut out: Vec<(u8, u32, u32)> = Vec::new();
+        let mut control_since: Option<u32> = None;
+        while self.t.frame - started < cap {
+            let page = self.t.last_dismiss > started && self.t.last_dismiss + 2 >= self.t.frame;
+            let prompt = page || self.t.choice_return != 0 || self.t.menu_return != 0;
+            if prompt {
+                waited += 1;
+                self.hold(0);
+                if self.t.choice_return != 0 && self.t.frame - self.t.choice_frame >= 20.max(PAGE_HOLD) {
+                    let keys = self.next_answer().unwrap_or(KEY_A);
+                    self.press_keys(keys, 3)?;
+                    waited = 0;
+                } else if let Some(open) = self.menu_open().filter(|&open| open >= 20.max(PAGE_HOLD)) {
+                    let _ = open;
+                    let keys = self.next_answer().unwrap_or(KEY_B);
+                    self.press_keys(keys, 3)?;
+                    waited = 0;
+                } else if page && waited >= PAGE_HOLD {
+                    self.press(3)?;
+                    waited = 0;
+                }
+            } else {
+                waited = 0;
+                self.hold(script.get(at).copied().unwrap_or(0));
+                if at < script.len() {
+                    at += 1;
+                }
+            }
+            self.frames(1)?;
+            if self.t.dispatched != dispatched {
+                dispatched = self.t.dispatched;
+            }
+            // Each row that ran, once for a run of the same (a step cell
+            // answered at every step); in another scene the addresses are
+            // another overlay's.
+            if self.t.ran != 0 && self.scene() == scene && self.t.loads == loads {
+                if let Some((kind, value, _)) = dispatched {
+                    if out.last().is_none_or(|l| (l.1, l.2) != (value, self.t.ran)) {
+                        out.push((kind, value, self.t.ran));
+                    }
+                }
+                self.t.ran = 0;
+            }
+            if at >= script.len() && !prompt {
+                // The player has control: the field sequence steps, with
+                // nothing to read.
+                let stepping = self.t.step_frame + 1 >= self.t.frame && self.t.frame - self.t.last_typing > 2;
+                if stepping {
+                    let since = *control_since.get_or_insert(self.t.frame);
+                    if self.t.frame - since >= CONTROL_FRAMES {
+                        break;
+                    }
+                } else {
+                    control_since = None;
+                }
+            }
+        }
+        self.hold(0);
+        self.watch = watch;
+        Ok(out)
+    }
+
+    /// The keys that answer the next prompt (Field::answers), if any are
+    /// left.
+    fn next_answer(&mut self) -> Option<u32> {
+        let keys = self.answers.get(usize::from(self.t.answered)).copied()?;
+        self.t.answered += 1;
+        Some(keys)
+    }
+
+    /// Whether a menu of icons other than a yes or no choice is open (a
+    /// shop's commands), and for how many frames.
+    fn menu_open(&self) -> Option<u32> {
+        (self.t.menu_return != 0 && self.t.choice_return == 0).then(|| self.t.frame - self.t.menu_opened)
+    }
+
+    /// Presses `keys` for `frames` frames, then lets go.
+    fn press_keys(&mut self, keys: u32, frames: u32) -> Result<(), String> {
+        self.t.keys = keys;
+        self.frames(frames)?;
+        self.t.keys = 0;
+        Ok(())
     }
 
     pub fn press(&mut self, frames: u32) -> Result<(), String> {
@@ -1606,6 +1791,23 @@ impl<'rom> Field<'rom> {
         }
         let cells = self.gba.read32(self.map_work() + self.s.l.map_layers + self.s.l.map_layer_cells + self.s.l.map_layer_size * u32::from(layer));
         i32::from(self.gba.read8(cells + (((cx + (cz << 7)) << 2) + 2) as u32))
+    }
+
+    /// The codes of the cells on and around cell (cx, cz), one cell away
+    /// at most, on every map layer.
+    pub fn codes_near(&self, cx: i32, cz: i32) -> Vec<u16> {
+        let mut out = Vec::new();
+        for layer in 0..=2 {
+            for dz in -1..=1 {
+                for dx in -1..=1 {
+                    let code = self.cell(layer, cx + dx, cz + dz);
+                    if code > 0 && !out.contains(&(code as u16)) {
+                        out.push(code as u16);
+                    }
+                }
+            }
+        }
+        out
     }
 
     /// The word of cell (cx, cz) of the world map's layer `layer` (0 or 1):
@@ -1945,6 +2147,88 @@ impl<'rom> Field<'rom> {
         }
     }
 
+    /// Where a start staged by hand put the leader outside the camera's
+    /// bounds, makes them those of the entrance camera box that holds him
+    /// on the screen's plane, or else the map's whole scroll bounds, so the
+    /// camera can come to him (a cell no entrance's box holds). Whether it
+    /// changed them.
+    pub fn fit_camera(&mut self) -> bool {
+        let Some(a) = self.leader() else {
+            return false;
+        };
+        let (x, plane) = (a.x, a.z - (a.y >> 16));
+        let b = self.bounds();
+        if x >= b[0] >> 16 && x < b[2] >> 16 && plane >= b[1] >> 16 && plane < b[3] >> 16 {
+            return false;
+        }
+        let header = self.header();
+        let fit = match self.entrances().iter().find(|e| e.camera != [-1; 4] && box_holds(e.camera, header, x, plane)) {
+            Some(e) => [0, 1, 2, 3].map(|i| if e.camera[i] == -1 { header[i] } else { fx(i32::from(e.camera[i])) }),
+            None => header,
+        };
+        let work = self.map_work();
+        for (i, v) in fit.iter().enumerate() {
+            self.gba.write32(work + self.s.l.map_bounds + 4 * i as u32, *v as u32);
+        }
+        self.cut();
+        true
+    }
+
+    /// Records a walk staged by hand with no event (render event with --at,
+    /// --hold or --then and no --event): from `entered` (the scene as it
+    /// was entered), the leader put on `at`'s cell, layer and facing when
+    /// given, then `lead` frames standing and `script` played (Field::
+    /// play_on: its prompts answered, the events it sets off played), on
+    /// until the player has control and, past a black screen, for
+    /// BLACK_CLEARANCE frames more.
+    pub fn walk(&mut self, entered: &Saved, at: Option<(i32, i32, Option<u8>, Option<u32>)>, lead: u32, script: &[u32]) -> Result<WalkRun, String> {
+        self.load(entered);
+        let mut notes = Vec::new();
+        match at {
+            Some((cx, cz, layer, face)) => {
+                self.until_control()?;
+                let spot = self.staged_spot(Trigger::Cast(0), (cx, cz), layer, face)?;
+                let gs = self.s.game_state;
+                self.load(entered);
+                self.gba.write32(gs + self.s.l.gs_x, fx(spot.x) as u32);
+                self.gba.write32(gs + self.s.l.gs_y, spot.height as u32);
+                self.gba.write32(gs + self.s.l.gs_z, fx(spot.z) as u32);
+                self.gba.write32(gs + self.s.l.gs_heading, spot.facing);
+                self.gba.write16(gs + self.s.l.gs_turn, u16::from(spot.layer));
+                self.until_control()?;
+                self.put_leader(&spot);
+                if self.fit_camera() {
+                    notes.push("no camera box of the way in holds the cell, so the camera's bounds are those of the box that does, or the map's".to_string());
+                }
+                notes.push(format!("the leader starts on cell ({cx}, {cz}) of layer {}", spot.layer));
+            }
+            None => self.until_control()?,
+        }
+        self.frames(SETTLE)?;
+        let wrong = self.misplaced()?;
+        if !wrong.is_empty() {
+            notes.push(format!("where he starts, {}", wrong.join(", ")));
+        }
+        // No random battle breaks into the walk.
+        self.set_flag(self.s.l.flag_no_encounters, true);
+        self.frames(1)?;
+        self.recorded = Some(Vec::new());
+        let scene = self.scene();
+        self.frames(lead)?;
+        let started = self.play_on(script, EVENT_LIMIT)?;
+        let capped = self.recorded.as_ref().map_or(0, Vec::len) >= EVENT_LIMIT as usize;
+        let since = self.recorded.as_ref().and_then(|f| f.iter().rposition(|p| is_black_bgr555(p)).map(|i| f.len() - 1 - i));
+        if let Some(since) = since.filter(|&s| s < CLEARED) {
+            self.frames((CLEARED - since) as u32)?;
+        }
+        let mut frames = self.recorded.take().unwrap_or_default();
+        let leads_to = (self.scene() != scene).then(|| self.scene());
+        if leads_to.is_some() {
+            frames = shorten_blanks(frames, BLANK_KEEP);
+        }
+        Ok(WalkRun { frames, started, leads_to, capped, notes })
+    }
+
     /// What of `misplaced` counts against a start that placed the leader:
     /// off the screen shows nothing wrong, and the camera may yet come to him.
     fn wrong_for_a_placed_start(mut wrong: Vec<String>) -> Vec<String> {
@@ -2153,8 +2437,11 @@ impl<'rom> Field<'rom> {
         if (leader.y - ground).abs() > 2 << 16 {
             out.push(format!("he stands {} pixels off the ground", (leader.y - ground) >> 16));
         }
+        // The camera box bounds the view, on the screen's plane: a ledge
+        // raised above its cells is seen higher up.
         let room = self.room();
-        if x < room[0] || x >= room[2] || z < room[1] || z >= room[3] {
+        let plane = z - (leader.y >> 16);
+        if x < room[0] || x >= room[2] || plane < room[1] || plane >= room[3] {
             out.push(format!("({x}, {z}) is outside his room's camera box {room:?}"));
         }
         let (vx, vy) = self.view();
@@ -2264,7 +2551,9 @@ impl<'rom> Field<'rom> {
         let entrances = self.entrances();
         // In the scene an exit led to, the room is the one he stands in.
         let elsewhere = self.scene() != self.setup.scene;
-        let here = self.leader().filter(|_| elsewhere).and_then(|a| entrances.iter().find(|e| box_holds(e.camera, self.header(), a.x, a.z)));
+        // A start staged by hand is in the room whose camera box holds him,
+        // on the screen's plane (a raised ledge lies above its cells).
+        let here = self.leader().filter(|_| elsewhere || self.staged).and_then(|a| entrances.iter().find(|e| box_holds(e.camera, self.header(), a.x, a.z - (a.y >> 16))));
         let entrance = here.or_else(|| entrances.iter().find(|e| !elsewhere && e.number as u16 == self.setup.entrance)).or_else(|| entrances.first());
         let h = self.header();
         let side = |i: usize| match entrance {
@@ -3716,6 +4005,11 @@ impl<'rom> Field<'rom> {
                 self.gba.write16(gs + self.s.l.gs_turn, u16::from(spot.layer));
                 self.until_control()?;
                 self.put_leader(spot);
+                // Staged where no camera box of the way in reaches, the
+                // camera is given the bounds that do.
+                if self.staged {
+                    self.fit_camera();
+                }
                 let early = self.stage();
                 self.frames(SETTLE)?;
                 early
@@ -4086,6 +4380,9 @@ impl<'rom> Field<'rom> {
         let mut lead = 0;
         // The frame the climb a touch left him on was first held on.
         let mut climb_held: Option<u32> = None;
+        // Why a start staged by hand set nothing off, when it did not: the
+        // run is recorded all the same, the note saying so.
+        let mut nothing: Option<String> = None;
         self.t.block_menu = true;
         self.t.menu_frame = 0;
         loop {
@@ -4218,7 +4515,7 @@ impl<'rom> Field<'rom> {
                             break;
                         }
                     }
-                } else if self.t.frame - pushed_from > START_FRAMES + script.len() as u32 {
+                } else if self.t.frame - pushed_from > START_FRAMES + script.len() as u32 || (self.staged && !script.is_empty() && script_at >= script.len() && self.t.frame - pushed_from > STAGED_QUIET + script.len() as u32) {
                     self.hold(0);
                     let how = match trigger {
                         Trigger::Talk(_) | Trigger::Search(_) => "pressing A",
@@ -4226,7 +4523,14 @@ impl<'rom> Field<'rom> {
                         Trigger::Psynergy(..) | Trigger::PsynergyCell(..) | Trigger::Cast(_) => "the cast",
                         Trigger::Direct(_) | Trigger::Message(..) => "the direct start",
                     };
-                    return Err(format!("{how} from ({}, {}) started nothing in {} frames", spot.x, spot.z, START_FRAMES));
+                    let why = format!("{how} from ({}, {}) started nothing in {} frames", spot.x, spot.z, self.t.frame - pushed_from);
+                    // A start staged by hand that sets nothing off is
+                    // recorded all the same, to show that nothing happens.
+                    if self.staged && record.is_some() {
+                        nothing = Some(why);
+                        break;
+                    }
+                    return Err(why);
                 }
                 continue;
             };
@@ -4344,7 +4648,18 @@ impl<'rom> Field<'rom> {
                     pages.push(Page { message });
                 }
                 if self.t.frame - self.t.choice_frame == 20.max(hold) {
-                    self.press(3)?;
+                    let keys = self.next_answer().unwrap_or(KEY_A);
+                    self.press_keys(keys, 3)?;
+                }
+                continue;
+            }
+            // A menu of icons (a shop's commands) is answered by --answer's
+            // keys while they last: B backs out of it.
+            if let Some(open) = self.menu_open().filter(|_| usize::from(self.t.answered) < self.answers.len()) {
+                quiet_start = self.t.frame;
+                if open == 20.max(hold) {
+                    let keys = self.next_answer().unwrap_or(KEY_A);
+                    self.press_keys(keys, 3)?;
                 }
                 continue;
             }
@@ -4403,18 +4718,34 @@ impl<'rom> Field<'rom> {
             }
         }
         self.t.catch_raised = false;
-        // Keys staged for once the player has control again (--then): he
-        // walks on, or waits to see what comes.
-        let then_played = record.is_some() && !self.then.is_empty() && began.is_some() && !capped && !left && !fought && !defeated && arrival.is_none();
-        if then_played {
-            for keys in super::stage::script_frames(&self.then) {
-                self.hold(keys);
+        // A cast whose row answers a later phase (Reveal wearing off) has
+        // given back control before its own function runs: the player
+        // waits, still, until the phase comes and what it runs is over.
+        let mut fade_note = None;
+        if matches!(trigger, Trigger::Cast(_)) && record.is_some() && !self.own.is_empty() && !self.t.own_ran && began.is_some() && !left && !fought && !capped && !defeated {
+            let from = self.t.frame;
+            while !self.t.own_ran && self.t.frame - from < CAST_PHASE_FRAMES {
                 self.frames(1)?;
             }
+            if self.t.own_ran {
+                fade_note = Some(format!("its row answers a later phase of the cast: the player stands still {} frames until it comes", self.t.frame - from));
+                self.play_on(&[], EVENT_LIMIT)?;
+            }
+        }
+        // Keys staged for once the player has control again (--then): he
+        // walks on, or waits to see what comes.
+        // They play to their end, in the scene an exit led to too, once
+        // the player has control there.
+        let then_played = record.is_some() && !self.then.is_empty() && (began.is_some() || nothing.is_some()) && !capped && !defeated && (arrival.is_none() || arrived) && self.scene() != MAP_BATTLE;
+        let mut then_started = Vec::new();
+        if then_played {
+            let keys = super::stage::script_frames(&self.then);
+            then_started = self.play_on(&keys, EVENT_LIMIT)?;
         }
         self.hold(0);
         let kept_keys = self.keys_kept.take().unwrap_or_default();
-        let blank = match unplayed {
+        let blank = nothing.is_some()
+            || match unplayed {
             Some((from, kept)) if pages.is_empty() && !left && !fought && !capped && !defeated && unseen_move.is_none() => self.looks_the_same(&from, kept, &kept_keys, target)?,
             _ => false,
         };
@@ -4581,6 +4912,10 @@ impl<'rom> Field<'rom> {
             let placed = "the arrival leaves the leader where the party cannot be, so he starts on the nearest open ground".to_string();
             note = Some(note.map_or(placed.clone(), |n| format!("{placed}; {n}")));
         }
+        if then_played && !self.staged {
+            let then = format!("{} held once the player has control again", super::stage::describe(&self.then));
+            note = Some(note.map_or(then.clone(), |n| format!("{n}; {then}")));
+        }
         if self.staged {
             let size = self.cell_size();
             let mut how = format!("staged: the leader starts on cell ({}, {}) of layer {}", spot.x.div_euclid(size), spot.z.div_euclid(size), spot.layer);
@@ -4606,11 +4941,18 @@ impl<'rom> Field<'rom> {
         if let Some(why) = &unseen {
             note = Some(note.map_or(why.clone(), |n| format!("{why}; {n}")));
         }
+        if let Some(why) = fade_note {
+            note = Some(note.map_or(why.clone(), |n| format!("{n}; {why}")));
+        }
         if let Some(why) = push_note {
             note = Some(note.map_or(why.clone(), |n| format!("{n}; {why}")));
         }
         if let Some(why) = hidden_note {
             note = Some(note.map_or(why.clone(), |n| format!("{n}; {why}")));
+        }
+        if let Some(why) = &nothing {
+            let why = format!("nothing visible happens: {why}");
+            note = Some(note.map_or(why.clone(), |n| format!("{why}; {n}")));
         }
         if blank && hidden_note_free(&note) {
             let why = "nothing visible happens: played again from the same moment with its row taken out of the scene's table, the screen shows the same".to_string();
@@ -4628,7 +4970,7 @@ impl<'rom> Field<'rom> {
             eprintln!("    keys held (MOMENT_HOLD): {pad}");
         }
         let frames_len = frames.len();
-        Ok(EventRun { pages, frames, states, whole: None, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, battle: fought.then(|| (battle_start, battle_end.unwrap_or(frames_len))), absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker), lead, unseen, goal, blank, flags_changed, effects })
+        Ok(EventRun { pages, frames, states, whole: None, capped, end, instant, shown, seen: foreign, rows, ran, own_ran, leads_to, note, battle: fought.then(|| (battle_start, battle_end.unwrap_or(frames_len))), absent_speaker: (self.t.absent_speaker != 0).then_some(self.t.absent_speaker), lead, unseen, goal, blank, flags_changed, effects, nothing, set_off: then_started })
     }
 
     /// One frame of an exit's arrival in the scene it leads to, which began
@@ -4797,6 +5139,11 @@ fn facing_toward(dx: i32, dz: i32) -> u32 {
 }
 
 /// A trigger's kind by name.
+/// A trigger's kind by name, for a note.
+pub fn kind_label(kind: u8) -> &'static str {
+    kind_name(kind)
+}
+
 fn kind_name(kind: u8) -> &'static str {
     match kind {
         TRIGGER_TALK => "talk",
@@ -4950,7 +5297,27 @@ pub const EVENT_LIMIT: u32 = 14400;
 
 /// What an event left: its pages, when recorded its frames, and the moment
 /// the player had control again, when that was in the same scene.
+/// A walk staged by hand (Field::walk): its frames, the events it set off
+/// (each dispatch's kind, the value it was dispatched for, the function
+/// that ran), the scene it led to, whether it ran past EVENT_LIMIT, and
+/// what the note says of where he started.
+pub struct WalkRun {
+    pub frames: Vec<Vec<u16>>,
+    pub started: Vec<(u8, u32, u32)>,
+    pub leads_to: Option<u16>,
+    pub capped: bool,
+    pub notes: Vec<String>,
+}
+
 pub struct EventRun {
+    /// Why a start staged by hand set nothing off, when it did not: the
+    /// recording shows the keys played, and its note says nothing visible
+    /// happens.
+    pub nothing: Option<String>,
+    /// The events the keys held once the player had control again (--then)
+    /// set off: each dispatch's kind, the value it was dispatched for, and
+    /// the scene's event function that ran for it (0 for none).
+    pub set_off: Vec<(u8, u32, u32)>,
     pub pages: Vec<Page>,
     /// Each frame's picture, BGR555.
     pub frames: Vec<Vec<u16>>,

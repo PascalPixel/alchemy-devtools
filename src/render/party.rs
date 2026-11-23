@@ -122,12 +122,59 @@ pub fn order(members: &[u8], flags: u8) -> Vec<u8> {
     out
 }
 
+/// `party` with `leader` moved to its head (added where it lacks him).
+pub fn lead(mut party: Vec<u8>, leader: Option<u8>) -> Vec<u8> {
+    if let Some(leader) = leader {
+        party.retain(|&m| m != leader);
+        party.insert(0, leader);
+    }
+    party
+}
+
+/// The characters by number, as both games' character_ids.h number them.
+const CHARACTERS: [&str; 8] = ["ISAAC", "GARET", "IVAN", "MIA", "FELIX", "JENNA", "SHEBA", "PIERS"];
+
+/// A character's number by name, with or without capitals (felix, FELIX).
+pub fn character_number(name: &str) -> Result<u8, String> {
+    let upper = name.trim().to_ascii_uppercase();
+    CHARACTERS.iter().position(|&c| c == upper).map(|i| i as u8).ok_or_else(|| format!("{name:?} is no character ({})", CHARACTERS.join(", ").to_ascii_lowercase()))
+}
+
+/// The debug set of The Lost Age that gives a staged party its strength:
+/// the first, past the test sets at level 50 and 90, that holds every
+/// member (`sets` as tla_sets reads them).
+fn staged_set(sets: &[Vec<u8>], members: &[u8]) -> Option<u32> {
+    sets.iter().position(|set| !set.is_empty() && members.iter().all(|m| set.contains(m)) && set.len() >= members.len()).map(|i| i as u32)
+}
+
+/// The party `--party` and `--leader` stage (field::Lineup): the members
+/// named, in order, the leader first; in The Lost Age at the strength of
+/// the first story debug set that holds them all.
+pub fn lineup(party: &[String], leader: Option<&str>, tla: bool) -> Result<Option<super::field::Lineup>, String> {
+    if party.is_empty() && leader.is_none() {
+        return Ok(None);
+    }
+    let leader = leader.map(character_number).transpose()?;
+    let members = lead(party.iter().map(|n| character_number(n)).collect::<Result<Vec<u8>, String>>()?, if party.is_empty() { None } else { leader });
+    let preset = if tla && !members.is_empty() {
+        let path = crate::compile::root().join("games/tla/src/battle/debug_parameter_sets.c");
+        let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+        let sets = tla_sets(&text);
+        // Past the test sets (level 50 and 90): the story's own run from
+        // the first set of level 5.
+        let story = sets.iter().position(|s| s.len() == 3).unwrap_or(0);
+        staged_set(&sets[story..], &members).map(|i| i + story as u32)
+    } else {
+        None
+    };
+    Ok(Some(super::field::Lineup { members, leader, preset }))
+}
+
 /// The Lost Age's debug parameter sets (gDebug_ParameterSets in
 /// games/tla/src/battle/debug_parameter_sets.c): each set's members, in its
 /// rows' order, the sets parted by a row whose owner is
 /// DEBUG_PARAMETER_SET_END, as DebugParty_LoadPreset counts them.
 fn tla_sets(text: &str) -> Vec<Vec<u8>> {
-    const CHARACTERS: [&str; 8] = ["ISAAC", "GARET", "IVAN", "MIA", "FELIX", "JENNA", "SHEBA", "PIERS"];
     let mut sets = vec![Vec::new()];
     let rows = text.split_once("gDebug_ParameterSets[]").map_or("", |(_, rows)| rows);
     for line in rows.lines() {
@@ -190,6 +237,23 @@ mod tests {
         // once Piers has joined.
         assert_eq!(tla(7).unwrap().members, vec![4, 5, 6]);
         assert_eq!(tla(19).unwrap().members, vec![4, 5, 6, 7]);
+    }
+
+    #[test]
+    fn a_staged_party_has_its_leader_first_and_a_story_set_s_strength() {
+        assert_eq!(lead(vec![4, 5, 6], Some(5)), vec![5, 4, 6]);
+        assert_eq!(lead(vec![4], Some(5)), vec![5, 4]);
+        assert_eq!(character_number("jenna"), Ok(5));
+        assert!(character_number("kraden").is_err());
+        let sets = vec![vec![4], vec![4, 5, 6], vec![4, 5, 6, 7]];
+        assert_eq!(staged_set(&sets, &[5, 4]), Some(1));
+        assert_eq!(staged_set(&sets, &[7, 5]), Some(2));
+        let staged = lineup(&["jenna".into(), "felix".into(), "piers".into()], None, true).unwrap().unwrap();
+        assert_eq!(staged.members, vec![5, 4, 7]);
+        // Set 19 is the first of the story's sets with Piers in it.
+        assert_eq!(staged.preset, Some(19));
+        let leader = lineup(&[], Some("jenna"), true).unwrap().unwrap();
+        assert_eq!((leader.members.len(), leader.leader, leader.preset), (0, Some(5), None));
     }
 
     #[test]

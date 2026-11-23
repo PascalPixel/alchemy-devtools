@@ -483,7 +483,8 @@ const SCENES_USAGE: &str = "usage: alchemy-devtools render place|event [--scene 
          [--out DIR] [--edition tbs-en] [--jobs N]
        event only: [--set FLAG]... [--clear FLAG]... [--give ITEM]...
          [--entrance N] [--at X,Y[,LAYER]] [--face WAY] [--hold KEYS:N,...]
-         [--then KEYS:N,...]
+         [--then KEYS:N,...] [--answer yes|no|KEYS,...] [--leader NAME]
+         [--party NAME,...]
 Plays a built edition of either game (make tbs-en, make tla-en) under
 libmgba from a new game's defaults straight into each scene, and writes
 into DIR/<scene>/ (DIR defaults to out/EDITION/places) PNG files at the
@@ -664,7 +665,44 @@ staged:
     own function. Before a talk, a search or a cast the keys walk him to
     where it is given.
   --then KEYS:N,...: keys held once the player has control again, recorded
-    too: he walks on after the trigger, or waits to see what comes.
+    too: he walks on after the trigger, or waits to see what comes. They
+    play to their end, in the scene an exit led to as well; while a page
+    waits for the button, a choice or a menu is open, they wait and the
+    prompt is answered (a page with A, a choice and a menu by --answer);
+    once they are over the run goes on until the player has control. The
+    note names each event they set off.
+  --answer yes|no|KEYS,... (appended): the answer to each prompt in turn,
+    a yes or no choice or a menu of icons (a shop's, a forge's): yes is A,
+    no is B (No, or backing out of a menu), or keys joined by + (right+a).
+    A choice past them is answered Yes; a menu past them is left to the
+    run's A, except while --then plays, which backs out of it with B.
+  --leader NAME: NAME (felix, jenna ... from character_ids.h) leads the
+    party, which he joins if he is not in it.
+  --party NAME,...: the party is these members, in order, the first
+    leading; in The Lost Age at the strength of the first of the story's
+    debug sets that holds them all (gDebug_ParameterSets).
+With --at, --hold or --then and no --event, the run is a walk staged by
+hand: the scene first named (--scene) is entered by --entrance (else its
+first way in) with --set's and --clear's flags and --give's items, the
+leader put at --at, and --hold's keys then --then's played as --then's
+are, whatever they set off, recorded as DIR/<scene>/events/walk.gif
+(index.tsv's kind walk-gif). Its note says where he started, the keys,
+and the events they set off, or that nothing visible happens beyond the
+walk. A start staged with --at or --hold that sets nothing off is
+recorded all the same, after its keys have played and a second more, and
+its note says nothing visible happens and what was tried; so is an event
+named with --event that runs and shows nothing. A staged start outside
+the camera box of its way in gives the camera the bounds of the box that
+holds it (the leader's place on the screen's plane, a raised ledge seen
+higher up), or the map's whole bounds when none does. --scene's scenes
+are where an event several scenes share plays first, and alone when its
+start is staged; and --at beside cells of one of an event's touch rows
+plays that row (the weeds', not the stream bank's).
+The run's flags are set again as each scene is arrived at (Scene_Arrive
+clears the area's flags as the party enters a new area), so a scene's
+initialization reads them (Garoh's night). A cast whose row answers a
+later phase (Reveal wearing off) is waited for, the player still, for
+up to 30 seconds after control comes back.
 
 --whole also draws each event's GIF whole, as <event>-whole.gif: every
 second frame of the same run, from the trigger until it leaves the scene
@@ -992,7 +1030,9 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
     let mut outcome = Outcome::default();
     let mut failed = Vec::new();
     let mut processes = 1;
-    let pieces: Vec<(String, u64)> = if jobs.count > 1 { scene_pieces(r, &units, &order, &candidates, out) } else { Vec::new() };
+    // A staged walk is one run, played here.
+    let walk = r.kind == "event" && r.stage.walks(r.wanted);
+    let pieces: Vec<(String, u64)> = if jobs.count > 1 && !walk { scene_pieces(r, &units, &order, &candidates, out) } else { Vec::new() };
     if jobs.split(pieces.len()) {
         if r.kind == "event" {
             for key in &order {
@@ -1015,6 +1055,8 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
                 for scene in job {
                     context.place(scene);
                 }
+            } else if r.stage.walks(r.wanted) {
+                context.walk(job);
             } else {
                 context.events(job);
             }
@@ -1330,7 +1372,8 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
 
 const PROBE_USAGE: &str = "usage: alchemy-devtools render probe --flags flags.tsv [--only NAME]... [--out DIR] [--edition tbs-en]
        alchemy-devtools render probe --only scene --scene N|NAME... [--entrance N] [--set FLAG]...
-         [--edition tla-en] [--flags flags.tsv] [--out DIR]
+         [--hide-actor N]... [--mark-cells X0,Y0,X1,Y1[,LAYER]]... [--cells X0,Y0,X1,Y1[,LAYER]]...
+         [--map] [--edition tla-en] [--flags flags.tsv] [--out DIR]
 Plays a built edition and prints what it reads for questions only the
 running game settles, writing any pictures into DIR (default
 out/EDITION/probe). Each probe is evidence The Broken Seal's source or pages
@@ -1341,7 +1384,15 @@ cite by name (`render probe NAME`), and `scene` reads either game:
               without --flags), once the player has control: its entrances
               and their camera boxes, each actor on stage, each row of the
               trigger table its field holds, named by the function it runs
-              or the message it shows, and the photo SCENE-ENTRANCE.png
+              or the message it shows, and the photo SCENE-ENTRANCE.png.
+              --hide-actor N (repeatable) hides actor N before the photo,
+              to compare it with one where it shows; --cells prints each
+              cell of the rectangle (corners included, on LAYER, 0 when
+              none) as behaviour/attribute bits in hex/ground height in
+              pixels, by row; --mark-cells outlines its cells in magenta
+              on the photo, each at its ground height; --map also draws
+              the room's whole camera box, the leader hidden, as
+              SCENE-ENTRANCE-map.png, with the same outlines
   places      sol-entrance flag-reads vale-gate log-rooms-a vault-revisit
               log-rooms-b vault-bridge vault-ivy maze-exit kraden-lift
   units       hammet flint venus-sockets-a list-tees enemy-slot-509-field
@@ -1359,9 +1410,22 @@ arrival at a socket) and VENUS_START (Actor_StartScript). Recordings are
 evidence kept beside what is printed: `render check` judges one before it is
 published. --only picks some; flags.tsv is the story tools' flag names.";
 
+/// What `render probe scene` is asked beyond the scene, its way in and its
+/// flags: actors to hide, cells to outline and to print, and the room drawn
+/// whole.
+#[derive(Default)]
+#[cfg_attr(not(feature = "render"), allow(dead_code))]
+struct SceneProbe {
+    hide: Vec<u16>,
+    mark: Vec<String>,
+    cells: Vec<String>,
+    map: bool,
+}
+
 fn probe_command(arguments: &[String]) -> Result<(), String> {
     let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
     let (mut scenes, mut entrance, mut set): (Vec<String>, Option<u16>, Vec<String>) = (Vec::new(), None, Vec::new());
+    let mut extra = SceneProbe::default();
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
         let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{PROBE_USAGE}"));
@@ -1377,6 +1441,10 @@ fn probe_command(arguments: &[String]) -> Result<(), String> {
             "--scene" => scenes.push(value("--scene")?),
             "--entrance" => entrance = Some(value("--entrance")?.parse().map_err(|_| format!("--entrance takes a number\n{PROBE_USAGE}"))?),
             "--set" => set.push(value("--set")?),
+            "--hide-actor" => extra.hide.push(value("--hide-actor")?.parse().map_err(|_| format!("--hide-actor takes an actor's number\n{PROBE_USAGE}"))?),
+            "--mark-cells" => extra.mark.push(value("--mark-cells")?),
+            "--cells" => extra.cells.push(value("--cells")?),
+            "--map" => extra.map = true,
             other => return Err(format!("unexpected argument {other:?}\n{PROBE_USAGE}")),
         }
     }
@@ -1392,7 +1460,7 @@ fn probe_command(arguments: &[String]) -> Result<(), String> {
             None => story::Flags::from_header(root, game.dir()),
         };
         let set: Vec<u16> = set.iter().map(|n| flags.resolve(n, None).ok_or_else(|| format!("no flag {n}"))).collect::<Result<_, _>>()?;
-        return play_scene_probe(root, &edition, &scenes, entrance, &set, &out);
+        return play_scene_probe(root, &edition, &scenes, entrance, &set, &extra, &out);
     }
     if !edition.starts_with("tbs-") {
         return Err(format!("{edition}: only probe scene reads The Lost Age; the rest are The Broken Seal's"));
@@ -1402,13 +1470,15 @@ fn probe_command(arguments: &[String]) -> Result<(), String> {
 }
 
 #[cfg(not(feature = "render"))]
-fn play_scene_probe(_: &Path, _: &str, _: &[String], _: Option<u16>, _: &[u16], _: &Path) -> Result<(), String> {
+fn play_scene_probe(_: &Path, _: &str, _: &[String], _: Option<u16>, _: &[u16], _: &SceneProbe, _: &Path) -> Result<(), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
 }
 
 /// `render probe scene`: each scene asked for, by its symbol or number.
 #[cfg(feature = "render")]
-fn play_scene_probe(root: &Path, edition: &str, wanted: &[String], entrance: Option<u16>, set: &[u16], out: &Path) -> Result<(), String> {
+fn play_scene_probe(root: &Path, edition: &str, wanted: &[String], entrance: Option<u16>, set: &[u16], extra: &SceneProbe, out: &Path) -> Result<(), String> {
+    let mark = extra.mark.iter().map(|c| probe_scene::Cells::parse(c)).collect::<Result<Vec<_>, _>>()?;
+    let cells = extra.cells.iter().map(|c| probe_scene::Cells::parse(c)).collect::<Result<Vec<_>, _>>()?;
     let game = layout::Game::of(edition)?;
     let all = story::scenes_from_tree(root, game.dir(), edition)?;
     let chosen: Vec<&story::Scene> = all.iter().filter(|s| wanted.iter().any(|w| w.parse::<u16>().ok() == Some(s.number) || s.symbol.as_deref().is_some_and(|n| n.eq_ignore_ascii_case(w)) || s.slug() == *w)).collect();
@@ -1419,7 +1489,7 @@ fn play_scene_probe(root: &Path, edition: &str, wanted: &[String], entrance: Opt
     let machines = Machines::load(root, edition, &chosen, true)?;
     let none = std::collections::HashMap::new();
     for s in chosen {
-        let ask = probe_scene::Ask { scene: s, entrance, set: set.to_vec() };
+        let ask = probe_scene::Ask { scene: Some(s), entrance, set: set.to_vec(), hide: extra.hide.clone(), mark: mark.clone(), cells: cells.clone(), map: extra.map };
         let file = probe_scene::scene(&machines.rom, &machines.symbols, &ask, machines.functions.get(&s.number).unwrap_or(&none), &machines.messages, out)?;
         eprintln!("{}", out.join(file).display());
     }
