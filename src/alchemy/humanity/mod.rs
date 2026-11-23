@@ -47,8 +47,10 @@ pub const LEFTOVERS: [&str; 2] = ["frame", "template"];
 
 /// A function body this many tokens long or more takes part in the duplicate search.
 const FUNCTION_TOKENS: usize = 24;
-/// A table initializer this many tokens long or more takes part in the duplicate search.
-const TABLE_TOKENS: usize = 16;
+/// A table initializer this many tokens long or more takes part in the
+/// duplicate search: more than 24, about ten numbers, since shorter tables
+/// (a creature's gravity, a picture's widths) are equal to others by chance.
+const TABLE_TOKENS: usize = 25;
 /// Files longer than this are listed (S3's split threshold).
 const LONG_FILE: usize = 3000;
 /// How many files and groups each top list keeps in the TSV.
@@ -117,6 +119,17 @@ pub struct Report {
     questions: BTreeMap<String, Vec<(usize, String)>>,
     pub function_groups: Vec<Group>,
     pub table_groups: Vec<Group>,
+    /// One body under several names the ROM keeps apart, said so in its
+    /// comments (`duplicates`).
+    pub said_groups: Vec<Group>,
+    /// Each file and what it `#include`s, as written.
+    includes: Vec<(String, String)>,
+    /// Every file read.
+    paths: BTreeSet<String>,
+    /// The identifiers the macros' bodies and the assembly (a far-call
+    /// veneer's export row) use, for which routines and tables are referred
+    /// to.
+    macro_words: HashSet<String>,
     /// Each counted thing, for `--list`.
     pub items: Vec<Item>,
     functions: BTreeMap<String, Declared>,
@@ -694,15 +707,73 @@ impl Report {
         for (file, line, name) in entries {
             self.note("undocumented_entry", &file, line, &name);
         }
-        (self.function_groups, self.table_groups) =
-            duplicates::groups(&std::mem::take(&mut self.copies), FUNCTION_TOKENS, TABLE_TOKENS);
+        let objects = self.objects();
+        let referred = std::mem::take(&mut self.macro_words);
+        (self.function_groups, self.table_groups, self.said_groups) =
+            duplicates::groups(&std::mem::take(&mut self.copies), FUNCTION_TOKENS, TABLE_TOKENS, &objects, &referred);
         self.long_files.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    }
+
+    /// The objects each file is part of: the files that include it, through
+    /// others or not, and itself. An include is found beside the file that
+    /// writes it, else under the game's `src` or `include`.
+    fn objects(&self) -> HashMap<String, BTreeSet<String>> {
+        let mut by_suffix: HashMap<&str, Vec<&str>> = HashMap::new();
+        for path in &self.paths {
+            for (at, _) in path.match_indices('/') {
+                by_suffix.entry(&path[at + 1..]).or_default().push(path);
+            }
+        }
+        let mut includers: HashMap<&str, Vec<&str>> = HashMap::new();
+        for (file, spec) in &self.includes {
+            let beside = file.rsplit_once('/').map_or(spec.clone(), |(folder, _)| normalized(&format!("{folder}/{spec}")));
+            let found = self.paths.get(&beside).map(String::as_str).or_else(|| {
+                let candidates = by_suffix.get(spec.as_str())?;
+                let game = file.split('/').take(2).collect::<Vec<_>>().join("/");
+                let mut own = candidates.iter().filter(|path| {
+                    [format!("{game}/src/{spec}"), format!("{game}/include/{spec}")].iter().any(|full| **path == full)
+                });
+                own.next().copied()
+            });
+            if let Some(found) = found {
+                includers.entry(found).or_default().push(file);
+            }
+        }
+        let mut objects = HashMap::new();
+        for path in &self.paths {
+            let mut seen = BTreeSet::from([path.clone()]);
+            let mut next = vec![path.as_str()];
+            while let Some(file) = next.pop() {
+                for &by in includers.get(file).into_iter().flatten() {
+                    if seen.insert(by.to_string()) {
+                        next.push(by);
+                    }
+                }
+            }
+            objects.insert(path.clone(), seen);
+        }
+        objects
     }
 
     /// Copies past the first in each group.
     pub fn copies(groups: &[Group]) -> usize {
         groups.iter().map(|group| group.members.len() - 1).sum()
     }
+}
+
+/// A path with its `..` steps taken: `src/scene/../field/a.c` is `src/field/a.c`.
+fn normalized(path: &str) -> String {
+    let mut parts: Vec<&str> = Vec::new();
+    for part in path.split('/') {
+        match part {
+            ".." if parts.last().is_some_and(|last| *last != "..") => {
+                parts.pop();
+            }
+            "." => {}
+            _ => parts.push(part),
+        }
+    }
+    parts.join("/")
 }
 
 fn regexes() -> &'static [Regex; 3] {
@@ -929,13 +1000,16 @@ struct Code<'a> {
     doc_text: Vec<String>,
     /// The `///<` notes after each token, its continuation lines included, raw.
     trailing_text: Vec<String>,
+    /// Every comment, `//` or `///`, between each token and the one before.
+    comment_text: Vec<String>,
 }
 
 impl<'a> Code<'a> {
     fn new(text: &'a str) -> (Code<'a>, Vec<Token<'a>>) {
         let all = clex::lex(text);
         let (mut tokens, mut comments, mut doc_before, mut doc_after) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
-        let (mut doc_text, mut trailing_text) = (Vec::new(), Vec::<String>::new());
+        let (mut doc_text, mut trailing_text, mut comment_text) = (Vec::new(), Vec::<String>::new(), Vec::new());
+        let mut pending_comments = String::new();
         let mut pending_doc = false;
         let mut pending_text = String::new();
         // The last comment was a `///<` note kept with the last token.
@@ -965,6 +1039,8 @@ impl<'a> Code<'a> {
                     }
                     pending_doc = doc;
                     trailing_open = false;
+                    pending_comments.push_str(token.text);
+                    pending_comments.push('\n');
                 }
                 comments.push(token);
                 continue;
@@ -973,6 +1049,7 @@ impl<'a> Code<'a> {
             doc_after.push(false);
             doc_text.push(if pending_doc { pending_text.clone() } else { String::new() });
             trailing_text.push(String::new());
+            comment_text.push(std::mem::take(&mut pending_comments));
             trailing_open = false;
             if token.kind != Kind::PpEnd {
                 pending_doc = false;
@@ -980,7 +1057,7 @@ impl<'a> Code<'a> {
             }
             tokens.push(token);
         }
-        (Code { tokens, doc_before, doc_after, doc_text, trailing_text }, comments)
+        (Code { tokens, doc_before, doc_after, doc_text, trailing_text, comment_text }, comments)
     }
 
     /// The `///<` notes after the tokens from `start` to `end`.
@@ -1279,7 +1356,14 @@ impl<'r, 'a> Walk<'r, 'a> {
         let line = self.code.tokens[start].line;
         let condition = tokens.iter().map(|t| t.text).filter(|t| !t.starts_with("/")).collect::<Vec<_>>().join(" ");
         match word {
-            "include" | "include_next" | "error" | "warning" | "pragma" | "line" => return,
+            "include" => {
+                // `#include "shared/staged_actor.c"`: what this file holds.
+                if let Some(spec) = tokens.get(1).map(|t| t.text).filter(|text| text.starts_with('"')) {
+                    self.report.includes.push((self.file.to_string(), spec.trim_matches('"').to_string()));
+                }
+                return;
+            }
+            "include_next" | "error" | "warning" | "pragma" | "line" => return,
             "if" | "ifdef" | "ifndef" | "elif" => {
                 if word == "elif" {
                     self.branch();
@@ -1310,6 +1394,7 @@ impl<'r, 'a> Walk<'r, 'a> {
             }
             "define" => {
                 let Some(name) = tokens.get(1).filter(|t| t.kind == Kind::Ident) else { return };
+                self.report.macro_words.extend(idents.iter().skip(1).map(|word| word.to_string()));
                 let function_like = tokens.get(2).is_some_and(|t| t.text == "(" && t.glued);
                 if function_like {
                     self.macro_parameters(name.text, start, end);
@@ -1839,19 +1924,22 @@ impl<'r, 'a> Walk<'r, 'a> {
     /// The tokens between a brace pair, preprocessor lines aside, a
     /// function's parameters and locals bound, for the duplicate search
     /// (`duplicates`).
-    fn duplicate(&mut self, statement: Option<&[usize]>, open: usize, name: &str) {
+    /// A table's type is what its declaration says before its name, storage
+    /// and qualifiers aside (`struct SceneEntrance`, `u16`); a function's,
+    /// how many parameters it takes. The comments above it go with it.
+    fn duplicate(&mut self, statement: &[usize], function: bool, open: usize, name: &str) {
         let close = self.braces[&open].close;
         let tokens: Vec<&str> = self.code.tokens[open + 1..close].iter().filter(|token| !token.pp).map(|token| token.text).collect();
-        let function = statement.is_some();
-        let tokens = match statement {
-            Some(statement) => {
+        let comment = statement.first().map_or(String::new(), |&first| self.code.comment_text[first].clone());
+        let kind;
+        let tokens = match function {
+            true => {
                 let open = statement.windows(2).position(|pair| self.code.text(pair[0]) == name && self.code.text(pair[1]) == "(");
-                let parameters: Vec<String> = open
-                    .map(|open| self.parameter_tokens(statement, open + 1))
-                    .unwrap_or_default()
-                    .iter()
-                    .filter_map(|tokens| self.parameter_name(tokens))
-                    .collect();
+                let listed = open.map(|open| self.parameter_tokens(statement, open + 1)).unwrap_or_default();
+                let parameters: Vec<String> = listed.iter().filter_map(|tokens| self.parameter_name(tokens)).collect();
+                // How many it takes; `(void)` takes none.
+                let void = listed.len() == 1 && listed[0].iter().all(|&at| self.code.text(at) == "void");
+                kind = format!("({})", if void { 0 } else { listed.len() });
                 // Every name the function gives a parameter or local, for
                 // whether a rename would clash (`naming`).
                 let scope = (self.file.to_string(), statement[0]);
@@ -1859,9 +1947,22 @@ impl<'r, 'a> Walk<'r, 'a> {
                 self.report.naming.scopes.entry(scope).or_default().extend(names);
                 duplicates::bind(&parameters, &tokens)
             }
-            None => tokens.iter().map(|text| text.to_string()).collect(),
+            false => {
+                // A section or attribute macro (`LATE_DATA`) before the type is no part of it.
+                let words: Vec<&str> = statement
+                    .iter()
+                    .map(|&at| self.code.text(at))
+                    .take_while(|text| *text != name)
+                    .filter(|text| !matches!(*text, "static" | "extern" | "const" | "volatile" | "UNUSED"))
+                    .collect();
+                let last = words.len().saturating_sub(1);
+                let words: Vec<&str> = words.iter().enumerate().filter(|(at, text)| *at == last || !is_macro_name(text)).map(|(_, text)| *text).collect();
+                kind = words.join(" ");
+                tokens.iter().map(|text| text.to_string()).collect()
+            }
         };
-        self.report.copies.push(duplicates::Copy { function, file: self.file.to_string(), name: name.to_string(), tokens });
+        let (file, name) = (self.file.to_string(), name.to_string());
+        self.report.copies.push(duplicates::Copy { function, file, name, tokens, kind, comment });
     }
 
     /// One statement outside every brace: a function, prototype, global,
@@ -1894,7 +1995,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 self.forwards(&name, &statement, open, close);
                 self.conversions(&name, open, close);
                 self.named(&name, NameKind::Function, line, None);
-                self.duplicate(Some(&statement), open, &name);
+                self.duplicate(&statement, true, open, &name);
                 let own = self.code.doc_text[first].clone();
                 self.thing(&name, Origin::Function, line, own, String::new(), (None, None));
             }
@@ -1928,7 +2029,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                     self.thing(&name, Origin::Global, line, own, String::new(), (None, None));
                 }
                 if let Some(&(open, _)) = opened.iter().find(|(_, kind)| *kind == Brace::Init) {
-                    self.duplicate(None, open, &name);
+                    self.duplicate(&statement, false, open, &name);
                 }
             }
             None => {}
@@ -2058,6 +2159,7 @@ pub fn file(report: &mut Report, path: &str, text: &str) {
         return;
     }
     report.files += 1;
+    report.paths.insert(path.to_string());
     let lines = text.lines().count();
     report.lines += lines;
     // S3 splits only an object holding more than one family: never a header, a
@@ -2163,6 +2265,11 @@ pub fn game_with_text<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>, t
         if path.ends_with("/README.md") {
             questions(&mut report, path, 1, text);
             units.push(path);
+            continue;
+        }
+        // Assembly: the names it refers to, for which routines are called.
+        if path.ends_with(".s") {
+            report.macro_words.extend(naming::code_identifiers(text).into_iter().map(str::to_string));
             continue;
         }
         // A picture: its stem, for the names taken from it.
@@ -2352,13 +2459,13 @@ fn tracked(root: &Path, folders: &[String]) -> Result<Vec<String>, String> {
 }
 
 /// The tracked C, headers and folder guides of a game, never build output,
-/// and its pictures by path alone (their text empty).
+/// its assembly, and its pictures by path alone (their text empty).
 fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     let mut files = Vec::new();
     for path in tracked(root, &[format!("games/{game}/src"), format!("games/{game}/include")])? {
         if path.ends_with(".png") {
             files.push((path, String::new()));
-        } else if path.ends_with(".c") || path.ends_with(".h") || is_folder_guide(&path) {
+        } else if path.ends_with(".c") || path.ends_with(".h") || path.ends_with(".s") || is_folder_guide(&path) {
             let bytes = std::fs::read(root.join(&path)).map_err(|error| format!("cannot read {path}: {error}"))?;
             files.push((path, String::from_utf8_lossy(&bytes).into_owned()));
         }
@@ -2439,6 +2546,7 @@ const ROWS: &[(&str, &str)] = &[
     ("duplicate_function_copies", "  copies past the first"),
     ("duplicate_table", "duplicate table groups"),
     ("duplicate_table_copies", "  copies past the first"),
+    ("duplicate_said", "one body under two names, said so"),
     ("provenance_names", "game-thing names"),
     ("provenance_verified", "  verified by row or ★ line"),
     ("provenance_table", "  verified by table"),
@@ -2503,6 +2611,7 @@ impl Report {
             "duplicate_function_copies" => Report::copies(&self.function_groups) as u64,
             "duplicate_table" => self.table_groups.len() as u64,
             "duplicate_table_copies" => Report::copies(&self.table_groups) as u64,
+            "duplicate_said" => self.said_groups.len() as u64,
             "unused_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.words.len() as u64),
             "seen_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.seen_words.len() as u64),
             "twin_words" => self.provenance.as_ref().map_or(0, |analysis| analysis.twin_words.len() as u64),
@@ -2551,7 +2660,11 @@ pub fn tsv(games: &[(&str, &Report)]) -> String {
         for (file, lines) in report.long_files.iter().take(TOP) {
             let _ = writeln!(text, "{game}\tlong_file\t{file}\t{lines}");
         }
-        for (metric, groups) in [("duplicate_function", &report.function_groups), ("duplicate_table", &report.table_groups)] {
+        for (metric, groups) in [
+            ("duplicate_function", &report.function_groups),
+            ("duplicate_table", &report.table_groups),
+            ("duplicate_said", &report.said_groups),
+        ] {
             for group in groups.iter().take(TOP) {
                 let _ = writeln!(text, "{game}\t{metric}\t{}\t{}", group.members.join(" "), group.tokens);
             }
@@ -2613,7 +2726,11 @@ pub fn summary(games: &[(&str, &Report)], top: usize) -> String {
                     let _ = writeln!(text, "  {:>6}  {file}", commas(*lines as i64));
                 }
             }
-            for (metric, groups) in [("duplicate_function", &report.function_groups), ("duplicate_table", &report.table_groups)] {
+            for (metric, groups) in [
+                ("duplicate_function", &report.function_groups),
+                ("duplicate_table", &report.table_groups),
+                ("duplicate_said", &report.said_groups),
+            ] {
                 if groups.is_empty() {
                     continue;
                 }
@@ -2705,6 +2822,7 @@ pub fn list(games: &[(&str, &Report)], metric: &str) -> String {
         let groups = match metric {
             "duplicate_function" | "duplicate_function_copies" => &report.function_groups[..],
             "duplicate_table" | "duplicate_table_copies" => &report.table_groups[..],
+            "duplicate_said" => &report.said_groups[..],
             _ => &[],
         };
         for group in groups {
@@ -3020,7 +3138,7 @@ mod tests {
         // A local renamed is the same routine; another table or callee is not.
         let renamed = body.replace("idx", "k");
         let other = body.replace("gA", "gC").replace("Load", "Fetch");
-        let table = "= { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };\n";
+        let table = "= { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };\n";
         let first = format!(
             "void Alpha(void) {body}void Beta(void) {renamed}void Eta(void) {other}void Gamma(void) {{ int i; }}\nconst u8 gT1[] {table}"
         );
@@ -3043,7 +3161,7 @@ mod tests {
         assert_eq!(report.table_groups.len(), 1);
         assert_eq!(report.table_groups[0].members, vec!["a.c:gT1", "b.c:gT2"]);
         assert_eq!(report.long_files, vec![("b.c".to_string(), 3002)]);
-        assert_eq!(list(&[("tbs", &report)], "duplicate_table"), "tbs\t19\ta.c:gT1 b.c:gT2\n");
+        assert_eq!(list(&[("tbs", &report)], "duplicate_table"), "tbs\t29\ta.c:gT1 b.c:gT2\n");
         let tsv = tsv(&[("tbs", &report)]);
         assert!(tsv.starts_with("game\tmetric\tscope\tcount\ntbs\tfiles\ttotal\t6\n"));
         assert!(tsv.contains("tbs\tduplicate_function\ttotal\t1\n"));
@@ -3051,6 +3169,23 @@ mod tests {
         assert!(tsv.contains("tbs\tlong_file\tb.c\t3002\n"));
         let table = summary(&[("tbs", &report)], 0);
         assert!(table.contains("objects over 3,000 lines") && table.lines().count() == ROWS.len() + 3);
+    }
+
+    #[test]
+    fn one_body_under_two_names_in_one_object() {
+        let body = "{ int i; for (i = 0; i < 4; i++) { gA[i] = Load(i) + 3; Store(gB, i); } }\n";
+        let scene = format!(
+            "#include \"../field/p.c\"\nvoid A_Run(void) {{ Task_Add(A_Step); Task_Add(P_Step); }}\n\
+             /// Steps.\n// The same routine as P_Step, under another name.\nvoid A_Step(void) {body}"
+        );
+        let part = format!("void P_Step(void) {body}");
+        let members = |report: &Report| (report.function_groups.len(), report.said_groups.iter().map(|group| group.members.clone()).collect::<Vec<_>>());
+        let report = game([("games/tla/src/scene/a.c", scene.as_str()), ("games/tla/src/field/p.c", part.as_str())]);
+        assert_eq!(members(&report), (0, vec![vec!["games/tla/src/field/p.c:P_Step".to_string(), "games/tla/src/scene/a.c:A_Step".to_string()]]));
+        let apart = scene.replace("#include \"../field/p.c\"\n", "");
+        let report = game([("games/tla/src/scene/a.c", apart.as_str()), ("games/tla/src/field/p.c", part.as_str())]);
+        assert_eq!(members(&report), (1, vec![]), "two objects: a copy to write once");
+        assert_eq!(normalized("games/tla/src/scene/../field/p.c"), "games/tla/src/field/p.c");
     }
 
     #[test]
