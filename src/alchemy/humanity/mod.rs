@@ -1087,6 +1087,7 @@ impl Report {
         let by_suffix = self.suffixes();
         let included: HashSet<String> = self.includes.iter().filter_map(|(file, spec)| self.resolve(&by_suffix, file, spec)).map(str::to_string).collect();
         drop(by_suffix);
+        let families = self.numbered_families();
         for (function, kind) in [(true, "undocumented_function"), (false, "undocumented_global")] {
             let missing: Vec<(String, usize, String, &str)> = (if function { &self.functions } else { &self.globals })
                 .iter()
@@ -1107,12 +1108,21 @@ impl Report {
                     // a name a macro gives, declared in a file another
                     // includes.
                     let shared = apart.is_none() && is_macro_name(name) && self.macro_docs.contains_key(name) && included.contains(&declared.file);
-                    match shared {
-                        true => {
+                    // A member of a numbered family (`Call1` to `Call11`): in
+                    // its head's run where the head has its `///`, else the
+                    // family counted once, at its head.
+                    let family = families.get(&(function, name.clone())).filter(|_| apart.is_none() && !shared);
+                    match (shared, family) {
+                        (true, _) => {
                             let (metric, what) = self.parameter_said(name, &declared.file);
                             (declared.file.clone(), declared.line, what, if metric == "undocumented_macro" { kind } else { metric })
                         }
-                        false => (declared.file.clone(), declared.line, name.clone(), apart.unwrap_or(kind)),
+                        (false, Some((true, _))) => (declared.file.clone(), declared.line, name.clone(), "undocumented_run"),
+                        (false, Some((false, members))) if members.first() == Some(name) => {
+                            (declared.file.clone(), declared.line, format!("{name}\ta family without a head: {}", members.join(", ")), kind)
+                        }
+                        (false, Some((false, _))) => (declared.file.clone(), declared.line, name.clone(), "undocumented_family"),
+                        (false, None) => (declared.file.clone(), declared.line, name.clone(), apart.unwrap_or(kind)),
                     }
                 })
                 .collect();
@@ -1274,6 +1284,39 @@ impl Report {
             objects.insert(path.clone(), seen);
         }
         objects
+    }
+
+    /// The numbered families of routines and of globals: two or more names
+    /// one stem and a number apart (`Call1`, `Call2`, ..., `Call11`), declared
+    /// in one file with no other routine or global between them. Each
+    /// member, by whether it is a routine and its name, with whether the
+    /// first (its head) has its `///`, and the members in file order.
+    fn numbered_families(&self) -> HashMap<(bool, String), (bool, Vec<String>)> {
+        let mut groups: BTreeMap<(bool, &str, &str), Vec<(usize, &str, bool)>> = BTreeMap::new();
+        let mut declared: HashMap<&str, Vec<usize>> = HashMap::new();
+        for (function, map) in [(true, &self.functions), (false, &self.globals)] {
+            for (name, entry) in map {
+                declared.entry(entry.file.as_str()).or_default().push(entry.line);
+                let stem = name.trim_end_matches(|c: char| c.is_ascii_digit());
+                if stem.len() < name.len() && stem.ends_with(|c: char| c.is_ascii_alphabetic() || c == '_') {
+                    groups.entry((function, entry.file.as_str(), stem)).or_default().push((entry.line, name.as_str(), entry.documented));
+                }
+            }
+        }
+        let mut families = HashMap::new();
+        for ((function, file, _), mut members) in groups {
+            members.sort();
+            let (first, last) = (members[0].0, members[members.len() - 1].0);
+            let between = declared.get(file).map_or(0, |lines| lines.iter().filter(|line| (first..=last).contains(*line)).count());
+            if members.len() < 2 || between != members.len() {
+                continue;
+            }
+            let names: Vec<String> = members.iter().map(|(_, name, _)| name.to_string()).collect();
+            for name in &names {
+                families.insert((function, name.clone()), (members[0].2, names.clone()));
+            }
+        }
+        families
     }
 
     /// Every file read, by each tail of its path (`field/call.h`, `call.h`),
@@ -4006,6 +4049,7 @@ const ROWS: &[(&str, &str)] = &[
     ("undocumented_string", "  apart: strings, their text"),
     ("undocumented_guard", "  apart: include guards"),
     ("undocumented_shared", "  apart: a shared file's parameters"),
+    ("undocumented_family", "  apart: a family without a head, past its first"),
 ];
 
 /// The metrics a sum adds: `fakematch` its devices, `leftover` its leftovers
@@ -4783,6 +4827,30 @@ mod tests {
             "OTHER is used again, NONE not by the shared file"
         );
         assert_eq!(names("undocumented_global"), ["LINES\ta parameter of games/tla/src/field/spawn.c, whose comments do not name it"]);
+    }
+
+    /// A numbered family is one run under its head's `///`, and counted once
+    /// at its head where it has none.
+    #[test]
+    fn a_numbered_family_is_one_run_or_one_item() {
+        let header = concat!(
+            "/// Calls f with that many arguments.\nstatic inline void Pass1(void (*f)(), s32 a0) { f(a0); }\n\n",
+            "static inline void Pass2(void (*f)(), s32 a0, s32 a1) { f(a0, a1); }\n\n",
+            "static inline void Call1(void (*f)(), s32 a0) { f(a0); }\n\n",
+            "static inline void Call2(void (*f)(), s32 a0, s32 a1) { f(a0, a1); }\n\n",
+            "static inline void Call11(void (*f)(), s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9, s32 a10) {\n",
+            "  f(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);\n}\n\n",
+            "s32 Step1(s32 a) { return Walk(a); }\n\ns32 Other(s32 a) { return Walk(a); }\n\ns32 Step2(s32 a) { return Run(a); }\n",
+        );
+        let report = game([("games/tla/include/field/call.h", header)]);
+        let names = |metric: &str| -> Vec<String> { report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.clone()).collect() };
+        assert_eq!(names("undocumented_run"), ["Pass2"]);
+        assert_eq!(names("undocumented_family"), ["Call11", "Call2"]);
+        assert_eq!(
+            names("undocumented_function"),
+            ["Call1\ta family without a head: Call1, Call2, Call11", "Other", "Step1", "Step2"],
+            "Step1 and Step2 have a routine between them"
+        );
     }
 
     /// A message declared in C is said by its text in the game's .po files.

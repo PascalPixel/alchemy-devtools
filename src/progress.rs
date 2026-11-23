@@ -94,7 +94,10 @@ what that file declares under such a name: undocumented_shared where the
 shared file's comments name it, else still counted, listed with the shared
 file as where to say it. A message's extern whose symbol is a msgctxt of any of
 the game's text/*.po counts with the strings (undocumented_string), said by its
-text.";
+text. A numbered family (Call1 to Call11, one stem and a number apart, in
+one file with nothing declared between) is a run under its first member's
+///, and without one counts once at that member, the rest on
+undocumented_family.";
 
 /// Both games' DONE, a line for each edition and one for the games.
 fn measure(root: &Path) -> String {
