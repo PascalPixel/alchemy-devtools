@@ -14,7 +14,7 @@ gAnemosInnerSanctum_MediumScript gFieldEffect_MediumScript gFieldEffect_MediumSc
 gInput_DpadAnglesEightWay gWorldMap_CursorDirectionAngles	kept apart	two main-image objects, and no main-image object shares a fragment; each says the other is the same
 gBubbleColumn_PictureWidths gCoatlicue_PictureWidths	different things	the layouts of two effects' own sheets, of the same sizes
 gBubbleColumn_Pictures gCoatlicue_Pictures	different things	the layouts of two effects' own sheets, of the same sizes
-gReaper_PictureX gCondemn_PictureX	kept apart	each effect's own table of the reaper's panels, both the ROM's in one file
+gCondemn_PictureX gReaper_PictureX	kept apart	each effect's own table of the reaper's panels, both the ROM's in one file
 gCrumbs_Script gEmbers_Script	different things	crumbs of rock and embers falling the same way, each a script of its own
 gInput_DpadAngles gRope_KeyHeadings	kept apart	two main-image objects, and no main-image object shares a fragment; the second says it is the same table
 gHoverGlow_Levels gWindowColor_WaveTable	different things	Hover's glow level by frame and the window colour wheel's level by hue step
