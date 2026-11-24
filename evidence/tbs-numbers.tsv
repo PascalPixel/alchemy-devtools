@@ -41,20 +41,9 @@ games/tbs/src/gamepak/flash/flashmx.c	gFlash_ChipMacronix	0x1cc2	honest	the flas
 games/tbs/src/gamepak/flash/flashmx.c	gFlash_ChipPanasonic	0x1b32	honest	the flash chip's maker and device id, as the chip reports them
 games/tbs/src/gamepak/flash/flashsst.c	gFlash_ChipSst	0xd4bf	honest	the flash chip's maker and device id, as the chip reports them
 games/tbs/src/menu/credits.c	Credits_DrawLine	0x80	honest	the top bit of a glyph row's byte, its first column
-games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	13	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
-games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	15	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects; step 15 shows three messages after POWERS = 14, so it has no single word of its own
 games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	16	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
-games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	17	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
-games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	18	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
-games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	20	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
-games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	21	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
-games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	22	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
-games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	24	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
-games/tbs/src/menu/menu_djinn.c	DjinnMenu_SelectDjinn	25	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
 games/tbs/src/menu/menu_djinn.c	Window_SetRectPalette	0xf	honest	the whole palette field of a screen entry, BG_TILE_PALETTE(0xf) as its mask
 games/tbs/src/menu/menu_djinn_figures.c	DjinnFigures_SetSlotPosition	0xffff8000	honest	the sign extension of a negative 16-bit y
-games/tbs/src/menu/menu_djinn_preview.c	DjinnMenu_RunPreview	12	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
-games/tbs/src/menu/menu_djinn_preview.c	DjinnMenu_RunPreview	23	unsettled	a step of Flint's Djinn lesson, each pressing A, B, Right or Left for the player; a recording of the lesson in the Djinn menu (FLAG_DJINN_LESSON, WorldMap_MeetFlint) would show what each press selects
 games/tbs/src/menu/menu_shared.c	CountDigitsAtLeastTwo	16	honest	the digit loop's bound: no count has 16 digits
 games/tbs/src/menu/menu_status.c	Menu_BusyWait	256	honest	Menu_BusyWait's passes
 games/tbs/src/scene/altmiller_cave.c	AltmillerCave_RestoreBabiAndInviteParty	30	honest	the 30 flickers of Babi's restoring
@@ -101,7 +90,6 @@ games/tbs/src/scene/venus_lighthouse_aerie.c	VenusLighthouseAerie_SpawnSideOrbit
 games/tbs/src/scene/venus_lighthouse_aerie.c	VenusLighthouseAerie_SpawnSideOrbitParticles	24	honest	the sway's amplitude in pixels, the FIXEDtoINT of a sine times 24
 games/tbs/src/scene/world_map.c	Scene_Initialize	0x85c	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
 games/tbs/src/shop/shop_buy.c	Shop_DrawStock	10	honest	a step into the 32-step swell table the icon starts at
-games/tbs/src/shop/shop_sanctum.c	Sanctum_RunMemberIconBurst	24	honest	a DEAD shift of a flag byte to the word's top
 games/tbs/src/sound/sound.c	SoundTest_Run	10	honest	the sound test's R and L step of the cue number shown
 games/tbs/src/system/system_oam.c	OamMatrix_AllocFromTransform	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
 games/tbs/src/system/system_serial.c	SERIAL_IDLE_HALFWORD	0xfefe	honest	the idle halfword on the serial wire between packets
