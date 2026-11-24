@@ -40,7 +40,7 @@ fn channels(c: u32) -> [i32; 3] {
 
 /// GBA frames a recording shows of the game on each side of a black screen
 /// (a fade or a load), ten seconds: a short loop through black flashes as
-/// it repeats, which Pascal found nauseating and a risk to anyone sensitive
+/// it repeats, which is nauseating and a risk to anyone sensitive
 /// to flashing (28 October 2026).
 pub const BLACK_CLEARANCE: usize = 600;
 

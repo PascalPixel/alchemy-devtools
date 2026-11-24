@@ -7,7 +7,7 @@
 //! is the game's own: blues, purples (the Psynergy Stone), reds, greys, black
 //! and white come out exactly as stored. Each band has smooth edges, so
 //! neighbouring hues never jump. A colour a turn carries past what the screen
-//! can show is clipped, as Pascal chose (26 October 2026).
+//! can show is clipped (chosen 26 October 2026).
 //!
 //! Pokefan531's GBA colour shader, which the docs site used before, mixes every
 //! channel into every other; that one rule turns purples towards blue and greys
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn yellows_and_greens_match_the_chosen_correction() {
-        // The values Pascal approved on 26 October 2026, from the prototype.
+        // The values approved on 26 October 2026, from the prototype.
         for (stored, shown) in [
             ([255, 255, 0], [255, 231, 107]),
             ([248, 200, 40], [255, 187, 118]),
