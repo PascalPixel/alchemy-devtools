@@ -3694,7 +3694,6 @@ ACTOR_FIRST_PIPE	what the player sees	a stone pipe section lying west to east, p
 ACTOR_SECOND_PIPE	what the player sees	a stone pipe section lying west to east, pipe_west_east.png (its render)	games/tbs/src/scene/mercury_lighthouse.c
 ACTOR_THIRD_PIPE	what the player sees	a stone pipe section lying north to south, pipe_north_south.png (its render)	games/tbs/src/scene/mercury_lighthouse.c
 ACTOR_PIPE_END	what the player sees	the rim at the top of an upright pipe in pipe_end.png (its render)	games/tbs/src/scene/mercury_lighthouse.c
-ACTOR_FOUNTAIN_PIPE	what the player sees	a stone pipe section lying west to east, pipe_west_east.png (its render)	games/tbs/src/scene/mercury_lighthouse.c
 ACTOR_GATE_STATUE	what the player sees	a blue statue of a woman holding a jar (its render)	games/tbs/src/scene/mercury_lighthouse.c
 ACTOR_SLEET	the game	"Sleet" (MsgDjinnName)	games/tbs/src/scene/mercury_lighthouse.c
 ACTOR_FALLEN_STATUE	what the player sees	the blue statue ACTOR_SLIDING_STATUE shows above, before it falls (its render)	games/tbs/src/scene/mercury_lighthouse.c
@@ -3709,8 +3708,6 @@ ACTOR_PLY_TARGET	the game	"used Ply." (MsgMercuryDidThat)	games/tbs/src/scene/me
 ACTOR_WATERFALL_STATUE	what the player sees	a blue statue beside the waterfall (its render)	games/tbs/src/scene/mercury_lighthouse.c
 ACTOR_LIFT_STATUE	what the player sees	the blue statue that stands on the lift in the Lighthouse Aerie (its render)	games/tbs/src/scene/mercury_lighthouse.c
 ACTOR_FIRST_VISITOR	what the player sees	people gathered round the fountain (its render)	games/tbs/src/scene/mercury_lighthouse.c
-FLAG_FOUNTAIN_RUNNING	the game	"peered into the fountain..." (MsgCheckedGround)	games/tbs/src/scene/mercury_lighthouse.c
-FLAG_FOUNTAIN_SHOWN	the game	"peered into the fountain..." (MsgCheckedGround)	games/tbs/src/scene/mercury_lighthouse.c
 FLAG_PIPE_1_JOINED	what the player sees	a pipe piece pushed along until it joins the pipes and water sprays through (its render)	games/tbs/src/scene/mercury_lighthouse.c
 FLAG_PIPE_2_JOINED	what the player sees	the second pipe piece joining the pipes (its render)	games/tbs/src/scene/mercury_lighthouse.c
 FLAG_PIPE_3_JOINED	what the player sees	the third pipe piece joining the pipes (its render)	games/tbs/src/scene/mercury_lighthouse.c
@@ -4136,17 +4133,6 @@ CELL_BEHAVIOR_TOLBI_SPRING_SIGN	the game	"Face away from Tolbi Spring and toss a
 CELL_BEHAVIOR_TOLBI_LUCKY_MEDAL_SIGN	the game	"If you toss a Lucky Medal" (MsgTolbiTossLuckyMedal)	games/tbs/src/scene/tolbi.c
 CELL_BEHAVIOR_TOLBI_BARREL	the game	"checked the barrel" (MsgVaultIsaacCheckedBarrel)	games/tbs/src/scene/tolbi.c
 CELL_BEHAVIOR_TOLBI_HIDDEN_CHEST	the game	"checked the chest" (MsgVaultIsaacCheckedChest)	games/tbs/src/scene/tolbi.c
-ACTOR_TOLBI_SPRING_WHEELS_ATTENDANT	the game	"Step right up and try your hand at lucky wheels!" (MsgTolbiStepRightTry)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_DICE_ATTENDANT	the game	"Hey, buddy, wanna try yer luck at the dice?" (MsgTolbiBuddyWannaTry)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_DICE_RULES_ATTENDANT	the game	"Read the sign if ya don't know the rules." (MsgTolbiSpringReadTheSignIfYaDont)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_DICE_PLAYER_FIRST_TIME	the game	"Is this yer first time to play Lucky Dice?" (MsgTolbiYerFirstTime)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_DICE_PLAYER_TRIPLE_DIGITS	the game	"Getting triple digits is real tough!" (MsgTolbiSpringWhoaGettingTripleDigitsIsReal)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_DICE_PLAYER_OUT_OF_COINS	the game	"I don't want to stop playing Lucky Dice" (MsgTolbiSpringIDontWantToStopPlaying)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_WHEELS_PRIZE_SIGN	the game	"Lucky Wheels Prizes" (MsgTolbiLuckyWheelsPrizesPrizesDetermined)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_WHEELS_RULES_SIGN	the game	"Lucky Wheels Rules" (MsgTolbiLuckyWheelsRulesPullLever)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_DICE_RULES_SIGN	the game	"Throw the dice on the table" (MsgTolbiSpringLuckyDiceThrowTheDiceOn)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_SOLDIER	the game	"poor soldiers like us" (MsgTolbiSpringTheresNoWayPoorSoldiersLike)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_DICE_PAIRS_SIGN	the game	"If two numbers match on either" (MsgTolbiSpringLuckyDiceIfTwoNumbersMatch)	games/tbs/src/scene/tolbi_games.c
 ACTOR_TOLBI_SPRING_COIN_SHADOW	what the player sees	the tossed coin's shadow, drawn at ground level below it as it flies (its render)	games/tbs/src/scene/tolbi_games.c
 ACTOR_TOLBI_SPRING_COIN	the game	"Face away from Tolbi Spring and toss a coin into it." (MsgTolbiFaceAwayTolbi)	games/tbs/src/scene/tolbi_games.c
 ACTOR_TOLBI_SPRING_MEDAL_SHADOW	what the player sees	the tossed Lucky Medal's shadow, drawn at ground level below it as it flies (its render)	games/tbs/src/scene/tolbi_games.c
@@ -4227,11 +4213,6 @@ ACTOR_WEST_VANISHING_STATUE	what the player sees	a white statue standing over a 
 ACTOR_EAST_VANISHING_STATUE	what the player sees	a white statue standing over a chest in the east (its render)	games/tbs/src/scene/tunnel_ruins.c
 ACTOR_EAST_PILLAR_A	what the player sees	one of a pair of grey pillars with pale caps in white rims, in the east (its render)	games/tbs/src/scene/tunnel_ruins.c
 ACTOR_EAST_PILLAR_B	what the player sees	the other pillar of the east pair (its render)	games/tbs/src/scene/tunnel_ruins.c
-ACTOR_LADY_STATUE_NORTHWEST	what the player sees	a violet statue of a robed woman, north-west of the five (its render)	games/tbs/src/scene/tunnel_ruins.c
-ACTOR_LADY_STATUE_NORTHEAST	what the player sees	a green statue of a robed woman, north-east of the five (its render)	games/tbs/src/scene/tunnel_ruins.c
-ACTOR_LADY_STATUE_SOUTHWEST	what the player sees	a blue statue of a robed woman, south-west of the five (its render)	games/tbs/src/scene/tunnel_ruins.c
-ACTOR_LADY_STATUE_SOUTHEAST	what the player sees	a pink statue of a robed woman, south-east of the five (its render)	games/tbs/src/scene/tunnel_ruins.c
-ACTOR_LADY_STATUE_SOUTH	what the player sees	a gold statue of a robed woman, the southmost of the five (its render)	games/tbs/src/scene/tunnel_ruins.c
 FLAG_TUNNEL_RUINS_DOUSE_PILLAR_SOAKED	what the player sees	a grey pillar on an orange base, a dark grating under its white rim, which Douse soaks (its render)	games/tbs/src/scene/tunnel_ruins.c
 FLAG_TUNNEL_RUINS_DOUSE_FROST_TARGET_FROZEN	what the player sees	a pillar of ice rising where Frost is cast (its render)	games/tbs/src/scene/tunnel_ruins.c
 ACTOR_OLD_WOMAN_ADMIRING_MT_ALEPH	the game	"Mt. Aleph looks beautiful today." (MsgValeMtAlephLooksBeautifulTodayIts)	games/tbs/src/scene/vale.c
@@ -4362,7 +4343,6 @@ ACTOR_FAREWELL_GARETS_SISTER	the game	"stagnant water" (MsgValeWhysEveryoneHangi
 ACTOR_FAREWELL_GARETS_BROTHER	the game	"Aunty Dora asked me" (MsgValeWhysEveryoneHanging)	games/tbs/src/scene/vale_plaza.c
 ACTOR_FAREWELL_GARETS_MOTHER	the game	"I know how Dora must be feeling" (MsgValeWhysEveryoneHanging)	games/tbs/src/scene/vale_plaza.c
 ACTOR_FAREWELL_GARETS_FATHER	the game	"My own son" (MsgValeImProudOfYouGaretMy), what the same sprite says in cottage_rooms_a.c	games/tbs/src/scene/vale_plaza.c
-ACTOR_FAREWELL_FIRST_CROWD_VILLAGER	what the player sees	men, women and a young man of Vale in their sprites (its render)	games/tbs/src/scene/vale_plaza.c
 ACTOR_FAREWELL_DOG	the game	"Woof! Woof!" (MsgValeRrruffRrrruff)	games/tbs/src/scene/vale_plaza.c
 ACTOR_FAREWELL_CAT	what the player sees	a small white and grey cat (its render)	games/tbs/src/scene/vale_plaza.c
 ACTOR_AFTER_KALAY_WELCOMING_YOUNG_MAN	the game	"You came back home, huh?" (MsgValeYouCameBackHome)	games/tbs/src/scene/vale_plaza.c
@@ -5052,7 +5032,6 @@ DJINN_COMMAND_INDEX	its code	as DJINN_COMMAND	games/tbs/include/battle/battle_ac
 ENEMY_DEFINITION_COUNT	its code	enemy_table.c's 165 rows (the enemies, then a closing row named 0xff); BattleUnit_Set's index > 164 refusal; Enemy_GetDefinition's BUG comment	games/tbs/include/game/game.h
 OWNER_STATUS_ICON_PLACES	its code	BattleStatusScreen_Run's statusSlots, statusKinds and statusSprites[11], filled and freed by loops of 11, drawn 15 pixels apart	games/tbs/src/window/screens_battle_status.c
 ITEM_ELEMENT_POWER	its code	battle_ability.c: "items always use 100"; an ability with no element heals as if at power 100	games/tbs/src/battle/battle_ability.c
-EQUIPPED_ICON_X	its code	ItemMenu_ArrangeCategoryItemIcons puts every worn item's icon at x 216	games/tbs/src/menu/menu_status.c
 EQUIPPED_ICON_Y	its code	the same rows on screen, y 32 to 80 (weapon, helm, shield, armor)	games/tbs/src/menu/menu_status.c
 DJINN_PREVIEW_VALUE_X	its code	DjinnMenu_DrawStatPreview draws each changed stat's 4-digit value at x * 8 + 72 on its DJINN_PREVIEW_STAT_Y row	games/tbs/src/menu/menu_djinn.c
 PREVIEW_STAT_ARROW_X	its code	BattleDjinnPreview draws each changed stat's arrow at x 80, beside its value on window tile rows 1 to 6	games/tbs/src/window/screens_battle_djinn_preview.c
@@ -5735,9 +5714,7 @@ ColosseumEntrance_PlaceCompanionsBehindIsaac	what the player sees	Garet and Ivan
 gColosseumEntrance_GatherIntoIsaacInWaitingRoomScript	what the player sees	Garet, Ivan and Mia walking up into Isaac's place before the soldiers in the waiting room and vanishing there (its render)	games/tbs/src/scene/colosseum_entrance.c
 CELL_BEHAVIOR_IMIL_ICE	what the player sees	the leader, stood on the frozen river below the big tree and given Down for a moment, slides down the ice several cells until a rock stops him (its render)	games/tbs/src/scene/imil.c
 CELL_BEHAVIOR_IMIL_PATH_TO_FALLS_CAVE	its code	its step trigger runs Imil_LeaveNorth, which faces the leader north and takes IMIL_TO_IMIL_FALLS_CAVE	games/tbs/src/scene/imil.c
-Leader_SlideOnIce	what the player sees	the leader slides down Imil's frozen river cell by cell until a rock stops him (its render); The Lost Age's twin is named so (shared/leader_slide_on_ice.h)	games/tbs/src/scene/imil.c
 Imil_SlideOnIce	what the player sees	stepping onto Imil's frozen river slides the leader down it (its render); as The Lost Age's TundariaTower_SlideOnIce	games/tbs/src/scene/imil.c
-Actor_SteerByPad	its twin	The Lost Age's Actor_SteerByPad (tundaria_tower.c), the same routine: the sliding leader turns toward the held direction	games/tbs/src/scene/imil.c
 Imil_DriftSmoke	its twin	The Lost Age's ShamanVillage_DriftSmoke, the same smoke puff's update	games/tbs/src/scene/imil.c
 FIELD_EFFECT_DRAG_X	its twin	The Lost Age's field_effect_advance_motion.c names the same divisor of FieldEffect_AdvanceMotion so (hz/fd)	games/tbs/src/scene/shared/field_effect_advance.c
 FIELD_EFFECT_DRAG_Z	its twin	The Lost Age's field_effect_advance_motion.c names the same divisor of FieldEffect_AdvanceMotion so (hz/fd)	games/tbs/src/scene/shared/field_effect_advance.c
@@ -5887,12 +5864,10 @@ LUCKY_WHEELS_HEART	its picture	icons.png's second picture, a red heart; "Stars a
 LUCKY_WHEELS_BOOT	its picture	icons.png's third picture, a green boot; "Boots win boots," (MsgTolbiLuckyWheelsPrizesPrizesDetermined)	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_RING	its picture	icons.png's fifth picture, a ring with a pink stone; "Rings win rings," (MsgTolbiLuckyWheelsPrizesPrizesDetermined)	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_MOON	its picture	icons.png's sixth picture, an orange crescent moon, the symbol every other matches; "Moons can win you anything." (MsgTolbiLuckyWheelsPrizesPrizesDetermined)	games/tbs/src/field/lucky_wheels.c
-LUCKY_WHEELS_PRIZE_UNDERSHIRT	the game	"Shirts win undershirts," (MsgTolbiLuckyWheelsPrizesPrizesDetermined); TolbiSpring_SelectLuckyWheelsPrize's category 0 is gTolbiSpring_LuckyWheelsPrizeItems' Mythril, Silk and Running Shirt	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_PRIZE_BOOTS	the game	"Boots win boots," (MsgTolbiLuckyWheelsPrizesPrizesDetermined); category 1 is Hyper, Quick and Fur Boots	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_PRIZE_RING	the game	"Rings win rings," (MsgTolbiLuckyWheelsPrizesPrizesDetermined); category 2 is the Adept, War and Sleep Ring	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_PRIZE_HEART_ITEM	the game	"Stars and Hearts win items," (MsgTolbiLuckyWheelsPrizesPrizesDetermined); the heart's category 3 is a Potion, Vial or Nut	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_PRIZE_STAR_ITEM	the game	"Stars and Hearts win items," (MsgTolbiLuckyWheelsPrizesPrizesDetermined); the star's category 4 is a Water of Life, Psy Crystal or Elixir	games/tbs/src/field/lucky_wheels.c
-LUCKY_WHEELS_PRIZE_ANYTHING	the game	"Moons can win you anything." (MsgTolbiLuckyWheelsPrizesPrizesDetermined); TolbiSpring_SelectLuckyWheelsPrize turns category 5 into one of the five others at random	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_WILD_SYMBOL	the game	"Moons can win you anything." (MsgTolbiLuckyWheelsPrizesPrizesDetermined); a payline whose other symbols agree wins with moons among them	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_PLACED_SYMBOLS	its code	LuckyWheels_Run picks eight different places on each wheel and gives them symbols 0 to 4 and then three moons (k above 5 held at 5)	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_BET_MAX	the game	"and 7 lines for 4 tickets." (MsgTolbiLuckyWheelsRulesPullLever)	games/tbs/src/field/lucky_wheels.c
@@ -6031,7 +6006,6 @@ EDITOR_NUMBER_TILE	its picture	games/tbs/src/graphics/palette_editor/swatch.png:
 TEXT_ACTOR_NAME_START	its twin	The Lost Age's window_internal.h names decoded code 28 so (MESSAGE_ACTOR_NAME_START in its decoder); here drawing and measuring skip it and its two entries	games/tbs/src/window/window_internal.h
 DIMMED_COPIES	its code	Judgment fills copies i = 0 to DIMMED_COPIES - 1 of the MOTE_SET_BYTES mote pictures (battle_effect_judgment.c), Thor eight copies at sheet + THOR_DIMMED_MOTES whose ring draws copy frame - 156 up to DIMMED_COPIES - 1 (battle_effect_thor.c), and a stat reduction copies its shard picture the same way, drawing copy (targetFrame - 24) / 4 up to DIMMED_COPIES - 1 (battle_effect_stat_change.c)	games/tbs/src/battle_effect/battle_effect_internal.h
 DIMMED_COPY_CAP	its code	EFFECT_CAP_LEVEL(v, DIMMED_COPY_CAP(i)) for copy i in all three, CANVAS_LEVEL_BRIGHTEST + 1 - i * 7, so copy 0 keeps every level	games/tbs/src/battle_effect/battle_effect_internal.h
-MOTE_DEPTH_NEAR	its code	Eruption's motes, Fire's embers, Dragon Cloud's and the particle streams' embers clamp their projected depth to MOTE_DEPTH_NEAR..MOTE_DEPTH_FAR and draw size largest - (depth - MOTE_DEPTH_NEAR) / MOTE_DEPTH_STEP; Froth's bubbles make the same clamp (battle_effect_vortices.c)	games/tbs/src/battle_effect/battle_effect_internal.h
 MOTE_DEPTH_FAR	its code	as MOTE_DEPTH_NEAR: the farthest depth a mote is sized at	games/tbs/src/battle_effect/battle_effect_internal.h
 MOTE_DEPTH_STEP	its code	as MOTE_DEPTH_NEAR: a size smaller for every MOTE_DEPTH_STEP of depth	games/tbs/src/battle_effect/battle_effect_internal.h
 MOTE_SIZE_MAX	its code	gBattleEffect_MotePictures has ten pictures, size 1 to 10 (EFFECT_DRAW_MOTE draws picture size - 1); Kirin's and the stars' motes cap their size at it and Fire's embers start from it	games/tbs/src/battle_effect/battle_effect_internal.h
@@ -6233,7 +6207,6 @@ SCENE_TRANSITION_VARIANT	its code	SCENE_TRANSITION(style, variant) is style << 8
 PLACE_ENEMY_SIDE	its twin	The Lost Age's battle_turn.c (hz/ui) names it so: Battle_GetUnitAtPlace reads the enemies' list when the place has 0x80 set (PLACE_ENEMY 0x180 is PLACE_PARTY 0x100 with it)	games/tbs/include/battle/battle_side.h
 PLACE_INDEX_MASK	its twin	as PLACE_ENEMY_SIDE: the place in the list is the place code's low four bits	games/tbs/include/battle/battle_side.h
 BATTLE_BG1_SCREEN_BLOCK	its code	BATTLE_BG1CNT's BGCNT_SCREEN_BASE(31): BG1's map in battle, which screens_battle_command_row.c writes the command icons' tiles into	games/tbs/include/battle/battle.h
-RANGE_ICON_ALL	its code	the twelfth of the range icons Window_DrawThreeTileColumn draws (screens_menu_titles.c builds twelve), drawn for ABILITY_RANGE_ALL where range n takes icon n - 1; the menus' Menu_BuildPatternTiles builds the same twelve as two sets of RANGE_ICON_PAIRS (6) pairs, the last 2 * RANGE_ICON_PAIRS - 1, which PsynergyMenu_DrawListPage draws for ABILITY_RANGE_ALL; screens_battle_psynergy_menu.c and The Lost Age (hz/ui) name it the same	games/tbs/include/battle/battle_unit.h
 WORLD_MAP_BLOCK_PIXELS	its code	as WORLD_MAP_BLOCK_SHIFT: 1 << (21 - 16) pixels a block	games/tbs/include/field/map_grid.h
 GLYPH_PAIR_WIDTH_MAX	its code	two characters other than spaces are drawn in one 16-pixel cell when their font widths sum to 15 or less, in Message_Type and Text_DrawWideStringAtOffset alike (outside Japanese)	games/tbs/src/window/window_internal.h
 GLYPH_PAIR_OUTLINED_WIDTH_MAX	its code	Spanish alone pairs outlined characters only up to 14, each outlined glyph drawn a pixel wider (Text_DrawGlyphPair width++)	games/tbs/src/window/window_internal.h
@@ -7129,9 +7102,6 @@ ACTOR_WARY_VISITOR	what the player sees	a dark-haired man in a red top in a corn
 ACTOR_TOLBI_SOUVENIR_SELLER	what the player sees	a stocky dark-haired strongman in a red top on a rug beside wares laid out for sale (its render)	games/tbs/src/scene/tolbi.c
 ACTOR_TOLBI_OVERSLEEPER	what the player sees	a woman with long hair in green, her back turned, before a stone house's door (its render)	games/tbs/src/scene/tolbi.c
 ACTOR_TOLBI_SPRING_MEDAL_SEEKER	what the player sees	a man in green carrying a pack by the spring's north-west corner (its render)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_DICE_PLAYER_FIRST_TIME	what the player sees	a burly grey-haired man with folded arms at the west end of the yellow rug in the Lucky Dice hall (its render)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_DICE_PLAYER_TRIPLE_DIGITS	what the player sees	an old man with white hair by the green table of the Lucky Dice hall (its render)	games/tbs/src/scene/tolbi_games.c
-ACTOR_TOLBI_SPRING_DICE_PLAYER_OUT_OF_COINS	what the player sees	a woman in a green dress by the east wall of the Lucky Dice hall (its render)	games/tbs/src/scene/tolbi_games.c
 ACTOR_GROUND_FLOOR_BOASTING_MAN	what the player sees	a red-haired man in green standing beside a table on the fortress's ground floor (its render)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_UPPER_FLOOR_CAPTIVE_WOMAN	what the player sees	a woman with fair hair in a white apron beside a barrel on the fortress's upper floor (its render)	games/tbs/src/scene/lunpa_fortress.c
 ACTOR_GROUND_FLOOR_SECOND_SENTRY	what the player sees	the second of two of Dodonpa's men in green helmets standing near each other on the ground floor, in a circle of light (its render)	games/tbs/src/scene/lunpa_fortress.c
@@ -7180,8 +7150,6 @@ FLAG_SWITCH_PIPE_STARTS_WESTWARD_JET	what the player sees	a stone pipe section (
 FLAG_SWITCH_PIPE_STARTS_EASTWARD_JET	what the player sees	a stone pipe section (its render)	games/tbs/src/scene/mercury_lighthouse.c
 FLAG_SWITCH_PIPE_STOPS_JETS	what the player sees	a stone pipe section (its render)	games/tbs/src/scene/mercury_lighthouse.c
 SPOUT_PIPE_JOINED_COLUMN	its code	SPOUT_PIPE_JOINED_COLUMN is 11 (mercury_lighthouse.c): The spout pipe joins the pipes above and below its pool at this column, and the spouts run; anywhere else they stop	games/tbs/src/scene/mercury_lighthouse.c
-FOUNTAIN_PIPE_RUNNING_ROW	its code	FOUNTAIN_PIPE_RUNNING_ROW is 40 (mercury_lighthouse.c): The pipe in the room with the Nut chest joins the pipes either side of its pool at the first row, and the jet runs; at the second it stops	games/tbs/src/scene/mercury_lighthouse.c
-FOUNTAIN_PIPE_STOPPED_ROW	its code	FOUNTAIN_PIPE_STOPPED_ROW is 42 (mercury_lighthouse.c): The pipe in the room with the Nut chest joins the pipes either side of its pool at the first row, and the jet runs; at the second it stops	games/tbs/src/scene/mercury_lighthouse.c
 SWITCH_PIPE_WESTWARD_JET_COLUMN	its code	SWITCH_PIPE_WESTWARD_JET_COLUMN is 47 (mercury_lighthouse.c): Where the switch pipe stops along its pool, in cells: at the first column the water runs to JET_WESTWARD, at the second to JET_EASTWARD, at the third no jet runs, and anywhere else, as at the last, where it starts, the water falls as JET_SOUTHWARD	games/tbs/src/scene/mercury_lighthouse.c
 SWITCH_PIPE_EASTWARD_JET_COLUMN	its code	SWITCH_PIPE_EASTWARD_JET_COLUMN is 48 (mercury_lighthouse.c): Where the switch pipe stops along its pool, in cells: at the first column the water runs to JET_WESTWARD, at the second to JET_EASTWARD, at the third no jet runs, and anywhere else, as at the last, where it starts, the water falls as JET_SOUTHWARD	games/tbs/src/scene/mercury_lighthouse.c
 SWITCH_PIPE_NO_JET_COLUMN	its code	SWITCH_PIPE_NO_JET_COLUMN is 53 (mercury_lighthouse.c): Where the switch pipe stops along its pool, in cells: at the first column the water runs to JET_WESTWARD, at the second to JET_EASTWARD, at the third no jet runs, and anywhere else, as at the last, where it starts, the water falls as JET_SOUTHWARD	games/tbs/src/scene/mercury_lighthouse.c
@@ -7210,8 +7178,6 @@ CELL_BEHAVIOR_SEALED_DOOR	what the player sees	the glowing lighthouse door befor
 MercuryLighthouse_RecordRowStatues	what the player sees	five stone statues along the north wall, the fifth alone in an alcove to the east; doorways behind the third and the fifth (its render)	games/tbs/src/scene/mercury_lighthouse.c
 MercuryLighthouse_PushRowStatue	what the player sees	Isaac walking up beside a stone statue along the north wall (its render)	games/tbs/src/scene/mercury_lighthouse.c
 MercuryLighthouse_MoveGapStatueOffDoorway	what the player sees	a stone statue standing in the doorway at the head of a room of vines (its render)	games/tbs/src/scene/mercury_lighthouse.c
-FLAG_FOUNTAIN_RUNNING	what the player sees	a jet shooting west along the north wall over the pool in the room with the Nut chest, with a doorway open in the wall above (its render)	games/tbs/src/scene/mercury_lighthouse.c
-CELL_BEHAVIOR_FOUNTAIN_JET	what the player sees	walking north into the jet along the north wall of the room with the Nut chest, Isaac stays put in a spray of sparkles (its render)	games/tbs/src/scene/mercury_lighthouse.c
 CELL_BEHAVIOR_SLEEP_BOMB_LEDGE	what the player sees	the floor beside the Sleep Bomb chest on the west side of the great pool room (its render)	games/tbs/src/scene/mercury_lighthouse.c
 CELL_BEHAVIOR_GATE_FLOOR_SWITCH	what the player sees	a round floor switch at the west end of the terrace, and one in the middle of the room of three arches (its render)	games/tbs/src/scene/mercury_lighthouse.c
 CELL_BEHAVIOR_SEALED_GATE	what the player sees	the sealed arch at the top of the ladder on the dais, and the middle one of three arches (its render)	games/tbs/src/scene/mercury_lighthouse.c
@@ -7510,7 +7476,6 @@ MercuryLighthouse_RippleWhileInPool	what the player sees	the great pool room's o
 MercuryLighthouse_HopAcrossPoolOnLower	what the player sees	Isaac, rings of light over his head from the heart square, hops two cells south off it onto the pool's open water, a ring flying ahead to hold him up, then on to the next stepping square (a staged walk after MercuryLighthouse_ChargeLightsOnLower) (its render)	games/tbs/src/scene/mercury_lighthouse.c
 MercuryLighthouse_HopAcrossPool	what the player sees	Isaac, rings of light over his head from the heart square, hops two cells south off it onto the pool's open water, a ring flying ahead to hold him up, then on to the next stepping square (a staged walk in MercuryLighthouseLower after MercuryLighthouse_ChargeLightsOnLower) (its render)	games/tbs/src/scene/shared/mercury_lighthouse_pillar.c
 MercuryLighthouseEntrance_HopAcrossPool	what the player sees	the ground floor's rooms of water-filled pools set with square stepping tiles, one before the goddess's hands (the scene's map render); the hop itself as MercuryLighthouse_HopAcrossPool's render in the floor above (its render)	games/tbs/src/scene/mercury_lighthouse_entrance.c
-MercuryLighthouse_PushSpoutAndFountainPipes	what the player sees	Isaac pushes a stone pipe section across its grated pool to join the pipes either side, and a tall spout of water shoots up from a pipe end in the room's west (its render)	games/tbs/src/scene/mercury_lighthouse.c
 MercuryLighthouse_StopSpoutsWithSparkles	what the player sees	the spouts this stops: the tall spout of water from the pipe end in the big pipe room's west, which MercuryLighthouse_PushSpoutAndFountainPipes's render starts (its render)	games/tbs/src/scene/mercury_lighthouse.c
 MercuryLighthouse_StopJet	what the player sees	pushing the room of jets' north-south pipe west, the jet of water from one pipe end draws back with spray drifting from it and another starts (MercuryLighthouse_PushJetRoomPipes's render, staged from cell (56, 36)) (its render)	games/tbs/src/scene/mercury_lighthouse.c
 MercuryLighthouse_StartStatueSlide	what the player sees	the camera turns to the blue statue and the new jet of water, striking it, slides it a step west (MercuryLighthouse_PushJetRoomPipes's render, staged from cell (56, 36)) (its render)	games/tbs/src/scene/mercury_lighthouse.c
@@ -7922,7 +7887,6 @@ FLAG_TUNNEL_RUINS_FIRST_STONE_SET	its code	TunnelRuins_SetStoneOnBalance sets FL
 TunnelRuins_PushCarvedStone	its code	the walking step trigger of CELL_BEHAVIOR_TUNNEL_RUINS_CARVED_STONES_FLOOR and _RISEN_PLATFORM: PushedActor_AdvancePair	games/tbs/src/scene/tunnel_ruins.c
 TunnelRuins_UpdateGreyPillarCells	its code	restores row 19 from cells (108, 19) and walls the cells of ACTOR_EAST_PILLAR_A and _B	games/tbs/src/scene/tunnel_ruins.c
 LUCKY_WHEELS_PRIZES_AWARDED	its code	the -2 Scene_Initialize writes to wonPrizes[0] after the attendant hands the prizes over, so that they are not given twice	games/tbs/src/scene/tolbi_games.c
-LUCKY_WHEELS_LAST_GIVEN	its code	TolbiSpring_SelectLuckyWheelsPrize reads and writes wonPrizes[8 + kind], the variant last given of each kind	games/tbs/src/scene/tolbi_games.c
 SPRING_RING_OUTSIDE	its code	TolbiSpring_UpdateTossSimulation sets sTossResult 4 beyond the fourth ring's squared distance, and a coin there wins nothing	games/tbs/src/scene/tolbi_games.c
 CRAB_HEADING_EAST	its code	a crab obstacle with heading 0 adds its step to x, and the crab turns to it at x 64	games/tbs/src/scene/tolbi_games.c
 CRAB_HEADING_WEST	its code	a crab obstacle with heading 1 takes its step from x, and the crab turns to it past x 176	games/tbs/src/scene/tolbi_games.c
@@ -7963,7 +7927,6 @@ SPIRAL_PILLAR_ANIMATION_ROAD	what the player sees	the Road to Babi Lighthouse's 
 ColosseumSatrageMatch_DemonstrateLogPush	its code	called once, from ColosseumSatrageMatch_TalkToBoardWalkAttendant, to push ACTOR_ROLLING_LOG_EAST west from 392 to 360 as Isaac follows (lines of the Board Walk attendant's description)	games/tbs/src/scene/colosseum_satrage_match.c
 LIFT_OPERATOR_ANIMATION_LIFTS_LINED_UP	its code	ColosseumSatrageMatch_UpdateLifts sets it on ACTOR_LIFT_OPERATOR as it sends the four lifts to z 216, in a line; young_man_with_fair_hair.tsv's anim 10 is a pose at a lever	games/tbs/src/scene/colosseum_satrage_match.c
 LIFT_OPERATOR_ANIMATION_LIFTS_APART	its code	ColosseumSatrageMatch_UpdateLifts sets it on ACTOR_LIFT_OPERATOR as it sends the lifts to z 184 and 248, apart; young_man_with_fair_hair.tsv's anim 11 is the lever's other pose	games/tbs/src/scene/colosseum_satrage_match.c
-ROLLED_LOG_ANIMATION_AT_REST	its picture	log_north_south.tsv's anim 1 holds picture 10, the first of the four its rolling anims 2 and 3 cycle; set once a Board Walk log stops	games/tbs/src/scene/colosseum_satrage_match.c
 CottageRoomsA_LeaveThroughDoor	its code	the eight door step triggers of every table call it with their exit; it stops the storm's lightning when FLAG_VALE_STORM is set, then plays SE_MAP_EXIT and the window transition and requests the exit	games/tbs/src/scene/cottage_rooms_a.c
 SHOP_VALE_WEAPONS	its code	Shop_Run's stock row in CottageRoomsA_TalkToWeaponMerchant, opened across the counter by the merchant whose lines are MsgValeGoodWeaponsDrawOutStrength	games/tbs/src/scene/cottage_rooms_a.c
 SHOP_VALE_ARMOR	its code	Shop_Run's stock row in CottageRoomsA_TalkToArmorMerchant, whose lines are MsgValeGoodArmorDrawsOutStrength	games/tbs/src/scene/cottage_rooms_a.c
@@ -8622,3 +8585,306 @@ Whirlwind_UpdateTarget	its twin	The Lost Age names it so: per-frame update of Wh
 Retreat_UpdateSpark	its twin	The Lost Age names it so: per-frame update of one of Retreat's sparks flying up from the caster	games/tbs/include/field/event_commands.h
 BACKGROUND_LEVEL_STEP	its code	Palette_StepFadeTransfer scales BG palettes 6 to 13 by FIXED_ONE - step * (FIXED_ONE / 60); battle_internal.h's BACKGROUND_LEVEL_STEP is the same 1092	games/tbs/include/battle/battle_work.h
 BATTLE_BACKGROUND_COLORS	its code	Palette_StepFadeTransfer scales 8 * 16 colours from BG palette 6, the battle background's	games/tbs/include/battle/battle_work.h
+Leader_SlideOnIce	what the player sees	the leader slides down Imil's frozen river cell by cell until a rock stops him (its render); The Lost Age's twin is named so (shared/leader_slide_on_ice.h)	games/tbs/src/scene/shared/leader_slide_on_ice.c
+Actor_SteerByPad	its twin	The Lost Age's Actor_SteerByPad (tundaria_tower.c), the same routine: the sliding leader turns toward the held direction	games/tbs/src/scene/shared/leader_slide_on_ice.c
+MOTE_DEPTH_NEAR	its code	Eruption's motes, Fire's embers, Dragon Cloud's and the starfield fall's embers clamp their projected depth to MOTE_DEPTH_NEAR..MOTE_DEPTH_FAR and draw size largest - (depth - MOTE_DEPTH_NEAR) / MOTE_DEPTH_STEP; Froth's bubbles make the same clamp (battle_effect_vortices.c)	games/tbs/src/battle_effect/battle_effect_internal.h
+LOG_ANIMATION_AT_REST	its picture	log_north_south.tsv's anim 1 holds picture 10, the first of the four its rolling anims 2 and 3 cycle; set once a Board Walk log stops	games/tbs/src/scene/colosseum_satrage_match.c
+BattleArena_Empty	its code	an empty body that nothing calls	games/tbs/src/scene/battle_arena.c
+ACTOR_SECOND_GATE_SOLDIER	its number	the gate soldiers' slots after ACTOR_FIRST_GATE_SOLDIER, in gColosseumEntranceActorPlacementsFinalsDay's order	games/tbs/src/scene/colosseum_entrance.c
+ACTOR_THIRD_GATE_SOLDIER	its number	the gate soldiers' slots after ACTOR_FIRST_GATE_SOLDIER, in gColosseumEntranceActorPlacementsFinalsDay's order	games/tbs/src/scene/colosseum_entrance.c
+ACTOR_FOURTH_GATE_SOLDIER	its number	the gate soldiers' slots after ACTOR_FIRST_GATE_SOLDIER, in gColosseumEntranceActorPlacementsFinalsDay's order	games/tbs/src/scene/colosseum_entrance.c
+ACTOR_SECOND_SOLDIER	its number	the soldiers' slots after ACTOR_FIRST_SOLDIER, in gColosseumSoldiersActorPlacements' order	games/tbs/src/scene/colosseum_entrance.c
+ACTOR_THIRD_SOLDIER	its number	the soldiers' slots after ACTOR_FIRST_SOLDIER, in gColosseumSoldiersActorPlacements' order	games/tbs/src/scene/colosseum_entrance.c
+LOG_ANIMATION_AT_REST	its picture	log_north_south.tsv's anim 1 holds picture 10, the first of the four its rolling anims 2 and 3 cycle; set once Colosseum Final 3's long log stops	games/tbs/src/scene/colosseum_navampa_match.c
+LONG_LOG_ANIMATION_ROLL_WEST	its picture	log_north_south.tsv's anim 2, pictures 10 to 13 forward; ColosseumNavampaMatch_RollLongLog plays it with Left held, the log rolling to lower x	games/tbs/src/scene/colosseum_navampa_match.c
+STANDING_LOG_ANIMATION_TOPPLE	its picture	standing_log.tsv's anim 2 shows picture 1, the log tilted, then plays anim 3; set as Force knocks the Moving Sidewalk's log	games/tbs/src/scene/colosseum_navampa_match.c
+STANDING_LOG_ANIMATION_FALLEN	its picture	standing_log.tsv's anim 3 holds picture 2, the log on its side with its cut end toward the viewer	games/tbs/src/scene/colosseum_navampa_match.c
+WALL_OPERATOR_ANIMATION_PISTONS_HALF_OUT	its uses	gColosseumNavampaMatch_WallWedgeCycle sets it on the steps whose pistons pass half out	games/tbs/src/scene/colosseum_navampa_match.c
+WALL_OPERATOR_ANIMATION_ODD_PISTONS_IN	its uses	gColosseumNavampaMatch_WallWedgeCycle sets it on the step where the first, third and fifth pistons pull in	games/tbs/src/scene/colosseum_navampa_match.c
+WALL_OPERATOR_ANIMATION_ODD_PISTONS_OUT	its uses	gColosseumNavampaMatch_WallWedgeCycle sets it on the step where the first, third and fifth pistons push out	games/tbs/src/scene/colosseum_navampa_match.c
+SIDEWALK_RUNNING_ANIMATION	its uses	the tileset animation paused once FLAG_SIDEWALK_LOG_KNOCKED_OFF is set, while ColosseumNavampaMatch_RideMovingSidewalk carries the party	games/tbs/src/scene/colosseum_navampa_match.c
+SIDEWALK_STOPPED_ANIMATION	its uses	the tileset animation paused until FLAG_SIDEWALK_LOG_KNOCKED_OFF is set and resumed by ColosseumNavampaMatch_ShowActivatedSidewalkLayer	games/tbs/src/scene/colosseum_navampa_match.c
+RAISED_TRIGGER_NONE	its uses	FieldState.raisedTrigger cleared after the Wall Wedge's demonstration	games/tbs/src/scene/colosseum_navampa_match.c
+PLATFORM_ANIMATION_AT_WATERLINE	its picture	white_platform.tsv's anim 4 holds picture 1, a white slab with a blue waterline at its foot	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_BOARD_WALK_NUT_CHEST	its code	map.txt holds behaviour 101 at (23, 7), in the Board Walk's span of columns (its attendant's camera at x 328)	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_SHIFTING_FLOOR_NUT_CHEST	its code	map.txt holds behaviour 104 at (56, 7), in the shifting floor stage's span of columns (its attendant's camera at x 984)	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_SMOKE_BOMB_CHEST	its code	map.txt holds behaviour 102 at (34, 16), at the foot of The Wall	games/tbs/src/scene/colosseum_satrage_match.c
+FLAG_COLOSSEUM_SATRAGE_MATCH_BOARD_WALK_NUT_CHEST_OPENED	its uses	the flag of the Nut chest row with CELL_BEHAVIOR_BOARD_WALK_NUT_CHEST	games/tbs/src/scene/colosseum_satrage_match.c
+FLAG_COLOSSEUM_SATRAGE_MATCH_SHIFTING_FLOOR_NUT_CHEST_OPENED	its uses	the flag of the Nut chest row with CELL_BEHAVIOR_SHIFTING_FLOOR_NUT_CHEST	games/tbs/src/scene/colosseum_satrage_match.c
+BOARD_WALK_STORE_COLUMN	its uses	Scene_Initialize copies the Board Walk's (14..25, 11..14) there; the logs' rolls copy it back	games/tbs/src/scene/colosseum_satrage_match.c
+LOG_ROLLING_STORE_COLUMN	its uses	Scene_Initialize copies the Log-Rolling Stage's (48..52, 10..15) there; the logs' rides copy it back	games/tbs/src/scene/colosseum_satrage_match.c
+CELL_BEHAVIOR_ANTIDOTE_BARREL	the game	the barrel row finds an Antidote (FIND_ITEM(ITEM_ANTIDOTE))	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_SIX_COINS_JAR	the game	the jar row finds 6 coins (FIND_COINS(6))	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_TWO_COINS_JAR	the game	the jar row finds 2 coins (FIND_COINS(2))	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_SMOKE_BOMB_JAR	the game	the jar row finds a Smoke Bomb	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_THREE_COINS_JAR	the game	the jar row finds 3 coins (FIND_COINS(3))	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_NORTHERN_CONTINENT_BOOKS	the game	"There are books entitled \"Journey to the Northern Continent of Angara\"" (MsgValeBooksAboutContinents)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_LAWS_OF_VALE_BOOK	the game	"There is a book entitled \"The Laws of Vale\"" (MsgValeBookLawsOfVale)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_POWER_OF_NATURE_BOOK	the game	"There is a book entitled \"The Mighty Power of Nature.\"" (MsgValeBookPowerOfNature)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_PSYNERGY_STONE_BOOK	the game	"There's a book entitled \"The Psynergy Stone.\"" (MsgValeBookPsynergyStone)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_AUNTS_NOTEBOOK	the game	"There's a notebook belonging to ...'s aunt" (MsgValeAuntNotebook)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_GREAT_VILLAGE_BOOK	the game	"There's a book entitled \"Making a Great Village.\"" (MsgValeBookMakingGreatVillage)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_STUDY_OF_ALCHEMY_NOTEBOOK	the game	"There's a notebook called \"Study of Alchemy.\"" (MsgValeNotebookStudyOfAlchemy)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_ANCIENT_LEMURIANS_BOOK	the game	"In Search of the Ancient Lemurians." (MsgValeBookAncientLemurians)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_FOUNTAIN_OF_TOLBI_BOOK	the game	"The Fountain of Tolbi." (MsgValeBookFountainOfTolbi)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_ENCYCLOPEDIA_OF_ALCHEMY	the game	"Encyclopedia of Alchemy." (MsgValeEncyclopediaOfAlchemy)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_LEGEND_OF_ALEPH_BOOK	the game	"Legend of Mt. Aleph." (MsgValeBookLegendOfAleph)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_BEING_AN_ADEPT_BOOK	the game	"Being an Adept." (MsgValeBookBeingAdept)	games/tbs/src/scene/cottage_rooms_a.c
+CELL_BEHAVIOR_HERB_BOX	the game	the wooden box row finds an Herb (FIND_ITEM(ITEM_HERB))	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_FIVE_COINS_JAR	the game	the jar row finds 5 coins (FIND_COINS(5))	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_ONE_COIN_BARREL	the game	the barrel row finds 1 coin (FIND_COINS(1))	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_COINS_BARREL	the game	the barrel row after Kalay finds 123 coins (FIND_COINS(123))	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_VIAL_JAR	the game	the jar row after Kalay finds a Vial (FIND_ITEM(ITEM_VIAL))	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_PSYNERGY_STONE	the game	the silent search row FIND_PSYNERGY_STONE, FLAG_VALE_PSYNERGY_STONE	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_TRAVELERS_ETIQUETTE_BOOK	the game	"Etiquette for Travelers." (MsgValeBookTravelersEtiquette)	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_SCHOLARS_STAIRS	its code	the stairs-up exit row to COTTAGE_ROOMS_B_TO_BABI_PALACE in the scholars' tables	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_SCHOLARS_HARD_NUT_JAR	the game	the jar row finds a Hard Nut (FLAG_BABI_PALACE_HARD_NUT)	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_SCHOLARS_ENCYCLOPEDIA	the game	MsgValeTheresABookEntitledEncyclopediaOf	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_SCHOLARS_EXPERIMENTS_NOTEBOOK	the game	MsgValeTheresANotebookEntitledExperimentsIn	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_SCHOLARS_STUDY_NOTEBOOK	the game	MsgValeTheresANotebookEntitledStudyOf	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_STUDY_OF_ALCHEMY_NOTEBOOK	the game	the bookcase row's message gives the title, as cottage_rooms_a.c's row of the same name	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_ANCIENT_LEMURIANS_BOOK	the game	the bookcase row's message gives the title, as cottage_rooms_a.c's row of the same name	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_FOUNTAIN_OF_TOLBI_BOOK	the game	the bookcase row's message gives the title, as cottage_rooms_a.c's row of the same name	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_ENCYCLOPEDIA_OF_ALCHEMY	the game	the bookcase row's message gives the title, as cottage_rooms_a.c's row of the same name	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_LEGEND_OF_ALEPH_BOOK	the game	the bookcase row's message gives the title, as cottage_rooms_a.c's row of the same name	games/tbs/src/scene/cottage_rooms_b.c
+CELL_BEHAVIOR_BEING_AN_ADEPT_BOOK	the game	the bookcase row's message gives the title, as cottage_rooms_a.c's row of the same name	games/tbs/src/scene/cottage_rooms_b.c
+FIRST_STATUE_SHOVE_PIXELS	its code	Actor_SetDestinationOffset(ACTOR_PARTY_LEADER, 0, 24) in every edition as the first statue shoves Isaac	games/tbs/src/scene/crossbone_isle_keys.c
+RAISED_PILLAR_TOP_COLUMN	its code	map.txt (61, 36) holds no behaviour at height 2, copied under the first pillar as it is lifted level with the back ledge	games/tbs/src/scene/crossbone_isle_keys.c
+LOW_LEDGE_COLUMN	its code	map.txt (62..64, 37) holds behaviours 61, 51 and 70, as (37..39, 42) of the low ledge	games/tbs/src/scene/crossbone_isle_keys.c
+EMPTY_GAP_COLUMN	its code	map.txt (57, 42) holds CELL_BEHAVIOR_BANE_FIRST_PILLAR at height 0, copied to the gap (40..41, 42) with no pillar	games/tbs/src/scene/crossbone_isle_keys.c
+EMPTY_LADDER_FOOT_COLUMN	its code	map.txt (58, 42) holds CELL_BEHAVIOR_BANE_LADDER at height 0, copied to the ladder foot (42, 42) with no pillar	games/tbs/src/scene/crossbone_isle_keys.c
+RAISED_LADDER_FOOT_COLUMN	its code	map.txt (58, 41) holds CELL_BEHAVIOR_BANE_LADDER at height 1, copied to (42, 42) with the pillar in it	games/tbs/src/scene/crossbone_isle_keys.c
+DEMON_AXE_CHEST_COLUMN	its code	map.txt (58, 36) holds behaviour 107, TREASURE_SPOT_DEMON_AXE (TREASURE_SPOT_FIRST_ID + 7)	games/tbs/src/scene/crossbone_isle_keys.c
+BLUE_DOOR_HALF_OPEN_COLUMN	its uses	CrossboneIsleKeys_OpenBlueDoor draws it first, 40 frames before the open picture, with SE_GATE_MOVE	games/tbs/src/scene/crossbone_isle_keys.c
+BLUE_DOOR_OPEN_COLUMN	its uses	CrossboneIsleKeys_OpenBlueDoor draws it last, and alone when the party comes back	games/tbs/src/scene/crossbone_isle_keys.c
+RED_DOOR_HALF_OPEN_COLUMN	its uses	CrossboneIsleKeys_OpenRedDoor draws it first, 60 frames before the open picture	games/tbs/src/scene/crossbone_isle_keys.c
+RED_DOOR_OPEN_COLUMN	its uses	CrossboneIsleKeys_OpenRedDoor draws it last	games/tbs/src/scene/crossbone_isle_keys.c
+LOG_ANIMATION_AT_REST	its picture	log_north_south.tsv's and log_west_east.tsv's anim 1 hold picture 10, the first their rolls turn through; set as a floodgate log is stranded	games/tbs/src/scene/crossbone_isle_stepping_stones.c
+TURNING_ROCK_ANIMATION_BOULDER	its picture	turning_rock.tsv's anim 2 holds picture 1, a round boulder; set on the dragon statue room's boulder	games/tbs/src/scene/crossbone_isle_stepping_stones.c
+FLOODGATE_LAYER_1_COLUMN	its code	crossbone_isle_floodgate map.inc's second map_layer at 64 half-cells, the map's column 32, as render probe prints layer origins for the same header elsewhere	games/tbs/src/scene/crossbone_isle_stepping_stones.c
+FLOODGATE_LAYER_2_COLUMN	its code	crossbone_isle_floodgate map.inc's third map_layer at 128 half-cells, the map's column 64	games/tbs/src/scene/crossbone_isle_stepping_stones.c
+RAISED_WATER_ROW	its uses	copied into the room as FLAG_CROSSBONE_ISLE_FLOODGATE_WATER_RAISED is set and on entering with it set	games/tbs/src/scene/crossbone_isle_stepping_stones.c
+DRAINED_WATER_ROW	its uses	copied into the room as the water drains	games/tbs/src/scene/crossbone_isle_stepping_stones.c
+STREAM_COLUMN	its uses	the 16 by 5 cells MapGrid_DrawCellPanel draws for the level change	games/tbs/src/scene/crossbone_isle_stepping_stones.c
+WATER_PANEL_ROW	its code	12 cell rows below STREAM_ROW, WATER_PANEL_SCROLL_Y	games/tbs/src/scene/crossbone_isle_stepping_stones.c
+FINALS_MATCH	the game	the lettering `The 1st Match` that Colosso_ShowOpeningLettering shows for this number	games/tbs/src/scene/colosseum_azart_match.c
+LETTERING_LEND_A_HAND	the game	the lettering `Lend a Hand!` Colosso_ShowOpeningLettering shows for 0	games/tbs/src/scene/colosseum_azart_match.c
+FINALS_MATCH	the game	the lettering `The 2nd Match` that Colosso_ShowOpeningLettering shows for this number	games/tbs/src/scene/colosseum_satrage_match.c
+LETTERING_LEND_A_HAND	the game	the lettering `Lend a Hand!` Colosso_ShowOpeningLettering shows for 0	games/tbs/src/scene/colosseum_satrage_match.c
+FINALS_MATCH	the game	the lettering `The 3rd Match` that Colosso_ShowOpeningLettering shows for this number	games/tbs/src/scene/colosseum_navampa_match.c
+LETTERING_LEND_A_HAND	the game	the lettering `Lend a Hand!` Colosso_ShowOpeningLettering shows for 0	games/tbs/src/scene/colosseum_navampa_match.c
+STAGE_ROCK_CHALLENGE	the game	"This is stage {n} of the first finals" (MsgColossoStageFirstFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_azart_match.c
+STAGE_PIPEWORKS	the game	"This is stage {n} of the first finals" (MsgColossoStageFirstFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_azart_match.c
+STAGE_BROKEN_BRIDGE	the game	"This is stage {n} of the first finals" (MsgColossoStageFirstFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_azart_match.c
+STAGE_LUMBER_WATER_CROSSING	the game	"This is stage {n} of the first finals" (MsgColossoStageFirstFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_azart_match.c
+STAGE_MINI_MAZE	the game	"This is stage {n} of the second finals" (MsgColossoStageSecondFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_satrage_match.c
+STAGE_SHIFTING_FLOOR	the game	"This is stage {n} of the second finals" (MsgColossoStageSecondFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_satrage_match.c
+STAGE_LOG_ROLLING	the game	"This is stage {n} of the second finals" (MsgColossoStageSecondFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_satrage_match.c
+STAGE_WALL	the game	"This is stage {n} of the second finals" (MsgColossoStageSecondFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_satrage_match.c
+STAGE_BOARD_WALK	the game	"This is stage {n} of the second finals" (MsgColossoStageSecondFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_satrage_match.c
+STAGE_SCALES_OF_JUSTICE	the game	"This is stage {n} of the third finals" (MsgColossoStageThirdFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_navampa_match.c
+STAGE_STEPPING_STONE	the game	"This is stage {n} of the third finals" (MsgColossoStageThirdFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_navampa_match.c
+STAGE_WALL_WEDGE	the game	"This is stage {n} of the third finals" (MsgColossoStageThirdFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_navampa_match.c
+STAGE_FREE_CLIMB	the game	"This is stage {n} of the third finals" (MsgColossoStageThirdFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_navampa_match.c
+STAGE_MOVING_SIDEWALK	the game	"This is stage {n} of the third finals" (MsgColossoStageThirdFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_navampa_match.c
+STAGE_LOG_ROLLING	the game	"This is stage {n} of the third finals" (MsgColossoStageThirdFinalsMatch), said by the stage's attendant	games/tbs/src/scene/colosseum_navampa_match.c
+HOP_SQUARE_COLUMN	its code	map.txt (14, 13) holds CELL_BEHAVIOR_JUMP_FORWARD	games/tbs/src/scene/colosseum_azart_match.c
+LOW_GROUND_COLUMN	its code	map.txt (27..29, 13) hold no behaviour at height 0	games/tbs/src/scene/colosseum_azart_match.c
+VINE_COLUMN	its code	map.txt (47, 24) holds CELL_BEHAVIOR_CLIMB	games/tbs/src/scene/colosseum_azart_match.c
+BRIDGE_DOWN_ROW	its code	UpdateBrokenBridge copies it as the bridge lies down	games/tbs/src/scene/colosseum_azart_match.c
+BRIDGE_UP_ROW	its code	UpdateBrokenBridge copies it as the bridge stands up	games/tbs/src/scene/colosseum_azart_match.c
+LOG_NORTH_SOUTH_COLUMN	its code	map.txt (64..66, 24) hold CELL_BEHAVIOR_LOG_NORTH_SOUTH	games/tbs/src/scene/colosseum_azart_match.c
+LOG_EAST_WEST_COLUMN	its code	map.txt (63, 25..27) hold CELL_BEHAVIOR_LOG_EAST_WEST	games/tbs/src/scene/colosseum_azart_match.c
+BRIDGE_PICTURE_COLUMN	its code	UpdateBrokenBridge draws rows 29, 31 and 33 at the spans for up, swinging and down	games/tbs/src/scene/colosseum_azart_match.c
+WATER_PICTURE_COLUMN	its code	AnimatePipeworksWater draws columns 96 to 100 in turn at (34, 38)	games/tbs/src/scene/colosseum_azart_match.c
+SCALES_LEDGE_SUNK_COLUMN	its code	map.txt (0, 24) holds no behaviour at height 17, copied to (9, 12) after the ledge sinks	games/tbs/src/scene/colosseum_navampa_match.c
+SCALES_LEDGE_LEVEL_COLUMN	its code	map.txt (0, 25) holds CELL_BEHAVIOR_SCALES_LEDGE	games/tbs/src/scene/colosseum_navampa_match.c
+SCALES_LEDGE_WEIGHTED_COLUMN	its code	map.txt (1, 25) holds no behaviour at height 18, copied under the weight	games/tbs/src/scene/colosseum_navampa_match.c
+LOG_LANE_STORE_COLUMN	its code	Scene_Initialize copies layer 2's (74..81, 60..65) to (120, 60) and RollLongLog copies it back	games/tbs/src/scene/colosseum_navampa_match.c
+HAMMET_PALACE_WIDE_DOORS_ANIMATION	its picture	hammet_palace tileset_anims.tsv channel 1 rewrites tiles four across (14 to 17) by four rows: a door two cells wide, as the door to Layana's room at the top of the entrance room's carpet	games/tbs/src/scene/hammet_palace.c
+HAMMET_PALACE_NARROW_DOORS_ANIMATION	what the player sees	the west wing's arched door, one cell across, swings open as Isaac walks into it (HammetPalace_LeaveThroughDoor, frames 260-290); channel 2 rewrites tiles two across (20, 21) by four rows (its render)	games/tbs/src/scene/hammet_palace.c
+ABILITY_TARGET_UNUSED	its uses	no row of ability_table.c has target mode 3; BattleAI_ChooseAction aims it at the user and picks again	games/tbs/include/battle/battle_unit.h
+FORMATION_FALLBACK	its uses	BattleFormation_BuildEnemyList and BattleFormation_GetRandomMember take formation 1 (ENEMY_VERMIN alone) for an id out of range or with no sure member	games/tbs/src/battle/battle_formation.c
+ZOOMED_PAGE_PRIORITY	its code	TASK_PASS_VBLANK + 127, the highest rank in the VBlank pass (task.h: higher runs first)	games/tbs/src/battle/battle_background.c
+ANIMATION_PRIORITY_SHADOW	its code	SpriteAnimation.priority 0 for battleObject->shadow, drawn first by Sprite_ComposePicture's sort	games/tbs/src/battle/battle_objects.c
+ANIMATION_PRIORITY_BODY	its code	SpriteAnimation.priority 1 for the body's entry and its overlay (weapon)	games/tbs/src/battle/battle_objects.c
+ANIMATION_PRIORITY_STATUS_ICON	its code	SpriteAnimation.priority 3 for the status icon animation	games/tbs/src/battle/battle_objects.c
+ANIMATION_PRIORITY_HIDDEN	its code	priority 9, above 3, which field_sprite_draw.c's sort skips	games/tbs/src/battle/battle_objects.c
+HIT_FLASH_FRAMES	its code	PLAY_HIT's timer runs 0 to 8, white on odd timers without bit 1	games/tbs/src/battle/battle_playback.c
+PLAIN_ATTACK_MISSED	its code	flags & 2 sends BattleStaging_RunPlainAttack to the hop-back branch with no effect	games/tbs/src/battle/battle_staging.c
+COMMAND_VIEW_DEPTH	its code	Projection_Set(0, Iwram_DivFX(969, 0.75), 1938) mirrors BattleCamera_SetView's (distance, ..., distance * 2)	games/tbs/src/battle/battle_turn.c
+POSE_STILL	what the player sees	Ivan comes down from Death Plunge standing still, his back to the camera, in animation 0 (battle_ivan.tsv: picture 0 held) (its render)	games/tbs/src/battle_effect/battle_effect_death_plunge.c
+GLOW_SHEET_ROOM	its picture	dot_cells_d, BlueGlowSheet's ten flares 2x2 to 20x20, 1540 bytes, the largest glow sheet loaded into the 1550-byte battle sheet slot	games/tbs/include/battle_effect/battle_effect.h
+ASURA_LOW_DRAW_HEIGHT	its picture	blue_beast_00.png is 80x96, blue_beast_01.png 80x104 with the sword tip in its top rows	games/tbs/src/battle_effect/battle_effect_casting_impact.c
+StarfieldFall_SpawnLanding	what the player sees	Meteor: the battle dissolves into a starfield and the meteor falls through it in flames among fireballs (its render)	games/tbs/src/battle_effect/battle_effect_starfield_fall.c
+StarfieldFall_SpawnFlame	what the player sees	Meteor: the battle dissolves into a starfield and the meteor falls through it in flames among fireballs (its render)	games/tbs/src/battle_effect/battle_effect_starfield_fall.c
+BLUE_BURST_WIDTH	its picture	blue_burst.png, BlueBurstSheet's one 40x32 picture: the top half of a blue burst, bright at its foot	games/tbs/src/battle_effect/battle_effect_rushing_strike.c
+BLUE_BURST_HEIGHT	its picture	as BLUE_BURST_WIDTH	games/tbs/src/battle_effect/battle_effect_rushing_strike.c
+ACTOR_NORTH_JET_PIPE	what the player sees	a stone pipe section lying west to east, pipe_west_east.png (its render)	games/tbs/src/scene/mercury_lighthouse.c
+ACTOR_LUCKY_WHEELS_ATTENDANT	the game	"Step right up and try your hand at lucky wheels!" (MsgTolbiStepRightTry)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_DICE_ATTENDANT	the game	"Hey, buddy, wanna try yer luck at the dice?" (MsgTolbiBuddyWannaTry)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_DICE_RULES_ATTENDANT	the game	"Read the sign if ya don't know the rules." (MsgTolbiSpringReadTheSignIfYaDont)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_DICE_PLAYER_FIRST_TIME	the game	"Is this yer first time to play Lucky Dice?" (MsgTolbiYerFirstTime)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_DICE_PLAYER_TRIPLE_DIGITS	the game	"Getting triple digits is real tough!" (MsgTolbiSpringWhoaGettingTripleDigitsIsReal)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_DICE_PLAYER_OUT_OF_COINS	the game	"I don't want to stop playing Lucky Dice" (MsgTolbiSpringIDontWantToStopPlaying)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_WHEELS_PRIZE_SIGN	the game	"Lucky Wheels Prizes" (MsgTolbiLuckyWheelsPrizesPrizesDetermined)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_WHEELS_RULES_SIGN	the game	"Lucky Wheels Rules" (MsgTolbiLuckyWheelsRulesPullLever)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_DICE_RULES_SIGN	the game	"Throw the dice on the table" (MsgTolbiSpringLuckyDiceThrowTheDiceOn)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_DICE_SOLDIER	the game	"poor soldiers like us" (MsgTolbiSpringTheresNoWayPoorSoldiersLike)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_DICE_PAIRS_SIGN	the game	"If two numbers match on either" (MsgTolbiSpringLuckyDiceIfTwoNumbersMatch)	games/tbs/src/scene/tolbi_games.c
+ACTOR_VIOLET_LADY_STATUE	what the player sees	a violet statue of a robed woman, north-west of the five (its render)	games/tbs/src/scene/tunnel_ruins.c
+ACTOR_GREEN_LADY_STATUE	what the player sees	a green statue of a robed woman, north-east of the five (its render)	games/tbs/src/scene/tunnel_ruins.c
+ACTOR_BLUE_LADY_STATUE	what the player sees	a blue statue of a robed woman, south-west of the five (its render)	games/tbs/src/scene/tunnel_ruins.c
+ACTOR_RED_LADY_STATUE	what the player sees	a pink statue of a robed woman, south-east of the five (render probe --only scene --scene TunnelRuinsLadyStatues --entrance 13); the text calls it red: "Red shines northwest of me." (MsgTunnelRuinsRedShinesNorthwestOfMe), Mind Read on the violet statue, whose mark is south-east (its render)	games/tbs/src/scene/tunnel_ruins.c
+ACTOR_YELLOW_LADY_STATUE	what the player sees	a gold statue of a robed woman, the southmost of the five (render probe --only scene --scene TunnelRuinsLadyStatues --entrance 13); the text calls it yellow: "Yellow shines northeast of me." (MsgTunnelRuinsYellowShinesNortheastOfMe), Mind Read on the green statue, whose mark is south-west of the middle (its render)	games/tbs/src/scene/tunnel_ruins.c
+ACTOR_FAREWELL_OLD_MAN	its code	the first of the ten crowd placements after Garet's father in gValePlaza_DepartureActorPlacements, drawn with SPRITE_OLD_MAN_WITH_CANE; it only nods and jumps in ValePlaza_DepartForQuest	games/tbs/src/scene/vale_plaza.c
+ACTOR_FAREWELL_OLD_WOMAN	its code	the second of the ten crowd placements after Garet's father in gValePlaza_DepartureActorPlacements, drawn with SPRITE_OLD_WOMAN; it only nods and jumps in ValePlaza_DepartForQuest	games/tbs/src/scene/vale_plaza.c
+ACTOR_FAREWELL_YOUNG_MAN	its code	the third of the ten crowd placements after Garet's father in gValePlaza_DepartureActorPlacements, drawn with SPRITE_YOUNG_MAN_WITH_BROWN_HAIR; it only nods and jumps in ValePlaza_DepartForQuest	games/tbs/src/scene/vale_plaza.c
+ACTOR_FAREWELL_FAIR_HAIRED_WOMAN	its code	the fourth of the ten crowd placements after Garet's father in gValePlaza_DepartureActorPlacements, drawn with SPRITE_WOMAN_WITH_FAIR_HAIR; it only nods and jumps in ValePlaza_DepartForQuest	games/tbs/src/scene/vale_plaza.c
+ACTOR_FAREWELL_FIRST_STRONGMAN	its code	the fifth of the ten crowd placements after Garet's father in gValePlaza_DepartureActorPlacements, drawn with SPRITE_STRONGMAN; it only nods and jumps in ValePlaza_DepartForQuest	games/tbs/src/scene/vale_plaza.c
+ACTOR_FAREWELL_SECOND_STRONGMAN	its code	the sixth of the ten crowd placements after Garet's father in gValePlaza_DepartureActorPlacements, drawn with SPRITE_STRONGMAN; it only nods and jumps in ValePlaza_DepartForQuest	games/tbs/src/scene/vale_plaza.c
+ACTOR_FAREWELL_THIRD_STRONGMAN	its code	the seventh of the ten crowd placements after Garet's father in gValePlaza_DepartureActorPlacements, drawn with SPRITE_STRONGMAN; it only nods and jumps in ValePlaza_DepartForQuest	games/tbs/src/scene/vale_plaza.c
+ACTOR_FAREWELL_BURLY_MAN	its code	the eighth of the ten crowd placements after Garet's father in gValePlaza_DepartureActorPlacements, drawn with SPRITE_BURLY_MAN_WITH_GREY_HAIR; it only nods and jumps in ValePlaza_DepartForQuest	games/tbs/src/scene/vale_plaza.c
+ACTOR_FAREWELL_WOMAN_IN_GREEN	its code	the ninth of the ten crowd placements after Garet's father in gValePlaza_DepartureActorPlacements, drawn with SPRITE_WOMAN_IN_GREEN_DRESS; it only nods and jumps in ValePlaza_DepartForQuest	games/tbs/src/scene/vale_plaza.c
+ACTOR_FAREWELL_STOUT_MAN	its code	the tenth of the ten crowd placements after Garet's father in gValePlaza_DepartureActorPlacements, drawn with SPRITE_STOUT_MAN; it only nods and jumps in ValePlaza_DepartForQuest	games/tbs/src/scene/vale_plaza.c
+EQUIPPED_ICON_X	its code	ItemMenu_PlaceEquippedIcons puts every worn item's icon at x 216	games/tbs/src/menu/menu_status.c
+LUCKY_WHEELS_PRIZE_UNDERSHIRT	the game	"Shirts win undershirts," (MsgTolbiLuckyWheelsPrizesPrizesDetermined); StuccoRoomsC_SelectLuckyWheelsPrize's category 0 is gStuccoRoomsC_LuckyWheelsPrizeItems' Mythril, Silk and Running Shirt	games/tbs/src/field/lucky_wheels.c
+LUCKY_WHEELS_PRIZE_ANYTHING	the game	"Moons can win you anything." (MsgTolbiLuckyWheelsPrizesPrizesDetermined); StuccoRoomsC_SelectLuckyWheelsPrize turns category 5 into one of the five others at random	games/tbs/src/field/lucky_wheels.c
+RANGE_ICON_ALL	its code	the twelfth of the range icons Window_DrawThreeTileColumn draws (screens_menu_titles.c builds twelve), drawn for ABILITY_RANGE_ALL where range n takes icon n - 1; the menus' Menu_BuildPatternTiles builds the same twelve as two sets of RANGE_ICON_PAIRS (6) pairs, the last 2 * RANGE_ICON_PAIRS - 1, which StatusScreen_DrawPsynergyPage draws for ABILITY_RANGE_ALL; screens_battle_psynergy_menu.c and The Lost Age (hz/ui) name it the same	games/tbs/include/battle/battle_unit.h
+ACTOR_LUCKY_DICE_PLAYER_FIRST_TIME	what the player sees	a burly grey-haired man with folded arms at the west end of the yellow rug in the Lucky Dice hall (its render)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_DICE_PLAYER_TRIPLE_DIGITS	what the player sees	an old man with white hair by the green table of the Lucky Dice hall (its render)	games/tbs/src/scene/tolbi_games.c
+ACTOR_LUCKY_DICE_PLAYER_OUT_OF_COINS	what the player sees	a woman in a green dress by the east wall of the Lucky Dice hall (its render)	games/tbs/src/scene/tolbi_games.c
+NORTH_JET_PIPE_RUNNING_ROW	its code	NORTH_JET_PIPE_RUNNING_ROW is 40 (mercury_lighthouse.c): The pipe in the room with the Nut chest joins the pipes either side of its pool at the first row, and the jet runs; at the second it stops	games/tbs/src/scene/mercury_lighthouse.c
+NORTH_JET_PIPE_STOPPED_ROW	its code	NORTH_JET_PIPE_STOPPED_ROW is 42 (mercury_lighthouse.c): The pipe in the room with the Nut chest joins the pipes either side of its pool at the first row, and the jet runs; at the second it stops	games/tbs/src/scene/mercury_lighthouse.c
+FLAG_NORTH_JET_RUNNING	what the player sees	a jet shooting west along the north wall over the pool in the room with the Nut chest, with a doorway open in the wall above (its render)	games/tbs/src/scene/mercury_lighthouse.c
+CELL_BEHAVIOR_NORTH_JET	what the player sees	walking north into the jet along the north wall of the room with the Nut chest, Isaac stays put in a spray of sparkles (its render)	games/tbs/src/scene/mercury_lighthouse.c
+MercuryLighthouse_PushSpoutAndNorthJetPipes	what the player sees	Isaac pushes a stone pipe section across its grated pool to join the pipes either side, and a tall spout of water shoots up from a pipe end in the room's west (its render)	games/tbs/src/scene/mercury_lighthouse.c
+LUCKY_WHEELS_LAST_GIVEN	its code	StuccoRoomsC_SelectLuckyWheelsPrize reads and writes wonPrizes[8 + kind], the variant last given of each kind	games/tbs/src/scene/tolbi_games.c
+CELL_BEHAVIOR_NORTH_JET_PIPE_PUSH	what the player sees	a jet shooting west along the north wall over the pool in the room with the Nut chest, with a doorway open in the wall above (its render)	games/tbs/src/scene/mercury_lighthouse.c
+FLAG_NORTH_JET_SHOWN	what the player sees	a jet shooting west along the north wall over the pool in the room with the Nut chest, with a doorway open in the wall above (its render)	games/tbs/src/scene/mercury_lighthouse.c
+MercuryLighthouse_DrawNorthJetTiles	what the player sees	a jet shooting west along the north wall over the pool in the room with the Nut chest, with a doorway open in the wall above (its render)	games/tbs/src/scene/mercury_lighthouse.c
+MercuryLighthouse_RestoreNorthJetTiles	what the player sees	a jet shooting west along the north wall over the pool in the room with the Nut chest, with a doorway open in the wall above (its render)	games/tbs/src/scene/mercury_lighthouse.c
+MercuryLighthouse_SparkleOnNorthJet	what the player sees	a jet shooting west along the north wall over the pool in the room with the Nut chest, with a doorway open in the wall above (its render)	games/tbs/src/scene/mercury_lighthouse.c
+MercuryLighthouse_StartNorthJet	what the player sees	a jet shooting west along the north wall over the pool in the room with the Nut chest, with a doorway open in the wall above (its render)	games/tbs/src/scene/mercury_lighthouse.c
+MercuryLighthouse_StopNorthJet	what the player sees	a jet shooting west along the north wall over the pool in the room with the Nut chest, with a doorway open in the wall above (its render)	games/tbs/src/scene/mercury_lighthouse.c
+SolSanctumEruption_ClearStatueCells	its code	copies the cell behaviors of cells (14, 8), (14, 28), (44, 8) and (44, 28), the Mars, Jupiter, Mercury and Venus statues whose examine rows sol_sanctum_elemental_star_room.c keys on behaviors 2 to 5 (map.txt: 4fff:5:4, 4037:4:4, 4fff:3:4, 4fff:2:4), to (10..13, 0), then copies the plain floor cell west of each (behavior 0) over it	games/tbs/src/scene/sol_sanctum_eruption.c
+gSolSanctumEruption_UnusedAfterRisingLights	its code	BSS_DATA bytes of the overlay that no code of the scene reads or writes (its only mention is the definition); named for the global it lies beside, which keeps the overlay's BSS layout	games/tbs/src/scene/sol_sanctum_eruption.c
+DRAW_LEFT_BEAM	what the player sees	with FLAG_SOL_SANCTUM_LEFT_BEAM_SHINING a blue beam runs from the left winged statue, beside the sun-disc statue, to the floor before it (render probe --only scene --scene SolSanctumStatue --entrance 1 --map, with --set 0x816 and with --set 0x816 --set 0x817, against none) (its render)	games/tbs/src/scene/sol_sanctum_statue.c
+DRAW_RIGHT_BEAM	what the player sees	with both beam flags a second blue beam runs from the right winged statue to the same floor (render probe --only scene --scene SolSanctumStatue --entrance 1 --map, with --set 0x816 and with --set 0x816 --set 0x817, against none) (its render)	games/tbs/src/scene/sol_sanctum_statue.c
+DRAW_CROSSED_BEAMS	what the player sees	with both beam flags the two beams meet over the floor before the sun-disc statue (render probe --only scene --scene SolSanctumStatue --entrance 1 --map, with --set 0x816 and with --set 0x816 --set 0x817, against none) (its render)	games/tbs/src/scene/sol_sanctum_statue.c
+DRAW_CENTER_HOLE	what the player sees	with both beam flags an oval hole shows in the floor before the sun-disc statue (render probe --only scene --scene SolSanctumStatue --entrance 1 --map, with --set 0x816 and with --set 0x816 --set 0x817, against none) (its render)	games/tbs/src/scene/sol_sanctum_statue.c
+SOL_SANCTUM_STATUE_DEBUG_FROM_SOL_SANCTUM_LUNA_SOL_ROOMS	its code	entrance 99 of gSolSanctumStatue_Entrances, at (576, 136) as entrances 3 to 6, which SolSanctumLunaSolRooms' exits reach; no exit table names 99 for SolSanctumStatue (grep of games/tbs/src), and scene_exits.h says the debug scene selector exits to any entrance from 0 to 99	games/tbs/src/scene/sol_sanctum_statue.c
+BACK_CLOUD_ROW_PALETTE	its code	the first of SolSanctumStatue_InitializeScrollingSprites' three rows takes OBJ palette 10, one of the basic sprite palettes 0 to 13 Palette_LoadBasicSpriteColors loads (field_sprite_animation.c); SolSanctumStatue_UpdateScrollingSprites moves that row slowest (ScrollOffset >> 10)	games/tbs/src/scene/sol_sanctum_statue.c
+MIDDLE_CLOUD_ROW_PALETTE	its code	the second row takes OBJ palette 13 and moves at ScrollOffset >> 9	games/tbs/src/scene/sol_sanctum_statue.c
+FRONT_CLOUD_ROW_PALETTE	its code	the third row has no palette bits (palette 0) and moves fastest (ScrollOffset >> 8), drawn SOL_SANCTUM_STATUE_FRONT_CLOUD_ROW_Y_OFFSET lower	games/tbs/src/scene/sol_sanctum_statue.c
+PARTICLE_ANIMATION_SHRINK	its picture	particle.tsv's animation 1 runs pictures 0 to 7 and holds; particle.png's pictures run from a large yellow glow (0) down to a dot (7)	games/tbs/src/scene/stucco_rooms_b.c
+PARTICLE_ANIMATION_GROW_AND_FLICKER	its picture	particle.tsv's animation 6 runs pictures 7 down to 0, then plays animation 7, pictures 0 and 1 in a loop; particle.png's pictures run from a large yellow glow (0) down to a dot (7)	games/tbs/src/scene/stucco_rooms_b.c
+TOLBI_DEBUG_BY_SPROUT	what the player sees	entered by entrance 30 Isaac stands beside the green sprout east of the town's houses, facing north toward the cliff (render probe --only scene --scene Tolbi --entrance 30); no exit table in games/tbs/src leads to Tolbi's 30 (its render)	games/tbs/src/scene/tolbi.c
+ACTOR_TOLBI_SECOND_OVERSLEEPER	its code	the placement after ACTOR_TOLBI_OVERSLEEPER's, the same SPRITE_PERSON_WITH_SWORD, standing; no trigger row names it, and the first's line says "Rats! We overslept and now the..." (MsgTolbiRatsWeOversleptAndNowThe)	games/tbs/src/scene/tolbi.c
+OAR_STROKE_STILL	its code	TolbiShipDeck_RowOars sets stroke 1's phase (sStrokePhase[0]) back to 0 every frame, so its oars do not turn	games/tbs/src/scene/tolbi_ship_deck.c
+OAR_STROKE_SLOW	its code	TolbiShipDeck_RowOars adds TRIG_TURN / 512 a frame to stroke 2's phase, on top of TolbiShipDeck_AdvanceStroke's step	games/tbs/src/scene/tolbi_ship_deck.c
+OAR_STROKE_STEADY	its code	TolbiShipDeck_RowOars adds TRIG_TURN / 256 a frame to stroke 3's phase; TolbiShipDeck_ChooseOarStrokes gives it to every seat no rower holds	games/tbs/src/scene/tolbi_ship_deck.c
+OAR_STROKE_FAST	its code	TolbiShipDeck_RowOars adds TRIG_TURN / 128 a frame to stroke 4's phase, the most	games/tbs/src/scene/tolbi_ship_deck.c
+OAR_ANIMATION_IN_AIR	its picture	oar.tsv's animation 1 holds oar.png's picture 0, the dry wooden blade	games/tbs/src/scene/tolbi_ship_deck.c
+OAR_ANIMATION_IN_WATER	its picture	oar.tsv's animation 2 loops pictures 2 and 3, the blade grey under water with white spray	games/tbs/src/scene/tolbi_ship_deck.c
+OAR_ANIMATION_DIPPING	its picture	oar.tsv's animation 3 holds picture 1, the blade half wet with a splash	games/tbs/src/scene/tolbi_ship_deck.c
+DIVE_STEP_HOVERING	its code	the step of TOLBI_SHIP_DECK_HOVER_AND_DIVE's switch on sceneCounter that the name says: 0 drifts and bobs, 1 and 5 set the move target, 3 and 7 wait for the target to be reached, the warrior jumping at 3's end	games/tbs/src/scene/tolbi_ship_deck.c
+DIVE_STEP_DIVE	its code	the step of TOLBI_SHIP_DECK_HOVER_AND_DIVE's switch on sceneCounter that the name says: 0 drifts and bobs, 1 and 5 set the move target, 3 and 7 wait for the target to be reached, the warrior jumping at 3's end	games/tbs/src/scene/tolbi_ship_deck.c
+DIVE_STEP_DIVE_STARTED	its code	the step of TOLBI_SHIP_DECK_HOVER_AND_DIVE's switch on sceneCounter that the name says: 0 drifts and bobs, 1 and 5 set the move target, 3 and 7 wait for the target to be reached, the warrior jumping at 3's end	games/tbs/src/scene/tolbi_ship_deck.c
+DIVE_STEP_DIVING	its code	the step of TOLBI_SHIP_DECK_HOVER_AND_DIVE's switch on sceneCounter that the name says: 0 drifts and bobs, 1 and 5 set the move target, 3 and 7 wait for the target to be reached, the warrior jumping at 3's end	games/tbs/src/scene/tolbi_ship_deck.c
+DIVE_STEP_WARRIOR_JUMPED	its code	the step of TOLBI_SHIP_DECK_HOVER_AND_DIVE's switch on sceneCounter that the name says: 0 drifts and bobs, 1 and 5 set the move target, 3 and 7 wait for the target to be reached, the warrior jumping at 3's end	games/tbs/src/scene/tolbi_ship_deck.c
+DIVE_STEP_RETURN	its code	the step of TOLBI_SHIP_DECK_HOVER_AND_DIVE's switch on sceneCounter that the name says: 0 drifts and bobs, 1 and 5 set the move target, 3 and 7 wait for the target to be reached, the warrior jumping at 3's end	games/tbs/src/scene/tolbi_ship_deck.c
+DIVE_STEP_RETURN_STARTED	its code	the step of TOLBI_SHIP_DECK_HOVER_AND_DIVE's switch on sceneCounter that the name says: 0 drifts and bobs, 1 and 5 set the move target, 3 and 7 wait for the target to be reached, the warrior jumping at 3's end	games/tbs/src/scene/tolbi_ship_deck.c
+DIVE_STEP_RETURNING	its code	the step of TOLBI_SHIP_DECK_HOVER_AND_DIVE's switch on sceneCounter that the name says: 0 drifts and bobs, 1 and 5 set the move target, 3 and 7 wait for the target to be reached, the warrior jumping at 3's end	games/tbs/src/scene/tolbi_ship_deck.c
+DIVE_STEP_BACK	its code	the step of TOLBI_SHIP_DECK_HOVER_AND_DIVE's switch on sceneCounter that the name says: 0 drifts and bobs, 1 and 5 set the move target, 3 and 7 wait for the target to be reached, the warrior jumping at 3's end	games/tbs/src/scene/tolbi_ship_deck.c
+LEAP_STEP_WAITING	its code	the step of TOLBI_SHIP_DECK_LEAP_AT's switch on timer that the name says: 0 waits for a 1 in 40 chance, 2 and 6 jump (velocityY 4) to a move target, 4 and 8 wait for it to be reached, the warrior jumping at 4's end	games/tbs/src/scene/tolbi_ship_deck.c
+LEAP_STEP_READY	its code	the step of TOLBI_SHIP_DECK_LEAP_AT's switch on timer that the name says: 0 waits for a 1 in 40 chance, 2 and 6 jump (velocityY 4) to a move target, 4 and 8 wait for it to be reached, the warrior jumping at 4's end	games/tbs/src/scene/tolbi_ship_deck.c
+LEAP_STEP_LEAP	its code	the step of TOLBI_SHIP_DECK_LEAP_AT's switch on timer that the name says: 0 waits for a 1 in 40 chance, 2 and 6 jump (velocityY 4) to a move target, 4 and 8 wait for it to be reached, the warrior jumping at 4's end	games/tbs/src/scene/tolbi_ship_deck.c
+LEAP_STEP_LEAP_STARTED	its code	the step of TOLBI_SHIP_DECK_LEAP_AT's switch on timer that the name says: 0 waits for a 1 in 40 chance, 2 and 6 jump (velocityY 4) to a move target, 4 and 8 wait for it to be reached, the warrior jumping at 4's end	games/tbs/src/scene/tolbi_ship_deck.c
+LEAP_STEP_LEAPING	its code	the step of TOLBI_SHIP_DECK_LEAP_AT's switch on timer that the name says: 0 waits for a 1 in 40 chance, 2 and 6 jump (velocityY 4) to a move target, 4 and 8 wait for it to be reached, the warrior jumping at 4's end	games/tbs/src/scene/tolbi_ship_deck.c
+LEAP_STEP_WARRIOR_JUMPED	its code	the step of TOLBI_SHIP_DECK_LEAP_AT's switch on timer that the name says: 0 waits for a 1 in 40 chance, 2 and 6 jump (velocityY 4) to a move target, 4 and 8 wait for it to be reached, the warrior jumping at 4's end	games/tbs/src/scene/tolbi_ship_deck.c
+LEAP_STEP_HOP_AWAY	its code	the step of TOLBI_SHIP_DECK_LEAP_AT's switch on timer that the name says: 0 waits for a 1 in 40 chance, 2 and 6 jump (velocityY 4) to a move target, 4 and 8 wait for it to be reached, the warrior jumping at 4's end	games/tbs/src/scene/tolbi_ship_deck.c
+LEAP_STEP_HOP_STARTED	its code	the step of TOLBI_SHIP_DECK_LEAP_AT's switch on timer that the name says: 0 waits for a 1 in 40 chance, 2 and 6 jump (velocityY 4) to a move target, 4 and 8 wait for it to be reached, the warrior jumping at 4's end	games/tbs/src/scene/tolbi_ship_deck.c
+LEAP_STEP_HOPPING	its code	the step of TOLBI_SHIP_DECK_LEAP_AT's switch on timer that the name says: 0 waits for a 1 in 40 chance, 2 and 6 jump (velocityY 4) to a move target, 4 and 8 wait for it to be reached, the warrior jumping at 4's end	games/tbs/src/scene/tolbi_ship_deck.c
+LEAP_STEP_LANDED	its code	the step of TOLBI_SHIP_DECK_LEAP_AT's switch on timer that the name says: 0 waits for a 1 in 40 chance, 2 and 6 jump (velocityY 4) to a move target, 4 and 8 wait for it to be reached, the warrior jumping at 4's end	games/tbs/src/scene/tolbi_ship_deck.c
+VALE_PROLOGUE_DEBUG_BY_STONE_BUILDING	what the player sees	Isaac stands in the rain before the doorway of a large stone building, stone steps below him (render probe --only scene --scene ValePrologue --entrance 1); no exit table in games/tbs/src leads to ValePrologue's 1 (its render)	games/tbs/src/scene/vale_prologue.c
+VALE_PROLOGUE_DEBUG_BY_HILLSIDE_STEPS	what the player sees	Isaac stands at the foot of stone steps cut into a grassy hillside, trees round him (render probe --only scene --scene ValePrologue --entrance 2); no exit leads to 2 (its render)	games/tbs/src/scene/vale_prologue.c
+VALE_PROLOGUE_DEBUG_BY_WEST_COTTAGE	what the player sees	Isaac stands in the rain before a thatched cottage's door (render probe --only scene --scene ValePrologue --entrance 11), at (102, 1222) beside VALE_PROLOGUE_FROM_COTTAGE_ROOMS_B_WEST's (101, 1216); no exit leads to 11 (its render)	games/tbs/src/scene/vale_prologue.c
+CELL_OF	its code	(position) / toFIXED(16), a 16.16 coordinate's 16-pixel map cell, used for the falling drop's and its subject's row and column; FIELD_CELL's shift in its place changes the bytes	games/tbs/src/scene/vault_cave.c
+VenusLighthouse_SetFlagBits	its code	ORs bits into a byte of flags; its one call sets the leader's ACTOR_FACES_MOTION	games/tbs/src/scene/venus_lighthouse.c
+VenusLighthouse_CopyPosition	its code	copies x, y and z.fixed from one actor to another; VenusLighthouse_CarryFloatingPillar swaps two floating pillars' places with it	games/tbs/src/scene/venus_lighthouse.c
+VenusLighthouse_SettleFloatingPillar	its code	clears a floating pillar's target height, ground height, rise speed, motion flags and timer, stopping it where it is	games/tbs/src/scene/venus_lighthouse.c
+NO_THIRD_FLOOR_SOCKET	its code	VenusLighthouse_MoveSwitchPillar's socketIndex when the pillar is in none of gVenusThirdFloorSockets' four rows	games/tbs/src/scene/venus_lighthouse.c
+NO_FOURTH_FLOOR_SOCKET	its code	VenusLighthouse_MoveSocketPillar's socketIndex when the pillar is in none of gVenusFourthFloorSockets' eight rows, and the loop's bound over them	games/tbs/src/scene/venus_lighthouse.c
+VenusLighthouseAerie_HasArrived	its code	true when an actor's targetX, targetY and targetZ are all ACTOR_NO_TARGET, as a move target clears them on arrival	games/tbs/src/scene/venus_lighthouse_aerie.c
+TEXT_EM_DASH_LEAD	its picture	glyph 0x8f of games/tbs/src/graphics/font/text.png is a 9-pixel line at the hyphen's height, width 9 in text.tsv, which MESSAGE_EM_DASH writes before '-' ({em_dash} in en.po)	games/tbs/src/window/window_internal.h
+StatusScreen_ShowPsynergyRow	its uses	StatusScreen_RunPsynergyPage calls it for the row under the cursor: describes the Psynergy under the cursor and highlights its row	games/tbs/include/menu/menu.h
+StatusScreen_DrawPsynergyPage	its uses	StatusScreen_RunPsynergyPage calls it on a page change: draws one page of the Status menu's Psynergy list	games/tbs/include/menu/menu.h
+StatusScreen_ShowEquipmentRow	its uses	StatusScreen_RunEquipmentPage calls it for the row under the cursor: names the item under the cursor and highlights its row and worn slot	games/tbs/include/menu/menu.h
+StatusScreen_DrawEquipmentPage	its uses	StatusScreen_RunEquipmentPage calls it on a page change: draws one page of the Status menu's equipment list	games/tbs/include/menu/menu.h
+StatusScreen_CreateStatusIcons	its code	creates the eight sprites whose first five StatusScreen_ShowStatusIcons shows beside the status labels	games/tbs/include/menu/menu.h
+StatusScreen_LoadStatusIcons	its code	loads each listed status's icon (down, poison, venom, curse, haunt) into its sprite's tiles	games/tbs/include/menu/menu.h
+ItemMenu_PlaceEquippedIcons	its code	puts the icon of each worn weapon, helm, shield and armor beside its slot in ItemMenu_DrawEquipment's window	games/tbs/include/menu/menu.h
+StatusScreen_PsynergyPageReturnTrue	its code	returns 1; nothing refers to it; it follows StatusScreen_RunPsynergyPage	games/tbs/include/menu/menu.h
+Menu_GridCursorReturnTrue	its code	returns 1; nothing refers to it; it follows Menu_MoveGridCursor	games/tbs/include/menu/menu.h
+Item_UseNoOp	its code	does nothing; nothing refers to it; it comes before Item_Use	games/tbs/include/menu/menu.h
+Item_UseReturnTrue	its code	returns 1; nothing refers to it; it follows Item_Use	games/tbs/include/menu/menu.h
+Ability_ReturnFalse	its code	returns 0; nothing refers to it; it follows Ability_PlayUseSound	games/tbs/include/menu/menu.h
+MenuCursor_NoOp	its code	does nothing; nothing refers to it; it follows MenuCursor_Slide	games/tbs/include/menu/menu.h
+Icon_CreateHandCursorUnusedArgument	its code	Icon_CreateHandCursor's body with a second parameter it never reads; nothing refers to it	games/tbs/include/menu/menu.h
+DJINN_TUTORIAL_GIVE_PICK	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_GIVE_MOVE	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_GIVE_DROP	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_GIVE_PREVIEW	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_SET_SPARE	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_SET_PICK	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_SET_CHOOSE	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_SET_PREVIEW	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_SET_DONE	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_POWERS_TALK	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_POWERS_WAIT	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_POWERS_WAIT_MORE	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_POWERS_PICK	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_POWERS_PICK_SPARE	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_POWERS_MOVE	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_POWERS_CHOOSE	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_POWERS_PREVIEW	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_POWERS_DONE	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINN_TUTORIAL_POWERS_END	its twin	The Lost Age's enum DjinnTutorialStep (games/tla/src/menu/menu_internal.h) names the same step; The Broken Seal's DjinnMenu_SelectDjinn and DjinnMenu_RunPreview press the same key at it and go to the same next step	games/tbs/src/menu/menu_djinn.c
+DJINNI_ANIMATION_BOUNCE	its picture	venus_djinni.tsv animation 3 plays pictures 18, 21 and 24 of venus_djinni.png: crouched, standing, stretched up; mercury_djinni.png draws the same three	games/tbs/src/field/event_commands_venus.c
+WORLD_MAP_ENCOUNTER_REGION_VALE_VAULT	its area name	Vale (WORLD_MAP_FROM_VALE_PLAZA at 5680, 1226): the entrance's cell in blocks.tsv is encounter region 1	games/tbs/src/field/world_map_encounter_rules.c
+WORLD_MAP_ENCOUNTER_REGION_VALE_VAULT	its area name	Vault (WORLD_MAP_FROM_VAULT_SOUTH at 5848, 1608): the entrance's cell in blocks.tsv is encounter region 1	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_VALE_VAULT	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_VALE_VAULT's open ground	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_VALE_VAULT_FOREST	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_VALE_VAULT's forest	games/tbs/src/field/world_map_encounter_rules.c
+WORLD_MAP_ENCOUNTER_REGION_BILIBIN_KOLIMA	its area name	Bilibin (WORLD_MAP_FROM_BILIBIN at 6584, 1224): the entrance's cell in blocks.tsv is encounter region 2	games/tbs/src/field/world_map_encounter_rules.c
+WORLD_MAP_ENCOUNTER_REGION_BILIBIN_KOLIMA	its area name	Kolima (WORLD_MAP_FROM_KOLIMA_WEST at 7328, 1240): the entrance's cell in blocks.tsv is encounter region 2	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_BILIBIN_KOLIMA	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_BILIBIN_KOLIMA's open ground	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_BILIBIN_KOLIMA_FOREST	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_BILIBIN_KOLIMA's forest	games/tbs/src/field/world_map_encounter_rules.c
+WORLD_MAP_ENCOUNTER_REGION_XIAN_ALTIN	its area name	Xian (WORLD_MAP_FROM_XIAN at 7544, 2008): the entrance's cell in blocks.tsv is encounter region 3	games/tbs/src/field/world_map_encounter_rules.c
+WORLD_MAP_ENCOUNTER_REGION_XIAN_ALTIN	its area name	Altin (WORLD_MAP_FROM_ALTIN at 7008, 1624): the entrance's cell in blocks.tsv is encounter region 3	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_XIAN_ALTIN	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_XIAN_ALTIN's open ground	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_XIAN_ALTIN_FOREST	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_XIAN_ALTIN's forest	games/tbs/src/field/world_map_encounter_rules.c
+WORLD_MAP_ENCOUNTER_REGION_KALAY	its area name	Kalay (WORLD_MAP_FROM_KALAY_WEST at 5560, 2136): the entrance's cell in blocks.tsv is encounter region 4	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_KALAY	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_KALAY's open ground	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_KALAY_FOREST	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_KALAY's forest	games/tbs/src/field/world_map_encounter_rules.c
+WORLD_MAP_ENCOUNTER_REGION_TOLBI	its area name	Tolbi (WORLD_MAP_FROM_TOLBI at 4904, 2312): the entrance's cell in blocks.tsv is encounter region 5	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_TOLBI	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_TOLBI's open ground	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_TOLBI_FOREST	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_TOLBI's forest	games/tbs/src/field/world_map_encounter_rules.c
+WORLD_MAP_ENCOUNTER_REGION_SUHALLA	its area name	Suhalla (WORLD_MAP_FROM_SUHALLA at 5388, 2840): the entrance's cell in blocks.tsv is encounter region 6	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_SUHALLA	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_SUHALLA's open ground	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_SUHALLA_FOREST	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_SUHALLA's forest	games/tbs/src/field/world_map_encounter_rules.c
+WORLD_MAP_ENCOUNTER_REGION_FUCHIN	its area name	Fuchin Temple (WORLD_MAP_FROM_FUCHIN_TEMPLE_GROUNDS at 7880, 1592): the entrance's cell in blocks.tsv is encounter region 31	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_FUCHIN	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_FUCHIN's open ground	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_FUCHIN_FOREST	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_FUCHIN's forest	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_SNOWFIELD	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_SNOWFIELD under BATTLE_ENVIRONMENT_SNOWFIELD	games/tbs/src/field/world_map_encounter_rules.c
+ENCOUNTER_ZONE_WORLD_MAP_SNOW_FOREST	its uses	gWorldMap_EncounterRules gives it to WORLD_MAP_ENCOUNTER_REGION_SNOWFIELD under BATTLE_ENVIRONMENT_SNOW_FOREST	games/tbs/src/field/world_map_encounter_rules.c
+BATTLE_SHEET_BYTES	its uses	the size BattleEffect_RunByIdRange and BattleEffect_RunElementPillar allocate HEAP_SLOT_BATTLE_SHEET at, 1550	games/tbs/src/field/lucky_dice.c
+BATTLE_SHEET_BYTES	its uses	the size BattleEffect_RunByIdRange and BattleEffect_RunElementPillar allocate HEAP_SLOT_BATTLE_SHEET at, 1550	games/tbs/src/field/lucky_wheels.c
+DICE_SPRITE_TILES	its picture	sprites.tsv's seven sheets total 31,744 pixels at 8 bits (rolling_die to lucky_numbers), 496 tiles of 64 bytes	games/tbs/src/field/lucky_dice.c
+DEPTH_SLOT_BACK_SHADOWS	its code	Render_PlaceProjectedSprite queues every shadow in slot 0 and keeps sprites at 1 or above; a sunk sprite takes slot 0 for its shadow in Render_ApplyProjectedPlacement	games/tbs/src/field/field_sprite_draw.c
+DEPTH_SLOT_BACK	its code	slot 1: a sunk sprite in Render_ApplyProjectedPlacement and the lowest a projected sprite takes in Render_PlaceProjectedSprite	games/tbs/src/field/field_sprite_draw.c
+LIGHTHOUSE_MARKER	its uses	its rows are Mercury Lighthouse, Sol Sanctum, Venus Lighthouse and Babi Lighthouse, drawn with event_commands_map_screen.c's MAP_SCREEN_MARKER_LIGHTHOUSE tile	games/tbs/src/field/map_screen_markers.c
+MAP_SCREEN_MARKER	its uses	a gMapScreen_AreaMarkers row, read by MapScreen_Show (MAP_SCREEN_AREA_MARKER_TILE)	games/tbs/src/field/map_screen_markers.c
+PARTICLE_ANIMATION_PULSE	its picture	graphics/sprite/particle.tsv: the animation that alternates pictures 0 and 1, the sheet's two largest glows, two frames each, in a loop	games/tbs/src/shop/shop_sanctum.c
+SANCTUM_BURST_COLOR_MODES	its code	Random16_Below of it picks SPRITE_COLOR_NORMAL to SPRITE_COLOR_GREY for the burst's sparkles and icon	games/tbs/src/shop/shop_sanctum.c
+MAP_ENTRY_PAIR	its code	BattleTransition_BuildTilemap fills BG1's map a word, two entries, at a time, adding MAP_ENTRY_PAIR(2, 2) to each word	games/tbs/include/system/io_reg.h
