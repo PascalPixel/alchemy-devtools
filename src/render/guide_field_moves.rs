@@ -20,10 +20,10 @@ const EAST: u32 = 0;
 const WEST: u32 = 0x8000;
 const NORTH: u32 = 0xc000;
 
-/// struct FieldWork.command: a field Psynergy request, as the Psynergy menu
+/// struct FieldState.command: a field Psynergy request, as the Psynergy menu
 /// raises it.
 const FIELD_COMMAND: u32 = 0x17e;
-/// struct MainRoutineWork.hazardSteps.
+/// struct MainRoutineState.hazardSteps.
 const HAZARD_STEPS: u32 = 0x232;
 /// struct Unit.hp.
 const UNIT_HP: u32 = 0x38;
@@ -64,8 +64,8 @@ impl<'a> Guide<'a> {
     /// request, and keeps `n` frames.
     fn cast(field: &mut Field, ability: &str, n: u32, frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
         let id = source::ability_id(ability)?;
-        let work = field.field_work();
-        field.write16(work + FIELD_COMMAND, id);
+        let state = field.field_state();
+        field.write16(state + FIELD_COMMAND, id);
         Self::hold(field, 0, n, frames)
     }
 
@@ -157,7 +157,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Walking on the Lamakan Desert's sand until the heat hurts: the count
-    /// (gMainRoutineWork.hazardSteps) set three quarters full and the
+    /// (gMainRoutineState.hazardSteps) set three quarters full and the
     /// quarters' complaints marked heard (FLAG_HEAT_QUARTER to
     /// FLAG_HEAT_THREE_QUARTERS), so the thermometer fills and at 600 the
     /// screen flashes, the leader flinches and the party loses a quarter of
@@ -170,7 +170,7 @@ impl<'a> Guide<'a> {
             let f = self.flag(flag)?;
             field.set_flag(f, true);
         }
-        let gs = field.main_routine_work();
+        let gs = field.main_routine_state();
         field.write16(gs + HAZARD_STEPS, 450);
         let hp = |field: &mut Field| -> Result<u16, String> {
             let unit = field.unit(0)?;

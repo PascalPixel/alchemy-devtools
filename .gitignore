@@ -1,8 +1,6 @@
 /target/
 .DS_Store
 
-# The two walkthroughs H3 allows, downloaded by hand (their URLs are in AGENTS.md).
+# What H3 lets an agent read beside the game, downloaded by hand and never committed:
+# the two walkthroughs, the SGL manual (sgl/) and GBATEK (gbatek/).
 /walkthroughs/
-
-# The pages of Sega's SGL reference that S3 names Alchemy's maths after, downloaded by hand (their URLs are in AGENTS.md).
-/sgl/

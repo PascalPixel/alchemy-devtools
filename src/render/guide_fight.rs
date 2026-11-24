@@ -29,7 +29,7 @@ const KEY_DOWN: u32 = 0x80;
 /// and two Stone Soldiers (fixed).
 const GRYPHONS: u32 = 294;
 const FOUR_ENEMIES: u32 = 296;
-/// gMainRoutineWork.battleType: BATTLE_TYPE_NORMAL rolls a first strike; 1, which
+/// gMainRoutineState.battleType: BATTLE_TYPE_NORMAL rolls a first strike; 1, which
 /// no battle start names, opens the battle normally.
 const BATTLE_TYPE_NORMAL: u8 = 0;
 const BATTLE_START_SET: u8 = 1;
@@ -369,7 +369,7 @@ impl<'a> Guide<'a> {
     pub fn fight_flee(&mut self) -> Result<(), String> {
         let random = self.sym("Random16")?;
         let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
-        let work = self.sym("gBattleWork")?;
+        let state = self.sym("gBattleState")?;
         let mut drive = self.party_drive(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], GRYPHONS, BATTLE_START_SET, vec![random, menu])?;
         drive.preset = PRESET_LEVEL_20;
         let mut frames = Vec::new();
@@ -394,7 +394,7 @@ impl<'a> Guide<'a> {
                 None => {}
             }
             frames.push(gba.picture());
-            if tries >= 2 && gone.is_none() && gba.read32(work) == 0 {
+            if tries >= 2 && gone.is_none() && gba.read32(state) == 0 {
                 gone = Some(f);
             }
             if gone.is_some_and(|g| f > g) || f > 4000 {
@@ -1179,9 +1179,9 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         // The restart point the story leaves on the way to Goma Cave: Vault
         // sets it to its Sanctum as the party enters (gScene_RestartRules).
-        let work = self.sym("gMainRoutineWork")?;
-        field.write16(work + STATE_RESTART_SCENE, super::source::map_id("Sanctum")?);
-        field.write16(work + STATE_RESTART_ENTRANCE, VAULT_SANCTUM_ENTRANCE);
+        let state = self.sym("gMainRoutineState")?;
+        field.write16(state + STATE_RESTART_SCENE, super::source::map_id("Sanctum")?);
+        field.write16(state + STATE_RESTART_ENTRANCE, VAULT_SANCTUM_ENTRANCE);
         for owner in [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA] {
             let unit = field.unit(owner)?;
             let max = u32::from(field.read16(unit + UNIT_MAX_HP)).max(1);
@@ -1251,7 +1251,7 @@ const ENEMIES_SET: usize = 60;
 const FIELD_KEPT: usize = 3000;
 /// Frames the defeat message is left on screen before A.
 const DEFEAT_SHOWN: usize = 150;
-/// struct MainRoutineWork: the restart point (main_routine_work.h).
+/// struct MainRoutineState: the restart point (main_routine_state.h).
 const STATE_RESTART_SCENE: u32 = 0x1c4;
 const STATE_RESTART_ENTRANCE: u32 = 0x1c6;
 /// The Sanctum's entrance Vault's restart rules name.

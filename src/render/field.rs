@@ -1,7 +1,7 @@
 //! A field scene, run from a built edition: where Game_ResetForNewGame has
-//! set a new game's defaults (MainRoutineWork_InitializeDefaults) and makes its next call
+//! set a new game's defaults (MainRoutineState_InitializeDefaults) and makes its next call
 //! (WindowColor_Apply), the run writes the scene, entrance and story flags
-//! into gMainRoutineWork, so the main routine runs that scene instead of the title.
+//! into gMainRoutineState, so the main routine runs that scene instead of the title.
 //! The location-name notice (AreaNameWindow_Show) returns at once unless
 //! show_notice is set. The
 //! scene is the player's once FieldSequence_Run's loop takes its first
@@ -9,7 +9,7 @@
 //!
 //! A map is stitched from one moment of the game: for each 240 by 160 view
 //! of the box the machine is loaded again, the map's followed point
-//! (MapGridScrollWork.origin) is pinned to gMainRoutineWork.x, y and z holding the
+//! (MapGridScrollState.origin) is pinned to gMainRoutineState.x, y and z holding the
 //! view's focus at each entry of its two readers, and the next scheduler
 //! call of MapGrid_UpdateLayerScroll runs MapGrid_CenterOnFollowedPoint instead,
 //! which redraws each layer around the point as the event camera does. The
@@ -22,7 +22,7 @@
 //! searches, on the ground there (MapGrid_GetTerrainHeight, run in the machine
 //! between two steps of the field sequence), and always on ground he could walk
 //! to from where he entered, in the room the camera shows (Field::reach).
-//! Then A (talk, search), a field Psynergy request (FieldWork.command) or
+//! Then A (talk, search), a field Psynergy request (FieldState.command) or
 //! walking onto the cell (touch) starts it, and the field sequence's own
 //! dispatch (Scene_TalkToActor, Scene_RunStepTriggerOrExit, Field_ExamineCell,
 //! Field_UsePsynergy) shows which event began; the event function the CPU
@@ -74,12 +74,12 @@ const RAISED_DIRECT: u32 = 0x7fff;
 /// (param) of struct SpriteAnimation, whose first halfword is its sprite id.
 const ANIM_ENTRIES: u32 = 0x28;
 const ANIM_ENTRY_PARAM: u32 = 0x05;
-/// FieldWork.mode's world map mode (an enum ActorSystemMode).
+/// FieldState.mode's world map mode (an enum ActorSystemMode).
 const ACTOR_SYSTEM_WORLD_MAP: u16 = 3;
-/// The world map (struct WorldMapView, which gMapGridWork points to there):
+/// The world map (struct WorldMapView, which gMapGridState points to there):
 /// 16 by 16 tiles of 16 by 16 cells, each cell 32 pixels square, so 8192
-/// pixels each way. tileIds names the tile at each place, and Ram_CellPictures
-/// (gCellPictures) holds the 2 by 2 tiles around the party, 32 cells to a row,
+/// pixels each way. tileIds names the tile at each place, and Ram_CellTiles
+/// (gCellTiles) holds the 2 by 2 tiles around the party, 32 cells to a row,
 /// the collision code in byte 2 as on a layered map (Field_UpdateWalking's
 /// step test reads it there).
 const PERSPECTIVE_TILE_IDS: u32 = 0x138;
@@ -122,7 +122,7 @@ const FLAG_KEEP_PARTY_POSITION: u16 = 0x109;
 /// (ACTOR_SNAPSHOT_CAPACITY, ACTOR_SNAPSHOT_EMPTY).
 const ACTOR_SNAPSHOT_CAPACITY: u32 = 32;
 const ACTOR_SNAPSHOT_EMPTY: u8 = 255;
-/// FieldWork.exit's value for a warp: the scene the main routine's work
+/// FieldState.exit's value for a warp: the scene the main routine's state
 /// names is entered again (EXIT_KEEP_DESTINATION).
 const EXIT_KEEP_DESTINATION: u16 = 999;
 /// Frames a staged walk plays on past the function --until names.
@@ -310,7 +310,7 @@ pub struct Symbols {
     lookup: u32,
     terrain_height: u32,
     write_cell_tile: u32,
-    map_cell_pictures: u32,
+    map_cell_tiles: u32,
     map_collision: u32,
     map_cell_buffer: u32,
     preset: u32,
@@ -338,8 +338,8 @@ pub struct Symbols {
     show_row: [u32; 4],
     game_state: u32,
     flag_bytes: u32,
-    map_work: u32,
-    field_work: u32,
+    map_state: u32,
+    field_state: u32,
     overlay: u32,
     /// gRandomSeed, gFrameCount, gFrameRenderPending and gBgScroll, which a
     /// whole picture (whole.rs) reads to tell the moment a view shows.
@@ -374,8 +374,8 @@ impl Symbols {
     /// Lost Age's source still names a thing otherwise than The Broken
     /// Seal's, The Broken Seal's name is looked for first and then The Lost
     /// Age's (the second of each pair), the name its source should change; a
-    /// work pointer The Lost Age reaches only through its heap slots
-    /// (gFieldWork, gMapGridWork) is its slot in gHeapSlots.
+    /// state pointer The Lost Age reaches only through its heap slots
+    /// (gFieldState, gMapGridState) is its slot in gHeapSlots.
     pub fn find_for(map: &Map, l: super::layout::Layout) -> Result<Symbols, String> {
         let find = |name: &str| map.symbol(name).map(|(_, a)| a & !1);
         let at = |name: &str| find(name).ok_or_else(|| format!("the map has no {name}"));
@@ -384,7 +384,7 @@ impl Symbols {
             find(name).or_else(|| find("gHeapSlots").map(|slots| slots + offset)).ok_or_else(|| format!("the map has no {name} (nor gHeapSlots)"))
         };
         Ok(Symbols {
-            init: at("MainRoutineWork_InitializeDefaults")?,
+            init: at("MainRoutineState_InitializeDefaults")?,
             glow: at("WindowColor_Apply")?,
             load_layered: at("MapGrid_LoadMap")?,
             arrive: at("Scene_Arrive")?,
@@ -408,7 +408,7 @@ impl Symbols {
             lookup: at("Message_Find")?,
             terrain_height: at("MapGrid_GetTerrainHeight")?,
             write_cell_tile: at("WorldMap_WriteLayerCellTile")?,
-            map_cell_pictures: either("gCellPictures", "gMapBlocks")?,
+            map_cell_tiles: at("gCellTiles")?,
             map_collision: either("gMapGridShapes", "gMapCollision")?,
             map_cell_buffer: either("gMapGridCellBuffer", "gMapCellBuffer")?,
             // The Broken Seal's story chapters load a debug preset, and The
@@ -427,10 +427,10 @@ impl Symbols {
             dpad_angle: find("Input_GetDpadAngle").unwrap_or(0),
             run_raised: either("Scene_RunRaisedTrigger", "Scene_RunRaisedEvent")?,
             show_row: [at("Event_Start")?, at("Event_SetMessageId")?, at("Event_ShowMessageAndWait")?, at("Event_End")?],
-            game_state: at("gMainRoutineWork")?,
+            game_state: at("gMainRoutineState")?,
             flag_bytes: at("gGameFlagBytes")?,
-            map_work: slot("gMapGridWork", l.heap_map)?,
-            field_work: slot("gFieldWork", l.heap_field)?,
+            map_state: slot("gMapGridState", l.heap_map)?,
+            field_state: slot("gFieldState", l.heap_field)?,
             overlay: at("gOverlayArea")?,
             random_seed: either("gRandomSeed", "gRandomState")?,
             frame_count: at("gFrameCount")?,
@@ -912,7 +912,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// Makes `party` the active party, in order: party flags 0 to 7 and
-    /// gMainRoutineWork.party.
+    /// gMainRoutineState.party.
     pub fn set_party(&mut self, party: &[u8]) {
         let bits = party.iter().fold(0u8, |b, &o| b | 1 << o);
         self.gba.write8(self.s.flag_bytes, bits);
@@ -943,8 +943,8 @@ impl<'rom> Field<'rom> {
 
     /// The map's view: the screen's top left on the map, in pixels.
     pub fn view(&self) -> (i32, i32) {
-        let work = self.map_work();
-        (self.gba.read32(work + self.s.l.map_view_x) as i32 >> 16, self.gba.read32(work + self.s.l.map_view_y) as i32 >> 16)
+        let state = self.map_state();
+        (self.gba.read32(state + self.s.l.map_view_x) as i32 >> 16, self.gba.read32(state + self.s.l.map_view_y) as i32 >> 16)
     }
 
     /// The leader as he is now.
@@ -996,14 +996,14 @@ impl<'rom> Field<'rom> {
         self.eval(self.s.unit_get, [u32::from(owner), 0, 0, 0])
     }
 
-    /// The address of gMainRoutineWork, struct MainRoutineWork.
-    pub fn main_routine_work(&self) -> u32 {
+    /// The address of gMainRoutineState, struct MainRoutineState.
+    pub fn main_routine_state(&self) -> u32 {
         self.s.game_state
     }
 
-    /// The scene's struct FieldWork (gFieldWork).
-    pub fn field_work(&self) -> u32 {
-        self.gba.read32(self.s.field_work)
+    /// The scene's struct FieldState (gFieldState).
+    pub fn field_state(&self) -> u32 {
+        self.gba.read32(self.s.field_state)
     }
 
     /// Gives the party `coins` (SaveBlock.coins).
@@ -1060,8 +1060,8 @@ impl<'rom> Field<'rom> {
         self.t.freeze = on;
     }
 
-    pub fn map_work(&self) -> u32 {
-        self.gba.read32(self.s.map_work)
+    pub fn map_state(&self) -> u32 {
+        self.gba.read32(self.s.map_state)
     }
 
     /// The scene the game state names now.
@@ -1139,7 +1139,7 @@ impl<'rom> Field<'rom> {
         false
     }
 
-    /// Lists the party (gMainRoutineWork.party) as the party flags have it
+    /// Lists the party (gMainRoutineState.party) as the party flags have it
     /// now, the chapter's members first (party::order); before the run's
     /// flags decide, the chapter's members are the party flags.
     fn list_party(&mut self) {
@@ -1244,9 +1244,9 @@ impl<'rom> Field<'rom> {
             self.t.load_return = lr(&self.gba);
         } else if self.t.load_return != 0 && pc == self.t.load_return {
             self.t.load_return = 0;
-            let work = self.gba.read32(s.map_work);
+            let state = self.gba.read32(s.map_state);
             for i in 0..4 {
-                self.t.header[i] = self.gba.read32(work + self.s.l.map_bounds + 4 * i as u32) as i32;
+                self.t.header[i] = self.gba.read32(state + self.s.l.map_bounds + 4 * i as u32) as i32;
             }
         }
         if self.t.phase == Phase::Loading && pc == s.apply_entrance && self.t.apply_return == 0 {
@@ -1361,7 +1361,7 @@ impl<'rom> Field<'rom> {
                 self.t.call_saved[i] = self.gba.register(i as u32);
             }
             self.t.call_saved[4] = self.gba.register(LR);
-            let origin = self.gba.read32(self.gba.read32(s.map_work));
+            let origin = self.gba.read32(self.gba.read32(s.map_state));
             if origin != 0 {
                 self.gba.write32(origin, self.t.call_origin[0] as u32);
                 self.gba.write32(origin + 8, self.t.call_origin[1] as u32);
@@ -1402,8 +1402,8 @@ impl<'rom> Field<'rom> {
             self.t.own_ran |= self.own.contains(&pc);
         }
         if self.t.pin_focus && (pc == s.update_layer || pc == s.center) {
-            let work = self.gba.read32(s.map_work);
-            self.gba.write32(work + self.s.l.map_origin, s.game_state + self.s.l.gs_x);
+            let state = self.gba.read32(s.map_state);
+            self.gba.write32(state + self.s.l.map_origin, s.game_state + self.s.l.gs_x);
             for i in 0..3 {
                 self.gba.write32(s.game_state + self.s.l.gs_x + 4 * i as u32, self.t.focus[i] as u32);
             }
@@ -1540,13 +1540,13 @@ impl<'rom> Field<'rom> {
 
     /// Plays one frame's step of a pad script (stage::script_frames): its
     /// keys held, or, for a cast (stage::CAST_FRAME), the Psynergy asked
-    /// for as the field's shortcut keys ask for it (FieldWork.psynergy,
+    /// for as the field's shortcut keys ask for it (FieldState.psynergy,
     /// which the field sequence casts where the leader stands and faces
     /// once it next looks), nothing held.
     pub fn play_key(&mut self, keys: u32) {
         if keys & super::stage::CAST_FRAME != 0 {
-            let work = self.gba.read32(self.s.field_work);
-            self.gba.write16(work + self.s.l.field_command, (keys & 0xffff) as u16);
+            let state = self.gba.read32(self.s.field_state);
+            self.gba.write16(state + self.s.l.field_command, (keys & 0xffff) as u16);
             self.cut();
             self.hold(0);
             self.t.cast_frame = self.t.frame;
@@ -1844,8 +1844,8 @@ impl<'rom> Field<'rom> {
 
     /// The live scroll bounds, 16.16 pixels.
     pub fn bounds(&self) -> [i32; 4] {
-        let work = self.map_work();
-        [0, 1, 2, 3].map(|i| self.gba.read32(work + self.s.l.map_bounds + 4 * i) as i32)
+        let state = self.map_state();
+        [0, 1, 2, 3].map(|i| self.gba.read32(state + self.s.l.map_bounds + 4 * i) as i32)
     }
 
     /// The map header's scroll bounds, 16.16 pixels; the whole world on the
@@ -1857,10 +1857,10 @@ impl<'rom> Field<'rom> {
         self.t.header
     }
 
-    /// Whether the field runs the world map (FieldWork.mode).
+    /// Whether the field runs the world map (FieldState.mode).
     pub fn world(&self) -> bool {
-        let work = self.gba.read32(self.s.field_work);
-        work != 0 && u16::from(self.gba.read8(work + self.s.l.field_mode)) == ACTOR_SYSTEM_WORLD_MAP
+        let state = self.gba.read32(self.s.field_state);
+        state != 0 && u16::from(self.gba.read8(state + self.s.l.field_mode)) == ACTOR_SYSTEM_WORLD_MAP
     }
 
     /// The side of a map cell in pixels: 16, or the world map's 32.
@@ -1885,18 +1885,18 @@ impl<'rom> Field<'rom> {
             return Ok(());
         }
         let saved = self.save();
-        let work = self.map_work();
+        let state = self.map_state();
         let mut cells = vec![0u32; (2 * WORLD_CELLS * WORLD_CELLS) as usize];
         for layer in 0..2 {
             for ty in 0..WORLD_TILES {
                 for tx in 0..WORLD_TILES {
-                    let id = u32::from(self.gba.read16(work + PERSPECTIVE_TILE_IDS + 2 * (ty * WORLD_TILES + tx) as u32));
+                    let id = u32::from(self.gba.read16(state + PERSPECTIVE_TILE_IDS + 2 * (ty * WORLD_TILES + tx) as u32));
                     let tile = id + layer as u32 * WORLD_LAYER_TILES;
                     // The quarter forgets its tile, so it is unpacked again.
                     let quarter = ((layer * 2 + (ty & 1)) * 2 + (tx & 1)) as u32;
-                    self.gba.write16(work + PERSPECTIVE_QUARTER_TILES + 2 * quarter, 0xffff);
+                    self.gba.write16(state + PERSPECTIVE_QUARTER_TILES + 2 * quarter, 0xffff);
                     self.eval(self.s.write_cell_tile, [layer as u32, tx as u32, ty as u32, tile])?;
-                    let base = self.s.map_cell_pictures + ((((layer * 2 + (ty & 1)) * 32 + (tx & 1)) << 6) as u32);
+                    let base = self.s.map_cell_tiles + ((((layer * 2 + (ty & 1)) * 32 + (tx & 1)) << 6) as u32);
                     for r in 0..WORLD_TILE_CELLS {
                         for c in 0..WORLD_TILE_CELLS {
                             let word = self.gba.read32(base + (r * 128 + c * 4) as u32);
@@ -1946,7 +1946,7 @@ impl<'rom> Field<'rom> {
     /// The Broken Seal, whose map has none.
     fn map_entrances(&self) -> Vec<Entrance> {
         let base = self.s.map_entrances;
-        if base == 0 || self.world() || self.gba.read32(self.s.map_work) == 0 {
+        if base == 0 || self.world() || self.gba.read32(self.s.map_state) == 0 {
             return Vec::new();
         }
         let list = base + u32::from(self.gba.read16(base));
@@ -1992,11 +1992,11 @@ impl<'rom> Field<'rom> {
     }
 
     fn actor_object(&self, id: u16) -> u32 {
-        let work = self.gba.read32(self.s.field_work);
-        if u32::from(id) >= self.s.l.field_actor_count || work == 0 {
+        let state = self.gba.read32(self.s.field_state);
+        if u32::from(id) >= self.s.l.field_actor_count || state == 0 {
             return 0;
         }
-        self.gba.read32(work + self.s.l.field_actors + 4 * u32::from(id))
+        self.gba.read32(state + self.s.l.field_actors + 4 * u32::from(id))
     }
 
     /// Stops drawing actor `id` (its object kind 0, which the camera still
@@ -2082,7 +2082,7 @@ impl<'rom> Field<'rom> {
         if !(0..GRID).contains(&cx) || !(0..GRID).contains(&cz) || layer > 2 {
             return -1;
         }
-        let cells = self.gba.read32(self.map_work() + self.s.l.map_layers + self.s.l.map_layer_cells + self.s.l.map_layer_size * u32::from(layer));
+        let cells = self.gba.read32(self.map_state() + self.s.l.map_layers + self.s.l.map_layer_cells + self.s.l.map_layer_size * u32::from(layer));
         i32::from(self.gba.read8(cells + (((cx + (cz << 7)) << 2) + 2) as u32))
     }
 
@@ -2111,7 +2111,7 @@ impl<'rom> Field<'rom> {
         if self.world() || layer > 2 {
             return (0, 0);
         }
-        let cells = |l: u32| self.gba.read32(self.map_work() + self.s.l.map_layers + self.s.l.map_layer_cells + self.s.l.map_layer_size * l);
+        let cells = |l: u32| self.gba.read32(self.map_state() + self.s.l.map_layers + self.s.l.map_layer_cells + self.s.l.map_layer_size * l);
         let words = (cells(u32::from(layer)).wrapping_sub(cells(0)) as i32) / 4;
         (words.rem_euclid(GRID), words.div_euclid(GRID))
     }
@@ -2140,17 +2140,17 @@ impl<'rom> Field<'rom> {
         let (cx, cz) = (cx.rem_euclid(WORLD_CELLS), cz.rem_euclid(WORLD_CELLS));
         match &self.world_cells {
             Some(cells) => cells[((layer * WORLD_CELLS + cz) * WORLD_CELLS + cx) as usize],
-            None => self.gba.read32(self.s.map_cell_pictures + ((layer << 12) + (((cx & 31) + ((cz & 31) << 5)) << 2)) as u32),
+            None => self.gba.read32(self.s.map_cell_tiles + ((layer << 12) + (((cx & 31) + ((cz & 31) << 5)) << 2)) as u32),
         }
     }
 
-    /// The whole word of cell (cx, cz) of map layer `layer`: its picture
-    /// (cell picture), its collision code and its ground; 0 off the grid.
+    /// The whole word of cell (cx, cz) of map layer `layer`: its cell
+    /// tiles, its collision code and its ground; 0 off the grid.
     pub fn cell_word(&self, layer: u8, cx: i32, cz: i32) -> i32 {
         if !(0..GRID).contains(&cx) || !(0..GRID).contains(&cz) || layer > 2 {
             return 0;
         }
-        let cells = self.gba.read32(self.map_work() + self.s.l.map_layers + self.s.l.map_layer_cells + self.s.l.map_layer_size * u32::from(layer));
+        let cells = self.gba.read32(self.map_state() + self.s.l.map_layers + self.s.l.map_layer_cells + self.s.l.map_layer_size * u32::from(layer));
         self.gba.read32(cells + ((cx + (cz << 7)) << 2) as u32) as i32
     }
 
@@ -2277,8 +2277,8 @@ impl<'rom> Field<'rom> {
     /// (the loft's own in Vault's houses). A result is as `result_key` gives
     /// it.
     pub fn triggers(&self) -> Vec<(u8, u16, u32)> {
-        let work = self.gba.read32(self.s.field_work);
-        let mut a = if work == 0 { 0 } else { self.gba.read32(work + self.s.l.field_events) };
+        let state = self.gba.read32(self.s.field_state);
+        let mut a = if state == 0 { 0 } else { self.gba.read32(state + self.s.l.field_events) };
         let mut out = Vec::new();
         for _ in 0..1024 {
             if a == 0 || self.gba.read32(a) == u32::MAX {
@@ -2293,8 +2293,8 @@ impl<'rom> Field<'rom> {
     /// The rows of the trigger table the field holds now, whole: each
     /// control word, target (its halfword), condition and result.
     pub fn trigger_rows(&self) -> Vec<super::triggers::Row> {
-        let work = self.gba.read32(self.s.field_work);
-        let mut a = if work == 0 { 0 } else { self.gba.read32(work + self.s.l.field_events) };
+        let state = self.gba.read32(self.s.field_state);
+        let mut a = if state == 0 { 0 } else { self.gba.read32(state + self.s.l.field_events) };
         let mut out = Vec::new();
         for _ in 0..1024 {
             if a == 0 || self.gba.read32(a) == u32::MAX {
@@ -2308,8 +2308,8 @@ impl<'rom> Field<'rom> {
 
     /// The scene's event rows for `kind` and `target`, in table order.
     fn event_rows(&self, kind: u8, target: u16) -> Vec<EventRow> {
-        let work = self.gba.read32(self.s.field_work);
-        let mut a = if work == 0 { 0 } else { self.gba.read32(work + self.s.l.field_events) };
+        let state = self.gba.read32(self.s.field_state);
+        let mut a = if state == 0 { 0 } else { self.gba.read32(state + self.s.l.field_events) };
         let mut out = Vec::new();
         for _ in 0..1024 {
             if a == 0 {
@@ -2489,9 +2489,9 @@ impl<'rom> Field<'rom> {
             Some(e) => [0, 1, 2, 3].map(|i| if e.camera[i] == -1 { header[i] } else { fx(i32::from(e.camera[i])) }),
             None => header,
         };
-        let work = self.map_work();
+        let state = self.map_state();
         for (i, v) in fit.iter().enumerate() {
-            self.gba.write32(work + self.s.l.map_bounds + 4 * i as u32, *v as u32);
+            self.gba.write32(state + self.s.l.map_bounds + 4 * i as u32, *v as u32);
         }
         self.cut();
         true
@@ -2592,8 +2592,8 @@ impl<'rom> Field<'rom> {
     /// battle fought there (--arrive-as after-battle): the game's own
     /// snapshot of the actors is taken as a battle's start takes it
     /// (Actor_Snapshot, ObjectTable_Snapshot), the party's place kept in
-    /// the main routine's work, and the scene entered again with
-    /// FLAG_KEEP_PARTY_POSITION (FieldWork.exit EXIT_KEEP_DESTINATION, as a
+    /// the main routine's state, and the scene entered again with
+    /// FLAG_KEEP_PARTY_POSITION (FieldState.exit EXIT_KEEP_DESTINATION, as a
     /// warp leaves), so its initialization takes the after-battle branches
     /// and Actor_Restore puts the leader back as he was. A new game's empty
     /// snapshot would leave him as the scene's first entry never made him
@@ -2614,8 +2614,8 @@ impl<'rom> Field<'rom> {
         self.gba.write32(gs + self.s.l.gs_heading, heading);
         self.gba.write16(gs + self.s.l.gs_turn, u16::from(leader.layer));
         self.set_flag(FLAG_KEEP_PARTY_POSITION, true);
-        let work = self.gba.read32(self.s.field_work);
-        self.gba.write16(work + self.s.l.field_exit, EXIT_KEEP_DESTINATION);
+        let state = self.gba.read32(self.s.field_state);
+        self.gba.write16(state + self.s.l.field_exit, EXIT_KEEP_DESTINATION);
         let entries = self.t.entries;
         let mut waited = 0;
         while self.t.entries == entries {
@@ -3352,7 +3352,7 @@ impl<'rom> Field<'rom> {
         // what lies past the edge is not the map.
         let pin = |field: &mut Field, within: bool| {
             field.load(from);
-            let work = field.map_work();
+            let state = field.map_state();
             field.t.focus = [view.0 + fx(120), 0, view.1 + fx(96)];
             field.t.pin_focus = true;
             let live = field.bounds();
@@ -3362,11 +3362,11 @@ impl<'rom> Field<'rom> {
                     (true, 0 | 1) => v.max(live[i]),
                     (true, _) => v.min(live[i]),
                 };
-                field.gba.write32(work + self.s.l.map_bounds + 4 * i as u32, v as u32);
+                field.gba.write32(state + self.s.l.map_bounds + 4 * i as u32, v as u32);
             }
-            work
+            state
         };
-        let work = pin(self, true);
+        let state = pin(self, true);
         self.t.arm_center = true;
         let mut ran = 0;
         while self.t.arm_center {
@@ -3379,18 +3379,18 @@ impl<'rom> Field<'rom> {
         // The drawing may run past the frame it started in.
         self.frames(1)?;
         let maps: Vec<u32> = (0..PIN_SCREEN_MAP_BYTES / 4).map(|i| self.gba.read32(PIN_SCREEN_MAPS + 4 * i)).collect();
-        let layers: Vec<u32> = (0..3).flat_map(|l| [0, 4].map(|o| self.gba.read32(work + self.s.l.map_layers + self.s.l.map_layer_size * l + o))).collect();
+        let layers: Vec<u32> = (0..3).flat_map(|l| [0, 4].map(|o| self.gba.read32(state + self.s.l.map_layers + self.s.l.map_layer_size * l + o))).collect();
         pin(self, false);
         for (i, &word) in maps.iter().enumerate() {
             self.gba.write32(PIN_SCREEN_MAPS + 4 * i as u32, word);
         }
         for (i, &word) in layers.iter().enumerate() {
-            self.gba.write32(work + self.s.l.map_layers + self.s.l.map_layer_size * (i as u32 / 2) + 4 * (i as u32 % 2), word);
+            self.gba.write32(state + self.s.l.map_layers + self.s.l.map_layer_size * (i as u32 / 2) + 4 * (i as u32 % 2), word);
         }
-        self.gba.write32(work + self.s.l.map_view_x, view.0 as u32);
-        self.gba.write32(work + self.s.l.map_view_y, view.1 as u32);
+        self.gba.write32(state + self.s.l.map_view_x, view.0 as u32);
+        self.gba.write32(state + self.s.l.map_view_y, view.1 as u32);
         for l in 0..3u32 {
-            let at = work + self.s.l.map_layers + self.s.l.map_layer_size * l;
+            let at = state + self.s.l.map_layers + self.s.l.map_layer_size * l;
             let word = |o: u32| self.gba.read32(at + o) as i32;
             // Each axis: the view times the layer's parallax, wrapped with its
             // drift when it drifts, plus its offset; BG3 is the first layer.
@@ -3410,11 +3410,11 @@ impl<'rom> Field<'rom> {
     }
 
     /// Lets the view follow the camera again, and returns the view the map
-    /// work last drew from (its top left, pixels).
+    /// state last drew from (its top left, pixels).
     pub fn unpin_view(&mut self) -> (i32, i32) {
         self.t.pin_focus = false;
-        let work = self.map_work();
-        (self.gba.read32(work + self.s.l.map_view_x) as i32 >> 16, self.gba.read32(work + self.s.l.map_view_y) as i32 >> 16)
+        let state = self.map_state();
+        (self.gba.read32(state + self.s.l.map_view_x) as i32 >> 16, self.gba.read32(state + self.s.l.map_view_y) as i32 >> 16)
     }
 
     /// The map of `box` (16.16 pixels) from the moment `settled`, the leader
@@ -3435,14 +3435,14 @@ impl<'rom> Field<'rom> {
             loop {
                 vx = vx.min(last_x);
                 self.load(settled);
-                let work = self.map_work();
+                let state = self.map_state();
                 // The followed point is the view's top left plus the focus
                 // (120, 96).
                 self.t.focus = [vx + fx(120), 0, vy + fx(96)];
                 self.t.pin_focus = true;
                 self.t.freeze = true;
                 for (i, &v) in b.iter().enumerate() {
-                    self.gba.write32(work + self.s.l.map_bounds + 4 * i as u32, v as u32);
+                    self.gba.write32(state + self.s.l.map_bounds + 4 * i as u32, v as u32);
                 }
                 if !leader {
                     let selected = self.gba.read32(self.s.game_state + self.s.l.gs_selected_actor);
@@ -3456,8 +3456,8 @@ impl<'rom> Field<'rom> {
                 if self.t.arm_center {
                     return Err("MapGrid_UpdateLayerScroll never ran".to_string());
                 }
-                let view_x = self.gba.read32(work + self.s.l.map_view_x) as i32;
-                let view_y = self.gba.read32(work + self.s.l.map_view_y) as i32;
+                let view_x = self.gba.read32(state + self.s.l.map_view_x) as i32;
+                let view_y = self.gba.read32(state + self.s.l.map_view_y) as i32;
                 let screen = self.gba.picture_rgb();
                 let (ox, oy) = ((view_x - min_x) >> 16, (view_y - min_y) >> 16);
                 for y in 0..HEIGHT as i32 {
@@ -3914,7 +3914,7 @@ impl<'rom> Field<'rom> {
     /// follows (MapGrid_CenterOnFollowedPoint), as the game does once it has
     /// placed the party.
     fn redraw_view(&mut self) -> Result<(), String> {
-        let origin = self.gba.read32(self.gba.read32(self.s.map_work));
+        let origin = self.gba.read32(self.gba.read32(self.s.map_state));
         if origin == 0 || self.world() {
             return Ok(());
         }
@@ -3934,8 +3934,8 @@ impl<'rom> Field<'rom> {
         let recorded = self.recorded.take();
         let states = self.states.take();
         self.resume(from);
-        let work = self.gba.read32(self.s.field_work);
-        let mut a = if work == 0 { 0 } else { self.gba.read32(work + self.s.l.field_events) };
+        let state = self.gba.read32(self.s.field_state);
+        let mut a = if state == 0 { 0 } else { self.gba.read32(state + self.s.l.field_events) };
         let in_ram = (0x0200_0000..0x0400_0000).contains(&a);
         for _ in 0..1024 {
             if !in_ram || self.gba.read32(a) == u32::MAX {
@@ -3992,7 +3992,7 @@ impl<'rom> Field<'rom> {
         Ok(self.t.frame - start)
     }
 
-    /// Whether the leader is climbing (MainRoutineWork.movementMode).
+    /// Whether the leader is climbing (MainRoutineState.movementMode).
     fn climbing(&self) -> bool {
         self.gba.read8(self.s.game_state + self.s.l.gs_movement_mode) != 0
     }
@@ -4940,8 +4940,8 @@ impl<'rom> Field<'rom> {
         match trigger {
             Trigger::Talk(_) | Trigger::Search(_) => self.press(2)?,
             Trigger::Psynergy(ability, _) | Trigger::PsynergyCell(ability, _) | Trigger::Cast(ability) => {
-                let work = self.gba.read32(self.s.field_work);
-                self.gba.write16(work + self.s.l.field_command, ability);
+                let state = self.gba.read32(self.s.field_state);
+                self.gba.write16(state + self.s.l.field_command, ability);
                 self.cut();
             }
             // The script walks him into it.
@@ -4974,8 +4974,8 @@ impl<'rom> Field<'rom> {
                     _ => 0,
                 };
                 self.t.raise_next = 0;
-                let work = self.gba.read32(self.s.field_work);
-                self.gba.write16(work + self.s.l.field_raised, RAISED_DIRECT as u16);
+                let state = self.gba.read32(self.s.field_state);
+                self.gba.write16(state + self.s.l.field_raised, RAISED_DIRECT as u16);
                 self.cut();
             }
         }

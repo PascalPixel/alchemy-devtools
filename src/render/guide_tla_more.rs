@@ -31,7 +31,7 @@ const MIKASALLA_NORTH: u16 = 9;
 const SPARK: u16 = 18;
 const PASSAGE_NORTH: (i32, i32) = (312, 262);
 /// The Kandorean Temple's room with a stream (SceneId_KandoreanTempleStream),
-/// a map whose ground effects (MapFlagsWork.groundEffects) are wading.
+/// a map whose ground effects (MapState.groundEffects) are wading.
 const TEMPLE_STREAM: &str = "KandoreanTempleStream";
 
 /// The modes this file plays.
@@ -224,7 +224,7 @@ impl<'a> Guide<'a> {
 const DEBUG_STEPS: u32 = 12;
 
 /// Walking down into the Kandorean Temple's stream and along it: the map's
-/// ground effect is wading (MapFlagsWork.groundEffects), and each step in
+/// ground effect is wading (MapState.groundEffects), and each step in
 /// the water starts a splash (Actor_SpawnWaterSplash).
 const WADING: Walk = Walk {
     file: "field/wading.gif",

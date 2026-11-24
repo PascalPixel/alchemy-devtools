@@ -114,7 +114,7 @@ impl Measurement {
     }
 
     /// The row for a tag in `routine`: its own, or one that names it first
-    /// (`MapGrid_CopyCellPictureIndicesRect and its siblings`).
+    /// (`MapGrid_CopyCellTilesIndicesRect and its siblings`).
     pub fn is_for(&self, routine: &str) -> bool {
         self.routine == routine || self.routine.strip_prefix(routine).is_some_and(|rest| rest.starts_with(' '))
     }

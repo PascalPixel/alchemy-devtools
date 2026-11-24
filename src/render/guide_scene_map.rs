@@ -46,7 +46,7 @@ const MENU_TEST_ROOM: u16 = 200;
 const MENU_TEST_ARMOR_MERCHANT: u16 = 12;
 /// The first actor a scene places (ACTOR_FIRST_PLACED).
 const FIRST_PLACED: u16 = 8;
-/// struct MainRoutineWork's next scene and entrance, and struct FieldWork's
+/// struct MainRoutineState's next scene and entrance, and struct FieldState's
 /// exit request, which with 999 leaves for them (Event_SetDestination).
 const GS_SCENE: u32 = 0x1c0;
 const GS_ENTRANCE: u32 = 0x1c2;
@@ -408,11 +408,11 @@ impl<'a> Guide<'a> {
         let mut frames = Vec::new();
         Self::menu_test_visit(field, (spot.x, spot.z), toward, true, &mut frames)?;
         // Into the room again, as Event_SetDestination sends the party.
-        let work = self.sym("gMainRoutineWork")?;
-        field.write16(work + GS_SCENE, MENU_TEST_ROOM);
-        field.write16(work + GS_ENTRANCE, 0);
-        let field_work = field.field_work();
-        field.write16(field_work + FW_EXIT, EXIT_TO_DESTINATION);
+        let state = self.sym("gMainRoutineState")?;
+        field.write16(state + GS_SCENE, MENU_TEST_ROOM);
+        field.write16(state + GS_ENTRANCE, 0);
+        let field_state = field.field_state();
+        field.write16(field_state + FW_EXIT, EXIT_TO_DESTINATION);
         for _ in 0..300 {
             field.frames(1)?;
             frames.push(field.picture());

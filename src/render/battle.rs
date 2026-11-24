@@ -50,7 +50,7 @@ const DJINN_PER_ELEMENT: u32 = 18;
 /// Frames Down is held into a chooser that loads no preset first.
 const CHOOSER_DOWN_FRAMES: u32 = 8;
 
-/// The offsets into the main routine's work, a unit, the battle's work and
+/// The offsets into the main routine's state, a unit, the battle's state and
 /// a battle object are the game's BattleLayout (layout.rs), in Symbols::b;
 /// the party's Djinn recovery list holds four-byte entries (element, index,
 /// owner, turns).
@@ -68,7 +68,7 @@ const ENEMY_UNITS: u32 = 6;
 const BATTLE_BG_PALETTE: u32 = 0x0500_00c0;
 /// BattleBackground_Load's darkening step, BACKGROUND_LEVEL_STEP.
 const LEVEL_STEP: i32 = 1092;
-/// gBattleWork->events.phase; PLAY_ADVANCE (5) shows the playback arrow.
+/// gBattleState->events.phase; PLAY_ADVANCE (5) shows the playback arrow.
 const PLAY_ADVANCE: u32 = 5;
 const PLACE_PARTY: u16 = 0x100;
 const PLACE_ENEMY: u16 = 0x180;
@@ -131,7 +131,7 @@ pub struct Symbols {
     wait_advance: u32,
     message: u32,
     battle_over: u32,
-    battle_work: u32,
+    battle_state: u32,
     game_state: u32,
     game_flags: u32,
     owner_states: u32,
@@ -154,7 +154,7 @@ impl Symbols {
     /// Lost Age names a thing otherwise, The Broken Seal's name is looked
     /// for first and The Lost Age's second (DebugParty_LoadPreset,
     /// Battle_RunEncounter, gOwnerStates), the name its source should
-    /// change; the battle's work and the enemies' units it reaches through
+    /// change; the battle's state and the enemies' units it reaches through
     /// gHeapSlots.
     pub fn find_for(map: &Map, b: super::layout::BattleLayout) -> Result<Symbols, String> {
         let find = |name: &str| map.symbol(name).map(|(_, a)| a & !1);
@@ -178,8 +178,8 @@ impl Symbols {
             wait_advance: at("BattleMessage_WaitForAdvance")?,
             message: at("BattleMessage_ShowAndWait")?,
             battle_over: at("Battle_ClearSerialTransferPayload")?,
-            battle_work: slot("gBattleWork", b.heap_battle)?,
-            game_state: at("gMainRoutineWork")?,
+            battle_state: slot("gBattleState", b.heap_battle)?,
+            game_state: at("gMainRoutineState")?,
             game_flags: at("gGameFlagBytes")?,
             owner_states: slot("gEnemyUnits", b.heap_enemy_units)?,
             owners: either("gCharacterUnits", "gOwnerStates")?,
@@ -234,7 +234,7 @@ pub enum Scene {
 
 /// A battle background as BattleBackground_Load leaves it: the picture's
 /// 256-colour pixels in character blocks 2 and 3, and its 128 colours, which
-/// BattleWork.palette keeps and BG palettes 6 to 13 show.
+/// BattleState.palette keeps and BG palettes 6 to 13 show.
 pub struct Background {
     pub vram: Vec<u8>,
     pub palette: Vec<u16>,
@@ -447,8 +447,8 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
         } else if background_return != 0 && pc == background_return {
             // Only the battle's own background changes: some effects load a
             // sky of their own.
-            let work = gba.read32(s.battle_work);
-            if background_id == u32::from(gba.read16(work + s.b.work_background)) {
+            let state = gba.read32(s.battle_state);
+            if background_id == u32::from(gba.read16(state + s.b.battle_background)) {
                 say(frame, format!("BattleBackground_Load({background_id:#x}, level {background_level}) returned"));
                 match scene {
                     Scene::Game => {}
@@ -462,7 +462,7 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                             gba.write32(a, u32::from_le_bytes([word[0], word[1], word[2], word[3]]));
                         }
                         for (i, &c) in picture.palette.iter().enumerate() {
-                            gba.write16(work + s.b.work_palette + 2 * i as u32, c);
+                            gba.write16(state + s.b.battle_palette + 2 * i as u32, c);
                         }
                         // As BattleBackground_Load darkens it, unless the
                         // level is negative.
@@ -549,10 +549,10 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             // its far stub): fill in the first command record and return one
             // command.
             let record = gba.register(0);
-            let work = gba.read32(s.battle_work);
+            let state = gba.read32(s.battle_state);
             let place = match cast.aim {
-                Aim::Foe => PLACE_ENEMY + place_of(&gba, work + s.b.work_enemy_ids, FIRST_ENEMY_UNIT as u16 + cast.target_foe() as u16)?,
-                Aim::Ally => PLACE_PARTY + place_of(&gba, work + s.b.work_party_units, cast.party[1].into())?,
+                Aim::Foe => PLACE_ENEMY + place_of(&gba, state + s.b.battle_enemy_ids, FIRST_ENEMY_UNIT as u16 + cast.target_foe() as u16)?,
+                Aim::Ally => PLACE_PARTY + place_of(&gba, state + s.b.battle_party_units, cast.party[1].into())?,
             };
             let agility = gba.read16(owner(caster) + s.b.unit_agility);
             let (command, parameter) = match cast.command {
@@ -624,8 +624,8 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
         // chooser and through the opening message; then A once a prompt has
         // waited: BattleMessage_WaitForAdvance, or the playback task's
         // arrow.
-        let work = if phase >= Phase::Battle { gba.read32(s.battle_work) } else { 0 };
-        let waiting = wait_return != 0 || (work != 0 && gba.read32(work + s.b.work_event_phase) == PLAY_ADVANCE);
+        let state = if phase >= Phase::Battle { gba.read32(s.battle_state) } else { 0 };
+        let waiting = wait_return != 0 || (state != 0 && gba.read32(state + s.b.battle_event_phase) == PLAY_ADVANCE);
         prompt_frames = if waiting { prompt_frames + 1 } else { 0 };
         if phase == Phase::Menu {
             let script = menu.unwrap_or(&[]);

@@ -383,7 +383,7 @@ fn exempt(name: &Name) -> bool {
 }
 
 /// The first segment of a name with `_`, without pret's `g` or `s`: the
-/// family prefix `Battle` of `Battle_Run` and `gBattle_Work`,
+/// family prefix `Battle` of `Battle_Run` and `gBattle_State`,
 /// `FLAG` of `FLAG_CHILDHOOD`.
 fn prefix(name: &str) -> Option<&str> {
     let (first, rest) = name.split_once('_')?;
@@ -728,16 +728,17 @@ fn words_of_one_idea(
 /// `synonym_referent`: the variables of one struct type, called by
 /// different spellings of the type's own name. A variable spells its type
 /// when each of its words means one of the type's (`object` and `obj` for
-/// `struct Object`, `work` and `fieldWork` for `struct FieldWork`),
+/// `struct Object`, `state` and `fieldState` for `struct FieldState`),
 /// or it is the type's initials; names for a role (`leader`, `target`) are
 /// not spellings and are left alone, and so are struct members, arrays and
 /// plurals, as `prefix_twin` leaves out members: a member names its place in
 /// a record, and an array or a pointer named in the plural (`objects`,
 /// indexed as the whole battle's objects) a set, not one of the type. A
 /// spelling another type owns (it is that type's most used, and that type
-/// uses it more: `work`, `struct FieldWork`'s in 263 places) is that type's,
-/// neither proposed nor measured here, since a `struct FieldEffectWork`
-/// called `work` would be misread. The spelling most variables use
+/// uses it more: `state`, which `struct FieldState` gives most of its
+/// variables and more variables than any other type) is that type's,
+/// neither proposed nor measured here, since a `struct FieldEffectState`
+/// called `state` would read as the field's. The spelling most variables use
 /// is the type's, and each other spelling is listed once, at its first use
 /// in a function that doesn't already give that name to another variable,
 /// parameter or local of any type.
@@ -1308,7 +1309,7 @@ mod tests {
         assert_eq!(replace_word("NUM_ELEMENTS", "num", "count"), "COUNT_ELEMENTS");
         assert_eq!(replace_word("BattleObj_GetPos", "pos", "position"), "BattleObj_GetPosition");
         assert_eq!(replace_word("objCnt", "cnt", "count"), "objCount");
-        assert_eq!(prefix("gBattle_Work"), Some("Battle"));
+        assert_eq!(prefix("gBattle_State"), Some("Battle"));
         assert_eq!(prefix("FLAG_VALE"), Some("FLAG"));
         assert_eq!(prefix("Vale"), None);
     }
@@ -1436,12 +1437,12 @@ mod tests {
                 typed("Object", "obj", 3),
                 typed("Object", "leader", 4),
                 typed("Object", "gActors", 5),
-                typed("FieldWork", "work", 6),
-                typed("FieldWork", "fieldWork", 7),
-                typed("FieldWork", "work", 8),
-                typed("FieldWork", "work", 8),
-                typed("FieldWork", "works", 10),
-                typed("FieldWork", "fw", 9),
+                typed("FieldState", "state", 6),
+                typed("FieldState", "fieldState", 7),
+                typed("FieldState", "state", 8),
+                typed("FieldState", "state", 8),
+                typed("FieldState", "states", 10),
+                typed("FieldState", "fs", 9),
             ],
             ..Names::default()
         };
@@ -1449,11 +1450,11 @@ mod tests {
         assert_eq!(
             findings,
             [
-                "f.c:7 fieldWork\tstruct FieldWork: 1 uses -> work (3 uses)",
-                "f.c:9 fw\tstruct FieldWork: 1 uses -> work (3 uses)",
+                "f.c:7 fieldState\tstruct FieldState: 1 uses -> state (3 uses)",
+                "f.c:9 fs\tstruct FieldState: 1 uses -> state (3 uses)",
                 "f.c:3 obj\tstruct Object: 1 uses -> object (3 uses)",
             ],
-            "a role (leader) and a global are not spellings of the type; works, named in the plural, names a set"
+            "a role (leader) and a global are not spellings of the type; states, named in the plural, names a set"
         );
     }
 
@@ -1469,20 +1470,20 @@ mod tests {
         };
         let mut names = Names {
             typed: vec![
-                // `work` is FieldWork's.
-                typed("FieldWork", "work", 1, 1),
-                typed("FieldWork", "work", 2, 2),
-                typed("FieldWork", "work", 3, 3),
-                typed("FieldWork", "work", 4, 4),
-                typed("FieldWork", "work", 5, 5),
-                typed("FieldEffectWork", "work", 6, 6),
-                typed("FieldEffectWork", "work", 7, 7),
-                typed("FieldEffectWork", "work", 8, 8),
-                typed("FieldEffectWork", "work", 9, 9),
-                typed("FieldEffectWork", "effectWork", 10, 10),
-                typed("FieldEffectWork", "effectWork", 11, 11),
-                typed("FieldEffectWork", "effectWork", 12, 12),
-                typed("FieldEffectWork", "fieldEffectWork", 13, 13),
+                // `state` is FieldState's.
+                typed("FieldState", "state", 1, 1),
+                typed("FieldState", "state", 2, 2),
+                typed("FieldState", "state", 3, 3),
+                typed("FieldState", "state", 4, 4),
+                typed("FieldState", "state", 5, 5),
+                typed("FieldEffectState", "state", 6, 6),
+                typed("FieldEffectState", "state", 7, 7),
+                typed("FieldEffectState", "state", 8, 8),
+                typed("FieldEffectState", "state", 9, 9),
+                typed("FieldEffectState", "effectState", 10, 10),
+                typed("FieldEffectState", "effectState", 11, 11),
+                typed("FieldEffectState", "effectState", 12, 12),
+                typed("FieldEffectState", "fieldEffectState", 13, 13),
                 // A plural pointer names the set it is indexed in.
                 typed("BattleObject", "battleObject", 20, 20),
                 typed("BattleObject", "battleObject", 21, 21),
@@ -1500,8 +1501,8 @@ mod tests {
         let findings: Vec<String> = check(&names, None).into_iter().map(|f| format!("{}:{} {}", f.file, f.line, f.what)).collect();
         assert_eq!(
             findings,
-            ["f.c:13 fieldEffectWork\tstruct FieldEffectWork: 1 uses -> effectWork (3 uses)"],
-            "FieldEffectWork's work is FieldWork's, neither proposed nor measured; objects names a set; mapLayer's function has a layer"
+            ["f.c:13 fieldEffectState\tstruct FieldEffectState: 1 uses -> effectState (3 uses)"],
+            "FieldEffectState's state is FieldState's, neither proposed nor measured; objects names a set; mapLayer's function has a layer"
         );
     }
 

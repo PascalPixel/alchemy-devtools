@@ -214,7 +214,7 @@ fn span(tokens: &[Token], at: usize, floor: usize) -> (usize, usize, Option<usiz
 }
 
 /// The member chains (`leader->x.part.pixel`, `shaken[2].y`,
-/// `gFieldWork->transitionFrames`) between `start` and `end` at expression
+/// `gFieldState->transitionFrames`) between `start` and `end` at expression
 /// level: outside a call's arguments and an array's index, so that
 /// `Map_GetBehavior(x, z) == 13` says nothing of 13. A call's own name is not
 /// one. Also whether a name holding `random` is there, at any level but an
@@ -970,7 +970,7 @@ pub fn packing(tokens: &[Token], at: usize, floor: usize, limit: usize) -> bool 
 }
 
 /// The array and index of the element assigned at `at`'s index, as in
-/// `name[at] = ...`: the tokens of its name (`gWork.weights`), from the start
+/// `name[at] = ...`: the tokens of its name (`gState.weights`), from the start
 /// of its statement.
 fn element_target<'a>(tokens: &[Token<'a>], at: usize, floor: usize) -> Option<Vec<&'a str>> {
     if at < floor + 2 || tokens[at - 1].text != "[" || tokens.get(at + 1).is_none_or(|t| t.text != "]") || tokens.get(at + 2).is_none_or(|t| t.text != "=") {
@@ -1722,7 +1722,7 @@ mod tests {
         assert_eq!(kind("for (frame = 0; frame < 24; frame++) {}", 1), Some("duration"));
         assert_eq!(kind("actor->timer = 60;", 0), Some("duration"));
         assert_eq!(kind("s32 framesRemaining = 40;", 0), Some("duration"));
-        assert_eq!(kind("gFieldWork->transitionFrames = 16;", 0), Some("duration"));
+        assert_eq!(kind("gFieldState->transitionFrames = 16;", 0), Some("duration"));
         assert_eq!(kind("while (++gAltinPeak_FlickerTimer <= 100) {}", 0), Some("duration"));
         assert_eq!(kind("x = centerX - 18;", 0), Some("position"));
         assert_eq!(kind("shaken[2].y += 176;", 1), Some("position"));
@@ -1734,15 +1734,15 @@ mod tests {
         assert_eq!(kind("if (Map_GetBehavior(x, z) == 13) {}", 0), None);
         assert_eq!(kind("v = gTable[x] + 40;", 0), None);
         assert_eq!(kind("v = gTable[Random16() & 7] + 40;", 1), None);
-        assert_eq!(kind("work->speedX = 24;", 0), None, "a rate");
+        assert_eq!(kind("state->speedX = 24;", 0), None, "a rate");
         assert_eq!(kind("object->scaleX = 12;", 0), None, "a scale");
         assert_eq!(kind("if (GameFlag_Get(0x95a)) {}", 0), None);
         assert_eq!(kind("Event_ShowMessage(27, 0);", 0), None);
         assert_eq!(kind("if (rangePattern == 255) {}", 0), None);
         assert_eq!(kind("CLAMP(screen.depth, 160, 799);", 0), None, "a tuned depth range");
         assert_eq!(kind("fade = -16;", 0), Some("level"));
-        assert_eq!(kind("work->shake = i * 2 - 128;", 1), Some("level"));
-        assert_eq!(kind("work->shakeFrames = 12;", 0), Some("duration"));
+        assert_eq!(kind("state->shake = i * 2 - 128;", 1), Some("level"));
+        assert_eq!(kind("state->shakeFrames = 12;", 0), Some("duration"));
         assert_eq!(kind("perspective->fadeStep = 128;", 0), None, "a rate");
     }
 
@@ -1811,7 +1811,7 @@ mod tests {
         // as the composed factor `FIXED_ONE * n / d`.
         assert_eq!(kind_of("void F(void) { effect->velocity.x -= effect->velocity.x / 18; }", "18", 0), None);
         assert_eq!(kind_of("void F(void) { p->velocityX = velocityX - velocityX / 256; }", "256", 0), None);
-        assert_eq!(kind_of("void F(void) { share = gWork.hazardSteps * 100 / gWork.hazardLimit; }", "100", 0), Some("decimal"));
+        assert_eq!(kind_of("void F(void) { share = gState.hazardSteps * 100 / gState.hazardLimit; }", "100", 0), Some("decimal"));
         assert_eq!(kind_of("void F(void) { share = steps * 100; }", "100", 0), None, "no division");
         assert_eq!(kind_of("void F(void) { maxHpPercent = 12; }", "12", 0), Some("decimal"));
         assert_eq!(kind_of("void F(void) { c = digit + 'A' - 10; }", "10", 0), Some("decimal"));

@@ -344,12 +344,12 @@ pub(super) fn room_map(field: &mut Field, settled: &super::field::Saved) -> Resu
 }
 
 
-/// struct FieldWork's Psynergy request (field_work.h).
-const WORK_PSYNERGY: u32 = 0x17e;
+/// struct FieldState's Psynergy request (field_state.h).
+const FIELD_PSYNERGY: u32 = 0x17e;
 
 /// Casts `ability` as Isaac from where the leader stands, as the field menu
 /// asks for it: the request the field sequence answers next.
 pub(super) fn cast(field: &mut Field, ability: u16) {
-    let work = field.field_work();
-    field.write16(work + WORK_PSYNERGY, ability);
+    let state = field.field_state();
+    field.write16(state + FIELD_PSYNERGY, ability);
 }

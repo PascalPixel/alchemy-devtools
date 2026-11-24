@@ -87,8 +87,8 @@ fn is_type_word(text: &str) -> bool {
 }
 
 /// The name an object-like macro's body views, and how many casts it
-/// takes to: `gWindowWork` of `((struct WindowWork *)gWindowWork[0])`,
-/// `gHeapSlots` of `(*(struct BattleMenuWork **)&gHeapSlots[HEAP_SLOT_BATTLE_MENU])`,
+/// takes to: `gWindowState` of `((struct WindowState *)gWindowState[0])`,
+/// `gHeapSlots` of `(*(struct BattleMenuState **)&gHeapSlots[HEAP_SLOT_BATTLE_MENU])`,
 /// `gWaitForFlashWrite` of `gWaitForFlashWrite`. Any other body, a
 /// number or a computation, views nothing.
 fn view_target<'t>(body: &[&'t str]) -> Option<(&'t str, usize)> {
@@ -1130,9 +1130,9 @@ impl Report {
                 self.note(kind, &file, line, &name);
             }
         }
-        // A typed view of one name (`((struct WindowWork *)gWindowWork[0])`),
+        // A typed view of one name (`((struct WindowState *)gWindowState[0])`),
         // that name said where it is declared: through a cast, any routine,
-        // global or macro; as it is, a global (`#define gLzPackWork
+        // global or macro; as it is, a global (`#define gLzPackState
         // gWaitForFlashWrite`), since a routine's bare name is a parameter of
         // what it is passed to.
         for (file, line, name, target, casts) in std::mem::take(&mut self.views) {
@@ -2372,8 +2372,8 @@ impl<'r, 'a> Walk<'r, 'a> {
                             Head::Note => "undocumented_note",
                         })
                     };
-                    // One cast of a name (`#define WINDOW_WORK ((struct
-                    // WindowWork *)gWindowWork[0])`), settled once every
+                    // One cast of a name (`#define WINDOW_STATE ((struct
+                    // WindowState *)gWindowState[0])`), settled once every
                     // declaration is read.
                     if apart.is_none() && !function_like {
                         if let Some((target, casts)) = view_target(&texts) {
@@ -4749,10 +4749,10 @@ mod tests {
     fn declarations_their_neighbours_or_kind_say() {
         let header = concat!(
             "#define NULL ((void *)0)\n#define TRUE 1\n\n",
-            "/// The window's work.\nextern struct WindowWork *gWindowWork[2];\n\n",
-            "#define WINDOW_WORK ((struct WindowWork *)gWindowWork[0])\n",
-            "#define BARE_WORK ((struct WindowWork *)gBare)\n",
-            "#define ALIAS gWindowWork\n#define ROUTINE_ALIAS Math_DivideBy\n\n",
+            "/// The window's state.\nextern struct WindowState *gWindowState[2];\n\n",
+            "#define WINDOW_STATE ((struct WindowState *)gWindowState[0])\n",
+            "#define BARE_STATE ((struct WindowState *)gBare)\n",
+            "#define ALIAS gWindowState\n#define ROUTINE_ALIAS Math_DivideBy\n\n",
             "extern void *gBare;\n\n",
             "/// Picks the width by edition.\n#if LANGUAGE == 1 || \\\n    LANGUAGE == 2\n#define WIDE 1\n#define NARROW 3\n#else\n#define WIDE 2\n#define NARROW 4\n#endif\n\n",
             "/// Divides.\ns32 Math_DivideBy(s32 a, s32 b);\n\n",
@@ -4786,11 +4786,11 @@ mod tests {
         assert_eq!(names("undocumented_forward"), ["Field_Send"]);
         assert_eq!(names("undocumented_library"), ["Bios_CpuSet", "__divsi3"]);
         assert_eq!(names("undocumented_standard"), ["NULL", "TRUE"]);
-        assert_eq!(names("undocumented_view"), ["ALIAS", "WINDOW_WORK"]);
+        assert_eq!(names("undocumented_view"), ["ALIAS", "WINDOW_STATE"]);
         assert_eq!(names("undocumented_typed"), ["gRipple"]);
         assert_eq!(names("undocumented_note"), ["SHIFTED"]);
         assert_eq!(names("undocumented_local"), ["PUT"]);
-        assert_eq!(names("undocumented_macro"), ["BARE_WORK", "ROUTINE_ALIAS", "UNIT_DEFINE"], "gBare is undocumented; a routine's bare name is no view");
+        assert_eq!(names("undocumented_macro"), ["BARE_STATE", "ROUTINE_ALIAS", "UNIT_DEFINE"], "gBare is undocumented; a routine's bare name is no view");
         assert_eq!(names("undocumented_function"), ["Call1", "Field_Twice", "Kr", "Test_Other", "Unit_GetZero"]);
         assert_eq!(names("undocumented_global"), ["gBare"], "an old-style definition's parameters are no globals");
     }
@@ -5049,7 +5049,7 @@ mod tests {
     #[test]
     fn honest_numbers_by_the_calls_they_stand_in() {
         let header = concat!(
-            "void MapGrid_CopyCellPictureCellsRect_(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5);\n",
+            "void MapGrid_CopyCellTilesCellsRect_(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5);\n",
             "void Actor_SetAnimation(s32 a0, s32 a1);\n",
             "void Actor_SetAnimationSpeed(void *actor, s32 a1);\n",
             "#define OBJ_X(x) ((x) << 16)\n",
@@ -5057,7 +5057,7 @@ mod tests {
         let source = concat!(
             "void Run(void) {\n",
             "    u16 counts[16];\n",
-            "    MapGrid_CopyCellPictureCellsRect_(x, 125, 3, 3, 39, 85);\n",
+            "    MapGrid_CopyCellTilesCellsRect_(x, 125, 3, 3, 39, 85);\n",
             "    Actor_SetAnimation(ACTOR_ALEX, 13);\n",
             "    Actor_SetAnimation(12, 25);\n",
             "    Actor_SetAnimationSpeed(leader, 48);\n",

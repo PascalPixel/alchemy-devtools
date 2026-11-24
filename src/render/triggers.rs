@@ -1,7 +1,7 @@
 //! The events of a game the story tools write no events.tsv for (The Lost
 //! Age), read from the running game: each scene is entered by each of its
 //! entrances, and each row of the trigger table its field then holds
-//! (FieldWork.triggers) becomes an event, named by the function it runs
+//! (FieldState.triggers) becomes an event, named by the function it runs
 //! (the overlay's symbol) or the message it shows (the edition's `Msg`
 //! symbol, or the message's number). Rows of one name are one event, at
 //! every scene that has them, with each trigger and condition its rows

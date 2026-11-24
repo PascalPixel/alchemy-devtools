@@ -22,7 +22,7 @@ const WHEELS_ROOM: u16 = 11;
 /// SaveBlock.mapId in place of a map.
 const SEQUENCE_LUCKY_WHEELS: u16 = 0x1fc;
 const SEQUENCE_LUCKY_DICE: u16 = 0x1fd;
-/// struct MainRoutineWork's mapId and the prize categories Lucky Wheels writes
+/// struct MainRoutineState's mapId and the prize categories Lucky Wheels writes
 /// (LuckyWheelsWonPrizesView, lucky_wheels.c), s8 each, -1 after the last.
 const SAVE_MAP_ID: u32 = 0x1c0;
 const SAVE_WON_PRIZES: u32 = 0x12c;
@@ -78,7 +78,7 @@ impl<'a> Guide<'a> {
         let (entered, _) = self.stand_for((map, room), Trigger::Talk(id), id)?;
         let mut field = entered.field;
         prepare(&mut field)?;
-        let save = self.sym("gMainRoutineWork")?;
+        let save = self.sym("gMainRoutineState")?;
         let mut n = 0;
         while field.read16(save + SAVE_MAP_ID) != run {
             if n > 3000 {
@@ -122,7 +122,7 @@ impl<'a> Guide<'a> {
     /// result, back to the line) until a throw pays more than its bet back
     /// (two pairs or better), and that throw is kept.
     fn lucky_dice(&mut self) -> Result<(), String> {
-        let save = self.sym("gMainRoutineWork")?;
+        let save = self.sym("gMainRoutineState")?;
         let mut field = self.lucky_reach(DICE_ROOM, "ACTOR_TOLBI_SPRING_DICE_ATTENDANT", |f| {
             f.set_coins(DICE_COINS);
             Ok(())
@@ -164,7 +164,7 @@ impl<'a> Guide<'a> {
     /// frames after their turn comes, so the player waiting a frame longer
     /// before A is another spin: the first that wins is kept.
     fn lucky_wheels(&mut self) -> Result<(), String> {
-        let save = self.sym("gMainRoutineWork")?;
+        let save = self.sym("gMainRoutineState")?;
         let ticket = super::tables::Game::here()?.item_names()?.iter().position(|i| i == "Game Ticket").ok_or("no item is named Game Ticket")? as u16;
         let mut field = self.lucky_reach(WHEELS_ROOM, "ACTOR_TOLBI_SPRING_WHEELS_ATTENDANT", |f| {
             let unit = f.unit(0)?;

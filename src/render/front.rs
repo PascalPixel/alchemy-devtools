@@ -283,8 +283,8 @@ impl Front<'_> {
             field.until_control()?;
             field.frames(10)?;
             field.freeze(true);
-            let work = field.map_work();
-            ids.push((0..256).map(|i| field.read16(work + TILE_IDS + 2 * i)).collect());
+            let state = field.map_state();
+            ids.push((0..256).map(|i| field.read16(state + TILE_IDS + 2 * i)).collect());
             for sz in (0..SQUARES).step_by(2) {
                 for sx in (0..SQUARES).step_by(2) {
                     // The 2 by 2 squares start 256 pixels left of and 320

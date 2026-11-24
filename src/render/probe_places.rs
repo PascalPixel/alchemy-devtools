@@ -486,10 +486,10 @@ impl<'a> Guide<'a> {
                     println!("  tiles 420.. (32 tiles): {nonzero} of 1024 words non-zero; DISPCNT {:04x} WININ {:04x} WINOUT {:04x} BLDCNT {:04x}", e.field.read16(0x0400_0000), e.field.read16(0x0400_0048), e.field.read16(0x0400_004a), e.field.read16(0x0400_0050));
                 }
                 {
-                    let work = e.field.map_work();
+                    let state = e.field.map_state();
                     let base = at("gMapGridCellBuffer")?;
                     for l in 0..3u32 {
-                        let p = e.field.read32(work + 0x130 + 0x30 * l);
+                        let p = e.field.read32(state + 0x130 + 0x30 * l);
                         let w = p.wrapping_sub(base) / 4;
                         println!("layer {l} window: column {}, row {}", w % 128, w / 128);
                     }
@@ -534,10 +534,10 @@ impl<'a> Guide<'a> {
                 let mut e = self.enter_story((24, 5), &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"], &[])?;
                 println!("leader {}", describe(&e.field, 0));
                 {
-                    let work = e.field.map_work();
+                    let state = e.field.map_state();
                     let base = at("gMapGridCellBuffer")?;
                     for l in 0..3u32 {
-                        let p = e.field.read32(work + 0x130 + 0x30 * l);
+                        let p = e.field.read32(state + 0x130 + 0x30 * l);
                         let w = p.wrapping_sub(base) / 4;
                         println!("layer {l} window: column {}, row {}", w % 128, w / 128);
                     }

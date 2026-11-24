@@ -1,5 +1,5 @@
 //! Where the structures the run reads keep what it reads: the main routine's
-//! work, the map's, the field's, an actor's, a scene's tables and a unit's,
+//! state, the map's, the field's, an actor's, a scene's tables and a unit's,
 //! for each game. The Broken Seal's are written here, as they have been read
 //! from its headers since the renderer began; The Lost Age's are read from
 //! its own headers at run time (Layout::read): each value a C expression,
@@ -43,7 +43,7 @@ impl Game {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Layout {
     pub game: Game,
-    /// struct MainRoutineWork: coins, the scene and entrance to run, the
+    /// struct MainRoutineState: coins, the scene and entrance to run, the
     /// party's position (x, y and z, s32 16.16 pixels, in a row), heading
     /// and layer, the leader, the active party.
     pub gs_coins: u32,
@@ -58,7 +58,7 @@ pub struct Layout {
     pub gs_active_owners: u32,
     /// Whether the leader walks or climbs (movementMode: 1 while he climbs).
     pub gs_movement_mode: u32,
-    /// The map's work: the followed point, the view's top left (x, then y),
+    /// The map's state: the followed point, the view's top left (x, then y),
     /// the scroll bounds (minX, minY, maxX, maxY), the scrolling layers and
     /// each one's size, and a layer's cells pointer.
     pub map_origin: u32,
@@ -75,14 +75,14 @@ pub struct Layout {
     pub layer_speed: u32,
     pub layer_phase: u32,
     pub layer_mask: u32,
-    /// struct FieldWork: the trigger table, the actors and how many there
+    /// struct FieldState: the trigger table, the actors and how many there
     /// are, the field Psynergy request, the raised trigger and the mode.
     pub field_events: u32,
     pub field_actors: u32,
     pub field_actor_count: u32,
     pub field_command: u32,
     pub field_raised: u32,
-    /// FieldWork.exit: the exit taken, which ends the scene.
+    /// FieldState.exit: the exit taken, which ends the scene.
     pub field_exit: u32,
     pub field_mode: u32,
     /// struct Actor: facing, x, y, z, ground height, layer, velocity, sprite
@@ -104,7 +104,7 @@ pub struct Layout {
     pub unit_action_slots: u32,
     /// The flag that stops random encounters.
     pub flag_no_encounters: u16,
-    /// The heap slots that point to the map's work and the field's, as
+    /// The heap slots that point to the map's state and the field's, as
     /// offsets into gHeapSlots.
     pub heap_map: u32,
     pub heap_field: u32,
@@ -113,22 +113,22 @@ pub struct Layout {
 /// Each value of a Layout, by name, as a C expression of each game's
 /// headers: The Broken Seal's, then The Lost Age's.
 const EXPRESSIONS: &[(&str, &str, &str)] = &[
-    ("gs_coins", "offsetof(struct MainRoutineWork, holdings.coins)", "offsetof(struct MainRoutineWork, coins)"),
-    ("gs_scene", "offsetof(struct MainRoutineWork, next)", "offsetof(struct MainRoutineWork, next)"),
-    ("gs_entrance", "offsetof(struct MainRoutineWork, entrance)", "offsetof(struct MainRoutineWork, entrance)"),
-    ("gs_x", "offsetof(struct MainRoutineWork, x)", "offsetof(struct MainRoutineWork, x)"),
-    ("gs_y", "offsetof(struct MainRoutineWork, y)", "offsetof(struct MainRoutineWork, y)"),
-    ("gs_z", "offsetof(struct MainRoutineWork, z)", "offsetof(struct MainRoutineWork, z)"),
-    ("gs_heading", "offsetof(struct MainRoutineWork, heading)", "offsetof(struct MainRoutineWork, heading)"),
-    ("gs_turn", "offsetof(struct MainRoutineWork, layer)", "offsetof(struct MainRoutineWork, layer)"),
-    ("gs_selected_actor", "offsetof(struct MainRoutineWork, leaderActorId)", "offsetof(struct MainRoutineWork, leaderActorId)"),
-    ("gs_active_owners", "offsetof(struct MainRoutineWork, party)", "offsetof(struct MainRoutineWork, party)"),
-    ("gs_movement_mode", "offsetof(struct MainRoutineWork, movementMode)", "offsetof(struct MainRoutineWork, movementMode)"),
-    ("map_origin", "offsetof(struct MapGridScrollWork, origin)", "offsetof(struct MapWork, origin)"),
-    ("map_view_x", "offsetof(struct MapGridScrollWork, view[0])", "offsetof(struct MapWork, viewX)"),
-    ("map_view_y", "offsetof(struct MapGridScrollWork, view[1])", "offsetof(struct MapWork, viewZ)"),
-    ("map_bounds", "offsetof(struct MapGridScrollWork, minX)", "offsetof(struct MapWork, minX)"),
-    ("map_layers", "offsetof(struct MapGridScrollWork, layers)", "offsetof(struct MapWork, layers)"),
+    ("gs_coins", "offsetof(struct MainRoutineState, holdings.coins)", "offsetof(struct MainRoutineState, coins)"),
+    ("gs_scene", "offsetof(struct MainRoutineState, next)", "offsetof(struct MainRoutineState, next)"),
+    ("gs_entrance", "offsetof(struct MainRoutineState, entrance)", "offsetof(struct MainRoutineState, entrance)"),
+    ("gs_x", "offsetof(struct MainRoutineState, x)", "offsetof(struct MainRoutineState, x)"),
+    ("gs_y", "offsetof(struct MainRoutineState, y)", "offsetof(struct MainRoutineState, y)"),
+    ("gs_z", "offsetof(struct MainRoutineState, z)", "offsetof(struct MainRoutineState, z)"),
+    ("gs_heading", "offsetof(struct MainRoutineState, heading)", "offsetof(struct MainRoutineState, heading)"),
+    ("gs_turn", "offsetof(struct MainRoutineState, layer)", "offsetof(struct MainRoutineState, layer)"),
+    ("gs_selected_actor", "offsetof(struct MainRoutineState, leaderActorId)", "offsetof(struct MainRoutineState, leaderActorId)"),
+    ("gs_active_owners", "offsetof(struct MainRoutineState, party)", "offsetof(struct MainRoutineState, party)"),
+    ("gs_movement_mode", "offsetof(struct MainRoutineState, movementMode)", "offsetof(struct MainRoutineState, movementMode)"),
+    ("map_origin", "offsetof(struct MapGridScrollState, origin)", "offsetof(struct MapState, origin)"),
+    ("map_view_x", "offsetof(struct MapGridScrollState, view[0])", "offsetof(struct MapState, viewX)"),
+    ("map_view_y", "offsetof(struct MapGridScrollState, view[1])", "offsetof(struct MapState, viewZ)"),
+    ("map_bounds", "offsetof(struct MapGridScrollState, minX)", "offsetof(struct MapState, minX)"),
+    ("map_layers", "offsetof(struct MapGridScrollState, layers)", "offsetof(struct MapState, layers)"),
     ("map_layer_size", "sizeof(struct MapGridLayerScroll)", "sizeof(struct MapLayer)"),
     ("map_layer_cells", "offsetof(struct MapGridLayerScroll, cells)", "offsetof(struct MapLayer, cells)"),
     // The Lost Age's layer leaves these unnamed: offsetX, scaleX, speedX,
@@ -138,13 +138,13 @@ const EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("layer_speed", "offsetof(struct MapGridLayerScroll, speedX)", "offsetof(struct MapLayer, speedX)"),
     ("layer_phase", "offsetof(struct MapGridLayerScroll, phaseX)", "offsetof(struct MapLayer, phaseX)"),
     ("layer_mask", "offsetof(struct MapGridLayerScroll, maskX)", "offsetof(struct MapLayer, maskX)"),
-    ("field_events", "offsetof(struct FieldWork, triggers)", "offsetof(struct FieldWork, triggers)"),
-    ("field_actors", "offsetof(struct FieldWork, actors)", "offsetof(struct FieldWork, actors)"),
+    ("field_events", "offsetof(struct FieldState, triggers)", "offsetof(struct FieldState, triggers)"),
+    ("field_actors", "offsetof(struct FieldState, actors)", "offsetof(struct FieldState, actors)"),
     ("field_actor_count", "ACTOR_ID_COUNT", "FIELD_ACTOR_COUNT"),
-    ("field_command", "offsetof(struct FieldWork, psynergy)", "offsetof(struct FieldWork, psynergy)"),
-    ("field_raised", "offsetof(struct FieldWork, raisedTrigger)", "offsetof(struct FieldWork, raisedTrigger)"),
-    ("field_exit", "offsetof(struct FieldWork, exit)", "offsetof(struct FieldWork, exit)"),
-    ("field_mode", "offsetof(struct FieldWork, mode)", "offsetof(struct FieldWork, mode)"),
+    ("field_command", "offsetof(struct FieldState, psynergy)", "offsetof(struct FieldState, psynergy)"),
+    ("field_raised", "offsetof(struct FieldState, raisedTrigger)", "offsetof(struct FieldState, raisedTrigger)"),
+    ("field_exit", "offsetof(struct FieldState, exit)", "offsetof(struct FieldState, exit)"),
+    ("field_mode", "offsetof(struct FieldState, mode)", "offsetof(struct FieldState, mode)"),
     ("obj_angle", "offsetof(struct Actor, facing)", "offsetof(struct Actor, facing)"),
     ("obj_x", "offsetof(struct Actor, x)", "offsetof(struct Actor, x)"),
     ("obj_y", "offsetof(struct Actor, y)", "offsetof(struct Actor, y)"),
@@ -162,7 +162,7 @@ const EXPRESSIONS: &[(&str, &str, &str)] = &[
     // Seal's tests FLAG_NO_ENCOUNTERS, the name wanted.
     ("flag_no_encounters", "FLAG_NO_ENCOUNTERS", "0x160"),
     ("heap_map", "HEAP_SLOT_MAP_GRID * 4", "offsetof(struct HeapSlots, mapGrid)"),
-    ("heap_field", "HEAP_SLOT_FIELD * 4", "offsetof(struct HeapSlots, fieldWork)"),
+    ("heap_field", "HEAP_SLOT_FIELD * 4", "offsetof(struct HeapSlots, fieldState)"),
 ];
 
 /// The headers each game's expressions read.
@@ -170,9 +170,9 @@ fn headers(game: Game) -> &'static [&'static str] {
     match game {
         Game::Tbs => &[
             "types.h",
-            "system/main_routine_work.h",
+            "system/main_routine_state.h",
             "field/map_grid_scroll.h",
-            "field/field_work.h",
+            "field/field_state.h",
             "field/actor.h",
             "field/scene_tables.h",
             "battle/battle_unit.h",
@@ -182,9 +182,9 @@ fn headers(game: Game) -> &'static [&'static str] {
         Game::Tla => &[
             "types.h",
             "stddef.h",
-            "system/main_routine_work.h",
+            "system/main_routine_state.h",
             "field/map_grid.h",
-            "field/field_work.h",
+            "field/field_state.h",
             "field/actor.h",
             "field/scene_tables.h",
             "battle/battle_unit.h",
@@ -367,19 +367,19 @@ fn probe(edition: &str, headers: &[&str], expressions: &[&str]) -> Result<Vec<i6
     Ok(values)
 }
 
-/// What a battle's run reads (battle.rs): the main routine's work, a
-/// unit's record, the battle's work and a battle object.
+/// What a battle's run reads (battle.rs): the main routine's state, a
+/// unit's record, the battle's state and a battle object.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BattleLayout {
-    /// MainRoutineWork's active party, in order.
+    /// MainRoutineState's active party, in order.
     pub state_active_owners: u32,
-    /// MainRoutineWork.battleType: 1, a set battle, rolls no first strike.
+    /// MainRoutineState.battleType: 1, a set battle, rolls no first strike.
     pub state_battle_type: u32,
     /// The battle background the next battle draws (the scene whose
     /// background it is).
     pub state_battle_background: u32,
     /// The party's Djinn recovery list (its four-byte entries), from
-    /// gMainRoutineWork, and where its count is from the list.
+    /// gMainRoutineState, and where its count is from the list.
     pub recovery_list: u32,
     pub recovery_count: u32,
     /// struct Unit (The Lost Age's BattleUnit): its size and fields.
@@ -403,18 +403,18 @@ pub struct BattleLayout {
     pub unit_djinn_held_counts: u32,
     pub unit_djinn_active: u32,
     pub unit_djinn_active_counts: u32,
-    /// struct BattleWork: the party's and the enemies' unit lists, the
+    /// struct BattleState: the party's and the enemies' unit lists, the
     /// background's colours and id, and the playback's phase.
-    pub work_party_units: u32,
-    pub work_enemy_ids: u32,
-    pub work_palette: u32,
-    pub work_background: u32,
-    pub work_event_phase: u32,
+    pub battle_party_units: u32,
+    pub battle_enemy_ids: u32,
+    pub battle_palette: u32,
+    pub battle_background: u32,
+    pub battle_event_phase: u32,
     /// struct BattleObject: its sprite, the sprite over it, its palette.
     pub obj_resource: u32,
     pub obj_overlay: u32,
     pub obj_palette: u32,
-    /// The heap slots of the battle's work and of the enemies' units, as
+    /// The heap slots of the battle's state and of the enemies' units, as
     /// offsets into gHeapSlots.
     pub heap_battle: u32,
     pub heap_enemy_units: u32,
@@ -427,10 +427,10 @@ pub struct BattleLayout {
 
 /// Each BattleLayout value as each game's C expression.
 const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
-    ("state_active_owners", "offsetof(struct MainRoutineWork, party)", "offsetof(struct MainRoutineWork, party)"),
-    ("state_battle_type", "offsetof(struct MainRoutineWork, battleType)", "offsetof(struct MainRoutineWork, battleType)"),
-    ("state_battle_background", "offsetof(struct MainRoutineWork, battleBackground)", "offsetof(struct MainRoutineWork, battleBackground)"),
-    // Djinn_GetRecoveryTable returns the main routine work from summonMask
+    ("state_active_owners", "offsetof(struct MainRoutineState, party)", "offsetof(struct MainRoutineState, party)"),
+    ("state_battle_type", "offsetof(struct MainRoutineState, battleType)", "offsetof(struct MainRoutineState, battleType)"),
+    ("state_battle_background", "offsetof(struct MainRoutineState, battleBackground)", "offsetof(struct MainRoutineState, battleBackground)"),
+    // Djinn_GetRecoveryTable returns the main routine's state from summonMask
     // on; The Lost Age's list is its entries after 8 bytes.
     ("recovery_list", "0x0c", "0x0c + offsetof(struct DjinnRecoveryTable, list.entries)"),
     ("recovery_count", "0x100", "offsetof(struct DjinnRecoveryTable, list.count) - offsetof(struct DjinnRecoveryTable, list.entries)"),
@@ -454,25 +454,25 @@ const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("unit_djinn_held_counts", "offsetof(struct Unit, djinnHeldCounts)", "offsetof(struct Unit, djinnHeldCounts)"),
     ("unit_djinn_active", "offsetof(struct Unit, djinnSet)", "offsetof(struct Unit, djinnSet)"),
     ("unit_djinn_active_counts", "offsetof(struct Unit, djinnSetCounts)", "offsetof(struct Unit, djinnSetCounts)"),
-    ("work_party_units", "offsetof(struct BattleWork, partyUnits)", "offsetof(struct BattleWork, partyUnits)"),
-    ("work_enemy_ids", "offsetof(struct BattleWork, enemyIds)", "offsetof(struct BattleWork, enemyIds)"),
-    ("work_palette", "offsetof(struct BattleWork, palette)", "offsetof(struct BattleWork, palette)"),
+    ("battle_party_units", "offsetof(struct BattleState, partyUnits)", "offsetof(struct BattleState, partyUnits)"),
+    ("battle_enemy_ids", "offsetof(struct BattleState, enemyIds)", "offsetof(struct BattleState, enemyIds)"),
+    ("battle_palette", "offsetof(struct BattleState, palette)", "offsetof(struct BattleState, palette)"),
     // The Lost Age's leaves the background's id unnamed, the first halfword
     // after the brightness as The Broken Seal's: background is the name
     // wanted.
-    ("work_background", "offsetof(struct BattleWork, background)", "offsetof(struct BattleWork, background)"),
-    ("work_event_phase", "offsetof(struct BattleWork, playback.phase)", "offsetof(struct BattleWork, events.phase)"),
+    ("battle_background", "offsetof(struct BattleState, background)", "offsetof(struct BattleState, background)"),
+    ("battle_event_phase", "offsetof(struct BattleState, playback.phase)", "offsetof(struct BattleState, events.phase)"),
     ("obj_resource", "offsetof(struct BattleObject, resource)", "offsetof(struct BattleObject, resource)"),
     ("obj_overlay", "offsetof(struct BattleObject, overlay)", "offsetof(struct BattleObject, overlay)"),
     ("obj_palette", "offsetof(struct BattleObject, palette)", "offsetof(struct BattleObject, palette)"),
-    ("heap_battle", "HEAP_SLOT_BATTLE * 4", "offsetof(struct HeapSlots, battleWork)"),
+    ("heap_battle", "HEAP_SLOT_BATTLE * 4", "offsetof(struct HeapSlots, battleState)"),
     ("heap_enemy_units", "HEAP_SLOT_ENEMY_UNITS * 4", "offsetof(struct HeapSlots, enemyUnits)"),
 ];
 
 fn battle_headers(game: Game) -> &'static [&'static str] {
     match game {
-        Game::Tbs => &["types.h", "system/main_routine_work.h", "battle/battle_unit.h", "battle/battle_work.h", "battle/battle_action.h", "battle/battle_side.h", "system/heap.h"],
-        Game::Tla => &["types.h", "stddef.h", "system/main_routine_work.h", "battle/battle_unit.h", "battle/battle_work.h", "battle/battle_action.h", "battle/battle_side.h", "system/ram_buffer.h"],
+        Game::Tbs => &["types.h", "system/main_routine_state.h", "battle/battle_unit.h", "battle/battle_state.h", "battle/battle_action.h", "battle/battle_side.h", "system/heap.h"],
+        Game::Tla => &["types.h", "stddef.h", "system/main_routine_state.h", "battle/battle_unit.h", "battle/battle_state.h", "battle/battle_action.h", "battle/battle_side.h", "system/ram_buffer.h"],
     }
 }
 
@@ -505,11 +505,11 @@ impl BattleLayout {
             unit_djinn_held_counts: 0x118,
             unit_djinn_active: 0x108,
             unit_djinn_active_counts: 0x11c,
-            work_party_units: 0x58,
-            work_enemy_ids: 0x66,
-            work_palette: 0x544,
-            work_background: 0x648,
-            work_event_phase: 0x800,
+            battle_party_units: 0x58,
+            battle_enemy_ids: 0x66,
+            battle_palette: 0x544,
+            battle_background: 0x648,
+            battle_event_phase: 0x800,
             obj_resource: 0x04,
             obj_overlay: 0x06,
             obj_palette: 0x14,
@@ -562,11 +562,11 @@ impl BattleLayout {
             unit_djinn_held_counts: get("unit_djinn_held_counts"),
             unit_djinn_active: get("unit_djinn_active"),
             unit_djinn_active_counts: get("unit_djinn_active_counts"),
-            work_party_units: get("work_party_units"),
-            work_enemy_ids: get("work_enemy_ids"),
-            work_palette: get("work_palette"),
-            work_background: get("work_background"),
-            work_event_phase: get("work_event_phase"),
+            battle_party_units: get("battle_party_units"),
+            battle_enemy_ids: get("battle_enemy_ids"),
+            battle_palette: get("battle_palette"),
+            battle_background: get("battle_background"),
+            battle_event_phase: get("battle_event_phase"),
             obj_resource: get("obj_resource"),
             obj_overlay: get("obj_overlay"),
             obj_palette: get("obj_palette"),

@@ -24,7 +24,7 @@ const ONE_WILD_WOLF: u32 = 129;
 /// Debug parameter set 7: Felix, Jenna and Sheba at level 7, as they reach
 /// the Kandorean Temple.
 const PARTY_TEMPLE: u8 = 7;
-/// gMainRoutineWork.battleType: 1, which no battle start names, opens the
+/// gMainRoutineState.battleType: 1, which no battle start names, opens the
 /// battle with no first strike or surprise.
 const BATTLE_START_SET: u8 = 1;
 /// The first enemy's unit id, and struct BattleAction's unit.
@@ -106,7 +106,7 @@ impl<'a> Guide<'a> {
         let menu = self.sym("DebugBattle_RunMenu")?;
         let preset = self.sym("DebugParameterSet_Load")?;
         let encounter = self.sym("Battle_Run")?;
-        let game_state = self.sym("gMainRoutineWork")?;
+        let game_state = self.sym("gMainRoutineState")?;
         let game_flags = self.sym("gGameFlagBytes")?;
         let mut gba = Gba::new(self.rom)?;
         // 0: booting, 1: the chooser, 2: the battle.

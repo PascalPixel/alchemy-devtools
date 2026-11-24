@@ -29,7 +29,7 @@ pub struct Held {
     pub keys: u32,
     pub frames: u32,
     /// The Psynergy cast at this step, where the leader stands and faces,
-    /// as the field's shortcut keys cast it (FieldWork.psynergy); `keys`
+    /// as the field's shortcut keys cast it (FieldState.psynergy); `keys`
     /// are then the way held after it for `frames` frames (a Move
     /// steered), none for none.
     pub cast: Option<Cast>,
@@ -564,10 +564,10 @@ pub fn guard(text: &str, name: &str) -> Vec<(String, bool)> {
 /// copy only what the cells do.
 const PICTURE_COPIES: [(&str, bool); 7] = [
     ("MapGrid_CopyCellsTo", true),
-    ("MapGrid_CopyCellPictureIndicesRect", true),
+    ("MapGrid_CopyCellTilesIndicesRect", true),
     ("MapGrid_CopyCells", false),
     ("MapGrid_CopyCellsLayered", false),
-    ("MapGrid_CopyCellPictureCellsRect", false),
+    ("MapGrid_CopyCellTilesCellsRect", false),
     ("FieldTileCopies_CopyTouchedCells", false),
     ("TileCopies_CopyTouchedCells", false),
 ];
@@ -621,7 +621,7 @@ pub fn drawn_cells(text: &str, name: &str) -> Vec<(i32, i32)> {
 }
 
 /// What function `name` of C source `text` assigns to, as its statements
-/// write it (`leader->riseCounter`, `gFadeOverlayWork->actor`), its own
+/// write it (`leader->riseCounter`, `gFadeOverlayState->actor`), its own
 /// locals left out: for an event that shows nothing, what it changes
 /// instead.
 pub fn assigned(text: &str, name: &str) -> Vec<String> {
@@ -997,8 +997,8 @@ mod tests {
 
     #[test]
     fn what_a_function_assigns_is_read() {
-        let text = "static void S_Start(void) {\n  struct Actor *leader = Actor_Get(0);\n  s32 i;\n  gFadeOverlayWork->actor = leader;\n  leader->riseCounter = 1;\n  i = 2;\n  gCount += 1;\n  if (leader->x == 3)\n    gWork.flags[i] |= 4;\n}\n";
-        assert_eq!(assigned(text, "S_Start"), vec!["gFadeOverlayWork->actor", "leader->riseCounter", "gCount", "gWork.flags[i]"]);
+        let text = "static void S_Start(void) {\n  struct Actor *leader = Actor_Get(0);\n  s32 i;\n  gFadeOverlayState->actor = leader;\n  leader->riseCounter = 1;\n  i = 2;\n  gCount += 1;\n  if (leader->x == 3)\n    gState.flags[i] |= 4;\n}\n";
+        assert_eq!(assigned(text, "S_Start"), vec!["gFadeOverlayState->actor", "leader->riseCounter", "gCount", "gState.flags[i]"]);
     }
 
     #[test]

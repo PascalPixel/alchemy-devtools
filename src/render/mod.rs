@@ -693,7 +693,7 @@ staged:
     debug sets that holds them all (gDebug_ParameterSets).
   A pad script's step may be cast:ABILITY (cast:hover, cast:burst): the
     Psynergy is cast where the leader stands and faces, through the
-    game's own cast path (FieldWork.psynergy, as a shortcut key casts it,
+    game's own cast path (FieldState.psynergy, as a shortcut key casts it,
     not the field menu), then the script goes on; cast:ABILITY:WAY holds
     north, east, south or west after it for 60 frames (cast:move:east,
     Move steered), cast:ABILITY:WAY:N for N. The ability is ability_ids.h's
