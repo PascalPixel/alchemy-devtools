@@ -4496,7 +4496,6 @@ ACTOR_SOLDIER_COLOSSO_VICTORS	the game	"Babi's soldiers are all Colosso victors.
 ACTOR_SCHOLAR_ATTACKED_ANYWAY	the game	"Kraden told them to stop, but they attacked anyway." (MsgVenusLighthouseKradenToldThemToStopBut)	games/tbs/src/scene/venus_lighthouse.c
 ACTOR_SCHOLAR_NOT_THE_ENTRANCE	the game	"said this isn't the entrance." (MsgVenusLighthouseKradenWentInsideButThenCame)	games/tbs/src/scene/venus_lighthouse.c
 ACTOR_DOOR_SCHOLAR	the game	"I thought I'd explore after the door opened." (MsgVenusThoughtIdExploreAfterDoor)	games/tbs/src/scene/venus_lighthouse.c
-ACTOR_WALL_PILLAR	what the player sees	a grey pillar carved with spirals, two cell pictures tall, short of the wall (its render)	games/tbs/src/scene/venus_lighthouse.c
 ACTOR_FLOOR_SWITCH_STATUE	what the player sees	a white statue of a robed woman beside a floor switch (its render)	games/tbs/src/scene/venus_lighthouse.c
 ACTOR_FIRST_CAPPED_PILLAR	what the player sees	grey pillars with white tops, one alone and two side by side (its render)	games/tbs/src/scene/venus_lighthouse.c
 ACTOR_FIRST_CARRY_PILLAR	what the player sees	two grey pillars carved with spirals beside the gap (its render)	games/tbs/src/scene/venus_lighthouse.c
@@ -4673,7 +4672,6 @@ SHEET_PALETTE_BYTES	its code	as SHEET_PALETTE_COLORS, two bytes a colour	games/t
 PARTICLE_DAMPING_NONE	its code	Particle_AdvanceWithGravity3D/2D multiply each speed by damping / 64: 64 keeps it whole	games/tbs/src/battle_effect/battle_effect_internal.h
 PICTURE_BYTES	its code	sheet pictures are one byte a pixel, laid out one after another (the enums' offsets were width * height sums)	games/tbs/src/battle_effect/battle_effect_internal.h
 EFFECT_DRAW_PICTURE	its code	the blitters take (canvas, source, x, y, width, height); a named picture is drawn at its own size	games/tbs/src/battle_effect/battle_effect_internal.h
-ATALANTA_SHAFTS	its code	sixteen shafts gather (the loop over work->particles 0 to 15; the brief's "sixteen shafts of light")	games/tbs/src/battle_effect/battle_effect_atalanta.c
 ATALANTA_TRAIL_MOTES	its code	24 trail motes per shaft in PARTICLES, each with its own stored rotation	games/tbs/src/battle_effect/battle_effect_atalanta.c
 ATALANTA_FALLING_SHAFTS	its code	the falling loop draws 24 shafts ("24 shafts rain down")	games/tbs/src/battle_effect/battle_effect_atalanta.c
 ATALANTA_SHAFT_FLASH_A	its sound data	the shaft's flash, drawn one picture a frame in order (switch on frame - start - 16, cases 0 to 4): lettered A to E as a set of frames, replacing _1 to _5	games/tbs/src/battle_effect/battle_effect_atalanta.c
@@ -4705,7 +4703,6 @@ THOR_SPARK_COUNT	its code	the spark launcher walks 910 particles from THOR_PARTI
 THOR_BOLT_WIDTH	its code	the bolts drawn 72x72 at i % 3 * (72 * 72)	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_LIGHT_FAN_WIDTH	its code	LightFanSheet drawn 32x96 twice, mirrored	games/tbs/src/battle_effect/battle_effect_thor.c
 BIND_EDGE_FLARES	its code	each triangle edge stamped with 24 flares, k / 24 of the way	games/tbs/src/battle_effect/battle_effect_bind.c
-BIND_SLOTS_PER_TARGET	its code	the triangle's corners at work->particles[member * 32 + j]	games/tbs/src/battle_effect/battle_effect_bind.c
 BLUE_FLAME_COLUMN_WIDTH	its code	BlueFlameSheet's 17x104 column and the 34x65 flame after it (BLUE_FLAME_SHEET_FLAME was 17 * 104; Venus draws the flame 34x65, Aqua Sock the splash width * 2 by 65)	games/tbs/src/battle_effect/battle_effect_internal.h
 FLAMEBALL_WIDTH	its code	FlameballSheet (Jupiter) and FireballSheet (the volley) drawn 40x64, centred	games/tbs/src/battle_effect/battle_effect_internal.h
 SHURIKEN_WIDTH	its code	ShurikenSheet's six pictures, frame % 6 * (32 * 24), drawn 32x24	games/tbs/src/battle_effect/battle_effect_projectiles.c
@@ -4751,18 +4748,14 @@ FIRE_BLOB_WIDTH	its code	FireBlobSheet drawn 48x32 (KIRIN_BLOB_BYTES was 48 * 32
 CRYSTAL_WIDTH	its code	CrystalSheet's crystal drawn 32x64 (PRISM_SHARD_PICTURES was 32 * 64)	games/tbs/src/battle_effect/battle_effect_internal.h
 BOREAS_CRYSTAL_WIDTH	its code	the torrent's crystals drawn 24x48 from the sheet's start; the big block 24x48; the streak 40x80	games/tbs/src/battle_effect/battle_effect_boreas.c
 PARTICLE_POOL_COUNT	its code	PARTICLES (Ram_MapGridCellBuffer as particles) is walked and freed 1,024 at a time by a dozen effects (EFFECT_FREE_PARTICLES(i, PARTICLES, 1024), PLASMA_SPARK_COUNT, VOLCANO_SPARK_POOL, RAY_SPARK_COUNT ...)	games/tbs/include/battle_effect/battle_effect.h
-BACKGROUND_DARKEN_FRAMES	its code	work->fadeFrames = 24 in eleven effects: Palette_StepFadeTransfer darkens the battle background a step a frame while it counts down	games/tbs/src/battle_effect/battle_effect_internal.h
 BOREAS_SPRAY	its code	the spray's 128 flecks in PARTICLES, their sparkles at PARTICLES + 128 (BOREAS_SPRAY_SPARKLES)	games/tbs/src/battle_effect/battle_effect_boreas.c
 BOREAS_SHARDS	its code	64 shards in PARTICLES, thrown 32 at frames 32 and 104 and 32 more at 64 into PARTICLES[i + 32]	games/tbs/src/battle_effect/battle_effect_boreas.c
 BOREAS_MASS_CRYSTALS	its code	the 64 PARTICLES set up before the first part, as the brief's "mass of ice crystals"	games/tbs/src/battle_effect/battle_effect_boreas.c
-BOREAS_TORRENT_CRYSTALS	its code	the torrent's 64 crystals in work->particles, half of them falling on frame 72	games/tbs/src/battle_effect/battle_effect_boreas.c
 BOREAS_TORRENT_SPARKLES	its code	64 sparkles in PARTICLES during the torrent	games/tbs/src/battle_effect/battle_effect_boreas.c
 PARTICLE_STREAMS_FLASHES	its code	the comment's 128 flashes in PARTICLES before the burst's 512 embers	games/tbs/src/battle_effect/battle_effect_particle_streams.c
 CANVAS_TILES	its code	the canvas's map is 16 rows of 16 tiles (EFFECT_WRITE_CANVAS_MAP_ROW, the wipe's (y / 8) * 16 + x / 8)	games/tbs/src/battle_effect/battle_effect_internal.h
 CANVAS_PIXEL_OFFSET	its code	the same tile-order pixel address written out at five sites (the wipe twice, Cybele twice, Meteor's starfield); a macro of ours	games/tbs/src/battle_effect/battle_effect_internal.h
-CYBELE_VINES	its code	the vines, sparks and thorns are 16 each in work->particles from 0, CYBELE_FIRST_SPARK and CYBELE_FIRST_THORN; the chips 48 from CYBELE_FIRST_CHIP	games/tbs/src/battle_effect/battle_effect_cybele.c
 GAIA_ROCKS	its code	eleven rock sprites created, moved and destroyed; 256 dust particles in PARTICLES	games/tbs/src/battle_effect/battle_effect_gaia.c
-BEAM_SPARKS	its code	64 sparks set up in work->particles and drawn in pairs, over the slash's and the critical hit's 32 frames	games/tbs/src/battle_effect/battle_effect_beams.c
 TARGET_STRIKE_MOTES_PER_TARGET	its code	PARTICLES[k * 128 + i] for each target's motes; the sparks at PARTICLES + 512, 512 of them	games/tbs/src/battle_effect/battle_effect_target_strike.c
 ATALANTA_FALL_FRAMES	its code	the effects' frame loops: each named for the effect or part it times, as the file's existing MERCURY_FRAMES, VOLCANO_FRAMES and JUDGMENT_GATHER_FRAMES are (24 loops: Atalanta's fall, Boreas's opening and torrent, Cybele, the element burst, Flare, Hail, Ground, Kirin's sweep and charge, Neptune's columns, the mirrored wall, the meteor's burst, Gaia, Procne, Ray, Thor's opening and storm, the flashing strike, Astral Blast, Shining Star, Whirlwind, Undead Sword)	games/tbs/src/battle_effect/battle_effect_*.c
 HEALING_SPARKS	its code	five loops walk 512 sparks in PARTICLES	games/tbs/src/battle_effect/battle_effect_healing.c
@@ -4821,8 +4814,6 @@ WINDOW_EDGE_LINES	its code	the u16 table at Ram_MapGridCellBuffer + 130 the buil
 FIELD_PIXEL	its code	INTtoFIXED() undone on a 16.16 coordinate or distance; the field lane's macro (claude/tbs-targets-field, same text in field_sequence.h) used at 45 scene sites	games/tbs/include/field/field_sequence.h
 MAPGRID_CELL_PIXELS	its code	glossary: a cell is one 16-pixel square; FIELD_CELL is >> 20, 16 pixels in 16.16; terrain reads x / 16 and x & 15	games/tbs/include/field/map_grid.h
 MAPGRID_SHAPE_KIND_MASK	its code	MapGridCell.shape's comment: the shape's kind in the first byte's low four bits; & 15 indexes gMapGrid_TerrainHeightFunctions	games/tbs/include/field/map_grid.h
-MAPGRID_SCREEN_CELLS	its code	a layer's BG map is 32 tiles a row (RenderCellPictureRow wraps at 32), 16 cells; the copy routines wrap x and y & 15	games/tbs/src/field/field_map_grid.c
-MAPGRID_SCREEN_ROW_BYTES	its code	a cell picture's bottom tile entries are written 64 bytes after its top ones: one row of 32 two-byte entries	games/tbs/src/field/field_map_grid.c
 EDITOR_SWATCH_TILE	its code	the swatch tiles are decompressed to tile 208 of char block 0, colour n drawn with tile 208 + n	games/tbs/src/field/field_sequence_palette_editor.c
 EDITOR_PALETTES	its code	L and R wrap the palette at 0..13; MapGrid_LoadMap loads 448 bytes, 14 of the 16 BG palettes	games/tbs/src/field/field_sequence_palette_editor.c
 EDITOR_BLINK_FRAMES	its code	START blinks white, the colour, black, the colour at frames 0, 10, 20, 30 of a 40-frame cycle	games/tbs/src/field/field_sequence_palette_editor.c
@@ -4844,7 +4835,6 @@ DISPLAY_TILE_HEIGHT	the hardware	rows 0 to 19 (160 / 8); off-screen speakers get
 unusedA	its code	two parameters of Event_ShowMessageAtPosition and its forwarder that nothing reads; only their order tells them apart	games/tbs/src/field/event_commands_messages.c
 FixedPoint_MulQ8	its code	the routine multiplies two 8.8 fixed-point values; named as Iwram_MulFX is for 16.16	games/tbs/src/field/lucky_dice.c
 BurstParticleVisual.xLow	its code	the byte at offset 6 is attribute 1's low byte, x; flagsBLow holds x's top bit	games/tbs/src/field/event_commands_growth.c
-ScriptOperands.layer	its code	struct Actor's layer and priorityFlags at 0x22 and 0x23, which no work value reaches	games/tbs/include/field/script_operands.h
 SceneEntrance.unusedAfterFacing	its code	0 in every table and never read; named by the member it follows	games/tbs/include/field/scene_tables.h
 FarCallSystemTable.arcTan2	its code	the entry at 64 is Trig_Atan's far call (FarCallArcTanVeneer), named as the system routine is	games/tbs/src/field/world_map_lines.c
 TILESET_ANIM_WIDE_TILE_BYTES	its code	a layout with wideTiles copies 64-byte tiles (256 colours, GBATEK) to char block 2	games/tbs/src/field/field_tile_animation.c
@@ -4901,7 +4891,6 @@ FIELD_CELL_CENTER	its code	(cell << 20) + INTtoFIXED(8), the middle of a map gri
 TREASURE_SPOT_FIRST_ID	its code	the map's spot list places a spot only for ids 100 to 239 (field_sequence_treasure_spots.c) and the marker search skips the rest (field_sequence_item_display.c); TreasureSpot.id's comment	games/tbs/include/field/field_sequence.h
 TREASURE_SPOT_LAST_ID	its code	as TREASURE_SPOT_FIRST_ID	games/tbs/include/field/field_sequence.h
 TREASURE_SPOT_LIST_END	its code	both readers of the map's spot list stop at column and row 255	games/tbs/include/field/field_sequence.h
-MAP_TRANSITION_FRAMES	its code	FieldWork.transitionFrames is set to 16 when a map is entered (field_sequence_run.c) and when an event starts (event_commands_event.c); events and scenes set other lengths (6, 24, 40)	games/tbs/include/field/field_work.h
 ABILITY_NONE	the game	MsgAbilityName + 0 is "Nothing"; ability 0 is the row no action names	games/tbs/include/ability_ids.h
 ITEM_NONE	its code	id 0 is the empty inventory slot and the gift list's terminator (itemId == 0 tests in battle_spoils.c, game_inventory.c); its name is "???"	games/tbs/include/item_ids.h
 ITEM_SPARE_FIRST	its code	rows 269 to 323 of gItem_DefinitionTable are one copied weapon row (Isaac, price 100, Move unleash) with no name message; nothing gives them	games/tbs/include/item_ids.h
@@ -4964,7 +4953,6 @@ PLTT_COLORS	the hardware	GBATEK: palette RAM holds 512 colours, background then 
 TILE_SIZE_8BPP	the hardware	GBATEK: an 8x8 tile of 256 colours is 64 bytes	games/tbs/include/system/io_reg.h
 BLEND_WEIGHT_MAX	the hardware	GBATEK: BLDALPHA's EVA and EVB coefficients run 0 to 16 (16/16 full); the game writes BLEND_ALPHA(16 - i, 16) fades	games/tbs/include/system/io_reg.h
 FRAMES_PER_SECOND	the hardware	GBATEK: 59.73 Hz refresh; the title's comments count its waits of 60, 120 and 180 frames as one, two and three seconds	games/tbs/include/system/frame.h
-INTRO_OBJECT_COUNT	its code	IntroWork's OAM shadow is 120 entries; Title_UpdateIntroSprites hides the entries after its sprites up to 120	games/tbs/src/menu/title_intro.c
 INTRO_SKIP_AFTER_FRAME	its code	Title_ShowIntro ignores A and START until frame 21	games/tbs/src/menu/title_intro.c
 INTRO_APPROACH_FRAME	its code	a skip jumps to frame 239, where INTRO_STATE_APPROACH is set	games/tbs/src/menu/title_intro.c
 INTRO_FLASH_FRAME	its code	at frame 280 Title_ShowIntro fades to white and loads the title picture	games/tbs/src/menu/title_intro.c
@@ -5012,7 +5000,6 @@ STATUS_FIGURE_ROW_Y	its code	as STATUS_FIGURE_X	games/tbs/src/menu/menu_status.c
 NAME_LAST_ROW	its code	the name keyboard's cursor wraps between row 0 and row 10, where the command column's End key is (width 3, ends the entry)	games/tbs/src/window/screens_name_entry.c
 NAME_DELETE_ROW	its code	the command column's row 8 jumps to remove_character	games/tbs/src/window/screens_name_entry.c
 NAME_IS_GAP_COLUMN	its code	Left and Right skip columns 5, 11 and 17, between the keyboard's groups	games/tbs/src/window/screens_name_entry.c
-reservedAfterError	its code	SerialWork's unnamed bytes after transferError, packetNumber and receiveIndex, named by what they follow	games/tbs/include/system/serial.h
 exec	its code	LinkSignature's first eight bytes: halfwords 0 to 3, which read "EXEC" while the link holds	games/tbs/src/window/screens_link_timer.c
 OBJ_X	the hardware	GBATEK: OAM attribute 1's low nine bits are the x; an OamWords attr01 word holds attribute 1 in its high half, so the intro, the credits and the icon menu shift x by 16	games/tbs/include/system/io_reg.h
 DMA_FILL_HALFWORDS	the hardware	GBATEK: DMA control with a fixed source fills; Dma_Fill16 and the intro's band clear write (DMA_ENABLE | DMA_SRC_FIXED) << 16 | count, beside DMA_FILL_WORDS	games/tbs/include/system/io_reg.h
@@ -5022,7 +5009,6 @@ TEXT_TILES	its code	as TEXT_TILE_FIRST: 128 tiles a range, masks 127 and 255	gam
 TEXT_EXTRA_TILE_FIRST	its code	as TEXT_TILE_FIRST: extraTextTiles adds tiles 512 to 639	games/tbs/include/window/window.h
 TEXT_LINE_HEIGHT	its code	Text_MeasureDecoded counts 15 pixels a line (its own comment), Text_MeasureAllPages starts each page at 15, and the wide string drawer moves 15 down a line	games/tbs/src/window/window_internal.h
 INVENTORY_STACK_MAX	its code	item.h's comment: a stack grows to 30 (Inventory_AddItem); the trade takes at most 30 out, and the quantity dial's bar ends at 30	games/tbs/include/game/item.h
-MENU_ENTRY_ICONS	its code	ItemMenuWork.entryIcons and the Psynergy, Djinn and status views of the menu work hold 32 icons; the menus loop over 32	games/tbs/include/menu/item_menu.h
 STAR_FIELD_SIZE	its code	the element glow's canvas is allocated and cleared as 128 * 128 bytes, its centre STAR_FIELD_CENTER 64	games/tbs/src/battle/battle_element_glow.c
 STAR_FIELD_FRAMES	its code	the star field runs frames 0 to 44 (the struct comment: 45 frames)	games/tbs/src/battle/battle_element_glow.c
 BATTLE_PROJECTION_CENTER_X	its code	both battle camera setups set gProjection.centerX and centerY to 120 and pass INTtoFIXED(120) to BattleCamera_SetRange	games/tbs/src/battle/battle_background.c
@@ -5077,7 +5063,6 @@ KANJI_GLYPH_SIZE	its code	Text_DrawGlyphPair and the ARM renderer step gFont_Kan
 KANJI_WIDTH	its code	a kanji is drawn and measured 10 pixels wide (Text_DrawGlyphPair, Text_GetWideStringWidth, the ARM renderer)	games/tbs/include/window/text_font.h
 MenuCursor.frames	its code	MenuCursor_Advance divides the move by it (durationFrames) and clears it on arrival; the shop sets it to 12, 4 or 3	games/tbs/include/window/cursor.h
 MenuCursor.frame	its code	MenuCursor_Advance increments it each frame and ends the move when it equals frames (cursor.h's own comment "frames of the current move done")	games/tbs/include/window/cursor.h
-ShopWork.cursorFrames	its code	only ever passed to MenuCursor_Set as the glide's frames (MenuCursor_Place); 12 when a list opens, 3 or 4 after the first placement	games/tbs/include/shop/shop.h
 SHOP_CURSOR_ENTER_FRAMES	its code	every shop list sets the glide to 12 frames as it opens, then 3 or 4 a step	games/tbs/include/shop/shop.h
 DJINN_COMMAND	its code	BattleDjinnMenu packs (element << 8) | number; BattleActionRun and the turn read (p >> 8) & 15 and p & 255 (battle_action.c's own comment)	games/tbs/include/battle/battle_action.h
 DJINN_COMMAND_ELEMENT	its code	as DJINN_COMMAND	games/tbs/include/battle/battle_action.h
@@ -5213,14 +5198,10 @@ PORTRAIT_SPRITE_MAP_FIRST	its code	window_messages.c's Portrait_GetForSpeaker ad
 PROJECTION_FAR_DEPTH_MAX	its code	Projection_Set's farDepth toFIXED(32767), the largest whole 16.16 number: battle_staging.c's BattleStaging_DispatchAction, battle_effect_thor.c and lucky_dice.c	games/tbs/include/system/system.h
 SCENE_TRANSITION_STYLE	its code	field_sequence_screen_transition.c's ScreenTransition_Start and ScreenTransition_Finish read (mode >> 8) & 0xff as the enum ScreenTransitionStyle, SCENE_TRANSITION's high byte	games/tbs/include/field/actor.h
 SCENE_TRANSITION_VARIANT	its code	ScreenTransition_Start and ScreenTransition_Finish read mode & 0xff as the variant the style reads, SCENE_TRANSITION's low byte	games/tbs/include/field/actor.h
-MESSAGE_DECODE_HALTING_SPEECH	its twin	The Lost Age's window.h enum MessageDecodeFlag; window_borders.c's Message_SetDecodeFlags sets WindowWork.haltingSpeech from bit 0	games/tbs/include/window/window.h
-MESSAGE_DECODE_SPACING_AFTER	its twin	The Lost Age's window.h enum MessageDecodeFlag; Message_SetDecodeFlags sets WindowWork.spacingAfter from bit 1	games/tbs/include/window/window.h
 MESSAGE_WINDOW_VOICE_OF	its code	window_borders.c's Message_OpenWindow takes the speaker's voice out of packed as (packed << 4) >> 20, bits 16 to 27	games/tbs/include/window/window.h
 MESSAGE_WINDOW_OPTIONS_MASK	its code	Message_OpenWindow keeps packed & 0xffff, the window options below the voice	games/tbs/include/window/window.h
 SPRITE_PICTURE_TAG	its code	field_sprite_animation.c's record->tag = (slot << 12) | number; field_sprite_viewer.c's SpriteViewer_Run creates a copy's sprite as id + (slot << 12)	games/tbs/include/field/sprite.h
 FIXEDtoINT_TWICE	its code	window_borders.c's Window_DrawZoomBorder (a zooming window's width and height) and battle_effect_prism.c's phase palette take twice a 16.16 value whole as value >> 15	games/tbs/include/fixed_math.h
-BATTLE_BACKGROUND_COLORS	its code	BattleWork.palette's 128 colours, BG palettes 6 to 13: battle_background.c's copies and scaling, the element glow, battle_effect_canvas.c, battle_effect_death_plunge.c and battle_effect_judgment.c	games/tbs/include/battle/battle_work.h
-BACKGROUND_LEVEL_STEP	its code	BattleBackground_SetPaletteLevel, BattleBackground_Load and the element glow scale the background by FIXED_ONE - level * 1092, and battle_effect_canvas.c's Palette_StepFadeTransfer by FIXED_ONE / 60 a step: a sixtieth of the full brightness	games/tbs/include/battle/battle_work.h
 DISPCNT_MODE_MASK	the hardware	DISPCNT bits 2..0, the BG mode (GBATEK): field_sequence_screen_transition.c and field_world_map.c clear them before choosing DISPCNT_MODE_2 or mode 0	games/tbs/include/system/io_reg.h
 MAP_ROW_BYTES	the hardware	a text background map row is 32 entries of two bytes (GBATEK): battle_transition.c and battle_effect_canvas.c step a map a row at a time	games/tbs/include/system/io_reg.h
 MAP_ENTRY_PAIR	its code	battle_transition.c's BattleTransition_BuildTilemap and field_world_map.c's WorldMap_LoadGraphics write two map entries a word, right << 16 | left, stepping both by 2	games/tbs/include/system/io_reg.h
@@ -5228,7 +5209,6 @@ DMA_COPY_HALFWORDS_DOWN	the hardware	DMA_SRC_DEC | DMA_DEST_DEC, both addresses 
 DMA_HBLANK_WORDS_PER_LINE	the hardware	an HBlank-started repeating 32-bit DMA whose destination reloads each line (GBATEK): field_world_map.c's WorldMap_ApplyAffinePage writes eight words a line, BG2PA to BG3Y	games/tbs/include/system/io_reg.h
 OBJ_AFFINE_PARAMETER	the hardware	OAM keeps the affine parameters in the fourth halfword of entries 4n to 4n + 3 (GBATEK): lucky_dice.c's dice and shadow matrices	games/tbs/include/system/io_reg.h
 OBJ_POSITION	the hardware	attribute 1's nine bits of x and attribute 0's eight of y (GBATEK): lucky_dice.c's bonus signs, result lettering and aiming hand	games/tbs/include/system/io_reg.h
-ACT_ID_MASK	its twin	The Lost Age's field_sequence.h; field_sequence_items.c and field_sequence_psynergy.c keep the Psynergy or item in bits 9..0 of FieldWork.psynergy and FieldWork.item	games/tbs/include/field/field_sequence.h
 ACT_UNIT_SHIFT	its twin	The Lost Age's field_sequence.h; the user above the Psynergy or item, bits 13..10 (event_commands_event.c's (shortcut >> 10) & 0xf)	games/tbs/include/field/field_sequence.h
 ABILITY_TONIC	the game	"Tonic" (MsgDjinnName + 25)	games/tbs/include/ability_ids.h
 DJINNI_TONIC	the game	"Tonic" (MsgDjinnName + 25)	games/tbs/include/djinn_ids.h
@@ -5569,8 +5549,6 @@ CART_COUNTDOWN_TURN	its code	CART_COUNTDOWN_TURN is 20 (altin_peak.c): A countdo
 LUCKY_DICE_COINS_PER_LEVEL	its code	LUCKY_DICE_COINS_PER_LEVEL is 10 (tolbi_games.c): Lucky Dice costs this many coins for each level of the party's average level; a win of LUCKY_DICE_MEDIUM_WIN coins or more, or of LUCKY_DICE_LARGE_WIN, is greeted with a bigger jingle	games/tbs/src/scene/tolbi_games.c
 LUCKY_DICE_MEDIUM_WIN	its code	LUCKY_DICE_MEDIUM_WIN is 5000 (tolbi_games.c): Lucky Dice costs this many coins for each level of the party's average level; a win of LUCKY_DICE_MEDIUM_WIN coins or more, or of LUCKY_DICE_LARGE_WIN, is greeted with a bigger jingle	games/tbs/src/scene/tolbi_games.c
 LUCKY_DICE_LARGE_WIN	its code	LUCKY_DICE_LARGE_WIN is 20000 (tolbi_games.c): Lucky Dice costs this many coins for each level of the party's average level; a win of LUCKY_DICE_MEDIUM_WIN coins or more, or of LUCKY_DICE_LARGE_WIN, is greeted with a bigger jingle	games/tbs/src/scene/tolbi_games.c
-SPRING_MEDAL_PRIZES	its code	SPRING_MEDAL_PRIZES is 15 (tolbi_games.c): A medal's prizes (MainRoutineWork's prizeWeights): its ring allows three more for each ring out from the centre	games/tbs/src/scene/tolbi_games.c
-SPRING_MEDAL_PRIZES_PER_RING	its code	SPRING_MEDAL_PRIZES_PER_RING is 3 (tolbi_games.c): A medal's prizes (MainRoutineWork's prizeWeights): its ring allows three more for each ring out from the centre	games/tbs/src/scene/tolbi_games.c
 SPRING_CRAB_REST_FRAMES	its code	SPRING_CRAB_REST_FRAMES is 30 (tolbi_games.c): The second crab rests this many frames at each end of its run	games/tbs/src/scene/tolbi_games.c
 SPRING_TOKEN_PULLED_DAMPING	its code	SPRING_TOKEN_PULLED_DAMPING is 253 (tolbi_games.c): The token's velocity keeps SPRING_TOKEN_PULLED_DAMPING / SPRING_TOKEN_DAMPING_SCALE of itself each frame while the rings pull it, and SPRING_TOKEN_SETTLING_DAMPING / SPRING_TOKEN_DAMPING_SCALE once they let go	games/tbs/src/scene/tolbi_games.c
 SPRING_TOKEN_SETTLING_DAMPING	its code	SPRING_TOKEN_SETTLING_DAMPING is 220 (tolbi_games.c): The token's velocity keeps SPRING_TOKEN_PULLED_DAMPING / SPRING_TOKEN_DAMPING_SCALE of itself each frame while the rings pull it, and SPRING_TOKEN_SETTLING_DAMPING / SPRING_TOKEN_DAMPING_SCALE once they let go	games/tbs/src/scene/tolbi_games.c
@@ -5725,7 +5703,6 @@ DJINN_PREVIEW_HOP_DELAY	its code	DJINN_PREVIEW_HOP_DELAY is 5 (menu_djinn_previe
 DJINN_PREVIEW_HOP_SINE_HEIGHT	its code	DJINN_PREVIEW_HOP_SINE_HEIGHT is 16 (menu_djinn_preview.c): The Djinni figures of a give or trade preview hop across between the two party members once a second, a few frames into it: a hop takes DJINN_PREVIEW_HOP_FRAMES frames along half a sine wave of DJINN_PREVIEW_HOP_SINE_HEIGHT pixels, cut flat at DJINN_PREVIEW_HOP_HEIGHT	games/tbs/src/menu/menu_djinn_preview.c
 DJINN_PREVIEW_HOP_HEIGHT	its code	DJINN_PREVIEW_HOP_HEIGHT is 6 (menu_djinn_preview.c): The Djinni figures of a give or trade preview hop across between the two party members once a second, a few frames into it: a hop takes DJINN_PREVIEW_HOP_FRAMES frames along half a sine wave of DJINN_PREVIEW_HOP_SINE_HEIGHT pixels, cut flat at DJINN_PREVIEW_HOP_HEIGHT	games/tbs/src/menu/menu_djinn_preview.c
 DJINN_TUTORIAL_COVERED_ROWS	its code	DJINN_TUTORIAL_COVERED_ROWS is 8 (menu_djinn_preview.c): The tilemap rows at the top of the screen that a tutorial message covers, saved before it opens and put back after it closes	games/tbs/src/menu/menu_djinn_preview.c
-BATTLE_BACKGROUND_COLORS	its code	BATTLE_BACKGROUND_COLORS is (8 * PALETTE_COLORS) (battle_work.h): the battle background's colours, BG palettes 6 to 13, which size BattleWork.palette; a battle background resource opens with as many (credits.c's Credits_LoadBackground)	games/tbs/include/battle/battle_work.h
 KOLIMA_PALETTE_WORDS	its code	the healthy and cursed sets are copied with DMA_COPY_WORDS(224): the palette fade's 2 * PALETTE_FADE_BG_COLORS colours, two to a word	games/tbs/src/scene/shared/kolima_palette.c
 VILLAGER_IS_BOY	its code	Vault_UpdateWalkingVillager picks ACTOR_GIRL_ROUND_THE_WELL as the partner when the timer's bit 0 is set, and vault.c and vault_revisit.c set it (timer = 1) for ACTOR_BOY_ROUND_THE_WELL	games/tbs/src/scene/shared/vault_nearby.c
 VILLAGER_TALKED_TO	its code	the talk events set the timer's bit 1 (timer |= 2) while the party talks to a child round the well and clear it after (timer &= 1); Vault_UpdateWalkingVillager then stops it whichever way it faces	games/tbs/src/scene/shared/vault_nearby.c
@@ -5750,9 +5727,6 @@ gKalay_PacingStep	the game	"Hey? What's up? Why are the guides pacing back and f
 gKalay_UnusedBeforePacingStep	its code	twelve bytes of the overlay's globals before gKalay_PacingStep that nothing reads or writes	games/tbs/src/scene/kalay.c
 gKalay_PartyLookAboutScript	its code	the party's script while Hammet comes home: Scene_LookAboutRandomly each frame (shared/actor_heading.c)	games/tbs/src/scene/kalay.c
 Kalay_AskAboutGoingToCave	the game	"Do you want to go to the cave up ahead?" (MsgKalayDoWantGoCaveUp)	games/tbs/src/scene/kalay.c
-DRIFT_HELD	its code	TolbiShipMast_DriftBird holds a bird's drift or bob at zero while its timer or work is 9, which nothing sets	games/tbs/src/scene/tolbi_ship_mast.c
-DRIFT_INCREASING	its code	TolbiShipMast_DriftBird keeps 0 in a bird's timer (its drift) or work (its bob) while the drift speeds up or the bob rises	games/tbs/src/scene/tolbi_ship_mast.c
-DRIFT_DECREASING	its code	TolbiShipMast_DriftBird keeps 1 in a bird's timer or work while the drift slows or the bob sinks	games/tbs/src/scene/tolbi_ship_mast.c
 gShipRooms_AnchorCharm	the game	"Anchor Charm" (MsgItemName)	games/tbs/src/scene/ship_rooms.c
 ROWING_DECK_SEATS	its code	gShipRooms_RowingDeckActorPlacements seats eight oarsmen and places eight oars, two by two, at x 410 and 470	games/tbs/src/scene/ship_rooms.c
 PASSENGER_COUNT	its code	each seat's group of rower flags runs from FLAG_TOLBI_SHIP_FIRST_SEAT_ROWERS + PASSENGER_HEAD_GUIDE to + PASSENGER_OLD_MAN, nine flags, and every loop over a group stops after nine	games/tbs/src/scene/ship_rooms.c
@@ -5889,8 +5863,6 @@ THOR_HAMMER_GLOW_PICTURE_HEIGHT	its code	the quarter is drawn 24 tall at y - 24 
 THOR_HAMMER_GLOW_SPARKS	what the player sees	a pale glow flickers about the head of Thor's hammer while the bolts stream from it, sparks flying off it (its render)	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_HAMMER_GLOW_SPARKS	its code	four free sparks a frame launched from the glow's mirrored corner	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_SPARK_SHRINK_FRAMES	its code	a spark's mote size is variant / 16 + 1	games/tbs/src/battle_effect/battle_effect_thor.c
-THOR_STRAY_PARTICLES	its code	work->particles[0..15] get random x, y and variant at the storm's start; nothing in Thor reads them and BattleEffect_RunImpactBurst overwrites them	games/tbs/src/battle_effect/battle_effect_thor.c
-THOR_DIMMED_MOTES	its code	the eight dimmed copies are written at work->sheet + 10000 and the ring draws from there	games/tbs/src/battle_effect/battle_effect_thor.c
 WIPE_LAG_MAX	its code	delay[x] = Random16() & WIPE_LAG_MAX (63), and the down wipe runs until its front passes CANVAS_SIZE + WIPE_LAG_MAX	games/tbs/src/battle_effect/battle_effect_canvas.c
 CANVAS_BG1_SCREEN	its code	BattleEffect_SetupCanvasTileMap writes BG1's map in screen block 31, the battle's own BG1 map	games/tbs/src/battle_effect/battle_effect_canvas.c
 CANVAS_BG1_BLANK_TILE	its code	the rows around the canvas are filled with tile 255, which is cleared	games/tbs/src/battle_effect/battle_effect_canvas.c
@@ -5911,7 +5883,6 @@ WINDOW_COLOR_SLIDER_PALETTE	the game	"Window color" (MsgWindowColorLabel)	games/
 WINDOW_COLOR_SLIDER_PALETTE	its code	sprite palette 14, which gSettingsMenu_SliderPalette fills with 15 for the two sliders' ends	games/tbs/src/window/window_settings_menu.c
 WINDOW_SHADE	its code	WindowColor_Apply sets BG_PLTT_COLOR(WINDOW_PALETTE, WINDOW_BACKGROUND_COLOR + n) for n 0 to 6	games/tbs/src/window/window_settings_menu.c
 ICON_MENU_BOTTOM_ROW	its code	IconMenu_Center(17, ...) for most menus, and IconMenu_AddIcon starts each icon at y 17 * 8; a Yes or No may stand at row 0	games/tbs/src/window/screens_icon_menu.c
-ICON_MENU_MAX_ICONS	its code	IconMenuWork.entries[6], and gFileList_ActionByPosition's rows of 6	games/tbs/src/window/screens_icon_menu.c
 ScreenTransition_UpdateDissolve	its code	each frame sets two more of a solid tile's 64 pixels, in gScreenTransition_DitherTable's order, to colour 0 (opening) or DISSOLVE_COVER_COLOR (closing) and copies the tile to the one screen block 4 shows everywhere: the screen goes to or from a colour a scattering of pixels at a time. No scene's transition is TRANSITION_DISSOLVE and nothing calls ScreenTransition_InitializeState, so the game never shows it (no render)	games/tbs/src/field/field_sequence_screen_transition.c
 ScreenTransition_UpdateDissolve	plain English	a dissolve: one picture giving way to another a scattering of pixels at a time, as the transitions of that name in film and video do	games/tbs/src/field/field_sequence_screen_transition.c
 ScreenTransition_InitializeState	its code	no call in either game's source and no imports.inc row; gamepak/far_call/field_sequence.s keeps its overlay veneer. It starts the dissolve held at value 0 and waits 120 frames	games/tbs/src/field/field_sequence_screen_transition.c
@@ -5924,7 +5895,6 @@ CENTER_LINE_HIDDEN_FIRST	its code	once value reaches DISPLAY_HEIGHT / 2 the line
 CENTER_LINE_HIDDEN_SECOND	its code	once value reaches DISPLAY_HEIGHT / 2 the lines go to 200 and 250, below the screen's 160 lines, so the HBlank interrupt switches nothing	games/tbs/src/field/field_sequence_screen_transition.c
 DISSOLVE_COVER_COLOR	its code	ScreenTransition_Start's dissolve fills tile 0 with colour 15 and the update sets pixels to 15 while closing	games/tbs/src/field/field_sequence_screen_transition.c
 DISPLAY_TRANSITION_IRQ_WAIT_SCREEN	its code	ScreenTransition_UpdateScanline: phase 0 waits for a VCount of DISPLAY_HEIGHT - 2 or less, then phase 1 waits for either line, 2 for the second, 3 for the first, 9 is done	games/tbs/src/field/field_sequence_screen_transition.c
-LUCKY_WHEELS_HEAP_SLOT	its code	LuckyWheels_Run allocates its struct LuckyWheelsWork in heap slot 45, the one heap.h names HEAP_SLOT_LUCKY_DICE_SPRITES, and releases it at the end; LuckyWheels_Update reads it there	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_CANVAS_FIRST_TILE	its code	LuckyWheels_Run maps BG2's rows 2 on from tile 212 (k * 32 + i + 148 before); LUCKY_WHEELS_CANVAS_TILES is its address, 212 * 64 = 0x3500 into char block 0	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_CANVAS_TOP_ROW	its code	the first of the BG2 map rows LuckyWheels_Run gives the canvas's tiles (k < 2 takes the clear tile)	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_CANVAS_BOTTOM_ROW	its code	the last of the BG2 map rows LuckyWheels_Run gives the canvas's tiles; below it (k > 16) the clear tile	games/tbs/src/field/lucky_wheels.c
@@ -5968,10 +5938,8 @@ LUCKY_WHEELS_PLACED_SYMBOLS	its code	LuckyWheels_Run picks eight different place
 LUCKY_WHEELS_BET_MAX	the game	"and 7 lines for 4 tickets." (MsgTolbiLuckyWheelsRulesPullLever)	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_PAYLINES	the game	"and 7 lines for 4 tickets." (MsgTolbiLuckyWheelsRulesPullLever)	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_LEVER	the game	"Pull the lever and try to line up matching icons to win big." (MsgTolbiLuckyWheelsRulesPullLever)	games/tbs/src/field/lucky_wheels.c
-PACK_BYTE_VALUES	its code	struct LzPackWork's 256 chain heads, one for each byte value	games/tbs/src/field/lucky_wheels.c
 PACK_HISTORY	its code	LzPack_ConsumeSlotBytes(position + 672, n) drops from its chain the node at start + 292, position - 60 in the window, so the chains hold the 60 bytes behind the one being packed	games/tbs/src/field/lucky_wheels.c
 PACK_SHORT_MATCH_MAX	its code	LzPack_PackStream writes a match of up to 16 bytes as two bytes, its length - 1 in a nibble, and a longer one with its length - 17 in a third	games/tbs/src/field/lucky_wheels.c
-PACK_FIRST_FLAG	its code	struct LzPackWork's flagMask starts at 0x80, the flag byte's top bit, for each group and shifts right an item	games/tbs/src/field/lucky_wheels.c
 PACK_CODE_DISTANCE_HIGH	its code	LzPack_PackStream's code keeps (distance << 4) & ~0xfff: the distance's bits from 8 up, in the code's bits 12 up	games/tbs/src/field/lucky_wheels.c
 PACK_CODE_LENGTH	its code	a short match's length - 1, << 8 & 0xf00: the code's bits 8 to 11	games/tbs/src/field/lucky_wheels.c
 PACK_CODE_DISTANCE_LOW	its code	distance & 0xff, the code's low byte, written second	games/tbs/src/field/lucky_wheels.c
@@ -6103,7 +6071,6 @@ DAMPING_SCALE	its code	a bounce keeps velocity * 48 / DAMPING_SCALE of a die's s
 DescendingArcSprite.shadow	its code	the view over struct Sprite takes its own member names at the same places (attr, shadow and the rest), read and written as the Sprite's	games/tbs/src/field/event_commands_retreat.c
 EDITOR_NUMBER_TILE	its picture	games/tbs/src/graphics/palette_editor/swatch.png: the 16 swatches, then 32 tiles showing the numbers 0 to 31; the editor draws level n with tile EDITOR_NUMBER_TILE + n	games/tbs/src/field/field_sequence_palette_editor.c
 TEXT_ACTOR_NAME_START	its twin	The Lost Age's window_internal.h names decoded code 28 so (MESSAGE_ACTOR_NAME_START in its decoder); here drawing and measuring skip it and its two entries	games/tbs/src/window/window_internal.h
-ANIM_CAST_PSYNERGY_END	its twin	The Lost Age's field/sprite.h names animation 21 so, ANIM_CAST_PSYNERGY's last pictures held; isaac.tsv's 21 is pictures 164, 169 and 174 held	games/tbs/src/field/event_commands_field_psynergy_work.c
 DIMMED_COPIES	its code	Judgment fills copies i = 0 to DIMMED_COPIES - 1 of the MOTE_SET_BYTES mote pictures (battle_effect_judgment.c), Thor eight copies at sheet + THOR_DIMMED_MOTES whose ring draws copy frame - 156 up to DIMMED_COPIES - 1 (battle_effect_thor.c), and a stat reduction copies its shard picture the same way, drawing copy (targetFrame - 24) / 4 up to DIMMED_COPIES - 1 (battle_effect_stat_change.c)	games/tbs/src/battle_effect/battle_effect_internal.h
 DIMMED_COPY_CAP	its code	EFFECT_CAP_LEVEL(v, DIMMED_COPY_CAP(i)) for copy i in all three, CANVAS_LEVEL_BRIGHTEST + 1 - i * 7, so copy 0 keeps every level	games/tbs/src/battle_effect/battle_effect_internal.h
 MOTE_DEPTH_NEAR	its code	Eruption's motes, Fire's embers, Dragon Cloud's and the particle streams' embers clamp their projected depth to MOTE_DEPTH_NEAR..MOTE_DEPTH_FAR and draw size largest - (depth - MOTE_DEPTH_NEAR) / MOTE_DEPTH_STEP; Froth's bubbles make the same clamp (battle_effect_vortices.c)	games/tbs/src/battle_effect/battle_effect_internal.h
@@ -6136,8 +6103,6 @@ BattleEffect_RunDouse	the game	"Douse" (MsgAbilityName)	games/tbs/src/battle_eff
 BattleEffect_RunDouse	what the player sees	round blue drops of water fall diagonally onto the party and burst in white splashes that throw up droplets, each struck member flashing white (its render, Douse)	games/tbs/src/battle_effect/battle_effect_falling.c
 FALLING_BUILD_SLANTED_WINDOW	what the player sees	the shards and drops show only inside a band that slants down from the top of the battle view to the targets' side (its render, Ice and Douse)	games/tbs/src/battle_effect/battle_effect_falling.c
 FALLING_BAND	its code	WIN_RANGE(left, left + CANVAS_SIZE): a band of window 0 as wide as the canvas, from left	games/tbs/src/battle_effect/battle_effect_falling.c
-FALLING_SHARD_COUNT	its code	Ice lines up work->particles 0 to FALLING_SHARD_COUNT - 1 as shards, each 8 pixels higher than the one before; gFalling_IceCounts' rows use up to that many	games/tbs/src/battle_effect/battle_effect_falling.c
-FALLING_SHARD_PUFF_COUNT	its code	the puffs' slots, work->particles after the shards; a landed shard takes the first free one on frames ICE_PUFF_FIRST_FRAME to ICE_PUFF_LAST_FRAME	games/tbs/src/battle_effect/battle_effect_falling.c
 FALLING_LAND_Y	its code	a shard or drop moves while y <= FALLING_LAND_Y, its y in eighths of a pixel, so it lands at line 80	games/tbs/src/battle_effect/battle_effect_falling.c
 ICE_SHARD_HEIGHT	its code	as ICE_SHARD_WIDTH: each picture of IceShardSheet is drawn 32 high	games/tbs/src/battle_effect/battle_effect_falling.c
 FALLING_LANDED_LAST_FRAME	its code	a landed shard's or drop's variant counts up while variant <= FALLING_LANDED_LAST_FRAME; the shatter is drawn for variant 1 to it	games/tbs/src/battle_effect/battle_effect_falling.c
@@ -6153,15 +6118,12 @@ DOUSE_DROP_WIDTH	what the player sees	the falling drop of water is a round blue 
 DOUSE_DROP_HEIGHT	its code	as DOUSE_DROP_WIDTH: the drop and the small splash are drawn 24x24	games/tbs/src/battle_effect/battle_effect_falling.c
 DOUSE_BURST_PICTURE_WIDTH	its code	the large splash is drawn 42x42, centred on the drop's 24x24	games/tbs/src/battle_effect/battle_effect_falling.c
 DOUSE_BURST_PICTURE_HEIGHT	its code	as DOUSE_BURST_PICTURE_WIDTH	games/tbs/src/battle_effect/battle_effect_falling.c
-DOUSE_FALLING_PICTURE	its code	BlueBeamSheet is loaded at work->sheet + 2 * MOTE_SET_BYTES, after ParticleSpritesD's flare pictures, and its first picture is the falling drop	games/tbs/src/battle_effect/battle_effect_falling.c
 DOUSE_FLASH_PICTURE	what the player sees	a landed drop flashes white for a few frames before its splash spreads (its render, Douse)	games/tbs/src/battle_effect/battle_effect_falling.c
 DOUSE_BURST_PICTURE	what the player sees	the white splash spreads wide over the struck member (its render, Douse)	games/tbs/src/battle_effect/battle_effect_falling.c
 WINDOW_BORDER_WIDTH	its twin	The Lost Age's window_measure.c (hz/ui) names it so: the window's two 8-pixel border tiles, taken off a window's width in tiles, (width << 3) - WINDOW_BORDER_WIDTH, to give the inner width a line's gaps spread across	games/tbs/src/window/window_measure.c
 LINE_GAP_MAX	its twin	The Lost Age's window_measure.c (hz/ui) names it so: outside Japanese a line's gap between characters over Q_8_8(LINE_GAP_MAX) falls back to Q_8_8(2)	games/tbs/src/window/window_measure.c
 WINDOW_PAD_X	its twin	The Lost Age's window_measure.c (hz/ui) names it so: Window_FitOnScreen adds WINDOW_BORDER_WIDTH + 3 to a measured width before >> 3	games/tbs/src/window/window_measure.c
 WINDOW_PAD_Y	its twin	The Lost Age's window_measure.c (hz/ui) names it so: Window_FitOnScreen adds 15 to a measured height before >> 3	games/tbs/src/window/window_measure.c
-JUDGMENT_SHEET_BYTES	its code	struct JudgmentWork's sheet[JUDGMENT_SHEET_BYTES] holds the pink burst, its quarters and the tornado sheet before dimmedMotes	games/tbs/src/battle_effect/battle_effect_judgment.c
-JudgmentWork	its code	BattleEffect_RunJudgment writes ((struct JudgmentWork *)work)->dimmedMotes[i][j] after the sheet, laid over struct BattleEffectWork from its start	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_SPARK_COUNT	its code	the unused sparks stage sets up JUDGMENT_SPARK_COUNT particles from PARTICLES[JUDGMENT_MOTES] and never draws them (frame < 0)	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_SPARKS	its code	(&PARTICLES[JUDGMENT_MOTES]): the unused sparks follow the gathering's motes in PARTICLES	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_FLASH_RING_MOTES	what the player sees	a ring of light spreads from the burst at Judgment's shield as the gathering flashes (its render, Judgment)	games/tbs/src/battle_effect/battle_effect_judgment.c
@@ -6177,7 +6139,6 @@ JUDGMENT_SPARK_DEPTH_FAR	its code	as JUDGMENT_SPARK_DEPTH_NEAR	games/tbs/src/bat
 JUDGMENT_SPARK_DEPTH_NONE	its code	minimumDepth starts at it, above any clamped spark depth, and only the unused stage lowers it	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_SPARK_AMPLITUDE	its code	the unused sparks start at (Trig_Sin(angle) * JUDGMENT_SPARK_AMPLITUDE) >> 2 and at frame 64 gain (Trig_Sin(variant) * JUDGMENT_SPARK_AMPLITUDE) >> 3 of speed	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_BEAM_HEIGHT	its twin	The Lost Age's battle_effect_judgment.c (hz/fx) names the same: the pink burst's beam picture, 24 by 64, at the sheet's start	games/tbs/src/battle_effect/battle_effect_judgment.c
-JUDGMENT_SHEET_BURST	its code	OverlayImageB is loaded at work->sheet + JUDGMENT_SHEET_BURST, after the beam picture	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_SHEET_TORNADO	its twin	The Lost Age's battle_effect_judgment.c (hz/fx) names the same: the tornado sheet after the burst's pictures, whose glints are the burst's shards	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_SHEET_EXPLOSION	its twin	The Lost Age's battle_effect_judgment.c (hz/fx) names the same: the explosion's pictures loaded over the flares on the sweep's frame 64	games/tbs/src/battle_effect/battle_effect_judgment.c
 JUDGMENT_FLARE_HEIGHT	its twin	The Lost Age's battle_effect_judgment.c (hz/fx) names the same: the crescent sheet's flare pictures, 24 by 24	games/tbs/src/battle_effect/battle_effect_judgment.c
@@ -6213,13 +6174,11 @@ TILE_TEXT_VOICED_MARK_GLYPH	its code	in Japanese a TEXT_MARK_VOICED is drawn fro
 TILE_TEXT_SEMIVOICED_MARK_GLYPH	its code	as TILE_TEXT_VOICED_MARK_GLYPH, for TEXT_MARK_SEMIVOICED, the next window tile	games/tbs/src/window/window_text_tiles.c
 TILE_TEXT_MARK_WIDTH	its twin	The Lost Age's window_text_tiles.c (hz/ui) names it so: a kana mark is 3 pixels wide and drawn 3 pixels back over its kana	games/tbs/src/window/window_text_tiles.c
 PIXEL_4BPP_MASK	the hardware	GBATEK: a 4bpp tile holds a pixel in four bits, a colour of its 16-colour palette; pens[bits & PIXEL_4BPP_MASK]	games/tbs/src/window/window_text_tiles.c
-TEXT_TILE_TAKEN	its twin	The Lost Age's window_text_tiles.c (hz/ui) names it so: WindowWork.textTileState's bit for a text tile given out	games/tbs/src/window/window_text_tiles.c
 TEXT_TILE_SHOWN	its twin	The Lost Age's window_text_tiles.c (hz/ui) names it so: the bit Window_MarkVisibleTextTiles sets for a text tile the tilemap shows	games/tbs/src/window/window_text_tiles.c
 TEXT_TILE_STATE_INDEX	its code	(tile & 0xFF) ^ TEXT_TILE_FIRST: the TEXT_TILES tiles from TEXT_TILE_FIRST take places 0 on and those from TEXT_EXTRA_TILE_FIRST the next TEXT_TILES; The Lost Age's twin writes (tile & 0xff) ^ TEXT_TILE_FIRST_BIT	games/tbs/src/window/window_text_tiles.c
 DICE_LABEL_SPRITE_WIDTH	its code	each result's lettering is gLuckyDice_LabelCounts 32 by 32 sprites (OBJ_SIZE_32X32) centred on DICE_RESULT_LABEL_CENTER_X: x = centre - count * 16 + index * 32, each sprite SPRITE_TILES_8BPP(32, 32) further into sprites_4.png	games/tbs/src/field/lucky_dice.c
 window0	its number	a struct WindowLine's WIN0H value, the console's window 0 as REG_WIN0H names it	games/tbs/src/window/screens_icon_menu.c
 window1	its number	a struct WindowLine's WIN1H value, the console's window 1 as REG_WIN1H names it; IconMenu_DrawIcons widens it over the icon row	games/tbs/src/window/screens_icon_menu.c
-PROCNE_COMET_PICTURES	its twin	The Lost Age's battle_effect_procne.c names the violet comet sheet's place in work->sheet so; the comets drawn from it are gProcne_Pictures offsets past it	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_SPIN_GAIN	what the player sees	the targets circle into the yellow whirlwind, facing every way as they rise out of sight (its render); The Lost Age's name for the 48 added to their spin each frame	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_SKY_SPIN	what the player sees	once the violet sky is up the targets whirl fast in the middle of the violet whirlwind beneath Procne (its render); The Lost Age's name for the spin of 6000 set at the arrival	games/tbs/src/battle_effect/battle_effect_procne.c
 PROCNE_DUST_SPIN_GAIN	its twin	The Lost Age's name for the 50 a dust mote's circling speed gains each frame, up to TRIG_TURN / 16	games/tbs/src/battle_effect/battle_effect_procne.c
@@ -6296,8 +6255,6 @@ THOR_PUSH_FRAME	its code	at storm frame 32 Thor is given speed toFIXED(4) across
 THOR_DAMAGE_FRAME	what the player sees	the damage message shows after the bolts have struck, as Thor stands back over the party (its render)	games/tbs/src/battle_effect/battle_effect_thor.c
 THOR_DAMAGE_FRAME	its code	EFFECT_SHOW_DAMAGE(SE_HEAVY_IMPACT) at storm frame 140	games/tbs/src/battle_effect/battle_effect_thor.c
 MAP_ENTRY_PAIR	its code	BattleTransition_BuildTilemap fills BG1's map a word, two entries, at a time, adding MAP_ENTRY_PAIR(2, 2) to each word	games/tbs/include/system/io_reg.h
-BACKGROUND_LEVEL_STEP	its code	Palette_StepFadeTransfer scales BG palettes 6 to 13 by FIXED_ONE - step * (FIXED_ONE / 60); battle_internal.h's BACKGROUND_LEVEL_STEP is the same 1092	games/tbs/include/battle/battle_work.h
-BATTLE_BACKGROUND_COLORS	its code	Palette_StepFadeTransfer scales 8 * 16 colours from BG palette 6, the battle background's	games/tbs/include/battle/battle_work.h
 SPRITE_ISAAC_CHILD	what the player sees	with FLAG_CHILDHOOD set, the stormy night in Vale (ValePrologue) draws the leader, actor 0 of sprite 18, as Isaac a small blond boy in the rain by his house and the boulder (its render)	games/tbs/include/sprite_ids.h
 SPRITE_GARET_CHILD	what the player sees	on the stormy night in Vale (ValePrologue_TalkToGaret), actor 22 of sprite 19 is Garet a red-haired boy with a child's portrait, who asks "What, you want me to just dump my stuff?" by his chest before "Garet joined" (its render)	games/tbs/include/sprite_ids.h
 RED_BITS	the hardware	RGB555: red in bits 4..0 (GBATEK); field/field_sequence_palette_fade.c, which defined a copy, now reads the header's	games/tbs/include/system/io_reg.h
@@ -6315,7 +6272,6 @@ SLEEP_Z_STEPS_PER_PIXEL	its code	CottageRoomsA_AdvanceSleepZ adds timer and user
 COLOSSO_SOLO_TO_RACE	its code	exit 10 is LEND_A_HAND_TO_RACE in each Colosso match scene's exits in scene_exits.h (Azart's, Satrage's and Navampa's alike); Colosso_TakePlaceForMatch and Colosso_AskDoneCheering request it once Mia, the last friend, has chosen where to cheer	games/tbs/include/scene/colosso_solo.h
 COLOSSO_SOLO_TO_COLOSSEUM	its code	exit 11 is the way back out to the Colosseum in each Colosso match scene's exits in scene_exits.h (COLOSSEUM_AZART_MATCH_TO_COLOSSEUM_WEST, COLOSSEUM_SATRAGE_MATCH_TO_COLOSSEUM_SOUTH, COLOSSEUM_NAVAMPA_MATCH_TO_COLOSSEUM); Colosso_AskReadyToRace requests it when Isaac, alone, answers yes to the guide's "did you get a good look" (MsgColossoIsaacDidGetGoodLook)	games/tbs/include/scene/colosso_solo.h
 DAMPING_SCALE	its code	Particle_AdvanceWithGravity3D and 2D keep speed * damping / 64 each frame; the effects damp their own speeds the same way (vx * 60 / 64, velocityY * 62 / 64, Kirin's fire * 48 / 64)	games/tbs/include/fixed_math.h
-MAPGRID_CELL_WORDS	its code	field_map_grid.c reads Ram_MapGridCellBuffer as u32 words, one per cell, to draw cell pictures (MapGrid_CopyCellPictureToScreen(cell, ...)) and to copy rows of cells, sourceY * MAPGRID_SIZE + sourceX words in; the field's other readers take the same words as struct MapGridCell (4 bytes)	games/tbs/src/field/field_map_grid.c
 MAPGRID_SIZE	its code	field_map_grid.c wraps cell rows and columns with & 127 and steps rows by 128 (MAPGRID_CELL_WORDS, "The map's 128 by 128 cells, each read whole as its word")	games/tbs/include/field/map_grid.h
 MAPGRID_CELLS	its code	Event_SpawnActorPlacements reads the cell under the leader as struct MapGridCell at x / 16 + (z / 16) * 128 of Ram_MapGridCellBuffer, and the one a row above at - 128, for CELL_BEHAVIOR_CLIMB; Mercury Lighthouse's pool hop reads ((z / 16) << 7) + x / 16 for the pool's behavior; MapGrid_LoadMap points each layer's cells at the same buffer + (y / 2) * MAPGRID_SIZE + x / 2; the buffer is 64 KB, 128 by 128 cells of 4 bytes	games/tbs/include/field/map_grid.h
 MAPGRID_CELLS_SOUTH	its code	Field_ClimbDown compares the behavior of the cell at x / 16 + (z / 16) * 128 of Ram_MapGridCellBuffer with the one 128 cells on, a row south (+z), and goes down the wall only when they match	games/tbs/src/field/event_commands_climbing.c
@@ -6331,9 +6287,7 @@ PLACE_INDEX_MASK	its twin	as PLACE_ENEMY_SIDE: the place in the list is the plac
 GLYPH_PALETTE_ICON_COLORS	its code	GlyphPalette.slot is u8[256], one entry for each colour of a 256-colour command icon's pixels; BattleCommandRow_Run sets all 256 to GLYPH_PALETTE_SLOT_UNSET and BattleCommandRow_LoadIconTiles indexes it by each pixel's colour	games/tbs/include/graphics/glyph.h
 BATTLE_BG1_SCREEN_BLOCK	its code	BATTLE_BG1CNT's BGCNT_SCREEN_BASE(31): BG1's map in battle, which screens_battle_command_row.c writes the command icons' tiles into	games/tbs/include/battle/battle.h
 RANGE_ICON_ALL	its code	the twelfth of the range icons Window_DrawThreeTileColumn draws (screens_menu_titles.c builds twelve), drawn for ABILITY_RANGE_ALL where range n takes icon n - 1; the menus' Menu_BuildPatternTiles builds the same twelve as two sets of RANGE_ICON_PAIRS (6) pairs, the last 2 * RANGE_ICON_PAIRS - 1, which PsynergyMenu_DrawListPage draws for ABILITY_RANGE_ALL; screens_battle_psynergy_menu.c and The Lost Age (hz/ui) name it the same	games/tbs/include/battle/battle_unit.h
-WORLD_MAP_BLOCK_SHIFT	its code	as field_terrain.c's WORLD_MAP_BLOCK_SHIFT: Cloak reads gCellPictures[tx + ty * WORLD_MAP_BLOCKS_ACROSS] with tx = x >> WORLD_MAP_BLOCK_SHIFT & 31, a 32-pixel block	games/tbs/include/field/map_grid.h
 WORLD_MAP_BLOCK_PIXELS	its code	as WORLD_MAP_BLOCK_SHIFT: 1 << (21 - 16) pixels a block	games/tbs/include/field/map_grid.h
-WORLD_MAP_BLOCKS_ACROSS	its code	as WORLD_MAP_BLOCK_SHIFT: the block index wraps at 32 and a row of gCellPictures is 32 blocks	games/tbs/include/field/map_grid.h
 GLYPH_PAIR_WIDTH_MAX	its code	two characters other than spaces are drawn in one 16-pixel cell when their font widths sum to 15 or less, in Message_Type and Text_DrawWideStringAtOffset alike (outside Japanese)	games/tbs/src/window/window_internal.h
 GLYPH_PAIR_OUTLINED_WIDTH_MAX	its code	Spanish alone pairs outlined characters only up to 14, each outlined glyph drawn a pixel wider (Text_DrawGlyphPair width++)	games/tbs/src/window/window_internal.h
 BattleEffect_RunUnusedOrbitingSpirals	its code	staged by hand: render psynergy --ability Quake on a tbs-en copy whose gAbilityBattleEffects row 3 (Quake) is BATTLE_EFFECT_UNUSED_ORBITING_SPIRALS (34), cast by Isaac at Garet, Ivan and Mia: a ring of four pink spirals turns about a point above Garet, then one above Ivan 16 frames later, then one above Mia about 18 frames after that, each joining the rings still turning	games/tbs/src/battle_effect/battle_effect_planet_diver.c
@@ -6348,7 +6302,6 @@ HUE_CIRCLE	its code	the same 360 degrees as 16.16, toFIXED(HUE_DEGREES)	games/tb
 FLAG_ARENA_REACHED	the game	"You must get through several stages before you reach the arena." (MsgColossoWarriorsEnterFinalsWithoutAny)	games/tbs/include/scene/colosso_solo.h
 SPROUT_ANIMATION_GROWN	its picture	sprout.tsv's animation 4 shows picture 6, the sprout grown tall, and goes on to animation 0, which holds it there	games/tbs/include/sprite_ids.h
 SPROUT_ANIMATION_HALF_GROWN	its picture	sprout.tsv's animation 3 holds picture 3, the sprout half grown, midway through animation 2's growth from picture 0 to 6	games/tbs/include/sprite_ids.h
-ACTOR_COUNT	its code	gActors' actors: field_actors.c allocates ACTOR_COUNT * sizeof(struct Actor) in HEAP_SLOT_ACTORS, and the event commands walk gActors up to it (event_commands_movement_types.c, event_commands_reveal.c, event_commands_field_psynergy_work.c)	games/tbs/include/field/actor.h
 FLAG_CROSSBONE_ISLE_STATUE_AFTER_LEADER	what the player sees	a pink statue of a robed woman glides down out of the dark onto the leader, pushes him back south and glides home again (its render)	games/tbs/src/scene/crossbone_isle_keys.c
 PISTON_ANIMATION_TIP	its picture	piston.tsv's animations 8 to 15 are the tip's, each the body's plus 8: picture 7, blank, but for 11, the tip when all the way out, which holds picture 9, the block's riveted end, and 13 and 14, which pass through picture 8	games/tbs/src/scene/colosseum_navampa_match.c
 TREE_STANDING_STEP	what the player sees	the training tree's trunk standing upright on its stone base on the wooden floor of Feh's school (its render)	games/tbs/src/scene/fuchin_temple.c
@@ -7460,7 +7413,6 @@ gScene_FallbackEntrances	its code	one SceneEntrance and its end row that six cav
 CELL_BEHAVIOR_CROSSBONE_ISLE_BESIDE_EAST_LOG	its code	crossbone_isle/map.txt holds it at (23, 22), (20, 26), (21, 26) and (23, 26), around ACTOR_FIRST_ISLE_LOG + 1 at (352, 376); its step row runs PushedActor_PushIfClear	games/tbs/src/scene/crossbone_isle.c
 CELL_BEHAVIOR_CROSSBONE_ISLE_BESIDE_WEST_LOG	its code	crossbone_isle/map.txt holds it at (8, 23) to (10, 23), (7, 26), (8, 26) and (10, 26), around ACTOR_FIRST_ISLE_LOG at (144, 392); its step row runs PushedActor_PushIfClear	games/tbs/src/scene/crossbone_isle.c
 SETTINGS_ROW_COUNT	its code	SettingsMenu_Run fills option and optionCount for rows 0 to 4 and shows MsgOptionHelp + row for each; renamed from SETTINGS_MENU_ROWS to its enum's SETTINGS_ROW_ prefix and the game's _COUNT ending (as ABILITY_COUNT)	games/tbs/src/window/window_settings_menu.c
-ANIM_CAST_PSYNERGY_START	its twin	The Lost Age's field/sprite.h names animation 20 so, ANIM_CAST_PSYNERGY's first two pictures held on the second; isaac.tsv's 20 is pictures 159 and 164 held; renamed from _BEGIN to the code's word start (216 names), beside ANIM_CAST_PSYNERGY_END	games/tbs/src/field/event_commands_field_psynergy_work.c
 VenusLighthouse_StepOnFloorSwitch	what the player sees	Isaac walking west onto the middle of the pink switch before the lady statue: it sinks and the yellow lightning band south of the room is gone while he stands there; stopping on the edge of the cell leaves the switch up and the lightning crackling (render event --scene VenusLighthouseGroundFloor --entrance 23 --at 43,49 --face west --hold left:14 and left:13 --then wait:200) (its render)	games/tbs/src/scene/venus_lighthouse.c
 WestLunpaCave_FreezeSouthPuddle	what the player sees	Frost turns the puddle by the west wall into a tall ice pillar against the rock; Isaac then walking west into it stops beside it, walks up past it and back, and never climbs onto it; the cells (7, 30..34) it is level with lie on the drawn rock of the wall (render event --scene WestLunpaCave --event WestLunpaCave_FreezeSouthPuddle --then wait:20,left:30,up:30,down:20,left:20; render probe --scene WestLunpaCave --set FLAG_SCENE_TEMP_04 --map --mark-cells 7,30,7,34) (its render)	games/tbs/src/scene/west_lunpa_cave.c
 BilibinCave_CloseLowerCaveMouth	what the player sees	cells (20, 13..14) and (22, 13..14), outlined at their height of 64, lie on the grassy path along the cliff top, drawn just above the low cave mouth at (21, 14), on the way from the vine side to the high mouth (render probe --scene BilibinCaveEntrance --map --mark-cells 20,13,20,14 --mark-cells 22,13,22,14 --mark-cells 21,14,21,14 --cells 17,9,25,16) (its render)	games/tbs/src/scene/bilibin_cave.c
@@ -7787,7 +7739,6 @@ ColosseumSatrageMatch_MoveWallPillar	what the player sees	render event --scene C
 ACTOR_FIRST_EMBER	its code	SolSanctumEruption_StepEmbers launches its embers from actors emberIndex + ACTOR_FIRST_CRYSTAL, the crystals' sixteen slots; the same actors as ACTOR_FIRST_CRYSTAL, whose render shows them; tried (23 November 2026): the embers rain only inside SolSanctumEruption_PlayHostageEvent, which Scene_Initialize plays on arriving by entrance 10 (SOL_SANCTUM_ERUPTION_FROM_SOL_SANCTUM_ELEMENTAL_STAR_ROOM); render event --scene SolSanctumEruption --entrance 10 refuses the run (the scene goes on to scene 11 before the player has control), and entrance 0 arrives after the event, with no embers	games/tbs/src/scene/sol_sanctum_eruption.c
 ATTACK_BEAM_SLASH	its code	BattleActionRun_Build gives Isaac, Garet and Jenna EFFECT_BY_ID_RANGE | 1, the beam enum BeamKind (battle_effect_beams.c) calls BEAM_ARC_A, one blue slash	games/tbs/src/battle/battle_action.c
 ATTACK_BEAM_WAVE	its code	BattleActionRun_Build gives Ivan and Mia EFFECT_BY_ID_RANGE | 4, the beam enum BeamKind calls BEAM_WAVE, three short blue arcs	games/tbs/src/battle/battle_action.c
-BATTLE_CHALLENGED_PARTY	the game	"This is no time to be running away!" (MsgNoTimeToRun): ABILITY_EFFECT_CHALLENGE on a party member ors bit 2 into BattleWork.challengeFlag (battle_ability.c), and a nonzero flag stops the party running	games/tbs/include/battle/battle_work.h
 YAW_TURN_START	its code	Battle_Run sets the camera's yaw to TRIG_TURN * 5 / 32 at the start and eases back to it over 60 frames at each turn's start	games/tbs/src/battle/battle_run.c
 FORMATION_NO_SURE_MEMBER	its code	BattleFormation_AverageLevel returns -1 when no member has a minimum count	games/tbs/src/battle/battle_formation.c
 FORMATION_UNMET_ENEMY	its code	BattleFormation_AverageLevel returns -2 for an enemy above level 3 whose defeated flag is clear, unless FLAG_MONSTER_BATTLE_ANY_ENEMY	games/tbs/src/battle/battle_formation.c
@@ -7808,19 +7759,14 @@ WINDOW_EDGE_FIRST_LINE	its code	BattleEffect_BuildWindowEdgeTable insets window 
 BattleEffect_OpenAndCloseTiledCanvas	its code	calls BattleEffect_StartTiledCanvas(BGCNT_PRIORITY(1)) then BattleEffect_EndCanvasLayer; nothing calls it	games/tbs/src/battle_effect/battle_effect_dispatch.c
 ATALANTA_SPRITE_ROWS	its code	BattleEffect_RunAtalanta places its sprites in 3 rows of 3, 32 pixels apart	games/tbs/src/battle_effect/battle_effect_atalanta.c
 ATALANTA_SPRITES	its code	the nine sprites BattleEffect_SpawnObjects makes from SPRITE_ATALANTA and the run destroys	games/tbs/src/battle_effect/battle_effect_atalanta.c
-CYBELE_FACE_LEFT_SPRITE	its code	work->sprites[3] plays gCybele_ObjectPoses' CYBELE_POSE_FACE_LEFT column, the half of her face with the mouth	games/tbs/src/battle_effect/battle_effect_cybele.c
-CYBELE_FACE_RIGHT_SPRITE	its code	work->sprites[4] plays gCybele_ObjectPoses' CYBELE_POSE_FACE_RIGHT column	games/tbs/src/battle_effect/battle_effect_cybele.c
-TITAN_BLADE_DRAWN_FLASHES	its code	the flash loop from frame 56 draws work->particles 0 to 15 of the 32 set out, at radius i * 2 and lit i / 2 frames apart	games/tbs/src/battle_effect/battle_effect_titan_blade.c
 TITAN_BLADE_RISE_START	its code	frame 32: SE_SCATTER, the dust lit 16 a frame and the pillar drawn for 32 frames from it, the sword top riseFrame / 2 below its hold from it	games/tbs/src/battle_effect/battle_effect_titan_blade.c
 TITAN_BLADE_LIGHT_DUST	its code	the two dust-lighting blocks (frame 28, and each rise frame): a random spot round (originX, 96), thrown at random, variant 0	games/tbs/src/battle_effect/battle_effect_titan_blade.c
-VOLCANO_MOST_PILLARS	its code	the pillar setup loop places work->particles 0 to 3; gVolcano_Counts is {1, 2, 4}	games/tbs/src/battle_effect/battle_effect_volcano.c
 UNDEAD_SWORD_PUFFS	what the player sees	clouds of lime smoke billow up round the blade under the target, the blast sheet's cloud pictures in the lime palette (its render)	games/tbs/src/battle_effect/battle_effect_undead_sword.c
 UNDEAD_SWORD_PUFF_SHEET	what the player sees	the cloud pictures loaded after the half blade (its render)	games/tbs/src/battle_effect/battle_effect_undead_sword.c
 UNDEAD_SWORD_PUFF_PICTURES	what the player sees	a cloud grows and fades through seven blast pictures (its render)	games/tbs/src/battle_effect/battle_effect_undead_sword.c
 UNDEAD_SWORD_PUFF_FRAMES	its code	a cloud is drawn while variant < 29, three frames a picture, the seventh held	games/tbs/src/battle_effect/battle_effect_undead_sword.c
 UNDEAD_SWORD_FOOT_Y	what the player sees	the pointed lime blade rises from the ground under Ivan, canvas row 112 its foot, where the clouds start (its render)	games/tbs/src/battle_effect/battle_effect_undead_sword.c
 FROTH_VORTEX_TURNS	its code	the vortex picture is (variant / 2) % 3 of the sheet's 16x64 halves, ahead of the bubble at 3 halves in	games/tbs/src/battle_effect/battle_effect_vortices.c
-WHIRLWIND_GLINTS_EACH	its code	each tornado i draws work->particles i * 4 + j for j 0 to 3	games/tbs/src/battle_effect/battle_effect_vortices.c
 WHIRLWIND_GLINT_FRAMES	its code	a glint restarts at variant 6, its picture variant / 2 of three	games/tbs/src/battle_effect/battle_effect_vortices.c
 DEFINE_CLAPPING_HANDS_CAST	its code	the two hands spawned 32 pixels either side move 24 pixels toward each other, SE_HEAVY_IMPACT plays as they meet and 24 SPRITE_SPARKLE actors scatter (event_commands_internal.h); Lift's and Carry's cast with no target	games/tbs/src/field/event_commands_internal.h
 CLAP_SPARKLE_COUNT	its code	the loop bound of SPRITE_SPARKLE actors DEFINE_CLAPPING_HANDS_CAST spawns	games/tbs/src/field/event_commands_internal.h
@@ -7905,7 +7851,6 @@ INVENTORY_DISCARD_EMPTY_SLOT	its code	game_inventory.c: Inventory_CheckDiscard r
 INVENTORY_DISCARD_STUCK	the game	"Can't remove." (MsgCannotRemove), which shop_item_picker.c draws for Inventory_CheckDiscard's -3, an equipped item with ITEM_CANNOT_UNEQUIP	games/tbs/include/game/item.h
 INVENTORY_DISCARD_INDISPENSABLE	the game	"Can't drop." (MsgCannotDrop), which shop_item_picker.c draws for Inventory_CheckDiscard's -4, an ITEM_INDISPENSABLE item	games/tbs/include/game/item.h
 STAT_BOOST_SPRITE_FRAME	its code	frame 80: EFFECT_SHOW_DAMAGE, SE_POWER_UP at member * 8 + 80, and the mode's picture (dagger, streak, wisp, shield) drawn from there	games/tbs/src/battle_effect/battle_effect_stat_change.c
-MapScreenWork.unreadAfterCursor	its code	six bytes after cursorY nothing on the screen reads, named by what they follow; named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
 WORLD_MAP_STILL_FIRST_TILE	its code	field_world_map.c's WorldMap_LoadGraphics numbers screen block 6 from tile 424, the 30 by 20 image that WorldMap_StartStillImage and event_commands_map_screen.c's MapScreen_Show load at BG_CHAR_BLOCK(0) + 424 * TILE_SIZE_8BPP	games/tbs/include/field/perspective.h
 MAP_SCREEN_MARKER_PARTY	the game	"Present location." (MsgPresentLocation); named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
 MapScreen_Show	what the player sees	R on the World Map near Vale shows a map of the whole world, a white pointing hand as its cursor, and "Present location." beside the party's place (its render); named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
@@ -7917,7 +7862,6 @@ MAP_SCREEN_MARKER_LIGHTHOUSE	its code	gMapScreen_AreaMarkers (map_screen_markers
 MAP_SCREEN_MARKER_LIGHTHOUSE	its area name	Mercury Lighthouse; named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
 FLAG_BATTLE_ARENA_PLAYER_APPLIED	the game	"Would you like to apply?" (MsgLobbyPleaseSpeakWhen + 1), the attendant's question whose yes sets the flag; "When you finish your preparations, please step into the circle!" (MsgLobbyPleaseSpeakWhen)	games/tbs/src/scene/battle_arena.c
 PATH_START	its code	battle_effect_atalanta.c and battle_effect_dragon_cloud.c read a path's first four bytes as x and y, each (high << 8) + low byte, then one x, y move a frame	games/tbs/src/graphics/battle_effects/paths.c
-PSYNERGY_MENU_BACK_TO_LIST	its code	PsynergyMenu_RunSteps sets PsynergyMenuWork.flags bit 0 on each return to PSYNERGY_STEP_LIST after a use or a cancelled target; no code reads the bit	games/tbs/src/menu/menu_psynergy.c
 WINDOW_ATTRS_MASK	its code	Window_UpdateOrCreate passes flags & 0xff to Window_CreateFar as its WINDOW_FLAG_ attrs, bit 8 being its own WINDOW_KEEP_EXISTING	games/tbs/src/menu/menu_shared.c
 FLAG_DOOR_OPEN	its area name	McCoy's Palace	games/tbs/src/scene/mccoy_palace_grounds.c
 TretTreeBranch_RevealFades	what the player sees	on Tret's branches an oval round Isaac shows the leaves in front of the branches see-through, as the scene sets it up again after Reveal (its render)	games/tbs/src/scene/tret_tree_branch.c
@@ -8049,10 +7993,8 @@ FLAG_TUNNEL_RUINS_NORTHWEST_PILLAR_FROZEN	its code	TunnelRuins_FreezeNorthwestPi
 FLAG_TUNNEL_RUINS_SOUTHEAST_PILLAR_FROZEN	its code	TunnelRuins_FreezeSoutheastPillarFrostTarget sets FLAG_SCENE_TEMP_01; the south walkway's hop triggers stop once it is set	games/tbs/src/scene/tunnel_ruins.c
 FLAG_TUNNEL_RUINS_SOUTHEAST_PILLAR_SOAKED	its code	TunnelRuins_DouseSoutheastPillar sets FLAG_SCENE_TEMP_02, which TunnelRuins_SinkSoutheastPillar requires	games/tbs/src/scene/tunnel_ruins.c
 FLAG_TUNNEL_RUINS_FIRST_STONE_SET	its code	TunnelRuins_SetStoneOnBalance sets FLAG_SCENE_TEMP_00 + the stone's index as a carved stone settles on the balance	games/tbs/src/scene/tunnel_ruins.c
-TunnelRuins_UpdateFadeOverlayLeader	its code	sets gFadeOverlayWork->actor to the leader or NULL by his half-cell row	games/tbs/src/scene/tunnel_ruins.c
 TunnelRuins_PushCarvedStone	its code	the walking step trigger of CELL_BEHAVIOR_TUNNEL_RUINS_CARVED_STONES_FLOOR and _RISEN_PLATFORM: PushedActor_AdvancePair	games/tbs/src/scene/tunnel_ruins.c
 TunnelRuins_UpdateGreyPillarCells	its code	restores row 19 from cells (108, 19) and walls the cells of ACTOR_EAST_PILLAR_A and _B	games/tbs/src/scene/tunnel_ruins.c
-LUCKY_WHEELS_PRIZES_END	its code	the -1 that ends the kinds won in holdings.wonPrizes (main_routine_work.h's comment on wonPrizes); Scene_Initialize offers another game when it comes first	games/tbs/src/scene/tolbi_games.c
 LUCKY_WHEELS_PRIZES_AWARDED	its code	the -2 Scene_Initialize writes to wonPrizes[0] after the attendant hands the prizes over, so that they are not given twice	games/tbs/src/scene/tolbi_games.c
 LUCKY_WHEELS_LAST_GIVEN	its code	TolbiSpring_SelectLuckyWheelsPrize reads and writes wonPrizes[8 + kind], the variant last given of each kind	games/tbs/src/scene/tolbi_games.c
 SPRING_RING_OUTSIDE	its code	TolbiSpring_UpdateTossSimulation sets sTossResult 4 beyond the fourth ring's squared distance, and a coin there wins nothing	games/tbs/src/scene/tolbi_games.c
@@ -8104,7 +8046,6 @@ JENNAS_GRANDMOTHERS_SICKBED_ANIMATION	its code	tileset_anims.tsv channel 4, the 
 VALE_INN	its code	Inn_CheckIn's inn number in CottageRoomsB_TalkToInnkeeper, Vale's innkeeper across her counter (ACTOR_INNKEEPER)	games/tbs/src/scene/cottage_rooms_b.c
 COTTAGE_ROOMS_B_ISAACS_BEDSIDE_RESTART	its code	gScene_RestartRules' row restart_point ValePrologue, 15, CottageRoomsB, 16 (field/scene_rules.s); the entrance stands at (538, 683) in the camera box of Isaac's bedroom, beside COTTAGE_ROOMS_B_FROM_VALE_PLAZA_SOUTHEAST's (567, 676)	games/tbs/src/scene/cottage_rooms_b.c
 CrossboneIsleKeys_LiftFirstPillar	its code	copies the raised cell (61, 36) to the first pillar's column on row 42 and sets the pillar's height to 32; CrossboneIsleKeys_MoveFirstPillar calls it for columns 37 to 39 of the low ledge	games/tbs/src/scene/crossbone_isle_keys.c
-CrossboneIsleKeys_RaiseEvent	its code	stores RAISED_SECOND_CHASE or RAISED_FIFTH_CHASE in gFieldWork->raisedTrigger, which the TRIGGER_RAISED rows of gCrossboneIsleStatuesTriggers answer	games/tbs/src/scene/crossbone_isle_keys.c
 FIRST_STATUE_FOLLOW_PIXELS	its code	the z offset of ACTOR_FIRST_STATUE's Actor_SetDestinationOffset after it shoves Isaac, 24 or 16 by patch	games/tbs/src/scene/crossbone_isle_keys.c
 STATUE_SHOVE_PIXELS	its code	the z offset of ACTOR_PARTY_LEADER's Actor_SetDestinationOffset in the second to fifth statues' shoves, 16 or 24 by patch	games/tbs/src/scene/crossbone_isle_keys.c
 gCrossboneIsleKeys_StatueColumns	its code	CrossboneIsleKeys_TrackStatueColumn reads and writes entry 0 for ACTOR_THIRD_STATUE (column 16, x 264) and 1 for ACTOR_FOURTH_STATUE (column 21, x 344)	games/tbs/src/scene/crossbone_isle_keys.c
@@ -8141,7 +8082,6 @@ TREASURE_SPOT_DRAGON_STATUE_888_COINS	its code	the examine trigger row of its ro
 TREASURE_SPOT_DRAGON_STATUE_POTION	its code	the examine trigger row of its room's table that answers this treasure spot finds what the name says, under FLAG_CROSSBONE_ISLE_DRAGON_STATUE_POTION	games/tbs/src/scene/crossbone_isle_stepping_stones.c
 TREASURE_SPOT_DRAGON_STATUE_CLERICS_RING	its code	the examine trigger row of its room's table that answers this treasure spot finds what the name says, under FLAG_CROSSBONE_ISLE_DRAGON_STATUE_CLERICS_RING	games/tbs/src/scene/crossbone_isle_stepping_stones.c
 TREASURE_SPOT_DRAGON_STATUE_SMOKE_BOMB	its code	the examine trigger row of its room's table that answers this treasure spot finds what the name says, under FLAG_CROSSBONE_ISLE_DRAGON_STATUE_SMOKE_BOMB	games/tbs/src/scene/crossbone_isle_stepping_stones.c
-FileScreenLoadedSceneState	its code	Scene_Initialize's Continue casts gSceneLocalState to it and compares its playTime, which Save_BuildFileSummary copies there when saving, with gMainRoutineWork.playTime; a mismatch shows MsgSaveDataCorrupted	games/tbs/src/scene/file_screen.c
 Kolima_TwinkleGroundSparkle	its twin	KolimaForestEntrance_TwinkleGroundSparkle, the same twinkle of the ground sparkles in Kolima Forest's entrance, whose render shows them	games/tbs/src/scene/kolima.c
 Kolima_FlickerPsynergyField	its twin	KolimaForestEntrance_FlickerPsynergyFields's own step for one field, as Kolima_FlickerPsynergyFields calls it	games/tbs/src/scene/kolima.c
 Kolima_BurstOnPsynergyField	its twin	KolimaForestEntrance_BurstOnPsynergyField, the same boxes and burst in Kolima Forest's entrance	games/tbs/src/scene/kolima.c
@@ -8218,7 +8158,6 @@ VenusLighthouse_FlashStruckLeader	its code	line 620: gVenusLeaderShockedScript's
 Dma0_Stop	the hardware	clears DMA0CNT_H's start timing and repeat, then its enable (GBATEK DMA control bits 9, 11 to 13, 15), as power-up, each scene change and each VBlank do	games/tbs/include/system/dma.h
 DMA_CONTROL_HALFWORD	the hardware	DMA0CNT_H is at 0x040000ba, halfword 5 from REG_DMA0 at 0x040000b0 (GBATEK)	games/tbs/include/system/dma.h
 VRAM_CACHE_CLEAR	its code	VramCache_Load clears the entry's VRAM with Iwram_ClearWords when src is -1 instead of copying from it	games/tbs/include/system/vram_cache.h
-SCENE_ROW	its code	Scene_Arrive reads area and sceneType from gScenes[gMainRoutineWork.next], the current scene's row	games/tbs/src/system/main_routine.c
 DEBUG_TEXT_SCREEN	its code	DebugText_Clear fills screen block 4 with blanks and sets BG0CNT's screen base to 4; DebugText_Print writes there	games/tbs/src/system/system_debug_text.c
 DEBUG_TEXT_SCREEN_BYTES	its code	32 by 20 two-byte map entries, where DebugText_Print wraps and DebugText_Clear stops	games/tbs/src/system/system_debug_text.c
 BASIC_SPRITE_COLORS	its code	224 halfwords copied from gBasicSpritePalettes to OBJ_PLTT: palettes 0 to 13 of 16 colours	games/tbs/src/system/system_debug_text.c
@@ -8239,7 +8178,6 @@ ICON_MARK_CURSED	its picture	gIcon_MarkPointers' third entry, phi.png, a white s
 ICON_DIGIT_TENS_FIRST	its code	gIcon_DigitPointers lists Icon_Digit0 to 9, then Icon_Tens1 to 3; ItemIcon_Compose takes count / 10 + 9	games/tbs/src/window/window_internal.h
 MENU_TITLE_PAUSE	its picture	gMenuTitlePictures' seventh entry, pause_en.png, which reads Pause	games/tbs/src/window/window_settings_menu.c
 MENU_TITLE_SETTINGS	its picture	gMenuTitlePictures' eighth entry, setup_en.png, which reads Settings	games/tbs/src/window/window_settings_menu.c
-MIND_READ_TEXT_COLOR	its code	Text_DrawGlyphPair draws in colour 8 with no shadow while WindowWork.mindRead is set	games/tbs/src/window/window_glyphs.c
 ARTICLE_FORM_BARE	its code	Message_AppendArticleName copies the name alone for form 0 (and 4 outside English); en.po's {argument_item_name:1}, stored one above	games/tbs/src/window/window_decode.c
 ARTICLE_FORM_ARTICLE	its code	the English Message_AppendArticleName writes a or an for form 1; en.po's 'uses {argument_item_name:2}!'	games/tbs/src/window/window_decode.c
 LAST_LETTER_SENTENCE_END	its code	Message_Decode sets 2 after . ! or ?, and the article and possessive writers capitalise their first letter on 2	games/tbs/src/window/window_decode.c
@@ -8251,14 +8189,12 @@ Window_SetInteriorPalette	its code	clears the palette number's low bit of each t
 Window_SetInteriorPaletteBit	its code	sets or clears BG_TILE_PALETTE(1) in each tilemap entry of a rectangle of the window's interior; nothing calls it	games/tbs/src/window/screens_party_status.c
 WINDOW_FLAG_UNREAD	its code	Window_Create copies bits 0x1, 0x2, 0x8, 0x20, 0x40, 0x80 and 0x100 of its attributes into Window.flags but never 0x4, which the menus pass with WINDOW_FLAG_INSTANT as 6	games/tbs/include/window/window.h
 MENU_WINDOW_FLAGS	its code	the 6 (WINDOW_FLAG_INSTANT | 0x4) every battle menu window, the party status window and the link timer window are created with	games/tbs/src/window/screens_internal.h
-BATTLE_PORTRAIT_X	its code	Battle_CollectPartyCommands sets the x of BattleMenuWork.icons[2], whose tile is Portrait_Load's, to it	games/tbs/src/window/screens_internal.h
 BAR_FILLED_COLOR	its code	PartyStatus_DrawBars recolours a bar tile's colour 14 to 8 up to the bar's length and to 2 after it, its shadow (colour 1) to 13 and 12	games/tbs/src/window/screens_party_status.c
 ITEM_FEMININE	its code	gLocalizedWord_ItemGenders picks gLocalizedWord_ItemPossessives[kind & 3]: 1 is "deine" in German and "la tua" in Italian, 0 and 2 "dein" and "Il tuo"; the swords (Langschwert, das Schwert) are 2, the axes (Axt) 1	games/tbs/include/window/articles.h
 RangeIcon_Draw	its code	draws gMenu_BarPatternRows' tile pair for an ability's range (ability->range, RANGE_ICON_ALL) beside its name in the battle Psynergy list and the Djinni preview	games/tbs/src/window/screens_menu_titles.c
 StatusIcon_LoadIntoSlot	its code	Icon_DrawMisc(resource) then VramCache_Reload; the Status screen loads its status icons (statusKinds) with it	games/tbs/src/window/screens_menu_titles.c
 AbilityIcon_LoadIntoSlot	its code	Ability_LoadGlyph(resource) then VramCache_Reload; the Djinni preview and the chosen ability's icon use it	games/tbs/src/window/screens_menu_titles.c
 CommandIcon_ReloadSlot	its code	decompresses entry icon of RESOURCE_COMMAND_ICONS and reloads the VRAM cache entry with it	games/tbs/src/window/screens_menu_titles.c
-BattleMenu_Update	its code	the task Battle_CollectPartyCommands adds: eases the battle view, draws BattleMenuWork.icons, slides the page arrows and counts down BattleMenuWork.timer in link battles	games/tbs/src/window/screens_link_timer.c
 BattleDjinnMenu_ListChangedAbilities	its code	lists the battle abilities of the new PsynergyEntry list, marking those the old lacks, then those of the old the new lacks	games/tbs/src/window/screens_battle_djinn_preview.c
 SUMMON_LIST_ROWS	its code	BattleSummonMenu_Run draws four summons a page, two tiles a row, and pages by four	games/tbs/src/window/screens_battle_summon_menu.c
 SPRITE_MAP_PORTRAIT	its code	gPortrait_SpriteMap's portraits count from 0 for SPRITE_JUPITER_DJINNI; Portrait_GetForSpeaker adds PORTRAIT_SPRITE_MAP_FIRST and Icon_LoadWithPalette draws it as row PORTRAIT_JUPITER_DJINNI + n	games/tbs/src/window/scales.c
@@ -8266,8 +8202,72 @@ Item_CheckBattleUse	its code	returns 1 for no item, ITEM_USE_TEACHES, no ability
 BATTLE_ITEM_NOT_IN_BATTLE	the game	"Cannot be used during battle." (MsgBattleItemUnavailable), shown when Item_CheckBattleUse returns 2	games/tbs/src/window/screens_internal.h
 COMMAND_ROW_STATUS	its code	BattleCommandRow_Run returns -2 on L or R in a party member's row, and Battle_CollectPartyCommands opens BattleStatusScreen_Run for it	games/tbs/src/window/screens_internal.h
 TARGET_MARKERS	its code	BattleTarget_RunSelection keeps six TargetTrack and SelectionSprite entries, slot 0 the aimed unit, i and 6 - i the units i places to each side	games/tbs/src/window/screens_battle_targets.c
-BATTLE_MENU_ICON_PORTRAIT	its code	Battle_CollectPartyCommands loads Portrait_Load into BattleMenuWork.icons[2], the chosen command's CommandIcon_ReloadSlot into icons[0] and the ability's or item's icon into icons[1]	games/tbs/include/window/menu_list.h
 PasswordLevel_DrawHelp	its code	the task IconMenu_ChooseSendOption adds for RESOURCE_LAYOUT_PASSWORD_LEVEL: lists MsgPasswordLevel's "Level", "Djinn", "Character stats", "Items", "Coins" for Gold, three for Silver, two for Bronze	games/tbs/src/window/screens_icon_menu.c
 TransferMethod_DrawHelp	its code	the task IconMenu_ChooseSendOption adds for RESOURCE_LAYOUT_TRANSFER_METHOD: draws MsgPasswordTransferHelp or MsgCableTransferHelp for the selection	games/tbs/src/window/screens_icon_menu.c
 FILE_ROW_FULL	its code	FileList_SelectAction picks row 1 of gFileList_ActionByPosition when Save_ScanFileSummaries counts three files, adding only Continue and Erase	games/tbs/src/window/screens_icon_menu.c
 DEBUG_SCENE_GO	its code	DebugSceneSelect_HandleRowInput returns -1 on A, and DebugSceneSelect_Run then calls Event_SetDestinationFar	games/tbs/src/window/screens_debug.c
+ACTOR_WALL_PILLAR	what the player sees	a grey pillar carved with spirals, two cells' tiles tall, short of the wall (its render)	games/tbs/src/scene/venus_lighthouse.c
+ATALANTA_SHAFTS	its code	sixteen shafts gather (the loop over state->particles 0 to 15; the brief's "sixteen shafts of light")	games/tbs/src/battle_effect/battle_effect_atalanta.c
+BIND_SLOTS_PER_TARGET	its code	the triangle's corners at state->particles[member * 32 + j]	games/tbs/src/battle_effect/battle_effect_bind.c
+BACKGROUND_DARKEN_FRAMES	its code	state->fadeFrames = 24 in eleven effects: Palette_StepFadeTransfer darkens the battle background a step a frame while it counts down	games/tbs/src/battle_effect/battle_effect_internal.h
+BOREAS_TORRENT_CRYSTALS	its code	the torrent's 64 crystals in state->particles, half of them falling on frame 72	games/tbs/src/battle_effect/battle_effect_boreas.c
+CYBELE_VINES	its code	the vines, sparks and thorns are 16 each in state->particles from 0, CYBELE_FIRST_SPARK and CYBELE_FIRST_THORN; the chips 48 from CYBELE_FIRST_CHIP	games/tbs/src/battle_effect/battle_effect_cybele.c
+BEAM_SPARKS	its code	64 sparks set up in state->particles and drawn in pairs, over the slash's and the critical hit's 32 frames	games/tbs/src/battle_effect/battle_effect_beams.c
+MAPGRID_SCREEN_CELLS	its code	a layer's BG map is 32 tiles a row (RenderCellTilesRow wraps at 32), 16 cells; the copy routines wrap x and y & 15	games/tbs/src/field/field_map_grid.c
+MAPGRID_SCREEN_ROW_BYTES	its code	a cell's bottom tile entries are written 64 bytes after its top ones: one row of 32 two-byte entries	games/tbs/src/field/field_map_grid.c
+ScriptOperands.layer	its code	struct Actor's layer and priorityFlags at 0x22 and 0x23, which no state value reaches	games/tbs/include/field/script_operands.h
+MAP_TRANSITION_FRAMES	its code	FieldState.transitionFrames is set to 16 when a map is entered (field_sequence_run.c) and when an event starts (event_commands_event.c); events and scenes set other lengths (6, 24, 40)	games/tbs/include/field/field_state.h
+INTRO_OBJECT_COUNT	its code	IntroState's OAM shadow is 120 entries; Title_UpdateIntroSprites hides the entries after its sprites up to 120	games/tbs/src/menu/title_intro.c
+reservedAfterError	its code	SerialState's unnamed bytes after transferError, packetNumber and receiveIndex, named by what they follow	games/tbs/include/system/serial.h
+MENU_ENTRY_ICONS	its code	ItemMenuState.entryIcons and the Psynergy, Djinn and status views of the menu state hold 32 icons; the menus loop over 32	games/tbs/include/menu/item_menu.h
+ShopState.cursorFrames	its code	only ever passed to MenuCursor_Set as the glide's frames (MenuCursor_Place); 12 when a list opens, 3 or 4 after the first placement	games/tbs/include/shop/shop.h
+MESSAGE_DECODE_HALTING_SPEECH	its twin	The Lost Age's window.h enum MessageDecodeFlag; window_borders.c's Message_SetDecodeFlags sets WindowState.haltingSpeech from bit 0	games/tbs/include/window/window.h
+MESSAGE_DECODE_SPACING_AFTER	its twin	The Lost Age's window.h enum MessageDecodeFlag; Message_SetDecodeFlags sets WindowState.spacingAfter from bit 1	games/tbs/include/window/window.h
+BATTLE_BACKGROUND_COLORS	its code	BattleState.palette's 128 colours, BG palettes 6 to 13: battle_background.c's copies and scaling, the element glow, battle_effect_canvas.c, battle_effect_death_plunge.c and battle_effect_judgment.c	games/tbs/include/battle/battle_state.h
+BACKGROUND_LEVEL_STEP	its code	BattleBackground_SetPaletteLevel, BattleBackground_Load and the element glow scale the background by FIXED_ONE - level * 1092, and battle_effect_canvas.c's Palette_StepFadeTransfer by FIXED_ONE / 60 a step: a sixtieth of the full brightness	games/tbs/include/battle/battle_state.h
+ACT_ID_MASK	its twin	The Lost Age's field_sequence.h; field_sequence_items.c and field_sequence_psynergy.c keep the Psynergy or item in bits 9..0 of FieldState.psynergy and FieldState.item	games/tbs/include/field/field_sequence.h
+SPRING_MEDAL_PRIZES	its code	SPRING_MEDAL_PRIZES is 15 (tolbi_games.c): A medal's prizes (MainRoutineState's prizeWeights): its ring allows three more for each ring out from the centre	games/tbs/src/scene/tolbi_games.c
+SPRING_MEDAL_PRIZES_PER_RING	its code	SPRING_MEDAL_PRIZES_PER_RING is 3 (tolbi_games.c): A medal's prizes (MainRoutineState's prizeWeights): its ring allows three more for each ring out from the centre	games/tbs/src/scene/tolbi_games.c
+BATTLE_BACKGROUND_COLORS	its code	BATTLE_BACKGROUND_COLORS is (8 * PALETTE_COLORS) (battle_state.h): the battle background's colours, BG palettes 6 to 13, which size BattleState.palette; a battle background resource opens with as many (credits.c's Credits_LoadBackground)	games/tbs/include/battle/battle_state.h
+DRIFT_HELD	its code	TolbiShipMast_DriftBird holds a bird's drift or bob at zero while its timer or userValue is 9, which nothing sets	games/tbs/src/scene/tolbi_ship_mast.c
+DRIFT_INCREASING	its code	TolbiShipMast_DriftBird keeps 0 in a bird's timer (its drift) or userValue (its bob) while the drift speeds up or the bob rises	games/tbs/src/scene/tolbi_ship_mast.c
+DRIFT_DECREASING	its code	TolbiShipMast_DriftBird keeps 1 in a bird's timer or userValue while the drift slows or the bob sinks	games/tbs/src/scene/tolbi_ship_mast.c
+THOR_STRAY_PARTICLES	its code	state->particles[0..15] get random x, y and variant at the storm's start; nothing in Thor reads them and BattleEffect_RunImpactBurst overwrites them	games/tbs/src/battle_effect/battle_effect_thor.c
+THOR_DIMMED_MOTES	its code	the eight dimmed copies are written at state->sheet + 10000 and the ring draws from there	games/tbs/src/battle_effect/battle_effect_thor.c
+ICON_MENU_MAX_ICONS	its code	IconMenuState.entries[6], and gFileList_ActionByPosition's rows of 6	games/tbs/src/window/screens_icon_menu.c
+LUCKY_WHEELS_HEAP_SLOT	its code	LuckyWheels_Run allocates its struct LuckyWheelsState in heap slot 45, the one heap.h names HEAP_SLOT_LUCKY_DICE_SPRITES, and releases it at the end; LuckyWheels_Update reads it there	games/tbs/src/field/lucky_wheels.c
+PACK_BYTE_VALUES	its code	struct LzPackState's 256 chain heads, one for each byte value	games/tbs/src/field/lucky_wheels.c
+PACK_FIRST_FLAG	its code	struct LzPackState's flagMask starts at 0x80, the flag byte's top bit, for each group and shifts right an item	games/tbs/src/field/lucky_wheels.c
+ANIM_CAST_PSYNERGY_END	its twin	The Lost Age's field/sprite.h names animation 21 so, ANIM_CAST_PSYNERGY's last pictures held; isaac.tsv's 21 is pictures 164, 169 and 174 held	games/tbs/src/field/event_commands_field_psynergy_state.c
+FALLING_SHARD_COUNT	its code	Ice lines up state->particles 0 to FALLING_SHARD_COUNT - 1 as shards, each 8 pixels higher than the one before; gFalling_IceCounts' rows use up to that many	games/tbs/src/battle_effect/battle_effect_falling.c
+FALLING_SHARD_PUFF_COUNT	its code	the puffs' slots, state->particles after the shards; a landed shard takes the first free one on frames ICE_PUFF_FIRST_FRAME to ICE_PUFF_LAST_FRAME	games/tbs/src/battle_effect/battle_effect_falling.c
+DOUSE_FALLING_PICTURE	its code	BlueBeamSheet is loaded at state->sheet + 2 * MOTE_SET_BYTES, after ParticleSpritesD's flare pictures, and its first picture is the falling drop	games/tbs/src/battle_effect/battle_effect_falling.c
+JUDGMENT_SHEET_BYTES	its code	struct JudgmentState's sheet[JUDGMENT_SHEET_BYTES] holds the pink burst, its quarters and the tornado sheet before dimmedMotes	games/tbs/src/battle_effect/battle_effect_judgment.c
+JudgmentState	its code	BattleEffect_RunJudgment writes ((struct JudgmentState *state)->dimmedMotes[i][j] after the sheet, laid over struct BattleEffectState from its start	games/tbs/src/battle_effect/battle_effect_judgment.c
+JUDGMENT_SHEET_BURST	its code	OverlayImageB is loaded at state->sheet + JUDGMENT_SHEET_BURST, after the beam picture	games/tbs/src/battle_effect/battle_effect_judgment.c
+TEXT_TILE_TAKEN	its twin	The Lost Age's window_text_tiles.c (hz/ui) names it so: WindowState.textTileState's bit for a text tile given out	games/tbs/src/window/window_text_tiles.c
+PROCNE_COMET_PICTURES	its twin	The Lost Age's battle_effect_procne.c names the violet comet sheet's place in state->sheet so; the comets drawn from it are gProcne_Pictures offsets past it	games/tbs/src/battle_effect/battle_effect_procne.c
+BACKGROUND_LEVEL_STEP	its code	Palette_StepFadeTransfer scales BG palettes 6 to 13 by FIXED_ONE - step * (FIXED_ONE / 60); battle_internal.h's BACKGROUND_LEVEL_STEP is the same 1092	games/tbs/include/battle/battle_state.h
+BATTLE_BACKGROUND_COLORS	its code	Palette_StepFadeTransfer scales 8 * 16 colours from BG palette 6, the battle background's	games/tbs/include/battle/battle_state.h
+MAPGRID_CELL_WORDS	its code	field_map_grid.c reads Ram_MapGridCellBuffer as u32 words, one per cell, to draw cell tiles (MapGrid_CopyCellTilesToScreen(cell, ...)) and to copy rows of cells, sourceY * MAPGRID_SIZE + sourceX words in; the field's other readers take the same words as struct MapGridCell (4 bytes)	games/tbs/src/field/field_map_grid.c
+WORLD_MAP_BLOCK_SHIFT	its code	as field_terrain.c's WORLD_MAP_BLOCK_SHIFT: Cloak reads gCellTiles[tx + ty * WORLD_MAP_BLOCKS_ACROSS] with tx = x >> WORLD_MAP_BLOCK_SHIFT & 31, a 32-pixel block	games/tbs/include/field/map_grid.h
+WORLD_MAP_BLOCKS_ACROSS	its code	as WORLD_MAP_BLOCK_SHIFT: the block index wraps at 32 and a row of gCellTiles is 32 blocks	games/tbs/include/field/map_grid.h
+ACTOR_COUNT	its code	gActors' actors: field_actors.c allocates ACTOR_COUNT * sizeof(struct Actor) in HEAP_SLOT_ACTORS, and the event commands walk gActors up to it (event_commands_movement_types.c, event_commands_reveal.c, event_commands_field_psynergy_state.c)	games/tbs/include/field/actor.h
+ANIM_CAST_PSYNERGY_START	its twin	The Lost Age's field/sprite.h names animation 20 so, ANIM_CAST_PSYNERGY's first two pictures held on the second; isaac.tsv's 20 is pictures 159 and 164 held; renamed from _BEGIN to the code's word start (216 names), beside ANIM_CAST_PSYNERGY_END	games/tbs/src/field/event_commands_field_psynergy_state.c
+BATTLE_CHALLENGED_PARTY	the game	"This is no time to be running away!" (MsgNoTimeToRun): ABILITY_EFFECT_CHALLENGE on a party member ors bit 2 into BattleState.challengeFlag (battle_ability.c), and a nonzero flag stops the party running	games/tbs/include/battle/battle_state.h
+CYBELE_FACE_LEFT_SPRITE	its code	state->sprites[3] plays gCybele_ObjectPoses' CYBELE_POSE_FACE_LEFT column, the half of her face with the mouth	games/tbs/src/battle_effect/battle_effect_cybele.c
+CYBELE_FACE_RIGHT_SPRITE	its code	state->sprites[4] plays gCybele_ObjectPoses' CYBELE_POSE_FACE_RIGHT column	games/tbs/src/battle_effect/battle_effect_cybele.c
+TITAN_BLADE_DRAWN_FLASHES	its code	the flash loop from frame 56 draws state->particles 0 to 15 of the 32 set out, at radius i * 2 and lit i / 2 frames apart	games/tbs/src/battle_effect/battle_effect_titan_blade.c
+VOLCANO_MOST_PILLARS	its code	the pillar setup loop places state->particles 0 to 3; gVolcano_Counts is {1, 2, 4}	games/tbs/src/battle_effect/battle_effect_volcano.c
+WHIRLWIND_GLINTS_EACH	its code	each tornado i draws state->particles i * 4 + j for j 0 to 3	games/tbs/src/battle_effect/battle_effect_vortices.c
+MapScreenState.unreadAfterCursor	its code	six bytes after cursorY nothing on the screen reads, named by what they follow; named for the glossary's Map screen	games/tbs/src/field/event_commands_map_screen.c
+PSYNERGY_MENU_BACK_TO_LIST	its code	PsynergyMenu_RunSteps sets PsynergyMenuState.flags bit 0 on each return to PSYNERGY_STEP_LIST after a use or a cancelled target; no code reads the bit	games/tbs/src/menu/menu_psynergy.c
+TunnelRuins_UpdateFadeOverlayLeader	its code	sets gFadeOverlayState->actor to the leader or NULL by his half-cell row	games/tbs/src/scene/tunnel_ruins.c
+LUCKY_WHEELS_PRIZES_END	its code	the -1 that ends the kinds won in holdings.wonPrizes (main_routine_state.h's comment on wonPrizes); Scene_Initialize offers another game when it comes first	games/tbs/src/scene/tolbi_games.c
+CrossboneIsleKeys_RaiseEvent	its code	stores RAISED_SECOND_CHASE or RAISED_FIFTH_CHASE in gFieldState->raisedTrigger, which the TRIGGER_RAISED rows of gCrossboneIsleStatuesTriggers answer	games/tbs/src/scene/crossbone_isle_keys.c
+FileScreenLoadedSceneState	its code	Scene_Initialize's Continue casts gSceneLocalState to it and compares its playTime, which Save_BuildFileSummary copies there when saving, with gMainRoutineState.playTime; a mismatch shows MsgSaveDataCorrupted	games/tbs/src/scene/file_screen.c
+SCENE_ROW	its code	Scene_Arrive reads area and sceneType from gScenes[gMainRoutineState.next], the current scene's row	games/tbs/src/system/main_routine.c
+MIND_READ_TEXT_COLOR	its code	Text_DrawGlyphPair draws in colour 8 with no shadow while WindowState.mindRead is set	games/tbs/src/window/window_glyphs.c
+BATTLE_PORTRAIT_X	its code	Battle_CollectPartyCommands sets the x of BattleMenuState.icons[2], whose tile is Portrait_Load's, to it	games/tbs/src/window/screens_internal.h
+BattleMenu_Update	its code	the task Battle_CollectPartyCommands adds: eases the battle view, draws BattleMenuState.icons, slides the page arrows and counts down BattleMenuState.timer in link battles	games/tbs/src/window/screens_link_timer.c
+BATTLE_MENU_ICON_PORTRAIT	its code	Battle_CollectPartyCommands loads Portrait_Load into BattleMenuState.icons[2], the chosen command's CommandIcon_ReloadSlot into icons[0] and the ability's or item's icon into icons[1]	games/tbs/include/window/menu_list.h
