@@ -46,7 +46,9 @@ impl Scene {
     }
 
     pub fn name(&self) -> String {
-        self.symbol.clone().unwrap_or_else(|| format!("#{}", self.number))
+        self.symbol
+            .clone()
+            .unwrap_or_else(|| format!("#{}", self.number))
     }
 }
 
@@ -59,7 +61,8 @@ struct Tsv {
 impl Tsv {
     /// Rows up to the first empty line.
     fn read(path: &Path) -> Result<Tsv, String> {
-        let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+        let text = std::fs::read_to_string(path)
+            .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
         let mut lines = text.lines();
         let columns = lines
             .next()
@@ -67,12 +70,18 @@ impl Tsv {
             .split('\t')
             .map(|c| c.split(':').next().unwrap_or(c).to_string())
             .collect();
-        let rows = lines.take_while(|l| !l.is_empty()).map(|l| l.split('\t').map(str::to_string).collect()).collect();
+        let rows = lines
+            .take_while(|l| !l.is_empty())
+            .map(|l| l.split('\t').map(str::to_string).collect())
+            .collect();
         Ok(Tsv { columns, rows })
     }
 
     fn column(&self, name: &str) -> Result<usize, String> {
-        self.columns.iter().position(|c| c == name).ok_or_else(|| format!("no column {name}"))
+        self.columns
+            .iter()
+            .position(|c| c == name)
+            .ok_or_else(|| format!("no column {name}"))
     }
 
     fn get<'a>(&self, row: &'a [String], column: usize) -> &'a str {
@@ -85,8 +94,14 @@ pub fn read_scenes(path: &Path) -> Result<Vec<Scene>, String> {
     if tsv.column("sceneNumber").is_err() {
         return read_story_scenes(path, &tsv);
     }
-    let [number, symbol, file, area, map] =
-        ["sceneNumber", "sceneSymbol", "overlayFile", "areaNames", "map"].map(|c| tsv.column(c));
+    let [number, symbol, file, area, map] = [
+        "sceneNumber",
+        "sceneSymbol",
+        "overlayFile",
+        "areaNames",
+        "map",
+    ]
+    .map(|c| tsv.column(c));
     let (number, symbol, file, area, map) = (number?, symbol?, file?, area?, map?);
     let overlay = tsv.column("overlayId").ok();
     tsv.rows
@@ -94,12 +109,19 @@ pub fn read_scenes(path: &Path) -> Result<Vec<Scene>, String> {
         .map(|row| {
             let n = tsv.get(row, number);
             Ok(Scene {
-                number: n.parse().map_err(|_| format!("{}: scene number {n:?}", path.display()))?,
-                symbol: tsv.get(row, symbol).strip_prefix("SceneId_").map(str::to_string),
+                number: n
+                    .parse()
+                    .map_err(|_| format!("{}: scene number {n:?}", path.display()))?,
+                symbol: tsv
+                    .get(row, symbol)
+                    .strip_prefix("SceneId_")
+                    .map(str::to_string),
                 file: tsv.get(row, file).to_string(),
                 area: tsv.get(row, area).to_string(),
                 map: tsv.get(row, map).to_string(),
-                overlay: overlay.and_then(|c| u16::from_str_radix(tsv.get(row, c).trim_start_matches("0x"), 16).ok()),
+                overlay: overlay.and_then(|c| {
+                    u16::from_str_radix(tsv.get(row, c).trim_start_matches("0x"), 16).ok()
+                }),
             })
         })
         .collect()
@@ -111,7 +133,12 @@ pub fn read_scenes(path: &Path) -> Result<Vec<Scene>, String> {
 /// name for every entrance. It has no map column, so only WorldMap is the
 /// perspective world map, and no overlay ids.
 fn read_story_scenes(path: &Path, tsv: &Tsv) -> Result<Vec<Scene>, String> {
-    let (number, name, file, area) = (tsv.column("scene")?, tsv.column("name")?, tsv.column("file")?, tsv.column("area name")?);
+    let (number, name, file, area) = (
+        tsv.column("scene")?,
+        tsv.column("name")?,
+        tsv.column("file")?,
+        tsv.column("area name")?,
+    );
     tsv.rows
         .iter()
         .map(|row| {
@@ -119,14 +146,24 @@ fn read_story_scenes(path: &Path, tsv: &Tsv) -> Result<Vec<Scene>, String> {
             let name = tsv.get(row, name);
             let file = tsv.get(row, file);
             Ok(Scene {
-                number: n.parse().map_err(|_| format!("{}: scene number {n:?}", path.display()))?,
+                number: n
+                    .parse()
+                    .map_err(|_| format!("{}: scene number {n:?}", path.display()))?,
                 symbol: (!name.is_empty()).then(|| name.to_string()),
-                file: if file.is_empty() { String::new() } else { format!("games/tbs/src/{file}") },
+                file: if file.is_empty() {
+                    String::new()
+                } else {
+                    format!("games/tbs/src/{file}")
+                },
                 area: match tsv.get(row, area) {
                     "" => String::new(),
                     a => format!("*={a}"),
                 },
-                map: if name == "WorldMap" { "world".to_string() } else { String::new() },
+                map: if name == "WorldMap" {
+                    "world".to_string()
+                } else {
+                    String::new()
+                },
                 overlay: None,
             })
         })
@@ -147,15 +184,27 @@ pub struct Flags {
 impl Flags {
     pub fn read(path: &Path) -> Result<Flags, String> {
         let tsv = Tsv::read(path)?;
-        let (flag, number, names) = (tsv.column("flag")?, tsv.column("number")?, tsv.column("names")?);
+        let (flag, number, names) = (
+            tsv.column("flag")?,
+            tsv.column("number")?,
+            tsv.column("names")?,
+        );
         let mut global = HashMap::new();
         let mut scoped = HashMap::new();
         for row in &tsv.rows {
             let Some(value) = parse_number(tsv.get(row, number)) else {
                 continue;
             };
-            let scene = tsv.get(row, flag).split_once('@').map(|(_, s)| s.to_string());
-            for name in tsv.get(row, names).split(',').map(str::trim).filter(|n| !n.is_empty()) {
+            let scene = tsv
+                .get(row, flag)
+                .split_once('@')
+                .map(|(_, s)| s.to_string());
+            for name in tsv
+                .get(row, names)
+                .split(',')
+                .map(str::trim)
+                .filter(|n| !n.is_empty())
+            {
                 match &scene {
                     Some(scene) => {
                         scoped.insert((scene.clone(), name.to_string()), value as u16);
@@ -171,23 +220,41 @@ impl Flags {
         // FLAG_AREA_TEMP_01): a name the table lacks is looked up there, in
         // the checkout the renderer runs from.
         let header = header_flags(Path::new("games/tbs/include/flags.h"));
-        Ok(Flags { dir: path.parent().map(Path::to_path_buf).unwrap_or_default(), global, scoped, header })
+        Ok(Flags {
+            dir: path.parent().map(Path::to_path_buf).unwrap_or_default(),
+            global,
+            scoped,
+            header,
+        })
     }
 
     /// A flag by name (as in scene `scene` when it names one there), or a
     /// number written in hex.
     /// A flag's name, by its number: flags.tsv's, else flags.h's.
     pub fn name(&self, flag: u16) -> Option<String> {
-        let mut names: Vec<&String> = self.global.iter().filter(|(_, &v)| v == flag).map(|(n, _)| n).collect();
+        let mut names: Vec<&String> = self
+            .global
+            .iter()
+            .filter(|(_, &v)| v == flag)
+            .map(|(n, _)| n)
+            .collect();
         if names.is_empty() {
-            names = self.header.iter().filter(|(_, &v)| v == flag).map(|(n, _)| n).collect();
+            names = self
+                .header
+                .iter()
+                .filter(|(_, &v)| v == flag)
+                .map(|(n, _)| n)
+                .collect();
         }
         names.sort();
         names.first().map(|n| n.to_string())
     }
 
     pub fn resolve(&self, name: &str, scene: Option<&str>) -> Option<u16> {
-        if let Some(n) = name.strip_prefix("0x").and_then(|h| u16::from_str_radix(h, 16).ok()) {
+        if let Some(n) = name
+            .strip_prefix("0x")
+            .and_then(|h| u16::from_str_radix(h, 16).ok())
+        {
             return Some(n);
         }
         if let Some(scene) = scene {
@@ -198,7 +265,12 @@ impl Flags {
         self.global
             .get(name)
             .copied()
-            .or_else(|| self.scoped.iter().find(|((_, n), _)| n == name).map(|(_, &v)| v))
+            .or_else(|| {
+                self.scoped
+                    .iter()
+                    .find(|((_, n), _)| n == name)
+                    .map(|(_, &v)| v)
+            })
             .or_else(|| self.header.get(name).copied())
     }
 }
@@ -218,14 +290,22 @@ impl Flags {
     pub fn before_first_visit(&self, scene: u16) -> Result<Vec<u16>, String> {
         let path = self.dir.join("beats.tsv");
         let tsv = Tsv::read(&path)?;
-        let (scenes, sets, clears) = (tsv.column("scenes")?, tsv.column("sets")?, tsv.column("clears")?);
+        let (scenes, sets, clears) = (
+            tsv.column("scenes")?,
+            tsv.column("sets")?,
+            tsv.column("clears")?,
+        );
         let mut held: Vec<u16> = Vec::new();
         for row in &tsv.rows {
             // "25 GomaCaveEntrance, 26 GomaCavePond": numbers and symbols.
             let listed: Vec<(u16, &str)> = tsv
                 .get(row, scenes)
                 .split(',')
-                .filter_map(|s| s.trim().split_once(' ').and_then(|(n, name)| Some((n.parse().ok()?, name))))
+                .filter_map(|s| {
+                    s.trim()
+                        .split_once(' ')
+                        .and_then(|(n, name)| Some((n.parse().ok()?, name)))
+                })
                 .collect();
             if listed.iter().any(|&(n, _)| n == scene) {
                 held.sort_unstable();
@@ -253,14 +333,19 @@ impl Flags {
     }
 }
 
-
 /// The `FLAG_` names a flags.h defines with a number, by name.
 fn header_flags(path: &Path) -> HashMap<String, u16> {
     let mut header = HashMap::new();
     for line in std::fs::read_to_string(path).unwrap_or_default().lines() {
         let mut words = line.split_whitespace();
-        if let (Some("#define"), Some(name), Some(value)) = (words.next(), words.next(), words.next()) {
-            if let Some(value) = name.starts_with("FLAG_").then(|| parse_number(value)).flatten() {
+        if let (Some("#define"), Some(name), Some(value)) =
+            (words.next(), words.next(), words.next())
+        {
+            if let Some(value) = name
+                .starts_with("FLAG_")
+                .then(|| parse_number(value))
+                .flatten()
+            {
                 header.insert(name.to_string(), value as u16);
             }
         }
@@ -274,7 +359,12 @@ impl Flags {
     /// scene's own, and the story's order (beats.tsv) is unknown.
     pub fn from_header(root: &Path, game: &str) -> Flags {
         let header = header_flags(&root.join("games").join(game).join("include/flags.h"));
-        Flags { dir: std::path::PathBuf::new(), global: HashMap::new(), scoped: HashMap::new(), header }
+        Flags {
+            dir: std::path::PathBuf::new(),
+            global: HashMap::new(),
+            scoped: HashMap::new(),
+            header,
+        }
     }
 }
 
@@ -286,11 +376,16 @@ impl Flags {
 /// area names are left empty; the world map is the row named WorldMap.
 pub fn scenes_from_tree(root: &Path, game: &str, edition: &str) -> Result<Vec<Scene>, String> {
     let path = root.join("games").join(game).join("src/field/scenes.s");
-    let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let text = std::fs::read_to_string(&path)
+        .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     let overlays = super::snapshot::build(root, edition)?.join("overlays");
     let mut scenes = Vec::new();
     for line in text.lines() {
-        let Some(rest) = line.trim_start().strip_prefix("scene ").or_else(|| line.trim_start().strip_prefix("scene\t")) else {
+        let Some(rest) = line
+            .trim_start()
+            .strip_prefix("scene ")
+            .or_else(|| line.trim_start().strip_prefix("scene\t"))
+        else {
             continue;
         };
         let fields: Vec<&str> = rest.split(',').map(str::trim).collect();
@@ -299,15 +394,24 @@ pub fn scenes_from_tree(root: &Path, game: &str, edition: &str) -> Result<Vec<Sc
         }
         let number = scenes.len() as u16;
         let code = fields[1];
-        let overlay = code.strip_prefix("0x").map_or_else(|| code.parse().ok(), |h| u16::from_str_radix(h, 16).ok());
+        let overlay = code
+            .strip_prefix("0x")
+            .map_or_else(|| code.parse().ok(), |h| u16::from_str_radix(h, 16).ok());
         // The overlay's own scene source: the C file its map links from
         // src/scene or src/debug, not the entry table or its globals.
         let file = overlay
-            .and_then(|id| std::fs::read_to_string(overlays.join(format!("resource_{id:03x}.map"))).ok())
+            .and_then(|id| {
+                std::fs::read_to_string(overlays.join(format!("resource_{id:03x}.map"))).ok()
+            })
             .and_then(|map| {
                 map.split_whitespace()
                     .filter_map(|w| w.find("games/").map(|i| &w[i..]))
-                    .filter(|w| w.ends_with(".o") && !w.contains("/bss/") && !w.ends_with("/entry.o") && !w.contains("/entry/"))
+                    .filter(|w| {
+                        w.ends_with(".o")
+                            && !w.contains("/bss/")
+                            && !w.ends_with("/entry.o")
+                            && !w.contains("/entry/")
+                    })
                     .find(|w| w.contains("/src/scene/") || w.contains("/src/debug/"))
                     .map(|w| format!("{}.c", w.trim_end_matches(".o")))
             })
@@ -318,7 +422,11 @@ pub fn scenes_from_tree(root: &Path, game: &str, edition: &str) -> Result<Vec<Sc
             symbol: (!name.is_empty()).then(|| name.to_string()),
             file,
             area: String::new(),
-            map: if name == "WorldMap" { "world".to_string() } else { String::new() },
+            map: if name == "WorldMap" {
+                "world".to_string()
+            } else {
+                String::new()
+            },
             overlay,
         });
     }
@@ -398,7 +506,10 @@ pub struct Alternative {
 impl Event {
     /// The first alternative's trigger, or why the row has none.
     pub fn trigger(&self) -> Result<Trigger, String> {
-        self.alternatives.first().map_or_else(|| Err("the row has no trigger".to_string()), |a| a.trigger.clone())
+        self.alternatives.first().map_or_else(
+            || Err("the row has no trigger".to_string()),
+            |a| a.trigger.clone(),
+        )
     }
 }
 
@@ -446,12 +557,22 @@ pub fn parse_trigger(text: &str) -> Result<Trigger, String> {
     }
     // A cast for any target, as the trigger tables read from the running
     // game write it: `psynergy 144 anywhere`.
-    if let Some(ability) = first.strip_prefix("psynergy ").and_then(|rest| rest.strip_suffix(" anywhere")) {
-        return ability.trim().parse::<u16>().map(Trigger::Cast).map_err(|_| bad());
+    if let Some(ability) = first
+        .strip_prefix("psynergy ")
+        .and_then(|rest| rest.strip_suffix(" anywhere"))
+    {
+        return ability
+            .trim()
+            .parse::<u16>()
+            .map(Trigger::Cast)
+            .map_err(|_| bad());
     }
     // A Psynergy by its ability id, as the trigger tables read from the
     // running game write it (triggers.rs): `psynergy 141 on 1032`.
-    if let Some((ability, actor)) = first.strip_prefix("psynergy ").and_then(|rest| rest.split_once(" on ")) {
+    if let Some((ability, actor)) = first
+        .strip_prefix("psynergy ")
+        .and_then(|rest| rest.split_once(" on "))
+    {
         if let Some(code) = actor.strip_prefix("cell ") {
             return match (ability.trim().parse::<u16>(), code.trim().parse::<u16>()) {
                 (Ok(ability), Ok(code)) => Ok(Trigger::PsynergyCell(ability, code)),
@@ -467,16 +588,23 @@ pub fn parse_trigger(text: &str) -> Result<Trigger, String> {
         if let Some(rest) = first.strip_prefix(&format!("{name} on ")) {
             // The row's trigger keeps its actor in bits 7..0; bit 10 has the
             // event play the effect itself (`mind read on 1027`, Mia).
-            return target(rest).map(|actor| Trigger::Psynergy(ability, actor & 0xff)).ok_or_else(bad);
+            return target(rest)
+                .map(|actor| Trigger::Psynergy(ability, actor & 0xff))
+                .ok_or_else(bad);
         }
     }
     // A cast for any target (`reveal 0`): the number is its phase.
     for (name, ability) in [("reveal", REVEAL), ("cloak", CLOAK)] {
-        if first.strip_prefix(name).is_some_and(|rest| rest.starts_with(' ') && target(rest).is_some()) {
+        if first
+            .strip_prefix(name)
+            .is_some_and(|rest| rest.starts_with(' ') && target(rest).is_some())
+        {
             return Ok(Trigger::Cast(ability));
         }
     }
-    Err(format!("{first:?} is not a talk, search, touch or Psynergy trigger"))
+    Err(format!(
+        "{first:?} is not a talk, search, touch or Psynergy trigger"
+    ))
 }
 
 /// Reveal's ability id (ability_ids.h).
@@ -513,14 +641,25 @@ fn alternatives(triggers: &str, condition: &str, requires: &str) -> Vec<Alternat
         })
         .collect();
     let mut out = Vec::new();
-    for (i, text) in triggers.split(';').map(str::trim).filter(|t| !t.is_empty()).enumerate() {
+    for (i, text) in triggers
+        .split(';')
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .enumerate()
+    {
         let trigger = parse_trigger(text);
-        let mine: Vec<&str> =
-            segments.iter().filter(|(t, _)| *t == Some(text) || (t.is_none() && i == 0)).map(|(_, c)| *c).collect();
+        let mine: Vec<&str> = segments
+            .iter()
+            .filter(|(t, _)| *t == Some(text) || (t.is_none() && i == 0))
+            .map(|(_, c)| *c)
+            .collect();
         let with = |extra: &str| {
             let mut conditions = own.clone();
             conditions.extend(parse_conditions(extra));
-            Alternative { trigger: trigger.clone(), conditions }
+            Alternative {
+                trigger: trigger.clone(),
+                conditions,
+            }
         };
         if mine.is_empty() {
             out.push(with(""));
@@ -528,22 +667,38 @@ fn alternatives(triggers: &str, condition: &str, requires: &str) -> Vec<Alternat
         out.extend(mine.into_iter().map(with));
     }
     if out.is_empty() {
-        out.push(Alternative { trigger: parse_trigger(triggers), conditions: own });
+        out.push(Alternative {
+            trigger: parse_trigger(triggers),
+            conditions: own,
+        });
     }
     out
 }
 
 /// A list of flags, `FLAG_A:set, FLAG_B` or `FLAG_A, FLAG_B`, as names.
 fn flag_names(text: &str) -> Vec<String> {
-    text.split(',').filter_map(|t| t.trim().split(':').next()).filter(|t| !t.is_empty()).map(str::to_string).collect()
+    text.split(',')
+        .filter_map(|t| t.trim().split(':').next())
+        .filter(|t| !t.is_empty())
+        .map(str::to_string)
+        .collect()
 }
 
 pub fn read_events(path: &Path) -> Result<Vec<Event>, String> {
     let tsv = Tsv::read(path)?;
-    let [scenes, event, trigger, condition, requires, tests, messages] =
-        ["scenes", "event", "trigger", "condition", "requires", "tests", "messages"].map(|c| tsv.column(c));
-    let (scenes, event, trigger, condition, requires, tests, messages) =
-        (scenes?, event?, trigger?, condition?, requires?, tests?, messages?);
+    let [scenes, event, trigger, condition, requires, tests, messages] = [
+        "scenes",
+        "event",
+        "trigger",
+        "condition",
+        "requires",
+        "tests",
+        "messages",
+    ]
+    .map(|c| tsv.column(c));
+    let (scenes, event, trigger, condition, requires, tests, messages) = (
+        scenes?, event?, trigger?, condition?, requires?, tests?, messages?,
+    );
     let sets = tsv.column("sets").ok();
     let clears = tsv.column("clears").ok();
     Ok(tsv
@@ -558,12 +713,24 @@ pub fn read_events(path: &Path) -> Result<Vec<Event>, String> {
                     .filter_map(|s| s.split_whitespace().next()?.parse().ok())
                     .collect(),
                 name: tsv.get(row, event).to_string(),
-                alternatives: alternatives(&trigger_text, tsv.get(row, condition), tsv.get(row, requires)),
+                alternatives: alternatives(
+                    &trigger_text,
+                    tsv.get(row, condition),
+                    tsv.get(row, requires),
+                ),
                 trigger_text,
                 tests: flag_names(tsv.get(row, tests)),
-                sets: sets.map(|c| flag_names(tsv.get(row, c))).unwrap_or_default(),
-                clears: clears.map(|c| flag_names(tsv.get(row, c))).unwrap_or_default(),
-                messages: tsv.get(row, messages).split(',').filter_map(|m| m.trim().parse().ok()).collect(),
+                sets: sets
+                    .map(|c| flag_names(tsv.get(row, c)))
+                    .unwrap_or_default(),
+                clears: clears
+                    .map(|c| flag_names(tsv.get(row, c)))
+                    .unwrap_or_default(),
+                messages: tsv
+                    .get(row, messages)
+                    .split(',')
+                    .filter_map(|m| m.trim().parse().ok())
+                    .collect(),
             }
         })
         .collect())
@@ -575,20 +742,44 @@ mod tests {
 
     #[test]
     fn triggers_name_their_target() {
-        assert_eq!(parse_trigger("talk ACTOR_EASTWARD_MONK=10"), Ok(Trigger::Talk(10)));
+        assert_eq!(
+            parse_trigger("talk ACTOR_EASTWARD_MONK=10"),
+            Ok(Trigger::Talk(10))
+        );
         assert_eq!(parse_trigger("touch 20; touch 21"), Ok(Trigger::Touch(20)));
         assert_eq!(parse_trigger("search 208"), Ok(Trigger::Search(208)));
-        assert_eq!(parse_trigger("mind read on 8"), Ok(Trigger::Psynergy(0x8d, 8)));
-        assert_eq!(parse_trigger("force on ACTOR_PILLAR=12"), Ok(Trigger::Psynergy(0x8e, 12)));
-        assert_eq!(parse_trigger("move on ACTOR_BLOCK=19"), Ok(Trigger::Psynergy(MOVE, 19)));
-        assert_eq!(parse_trigger("mind read on 1027"), Ok(Trigger::Psynergy(0x8d, 3)));
-        assert_eq!(parse_trigger("ply on ACTOR_WATERFALL_STATUE=12"), Ok(Trigger::Psynergy(0x5d, 12)));
+        assert_eq!(
+            parse_trigger("mind read on 8"),
+            Ok(Trigger::Psynergy(0x8d, 8))
+        );
+        assert_eq!(
+            parse_trigger("force on ACTOR_PILLAR=12"),
+            Ok(Trigger::Psynergy(0x8e, 12))
+        );
+        assert_eq!(
+            parse_trigger("move on ACTOR_BLOCK=19"),
+            Ok(Trigger::Psynergy(MOVE, 19))
+        );
+        assert_eq!(
+            parse_trigger("mind read on 1027"),
+            Ok(Trigger::Psynergy(0x8d, 3))
+        );
+        assert_eq!(
+            parse_trigger("ply on ACTOR_WATERFALL_STATUE=12"),
+            Ok(Trigger::Psynergy(0x5d, 12))
+        );
         assert!(parse_trigger("entry initialize").is_err());
         assert_eq!(parse_trigger("reveal 0"), Ok(Trigger::Cast(REVEAL)));
         assert_eq!(parse_trigger("cloak 1"), Ok(Trigger::Cast(CLOAK)));
         assert!(parse_trigger("revealed 0").is_err());
-        assert_eq!(parse_trigger("psynergy 141 on 1032"), Ok(Trigger::Psynergy(0x8d, 8)));
-        assert_eq!(parse_trigger("psynergy 136 on cell 40"), Ok(Trigger::PsynergyCell(136, 40)));
+        assert_eq!(
+            parse_trigger("psynergy 141 on 1032"),
+            Ok(Trigger::Psynergy(0x8d, 8))
+        );
+        assert_eq!(
+            parse_trigger("psynergy 136 on cell 40"),
+            Ok(Trigger::PsynergyCell(136, 40))
+        );
     }
 
     #[test]
@@ -617,24 +808,51 @@ mod tests {
 
     #[test]
     fn each_trigger_is_an_alternative_with_its_conditions() {
-        let alts = alternatives("touch 20; touch 21", "touch 20: FLAG_A set | touch 21: FLAG_A clear", "FLAG_B clear");
+        let alts = alternatives(
+            "touch 20; touch 21",
+            "touch 20: FLAG_A set | touch 21: FLAG_A clear",
+            "FLAG_B clear",
+        );
         assert_eq!(alts.len(), 2);
         assert_eq!(alts[0].trigger, Ok(Trigger::Touch(20)));
-        assert_eq!(alts[0].conditions, vec![("FLAG_B".to_string(), false), ("FLAG_A".to_string(), true)]);
+        assert_eq!(
+            alts[0].conditions,
+            vec![("FLAG_B".to_string(), false), ("FLAG_A".to_string(), true)]
+        );
         assert_eq!(alts[1].trigger, Ok(Trigger::Touch(21)));
-        assert_eq!(alts[1].conditions, vec![("FLAG_B".to_string(), false), ("FLAG_A".to_string(), false)]);
+        assert_eq!(
+            alts[1].conditions,
+            vec![("FLAG_B".to_string(), false), ("FLAG_A".to_string(), false)]
+        );
         // A condition with no trigger before it is the first trigger's.
         let alts = alternatives("talk 9; mind read on 9", "FLAG_C set", "");
         assert_eq!(alts[0].conditions, vec![("FLAG_C".to_string(), true)]);
         assert!(alts[1].conditions.is_empty());
         // One trigger listed under several conditions is one alternative each.
-        assert_eq!(alternatives("search 70", "search 70: FLAG_D set | search 70: FLAG_D clear", "").len(), 2);
+        assert_eq!(
+            alternatives(
+                "search 70",
+                "search 70: FLAG_D set | search 70: FLAG_D clear",
+                ""
+            )
+            .len(),
+            2
+        );
     }
 
     #[test]
     fn a_flag_is_named_by_its_number() {
-        let header = HashMap::from([("FLAG_B".to_string(), 3u16), ("FLAG_A".to_string(), 3), ("FLAG_C".to_string(), 4)]);
-        let flags = Flags { dir: std::path::PathBuf::new(), global: HashMap::new(), scoped: HashMap::new(), header };
+        let header = HashMap::from([
+            ("FLAG_B".to_string(), 3u16),
+            ("FLAG_A".to_string(), 3),
+            ("FLAG_C".to_string(), 4),
+        ]);
+        let flags = Flags {
+            dir: std::path::PathBuf::new(),
+            global: HashMap::new(),
+            scoped: HashMap::new(),
+            header,
+        };
         assert_eq!(flags.name(3).as_deref(), Some("FLAG_A"));
         assert_eq!(flags.name(4).as_deref(), Some("FLAG_C"));
         assert_eq!(flags.name(5), None);
@@ -659,9 +877,11 @@ mod tests {
             map: String::new(),
             overlay: None,
         };
-        assert_eq!(scene(Some("KolimaForestBridge")).slug(), "kolima-forest-bridge");
+        assert_eq!(
+            scene(Some("KolimaForestBridge")).slug(),
+            "kolima-forest-bridge"
+        );
         assert_eq!(scene(Some("Bilibin1")).slug(), "bilibin1");
         assert_eq!(scene(None).slug(), "scene-31");
     }
 }
-

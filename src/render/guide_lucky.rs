@@ -72,7 +72,13 @@ impl<'a> Guide<'a> {
     /// The game rooms entered by `room`, the leader across from attendant
     /// `attendant`, then, after `prepare`, A every 40 frames through the offer
     /// until the next sequence is `run`. Returns the field there.
-    fn lucky_reach(&self, room: u16, attendant: &str, prepare: impl Fn(&mut Field) -> Result<(), String>, run: u16) -> Result<Field<'a>, String> {
+    fn lucky_reach(
+        &self,
+        room: u16,
+        attendant: &str,
+        prepare: impl Fn(&mut Field) -> Result<(), String>,
+        run: u16,
+    ) -> Result<Field<'a>, String> {
         let map = source::map_id(GAME_ROOMS)?;
         let id = source::actor_id(GAME_ROOMS, attendant)?;
         let (entered, _) = self.stand_for((map, room), Trigger::Talk(id), id)?;
@@ -82,7 +88,9 @@ impl<'a> Guide<'a> {
         let mut n = 0;
         while field.read16(save + SAVE_MAP_ID) != run {
             if n > 3000 {
-                return Err(format!("the attendant never started the game ({attendant})"));
+                return Err(format!(
+                    "the attendant never started the game ({attendant})"
+                ));
             }
             if n % 40 == 0 {
                 field.press(3)?;
@@ -98,7 +106,13 @@ impl<'a> Guide<'a> {
     /// frames and then LEAD more, which are kept, presses A and plays on,
     /// keeping each frame, until `settled` gives the result (or LIMIT frames
     /// pass), then `tail` frames more. Returns the frames and the result.
-    fn lucky_try(field: &mut Field, ready: &Saved, delay: u32, tail: u32, mut settled: impl FnMut(&Field) -> Option<u32>) -> Result<(Vec<Vec<u16>>, Option<u32>), String> {
+    fn lucky_try(
+        field: &mut Field,
+        ready: &Saved,
+        delay: u32,
+        tail: u32,
+        mut settled: impl FnMut(&Field) -> Option<u32>,
+    ) -> Result<(Vec<Vec<u16>>, Option<u32>), String> {
         field.load(ready);
         field.frames(delay)?;
         let mut frames = Vec::new();
@@ -123,10 +137,15 @@ impl<'a> Guide<'a> {
     /// (two pairs or better), and that throw is kept.
     fn lucky_dice(&mut self) -> Result<(), String> {
         let save = self.sym("gMainRoutineState")?;
-        let mut field = self.lucky_reach(DICE_ROOM, "ACTOR_TOLBI_SPRING_DICE_ATTENDANT", |f| {
-            f.set_coins(DICE_COINS);
-            Ok(())
-        }, SEQUENCE_LUCKY_DICE)?;
+        let mut field = self.lucky_reach(
+            DICE_ROOM,
+            "ACTOR_TOLBI_SPRING_DICE_ATTENDANT",
+            |f| {
+                f.set_coins(DICE_COINS);
+                Ok(())
+            },
+            SEQUENCE_LUCKY_DICE,
+        )?;
         // Past the fade in, the dice on the throwing line.
         field.frames(SETTLE)?;
         let coins = |f: &Field| f.read32(save + SAVE_COINS);
@@ -154,7 +173,11 @@ impl<'a> Guide<'a> {
             field.frames(DICE_NEXT)?;
         }
         let frames = first.ok_or_else(|| format!("no throw paid in {TRIES}"))?;
-        self.world_gif("overworld/lucky-dice.gif", &frames, "Lucky Dice: two dice thrown, landing, and the result")
+        self.world_gif(
+            "overworld/lucky-dice.gif",
+            &frames,
+            "Lucky Dice: two dice thrown, landing, and the result",
+        )
     }
 
     /// Lucky Wheels with nine Game Tickets: four bet, which plays all seven
@@ -165,17 +188,29 @@ impl<'a> Guide<'a> {
     /// before A is another spin: the first that wins is kept.
     fn lucky_wheels(&mut self) -> Result<(), String> {
         let save = self.sym("gMainRoutineState")?;
-        let ticket = super::tables::Game::here()?.item_names()?.iter().position(|i| i == "Game Ticket").ok_or("no item is named Game Ticket")? as u16;
-        let mut field = self.lucky_reach(WHEELS_ROOM, "ACTOR_TOLBI_SPRING_WHEELS_ATTENDANT", |f| {
-            let unit = f.unit(0)?;
-            for i in 0..INVENTORY_SLOTS {
-                if f.read16(unit + UNIT_INVENTORY + 2 * i) == 0 {
-                    f.write16(unit + UNIT_INVENTORY + 2 * i, ticket | (WHEELS_TICKETS - 1) << INVENTORY_QUANTITY_SHIFT);
-                    return Ok(());
+        let ticket = super::tables::Game::here()?
+            .item_names()?
+            .iter()
+            .position(|i| i == "Game Ticket")
+            .ok_or("no item is named Game Ticket")? as u16;
+        let mut field = self.lucky_reach(
+            WHEELS_ROOM,
+            "ACTOR_TOLBI_SPRING_WHEELS_ATTENDANT",
+            |f| {
+                let unit = f.unit(0)?;
+                for i in 0..INVENTORY_SLOTS {
+                    if f.read16(unit + UNIT_INVENTORY + 2 * i) == 0 {
+                        f.write16(
+                            unit + UNIT_INVENTORY + 2 * i,
+                            ticket | (WHEELS_TICKETS - 1) << INVENTORY_QUANTITY_SHIFT,
+                        );
+                        return Ok(());
+                    }
                 }
-            }
-            Err("Isaac's bag is full".to_string())
-        }, SEQUENCE_LUCKY_WHEELS)?;
+                Err("Isaac's bag is full".to_string())
+            },
+            SEQUENCE_LUCKY_WHEELS,
+        )?;
         field.frames(SETTLE)?;
         // Up three times: the bet from one ticket to four.
         for _ in 0..3 {
@@ -197,6 +232,10 @@ impl<'a> Guide<'a> {
             }
         }
         let frames = frames.ok_or_else(|| format!("no spin won in {TRIES}"))?;
-        self.world_gif("overworld/lucky-wheels.gif", &frames, "Lucky Wheels: the wheels spun and stopped one by one, and the result")
+        self.world_gif(
+            "overworld/lucky-wheels.gif",
+            &frames,
+            "Lucky Wheels: the wheels spun and stopped one by one, and the result",
+        )
     }
 }

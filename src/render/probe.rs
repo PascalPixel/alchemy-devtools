@@ -56,7 +56,9 @@ pub(super) fn actors(field: &Field, ids: std::ops::Range<u16>) {
 pub(super) fn cells(field: &Field, layer: u8, (x0, z0): (i32, i32), (x1, z1): (i32, i32)) {
     println!("  layer {layer} codes, columns {x0}..={x1}:");
     for z in z0..=z1 {
-        let row: Vec<String> = (x0..=x1).map(|x| format!("{:3}", field.cell(layer, x, z))).collect();
+        let row: Vec<String> = (x0..=x1)
+            .map(|x| format!("{:3}", field.cell(layer, x, z)))
+            .collect();
         println!("   {z:3}: {}", row.join(" "));
     }
 }
@@ -64,16 +66,34 @@ pub(super) fn cells(field: &Field, layer: u8, (x0, z0): (i32, i32), (x1, z1): (i
 pub(super) fn words(field: &Field, layer: u8, (x0, z0): (i32, i32), (x1, z1): (i32, i32)) {
     println!("  layer {layer} words, columns {x0}..={x1}:");
     for z in z0..=z1 {
-        let row: Vec<String> = (x0..=x1).map(|x| format!("{:08x}", field.cell_word(layer, x, z) as u32)).collect();
+        let row: Vec<String> = (x0..=x1)
+            .map(|x| format!("{:08x}", field.cell_word(layer, x, z) as u32))
+            .collect();
         println!("   {z:3}: {}", row.join(" "));
     }
 }
 
 /// Puts the leader at (x, z) on `layer` facing `facing`, then holds `keys`
 /// for `frames` frames; where he started and where he ended up.
-pub(super) fn walk(field: &mut Field, placed: &super::field::Saved, (x, z): (i32, i32), layer: u8, facing: u32, keys: u32, frames: u32) -> Result<String, String> {
+pub(super) fn walk(
+    field: &mut Field,
+    placed: &super::field::Saved,
+    (x, z): (i32, i32),
+    layer: u8,
+    facing: u32,
+    keys: u32,
+    frames: u32,
+) -> Result<String, String> {
     let height = field.ground(layer, x, z)?;
-    let spot = Spot { x, z, layer, height, facing, walk: 0, cell: None };
+    let spot = Spot {
+        x,
+        z,
+        layer,
+        height,
+        facing,
+        walk: 0,
+        cell: None,
+    };
     field.stand(placed, &spot)?;
     let start = field.leader().ok_or("no leader")?;
     field.hold(keys);
@@ -88,7 +108,17 @@ pub(super) fn walk(field: &mut Field, placed: &super::field::Saved, (x, z): (i32
     field.hold(0);
     field.frames(4)?;
     let end = field.leader().ok_or("no leader")?;
-    Ok(format!("from ({}, {}) layer {} to ({}, {}) layer {}; scene {}; {}", start.x, start.z, start.layer, end.x, end.z, end.layer, field.scene(), track.join(" ")))
+    Ok(format!(
+        "from ({}, {}) layer {} to ({}, {}) layer {}; scene {}; {}",
+        start.x,
+        start.z,
+        start.layer,
+        end.x,
+        end.z,
+        end.layer,
+        field.scene(),
+        track.join(" ")
+    ))
 }
 
 impl<'a> Guide<'a> {
@@ -107,11 +137,31 @@ impl<'a> Guide<'a> {
     /// VenusLighthouse_CreateOccludingPassageEffect (at `VENUS_OCCLUDER`, an
     /// address in the overlay) returning at once.
     fn venus(&mut self, _map: &Map) -> Result<(), String> {
-        let occluder = std::env::var("VENUS_OCCLUDER").ok().and_then(|v| u32::from_str_radix(v.trim_start_matches("0x"), 16).ok()).ok_or("set VENUS_OCCLUDER")?;
-        let watch: Vec<u32> = std::env::var("VENUS_WATCH").unwrap_or_default().split(',').filter_map(|v| u32::from_str_radix(v.trim_start_matches("0x"), 16).ok()).collect();
-        let pillar: Vec<i32> = std::env::var("VENUS_PILLAR").unwrap_or_else(|_| "744,712".into()).split(',').filter_map(|v| v.parse().ok()).collect();
-        let leader: Vec<i32> = std::env::var("VENUS_LEADER").unwrap_or_else(|_| "744,696".into()).split(',').filter_map(|v| v.parse().ok()).collect();
-        let prepare = |me: &Self, stub: bool| -> Result<(super::guide::Entered<'a>, Spot, Rc<RefCell<Vec<u32>>>), String> {
+        let occluder = std::env::var("VENUS_OCCLUDER")
+            .ok()
+            .and_then(|v| u32::from_str_radix(v.trim_start_matches("0x"), 16).ok())
+            .ok_or("set VENUS_OCCLUDER")?;
+        let watch: Vec<u32> = std::env::var("VENUS_WATCH")
+            .unwrap_or_default()
+            .split(',')
+            .filter_map(|v| u32::from_str_radix(v.trim_start_matches("0x"), 16).ok())
+            .collect();
+        let pillar: Vec<i32> = std::env::var("VENUS_PILLAR")
+            .unwrap_or_else(|_| "744,712".into())
+            .split(',')
+            .filter_map(|v| v.parse().ok())
+            .collect();
+        let leader: Vec<i32> = std::env::var("VENUS_LEADER")
+            .unwrap_or_else(|_| "744,696".into())
+            .split(',')
+            .filter_map(|v| v.parse().ok())
+            .collect();
+        let prepare = |me: &Self,
+                       stub: bool|
+         -> Result<
+            (super::guide::Entered<'a>, Spot, Rc<RefCell<Vec<u32>>>),
+            String,
+        > {
             let mut e = me.enter_with((184, 9), &[])?;
             let a = e.field.actor_address(9);
             e.field.write32(a + 8, (pillar[0] << 16) as u32);
@@ -125,7 +175,10 @@ impl<'a> Guide<'a> {
             // put at this z, as if the push had brought it there.
             if let Ok(v) = std::env::var("VENUS_ARRIVE") {
                 let parts: Vec<&str> = v.split(',').collect();
-                if let (Some(at), Some(z)) = (parts.first().and_then(|p| u32::from_str_radix(p, 16).ok()), parts.get(1).and_then(|p| p.parse::<i32>().ok())) {
+                if let (Some(at), Some(z)) = (
+                    parts.first().and_then(|p| u32::from_str_radix(p, 16).ok()),
+                    parts.get(1).and_then(|p| p.parse::<i32>().ok()),
+                ) {
                     e.field.pokes = vec![(at, a + 0x10, (z << 16) as u32)];
                 }
             }
@@ -140,15 +193,42 @@ impl<'a> Guide<'a> {
                 }
             }));
             let height = e.field.ground(0, leader[0], leader[1])?;
-            Ok((e, Spot { x: leader[0], z: leader[1], layer: 0, height, facing: SOUTH, walk: 0, cell: None }, hits))
+            Ok((
+                e,
+                Spot {
+                    x: leader[0],
+                    z: leader[1],
+                    layer: 0,
+                    height,
+                    facing: SOUTH,
+                    walk: 0,
+                    cell: None,
+                },
+                hits,
+            ))
         };
         let mut runs = Vec::new();
         for stub in [false, true] {
             let (mut e, spot, hits) = prepare(self, stub)?;
             let frames = Self::record_trigger(&mut e, Trigger::Psynergy(MOVE, 9), Some(spot), 60)?;
-            println!("stub {stub}: {} frames, hits {:?} (watched, then the occluder); pillar {}", frames.len(), hits.borrow(), describe(&e.field, 9));
-            let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.iter().map(|&c| super::animation::rgb(c)).collect()).collect();
-            super::animation::write_evidence(&self.out.join(format!("venus-sink-{}.gif", if stub { "without" } else { "with" })), &rgb, super::mgba::WIDTH)?;
+            println!(
+                "stub {stub}: {} frames, hits {:?} (watched, then the occluder); pillar {}",
+                frames.len(),
+                hits.borrow(),
+                describe(&e.field, 9)
+            );
+            let rgb: Vec<Vec<u32>> = frames
+                .iter()
+                .map(|f| f.iter().map(|&c| super::animation::rgb(c)).collect())
+                .collect();
+            super::animation::write_evidence(
+                &self.out.join(format!(
+                    "venus-sink-{}.gif",
+                    if stub { "without" } else { "with" }
+                )),
+                &rgb,
+                super::mgba::WIDTH,
+            )?;
             runs.push(frames);
         }
         if std::env::var("VENUS_SEARCH").is_err() {
@@ -157,12 +237,31 @@ impl<'a> Guide<'a> {
         let mut found = None;
         'search: for (scene, triggers) in [
             (184u16, vec![Trigger::Psynergy(MOVE, 9), Trigger::Touch(36)]),
-            (185, vec![Trigger::Psynergy(MOVE, 9), Trigger::Psynergy(MOVE, 10), Trigger::Psynergy(MOVE, 11), Trigger::Touch(35)]),
-            (186, vec![Trigger::Psynergy(MOVE, 15), Trigger::Psynergy(MOVE, 16), Trigger::Psynergy(MOVE, 17), Trigger::Psynergy(MOVE, 18), Trigger::Touch(45)]),
+            (
+                185,
+                vec![
+                    Trigger::Psynergy(MOVE, 9),
+                    Trigger::Psynergy(MOVE, 10),
+                    Trigger::Psynergy(MOVE, 11),
+                    Trigger::Touch(35),
+                ],
+            ),
+            (
+                186,
+                vec![
+                    Trigger::Psynergy(MOVE, 15),
+                    Trigger::Psynergy(MOVE, 16),
+                    Trigger::Psynergy(MOVE, 17),
+                    Trigger::Psynergy(MOVE, 18),
+                    Trigger::Touch(45),
+                ],
+            ),
         ] {
             for entrance in 1..14u16 {
                 for &trigger in &triggers {
-                    let Ok(mut e) = self.enter_with((scene, entrance), &[]) else { continue };
+                    let Ok(mut e) = self.enter_with((scene, entrance), &[]) else {
+                        continue;
+                    };
                     e.field.probe_pcs = vec![occluder];
                     let hits = Rc::new(RefCell::new(0u32));
                     let keep = hits.clone();
@@ -172,7 +271,11 @@ impl<'a> Guide<'a> {
                         }
                     }));
                     let r = Self::record_trigger(&mut e, trigger, None, 0);
-                    println!("scene {scene} entrance {entrance} {trigger:?}: {} frames, occluder {}", r.as_ref().map(|f| f.len() as i64).unwrap_or(-1), hits.borrow());
+                    println!(
+                        "scene {scene} entrance {entrance} {trigger:?}: {} frames, occluder {}",
+                        r.as_ref().map(|f| f.len() as i64).unwrap_or(-1),
+                        hits.borrow()
+                    );
                     if *hits.borrow() > 0 {
                         found = Some((scene, entrance, trigger));
                         break 'search;
@@ -197,8 +300,18 @@ impl<'a> Guide<'a> {
             }));
             let frames = Self::record_trigger(&mut e, trigger, None, 60)?;
             println!("stub {stub}: scene {scene} entrance {entrance} {trigger:?}: {} frames, occluder entered {} times; leader {}", frames.len(), hits.borrow(), describe(&e.field, 0));
-            let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.iter().map(|&c| super::animation::rgb(c)).collect()).collect();
-            super::animation::write_evidence(&self.out.join(format!("venus-sink-{}.gif", if stub { "without" } else { "with" })), &rgb, super::mgba::WIDTH)?;
+            let rgb: Vec<Vec<u32>> = frames
+                .iter()
+                .map(|f| f.iter().map(|&c| super::animation::rgb(c)).collect())
+                .collect();
+            super::animation::write_evidence(
+                &self.out.join(format!(
+                    "venus-sink-{}.gif",
+                    if stub { "without" } else { "with" }
+                )),
+                &rgb,
+                super::mgba::WIDTH,
+            )?;
             runs.push(frames);
         }
         compare_runs(self, &runs)
@@ -217,11 +330,23 @@ fn compare_runs(g: &Guide, runs: &[Vec<Vec<u16>>]) -> Result<(), String> {
                 differ.push((i, n));
             }
         }
-        println!("frames compared: {}; frames that differ: {} {:?}", a.len().min(b.len()), differ.len(), &differ[..differ.len().min(40)]);
+        println!(
+            "frames compared: {}; frames that differ: {} {:?}",
+            a.len().min(b.len()),
+            differ.len(),
+            &differ[..differ.len().min(40)]
+        );
         if let Some(&(i, _)) = differ.iter().max_by_key(|(_, n)| *n) {
             for (name, run) in [("with", a), ("without", b)] {
-                let image = super::field::Image { width: super::mgba::WIDTH, height: super::mgba::HEIGHT, pixels: run[i].iter().map(|&c| super::animation::rgb(c)).collect() };
-                super::places::write_png(&g.out.join(format!("venus-frame-{i}-{name}.png")), &image)?;
+                let image = super::field::Image {
+                    width: super::mgba::WIDTH,
+                    height: super::mgba::HEIGHT,
+                    pixels: run[i].iter().map(|&c| super::animation::rgb(c)).collect(),
+                };
+                super::places::write_png(
+                    &g.out.join(format!("venus-frame-{i}-{name}.png")),
+                    &image,
+                )?;
             }
         }
         Ok(())
@@ -305,7 +430,15 @@ fn glyph(c: char) -> [u8; 5] {
 /// Writes `s` at (x, y) in the 3 by 5 font `scale` times its size, in
 /// `colour` on a box of `back` when there is one, clipped; returns the
 /// width drawn.
-pub(super) fn text(image: &mut Image, x: i32, y: i32, s: &str, colour: u32, back: Option<u32>, scale: i32) -> i32 {
+pub(super) fn text(
+    image: &mut Image,
+    x: i32,
+    y: i32,
+    s: &str,
+    colour: u32,
+    back: Option<u32>,
+    scale: i32,
+) -> i32 {
     let (w, h) = (s.chars().count() as i32 * 4 * scale + scale, 7 * scale);
     let mut put = |px: i32, py: i32, c: u32| {
         if px >= 0 && py >= 0 && (px as usize) < image.width && (py as usize) < image.height {
@@ -325,7 +458,11 @@ pub(super) fn text(image: &mut Image, x: i32, y: i32, s: &str, colour: u32, back
                 if bits & (4 >> c) != 0 {
                     for dy in 0..scale {
                         for dx in 0..scale {
-                            put(x + scale + (i as i32 * 4 + c) * scale + dx, y + scale + r as i32 * scale + dy, colour);
+                            put(
+                                x + scale + (i as i32 * 4 + c) * scale + dx,
+                                y + scale + r as i32 * scale + dy,
+                                colour,
+                            );
                         }
                     }
                 }
@@ -337,12 +474,18 @@ pub(super) fn text(image: &mut Image, x: i32, y: i32, s: &str, colour: u32, back
 
 /// The map of the room the field entered, the leader hidden, from the
 /// moment `settled`, with its top left on the map in pixels.
-pub(super) fn room_map(field: &mut Field, settled: &super::field::Saved) -> Result<(Image, (i32, i32)), String> {
+pub(super) fn room_map(
+    field: &mut Field,
+    settled: &super::field::Saved,
+) -> Result<(Image, (i32, i32)), String> {
     let r = field.room();
-    let image = field.stitch(settled, [r[0] << 16, r[1] << 16, r[2] << 16, r[3] << 16], false)?;
+    let image = field.stitch(
+        settled,
+        [r[0] << 16, r[1] << 16, r[2] << 16, r[3] << 16],
+        false,
+    )?;
     Ok((image, (r[0], r[1])))
 }
-
 
 /// struct FieldState's Psynergy request (field_state.h).
 const FIELD_PSYNERGY: u32 = 0x17e;

@@ -36,52 +36,163 @@ struct Chapter {
 /// The chapters, in the story's order.
 const CHAPTERS: &[Chapter] = &[
     // The stormy night: Isaac and Garet as children, a new game's level 1.
-    Chapter { maps: &[("ValePrologue", "ValePrologue")], preset: None, members: Some(&["ISAAC", "GARET"]) },
+    Chapter {
+        maps: &[("ValePrologue", "ValePrologue")],
+        preset: None,
+        members: Some(&["ISAAC", "GARET"]),
+    },
     // Vale three years on, before Sol Sanctum: Jenna, in the preset, has
     // not joined yet.
-    Chapter { maps: &[("Vale", "ValeEruption")], preset: Some(10), members: Some(&["ISAAC", "GARET"]) },
+    Chapter {
+        maps: &[("Vale", "ValeEruption")],
+        preset: Some(10),
+        members: Some(&["ISAAC", "GARET"]),
+    },
     // Sol Sanctum and Mt. Aleph's eruption, with Jenna.
-    Chapter { maps: &[("SolSanctumLunaSolRooms", "SolEntrance")], preset: Some(11), members: None },
+    Chapter {
+        maps: &[("SolSanctumLunaSolRooms", "SolEntrance")],
+        preset: Some(11),
+        members: None,
+    },
     // The world map and Vault: Isaac and Garet set out; Ivan joins in Vault.
-    Chapter { maps: &[("WorldMap", "WorldMap"), ("Vault", "StoneRooms")], preset: Some(12), members: None },
+    Chapter {
+        maps: &[("WorldMap", "WorldMap"), ("Vault", "StoneRooms")],
+        preset: Some(12),
+        members: None,
+    },
     // Goma Cave, Bilibin and its barricade, Vault revisited.
-    Chapter { maps: &[("VaultRevisit", "GomaCaveBridge")], preset: Some(14), members: None },
-    Chapter { maps: &[("Bilibin", "BilibinBarricade")], preset: Some(20), members: None },
+    Chapter {
+        maps: &[("VaultRevisit", "GomaCaveBridge")],
+        preset: Some(14),
+        members: None,
+    },
+    Chapter {
+        maps: &[("Bilibin", "BilibinBarricade")],
+        preset: Some(20),
+        members: None,
+    },
     // Kolima, its forest and Tret, and the caves by Vale and Vault.
-    Chapter { maps: &[("Kolima", "TretTreeBranch"), ("ValeCaveMouth", "VaultCaveMouth")], preset: Some(21), members: None },
+    Chapter {
+        maps: &[
+            ("Kolima", "TretTreeBranch"),
+            ("ValeCaveMouth", "VaultCaveMouth"),
+        ],
+        preset: Some(21),
+        members: None,
+    },
     // Bilibin Cave, Imil.
-    Chapter { maps: &[("BilibinCaveIce", "ImilFallsCave")], preset: Some(23), members: None },
+    Chapter {
+        maps: &[("BilibinCaveIce", "ImilFallsCave")],
+        preset: Some(23),
+        members: None,
+    },
     // Mercury Lighthouse, where Mia joins.
-    Chapter { maps: &[("MercuryLighthouseEntrance", "UnusedMercuryLighthouseAerieCopy")], preset: Some(25), members: None },
+    Chapter {
+        maps: &[(
+            "MercuryLighthouseEntrance",
+            "UnusedMercuryLighthouseAerieCopy",
+        )],
+        preset: Some(25),
+        members: None,
+    },
     // Fuchin Temple and its falls.
-    Chapter { maps: &[("FuchinTempleGrounds", "FuchinFallsCaveDragonStatue")], preset: Some(30), members: None },
+    Chapter {
+        maps: &[("FuchinTempleGrounds", "FuchinFallsCaveDragonStatue")],
+        preset: Some(30),
+        members: None,
+    },
     // Mogall Forest, Xian, Alpine Crossing.
-    Chapter { maps: &[("MogallForestSign", "AlpineCrossing")], preset: Some(32), members: None },
+    Chapter {
+        maps: &[("MogallForestSign", "AlpineCrossing")],
+        preset: Some(32),
+        members: None,
+    },
     // Altin and Altin Peak.
-    Chapter { maps: &[("Altin", "AltinPeakWestExit")], preset: Some(34), members: None },
+    Chapter {
+        maps: &[("Altin", "AltinPeakWestExit")],
+        preset: Some(34),
+        members: None,
+    },
     // Lama Temple and the Lamakan Desert.
-    Chapter { maps: &[("LamaTemple", "LamakanDesertCave")], preset: Some(40), members: None },
+    Chapter {
+        maps: &[("LamaTemple", "LamakanDesertCave")],
+        preset: Some(40),
+        members: None,
+    },
     // Kalay, its docks and Hammet's palace.
-    Chapter { maps: &[("Kalay", "HammetPalace"), ("KalayDocks", "CottageRoomsE")], preset: Some(42), members: None },
+    Chapter {
+        maps: &[("Kalay", "HammetPalace"), ("KalayDocks", "CottageRoomsE")],
+        preset: Some(42),
+        members: None,
+    },
     // The Tolbi-bound Ship and Tolbi Docks.
-    Chapter { maps: &[("TolbiShipDeck", "TolbiDocks")], preset: Some(43), members: None },
+    Chapter {
+        maps: &[("TolbiShipDeck", "TolbiDocks")],
+        preset: Some(43),
+        members: None,
+    },
     // Tolbi and Babi's palace.
-    Chapter { maps: &[("Tolbi", "BabiPalaceEntrance"), ("TolbiSpring", "TolbiSpring")], preset: Some(51), members: None },
+    Chapter {
+        maps: &[
+            ("Tolbi", "BabiPalaceEntrance"),
+            ("TolbiSpring", "TolbiSpring"),
+        ],
+        preset: Some(51),
+        members: None,
+    },
     // The Colosso: Isaac alone.
-    Chapter { maps: &[("Colosseum", "ColosseumNavampaMatch")], preset: Some(53), members: None },
+    Chapter {
+        maps: &[("Colosseum", "ColosseumNavampaMatch")],
+        preset: Some(53),
+        members: None,
+    },
     // Altmiller Cave, Gondowan Passage, Kalay Tunnel, Gondowan Cave.
-    Chapter { maps: &[("AltmillerCaveEntrance", "GondowanPassage")], preset: Some(60), members: None },
-    Chapter { maps: &[("KalayTunnelEntrance", "GondowanCave")], preset: Some(61), members: None },
+    Chapter {
+        maps: &[("AltmillerCaveEntrance", "GondowanPassage")],
+        preset: Some(60),
+        members: None,
+    },
+    Chapter {
+        maps: &[("KalayTunnelEntrance", "GondowanCave")],
+        preset: Some(61),
+        members: None,
+    },
     // Lunpa, its fortress and West Lunpa Cave.
-    Chapter { maps: &[("Lunpa", "WestLunpaCave"), ("LunpaFortressGates", "LunpaFortressToadonpa")], preset: Some(63), members: None },
+    Chapter {
+        maps: &[
+            ("Lunpa", "WestLunpaCave"),
+            ("LunpaFortressGates", "LunpaFortressToadonpa"),
+        ],
+        preset: Some(63),
+        members: None,
+    },
     // The Suhalla Desert, Suhalla, its gate, Gateway Cave, the Tunnel Ruins.
-    Chapter { maps: &[("SuhallaDesertNorth", "TunnelRuinsLadyStatues")], preset: Some(64), members: None },
+    Chapter {
+        maps: &[("SuhallaDesertNorth", "TunnelRuinsLadyStatues")],
+        preset: Some(64),
+        members: None,
+    },
     // Babi Lighthouse, Lalivero, the Lemurian Ship.
-    Chapter { maps: &[("BabiLighthouseStoneDoor", "TimberRoomsC"), ("LemurianShip", "LemurianShip")], preset: Some(65), members: None },
+    Chapter {
+        maps: &[
+            ("BabiLighthouseStoneDoor", "TimberRoomsC"),
+            ("LemurianShip", "LemurianShip"),
+        ],
+        preset: Some(65),
+        members: None,
+    },
     // Crossbone Isle, open to the end.
-    Chapter { maps: &[("CrossboneIsle", "CrossboneIsleNinthFloor")], preset: Some(67), members: None },
+    Chapter {
+        maps: &[("CrossboneIsle", "CrossboneIsleNinthFloor")],
+        preset: Some(67),
+        members: None,
+    },
     // Venus Lighthouse.
-    Chapter { maps: &[("VenusLighthouseEntry", "VenusLighthouseAerie")], preset: Some(69), members: None },
+    Chapter {
+        maps: &[("VenusLighthouseEntry", "VenusLighthouseAerie")],
+        preset: Some(69),
+        members: None,
+    },
 ];
 
 /// A chapter read through the source: its maps by number, its members by
@@ -93,27 +204,47 @@ pub struct Party {
 }
 
 fn resolve(chapter: &Chapter) -> Result<Party, String> {
-    let maps = chapter.maps.iter().map(|&(first, last)| Ok((source::map_id(first)?, source::map_id(last)?))).collect::<Result<_, String>>()?;
+    let maps = chapter
+        .maps
+        .iter()
+        .map(|&(first, last)| Ok((source::map_id(first)?, source::map_id(last)?)))
+        .collect::<Result<_, String>>()?;
     let mut members = match (chapter.members, chapter.preset) {
-        (Some(names), _) => names.iter().map(|name| source::character(name)).collect::<Result<Vec<u8>, String>>()?,
+        (Some(names), _) => names
+            .iter()
+            .map(|name| source::character(name))
+            .collect::<Result<Vec<u8>, String>>()?,
         (None, Some(preset)) => source::preset_members(preset)?,
         (None, None) => return Err("a chapter without a preset names its members".into()),
     };
     members.sort_unstable();
-    Ok(Party { maps, members, preset: chapter.preset })
+    Ok(Party {
+        maps,
+        members,
+        preset: chapter.preset,
+    })
 }
 
 /// The chapter scene `scene` falls in, if any.
 pub fn chapter(scene: u16) -> Result<Option<&'static Party>, String> {
     static PARTIES: OnceLock<Result<Vec<Party>, String>> = OnceLock::new();
-    let parties = PARTIES.get_or_init(|| CHAPTERS.iter().map(resolve).collect()).as_ref().map_err(Clone::clone)?;
-    Ok(parties.iter().find(|p| p.maps.iter().any(|&(a, b)| (a..=b).contains(&scene))))
+    let parties = PARTIES
+        .get_or_init(|| CHAPTERS.iter().map(resolve).collect())
+        .as_ref()
+        .map_err(Clone::clone)?;
+    Ok(parties
+        .iter()
+        .find(|p| p.maps.iter().any(|&(a, b)| (a..=b).contains(&scene))))
 }
 
 /// The party's order once the run's flags have decided who is in it: the
 /// chapter's members first, then any other member the flags add, by number.
 pub fn order(members: &[u8], flags: u8) -> Vec<u8> {
-    let mut out: Vec<u8> = members.iter().copied().filter(|&m| flags & (1 << m) != 0).collect();
+    let mut out: Vec<u8> = members
+        .iter()
+        .copied()
+        .filter(|&m| flags & (1 << m) != 0)
+        .collect();
     for m in 0..8u8 {
         if flags & (1 << m) != 0 && !out.contains(&m) {
             out.push(m);
@@ -132,33 +263,59 @@ pub fn lead(mut party: Vec<u8>, leader: Option<u8>) -> Vec<u8> {
 }
 
 /// The characters by number, as both games' character_ids.h number them.
-const CHARACTERS: [&str; 8] = ["ISAAC", "GARET", "IVAN", "MIA", "FELIX", "JENNA", "SHEBA", "PIERS"];
+const CHARACTERS: [&str; 8] = [
+    "ISAAC", "GARET", "IVAN", "MIA", "FELIX", "JENNA", "SHEBA", "PIERS",
+];
 
 /// A character's number by name, with or without capitals (felix, FELIX).
 pub fn character_number(name: &str) -> Result<u8, String> {
     let upper = name.trim().to_ascii_uppercase();
-    CHARACTERS.iter().position(|&c| c == upper).map(|i| i as u8).ok_or_else(|| format!("{name:?} is no character ({})", CHARACTERS.join(", ").to_ascii_lowercase()))
+    CHARACTERS
+        .iter()
+        .position(|&c| c == upper)
+        .map(|i| i as u8)
+        .ok_or_else(|| {
+            format!(
+                "{name:?} is no character ({})",
+                CHARACTERS.join(", ").to_ascii_lowercase()
+            )
+        })
 }
 
 /// The debug set of The Lost Age that gives a staged party its strength:
 /// the first, past the test sets at level 50 and 90, that holds every
 /// member (`sets` as tla_sets reads them).
 fn staged_set(sets: &[Vec<u8>], members: &[u8]) -> Option<u32> {
-    sets.iter().position(|set| !set.is_empty() && members.iter().all(|m| set.contains(m)) && set.len() >= members.len()).map(|i| i as u32)
+    sets.iter()
+        .position(|set| {
+            !set.is_empty() && members.iter().all(|m| set.contains(m)) && set.len() >= members.len()
+        })
+        .map(|i| i as u32)
 }
 
 /// The party `--party` and `--leader` stage (field::Lineup): the members
 /// named, in order, the leader first; in The Lost Age at the strength of
 /// the first story debug set that holds them all.
-pub fn lineup(party: &[String], leader: Option<&str>, tla: bool) -> Result<Option<super::field::Lineup>, String> {
+pub fn lineup(
+    party: &[String],
+    leader: Option<&str>,
+    tla: bool,
+) -> Result<Option<super::field::Lineup>, String> {
     if party.is_empty() && leader.is_none() {
         return Ok(None);
     }
     let leader = leader.map(character_number).transpose()?;
-    let members = lead(party.iter().map(|n| character_number(n)).collect::<Result<Vec<u8>, String>>()?, if party.is_empty() { None } else { leader });
+    let members = lead(
+        party
+            .iter()
+            .map(|n| character_number(n))
+            .collect::<Result<Vec<u8>, String>>()?,
+        if party.is_empty() { None } else { leader },
+    );
     let preset = if tla && !members.is_empty() {
         let path = crate::compile::root().join("games/tla/src/battle/debug_parameter_sets.c");
-        let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+        let text = std::fs::read_to_string(&path)
+            .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
         let sets = tla_sets(&text);
         // Past the test sets (level 50 and 90): the story's own run from
         // the first set of level 5.
@@ -167,7 +324,11 @@ pub fn lineup(party: &[String], leader: Option<&str>, tla: bool) -> Result<Optio
     } else {
         None
     };
-    Ok(Some(super::field::Lineup { members, leader, preset }))
+    Ok(Some(super::field::Lineup {
+        members,
+        leader,
+        preset,
+    }))
 }
 
 /// The Lost Age's debug parameter sets (gDebug_ParameterSets in
@@ -176,10 +337,17 @@ pub fn lineup(party: &[String], leader: Option<&str>, tla: bool) -> Result<Optio
 /// DEBUG_PARAMETER_SET_END, as DebugParty_LoadPreset counts them.
 fn tla_sets(text: &str) -> Vec<Vec<u8>> {
     let mut sets = vec![Vec::new()];
-    let rows = text.split_once("gDebug_ParameterSets[]").map_or("", |(_, rows)| rows);
+    let rows = text
+        .split_once("gDebug_ParameterSets[]")
+        .map_or("", |(_, rows)| rows);
     for line in rows.lines() {
-        let Some(owner) = line.trim().strip_prefix(".owner = ") else { continue };
-        match CHARACTERS.iter().position(|&name| name == owner.trim_end_matches(',')) {
+        let Some(owner) = line.trim().strip_prefix(".owner = ") else {
+            continue;
+        };
+        match CHARACTERS
+            .iter()
+            .position(|&name| name == owner.trim_end_matches(','))
+        {
             Some(character) => sets.last_mut().expect("a set").push(character as u8),
             None => sets.push(Vec::new()),
         }
@@ -195,19 +363,26 @@ pub fn tla(preset: u32) -> Result<&'static Party, String> {
     let sets = SETS
         .get_or_init(|| {
             let path = crate::compile::root().join("games/tla/src/battle/debug_parameter_sets.c");
-            let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+            let text = std::fs::read_to_string(&path)
+                .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
             Ok(tla_sets(&text)
                 .into_iter()
                 .enumerate()
                 .map(|(set, mut members)| {
                     members.sort_unstable();
-                    Party { maps: Vec::new(), members, preset: Some(set as u32) }
+                    Party {
+                        maps: Vec::new(),
+                        members,
+                        preset: Some(set as u32),
+                    }
                 })
                 .collect())
         })
         .as_ref()
         .map_err(Clone::clone)?;
-    sets.get(preset as usize).filter(|p| !p.members.is_empty()).ok_or_else(|| format!("The Lost Age has no debug set {preset}"))
+    sets.get(preset as usize)
+        .filter(|p| !p.members.is_empty())
+        .ok_or_else(|| format!("The Lost Age has no debug set {preset}"))
 }
 
 #[cfg(test)]
@@ -216,9 +391,20 @@ mod tests {
 
     #[test]
     fn scenes_fall_in_one_chapter_each() {
-        let parties: Vec<Party> = CHAPTERS.iter().map(resolve).collect::<Result<_, _>>().unwrap();
+        let parties: Vec<Party> = CHAPTERS
+            .iter()
+            .map(resolve)
+            .collect::<Result<_, _>>()
+            .unwrap();
         for scene in 0..201u16 {
-            assert!(parties.iter().filter(|p| p.maps.iter().any(|&(a, b)| (a..=b).contains(&scene))).count() <= 1, "scene {scene}");
+            assert!(
+                parties
+                    .iter()
+                    .filter(|p| p.maps.iter().any(|&(a, b)| (a..=b).contains(&scene)))
+                    .count()
+                    <= 1,
+                "scene {scene}"
+            );
         }
         for p in &parties {
             assert!(p.maps.iter().all(|&(a, b)| a <= b));
@@ -248,12 +434,21 @@ mod tests {
         let sets = vec![vec![4], vec![4, 5, 6], vec![4, 5, 6, 7]];
         assert_eq!(staged_set(&sets, &[5, 4]), Some(1));
         assert_eq!(staged_set(&sets, &[7, 5]), Some(2));
-        let staged = lineup(&["jenna".into(), "felix".into(), "piers".into()], None, true).unwrap().unwrap();
+        let staged = lineup(
+            &["jenna".into(), "felix".into(), "piers".into()],
+            None,
+            true,
+        )
+        .unwrap()
+        .unwrap();
         assert_eq!(staged.members, vec![5, 4, 7]);
         // Set 19 is the first of the story's sets with Piers in it.
         assert_eq!(staged.preset, Some(19));
         let leader = lineup(&[], Some("jenna"), true).unwrap().unwrap();
-        assert_eq!((leader.members.len(), leader.leader, leader.preset), (0, Some(5), None));
+        assert_eq!(
+            (leader.members.len(), leader.leader, leader.preset),
+            (0, Some(5), None)
+        );
     }
 
     #[test]

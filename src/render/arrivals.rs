@@ -28,27 +28,38 @@ fn aside(from: &str) -> bool {
 fn plain(text: &str) -> String {
     let block = Regex::new(r"(?s)/\*.*?\*/").unwrap();
     let text = block.replace_all(text, " ");
-    text.lines().map(|l| l.split("//").next().unwrap_or("")).collect::<Vec<_>>().join("\n")
+    text.lines()
+        .map(|l| l.split("//").next().unwrap_or(""))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// The enumerators `NAME = N` of a source, by name.
 fn numbers(text: &str) -> HashMap<String, u16> {
     let pattern = Regex::new(r"\b([A-Z][A-Z0-9_]+)\s*=\s*(\d+)\b").unwrap();
-    pattern.captures_iter(&plain(text)).filter_map(|c| Some((c[1].to_string(), c[2].parse().ok()?))).collect()
+    pattern
+        .captures_iter(&plain(text))
+        .filter_map(|c| Some((c[1].to_string(), c[2].parse().ok()?)))
+        .collect()
 }
 
 /// The scene names of scenes.s in row order: a row's number is its
 /// SceneId_. A row without a name is an empty string.
 fn map_names(text: &str) -> Vec<String> {
     let pattern = Regex::new(r"^\s*scene\s+(\w*)\s*,").unwrap();
-    text.lines().filter_map(|l| pattern.captures(l).map(|c| c[1].to_string())).collect()
+    text.lines()
+        .filter_map(|l| pattern.captures(l).map(|c| c[1].to_string()))
+        .collect()
 }
 
 /// The exits of one source file, as (the map whose table holds it, the map
 /// it leads to, its entrance's name or number), in table order: SCENE_EXIT
 /// rows, and SCENE_EXIT_UNLESS rows, taken until their flag is set.
 fn warps(text: &str) -> Vec<(String, String, String)> {
-    let pattern = Regex::new(r"SCENE_EXITS\(\s*(\w+)\s*\)|SCENE_EXIT(?:_UNLESS)?\(\s*\w+\s*,\s*(\w+)\s*,\s*(\w+)").unwrap();
+    let pattern = Regex::new(
+        r"SCENE_EXITS\(\s*(\w+)\s*\)|SCENE_EXIT(?:_UNLESS)?\(\s*\w+\s*,\s*(\w+)\s*,\s*(\w+)",
+    )
+    .unwrap();
     let mut from = None;
     let mut out = Vec::new();
     for c in pattern.captures_iter(&plain(text)) {
@@ -62,7 +73,8 @@ fn warps(text: &str) -> Vec<(String, String, String)> {
 }
 
 fn sources(dir: &Path, out: &mut Vec<std::path::PathBuf>) -> Result<(), String> {
-    let entries = std::fs::read_dir(dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))?;
+    let entries =
+        std::fs::read_dir(dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))?;
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
@@ -82,10 +94,16 @@ fn sources(dir: &Path, out: &mut Vec<std::path::PathBuf>) -> Result<(), String> 
 /// its exit rows and has no scene_exits.h.
 pub fn read(root: &Path, game: &str) -> Result<HashMap<u16, Vec<Arrival>>, String> {
     let game = root.join("games").join(game);
-    let read = |path: &Path| std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()));
+    let read = |path: &Path| {
+        std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))
+    };
     let names = map_names(&read(&game.join("src/field/scenes.s"))?);
     let exits = game.join("include/scene_exits.h");
-    let shared = if exits.exists() { numbers(&read(&exits)?) } else { HashMap::new() };
+    let shared = if exits.exists() {
+        numbers(&read(&exits)?)
+    } else {
+        HashMap::new()
+    };
     let mut files = Vec::new();
     sources(&game.join("src"), &mut files)?;
     files.sort();
@@ -102,12 +120,17 @@ pub fn read(root: &Path, game: &str) -> Result<HashMap<u16, Vec<Arrival>>, Strin
             let Some(number) = names.iter().position(|n| *n == to) else {
                 continue;
             };
-            let dest = dest.parse().ok().or_else(|| shared.get(&dest).or_else(|| own.get(&dest)).copied());
+            let dest = dest
+                .parse()
+                .ok()
+                .or_else(|| shared.get(&dest).or_else(|| own.get(&dest)).copied());
             let Some(dest) = dest else {
                 continue;
             };
             if from != to {
-                out.entry(number as u16).or_default().push(Arrival { dest, from });
+                out.entry(number as u16)
+                    .or_default()
+                    .push(Arrival { dest, from });
             }
         }
     }
@@ -153,9 +176,21 @@ mod tests {
         assert_eq!(
             warps(text),
             vec![
-                ("GomaCaveStream".to_string(), "GomaCaveEntrance".to_string(), "GOMA_CAVE_ENTRANCE_FROM_GOMA_CAVE_STREAM".to_string()),
-                ("GomaCaveBridge".to_string(), "WorldMap".to_string(), "40".to_string()),
-                ("GomaCaveBridge".to_string(), "Vale".to_string(), "VALE_FROM_GOMA".to_string()),
+                (
+                    "GomaCaveStream".to_string(),
+                    "GomaCaveEntrance".to_string(),
+                    "GOMA_CAVE_ENTRANCE_FROM_GOMA_CAVE_STREAM".to_string()
+                ),
+                (
+                    "GomaCaveBridge".to_string(),
+                    "WorldMap".to_string(),
+                    "40".to_string()
+                ),
+                (
+                    "GomaCaveBridge".to_string(),
+                    "Vale".to_string(),
+                    "VALE_FROM_GOMA".to_string()
+                ),
             ]
         );
     }
@@ -177,28 +212,64 @@ mod tests {
     #[test]
     fn goma_cave_entrance_is_entered_from_the_world_map() {
         let arrivals = read(crate::compile::root(), "tbs").unwrap();
-        let names = map_names(&std::fs::read_to_string(crate::compile::root().join("games/tbs/src/field/scenes.s")).unwrap());
+        let names = map_names(
+            &std::fs::read_to_string(crate::compile::root().join("games/tbs/src/field/scenes.s"))
+                .unwrap(),
+        );
         let number = names.iter().position(|n| n == "GomaCaveEntrance").unwrap() as u16;
-        assert!(arrivals[&number].contains(&Arrival { dest: 1, from: "WorldMap".to_string() }), "{:?}", arrivals[&number]);
+        assert!(
+            arrivals[&number].contains(&Arrival {
+                dest: 1,
+                from: "WorldMap".to_string()
+            }),
+            "{:?}",
+            arrivals[&number]
+        );
         assert_eq!(ranked(&arrivals[&number], &[0, 1, 2]), vec![1, 2]);
     }
 
     #[test]
     fn idejima_is_entered_from_the_world_map_and_suhalla_gate() {
         let arrivals = read(crate::compile::root(), "tla").unwrap();
-        let names = map_names(&std::fs::read_to_string(crate::compile::root().join("games/tla/src/field/scenes.s")).unwrap());
+        let names = map_names(
+            &std::fs::read_to_string(crate::compile::root().join("games/tla/src/field/scenes.s"))
+                .unwrap(),
+        );
         let number = names.iter().position(|n| n == "Idejima").unwrap() as u16;
-        assert!(arrivals[&number].contains(&Arrival { dest: 2, from: "WorldMap".to_string() }), "{:?}", arrivals[&number]);
-        assert!(arrivals[&number].contains(&Arrival { dest: 11, from: "SuhallaGatePsynergyStone".to_string() }), "{:?}", arrivals[&number]);
+        assert!(
+            arrivals[&number].contains(&Arrival {
+                dest: 2,
+                from: "WorldMap".to_string()
+            }),
+            "{:?}",
+            arrivals[&number]
+        );
+        assert!(
+            arrivals[&number].contains(&Arrival {
+                dest: 11,
+                from: "SuhallaGatePsynergyStone".to_string()
+            }),
+            "{:?}",
+            arrivals[&number]
+        );
     }
 
     #[test]
     fn ways_in_are_ranked_lowest_first() {
-        let a = |dest, from: &str| Arrival { dest, from: from.to_string() };
+        let a = |dest, from: &str| Arrival {
+            dest,
+            from: from.to_string(),
+        };
         // Goma Cave Entrance: the default row 0 is in the table, but no exit leads there.
-        assert_eq!(ranked(&[a(2, "GomaCaveStream"), a(1, "WorldMap")], &[0, 1, 2]), vec![1, 2]);
+        assert_eq!(
+            ranked(&[a(2, "GomaCaveStream"), a(1, "WorldMap")], &[0, 1, 2]),
+            vec![1, 2]
+        );
         // The Sanctum's revival after every other way in.
-        assert_eq!(ranked(&[a(1, "Sanctum"), a(2, "SolEntrance")], &[0, 1, 2]), vec![2, 1]);
+        assert_eq!(
+            ranked(&[a(1, "Sanctum"), a(2, "SolEntrance")], &[0, 1, 2]),
+            vec![2, 1]
+        );
         // An exit to a destination the table lacks lands on its first row.
         assert_eq!(ranked(&[a(10, "SolSanctumLunaSolRooms")], &[3, 4]), vec![3]);
         assert_eq!(ranked(&[a(7, "Vale"), a(4, "Vale")], &[3, 4]), vec![4, 3]);

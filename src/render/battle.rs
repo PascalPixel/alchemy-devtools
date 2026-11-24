@@ -159,9 +159,15 @@ impl Symbols {
     pub fn find_for(map: &Map, b: super::layout::BattleLayout) -> Result<Symbols, String> {
         let find = |name: &str| map.symbol(name).map(|(_, a)| a & !1);
         let at = |name: &str| find(name).ok_or_else(|| format!("the map has no {name}"));
-        let either = |name: &str, other: &str| find(name).or_else(|| find(other)).ok_or_else(|| format!("the map has no {name} (nor {other})"));
+        let either = |name: &str, other: &str| {
+            find(name)
+                .or_else(|| find(other))
+                .ok_or_else(|| format!("the map has no {name} (nor {other})"))
+        };
         let slot = |name: &str, offset: u32| {
-            find(name).or_else(|| find("gHeapSlots").map(|slots| slots + offset)).ok_or_else(|| format!("the map has no {name} (nor gHeapSlots)"))
+            find(name)
+                .or_else(|| find("gHeapSlots").map(|slots| slots + offset))
+                .ok_or_else(|| format!("the map has no {name} (nor gHeapSlots)"))
         };
         Ok(Symbols {
             start: at("MainRoutine_RunFar")?,
@@ -242,16 +248,42 @@ pub struct Background {
 
 /// Plays `cast` on `rom` with the battlefield showing `scene` and returns its
 /// frames; `log` prints each step of the setup.
-pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool) -> Result<Recording, String> {
+pub fn record(
+    rom: &[u8],
+    symbols: &Symbols,
+    cast: &Cast,
+    scene: &Scene,
+    log: bool,
+) -> Result<Recording, String> {
     let mut recording = record_run(rom, symbols, cast, scene, log, None, &[], &mut |_, _| {}, 0)?;
     // A cast that reaches black sooner than the battle has shown since its
     // own opening black screen is played again with the opening message left
     // waiting for as long as it lacks.
-    if let Some(first) = recording.frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b + recording.before.len() < CLEARED) {
+    if let Some(first) = recording
+        .frames
+        .iter()
+        .position(|f| is_black_bgr555(f))
+        .filter(|&b| b + recording.before.len() < CLEARED)
+    {
         let wait = CLEARED - first - recording.before.len() + INTRO_WAIT_MARGIN;
-        recording = record_run(rom, symbols, cast, scene, log, None, &[], &mut |_, _| {}, wait as u32)?;
+        recording = record_run(
+            rom,
+            symbols,
+            cast,
+            scene,
+            log,
+            None,
+            &[],
+            &mut |_, _| {},
+            wait as u32,
+        )?;
     }
-    if let Some(first) = recording.frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b < CLEARED) {
+    if let Some(first) = recording
+        .frames
+        .iter()
+        .position(|f| is_black_bgr555(f))
+        .filter(|&b| b < CLEARED)
+    {
         let take = (CLEARED - first).min(recording.before.len());
         let mut frames = recording.before.split_off(recording.before.len() - take);
         frames.append(&mut recording.frames);
@@ -267,14 +299,33 @@ pub fn record(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
 /// run records and holds each (keys, frames) of `menu` in turn, and stops
 /// when the script ends.
 #[allow(clippy::too_many_arguments)]
-pub fn record_watching(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool, menu: Option<&[(u32, u32)]>, hooks: &[u32], watch: &mut dyn FnMut(&mut Gba, Option<u32>)) -> Result<Recording, String> {
+pub fn record_watching(
+    rom: &[u8],
+    symbols: &Symbols,
+    cast: &Cast,
+    scene: &Scene,
+    log: bool,
+    menu: Option<&[(u32, u32)]>,
+    hooks: &[u32],
+    watch: &mut dyn FnMut(&mut Gba, Option<u32>),
+) -> Result<Recording, String> {
     record_run(rom, symbols, cast, scene, log, menu, hooks, watch, 0)
 }
 
 /// As `record_watching`, the battle's opening message left unanswered for
 /// `intro_wait` frames first, so the battle shows longer before the cast.
 #[allow(clippy::too_many_arguments)]
-fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bool, menu: Option<&[(u32, u32)]>, hooks: &[u32], watch: &mut dyn FnMut(&mut Gba, Option<u32>), intro_wait: u32) -> Result<Recording, String> {
+fn record_run(
+    rom: &[u8],
+    symbols: &Symbols,
+    cast: &Cast,
+    scene: &Scene,
+    log: bool,
+    menu: Option<&[(u32, u32)]>,
+    hooks: &[u32],
+    watch: &mut dyn FnMut(&mut Gba, Option<u32>),
+    intro_wait: u32,
+) -> Result<Recording, String> {
     let mut gba = Gba::new(rom)?;
     let s = symbols;
     let owner = |id: u8| s.owners + u32::from(id) * s.b.unit_size;
@@ -284,7 +335,10 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             eprintln!("  [{frame}] {text}");
         }
     };
-    let windows: Vec<u16> = WINDOW_ENTRIES.iter().flat_map(|(p, colours)| colours.clone().map(move |c| p * 16 + c)).collect();
+    let windows: Vec<u16> = WINDOW_ENTRIES
+        .iter()
+        .flat_map(|(p, colours)| colours.clone().map(move |c| p * 16 + c))
+        .collect();
 
     let mut phase = Phase::Boot;
     // From power-on: the menu opens its chooser while Down is held.
@@ -325,7 +379,14 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             chooser_from = frame;
         } else if phase == Phase::Chooser && pc == s.preset {
             // The chooser loads preset 0 first: load ours instead.
-            say(frame, format!("DebugParameterSet_Load({}) -> {}", gba.register(0), cast.preset));
+            say(
+                frame,
+                format!(
+                    "DebugParameterSet_Load({}) -> {}",
+                    gba.register(0),
+                    cast.preset
+                ),
+            );
             gba.set_register(0, cast.preset.into());
             hold_down = false;
         } else if phase == Phase::Chooser && pc == s.encounter {
@@ -357,13 +418,17 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                 for (element, &need) in needs.iter().enumerate().filter(|(_, &n)| n > 0) {
                     let e = element as u32;
                     let active = unit + s.b.unit_djinn_active + 4 * e;
-                    let mut missing = usize::from(need).saturating_sub(gba.read32(active).count_ones() as usize);
+                    let mut missing =
+                        usize::from(need).saturating_sub(gba.read32(active).count_ones() as usize);
                     for index in 0..DJINN_PER_ELEMENT {
                         if missing == 0 {
                             break;
                         }
                         if gba.read32(active) & 1 << index == 0 {
-                            for (bits, counts) in [(s.b.unit_djinn_held, s.b.unit_djinn_held_counts), (s.b.unit_djinn_active, s.b.unit_djinn_active_counts)] {
+                            for (bits, counts) in [
+                                (s.b.unit_djinn_held, s.b.unit_djinn_held_counts),
+                                (s.b.unit_djinn_active, s.b.unit_djinn_active_counts),
+                            ] {
                                 let word = gba.read32(unit + bits + 4 * e);
                                 if word & 1 << index == 0 {
                                     gba.write32(unit + bits + 4 * e, word | 1 << index);
@@ -374,12 +439,18 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                             missing -= 1;
                         }
                     }
-                    let set: Vec<u32> = (0..32).filter(|&i| gba.read32(active) & 1 << i != 0).take(usize::from(need)).collect();
+                    let set: Vec<u32> = (0..32)
+                        .filter(|&i| gba.read32(active) & 1 << i != 0)
+                        .take(usize::from(need))
+                        .collect();
                     for index in set {
                         let bits = gba.read32(active);
                         gba.write32(active, bits & !(1 << index));
                         let counted = gba.read8(unit + s.b.unit_djinn_active_counts + e);
-                        gba.write8(unit + s.b.unit_djinn_active_counts + e, counted.saturating_sub(1));
+                        gba.write8(
+                            unit + s.b.unit_djinn_active_counts + e,
+                            counted.saturating_sub(1),
+                        );
                         let n = gba.read32(list + s.b.recovery_count);
                         let entry = list + 4 * n;
                         gba.write8(entry, element as u8);
@@ -394,7 +465,10 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             // gives each element's from its eighth on) is given and set first.
             if let Command::Djinni { element, index } = cast.command {
                 let e = u32::from(element);
-                for (bits, counts) in [(s.b.unit_djinn_held, s.b.unit_djinn_held_counts), (s.b.unit_djinn_active, s.b.unit_djinn_active_counts)] {
+                for (bits, counts) in [
+                    (s.b.unit_djinn_held, s.b.unit_djinn_held_counts),
+                    (s.b.unit_djinn_active, s.b.unit_djinn_active_counts),
+                ] {
                     let word = gba.read32(unit + bits + 4 * e);
                     if word & 1 << index == 0 {
                         gba.write32(unit + bits + 4 * e, word | 1 << index);
@@ -409,7 +483,10 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                 // Unit_Calculate keeps the share of HP the gauge holds.
                 let set_hp = |gba: &mut Gba, hp: u32| {
                     gba.write16(unit + s.b.unit_hp, hp as u16);
-                    gba.write16(unit + s.b.unit_hp_gauge, (hp * GAUGE_FULL / max.max(1)) as u16);
+                    gba.write16(
+                        unit + s.b.unit_hp_gauge,
+                        (hp * GAUGE_FULL / max.max(1)) as u16,
+                    );
                 };
                 match cast.ally {
                     Ally::Healthy => {}
@@ -459,7 +536,10 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                     }
                     Scene::Picture(picture) => {
                         for (a, word) in PICTURE.step_by(4).zip(picture.vram.chunks(4)) {
-                            gba.write32(a, u32::from_le_bytes([word[0], word[1], word[2], word[3]]));
+                            gba.write32(
+                                a,
+                                u32::from_le_bytes([word[0], word[1], word[2], word[3]]),
+                            );
                         }
                         for (i, &c) in picture.palette.iter().enumerate() {
                             gba.write16(state + s.b.battle_palette + 2 * i as u32, c);
@@ -469,7 +549,10 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
                         if background_level >= 0 {
                             let brightness = 0x10000 - background_level * LEVEL_STEP;
                             for (i, &c) in picture.palette.iter().enumerate() {
-                                gba.write16(BATTLE_BG_PALETTE + 2 * i as u32, scale_colour(c, brightness));
+                                gba.write16(
+                                    BATTLE_BG_PALETTE + 2 * i as u32,
+                                    scale_colour(c, brightness),
+                                );
                             }
                         }
                     }
@@ -551,20 +634,48 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             let record = gba.register(0);
             let state = gba.read32(s.battle_state);
             let place = match cast.aim {
-                Aim::Foe => PLACE_ENEMY + place_of(&gba, state + s.b.battle_enemy_ids, FIRST_ENEMY_UNIT as u16 + cast.target_foe() as u16)?,
-                Aim::Ally => PLACE_PARTY + place_of(&gba, state + s.b.battle_party_units, cast.party[1].into())?,
+                Aim::Foe => {
+                    PLACE_ENEMY
+                        + place_of(
+                            &gba,
+                            state + s.b.battle_enemy_ids,
+                            FIRST_ENEMY_UNIT as u16 + cast.target_foe() as u16,
+                        )?
+                }
+                Aim::Ally => {
+                    PLACE_PARTY
+                        + place_of(&gba, state + s.b.battle_party_units, cast.party[1].into())?
+                }
             };
             let agility = gba.read16(owner(caster) + s.b.unit_agility);
             let (command, parameter) = match cast.command {
                 Command::Psynergy => (CMD_PSYNERGY, cast.ability.id),
-                Command::Djinni { element, index } => (CMD_DJINN, u16::from(element) << 8 | u16::from(index)),
+                Command::Djinni { element, index } => {
+                    (CMD_DJINN, u16::from(element) << 8 | u16::from(index))
+                }
                 Command::Summon { row, .. } => (CMD_SUMMON, u16::from(row)),
             };
-            let fields = [caster.into(), 0, agility, command, parameter, place, cast.ability.range.into(), 0];
+            let fields = [
+                caster.into(),
+                0,
+                agility,
+                command,
+                parameter,
+                place,
+                cast.ability.range.into(),
+                0,
+            ];
             for (i, value) in fields.into_iter().enumerate() {
                 gba.write16(record + 2 * i as u32, value);
             }
-            say(frame, format!("command: {} casts ability {} at place {place:#x}", plan::character_name(caster), cast.ability.id));
+            say(
+                frame,
+                format!(
+                    "command: {} casts ability {} at place {place:#x}",
+                    plan::character_name(caster),
+                    cast.ability.id
+                ),
+            );
             gba.return_now(1);
             phase = Phase::Commanded;
         } else if phase >= Phase::Intro && pc == s.opponents {
@@ -615,7 +726,12 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
             }
             if let Some(t) = tail.as_mut() {
                 *t += 1;
-                if *t > 1 && frames.iter().rposition(|f| is_black_bgr555(f)).is_none_or(|b| frames.len() - 1 - b >= CLEARED) {
+                if *t > 1
+                    && frames
+                        .iter()
+                        .rposition(|f| is_black_bgr555(f))
+                        .is_none_or(|b| frames.len() - 1 - b >= CLEARED)
+                {
                     break;
                 }
             }
@@ -624,8 +740,13 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
         // chooser and through the opening message; then A once a prompt has
         // waited: BattleMessage_WaitForAdvance, or the playback task's
         // arrow.
-        let state = if phase >= Phase::Battle { gba.read32(s.battle_state) } else { 0 };
-        let waiting = wait_return != 0 || (state != 0 && gba.read32(state + s.b.battle_event_phase) == PLAY_ADVANCE);
+        let state = if phase >= Phase::Battle {
+            gba.read32(s.battle_state)
+        } else {
+            0
+        };
+        let waiting = wait_return != 0
+            || (state != 0 && gba.read32(state + s.b.battle_event_phase) == PLAY_ADVANCE);
         prompt_frames = if waiting { prompt_frames + 1 } else { 0 };
         if phase == Phase::Menu {
             let script = menu.unwrap_or(&[]);
@@ -643,7 +764,11 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
         }
         // The Lost Age's chooser reads Down as it opens and loads its preset
         // only once A has picked it: Down is let go after a few frames.
-        if hold_down && !s.preset_first && phase == Phase::Chooser && frame > chooser_from + CHOOSER_DOWN_FRAMES {
+        if hold_down
+            && !s.preset_first
+            && phase == Phase::Chooser
+            && frame > chooser_from + CHOOSER_DOWN_FRAMES
+        {
             hold_down = false;
         }
         let keys = if hold_down {
@@ -651,7 +776,11 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
         } else if phase == Phase::Intro && frame < intro_from + intro_wait {
             0
         } else if matches!(phase, Phase::Chooser | Phase::Intro) {
-            if (frame / 4) % 2 == 1 { KEY_A } else { 0 }
+            if (frame / 4) % 2 == 1 {
+                KEY_A
+            } else {
+                0
+            }
         } else if waiting && (ADVANCE..ADVANCE + 2).contains(&prompt_frames) {
             KEY_A
         } else {
@@ -663,7 +792,12 @@ fn record_run(rom: &[u8], symbols: &Symbols, cast: &Cast, scene: &Scene, log: bo
         }
     }
     say(frame, format!("{} frames", frames.len()));
-    Ok(Recording { frames, battle_over, capped, before: before.into() })
+    Ok(Recording {
+        frames,
+        battle_over,
+        capped,
+        before: before.into(),
+    })
 }
 
 /// A colour with each channel scaled by `scale` (16.16, at most 1), as
@@ -692,7 +826,10 @@ mod tests {
     #[test]
     fn the_gradient_runs_from_top_to_bottom_over_the_battlefield() {
         let lines = gradient(25, 9);
-        assert_eq!((lines[0], lines[STRIP - 1], lines[STRIP]), (grey(25), grey(9), 0));
+        assert_eq!(
+            (lines[0], lines[STRIP - 1], lines[STRIP]),
+            (grey(25), grey(9), 0)
+        );
         assert!(lines.windows(2).take(STRIP - 1).all(|w| w[0] >= w[1]));
     }
 

@@ -61,11 +61,18 @@ struct Left {
 impl Left {
     fn of(pieces: &[Piece]) -> Left {
         let mut left = Left::default();
-        for piece in pieces.iter().filter(|piece| piece.stem.starts_with("recon/")) {
+        for piece in pieces
+            .iter()
+            .filter(|piece| piece.stem.starts_with("recon/"))
+        {
             let size = u64::from(piece.placed.size);
             let kind = Kind::of(piece);
             *left.pieces.entry((kind, piece.label())).or_default() += size;
-            let folder = piece.stem.rsplit_once('/').map_or("", |(folder, _)| folder).to_string();
+            let folder = piece
+                .stem
+                .rsplit_once('/')
+                .map_or("", |(folder, _)| folder)
+                .to_string();
             let entry = left.folders.entry((kind, folder)).or_default();
             entry.0 += size;
             entry.1.insert(piece.stem.clone());
@@ -74,7 +81,11 @@ impl Left {
     }
 
     fn total(&self, kind: Kind) -> u64 {
-        self.pieces.iter().filter(|((k, _), _)| *k == kind).map(|(_, size)| size).sum()
+        self.pieces
+            .iter()
+            .filter(|((k, _), _)| *k == kind)
+            .map(|(_, size)| size)
+            .sum()
     }
 
     fn report(&self, edition: DecompTargetId, top: usize) -> String {
@@ -91,7 +102,10 @@ impl Left {
             self.pieces.len()
         );
         if scaffold > 0 {
-            text += &format!("; {} of the data in scaffold sections, code and data not yet told apart", commas(scaffold as i64));
+            text += &format!(
+                "; {} of the data in scaffold sections, code and data not yet told apart",
+                commas(scaffold as i64)
+            );
         }
         text.push('\n');
         let mut folders: Vec<_> = self.folders.iter().collect();
@@ -101,14 +115,22 @@ impl Left {
                 1 => objects.first().unwrap().clone(),
                 n => format!("{folder}/* ({n} objects)"),
             };
-            text += &format!("  {:>width$}  {:<8}  {label}\n", commas(*size as i64), kind.name());
+            text += &format!(
+                "  {:>width$}  {:<8}  {label}\n",
+                commas(*size as i64),
+                kind.name()
+            );
         }
         if top > 0 {
             let mut pieces: Vec<_> = self.pieces.iter().collect();
             pieces.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
             text += &format!("  largest {}:\n", top.min(pieces.len()));
             for ((kind, label), size) in pieces.into_iter().take(top) {
-                text += &format!("  {:>width$}  {:<8}  {label}\n", commas(*size as i64), kind.name());
+                text += &format!(
+                    "  {:>width$}  {:<8}  {label}\n",
+                    commas(*size as i64),
+                    kind.name()
+                );
             }
         }
         text
@@ -116,7 +138,9 @@ impl Left {
 }
 
 fn number(value: Option<&String>, flag: &str) -> Result<usize, String> {
-    value.and_then(|value| value.parse().ok()).ok_or_else(|| format!("{flag} takes a number\n{USAGE}"))
+    value
+        .and_then(|value| value.parse().ok())
+        .ok_or_else(|| format!("{flag} takes a number\n{USAGE}"))
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
@@ -158,7 +182,9 @@ fn done_report(root: &Path, editions: &[DecompTargetId]) -> String {
             games.push(id.game());
         }
     }
-    let mut text = String::from("DONE from the maps, analysis only: progress counts only editions that match rom.sha1.\n");
+    let mut text = String::from(
+        "DONE from the maps, analysis only: progress counts only editions that match rom.sha1.\n",
+    );
     for game in games {
         match done::count_game(root, game, done::count_edition) {
             Ok(counted) => text += &done_lines(root, game, &counted),
@@ -234,15 +260,34 @@ mod tests {
             piece("games/tla/src/main", ".text", 0x1000),
         ];
         let left = Left::of(&pieces);
-        assert_eq!((left.total(Kind::Code), left.total(Kind::Scaffold), left.total(Kind::Data)), (0x140, 0x30, 6));
+        assert_eq!(
+            (
+                left.total(Kind::Code),
+                left.total(Kind::Scaffold),
+                left.total(Kind::Data)
+            ),
+            (0x140, 0x30, 6)
+        );
         let report = left.report(id("tla-ja"), 2);
         let head = "tla-ja: 320 code and 54 data bytes still placed from recon/, in 5 pieces; 48 of the data in scaffold sections, code and data not yet told apart\n";
         assert!(report.starts_with(head), "{report}");
-        assert!(report.contains("  320  code      recon/tla/raw/* (2 objects)\n"), "{report}");
-        assert!(report.contains("   48  scaffold  recon/tla/ja/rom\n"), "{report}");
-        assert!(report.contains("    6  data      recon/tla/unidentified\n"), "{report}");
+        assert!(
+            report.contains("  320  code      recon/tla/raw/* (2 objects)\n"),
+            "{report}"
+        );
+        assert!(
+            report.contains("   48  scaffold  recon/tla/ja/rom\n"),
+            "{report}"
+        );
+        assert!(
+            report.contains("    6  data      recon/tla/unidentified\n"),
+            "{report}"
+        );
         assert!(report.contains("  largest 2:\n  256  code      recon/tla/raw/08000100\n   64  code      recon/tla/raw/08000200\n"), "{report}");
-        assert_eq!(Left::of(&pieces[5..]).report(id("tbs-en"), 25), "tbs-en: nothing placed from recon/\n");
+        assert_eq!(
+            Left::of(&pieces[5..]).report(id("tbs-en"), 25),
+            "tbs-en: nothing placed from recon/\n"
+        );
     }
 
     /// In every edition built, the bytes `where` finds left are those
@@ -252,12 +297,23 @@ mod tests {
     fn what_is_left_is_what_calcrom_counts_not_done() {
         let root = crate::compile::root();
         for edition in built::editions(&[]).unwrap() {
-            let Ok(pieces) = built::pieces(root, edition) else { continue };
+            let Ok(pieces) = built::pieces(root, edition) else {
+                continue;
+            };
             let left = Left::of(&pieces);
             let done = done::count_edition(root, edition.as_str()).unwrap().done;
             let not_done = (done.executable - done.bytes()) + (done.data_total - done.data);
-            assert_eq!((left.total(Kind::Code) + left.total(Kind::Scaffold) + left.total(Kind::Data)) as i64, not_done, "{edition}");
-            assert_eq!((left.total(Kind::Scaffold) + left.total(Kind::Data)) as i64, done.data_total - done.data, "{edition}");
+            assert_eq!(
+                (left.total(Kind::Code) + left.total(Kind::Scaffold) + left.total(Kind::Data))
+                    as i64,
+                not_done,
+                "{edition}"
+            );
+            assert_eq!(
+                (left.total(Kind::Scaffold) + left.total(Kind::Data)) as i64,
+                done.data_total - done.data,
+                "{edition}"
+            );
         }
     }
 }

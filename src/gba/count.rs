@@ -33,7 +33,11 @@ impl Image {
 /// order. Fill and unnamed input (`*fill*`, `COMMON`) are left to the span.
 pub(crate) fn placed(map: &Map, image: Image) -> impl Iterator<Item = &Placed> {
     map.placed.iter().filter(move |placed| {
-        placed.size > 0 && placed.name.starts_with('.') && placed.output.is_some_and(|output| image.holds(&map.outputs[output]))
+        placed.size > 0
+            && placed.name.starts_with('.')
+            && placed
+                .output
+                .is_some_and(|output| image.holds(&map.outputs[output]))
     })
 }
 
@@ -41,7 +45,10 @@ pub(crate) fn placed(map: &Map, image: Image) -> impl Iterator<Item = &Placed> {
 pub(crate) fn span(map: &Map, image: Image) -> i64 {
     let held = map.outputs.iter().filter(|output| image.holds(output));
     let (first, last) = held.fold((i64::MAX, 0), |(first, last), output| {
-        (first.min(i64::from(output.load)), last.max(i64::from(output.load) + i64::from(output.size)))
+        (
+            first.min(i64::from(output.load)),
+            last.max(i64::from(output.load) + i64::from(output.size)),
+        )
     });
     (last - first).max(0)
 }
@@ -73,7 +80,9 @@ ewram           0x02000000    0x38000
         // RAM is outside the cartridge, and a wrapped heading still places
         // the code it loads there.
         assert_eq!(span(&map, Image::Rom), 0x220);
-        let sections: Vec<_> = placed(&map, Image::Rom).map(|p| (p.name.as_str(), p.size, p.path.as_str())).collect();
+        let sections: Vec<_> = placed(&map, Image::Rom)
+            .map(|p| (p.name.as_str(), p.size, p.path.as_str()))
+            .collect();
         assert_eq!(
             sections,
             [
@@ -97,8 +106,19 @@ Linker script and memory map
 ",
         );
         assert_eq!(span(&overlay, Image::Linked(&[".text", ".data"])), 0x40);
-        assert_eq!(placed(&overlay, Image::Linked(&[".text", ".data"])).map(|p| p.size).sum::<u32>(), 0x40);
+        assert_eq!(
+            placed(&overlay, Image::Linked(&[".text", ".data"]))
+                .map(|p| p.size)
+                .sum::<u32>(),
+            0x40
+        );
         let nothing = Map::parse("no map");
-        assert_eq!((span(&nothing, Image::Rom), placed(&nothing, Image::Rom).count()), (0, 0));
+        assert_eq!(
+            (
+                span(&nothing, Image::Rom),
+                placed(&nothing, Image::Rom).count()
+            ),
+            (0, 0)
+        );
     }
 }

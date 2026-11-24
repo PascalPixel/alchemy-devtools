@@ -107,7 +107,11 @@ fn measure(root: &Path) -> String {
             .map(|thread| thread.join().expect("measurement thread"))
     });
     let combined = |game: &Result<Game, String>| game.as_ref().ok().map(Game::combined);
-    format!("{}measured {}", done::lines_of(&games, &[0, 1]), done::status_line(combined(&games[0]), combined(&games[1])))
+    format!(
+        "{}measured {}",
+        done::lines_of(&games, &[0, 1]),
+        done::status_line(combined(&games[0]), combined(&games[1]))
+    )
 }
 
 /// `--humanity`'s options: `--top N` and `--list METRIC`.
@@ -115,9 +119,15 @@ fn humanity_options(root: &Path, options: &[String]) -> Result<String, String> {
     let (mut top, mut metric) = (0, None);
     let mut options = options.iter();
     while let Some(option) = options.next() {
-        let value = options.next().ok_or_else(|| format!("{option} takes a value\n{USAGE}"))?;
+        let value = options
+            .next()
+            .ok_or_else(|| format!("{option} takes a value\n{USAGE}"))?;
         match option.as_str() {
-            "--top" => top = value.parse().map_err(|_| format!("--top takes a number, not {value}"))?,
+            "--top" => {
+                top = value
+                    .parse()
+                    .map_err(|_| format!("--top takes a number, not {value}"))?
+            }
             "--list" => metric = Some(value.as_str()),
             _ => return Err(format!("unrecognized --humanity option: {option}\n{USAGE}")),
         }
@@ -131,7 +141,12 @@ pub(crate) fn run(argv: &[String]) -> Result<(), String> {
         [flag] if flag == "-h" || flag == "--help" => USAGE.to_string(),
         [] => measure(root),
         [flag, options @ ..] if flag == "--humanity" => humanity_options(root, options)?,
-        _ => return Err(format!("unrecognized arguments: {}\n{USAGE}", argv.join(" "))),
+        _ => {
+            return Err(format!(
+                "unrecognized arguments: {}\n{USAGE}",
+                argv.join(" ")
+            ))
+        }
     };
     println!("{line}");
     Ok(())

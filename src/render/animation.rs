@@ -31,7 +31,11 @@ pub fn rgb(c: u16) -> u32 {
 }
 
 fn channels(c: u32) -> [i32; 3] {
-    [(c >> 16) as i32 & 0xff, (c >> 8) as i32 & 0xff, c as i32 & 0xff]
+    [
+        (c >> 16) as i32 & 0xff,
+        (c >> 8) as i32 & 0xff,
+        c as i32 & 0xff,
+    ]
 }
 
 /// GBA frames a recording shows of the game on each side of a black screen
@@ -48,7 +52,10 @@ pub fn is_black(picture: &[u32]) -> bool {
 
 /// The same for a BGR555 picture: every channel at most 1 of 31.
 pub fn is_black_bgr555(picture: &[u16]) -> bool {
-    !picture.is_empty() && picture.iter().all(|&c| c & 31 <= 1 && c >> 5 & 31 <= 1 && c >> 10 & 31 <= 1)
+    !picture.is_empty()
+        && picture
+            .iter()
+            .all(|&c| c & 31 <= 1 && c >> 5 & 31 <= 1 && c >> 10 & 31 <= 1)
 }
 
 /// Refuses a recording, given whether each picture shown is black, that
@@ -74,7 +81,11 @@ pub fn check_black_clearance(black: &[bool], stride: usize) -> Result<(), String
             } else if i == black.len() {
                 "after its last black screen".to_string()
             } else {
-                format!("between the black screens at {:.1} and {:.1} seconds", seconds(start), seconds(i))
+                format!(
+                    "between the black screens at {:.1} and {:.1} seconds",
+                    seconds(start),
+                    seconds(i)
+                )
             };
             let keep = BLACK_CLEARANCE / 60;
             return Err(format!("it shows {:.1} seconds of the game {at}, under the {keep} a recording keeps on each side of one", seconds(run)));
@@ -87,7 +98,10 @@ pub fn check_black_clearance(black: &[bool], stride: usize) -> Result<(), String
 /// Writes `frames` (0xRRGGBB, `width` pixels a row) to `path`.
 pub fn write(path: &Path, frames: &[Vec<u32>], width: usize) -> Result<Written, String> {
     let shown: Vec<&Vec<u32>> = frames.iter().step_by(STRIDE).collect();
-    check_black_clearance(&shown.iter().map(|f| is_black(f)).collect::<Vec<_>>(), STRIDE)?;
+    check_black_clearance(
+        &shown.iter().map(|f| is_black(f)).collect::<Vec<_>>(),
+        STRIDE,
+    )?;
     encode(path, &shown, width)
 }
 
@@ -95,21 +109,44 @@ pub fn write(path: &Path, frames: &[Vec<u32>], width: usize) -> Result<Written, 
 /// recording, evidence kept beside what it printed, which `render check`
 /// still judges before any is published.
 pub fn write_evidence(path: &Path, frames: &[Vec<u32>], width: usize) -> Result<Written, String> {
-    encode(path, &frames.iter().step_by(STRIDE).collect::<Vec<_>>(), width)
+    encode(
+        path,
+        &frames.iter().step_by(STRIDE).collect::<Vec<_>>(),
+        width,
+    )
 }
 
 /// Writes `frames` (BGR555, as the GBA draws them) to `path`, widening only
 /// the frames shown.
 pub fn write_bgr555(path: &Path, frames: &[&[u16]], width: usize) -> Result<Written, String> {
-    check_black_clearance(&frames.iter().step_by(STRIDE).map(|f| is_black_bgr555(f)).collect::<Vec<_>>(), STRIDE)?;
-    let shown: Vec<Vec<u32>> = frames.iter().step_by(STRIDE).map(|f| f.iter().map(|&c| rgb(c)).collect()).collect();
+    check_black_clearance(
+        &frames
+            .iter()
+            .step_by(STRIDE)
+            .map(|f| is_black_bgr555(f))
+            .collect::<Vec<_>>(),
+        STRIDE,
+    )?;
+    let shown: Vec<Vec<u32>> = frames
+        .iter()
+        .step_by(STRIDE)
+        .map(|f| f.iter().map(|&c| rgb(c)).collect())
+        .collect();
     encode(path, &shown.iter().collect::<Vec<_>>(), width)
 }
 
 /// Writes `frames` as `write_bgr555` does, without the black-screen rule
 /// (render event --keep-short): `render check` still refuses it.
-pub fn write_bgr555_unchecked(path: &Path, frames: &[&[u16]], width: usize) -> Result<Written, String> {
-    let shown: Vec<Vec<u32>> = frames.iter().step_by(STRIDE).map(|f| f.iter().map(|&c| rgb(c)).collect()).collect();
+pub fn write_bgr555_unchecked(
+    path: &Path,
+    frames: &[&[u16]],
+    width: usize,
+) -> Result<Written, String> {
+    let shown: Vec<Vec<u32>> = frames
+        .iter()
+        .step_by(STRIDE)
+        .map(|f| f.iter().map(|&c| rgb(c)).collect())
+        .collect();
     encode(path, &shown.iter().collect::<Vec<_>>(), width)
 }
 
@@ -127,22 +164,41 @@ fn encode(path: &Path, shown: &[&Vec<u32>], width: usize) -> Result<Written, Str
     let mut histogram: Vec<(u32, u64)> = counts.into_iter().collect();
     histogram.sort_unstable();
     let colours = histogram.len();
-    let palette = if colours <= 255 { histogram.iter().map(|&(c, _)| c).collect() } else { median_cut(&histogram, 255) };
-    let index: HashMap<u32, u8> = histogram.iter().map(|&(c, _)| (c, nearest(&palette, c))).collect();
+    let palette = if colours <= 255 {
+        histogram.iter().map(|&(c, _)| c).collect()
+    } else {
+        median_cut(&histogram, 255)
+    };
+    let index: HashMap<u32, u8> = histogram
+        .iter()
+        .map(|&(c, _)| (c, nearest(&palette, c)))
+        .collect();
     let transparent = palette.len() as u8;
-    let mut table: Vec<u8> = palette.iter().flat_map(|&c| [(c >> 16) as u8, (c >> 8) as u8, c as u8]).collect();
+    let mut table: Vec<u8> = palette
+        .iter()
+        .flat_map(|&c| [(c >> 16) as u8, (c >> 8) as u8, c as u8])
+        .collect();
     table.extend([0, 0, 0]);
 
-    let file = std::fs::File::create(path).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+    let file =
+        std::fs::File::create(path).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
     let error = |e: gif::EncodingError| format!("{}: {e}", path.display());
-    let mut encoder =
-        gif::Encoder::new(std::io::BufWriter::new(file), width as u16, height as u16, &table).map_err(error)?;
+    let mut encoder = gif::Encoder::new(
+        std::io::BufWriter::new(file),
+        width as u16,
+        height as u16,
+        &table,
+    )
+    .map_err(error)?;
     encoder.set_repeat(gif::Repeat::Infinite).map_err(error)?;
 
     let start = |i: usize| (i * 100 + FPS / 2) / FPS;
     let indexed = |frame: &Vec<u32>| -> Vec<u8> { frame.iter().map(|c| index[c]).collect() };
     let mut canvas = indexed(first);
-    let mut pending = Some((0, gif_frame(&canvas, None, (0, 0, width, height), width, None)));
+    let mut pending = Some((
+        0,
+        gif_frame(&canvas, None, (0, 0, width, height), width, None),
+    ));
     let mut stored = 0;
     for (i, frame) in shown.iter().enumerate().skip(1) {
         let next = indexed(frame);
@@ -154,7 +210,10 @@ fn encode(path: &Path, shown: &[&Vec<u32>], width: usize) -> Result<Written, Str
             encoder.write_frame(&f).map_err(error)?;
             stored += 1;
         }
-        pending = Some((i, gif_frame(&next, Some(&canvas), rect, width, Some(transparent))));
+        pending = Some((
+            i,
+            gif_frame(&next, Some(&canvas), rect, width, Some(transparent)),
+        ));
         canvas = next;
     }
     if let Some((at, mut f)) = pending.take() {
@@ -164,7 +223,12 @@ fn encode(path: &Path, shown: &[&Vec<u32>], width: usize) -> Result<Written, Str
     }
     encoder.into_inner().map_err(error)?;
     let bytes = std::fs::metadata(path).map_err(|e| e.to_string())?.len();
-    Ok(Written { frames: shown.len(), stored, colours, bytes })
+    Ok(Written {
+        frames: shown.len(),
+        stored,
+        colours,
+        bytes,
+    })
 }
 
 /// The rectangle (x, y, width, height) where two frames differ.
@@ -208,8 +272,18 @@ fn gif_frame(
 
 fn nearest(palette: &[u32], c: u32) -> u8 {
     let target = channels(c);
-    let distance = |p: u32| channels(p).iter().zip(target).map(|(a, b)| (a - b) * (a - b)).sum::<i32>();
-    palette.iter().enumerate().min_by_key(|(_, &p)| distance(p)).map_or(0, |(i, _)| i as u8)
+    let distance = |p: u32| {
+        channels(p)
+            .iter()
+            .zip(target)
+            .map(|(a, b)| (a - b) * (a - b))
+            .sum::<i32>()
+    };
+    palette
+        .iter()
+        .enumerate()
+        .min_by_key(|(_, &p)| distance(p))
+        .map_or(0, |(i, _)| i as u8)
 }
 
 /// At most `limit` colours for a histogram: the box with the most pixels is
@@ -219,8 +293,11 @@ fn median_cut(histogram: &[(u32, u64)], limit: usize) -> Vec<u32> {
     let weight = |b: &[(u32, u64)]| b.iter().map(|&(_, n)| n).sum::<u64>();
     let mut boxes: Vec<Vec<(u32, u64)>> = vec![histogram.to_vec()];
     while boxes.len() < limit {
-        let Some((at, _)) =
-            boxes.iter().enumerate().filter(|(_, b)| b.len() > 1).max_by_key(|(_, b)| weight(b))
+        let Some((at, _)) = boxes
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| b.len() > 1)
+            .max_by_key(|(_, b)| weight(b))
         else {
             break;
         };
@@ -249,7 +326,13 @@ fn median_cut(histogram: &[(u32, u64)], limit: usize) -> Vec<u32> {
         .iter()
         .map(|b| {
             let total = weight(b).max(1);
-            let mean = |k: usize| (b.iter().map(|&(c, n)| channels(c)[k] as u64 * n).sum::<u64>() + total / 2) / total;
+            let mean = |k: usize| {
+                (b.iter()
+                    .map(|&(c, n)| channels(c)[k] as u64 * n)
+                    .sum::<u64>()
+                    + total / 2)
+                    / total
+            };
             (mean(0) << 16 | mean(1) << 8 | mean(2)) as u32
         })
         .collect();
@@ -281,7 +364,9 @@ pub fn check_folders(folders: &[String]) -> Result<(), String> {
     files.sort();
     let mut refused = 0;
     for file in &files {
-        if let Err(why) = black_pictures(file).and_then(|black| check_black_clearance(&black, STRIDE)) {
+        if let Err(why) =
+            black_pictures(file).and_then(|black| check_black_clearance(&black, STRIDE))
+        {
             println!("{}\t{why}", file.display());
             refused += 1;
         }
@@ -296,7 +381,9 @@ pub fn check_folders(folders: &[String]) -> Result<(), String> {
 }
 
 fn gifs_under(dir: &Path, out: &mut Vec<std::path::PathBuf>) -> Result<(), String> {
-    for entry in std::fs::read_dir(dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))? {
+    for entry in
+        std::fs::read_dir(dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))?
+    {
         let path = entry.map_err(|e| e.to_string())?.path();
         if path.is_dir() {
             gifs_under(&path, out)?;
@@ -313,20 +400,28 @@ fn gifs_under(dir: &Path, out: &mut Vec<std::path::PathBuf>) -> Result<(), Strin
 /// i * 100 / 30 hundredths, rounded).
 fn black_pictures(path: &Path) -> Result<Vec<bool>, String> {
     let error = |e: gif::DecodingError| format!("{}: {e}", path.display());
-    let file = std::fs::File::open(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let file =
+        std::fs::File::open(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     let mut options = gif::DecodeOptions::new();
     options.set_color_output(gif::ColorOutput::RGBA);
-    let mut decoder = options.read_info(std::io::BufReader::new(file)).map_err(error)?;
+    let mut decoder = options
+        .read_info(std::io::BufReader::new(file))
+        .map_err(error)?;
     let (w, h) = (decoder.width() as usize, decoder.height() as usize);
     let mut canvas = vec![0u32; w * h];
     let start = |i: usize| (i * 100 + FPS / 2) / FPS;
     let (mut elapsed, mut black) = (0, Vec::new());
     while let Some(frame) = decoder.read_next_frame().map_err(error)? {
-        let (left, top, fw) = (usize::from(frame.left), usize::from(frame.top), usize::from(frame.width));
+        let (left, top, fw) = (
+            usize::from(frame.left),
+            usize::from(frame.top),
+            usize::from(frame.width),
+        );
         for (k, px) in frame.buffer.chunks_exact(4).enumerate() {
             let (x, y) = (left + k % fw, top + k / fw);
             if px[3] != 0 && x < w && y < h {
-                canvas[y * w + x] = u32::from(px[0]) << 16 | u32::from(px[1]) << 8 | u32::from(px[2]);
+                canvas[y * w + x] =
+                    u32::from(px[0]) << 16 | u32::from(px[1]) << 8 | u32::from(px[2]);
             }
         }
         elapsed += usize::from(frame.delay);
@@ -361,15 +456,37 @@ mod tests {
 
     #[test]
     fn black_screens_need_ten_seconds_of_the_game_around_them() {
-        let clip = |runs: &[(bool, usize)]| -> Vec<bool> { runs.iter().flat_map(|&(b, n)| std::iter::repeat_n(b, n)).collect() };
+        let clip = |runs: &[(bool, usize)]| -> Vec<bool> {
+            runs.iter()
+                .flat_map(|&(b, n)| std::iter::repeat_n(b, n))
+                .collect()
+        };
         assert!(check_black_clearance(&clip(&[(false, 40)]), 2).is_ok());
         assert!(check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 300)]), 2).is_ok());
         assert!(check_black_clearance(&clip(&[(true, 8), (false, 300)]), 2).is_ok());
-        let short_before = check_black_clearance(&clip(&[(false, 20), (true, 8), (false, 300)]), 2).unwrap_err();
-        assert!(short_before.contains("before its first black screen"), "{short_before}");
-        let short_after = check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 299)]), 2).unwrap_err();
-        assert!(short_after.contains("after its last black screen"), "{short_after}");
-        assert!(check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 100), (true, 8), (false, 300)]), 2).is_err());
+        let short_before =
+            check_black_clearance(&clip(&[(false, 20), (true, 8), (false, 300)]), 2).unwrap_err();
+        assert!(
+            short_before.contains("before its first black screen"),
+            "{short_before}"
+        );
+        let short_after =
+            check_black_clearance(&clip(&[(false, 300), (true, 8), (false, 299)]), 2).unwrap_err();
+        assert!(
+            short_after.contains("after its last black screen"),
+            "{short_after}"
+        );
+        assert!(check_black_clearance(
+            &clip(&[
+                (false, 300),
+                (true, 8),
+                (false, 100),
+                (true, 8),
+                (false, 300)
+            ]),
+            2
+        )
+        .is_err());
         assert!(is_black(&[0, 0x080808]) && !is_black(&[0, 0x100000]));
         assert!(is_black_bgr555(&[0, 1 | 1 << 5]) && !is_black_bgr555(&[2]));
     }

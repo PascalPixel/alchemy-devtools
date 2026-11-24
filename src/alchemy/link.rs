@@ -22,14 +22,21 @@ pub(crate) struct Linked {
 impl Linked {
     /// Whether any image links `stem`.
     pub fn links(&self, stem: &str) -> bool {
-        self.main.iter().chain(self.overlays.iter().flat_map(|(_, objects)| objects)).any(|object| object == stem)
+        self.main
+            .iter()
+            .chain(self.overlays.iter().flat_map(|(_, objects)| objects))
+            .any(|object| object == stem)
     }
 
     /// Every object, the main image's first, then each overlay's that the
     /// main image does not link, each once.
     pub fn all(&self) -> Vec<&str> {
         let mut all: Vec<&str> = Vec::new();
-        for object in self.main.iter().chain(self.overlays.iter().flat_map(|(_, objects)| objects)) {
+        for object in self
+            .main
+            .iter()
+            .chain(self.overlays.iter().flat_map(|(_, objects)| objects))
+        {
             if !all.contains(&object.as_str()) {
                 all.push(object);
             }
@@ -40,7 +47,10 @@ impl Linked {
     /// The objects overlay `id` (`64b`, or `resource_64b`) links.
     pub fn overlay(&self, id: &str) -> Option<&[String]> {
         let id = id.strip_prefix("resource_").unwrap_or(id);
-        self.overlays.iter().find(|(overlay, _)| overlay == id).map(|(_, objects)| objects.as_slice())
+        self.overlays
+            .iter()
+            .find(|(overlay, _)| overlay == id)
+            .map(|(_, objects)| objects.as_slice())
     }
 }
 
@@ -51,7 +61,9 @@ fn variable<'a>(text: &'a str, name: &str) -> Vec<&'a str> {
     let mut inside = false;
     for line in text.lines() {
         if !inside {
-            let Some((variable, rest)) = line.split_once(":=") else { continue };
+            let Some((variable, rest)) = line.split_once(":=") else {
+                continue;
+            };
             if variable.trim() != name {
                 continue;
             }
@@ -69,7 +81,11 @@ fn variable<'a>(text: &'a str, name: &str) -> Vec<&'a str> {
 
 /// The stems of a list of `$(BUILD)/obj/<stem>.o` words.
 fn stems(words: &[&str]) -> Vec<String> {
-    words.iter().filter_map(|word| word.strip_prefix("$(BUILD)/obj/")?.strip_suffix(".o")).map(str::to_string).collect()
+    words
+        .iter()
+        .filter_map(|word| word.strip_prefix("$(BUILD)/obj/")?.strip_suffix(".o"))
+        .map(str::to_string)
+        .collect()
 }
 
 /// An `objects.mk` the Makefile wrote.
@@ -77,10 +93,23 @@ pub(crate) fn parse_objects_mk(text: &str) -> Linked {
     // Each overlay's list, in the order they are written.
     let overlays = text
         .lines()
-        .filter_map(|line| line.split_once(":=")?.0.trim().strip_prefix("OVERLAY_OBJS_"))
-        .map(|id| (id.to_string(), stems(&variable(text, &format!("OVERLAY_OBJS_{id}")))))
+        .filter_map(|line| {
+            line.split_once(":=")?
+                .0
+                .trim()
+                .strip_prefix("OVERLAY_OBJS_")
+        })
+        .map(|id| {
+            (
+                id.to_string(),
+                stems(&variable(text, &format!("OVERLAY_OBJS_{id}"))),
+            )
+        })
         .collect();
-    Linked { main: stems(&variable(text, "MAIN_OBJS")), overlays }
+    Linked {
+        main: stems(&variable(text, "MAIN_OBJS")),
+        overlays,
+    }
 }
 
 /// The source stem one linker-script statement names, by the Makefile's own
@@ -100,7 +129,9 @@ pub(crate) fn statement_stem(line: &str) -> Option<&str> {
 pub(crate) fn linked(root: &Path, id: DecompTargetId) -> Result<Linked, String> {
     let output = built::output(root, id);
     if !output.join("objects.mk").is_file() {
-        return Err(format!("{id} is not built (no objects.mk): make {id} first"));
+        return Err(format!(
+            "{id} is not built (no objects.mk): make {id} first"
+        ));
     }
     from_objects_mk(root, &output)
 }
@@ -110,7 +141,8 @@ pub(crate) fn linked(root: &Path, id: DecompTargetId) -> Result<Linked, String> 
 /// it is made from.
 pub(crate) fn from_objects_mk(root: &Path, output: &Path) -> Result<Linked, String> {
     let path = root.join(output).join("objects.mk");
-    let text = std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let text =
+        std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
     fresh(root, output, &text)?;
     Ok(parse_objects_mk(&text))
 }
@@ -123,28 +155,48 @@ pub(crate) fn from_objects_mk(root: &Path, output: &Path) -> Result<Linked, Stri
 /// was last made.
 fn fresh(root: &Path, output: &Path, text: &str) -> Result<(), String> {
     let output = root.join(output);
-    let edition = output.file_name().and_then(|name| name.to_str()).unwrap_or("");
+    let edition = output
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("");
     let game = edition.split('-').next().unwrap_or(edition);
-    let modified = |path: &Path| std::fs::metadata(path).and_then(|meta| meta.modified()).ok();
+    let modified = |path: &Path| {
+        std::fs::metadata(path)
+            .and_then(|meta| meta.modified())
+            .ok()
+    };
     let written = modified(&output.join("objects.mk"));
     // The Makefile's prerequisites of each script: the one script, the
     // overlays' part it includes, and LD_HEADERS.
     let script = format!("games/{game}/ld_script.ld");
     let overlays = format!("games/{game}/src/system/overlay/overlay.ld");
-    let headers = [format!("games/{game}/include/edition.h"), format!("games/{game}/include/version.h")];
+    let headers = [
+        format!("games/{game}/include/edition.h"),
+        format!("games/{game}/include/version.h"),
+    ];
     let check = |stamp: String, sources: Vec<&String>| -> Result<(), String> {
         let made = modified(&output.join("ld").join(stamp)).max(written);
-        let newest = sources.into_iter().filter_map(|source| modified(&root.join(source)).map(|time| (time, source))).max();
+        let newest = sources
+            .into_iter()
+            .filter_map(|source| modified(&root.join(source)).map(|time| (time, source)))
+            .max();
         match newest {
-            Some((time, source)) if made.is_none_or(|made| made < time) => {
-                Err(format!("{}/objects.mk is older than {source}: make {edition} first", output.strip_prefix(root).unwrap_or(&output).display()))
-            }
+            Some((time, source)) if made.is_none_or(|made| made < time) => Err(format!(
+                "{}/objects.mk is older than {source}: make {edition} first",
+                output.strip_prefix(root).unwrap_or(&output).display()
+            )),
             _ => Ok(()),
         }
     };
-    check("main.stamp".into(), [&script].into_iter().chain(&headers).collect())?;
+    check(
+        "main.stamp".into(),
+        [&script].into_iter().chain(&headers).collect(),
+    )?;
     for overlay in variable(text, "OVERLAYS") {
-        check(format!("overlay_{overlay}.stamp"), [&script, &overlays].into_iter().chain(&headers).collect())?;
+        check(
+            format!("overlay_{overlay}.stamp"),
+            [&script, &overlays].into_iter().chain(&headers).collect(),
+        )?;
     }
     Ok(())
 }
@@ -157,20 +209,54 @@ mod tests {
     fn objects_mk_lists_each_image_first_mention_first() {
         let text = "# Written by the Makefile from the linker script: do not edit.\nMAIN_OBJS := \\\n\t$(BUILD)/obj/games/tla/src/system/ewram.o \\\n\t$(BUILD)/obj/games/tla/src/system/entry.o\nOVERLAYS := 649 64a\nOVERLAY_OBJS_649 := \\\n\t$(BUILD)/obj/games/tla/src/scene/a/a.o \\\n\t$(BUILD)/obj/games/tla/src/system/entry.o\nOVERLAY_OBJS_64a :=\n";
         let linked = parse_objects_mk(text);
-        assert_eq!(linked.main, ["games/tla/src/system/ewram", "games/tla/src/system/entry"]);
-        assert_eq!(linked.overlay("resource_649").unwrap(), ["games/tla/src/scene/a/a", "games/tla/src/system/entry"]);
-        assert_eq!(linked.overlay("64a").unwrap(), Vec::<String>::new().as_slice());
-        assert!(linked.links("games/tla/src/scene/a/a") && !linked.links("games/tla/src/scene/b/b"));
-        assert_eq!(linked.all(), ["games/tla/src/system/ewram", "games/tla/src/system/entry", "games/tla/src/scene/a/a"]);
+        assert_eq!(
+            linked.main,
+            ["games/tla/src/system/ewram", "games/tla/src/system/entry"]
+        );
+        assert_eq!(
+            linked.overlay("resource_649").unwrap(),
+            ["games/tla/src/scene/a/a", "games/tla/src/system/entry"]
+        );
+        assert_eq!(
+            linked.overlay("64a").unwrap(),
+            Vec::<String>::new().as_slice()
+        );
+        assert!(
+            linked.links("games/tla/src/scene/a/a") && !linked.links("games/tla/src/scene/b/b")
+        );
+        assert_eq!(
+            linked.all(),
+            [
+                "games/tla/src/system/ewram",
+                "games/tla/src/system/entry",
+                "games/tla/src/scene/a/a"
+            ]
+        );
     }
 
     #[test]
     fn a_statement_names_its_object_as_the_makefile_reads_it() {
-        assert_eq!(statement_stem("        \"*/games/tla/src/field/f021470.o\"(.text)"), Some("games/tla/src/field/f021470"));
-        assert_eq!(statement_stem("\"*/games/tbs/src/system/iwram.o\"(.sym_iwram_slots)"), Some("games/tbs/src/system/iwram"));
-        assert_eq!(statement_stem("        \"*libgcc.a:_udivsi3.o\"(.text)"), None);
-        assert_eq!(statement_stem("        /* \"*/games/tla/src/x.o\"(.text) */"), None);
-        assert_eq!(statement_stem("\t\"*/games/tla/src/x.o\"(.text)"), None, "the Makefile's pattern takes spaces only");
+        assert_eq!(
+            statement_stem("        \"*/games/tla/src/field/f021470.o\"(.text)"),
+            Some("games/tla/src/field/f021470")
+        );
+        assert_eq!(
+            statement_stem("\"*/games/tbs/src/system/iwram.o\"(.sym_iwram_slots)"),
+            Some("games/tbs/src/system/iwram")
+        );
+        assert_eq!(
+            statement_stem("        \"*libgcc.a:_udivsi3.o\"(.text)"),
+            None
+        );
+        assert_eq!(
+            statement_stem("        /* \"*/games/tla/src/x.o\"(.text) */"),
+            None
+        );
+        assert_eq!(
+            statement_stem("\t\"*/games/tla/src/x.o\"(.text)"),
+            None,
+            "the Makefile's pattern takes spaces only"
+        );
     }
 
     /// A list is as new as its scripts by its own time or its stamp's, and
@@ -185,8 +271,14 @@ mod tests {
             if !path.exists() {
                 std::fs::write(&path, "\n").unwrap();
             }
-            let time = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000 + seconds);
-            std::fs::File::options().write(true).open(&path).unwrap().set_modified(time).unwrap();
+            let time =
+                std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000 + seconds);
+            std::fs::File::options()
+                .write(true)
+                .open(&path)
+                .unwrap()
+                .set_modified(time)
+                .unwrap();
         };
         at("games/tla/ld_script.ld", 10);
         at("games/tla/include/version.h", 0);
@@ -197,14 +289,19 @@ mod tests {
         let read = || from_objects_mk(root, Path::new("out/tla-en"));
         assert_eq!(read().unwrap().main, ["games/tla/src/a"]);
         at("games/tla/src/system/overlay/overlay.ld", 30);
-        assert!(read().unwrap_err().contains("older than games/tla/src/system/overlay/overlay.ld: make tla-en first"));
+        assert!(read()
+            .unwrap_err()
+            .contains("older than games/tla/src/system/overlay/overlay.ld: make tla-en first"));
         // The preprocessor ran again and wrote the same list.
         at("out/tla-en/ld/overlay_649.stamp", 40);
         read().unwrap();
         at("games/tla/include/version.h", 50);
         assert!(read().unwrap_err().contains("version.h"));
         at("out/tla-en/ld/main.stamp", 60);
-        assert!(read().unwrap_err().contains("version.h"), "each overlay's stamp counts for its own script");
+        assert!(
+            read().unwrap_err().contains("version.h"),
+            "each overlay's stamp counts for its own script"
+        );
         at("out/tla-en/ld/overlay_649.stamp", 60);
         read().unwrap();
     }

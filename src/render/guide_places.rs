@@ -23,7 +23,18 @@ impl Guide<'_> {
         let field = &mut entered.field;
         let placed = field.save();
         let height = field.ground(0, 288, 120)?;
-        field.stand(&placed, &Spot { x: 288, z: 120, layer: 0, height, facing: 0xc000, walk: 0, cell: None })?;
+        field.stand(
+            &placed,
+            &Spot {
+                x: 288,
+                z: 120,
+                layer: 0,
+                height,
+                facing: 0xc000,
+                walk: 0,
+                cell: None,
+            },
+        )?;
         // The top of the screen, where the rows are drawn, twice its size:
         // the screen, the sprites alone and the backgrounds alone, one above
         // another.
@@ -49,7 +60,11 @@ impl Guide<'_> {
             }
             frames.push(out.pixels);
         }
-        let written = animation::write(&self.out.join("statue-sky-rows.gif"), &frames, 2 * WIDTH + 8)?;
+        let written = animation::write(
+            &self.out.join("statue-sky-rows.gif"),
+            &frames,
+            2 * WIDTH + 8,
+        )?;
         self.written.push(("statue-sky-rows.gif".to_string(), written.bytes, format!("the statue room's drifting sky rows: the screen, the sprites, the backgrounds; {} frames", written.frames)));
         Ok(())
     }

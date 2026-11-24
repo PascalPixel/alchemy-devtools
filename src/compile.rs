@@ -8,18 +8,22 @@ use std::sync::OnceLock;
 
 /// Locate the checkout at runtime, including when Alchemy Devtools is a submodule.
 fn checkout_root(folder: &Path) -> Option<PathBuf> {
-    folder.ancestors().find(|folder| {
-        folder.join("rom.sha1").is_file()
-            && folder.join("games").is_dir()
-            && folder.join("Makefile").is_file()
-    }).map(Path::to_path_buf)
+    folder
+        .ancestors()
+        .find(|folder| {
+            folder.join("rom.sha1").is_file()
+                && folder.join("games").is_dir()
+                && folder.join("Makefile").is_file()
+        })
+        .map(Path::to_path_buf)
 }
 
 /// A standalone Alchemy Devtools checkout can target Alchemy through ALCHEMY_ROOT.
 pub fn root() -> &'static Path {
     static ROOT: OnceLock<PathBuf> = OnceLock::new();
     ROOT.get_or_init(|| {
-        let folder = std::env::var_os("ALCHEMY_ROOT").map(PathBuf::from)
+        let folder = std::env::var_os("ALCHEMY_ROOT")
+            .map(PathBuf::from)
             .or_else(|| std::env::current_dir().ok());
         if let Some(found) = folder.as_deref().and_then(checkout_root) {
             return found.canonicalize().unwrap_or(found);
@@ -29,7 +33,9 @@ pub fn root() -> &'static Path {
         if cfg!(test) {
             panic!("this test needs an Alchemy checkout: set ALCHEMY_ROOT to its path");
         }
-        eprintln!("alchemy-devtools: run inside an Alchemy checkout or set ALCHEMY_ROOT to its path");
+        eprintln!(
+            "alchemy-devtools: run inside an Alchemy checkout or set ALCHEMY_ROOT to its path"
+        );
         std::process::exit(1)
     })
 }
@@ -42,21 +48,40 @@ pub fn root() -> &'static Path {
 /// - with `arm`, the draft takes the ARM C route: make is told it is one of
 ///   the Makefile's `ARM_C`;
 /// - any other draft takes the recipe the Makefile gives every other C file.
-pub(crate) fn steps(target: DecompTarget, draft: &Path, object: &Path, overlay: Option<&str>, arm: bool) -> Result<Vec<Vec<String>>, String> {
+pub(crate) fn steps(
+    target: DecompTarget,
+    draft: &Path,
+    object: &Path,
+    overlay: Option<&str>,
+    arm: bool,
+) -> Result<Vec<Vec<String>>, String> {
     steps_many(target, &[(draft, object, overlay, arm)]).remove(0)
 }
 
 /// What `steps` gives each of `drafts` (draft, object, overlay, arm), asking
 /// make once for every draft that shares make's variables.
-pub(crate) fn steps_many(target: DecompTarget, drafts: &[(&Path, &Path, Option<&str>, bool)]) -> Vec<Result<Vec<Vec<String>>, String>> {
+pub(crate) fn steps_many(
+    target: DecompTarget,
+    drafts: &[(&Path, &Path, Option<&str>, bool)],
+) -> Vec<Result<Vec<Vec<String>>, String>> {
     let root = root();
-    let object_of = |source: &str| format!("{}/obj/{}.o", target.output_dir, source.strip_suffix(".c").unwrap_or(source));
+    let object_of = |source: &str| {
+        format!(
+            "{}/obj/{}.o",
+            target.output_dir,
+            source.strip_suffix(".c").unwrap_or(source)
+        )
+    };
     // Each draft's make variables and the source and object whose recipe it takes.
     let routed: Vec<Result<(Vec<String>, String, String), String>> = drafts
         .iter()
         .map(|&(draft, _, overlay, arm)| {
             // The draft as make names it: relative to the checkout when inside it.
-            let named = if draft.is_absolute() { draft.strip_prefix(root).unwrap_or(draft) } else { draft };
+            let named = if draft.is_absolute() {
+                draft.strip_prefix(root).unwrap_or(draft)
+            } else {
+                draft
+            };
             let named = named.to_string_lossy().into_owned();
             let mut variables = vec![format!("EDITION={}", target.id)];
             let source = if arm {
@@ -65,7 +90,11 @@ pub(crate) fn steps_many(target: DecompTarget, drafts: &[(&Path, &Path, Option<&
             } else if let Some(overlay) = overlay {
                 match listed(target, &named)? {
                     true => named,
-                    false => crate::alchemy::overlay::linked_source(root, Path::new(target.output_dir), overlay)?,
+                    false => crate::alchemy::overlay::linked_source(
+                        root,
+                        Path::new(target.output_dir),
+                        overlay,
+                    )?,
                 }
             } else {
                 named
@@ -88,7 +117,12 @@ pub(crate) fn steps_many(target: DecompTarget, drafts: &[(&Path, &Path, Option<&
     for (variables, members) in groups {
         let wanted: Vec<(String, String)> = members
             .iter()
-            .filter_map(|&index| routed[index].as_ref().ok().map(|(_, source, made)| (source.clone(), made.clone())))
+            .filter_map(|&index| {
+                routed[index]
+                    .as_ref()
+                    .ok()
+                    .map(|(_, source, made)| (source.clone(), made.clone()))
+            })
             .collect();
         match crate::gba::recipe::recipes(root, Path::new(target.output_dir), &variables, &wanted) {
             Ok(found) => {
@@ -107,9 +141,13 @@ pub(crate) fn steps_many(target: DecompTarget, drafts: &[(&Path, &Path, Option<&
         .into_iter()
         .zip(drafts.iter().zip(&routed))
         .map(|(recipe, (&(draft, object, _, _), routed))| {
-            let recipe = recipe.unwrap_or_else(|| Err("no recipe asked for".into())).map_err(|error| format!("{error}; build {} first", target.id))?;
+            let recipe = recipe
+                .unwrap_or_else(|| Err("no recipe asked for".into()))
+                .map_err(|error| format!("{error}; build {} first", target.id))?;
             let (_, source, made) = routed.as_ref().map_err(Clone::clone)?;
-            Ok(crate::gba::recipe::retarget(&recipe, root, source, made, draft, object))
+            Ok(crate::gba::recipe::retarget(
+                &recipe, root, source, made, draft, object,
+            ))
         })
         .collect()
 }
@@ -123,7 +161,8 @@ pub(crate) fn listed(target: DecompTarget, source: &str) -> Result<bool, String>
     if !root().join(target.output_dir).join("objects.mk").is_file() {
         return Ok(false);
     }
-    crate::alchemy::link::from_objects_mk(root(), Path::new(target.output_dir)).map(|linked| linked.links(stem))
+    crate::alchemy::link::from_objects_mk(root(), Path::new(target.output_dir))
+        .map(|linked| linked.links(stem))
 }
 
 #[cfg(test)]

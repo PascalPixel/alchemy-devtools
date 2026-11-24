@@ -33,10 +33,14 @@ pub fn run<S: AsRef<str>>(command: &[S], cwd: impl AsRef<Path>) -> Result<String
 
 /// A command's outcome with both its streams, whether it succeeded or not:
 /// a compiler writes its warnings to stderr when it succeeds too.
-pub(crate) fn capture<S: AsRef<str>>(command: &[S], cwd: impl AsRef<Path>) -> Result<(bool, String, String), String> {
+pub(crate) fn capture<S: AsRef<str>>(
+    command: &[S],
+    cwd: impl AsRef<Path>,
+) -> Result<(bool, String, String), String> {
     let program = command.first().ok_or("run: empty command")?.as_ref();
     let args: Vec<&str> = command[1..].iter().map(AsRef::as_ref).collect();
-    let output = spawn(program, &args, cwd.as_ref()).map_err(|error| format!("{program}: {error}"))?;
+    let output =
+        spawn(program, &args, cwd.as_ref()).map_err(|error| format!("{program}: {error}"))?;
     let text = |bytes: &[u8]| String::from_utf8_lossy(bytes).into_owned();
     Ok((output.success, text(&output.stdout), text(&output.stderr)))
 }
@@ -44,19 +48,29 @@ pub(crate) fn capture<S: AsRef<str>>(command: &[S], cwd: impl AsRef<Path>) -> Re
 /// Whether process `pid` has ended. Signal 0 sends nothing; it only asks
 /// whether the process exists. 0 and what no process id can be count as gone.
 pub(crate) fn gone(pid: u32) -> bool {
-    let Ok(pid) = libc::pid_t::try_from(pid) else { return true };
+    let Ok(pid) = libc::pid_t::try_from(pid) else {
+        return true;
+    };
     // SAFETY: kill with signal 0 has no effect on the process.
-    pid <= 0 || (unsafe { libc::kill(pid, 0) } != 0 && std::io::Error::last_os_error().raw_os_error() == Some(libc::ESRCH))
+    pid <= 0
+        || (unsafe { libc::kill(pid, 0) } != 0
+            && std::io::Error::last_os_error().raw_os_error() == Some(libc::ESRCH))
 }
 
 /// Removes each folder in `folder` named `prefix` and a process id whose
 /// process has ended: a run killed before it could remove its own. A live
 /// run's folder stays.
 pub(crate) fn sweep(folder: &Path, prefix: &str) {
-    let Ok(entries) = std::fs::read_dir(folder) else { return };
+    let Ok(entries) = std::fs::read_dir(folder) else {
+        return;
+    };
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().into_owned();
-        if name.strip_prefix(prefix).and_then(|pid| pid.parse::<u32>().ok()).is_some_and(gone) {
+        if name
+            .strip_prefix(prefix)
+            .and_then(|pid| pid.parse::<u32>().ok())
+            .is_some_and(gone)
+        {
             let _ = std::fs::remove_dir_all(entry.path());
         }
     }
@@ -315,12 +329,20 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let mut child = std::process::Command::new("true").spawn().unwrap();
         child.wait().unwrap();
-        let folders = [format!("run-{}", child.id()), format!("run-{}", std::process::id()), format!("rank-{}", child.id()), "run-x".into()];
+        let folders = [
+            format!("run-{}", child.id()),
+            format!("run-{}", std::process::id()),
+            format!("rank-{}", child.id()),
+            "run-x".into(),
+        ];
         for name in &folders {
             std::fs::create_dir_all(directory.path().join(name).join("inner")).unwrap();
         }
         sweep(directory.path(), "run-");
-        let left: Vec<bool> = folders.iter().map(|name| directory.path().join(name).exists()).collect();
+        let left: Vec<bool> = folders
+            .iter()
+            .map(|name| directory.path().join(name).exists())
+            .collect();
         assert_eq!(left, [false, true, true, true]);
     }
 

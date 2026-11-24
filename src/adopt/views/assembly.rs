@@ -23,7 +23,20 @@ pub(crate) struct Piece {
 /// Directives that belong to the symbol after them.
 fn leads(line: &str) -> bool {
     let word = line.split_whitespace().next().unwrap_or("");
-    matches!(word, ".globl" | ".global" | ".type" | ".thumb_func" | ".align" | ".balign" | ".p2align" | ".code" | ".thumb" | ".arm" | ".weak")
+    matches!(
+        word,
+        ".globl"
+            | ".global"
+            | ".type"
+            | ".thumb_func"
+            | ".align"
+            | ".balign"
+            | ".p2align"
+            | ".code"
+            | ".thumb"
+            | ".arm"
+            | ".weak"
+    )
 }
 
 fn section_of(line: &str) -> Option<String> {
@@ -45,7 +58,14 @@ pub(crate) fn pieces(assembly: &str) -> Vec<Piece> {
     let mut pending: Vec<String> = Vec::new();
     for raw in assembly.lines() {
         let line = raw.trim();
-        if line.is_empty() || line.starts_with(".file") || line.starts_with(".ident") || line.starts_with('@') || line == "gcc2_compiled.:" || line == ".gcc2_compiled.:" || line.split_whitespace().eq([".code", "16"]) {
+        if line.is_empty()
+            || line.starts_with(".file")
+            || line.starts_with(".ident")
+            || line.starts_with('@')
+            || line == "gcc2_compiled.:"
+            || line == ".gcc2_compiled.:"
+            || line.split_whitespace().eq([".code", "16"])
+        {
             continue;
         }
         if let Some(name) = section_of(line) {
@@ -53,15 +73,35 @@ pub(crate) fn pieces(assembly: &str) -> Vec<Piece> {
             open = None;
             continue;
         }
-        if let Some(name) = line.strip_suffix(':').filter(|name| !name.starts_with(".L") && !name.contains(char::is_whitespace)) {
-            pieces.push(Piece { section: section.clone(), name: name.to_string(), lines: std::mem::take(&mut pending) });
+        if let Some(name) = line
+            .strip_suffix(':')
+            .filter(|name| !name.starts_with(".L") && !name.contains(char::is_whitespace))
+        {
+            pieces.push(Piece {
+                section: section.clone(),
+                name: name.to_string(),
+                lines: std::mem::take(&mut pending),
+            });
             open = Some(pieces.len() - 1);
             continue;
         }
-        let common = line.split_whitespace().next().filter(|word| *word == ".comm" || *word == ".lcomm");
+        let common = line
+            .split_whitespace()
+            .next()
+            .filter(|word| *word == ".comm" || *word == ".lcomm");
         if let Some(word) = common {
-            let name = line[word.len()..].trim().split(',').next().unwrap_or("").trim().to_string();
-            pieces.push(Piece { section: word.to_string(), name, lines: vec![line.to_string()] });
+            let name = line[word.len()..]
+                .trim()
+                .split(',')
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            pieces.push(Piece {
+                section: word.to_string(),
+                name,
+                lines: vec![line.to_string()],
+            });
             continue;
         }
         if leads(line) {
@@ -71,7 +111,11 @@ pub(crate) fn pieces(assembly: &str) -> Vec<Piece> {
         let index = match open {
             Some(index) => index,
             None => {
-                pieces.push(Piece { section: section.clone(), name: String::new(), lines: Vec::new() });
+                pieces.push(Piece {
+                    section: section.clone(),
+                    name: String::new(),
+                    lines: Vec::new(),
+                });
                 pieces.len() - 1
             }
         };
@@ -96,22 +140,36 @@ pub(crate) fn renamed(assembly: &str, renames: &[(String, String)]) -> String {
     if renames.is_empty() {
         return assembly.to_string();
     }
-    let map: std::collections::BTreeMap<&str, &str> = renames.iter().map(|(from, to)| (from.as_str(), to.as_str())).collect();
+    let map: std::collections::BTreeMap<&str, &str> = renames
+        .iter()
+        .map(|(from, to)| (from.as_str(), to.as_str()))
+        .collect();
     let alternatives: Vec<String> = map.keys().map(|name| regex::escape(name)).collect();
     // A symbol is the name with nothing of a name either side: `sTable`
     // in `sTable.0` (a local static's), never in `sTable__b` or `.LsTable`.
-    let pattern = Regex::new(&format!(r"(^|[^A-Za-z0-9_$.])({})($|[^A-Za-z0-9_$])", alternatives.join("|"))).unwrap();
+    let pattern = Regex::new(&format!(
+        r"(^|[^A-Za-z0-9_$.])({})($|[^A-Za-z0-9_$])",
+        alternatives.join("|")
+    ))
+    .unwrap();
     let mut text = assembly.to_string();
     // Twice, as two uses can share the one character between them.
     for _ in 0..2 {
-        text = pattern.replace_all(&text, |found: &regex::Captures| format!("{}{}{}", &found[1], map[&found[2]], &found[3])).into_owned();
+        text = pattern
+            .replace_all(&text, |found: &regex::Captures| {
+                format!("{}{}{}", &found[1], map[&found[2]], &found[3])
+            })
+            .into_owned();
     }
     text
 }
 
 /// A common symbol's line read: its size and alignment.
 fn common_size(line: &str) -> (u64, u64) {
-    let mut fields = line.split(',').skip(1).map(|field| field.trim().parse::<u64>().unwrap_or(0));
+    let mut fields = line
+        .split(',')
+        .skip(1)
+        .map(|field| field.trim().parse::<u64>().unwrap_or(0));
     (fields.next().unwrap_or(0), fields.next().unwrap_or(0))
 }
 
@@ -124,10 +182,13 @@ fn renumber(piece: &mut Piece) {
         *line = label
             .replace_all(line, |found: &regex::Captures| {
                 let text = found[0].to_string();
-                let index = seen.iter().position(|known| *known == text).unwrap_or_else(|| {
-                    seen.push(text.clone());
-                    seen.len() - 1
-                });
+                let index = seen
+                    .iter()
+                    .position(|known| *known == text)
+                    .unwrap_or_else(|| {
+                        seen.push(text.clone());
+                        seen.len() - 1
+                    });
                 format!(".L#{index}")
             })
             .into_owned();
@@ -145,8 +206,16 @@ pub(crate) fn moved(parts: &[Vec<Piece>], joined: &[Piece]) -> Vec<(usize, Strin
     }
     let mut found = Vec::new();
     for section in sections {
-        let theirs: Vec<(usize, &Piece)> = parts.iter().enumerate().flat_map(|(part, pieces)| pieces.iter().map(move |piece| (part, piece))).filter(|(_, piece)| piece.section == section).collect();
-        let ours: Vec<&Piece> = joined.iter().filter(|piece| piece.section == section).collect();
+        let theirs: Vec<(usize, &Piece)> = parts
+            .iter()
+            .enumerate()
+            .flat_map(|(part, pieces)| pieces.iter().map(move |piece| (part, piece)))
+            .filter(|(_, piece)| piece.section == section)
+            .collect();
+        let ours: Vec<&Piece> = joined
+            .iter()
+            .filter(|piece| piece.section == section)
+            .collect();
         if section == ".comm" {
             // Common symbols merge in the link, one name one symbol of the
             // largest size and alignment any file gave it: the join must give
@@ -169,12 +238,21 @@ pub(crate) fn moved(parts: &[Vec<Piece>], joined: &[Piece]) -> Vec<(usize, Strin
             for (name, (part, size)) in &wanted {
                 match joined.get(name) {
                     None => found.push((*part, name.to_string())),
-                    Some(now) if now != size => found.push((*part, format!("{name} (common {},{} where its files had {},{})", now.0, now.1, size.0, size.1))),
+                    Some(now) if now != size => found.push((
+                        *part,
+                        format!(
+                            "{name} (common {},{} where its files had {},{})",
+                            now.0, now.1, size.0, size.1
+                        ),
+                    )),
                     Some(_) => {}
                 }
             }
             for name in joined.keys().filter(|name| !wanted.contains_key(*name)) {
-                found.push((theirs.last().map_or(0, |(part, _)| *part), format!("{name} (new)")));
+                found.push((
+                    theirs.last().map_or(0, |(part, _)| *part),
+                    format!("{name} (new)"),
+                ));
             }
             continue;
         }
@@ -217,7 +295,13 @@ mod tests {
     const TWO: &str = "\t.file\t\"b.c\"\n.text\n\t.align\t2\n\t.thumb_func\nsTwo:\n\tbl\tHelper\n.L7:\n\tb\t.L7\n.Lfe1:\n\t.size\t sTwo,.Lfe1-sTwo\n\t.comm\tgShared,4,4\n";
 
     fn suffixed(assembly: &str, names: &[(&str, &str)]) -> String {
-        renamed(assembly, &names.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect::<Vec<_>>())
+        renamed(
+            assembly,
+            &names
+                .iter()
+                .map(|(a, b)| (a.to_string(), b.to_string()))
+                .collect::<Vec<_>>(),
+        )
     }
 
     #[test]
@@ -225,25 +309,47 @@ mod tests {
         let one = pieces(ONE);
         assert_eq!(one.len(), 1);
         assert_eq!(one[0].name, "One");
-        assert!(one[0].lines.contains(&".L#0:".to_string()) && one[0].lines.iter().any(|line| line.contains(".L#1-One")));
+        assert!(
+            one[0].lines.contains(&".L#0:".to_string())
+                && one[0].lines.iter().any(|line| line.contains(".L#1-One"))
+        );
         let two = pieces(TWO);
-        assert_eq!(two.iter().map(|p| (p.section.as_str(), p.name.as_str())).collect::<Vec<_>>(), [(".text", "sTwo"), (".comm", "gShared")]);
+        assert_eq!(
+            two.iter()
+                .map(|p| (p.section.as_str(), p.name.as_str()))
+                .collect::<Vec<_>>(),
+            [(".text", "sTwo"), (".comm", "gShared")]
+        );
     }
 
     #[test]
     fn a_join_differs_where_a_symbol_moved() {
         // b's static took the private name sTwo__b: b's own assembly is read with it.
         let parts = vec![pieces(ONE), pieces(&suffixed(TWO, &[("sTwo", "sTwo__b")]))];
-        let joined = format!("{ONE}{}", TWO.replace("sTwo", "sTwo__b").replace(".L7", ".L9").replace(".Lfe1", ".Lfe2"));
+        let joined = format!(
+            "{ONE}{}",
+            TWO.replace("sTwo", "sTwo__b")
+                .replace(".L7", ".L9")
+                .replace(".Lfe1", ".Lfe2")
+        );
         assert!(moved(&parts, &pieces(&joined)).is_empty());
         let changed = joined.replace("bl\tHelper\n.L9", "bl\tOther\n.L9");
-        assert_eq!(moved(&parts, &pieces(&changed)), [(1, "sTwo__b".to_string())]);
+        assert_eq!(
+            moved(&parts, &pieces(&changed)),
+            [(1, "sTwo__b".to_string())]
+        );
         // An alias's private name is never read as the symbol: one its label
         // failed to bind shows.
         let unbound = joined.replace("bl\tHelper\n.L9", "bl\tHelper__b\n.L9");
-        assert_eq!(moved(&parts, &pieces(&unbound)), [(1, "sTwo__b".to_string())]);
+        assert_eq!(
+            moved(&parts, &pieces(&unbound)),
+            [(1, "sTwo__b".to_string())]
+        );
         let lost = ONE.to_string();
-        assert_eq!(moved(&parts, &pieces(&lost)), [(1, "sTwo__b".to_string()), (1, "gShared".to_string())]);
+        assert_eq!(
+            moved(&parts, &pieces(&lost)),
+            [(1, "sTwo__b".to_string()), (1, "gShared".to_string())]
+        );
     }
 
     /// Two parts each with a static sFoo; b's became sFoo__b. A use in b that
@@ -251,7 +357,8 @@ mod tests {
     /// so the wrong binding shows (before, both read sFoo and passed).
     #[test]
     fn a_use_bound_to_another_part_s_static_shows() {
-        let a = ".text\n\t.align\t2\n\t.thumb_func\nsFoo:\n\tbx\tlr\n\t.thumb_func\nA:\n\tbl\tsFoo\n";
+        let a =
+            ".text\n\t.align\t2\n\t.thumb_func\nsFoo:\n\tbx\tlr\n\t.thumb_func\nA:\n\tbl\tsFoo\n";
         let b = ".text\n\t.align\t2\n\t.thumb_func\nsFoo:\n\tmov\tr0, #1\n\tbx\tlr\n\t.thumb_func\nB:\n\tbl\tsFoo\n";
         let parts = vec![pieces(a), pieces(&suffixed(b, &[("sFoo", "sFoo__b")]))];
         let right = format!("{a}{}", b.replace("sFoo", "sFoo__b"));
@@ -264,7 +371,10 @@ mod tests {
     fn a_rename_reaches_only_whole_symbols() {
         let text = "\tbl\tsFoo\n\t.word\tsFoo+4\nsFoo.0:\n\t.word\tsFoo__c\n\t.word\t.LsFoo\n\tldr\tr0, =sFoo\nsFoo:\n";
         assert_eq!(suffixed(text, &[("sFoo", "sFoo__b")]), "\tbl\tsFoo__b\n\t.word\tsFoo__b+4\nsFoo__b.0:\n\t.word\tsFoo__c\n\t.word\t.LsFoo\n\tldr\tr0, =sFoo__b\nsFoo__b:\n");
-        assert_eq!(suffixed("\t.word\tsA,sA\n", &[("sA", "sA__b")]), "\t.word\tsA__b,sA__b\n");
+        assert_eq!(
+            suffixed("\t.word\tsA,sA\n", &[("sA", "sA__b")]),
+            "\t.word\tsA__b,sA__b\n"
+        );
     }
 
     /// int gY[2] in one part, int gY in another: the link took 8 bytes. A join
@@ -273,9 +383,15 @@ mod tests {
     fn a_common_symbol_keeps_its_largest_size_and_alignment() {
         let parts = vec![pieces("\t.comm\tgY,8,4\n"), pieces("\t.comm\tgY,4,4\n")];
         assert!(moved(&parts, &pieces("\t.comm\tgY,8,4\n")).is_empty());
-        assert_eq!(moved(&parts, &pieces("\t.comm\tgY,4,4\n")), [(0, "gY (common 4,4 where its files had 8,4)".to_string())]);
+        assert_eq!(
+            moved(&parts, &pieces("\t.comm\tgY,4,4\n")),
+            [(0, "gY (common 4,4 where its files had 8,4)".to_string())]
+        );
         assert_eq!(moved(&parts, &pieces("\t.comm\tgY,8,8\n")).len(), 1);
-        assert_eq!(moved(&parts, &pieces("\t.comm\tgY,8,4\n\t.comm\tgZ,4,4\n")), [(1, "gZ (new)".to_string())]);
+        assert_eq!(
+            moved(&parts, &pieces("\t.comm\tgY,8,4\n\t.comm\tgZ,4,4\n")),
+            [(1, "gZ (new)".to_string())]
+        );
         assert_eq!(moved(&parts, &pieces("")), [(0, "gY".to_string())]);
     }
 }

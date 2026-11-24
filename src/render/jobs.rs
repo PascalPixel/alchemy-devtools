@@ -28,15 +28,25 @@ pub struct Jobs {
 
 impl Jobs {
     pub fn new() -> Jobs {
-        Jobs { count: std::thread::available_parallelism().map_or(1, |n| n.get()), child: false }
+        Jobs {
+            count: std::thread::available_parallelism().map_or(1, |n| n.get()),
+            child: false,
+        }
     }
 
     /// Reads one of the job options, or says it is not one.
-    pub fn option(&mut self, argument: &str, value: &mut dyn FnMut(&str) -> Result<String, String>) -> Result<bool, String> {
+    pub fn option(
+        &mut self,
+        argument: &str,
+        value: &mut dyn FnMut(&str) -> Result<String, String>,
+    ) -> Result<bool, String> {
         match argument {
             "--jobs" => {
                 let text = value("--jobs")?;
-                self.count = text.parse().ok().filter(|&n| n > 0).ok_or_else(|| format!("--jobs {text:?}: a number of processes, 1 or more"))?;
+                self.count =
+                    text.parse().ok().filter(|&n| n > 0).ok_or_else(|| {
+                        format!("--jobs {text:?}: a number of processes, 1 or more")
+                    })?;
             }
             "--child" => self.child = true,
             _ => return Ok(false),
@@ -60,12 +70,26 @@ pub struct Joined {
 /// Runs `render <command> <arguments> --jobs 1 --child` up to `count`
 /// times at once and hands out `pieces` (each a key and its estimated
 /// cost), the costliest first, to whichever child is free.
-pub fn run(command: &str, arguments: &[String], pieces: &[(String, u64)], count: usize) -> Result<Joined, String> {
-    let exe = std::env::current_exe().map_err(|e| format!("cannot find this program to run its children: {e}"))?;
+pub fn run(
+    command: &str,
+    arguments: &[String],
+    pieces: &[(String, u64)],
+    count: usize,
+) -> Result<Joined, String> {
+    let exe = std::env::current_exe()
+        .map_err(|e| format!("cannot find this program to run its children: {e}"))?;
     let mut order: Vec<&(String, u64)> = pieces.iter().collect();
     order.sort_by(|a, b| b.1.cmp(&a.1));
-    let queue = Mutex::new(order.into_iter().map(|(key, _)| key.clone()).collect::<VecDeque<String>>());
-    let joined = Mutex::new(Joined { records: Vec::new(), failed: Vec::new() });
+    let queue = Mutex::new(
+        order
+            .into_iter()
+            .map(|(key, _)| key.clone())
+            .collect::<VecDeque<String>>(),
+    );
+    let joined = Mutex::new(Joined {
+        records: Vec::new(),
+        failed: Vec::new(),
+    });
     let mut children = Vec::new();
     for _ in 0..count.min(pieces.len()) {
         let child = Command::new(&exe)
@@ -91,7 +115,10 @@ pub fn run(command: &str, arguments: &[String], pieces: &[(String, u64)], count:
                     let Some(key) = queue.lock().unwrap().pop_front() else {
                         break;
                     };
-                    if writeln!(input, "{}", escape(&key)).and_then(|()| input.flush()).is_err() {
+                    if writeln!(input, "{}", escape(&key))
+                        .and_then(|()| input.flush())
+                        .is_err()
+                    {
                         failed.push(format!("{key}: its process had stopped"));
                         break;
                     }
@@ -115,7 +142,9 @@ pub fn run(command: &str, arguments: &[String], pieces: &[(String, u64)], count:
                 }
                 drop(input);
                 match child.wait() {
-                    Ok(status) if !status.success() => failed.push(format!("a child process {status}")),
+                    Ok(status) if !status.success() => {
+                        failed.push(format!("a child process {status}"))
+                    }
                     Err(e) => failed.push(format!("a child process: {e}")),
                     Ok(_) => {}
                 }
@@ -127,7 +156,9 @@ pub fn run(command: &str, arguments: &[String], pieces: &[(String, u64)], count:
     });
     let mut joined = joined.into_inner().unwrap();
     for key in queue.into_inner().unwrap() {
-        joined.failed.push(format!("{key}: not played, every child process had stopped"));
+        joined.failed.push(format!(
+            "{key}: not played, every child process had stopped"
+        ));
     }
     Ok(joined)
 }

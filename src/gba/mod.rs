@@ -42,7 +42,11 @@ mod boundary {
             let mut comment = false;
             let raw = at(i) == 'r'
                 && (!identifier(before(i)) || (before(i) == 'b' && !identifier(before(i - 1))));
-            let hashes = if raw { (i + 1..).take_while(|&k| at(k) == '#').count() } else { 0 };
+            let hashes = if raw {
+                (i + 1..).take_while(|&k| at(k) == '#').count()
+            } else {
+                0
+            };
             if at(i) == '/' && at(i + 1) == '/' {
                 comment = true;
                 while i < chars.len() && at(i) != '\n' {
@@ -108,10 +112,18 @@ mod boundary {
     /// One project's layout, refused outside comments: its folders as a path
     /// starts them (`build/obj/` is one, `layout/` is not) and its file names.
     const FOLDERS: [&str; 5] = ["out/", "obj/", "games/", "roms/", "recon/"];
-    const FILES: [&str; 6] = ["rom.sha1", "ld_script", "objects.mk", "deps.mk", "resource_", "_overlay"];
+    const FILES: [&str; 6] = [
+        "rom.sha1",
+        "ld_script",
+        "objects.mk",
+        "deps.mk",
+        "resource_",
+        "_overlay",
+    ];
 
     fn folder(text: &str, word: &str) -> bool {
-        text.match_indices(word).any(|(k, _)| !text[..k].chars().next_back().is_some_and(identifier))
+        text.match_indices(word)
+            .any(|(k, _)| !text[..k].chars().next_back().is_some_and(identifier))
     }
 
     /// Each line of code that reaches outside `crate::gba`, through `crate::`
@@ -124,7 +136,8 @@ mod boundary {
             let outside = line.match_indices("crate::").any(|(k, _)| {
                 let path = &line[k + "crate::".len()..];
                 !path.starts_with("gba") || path[3..].starts_with(identifier)
-            }) || line.contains("super::super") || (top && folder(line, "super::"));
+            }) || line.contains("super::super")
+                || (top && folder(line, "super::"));
             let lower = line.to_ascii_lowercase();
             let named = NAMES.iter().any(|name| whole(&lower, name))
                 || FOLDERS.iter().any(|name| folder(&lower, name))
@@ -158,7 +171,11 @@ mod boundary {
             }
         }
         assert!(read > 1, "no Rust read under {}", directory.display());
-        assert!(found.is_empty(), "src/gba must stay generic:\n{}", found.join("\n"));
+        assert!(
+            found.is_empty(),
+            "src/gba must stay generic:\n{}",
+            found.join("\n")
+        );
     }
 
     #[test]
@@ -170,7 +187,10 @@ mod boundary {
                       fn f<'a>(x: &'a str) {} // TBS\n\
                       let s = r#\"a \" crate::gbax\"#; /* /* Camelot */ */\n\
                       let atlas = crate::gba::thumb::bl_displacement;\n";
-        let lines: Vec<usize> = findings(source, false).iter().map(|(line, _)| *line).collect();
+        let lines: Vec<usize> = findings(source, false)
+            .iter()
+            .map(|(line, _)| *line)
+            .collect();
         assert_eq!(lines, [2, 3, 4, 6]);
     }
 
@@ -182,7 +202,12 @@ mod boundary {
                       use super::super::diff;\n\
                       use super::elf;\n\
                       let list = \"games/x/ld_script.ld\";\n";
-        let lines = |top| findings(source, top).iter().map(|(line, _)| *line).collect::<Vec<usize>>();
+        let lines = |top| {
+            findings(source, top)
+                .iter()
+                .map(|(line, _)| *line)
+                .collect::<Vec<usize>>()
+        };
         assert_eq!(lines(false), [1, 3, 4, 6]);
         assert_eq!(lines(true), [1, 3, 4, 5, 6]);
     }

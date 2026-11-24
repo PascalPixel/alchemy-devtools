@@ -11,10 +11,10 @@
 //! answering the random call that makes it, and weapons never unleash unless
 //! a recording is about the unleash, so an Attack reads as one.
 
-use super::guide::Guide;
-use super::guide_battle::{Act, Drive};
 use super::animation::is_black_bgr555;
 use super::field::CLEARED;
+use super::guide::Guide;
+use super::guide_battle::{Act, Drive};
 use super::mgba::{Gba, LR, WIDTH};
 use super::plan::{self, Tables};
 
@@ -80,7 +80,10 @@ struct Script {
 impl Script {
     /// Taps: each `keys` held four frames, then `wait` frames of nothing.
     fn taps(taps: &[(u32, u32)]) -> Script {
-        Script { steps: taps.iter().flat_map(|&(k, w)| [(k, 4), (0, w)]).collect(), start: None }
+        Script {
+            steps: taps.iter().flat_map(|&(k, w)| [(k, 4), (0, w)]).collect(),
+            start: None,
+        }
     }
 
     /// The keys at frame `f`, the script started at its first call; None
@@ -107,24 +110,44 @@ pub(super) fn trimmed(frames: &[Vec<u16>]) -> Vec<Vec<u16>> {
     let lit = |f: &Vec<u16>| f.iter().filter(|&&c| c & 0x7fff != 0).count() > 2000;
     let first = frames.iter().position(lit).unwrap_or(0);
     let last = frames.len().saturating_sub(1);
-    let differs = |a: &Vec<u16>, b: &Vec<u16>| a.iter().zip(b).filter(|(x, y)| x != y).count() > STILL_PIXELS;
-    let moved = (first..last).rev().find(|&i| differs(&frames[i], &frames[last])).unwrap_or(last);
+    let differs =
+        |a: &Vec<u16>, b: &Vec<u16>| a.iter().zip(b).filter(|(x, y)| x != y).count() > STILL_PIXELS;
+    let moved = (first..last)
+        .rev()
+        .find(|&i| differs(&frames[i], &frames[last]))
+        .unwrap_or(last);
     frames[first..(moved + STILL_KEPT).min(frames.len())].to_vec()
 }
 
 impl<'a> Guide<'a> {
-    pub(super) fn fight_gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
+    pub(super) fn fight_gif(
+        &mut self,
+        file: &str,
+        frames: &[Vec<u16>],
+        what: &str,
+    ) -> Result<(), String> {
         let path = self.out.join(file);
         if let Some(dir) = path.parent() {
-            std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+            std::fs::create_dir_all(dir)
+                .map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
         }
         let shown: Vec<&[u16]> = frames.iter().map(|f| f.as_slice()).collect();
         let written = super::animation::write_bgr555(&path, &shown, WIDTH)?;
-        self.written.push((file.to_string(), written.bytes, format!("{what}; {} frames at 30 a second", written.frames)));
+        self.written.push((
+            file.to_string(),
+            written.bytes,
+            format!("{what}; {} frames at 30 a second", written.frames),
+        ));
         Ok(())
     }
 
-    fn party_drive(&self, party: &[u8], encounter: u32, battle_start: u8, hooks: Vec<u32>) -> Result<Drive, String> {
+    fn party_drive(
+        &self,
+        party: &[u8],
+        encounter: u32,
+        battle_start: u8,
+        hooks: Vec<u32>,
+    ) -> Result<Drive, String> {
         let mut drive = self.quake_drive(encounter, battle_start, hooks)?;
         drive.party = party.to_vec();
         Ok(drive)
@@ -133,7 +156,7 @@ impl<'a> Guide<'a> {
     /// At an entry of Battle_Random: answers a weapon's unleash roll so the
     /// weapon stays quiet; true when it did.
     fn quiet_weapon(&self, gba: &mut Gba) -> bool {
-        if self.function_at(gba.register(LR) & !1) == "RollWeaponUnleash" {
+        if self.function_at(gba.register(LR) & !1) == "Equipment_RollUnleash" {
             gba.return_now(0xffff);
             return true;
         }
@@ -144,9 +167,16 @@ impl<'a> Guide<'a> {
     /// enemies are announced as the camera swings in, and it settles behind
     /// the party as the first menu opens, as `battle/opening.gif`.
     pub fn fight_opening(&mut self) -> Result<(), String> {
-        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
+        let menu = self
+            .sym("Battle_BuildPartyActions")
+            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let message = self.sym("BattleMessage_ShowAndWait")?;
-        let drive = self.party_drive(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], FOUR_ENEMIES, BATTLE_START_SET, vec![menu, message])?;
+        let drive = self.party_drive(
+            &[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA],
+            FOUR_ENEMIES,
+            BATTLE_START_SET,
+            vec![menu, message],
+        )?;
         let mut frames = Vec::new();
         let mut opened: Option<usize> = None;
         let mut messages = Vec::new();
@@ -169,7 +199,10 @@ impl<'a> Guide<'a> {
                 _ => Act::Keys(0),
             }
         })?;
-        eprintln!("fight-opening: {} frames, messages at {messages:?}, menu at {opened:?}", frames.len());
+        eprintln!(
+            "fight-opening: {} frames, messages at {messages:?}, menu at {opened:?}",
+            frames.len()
+        );
         self.fight_gif("battle/opening.gif", &trimmed(&frames), "a battle opening")
     }
 
@@ -178,10 +211,17 @@ impl<'a> Guide<'a> {
     /// ends); kept from the menu until `after` frames past the first action,
     /// or with `after` None until the script ends.
     fn menu_run(&self, mut keys: Script, after: Option<usize>) -> Result<Vec<Vec<u16>>, String> {
-        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
+        let menu = self
+            .sym("Battle_BuildPartyActions")
+            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let dispatch = self.sym("BattleStaging_DispatchAction")?;
         let random = self.sym("Battle_Random")?;
-        let drive = self.party_drive(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], FOUR_ENEMIES, BATTLE_START_SET, vec![menu, dispatch, random])?;
+        let drive = self.party_drive(
+            &[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA],
+            FOUR_ENEMIES,
+            BATTLE_START_SET,
+            vec![menu, dispatch, random],
+        )?;
         let mut frames = Vec::new();
         let mut opened: Option<usize> = None;
         let mut acted: Option<usize> = None;
@@ -217,7 +257,10 @@ impl<'a> Guide<'a> {
             }
         })?;
         let o = opened.ok_or("the menu never opened")?;
-        eprintln!("menu run: {} frames, menu at {o}, first action at {acted:?}", frames.len());
+        eprintln!(
+            "menu run: {} frames, menu at {o}, first action at {acted:?}",
+            frames.len()
+        );
         Ok(frames[o..].to_vec())
     }
 
@@ -254,7 +297,19 @@ impl<'a> Guide<'a> {
     /// along the four enemies and round from the last to the first, as
     /// `battle/aim.gif`.
     pub fn fight_aim(&mut self) -> Result<(), String> {
-        let keys = Script::taps(&[(0, 26), (KEY_A, 36), (KEY_RIGHT, 30), (KEY_A, 46), (KEY_DOWN, 30), (KEY_A, 46), (KEY_RIGHT, 40), (KEY_RIGHT, 40), (KEY_RIGHT, 40), (KEY_RIGHT, 40), (KEY_RIGHT, 50)]);
+        let keys = Script::taps(&[
+            (0, 26),
+            (KEY_A, 36),
+            (KEY_RIGHT, 30),
+            (KEY_A, 46),
+            (KEY_DOWN, 30),
+            (KEY_A, 46),
+            (KEY_RIGHT, 40),
+            (KEY_RIGHT, 40),
+            (KEY_RIGHT, 40),
+            (KEY_RIGHT, 40),
+            (KEY_RIGHT, 50),
+        ]);
         let frames = self.menu_run(keys, None)?;
         self.fight_gif("battle/aim.gif", &frames, "aiming Quake")
     }
@@ -263,11 +318,24 @@ impl<'a> Guide<'a> {
 impl<'a> Guide<'a> {
     /// One round from the menu's first frame, every command Attack (A
     /// pressed throughout), until the next round's menu.
-    fn one_round(&mut self, party: &[u8], encounter: u32, file: &str, what: &str) -> Result<(), String> {
-        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
+    fn one_round(
+        &mut self,
+        party: &[u8],
+        encounter: u32,
+        file: &str,
+        what: &str,
+    ) -> Result<(), String> {
+        let menu = self
+            .sym("Battle_BuildPartyActions")
+            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let dispatch = self.sym("BattleStaging_DispatchAction")?;
         let random = self.sym("Battle_Random")?;
-        let drive = self.party_drive(party, encounter, BATTLE_START_SET, vec![menu, dispatch, random])?;
+        let drive = self.party_drive(
+            party,
+            encounter,
+            BATTLE_START_SET,
+            vec![menu, dispatch, random],
+        )?;
         let mut frames = Vec::new();
         let mut menus: Vec<usize> = Vec::new();
         let mut acts: Vec<(usize, String)> = Vec::new();
@@ -303,12 +371,22 @@ impl<'a> Guide<'a> {
 
     /// Isaac and Garet against two Gryphons, as `battle/round.gif`.
     pub fn fight_round(&mut self) -> Result<(), String> {
-        self.one_round(&[plan::ISAAC, plan::GARET], GRYPHONS, "battle/round.gif", "a round against two Gryphons")
+        self.one_round(
+            &[plan::ISAAC, plan::GARET],
+            GRYPHONS,
+            "battle/round.gif",
+            "a round against two Gryphons",
+        )
     }
 
     /// The four against the Lizard King's four, as `battle/turn-order.gif`.
     pub fn fight_turn_order(&mut self) -> Result<(), String> {
-        self.one_round(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], FOUR_ENEMIES, "battle/turn-order.gif", "a round against the Lizard King's four")
+        self.one_round(
+            &[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA],
+            FOUR_ENEMIES,
+            "battle/turn-order.gif",
+            "a round against the Lizard King's four",
+        )
     }
 
     /// Isaac and Garet in a random encounter with two Gryphons, Battle_Run's
@@ -317,9 +395,16 @@ impl<'a> Guide<'a> {
     /// still, and the next round's menu opens, as `battle/first-strike.gif`.
     pub fn fight_first_strike(&mut self) -> Result<(), String> {
         let random = self.sym("Battle_Random")?;
-        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
+        let menu = self
+            .sym("Battle_BuildPartyActions")
+            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let message = self.sym("BattleMessage_ShowAndWait")?;
-        let drive = self.party_drive(&[plan::ISAAC, plan::GARET], GRYPHONS, BATTLE_TYPE_NORMAL, vec![random, menu, message])?;
+        let drive = self.party_drive(
+            &[plan::ISAAC, plan::GARET],
+            GRYPHONS,
+            BATTLE_TYPE_NORMAL,
+            vec![random, menu, message],
+        )?;
         let mut frames = Vec::new();
         let mut menus: Vec<usize> = Vec::new();
         let mut answered = false;
@@ -327,7 +412,10 @@ impl<'a> Guide<'a> {
         self.drive(&drive, &mut |gba, hook, f| {
             match hook {
                 Some(h) if h == random => {
-                    if !self.quiet_weapon(gba) && !answered && self.function_at(gba.register(LR) & !1) == "Battle_Run" {
+                    if !self.quiet_weapon(gba)
+                        && !answered
+                        && self.function_at(gba.register(LR) & !1) == "Battle_Run"
+                    {
                         gba.return_now(0);
                         answered = true;
                     }
@@ -355,11 +443,17 @@ impl<'a> Guide<'a> {
                 _ => Act::Mash,
             }
         })?;
-        eprintln!("fight-first-strike: menus at {menus:?}, answered {answered}, message at {shown:?}");
+        eprintln!(
+            "fight-first-strike: menus at {menus:?}, answered {answered}, message at {shown:?}"
+        );
         if !answered {
             return Err("Battle_Run made no first-strike roll".into());
         }
-        self.fight_gif("battle/first-strike.gif", &trimmed(&frames), "a first strike")
+        self.fight_gif(
+            "battle/first-strike.gif",
+            &trimmed(&frames),
+            "a first strike",
+        )
     }
 
     /// The four at level 20 against two Gryphons choose Run twice: the first
@@ -368,9 +462,16 @@ impl<'a> Guide<'a> {
     /// gets away, as `battle/flee.gif`.
     pub fn fight_flee(&mut self) -> Result<(), String> {
         let random = self.sym("Random16")?;
-        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
+        let menu = self
+            .sym("Battle_BuildPartyActions")
+            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let state = self.sym("gBattleState")?;
-        let mut drive = self.party_drive(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], GRYPHONS, BATTLE_START_SET, vec![random, menu])?;
+        let mut drive = self.party_drive(
+            &[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA],
+            GRYPHONS,
+            BATTLE_START_SET,
+            vec![random, menu],
+        )?;
         drive.preset = PRESET_LEVEL_20;
         let mut frames = Vec::new();
         let mut menus: Vec<usize> = Vec::new();
@@ -405,7 +506,10 @@ impl<'a> Guide<'a> {
                 None => Act::Mash,
             }
         })?;
-        eprintln!("fight-flee: menus at {menus:?}, tries {tries}, gone {gone:?}, {} frames", frames.len());
+        eprintln!(
+            "fight-flee: menus at {menus:?}, tries {tries}, gone {gone:?}, {} frames",
+            frames.len()
+        );
         if tries != 2 {
             return Err(format!("{tries} tries to run"));
         }
@@ -422,14 +526,24 @@ impl<'a> Guide<'a> {
     /// Battle_RandomPercent after that answered 0, so an added effect's roll
     /// lands. Returns the frames and the frames each enemy's action was
     /// dispatched.
-    fn enemy_round(&self, encounter: u32, rolls: &[u32], sure: bool) -> Result<(Vec<Vec<u16>>, Vec<usize>), String> {
+    fn enemy_round(
+        &self,
+        encounter: u32,
+        rolls: &[u32],
+        sure: bool,
+    ) -> Result<(Vec<Vec<u16>>, Vec<usize>), String> {
         let commands = self.sym("Battle_CollectPartyCommands")?;
         let dispatch = self.sym("BattleStaging_DispatchAction")?;
         let random = self.sym("Battle_Random")?;
         let choose = self.sym("BattleAI_ChooseAction")?;
         let percent = self.sym("Battle_RandomPercent")?;
         let party = [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA];
-        let drive = self.party_drive(&party, encounter, BATTLE_START_SET, vec![commands, dispatch, random, choose, percent])?;
+        let drive = self.party_drive(
+            &party,
+            encounter,
+            BATTLE_START_SET,
+            vec![commands, dispatch, random, choose, percent],
+        )?;
         let mut frames = Vec::new();
         let mut starts = 0;
         let mut turns: Vec<usize> = Vec::new();
@@ -446,7 +560,11 @@ impl<'a> Guide<'a> {
                         // No commands given: the menu opens and waits.
                         return Act::Keys(0);
                     }
-                    let order: Vec<(u16, u16, u16, u16, u16)> = party.iter().enumerate().map(|(i, &o)| (u16::from(o), COMMAND_DEFEND, 0, PLACE_PARTY + i as u16, 1)).collect();
+                    let order: Vec<(u16, u16, u16, u16, u16)> = party
+                        .iter()
+                        .enumerate()
+                        .map(|(i, &o)| (u16::from(o), COMMAND_DEFEND, 0, PLACE_PARTY + i as u16, 1))
+                        .collect();
                     if let Err(e) = self.give_commands(gba, &order) {
                         failed = Some(e);
                     }
@@ -497,25 +615,42 @@ impl<'a> Guide<'a> {
         if let Some(e) = failed {
             return Err(e);
         }
-        eprintln!("enemy round: {} frames, enemy turns at {turns:?}, {answered} draws answered", frames.len());
+        eprintln!(
+            "enemy round: {} frames, enemy turns at {turns:?}, {answered} draws answered",
+            frames.len()
+        );
         Ok((frames, turns))
     }
 
     /// The Gryphons' turns while the party defends: the first uses Wing
     /// Flutter and the second Tornado, as `battle/gryphons.gif`.
     pub fn fight_gryphons(&mut self) -> Result<(), String> {
-        let (frames, turns) = self.enemy_round(GRYPHONS, &[ROLL_WING_FLUTTER, ROLL_TORNADO], false)?;
+        let (frames, turns) =
+            self.enemy_round(GRYPHONS, &[ROLL_WING_FLUTTER, ROLL_TORNADO], false)?;
         let first = *turns.first().ok_or("no Gryphon acted")?;
-        self.fight_gif("battle/gryphons.gif", &trimmed(&frames[first.saturating_sub(10)..]), "two Gryphons' turns")
+        self.fight_gif(
+            "battle/gryphons.gif",
+            &trimmed(&frames[first.saturating_sub(10)..]),
+            "two Gryphons' turns",
+        )
     }
 
     /// The first Gryphon's Twin Beaks, from its announcement to the second
     /// Gryphon's action, as `battle_anim/twin-beaks.gif`.
     pub fn fight_twin_beaks(&mut self) -> Result<(), String> {
-        let (frames, turns) = self.enemy_round(GRYPHONS, &[ROLL_TWIN_BEAKS, ROLL_WING_FLUTTER], false)?;
+        let (frames, turns) =
+            self.enemy_round(GRYPHONS, &[ROLL_TWIN_BEAKS, ROLL_WING_FLUTTER], false)?;
         let first = *turns.first().ok_or("no Gryphon acted")?;
-        let end = turns.get(1).copied().unwrap_or(frames.len()).min(frames.len());
-        self.fight_gif("battle_anim/twin-beaks.gif", &trimmed(&frames[first.saturating_sub(10)..end]), "a Gryphon's Twin Beaks")
+        let end = turns
+            .get(1)
+            .copied()
+            .unwrap_or(frames.len())
+            .min(frames.len());
+        self.fight_gif(
+            "battle_anim/twin-beaks.gif",
+            &trimmed(&frames[first.saturating_sub(10)..end]),
+            "a Gryphon's Twin Beaks",
+        )
     }
 
     /// A Skeleton's Bone Charge, a rushing strike, as
@@ -523,7 +658,11 @@ impl<'a> Guide<'a> {
     pub fn fight_bone_charge(&mut self) -> Result<(), String> {
         let (frames, turns) = self.enemy_round(ONE_SKELETON, &[ROLL_BONE_CHARGE], false)?;
         let first = *turns.first().ok_or("the Skeleton never acted")?;
-        self.fight_gif("battle_anim/bone-charge.gif", &trimmed(&frames[first.saturating_sub(10)..]), "a Skeleton's Bone Charge")
+        self.fight_gif(
+            "battle_anim/bone-charge.gif",
+            &trimmed(&frames[first.saturating_sub(10)..]),
+            "a Skeleton's Bone Charge",
+        )
     }
 
     /// One Skeleton from the battle's first picture to the end of its
@@ -534,7 +673,11 @@ impl<'a> Guide<'a> {
     pub fn graphics_monster(&mut self) -> Result<(), String> {
         let (frames, turns) = self.enemy_round(ONE_SKELETON, &[ROLL_SKELETON_ATTACK], false)?;
         turns.first().ok_or("the Skeleton never acted")?;
-        self.fight_gif("graphics/monster.gif", &trimmed(&frames), "a Skeleton's pictures as the camera swings and it attacks")
+        self.fight_gif(
+            "graphics/monster.gif",
+            &trimmed(&frames),
+            "a Skeleton's pictures as the camera swings and it attacks",
+        )
     }
 
     /// A Fighter Bee's Ally Search, its roll landing: a second Fighter Bee
@@ -543,7 +686,11 @@ impl<'a> Guide<'a> {
     pub fn fight_ally_search(&mut self) -> Result<(), String> {
         let (frames, turns) = self.enemy_round(ONE_FIGHTER_BEE, &[ROLL_ALLY_SEARCH], true)?;
         let first = *turns.first().ok_or("the Fighter Bee never acted")?;
-        self.fight_gif("battle/ally-search.gif", &frames[first.saturating_sub(10)..], "a Fighter Bee's Ally Search")
+        self.fight_gif(
+            "battle/ally-search.gif",
+            &frames[first.saturating_sub(10)..],
+            "a Fighter Bee's Ally Search",
+        )
     }
 }
 
@@ -553,7 +700,11 @@ impl<'a> Guide<'a> {
     /// howl!`, then Sonic Smash strikes three times, as `battle/unleash.gif`.
     pub fn fight_unleash(&mut self) -> Result<(), String> {
         let frames = self.rolled_attack(&[0], 0, Some(SWIFT_SWORD))?;
-        self.fight_gif("battle/unleash.gif", &trimmed(&frames), "a weapon's unleash")
+        self.fight_gif(
+            "battle/unleash.gif",
+            &trimmed(&frames),
+            "a weapon's unleash",
+        )
     }
 
     /// Isaac attacks a copy of Ivan twice: a miss (the miss roll answered 0)
@@ -571,7 +722,11 @@ impl<'a> Guide<'a> {
     pub fn fight_wake(&mut self) -> Result<(), String> {
         let root = crate::compile::root();
         let plan = Tables::read(root)?.plan()?;
-        let mut cast = plan.casts.into_iter().find(|c| c.ability.name == "Quake").ok_or("no Quake cast")?;
+        let mut cast = plan
+            .casts
+            .into_iter()
+            .find(|c| c.ability.name == "Quake")
+            .ok_or("no Quake cast")?;
         cast.foes = vec![plan::GARET, plan::IVAN, plan::MIA];
         let symbols = super::battle::Symbols::find(self.map)?;
         let random = self.sym("Battle_Random")?;
@@ -583,26 +738,42 @@ impl<'a> Guide<'a> {
         };
         let mut set = false;
         let mut woke = 0;
-        let recording = super::battle::record_watching(self.rom, &symbols, &cast, &super::battle::Scene::Game, false, None, &[random, commands], &mut |gba, hook| match hook {
-            Some(h) if h == commands && !set => {
-                if let Ok(ivan) = self.unit_address(gba, FIRST_ENEMY_UNIT + 1) {
-                    gba.write8(ivan + UNIT_SLEEP, SLEPT_A_ROUND);
-                    set = true;
+        let recording = super::battle::record_watching(
+            self.rom,
+            &symbols,
+            &cast,
+            &super::battle::Scene::Game,
+            false,
+            None,
+            &[random, commands],
+            &mut |gba, hook| match hook {
+                Some(h) if h == commands && !set => {
+                    if let Ok(ivan) = self.unit_address(gba, FIRST_ENEMY_UNIT + 1) {
+                        gba.write8(ivan + UNIT_SLEEP, SLEPT_A_ROUND);
+                        set = true;
+                    }
                 }
-            }
-            Some(h) if h == random => {
-                if gba.register(LR) & !1 == wake {
-                    gba.return_now(0);
-                    woke += 1;
+                Some(h) if h == random => {
+                    if gba.register(LR) & !1 == wake {
+                        gba.return_now(0);
+                        woke += 1;
+                    }
                 }
-            }
-            _ => {}
-        })?;
-        eprintln!("fight-wake: {} frames, wake rolls answered {woke}", recording.frames.len());
+                _ => {}
+            },
+        )?;
+        eprintln!(
+            "fight-wake: {} frames, wake rolls answered {woke}",
+            recording.frames.len()
+        );
         if woke == 0 {
             return Err("no wake roll was made".into());
         }
-        self.fight_gif("battle/wake.gif", &recording.frames, "a sleeper woken by Quake")
+        self.fight_gif(
+            "battle/wake.gif",
+            &recording.frames,
+            "a sleeper woken by Quake",
+        )
     }
 }
 
@@ -616,13 +787,18 @@ impl<'a> Guide<'a> {
         let mut entered = self.enter_goma_cave(place)?;
         let field = &mut entered.field;
         let mut frames = Vec::new();
-        Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?
+            .ok_or("no battle came")?;
         let battle = field.scene();
         frames.clear();
         let mut back: Option<usize> = None;
         for f in 0..20000usize {
             // A until the cave is back, which would open the field menu.
-            field.hold(if back.is_none() && (f / 4) % 2 == 1 { KEY_A } else { 0 });
+            field.hold(if back.is_none() && (f / 4) % 2 == 1 {
+                KEY_A
+            } else {
+                0
+            });
             field.frames(1)?;
             frames.push(field.picture());
             if back.is_none() && field.scene() != battle {
@@ -635,7 +811,11 @@ impl<'a> Guide<'a> {
         field.hold(0);
         let b = back.ok_or("the battle never ended")?;
         eprintln!("fight-won: {} frames, field back at {b}", frames.len());
-        self.fight_gif("battle/won.gif", &frames[b.saturating_sub(BACK_FRAMES)..], "a battle won and the cave back")
+        self.fight_gif(
+            "battle/won.gif",
+            &frames[b.saturating_sub(BACK_FRAMES)..],
+            "a battle won and the cave back",
+        )
     }
 }
 
@@ -680,14 +860,25 @@ impl<'a> Guide<'a> {
     /// returning the number to answer with or None to let the call run.
     /// Returns the frames and the frame and unit of each action dispatched.
     #[allow(clippy::type_complexity)]
-    fn commanded_round(&self, encounter: u32, commands: &[(u16, u16, u16, u16, u16)], prepare: &mut dyn FnMut(&mut Gba), answer: &mut dyn FnMut(Asked) -> Option<u32>) -> Result<(Vec<Vec<u16>>, Vec<(usize, String)>), String> {
+    fn commanded_round(
+        &self,
+        encounter: u32,
+        commands: &[(u16, u16, u16, u16, u16)],
+        prepare: &mut dyn FnMut(&mut Gba),
+        answer: &mut dyn FnMut(Asked) -> Option<u32>,
+    ) -> Result<(Vec<Vec<u16>>, Vec<(usize, String)>), String> {
         let given = self.sym("Battle_CollectPartyCommands")?;
         let dispatch = self.sym("BattleStaging_DispatchAction")?;
         let random = self.sym("Battle_Random")?;
         let random16 = self.sym("Random16")?;
         let choose = self.sym("BattleAI_ChooseAction")?;
         let party = [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA];
-        let drive = self.party_drive(&party, encounter, BATTLE_START_SET, vec![given, dispatch, random, random16, choose])?;
+        let drive = self.party_drive(
+            &party,
+            encounter,
+            BATTLE_START_SET,
+            vec![given, dispatch, random, random16, choose],
+        )?;
         let mut frames = Vec::new();
         let mut starts = 0;
         let mut acts: Vec<(usize, String)> = Vec::new();
@@ -724,7 +915,10 @@ impl<'a> Guide<'a> {
                     let by = self.function_at(gba.register(LR) & !1);
                     let asked = match (h == random, choosing.take()) {
                         (true, Some(name)) => answer(Asked::Choice(&name)),
-                        _ => answer(Asked::Call { by: &by, actor: acts.last().map_or("", |a| a.1.as_str()) }),
+                        _ => answer(Asked::Call {
+                            by: &by,
+                            actor: acts.last().map_or("", |a| a.1.as_str()),
+                        }),
                     };
                     if let Some(a) = asked {
                         gba.return_now(a);
@@ -760,10 +954,21 @@ impl<'a> Guide<'a> {
 
     /// The frames from `before` frames before the first action `who` matches
     /// to ten after the next action starts.
-    fn one_action(frames: &[Vec<u16>], acts: &[(usize, String)], before: usize, who: &dyn Fn(&str) -> bool) -> Result<Vec<Vec<u16>>, String> {
-        let at = acts.iter().position(|(_, name)| who(name)).ok_or("the unit never acted")?;
+    fn one_action(
+        frames: &[Vec<u16>],
+        acts: &[(usize, String)],
+        before: usize,
+        who: &dyn Fn(&str) -> bool,
+    ) -> Result<Vec<Vec<u16>>, String> {
+        let at = acts
+            .iter()
+            .position(|(_, name)| who(name))
+            .ok_or("the unit never acted")?;
         let start = acts[at].0.saturating_sub(before);
-        let end = acts.get(at + 1).map_or(frames.len(), |a| a.0 + 10).min(frames.len());
+        let end = acts
+            .get(at + 1)
+            .map_or(frames.len(), |a| a.0 + 10)
+            .min(frames.len());
         Ok(trimmed(&frames[start..end]))
     }
 
@@ -775,19 +980,29 @@ impl<'a> Guide<'a> {
     pub fn fight_critical(&mut self) -> Result<(), String> {
         let commands = [
             (u16::from(plan::ISAAC), COMMAND_ATTACK, 0, PLACE_ENEMY, 1),
-            (u16::from(plan::GARET), COMMAND_DEFEND, 0, PLACE_PARTY + 1, 1),
+            (
+                u16::from(plan::GARET),
+                COMMAND_DEFEND,
+                0,
+                PLACE_PARTY + 1,
+                1,
+            ),
             (u16::from(plan::IVAN), COMMAND_DEFEND, 0, PLACE_PARTY + 2, 1),
             (u16::from(plan::MIA), COMMAND_DEFEND, 0, PLACE_PARTY + 3, 1),
         ];
         let answers = [1, 0];
         let mut asked = 0;
-        let (frames, acts) = self.commanded_round(GRYPHONS, &commands, &mut |_| {}, &mut |call| match call {
-            Asked::Call { by: "BattleActionRun_Build", actor: "Isaac" } => {
-                asked += 1;
-                answers.get(asked - 1).copied()
-            }
-            _ => None,
-        })?;
+        let (frames, acts) =
+            self.commanded_round(GRYPHONS, &commands, &mut |_| {}, &mut |call| match call {
+                Asked::Call {
+                    by: "BattleActionRun_Build",
+                    actor: "Isaac",
+                } => {
+                    asked += 1;
+                    answers.get(asked - 1).copied()
+                }
+                _ => None,
+            })?;
         if asked < answers.len() {
             return Err(format!("Isaac's attack made {asked} rolls"));
         }
@@ -803,23 +1018,44 @@ impl<'a> Guide<'a> {
     pub fn fight_item(&mut self) -> Result<(), String> {
         let commands = [
             (u16::from(plan::ISAAC), COMMAND_DEFEND, 0, PLACE_PARTY, 1),
-            (u16::from(plan::GARET), COMMAND_DEFEND, 0, PLACE_PARTY + 1, 1),
+            (
+                u16::from(plan::GARET),
+                COMMAND_DEFEND,
+                0,
+                PLACE_PARTY + 1,
+                1,
+            ),
             (u16::from(plan::IVAN), COMMAND_DEFEND, 0, PLACE_PARTY + 2, 1),
-            (u16::from(plan::MIA), COMMAND_ITEM, RING_SLOT, PLACE_PARTY + 1, 1),
+            (
+                u16::from(plan::MIA),
+                COMMAND_ITEM,
+                RING_SLOT,
+                PLACE_PARTY + 1,
+                1,
+            ),
         ];
         let mut broke = 0;
         let (frames, acts) = self.commanded_round(
             GRYPHONS,
             &commands,
             &mut |gba| {
-                if let (Ok(mia), Ok(garet)) = (self.unit_address(gba, plan::MIA.into()), self.unit_address(gba, plan::GARET.into())) {
-                    gba.write16(mia + UNIT_INVENTORY + 2 * u32::from(RING_SLOT), HEALING_RING);
+                if let (Ok(mia), Ok(garet)) = (
+                    self.unit_address(gba, plan::MIA.into()),
+                    self.unit_address(gba, plan::GARET.into()),
+                ) {
+                    gba.write16(
+                        mia + UNIT_INVENTORY + 2 * u32::from(RING_SLOT),
+                        HEALING_RING,
+                    );
                     let hp = gba.read16(garet + UNIT_HP);
                     gba.write16(garet + UNIT_HP, hp / 3);
                 }
             },
             &mut |asked| match asked {
-                Asked::Call { by: "BattleStaging_RunItem", .. } => {
+                Asked::Call {
+                    by: "BattleStaging_RunItem",
+                    ..
+                } => {
                     broke += 1;
                     Some(0)
                 }
@@ -838,20 +1074,33 @@ impl<'a> Guide<'a> {
     /// answered 0, so it gets away, as `battle/enemy-flees.gif`. Kept from a
     /// moment before its action to the next.
     pub fn fight_enemy_flees(&mut self) -> Result<(), String> {
-        let commands: Vec<(u16, u16, u16, u16, u16)> = [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA].iter().enumerate().map(|(i, &o)| (u16::from(o), COMMAND_DEFEND, 0, PLACE_PARTY + i as u16, 1)).collect();
+        let commands: Vec<(u16, u16, u16, u16, u16)> =
+            [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA]
+                .iter()
+                .enumerate()
+                .map(|(i, &o)| (u16::from(o), COMMAND_DEFEND, 0, PLACE_PARTY + i as u16, 1))
+                .collect();
         let mut fled = 0;
         let mut chosen = false;
-        let (frames, acts) = self.commanded_round(RAT_SOLDIERS, &commands, &mut |_| {}, &mut |asked| match asked {
-            Asked::Choice(name) if name.starts_with("Rat Soldier") && !chosen => {
-                chosen = true;
-                Some(ROLL_FLEE)
-            }
-            Asked::Call { by: "BattleStaging_RunFlee", .. } => {
-                fled += 1;
-                Some(0)
-            }
-            _ => None,
-        })?;
+        let (frames, acts) = self.commanded_round(
+            RAT_SOLDIERS,
+            &commands,
+            &mut |_| {},
+            &mut |asked| match asked {
+                Asked::Choice(name) if name.starts_with("Rat Soldier") && !chosen => {
+                    chosen = true;
+                    Some(ROLL_FLEE)
+                }
+                Asked::Call {
+                    by: "BattleStaging_RunFlee",
+                    ..
+                } => {
+                    fled += 1;
+                    Some(0)
+                }
+                _ => None,
+            },
+        )?;
         if fled == 0 {
             return Err("no Rat Soldier ran".into());
         }
@@ -863,9 +1112,16 @@ impl<'a> Guide<'a> {
     /// the enemies' shattering opening and the party fading in, kept until
     /// the first menu has opened, as `battle/storm.gif`.
     pub fn fight_storm(&mut self) -> Result<(), String> {
-        let menu = self.sym("Battle_BuildPartyActions").or_else(|_| self.sym("Battle_BuildUnitActions"))?;
+        let menu = self
+            .sym("Battle_BuildPartyActions")
+            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
         let message = self.sym("BattleMessage_ShowAndWait")?;
-        let drive = self.party_drive(&[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA], FUSION_DRAGON, BATTLE_START_SET, vec![menu, message])?;
+        let drive = self.party_drive(
+            &[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA],
+            FUSION_DRAGON,
+            BATTLE_START_SET,
+            vec![menu, message],
+        )?;
         let mut frames = Vec::new();
         let mut opened: Option<usize> = None;
         let mut messages = Vec::new();
@@ -890,10 +1146,16 @@ impl<'a> Guide<'a> {
                 _ => Act::Keys(0),
             }
         })?;
-        eprintln!("fight-storm: {} frames, messages at {messages:?}, menu at {opened:?}", frames.len());
-        self.fight_gif("battle/storm.gif", &trimmed(&frames), "the Fusion Dragon's storm")
+        eprintln!(
+            "fight-storm: {} frames, messages at {messages:?}, menu at {opened:?}",
+            frames.len()
+        );
+        self.fight_gif(
+            "battle/storm.gif",
+            &trimmed(&frames),
+            "the Fusion Dragon's storm",
+        )
     }
-
 }
 
 /// struct Unit (battle/battle_unit.h): its size and the fields the ends of
@@ -946,9 +1208,14 @@ impl<'a> Guide<'a> {
     /// symbols the linker map leaves out).
     fn message_number(&self, name: &str) -> Result<u32, String> {
         let path = crate::compile::root().join("out/tbs-en/tbs-en.elf");
-        let data = std::fs::read(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+        let data =
+            std::fs::read(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
         let elf = crate::gba::elf::Elf::parse(&data)?;
-        elf.symbols.iter().find(|s| s.name == name).map(|s| s.value).ok_or_else(|| format!("the ELF has no {name}"))
+        elf.symbols
+            .iter()
+            .find(|s| s.name == name)
+            .map(|s| s.value)
+            .ok_or_else(|| format!("the ELF has no {name}"))
     }
 
     /// Isaac and Garet at level 35 against two Gryphons that cannot fall
@@ -957,22 +1224,53 @@ impl<'a> Guide<'a> {
     /// set as DjinnRecovery_Reconcile lists it) while Garet defends, and in
     /// each later turn both defend. `prepare` is called at the start of each
     /// turn, numbered from 1, before the commands are given.
-    fn summon_turns(&self, turns: usize, prepare: &dyn Fn(&Self, &mut Gba, usize) -> Result<(), String>) -> Result<Ends, String> {
+    fn summon_turns(
+        &self,
+        turns: usize,
+        prepare: &dyn Fn(&Self, &mut Gba, usize) -> Result<(), String>,
+    ) -> Result<Ends, String> {
         let root = crate::compile::root();
         let plan = Tables::read(root)?.plan()?;
-        let venus = plan.casts.into_iter().find(|c| c.ability.name == "Venus" && matches!(c.command, plan::Command::Summon { .. })).ok_or("no Venus summon")?;
-        let plan::Command::Summon { row, element, count, .. } = venus.command else {
+        let venus = plan
+            .casts
+            .into_iter()
+            .find(|c| {
+                c.ability.name == "Venus" && matches!(c.command, plan::Command::Summon { .. })
+            })
+            .ok_or("no Venus summon")?;
+        let plan::Command::Summon {
+            row,
+            element,
+            count,
+            ..
+        } = venus.command
+        else {
             return Err("Venus is no summon".into());
         };
         let reconcile = self.sym("DjinnRecovery_Reconcile")?;
         let commands = self.sym("Battle_CollectPartyCommands")?;
-        let opponents = self.sym("Battle_BuildEnemyActions").or_else(|_| self.sym("Battle_BuildOpponentActions"))?;
+        let opponents = self
+            .sym("Battle_BuildEnemyActions")
+            .or_else(|_| self.sym("Battle_BuildOpponentActions"))?;
         let action_end = self.sym("BattleUnit_ProcessActionEnd")?;
         let turn_end = self.sym("Battle_ProcessTurnEnd")?;
         let dispatch = self.sym("BattleStaging_DispatchAction")?;
         let random = self.sym("Battle_Random")?;
-        let drive = self.party_drive(&[plan::ISAAC, plan::GARET], GRYPHONS, BATTLE_START_SET, vec![reconcile, commands, opponents, action_end, turn_end, dispatch, random])?;
-        let mut ends = Ends { frames: Vec::new(), action_ends: Vec::new(), turn_ends: Vec::new(), dispatches: Vec::new(), over: 0 };
+        let drive = self.party_drive(
+            &[plan::ISAAC, plan::GARET],
+            GRYPHONS,
+            BATTLE_START_SET,
+            vec![
+                reconcile, commands, opponents, action_end, turn_end, dispatch, random,
+            ],
+        )?;
+        let mut ends = Ends {
+            frames: Vec::new(),
+            action_ends: Vec::new(),
+            turn_ends: Vec::new(),
+            dispatches: Vec::new(),
+            over: 0,
+        };
         let mut turn = 0;
         let mut over: Option<usize> = None;
         let mut failed: Option<String> = None;
@@ -984,7 +1282,9 @@ impl<'a> Guide<'a> {
                     return Act::Mash;
                 }
                 Some(h) if h == reconcile => {
-                    let Ok(isaac) = self.unit_address(gba, u16::from(plan::ISAAC)) else { return Act::Mash };
+                    let Ok(isaac) = self.unit_address(gba, u16::from(plan::ISAAC)) else {
+                        return Act::Mash;
+                    };
                     let set = isaac + UNIT_DJINN_SET + 4 * u32::from(element);
                     for index in 0..32 {
                         let bits = gba.read32(set);
@@ -1018,11 +1318,29 @@ impl<'a> Guide<'a> {
                         }
                         prepare(self, gba, turn)?;
                         let isaac = if turn == 1 {
-                            (u16::from(plan::ISAAC), COMMAND_SUMMON, u16::from(row), PLACE_ENEMY, u16::from(venus.ability.range))
+                            (
+                                u16::from(plan::ISAAC),
+                                COMMAND_SUMMON,
+                                u16::from(row),
+                                PLACE_ENEMY,
+                                u16::from(venus.ability.range),
+                            )
                         } else {
                             (u16::from(plan::ISAAC), COMMAND_DEFEND, 0, PLACE_PARTY, 1)
                         };
-                        self.give_commands(gba, &[isaac, (u16::from(plan::GARET), COMMAND_DEFEND, 0, PLACE_PARTY + 1, 1)])
+                        self.give_commands(
+                            gba,
+                            &[
+                                isaac,
+                                (
+                                    u16::from(plan::GARET),
+                                    COMMAND_DEFEND,
+                                    0,
+                                    PLACE_PARTY + 1,
+                                    1,
+                                ),
+                            ],
+                        )
                     })();
                     if let Err(e) = result {
                         failed = Some(e);
@@ -1065,7 +1383,9 @@ impl<'a> Guide<'a> {
             return Err(e);
         }
         if on_standby < count {
-            return Err(format!("Isaac had {on_standby} of the {count} Venus Djinn the summon needs set"));
+            return Err(format!(
+                "Isaac had {on_standby} of the {count} Venus Djinn the summon needs set"
+            ));
         }
         ends.over = over.ok_or("the battle never came back to the menu")?;
         eprintln!("summon turns: {} frames, actions ended at {:?}, turns ended at {:?}, dispatches at {:?}, menu back at {}", ends.frames.len(), ends.action_ends, ends.turn_ends, ends.dispatches, ends.over);
@@ -1085,11 +1405,26 @@ impl<'a> Guide<'a> {
             }
             Ok(())
         })?;
-        let (end, _) = *ends.action_ends.iter().find(|&&(_, unit)| unit == plan::ISAAC).ok_or("Isaac's action never ended")?;
-        let next = ends.dispatches.iter().chain(&ends.turn_ends).copied().filter(|&d| d > end).min().unwrap_or(ends.frames.len());
+        let (end, _) = *ends
+            .action_ends
+            .iter()
+            .find(|&&(_, unit)| unit == plan::ISAAC)
+            .ok_or("Isaac's action never ended")?;
+        let next = ends
+            .dispatches
+            .iter()
+            .chain(&ends.turn_ends)
+            .copied()
+            .filter(|&d| d > end)
+            .min()
+            .unwrap_or(ends.frames.len());
         let from = end.saturating_sub(ACTION_END_BEFORE);
         let to = (next + 10).min(ends.frames.len());
-        self.fight_gif("battle/action-end.gif", &ends.frames[from..to], "an action's end")
+        self.fight_gif(
+            "battle/action-end.gif",
+            &ends.frames[from..to],
+            "an action's end",
+        )
     }
 
     /// Isaac summons Venus and both defend for a turn; in the next Isaac,
@@ -1107,7 +1442,11 @@ impl<'a> Guide<'a> {
         let end = *ends.turn_ends.get(1).ok_or("the second turn never ended")?;
         let from = end.saturating_sub(TURN_END_BEFORE);
         let to = (ends.over + MENU_KEPT).min(ends.frames.len());
-        self.fight_gif("battle/turn-end.gif", &ends.frames[from..to], "a turn's end")
+        self.fight_gif(
+            "battle/turn-end.gif",
+            &ends.frames[from..to],
+            "a turn's end",
+        )
     }
 }
 
@@ -1131,14 +1470,27 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         let isaac = field.unit(plan::ISAAC)?;
         let level = field.read8(isaac + UNIT_LEVEL);
-        let next = *SQUIRE_LEARNS.iter().find(|&&l| l > level).ok_or("Isaac learns nothing more")?;
-        let at = (table - 0x0800_0000 + 4 * (u32::from(plan::ISAAC) * LEVELS + u32::from(next) - 1)) as usize;
-        let needed = u32::from_le_bytes(self.rom[at..at + 4].try_into().map_err(|_| "the table is past the ROM")?);
-        eprintln!("fight-level-up: Isaac level {level}, raised to {} with {} experience", next - 1, needed - 1);
+        let next = *SQUIRE_LEARNS
+            .iter()
+            .find(|&&l| l > level)
+            .ok_or("Isaac learns nothing more")?;
+        let at = (table - 0x0800_0000 + 4 * (u32::from(plan::ISAAC) * LEVELS + u32::from(next) - 1))
+            as usize;
+        let needed = u32::from_le_bytes(
+            self.rom[at..at + 4]
+                .try_into()
+                .map_err(|_| "the table is past the ROM")?,
+        );
+        eprintln!(
+            "fight-level-up: Isaac level {level}, raised to {} with {} experience",
+            next - 1,
+            needed - 1
+        );
         field.write8(isaac + UNIT_LEVEL, next - 1);
         field.write32(isaac + UNIT_EXPERIENCE, needed - 1);
         let mut frames = Vec::new();
-        Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?
+            .ok_or("no battle came")?;
         frames.clear();
         let mut first: Option<usize> = None;
         let mut last: Option<usize> = None;
@@ -1161,9 +1513,16 @@ impl<'a> Guide<'a> {
             }
         }
         field.hold(0);
-        let (first, last) = (first.ok_or("no experience was handed out")?, last.ok_or("no coins were handed out")?);
+        let (first, last) = (
+            first.ok_or("no experience was handed out")?,
+            last.ok_or("no coins were handed out")?,
+        );
         eprintln!("fight-level-up: experience at {first}, coins at {last}");
-        self.fight_gif("game/level-up.gif", &frames[first.saturating_sub(SPOILS_BEFORE)..], "the spoils with a level gained")
+        self.fight_gif(
+            "game/level-up.gif",
+            &frames[first.saturating_sub(SPOILS_BEFORE)..],
+            "the spoils with a level gained",
+        )
     }
 
     /// Goma Cave's random battle with the party at 1 HP and the enemies
@@ -1180,17 +1539,24 @@ impl<'a> Guide<'a> {
         // The restart point the story leaves on the way to Goma Cave: Vault
         // sets it to its Sanctum as the party enters (gScene_RestartRules).
         let state = self.sym("gMainRoutineState")?;
-        field.write16(state + STATE_RESTART_SCENE, super::source::map_id("Sanctum")?);
+        field.write16(
+            state + STATE_RESTART_SCENE,
+            super::source::map_id("Sanctum")?,
+        );
         field.write16(state + STATE_RESTART_ENTRANCE, VAULT_SANCTUM_ENTRANCE);
         for owner in [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA] {
             let unit = field.unit(owner)?;
             let max = u32::from(field.read16(unit + UNIT_MAX_HP)).max(1);
             field.write16(unit + UNIT_HP, 1);
             // Unit_Calculate keeps the share of HP the gauge holds.
-            field.write16(unit + UNIT_HP_GAUGE, (u32::from(GAUGE_FULL) / max).max(1) as u16);
+            field.write16(
+                unit + UNIT_HP_GAUGE,
+                (u32::from(GAUGE_FULL) / max).max(1) as u16,
+            );
         }
         let mut frames = Vec::new();
-        Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?
+            .ok_or("no battle came")?;
         let battle = field.scene();
         frames.clear();
         let mut lasting = [false; ENEMY_UNITS as usize];
@@ -1202,7 +1568,10 @@ impl<'a> Guide<'a> {
                 let base = field.read32(enemies);
                 for (i, done) in lasting.iter_mut().enumerate() {
                     let unit = base + i as u32 * UNIT_SIZE;
-                    if !*done && field.read8(unit + UNIT_SIDE) == SIDE_ENEMY && field.read16(unit + UNIT_HP) != 0 {
+                    if !*done
+                        && field.read8(unit + UNIT_SIDE) == SIDE_ENEMY
+                        && field.read16(unit + UNIT_HP) != 0
+                    {
                         for at in [UNIT_BASE_HP, UNIT_MAX_HP, UNIT_HP] {
                             field.write16(unit + at, LASTING_HP);
                         }
@@ -1214,7 +1583,11 @@ impl<'a> Guide<'a> {
             // A until the field is back, the defeat message left a moment
             // first so it can be read.
             let reading = lost.is_some_and(|l| frames.len() < l + DEFEAT_SHOWN);
-            field.hold(if back.is_none() && !reading && (f / 4) % 2 == 1 { KEY_A } else { 0 });
+            field.hold(if back.is_none() && !reading && (f / 4) % 2 == 1 {
+                KEY_A
+            } else {
+                0
+            });
             field.frames(1)?;
             frames.push(field.picture());
             if lost.is_none() && field.last_message() == defeated {
@@ -1226,7 +1599,10 @@ impl<'a> Guide<'a> {
             if let (Some(l), Some(b)) = (lost, back) {
                 // CLEARED frames past the last black screen since the
                 // defeat, once the field has been back long enough to fade in.
-                let since = frames[l..].iter().rposition(|p| is_black_bgr555(p)).map(|k| frames.len() - 1 - (k + l));
+                let since = frames[l..]
+                    .iter()
+                    .rposition(|p| is_black_bgr555(p))
+                    .map(|k| frames.len() - 1 - (k + l));
                 if since.is_some_and(|s| s >= CLEARED + 10) || frames.len() > b + FIELD_KEPT {
                     break;
                 }
@@ -1235,10 +1611,22 @@ impl<'a> Guide<'a> {
         field.hold(0);
         let lost = lost.ok_or("the party was never defeated")?;
         let back = back.ok_or("the party never left the battle")?;
-        let black = frames[lost..].iter().position(|p| is_black_bgr555(p)).map(|b| b + lost).ok_or("the battle never faded")?;
+        let black = frames[lost..]
+            .iter()
+            .position(|p| is_black_bgr555(p))
+            .map(|b| b + lost)
+            .ok_or("the battle never faded")?;
         let from = black.saturating_sub(CLEARED + 10);
-        eprintln!("fight-lost: {} frames, defeated at {lost}, first black at {black}, scene {} at {back}", frames.len(), field.scene());
-        self.fight_gif("battle/lost.gif", &frames[from..], "a battle lost and where the party wakes")
+        eprintln!(
+            "fight-lost: {} frames, defeated at {lost}, first black at {black}, scene {} at {back}",
+            frames.len(),
+            field.scene()
+        );
+        self.fight_gif(
+            "battle/lost.gif",
+            &frames[from..],
+            "a battle lost and where the party wakes",
+        )
     }
 }
 

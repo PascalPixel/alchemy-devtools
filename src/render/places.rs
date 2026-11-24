@@ -3,12 +3,13 @@
 //! of its events, as PNG files at the GBA's own size, with an index.
 
 use super::animation::is_black_bgr555;
-use super::field::{CLEARED, LEAD_IN};
-use super::field::{
-    box_holds, result_key, stands_in, Entrance, EventRun, Field, Image, Saved, Setup, Start, Symbols, TRIGGER_EXIT, EVENT_LIMIT, TRIGGER_PSYNERGY, TRIGGER_EXAMINE, TRIGGER_TALK,
-    TRIGGER_STEP, SETTLE,
-};
 use super::arrivals;
+use super::field::{
+    box_holds, result_key, stands_in, Entrance, EventRun, Field, Image, Saved, Setup, Start,
+    Symbols, EVENT_LIMIT, SETTLE, TRIGGER_EXAMINE, TRIGGER_EXIT, TRIGGER_PSYNERGY, TRIGGER_STEP,
+    TRIGGER_TALK,
+};
+use super::field::{CLEARED, LEAD_IN};
 use super::story::{parse_trigger, Alternative, Event, Flags, Scene, Trigger, MOVE};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -39,7 +40,11 @@ struct Variant {
     set: &'static str,
 }
 
-const VARIANTS: [Variant; 1] = [Variant { flag: "FLAG_KOLIMA_CURSE_LIFTED", clear: "cursed", set: "cured" }];
+const VARIANTS: [Variant; 1] = [Variant {
+    flag: "FLAG_KOLIMA_CURSE_LIFTED",
+    clear: "cursed",
+    set: "cured",
+}];
 
 /// Story moments drawn for one scene at most, besides its new game's state.
 pub const MAX_MOMENTS: usize = 12;
@@ -86,8 +91,16 @@ pub fn moment_label(flag: &str) -> String {
 /// that no event's condition ever sees set together with it while some sees
 /// it set with the later flag clear (the storm is over once the party has
 /// left).
-pub fn story_moments(candidates: &[String], own: &[String], events: &[Event], number: &dyn Fn(&str) -> Option<u16>) -> Vec<Moment> {
-    let interval: HashSet<&str> = events.iter().flat_map(|e| e.clears.iter().map(String::as_str)).collect();
+pub fn story_moments(
+    candidates: &[String],
+    own: &[String],
+    events: &[Event],
+    number: &dyn Fn(&str) -> Option<u16>,
+) -> Vec<Moment> {
+    let interval: HashSet<&str> = events
+        .iter()
+        .flat_map(|e| e.clears.iter().map(String::as_str))
+        .collect();
     // before[a] holds the flags a comes before; follows[a] those set only
     // once a is set.
     let mut before: HashMap<&str, Vec<&str>> = HashMap::new();
@@ -130,7 +143,9 @@ pub fn story_moments(candidates: &[String], own: &[String], events: &[Event], nu
     let after: Vec<HashSet<String>> = flags.iter().map(|f| reach(&before, f)).collect();
     let next: Vec<HashSet<String>> = flags.iter().map(|f| reach(&follows, f)).collect();
     // a must come before b: b is after a, and a is not after b.
-    let precedes = |a: usize, b: usize| after[a].contains(flags[b].as_str()) && !after[b].contains(flags[a].as_str());
+    let precedes = |a: usize, b: usize| {
+        after[a].contains(flags[b].as_str()) && !after[b].contains(flags[a].as_str())
+    };
     // The flags tied to a by any condition, either way round: its chapter.
     let mut either: HashMap<&str, Vec<&str>> = HashMap::new();
     for (&a, list) in &before {
@@ -143,10 +158,17 @@ pub fn story_moments(candidates: &[String], own: &[String], events: &[Event], nu
     // them both set. An event that sets b says nothing: it needs b clear
     // only because it has not happened yet.
     let exclusive = |a: &str, b: &str| {
-        let conditions =
-            || events.iter().filter(|e| !e.sets.iter().any(|s| s == b)).flat_map(|e| e.alternatives.iter().map(|alt| &alt.conditions));
-        let has = |c: &Vec<(String, bool)>, name: &str, on: bool| c.iter().any(|(n, o)| n == name && *o == on);
-        conditions().any(|c| has(c, a, true) && has(c, b, false)) && !conditions().any(|c| has(c, a, true) && has(c, b, true))
+        let conditions = || {
+            events
+                .iter()
+                .filter(|e| !e.sets.iter().any(|s| s == b))
+                .flat_map(|e| e.alternatives.iter().map(|alt| &alt.conditions))
+        };
+        let has = |c: &Vec<(String, bool)>, name: &str, on: bool| {
+            c.iter().any(|(n, o)| n == name && *o == on)
+        };
+        conditions().any(|c| has(c, a, true) && has(c, b, false))
+            && !conditions().any(|c| has(c, a, true) && has(c, b, true))
     };
     // The flags of `set` that setting b ends.
     let ends = |set: &[String], b: &str| -> Vec<String> {
@@ -154,28 +176,56 @@ pub fn story_moments(candidates: &[String], own: &[String], events: &[Event], nu
             events
                 .iter()
                 .filter(|e| e.sets.iter().any(|s| s == b))
-                .any(|e| e.alternatives.iter().any(|alt| alt.conditions.iter().any(|(n, on)| n == a && !*on)))
+                .any(|e| {
+                    e.alternatives
+                        .iter()
+                        .any(|alt| alt.conditions.iter().any(|(n, on)| n == a && !*on))
+                })
         };
-        set.iter().filter(|a| interval.contains(a.as_str()) && (needs_clear(a) || exclusive(a, b))).cloned().collect()
+        set.iter()
+            .filter(|a| interval.contains(a.as_str()) && (needs_clear(a) || exclusive(a, b)))
+            .cloned()
+            .collect()
     };
     let mut out = Vec::new();
     let (mut set, mut clear): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
     let mut last: Option<usize> = None;
     let mut left: Vec<usize> = (0..flags.len()).collect();
     while !left.is_empty() {
-        let ready: Vec<usize> = left.iter().copied().filter(|&b| !left.iter().any(|&a| a != b && precedes(a, b))).collect();
-        let ready = if ready.is_empty() { left.clone() } else { ready };
+        let ready: Vec<usize> = left
+            .iter()
+            .copied()
+            .filter(|&b| !left.iter().any(|&a| a != b && precedes(a, b)))
+            .collect();
+        let ready = if ready.is_empty() {
+            left.clone()
+        } else {
+            ready
+        };
         // A flag that ends a period waits while another flag of that
         // period's chapter can still come first.
-        let ending: Vec<(usize, Vec<String>)> = ready.iter().map(|&i| (i, ends(&set, flags[i]))).collect();
-        let chapter: HashSet<String> = ending.iter().flat_map(|(_, e)| e.iter().flat_map(|a| reach(&either, a))).collect();
+        let ending: Vec<(usize, Vec<String>)> =
+            ready.iter().map(|&i| (i, ends(&set, flags[i]))).collect();
+        let chapter: HashSet<String> = ending
+            .iter()
+            .flat_map(|(_, e)| e.iter().flat_map(|a| reach(&either, a)))
+            .collect();
         let waits = |i: usize| {
             let mine = &ending.iter().find(|(j, _)| *j == i).unwrap().1;
-            !mine.is_empty() && ending.iter().any(|(j, e)| *j != i && e.is_empty() && chapter.contains(flags[*j].as_str()))
+            !mine.is_empty()
+                && ending
+                    .iter()
+                    .any(|(j, e)| *j != i && e.is_empty() && chapter.contains(flags[*j].as_str()))
         };
         let key = |&i: &usize| {
             let follows_last = last.is_some_and(|l| next[l].contains(flags[i].as_str()));
-            (!own.contains(flags[i]), waits(i), !follows_last, number(flags[i]), i)
+            (
+                !own.contains(flags[i]),
+                waits(i),
+                !follows_last,
+                number(flags[i]),
+                i,
+            )
         };
         let pick = *ready.iter().min_by_key(|i| key(i)).unwrap();
         left.retain(|&i| i != pick);
@@ -190,7 +240,11 @@ pub fn story_moments(candidates: &[String], own: &[String], events: &[Event], nu
         }
         clear.retain(|a| a != b);
         set.push(b.to_string());
-        out.push(Moment { flag: b.to_string(), set: set.clone(), clear: clear.clone() });
+        out.push(Moment {
+            flag: b.to_string(),
+            set: set.clone(),
+            clear: clear.clone(),
+        });
     }
     out
 }
@@ -247,12 +301,20 @@ impl Row {
             self.kind,
             self.entrance,
             self.event,
-            if self.page > 0 { self.page.to_string() } else { String::new() },
+            if self.page > 0 {
+                self.page.to_string()
+            } else {
+                String::new()
+            },
             self.segment.map(|s| s.to_string()).unwrap_or_default(),
             self.message,
             self.after,
             self.before,
-            if self.frames > 0 { self.frames.to_string() } else { String::new() },
+            if self.frames > 0 {
+                self.frames.to_string()
+            } else {
+                String::new()
+            },
             self.leads_to,
             self.note,
             self.messages,
@@ -269,7 +331,11 @@ fn same_columns(header: &str, line: &str) -> String {
         return line.to_string();
     }
     let old: HashMap<&str, &str> = header.split('\t').zip(line.split('\t')).collect();
-    INDEX_HEADER.split('\t').map(|k| old.get(k).copied().unwrap_or_default()).collect::<Vec<_>>().join("\t")
+    INDEX_HEADER
+        .split('\t')
+        .map(|k| old.get(k).copied().unwrap_or_default())
+        .collect::<Vec<_>>()
+        .join("\t")
 }
 
 /// Writes `rows` into index.tsv, keeping the lines already there for other
@@ -305,9 +371,15 @@ pub fn write_index(out: &Path, rows: &[(String, String)]) -> Result<(), String> 
 /// as the same messages. The first of each kept, the rest are taken out of
 /// `rows` and deleted from `out`, and returned as (scene number, event,
 /// the event whose recording it is).
-pub fn shared_recordings(out: &Path, rows: &mut Vec<(String, String)>) -> Vec<(u16, String, String)> {
+pub fn shared_recordings(
+    out: &Path,
+    rows: &mut Vec<(String, String)>,
+) -> Vec<(u16, String, String)> {
     let column = |line: &str, name: &str| -> String {
-        let i = INDEX_HEADER.split('\t').position(|c| c == name).unwrap_or(usize::MAX);
+        let i = INDEX_HEADER
+            .split('\t')
+            .position(|c| c == name)
+            .unwrap_or(usize::MAX);
         line.split('\t').nth(i).unwrap_or_default().to_string()
     };
     let mut seen: HashMap<Vec<u8>, (String, String)> = HashMap::new();
@@ -325,8 +397,14 @@ pub fn shared_recordings(out: &Path, rows: &mut Vec<(String, String)>) -> Vec<(u
         };
         let (event, messages) = (column(line, "event"), column(line, "messages"));
         match seen.get(&bytes) {
-            Some((other, theirs)) if *other != event && (messages.is_empty() || *theirs != messages) => {
-                shared.push((column(line, "number").parse().unwrap_or_default(), event, other.clone()));
+            Some((other, theirs))
+                if *other != event && (messages.is_empty() || *theirs != messages) =>
+            {
+                shared.push((
+                    column(line, "number").parse().unwrap_or_default(),
+                    event,
+                    other.clone(),
+                ));
                 let _ = std::fs::remove_file(out.join(&rows[i].0));
                 gone.insert(i);
             }
@@ -351,7 +429,11 @@ pub fn write_png(path: &Path, image: &Image) -> Result<u64, String> {
         std::fs::create_dir_all(parent).map_err(|e| error(&e))?;
     }
     let file = std::fs::File::create(path).map_err(|e| error(&e))?;
-    let mut encoder = png::Encoder::new(std::io::BufWriter::new(file), image.width as u32, image.height as u32);
+    let mut encoder = png::Encoder::new(
+        std::io::BufWriter::new(file),
+        image.width as u32,
+        image.height as u32,
+    );
     encoder.set_depth(png::BitDepth::Eight);
     encoder.set_compression(png::Compression::Best);
     let mut colours: Vec<u32> = image.pixels.clone();
@@ -359,12 +441,25 @@ pub fn write_png(path: &Path, image: &Image) -> Result<u64, String> {
     colours.dedup();
     let data: Vec<u8> = if colours.len() <= 256 {
         encoder.set_color(png::ColorType::Indexed);
-        encoder.set_palette(colours.iter().flat_map(|&c| [(c >> 16) as u8, (c >> 8) as u8, c as u8]).collect::<Vec<u8>>());
-        let index: HashMap<u32, u8> = colours.iter().enumerate().map(|(i, &c)| (c, i as u8)).collect();
+        encoder.set_palette(
+            colours
+                .iter()
+                .flat_map(|&c| [(c >> 16) as u8, (c >> 8) as u8, c as u8])
+                .collect::<Vec<u8>>(),
+        );
+        let index: HashMap<u32, u8> = colours
+            .iter()
+            .enumerate()
+            .map(|(i, &c)| (c, i as u8))
+            .collect();
         image.pixels.iter().map(|c| index[c]).collect()
     } else {
         encoder.set_color(png::ColorType::Rgb);
-        image.pixels.iter().flat_map(|&c| [(c >> 16) as u8, (c >> 8) as u8, c as u8]).collect()
+        image
+            .pixels
+            .iter()
+            .flat_map(|&c| [(c >> 16) as u8, (c >> 8) as u8, c as u8])
+            .collect()
     };
     let mut writer = encoder.write_header().map_err(|e| error(&e))?;
     writer.write_image_data(&data).map_err(|e| error(&e))?;
@@ -443,7 +538,13 @@ pub fn is_place(scene: &Scene) -> Result<(), String> {
     if scene.file.contains("/debug/") {
         return Err("a debug test room".to_string());
     }
-    let menus = ["scene/title.c", "scene/file_screen.c", "menu/title.c", "menu/file_screen.c", "scene/clear.c"];
+    let menus = [
+        "scene/title.c",
+        "scene/file_screen.c",
+        "menu/title.c",
+        "menu/file_screen.c",
+        "scene/clear.c",
+    ];
     if menus.iter().any(|m| scene.file.ends_with(m)) {
         return Err("a menu, not a place".to_string());
     }
@@ -453,7 +554,11 @@ pub fn is_place(scene: &Scene) -> Result<(), String> {
 impl Context<'_> {
     fn skip(&mut self, scene: &Scene, what: &str, reason: String) {
         eprintln!("  left out: {} {what}: {reason}", scene.name());
-        self.skipped.push(Skip { scene: scene.name(), what: what.to_string(), reason });
+        self.skipped.push(Skip {
+            scene: scene.name(),
+            what: what.to_string(),
+            reason,
+        });
     }
 
     fn write(&mut self, image: &Image, file: &str) -> Result<(), String> {
@@ -464,8 +569,18 @@ impl Context<'_> {
 
     /// The scene's entrance table, from a run that enters it by entrance 0
     /// (the table's first entry when no entry has that number).
-    fn entrances(&self, scene: &Scene, set: &[u16], clear: &[u16]) -> Result<(Vec<Entrance>, [i32; 4]), String> {
-        let setup = Setup { scene: scene.number, entrance: 0, set: set.to_vec(), clear: clear.to_vec() };
+    fn entrances(
+        &self,
+        scene: &Scene,
+        set: &[u16],
+        clear: &[u16],
+    ) -> Result<(Vec<Entrance>, [i32; 4]), String> {
+        let setup = Setup {
+            scene: scene.number,
+            entrance: 0,
+            set: set.to_vec(),
+            clear: clear.to_vec(),
+        };
         let field = Field::enter(self.rom, self.symbols, &setup)?;
         let entrances = field.entrances();
         if entrances.is_empty() {
@@ -480,13 +595,20 @@ impl Context<'_> {
     /// a Variant's `clear` name when the scene tests its flag.
     fn states(&self, scene: &Scene) -> Vec<(String, String, Vec<u16>, Vec<u16>)> {
         let name = scene.symbol.as_deref();
-        let entry: Vec<&Event> =
-            self.events.iter().filter(|e| e.scenes.contains(&scene.number) && e.trigger_text.starts_with("entry")).collect();
+        let entry: Vec<&Event> = self
+            .events
+            .iter()
+            .filter(|e| e.scenes.contains(&scene.number) && e.trigger_text.starts_with("entry"))
+            .collect();
         let mut candidates: Vec<String> = Vec::new();
         let mut own: Vec<String> = Vec::new();
         for e in &entry {
             // A flag flags.tsv leaves unnamed (0xfd0) names no moment.
-            for t in e.tests.iter().filter(|t| is_story_flag(t, self.flags) && !t.starts_with("0x")) {
+            for t in e
+                .tests
+                .iter()
+                .filter(|t| is_story_flag(t, self.flags) && !t.starts_with("0x"))
+            {
                 if !candidates.contains(t) {
                     candidates.push(t.clone());
                 }
@@ -494,10 +616,19 @@ impl Context<'_> {
             own.extend(e.sets.iter().cloned());
         }
         let resolve = |n: &str| self.flags.resolve(n, name);
-        let numbers = |names: &[String]| -> Vec<u16> { names.iter().filter_map(|n| resolve(n)).collect() };
+        let numbers =
+            |names: &[String]| -> Vec<u16> { names.iter().filter_map(|n| resolve(n)).collect() };
         let mut out = Vec::new();
-        match VARIANTS.iter().find(|v| candidates.iter().any(|c| c == v.flag)) {
-            Some(v) => out.push((v.clear.to_string(), v.clear.to_string(), Vec::new(), resolve(v.flag).into_iter().collect())),
+        match VARIANTS
+            .iter()
+            .find(|v| candidates.iter().any(|c| c == v.flag))
+        {
+            Some(v) => out.push((
+                v.clear.to_string(),
+                v.clear.to_string(),
+                Vec::new(),
+                resolve(v.flag).into_iter().collect(),
+            )),
             None => out.push((String::new(), String::new(), Vec::new(), Vec::new())),
         }
         let (storm, child) = (resolve("FLAG_VALE_STORM"), resolve("FLAG_CHILDHOOD"));
@@ -525,13 +656,37 @@ impl Context<'_> {
 
     /// Writes a state's entrance photo, taken by entrance `number`,
     /// noting in skipped.tsv where its leader is misplaced (`wrong`).
-    fn take_photo(&mut self, scene: &Scene, column: &str, folder: &str, number: i16, image: &Image, wrong: &[String]) -> Result<(), String> {
+    fn take_photo(
+        &mut self,
+        scene: &Scene,
+        column: &str,
+        folder: &str,
+        number: i16,
+        image: &Image,
+        wrong: &[String],
+    ) -> Result<(), String> {
         let file = format!("{folder}/entrance.png");
         self.write(image, &file)?;
         if !wrong.is_empty() {
-            self.skip(scene, &format!("{file} (kept)"), format!("the leader is misplaced by every way in; by entrance {number}: {}", wrong.join("; ")));
+            self.skip(
+                scene,
+                &format!("{file} (kept)"),
+                format!(
+                    "the leader is misplaced by every way in; by entrance {number}: {}",
+                    wrong.join("; ")
+                ),
+            );
         }
-        self.rows.push(Row { scene: scene.slug(), number: scene.number, area: scene.area.clone(), variant: column.to_string(), kind: "entrance", entrance: number, file, ..Row::default() });
+        self.rows.push(Row {
+            scene: scene.slug(),
+            number: scene.number,
+            area: scene.area.clone(),
+            variant: column.to_string(),
+            kind: "entrance",
+            entrance: number,
+            file,
+            ..Row::default()
+        });
         Ok(())
     }
 
@@ -550,7 +705,14 @@ impl Context<'_> {
         for (i, (label, column, set, clear)) in states.iter().enumerate() {
             if i > 0 && drawn == MAX_MOMENTS {
                 let rest: Vec<&str> = states[i..].iter().map(|s| s.0.as_str()).collect();
-                self.skip(scene, "place moments", format!("hit the cap of {MAX_MOMENTS} moments; not tried: {}", rest.join(", ")));
+                self.skip(
+                    scene,
+                    "place moments",
+                    format!(
+                        "hit the cap of {MAX_MOMENTS} moments; not tried: {}",
+                        rest.join(", ")
+                    ),
+                );
                 self.capped += 1;
                 break;
             }
@@ -581,7 +743,11 @@ impl Context<'_> {
         seen: &mut HashMap<i16, Vec<Vec<i32>>>,
     ) -> Result<bool, String> {
         let (entrances, _) = self.entrances(scene, set, clear)?;
-        let folder = if variant.is_empty() { scene.slug() } else { format!("{}_{variant}", scene.slug()) };
+        let folder = if variant.is_empty() {
+            scene.slug()
+        } else {
+            format!("{}_{variant}", scene.slug())
+        };
         // A room is a camera box; the first entrance that has it names it.
         let mut rooms: Vec<Entrance> = Vec::new();
         for e in entrances.iter().filter(|e| !stands_in(e, &entrances)) {
@@ -608,9 +774,16 @@ impl Context<'_> {
         // camera box, where the debug map select starts: in its place, as a
         // way in or when none leads in, its lowest entrance past 0 with a box
         // is taken.
-        let boxed = entrances.iter().filter(|e| e.number > 0 && e.camera != [-1; 4]).min_by_key(|e| e.number).copied();
+        let boxed = entrances
+            .iter()
+            .filter(|e| e.number > 0 && e.camera != [-1; 4])
+            .min_by_key(|e| e.number)
+            .copied();
         if let Some(b) = boxed.filter(|_| self.symbols.l.game == super::layout::Game::Tla) {
-            for way in ways.iter_mut().filter(|w| w.number == 0 && w.camera == [-1; 4]) {
+            for way in ways
+                .iter_mut()
+                .filter(|w| w.number == 0 && w.camera == [-1; 4])
+            {
                 *way = b;
             }
             ways.dedup_by_key(|w| w.number);
@@ -621,8 +794,16 @@ impl Context<'_> {
                 _ => rooms[0],
             };
             if all {
-                let what = if way.number == rooms[0].number { "the table's first row".to_string() } else { format!("its lowest entrance with a camera box, {}", way.number) };
-                self.skip(scene, "entrance.png (kept)", format!("no exit of another map leads in, so it is taken by {what}"));
+                let what = if way.number == rooms[0].number {
+                    "the table's first row".to_string()
+                } else {
+                    format!("its lowest entrance with a camera box, {}", way.number)
+                };
+                self.skip(
+                    scene,
+                    "entrance.png (kept)",
+                    format!("no exit of another map leads in, so it is taken by {what}"),
+                );
             }
             ways.push(way);
         }
@@ -632,8 +813,20 @@ impl Context<'_> {
         // is a run of its own. When every way in goes on to another map
         // before the player has control, the photo is of the first way's
         // arrival scene (Field::arrival_scene).
-        let mut runs: Vec<(Entrance, bool, Photo)> =
-            rooms.iter().map(|r| (*r, true, if ways[0].number == r.number { Photo::Control } else { Photo::None })).collect();
+        let mut runs: Vec<(Entrance, bool, Photo)> = rooms
+            .iter()
+            .map(|r| {
+                (
+                    *r,
+                    true,
+                    if ways[0].number == r.number {
+                        Photo::Control
+                    } else {
+                        Photo::None
+                    },
+                )
+            })
+            .collect();
         if !rooms.iter().any(|r| r.number == ways[0].number) {
             runs.push((ways[0], false, Photo::Control));
         }
@@ -650,7 +843,12 @@ impl Context<'_> {
             if room.required_flag >= 0 {
                 set.push(room.required_flag as u16);
             }
-            let setup = Setup { scene: scene.number, entrance: room.number as u16, set, clear: clear.to_vec() };
+            let setup = Setup {
+                scene: scene.number,
+                entrance: room.number as u16,
+                set,
+                clear: clear.to_vec(),
+            };
             let result = (|| -> Result<(), String> {
                 let mut field = Field::enter(self.rom, self.symbols, &setup)?;
                 if photo == Photo::Scene {
@@ -658,7 +856,16 @@ impl Context<'_> {
                     let file = format!("{folder}/entrance.png");
                     self.write(&image, &file)?;
                     self.skip(scene, &format!("{file} (kept)"), format!("every way in goes on to another map before the player has control, so it shows entrance {}'s arrival scene", room.number));
-                    self.rows.push(Row { scene: scene.slug(), number: scene.number, area: scene.area.clone(), variant: column.to_string(), kind: "entrance", entrance: room.number, file, ..Row::default() });
+                    self.rows.push(Row {
+                        scene: scene.slug(),
+                        number: scene.number,
+                        area: scene.area.clone(),
+                        variant: column.to_string(),
+                        kind: "entrance",
+                        entrance: room.number,
+                        file,
+                        ..Row::default()
+                    });
                     wrote = true;
                     return Ok(());
                 }
@@ -725,19 +932,34 @@ impl Context<'_> {
                 let image = field.stitch(&settled, bounds, false)?;
                 let count = named.entry(room.number).or_default();
                 *count += 1;
-                let suffix = if *count > 1 { format!("-{count}") } else { String::new() };
+                let suffix = if *count > 1 {
+                    format!("-{count}")
+                } else {
+                    String::new()
+                };
                 let file = format!("{folder}/map-{}{suffix}.png", room.number);
                 self.write(&image, &file)?;
                 let edges = field.uniform_edges(bounds);
                 if !edges.is_empty() {
-                    self.skip(scene, &format!("{file} (kept)"), format!("its {} edge is one cell repeated, as the grid beyond a map is", edges.join(", ")));
+                    self.skip(
+                        scene,
+                        &format!("{file} (kept)"),
+                        format!(
+                            "its {} edge is one cell repeated, as the grid beyond a map is",
+                            edges.join(", ")
+                        ),
+                    );
                 }
                 self.rows.push(row("map", file));
                 wrote = true;
                 Ok(())
             })();
             if let Err(e) = result {
-                self.skip(scene, &format!("{folder} room of entrance {}", room.number), e);
+                self.skip(
+                    scene,
+                    &format!("{folder} room of entrance {}", room.number),
+                    e,
+                );
                 try_next = photo == Photo::Control;
             }
             if try_next {
@@ -754,7 +976,11 @@ impl Context<'_> {
             }
         }
         if all && scene.map == "world" {
-            self.skip(scene, "maps", "the perspective world map has no layered map to stitch".to_string());
+            self.skip(
+                scene,
+                "maps",
+                "the perspective world map has no layered map to stitch".to_string(),
+            );
         }
         Ok(wrote)
     }
@@ -798,7 +1024,10 @@ struct Failure {
 
 impl Failure {
     fn new(reason: String) -> Failure {
-        Failure { reason, absent: false }
+        Failure {
+            reason,
+            absent: false,
+        }
     }
 }
 
@@ -821,13 +1050,20 @@ pub struct Job {
 /// message, named by it (MsgValeRockCannotBeMoved): it changes nothing
 /// another event could need.
 fn is_message_row(name: &str) -> bool {
-    name.starts_with("Msg") || name.contains('[') || name.chars().next().is_some_and(|c| c.is_ascii_digit())
+    name.starts_with("Msg")
+        || name.contains('[')
+        || name.chars().next().is_some_and(|c| c.is_ascii_digit())
 }
 
 /// The events `render event` plays for one overlay's scenes, in its order:
 /// the rows that list one of them (and one of `only`'s, when it names
 /// any), of the names `wanted` gives, merged by name.
-pub fn job_events(events: &[Event], wanted: &[String], only: &[u16], scenes: &[&Scene]) -> Vec<Event> {
+pub fn job_events(
+    events: &[Event],
+    wanted: &[String],
+    only: &[u16],
+    scenes: &[&Scene],
+) -> Vec<Event> {
     let numbers: Vec<u16> = scenes.iter().map(|s| s.number).collect();
     let rows: Vec<&Event> = events
         .iter()
@@ -840,15 +1076,30 @@ pub fn job_events(events: &[Event], wanted: &[String], only: &[u16], scenes: &[&
     // story tools list no trigger for): an event with no trigger, at the
     // scenes whose overlay source defines it, which only a direct start
     // plays.
-    for name in wanted.iter().filter(|w| !events.iter().any(|e| e.name == **w)) {
+    for name in wanted
+        .iter()
+        .filter(|w| !events.iter().any(|e| e.name == **w))
+    {
         let at: Vec<u16> = scenes
             .iter()
             .filter(|s| only.is_empty() || only.contains(&s.number))
-            .filter(|s| std::fs::read_to_string(&s.file).is_ok_and(|source| source.contains(&format!(" {name}("))))
+            .filter(|s| {
+                std::fs::read_to_string(&s.file)
+                    .is_ok_and(|source| source.contains(&format!(" {name}(")))
+            })
             .map(|s| s.number)
             .collect();
         if !at.is_empty() {
-            out.push(Event { scenes: at, name: name.clone(), trigger_text: String::new(), alternatives: Vec::new(), tests: Vec::new(), sets: Vec::new(), clears: Vec::new(), messages: Vec::new() });
+            out.push(Event {
+                scenes: at,
+                name: name.clone(),
+                trigger_text: String::new(),
+                alternatives: Vec::new(),
+                tests: Vec::new(),
+                sets: Vec::new(),
+                clears: Vec::new(),
+                messages: Vec::new(),
+            });
         }
     }
     out
@@ -857,10 +1108,18 @@ pub fn job_events(events: &[Event], wanted: &[String], only: &[u16], scenes: &[&
 /// Every event of a scene played afresh: what an earlier run wrote for it
 /// goes first, so an event renamed since, or one that no longer plays,
 /// keeps no picture. Returns skipped.tsv's `event *` lines to clear.
-pub fn clear_events(out: &Path, scenes: &[&Scene], wanted: &[String], only: &[u16]) -> Vec<(String, String)> {
+pub fn clear_events(
+    out: &Path,
+    scenes: &[&Scene],
+    wanted: &[String],
+    only: &[u16],
+) -> Vec<(String, String)> {
     let mut cleared = Vec::new();
     if wanted.is_empty() {
-        for scene in scenes.iter().filter(|s| only.is_empty() || only.contains(&s.number)) {
+        for scene in scenes
+            .iter()
+            .filter(|s| only.is_empty() || only.contains(&s.number))
+        {
             let folder = out.join(scene.slug()).join("events");
             if folder.is_dir() {
                 let _ = std::fs::remove_dir_all(&folder);
@@ -886,8 +1145,13 @@ fn merge_rows(events: &[&Event]) -> Vec<Event> {
                 group.scenes.push(*s);
             }
         }
-        group.alternatives.extend(event.alternatives.iter().cloned());
-        for (list, more) in [(&mut group.tests, &event.tests), (&mut group.sets, &event.sets)] {
+        group
+            .alternatives
+            .extend(event.alternatives.iter().cloned());
+        for (list, more) in [
+            (&mut group.tests, &event.tests),
+            (&mut group.sets, &event.sets),
+        ] {
             for t in more {
                 if !list.contains(t) {
                     list.push(t.clone());
@@ -905,7 +1169,12 @@ fn merge_rows(events: &[&Event]) -> Vec<Event> {
 
 impl Context<'_> {
     fn scan(&self, scene: u16, entrance: u16, set: &[u16], clear: &[u16]) -> Result<Scan, String> {
-        let setup = Setup { scene, entrance, set: set.to_vec(), clear: clear.to_vec() };
+        let setup = Setup {
+            scene,
+            entrance,
+            set: set.to_vec(),
+            clear: clear.to_vec(),
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let entrances = field.entrances();
         let header = field.header();
@@ -931,7 +1200,15 @@ impl Context<'_> {
             eprintln!("    scan {scene} entrance {entrance} set {set:?}: world {} cells {codes:?} triggers {:?} entrances {:?}", field.world(), triggers.iter().filter(|t| t.0 == 3).collect::<Vec<_>>(), entrances.iter().map(|e| (e.number, e.camera)).collect::<Vec<_>>());
         }
         let size = field.cell_size();
-        Ok(Scan { entrances, header, actors, absent, cells, size, triggers })
+        Ok(Scan {
+            entrances,
+            header,
+            actors,
+            absent,
+            cells,
+            size,
+            triggers,
+        })
     }
 
     /// The scan of a scene entered by an entrance with given flags, made
@@ -944,7 +1221,9 @@ impl Context<'_> {
         set: &[u16],
         clear: &[u16],
     ) -> &'s Result<Scan, String> {
-        scans.entry((scene, entrance, set.to_vec(), clear.to_vec())).or_insert_with(|| self.scan(scene, entrance, set, clear))
+        scans
+            .entry((scene, entrance, set.to_vec(), clear.to_vec()))
+            .or_insert_with(|| self.scan(scene, entrance, set, clear))
     }
 
     /// The scene and entrance pairs where `trigger` stands, scanning the
@@ -970,7 +1249,9 @@ impl Context<'_> {
         if let Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..) = trigger {
             for scene in scenes.iter().filter(|s| is_place(s).is_ok()) {
                 let holds = match trigger {
-                    Trigger::Direct(address) => self.own(event, scene.number).contains(&result_key(address)),
+                    Trigger::Direct(address) => {
+                        self.own(event, scene.number).contains(&result_key(address))
+                    }
                     _ => true,
                 };
                 if !holds {
@@ -986,11 +1267,27 @@ impl Context<'_> {
                 let mut rooms: Vec<Entrance> = Vec::new();
                 // A cast for what its event draws somewhere is made in the
                 // room that holds it, entered by its entrance nearest it.
-                let aim = if let Trigger::Cast(_) = trigger { super::stage::drawn_cells(&self.source(scene), &event.name) } else { Vec::new() };
-                let mut ways: Vec<&Entrance> = first.entrances.iter().filter(|e| e.number >= 0 && !stands_in(e, &first.entrances)).collect();
+                let aim = if let Trigger::Cast(_) = trigger {
+                    super::stage::drawn_cells(&self.source(scene), &event.name)
+                } else {
+                    Vec::new()
+                };
+                let mut ways: Vec<&Entrance> = first
+                    .entrances
+                    .iter()
+                    .filter(|e| e.number >= 0 && !stands_in(e, &first.entrances))
+                    .collect();
                 if let Some(&(ax, az)) = aim.first() {
-                    let (x, z) = (ax * first.size + first.size / 2, az * first.size + first.size / 2);
-                    ways.sort_by_key(|e| (!box_holds(e.camera, first.header, x, z), (i32::from(e.x) - x).pow(2) + (i32::from(e.z) - z).pow(2)));
+                    let (x, z) = (
+                        ax * first.size + first.size / 2,
+                        az * first.size + first.size / 2,
+                    );
+                    ways.sort_by_key(|e| {
+                        (
+                            !box_holds(e.camera, first.header, x, z),
+                            (i32::from(e.x) - x).pow(2) + (i32::from(e.z) - z).pow(2),
+                        )
+                    });
                 }
                 for e in ways {
                     if !rooms.iter().any(|r| r.camera == e.camera) && rooms.len() < MAX_ENTRANCES {
@@ -999,30 +1296,62 @@ impl Context<'_> {
                 }
                 out.extend(rooms.into_iter().map(|e| (scene.number, e)));
             }
-            return if out.is_empty() { Err(Failure::new(error.unwrap_or_else(|| "no scene of its overlay holds its function".to_string()))) } else { Ok(out) };
+            return if out.is_empty() {
+                Err(Failure::new(error.unwrap_or_else(|| {
+                    "no scene of its overlay holds its function".to_string()
+                })))
+            } else {
+                Ok(out)
+            };
         }
         // Where the trigger stands in a scan: the actor, or the cells with
         // its code (the ground layer's for a search).
         let at = |scan: &Scan| -> Vec<(i32, i32)> {
-            let centre = |&(_, cx, cz): &(u8, i32, i32)| (cx * scan.size + scan.size / 2, cz * scan.size + scan.size / 2);
+            let centre = |&(_, cx, cz): &(u8, i32, i32)| {
+                (
+                    cx * scan.size + scan.size / 2,
+                    cz * scan.size + scan.size / 2,
+                )
+            };
             match trigger {
-                Trigger::Talk(a) | Trigger::Psynergy(_, a) => scan.actors.get(&a).copied().into_iter().collect(),
-                Trigger::Search(c) | Trigger::PsynergyCell(_, c) => scan.cells.get(&c).map_or_else(Vec::new, |v| v.iter().filter(|c| c.0 == 0).map(centre).collect()),
+                Trigger::Talk(a) | Trigger::Psynergy(_, a) => {
+                    scan.actors.get(&a).copied().into_iter().collect()
+                }
+                Trigger::Search(c) | Trigger::PsynergyCell(_, c) => {
+                    scan.cells.get(&c).map_or_else(Vec::new, |v| {
+                        v.iter().filter(|c| c.0 == 0).map(centre).collect()
+                    })
+                }
                 // A world map place is an actor the leader walks into.
-                Trigger::Touch(c) if scan.size == 32 && c >= 100 && !scan.cells.contains_key(&c) => scan.actors.get(&(c - 100)).copied().into_iter().collect(),
-                Trigger::Touch(c) => scan.cells.get(&c).map_or_else(Vec::new, |v| v.iter().map(centre).collect()),
+                Trigger::Touch(c)
+                    if scan.size == 32 && c >= 100 && !scan.cells.contains_key(&c) =>
+                {
+                    scan.actors.get(&(c - 100)).copied().into_iter().collect()
+                }
+                Trigger::Touch(c) => scan
+                    .cells
+                    .get(&c)
+                    .map_or_else(Vec::new, |v| v.iter().map(centre).collect()),
                 Trigger::Direct(_) | Trigger::Cast(_) | Trigger::Message(..) => Vec::new(),
             }
         };
         // Whether the event table a scan's entrance gives answers the
         // trigger with the event's own row, when its row is known.
         let answers = |scan: &Scan, own: &[u32]| {
-            let row = |kind: u8, target: u16| scan.triggers.iter().any(|&(k, t, r)| k == kind && t == target && (own.is_empty() || own.contains(&r)));
+            let row = |kind: u8, target: u16| {
+                scan.triggers.iter().any(|&(k, t, r)| {
+                    k == kind && t == target && (own.is_empty() || own.contains(&r))
+                })
+            };
             match trigger {
                 Trigger::Talk(a) => row(TRIGGER_TALK, a),
                 Trigger::Search(c) => row(TRIGGER_EXAMINE, c),
-                Trigger::Touch(c) => row(TRIGGER_STEP, c) || (own.is_empty() && row(TRIGGER_EXIT, c)),
-                Trigger::Psynergy(..) if own.is_empty() => scan.triggers.iter().any(|t| t.0 == TRIGGER_PSYNERGY),
+                Trigger::Touch(c) => {
+                    row(TRIGGER_STEP, c) || (own.is_empty() && row(TRIGGER_EXIT, c))
+                }
+                Trigger::Psynergy(..) if own.is_empty() => {
+                    scan.triggers.iter().any(|t| t.0 == TRIGGER_PSYNERGY)
+                }
                 Trigger::Psynergy(_, a) => row(TRIGGER_PSYNERGY, a),
                 Trigger::PsynergyCell(_, c) => row(TRIGGER_PSYNERGY, c),
                 Trigger::Direct(_) | Trigger::Message(..) => false,
@@ -1039,7 +1368,12 @@ impl Context<'_> {
                 }
             };
             let header = first.header;
-            let entrances: Vec<Entrance> = first.entrances.iter().filter(|e| e.number >= 0 && !stands_in(e, &first.entrances)).copied().collect();
+            let entrances: Vec<Entrance> = first
+                .entrances
+                .iter()
+                .filter(|e| e.number >= 0 && !stands_in(e, &first.entrances))
+                .copied()
+                .collect();
             let first_at = at(first);
             // The entrances to try, best first: those whose room holds the
             // trigger as the scene is entered by its first, nearest it
@@ -1047,8 +1381,14 @@ impl Context<'_> {
             // the loft's do in Vault); then the first of each other room.
             let mut near: Vec<(i32, Entrance)> = Vec::new();
             for (x, z) in first_at {
-                for e in entrances.iter().filter(|e| box_holds(e.camera, header, x, z)) {
-                    near.push(((i32::from(e.x) - x).pow(2) + (i32::from(e.z) - z).pow(2), *e));
+                for e in entrances
+                    .iter()
+                    .filter(|e| box_holds(e.camera, header, x, z))
+                {
+                    near.push((
+                        (i32::from(e.x) - x).pow(2) + (i32::from(e.z) - z).pow(2),
+                        *e,
+                    ));
                 }
             }
             near.sort_by_key(|(d, _)| *d);
@@ -1081,7 +1421,11 @@ impl Context<'_> {
                 // Entered here, the scene must show the trigger in this
                 // entrance's room and answer it.
                 let here = at(scan);
-                if answers(scan, &own) && here.iter().any(|&(x, z)| box_holds(e.camera, scan.header, x, z)) {
+                if answers(scan, &own)
+                    && here
+                        .iter()
+                        .any(|&(x, z)| box_holds(e.camera, scan.header, x, z))
+                {
                     out.push((scene.number, e));
                     found += 1;
                 }
@@ -1093,9 +1437,16 @@ impl Context<'_> {
         }
         if out.is_empty() {
             if let Some(why) = absent {
-                return Err(Failure { reason: why, absent: true });
+                return Err(Failure {
+                    reason: why,
+                    absent: true,
+                });
             }
-            let names = scenes.iter().map(|s| s.name()).collect::<Vec<_>>().join(", ");
+            let names = scenes
+                .iter()
+                .map(|s| s.name())
+                .collect::<Vec<_>>()
+                .join(", ");
             let missing = match trigger {
                 Trigger::Search(c) => format!("no entrance of {names} leads to a room with a ground-layer cell with code {c} that its events search"),
                 Trigger::Touch(c) => format!("no entrance of {names} leads to a room with a cell with code {c} that its events answer"),
@@ -1128,7 +1479,9 @@ impl Context<'_> {
         };
         let places = self.by_entrance(found.unwrap_or_default(), scenes, set, clear, scans);
         if places.is_empty() {
-            return Err(Failure::new(format!("no scene of its overlay has entrance {number}")));
+            return Err(Failure::new(format!(
+                "no scene of its overlay has entrance {number}"
+            )));
         }
         Ok(places)
     }
@@ -1136,18 +1489,34 @@ impl Context<'_> {
     /// The places to try, by the entrance --entrance names alone when it
     /// names one: those of `places` it enters by, or else that entrance of
     /// each scene, wherever its room is.
-    fn by_entrance(&self, places: Vec<(u16, Entrance)>, scenes: &[&Scene], set: &[u16], clear: &[u16], scans: &mut HashMap<ScanKey, Result<Scan, String>>) -> Vec<(u16, Entrance)> {
+    fn by_entrance(
+        &self,
+        places: Vec<(u16, Entrance)>,
+        scenes: &[&Scene],
+        set: &[u16],
+        clear: &[u16],
+        scans: &mut HashMap<ScanKey, Result<Scan, String>>,
+    ) -> Vec<(u16, Entrance)> {
         let Some(number) = self.stage.entrance else {
             return places;
         };
-        let chosen: Vec<(u16, Entrance)> = places.iter().filter(|(_, e)| e.number == number as i16).copied().collect();
+        let chosen: Vec<(u16, Entrance)> = places
+            .iter()
+            .filter(|(_, e)| e.number == number as i16)
+            .copied()
+            .collect();
         if !chosen.is_empty() {
             return chosen;
         }
         let mut out = Vec::new();
         for scene in scenes.iter().filter(|s| is_place(s).is_ok()) {
             if let Ok(scan) = self.scanned(scans, scene.number, 0, set, clear) {
-                out.extend(scan.entrances.iter().filter(|e| e.number == number as i16).map(|e| (scene.number, *e)));
+                out.extend(
+                    scan.entrances
+                        .iter()
+                        .filter(|e| e.number == number as i16)
+                        .map(|e| (scene.number, *e)),
+                );
             }
         }
         out
@@ -1163,7 +1532,8 @@ impl Context<'_> {
     /// what it needs another event leaves) is tried once each other event
     /// of the scene has played.
     pub fn events(&mut self, scenes: &[&Scene]) {
-        self.cleared.extend(clear_events(&self.out, scenes, self.wanted, self.only));
+        self.cleared
+            .extend(clear_events(&self.out, scenes, self.wanted, self.only));
         self.play_events(scenes, None, &mut Job::default());
     }
 
@@ -1175,7 +1545,12 @@ impl Context<'_> {
     /// off. Its note says where he started, what was played and what it
     /// set off, or that nothing visible happens.
     pub fn walk(&mut self, scenes: &[&Scene]) {
-        let Some(scene) = scenes.iter().find(|s| self.only.contains(&s.number)).or(scenes.first()).copied() else {
+        let Some(scene) = scenes
+            .iter()
+            .find(|s| self.only.contains(&s.number))
+            .or(scenes.first())
+            .copied()
+        else {
             return;
         };
         self.remove_event_files(scene, "walk");
@@ -1183,7 +1558,13 @@ impl Context<'_> {
         match self.play_walk(scene, scenes) {
             Ok((entrance, run, note)) => {
                 let file = format!("{}/events/walk.gif", scene.slug());
-                let leads_to = run.leads_to.map(|n| self.scenes.iter().find(|s| s.number == n).and_then(|s| s.symbol.clone()).map_or(format!("#{n}"), |s| format!("SceneId_{s}")));
+                let leads_to = run.leads_to.map(|n| {
+                    self.scenes
+                        .iter()
+                        .find(|s| s.number == n)
+                        .and_then(|s| s.symbol.clone())
+                        .map_or(format!("#{n}"), |s| format!("SceneId_{s}"))
+                });
                 match self.gif(&file, &run.frames) {
                     Ok((written, more)) => self.rows.push(Row {
                         scene: scene.slug(),
@@ -1194,7 +1575,10 @@ impl Context<'_> {
                         event: "walk".to_string(),
                         frames: written,
                         leads_to: leads_to.unwrap_or_default(),
-                        note: std::iter::once(note).chain(more).collect::<Vec<_>>().join("; "),
+                        note: std::iter::once(note)
+                            .chain(more)
+                            .collect::<Vec<_>>()
+                            .join("; "),
                         file,
                         ..Row::default()
                     }),
@@ -1206,11 +1590,17 @@ impl Context<'_> {
     }
 
     /// Plays the walk `walk` records: its way in, its run, and its note.
-    fn play_walk(&self, scene: &Scene, scenes: &[&Scene]) -> Result<(u16, super::field::WalkRun, String), String> {
+    fn play_walk(
+        &self,
+        scene: &Scene,
+        scenes: &[&Scene],
+    ) -> Result<(u16, super::field::WalkRun, String), String> {
         let (mut set, mut clear) = (Vec::new(), Vec::new());
         for (names, on) in [(&self.stage.set, true), (&self.stage.clear, false)] {
             for name in names {
-                let flag = self.resolve_flag(name, scene).ok_or_else(|| format!("unknown flag {name}"))?;
+                let flag = self
+                    .resolve_flag(name, scene)
+                    .ok_or_else(|| format!("unknown flag {name}"))?;
                 set.retain(|&f| f != flag);
                 clear.retain(|&f| f != flag);
                 if on { &mut set } else { &mut clear }.push(flag);
@@ -1220,22 +1610,47 @@ impl Context<'_> {
             Some(n) => n,
             None => {
                 let (entrances, _) = self.entrances(scene, &set, &clear)?;
-                entrances.iter().find(|e| e.number > 0).or(entrances.first()).map_or(0, |e| e.number as u16)
+                entrances
+                    .iter()
+                    .find(|e| e.number > 0)
+                    .or(entrances.first())
+                    .map_or(0, |e| e.number as u16)
             }
         };
-        let setup = Setup { scene: scene.number, entrance, set, clear };
-        let mut field = Field::enter_staged(self.rom, self.symbols, &setup, self.lineup()?.as_ref())?;
+        let setup = Setup {
+            scene: scene.number,
+            entrance,
+            set,
+            clear,
+        };
+        let mut field =
+            Field::enter_staged(self.rom, self.symbols, &setup, self.lineup()?.as_ref())?;
         field.answers.clone_from(&self.stage.answer);
         field.staged = true;
         field.walk_to = self.stage.walk_to;
         field.hold_camera = self.stage.crop.is_some();
         field.after_battle = self.stage.after_battle;
         if let Some(name) = &self.stage.until {
-            let address = self.functions.get(&scene.number).and_then(|f| f.get(name)).ok_or_else(|| format!("--until names {name}, which scene {}'s overlay has no function of", scene.number))?;
+            let address = self
+                .functions
+                .get(&scene.number)
+                .and_then(|f| f.get(name))
+                .ok_or_else(|| {
+                    format!(
+                        "--until names {name}, which scene {}'s overlay has no function of",
+                        scene.number
+                    )
+                })?;
             field.until = Some((address & !1, name.clone()));
         }
         if !self.stage.give.is_empty() {
-            let header = std::fs::read_to_string(crate::compile::root().join("games").join(self.symbols.l.game.dir()).join("include/item_ids.h")).unwrap_or_default();
+            let header = std::fs::read_to_string(
+                crate::compile::root()
+                    .join("games")
+                    .join(self.symbols.l.game.dir())
+                    .join("include/item_ids.h"),
+            )
+            .unwrap_or_default();
             for name in &self.stage.give {
                 field.give(super::stage::item_id(&header, name)?)?;
             }
@@ -1245,19 +1660,55 @@ impl Context<'_> {
         // --first: the walk starts where that event leaves the player.
         let mut after_first = None;
         if let Some(name) = &self.stage.first {
-            let overlay: Vec<&Scene> = std::iter::once(scene).chain(scenes.iter().copied().filter(|s| s.number != scene.number)).collect();
-            let before = self.events.iter().find(|e| e.name == *name && e.scenes.contains(&scene.number)).ok_or_else(|| format!("--first names {name}, which scene {} has no row of", scene.name()))?;
+            let overlay: Vec<&Scene> = std::iter::once(scene)
+                .chain(scenes.iter().copied().filter(|s| s.number != scene.number))
+                .collect();
+            let before = self
+                .events
+                .iter()
+                .find(|e| e.name == *name && e.scenes.contains(&scene.number))
+                .ok_or_else(|| {
+                    format!(
+                        "--first names {name}, which scene {} has no row of",
+                        scene.name()
+                    )
+                })?;
             self.in_first.set(true);
-            let end = self.play_event(before, &overlay, &mut Job::default(), None, Some((&setup.set, &setup.clear)));
+            let end = self.play_event(
+                before,
+                &overlay,
+                &mut Job::default(),
+                None,
+                Some((&setup.set, &setup.clear)),
+            );
             self.in_first.set(false);
             let end = end.map_err(|f| format!("{name}, played first: {}", f.reason))?;
-            entered = end.run.end.ok_or_else(|| format!("{name}, played first, never gave the player control again in {}", scene.name()))?;
+            entered = end.run.end.ok_or_else(|| {
+                format!(
+                    "{name}, played first, never gave the player control again in {}",
+                    scene.name()
+                )
+            })?;
             after_first = Some(name.clone());
         }
         let face = self.stage.face;
         let at = match (self.stage.at_px, self.stage.at) {
-            (Some((x, z, layer)), _) => Some(super::field::WalkStart { x, z, layer, face, cell: false, height: self.stage.at_height }),
-            (None, Some((x, z, layer))) => Some(super::field::WalkStart { x, z, layer, face, cell: true, height: self.stage.at_height }),
+            (Some((x, z, layer)), _) => Some(super::field::WalkStart {
+                x,
+                z,
+                layer,
+                face,
+                cell: false,
+                height: self.stage.at_height,
+            }),
+            (None, Some((x, z, layer))) => Some(super::field::WalkStart {
+                x,
+                z,
+                layer,
+                face,
+                cell: true,
+                height: self.stage.at_height,
+            }),
             (None, None) => None,
         };
         let mut keys = super::stage::script_frames(&self.stage.hold);
@@ -1266,30 +1717,60 @@ impl Context<'_> {
         // played again, standing longer first.
         let mut lead = WALK_LEAD;
         let mut run = field.walk(&entered, at, lead, &keys)?;
-        if let Some(first) = run.frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b < CLEARED) {
+        if let Some(first) = run
+            .frames
+            .iter()
+            .position(|f| is_black_bgr555(f))
+            .filter(|&b| b < CLEARED)
+        {
             lead += (CLEARED - first) as u32;
             run = field.walk(&entered, at, lead, &keys)?;
         }
         if run.capped && !self.stage.windowed() && self.stage.until.is_none() {
-            return Err(format!("it runs past {} seconds (--limit SECONDS asks for longer)", self.stage.limit_frames(EVENT_LIMIT) / 60));
+            return Err(format!(
+                "it runs past {} seconds (--limit SECONDS asks for longer)",
+                self.stage.limit_frames(EVENT_LIMIT) / 60
+            ));
         }
-        let mut note = vec![format!("staged walk, no event: entered by entrance {entrance}")];
+        let mut note = vec![format!(
+            "staged walk, no event: entered by entrance {entrance}"
+        )];
         if let Some(name) = after_first {
             note.push(format!("walked after {name}, which is not recorded"));
         }
         note.extend(skip_note(&self.stage.skip));
         if run.capped {
-            note.push(format!("it runs past {} seconds, so only its window is written", self.stage.limit_frames(EVENT_LIMIT) / 60));
+            note.push(format!(
+                "it runs past {} seconds, so only its window is written",
+                self.stage.limit_frames(EVENT_LIMIT) / 60
+            ));
         }
         note.extend(run.notes.iter().cloned());
-        let played = super::stage::describe(&self.stage.hold.iter().chain(&self.stage.then).cloned().collect::<Vec<_>>());
+        let played = super::stage::describe(
+            &self
+                .stage
+                .hold
+                .iter()
+                .chain(&self.stage.then)
+                .cloned()
+                .collect::<Vec<_>>(),
+        );
         note.push(format!("keys held {played}"));
         if !self.stage.set.is_empty() || !self.stage.clear.is_empty() {
-            note.push(format!("flags set {}, cleared {}", self.stage.set.join(" "), self.stage.clear.join(" ")));
+            note.push(format!(
+                "flags set {}, cleared {}",
+                self.stage.set.join(" "),
+                self.stage.clear.join(" ")
+            ));
         }
         match run.started.is_empty() {
-            true => note.push("nothing visible happens beyond the walk: the keys set off no event".to_string()),
-            false => note.push(format!("the keys set off {}", self.set_off(&run.started, scene.number))),
+            true => note.push(
+                "nothing visible happens beyond the walk: the keys set off no event".to_string(),
+            ),
+            false => note.push(format!(
+                "the keys set off {}",
+                self.set_off(&run.started, scene.number)
+            )),
         }
         Ok((entrance, run, note.join("; ")))
     }
@@ -1298,13 +1779,24 @@ impl Context<'_> {
     /// or only the one named, keeping what it finds in `job` for the next
     /// events of the same scenes. The old pictures are not cleared first.
     pub fn play_events(&mut self, scenes: &[&Scene], name: Option<&str>, job: &mut Job) {
-        for event in job_events(self.events, self.wanted, self.only, scenes).into_iter().filter(|e| name.is_none_or(|n| e.name == n)) {
-            let mut candidates: Vec<&Scene> = scenes.iter().copied().filter(|s| event.scenes.contains(&s.number)).collect();
+        for event in job_events(self.events, self.wanted, self.only, scenes)
+            .into_iter()
+            .filter(|e| name.is_none_or(|n| e.name == n))
+        {
+            let mut candidates: Vec<&Scene> = scenes
+                .iter()
+                .copied()
+                .filter(|s| event.scenes.contains(&s.number))
+                .collect();
             // The scenes --scene names come first, and alone where the
             // leader's start is staged there.
             candidates.sort_by_key(|s| !self.only.contains(&s.number));
             if self.stage.staged() || self.stage.entrance.is_some() {
-                let named: Vec<&Scene> = candidates.iter().copied().filter(|s| self.only.contains(&s.number)).collect();
+                let named: Vec<&Scene> = candidates
+                    .iter()
+                    .copied()
+                    .filter(|s| self.only.contains(&s.number))
+                    .collect();
                 if !named.is_empty() {
                     candidates = named;
                 }
@@ -1317,11 +1809,26 @@ impl Context<'_> {
             for scene in &candidates {
                 self.remove_event_files(scene, &event.name);
             }
-            let mut played = self.play_event(&event, &candidates, job, Some(self.stage.limit_frames(EVENT_LIMIT) as usize), None);
+            let mut played = self.play_event(
+                &event,
+                &candidates,
+                job,
+                Some(self.stage.limit_frames(EVENT_LIMIT) as usize),
+                None,
+            );
             let mut relaxed = false;
-            if played.as_ref().is_err_and(|f| f.reason.contains("cannot walk")) {
+            if played
+                .as_ref()
+                .is_err_and(|f| f.reason.contains("cannot walk"))
+            {
                 self.relaxed.set(true);
-                let again = self.play_event(&event, &candidates, job, Some(self.stage.limit_frames(EVENT_LIMIT) as usize), None);
+                let again = self.play_event(
+                    &event,
+                    &candidates,
+                    job,
+                    Some(self.stage.limit_frames(EVENT_LIMIT) as usize),
+                    None,
+                );
                 self.relaxed.set(false);
                 if again.is_ok() {
                     played = again;
@@ -1332,11 +1839,24 @@ impl Context<'_> {
             // BLACK_CLEARANCE is played again with a longer lead-in before
             // its trigger (the leader walking up from further back, or
             // standing ready for longer), so the recording clears it.
-            let first_black = played.as_ref().ok().and_then(|p| p.run.frames.iter().position(|f| is_black_bgr555(f)).map(|b| (b, p.run.lead)));
+            let first_black = played.as_ref().ok().and_then(|p| {
+                p.run
+                    .frames
+                    .iter()
+                    .position(|f| is_black_bgr555(f))
+                    .map(|b| (b, p.run.lead))
+            });
             if let Some((first_black, lead)) = first_black.filter(|&(b, _)| b < CLEARED) {
-                self.lead_in.set(lead.max(LEAD_IN as usize) as u32 + (CLEARED - first_black) as u32);
+                self.lead_in
+                    .set(lead.max(LEAD_IN as usize) as u32 + (CLEARED - first_black) as u32);
                 self.relaxed.set(relaxed);
-                let longer = self.play_event(&event, &candidates, job, Some(self.stage.limit_frames(EVENT_LIMIT) as usize), None);
+                let longer = self.play_event(
+                    &event,
+                    &candidates,
+                    job,
+                    Some(self.stage.limit_frames(EVENT_LIMIT) as usize),
+                    None,
+                );
                 self.relaxed.set(false);
                 self.lead_in.set(LEAD_IN);
                 if longer.is_ok() {
@@ -1345,7 +1865,11 @@ impl Context<'_> {
             }
             match played {
                 Ok(played) => {
-                    let scene = candidates.iter().find(|s| s.number == played.setup.scene).copied().unwrap_or(first);
+                    let scene = candidates
+                        .iter()
+                        .find(|s| s.number == played.setup.scene)
+                        .copied()
+                        .unwrap_or(first);
                     for s in &candidates {
                         self.cleared.push((s.name(), label.clone()));
                     }
@@ -1354,7 +1878,9 @@ impl Context<'_> {
                     if played.run.capped && !self.stage.windowed() {
                         let limit = self.stage.limit_frames(EVENT_LIMIT) / 60;
                         self.skip(scene, &label, format!("it runs past {limit} seconds without the player having control again (--limit SECONDS asks for longer)"));
-                    } else if let Err(e) = self.write_event(scene, played.setup.entrance as i16, &event, &played.run) {
+                    } else if let Err(e) =
+                        self.write_event(scene, played.setup.entrance as i16, &event, &played.run)
+                    {
                         self.skip(scene, &label, e);
                     }
                 }
@@ -1367,15 +1893,29 @@ impl Context<'_> {
     /// childhood.
     /// What its own function's guard needs comes first (stage::guard), then
     /// the row's conditions, then the flags --set and --clear name.
-    fn alternative_flags(&self, alternative: &Alternative, first: &Scene, event: &Event) -> Result<(Vec<u16>, Vec<u16>), String> {
+    fn alternative_flags(
+        &self,
+        alternative: &Alternative,
+        first: &Scene,
+        event: &Event,
+    ) -> Result<(Vec<u16>, Vec<u16>), String> {
         let (mut set, mut clear) = (Vec::new(), Vec::new());
         let mut needs: Vec<(u16, bool)> = self.guard_flags(event, first);
         for (name, on) in &alternative.conditions {
-            needs.push((self.flags.resolve(name, first.symbol.as_deref()).ok_or_else(|| format!("unknown flag {name}"))?, *on));
+            needs.push((
+                self.flags
+                    .resolve(name, first.symbol.as_deref())
+                    .ok_or_else(|| format!("unknown flag {name}"))?,
+                *on,
+            ));
         }
         for (names, on) in [(&self.stage.set, true), (&self.stage.clear, false)] {
             for name in names {
-                needs.push((self.resolve_flag(name, first).ok_or_else(|| format!("unknown flag {name}"))?, on));
+                needs.push((
+                    self.resolve_flag(name, first)
+                        .ok_or_else(|| format!("unknown flag {name}"))?,
+                    on,
+                ));
             }
         }
         for (flag, on) in needs {
@@ -1386,8 +1926,13 @@ impl Context<'_> {
         // The stormy night is the prologue: Isaac and Garet are children
         // then, and the party's sprites follow FLAG_CHILDHOOD
         // (Party_RemapCharacterIdByFlags).
-        if let (Some(storm), Some(child)) = (self.flags.resolve("FLAG_VALE_STORM", None), self.flags.resolve("FLAG_CHILDHOOD", None)) {
-            if (set.contains(&storm) || first.symbol.as_deref() == Some("ValePrologue")) && !set.contains(&child) {
+        if let (Some(storm), Some(child)) = (
+            self.flags.resolve("FLAG_VALE_STORM", None),
+            self.flags.resolve("FLAG_CHILDHOOD", None),
+        ) {
+            if (set.contains(&storm) || first.symbol.as_deref() == Some("ValePrologue"))
+                && !set.contains(&child)
+            {
                 clear.retain(|&f| f != child);
                 set.push(child);
             }
@@ -1407,7 +1952,10 @@ impl Context<'_> {
             if let Some(f) = self.flags.resolve(&name, scene.symbol.as_deref()) {
                 return Some(f);
             }
-            name = defines.get(&name)?.trim_matches(|c| c == '(' || c == ')').to_string();
+            name = defines
+                .get(&name)?
+                .trim_matches(|c| c == '(' || c == ')')
+                .to_string();
         }
         None
     }
@@ -1425,17 +1973,26 @@ impl Context<'_> {
         if is_message_row(&event.name) {
             return Vec::new();
         }
-        super::stage::guard(&self.source(scene), &event.name).into_iter().filter_map(|(name, on)| self.resolve_flag(&name, scene).map(|f| (f, on))).collect()
+        super::stage::guard(&self.source(scene), &event.name)
+            .into_iter()
+            .filter_map(|(name, on)| self.resolve_flag(&name, scene).map(|f| (f, on)))
+            .collect()
     }
 
     /// The story flags tried one at a time when an event's own do not put
     /// its trigger on stage: those its scene's setup tests, then those its
     /// scene's events set.
     fn extra_flags(&self, first: &Scene, set: &[u16], clear: &[u16]) -> Vec<u16> {
-        let mut names: Vec<String> = variant_candidates(self.events, self.flags).remove(&first.number).unwrap_or_default();
+        let mut names: Vec<String> = variant_candidates(self.events, self.flags)
+            .remove(&first.number)
+            .unwrap_or_default();
         // A named variant's flag is tried only where an event sets it.
         names.retain(|n| !VARIANTS.iter().any(|v| v.flag == n));
-        for e in self.events.iter().filter(|e| e.scenes.contains(&first.number)) {
+        for e in self
+            .events
+            .iter()
+            .filter(|e| e.scenes.contains(&first.number))
+        {
             for s in e.sets.iter().filter(|s| is_story_flag(s, self.flags)) {
                 if !names.contains(s) {
                     names.push(s.clone());
@@ -1443,7 +2000,10 @@ impl Context<'_> {
             }
         }
         let mut out = Vec::new();
-        for f in names.iter().filter_map(|n| self.flags.resolve(n, first.symbol.as_deref())) {
+        for f in names
+            .iter()
+            .filter_map(|n| self.flags.resolve(n, first.symbol.as_deref()))
+        {
             if !set.contains(&f) && !clear.contains(&f) && !out.contains(&f) {
                 out.push(f);
             }
@@ -1454,11 +2014,30 @@ impl Context<'_> {
     /// `set` with every story flag the scene's other events set that the
     /// event neither sets itself nor needs clear, when that adds more than
     /// one flag (one alone extra_flags tries).
-    fn story_so_far(&self, first: &Scene, event: &Event, set: &[u16], clear: &[u16]) -> Option<Vec<u16>> {
-        let own: Vec<u16> = event.sets.iter().filter_map(|n| self.flags.resolve(n, first.symbol.as_deref())).collect();
+    fn story_so_far(
+        &self,
+        first: &Scene,
+        event: &Event,
+        set: &[u16],
+        clear: &[u16],
+    ) -> Option<Vec<u16>> {
+        let own: Vec<u16> = event
+            .sets
+            .iter()
+            .filter_map(|n| self.flags.resolve(n, first.symbol.as_deref()))
+            .collect();
         let mut out = set.to_vec();
-        for e in self.events.iter().filter(|e| e.scenes.contains(&first.number) && e.name != event.name) {
-            for f in e.sets.iter().filter(|s| is_story_flag(s, self.flags)).filter_map(|n| self.flags.resolve(n, first.symbol.as_deref())) {
+        for e in self
+            .events
+            .iter()
+            .filter(|e| e.scenes.contains(&first.number) && e.name != event.name)
+        {
+            for f in e
+                .sets
+                .iter()
+                .filter(|s| is_story_flag(s, self.flags))
+                .filter_map(|n| self.flags.resolve(n, first.symbol.as_deref()))
+            {
                 if !out.contains(&f) && !clear.contains(&f) && !own.contains(&f) {
                     out.push(f);
                 }
@@ -1479,7 +2058,9 @@ impl Context<'_> {
         // --first: the event is recorded from where that one leaves him.
         if let (Some(name), None, Some(_)) = (&self.stage.first, within, record) {
             if *name != event.name {
-                return self.play_after_first(name, event, scenes, job, record).map_err(Failure::new);
+                return self
+                    .play_after_first(name, event, scenes, job, record)
+                    .map_err(Failure::new);
             }
         }
         let first = scenes[0];
@@ -1514,17 +2095,35 @@ impl Context<'_> {
             if let Some((with_set, with_clear)) = within {
                 set.retain(|f| !with_clear.contains(f));
                 clear.retain(|f| !with_set.contains(f));
-                set.extend(with_set.iter().filter(|f| !set.contains(f)).collect::<Vec<_>>());
-                clear.extend(with_clear.iter().filter(|f| !clear.contains(f)).collect::<Vec<_>>());
+                set.extend(
+                    with_set
+                        .iter()
+                        .filter(|f| !set.contains(f))
+                        .collect::<Vec<_>>(),
+                );
+                clear.extend(
+                    with_clear
+                        .iter()
+                        .filter(|f| !clear.contains(f))
+                        .collect::<Vec<_>>(),
+                );
                 set.sort_unstable();
                 clear.sort_unstable();
             }
             // On the way to another event, only by its own flags.
-            let extras = if within.is_some() { Vec::new() } else { self.extra_flags(first, &set, &clear) };
+            let extras = if within.is_some() {
+                Vec::new()
+            } else {
+                self.extra_flags(first, &set, &clear)
+            };
             // Last, every story flag the scene's other events set, all at
             // once: a room some events open in turn (the crossings each
             // Elemental Star bagged opens to the next pedestal).
-            let together = if within.is_some() { None } else { self.story_so_far(first, event, &set, &clear) };
+            let together = if within.is_some() {
+                None
+            } else {
+                self.story_so_far(first, event, &set, &clear)
+            };
             let flag_sets = std::iter::once(set.clone())
                 .chain(extras.iter().map(|&f| {
                     let mut s = set.clone();
@@ -1535,7 +2134,14 @@ impl Context<'_> {
                 .chain(together);
             let mut placed = false;
             for flags in flag_sets {
-                let places = match self.staged_places(scenes, trigger, event, &flags, &clear, &mut job.scans) {
+                let places = match self.staged_places(
+                    scenes,
+                    trigger,
+                    event,
+                    &flags,
+                    &clear,
+                    &mut job.scans,
+                ) {
                     Ok(places) => places,
                     Err(f) => {
                         // A story flag that puts nothing on stage says less
@@ -1549,11 +2155,18 @@ impl Context<'_> {
                 placed = true;
                 for (scene, entrance) in places {
                     let mut set = flags.clone();
-                    if entrance.required_flag >= 0 && !set.contains(&(entrance.required_flag as u16)) {
+                    if entrance.required_flag >= 0
+                        && !set.contains(&(entrance.required_flag as u16))
+                    {
                         set.push(entrance.required_flag as u16);
                         set.sort_unstable();
                     }
-                    let setup = Setup { scene, entrance: entrance.number as u16, set, clear: clear.clone() };
+                    let setup = Setup {
+                        scene,
+                        entrance: entrance.number as u16,
+                        set,
+                        clear: clear.clone(),
+                    };
                     tried.push(setup.clone());
                     match self.play_at(&setup, None, trigger, event, record, strict) {
                         // Changing nothing on the screen, it may do
@@ -1566,7 +2179,10 @@ impl Context<'_> {
                         Ok(run) => return Ok(Played { setup, run }),
                         Err(e) => {
                             if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
-                                eprintln!("    {} at scene {} entrance {}: {e}", event.name, setup.scene, setup.entrance);
+                                eprintln!(
+                                    "    {} at scene {} entrance {}: {e}",
+                                    event.name, setup.scene, setup.entrance
+                                );
                             }
                             // Tried again where he could be put (see below).
                             if e.contains("cannot walk") {
@@ -1591,7 +2207,12 @@ impl Context<'_> {
             self.every_place.set(true);
             let mut more = Vec::new();
             for (trigger, set, clear) in &retry {
-                more.extend(self.places(scenes, *trigger, event, set, clear, &mut job.scans).unwrap_or_default().into_iter().map(|p| (*trigger, set.clone(), clear.clone(), p)));
+                more.extend(
+                    self.places(scenes, *trigger, event, set, clear, &mut job.scans)
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|p| (*trigger, set.clone(), clear.clone(), p)),
+                );
             }
             self.every_place.set(false);
             for (trigger, set, clear, (scene, entrance)) in more {
@@ -1600,7 +2221,12 @@ impl Context<'_> {
                     set.push(entrance.required_flag as u16);
                     set.sort_unstable();
                 }
-                let setup = Setup { scene, entrance: entrance.number as u16, set, clear };
+                let setup = Setup {
+                    scene,
+                    entrance: entrance.number as u16,
+                    set,
+                    clear,
+                };
                 if tried.contains(&setup) {
                     continue;
                 }
@@ -1613,7 +2239,13 @@ impl Context<'_> {
                     self.relaxed.set(false);
                 }
                 if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
-                    eprintln!("    {} at scene {} entrance {}, tried as nothing showed: {:?}", event.name, setup.scene, setup.entrance, run.as_ref().map(|r| r.blank));
+                    eprintln!(
+                        "    {} at scene {} entrance {}, tried as nothing showed: {:?}",
+                        event.name,
+                        setup.scene,
+                        setup.entrance,
+                        run.as_ref().map(|r| r.blank)
+                    );
                 }
                 if let Some(mut run) = run.ok().filter(|run| !run.blank) {
                     let way = format!("entered by entrance {}, since entered by the first ways in it changed nothing on the screen", setup.entrance);
@@ -1623,7 +2255,8 @@ impl Context<'_> {
             }
             return Ok(played);
         }
-        let mut failure = failure.unwrap_or_else(|| Failure::new("the row has no trigger".to_string()));
+        let mut failure =
+            failure.unwrap_or_else(|| Failure::new("the row has no trigger".to_string()));
         // The event does not play as the scene is entered: its actor only
         // comes on stage during another event, or what it needs (a log
         // pushed into place, a flag) another event leaves. Play each of the
@@ -1652,7 +2285,10 @@ impl Context<'_> {
                 for (trigger, set, clear) in &retry {
                     let key = (other.name.clone(), set.clone(), clear.clone());
                     if !job.ends.contains_key(&key) {
-                        let end = self.play_event(other, scenes, job, None, Some((set, clear))).ok().and_then(|p| p.run.end.map(|end| (p.setup, end)));
+                        let end = self
+                            .play_event(other, scenes, job, None, Some((set, clear)))
+                            .ok()
+                            .and_then(|p| p.run.end.map(|end| (p.setup, end)));
                         job.ends.insert(key.clone(), end);
                     }
                     let Some((setup, end)) = &job.ends[&key] else {
@@ -1660,17 +2296,34 @@ impl Context<'_> {
                     };
                     tried_after += 1;
                     match self.play_at(setup, Some(end), *trigger, event, record, strict) {
-                        Ok(run) => return Ok(Played { setup: setup.clone(), run }),
-                        Err(e) if failure.absent && (e.contains("off stage") || e.contains("no actor") || e.contains("no sprite")) => {}
-                        Err(e) if failure.absent => failure = Failure::new(format!("after {}: {e}", other.name)),
+                        Ok(run) => {
+                            return Ok(Played {
+                                setup: setup.clone(),
+                                run,
+                            })
+                        }
+                        Err(e)
+                            if failure.absent
+                                && (e.contains("off stage")
+                                    || e.contains("no actor")
+                                    || e.contains("no sprite")) => {}
+                        Err(e) if failure.absent => {
+                            failure = Failure::new(format!("after {}: {e}", other.name))
+                        }
                         Err(_) => {}
                     }
                 }
             }
             failure.reason = if failure.absent {
-                format!("{}, when the scene is entered and after each of its other events", failure.reason)
+                format!(
+                    "{}, when the scene is entered and after each of its other events",
+                    failure.reason
+                )
             } else if tried_after > 0 {
-                format!("{}; nor after any of the scene's other events", failure.reason)
+                format!(
+                    "{}; nor after any of the scene's other events",
+                    failure.reason
+                )
             } else {
                 failure.reason
             };
@@ -1693,8 +2346,19 @@ impl Context<'_> {
     /// Plays event `name` first, unrecorded, with each of `event`'s rows'
     /// flags, and records `event` from where it leaves the player (--first);
     /// the note says so.
-    fn play_after_first(&self, name: &str, event: &Event, scenes: &[&Scene], job: &mut Job, record: Option<usize>) -> Result<Played, String> {
-        let before = self.events.iter().find(|e| e.name == name && scenes.iter().any(|s| e.scenes.contains(&s.number))).ok_or_else(|| format!("--first names {name}, which no scene of its overlay has"))?;
+    fn play_after_first(
+        &self,
+        name: &str,
+        event: &Event,
+        scenes: &[&Scene],
+        job: &mut Job,
+        record: Option<usize>,
+    ) -> Result<Played, String> {
+        let before = self
+            .events
+            .iter()
+            .find(|e| e.name == name && scenes.iter().any(|s| e.scenes.contains(&s.number)))
+            .ok_or_else(|| format!("--first names {name}, which no scene of its overlay has"))?;
         let mut error = format!("{name}, played first, never gave the player control again");
         for alternative in &event.alternatives {
             let Ok(trigger) = alternative.trigger else {
@@ -1712,7 +2376,10 @@ impl Context<'_> {
                 Ok(mut run) => {
                     let after = format!("played after {name}, which is not recorded");
                     run.note = Some(run.note.map_or(after.clone(), |n| format!("{after}; {n}")));
-                    return Ok(Played { setup: end.setup, run });
+                    return Ok(Played {
+                        setup: end.setup,
+                        run,
+                    });
                 }
                 Err(e) => error = format!("after {name}: {e}"),
             }
@@ -1724,7 +2391,13 @@ impl Context<'_> {
     /// or a message row by showing its message as its row's dispatch would
     /// (Trigger::Message), with the flags its first row needs, at each room
     /// of each scene whose overlay holds the function.
-    fn play_direct(&self, event: &Event, scenes: &[&Scene], job: &mut Job, record: Option<usize>) -> Result<Played, String> {
+    fn play_direct(
+        &self,
+        event: &Event,
+        scenes: &[&Scene],
+        job: &mut Job,
+        record: Option<usize>,
+    ) -> Result<Played, String> {
         // Code the game never reaches has no moment to start from: it is shown
         // only staged by hand (guide_unused), or not at all.
         if event.name.contains("_Unused") {
@@ -1740,13 +2413,22 @@ impl Context<'_> {
             }
         }
         let first = scenes[0];
-        let function = scenes.iter().find_map(|s| self.functions.get(&s.number).and_then(|f| f.get(&event.name)).copied());
+        let function = scenes.iter().find_map(|s| {
+            self.functions
+                .get(&s.number)
+                .and_then(|f| f.get(&event.name))
+                .copied()
+        });
         let trigger = match function {
             Some(address) => Trigger::Direct(address),
             None => {
                 // A message row: its message, beside the actor its trigger
                 // names (none for a search).
-                let message = scenes.iter().flat_map(|s| self.own(event, s.number)).find(|&r| r < 0x10000).ok_or("it has no function or message of its own")?;
+                let message = scenes
+                    .iter()
+                    .flat_map(|s| self.own(event, s.number))
+                    .find(|&r| r < 0x10000)
+                    .ok_or("it has no function or message of its own")?;
                 let actor = match event.trigger() {
                     Ok(Trigger::Talk(a) | Trigger::Psynergy(_, a)) => a,
                     _ => u16::MAX,
@@ -1756,9 +2438,18 @@ impl Context<'_> {
         };
         let (set, clear) = match event.alternatives.first() {
             Some(alternative) => self.alternative_flags(alternative, first, event)?,
-            None => self.alternative_flags(&Alternative { trigger: Err(String::new()), conditions: Vec::new() }, first, event)?,
+            None => self.alternative_flags(
+                &Alternative {
+                    trigger: Err(String::new()),
+                    conditions: Vec::new(),
+                },
+                first,
+                event,
+            )?,
         };
-        let mut places = self.staged_places(scenes, trigger, event, &set, &clear, &mut job.scans).map_err(|f| f.reason)?;
+        let mut places = self
+            .staged_places(scenes, trigger, event, &set, &clear, &mut job.scans)
+            .map_err(|f| f.reason)?;
         // Entrance 0 is where a scene puts the party with no way in: often a
         // debug default out in the sky or on water, sometimes the one place an
         // opening plays. A start tries it after every other.
@@ -1770,11 +2461,18 @@ impl Context<'_> {
                 set.push(entrance.required_flag as u16);
                 set.sort_unstable();
             }
-            let setup = Setup { scene, entrance: entrance.number as u16, set, clear: clear.clone() };
+            let setup = Setup {
+                scene,
+                entrance: entrance.number as u16,
+                set,
+                clear: clear.clone(),
+            };
             // A start that never gives the player control back waits on
             // what started it (a cast's phase, a choice): no recording.
             match self.play_at(&setup, None, trigger, event, record, true) {
-                Ok(run) if run.capped => error = "it never gives the player control again".to_string(),
+                Ok(run) if run.capped => {
+                    error = "it never gives the player control again".to_string()
+                }
                 Ok(run) => return Ok(Played { setup, run }),
                 Err(e) => error = e,
             }
@@ -1789,20 +2487,34 @@ impl Context<'_> {
             .filter(|e| {
                 let fresh = !seen.contains(&e.name.as_str());
                 seen.push(e.name.as_str());
-                fresh && e.scenes.contains(&first.number) && e.name != event.name && !is_message_row(&e.name) && e.trigger().is_ok()
+                fresh
+                    && e.scenes.contains(&first.number)
+                    && e.name != event.name
+                    && !is_message_row(&e.name)
+                    && e.trigger().is_ok()
             })
             .collect();
         for other in others {
             let key = (other.name.clone(), set.clone(), clear.clone());
             if !job.ends.contains_key(&key) {
-                let end = self.play_event(other, scenes, job, None, Some((&set, &clear))).ok().and_then(|p| p.run.end.map(|end| (p.setup, end)));
+                let end = self
+                    .play_event(other, scenes, job, None, Some((&set, &clear)))
+                    .ok()
+                    .and_then(|p| p.run.end.map(|end| (p.setup, end)));
                 job.ends.insert(key.clone(), end);
             }
             let Some((setup, end)) = &job.ends[&key] else {
                 continue;
             };
-            if let Some(run) = self.play_at(setup, Some(end), trigger, event, record, true).ok().filter(|run| !run.capped) {
-                return Ok(Played { setup: setup.clone(), run });
+            if let Some(run) = self
+                .play_at(setup, Some(end), trigger, event, record, true)
+                .ok()
+                .filter(|run| !run.capped)
+            {
+                return Ok(Played {
+                    setup: setup.clone(),
+                    run,
+                });
             }
         }
         Err(error)
@@ -1814,12 +2526,21 @@ impl Context<'_> {
     /// something, left, fought or changed the map). `after` is a moment of
     /// the scene to start from instead of its entrance. Unless `strict`, any
     /// run that began counts.
-    fn play_at(&self, setup: &Setup, after: Option<&Saved>, trigger: Trigger, event: &Event, record: Option<usize>, strict: bool) -> Result<EventRun, String> {
+    fn play_at(
+        &self,
+        setup: &Setup,
+        after: Option<&Saved>,
+        trigger: Trigger,
+        event: &Event,
+        record: Option<usize>,
+        strict: bool,
+    ) -> Result<EventRun, String> {
         let messages = &event.messages;
         let own = self.own(event, setup.scene);
         let own_function = own.iter().copied().find(|&r| r >= 0x10000);
         let message_row = !own.is_empty() && own_function.is_none();
-        let mut field = Field::enter_staged(self.rom, self.symbols, setup, self.lineup()?.as_ref())?;
+        let mut field =
+            Field::enter_staged(self.rom, self.symbols, setup, self.lineup()?.as_ref())?;
         field.answers.clone_from(&self.st().answer);
         field.relaxed = self.relaxed.get();
         field.lead_in = self.lead_in.get();
@@ -1836,7 +2557,13 @@ impl Context<'_> {
         field.then = self.st().then.clone();
         self.stage_field(&mut field, setup.scene)?;
         if !self.st().give.is_empty() {
-            let header = std::fs::read_to_string(crate::compile::root().join("games").join(self.symbols.l.game.dir()).join("include/item_ids.h")).unwrap_or_default();
+            let header = std::fs::read_to_string(
+                crate::compile::root()
+                    .join("games")
+                    .join(self.symbols.l.game.dir())
+                    .join("include/item_ids.h"),
+            )
+            .unwrap_or_default();
             for name in &self.st().give {
                 field.give(super::stage::item_id(&header, name)?)?;
             }
@@ -1853,23 +2580,41 @@ impl Context<'_> {
         // Staged beside cells, an event of several touch rows plays the row
         // whose cells they are (the weeds', not the stream bank's).
         if let (Some((cx, cz, _)), Trigger::Touch(code)) = (self.st().start(), trigger) {
-            let codes: Vec<u16> = event.alternatives.iter().filter_map(|a| match a.trigger {
-                Ok(Trigger::Touch(c)) => Some(c),
-                _ => None,
-            }).collect();
+            let codes: Vec<u16> = event
+                .alternatives
+                .iter()
+                .filter_map(|a| match a.trigger {
+                    Ok(Trigger::Touch(c)) => Some(c),
+                    _ => None,
+                })
+                .collect();
             let near = field.codes_near(cx, cz);
             if let Some(other) = row_for_cells(&codes, code, &near) {
                 return Err(format!("cell ({cx}, {cz}) lies by cells of code {other}, not {code}: its row for code {other} is played instead"));
             }
         }
         let spots = match (self.st().at_px, self.st().at) {
-            (Some((x, z, layer)), _) => vec![field.staged_spot_px(trigger, (x, z), layer, self.st().face)?],
-            (None, Some((cx, cz, layer))) => vec![field.staged_spot(trigger, (cx, cz), layer, self.st().face)?],
+            (Some((x, z, layer)), _) => {
+                vec![field.staged_spot_px(trigger, (x, z), layer, self.st().face)?]
+            }
+            (None, Some((cx, cz, layer))) => {
+                vec![field.staged_spot(trigger, (cx, cz), layer, self.st().face)?]
+            }
             _ => field.spots(trigger)?,
         };
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
-            let first: Vec<String> = spots.iter().take(MAX_SPOTS).map(|s| format!("({},{})L{}k{:#x}", s.x, s.z, s.layer, s.walk)).collect();
-            eprintln!("    {} spots at scene {} entrance {}: {}", event.name, setup.scene, setup.entrance, first.join(" "));
+            let first: Vec<String> = spots
+                .iter()
+                .take(MAX_SPOTS)
+                .map(|s| format!("({},{})L{}k{:#x}", s.x, s.z, s.layer, s.walk))
+                .collect();
+            eprintln!(
+                "    {} spots at scene {} entrance {}: {}",
+                event.name,
+                setup.scene,
+                setup.entrance,
+                first.join(" ")
+            );
         }
         let mut error = String::new();
         // A push gone on with that set no flag (rolled no log into the
@@ -1880,7 +2625,10 @@ impl Context<'_> {
         let mut blank: Option<EventRun> = None;
         // A direct start has no button press or step to show for it: it must
         // show itself as a silent trigger must.
-        let silent = matches!(trigger, Trigger::Touch(_) | Trigger::Psynergy(MOVE, _) | Trigger::Direct(_) | Trigger::Cast(_));
+        let silent = matches!(
+            trigger,
+            Trigger::Touch(_) | Trigger::Psynergy(MOVE, _) | Trigger::Direct(_) | Trigger::Cast(_)
+        );
         // An event named on the command line that runs and shows nothing is
         // recorded all the same, its note saying so, where nothing better
         // plays: "nothing happens" is an answer too.
@@ -1889,7 +2637,11 @@ impl Context<'_> {
         let mut keep_quiet = |mut run: EventRun, why: &str| {
             if quiet.is_none() {
                 let why = format!("nothing visible happens: {why}");
-                run.note = Some(run.note.take().map_or(why.clone(), |n| format!("{why}; {n}")));
+                run.note = Some(
+                    run.note
+                        .take()
+                        .map_or(why.clone(), |n| format!("{why}; {n}")),
+                );
                 run.blank = true;
                 quiet = Some(run);
             }
@@ -2002,13 +2754,21 @@ impl Context<'_> {
 
     /// The party --party and --leader stage, if they stage one.
     fn lineup(&self) -> Result<Option<super::field::Lineup>, String> {
-        super::party::lineup(&self.stage.party, self.stage.leader.as_deref(), self.symbols.l.game == super::layout::Game::Tla)
+        super::party::lineup(
+            &self.stage.party,
+            self.stage.leader.as_deref(),
+            self.symbols.l.game == super::layout::Game::Tla,
+        )
     }
 
     /// The staging of the event playing: --first's own (--first-at and the
     /// rest) while the event it names plays, else the run's.
     fn st(&self) -> &super::stage::Stage {
-        if self.in_first.get() { &self.first_stage } else { self.stage }
+        if self.in_first.get() {
+            &self.first_stage
+        } else {
+            self.stage
+        }
     }
 
     /// Stages what `field` plays as the options ask: --skip's functions of
@@ -2016,7 +2776,13 @@ impl Context<'_> {
     fn stage_field(&self, field: &mut Field, scene: u16) -> Result<(), String> {
         let st = self.st();
         for name in &st.skip {
-            let address = self.functions.get(&scene).and_then(|f| f.get(name)).ok_or_else(|| format!("--skip names {name}, which scene {scene}'s overlay has no function of"))?;
+            let address = self
+                .functions
+                .get(&scene)
+                .and_then(|f| f.get(name))
+                .ok_or_else(|| {
+                    format!("--skip names {name}, which scene {scene}'s overlay has no function of")
+                })?;
             field.returns.push((address & !1, 0));
         }
         field.during.clone_from(&st.during);
@@ -2044,12 +2810,18 @@ impl Context<'_> {
         self.functions
             .get(&scene)
             .and_then(|f| f.iter().find(|(_, &a)| result_key(a) == address))
-            .map_or_else(|| format!("the function at {address:#x}"), |(n, _)| n.clone())
+            .map_or_else(
+                || format!("the function at {address:#x}"),
+                |(n, _)| n.clone(),
+            )
     }
 
     /// Whether message `m` is one only other events of the scene list.
     fn listed_elsewhere(&self, m: u32, scene: u16, event: &Event) -> bool {
-        !event.messages.contains(&m) && self.events.iter().any(|e| e.scenes.contains(&scene) && e.name != event.name && e.messages.contains(&m))
+        !event.messages.contains(&m)
+            && self.events.iter().any(|e| {
+                e.scenes.contains(&scene) && e.name != event.name && e.messages.contains(&m)
+            })
     }
 
     /// `, which <event> shows` for message `m` of a scene, when an event
@@ -2070,7 +2842,13 @@ impl Context<'_> {
         let inner = rest.trim_end_matches(')');
         let trigger = parse_trigger(inner).ok();
         let other = trigger.and_then(|t| {
-            self.events.iter().find(|ev| ev.scenes.contains(&scene) && ev.alternatives.iter().any(|a| a.trigger.as_ref().ok() == Some(&t)))
+            self.events.iter().find(|ev| {
+                ev.scenes.contains(&scene)
+                    && ev
+                        .alternatives
+                        .iter()
+                        .any(|a| a.trigger.as_ref().ok() == Some(&t))
+            })
         });
         match other {
             Some(ev) => format!("{} began first ({inner})", ev.name),
@@ -2088,10 +2866,16 @@ impl Context<'_> {
         };
         for entry in entries.flatten() {
             let file = entry.file_name().to_string_lossy().into_owned();
-            let Some(stem) = file.strip_suffix(".gif").or_else(|| file.strip_suffix(".png")) else {
+            let Some(stem) = file
+                .strip_suffix(".gif")
+                .or_else(|| file.strip_suffix(".png"))
+            else {
                 continue;
             };
-            let page = stem.strip_prefix(base.as_str()).and_then(|r| r.strip_prefix('-')).is_some_and(|n| n.parse::<u32>().is_ok());
+            let page = stem
+                .strip_prefix(base.as_str())
+                .and_then(|r| r.strip_prefix('-'))
+                .is_some_and(|n| n.parse::<u32>().is_ok());
             if stem == base || page || stem == format!("{base}-whole") {
                 let _ = std::fs::remove_file(entry.path());
             }
@@ -2108,29 +2892,57 @@ impl Context<'_> {
         let mut note = self.note_of_effects(run, scene, event);
         if run.capped {
             let capped = format!("it runs past {} seconds without the player having control again, so only its window is written", self.stage.limit_frames(EVENT_LIMIT) / 60);
-            note = if note.is_empty() { capped } else { format!("{capped}; {note}") };
+            note = if note.is_empty() {
+                capped
+            } else {
+                format!("{capped}; {note}")
+            };
         }
         note
     }
 
     fn note_of_effects(&self, run: &EventRun, scene: &Scene, event: &Event) -> String {
-        let name = |flag: u16| self.flags.name(flag).unwrap_or_else(|| format!("flag {flag:#05x}"));
-        let flags: Vec<(String, bool)> = run.flags_changed.iter().map(|&(f, on)| (name(f), on)).collect();
+        let name = |flag: u16| {
+            self.flags
+                .name(flag)
+                .unwrap_or_else(|| format!("flag {flag:#05x}"))
+        };
+        let flags: Vec<(String, bool)> = run
+            .flags_changed
+            .iter()
+            .map(|&(f, on)| (name(f), on))
+            .collect();
         let mut effects = run.effects.clone();
-        let nothing = run.note.as_deref().is_some_and(|n| n.contains("nothing visible happens") && !n.contains("moves the leader and the camera"));
+        let nothing = run.note.as_deref().is_some_and(|n| {
+            n.contains("nothing visible happens") && !n.contains("moves the leader and the camera")
+        });
         if nothing && flags.is_empty() && effects.is_empty() {
             let assigned = super::stage::assigned(&self.source(scene), &event.name);
             if !assigned.is_empty() {
-                effects.push(format!("its code changes {}, which nothing on the screen shows (read from its source)", assigned.join(", ")));
+                effects.push(format!(
+                    "its code changes {}, which nothing on the screen shows (read from its source)",
+                    assigned.join(", ")
+                ));
             }
         }
         let mut note = instead(run.note.clone().unwrap_or_default(), &flags, &effects);
         if !run.set_off.is_empty() {
-            let set_off = format!("the keys held afterwards set off {}", self.set_off(&run.set_off, scene.number));
-            note = if note.is_empty() { set_off } else { format!("{note}; {set_off}") };
+            let set_off = format!(
+                "the keys held afterwards set off {}",
+                self.set_off(&run.set_off, scene.number)
+            );
+            note = if note.is_empty() {
+                set_off
+            } else {
+                format!("{note}; {set_off}")
+            };
         }
         if let Some(skipped) = skip_note(&self.stage.skip) {
-            note = if note.is_empty() { skipped } else { format!("{note}; {skipped}") };
+            note = if note.is_empty() {
+                skipped
+            } else {
+                format!("{note}; {skipped}")
+            };
         }
         note
     }
@@ -2140,22 +2952,46 @@ impl Context<'_> {
     fn set_off(&self, started: &[(u8, u32, u32)], scene: u16) -> String {
         let named: Vec<String> = started
             .iter()
-            .map(|&(kind, _, ran)| format!("{} ({})", self.name_of(scene, ran), super::field::kind_label(kind)))
+            .map(|&(kind, _, ran)| {
+                format!(
+                    "{} ({})",
+                    self.name_of(scene, ran),
+                    super::field::kind_label(kind)
+                )
+            })
             .collect();
         named.join(", ")
     }
 
-    fn write_event(&mut self, scene: &Scene, entrance: i16, event: &Event, run: &EventRun) -> Result<(), String> {
+    fn write_event(
+        &mut self,
+        scene: &Scene,
+        entrance: i16,
+        event: &Event,
+        run: &EventRun,
+    ) -> Result<(), String> {
         let base = file_name(&event.name);
-        let messages = event.messages.iter().map(|m| format!("{m:05}")).collect::<Vec<_>>().join(", ");
+        let messages = event
+            .messages
+            .iter()
+            .map(|m| format!("{m:05}"))
+            .collect::<Vec<_>>()
+            .join(", ");
         if run.frames.is_empty() {
             return Err("no frame was recorded".to_string());
         }
         let file = format!("{}/events/{base}.gif", scene.slug());
         let (written, more) = self.gif(&file, &run.frames)?;
-        let leads_to = run.leads_to.map(|n| match self.scenes.iter().find(|s| s.number == n).and_then(|s| s.symbol.as_deref()) {
-            Some(symbol) => format!("SceneId_{symbol}"),
-            None => format!("#{n}"),
+        let leads_to = run.leads_to.map(|n| {
+            match self
+                .scenes
+                .iter()
+                .find(|s| s.number == n)
+                .and_then(|s| s.symbol.as_deref())
+            {
+                Some(symbol) => format!("SceneId_{symbol}"),
+                None => format!("#{n}"),
+            }
         });
         self.rows.push(Row {
             scene: scene.slug(),
@@ -2166,7 +3002,11 @@ impl Context<'_> {
             event: event.name.clone(),
             frames: written,
             leads_to: leads_to.unwrap_or_default(),
-            note: std::iter::once(self.note_with_effects(run, scene, event)).filter(|n| !n.is_empty()).chain(more).collect::<Vec<_>>().join("; "),
+            note: std::iter::once(self.note_with_effects(run, scene, event))
+                .filter(|n| !n.is_empty())
+                .chain(more)
+                .collect::<Vec<_>>()
+                .join("; "),
             messages,
             file,
             ..Row::default()
@@ -2190,12 +3030,21 @@ impl Context<'_> {
 /// What a note says of a recording written in part (--from, --for): the
 /// frames kept, in seconds.
 fn window_note(start: usize, end: usize) -> String {
-    format!("written from {:.1} to {:.1} seconds (--from, --for)", start as f64 / 60.0, end as f64 / 60.0)
+    format!(
+        "written from {:.1} to {:.1} seconds (--from, --for)",
+        start as f64 / 60.0,
+        end as f64 / 60.0
+    )
 }
 
 /// What a note says of the functions --skip made return at once.
 fn skip_note(skip: &[String]) -> Option<String> {
-    (!skip.is_empty()).then(|| format!("played with {} returning at once (--skip)", skip.join(" and ")))
+    (!skip.is_empty()).then(|| {
+        format!(
+            "played with {} returning at once (--skip)",
+            skip.join(" and ")
+        )
+    })
 }
 
 /// Frames a staged walk shows the leader standing before its keys.
@@ -2217,7 +3066,11 @@ fn row_for_cells(codes: &[u16], code: u16, near: &[u16]) -> Option<u16> {
 fn instead(mut note: String, flags: &[(String, bool)], effects: &[String]) -> String {
     let mut out: Vec<String> = Vec::new();
     for (on, verb) in [(true, "sets"), (false, "clears")] {
-        let names: Vec<&str> = flags.iter().filter(|f| f.1 == on).map(|f| f.0.as_str()).collect();
+        let names: Vec<&str> = flags
+            .iter()
+            .filter(|f| f.1 == on)
+            .map(|f| f.0.as_str())
+            .collect();
         if !names.is_empty() {
             out.push(format!("it {verb} {}", names.join(", ")));
         }
@@ -2247,8 +3100,15 @@ fn file_name(name: &str) -> String {
 /// the order it tests them.
 pub fn variant_candidates(events: &[Event], flags: &Flags) -> BTreeMap<u16, Vec<String>> {
     let mut out: BTreeMap<u16, Vec<String>> = BTreeMap::new();
-    for e in events.iter().filter(|e| e.trigger_text.starts_with("entry")) {
-        for t in e.tests.iter().filter(|t| is_story_flag(t, flags) && !VARIANTS.iter().any(|v| v.flag == *t)) {
+    for e in events
+        .iter()
+        .filter(|e| e.trigger_text.starts_with("entry"))
+    {
+        for t in e
+            .tests
+            .iter()
+            .filter(|t| is_story_flag(t, flags) && !VARIANTS.iter().any(|v| v.flag == *t))
+        {
             for &s in &e.scenes {
                 let list = out.entry(s).or_default();
                 if !list.contains(t) {
@@ -2277,26 +3137,42 @@ mod tests {
     #[test]
     fn an_older_index_keeps_its_columns_by_name() {
         let old = "scene\tnumber\tarea\tvariant\tkind\tentrance\tevent\tpage\tsegment\tmessage\tafter\tbefore\tframes\tmessages\tfile";
-        let line = same_columns(old, "vale\t4\tVale\t\tevent-gif\t0\tEvent_X\t\t\t\t\t\t90\t00001\tvale/events/Event_X.gif");
+        let line = same_columns(
+            old,
+            "vale\t4\tVale\t\tevent-gif\t0\tEvent_X\t\t\t\t\t\t90\t00001\tvale/events/Event_X.gif",
+        );
         assert_eq!(line, "vale\t4\tVale\t\tevent-gif\t0\tEvent_X\t\t\t\t\t\t90\t\t\t00001\tvale/events/Event_X.gif");
         assert_eq!(same_columns(INDEX_HEADER, "a\tb"), "a\tb");
     }
 
     #[test]
     fn a_note_of_nothing_visible_says_what_happens_instead() {
-        let flags = vec![("FLAG_A".to_string(), true), ("FLAG_B".to_string(), false), ("FLAG_C".to_string(), true)];
-        let effects = vec!["it changes the camera's bounds from (0, 0)-(240, 160) to (0, 0)-(480, 160) pixels".to_string()];
+        let flags = vec![
+            ("FLAG_A".to_string(), true),
+            ("FLAG_B".to_string(), false),
+            ("FLAG_C".to_string(), true),
+        ];
+        let effects = vec![
+            "it changes the camera's bounds from (0, 0)-(240, 160) to (0, 0)-(480, 160) pixels"
+                .to_string(),
+        ];
         assert_eq!(
             instead("nothing visible happens".to_string(), &flags, &effects),
             "nothing visible happens; what it does instead: it sets FLAG_A, FLAG_C; it clears FLAG_B; it changes the camera's bounds from (0, 0)-(240, 160) to (0, 0)-(480, 160) pixels"
         );
-        assert_eq!(instead("nothing visible happens".to_string(), &[], &[]), "nothing visible happens");
+        assert_eq!(
+            instead("nothing visible happens".to_string(), &[], &[]),
+            "nothing visible happens"
+        );
     }
 
     #[test]
     fn event_names_become_file_names() {
         assert_eq!(file_name("Bilibin_InspectWell"), "Bilibin_InspectWell");
-        assert_eq!(file_name("gLacquerRoomsB_Triggers[65]"), "gLacquerRoomsB_Triggers-65");
+        assert_eq!(
+            file_name("gLacquerRoomsB_Triggers[65]"),
+            "gLacquerRoomsB_Triggers-65"
+        );
     }
 
     #[test]
@@ -2305,14 +3181,23 @@ mod tests {
             scenes: vec![scene],
             name: name.to_string(),
             trigger_text: String::new(),
-            alternatives: vec![Alternative { trigger: Ok(trigger), conditions: Vec::new() }],
+            alternatives: vec![Alternative {
+                trigger: Ok(trigger),
+                conditions: Vec::new(),
+            }],
             tests: Vec::new(),
             sets: Vec::new(),
             clears: Vec::new(),
             messages: vec![message],
         };
-        let rocks = [row("MsgValeRockCannotBeMoved", 3, Trigger::Talk(11), 4385), row("MsgValeRockCannotBeMoved", 3, Trigger::Talk(12), 4385)];
-        let hops = [row("KolimaForest_HopEast", 40, Trigger::Touch(11), 1), row("KolimaForest_HopEast", 42, Trigger::Touch(11), 2)];
+        let rocks = [
+            row("MsgValeRockCannotBeMoved", 3, Trigger::Talk(11), 4385),
+            row("MsgValeRockCannotBeMoved", 3, Trigger::Talk(12), 4385),
+        ];
+        let hops = [
+            row("KolimaForest_HopEast", 40, Trigger::Touch(11), 1),
+            row("KolimaForest_HopEast", 42, Trigger::Touch(11), 2),
+        ];
         let all: Vec<&Event> = rocks.iter().chain(hops.iter()).collect();
         let merged = merge_rows(&all);
         assert_eq!(merged.len(), 2);
@@ -2324,7 +3209,10 @@ mod tests {
 
     #[test]
     fn moments_are_named_by_their_flags() {
-        assert_eq!(moment_label("FLAG_VALE_STORM_SAW_RIVER_RESCUE"), "vale-storm-saw-river-rescue");
+        assert_eq!(
+            moment_label("FLAG_VALE_STORM_SAW_RIVER_RESCUE"),
+            "vale-storm-saw-river-rescue"
+        );
         assert_eq!(moment_label("FLAG_KOLIMA_CURSE_LIFTED"), "cured");
     }
 
@@ -2337,7 +3225,10 @@ mod tests {
             trigger_text: String::new(),
             alternatives: vec![Alternative {
                 trigger: Ok(Trigger::Touch(1)),
-                conditions: conditions.iter().map(|(n, on)| (n.to_string(), *on)).collect(),
+                conditions: conditions
+                    .iter()
+                    .map(|(n, on)| (n.to_string(), *on))
+                    .collect(),
             }],
             tests: Vec::new(),
             sets: names(sets),
@@ -2377,15 +3268,47 @@ mod tests {
             setter(&[], &[("STORM", true), ("PARTY_LEFT", false)], &[]),
         ];
         let names = |list: &[&str]| list.iter().map(|s| s.to_string()).collect::<Vec<String>>();
-        let candidates = names(&["STORM", "ROCK", "JOINED", "GATHERING", "LEFT", "RESCUE", "PARTY_LEFT"]);
+        let candidates = names(&[
+            "STORM",
+            "ROCK",
+            "JOINED",
+            "GATHERING",
+            "LEFT",
+            "RESCUE",
+            "PARTY_LEFT",
+        ]);
         let number = |n: &str| numbers.get(n).copied();
         let moments = story_moments(&candidates, &[], &events, &number);
         let order: Vec<&str> = moments.iter().map(|m| m.flag.as_str()).collect();
-        assert_eq!(order, ["ROCK", "STORM", "JOINED", "RESCUE", "GATHERING", "LEFT", "PARTY_LEFT"]);
-        assert_eq!(moments[5].set, names(&["ROCK", "STORM", "JOINED", "RESCUE", "GATHERING", "LEFT"]));
+        assert_eq!(
+            order,
+            [
+                "ROCK",
+                "STORM",
+                "JOINED",
+                "RESCUE",
+                "GATHERING",
+                "LEFT",
+                "PARTY_LEFT"
+            ]
+        );
+        assert_eq!(
+            moments[5].set,
+            names(&["ROCK", "STORM", "JOINED", "RESCUE", "GATHERING", "LEFT"])
+        );
         assert!(moments[5].clear.is_empty());
         // Leaving Vale ends the night: no condition sees the storm with it.
-        assert_eq!(moments[6].set, names(&["ROCK", "JOINED", "RESCUE", "GATHERING", "LEFT", "PARTY_LEFT"]));
+        assert_eq!(
+            moments[6].set,
+            names(&[
+                "ROCK",
+                "JOINED",
+                "RESCUE",
+                "GATHERING",
+                "LEFT",
+                "PARTY_LEFT"
+            ])
+        );
         assert_eq!(moments[6].clear, names(&["STORM"]));
         // The scene's own arrival comes first.
         let moments = story_moments(&candidates, &names(&["STORM"]), &events, &number);
@@ -2394,12 +3317,22 @@ mod tests {
 
     #[test]
     fn two_events_never_share_one_recording() {
-        let out = std::env::temp_dir().join(format!("alchemy-shared-recordings-{}", std::process::id()));
+        let out =
+            std::env::temp_dir().join(format!("alchemy-shared-recordings-{}", std::process::id()));
         std::fs::create_dir_all(out.join("tret/events")).unwrap();
         let row = |event: &str, messages: &str, bytes: &[u8]| {
             let file = format!("tret/events/{event}.gif");
             std::fs::write(out.join(&file), bytes).unwrap();
-            let line = Row { scene: "tret".to_string(), number: 46, kind: "event-gif", event: event.to_string(), messages: messages.to_string(), file: file.clone(), ..Row::default() }.line();
+            let line = Row {
+                scene: "tret".to_string(),
+                number: 46,
+                kind: "event-gif",
+                event: event.to_string(),
+                messages: messages.to_string(),
+                file: file.clone(),
+                ..Row::default()
+            }
+            .line();
             (file, line)
         };
         let mut rows = vec![
@@ -2410,7 +3343,14 @@ mod tests {
             row("MsgB", "00012", b"same"),
         ];
         let shared = shared_recordings(&out, &mut rows);
-        assert_eq!(shared, vec![(46, "GoUpWestVine".to_string(), "GoUpNortheastVine".to_string())]);
+        assert_eq!(
+            shared,
+            vec![(
+                46,
+                "GoUpWestVine".to_string(),
+                "GoUpNortheastVine".to_string()
+            )]
+        );
         assert_eq!(rows.len(), 4);
         assert!(!out.join("tret/events/GoUpWestVine.gif").exists());
         assert!(out.join("tret/events/GoUpNortheastVine.gif").exists());
@@ -2437,24 +3377,46 @@ impl Context<'_> {
         let mut notes = Vec::new();
         let (start, end) = self.stage.window(frames.len());
         if (start, end) != (0, frames.len()) {
-            notes.push(format!("{}; the whole recording runs {:.1} seconds", window_note(start, end), frames.len() as f64 / 60.0));
+            notes.push(format!(
+                "{}; the whole recording runs {:.1} seconds",
+                window_note(start, end),
+                frames.len() as f64 / 60.0
+            ));
         }
         // --crop: a part of the screen, drawn --zoom times as large.
         let (cropped, width) = match self.stage.crop {
             Some(crop) => {
                 let zoom = self.stage.zoom.unwrap_or(2) as usize;
-                notes.push(format!("the screen's {}x{} pixels from ({}, {}), drawn {zoom} times as large", crop[2], crop[3], crop[0], crop[1]));
-                (frames[start..end].iter().map(|f| super::stage::crop_frame(f, super::mgba::WIDTH, crop, zoom)).collect(), crop[2] as usize * zoom)
+                notes.push(format!(
+                    "the screen's {}x{} pixels from ({}, {}), drawn {zoom} times as large",
+                    crop[2], crop[3], crop[0], crop[1]
+                ));
+                (
+                    frames[start..end]
+                        .iter()
+                        .map(|f| super::stage::crop_frame(f, super::mgba::WIDTH, crop, zoom))
+                        .collect(),
+                    crop[2] as usize * zoom,
+                )
             }
             None => (Vec::new(), super::mgba::WIDTH),
         };
-        let pictures: Vec<&[u16]> = if self.stage.crop.is_some() { cropped.iter().map(Vec::as_slice).collect() } else { frames[start..end].iter().map(Vec::as_slice).collect() };
+        let pictures: Vec<&[u16]> = if self.stage.crop.is_some() {
+            cropped.iter().map(Vec::as_slice).collect()
+        } else {
+            frames[start..end].iter().map(Vec::as_slice).collect()
+        };
         if pictures.is_empty() {
-            return Err(format!("--from and --for leave no frame of its {:.1} seconds", frames.len() as f64 / 60.0));
+            return Err(format!(
+                "--from and --for leave no frame of its {:.1} seconds",
+                frames.len() as f64 / 60.0
+            ));
         }
         let written = match super::animation::write_bgr555(&path, &pictures, width) {
             Err(why) if self.stage.keep_short && why.contains("under the") => {
-                notes.push(format!("kept short (--keep-short): {why}, which render check refuses"));
+                notes.push(format!(
+                    "kept short (--keep-short): {why}, which render check refuses"
+                ));
                 super::animation::write_bgr555_unchecked(&path, &pictures, width)?
             }
             other => other?,

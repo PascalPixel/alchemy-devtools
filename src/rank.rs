@@ -81,18 +81,34 @@ fn parse(arguments: &[String]) -> Result<Options, String> {
     };
     let mut words = arguments.iter();
     while let Some(word) = words.next() {
-        let mut value = || words.next().ok_or_else(|| format!("{word} takes a value\n{USAGE}"));
+        let mut value = || {
+            words
+                .next()
+                .ok_or_else(|| format!("{word} takes a value\n{USAGE}"))
+        };
         match word.as_str() {
             "--game" => options.games.push(targets::game(value()?)?),
             "--kind" => {
                 for kind in value()?.split(',') {
-                    options.kinds.push(Kind::named(kind).ok_or_else(|| format!("--kind takes main, arm, overlay, edition or data, not {kind}"))?);
+                    options.kinds.push(Kind::named(kind).ok_or_else(|| {
+                        format!("--kind takes main, arm, overlay, edition or data, not {kind}")
+                    })?);
                 }
             }
             "--state" => options.states.push(value()?.to_ascii_lowercase()),
-            "--limit" => options.limit = Some(value()?.parse().map_err(|_| format!("--limit takes a number\n{USAGE}"))?),
+            "--limit" => {
+                options.limit = Some(
+                    value()?
+                        .parse()
+                        .map_err(|_| format!("--limit takes a number\n{USAGE}"))?,
+                )
+            }
             "--jobs" => {
-                options.jobs = value()?.parse().ok().filter(|&jobs| jobs > 0).ok_or_else(|| format!("--jobs takes a number above 0\n{USAGE}"))?
+                options.jobs = value()?
+                    .parse()
+                    .ok()
+                    .filter(|&jobs| jobs > 0)
+                    .ok_or_else(|| format!("--jobs takes a number above 0\n{USAGE}"))?
             }
             "--json" => options.json = true,
             "--twins" => options.twins = true,
@@ -141,19 +157,35 @@ fn order(rows: &mut [Row]) {
         Some(Err(_)) => 2,
     };
     rows.sort_by(|a, b| {
-        let key = |row: &Row| if tier(row) == 0 { row.size * row.places.len() } else { weight(row) };
-        tier(a).cmp(&tier(b)).then(key(b).cmp(&key(a))).then(b.size.cmp(&a.size))
+        let key = |row: &Row| {
+            if tier(row) == 0 {
+                row.size * row.places.len()
+            } else {
+                weight(row)
+            }
+        };
+        tier(a)
+            .cmp(&tier(b))
+            .then(key(b).cmp(&key(a)))
+            .then(b.size.cmp(&a.size))
     });
 }
 
 /// The diff command that measures a row's piece, from the checkout.
 fn measure_command(row: &Row, program: &str) -> String {
     let piece = &row.piece;
-    let Some(draft) = piece.draft.as_ref().or(piece.planned.as_ref()) else { return String::new() };
+    let Some(draft) = piece.draft.as_ref().or(piece.planned.as_ref()) else {
+        return String::new();
+    };
     let mut words = vec![program.to_string(), "diff".into(), draft.clone()];
-    let stem = Path::new(draft).file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or_default();
+    let stem = Path::new(draft)
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().into_owned())
+        .unwrap_or_default();
     match &piece.reference {
-        Reference::Listings(list) if list.len() > 1 || list.first() != Some(&stem) => words.push(list.join(",")),
+        Reference::Listings(list) if list.len() > 1 || list.first() != Some(&stem) => {
+            words.push(list.join(","))
+        }
         Reference::Listings(_) => {}
         Reference::Overlay(named) => {
             if piece.kind == Kind::Edition {
@@ -164,7 +196,12 @@ fn measure_command(row: &Row, program: &str) -> String {
             }
             words.extend(["--symbol".into(), piece.name.clone()]);
         }
-        Reference::Scaffold { .. } => words.extend(["--edition".into(), piece.target.id.to_string(), "--symbol".into(), piece.name.clone()]),
+        Reference::Scaffold { .. } => words.extend([
+            "--edition".into(),
+            piece.target.id.to_string(),
+            "--symbol".into(),
+            piece.name.clone(),
+        ]),
     }
     if piece.arm {
         words.push("--arm".into());
@@ -175,13 +212,21 @@ fn measure_command(row: &Row, program: &str) -> String {
 /// This program as a command run from the checkout: its path there, or its
 /// whole path when it lives elsewhere.
 fn program(root: &Path) -> String {
-    let Ok(exe) = std::env::current_exe() else { return "alchemy-devtools".into() };
+    let Ok(exe) = std::env::current_exe() else {
+        return "alchemy-devtools".into();
+    };
     let exe = exe.canonicalize().unwrap_or(exe);
-    exe.strip_prefix(root).unwrap_or(&exe).to_string_lossy().into_owned()
+    exe.strip_prefix(root)
+        .unwrap_or(&exe)
+        .to_string_lossy()
+        .into_owned()
 }
 
 fn differ(row: &Row) -> Option<usize> {
-    row.measured.as_ref().and_then(|measured| measured.as_ref().ok()).map(|measure| measure.differ)
+    row.measured
+        .as_ref()
+        .and_then(|measured| measured.as_ref().ok())
+        .map(|measure| measure.differ)
 }
 
 /// Each unfinished function's twin in the other game, by game and name, as
@@ -189,11 +234,16 @@ fn differ(row: &Row) -> Option<usize> {
 type Twins = std::collections::HashMap<(String, String), String>;
 
 fn twin(twins: &Twins, row: &Row) -> String {
-    twins.get(&(row.piece.target.game().to_string(), row.piece.name.clone())).cloned().unwrap_or_default()
+    twins
+        .get(&(row.piece.target.game().to_string(), row.piece.name.clone()))
+        .cloned()
+        .unwrap_or_default()
 }
 
 fn table(rows: &[Row], program: &str, twins: Option<&Twins>) -> String {
-    let mut text = String::from("rank\tweight\tgap\tcopies\tsize\tdiffer\tkind\tstate\twhere\tname\tdraft\tmeasure");
+    let mut text = String::from(
+        "rank\tweight\tgap\tcopies\tsize\tdiffer\tkind\tstate\twhere\tname\tdraft\tmeasure",
+    );
     text += if twins.is_some() { "\ttwin\n" } else { "\n" };
     for (n, row) in rows.iter().enumerate() {
         let mut fields = vec![
@@ -202,7 +252,9 @@ fn table(rows: &[Row], program: &str, twins: Option<&Twins>) -> String {
             gap(row).to_string(),
             row.places.len().to_string(),
             row.size.to_string(),
-            differ(row).map(|differ| differ.to_string()).unwrap_or_default(),
+            differ(row)
+                .map(|differ| differ.to_string())
+                .unwrap_or_default(),
             row.piece.kind.name().into(),
             state(row),
             row.piece.place.clone(),
@@ -219,7 +271,16 @@ fn table(rows: &[Row], program: &str, twins: Option<&Twins>) -> String {
 
 fn json(rows: &[Row], program: &str, twins: Option<&Twins>) -> String {
     let optional = |text: Option<&String>| text.map_or("null".into(), |text| quote(text));
-    let list = |items: &[String]| format!("[{}]", items.iter().map(|item| quote(item)).collect::<Vec<_>>().join(","));
+    let list = |items: &[String]| {
+        format!(
+            "[{}]",
+            items
+                .iter()
+                .map(|item| quote(item))
+                .collect::<Vec<_>>()
+                .join(",")
+        )
+    };
     let rows: Vec<String> = rows
         .iter()
         .enumerate()
@@ -256,7 +317,10 @@ fn totals(rows: &[Row]) -> String {
     let kind = |row: &Row| row.piece.kind.name().to_string();
     let first_words = |row: &Row| state(row).split(':').next().unwrap_or("").to_string();
     let mut text = String::new();
-    for (title, key) in [("kind", &kind as &dyn Fn(&Row) -> String), ("state", &first_words)] {
+    for (title, key) in [
+        ("kind", &kind as &dyn Fn(&Row) -> String),
+        ("state", &first_words),
+    ] {
         let mut sums: Vec<(String, usize, usize, usize)> = Vec::new();
         for row in rows {
             let name = key(row);
@@ -273,7 +337,13 @@ fn totals(rows: &[Row]) -> String {
         }
         let parts: Vec<String> = sums
             .iter()
-            .map(|(name, pieces, size, weight)| format!("{name} {pieces} ({} instructions, weight {})", commas(*size as i64), commas(*weight as i64)))
+            .map(|(name, pieces, size, weight)| {
+                format!(
+                    "{name} {pieces} ({} instructions, weight {})",
+                    commas(*size as i64),
+                    commas(*weight as i64)
+                )
+            })
             .collect();
         text += &format!("by {title}: {}\n", parts.join("; "));
     }
@@ -287,7 +357,9 @@ fn data(root: &Path, english: crate::alchemy::targets::DecompTargetId) -> Result
     let pieces = built::pieces(root, english)?;
     Ok(pieces
         .iter()
-        .filter(|piece| piece.stem.starts_with("recon/") && !piece.is_code() && !piece.is_scaffold())
+        .filter(|piece| {
+            piece.stem.starts_with("recon/") && !piece.is_code() && !piece.is_scaffold()
+        })
         .map(|piece| Row {
             piece: inventory::Piece {
                 kind: Kind::Data,
@@ -308,7 +380,10 @@ fn data(root: &Path, english: crate::alchemy::targets::DecompTargetId) -> Result
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
-    if arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
+    if arguments
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "-h" | "--help"))
+    {
         println!("{USAGE}");
         return Ok(());
     }
@@ -316,7 +391,10 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let options = parse(arguments)?;
     let root = crate::compile::root();
     let games: Vec<&str> = match options.games.is_empty() {
-        true => targets::games()?.into_iter().filter(|game| root.join("recon").join(game).is_dir()).collect(),
+        true => targets::games()?
+            .into_iter()
+            .filter(|game| root.join("recon").join(game).is_dir())
+            .collect(),
         false => options.games.clone(),
     };
     let wants = |kind: Kind| options.kinds.contains(&kind);
@@ -325,9 +403,15 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     for game in games {
         let layout = Layout::new(game);
         let ids = built::editions(&[game.to_string()])?;
-        let english = built::edition(game, "en").ok_or_else(|| format!("{game} has no English edition"))?;
+        let english =
+            built::edition(game, "en").ok_or_else(|| format!("{game} has no English edition"))?;
         let mut editions: Vec<DecompTarget> = vec![target_for(english)];
-        editions.extend(ids.iter().copied().filter(|&id| id != english).map(target_for));
+        editions.extend(
+            ids.iter()
+                .copied()
+                .filter(|&id| id != english)
+                .map(target_for),
+        );
         let mut pieces = Vec::new();
         if (wants(Kind::Main) || wants(Kind::Arm)) && root.join(layout.listings()).is_dir() {
             pieces.extend(inventory::main(root, &layout, editions[0])?);
@@ -344,10 +428,14 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             rows.extend(data(root, english)?);
         }
         for (listing, draft) in &summary.nested {
-            notes += &format!("{game}: {listing} measured with the draft of {draft}, which holds it\n");
+            notes +=
+                &format!("{game}: {listing} measured with the draft of {draft}, which holds it\n");
         }
         for places in &summary.near {
-            notes += &format!("{game}: near copies, the same instructions with other names or constants: {}\n", places.join(", "));
+            notes += &format!(
+                "{game}: near copies, the same instructions with other names or constants: {}\n",
+                places.join(", ")
+            );
         }
         notes += &format!("{game}: {} drafts compiled\n", summary.compiled);
         if !summary.padding.is_empty() {
@@ -361,7 +449,10 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     if !options.states.is_empty() {
         rows.retain(|row| {
             let state = state(row);
-            options.states.iter().any(|wanted| state.starts_with(wanted.as_str()))
+            options
+                .states
+                .iter()
+                .any(|wanted| state.starts_with(wanted.as_str()))
         });
     }
     order(&mut rows);
@@ -372,7 +463,11 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let twins = match options.twins {
         true => {
             let mut twins = Twins::new();
-            for game in rows.iter().map(|row| row.piece.target.game()).collect::<std::collections::BTreeSet<_>>() {
+            for game in rows
+                .iter()
+                .map(|row| row.piece.target.game())
+                .collect::<std::collections::BTreeSet<_>>()
+            {
                 for (name, (twin, file, dice)) in crate::twins::index(root, game)? {
                     twins.insert((game.to_string(), name), format!("{twin} {file} {dice:.3}"));
                 }
@@ -384,12 +479,18 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     if options.json {
         print!("{}", json(&rows, &program, twins.as_ref()));
     } else if let Some(out) = &options.out {
-        std::fs::write(out, table(&rows, &program, twins.as_ref())).map_err(|error| format!("{out}: {error}"))?;
+        std::fs::write(out, table(&rows, &program, twins.as_ref()))
+            .map_err(|error| format!("{out}: {error}"))?;
     } else {
         print!("{}", table(&rows, &program, twins.as_ref()));
     }
     eprint!("{notes}{}", totals(&rows));
-    eprintln!("{} rows in {:.1} s on {} jobs", rows.len(), started.elapsed().as_secs_f64(), options.jobs);
+    eprintln!(
+        "{} rows in {:.1} s on {} jobs",
+        rows.len(),
+        started.elapsed().as_secs_f64(),
+        options.jobs
+    );
     Ok(())
 }
 
@@ -399,14 +500,22 @@ mod tests {
     use crate::alchemy::targets::decomp_target;
     use inventory::Piece;
 
-    fn row(kind: Kind, place: &str, size: usize, copies: usize, measured: Option<Result<Measure, String>>) -> Row {
+    fn row(
+        kind: Kind,
+        place: &str,
+        size: usize,
+        copies: usize,
+        measured: Option<Result<Measure, String>>,
+    ) -> Row {
         Row {
             piece: Piece {
                 kind,
                 target: decomp_target(Some("tla-en")).unwrap(),
                 name: format!("Func_{place}"),
                 place: place.into(),
-                draft: measured.is_some().then(|| format!("recon/tla/en/main/{place}.c")),
+                draft: measured
+                    .is_some()
+                    .then(|| format!("recon/tla/en/main/{place}.c")),
                 planned: Some(format!("recon/tla/en/main/{place}.c")),
                 reference: Reference::Listings(vec![place.into()]),
                 arm: false,
@@ -419,7 +528,12 @@ mod tests {
     }
 
     fn measured(differ: usize, gap: usize) -> Option<Result<Measure, String>> {
-        Some(Ok(Measure { listing: 0, draft: 0, differ, gap }))
+        Some(Ok(Measure {
+            listing: 0,
+            draft: 0,
+            differ,
+            gap,
+        }))
     }
 
     #[test]
@@ -427,31 +541,60 @@ mod tests {
         let mut rows = vec![
             row(Kind::Main, "08000010", 50, 1, measured(10, 4)),
             row(Kind::Main, "08000020", 10, 1, None),
-            row(Kind::Main, "08000030", 30, 1, Some(Err("xgcc failed".into()))),
+            row(
+                Kind::Main,
+                "08000030",
+                30,
+                1,
+                Some(Err("xgcc failed".into())),
+            ),
             row(Kind::Main, "08000040", 20, 3, None),
             row(Kind::Main, "08000050", 90, 1, measured(0, 0)),
             row(Kind::Main, "08000060", 40, 2, measured(6, 3)),
         ];
         order(&mut rows);
         let places: Vec<&str> = rows.iter().map(|row| row.piece.place.as_str()).collect();
-        assert_eq!(places, ["08000040", "08000020", "08000060", "08000010", "08000050", "08000030"]);
-        assert_eq!(rows.iter().map(weight).collect::<Vec<_>>(), [120, 20, 6, 4, 0, 60]);
-        assert_eq!(rows.iter().map(state).collect::<Vec<_>>()[2..], ["draft", "draft", "ready to adopt", "does not measure: xgcc failed"]);
+        assert_eq!(
+            places,
+            ["08000040", "08000020", "08000060", "08000010", "08000050", "08000030"]
+        );
+        assert_eq!(
+            rows.iter().map(weight).collect::<Vec<_>>(),
+            [120, 20, 6, 4, 0, 60]
+        );
+        assert_eq!(
+            rows.iter().map(state).collect::<Vec<_>>()[2..],
+            [
+                "draft",
+                "draft",
+                "ready to adopt",
+                "does not measure: xgcc failed"
+            ]
+        );
     }
 
     #[test]
     fn each_row_names_the_command_that_measures_it() {
         let mut nested = row(Kind::Main, "081843fc", 4580, 1, measured(22, 16));
         nested.piece.reference = Reference::Listings(vec!["081843fc".into(), "081848ec".into()]);
-        assert_eq!(measure_command(&nested, "devtools"), "devtools diff recon/tla/en/main/081843fc.c 081843fc,081848ec");
+        assert_eq!(
+            measure_command(&nested, "devtools"),
+            "devtools diff recon/tla/en/main/081843fc.c 081843fc,081848ec"
+        );
         let mut arm = row(Kind::Arm, "080212dc", 95, 1, None);
         arm.piece.arm = true;
-        assert_eq!(measure_command(&arm, "devtools"), "devtools diff recon/tla/en/main/080212dc.c --arm");
+        assert_eq!(
+            measure_command(&arm, "devtools"),
+            "devtools diff recon/tla/en/main/080212dc.c --arm"
+        );
         let mut copy = row(Kind::Overlay, "resource_6aa 0200a63c", 236, 1, None);
         copy.piece.planned = Some("recon/tla/en/overlays/resource_6aa_c_0200263c.c".into());
         copy.piece.name = "Func_0200263c".into();
         copy.piece.reference = Reference::Overlay("resource_6aa".into());
-        assert_eq!(measure_command(&copy, "devtools"), "devtools diff recon/tla/en/overlays/resource_6aa_c_0200263c.c --symbol Func_0200263c");
+        assert_eq!(
+            measure_command(&copy, "devtools"),
+            "devtools diff recon/tla/en/overlays/resource_6aa_c_0200263c.c --symbol Func_0200263c"
+        );
         copy.piece.kind = Kind::Edition;
         copy.piece.target = decomp_target(Some("tla-ja")).unwrap();
         copy.piece.draft = Some("games/tla/src/scene/islets/s263c.c".into());
@@ -459,7 +602,13 @@ mod tests {
             measure_command(&copy, "devtools"),
             "devtools diff games/tla/src/scene/islets/s263c.c --edition tla-ja --overlay resource_6aa --symbol Func_0200263c"
         );
-        let mut edition = row(Kind::Edition, "tla-ja .rom.0016fca8", 1152, 5, measured(0, 0));
+        let mut edition = row(
+            Kind::Edition,
+            "tla-ja .rom.0016fca8",
+            1152,
+            5,
+            measured(0, 0),
+        );
         edition.piece.target = decomp_target(Some("tla-ja")).unwrap();
         edition.piece.name = "BattleEffect_RunMegaera".into();
         edition.piece.draft = Some("games/tla/src/battle_effect/f170364.c".into());
@@ -470,21 +619,52 @@ mod tests {
         );
         let shown = table(std::slice::from_ref(&edition), "devtools", None);
         assert_eq!(
-            shown.lines().nth(1).unwrap().split('\t').take(9).collect::<Vec<_>>(),
-            ["1", "0", "0", "5", "1152", "0", "edition", "ready to adopt", "tla-ja .rom.0016fca8"]
+            shown
+                .lines()
+                .nth(1)
+                .unwrap()
+                .split('\t')
+                .take(9)
+                .collect::<Vec<_>>(),
+            [
+                "1",
+                "0",
+                "0",
+                "5",
+                "1152",
+                "0",
+                "edition",
+                "ready to adopt",
+                "tla-ja .rom.0016fca8"
+            ]
         );
         assert!(json(&[edition], "devtools", None).starts_with("[{\"rank\":1,\"weight\":0,\"gap\":0,\"copies\":5,\"size\":1152,\"differ\":0,\"kind\":\"edition\""));
     }
 
     #[test]
     fn options_name_kinds_states_and_one_output() {
-        let args = |items: &[&str]| items.iter().map(|item| item.to_string()).collect::<Vec<_>>();
-        let options = parse(&args(&["--kind", "main,arm", "--kind", "edition", "--state", "Draft", "--limit", "5", "--jobs", "3"])).unwrap();
+        let args = |items: &[&str]| {
+            items
+                .iter()
+                .map(|item| item.to_string())
+                .collect::<Vec<_>>()
+        };
+        let options = parse(&args(&[
+            "--kind", "main,arm", "--kind", "edition", "--state", "Draft", "--limit", "5",
+            "--jobs", "3",
+        ]))
+        .unwrap();
         assert_eq!(options.kinds, [Kind::Main, Kind::Arm, Kind::Edition]);
-        assert_eq!((options.states, options.limit, options.jobs), (vec!["draft".to_string()], Some(5), 3));
+        assert_eq!(
+            (options.states, options.limit, options.jobs),
+            (vec!["draft".to_string()], Some(5), 3)
+        );
         assert!(parse(&args(&["--json", "--out", "rank.tsv"])).is_err());
         assert!(parse(&args(&["--kind", "code"])).is_err());
-        assert_eq!(parse(&args(&["--kind", "data"])).unwrap().kinds, [Kind::Data]);
+        assert_eq!(
+            parse(&args(&["--kind", "data"])).unwrap().kinds,
+            [Kind::Data]
+        );
         assert!(parse(&args(&["--jobs", "0"])).is_err());
         assert!(parse(&args(&["--limit"])).is_err());
         assert_eq!(parse(&[]).unwrap().kinds.len(), 4);

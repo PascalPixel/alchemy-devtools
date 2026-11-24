@@ -69,7 +69,12 @@ impl Roster {
     /// Mercury Piers against Jenna.
     pub fn tla() -> Roster {
         Roster {
-            by_element: [(FELIX, SHEBA), (PIERS, JENNA), (JENNA, PIERS), (SHEBA, FELIX)],
+            by_element: [
+                (FELIX, SHEBA),
+                (PIERS, JENNA),
+                (JENNA, PIERS),
+                (SHEBA, FELIX),
+            ],
             four: [FELIX, JENNA, SHEBA, PIERS],
             preset: 3,
             special: None,
@@ -134,7 +139,9 @@ impl Ability {
     }
 
     fn usable_in_battle(&self) -> bool {
-        self.flags & USABLE_IN_BATTLE != 0 && self.kind() != 0 && !matches!(self.name.as_str(), "?" | "=")
+        self.flags & USABLE_IN_BATTLE != 0
+            && self.kind() != 0
+            && !matches!(self.name.as_str(), "?" | "=")
     }
 }
 
@@ -190,11 +197,19 @@ pub enum Ally {
 pub enum Command {
     Psynergy,
     /// A Djinni Set on the caster: its element and its index in it.
-    Djinni { element: u8, index: u8 },
+    Djinni {
+        element: u8,
+        index: u8,
+    },
     /// A summon, by its row of gSummon_DefinitionTable, with `count` Djinn of
     /// `element` on standby, and `needs[e]` of each element e in all (The
     /// Lost Age's summons call on more than one element).
-    Summon { row: u8, element: u8, count: u8, needs: [u8; 4] },
+    Summon {
+        row: u8,
+        element: u8,
+        count: u8,
+        needs: [u8; 4],
+    },
 }
 
 /// Where the cast is aimed.
@@ -256,7 +271,13 @@ pub struct Plan {
 fn nonzero(table: &Table, path: &str) -> Result<BTreeSet<u16>, String> {
     let mut values = BTreeSet::new();
     for row in 0..table.len() {
-        values.extend(table.values(row, path)?.into_iter().filter(|&v| v > 0).map(|v| v as u16));
+        values.extend(
+            table
+                .values(row, path)?
+                .into_iter()
+                .filter(|&v| v > 0)
+                .map(|v| v as u16),
+        );
     }
     Ok(values)
 }
@@ -265,7 +286,9 @@ fn nonzero(table: &Table, path: &str) -> Result<BTreeSet<u16>, String> {
 /// Lost Age's first ability name is MsgAbilityNothing, the name to change).
 pub fn abilities(game: &Game) -> Result<Vec<Ability>, String> {
     let table = game.table("gAbilityDefinitions", "AbilityDefinition")?;
-    let names = game.names("MsgAbilityName", table.len()).or_else(|_| game.names("MsgAbilityNothing", table.len()))?;
+    let names = game
+        .names("MsgAbilityName", table.len())
+        .or_else(|_| game.names("MsgAbilityNothing", table.len()))?;
     (0..table.len())
         .map(|row| {
             let byte = |field| table.value(row, field).map(|v| v as u8);
@@ -310,7 +333,9 @@ pub struct Tables {
 /// otherwise: the first name is The Broken Seal's, the second The Lost
 /// Age's, the name its source should change.
 fn either(table: &Table, row: usize, names: [&str; 2]) -> Result<i64, String> {
-    table.value(row, names[0]).or_else(|_| table.value(row, names[1]))
+    table
+        .value(row, names[0])
+        .or_else(|_| table.value(row, names[1]))
 }
 
 impl Tables {
@@ -323,7 +348,11 @@ impl Tables {
     /// Edition `edition`'s.
     pub fn read_edition(root: &Path, edition: &str) -> Result<Tables, String> {
         let game = Game::read_edition(root, edition)?;
-        let roster = if edition.starts_with("tla-") { Roster::tla() } else { Roster::tbs() };
+        let roster = if edition.starts_with("tla-") {
+            Roster::tla()
+        } else {
+            Roster::tbs()
+        };
         let classes = game.table("gClass_DefinitionTable", "ClassDefinition")?;
         let items = game.table("gItem_DefinitionTable", "ItemDefinition")?;
         let summons = game.table("gSummon_DefinitionTable", "SummonDefinition")?;
@@ -335,15 +364,28 @@ impl Tables {
         for row in 0..items.len() {
             let id = either(&items, row, ["abilityId", "actionId"])?;
             if id > 0 {
-                if items.value(row, "useType")? == teaches { &mut taught } else { &mut used }.insert(id as u16);
+                if items.value(row, "useType")? == teaches {
+                    &mut taught
+                } else {
+                    &mut used
+                }
+                .insert(id as u16);
             }
         }
         let jenna = match roster.special {
-            Some((class, _)) if class < classes.len() => classes.values(class, "abilities.ability")?.into_iter().filter(|&v| v > 0).map(|v| v as u16).collect(),
+            Some((class, _)) if class < classes.len() => classes
+                .values(class, "abilities.ability")?
+                .into_iter()
+                .filter(|&v| v > 0)
+                .map(|v| v as u16)
+                .collect(),
             _ => BTreeSet::new(),
         };
-        let unleashed = nonzero(&items, "unleashAbility").or_else(|_| nonzero(&items, "unleashAction"))?;
-        let enemies = game.table("gEnemy_Definitions", "EnemyDefinition").or_else(|_| game.table("gEnemy_DefinitionTable", "EnemyDefinition"))?;
+        let unleashed =
+            nonzero(&items, "unleashAbility").or_else(|_| nonzero(&items, "unleashAction"))?;
+        let enemies = game
+            .table("gEnemy_Definitions", "EnemyDefinition")
+            .or_else(|_| game.table("gEnemy_DefinitionTable", "EnemyDefinition"))?;
         Ok(Tables {
             abilities: abilities(&game)?,
             learned: nonzero(&classes, "abilities.ability")?,
@@ -351,9 +393,17 @@ impl Tables {
             taught,
             used,
             unleashed,
-            djinn: nonzero(&game.table("gDjinn_DefinitionTable", "DjinnDefinition")?, "abilityId")?,
+            djinn: nonzero(
+                &game.table("gDjinn_DefinitionTable", "DjinnDefinition")?,
+                "abilityId",
+            )?,
             summons: (0..summons.len())
-                .map(|row| Ok((either(&summons, row, ["abilityId", "nameMessageId"])? as u16, summons.values(row, "djinnRequired")?)))
+                .map(|row| {
+                    Ok((
+                        either(&summons, row, ["abilityId", "nameMessageId"])? as u16,
+                        summons.values(row, "djinnRequired")?,
+                    ))
+                })
                 .collect::<Result<_, String>>()?,
             enemy: nonzero(&enemies, "abilities")?,
             roster,
@@ -361,13 +411,30 @@ impl Tables {
     }
 
     pub fn plan(&self) -> Result<Plan, String> {
-        let (learned, jenna, taught, used, unleashed, djinn, enemy) =
-            (&self.learned, &self.jenna, &self.taught, &self.used, &self.unleashed, &self.djinn, &self.enemy);
-        let summons: BTreeSet<u16> = self.summons.iter().map(|s| s.0).filter(|&a| a > 0).collect();
+        let (learned, jenna, taught, used, unleashed, djinn, enemy) = (
+            &self.learned,
+            &self.jenna,
+            &self.taught,
+            &self.used,
+            &self.unleashed,
+            &self.djinn,
+            &self.enemy,
+        );
+        let summons: BTreeSet<u16> = self
+            .summons
+            .iter()
+            .map(|s| s.0)
+            .filter(|&a| a > 0)
+            .collect();
         let mut casts = Vec::new();
         let mut specials = Vec::new();
         let mut skipped = Vec::new();
-        for ability in self.abilities.iter().cloned().filter(Ability::usable_in_battle) {
+        for ability in self
+            .abilities
+            .iter()
+            .cloned()
+            .filter(Ability::usable_in_battle)
+        {
             let id = ability.id;
             let skip = if id <= 2 {
                 Some(Skip::Command)
@@ -375,7 +442,9 @@ impl Tables {
                 Some(Skip::Djinni)
             } else if summons.contains(&id) {
                 Some(Skip::Summon)
-            } else if (learned.contains(&id) || taught.contains(&id)) && ability.kind() != KIND_NO_POWER {
+            } else if (learned.contains(&id) || taught.contains(&id))
+                && ability.kind() != KIND_NO_POWER
+            {
                 None
             } else if used.contains(&id) {
                 Some(Skip::Item)
@@ -389,19 +458,29 @@ impl Tables {
             // A Djinni Set on its element's Adept, or a summon with its Djinn
             // on standby.
             let special = match skip {
-                Some(Skip::Djinni) => id.checked_sub(DJINN_FIRST).filter(|n| n % DJINN_PER_ELEMENT < self.roster.djinn).and_then(|n| {
-                    let mut c = cast_for(&self.roster, ability.clone(), false)?;
-                    c.command =
-                        Command::Djinni { element: (n / DJINN_PER_ELEMENT) as u8, index: (n % DJINN_PER_ELEMENT) as u8 };
-                    Some(c)
-                }),
+                Some(Skip::Djinni) => id
+                    .checked_sub(DJINN_FIRST)
+                    .filter(|n| n % DJINN_PER_ELEMENT < self.roster.djinn)
+                    .and_then(|n| {
+                        let mut c = cast_for(&self.roster, ability.clone(), false)?;
+                        c.command = Command::Djinni {
+                            element: (n / DJINN_PER_ELEMENT) as u8,
+                            index: (n % DJINN_PER_ELEMENT) as u8,
+                        };
+                        Some(c)
+                    }),
                 Some(Skip::Summon) => self.summon_row(id).and_then(|(row, element, count)| {
                     let mut c = cast_for(&self.roster, ability.clone(), false)?;
                     let mut needs = [0u8; 4];
                     for (e, &n) in self.summons[usize::from(row)].1.iter().enumerate().take(4) {
                         needs[e] = n.max(0) as u8;
                     }
-                    c.command = Command::Summon { row, element, count, needs };
+                    c.command = Command::Summon {
+                        row,
+                        element,
+                        count,
+                        needs,
+                    };
                     Some(c)
                 }),
                 _ => None,
@@ -422,7 +501,11 @@ impl Tables {
         // Djinn and summons keep their names unless a Psynergy has them.
         for c in &mut specials {
             if casts.iter().any(|p| p.slug == c.slug) {
-                let kind = if matches!(c.command, Command::Summon { .. }) { "summon" } else { "djinni" };
+                let kind = if matches!(c.command, Command::Summon { .. }) {
+                    "summon"
+                } else {
+                    "djinni"
+                };
                 c.slug = format!("{}-{kind}", c.slug);
             }
         }
@@ -434,7 +517,11 @@ impl Tables {
     /// count of Djinn it needs.
     fn summon_row(&self, id: u16) -> Option<(u8, u8, u8)> {
         let row = self.summons.iter().position(|s| s.0 == id)?;
-        self.summons[row].1.iter().enumerate().find_map(|(e, &n)| (n > 0).then_some((row as u8, e as u8, n as u8)))
+        self.summons[row]
+            .1
+            .iter()
+            .enumerate()
+            .find_map(|(e, &n)| (n > 0).then_some((row as u8, e as u8, n as u8)))
     }
 }
 
@@ -467,8 +554,16 @@ pub fn cast_for(roster: &Roster, ability: Ability, special: bool) -> Option<Cast
         if ability.range != 1 {
             // The target goes in the middle of the line, so a range reaches
             // the foes on both sides of it.
-            let mut others = roster.four.iter().copied().filter(|&o| o != caster && o != opposed).take(2);
-            foes = [others.next(), Some(opposed), others.next()].into_iter().flatten().collect();
+            let mut others = roster
+                .four
+                .iter()
+                .copied()
+                .filter(|&o| o != caster && o != opposed)
+                .take(2);
+            foes = [others.next(), Some(opposed), others.next()]
+                .into_iter()
+                .flatten()
+                .collect();
         }
         (vec![caster], foes, Aim::Foe)
     } else {
@@ -483,7 +578,17 @@ pub fn cast_for(roster: &Roster, ability: Ability, special: bool) -> Option<Cast
         _ => Ally::Healthy,
     };
     let lucky_foes = ability.effect == EFFECT_INSTANT_DEATH;
-    Some(Cast { slug: slug(&ability.name), ability, command: Command::Psynergy, preset, party, foes, aim, ally, lucky_foes })
+    Some(Cast {
+        slug: slug(&ability.name),
+        ability,
+        command: Command::Psynergy,
+        preset,
+        party,
+        foes,
+        aim,
+        ally,
+        lucky_foes,
+    })
 }
 
 /// The file name of an English ability name: lowercase letters and digits,
@@ -523,17 +628,43 @@ mod tests {
 
     /// (target mode, flags, element, effect, range, PP cost, name).
     fn rows() -> Vec<Ability> {
-        [(1, 0x05, 4, 0, 1, 0, "Nothing"), (1, 0x83, 4, 0, 1, 0, "Attack"), (4, 0x89, 4, 46, 1, 0, "Defend"), (1, 0x85, 0, 0, 2, 4, "Quake"), (2, 0xc1, 1, 0, 1, 4, "Ply"), (1, 0x85, 2, 0, 1, 4, "Flare")]
-            .into_iter()
-            .enumerate()
-            .map(|(id, (target_mode, flags, element, effect, range, pp_cost, name))| Ability { id: id as u16, name: name.to_string(), target_mode, flags, element, effect, range, pp_cost })
-            .collect()
+        [
+            (1, 0x05, 4, 0, 1, 0, "Nothing"),
+            (1, 0x83, 4, 0, 1, 0, "Attack"),
+            (4, 0x89, 4, 46, 1, 0, "Defend"),
+            (1, 0x85, 0, 0, 2, 4, "Quake"),
+            (2, 0xc1, 1, 0, 1, 4, "Ply"),
+            (1, 0x85, 2, 0, 1, 4, "Flare"),
+        ]
+        .into_iter()
+        .enumerate()
+        .map(
+            |(id, (target_mode, flags, element, effect, range, pp_cost, name))| Ability {
+                id: id as u16,
+                name: name.to_string(),
+                target_mode,
+                flags,
+                element,
+                effect,
+                range,
+                pp_cost,
+            },
+        )
+        .collect()
     }
 
     #[test]
     fn kinds_and_battle_use_come_from_the_flags() {
         let rows = rows();
-        assert_eq!((rows[3].flags, rows[3].kind(), rows[3].range, rows[3].pp_cost), (0x85, 5, 2, 4));
+        assert_eq!(
+            (
+                rows[3].flags,
+                rows[3].kind(),
+                rows[3].range,
+                rows[3].pp_cost
+            ),
+            (0x85, 5, 2, 4)
+        );
         assert!(!rows[0].usable_in_battle());
         assert!(rows[1].usable_in_battle());
     }
@@ -542,12 +673,21 @@ mod tests {
     fn casters_and_targets_follow_the_elements() {
         let rows = rows();
         let quake = cast(rows[3].clone(), false).unwrap();
-        assert_eq!((quake.party.clone(), quake.foes.clone(), quake.aim), (vec![ISAAC], vec![GARET, IVAN, MIA], Aim::Foe));
+        assert_eq!(
+            (quake.party.clone(), quake.foes.clone(), quake.aim),
+            (vec![ISAAC], vec![GARET, IVAN, MIA], Aim::Foe)
+        );
         let ply = cast(rows[4].clone(), false).unwrap();
-        assert_eq!((ply.party.clone(), ply.foes.clone(), ply.aim), (vec![MIA, GARET], vec![], Aim::Ally));
+        assert_eq!(
+            (ply.party.clone(), ply.foes.clone(), ply.aim),
+            (vec![MIA, GARET], vec![], Aim::Ally)
+        );
         assert_eq!(ply.target_name(), "Garet");
         let flare = cast(rows[5].clone(), true).unwrap();
-        assert_eq!((flare.party.clone(), flare.foes.clone(), flare.preset), (vec![JENNA], vec![MIA], PRESET_FOUR));
+        assert_eq!(
+            (flare.party.clone(), flare.foes.clone(), flare.preset),
+            (vec![JENNA], vec![MIA], PRESET_FOUR)
+        );
         assert_eq!(cast(rows[5].clone(), false).unwrap().party, vec![GARET]);
     }
 
@@ -561,9 +701,15 @@ mod tests {
     #[test]
     fn shared_names_take_their_ids() {
         let rows = rows();
-        let mut casts: Vec<Cast> = [3, 3].iter().map(|&i| cast(rows[i].clone(), false).unwrap()).collect();
+        let mut casts: Vec<Cast> = [3, 3]
+            .iter()
+            .map(|&i| cast(rows[i].clone(), false).unwrap())
+            .collect();
         casts[1].ability.id = 9;
         name_files(&mut casts);
-        assert_eq!((casts[0].slug.as_str(), casts[1].slug.as_str()), ("quake-3", "quake-9"));
+        assert_eq!(
+            (casts[0].slug.as_str(), casts[1].slug.as_str()),
+            ("quake-3", "quake-9")
+        );
     }
 }

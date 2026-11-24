@@ -8,8 +8,6 @@
 //! one stops it with the name it wants. A test compiles The Broken Seal's
 //! expressions the same way and checks them against its written values.
 
-
-
 /// The two games the renderer plays.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Game {
@@ -113,56 +111,228 @@ pub struct Layout {
 /// Each value of a Layout, by name, as a C expression of each game's
 /// headers: The Broken Seal's, then The Lost Age's.
 const EXPRESSIONS: &[(&str, &str, &str)] = &[
-    ("gs_coins", "offsetof(struct MainRoutineState, holdings.coins)", "offsetof(struct MainRoutineState, coins)"),
-    ("gs_scene", "offsetof(struct MainRoutineState, next)", "offsetof(struct MainRoutineState, next)"),
-    ("gs_entrance", "offsetof(struct MainRoutineState, entrance)", "offsetof(struct MainRoutineState, entrance)"),
-    ("gs_x", "offsetof(struct MainRoutineState, x)", "offsetof(struct MainRoutineState, x)"),
-    ("gs_y", "offsetof(struct MainRoutineState, y)", "offsetof(struct MainRoutineState, y)"),
-    ("gs_z", "offsetof(struct MainRoutineState, z)", "offsetof(struct MainRoutineState, z)"),
-    ("gs_heading", "offsetof(struct MainRoutineState, heading)", "offsetof(struct MainRoutineState, heading)"),
-    ("gs_turn", "offsetof(struct MainRoutineState, layer)", "offsetof(struct MainRoutineState, layer)"),
-    ("gs_selected_actor", "offsetof(struct MainRoutineState, leaderActorId)", "offsetof(struct MainRoutineState, leaderActorId)"),
-    ("gs_active_owners", "offsetof(struct MainRoutineState, party)", "offsetof(struct MainRoutineState, party)"),
-    ("gs_movement_mode", "offsetof(struct MainRoutineState, movementMode)", "offsetof(struct MainRoutineState, movementMode)"),
-    ("map_origin", "offsetof(struct MapGridScrollState, origin)", "offsetof(struct MapState, origin)"),
-    ("map_view_x", "offsetof(struct MapGridScrollState, view[0])", "offsetof(struct MapState, viewX)"),
-    ("map_view_y", "offsetof(struct MapGridScrollState, view[1])", "offsetof(struct MapState, viewZ)"),
-    ("map_bounds", "offsetof(struct MapGridScrollState, minX)", "offsetof(struct MapState, minX)"),
-    ("map_layers", "offsetof(struct MapGridScrollState, layers)", "offsetof(struct MapState, layers)"),
-    ("map_layer_size", "sizeof(struct MapGridLayerScroll)", "sizeof(struct MapLayer)"),
-    ("map_layer_cells", "offsetof(struct MapGridLayerScroll, cells)", "offsetof(struct MapLayer, cells)"),
+    (
+        "gs_coins",
+        "offsetof(struct MainRoutineState, holdings.coins)",
+        "offsetof(struct MainRoutineState, coins)",
+    ),
+    (
+        "gs_scene",
+        "offsetof(struct MainRoutineState, next)",
+        "offsetof(struct MainRoutineState, next)",
+    ),
+    (
+        "gs_entrance",
+        "offsetof(struct MainRoutineState, entrance)",
+        "offsetof(struct MainRoutineState, entrance)",
+    ),
+    (
+        "gs_x",
+        "offsetof(struct MainRoutineState, x)",
+        "offsetof(struct MainRoutineState, x)",
+    ),
+    (
+        "gs_y",
+        "offsetof(struct MainRoutineState, y)",
+        "offsetof(struct MainRoutineState, y)",
+    ),
+    (
+        "gs_z",
+        "offsetof(struct MainRoutineState, z)",
+        "offsetof(struct MainRoutineState, z)",
+    ),
+    (
+        "gs_heading",
+        "offsetof(struct MainRoutineState, heading)",
+        "offsetof(struct MainRoutineState, heading)",
+    ),
+    (
+        "gs_turn",
+        "offsetof(struct MainRoutineState, layer)",
+        "offsetof(struct MainRoutineState, layer)",
+    ),
+    (
+        "gs_selected_actor",
+        "offsetof(struct MainRoutineState, leaderActorId)",
+        "offsetof(struct MainRoutineState, leaderActorId)",
+    ),
+    (
+        "gs_active_owners",
+        "offsetof(struct MainRoutineState, party)",
+        "offsetof(struct MainRoutineState, party)",
+    ),
+    (
+        "gs_movement_mode",
+        "offsetof(struct MainRoutineState, movementMode)",
+        "offsetof(struct MainRoutineState, movementMode)",
+    ),
+    (
+        "map_origin",
+        "offsetof(struct MapGridScrollState, origin)",
+        "offsetof(struct MapState, origin)",
+    ),
+    (
+        "map_view_x",
+        "offsetof(struct MapGridScrollState, view[0])",
+        "offsetof(struct MapState, viewX)",
+    ),
+    (
+        "map_view_y",
+        "offsetof(struct MapGridScrollState, view[1])",
+        "offsetof(struct MapState, viewZ)",
+    ),
+    (
+        "map_bounds",
+        "offsetof(struct MapGridScrollState, minX)",
+        "offsetof(struct MapState, minX)",
+    ),
+    (
+        "map_layers",
+        "offsetof(struct MapGridScrollState, layers)",
+        "offsetof(struct MapState, layers)",
+    ),
+    (
+        "map_layer_size",
+        "sizeof(struct MapGridLayerScroll)",
+        "sizeof(struct MapLayer)",
+    ),
+    (
+        "map_layer_cells",
+        "offsetof(struct MapGridLayerScroll, cells)",
+        "offsetof(struct MapLayer, cells)",
+    ),
     // The Lost Age's layer leaves these unnamed: offsetX, scaleX, speedX,
     // phaseX and maskX are the names wanted.
-    ("layer_offset", "offsetof(struct MapGridLayerScroll, offsetX)", "offsetof(struct MapLayer, offsetX)"),
-    ("layer_scale", "offsetof(struct MapGridLayerScroll, scaleX)", "offsetof(struct MapLayer, scaleX)"),
-    ("layer_speed", "offsetof(struct MapGridLayerScroll, speedX)", "offsetof(struct MapLayer, speedX)"),
-    ("layer_phase", "offsetof(struct MapGridLayerScroll, phaseX)", "offsetof(struct MapLayer, phaseX)"),
-    ("layer_mask", "offsetof(struct MapGridLayerScroll, maskX)", "offsetof(struct MapLayer, maskX)"),
-    ("field_events", "offsetof(struct FieldState, triggers)", "offsetof(struct FieldState, triggers)"),
-    ("field_actors", "offsetof(struct FieldState, actors)", "offsetof(struct FieldState, actors)"),
+    (
+        "layer_offset",
+        "offsetof(struct MapGridLayerScroll, offsetX)",
+        "offsetof(struct MapLayer, offsetX)",
+    ),
+    (
+        "layer_scale",
+        "offsetof(struct MapGridLayerScroll, scaleX)",
+        "offsetof(struct MapLayer, scaleX)",
+    ),
+    (
+        "layer_speed",
+        "offsetof(struct MapGridLayerScroll, speedX)",
+        "offsetof(struct MapLayer, speedX)",
+    ),
+    (
+        "layer_phase",
+        "offsetof(struct MapGridLayerScroll, phaseX)",
+        "offsetof(struct MapLayer, phaseX)",
+    ),
+    (
+        "layer_mask",
+        "offsetof(struct MapGridLayerScroll, maskX)",
+        "offsetof(struct MapLayer, maskX)",
+    ),
+    (
+        "field_events",
+        "offsetof(struct FieldState, triggers)",
+        "offsetof(struct FieldState, triggers)",
+    ),
+    (
+        "field_actors",
+        "offsetof(struct FieldState, actors)",
+        "offsetof(struct FieldState, actors)",
+    ),
     ("field_actor_count", "ACTOR_ID_COUNT", "FIELD_ACTOR_COUNT"),
-    ("field_command", "offsetof(struct FieldState, psynergy)", "offsetof(struct FieldState, psynergy)"),
-    ("field_raised", "offsetof(struct FieldState, raisedTrigger)", "offsetof(struct FieldState, raisedTrigger)"),
-    ("field_exit", "offsetof(struct FieldState, exit)", "offsetof(struct FieldState, exit)"),
-    ("field_mode", "offsetof(struct FieldState, mode)", "offsetof(struct FieldState, mode)"),
-    ("obj_angle", "offsetof(struct Actor, facing)", "offsetof(struct Actor, facing)"),
-    ("obj_x", "offsetof(struct Actor, x)", "offsetof(struct Actor, x)"),
-    ("obj_y", "offsetof(struct Actor, y)", "offsetof(struct Actor, y)"),
-    ("obj_z", "offsetof(struct Actor, z)", "offsetof(struct Actor, z)"),
-    ("obj_terrain_height", "offsetof(struct Actor, groundHeight)", "offsetof(struct Actor, groundHeight)"),
-    ("obj_terrain_id", "offsetof(struct Actor, layer)", "offsetof(struct Actor, layer)"),
-    ("obj_velocity", "offsetof(struct Actor, velocityX)", "offsetof(struct Actor, velocityX)"),
-    ("obj_sprite", "offsetof(struct Actor, sprite)", "offsetof(struct Actor, sprite)"),
-    ("obj_kind", "offsetof(struct Actor, spriteStorageKind)", "offsetof(struct Actor, spriteStorageKind)"),
-    ("entrance_size", "sizeof(struct SceneEntrance)", "sizeof(struct SceneEntrance)"),
-    ("event_row_size", "sizeof(struct Trigger)", "sizeof(struct Trigger)"),
-    ("unit_action_slots", "offsetof(struct Unit, psynergy)", "offsetof(struct Unit, psynergy)"),
+    (
+        "field_command",
+        "offsetof(struct FieldState, psynergy)",
+        "offsetof(struct FieldState, psynergy)",
+    ),
+    (
+        "field_raised",
+        "offsetof(struct FieldState, raisedTrigger)",
+        "offsetof(struct FieldState, raisedTrigger)",
+    ),
+    (
+        "field_exit",
+        "offsetof(struct FieldState, exit)",
+        "offsetof(struct FieldState, exit)",
+    ),
+    (
+        "field_mode",
+        "offsetof(struct FieldState, mode)",
+        "offsetof(struct FieldState, mode)",
+    ),
+    (
+        "obj_angle",
+        "offsetof(struct Actor, facing)",
+        "offsetof(struct Actor, facing)",
+    ),
+    (
+        "obj_x",
+        "offsetof(struct Actor, x)",
+        "offsetof(struct Actor, x)",
+    ),
+    (
+        "obj_y",
+        "offsetof(struct Actor, y)",
+        "offsetof(struct Actor, y)",
+    ),
+    (
+        "obj_z",
+        "offsetof(struct Actor, z)",
+        "offsetof(struct Actor, z)",
+    ),
+    (
+        "obj_terrain_height",
+        "offsetof(struct Actor, groundHeight)",
+        "offsetof(struct Actor, groundHeight)",
+    ),
+    (
+        "obj_terrain_id",
+        "offsetof(struct Actor, layer)",
+        "offsetof(struct Actor, layer)",
+    ),
+    (
+        "obj_velocity",
+        "offsetof(struct Actor, velocityX)",
+        "offsetof(struct Actor, velocityX)",
+    ),
+    (
+        "obj_sprite",
+        "offsetof(struct Actor, sprite)",
+        "offsetof(struct Actor, sprite)",
+    ),
+    (
+        "obj_kind",
+        "offsetof(struct Actor, spriteStorageKind)",
+        "offsetof(struct Actor, spriteStorageKind)",
+    ),
+    (
+        "entrance_size",
+        "sizeof(struct SceneEntrance)",
+        "sizeof(struct SceneEntrance)",
+    ),
+    (
+        "event_row_size",
+        "sizeof(struct Trigger)",
+        "sizeof(struct Trigger)",
+    ),
+    (
+        "unit_action_slots",
+        "offsetof(struct Unit, psynergy)",
+        "offsetof(struct Unit, psynergy)",
+    ),
     // The Lost Age's flags.h leaves flag 0x160 unnamed; its encounter roll
     // (Encounter_CountStepsAndSelectFormation) tests it where The Broken
     // Seal's tests FLAG_NO_ENCOUNTERS, the name wanted.
     ("flag_no_encounters", "FLAG_NO_ENCOUNTERS", "0x160"),
-    ("heap_map", "HEAP_SLOT_MAP_GRID * 4", "offsetof(struct HeapSlots, mapGrid)"),
-    ("heap_field", "HEAP_SLOT_FIELD * 4", "offsetof(struct HeapSlots, fieldState)"),
+    (
+        "heap_map",
+        "HEAP_SLOT_MAP_GRID * 4",
+        "offsetof(struct HeapSlots, mapGrid)",
+    ),
+    (
+        "heap_field",
+        "HEAP_SLOT_FIELD * 4",
+        "offsetof(struct HeapSlots, fieldState)",
+    ),
 ];
 
 /// The headers each game's expressions read.
@@ -262,10 +432,16 @@ impl Layout {
     /// from the assembly, in order.
     pub fn read(edition: &str) -> Result<Layout, String> {
         let game = Game::of(edition)?;
-        let expressions: Vec<&str> = EXPRESSIONS.iter().map(|(_, tbs, tla)| if game == Game::Tbs { *tbs } else { *tla }).collect();
+        let expressions: Vec<&str> = EXPRESSIONS
+            .iter()
+            .map(|(_, tbs, tla)| if game == Game::Tbs { *tbs } else { *tla })
+            .collect();
         let values = probe(edition, headers(game), &expressions)?;
         let get = |name: &str| -> u32 {
-            let i = EXPRESSIONS.iter().position(|(n, ..)| *n == name).expect("a layout value's name");
+            let i = EXPRESSIONS
+                .iter()
+                .position(|(n, ..)| *n == name)
+                .expect("a layout value's name");
             values[i] as u32
         };
         Ok(Layout {
@@ -319,13 +495,13 @@ impl Layout {
     }
 }
 
-
 /// Compiles `expressions` with `headers` by edition `edition`'s recipe for
 /// any C file (compile::steps), as one array of ints, and reads each value
 /// back from its assembly: a `.word`, or a run of zeros as `.space`.
 fn probe(edition: &str, headers: &[&str], expressions: &[&str]) -> Result<Vec<i64>, String> {
     let target = crate::alchemy::targets::decomp_target(Some(edition))?;
-    let work = tempfile::tempdir().map_err(|e| format!("cannot make a folder for the layout probe: {e}"))?;
+    let work = tempfile::tempdir()
+        .map_err(|e| format!("cannot make a folder for the layout probe: {e}"))?;
     let source = work.path().join("layout_probe.c");
     let object = work.path().join("layout_probe.o");
     let mut text = String::from("/* What alchemy-devtools render reads, from the headers. */\n");
@@ -339,12 +515,17 @@ fn probe(edition: &str, headers: &[&str], expressions: &[&str]) -> Result<Vec<i6
     text.push_str("};\n");
     std::fs::write(&source, text).map_err(|e| format!("cannot write {}: {e}", source.display()))?;
     for step in crate::compile::steps(target, &source, &object, None, false)? {
-        crate::gba::process::run(&step, work.path()).map_err(|e| format!("the layout probe of {edition}'s headers: {e}"))?;
+        crate::gba::process::run(&step, work.path())
+            .map_err(|e| format!("the layout probe of {edition}'s headers: {e}"))?;
     }
-    let assembly = std::fs::read_to_string(object.with_extension("s")).map_err(|e| format!("the layout probe wrote no assembly: {e}"))?;
+    let assembly = std::fs::read_to_string(object.with_extension("s"))
+        .map_err(|e| format!("the layout probe wrote no assembly: {e}"))?;
     let number = |v: &str| {
         let v = v.trim();
-        v.strip_prefix("0x").map_or_else(|| v.parse::<i64>().ok(), |h| i64::from_str_radix(h, 16).ok())
+        v.strip_prefix("0x").map_or_else(
+            || v.parse::<i64>().ok(),
+            |h| i64::from_str_radix(h, 16).ok(),
+        )
     };
     let mut values: Vec<i64> = Vec::new();
     let mut started = false;
@@ -362,7 +543,11 @@ fn probe(edition: &str, headers: &[&str], expressions: &[&str]) -> Result<Vec<i6
         }
     }
     if values.len() != expressions.len() {
-        return Err(format!("the layout probe gave {} values for {} expressions", values.len(), expressions.len()));
+        return Err(format!(
+            "the layout probe gave {} values for {} expressions",
+            values.len(),
+            expressions.len()
+        ));
     }
     Ok(values)
 }
@@ -471,8 +656,25 @@ const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
 
 fn battle_headers(game: Game) -> &'static [&'static str] {
     match game {
-        Game::Tbs => &["types.h", "system/main_routine_state.h", "battle/battle_unit.h", "battle/battle_state.h", "battle/battle_action.h", "battle/battle_side.h", "system/heap.h"],
-        Game::Tla => &["types.h", "stddef.h", "system/main_routine_state.h", "battle/battle_unit.h", "battle/battle_state.h", "battle/battle_action.h", "battle/battle_side.h", "system/ram_buffer.h"],
+        Game::Tbs => &[
+            "types.h",
+            "system/main_routine_state.h",
+            "battle/battle_unit.h",
+            "battle/battle_state.h",
+            "battle/battle_action.h",
+            "battle/battle_side.h",
+            "system/heap.h",
+        ],
+        Game::Tla => &[
+            "types.h",
+            "stddef.h",
+            "system/main_routine_state.h",
+            "battle/battle_unit.h",
+            "battle/battle_state.h",
+            "battle/battle_action.h",
+            "battle/battle_side.h",
+            "system/ram_buffer.h",
+        ],
     }
 }
 
@@ -530,10 +732,16 @@ impl BattleLayout {
 
     pub fn read(edition: &str) -> Result<BattleLayout, String> {
         let game = Game::of(edition)?;
-        let expressions: Vec<&str> = BATTLE_EXPRESSIONS.iter().map(|(_, tbs, tla)| if game == Game::Tbs { *tbs } else { *tla }).collect();
+        let expressions: Vec<&str> = BATTLE_EXPRESSIONS
+            .iter()
+            .map(|(_, tbs, tla)| if game == Game::Tbs { *tbs } else { *tla })
+            .collect();
         let values = probe(edition, battle_headers(game), &expressions)?;
         let get = |name: &str| -> u32 {
-            let i = BATTLE_EXPRESSIONS.iter().position(|(n, ..)| *n == name).expect("a battle layout value's name");
+            let i = BATTLE_EXPRESSIONS
+                .iter()
+                .position(|(n, ..)| *n == name)
+                .expect("a battle layout value's name");
             values[i] as u32
         };
         Ok(BattleLayout {

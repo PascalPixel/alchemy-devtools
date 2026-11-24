@@ -23,7 +23,11 @@ fn offset(text: &str, token: &Token) -> usize {
 /// Macros whose arguments at these places name a link symbol, written into
 /// `__asm__` as a string under MODERN (types.h): a view never renames them,
 /// since a routine's or variable's symbol stays its own.
-const SYMBOL_ARGUMENTS: &[(&str, &[usize])] = &[("FIXED_LINKED", &[0]), ("FIXED_ADDRESS", &[2]), ("FIXED_OFFSET", &[1, 2])];
+const SYMBOL_ARGUMENTS: &[(&str, &[usize])] = &[
+    ("FIXED_LINKED", &[0]),
+    ("FIXED_ADDRESS", &[2]),
+    ("FIXED_OFFSET", &[1, 2]),
+];
 
 /// The text with every `from` in `space` written `to`. A member name (after
 /// `.` or `->`) and an `#include` line are left alone; a tag is the name
@@ -48,13 +52,21 @@ pub(crate) fn rename(text: &str, from: &str, to: &str, space: Space) -> String {
     // A header view's own wrapper (`#define FROM TO` ... `#undef FROM`) is
     // what makes the rename; it stays as it is.
     let directive = |index: usize| -> Vec<&str> {
-        tokens[index + 1..].iter().take_while(|t| t.kind != Kind::PpEnd && t.kind != Kind::Comment).map(|t| t.text).collect()
+        tokens[index + 1..]
+            .iter()
+            .take_while(|t| t.kind != Kind::PpEnd && t.kind != Kind::Comment)
+            .map(|t| t.text)
+            .collect()
     };
-    let wrapped = tokens.iter().enumerate().any(|(index, t)| t.kind == Kind::PpStart && directive(index) == ["define", from, to]);
+    let wrapped = tokens
+        .iter()
+        .enumerate()
+        .any(|(index, t)| t.kind == Kind::PpStart && directive(index) == ["define", from, to]);
     for (index, token) in tokens.iter().enumerate() {
         if token.kind == Kind::PpStart {
             let words = directive(index);
-            include = words.first() == Some(&"include") || (wrapped && (words == ["define", from, to] || words == ["undef", from]));
+            include = words.first() == Some(&"include")
+                || (wrapped && (words == ["define", from, to] || words == ["undef", from]));
             preprocessor = match words.first() {
                 Some(&("if" | "ifdef" | "ifndef" | "elif" | "undef")) => Some((index + 1, false)),
                 // `#define NAME`: only the name is the preprocessor's.
@@ -68,8 +80,12 @@ pub(crate) fn rename(text: &str, from: &str, to: &str, space: Space) -> String {
         if token.kind == Kind::Comment {
             continue;
         }
-        let in_preprocessor = preprocessor.is_some_and(|(first, only)| if only { index == first } else { index >= first });
-        let in_symbol = calls.iter().any(|(places, _, argument)| places.contains(argument));
+        let in_preprocessor =
+            preprocessor
+                .is_some_and(|(first, only)| if only { index == first } else { index >= first });
+        let in_symbol = calls
+            .iter()
+            .any(|(places, _, argument)| places.contains(argument));
         if token.kind == Kind::Ident && token.text == from && !include {
             let after = previous.map_or("", |previous| previous.text);
             let tagged = matches!(after, "struct" | "union" | "enum");
@@ -89,7 +105,9 @@ pub(crate) fn rename(text: &str, from: &str, to: &str, space: Space) -> String {
         match token.text {
             "(" => {
                 depth += 1;
-                let called = previous.filter(|p| p.kind == Kind::Ident).and_then(|p| SYMBOL_ARGUMENTS.iter().find(|(name, _)| *name == p.text));
+                let called = previous
+                    .filter(|p| p.kind == Kind::Ident)
+                    .and_then(|p| SYMBOL_ARGUMENTS.iter().find(|(name, _)| *name == p.text));
                 if let Some((_, places)) = called {
                     calls.push((places, depth, 0));
                 }
@@ -148,8 +166,18 @@ impl Statement<'_> {
     /// definition's declaration.
     pub fn declaration(&self) -> String {
         let head: Vec<&str> = match self.body {
-            Some((open, _)) => self.words.iter().take_while(|word| word.at < open).map(|word| word.text).collect(),
-            None => self.words.iter().map(|word| word.text).take_while(|text| *text != ";").collect(),
+            Some((open, _)) => self
+                .words
+                .iter()
+                .take_while(|word| word.at < open)
+                .map(|word| word.text)
+                .collect(),
+            None => self
+                .words
+                .iter()
+                .map(|word| word.text)
+                .take_while(|text| *text != ";")
+                .collect(),
         };
         format!("{};", squash(head.into_iter()))
     }
@@ -164,7 +192,8 @@ impl Statement<'_> {
     }
 
     pub fn is_inline(&self) -> bool {
-        self.top().any(|found| matches!(found.text, "inline" | "__inline__" | "__inline"))
+        self.top()
+            .any(|found| matches!(found.text, "inline" | "__inline__" | "__inline"))
     }
 
     /// The first word that is `name`, at any depth.
@@ -174,10 +203,23 @@ impl Statement<'_> {
 
     /// Whether `name` is an enumerator here: inside the braces of an `enum`.
     pub fn enumerates(&self, name: &str) -> bool {
-        let Some(at) = self.words.iter().position(|word| word.text == name && word.depth > 0) else { return false };
-        let open = self.words[..at].iter().rposition(|word| word.text == "{" && word.depth == self.words[at].depth - 1);
+        let Some(at) = self
+            .words
+            .iter()
+            .position(|word| word.text == name && word.depth > 0)
+        else {
+            return false;
+        };
+        let open = self.words[..at]
+            .iter()
+            .rposition(|word| word.text == "{" && word.depth == self.words[at].depth - 1);
         open.is_some_and(|open| {
-            let before: Vec<&str> = self.words[..open].iter().rev().take(2).map(|word| word.text).collect();
+            let before: Vec<&str> = self.words[..open]
+                .iter()
+                .rev()
+                .take(2)
+                .map(|word| word.text)
+                .collect();
             before.first() == Some(&"enum") || before.get(1) == Some(&"enum")
         })
     }
@@ -185,7 +227,11 @@ impl Statement<'_> {
     /// Whether `name` is declared here as a routine: its declarator is
     /// followed by a parameter list.
     pub fn routine(&self, name: &str) -> bool {
-        self.words.iter().enumerate().any(|(i, word)| word.depth == 0 && word.text == name && self.words.get(i + 1).is_some_and(|next| next.text == "("))
+        self.words.iter().enumerate().any(|(i, word)| {
+            word.depth == 0
+                && word.text == name
+                && self.words.get(i + 1).is_some_and(|next| next.text == "(")
+        })
     }
 
     /// Whether the statement defines `name` rather than only declaring it: a
@@ -213,7 +259,10 @@ impl Statement<'_> {
 
     /// Where the statement's last `;` is, for a declaration that has one.
     pub fn semicolon(&self) -> Option<usize> {
-        self.words.last().filter(|word| word.text == ";").map(|word| word.at)
+        self.words
+            .last()
+            .filter(|word| word.text == ";")
+            .map(|word| word.at)
     }
 }
 
@@ -241,9 +290,19 @@ pub(crate) fn statements(text: &str) -> Vec<Statement<'_>> {
     let mut current: Option<Statement> = None;
     let mut depth = 0usize;
     let mut parens = 0usize;
-    for token in lex(text).iter().filter(|token| !token.pp && token.kind != Kind::Comment) {
+    for token in lex(text)
+        .iter()
+        .filter(|token| !token.pp && token.kind != Kind::Comment)
+    {
         let at = offset(text, token);
-        let statement = current.get_or_insert_with(|| Statement { start: at, end: at, first_line: token.line, last_line: token.line, body: None, words: Vec::new() });
+        let statement = current.get_or_insert_with(|| Statement {
+            start: at,
+            end: at,
+            first_line: token.line,
+            last_line: token.line,
+            body: None,
+            words: Vec::new(),
+        });
         let mut ends = false;
         let mut word_depth = depth;
         match token.text {
@@ -251,7 +310,10 @@ pub(crate) fn statements(text: &str) -> Vec<Statement<'_>> {
             ")" | "]" => parens = parens.saturating_sub(1),
             "{" => {
                 let after_parameters = statement.words.last().is_some_and(|last| last.text == ")");
-                let assigns = statement.words.iter().any(|word| word.depth == 0 && word.text == "=");
+                let assigns = statement
+                    .words
+                    .iter()
+                    .any(|word| word.depth == 0 && word.text == "=");
                 if depth == 0 && parens == 0 && after_parameters && !assigns {
                     statement.body = Some((at, at));
                 }
@@ -270,7 +332,11 @@ pub(crate) fn statements(text: &str) -> Vec<Statement<'_>> {
             ";" if depth == 0 && parens == 0 => ends = true,
             _ => {}
         }
-        statement.words.push(Word { text: token.text, at, depth: word_depth });
+        statement.words.push(Word {
+            text: token.text,
+            at,
+            depth: word_depth,
+        });
         statement.end = at + token.text.len();
         statement.last_line = token.line;
         if ends {
@@ -283,11 +349,26 @@ pub(crate) fn statements(text: &str) -> Vec<Statement<'_>> {
 
 /// The statement that declares `name` nearest `line`: one whose lines hold
 /// it, else the closest that names it.
-pub(crate) fn statement_at<'a>(statements: &'a [Statement<'a>], line: usize, name: &str) -> Option<&'a Statement<'a>> {
-    let naming = || statements.iter().filter(|statement| statement.find(name).is_some());
+pub(crate) fn statement_at<'a>(
+    statements: &'a [Statement<'a>],
+    line: usize,
+    name: &str,
+) -> Option<&'a Statement<'a>> {
+    let naming = || {
+        statements
+            .iter()
+            .filter(|statement| statement.find(name).is_some())
+    };
     naming()
         .find(|statement| (statement.first_line..=statement.last_line).contains(&line))
-        .or_else(|| naming().min_by_key(|statement| statement.first_line.abs_diff(line).min(statement.last_line.abs_diff(line))))
+        .or_else(|| {
+            naming().min_by_key(|statement| {
+                statement
+                    .first_line
+                    .abs_diff(line)
+                    .min(statement.last_line.abs_diff(line))
+            })
+        })
 }
 
 /// The offset a 1-based line starts at, or the text's end.
@@ -295,7 +376,9 @@ pub(crate) fn line_start(text: &str, line: usize) -> usize {
     if line <= 1 {
         return 0;
     }
-    text.match_indices('\n').nth(line - 2).map_or(text.len(), |(at, _)| at + 1)
+    text.match_indices('\n')
+        .nth(line - 2)
+        .map_or(text.len(), |(at, _)| at + 1)
 }
 
 /// The text with `lines` put before 1-based line `line`.
@@ -323,7 +406,11 @@ pub(crate) fn macros(text: &str) -> Vec<(String, String, usize)> {
         if token.kind != Kind::PpStart || tokens.get(index + 1).map(|t| t.text) != Some("define") {
             continue;
         }
-        let rest: Vec<&Token> = tokens[index + 2..].iter().take_while(|t| t.kind != Kind::PpEnd).filter(|t| t.kind != Kind::Comment).collect();
+        let rest: Vec<&Token> = tokens[index + 2..]
+            .iter()
+            .take_while(|t| t.kind != Kind::PpEnd)
+            .filter(|t| t.kind != Kind::Comment)
+            .collect();
         let Some(name) = rest.first() else { continue };
         found.push((name.text.to_string(), definition(&rest), token.line));
     }
@@ -354,17 +441,28 @@ fn definition(rest: &[&Token]) -> String {
 
 /// The macros a `-dM` listing defines, by name, each as `macros` writes it.
 pub(crate) fn listed_macros(listing: &str) -> std::collections::BTreeMap<String, String> {
-    macros(listing).into_iter().map(|(name, text, _)| (name, text)).collect()
+    macros(listing)
+        .into_iter()
+        .map(|(name, text, _)| (name, text))
+        .collect()
 }
 
 /// A text's words (identifiers and keywords) in order.
 pub(crate) fn identifiers_in_order(text: &str) -> Vec<&str> {
-    lex(text).into_iter().filter(|token| token.kind == Kind::Ident).map(|token| token.text).collect()
+    lex(text)
+        .into_iter()
+        .filter(|token| token.kind == Kind::Ident)
+        .map(|token| token.text)
+        .collect()
 }
 
 /// The identifiers a text uses, each once.
 pub(crate) fn identifiers(text: &str) -> std::collections::BTreeSet<&str> {
-    lex(text).into_iter().filter(|token| token.kind == Kind::Ident).map(|token| token.text).collect()
+    lex(text)
+        .into_iter()
+        .filter(|token| token.kind == Kind::Ident)
+        .map(|token| token.text)
+        .collect()
 }
 
 #[cfg(test)]
@@ -382,10 +480,19 @@ mod tests {
             rename(text, "Helper", "Helper__b", Space::Tag),
             "#include \"helper.h\"\nstruct Helper__b { int Helper; };\nint Helper(struct Helper__b *h) { return h->Helper + Helper(h); } // Helper\n"
         );
-        assert_eq!(rename("#define CALL(x) Go(x)\n", "Go", "Go__a", Space::Ordinary), "#define CALL(x) Go__a(x)\n");
+        assert_eq!(
+            rename("#define CALL(x) Go(x)\n", "Go", "Go__a", Space::Ordinary),
+            "#define CALL(x) Go__a(x)\n"
+        );
         let wrapper = "#define Go Go__a\n#include \"go.h\"\n#undef Go\nvoid Go(int);\n";
-        assert_eq!(rename(wrapper, "Go", "Go__a", Space::Ordinary), "#define Go Go__a\n#include \"go.h\"\n#undef Go\nvoid Go__a(int);\n");
-        assert_eq!(rename("#undef Go\n", "Go", "Go__a", Space::Macro), "#undef Go__a\n");
+        assert_eq!(
+            rename(wrapper, "Go", "Go__a", Space::Ordinary),
+            "#define Go Go__a\n#include \"go.h\"\n#undef Go\nvoid Go__a(int);\n"
+        );
+        assert_eq!(
+            rename("#undef Go\n", "Go", "Go__a", Space::Macro),
+            "#undef Go__a\n"
+        );
     }
 
     /// A routine's, variable's or typedef's rename never reaches what the
@@ -398,14 +505,25 @@ mod tests {
             rename(text, "Go", "Go__a", Space::Ordinary),
             "#ifdef Go\n#if defined(Go) || Go > 1\n#endif\n#endif\n#ifndef Go\n#define Go 2\n#endif\n#undef Go\n#define CALL(x) Go__a(x)\nvoid Go__a(int);\n"
         );
-        assert_eq!(rename(text, "Go", "Go__a", Space::Macro), text.replace("Go", "Go__a"));
+        assert_eq!(
+            rename(text, "Go", "Go__a", Space::Macro),
+            text.replace("Go", "Go__a")
+        );
         let fixed = "void *p = FIXED_ADDRESS(Go *, 0x02000000, Go);\nu32 n = FIXED_OFFSET(4, Go, gBase) + FIXED_LINKED(Go) + Go;\n";
         assert_eq!(
             rename(fixed, "Go", "Go__a", Space::Ordinary),
             "void *p = FIXED_ADDRESS(Go__a *, 0x02000000, Go);\nu32 n = FIXED_OFFSET(4, Go, gBase) + FIXED_LINKED(Go) + Go__a;\n"
         );
         // A name inside a string or comment is never renamed.
-        assert_eq!(rename("char *s = \"Go\"; /* Go */ int Go;\n", "Go", "Go__a", Space::Ordinary), "char *s = \"Go\"; /* Go */ int Go__a;\n");
+        assert_eq!(
+            rename(
+                "char *s = \"Go\"; /* Go */ int Go;\n",
+                "Go",
+                "Go__a",
+                Space::Ordinary
+            ),
+            "char *s = \"Go\"; /* Go */ int Go__a;\n"
+        );
     }
 
     #[test]
@@ -430,17 +548,37 @@ mod tests {
         assert!(found[3].enumerates("TWO") && !found[0].enumerates("a"));
         assert!(found[4].has("typedef") && found[5].has("static") && found[5].defines("sTable"));
         assert_eq!((found[2].first_line, found[2].last_line), (5, 7));
-        assert_eq!(statement_at(&found, 6, "Helper").map(|s| s.first_line), Some(5));
-        assert_eq!(statement_at(&found, 4, "Helper").map(|s| s.first_line), Some(4));
-        assert!(statements("int a, b;")[0].several() && !statements("int f(int a, int b);")[0].several());
+        assert_eq!(
+            statement_at(&found, 6, "Helper").map(|s| s.first_line),
+            Some(5)
+        );
+        assert_eq!(
+            statement_at(&found, 4, "Helper").map(|s| s.first_line),
+            Some(4)
+        );
+        assert!(
+            statements("int a, b;")[0].several()
+                && !statements("int f(int a, int b);")[0].several()
+        );
     }
 
     #[test]
     fn macros_read_as_one_line_and_lines_insert() {
         let text = "#define A 1\n#define F(x, y)  ((x) +\\\n (y))\n#define G (x)\n";
-        let found: Vec<(String, String)> = macros(text).into_iter().map(|(n, d, _)| (n, d)).collect();
-        assert_eq!(found, [("A".into(), "A 1".into()), ("F".into(), "F(x, y) ((x) + (y))".into()), ("G".into(), "G (x)".into())]);
-        assert_eq!(listed_macros("#define F(x,y) ((x) + (y))\n")["F"], "F(x, y) ((x) + (y))");
+        let found: Vec<(String, String)> =
+            macros(text).into_iter().map(|(n, d, _)| (n, d)).collect();
+        assert_eq!(
+            found,
+            [
+                ("A".into(), "A 1".into()),
+                ("F".into(), "F(x, y) ((x) + (y))".into()),
+                ("G".into(), "G (x)".into())
+            ]
+        );
+        assert_eq!(
+            listed_macros("#define F(x,y) ((x) + (y))\n")["F"],
+            "F(x, y) ((x) + (y))"
+        );
         assert_eq!(insert_before("a\nb\n", 2, &["x".into()]), "a\nx\nb\n");
         assert_eq!(insert_before("a\nb", 3, &["x".into()]), "a\nb\nx\n");
     }

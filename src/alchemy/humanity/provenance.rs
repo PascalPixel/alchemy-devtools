@@ -39,26 +39,203 @@ use std::sync::OnceLock;
 /// stays flagged, so the list errs short.
 pub const VOCABULARY: &[&str] = &[
     // Kinds and prefixes.
-    "map", "mapsec", "localid", "area", "scene", "id", "ids", "actor", "actors", "flag", "flags", "event", "events", "trigger", "triggers", "script", "scripts", "handler",
-    "handlers", "callback", "table", "tables", "entry", "entries", "index", "count", "num", "interiors", "interior",
+    "map",
+    "mapsec",
+    "localid",
+    "area",
+    "scene",
+    "id",
+    "ids",
+    "actor",
+    "actors",
+    "flag",
+    "flags",
+    "event",
+    "events",
+    "trigger",
+    "triggers",
+    "script",
+    "scripts",
+    "handler",
+    "handlers",
+    "callback",
+    "table",
+    "tables",
+    "entry",
+    "entries",
+    "index",
+    "count",
+    "num",
+    "interiors",
+    "interior",
     // The interior styles a rooms map is named for, the words the game's
     // text lacks.
-    "stucco", "timber", "lacquer",
-    "temp", "tmp", "msg", "obj", "npc", "fx", "se", "mus", "bg", "gfx", "anim", "oam", "vram", "sprite", "sprites",
-    "tile", "tiles", "tilemap", "palette", "pal", "cell", "cells", "region", "regions", "layer", "rect", "ptr",
-    "buf", "buffer", "data", "state", "mode", "kind", "type", "init", "initialize", "update", "updates", "get",
-    "set", "run", "runs", "handle", "reset", "clear", "check", "load", "draw", "render", "spawn", "tick", "frame",
-    "frames", "timer", "pos", "max", "min", "prev", "cur", "unused", "debug", "util", "func", "sub", "args", "arg",
-    "src", "dst", "len", "info", "ctx", "cfg", "config", "rng", "random", "rom", "ram", "iwram", "ewram", "bss", "dma",
-    "irq", "params", "param", "struct", "enum", "macro", "lut", "offset", "addr", "ov", "alloc", "mem", "var", "cb",
-    "attr", "byte", "clr", "ui", "setup", "cached", "engine", "scheduler", "dispatch", "op", "noop", "placement",
-    "placements", "template", "templates", "dest", "dests", "coord",
+    "stucco",
+    "timber",
+    "lacquer",
+    "temp",
+    "tmp",
+    "msg",
+    "obj",
+    "npc",
+    "fx",
+    "se",
+    "mus",
+    "bg",
+    "gfx",
+    "anim",
+    "oam",
+    "vram",
+    "sprite",
+    "sprites",
+    "tile",
+    "tiles",
+    "tilemap",
+    "palette",
+    "pal",
+    "cell",
+    "cells",
+    "region",
+    "regions",
+    "layer",
+    "rect",
+    "ptr",
+    "buf",
+    "buffer",
+    "data",
+    "state",
+    "mode",
+    "kind",
+    "type",
+    "init",
+    "initialize",
+    "update",
+    "updates",
+    "get",
+    "set",
+    "run",
+    "runs",
+    "handle",
+    "reset",
+    "clear",
+    "check",
+    "load",
+    "draw",
+    "render",
+    "spawn",
+    "tick",
+    "frame",
+    "frames",
+    "timer",
+    "pos",
+    "max",
+    "min",
+    "prev",
+    "cur",
+    "unused",
+    "debug",
+    "util",
+    "func",
+    "sub",
+    "args",
+    "arg",
+    "src",
+    "dst",
+    "len",
+    "info",
+    "ctx",
+    "cfg",
+    "config",
+    "rng",
+    "random",
+    "rom",
+    "ram",
+    "iwram",
+    "ewram",
+    "bss",
+    "dma",
+    "irq",
+    "params",
+    "param",
+    "struct",
+    "enum",
+    "macro",
+    "lut",
+    "offset",
+    "addr",
+    "ov",
+    "alloc",
+    "mem",
+    "var",
+    "cb",
+    "attr",
+    "byte",
+    "clr",
+    "ui",
+    "setup",
+    "cached",
+    "engine",
+    "scheduler",
+    "dispatch",
+    "op",
+    "noop",
+    "placement",
+    "placements",
+    "template",
+    "templates",
+    "dest",
+    "dests",
+    "coord",
     // How the code draws and moves things, not what the player sees.
-    "particle", "transition", "animation", "animate", "blend", "fade", "overlay", "channel", "angle", "collision",
-    "trigger", "marker", "cycle", "blank", "hblank", "vblank", "alpha", "vector", "tint", "darken", "hue", "flicker",
-    "dither", "contrast", "zoom", "rotation", "backdrop", "foreground", "background", "visibility", "occluding",
-    "collidable", "pixel", "scanline", "hofs", "canvas", "glyph", "graphics", "rgb", "radial", "orbit", "pulse",
-    "squash", "jitter", "emitter", "emission", "spawner", "cue", "audio",
+    "particle",
+    "transition",
+    "animation",
+    "animate",
+    "blend",
+    "fade",
+    "overlay",
+    "channel",
+    "angle",
+    "collision",
+    "trigger",
+    "marker",
+    "cycle",
+    "blank",
+    "hblank",
+    "vblank",
+    "alpha",
+    "vector",
+    "tint",
+    "darken",
+    "hue",
+    "flicker",
+    "dither",
+    "contrast",
+    "zoom",
+    "rotation",
+    "backdrop",
+    "foreground",
+    "background",
+    "visibility",
+    "occluding",
+    "collidable",
+    "pixel",
+    "scanline",
+    "hofs",
+    "canvas",
+    "glyph",
+    "graphics",
+    "rgb",
+    "radial",
+    "orbit",
+    "pulse",
+    "squash",
+    "jitter",
+    "emitter",
+    "emission",
+    "spawner",
+    "cue",
+    "audio",
     // The same, as the shared code names them: an actor's or a cursor's bob
     // (`Actor_Bob`, `gMenuCursor_BobOffsets`), a position's horizontal and
     // vertical parts, a diagonal step or line, a rectangle of cells or
@@ -66,26 +243,107 @@ pub const VOCABULARY: &[&str] = &[
     // dungeons spiral (`struct Orbiter`), two spheres' overlap, the overhead
     // layer of a map, and the portrait a message or menu shows for its
     // speaker (`PortraitId`, as `sprite`).
-    "bob", "horizontal", "vertical", "diagonal", "rectangle", "vertex", "vertices", "radius", "orbiter", "overlap",
-    "overhead", "portrait",
+    "bob",
+    "horizontal",
+    "vertical",
+    "diagonal",
+    "rectangle",
+    "vertex",
+    "vertices",
+    "radius",
+    "orbiter",
+    "overlap",
+    "overhead",
+    "portrait",
     // The hardware's own words for drawing, as GBATEK writes them: a
     // sprite's or layer's priority, a layer's scroll, the serial port.
-    "priority", "scroll", "serial",
+    "priority",
+    "scroll",
+    "serial",
     // What code does with its data.
-    "pointer", "sync", "synchronize", "toggle", "variant", "default", "definition", "install", "queued", "pending",
-    "remap", "suspend", "compute", "clamp", "allocate", "address", "header", "heap", "storage", "descriptor",
-    "packet", "query", "probe", "validate", "invalid", "unset", "insert", "cleanup", "runtime", "snapshot",
-    "fallback", "override", "refresh", "redraw", "repaint", "context", "configure", "enable", "activate",
-    "resource", "lz", "hex", "dpad", "interpolation", "linear", "inverse", "magnitude", "ratio", "remainder", "sine",
-    "negative", "positive", "relative", "length", "width", "grid", "node", "cursor", "selector", "periodic",
-    "frequency", "duration", "cos", "crc", "encode", "decode",
+    "pointer",
+    "sync",
+    "synchronize",
+    "toggle",
+    "variant",
+    "default",
+    "definition",
+    "install",
+    "queued",
+    "pending",
+    "remap",
+    "suspend",
+    "compute",
+    "clamp",
+    "allocate",
+    "address",
+    "header",
+    "heap",
+    "storage",
+    "descriptor",
+    "packet",
+    "query",
+    "probe",
+    "validate",
+    "invalid",
+    "unset",
+    "insert",
+    "cleanup",
+    "runtime",
+    "snapshot",
+    "fallback",
+    "override",
+    "refresh",
+    "redraw",
+    "repaint",
+    "context",
+    "configure",
+    "enable",
+    "activate",
+    "resource",
+    "lz",
+    "hex",
+    "dpad",
+    "interpolation",
+    "linear",
+    "inverse",
+    "magnitude",
+    "ratio",
+    "remainder",
+    "sine",
+    "negative",
+    "positive",
+    "relative",
+    "length",
+    "width",
+    "grid",
+    "node",
+    "cursor",
+    "selector",
+    "periodic",
+    "frequency",
+    "duration",
+    "cos",
+    "crc",
+    "encode",
+    "decode",
     // The same, as the shared code names it: calculate (`Battle_Calculate*`),
     // format a number (`String_Format*`), poll a port, prompt for an answer,
     // filter items or targets (`ITEM_FILTER_ANY`), a toss's simulation, a
     // code (a cell's collision code, a picture's, a button code), a cell
     // stamped from another, cells unblocked or made pushable
     // (`MAP_CELL_PUSH`), and an actor parked out of sight (`Actor_Park`).
-    "calculate", "format", "poll", "prompt", "filter", "simulation", "code", "stamp", "unblock", "pushable", "park",
+    "calculate",
+    "format",
+    "poll",
+    "prompt",
+    "filter",
+    "simulation",
+    "code",
+    "stamp",
+    "unblock",
+    "pushable",
+    "park",
     // The same, as the field code names it: an actor's movement type, a
     // message's speaker, the Adept casting Psynergy (`caster`), the bubble an
     // actor shows (`Actor_ShowEmote`), a sprite's blink, a step of a sequence
@@ -95,17 +353,61 @@ pub const VOCABULARY: &[&str] = &[
     // battle's environment and an encounter zone, an effect attached to an
     // actor, a value snapped to its target, a choice made randomly, a string
     // of characters, and what cannot be used (`ITEM_USE_MODE_UNUSABLE`).
-    "movement", "speaker", "caster", "emote", "blink", "phase", "curve", "ramp", "pattern", "steer", "lookup", "idle",
-    "automatic", "underfoot", "dissolve", "environment", "zone", "attach", "snap", "randomly", "string", "unusable",
+    "movement",
+    "speaker",
+    "caster",
+    "emote",
+    "blink",
+    "phase",
+    "curve",
+    "ramp",
+    "pattern",
+    "steer",
+    "lookup",
+    "idle",
+    "automatic",
+    "underfoot",
+    "dissolve",
+    "environment",
+    "zone",
+    "attach",
+    "snap",
+    "randomly",
+    "string",
+    "unusable",
     // The debug menus' tools: a browser of icons or portraits, an editor of
     // flags or palettes, a picker of items (`ItemPicker_Run`).
-    "browser", "editor", "picker",
+    "browser",
+    "editor",
+    "picker",
     // A bump allocator, which hands out memory by moving one pointer on.
     "bump",
     // Positions.
-    "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth", "eleventh",
-    "twelfth", "last", "north",
-    "south", "east", "west", "northeast", "northwest", "southeast", "southwest", "upper", "lower", "left", "right",
+    "first",
+    "second",
+    "third",
+    "fourth",
+    "fifth",
+    "sixth",
+    "seventh",
+    "eighth",
+    "ninth",
+    "tenth",
+    "eleventh",
+    "twelfth",
+    "last",
+    "north",
+    "south",
+    "east",
+    "west",
+    "northeast",
+    "northwest",
+    "southeast",
+    "southwest",
+    "upper",
+    "lower",
+    "left",
+    "right",
 ];
 
 /// A game's English text, as the checks read it.
@@ -168,7 +470,10 @@ fn words_of(body: &str) -> Vec<String> {
     for word in body.split(|c: char| !(c.is_alphanumeric() || c == '\'')) {
         let word = word.trim_matches('\'').to_lowercase();
         let dropped = word.replace('\'', "");
-        for part in [word.as_str(), dropped.as_str()].into_iter().chain(word.split('\'')) {
+        for part in [word.as_str(), dropped.as_str()]
+            .into_iter()
+            .chain(word.split('\''))
+        {
             if !part.is_empty() {
                 out.push(part.to_string());
             }
@@ -186,14 +491,22 @@ pub fn stem(word: &str) -> String {
     }
     let undouble = |w: &mut String| {
         let b = w.as_bytes();
-        if b.len() >= 2 && b[b.len() - 1] == b[b.len() - 2] && !matches!(b[b.len() - 1], b'l' | b's' | b'z') {
+        if b.len() >= 2
+            && b[b.len() - 1] == b[b.len() - 2]
+            && !matches!(b[b.len() - 1], b'l' | b's' | b'z')
+        {
             w.pop();
         }
     };
     if w.len() > 4 && w.ends_with("ies") {
         w.truncate(w.len() - 3);
         w.push('y');
-    } else if w.len() > 3 && w.ends_with("es") && ["s", "x", "z", "ch", "sh"].iter().any(|e| w[..w.len() - 2].ends_with(e)) {
+    } else if w.len() > 3
+        && w.ends_with("es")
+        && ["s", "x", "z", "ch", "sh"]
+            .iter()
+            .any(|e| w[..w.len() - 2].ends_with(e))
+    {
         w.truncate(w.len() - 2);
     } else if w.len() > 3 && w.ends_with('s') && !w.ends_with("ss") && !w.ends_with("us") {
         w.pop();
@@ -225,7 +538,10 @@ impl GameText {
             if let Ok(number) = entry.id.parse() {
                 text.numbers.insert(number, text.messages.len());
             }
-            text.messages.push((entry.context.filter(|context| context != "message"), flatten(&entry.value)));
+            text.messages.push((
+                entry.context.filter(|context| context != "message"),
+                flatten(&entry.value),
+            ));
         }
         for (at, (symbol, _)) in text.messages.iter().enumerate() {
             if let Some(symbol) = symbol {
@@ -238,20 +554,37 @@ impl GameText {
                 text.words.insert(word);
             }
         }
-        text.joined = text.messages.iter().map(|(_, body)| body.as_str()).collect::<Vec<_>>().join("\u{1}");
+        text.joined = text
+            .messages
+            .iter()
+            .map(|(_, body)| body.as_str())
+            .collect::<Vec<_>>()
+            .join("\u{1}");
         for (_, body) in &text.messages {
-            let capitalized = |word: &str| word.starts_with(|c: char| c.is_uppercase()) && word.chars().skip(1).any(|c| c.is_lowercase());
-            let found: Vec<&str> = body.split(' ').map(|word| word.trim_matches(|c: char| !c.is_alphanumeric() && c != '\'')).collect();
+            let capitalized = |word: &str| {
+                word.starts_with(|c: char| c.is_uppercase())
+                    && word.chars().skip(1).any(|c| c.is_lowercase())
+            };
+            let found: Vec<&str> = body
+                .split(' ')
+                .map(|word| word.trim_matches(|c: char| !c.is_alphanumeric() && c != '\''))
+                .collect();
             for pair in found.windows(2) {
                 if capitalized(pair[0]) && capitalized(pair[1]) {
                     text.name_ends.insert(pair[1].to_lowercase());
                 }
             }
         }
-        if let Some(&start) = text.symbols.get("MsgDebugAreaName").or_else(|| text.symbols.get("MsgDebugEntryName")) {
+        if let Some(&start) = text
+            .symbols
+            .get("MsgDebugAreaName")
+            .or_else(|| text.symbols.get("MsgDebugEntryName"))
+        {
             let end = match areas {
                 Some(count) => (start + count).min(text.messages.len()),
-                None => (start + 1..text.messages.len()).find(|&at| text.messages[at].0.is_some()).unwrap_or(text.messages.len()),
+                None => (start + 1..text.messages.len())
+                    .find(|&at| text.messages[at].0.is_some())
+                    .unwrap_or(text.messages.len()),
             };
             let mut seen = HashSet::new();
             for (_, body) in &text.messages[start..end] {
@@ -277,7 +610,10 @@ impl GameText {
     /// `msgctxt`), for a message only another edition shows.
     pub fn with_edition_text(mut self, po: &str) -> GameText {
         for line in po.lines() {
-            if let Some(symbol) = line.strip_prefix("msgctxt \"").and_then(|rest| rest.strip_suffix('"')) {
+            if let Some(symbol) = line
+                .strip_prefix("msgctxt \"")
+                .and_then(|rest| rest.strip_suffix('"'))
+            {
                 if symbol != "message" && !self.symbols.contains_key(symbol) {
                     self.edition_symbols.insert(symbol.to_string());
                 }
@@ -291,7 +627,12 @@ impl GameText {
             let defined = if let Some(heading) = paragraph.strip_prefix("### ") {
                 words_of(heading)
             } else if paragraph.starts_with("Evidence:") {
-                paragraph.split('"').skip(1).step_by(2).flat_map(words_of).collect()
+                paragraph
+                    .split('"')
+                    .skip(1)
+                    .step_by(2)
+                    .flat_map(words_of)
+                    .collect()
             } else {
                 continue;
             };
@@ -318,7 +659,9 @@ impl GameText {
         let lower = word.to_lowercase();
         self.words.contains(&lower)
             || self.stems.contains(&stem(&lower))
-            || lower.strip_suffix("us").is_some_and(|base| self.words.contains(&format!("{base}u")))
+            || lower
+                .strip_suffix("us")
+                .is_some_and(|base| self.words.contains(&format!("{base}u")))
     }
 
     /// Whether the text writes a word capitalized after another capitalized
@@ -331,7 +674,11 @@ impl GameText {
     /// proper name (`Isaac`, `Dora`).
     pub fn is_proper(&self, word: &str) -> bool {
         let mut seen = false;
-        for found in self.joined.split(|c: char| !c.is_alphanumeric()).filter(|found| found.eq_ignore_ascii_case(word)) {
+        for found in self
+            .joined
+            .split(|c: char| !c.is_alphanumeric())
+            .filter(|found| found.eq_ignore_ascii_case(word))
+        {
             if !found.starts_with(|c: char| c.is_uppercase()) {
                 return false;
             }
@@ -346,14 +693,19 @@ impl GameText {
         let word = word.to_lowercase();
         self.symbols.iter().filter_map(move |(symbol, &at)| {
             let body = self.messages[at].1.to_lowercase();
-            body.split(|c: char| !c.is_alphanumeric()).any(|w| w == word).then_some(symbol.as_str())
+            body.split(|c: char| !c.is_alphanumeric())
+                .any(|w| w == word)
+                .then_some(symbol.as_str())
         })
     }
 
     /// Every message's symbol (`MsgCanYouImagine`), from its `msgctxt` in
     /// any of the game's .po files.
     pub fn symbols(&self) -> impl Iterator<Item = &str> {
-        self.symbols.keys().chain(&self.edition_symbols).map(String::as_str)
+        self.symbols
+            .keys()
+            .chain(&self.edition_symbols)
+            .map(String::as_str)
     }
 
     /// Some message holds the quote, commands aside.
@@ -368,8 +720,15 @@ impl GameText {
     fn symbol_holds(&self, symbol: &str, quote: &str) -> Option<bool> {
         let &start = self.symbols.get(symbol)?;
         let quote = flatten(quote);
-        let end = (start + 1..self.messages.len()).find(|&at| self.messages[at].0.is_some()).unwrap_or(self.messages.len());
-        Some(!quote.is_empty() && self.messages[start..end].iter().any(|(_, body)| body.contains(&quote)))
+        let end = (start + 1..self.messages.len())
+            .find(|&at| self.messages[at].0.is_some())
+            .unwrap_or(self.messages.len());
+        Some(
+            !quote.is_empty()
+                && self.messages[start..end]
+                    .iter()
+                    .any(|(_, body)| body.contains(&quote)),
+        )
     }
 
     /// The message `offset` numbers after a table's first (`MsgItemName` + 5),
@@ -377,7 +736,9 @@ impl GameText {
     pub fn table_entry(&self, symbol: &str, offset: i64) -> Option<&str> {
         let &base = self.symbols.get(symbol)?;
         let at = match self.numbers.iter().find(|(_, &at)| at == base) {
-            Some((&number, _)) => *self.numbers.get(&u32::try_from(i64::from(number) + offset).ok()?)?,
+            Some((&number, _)) => *self
+                .numbers
+                .get(&u32::try_from(i64::from(number) + offset).ok()?)?,
             None => usize::try_from(base as i64 + offset).ok()?,
         };
         self.messages.get(at).map(|(_, body)| body.as_str())
@@ -390,7 +751,9 @@ impl GameText {
             .iter()
             .filter(|area| {
                 text.strip_prefix(area.as_str()).is_some_and(|rest| {
-                    rest.is_empty() || rest.starts_with(" (") || rest.starts_with(|c: char| c.is_ascii_punctuation())
+                    rest.is_empty()
+                        || rest.starts_with(" (")
+                        || rest.starts_with(|c: char| c.is_ascii_punctuation())
                 })
             })
             .max_by_key(|area| area.len())
@@ -433,7 +796,9 @@ pub fn pieces(name: &str) -> Vec<&str> {
             if boundary {
                 let piece = &segment[start..at];
                 let digits = piece.bytes().all(|b| b.is_ascii_digit());
-                let hex = after_digits && piece.len() <= 2 && piece.bytes().all(|b| b.is_ascii_hexdigit());
+                let hex = after_digits
+                    && piece.len() <= 2
+                    && piece.bytes().all(|b| b.is_ascii_hexdigit());
                 let sheets = before == "Rooms" && piece.bytes().all(|b| b.is_ascii_uppercase());
                 if piece.len() > 1 && !digits && !hex && !sheets {
                     out.push(piece);
@@ -450,7 +815,9 @@ pub fn pieces(name: &str) -> Vec<&str> {
 /// On the vocabulary, plurals and verb forms included.
 fn in_vocabulary(lower: &str) -> bool {
     let stemmed = stem(lower);
-    VOCABULARY.iter().any(|word| *word == lower || stem(word) == stemmed)
+    VOCABULARY
+        .iter()
+        .any(|word| *word == lower || stem(word) == stemmed)
 }
 
 /// The words of a name the game's text and the vocabulary leave unexplained,
@@ -484,10 +851,19 @@ pub enum Evidence {
     /// An enumerator of a table-indexed enum whose words are the game's name
     /// for its index: the table's first message and the offset, and whether
     /// it took a duplicate's number (`ENEMY_SLIME_2`) to match.
-    Table { symbol: &'static str, offset: i64, numbered: bool },
+    Table {
+        symbol: &'static str,
+        offset: i64,
+        numbered: bool,
+    },
     /// The same, but its words differ from the game's name, which it gives,
     /// and whether they are the game's name and more words after it.
-    Mismatch { symbol: &'static str, offset: i64, game: String, suffixed: bool },
+    Mismatch {
+        symbol: &'static str,
+        offset: i64,
+        game: String,
+        suffixed: bool,
+    },
     /// An exit whose words are all verified maps and door words.
     Rooms,
     /// The same line, confirmed, without its ★.
@@ -527,10 +903,22 @@ impl Evidence {
     pub fn describe(&self) -> String {
         match self {
             Evidence::Verified(kind) => format!("verified {kind}"),
-            Evidence::Table { symbol, offset, numbered } => {
-                format!("table {symbol}+{offset}{}", if *numbered { " numbered" } else { "" })
+            Evidence::Table {
+                symbol,
+                offset,
+                numbered,
+            } => {
+                format!(
+                    "table {symbol}+{offset}{}",
+                    if *numbered { " numbered" } else { "" }
+                )
             }
-            Evidence::Mismatch { symbol, offset, game, .. } => format!("mismatch: {symbol}+{offset} is \"{game}\""),
+            Evidence::Mismatch {
+                symbol,
+                offset,
+                game,
+                ..
+            } => format!("mismatch: {symbol}+{offset} is \"{game}\""),
             Evidence::Rooms => "rooms".to_string(),
             Evidence::Unstarred(kind) => format!("unstarred {kind}"),
             Evidence::Failed(why) => format!("failed: {why}"),
@@ -542,10 +930,13 @@ impl Evidence {
     }
 }
 
-
 /// A comment's words, its markers taken off, lines joined by spaces.
 pub fn comment_words(raw: &str) -> String {
-    comment_lines(raw).join(" ").split_whitespace().collect::<Vec<_>>().join(" ")
+    comment_lines(raw)
+        .join(" ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// A comment's lines without `///<`, `///`, `//`, `/*`, `*/` or a leading `*`.
@@ -553,7 +944,9 @@ pub fn comment_lines(raw: &str) -> Vec<String> {
     raw.lines()
         .map(|line| {
             let mut line = line.trim();
-            for marker in ["///<", "//!<", "///", "//!", "//", "/**<", "/**", "/*!", "/*"] {
+            for marker in [
+                "///<", "//!<", "///", "//!", "//", "/**<", "/**", "/*!", "/*",
+            ] {
                 if let Some(rest) = line.strip_prefix(marker) {
                     line = rest;
                     break;
@@ -569,7 +962,10 @@ fn line_regexes() -> &'static [Regex; 4] {
     static SET: OnceLock<[Regex; 4]> = OnceLock::new();
     SET.get_or_init(|| {
         [
-            Regex::new(r#"(★\s*)?Named from the game:\s*"([^"]+)"\s*\(\s*(Msg[A-Za-z0-9_]+)([^)]*)\)"#).unwrap(),
+            Regex::new(
+                r#"(★\s*)?Named from the game:\s*"([^"]+)"\s*\(\s*(Msg[A-Za-z0-9_]+)([^)]*)\)"#,
+            )
+            .unwrap(),
             Regex::new(r"(★\s*)?Named from its area name:\s*(.+)").unwrap(),
             Regex::new(r"(★\s*)?Named from what the player sees:\s*(.*?)\(its render\)").unwrap(),
             Regex::new(r"Named from (?:the game|its area name|what the player sees)").unwrap(),
@@ -586,7 +982,10 @@ fn evidence_line(comment: &str, text: &GameText) -> Option<Evidence> {
         // `(MsgAbilityName + 455)` names one message of a table, which other
         // symbols may fall inside (the Djinn's names are the abilities' from
         // 300 on): that message is the one checked.
-        let offset = capture[4].trim().strip_prefix('+').and_then(|n| n.trim().parse::<i64>().ok());
+        let offset = capture[4]
+            .trim()
+            .strip_prefix('+')
+            .and_then(|n| n.trim().parse::<i64>().ok());
         let (symbol, quote) = (&capture[3], &capture[2]);
         let holds = match offset {
             Some(offset) => text.table_entry(symbol, offset).map(|body| {
@@ -632,13 +1031,23 @@ fn evidence_line(comment: &str, text: &GameText) -> Option<Evidence> {
 /// looked at: the code, the other game's twin, the walkthrough and so on.
 pub const CHECKED_KINDS: &[&str] = &["the game", "its area name", "what the player sees"];
 pub const UNCHECKED_KINDS: &[&str] = &[
-    "its code", "its twin", "its uses", "the walkthrough", "plain English", "where it plays", "the hardware", "its picture",
-    "its sound data", "its number",
+    "its code",
+    "its twin",
+    "its uses",
+    "the walkthrough",
+    "plain English",
+    "where it plays",
+    "the hardware",
+    "its picture",
+    "its sound data",
+    "its number",
 ];
 
 /// The kind of a row's `★ Named from <kind>: ...` line.
 fn row_kind(line: &str) -> Option<&str> {
-    line.strip_prefix("★ Named from ")?.split_once(": ").map(|(kind, _)| kind)
+    line.strip_prefix("★ Named from ")?
+        .split_once(": ")
+        .map(|(kind, _)| kind)
 }
 
 /// What a name's evidence says, each row judged as the `★` line it stands
@@ -647,30 +1056,49 @@ fn row_kind(line: &str) -> Option<&str> {
 /// (`Unchecked`), set apart where its `its code` row says the thing shows
 /// nothing on screen (`Unseen`). A row of a kind nobody named fails.
 fn named(thing: &Thing, own: &str, text: &GameText) -> Option<Evidence> {
-    let rows: Vec<Evidence> = thing.evidence.iter().filter_map(|line| evidence_line(line, text)).collect();
+    let rows: Vec<Evidence> = thing
+        .evidence
+        .iter()
+        .filter_map(|line| evidence_line(line, text))
+        .collect();
     if let Some(verified) = rows.iter().find(|row| matches!(row, Evidence::Verified(_))) {
         return Some(verified.clone());
     }
     if let Some(line) = evidence_line(own, text).or_else(|| rows.into_iter().next()) {
         return Some(line);
     }
-    let kinds: Vec<&str> = thing.evidence.iter().filter_map(|line| row_kind(line)).collect();
-    if let Some(unknown) = kinds.iter().find(|kind| !CHECKED_KINDS.contains(kind) && !UNCHECKED_KINDS.contains(kind)) {
-        return Some(Evidence::Failed(format!("a row of no known kind: {unknown}")));
+    let kinds: Vec<&str> = thing
+        .evidence
+        .iter()
+        .filter_map(|line| row_kind(line))
+        .collect();
+    if let Some(unknown) = kinds
+        .iter()
+        .find(|kind| !CHECKED_KINDS.contains(kind) && !UNCHECKED_KINDS.contains(kind))
+    {
+        return Some(Evidence::Failed(format!(
+            "a row of no known kind: {unknown}"
+        )));
     }
     // A row of `its code` saying the thing shows nothing on screen: nothing
     // a render could check.
     if shows_nothing(thing) {
         return Some(Evidence::Unseen);
     }
-    kinds.iter().find_map(|kind| UNCHECKED_KINDS.iter().find(|known| *known == kind)).map(|kind| Evidence::Unchecked(kind))
+    kinds
+        .iter()
+        .find_map(|kind| UNCHECKED_KINDS.iter().find(|known| *known == kind))
+        .map(|kind| Evidence::Unchecked(kind))
 }
 
 /// Whether a thing's `its code` row says it shows nothing on screen: no
 /// render can check its name, nor name its words.
 fn shows_nothing(thing: &Thing) -> bool {
     thing.evidence.iter().any(|line| {
-        line.strip_prefix("★ Named from its code: ").is_some_and(|text| text.contains("nothing on screen") || text.contains("nothing visible"))
+        line.strip_prefix("★ Named from its code: ")
+            .is_some_and(|text| {
+                text.contains("nothing on screen") || text.contains("nothing visible")
+            })
     })
 }
 
@@ -691,13 +1119,22 @@ fn prose(comment: &str, text: &GameText, quotes: &mut HashMap<String, bool>) -> 
     let [quote, message, area, render] = prose_regexes();
     let mut kinds = Vec::new();
     let quoted = quote.captures_iter(comment).any(|capture| {
-        let inner = capture.get(1).or(capture.get(2)).or(capture.get(3)).map_or("", |m| m.as_str());
-        *quotes.entry(inner.to_string()).or_insert_with(|| text.holds(inner))
+        let inner = capture
+            .get(1)
+            .or(capture.get(2))
+            .or(capture.get(3))
+            .map_or("", |m| m.as_str());
+        *quotes
+            .entry(inner.to_string())
+            .or_insert_with(|| text.holds(inner))
     });
     if quoted {
         kinds.push("quote");
     }
-    if message.find_iter(comment).any(|m| text.symbols.contains_key(m.as_str())) {
+    if message
+        .find_iter(comment)
+        .any(|m| text.symbols.contains_key(m.as_str()))
+    {
         kinds.push("message");
     }
     if area.is_match(comment) {
@@ -770,8 +1207,30 @@ pub const FAMILIES: &[(&str, &str, &str)] = &[
 /// where a Psynergy came from and `ABILITY_USABLE_IN_FIELD` where an ability
 /// can be used. Like the vocabulary, it errs short.
 pub const ASPECTS: &[&str] = &[
-    "kind", "type", "effect", "mode", "step", "phase", "state", "action", "command", "use", "range", "index", "menu",
-    "debug", "event", "ev", "trigger", "anim", "animation", "from", "usable", "snapshot", "template", "placement",
+    "kind",
+    "type",
+    "effect",
+    "mode",
+    "step",
+    "phase",
+    "state",
+    "action",
+    "command",
+    "use",
+    "range",
+    "index",
+    "menu",
+    "debug",
+    "event",
+    "ev",
+    "trigger",
+    "anim",
+    "animation",
+    "from",
+    "usable",
+    "snapshot",
+    "template",
+    "placement",
 ];
 
 /// Words that, right after `ACTOR_`, make an actor a part of its map's
@@ -786,8 +1245,8 @@ pub const STAND_INS: &[&str] = &["invisible", "mask"];
 /// field or a place on the screen: `ITEM_STACK_MAX`, `ENEMY_ID_FIRST`, `SUMMON_END`,
 /// `PSYNERGY_SHORTCUT_ID_MASK`, `ITEM_LIST_NAME_X`.
 pub const MEASURES: &[&str] = &[
-    "count", "num", "max", "min", "first", "last", "end", "mask", "shift", "x", "y", "width", "height", "size",
-    "tile", "tiles", "slots", "words", "frames",
+    "count", "num", "max", "min", "first", "last", "end", "mask", "shift", "x", "y", "width",
+    "height", "size", "tile", "tiles", "slots", "words", "frames",
 ];
 
 /// A definition `kind` classifies.
@@ -804,7 +1263,13 @@ pub struct Definition<'a> {
 
 impl<'a> Definition<'a> {
     pub fn new(name: &'a str, file: &'a str, origin: Origin) -> Definition<'a> {
-        Definition { name, file, origin, tag: None, value: None }
+        Definition {
+            name,
+            file,
+            origin,
+            tag: None,
+            value: None,
+        }
     }
 }
 
@@ -830,7 +1295,8 @@ fn field_sequence_bank(file: &str) -> bool {
         "/src/field/lucky_wheels.c",
         "/src/system/main_routine.c",
     ];
-    file.contains("/src/overworld/") || (file.contains("games/tbs/") && FILES.iter().any(|path| file.contains(path)))
+    file.contains("/src/overworld/")
+        || (file.contains("games/tbs/") && FILES.iter().any(|path| file.contains(path)))
 }
 
 /// What kind of game thing a definition names, if any: an exit by its
@@ -841,21 +1307,31 @@ fn field_sequence_bank(file: &str) -> bool {
 /// the source's numeric macros read so far.
 pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'static str> {
     static TEMP: OnceLock<Regex> = OnceLock::new();
-    let temp = TEMP.get_or_init(|| Regex::new(r"^FLAG_(?:SCENE|MAPSEC|AREA)_TEMP_[0-9A-Fa-f]+$").unwrap());
-    let Definition { name, file, origin, .. } = definition;
+    let temp =
+        TEMP.get_or_init(|| Regex::new(r"^FLAG_(?:SCENE|MAPSEC|AREA)_TEMP_[0-9A-Fa-f]+$").unwrap());
+    let Definition {
+        name, file, origin, ..
+    } = definition;
     if super::is_placeholder(name) || temp.is_match(name) {
         return None;
     }
-    let family = FAMILIES.iter().find(|(prefix, ..)| name.starts_with(prefix) && name.len() > prefix.len());
+    let family = FAMILIES
+        .iter()
+        .find(|(prefix, ..)| name.starts_with(prefix) && name.len() > prefix.len());
     if let Some(&(prefix, kind, word)) = family {
         return (!is_mechanism(&definition, prefix, word, macros)).then_some(kind);
     }
     // Each map's exits are an anonymous enum; a tagged enum there holds
     // what the links share (`enum DefaultEntrance`), a mechanism.
-    if origin == Origin::Enumerator && ["scene_exits.h", "map_warps.h", "scene_links.h"].iter().any(|header| file.ends_with(header)) {
+    if origin == Origin::Enumerator
+        && ["scene_exits.h", "map_warps.h", "scene_links.h"]
+            .iter()
+            .any(|header| file.ends_with(header))
+    {
         return definition.tag.is_none().then_some("exit");
     }
-    let mechanism_folder = file.contains("/src/map/") || file.contains("/src/scene/") || field_sequence_bank(file);
+    let mechanism_folder =
+        file.contains("/src/map/") || file.contains("/src/scene/") || field_sequence_bank(file);
     match origin {
         Origin::Function if mechanism_folder => Some("function"),
         Origin::Global if mechanism_folder => Some("global"),
@@ -889,7 +1365,12 @@ pub fn kind(definition: Definition, macros: &HashMap<String, i64>) -> Option<&'s
 /// - a flag numbered in the range the source names as the system's own,
 ///   `FLAG_SYSTEM_FIRST` to `FLAG_SYSTEM_LAST`, is what the field, battles
 ///   and menus keep about their own working, not a fact of the story.
-fn is_mechanism(definition: &Definition, prefix: &str, family: &str, macros: &HashMap<String, i64>) -> bool {
+fn is_mechanism(
+    definition: &Definition,
+    prefix: &str,
+    family: &str,
+    macros: &HashMap<String, i64>,
+) -> bool {
     if definition.origin == Origin::FunctionMacro {
         return true;
     }
@@ -904,7 +1385,11 @@ fn is_mechanism(definition: &Definition, prefix: &str, family: &str, macros: &Ha
     // mechanism even in an enum of ids.
     let actor = matches!(prefix, "LOCALID_" | "ACTOR_") && definition.tag.is_some();
     let last = rest.rsplit('_').next().unwrap_or("").to_ascii_lowercase();
-    if !actor && (ASPECTS.contains(&first.as_str()) || MEASURES.contains(&last.as_str()) || rest == "NONE") {
+    if !actor
+        && (ASPECTS.contains(&first.as_str())
+            || MEASURES.contains(&last.as_str())
+            || rest == "NONE")
+    {
         return true;
     }
     if definition.tag == Some(family) {
@@ -914,7 +1399,10 @@ fn is_mechanism(definition: &Definition, prefix: &str, family: &str, macros: &Ha
         return last != "Id" && last != family;
     }
     if prefix == "FLAG_" {
-        let range = (macros.get("FLAG_SYSTEM_FIRST"), macros.get("FLAG_SYSTEM_LAST"));
+        let range = (
+            macros.get("FLAG_SYSTEM_FIRST"),
+            macros.get("FLAG_SYSTEM_LAST"),
+        );
         if let (Some(value), (Some(&low), Some(&high))) = (definition.value, range) {
             return (low..=high).contains(&value);
         }
@@ -951,10 +1439,30 @@ pub struct Table {
 /// `MsgAbilityName` + id, an enemy's `MsgEnemyName` + its row in
 /// `gEnemy_Definitions`, a Djinni's `MsgDjinnName` + its number.
 pub const TABLES: &[Table] = &[
-    Table { tag: "ItemId", prefix: "ITEM_", symbol: "MsgItemName", first: None },
-    Table { tag: "AbilityId", prefix: "ABILITY_", symbol: "MsgAbilityName", first: None },
-    Table { tag: "EnemyId", prefix: "ENEMY_", symbol: "MsgEnemyName", first: Some("ENEMY_ID_FIRST") },
-    Table { tag: "DjinniId", prefix: "DJINNI_", symbol: "MsgDjinnName", first: None },
+    Table {
+        tag: "ItemId",
+        prefix: "ITEM_",
+        symbol: "MsgItemName",
+        first: None,
+    },
+    Table {
+        tag: "AbilityId",
+        prefix: "ABILITY_",
+        symbol: "MsgAbilityName",
+        first: None,
+    },
+    Table {
+        tag: "EnemyId",
+        prefix: "ENEMY_",
+        symbol: "MsgEnemyName",
+        first: Some("ENEMY_ID_FIRST"),
+    },
+    Table {
+        tag: "DjinniId",
+        prefix: "DJINNI_",
+        symbol: "MsgDjinnName",
+        first: None,
+    },
 ];
 
 /// A name's words for comparing with the game's: lowercase, apostrophes
@@ -963,7 +1471,13 @@ pub const TABLES: &[Table] = &[
 pub fn table_words(name: &str) -> String {
     name.chars()
         .filter(|c| !matches!(c, '\'' | '’'))
-        .map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { ' ' })
+        .map(|c| {
+            if c.is_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                ' '
+            }
+        })
         .collect::<String>()
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -985,15 +1499,33 @@ fn table_check(thing: &Thing, text: &GameText, macros: &HashMap<String, i64>) ->
     let wanted = table_words(game);
     let symbol = table.symbol;
     if words == wanted {
-        return Some(Evidence::Table { symbol, offset, numbered: false });
+        return Some(Evidence::Table {
+            symbol,
+            offset,
+            numbered: false,
+        });
     }
     // Later rows sharing a name take `_2` onwards.
-    let base = words.rsplit_once(' ').filter(|(_, n)| n.bytes().all(|b| b.is_ascii_digit())).map(|(base, _)| base);
+    let base = words
+        .rsplit_once(' ')
+        .filter(|(_, n)| n.bytes().all(|b| b.is_ascii_digit()))
+        .map(|(base, _)| base);
     if base == Some(wanted.as_str()) {
-        return Some(Evidence::Table { symbol, offset, numbered: true });
+        return Some(Evidence::Table {
+            symbol,
+            offset,
+            numbered: true,
+        });
     }
-    let suffixed = words.strip_prefix(wanted.as_str()).is_some_and(|rest| rest.starts_with(' '));
-    Some(Evidence::Mismatch { symbol, offset, game: game.to_string(), suffixed })
+    let suffixed = words
+        .strip_prefix(wanted.as_str())
+        .is_some_and(|rest| rest.starts_with(' '));
+    Some(Evidence::Mismatch {
+        symbol,
+        offset,
+        game: game.to_string(),
+        suffixed,
+    })
 }
 
 /// One row of the worklist.
@@ -1062,19 +1594,39 @@ fn mentions(text: &str, word: &str) -> bool {
 /// Words an exit uses for how it joins maps: the directions, its
 /// side of the door, and the markers for links no exit takes.
 pub const DOOR_WORDS: &[&str] = &[
-    "to", "from", "north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest", "unused",
-    "debug", "battle", "after", "before",
+    "to",
+    "from",
+    "north",
+    "south",
+    "east",
+    "west",
+    "northeast",
+    "northwest",
+    "southeast",
+    "southwest",
+    "unused",
+    "debug",
+    "battle",
+    "after",
+    "before",
 ];
 
 /// An exit's words, uppercase, split as `pieces` splits them.
 fn link_words(name: &str) -> Vec<String> {
-    pieces(name).iter().map(|piece| piece.to_ascii_uppercase()).collect()
+    pieces(name)
+        .iter()
+        .map(|piece| piece.to_ascii_uppercase())
+        .collect()
 }
 
 /// The maps an exit's words name, longest first at each place, and the
 /// words left over, lowercase, in order. Words are compared run together, so
 /// `MCCOY_PALACE` is `SceneId_McCoyPalace`.
-fn resolve(words: &[String], scenes: &HashMap<String, usize>, longest: usize) -> Vec<Result<usize, String>> {
+fn resolve(
+    words: &[String],
+    scenes: &HashMap<String, usize>,
+    longest: usize,
+) -> Vec<Result<usize, String>> {
     spans(words, scenes, longest)
         .into_iter()
         .map(|(range, map)| map.ok_or_else(|| words[range.start].to_ascii_lowercase()))
@@ -1082,11 +1634,19 @@ fn resolve(words: &[String], scenes: &HashMap<String, usize>, longest: usize) ->
 }
 
 /// The same, as the words each part spans and the map it names, if any.
-fn spans(words: &[String], scenes: &HashMap<String, usize>, longest: usize) -> Vec<(std::ops::Range<usize>, Option<usize>)> {
+fn spans(
+    words: &[String],
+    scenes: &HashMap<String, usize>,
+    longest: usize,
+) -> Vec<(std::ops::Range<usize>, Option<usize>)> {
     let mut out = Vec::new();
     let mut at = 0;
     while at < words.len() {
-        let found = (1..=longest.min(words.len() - at)).rev().find_map(|len| scenes.get(&words[at..at + len].concat()).map(|&row| (row, len)));
+        let found = (1..=longest.min(words.len() - at)).rev().find_map(|len| {
+            scenes
+                .get(&words[at..at + len].concat())
+                .map(|&row| (row, len))
+        });
         let (map, len) = found.map_or((None, 1), |(row, len)| (Some(row), len));
         out.push((at..at + len, map));
         at += len;
@@ -1100,7 +1660,11 @@ fn spans(words: &[String], scenes: &HashMap<String, usize>, longest: usize) -> V
 fn scene_words(rows: &[Row]) -> (HashMap<String, usize>, usize) {
     let mut scenes: HashMap<String, usize> = HashMap::new();
     let mut longest = 0;
-    for (at, row) in rows.iter().enumerate().filter(|(_, row)| row.thing.kind == "scene") {
+    for (at, row) in rows
+        .iter()
+        .enumerate()
+        .filter(|(_, row)| row.thing.kind == "scene")
+    {
         let words = link_words(&row.thing.name);
         if words.len() > 2 {
             scenes.entry(words[2..].concat()).or_insert(at);
@@ -1113,8 +1677,15 @@ fn scene_words(rows: &[Row]) -> (HashMap<String, usize>, usize) {
 /// The words of a comment's ★ line onwards, as stems.
 fn star_stems(comment: &str) -> impl Iterator<Item = String> + '_ {
     let words = comment_words(comment);
-    let rest = words.split_once('★').map_or(String::new(), |(_, rest)| rest.to_string());
-    table_words(&rest).split(' ').filter(|w| !w.is_empty()).map(stem).collect::<Vec<_>>().into_iter()
+    let rest = words
+        .split_once('★')
+        .map_or(String::new(), |(_, rest)| rest.to_string());
+    table_words(&rest)
+        .split(' ')
+        .filter(|w| !w.is_empty())
+        .map(stem)
+        .collect::<Vec<_>>()
+        .into_iter()
 }
 
 /// Verify the exits that a ★ line doesn't by their words: each must
@@ -1126,9 +1697,16 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
     let verified = |row: &Row| matches!(row.evidence, Some(Evidence::Verified(_)));
     let (scenes, longest) = scene_words(rows);
     let mut rooms: HashMap<usize, HashSet<String>> = HashMap::new();
-    for (at, row) in rows.iter().enumerate().filter(|(_, row)| row.thing.kind == "scene") {
+    for (at, row) in rows
+        .iter()
+        .enumerate()
+        .filter(|(_, row)| row.thing.kind == "scene")
+    {
         if verified(row) {
-            rooms.entry(at).or_default().extend(star_stems(&row.thing.own));
+            rooms
+                .entry(at)
+                .or_default()
+                .extend(star_stems(&row.thing.own));
             for line in &row.thing.evidence {
                 rooms.entry(at).or_default().extend(star_stems(line));
             }
@@ -1139,24 +1717,44 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
     for row in rows.iter().filter(|row| verified(row)) {
         if row.thing.kind == "exit" {
             let parts = resolve(&link_words(&row.thing.name), &scenes, longest);
-            let named: Vec<usize> = parts.iter().filter_map(|part| part.as_ref().ok().copied()).collect();
-            for word in parts.iter().filter_map(|part| part.as_ref().err()).filter(|word| !door(word)) {
+            let named: Vec<usize> = parts
+                .iter()
+                .filter_map(|part| part.as_ref().ok().copied())
+                .collect();
+            for word in parts
+                .iter()
+                .filter_map(|part| part.as_ref().err())
+                .filter(|word| !door(word))
+            {
                 for scene in &named {
                     rooms.entry(*scene).or_default().insert(stem(word));
                 }
             }
         } else if row.thing.kind != "scene" {
-            events.extend(link_words(&row.thing.name).iter().skip(1).map(|word| stem(word)));
+            events.extend(
+                link_words(&row.thing.name)
+                    .iter()
+                    .skip(1)
+                    .map(|word| stem(word)),
+            );
         }
     }
     let mut words: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     for at in 0..rows.len() {
         let row = &rows[at];
-        if row.thing.kind != "exit" || matches!(row.evidence, Some(Evidence::Verified(_) | Evidence::Failed(_))) {
+        if row.thing.kind != "exit"
+            || matches!(
+                row.evidence,
+                Some(Evidence::Verified(_) | Evidence::Failed(_))
+            )
+        {
             continue;
         }
         let parts = resolve(&link_words(&row.thing.name), &scenes, longest);
-        let named: Vec<usize> = parts.iter().filter_map(|part| part.as_ref().ok().copied()).collect();
+        let named: Vec<usize> = parts
+            .iter()
+            .filter_map(|part| part.as_ref().ok().copied())
+            .collect();
         let mut unresolved: Vec<String> = Vec::new();
         for &scene in &named {
             if !verified(&rows[scene]) {
@@ -1166,7 +1764,9 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
         let mut after = false;
         for word in parts.iter().filter_map(|part| part.as_ref().err()) {
             let stemmed = stem(word);
-            let room = named.iter().any(|scene| rooms.get(scene).is_some_and(|set| set.contains(&stemmed)));
+            let room = named
+                .iter()
+                .any(|scene| rooms.get(scene).is_some_and(|set| set.contains(&stemmed)));
             let event = after && (text.uses(word) || events.contains(&stemmed));
             if door(word) {
                 after |= word == "after" || word == "before";
@@ -1187,14 +1787,21 @@ fn check_doors(analysis: &mut Analysis, text: &GameText) {
         }
     }
     analysis.door_words = words.into_iter().collect();
-    analysis.door_words.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
+    analysis
+        .door_words
+        .sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
 }
 
 /// Run both checks. `places` are the opening comments of the map overlays
 /// (raw); a paragraph of one that mentions a name counts as its prose.
 /// `macros` are the source's numeric macros, for a table's first number.
 #[cfg(test)]
-pub fn analyze(things: &[Thing], places: &[(String, String)], text: &GameText, macros: &HashMap<String, i64>) -> Analysis {
+pub fn analyze(
+    things: &[Thing],
+    places: &[(String, String)],
+    text: &GameText,
+    macros: &HashMap<String, i64>,
+) -> Analysis {
     analyze_with(things, places, text, macros, &HashMap::new())
 }
 
@@ -1253,7 +1860,10 @@ pub fn analyze_with(
                 }
             };
             more(&comment_words(&thing.context), &mut kinds);
-            for paragraph in paragraphs.iter().filter(|p| mentions(p, spoken(&thing.name))) {
+            for paragraph in paragraphs
+                .iter()
+                .filter(|p| mentions(p, spoken(&thing.name)))
+            {
                 more(paragraph, &mut kinds);
             }
             if kinds.is_empty() {
@@ -1263,9 +1873,21 @@ pub fn analyze_with(
             }
         });
         for word in &flagged {
-            words.entry(word.clone()).or_default().push(analysis.rows.len());
+            words
+                .entry(word.clone())
+                .or_default()
+                .push(analysis.rows.len());
         }
-        analysis.rows.push(Row { thing: thing.clone(), words: flagged, evidence, door_words: Vec::new(), seen_words: Vec::new(), seen_uses: Vec::new(), lent_uses: Vec::new(), unseen_uses: Vec::new() });
+        analysis.rows.push(Row {
+            thing: thing.clone(),
+            words: flagged,
+            evidence,
+            door_words: Vec::new(),
+            seen_words: Vec::new(),
+            seen_uses: Vec::new(),
+            lent_uses: Vec::new(),
+            unseen_uses: Vec::new(),
+        });
     }
     // A word the glossary defines is settled, and one the twin's text uses
     // is the game's (H6): each is set apart. A name taking a word from what
@@ -1275,7 +1897,9 @@ pub fn analyze_with(
     let (mut glossary, words): (Vec<_>, Vec<_>) = words.into_iter().partition(|(word, uses)| {
         text.glossary_defines(word) && !uses.iter().any(|&at| seen.word(&analysis.rows, at, word))
     });
-    let (mut twin, words): (Vec<_>, Vec<_>) = words.into_iter().partition(|(word, _)| text.twin_uses(word));
+    let (mut twin, words): (Vec<_>, Vec<_>) = words
+        .into_iter()
+        .partition(|(word, _)| text.twin_uses(word));
     for (word, uses) in glossary.iter().chain(&twin) {
         for &at in uses {
             analysis.rows[at].words.retain(|flagged| flagged != word);
@@ -1286,7 +1910,11 @@ pub fn analyze_with(
     let mut borrowed = Vec::new();
     let mut unseen = Vec::new();
     for (word, uses) in words {
-        let seen_at: Vec<usize> = uses.iter().copied().filter(|&at| seen.word(&analysis.rows, at, &word)).collect();
+        let seen_at: Vec<usize> = uses
+            .iter()
+            .copied()
+            .filter(|&at| seen.word(&analysis.rows, at, &word))
+            .collect();
         // A use no render can name: the thing shows nothing on screen, by
         // its `its code` row; or it takes the word from a seen copy or
         // sibling (`lenders`).
@@ -1294,7 +1922,13 @@ pub fn analyze_with(
             .iter()
             .copied()
             .filter(|at| !seen_at.contains(at))
-            .map(|at| (at, shows_nothing(&analysis.rows[at].thing), seen.lent(&analysis.rows, lenders, at, &word)))
+            .map(|at| {
+                (
+                    at,
+                    shows_nothing(&analysis.rows[at].thing),
+                    seen.lent(&analysis.rows, lenders, at, &word),
+                )
+            })
             .collect();
         if rest.is_empty() {
             apart.push((word, uses));
@@ -1325,10 +1959,22 @@ pub fn analyze_with(
             row.seen_words.push(word.clone());
         }
     }
-    for list in [&mut flagged, &mut apart, &mut borrowed, &mut unseen, &mut twin, &mut glossary] {
+    for list in [
+        &mut flagged,
+        &mut apart,
+        &mut borrowed,
+        &mut unseen,
+        &mut twin,
+        &mut glossary,
+    ] {
         list.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
     }
-    (analysis.words, analysis.seen_words, analysis.twin_words, analysis.glossary_words) = (flagged, apart, twin, glossary);
+    (
+        analysis.words,
+        analysis.seen_words,
+        analysis.twin_words,
+        analysis.glossary_words,
+    ) = (flagged, apart, twin, glossary);
     (analysis.lent_words, analysis.unseen_words) = (borrowed, unseen);
     check_doors(&mut analysis, text);
     analysis
@@ -1344,11 +1990,16 @@ pub const SEEN_KINDS: &[&str] = &["its picture", "the walkthrough"];
 /// kind, each as its ★ line.
 fn seen_lines(thing: &Thing) -> Vec<String> {
     let sees = &line_regexes()[2];
-    let rendered = |line: &str| sees.captures_iter(line).any(|capture| capture.get(1).is_some() && !capture[2].trim().is_empty());
+    let rendered = |line: &str| {
+        sees.captures_iter(line)
+            .any(|capture| capture.get(1).is_some() && !capture[2].trim().is_empty())
+    };
     let mut lines: Vec<String> = thing
         .evidence
         .iter()
-        .filter(|line| rendered(line) || row_kind(line).is_some_and(|kind| SEEN_KINDS.contains(&kind)))
+        .filter(|line| {
+            rendered(line) || row_kind(line).is_some_and(|kind| SEEN_KINDS.contains(&kind))
+        })
         .cloned()
         .collect();
     let own = comment_words(&thing.own);
@@ -1372,7 +2023,12 @@ struct Seen {
 impl Seen {
     fn new(rows: &[Row]) -> Seen {
         let (scenes, longest) = scene_words(rows);
-        let mut seen = Seen { scenes, longest, named: HashSet::new(), rooms: HashMap::new() };
+        let mut seen = Seen {
+            scenes,
+            longest,
+            named: HashSet::new(),
+            rooms: HashMap::new(),
+        };
         for (at, row) in rows.iter().enumerate() {
             let lines = seen_lines(&row.thing);
             if lines.is_empty() {
@@ -1380,11 +2036,21 @@ impl Seen {
             }
             seen.named.insert(at);
             if row.thing.kind == "scene" {
-                seen.rooms.entry(at).or_default().extend(lines.iter().flat_map(|line| star_stems(line)));
+                seen.rooms
+                    .entry(at)
+                    .or_default()
+                    .extend(lines.iter().flat_map(|line| star_stems(line)));
             } else if row.thing.kind == "exit" {
                 let parts = resolve(&link_words(&row.thing.name), &seen.scenes, seen.longest);
-                let maps: Vec<usize> = parts.iter().filter_map(|part| part.as_ref().ok().copied()).collect();
-                for word in parts.iter().filter_map(|part| part.as_ref().err()).filter(|word| !DOOR_WORDS.contains(&word.as_str())) {
+                let maps: Vec<usize> = parts
+                    .iter()
+                    .filter_map(|part| part.as_ref().ok().copied())
+                    .collect();
+                for word in parts
+                    .iter()
+                    .filter_map(|part| part.as_ref().err())
+                    .filter(|word| !DOOR_WORDS.contains(&word.as_str()))
+                {
                     for map in &maps {
                         seen.rooms.entry(*map).or_default().insert(stem(word));
                     }
@@ -1410,7 +2076,10 @@ impl Seen {
         let short = self.short_names(rows, &thing.file, &words);
         let mut used = false;
         for (range, map) in &spans {
-            if !words[range.clone()].iter().any(|piece| piece.eq_ignore_ascii_case(word)) {
+            if !words[range.clone()]
+                .iter()
+                .any(|piece| piece.eq_ignore_ascii_case(word))
+            {
                 continue;
             }
             used = true;
@@ -1418,7 +2087,11 @@ impl Seen {
                 Some(map) => self.named.contains(map),
                 None => {
                     short.contains(&range.start)
-                        || maps.iter().any(|map| self.rooms.get(map).is_some_and(|room| room.contains(&stem(word))))
+                        || maps.iter().any(|map| {
+                            self.rooms
+                                .get(map)
+                                .is_some_and(|room| room.contains(&stem(word)))
+                        })
                 }
             };
             if !seen {
@@ -1430,9 +2103,24 @@ impl Seen {
 
     /// Whether row `at` takes `word` from a seen lender (`lenders`) whose
     /// name uses it too.
-    fn lent(&self, rows: &[Row], lenders: &HashMap<usize, Vec<usize>>, at: usize, word: &str) -> bool {
-        let uses = |row: usize| link_words(&rows[row].thing.name).iter().any(|piece| piece.eq_ignore_ascii_case(word));
-        uses(at) && lenders.get(&at).is_some_and(|lenders| lenders.iter().any(|&lender| self.named.contains(&lender) && uses(lender)))
+    fn lent(
+        &self,
+        rows: &[Row],
+        lenders: &HashMap<usize, Vec<usize>>,
+        at: usize,
+        word: &str,
+    ) -> bool {
+        let uses = |row: usize| {
+            link_words(&rows[row].thing.name)
+                .iter()
+                .any(|piece| piece.eq_ignore_ascii_case(word))
+        };
+        uses(at)
+            && lenders.get(&at).is_some_and(|lenders| {
+                lenders
+                    .iter()
+                    .any(|&lender| self.named.contains(&lender) && uses(lender))
+            })
     }
 
     /// The places among `words` that a seen map of the scene file `file`
@@ -1441,7 +2129,11 @@ impl Seen {
     /// `SceneId_DehkanPlateauTightropes`), as that file's names call it.
     fn short_names(&self, rows: &[Row], file: &str, words: &[String]) -> HashSet<usize> {
         let mut out = HashSet::new();
-        let Some(stem) = file.rsplit_once("/src/scene/").and_then(|(_, rest)| rest.strip_suffix(".c")).filter(|rest| !rest.contains('/')) else {
+        let Some(stem) = file
+            .rsplit_once("/src/scene/")
+            .and_then(|(_, rest)| rest.strip_suffix(".c"))
+            .filter(|rest| !rest.contains('/'))
+        else {
             return out;
         };
         let prefix = stem.replace('_', "").to_ascii_uppercase();
@@ -1452,7 +2144,9 @@ impl Seen {
             }
             let name = link_words(&row.thing.name);
             let Some(name) = name.get(2..) else { continue };
-            let Some(cut) = (1..name.len()).find(|&cut| name[..cut].concat() == prefix) else { continue };
+            let Some(cut) = (1..name.len()).find(|&cut| name[..cut].concat() == prefix) else {
+                continue;
+            };
             let rest = &name[cut..];
             for start in 0..words.len().saturating_sub(rest.len() - 1) {
                 if words[start..start + rest.len()] == *rest {
@@ -1480,51 +2174,111 @@ mod tests {
     #[test]
     fn text_words_stems_and_areas() {
         let text = GameText::parse(PO, Some(2)).unwrap();
-        assert!(text.uses("Treasury") && text.uses("tree") && text.uses("Move") && text.uses("McCoy"));
+        assert!(
+            text.uses("Treasury") && text.uses("tree") && text.uses("Move") && text.uses("McCoy")
+        );
         assert!(!text.uses("Warehouse") && !text.uses("charset"));
         assert!(text.holds("McCoy's Hidden Treasury") && !text.holds("Hidden Warehouse"));
         assert_eq!(text.areas, vec!["Bilibin Barricade", "Bilibin"]);
-        assert_eq!(GameText::parse(PO, None).unwrap().areas.len(), 2, "up to the next named message");
+        assert_eq!(
+            GameText::parse(PO, None).unwrap().areas.len(),
+            2,
+            "up to the next named message"
+        );
         assert_eq!(stem("Storms"), "storm");
         assert_eq!(stem("moving"), stem("move"));
         assert_eq!(stem("bodies"), "body");
-        let menu = GameText::parse("msgctxt \"MsgMenu\"\nmsgid \"00001\"\nmsgstr \"Menu and statue\"\n", None).unwrap();
-        assert!(menu.uses("menus") && !menu.uses("status"), "a plural in -us, not -us itself");
+        let menu = GameText::parse(
+            "msgctxt \"MsgMenu\"\nmsgid \"00001\"\nmsgstr \"Menu and statue\"\n",
+            None,
+        )
+        .unwrap();
+        assert!(
+            menu.uses("menus") && !menu.uses("status"),
+            "a plural in -us, not -us itself"
+        );
     }
 
     #[test]
     fn words_of_names() {
-        assert_eq!(pieces("SceneId_SolSanctumLunaSolRooms"), ["Scene", "Id", "Sol", "Sanctum", "Luna", "Sol", "Rooms"]);
+        assert_eq!(
+            pieces("SceneId_SolSanctumLunaSolRooms"),
+            ["Scene", "Id", "Sol", "Sanctum", "Luna", "Sol", "Rooms"]
+        );
         assert_eq!(pieces("gBilibinEvents1"), ["Bilibin", "Events"]);
         assert_eq!(pieces("ACTOR_TREE_MAN_2"), ["ACTOR", "TREE", "MAN"]);
         assert_eq!(pieces("HTMLParser"), ["HTML", "Parser"]);
         assert_eq!(pieces("SceneId_Ov6aaRoom1"), ["Scene", "Id", "Ov", "Room"]);
         // Sheet letters after `Rooms`, one or a run, are no word.
-        assert_eq!(pieces("TimberRoomsBC_TalkToInnWorker"), ["Timber", "Rooms", "Talk", "To", "Inn", "Worker"]);
-        assert_eq!(pieces("gTimberRoomsBCActorPlacements"), ["Timber", "Rooms", "Actor", "Placements"]);
-        assert_eq!(pieces("IZUMO_ROOMS_TO_IZUMO"), ["IZUMO", "ROOMS", "TO", "IZUMO"]);
+        assert_eq!(
+            pieces("TimberRoomsBC_TalkToInnWorker"),
+            ["Timber", "Rooms", "Talk", "To", "Inn", "Worker"]
+        );
+        assert_eq!(
+            pieces("gTimberRoomsBCActorPlacements"),
+            ["Timber", "Rooms", "Actor", "Placements"]
+        );
+        assert_eq!(
+            pieces("IZUMO_ROOMS_TO_IZUMO"),
+            ["IZUMO", "ROOMS", "TO", "IZUMO"]
+        );
         let text = GameText::parse(PO, Some(2)).unwrap();
-        assert_eq!(unused_words("Bilibin_UpdateWarehouseApproach", &text), ["warehouse", "approach"]);
-        assert_eq!(unused_words("ACTOR_MCCOY_TREES", &text), Vec::<String>::new());
-        assert_eq!(unused_words("Event_McCoyTreasury", &text), Vec::<String>::new(), "Mc and Coy are one word");
+        assert_eq!(
+            unused_words("Bilibin_UpdateWarehouseApproach", &text),
+            ["warehouse", "approach"]
+        );
+        assert_eq!(
+            unused_words("ACTOR_MCCOY_TREES", &text),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            unused_words("Event_McCoyTreasury", &text),
+            Vec::<String>::new(),
+            "Mc and Coy are one word"
+        );
     }
 
     #[test]
     fn the_shared_codes_words() {
         let text = GameText::parse(PO, Some(2)).unwrap();
         for (name, word) in [
-            ("Actor_Bob", "bob"), ("Actor_IsParked", "parked"), ("Orbiter_Step", "orbiter"), ("Event_CheckSpheresOverlap", "overlap"),
-            ("Clear_CalculatePasswordCrc16", "calculate"), ("LinkLobby_PollPeerReady", "poll"), ("ACTOR_ITEM_PICKER", "picker"),
-            ("ACTOR_LEVEL_EDITOR", "editor"), ("ACTOR_PORTRAIT_BROWSER", "portrait"), ("ACTOR_PORTRAIT_BROWSER", "browser"),
-            ("DJINNI_CHARGE_RING_VERTICES", "vertices"), ("gClear_ButtonCodes", "codes"), ("gAirsRockInside_StampedCell", "stamped"),
-            ("Settlements_UnblockCrate", "unblock"), ("Actor_SetMovementTypeById", "movement"), ("Speaker_GetVoice", "speaker"),
-            ("FieldEffect_UpdateRetreatCaster", "caster"), ("Sanctum_ShowAllEmotes", "emotes"), ("FieldEffect_RunAngledApproachPhases", "phases"),
-            ("Encounter_SelectMapZones", "zones"), ("FieldEffect_SetAttached", "attached"), ("ACTOR_PRIORITY_UNDERFOOT", "underfoot"),
+            ("Actor_Bob", "bob"),
+            ("Actor_IsParked", "parked"),
+            ("Orbiter_Step", "orbiter"),
+            ("Event_CheckSpheresOverlap", "overlap"),
+            ("Clear_CalculatePasswordCrc16", "calculate"),
+            ("LinkLobby_PollPeerReady", "poll"),
+            ("ACTOR_ITEM_PICKER", "picker"),
+            ("ACTOR_LEVEL_EDITOR", "editor"),
+            ("ACTOR_PORTRAIT_BROWSER", "portrait"),
+            ("ACTOR_PORTRAIT_BROWSER", "browser"),
+            ("DJINNI_CHARGE_RING_VERTICES", "vertices"),
+            ("gClear_ButtonCodes", "codes"),
+            ("gAirsRockInside_StampedCell", "stamped"),
+            ("Settlements_UnblockCrate", "unblock"),
+            ("Actor_SetMovementTypeById", "movement"),
+            ("Speaker_GetVoice", "speaker"),
+            ("FieldEffect_UpdateRetreatCaster", "caster"),
+            ("Sanctum_ShowAllEmotes", "emotes"),
+            ("FieldEffect_RunAngledApproachPhases", "phases"),
+            ("Encounter_SelectMapZones", "zones"),
+            ("FieldEffect_SetAttached", "attached"),
+            ("ACTOR_PRIORITY_UNDERFOOT", "underfoot"),
         ] {
-            assert!(!unused_words(name, &text).contains(&word.to_string()), "{name}: {word}");
+            assert!(
+                !unused_words(name, &text).contains(&word.to_string()),
+                "{name}: {word}"
+            );
         }
-        assert_eq!(unused_words("Actor_Shimmer", &text), ["shimmer"], "what the player sees stays");
-        assert!(unused_words("Vault_UpdateBoneProximityFlag", &text).contains(&"proximity".to_string()), "a word one name uses stays");
+        assert_eq!(
+            unused_words("Actor_Shimmer", &text),
+            ["shimmer"],
+            "what the player sees stays"
+        );
+        assert!(
+            unused_words("Vault_UpdateBoneProximityFlag", &text).contains(&"proximity".to_string()),
+            "a word one name uses stays"
+        );
     }
 
     #[test]
@@ -1534,9 +2288,15 @@ mod tests {
             "msgctxt \"message\"\nmsgid \"00002\"\nmsgstr \"Can't Use\"\n",
         );
         let text = GameText::parse(po, None).unwrap();
-        assert_eq!(unused_words("ACTOR_LIL_TURTLE", &text), Vec::<String>::new());
+        assert_eq!(
+            unused_words("ACTOR_LIL_TURTLE", &text),
+            Vec::<String>::new()
+        );
         assert_eq!(unused_words("FLAG_CANT_USE", &text), Vec::<String>::new());
-        assert!(text.uses("li'l") && text.uses("can"), "the word and its parts stay");
+        assert!(
+            text.uses("li'l") && text.uses("can"),
+            "the word and its parts stay"
+        );
         assert_eq!(unused_words("ACTOR_LILT_TURTLE", &text), ["lilt"]);
     }
 
@@ -1556,39 +2316,98 @@ mod tests {
     fn a_lone_enumerator_takes_its_enums_line() {
         let text = GameText::parse(PO, Some(2)).unwrap();
         let line = "/// The barricade is down.\n/// ★ Named from its area name: Bilibin Barricade";
-        let lone = Thing { alone: true, ..thing("FLAG_BARRICADE_DOWN", "", line) };
+        let lone = Thing {
+            alone: true,
+            ..thing("FLAG_BARRICADE_DOWN", "", line)
+        };
         let shared = thing("FLAG_BARRICADE_UP", "", line);
         let analysis = analyze(&[lone, shared], &[], &text, &HashMap::new());
-        let evidence: Vec<String> = analysis.rows.iter().map(|row| row.evidence.as_ref().unwrap().describe()).collect();
-        assert_eq!(evidence, ["verified area", "prose area"], "an enum of several keeps its line its own");
+        let evidence: Vec<String> = analysis
+            .rows
+            .iter()
+            .map(|row| row.evidence.as_ref().unwrap().describe())
+            .collect();
+        assert_eq!(
+            evidence,
+            ["verified area", "prose area"],
+            "an enum of several keeps its line its own"
+        );
     }
 
     #[test]
     fn evidence_lines_and_prose() {
         let text = GameText::parse(PO, Some(2)).unwrap();
         let things = [
-            thing("ACTOR_A", "/// ★ Named from the game: \"McCoy's Hidden\n/// Treasury\" (MsgSignMcCoy)", ""),
-            thing("ACTOR_B", "///< Named from its area name: Bilibin Barricade.", ""),
-            thing("ACTOR_C", "/// ★ Named from what the player sees: a stack of crates (its render)", ""),
-            thing("ACTOR_D", "/// ★ Named from the game: \"Hidden Warehouse\" (MsgSignMcCoy)", ""),
-            thing("ACTOR_E", "/// ★ Named from its area name: Bilibin Warehouse", ""),
-            thing("ACTOR_F", "/// ★ Named from the game: \"The trees\" (MsgNope)", ""),
+            thing(
+                "ACTOR_A",
+                "/// ★ Named from the game: \"McCoy's Hidden\n/// Treasury\" (MsgSignMcCoy)",
+                "",
+            ),
+            thing(
+                "ACTOR_B",
+                "///< Named from its area name: Bilibin Barricade.",
+                "",
+            ),
+            thing(
+                "ACTOR_C",
+                "/// ★ Named from what the player sees: a stack of crates (its render)",
+                "",
+            ),
+            thing(
+                "ACTOR_D",
+                "/// ★ Named from the game: \"Hidden Warehouse\" (MsgSignMcCoy)",
+                "",
+            ),
+            thing(
+                "ACTOR_E",
+                "/// ★ Named from its area name: Bilibin Warehouse",
+                "",
+            ),
+            thing(
+                "ACTOR_F",
+                "/// ★ Named from the game: \"The trees\" (MsgNope)",
+                "",
+            ),
             thing("ACTOR_G", "/// Says `The trees are moving.`", ""),
             thing("ACTOR_H", "/// The sign (MsgSignMcCoy).", ""),
             thing("ACTOR_I", "", "/// The actors, as their renders show them."),
-            thing("ACTOR_J", "/// A raised warehouse approach.", "/// Says \"warehouse\"."),
+            thing(
+                "ACTOR_J",
+                "/// A raised warehouse approach.",
+                "/// Says \"warehouse\".",
+            ),
             thing("ACTOR_K", "", ""),
-            thing("ACTOR_L", "/// ★ Named from the game: \"The trees are moving.\" (MsgSignMcCoy)", ""),
-            thing("ACTOR_M", "/// ★ Named from the game: \"Kolima Forest\" (MsgSignMcCoy)", ""),
-            thing("ACTOR_N", "/// ★ Named from the game: \"Kolima Forest\" (MsgSignMcCoy + 4)", ""),
-            thing("ACTOR_O", "/// ★ Named from the game: \"The trees\" (MsgSignMcCoy + 2)", ""),
+            thing(
+                "ACTOR_L",
+                "/// ★ Named from the game: \"The trees are moving.\" (MsgSignMcCoy)",
+                "",
+            ),
+            thing(
+                "ACTOR_M",
+                "/// ★ Named from the game: \"Kolima Forest\" (MsgSignMcCoy)",
+                "",
+            ),
+            thing(
+                "ACTOR_N",
+                "/// ★ Named from the game: \"Kolima Forest\" (MsgSignMcCoy + 4)",
+                "",
+            ),
+            thing(
+                "ACTOR_O",
+                "/// ★ Named from the game: \"The trees\" (MsgSignMcCoy + 2)",
+                "",
+            ),
         ];
         let places = [(
             "games/tbs/src/scene/bilibin.c".to_string(),
             "/// @file\n/// ACTOR_K stands where its area name says.\n///\n/// ACTOR_J says `Treasury`.".to_string(),
         )];
         let analysis = analyze(&things, &places, &text, &HashMap::new());
-        let evidence: Vec<String> = analysis.rows.iter().map(|row| row.evidence.as_ref().unwrap().describe()).collect();
+        let evidence: Vec<String> = analysis
+            .rows
+            .iter()
+            .map(|row| row.evidence.as_ref().unwrap().describe())
+            .collect();
         assert_eq!(evidence[0], "verified quote");
         assert_eq!(evidence[1], "unstarred area");
         assert_eq!(evidence[2], "verified render");
@@ -1598,12 +2417,27 @@ mod tests {
         assert_eq!(evidence[6], "prose quote");
         assert_eq!(evidence[7], "prose message");
         assert_eq!(evidence[8], "prose render");
-        assert_eq!(evidence[9], "prose quote", "its place paragraph quotes the game");
+        assert_eq!(
+            evidence[9], "prose quote",
+            "its place paragraph quotes the game"
+        );
         assert_eq!(evidence[10], "prose area");
-        assert_eq!(evidence[11], "verified quote", "an unnamed message after the symbol's own");
-        assert!(evidence[12].starts_with("failed"), "not past the next named message");
-        assert_eq!(evidence[13], "verified quote", "a table's message by its offset, past the next named one");
-        assert_eq!(evidence[14], "failed: MsgSignMcCoy + 2 does not hold \"The trees\"", "that message only");
+        assert_eq!(
+            evidence[11], "verified quote",
+            "an unnamed message after the symbol's own"
+        );
+        assert!(
+            evidence[12].starts_with("failed"),
+            "not past the next named message"
+        );
+        assert_eq!(
+            evidence[13], "verified quote",
+            "a table's message by its offset, past the next named one"
+        );
+        assert_eq!(
+            evidence[14], "failed: MsgSignMcCoy + 2 does not hold \"The trees\"",
+            "that message only"
+        );
     }
 
     #[test]
@@ -1611,34 +2445,99 @@ mod tests {
         let text = GameText::parse(PO, Some(2)).unwrap();
         let mut function = thing("Bilibin_RaiseWarehouse", "", "");
         function.kind = "function";
-        let things = [thing("ACTOR_WAREHOUSE_GUARD", "", ""), function, thing("ACTOR_PILLAR", "", "")];
+        let things = [
+            thing("ACTOR_WAREHOUSE_GUARD", "", ""),
+            function,
+            thing("ACTOR_PILLAR", "", ""),
+        ];
         let analysis = analyze(&things, &[], &text, &HashMap::new());
         assert_eq!(analysis.words[0], ("warehouse".to_string(), vec![0, 1]));
-        assert!(analysis.rows[1].evidence.is_none(), "a mechanism's name needs no evidence");
+        assert!(
+            analysis.rows[1].evidence.is_none(),
+            "a mechanism's name needs no evidence"
+        );
         let kind = |name, file, origin| kind(Definition::new(name, file, origin), &HashMap::new());
         assert_eq!(kind("SceneId_Vale", "a.h", Origin::Global), Some("scene"));
         assert_eq!(kind("FLAG_SCENE_TEMP_01", "a.h", Origin::Macro), None);
-        assert_eq!(kind("VALE_FROM_WORLD_MAP", "games/tbs/include/scene_exits.h", Origin::Enumerator), Some("exit"));
-        let shared = Definition { tag: Some("DefaultEntrance"), ..Definition::new("ENTRANCE_DEFAULT", "games/tbs/include/scene_exits.h", Origin::Enumerator) };
-        assert_eq!(super::kind(shared, &HashMap::new()), None, "what the links share");
-        assert_eq!(kind("Vale_Init", "games/tbs/src/scene/vale.c", Origin::Function), Some("function"));
-        assert_eq!(kind("Battle_Init", "games/tbs/src/battle/x.c", Origin::Function), None);
+        assert_eq!(
+            kind(
+                "VALE_FROM_WORLD_MAP",
+                "games/tbs/include/scene_exits.h",
+                Origin::Enumerator
+            ),
+            Some("exit")
+        );
+        let shared = Definition {
+            tag: Some("DefaultEntrance"),
+            ..Definition::new(
+                "ENTRANCE_DEFAULT",
+                "games/tbs/include/scene_exits.h",
+                Origin::Enumerator,
+            )
+        };
+        assert_eq!(
+            super::kind(shared, &HashMap::new()),
+            None,
+            "what the links share"
+        );
+        assert_eq!(
+            kind("Vale_Init", "games/tbs/src/scene/vale.c", Origin::Function),
+            Some("function")
+        );
+        assert_eq!(
+            kind("Battle_Init", "games/tbs/src/battle/x.c", Origin::Function),
+            None
+        );
         assert_eq!(kind("ACTOR_unk_14", "a.h", Origin::Enumerator), None);
     }
 
     #[test]
     fn words_of_the_twins_text() {
-        let twin = GameText::parse("msgctxt \"MsgHealer\"\nmsgid \"00001\"\nmsgstr \"I am the healer here. Hsu fell.\"\n", None).unwrap();
+        let twin = GameText::parse(
+            "msgctxt \"MsgHealer\"\nmsgid \"00001\"\nmsgstr \"I am the healer here. Hsu fell.\"\n",
+            None,
+        )
+        .unwrap();
         let text = GameText::parse(PO, Some(2)).unwrap();
-        let things = [thing("ACTOR_HEALER", "", ""), thing("FLAG_HEALERS_WAREHOUSE", "", ""), thing("ACTOR_HSU", "", "")];
+        let things = [
+            thing("ACTOR_HEALER", "", ""),
+            thing("FLAG_HEALERS_WAREHOUSE", "", ""),
+            thing("ACTOR_HSU", "", ""),
+        ];
         let alone = analyze(&things, &[], &text, &HashMap::new());
-        assert!(alone.words.iter().any(|(word, _)| word == "healer") && alone.twin_words.is_empty(), "no twin, no twin's words");
-        let analysis = analyze(&things, &[], &GameText::parse(PO, Some(2)).unwrap().with_twin(&twin), &HashMap::new());
-        let flagged: Vec<&str> = analysis.words.iter().map(|(word, _)| word.as_str()).collect();
+        assert!(
+            alone.words.iter().any(|(word, _)| word == "healer") && alone.twin_words.is_empty(),
+            "no twin, no twin's words"
+        );
+        let analysis = analyze(
+            &things,
+            &[],
+            &GameText::parse(PO, Some(2)).unwrap().with_twin(&twin),
+            &HashMap::new(),
+        );
+        let flagged: Vec<&str> = analysis
+            .words
+            .iter()
+            .map(|(word, _)| word.as_str())
+            .collect();
         assert_eq!(flagged, ["warehouse"]);
-        assert_eq!(analysis.twin_words, [("healer".to_string(), vec![0]), ("healers".to_string(), vec![1]), ("hsu".to_string(), vec![2])]);
-        assert_eq!(analysis.rows[1].words, ["warehouse"], "the twin's word leaves the name");
-        assert!(text.uses("tree") && !twin.with_twin(&text).uses("tree"), "the twin's words are not the game's own");
+        assert_eq!(
+            analysis.twin_words,
+            [
+                ("healer".to_string(), vec![0]),
+                ("healers".to_string(), vec![1]),
+                ("hsu".to_string(), vec![2])
+            ]
+        );
+        assert_eq!(
+            analysis.rows[1].words,
+            ["warehouse"],
+            "the twin's word leaves the name"
+        );
+        assert!(
+            text.uses("tree") && !twin.with_twin(&text).uses("tree"),
+            "the twin's words are not the game's own"
+        );
     }
 
     #[test]
@@ -1647,49 +2546,184 @@ mod tests {
             "# Glossary\n\n### Main routine\n\nThe main routine starts the next sequence and the music.\n\n",
             "Evidence: tradition.\n\n### Heap and pools\n\nMemory.\n\n### Sound\n\nBelow 80 it is music.\n\nEvidence: Camelot: the credits'\n\"Music\" and \"Sound\nEffects\".\n",
         );
-        let text = GameText::parse(PO, Some(2)).unwrap().with_glossary(glossary);
-        assert!(text.glossary_defines("routine") && text.glossary_defines("Music") && text.glossary_defines("effects"));
-        assert!(!text.glossary_defines("sequence"), "a word of an entry's prose is not defined by it");
-        assert!(!text.glossary_defines("credits"), "the evidence's own words are not quoted");
-        let function = |name: &str| Thing { kind: "function", ..thing(name, "", "") };
-        let seen = Thing { evidence: vec!["★ Named from its picture: a pool of water".to_string()], ..thing("ACTOR_POOL", "", "") };
-        let things = [function("MainRoutine_Run"), function("Scene_PlayWarehouseMusic"), function("Scene_ReturnFromSequence"), seen, function("Sound_PlayFromPool")];
+        let text = GameText::parse(PO, Some(2))
+            .unwrap()
+            .with_glossary(glossary);
+        assert!(
+            text.glossary_defines("routine")
+                && text.glossary_defines("Music")
+                && text.glossary_defines("effects")
+        );
+        assert!(
+            !text.glossary_defines("sequence"),
+            "a word of an entry's prose is not defined by it"
+        );
+        assert!(
+            !text.glossary_defines("credits"),
+            "the evidence's own words are not quoted"
+        );
+        let function = |name: &str| Thing {
+            kind: "function",
+            ..thing(name, "", "")
+        };
+        let seen = Thing {
+            evidence: vec!["★ Named from its picture: a pool of water".to_string()],
+            ..thing("ACTOR_POOL", "", "")
+        };
+        let things = [
+            function("MainRoutine_Run"),
+            function("Scene_PlayWarehouseMusic"),
+            function("Scene_ReturnFromSequence"),
+            seen,
+            function("Sound_PlayFromPool"),
+        ];
         let analysis = analyze(&things, &[], &text, &HashMap::new());
-        let flagged: Vec<&str> = analysis.words.iter().map(|(word, _)| word.as_str()).collect();
-        assert_eq!(flagged, ["from", "play", "pool", "return", "sequence", "warehouse"], "a word a seen name uses stays");
-        assert!(!flagged.contains(&"sound"), "the glossary's word, not seen in its other use");
-        assert_eq!(analysis.glossary_words, [("main".to_string(), vec![0]), ("music".to_string(), vec![1]), ("routine".to_string(), vec![0]), ("sound".to_string(), vec![4])]);
+        let flagged: Vec<&str> = analysis
+            .words
+            .iter()
+            .map(|(word, _)| word.as_str())
+            .collect();
+        assert_eq!(
+            flagged,
+            ["from", "play", "pool", "return", "sequence", "warehouse"],
+            "a word a seen name uses stays"
+        );
+        assert!(
+            !flagged.contains(&"sound"),
+            "the glossary's word, not seen in its other use"
+        );
+        assert_eq!(
+            analysis.glossary_words,
+            [
+                ("main".to_string(), vec![0]),
+                ("music".to_string(), vec![1]),
+                ("routine".to_string(), vec![0]),
+                ("sound".to_string(), vec![4])
+            ]
+        );
         assert_eq!(analysis.rows[1].words, ["play", "warehouse"]);
     }
 
     #[test]
     fn mechanisms_of_a_family() {
-        let macros = HashMap::from([("FLAG_SYSTEM_FIRST".to_string(), 0x100), ("FLAG_SYSTEM_LAST".to_string(), 0x1ff)]);
+        let macros = HashMap::from([
+            ("FLAG_SYSTEM_FIRST".to_string(), 0x100),
+            ("FLAG_SYSTEM_LAST".to_string(), 0x1ff),
+        ]);
         let of = |name, origin, tag, value| {
-            kind(Definition { tag, value, ..Definition::new(name, "games/tbs/include/a.h", origin) }, &macros)
+            kind(
+                Definition {
+                    tag,
+                    value,
+                    ..Definition::new(name, "games/tbs/include/a.h", origin)
+                },
+                &macros,
+            )
         };
         let enumerator = |name, tag| of(name, Origin::Enumerator, tag, None);
-        assert_eq!(enumerator("ITEM_HERB", Some("ItemId")), Some("item"), "an id enum holds members");
-        assert_eq!(enumerator("ACTOR_GUARD", Some("BilibinActorId")), Some("actor"), "so does one tagged by the family");
-        assert_eq!(enumerator("ACTOR_GUARD", None), Some("actor"), "an untagged enum, by its words");
-        assert_eq!(enumerator("ACTOR_INVISIBLE_ROCK_GUIDE", Some("WorldMapCaravanActorId")), None, "an invisible actor");
-        assert_eq!(enumerator("ACTOR_MASK_FOR_STUMP", Some("GomaCavePillarActorId")), None, "a mask");
-        assert_eq!(enumerator("ACTOR_YOUNG_MAN_SAW_MASK", Some("CottageRoomsBActorId")), Some("actor"), "a mask last is a word");
-        assert_eq!(enumerator("ACTOR_MASKED_MAN", Some("CottageRoomsBActorId")), Some("actor"));
-        assert_eq!(enumerator("ACTOR_HIDDEN_PUDDLE", Some("LunpaActorId")), Some("actor"), "hidden is not invisible");
-        assert_eq!(enumerator("ITEM_BLANK", Some("ItemId")), Some("item"), "stand-ins are actors");
-        assert_eq!(enumerator("ABILITY_FORMULA_SUMMON", Some("AbilityFormula")), None);
-        assert_eq!(enumerator("ACTOR_SOLID", Some("ActorCollisionFlag")), None, "an actor's bits");
-        assert_eq!(enumerator("CHARACTER_POISON", Some("UnitStatus")), None, "a state, not a person");
-        assert_eq!(of("FLAG_IN_PARTY", Origin::FunctionMacro, None, None), None, "a computed value");
-        assert_eq!(of("ITEM_TYPE_WEAPON", Origin::Macro, None, Some(1)), None, "an aspect");
-        assert_eq!(of("PSYNERGY_STEP_TARGET", Origin::Enumerator, None, Some(3)), None);
-        assert_eq!(of("ITEM_LIST_NAME_X", Origin::Macro, None, Some(9)), None, "a position on the screen");
-        assert_eq!(of("ENEMY_SPRITE_SLOTS", Origin::Macro, None, Some(9)), None, "a measure");
-        assert_eq!(of("FLAG_IN_BATTLE", Origin::Macro, None, Some(0x103)), None, "the system's own flag");
-        assert_eq!(of("FLAG_KRADEN_SETS_OFF", Origin::Macro, None, Some(0x801)), Some("flag"), "a story flag");
-        assert_eq!(of("FLAG_CHILDHOOD", Origin::Macro, None, Some(0x20)), Some("flag"));
-        let unranged = kind(Definition { value: Some(0x103), ..Definition::new("FLAG_IN_BATTLE", "a.h", Origin::Macro) }, &HashMap::new());
+        assert_eq!(
+            enumerator("ITEM_HERB", Some("ItemId")),
+            Some("item"),
+            "an id enum holds members"
+        );
+        assert_eq!(
+            enumerator("ACTOR_GUARD", Some("BilibinActorId")),
+            Some("actor"),
+            "so does one tagged by the family"
+        );
+        assert_eq!(
+            enumerator("ACTOR_GUARD", None),
+            Some("actor"),
+            "an untagged enum, by its words"
+        );
+        assert_eq!(
+            enumerator("ACTOR_INVISIBLE_ROCK_GUIDE", Some("WorldMapCaravanActorId")),
+            None,
+            "an invisible actor"
+        );
+        assert_eq!(
+            enumerator("ACTOR_MASK_FOR_STUMP", Some("GomaCavePillarActorId")),
+            None,
+            "a mask"
+        );
+        assert_eq!(
+            enumerator("ACTOR_YOUNG_MAN_SAW_MASK", Some("CottageRoomsBActorId")),
+            Some("actor"),
+            "a mask last is a word"
+        );
+        assert_eq!(
+            enumerator("ACTOR_MASKED_MAN", Some("CottageRoomsBActorId")),
+            Some("actor")
+        );
+        assert_eq!(
+            enumerator("ACTOR_HIDDEN_PUDDLE", Some("LunpaActorId")),
+            Some("actor"),
+            "hidden is not invisible"
+        );
+        assert_eq!(
+            enumerator("ITEM_BLANK", Some("ItemId")),
+            Some("item"),
+            "stand-ins are actors"
+        );
+        assert_eq!(
+            enumerator("ABILITY_FORMULA_SUMMON", Some("AbilityFormula")),
+            None
+        );
+        assert_eq!(
+            enumerator("ACTOR_SOLID", Some("ActorCollisionFlag")),
+            None,
+            "an actor's bits"
+        );
+        assert_eq!(
+            enumerator("CHARACTER_POISON", Some("UnitStatus")),
+            None,
+            "a state, not a person"
+        );
+        assert_eq!(
+            of("FLAG_IN_PARTY", Origin::FunctionMacro, None, None),
+            None,
+            "a computed value"
+        );
+        assert_eq!(
+            of("ITEM_TYPE_WEAPON", Origin::Macro, None, Some(1)),
+            None,
+            "an aspect"
+        );
+        assert_eq!(
+            of("PSYNERGY_STEP_TARGET", Origin::Enumerator, None, Some(3)),
+            None
+        );
+        assert_eq!(
+            of("ITEM_LIST_NAME_X", Origin::Macro, None, Some(9)),
+            None,
+            "a position on the screen"
+        );
+        assert_eq!(
+            of("ENEMY_SPRITE_SLOTS", Origin::Macro, None, Some(9)),
+            None,
+            "a measure"
+        );
+        assert_eq!(
+            of("FLAG_IN_BATTLE", Origin::Macro, None, Some(0x103)),
+            None,
+            "the system's own flag"
+        );
+        assert_eq!(
+            of("FLAG_KRADEN_SETS_OFF", Origin::Macro, None, Some(0x801)),
+            Some("flag"),
+            "a story flag"
+        );
+        assert_eq!(
+            of("FLAG_CHILDHOOD", Origin::Macro, None, Some(0x20)),
+            Some("flag")
+        );
+        let unranged = kind(
+            Definition {
+                value: Some(0x103),
+                ..Definition::new("FLAG_IN_BATTLE", "a.h", Origin::Macro)
+            },
+            &HashMap::new(),
+        );
         assert_eq!(unranged, Some("flag"), "no range named, no range");
     }
 
@@ -1704,13 +2738,23 @@ mod tests {
     );
 
     fn entry(name: &str, kind: &'static str, tag: &str, value: i64) -> Thing {
-        Thing { name: name.to_string(), kind, tag: Some(tag.to_string()), value: Some(value), ..Thing::default() }
+        Thing {
+            name: name.to_string(),
+            kind,
+            tag: Some(tag.to_string()),
+            value: Some(value),
+            ..Thing::default()
+        }
     }
 
     #[test]
     fn table_names() {
         let text = GameText::parse(TABLE_PO, None).unwrap();
-        assert_eq!(text.table_entry("MsgItemName", 1), Some("Bandit's Sword"), "by msgid, commands taken out");
+        assert_eq!(
+            text.table_entry("MsgItemName", 1),
+            Some("Bandit's Sword"),
+            "by msgid, commands taken out"
+        );
         assert_eq!(text.table_entry("MsgEnemyName", 2), Some("Slime"));
         assert_eq!(text.table_entry("MsgNope", 0), None);
         assert_eq!(table_words("{x}Bandit's Sword"), "x bandits sword");
@@ -1724,36 +2768,72 @@ mod tests {
             entry("ENEMY_SLIME", "enemy", "EnemyId", 9),
             entry("ENEMY_SLIME_2", "enemy", "EnemyId", 10),
             entry("ENEMY_OOZE", "enemy", "EnemyId", 10),
-            Thing { own: "/// ★ Named from the game: \"Slime\" (MsgEnemyName)".to_string(), ..entry("ITEM_X", "item", "Other", 1) },
+            Thing {
+                own: "/// ★ Named from the game: \"Slime\" (MsgEnemyName)".to_string(),
+                ..entry("ITEM_X", "item", "Other", 1)
+            },
             unknown,
             Thing {
-                own: "/// ★ Named from what the player sees: the Slime in the cave (its render)".to_string(),
+                own: "/// ★ Named from what the player sees: the Slime in the cave (its render)"
+                    .to_string(),
                 ..entry("ENEMY_SLIME_CAVE", "enemy", "EnemyId", 10)
             },
             entry("ENEMY_SLIME_POOL", "enemy", "EnemyId", 10),
-            Thing { own: "/// ★ Named from the game: \"Ooze\" (MsgNope)".to_string(), ..entry("ENEMY_SLIME_PIT", "enemy", "EnemyId", 10) },
+            Thing {
+                own: "/// ★ Named from the game: \"Ooze\" (MsgNope)".to_string(),
+                ..entry("ENEMY_SLIME_PIT", "enemy", "EnemyId", 10)
+            },
             Thing {
                 own: "/// ★ Named from what the player sees: an ooze (its render)".to_string(),
                 ..entry("ENEMY_OOZE_CAVE", "enemy", "EnemyId", 10)
             },
         ];
         let analysis = analyze(&things, &[], &text, &macros);
-        let evidence: Vec<String> = analysis.rows.iter().map(|row| row.evidence.as_ref().unwrap().describe()).collect();
+        let evidence: Vec<String> = analysis
+            .rows
+            .iter()
+            .map(|row| row.evidence.as_ref().unwrap().describe())
+            .collect();
         assert_eq!(evidence[0], "table MsgItemName+1");
         assert_eq!(evidence[1], "table MsgItemName+2", "a hyphen is a space");
         assert_eq!(evidence[2], "mismatch: MsgItemName+2 is \"Hyper-Boots\"");
-        assert_eq!(evidence[3], "table MsgEnemyName+1", "an enemy's row is its class id less ENEMY_ID_FIRST");
+        assert_eq!(
+            evidence[3], "table MsgEnemyName+1",
+            "an enemy's row is its class id less ENEMY_ID_FIRST"
+        );
         assert_eq!(evidence[4], "table MsgEnemyName+2 numbered");
         assert_eq!(evidence[5], "mismatch: MsgEnemyName+2 is \"Slime\"");
-        assert_eq!(evidence[6], "verified quote", "an enum no table reads keeps its ★ line");
+        assert_eq!(
+            evidence[6], "verified quote",
+            "an enum no table reads keeps its ★ line"
+        );
         assert_eq!(evidence[7], "none", "an unknown value is not checked");
-        assert_eq!(evidence[8], "verified render", "one of a name's rows, told apart by its ★ line");
-        assert_eq!(evidence[9], "mismatch: MsgEnemyName+2 is \"Slime\"", "a suffix without a line");
-        assert_eq!(evidence[10], "mismatch: MsgEnemyName+2 is \"Slime\"", "a suffix with a failing line");
-        assert_eq!(evidence[11], "mismatch: MsgEnemyName+2 is \"Slime\"", "a line on another name");
-        assert_eq!(analysis.rows[2].evidence.as_ref().unwrap().metric(), "provenance_table_mismatch");
+        assert_eq!(
+            evidence[8], "verified render",
+            "one of a name's rows, told apart by its ★ line"
+        );
+        assert_eq!(
+            evidence[9], "mismatch: MsgEnemyName+2 is \"Slime\"",
+            "a suffix without a line"
+        );
+        assert_eq!(
+            evidence[10], "mismatch: MsgEnemyName+2 is \"Slime\"",
+            "a suffix with a failing line"
+        );
+        assert_eq!(
+            evidence[11], "mismatch: MsgEnemyName+2 is \"Slime\"",
+            "a line on another name"
+        );
+        assert_eq!(
+            analysis.rows[2].evidence.as_ref().unwrap().metric(),
+            "provenance_table_mismatch"
+        );
         let without = analyze(&things[3..4], &[], &text, &HashMap::new());
-        assert_eq!(without.rows[0].evidence, Some(Evidence::None), "no ENEMY_ID_FIRST, no check");
+        assert_eq!(
+            without.rows[0].evidence,
+            Some(Evidence::None),
+            "no ENEMY_ID_FIRST, no check"
+        );
     }
 
     #[test]
@@ -1795,20 +2875,52 @@ mod tests {
             link("TOLBI_FROM_MCCOY_PALACE", ""),
         ];
         let analysis = analyze(&things, &[], &text, &HashMap::new());
-        let evidence: Vec<String> = analysis.rows.iter().map(|row| row.evidence.as_ref().unwrap().describe()).collect();
-        let doors: Vec<String> = analysis.rows.iter().map(|row| row.door_words.join(",")).collect();
+        let evidence: Vec<String> = analysis
+            .rows
+            .iter()
+            .map(|row| row.evidence.as_ref().unwrap().describe())
+            .collect();
+        let doors: Vec<String> = analysis
+            .rows
+            .iter()
+            .map(|row| row.door_words.join(","))
+            .collect();
         assert_eq!(evidence[4], "verified quote");
-        assert_eq!(evidence[5], "rooms", "INN, from the ★-verified TOLBI_TO_INN");
-        assert_eq!(evidence[6], "rooms", "DECK, from SceneId_TolbiShip's ★ line");
-        assert_eq!((evidence[7].as_str(), doors[7].as_str()), ("none", "SceneId_TolbiShipMast"), "an unverified scene");
+        assert_eq!(
+            evidence[5], "rooms",
+            "INN, from the ★-verified TOLBI_TO_INN"
+        );
+        assert_eq!(
+            evidence[6], "rooms",
+            "DECK, from SceneId_TolbiShip's ★ line"
+        );
+        assert_eq!(
+            (evidence[7].as_str(), doors[7].as_str()),
+            ("none", "SceneId_TolbiShipMast"),
+            "an unverified scene"
+        );
         assert_eq!(doors[8], "house,upper");
         assert_eq!(evidence[9], "rooms", "after AFTER, the game's words");
-        assert_eq!(evidence[10], "rooms", "after AFTER, a ★-verified name's words");
-        assert_eq!(doors[11], "crew,attacked", "the game's words only after AFTER or BEFORE");
+        assert_eq!(
+            evidence[10], "rooms",
+            "after AFTER, a ★-verified name's words"
+        );
+        assert_eq!(
+            doors[11], "crew,attacked",
+            "the game's words only after AFTER or BEFORE"
+        );
         assert_eq!(doors[12], "entrance,default", "no map, nothing verified");
-        assert!(evidence[13].starts_with("failed") && doors[13].is_empty(), "a failing line stays a finding");
-        assert!(analysis.door_words.contains(&("attacked".to_string(), vec![11])));
-        assert_eq!(analysis.rows[5].evidence.as_ref().unwrap().metric(), "provenance_rooms");
+        assert!(
+            evidence[13].starts_with("failed") && doors[13].is_empty(),
+            "a failing line stays a finding"
+        );
+        assert!(analysis
+            .door_words
+            .contains(&("attacked".to_string(), vec![11])));
+        assert_eq!(
+            analysis.rows[5].evidence.as_ref().unwrap().metric(),
+            "provenance_rooms"
+        );
         assert_eq!(evidence[15], "rooms", "MCCOY is McCoy");
     }
 
@@ -1822,41 +2934,103 @@ mod tests {
             evidence: rows.to_vec(),
             ..Thing::default()
         };
-        let rendered = row("what the player sees", "ropes strung between the cliffs, a ledge below (its render)");
+        let rendered = row(
+            "what the player sees",
+            "ropes strung between the cliffs, a ledge below (its render)",
+        );
         let things = [
             of("SceneId_BilibinTightropes", "scene", &[rendered.clone()]),
             of("BILIBIN_TIGHTROPES_TO_BILIBIN", "exit", &[]),
             of("BilibinTightropes_DropToLedge", "function", &[]),
-            of("ACTOR_LADDER", "actor", &[row("its picture", "a rope ladder (ladder.png)")]),
-            of("ACTOR_FOOTPRINTS", "actor", &[row("the walkthrough", "\"follow the footprints\"")]),
+            of(
+                "ACTOR_LADDER",
+                "actor",
+                &[row("its picture", "a rope ladder (ladder.png)")],
+            ),
+            of(
+                "ACTOR_FOOTPRINTS",
+                "actor",
+                &[row("the walkthrough", "\"follow the footprints\"")],
+            ),
             of("ACTOR_WAREHOUSE", "actor", &[row("its picture", "a shed")]),
             of("Bilibin_OpenWarehouse", "function", &[]),
-            of("ACTOR_CRATE", "actor", &[row("what the player sees", "a crate, no render cited")]),
+            of(
+                "ACTOR_CRATE",
+                "actor",
+                &[row("what the player sees", "a crate, no render cited")],
+            ),
             of("ACTOR_SHELF", "actor", &[row("its code", "drawn first")]),
-            of("SceneId_BilibinCellar", "scene", &[row("its code", "the room below")]),
+            of(
+                "SceneId_BilibinCellar",
+                "scene",
+                &[row("its code", "the room below")],
+            ),
             of("BILIBIN_CELLAR_TO_BILIBIN_TIGHTROPES", "exit", &[]),
-            Thing { file: "games/tbs/src/scene/bilibin.c".to_string(), ..of("ACTOR_TIGHTROPES_POST", "actor", &[]) },
-            Thing { file: "games/tbs/src/scene/bilibin.c".to_string(), ..of("ACTOR_CELLAR_DOOR", "actor", &[]) },
-            Thing { file: "games/tbs/src/scene/vale.c".to_string(), ..of("ACTOR_TIGHTROPES_HOOK", "actor", &[]) },
+            Thing {
+                file: "games/tbs/src/scene/bilibin.c".to_string(),
+                ..of("ACTOR_TIGHTROPES_POST", "actor", &[])
+            },
+            Thing {
+                file: "games/tbs/src/scene/bilibin.c".to_string(),
+                ..of("ACTOR_CELLAR_DOOR", "actor", &[])
+            },
+            Thing {
+                file: "games/tbs/src/scene/vale.c".to_string(),
+                ..of("ACTOR_TIGHTROPES_HOOK", "actor", &[])
+            },
         ];
         let all = analyze(&things, &[], &text, &HashMap::new());
-        assert!(all.words.iter().any(|(word, _)| word == "tightropes"), "another file's TIGHTROPES is not that map's");
+        assert!(
+            all.words.iter().any(|(word, _)| word == "tightropes"),
+            "another file's TIGHTROPES is not that map's"
+        );
         let analysis = analyze(&things[..13], &[], &text, &HashMap::new());
-        let seen: Vec<&str> = analysis.seen_words.iter().map(|(word, _)| word.as_str()).collect();
-        let flagged: Vec<&str> = analysis.words.iter().map(|(word, _)| word.as_str()).collect();
-        assert_eq!(analysis.seen_words[0], ("tightropes".to_string(), vec![0, 1, 2, 10, 11]), "inside a seen map's name, or its short name in its file");
+        let seen: Vec<&str> = analysis
+            .seen_words
+            .iter()
+            .map(|(word, _)| word.as_str())
+            .collect();
+        let flagged: Vec<&str> = analysis
+            .words
+            .iter()
+            .map(|(word, _)| word.as_str())
+            .collect();
+        assert_eq!(
+            analysis.seen_words[0],
+            ("tightropes".to_string(), vec![0, 1, 2, 10, 11]),
+            "inside a seen map's name, or its short name in its file"
+        );
         assert!(flagged.contains(&"cellar"), "an unseen map's short name");
-        assert!(seen.contains(&"ledge"), "a word of the seen map's line, after its name");
-        assert!(seen.contains(&"ladder") && seen.contains(&"footprints"), "its picture, the walkthrough");
-        assert!(flagged.contains(&"warehouse"), "one name of two has no seen row");
-        assert!(flagged.contains(&"crate"), "a render not cited is no render");
+        assert!(
+            seen.contains(&"ledge"),
+            "a word of the seen map's line, after its name"
+        );
+        assert!(
+            seen.contains(&"ladder") && seen.contains(&"footprints"),
+            "its picture, the walkthrough"
+        );
+        assert!(
+            flagged.contains(&"warehouse"),
+            "one name of two has no seen row"
+        );
+        assert!(
+            flagged.contains(&"crate"),
+            "a render not cited is no render"
+        );
         assert!(flagged.contains(&"shelf"), "its code is no look");
         assert!(flagged.contains(&"cellar"), "a map named from its code");
-        assert!(analysis.rows[10].words.contains(&"cellar".to_string()), "its unseen word stays on the exit");
+        assert!(
+            analysis.rows[10].words.contains(&"cellar".to_string()),
+            "its unseen word stays on the exit"
+        );
         assert!(!analysis.rows[10].words.contains(&"tightropes".to_string()));
         assert_eq!(analysis.rows[10].seen_words, ["tightropes"]);
         assert!(analysis.rows[0].words.is_empty());
-        assert_eq!(analysis.rows[5].seen_uses, ["warehouse"], "a seen use of a word another name leaves unseen");
+        assert_eq!(
+            analysis.rows[5].seen_uses,
+            ["warehouse"],
+            "a seen use of a word another name leaves unseen"
+        );
         assert!(analysis.rows[6].seen_uses.is_empty());
     }
 }

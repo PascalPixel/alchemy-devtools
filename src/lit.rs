@@ -115,7 +115,10 @@ pub fn lit8(rgb: [u8; 3]) -> [u8; 3] {
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
-    if arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
+    if arguments
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "-h" | "--help"))
+    {
         println!("{USAGE}");
         return Ok(());
     }

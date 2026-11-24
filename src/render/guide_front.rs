@@ -6,9 +6,9 @@
 
 use super::animation;
 use super::animation::is_black_bgr555;
-use super::mgba::WIDTH;
 use super::field::{Field, Setup, Spot, Start, CLEARED, EVENT_LIMIT};
 use super::guide::Guide;
+use super::mgba::WIDTH;
 use super::story::Trigger;
 
 const KEY_A: u32 = 0x1;
@@ -114,9 +114,19 @@ impl<'a> Guide<'a> {
 
     /// Two takes of the same moment side by side as `path`, each with the
     /// same length so the pair restarts together as an exact loop.
-    fn front_pair(&mut self, path: &str, left: &[Vec<u16>], right: &[Vec<u16>], what: &str) -> Result<(), String> {
+    fn front_pair(
+        &mut self,
+        path: &str,
+        left: &[Vec<u16>],
+        right: &[Vec<u16>],
+        what: &str,
+    ) -> Result<(), String> {
         if left.len() != right.len() {
-            return Err(format!("{path}: the takes differ in length ({} and {} frames)", left.len(), right.len()));
+            return Err(format!(
+                "{path}: the takes differ in length ({} and {} frames)",
+                left.len(),
+                right.len()
+            ));
         }
         // A gap of one black column pair separates the panels; black never counts as a screen.
         const GAP: usize = 4;
@@ -134,27 +144,53 @@ impl<'a> Guide<'a> {
             })
             .collect();
         if let Some(dir) = std::path::Path::new(path).parent() {
-            std::fs::create_dir_all(self.out.join(dir)).map_err(|e| format!("cannot make {}: {e}", dir.display()))?;
+            std::fs::create_dir_all(self.out.join(dir))
+                .map_err(|e| format!("cannot make {}: {e}", dir.display()))?;
         }
-        let written = animation::write_bgr555(&self.out.join(path), &joined.iter().map(Vec::as_slice).collect::<Vec<_>>(), 2 * WIDTH + GAP)?;
-        self.written.push((path.to_string(), written.bytes, format!("{what}; {} frames at 30 a second", written.frames)));
+        let written = animation::write_bgr555(
+            &self.out.join(path),
+            &joined.iter().map(Vec::as_slice).collect::<Vec<_>>(),
+            2 * WIDTH + GAP,
+        )?;
+        self.written.push((
+            path.to_string(),
+            written.bytes,
+            format!("{what}; {} frames at 30 a second", written.frames),
+        ));
         Ok(())
     }
 
     /// Writes `frames` as `path` under the output folder, making its folder.
     fn front_gif(&mut self, path: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
         if let Some(dir) = std::path::Path::new(path).parent() {
-            std::fs::create_dir_all(self.out.join(dir)).map_err(|e| format!("cannot make {}: {e}", dir.display()))?;
+            std::fs::create_dir_all(self.out.join(dir))
+                .map_err(|e| format!("cannot make {}: {e}", dir.display()))?;
         }
         self.guide_gif(path, frames, what)
     }
 
     /// A scene entered with exactly the story flags given (the renderer's
     /// usual entry always sets FLAG_VALE_PARTY_LEFT), the player in control.
-    fn enter_exactly(&self, place: (u16, u16), set: &[&str], clear: &[&str]) -> Result<Field<'a>, String> {
-        let set = set.iter().map(|n| self.flag(n)).collect::<Result<Vec<u16>, String>>()?;
-        let clear = clear.iter().map(|n| self.flag(n)).collect::<Result<Vec<u16>, String>>()?;
-        let setup = Setup { scene: place.0, entrance: place.1, set, clear };
+    fn enter_exactly(
+        &self,
+        place: (u16, u16),
+        set: &[&str],
+        clear: &[&str],
+    ) -> Result<Field<'a>, String> {
+        let set = set
+            .iter()
+            .map(|n| self.flag(n))
+            .collect::<Result<Vec<u16>, String>>()?;
+        let clear = clear
+            .iter()
+            .map(|n| self.flag(n))
+            .collect::<Result<Vec<u16>, String>>()?;
+        let setup = Setup {
+            scene: place.0,
+            entrance: place.1,
+            set,
+            clear,
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         field.until_control()?;
         field.frames(20)?;
@@ -166,7 +202,11 @@ impl<'a> Guide<'a> {
     fn front_door(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(VALE, &[])?;
         let frames = Self::press_path(&mut entered.field, &[(0, 20), (KEY_UP, 40), (0, 100)])?;
-        self.front_gif("front/sanctum-door.gif", &frames, "up through the Sanctum's door, Vale giving way to the Sanctum")
+        self.front_gif(
+            "front/sanctum-door.gif",
+            &frames,
+            "up through the Sanctum's door, Vale giving way to the Sanctum",
+        )
     }
 
     /// From the world map into Vale's gate, a new area, whose area
@@ -175,8 +215,15 @@ impl<'a> Guide<'a> {
         let mut entered = self.enter_with(WORLD_MAP, &[])?;
         // The field leaves the area name out of every other recording.
         entered.field.show_notice = true;
-        let frames = Self::press_path(&mut entered.field, &[(0, 30), (KEY_UP, 40), (0, 100), (KEY_UP, 30), (0, 40)])?;
-        self.front_gif("front/area-name.gif", &frames, "into Vale from the world map, its area name shown")
+        let frames = Self::press_path(
+            &mut entered.field,
+            &[(0, 30), (KEY_UP, 40), (0, 100), (KEY_UP, 30), (0, 40)],
+        )?;
+        self.front_gif(
+            "front/area-name.gif",
+            &frames,
+            "into Vale from the world map, its area name shown",
+        )
     }
 
     /// Down the path from Sol Sanctum's entrance, the two takes side by side:
@@ -184,12 +231,33 @@ impl<'a> Guide<'a> {
     /// FLAG_SOL_SANCTUM_ERUPTED set and FLAG_VALE_PARTY_LEFT clear the same
     /// exit leads to the erupting village (gSolSanctumEntrance_Exits).
     fn front_warp_rows(&mut self) -> Result<(), String> {
-        let path = [(0, 10 + animation::BLACK_CLEARANCE as u32), (KEY_DOWN, 50), (0, animation::BLACK_CLEARANCE as u32 + 60)];
-        let mut field = self.enter_exactly(SOL_ENTRANCE, &["FLAG_VALE_PARTY_LEFT"], &["FLAG_SOL_SANCTUM_ERUPTED", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
+        let path = [
+            (0, 10 + animation::BLACK_CLEARANCE as u32),
+            (KEY_DOWN, 50),
+            (0, animation::BLACK_CLEARANCE as u32 + 60),
+        ];
+        let mut field = self.enter_exactly(
+            SOL_ENTRANCE,
+            &["FLAG_VALE_PARTY_LEFT"],
+            &[
+                "FLAG_SOL_SANCTUM_ERUPTED",
+                "FLAG_VALE_STORM",
+                "FLAG_CHILDHOOD",
+            ],
+        )?;
         let before = Self::press_path(&mut field, &path)?;
-        let mut field = self.enter_exactly(SOL_ENTRANCE, &["FLAG_SOL_SANCTUM_ERUPTED"], &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"])?;
+        let mut field = self.enter_exactly(
+            SOL_ENTRANCE,
+            &["FLAG_SOL_SANCTUM_ERUPTED"],
+            &["FLAG_VALE_PARTY_LEFT", "FLAG_VALE_STORM", "FLAG_CHILDHOOD"],
+        )?;
         let after = Self::press_path(&mut field, &path)?;
-        self.front_pair("front/sol-entrance-warp.gif", &before, &after, "down Sol Sanctum's path to Vale beside the same path to the erupting village")
+        self.front_pair(
+            "front/sol-entrance-warp.gif",
+            &before,
+            &after,
+            "down Sol Sanctum's path to Vale beside the same path to the erupting village",
+        )
     }
 
     /// Vale's gate in the story's two versions side by side, the leader
@@ -198,19 +266,51 @@ impl<'a> Guide<'a> {
     /// has left (FLAG_VALE_PARTY_LEFT), the main story.
     fn front_story(&mut self) -> Result<(), String> {
         let path = [(0, 20), (KEY_UP, 24), (0, 56)];
-        let mut field = self.enter_exactly(VALE_PLAZA, &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"], &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"])?;
+        let mut field = self.enter_exactly(
+            VALE_PLAZA,
+            &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"],
+            &["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"],
+        )?;
         let prelude = Self::press_path(&mut field, &path)?;
-        let mut field = self.enter_exactly(VALE_PLAZA, &["FLAG_VALE_PARTY_LEFT"], &["FLAG_VALE_STORM", "FLAG_KALAY_REACHED", "FLAG_CHILDHOOD"])?;
+        let mut field = self.enter_exactly(
+            VALE_PLAZA,
+            &["FLAG_VALE_PARTY_LEFT"],
+            &["FLAG_VALE_STORM", "FLAG_KALAY_REACHED", "FLAG_CHILDHOOD"],
+        )?;
         let main = Self::press_path(&mut field, &path)?;
-        self.front_pair("front/vale-plaza-story.gif", &prelude, &main, "Vale's gate on the stormy night beside the gate after the party left")
+        self.front_pair(
+            "front/vale-plaza-story.gif",
+            &prelude,
+            &main,
+            "Vale's gate on the stormy night beside the gate after the party left",
+        )
     }
 
     /// Talking to the strongman by Vale's river: the line types out and
     /// waits for A while the river keeps flowing.
     fn engine_waiting(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(STRONGMAN_BY_THE_RIVER), STRONGMAN_BY_THE_RIVER)?;
-        let frames = Self::press_path(&mut entered.field, &[(0, 20), (KEY_A, 3), (0, 150), (KEY_A, 3), (0, 120), (KEY_A, 3), (0, 30)])?;
-        self.front_gif("engine/waiting-talk.gif", &frames, "talking to the strongman by Vale's river")
+        let (mut entered, _) = self.stand_for(
+            VALE,
+            Trigger::Talk(STRONGMAN_BY_THE_RIVER),
+            STRONGMAN_BY_THE_RIVER,
+        )?;
+        let frames = Self::press_path(
+            &mut entered.field,
+            &[
+                (0, 20),
+                (KEY_A, 3),
+                (0, 150),
+                (KEY_A, 3),
+                (0, 120),
+                (KEY_A, 3),
+                (0, 30),
+            ],
+        )?;
+        self.front_gif(
+            "engine/waiting-talk.gif",
+            &frames,
+            "talking to the strongman by Vale's river",
+        )
     }
 
     /// Opening the chest in Sol Sanctum: the Small Jewel rises and the
@@ -218,7 +318,12 @@ impl<'a> Guide<'a> {
     /// FLAG_SOL_SANCTUM_FIRST_SMALL_JEWEL_FOUND is set.
     fn front_chest(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(SOL_CHEST_ROOM, &[])?;
-        let frames = Self::record_trigger(&mut entered, Trigger::Search(CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST), None, 20)?;
+        let frames = Self::record_trigger(
+            &mut entered,
+            Trigger::Search(CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST),
+            None,
+            20,
+        )?;
         self.front_gif("front/chest.gif", &frames, "a chest opened in Sol Sanctum")
     }
 
@@ -233,8 +338,18 @@ impl<'a> Guide<'a> {
         let trigger = Trigger::Talk(VAULT_TIED_UP_VILLAGER);
         let field = &mut entered.field;
         let spots = field.spots(trigger)?;
-        let spot = spots.first().ok_or("nowhere to stand to free the villager")?;
-        let run = field.event(Start::Entered(&entered.placed), trigger, spot, &[], &[], 16, Some(EVENT_LIMIT as usize))?;
+        let spot = spots
+            .first()
+            .ok_or("nowhere to stand to free the villager")?;
+        let run = field.event(
+            Start::Entered(&entered.placed),
+            trigger,
+            spot,
+            &[],
+            &[],
+            16,
+            Some(EVENT_LIMIT as usize),
+        )?;
         let frames = run.frames;
         let black: Vec<bool> = frames.iter().map(|f| is_black_bgr555(f)).collect();
         // The black screens' runs, in frames.
@@ -248,13 +363,17 @@ impl<'a> Guide<'a> {
         }
         let (opens, closes) = run.battle.ok_or("the event started no battle")?;
         // The loft before the attack and the battle's opening, CLEARED each.
-        let mut cut: Vec<Vec<u16>> = frames[opens.saturating_sub(CLEARED)..(opens + CLEARED).min(closes)].to_vec();
+        let mut cut: Vec<Vec<u16>> =
+            frames[opens.saturating_sub(CLEARED)..(opens + CLEARED).min(closes)].to_vec();
         // The battle's end, then the loft it returns to, up to the next black
         // screen after the one the return fades through (which can end a few
         // frames before the battle is over), at most 2 * CLEARED past it.
         let after = runs.iter().position(|r| r.1 + CLEARED > closes);
         let end = match after {
-            Some(i) => runs.get(i + 1).map_or(frames.len(), |r| r.0).min(runs[i].1 + 2 * CLEARED),
+            Some(i) => runs
+                .get(i + 1)
+                .map_or(frames.len(), |r| r.0)
+                .min(runs[i].1 + 2 * CLEARED),
             None => (closes + 2 * CLEARED).min(frames.len()),
         };
         cut.extend_from_slice(&frames[closes.saturating_sub(CLEARED).max(opens + CLEARED)..end]);
@@ -280,13 +399,21 @@ impl<'a> Guide<'a> {
     /// Vale's number stepped down past map 0 to SceneId_MenuTest, and A.
     fn engine_debug_select(&mut self) -> Result<(), String> {
         let frames = self.selector(5, 110)?;
-        self.front_gif("engine/debug-select.gif", &frames, "the debug map selector opened in Vale, warping to the menu test room")
+        self.front_gif(
+            "engine/debug-select.gif",
+            &frames,
+            "the debug map selector opened in Vale, warping to the menu test room",
+        )
     }
 
     /// One step further, to SceneId_IncreaseItemAndLevel, and A.
     fn debug_map_select(&mut self) -> Result<(), String> {
         let frames = self.selector(6, 110)?;
-        self.front_gif("debug/map-select.gif", &frames, "the debug map selector opened in Vale, warping to the level room")
+        self.front_gif(
+            "debug/map-select.gif",
+            &frames,
+            "the debug map selector opened in Vale, warping to the level room",
+        )
     }
 
     /// A, B, Select and Start pressed together in Vale: the game starts
@@ -295,59 +422,130 @@ impl<'a> Guide<'a> {
     fn runtime_soft_reset(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
-        let mut frames = Self::press_path(field, &[(0, 40), (KEY_A | KEY_B | KEY_SELECT | KEY_START, 6), (0, 1)])?;
+        let mut frames = Self::press_path(
+            field,
+            &[(0, 40), (KEY_A | KEY_B | KEY_SELECT | KEY_START, 6), (0, 1)],
+        )?;
         let mut after = Vec::new();
         Self::hold(field, 0, 700, &mut after)?;
         // After the reset: black, the Nintendo logo, black, Camelot's logo.
-        let first = after.iter().position(|f| lit(f)).ok_or("nothing after the reset")?;
-        let black = first + after[first..].iter().position(|f| !lit(f)).ok_or("the Nintendo logo never ends")?;
-        let camelot = black + after[black..].iter().position(|f| lit(f)).ok_or("no Camelot logo")?;
+        let first = after
+            .iter()
+            .position(|f| lit(f))
+            .ok_or("nothing after the reset")?;
+        let black = first
+            + after[first..]
+                .iter()
+                .position(|f| !lit(f))
+                .ok_or("the Nintendo logo never ends")?;
+        let camelot = black
+            + after[black..]
+                .iter()
+                .position(|f| lit(f))
+                .ok_or("no Camelot logo")?;
         frames.extend_from_slice(&after[..first.min(30)]);
         frames.extend_from_slice(&after[camelot..(camelot + 120).min(after.len())]);
-        self.front_gif("runtime/soft-reset.gif", &frames, "a soft reset in Vale and the game starting again at Camelot's logo")
+        self.front_gif(
+            "runtime/soft-reset.gif",
+            &frames,
+            "a soft reset in Vale and the game starting again at Camelot's logo",
+        )
     }
 
     /// Start in Vale, Save your quest, the first file, and the save written.
     fn runtime_save(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(VALE, &[])?;
-        let path = [(0, 20), (KEY_START, 4), (0, 50), (KEY_A, 3), (0, 60), (KEY_A, 3), (0, 120), (KEY_A, 3), (0, 30)];
+        let path = [
+            (0, 20),
+            (KEY_START, 4),
+            (0, 50),
+            (KEY_A, 3),
+            (0, 60),
+            (KEY_A, 3),
+            (0, 120),
+            (KEY_A, 3),
+            (0, 30),
+        ];
         let frames = Self::press_path(&mut entered.field, &path)?;
-        self.front_gif("runtime/save.gif", &frames, "saving from the pause menu in Vale")
+        self.front_gif(
+            "runtime/save.gif",
+            &frames,
+            "saving from the pause menu in Vale",
+        )
     }
 
     /// The title intro's first seconds after the prologue: the palette
     /// fade from near-black to the picture's colours.
     fn graphics_title_fade(&mut self) -> Result<(), String> {
-        let setup = Setup { scene: TITLE_AFTER_PROLOGUE.0, entrance: TITLE_AFTER_PROLOGUE.1, set: Vec::new(), clear: Vec::new() };
+        let setup = Setup {
+            scene: TITLE_AFTER_PROLOGUE.0,
+            entrance: TITLE_AFTER_PROLOGUE.1,
+            set: Vec::new(),
+            clear: Vec::new(),
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let mut frames = Vec::new();
         Self::hold(&mut field, 0, 400, &mut frames)?;
-        let first = frames.iter().position(|f| lit(f)).ok_or("the title stayed black")?;
+        let first = frames
+            .iter()
+            .position(|f| lit(f))
+            .ok_or("the title stayed black")?;
         let start = first.saturating_sub(10);
-        self.front_gif("graphics/title-fade.gif", &frames[start..(first + 110).min(frames.len())], "the title intro fading in from near-black")
+        self.front_gif(
+            "graphics/title-fade.gif",
+            &frames[start..(first + 110).min(frames.len())],
+            "the title intro fading in from near-black",
+        )
     }
 
     /// The credits' names scrolling over the second picture, Sol Sanctum's
     /// hall, after its crossfade and before the next.
     fn graphics_credits_names(&mut self) -> Result<(), String> {
-        let setup = Setup { scene: CREDITS.0, entrance: CREDITS.1, set: Vec::new(), clear: Vec::new() };
+        let setup = Setup {
+            scene: CREDITS.0,
+            entrance: CREDITS.1,
+            set: Vec::new(),
+            clear: Vec::new(),
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let mut frames = Vec::new();
         Self::hold(&mut field, 0, 2000, &mut frames)?;
-        let first = frames.iter().position(|f| lit(f)).ok_or("the credits stayed black")?;
+        let first = frames
+            .iter()
+            .position(|f| lit(f))
+            .ok_or("the credits stayed black")?;
         let start = first + CREDITS_LEAD + 2 * (CREDITS_FADE + CREDITS_HOLD) - 280;
         if start + 200 > frames.len() {
             return Err("the credits ended early".to_string());
         }
-        self.front_gif("graphics/credits-names.gif", &frames[start..start + 200], "the credits' names scrolling up over Sol Sanctum's hall")
+        self.front_gif(
+            "graphics/credits-names.gif",
+            &frames[start..start + 200],
+            "the credits' names scrolling up over Sol Sanctum's hall",
+        )
     }
 
     /// A night at Vale's inn: the screen closes to black and opens again
     /// while the inn's jingle plays.
     fn sound_inn_fanfare(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.stand_where(VALE_INN, Trigger::Talk(VALE_INNKEEPER), VALE_INNKEEPER, |s| s.facing == NORTH)?;
+        let (mut entered, _) = self.stand_where(
+            VALE_INN,
+            Trigger::Talk(VALE_INNKEEPER),
+            VALE_INNKEEPER,
+            |s| s.facing == NORTH,
+        )?;
         entered.field.set_coins(500);
-        let path = [(0, 10), (KEY_A, 3), (0, 60), (KEY_A, 3), (0, 80), (KEY_A, 3), (0, 70), (KEY_A, 3), (0, 640)];
+        let path = [
+            (0, 10),
+            (KEY_A, 3),
+            (0, 60),
+            (KEY_A, 3),
+            (0, 80),
+            (KEY_A, 3),
+            (0, 70),
+            (KEY_A, 3),
+            (0, 640),
+        ];
         let frames = Self::press_path(&mut entered.field, &path)?;
         self.front_gif("sound/inn-fanfare.gif", &frames, "a night at Vale's inn")
     }
@@ -356,11 +554,41 @@ impl<'a> Guide<'a> {
     /// level, Start five.
     fn debug_level_editor(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with((LEVEL_ROOM, 0), &[])?;
-        let at = entered.field.actor(LEVEL_EDITOR).ok_or("the level editor is not placed")?;
-        let spot = Spot { x: at.x + 16, z: at.z, layer: at.layer, height: at.y, facing: WEST, walk: 0, cell: None };
+        let at = entered
+            .field
+            .actor(LEVEL_EDITOR)
+            .ok_or("the level editor is not placed")?;
+        let spot = Spot {
+            x: at.x + 16,
+            z: at.z,
+            layer: at.layer,
+            height: at.y,
+            facing: WEST,
+            walk: 0,
+            cell: None,
+        };
         entered.field.stand(&entered.placed, &spot)?;
-        let frames = Self::press_path(&mut entered.field, &[(0, 20), (KEY_A, 3), (0, 90), (KEY_A, 3), (0, 50), (KEY_A, 3), (0, 50), (KEY_START, 3), (0, 60), (KEY_B, 3), (0, 30)])?;
-        self.front_gif("debug/level-editor.gif", &frames, "the level room's level editor raising the party")
+        let frames = Self::press_path(
+            &mut entered.field,
+            &[
+                (0, 20),
+                (KEY_A, 3),
+                (0, 90),
+                (KEY_A, 3),
+                (0, 50),
+                (KEY_A, 3),
+                (0, 50),
+                (KEY_START, 3),
+                (0, 60),
+                (KEY_B, 3),
+                (0, 30),
+            ],
+        )?;
+        self.front_gif(
+            "debug/level-editor.gif",
+            &frames,
+            "the level room's level editor raising the party",
+        )
     }
 
     /// The menu test room's first Felix talked to from his south, facing
@@ -369,12 +597,46 @@ impl<'a> Guide<'a> {
     fn debug_felix_facing(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with((MENU_TEST_ROOM, 0), &[])?;
         let at = entered.field.actor(FELIX).ok_or("Felix is not placed")?;
-        let spot = Spot { x: at.x, z: at.z + 16, layer: at.layer, height: at.y, facing: NORTH, walk: 0, cell: None };
+        let spot = Spot {
+            x: at.x,
+            z: at.z + 16,
+            layer: at.layer,
+            height: at.y,
+            facing: NORTH,
+            walk: 0,
+            cell: None,
+        };
         entered.field.stand(&entered.placed, &spot)?;
-        let mut frames = Self::press_path(&mut entered.field, &[(0, 20), (KEY_A, 3), (0, 90), (KEY_RIGHT, 3), (0, 50), (KEY_B, 3), (0, 30)])?;
-        let spot = Spot { x: at.x, z: at.z - 16, layer: at.layer, height: at.y, facing: SOUTH, walk: 0, cell: None };
+        let mut frames = Self::press_path(
+            &mut entered.field,
+            &[
+                (0, 20),
+                (KEY_A, 3),
+                (0, 90),
+                (KEY_RIGHT, 3),
+                (0, 50),
+                (KEY_B, 3),
+                (0, 30),
+            ],
+        )?;
+        let spot = Spot {
+            x: at.x,
+            z: at.z - 16,
+            layer: at.layer,
+            height: at.y,
+            facing: SOUTH,
+            walk: 0,
+            cell: None,
+        };
         entered.field.stand(&entered.placed, &spot)?;
-        frames.extend(Self::press_path(&mut entered.field, &[(0, 20), (KEY_A, 3), (0, 90), (KEY_B, 3), (0, 30)])?);
-        self.front_gif("debug/felix-facing.gif", &frames, "the menu test room's Felix talked to from two sides")
+        frames.extend(Self::press_path(
+            &mut entered.field,
+            &[(0, 20), (KEY_A, 3), (0, 90), (KEY_B, 3), (0, 30)],
+        )?);
+        self.front_gif(
+            "debug/felix-facing.gif",
+            &frames,
+            "the menu test room's Felix talked to from two sides",
+        )
     }
 }

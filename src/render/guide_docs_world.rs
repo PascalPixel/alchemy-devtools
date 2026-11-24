@@ -51,9 +51,15 @@ impl<'a> Guide<'a> {
             "venus-lighthouse-aerie-beam-whole" => self.venus_beam_whole(),
             "venus-lighthouse-aerie-eruption-whole" => self.venus_eruption_whole(),
             "venus-lighthouse-aerie-story-dollhouse" => self.venus_story_dollhouse(),
-            "mercury-lighthouse-aerie-story-dollhouse" => self.set_piece(&super::guide_set_piece::MERCURY_LIGHTHOUSE_AERIE),
-            "lalivero-story-dollhouse" => self.set_piece(&super::guide_set_piece::LALIVERO_BLACK_ORB),
-            "babi-lighthouse-stone-door-story-dollhouse" => self.set_piece(&super::guide_set_piece::BABI_LIGHTHOUSE_TRUTH_DOOR),
+            "mercury-lighthouse-aerie-story-dollhouse" => {
+                self.set_piece(&super::guide_set_piece::MERCURY_LIGHTHOUSE_AERIE)
+            }
+            "lalivero-story-dollhouse" => {
+                self.set_piece(&super::guide_set_piece::LALIVERO_BLACK_ORB)
+            }
+            "babi-lighthouse-stone-door-story-dollhouse" => {
+                self.set_piece(&super::guide_set_piece::BABI_LIGHTHOUSE_TRUTH_DOOR)
+            }
             _ => self.run_field_moves(name),
         }
     }
@@ -66,14 +72,20 @@ impl<'a> Guide<'a> {
     fn haze(&mut self) -> Result<(), String> {
         let mut entered = self.enter_first_visit(SUHALLA_DESERT_NORTH, SUHALLA_DESERT_NORTH.0)?;
         entered.field.load(&entered.placed);
-        entered.field.set_flag(FLAG_SUHALLA_DESERT_SANDSTORMS_RISEN, true);
+        entered
+            .field
+            .set_flag(FLAG_SUHALLA_DESERT_SANDSTORMS_RISEN, true);
         entered.field.until_control()?;
         entered.field.frames(20)?;
         let mut frames = vec![entered.field.picture()];
         for (keys, n) in [(0, 120), (KEY_DOWN, 70), (0, 60)] {
             Self::hold(&mut entered.field, keys, n, &mut frames)?;
         }
-        self.world_gif("layout/haze.gif", &frames, "the sand haze over Suhalla Desert's north")
+        self.world_gif(
+            "layout/haze.gif",
+            &frames,
+            "the sand haze over Suhalla Desert's north",
+        )
     }
 
     /// A Psynergy Stone searched in Sol Sanctum (treasure spot 100, a
@@ -90,7 +102,11 @@ impl<'a> Guide<'a> {
         Self::hold(&mut entered.field, 0, 10, &mut frames)?;
         Self::talk_through(&mut entered.field, &mut frames)?;
         Self::hold(&mut entered.field, 0, 30, &mut frames)?;
-        self.world_gif("layout/psynergy-stone.gif", &frames, "a Psynergy Stone taken in Sol Sanctum")
+        self.world_gif(
+            "layout/psynergy-stone.gif",
+            &frames,
+            "a Psynergy Stone taken in Sol Sanctum",
+        )
     }
 
     /// The start of Colosso's first final as the race begins: from the party
@@ -106,12 +122,21 @@ impl<'a> Guide<'a> {
             }
         }
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
-        let setup = Setup { scene: COLOSSEUM_AZART_RACE.0, entrance: COLOSSEUM_AZART_RACE.1, set, clear };
+        let setup = Setup {
+            scene: COLOSSEUM_AZART_RACE.0,
+            entrance: COLOSSEUM_AZART_RACE.1,
+            set,
+            clear,
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let mut frames = Vec::new();
         Self::hold(&mut field, 0, 650, &mut frames)?;
         Self::hold(&mut field, KEY_UP, 30, &mut frames)?;
-        self.world_gif("map/colosso-race.gif", &frames, "the start of Colosso's first final")
+        self.world_gif(
+            "map/colosso-race.gif",
+            &frames,
+            "the start of Colosso's first final",
+        )
     }
 }
 
@@ -126,11 +151,18 @@ impl Guide<'_> {
         let set = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
         let place = VENUS_LIGHTHOUSE_AERIE_AFTER_FIRST_BATTLE;
-        let setup = Setup { scene: place.0, entrance: place.1, set, clear };
+        let setup = Setup {
+            scene: place.0,
+            entrance: place.1,
+            set,
+            clear,
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         // VenusLighthouseAerie_ShowGroupEmote pops each one's bubble through
         // Actor_ShowEmote, Actor_ShowEmoteById.
-        let emote = self.sym("Actor_ShowEmoteById").or_else(|_| self.sym("FieldEffect_SpawnAttached"))?;
+        let emote = self
+            .sym("Actor_ShowEmoteById")
+            .or_else(|_| self.sym("FieldEffect_SpawnAttached"))?;
         let reacted = std::rc::Rc::new(std::cell::Cell::new(false));
         let seen = reacted.clone();
         field.probe_pcs = vec![emote];
@@ -139,7 +171,10 @@ impl Guide<'_> {
                 seen.set(true);
             }
         }));
-        let thrown = |f: &Field| f.actor(ACTOR_VENUS_STAR_SHADOW).is_some_and(|a| a.x != 0 || a.z != 0);
+        let thrown = |f: &Field| {
+            f.actor(ACTOR_VENUS_STAR_SHADOW)
+                .is_some_and(|a| a.x != 0 || a.z != 0)
+        };
         let mut star = false;
         let mut kept: std::collections::VecDeque<Vec<u16>> = std::collections::VecDeque::new();
         let mut frames: Vec<Vec<u16>> = Vec::new();
@@ -181,6 +216,10 @@ impl Guide<'_> {
         }
         let last = frames.last().cloned().ok_or("no frames")?;
         frames.extend(std::iter::repeat(last).take(STAR_HOLD));
-        self.world_gif("map/venus-star-thrown.gif", &frames, "Saturos throwing the Venus Star into Venus Lighthouse's beacon")
+        self.world_gif(
+            "map/venus-star-thrown.gif",
+            &frames,
+            "Saturos throwing the Venus Star into Venus Lighthouse's beacon",
+        )
     }
 }

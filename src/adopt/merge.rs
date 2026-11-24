@@ -19,8 +19,13 @@ fn common(a: &[&str], b: &[&str]) -> Vec<(usize, usize)> {
     let mut found = None;
     'search: for d in 0..=max {
         for k in (-d..=d).step_by(2) {
-            let down = k == -d || (k != d && v[(offset + k - 1) as usize] < v[(offset + k + 1) as usize]);
-            let mut x = if down { v[(offset + k + 1) as usize] } else { v[(offset + k - 1) as usize] + 1 };
+            let down =
+                k == -d || (k != d && v[(offset + k - 1) as usize] < v[(offset + k + 1) as usize]);
+            let mut x = if down {
+                v[(offset + k + 1) as usize]
+            } else {
+                v[(offset + k - 1) as usize] + 1
+            };
             let mut y = x - k;
             while x < n && y < m && a[x as usize] == b[y as usize] {
                 x += 1;
@@ -53,7 +58,11 @@ fn common(a: &[&str], b: &[&str]) -> Vec<(usize, usize)> {
         let previous_k = if down { k + 1 } else { k - 1 };
         let previous_x = at(previous_k);
         let previous_y = previous_x - previous_k;
-        let (middle_x, middle_y) = if down { (previous_x, previous_y + 1) } else { (previous_x + 1, previous_y) };
+        let (middle_x, middle_y) = if down {
+            (previous_x, previous_y + 1)
+        } else {
+            (previous_x + 1, previous_y)
+        };
         while x > middle_x && y > middle_y {
             x -= 1;
             y -= 1;
@@ -77,9 +86,16 @@ struct Hunk<'a> {
 fn hunks<'a>(base: &[&str], other: &[&'a str]) -> Vec<Hunk<'a>> {
     let mut hunks = Vec::new();
     let (mut i, mut j) = (0, 0);
-    for (bi, oj) in common(base, other).into_iter().chain([(base.len(), other.len())]) {
+    for (bi, oj) in common(base, other)
+        .into_iter()
+        .chain([(base.len(), other.len())])
+    {
         if bi > i || oj > j {
-            hunks.push(Hunk { start: i, end: bi, lines: other[j..oj].to_vec() });
+            hunks.push(Hunk {
+                start: i,
+                end: bi,
+                lines: other[j..oj].to_vec(),
+            });
         }
         i = bi + 1;
         j = oj + 1;
@@ -99,9 +115,14 @@ pub fn merge(base: &str, ours: &str, theirs: &str) -> Option<String> {
         }
         let clash = all.iter().any(|other| {
             let overlap = hunk.start.max(other.start) < hunk.end.min(other.end);
-            let insertion_inside = |a: &Hunk, b: &Hunk| a.start == a.end && b.start < a.start && a.start < b.end;
-            let same_point = hunk.start == hunk.end && other.start == other.end && hunk.start == other.start;
-            overlap || insertion_inside(&hunk, other) || insertion_inside(other, &hunk) || same_point
+            let insertion_inside =
+                |a: &Hunk, b: &Hunk| a.start == a.end && b.start < a.start && a.start < b.end;
+            let same_point =
+                hunk.start == hunk.end && other.start == other.end && hunk.start == other.start;
+            overlap
+                || insertion_inside(&hunk, other)
+                || insertion_inside(other, &hunk)
+                || same_point
         });
         if clash {
             return None;
@@ -137,13 +158,28 @@ mod tests {
     fn changes_apart_both_apply_and_changes_that_clash_refuse() {
         let base = "1\n2\n3\n4\n5\n6\n";
         // Later work changed 5; the undo puts 2 back.
-        assert_eq!(merge(base, "1\n2\n3\n4\nfive\n6\n", "1\ntwo\n3\n4\n5\n6\n").as_deref(), Some("1\ntwo\n3\n4\nfive\n6\n"));
+        assert_eq!(
+            merge(base, "1\n2\n3\n4\nfive\n6\n", "1\ntwo\n3\n4\n5\n6\n").as_deref(),
+            Some("1\ntwo\n3\n4\nfive\n6\n")
+        );
         // Touching changes: a row inserted after the one the undo replaces.
-        assert_eq!(merge(base, "1\n2\nnew\n3\n4\n5\n6\n", "1\ntwo\n3\n4\n5\n6\n").as_deref(), Some("1\ntwo\nnew\n3\n4\n5\n6\n"));
-        assert_eq!(merge(base, "1\nB\n3\n4\n5\n6\n", "1\nC\n3\n4\n5\n6\n"), None);
-        assert_eq!(merge(base, "1\n2\nx\n3\n4\n5\n6\n", "1\n2\ny\n3\n4\n5\n6\n"), None);
+        assert_eq!(
+            merge(base, "1\n2\nnew\n3\n4\n5\n6\n", "1\ntwo\n3\n4\n5\n6\n").as_deref(),
+            Some("1\ntwo\nnew\n3\n4\n5\n6\n")
+        );
+        assert_eq!(
+            merge(base, "1\nB\n3\n4\n5\n6\n", "1\nC\n3\n4\n5\n6\n"),
+            None
+        );
+        assert_eq!(
+            merge(base, "1\n2\nx\n3\n4\n5\n6\n", "1\n2\ny\n3\n4\n5\n6\n"),
+            None
+        );
         // The same change on both sides is one change.
-        assert_eq!(merge(base, "1\n2\n3\n", "1\n2\n3\n").as_deref(), Some("1\n2\n3\n"));
+        assert_eq!(
+            merge(base, "1\n2\n3\n", "1\n2\n3\n").as_deref(),
+            Some("1\n2\n3\n")
+        );
         assert_eq!(merge("a", "a\nb", "c").as_deref(), None);
     }
 }

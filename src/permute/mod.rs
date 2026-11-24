@@ -6,6 +6,8 @@
 
 mod ast;
 mod c;
+#[cfg(test)]
+mod compatibility_tests;
 mod lex;
 mod output;
 mod parse;
@@ -13,8 +15,6 @@ pub(crate) mod perm;
 mod randomize;
 mod rng;
 mod score;
-#[cfg(test)]
-mod compatibility_tests;
 
 use crate::alchemy::overlay::{self, draft_address, named_after};
 use crate::alchemy::targets::{self, decomp_target, DecompTarget};
@@ -114,7 +114,8 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
     let mut game = None;
     let mut target = None;
     let mut minutes = 10.0_f64;
-    let mut jobs = std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(2).max(1));
+    let mut jobs =
+        std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(2).max(1));
     let mut seed = 1;
     let mut function = None;
     let mut overlay = None;
@@ -125,7 +126,12 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
     let mut stop_on_zero = false;
     let mut better_only = false;
     let mut index = 0;
-    let value = |index: usize| arguments.get(index).cloned().ok_or_else(|| USAGE.to_string());
+    let value = |index: usize| {
+        arguments
+            .get(index)
+            .cloned()
+            .ok_or_else(|| USAGE.to_string())
+    };
     while index < arguments.len() {
         match arguments[index].as_str() {
             "--better-only" => better_only = true,
@@ -136,23 +142,38 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
             }
             "--game" => {
                 index += 1;
-                game = Some(targets::game(&value(index)?).map_err(|error| format!("--game: {error}\n{USAGE}"))?);
+                game = Some(
+                    targets::game(&value(index)?)
+                        .map_err(|error| format!("--game: {error}\n{USAGE}"))?,
+                );
             }
             "--minutes" => {
                 index += 1;
-                minutes = value(index)?.parse().map_err(|_| format!("--minutes: a number\n{USAGE}"))?;
+                minutes = value(index)?
+                    .parse()
+                    .map_err(|_| format!("--minutes: a number\n{USAGE}"))?;
             }
             "--jobs" => {
                 index += 1;
-                jobs = value(index)?.parse::<usize>().map_err(|_| format!("--jobs: a count\n{USAGE}"))?.max(1);
+                jobs = value(index)?
+                    .parse::<usize>()
+                    .map_err(|_| format!("--jobs: a count\n{USAGE}"))?
+                    .max(1);
             }
             option @ ("--seed" | "--search-seed") => {
                 index += 1;
-                seed = value(index)?.trim().parse().map_err(|_| format!("{option}: a nonnegative integer\n{USAGE}"))?;
+                seed = value(index)?
+                    .trim()
+                    .parse()
+                    .map_err(|_| format!("{option}: a nonnegative integer\n{USAGE}"))?;
             }
             "--iterations" => {
                 index += 1;
-                iterations = Some(value(index)?.parse().map_err(|_| format!("--iterations: a count\n{USAGE}"))?);
+                iterations = Some(
+                    value(index)?
+                        .parse()
+                        .map_err(|_| format!("--iterations: a count\n{USAGE}"))?,
+                );
             }
             "--function" | "--symbol" => {
                 index += 1;
@@ -161,19 +182,31 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
             "--overlay" => {
                 index += 1;
                 let name = value(index)?;
-                overlay = Some(overlay::named_in(&name).filter(|_| name.len() == 12).ok_or("--overlay must be resource_XXX")?);
+                overlay = Some(
+                    overlay::named_in(&name)
+                        .filter(|_| name.len() == 12)
+                        .ok_or("--overlay must be resource_XXX")?,
+                );
             }
             "--arm" => arm = true,
             "--stack-diffs" => score_options.stack_differences = true,
             "--stop-on-zero" => stop_on_zero = true,
             "--keep-prob" => {
                 index += 1;
-                keep_prob = value(index)?.parse::<f64>().map_err(|_| "--keep-prob: a number in 0..1")?;
-                if !(0.0..=1.0).contains(&keep_prob) { return Err("--keep-prob: a number in 0..1".into()); }
-            },
-            other if other.starts_with('-') => return Err(format!("unknown permute option: {other}\n{USAGE}")),
+                keep_prob = value(index)?
+                    .parse::<f64>()
+                    .map_err(|_| "--keep-prob: a number in 0..1")?;
+                if !(0.0..=1.0).contains(&keep_prob) {
+                    return Err("--keep-prob: a number in 0..1".into());
+                }
+            }
+            other if other.starts_with('-') => {
+                return Err(format!("unknown permute option: {other}\n{USAGE}"))
+            }
             other if draft.is_none() => draft = Some(PathBuf::from(other)),
-            other if addresses.is_empty() => addresses = other.split(',').map(str::to_string).collect(),
+            other if addresses.is_empty() => {
+                addresses = other.split(',').map(str::to_string).collect()
+            }
             _ => return Err(USAGE.into()),
         }
         index += 1;
@@ -181,25 +214,57 @@ fn parse_options(arguments: &[String]) -> Result<Options, String> {
     let draft = draft.ok_or_else(|| USAGE.to_string())?;
     let text = draft.to_string_lossy().into_owned();
     if overlay.is_none() && text.contains("/overlays/") {
-        overlay = Some(overlay::named_in(&text).ok_or_else(|| format!("{}: name its overlay with --overlay resource_XXX", draft.display()))?);
+        overlay = Some(overlay::named_in(&text).ok_or_else(|| {
+            format!(
+                "{}: name its overlay with --overlay resource_XXX",
+                draft.display()
+            )
+        })?);
     }
     if overlay.is_some() && (arm || !addresses.is_empty()) {
-        return Err("--overlay compares one overlay function: it takes no main-image address and no --arm".into());
+        return Err(
+            "--overlay compares one overlay function: it takes no main-image address and no --arm"
+                .into(),
+        );
     }
     if addresses.is_empty() && overlay.is_none() {
-        let stem = draft.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        let stem = draft
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
         if stem.len() == 8 && stem.chars().all(|c| c.is_ascii_hexdigit()) {
             addresses.push(stem);
         } else if let Some(name) = &function {
             // As diff resolves --symbol: by name in the edition's map.
             addresses.push(name.clone());
         } else {
-            return Err(format!("{}: name the listing address\n{USAGE}", draft.display()));
+            return Err(format!(
+                "{}: name the listing address\n{USAGE}",
+                draft.display()
+            ));
         }
     }
     let (game, target) = targets::draft_edition(game, target, &text)?;
-    if !minutes.is_finite() || minutes < 0.0 { return Err("--minutes must be finite and nonnegative".into()); }
-    Ok(Options { draft, addresses, game, target, minutes, jobs, seed, function, overlay, iterations, arm, score_options, keep_prob, stop_on_zero, better_only })
+    if !minutes.is_finite() || minutes < 0.0 {
+        return Err("--minutes must be finite and nonnegative".into());
+    }
+    Ok(Options {
+        draft,
+        addresses,
+        game,
+        target,
+        minutes,
+        jobs,
+        seed,
+        function,
+        overlay,
+        iterations,
+        arm,
+        score_options,
+        keep_prob,
+        stop_on_zero,
+        better_only,
+    })
 }
 
 /// One job's scratch: its candidate file and alchemy-devtools diff's steps for it.
@@ -212,7 +277,8 @@ struct Job {
 impl Job {
     fn new(problem: &Problem, directory: &Path) -> Result<Job, String> {
         let object = directory.join("obj").join(format!("{}.o", problem.stem));
-        std::fs::create_dir_all(object.parent().unwrap()).map_err(|e| format!("{}: {e}", directory.display()))?;
+        std::fs::create_dir_all(object.parent().unwrap())
+            .map_err(|e| format!("{}: {e}", directory.display()))?;
         let candidate = directory.join(problem.draft.file_name().unwrap_or_default());
         // The draft's own steps (its routing and options), aimed at the
         // job's copy and the edition's generated imports.
@@ -245,17 +311,28 @@ impl Job {
         // siblings (system/dma.h's "io_reg.h"), as the build lets it.
         let source_directory = root().join(problem.draft.parent().unwrap_or_else(|| Path::new("")));
         steps[0].splice(1..1, [format!("-I{}", source_directory.display())]);
-        Ok(Job { candidate, object, steps })
+        Ok(Job {
+            candidate,
+            object,
+            steps,
+        })
     }
 
     /// The translation unit the compiler sees: the compile step with -E
     /// for -S (a library route already writes it before compiling).
     fn preprocess(&self) -> Result<String, String> {
         let preprocessed = self.object.with_extension("i");
-        let assembly = self.object.with_extension("s").to_string_lossy().into_owned();
+        let assembly = self
+            .object
+            .with_extension("s")
+            .to_string_lossy()
+            .into_owned();
         let mut step = self.steps[0].clone();
         if !step.iter().any(|argument| argument == "-S")
-            && !step.iter().any(|argument| argument == &preprocessed.to_string_lossy()) {
+            && !step
+                .iter()
+                .any(|argument| argument == &preprocessed.to_string_lossy())
+        {
             return Err("no compile step to preprocess with".into());
         }
         for argument in step.iter_mut() {
@@ -268,11 +345,13 @@ impl Job {
         // ARM compilation also leaves an .i file. It belongs to the previous
         // candidate, not necessarily to the expansion being prepared now.
         crate::gba::process::run(&step, root())?;
-        std::fs::read_to_string(&preprocessed).map_err(|e| format!("{}: {e}", preprocessed.display()))
+        std::fs::read_to_string(&preprocessed)
+            .map_err(|e| format!("{}: {e}", preprocessed.display()))
     }
 
     fn compile(&self, text: &str) -> Result<(), String> {
-        std::fs::write(&self.candidate, text).map_err(|e| format!("{}: {e}", self.candidate.display()))?;
+        std::fs::write(&self.candidate, text)
+            .map_err(|e| format!("{}: {e}", self.candidate.display()))?;
         let _ = std::fs::remove_file(&self.object);
         for step in &self.steps {
             crate::gba::process::run(step, root())?;
@@ -315,8 +394,16 @@ impl Problem {
 
     /// The candidate an expansion `prepare` has given its unit starts from.
     fn state_of(&self, expanded: Arc<Expanded>) -> State {
-        let full = expanded.unit.as_deref().cloned().expect("a prepared expansion");
-        State { expanded, full, steps: Vec::new() }
+        let full = expanded
+            .unit
+            .as_deref()
+            .cloned()
+            .expect("a prepared expansion");
+        State {
+            expanded,
+            full,
+            steps: Vec::new(),
+        }
     }
 
     fn source(&self, state: &State) -> String {
@@ -343,7 +430,13 @@ impl Problem {
         let mut state = self.state_of(expanded.clone());
         let function = self.function.as_deref().expect("a selected function");
         for step in steps {
-            if randomize::replay(&mut state.full, function, step.kind, &mut step.rng.clone(), step.region) {
+            if randomize::replay(
+                &mut state.full,
+                function,
+                step.kind,
+                &mut step.rng.clone(),
+                step.region,
+            ) {
                 state.steps.push(step.clone());
             }
         }
@@ -375,9 +468,16 @@ struct Reference {
 
 fn reference(options: &Options) -> Result<Reference, String> {
     if let Some(overlay) = &options.overlay {
-        let wanted = options.function.as_deref().ok_or("name the overlay function with --function")?;
+        let wanted = options
+            .function
+            .as_deref()
+            .ok_or("name the overlay function with --function")?;
         let (listing, name) = crate::diff::overlay_reference(options.target, overlay, wanted)?;
-        return Ok(Reference { listing, scaffold: Some(name), rows: None });
+        return Ok(Reference {
+            listing,
+            scaffold: Some(name),
+            rows: None,
+        });
     }
     let mut listing = Vec::new();
     let mut rows = Some(Vec::new());
@@ -389,38 +489,67 @@ fn reference(options: &Options) -> Result<Reference, String> {
         if object.exists() {
             // Listings can contain several functions (for example glyph_arm.o).
             // A named target must not be scored against its neighbours.
-            let symbol = options.function.as_deref().filter(|name| crate::diff::text_symbols(&object).is_ok_and(|symbols| symbols.iter().any(|s| s == name)));
+            let symbol = options.function.as_deref().filter(|name| {
+                crate::diff::text_symbols(&object)
+                    .is_ok_and(|symbols| symbols.iter().any(|s| s == name))
+            });
             listing.extend(crate::diff::disassemble(&object, symbol)?);
-            if let Some(rows) = &mut rows { rows.extend(score::disassemble(&object, symbol)?); }
+            if let Some(rows) = &mut rows {
+                rows.extend(score::disassemble(&object, symbol)?);
+            }
         } else {
             rows = None;
-            let (tokens, name) = crate::diff::scaffold_reference(options.target, address, options.arm)?;
+            let (tokens, name) =
+                crate::diff::scaffold_reference(options.target, address, options.arm)?;
             listing.extend(tokens);
             if options.addresses.len() == 1 {
                 scaffold = Some(name);
             }
         }
     }
-    Ok(Reference { listing, scaffold, rows })
+    Ok(Reference {
+        listing,
+        scaffold,
+        rows,
+    })
 }
 
 /// The overlay function an overlay draft is compared with, as diff finds
 /// it: the one function the draft defines that the overlay also has, or
 /// else the one the overlay names after the draft's address.
-fn overlay_function(target: DecompTarget, overlay: &str, stem: &str, text: &str) -> Result<String, String> {
+fn overlay_function(
+    target: DecompTarget,
+    overlay: &str,
+    stem: &str,
+    text: &str,
+) -> Result<String, String> {
     let output = root().join(target.output_dir).join("overlays");
     let ours = crate::diff::overlay_functions(target, overlay)?;
     if ours.is_empty() {
-        return Err(format!("{overlay}: no linked overlay in {}; build {} first", output.display(), target.id));
+        return Err(format!(
+            "{overlay}: no linked overlay in {}; build {} first",
+            output.display(),
+            target.id
+        ));
     }
-    let defined: Vec<String> = lex::lex(text).map(|tokens| parse::scan_definitions(&tokens).into_iter().map(|entry| entry.0).collect()).unwrap_or_default();
+    let defined: Vec<String> = lex::lex(text)
+        .map(|tokens| {
+            parse::scan_definitions(&tokens)
+                .into_iter()
+                .map(|entry| entry.0)
+                .collect()
+        })
+        .unwrap_or_default();
     overlay::function(&ours, &defined, stem).ok_or_else(|| {
         format!("name the overlay function with --function: {overlay} has no single function the draft defines or names after its address")
     })
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
-    if arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
+    if arguments
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "-h" | "--help"))
+    {
         println!("{USAGE}");
         return Ok(());
     }
@@ -428,15 +557,23 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     if options.arm {
         println!("{}", crate::diff::GAME_ARM_NOTICE);
     }
-    let draft = std::fs::canonicalize(&options.draft).map_err(|e| format!("{}: {e}", options.draft.display()))?;
+    let draft = std::fs::canonicalize(&options.draft)
+        .map_err(|e| format!("{}: {e}", options.draft.display()))?;
     let text = std::fs::read_to_string(&draft).map_err(|e| format!("{}: {e}", draft.display()))?;
-    let stem = draft.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let stem = draft
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
     let output = root().join("out/permute").join(&stem);
     let nodes = perm::parse(&text)?;
     if let (Some(overlay), None) = (&options.overlay, &options.function) {
         options.function = Some(overlay_function(options.target, overlay, &stem, &text)?);
     }
-    let Reference { listing, scaffold, rows: listing_rows } = reference(&options)?;
+    let Reference {
+        listing,
+        scaffold,
+        rows: listing_rows,
+    } = reference(&options)?;
     let problem = Problem {
         draft,
         text,
@@ -473,18 +610,39 @@ impl Drop for Scratch {
 /// one named after the draft's address.
 fn select_function(unit: &c::Node, selected: Option<&str>, stem: &str) -> Result<String, String> {
     if let Some(name) = selected {
-        return randomize::target_index(unit, name).map(|_| name.to_string()).ok_or_else(|| format!("the draft does not define {name}"));
+        return randomize::target_index(unit, name)
+            .map(|_| name.to_string())
+            .ok_or_else(|| format!("the draft does not define {name}"));
     }
-    let c::Node::FileAst { ext } = unit else { return Err("expected a translation unit".into()) };
-    let names: Vec<_> = ext.iter().filter_map(|n| match n {
-        c::Node::FuncDef { decl, .. } => match decl.as_ref() {
-            c::Node::Decl { name: Some(name), funcspec, .. } if !funcspec.iter().any(|s| s == "inline") => Some(name.clone()), _ => None,
-        }, _ => None,
-    }).collect();
+    let c::Node::FileAst { ext } = unit else {
+        return Err("expected a translation unit".into());
+    };
+    let names: Vec<_> = ext
+        .iter()
+        .filter_map(|n| match n {
+            c::Node::FuncDef { decl, .. } => match decl.as_ref() {
+                c::Node::Decl {
+                    name: Some(name),
+                    funcspec,
+                    ..
+                } if !funcspec.iter().any(|s| s == "inline") => Some(name.clone()),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect();
     let address = draft_address(stem);
-    match names.iter().filter(|name| names.len() == 1 || named_after(name, address.as_deref())).collect::<Vec<_>>().as_slice() {
+    match names
+        .iter()
+        .filter(|name| names.len() == 1 || named_after(name, address.as_deref()))
+        .collect::<Vec<_>>()
+        .as_slice()
+    {
         [one] => Ok(one.to_string()),
-        _ => Err(format!("choose a definition with --function (found: {})", names.join(", "))),
+        _ => Err(format!(
+            "choose a definition with --function (found: {})",
+            names.join(", ")
+        )),
     }
 }
 
@@ -526,7 +684,12 @@ fn sweep(output: &Path) {
     crate::gba::process::sweep(output, "run-");
 }
 
-fn execute(mut problem: Problem, options: &Options, scaffold: Option<String>, output: &Path) -> Result<(), String> {
+fn execute(
+    mut problem: Problem,
+    options: &Options,
+    scaffold: Option<String>,
+    output: &Path,
+) -> Result<(), String> {
     // The written spelling first: its preprocessed unit gives the parser
     // its declarations, and its score is where the search starts.
     // This run's own scratch, so two runs on one draft never share files.
@@ -557,7 +720,14 @@ fn execute(mut problem: Problem, options: &Options, scaffold: Option<String>, ou
     }
     let random = !problem.choices || perm::randomizes(&problem.nodes);
     let base_score = problem.evaluate(&setup, &base_text)?;
-    let base = Found { score: base_score, text: base_text, steps: Vec::new(), expanded: base_state.expanded.clone(), job: 0, iteration: 0 };
+    let base = Found {
+        score: base_score,
+        text: base_text,
+        steps: Vec::new(),
+        expanded: base_state.expanded.clone(),
+        job: 0,
+        iteration: 0,
+    };
     println!(
         "{}: listing {} instructions; draft {}; {} job(s), {}, seed {}; rewrites: {}",
         problem.stem,
@@ -576,8 +746,14 @@ fn execute(mut problem: Problem, options: &Options, scaffold: Option<String>, ou
         }
     );
     let started = Instant::now();
-    let deadline = options.iterations.is_none().then(|| started + Duration::from_secs_f64(options.minutes * 60.0));
-    let base_hash = score::strict_assembly_key(&score::disassemble(&setup.object, problem.symbol.as_deref())?);
+    let deadline = options
+        .iterations
+        .is_none()
+        .then(|| started + Duration::from_secs_f64(options.minutes * 60.0));
+    let base_hash = score::strict_assembly_key(&score::disassemble(
+        &setup.object,
+        problem.symbol.as_deref(),
+    )?);
     // Seed zero is the expansion already compiled above. Retain it when
     // it matches: no later candidate can strictly improve a zero score.
     let initial_match = base.score.is_zero();
@@ -585,10 +761,28 @@ fn execute(mut problem: Problem, options: &Options, scaffold: Option<String>, ou
         println!("initial expansion is an exact instruction match");
         output::write(output, 0, &base.text, &base.text)?;
     }
-    let found = if initial_match && options.stop_on_zero { Vec::new() }
-        else { search(&problem, &base_state, &base, random, options, deadline, &scratch, started, Some((output, base_hash)))? };
-    let mut found: Vec<_> = found.into_iter().filter(|entry| !options.better_only || entry.score.distance() < base.score.distance()).collect();
-    if initial_match { found.insert(0, base.clone()); }
+    let found = if initial_match && options.stop_on_zero {
+        Vec::new()
+    } else {
+        search(
+            &problem,
+            &base_state,
+            &base,
+            random,
+            options,
+            deadline,
+            &scratch,
+            started,
+            Some((output, base_hash)),
+        )?
+    };
+    let mut found: Vec<_> = found
+        .into_iter()
+        .filter(|entry| !options.better_only || entry.score.distance() < base.score.distance())
+        .collect();
+    if initial_match {
+        found.insert(0, base.clone());
+    }
     let best = minimize_best(&problem, &found, &scratch.join("minimize"))?;
     write_best(&problem, &base, &best, output)
 }
@@ -611,13 +805,19 @@ fn search(
     started: Instant,
     archive: Option<(&Path, SourceHash)>,
 ) -> Result<Vec<Found>, String> {
-    let archive_state = Mutex::new(archive.map(|(_, hash)| output::State::new(&base.score, hash, options.better_only)));
+    let archive_state = Mutex::new(
+        archive.map(|(_, hash)| output::State::new(&base.score, hash, options.better_only)),
+    );
     let stop = AtomicBool::new(false);
     let global = Mutex::new(base.score.distance());
     let found = Mutex::new(Vec::new());
     let failures = Mutex::new(Vec::new());
     let compiled = std::sync::atomic::AtomicU64::new(0);
-    let seeds = Mutex::new(perm::Seeds::new(perm::count(&problem.nodes)?, random, options.seed));
+    let seeds = Mutex::new(perm::Seeds::new(
+        perm::count(&problem.nodes)?,
+        random,
+        options.seed,
+    ));
     let function = problem.function.as_deref().expect("a selected function");
     let running = std::sync::atomic::AtomicUsize::new(options.jobs);
     std::thread::scope(|scope| {
@@ -751,7 +951,12 @@ fn search(
         return Err(error.clone());
     }
     let mut all = found.into_inner().unwrap();
-    all.sort_by(|a, b| a.rank().cmp(&b.rank()).then(a.job.cmp(&b.job)).then(a.iteration.cmp(&b.iteration)));
+    all.sort_by(|a, b| {
+        a.rank()
+            .cmp(&b.rank())
+            .then(a.job.cmp(&b.job))
+            .then(a.iteration.cmp(&b.iteration))
+    });
     let mut distinct: Vec<Found> = Vec::new();
     for candidate in all {
         if !distinct.iter().any(|seen| seen.text == candidate.text) {
@@ -771,8 +976,15 @@ fn rewrites(kinds: &[randomize::Kind]) -> String {
         }
     }
     counts.sort_by_key(|(count, kind)| (std::cmp::Reverse(*count), *kind));
-    let text: Vec<String> = counts.iter().map(|(count, kind)| format!("{count}x {}", kind.name())).collect();
-    if text.is_empty() { "PERM choices only".into() } else { text.join(", ") }
+    let text: Vec<String> = counts
+        .iter()
+        .map(|(count, kind)| format!("{count}x {}", kind.name()))
+        .collect();
+    if text.is_empty() {
+        "PERM choices only".into()
+    } else {
+        text.join(", ")
+    }
 }
 
 type SourceHash = [u8; 32];
@@ -783,15 +995,28 @@ fn text_key(text: &str) -> SourceHash {
 }
 
 /// A score from the cache, or from one compile.
-fn scored(problem: &Problem, job: &Job, text: &str, cache: &mut HashMap<SourceHash, Option<Score>>) -> Option<Score> {
-    cache.entry(text_key(text)).or_insert_with(|| problem.evaluate(job, text).ok()).clone()
+fn scored(
+    problem: &Problem,
+    job: &Job,
+    text: &str,
+    cache: &mut HashMap<SourceHash, Option<Score>>,
+) -> Option<Score> {
+    cache
+        .entry(text_key(text))
+        .or_insert_with(|| problem.evaluate(job, text).ok())
+        .clone()
 }
 
 /// Undo a candidate's rewrites one at a time, last first, keeping each
 /// removal that leaves its weighted score (then differ) no higher, until a
 /// whole pass removes nothing. A trail that does not replay to the
 /// candidate's own text is left as found.
-fn minimize(problem: &Problem, job: &Job, best: &Found, cache: &mut HashMap<SourceHash, Option<Score>>) -> Found {
+fn minimize(
+    problem: &Problem,
+    job: &Job,
+    best: &Found,
+    cache: &mut HashMap<SourceHash, Option<Score>>,
+) -> Found {
     let replayed = problem.replay(&best.expanded, &best.steps);
     if replayed.steps.len() != best.steps.len() || problem.source(&replayed) != best.text {
         return best.clone();
@@ -810,9 +1035,18 @@ fn minimize(problem: &Problem, job: &Job, best: &Found, cache: &mut HashMap<Sour
             let state = problem.replay(&current.expanded, &trial);
             let text = problem.source(&state);
             // A rewrite that changes no text costs no compile.
-            let score = if text == current.text { Some(current.score.clone()) } else { scored(problem, job, &text, cache) };
+            let score = if text == current.text {
+                Some(current.score.clone())
+            } else {
+                scored(problem, job, &text, cache)
+            };
             let Some(score) = score else { continue };
-            let candidate = Found { score, text, steps: state.steps, ..current.clone() };
+            let candidate = Found {
+                score,
+                text,
+                steps: state.steps,
+                ..current.clone()
+            };
             if candidate.score.distance() <= current.score.distance() {
                 current = candidate;
                 removed = true;
@@ -853,7 +1087,12 @@ fn lines(text: &str) -> Vec<String> {
 /// draft line keeps its spelling. `None` when a change touches a line the
 /// printer spelled differently from the draft.
 fn transplant(draft: &str, before: &str, after: &str) -> Option<String> {
-    let squeeze = |lines: &[String]| -> Vec<String> { lines.iter().map(|line| line.split_whitespace().collect()).collect() };
+    let squeeze = |lines: &[String]| -> Vec<String> {
+        lines
+            .iter()
+            .map(|line| line.split_whitespace().collect())
+            .collect()
+    };
     let (d, p0, p1) = (lines(draft), lines(before), lines(after));
     let at = align(&squeeze(&p0), &squeeze(&d));
     let (_, script) = crate::diff::compare(&p0, &p1);
@@ -922,7 +1161,9 @@ fn unified(old: &str, new: &str, name: &str) -> String {
             _ => i += 1,
         }
     }
-    let changed: Vec<usize> = (0..entries.len()).filter(|&at| entries[at].0 != b' ').collect();
+    let changed: Vec<usize> = (0..entries.len())
+        .filter(|&at| entries[at].0 != b' ')
+        .collect();
     if changed.is_empty() {
         return String::new();
     }
@@ -960,7 +1201,10 @@ fn unified(old: &str, new: &str, name: &str) -> String {
                 continue;
             }
             // Each run of changes: its removals, then its insertions.
-            let run = r + range[r..].iter().take_while(|entry| entry.0 != b' ').count();
+            let run = r + range[r..]
+                .iter()
+                .take_while(|entry| entry.0 != b' ')
+                .count();
             for tag in *b"-+" {
                 for entry in range[r..run].iter().filter(|entry| entry.0 == tag) {
                     push(&mut out, tag as char, entry.1);
@@ -988,13 +1232,17 @@ struct Best {
 /// only when its score and compiled instructions match the printed candidate.
 fn respell(problem: &Problem, job: &Job, found: &Found) -> (String, bool) {
     let draft = found.expanded.restore(&found.expanded.text);
-    let expected = job.compile(&found.text).and_then(|()| score::disassemble(&job.object, problem.symbol.as_deref())).ok();
+    let expected = job
+        .compile(&found.text)
+        .and_then(|()| score::disassemble(&job.object, problem.symbol.as_deref()))
+        .ok();
     let verifies = |text: &str| {
         // Equal scalar scores do not imply equal instructions. The
         // projection must retain the compiled candidate, including
         // relocations and literal data. Compile even a cached score's
         // text so the object being checked belongs to this spelling.
-        expected.is_some() && problem.evaluate(job, text).ok().as_ref() == Some(&found.score)
+        expected.is_some()
+            && problem.evaluate(job, text).ok().as_ref() == Some(&found.score)
             && score::disassemble(&job.object, problem.symbol.as_deref()).ok() == expected
     };
     // Body/signature changes and new inline helpers usually fit back into
@@ -1009,12 +1257,26 @@ fn respell(problem: &Problem, job: &Job, found: &Found) -> (String, bool) {
         }
     }
     let plain = problem.source(&plain);
-    let text = if found.text == plain { Some(draft) } else { transplant(&draft, &plain, &found.text) };
-    let printed = |text: &str| locate(text, problem.function.as_deref(), &problem.unit.typedef_names()).ok().map(|located| located.function.print());
+    let text = if found.text == plain {
+        Some(draft)
+    } else {
+        transplant(&draft, &plain, &found.text)
+    };
+    let printed = |text: &str| {
+        locate(
+            text,
+            problem.function.as_deref(),
+            &problem.unit.typedef_names(),
+        )
+        .ok()
+        .map(|located| located.function.print())
+    };
     match text {
         Some(text) if text == found.text => (text, true),
         Some(text)
-            if printed(&text).zip(printed(&found.text)).is_none_or(|(a, b)| a == b)
+            if printed(&text)
+                .zip(printed(&found.text))
+                .is_none_or(|(a, b)| a == b)
                 && verifies(&text) =>
         {
             (text, true)
@@ -1023,11 +1285,18 @@ fn respell(problem: &Problem, job: &Job, found: &Found) -> (String, bool) {
     }
 }
 
-fn project_function(problem: &Problem, draft: &str, before: &c::Node, after: &c::Node) -> Option<(String, bool)> {
+fn project_function(
+    problem: &Problem,
+    draft: &str,
+    before: &c::Node,
+    after: &c::Node,
+) -> Option<(String, bool)> {
     let target = problem.function.as_deref()?;
     let old_index = randomize::target_index(before, target)?;
     let new_index = randomize::target_index(after, target)?;
-    let (c::Node::FileAst { ext: old }, c::Node::FileAst { ext: new }) = (before, after) else { return None };
+    let (c::Node::FileAst { ext: old }, c::Node::FileAst { ext: new }) = (before, after) else {
+        return None;
+    };
     // A PRETEND/SAMELINE region may start outside the target and end inside
     // it. The restored draft has already consumed the external marker;
     // projecting the printed function would leave an unmatched end marker.
@@ -1035,33 +1304,62 @@ fn project_function(problem: &Problem, draft: &str, before: &c::Node, after: &c:
     for kind in ["pretend", "sameline"] {
         let mut depth = 0usize;
         for line in old[old_index].print().lines() {
-            match line.trim().strip_prefix(&format!("#pragma _permuter {kind} ")) {
+            match line
+                .trim()
+                .strip_prefix(&format!("#pragma _permuter {kind} "))
+            {
                 Some("start") => depth += 1,
                 Some("end") => depth = depth.checked_sub(1)?,
                 _ => {}
             }
         }
-        if depth != 0 { return None; }
+        if depth != 0 {
+            return None;
+        }
     }
-    let old_context: Vec<_> = old.iter().enumerate().filter(|(i, _)| *i != old_index).map(|(_, n)| n).collect();
+    let old_context: Vec<_> = old
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != old_index)
+        .map(|(_, n)| n)
+        .collect();
     let mut new_context = Vec::new();
     let mut helpers = String::new();
     for (i, item) in new.iter().enumerate() {
-        if i == new_index { continue; }
-        if !old_context.contains(&item) && matches!(item, c::Node::FuncDef { .. }) { helpers.push_str(&item.print()); }
-        else { new_context.push(item); }
+        if i == new_index {
+            continue;
+        }
+        if !old_context.contains(&item) && matches!(item, c::Node::FuncDef { .. }) {
+            helpers.push_str(&item.print());
+        } else {
+            new_context.push(item);
+        }
     }
-    if old_context != new_context { return None; }
+    if old_context != new_context {
+        return None;
+    }
     let located = locate(draft, Some(target), &problem.unit.typedef_names()).ok()?;
     let original = &draft[located.start..located.end];
     let transplanted = transplant(original, &old[old_index].print(), &new[new_index].print());
     let preserved = transplanted.is_some();
     let function = transplanted.unwrap_or_else(|| new[new_index].print());
-    Some((format!("{}{helpers}{}{}", &draft[..located.start], function.trim_end(), &draft[located.end..]), preserved))
+    Some((
+        format!(
+            "{}{helpers}{}{}",
+            &draft[..located.start],
+            function.trim_end(),
+            &draft[located.end..]
+        ),
+        preserved,
+    ))
 }
 
 /// Minimize and respell the search's best, until three distinct remain.
-fn minimize_best(problem: &Problem, found: &[Found], directory: &Path) -> Result<Vec<Best>, String> {
+fn minimize_best(
+    problem: &Problem,
+    found: &[Found],
+    directory: &Path,
+) -> Result<Vec<Best>, String> {
     if found.is_empty() {
         return Ok(Vec::new());
     }
@@ -1083,19 +1381,37 @@ fn minimize_best(problem: &Problem, found: &[Found], directory: &Path) -> Result
         // key, including distinctions ignored by the weighted score.
         job.compile(&text)?;
         let assembly = score::disassemble(&job.object, problem.symbol.as_deref())?;
-        if !assemblies.insert(text_key(&format!("{assembly:?}"))) { continue; }
+        if !assemblies.insert(text_key(&format!("{assembly:?}"))) {
+            continue;
+        }
         let searched = candidate.steps.iter().map(|step| step.kind).collect();
-        best.push(Best { found: minimized, searched, text, respelled });
+        best.push(Best {
+            found: minimized,
+            searched,
+            text,
+            respelled,
+        });
     }
     best.sort_by(|a, b| {
         let (a, b) = (&a.found, &b.found);
-        a.rank().cmp(&b.rank()).then(a.job.cmp(&b.job)).then(a.iteration.cmp(&b.iteration))
+        a.rank()
+            .cmp(&b.rank())
+            .then(a.job.cmp(&b.job))
+            .then(a.iteration.cmp(&b.iteration))
     });
     Ok(best)
 }
 
-fn write_best(problem: &Problem, base: &Found, found: &[Best], output: &Path) -> Result<(), String> {
-    for entry in std::fs::read_dir(output).map_err(|e| format!("{}: {e}", output.display()))?.flatten() {
+fn write_best(
+    problem: &Problem,
+    base: &Found,
+    found: &[Best],
+    output: &Path,
+) -> Result<(), String> {
+    for entry in std::fs::read_dir(output)
+        .map_err(|e| format!("{}: {e}", output.display()))?
+        .flatten()
+    {
         let name = entry.file_name().to_string_lossy().into_owned();
         if name.starts_with("best-") {
             let _ = std::fs::remove_file(entry.path());
@@ -1109,13 +1425,26 @@ fn write_best(problem: &Problem, base: &Found, found: &[Best], output: &Path) ->
         println!("no candidate beat the draft");
         return Ok(());
     }
-    let name = problem.draft.strip_prefix(root()).unwrap_or(&problem.draft).to_string_lossy().into_owned();
+    let name = problem
+        .draft
+        .strip_prefix(root())
+        .unwrap_or(&problem.draft)
+        .to_string_lossy()
+        .into_owned();
     for (index, entry) in found.iter().take(3).enumerate() {
         let best = &entry.found;
         let path = output.join(format!("best-{}.c", index + 1));
         let kinds: Vec<randomize::Kind> = best.steps.iter().map(|step| step.kind).collect();
-        let spelling = if entry.respelled { "" } else { "\n   Its rewrites do not carry into the draft's lines: this is the permuter's printed source." };
-        let review = if kinds.is_empty() { "" } else { "\n   Source hypothesis: review type and behavior changes, and tag compiler-steering devices under S2 before adoption." };
+        let spelling = if entry.respelled {
+            ""
+        } else {
+            "\n   Its rewrites do not carry into the draft's lines: this is the permuter's printed source."
+        };
+        let review = if kinds.is_empty() {
+            ""
+        } else {
+            "\n   Source hypothesis: review type and behavior changes, and tag compiler-steering devices under S2 before adoption."
+        };
         let header = format!(
             "/* alchemy-devtools permute {}: {}; draft {}.\n   Job {}, iteration {}; rewrites: {} (minimized from {}: {}).{spelling}{review} */\n",
             problem.stem,
@@ -1164,21 +1493,60 @@ mod tests {
     #[test]
     fn overlay_options_follow_the_drafts_path_as_diff_does() {
         let parse = |items: &[&str]| parse_options(&args(items));
-        let options = parse(&["scene.c", "--overlay", "resource_3B7", "--function", "Event"]).unwrap();
+        let options = parse(&[
+            "scene.c",
+            "--overlay",
+            "resource_3B7",
+            "--function",
+            "Event",
+        ])
+        .unwrap();
         assert_eq!(options.overlay.as_deref(), Some("resource_3b7"));
         assert_eq!(options.function.as_deref(), Some("Event"));
         assert!(options.addresses.is_empty());
         // The resource from the path; the function is left to the overlay.
         let options = parse(&["recon/tla/en/overlays/resource_6AA_c_0200263c.c"]).unwrap();
-        assert_eq!((options.overlay.as_deref(), options.function.as_deref(), options.game), (Some("resource_6aa"), None, "tla"));
-        let options = parse(&["recon/tla/en/overlays/resource_6aa_c_0200263c.c", "--symbol", "Func_0200263c"]).unwrap();
+        assert_eq!(
+            (
+                options.overlay.as_deref(),
+                options.function.as_deref(),
+                options.game
+            ),
+            (Some("resource_6aa"), None, "tla")
+        );
+        let options = parse(&[
+            "recon/tla/en/overlays/resource_6aa_c_0200263c.c",
+            "--symbol",
+            "Func_0200263c",
+        ])
+        .unwrap();
         assert_eq!(options.function.as_deref(), Some("Func_0200263c"));
         assert!(options.addresses.is_empty());
         for items in [
-            vec!["scene.c", "--overlay", "resource_../x", "--function", "Event"],
+            vec![
+                "scene.c",
+                "--overlay",
+                "resource_../x",
+                "--function",
+                "Event",
+            ],
             vec!["scene.c", "--overlay", "resource_3b7x"],
-            vec!["scene.c", "--overlay", "resource_3b7", "--function", "Event", "--arm"],
-            vec!["scene.c", "08000000", "--overlay", "resource_3b7", "--function", "Event"],
+            vec![
+                "scene.c",
+                "--overlay",
+                "resource_3b7",
+                "--function",
+                "Event",
+                "--arm",
+            ],
+            vec![
+                "scene.c",
+                "08000000",
+                "--overlay",
+                "resource_3b7",
+                "--function",
+                "Event",
+            ],
             vec!["recon/tla/en/overlays/draft.c"],
         ] {
             assert!(parse(&items).is_err(), "{items:?}");
@@ -1187,10 +1555,21 @@ mod tests {
 
     #[test]
     fn the_definition_named_after_the_drafts_address_is_rewritten() {
-        let unit = c::parse("int Helper(int x) { return x; }\nint Func_0800a0f8(int x) { return Helper(x) + 1; }\n").unwrap();
-        assert_eq!(select_function(&unit, None, "0800a0f8").unwrap(), "Func_0800a0f8");
-        assert_eq!(select_function(&unit, Some("Helper"), "0800a0f8").unwrap(), "Helper");
-        assert!(select_function(&unit, None, "draft").unwrap_err().contains("Helper, Func_0800a0f8"));
+        let unit = c::parse(
+            "int Helper(int x) { return x; }\nint Func_0800a0f8(int x) { return Helper(x) + 1; }\n",
+        )
+        .unwrap();
+        assert_eq!(
+            select_function(&unit, None, "0800a0f8").unwrap(),
+            "Func_0800a0f8"
+        );
+        assert_eq!(
+            select_function(&unit, Some("Helper"), "0800a0f8").unwrap(),
+            "Helper"
+        );
+        assert!(select_function(&unit, None, "draft")
+            .unwrap_err()
+            .contains("Helper, Func_0800a0f8"));
         assert!(select_function(&unit, Some("Missing"), "0800a0f8").is_err());
         let unit = c::parse("int Only(int x) { return x; }\n").unwrap();
         assert_eq!(select_function(&unit, None, "draft").unwrap(), "Only");
@@ -1199,34 +1578,110 @@ mod tests {
     #[test]
     fn options_default_and_parse() {
         let parsed = parse_options(&args(&["recon/tbs/en/main/080cbc0c.c"])).unwrap();
-        assert_eq!((parsed.addresses.as_slice(), parsed.minutes, parsed.seed), (["080cbc0c".to_string()].as_slice(), 10.0, 1));
+        assert_eq!(
+            (parsed.addresses.as_slice(), parsed.minutes, parsed.seed),
+            (["080cbc0c".to_string()].as_slice(), 10.0, 1)
+        );
         assert!(parsed.jobs >= 1 && !parsed.better_only);
         assert_eq!(parsed.target.id.as_str(), "tbs-en");
-        let parsed = parse_options(&args(&["x.c", "08000000,08000010", "--edition", "tla-de", "--minutes", "0.5", "--jobs", "3", "--search-seed", "9"])).unwrap();
-        assert_eq!((parsed.addresses.len(), parsed.game, parsed.jobs, parsed.seed, parsed.minutes), (2, "tla", 3, 9, 0.5));
+        let parsed = parse_options(&args(&[
+            "x.c",
+            "08000000,08000010",
+            "--edition",
+            "tla-de",
+            "--minutes",
+            "0.5",
+            "--jobs",
+            "3",
+            "--search-seed",
+            "9",
+        ]))
+        .unwrap();
+        assert_eq!(
+            (
+                parsed.addresses.len(),
+                parsed.game,
+                parsed.jobs,
+                parsed.seed,
+                parsed.minutes
+            ),
+            (2, "tla", 3, 9, 0.5)
+        );
         // --seed seeds the search, as --search-seed does.
         for flag in ["--seed", "--search-seed"] {
-            assert_eq!(parse_options(&args(&["08000000.c", flag, "7"])).unwrap().seed, 7);
+            assert_eq!(
+                parse_options(&args(&["08000000.c", flag, "7"]))
+                    .unwrap()
+                    .seed,
+                7
+            );
         }
         for text in ["1,2", "bad", "-1"] {
-            assert!(parse_options(&args(&["08000000.c", "--seed", text])).is_err(), "{text}");
+            assert!(
+                parse_options(&args(&["08000000.c", "--seed", text])).is_err(),
+                "{text}"
+            );
         }
         // --game as diff reads it.
-        assert_eq!(parse_options(&args(&["x.c", "08000000", "--game", "tla"])).unwrap().target.id.as_str(), "tla-en");
-        assert!(parse_options(&args(&["x.c", "08000000", "--game", "tla", "--edition", "tbs-de"])).is_err());
+        assert_eq!(
+            parse_options(&args(&["x.c", "08000000", "--game", "tla"]))
+                .unwrap()
+                .target
+                .id
+                .as_str(),
+            "tla-en"
+        );
+        assert!(parse_options(&args(&[
+            "x.c",
+            "08000000",
+            "--game",
+            "tla",
+            "--edition",
+            "tbs-de"
+        ]))
+        .is_err());
         assert!(parse_options(&args(&["x.c", "08000000", "--game", "gs"])).is_err());
         // A draft not named after its address: the listing is the named function's.
-        let parsed = parse_options(&args(&["out/draft_link.c", "--symbol", "Serial_Begin"])).unwrap();
-        assert_eq!((parsed.addresses.as_slice(), parsed.function.as_deref()), (["Serial_Begin".to_string()].as_slice(), Some("Serial_Begin")));
+        let parsed =
+            parse_options(&args(&["out/draft_link.c", "--symbol", "Serial_Begin"])).unwrap();
+        assert_eq!(
+            (parsed.addresses.as_slice(), parsed.function.as_deref()),
+            (
+                ["Serial_Begin".to_string()].as_slice(),
+                Some("Serial_Begin")
+            )
+        );
         assert!(parse_options(&args(&["x.c"])).is_err());
-        let parsed = parse_options(&args(&["recon/tbs/en/overlays/resource_383_c_020048c8.c"])).unwrap();
-        assert_eq!((parsed.overlay.as_deref(), parsed.game), (Some("resource_383"), "tbs"));
+        let parsed =
+            parse_options(&args(&["recon/tbs/en/overlays/resource_383_c_020048c8.c"])).unwrap();
+        assert_eq!(
+            (parsed.overlay.as_deref(), parsed.game),
+            (Some("resource_383"), "tbs")
+        );
         assert!(parse_options(&args(&["08000000.c", "--bogus"])).is_err());
         assert!(!parse_options(&args(&["08000000.c"])).unwrap().arm);
-        assert!(parse_options(&args(&["recon/tbs/en/main/0800a0f8.c", "--arm"])).unwrap().arm);
-        assert!(parse_options(&args(&["08000000.c", "--edition", "tla-en", "--arm"])).unwrap().arm);
-        let parsed = parse_options(&args(&["08000000.c", "--stack-diffs", "--keep-prob", "0.25", "--stop-on-zero", "--better-only"])).unwrap();
-        assert!(parsed.score_options.stack_differences && parsed.stop_on_zero && parsed.better_only);
+        assert!(
+            parse_options(&args(&["recon/tbs/en/main/0800a0f8.c", "--arm"]))
+                .unwrap()
+                .arm
+        );
+        assert!(
+            parse_options(&args(&["08000000.c", "--edition", "tla-en", "--arm"]))
+                .unwrap()
+                .arm
+        );
+        let parsed = parse_options(&args(&[
+            "08000000.c",
+            "--stack-diffs",
+            "--keep-prob",
+            "0.25",
+            "--stop-on-zero",
+            "--better-only",
+        ]))
+        .unwrap();
+        assert!(
+            parsed.score_options.stack_differences && parsed.stop_on_zero && parsed.better_only
+        );
         assert_eq!(parsed.keep_prob, 0.25);
         for value in ["NaN", "-1", "1.1"] {
             assert!(parse_options(&args(&["08000000.c", "--keep-prob", value])).is_err());
@@ -1256,7 +1711,12 @@ mod tests {
         let thumb = Job::new(&problem, work.path()).unwrap();
         problem.arm = true;
         let arm = Job::new(&problem, work.path()).unwrap();
-        let compiler = |job: &Job| job.steps.iter().flatten().any(|argument| argument.ends_with("gcc2952_arm"));
+        let compiler = |job: &Job| {
+            job.steps
+                .iter()
+                .flatten()
+                .any(|argument| argument.ends_with("gcc2952_arm"))
+        };
         assert!(!compiler(&thumb));
         assert!(compiler(&arm));
         std::fs::write(&arm.candidate, "int F(int x) { return x + 1; }\n").unwrap();
@@ -1265,18 +1725,22 @@ mod tests {
 
     #[test]
     fn relocated_jobs_keep_the_drafts_quoted_header_search() {
-
         let work = tempfile::tempdir().unwrap();
         let directory = work.path().join("drafts");
         std::fs::create_dir(&directory).unwrap();
         std::fs::write(work.path().join("value.h"), "#define VALUE 37\n").unwrap();
-        std::fs::write(directory.join("local.h"), "#include \"../value.h\"\n#include \"part/outer.h\"\n").unwrap();
+        std::fs::write(
+            directory.join("local.h"),
+            "#include \"../value.h\"\n#include \"part/outer.h\"\n",
+        )
+        .unwrap();
         // A header finds its own siblings by quote, as in the build.
         std::fs::create_dir(directory.join("part")).unwrap();
         std::fs::write(directory.join("part/outer.h"), "#include \"inner.h\"\n").unwrap();
         std::fs::write(directory.join("part/inner.h"), "#define INNER 5\n").unwrap();
         let draft = directory.join("sample.c");
-        let source = "#include \"local.h\"\n#include \"types.h\"\nu32 F(void) { return VALUE + INNER; }\n";
+        let source =
+            "#include \"local.h\"\n#include \"types.h\"\nu32 F(void) { return VALUE + INNER; }\n";
         std::fs::write(&draft, source).unwrap();
         for arm in [false, true] {
             let mut problem = test_problem(&draft, source, Vec::new(), Some("F"));
@@ -1291,18 +1755,27 @@ mod tests {
             } else {
                 crate::diff::draft_steps(problem.target, &draft, &expected_object).unwrap()
             };
-            for step in &steps { crate::gba::process::run(step, root()).unwrap(); }
-            assert_eq!(crate::diff::disassemble(&job.object, Some("F")).unwrap(), crate::diff::disassemble(&expected_object, Some("F")).unwrap());
+            for step in &steps {
+                crate::gba::process::run(step, root()).unwrap();
+            }
+            assert_eq!(
+                crate::diff::disassemble(&job.object, Some("F")).unwrap(),
+                crate::diff::disassemble(&expected_object, Some("F")).unwrap()
+            );
         }
     }
 
     #[test]
     fn c_tree_compiles_through_both_game_routes() {
-
         let source = "#include \"types.h\"\ntypedef struct { u32 word; s16 pair[2]; } Item;\nstatic inline u32 Twice(u32 x) { return x + x; }\nu32 F(Item *p) { u32 n = p->word; if (n) return Twice(n); return (u16)p->pair[1]; }\n";
         for arm in [false, true] {
             let work = tempfile::tempdir().unwrap();
-            let mut problem = test_problem(Path::new("recon/tbs/en/main/08000000.c"), source, Vec::new(), Some("F"));
+            let mut problem = test_problem(
+                Path::new("recon/tbs/en/main/08000000.c"),
+                source,
+                Vec::new(),
+                Some("F"),
+            );
             problem.arm = arm;
             let job = Job::new(&problem, work.path()).unwrap();
             job.compile(source).unwrap();
@@ -1310,19 +1783,31 @@ mod tests {
             let mut unit = c::parse(&job.preprocess().unwrap()).unwrap();
             unit.extract_function("F").unwrap();
             job.compile(&unit.print()).unwrap();
-            assert_eq!(crate::diff::disassemble(&job.object, Some("F")).unwrap(), expected);
+            assert_eq!(
+                crate::diff::disassemble(&job.object, Some("F")).unwrap(),
+                expected
+            );
         }
     }
 
     #[test]
     fn unified_diff_has_numbered_hunks_with_removals_first() {
         let diff = unified("a\nb\nc\nd\ne\nf\ng\n", "a\nb\nc\nD\ne\nf\ng\n", "x.c");
-        assert_eq!(diff, "--- x.c\n+++ x.c\n@@ -1,7 +1,7 @@\n a\n b\n c\n-d\n+D\n e\n f\n g\n");
+        assert_eq!(
+            diff,
+            "--- x.c\n+++ x.c\n@@ -1,7 +1,7 @@\n a\n b\n c\n-d\n+D\n e\n f\n g\n"
+        );
         let old: String = (1..=20).map(|n| format!("{n}\n")).collect();
-        let new = old.replace("\n2\n", "\ntwo\n").replace("\n18\n", "\n18\neighteen\n");
+        let new = old
+            .replace("\n2\n", "\ntwo\n")
+            .replace("\n18\n", "\n18\neighteen\n");
         let diff = unified(&old, &new, "x.c");
         assert_eq!(diff.matches("@@ -").count(), 2, "{diff}");
-        assert!(diff.contains("@@ -1,5 +1,5 @@\n 1\n-2\n+two\n") && diff.contains("@@ -16,5 +16,6 @@\n"), "{diff}");
+        assert!(
+            diff.contains("@@ -1,5 +1,5 @@\n 1\n-2\n+two\n")
+                && diff.contains("@@ -16,5 +16,6 @@\n"),
+            "{diff}"
+        );
         assert_eq!(apply_unified(&old, &diff), new);
         assert_eq!(unified(&old, &old, "x.c"), "");
     }
@@ -1335,7 +1820,8 @@ mod tests {
         for line in diff.split_inclusive('\n').skip(2) {
             if let Some(header) = line.strip_prefix("@@ -") {
                 let (start, count) = header.split(' ').next().unwrap().split_once(',').unwrap();
-                let (start, count): (usize, usize) = (start.parse().unwrap(), count.parse().unwrap());
+                let (start, count): (usize, usize) =
+                    (start.parse().unwrap(), count.parse().unwrap());
                 let begin = if count == 0 { start } else { start - 1 };
                 out.extend(old[at..begin].iter().map(String::as_str));
                 at = begin;
@@ -1357,7 +1843,12 @@ mod tests {
         out
     }
 
-    pub(super) fn test_problem(draft: &Path, text: &str, listing: Vec<String>, function: Option<&str>) -> Problem {
+    pub(super) fn test_problem(
+        draft: &Path,
+        text: &str,
+        listing: Vec<String>,
+        function: Option<&str>,
+    ) -> Problem {
         let nodes = perm::parse(text).unwrap();
         Problem {
             draft: draft.to_path_buf(),
@@ -1408,13 +1899,24 @@ mod tests {
         // of its last statement.
         let mut unit = c::parse(&expanded.preprocess_text()).unwrap();
         unit.extract_function("Set").unwrap();
-        let c::Node::FileAst { ext } = &unit else { panic!() };
+        let c::Node::FileAst { ext } = &unit else {
+            panic!()
+        };
         let before = ext[randomize::target_index(&unit, "Set").unwrap()].print();
         let after = before.replace("gX = b;", "gX = b + a;");
         assert_ne!(before, after, "{before}");
-        let text = transplant(&written, &before, &after).expect("the rewritten line aligns with the draft's");
-        assert!(text.contains("/* kept as written */") && text.contains("gX   =   a;   /* x */") && !perm::has_macros(&text), "{text}");
-        assert!(text.contains("gY = b;\n") && text.contains("gX = b + a;") && !text.contains("gX = b;"), "{text}");
+        let text = transplant(&written, &before, &after)
+            .expect("the rewritten line aligns with the draft's");
+        assert!(
+            text.contains("/* kept as written */")
+                && text.contains("gX   =   a;   /* x */")
+                && !perm::has_macros(&text),
+            "{text}"
+        );
+        assert!(
+            text.contains("gY = b;\n") && text.contains("gX = b + a;") && !text.contains("gX = b;"),
+            "{text}"
+        );
         let diff = unified(draft, &text, "recon/tbs/en/main/08000000.c");
         assert_eq!(apply_unified(draft, &diff), text);
         // And `patch` itself, where the system has it.
@@ -1431,8 +1933,18 @@ mod tests {
             assert_eq!(std::fs::read_to_string(&file).unwrap(), text);
         }
         // A change on a line the printer spells differently does not carry.
-        assert_eq!(transplant("int a;\nx  =  1 ;\n", "int a;\nx = 1;\n", "int a;\nx = 2;\n"), Some("int a;\nx = 2;\n".into()));
-        assert_eq!(transplant("int a; x = 1;\n", "int a;\nx = 1;\n", "int a;\nx = 2;\n"), None);
+        assert_eq!(
+            transplant(
+                "int a;\nx  =  1 ;\n",
+                "int a;\nx = 1;\n",
+                "int a;\nx = 2;\n"
+            ),
+            Some("int a;\nx = 2;\n".into())
+        );
+        assert_eq!(
+            transplant("int a; x = 1;\n", "int a;\nx = 1;\n", "int a;\nx = 2;\n"),
+            None
+        );
     }
 
     fn listing_of(work: &Path, source: &str) -> Vec<String> {
@@ -1456,23 +1968,24 @@ mod tests {
 
     #[test]
     fn scoring_reads_real_compiler_objects() {
-
         let work = tempfile::tempdir().unwrap();
         let text = "int F(int x) { return x + 2; }\n";
         let listing = listing_of(work.path(), text);
         let draft = work.path().join("draft/08000000.c");
         let mut problem = test_problem(&draft, text, listing, None);
-        problem.listing_rows = Some(score::disassemble(&work.path().join("reference/obj/08000000.o"), None).unwrap());
+        problem.listing_rows =
+            Some(score::disassemble(&work.path().join("reference/obj/08000000.o"), None).unwrap());
         let job = Job::new(&problem, &work.path().join("job")).unwrap();
         assert_eq!(problem.evaluate(&job, text).unwrap().weighted, 0);
-        let score = problem.evaluate(&job, "int F(int x) { return x + 3; }\n").unwrap();
+        let score = problem
+            .evaluate(&job, "int F(int x) { return x + 3; }\n")
+            .unwrap();
         assert_eq!((score.weighted, score.regalloc), (5, 1));
         assert!(score.differ > 0);
     }
 
     #[test]
     fn whole_tree_type_search_and_minimizer_reach_a_byte_load_on_both_routes() {
-
         let source = "extern int input; int F(void) { return input; }\n";
         for arm in [false, true] {
             let work = tempfile::tempdir().unwrap();
@@ -1481,22 +1994,54 @@ mod tests {
             problem.arm = arm;
             problem.symbol = Some("F".into());
             let job = Job::new(&problem, &work.path().join("job")).unwrap();
-            job.compile("extern unsigned char input; int F(void) { return input; }\n").unwrap();
+            job.compile("extern unsigned char input; int F(void) { return input; }\n")
+                .unwrap();
             problem.listing = crate::diff::disassemble(&job.object, Some("F")).unwrap();
             problem.listing_rows = Some(score::disassemble(&job.object, Some("F")).unwrap());
             let base_state = prepared(&problem, &job, "F");
             let base_text = problem.source(&base_state);
-            let base = Found { score: problem.evaluate(&job, &base_text).unwrap(), text: base_text, steps: vec![], expanded: base_state.expanded.clone(), job: 0, iteration: 0 };
-            assert!(base.score.differ > 0 && base.score.weighted > 0, "arm={arm}: {}\nsource: {}\nreference: {:?}\ncandidate: {:?}", base.score.summary(), base.text, problem.listing, crate::diff::disassemble(&job.object, Some("F")).unwrap());
-            let found = (0..80).find_map(|seed| {
-                let mut state = base_state.clone();
-                let kind = randomize::Kind::GlobalType;
-                if !randomize::replay(&mut state.full, "F", kind, &mut Rng::new(seed), None) { return None; }
-                let text = problem.source(&state);
-                let score = problem.evaluate(&job, &text).ok()?;
-                if score.differ != 0 { return None; }
-                Some(Found { score, text, steps: vec![Step { kind, rng: Rng::new(seed), region: None }], expanded: state.expanded, job: 0, iteration: seed })
-            }).expect("changing a global type reaches the byte load");
+            let base = Found {
+                score: problem.evaluate(&job, &base_text).unwrap(),
+                text: base_text,
+                steps: vec![],
+                expanded: base_state.expanded.clone(),
+                job: 0,
+                iteration: 0,
+            };
+            assert!(
+                base.score.differ > 0 && base.score.weighted > 0,
+                "arm={arm}: {}\nsource: {}\nreference: {:?}\ncandidate: {:?}",
+                base.score.summary(),
+                base.text,
+                problem.listing,
+                crate::diff::disassemble(&job.object, Some("F")).unwrap()
+            );
+            let found = (0..80)
+                .find_map(|seed| {
+                    let mut state = base_state.clone();
+                    let kind = randomize::Kind::GlobalType;
+                    if !randomize::replay(&mut state.full, "F", kind, &mut Rng::new(seed), None) {
+                        return None;
+                    }
+                    let text = problem.source(&state);
+                    let score = problem.evaluate(&job, &text).ok()?;
+                    if score.differ != 0 {
+                        return None;
+                    }
+                    Some(Found {
+                        score,
+                        text,
+                        steps: vec![Step {
+                            kind,
+                            rng: Rng::new(seed),
+                            region: None,
+                        }],
+                        expanded: state.expanded,
+                        job: 0,
+                        iteration: seed,
+                    })
+                })
+                .expect("changing a global type reaches the byte load");
             let minimized = minimize(&problem, &job, &found, &mut HashMap::new());
             assert_eq!(minimized.steps.len(), 1);
             let replay = problem.replay(&minimized.expanded, &minimized.steps);
@@ -1509,10 +2054,14 @@ mod tests {
 
     #[test]
     fn whole_tree_manual_expansions_survive_preprocessing_and_keep_separate_orders() {
-
         let source = "int F(int x) { PERM_PRETEND(typedef int T;) PERM_LINESWAP(x += 1;\nx *= 2;) PERM_RANDOMIZE(x += 3;) PERM_IGNORE(asm(\"\");) return x; }\n";
         let work = tempfile::tempdir().unwrap();
-        let problem = test_problem(&work.path().join("draft/08000000.c"), source, vec![], Some("F"));
+        let problem = test_problem(
+            &work.path().join("draft/08000000.c"),
+            source,
+            vec![],
+            Some("F"),
+        );
         let job = Job::new(&problem, &work.path().join("job")).unwrap();
         let mut first = perm::expand_seed(&problem.nodes, 0).unwrap();
         let mut second = perm::expand_seed(&problem.nodes, 1).unwrap();
@@ -1521,44 +2070,92 @@ mod tests {
         for expansion in [&mut first, &mut second] {
             prepare(&job, expansion, "F").unwrap();
             let tree = expansion.unit.as_deref().unwrap();
-            assert!(tree.print().contains("typedef int T;") && tree.print().contains("#pragma _permuter randomizer start"));
+            assert!(
+                tree.print().contains("typedef int T;")
+                    && tree.print().contains("#pragma _permuter randomizer start")
+            );
             let source = expansion.restore(&tree.print());
-            assert!(!source.contains("typedef int T;") && !source.contains("_permuter"), "{source}");
+            assert!(
+                !source.contains("typedef int T;") && !source.contains("_permuter"),
+                "{source}"
+            );
             assert!(source.contains("asm(\"\");"));
             job.compile(&source).unwrap();
-            let c::Node::FileAst { ext } = tree else { panic!() };
-            let c::Node::FuncDef { body, .. } = &ext[0] else { panic!() };
-            let c::Node::Compound { block_items } = body.as_ref() else { panic!() };
-            assert!(!block_items.iter().any(|n| matches!(n, c::Node::Compound { .. })), "line swap must not introduce a declaration scope");
+            let c::Node::FileAst { ext } = tree else {
+                panic!()
+            };
+            let c::Node::FuncDef { body, .. } = &ext[0] else {
+                panic!()
+            };
+            let c::Node::Compound { block_items } = body.as_ref() else {
+                panic!()
+            };
+            assert!(
+                !block_items
+                    .iter()
+                    .any(|n| matches!(n, c::Node::Compound { .. })),
+                "line swap must not introduce a declaration scope"
+            );
         }
         assert_ne!(first.unit, second.unit);
     }
 
     #[test]
     fn whole_tree_outputs_keep_includes_and_comments_when_only_the_function_changes() {
-
         let source = "#include \"types.h\"\n/* Keep this explanation. */\nint F(int a, int b) { return a + b; }\n";
         let work = tempfile::tempdir().unwrap();
-        let mut problem = test_problem(&work.path().join("draft/08000000.c"), source, vec![], Some("F"));
+        let mut problem = test_problem(
+            &work.path().join("draft/08000000.c"),
+            source,
+            vec![],
+            Some("F"),
+        );
         problem.symbol = Some("F".into());
         let job = Job::new(&problem, &work.path().join("job")).unwrap();
         let mut state = prepared(&problem, &job, "F");
         let kind = randomize::Kind::Commutative;
-        assert!(randomize::replay(&mut state.full, "F", kind, &mut Rng::new(0), None));
-        state.steps.push(Step { kind, rng: Rng::new(0), region: None });
+        assert!(randomize::replay(
+            &mut state.full,
+            "F",
+            kind,
+            &mut Rng::new(0),
+            None
+        ));
+        state.steps.push(Step {
+            kind,
+            rng: Rng::new(0),
+            region: None,
+        });
         let text = problem.source(&state);
-        let found = Found { score: problem.evaluate(&job, &text).unwrap(), text, steps: state.steps, expanded: state.expanded, job: 0, iteration: 1 };
+        let found = Found {
+            score: problem.evaluate(&job, &text).unwrap(),
+            text,
+            steps: state.steps,
+            expanded: state.expanded,
+            job: 0,
+            iteration: 1,
+        };
         let (output, _) = respell(&problem, &job, &found);
-        assert!(output.contains("#include \"types.h\"") && output.contains("/* Keep this explanation. */") && output.contains("b + a"), "{output}");
-        assert!(!output.contains("typedef"), "output should not inline all headers");
+        assert!(
+            output.contains("#include \"types.h\"")
+                && output.contains("/* Keep this explanation. */")
+                && output.contains("b + a"),
+            "{output}"
+        );
+        assert!(
+            !output.contains("typedef"),
+            "output should not inline all headers"
+        );
     }
 
     #[test]
     fn minimizing_drops_rewrites_the_score_does_not_need() {
-
         let work = tempfile::tempdir().unwrap();
         // The listing stores gY first; the draft stores gX first.
-        let listing = listing_of(work.path(), "int gX;\nint gY;\nvoid Set(int a, int b)\n{\n    gY = b;\n    gX = a;\n}\n");
+        let listing = listing_of(
+            work.path(),
+            "int gX;\nint gY;\nvoid Set(int a, int b)\n{\n    gY = b;\n    gX = a;\n}\n",
+        );
         let draft = work.path().join("draft/08000000.c");
         std::fs::create_dir_all(draft.parent().unwrap()).unwrap();
         let text = "int gX;\nint gY;\nvoid Set(int a, int b)\n{\n    gX = a;\n    gY = b;\n}\n";
@@ -1569,7 +2166,12 @@ mod tests {
         let base_state = prepared(&problem, &job, "Set");
         let base_text = problem.source(&base_state);
         let mut cache = HashMap::new();
-        assert!(scored(&problem, &job, &base_text, &mut cache).unwrap().weighted > 0);
+        assert!(
+            scored(&problem, &job, &base_text, &mut cache)
+                .unwrap()
+                .weighted
+                > 0
+        );
         // A long walk under a fixed seed that ends with gY stored first.
         let stores_y_first = |text: &str| matches!((text.find("gY = b"), text.find("gX = a")), (Some(y), Some(x)) if y < x);
         let (state, walked) = (1..500u64)
@@ -1586,13 +2188,31 @@ mod tests {
             })
             .expect("a walk that reorders the stores");
         let score = scored(&problem, &job, &walked, &mut cache).unwrap();
-        let found = Found { score, text: walked, steps: state.steps.clone(), expanded: state.expanded.clone(), job: 0, iteration: 1 };
+        let found = Found {
+            score,
+            text: walked,
+            steps: state.steps.clone(),
+            expanded: state.expanded.clone(),
+            job: 0,
+            iteration: 1,
+        };
         let minimized = minimize(&problem, &job, &found, &mut cache);
-        assert!(minimized.steps.len() < found.steps.len(), "{} of {} rewrites remain", minimized.steps.len(), found.steps.len());
+        assert!(
+            minimized.steps.len() < found.steps.len(),
+            "{} of {} rewrites remain",
+            minimized.steps.len(),
+            found.steps.len()
+        );
         assert!(minimized.score.distance() <= found.score.distance());
         // The minimized trail replays to its text, and that text scores as recorded.
-        assert_eq!(problem.source(&problem.replay(&minimized.expanded, &minimized.steps)), minimized.text);
-        assert_eq!(problem.evaluate(&job, &minimized.text).unwrap(), minimized.score);
+        assert_eq!(
+            problem.source(&problem.replay(&minimized.expanded, &minimized.steps)),
+            minimized.text
+        );
+        assert_eq!(
+            problem.evaluate(&job, &minimized.text).unwrap(),
+            minimized.score
+        );
         // Every remaining rewrite is needed: dropping any one raises the score.
         for index in 0..minimized.steps.len() {
             let mut fewer = minimized.steps.clone();
@@ -1600,35 +2220,57 @@ mod tests {
             let text = problem.source(&problem.replay(&minimized.expanded, &fewer));
             assert_ne!(text, minimized.text, "rewrite {index} changes nothing");
             if let Ok(score) = problem.evaluate(&job, &text) {
-                assert!(score.distance() > minimized.score.distance(), "rewrite {index} is not needed");
+                assert!(
+                    score.distance() > minimized.score.distance(),
+                    "rewrite {index} is not needed"
+                );
             }
         }
         // The same minimization twice is the same.
-        assert_eq!(minimize(&problem, &job, &found, &mut cache).text, minimized.text);
+        assert_eq!(
+            minimize(&problem, &job, &found, &mut cache).text,
+            minimized.text
+        );
     }
 
     #[test]
     fn failed_runs_leave_no_scratch() {
-
         let work = tempfile::tempdir().unwrap();
-        let listing = listing_of(work.path(), "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return a - b;\n}\n");
+        let listing = listing_of(
+            work.path(),
+            "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return a - b;\n}\n",
+        );
         let draft = work.path().join("draft/08000000.c");
         std::fs::create_dir_all(draft.parent().unwrap()).unwrap();
         let output = work.path().join("out/permute/08000000");
         let cases = [
-            ("int gX;\nint Sub(int a, int b)\n{\n    gX = a\n    return a - b;\n}\n", None),
-            ("int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return a - b;\n}\n", Some("Missing")),
+            (
+                "int gX;\nint Sub(int a, int b)\n{\n    gX = a\n    return a - b;\n}\n",
+                None,
+            ),
+            (
+                "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return a - b;\n}\n",
+                Some("Missing"),
+            ),
         ];
         for (text, function) in cases {
             std::fs::write(&draft, text).unwrap();
             let problem = test_problem(&draft, text, listing.clone(), function);
             assert!(execute(problem, &test_options(&draft), None, &output).is_err());
-            assert!(!output.exists(), "{:?}", std::fs::read_dir(&output).map(|d| d.flatten().map(|e| e.file_name()).collect::<Vec<_>>()));
+            assert!(
+                !output.exists(),
+                "{:?}",
+                std::fs::read_dir(&output)
+                    .map(|d| d.flatten().map(|e| e.file_name()).collect::<Vec<_>>())
+            );
         }
         // A killed run's scratch goes at the next run; a live one's stays.
         let mut child = std::process::Command::new("true").spawn().unwrap();
         child.wait().unwrap();
-        let (dead, live) = (output.join(format!("run-{}", child.id())), output.join(format!("run-{}", std::process::id())));
+        let (dead, live) = (
+            output.join(format!("run-{}", child.id())),
+            output.join(format!("run-{}", std::process::id())),
+        );
         for directory in [&dead, &live] {
             std::fs::create_dir_all(directory.join("job-00")).unwrap();
         }
@@ -1648,14 +2290,35 @@ mod tests {
         std::fs::write(&draft, text).unwrap();
         let problem = test_problem(&draft, text, listing, None);
         execute(problem, &test_options(&draft), None, &output).unwrap();
-        let names: Vec<String> = std::fs::read_dir(&output).unwrap().flatten().map(|entry| entry.file_name().to_string_lossy().into_owned()).collect();
-        assert!(names.iter().all(|name| name.starts_with("best-") || name.starts_with("output-")) && names.contains(&"best-1.diff".to_string()), "{names:?}");
-        assert_eq!(std::fs::read_to_string(output.join("output-0-1/score.txt")).unwrap(), "0\n");
-        assert!(std::fs::read_to_string(output.join("output-0-1/source.c")).unwrap().contains("return a - b;"));
+        let names: Vec<String> = std::fs::read_dir(&output)
+            .unwrap()
+            .flatten()
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            names
+                .iter()
+                .all(|name| name.starts_with("best-") || name.starts_with("output-"))
+                && names.contains(&"best-1.diff".to_string()),
+            "{names:?}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(output.join("output-0-1/score.txt")).unwrap(),
+            "0\n"
+        );
+        assert!(std::fs::read_to_string(output.join("output-0-1/source.c"))
+            .unwrap()
+            .contains("return a - b;"));
         // PERM choices only: the diff resolves the macro in the draft's spelling.
         let diff = std::fs::read_to_string(output.join("best-1.diff")).unwrap();
-        assert!(diff.contains("-    return PERM_ONEOF(b - a, a - b);\n+    return a - b;\n"), "{diff}");
-        assert_eq!(apply_unified(text, &diff), "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return a - b;\n}\n");
+        assert!(
+            diff.contains("-    return PERM_ONEOF(b - a, a - b);\n+    return a - b;\n"),
+            "{diff}"
+        );
+        assert_eq!(
+            apply_unified(text, &diff),
+            "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return a - b;\n}\n"
+        );
     }
 
     #[test]
@@ -1663,7 +2326,12 @@ mod tests {
         let source = "extern int gX;\n\nint Sum(int *p, int n)\n{\n    int i;\n    int total = 0;\n    for (i = 0; i < n; i++) {\n        total += p[i] << 2;\n    }\n    if (total > 3 && n != 0)\n        gX = total;\n    return total;\n}\n";
         let typedefs = Default::default();
         let first = locate(source, None, &typedefs).unwrap();
-        let printed = format!("{}{}{}", &source[..first.start], first.function.print().trim_end(), &source[first.end..]);
+        let printed = format!(
+            "{}{}{}",
+            &source[..first.start],
+            first.function.print().trim_end(),
+            &source[first.end..]
+        );
         let second = locate(&printed, None, &typedefs).unwrap();
         assert_eq!(first.function.print(), second.function.print());
         assert_eq!(second.function.print(), first.function.print());
@@ -1671,14 +2339,17 @@ mod tests {
 
     #[test]
     fn search_reaches_differ_zero_through_diffs_own_compile() {
-
         let work = tempfile::tempdir().unwrap();
         let target = decomp_target(Some("tbs-en")).unwrap();
         // The listing: one spelling, compiled as alchemy-devtools diff compiles drafts.
         let reference = work.path().join("reference/08000000.c");
         let object = work.path().join("reference/obj/08000000.o");
         std::fs::create_dir_all(object.parent().unwrap()).unwrap();
-        std::fs::write(&reference, "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return a - b;\n}\n").unwrap();
+        std::fs::write(
+            &reference,
+            "int gX;\nint Sub(int a, int b)\n{\n    gX = a;\n    return a - b;\n}\n",
+        )
+        .unwrap();
         for step in crate::diff::draft_steps(target, &reference, &object).unwrap() {
             crate::gba::process::run(&step, root()).unwrap();
         }
@@ -1697,10 +2368,35 @@ mod tests {
         // diff's own comparison of the same objects gives the same differ.
         let compiled = crate::diff::disassemble(&setup.object, None).unwrap();
         let (common, _) = crate::diff::compare(&problem.listing, &compiled);
-        assert_eq!(score.differ, problem.listing.len() + compiled.len() - 2 * common);
-        let base = Found { score, text: base_text, steps: Vec::new(), expanded: base_state.expanded.clone(), job: 0, iteration: 0 };
-        let options = Options { jobs: 2, iterations: Some(8), ..test_options(&draft) };
-        let found = search(&problem, &base_state, &base, false, &options, None, &work.path().join("run"), Instant::now(), None).unwrap();
+        assert_eq!(
+            score.differ,
+            problem.listing.len() + compiled.len() - 2 * common
+        );
+        let base = Found {
+            score,
+            text: base_text,
+            steps: Vec::new(),
+            expanded: base_state.expanded.clone(),
+            job: 0,
+            iteration: 0,
+        };
+        let options = Options {
+            jobs: 2,
+            iterations: Some(8),
+            ..test_options(&draft)
+        };
+        let found = search(
+            &problem,
+            &base_state,
+            &base,
+            false,
+            &options,
+            None,
+            &work.path().join("run"),
+            Instant::now(),
+            None,
+        )
+        .unwrap();
         assert_eq!((found[0].score.weighted, found[0].score.differ), (0, 0));
         assert!(found[0].text.contains("return a - b;") && !perm::has_macros(&found[0].text));
     }
@@ -1708,13 +2404,19 @@ mod tests {
     #[test]
     fn rewrites_count_kinds_and_name_perm_only_runs() {
         assert_eq!(rewrites(&[]), "PERM choices only");
-        let kinds = [randomize::Kind::Cast, randomize::Kind::Temporary, randomize::Kind::Temporary];
-        assert_eq!(rewrites(&kinds), "2x introduce or reuse a temporary, 1x cast an expression");
+        let kinds = [
+            randomize::Kind::Cast,
+            randomize::Kind::Temporary,
+            randomize::Kind::Temporary,
+        ];
+        assert_eq!(
+            rewrites(&kinds),
+            "2x introduce or reuse a temporary, 1x cast an expression"
+        );
     }
 
     #[test]
     fn tied_score_candidates_are_archived_and_output_filters_apply() {
-
         let work = tempfile::tempdir().unwrap();
         let listing = listing_of(work.path(), "int F(void) { return 3; }\n");
         let draft = work.path().join("08000000.c");
@@ -1725,13 +2427,28 @@ mod tests {
             items.extend(flags);
             let options = parse_options(&args(&items)).unwrap();
             let output = work.path().join(format!("output-{index}"));
-            execute(test_problem(&draft, source, listing.clone(), Some("F")), &options, None, &output).unwrap();
+            execute(
+                test_problem(&draft, source, listing.clone(), Some("F")),
+                &options,
+                None,
+                &output,
+            )
+            .unwrap();
             let archives: Vec<_> = if output.exists() {
-                std::fs::read_dir(&output).unwrap().flatten().filter(|entry| entry.file_name().to_string_lossy().starts_with("output-")).collect()
-            } else { vec![] };
+                std::fs::read_dir(&output)
+                    .unwrap()
+                    .flatten()
+                    .filter(|entry| entry.file_name().to_string_lossy().starts_with("output-"))
+                    .collect()
+            } else {
+                vec![]
+            };
             assert_eq!(archives.len(), expected, "case {index}");
             if expected != 0 {
-                assert_eq!(std::fs::read_to_string(archives[0].path().join("score.txt")).unwrap(), "5\n");
+                assert_eq!(
+                    std::fs::read_to_string(archives[0].path().join("score.txt")).unwrap(),
+                    "5\n"
+                );
                 let source = std::fs::read_to_string(archives[0].path().join("source.c")).unwrap();
                 assert!(source.contains("return 2;") && source.contains("extern int unused;"));
             }

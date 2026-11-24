@@ -109,8 +109,15 @@ impl States {
 
     pub fn get(&self, i: usize) -> Saved {
         let (k, ref d) = self.kept[i];
-        let state = if d.is_empty() { self.keyframes[k].clone() } else { undelta(&self.keyframes[k], d) };
-        Saved { state, track: self.tracks[i] }
+        let state = if d.is_empty() {
+            self.keyframes[k].clone()
+        } else {
+            undelta(&self.keyframes[k], d)
+        };
+        Saved {
+            state,
+            track: self.tracks[i],
+        }
     }
 
     /// The keys held through the frame after state `i` (Saved::keys).
@@ -131,7 +138,11 @@ fn delta(base: &[u8], new: &[u8]) -> Vec<u8> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < new.len() {
-        let same = new[i..].iter().zip(&base[i..]).take_while(|(a, b)| a == b).count();
+        let same = new[i..]
+            .iter()
+            .zip(&base[i..])
+            .take_while(|(a, b)| a == b)
+            .count();
         i += same;
         // A run that differs ends at 8 equal bytes in a row, so that a lone
         // equal byte does not cost a pair of lengths.
@@ -186,13 +197,41 @@ fn undelta(base: &[u8], d: &[u8]) -> Vec<u8> {
 /// left it, or the pinned view has changed what happened. No view is pinned
 /// from one side of a change made from outside the game (Field::cut) and
 /// drawn on the other.
-pub fn stitch(field: &mut Field, states: &States, frames: &[usize], area: [i32; 4]) -> Result<Vec<Image>, String> {
-    stitch_runs(&mut [Run { field, states, frames, wide: false }], area)
+pub fn stitch(
+    field: &mut Field,
+    states: &States,
+    frames: &[usize],
+    area: [i32; 4],
+) -> Result<Vec<Image>, String> {
+    stitch_runs(
+        &mut [Run {
+            field,
+            states,
+            frames,
+            wide: false,
+        }],
+        area,
+    )
 }
 
 /// stitch, keeping at least `keep_sky` rows of sky above the map's top.
-fn stitch_keeping(field: &mut Field, states: &States, frames: &[usize], area: [i32; 4], keep_sky: i32) -> Result<Vec<Image>, String> {
-    stitch_runs_keeping(&mut [Run { field, states, frames, wide: false }], area, keep_sky)
+fn stitch_keeping(
+    field: &mut Field,
+    states: &States,
+    frames: &[usize],
+    area: [i32; 4],
+    keep_sky: i32,
+) -> Result<Vec<Image>, String> {
+    stitch_runs_keeping(
+        &mut [Run {
+            field,
+            states,
+            frames,
+            wide: false,
+        }],
+        area,
+        keep_sky,
+    )
 }
 
 /// One run of the game drawn whole (stitch_runs): its field, the states it
@@ -214,7 +253,11 @@ pub fn stitch_runs(runs: &mut [Run], area: [i32; 4]) -> Result<Vec<Image>, Strin
 
 /// stitch_runs, keeping at least `keep_sky` rows of sky (at most ABOVE)
 /// above the map's top whether or not a sprite reaches them.
-fn stitch_runs_keeping(runs: &mut [Run], area: [i32; 4], keep_sky: i32) -> Result<Vec<Image>, String> {
+fn stitch_runs_keeping(
+    runs: &mut [Run],
+    area: [i32; 4],
+    keep_sky: i32,
+) -> Result<Vec<Image>, String> {
     let canvas = Canvas::new(area, MARGIN);
     let mut pictures = Vec::new();
     let mut highest = canvas.map_top;
@@ -228,7 +271,11 @@ fn stitch_runs_keeping(runs: &mut [Run], area: [i32; 4], keep_sky: i32) -> Resul
         highest = highest.min(h);
     }
     let w = canvas.w;
-    let cut = if highest < canvas.map_top { (highest - SKY_MARGIN).max(canvas.top) - canvas.top } else { ABOVE };
+    let cut = if highest < canvas.map_top {
+        (highest - SKY_MARGIN).max(canvas.top) - canvas.top
+    } else {
+        ABOVE
+    };
     let cut = cut.min(ABOVE - keep_sky.clamp(0, ABOVE)) as usize;
     for p in &mut pictures {
         p.pixels.drain(..cut * w);
@@ -239,7 +286,12 @@ fn stitch_runs_keeping(runs: &mut [Run], area: [i32; 4], keep_sky: i32) -> Resul
 
 /// stitch's frames with the whole sky over the map left on, and the highest
 /// row a sprite showed in there.
-fn stitch_uncut(field: &mut Field, states: &States, frames: &[usize], canvases: &[Canvas]) -> Result<(Vec<Image>, i32), String> {
+fn stitch_uncut(
+    field: &mut Field,
+    states: &States,
+    frames: &[usize],
+    canvases: &[Canvas],
+) -> Result<(Vec<Image>, i32), String> {
     let marks = marks(field, states);
     // The frames are shared out among threads, each drawing a run of them
     // on its own field (Field::recipe) from the same states: every view is
@@ -258,10 +310,18 @@ fn stitch_uncut(field: &mut Field, states: &States, frames: &[usize], canvases: 
                     .chunks(part)
                     .map(|run| {
                         let (recipe, marks) = (&recipe, &marks);
-                        scope.spawn(move || draw(&mut recipe.enter()?, states, run, canvases, marks))
+                        scope
+                            .spawn(move || draw(&mut recipe.enter()?, states, run, canvases, marks))
                     })
                     .collect();
-                workers.into_iter().map(|w| w.join().unwrap_or_else(|_| Err("a thread drawing frames whole failed".to_string()))).collect()
+                workers
+                    .into_iter()
+                    .map(|w| {
+                        w.join().unwrap_or_else(|_| {
+                            Err("a thread drawing frames whole failed".to_string())
+                        })
+                    })
+                    .collect()
             });
             let mut pictures = Vec::with_capacity(frames.len());
             let mut highest = canvases[0].map_top;
@@ -298,7 +358,11 @@ fn marks(field: &mut Field, states: &States) -> Vec<Mark> {
     (0..states.len())
         .map(|i| {
             field.load(&states.get(i));
-            (field.read32(frame_count), field.read8(pending) != 0, field.read32(seed))
+            (
+                field.read32(frame_count),
+                field.read8(pending) != 0,
+                field.read32(seed),
+            )
         })
         .collect()
 }
@@ -308,7 +372,10 @@ fn marks(field: &mut Field, states: &States) -> Vec<Mark> {
 /// (draw_frame pins its views from it).
 fn state_before(marks: &[Mark], t: usize) -> Result<usize, String> {
     let built = marks[t - 1].0;
-    (0..=t - LEAD).rev().find(|&k| marks[k].0 < built && marks[k].1).ok_or_else(|| format!("no state before frame {t} began"))
+    (0..=t - LEAD)
+        .rev()
+        .find(|&k| marks[k].0 < built && marks[k].1)
+        .ok_or_else(|| format!("no state before frame {t} began"))
 }
 
 /// The whole picture's area and the views it is drawn from.
@@ -330,20 +397,49 @@ impl Canvas {
     fn new(area: [i32; 4], margin: i32) -> Canvas {
         let [left, map_top, right, bottom] = area;
         let top = map_top - ABOVE;
-        let bounds = [(left - margin) << 16, (top - margin) << 16, (right + margin) << 16, (bottom + margin) << 16];
+        let bounds = [
+            (left - margin) << 16,
+            (top - margin) << 16,
+            (right + margin) << 16,
+            (bottom + margin) << 16,
+        ];
         // Views over the sky (their top above the map's) draw only the
         // sprites, over KEY; the rest draw the map. They overlap and reach
         // margin past the edges, so that the shake leaves no gap.
         let stride = |size: usize| size as i32 - 2 * margin;
-        let sky_rows = steps(top - margin, map_top + margin, HEIGHT as i32, stride(HEIGHT)).into_iter().map(|y| (y, true));
-        let map_rows = steps(map_top - margin, bottom + margin, HEIGHT as i32, stride(HEIGHT)).into_iter().map(|y| (y, false));
+        let sky_rows = steps(
+            top - margin,
+            map_top + margin,
+            HEIGHT as i32,
+            stride(HEIGHT),
+        )
+        .into_iter()
+        .map(|y| (y, true));
+        let map_rows = steps(
+            map_top - margin,
+            bottom + margin,
+            HEIGHT as i32,
+            stride(HEIGHT),
+        )
+        .into_iter()
+        .map(|y| (y, false));
         let mut views = Vec::new();
         for (y, over_sky) in sky_rows.chain(map_rows) {
             for x in steps(left - margin, right + margin, WIDTH as i32, stride(WIDTH)) {
                 views.push(((x, y), over_sky));
             }
         }
-        Canvas { left, top, map_top, right, bottom, w: (right - left) as usize, h: (bottom - top) as usize, bounds, views }
+        Canvas {
+            left,
+            top,
+            map_top,
+            right,
+            bottom,
+            w: (right - left) as usize,
+            h: (bottom - top) as usize,
+            bounds,
+            views,
+        }
     }
 }
 
@@ -351,7 +447,13 @@ impl Canvas {
 /// map uncut, each from the views of the first of `canvases` that leaves no
 /// gap in it: the pictures, and the highest row a sprite showed in above the
 /// map (the map's top for none).
-fn draw(field: &mut Field, states: &States, frames: &[usize], canvases: &[Canvas], marks: &[Mark]) -> Result<(Vec<Image>, i32), String> {
+fn draw(
+    field: &mut Field,
+    states: &States,
+    frames: &[usize],
+    canvases: &[Canvas],
+    marks: &[Mark],
+) -> Result<(Vec<Image>, i32), String> {
     let mut pictures = Vec::new();
     let mut highest = canvases[0].map_top;
     for &t in frames {
@@ -370,24 +472,41 @@ fn draw(field: &mut Field, states: &States, frames: &[usize], canvases: &[Canvas
 /// Frame `t` drawn whole from the views of `c` (draw), none when they leave
 /// a gap in it; `highest` is lowered to the highest row a sprite shows in
 /// above the map.
-fn draw_frame(field: &mut Field, states: &States, t: usize, c: &Canvas, marks: &[Mark], highest: &mut i32) -> Result<Option<Image>, String> {
+fn draw_frame(
+    field: &mut Field,
+    states: &States,
+    t: usize,
+    c: &Canvas,
+    marks: &[Mark],
+    highest: &mut i32,
+) -> Result<Option<Image>, String> {
     let s = field.symbols();
-    let (seed, frame_count, pending, bg_scroll) = (s.random_seed, s.frame_count, s.render_pending, s.bg_scroll);
-    let (left, top, map_top, right, bottom, w, h) = (c.left, c.top, c.map_top, c.right, c.bottom, c.w, c.h);
+    let (seed, frame_count, pending, bg_scroll) =
+        (s.random_seed, s.frame_count, s.render_pending, s.bg_scroll);
+    let (left, top, map_top, right, bottom, w, h) =
+        (c.left, c.top, c.map_top, c.right, c.bottom, c.w, c.h);
     // The picture's frame; the seed as the game finishes it, at t - 1
     // or later when the game itself took longer over it; and the last
     // state, LEAD frames before t or earlier, at which the game had
     // finished the frame before and not begun this one.
     let built = marks[t - 1].0;
-    let finished = (t - 1..states.len()).take_while(|&k| marks[k].0 == built).find(|&k| marks[k].1);
+    let finished = (t - 1..states.len())
+        .take_while(|&k| marks[k].0 == built)
+        .find(|&k| marks[k].1);
     let built_seed = finished.map(|k| marks[k].2);
     let from = state_before(marks, t)?;
     // The frames the game finished from there to this one's picture: a
     // view that makes the game slower finishes the same frame a blank or
     // more later, when the frame counter has passed `built`.
-    let needed = finished.map(|k| (from + 1..=k).filter(|&i| completes(marks[i - 1], marks[i])).count());
+    let needed = finished.map(|k| {
+        (from + 1..=k)
+            .filter(|&i| completes(marks[i - 1], marks[i]))
+            .count()
+    });
     if states.cuts(from) != states.cuts(t - 1) {
-        return Err(format!("frame {t}'s views would be pinned across a change made from outside the game"));
+        return Err(format!(
+            "frame {t}'s views would be pinned across a change made from outside the game"
+        ));
     }
     let start = states.get(from);
     let mut canvas = vec![u32::MAX; w * h];
@@ -413,11 +532,15 @@ fn draw_frame(field: &mut Field, states: &States, t: usize, c: &Canvas, marks: &
                 break;
             }
             if ran > t - from + LATE {
-                return Err(format!("the view at {view:?} never finished frame {t}'s picture"));
+                return Err(format!(
+                    "the view at {view:?} never finished frame {t}'s picture"
+                ));
             }
         }
         if built_seed.is_some_and(|s| s != field.read32(seed)) {
-            return Err(format!("the view at {view:?} changed the game's random draws before frame {t}"));
+            return Err(format!(
+                "the view at {view:?} changed the game's random draws before frame {t}"
+            ));
         }
         // The view the picture was built at (with the shake), before the
         // game moves on to its next frame while the picture is drawn. The
@@ -426,7 +549,9 @@ fn draw_frame(field: &mut Field, states: &States, t: usize, c: &Canvas, marks: &
         // its view would jump back to the camera and draw the row and column
         // that come into view there into the picture.
         let at = field.view();
-        field.until_line(LAST_BLANK_LINE).map_err(|e| format!("frame {t}, the view at {view:?}: {e}"))?;
+        field
+            .until_line(LAST_BLANK_LINE)
+            .map_err(|e| format!("frame {t}, the view at {view:?}: {e}"))?;
         hide_front_sprites(field);
         hide_parked_sprites(field);
         let hidden = if over_sky { DISPCNT_BGS } else { DISPCNT_BG0 };
@@ -439,7 +564,9 @@ fn draw_frame(field: &mut Field, states: &States, t: usize, c: &Canvas, marks: &
         field.clear_backdrop();
         field.unpin_view();
         if field.read16(DISPCNT) & hidden != 0 {
-            return Err(format!("the game showed the layers again while the view at {view:?} drew frame {t}"));
+            return Err(format!(
+                "the game showed the layers again while the view at {view:?} drew frame {t}"
+            ));
         }
         let picture = field.picture();
         // A picture's first lines and columns can show what the map
@@ -476,7 +603,12 @@ fn draw_frame(field: &mut Field, states: &States, t: usize, c: &Canvas, marks: &
     for &c in &canvas[ABOVE as usize * w..(ABOVE + SKY_ROWS) as usize * w] {
         *sky.entry(c).or_default() += 1;
     }
-    let fill = sky.into_iter().filter(|&(c, _)| c != u32::MAX).max_by_key(|&(_, count)| count).map(|(c, _)| c).ok_or("the map's top rows were in no view")?;
+    let fill = sky
+        .into_iter()
+        .filter(|&(c, _)| c != u32::MAX)
+        .max_by_key(|&(_, count)| count)
+        .map(|(c, _)| c)
+        .ok_or("the map's top rows were in no view")?;
     for c in canvas.iter_mut().take(ABOVE as usize * w) {
         if *c == u32::MAX {
             *c = fill;
@@ -485,7 +617,11 @@ fn draw_frame(field: &mut Field, states: &States, t: usize, c: &Canvas, marks: &
     if canvas.contains(&u32::MAX) {
         return Ok(None);
     }
-    Ok(Some(Image { width: w, height: h, pixels: canvas }))
+    Ok(Some(Image {
+        width: w,
+        height: h,
+        pixels: canvas,
+    }))
 }
 
 /// How a recorded event's whole frames are cut and dressed (render event
@@ -539,12 +675,23 @@ impl Cut {
 
     /// A --whole-frame value: L,T,W,H.
     pub fn parse_frame(value: &str) -> Result<[i32; 4], String> {
-        let parts: Vec<i32> = value.split(',').map(|p| p.trim().parse::<i32>().map_err(|e| format!("--whole-frame {value:?}: {e}"))).collect::<Result<_, _>>()?;
+        let parts: Vec<i32> = value
+            .split(',')
+            .map(|p| {
+                p.trim()
+                    .parse::<i32>()
+                    .map_err(|e| format!("--whole-frame {value:?}: {e}"))
+            })
+            .collect::<Result<_, _>>()?;
         let [l, t, w, h] = parts[..] else {
-            return Err(format!("--whole-frame {value:?}: four numbers are needed, left,top,width,height"));
+            return Err(format!(
+                "--whole-frame {value:?}: four numbers are needed, left,top,width,height"
+            ));
         };
         if w <= 0 || h <= 0 {
-            return Err(format!("--whole-frame {value:?}: the width and height must be positive"));
+            return Err(format!(
+                "--whole-frame {value:?}: the width and height must be positive"
+            ));
         }
         Ok([l, t, w, h])
     }
@@ -555,12 +702,19 @@ impl Cut {
 /// (Field::cut), until the event leaves the scene or a battle begins, over
 /// the room's camera box (Field::room), cut and dressed as `cut` says, from
 /// the screens `screen` the run recorded (one a state).
-pub fn event(field: &mut Field, states: &States, screen: &[Vec<u16>], cut: Cut) -> Result<Vec<Image>, String> {
+pub fn event(
+    field: &mut Field,
+    states: &States,
+    screen: &[Vec<u16>],
+    cut: Cut,
+) -> Result<Vec<Image>, String> {
     if states.is_empty() {
         return Err("no state was kept".to_string());
     }
     let last = states.len() - 1;
-    let first = (0..=last).find(|&i| states.cuts(i) == states.cuts(last)).unwrap_or(last);
+    let first = (0..=last)
+        .find(|&i| states.cuts(i) == states.cuts(last))
+        .unwrap_or(last);
     field.load(&states.get(first));
     let scene = field.scene();
     let area = field.room();
@@ -593,13 +747,18 @@ pub fn event(field: &mut Field, states: &States, screen: &[Vec<u16>], cut: Cut) 
             let part = [left + l, top + t.max(0), left + l + w, top + t + h];
             let pictures = stitch_keeping(field, states, &frames, part, keep_sky)?;
             let sky = pictures[0].height as i32 - (part[3] - part[1]);
-            pictures.into_iter().map(|p| cut_frame(p, [0, -keep_sky, w, h], sky)).collect::<Result<_, _>>()?
+            pictures
+                .into_iter()
+                .map(|p| cut_frame(p, [0, -keep_sky, w, h], sky))
+                .collect::<Result<_, _>>()?
         }
     };
     if let Some(place) = cut.window {
         let marks = marks(field, states);
         for (picture, &t) in pictures.iter_mut().zip(&frames) {
-            let shown = screen.get(t).ok_or_else(|| format!("no screen was recorded for frame {t}"))?;
+            let shown = screen
+                .get(t)
+                .ok_or_else(|| format!("no screen was recorded for frame {t}"))?;
             let bare = bare_screen(field, states, t, &marks)?;
             dress(picture, shown, &bare, place);
         }
@@ -616,15 +775,31 @@ fn cut_frame(picture: Image, frame: [i32; 4], sky: i32) -> Result<Image, String>
     if l < 0 || top < 0 || right > picture.width as i32 || bottom > picture.height as i32 {
         return Err(format!("the frame {l},{t},{w},{h} reaches outside the whole picture, which spans 0 to {} across and {} to {} down", picture.width, -sky, picture.height as i32 - sky));
     }
-    let pixels = (top..bottom).flat_map(|y| picture.pixels[y as usize * picture.width + l as usize..y as usize * picture.width + right as usize].iter().copied()).collect();
-    Ok(Image { width: w as usize, height: h as usize, pixels })
+    let pixels = (top..bottom)
+        .flat_map(|y| {
+            picture.pixels[y as usize * picture.width + l as usize
+                ..y as usize * picture.width + right as usize]
+                .iter()
+                .copied()
+        })
+        .collect();
+    Ok(Image {
+        width: w as usize,
+        height: h as usize,
+        pixels,
+    })
 }
 
 /// The screen the GBA draws on frame `t` with the message window (BG0) and
 /// the sprites in front of everything left out: the game run again from
 /// the last state before the frame began, at its own camera, so it draws
 /// what the run recorded for the frame but for those.
-fn bare_screen(field: &mut Field, states: &States, t: usize, marks: &[Mark]) -> Result<Vec<u16>, String> {
+fn bare_screen(
+    field: &mut Field,
+    states: &States,
+    t: usize,
+    marks: &[Mark],
+) -> Result<Vec<u16>, String> {
     let s = field.symbols();
     let (frame_count, pending) = (s.frame_count, s.render_pending);
     let built = marks[t - 1].0;
@@ -644,7 +819,9 @@ fn bare_screen(field: &mut Field, states: &States, t: usize, marks: &[Mark]) -> 
             return Err(format!("the game never finished frame {t}'s picture again"));
         }
     }
-    field.until_line(LAST_BLANK_LINE).map_err(|e| format!("frame {t}: {e}"))?;
+    field
+        .until_line(LAST_BLANK_LINE)
+        .map_err(|e| format!("frame {t}: {e}"))?;
     hide_front_sprites(field);
     field.io_write16(DISPCNT, field.read16(DISPCNT) & !DISPCNT_BG0);
     field.frames(1)?;
@@ -656,9 +833,19 @@ fn bare_screen(field: &mut Field, states: &States, t: usize, marks: &[Mark]) -> 
 /// they differ, their box placed as `place` says (Place).
 fn dress(picture: &mut Image, shown: &[u16], bare: &[u16], place: Place) {
     let differs = |x: usize, y: usize| shown[y * WIDTH + x] != bare[y * WIDTH + x];
-    let rows: Vec<i32> = (0..HEIGHT).filter(|&y| (0..WIDTH).any(|x| differs(x, y))).map(|y| y as i32).collect();
-    let columns: Vec<i32> = (0..WIDTH).filter(|&x| (0..HEIGHT).any(|y| differs(x, y))).map(|x| x as i32).collect();
-    let (Some(&y0), Some(&y1), Some(&x0), Some(&x1)) = (rows.first(), rows.last(), columns.first(), columns.last()) else { return };
+    let rows: Vec<i32> = (0..HEIGHT)
+        .filter(|&y| (0..WIDTH).any(|x| differs(x, y)))
+        .map(|y| y as i32)
+        .collect();
+    let columns: Vec<i32> = (0..WIDTH)
+        .filter(|&x| (0..HEIGHT).any(|y| differs(x, y)))
+        .map(|x| x as i32)
+        .collect();
+    let (Some(&y0), Some(&y1), Some(&x0), Some(&x1)) =
+        (rows.first(), rows.last(), columns.first(), columns.last())
+    else {
+        return;
+    };
     let (w, h) = (picture.width as i32, picture.height as i32);
     // The box stands as far from the picture's edges as it stands from the
     // screen's nearest edge, above or below it.
@@ -668,7 +855,11 @@ fn dress(picture: &mut Image, shown: &[u16], bare: &[u16], place: Place) {
         Across::Centre => (w - (x1 - x0 + 1)) / 2 - x0,
         Across::Right => w - gap - 1 - x1,
     };
-    let oy = if place.bottom { h - gap - 1 - y1 } else { gap - y0 };
+    let oy = if place.bottom {
+        h - gap - 1 - y1
+    } else {
+        gap - y0
+    };
     for y in 0..HEIGHT {
         for x in 0..WIDTH {
             let k = y * WIDTH + x;
@@ -696,28 +887,50 @@ fn dress(picture: &mut Image, shown: &[u16], bare: &[u16], place: Place) {
 /// note of its frames.
 pub fn write_gif(path: &Path, pictures: &[Image]) -> Result<(u64, String), String> {
     if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+        std::fs::create_dir_all(dir)
+            .map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
     }
     let first = pictures.first().ok_or("no frames")?;
     let w = first.width;
-    animation::check_black_clearance(&pictures.iter().map(|p| animation::is_black(&p.pixels)).collect::<Vec<_>>(), 2)?;
+    animation::check_black_clearance(
+        &pictures
+            .iter()
+            .map(|p| animation::is_black(&p.pixels))
+            .collect::<Vec<_>>(),
+        2,
+    )?;
     // animation::write shows every second frame it is given: each
     // picture, then one it passes over.
     let one_palette = |pictures: &[Image]| {
-        let frames: Vec<Vec<u32>> = pictures.iter().flat_map(|p| [p.pixels.clone(), Vec::new()]).collect();
+        let frames: Vec<Vec<u32>> = pictures
+            .iter()
+            .flat_map(|p| [p.pixels.clone(), Vec::new()])
+            .collect();
         animation::write(path, &frames, w)
     };
-    let all: HashSet<u32> = pictures.iter().flat_map(|p| p.pixels.iter().copied()).collect();
+    let all: HashSet<u32> = pictures
+        .iter()
+        .flat_map(|p| p.pixels.iter().copied())
+        .collect();
     if all.len() <= GIF_COLOURS {
         let written = one_palette(pictures)?;
-        return Ok((written.bytes, format!("{} frames, {} colours", written.frames, written.colours)));
+        return Ok((
+            written.bytes,
+            format!("{} frames, {} colours", written.frames, written.colours),
+        ));
     }
     if let Some(written) = write_exact(path, pictures)? {
         return Ok(written);
     }
     let cut = quantize(pictures, GIF_COLOURS);
     let written = one_palette(&cut)?;
-    Ok((written.bytes, format!("{} frames, cut to {} colours", written.frames, written.colours)))
+    Ok((
+        written.bytes,
+        format!(
+            "{} frames, cut to {} colours",
+            written.frames, written.colours
+        ),
+    ))
 }
 
 /// The pictures with their colours cut to `n` by median cut: the colours
@@ -736,7 +949,16 @@ fn quantize(pictures: &[Image], n: usize) -> Vec<Image> {
             .iter()
             .enumerate()
             .filter(|(_, b)| b.len() > 1)
-            .flat_map(|(i, b)| (0..3).map(move |k| (i, k, b.iter().map(|&c| channel(c, k)).max().unwrap_or(0) - b.iter().map(|&c| channel(c, k)).min().unwrap_or(0))))
+            .flat_map(|(i, b)| {
+                (0..3).map(move |k| {
+                    (
+                        i,
+                        k,
+                        b.iter().map(|&c| channel(c, k)).max().unwrap_or(0)
+                            - b.iter().map(|&c| channel(c, k)).min().unwrap_or(0),
+                    )
+                })
+            })
             .max_by_key(|&(_, _, range)| range);
         let Some((i, k, _)) = widest else { break };
         let mut b = std::mem::take(&mut boxes[i]);
@@ -758,13 +980,26 @@ fn quantize(pictures: &[Image], n: usize) -> Vec<Image> {
     let mut palette: HashMap<u32, u32> = HashMap::new();
     for b in &boxes {
         let total: usize = b.iter().map(|c| weights[c]).sum::<usize>().max(1);
-        let mean = |k: usize| (b.iter().map(|&c| channel(c, k) * weights[&c]).sum::<usize>() + total / 2) / total;
+        let mean = |k: usize| {
+            (b.iter()
+                .map(|&c| channel(c, k) * weights[&c])
+                .sum::<usize>()
+                + total / 2)
+                / total
+        };
         let colour = (mean(0) << 16 | mean(1) << 8 | mean(2)) as u32;
         for &c in b {
             palette.insert(c, colour);
         }
     }
-    pictures.iter().map(|p| Image { width: p.width, height: p.height, pixels: p.pixels.iter().map(|c| palette[c]).collect() }).collect()
+    pictures
+        .iter()
+        .map(|p| Image {
+            width: p.width,
+            height: p.height,
+            pixels: p.pixels.iter().map(|c| palette[c]).collect(),
+        })
+        .collect()
 }
 
 /// write_gif's frames each with a palette of the colours in the rectangle
@@ -774,8 +1009,10 @@ fn write_exact(path: &Path, pictures: &[Image]) -> Result<Option<(u64, String)>,
     let first = pictures.first().ok_or("no frames")?;
     let (w, h) = (first.width, first.height);
     let error = |e: gif::EncodingError| format!("{}: {e}", path.display());
-    let out = std::fs::File::create(path).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
-    let mut encoder = gif::Encoder::new(std::io::BufWriter::new(out), w as u16, h as u16, &[]).map_err(error)?;
+    let out =
+        std::fs::File::create(path).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+    let mut encoder =
+        gif::Encoder::new(std::io::BufWriter::new(out), w as u16, h as u16, &[]).map_err(error)?;
     encoder.set_repeat(gif::Repeat::Infinite).map_err(error)?;
     // Frame i starts at i * 100 / 30 hundredths of a second, rounded, as
     // animation.rs times its frames; a frame the same as the last
@@ -792,7 +1029,10 @@ fn write_exact(path: &Path, pictures: &[Image]) -> Result<Option<(u64, String)>,
         let Some((x, y, rw, rh)) = rect else { continue };
         let keep = |k: usize| shown.is_none_or(|last| last.pixels[k] != picture.pixels[k]);
         let pixels = || (y..y + rh).flat_map(|row| row * w + x..row * w + x + rw);
-        let mut colours: Vec<u32> = pixels().filter(|&k| keep(k)).map(|k| picture.pixels[k]).collect();
+        let mut colours: Vec<u32> = pixels()
+            .filter(|&k| keep(k))
+            .map(|k| picture.pixels[k])
+            .collect();
         colours.sort_unstable();
         colours.dedup();
         if colours.len() > GIF_COLOURS {
@@ -801,8 +1041,19 @@ fn write_exact(path: &Path, pictures: &[Image]) -> Result<Option<(u64, String)>,
         // The index after the colours is the transparent one; the
         // palette is padded to a power of two.
         let transparent = colours.len() as u8;
-        let buffer: Vec<u8> = pixels().map(|k| if keep(k) { colours.binary_search(&picture.pixels[k]).unwrap_or(0) as u8 } else { transparent }).collect();
-        let mut palette: Vec<u8> = colours.iter().flat_map(|&c| [(c >> 16) as u8, (c >> 8) as u8, c as u8]).collect();
+        let buffer: Vec<u8> = pixels()
+            .map(|k| {
+                if keep(k) {
+                    colours.binary_search(&picture.pixels[k]).unwrap_or(0) as u8
+                } else {
+                    transparent
+                }
+            })
+            .collect();
+        let mut palette: Vec<u8> = colours
+            .iter()
+            .flat_map(|&c| [(c >> 16) as u8, (c >> 8) as u8, c as u8])
+            .collect();
         palette.resize(3 * (colours.len() + 1).next_power_of_two().max(2), 0);
         let frame = gif::Frame {
             left: x as u16,
@@ -829,7 +1080,10 @@ fn write_exact(path: &Path, pictures: &[Image]) -> Result<Option<(u64, String)>,
     }
     encoder.into_inner().map_err(error)?;
     let bytes = std::fs::metadata(path).map_err(|e| e.to_string())?.len();
-    Ok(Some((bytes, format!("{} frames, {stored} stored", pictures.len()))))
+    Ok(Some((
+        bytes,
+        format!("{} frames, {stored} stored", pictures.len()),
+    )))
 }
 
 /// The rectangle (x, y, width, height) where two pictures `w` wide differ.
@@ -913,9 +1167,27 @@ mod tests {
     /// The window's place is an edge, alone or with a corner.
     #[test]
     fn a_place_is_parsed() {
-        assert_eq!(Cut::parse_place("top"), Ok(Place { bottom: false, across: Across::Centre }));
-        assert_eq!(Cut::parse_place("bottom-right"), Ok(Place { bottom: true, across: Across::Right }));
-        assert_eq!(Cut::parse_place("top-left"), Ok(Place { bottom: false, across: Across::Left }));
+        assert_eq!(
+            Cut::parse_place("top"),
+            Ok(Place {
+                bottom: false,
+                across: Across::Centre
+            })
+        );
+        assert_eq!(
+            Cut::parse_place("bottom-right"),
+            Ok(Place {
+                bottom: true,
+                across: Across::Right
+            })
+        );
+        assert_eq!(
+            Cut::parse_place("top-left"),
+            Ok(Place {
+                bottom: false,
+                across: Across::Left
+            })
+        );
         assert!(Cut::parse_place("left").is_err());
         assert!(Cut::parse_place("top-middle").is_err());
     }
@@ -925,10 +1197,24 @@ mod tests {
     #[test]
     fn colours_are_cut_to_the_palette() {
         let pixels: Vec<u32> = (0..1000u32).map(|i| i * 0x010203 % 0x100_0000).collect();
-        let cut = quantize(&[Image { width: 100, height: 10, pixels: pixels.clone() }], 16);
+        let cut = quantize(
+            &[Image {
+                width: 100,
+                height: 10,
+                pixels: pixels.clone(),
+            }],
+            16,
+        );
         let colours: std::collections::HashSet<u32> = cut[0].pixels.iter().copied().collect();
         assert!(colours.len() <= 16 && colours.len() > 1);
-        let kept = quantize(&[Image { width: 2, height: 1, pixels: vec![0x102030, 0xfffefd] }], 16);
+        let kept = quantize(
+            &[Image {
+                width: 2,
+                height: 1,
+                pixels: vec![0x102030, 0xfffefd],
+            }],
+            16,
+        );
         assert_eq!(kept[0].pixels, vec![0x102030, 0xfffefd]);
     }
 
@@ -945,9 +1231,16 @@ mod tests {
     /// from a negative top, and refused where it leaves the picture.
     #[test]
     fn a_frame_is_cut_from_the_room() {
-        let picture = || Image { width: 4, height: 5, pixels: (0..20).collect() };
+        let picture = || Image {
+            width: 4,
+            height: 5,
+            pixels: (0..20).collect(),
+        };
         let cut = cut_frame(picture(), [1, 0, 2, 2], 2).unwrap();
-        assert_eq!((cut.width, cut.height, cut.pixels), (2, 2, vec![9, 10, 13, 14]));
+        assert_eq!(
+            (cut.width, cut.height, cut.pixels),
+            (2, 2, vec![9, 10, 13, 14])
+        );
         let sky = cut_frame(picture(), [0, -2, 4, 1], 2).unwrap();
         assert_eq!(sky.pixels, vec![0, 1, 2, 3]);
         assert!(cut_frame(picture(), [0, -3, 4, 1], 2).is_err());
@@ -973,10 +1266,11 @@ mod tests {
         for i in [0, 1, 5, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 2000, 4095] {
             new[i] ^= 0x5a;
         }
-        new[100..400].iter_mut().for_each(|b| *b = b.wrapping_add(1));
+        new[100..400]
+            .iter_mut()
+            .for_each(|b| *b = b.wrapping_add(1));
         assert_eq!(undelta(&base, &delta(&base, &new)), new);
         assert_eq!(undelta(&base, &delta(&base, &base)), base);
         assert!(delta(&base, &base).len() <= 8);
     }
 }
-

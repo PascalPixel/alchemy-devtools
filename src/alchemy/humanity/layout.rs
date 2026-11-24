@@ -31,23 +31,36 @@ fn stem(name: &str) -> &str {
 /// `jupiter_lighthouse_room_5`, `unnamed_28`, `set_03`, not `decompress_4bpp`
 /// or `mul_q16`.
 pub fn named_by_number(name: &str) -> bool {
-    stem(name).split('_').any(|segment| segment.bytes().any(|b| b.is_ascii_digit()) && !convention().is_match(segment))
+    stem(name).split('_').any(|segment| {
+        segment.bytes().any(|b| b.is_ascii_digit()) && !convention().is_match(segment)
+    })
 }
 
 /// A frame of one set: a picture `NAME_NN.png` beside `NAME_00.png`, which the
 /// build joins into `NAME.bitmaps` (the Makefile's `PICTURE_RUN`). Its number
 /// is its place in the animation.
 fn is_frame(path: &str, tracked: &HashSet<&str>) -> bool {
-    let Some(base) = path.strip_suffix(".png") else { return false };
-    let Some((name, number)) = base.rsplit_once('_') else { return false };
-    number.len() == 2 && number.bytes().all(|b| b.is_ascii_digit()) && tracked.contains(format!("{name}_00.png").as_str())
+    let Some(base) = path.strip_suffix(".png") else {
+        return false;
+    };
+    let Some((name, number)) = base.rsplit_once('_') else {
+        return false;
+    };
+    number.len() == 2
+        && number.bytes().all(|b| b.is_ascii_digit())
+        && tracked.contains(format!("{name}_00.png").as_str())
 }
 
 /// Whether an `its number` row names the thing a file or folder is named
 /// for: `status_grim_reaper_1.png` is `SPRITE_STATUS_GRIM_REAPER_1`'s
 /// picture, `test_3` the debug area `SceneId_Test3`.
 fn by_row(name: &str, rows: &[String]) -> bool {
-    let flat = |text: &str| text.chars().filter(|c| *c != '_').collect::<String>().to_ascii_lowercase();
+    let flat = |text: &str| {
+        text.chars()
+            .filter(|c| *c != '_')
+            .collect::<String>()
+            .to_ascii_lowercase()
+    };
     let name = flat(stem(name));
     rows.iter().any(|row| flat(row).ends_with(&name))
 }
@@ -85,17 +98,25 @@ fn without_comments(text: &str) -> String {
 /// and lines it is written on.
 pub fn numbered_symbols(texts: &[(String, String)]) -> HashMap<String, Vec<(usize, usize)>> {
     static IDENT: OnceLock<Regex> = OnceLock::new();
-    let ident = IDENT.get_or_init(|| Regex::new(r"[A-Za-z_][A-Za-z0-9_]*[0-9][A-Za-z0-9_]*").unwrap());
+    let ident =
+        IDENT.get_or_init(|| Regex::new(r"[A-Za-z_][A-Za-z0-9_]*[0-9][A-Za-z0-9_]*").unwrap());
     let mut symbols: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
     for (file, (path, text)) in texts.iter().enumerate() {
-        let text = if path.ends_with(".c") || path.ends_with(".h") { without_comments(text) } else { text.clone() };
+        let text = if path.ends_with(".c") || path.ends_with(".h") {
+            without_comments(text)
+        } else {
+            text.clone()
+        };
         for (line, content) in text.lines().enumerate() {
             for found in ident.find_iter(content) {
                 let before = content[..found.start()].chars().next_back();
                 if before.is_some_and(|c| c.is_ascii_alphanumeric() || c == '_') {
                     continue;
                 }
-                symbols.entry(found.as_str().to_string()).or_default().push((file, line));
+                symbols
+                    .entry(found.as_str().to_string())
+                    .or_default()
+                    .push((file, line));
             }
         }
     }
@@ -110,10 +131,18 @@ pub fn numbered_symbols(texts: &[(String, String)]) -> HashMap<String, Vec<(usiz
 /// with no symbol (a sprite kept by its row's number) cannot be shown
 /// unused this way, and stays.
 fn unused(name: &str, symbols: &HashMap<String, Vec<(usize, usize)>>) -> bool {
-    let mut places: Vec<(usize, usize)> = symbols.iter().filter(|(symbol, _)| writes(symbol, name)).flat_map(|(_, at)| at.iter().copied()).collect();
+    let mut places: Vec<(usize, usize)> = symbols
+        .iter()
+        .filter(|(symbol, _)| writes(symbol, name))
+        .flat_map(|(_, at)| at.iter().copied())
+        .collect();
     places.sort_unstable();
-    let Some(&(file, first)) = places.first() else { return false };
-    places.iter().all(|&(other, line)| other == file && line <= first + 1)
+    let Some(&(file, first)) = places.first() else {
+        return false;
+    };
+    places
+        .iter()
+        .all(|&(other, line)| other == file && line <= first + 1)
 }
 
 /// What the game's text and songs show of the samples and maps it uses
@@ -193,7 +222,10 @@ pub fn midi_programs(bytes: &[u8]) -> Option<(BTreeSet<String>, BTreeSet<u8>)> {
             i += if matches!(kind, 0xc0 | 0xd0) { 1 } else { 2 };
         }
     }
-    banks.extend(bank.find_iter(text.as_deref().unwrap_or("")).map(|found| found.as_str().to_string()));
+    banks.extend(
+        bank.find_iter(text.as_deref().unwrap_or(""))
+            .map(|found| found.as_str().to_string()),
+    );
     Some((banks, programs))
 }
 
@@ -214,45 +246,91 @@ pub fn uses(texts: &[(String, String)], songs: &[(String, Vec<u8>)]) -> Uses {
         if path.ends_with("sound/voice_groups.s") {
             let (mut group, mut place) = (String::new(), 0);
             for (line, content) in text.lines().enumerate() {
-                if let Some(label) = content.strip_suffix(':').filter(|label| !label.starts_with(['\t', ' ', '.'])) {
+                if let Some(label) = content
+                    .strip_suffix(':')
+                    .filter(|label| !label.starts_with(['\t', ' ', '.']))
+                {
                     (group, place) = (label.to_string(), 0);
                 } else if let Some(found) = voice.captures(content) {
-                    for target in found[1].split(',').map(str::trim).filter(|cell| cell.starts_with(|c: char| c.is_ascii_alphabetic())) {
-                        out.voices.push((group.clone(), place, target.to_string(), (file, line)));
+                    for target in found[1]
+                        .split(',')
+                        .map(str::trim)
+                        .filter(|cell| cell.starts_with(|c: char| c.is_ascii_alphabetic()))
+                    {
+                        out.voices
+                            .push((group.clone(), place, target.to_string(), (file, line)));
                     }
                     place += 1;
                 }
             }
         } else if path.ends_with("src/field/map_grid_data.c") {
-            out.maps.extend(text.lines().filter_map(|line| map.captures(line)).map(|found| found[1].to_string()));
+            out.maps.extend(
+                text.lines()
+                    .filter_map(|line| map.captures(line))
+                    .map(|found| found[1].to_string()),
+            );
         } else if path.ends_with("src/field/scenes.s") {
-            for line in text.lines().filter_map(|line| line.trim_start().strip_prefix("scene ")) {
-                if let Some(row) = line.split(',').nth(4).and_then(|cell| cell.trim().parse().ok()) {
+            for line in text
+                .lines()
+                .filter_map(|line| line.trim_start().strip_prefix("scene "))
+            {
+                if let Some(row) = line
+                    .split(',')
+                    .nth(4)
+                    .and_then(|cell| cell.trim().parse().ok())
+                {
                     out.scene_maps.insert(row);
                 }
             }
         } else if path.contains("/sound/songs/") && path.ends_with(".s") {
             // A song written in assembly: its voice group, and every program
             // of it where it plays a track (its header's first byte).
-            let tracks = text.lines().find_map(|line| line.trim().strip_prefix(".byte ")).and_then(|bytes| bytes.split(',').next()?.trim().parse::<u32>().ok());
-            let banks: BTreeSet<String> = text.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')).filter(|word| word.starts_with("Sound_") && word.ends_with("Voices")).map(str::to_string).collect();
-            let programs = if tracks.unwrap_or(1) > 0 { (0..=255).collect() } else { BTreeSet::new() };
-            out.songs.push((path.rsplit('/').next().unwrap_or(path).to_string(), banks, programs));
+            let tracks = text
+                .lines()
+                .find_map(|line| line.trim().strip_prefix(".byte "))
+                .and_then(|bytes| bytes.split(',').next()?.trim().parse::<u32>().ok());
+            let banks: BTreeSet<String> = text
+                .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+                .filter(|word| word.starts_with("Sound_") && word.ends_with("Voices"))
+                .map(str::to_string)
+                .collect();
+            let programs = if tracks.unwrap_or(1) > 0 {
+                (0..=255).collect()
+            } else {
+                BTreeSet::new()
+            };
+            out.songs.push((
+                path.rsplit('/').next().unwrap_or(path).to_string(),
+                banks,
+                programs,
+            ));
         }
     }
     for (path, bytes) in songs {
         if let Some((banks, programs)) = midi_programs(bytes) {
-            out.songs.push((path.rsplit('/').next().unwrap_or(path).to_string(), banks, programs));
+            out.songs.push((
+                path.rsplit('/').next().unwrap_or(path).to_string(),
+                banks,
+                programs,
+            ));
         }
     }
     // The songs something plays: a song's symbol (`SE_FLASH` for
     // `se_flash.mid`) written anywhere but where it is defined.
     static IDENT: OnceLock<Regex> = OnceLock::new();
     let ident = IDENT.get_or_init(|| Regex::new(r"[A-Za-z_][A-Za-z0-9_]*").unwrap());
-    let wanted: HashMap<String, &str> = out.songs.iter().map(|(song, ..)| (stem(song).to_ascii_uppercase(), song.as_str())).collect();
+    let wanted: HashMap<String, &str> = out
+        .songs
+        .iter()
+        .map(|(song, ..)| (stem(song).to_ascii_uppercase(), song.as_str()))
+        .collect();
     let mut places: HashMap<&str, Vec<(usize, usize)>> = HashMap::new();
     for (file, (path, text)) in texts.iter().enumerate() {
-        let text = if path.ends_with(".c") || path.ends_with(".h") { without_comments(text) } else { text.clone() };
+        let text = if path.ends_with(".c") || path.ends_with(".h") {
+            without_comments(text)
+        } else {
+            text.clone()
+        };
         for (line, content) in text.lines().enumerate() {
             for found in ident.find_iter(content) {
                 if let Some(song) = wanted.get(found.as_str()) {
@@ -265,7 +343,8 @@ pub fn uses(texts: &[(String, String)], songs: &[(String, Vec<u8>)]) -> Uses {
         .into_iter()
         .filter(|(_, at)| {
             let (file, first) = at[0];
-            !at.iter().all(|&(other, line)| other == file && line <= first + 1)
+            !at.iter()
+                .all(|&(other, line)| other == file && line <= first + 1)
         })
         .map(|(song, _)| song.to_string())
         .collect();
@@ -278,19 +357,38 @@ pub fn uses(texts: &[(String, String)], songs: &[(String, Vec<u8>)]) -> Uses {
 /// their voice group (`Sound_SeVoices`' row 94 only in `se_562.mid`, a sound
 /// nothing plays).
 fn unplayed(name: &str, symbols: &HashMap<String, Vec<(usize, usize)>>, uses: &Uses) -> bool {
-    let rows: Vec<&(String, usize, String, (usize, usize))> = uses.voices.iter().filter(|(_, _, target, _)| writes(target, name)).collect();
+    let rows: Vec<&(String, usize, String, (usize, usize))> = uses
+        .voices
+        .iter()
+        .filter(|(_, _, target, _)| writes(target, name))
+        .collect();
     if rows.is_empty() {
         return false;
     }
-    let mut places: Vec<(usize, usize)> = symbols.iter().filter(|(symbol, _)| writes(symbol, name)).flat_map(|(_, at)| at.iter().copied()).collect();
+    let mut places: Vec<(usize, usize)> = symbols
+        .iter()
+        .filter(|(symbol, _)| writes(symbol, name))
+        .flat_map(|(_, at)| at.iter().copied())
+        .collect();
     places.retain(|place| !rows.iter().any(|row| row.3 == *place));
     places.sort_unstable();
     // What is left is its definition, on one line or two together.
-    let defined = places.first().is_none_or(|&(file, first)| places.iter().all(|&(other, line)| other == file && line <= first + 1));
+    let defined = places.first().is_none_or(|&(file, first)| {
+        places
+            .iter()
+            .all(|&(other, line)| other == file && line <= first + 1)
+    });
     let played = |group: &str, place: usize| {
-        uses.songs.iter().any(|(song, banks, programs)| banks.contains(group) && programs.contains(&u8::try_from(place).unwrap_or(u8::MAX)) && uses.played.contains(song))
+        uses.songs.iter().any(|(song, banks, programs)| {
+            banks.contains(group)
+                && programs.contains(&u8::try_from(place).unwrap_or(u8::MAX))
+                && uses.played.contains(song)
+        })
     };
-    defined && rows.iter().all(|(group, place, _, _)| !played(group, *place))
+    defined
+        && rows
+            .iter()
+            .all(|(group, place, _, _)| !played(group, *place))
 }
 
 /// Whether `symbol` writes a file's stem: its words in capitals (`SE_120`
@@ -302,10 +400,16 @@ fn writes(symbol: &str, name: &str) -> bool {
         .split('_')
         .map(|word| {
             let mut chars = word.chars();
-            chars.next().map_or(String::new(), |first| first.to_ascii_uppercase().to_string() + chars.as_str())
+            chars.next().map_or(String::new(), |first| {
+                first.to_ascii_uppercase().to_string() + chars.as_str()
+            })
         })
         .collect();
-    symbol == stem.to_ascii_uppercase() || symbol == mixed || symbol.strip_suffix(mixed.as_str()).is_some_and(|prefix| prefix.ends_with('_'))
+    symbol == stem.to_ascii_uppercase()
+        || symbol == mixed
+        || symbol
+            .strip_suffix(mixed.as_str())
+            .is_some_and(|prefix| prefix.ends_with('_'))
 }
 
 /// Count a game's tracked files under `games/<game>/` (`paths`, each from
@@ -315,12 +419,21 @@ fn writes(symbol: &str, name: &str) -> bool {
 /// which a numbered file nothing uses is set apart, and `uses` what its
 /// voice rows, songs and scene table show: a sample heard only in sounds
 /// nothing plays, and a map no scene names, are set apart too.
-pub fn count(report: &mut Report, game: &str, paths: &[String], rows: &[String], symbols: &HashMap<String, Vec<(usize, usize)>>, uses: &Uses) {
+pub fn count(
+    report: &mut Report,
+    game: &str,
+    paths: &[String],
+    rows: &[String],
+    symbols: &HashMap<String, Vec<(usize, usize)>>,
+    uses: &Uses,
+) {
     let root = format!("games/{game}/");
     let tracked: HashSet<&str> = paths.iter().map(String::as_str).collect();
     let mut folders = BTreeSet::new();
     for path in paths {
-        let Some(inside) = path.strip_prefix(&root) else { continue };
+        let Some(inside) = path.strip_prefix(&root) else {
+            continue;
+        };
         let mut at = 0;
         while let Some(slash) = inside[at..].find('/') {
             folders.insert(&path[..root.len() + at + slash]);
@@ -330,7 +443,10 @@ pub fn count(report: &mut Report, game: &str, paths: &[String], rows: &[String],
         let extension = name.rsplit_once('.').map_or("", |(_, extension)| extension);
         if SOURCE.contains(&extension) {
             report.add("source_files", path, 1);
-            if inside.starts_with("include/") && !inside["include/".len()..].contains('/') && extension == "h" {
+            if inside.starts_with("include/")
+                && !inside["include/".len()..].contains('/')
+                && extension == "h"
+            {
                 report.note("loose_headers", path, 0, name);
             }
         }
@@ -351,7 +467,11 @@ pub fn count(report: &mut Report, game: &str, paths: &[String], rows: &[String],
         if named_by_number(name) {
             // A map's folder no scene's row of the scene table names.
             let map_unused = folder.contains("/src/map/")
-                && uses.maps.iter().position(|map| map == name).is_some_and(|row| !uses.scene_maps.contains(&row));
+                && uses
+                    .maps
+                    .iter()
+                    .position(|map| map == name)
+                    .is_some_and(|row| !uses.scene_maps.contains(&row));
             let metric = if by_row(name, rows) {
                 "numbered_files_honest"
             } else if map_unused {
@@ -374,10 +494,26 @@ mod tests {
 
     #[test]
     fn files_and_folders_by_name() {
-        for name in ["map_108", "jupiter_lighthouse_room_5.c", "unnamed_28.c", "set_03", "spr_12.tsv", "keyboard_j2.png", "a9_motion.s"] {
+        for name in [
+            "map_108",
+            "jupiter_lighthouse_room_5.c",
+            "unnamed_28.c",
+            "set_03",
+            "spr_12.tsv",
+            "keyboard_j2.png",
+            "a9_motion.s",
+        ] {
             assert!(named_by_number(name), "{name}");
         }
-        for name in ["decompress_4bpp.s", "mul_fx.h", "iwram_ratio_q14.s", "m4a_interfaces.h", "vector3.h", "vale.c", "field"] {
+        for name in [
+            "decompress_4bpp.s",
+            "mul_fx.h",
+            "iwram_ratio_q14.s",
+            "m4a_interfaces.h",
+            "vector3.h",
+            "vale.c",
+            "field",
+        ] {
             assert!(!named_by_number(name), "{name}");
         }
         let paths: Vec<String> = [
@@ -397,18 +533,45 @@ mod tests {
         .map(String::from)
         .to_vec();
         let texts: Vec<(String, String)> = [
-            ("games/tla/include/sounds.h", "enum SoundId {\n  SE_104,\n  /// SE_104's notes, higher.\n  SE_105,\n};\n"),
+            (
+                "games/tla/include/sounds.h",
+                "enum SoundId {\n  SE_104,\n  /// SE_104's notes, higher.\n  SE_105,\n};\n",
+            ),
             ("games/tla/src/scene/vale.c", "  Sound_Play(SE_105);\n"),
-            ("games/tla/sound/samples.s", "\t.global Sound_Wave50\nSound_Wave50:\n\t.global Sound_Wave52\nSound_Wave52:\n"),
+            (
+                "games/tla/sound/samples.s",
+                "\t.global Sound_Wave50\nSound_Wave50:\n\t.global Sound_Wave52\nSound_Wave52:\n",
+            ),
             ("games/tla/sound/voices.s", "\tvoice 0, Sound_Wave52\n"),
         ]
         .map(|(path, text)| (path.to_string(), text.to_string()))
         .to_vec();
         let mut report = Report::default();
         let mut paths = paths;
-        paths.extend(["games/tla/sound/songs/se_105.s", "games/tla/sound/samples/wave_50.pcm8.wav", "games/tla/sound/samples/wave_52.pcm8.wav"].map(String::from));
-        count(&mut report, "tla", &paths, &["SPRITE_STATUS_GRIM_REAPER_1".to_string()], &numbered_symbols(&texts), &uses(&texts, &[]));
-        let listed = |metric: &str| -> Vec<&str> { report.items.iter().filter(|item| item.metric == metric).map(|item| item.file.as_str()).collect() };
+        paths.extend(
+            [
+                "games/tla/sound/songs/se_105.s",
+                "games/tla/sound/samples/wave_50.pcm8.wav",
+                "games/tla/sound/samples/wave_52.pcm8.wav",
+            ]
+            .map(String::from),
+        );
+        count(
+            &mut report,
+            "tla",
+            &paths,
+            &["SPRITE_STATUS_GRIM_REAPER_1".to_string()],
+            &numbered_symbols(&texts),
+            &uses(&texts, &[]),
+        );
+        let listed = |metric: &str| -> Vec<&str> {
+            report
+                .items
+                .iter()
+                .filter(|item| item.metric == metric)
+                .map(|item| item.file.as_str())
+                .collect()
+        };
         assert_eq!(report.total("source_files"), 8);
         // include, include/field, src, src/field, src/field/field, src/graphics,
         // src/graphics/set_03, src/scene, sound, sound/songs, sound/samples.
@@ -427,14 +590,25 @@ mod tests {
         );
         assert_eq!(
             listed("numbered_files_unused"),
-            ["games/tla/sound/songs/se_104.s", "games/tla/sound/samples/wave_50.pcm8.wav"],
+            [
+                "games/tla/sound/songs/se_104.s",
+                "games/tla/sound/samples/wave_50.pcm8.wav"
+            ],
             "written only where each is defined"
         );
-        assert_eq!(listed("numbered_files_honest"), ["games/tla/src/graphics/status_grim_reaper_1.png"]);
+        assert_eq!(
+            listed("numbered_files_honest"),
+            ["games/tla/src/graphics/status_grim_reaper_1.png"]
+        );
         assert_eq!(listed("part_folders"), ["games/tla/src/field/field/"]);
         let listing = super::super::list(&[("tla", &report)], "part_folders");
-        assert_eq!(listing, "tla\tgames/tla/src/field/field/\tfield\n", "a folder is listed by its path");
-        assert!(super::super::listable("loose_headers") && super::super::listable("numbered_files"));
+        assert_eq!(
+            listing, "tla\tgames/tla/src/field/field/\tfield\n",
+            "a folder is listed by its path"
+        );
+        assert!(
+            super::super::listable("loose_headers") && super::super::listable("numbered_files")
+        );
     }
 
     /// A MIDI file of one track whose header names `bank` and that selects
@@ -452,7 +626,13 @@ mod tests {
 
     #[test]
     fn samples_heard_only_in_sounds_nothing_plays_and_maps_no_scene_names() {
-        assert_eq!(midi_programs(&midi("Sound_SeVoices", 7)), Some((BTreeSet::from(["Sound_SeVoices".to_string()]), BTreeSet::from([7]))));
+        assert_eq!(
+            midi_programs(&midi("Sound_SeVoices", 7)),
+            Some((
+                BTreeSet::from(["Sound_SeVoices".to_string()]),
+                BTreeSet::from([7])
+            ))
+        );
         let texts: Vec<(String, String)> = [
             ("games/tla/include/sounds.h", "enum SoundId {\n  SE_FLASH,\n  SE_562,\n};\n"),
             ("games/tla/src/field/flash.c", "void Flash(void) { Sound_Play(SE_FLASH); }\n"),
@@ -466,15 +646,50 @@ mod tests {
         ]
         .map(|(path, text)| (path.to_string(), text.to_string()))
         .to_vec();
-        let songs = [("games/tla/sound/songs/se_562.mid".to_string(), midi("Sound_SeVoices", 0)), ("games/tla/sound/songs/se_flash.mid".to_string(), midi("Sound_SeVoices", 1))];
+        let songs = [
+            (
+                "games/tla/sound/songs/se_562.mid".to_string(),
+                midi("Sound_SeVoices", 0),
+            ),
+            (
+                "games/tla/sound/songs/se_flash.mid".to_string(),
+                midi("Sound_SeVoices", 1),
+            ),
+        ];
         let used = uses(&texts, &songs);
-        let paths: Vec<String> = ["games/tla/sound/direct_sound_samples/wave_52.pcm8.wav", "games/tla/sound/direct_sound_samples/wave_64.pcm8.wav", "games/tla/src/map/map_290/map.txt"]
-            .map(String::from)
-            .to_vec();
+        let paths: Vec<String> = [
+            "games/tla/sound/direct_sound_samples/wave_52.pcm8.wav",
+            "games/tla/sound/direct_sound_samples/wave_64.pcm8.wav",
+            "games/tla/src/map/map_290/map.txt",
+        ]
+        .map(String::from)
+        .to_vec();
         let mut report = Report::default();
-        count(&mut report, "tla", &paths, &[], &numbered_symbols(&texts), &used);
-        let listed = |metric: &str| -> Vec<&str> { report.items.iter().filter(|item| item.metric == metric).map(|item| item.what.as_str()).collect() };
-        assert_eq!(listed("numbered_files_unused"), ["wave_52.pcm8.wav", "map_290"], "heard only in SE_562, which nothing plays; no scene's map");
-        assert_eq!(listed("numbered_files"), ["wave_64.pcm8.wav"], "heard in SE_FLASH");
+        count(
+            &mut report,
+            "tla",
+            &paths,
+            &[],
+            &numbered_symbols(&texts),
+            &used,
+        );
+        let listed = |metric: &str| -> Vec<&str> {
+            report
+                .items
+                .iter()
+                .filter(|item| item.metric == metric)
+                .map(|item| item.what.as_str())
+                .collect()
+        };
+        assert_eq!(
+            listed("numbered_files_unused"),
+            ["wave_52.pcm8.wav", "map_290"],
+            "heard only in SE_562, which nothing plays; no scene's map"
+        );
+        assert_eq!(
+            listed("numbered_files"),
+            ["wave_64.pcm8.wav"],
+            "heard in SE_FLASH"
+        );
     }
 }

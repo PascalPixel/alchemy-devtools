@@ -63,7 +63,10 @@ impl DecompTarget {
 
     pub fn verify_reference(&self, rom: &[u8]) -> Result<(), String> {
         if !self.matches(rom) {
-            return Err(format!("{}: its SHA-1 is not the one rom.sha1 gives {}", self.rom, self.id));
+            return Err(format!(
+                "{}: its SHA-1 is not the one rom.sha1 gives {}",
+                self.rom, self.id
+            ));
         }
         Ok(())
     }
@@ -106,7 +109,10 @@ fn editions() -> Result<&'static [Edition], String> {
     EDITIONS
         .get_or_init(|| {
             let path = root().join("rom.sha1");
-            read(&std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?)
+            read(
+                &std::fs::read_to_string(&path)
+                    .map_err(|error| format!("{}: {error}", path.display()))?,
+            )
         })
         .as_deref()
         .map_err(Clone::clone)
@@ -124,7 +130,10 @@ fn target(edition: &'static Edition) -> DecompTarget {
 
 /// Every edition's name, in rom.sha1's order.
 pub fn ids() -> Result<Vec<DecompTargetId>, String> {
-    Ok(editions()?.iter().map(|edition| DecompTargetId(&edition.id)).collect())
+    Ok(editions()?
+        .iter()
+        .map(|edition| DecompTargetId(&edition.id))
+        .collect())
 }
 
 /// Every game, in the order rom.sha1 first lists it.
@@ -141,7 +150,16 @@ pub fn games() -> Result<Vec<&'static str>, String> {
 /// A game named on a command line, one rom.sha1 lists.
 pub fn game(name: &str) -> Result<&'static str, String> {
     let games = games()?;
-    games.iter().copied().find(|&game| game == name).ok_or_else(|| format!("{name:?} is not a game rom.sha1 lists: {}", games.join(" or ")))
+    games
+        .iter()
+        .copied()
+        .find(|&game| game == name)
+        .ok_or_else(|| {
+            format!(
+                "{name:?} is not a game rom.sha1 lists: {}",
+                games.join(" or ")
+            )
+        })
 }
 
 /// The edition a draft is measured in, and its game: the edition named, or
@@ -149,7 +167,11 @@ pub fn game(name: &str) -> Result<&'static str, String> {
 /// draft's path names (`recon/tla/`), or of rom.sha1's first game. That last
 /// is a guess when rom.sha1 lists several, and stderr says so: a draft
 /// compiled with another game's headers fails in ways that hide why.
-pub fn draft_edition(game: Option<&'static str>, edition: Option<DecompTarget>, path: &str) -> Result<(&'static str, DecompTarget), String> {
+pub fn draft_edition(
+    game: Option<&'static str>,
+    edition: Option<DecompTarget>,
+    path: &str,
+) -> Result<(&'static str, DecompTarget), String> {
     let edition_game = edition.map(|target| target.game());
     if matches!((game, edition_game), (Some(game), Some(edition_game)) if game != edition_game) {
         return Err("--game and --edition name different games".into());
@@ -158,8 +180,12 @@ pub fn draft_edition(game: Option<&'static str>, edition: Option<DecompTarget>, 
         Some(game) => game,
         None => {
             let games = games()?;
-            let named = games.iter().copied().find(|game| path.contains(&format!("/{game}/")) || path.starts_with(&format!("{game}/")));
-            let game = named.or(games.first().copied()).ok_or("rom.sha1 lists no edition")?;
+            let named = games.iter().copied().find(|game| {
+                path.contains(&format!("/{game}/")) || path.starts_with(&format!("{game}/"))
+            });
+            let game = named
+                .or(games.first().copied())
+                .ok_or("rom.sha1 lists no edition")?;
             if named.is_none() && games.len() > 1 {
                 eprintln!("note: {path} names no game's folder; measuring in {game}-en, rom.sha1's first game (give --game or --edition)");
             }
@@ -177,7 +203,11 @@ pub fn draft_edition(game: Option<&'static str>, edition: Option<DecompTarget>, 
 /// so its edition is always there.
 pub fn target_for(id: DecompTargetId) -> DecompTarget {
     let all = editions().expect("an edition's name comes from rom.sha1");
-    target(all.iter().find(|edition| edition.id == id.0).expect("an edition's name comes from rom.sha1"))
+    target(
+        all.iter()
+            .find(|edition| edition.id == id.0)
+            .expect("an edition's name comes from rom.sha1"),
+    )
 }
 
 pub fn parse_decomp_target(value: &str) -> Result<DecompTargetId, String> {
@@ -187,10 +217,16 @@ pub fn parse_decomp_target(value: &str) -> Result<DecompTargetId, String> {
 pub fn decomp_target(id: Option<&str>) -> Result<DecompTarget, String> {
     let id = id.ok_or("name an edition")?;
     let all = editions()?;
-    all.iter().find(|edition| edition.id == id).map(target).ok_or_else(|| {
-        let expected: Vec<&str> = all.iter().map(|edition| edition.id.as_str()).collect();
-        format!("unsupported decomp target {id:?}; expected {}", expected.join(" or "))
-    })
+    all.iter()
+        .find(|edition| edition.id == id)
+        .map(target)
+        .ok_or_else(|| {
+            let expected: Vec<&str> = all.iter().map(|edition| edition.id.as_str()).collect();
+            format!(
+                "unsupported decomp target {id:?}; expected {}",
+                expected.join(" or ")
+            )
+        })
 }
 
 #[cfg(test)]
@@ -200,23 +236,60 @@ mod tests {
     #[test]
     fn editions_are_rom_sha1s_lines() {
         let editions = read("5C4695205413DF7DB52B9A184815A07783999971  out/tbs-en/tbs-en.gba\n\nb500663220cb9bf56b9f8e8c0c544f1d6fa3a824  out/tla-en/tla-en.gba\n").unwrap();
-        let rows: Vec<_> = editions.iter().map(|e| (e.id.as_str(), e.rom.as_str(), e.output_dir.as_str(), &e.sha1[..4])).collect();
-        assert_eq!(rows, [("tbs-en", "roms/tbs-en.gba", "out/tbs-en", "5c46"), ("tla-en", "roms/tla-en.gba", "out/tla-en", "b500")]);
+        let rows: Vec<_> = editions
+            .iter()
+            .map(|e| {
+                (
+                    e.id.as_str(),
+                    e.rom.as_str(),
+                    e.output_dir.as_str(),
+                    &e.sha1[..4],
+                )
+            })
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                ("tbs-en", "roms/tbs-en.gba", "out/tbs-en", "5c46"),
+                ("tla-en", "roms/tla-en.gba", "out/tla-en", "b500")
+            ]
+        );
         assert!(read("5c4695205413df7db52b9a184815a07783999971\n").is_err());
         // pret's ROM is written at the checkout's root.
         let root = read("f3ae088181bf583e55daf962a92bb46f4f1d07b7  pokeemerald.gba\n").unwrap();
-        assert_eq!((root[0].id.as_str(), root[0].output_dir.as_str(), root[0].image.as_str()), ("pokeemerald", "", "pokeemerald.gba"));
-        assert_eq!(target(Box::leak(Box::new(root.into_iter().next().unwrap()))).image(), "pokeemerald.gba");
-        assert_eq!(decomp_target(Some("tla-en")).unwrap().image(), "out/tla-en/tla-en.gba");
+        assert_eq!(
+            (
+                root[0].id.as_str(),
+                root[0].output_dir.as_str(),
+                root[0].image.as_str()
+            ),
+            ("pokeemerald", "", "pokeemerald.gba")
+        );
+        assert_eq!(
+            target(Box::leak(Box::new(root.into_iter().next().unwrap()))).image(),
+            "pokeemerald.gba"
+        );
+        assert_eq!(
+            decomp_target(Some("tla-en")).unwrap().image(),
+            "out/tla-en/tla-en.gba"
+        );
     }
 
     #[test]
     fn the_checkout_lists_twelve_editions_and_checks_a_rom_by_its_line() {
         assert_eq!(ids().unwrap().len(), 12);
         let target = decomp_target(Some("tla-ja")).unwrap();
-        assert_eq!((target.game(), target.output_dir, target.rom), ("tla", "out/tla-ja", "roms/tla-ja.gba"));
-        assert!(target.verify_reference(b"not the ROM").unwrap_err().contains("rom.sha1"));
-        assert!(decomp_target(Some("tbs-xx")).unwrap_err().contains("tbs-en"));
+        assert_eq!(
+            (target.game(), target.output_dir, target.rom),
+            ("tla", "out/tla-ja", "roms/tla-ja.gba")
+        );
+        assert!(target
+            .verify_reference(b"not the ROM")
+            .unwrap_err()
+            .contains("rom.sha1"));
+        assert!(decomp_target(Some("tbs-xx"))
+            .unwrap_err()
+            .contains("tbs-en"));
         assert_eq!(parse_decomp_target("tbs-it").unwrap().as_str(), "tbs-it");
         assert_eq!(games().unwrap(), ["tbs", "tla"]);
         assert!(game("gs").unwrap_err().contains("tbs or tla"));
@@ -225,14 +298,30 @@ mod tests {
     #[test]
     fn a_draft_is_measured_in_its_games_english_edition_unless_named() {
         let named = |game, edition: Option<&str>, path| {
-            draft_edition(game, edition.map(|edition| decomp_target(Some(edition)).unwrap()), path)
-                .map(|(game, target)| (game, target.id.as_str()))
+            draft_edition(
+                game,
+                edition.map(|edition| decomp_target(Some(edition)).unwrap()),
+                path,
+            )
+            .map(|(game, target)| (game, target.id.as_str()))
         };
-        assert_eq!(named(None, None, "recon/tla/en/main/08000000.c").unwrap(), ("tla", "tla-en"));
+        assert_eq!(
+            named(None, None, "recon/tla/en/main/08000000.c").unwrap(),
+            ("tla", "tla-en")
+        );
         assert_eq!(named(None, None, "draft.c").unwrap(), ("tbs", "tbs-en"));
-        assert_eq!(named(None, None, "tla/src/field/a.c").unwrap(), ("tla", "tla-en"));
-        assert_eq!(named(Some("tla"), None, "draft.c").unwrap(), ("tla", "tla-en"));
-        assert_eq!(named(None, Some("tla-de"), "recon/tbs/en/main/08000000.c").unwrap(), ("tla", "tla-de"));
+        assert_eq!(
+            named(None, None, "tla/src/field/a.c").unwrap(),
+            ("tla", "tla-en")
+        );
+        assert_eq!(
+            named(Some("tla"), None, "draft.c").unwrap(),
+            ("tla", "tla-en")
+        );
+        assert_eq!(
+            named(None, Some("tla-de"), "recon/tbs/en/main/08000000.c").unwrap(),
+            ("tla", "tla-de")
+        );
         assert!(named(Some("tbs"), Some("tla-de"), "draft.c").is_err());
     }
 }

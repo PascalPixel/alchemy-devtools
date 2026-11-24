@@ -21,7 +21,11 @@ pub(crate) struct Pseudo {
 
 impl Pseudo {
     pub fn priority(&self) -> f64 {
-        let log = if self.refs > 0 { 31 - self.refs.leading_zeros() } else { 0 };
+        let log = if self.refs > 0 {
+            31 - self.refs.leading_zeros()
+        } else {
+            0
+        };
         f64::from(log * self.refs) / f64::from(self.live.max(1))
     }
 }
@@ -48,14 +52,25 @@ fn functions(dump: &str) -> Vec<(&str, &str)> {
 fn lreg_rows(text: &str) -> BTreeMap<u32, (u32, u32, u32, bool)> {
     let mut rows = BTreeMap::new();
     for line in text.lines() {
-        let Some(rest) = line.strip_prefix("Register ") else { continue };
-        let words: Vec<&str> = rest.split([' ', ';']).filter(|word| !word.is_empty()).collect();
+        let Some(rest) = line.strip_prefix("Register ") else {
+            continue;
+        };
+        let words: Vec<&str> = rest
+            .split([' ', ';'])
+            .filter(|word| !word.is_empty())
+            .collect();
         let number = |at: usize| words.get(at).and_then(|word| word.parse::<u32>().ok());
-        let (Some(pseudo), Some(refs), Some(live)) = (number(0), number(2), number(5)) else { continue };
+        let (Some(pseudo), Some(refs), Some(live)) = (number(0), number(2), number(5)) else {
+            continue;
+        };
         if words.get(1) != Some(&"used") {
             continue;
         }
-        let calls = words.iter().position(|word| *word == "crosses").and_then(|at| number(at + 1)).unwrap_or(0);
+        let calls = words
+            .iter()
+            .position(|word| *word == "crosses")
+            .and_then(|at| number(at + 1))
+            .unwrap_or(0);
         rows.insert(pseudo, (refs, live, calls, line.contains("user var")));
     }
     rows
@@ -67,11 +82,21 @@ fn greg_rows(text: &str) -> (Vec<u32>, BTreeMap<u32, u32>) {
     let order = text
         .lines()
         .find_map(|line| line.split_once("regs to allocate:").map(|(_, list)| list))
-        .map(|list| list.split_whitespace().filter_map(|word| word.split('+').next()?.parse().ok()).collect())
+        .map(|list| {
+            list.split_whitespace()
+                .filter_map(|word| word.split('+').next()?.parse().ok())
+                .collect()
+        })
         .unwrap_or_default();
     let mut hard = BTreeMap::new();
-    let mut lines = text.lines().skip_while(|line| !line.starts_with(";; Register dispositions:")).skip(1);
-    for line in lines.by_ref().take_while(|line| !line.starts_with(";;") && !line.trim().is_empty()) {
+    let mut lines = text
+        .lines()
+        .skip_while(|line| !line.starts_with(";; Register dispositions:"))
+        .skip(1);
+    for line in lines
+        .by_ref()
+        .take_while(|line| !line.starts_with(";;") && !line.trim().is_empty())
+    {
         let words: Vec<&str> = line.split_whitespace().collect();
         for triple in words.windows(3).filter(|triple| triple[1] == "in") {
             if let (Ok(pseudo), Ok(register)) = (triple[0].parse(), triple[2].parse()) {
@@ -95,7 +120,14 @@ pub(crate) fn read(lreg: &str, greg: &str, only: Option<&str>) -> Vec<(String, V
                 .into_iter()
                 .map(|number| {
                     let (refs, live, calls, user) = rows.get(&number).copied().unwrap_or_default();
-                    Pseudo { number, refs, live, calls, user, hard: hard.get(&number).copied() }
+                    Pseudo {
+                        number,
+                        refs,
+                        live,
+                        calls,
+                        user,
+                        hard: hard.get(&number).copied(),
+                    }
                 })
                 .collect();
             (name.to_string(), pseudos)
@@ -118,12 +150,25 @@ pub(crate) fn register(number: u32) -> String {
 
 pub(crate) fn print(functions: &[(String, Vec<Pseudo>)]) {
     for (name, pseudos) in functions {
-        println!("allocation: {name}, {} pseudos in global.c's order", pseudos.len());
-        println!("{:>7} {:>5} {:>6} {:>9} {:>6}  hard", "pseudo", "refs", "live", "priority", "calls");
+        println!(
+            "allocation: {name}, {} pseudos in global.c's order",
+            pseudos.len()
+        );
+        println!(
+            "{:>7} {:>5} {:>6} {:>9} {:>6}  hard",
+            "pseudo", "refs", "live", "priority", "calls"
+        );
         for pseudo in pseudos {
             let hard = pseudo.hard.map_or("stack".to_string(), register);
             let user = if pseudo.user { "  user variable" } else { "" };
-            println!("{:>7} {:>5} {:>6} {:>9.3} {:>6}  {hard}{user}", pseudo.number, pseudo.refs, pseudo.live, pseudo.priority(), pseudo.calls);
+            println!(
+                "{:>7} {:>5} {:>6} {:>9.3} {:>6}  {hard}{user}",
+                pseudo.number,
+                pseudo.refs,
+                pseudo.live,
+                pseudo.priority(),
+                pseudo.calls
+            );
         }
     }
 }
@@ -141,13 +186,40 @@ mod tests {
         assert_eq!(found.len(), 2);
         let (name, first) = &found[0];
         assert_eq!(name, "First");
-        assert_eq!(first, &[
-            Pseudo { number: 40, refs: 5, live: 10, calls: 0, user: false, hard: None },
-            Pseudo { number: 32, refs: 136, live: 5992, calls: 536, user: true, hard: Some(4) },
-        ]);
+        assert_eq!(
+            first,
+            &[
+                Pseudo {
+                    number: 40,
+                    refs: 5,
+                    live: 10,
+                    calls: 0,
+                    user: false,
+                    hard: None
+                },
+                Pseudo {
+                    number: 32,
+                    refs: 136,
+                    live: 5992,
+                    calls: 536,
+                    user: true,
+                    hard: Some(4)
+                },
+            ]
+        );
         assert!((first[0].priority() - 1.0).abs() < 1e-9);
         assert!((first[1].priority() - 7.0 * 136.0 / 5992.0).abs() < 1e-9);
-        assert_eq!(read(LREG, GREG, Some("Second"))[0].1, [Pseudo { number: 32, refs: 2, live: 4, calls: 1, user: false, hard: Some(11) }]);
+        assert_eq!(
+            read(LREG, GREG, Some("Second"))[0].1,
+            [Pseudo {
+                number: 32,
+                refs: 2,
+                live: 4,
+                calls: 1,
+                user: false,
+                hard: Some(11)
+            }]
+        );
         assert_eq!(register(11), "fp");
     }
 }

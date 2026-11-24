@@ -35,9 +35,13 @@ pub(crate) fn messages(stderr: &str) -> Vec<Message> {
         if trimmed.starts_with("In file included from") || trimmed.starts_with("from ") {
             continue;
         }
-        let Some((file, rest)) = line.split_once(':') else { continue };
+        let Some((file, rest)) = line.split_once(':') else {
+            continue;
+        };
         let mut parts = rest.splitn(3, ':');
-        let Some(number) = parts.next().and_then(|n| n.trim().parse::<usize>().ok()) else { continue };
+        let Some(number) = parts.next().and_then(|n| n.trim().parse::<usize>().ok()) else {
+            continue;
+        };
         let mut text = parts.next().unwrap_or("").to_string();
         if let Some(column_rest) = parts.next() {
             match text.trim().parse::<usize>() {
@@ -53,7 +57,12 @@ pub(crate) fn messages(stderr: &str) -> Vec<Message> {
             Some(rest) => (true, rest),
             None => (false, text),
         };
-        found.push(Message { file: file.to_string(), line: number, warning, text: text.to_string() });
+        found.push(Message {
+            file: file.to_string(),
+            line: number,
+            warning,
+            text: text.to_string(),
+        });
     }
     found
 }
@@ -72,7 +81,10 @@ pub(crate) struct Preprocessed {
 /// Reads `cpp`'s line markers (`# LINE "FILE" FLAGS`): `top` is the joined
 /// file's name as the compiler writes it.
 pub(crate) fn preprocessed(output: &str, top: &str) -> Preprocessed {
-    let mut read = Preprocessed { text: output.to_string(), ..Preprocessed::default() };
+    let mut read = Preprocessed {
+        text: output.to_string(),
+        ..Preprocessed::default()
+    };
     let mut file = top.to_string();
     let mut line = 1usize;
     // The headers entered since the joined file was last read: the marker
@@ -113,7 +125,14 @@ fn marker(text: &str) -> Option<(usize, &str, Vec<u8>)> {
     let number = number.parse().ok()?;
     let rest = rest.strip_prefix('"')?;
     let (name, flags) = rest.split_once('"')?;
-    Some((number, name, flags.split_whitespace().filter_map(|flag| flag.parse().ok()).collect()))
+    Some((
+        number,
+        name,
+        flags
+            .split_whitespace()
+            .filter_map(|flag| flag.parse().ok())
+            .collect(),
+    ))
 }
 
 /// One routine declaration `-aux-info` wrote: where, how, and as what.
@@ -133,14 +152,29 @@ pub(crate) struct Declared {
 pub(crate) fn declarations(aux: &str) -> Vec<Declared> {
     let mut found = Vec::new();
     for line in aux.lines() {
-        let Some(rest) = line.strip_prefix("/* ") else { continue };
-        let Some((place, declaration)) = rest.split_once(" */ ") else { continue };
+        let Some(rest) = line.strip_prefix("/* ") else {
+            continue;
+        };
+        let Some((place, declaration)) = rest.split_once(" */ ") else {
+            continue;
+        };
         let mut fields = place.rsplitn(3, ':');
-        let (Some(how), Some(number), Some(file)) = (fields.next(), fields.next(), fields.next()) else { continue };
+        let (Some(how), Some(number), Some(file)) = (fields.next(), fields.next(), fields.next())
+        else {
+            continue;
+        };
         let Ok(number) = number.parse() else { continue };
         let text = strip_comments(declaration);
-        let Some(name) = declared_name(&text) else { continue };
-        found.push(Declared { file: file.to_string(), line: number, how: how.to_string(), name, text });
+        let Some(name) = declared_name(&text) else {
+            continue;
+        };
+        found.push(Declared {
+            file: file.to_string(),
+            line: number,
+            how: how.to_string(),
+            name,
+            text,
+        });
     }
     found
 }
@@ -150,7 +184,9 @@ fn strip_comments(text: &str) -> String {
     let mut rest = text;
     while let Some(start) = rest.find("/*") {
         out.push_str(&rest[..start]);
-        rest = rest[start..].find("*/").map_or("", |end| &rest[start + end + 2..]);
+        rest = rest[start..]
+            .find("*/")
+            .map_or("", |end| &rest[start + end + 2..]);
     }
     out.push_str(rest);
     out.split_whitespace().collect::<Vec<_>>().join(" ")
@@ -159,11 +195,18 @@ fn strip_comments(text: &str) -> String {
 /// The routine an aux-info declaration names: the first identifier before a
 /// parameter list that is not a word of a type.
 fn declared_name(text: &str) -> Option<String> {
-    const TYPE_WORDS: [&str; 12] = ["void", "int", "char", "short", "long", "unsigned", "signed", "float", "double", "const", "volatile", "extern"];
+    const TYPE_WORDS: [&str; 12] = [
+        "void", "int", "char", "short", "long", "unsigned", "signed", "float", "double", "const",
+        "volatile", "extern",
+    ];
     let words = crate::gba::clex::lex(text);
     words
         .windows(2)
-        .find(|pair| pair[0].kind == crate::gba::clex::Kind::Ident && pair[1].text == "(" && !TYPE_WORDS.contains(&pair[0].text))
+        .find(|pair| {
+            pair[0].kind == crate::gba::clex::Kind::Ident
+                && pair[1].text == "("
+                && !TYPE_WORDS.contains(&pair[0].text)
+        })
         .map(|pair| pair[0].text.to_string())
 }
 
@@ -176,9 +219,18 @@ mod tests {
         let stderr = "In file included from games/tla/include/field/field.h:7,\n                 from j.c:61:\ngames/tla/include/actor.h:80: conflicting types for `Actor_Move'\nk.h:73: previous declaration of `Actor_Move'\nt.c:16:11: warning: \"M\" redefined\nj.c: In function `Two':\nj.c:20: warning: type mismatch with previous implicit declaration\n";
         let found = messages(stderr);
         assert_eq!(found.len(), 4);
-        assert_eq!((found[0].file.as_str(), found[0].line, found[0].name()), ("games/tla/include/actor.h", 80, Some("Actor_Move")));
-        assert_eq!((found[2].line, found[2].warning, found[2].name()), (16, true, Some("M")));
-        assert_eq!(found[3].text, "type mismatch with previous implicit declaration");
+        assert_eq!(
+            (found[0].file.as_str(), found[0].line, found[0].name()),
+            ("games/tla/include/actor.h", 80, Some("Actor_Move"))
+        );
+        assert_eq!(
+            (found[2].line, found[2].warning, found[2].name()),
+            (16, true, Some("M"))
+        );
+        assert_eq!(
+            found[3].text,
+            "type mismatch with previous implicit declaration"
+        );
     }
 
     #[test]
@@ -196,8 +248,19 @@ mod tests {
     fn aux_info_names_each_declaration() {
         let aux = "/* compiled from: . */\n/* u.c:2:NC */ extern int f (void);\n/* u.c:4:OC */ extern int g (/* ??? */);\n/* u.c:5:IC */ extern int h (/* ??? */);\n/* inc/x.h:9:NC */ extern void (*Pick (int)) (void);\n";
         let found = declarations(aux);
-        let names: Vec<(&str, &str, &str)> = found.iter().map(|d| (d.name.as_str(), d.how.as_str(), d.text.as_str())).collect();
-        assert_eq!(names, [("f", "NC", "extern int f (void);"), ("g", "OC", "extern int g ();"), ("h", "IC", "extern int h ();"), ("Pick", "NC", "extern void (*Pick (int)) (void);")]);
+        let names: Vec<(&str, &str, &str)> = found
+            .iter()
+            .map(|d| (d.name.as_str(), d.how.as_str(), d.text.as_str()))
+            .collect();
+        assert_eq!(
+            names,
+            [
+                ("f", "NC", "extern int f (void);"),
+                ("g", "OC", "extern int g ();"),
+                ("h", "IC", "extern int h ();"),
+                ("Pick", "NC", "extern void (*Pick (int)) (void);")
+            ]
+        );
         assert_eq!(found[3].file, "inc/x.h");
     }
 }

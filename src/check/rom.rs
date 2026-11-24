@@ -3,8 +3,8 @@
 //! every difference named by what placed it.
 
 use crate::alchemy::built;
-use crate::alchemy::layout::rom_offset;
 use crate::alchemy::done::commas;
+use crate::alchemy::layout::rom_offset;
 use crate::alchemy::overlay;
 use crate::alchemy::targets::{target_for, DecompTargetId};
 use crate::gba::count::CARTRIDGE;
@@ -21,7 +21,8 @@ const JOIN: usize = 4;
 /// An edition's reference ROM, checked against its approved digest.
 pub(super) fn reference(root: &Path, id: DecompTargetId) -> Result<Vec<u8>, String> {
     let target = target_for(id);
-    let rom = std::fs::read(root.join(target.rom)).map_err(|error| format!("{}: {error}", target.rom))?;
+    let rom =
+        std::fs::read(root.join(target.rom)).map_err(|error| format!("{}: {error}", target.rom))?;
     target.verify_reference(&rom)?;
     Ok(rom)
 }
@@ -38,14 +39,23 @@ fn find_all(haystack: &[u8], needles: &[Vec<u8>]) -> Vec<Option<usize>> {
                 first[usize::from(u16::from_le_bytes([a, b]))] = true;
                 starts.entry([a, b, c, d]).or_default().push(index);
             }
-            _ => found[index] = haystack.windows(needle.len().max(1)).position(|window| needle.is_empty() || window == needle),
+            _ => {
+                found[index] = haystack
+                    .windows(needle.len().max(1))
+                    .position(|window| needle.is_empty() || window == needle)
+            }
         }
     }
     for at in 0..haystack.len().saturating_sub(3) {
         if !first[usize::from(u16::from_le_bytes([haystack[at], haystack[at + 1]]))] {
             continue;
         }
-        let key = [haystack[at], haystack[at + 1], haystack[at + 2], haystack[at + 3]];
+        let key = [
+            haystack[at],
+            haystack[at + 1],
+            haystack[at + 2],
+            haystack[at + 3],
+        ];
         for &index in starts.get(&key).map_or(&[][..], Vec::as_slice) {
             if found[index].is_none() && haystack[at..].starts_with(&needles[index]) {
                 found[index] = Some(at);
@@ -58,7 +68,9 @@ fn find_all(haystack: &[u8], needles: &[Vec<u8>]) -> Vec<Option<usize>> {
 /// The overlay id an argument names: `64b`, `resource_64b`, or a path with
 /// `resource_64b` in it.
 fn overlay_id(argument: &str) -> Option<String> {
-    overlay::named_in(argument).or_else(|| overlay::named_in(&format!("resource_{argument}")).filter(|_| argument.len() == 3))
+    overlay::named_in(argument).or_else(|| {
+        overlay::named_in(&format!("resource_{argument}")).filter(|_| argument.len() == 3)
+    })
 }
 
 pub fn overlays(arguments: &[String]) -> Result<(), String> {
@@ -66,11 +78,17 @@ pub fn overlays(arguments: &[String]) -> Result<(), String> {
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
         if argument == "--edition" {
-            words.push(arguments.next().ok_or("--edition takes an edition or a game")?.clone());
+            words.push(
+                arguments
+                    .next()
+                    .ok_or("--edition takes an edition or a game")?
+                    .clone(),
+            );
         } else if argument.starts_with('-') {
             return Err(format!("unknown option {argument}"));
         } else {
-            wanted.push(overlay_id(argument).ok_or_else(|| format!("{argument} names no overlay"))?);
+            wanted
+                .push(overlay_id(argument).ok_or_else(|| format!("{argument} names no overlay"))?);
         }
     }
     let root = crate::compile::root();
@@ -82,8 +100,14 @@ pub fn overlays(arguments: &[String]) -> Result<(), String> {
             not_built.push(id);
             continue;
         };
-        let streams: Vec<_> = streams.into_iter().filter(|(name, _)| wanted.is_empty() || wanted.contains(name)).collect();
-        for name in wanted.iter().filter(|name| !streams.iter().any(|(built, _)| built == *name)) {
+        let streams: Vec<_> = streams
+            .into_iter()
+            .filter(|(name, _)| wanted.is_empty() || wanted.contains(name))
+            .collect();
+        for name in wanted
+            .iter()
+            .filter(|name| !streams.iter().any(|(built, _)| built == *name))
+        {
             println!("{id}: {name} is not built");
             unbuilt += 1;
         }
@@ -92,29 +116,53 @@ pub fn overlays(arguments: &[String]) -> Result<(), String> {
         }
         let packed = streams
             .iter()
-            .map(|(_, path)| std::fs::read(path).map_err(|error| format!("{}: {error}", path.display())))
+            .map(|(_, path)| {
+                std::fs::read(path).map_err(|error| format!("{}: {error}", path.display()))
+            })
             .collect::<Result<Vec<_>, _>>()?;
         let found = find_all(&reference(root, id)?, &packed);
-        let lost: Vec<&str> = streams.iter().zip(&found).filter(|(_, at)| at.is_none()).map(|((name, _), _)| name.as_str()).collect();
+        let lost: Vec<&str> = streams
+            .iter()
+            .zip(&found)
+            .filter(|(_, at)| at.is_none())
+            .map(|((name, _), _)| name.as_str())
+            .collect();
         checked += streams.len();
         missing += lost.len();
         let rom = target_for(id).rom;
         match lost.is_empty() {
             true => println!("{id}: {} overlays, each found in {rom}", streams.len()),
-            false => println!("{id}: {} overlays; {} not found in {rom}: {}", streams.len(), lost.len(), lost.join(" ")),
+            false => println!(
+                "{id}: {} overlays; {} not found in {rom}: {}",
+                streams.len(),
+                lost.len(),
+                lost.join(" ")
+            ),
         }
     }
     match (missing, unbuilt) {
         (0, 0) => checked_all(!words.is_empty(), editions.len(), &not_built),
         (0, unbuilt) => Err(format!("{unbuilt} overlays asked for are not built")),
-        (missing, _) => Err(format!("{missing} of {checked} overlay streams are not in their reference ROMs")),
+        (missing, _) => Err(format!(
+            "{missing} of {checked} overlay streams are not in their reference ROMs"
+        )),
     }
 }
 
 /// Whether a check that found nothing wrong checked what it was asked to:
 /// every edition named, or with none named at least one edition built.
-pub(super) fn checked_all(named: bool, editions: usize, not_built: &[DecompTargetId]) -> Result<(), String> {
-    let names = || not_built.iter().map(|id| id.as_str()).collect::<Vec<_>>().join(" ");
+pub(super) fn checked_all(
+    named: bool,
+    editions: usize,
+    not_built: &[DecompTargetId],
+) -> Result<(), String> {
+    let names = || {
+        not_built
+            .iter()
+            .map(|id| id.as_str())
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
     match not_built.len() {
         0 => Ok(()),
         _ if named => Err(format!("not built, so not checked: {}", names())),
@@ -134,7 +182,10 @@ fn differences(built: &[u8], reference: &[u8]) -> Vec<(usize, usize)> {
         }
     }
     if built.len() != reference.len() {
-        ranges.push((built.len().min(reference.len()), built.len().max(reference.len())));
+        ranges.push((
+            built.len().min(reference.len()),
+            built.len().max(reference.len()),
+        ));
     }
     ranges
 }
@@ -171,16 +222,34 @@ impl Placement {
                     && !symbol.name.is_empty()
                     && !symbol.name.starts_with(['$', '.'])
             })
-            .map(|symbol| (if symbol.kind == 2 { symbol.value & !1 } else { symbol.value }, symbol.name))
+            .map(|symbol| {
+                (
+                    if symbol.kind == 2 {
+                        symbol.value & !1
+                    } else {
+                        symbol.value
+                    },
+                    symbol.name,
+                )
+            })
             .collect();
         symbols.sort();
-        Ok(Placement { edition: id, sections, symbols })
+        Ok(Placement {
+            edition: id,
+            sections,
+            symbols,
+        })
     }
 
     /// The symbol and object that placed the byte at a cartridge address.
     fn at(&self, address: u32) -> String {
-        let after = self.sections.partition_point(|placed| placed.load <= address);
-        let Some(placed) = after.checked_sub(1).map(|at| &self.sections[at]).filter(|placed| address < placed.load + placed.size)
+        let after = self
+            .sections
+            .partition_point(|placed| placed.load <= address);
+        let Some(placed) = after
+            .checked_sub(1)
+            .map(|at| &self.sections[at])
+            .filter(|placed| address < placed.load + placed.size)
         else {
             return "no section".to_string();
         };
@@ -193,7 +262,11 @@ impl Placement {
         };
         let vma = placed.address + (address - placed.load);
         let before = self.symbols.partition_point(|(value, _)| *value <= vma);
-        match before.checked_sub(1).map(|at| &self.symbols[at]).filter(|(value, _)| *value >= placed.address) {
+        match before
+            .checked_sub(1)
+            .map(|at| &self.symbols[at])
+            .filter(|(value, _)| *value >= placed.address)
+        {
             Some((value, name)) if *value == vma => format!("{name} in {label}"),
             Some((value, name)) => format!("{name}+{:#x} in {label}", vma - value),
             None => label,
@@ -202,8 +275,13 @@ impl Placement {
 
     /// The source stem of the object that placed the byte at an address.
     fn object(&self, address: u32) -> Option<String> {
-        let after = self.sections.partition_point(|placed| placed.load <= address);
-        let placed = after.checked_sub(1).map(|at| &self.sections[at]).filter(|placed| address < placed.load + placed.size)?;
+        let after = self
+            .sections
+            .partition_point(|placed| placed.load <= address);
+        let placed = after
+            .checked_sub(1)
+            .map(|at| &self.sections[at])
+            .filter(|placed| address < placed.load + placed.size)?;
         (!placed.is_fill()).then(|| built::stem(self.edition, &placed.path))
     }
 }
@@ -219,23 +297,35 @@ pub(crate) struct Difference {
     pub(crate) overlays: Vec<String>,
 }
 
-pub(crate) fn first_difference(root: &Path, id: DecompTargetId) -> Result<Option<Difference>, String> {
+pub(crate) fn first_difference(
+    root: &Path,
+    id: DecompTargetId,
+) -> Result<Option<Difference>, String> {
     let path = built::output(root, id).join(format!("{id}.gba"));
     let image = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
     let rom = reference(root, id)?;
-    let Some(&(start, _)) = differences(&image, &rom).first() else { return Ok(None) };
+    let Some(&(start, _)) = differences(&image, &rom).first() else {
+        return Ok(None);
+    };
     let placement = Placement::read(root, id)?;
     let address = ROM + start as u32;
     let mut overlays = Vec::new();
     if let Ok(streams) = built::overlay_files(root, id, "lz") {
-        let packed = streams.iter().map(|(_, path)| std::fs::read(path).unwrap_or_default()).collect::<Vec<_>>();
+        let packed = streams
+            .iter()
+            .map(|(_, path)| std::fs::read(path).unwrap_or_default())
+            .collect::<Vec<_>>();
         for ((name, _), at) in streams.iter().zip(find_all(&rom, &packed)) {
             if at.is_none() {
                 overlays.push(name.clone());
             }
         }
     }
-    Ok(Some(Difference { label: placement.at(address), object: placement.object(address), overlays }))
+    Ok(Some(Difference {
+        label: placement.at(address),
+        object: placement.object(address),
+        overlays,
+    }))
 }
 
 /// Where an object places its bytes in the reference layout, as its name
@@ -251,7 +341,10 @@ fn expected(id: DecompTargetId, piece: &Placed, stem: &str) -> Option<u32> {
     if name.len() == 8 && name.starts_with("08") && stem.contains("/raw/") {
         return hex(name);
     }
-    let address = name.strip_prefix('f').filter(|rest| rest.len() == 6 && id.language() == "en" && stem.starts_with("games/")).and_then(hex)?;
+    let address = name
+        .strip_prefix('f')
+        .filter(|rest| rest.len() == 6 && id.language() == "en" && stem.starts_with("games/"))
+        .and_then(hex)?;
     Some(ROM + address)
 }
 
@@ -266,11 +359,17 @@ const ORIGIN_LISTED: usize = 12;
 /// when every such object is in place.
 fn origin(placement: &Placement, image: &[u8], reference: &[u8]) -> Option<Vec<String>> {
     let id = placement.edition;
-    let pieces: Vec<&Placed> = placement.sections.iter().filter(|placed| !placed.is_fill()).collect();
+    let pieces: Vec<&Placed> = placement
+        .sections
+        .iter()
+        .filter(|placed| !placed.is_fill())
+        .collect();
     let mut last_right: Option<usize> = None;
     for (index, piece) in pieces.iter().enumerate() {
         let stem = built::stem(id, &piece.path);
-        let Some(expected) = expected(id, piece, &stem) else { continue };
+        let Some(expected) = expected(id, piece, &stem) else {
+            continue;
+        };
         if expected == piece.load {
             last_right = Some(index);
             continue;
@@ -287,7 +386,11 @@ fn origin(placement: &Placement, image: &[u8], reference: &[u8]) -> Option<Vec<S
             commas(shift.abs()),
             if shift > 0 { "after" } else { "before" },
             match last_right {
-                Some(at) => format!("the layout last holds at {} ({:#010x}). From there:", label(pieces[at]), pieces[at].load),
+                Some(at) => format!(
+                    "the layout last holds at {} ({:#010x}). From there:",
+                    label(pieces[at]),
+                    pieces[at].load
+                ),
                 None => "nothing before it is placed by name. Before it:".to_string(),
             }
         )];
@@ -305,7 +408,10 @@ fn origin(placement: &Placement, image: &[u8], reference: &[u8]) -> Option<Vec<S
             ));
         }
         if between.len() > ORIGIN_LISTED {
-            lines.push(format!("  and {} objects more", between.len() - ORIGIN_LISTED));
+            lines.push(format!(
+                "  and {} objects more",
+                between.len() - ORIGIN_LISTED
+            ));
         }
         return Some(lines);
     }
@@ -342,7 +448,11 @@ pub fn roms(arguments: &[String]) -> Result<(), String> {
         }
         differing.push(id.as_str());
         let bytes: usize = ranges.iter().map(|(start, end)| end - start).sum();
-        println!("{id}: {} bytes in {} ranges differ from {rom}", commas(bytes as i64), ranges.len());
+        println!(
+            "{id}: {} bytes in {} ranges differ from {rom}",
+            commas(bytes as i64),
+            ranges.len()
+        );
         let placement = Placement::read(root, id)?;
         match origin(&placement, &image, &reference) {
             Some(lines) => lines.iter().for_each(|line| println!("  {line}")),
@@ -354,16 +464,27 @@ pub fn roms(arguments: &[String]) -> Result<(), String> {
         let listed = if all { ranges.len() } else { LISTED };
         for &(start, end) in ranges.iter().take(listed) {
             let at = ROM + start as u32;
-            println!("  {at:#010x}..{:#010x} {:>9}  {}", ROM + end as u32, commas((end - start) as i64), placement.at(at));
+            println!(
+                "  {at:#010x}..{:#010x} {:>9}  {}",
+                ROM + end as u32,
+                commas((end - start) as i64),
+                placement.at(at)
+            );
         }
         if ranges.len() > listed {
-            println!("  and {} ranges more (--all lists them)", ranges.len() - listed);
+            println!(
+                "  and {} ranges more (--all lists them)",
+                ranges.len() - listed
+            );
         }
     }
     match differing.as_slice() {
         [] => checked_all(!words.is_empty(), editions.len(), &not_built),
         [edition] => Err(format!("{edition} differs from its reference ROM")),
-        editions => Err(format!("{} differ from their reference ROMs", editions.join(" "))),
+        editions => Err(format!(
+            "{} differ from their reference ROMs",
+            editions.join(" ")
+        )),
     }
 }
 
@@ -378,15 +499,30 @@ mod tests {
     #[test]
     fn needles_are_found_in_one_pass() {
         let haystack = b"..abcdefgh..abcdXYZ..xy";
-        let needles = [b"abcdX".to_vec(), b"abcdefgh".to_vec(), b"xy".to_vec(), b"abcdQ".to_vec(), Vec::new()];
-        assert_eq!(find_all(haystack, &needles), [Some(12), Some(2), Some(21), None, Some(0)]);
+        let needles = [
+            b"abcdX".to_vec(),
+            b"abcdefgh".to_vec(),
+            b"xy".to_vec(),
+            b"abcdQ".to_vec(),
+            Vec::new(),
+        ];
+        assert_eq!(
+            find_all(haystack, &needles),
+            [Some(12), Some(2), Some(21), None, Some(0)]
+        );
     }
 
     #[test]
     fn overlay_ids_come_from_any_naming() {
         assert_eq!(overlay_id("64B").as_deref(), Some("resource_64b"));
-        assert_eq!(overlay_id("recon/tla/en/overlays/resource_6aa_c_0200263c.c").as_deref(), Some("resource_6aa"));
-        assert_eq!(overlay_id("out/tla-en/overlays/resource_649.lz").as_deref(), Some("resource_649"));
+        assert_eq!(
+            overlay_id("recon/tla/en/overlays/resource_6aa_c_0200263c.c").as_deref(),
+            Some("resource_6aa")
+        );
+        assert_eq!(
+            overlay_id("out/tla-en/overlays/resource_649.lz").as_deref(),
+            Some("resource_649")
+        );
         assert_eq!(overlay_id("tla-en"), None);
     }
 
@@ -394,9 +530,16 @@ mod tests {
     fn an_edition_named_or_every_edition_unbuilt_fails() {
         let unbuilt = [id("tla-ja")];
         assert!(checked_all(false, 6, &[]).is_ok());
-        assert!(checked_all(false, 6, &unbuilt).is_ok(), "with none named, what is built is checked");
-        assert!(checked_all(true, 6, &unbuilt).unwrap_err().contains("tla-ja"));
-        assert!(checked_all(false, 1, &unbuilt).unwrap_err().contains("nothing was checked"));
+        assert!(
+            checked_all(false, 6, &unbuilt).is_ok(),
+            "with none named, what is built is checked"
+        );
+        assert!(checked_all(true, 6, &unbuilt)
+            .unwrap_err()
+            .contains("tla-ja"));
+        assert!(checked_all(false, 1, &unbuilt)
+            .unwrap_err()
+            .contains("nothing was checked"));
     }
 
     #[test]
@@ -407,7 +550,10 @@ mod tests {
         built[4] = 1;
         built[20] = 1;
         assert_eq!(differences(&built, &reference), [(2, 5), (20, 21)]);
-        assert_eq!(differences(&built[..30], &reference), [(2, 5), (20, 21), (30, 32)]);
+        assert_eq!(
+            differences(&built[..30], &reference),
+            [(2, 5), (20, 21), (30, 32)]
+        );
         assert!(differences(&reference, &reference).is_empty());
     }
 
@@ -427,37 +573,110 @@ mod tests {
         };
         let de = id("tla-de");
         let sections = vec![
-            placed(".rom.00000000", "out/tla-de/obj/recon/tla/de/rom.o", 0x0800_0000, 0x10),
-            placed(".text", "out/tla-de/obj/games/tla/src/menu/f000010.o", 0x0800_0010, 0x12),
-            placed(".rom.00000020", "out/tla-de/obj/recon/tla/de/rom.o", 0x0800_0022, 0x8),
+            placed(
+                ".rom.00000000",
+                "out/tla-de/obj/recon/tla/de/rom.o",
+                0x0800_0000,
+                0x10,
+            ),
+            placed(
+                ".text",
+                "out/tla-de/obj/games/tla/src/menu/f000010.o",
+                0x0800_0010,
+                0x12,
+            ),
+            placed(
+                ".rom.00000020",
+                "out/tla-de/obj/recon/tla/de/rom.o",
+                0x0800_0022,
+                0x8,
+            ),
         ];
-        let placement = Placement { edition: de, sections, symbols: Vec::new() };
+        let placement = Placement {
+            edition: de,
+            sections,
+            symbols: Vec::new(),
+        };
         let reference = vec![0u8; 0x2a];
         let mut image = reference.clone();
         image[0x20] = 1;
         let lines = origin(&placement, &image, &reference).unwrap();
         assert!(lines[0].starts_with("origin: recon/tla/de/rom(.rom.00000020) is placed at 0x08000022, 2 bytes after its place"), "{}", lines[0]);
         assert!(lines[0].contains("last holds at recon/tla/de/rom(.rom.00000000)"));
-        assert_eq!(lines[1..], ["  0x08000000    0x10 recon/tla/de/rom(.rom.00000000)", "  0x08000010    0x12 games/tla/src/menu/f000010  (differs)"]);
-        assert_eq!(expected(id("tla-en"), &placement.sections[1], "games/tla/src/menu/f0f94a4"), Some(0x080f_94a4));
-        assert_eq!(expected(de, &placement.sections[1], "games/tla/src/menu/f0f94a4"), None, "modules are named by English addresses");
-        assert_eq!(expected(id("tla-en"), &placement.sections[1], "recon/tla/raw/080f9644"), Some(0x080f_9644));
+        assert_eq!(
+            lines[1..],
+            [
+                "  0x08000000    0x10 recon/tla/de/rom(.rom.00000000)",
+                "  0x08000010    0x12 games/tla/src/menu/f000010  (differs)"
+            ]
+        );
+        assert_eq!(
+            expected(
+                id("tla-en"),
+                &placement.sections[1],
+                "games/tla/src/menu/f0f94a4"
+            ),
+            Some(0x080f_94a4)
+        );
+        assert_eq!(
+            expected(de, &placement.sections[1], "games/tla/src/menu/f0f94a4"),
+            None,
+            "modules are named by English addresses"
+        );
+        assert_eq!(
+            expected(
+                id("tla-en"),
+                &placement.sections[1],
+                "recon/tla/raw/080f9644"
+            ),
+            Some(0x080f_9644)
+        );
         image[0x20] = 0;
         let mut right = placement.sections.clone();
         right[2].load = 0x0800_0020;
-        assert!(origin(&Placement { edition: de, sections: right, symbols: Vec::new() }, &image, &reference).is_none());
+        assert!(origin(
+            &Placement {
+                edition: de,
+                sections: right,
+                symbols: Vec::new()
+            },
+            &image,
+            &reference
+        )
+        .is_none());
     }
 
     #[test]
     fn a_byte_is_named_by_the_symbol_and_object_that_placed_it() {
         let map = Map::parse(crate::gba::ld_map::tests::MAP);
-        let mut sections: Vec<Placed> = map.placed.into_iter().filter(|p| p.loaded && p.size > 0).collect();
+        let mut sections: Vec<Placed> = map
+            .placed
+            .into_iter()
+            .filter(|p| p.loaded && p.size > 0)
+            .collect();
         sections.sort_by_key(|placed| placed.load);
-        let symbols = vec![(0x0300_0000, "IwramIrqMain".to_string()), (0x0800_0010, "Input_Handle".to_string()), (0x0800_0018, "Input_Poll".to_string())];
-        let placement = Placement { edition: id("tla-en"), sections, symbols };
-        assert_eq!(placement.at(0x0800_001a), "Input_Poll+0x2 in /x/build/src/system/io.o");
-        assert_eq!(placement.at(0x0800_0032), "IwramIrqMain+0x2 in /x/build/src/system/iwram_routines.o");
+        let symbols = vec![
+            (0x0300_0000, "IwramIrqMain".to_string()),
+            (0x0800_0010, "Input_Handle".to_string()),
+            (0x0800_0018, "Input_Poll".to_string()),
+        ];
+        let placement = Placement {
+            edition: id("tla-en"),
+            sections,
+            symbols,
+        };
+        assert_eq!(
+            placement.at(0x0800_001a),
+            "Input_Poll+0x2 in /x/build/src/system/io.o"
+        );
+        assert_eq!(
+            placement.at(0x0800_0032),
+            "IwramIrqMain+0x2 in /x/build/src/system/iwram_routines.o"
+        );
         assert_eq!(placement.at(0x0800_001e), "the linker's fill");
-        assert_eq!(placement.at(0x0800_0004), "/x/build/asm/rom.o(.rom.00000000)");
+        assert_eq!(
+            placement.at(0x0800_0004),
+            "/x/build/asm/rom.o(.rom.00000000)"
+        );
     }
 }

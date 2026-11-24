@@ -52,7 +52,11 @@ impl Type {
                     value = value << 8 | u64::from(bytes.get(at + i).copied().unwrap_or(0));
                 }
                 let bits = 8 * *size as u32;
-                let value = if *signed && bits < 64 && value >> (bits - 1) & 1 != 0 { value as i64 - (1i64 << bits) } else { value as i64 };
+                let value = if *signed && bits < 64 && value >> (bits - 1) & 1 != 0 {
+                    value as i64 - (1i64 << bits)
+                } else {
+                    value as i64
+                };
                 out.push(value);
             }
             Type::Array(element, count) => {
@@ -94,10 +98,13 @@ struct Headers {
 impl Headers {
     fn read(root: &Path, game: &str) -> Result<Headers, String> {
         let mut texts = Vec::new();
-        for entry in walkdir::WalkDir::new(root.join("games").join(game).join("include")).sort_by_file_name() {
+        for entry in
+            walkdir::WalkDir::new(root.join("games").join(game).join("include")).sort_by_file_name()
+        {
             let entry = entry.map_err(|e| e.to_string())?;
             if entry.path().extension().and_then(|e| e.to_str()) == Some("h") {
-                let text = std::fs::read_to_string(entry.path()).map_err(|e| format!("cannot read {}: {e}", entry.path().display()))?;
+                let text = std::fs::read_to_string(entry.path())
+                    .map_err(|e| format!("cannot read {}: {e}", entry.path().display()))?;
                 texts.push((entry.path().to_path_buf(), text));
             }
         }
@@ -106,13 +113,20 @@ impl Headers {
 
     fn from_texts(texts: Vec<(PathBuf, String)>) -> Result<Headers, String> {
         let comments = regex::Regex::new(r"(?s)/\*.*?\*/|//[^\n]*").map_err(|e| e.to_string())?;
-        let define = regex::Regex::new(r"(?m)^\s*#\s*define\s+(\w+)[ \t]+(.+?)\s*$").map_err(|e| e.to_string())?;
-        let enumeration = regex::Regex::new(r"(?s)\benum\s*\w*\s*\{([^}]*)\}").map_err(|e| e.to_string())?;
-        let texts: Vec<(PathBuf, String)> = texts.into_iter().map(|(p, t)| (p, comments.replace_all(&t, "").into_owned())).collect();
+        let define = regex::Regex::new(r"(?m)^\s*#\s*define\s+(\w+)[ \t]+(.+?)\s*$")
+            .map_err(|e| e.to_string())?;
+        let enumeration =
+            regex::Regex::new(r"(?s)\benum\s*\w*\s*\{([^}]*)\}").map_err(|e| e.to_string())?;
+        let texts: Vec<(PathBuf, String)> = texts
+            .into_iter()
+            .map(|(p, t)| (p, comments.replace_all(&t, "").into_owned()))
+            .collect();
         let mut defines = HashMap::new();
         for (_, text) in &texts {
             for found in define.captures_iter(text) {
-                defines.entry(found[1].to_string()).or_insert_with(|| found[2].to_string());
+                defines
+                    .entry(found[1].to_string())
+                    .or_insert_with(|| found[2].to_string());
             }
             for found in enumeration.captures_iter(text) {
                 // The last enumerator with a value of its own, and how far past
@@ -154,7 +168,13 @@ impl Headers {
     }
 
     /// Binary operators by precedence, loosest first.
-    fn expression(&self, tokens: &[&str], at: &mut usize, level: usize, depth: usize) -> Option<i64> {
+    fn expression(
+        &self,
+        tokens: &[&str],
+        at: &mut usize,
+        level: usize,
+        depth: usize,
+    ) -> Option<i64> {
         const LEVELS: [&[&str]; 5] = [&["|"], &["&"], &["<<", ">>"], &["+", "-"], &["*"]];
         if depth > 64 {
             return None;
@@ -192,7 +212,8 @@ impl Headers {
             }
             _ => number(token).or_else(|| {
                 let text = self.defines.get(token)?;
-                let tokens = regex::Regex::new(r"0[xX][0-9a-fA-F]+|\d+|\w+|<<|>>|[-+*|&~()]").ok()?;
+                let tokens =
+                    regex::Regex::new(r"0[xX][0-9a-fA-F]+|\d+|\w+|<<|>>|[-+*|&~()]").ok()?;
                 let inner: Vec<&str> = tokens.find_iter(text).map(|m| m.as_str()).collect();
                 let mut inner_at = 0;
                 let value = self.expression(&inner, &mut inner_at, 0, depth + 1)?;
@@ -204,7 +225,8 @@ impl Headers {
     /// The layout of `struct name`, as alchemy-gcc lays it out: each field at
     /// its type's alignment, every struct aligned and padded to 4 bytes.
     fn layout(&self, name: &str) -> Result<Layout, String> {
-        let start = regex::Regex::new(&format!(r"\bstruct\s+{}\s*\{{", regex::escape(name))).map_err(|e| e.to_string())?;
+        let start = regex::Regex::new(&format!(r"\bstruct\s+{}\s*\{{", regex::escape(name)))
+            .map_err(|e| e.to_string())?;
         let (path, text, body) = self
             .texts
             .iter()
@@ -221,7 +243,11 @@ impl Headers {
         let mut bits = 0usize;
         for member in body.split(';').map(str::trim).filter(|m| !m.is_empty()) {
             let member = member.split_whitespace().collect::<Vec<_>>().join(" ");
-            if let Some(width) = member.strip_prefix("unsigned ").and_then(|rest| rest.split_once(':')).and_then(|(_, width)| width.trim().parse::<usize>().ok()) {
+            if let Some(width) = member
+                .strip_prefix("unsigned ")
+                .and_then(|rest| rest.split_once(':'))
+                .and_then(|(_, width)| width.trim().parse::<usize>().ok())
+            {
                 bits += width;
                 continue;
             }
@@ -232,24 +258,53 @@ impl Headers {
             if member.contains(':') || member.contains('(') {
                 return Err(format!("struct {name}: cannot lay out `{member}`"));
             }
-            let words: Vec<&str> = member.split(' ').filter(|w| !matches!(*w, "const" | "volatile")).collect();
+            let words: Vec<&str> = member
+                .split(' ')
+                .filter(|w| !matches!(*w, "const" | "volatile"))
+                .collect();
             let (base, declarators) = match words.first() {
                 Some(&"struct") => {
-                    let tag = words.get(1).ok_or_else(|| format!("struct {name}: `{member}`"))?;
+                    let tag = words
+                        .get(1)
+                        .ok_or_else(|| format!("struct {name}: `{member}`"))?;
                     (Type::Struct(self.layout(tag)?), words[2..].join(" "))
                 }
-                Some(&"unsigned" | &"signed") if words.len() > 2 && scalar(&words[..2].join(" ")).is_some() => {
+                Some(&"unsigned" | &"signed")
+                    if words.len() > 2 && scalar(&words[..2].join(" ")).is_some() =>
+                {
                     (scalar(&words[..2].join(" ")).unwrap(), words[2..].join(" "))
                 }
-                Some(word) => (scalar(word).ok_or_else(|| format!("struct {name}: unknown type in `{member}`"))?, words[1..].join(" ")),
+                Some(word) => (
+                    scalar(word)
+                        .ok_or_else(|| format!("struct {name}: unknown type in `{member}`"))?,
+                    words[1..].join(" "),
+                ),
                 None => continue,
             };
             for declarator in declarators.split(',').map(str::trim) {
-                let (field, dims) = declarator.split_once('[').map_or((declarator, ""), |(f, d)| (f.trim(), d));
-                let mut kind = if field.starts_with('*') { Type::Int { size: 4, signed: false } } else { base.clone() };
+                let (field, dims) = declarator
+                    .split_once('[')
+                    .map_or((declarator, ""), |(f, d)| (f.trim(), d));
+                let mut kind = if field.starts_with('*') {
+                    Type::Int {
+                        size: 4,
+                        signed: false,
+                    }
+                } else {
+                    base.clone()
+                };
                 let mut lengths = Vec::new();
-                for dim in dims.split('[').map(|d| d.trim().trim_end_matches(']').trim()).filter(|d| !d.is_empty()) {
-                    lengths.push(self.constant(dim).filter(|&n| n >= 0).map(|n| n as usize).ok_or_else(|| format!("struct {name}: cannot size {field}[{dim}]"))?);
+                for dim in dims
+                    .split('[')
+                    .map(|d| d.trim().trim_end_matches(']').trim())
+                    .filter(|d| !d.is_empty())
+                {
+                    lengths.push(
+                        self.constant(dim)
+                            .filter(|&n| n >= 0)
+                            .map(|n| n as usize)
+                            .ok_or_else(|| format!("struct {name}: cannot size {field}[{dim}]"))?,
+                    );
                 }
                 for length in lengths.into_iter().rev() {
                     kind = Type::Array(Box::new(kind), length);
@@ -264,29 +319,49 @@ impl Headers {
         if bits > 0 {
             offset = offset.next_multiple_of(4) + bits.div_ceil(32) * 4;
         }
-        let layout = Layout { fields, size: offset.next_multiple_of(align), align };
-        self.check(name, &layout, text).map_err(|e| format!("{}: {e}", path.display()))?;
+        let layout = Layout {
+            fields,
+            size: offset.next_multiple_of(align),
+            align,
+        };
+        self.check(name, &layout, text)
+            .map_err(|e| format!("{}: {e}", path.display()))?;
         Ok(layout)
     }
 
     /// The header's STATIC_ASSERTs on `struct name` hold for `layout`.
     fn check(&self, name: &str, layout: &Layout, text: &str) -> Result<(), String> {
         let tag = regex::escape(name);
-        let size = regex::Regex::new(&format!(r"STATIC_ASSERT\(\s*sizeof\(struct {tag}\)\s*==\s*(\w+)\s*\)")).map_err(|e| e.to_string())?;
+        let size = regex::Regex::new(&format!(
+            r"STATIC_ASSERT\(\s*sizeof\(struct {tag}\)\s*==\s*(\w+)\s*\)"
+        ))
+        .map_err(|e| e.to_string())?;
         for found in size.captures_iter(text) {
             if let Some(want) = self.constant(&found[1]).map(|n| n as usize) {
                 if want != layout.size {
-                    return Err(format!("struct {name} lays out as {} bytes, its STATIC_ASSERT says {want}", layout.size));
+                    return Err(format!(
+                        "struct {name} lays out as {} bytes, its STATIC_ASSERT says {want}",
+                        layout.size
+                    ));
                 }
             }
         }
-        let offset = regex::Regex::new(&format!(r"STATIC_ASSERT\(\s*offsetof\(struct {tag},\s*(\w+)\)\s*==\s*(\w+)\s*\)")).map_err(|e| e.to_string())?;
+        let offset = regex::Regex::new(&format!(
+            r"STATIC_ASSERT\(\s*offsetof\(struct {tag},\s*(\w+)\)\s*==\s*(\w+)\s*\)"
+        ))
+        .map_err(|e| e.to_string())?;
         for found in offset.captures_iter(text) {
-            let (Some(at), Some(want)) = (layout.fields.iter().find(|f| f.0 == found[1]).map(|f| f.1), self.constant(&found[2]).map(|n| n as usize)) else {
+            let (Some(at), Some(want)) = (
+                layout.fields.iter().find(|f| f.0 == found[1]).map(|f| f.1),
+                self.constant(&found[2]).map(|n| n as usize),
+            ) else {
                 continue;
             };
             if at != want {
-                return Err(format!("struct {name}: {} lays out at {at:#x}, its STATIC_ASSERT says {want:#x}", &found[1]));
+                return Err(format!(
+                    "struct {name}: {} lays out at {at:#x}, its STATIC_ASSERT says {want:#x}",
+                    &found[1]
+                ));
             }
         }
         Ok(())
@@ -327,13 +402,20 @@ impl Table {
                 let mut at = vec![at];
                 while let Type::Array(element, count) = kind {
                     let step = element.size();
-                    at = at.iter().flat_map(|&a| (0..count).map(move |i| a + i * step)).collect();
+                    at = at
+                        .iter()
+                        .flat_map(|&a| (0..count).map(move |i| a + i * step))
+                        .collect();
                     kind = *element;
                 }
                 let Type::Struct(layout) = kind else {
                     return Err(format!("{}: {path} reads into a number", self.symbol));
                 };
-                let (_, offset, field) = layout.fields.iter().find(|f| f.0 == name).ok_or_else(|| format!("{} has no field {path}", self.symbol))?;
+                let (_, offset, field) = layout
+                    .fields
+                    .iter()
+                    .find(|f| f.0 == name)
+                    .ok_or_else(|| format!("{} has no field {path}", self.symbol))?;
                 next.extend(at.into_iter().map(|a| (a + offset, field.clone())));
             }
             found = next;
@@ -377,38 +459,64 @@ impl Game {
     /// Edition `edition` (`tla-en`): its ELF, its game's headers and the
     /// text of its language.
     pub fn read_edition(root: &Path, edition: &str) -> Result<Game, String> {
-        let (game, language) = edition.split_once('-').ok_or_else(|| format!("{edition}: no edition"))?;
+        let (game, language) = edition
+            .split_once('-')
+            .ok_or_else(|| format!("{edition}: no edition"))?;
         let path = super::snapshot::build(root, edition)?.join(format!("{edition}.elf"));
-        let data = std::fs::read(&path).map_err(|e| format!("cannot read {}: {e} (make {edition})", path.display()))?;
+        let data = std::fs::read(&path)
+            .map_err(|e| format!("cannot read {}: {e} (make {edition})", path.display()))?;
         Ok(Game {
             elf: crate::gba::elf::Elf::parse(&data)?,
             elf_path: path,
             headers: Headers::read(root, game)?,
-            catalog: crate::alchemy::po::read_catalog(&root.join("games").join(game).join("text").join(format!("{language}.po")))?,
+            catalog: crate::alchemy::po::read_catalog(
+                &root
+                    .join("games")
+                    .join(game)
+                    .join("text")
+                    .join(format!("{language}.po")),
+            )?,
         })
     }
 
     /// The game of the checkout the program runs in, read once.
     pub fn here() -> Result<&'static Game, String> {
         static GAME: std::sync::OnceLock<Result<Game, String>> = std::sync::OnceLock::new();
-        GAME.get_or_init(|| Game::read(crate::compile::root())).as_ref().map_err(Clone::clone)
+        GAME.get_or_init(|| Game::read(crate::compile::root()))
+            .as_ref()
+            .map_err(Clone::clone)
     }
 
     /// Table `symbol`, rows of `struct row`.
     pub fn table(&self, symbol: &str, row: &str) -> Result<Table, String> {
         let layout = self.headers.layout(row)?;
-        let found = self.elf.symbols.iter().find(|s| s.name == symbol && s.size > 0).ok_or_else(|| format!("{} has no {symbol}", self.elf_path.display()))?;
+        let found = self
+            .elf
+            .symbols
+            .iter()
+            .find(|s| s.name == symbol && s.size > 0)
+            .ok_or_else(|| format!("{} has no {symbol}", self.elf_path.display()))?;
         let (start, size) = (found.value as usize, found.size as usize);
         let bytes = self
             .elf
             .sections
             .iter()
-            .find_map(|s| s.bytes.get(start.checked_sub(s.address as usize)?..start - s.address as usize + size))
+            .find_map(|s| {
+                s.bytes
+                    .get(start.checked_sub(s.address as usize)?..start - s.address as usize + size)
+            })
             .ok_or_else(|| format!("{symbol} lies in no section"))?;
         if size % layout.size != 0 {
-            return Err(format!("{symbol}: {size} bytes is no whole number of struct {row} ({} bytes)", layout.size));
+            return Err(format!(
+                "{symbol}: {size} bytes is no whole number of struct {row} ({} bytes)",
+                layout.size
+            ));
         }
-        Ok(Table { layout, bytes: bytes.to_vec(), symbol: symbol.to_string() })
+        Ok(Table {
+            layout,
+            bytes: bytes.to_vec(),
+            symbol: symbol.to_string(),
+        })
     }
 
     /// The `count` names that follow message `first` (`MsgAbilityName`): the
@@ -423,11 +531,34 @@ impl Game {
             .iter()
             .find(|e| e.context.as_deref() == Some(first))
             .and_then(key)
-            .or_else(|| self.elf.symbols.iter().find(|y| y.name == first).map(|y| y.value as usize))
-            .ok_or_else(|| format!("neither the text nor {} names {first}", self.elf_path.display()))?;
-        let by_key: HashMap<usize, &str> = self.catalog.entries.iter().filter_map(|e| Some((key(e)?, e.value.as_str()))).collect();
+            .or_else(|| {
+                self.elf
+                    .symbols
+                    .iter()
+                    .find(|y| y.name == first)
+                    .map(|y| y.value as usize)
+            })
+            .ok_or_else(|| {
+                format!(
+                    "neither the text nor {} names {first}",
+                    self.elf_path.display()
+                )
+            })?;
+        let by_key: HashMap<usize, &str> = self
+            .catalog
+            .entries
+            .iter()
+            .filter_map(|e| Some((key(e)?, e.value.as_str())))
+            .collect();
         let codes = regex::Regex::new(r"\{[^}]*\}").map_err(|e| e.to_string())?;
-        Ok((0..count).map(|n| by_key.get(&(base + n)).map(|v| codes.replace_all(v, "").into_owned()).unwrap_or_default()).collect())
+        Ok((0..count)
+            .map(|n| {
+                by_key
+                    .get(&(base + n))
+                    .map(|v| codes.replace_all(v, "").into_owned())
+                    .unwrap_or_default()
+            })
+            .collect())
     }
 
     /// The names of table `symbol`'s rows (`struct row`), message `first` and
@@ -448,7 +579,9 @@ impl Game {
 
     /// The value of `#define name` or enumerator `name` in the headers.
     pub fn constant(&self, name: &str) -> Result<i64, String> {
-        self.headers.constant(name).ok_or_else(|| format!("the headers give no value to {name}"))
+        self.headers
+            .constant(name)
+            .ok_or_else(|| format!("the headers give no value to {name}"))
     }
 }
 
@@ -480,7 +613,15 @@ STATIC_ASSERT(offsetof(struct Row, pairs) == 0x08);
     #[test]
     fn constants_count_on_and_evaluate() {
         let h = headers("enum Element { VENUS, MERCURY = 3, MARS, /* x */ NONE, COUNT = NONE };\n#define END -1 ///< y\n#define SHIFTED (1 << 4 | MARS)\n");
-        assert_eq!([h.constant("MARS"), h.constant("COUNT"), h.constant("END"), h.constant("SHIFTED")], [Some(4), Some(5), Some(-1), Some(20)]);
+        assert_eq!(
+            [
+                h.constant("MARS"),
+                h.constant("COUNT"),
+                h.constant("END"),
+                h.constant("SHIFTED")
+            ],
+            [Some(4), Some(5), Some(-1), Some(20)]
+        );
         assert_eq!(h.constant("MISSING"), None);
     }
 
@@ -491,7 +632,18 @@ STATIC_ASSERT(offsetof(struct Row, pairs) == 0x08);
         assert_eq!(pair.size, 4);
         let row = h.layout("Row").unwrap();
         let at: Vec<(&str, usize)> = row.fields.iter().map(|f| (f.0.as_str(), f.1)).collect();
-        assert_eq!(at, [("price", 0), ("type", 2), ("flags", 3), ("word", 4), ("pairs", 8), ("ids", 24), ("last", 36)]);
+        assert_eq!(
+            at,
+            [
+                ("price", 0),
+                ("type", 2),
+                ("flags", 3),
+                ("word", 4),
+                ("pairs", 8),
+                ("ids", 24),
+                ("last", 36)
+            ]
+        );
         assert_eq!(row.size, 40);
     }
 
@@ -510,7 +662,11 @@ STATIC_ASSERT(offsetof(struct Row, pairs) == 0x08);
         bytes[9] = 0xff;
         bytes[12] = 7;
         bytes[40 + 36] = 9;
-        let table = Table { layout, bytes, symbol: "gRows".into() };
+        let table = Table {
+            layout,
+            bytes,
+            symbol: "gRows".into(),
+        };
         assert_eq!(table.len(), 2);
         assert_eq!(table.value(0, "price").unwrap(), -5);
         assert_eq!(table.values(0, "pairs.amount").unwrap(), [-1, 0, 0, 0]);
@@ -530,12 +686,30 @@ STATIC_ASSERT(offsetof(struct Row, pairs) == 0x08);
             return;
         }
         let game = Game::read(root).unwrap();
-        let items = game.table("gItem_DefinitionTable", "ItemDefinition").unwrap();
-        let long_sword = game.item_names().unwrap().iter().position(|n| n == "Long Sword").unwrap();
-        assert_eq!(items.value(long_sword, "type").unwrap(), game.constant("ITEM_TYPE_WEAPON").unwrap());
+        let items = game
+            .table("gItem_DefinitionTable", "ItemDefinition")
+            .unwrap();
+        let long_sword = game
+            .item_names()
+            .unwrap()
+            .iter()
+            .position(|n| n == "Long Sword")
+            .unwrap();
+        assert_eq!(
+            items.value(long_sword, "type").unwrap(),
+            game.constant("ITEM_TYPE_WEAPON").unwrap()
+        );
         let abilities = game.ability_names().unwrap();
-        assert_eq!(abilities.len(), game.table("gAbilityDefinitions", "AbilityDefinition").unwrap().len());
-        assert_eq!(abilities[game.constant("ABILITY_MOVE").unwrap() as usize], "Move");
+        assert_eq!(
+            abilities.len(),
+            game.table("gAbilityDefinitions", "AbilityDefinition")
+                .unwrap()
+                .len()
+        );
+        assert_eq!(
+            abilities[game.constant("ABILITY_MOVE").unwrap() as usize],
+            "Move"
+        );
         for (symbol, row) in [
             ("gClass_DefinitionTable", "ClassDefinition"),
             ("gDjinn_DefinitionTable", "DjinnDefinition"),

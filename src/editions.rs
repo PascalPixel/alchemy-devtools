@@ -71,14 +71,22 @@ struct Section {
 fn sections(path: &Path) -> Result<Vec<Section>, String> {
     let data = std::fs::read(path).map_err(|error| format!("{}: {error}", path.display()))?;
     let headers = elf::headers(&data).map_err(|error| format!("{}: {error}", path.display()))?;
-    let symbols = Elf::parse(&data).map_err(|error| format!("{}: {error}", path.display()))?.symbols;
+    let symbols = Elf::parse(&data)
+        .map_err(|error| format!("{}: {error}", path.display()))?
+        .symbols;
     let mut sections: Vec<Section> = headers
         .iter()
-        .map(|header| Section { name: header.name.clone(), size: header.size as u64, names: Vec::new() })
+        .map(|header| Section {
+            name: header.name.clone(),
+            size: header.size as u64,
+            names: Vec::new(),
+        })
         .collect();
     let mut globals: Vec<_> = symbols
         .iter()
-        .filter(|symbol| symbol.bind == STB_GLOBAL && symbol.section != 0 && symbol.section < RESERVED)
+        .filter(|symbol| {
+            symbol.bind == STB_GLOBAL && symbol.section != 0 && symbol.section < RESERVED
+        })
         .collect();
     globals.sort_by_key(|symbol| (symbol.section, symbol.value));
     for symbol in globals {
@@ -97,25 +105,40 @@ fn sections(path: &Path) -> Result<Vec<Section>, String> {
 
 /// The global names an object defines, section by section.
 fn defined(path: &Path) -> Result<Vec<String>, String> {
-    Ok(sections(path)?.into_iter().flat_map(|section| section.names).collect())
+    Ok(sections(path)?
+        .into_iter()
+        .flat_map(|section| section.names)
+        .collect())
 }
 
 /// The editions of `game` among `chosen`, in the targets' order.
 fn of_game(chosen: &[DecompTargetId], game: &str) -> Vec<DecompTargetId> {
-    chosen.iter().copied().filter(|&id| id.game() == game).collect()
+    chosen
+        .iter()
+        .copied()
+        .filter(|&id| id.game() == game)
+        .collect()
 }
 
 /// Every object an edition of `all` links from `games/`, in English's link
 /// order and then each other edition's own in its order, with the languages
 /// whose main image or any overlay links it: each edition's object list as
 /// its build wrote it from the linker script.
-fn linked_by(root: &Path, all: &[DecompTargetId], english: DecompTargetId) -> Result<(Vec<String>, HashMap<String, Vec<&'static str>>), String> {
+fn linked_by(
+    root: &Path,
+    all: &[DecompTargetId],
+    english: DecompTargetId,
+) -> Result<(Vec<String>, HashMap<String, Vec<&'static str>>), String> {
     let mut order: Vec<String> = Vec::new();
     let mut languages: HashMap<String, Vec<&'static str>> = HashMap::new();
     let ordered = std::iter::once(english).chain(all.iter().copied().filter(|&id| id != english));
     for id in ordered {
         let lists = link::linked(root, id)?;
-        for stem in lists.all().into_iter().filter(|stem| stem.starts_with("games/")) {
+        for stem in lists
+            .all()
+            .into_iter()
+            .filter(|stem| stem.starts_with("games/"))
+        {
             let linked = languages.entry(stem.to_string()).or_insert_with(|| {
                 order.push(stem.to_string());
                 Vec::new()
@@ -129,23 +152,43 @@ fn linked_by(root: &Path, all: &[DecompTargetId], english: DecompTargetId) -> Re
 }
 
 /// One game's objects and scaffolds.
-pub(crate) fn survey(root: &Path, game: &str, chosen: &[DecompTargetId]) -> Result<(Vec<Object>, Vec<Scaffold>), String> {
+pub(crate) fn survey(
+    root: &Path,
+    game: &str,
+    chosen: &[DecompTargetId],
+) -> Result<(Vec<Object>, Vec<Scaffold>), String> {
     let all: Vec<DecompTargetId> = built::editions(&[game.to_string()])?;
-    let english = built::edition(game, "en").ok_or_else(|| format!("{game} has no English edition"))?;
+    let english =
+        built::edition(game, "en").ok_or_else(|| format!("{game} has no English edition"))?;
     let (order, languages) = linked_by(root, &all, english)?;
     let mut objects: Vec<Object> = Vec::new();
     // Each name English links from games/, by the object that defines it.
     let mut owner: HashMap<String, usize> = HashMap::new();
     for stem in &order {
-        let linked: Vec<DecompTargetId> = all.iter().copied().filter(|&id| languages[stem].contains(&id.language())).collect();
-        let missing: Vec<DecompTargetId> = all.iter().copied().filter(|id| !linked.contains(id)).collect();
+        let linked: Vec<DecompTargetId> = all
+            .iter()
+            .copied()
+            .filter(|&id| languages[stem].contains(&id.language()))
+            .collect();
+        let missing: Vec<DecompTargetId> = all
+            .iter()
+            .copied()
+            .filter(|id| !linked.contains(id))
+            .collect();
         let english_links = linked.contains(&english);
         if missing.iter().all(|id| !chosen.contains(id)) && !english_links {
             continue;
         }
         // English's names first, then those only another edition's build defines.
-        let mut names = if english_links { defined(&built::object(root, english, stem))? } else { Vec::new() };
-        for &id in linked.iter().filter(|&&id| id != english && !missing.is_empty()) {
+        let mut names = if english_links {
+            defined(&built::object(root, english, stem))?
+        } else {
+            Vec::new()
+        };
+        for &id in linked
+            .iter()
+            .filter(|&&id| id != english && !missing.is_empty())
+        {
             for name in defined(&built::object(root, id, stem))? {
                 if !names.contains(&name) {
                     names.push(name);
@@ -169,11 +212,16 @@ pub(crate) fn survey(root: &Path, game: &str, chosen: &[DecompTargetId]) -> Resu
     }
     let mut scaffolds = Vec::new();
     for &id in chosen.iter().filter(|&&id| id != english) {
-        let Some((source, object)) = built::scaffold(root, id) else { continue };
+        let Some((source, object)) = built::scaffold(root, id) else {
+            continue;
+        };
         let mut scaffold = Scaffold {
             edition: id,
             source,
-            unlinked: objects.iter().filter(|object| object.missing.contains(&id)).count(),
+            unlinked: objects
+                .iter()
+                .filter(|object| object.missing.contains(&id))
+                .count(),
             linked_sections: 0,
             linked_bytes: 0,
             other_bytes: 0,
@@ -184,7 +232,11 @@ pub(crate) fn survey(root: &Path, game: &str, chosen: &[DecompTargetId]) -> Resu
             for name in &section.names {
                 let Some(&at) = owner.get(name) else { continue };
                 held = true;
-                let place = Held { edition: id, section: section.name.clone(), size: section.size };
+                let place = Held {
+                    edition: id,
+                    section: section.name.clone(),
+                    size: section.size,
+                };
                 if let Some((_, places)) = objects[at].names.iter_mut().find(|(n, _)| n == name) {
                     places.push(place);
                 }
@@ -202,13 +254,18 @@ pub(crate) fn survey(root: &Path, game: &str, chosen: &[DecompTargetId]) -> Resu
     }
     // Keep what some chosen edition lacks, or what a scaffold still holds.
     objects.retain(|object| {
-        object.missing.iter().any(|id| chosen.contains(id)) || object.names.iter().any(|(_, places)| !places.is_empty())
+        object.missing.iter().any(|id| chosen.contains(id))
+            || object.names.iter().any(|(_, places)| !places.is_empty())
     });
     Ok((objects, scaffolds))
 }
 
 fn languages(editions: &[DecompTargetId]) -> String {
-    editions.iter().map(|&id| id.language()).collect::<Vec<_>>().join(" ")
+    editions
+        .iter()
+        .map(|&id| id.language())
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn text(objects: &[Object], scaffolds: &[Scaffold]) -> String {
@@ -223,13 +280,22 @@ fn text(objects: &[Object], scaffolds: &[Scaffold]) -> String {
         for (name, places) in &object.names {
             let mut parts: Vec<String> = places
                 .iter()
-                .map(|place| format!("{} {} ({})", place.edition.language(), place.section, bytes(place.size)))
+                .map(|place| {
+                    format!(
+                        "{} {} ({})",
+                        place.edition.language(),
+                        place.section,
+                        bytes(place.size)
+                    )
+                })
                 .collect();
             let absent: Vec<_> = object
                 .missing
                 .iter()
                 .copied()
-                .filter(|id| scanned.contains(id) && places.iter().all(|place| place.edition != *id))
+                .filter(|id| {
+                    scanned.contains(id) && places.iter().all(|place| place.edition != *id)
+                })
                 .collect();
             if !absent.is_empty() {
                 parts.push(format!("not in the scaffold of {}", languages(&absent)));
@@ -273,7 +339,14 @@ pub(crate) fn quote(text: &str) -> String {
 }
 
 fn list(editions: &[DecompTargetId]) -> String {
-    format!("[{}]", editions.iter().map(|id| quote(id.as_str())).collect::<Vec<_>>().join(","))
+    format!(
+        "[{}]",
+        editions
+            .iter()
+            .map(|id| quote(id.as_str()))
+            .collect::<Vec<_>>()
+            .join(",")
+    )
 }
 
 fn json(objects: &[Object], scaffolds: &[Scaffold]) -> String {
@@ -295,7 +368,11 @@ fn json(objects: &[Object], scaffolds: &[Scaffold]) -> String {
                             )
                         })
                         .collect();
-                    format!("{{\"name\":{},\"scaffold\":[{}]}}", quote(name), places.join(","))
+                    format!(
+                        "{{\"name\":{},\"scaffold\":[{}]}}",
+                        quote(name),
+                        places.join(",")
+                    )
                 })
                 .collect();
             format!(
@@ -323,7 +400,11 @@ fn json(objects: &[Object], scaffolds: &[Scaffold]) -> String {
             )
         })
         .collect();
-    format!("{{\"objects\":[{}],\"scaffolds\":[{}]}}\n", objects.join(","), scaffolds.join(","))
+    format!(
+        "{{\"objects\":[{}],\"scaffolds\":[{}]}}\n",
+        objects.join(","),
+        scaffolds.join(",")
+    )
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
@@ -341,8 +422,11 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     }
     let root = crate::compile::root();
     let chosen = if words.is_empty() {
-        let unfinished: Vec<String> =
-            targets::games()?.into_iter().filter(|game| root.join("recon").join(game).is_dir()).map(str::to_string).collect();
+        let unfinished: Vec<String> = targets::games()?
+            .into_iter()
+            .filter(|game| root.join("recon").join(game).is_dir())
+            .map(str::to_string)
+            .collect();
         if unfinished.is_empty() {
             println!("every game is done: no recon/ left");
             return Ok(());
@@ -361,7 +445,14 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         objects.extend(found);
         scaffolds.extend(held);
     }
-    print!("{}", if as_json { json(&objects, &scaffolds) } else { text(&objects, &scaffolds) });
+    print!(
+        "{}",
+        if as_json {
+            json(&objects, &scaffolds)
+        } else {
+            text(&objects, &scaffolds)
+        }
+    );
     Ok(())
 }
 
@@ -382,7 +473,14 @@ mod tests {
             linked: vec![id("tla-en")],
             missing: vec![id("tla-ja"), id("tla-de")],
             names: vec![
-                ("Message_StepScript".into(), vec![Held { edition: id("tla-ja"), section: ".rom.00039858".into(), size: 1548 }]),
+                (
+                    "Message_StepScript".into(),
+                    vec![Held {
+                        edition: id("tla-ja"),
+                        section: ".rom.00039858".into(),
+                        size: 1548,
+                    }],
+                ),
                 ("Message_Other".into(), vec![]),
             ],
         };
@@ -426,13 +524,23 @@ mod tests {
         write(en, "MAIN_OBJS := \\\n\t$(BUILD)/obj/games/tla/src/a.o \\\n\t$(BUILD)/obj/games/tla/src/b.o\nOVERLAYS := 649\nOVERLAY_OBJS_649 := \\\n\t$(BUILD)/obj/games/tla/src/scene/s.o\n");
         write(ja, "MAIN_OBJS := \\\n\t$(BUILD)/obj/games/tla/src/a.o \\\n\t$(BUILD)/obj/games/tla/src/a_ja.o\nOVERLAYS := 649\nOVERLAY_OBJS_649 := \\\n\t$(BUILD)/obj/games/tla/src/scene/s.o\n");
         let (order, languages) = linked_by(root, &[ja, en], en).unwrap();
-        assert_eq!(order, ["games/tla/src/a", "games/tla/src/b", "games/tla/src/scene/s", "games/tla/src/a_ja"]);
+        assert_eq!(
+            order,
+            [
+                "games/tla/src/a",
+                "games/tla/src/b",
+                "games/tla/src/scene/s",
+                "games/tla/src/a_ja"
+            ]
+        );
         assert_eq!(languages["games/tla/src/a"], ["en", "ja"]);
         assert_eq!(languages["games/tla/src/b"], ["en"]);
         assert_eq!(languages["games/tla/src/a_ja"], ["ja"]);
         assert_eq!(languages["games/tla/src/scene/s"], ["en", "ja"]);
         let de = id("tla-de");
-        assert!(linked_by(root, &[en, de], en).unwrap_err().contains("tla-de is not built"));
+        assert!(linked_by(root, &[en, de], en)
+            .unwrap_err()
+            .contains("tla-de is not built"));
     }
 
     /// A built scaffold's sections and names, read from its symbol table,
@@ -442,19 +550,32 @@ mod tests {
     fn a_scaffold_object_reads_as_its_source() {
         let root = crate::compile::root();
         for id in [id("tla-ja"), id("tla-de")] {
-            let Some((source, object)) = built::scaffold(root, id) else { continue };
-            let Ok(read) = sections(&object) else { continue };
+            let Some((source, object)) = built::scaffold(root, id) else {
+                continue;
+            };
+            let Ok(read) = sections(&object) else {
+                continue;
+            };
             let text = std::fs::read_to_string(root.join(source)).unwrap();
             let mut written: Vec<Section> = Vec::new();
             for line in text.lines().map(str::trim) {
                 if let Some(name) = line.strip_prefix(".section ") {
                     let name = name.split(',').next().unwrap().trim().to_string();
-                    written.push(Section { name, size: 0, names: Vec::new() });
+                    written.push(Section {
+                        name,
+                        size: 0,
+                        names: Vec::new(),
+                    });
                 } else if let Some(name) = line.strip_prefix(".global ") {
-                    written.last_mut().unwrap().names.push(name.trim().to_string());
+                    written
+                        .last_mut()
+                        .unwrap()
+                        .names
+                        .push(name.trim().to_string());
                 } else if let Some(arguments) = line.strip_prefix(".incbin ") {
                     let size = arguments.rsplit(',').next().unwrap().trim();
-                    written.last_mut().unwrap().size += u64::from_str_radix(size.trim_start_matches("0x"), 16).unwrap();
+                    written.last_mut().unwrap().size +=
+                        u64::from_str_radix(size.trim_start_matches("0x"), 16).unwrap();
                 }
             }
             written.sort_by(|a, b| a.name.cmp(&b.name));

@@ -63,7 +63,13 @@ pub fn lex(text: &str) -> Vec<Token<'_>> {
         }
         if byte == b'\n' {
             if in_pp {
-                tokens.push(Token { kind: Kind::PpEnd, text: "", line, pp: true, glued: false });
+                tokens.push(Token {
+                    kind: Kind::PpEnd,
+                    text: "",
+                    line,
+                    pp: true,
+                    glued: false,
+                });
                 in_pp = false;
             }
             line += 1;
@@ -111,7 +117,9 @@ pub fn lex(text: &str) -> Vec<Token<'_>> {
             } else {
                 Kind::Char
             }
-        } else if byte.is_ascii_digit() || (byte == b'.' && bytes.get(at + 1).is_some_and(u8::is_ascii_digit)) {
+        } else if byte.is_ascii_digit()
+            || (byte == b'.' && bytes.get(at + 1).is_some_and(u8::is_ascii_digit))
+        {
             at += 1;
             // An exponent's sign: after e in a decimal number, after p in a hex one.
             let hex = matches!(bytes.get(start + 1), Some(b'x' | b'X')) && byte == b'0';
@@ -126,15 +134,17 @@ pub fn lex(text: &str) -> Vec<Token<'_>> {
             }
             Kind::Number
         } else if byte.is_ascii_alphabetic() || byte == b'_' || byte == b'$' {
-            while at < bytes.len() && (bytes[at].is_ascii_alphanumeric() || bytes[at] == b'_' || bytes[at] == b'$') {
+            while at < bytes.len()
+                && (bytes[at].is_ascii_alphanumeric() || bytes[at] == b'_' || bytes[at] == b'$')
+            {
                 at += 1;
             }
             Kind::Ident
         } else {
             const THREE: [&[u8]; 3] = [b"...", b"<<=", b">>="];
             const TWO: [&[u8]; 20] = [
-                b"->", b"++", b"--", b"<<", b">>", b"<=", b">=", b"==", b"!=", b"&&", b"||", b"+=", b"-=", b"*=",
-                b"/=", b"%=", b"&=", b"|=", b"^=", b"##",
+                b"->", b"++", b"--", b"<<", b">>", b"<=", b">=", b"==", b"!=", b"&&", b"||", b"+=",
+                b"-=", b"*=", b"/=", b"%=", b"&=", b"|=", b"^=", b"##",
             ];
             let rest = &bytes[at..];
             at += if THREE.iter().any(|op| rest.starts_with(op)) {
@@ -148,11 +158,23 @@ pub fn lex(text: &str) -> Vec<Token<'_>> {
             Kind::Punct
         };
         line_start = false;
-        tokens.push(Token { kind, text: &text[start..at], line: first_line, pp: in_pp, glued: last_end == start });
+        tokens.push(Token {
+            kind,
+            text: &text[start..at],
+            line: first_line,
+            pp: in_pp,
+            glued: last_end == start,
+        });
         last_end = at;
     }
     if in_pp {
-        tokens.push(Token { kind: Kind::PpEnd, text: "", line, pp: true, glued: false });
+        tokens.push(Token {
+            kind: Kind::PpEnd,
+            text: "",
+            line,
+            pp: true,
+            glued: false,
+        });
     }
     tokens
 }
@@ -191,10 +213,17 @@ pub fn owners<'a>(tokens: &[Token<'a>]) -> Vec<Option<&'a str>> {
     while at < tokens.len() {
         let token = &tokens[at];
         if token.kind == Kind::PpStart {
-            let end = (at..tokens.len()).find(|&end| tokens[end].kind == Kind::PpEnd).unwrap_or(tokens.len() - 1);
-            let words: Vec<&Token> = tokens[at + 1..end].iter().filter(|t| t.kind != Kind::Comment).collect();
+            let end = (at..tokens.len())
+                .find(|&end| tokens[end].kind == Kind::PpEnd)
+                .unwrap_or(tokens.len() - 1);
+            let words: Vec<&Token> = tokens[at + 1..end]
+                .iter()
+                .filter(|t| t.kind != Kind::Comment)
+                .collect();
             let name = match words[..] {
-                [define, name, ..] if define.text == "define" && name.kind == Kind::Ident => Some(name.text),
+                [define, name, ..] if define.text == "define" && name.kind == Kind::Ident => {
+                    Some(name.text)
+                }
                 _ => None,
             };
             match words.first().map(|word| word.text) {
@@ -239,7 +268,11 @@ pub fn owners<'a>(tokens: &[Token<'a>]) -> Vec<Option<&'a str>> {
                             }
                             index -= 1;
                         }
-                        s.owner = index.checked_sub(1).map(|i| &tokens[i]).filter(|t| t.kind == Kind::Ident).map(|t| t.text);
+                        s.owner = index
+                            .checked_sub(1)
+                            .map(|i| &tokens[i])
+                            .filter(|t| t.kind == Kind::Ident)
+                            .map(|t| t.text);
                     } else if s.assigned {
                         s.owner = s.declarator;
                     } else if s.is_enum {
@@ -252,7 +285,9 @@ pub fn owners<'a>(tokens: &[Token<'a>]) -> Vec<Option<&'a str>> {
                 ")" | "]" => s.nested = s.nested.saturating_sub(1),
                 "=" if s.nested == 0 => s.assigned = true,
                 "enum" => s.is_enum = true,
-                _ if token.kind == Kind::Ident && s.nested == 0 && !s.assigned => s.declarator = Some(token.text),
+                _ if token.kind == Kind::Ident && s.nested == 0 && !s.assigned => {
+                    s.declarator = Some(token.text)
+                }
                 _ => {}
             }
             if s.assigned && token.text != "=" && token.text != ";" {
@@ -263,7 +298,9 @@ pub fn owners<'a>(tokens: &[Token<'a>]) -> Vec<Option<&'a str>> {
                 "{" => s.depth += 1,
                 "}" => s.depth -= 1,
                 "," if s.in_enum && s.depth == 1 => s.expect = true,
-                _ if s.in_enum && s.expect && token.kind == Kind::Ident => (s.enumerator, s.expect) = (Some(token.text), false),
+                _ if s.in_enum && s.expect && token.kind == Kind::Ident => {
+                    (s.enumerator, s.expect) = (Some(token.text), false)
+                }
                 _ => {}
             }
             if s.depth == 0 {
@@ -293,7 +330,10 @@ mod tests {
         let kinds: Vec<_> = tokens.iter().map(|t| (t.kind, t.text, t.pp)).collect();
         assert_eq!(kinds[0], (Kind::PpStart, "#", true));
         assert_eq!(kinds[1], (Kind::Ident, "define", true));
-        assert!(tokens[3].glued, "a function-like macro's parenthesis is glued to its name");
+        assert!(
+            tokens[3].glued,
+            "a function-like macro's parenthesis is glued to its name"
+        );
         assert!(kinds.contains(&(Kind::Number, "0x10u", true)));
         assert!(kinds.contains(&(Kind::Comment, "/// note", true)));
         assert!(kinds.contains(&(Kind::PpEnd, "", true)));
@@ -302,7 +342,9 @@ mod tests {
         let texts: Vec<_> = lex("0x1e+1 'a\n").iter().map(|t| t.text).collect();
         assert_eq!(texts, ["0x1e", "+", "1", "'a"]);
         assert_eq!(tokens.last().unwrap().line, 3);
-        assert!(is_doc("/// x") && !is_doc("//// x") && !is_doc("// x") && is_trailing_doc("///< x"));
+        assert!(
+            is_doc("/// x") && !is_doc("//// x") && !is_doc("// x") && is_trailing_doc("///< x")
+        );
     }
 
     #[test]
@@ -319,11 +361,24 @@ mod tests {
         );
         let tokens = lex(text);
         let owners = owners(&tokens);
-        let of = |text: &str| tokens.iter().zip(&owners).filter(|(t, _)| t.text == text).map(|(_, owner)| *owner).collect::<Vec<_>>();
+        let of = |text: &str| {
+            tokens
+                .iter()
+                .zip(&owners)
+                .filter(|(t, _)| t.text == text)
+                .map(|(_, owner)| *owner)
+                .collect::<Vec<_>>()
+        };
         assert_eq!(of("0x600"), [Some("HALF")]);
-        assert_eq!((of("0x212"), of("3")), (vec![Some("TAG")], vec![Some("OTHER")]));
+        assert_eq!(
+            (of("0x212"), of("3")),
+            (vec![Some("TAG")], vec![Some("OTHER")])
+        );
         assert_eq!(of("0x3d1f"), [Some("gInfo")]);
-        assert_eq!((of("16"), of("0x80"), of("a")), (vec![Some("F")], vec![Some("F")], vec![None]));
+        assert_eq!(
+            (of("16"), of("0x80"), of("a")),
+            (vec![Some("F")], vec![Some("F")], vec![None])
+        );
         assert_eq!(of("0x10"), [Some("gWord")]);
         // Each branch of an `#if` opens the same body.
         assert_eq!((of("0x20"), of("0x30")), (vec![Some("G")], vec![Some("H")]));

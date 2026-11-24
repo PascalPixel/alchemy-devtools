@@ -17,7 +17,10 @@ use crate::gba::ld_map::Map;
 use std::path::Path;
 
 /// The two games: their id, mark and title.
-pub(crate) const GAMES: [(&str, &str, &str); 2] = [("tbs", "☀️", "The Broken Seal"), ("tla", "⚓️", "The Lost Age")];
+pub(crate) const GAMES: [(&str, &str, &str); 2] = [
+    ("tbs", "☀️", "The Broken Seal"),
+    ("tla", "⚓️", "The Lost Age"),
+];
 
 pub(crate) const LANGUAGES: [&str; 6] = ["ja", "en", "de", "es", "fr", "it"];
 
@@ -43,7 +46,10 @@ impl GameDone {
     pub fn parts(&self) -> (f64, f64, f64) {
         (
             floor_percent(self.common_c + self.game_c, self.executable),
-            floor_percent(self.common_asm + self.game_asm - self.veneers, self.executable),
+            floor_percent(
+                self.common_asm + self.game_asm - self.veneers,
+                self.executable,
+            ),
             floor_percent(self.veneers, self.executable),
         )
     }
@@ -109,7 +115,9 @@ pub fn floor_percent(n: i64, d: i64) -> f64 {
 /// A count with a comma every three digits.
 pub fn commas(value: i64) -> String {
     let text = value.to_string();
-    let (sign, digits) = text.strip_prefix('-').map_or(("", text.as_str()), |value| ("-", value));
+    let (sign, digits) = text
+        .strip_prefix('-')
+        .map_or(("", text.as_str()), |value| ("-", value));
     let mut out = String::from(sign);
     for (index, digit) in digits.chars().enumerate() {
         if index > 0 && (digits.len() - index) % 3 == 0 {
@@ -143,7 +151,11 @@ fn stub(stem: &str) -> bool {
 fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
     let map = Map::parse(map);
     for placed in count::placed(&map, image) {
-        let (name, size, object) = (placed.name.as_str(), i64::from(placed.size), placed.path.as_str());
+        let (name, size, object) = (
+            placed.name.as_str(),
+            i64::from(placed.size),
+            placed.path.as_str(),
+        );
         if name == ".overlays" {
             tally.streams += size;
             continue;
@@ -192,7 +204,8 @@ fn tally(root: &Path, map: &str, image: Image, tally: &mut Tally) {
 pub(crate) fn verified(root: &Path, edition: &str) -> Result<(), String> {
     let target = targets::decomp_target(Some(edition))?;
     let rom = target.image();
-    let bytes = std::fs::read(root.join(&rom)).map_err(|_| format!("{rom} is not built: make compare-{edition}"))?;
+    let bytes = std::fs::read(root.join(&rom))
+        .map_err(|_| format!("{rom} is not built: make compare-{edition}"))?;
     if !target.matches(&bytes) {
         return Err(format!("{rom} does not match rom.sha1"));
     }
@@ -209,7 +222,8 @@ pub(crate) fn measure_edition(root: &Path, edition: &str) -> Result<Counted, Str
 pub(crate) fn count_edition(root: &Path, edition: &str) -> Result<Counted, String> {
     let mut counted = Tally::default();
     let main = root.join(format!("out/{edition}/{edition}.map"));
-    let text = std::fs::read_to_string(&main).map_err(|error| format!("{}: {error}", main.display()))?;
+    let text =
+        std::fs::read_to_string(&main).map_err(|error| format!("{}: {error}", main.display()))?;
     tally(root, &text, Image::Rom, &mut counted);
     let mut maps: Vec<_> = std::fs::read_dir(root.join(format!("out/{edition}/overlays")))
         .map_err(|error| format!("out/{edition}/overlays: {error}"))?
@@ -218,8 +232,14 @@ pub(crate) fn count_edition(root: &Path, edition: &str) -> Result<Counted, Strin
         .collect();
     maps.sort();
     for map in maps {
-        let text = std::fs::read_to_string(&map).map_err(|error| format!("{}: {error}", map.display()))?;
-        tally(root, &text, Image::Linked(super::overlay::SECTIONS), &mut counted);
+        let text =
+            std::fs::read_to_string(&map).map_err(|error| format!("{}: {error}", map.display()))?;
+        tally(
+            root,
+            &text,
+            Image::Linked(super::overlay::SECTIONS),
+            &mut counted,
+        );
     }
     let done = &mut counted.counted.done;
     done.executable = counted.code;
@@ -255,9 +275,17 @@ pub(crate) fn count_game(
 /// Each game's code and data shares, or pending.
 pub(crate) fn status_line(sun: Option<GameDone>, anchor: Option<GameDone>) -> String {
     let show = |done: Option<GameDone>| {
-        done.map_or("pending".to_string(), |d| format!("code {:.2}% data {:.2}%", d.percent(), d.data_percent()))
+        done.map_or("pending".to_string(), |d| {
+            format!("code {:.2}% data {:.2}%", d.percent(), d.data_percent())
+        })
     };
-    format!("{} {} · {} {}", GAMES[0].1, show(sun), GAMES[1].1, show(anchor))
+    format!(
+        "{} {} · {} {}",
+        GAMES[0].1,
+        show(sun),
+        GAMES[1].1,
+        show(anchor)
+    )
 }
 
 /// The lines of the games at `which`: each game's total, then a line for
@@ -266,7 +294,10 @@ pub(crate) fn lines_of(games: &[Result<Game, String>; 2], which: &[usize]) -> St
     let mut text = String::new();
     for ((_, mark, name), game) in which.iter().map(|&at| (GAMES[at], &games[at])) {
         let Ok(game) = game else {
-            text += &format!("{mark} {name}: pending ({})\n", game.as_ref().err().unwrap());
+            text += &format!(
+                "{mark} {name}: pending ({})\n",
+                game.as_ref().err().unwrap()
+            );
             continue;
         };
         let all = game.combined();
@@ -368,5 +399,4 @@ ewram           0x02000000    0x38000
             "☀️ code 59.00% data 99.20% · ⚓️ code 6.00% data 0.00%"
         );
     }
-
 }

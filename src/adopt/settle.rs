@@ -93,7 +93,9 @@ pub(crate) struct View {
 
 impl View {
     fn private(&self) -> String {
-        self.bound.clone().unwrap_or_else(|| format!("{}__{}", self.name, self.suffix))
+        self.bound
+            .clone()
+            .unwrap_or_else(|| format!("{}__{}", self.name, self.suffix))
     }
 }
 
@@ -105,9 +107,18 @@ fn bound_in(lines: &[&str], view: &View) -> Option<String> {
     if !matches!(view.kind, "routine" | "variable") {
         return None;
     }
-    let own: Vec<&str> = lines.iter().take(MARKER_LINES).take_while(|line| !line.trim_start().starts_with("/* VIEW")).copied().collect();
+    let own: Vec<&str> = lines
+        .iter()
+        .take(MARKER_LINES)
+        .take_while(|line| !line.trim_start().starts_with("/* VIEW"))
+        .copied()
+        .collect();
     let text = own.join("\n");
-    let binding = Regex::new(&format!(r#"__asm__\s*\(\s*"{}"\s*\)"#, regex::escape(&view.name))).unwrap();
+    let binding = Regex::new(&format!(
+        r#"__asm__\s*\(\s*"{}"\s*\)"#,
+        regex::escape(&view.name)
+    ))
+    .unwrap();
     let at = binding.find(&text)?.start();
     let from = text[..at].rfind([';', '}']).map_or(0, |n| n + 1);
     let private = Regex::new(&format!(r"\b\w+__{}\b", regex::escape(&view.suffix))).unwrap();
@@ -127,8 +138,19 @@ pub(crate) fn marker(line: &str) -> Option<View> {
     let (suffix, rest) = rest.split_once("): ")?;
     let rest = rest.strip_prefix(kind)?.trim_start();
     let named = rest.split_once(" as ")?.0;
-    let name = ["struct ", "union ", "enum "].iter().find_map(|tag| named.strip_prefix(tag)).unwrap_or(named);
-    Some(View { marker: line.to_string(), written: written.to_string(), key: line.to_string(), suffix: suffix.to_string(), kind, name: name.to_string(), bound: None })
+    let name = ["struct ", "union ", "enum "]
+        .iter()
+        .find_map(|tag| named.strip_prefix(tag))
+        .unwrap_or(named);
+    Some(View {
+        marker: line.to_string(),
+        written: written.to_string(),
+        key: line.to_string(),
+        suffix: suffix.to_string(),
+        kind,
+        name: name.to_string(),
+        bound: None,
+    })
 }
 
 /// The longest a marker may run over lines before it is taken for no marker.
@@ -143,18 +165,26 @@ pub(crate) fn spans(text: &str) -> Vec<(usize, usize, View)> {
     let mut at = 0;
     while at < lines.len() {
         let first = lines[at].trim();
-        if !first.strip_prefix("/* ").is_some_and(|rest| rest.starts_with(views::MARKER)) {
+        if !first
+            .strip_prefix("/* ")
+            .is_some_and(|rest| rest.starts_with(views::MARKER))
+        {
             at += 1;
             continue;
         }
-        let Some(end) = (at..lines.len().min(at + MARKER_LINES)).find(|&n| lines[n].contains("*/")) else {
+        let Some(end) = (at..lines.len().min(at + MARKER_LINES)).find(|&n| lines[n].contains("*/"))
+        else {
             at += 1;
             continue;
         };
         let mut words = vec![first];
         for line in &lines[at + 1..=end] {
             let line = line.trim();
-            let line = if line.starts_with("*/") { line } else { line.strip_prefix('*').unwrap_or(line).trim_start() };
+            let line = if line.starts_with("*/") {
+                line
+            } else {
+                line.strip_prefix('*').unwrap_or(line).trim_start()
+            };
             if !line.is_empty() {
                 words.push(line);
             }
@@ -184,7 +214,11 @@ const COLUMNS: usize = 80;
 /// filled to 80 columns, each line after the first opened with ` * `, the
 /// closing `*/` on the last line where it fits, else on its own.
 pub(crate) fn wrapped(comment: &str, indent: &str) -> String {
-    let body = comment.trim().strip_prefix("/*").map_or(comment, |body| body.strip_suffix("*/").unwrap_or(body)).trim();
+    let body = comment
+        .trim()
+        .strip_prefix("/*")
+        .map_or(comment, |body| body.strip_suffix("*/").unwrap_or(body))
+        .trim();
     let width = |text: &str| text.chars().count();
     let mut lines: Vec<String> = Vec::new();
     let mut line = format!("{indent}/*");
@@ -236,19 +270,34 @@ fn indent_of(line: &str) -> &str {
 fn keyed(text: &str, views: &[View]) -> (String, Vec<View>) {
     let mut keyed: Vec<View> = views.to_vec();
     let lines = lines_of(text);
-    let starts: BTreeMap<usize, (usize, View)> = spans(text).into_iter().map(|(first, last, view)| (first, (last, view))).collect();
+    let starts: BTreeMap<usize, (usize, View)> = spans(text)
+        .into_iter()
+        .map(|(first, last, view)| (first, (last, view)))
+        .collect();
     let mut next = 0;
     let mut out = String::with_capacity(text.len());
     let mut at = 0;
     while at < lines.len() {
-        match starts.get(&at).filter(|(_, view)| keyed.get(next).is_some_and(|wanted| wanted.marker == view.marker)) {
+        match starts.get(&at).filter(|(_, view)| {
+            keyed
+                .get(next)
+                .is_some_and(|wanted| wanted.marker == view.marker)
+        }) {
             Some((last, view)) => {
                 let newline = if lines[at].ends_with('\n') { "\n" } else { "" };
                 keyed[next].key = key_of(next);
                 keyed[next].written = view.written.clone();
-                out.push_str(&format!("{}{}{newline}", indent_of(lines[at]), keyed[next].key));
+                out.push_str(&format!(
+                    "{}{}{newline}",
+                    indent_of(lines[at]),
+                    keyed[next].key
+                ));
                 for line in &lines[at + 1..=*last] {
-                    out.push_str(&format!("{}{CONTINUED}{}", indent_of(line), if line.ends_with('\n') { "\n" } else { "" }));
+                    out.push_str(&format!(
+                        "{}{CONTINUED}{}",
+                        indent_of(line),
+                        if line.ends_with('\n') { "\n" } else { "" }
+                    ));
                 }
                 next += 1;
                 at = last + 1;
@@ -269,8 +318,13 @@ fn unkeyed(text: &str, views: &[View]) -> String {
         if continued(line) {
             continue;
         }
-        let (content, newline) = line.strip_suffix('\n').map_or((line, ""), |content| (content, "\n"));
-        match views.iter().find(|view| view.key != view.marker && content.trim() == view.key) {
+        let (content, newline) = line
+            .strip_suffix('\n')
+            .map_or((line, ""), |content| (content, "\n"));
+        match views
+            .iter()
+            .find(|view| view.key != view.marker && content.trim() == view.key)
+        {
             Some(view) => out.push_str(&format!("{}{newline}", view.written)),
             None => out.push_str(line),
         }
@@ -284,8 +338,17 @@ fn collapsed(text: &str, view: &View) -> String {
         return text.to_string();
     }
     let lines = lines_of(text);
-    let Some((first, last, _)) = spans(text).into_iter().find(|(.., found)| found.marker == view.marker) else { return text.to_string() };
-    let newline = if lines[last].ends_with('\n') { "\n" } else { "" };
+    let Some((first, last, _)) = spans(text)
+        .into_iter()
+        .find(|(.., found)| found.marker == view.marker)
+    else {
+        return text.to_string();
+    };
+    let newline = if lines[last].ends_with('\n') {
+        "\n"
+    } else {
+        ""
+    };
     let mut out: String = lines[..first].concat();
     out.push_str(&format!("{}{}{newline}", indent_of(lines[first]), view.key));
     out.push_str(&lines[last + 1..].concat());
@@ -297,10 +360,15 @@ fn collapsed(text: &str, view: &View) -> String {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Choice {
     Remove,
-    Declare { declaration: String, whose: String },
+    Declare {
+        declaration: String,
+        whose: String,
+    },
     /// A tag's view deleted, the part's uses of its members written with
     /// the names the other definition gives the same layout.
-    Members { renames: Vec<(String, String)> },
+    Members {
+        renames: Vec<(String, String)>,
+    },
 }
 
 impl Choice {
@@ -308,11 +376,19 @@ impl Choice {
     fn said(&self, view: &View) -> String {
         match self {
             Choice::Declare { declaration, whose } => format!("as {whose} {}", brief(declaration)),
-            Choice::Remove if matches!(view.kind, "routine" | "variable") => "as the rest of the object declares it".into(),
+            Choice::Remove if matches!(view.kind, "routine" | "variable") => {
+                "as the rest of the object declares it".into()
+            }
             Choice::Remove => "with the definition the rest of the object has".into(),
             Choice::Members { renames } => {
-                let renames: Vec<String> = renames.iter().map(|(from, to)| format!("{from} as {to}")).collect();
-                format!("with the definition the rest of the object has, its members read {}", renames.join(", "))
+                let renames: Vec<String> = renames
+                    .iter()
+                    .map(|(from, to)| format!("{from} as {to}"))
+                    .collect();
+                format!(
+                    "with the definition the rest of the object has, its members read {}",
+                    renames.join(", ")
+                )
             }
         }
     }
@@ -320,7 +396,11 @@ impl Choice {
 
 /// A marker's text kept to one readable line.
 fn brief(text: &str) -> String {
-    let text = text.replace("*/", "* /").split_whitespace().collect::<Vec<_>>().join(" ");
+    let text = text
+        .replace("*/", "* /")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     let text = text.trim_end_matches(';').to_string();
     match text.char_indices().nth(140) {
         Some((at, _)) => format!("{}...", &text[..at]),
@@ -336,21 +416,35 @@ fn separates(line: &str) -> bool {
 
 /// The lines of the part that holds line `at`: from its separator to the next.
 fn region(lines: &[String], at: usize) -> (usize, usize) {
-    let start = lines[..=at].iter().rposition(|line| separates(line)).unwrap_or(0);
-    let end = lines[at + 1..].iter().position(|line| separates(line)).map_or(lines.len(), |n| at + 1 + n);
+    let start = lines[..=at]
+        .iter()
+        .rposition(|line| separates(line))
+        .unwrap_or(0);
+    let end = lines[at + 1..]
+        .iter()
+        .position(|line| separates(line))
+        .map_or(lines.len(), |n| at + 1 + n);
     (start, end)
 }
 
 /// Every part's lines, in order: from each separator to the next.
 fn regions(lines: &[String]) -> Vec<(usize, usize)> {
-    let mut starts: Vec<usize> = (0..lines.len()).filter(|&n| n == 0 || separates(&lines[n])).collect();
+    let mut starts: Vec<usize> = (0..lines.len())
+        .filter(|&n| n == 0 || separates(&lines[n]))
+        .collect();
     starts.dedup();
-    starts.iter().enumerate().map(|(n, &start)| (start, starts.get(n + 1).copied().unwrap_or(lines.len()))).collect()
+    starts
+        .iter()
+        .enumerate()
+        .map(|(n, &start)| (start, starts.get(n + 1).copied().unwrap_or(lines.len())))
+        .collect()
 }
 
 /// Whether a line is a view's marker or key, which no rename touches.
 fn marks(line: &str) -> bool {
-    line.trim_start().strip_prefix("/* ").is_some_and(|rest| rest.starts_with(views::MARKER) || rest.starts_with("VIEW#"))
+    line.trim_start()
+        .strip_prefix("/* ")
+        .is_some_and(|rest| rest.starts_with(views::MARKER) || rest.starts_with("VIEW#"))
 }
 
 fn word(name: &str) -> Regex {
@@ -375,7 +469,9 @@ fn joined(lines: &[String]) -> String {
 }
 
 fn holds_tag(lines: &[String], range: (usize, usize)) -> bool {
-    lines[range.0..range.1].iter().any(|line| line.contains("FAKEMATCH"))
+    lines[range.0..range.1]
+        .iter()
+        .any(|line| line.contains("FAKEMATCH"))
 }
 
 /// The text with one view taken away as `choice` says. The view's own
@@ -385,12 +481,24 @@ fn holds_tag(lines: &[String], range: (usize, usize)) -> bool {
 pub(crate) fn apply(text: &str, view: &View, choice: &Choice) -> Result<String, String> {
     let text = collapsed(text, view);
     let mut lines: Vec<String> = text.lines().map(str::to_string).collect();
-    let at = lines.iter().position(|line| line.trim() == view.key).ok_or_else(|| format!("{}'s marker was not found", view.name))?;
+    let at = lines
+        .iter()
+        .position(|line| line.trim() == view.key)
+        .ok_or_else(|| format!("{}'s marker was not found", view.name))?;
     let private = view.private();
     let name = view.name.as_str();
     let pattern = word(&private);
     // The parts that see the private name, by their order.
-    let seeing: BTreeSet<usize> = regions(&lines).iter().enumerate().filter(|(_, (start, end))| lines[*start..*end].iter().any(|line| pattern.is_match(line))).map(|(n, _)| n).collect();
+    let seeing: BTreeSet<usize> = regions(&lines)
+        .iter()
+        .enumerate()
+        .filter(|(_, (start, end))| {
+            lines[*start..*end]
+                .iter()
+                .any(|line| pattern.is_match(line))
+        })
+        .map(|(n, _)| n)
+        .collect();
     let (start, end) = region(&lines, at);
     let mut part = lines[start..end].to_vec();
     let wrapped = edit(&mut part, at - start, view, choice)?;
@@ -414,7 +522,10 @@ pub(crate) fn apply(text: &str, view: &View, choice: &Choice) -> Result<String, 
         }
     }
     if let Choice::Members { renames } = choice {
-        let map: BTreeMap<&str, &str> = renames.iter().map(|(from, to)| (from.as_str(), to.as_str())).collect();
+        let map: BTreeMap<&str, &str> = renames
+            .iter()
+            .map(|(from, to)| (from.as_str(), to.as_str()))
+            .collect();
         let alternatives: Vec<String> = map.keys().map(|from| regex::escape(from)).collect();
         let access = Regex::new(&format!(r"(\.|->)(\s*)({})\b", alternatives.join("|"))).unwrap();
         for (n, (start, end)) in regions(&lines).into_iter().enumerate() {
@@ -423,7 +534,11 @@ pub(crate) fn apply(text: &str, view: &View, choice: &Choice) -> Result<String, 
             }
             for line in &mut lines[start..end] {
                 if !marks(line) && !line.trim_start().starts_with("//") {
-                    *line = access.replace_all(line, |found: &regex::Captures| format!("{}{}{}", &found[1], &found[2], map[&found[3]])).into_owned();
+                    *line = access
+                        .replace_all(line, |found: &regex::Captures| {
+                            format!("{}{}{}", &found[1], &found[2], map[&found[3]])
+                        })
+                        .into_owned();
                 }
             }
         }
@@ -446,7 +561,11 @@ fn renames(lines: &[String], view: &View) -> bool {
     let private = view.private();
     let define = format!("#define {} {private}", view.name);
     let text = joined(lines);
-    let still = defined_as(lines, &view.name, &private).is_some() || lines.iter().any(|line| line.trim() == define) || text::statements(&text).iter().any(|s| s.find(&private).is_some() && s.find("__asm__").is_some());
+    let still = defined_as(lines, &view.name, &private).is_some()
+        || lines.iter().any(|line| line.trim() == define)
+        || text::statements(&text)
+            .iter()
+            .any(|s| s.find(&private).is_some() && s.find("__asm__").is_some());
     !still
 }
 
@@ -483,7 +602,10 @@ fn defined_as(lines: &[String], name: &str, private: &str) -> Option<(usize, usi
 /// Where a view's own lines end in a part, from line `at` (where its marker
 /// was): at the next view's marker, or the part's end.
 fn own_end(part: &[String], at: usize) -> usize {
-    part[at.min(part.len())..].iter().position(|line| line.trim_start().starts_with("/* VIEW")).map_or(part.len(), |n| at + n)
+    part[at.min(part.len())..]
+        .iter()
+        .position(|line| line.trim_start().starts_with("/* VIEW"))
+        .map_or(part.len(), |n| at + n)
 }
 
 /// Removes, in a part's lines from `at` to the next view, `#define NAME
@@ -492,11 +614,16 @@ fn own_end(part: &[String], at: usize) -> usize {
 fn unwrap_header(part: &mut Vec<String>, at: usize, name: &str, private: &str) -> bool {
     let end = own_end(part, at);
     let from = at.min(end);
-    let Some((first, last)) = defined_as(&part[from..end], name, private) else { return false };
+    let Some((first, last)) = defined_as(&part[from..end], name, private) else {
+        return false;
+    };
     let found = from + first;
     part.drain(found..from + last);
     let undefine = format!("#undef {name}");
-    if let Some(n) = part[found..].iter().position(|line| line.trim() == undefine) {
+    if let Some(n) = part[found..]
+        .iter()
+        .position(|line| line.trim() == undefine)
+    {
         part.remove(found + n);
     }
     true
@@ -524,8 +651,14 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
             // Its own bound declaration: the first after its marker, before the
             // next view's; else the part's first.
             let end = own_end(part, at);
-            let binds = |s: &&text::Statement| s.find(&private).is_some() && s.find("__asm__").is_some() && !s.several();
-            let bound = all.iter().filter(binds).find(|s| s.first_line > at && s.first_line <= end).or_else(|| all.iter().find(binds));
+            let binds = |s: &&text::Statement| {
+                s.find(&private).is_some() && s.find("__asm__").is_some() && !s.several()
+            };
+            let bound = all
+                .iter()
+                .filter(binds)
+                .find(|s| s.first_line > at && s.first_line <= end)
+                .or_else(|| all.iter().find(binds));
             match bound {
                 Some(statement) => {
                     let (first, last) = (statement.first_line - 1, statement.last_line);
@@ -537,7 +670,9 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
                         return Err(format!("{name}'s declaration holds a FAKEMATCH tag"));
                     }
                     let written: Vec<String> = match choice {
-                        Choice::Declare { declaration, .. } if !wrapped => vec![declaration.clone()],
+                        Choice::Declare { declaration, .. } if !wrapped => {
+                            vec![declaration.clone()]
+                        }
                         _ => Vec::new(),
                     };
                     part.splice(range.0..range.1, written);
@@ -550,13 +685,24 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
             let text = joined(part);
             let all = text::statements(&text);
             let found = all.iter().find_map(|s| {
-                let at = s.words.windows(3).position(|w| matches!(w[0].text, "struct" | "union" | "enum") && w[1].text == private && w[2].text == "{" && w[0].depth == 0)?;
+                let at = s.words.windows(3).position(|w| {
+                    matches!(w[0].text, "struct" | "union" | "enum")
+                        && w[1].text == private
+                        && w[2].text == "{"
+                        && w[0].depth == 0
+                })?;
                 Some((s, at))
             });
             match found {
                 Some((statement, at)) => {
-                    let close = statement.words[at + 2..].iter().position(|w| w.text == "}" && w.depth == 0).map(|n| at + 2 + n).ok_or("its definition has no end")?;
-                    let alone = at == 0 && statement.words.len() == close + 2 && statement.words[close + 1].text == ";";
+                    let close = statement.words[at + 2..]
+                        .iter()
+                        .position(|w| w.text == "}" && w.depth == 0)
+                        .map(|n| at + 2 + n)
+                        .ok_or("its definition has no end")?;
+                    let alone = at == 0
+                        && statement.words.len() == close + 2
+                        && statement.words[close + 1].text == ";";
                     let range = documented(part, statement);
                     if holds_tag(part, range) {
                         return Err(format!("struct {name}'s definition holds a FAKEMATCH tag"));
@@ -565,7 +711,8 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
                         part.splice(range.0..range.1, Vec::new());
                     } else {
                         // `typedef struct X { ... } T;` keeps its declarators.
-                        let (from, to) = (statement.words[at + 2].at, statement.words[close].at + 1);
+                        let (from, to) =
+                            (statement.words[at + 2].at, statement.words[close].at + 1);
                         let from = text[..from].trim_end().len();
                         let mut text = text.clone();
                         text.replace_range(from..to, "");
@@ -579,7 +726,8 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
         "static" | "typedef" | "enumerator" => {
             let text = joined(part);
             let all = text::statements(&text);
-            let top = |s: &text::Statement| s.words.iter().any(|w| w.depth == 0 && w.text == private);
+            let top =
+                |s: &text::Statement| s.words.iter().any(|w| w.depth == 0 && w.text == private);
             let found = all.iter().find(|s| match view.kind {
                 "enumerator" => s.enumerates(&private),
                 "typedef" => s.has("typedef") && top(s),
@@ -613,8 +761,16 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
                         remove_define_at(part, at);
                     }
                 }
-                let tail = part.iter().rposition(|line| !line.trim().is_empty() && !line.trim_start().starts_with('#')).map_or(0, |n| n + 1);
-                if let Some(n) = part[tail..].iter().rposition(|line| line.trim() == undefine) {
+                let tail = part
+                    .iter()
+                    .rposition(|line| {
+                        !line.trim().is_empty() && !line.trim_start().starts_with('#')
+                    })
+                    .map_or(0, |n| n + 1);
+                if let Some(n) = part[tail..]
+                    .iter()
+                    .rposition(|line| line.trim() == undefine)
+                {
                     part.remove(tail + n);
                     if part.get(tail + n).is_some_and(|line| defines(line, name)) {
                         remove_define_at(part, tail + n);
@@ -632,8 +788,19 @@ fn edit(part: &mut Vec<String>, at: usize, view: &View, choice: &Choice) -> Resu
 fn body_of<'t>(text: &'t str, tag: &str) -> Option<Vec<&'t str>> {
     for statement in text::statements(text) {
         let words = &statement.words;
-        let Some(at) = words.windows(3).position(|w| w[0].depth == 0 && matches!(w[0].text, "struct" | "union") && w[1].text == tag && w[2].text == "{") else { continue };
-        let close = words[at + 2..].iter().position(|w| w.text == "}" && w.depth == 0)? + at + 2;
+        let Some(at) = words.windows(3).position(|w| {
+            w[0].depth == 0
+                && matches!(w[0].text, "struct" | "union")
+                && w[1].text == tag
+                && w[2].text == "{"
+        }) else {
+            continue;
+        };
+        let close = words[at + 2..]
+            .iter()
+            .position(|w| w.text == "}" && w.depth == 0)?
+            + at
+            + 2;
         return Some(words[at + 3..close].iter().map(|w| w.text).collect());
     }
     None
@@ -666,13 +833,23 @@ fn members(body: &[&str]) -> Option<Vec<(String, String)>> {
 }
 
 fn member_of(tokens: &[&str]) -> Option<(String, String)> {
-    let ident = |t: &&str| t.chars().next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_');
+    let ident = |t: &&str| {
+        t.chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+    };
     // A pointer to a routine: the name after `(*`; else the last name
     // before a `[`, a `:` or the end.
-    let at = match tokens.windows(3).position(|w| w[0] == "(" && w[1] == "*" && ident(&w[2])) {
+    let at = match tokens
+        .windows(3)
+        .position(|w| w[0] == "(" && w[1] == "*" && ident(&w[2]))
+    {
         Some(at) => at + 2,
         None => {
-            let end = tokens.iter().position(|t| *t == "[" || *t == ":").unwrap_or(tokens.len());
+            let end = tokens
+                .iter()
+                .position(|t| *t == "[" || *t == ":")
+                .unwrap_or(tokens.len());
             tokens[..end].iter().rposition(ident)?
         }
     };
@@ -686,13 +863,22 @@ fn member_of(tokens: &[&str]) -> Option<(String, String)> {
 /// member names: the names to write, each part member to the other's.
 /// None where the layouts differ, the names agree, or an old name is a
 /// member of another tag the object defines.
-pub(crate) fn member_renames(object: &str, view: &View, other: &str) -> Option<Vec<(String, String)>> {
+pub(crate) fn member_renames(
+    object: &str,
+    view: &View,
+    other: &str,
+) -> Option<Vec<(String, String)>> {
     let theirs = members(&body_of(other, &view.name)?)?;
     let ours = members(&body_of(object, &view.private())?)?;
     if theirs.len() != ours.len() || theirs.iter().zip(&ours).any(|(a, b)| a.0 != b.0) {
         return None;
     }
-    let renames: Vec<(String, String)> = ours.iter().zip(&theirs).filter(|(a, b)| a.1 != b.1).map(|(a, b)| (a.1.clone(), b.1.clone())).collect();
+    let renames: Vec<(String, String)> = ours
+        .iter()
+        .zip(&theirs)
+        .filter(|(a, b)| a.1 != b.1)
+        .map(|(a, b)| (a.1.clone(), b.1.clone()))
+        .collect();
     if renames.is_empty() {
         return None;
     }
@@ -702,10 +888,25 @@ pub(crate) fn member_renames(object: &str, view: &View, other: &str) -> Option<V
     for statement in text::statements(object) {
         let words = &statement.words;
         for (at, w) in words.windows(3).enumerate() {
-            if matches!(w[0].text, "struct" | "union") && w[2].text == "{" && w[1].text != private && w[1].text != view.name {
-                let Some(close) = words[at + 2..].iter().position(|x| x.text == "}" && x.depth == w[0].depth).map(|n| n + at + 2) else { continue };
+            if matches!(w[0].text, "struct" | "union")
+                && w[2].text == "{"
+                && w[1].text != private
+                && w[1].text != view.name
+            {
+                let Some(close) = words[at + 2..]
+                    .iter()
+                    .position(|x| x.text == "}" && x.depth == w[0].depth)
+                    .map(|n| n + at + 2)
+                else {
+                    continue;
+                };
                 let body: Vec<&str> = words[at + 3..close].iter().map(|x| x.text).collect();
-                elsewhere.extend(members(&body).unwrap_or_default().into_iter().map(|(_, name)| name));
+                elsewhere.extend(
+                    members(&body)
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|(_, name)| name),
+                );
             }
         }
     }
@@ -715,12 +916,22 @@ pub(crate) fn member_renames(object: &str, view: &View, other: &str) -> Option<V
 /// `struct X;` or `union X;`, a view's forward declaration.
 fn forward(line: &str) -> bool {
     let line = line.trim();
-    let Some(rest) = line.strip_prefix("struct ").or_else(|| line.strip_prefix("union ")) else { return false };
-    rest.strip_suffix(';').is_some_and(|tag| !tag.is_empty() && tag.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
+    let Some(rest) = line
+        .strip_prefix("struct ")
+        .or_else(|| line.strip_prefix("union "))
+    else {
+        return false;
+    };
+    rest.strip_suffix(';').is_some_and(|tag| {
+        !tag.is_empty() && tag.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    })
 }
 
 fn defines(line: &str, name: &str) -> bool {
-    line.trim_start().strip_prefix("#define ").and_then(|rest| rest.strip_prefix(name)).is_some_and(|rest| rest.is_empty() || rest.starts_with([' ', '\t', '(']))
+    line.trim_start()
+        .strip_prefix("#define ")
+        .and_then(|rest| rest.strip_prefix(name))
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with([' ', '\t', '(']))
 }
 
 fn remove_define_at(part: &mut Vec<String>, at: usize) {
@@ -754,7 +965,12 @@ impl Failure {
         if let Some(error) = &self.error {
             return format!("it does not compile in {}: {}", self.edition, brief(error));
         }
-        let mut shown: Vec<String> = self.moved.iter().take(3).map(|(name, n, m)| format!("{name} moves: {n} of {m} instructions")).collect();
+        let mut shown: Vec<String> = self
+            .moved
+            .iter()
+            .take(3)
+            .map(|(name, n, m)| format!("{name} moves: {n} of {m} instructions"))
+            .collect();
         if self.moved.len() > 3 {
             shown.push(format!("{} more", self.moved.len() - 3));
         }
@@ -807,21 +1023,41 @@ impl Solver<'_> {
     /// None when `extra` on what is accepted judges clean.
     fn test(&self, extra: &[(usize, Choice)]) -> Result<Option<Failure>, String> {
         // A static's view taken away gives its symbol the plain name back.
-        let renamed: Vec<(String, String)> =
-            self.accepted.iter().chain(extra).map(|(view, _)| &self.views[*view]).filter(|view| view.kind == "static").map(|view| (view.private(), view.name.clone())).collect();
+        let renamed: Vec<(String, String)> = self
+            .accepted
+            .iter()
+            .chain(extra)
+            .map(|(view, _)| &self.views[*view])
+            .filter(|view| view.kind == "static")
+            .map(|view| (view.private(), view.name.clone()))
+            .collect();
         match self.text(extra) {
             Ok(text) => self.judge.judge(&text, &renamed),
-            Err(why) => Ok(Some(Failure { edition: "the source".into(), error: Some(why), moved: Vec::new() })),
+            Err(why) => Ok(Some(Failure {
+                edition: "the source".into(),
+                error: Some(why),
+                moved: Vec::new(),
+            })),
         }
     }
 
     fn accept(&mut self, edits: Vec<(usize, Choice)>) {
-        self.solved.deleted.extend(edits.iter().map(|(view, _)| *view));
+        self.solved
+            .deleted
+            .extend(edits.iter().map(|(view, _)| *view));
         self.accepted.extend(edits);
     }
 
     fn first(&self, units: &[usize]) -> Vec<(usize, Choice)> {
-        units.iter().flat_map(|&unit| self.units[unit].views.iter().map(move |&view| (view, self.units[unit].choices[0].clone()))).collect()
+        units
+            .iter()
+            .flat_map(|&unit| {
+                self.units[unit]
+                    .views
+                    .iter()
+                    .map(move |&view| (view, self.units[unit].choices[0].clone()))
+            })
+            .collect()
     }
 
     fn settle(&mut self, units: &[usize]) -> Result<(), String> {
@@ -846,7 +1082,8 @@ impl Solver<'_> {
     fn leaf(&mut self, unit: usize, failure: Failure) -> Result<(), String> {
         let Unit { views, choices } = self.units[unit].clone();
         for choice in &choices[1..] {
-            let edits: Vec<(usize, Choice)> = views.iter().map(|&view| (view, choice.clone())).collect();
+            let edits: Vec<(usize, Choice)> =
+                views.iter().map(|&view| (view, choice.clone())).collect();
             if self.test(&edits)?.is_none() {
                 self.accept(edits);
                 return Ok(());
@@ -883,33 +1120,66 @@ impl Solver<'_> {
     /// first try was the definition's, written by nothing new.
     fn keep(&mut self, view: usize, choices: &[Choice], failure: &Failure) {
         let tried = match choices {
-            [Choice::Remove, Choice::Declare { declaration, whose }, ..] if whose == "the definition's" => format!("as the definition's {}, which the object already declares", brief(declaration)),
+            [Choice::Remove, Choice::Declare { declaration, whose }, ..]
+                if whose == "the definition's" =>
+            {
+                format!(
+                    "as the definition's {}, which the object already declares",
+                    brief(declaration)
+                )
+            }
             _ => choices[0].said(&self.views[view]),
         };
         let note = format!("{tried}, {}", failure.said());
-        let functions = failure.moved.iter().map(|(name, ..)| name.clone()).collect();
+        let functions = failure
+            .moved
+            .iter()
+            .map(|(name, ..)| name.clone())
+            .collect();
         self.solved.kept.push((view, note, functions));
     }
 }
 
 /// Settles an object's units: its text with every view gone that moves
 /// nothing, and each kept one's marker saying what was tried.
-pub(crate) fn solve(original: &str, views: &[View], units: &[Unit], judge: &dyn Judge) -> Result<Solved, String> {
+pub(crate) fn solve(
+    original: &str,
+    views: &[View],
+    units: &[Unit],
+    judge: &dyn Judge,
+) -> Result<Solved, String> {
     // Each view found by a line of its own, whatever its marker repeats.
     let (original, views) = keyed(original, views);
     let (original, views) = (original.as_str(), views.as_slice());
-    let mut solver = Solver { original, views, units, judge, accepted: Vec::new(), solved: Solved::default() };
+    let mut solver = Solver {
+        original,
+        views,
+        units,
+        judge,
+        accepted: Vec::new(),
+        solved: Solved::default(),
+    };
     // A unit no choice can even be written for stays as it is.
     let mut tried = Vec::new();
     for (index, unit) in units.iter().enumerate() {
-        let edits: Vec<(usize, Choice)> = unit.views.iter().map(|&view| (view, unit.choices[0].clone())).collect();
+        let edits: Vec<(usize, Choice)> = unit
+            .views
+            .iter()
+            .map(|&view| (view, unit.choices[0].clone()))
+            .collect();
         let mut text = original.to_string();
-        let written = edits.iter().try_for_each(|(view, choice)| apply(&text, &views[*view], choice).map(|t| text = t));
+        let written = edits
+            .iter()
+            .try_for_each(|(view, choice)| apply(&text, &views[*view], choice).map(|t| text = t));
         match written {
             Ok(()) => tried.push(index),
             Err(why) => {
                 for &view in &unit.views {
-                    solver.solved.kept.push((view, format!("not tried: {}", brief(&why)), Vec::new()));
+                    solver.solved.kept.push((
+                        view,
+                        format!("not tried: {}", brief(&why)),
+                        Vec::new(),
+                    ));
                 }
             }
         }
@@ -937,17 +1207,31 @@ const UNTRIED: &str = "; not tried: ";
 /// reads it again.
 fn annotate(text: &str, view: &View, note: &str) -> String {
     let text = collapsed(text, view);
-    let body = view.marker.strip_suffix("*/").unwrap_or(&view.marker).trim_end();
+    let body = view
+        .marker
+        .strip_suffix("*/")
+        .unwrap_or(&view.marker)
+        .trim_end();
     let body = body.strip_suffix('.').unwrap_or(body);
-    let body = [TRIED, UNTRIED].iter().find_map(|note| body.split_once(note)).map_or(body, |(before, _)| before);
+    let body = [TRIED, UNTRIED]
+        .iter()
+        .find_map(|note| body.split_once(note))
+        .map_or(body, |(before, _)| before);
     // A view no choice could be written for says so in place of what was tried.
     let rewritten = match note.strip_prefix("not tried: ") {
         Some(why) => format!("{body}{UNTRIED}{}. */", why.trim_end_matches('.')),
-        None => format!("{body}{TRIED}{}. */", note.strip_prefix("tried ").unwrap_or(note).trim_end_matches('.')),
+        None => format!(
+            "{body}{TRIED}{}. */",
+            note.strip_prefix("tried ")
+                .unwrap_or(note)
+                .trim_end_matches('.')
+        ),
     };
     let mut out = String::with_capacity(text.len() + rewritten.len());
     for line in text.split_inclusive('\n') {
-        let (content, newline) = line.strip_suffix('\n').map_or((line, ""), |content| (content, "\n"));
+        let (content, newline) = line
+            .strip_suffix('\n')
+            .map_or((line, ""), |content| (content, "\n"));
         if content.trim() == view.key {
             out.push_str(&wrapped(&rewritten, indent_of(content)));
             out.push_str(newline);
@@ -960,10 +1244,19 @@ fn annotate(text: &str, view: &View, note: &str) -> String {
 
 /// The units of an object's views: a routine's, variable's or other name's
 /// views together, an enum's enumerators together.
-pub(crate) fn units(views: &[View], lines: &[&str], choices: &dyn Fn(&View) -> Vec<Choice>) -> Vec<Unit> {
+pub(crate) fn units(
+    views: &[View],
+    lines: &[&str],
+    choices: &dyn Fn(&View) -> Vec<Choice>,
+) -> Vec<Unit> {
     let mut keyed: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     let mut order: Vec<String> = Vec::new();
-    let line_of = |view: &View| lines.iter().position(|line| line.trim() == view.key).unwrap_or(0);
+    let line_of = |view: &View| {
+        lines
+            .iter()
+            .position(|line| line.trim() == view.key)
+            .unwrap_or(0)
+    };
     let mut previous: Option<(usize, String)> = None;
     for (index, view) in views.iter().enumerate() {
         let line = line_of(view);
@@ -971,12 +1264,26 @@ pub(crate) fn units(views: &[View], lines: &[&str], choices: &dyn Fn(&View) -> V
             "routine" | "variable" => format!("symbol {}", view.name),
             "enumerator" => match &previous {
                 // Markers one after another, a wrapped one's further lines between.
-                Some((at, key)) if *at < line && lines[*at + 1..line].iter().all(|line| continued(line)) && key.starts_with("enumerator ") => key.clone(),
+                Some((at, key))
+                    if *at < line
+                        && lines[*at + 1..line].iter().all(|line| continued(line))
+                        && key.starts_with("enumerator ") =>
+                {
+                    key.clone()
+                }
                 _ => format!("enumerator {} {}", view.suffix, view.name),
             },
             // A macro's and a tag's views are each part's own: their
             // choices are worked out from that part's definition.
-            kind => format!("{kind} {} {}", view.name, if matches!(kind, "macro" | "tag") { view.suffix.as_str() } else { "" }),
+            kind => format!(
+                "{kind} {} {}",
+                view.name,
+                if matches!(kind, "macro" | "tag") {
+                    view.suffix.as_str()
+                } else {
+                    ""
+                }
+            ),
         };
         previous = Some((line, key.clone()));
         if !keyed.contains_key(&key) {
@@ -989,7 +1296,10 @@ pub(crate) fn units(views: &[View], lines: &[&str], choices: &dyn Fn(&View) -> V
         .map(|key| {
             let views_of = keyed.remove(&key).unwrap_or_default();
             let choices = choices(&views[views_of[0]]);
-            Unit { views: views_of, choices }
+            Unit {
+                views: views_of,
+                choices,
+            }
         })
         .collect()
 }
@@ -1008,7 +1318,9 @@ pub(crate) struct Declarations {
 /// scope outside any parentheses, followed by what ends a declarator.
 fn declarator(statement: &text::Statement, at: usize) -> bool {
     let words = &statement.words;
-    if words[at].depth != 0 || at > 0 && matches!(words[at - 1].text, "struct" | "union" | "enum" | "." | "->") {
+    if words[at].depth != 0
+        || at > 0 && matches!(words[at - 1].text, "struct" | "union" | "enum" | "." | "->")
+    {
         return false;
     }
     let mut parens = 0i32;
@@ -1019,13 +1331,21 @@ fn declarator(statement: &text::Statement, at: usize) -> bool {
             _ => {}
         }
     }
-    parens == 0 && words.get(at + 1).is_some_and(|next| matches!(next.text, ";" | "[" | "=" | "__asm__" | "__attribute__"))
+    parens == 0
+        && words
+            .get(at + 1)
+            .is_some_and(|next| matches!(next.text, ";" | "[" | "=" | "__asm__" | "__attribute__"))
 }
 
 /// A statement's declaration of `plain`, written plainly: a definition's
 /// head, an initializer left off, a view's private name and binding taken
 /// out, a variable made `extern`.
-fn declaration_of(statement: &text::Statement, written: &str, plain: &str, routine: bool) -> String {
+fn declaration_of(
+    statement: &text::Statement,
+    written: &str,
+    plain: &str,
+    routine: bool,
+) -> String {
     let mut words: Vec<&str> = Vec::new();
     let mut skip = 0;
     for (index, word) in statement.words.iter().enumerate() {
@@ -1041,11 +1361,20 @@ fn declaration_of(statement: &text::Statement, written: &str, plain: &str, routi
         if word.depth == 0 && (word.text == ";" || !routine && word.text == "=") {
             break;
         }
-        if word.text == "__asm__" && statement.words.get(index + 1).is_some_and(|w| w.text == "(") {
+        if word.text == "__asm__"
+            && statement
+                .words
+                .get(index + 1)
+                .is_some_and(|w| w.text == "(")
+        {
             skip = 3;
             continue;
         }
-        words.push(if word.text == written { plain } else { word.text });
+        words.push(if word.text == written {
+            plain
+        } else {
+            word.text
+        });
     }
     if routine && words.first() == Some(&"extern") {
         words.remove(0);
@@ -1074,7 +1403,11 @@ impl Declarations {
                         word.text
                     } else {
                         match word.text.split_once("__") {
-                            Some((plain, _)) if names.contains(plain) && statement.find("__asm__").is_some() => plain,
+                            Some((plain, _))
+                                if names.contains(plain) && statement.find("__asm__").is_some() =>
+                            {
+                                plain
+                            }
                             _ => continue,
                         }
                     };
@@ -1082,12 +1415,24 @@ impl Declarations {
                     if !routine && !declarator(&statement, at) || !seen.insert(plain) {
                         continue;
                     }
-                    let defines = if routine { statement.body.is_some() } else { !statement.has("extern") };
+                    let defines = if routine {
+                        statement.body.is_some()
+                    } else {
+                        !statement.has("extern")
+                    };
                     let declaration = declaration_of(&statement, word.text, plain, routine);
                     if defines {
-                        found.definition.entry(plain.to_string()).or_insert(declaration);
+                        found
+                            .definition
+                            .entry(plain.to_string())
+                            .or_insert(declaration);
                     } else {
-                        *found.declared.entry(plain.to_string()).or_default().entry(declaration.clone()).or_default() += 1;
+                        *found
+                            .declared
+                            .entry(plain.to_string())
+                            .or_default()
+                            .entry(declaration.clone())
+                            .or_default() += 1;
                         if header {
                             found.in_headers.insert(declaration);
                         }
@@ -1108,31 +1453,57 @@ impl Declarations {
         if let Some(definition) = self.definition.get(name) {
             written.push((definition.clone(), "the definition's".into()));
         }
-        let mut declared: Vec<(&String, &usize)> = self.declared.get(name).map(|d| d.iter().collect()).unwrap_or_default();
+        let mut declared: Vec<(&String, &usize)> = self
+            .declared
+            .get(name)
+            .map(|d| d.iter().collect())
+            .unwrap_or_default();
         // The most written first; of as many, a header's.
-        declared.sort_by(|a, b| b.1.cmp(a.1).then(self.in_headers.contains(b.0).cmp(&self.in_headers.contains(a.0))).then(a.0.cmp(b.0)));
+        declared.sort_by(|a, b| {
+            b.1.cmp(a.1)
+                .then(
+                    self.in_headers
+                        .contains(b.0)
+                        .cmp(&self.in_headers.contains(a.0)),
+                )
+                .then(a.0.cmp(b.0))
+        });
         for (declaration, count) in declared {
             if written.len() >= 2 {
                 break;
             }
             if !written.iter().any(|(d, _)| d == declaration) {
-                let whose = if *count == 1 { "the one declaration".to_string() } else { format!("the {count} declarations'") };
+                let whose = if *count == 1 {
+                    "the one declaration".to_string()
+                } else {
+                    format!("the {count} declarations'")
+                };
                 written.push((declaration.clone(), whose));
             }
         }
-        let mut choices: Vec<Choice> = written.into_iter().map(|(declaration, whose)| Choice::Declare { declaration, whose }).collect();
+        let mut choices: Vec<Choice> = written
+            .into_iter()
+            .map(|(declaration, whose)| Choice::Declare { declaration, whose })
+            .collect();
         let repeat = match choices.first() {
-            Some(Choice::Declare { declaration, .. }) => self.in_headers.contains(declaration) || object_declares(object, declaration),
+            Some(Choice::Declare { declaration, .. }) => {
+                self.in_headers.contains(declaration) || object_declares(object, declaration)
+            }
             _ => true,
         };
-        choices.insert(if repeat { 0 } else { choices.len().min(1) }, Choice::Remove);
+        choices.insert(
+            if repeat { 0 } else { choices.len().min(1) },
+            Choice::Remove,
+        );
         choices
     }
 }
 
 /// Whether a statement of `object` declares or defines exactly `declaration`.
 fn object_declares(object: &str, declaration: &str) -> bool {
-    text::statements(object).iter().any(|statement| statement.declaration() == *declaration || statement.squashed() == *declaration)
+    text::statements(object).iter().any(|statement| {
+        statement.declaration() == *declaration || statement.squashed() == *declaration
+    })
 }
 
 /// Bounds how many compilers run at once across every object.
@@ -1143,7 +1514,10 @@ struct Gate {
 
 impl Gate {
     fn new(slots: usize) -> Gate {
-        Gate { free: Mutex::new(slots.max(1)), wake: Condvar::new() }
+        Gate {
+            free: Mutex::new(slots.max(1)),
+            wake: Condvar::new(),
+        }
     }
 
     fn hold<T>(&self, work: impl FnOnce() -> T) -> T {
@@ -1183,7 +1557,12 @@ struct Built<'a> {
 
 /// A function's instructions: its lines that are no label or directive.
 fn instructions(piece: &assembly::Piece) -> Vec<&str> {
-    piece.lines.iter().map(String::as_str).filter(|line| !line.ends_with(':') && !line.starts_with('.')).collect()
+    piece
+        .lines
+        .iter()
+        .map(String::as_str)
+        .filter(|line| !line.ends_with(':') && !line.starts_with('.'))
+        .collect()
 }
 
 /// How many instructions of two listings differ: the longer's length less
@@ -1194,7 +1573,11 @@ pub(crate) fn differing(a: &[&str], b: &[&str]) -> usize {
         let mut diagonal = 0;
         for (j, y) in b.iter().enumerate() {
             let above = row[j + 1];
-            row[j + 1] = if x == y { diagonal + 1 } else { above.max(row[j]) };
+            row[j + 1] = if x == y {
+                diagonal + 1
+            } else {
+                above.max(row[j])
+            };
             diagonal = above;
         }
     }
@@ -1202,7 +1585,10 @@ pub(crate) fn differing(a: &[&str], b: &[&str]) -> usize {
 }
 
 /// What moved in one edition, each with its instructions differing and had.
-pub(crate) fn moved_by(reference: &[assembly::Piece], now: &[assembly::Piece]) -> Vec<(String, usize, usize)> {
+pub(crate) fn moved_by(
+    reference: &[assembly::Piece],
+    now: &[assembly::Piece],
+) -> Vec<(String, usize, usize)> {
     assembly::moved(&[reference.to_vec()], now)
         .into_iter()
         .map(|(_, name)| {
@@ -1214,7 +1600,11 @@ pub(crate) fn moved_by(reference: &[assembly::Piece], now: &[assembly::Piece]) -
                     let (a, b) = (instructions(theirs), instructions(ours));
                     (name.clone(), differing(&a, &b), a.len())
                 }
-                (Some(theirs), None) => (format!("{name} (gone)"), instructions(theirs).len(), instructions(theirs).len()),
+                (Some(theirs), None) => (
+                    format!("{name} (gone)"),
+                    instructions(theirs).len(),
+                    instructions(theirs).len(),
+                ),
                 (None, Some(ours)) => (name.clone(), instructions(ours).len(), 0),
                 (None, None) => (name.clone(), 0, 0),
             }
@@ -1232,56 +1622,117 @@ fn first_error(stderr: &str, scratch: &str, object: &str, root: &Path) -> String
 /// with the file it stands for) read as its file's.
 fn first_error_of(stderr: &str, names: &[(String, String)], root: &Path) -> String {
     let placed = Regex::new(r":\d+: ").unwrap();
-    let line = stderr.lines().find(|line| !line.contains("warning:") && placed.is_match(line)).or_else(|| stderr.lines().next()).unwrap_or("");
+    let line = stderr
+        .lines()
+        .find(|line| !line.contains("warning:") && placed.is_match(line))
+        .or_else(|| stderr.lines().next())
+        .unwrap_or("");
     let mut line = line.to_string();
     for (copy, file) in names {
         line = line.replace(copy, file);
     }
     // Every path from the checkout, a header the build writes too.
     let line = line.replace(&format!("{}/", root.display()), "");
-    line.split_once("/out/").map_or(line.clone(), |(_, rest)| format!("out/{rest}"))
+    line.split_once("/out/")
+        .map_or(line.clone(), |(_, rest)| format!("out/{rest}"))
 }
 
 impl Judge for Built<'_> {
     fn judge(&self, text: &str, renamed: &[(String, String)]) -> Result<Option<Failure>, String> {
         let files = bundle::split(text);
-        let changed: BTreeSet<&str> = files.iter().filter(|(path, now)| self.original.iter().find(|(p, _)| p == path).is_none_or(|(_, was)| was != now)).map(|(path, _)| path.as_str()).collect();
+        let changed: BTreeSet<&str> = files
+            .iter()
+            .filter(|(path, now)| {
+                self.original
+                    .iter()
+                    .find(|(p, _)| p == path)
+                    .is_none_or(|(_, was)| was != now)
+            })
+            .map(|(path, _)| path.as_str())
+            .collect();
         let several = self.members.len() > 1;
         // Each object that sees a change, compiled from copies of its files.
         let mut copies: Vec<(&Member, bundle::Copies)> = Vec::new();
-        for member in self.members.iter().filter(|member| member.reaches.iter().any(|path| changed.contains(path.as_str()))) {
+        for member in self.members.iter().filter(|member| {
+            member
+                .reaches
+                .iter()
+                .any(|path| changed.contains(path.as_str()))
+        }) {
             let object = format!("{}.c", member.stem);
-            let own: Vec<(&str, &str)> = files.iter().filter(|(path, _)| member.reaches.contains(path)).map(|(path, text)| (path.as_str(), text.as_str())).collect();
+            let own: Vec<(&str, &str)> = files
+                .iter()
+                .filter(|(path, _)| member.reaches.contains(path))
+                .map(|(path, text)| (path.as_str(), text.as_str()))
+                .collect();
             copies.push((member, bundle::Copies::write(self.root, &object, &own)?));
         }
-        let tasks: Vec<(usize, usize)> = copies.iter().enumerate().flat_map(|(n, (member, _))| (0..member.compiler.editions().len()).map(move |e| (n, e))).collect();
+        let tasks: Vec<(usize, usize)> = copies
+            .iter()
+            .enumerate()
+            .flat_map(|(n, (member, _))| (0..member.compiler.editions().len()).map(move |e| (n, e)))
+            .collect();
         let named = |n: usize, edition: &str| match several {
-            true => format!("{edition} ({}.c)", copies[n].0.stem.rsplit('/').next().unwrap_or(&copies[n].0.stem)),
+            true => format!(
+                "{edition} ({}.c)",
+                copies[n]
+                    .0
+                    .stem
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or(&copies[n].0.stem)
+            ),
             false => edition.to_string(),
         };
         let check = |(n, e): (usize, usize), compiled: views::Compiled| -> Option<Failure> {
             let (member, copy) = &copies[n];
             let edition = named(n, &member.compiler.editions()[e]);
             if !compiled.ok {
-                return Some(Failure { edition, error: Some(first_error_of(&compiled.stderr, &copy.names, self.root)), moved: Vec::new() });
+                return Some(Failure {
+                    edition,
+                    error: Some(first_error_of(&compiled.stderr, &copy.names, self.root)),
+                    moved: Vec::new(),
+                });
             }
             let reference = assembly::pieces(&assembly::renamed(&member.reference[e], renamed));
             let moved = moved_by(&reference, &assembly::pieces(&compiled.output));
-            (!moved.is_empty()).then_some(Failure { edition, error: None, moved })
+            (!moved.is_empty()).then_some(Failure {
+                edition,
+                error: None,
+                moved,
+            })
         };
         let compile = |(n, e): (usize, usize)| {
             let (member, copy) = &copies[n];
-            self.gate.hold(|| member.compiler.compile(&member.compiler.editions()[e], &copy.object, Mode::Assembly))
+            self.gate.hold(|| {
+                member.compiler.compile(
+                    &member.compiler.editions()[e],
+                    &copy.object,
+                    Mode::Assembly,
+                )
+            })
         };
         // The first edition alone, then the rest together: most tries that
         // fail are seen failing in the first.
-        let Some(&first) = tasks.first() else { return Ok(None) };
+        let Some(&first) = tasks.first() else {
+            return Ok(None);
+        };
         if let Some(failure) = check(first, compile(first)?) {
             return Ok(Some(failure));
         }
         let rest: Vec<Result<views::Compiled, String>> = std::thread::scope(|scope| {
-            let handles: Vec<_> = tasks[1..].iter().map(|&task| scope.spawn(move || compile(task))).collect();
-            handles.into_iter().map(|handle| handle.join().unwrap_or_else(|_| Err("a compile panicked".into()))).collect()
+            let handles: Vec<_> = tasks[1..]
+                .iter()
+                .map(|&task| scope.spawn(move || compile(task)))
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| {
+                    handle
+                        .join()
+                        .unwrap_or_else(|_| Err("a compile panicked".into()))
+                })
+                .collect()
         });
         for (&task, compiled) in tasks[1..].iter().zip(rest) {
             if let Some(failure) = check(task, compiled?) {
@@ -1292,10 +1743,19 @@ impl Judge for Built<'_> {
         for &(n, e) in &tasks {
             let (member, copy) = &copies[n];
             let edition = &member.compiler.editions()[e];
-            let Some(compiled) = self.gate.hold(|| member.compiler.modern(edition, &copy.object))? else { continue };
+            let Some(compiled) = self
+                .gate
+                .hold(|| member.compiler.modern(edition, &copy.object))?
+            else {
+                continue;
+            };
             if !compiled.ok {
                 let error = first_error_of(&compiled.stderr, &copy.names, self.root);
-                return Ok(Some(Failure { edition: format!("{} (make modern)", named(n, edition)), error: Some(error), moved: Vec::new() }));
+                return Ok(Some(Failure {
+                    edition: format!("{} (make modern)", named(n, edition)),
+                    error: Some(error),
+                    moved: Vec::new(),
+                }));
             }
         }
         Ok(None)
@@ -1319,28 +1779,58 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
     let mut words = arguments.iter();
     while let Some(word) = words.next() {
         match word.as_str() {
-            "--game" => game = Some(words.next().filter(|g| !g.starts_with('-')).ok_or_else(|| USAGE.to_string())?.clone()),
+            "--game" => {
+                game = Some(
+                    words
+                        .next()
+                        .filter(|g| !g.starts_with('-'))
+                        .ok_or_else(|| USAGE.to_string())?
+                        .clone(),
+                )
+            }
             "--dry-run" => dry_run = true,
             "--no-modern" => modern = false,
-            other if other.starts_with('-') => return Err(format!("unknown settle option: {other}\n{USAGE}")),
+            other if other.starts_with('-') => {
+                return Err(format!("unknown settle option: {other}\n{USAGE}"))
+            }
             other => objects.push(other.strip_suffix(".c").unwrap_or(other).to_string()),
         }
     }
     let game = game.ok_or_else(|| USAGE.to_string())?;
-    Ok(Request { game, dry_run, modern, objects })
+    Ok(Request {
+        game,
+        dry_run,
+        modern,
+        objects,
+    })
 }
 
 /// Every `.c` and `.h` under a folder, by its path from the root.
 fn sources(root: &Path, folder: &str) -> Vec<(String, String)> {
     let mut found = Vec::new();
-    for entry in walkdir::WalkDir::new(root.join(folder)).into_iter().filter_map(Result::ok) {
+    for entry in walkdir::WalkDir::new(root.join(folder))
+        .into_iter()
+        .filter_map(Result::ok)
+    {
         let path = entry.path();
-        let named = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-        if named.starts_with('.') || !(named.ends_with(".c") || named.ends_with(".h")) || !entry.file_type().is_file() {
+        let named = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        if named.starts_with('.')
+            || !(named.ends_with(".c") || named.ends_with(".h"))
+            || !entry.file_type().is_file()
+        {
             continue;
         }
-        let Ok(text) = std::fs::read_to_string(path) else { continue };
-        let relative = path.strip_prefix(root).unwrap_or(path).to_string_lossy().into_owned();
+        let Ok(text) = std::fs::read_to_string(path) else {
+            continue;
+        };
+        let relative = path
+            .strip_prefix(root)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .into_owned();
         found.push((relative, text));
     }
     found.sort();
@@ -1398,20 +1888,40 @@ fn grouped(count: usize, pairs: &[(usize, usize)]) -> Vec<usize> {
 
 /// A regex matching any of `words` as a word, or None for none.
 fn any_word(words: &BTreeSet<String>) -> Option<Regex> {
-    (!words.is_empty()).then(|| Regex::new(&format!(r"\b(?:{})\b", words.iter().map(|w| regex::escape(w)).collect::<Vec<_>>().join("|"))).unwrap())
+    (!words.is_empty()).then(|| {
+        Regex::new(&format!(
+            r"\b(?:{})\b",
+            words
+                .iter()
+                .map(|w| regex::escape(w))
+                .collect::<Vec<_>>()
+                .join("|")
+        ))
+        .unwrap()
+    })
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
-    if arguments.iter().any(|a| matches!(a.as_str(), "-h" | "--help")) {
+    if arguments
+        .iter()
+        .any(|a| matches!(a.as_str(), "-h" | "--help"))
+    {
         println!("{USAGE}");
         return Ok(());
     }
     let request = parse(arguments)?;
     let root = crate::compile::root();
-    let _lock = if request.dry_run { None } else { Some(super::Lock::take(root)?) };
+    let _lock = if request.dry_run {
+        None
+    } else {
+        Some(super::Lock::take(root)?)
+    };
     let started = std::time::Instant::now();
     let all = sources(root, &format!("games/{}", request.game));
-    let texts: BTreeMap<&str, &str> = all.iter().map(|(path, text)| (path.as_str(), text.as_str())).collect();
+    let texts: BTreeMap<&str, &str> = all
+        .iter()
+        .map(|(path, text)| (path.as_str(), text.as_str()))
+        .collect();
     let editions = crate::alchemy::built::editions(std::slice::from_ref(&request.game))?;
     let mut linked = Vec::new();
     for &id in &editions {
@@ -1420,17 +1930,30 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
 
     // The files holding views, and those a settle may change: a file that
     // uses a view's private name or undefines a view's name.
-    let held: BTreeMap<&str, Vec<View>> = all.iter().map(|(path, text)| (path.as_str(), markers(text))).filter(|(_, views)| !views.is_empty()).collect();
+    let held: BTreeMap<&str, Vec<View>> = all
+        .iter()
+        .map(|(path, text)| (path.as_str(), markers(text)))
+        .filter(|(_, views)| !views.is_empty())
+        .collect();
     if held.is_empty() {
         return Err(format!("no file of games/{} holds a view", request.game));
     }
     let privates: BTreeSet<String> = held.values().flatten().map(View::private).collect();
-    let plain: BTreeSet<String> = held.values().flatten().map(|view| view.name.clone()).collect();
+    let plain: BTreeSet<String> = held
+        .values()
+        .flatten()
+        .map(|view| view.name.clone())
+        .collect();
     let private_word = any_word(&privates);
-    let undefines = any_word(&plain).map(|names| Regex::new(&format!(r"(?m)^\s*#\s*undef\s+{}\s*$", names.as_str())).unwrap());
+    let undefines = any_word(&plain)
+        .map(|names| Regex::new(&format!(r"(?m)^\s*#\s*undef\s+{}\s*$", names.as_str())).unwrap());
     let relevant: BTreeSet<&str> = all
         .iter()
-        .filter(|(path, text)| held.contains_key(path.as_str()) || private_word.as_ref().is_some_and(|r| r.is_match(text)) || undefines.as_ref().is_some_and(|r| r.is_match(text)))
+        .filter(|(path, text)| {
+            held.contains_key(path.as_str())
+                || private_word.as_ref().is_some_and(|r| r.is_match(text))
+                || undefines.as_ref().is_some_and(|r| r.is_match(text))
+        })
         .map(|(path, _)| path.as_str())
         .collect();
 
@@ -1438,7 +1961,12 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let read = |path: &str| texts.get(path).map(|text| text.to_string());
     let mut stems: BTreeSet<&str> = BTreeSet::new();
     for (_, linked) in &linked {
-        stems.extend(linked.all().into_iter().filter(|stem| texts.contains_key(format!("{stem}.c").as_str())));
+        stems.extend(
+            linked
+                .all()
+                .into_iter()
+                .filter(|stem| texts.contains_key(format!("{stem}.c").as_str())),
+        );
     }
     let mut objects: Vec<(String, BTreeSet<String>, BTreeSet<String>)> = Vec::new();
     for stem in stems {
@@ -1455,7 +1983,10 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let mut first_of: BTreeMap<&str, usize> = BTreeMap::new();
     let mut pairs = Vec::new();
     for (n, (_, needed, _)) in objects.iter().enumerate() {
-        for path in needed.iter().filter(|path| relevant.contains(path.as_str())) {
+        for path in needed
+            .iter()
+            .filter(|path| relevant.contains(path.as_str()))
+        {
             match first_of.get(path.as_str()) {
                 Some(&other) => pairs.push((other, n)),
                 None => {
@@ -1470,14 +2001,24 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let named: Option<BTreeSet<String>> = (!request.objects.is_empty()).then(|| {
         let mut named = BTreeSet::new();
         for asked in &request.objects {
-            for path in [format!("{asked}.c"), asked.clone()].into_iter().filter(|path| texts.contains_key(path.as_str())) {
+            for path in [format!("{asked}.c"), asked.clone()]
+                .into_iter()
+                .filter(|path| texts.contains_key(path.as_str()))
+            {
                 named.extend(bundle::tree(root, &path, &read).into_keys());
             }
         }
         named
     });
     let held_views = held.values().flatten().count();
-    let held_by_objects: usize = held.iter().filter(|(path, _)| path.strip_suffix(".c").is_some_and(|stem| linked.iter().any(|(_, l)| l.links(stem)))).map(|(_, views)| views.len()).sum();
+    let held_by_objects: usize = held
+        .iter()
+        .filter(|(path, _)| {
+            path.strip_suffix(".c")
+                .is_some_and(|stem| linked.iter().any(|(_, l)| l.links(stem)))
+        })
+        .map(|(_, views)| views.len())
+        .sum();
     let mut reached_views = 0;
 
     let mut names: BTreeSet<String> = BTreeSet::new();
@@ -1485,10 +2026,18 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     // Each file as it was read, for the journal that undoes the settle.
     let mut files = super::Files::new(root);
     for leader in leaders.iter().copied().collect::<BTreeSet<usize>>() {
-        let group: Vec<usize> = (0..objects.len()).filter(|&n| leaders[n] == leader).collect();
+        let group: Vec<usize> = (0..objects.len())
+            .filter(|&n| leaders[n] == leader)
+            .collect();
         // The objects first, then the files they include.
-        let mut paths: Vec<String> = group.iter().map(|&n| format!("{}.c", objects[n].0)).collect();
-        let mut rest: BTreeSet<String> = group.iter().flat_map(|&n| objects[n].1.iter().cloned()).collect();
+        let mut paths: Vec<String> = group
+            .iter()
+            .map(|&n| format!("{}.c", objects[n].0))
+            .collect();
+        let mut rest: BTreeSet<String> = group
+            .iter()
+            .flat_map(|&n| objects[n].1.iter().cloned())
+            .collect();
         rest.retain(|path| !paths.contains(path));
         paths.extend(rest);
         let mut joined_files = Vec::new();
@@ -1503,25 +2052,61 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             joined_files.push((path.clone(), text));
         }
         reached_views += views.len();
-        let selected: Vec<bool> = holders.iter().map(|holder| named.as_ref().is_none_or(|named| named.contains(holder))).collect();
+        let selected: Vec<bool> = holders
+            .iter()
+            .map(|holder| named.as_ref().is_none_or(|named| named.contains(holder)))
+            .collect();
         if !selected.contains(&true) {
             continue;
         }
-        names.extend(views.iter().zip(&selected).filter(|(v, &s)| s && matches!(v.kind, "routine" | "variable")).map(|(v, _)| v.name.clone()));
-        let members = group.iter().map(|&n| (objects[n].0.clone(), objects[n].1.clone())).collect();
+        names.extend(
+            views
+                .iter()
+                .zip(&selected)
+                .filter(|(v, &s)| s && matches!(v.kind, "routine" | "variable"))
+                .map(|(v, _)| v.name.clone()),
+        );
+        let members = group
+            .iter()
+            .map(|&n| (objects[n].0.clone(), objects[n].1.clone()))
+            .collect();
         let text = bundle::join(&joined_files);
-        let selected = selected.iter().enumerate().filter(|(_, &s)| s).map(|(n, _)| n).collect();
-        jobs.push(Job { members, files: joined_files, text, views, holders, selected, units: Vec::new() });
+        let selected = selected
+            .iter()
+            .enumerate()
+            .filter(|(_, &s)| s)
+            .map(|(n, _)| n)
+            .collect();
+        jobs.push(Job {
+            members,
+            files: joined_files,
+            text,
+            views,
+            holders,
+            selected,
+            units: Vec::new(),
+        });
     }
     if jobs.is_empty() {
-        return Err(format!("no object of games/{} reaches a view it was asked for", request.game));
+        return Err(format!(
+            "no object of games/{} reaches a view it was asked for",
+            request.game
+        ));
     }
     // The headers the build writes (the message ids), as the first edition has them.
     let mut read_all = all.clone();
     if let Some(&first) = editions.first() {
         let out = crate::alchemy::built::output(root, first);
-        let folder = out.strip_prefix(root).unwrap_or(&out).to_string_lossy().into_owned();
-        read_all.extend(sources(root, &folder).into_iter().filter(|(path, _)| path.ends_with(".h")));
+        let folder = out
+            .strip_prefix(root)
+            .unwrap_or(&out)
+            .to_string_lossy()
+            .into_owned();
+        read_all.extend(
+            sources(root, &folder)
+                .into_iter()
+                .filter(|(path, _)| path.ends_with(".h")),
+        );
     }
     let declarations = Declarations::read(&read_all, &names);
     for job in &mut jobs {
@@ -1532,7 +2117,15 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         let choices = |view: &View| match view.kind {
             "routine" | "variable" => declarations.choices(&view.name, &text),
             "tag" => {
-                let other = body_of(&text, &view.name).map(|_| text.as_str()).or_else(|| all.iter().find(|(path, source)| path.ends_with(".h") && body_of(source, &view.name).is_some()).map(|(_, source)| source.as_str()));
+                let other = body_of(&text, &view.name)
+                    .map(|_| text.as_str())
+                    .or_else(|| {
+                        all.iter()
+                            .find(|(path, source)| {
+                                path.ends_with(".h") && body_of(source, &view.name).is_some()
+                            })
+                            .map(|(_, source)| source.as_str())
+                    });
                 match other.and_then(|other| member_renames(&text, view, other)) {
                     Some(renames) => vec![Choice::Members { renames }, Choice::Remove],
                     None => vec![Choice::Remove],
@@ -1543,12 +2136,18 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         let chosen: Vec<View> = selected.iter().map(|&n| keyed_views[n].clone()).collect();
         job.units = units(&chosen, &lines, &choices)
             .into_iter()
-            .map(|unit| Unit { views: unit.views.into_iter().map(|n| selected[n]).collect(), choices: unit.choices })
+            .map(|unit| Unit {
+                views: unit.views.into_iter().map(|n| selected[n]).collect(),
+                choices: unit.choices,
+            })
             .collect();
     }
     // The largest first, so the longest is not left for last.
     jobs.sort_by_key(|job| std::cmp::Reverse(job.text.len() * job.units.len() * job.members.len()));
-    let total: usize = jobs.iter().map(|job| job.units.iter().map(|unit| unit.views.len()).sum::<usize>()).sum();
+    let total: usize = jobs
+        .iter()
+        .map(|job| job.units.iter().map(|unit| unit.views.len()).sum::<usize>())
+        .sum();
     println!(
         "settle: {total} views in {} settles of {} objects; games/{} holds {held_views}, {held_by_objects} in linked objects, {} in files they include, {} reached by no linked object",
         jobs.len(),
@@ -1564,34 +2163,96 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let mut objects_of: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut moderns: BTreeMap<String, Vec<views::ModernRecipe>> = BTreeMap::new();
     let mut reference: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    let members: BTreeMap<&str, &BTreeSet<String>> = jobs.iter().flat_map(|job| job.members.iter().map(|(stem, reaches)| (stem.as_str(), reaches))).collect();
-    let reached_of: BTreeMap<&str, &BTreeSet<String>> = objects.iter().map(|(stem, _, reached)| (stem.as_str(), reached)).collect();
+    let members: BTreeMap<&str, &BTreeSet<String>> = jobs
+        .iter()
+        .flat_map(|job| {
+            job.members
+                .iter()
+                .map(|(stem, reaches)| (stem.as_str(), reaches))
+        })
+        .collect();
+    let reached_of: BTreeMap<&str, &BTreeSet<String>> = objects
+        .iter()
+        .map(|(stem, _, reached)| (stem.as_str(), reached))
+        .collect();
     for (id, linked) in &linked {
         let target = crate::alchemy::targets::target_for(*id);
-        let linking: Vec<&str> = members.keys().copied().filter(|stem| linked.links(stem)).collect();
+        let linking: Vec<&str> = members
+            .keys()
+            .copied()
+            .filter(|stem| linked.links(stem))
+            .collect();
         if linking.is_empty() {
             continue;
         }
-        let mut wanted: Vec<(String, String)> = linking.iter().map(|stem| (format!("{stem}.c"), format!("{}/obj/{stem}.o", target.output_dir))).collect();
-        wanted.extend(linking.iter().map(|stem| (format!("{stem}.c"), format!("{}/modern/{stem}.o", target.output_dir))));
-        let mut found = crate::gba::recipe::recipes(root, Path::new(target.output_dir), &[format!("EDITION={id}")], &wanted)?;
+        let mut wanted: Vec<(String, String)> = linking
+            .iter()
+            .map(|stem| {
+                (
+                    format!("{stem}.c"),
+                    format!("{}/obj/{stem}.o", target.output_dir),
+                )
+            })
+            .collect();
+        wanted.extend(linking.iter().map(|stem| {
+            (
+                format!("{stem}.c"),
+                format!("{}/modern/{stem}.o", target.output_dir),
+            )
+        }));
+        let mut found = crate::gba::recipe::recipes(
+            root,
+            Path::new(target.output_dir),
+            &[format!("EDITION={id}")],
+            &wanted,
+        )?;
         let modern_found = found.split_off(linking.len());
-        for (((source, object), recipe), ((_, modern_object), modern_recipe)) in wanted.iter().zip(found).zip(wanted[linking.len()..].iter().zip(modern_found)) {
+        for (((source, object), recipe), ((_, modern_object), modern_recipe)) in wanted
+            .iter()
+            .zip(found)
+            .zip(wanted[linking.len()..].iter().zip(modern_found))
+        {
             let stem = source.strip_suffix(".c").unwrap_or(source).to_string();
             let recipe = recipe.map_err(|why| format!("{source} in {id}: {why}"))?;
-            let modern_recipe = modern_recipe.map_err(|why| format!("{source} in {id} (make modern): {why}"))?;
-            let built = crate::alchemy::built::output(root, *id).join("obj").join(format!("{stem}.s"));
-            let modified = |path: &Path| std::fs::metadata(path).and_then(|meta| meta.modified()).ok();
+            let modern_recipe =
+                modern_recipe.map_err(|why| format!("{source} in {id} (make modern): {why}"))?;
+            let built = crate::alchemy::built::output(root, *id)
+                .join("obj")
+                .join(format!("{stem}.s"));
+            let modified = |path: &Path| {
+                std::fs::metadata(path)
+                    .and_then(|meta| meta.modified())
+                    .ok()
+            };
             let made = modified(&built);
             // Every file of games/ the object reaches, its parts too.
-            let newer = reached_of.get(stem.as_str()).into_iter().flat_map(|reached| reached.iter()).find(|path| made.is_none() || modified(&root.join(path)) > made);
+            let newer = reached_of
+                .get(stem.as_str())
+                .into_iter()
+                .flat_map(|reached| reached.iter())
+                .find(|path| made.is_none() || modified(&root.join(path)) > made);
             if let Some(newer) = newer {
-                return Err(format!("{} is missing or older than {newer}: make {id} first", built.display()));
+                return Err(format!(
+                    "{} is missing or older than {newer}: make {id} first",
+                    built.display()
+                ));
             }
-            recipes.entry(stem.clone()).or_default().push((id.as_str().to_string(), recipe));
-            objects_of.entry(stem.clone()).or_default().push(object.clone());
-            moderns.entry(stem.clone()).or_default().push((modern_recipe, modern_object.clone()));
-            reference.entry(stem).or_default().push(crate::alchemy::built::read_text(&built)?);
+            recipes
+                .entry(stem.clone())
+                .or_default()
+                .push((id.as_str().to_string(), recipe));
+            objects_of
+                .entry(stem.clone())
+                .or_default()
+                .push(object.clone());
+            moderns
+                .entry(stem.clone())
+                .or_default()
+                .push((modern_recipe, modern_object.clone()));
+            reference
+                .entry(stem)
+                .or_default()
+                .push(crate::alchemy::built::read_text(&built)?);
         }
     }
 
@@ -1608,22 +2269,52 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
                 let result = (|| -> Result<Solved, String> {
                     let mut members = Vec::new();
                     for (stem, reaches) in &job.members {
-                        let recipe = recipes.get(stem).cloned().ok_or_else(|| format!("{stem} is linked by no edition"))?;
-                        let compiler = views::Recipes::of(root, stem, recipe, objects_of.get(stem).cloned().unwrap_or_default())?;
-                        let compiler = if request.modern { compiler.with_modern(moderns.get(stem).cloned().unwrap_or_default()) } else { compiler };
-                        members.push(Member { stem: stem.clone(), reaches: reaches.clone(), compiler, reference: reference.get(stem).cloned().unwrap_or_default() });
+                        let recipe = recipes
+                            .get(stem)
+                            .cloned()
+                            .ok_or_else(|| format!("{stem} is linked by no edition"))?;
+                        let compiler = views::Recipes::of(
+                            root,
+                            stem,
+                            recipe,
+                            objects_of.get(stem).cloned().unwrap_or_default(),
+                        )?;
+                        let compiler = if request.modern {
+                            compiler.with_modern(moderns.get(stem).cloned().unwrap_or_default())
+                        } else {
+                            compiler
+                        };
+                        members.push(Member {
+                            stem: stem.clone(),
+                            reaches: reaches.clone(),
+                            compiler,
+                            reference: reference.get(stem).cloned().unwrap_or_default(),
+                        });
                     }
                     // As solve compiles it: each marker written as its key.
                     let original = bundle::split(&keyed(&job.text, &job.views).0);
-                    let built = Built { root, original, members, gate: &gate };
+                    let built = Built {
+                        root,
+                        original,
+                        members,
+                        gate: &gate,
+                    };
                     solve(&job.text, &job.views, &job.units, &built)
                 })();
                 let asked: usize = job.units.iter().map(|unit| unit.views.len()).sum();
                 match &result {
-                    Ok(solved) => println!("settle: {}: {} of {asked} views deleted ({:.0} s)", job.name(), solved.deleted.len(), begun.elapsed().as_secs_f64()),
+                    Ok(solved) => println!(
+                        "settle: {}: {} of {asked} views deleted ({:.0} s)",
+                        job.name(),
+                        solved.deleted.len(),
+                        begun.elapsed().as_secs_f64()
+                    ),
                     Err(why) => println!("settle: {} not settled: {why}", job.name()),
                 }
-                results.lock().unwrap_or_else(|e| e.into_inner()).push((at, result));
+                results
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .push((at, result));
             });
         }
     });
@@ -1649,21 +2340,41 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let mut counts: [Count; 2] = Default::default();
     for (at, result) in &results {
         let job = &jobs[*at];
-        let class = |view: usize| usize::from(!job.members.iter().any(|(stem, _)| job.holders[view] == format!("{stem}.c")));
-        let asked: Vec<usize> = job.units.iter().flat_map(|unit| unit.views.iter().copied()).collect();
+        let class = |view: usize| {
+            usize::from(
+                !job.members
+                    .iter()
+                    .any(|(stem, _)| job.holders[view] == format!("{stem}.c")),
+            )
+        };
+        let asked: Vec<usize> = job
+            .units
+            .iter()
+            .flat_map(|unit| unit.views.iter().copied())
+            .collect();
         for &view in &asked {
             counts[class(view)].views += 1;
         }
         let Ok(solved) = result else {
             for &view in &asked {
                 let view_of = &job.views[view];
-                symbols.entry(format!("{} {}", view_of.kind, view_of.name)).or_default().kept.push(format!("{} ({}): not settled", job.holders[view], view_of.suffix));
+                symbols
+                    .entry(format!("{} {}", view_of.kind, view_of.name))
+                    .or_default()
+                    .kept
+                    .push(format!(
+                        "{} ({}): not settled",
+                        job.holders[view], view_of.suffix
+                    ));
             }
             kept += asked.len();
             continue;
         };
         for &view in &solved.deleted {
-            symbols.entry(format!("{} {}", job.views[view].kind, job.views[view].name)).or_default().deleted += 1;
+            symbols
+                .entry(format!("{} {}", job.views[view].kind, job.views[view].name))
+                .or_default()
+                .deleted += 1;
             counts[class(view)].tried += 1;
             counts[class(view)].deleted += 1;
         }
@@ -1673,7 +2384,11 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             }
             let holder = &job.holders[*view];
             let view = &job.views[*view];
-            symbols.entry(format!("{} {}", view.kind, view.name)).or_default().kept.push(format!("{holder} ({}): {note}", view.suffix));
+            symbols
+                .entry(format!("{} {}", view.kind, view.name))
+                .or_default()
+                .kept
+                .push(format!("{holder} ({}): {note}", view.suffix));
         }
         deleted += solved.deleted.len();
         kept += solved.kept.len();
@@ -1693,16 +2408,27 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     }
     for (symbol, found) in &symbols {
         if !found.kept.is_empty() {
-            println!("left {symbol}: {} kept, {} deleted", found.kept.len(), found.deleted);
+            println!(
+                "left {symbol}: {} kept, {} deleted",
+                found.kept.len(),
+                found.deleted
+            );
             for line in &found.kept {
                 println!("  {line}");
             }
         }
     }
     for (count, held) in counts.iter().zip(["linked objects", "files they include"]) {
-        println!("settle: in {held}, {} views: {} tried, {} deleted", count.views, count.tried, count.deleted);
+        println!(
+            "settle: in {held}, {} views: {} tried, {} deleted",
+            count.views, count.tried, count.deleted
+        );
     }
-    let action = if request.dry_run { "would be written" } else { "written" };
+    let action = if request.dry_run {
+        "would be written"
+    } else {
+        "written"
+    };
     println!(
         "settle: {total} views; {deleted} deleted, {kept} left; {settled} of {} symbols settled; {written} files {action} ({:.0} s)",
         symbols.len(),
@@ -1712,7 +2438,10 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         return Ok(());
     }
     // Written through a journal, as a merge is, so adopt --undo takes it back.
-    let journal = files.commit(&format!("adopt settle {}", arguments.join(" ")), &format!("settle-{}", request.game))?;
+    let journal = files.commit(
+        &format!("adopt settle {}", arguments.join(" ")),
+        &format!("settle-{}", request.game),
+    )?;
     println!("settle: journal {journal}; undo with alchemy-devtools adopt --undo {journal}");
     if request.modern {
         super::modern_gate(root, &request.game).map_err(|why| format!("{why}\nthe settle is written; undo it with alchemy-devtools adopt --undo {journal}"))?;

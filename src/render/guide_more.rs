@@ -65,7 +65,11 @@ fn rgb(c: u16) -> u32 {
 
 /// An image of `w` by `h` pixels in `fill`.
 pub(super) fn canvas(w: usize, h: usize, fill: u32) -> Image {
-    Image { width: w, height: h, pixels: vec![fill; w * h] }
+    Image {
+        width: w,
+        height: h,
+        pixels: vec![fill; w * h],
+    }
 }
 
 /// Draws `from` into `to` with its top left at (x, y), `scale` times its
@@ -82,7 +86,11 @@ pub(super) fn paste(to: &mut Image, from: &Image, x: usize, y: usize, scale: usi
 }
 
 pub(super) fn screen(picture: &[u16]) -> Image {
-    Image { width: WIDTH, height: HEIGHT, pixels: picture.iter().map(|&c| rgb(c)).collect() }
+    Image {
+        width: WIDTH,
+        height: HEIGHT,
+        pixels: picture.iter().map(|&c| rgb(c)).collect(),
+    }
 }
 
 /// Outlines the rectangle (x, y, w, h) in `colour`, clipped.
@@ -120,7 +128,13 @@ pub(super) fn hue(n: usize) -> u32 {
 
 /// One 8 by 8 tile at `address`, 4 or 8 bits a pixel, with colours from
 /// `palette` (the 16 or 256 entries it reads); colour 0 is `empty`.
-pub(super) fn tile(field: &Field, address: u32, wide: bool, palette: &[u32], empty: u32) -> [u32; 64] {
+pub(super) fn tile(
+    field: &Field,
+    address: u32,
+    wide: bool,
+    palette: &[u32],
+    empty: u32,
+) -> [u32; 64] {
     let mut out = [empty; 64];
     for (i, px) in out.iter_mut().enumerate() {
         let index = if wide {
@@ -136,10 +150,20 @@ pub(super) fn tile(field: &Field, address: u32, wide: bool, palette: &[u32], emp
     out
 }
 
-pub(super) fn put_tile(image: &mut Image, x: usize, y: usize, pixels: &[u32; 64], hflip: bool, vflip: bool) {
+pub(super) fn put_tile(
+    image: &mut Image,
+    x: usize,
+    y: usize,
+    pixels: &[u32; 64],
+    hflip: bool,
+    vflip: bool,
+) {
     for ty in 0..8 {
         for tx in 0..8 {
-            let (sx, sy) = (if hflip { 7 - tx } else { tx }, if vflip { 7 - ty } else { ty });
+            let (sx, sy) = (
+                if hflip { 7 - tx } else { tx },
+                if vflip { 7 - ty } else { ty },
+            );
             let (px, py) = (x + tx, y + ty);
             if px < image.width && py < image.height {
                 image.pixels[py * image.width + px] = pixels[sy * 8 + sx];
@@ -150,28 +174,57 @@ pub(super) fn put_tile(image: &mut Image, x: usize, y: usize, pixels: &[u32; 64]
 
 impl<'a> Guide<'a> {
     /// Writes `frames` (BGR555 at 60 a second) as `file`.
-    pub(super) fn guide_gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
-        let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.iter().map(|&c| rgb(c)).collect()).collect();
+    pub(super) fn guide_gif(
+        &mut self,
+        file: &str,
+        frames: &[Vec<u16>],
+        what: &str,
+    ) -> Result<(), String> {
+        let rgb: Vec<Vec<u32>> = frames
+            .iter()
+            .map(|f| f.iter().map(|&c| rgb(c)).collect())
+            .collect();
         let written = animation::write(&self.out.join(file), &rgb, WIDTH)?;
-        self.written.push((file.to_string(), written.bytes, format!("{what}; {} frames at 30 a second", written.frames)));
+        self.written.push((
+            file.to_string(),
+            written.bytes,
+            format!("{what}; {} frames at 30 a second", written.frames),
+        ));
         Ok(())
     }
 
-    pub(super) fn guide_png(&mut self, file: &str, image: &Image, what: &str) -> Result<(), String> {
+    pub(super) fn guide_png(
+        &mut self,
+        file: &str,
+        image: &Image,
+        what: &str,
+    ) -> Result<(), String> {
         let bytes = write_png(&self.out.join(file), image)?;
-        self.written.push((file.to_string(), bytes, what.to_string()));
+        self.written
+            .push((file.to_string(), bytes, what.to_string()));
         Ok(())
     }
 
     /// The scene entered with the leader where `trigger` would start, from
     /// `place` or else from an entrance whose room holds the actor: the
     /// entered scene and the spot, the player in control there.
-    pub(super) fn stand_for(&self, place: (u16, u16), trigger: Trigger, actor: u16) -> Result<(Entered<'a>, Spot), String> {
+    pub(super) fn stand_for(
+        &self,
+        place: (u16, u16),
+        trigger: Trigger,
+        actor: u16,
+    ) -> Result<(Entered<'a>, Spot), String> {
         self.stand_where(place, trigger, actor, |_| true)
     }
 
     /// As `stand_for`, at the first spot `pick` accepts.
-    pub(super) fn stand_where(&self, place: (u16, u16), trigger: Trigger, actor: u16, pick: impl Fn(&Spot) -> bool) -> Result<(Entered<'a>, Spot), String> {
+    pub(super) fn stand_where(
+        &self,
+        place: (u16, u16),
+        trigger: Trigger,
+        actor: u16,
+        pick: impl Fn(&Spot) -> bool,
+    ) -> Result<(Entered<'a>, Spot), String> {
         let mut entered = self.enter_with(place, &[])?;
         let first = match entered.field.spots(trigger) {
             Ok(spots) if spots.iter().any(&pick) => {
@@ -184,12 +237,23 @@ impl<'a> Guide<'a> {
         };
         let at = entered.field.actor(actor).ok_or(first.clone())?;
         let header = entered.field.header();
-        let others: Vec<u16> = entered.field.entrances().iter().filter(|e| e.number as u16 != place.1 && box_holds(e.camera, header, at.x, at.z)).map(|e| e.number as u16).collect();
+        let others: Vec<u16> = entered
+            .field
+            .entrances()
+            .iter()
+            .filter(|e| e.number as u16 != place.1 && box_holds(e.camera, header, at.x, at.z))
+            .map(|e| e.number as u16)
+            .collect();
         for entrance in others {
             let Ok(mut entered) = self.enter_with((place.0, entrance), &[]) else {
                 continue;
             };
-            if let Some(spot) = entered.field.spots(trigger).ok().and_then(|s| s.into_iter().find(|s| pick(s))) {
+            if let Some(spot) = entered
+                .field
+                .spots(trigger)
+                .ok()
+                .and_then(|s| s.into_iter().find(|s| pick(s)))
+            {
                 entered.field.stand(&entered.placed, &spot)?;
                 return Ok((entered, spot));
             }
@@ -199,7 +263,10 @@ impl<'a> Guide<'a> {
 
     /// Holds each step's keys in turn from the moment the leader stands
     /// ready, keeping every frame.
-    pub(super) fn press_path(field: &mut Field, path: &[(u32, u32)]) -> Result<Vec<Vec<u16>>, String> {
+    pub(super) fn press_path(
+        field: &mut Field,
+        path: &[(u32, u32)],
+    ) -> Result<Vec<Vec<u16>>, String> {
         let mut frames = vec![field.picture()];
         for &(keys, n) in path {
             Self::hold(field, keys, n, &mut frames)?;
@@ -212,10 +279,17 @@ impl<'a> Guide<'a> {
     /// sooner than CLEARED, then run on with the pad left alone until it
     /// has shown CLEARED frames past its last black screen
     /// (animation::check_black_clearance).
-    pub(super) fn press_path_cleared(field: &mut Field, path: &[(u32, u32)]) -> Result<Vec<Vec<u16>>, String> {
+    pub(super) fn press_path_cleared(
+        field: &mut Field,
+        path: &[(u32, u32)],
+    ) -> Result<Vec<Vec<u16>>, String> {
         let start = field.save();
         let mut frames = Self::press_path(field, path)?;
-        if let Some(first) = frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b < CLEARED) {
+        if let Some(first) = frames
+            .iter()
+            .position(|f| is_black_bgr555(f))
+            .filter(|&b| b < CLEARED)
+        {
             field.load(&start);
             let mut longer = vec![(0, (CLEARED - first) as u32)];
             longer.extend_from_slice(path);
@@ -227,10 +301,15 @@ impl<'a> Guide<'a> {
 
     /// Runs `field` on, the pad left alone and every picture kept, until
     /// `frames` shows CLEARED frames past its last black screen.
-    pub(super) fn run_past_black(field: &mut Field, frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
+    pub(super) fn run_past_black(
+        field: &mut Field,
+        frames: &mut Vec<Vec<u16>>,
+    ) -> Result<(), String> {
         // A black screen the run on reaches is cleared in turn, four at most.
         for _ in 0..4 {
-            let Some(last) = frames.iter().rposition(|f| is_black_bgr555(f)) else { break };
+            let Some(last) = frames.iter().rposition(|f| is_black_bgr555(f)) else {
+                break;
+            };
             let since = frames.len() - 1 - last;
             if since >= CLEARED {
                 break;
@@ -256,17 +335,48 @@ impl<'a> Guide<'a> {
     pub fn talk(&mut self) -> Result<(), String> {
         let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
         let field = &mut entered.field;
-        let mut frames = Self::press_path(field, &[(0, 20), (KEY_A, 3), (0, 150), (KEY_A, 3), (0, 120), (KEY_A, 3), (0, 40)])?;
+        let mut frames = Self::press_path(
+            field,
+            &[
+                (0, 20),
+                (KEY_A, 3),
+                (0, 150),
+                (KEY_A, 3),
+                (0, 120),
+                (KEY_A, 3),
+                (0, 40),
+            ],
+        )?;
         // The window's opening: from the frame before the top 48 lines,
         // where it opens, first change, 10 frames at 60 a second.
         let still = frames[0].clone();
         let top = WIDTH * 48;
-        let opens = frames.iter().position(|f| f[..top].iter().zip(&still[..top]).filter(|(a, b)| a != b).count() > 20).unwrap_or(1);
+        let opens = frames
+            .iter()
+            .position(|f| {
+                f[..top]
+                    .iter()
+                    .zip(&still[..top])
+                    .filter(|(a, b)| a != b)
+                    .count()
+                    > 20
+            })
+            .unwrap_or(1);
         let mut strip = canvas(5 * (WIDTH + 4) + 4, 2 * (HEIGHT + 4) + 4, 0xffffff);
         for (i, frame) in frames.iter().skip(opens - 1).take(10).enumerate() {
-            paste(&mut strip, &screen(frame), 4 + (i % 5) * (WIDTH + 4), 4 + (i / 5) * (HEIGHT + 4), 1);
+            paste(
+                &mut strip,
+                &screen(frame),
+                4 + (i % 5) * (WIDTH + 4),
+                4 + (i / 5) * (HEIGHT + 4),
+                1,
+            );
         }
-        self.guide_png("window-open.png", &strip, "the message window's first 10 frames, left to right and down")?;
+        self.guide_png(
+            "window-open.png",
+            &strip,
+            "the message window's first 10 frames, left to right and down",
+        )?;
         let last = frames.last().cloned().unwrap_or_default();
         frames.extend(std::iter::repeat_n(last, 20));
         self.guide_gif("talk.gif", &frames, "talking to Garet's sister in Vale")
@@ -278,14 +388,22 @@ impl<'a> Guide<'a> {
         // The test rooms draw no map: the actors stand on black.
         let mut entered = self.enter_with(DJINN_ROOM, &[])?;
         let frames = Self::record_trigger(&mut entered, Trigger::Talk(FLINT), None, 30)?;
-        self.guide_gif("djinn-room.gif", &frames, "Flint given out in the Djinn test room")
+        self.guide_gif(
+            "djinn-room.gif",
+            &frames,
+            "Flint given out in the Djinn test room",
+        )
     }
-
 
     /// Bilibin's item shop, the party given 500 coins: talked to across the
     /// counter, Buy, a Herb for Isaac, and B out, as `shop.gif`.
     pub fn shop(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.stand_where(BILIBIN_ITEM_SHOP, Trigger::Talk(BILIBIN_ITEM_SHOPKEEPER), BILIBIN_ITEM_SHOPKEEPER, |s| s.facing == NORTH)?;
+        let (mut entered, _) = self.stand_where(
+            BILIBIN_ITEM_SHOP,
+            Trigger::Talk(BILIBIN_ITEM_SHOPKEEPER),
+            BILIBIN_ITEM_SHOPKEEPER,
+            |s| s.facing == NORTH,
+        )?;
         entered.field.set_coins(500);
         let path = [
             (0, 20),
@@ -315,9 +433,26 @@ impl<'a> Guide<'a> {
     /// Bilibin's inn, the party given 500 coins: a night's stay, the fade
     /// to black and back, as `inn.gif`.
     pub fn inn(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.stand_where(BILIBIN_INN, Trigger::Talk(BILIBIN_INNKEEPER), BILIBIN_INNKEEPER, |s| s.facing == NORTH)?;
+        let (mut entered, _) = self.stand_where(
+            BILIBIN_INN,
+            Trigger::Talk(BILIBIN_INNKEEPER),
+            BILIBIN_INNKEEPER,
+            |s| s.facing == NORTH,
+        )?;
         entered.field.set_coins(500);
-        let path = [(0, 20), (KEY_A, 3), (0, 70), (KEY_A, 3), (0, 90), (KEY_A, 3), (0, 90), (KEY_A, 3), (0, 600), (KEY_A, 3), (0, 90)];
+        let path = [
+            (0, 20),
+            (KEY_A, 3),
+            (0, 70),
+            (KEY_A, 3),
+            (0, 90),
+            (KEY_A, 3),
+            (0, 90),
+            (KEY_A, 3),
+            (0, 600),
+            (KEY_A, 3),
+            (0, 90),
+        ];
         let frames = Self::press_path_cleared(&mut entered.field, &path)?;
         self.guide_gif("inn.gif", &frames, "a night at Bilibin's inn")
     }
@@ -325,16 +460,38 @@ impl<'a> Guide<'a> {
     /// Move chosen from the field menu in front of Vale's pillar: the menu
     /// closes and the field casts it, as `menu-psynergy.gif`.
     pub fn menu_psynergy(&mut self) -> Result<(), String> {
-        let (mut entered, spot) = self.stand_where(VALE, Trigger::Psynergy(MOVE, VALE_PILLAR), VALE_PILLAR, |s| s.walk == KEY_RIGHT)?;
+        let (mut entered, spot) = self.stand_where(
+            VALE,
+            Trigger::Psynergy(MOVE, VALE_PILLAR),
+            VALE_PILLAR,
+            |s| s.walk == KEY_RIGHT,
+        )?;
         // The menu, Psynergy, Isaac, then Move where it is in his list.
-        let at = entered.field.abilities(0)?.iter().position(|&a| a == MOVE).ok_or("Isaac has no Move here")?;
-        let mut path = vec![(0, 20), (KEY_A, 3), (0, 50), (KEY_A, 3), (0, 50), (KEY_A, 3), (0, 50)];
+        let at = entered
+            .field
+            .abilities(0)?
+            .iter()
+            .position(|&a| a == MOVE)
+            .ok_or("Isaac has no Move here")?;
+        let mut path = vec![
+            (0, 20),
+            (KEY_A, 3),
+            (0, 50),
+            (KEY_A, 3),
+            (0, 50),
+            (KEY_A, 3),
+            (0, 50),
+        ];
         for _ in 0..at {
             path.extend([(KEY_DOWN, 3), (0, 15)]);
         }
         path.extend([(0, 20), (KEY_A, 3), (0, 100), (spot.walk, 60), (0, 200)]);
         let frames = Self::press_path(&mut entered.field, &path)?;
-        self.guide_gif("menu-psynergy.gif", &frames, "Move chosen from the menu and cast on Vale's pillar")
+        self.guide_gif(
+            "menu-psynergy.gif",
+            &frames,
+            "Move chosen from the menu and cast on Vale's pillar",
+        )
     }
 
     /// The credits from their start, kept from just before the first
@@ -342,20 +499,32 @@ impl<'a> Guide<'a> {
     /// `credits.gif`; and at the crossfade's middle the two backdrops, the
     /// names and the picture they make, as `credits-layers.png`.
     pub fn credits(&mut self) -> Result<(), String> {
-        let setup = super::field::Setup { scene: CREDITS.0, entrance: CREDITS.1, set: Vec::new(), clear: Vec::new() };
+        let setup = super::field::Setup {
+            scene: CREDITS.0,
+            entrance: CREDITS.1,
+            set: Vec::new(),
+            clear: Vec::new(),
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let mut frames = Vec::new();
         Self::hold(&mut field, 0, 1300, &mut frames)?;
         // The first frame not black, then the lead and the first slide's
         // fade and hold: the second slide's fade starts 300 + 64 + 267 frames
         // in.
-        let first = frames.iter().position(|f| f.iter().any(|&c| c & 0x7fff != 0)).unwrap_or(0);
+        let first = frames
+            .iter()
+            .position(|f| f.iter().any(|&c| c & 0x7fff != 0))
+            .unwrap_or(0);
         // (measured: the blend steps run in the 40 frames before it).
         let fade = first + 631 - 40;
         if fade + 200 > frames.len() {
             return Err("the credits ended early".to_string());
         }
-        self.guide_gif("credits.gif", &frames[fade - 60..fade + 160], "the credits' first crossfade, the names scrolling")?;
+        self.guide_gif(
+            "credits.gif",
+            &frames[fade - 60..fade + 160],
+            "the credits' first crossfade, the names scrolling",
+        )?;
         // Back to the crossfade's middle, each layer alone.
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         field.frames((fade + 20) as u32)?;
@@ -372,9 +541,19 @@ impl<'a> Guide<'a> {
         }
         let mut out = canvas(2 * WIDTH + 12, 2 * HEIGHT + 12, 0xffffff);
         for (i, shot) in shots.iter().enumerate() {
-            paste(&mut out, shot, 4 + (i % 2) * (WIDTH + 4), 4 + (i / 2) * (HEIGHT + 4), 1);
+            paste(
+                &mut out,
+                shot,
+                4 + (i % 2) * (WIDTH + 4),
+                4 + (i / 2) * (HEIGHT + 4),
+                1,
+            );
         }
-        self.guide_png("credits-layers.png", &out, "the crossfade's middle: BG3, BG2, the sprites and the screen")
+        self.guide_png(
+            "credits-layers.png",
+            &out,
+            "the crossfade's middle: BG3, BG2, the sprites and the screen",
+        )
     }
 
     /// Holding only L and R in Vale until the game sleeps: three seconds, then
@@ -383,10 +562,17 @@ impl<'a> Guide<'a> {
         let mut entered = self.enter_with(VALE, &[])?;
         let mut frames = Self::press_path(&mut entered.field, &[(0, 20), (KEY_L | KEY_R, 250)])?;
         // The stopped console draws nothing new: end on the white screen.
-        if let Some(last) = frames.iter().rposition(|f| f.iter().all(|&c| c & 0x7fff == 0x7fff)) {
+        if let Some(last) = frames
+            .iter()
+            .rposition(|f| f.iter().all(|&c| c & 0x7fff == 0x7fff))
+        {
             frames.truncate(last + 1);
         }
-        self.guide_gif("sleep.gif", &frames, "L and R held in Vale until the screen turns white for sleep")
+        self.guide_gif(
+            "sleep.gif",
+            &frames,
+            "L and R held in Vale until the screen turns white for sleep",
+        )
     }
 
     /// A scene entered and left to play on its own, for a moment no event
@@ -402,26 +588,44 @@ impl<'a> Guide<'a> {
     /// of its collision codes.
     pub fn play_moment(&mut self) -> Result<(), String> {
         let var = |name: &str| std::env::var(name).unwrap_or_default();
-        let place: Vec<u16> = var("MOMENT_PLACE").split(',').filter_map(|v| v.trim().parse().ok()).collect();
+        let place: Vec<u16> = var("MOMENT_PLACE")
+            .split(',')
+            .filter_map(|v| v.trim().parse().ok())
+            .collect();
         // A full run of the guide plays no moment unless one is asked for.
         let [scene, entrance] = place[..] else {
             eprintln!("moment: skipped, MOMENT_PLACE (scene,entrance) is not set");
             return Ok(());
         };
         let names = var("MOMENT_SET");
-        let set: Vec<&str> = names.split(',').map(str::trim).filter(|n| !n.is_empty()).collect();
+        let set: Vec<&str> = names
+            .split(',')
+            .map(str::trim)
+            .filter(|n| !n.is_empty())
+            .collect();
         let frames: u32 = var("MOMENT_FRAMES").parse().unwrap_or(600);
         let every: u32 = var("MOMENT_EVERY").parse().unwrap_or(30);
-        let watch: Vec<u16> = var("MOMENT_ACTORS").split(',').filter_map(|v| v.trim().parse().ok()).collect();
+        let watch: Vec<u16> = var("MOMENT_ACTORS")
+            .split(',')
+            .filter_map(|v| v.trim().parse().ok())
+            .collect();
         // From the moment the party was placed, before the scene's opening
         // script has run, which may never hand the player control.
         let resolve = |n: &&str| match n.strip_prefix("0x") {
             Some(hex) => u16::from_str_radix(hex, 16).map_err(|e| e.to_string()),
             None => self.flag(n),
         };
-        let set = set.iter().map(resolve).collect::<Result<Vec<u16>, String>>()?;
+        let set = set
+            .iter()
+            .map(resolve)
+            .collect::<Result<Vec<u16>, String>>()?;
         let clear = self.story_clears()?;
-        let setup = super::field::Setup { scene, entrance, set, clear };
+        let setup = super::field::Setup {
+            scene,
+            entrance,
+            set,
+            clear,
+        };
         let mut entered = self.moment_enter(&setup)?;
         let field = &mut entered;
         // MOMENT_CELLS: where the map holds each of these collision codes
@@ -429,10 +633,19 @@ impl<'a> Guide<'a> {
         // pixels on its map layer and its ground's height, which lifts it
         // that far up the picture. A map picture (render place's map-N.png)
         // starts at the scroll bounds' top left, also printed.
-        let codes: Vec<u16> = var("MOMENT_CELLS").split(',').filter_map(|v| v.trim().parse().ok()).collect();
+        let codes: Vec<u16> = var("MOMENT_CELLS")
+            .split(',')
+            .filter_map(|v| v.trim().parse().ok())
+            .collect();
         if !codes.is_empty() {
             let b = field.bounds();
-            println!("scroll bounds: x {}..{} z {}..{}", b[0] >> 16, b[2] >> 16, b[1] >> 16, b[3] >> 16);
+            println!(
+                "scroll bounds: x {}..{} z {}..{}",
+                b[0] >> 16,
+                b[2] >> 16,
+                b[1] >> 16,
+                b[3] >> 16
+            );
         }
         for code in codes {
             let size = field.cell_size();
@@ -447,8 +660,12 @@ impl<'a> Guide<'a> {
         // MOMENT_HOLD (`keys,frames,keys,frames...`): those keys then held
         // for that many frames, one pair after another, as the player would
         // walk him. The leader's place and the camera's are printed after.
-        let stand: Vec<i64> = var("MOMENT_STAND").split(',').filter_map(|v| v.trim().parse().ok()).collect();
-        let hold = super::approach::Pad::parse(&var("MOMENT_HOLD")).map_err(|e| format!("MOMENT_HOLD: {e}"))?;
+        let stand: Vec<i64> = var("MOMENT_STAND")
+            .split(',')
+            .filter_map(|v| v.trim().parse().ok())
+            .collect();
+        let hold = super::approach::Pad::parse(&var("MOMENT_HOLD"))
+            .map_err(|e| format!("MOMENT_HOLD: {e}"))?;
         if !stand.is_empty() || !hold.0.is_empty() {
             let placed = field.save();
             field.until_control()?;
@@ -467,7 +684,13 @@ impl<'a> Guide<'a> {
         }
         if let Some(a) = field.leader() {
             let (vx, vz) = field.view();
-            println!("leader: x {} z {} layer {} height {}; view x {vx} z {vz}", a.x, a.z, a.layer, a.y >> 16);
+            println!(
+                "leader: x {} z {} layer {} height {}; view x {vx} z {vz}",
+                a.x,
+                a.z,
+                a.layer,
+                a.y >> 16
+            );
         }
         let mut shots = vec![field.picture()];
         // MOMENT_A: A pressed for 3 frames every so many, to page through
@@ -483,7 +706,11 @@ impl<'a> Guide<'a> {
             shots.push(field.picture());
             if n % every == 0 && n >= from {
                 let image = Self::labelled_actors(field)?;
-                self.guide_png(&format!("moment-{n}.png"), &image, "a moment, its actors labelled")?;
+                self.guide_png(
+                    &format!("moment-{n}.png"),
+                    &image,
+                    "a moment, its actors labelled",
+                )?;
                 if !var("MOMENT_OAM").is_empty() {
                     // The sprite list's entries drawn in a mode other than
                     // normal: semi-transparent (1) or an object window (2).
@@ -493,10 +720,21 @@ impl<'a> Guide<'a> {
                         let a2 = field.read16(OAM + 8 * i + 4);
                         let mode = (a0 >> 10) & 3;
                         if (a0 >> 8) & 3 != 2 && mode != 0 {
-                            println!("frame {n}: OAM {i} mode {mode} y {} x {} tile {} priority {}", a0 & 0xff, a1 & 0x1ff, a2 & 0x3ff, (a2 >> 10) & 3);
+                            println!(
+                                "frame {n}: OAM {i} mode {mode} y {} x {} tile {} priority {}",
+                                a0 & 0xff,
+                                a1 & 0x1ff,
+                                a2 & 0x3ff,
+                                (a2 >> 10) & 3
+                            );
                         }
                     }
-                    println!("frame {n}: DISPCNT {:#06x} WINOUT {:#06x} BLDCNT {:#06x}", field.read16(DISPCNT), field.read16(0x0400_004a), field.read16(0x0400_0050));
+                    println!(
+                        "frame {n}: DISPCNT {:#06x} WINOUT {:#06x} BLDCNT {:#06x}",
+                        field.read16(DISPCNT),
+                        field.read16(0x0400_004a),
+                        field.read16(0x0400_0050)
+                    );
                 }
                 for &id in &watch {
                     println!("frame {n}: {}", describe(field, id));
@@ -514,13 +752,29 @@ impl<'a> Guide<'a> {
                     field.frames(3)?;
                     let without = field.picture();
                     field.load(&saved);
-                    let changed: Vec<usize> = (0..with.len()).filter(|&i| with[i] != without[i]).collect();
-                    if let (Some(lo), Some(hi)) = (changed.iter().map(|i| i % WIDTH).min(), changed.iter().map(|i| i % WIDTH).max()) {
-                        let (top, bottom) = (changed[0] / WIDTH, changed[changed.len() - 1] / WIDTH);
+                    let changed: Vec<usize> =
+                        (0..with.len()).filter(|&i| with[i] != without[i]).collect();
+                    if let (Some(lo), Some(hi)) = (
+                        changed.iter().map(|i| i % WIDTH).min(),
+                        changed.iter().map(|i| i % WIDTH).max(),
+                    ) {
+                        let (top, bottom) =
+                            (changed[0] / WIDTH, changed[changed.len() - 1] / WIDTH);
                         println!("frame {n}: actor {id} changes {} pixels, x {lo}..={hi}, y {top}..={bottom}", changed.len());
                         let mut marked = screen(&with);
-                        outline(&mut marked, lo as i32 - 1, top as i32 - 1, (hi - lo + 3) as i32, (bottom - top + 3) as i32, 0xff00ff);
-                        self.guide_png(&format!("moment-{n}-actor-{id}.png"), &marked, "what the actor adds, outlined")?;
+                        outline(
+                            &mut marked,
+                            lo as i32 - 1,
+                            top as i32 - 1,
+                            (hi - lo + 3) as i32,
+                            (bottom - top + 3) as i32,
+                            0xff00ff,
+                        );
+                        self.guide_png(
+                            &format!("moment-{n}-actor-{id}.png"),
+                            &marked,
+                            "what the actor adds, outlined",
+                        )?;
                         // The changed box with the actor and without it, side
                         // by side at eight times the size.
                         let (bw, bh) = (hi - lo + 9, bottom - top + 9);
@@ -528,17 +782,27 @@ impl<'a> Guide<'a> {
                         for (k, source) in [&with, &without].into_iter().enumerate() {
                             for y in 0..bh {
                                 for x in 0..bw {
-                                    let (sx, sy) = ((lo + x).saturating_sub(4).min(WIDTH - 1), (top + y).saturating_sub(4).min(HEIGHT - 1));
+                                    let (sx, sy) = (
+                                        (lo + x).saturating_sub(4).min(WIDTH - 1),
+                                        (top + y).saturating_sub(4).min(HEIGHT - 1),
+                                    );
                                     let colour = rgb(source[sy * WIDTH + sx]);
                                     for dy in 0..8 {
                                         for dx in 0..8 {
-                                            pair.pixels[(8 * y + dy) * pair.width + k * (8 * bw + 8) + 8 * x + dx] = colour;
+                                            pair.pixels[(8 * y + dy) * pair.width
+                                                + k * (8 * bw + 8)
+                                                + 8 * x
+                                                + dx] = colour;
                                         }
                                     }
                                 }
                             }
                         }
-                        self.guide_png(&format!("moment-{n}-actor-{id}-pair.png"), &pair, "with and without the actor")?;
+                        self.guide_png(
+                            &format!("moment-{n}-actor-{id}-pair.png"),
+                            &pair,
+                            "with and without the actor",
+                        )?;
                     } else {
                         println!("frame {n}: actor {id} changes nothing on screen");
                     }
@@ -604,24 +868,39 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         let start_state = field.save();
         let mut frames = Vec::new();
-        let mut at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        let mut at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?
+            .ok_or("no battle came")?;
         // A battle that comes before CLEARED frames of walking: the walk is
         // played again with the leader standing that much longer first.
-        let first_black = |frames: &[Vec<u16>], at: usize| at + frames[at..].iter().position(|f| is_black_bgr555(f)).unwrap_or(0);
+        let first_black = |frames: &[Vec<u16>], at: usize| {
+            at + frames[at..]
+                .iter()
+                .position(|f| is_black_bgr555(f))
+                .unwrap_or(0)
+        };
         if first_black(&frames, at) < CLEARED {
             let stand = (CLEARED - first_black(&frames, at)) as u32;
             field.load(&start_state);
             frames.clear();
             Self::hold(field, 0, stand, &mut frames)?;
-            at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+            at = Self::walk_stretch(field, &stretch, 80, &mut frames, &mut 0, &mut |_| {})?
+                .ok_or("no battle came")?;
         }
         Self::hold(field, 0, 240, &mut frames)?;
         Self::run_past_black(field, &mut frames)?;
         // From CLEARED frames of walking before the battle's first black
         // screen, where the walk is that long.
-        let black = at + frames[at..].iter().position(|f| is_black_bgr555(f)).unwrap_or(0);
+        let black = at
+            + frames[at..]
+                .iter()
+                .position(|f| is_black_bgr555(f))
+                .unwrap_or(0);
         let start = black.saturating_sub(CLEARED);
-        self.guide_gif("random-battle.gif", &frames[start..], "a random battle in Goma Cave")
+        self.guide_gif(
+            "random-battle.gif",
+            &frames[start..],
+            "a random battle in Goma Cave",
+        )
     }
 
     /// The world map pulled apart like Vale's layers, as `world-map-layers-3d.gif`:
@@ -647,7 +926,8 @@ impl<'a> Guide<'a> {
         let (place, stretch) = self.goma_cave_stretch()?;
         let mut entered = self.enter_goma_cave(place)?;
         let field = &mut entered.field;
-        Self::walk_stretch(field, &stretch, 80, &mut Vec::new(), &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        Self::walk_stretch(field, &stretch, 80, &mut Vec::new(), &mut 0, &mut |_| {})?
+            .ok_or("no battle came")?;
         field.frames(BATTLE_SETTLE_FRAMES)?;
         self.explode_now(field, "battle-layers-3d.gif", "a Goma Cave battle")
     }
@@ -685,7 +965,17 @@ impl<'a> Guide<'a> {
                         continue;
                     }
                     let mut dark = 0;
-                    if Self::walk_stretch(&mut entered.field, &stretch, 2, &mut Vec::new(), &mut dark, &mut |_| {}).is_err() || dark > DARK_LIMIT {
+                    if Self::walk_stretch(
+                        &mut entered.field,
+                        &stretch,
+                        2,
+                        &mut Vec::new(),
+                        &mut dark,
+                        &mut |_| {},
+                    )
+                    .is_err()
+                        || dark > DARK_LIMIT
+                    {
                         continue;
                     }
                     best = Some((length, (scene, entrance), stretch));
@@ -704,7 +994,14 @@ impl<'a> Guide<'a> {
     /// checked against what the game allows (Guide::check_footing): the walk
     /// fails rather than show him anywhere he could not stand. `each` sees
     /// the field after every frame.
-    pub(super) fn walk_stretch(field: &mut Field, stretch: &Stretch, legs: u32, frames: &mut Vec<Vec<u16>>, dark: &mut u32, each: &mut dyn FnMut(&Field)) -> Result<Option<usize>, String> {
+    pub(super) fn walk_stretch(
+        field: &mut Field,
+        stretch: &Stretch,
+        legs: u32,
+        frames: &mut Vec<Vec<u16>>,
+        dark: &mut u32,
+        each: &mut dyn FnMut(&Field),
+    ) -> Result<Option<usize>, String> {
         let mut way = 1;
         let mut last = field.leader().ok_or("the scene has no leader")?;
         for _ in 0..legs {
@@ -725,21 +1022,34 @@ impl<'a> Guide<'a> {
                 let (sx, sy) = (now.x - vx, now.z - vy - 16);
                 let black = (sy - 16..sy + 16)
                     .flat_map(|y| (sx - 16..sx + 16).map(move |x| (x, y)))
-                    .filter(|&(x, y)| (0..WIDTH as i32).contains(&x) && (0..HEIGHT as i32).contains(&y))
-                    .filter(|&(x, y)| { let c = picture[y as usize * WIDTH + x as usize]; (0..3).all(|i| (c >> (5 * i)) & 31 < 4) })
+                    .filter(|&(x, y)| {
+                        (0..WIDTH as i32).contains(&x) && (0..HEIGHT as i32).contains(&y)
+                    })
+                    .filter(|&(x, y)| {
+                        let c = picture[y as usize * WIDTH + x as usize];
+                        (0..3).all(|i| (c >> (5 * i)) & 31 < 4)
+                    })
                     .count() as u32;
                 *dark = (*dark).max(black);
                 frames.push(picture);
-                still = if (now.x, now.z) == (last.x, last.z) { still + 1 } else { 0 };
+                still = if (now.x, now.z) == (last.x, last.z) {
+                    still + 1
+                } else {
+                    0
+                };
                 last = now;
                 let along = if stretch.across { last.x } else { last.z };
-                if (way == 1 && along >= stretch.ends[1]) || (way == 0 && along <= stretch.ends[0]) {
+                if (way == 1 && along >= stretch.ends[1]) || (way == 0 && along <= stretch.ends[0])
+                {
                     break;
                 }
                 // Turning round takes the game a few frames; standing longer
                 // means something stopped him short of the end.
                 if still >= 12 {
-                    return Err(format!("the leader stopped at ({}, {}) short of the stretch's end", last.x, last.z));
+                    return Err(format!(
+                        "the leader stopped at ({}, {}) short of the stretch's end",
+                        last.x, last.z
+                    ));
                 }
             }
             way = 1 - way;
@@ -754,25 +1064,44 @@ impl<'a> Guide<'a> {
     /// more than a running step, stands on a cell of his layer that is no
     /// wall (CELL_BEHAVIOR_WALL), and climbs or drops no more than
     /// MapGrid_CheckCollision's 8 and 12 pixels.
-    fn check_footing(field: &mut Field, stretch: &Stretch, last: &Actor, now: &Actor) -> Result<(), String> {
+    fn check_footing(
+        field: &mut Field,
+        stretch: &Stretch,
+        last: &Actor,
+        now: &Actor,
+    ) -> Result<(), String> {
         let at = format!("at ({}, {}) on layer {}", now.x, now.z, now.layer);
-        let (line, was) = if stretch.across { (now.z, last.z) } else { (now.x, last.x) };
+        let (line, was) = if stretch.across {
+            (now.z, last.z)
+        } else {
+            (now.x, last.x)
+        };
         if line != was {
             return Err(format!("the leader was turned aside {at}"));
         }
         if (now.x - last.x).abs() + (now.z - last.z).abs() > 4 {
-            return Err(format!("the leader jumped from ({}, {}) {at}", last.x, last.z));
+            return Err(format!(
+                "the leader jumped from ({}, {}) {at}",
+                last.x, last.z
+            ));
         }
         let code = field.cell(now.layer, now.x >> 4, now.z >> 4);
         if code < 0 || code == CELL_WALL {
             return Err(format!("the leader stands in a wall {at}"));
         }
         if !(-STEP_DOWN..=STEP_UP).contains(&(now.y - last.y)) {
-            return Err(format!("the leader's height went from {} to {} {at}", last.y >> 16, now.y >> 16));
+            return Err(format!(
+                "the leader's height went from {} to {} {at}",
+                last.y >> 16,
+                now.y >> 16
+            ));
         }
         let ground = field.ground(now.layer, now.x, now.z)?;
         if (now.y - ground).abs() > 1 << 16 {
-            return Err(format!("the leader is {} pixels off the ground {at}", (now.y - ground) >> 16));
+            return Err(format!(
+                "the leader is {} pixels off the ground {at}",
+                (now.y - ground) >> 16
+            ));
         }
         Ok(())
     }
@@ -787,11 +1116,19 @@ impl<'a> Guide<'a> {
         let saved = field.save();
         let scene = field.scene();
         let start = field.leader().ok_or("the scene has no leader")?;
-        let keys = if across { [KEY_LEFT, KEY_RIGHT] } else { [KEY_UP, KEY_DOWN] };
+        let keys = if across {
+            [KEY_LEFT, KEY_RIGHT]
+        } else {
+            [KEY_UP, KEY_DOWN]
+        };
         let along = |a: &Actor| if across { a.x } else { a.z };
         // Open both ways while measuring: the check is of the line and the
         // footing, not of where the stretch ends.
-        let open = Stretch { across, ends: [i32::MIN, i32::MAX], keys };
+        let open = Stretch {
+            across,
+            ends: [i32::MIN, i32::MAX],
+            keys,
+        };
         let mut ends = [along(&start); 2];
         for way in 0..2 {
             field.load(&saved);
@@ -807,7 +1144,11 @@ impl<'a> Guide<'a> {
                 if Self::check_footing(field, &open, &last, &now).is_err() {
                     break;
                 }
-                still = if (now.x, now.z) == (last.x, last.z) { still + 1 } else { 0 };
+                still = if (now.x, now.z) == (last.x, last.z) {
+                    still + 1
+                } else {
+                    0
+                };
                 last = now;
                 ends[way] = along(&last);
                 if still >= 6 {
@@ -817,16 +1158,36 @@ impl<'a> Guide<'a> {
         }
         field.hold(0);
         field.load(&saved);
-        Ok(Stretch { across, ends: [ends[0] + STRETCH_MARGIN, ends[1] - STRETCH_MARGIN], keys })
+        Ok(Stretch {
+            across,
+            ends: [ends[0] + STRETCH_MARGIN, ends[1] - STRETCH_MARGIN],
+            keys,
+        })
     }
 
     /// The world map's still picture: R, the cursor moved over the map, L
     /// held to bring it back to the party, and A closing it, as `world-map-picture.gif`.
     pub fn world_map_picture(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(WORLD_MAP, &[])?;
-        let path = [(0, 20), (KEY_R, 3), (0, 90), (KEY_RIGHT, 50), (0, 40), (KEY_UP, 40), (0, 40), (KEY_L, 40), (0, 320), (KEY_A, 3), (0, 60)];
+        let path = [
+            (0, 20),
+            (KEY_R, 3),
+            (0, 90),
+            (KEY_RIGHT, 50),
+            (0, 40),
+            (KEY_UP, 40),
+            (0, 40),
+            (KEY_L, 40),
+            (0, 320),
+            (KEY_A, 3),
+            (0, 60),
+        ];
         let frames = Self::press_path_cleared(&mut entered.field, &path)?;
-        self.guide_gif("world-map-picture.gif", &frames, "the world map's still picture")
+        self.guide_gif(
+            "world-map-picture.gif",
+            &frames,
+            "the world map's still picture",
+        )
     }
 
     /// Walking from Vale into the Sanctum, the screen beside the 32 KB
@@ -860,10 +1221,16 @@ impl<'a> Guide<'a> {
         }
         field.hold(0);
         let written = animation::write(&self.out.join("overlay.gif"), &frames, w)?;
-        self.written.push(("overlay.gif".to_string(), written.bytes, format!("walking into the Sanctum beside the overlay area; {} frames", written.frames)));
+        self.written.push((
+            "overlay.gif".to_string(),
+            written.bytes,
+            format!(
+                "walking into the Sanctum beside the overlay area; {} frames",
+                written.frames
+            ),
+        ));
         Ok(())
     }
-
 }
 
 /// A straight run of walkable ground (Guide::measure_stretch): along x or z,
@@ -923,7 +1290,11 @@ pub(super) fn label(image: &mut Image, x: i32, y: i32, n: u16, colour: u32) {
             for c in 0..3 {
                 if bits & (4 >> c) != 0 {
                     for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
-                        put(x + 2 + i as i32 * 8 + 2 * c + dx, y + 2 + 2 * r as i32 + dy, 0xff_ff_ff);
+                        put(
+                            x + 2 + i as i32 * 8 + 2 * c + dx,
+                            y + 2 + 2 * r as i32 + dy,
+                            0xff_ff_ff,
+                        );
                     }
                 }
             }

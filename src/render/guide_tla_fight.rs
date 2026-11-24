@@ -53,7 +53,12 @@ struct Drive {
 }
 
 /// The modes this file plays.
-pub const MODES: &[&str] = &["fight-opening", "fight-turn-order", "graphics-monster", "fight-unleash"];
+pub const MODES: &[&str] = &[
+    "fight-opening",
+    "fight-turn-order",
+    "graphics-monster",
+    "fight-unleash",
+];
 
 impl<'a> Guide<'a> {
     pub(super) fn run_tla_fight(&mut self, name: &str) -> Result<(), String> {
@@ -74,7 +79,12 @@ impl<'a> Guide<'a> {
         let table = self.sym("gScene_BattleBackgroundRules")?;
         let word = |i: u32| {
             let at = (table + 4 * i - 0x0800_0000) as usize;
-            u32::from_le_bytes([self.rom[at], self.rom[at + 1], self.rom[at + 2], self.rom[at + 3]])
+            u32::from_le_bytes([
+                self.rom[at],
+                self.rom[at + 1],
+                self.rom[at + 2],
+                self.rom[at + 3],
+            ])
         };
         let (mut i, mut chosen) = (0, None);
         loop {
@@ -93,14 +103,25 @@ impl<'a> Guide<'a> {
     /// Felix, Jenna and Sheba from debug set 7 against `formation` in the
     /// temple.
     fn temple_drive(&self, formation: u32, hooks: Vec<u32>) -> Result<Drive, String> {
-        Ok(Drive { preset: PARTY_TEMPLE, party: vec![plan::FELIX, plan::JENNA, plan::SHEBA], formation, battle_start: BATTLE_START_SET, background: self.temple_background()?, hooks })
+        Ok(Drive {
+            preset: PARTY_TEMPLE,
+            party: vec![plan::FELIX, plan::JENNA, plan::SHEBA],
+            formation,
+            battle_start: BATTLE_START_SET,
+            background: self.temple_background()?,
+            hooks,
+        })
     }
 
     /// Boots the ROM into The Lost Age's battle test menu, starts `drive`'s
     /// battle and plays it, as Guide::drive does The Broken Seal's: `watch`
     /// is called at each of the hooks with the address and after each
     /// battle frame with None, and its answer decides the keys.
-    fn tla_drive(&self, drive: &Drive, watch: &mut dyn FnMut(&mut Gba, Option<u32>, usize) -> Act) -> Result<(), String> {
+    fn tla_drive(
+        &self,
+        drive: &Drive,
+        watch: &mut dyn FnMut(&mut Gba, Option<u32>, usize) -> Act,
+    ) -> Result<(), String> {
         let b = super::layout::BattleLayout::for_edition("tla-en")?;
         let start = self.sym("MainRoutine_RunFar")?;
         let menu = self.sym("DebugBattle_RunMenu")?;
@@ -193,8 +214,15 @@ impl<'a> Guide<'a> {
                 _ => Act::Keys(0),
             }
         })?;
-        eprintln!("fight-opening: {} frames, messages at {messages:?}, menu at {opened:?}", frames.len());
-        self.fight_gif("battle/opening.gif", &super::guide_fight::trimmed(&frames), "a battle opening in the Kandorean Temple")
+        eprintln!(
+            "fight-opening: {} frames, messages at {messages:?}, menu at {opened:?}",
+            frames.len()
+        );
+        self.fight_gif(
+            "battle/opening.gif",
+            &super::guide_fight::trimmed(&frames),
+            "a battle opening in the Kandorean Temple",
+        )
     }
 
     /// One round from the menu's first frame against the Wild Wolf, the
@@ -225,13 +253,19 @@ impl<'a> Guide<'a> {
                 Some(_) => Act::Keys(0),
                 // Once the enemies act, A only every SLOW_A frames, so each
                 // message can be read before it goes.
-                None if acts.iter().any(|a| a.1 >= FIRST_ENEMY_UNIT) => Act::Keys(if f % SLOW_A < 4 { KEY_A } else { 0 }),
+                None if acts.iter().any(|a| a.1 >= FIRST_ENEMY_UNIT) => {
+                    Act::Keys(if f % SLOW_A < 4 { KEY_A } else { 0 })
+                }
                 None => Act::Mash,
             }
         })?;
         eprintln!("fight-turn-order: menus at {menus:?}, actions {acts:?}");
         let start = menus.first().copied().ok_or("no menu")?;
-        self.fight_gif("battle/turn-order.gif", &frames[start..], "a round against a Wild Wolf, a Punch Ant and a Giant Bat")
+        self.fight_gif(
+            "battle/turn-order.gif",
+            &frames[start..],
+            "a round against a Wild Wolf, a Punch Ant and a Giant Bat",
+        )
     }
 
     /// One Wild Wolf from the battle's first picture to the end of its
@@ -256,8 +290,18 @@ impl<'a> Guide<'a> {
                         // in, as the menu would, and their count returned.
                         let record = gba.register(0);
                         for (i, &o) in party.iter().enumerate() {
-                            let agility = gba.read16(owners + u32::from(o) * b.unit_size + b.unit_agility);
-                            let fields = [u16::from(o), 0, agility, COMMAND_DEFEND, 0, PLACE_PARTY + i as u16, 1, 0];
+                            let agility =
+                                gba.read16(owners + u32::from(o) * b.unit_size + b.unit_agility);
+                            let fields = [
+                                u16::from(o),
+                                0,
+                                agility,
+                                COMMAND_DEFEND,
+                                0,
+                                PLACE_PARTY + i as u16,
+                                1,
+                                0,
+                            ];
                             for (k, v) in fields.into_iter().enumerate() {
                                 gba.write16(record + 16 * i as u32 + 2 * k as u32, v);
                             }
@@ -285,9 +329,16 @@ impl<'a> Guide<'a> {
                 Act::Keys(if f % SLOW_A < 4 { KEY_A } else { 0 })
             }
         })?;
-        eprintln!("graphics-monster: {} frames, the wolf acted at {turns:?}", frames.len());
+        eprintln!(
+            "graphics-monster: {} frames, the wolf acted at {turns:?}",
+            frames.len()
+        );
         turns.first().ok_or("the Wild Wolf never acted")?;
-        self.fight_gif("graphics/monster.gif", &super::guide_fight::trimmed(&frames), "a Wild Wolf's pictures as the camera swings and it attacks")
+        self.fight_gif(
+            "graphics/monster.gif",
+            &super::guide_fight::trimmed(&frames),
+            "a Wild Wolf's pictures as the camera swings and it attacks",
+        )
     }
 
     /// Felix attacks a copy of Sheba with the Gaia Blade of his debug set,
@@ -296,29 +347,61 @@ impl<'a> Guide<'a> {
     fn tla_unleash(&mut self) -> Result<(), String> {
         let root = crate::compile::root();
         let plan = super::plan::Tables::read_edition(root, "tla-en")?.plan()?;
-        let mut cast = plan.casts.into_iter().find(|c| c.caster() == plan::FELIX && c.ability.name == "Quake").ok_or("no Quake cast of Felix's")?;
+        let mut cast = plan
+            .casts
+            .into_iter()
+            .find(|c| c.caster() == plan::FELIX && c.ability.name == "Quake")
+            .ok_or("no Quake cast of Felix's")?;
         cast.foes = vec![plan::SHEBA];
-        let symbols = super::battle::Symbols::find_for(self.map, super::layout::BattleLayout::for_edition("tla-en")?)?;
+        let symbols = super::battle::Symbols::find_for(
+            self.map,
+            super::layout::BattleLayout::for_edition("tla-en")?,
+        )?;
         let random = self.sym("Battle_Random")?;
         let mut unleashed = 0;
-        let recording = super::battle::record_watching(self.rom, &symbols, &cast, &super::battle::Scene::Game, false, Some(&super::guide_battle::ATTACK_MENU), &[random], &mut |gba, hook| {
-            if hook == Some(random) && self.function_at(gba.register(LR) & !1) == "RollWeaponUnleash" {
-                gba.return_now(0);
-                unleashed += 1;
-            }
-        })?;
-        eprintln!("fight-unleash: {} frames, unleash rolls answered {unleashed}", recording.frames.len());
+        let recording = super::battle::record_watching(
+            self.rom,
+            &symbols,
+            &cast,
+            &super::battle::Scene::Game,
+            false,
+            Some(&super::guide_battle::ATTACK_MENU),
+            &[random],
+            &mut |gba, hook| {
+                if hook == Some(random)
+                    && self.function_at(gba.register(LR) & !1) == "Equipment_RollUnleash"
+                {
+                    gba.return_now(0);
+                    unleashed += 1;
+                }
+            },
+        )?;
+        eprintln!(
+            "fight-unleash: {} frames, unleash rolls answered {unleashed}",
+            recording.frames.len()
+        );
         if unleashed == 0 {
             return Err("no unleash roll was made".into());
         }
-        self.fight_gif("battle/unleash.gif", &super::guide_fight::trimmed(&recording.frames), "a weapon's unleash")
+        self.fight_gif(
+            "battle/unleash.gif",
+            &super::guide_fight::trimmed(&recording.frames),
+            "a weapon's unleash",
+        )
     }
 }
 
 /// The Kandorean Temple's rooms walked for a random battle, gScenes' rows
 /// (SceneId_KandoreanTemple2 on), as the walkthrough has the party meet
 /// its Wild Wolves, Punch Ants and Giant Bats there.
-const TEMPLE_ROOMS: &[&str] = &["KandoreanTempleMimic", "KandoreanTempleChestbeaters", "KandoreanTemplePillar", "KandoreanTempleStream", "KandoreanTempleSteam", "KandoreanTempleFog"];
+const TEMPLE_ROOMS: &[&str] = &[
+    "KandoreanTempleMimic",
+    "KandoreanTempleChestbeaters",
+    "KandoreanTemplePillar",
+    "KandoreanTempleStream",
+    "KandoreanTempleSteam",
+    "KandoreanTempleFog",
+];
 
 /// The modes of the Kandorean Temple's random battles.
 pub const CAVE_MODES: &[&str] = &["fight-won", "overworld-battle-return", "battle-layers-3d"];
@@ -345,7 +428,9 @@ impl<'a> Guide<'a> {
             };
             for entrance in first.field.entrances().iter().map(|e| e.number as u16) {
                 for across in [true, false] {
-                    let Ok(mut entered) = self.tla_enter(room, entrance, super::guide_tla::PARTY_DAILA, &[]) else {
+                    let Ok(mut entered) =
+                        self.tla_enter(room, entrance, super::guide_tla::PARTY_DAILA, &[])
+                    else {
                         continue;
                     };
                     let Ok(stretch) = Self::measure_stretch(&mut entered.field, across) else {
@@ -356,29 +441,67 @@ impl<'a> Guide<'a> {
                         continue;
                     }
                     let mut dark = 0;
-                    if Self::walk_stretch(&mut entered.field, &stretch, 2, &mut Vec::new(), &mut dark, &mut |_| {}).is_err() || dark > super::guide_more::DARK_LIMIT {
+                    if Self::walk_stretch(
+                        &mut entered.field,
+                        &stretch,
+                        2,
+                        &mut Vec::new(),
+                        &mut dark,
+                        &mut |_| {},
+                    )
+                    .is_err()
+                        || dark > super::guide_more::DARK_LIMIT
+                    {
                         continue;
                     }
                     best = Some((length, (room, entrance), stretch));
                 }
             }
         }
-        let (_, place, stretch) = best.ok_or("no room of the Kandorean Temple has open ground to walk")?;
-        eprintln!("temple stretch: {place:?}, {} pixels", stretch.ends[1] - stretch.ends[0]);
+        let (_, place, stretch) =
+            best.ok_or("no room of the Kandorean Temple has open ground to walk")?;
+        eprintln!(
+            "temple stretch: {place:?}, {} pixels",
+            stretch.ends[1] - stretch.ends[0]
+        );
         Ok((place, stretch))
     }
 
     /// Walks the temple's stretch until a random battle starts: the field
     /// and the frames walked, the last the battle's first.
-    fn temple_battle(&self) -> Result<(super::guide::Entered<'a>, super::guide_more::Stretch, Vec<Vec<u16>>, usize, u16), String> {
+    fn temple_battle(
+        &self,
+    ) -> Result<
+        (
+            super::guide::Entered<'a>,
+            super::guide_more::Stretch,
+            Vec<Vec<u16>>,
+            usize,
+            u16,
+        ),
+        String,
+    > {
         let ((room, entrance), stretch) = self.temple_stretch()?;
         let cave = Self::tla_scene(room)?;
         let mut entered = self.tla_enter(room, entrance, super::guide_tla::PARTY_DAILA, &[])?;
         // Stood a while first, so a battle that comes soon still has the
         // cave before it.
         let mut walk = Vec::new();
-        Self::hold(&mut entered.field, 0, super::field::CLEARED as u32, &mut walk)?;
-        let at = Self::walk_stretch(&mut entered.field, &stretch, 80, &mut walk, &mut 0, &mut |_| {})?.ok_or("no battle came in the temple")?;
+        Self::hold(
+            &mut entered.field,
+            0,
+            super::field::CLEARED as u32,
+            &mut walk,
+        )?;
+        let at = Self::walk_stretch(
+            &mut entered.field,
+            &stretch,
+            80,
+            &mut walk,
+            &mut 0,
+            &mut |_| {},
+        )?
+        .ok_or("no battle came in the temple")?;
         Ok((entered, stretch, walk, at, cave))
     }
 
@@ -391,7 +514,8 @@ impl<'a> Guide<'a> {
     fn temple_fight(&self) -> Result<(Vec<Vec<u16>>, usize, usize), String> {
         let (mut entered, stretch, walk, at, cave) = self.temple_battle()?;
         let field = &mut entered.field;
-        let mut frames: Vec<Vec<u16>> = walk[at.saturating_sub(super::field::CLEARED + 60)..].to_vec();
+        let mut frames: Vec<Vec<u16>> =
+            walk[at.saturating_sub(super::field::CLEARED + 60)..].to_vec();
         let opens = frames.len();
         let mut back = None;
         for n in 0..20000usize {
@@ -425,10 +549,22 @@ impl<'a> Guide<'a> {
     fn tla_fight_won(&mut self) -> Result<(), String> {
         let (frames, opens, back) = self.temple_fight()?;
         // The last black screen of the battle: its end, which fades out.
-        let last_black = frames[opens..back].iter().rposition(|f| super::animation::is_black_bgr555(f)).map_or(back, |b| opens + b);
-        let first_black = frames[opens..last_black].iter().rposition(|f| !super::animation::is_black_bgr555(f)).map_or(opens, |b| opens + b);
-        let from = first_black.saturating_sub(super::field::CLEARED + 30).max(opens);
-        self.fight_gif("battle/won.gif", &frames[from..], "a battle won in the Kandorean Temple and the cave back")
+        let last_black = frames[opens..back]
+            .iter()
+            .rposition(|f| super::animation::is_black_bgr555(f))
+            .map_or(back, |b| opens + b);
+        let first_black = frames[opens..last_black]
+            .iter()
+            .rposition(|f| !super::animation::is_black_bgr555(f))
+            .map_or(opens, |b| opens + b);
+        let from = first_black
+            .saturating_sub(super::field::CLEARED + 30)
+            .max(opens);
+        self.fight_gif(
+            "battle/won.gif",
+            &frames[from..],
+            "a battle won in the Kandorean Temple and the cave back",
+        )
     }
 
     /// A random battle in the temple walked into, fought to its end, and
@@ -436,7 +572,11 @@ impl<'a> Guide<'a> {
     /// `overworld/battle-return.gif`.
     fn tla_battle_return(&mut self) -> Result<(), String> {
         let (frames, _, _) = self.temple_fight()?;
-        self.world_gif("overworld/battle-return.gif", &frames, "a Kandorean Temple battle walked into, won, and the cave again")
+        self.world_gif(
+            "overworld/battle-return.gif",
+            &frames,
+            "a Kandorean Temple battle walked into, won, and the cave again",
+        )
     }
 
     /// A random battle in the temple pulled apart once it has settled, as

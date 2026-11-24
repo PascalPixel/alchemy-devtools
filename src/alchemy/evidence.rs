@@ -35,14 +35,25 @@ pub fn table(name: &str) -> Option<&'static str> {
             return Some(text);
         }
     }
-    tables::TABLES.iter().find(|(file, _)| *file == name).map(|(_, text)| *text)
+    tables::TABLES
+        .iter()
+        .find(|(file, _)| *file == name)
+        .map(|(_, text)| *text)
 }
 
 /// A table read from a file once per run and kept for the rest of it.
 fn read_once(path: &std::path::Path) -> Option<&'static str> {
-    static READ: OnceLock<Mutex<HashMap<std::path::PathBuf, Option<&'static str>>>> = OnceLock::new();
-    let mut read = READ.get_or_init(Default::default).lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-    *read.entry(path.to_path_buf()).or_insert_with(|| std::fs::read_to_string(path).ok().map(|text| &*Box::leak(text.into_boxed_str())))
+    static READ: OnceLock<Mutex<HashMap<std::path::PathBuf, Option<&'static str>>>> =
+        OnceLock::new();
+    let mut read = READ
+        .get_or_init(Default::default)
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    *read.entry(path.to_path_buf()).or_insert_with(|| {
+        std::fs::read_to_string(path)
+            .ok()
+            .map(|text| &*Box::leak(text.into_boxed_str()))
+    })
 }
 
 /// A table's rows, its header line left out, each split at its tabs into
@@ -56,7 +67,11 @@ fn rows(text: &str, columns: usize) -> Result<Vec<Vec<&str>>, String> {
         }
         let cells: Vec<&str> = line.split('\t').collect();
         if cells.len() != columns {
-            return Err(format!("line {}: {} cells, not {columns}", at + 1, cells.len()));
+            return Err(format!(
+                "line {}: {} cells, not {columns}",
+                at + 1,
+                cells.len()
+            ));
         }
         out.push(cells);
     }
@@ -85,13 +100,20 @@ impl Name {
 pub fn parse_names(text: &str) -> Result<Vec<Name>, String> {
     Ok(rows(text, 4)?
         .into_iter()
-        .map(|cells| Name { name: cells[0].to_string(), kind: cells[1].to_string(), evidence: cells[2].to_string(), file: cells[3].to_string() })
+        .map(|cells| Name {
+            name: cells[0].to_string(),
+            kind: cells[1].to_string(),
+            evidence: cells[2].to_string(),
+            file: cells[3].to_string(),
+        })
         .collect())
 }
 
 /// A game's names table (`tbs`), empty for a game that has none yet.
 pub fn names(game: &str) -> Result<Vec<Name>, String> {
-    table(&format!("{game}-names.tsv")).map_or(Ok(Vec::new()), |text| parse_names(text).map_err(|error| format!("evidence/{game}-names.tsv: {error}")))
+    table(&format!("{game}-names.tsv")).map_or(Ok(Vec::new()), |text| {
+        parse_names(text).map_err(|error| format!("evidence/{game}-names.tsv: {error}"))
+    })
 }
 
 /// One row of a game's fake-match table.
@@ -116,7 +138,11 @@ impl Measurement {
     /// The row for a tag in `routine`: its own, or one that names it first
     /// (`MapGrid_CopyCellTilesIndicesRect and its siblings`).
     pub fn is_for(&self, routine: &str) -> bool {
-        self.routine == routine || self.routine.strip_prefix(routine).is_some_and(|rest| rest.starts_with(' '))
+        self.routine == routine
+            || self
+                .routine
+                .strip_prefix(routine)
+                .is_some_and(|rest| rest.starts_with(' '))
     }
 }
 
@@ -124,14 +150,20 @@ impl Measurement {
 pub fn parse_measurements(text: &str) -> Result<Vec<Measurement>, String> {
     Ok(rows(text, 4)?
         .into_iter()
-        .map(|cells| Measurement { file: cells[0].to_string(), routine: cells[1].to_string(), kind: cells[2].to_string(), text: cells[3].to_string() })
+        .map(|cells| Measurement {
+            file: cells[0].to_string(),
+            routine: cells[1].to_string(),
+            kind: cells[2].to_string(),
+            text: cells[3].to_string(),
+        })
         .collect())
 }
 
 /// A game's fake-match table, empty for a game that has none yet.
 pub fn measurements(game: &str) -> Result<Vec<Measurement>, String> {
-    table(&format!("{game}-fakematch.tsv"))
-        .map_or(Ok(Vec::new()), |text| parse_measurements(text).map_err(|error| format!("evidence/{game}-fakematch.tsv: {error}")))
+    table(&format!("{game}-fakematch.tsv")).map_or(Ok(Vec::new()), |text| {
+        parse_measurements(text).map_err(|error| format!("evidence/{game}-fakematch.tsv: {error}"))
+    })
 }
 
 /// The kinds a judged number's row may be: a number S3 keeps as it is,
@@ -169,7 +201,12 @@ pub fn parse_judged(text: &str) -> Result<Vec<Judged>, String> {
             what: cells[4].to_string(),
         };
         if !JUDGED_KINDS.contains(&row.kind.as_str()) {
-            return Err(format!("row {}: kind {}, not one of {}", at + 1, row.kind, JUDGED_KINDS.join(", ")));
+            return Err(format!(
+                "row {}: kind {}, not one of {}",
+                at + 1,
+                row.kind,
+                JUDGED_KINDS.join(", ")
+            ));
         }
         if cells.iter().any(|cell| cell.trim().is_empty()) {
             return Err(format!("row {}: an empty cell", at + 1));
@@ -181,7 +218,9 @@ pub fn parse_judged(text: &str) -> Result<Vec<Judged>, String> {
 
 /// A game's judged numbers, empty for a game that has none yet.
 pub fn judged(game: &str) -> Result<Vec<Judged>, String> {
-    table(&format!("{game}-numbers.tsv")).map_or(Ok(Vec::new()), |text| parse_judged(text).map_err(|error| format!("evidence/{game}-numbers.tsv: {error}")))
+    table(&format!("{game}-numbers.tsv")).map_or(Ok(Vec::new()), |text| {
+        parse_judged(text).map_err(|error| format!("evidence/{game}-numbers.tsv: {error}"))
+    })
 }
 
 /// The kinds a judged duplicate group's row may be: copies that are
@@ -210,16 +249,28 @@ pub struct JudgedGroup {
 pub fn parse_duplicates(text: &str) -> Result<Vec<JudgedGroup>, String> {
     let mut out = Vec::new();
     for (at, cells) in rows(text, 3)?.into_iter().enumerate() {
-        let row = JudgedGroup { members: cells[0].to_string(), kind: cells[1].to_string(), why: cells[2].to_string() };
+        let row = JudgedGroup {
+            members: cells[0].to_string(),
+            kind: cells[1].to_string(),
+            why: cells[2].to_string(),
+        };
         if !DUPLICATE_KINDS.contains(&row.kind.as_str()) {
-            return Err(format!("row {}: kind {}, not one of {}", at + 1, row.kind, DUPLICATE_KINDS.join(", ")));
+            return Err(format!(
+                "row {}: kind {}, not one of {}",
+                at + 1,
+                row.kind,
+                DUPLICATE_KINDS.join(", ")
+            ));
         }
         if cells.iter().any(|cell| cell.trim().is_empty()) {
             return Err(format!("row {}: an empty cell", at + 1));
         }
         let names: Vec<&str> = row.members.split(' ').collect();
         if names.len() < 2 || names.windows(2).any(|pair| pair[0] > pair[1]) {
-            return Err(format!("row {}: members not two or more names in order", at + 1));
+            return Err(format!(
+                "row {}: members not two or more names in order",
+                at + 1
+            ));
         }
         out.push(row);
     }
@@ -228,8 +279,9 @@ pub fn parse_duplicates(text: &str) -> Result<Vec<JudgedGroup>, String> {
 
 /// A game's judged duplicates, empty for a game that has none yet.
 pub fn duplicates(game: &str) -> Result<Vec<JudgedGroup>, String> {
-    table(&format!("{game}-duplicates.tsv"))
-        .map_or(Ok(Vec::new()), |text| parse_duplicates(text).map_err(|error| format!("evidence/{game}-duplicates.tsv: {error}")))
+    table(&format!("{game}-duplicates.tsv")).map_or(Ok(Vec::new()), |text| {
+        parse_duplicates(text).map_err(|error| format!("evidence/{game}-duplicates.tsv: {error}"))
+    })
 }
 
 #[cfg(test)]
@@ -238,11 +290,33 @@ mod tests {
 
     #[test]
     fn judged_duplicates_are_read_and_checked() {
-        let rows = parse_duplicates("members\tkind\twhy\ngA gB\tdifferent things\teach creature's gravity\n").unwrap();
-        assert_eq!(rows, [JudgedGroup { members: "gA gB".into(), kind: "different things".into(), why: "each creature's gravity".into() }]);
-        assert!(parse_duplicates("members\tkind\twhy\ngA gB\tthe same\tno\n").unwrap_err().contains("kind the same"));
-        assert!(parse_duplicates("members\tkind\twhy\ngB gA\tkept apart\ttwo objects\n").unwrap_err().contains("in order"));
-        assert!(parse_duplicates("members\tkind\twhy\ngA\tkept apart\ttwo objects\n").unwrap_err().contains("two or more"));
+        let rows = parse_duplicates(
+            "members\tkind\twhy\ngA gB\tdifferent things\teach creature's gravity\n",
+        )
+        .unwrap();
+        assert_eq!(
+            rows,
+            [JudgedGroup {
+                members: "gA gB".into(),
+                kind: "different things".into(),
+                why: "each creature's gravity".into()
+            }]
+        );
+        assert!(
+            parse_duplicates("members\tkind\twhy\ngA gB\tthe same\tno\n")
+                .unwrap_err()
+                .contains("kind the same")
+        );
+        assert!(
+            parse_duplicates("members\tkind\twhy\ngB gA\tkept apart\ttwo objects\n")
+                .unwrap_err()
+                .contains("in order")
+        );
+        assert!(
+            parse_duplicates("members\tkind\twhy\ngA\tkept apart\ttwo objects\n")
+                .unwrap_err()
+                .contains("two or more")
+        );
         assert!(duplicates("tla").unwrap().len() > 10);
     }
 
@@ -250,30 +324,62 @@ mod tests {
     fn the_tables_are_compiled_in_and_read_whole() {
         let rows = names("tbs").unwrap();
         assert!(rows.len() > 4000, "{}", rows.len());
-        assert!(rows.iter().all(|row| row.file.starts_with("games/tbs/") && !row.name.is_empty()));
+        assert!(rows
+            .iter()
+            .all(|row| row.file.starts_with("games/tbs/") && !row.name.is_empty()));
         let measured = measurements("tbs").unwrap();
         assert!(measured.len() > 100, "{}", measured.len());
-        assert!(measured.iter().all(|row| row.file.starts_with("games/tbs/") && (row.kind.starts_with("FAKEMATCH(") || row.kind.starts_with("LEFTOVER("))));
+        assert!(measured.iter().all(|row| row.file.starts_with("games/tbs/")
+            && (row.kind.starts_with("FAKEMATCH(") || row.kind.starts_with("LEFTOVER("))));
         for game in ["tbs", "tla"] {
             let judged = judged(game).unwrap();
-            assert!(judged.iter().any(|row| row.kind == "honest") && judged.iter().any(|row| row.kind == "unsettled"), "{game}");
+            assert!(
+                judged.iter().any(|row| row.kind == "honest")
+                    && judged.iter().any(|row| row.kind == "unsettled"),
+                "{game}"
+            );
             let root = crate::compile::root();
             for row in &judged {
-                assert!(row.file.starts_with(&format!("games/{game}/")) && root.join(&row.file).is_file(), "{game}: {}", row.file);
-                assert!(row.number.bytes().next().is_some_and(|b| b.is_ascii_digit()), "{game}: {} {}", row.file, row.number);
+                assert!(
+                    row.file.starts_with(&format!("games/{game}/"))
+                        && root.join(&row.file).is_file(),
+                    "{game}: {}",
+                    row.file
+                );
+                assert!(
+                    row.number
+                        .bytes()
+                        .next()
+                        .is_some_and(|b| b.is_ascii_digit()),
+                    "{game}: {} {}",
+                    row.file,
+                    row.number
+                );
             }
         }
         // A game not yet converted has no table, and so no rows.
-        assert!(table("xyz-names.tsv").is_none() && names("xyz").unwrap().is_empty() && measurements("xyz").unwrap().is_empty() && judged("xyz").unwrap().is_empty());
+        assert!(
+            table("xyz-names.tsv").is_none()
+                && names("xyz").unwrap().is_empty()
+                && measurements("xyz").unwrap().is_empty()
+                && judged("xyz").unwrap().is_empty()
+        );
     }
 
     #[test]
     fn a_folder_of_tables_read_as_the_program_runs() {
         let folder = std::env::temp_dir().join(format!("alchemy-evidence-{}", std::process::id()));
         std::fs::create_dir_all(&folder).unwrap();
-        std::fs::write(folder.join("xyz-names.tsv"), "name\tkind\tevidence\tfile\nA\tthe game\t\"A\" (MsgA)\tgames/xyz/a.c\n").unwrap();
+        std::fs::write(
+            folder.join("xyz-names.tsv"),
+            "name\tkind\tevidence\tfile\nA\tthe game\t\"A\" (MsgA)\tgames/xyz/a.c\n",
+        )
+        .unwrap();
         assert!(read_once(&folder.join("xyz-names.tsv")).is_some_and(|text| text.contains("MsgA")));
-        assert!(read_once(&folder.join("tbs-names.tsv")).is_none(), "a table the folder lacks is not read from it");
+        assert!(
+            read_once(&folder.join("tbs-names.tsv")).is_none(),
+            "a table the folder lacks is not read from it"
+        );
         std::fs::remove_dir_all(&folder).unwrap();
     }
 
@@ -282,15 +388,40 @@ mod tests {
         let text = "name\tkind\tevidence\tfile\nABILITY_ATTACK\tthe game\t\"Attack\" (MsgAbilityName)\tgames/tbs/include/ability_ids.h\n\n";
         let rows = parse_names(text).unwrap();
         assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0].line(), "★ Named from the game: \"Attack\" (MsgAbilityName)");
-        assert_eq!(parse_names("header\nA\tB\tC\n").unwrap_err(), "line 2: 3 cells, not 4");
+        assert_eq!(
+            rows[0].line(),
+            "★ Named from the game: \"Attack\" (MsgAbilityName)"
+        );
+        assert_eq!(
+            parse_names("header\nA\tB\tC\n").unwrap_err(),
+            "line 2: 3 cells, not 4"
+        );
         let rows = parse_measurements("file\troutine\tkind\tmeasurement\na.c\tF and its siblings\tFAKEMATCH(dead)\tkept; as none, 1 of 2 instructions differ in tbs-en.\n").unwrap();
-        assert_eq!(rows[0].tag(), "FAKEMATCH(dead): kept; as none, 1 of 2 instructions differ in tbs-en.");
+        assert_eq!(
+            rows[0].tag(),
+            "FAKEMATCH(dead): kept; as none, 1 of 2 instructions differ in tbs-en."
+        );
         assert!(rows[0].is_for("F") && !rows[0].is_for("F_2") && !rows[0].is_for("G"));
         let header = "file\troutine\tnumber\tkind\twhat\n";
-        let rows = parse_judged(&format!("{header}a.c\tF\t0x169\tunsettled\ta flag nothing reads; a reader would settle it\n")).unwrap();
-        assert_eq!((rows[0].routine.as_str(), rows[0].number.as_str(), rows[0].kind.as_str()), ("F", "0x169", "unsettled"));
-        assert_eq!(parse_judged(&format!("{header}a.c\tF\t16\tnamed\tx\n")).unwrap_err(), "row 1: kind named, not one of honest, unsettled");
-        assert_eq!(parse_judged(&format!("{header}a.c\tF\t16\thonest\t \n")).unwrap_err(), "row 1: an empty cell");
+        let rows = parse_judged(&format!(
+            "{header}a.c\tF\t0x169\tunsettled\ta flag nothing reads; a reader would settle it\n"
+        ))
+        .unwrap();
+        assert_eq!(
+            (
+                rows[0].routine.as_str(),
+                rows[0].number.as_str(),
+                rows[0].kind.as_str()
+            ),
+            ("F", "0x169", "unsettled")
+        );
+        assert_eq!(
+            parse_judged(&format!("{header}a.c\tF\t16\tnamed\tx\n")).unwrap_err(),
+            "row 1: kind named, not one of honest, unsettled"
+        );
+        assert_eq!(
+            parse_judged(&format!("{header}a.c\tF\t16\thonest\t \n")).unwrap_err(),
+            "row 1: an empty cell"
+        );
     }
 }

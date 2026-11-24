@@ -420,8 +420,12 @@ impl<'a> Parser<'a> {
     /// closing brace, joined, or None (and nothing consumed) when the
     /// declaration here is an ordinary one.
     fn nested_function(&mut self) -> Result<Option<String>> {
-        let (position, comments, trailing, anonymous) =
-            (self.position, self.comments.clone(), self.trailing.clone(), self.anonymous);
+        let (position, comments, trailing, anonymous) = (
+            self.position,
+            self.comments.clone(),
+            self.trailing.clone(),
+            self.anonymous,
+        );
         let typedefs = self.typedefs.clone();
         let restore = |parser: &mut Self| {
             parser.position = position;
@@ -1134,7 +1138,10 @@ mod tests {
             "typedef unsigned short u16;\ntypedef struct { u16 a; u16 b : 3; } Pair;\nstruct Node { struct Node *next; u16 value[4]; };\nenum { KIND_A, KIND_B = 3 };\nextern struct Node *gHead;\nu16 Get(int);\nstatic int Helper(int x) { return x + 1; }\nint gCount = 2, gOther;\n",
         )
         .unwrap();
-        assert_eq!(unit.typedef_names(), ["Pair", "u16"].map(String::from).into());
+        assert_eq!(
+            unit.typedef_names(),
+            ["Pair", "u16"].map(String::from).into()
+        );
     }
 
     #[test]

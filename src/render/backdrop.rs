@@ -28,7 +28,9 @@ pub fn scene(value: &str) -> Result<Scene, String> {
         path => {
             let (w, h, pixels) = read_png(Path::new(path))?;
             if (w, h) != (WIDTH, HEIGHT) {
-                return Err(format!("{path}: {w} by {h}; a battle backdrop is {WIDTH} by {HEIGHT}"));
+                return Err(format!(
+                    "{path}: {w} by {h}; a battle backdrop is {WIDTH} by {HEIGHT}"
+                ));
             }
             Ok(Scene::Picture(background(&pixels)))
         }
@@ -48,9 +50,15 @@ pub fn background(pixels: &[u32]) -> Background {
     }
     let mut histogram: Vec<(u16, u64)> = counts.into_iter().collect();
     histogram.sort_unstable();
-    let mut palette: Vec<u16> =
-        if histogram.len() <= COLOURS { histogram.iter().map(|&(c, _)| c).collect() } else { median_cut(&histogram, COLOURS) };
-    let index: HashMap<u16, u8> = histogram.iter().map(|&(c, _)| (c, nearest(&palette, c))).collect();
+    let mut palette: Vec<u16> = if histogram.len() <= COLOURS {
+        histogram.iter().map(|&(c, _)| c).collect()
+    } else {
+        median_cut(&histogram, COLOURS)
+    };
+    let index: HashMap<u16, u8> = histogram
+        .iter()
+        .map(|&(c, _)| (c, nearest(&palette, c)))
+        .collect();
     let mut vram = Vec::with_capacity(WIDTH * HEIGHT);
     for tile in 0..WIDTH * HEIGHT / 64 {
         let (tx, ty) = (tile % (WIDTH / 8), tile / (WIDTH / 8));
@@ -72,13 +80,27 @@ fn bgr555(c: u32) -> u16 {
 }
 
 fn channels(c: u16) -> [i32; 3] {
-    [i32::from(c & 31), i32::from((c >> 5) & 31), i32::from((c >> 10) & 31)]
+    [
+        i32::from(c & 31),
+        i32::from((c >> 5) & 31),
+        i32::from((c >> 10) & 31),
+    ]
 }
 
 fn nearest(palette: &[u16], c: u16) -> u8 {
     let target = channels(c);
-    let distance = |p: u16| channels(p).iter().zip(target).map(|(a, b)| (a - b) * (a - b)).sum::<i32>();
-    palette.iter().enumerate().min_by_key(|(_, &p)| distance(p)).map_or(0, |(i, _)| i as u8)
+    let distance = |p: u16| {
+        channels(p)
+            .iter()
+            .zip(target)
+            .map(|(a, b)| (a - b) * (a - b))
+            .sum::<i32>()
+    };
+    palette
+        .iter()
+        .enumerate()
+        .min_by_key(|(_, &p)| distance(p))
+        .map_or(0, |(i, _)| i as u8)
 }
 
 /// At most `limit` colours for a histogram: the box with the most pixels is
@@ -88,8 +110,11 @@ fn median_cut(histogram: &[(u16, u64)], limit: usize) -> Vec<u16> {
     let weight = |b: &[(u16, u64)]| b.iter().map(|&(_, n)| n).sum::<u64>();
     let mut boxes: Vec<Vec<(u16, u64)>> = vec![histogram.to_vec()];
     while boxes.len() < limit {
-        let Some((at, _)) =
-            boxes.iter().enumerate().filter(|(_, b)| b.len() > 1).max_by_key(|(_, b)| weight(b))
+        let Some((at, _)) = boxes
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| b.len() > 1)
+            .max_by_key(|(_, b)| weight(b))
         else {
             break;
         };
@@ -118,7 +143,13 @@ fn median_cut(histogram: &[(u16, u64)], limit: usize) -> Vec<u16> {
         .iter()
         .map(|b| {
             let total = weight(b).max(1);
-            let mean = |k: usize| (b.iter().map(|&(c, n)| channels(c)[k] as u64 * n).sum::<u64>() + total / 2) / total;
+            let mean = |k: usize| {
+                (b.iter()
+                    .map(|&(c, n)| channels(c)[k] as u64 * n)
+                    .sum::<u64>()
+                    + total / 2)
+                    / total
+            };
             (mean(0) | mean(1) << 5 | mean(2) << 10) as u16
         })
         .collect();
@@ -175,8 +206,13 @@ mod tests {
 
     #[test]
     fn many_colours_reduce_to_the_palette() {
-        let pixels: Vec<u32> = (0..WIDTH * HEIGHT).map(|i| (i as u32 % 256) * 0x010101 + (i as u32 / 256) * 0x10000).collect();
+        let pixels: Vec<u32> = (0..WIDTH * HEIGHT)
+            .map(|i| (i as u32 % 256) * 0x010101 + (i as u32 / 256) * 0x10000)
+            .collect();
         let b = background(&pixels);
-        assert!(b.vram.iter().all(|&v| (FIRST_ENTRY..FIRST_ENTRY + COLOURS as u8).contains(&v)));
+        assert!(b
+            .vram
+            .iter()
+            .all(|&v| (FIRST_ENTRY..FIRST_ENTRY + COLOURS as u8).contains(&v)));
     }
 }

@@ -46,7 +46,11 @@ pub struct Cast {
 impl Held {
     /// Keys held for frames, no cast.
     pub const fn keys(keys: u32, frames: u32) -> Held {
-        Held { keys, frames, cast: None }
+        Held {
+            keys,
+            frames,
+            cast: None,
+        }
     }
 }
 
@@ -151,7 +155,9 @@ impl Stage {
     /// The cell the leader starts on, and its layer: --at's, or the cell
     /// --at-px's pixel lies in.
     pub fn start(&self) -> Option<(i32, i32, Option<u8>)> {
-        self.at.or(self.at_px.map(|(x, z, layer)| (x.div_euclid(16), z.div_euclid(16), layer)))
+        self.at.or(self
+            .at_px
+            .map(|(x, z, layer)| (x.div_euclid(16), z.div_euclid(16), layer)))
     }
 
     /// The same staging for the event --first plays: its own start, way
@@ -197,7 +203,13 @@ impl Stage {
     /// Reads each cast's ability number from the game's ability_ids.h
     /// (`header`'s text): `hover`, `HOVER` or `ABILITY_HOVER`.
     pub fn resolve(&mut self, header: &str) -> Result<(), String> {
-        for script in [&mut self.hold, &mut self.then, &mut self.during, &mut self.first_hold, &mut self.first_then] {
+        for script in [
+            &mut self.hold,
+            &mut self.then,
+            &mut self.during,
+            &mut self.first_hold,
+            &mut self.first_then,
+        ] {
             for step in script.iter_mut() {
                 if let Some(cast) = step.cast.as_mut() {
                     cast.id = ability_id(header, &cast.name)?;
@@ -210,18 +222,30 @@ impl Stage {
     /// Whether, with no event named, the run is a walk: the keys played
     /// from the start given, recorded, whatever they set off.
     pub fn walks(&self, events: &[String]) -> bool {
-        events.is_empty() && (self.start().is_some() || !self.hold.is_empty() || !self.then.is_empty() || self.walk_to.is_some() || self.until.is_some())
+        events.is_empty()
+            && (self.start().is_some()
+                || !self.hold.is_empty()
+                || !self.then.is_empty()
+                || self.walk_to.is_some()
+                || self.until.is_some())
     }
 
     /// Reads one staging option and its value; false when `option` is none.
-    pub fn option(&mut self, option: &str, value: &mut dyn FnMut(&str) -> Result<String, String>) -> Result<bool, String> {
+    pub fn option(
+        &mut self,
+        option: &str,
+        value: &mut dyn FnMut(&str) -> Result<String, String>,
+    ) -> Result<bool, String> {
         match option {
             "--set" => self.set.push(value(option)?),
             "--clear" => self.clear.push(value(option)?),
             "--give" => self.give.push(value(option)?),
             "--entrance" => {
                 let v = value(option)?;
-                self.entrance = Some(v.parse().map_err(|_| format!("--entrance takes a number, not {v:?}"))?);
+                self.entrance = Some(
+                    v.parse()
+                        .map_err(|_| format!("--entrance takes a number, not {v:?}"))?,
+                );
             }
             "--at" => self.at = Some(parse_cell(&value(option)?)?),
             "--face" => self.face = Some(parse_face(&value(option)?)?),
@@ -230,7 +254,12 @@ impl Stage {
             "--answer" => self.answer.extend(parse_answers(&value(option)?)?),
             "--leader" => self.leader = Some(value(option)?),
             "--first" => self.first = Some(value(option)?),
-            "--party" => self.party.extend(value(option)?.split(',').map(|n| n.trim().to_string()).filter(|n| !n.is_empty())),
+            "--party" => self.party.extend(
+                value(option)?
+                    .split(',')
+                    .map(|n| n.trim().to_string())
+                    .filter(|n| !n.is_empty()),
+            ),
             "--first-at" => self.first_at = Some(parse_cell(&value(option)?)?),
             "--first-face" => self.first_face = Some(parse_face(&value(option)?)?),
             "--first-hold" => self.first_hold.extend(parse_script(&value(option)?)?),
@@ -238,35 +267,80 @@ impl Stage {
             "--until" => self.until = Some(value(option)?.trim().to_string()),
             "--follow-scenes" => {
                 let v = value(option)?;
-                self.follow_scenes = v.trim().parse().ok().filter(|&n| (1..=8).contains(&n)).ok_or_else(|| format!("--follow-scenes takes a number of scene changes, 1 to 8, not {v:?}"))?;
+                self.follow_scenes = v
+                    .trim()
+                    .parse()
+                    .ok()
+                    .filter(|&n| (1..=8).contains(&n))
+                    .ok_or_else(|| {
+                        format!(
+                            "--follow-scenes takes a number of scene changes, 1 to 8, not {v:?}"
+                        )
+                    })?;
             }
             "--arrive-as" => {
                 let how = value(option)?;
                 self.after_battle = match how.trim() {
                     "after-battle" => true,
                     "entrance" => false,
-                    other => return Err(format!("--arrive-as takes after-battle or entrance, not {other}")),
+                    other => {
+                        return Err(format!(
+                            "--arrive-as takes after-battle or entrance, not {other}"
+                        ))
+                    }
                 };
             }
-            "--at-height" => self.at_height = Some(value(option)?.trim().parse().map_err(|_| "--at-height takes a height in pixels, as 208".to_string())?),
-            "--at-px" => self.at_px = Some(parse_cell(&value(option)?).map_err(|e| e.replace("--at takes a cell as X,Y or X,Y,LAYER", "--at-px takes a pixel as X,Z or X,Z,LAYER"))?),
+            "--at-height" => {
+                self.at_height = Some(
+                    value(option)?
+                        .trim()
+                        .parse()
+                        .map_err(|_| "--at-height takes a height in pixels, as 208".to_string())?,
+                )
+            }
+            "--at-px" => {
+                self.at_px = Some(parse_cell(&value(option)?).map_err(|e| {
+                    e.replace(
+                        "--at takes a cell as X,Y or X,Y,LAYER",
+                        "--at-px takes a pixel as X,Z or X,Z,LAYER",
+                    )
+                })?)
+            }
             "--during" => self.during.extend(parse_script(&value(option)?)?),
             "--skip" => self.skip.push(value(option)?),
             "--limit" => {
                 let v = value(option)?;
-                self.limit = Some(v.parse().ok().filter(|&s: &u32| s > 0).ok_or_else(|| format!("--limit takes a number of seconds, not {v:?}"))?);
+                self.limit = Some(
+                    v.parse()
+                        .ok()
+                        .filter(|&s: &u32| s > 0)
+                        .ok_or_else(|| format!("--limit takes a number of seconds, not {v:?}"))?,
+                );
             }
             "--from" | "--for" => {
                 let v = value(option)?;
-                let seconds: f64 = v.parse().ok().filter(|s: &f64| s.is_finite() && *s >= 0.0).ok_or_else(|| format!("{option} takes a number of seconds, not {v:?}"))?;
+                let seconds: f64 = v
+                    .parse()
+                    .ok()
+                    .filter(|s: &f64| s.is_finite() && *s >= 0.0)
+                    .ok_or_else(|| format!("{option} takes a number of seconds, not {v:?}"))?;
                 let frames = Some((seconds * 60.0).round() as u32);
-                if option == "--from" { self.from = frames } else { self.length = frames }
+                if option == "--from" {
+                    self.from = frames
+                } else {
+                    self.length = frames
+                }
             }
             "--keep-short" => self.keep_short = true,
             "--crop" => self.crop = Some(parse_crop(&value(option)?)?),
             "--zoom" => {
                 let v = value(option)?;
-                self.zoom = Some(v.parse().ok().filter(|z: &u32| (1..=4).contains(z)).ok_or_else(|| format!("--zoom takes 1, 2, 3 or 4, not {v:?}"))?);
+                self.zoom = Some(
+                    v.parse()
+                        .ok()
+                        .filter(|z: &u32| (1..=4).contains(z))
+                        .ok_or_else(|| format!("--zoom takes 1, 2, 3 or 4, not {v:?}"))?,
+                );
             }
             "--frames" => {
                 let v = value(option)?;
@@ -274,7 +348,12 @@ impl Stage {
                 self.from = Some(a);
                 self.length = Some(b - a + 1);
             }
-            "--walk-to" => self.walk_to = Some(parse_cell(&value(option)?).map_err(|e| e.replace("--at takes", "--walk-to takes"))?),
+            "--walk-to" => {
+                self.walk_to = Some(
+                    parse_cell(&value(option)?)
+                        .map_err(|e| e.replace("--at takes", "--walk-to takes"))?,
+                )
+            }
             _ => return Ok(false),
         }
         Ok(true)
@@ -288,7 +367,37 @@ impl Stage {
 
 /// Every staging option `render event` reads (Stage::option).
 pub const OPTIONS: [&str; 31] = [
-    "--set", "--clear", "--give", "--entrance", "--at", "--face", "--hold", "--then", "--answer", "--leader", "--party", "--first", "--first-at", "--first-face", "--first-hold", "--first-then", "--at-px", "--during", "--skip", "--limit", "--from", "--for", "--keep-short", "--walk-to", "--at-height", "--arrive-as", "--until", "--follow-scenes", "--crop", "--zoom", "--frames",
+    "--set",
+    "--clear",
+    "--give",
+    "--entrance",
+    "--at",
+    "--face",
+    "--hold",
+    "--then",
+    "--answer",
+    "--leader",
+    "--party",
+    "--first",
+    "--first-at",
+    "--first-face",
+    "--first-hold",
+    "--first-then",
+    "--at-px",
+    "--during",
+    "--skip",
+    "--limit",
+    "--from",
+    "--for",
+    "--keep-short",
+    "--walk-to",
+    "--at-height",
+    "--arrive-as",
+    "--until",
+    "--follow-scenes",
+    "--crop",
+    "--zoom",
+    "--frames",
 ];
 
 /// The screen's size, which a crop lies within.
@@ -297,18 +406,29 @@ const SCREEN: [i32; 2] = [240, 160];
 /// `X,Y,W,H`: a rectangle of the screen, in its pixels, within it.
 pub fn parse_crop(text: &str) -> Result<[i32; 4], String> {
     let bad = || format!("--crop takes X,Y,W,H in the screen's pixels (240 by 160), not {text:?}");
-    let n: Vec<i32> = text.split(',').map(|p| p.trim().parse().map_err(|_| bad())).collect::<Result<_, _>>()?;
+    let n: Vec<i32> = text
+        .split(',')
+        .map(|p| p.trim().parse().map_err(|_| bad()))
+        .collect::<Result<_, _>>()?;
     match n[..] {
-        [x, y, w, h] if x >= 0 && y >= 0 && w > 0 && h > 0 && x + w <= SCREEN[0] && y + h <= SCREEN[1] => Ok([x, y, w, h]),
+        [x, y, w, h]
+            if x >= 0 && y >= 0 && w > 0 && h > 0 && x + w <= SCREEN[0] && y + h <= SCREEN[1] =>
+        {
+            Ok([x, y, w, h])
+        }
         _ => Err(bad()),
     }
 }
 
 /// `A-B`: the first and last frame of a recording kept, 60 a second.
 pub fn parse_frames(text: &str) -> Result<(u32, u32), String> {
-    let bad = || format!("--frames takes A-B, the first and last frame kept (60 a second), not {text:?}");
+    let bad =
+        || format!("--frames takes A-B, the first and last frame kept (60 a second), not {text:?}");
     let (a, b) = text.split_once('-').ok_or_else(bad)?;
-    let (a, b): (u32, u32) = (a.trim().parse().map_err(|_| bad())?, b.trim().parse().map_err(|_| bad())?);
+    let (a, b): (u32, u32) = (
+        a.trim().parse().map_err(|_| bad())?,
+        b.trim().parse().map_err(|_| bad())?,
+    );
     if b < a {
         return Err(bad());
     }
@@ -321,7 +441,10 @@ pub fn crop_frame(frame: &[u16], width: usize, crop: [i32; 4], zoom: usize) -> V
     let [x, y, w, h] = crop.map(|v| v as usize);
     let mut out = Vec::with_capacity(w * h * zoom * zoom);
     for row in y..y + h {
-        let line: Vec<u16> = frame[row * width + x..row * width + x + w].iter().flat_map(|&p| std::iter::repeat_n(p, zoom)).collect();
+        let line: Vec<u16> = frame[row * width + x..row * width + x + w]
+            .iter()
+            .flat_map(|&p| std::iter::repeat_n(p, zoom))
+            .collect();
         for _ in 0..zoom {
             out.extend_from_slice(&line);
         }
@@ -334,8 +457,16 @@ pub fn parse_cell(text: &str) -> Result<(i32, i32, Option<u8>), String> {
     let parts: Vec<&str> = text.split(',').map(str::trim).collect();
     let bad = || format!("--at takes a cell as X,Y or X,Y,LAYER, not {text:?}");
     match parts[..] {
-        [x, z] => Ok((x.parse().map_err(|_| bad())?, z.parse().map_err(|_| bad())?, None)),
-        [x, z, layer] => Ok((x.parse().map_err(|_| bad())?, z.parse().map_err(|_| bad())?, Some(layer.parse().map_err(|_| bad())?))),
+        [x, z] => Ok((
+            x.parse().map_err(|_| bad())?,
+            z.parse().map_err(|_| bad())?,
+            None,
+        )),
+        [x, z, layer] => Ok((
+            x.parse().map_err(|_| bad())?,
+            z.parse().map_err(|_| bad())?,
+            Some(layer.parse().map_err(|_| bad())?),
+        )),
         _ => Err(bad()),
     }
 }
@@ -357,7 +488,11 @@ pub fn parse_face(text: &str) -> Result<u32, String> {
     ways.iter()
         .find(|(names, _)| names.contains(&lower.as_str()) || names[0].replace('-', "") == lower)
         .map(|(_, angle)| *angle)
-        .ok_or_else(|| format!("--face takes north, north-east, east and so on (or n, ne, e ...), not {text:?}"))
+        .ok_or_else(|| {
+            format!(
+                "--face takes north, north-east, east and so on (or n, ne, e ...), not {text:?}"
+            )
+        })
 }
 
 /// A pad script: steps `KEYS:FRAMES` apart by commas, KEYS key names joined
@@ -373,8 +508,13 @@ pub fn parse_script(text: &str) -> Result<Vec<Held>, String> {
             out.push(parse_cast(rest)?);
             continue;
         }
-        let (keys, frames) = step.split_once(':').ok_or_else(|| format!("a pad step is KEYS:FRAMES (up:40) or cast:ABILITY, not {step:?}"))?;
-        let frames: u32 = frames.trim().parse().map_err(|_| format!("{step:?} holds its keys for no number of frames"))?;
+        let (keys, frames) = step.split_once(':').ok_or_else(|| {
+            format!("a pad step is KEYS:FRAMES (up:40) or cast:ABILITY, not {step:?}")
+        })?;
+        let frames: u32 = frames
+            .trim()
+            .parse()
+            .map_err(|_| format!("{step:?} holds its keys for no number of frames"))?;
         out.push(Held::keys(parse_keys(keys)?, frames));
     }
     Ok(out)
@@ -387,7 +527,15 @@ fn parse_keys(keys: &str) -> Result<u32, String> {
         if key == "wait" || key == "none" {
             continue;
         }
-        bits |= KEY_NAMES.iter().find(|(n, _)| *n == key).map(|(_, b)| *b).ok_or_else(|| format!("{key:?} is no key (up, down, left, right, a, b, l, r, start, select, wait)"))?;
+        bits |= KEY_NAMES
+            .iter()
+            .find(|(n, _)| *n == key)
+            .map(|(_, b)| *b)
+            .ok_or_else(|| {
+                format!(
+                    "{key:?} is no key (up, down, left, right, a, b, l, r, start, select, wait)"
+                )
+            })?;
     }
     Ok(bits)
 }
@@ -397,7 +545,9 @@ fn parse_cast(text: &str) -> Result<Held, String> {
     let parts: Vec<&str> = text.split(':').map(str::trim).collect();
     let name = parts[0];
     if name.is_empty() || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
-        return Err(format!("cast: names an ability (cast:hover, cast:move:east), not {text:?}"));
+        return Err(format!(
+            "cast: names an ability (cast:hover, cast:move:east), not {text:?}"
+        ));
     }
     let keys = match parts.get(1) {
         None => 0,
@@ -406,41 +556,65 @@ fn parse_cast(text: &str) -> Result<Held, String> {
             "south" | "s" | "down" => 0x80,
             "east" | "e" | "right" => 0x10,
             "west" | "w" | "left" => 0x20,
-            other => return Err(format!("cast:{name}: takes a way (north, east, south, west), not {other:?}")),
+            other => {
+                return Err(format!(
+                    "cast:{name}: takes a way (north, east, south, west), not {other:?}"
+                ))
+            }
         },
     };
     let frames = match parts.get(2) {
         None if keys == 0 => 0,
         None => CAST_WAY_FRAMES,
-        Some(n) => n.parse().map_err(|_| format!("cast:{text} holds its way for no number of frames"))?,
+        Some(n) => n
+            .parse()
+            .map_err(|_| format!("cast:{text} holds its way for no number of frames"))?,
     };
     if parts.len() > 3 {
-        return Err(format!("a cast step is cast:ABILITY[:WAY[:FRAMES]], not cast:{text}"));
+        return Err(format!(
+            "a cast step is cast:ABILITY[:WAY[:FRAMES]], not cast:{text}"
+        ));
     }
-    Ok(Held { keys, frames, cast: Some(Cast { name: name.to_string(), id: 0 }) })
+    Ok(Held {
+        keys,
+        frames,
+        cast: Some(Cast {
+            name: name.to_string(),
+            id: 0,
+        }),
+    })
 }
 
 /// An ability's number from the game's ability_ids.h (`enum AbilityId`),
 /// by its name with or without ABILITY_, in either case.
 pub fn ability_id(header: &str, name: &str) -> Result<u16, String> {
     let upper = name.trim().to_ascii_uppercase();
-    let wanted = if upper.starts_with("ABILITY_") { upper } else { format!("ABILITY_{upper}") };
+    let wanted = if upper.starts_with("ABILITY_") {
+        upper
+    } else {
+        format!("ABILITY_{upper}")
+    };
     // The value each enumerator takes: its own number, else one past the
     // last; one given by an expression (ABILITY_DJINNI_FIRST + ...) leaves
     // those after it unknown until a number comes.
     let mut next = Some(0i64);
-    let item = regex::Regex::new(r"^\s*(ABILITY_\w+)\s*(?:=\s*([^,/]+?))?\s*(?:,|$|//)").expect("an enumerator pattern");
+    let item = regex::Regex::new(r"^\s*(ABILITY_\w+)\s*(?:=\s*([^,/]+?))?\s*(?:,|$|//)")
+        .expect("an enumerator pattern");
     for line in header.lines() {
         let Some(found) = item.captures(line) else {
             continue;
         };
         let value = match found.get(2).map(|v| v.as_str().trim()) {
-            Some(v) => v.strip_prefix("0x").map_or_else(|| v.parse().ok(), |h| i64::from_str_radix(h, 16).ok()),
+            Some(v) => v
+                .strip_prefix("0x")
+                .map_or_else(|| v.parse().ok(), |h| i64::from_str_radix(h, 16).ok()),
             None => next,
         };
         next = value.map(|v| v + 1);
         if found[1] == wanted {
-            return value.map(|v| v as u16).ok_or_else(|| format!("ability_ids.h gives {wanted} no plain number"));
+            return value
+                .map(|v| v as u16)
+                .ok_or_else(|| format!("ability_ids.h gives {wanted} no plain number"));
         }
     }
     Err(format!("ability_ids.h has no {wanted}"))
@@ -455,10 +629,14 @@ pub fn parse_answers(text: &str) -> Result<Vec<u32>, String> {
         let keys = match answer.to_ascii_lowercase().as_str() {
             "yes" | "y" => 1,
             "no" | "n" => 2,
-            other => parse_script(&format!("{other}:1"))?.first().map_or(0, |h| h.keys),
+            other => parse_script(&format!("{other}:1"))?
+                .first()
+                .map_or(0, |h| h.keys),
         };
         if keys == 0 {
-            return Err(format!("--answer takes yes, no or keys (a, b, right+a), not {answer:?}"));
+            return Err(format!(
+                "--answer takes yes, no or keys (a, b, right+a), not {answer:?}"
+            ));
         }
         out.push(keys);
     }
@@ -473,7 +651,11 @@ pub fn script_frames(script: &[Held]) -> Vec<u32> {
         .iter()
         .flat_map(|h| {
             let way = if h.cast.is_some() { CAST_WAY } else { 0 };
-            h.cast.as_ref().map(|c| CAST_FRAME | u32::from(c.id)).into_iter().chain(std::iter::repeat_n(h.keys | way, h.frames as usize))
+            h.cast
+                .as_ref()
+                .map(|c| CAST_FRAME | u32::from(c.id))
+                .into_iter()
+                .chain(std::iter::repeat_n(h.keys | way, h.frames as usize))
         })
         .collect()
 }
@@ -483,11 +665,28 @@ pub fn describe(script: &[Held]) -> String {
     script
         .iter()
         .map(|h| {
-            let keys: Vec<&str> = KEY_NAMES.iter().filter(|(_, b)| h.keys & b != 0).map(|(n, _)| *n).collect();
+            let keys: Vec<&str> = KEY_NAMES
+                .iter()
+                .filter(|(_, b)| h.keys & b != 0)
+                .map(|(n, _)| *n)
+                .collect();
             match &h.cast {
                 Some(c) if h.frames == 0 => format!("cast:{}", c.name.to_ascii_lowercase()),
-                Some(c) => format!("cast:{}:{}:{}", c.name.to_ascii_lowercase(), keys.join("+"), h.frames),
-                None => format!("{}:{}", if keys.is_empty() { "wait".to_string() } else { keys.join("+") }, h.frames),
+                Some(c) => format!(
+                    "cast:{}:{}:{}",
+                    c.name.to_ascii_lowercase(),
+                    keys.join("+"),
+                    h.frames
+                ),
+                None => format!(
+                    "{}:{}",
+                    if keys.is_empty() {
+                        "wait".to_string()
+                    } else {
+                        keys.join("+")
+                    },
+                    h.frames
+                ),
             }
         })
         .collect::<Vec<_>>()
@@ -499,10 +698,17 @@ pub fn describe(script: &[Held]) -> String {
 /// with or without ITEM_, or a number.
 pub fn item_id(header: &str, name: &str) -> Result<u16, String> {
     let name = name.trim();
-    if let Some(n) = name.strip_prefix("0x").map_or_else(|| name.parse().ok(), |h| u16::from_str_radix(h, 16).ok()) {
+    if let Some(n) = name
+        .strip_prefix("0x")
+        .map_or_else(|| name.parse().ok(), |h| u16::from_str_radix(h, 16).ok())
+    {
         return Ok(n);
     }
-    let wanted = if name.starts_with("ITEM_") { name.to_string() } else { format!("ITEM_{}", name.to_ascii_uppercase()) };
+    let wanted = if name.starts_with("ITEM_") {
+        name.to_string()
+    } else {
+        format!("ITEM_{}", name.to_ascii_uppercase())
+    };
     super::source::enums(header, &HashMap::new())?
         .into_iter()
         .flat_map(|(_, values)| values)
@@ -538,11 +744,28 @@ pub fn guard(text: &str, name: &str) -> Vec<(String, bool)> {
     };
     let after = after.trim_start();
     // `if (C) return;`: the body needs C false.
-    let returns = |t: &str| t.strip_prefix("return").is_some_and(|r| r.trim_start().starts_with(';'));
-    let braced_return = after.strip_prefix('{').map(str::trim_start).is_some_and(|t| returns(t) && t.trim_start_matches("return").trim_start().trim_start_matches(';').trim_start().starts_with('}'));
+    let returns = |t: &str| {
+        t.strip_prefix("return")
+            .is_some_and(|r| r.trim_start().starts_with(';'))
+    };
+    let braced_return = after
+        .strip_prefix('{')
+        .map(str::trim_start)
+        .is_some_and(|t| {
+            returns(t)
+                && t.trim_start_matches("return")
+                    .trim_start()
+                    .trim_start_matches(';')
+                    .trim_start()
+                    .starts_with('}')
+        });
     if returns(after) || braced_return {
         let terms: Vec<&str> = split_top(&condition, "||");
-        return terms.iter().map(|t| flag_test(t).map(|(f, on)| (f, !on))).collect::<Option<Vec<_>>>().unwrap_or_default();
+        return terms
+            .iter()
+            .map(|t| flag_test(t).map(|(f, on)| (f, !on)))
+            .collect::<Option<Vec<_>>>()
+            .unwrap_or_default();
     }
     // `if (C) { ... }` closing the body, with no else.
     let Some(block) = after.strip_prefix('{') else {
@@ -555,7 +778,11 @@ pub fn guard(text: &str, name: &str) -> Vec<(String, bool)> {
         return Vec::new();
     }
     let terms: Vec<&str> = split_top(&condition, "&&");
-    terms.iter().map(|t| flag_test(t)).collect::<Option<Vec<_>>>().unwrap_or_default()
+    terms
+        .iter()
+        .map(|t| flag_test(t))
+        .collect::<Option<Vec<_>>>()
+        .unwrap_or_default()
 }
 
 /// The map copies whose rectangle's destination comes before its size
@@ -571,7 +798,11 @@ const PICTURE_COPIES: [(&str, bool); 7] = [
     ("FieldTileCopies_CopyTouchedCells", false),
     ("TileCopies_CopyTouchedCells", false),
 ];
-const BEHAVIOUR_COPIES: [(&str, bool); 3] = [("MapGrid_CopyCellAttributes", false), ("Map_CopyCellAttributeRect", false), ("Map_CopyCellsRect", false)];
+const BEHAVIOUR_COPIES: [(&str, bool); 3] = [
+    ("MapGrid_CopyCellAttributes", false),
+    ("Map_CopyCellAttributeRect", false),
+    ("Map_CopyCellsRect", false),
+];
 
 /// The map cells function `name` of C source `text` changes or puts
 /// something on, what a Psynergy cast for it must reach to show it: the
@@ -583,11 +814,16 @@ pub fn drawn_cells(text: &str, name: &str) -> Vec<(i32, i32)> {
         return Vec::new();
     };
     let plain = strip_comments(&body);
-    let numbers = |args: &str| -> Option<Vec<i32>> { args.split(',').map(|a| a.trim().parse::<i32>().ok()).collect() };
+    let numbers = |args: &str| -> Option<Vec<i32>> {
+        args.split(',')
+            .map(|a| a.trim().parse::<i32>().ok())
+            .collect()
+    };
     let calls = |table: &[(&str, bool)]| -> Vec<(i32, i32)> {
         let mut out = Vec::new();
         for &(function, to_first) in table {
-            let pattern = regex::Regex::new(&format!(r"\b{function}\s*\(([^;]*?)\)\s*;")).expect("a call pattern");
+            let pattern = regex::Regex::new(&format!(r"\b{function}\s*\(([^;]*?)\)\s*;"))
+                .expect("a call pattern");
             for found in pattern.captures_iter(&plain) {
                 let Some(n) = numbers(&found[1]) else {
                     continue;
@@ -595,7 +831,11 @@ pub fn drawn_cells(text: &str, name: &str) -> Vec<(i32, i32)> {
                 if n.len() < 6 {
                     continue;
                 }
-                let (x, z, w, h) = if to_first { (n[2], n[3], n[4], n[5]) } else { (n[4], n[5], n[2], n[3]) };
+                let (x, z, w, h) = if to_first {
+                    (n[2], n[3], n[4], n[5])
+                } else {
+                    (n[4], n[5], n[2], n[3])
+                };
                 for dz in 0..h.clamp(1, 8) {
                     for dx in 0..w.clamp(1, 8) {
                         if !out.contains(&(x + dx, z + dz)) {
@@ -608,7 +848,10 @@ pub fn drawn_cells(text: &str, name: &str) -> Vec<(i32, i32)> {
         out
     };
     let mut out = calls(&PICTURE_COPIES);
-    let placed = regex::Regex::new(r"\bActor_SetPosition(?:AndFacing)?\s*\(\s*\w+\s*,\s*(\d+)\s*,\s*(\d+)\s*[,)]").expect("a placement pattern");
+    let placed = regex::Regex::new(
+        r"\bActor_SetPosition(?:AndFacing)?\s*\(\s*\w+\s*,\s*(\d+)\s*,\s*(\d+)\s*[,)]",
+    )
+    .expect("a placement pattern");
     for found in placed.captures_iter(&plain) {
         if let (Ok(x), Ok(z)) = (found[1].parse::<i32>(), found[2].parse::<i32>()) {
             out.push((x / 16, z / 16));
@@ -621,7 +864,7 @@ pub fn drawn_cells(text: &str, name: &str) -> Vec<(i32, i32)> {
 }
 
 /// What function `name` of C source `text` assigns to, as its statements
-/// write it (`leader->riseCounter`, `gFadeOverlayState->actor`), its own
+/// write it (`leader->sceneCounter`, `gFadeOverlayState->actor`), its own
 /// locals left out: for an event that shows nothing, what it changes
 /// instead.
 pub fn assigned(text: &str, name: &str) -> Vec<String> {
@@ -629,7 +872,10 @@ pub fn assigned(text: &str, name: &str) -> Vec<String> {
         return Vec::new();
     };
     let plain = strip_comments(&body);
-    let statement = regex::Regex::new(r"(?m)^\s*([A-Za-z_][\w]*(?:\s*(?:->|\.)\s*\w+|\[[^\]]*\])+|g[A-Z]\w*)\s*(?:[-+|&]?=)[^=]").expect("an assignment pattern");
+    let statement = regex::Regex::new(
+        r"(?m)^\s*([A-Za-z_][\w]*(?:\s*(?:->|\.)\s*\w+|\[[^\]]*\])+|g[A-Z]\w*)\s*(?:[-+|&]?=)[^=]",
+    )
+    .expect("an assignment pattern");
     let mut out: Vec<String> = Vec::new();
     for found in statement.captures_iter(&plain) {
         let target: String = found[1].split_whitespace().collect();
@@ -653,7 +899,13 @@ fn flag_test(term: &str) -> Option<(String, bool)> {
             t = r.trim();
         }
     }
-    for (suffix, flips) in [("== 0", true), ("== FALSE", true), ("!= 0", false), ("== 1", false), ("!= FALSE", false)] {
+    for (suffix, flips) in [
+        ("== 0", true),
+        ("== FALSE", true),
+        ("!= 0", false),
+        ("== 1", false),
+        ("!= FALSE", false),
+    ] {
         if let Some(r) = t.strip_suffix(suffix) {
             t = r.trim();
             on ^= flips;
@@ -673,7 +925,11 @@ fn flag_test(term: &str) -> Option<(String, bool)> {
 
 /// The text of function `name`'s body in `text`, braces left out.
 fn function_body(text: &str, name: &str) -> Option<String> {
-    let pattern = regex::Regex::new(&format!(r"(?m)^[\w\s\*]*\b{}\s*\([^)]*\)\s*\{{", regex::escape(name))).ok()?;
+    let pattern = regex::Regex::new(&format!(
+        r"(?m)^[\w\s\*]*\b{}\s*\([^)]*\)\s*\{{",
+        regex::escape(name)
+    ))
+    .ok()?;
     let start = pattern.find(text)?.end();
     let end = matching_brace(&text[start..])?;
     Some(text[start..start + end].to_string())
@@ -734,7 +990,10 @@ fn split_top<'t>(text: &'t str, op: &str) -> Vec<&'t str> {
 }
 
 fn strip_comments(text: &str) -> String {
-    regex::Regex::new(r"(?s)/\*.*?\*/|//[^\n]*").map_or_else(|_| text.to_string(), |r| r.replace_all(text, "").into_owned())
+    regex::Regex::new(r"(?s)/\*.*?\*/|//[^\n]*").map_or_else(
+        |_| text.to_string(),
+        |r| r.replace_all(text, "").into_owned(),
+    )
 }
 
 /// `#define NAME VALUE` lines of a C source, and its enumerators given a
@@ -742,13 +1001,16 @@ fn strip_comments(text: &str) -> String {
 /// itself.
 pub fn defines(text: &str) -> HashMap<String, String> {
     let mut out = HashMap::new();
-    let given = regex::Regex::new(r"(?m)^\s*(FLAG_\w+)\s*=\s*([\w()]+)\s*,").expect("an enumerator pattern");
+    let given = regex::Regex::new(r"(?m)^\s*(FLAG_\w+)\s*=\s*([\w()]+)\s*,")
+        .expect("an enumerator pattern");
     for found in given.captures_iter(text) {
         out.insert(found[1].to_string(), found[2].to_string());
     }
     for line in text.lines() {
         let mut words = line.split_whitespace();
-        if let (Some("#define"), Some(name), Some(value)) = (words.next(), words.next(), words.next()) {
+        if let (Some("#define"), Some(name), Some(value)) =
+            (words.next(), words.next(), words.next())
+        {
             if !name.contains('(') {
                 out.insert(name.to_string(), value.to_string());
             }
@@ -765,14 +1027,20 @@ mod tests {
     fn a_scene_names_flags_by_define_and_enum() {
         let names = defines("#define FLAG_TOLD 0x8b0 ///< told\nenum {\n  FLAG_LOG_ROLLED = FLAG_AREA_TEMP_10,\n  OTHER = 3,\n};\n#define F(x) (x)\n");
         assert_eq!(names.get("FLAG_TOLD").map(String::as_str), Some("0x8b0"));
-        assert_eq!(names.get("FLAG_LOG_ROLLED").map(String::as_str), Some("FLAG_AREA_TEMP_10"));
+        assert_eq!(
+            names.get("FLAG_LOG_ROLLED").map(String::as_str),
+            Some("FLAG_AREA_TEMP_10")
+        );
         assert!(!names.contains_key("OTHER") && !names.contains_key("F(x)"));
     }
 
     #[test]
     fn a_pad_script_is_keys_held_for_frames() {
         let script = parse_script("up:40, wait:20,a+right:2").unwrap();
-        assert_eq!(script, vec![Held::keys(0x40, 40), Held::keys(0, 20), Held::keys(0x11, 2)]);
+        assert_eq!(
+            script,
+            vec![Held::keys(0x40, 40), Held::keys(0, 20), Held::keys(0x11, 2)]
+        );
         assert_eq!(script_frames(&script).len(), 62);
         assert_eq!(describe(&script), "up:40,wait:20,a+right:2");
         assert!(parse_script("up").is_err());
@@ -783,21 +1051,49 @@ mod tests {
     fn a_cast_is_a_step_of_a_pad_script() {
         let header = "enum AbilityId {\n  ABILITY_NONE,\n  ABILITY_FROST = 24,\n  ABILITY_DOUSE, // a comment\n  ABILITY_MOVE = 0x8c,\n  ABILITY_HOVER\n  ABILITY_FIZZ = ABILITY_DJINNI_FIRST + 20,\n  ABILITY_SLEET,\n  ABILITY_LAST = 700,\n  ABILITY_AFTER\n};";
         let mut stage = Stage::default();
-        assert!(stage.option("--then", &mut |_| Ok("wait:30, cast:hover, cast:Move:east, cast:frost:s:5, up:2".to_string())).unwrap());
-        assert_eq!(stage.then[1], Held { keys: 0, frames: 0, cast: Some(Cast { name: "hover".to_string(), id: 0 }) });
-        assert_eq!((stage.then[2].keys, stage.then[2].frames), (0x10, CAST_WAY_FRAMES));
+        assert!(stage
+            .option("--then", &mut |_| Ok(
+                "wait:30, cast:hover, cast:Move:east, cast:frost:s:5, up:2".to_string()
+            ))
+            .unwrap());
+        assert_eq!(
+            stage.then[1],
+            Held {
+                keys: 0,
+                frames: 0,
+                cast: Some(Cast {
+                    name: "hover".to_string(),
+                    id: 0
+                })
+            }
+        );
+        assert_eq!(
+            (stage.then[2].keys, stage.then[2].frames),
+            (0x10, CAST_WAY_FRAMES)
+        );
         assert_eq!((stage.then[3].keys, stage.then[3].frames), (0x80, 5));
         stage.resolve(header).unwrap();
         let frames = script_frames(&stage.then);
         assert_eq!(frames.len(), 30 + 1 + 1 + 60 + 1 + 5 + 2);
         assert_eq!(frames[30], CAST_FRAME | 0x8d);
-        assert_eq!((frames[31], frames[32]), (CAST_FRAME | 0x8c, 0x10 | CAST_WAY));
+        assert_eq!(
+            (frames[31], frames[32]),
+            (CAST_FRAME | 0x8c, 0x10 | CAST_WAY)
+        );
         assert_eq!(frames[29], 0);
         assert_eq!(frames[98], 0x40);
         assert_eq!(frames[92], CAST_FRAME | 24);
-        assert_eq!(describe(&stage.then), "wait:30,cast:hover,cast:move:right:60,cast:frost:down:5,up:2");
+        assert_eq!(
+            describe(&stage.then),
+            "wait:30,cast:hover,cast:move:right:60,cast:frost:down:5,up:2"
+        );
         assert_eq!(parse_script(&describe(&stage.then)).unwrap().len(), 5);
-        assert!(Stage { then: parse_script("cast:sand").unwrap(), ..Stage::default() }.resolve(header).is_err());
+        assert!(Stage {
+            then: parse_script("cast:sand").unwrap(),
+            ..Stage::default()
+        }
+        .resolve(header)
+        .is_err());
         assert!(parse_script("cast:move:sideways").is_err());
         assert!(parse_script("cast:").is_err());
         assert_eq!(ability_id(header, "ABILITY_DOUSE").unwrap(), 25);
@@ -823,9 +1119,13 @@ mod tests {
         ];
         for (option, value) in given {
             assert!(Stage::is_option(option));
-            assert!(stage.option(option, &mut |_| Ok(value.to_string())).unwrap());
+            assert!(stage
+                .option(option, &mut |_| Ok(value.to_string()))
+                .unwrap());
         }
-        assert!(stage.option("--keep-short", &mut |_| Err("no value".to_string())).unwrap());
+        assert!(stage
+            .option("--keep-short", &mut |_| Err("no value".to_string()))
+            .unwrap());
         assert!(stage.keep_short);
         assert_eq!(stage.during, vec![Held::keys(0x40, 60)]);
         assert_eq!(stage.skip, vec!["Settlements_StepOntoWall"]);
@@ -841,78 +1141,155 @@ mod tests {
         assert_eq!(stage.start(), Some((42, 49, Some(0))));
         assert!(stage.staged());
         assert!(stage.walks(&[]));
-        assert!(stage.option("--limit", &mut |_| Ok("0".to_string())).is_err());
-        assert!(stage.option("--from", &mut |_| Ok("-1".to_string())).is_err());
-        assert!(stage.option("--at-px", &mut |_| Ok("3".to_string())).unwrap_err().contains("--at-px"));
+        assert!(stage
+            .option("--limit", &mut |_| Ok("0".to_string()))
+            .is_err());
+        assert!(stage
+            .option("--from", &mut |_| Ok("-1".to_string()))
+            .is_err());
+        assert!(stage
+            .option("--at-px", &mut |_| Ok("3".to_string()))
+            .unwrap_err()
+            .contains("--at-px"));
     }
 
     #[test]
     fn a_height_to_start_at_is_read() {
         let mut stage = Stage::default();
         assert!(Stage::is_option("--at-height"));
-        assert!(stage.option("--at-height", &mut |_| Ok("208".to_string())).unwrap());
+        assert!(stage
+            .option("--at-height", &mut |_| Ok("208".to_string()))
+            .unwrap());
         assert_eq!(stage.at_height, Some(208));
-        assert!(stage.option("--at-height", &mut |_| Ok("high".to_string())).unwrap_err().contains("--at-height"));
+        assert!(stage
+            .option("--at-height", &mut |_| Ok("high".to_string()))
+            .unwrap_err()
+            .contains("--at-height"));
     }
 
     #[test]
     fn a_function_to_wait_for_and_scene_changes_to_follow_are_read() {
         let mut stage = Stage::default();
         assert!(Stage::is_option("--until") && Stage::is_option("--follow-scenes"));
-        assert!(stage.option("--until", &mut |_| Ok("MagmaRock_BurstStatue".to_string())).unwrap());
-        assert_eq!(stage.until.as_deref(), Some("MagmaRock_BurstStatue"));
-        assert!(stage.option("--follow-scenes", &mut |_| Ok("2".to_string())).unwrap());
+        assert!(stage
+            .option("--until", &mut |_| Ok(
+                "MagmaRock_BurstCrackedPillar".to_string()
+            ))
+            .unwrap());
+        assert_eq!(stage.until.as_deref(), Some("MagmaRock_BurstCrackedPillar"));
+        assert!(stage
+            .option("--follow-scenes", &mut |_| Ok("2".to_string()))
+            .unwrap());
         assert_eq!(stage.follow_scenes, 2);
-        assert!(stage.option("--follow-scenes", &mut |_| Ok("0".to_string())).is_err());
-        assert!(stage.option("--follow-scenes", &mut |_| Ok("many".to_string())).is_err());
+        assert!(stage
+            .option("--follow-scenes", &mut |_| Ok("0".to_string()))
+            .is_err());
+        assert!(stage
+            .option("--follow-scenes", &mut |_| Ok("many".to_string()))
+            .is_err());
     }
 
     #[test]
     fn an_arrival_as_after_a_battle_is_read() {
         let mut stage = Stage::default();
         assert!(Stage::is_option("--arrive-as"));
-        assert!(stage.option("--arrive-as", &mut |_| Ok("after-battle".to_string())).unwrap());
+        assert!(stage
+            .option("--arrive-as", &mut |_| Ok("after-battle".to_string()))
+            .unwrap());
         assert!(stage.after_battle);
-        assert!(stage.option("--arrive-as", &mut |_| Ok("entrance".to_string())).unwrap());
+        assert!(stage
+            .option("--arrive-as", &mut |_| Ok("entrance".to_string()))
+            .unwrap());
         assert!(!stage.after_battle);
-        assert!(stage.option("--arrive-as", &mut |_| Ok("battle".to_string())).is_err());
+        assert!(stage
+            .option("--arrive-as", &mut |_| Ok("battle".to_string()))
+            .is_err());
     }
 
     #[test]
     fn a_walk_to_a_cell_a_crop_and_a_frame_range_are_read() {
         let mut stage = Stage::default();
-        for (option, value) in [("--walk-to", "17,13"), ("--crop", "100,40,64,48"), ("--zoom", "3"), ("--frames", "120-299")] {
+        for (option, value) in [
+            ("--walk-to", "17,13"),
+            ("--crop", "100,40,64,48"),
+            ("--zoom", "3"),
+            ("--frames", "120-299"),
+        ] {
             assert!(Stage::is_option(option));
-            assert!(stage.option(option, &mut |_| Ok(value.to_string())).unwrap());
+            assert!(stage
+                .option(option, &mut |_| Ok(value.to_string()))
+                .unwrap());
         }
         assert_eq!(stage.walk_to, Some((17, 13, None)));
-        assert!(stage.walks(&[]) && !Stage { walk_to: None, ..stage.clone() }.walks(&[]));
+        assert!(
+            stage.walks(&[])
+                && !Stage {
+                    walk_to: None,
+                    ..stage.clone()
+                }
+                .walks(&[])
+        );
         assert_eq!((stage.crop, stage.zoom), (Some([100, 40, 64, 48]), Some(3)));
         assert_eq!(stage.window(1000), (120, 300));
         assert_eq!(stage.window(200), (120, 200));
         assert!(parse_crop("200,0,64,16").is_err());
         assert!(parse_crop("0,0,0,16").is_err());
         assert!(parse_frames("30-10").is_err() && parse_frames("30").is_err());
-        assert!(stage.option("--zoom", &mut |_| Ok("5".to_string())).is_err());
-        assert!(stage.option("--walk-to", &mut |_| Ok("3".to_string())).unwrap_err().contains("--walk-to"));
+        assert!(stage
+            .option("--zoom", &mut |_| Ok("5".to_string()))
+            .is_err());
+        assert!(stage
+            .option("--walk-to", &mut |_| Ok("3".to_string()))
+            .unwrap_err()
+            .contains("--walk-to"));
         // A 4 by 2 screen cut to its middle 2 by 1, drawn twice as large.
         let frame = [0, 1, 2, 3, 4, 5, 6, 7];
-        assert_eq!(crop_frame(&frame, 4, [1, 1, 2, 1], 2), vec![5, 5, 6, 6, 5, 5, 6, 6]);
+        assert_eq!(
+            crop_frame(&frame, 4, [1, 1, 2, 1], 2),
+            vec![5, 5, 6, 6, 5, 5, 6, 6]
+        );
         assert_eq!(crop_frame(&frame, 4, [0, 0, 4, 2], 1), frame.to_vec());
     }
 
     #[test]
     fn the_event_played_first_has_its_own_start() {
-        let mut stage = Stage { at: Some((10, 9, None)), hold: parse_script("up:8").unwrap(), then: parse_script("down:8").unwrap(), during: parse_script("a:1").unwrap(), set: vec!["FLAG_X".to_string()], first: Some("E_First".to_string()), ..Stage::default() };
+        let mut stage = Stage {
+            at: Some((10, 9, None)),
+            hold: parse_script("up:8").unwrap(),
+            then: parse_script("down:8").unwrap(),
+            during: parse_script("a:1").unwrap(),
+            set: vec!["FLAG_X".to_string()],
+            first: Some("E_First".to_string()),
+            ..Stage::default()
+        };
         let first = stage.for_first();
-        assert_eq!((first.at, first.hold.len(), first.then.len(), first.during.len()), (None, 0, 0, 0));
-        assert_eq!((first.set.clone(), first.first.clone()), (vec!["FLAG_X".to_string()], None));
+        assert_eq!(
+            (
+                first.at,
+                first.hold.len(),
+                first.then.len(),
+                first.during.len()
+            ),
+            (None, 0, 0, 0)
+        );
+        assert_eq!(
+            (first.set.clone(), first.first.clone()),
+            (vec!["FLAG_X".to_string()], None)
+        );
         assert!(!first.staged());
         stage.first_at = Some((15, 23, Some(1)));
         stage.first_face = Some(0x4000);
         stage.first_hold = parse_script("down:20").unwrap();
         let first = stage.for_first();
-        assert_eq!((first.at, first.face, first.hold.clone(), first.first_at), (Some((15, 23, Some(1))), Some(0x4000), vec![Held::keys(0x80, 20)], None));
+        assert_eq!(
+            (first.at, first.face, first.hold.clone(), first.first_at),
+            (
+                Some((15, 23, Some(1))),
+                Some(0x4000),
+                vec![Held::keys(0x80, 20)],
+                None
+            )
+        );
         assert!(first.staged());
     }
 
@@ -922,12 +1299,27 @@ mod tests {
         assert!(parse_answers("maybe").is_err());
         assert!(parse_answers("wait").is_err());
         let mut stage = Stage::default();
-        for (option, value) in [("--answer", "no"), ("--leader", "jenna"), ("--party", "JENNA, FELIX")] {
-            assert!(stage.option(option, &mut |_| Ok(value.to_string())).unwrap());
+        for (option, value) in [
+            ("--answer", "no"),
+            ("--leader", "jenna"),
+            ("--party", "JENNA, FELIX"),
+        ] {
+            assert!(stage
+                .option(option, &mut |_| Ok(value.to_string()))
+                .unwrap());
         }
-        assert_eq!((stage.answer, stage.leader.as_deref(), stage.party), (vec![2], Some("jenna"), vec!["JENNA".to_string(), "FELIX".to_string()]));
+        assert_eq!(
+            (stage.answer, stage.leader.as_deref(), stage.party),
+            (
+                vec![2],
+                Some("jenna"),
+                vec!["JENNA".to_string(), "FELIX".to_string()]
+            )
+        );
         let mut chained = Stage::default();
-        assert!(chained.option("--first", &mut |_| Ok("Garoh_PlaceFirstPillar".to_string())).unwrap());
+        assert!(chained
+            .option("--first", &mut |_| Ok("Garoh_PlaceFirstPillar".to_string()))
+            .unwrap());
         assert_eq!(chained.first.as_deref(), Some("Garoh_PlaceFirstPillar"));
     }
 
@@ -939,7 +1331,11 @@ mod tests {
         assert!(stage.walks(&[]));
         assert!(!stage.walks(&["Garoh_IsNight".to_string()]));
         stage.set.push("FLAG_GAROH_NIGHT".to_string());
-        assert!(!Stage { set: stage.set.clone(), ..Stage::default() }.walks(&[]));
+        assert!(!Stage {
+            set: stage.set.clone(),
+            ..Stage::default()
+        }
+        .walks(&[]));
     }
 
     #[test]
@@ -957,9 +1353,17 @@ mod tests {
     #[test]
     fn staging_options_are_read_and_named() {
         let mut stage = Stage::default();
-        let mut given = ["FLAG_A".to_string(), "4".to_string(), "3,4".to_string(), "left:16".to_string()].into_iter();
+        let mut given = [
+            "FLAG_A".to_string(),
+            "4".to_string(),
+            "3,4".to_string(),
+            "left:16".to_string(),
+        ]
+        .into_iter();
         for option in ["--set", "--entrance", "--at", "--hold"] {
-            assert!(stage.option(option, &mut |_| Ok(given.next().unwrap())).unwrap());
+            assert!(stage
+                .option(option, &mut |_| Ok(given.next().unwrap()))
+                .unwrap());
             assert!(Stage::is_option(option));
         }
         assert!(!stage.option("--scene", &mut |_| Ok(String::new())).unwrap());
@@ -997,8 +1401,16 @@ mod tests {
 
     #[test]
     fn what_a_function_assigns_is_read() {
-        let text = "static void S_Start(void) {\n  struct Actor *leader = Actor_Get(0);\n  s32 i;\n  gFadeOverlayState->actor = leader;\n  leader->riseCounter = 1;\n  i = 2;\n  gCount += 1;\n  if (leader->x == 3)\n    gState.flags[i] |= 4;\n}\n";
-        assert_eq!(assigned(text, "S_Start"), vec!["gFadeOverlayState->actor", "leader->riseCounter", "gCount", "gState.flags[i]"]);
+        let text = "static void S_Start(void) {\n  struct Actor *leader = Actor_Get(0);\n  s32 i;\n  gFadeOverlayState->actor = leader;\n  leader->sceneCounter = 1;\n  i = 2;\n  gCount += 1;\n  if (leader->x == 3)\n    gState.flags[i] |= 4;\n}\n";
+        assert_eq!(
+            assigned(text, "S_Start"),
+            vec![
+                "gFadeOverlayState->actor",
+                "leader->sceneCounter",
+                "gCount",
+                "gState.flags[i]"
+            ]
+        );
     }
 
     #[test]
@@ -1009,10 +1421,25 @@ mod tests {
                     void A_Braced(void) {\n\n  if (!Event_GetFlag(FLAG_WALKED)) {\n    return;\n  }\n  Event_Start();\n}\n\
                     void A_Zero(s32 mode) {\n  if (Event_GetFlag(FLAG_Y) == 0) {\n    a();\n  }\n}\n\
                     void A_Other(void) {\n  if (Actor_Get(3)) {\n    a();\n  }\n}\n";
-        assert_eq!(guard(text, "A_Stop"), vec![("FLAG_REUNITED".to_string(), true), ("FLAG_SET_OUT".to_string(), false)]);
-        assert_eq!(guard(text, "A_Early"), vec![("FLAG_DONE".to_string(), false), ("FLAG_OPEN".to_string(), true)]);
+        assert_eq!(
+            guard(text, "A_Stop"),
+            vec![
+                ("FLAG_REUNITED".to_string(), true),
+                ("FLAG_SET_OUT".to_string(), false)
+            ]
+        );
+        assert_eq!(
+            guard(text, "A_Early"),
+            vec![
+                ("FLAG_DONE".to_string(), false),
+                ("FLAG_OPEN".to_string(), true)
+            ]
+        );
         assert!(guard(text, "A_Else").is_empty());
-        assert_eq!(guard(text, "A_Braced"), vec![("FLAG_WALKED".to_string(), true)]);
+        assert_eq!(
+            guard(text, "A_Braced"),
+            vec![("FLAG_WALKED".to_string(), true)]
+        );
         assert_eq!(guard(text, "A_Zero"), vec![("FLAG_Y".to_string(), false)]);
         assert!(guard(text, "A_Other").is_empty());
         assert!(guard(text, "A_Missing").is_empty());

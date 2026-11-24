@@ -80,11 +80,24 @@ pub(super) struct SetPiece {
 pub(super) const MERCURY_LIGHTHOUSE_AERIE: SetPiece = SetPiece {
     scene: 58,
     legs: &[
-        Leg { entrance: 1, trigger: Some(Trigger::Touch(5)), set: &[], walk: &[], end: End::Battle },
-        Leg { entrance: 2, trigger: None, set: &[], walk: &[], end: End::Settled },
+        Leg {
+            entrance: 1,
+            trigger: Some(Trigger::Touch(5)),
+            set: &[],
+            walk: &[],
+            end: End::Battle,
+        },
+        Leg {
+            entrance: 2,
+            trigger: None,
+            set: &[],
+            walk: &[],
+            end: End::Settled,
+        },
     ],
     file: "mercury-lighthouse-aerie/story-dollhouse.gif",
-    what: "Mercury Lighthouse's aerie story in the Doll House recorder, the whole aerie and the sky",
+    what:
+        "Mercury Lighthouse's aerie story in the Doll House recorder, the whole aerie and the sky",
 };
 
 /// Lalivero (SceneId_Lalivero) once the party is back from Venus
@@ -93,7 +106,13 @@ pub(super) const MERCURY_LIGHTHOUSE_AERIE: SetPiece = SetPiece {
 /// control again.
 pub(super) const LALIVERO_BLACK_ORB: SetPiece = SetPiece {
     scene: 178,
-    legs: &[Leg { entrance: 0, trigger: Some(Trigger::Touch(50)), set: &["FLAG_VENUS_LIGHTHOUSE_PARTY_RETURNED"], walk: &[], end: End::Settled }],
+    legs: &[Leg {
+        entrance: 0,
+        trigger: Some(Trigger::Touch(50)),
+        set: &["FLAG_VENUS_LIGHTHOUSE_PARTY_RETURNED"],
+        walk: &[],
+        end: End::Settled,
+    }],
     file: "lalivero/story-dollhouse.gif",
     what: "Iodem giving the Black Orb in Lalivero in the Doll House recorder, the whole town",
 };
@@ -103,7 +122,13 @@ pub(super) const LALIVERO_BLACK_ORB: SetPiece = SetPiece {
 /// player has control again.
 pub(super) const BABI_LIGHTHOUSE_TRUTH_DOOR: SetPiece = SetPiece {
     scene: 174,
-    legs: &[Leg { entrance: 1, trigger: Some(Trigger::Touch(22)), set: &[], walk: &[], end: End::Settled }],
+    legs: &[Leg {
+        entrance: 1,
+        trigger: Some(Trigger::Touch(22)),
+        set: &[],
+        walk: &[],
+        end: End::Settled,
+    }],
     file: "babi-lighthouse-stone-door/story-dollhouse.gif",
     what: "the Truth Door opening in Babi Lighthouse in the Doll House recorder, the whole room",
 };
@@ -135,14 +160,29 @@ impl<'a> Guide<'a> {
             }
         }
         // The scene's scroll bounds as its last frame drawn has them.
-        let last = legs.last_mut().zip(frames.last().and_then(|f| f.last())).ok_or("the last leg showed nothing")?;
+        let last = legs
+            .last_mut()
+            .zip(frames.last().and_then(|f| f.last()))
+            .ok_or("the last leg showed nothing")?;
         last.0.field.load(&last.0.states.get(*last.1));
         let area = last.0.field.bounds().map(|v| v >> 16);
-        let mut parts: Vec<Run> = legs.iter_mut().zip(&frames).map(|(p, f)| Run { field: &mut p.field, states: &p.states, frames: f, wide: true }).collect();
+        let mut parts: Vec<Run> = legs
+            .iter_mut()
+            .zip(&frames)
+            .map(|(p, f)| Run {
+                field: &mut p.field,
+                states: &p.states,
+                frames: f,
+                wide: true,
+            })
+            .collect();
         let mut pictures = whole::stitch_runs(&mut parts, area)?;
         // A scene that fades out at the end ends on its last picture that is
         // not all one colour.
-        while pictures.last().is_some_and(|p| p.pixels.iter().all(|&c| c == p.pixels[0])) {
+        while pictures
+            .last()
+            .is_some_and(|p| p.pixels.iter().all(|&c| c == p.pixels[0]))
+        {
             pictures.pop();
         }
         self.whole_gif(&format!("places/{}", piece.file), &pictures, piece.what)
@@ -152,7 +192,12 @@ impl<'a> Guide<'a> {
     /// plays it, keeping every frame's state, until it ends.
     fn play_leg(&self, scene: u16, leg: &Leg, set: &[u16]) -> Result<Played<'a>, String> {
         let mut flags = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
-        flags.extend(set.iter().filter(|f| !flags.contains(f)).copied().collect::<Vec<_>>());
+        flags.extend(
+            set.iter()
+                .filter(|f| !flags.contains(f))
+                .copied()
+                .collect::<Vec<_>>(),
+        );
         for name in leg.set {
             let f = self.flag(name)?;
             if !flags.contains(&f) {
@@ -160,7 +205,16 @@ impl<'a> Guide<'a> {
             }
         }
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
-        let mut field = Field::enter(self.rom, self.symbols, &Setup { scene, entrance: leg.entrance, set: flags, clear })?;
+        let mut field = Field::enter(
+            self.rom,
+            self.symbols,
+            &Setup {
+                scene,
+                entrance: leg.entrance,
+                set: flags,
+                clear,
+            },
+        )?;
         // A leg started by a trigger: the leader placed where `render event`
         // would place him for it, out of the walk's reach if need be, and
         // the trigger given once the leg is recorded: the direction held
@@ -169,7 +223,11 @@ impl<'a> Guide<'a> {
         if let Some(trigger) = leg.trigger {
             field.until_control()?;
             field.relaxed = true;
-            let spot = field.spots(trigger)?.into_iter().next().ok_or("no spot to give its trigger from")?;
+            let spot = field
+                .spots(trigger)?
+                .into_iter()
+                .next()
+                .ok_or("no spot to give its trigger from")?;
             field.put_leader(&spot);
             field.frames(PLACED)?;
             giving = match trigger {
@@ -192,10 +250,16 @@ impl<'a> Guide<'a> {
                 if leg.end == End::Battle {
                     break;
                 }
-                return Err(format!("a battle began where none was expected, entering at {}", leg.entrance));
+                return Err(format!(
+                    "a battle began where none was expected, entering at {}",
+                    leg.entrance
+                ));
             }
             if shown.len() > LEG_LIMIT {
-                return Err(format!("the leg from entrance {} went on past {LEG_LIMIT} frames", leg.entrance));
+                return Err(format!(
+                    "the leg from entrance {} went on past {LEG_LIMIT} frames",
+                    leg.entrance
+                ));
             }
             let in_control = field.steps() != steps;
             steps = field.steps();
@@ -238,7 +302,10 @@ impl<'a> Guide<'a> {
                 field.hold(0);
                 settled += 1;
                 if settled == 1 && std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
-                    eprintln!("leg from entrance {}: the walk is over with the leader at ({}, {})", leg.entrance, leader.x, leader.z);
+                    eprintln!(
+                        "leg from entrance {}: the walk is over with the leader at ({}, {})",
+                        leg.entrance, leader.x, leader.z
+                    );
                 }
                 if leg.end == End::Settled && settled >= SETTLED {
                     break;
@@ -257,7 +324,11 @@ impl<'a> Guide<'a> {
                 (false, _, true) => KEY_DOWN,
                 (false, _, false) => KEY_UP,
             });
-            still = if place == Some((leader.x, leader.z)) { still + 1 } else { 0 };
+            still = if place == Some((leader.x, leader.z)) {
+                still + 1
+            } else {
+                0
+            };
             place = Some((leader.x, leader.z));
             if still > STUCK {
                 if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
@@ -265,12 +336,19 @@ impl<'a> Guide<'a> {
                     print_codes(&field, 0);
                     print_codes(&field, 1);
                 }
-                return Err(format!("the leader stood at ({}, {}) walking to ({x}, {z})", leader.x, leader.z));
+                return Err(format!(
+                    "the leader stood at ({}, {}) walking to ({x}, {z})",
+                    leader.x, leader.z
+                ));
             }
         }
         field.hold(0);
         let states = field.keep_states(false).ok_or("no states were kept")?;
-        Ok(Played { field, states, shown })
+        Ok(Played {
+            field,
+            states,
+            shown,
+        })
     }
 }
 
@@ -286,7 +364,15 @@ fn print_reach(field: &mut Field, x: i32, z: i32) {
     for cz in (z0..z1).step_by(16) {
         let row: String = (x0..x1)
             .step_by(16)
-            .map(|cx| if (cx..cx + 16).contains(&x) && (cz..cz + 16).contains(&z) { '@' } else if reach.holds(reach.layer, cx + 8, cz + 8) { '#' } else { '.' })
+            .map(|cx| {
+                if (cx..cx + 16).contains(&x) && (cz..cz + 16).contains(&z) {
+                    '@'
+                } else if reach.holds(reach.layer, cx + 8, cz + 8) {
+                    '#'
+                } else {
+                    '.'
+                }
+            })
             .collect();
         eprintln!("{cz:4} {row}");
     }

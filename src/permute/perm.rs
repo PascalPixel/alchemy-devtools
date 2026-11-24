@@ -52,7 +52,11 @@ impl Expanded {
         if let Ok(tokens) = super::lex::lex(&self.text) {
             for token in tokens.iter().rev() {
                 if let super::lex::Tok::Comment(text) = &token.tok {
-                    if let Some(marker) = text.strip_prefix("/* ").and_then(|s| s.strip_suffix(" */")).filter(|s| s.starts_with("_permuter ")) {
+                    if let Some(marker) = text
+                        .strip_prefix("/* ")
+                        .and_then(|s| s.strip_suffix(" */"))
+                        .filter(|s| s.starts_with("_permuter "))
+                    {
                         out.replace_range(token.start..token.end, &format!("\n#pragma {marker}\n"));
                     }
                 }
@@ -64,7 +68,10 @@ impl Expanded {
     pub fn key(&self) -> [u8; 32] {
         // AST orders and ignored text can differ while placeholder C is the
         // same. They must not share a prepared tree or a replay baseline.
-        super::text_key(&format!("{:?}{:?}{:?}", self.text, self.ignored, self.ast_swaps))
+        super::text_key(&format!(
+            "{:?}{:?}{:?}",
+            self.text, self.ignored, self.ast_swaps
+        ))
     }
 
     /// Apply line swaps after parsing each line as a compound statement.
@@ -75,25 +82,42 @@ impl Expanded {
         fn visit(unit: &mut C, swaps: &[Vec<usize>]) -> bool {
             if let C::Compound { block_items } = unit {
                 let order = match block_items.first() {
-                    Some(C::Pragma { string }) => string.strip_prefix("_permuter ast ").and_then(|n| n.parse::<usize>().ok()).and_then(|i| swaps.get(i)),
+                    Some(C::Pragma { string }) => string
+                        .strip_prefix("_permuter ast ")
+                        .and_then(|n| n.parse::<usize>().ok())
+                        .and_then(|i| swaps.get(i)),
                     _ => None,
                 };
                 if let Some(order) = order {
-                    for item in block_items.iter_mut().skip(1) { visit(item, swaps); }
-                    *block_items = order.iter().flat_map(|&i| match &block_items[i + 1] { C::Compound { block_items } => block_items.clone(), _ => unreachable!("line swap arguments are blocks") }).collect();
+                    for item in block_items.iter_mut().skip(1) {
+                        visit(item, swaps);
+                    }
+                    *block_items = order
+                        .iter()
+                        .flat_map(|&i| match &block_items[i + 1] {
+                            C::Compound { block_items } => block_items.clone(),
+                            _ => unreachable!("line swap arguments are blocks"),
+                        })
+                        .collect();
                     return true;
                 }
                 let mut out = Vec::new();
                 for mut item in std::mem::take(block_items) {
                     if visit(&mut item, swaps) {
-                        let C::Compound { block_items } = item else { unreachable!() };
+                        let C::Compound { block_items } = item else {
+                            unreachable!()
+                        };
                         out.extend(block_items);
-                    } else { out.push(item); }
+                    } else {
+                        out.push(item);
+                    }
                 }
                 *block_items = out;
             } else {
                 // An unbraced control body keeps its compound after swapping.
-                for child in unit.children_mut() { visit(child, swaps); }
+                for child in unit.children_mut() {
+                    visit(child, swaps);
+                }
             }
             false
         }
@@ -105,11 +129,17 @@ impl Expanded {
     fn comment_markers(&self, text: &str) -> String {
         let mut out = text.to_string();
         for (index, _) in self.ignored.iter().enumerate() {
-            out = out.replace(&format!("#pragma _permuter ignored {index}"), &format!("/* _permuter ignored {index} */"));
+            out = out.replace(
+                &format!("#pragma _permuter ignored {index}"),
+                &format!("/* _permuter ignored {index} */"),
+            );
         }
         for kind in ["sameline", "pretend", "randomizer"] {
             for edge in ["start", "end"] {
-                out = out.replace(&format!("#pragma _permuter {kind} {edge}"), &format!("/* _permuter {kind} {edge} */"));
+                out = out.replace(
+                    &format!("#pragma _permuter {kind} {edge}"),
+                    &format!("/* _permuter {kind} {edge} */"),
+                );
             }
         }
         out
@@ -183,7 +213,9 @@ fn closing(text: &str, open: usize) -> Option<usize> {
                 index = text[index + 2..].find("*/").map(|at| index + 2 + at + 1)?;
             }
             b'/' if bytes.get(index + 1) == Some(&b'/') => {
-                index = text[index..].find('\n').map_or(bytes.len(), |at| index + at);
+                index = text[index..]
+                    .find('\n')
+                    .map_or(bytes.len(), |at| index + at);
             }
             _ => {}
         }
@@ -198,11 +230,15 @@ fn next_macro(text: &str, from: usize) -> Option<(usize, &str)> {
     let mut index = from;
     while index < bytes.len() {
         if bytes[index..].starts_with(b"/*") {
-            index = text[index + 2..].find("*/").map_or(bytes.len(), |at| index + 2 + at + 2);
+            index = text[index + 2..]
+                .find("*/")
+                .map_or(bytes.len(), |at| index + 2 + at + 2);
             continue;
         }
         if bytes[index..].starts_with(b"//") {
-            index = text[index..].find('\n').map_or(bytes.len(), |at| index + at);
+            index = text[index..]
+                .find('\n')
+                .map_or(bytes.len(), |at| index + at);
             continue;
         }
         if bytes[index] == b'"' || bytes[index] == b'\'' {
@@ -214,10 +250,14 @@ fn next_macro(text: &str, from: usize) -> Option<(usize, &str)> {
             index += 1;
             continue;
         }
-        let boundary = index == 0 || !(bytes[index - 1].is_ascii_alphanumeric() || bytes[index - 1] == b'_');
+        let boundary =
+            index == 0 || !(bytes[index - 1].is_ascii_alphanumeric() || bytes[index - 1] == b'_');
         if boundary && bytes[index..].starts_with(b"PERM_") {
             let mut end = index + 5;
-            while bytes.get(end).is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_') {
+            while bytes
+                .get(end)
+                .is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_')
+            {
                 end += 1;
             }
             if text[end..].trim_start().starts_with('(') {
@@ -254,10 +294,14 @@ fn arguments(inner: &str) -> Vec<&str> {
                 }
             }
             b'/' if bytes.get(index + 1) == Some(&b'*') => {
-                index = inner[index + 2..].find("*/").map_or(bytes.len(), |at| index + 2 + at + 1);
+                index = inner[index + 2..]
+                    .find("*/")
+                    .map_or(bytes.len(), |at| index + 2 + at + 1);
             }
             b'/' if bytes.get(index + 1) == Some(&b'/') => {
-                index = inner[index..].find('\n').map_or(bytes.len(), |at| index + at);
+                index = inner[index..]
+                    .find('\n')
+                    .map_or(bytes.len(), |at| index + at);
             }
             _ => {}
         }
@@ -274,12 +318,19 @@ fn ast_lines(inner: &str) -> Result<Vec<&str>, String> {
     let (mut start, mut token, mut lines) = (0, 0, Vec::new());
     let (mut has_code, mut last_start) = (false, 0);
     for (at, c) in inner.char_indices() {
-        if c != '\n' { continue; }
+        if c != '\n' {
+            continue;
+        }
         while token < tokens.len() && tokens[token].end <= at {
             has_code |= !matches!(tokens[token].tok, super::lex::Tok::Comment(_));
             token += 1;
         }
-        if tokens.get(token).is_some_and(|t| t.start <= at && at < t.end) { continue; }
+        if tokens
+            .get(token)
+            .is_some_and(|t| t.start <= at && at < t.end)
+        {
+            continue;
+        }
         // Comment-only lines belong to the next argument, rather than
         // multiplying the search by permutations of empty blocks.
         if has_code {
@@ -289,9 +340,14 @@ fn ast_lines(inner: &str) -> Result<Vec<&str>, String> {
             has_code = false;
         }
     }
-    has_code |= tokens[token..].iter().any(|t| !matches!(t.tok, super::lex::Tok::Comment(_)));
-    if has_code { lines.push(&inner[start..]); }
-    else if let Some(last) = lines.last_mut() { *last = &inner[last_start..]; }
+    has_code |= tokens[token..]
+        .iter()
+        .any(|t| !matches!(t.tok, super::lex::Tok::Comment(_)));
+    if has_code {
+        lines.push(&inner[start..]);
+    } else if let Some(last) = lines.last_mut() {
+        *last = &inner[last_start..];
+    }
     Ok(lines)
 }
 
@@ -315,12 +371,30 @@ fn parse_inner(text: &str) -> Result<Vec<Node>, String> {
         let end = closing(text, open).ok_or_else(|| format!("{name}: unbalanced parentheses"))?;
         let inner = &text[open + 1..end - 1];
         nodes.push(match name {
-            "PERM_GENERAL" => Node::OneOf(arguments(inner).into_iter().map(parse_inner).collect::<Result<_, _>>()?),
+            "PERM_GENERAL" => Node::OneOf(
+                arguments(inner)
+                    .into_iter()
+                    .map(parse_inner)
+                    .collect::<Result<_, _>>()?,
+            ),
             // Alchemy's older alias trimmed its alternatives.
-            "PERM_ONEOF" => Node::OneOf(arguments(inner).into_iter().map(|arg| parse_inner(arg.trim())).collect::<Result<_, _>>()?),
+            "PERM_ONEOF" => Node::OneOf(
+                arguments(inner)
+                    .into_iter()
+                    .map(|arg| parse_inner(arg.trim()))
+                    .collect::<Result<_, _>>()?,
+            ),
             "PERM_LINESWAP" | "PERM_LINESWAP_TEXT" => {
-                let lines = if name == "PERM_LINESWAP" { ast_lines(inner)? } else { inner.lines().filter(|line| !line.trim().is_empty()).collect() };
-                let lines = lines.into_iter()
+                let lines = if name == "PERM_LINESWAP" {
+                    ast_lines(inner)?
+                } else {
+                    inner
+                        .lines()
+                        .filter(|line| !line.trim().is_empty())
+                        .collect()
+                };
+                let lines = lines
+                    .into_iter()
                     .map(parse_inner)
                     .collect::<Result<_, _>>()?;
                 if name == "PERM_LINESWAP" {
@@ -338,8 +412,14 @@ fn parse_inner(text: &str) -> Result<Vec<Node>, String> {
                 if args.len() != 2 {
                     return Err("PERM_INT takes 2 integer arguments".into());
                 }
-                let low = args[0].trim().parse::<i64>().map_err(|_| "PERM_INT: invalid lower bound")?;
-                let high = args[1].trim().parse::<i64>().map_err(|_| "PERM_INT: invalid upper bound")?;
+                let low = args[0]
+                    .trim()
+                    .parse::<i64>()
+                    .map_err(|_| "PERM_INT: invalid lower bound")?;
+                let high = args[1]
+                    .trim()
+                    .parse::<i64>()
+                    .map_err(|_| "PERM_INT: invalid upper bound")?;
                 if low > high {
                     return Err("PERM_INT: lower bound exceeds upper bound".into());
                 }
@@ -353,7 +433,10 @@ fn parse_inner(text: &str) -> Result<Vec<Node>, String> {
                 if name == "PERM_ONCE" {
                     Node::Once(args[0].trim().into(), parse_inner(args[args.len() - 1])?)
                 } else {
-                    Node::Var(parse_inner(args[0])?, args.get(1).map(|v| parse_inner(v)).transpose()?)
+                    Node::Var(
+                        parse_inner(args[0])?,
+                        args.get(1).map(|v| parse_inner(v)).transpose()?,
+                    )
                 }
             }
             _ => unreachable!(),
@@ -374,8 +457,13 @@ pub fn has_choices(nodes: &[Node]) -> bool {
 pub fn randomizes(nodes: &[Node]) -> bool {
     nodes.iter().any(|node| match node {
         Node::Randomize(_) => true,
-        Node::OneOf(options) | Node::LineSwap(options) | Node::LineSwapText(options) => options.iter().any(|o| randomizes(o)),
-        Node::Ignore(inner) | Node::Pretend(inner) | Node::SameLine(inner) | Node::Once(_, inner) => randomizes(inner),
+        Node::OneOf(options) | Node::LineSwap(options) | Node::LineSwapText(options) => {
+            options.iter().any(|o| randomizes(o))
+        }
+        Node::Ignore(inner)
+        | Node::Pretend(inner)
+        | Node::SameLine(inner)
+        | Node::Once(_, inner) => randomizes(inner),
         Node::Var(name, value) => randomizes(name) || value.as_ref().is_some_and(|v| randomizes(v)),
         _ => false,
     })
@@ -387,7 +475,10 @@ pub fn expand(nodes: &[Node]) -> Result<Expanded, String> {
 }
 
 fn product(mut counts: impl Iterator<Item = Result<u64, String>>) -> Result<u64, String> {
-    counts.try_fold(1u64, |a, b| a.checked_mul(b?).ok_or_else(|| "PERM search space exceeds 64-bit seeds".into()))
+    counts.try_fold(1u64, |a, b| {
+        a.checked_mul(b?)
+            .ok_or_else(|| "PERM search space exceeds 64-bit seeds".into())
+    })
 }
 
 fn factorial(n: usize) -> Result<u64, String> {
@@ -399,13 +490,23 @@ fn inner_count(nodes: &[Node]) -> Result<u64, String> {
 fn node_count(node: &Node) -> Result<u64, String> {
     match node {
         Node::Text(_) => Ok(1),
-        Node::Int(low, high) => u64::try_from(i128::from(*high) - i128::from(*low) + 1).map_err(|_| "PERM_INT range exceeds 64-bit seeds".into()),
+        Node::Int(low, high) => u64::try_from(i128::from(*high) - i128::from(*low) + 1)
+            .map_err(|_| "PERM_INT range exceeds 64-bit seeds".into()),
         Node::OneOf(options) => options.iter().try_fold(0u64, |a, b| {
-            a.checked_add(inner_count(b)?).ok_or_else(|| "PERM search space exceeds 64-bit seeds".into())
+            a.checked_add(inner_count(b)?)
+                .ok_or_else(|| "PERM search space exceeds 64-bit seeds".into())
         }),
-        Node::LineSwap(lines) | Node::LineSwapText(lines) => product(std::iter::once(factorial(lines.len())).chain(lines.iter().map(|l| inner_count(l)))),
-        Node::Randomize(inner) | Node::Ignore(inner) | Node::Pretend(inner) | Node::SameLine(inner) | Node::Once(_, inner) => inner_count(inner),
-        Node::Var(name, value) => product(std::iter::once(inner_count(name)).chain(value.iter().map(|v| inner_count(v)))),
+        Node::LineSwap(lines) | Node::LineSwapText(lines) => product(
+            std::iter::once(factorial(lines.len())).chain(lines.iter().map(|l| inner_count(l))),
+        ),
+        Node::Randomize(inner)
+        | Node::Ignore(inner)
+        | Node::Pretend(inner)
+        | Node::SameLine(inner)
+        | Node::Once(_, inner) => inner_count(inner),
+        Node::Var(name, value) => {
+            product(std::iter::once(inner_count(name)).chain(value.iter().map(|v| inner_count(v))))
+        }
     }
 }
 
@@ -425,7 +526,11 @@ fn once_groups(nodes: &[Node]) -> Vec<(&str, Vec<&Node>)> {
                         visit(inner, groups);
                     }
                 }
-                Node::Randomize(inner) | Node::Ignore(inner) | Node::Pretend(inner) | Node::SameLine(inner) | Node::Once(_, inner) => visit(inner, groups),
+                Node::Randomize(inner)
+                | Node::Ignore(inner)
+                | Node::Pretend(inner)
+                | Node::SameLine(inner)
+                | Node::Once(_, inner) => visit(inner, groups),
                 Node::Var(name, value) => {
                     visit(name, groups);
                     if let Some(v) = value {
@@ -445,10 +550,15 @@ pub fn count(nodes: &[Node]) -> Result<u64, String> {
     let groups = once_groups(nodes);
     for (key, options) in &groups {
         if options.len() == 1 {
-            return Err(format!("PERM_ONCE({key}) is used once; a key names choices shared by two or more places"));
+            return Err(format!(
+                "PERM_ONCE({key}) is used once; a key names choices shared by two or more places"
+            ));
         }
     }
-    product(std::iter::once(inner_count(nodes)).chain(groups.iter().map(|(_, options)| Ok(options.len() as u64))))
+    product(
+        std::iter::once(inner_count(nodes))
+            .chain(groups.iter().map(|(_, options)| Ok(options.len() as u64))),
+    )
 }
 
 fn shuffle<T>(mut items: Vec<T>, mut seed: u64) -> Vec<T> {
@@ -475,7 +585,13 @@ pub fn expand_seed(nodes: &[Node], mut seed: u64) -> Result<Expanded, String> {
     Ok(out)
 }
 
-fn evaluate(nodes: &[Node], mut seed: u64, once: &[&Node], vars: &mut BTreeMap<String, String>, out: &mut Expanded) -> Result<String, String> {
+fn evaluate(
+    nodes: &[Node],
+    mut seed: u64,
+    once: &[&Node],
+    vars: &mut BTreeMap<String, String>,
+    out: &mut Expanded,
+) -> Result<String, String> {
     let mut text = String::new();
     for node in nodes {
         let count = node_count(node)?;
@@ -486,7 +602,13 @@ fn evaluate(nodes: &[Node], mut seed: u64, once: &[&Node], vars: &mut BTreeMap<S
     Ok(text)
 }
 
-fn eval_node(node: &Node, mut seed: u64, once: &[&Node], vars: &mut BTreeMap<String, String>, out: &mut Expanded) -> Result<String, String> {
+fn eval_node(
+    node: &Node,
+    mut seed: u64,
+    once: &[&Node],
+    vars: &mut BTreeMap<String, String>,
+    out: &mut Expanded,
+) -> Result<String, String> {
     Ok(match node {
         Node::Text(text) => text.clone(),
         Node::Int(low, _) => (i128::from(*low) + i128::from(seed)).to_string(),
@@ -519,10 +641,18 @@ fn eval_node(node: &Node, mut seed: u64, once: &[&Node], vars: &mut BTreeMap<Str
                 out.ast_swaps.push(order);
                 format!(
                     "{{\n/* _permuter ast {id} */\n{}\n}}",
-                    texts.iter().map(|s| format!("{{{s}\n}}")).collect::<Vec<_>>().join("\n")
+                    texts
+                        .iter()
+                        .map(|s| format!("{{{s}\n}}"))
+                        .collect::<Vec<_>>()
+                        .join("\n")
                 )
             } else {
-                order.iter().map(|&i| texts[i].as_str()).collect::<Vec<_>>().join("\n")
+                order
+                    .iter()
+                    .map(|&i| texts[i].as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n")
             }
         }
         Node::Once(_, inner) => {
@@ -534,13 +664,17 @@ fn eval_node(node: &Node, mut seed: u64, once: &[&Node], vars: &mut BTreeMap<Str
         }
         Node::Var(name, value) => {
             let count = inner_count(name)?;
-            let name = evaluate(name, seed % count, once, vars, out)?.trim().to_string();
+            let name = evaluate(name, seed % count, once, vars, out)?
+                .trim()
+                .to_string();
             if let Some(value) = value {
                 let text = evaluate(value, seed / count, once, vars, out)?;
                 vars.insert(name, text);
                 String::new()
             } else {
-                vars.get(&name).cloned().ok_or_else(|| format!("Tried to read undefined PERM_VAR {name}"))?
+                vars.get(&name)
+                    .cloned()
+                    .ok_or_else(|| format!("Tried to read undefined PERM_VAR {name}"))?
             }
         }
         Node::Ignore(inner) => {
@@ -605,7 +739,8 @@ impl Iterator for Seeds {
                 }
             } else {
                 if self.remaining.is_none() {
-                    let mut remaining: Vec<_> = (0..self.total).filter(|s| !self.seen.contains(s)).collect();
+                    let mut remaining: Vec<_> =
+                        (0..self.total).filter(|s| !self.seen.contains(s)).collect();
                     for i in (1..remaining.len()).rev() {
                         remaining.swap(i, self.rng.below(i + 1));
                     }
@@ -671,7 +806,9 @@ mod tests {
         // Two line orders times three values.
         assert_eq!(seen.len(), 6);
         assert!(seen.iter().any(|text| text.contains("p[2] = 4 + 6;")));
-        assert!(seen.iter().any(|text| before(text, "p[1] = 2;", "p[0] = 1;")));
+        assert!(seen
+            .iter()
+            .any(|text| before(text, "p[1] = 2;", "p[0] = 1;")));
         let (mut a, mut b) = (Rng::new(3), Rng::new(3));
         for _ in 0..20 {
             assert_eq!(draw(&mut a), draw(&mut b));
@@ -681,7 +818,9 @@ mod tests {
     #[test]
     fn macros_are_found_only_as_calls_outside_comments_and_strings() {
         assert!(has_macros("x = PERM_ONEOF(1, 2);"));
-        assert!(!has_macros("/* PERM_ONEOF(1, 2) */ x = \"PERM_IGNORE(a)\";"));
+        assert!(!has_macros(
+            "/* PERM_ONEOF(1, 2) */ x = \"PERM_IGNORE(a)\";"
+        ));
         assert!(parse("int PERM_GENERALLY(int);").is_err());
         assert!(parse("PERM_GENERAL(a, (b").is_err());
     }
@@ -715,11 +854,22 @@ mod tests {
 
     #[test]
     fn shared_fragments_and_once_choices_compose_with_surrounding_text() {
-        assert_eq!(expansions("begin;PERM_ONCE(note,record(3);)middle;PERM_ONCE(note,record(8);)end;"), ["begin;record(3);middle;end;", "begin;middle;record(8);end;"]);
-        assert_eq!(expansions("PERM_VAR(mask,PERM_GENERAL(15,63))return value & PERM_VAR(mask);"), ["return value & 15;", "return value & 63;"]);
+        assert_eq!(
+            expansions("begin;PERM_ONCE(note,record(3);)middle;PERM_ONCE(note,record(8);)end;"),
+            ["begin;record(3);middle;end;", "begin;middle;record(8);end;"]
+        );
+        assert_eq!(
+            expansions("PERM_VAR(mask,PERM_GENERAL(15,63))return value & PERM_VAR(mask);"),
+            ["return value & 15;", "return value & 63;"]
+        );
         assert!(parse("prefix;PERM_ONCE(record(4);)suffix;").is_err());
         assert!(expand(&parse("return PERM_VAR(unbound_mask);").unwrap()).is_err());
-        assert_eq!(expansions("PERM_LINESWAP_TEXT(\nPERM_VAR(step,19)start();\nfinish(PERM_VAR(step));\n)"), ["start();\nfinish(19);", "finish(19);\nstart();"]);
+        assert_eq!(
+            expansions(
+                "PERM_LINESWAP_TEXT(\nPERM_VAR(step,19)start();\nfinish(PERM_VAR(step));\n)"
+            ),
+            ["start();\nfinish(19);", "finish(19);\nstart();"]
+        );
     }
 
     #[test]
@@ -731,7 +881,10 @@ mod tests {
         assert_eq!(expansions("PERM_FORCE_SAMELINE(a;\nb;)"), ["a; b;"]);
         assert_eq!(expansions("/* 日本語 */ PERM_INT(1,1)"), ["/* 日本語 */ 1"]);
         assert!(expand(&parse("PERM_RANDOMIZE(PERM_RANDOMIZE(x();))").unwrap()).is_err());
-        assert_eq!(expansions("PERM_PRETEND(\n#pragma _permuter define ID 7\ntypedef int T;\n)"), ["#define ID 7"]);
+        assert_eq!(
+            expansions("PERM_PRETEND(\n#pragma _permuter define ID 7\ntypedef int T;\n)"),
+            ["#define ID 7"]
+        );
     }
 
     #[test]
@@ -741,15 +894,23 @@ mod tests {
         /// The statements of the unit's first function.
         fn body(unit: &C) -> &Vec<C> {
             let C::FileAst { ext } = unit else { panic!() };
-            let C::FuncDef { body, .. } = &ext[0] else { panic!() };
-            let C::Compound { block_items } = body.as_ref() else { panic!() };
+            let C::FuncDef { body, .. } = &ext[0] else {
+                panic!()
+            };
+            let C::Compound { block_items } = body.as_ref() else {
+                panic!()
+            };
             block_items
         }
         let nodes = parse(source).unwrap();
         for seed in 0..2 {
             let unit = tree(&expand_seed(&nodes, seed).unwrap());
-            let C::If { iftrue, .. } = &body(&unit)[0] else { panic!() };
-            let C::Compound { block_items } = iftrue.as_ref() else { panic!("must remain a block") };
+            let C::If { iftrue, .. } = &body(&unit)[0] else {
+                panic!()
+            };
+            let C::Compound { block_items } = iftrue.as_ref() else {
+                panic!("must remain a block")
+            };
             assert_eq!(block_items.len(), 3);
             assert!(!unit.print().contains("_permuter ast"));
         }
@@ -776,7 +937,10 @@ mod tests {
                 assert_eq!(printed.matches("*a =").count(), 1);
                 assert_eq!(printed.matches("*b =").count(), 1);
                 super::super::c::parse(&printed).unwrap();
-                results.insert((printed.contains("*a = 1;"), printed.find("*a =").unwrap() < printed.find("*b =").unwrap()));
+                results.insert((
+                    printed.contains("*a = 1;"),
+                    printed.find("*a =").unwrap() < printed.find("*b =").unwrap(),
+                ));
             }
         }
         assert_eq!(results.len(), 4);
@@ -787,8 +951,16 @@ mod tests {
         for count in 1..24 {
             let seeds: Vec<_> = Seeds::new(count, false, 12).collect();
             assert_eq!(seeds.len(), count as usize);
-            assert_eq!(seeds.iter().copied().collect::<std::collections::BTreeSet<_>>(), (0..count).collect());
-            let infinite: Vec<_> = Seeds::new(count, true, 12).take(count as usize * 3).collect();
+            assert_eq!(
+                seeds
+                    .iter()
+                    .copied()
+                    .collect::<std::collections::BTreeSet<_>>(),
+                (0..count).collect()
+            );
+            let infinite: Vec<_> = Seeds::new(count, true, 12)
+                .take(count as usize * 3)
+                .collect();
             for cycle in infinite.chunks(count as usize) {
                 assert_eq!(cycle.iter().collect::<HashSet<_>>().len(), count as usize);
             }

@@ -13,7 +13,11 @@ pub struct Line {
 }
 
 pub fn disassemble(object: &Path, symbol: Option<&str>) -> Result<Vec<Line>, String> {
-    let mut args = vec!["arm-none-eabi-objdump".to_string(), "-drz".into(), "--no-show-raw-insn".into()];
+    let mut args = vec![
+        "arm-none-eabi-objdump".to_string(),
+        "-drz".into(),
+        "--no-show-raw-insn".into(),
+    ];
     if let Some(symbol) = symbol {
         args.push(format!("--disassemble={symbol}"));
     }
@@ -24,7 +28,10 @@ pub fn disassemble(object: &Path, symbol: Option<&str>) -> Result<Vec<Line>, Str
 /// Candidate scoring needs both diff's encoded branch view and all of the
 /// weighted scorer's data and relocation rows. Reuse the strict disassembly
 /// only when objdump did not omit any bytes and its raw column is recognized.
-pub fn disassemble_both(object: &Path, symbol: Option<&str>) -> Result<(Vec<String>, Vec<Line>), String> {
+pub fn disassemble_both(
+    object: &Path,
+    symbol: Option<&str>,
+) -> Result<(Vec<String>, Vec<Line>), String> {
     let text = crate::diff::disassemble_text(object, symbol)?;
     let strict = crate::diff::normalize(&text);
     let rows = match without_raw_instructions(&text) {
@@ -47,9 +54,12 @@ fn without_raw_instructions(text: &str) -> Option<String> {
                 let row = row.trim_start();
                 if !row.starts_with("R_ARM_") {
                     let (raw, rest) = row.split_once('\t')?;
-                    if raw.trim().is_empty() || !raw.split_whitespace().all(|word| {
-                        matches!(word.len(), 2 | 4 | 8) && word.chars().all(|c| c.is_ascii_hexdigit())
-                    }) {
+                    if raw.trim().is_empty()
+                        || !raw.split_whitespace().all(|word| {
+                            matches!(word.len(), 2 | 4 | 8)
+                                && word.chars().all(|c| c.is_ascii_hexdigit())
+                        })
+                    {
                         return None;
                     }
                     stripped.push_str(address);
@@ -72,7 +82,9 @@ fn parse_objdump(text: &str) -> Result<Vec<Line>, String> {
     let comment = COMMENT.get_or_init(|| Regex::new(r"<.*>|//.*$").unwrap());
     let mut lines: Vec<Line> = Vec::new();
     for line in text.lines() {
-        let Some((address, row)) = line.trim_start().split_once(':') else { continue };
+        let Some((address, row)) = line.trim_start().split_once(':') else {
+            continue;
+        };
         if u64::from_str_radix(address, 16).is_err() {
             continue;
         }
@@ -87,10 +99,15 @@ fn parse_objdump(text: &str) -> Result<Vec<Line>, String> {
             if row.split_whitespace().next() == Some("R_ARM_V4BX") {
                 continue;
             }
-            if !["R_ARM_THM_CALL", "R_ARM_CALL", "R_ARM_ABS32"].iter().any(|kind| row.starts_with(kind)) {
+            if !["R_ARM_THM_CALL", "R_ARM_CALL", "R_ARM_ABS32"]
+                .iter()
+                .any(|kind| row.starts_with(kind))
+            {
                 return Err(format!("unsupported ARM relocation: {row}"));
             }
-            let previous = lines.last_mut().ok_or("relocation without an instruction")?;
+            let previous = lines
+                .last_mut()
+                .ok_or("relocation without an instruction")?;
             let start = [',', '\t', ' ']
                 .iter()
                 .find_map(|c| previous.row.rfind(*c))
@@ -101,7 +118,11 @@ fn parse_objdump(text: &str) -> Result<Vec<Line>, String> {
                 .map(|i| previous.row[start + i..].to_string())
                 .unwrap_or_default();
             previous.row.truncate(start);
-            previous.row.push_str(row.split_whitespace().last().ok_or("relocation without symbol")?);
+            previous.row.push_str(
+                row.split_whitespace()
+                    .last()
+                    .ok_or("relocation without symbol")?,
+            );
             previous.row.push_str(&suffix);
             previous.has_symbol = true;
         } else {
@@ -160,7 +181,12 @@ impl Score {
         if parts.is_empty() {
             return format!("weighted 0, differ {}", self.differ);
         }
-        format!("weighted {}, differ {} ({})", self.weighted, self.differ, parts.join(", "))
+        format!(
+            "weighted {}, differ {} ({})",
+            self.weighted,
+            self.differ,
+            parts.join(", ")
+        )
     }
 }
 
@@ -176,12 +202,31 @@ fn mnemonic(text: &str) -> &str {
 }
 
 fn branch(mnemonic: &str) -> bool {
-    let mnemonic = mnemonic.strip_suffix(".n").or_else(|| mnemonic.strip_suffix(".w")).unwrap_or(mnemonic);
+    let mnemonic = mnemonic
+        .strip_suffix(".n")
+        .or_else(|| mnemonic.strip_suffix(".w"))
+        .unwrap_or(mnemonic);
     ["b", "bl"].iter().any(|prefix| {
         mnemonic.strip_prefix(prefix).is_some_and(|cond| {
             matches!(
                 cond,
-                "" | "eq" | "ne" | "cs" | "hs" | "cc" | "lo" | "mi" | "pl" | "vs" | "vc" | "hi" | "ls" | "ge" | "lt" | "gt" | "le" | "al"
+                "" | "eq"
+                    | "ne"
+                    | "cs"
+                    | "hs"
+                    | "cc"
+                    | "lo"
+                    | "mi"
+                    | "pl"
+                    | "vs"
+                    | "vc"
+                    | "hi"
+                    | "ls"
+                    | "ge"
+                    | "lt"
+                    | "gt"
+                    | "le"
+                    | "al"
             )
         })
     })
@@ -195,7 +240,11 @@ fn stack_pattern() -> &'static Regex {
 fn normalize(text: &str, options: Options) -> String {
     let mut row = text.to_string();
     if !options.stack_differences {
-        if matches!(mnemonic(text), "add" | "sub") && text.split(|c: char| !c.is_alphanumeric()).any(|p| p == "sp") {
+        if matches!(mnemonic(text), "add" | "sub")
+            && text
+                .split(|c: char| !c.is_alphanumeric())
+                .any(|p| p == "sp")
+        {
             static NUMBER: OnceLock<Regex> = OnceLock::new();
             row = NUMBER
                 .get_or_init(|| Regex::new(r"\b(?:0x[0-9a-fA-F]+|[0-9]+)\b").unwrap())
@@ -219,7 +268,9 @@ fn normalize(text: &str, options: Options) -> String {
             converted.push_str(&row[end..m.start()]);
             let forbidden = |c: u8| c.is_ascii_alphabetic() || c == b'_';
             if m.len() <= 1
-                || m.start().checked_sub(1).is_some_and(|i| forbidden(row.as_bytes()[i]))
+                || m.start()
+                    .checked_sub(1)
+                    .is_some_and(|i| forbidden(row.as_bytes()[i]))
                 || row.as_bytes().get(m.end()).is_some_and(|c| forbidden(*c))
             {
                 converted.push_str(m.as_str());
@@ -247,12 +298,18 @@ fn matching_blocks(a: &[&str], b: &[&str]) -> Vec<(usize, usize, usize)> {
     matching_blocks_autojunk(a, b, false)
 }
 
-pub fn matching_blocks_autojunk(a: &[&str], b: &[&str], autojunk: bool) -> Vec<(usize, usize, usize)> {
+pub fn matching_blocks_autojunk(
+    a: &[&str],
+    b: &[&str],
+    autojunk: bool,
+) -> Vec<(usize, usize, usize)> {
     let mut positions: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
     for (j, word) in b.iter().enumerate() {
         positions.entry(word).or_default().push(j);
     }
-    if autojunk && b.len() >= 200 { positions.retain(|_, locations| locations.len() <= b.len() / 100 + 1); }
+    if autojunk && b.len() >= 200 {
+        positions.retain(|_, locations| locations.len() <= b.len() / 100 + 1);
+    }
     let mut queue = vec![(0, a.len(), 0, b.len())];
     let mut blocks = Vec::new();
     while let Some((alo, ahi, blo, bhi)) = queue.pop() {
@@ -267,7 +324,11 @@ pub fn matching_blocks_autojunk(a: &[&str], b: &[&str], autojunk: bool) -> Vec<(
                 if j >= bhi {
                     break;
                 }
-                let k = 1 + j.checked_sub(1).and_then(|j| previous.get(&j)).copied().unwrap_or(0);
+                let k = 1 + j
+                    .checked_sub(1)
+                    .and_then(|j| previous.get(&j))
+                    .copied()
+                    .unwrap_or(0);
                 current.insert(j, k);
                 if k > size {
                     (best_i, best_j, size) = (i + 1 - k, j + 1 - k, k);
@@ -275,8 +336,14 @@ pub fn matching_blocks_autojunk(a: &[&str], b: &[&str], autojunk: bool) -> Vec<(
             }
             previous = current;
         }
-        while best_i > alo && best_j > blo && a[best_i - 1] == b[best_j - 1] { best_i -= 1; best_j -= 1; size += 1; }
-        while best_i + size < ahi && best_j + size < bhi && a[best_i + size] == b[best_j + size] { size += 1; }
+        while best_i > alo && best_j > blo && a[best_i - 1] == b[best_j - 1] {
+            best_i -= 1;
+            best_j -= 1;
+            size += 1;
+        }
+        while best_i + size < ahi && best_j + size < bhi && a[best_i + size] == b[best_j + size] {
+            size += 1;
+        }
         if size > 0 {
             blocks.push((best_i, best_j, size));
             if alo < best_i && blo < best_j {
@@ -290,7 +357,10 @@ pub fn matching_blocks_autojunk(a: &[&str], b: &[&str], autojunk: bool) -> Vec<(
     blocks.sort_unstable();
     let mut merged: Vec<(usize, usize, usize)> = Vec::new();
     for (i, j, n) in blocks {
-        if let Some((pi, pj, pn)) = merged.last_mut().filter(|(pi, pj, pn)| *pi + *pn == i && *pj + *pn == j) {
+        if let Some((pi, pj, pn)) = merged
+            .last_mut()
+            .filter(|(pi, pj, pn)| *pi + *pn == i && *pj + *pn == j)
+        {
             let _ = (pi, pj);
             *pn += n;
         } else {
@@ -312,10 +382,14 @@ fn same_line(old: &str, new: &str, old_symbol: bool, options: Options, score: &m
     }
     let mut ignore_last = false;
     if options.stack_differences {
-        if let (Some(old), Some(new)) = (stack_pattern().captures(old), stack_pattern().captures(new)) {
+        if let (Some(old), Some(new)) =
+            (stack_pattern().captures(old), stack_pattern().captures(new))
+        {
             let int = |s: &str| {
-                s.strip_prefix("0x")
-                    .map_or_else(|| s.parse::<u64>().unwrap(), |s| u64::from_str_radix(s, 16).unwrap())
+                s.strip_prefix("0x").map_or_else(
+                    || s.parse::<u64>().unwrap(),
+                    |s| u64::from_str_radix(s, 16).unwrap(),
+                )
             };
             score.stack += int(&old[1]).abs_diff(int(&new[1]));
             ignore_last = true;
@@ -332,12 +406,20 @@ fn same_line(old: &str, new: &str, old_symbol: bool, options: Options, score: &m
             }
         }
     }
-    score.regalloc += old.iter().zip(&new).filter(|(a, b)| a != b && !(old_symbol && b.contains('.'))).count() + old.len().abs_diff(new.len());
+    score.regalloc += old
+        .iter()
+        .zip(&new)
+        .filter(|(a, b)| a != b && !(old_symbol && b.contains('.')))
+        .count()
+        + old.len().abs_diff(new.len());
 }
 
 pub fn score_with(listing: &[String], draft: &[String], options: Options) -> Score {
     let (common, _) = crate::diff::compare_counts(listing, draft);
-    let mut result = Score { differ: listing.len() + draft.len() - 2 * common, ..Score::default() };
+    let mut result = Score {
+        differ: listing.len() + draft.len() - 2 * common,
+        ..Score::default()
+    };
     let lines = |rows: &[String]| {
         rows.iter()
             .map(|row| Line {
@@ -351,20 +433,42 @@ pub fn score_with(listing: &[String], draft: &[String], options: Options) -> Sco
 }
 
 fn prepared(rows: &[Line], options: Options) -> Vec<Line> {
-    let end = rows.iter().rposition(|s| mnemonic(&s.row) != "nop").map_or(0, |i| i + 1);
-    rows[..end].iter().map(|s| Line { row: normalize(&s.row, options), has_symbol: s.has_symbol }).collect()
+    let end = rows
+        .iter()
+        .rposition(|s| mnemonic(&s.row) != "nop")
+        .map_or(0, |i| i + 1);
+    rows[..end]
+        .iter()
+        .map(|s| Line {
+            row: normalize(&s.row, options),
+            has_symbol: s.has_symbol,
+        })
+        .collect()
 }
 
 /// Deduplication must retain operands the weighted search deliberately ignores.
 pub fn strict_assembly_key(rows: &[Line]) -> [u8; 32] {
     use sha2::{Digest, Sha256};
-    Sha256::digest(rows.iter().map(|s| s.row.as_str()).collect::<Vec<_>>().join("\n").as_bytes()).into()
+    Sha256::digest(
+        rows.iter()
+            .map(|s| s.row.as_str())
+            .collect::<Vec<_>>()
+            .join("\n")
+            .as_bytes(),
+    )
+    .into()
 }
 
 pub fn weighted(listing: &[Line], draft: &[Line], options: Options, result: &mut Score) {
-    *result = Score { differ: result.differ, ..Score::default() };
+    *result = Score {
+        differ: result.differ,
+        ..Score::default()
+    };
     let (old, new) = (prepared(listing, options), prepared(draft, options));
-    let (a, b) = (new.iter().map(|s| mnemonic(&s.row)).collect::<Vec<_>>(), old.iter().map(|s| mnemonic(&s.row)).collect::<Vec<_>>());
+    let (a, b) = (
+        new.iter().map(|s| mnemonic(&s.row)).collect::<Vec<_>>(),
+        old.iter().map(|s| mnemonic(&s.row)).collect::<Vec<_>>(),
+    );
     let blocks = matching_blocks(&a, &b);
     let mut unmatched: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
     let (mut a, mut b) = (0, 0);
@@ -376,7 +480,13 @@ pub fn weighted(listing: &[Line], draft: &[Line], options: Options, result: &mut
             unmatched.entry(&line.row).or_default().1 += 1;
         }
         for k in 0..n {
-            same_line(&old[j + k].row, &new[i + k].row, old[j + k].has_symbol, options, result);
+            same_line(
+                &old[j + k].row,
+                &new[i + k].row,
+                old[j + k].has_symbol,
+                options,
+                result,
+            );
         }
         (a, b) = (i + n, j + n);
     }
@@ -404,7 +514,15 @@ mod tests {
     /// The weighted search's view of the rows, as a hash.
     fn assembly_key(rows: &[Line], options: Options) -> [u8; 32] {
         use sha2::{Digest, Sha256};
-        Sha256::digest(prepared(rows, options).iter().map(|s| s.row.as_str()).collect::<Vec<_>>().join("\n").as_bytes()).into()
+        Sha256::digest(
+            prepared(rows, options)
+                .iter()
+                .map(|s| s.row.as_str())
+                .collect::<Vec<_>>()
+                .join("\n")
+                .as_bytes(),
+        )
+        .into()
     }
 
     #[test]
@@ -415,19 +533,26 @@ mod tests {
         let expected = parse_objdump(plain).unwrap();
         assert_eq!(reused, expected);
         assert_eq!(strict_assembly_key(&reused), strict_assembly_key(&expected));
-        for ambiguous in ["\t...\n", "  0:\tunknown raw\tmovs\tr0, #1\n", "  0:\t123\tmovs\tr0, #1\n"] {
+        for ambiguous in [
+            "\t...\n",
+            "  0:\tunknown raw\tmovs\tr0, #1\n",
+            "  0:\t123\tmovs\tr0, #1\n",
+        ] {
             assert!(without_raw_instructions(ambiguous).is_none(), "{ambiguous}");
         }
     }
 
     #[test]
     fn shared_disassembly_matches_legacy_thumb_arm_pools_and_zeros() {
-
         let work = tempfile::tempdir().unwrap();
         for (arm, zeros) in [(false, false), (false, true), (true, false), (true, true)] {
             let source = work.path().join(format!("probe-{arm}-{zeros}.s"));
             let object = source.with_extension("o");
-            let mode = if arm { ".arm\n.type Target, %function\n" } else { ".thumb\n.thumb_func\n" };
+            let mode = if arm {
+                ".arm\n.type Target, %function\n"
+            } else {
+                ".thumb\n.thumb_func\n"
+            };
             let body = if arm {
                 "push {lr}\nldr r0, .Lpool\ncmp r0, #0\nbeq .Lend\nbl Called\n.Lend:\npop {lr}\nbx lr\n"
             } else {
@@ -435,33 +560,77 @@ mod tests {
             };
             let padding = if zeros { ".space 16\n" } else { "" };
             std::fs::write(&source, format!(".syntax unified\n.text\n.global Target\n{mode}Target:\n{body}{padding}.align 2\n.Lpool:\n.word Data\n.word 0x12345678\n.size Target, .-Target\n")).unwrap();
-            crate::gba::process::run(&["arm-none-eabi-as", "-mcpu=arm7tdmi", "-o", &object.to_string_lossy(), &source.to_string_lossy()], crate::compile::root()).unwrap();
+            crate::gba::process::run(
+                &[
+                    "arm-none-eabi-as",
+                    "-mcpu=arm7tdmi",
+                    "-o",
+                    &object.to_string_lossy(),
+                    &source.to_string_lossy(),
+                ],
+                crate::compile::root(),
+            )
+            .unwrap();
             for symbol in [None, Some("Target")] {
                 let text = crate::diff::disassemble_text(&object, symbol).unwrap();
-                assert_eq!(without_raw_instructions(&text).is_none(), zeros, "arm={arm}, symbol={symbol:?}: {text}");
-                let legacy = (crate::diff::disassemble(&object, symbol).unwrap(), disassemble(&object, symbol).unwrap());
+                assert_eq!(
+                    without_raw_instructions(&text).is_none(),
+                    zeros,
+                    "arm={arm}, symbol={symbol:?}: {text}"
+                );
+                let legacy = (
+                    crate::diff::disassemble(&object, symbol).unwrap(),
+                    disassemble(&object, symbol).unwrap(),
+                );
                 let reused = disassemble_both(&object, symbol).unwrap();
-                assert_eq!(reused, legacy, "arm={arm}, zeros={zeros}, symbol={symbol:?}");
-                assert_eq!(strict_assembly_key(&reused.1), strict_assembly_key(&legacy.1));
-                assert!(reused.1.iter().any(|line| line.has_symbol && line.row.ends_with("Data")));
+                assert_eq!(
+                    reused, legacy,
+                    "arm={arm}, zeros={zeros}, symbol={symbol:?}"
+                );
+                assert_eq!(
+                    strict_assembly_key(&reused.1),
+                    strict_assembly_key(&legacy.1)
+                );
+                assert!(reused
+                    .1
+                    .iter()
+                    .any(|line| line.has_symbol && line.row.ends_with("Data")));
             }
         }
     }
 
     #[test]
     fn archive_identity_retains_operands_ignored_by_weighting() {
-        let rows = |row: &str| vec![Line { row: row.into(), has_symbol: false }];
-        for (old, new) in [("ldr\tr0, [sp, #0]", "ldr\tr0, [sp, #4]"), ("b\t10", "b\t12")] {
+        let rows = |row: &str| {
+            vec![Line {
+                row: row.into(),
+                has_symbol: false,
+            }]
+        };
+        for (old, new) in [
+            ("ldr\tr0, [sp, #0]", "ldr\tr0, [sp, #4]"),
+            ("b\t10", "b\t12"),
+        ] {
             let (old, new) = (rows(old), rows(new));
-            assert_eq!(assembly_key(&old, Options::default()), assembly_key(&new, Options::default()));
+            assert_eq!(
+                assembly_key(&old, Options::default()),
+                assembly_key(&new, Options::default())
+            );
             assert_ne!(strict_assembly_key(&old), strict_assembly_key(&new));
         }
         let old = rows("bx\tlr");
         let mut new = old.clone();
         new.extend(rows("nop"));
-        assert_eq!(assembly_key(&old, Options::default()), assembly_key(&new, Options::default()));
+        assert_eq!(
+            assembly_key(&old, Options::default()),
+            assembly_key(&new, Options::default())
+        );
         assert_ne!(strict_assembly_key(&old), strict_assembly_key(&new));
-        assert!(!Score { differ: 42, ..Score::default() }.is_zero());
+        assert!(!Score {
+            differ: 42,
+            ..Score::default()
+        }
+        .is_zero());
         assert!(Score::default().is_zero());
     }
 
@@ -470,11 +639,20 @@ mod tests {
         use sha2::{Digest, Sha256};
         for row in include_str!("c/fixtures/output-assembly.tsv").lines() {
             let c: Vec<_> = row.split('\t').collect();
-            let options = Options { stack_differences: c[0] == "1" };
+            let options = Options {
+                stack_differences: c[0] == "1",
+            };
             let raw = c[1].replace("\\n", "\n").replace("\\t", "\t");
             let expected = c[2].replace("\\n", "\n").replace("\\t", "\t");
             let lines = parse_objdump(&raw).unwrap();
-            assert_eq!(prepared(&lines, options).iter().map(|line| line.row.as_str()).collect::<Vec<_>>().join("\n"), expected);
+            assert_eq!(
+                prepared(&lines, options)
+                    .iter()
+                    .map(|line| line.row.as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+                expected
+            );
             let expected_hash: [u8; 32] = Sha256::digest(expected.as_bytes()).into();
             assert_eq!(assembly_key(&lines, options), expected_hash);
         }
@@ -484,12 +662,24 @@ mod tests {
     fn recorded_scores_with_each_stack_option() {
         for row in include_str!("c/fixtures/scoring.tsv").lines() {
             let c: Vec<_> = row.split('\t').collect();
-            let options = Options { stack_differences: c[0] == "1" };
+            let options = Options {
+                stack_differences: c[0] == "1",
+            };
             let decode = |s: &str| s.replace("\\t", "\t").replace("\\n", "\n");
-            let (old, new) = (parse_objdump(&decode(c[3])).unwrap(), parse_objdump(&decode(c[4])).unwrap());
+            let (old, new) = (
+                parse_objdump(&decode(c[3])).unwrap(),
+                parse_objdump(&decode(c[4])).unwrap(),
+            );
             let mut actual = Score::default();
             weighted(&old, &new, options, &mut actual);
-            assert_eq!(actual.weighted, c[2].parse::<u64>().unwrap(), "seed {} stack={} {:?}", c[1], c[0], actual);
+            assert_eq!(
+                actual.weighted,
+                c[2].parse::<u64>().unwrap(),
+                "seed {} stack={} {:?}",
+                c[1],
+                c[0],
+                actual
+            );
         }
     }
 
@@ -499,24 +689,69 @@ mod tests {
 
     #[test]
     fn count_only_strict_scoring_preserves_all_score_fields_and_options() {
-        let listing = rows(&["push {lr}", "ldr r0, [sp, #12]", "mov r0, r1", "mov r0, r1", "b.n +4", "bx lr", "nop"]);
+        let listing = rows(&[
+            "push {lr}",
+            "ldr r0, [sp, #12]",
+            "mov r0, r1",
+            "mov r0, r1",
+            "b.n +4",
+            "bx lr",
+            "nop",
+        ]);
         let drafts = [
             Vec::new(),
             listing.clone(),
-            rows(&["push {lr}", "ldr r0, [sp, #20]", "mov r0, r1", "mov r0, r1", "b.n +8", "bx lr"]),
-            rows(&["mov r0, r1", "push {lr}", "ldr r0, [sp, #12]", "mov r0, r1", "b.n +4", "bx lr", "nop"]),
-            rows(&["push {lr}", "ldr r0, [sp, #12]", "mov r0, r1", "bl", "b.n +4", "bx lr", "nop"]),
+            rows(&[
+                "push {lr}",
+                "ldr r0, [sp, #20]",
+                "mov r0, r1",
+                "mov r0, r1",
+                "b.n +8",
+                "bx lr",
+            ]),
+            rows(&[
+                "mov r0, r1",
+                "push {lr}",
+                "ldr r0, [sp, #12]",
+                "mov r0, r1",
+                "b.n +4",
+                "bx lr",
+                "nop",
+            ]),
+            rows(&[
+                "push {lr}",
+                "ldr r0, [sp, #12]",
+                "mov r0, r1",
+                "bl",
+                "b.n +4",
+                "bx lr",
+                "nop",
+            ]),
             rows(&["mov r0, r1", "mov r0, r1"]),
         ];
-        let lines = |rows: &[String]| rows.iter().map(|row| Line { row: row.clone(), has_symbol: false }).collect::<Vec<_>>();
+        let lines = |rows: &[String]| {
+            rows.iter()
+                .map(|row| Line {
+                    row: row.clone(),
+                    has_symbol: false,
+                })
+                .collect::<Vec<_>>()
+        };
         for draft in &drafts {
             for (listing, draft) in [(&listing, draft), (draft, &listing)] {
                 let (common, _) = crate::diff::compare(listing, draft);
                 for stack_differences in [false, true] {
                     let options = Options { stack_differences };
-                    let mut expected = Score { differ: listing.len() + draft.len() - 2 * common, ..Score::default() };
+                    let mut expected = Score {
+                        differ: listing.len() + draft.len() - 2 * common,
+                        ..Score::default()
+                    };
                     weighted(&lines(listing), &lines(draft), options, &mut expected);
-                    assert_eq!(score_with(listing, draft, options), expected, "{options:?} {listing:?} / {draft:?}");
+                    assert_eq!(
+                        score_with(listing, draft, options),
+                        expected,
+                        "{options:?} {listing:?} / {draft:?}"
+                    );
                 }
             }
         }
@@ -524,23 +759,66 @@ mod tests {
 
     #[test]
     fn identical_code_scores_zero_and_registers_cost_least() {
-        let listing = rows(&["push {r5, lr}", "ldrh r3, [r0, r1]", "lsrs r0, r3, #9", "bx r1"]);
+        let listing = rows(&[
+            "push {r5, lr}",
+            "ldrh r3, [r0, r1]",
+            "lsrs r0, r3, #9",
+            "bx r1",
+        ]);
         assert_eq!(score(&listing, &listing), Score::default());
-        let renamed = score(&listing, &rows(&["push {r5, lr}", "ldrh r2, [r0, r1]", "lsrs r0, r2, #9", "bx r1"]));
-        assert_eq!((renamed.weighted, renamed.regalloc, renamed.differ), (2 * REGALLOC, 2, 4));
-        let pool = score(&rows(&["ldr r0, [pc, #4]", "bx lr"]), &rows(&["ldr r0, [pc, #8]", "bx lr"]));
+        let renamed = score(
+            &listing,
+            &rows(&[
+                "push {r5, lr}",
+                "ldrh r2, [r0, r1]",
+                "lsrs r0, r2, #9",
+                "bx r1",
+            ]),
+        );
+        assert_eq!(
+            (renamed.weighted, renamed.regalloc, renamed.differ),
+            (2 * REGALLOC, 2, 4)
+        );
+        let pool = score(
+            &rows(&["ldr r0, [pc, #4]", "bx lr"]),
+            &rows(&["ldr r0, [pc, #8]", "bx lr"]),
+        );
         assert_eq!((pool.weighted, pool.regalloc), (REGALLOC, 1));
     }
 
     #[test]
     fn reorderings_cost_less_than_insertions_and_deletions() {
         let listing = rows(&["movs r0, #1", "adds r1, #2", "str r0, [r2]", "bx lr"]);
-        let moved = score(&listing, &rows(&["adds r1, #2", "movs r0, #1", "str r0, [r2]", "bx lr"]));
-        assert_eq!((moved.weighted, moved.reordered, moved.differ), (REORDER, 1, 2));
-        let renamed = score(&listing, &rows(&["adds r3, #2", "movs r0, #1", "str r0, [r2]", "bx lr"]));
-        assert_eq!((renamed.weighted, renamed.reordered), (REORDER + REGALLOC, 1));
-        let extra = score(&listing, &rows(&["movs r0, #1", "adds r1, #2", "mov r8, r0", "str r0, [r2]", "bx lr"]));
-        assert_eq!((extra.weighted, extra.inserted, extra.differ), (INSERT, 1, 1));
+        let moved = score(
+            &listing,
+            &rows(&["adds r1, #2", "movs r0, #1", "str r0, [r2]", "bx lr"]),
+        );
+        assert_eq!(
+            (moved.weighted, moved.reordered, moved.differ),
+            (REORDER, 1, 2)
+        );
+        let renamed = score(
+            &listing,
+            &rows(&["adds r3, #2", "movs r0, #1", "str r0, [r2]", "bx lr"]),
+        );
+        assert_eq!(
+            (renamed.weighted, renamed.reordered),
+            (REORDER + REGALLOC, 1)
+        );
+        let extra = score(
+            &listing,
+            &rows(&[
+                "movs r0, #1",
+                "adds r1, #2",
+                "mov r8, r0",
+                "str r0, [r2]",
+                "bx lr",
+            ]),
+        );
+        assert_eq!(
+            (extra.weighted, extra.inserted, extra.differ),
+            (INSERT, 1, 1)
+        );
         let missing = score(&listing, &rows(&["movs r0, #1", "str r0, [r2]", "bx lr"]));
         assert_eq!((missing.weighted, missing.deleted), (DELETE, 1));
         const { assert!(REGALLOC < REORDER && REORDER < INSERT) };
@@ -549,7 +827,11 @@ mod tests {
     #[test]
     fn unchanged_rows_keep_both_measurements_zero() {
         let listing = rows(&["movs r0, #1", "bx lr"]);
-        for draft in [rows(&["movs r0, #1", "bx lr"]), rows(&["movs r1, #1", "bx lr"]), rows(&["bx lr"])] {
+        for draft in [
+            rows(&["movs r0, #1", "bx lr"]),
+            rows(&["movs r1, #1", "bx lr"]),
+            rows(&["bx lr"]),
+        ] {
             let result = score(&listing, &draft);
             assert_eq!(result.weighted == 0, result.differ == 0);
         }
@@ -559,8 +841,19 @@ mod tests {
     fn penalties_count_operands_and_immediates_separately() {
         let result = score(&rows(&["adds r0, r1, #3"]), &rows(&["adds r2, r3, #4"]));
         assert_eq!((result.regalloc, result.weighted), (3, 15));
-        let result = score(&rows(&["mov r0, r1", "add r2, r3"]), &rows(&["add r2, r3", "mov r4, r1"]));
-        assert_eq!((result.weighted, result.inserted, result.deleted, result.reordered), (200, 1, 1, 0));
+        let result = score(
+            &rows(&["mov r0, r1", "add r2, r3"]),
+            &rows(&["add r2, r3", "mov r4, r1"]),
+        );
+        assert_eq!(
+            (
+                result.weighted,
+                result.inserted,
+                result.deleted,
+                result.reordered
+            ),
+            (200, 1, 1, 0)
+        );
     }
 
     #[test]
@@ -569,15 +862,30 @@ mod tests {
         let new = rows(&["ldr r0, [sp, #20]", "b.n +8"]);
         let result = score(&old, &new);
         assert_eq!((result.weighted, result.stack), (0, 0));
-        assert_ne!(result.differ, 0, "weighted zero must not be presented as byte identity");
-        let result = score_with(&old, &new, Options { stack_differences: true });
+        assert_ne!(
+            result.differ, 0,
+            "weighted zero must not be presented as byte identity"
+        );
+        let result = score_with(
+            &old,
+            &new,
+            Options {
+                stack_differences: true,
+            },
+        );
         assert_eq!((result.weighted, result.stack), (8, 8));
     }
 
     #[test]
     fn only_discards_trailing_nops() {
-        assert_eq!(score(&rows(&["mov r0, r1", "nop"]), &rows(&["mov r0, r1"])).weighted, 0);
-        assert_eq!(score(&rows(&["nop", "mov r0, r1"]), &rows(&["mov r0, r1"])).weighted, DELETE);
+        assert_eq!(
+            score(&rows(&["mov r0, r1", "nop"]), &rows(&["mov r0, r1"])).weighted,
+            0
+        );
+        assert_eq!(
+            score(&rows(&["nop", "mov r0, r1"]), &rows(&["mov r0, r1"])).weighted,
+            DELETE
+        );
     }
 
     #[test]
@@ -592,13 +900,19 @@ mod tests {
         weighted(&target, &candidate, Options::default(), &mut score);
         assert_eq!(score.weighted, 0);
         weighted(&candidate, &target, Options::default(), &mut score);
-        assert_eq!(score.weighted, REGALLOC, "symbol wildcard is directional, in this scoring direction");
+        assert_eq!(
+            score.weighted, REGALLOC,
+            "symbol wildcard is directional, in this scoring direction"
+        );
         let wrong_word = parse_objdump("  0:\tbl\t4 <f>\n  0: R_ARM_THM_CALL Call\n  4:\t.word\t0x00000000\n  4: R_ARM_ABS32 Other\n").unwrap();
         weighted(&target, &wrong_word, Options::default(), &mut score);
         assert_eq!(score.weighted, REGALLOC, "literal words keep their symbols");
         let wrong_call = parse_objdump("  0:\tbl\t4 <f>\n  0: R_ARM_THM_CALL Other\n  4:\t.word\t0x00000000\n  4: R_ARM_ABS32 Data\n").unwrap();
         weighted(&target, &wrong_call, Options::default(), &mut score);
-        assert_eq!(score.weighted, 0, "call targets are ignored as well as branch destinations");
+        assert_eq!(
+            score.weighted, 0,
+            "call targets are ignored as well as branch destinations"
+        );
     }
 
     #[test]
@@ -616,8 +930,14 @@ mod tests {
 
     #[test]
     fn mnemonic_alignment_prefers_the_earliest_candidate_tie() {
-        assert_eq!(matching_blocks(&["a", "b", "a"], &["b", "a", "b"]), [(0, 1, 2), (3, 3, 0)]);
+        assert_eq!(
+            matching_blocks(&["a", "b", "a"], &["b", "a", "b"]),
+            [(0, 1, 2), (3, 3, 0)]
+        );
         assert_eq!(matching_blocks(&[], &["a"]), [(0, 1, 0)]);
-        assert_eq!(matching_blocks(&["a", "b", "c"], &["a", "x", "c"]), [(0, 0, 1), (2, 2, 1), (3, 3, 0)]);
+        assert_eq!(
+            matching_blocks(&["a", "b", "c"], &["a", "x", "c"]),
+            [(0, 0, 1), (2, 2, 1), (3, 3, 0)]
+        );
     }
 }

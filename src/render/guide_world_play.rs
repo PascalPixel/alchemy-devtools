@@ -75,9 +75,15 @@ impl<'a> Guide<'a> {
     }
 
     /// Writes `frames` as `file` under the output folder, making its folder.
-    pub(super) fn world_gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
+    pub(super) fn world_gif(
+        &mut self,
+        file: &str,
+        frames: &[Vec<u16>],
+        what: &str,
+    ) -> Result<(), String> {
         if let Some(parent) = Path::new(file).parent() {
-            std::fs::create_dir_all(self.out.join(parent)).map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
+            std::fs::create_dir_all(self.out.join(parent))
+                .map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
         }
         self.guide_gif(file, frames, what)
     }
@@ -90,7 +96,10 @@ impl<'a> Guide<'a> {
         }
         let mut entered = self.enter_first_visit(place, of)?;
         if !set.is_empty() {
-            let flags = set.iter().map(|n| self.flag(n)).collect::<Result<Vec<u16>, String>>()?;
+            let flags = set
+                .iter()
+                .map(|n| self.flag(n))
+                .collect::<Result<Vec<u16>, String>>()?;
             entered.field.load(&entered.placed);
             for f in flags {
                 entered.field.set_flag(f, true);
@@ -279,7 +288,10 @@ impl<'a> Guide<'a> {
     /// Presses A and keeps every frame until the talk or search it starts
     /// is over and the player has control again, pressing A through each
     /// page that waits.
-    pub(super) fn talk_through(field: &mut Field, frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
+    pub(super) fn talk_through(
+        field: &mut Field,
+        frames: &mut Vec<Vec<u16>>,
+    ) -> Result<(), String> {
         Self::hold(field, KEY_A, 3, frames)?;
         // The field sequence stops stepping while the talk runs.
         let (mut last, mut still, mut talking, mut waited) = (field.steps(), 0, false, 0);
@@ -312,7 +324,15 @@ impl<'a> Guide<'a> {
     /// wooden box...` and `but didn't find anything.`, the lines every map
     /// shares.
     fn wooden_box(&mut self) -> Result<(), String> {
-        let play = Play { file: "world/wooden-box.gif", place: VALE, of: 0, set: &[], stand: Some((152, 1226, NORTH)), path: &[(0, 15), (KEY_UP, 8), (0, 15)], what: "" };
+        let play = Play {
+            file: "world/wooden-box.gif",
+            place: VALE,
+            of: 0,
+            set: &[],
+            stand: Some((152, 1226, NORTH)),
+            path: &[(0, 15), (KEY_UP, 8), (0, 15)],
+            what: "",
+        };
         let (mut entered, mut frames) = self.start(&play)?;
         Self::talk_through(&mut entered.field, &mut frames)?;
         Self::hold(&mut entered.field, 0, 20, &mut frames)?;
@@ -322,13 +342,25 @@ impl<'a> Guide<'a> {
     /// Talking to the young man who welcomes the party to Vault, then
     /// walking on: the walk stops for the talk and starts again after it.
     fn talk_walk(&mut self) -> Result<(), String> {
-        let play = Play { file: "field/talk-walk.gif", place: VAULT, of: VAULT.0, set: &[], stand: Some((381, 380, NORTH)), path: &[(0, 10), (KEY_UP, 20), (0, 10)], what: "" };
+        let play = Play {
+            file: "field/talk-walk.gif",
+            place: VAULT,
+            of: VAULT.0,
+            set: &[],
+            stand: Some((381, 380, NORTH)),
+            path: &[(0, 10), (KEY_UP, 20), (0, 10)],
+            what: "",
+        };
         let (mut entered, mut frames) = self.start(&play)?;
         Self::talk_through(&mut entered.field, &mut frames)?;
         Self::hold(&mut entered.field, 0, 10, &mut frames)?;
         Self::hold(&mut entered.field, KEY_LEFT, 60, &mut frames)?;
         Self::hold(&mut entered.field, 0, 10, &mut frames)?;
-        self.world_gif(play.file, &frames, "talking to a villager in Vault and walking on")
+        self.world_gif(
+            play.file,
+            &frames,
+            "talking to a villager in Vault and walking on",
+        )
     }
 
     /// The mayor of Vault talked to twice in his house on the party's
@@ -337,7 +369,15 @@ impl<'a> Guide<'a> {
     /// FLAG_VAULT_REVISIT_ISAAC_WELCOMED_BACK is clear), the second he only
     /// warns of the thieves (LogRoomsB_WarnOfThievesRevenge).
     fn talk_twice(&mut self) -> Result<(), String> {
-        let play = Play { file: "map/talk-twice.gif", place: VAULT_HOUSES_REVISIT, of: VAULT_HOUSES_REVISIT.0, set: &[], stand: Some((510, 452, EAST)), path: &[(0, 15)], what: "" };
+        let play = Play {
+            file: "map/talk-twice.gif",
+            place: VAULT_HOUSES_REVISIT,
+            of: VAULT_HOUSES_REVISIT.0,
+            set: &[],
+            stand: Some((510, 452, EAST)),
+            path: &[(0, 15)],
+            what: "",
+        };
         let (mut entered, mut frames) = self.start(&play)?;
         Self::talk_through(&mut entered.field, &mut frames)?;
         Self::hold(&mut entered.field, 0, 30, &mut frames)?;
@@ -368,7 +408,11 @@ impl<'a> Guide<'a> {
         field.hold(0);
         let at = at.ok_or("no battle came on the world map")?;
         Self::hold(field, 0, 240, &mut frames)?;
-        self.world_gif("world/world-map-battle.gif", &frames[at.saturating_sub(150)..], "a random battle on the world map")
+        self.world_gif(
+            "world/world-map-battle.gif",
+            &frames[at.saturating_sub(150)..],
+            "a random battle on the world map",
+        )
     }
 
     /// A random battle in Goma Cave fought to its end with A, and the cave
@@ -380,7 +424,8 @@ impl<'a> Guide<'a> {
         let mut entered = self.enter_goma_cave(place)?;
         let field = &mut entered.field;
         let mut walk = Vec::new();
-        let at = Self::walk_stretch(field, &stretch, 80, &mut walk, &mut 0, &mut |_| {})?.ok_or("no battle came")?;
+        let at = Self::walk_stretch(field, &stretch, 80, &mut walk, &mut 0, &mut |_| {})?
+            .ok_or("no battle came")?;
         let before = walk[at.saturating_sub(60)..].to_vec();
         let mut frames = Vec::new();
         let mut back = None;
@@ -408,24 +453,51 @@ impl<'a> Guide<'a> {
         Self::hold(field, stretch.keys[0], 40, &mut frames)?;
         // Isaac's and Garet's last swings, for the sprites' guide.
         let swings = back.saturating_sub(300).max(120);
-        self.world_gif("field/battle-swing.gif", &frames[swings..(swings + 150).min(back)], "the last swings of a Goma Cave battle")?;
+        self.world_gif(
+            "field/battle-swing.gif",
+            &frames[swings..(swings + 150).min(back)],
+            "the last swings of a Goma Cave battle",
+        )?;
         // The walk and the battle's opening, then, cut, its last ten
         // seconds and the cave again.
         let mut kept = before;
         kept.extend_from_slice(&frames[..120.min(back)]);
         kept.extend_from_slice(&frames[back.saturating_sub(300).max(120)..]);
-        self.world_gif("overworld/battle-return.gif", &kept, "a Goma Cave battle's end and the cave again")
+        self.world_gif(
+            "overworld/battle-return.gif",
+            &kept,
+            "a Goma Cave battle's end and the cave again",
+        )
     }
 
     /// Move cast in Vale with nothing ahead: the hand appears and pushes,
     /// and nothing moves, since no trigger answers it there.
     fn move_nothing(&mut self) -> Result<(), String> {
-        let play = Play { file: "overworld/move-nothing.gif", place: VALE, of: 0, set: &[], stand: Some((300, 470, EAST)), path: &[(0, 10)], what: "" };
+        let play = Play {
+            file: "overworld/move-nothing.gif",
+            place: VALE,
+            of: 0,
+            set: &[],
+            stand: Some((300, 470, EAST)),
+            path: &[(0, 10)],
+            what: "",
+        };
         let (mut entered, mut frames) = self.start(&play)?;
         let field = &mut entered.field;
         let ability = super::source::ability_id("ABILITY_MOVE")?;
-        let at = field.abilities(0)?.iter().position(|&a| a == ability).ok_or("Isaac has no Move here")?;
-        let mut path = vec![(KEY_A, 3), (0, 50), (KEY_A, 3), (0, 50), (KEY_A, 3), (0, 50)];
+        let at = field
+            .abilities(0)?
+            .iter()
+            .position(|&a| a == ability)
+            .ok_or("Isaac has no Move here")?;
+        let mut path = vec![
+            (KEY_A, 3),
+            (0, 50),
+            (KEY_A, 3),
+            (0, 50),
+            (KEY_A, 3),
+            (0, 50),
+        ];
         for _ in 0..at {
             path.extend([(KEY_DOWN, 3), (0, 15)]);
         }
@@ -438,6 +510,10 @@ impl<'a> Guide<'a> {
         let from = frames.len().saturating_sub(20);
         Self::hold(field, KEY_A, 3, &mut frames)?;
         Self::hold(field, 0, 170, &mut frames)?;
-        self.world_gif(play.file, &frames[from..], "Move cast in Vale with nothing ahead")
+        self.world_gif(
+            play.file,
+            &frames[from..],
+            "Move cast in Vale with nothing ahead",
+        )
     }
 }

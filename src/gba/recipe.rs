@@ -16,8 +16,20 @@ use std::path::{Path, PathBuf};
 /// command-line variables. The makefiles `-W` would make out of date are
 /// passed as `-o`, since make remakes the makefiles it includes even under
 /// `-n`; `-W` makes the object out of date whether or not it was built.
-pub(crate) fn recipe(root: &Path, build: &Path, variables: &[String], source: &str, object: &str) -> Result<Vec<Vec<String>>, String> {
-    recipes(root, build, variables, &[(source.to_string(), object.to_string())])?.remove(0)
+pub(crate) fn recipe(
+    root: &Path,
+    build: &Path,
+    variables: &[String],
+    source: &str,
+    object: &str,
+) -> Result<Vec<Vec<String>>, String> {
+    recipes(
+        root,
+        build,
+        variables,
+        &[(source.to_string(), object.to_string())],
+    )?
+    .remove(0)
 }
 
 /// The recipe of each (source, object) in `wanted`, as `recipe` gives one,
@@ -27,7 +39,12 @@ pub(crate) fn recipe(root: &Path, build: &Path, variables: &[String], source: &s
 /// make's own messages ("make: `X' is up to date.") belong to none. An
 /// object asked for twice is asked for once. When make fails on one of
 /// them, each is asked for on its own, so one error stays its object's.
-pub(crate) fn recipes(root: &Path, build: &Path, variables: &[String], wanted: &[(String, String)]) -> Result<Vec<Result<Vec<Vec<String>>, String>>, String> {
+pub(crate) fn recipes(
+    root: &Path,
+    build: &Path,
+    variables: &[String],
+    wanted: &[(String, String)],
+) -> Result<Vec<Result<Vec<Vec<String>>, String>>, String> {
     let mut distinct: Vec<&(String, String)> = Vec::new();
     for pair in wanted {
         if !distinct.contains(&pair) {
@@ -37,7 +54,10 @@ pub(crate) fn recipes(root: &Path, build: &Path, variables: &[String], wanted: &
     if distinct.len() < wanted.len() {
         let once: Vec<(String, String)> = distinct.iter().map(|&pair| pair.clone()).collect();
         let found = recipes(root, build, variables, &once)?;
-        return Ok(wanted.iter().map(|pair| found[once.iter().position(|other| other == pair).unwrap_or(0)].clone()).collect());
+        return Ok(wanted
+            .iter()
+            .map(|pair| found[once.iter().position(|other| other == pair).unwrap_or(0)].clone())
+            .collect());
     }
     let mut arguments = vec!["make".to_string(), "-n".into()];
     let mut held_all: Vec<String> = Vec::new();
@@ -59,7 +79,12 @@ pub(crate) fn recipes(root: &Path, build: &Path, variables: &[String], wanted: &
     let printed = match crate::gba::process::run(&arguments, root) {
         Ok(printed) => printed,
         Err(error) if wanted.len() == 1 => return Err(error),
-        Err(_) => return Ok(wanted.iter().map(|(source, object)| recipe(root, build, variables, source, object)).collect()),
+        Err(_) => {
+            return Ok(wanted
+                .iter()
+                .map(|(source, object)| recipe(root, build, variables, source, object))
+                .collect())
+        }
     };
     let mut shell: Option<Vec<String>> = None;
     let mut found: Vec<Vec<Vec<String>>> = vec![Vec::new(); wanted.len()];
@@ -72,14 +97,22 @@ pub(crate) fn recipes(root: &Path, build: &Path, variables: &[String], wanted: &
             let outputs = [".o", ".s", ".i"].map(|extension| format!("{base}{extension}"));
             match &words {
                 Ok(words) => {
-                    let ours = words.iter().any(|word| word == source || outputs.iter().any(|output| word.contains(output.as_str())));
+                    let ours = words.iter().any(|word| {
+                        word == source
+                            || outputs.iter().any(|output| word.contains(output.as_str()))
+                    });
                     if ours && !words.is_empty() {
                         found[index].push(words.clone());
                     }
                 }
-                Err(_) if mentions(line, source) || outputs.iter().any(|output| line.contains(output.as_str())) => {
+                Err(_)
+                    if mentions(line, source)
+                        || outputs.iter().any(|output| line.contains(output.as_str())) =>
+                {
                     if shell.is_none() {
-                        shell = Some(make_shell(root, variables).map_err(|error| format!("make's recipe for {object} needs its shell: {error}"))?);
+                        shell = Some(make_shell(root, variables).map_err(|error| {
+                            format!("make's recipe for {object} needs its shell: {error}")
+                        })?);
                     }
                     let mut step = shell.clone().unwrap_or_default();
                     step.push(format!("cd {} && {line}", quote(&root.to_string_lossy())));
@@ -92,7 +125,13 @@ pub(crate) fn recipes(root: &Path, build: &Path, variables: &[String], wanted: &
     Ok(found
         .into_iter()
         .zip(wanted)
-        .map(|(steps, (_, object))| if steps.is_empty() { Err(format!("make printed no recipe for {object}")) } else { Ok(steps) })
+        .map(|(steps, (_, object))| {
+            if steps.is_empty() {
+                Err(format!("make printed no recipe for {object}"))
+            } else {
+                Ok(steps)
+            }
+        })
         .collect())
 }
 
@@ -101,7 +140,11 @@ pub(crate) fn recipes(root: &Path, build: &Path, variables: &[String], wanted: &
 fn message(line: &str) -> bool {
     let (program, _) = line.split_once(": ").unwrap_or(("", ""));
     let program = program.split_once('[').map_or(program, |(name, _)| name);
-    !program.contains(' ') && program.rsplit('/').next().is_some_and(|name| name.ends_with("make"))
+    !program.contains(' ')
+        && program
+            .rsplit('/')
+            .next()
+            .is_some_and(|name| name.ends_with("make"))
 }
 
 /// The makefiles make would remake under `-n` once `-W` makes the source
@@ -116,7 +159,15 @@ fn held(root: &Path, build: &Path, object: &str) -> Result<Vec<String>, String> 
         .filter(|path| path.extension().is_some_and(|extension| extension == "mk"))
         .collect();
     included.sort();
-    let mut held: Vec<String> = included.iter().map(|path| path.strip_prefix(root).unwrap_or(path).to_string_lossy().into_owned()).collect();
+    let mut held: Vec<String> = included
+        .iter()
+        .map(|path| {
+            path.strip_prefix(root)
+                .unwrap_or(path)
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
     let dependencies = format!("{}.d", object.strip_suffix(".o").unwrap_or(object));
     if root.join(&dependencies).is_file() {
         held.push(dependencies);
@@ -129,18 +180,39 @@ fn held(root: &Path, build: &Path, object: &str) -> Result<Vec<String>, String> 
 /// from a rule of our own read after the project's makefile, as make 3.81
 /// has no --eval.
 fn make_shell(root: &Path, variables: &[String]) -> Result<Vec<String>, String> {
-    let makefile = ["GNUmakefile", "makefile", "Makefile"].into_iter().find(|name| root.join(name).is_file()).ok_or("no makefile")?;
-    let mut probe = tempfile::Builder::new().prefix("devtools-shell").suffix(".mk").tempfile().map_err(|error| error.to_string())?;
+    let makefile = ["GNUmakefile", "makefile", "Makefile"]
+        .into_iter()
+        .find(|name| root.join(name).is_file())
+        .ok_or("no makefile")?;
+    let mut probe = tempfile::Builder::new()
+        .prefix("devtools-shell")
+        .suffix(".mk")
+        .tempfile()
+        .map_err(|error| error.to_string())?;
     use std::io::Write;
     probe
         .write_all(b".PHONY: devtools-shell\ndevtools-shell:\n\t@echo devtools-shell $(SHELL) devtools-flags $(or $(.SHELLFLAGS),-c)\n")
         .map_err(|error| error.to_string())?;
-    let mut arguments = vec!["make".to_string(), "-n".into(), "-f".into(), makefile.into(), "-f".into(), probe.path().to_string_lossy().into_owned()];
+    let mut arguments = vec![
+        "make".to_string(),
+        "-n".into(),
+        "-f".into(),
+        makefile.into(),
+        "-f".into(),
+        probe.path().to_string_lossy().into_owned(),
+    ];
     arguments.extend(variables.iter().cloned());
     arguments.push("devtools-shell".into());
     let printed = crate::gba::process::run(&arguments, root)?;
-    let line = printed.lines().find(|line| line.starts_with("echo devtools-shell ")).ok_or("make printed no SHELL")?;
-    let mut words = words(line)?.into_iter().skip(2).filter(|word| word != "devtools-flags").collect::<Vec<_>>();
+    let line = printed
+        .lines()
+        .find(|line| line.starts_with("echo devtools-shell "))
+        .ok_or("make printed no SHELL")?;
+    let mut words = words(line)?
+        .into_iter()
+        .skip(2)
+        .filter(|word| word != "devtools-flags")
+        .collect::<Vec<_>>();
     if words.len() < 2 {
         words = vec!["/bin/sh".into(), "-c".into()];
     }
@@ -150,19 +222,26 @@ fn make_shell(root: &Path, variables: &[String]) -> Result<Vec<String>, String> 
 /// Whether `text` names `path` as a whole path, not as the tail or head of
 /// a longer one.
 fn mentions(text: &str, path: &str) -> bool {
-    !path.is_empty() && text.match_indices(path).any(|(at, _)| bounded(text, at, path.len()))
+    !path.is_empty()
+        && text
+            .match_indices(path)
+            .any(|(at, _)| bounded(text, at, path.len()))
 }
 
 fn bounded(text: &str, at: usize, length: usize) -> bool {
     let path_char = |c: char| c.is_alphanumeric() || matches!(c, '_' | '.' | '/' | '-' | '+');
-    !text[..at].chars().next_back().is_some_and(path_char) && !text[at + length..].chars().next().is_some_and(path_char)
+    !text[..at].chars().next_back().is_some_and(path_char)
+        && !text[at + length..].chars().next().is_some_and(path_char)
 }
 
 /// `text` with every whole-path mention of `from` made `to`.
 fn replace_path(text: &str, from: &str, to: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut last = 0;
-    for (at, _) in text.match_indices(from).filter(|&(at, _)| bounded(text, at, from.len())) {
+    for (at, _) in text
+        .match_indices(from)
+        .filter(|&(at, _)| bounded(text, at, from.len()))
+    {
         out += &text[last..at];
         out += to;
         last = at + from.len();
@@ -172,7 +251,12 @@ fn replace_path(text: &str, from: &str, to: &str) -> String {
 
 /// A word as the shell reads it back unchanged.
 fn quote(word: &str) -> String {
-    if !word.is_empty() && word.chars().all(|c| c.is_alphanumeric() || matches!(c, '_' | '.' | '/' | '-' | '+' | ',' | '=' | ':' | '@' | '%')) {
+    if !word.is_empty()
+        && word.chars().all(|c| {
+            c.is_alphanumeric()
+                || matches!(c, '_' | '.' | '/' | '-' | '+' | ',' | '=' | ':' | '@' | '%')
+        })
+    {
         return word.to_string();
     }
     format!("'{}'", word.replace('\'', r"'\''"))
@@ -181,7 +265,10 @@ fn quote(word: &str) -> String {
 /// Whether a step is a recipe line run through make's shell: its last word
 /// is the line, run from the checkout.
 pub(crate) fn is_shell(step: &[String]) -> bool {
-    step.len() > 1 && step.last().is_some_and(|line| line.starts_with("cd ") && line.contains(" && "))
+    step.len() > 1
+        && step
+            .last()
+            .is_some_and(|line| line.starts_with("cd ") && line.contains(" && "))
 }
 
 /// A recipe line split as the shell splits it. Quotes and backslashes are
@@ -235,16 +322,39 @@ fn words(line: &str) -> Result<Vec<String>, String> {
 /// source, also as the `-dumpbase` name, and every relative path the recipe
 /// names under `root` becomes absolute, so the steps run from any folder.
 /// A line run through the shell has the same paths replaced in its text.
-pub(crate) fn retarget(steps: &[Vec<String>], root: &Path, source: &str, object: &str, draft: &Path, output: &Path) -> Vec<Vec<String>> {
+pub(crate) fn retarget(
+    steps: &[Vec<String>],
+    root: &Path,
+    source: &str,
+    object: &str,
+    draft: &Path,
+    output: &Path,
+) -> Vec<Vec<String>> {
     let base = object.strip_suffix(".o").unwrap_or(object);
-    let outputs = ["o", "s", "i"].map(|extension| (format!("{base}.{extension}"), output.with_extension(extension).to_string_lossy().into_owned()));
-    let draft_name = draft.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
+    let outputs = ["o", "s", "i"].map(|extension| {
+        (
+            format!("{base}.{extension}"),
+            output
+                .with_extension(extension)
+                .to_string_lossy()
+                .into_owned(),
+        )
+    });
+    let draft_name = draft
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
     // A search folder is a path whether or not it exists; another word is
     // one when it names something under the root.
     let absolute = |word: &str| -> String {
         for prefix in ["-I", "-B", "-L", ""] {
-            let Some(rest) = word.strip_prefix(prefix) else { continue };
-            if rest.is_empty() || rest.starts_with(['-', '/']) || (prefix.is_empty() && !root.join(rest).exists()) {
+            let Some(rest) = word.strip_prefix(prefix) else {
+                continue;
+            };
+            if rest.is_empty()
+                || rest.starts_with(['-', '/'])
+                || (prefix.is_empty() && !root.join(rest).exists())
+            {
                 continue;
             }
             return format!("{prefix}{}", root.join(rest).display());
@@ -256,7 +366,11 @@ pub(crate) fn retarget(steps: &[Vec<String>], root: &Path, source: &str, object:
         .map(|step| {
             if is_shell(step) {
                 let mut step = step.clone();
-                let mut line = replace_path(&step.pop().unwrap_or_default(), source, &quote(&draft.to_string_lossy()));
+                let mut line = replace_path(
+                    &step.pop().unwrap_or_default(),
+                    source,
+                    &quote(&draft.to_string_lossy()),
+                );
                 for (from, to) in &outputs {
                     line = replace_path(&line, from, &quote(to));
                 }
@@ -266,7 +380,9 @@ pub(crate) fn retarget(steps: &[Vec<String>], root: &Path, source: &str, object:
             let mut retargeted: Vec<String> = Vec::with_capacity(step.len());
             for word in step {
                 let after_dumpbase = retargeted.last().is_some_and(|last| last == "-dumpbase");
-                let written = outputs.iter().find(|(from, _)| word.contains(from.as_str()));
+                let written = outputs
+                    .iter()
+                    .find(|(from, _)| word.contains(from.as_str()));
                 retargeted.push(if word == source {
                     draft.to_string_lossy().into_owned()
                 } else if let Some((from, to)) = written {
@@ -288,10 +404,22 @@ mod tests {
 
     #[test]
     fn recipe_lines_split_as_the_shell_splits_them() {
-        assert_eq!(words("cpp0 -lang-c '-Acpu(arm)' \"-DNAME=\\\"x y\\\"\" a\\ b").unwrap(),
-            ["cpp0", "-lang-c", "-Acpu(arm)", "-DNAME=\"x y\"", "a b"]);
-        assert_eq!(words("  as  -o x.o\tx.s ").unwrap(), ["as", "-o", "x.o", "x.s"]);
-        for line in ["cpp x.c | cc1", "as x.s && ld", "cc1 -o $@", "echo `date`", "cc1 > x.s", "cc1 'open"] {
+        assert_eq!(
+            words("cpp0 -lang-c '-Acpu(arm)' \"-DNAME=\\\"x y\\\"\" a\\ b").unwrap(),
+            ["cpp0", "-lang-c", "-Acpu(arm)", "-DNAME=\"x y\"", "a b"]
+        );
+        assert_eq!(
+            words("  as  -o x.o\tx.s ").unwrap(),
+            ["as", "-o", "x.o", "x.s"]
+        );
+        for line in [
+            "cpp x.c | cc1",
+            "as x.s && ld",
+            "cc1 -o $@",
+            "echo `date`",
+            "cc1 > x.s",
+            "cc1 'open",
+        ] {
             assert!(words(line).is_err(), "{line}");
         }
     }
@@ -302,16 +430,38 @@ mod tests {
         std::fs::create_dir_all(root.path().join("include/sub")).unwrap();
         std::fs::create_dir_all(root.path().join("tools")).unwrap();
         let steps = vec![
-            "tools/cc -Btools/ -O2 -Iinclude -Iinclude/sub -Imissing -S -o build/src/a.s src/a.c".split(' ').map(String::from).collect(),
-            "tools/cc1 build/src/a.i -dumpbase a.c -o build/src/a.s".split(' ').map(String::from).collect::<Vec<_>>(),
-            "as -mthumb -o build/src/a.o build/src/a.s".split(' ').map(String::from).collect(),
+            "tools/cc -Btools/ -O2 -Iinclude -Iinclude/sub -Imissing -S -o build/src/a.s src/a.c"
+                .split(' ')
+                .map(String::from)
+                .collect(),
+            "tools/cc1 build/src/a.i -dumpbase a.c -o build/src/a.s"
+                .split(' ')
+                .map(String::from)
+                .collect::<Vec<_>>(),
+            "as -mthumb -o build/src/a.o build/src/a.s"
+                .split(' ')
+                .map(String::from)
+                .collect(),
         ];
         let output = Path::new("/work/run-1/draft.o");
         let r = root.path().display();
-        let aimed = retarget(&steps, root.path(), "src/a.c", "build/src/a.o", Path::new("/drafts/draft.c"), output);
+        let aimed = retarget(
+            &steps,
+            root.path(),
+            "src/a.c",
+            "build/src/a.o",
+            Path::new("/drafts/draft.c"),
+            output,
+        );
         assert_eq!(aimed[0].join(" "), format!("tools/cc -B{r}/tools/ -O2 -I{r}/include -I{r}/include/sub -I{r}/missing -S -o /work/run-1/draft.s /drafts/draft.c"));
-        assert_eq!(aimed[1].join(" "), "tools/cc1 /work/run-1/draft.i -dumpbase draft.c -o /work/run-1/draft.s");
-        assert_eq!(aimed[2].join(" "), "as -mthumb -o /work/run-1/draft.o /work/run-1/draft.s");
+        assert_eq!(
+            aimed[1].join(" "),
+            "tools/cc1 /work/run-1/draft.i -dumpbase draft.c -o /work/run-1/draft.s"
+        );
+        assert_eq!(
+            aimed[2].join(" "),
+            "as -mthumb -o /work/run-1/draft.o /work/run-1/draft.s"
+        );
     }
 
     /// Two objects from one make: each takes only its own lines, one asked
@@ -322,17 +472,37 @@ mod tests {
         let root = directory.path();
         std::fs::create_dir_all(root.join("src")).unwrap();
         std::fs::create_dir_all(root.join("build/src")).unwrap();
-        std::fs::write(root.join("Makefile"), "build/src/%.o: src/%.c\n\tcc -c -o $@ $<\n").unwrap();
+        std::fs::write(
+            root.join("Makefile"),
+            "build/src/%.o: src/%.c\n\tcc -c -o $@ $<\n",
+        )
+        .unwrap();
         for name in ["a", "b"] {
             std::fs::write(root.join(format!("src/{name}.c")), "int x;\n").unwrap();
         }
         let pair = |name: &str| (format!("src/{name}.c"), format!("build/src/{name}.o"));
-        let found = recipes(root, Path::new("build"), &[], &[pair("a"), pair("b"), pair("a")]).unwrap();
-        let line = |steps: &Result<Vec<Vec<String>>, String>| steps.as_ref().unwrap().iter().map(|step| step.join(" ")).collect::<Vec<_>>();
+        let found = recipes(
+            root,
+            Path::new("build"),
+            &[],
+            &[pair("a"), pair("b"), pair("a")],
+        )
+        .unwrap();
+        let line = |steps: &Result<Vec<Vec<String>>, String>| {
+            steps
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|step| step.join(" "))
+                .collect::<Vec<_>>()
+        };
         assert_eq!(line(&found[0]), ["cc -c -o build/src/a.o src/a.c"]);
         assert_eq!(line(&found[1]), ["cc -c -o build/src/b.o src/b.c"]);
         assert_eq!(line(&found[2]), line(&found[0]));
-        assert!(message("make: `build/src/a.o' is up to date.") && message("/usr/bin/gmake[1]: Nothing to be done for `x'."));
+        assert!(
+            message("make: `build/src/a.o' is up to date.")
+                && message("/usr/bin/gmake[1]: Nothing to be done for `x'.")
+        );
         assert!(!message("cc: error: x") && !message("echo make: it"));
     }
 
@@ -352,7 +522,11 @@ mod tests {
         std::fs::write(root.join("src/a.c"), "int a;\n").unwrap();
         std::fs::write(root.join("build/src/a.d"), "# kept\n").unwrap();
         let steps = recipe(root, Path::new("build"), &[], "src/a.c", "build/src/a.o").unwrap();
-        assert_eq!(std::fs::read_to_string(root.join("build/src/a.d")).unwrap(), "# kept\n", "-o kept the dependency file");
+        assert_eq!(
+            std::fs::read_to_string(root.join("build/src/a.d")).unwrap(),
+            "# kept\n",
+            "-o kept the dependency file"
+        );
         let shell = steps.last().unwrap();
         assert!(is_shell(shell) && !is_shell(&steps[0]), "{steps:?}");
         assert_eq!(shell[..2], ["/bin/sh", "-c"]);
@@ -361,11 +535,19 @@ mod tests {
         std::fs::write(&draft, "int b;\n").unwrap();
         let output = work.path().join("draft.o");
         let aimed = retarget(&steps, root, "src/a.c", "build/src/a.o", &draft, &output);
-        assert!(aimed.last().unwrap().last().unwrap().ends_with(&format!("cat '{}' | tr a-z A-Z > {}", draft.display(), quote(&output.to_string_lossy()))));
+        assert!(aimed.last().unwrap().last().unwrap().ends_with(&format!(
+            "cat '{}' | tr a-z A-Z > {}",
+            draft.display(),
+            quote(&output.to_string_lossy())
+        )));
         for step in &aimed {
             crate::gba::process::run(step, work.path()).unwrap();
         }
         assert_eq!(std::fs::read_to_string(&output).unwrap(), "INT B;\n");
-        assert!(mentions("cc src/a.c -o x", "src/a.c") && !mentions("cc build/src/a.c", "src/a.c") && !mentions("src/a.cc", "src/a.c"));
+        assert!(
+            mentions("cc src/a.c -o x", "src/a.c")
+                && !mentions("cc build/src/a.c", "src/a.c")
+                && !mentions("src/a.cc", "src/a.c")
+        );
     }
 }

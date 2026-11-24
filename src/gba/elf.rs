@@ -1,4 +1,3 @@
-
 pub struct Section {
     pub address: u32,
     pub bytes: Vec<u8>,
@@ -25,7 +24,9 @@ impl Symbol {
     /// Whether the symbol names a function: FUNC or STT_ARM_TFUNC, and not a
     /// mapping symbol (`$t`) or a compiler's marker (`.gcc2_compiled.`).
     pub fn is_function(&self) -> bool {
-        matches!(self.kind, STT_FUNC | STT_ARM_TFUNC) && !self.name.is_empty() && !self.name.starts_with(['$', '.'])
+        matches!(self.kind, STT_FUNC | STT_ARM_TFUNC)
+            && !self.name.is_empty()
+            && !self.name.starts_with(['$', '.'])
     }
 }
 
@@ -90,7 +91,9 @@ pub fn headers(data: &[u8]) -> Result<Vec<Header>, String> {
             link: word(data, at + 24)?,
         });
     }
-    let strings = headers.get(half(data, 0x32)? as usize).and_then(|h| data.get(h.offset..h.offset + h.size));
+    let strings = headers
+        .get(half(data, 0x32)? as usize)
+        .and_then(|h| data.get(h.offset..h.offset + h.size));
     for (header, name) in headers.iter_mut().zip(names) {
         header.name = strings.map(|table| string(table, name)).unwrap_or_default();
     }

@@ -78,7 +78,12 @@ fn condition_text(condition: i16) -> Option<String> {
 /// Each scene's trigger rows, entered by each of its entrances (its
 /// table's and its map's), as one list a scene with no duplicates.
 fn scene_rows(rom: &[u8], symbols: &super::field::Symbols, scene: u16) -> Result<Vec<Row>, String> {
-    let setup = Setup { scene, entrance: 0, set: Vec::new(), clear: Vec::new() };
+    let setup = Setup {
+        scene,
+        entrance: 0,
+        set: Vec::new(),
+        clear: Vec::new(),
+    };
     let first = Field::enter(rom, symbols, &setup)?;
     let mut numbers: Vec<u16> = vec![0];
     for e in first.entrances() {
@@ -89,7 +94,12 @@ fn scene_rows(rom: &[u8], symbols: &super::field::Symbols, scene: u16) -> Result
     drop(first);
     let mut rows: Vec<Row> = Vec::new();
     for entrance in numbers {
-        let setup = Setup { scene, entrance, set: Vec::new(), clear: Vec::new() };
+        let setup = Setup {
+            scene,
+            entrance,
+            set: Vec::new(),
+            clear: Vec::new(),
+        };
         let Ok(mut field) = Field::enter(rom, symbols, &setup) else {
             continue;
         };
@@ -116,8 +126,14 @@ pub fn read(
     functions: &HashMap<u16, HashMap<String, u32>>,
     messages: &HashMap<u32, String>,
 ) -> String {
-    let places: Vec<u16> = scenes.iter().filter(|s| super::places::is_place(s).is_ok() && s.map != "world").map(|s| s.number).collect();
-    let threads = std::thread::available_parallelism().map_or(4, |n| n.get()).min(places.len().max(1));
+    let places: Vec<u16> = scenes
+        .iter()
+        .filter(|s| super::places::is_place(s).is_ok() && s.map != "world")
+        .map(|s| s.number)
+        .collect();
+    let threads = std::thread::available_parallelism()
+        .map_or(4, |n| n.get())
+        .min(places.len().max(1));
     let next = std::sync::atomic::AtomicUsize::new(0);
     let found: std::sync::Mutex<Vec<(u16, Vec<Row>)>> = std::sync::Mutex::new(Vec::new());
     std::thread::scope(|scope| {
@@ -139,7 +155,10 @@ pub fn read(
     // name -> (scenes, alternatives as (trigger, condition), messages)
     let mut events: Vec<(String, Vec<u16>, Vec<(String, Option<String>)>, Vec<u32>)> = Vec::new();
     for (scene, rows) in found {
-        let named: HashMap<u32, &String> = functions.get(&scene).map(|f| f.iter().map(|(n, &a)| (result_key(a), n)).collect()).unwrap_or_default();
+        let named: HashMap<u32, &String> = functions
+            .get(&scene)
+            .map(|f| f.iter().map(|(n, &a)| (result_key(a), n)).collect())
+            .unwrap_or_default();
         for row in rows {
             let Some(trigger) = trigger_text(&row) else {
                 continue;
@@ -152,7 +171,13 @@ pub fn read(
             let (name, message) = match named.get(&key) {
                 Some(name) if key >= 0x10000 => ((*name).clone(), None),
                 _ if key >= 0x10000 => continue,
-                _ => (messages.get(&key).cloned().unwrap_or_else(|| format!("{key:05}")), Some(key)),
+                _ => (
+                    messages
+                        .get(&key)
+                        .cloned()
+                        .unwrap_or_else(|| format!("{key:05}")),
+                    Some(key),
+                ),
             };
             let index = match events.iter().position(|e| e.0 == name) {
                 Some(i) => i,
@@ -178,9 +203,19 @@ pub fn read(
 }
 
 /// The events as events.tsv writes them.
-fn to_tsv(events: &[(String, Vec<u16>, Vec<(String, Option<String>)>, Vec<u32>)], scenes: &[&Scene]) -> String {
-    let name = |n: u16| scenes.iter().find(|s| s.number == n).map_or_else(|| format!("#{n}"), |s| s.name());
-    let mut text = String::from("scenes\tevent\ttrigger\tcondition\trequires\ttests\tmessages\tsets\tclears\n");
+fn to_tsv(
+    events: &[(String, Vec<u16>, Vec<(String, Option<String>)>, Vec<u32>)],
+    scenes: &[&Scene],
+) -> String {
+    let name = |n: u16| {
+        scenes
+            .iter()
+            .find(|s| s.number == n)
+            .map_or_else(|| format!("#{n}"), |s| s.name())
+    };
+    let mut text = String::from(
+        "scenes\tevent\ttrigger\tcondition\trequires\ttests\tmessages\tsets\tclears\n",
+    );
     for (event, at, alternatives, messages) in events {
         let scenes: Vec<String> = at.iter().map(|&n| format!("{n} {}", name(n))).collect();
         let mut triggers: Vec<&str> = Vec::new();
@@ -189,9 +224,18 @@ fn to_tsv(events: &[(String, Vec<u16>, Vec<(String, Option<String>)>, Vec<u32>)]
                 triggers.push(t);
             }
         }
-        let conditions: Vec<String> = alternatives.iter().filter_map(|(t, c)| c.as_ref().map(|c| format!("{t}: {c}"))).collect();
+        let conditions: Vec<String> = alternatives
+            .iter()
+            .filter_map(|(t, c)| c.as_ref().map(|c| format!("{t}: {c}")))
+            .collect();
         let messages: Vec<String> = messages.iter().map(|m| format!("{m:05}")).collect();
-        text.push_str(&format!("{}\t{event}\t{}\t{}\t\t\t{}\t\t\n", scenes.join(", "), triggers.join("; "), conditions.join(" | "), messages.join(", ")));
+        text.push_str(&format!(
+            "{}\t{event}\t{}\t{}\t\t\t{}\t\t\n",
+            scenes.join(", "),
+            triggers.join("; "),
+            conditions.join(" | "),
+            messages.join(", ")
+        ));
     }
     text
 }
@@ -202,14 +246,28 @@ mod tests {
 
     #[test]
     fn rows_are_written_as_triggers() {
-        let row = |control, target, condition| Row { control, target, condition, result: 0 };
+        let row = |control, target, condition| Row {
+            control,
+            target,
+            condition,
+            result: 0,
+        };
         assert_eq!(trigger_text(&row(0, 10, -1)).as_deref(), Some("talk 10"));
         assert_eq!(trigger_text(&row(0x602, 3, -1)).as_deref(), Some("touch 3"));
         assert_eq!(trigger_text(&row(3, 11, -1)).as_deref(), Some("search 11"));
-        assert_eq!(trigger_text(&row(5 | 0x10 | 0x8d << 8, 0x408, -1)).as_deref(), Some("psynergy 141 on 1032"));
+        assert_eq!(
+            trigger_text(&row(5 | 0x10 | 0x8d << 8, 0x408, -1)).as_deref(),
+            Some("psynergy 141 on 1032")
+        );
         // Reveal for any target (PSYNERGY_ANYWHERE) is no cell's.
-        assert_eq!(trigger_text(&row(0x5000_0000 | 5 | 0x80 | 0x90 << 8, 0, -1)).as_deref(), Some("psynergy 144 anywhere"));
-        assert_eq!(super::super::story::parse_trigger("psynergy 144 anywhere"), Ok(super::super::story::Trigger::Cast(0x90)));
+        assert_eq!(
+            trigger_text(&row(0x5000_0000 | 5 | 0x80 | 0x90 << 8, 0, -1)).as_deref(),
+            Some("psynergy 144 anywhere")
+        );
+        assert_eq!(
+            super::super::story::parse_trigger("psynergy 144 anywhere"),
+            Ok(super::super::story::Trigger::Cast(0x90))
+        );
         assert_eq!(trigger_text(&row(1, 4, -1)), None);
         assert_eq!(condition_text(-1), None);
         assert_eq!(condition_text(0x1000 | 0x823).as_deref(), Some("0x823 set"));

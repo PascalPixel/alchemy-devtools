@@ -48,7 +48,13 @@ pub const FRAMES_PER_CELL: u32 = 16;
 /// least. The last move comes along `last` (the keys that then push on into
 /// the trigger) where a cell lies that way, so the leader walks straight in.
 /// None when no start lies `least` cells away.
-pub fn approach(moves: &[Move], spot: Cell, last: u32, wanted: usize, least: usize) -> Option<Vec<Move>> {
+pub fn approach(
+    moves: &[Move],
+    spot: Cell,
+    last: u32,
+    wanted: usize,
+    least: usize,
+) -> Option<Vec<Move>> {
     use std::collections::{HashMap, VecDeque};
     // The moves into each cell, the straight one first, walks before climbs.
     let mut into: HashMap<Cell, Vec<&Move>> = HashMap::new();
@@ -79,8 +85,16 @@ pub fn approach(moves: &[Move], spot: Cell, last: u32, wanted: usize, least: usi
     };
     let turns = |p: &[Move]| p.windows(2).filter(|w| w[0].keys != w[1].keys).count();
     let far = via.values().map(|v| v.0).max().filter(|&d| d >= least)?;
-    let length = if far >= wanted { via.values().map(|v| v.0).filter(|&d| d >= wanted).min()? } else { far };
-    let mut starts: Vec<Cell> = via.iter().filter(|(_, v)| v.0 == length).map(|(c, _)| *c).collect();
+    let length = if far >= wanted {
+        via.values().map(|v| v.0).filter(|&d| d >= wanted).min()?
+    } else {
+        far
+    };
+    let mut starts: Vec<Cell> = via
+        .iter()
+        .filter(|(_, v)| v.0 == length)
+        .map(|(c, _)| *c)
+        .collect();
     starts.sort_unstable();
     starts.into_iter().map(path).min_by_key(|p| turns(p))
 }
@@ -137,7 +151,11 @@ pub fn away(moves: &[Move], from: Cell, wanted: usize) -> Option<Vec<Move>> {
             }
         }
     }
-    let far = via.values().map(|v| v.0).max().filter(|&d| d >= APPROACH_LEAST)?;
+    let far = via
+        .values()
+        .map(|v| v.0)
+        .max()
+        .filter(|&d| d >= APPROACH_LEAST)?;
     let path = |end: Cell| -> Vec<Move> {
         let mut out = Vec::new();
         let mut at = end;
@@ -149,7 +167,11 @@ pub fn away(moves: &[Move], from: Cell, wanted: usize) -> Option<Vec<Move>> {
         out
     };
     let turns = |p: &[Move]| p.windows(2).filter(|w| w[0].keys != w[1].keys).count();
-    let mut ends: Vec<Cell> = via.iter().filter(|(_, v)| v.0 == far).map(|(c, _)| *c).collect();
+    let mut ends: Vec<Cell> = via
+        .iter()
+        .filter(|(_, v)| v.0 == far)
+        .map(|(c, _)| *c)
+        .collect();
     ends.sort_unstable();
     ends.into_iter().map(path).min_by_key(|p| turns(p))
 }
@@ -164,8 +186,14 @@ pub fn lengthen(moves: &[Move], path: &[Move], cells: usize) -> Vec<Move> {
         return path.to_vec();
     };
     let on_path: Vec<Cell> = path.iter().map(|m| m.to).collect();
-    let aside: Vec<Move> = moves.iter().filter(|m| !on_path.contains(&m.to) && !on_path.contains(&m.from)).copied().collect();
-    let out = away(&aside, start, cells).filter(|w| w.len() * 2 >= cells).or_else(|| away(moves, start, cells));
+    let aside: Vec<Move> = moves
+        .iter()
+        .filter(|m| !on_path.contains(&m.to) && !on_path.contains(&m.from))
+        .copied()
+        .collect();
+    let out = away(&aside, start, cells)
+        .filter(|w| w.len() * 2 >= cells)
+        .or_else(|| away(moves, start, cells));
     let Some(back) = out.and_then(|w| route(moves, w.last()?.to, start)) else {
         return path.to_vec();
     };
@@ -218,14 +246,24 @@ pub fn describe(path: &[Move], padding: u32) -> Option<String> {
     if let Some(first) = climbs.first() {
         let way = if first.keys == 0x40 { "up" } else { "down" };
         let key = if first.keys == 0x40 { "Up" } else { "Down" };
-        let cells = if climbs.len() == 1 { "a cell".to_string() } else { format!("{} cells", climbs.len()) };
+        let cells = if climbs.len() == 1 {
+            "a cell".to_string()
+        } else {
+            format!("{} cells", climbs.len())
+        };
         parts.push(format!("the recording begins with the way up to it, which climbs {way} a vine or ladder ({key} held, {cells} of climbing)"));
     } else if path.iter().any(|m| m.how == How::Drop) {
-        parts.push("the recording begins with the way up to it, which drops down a ledge".to_string());
+        parts.push(
+            "the recording begins with the way up to it, which drops down a ledge".to_string(),
+        );
     }
     // Begun farther back than the way up goes (lengthen): he passes a cell
     // twice, walking off from it and back.
-    if path.iter().enumerate().any(|(i, m)| path[i + 1..].iter().any(|n| n.to == m.to)) {
+    if path
+        .iter()
+        .enumerate()
+        .any(|(i, m)| path[i + 1..].iter().any(|n| n.to == m.to))
+    {
         parts.push("the way up is shorter than ten seconds before the black screen, so he walks a way off along it and back first".to_string());
     }
     if padding >= 60 {
@@ -278,7 +316,14 @@ const SAME_FRAMES: usize = 2;
 /// shows, frame by frame: the event changed nothing on the screen. Water and
 /// cycling colours run alike in both.
 pub fn looks_the_same(played: &[Vec<u16>], idle: &[Vec<u16>]) -> bool {
-    let differ = played.iter().zip(idle).filter(|(a, b)| a.len() != b.len() || a.iter().zip(b.iter()).filter(|(p, q)| p != q).count() > SAME_PIXELS).count();
+    let differ = played
+        .iter()
+        .zip(idle)
+        .filter(|(a, b)| {
+            a.len() != b.len()
+                || a.iter().zip(b.iter()).filter(|(p, q)| p != q).count() > SAME_PIXELS
+        })
+        .count();
     differ <= SAME_FRAMES
 }
 
@@ -289,9 +334,16 @@ pub struct Pad(pub Vec<(u32, u32)>);
 
 impl Pad {
     pub fn parse(text: &str) -> Result<Pad, String> {
-        let numbers = text.split(',').map(str::trim).filter(|v| !v.is_empty()).map(|v| v.parse::<u32>().map_err(|e| format!("{v}: {e}"))).collect::<Result<Vec<u32>, String>>()?;
+        let numbers = text
+            .split(',')
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(|v| v.parse::<u32>().map_err(|e| format!("{v}: {e}")))
+            .collect::<Result<Vec<u32>, String>>()?;
         if numbers.len() % 2 != 0 {
-            return Err(format!("a pad script is keys and frames in pairs; {text} has an odd number"));
+            return Err(format!(
+                "a pad script is keys and frames in pairs; {text} has an odd number"
+            ));
         }
         Ok(Pad(numbers.chunks(2).map(|p| (p[0], p[1])).collect()))
     }
@@ -324,7 +376,12 @@ mod tests {
     /// Walks both ways between the open cells of `grid` (`.` open, `#` not,
     /// `C` a climb cell), and climbs between climb cells one above another.
     fn moves(grid: &[&str]) -> Vec<Move> {
-        let at = |x: i32, z: i32| grid.get(z as usize).and_then(|r| r.as_bytes().get(x as usize)).copied().unwrap_or(b'#');
+        let at = |x: i32, z: i32| {
+            grid.get(z as usize)
+                .and_then(|r| r.as_bytes().get(x as usize))
+                .copied()
+                .unwrap_or(b'#')
+        };
         let mut out = Vec::new();
         for (z, row) in grid.iter().enumerate() {
             for x in 0..row.len() as i32 {
@@ -337,8 +394,17 @@ mod tests {
                     if n == b'#' {
                         continue;
                     }
-                    let how = if c == b'C' && n == b'C' && dx == 0 { How::Climb } else { How::Walk };
-                    out.push(Move { from: (x, z), to: (x + dx, z + dz), keys, how });
+                    let how = if c == b'C' && n == b'C' && dx == 0 {
+                        How::Climb
+                    } else {
+                        How::Walk
+                    };
+                    out.push(Move {
+                        from: (x, z),
+                        to: (x + dx, z + dz),
+                        keys,
+                        how,
+                    });
                 }
             }
         }
@@ -360,13 +426,21 @@ mod tests {
         assert_eq!(path[0].from, (1, 3));
         assert_eq!(path.len(), 7);
         // With more asked than the branch holds, all of it.
-        assert_eq!(approach(&moves(&grid), (6, 1), RIGHT, 30, APPROACH_LEAST).unwrap().len(), 7);
+        assert_eq!(
+            approach(&moves(&grid), (6, 1), RIGHT, 30, APPROACH_LEAST)
+                .unwrap()
+                .len(),
+            7
+        );
     }
 
     #[test]
     fn a_trigger_with_no_walk_up_to_it_has_no_approach() {
         let grid = ["####", "#..#", "####"];
-        assert_eq!(approach(&moves(&grid), (2, 1), RIGHT, 4, APPROACH_LEAST), None);
+        assert_eq!(
+            approach(&moves(&grid), (2, 1), RIGHT, 4, APPROACH_LEAST),
+            None
+        );
     }
 
     #[test]
@@ -377,12 +451,28 @@ mod tests {
         let all = moves(&grid);
         let path = approach(&all, (2, 0), RIGHT, 4, APPROACH_LEAST).unwrap();
         assert!(path.iter().any(|m| m.how == How::Climb && m.keys == UP));
-        assert_eq!(path.last().unwrap(), &Move { from: (1, 0), to: (2, 0), keys: RIGHT, how: How::Walk });
+        assert_eq!(
+            path.last().unwrap(),
+            &Move {
+                from: (1, 0),
+                to: (2, 0),
+                keys: RIGHT,
+                how: How::Walk
+            }
+        );
         // Set down beside the vine's top, the climb down is a step away.
         let on = onward(&all, (2, 0), 3).unwrap();
         assert_eq!(on.last().unwrap().how, How::Climb);
         assert_eq!(on.last().unwrap().keys, DOWN);
-        assert_eq!(on[0], Move { from: (2, 0), to: (1, 0), keys: LEFT, how: How::Walk });
+        assert_eq!(
+            on[0],
+            Move {
+                from: (2, 0),
+                to: (1, 0),
+                keys: LEFT,
+                how: How::Walk
+            }
+        );
         assert_eq!(onward(&all, (3, 2), 0), None);
         // Come from the far end of the lower branch, the way leads up the
         // vine: its last four moves are the walk to it, the climb and the
@@ -417,14 +507,32 @@ mod tests {
         let all = moves(&grid);
         // Two cells asked to be five: begun three cells down the side way,
         // he walks up it and along the branch.
-        let short = vec![Move { from: (1, 1), to: (2, 1), keys: RIGHT, how: How::Walk }, Move { from: (2, 1), to: (3, 1), keys: RIGHT, how: How::Walk }];
+        let short = vec![
+            Move {
+                from: (1, 1),
+                to: (2, 1),
+                keys: RIGHT,
+                how: How::Walk,
+            },
+            Move {
+                from: (2, 1),
+                to: (3, 1),
+                keys: RIGHT,
+                how: How::Walk,
+            },
+        ];
         let longer = lengthen(&all, &short, 3);
         assert_eq!(longer.len(), 5);
         assert_eq!(longer[0].from, (1, 4));
         assert_eq!(&longer[3..], &short[..]);
         // Nowhere to go: as it was.
         let lone = moves(&["####", "#..#", "####"]);
-        let step = vec![Move { from: (1, 1), to: (2, 1), keys: RIGHT, how: How::Walk }];
+        let step = vec![Move {
+            from: (1, 1),
+            to: (2, 1),
+            keys: RIGHT,
+            how: How::Walk,
+        }];
         assert_eq!(lengthen(&lone, &step, 4), step);
     }
 
@@ -433,10 +541,14 @@ mod tests {
         use Frame::{Stood, Walked};
         assert!(stands_still(&[Stood; 40]).is_some());
         // Standing twelve frames, then walking a cell onto the trigger.
-        let walked: Vec<Frame> = std::iter::repeat_n(Stood, 12).chain(std::iter::repeat_n(Walked, 16)).collect();
+        let walked: Vec<Frame> = std::iter::repeat_n(Stood, 12)
+            .chain(std::iter::repeat_n(Walked, 16))
+            .collect();
         assert_eq!(stands_still(&walked), None);
         // Ten seconds stood before a short step is standing.
-        let stood: Vec<Frame> = std::iter::repeat_n(Stood, 600).chain(std::iter::repeat_n(Walked, 16)).collect();
+        let stood: Vec<Frame> = std::iter::repeat_n(Stood, 600)
+            .chain(std::iter::repeat_n(Walked, 16))
+            .collect();
         assert!(stands_still(&stood).unwrap().contains("600 of the 616"));
         assert_eq!(stands_still(&[Stood; 4]), None);
     }
@@ -446,13 +558,19 @@ mod tests {
         use Frame::{Pushed, Stood, Walked};
         // Started beside Goma Cave's gap: three frames turning, then
         // twenty-seven of West held into the cell before the jump.
-        let pushed: Vec<Frame> = std::iter::repeat_n(Stood, 3).chain(std::iter::repeat_n(Pushed, 27)).collect();
+        let pushed: Vec<Frame> = std::iter::repeat_n(Stood, 3)
+            .chain(std::iter::repeat_n(Pushed, 27))
+            .collect();
         assert_eq!(stands_still(&pushed), None);
         // A walk of two cells to a ladder's foot, then the push up it.
-        let walked: Vec<Frame> = std::iter::repeat_n(Walked, 32).chain(std::iter::repeat_n(Pushed, 27)).collect();
+        let walked: Vec<Frame> = std::iter::repeat_n(Walked, 32)
+            .chain(std::iter::repeat_n(Pushed, 27))
+            .collect();
         assert_eq!(stands_still(&walked), None);
         // Standing is still standing however it ends.
-        let stood: Vec<Frame> = std::iter::repeat_n(Stood, 40).chain(std::iter::repeat_n(Pushed, 10)).collect();
+        let stood: Vec<Frame> = std::iter::repeat_n(Stood, 40)
+            .chain(std::iter::repeat_n(Pushed, 10))
+            .collect();
         assert!(stands_still(&stood).is_some());
     }
 
@@ -462,16 +580,28 @@ mod tests {
         let all = moves(&grid);
         let up = route(&all, (3, 2), (2, 0)).unwrap();
         let said = describe(&up, 0).unwrap();
-        assert!(said.contains("climbs up a vine or ladder (Up held"), "{said}");
+        assert!(
+            said.contains("climbs up a vine or ladder (Up held"),
+            "{said}"
+        );
         let walk = route(&all, (3, 2), (0, 2)).unwrap();
         assert_eq!(describe(&walk, 12), None);
         // Begun farther back, back along itself.
         let there = route(&all, (0, 2), (3, 2)).unwrap();
-        let fro: Vec<Move> = route(&all, (3, 2), (0, 2)).unwrap().into_iter().chain(there).collect();
-        assert!(describe(&fro, 0).unwrap().contains("walks a way off along it and back"));
+        let fro: Vec<Move> = route(&all, (3, 2), (0, 2))
+            .unwrap()
+            .into_iter()
+            .chain(there)
+            .collect();
+        assert!(describe(&fro, 0)
+            .unwrap()
+            .contains("walks a way off along it and back"));
         // Stood at the start for the rest of a black screen's ten seconds.
         let said = describe(&walk, 480).unwrap();
-        assert!(said.contains("8.0 seconds before walking 3 cells"), "{said}");
+        assert!(
+            said.contains("8.0 seconds before walking 3 cells"),
+            "{said}"
+        );
     }
 
     #[test]
@@ -480,7 +610,9 @@ mod tests {
         // shorter than the lead-in are left out, the walk is kept.
         let stood = vec![Frame::Stood; 500];
         assert!(stands_still(&stood).is_some());
-        let walk: Vec<Frame> = std::iter::repeat_n(Frame::Walked, 48).chain(std::iter::repeat_n(Frame::Stood, 16)).collect();
+        let walk: Vec<Frame> = std::iter::repeat_n(Frame::Walked, 48)
+            .chain(std::iter::repeat_n(Frame::Stood, 16))
+            .collect();
         assert_eq!(stands_still(&walk), None);
     }
 

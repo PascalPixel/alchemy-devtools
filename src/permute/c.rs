@@ -21,16 +21,24 @@ impl Edges for String {
 
 impl<T: Edges> Edges for Option<T> {
     fn edges<'a>(&'a self, single: &mut Vec<&'a Node>, lists: &mut Vec<&'a Node>) {
-        if let Some(value) = self { value.edges(single, lists); }
+        if let Some(value) = self {
+            value.edges(single, lists);
+        }
     }
     fn edges_mut<'a>(&'a mut self, single: &mut Vec<&'a mut Node>, lists: &mut Vec<&'a mut Node>) {
-        if let Some(value) = self { value.edges_mut(single, lists); }
+        if let Some(value) = self {
+            value.edges_mut(single, lists);
+        }
     }
 }
 
 impl Edges for Vec<Node> {
-    fn edges<'a>(&'a self, _: &mut Vec<&'a Node>, lists: &mut Vec<&'a Node>) { lists.extend(self); }
-    fn edges_mut<'a>(&'a mut self, _: &mut Vec<&'a mut Node>, lists: &mut Vec<&'a mut Node>) { lists.extend(self); }
+    fn edges<'a>(&'a self, _: &mut Vec<&'a Node>, lists: &mut Vec<&'a Node>) {
+        lists.extend(self);
+    }
+    fn edges_mut<'a>(&'a mut self, _: &mut Vec<&'a mut Node>, lists: &mut Vec<&'a mut Node>) {
+        lists.extend(self);
+    }
 }
 
 impl Edges for Vec<String> {
@@ -39,8 +47,12 @@ impl Edges for Vec<String> {
 }
 
 impl Edges for Box<Node> {
-    fn edges<'a>(&'a self, single: &mut Vec<&'a Node>, _: &mut Vec<&'a Node>) { single.push(self); }
-    fn edges_mut<'a>(&'a mut self, single: &mut Vec<&'a mut Node>, _: &mut Vec<&'a mut Node>) { single.push(self); }
+    fn edges<'a>(&'a self, single: &mut Vec<&'a Node>, _: &mut Vec<&'a Node>) {
+        single.push(self);
+    }
+    fn edges_mut<'a>(&'a mut self, single: &mut Vec<&'a mut Node>, _: &mut Vec<&'a mut Node>) {
+        single.push(self);
+    }
 }
 
 macro_rules! nodes {
@@ -142,55 +154,89 @@ nodes! {
 }
 
 impl Node {
-    pub fn boxed(self) -> Child { Box::new(self) }
+    pub fn boxed(self) -> Child {
+        Box::new(self)
+    }
 
-    pub fn id(name: impl Into<String>) -> Self { Self::Id { name: name.into() } }
+    pub fn id(name: impl Into<String>) -> Self {
+        Self::Id { name: name.into() }
+    }
 
-    pub fn print(&self) -> String { print::Generator::default().visit(self) }
+    pub fn print(&self) -> String {
+        print::Generator::default().visit(self)
+    }
 
     /// Keep unrelated declarations as prototypes; normalize only the target.
     pub fn extract_function(&mut self, name: &str) -> Result<usize, String> {
-        let Self::FileAst { ext } = self else { return Err("expected a C translation unit".into()); };
+        let Self::FileAst { ext } = self else {
+            return Err("expected a C translation unit".into());
+        };
         let mut index = None;
         for (i, item) in ext.iter_mut().enumerate() {
             if let Self::FuncDef { decl, .. } = item {
-                if let Self::Decl { name: Some(n), funcspec, .. } = decl.as_ref() {
+                if let Self::Decl {
+                    name: Some(n),
+                    funcspec,
+                    ..
+                } = decl.as_ref()
+                {
                     if n == name {
-                        if index.replace(i).is_some() { return Err(format!("multiple definitions of {name}")); }
+                        if index.replace(i).is_some() {
+                            return Err(format!("multiple definitions of {name}"));
+                        }
                         item.normalize();
                     } else if !funcspec.iter().any(|s| s == "inline") {
                         *item = *decl.clone();
                     }
                 }
             }
-            if let Self::Decl { storage, .. } = item { storage.retain(|s| s != "static"); }
+            if let Self::Decl { storage, .. } = item {
+                storage.retain(|s| s != "static");
+            }
         }
         index.ok_or_else(|| format!("function {name} not found"))
     }
 
     fn normalize(&mut self) {
         fn brace(stmt: &mut Child) {
-            if !matches!(stmt.as_ref(), Node::Compound { .. } | Node::Case { .. } | Node::Default { .. }) {
+            if !matches!(
+                stmt.as_ref(),
+                Node::Compound { .. } | Node::Case { .. } | Node::Default { .. }
+            ) {
                 let old = std::mem::replace(stmt.as_mut(), Node::EmptyStatement {});
-                **stmt = Node::Compound { block_items: vec![old] };
+                **stmt = Node::Compound {
+                    block_items: vec![old],
+                };
             }
         }
         match self {
             Self::FuncDef { body, .. } => body.normalize(),
             Self::Compound { .. } => {
-                for child in self.children_mut() { child.normalize(); }
+                for child in self.children_mut() {
+                    child.normalize();
+                }
             }
             Self::Case { stmts, .. } | Self::Default { stmts } => {
-                for stmt in stmts { stmt.normalize(); }
+                for stmt in stmts {
+                    stmt.normalize();
+                }
             }
-            Self::For { stmt, .. } | Self::While { stmt, .. } | Self::DoWhile { stmt, .. } | Self::Switch { stmt, .. } => {
+            Self::For { stmt, .. }
+            | Self::While { stmt, .. }
+            | Self::DoWhile { stmt, .. }
+            | Self::Switch { stmt, .. } => {
                 brace(stmt);
                 stmt.normalize();
             }
-            Self::If { iftrue, iffalse, .. } => {
+            Self::If {
+                iftrue, iffalse, ..
+            } => {
                 brace(iftrue);
                 iftrue.normalize();
-                if let Some(stmt) = iffalse { brace(stmt); stmt.normalize(); }
+                if let Some(stmt) = iffalse {
+                    brace(stmt);
+                    stmt.normalize();
+                }
             }
             Self::Label { stmt, .. } => stmt.normalize(),
             _ => {}
@@ -204,14 +250,28 @@ mod tests {
 
     /// The node's variant, as its debug form starts.
     fn kind(node: &Node) -> String {
-        format!("{node:?}").split([' ', '{']).next().unwrap_or_default().to_string()
+        format!("{node:?}")
+            .split([' ', '{'])
+            .next()
+            .unwrap_or_default()
+            .to_string()
     }
 
     fn decode(text: &str) -> String {
         let mut result = String::new();
         let mut chars = text.chars();
         while let Some(c) = chars.next() {
-            result.push(if c == '\\' { match chars.next().unwrap() { 'n' => '\n', 'r' => '\r', 't' => '\t', '\\' => '\\', other => panic!("unexpected escape {other}") } } else { c });
+            result.push(if c == '\\' {
+                match chars.next().unwrap() {
+                    'n' => '\n',
+                    'r' => '\r',
+                    't' => '\t',
+                    '\\' => '\\',
+                    other => panic!("unexpected escape {other}"),
+                }
+            } else {
+                c
+            });
         }
         result
     }
@@ -221,9 +281,21 @@ mod tests {
         let mut accepted = Vec::new();
         for row in include_str!("c/fixtures/parser-invalid.tsv").lines() {
             let c: Vec<_> = row.split('\t').map(decode).collect();
-            if let Ok(tree) = parse(&c[1]) { accepted.push(format!("{}\nsource {}\nparsed {}", c[0], c[1], tree.print())); }
+            if let Ok(tree) = parse(&c[1]) {
+                accepted.push(format!(
+                    "{}\nsource {}\nparsed {}",
+                    c[0],
+                    c[1],
+                    tree.print()
+                ));
+            }
         }
-        assert!(accepted.is_empty(), "{} unexpected acceptances\n{}", accepted.len(), accepted.join("\n"));
+        assert!(
+            accepted.is_empty(),
+            "{} unexpected acceptances\n{}",
+            accepted.len(),
+            accepted.join("\n")
+        );
     }
 
     #[test]
@@ -237,10 +309,16 @@ mod tests {
     fn nested_functions_survive_as_written() {
         let source = "int F(int a) {\n    int G(int b) { if (b) return b + 1; return 0; }\n    while (a) { a = G(a); }\n    return G(a);\n}\n";
         let printed = parse(source).unwrap().print();
-        assert!(printed.contains("int G(int b) { if (b) return b + 1; return 0; }"), "{printed}");
+        assert!(
+            printed.contains("int G(int b) { if (b) return b + 1; return 0; }"),
+            "{printed}"
+        );
         assert!(printed.contains("return G(a);"), "{printed}");
         let marked = source.replace("int G(", "__attribute__((unused)) int G(");
-        assert!(parse(&marked).unwrap().print().contains("__attribute__((unused)) int G(int b)"));
+        assert!(parse(&marked)
+            .unwrap()
+            .print()
+            .contains("__attribute__((unused)) int G(int b)"));
     }
 
     #[test]
@@ -254,7 +332,12 @@ mod tests {
     fn adapter_and_printer_failures_do_not_become_valid_candidates() {
         for row in include_str!("c/fixtures/parser-unsupported.tsv").lines() {
             let c: Vec<_> = row.split('\t').map(decode).collect();
-            assert!(parse(&c[1]).is_err(), "{}: unsupported input {}", c[0], c[2]);
+            assert!(
+                parse(&c[1]).is_err(),
+                "{}: unsupported input {}",
+                c[0],
+                c[2]
+            );
         }
     }
 
@@ -262,49 +345,115 @@ mod tests {
     fn offsetof_bridge_does_not_accept_the_unsupported_builtin() {
         assert!(parse("int f(void) { return __builtin_offsetof(struct S, p); }").is_err());
         let source = "int f(void) { return offsetof(struct S, p); }";
-        assert!(parse(source).unwrap().print().contains("offsetof(struct S, p)"));
+        assert!(parse(source)
+            .unwrap()
+            .print()
+            .contains("offsetof(struct S, p)"));
     }
 
     #[test]
     fn independent_parser_inputs_match_printing_and_traversal() {
         let mut failures = Vec::new();
         fn topology(node: &Node, out: &mut String) {
-            out.push_str(match kind(node).as_str() { "FileAst" => "FileAST", "Id" => "ID", "Attribute" => "GccAttribute", "AttributeStatement" => "GccAttributeStatement", name => name });
-            if let Node::Constant { ty, .. } = node { out.push('\t'); out.push_str(ty); }
+            out.push_str(match kind(node).as_str() {
+                "FileAst" => "FileAST",
+                "Id" => "ID",
+                "Attribute" => "GccAttribute",
+                "AttributeStatement" => "GccAttributeStatement",
+                name => name,
+            });
+            if let Node::Constant { ty, .. } = node {
+                out.push('\t');
+                out.push_str(ty);
+            }
             out.push('\n');
-            for child in node.children() { topology(child, out); }
+            for child in node.children() {
+                topology(child, out);
+            }
         }
-        for (index, row) in include_str!("c/fixtures/parser-cases.tsv").lines().enumerate() {
+        for (index, row) in include_str!("c/fixtures/parser-cases.tsv")
+            .lines()
+            .enumerate()
+        {
             let c: Vec<_> = row.split('\t').map(decode).collect();
             match parse(&c[1]) {
                 Ok(tree) if tree.print() == c[2] => {
                     let mut nodes = String::new();
                     topology(&tree, &mut nodes);
-                    if nodes != c[3] { failures.push(format!("row {index} {}\nsource {}\nactual topology {}\nexpected topology {}", c[0], c[1], nodes, c[3])); }
-                },
-                Ok(tree) => failures.push(format!("row {index} {}\nsource {}\nactual {}\nexpected {}", c[0], c[1], tree.print(), c[2])),
-                Err(error) => failures.push(format!("row {index} {}\nsource {}\nparse error {error}", c[0], c[1])),
+                    if nodes != c[3] {
+                        failures.push(format!(
+                            "row {index} {}\nsource {}\nactual topology {}\nexpected topology {}",
+                            c[0], c[1], nodes, c[3]
+                        ));
+                    }
+                }
+                Ok(tree) => failures.push(format!(
+                    "row {index} {}\nsource {}\nactual {}\nexpected {}",
+                    c[0],
+                    c[1],
+                    tree.print(),
+                    c[2]
+                )),
+                Err(error) => failures.push(format!(
+                    "row {index} {}\nsource {}\nparse error {error}",
+                    c[0], c[1]
+                )),
             }
         }
-        assert!(failures.is_empty(), "{} discrepancies\n{}", failures.len(), failures.join("\n"));
+        assert!(
+            failures.is_empty(),
+            "{} discrepancies\n{}",
+            failures.len(),
+            failures.join("\n")
+        );
     }
 
     #[test]
     fn translation_unit_fixtures() {
         for (source, expected, nodes) in [
-            (include_str!("c/fixtures/declarations.c"), include_str!("c/fixtures/declarations.expected"), include_str!("c/fixtures/declarations.nodes")),
-            (include_str!("c/fixtures/statements.c"), include_str!("c/fixtures/statements.expected"), include_str!("c/fixtures/statements.nodes")),
-            (include_str!("c/fixtures/expressions.c"), include_str!("c/fixtures/expressions.expected"), include_str!("c/fixtures/expressions.nodes")),
-            (include_str!("c/fixtures/sizeof.c"), include_str!("c/fixtures/sizeof.expected"), include_str!("c/fixtures/sizeof.nodes")),
+            (
+                include_str!("c/fixtures/declarations.c"),
+                include_str!("c/fixtures/declarations.expected"),
+                include_str!("c/fixtures/declarations.nodes"),
+            ),
+            (
+                include_str!("c/fixtures/statements.c"),
+                include_str!("c/fixtures/statements.expected"),
+                include_str!("c/fixtures/statements.nodes"),
+            ),
+            (
+                include_str!("c/fixtures/expressions.c"),
+                include_str!("c/fixtures/expressions.expected"),
+                include_str!("c/fixtures/expressions.nodes"),
+            ),
+            (
+                include_str!("c/fixtures/sizeof.c"),
+                include_str!("c/fixtures/sizeof.expected"),
+                include_str!("c/fixtures/sizeof.nodes"),
+            ),
         ] {
             let mut unit = parse(source).unwrap();
             unit.extract_function("target").unwrap();
-            assert_eq!(unit.print(), expected.replace("\\x20\n", " \n").replace("\\x0a\n", "\n"));
+            assert_eq!(
+                unit.print(),
+                expected.replace("\\x20\n", " \n").replace("\\x0a\n", "\n")
+            );
             fn topology(node: &Node, out: &mut String) {
-                out.push_str(match kind(node).as_str() { "FileAst" => "FileAST", "Id" => "ID", "Attribute" => "GccAttribute", "AttributeStatement" => "GccAttributeStatement", name => name });
-                if let Node::Constant { ty, .. } = node { out.push('\t'); out.push_str(ty); }
+                out.push_str(match kind(node).as_str() {
+                    "FileAst" => "FileAST",
+                    "Id" => "ID",
+                    "Attribute" => "GccAttribute",
+                    "AttributeStatement" => "GccAttributeStatement",
+                    name => name,
+                });
+                if let Node::Constant { ty, .. } = node {
+                    out.push('\t');
+                    out.push_str(ty);
+                }
                 out.push('\n');
-                for child in node.children() { topology(child, out); }
+                for child in node.children() {
+                    topology(child, out);
+                }
             }
             let mut actual_nodes = String::new();
             topology(&unit, &mut actual_nodes);
@@ -319,16 +468,28 @@ mod tests {
     fn traversal_matches_field_order() {
         let unit = parse("int target(int n) { for (n = 1; n < 4; n++) n += 2; }").unwrap();
         fn collect(node: &Node, names: &mut Vec<String>) {
-            if let Node::Id { name } = node { names.push(name.clone()); }
-            if let Node::Constant { value, .. } = node { names.push(value.clone()); }
-            for child in node.children() { collect(child, names); }
+            if let Node::Id { name } = node {
+                names.push(name.clone());
+            }
+            if let Node::Constant { value, .. } = node {
+                names.push(value.clone());
+            }
+            for child in node.children() {
+                collect(child, names);
+            }
         }
         let mut order = Vec::new();
         collect(&unit, &mut order);
         assert_eq!(order, ["n", "1", "n", "4", "n", "n", "2"]);
-        let Node::FileAst { ext } = unit else { panic!() };
-        let Node::FuncDef { decl, .. } = &ext[0] else { panic!() };
-        let Node::Decl { ty, .. } = decl.as_ref() else { panic!() };
+        let Node::FileAst { ext } = unit else {
+            panic!()
+        };
+        let Node::FuncDef { decl, .. } = &ext[0] else {
+            panic!()
+        };
+        let Node::Decl { ty, .. } = decl.as_ref() else {
+            panic!()
+        };
         assert!(matches!(ty.children()[0], Node::ParamList { .. }));
         assert!(matches!(ty.children()[1], Node::TypeDecl { .. }));
     }

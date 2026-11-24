@@ -15,8 +15,17 @@ use std::path::{Path, PathBuf};
 fn all() -> Result<Vec<DecompTargetId>, String> {
     let mut ids = targets::ids()?;
     let games = targets::games()?;
-    let language = |id: DecompTargetId| LANGUAGES.iter().position(|&language| language == id.language());
-    ids.sort_by_key(|&id| (games.iter().position(|&game| game == id.game()), language(id)));
+    let language = |id: DecompTargetId| {
+        LANGUAGES
+            .iter()
+            .position(|&language| language == id.language())
+    };
+    ids.sort_by_key(|&id| {
+        (
+            games.iter().position(|&game| game == id.game()),
+            language(id),
+        )
+    });
     Ok(ids)
 }
 
@@ -29,7 +38,11 @@ pub fn editions(words: &[String]) -> Result<Vec<DecompTargetId>, String> {
     }
     let mut chosen = Vec::new();
     for word in words {
-        let named: Vec<_> = all.iter().copied().filter(|&id| id.as_str() == word || id.game() == word).collect();
+        let named: Vec<_> = all
+            .iter()
+            .copied()
+            .filter(|&id| id.as_str() == word || id.game() == word)
+            .collect();
         if named.is_empty() {
             let names: Vec<&str> = all.iter().map(|id| id.as_str()).collect();
             return Err(format!(
@@ -49,7 +62,10 @@ pub fn editions(words: &[String]) -> Result<Vec<DecompTargetId>, String> {
 
 /// The edition of `game` in `language`.
 pub fn edition(game: &str, language: &str) -> Option<DecompTargetId> {
-    targets::ids().ok()?.into_iter().find(|&id| id.game() == game && id.language() == language)
+    targets::ids()
+        .ok()?
+        .into_iter()
+        .find(|&id| id.game() == game && id.language() == language)
 }
 
 pub fn output(root: &Path, id: DecompTargetId) -> PathBuf {
@@ -70,14 +86,19 @@ pub fn object(root: &Path, id: DecompTargetId, stem: &str) -> PathBuf {
 /// The source an object stem is built from, as the Makefile's `source` picks
 /// it: `NAME.c`, `NAME.s`, `NAME.S` or `NAME.mid`.
 pub fn source(root: &Path, stem: &str) -> Option<String> {
-    ["c", "s", "S", "mid"].iter().map(|extension| format!("{stem}.{extension}")).find(|path| root.join(path).is_file())
+    ["c", "s", "S", "mid"]
+        .iter()
+        .map(|extension| format!("{stem}.{extension}"))
+        .find(|path| root.join(path).is_file())
 }
 
 /// An edition's scaffold for its main image, when it has one: the source
 /// (`recon/<game>/<language>/rom.s`) and the object it builds.
 pub fn scaffold(root: &Path, id: DecompTargetId) -> Option<(String, PathBuf)> {
     let stem = Layout::new(id.game()).scaffold(id.language());
-    root.join(format!("{stem}.s")).is_file().then(|| (format!("{stem}.s"), object(root, id, &stem)))
+    root.join(format!("{stem}.s"))
+        .is_file()
+        .then(|| (format!("{stem}.s"), object(root, id, &stem)))
 }
 
 /// The source stem of an object path a map names, when the build compiled
@@ -104,20 +125,33 @@ pub fn stem(id: DecompTargetId, path: &str) -> String {
         if tail.ends_with("/imports.o") {
             return format!("games/{}/src/system/overlay/imports", id.game());
         }
-        return format!("{}/{}", Layout::new(id.game()).overlays(), tail.strip_suffix(".o").unwrap_or(tail));
+        return format!(
+            "{}/{}",
+            Layout::new(id.game()).overlays(),
+            tail.strip_suffix(".o").unwrap_or(tail)
+        );
     }
     path.to_string()
 }
 
 /// Each overlay's file with `extension` in an edition's build, by overlay
 /// name (`resource_64b`), sorted.
-pub fn overlay_files(root: &Path, id: DecompTargetId, extension: &str) -> Result<Vec<(String, PathBuf)>, String> {
+pub fn overlay_files(
+    root: &Path,
+    id: DecompTargetId,
+    extension: &str,
+) -> Result<Vec<(String, PathBuf)>, String> {
     let folder = output(root, id).join("overlays");
-    let entries = std::fs::read_dir(&folder).map_err(|error| format!("{}: {error}", folder.display()))?;
+    let entries =
+        std::fs::read_dir(&folder).map_err(|error| format!("{}: {error}", folder.display()))?;
     let mut files: Vec<(String, PathBuf)> = entries
         .filter_map(|entry| {
             let path = entry.ok()?.path();
-            let name = path.file_name()?.to_str()?.strip_suffix(&format!(".{extension}"))?.to_string();
+            let name = path
+                .file_name()?
+                .to_str()?
+                .strip_suffix(&format!(".{extension}"))?
+                .to_string();
             let id = name.strip_prefix("resource_")?;
             (!id.is_empty() && id.chars().all(|c| c.is_ascii_hexdigit())).then_some((name, path))
         })
@@ -157,7 +191,10 @@ impl Piece {
 /// Every section an edition places, as calcrom counts it: the main map's ROM
 /// image, then each overlay map's own.
 pub fn pieces(root: &Path, id: DecompTargetId) -> Result<Vec<Piece>, String> {
-    let piece = |placed: &Placed| Piece { stem: stem(id, &placed.path), placed: placed.clone() };
+    let piece = |placed: &Placed| Piece {
+        stem: stem(id, &placed.path),
+        placed: placed.clone(),
+    };
     let main = Map::parse(&read_text(&output(root, id).join(format!("{id}.map")))?);
     let mut pieces: Vec<Piece> = count::placed(&main, Image::Rom).map(piece).collect();
     for (_, path) in overlay_files(root, id, "map")? {
@@ -177,23 +214,50 @@ mod tests {
 
     #[test]
     fn games_and_editions_are_named_on_the_command_line() {
-        let words = |items: &[&str]| items.iter().map(|item| item.to_string()).collect::<Vec<_>>();
+        let words = |items: &[&str]| {
+            items
+                .iter()
+                .map(|item| item.to_string())
+                .collect::<Vec<_>>()
+        };
         assert_eq!(editions(&[]).unwrap().len(), 12);
-        let named: Vec<&str> = editions(&words(&["tla-de", "tla", "tbs-en"])).unwrap().iter().map(|id| id.as_str()).collect();
-        assert_eq!(named, ["tla-de", "tla-ja", "tla-en", "tla-es", "tla-fr", "tla-it", "tbs-en"]);
+        let named: Vec<&str> = editions(&words(&["tla-de", "tla", "tbs-en"]))
+            .unwrap()
+            .iter()
+            .map(|id| id.as_str())
+            .collect();
+        assert_eq!(
+            named,
+            ["tla-de", "tla-ja", "tla-en", "tla-es", "tla-fr", "tla-it", "tbs-en"]
+        );
         assert!(editions(&words(&["tla-xx"])).is_err());
-                assert_eq!((id("tla-de").game(), id("tla-de").language()), ("tla", "de"));
+        assert_eq!(
+            (id("tla-de").game(), id("tla-de").language()),
+            ("tla", "de")
+        );
         assert_eq!(edition("tbs", "it"), Some(id("tbs-it")));
     }
 
     #[test]
     fn object_paths_name_their_sources() {
-        assert_eq!(stem(id("tla-en"), "out/tla-en/obj/recon/tla/raw/0815f16c.o"), "recon/tla/raw/0815f16c");
-        assert_eq!(stem(id("tla-ja"), "out/tla-ja/obj/recon/tla/ja/rom.o"), "recon/tla/ja/rom");
+        assert_eq!(
+            stem(id("tla-en"), "out/tla-en/obj/recon/tla/raw/0815f16c.o"),
+            "recon/tla/raw/0815f16c"
+        );
+        assert_eq!(
+            stem(id("tla-ja"), "out/tla-ja/obj/recon/tla/ja/rom.o"),
+            "recon/tla/ja/rom"
+        );
         assert_eq!(
             stem(id("tla-en"), "out/tla-en/overlays/resource_64c_overlay.o"),
             "recon/tla/raw/overlays/resource_64c_overlay"
         );
-        assert_eq!(stem(id("tla-en"), "tools/out/compiler-runtime/libgcc.a(_call_via_rX.o)"), "tools/out/compiler-runtime/libgcc.a(_call_via_rX.o)");
+        assert_eq!(
+            stem(
+                id("tla-en"),
+                "tools/out/compiler-runtime/libgcc.a(_call_via_rX.o)"
+            ),
+            "tools/out/compiler-runtime/libgcc.a(_call_via_rX.o)"
+        );
     }
 }

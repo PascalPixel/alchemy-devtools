@@ -5,7 +5,10 @@
 
 use super::field::Spot;
 use super::guide::Guide;
-use super::guide_tla::{Walk, EAST, KEY_A, KEY_B, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_START, KEY_UP, NORTH, PARTY_DAILA, WEST};
+use super::guide_tla::{
+    Walk, EAST, KEY_A, KEY_B, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_START, KEY_UP, NORTH, PARTY_DAILA,
+    WEST,
+};
 use super::story::Trigger;
 
 /// Daila as the party first comes (SceneId_DailaFlooded), from the World Map, and
@@ -65,12 +68,28 @@ impl<'a> Guide<'a> {
         match name {
             "field-talk-walk" => self.tla_talk_walk(),
             "talk" => self.tla_window_talk(),
-            "menus" => self.tla_menu_path("menu/menus.gif", &MENUS, "the field menu in Daila, its icons and the Status screen"),
-            "menu-start" => self.tla_menu_path("menu/menu-start.gif", &MENU_START, "Start closing the Psynergy screen and the field menu at once in Daila"),
+            "menus" => self.tla_menu_path(
+                "menu/menus.gif",
+                &MENUS,
+                "the field menu in Daila, its icons and the Status screen",
+            ),
+            "menu-start" => self.tla_menu_path(
+                "menu/menu-start.gif",
+                &MENU_START,
+                "Start closing the Psynergy screen and the field menu at once in Daila",
+            ),
             "summary-screen" => self.tla_summary_screen(),
             "djinn-standby" => self.tla_djinn_standby(),
-            "save-game" => self.tla_menu_path("window/save.gif", &SAVE, "saving the game from the Pause menu in Daila"),
-            "runtime-save" => self.tla_menu_path("runtime/save.gif", &SAVE, "saving from the Pause menu in Daila"),
+            "save-game" => self.tla_menu_path(
+                "window/save.gif",
+                &SAVE,
+                "saving the game from the Pause menu in Daila",
+            ),
+            "runtime-save" => self.tla_menu_path(
+                "runtime/save.gif",
+                &SAVE,
+                "saving from the Pause menu in Daila",
+            ),
             "message-blanks" => self.tla_message_blanks(),
             "sound-inn-fanfare" => self.tla_inn_fanfare(),
             "shop" => self.tla_shop(),
@@ -95,7 +114,10 @@ impl<'a> Guide<'a> {
     /// Felix walks up to the man by Daila's well and talks to him, then
     /// walks on: the walk stops for the talk and starts again after it.
     fn tla_talk_walk(&mut self) -> Result<(), String> {
-        let (mut entered, spot) = self.tla_stand(DAILA, 0, PARTY_DAILA, Trigger::Talk(DAILA_WAVE_MAN), |_| true)?;
+        let (mut entered, spot) =
+            self.tla_stand(DAILA, 0, PARTY_DAILA, Trigger::Talk(DAILA_WAVE_MAN), |_| {
+                true
+            })?;
         // A step and a half back from where he talks, facing the man.
         let (dx, dz, toward) = match spot.facing {
             EAST => (-24, 0, KEY_RIGHT),
@@ -103,7 +125,11 @@ impl<'a> Guide<'a> {
             NORTH => (0, 24, KEY_UP),
             _ => (0, -24, KEY_DOWN),
         };
-        let back = Spot { x: spot.x + dx, z: spot.z + dz, ..spot };
+        let back = Spot {
+            x: spot.x + dx,
+            z: spot.z + dz,
+            ..spot
+        };
         entered.field.stand(&entered.placed, &back)?;
         let field = &mut entered.field;
         let mut frames = vec![field.picture()];
@@ -114,21 +140,47 @@ impl<'a> Guide<'a> {
         for (keys, n) in TWO_PAGES {
             Self::hold(field, keys, n, &mut frames)?;
         }
-        let away = if toward == KEY_UP || toward == KEY_DOWN { KEY_LEFT } else { KEY_DOWN };
+        let away = if toward == KEY_UP || toward == KEY_DOWN {
+            KEY_LEFT
+        } else {
+            KEY_DOWN
+        };
         Self::hold(field, away, 60, &mut frames)?;
         Self::hold(field, 0, 10, &mut frames)?;
-        self.world_gif("field/talk-walk.gif", &frames, "Felix talking to the man by Daila's well and walking on")
+        self.world_gif(
+            "field/talk-walk.gif",
+            &frames,
+            "Felix talking to the man by Daila's well and walking on",
+        )
     }
 
     /// Talking to the man by Daila's well: the window opens, the line is
     /// typed out and the arrow bobs, the next page, and the window closes.
     fn tla_window_talk(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.tla_stand(DAILA, 0, PARTY_DAILA, Trigger::Talk(DAILA_WAVE_MAN), |_| true)?;
+        let (mut entered, _) =
+            self.tla_stand(DAILA, 0, PARTY_DAILA, Trigger::Talk(DAILA_WAVE_MAN), |_| {
+                true
+            })?;
         let field = &mut entered.field;
-        let mut frames = Self::press_path(field, &[(0, 20), (KEY_A, 3), (0, 150), (KEY_A, 3), (0, 120), (KEY_A, 3), (0, 40)])?;
+        let mut frames = Self::press_path(
+            field,
+            &[
+                (0, 20),
+                (KEY_A, 3),
+                (0, 150),
+                (KEY_A, 3),
+                (0, 120),
+                (KEY_A, 3),
+                (0, 40),
+            ],
+        )?;
         let last = frames.last().cloned().unwrap_or_default();
         frames.extend(std::iter::repeat_n(last, 20));
-        self.world_gif("window/talk.gif", &frames, "talking to the man by Daila's well")
+        self.world_gif(
+            "window/talk.gif",
+            &frames,
+            "talking to the man by Daila's well",
+        )
     }
 
     /// The Status screen in Daila: Felix's pages, R to Jenna, and B out.
@@ -137,34 +189,88 @@ impl<'a> Guide<'a> {
         path.extend(presses(&[KEY_A], 60));
         path.extend(presses(&[KEY_A, KEY_A, KEY_A, super::guide_tla::KEY_R], 60));
         path.extend(presses(&[KEY_B, KEY_B, KEY_B], 30));
-        self.tla_menu_path("menu/summary-screen.gif", &path, "the Status screen's pages in Daila")
+        self.tla_menu_path(
+            "menu/summary-screen.gif",
+            &path,
+            "the Status screen's pages in Daila",
+        )
     }
 
     /// The Djinn screen in Daila: Felix's Echo put on standby, the preview
     /// of what changes, and A.
     fn tla_djinn_standby(&mut self) -> Result<(), String> {
         let mut path = open_screen(1);
-        path.extend([(0, 30), (KEY_A, 4), (0, 60), (KEY_A, 4), (0, 120), (KEY_A, 4), (0, 120)]);
+        path.extend([
+            (0, 30),
+            (KEY_A, 4),
+            (0, 60),
+            (KEY_A, 4),
+            (0, 120),
+            (KEY_A, 4),
+            (0, 120),
+        ]);
         path.extend(presses(&[KEY_B, KEY_B], 35));
-        self.tla_menu_path("menu/djinn-standby.gif", &path, "Echo put on standby from the Djinn screen in Daila")
+        self.tla_menu_path(
+            "menu/djinn-standby.gif",
+            &path,
+            "Echo put on standby from the Djinn screen in Daila",
+        )
     }
 
     /// Daila's innkeeper asked for a room across the counter: the price, a
     /// number filled into the line, and No.
     fn tla_message_blanks(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.tla_stand(DAILA_HOUSES, 0, PARTY_DAILA, Trigger::Talk(DAILA_INNKEEPER), |s| s.facing == WEST)?;
+        let (mut entered, _) = self.tla_stand(
+            DAILA_HOUSES,
+            0,
+            PARTY_DAILA,
+            Trigger::Talk(DAILA_INNKEEPER),
+            |s| s.facing == WEST,
+        )?;
         entered.field.set_coins(500);
-        let path = [(0, 20), (KEY_A, 3), (0, 70), (KEY_A, 3), (0, 90), (KEY_DOWN, 3), (0, 20), (KEY_A, 3), (0, 90), (KEY_A, 3), (0, 40)];
+        let path = [
+            (0, 20),
+            (KEY_A, 3),
+            (0, 70),
+            (KEY_A, 3),
+            (0, 90),
+            (KEY_DOWN, 3),
+            (0, 20),
+            (KEY_A, 3),
+            (0, 90),
+            (KEY_A, 3),
+            (0, 40),
+        ];
         let frames = Self::press_path(&mut entered.field, &path)?;
-        self.world_gif("window/message-blanks.gif", &frames, "Daila's innkeeper's price, a number filled into the line")
+        self.world_gif(
+            "window/message-blanks.gif",
+            &frames,
+            "Daila's innkeeper's price, a number filled into the line",
+        )
     }
 
     /// A night at Daila's inn: the screen closes to black and opens again
     /// while the inn's jingle plays.
     fn tla_inn_fanfare(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.tla_stand(DAILA_HOUSES, 0, PARTY_DAILA, Trigger::Talk(DAILA_INNKEEPER), |s| s.facing == WEST)?;
+        let (mut entered, _) = self.tla_stand(
+            DAILA_HOUSES,
+            0,
+            PARTY_DAILA,
+            Trigger::Talk(DAILA_INNKEEPER),
+            |s| s.facing == WEST,
+        )?;
         entered.field.set_coins(500);
-        let path = [(0, 10), (KEY_A, 3), (0, 60), (KEY_A, 3), (0, 80), (KEY_A, 3), (0, 70), (KEY_A, 3), (0, 640)];
+        let path = [
+            (0, 10),
+            (KEY_A, 3),
+            (0, 60),
+            (KEY_A, 3),
+            (0, 80),
+            (KEY_A, 3),
+            (0, 70),
+            (KEY_A, 3),
+            (0, 640),
+        ];
         let mut frames = Self::press_path_cleared(&mut entered.field, &path)?;
         // The first picture of a path played again is the one before it.
         frames.remove(0);
@@ -174,7 +280,13 @@ impl<'a> Guide<'a> {
     /// Daila's stall, the party given 500 coins: talked to across the
     /// counter, Buy, a Herb for Felix, and B out.
     fn tla_shop(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.tla_stand(DAILA, 0, PARTY_DAILA, Trigger::Talk(DAILA_STALL_KEEPER), |s| s.facing == NORTH)?;
+        let (mut entered, _) = self.tla_stand(
+            DAILA,
+            0,
+            PARTY_DAILA,
+            Trigger::Talk(DAILA_STALL_KEEPER),
+            |s| s.facing == NORTH,
+        )?;
         entered.field.set_coins(500);
         let path = [
             (0, 20),
@@ -205,16 +317,50 @@ impl<'a> Guide<'a> {
     /// healer talked to across the counter, Revive, the hand over the party
     /// and Jenna chosen.
     fn tla_sanctum(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.tla_stand(DAILA_SANCTUM, 0, PARTY_DAILA, Trigger::Talk(DAILA_HEALER), |s| s.facing == NORTH)?;
+        let (mut entered, _) = self.tla_stand(
+            DAILA_SANCTUM,
+            0,
+            PARTY_DAILA,
+            Trigger::Talk(DAILA_HEALER),
+            |s| s.facing == NORTH,
+        )?;
         let flag = self.flag("FLAG_DAILA_HEALER_SENT_TO_POI")?;
         entered.field.set_flag(flag, true);
         entered.field.set_coins(500);
         Self::down(&mut entered.field, super::plan::JENNA)?;
         // The hand starts on the member who is down: it is moved to Sheba and
         // Felix, who need none, and back to Jenna, and A.
-        let path = [(0, 20), (KEY_A, 3), (0, 100), (KEY_A, 3), (0, 80), (KEY_A, 3), (0, 60), (KEY_RIGHT, 3), (0, 50), (KEY_LEFT, 3), (0, 40), (KEY_LEFT, 3), (0, 50), (KEY_RIGHT, 3), (0, 40), (KEY_A, 3), (0, 60), (KEY_A, 3), (0, 200), (KEY_A, 3), (0, 80), (KEY_A, 3), (0, 60)];
+        let path = [
+            (0, 20),
+            (KEY_A, 3),
+            (0, 100),
+            (KEY_A, 3),
+            (0, 80),
+            (KEY_A, 3),
+            (0, 60),
+            (KEY_RIGHT, 3),
+            (0, 50),
+            (KEY_LEFT, 3),
+            (0, 40),
+            (KEY_LEFT, 3),
+            (0, 50),
+            (KEY_RIGHT, 3),
+            (0, 40),
+            (KEY_A, 3),
+            (0, 60),
+            (KEY_A, 3),
+            (0, 200),
+            (KEY_A, 3),
+            (0, 80),
+            (KEY_A, 3),
+            (0, 60),
+        ];
         let frames = Self::press_path(&mut entered.field, &path)?;
-        self.world_gif("shop/sanctum.gif", &frames, "Jenna revived at Daila's sanctum")
+        self.world_gif(
+            "shop/sanctum.gif",
+            &frames,
+            "Jenna revived at Daila's sanctum",
+        )
     }
 
     /// Daila's healer talked to twice from across the counter: the first
@@ -222,17 +368,42 @@ impl<'a> Guide<'a> {
     /// (FLAG_DAILA_HEALER_SENT_TO_POI clear), the second she runs the
     /// sanctum.
     fn tla_talk_twice(&mut self) -> Result<(), String> {
-        let (mut entered, _) = self.tla_stand(DAILA_SANCTUM, 0, PARTY_DAILA, Trigger::Talk(DAILA_HEALER), |s| s.facing == NORTH)?;
+        let (mut entered, _) = self.tla_stand(
+            DAILA_SANCTUM,
+            0,
+            PARTY_DAILA,
+            Trigger::Talk(DAILA_HEALER),
+            |s| s.facing == NORTH,
+        )?;
         let field = &mut entered.field;
         let mut frames = vec![field.picture()];
         Self::hold(field, 0, 15, &mut frames)?;
         // The first talk: her question, Yes, and her two pages on Master Poi.
         // The second: the sanctum's welcome and its choices, cancelled.
-        let path = [(KEY_A, 3), (0, 140), (KEY_A, 3), (0, 150), (KEY_A, 3), (0, 190), (KEY_A, 3), (0, 100), (KEY_A, 3), (0, 140), (KEY_B, 3), (0, 80), (KEY_A, 3), (0, 60)];
+        let path = [
+            (KEY_A, 3),
+            (0, 140),
+            (KEY_A, 3),
+            (0, 150),
+            (KEY_A, 3),
+            (0, 190),
+            (KEY_A, 3),
+            (0, 100),
+            (KEY_A, 3),
+            (0, 140),
+            (KEY_B, 3),
+            (0, 80),
+            (KEY_A, 3),
+            (0, 60),
+        ];
         for (keys, n) in path {
             Self::hold(field, keys, n, &mut frames)?;
         }
-        self.world_gif("map/talk-twice.gif", &frames, "Daila's healer talked to twice")
+        self.world_gif(
+            "map/talk-twice.gif",
+            &frames,
+            "Daila's healer talked to twice",
+        )
     }
 
     /// `owner` downed in the field: no HP, the gauge empty.
@@ -247,15 +418,60 @@ impl<'a> Guide<'a> {
 
 /// The field menu opened with A in Daila, moved along its icons and into
 /// the Status screen and back out.
-const MENUS: [(u32, u32); 17] = [(0, 20), (KEY_A, 4), (0, 50), (KEY_RIGHT, 4), (0, 30), (KEY_RIGHT, 4), (0, 30), (KEY_RIGHT, 4), (0, 30), (KEY_A, 4), (0, 40), (KEY_A, 4), (0, 150), (KEY_B, 4), (0, 40), (KEY_B, 4), (0, 40)];
+const MENUS: [(u32, u32); 17] = [
+    (0, 20),
+    (KEY_A, 4),
+    (0, 50),
+    (KEY_RIGHT, 4),
+    (0, 30),
+    (KEY_RIGHT, 4),
+    (0, 30),
+    (KEY_RIGHT, 4),
+    (0, 30),
+    (KEY_A, 4),
+    (0, 40),
+    (KEY_A, 4),
+    (0, 150),
+    (KEY_B, 4),
+    (0, 40),
+    (KEY_B, 4),
+    (0, 40),
+];
 /// Start pressed two screens deep: every screen closes at once.
-const MENU_START: [(u32, u32); 9] = [(0, 20), (KEY_A, 4), (0, 50), (KEY_A, 4), (0, 50), (KEY_A, 4), (0, 60), (KEY_START, 4), (0, 60)];
+const MENU_START: [(u32, u32); 9] = [
+    (0, 20),
+    (KEY_A, 4),
+    (0, 50),
+    (KEY_A, 4),
+    (0, 50),
+    (KEY_A, 4),
+    (0, 60),
+    (KEY_START, 4),
+    (0, 60),
+];
 /// Start, Save your quest, the first file, and the messages to `Your game
 /// was saved.`
-const SAVE: [(u32, u32); 9] = [(0, 20), (KEY_START, 4), (0, 50), (KEY_A, 4), (0, 100), (KEY_A, 4), (0, 200), (KEY_A, 4), (0, 40)];
+const SAVE: [(u32, u32); 9] = [
+    (0, 20),
+    (KEY_START, 4),
+    (0, 50),
+    (KEY_A, 4),
+    (0, 100),
+    (KEY_A, 4),
+    (0, 200),
+    (KEY_A, 4),
+    (0, 40),
+];
 /// A talk of two pages from its first press: each page typed out and paged
 /// with A, and the window closing.
-const TWO_PAGES: [(u32, u32); 6] = [(KEY_A, 3), (0, 150), (KEY_A, 3), (0, 120), (KEY_A, 3), (0, 40)];
+const TWO_PAGES: [(u32, u32); 6] = [
+    (KEY_A, 3),
+    (0, 150),
+    (KEY_A, 3),
+    (0, 120),
+    (KEY_A, 3),
+    (0, 40),
+];
 
 /// Debug parameter set 19: Felix, Jenna, Sheba and Piers at level 19, the
 /// party once Piers has joined, who knows Frost.
@@ -273,7 +489,16 @@ const WORLD_MAP: (&str, u16) = ("WorldMap", 2);
 const HOUSE_DOOR_BELOW: (i32, i32) = (120, 344);
 
 /// The modes of the second batch.
-pub const MORE_MODES: &[&str] = &["world-map", "windows-zoom", "world-door", "front-door", "world-behind-roof", "layers-3d", "world-map-layers-3d", "scene-log-state"];
+pub const MORE_MODES: &[&str] = &[
+    "world-map",
+    "windows-zoom",
+    "world-door",
+    "front-door",
+    "world-behind-roof",
+    "layers-3d",
+    "world-map-layers-3d",
+    "scene-log-state",
+];
 
 impl<'a> Guide<'a> {
     pub(super) fn run_tla_town_more(&mut self, name: &str) -> Result<(), String> {
@@ -296,7 +521,11 @@ impl<'a> Guide<'a> {
                 field.frames(50)?;
                 field.hold(0);
                 field.frames(2)?;
-                self.explode_now(field, "field/world-map-layers-3d.gif", "the World Map outside Daila")
+                self.explode_now(
+                    field,
+                    "field/world-map-layers-3d.gif",
+                    "the World Map outside Daila",
+                )
             }
             "scene-log-state" => self.tla_puddle_state(),
             _ => Err(format!("no mode {name}")),
@@ -309,8 +538,25 @@ impl<'a> Guide<'a> {
         // A room of Daila's houses, where no water moves beside the window,
         // and a guest of the inn: his two pages, the window at the top of the
         // screen, over the lines the close-up keeps.
-        let (mut entered, _) = self.tla_stand(DAILA_HOUSES, 0, PARTY_DAILA, Trigger::Talk(DAILA_INN_GUEST), |_| true)?;
-        let frames = Self::press_path(&mut entered.field, &[(0, 20), (KEY_A, 3), (0, 150), (KEY_A, 3), (0, 150), (KEY_A, 3), (0, 50)])?;
+        let (mut entered, _) = self.tla_stand(
+            DAILA_HOUSES,
+            0,
+            PARTY_DAILA,
+            Trigger::Talk(DAILA_INN_GUEST),
+            |_| true,
+        )?;
+        let frames = Self::press_path(
+            &mut entered.field,
+            &[
+                (0, 20),
+                (KEY_A, 3),
+                (0, 150),
+                (KEY_A, 3),
+                (0, 150),
+                (KEY_A, 3),
+                (0, 50),
+            ],
+        )?;
         self.window_close_up(&frames, WINDOW_ROWS)
     }
 
@@ -321,7 +567,12 @@ impl<'a> Guide<'a> {
     fn tla_puddle_state(&mut self) -> Result<(), String> {
         let frost = Self::tla_constant("ABILITY_FROST")?;
         let mut entered = self.tla_enter(DAILA_PUDDLES, 0, PARTY_PIERS, &[FLAG_TAVI_RESCUED])?;
-        let mut frames = Self::record_trigger(&mut entered, Trigger::Psynergy(frost, FIRST_PUDDLE), None, 60)?;
+        let mut frames = Self::record_trigger(
+            &mut entered,
+            Trigger::Psynergy(frost, FIRST_PUDDLE),
+            None,
+            60,
+        )?;
         let field = &mut entered.field;
         // The pillar a moment, so the game shows CLEARED frames before the
         // house's black screen; then down from it and along to the door.
@@ -334,7 +585,11 @@ impl<'a> Guide<'a> {
         Self::hold(field, 0, super::field::CLEARED as u32 + 60, &mut frames)?;
         Self::hold(field, KEY_DOWN, 50, &mut frames)?;
         Self::hold(field, 0, super::field::CLEARED as u32 + 60, &mut frames)?;
-        self.world_gif("scene/log-state.gif", &frames, "a puddle in Daila frozen into a pillar, and a puddle again after a house")
+        self.world_gif(
+            "scene/log-state.gif",
+            &frames,
+            "a puddle in Daila frozen into a pillar, and a puddle again after a house",
+        )
     }
 }
 
@@ -383,6 +638,10 @@ const WORLD_MAP_WALK: Walk = Walk {
     entrance: WORLD_MAP.1,
     preset: PARTY_DAILA,
     stand: None,
-    path: &[(KEY_DOWN | KEY_LEFT, 60), (KEY_LEFT | KEY_B, 60), (KEY_UP, 40)],
+    path: &[
+        (KEY_DOWN | KEY_LEFT, 60),
+        (KEY_LEFT | KEY_B, 60),
+        (KEY_UP, 40),
+    ],
     what: "walking and running on the World Map outside Daila",
 };

@@ -49,40 +49,67 @@ fn is_black(picture: &[u16]) -> bool {
 }
 
 fn image(picture: &[u16]) -> Image {
-    Image { width: WIDTH, height: HEIGHT, pixels: picture.iter().map(|&c| animation::rgb(c)).collect() }
+    Image {
+        width: WIDTH,
+        height: HEIGHT,
+        pixels: picture.iter().map(|&c| animation::rgb(c)).collect(),
+    }
 }
 
 impl Front<'_> {
     fn flag(&self, name: &str) -> Result<u16, String> {
-        self.flags.resolve(name, None).ok_or_else(|| format!("flags.tsv names no {name}"))
+        self.flags
+            .resolve(name, None)
+            .ok_or_else(|| format!("flags.tsv names no {name}"))
     }
 
     fn png(&mut self, file: &str, picture: &Image, what: &str) -> Result<(), String> {
         let bytes = write_png(&self.out.join(file), picture)?;
-        self.written.push((file.to_string(), bytes, what.to_string()));
+        self.written
+            .push((file.to_string(), bytes, what.to_string()));
         Ok(())
     }
 
     fn gif(&mut self, file: &str, frames: &[&Frame], what: &str) -> Result<(), String> {
-        let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.picture.iter().map(|&c| animation::rgb(c)).collect()).collect();
+        let rgb: Vec<Vec<u32>> = frames
+            .iter()
+            .map(|f| f.picture.iter().map(|&c| animation::rgb(c)).collect())
+            .collect();
         let written = animation::write(&self.out.join(file), &rgb, WIDTH)?;
-        self.written.push((file.to_string(), written.bytes, format!("{what}; {} frames at 30 a second", written.frames)));
+        self.written.push((
+            file.to_string(),
+            written.bytes,
+            format!("{what}; {} frames at 30 a second", written.frames),
+        ));
         Ok(())
     }
 
     /// Runs `frames` frames, keeping each picture, holding each waiting page
     /// PAGE_HOLD frames before A; stops early when `stop` says so.
-    fn record(&self, field: &mut Field, frames: u32, stop: &dyn Fn(&Field) -> bool) -> Result<Vec<Frame>, String> {
+    fn record(
+        &self,
+        field: &mut Field,
+        frames: u32,
+        stop: &dyn Fn(&Field) -> bool,
+    ) -> Result<Vec<Frame>, String> {
         let mut out = Vec::new();
         let mut waited = 0;
         for _ in 0..frames {
             field.frames(1)?;
-            out.push(Frame { picture: field.picture(), message: field.last_message(), scene: field.scene() });
+            out.push(Frame {
+                picture: field.picture(),
+                message: field.last_message(),
+                scene: field.scene(),
+            });
             waited = if field.waiting() { waited + 1 } else { 0 };
             if waited >= PAGE_HOLD {
                 field.press(3)?;
                 for _ in 0..3 {
-                    out.push(Frame { picture: field.picture(), message: field.last_message(), scene: field.scene() });
+                    out.push(Frame {
+                        picture: field.picture(),
+                        message: field.last_message(),
+                        scene: field.scene(),
+                    });
                 }
                 waited = 0;
             }
@@ -98,19 +125,35 @@ impl Front<'_> {
     /// Mt. Aleph, then the Golden Sun logo, without the "Press Start" prompt
     /// the power-on title adds; then it fades to Vale.
     pub fn title(&mut self) -> Result<(), String> {
-        let setup = Setup { scene: TITLE.0, entrance: TITLE.1, set: Vec::new(), clear: Vec::new() };
+        let setup = Setup {
+            scene: TITLE.0,
+            entrance: TITLE.1,
+            set: Vec::new(),
+            clear: Vec::new(),
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let scene = setup.scene;
         let frames = self.record(&mut field, 3000, &|f: &Field| f.scene() != scene)?;
         let shown: Vec<&Frame> = frames.iter().filter(|f| f.scene == scene).collect();
-        let first = shown.iter().position(|f| !is_black(&f.picture)).ok_or("the title stayed black")?;
+        let first = shown
+            .iter()
+            .position(|f| !is_black(&f.picture))
+            .ok_or("the title stayed black")?;
         // The logo held is the longest steady stretch: the GIF ends with it,
         // before the fade towards Vale, and the still is its middle.
         let held = steadiest(&shown);
         let end = held.end.max(first + 1);
         let still = (held.start + held.end) / 2;
-        self.gif("title.gif", &shown[first..end], "the sun rising over Mt. Aleph, then the Golden Sun logo held")?;
-        self.png("title.png", &image(&shown[still].picture), "the Golden Sun logo over the sky, no prompt")?;
+        self.gif(
+            "title.gif",
+            &shown[first..end],
+            "the sun rising over Mt. Aleph, then the Golden Sun logo held",
+        )?;
+        self.png(
+            "title.png",
+            &image(&shown[still].picture),
+            "the Golden Sun logo over the sky, no prompt",
+        )?;
         Ok(())
     }
 
@@ -124,20 +167,43 @@ impl Front<'_> {
             scene: VALE_HOME.0,
             entrance: VALE_HOME.1,
             set: Vec::new(),
-            clear: vec![self.flag("FLAG_KALAY_REACHED")?, self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?],
+            clear: vec![
+                self.flag("FLAG_KALAY_REACHED")?,
+                self.flag("FLAG_VALE_STORM")?,
+                self.flag("FLAG_CHILDHOOD")?,
+            ],
         };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         field.set_party(&[0, 1]);
         let scene = setup.scene;
         let frames = self.record(&mut field, 20000, &|f: &Field| f.scene() != scene)?;
-        let at = |m: u32| frames.iter().position(|f| f.message == m).ok_or(format!("message {m:05} never showed"));
+        let at = |m: u32| {
+            frames
+                .iter()
+                .position(|f| f.message == m)
+                .ok_or(format!("message {m:05} never showed"))
+        };
         let start = at(first)?;
-        let last_shown = frames.iter().rposition(|f| f.message == last).ok_or(format!("message {last:05} never showed"))?;
+        let last_shown = frames
+            .iter()
+            .rposition(|f| f.message == last)
+            .ok_or(format!("message {last:05} never showed"))?;
         let end = (last_shown + PAGE_HOLD as usize).min(frames.len());
-        let clip: Vec<&Frame> = frames[start..end].iter().filter(|f| f.scene == scene).collect();
-        self.gif("vale-farewell.gif", &clip, &format!("ValePlaza_DepartForQuest from message {first:05} to {last:05}"))?;
+        let clip: Vec<&Frame> = frames[start..end]
+            .iter()
+            .filter(|f| f.scene == scene)
+            .collect();
+        self.gif(
+            "vale-farewell.gif",
+            &clip,
+            &format!("ValePlaza_DepartForQuest from message {first:05} to {last:05}"),
+        )?;
         let gathered = at(crowd)?.saturating_sub(2);
-        self.png("vale-farewell.png", &image(&frames[gathered].picture), &format!("the town gathered, before message {crowd:05}"))?;
+        self.png(
+            "vale-farewell.png",
+            &image(&frames[gathered].picture),
+            &format!("the town gathered, before message {crowd:05}"),
+        )?;
         Ok(())
     }
 
@@ -145,22 +211,49 @@ impl Front<'_> {
     /// erupts: WorldMap_PlayLighthouseTransition(1), until the scene goes on
     /// to the aerie's entrance 93.
     pub fn lighthouse(&mut self) -> Result<(), String> {
-        let set = ["FLAG_VENUS_LIGHTHOUSE_LIT", "FLAG_MERCURY_LIGHTHOUSE_LIT", "FLAG_VALE_PARTY_LEFT"]
-            .iter()
-            .map(|n| self.flag(n))
-            .collect::<Result<Vec<u16>, String>>()?;
-        let setup = Setup { scene: WORLD_MAP.0, entrance: WORLD_MAP.1, set, clear: Vec::new() };
+        let set = [
+            "FLAG_IN_VENUS_LIGHTHOUSE",
+            "FLAG_IN_MERCURY_LIGHTHOUSE",
+            "FLAG_VALE_PARTY_LEFT",
+        ]
+        .iter()
+        .map(|n| self.flag(n))
+        .collect::<Result<Vec<u16>, String>>()?;
+        let setup = Setup {
+            scene: WORLD_MAP.0,
+            entrance: WORLD_MAP.1,
+            set,
+            clear: Vec::new(),
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         field.set_party(&[0, 1, 2, 3]);
         let scene = setup.scene;
         let frames = self.record(&mut field, 1500, &|f: &Field| f.scene() != scene)?;
-        let start = frames.iter().position(|f| !is_black(&f.picture)).ok_or("the cut stayed black")?;
-        let end = frames.iter().rposition(|f| !is_black(&f.picture) && f.scene == scene).ok_or("the cut stayed black")? + 1;
+        let start = frames
+            .iter()
+            .position(|f| !is_black(&f.picture))
+            .ok_or("the cut stayed black")?;
+        let end = frames
+            .iter()
+            .rposition(|f| !is_black(&f.picture) && f.scene == scene)
+            .ok_or("the cut stayed black")?
+            + 1;
         let clip: Vec<&Frame> = frames[start..end].iter().collect();
-        self.gif("venus-lighthouse-lit.gif", &clip, "the world map cut at entrance 91")?;
+        self.gif(
+            "venus-lighthouse-lit.gif",
+            &clip,
+            "the world map cut at entrance 91",
+        )?;
         // The still: the frame with the most of the beacon's warm light.
-        let still = clip.iter().max_by_key(|f| warmth(&f.picture)).ok_or("the cut is empty")?;
-        self.png("venus-lighthouse-lit.png", &image(&still.picture), "the beacon's flare held at the lighthouse's top")?;
+        let still = clip
+            .iter()
+            .max_by_key(|f| warmth(&f.picture))
+            .ok_or("the cut is empty")?;
+        self.png(
+            "venus-lighthouse-lit.png",
+            &image(&still.picture),
+            "the beacon's flare held at the lighthouse's top",
+        )?;
         Ok(())
     }
 
@@ -175,7 +268,12 @@ impl Front<'_> {
     pub fn mercury_lighthouse(&mut self) -> Result<(), String> {
         let set = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
         let place = WORLD_MAP_AFTER_MERCURY_LIGHTHOUSE_LIT;
-        let setup = Setup { scene: place.0, entrance: place.1, set, clear: Vec::new() };
+        let setup = Setup {
+            scene: place.0,
+            entrance: place.1,
+            set,
+            clear: Vec::new(),
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         field.set_party(&[0, 1, 2, 3]);
         // The field sequence's steps as the aerie comes up: it steps again once
@@ -189,24 +287,56 @@ impl Front<'_> {
             arrived.set(Some(at));
             f.steps() > at
         })?;
-        let start = frames.iter().position(|f| !is_black(&f.picture)).ok_or("the cut stayed black")?;
-        let end = frames.iter().rposition(|f| !is_black(&f.picture) && f.scene == place.0).ok_or("the cut stayed black")? + 1;
+        let start = frames
+            .iter()
+            .position(|f| !is_black(&f.picture))
+            .ok_or("the cut stayed black")?;
+        let end = frames
+            .iter()
+            .rposition(|f| !is_black(&f.picture) && f.scene == place.0)
+            .ok_or("the cut stayed black")?
+            + 1;
         let clip: Vec<&Frame> = frames[start..end].iter().collect();
-        self.gif("mercury-lighthouse-lit.gif", &clip, "the world map cut at entrance 90")?;
-        let still = clip.iter().max_by_key(|f| flare(&f.picture)).ok_or("the cut is empty")?;
-        self.png("mercury-lighthouse-lit.png", &image(&still.picture), "the beacon's flare held at the lighthouse's top")?;
-        if frames.last().is_none_or(|f| f.scene != MERCURY_LIGHTHOUSE_AERIE) {
+        self.gif(
+            "mercury-lighthouse-lit.gif",
+            &clip,
+            "the world map cut at entrance 90",
+        )?;
+        let still = clip
+            .iter()
+            .max_by_key(|f| flare(&f.picture))
+            .ok_or("the cut is empty")?;
+        self.png(
+            "mercury-lighthouse-lit.png",
+            &image(&still.picture),
+            "the beacon's flare held at the lighthouse's top",
+        )?;
+        if frames
+            .last()
+            .is_none_or(|f| f.scene != MERCURY_LIGHTHOUSE_AERIE)
+        {
             return Err("the cut never went on to the aerie".to_string());
         }
         // The player has control at the aerie: hold it a moment.
         let mut held = Vec::new();
         for _ in 0..ARRIVAL_HOLD {
             field.frames(1)?;
-            held.push(Frame { picture: field.picture(), message: field.last_message(), scene: field.scene() });
+            held.push(Frame {
+                picture: field.picture(),
+                message: field.last_message(),
+                scene: field.scene(),
+            });
         }
-        let arrival = frames.iter().position(|f| f.scene == MERCURY_LIGHTHOUSE_AERIE && !is_black(&f.picture)).ok_or("the aerie stayed black")?;
+        let arrival = frames
+            .iter()
+            .position(|f| f.scene == MERCURY_LIGHTHOUSE_AERIE && !is_black(&f.picture))
+            .ok_or("the aerie stayed black")?;
         let clip: Vec<&Frame> = frames[arrival..].iter().chain(held.iter()).collect();
-        self.gif("mercury-lighthouse-aerie-arrival.gif", &clip, "the Lighthouse Aerie at MERCURY_LIGHTHOUSE_AERIE_AFTER_BEACON_LIT")
+        self.gif(
+            "mercury-lighthouse-aerie-arrival.gif",
+            &clip,
+            "the Lighthouse Aerie at MERCURY_LIGHTHOUSE_AERIE_AFTER_BEACON_LIT",
+        )
     }
 }
 
@@ -216,7 +346,9 @@ pub fn affine_plane(field: &Field, bgcnt: u16) -> (Image, Vec<u8>) {
     let tiles = 16usize << ((bgcnt >> 14) & 3);
     let char_base = 0x0600_0000 + u32::from((bgcnt >> 2) & 3) * 0x4000;
     let screen_base = 0x0600_0000 + u32::from((bgcnt >> 8) & 31) * 0x800;
-    let palette: Vec<u32> = (0..256u32).map(|i| animation::rgb(field.read16(0x0500_0000 + 2 * i))).collect();
+    let palette: Vec<u32> = (0..256u32)
+        .map(|i| animation::rgb(field.read16(0x0500_0000 + 2 * i)))
+        .collect();
     let size = tiles * 8;
     let mut pixels = vec![0u32; size * size];
     let mut indices = vec![0u8; size * size];
@@ -232,9 +364,15 @@ pub fn affine_plane(field: &Field, bgcnt: u16) -> (Image, Vec<u8>) {
             }
         }
     }
-    (Image { width: size, height: size, pixels }, indices)
+    (
+        Image {
+            width: size,
+            height: size,
+            pixels,
+        },
+        indices,
+    )
 }
-
 
 /// The world map's grid: 16 by 16 squares, each 32 by 32 tiles of its
 /// affine planes (256 pixels), two squares across a plane.
@@ -275,7 +413,12 @@ impl Front<'_> {
         // Lighthouse.
         for at in [None, Some((5800, 500))] {
             let mut canvas = vec![0u32; size * size];
-            let setup = Setup { scene: WORLD_MAP.0, entrance: 1, set: vec![self.flag("FLAG_VALE_PARTY_LEFT")?], clear: Vec::new() };
+            let setup = Setup {
+                scene: WORLD_MAP.0,
+                entrance: 1,
+                set: vec![self.flag("FLAG_VALE_PARTY_LEFT")?],
+                clear: Vec::new(),
+            };
             let mut field = Field::enter(self.rom, self.symbols, &setup)?;
             if let Some((x, z)) = at {
                 field.set_position(x, z);
@@ -284,12 +427,19 @@ impl Front<'_> {
             field.frames(10)?;
             field.freeze(true);
             let state = field.map_state();
-            ids.push((0..256).map(|i| field.read16(state + TILE_IDS + 2 * i)).collect());
+            ids.push(
+                (0..256)
+                    .map(|i| field.read16(state + TILE_IDS + 2 * i))
+                    .collect(),
+            );
             for sz in (0..SQUARES).step_by(2) {
                 for sx in (0..SQUARES).step_by(2) {
                     // The 2 by 2 squares start 256 pixels left of and 320
                     // above the point, in 512-pixel world steps.
-                    let origin = [((sx * 512 + 256 + 8) << 16) as i32, ((sz * 512 + 320 + 8) << 16) as i32];
+                    let origin = [
+                        ((sx * 512 + 256 + 8) << 16) as i32,
+                        ((sz * 512 + 320 + 8) << 16) as i32,
+                    ];
                     field.call(update, origin)?;
                     field.frames(1)?;
                     let r = |a: u32| field.read16(0x0400_0000 + a);
@@ -300,7 +450,11 @@ impl Front<'_> {
                         for y in 0..SQUARE {
                             for px in 0..SQUARE {
                                 let i = (qz + y) * ground.width + qx + px;
-                                let c = if over_index[i] != 0 { over.pixels[i] } else { ground.pixels[i] };
+                                let c = if over_index[i] != 0 {
+                                    over.pixels[i]
+                                } else {
+                                    ground.pixels[i]
+                                };
                                 canvas[(z * SQUARE + y) * size + x * SQUARE + px] = c;
                             }
                         }
@@ -316,7 +470,9 @@ impl Front<'_> {
                 // The squares the second set swaps in, and those it draws
                 // with less flat white.
                 let swapped = ids[1][sz * 16 + sx] != ids[0][sz * 16 + sx];
-                if swapped || whiteness(&canvases[1], size, sx, sz) < whiteness(&canvases[0], size, sx, sz) {
+                if swapped
+                    || whiteness(&canvases[1], size, sx, sz) < whiteness(&canvases[0], size, sx, sz)
+                {
                     second += 1;
                     for y in 0..SQUARE {
                         let row = (sz * SQUARE + y) * size + sx * SQUARE;
@@ -325,7 +481,11 @@ impl Front<'_> {
                 }
             }
         }
-        let image = Image { width: size, height: size, pixels: canvas };
+        let image = Image {
+            width: size,
+            height: size,
+            pixels: canvas,
+        };
         self.png(
             "world.png",
             &image,
@@ -337,7 +497,10 @@ impl Front<'_> {
 
 /// Pixels of bright warm light: much red, little blue.
 fn warmth(picture: &[u16]) -> usize {
-    picture.iter().filter(|&&c| c & 31 >= 26 && (c >> 10) & 31 <= 16).count()
+    picture
+        .iter()
+        .filter(|&&c| c & 31 >= 26 && (c >> 10) & 31 <= 16)
+        .count()
 }
 
 fn differ(a: &[u16], b: &[u16]) -> usize {

@@ -55,9 +55,15 @@ when none is.";
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
     let Some((what, rest)) = arguments.split_first() else {
-        return Err(format!("check needs overlays, packer, rom or tags\n{USAGE}"));
+        return Err(format!(
+            "check needs overlays, packer, rom or tags\n{USAGE}"
+        ));
     };
-    if [what].into_iter().chain(rest).any(|argument| argument == "-h" || argument == "--help") {
+    if [what]
+        .into_iter()
+        .chain(rest)
+        .any(|argument| argument == "-h" || argument == "--help")
+    {
         println!("{USAGE}");
         return Ok(());
     }

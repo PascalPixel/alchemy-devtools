@@ -17,11 +17,16 @@ pub fn bl_displacement(pair: &[u8]) -> Option<i32> {
 }
 
 fn half_at(bytes: &[u8], offset: usize) -> Option<u16> {
-    Some(u16::from_le_bytes([*bytes.get(offset)?, *bytes.get(offset + 1)?]))
+    Some(u16::from_le_bytes([
+        *bytes.get(offset)?,
+        *bytes.get(offset + 1)?,
+    ]))
 }
 
 fn word_at(bytes: &[u8], offset: usize) -> Option<u32> {
-    Some(u32::from_le_bytes(bytes.get(offset..offset + 4)?.try_into().ok()?))
+    Some(u32::from_le_bytes(
+        bytes.get(offset..offset + 4)?.try_into().ok()?,
+    ))
 }
 
 /// What one row of a function's bytes is.
@@ -59,7 +64,12 @@ fn classify(image: &[u8], base: u32, pc: u32, end: u32, half: u16) -> (Part, u32
             None => (Part::Undecodable, 2, None),
         },
         // A bl prefix runs only as a whole pair before the end.
-        0x1e if pc + 4 <= end && image.get(offset..offset + 4).and_then(bl_displacement).is_some() => {
+        0x1e if pc + 4 <= end
+            && image
+                .get(offset..offset + 4)
+                .and_then(bl_displacement)
+                .is_some() =>
+        {
             (Part::Instruction, 4, None)
         }
         0x1e | 0x1d => (Part::Undecodable, 2, None),
@@ -67,7 +77,9 @@ fn classify(image: &[u8], base: u32, pc: u32, end: u32, half: u16) -> (Part, u32
         _ => match half >> 8 {
             // Undefined, and the 0xb000 group's later forms; swi (0xdf),
             // bkpt (0xbe) and nop (0xbf00) are the ARMv4T's.
-            0xde | 0xb1 | 0xb2 | 0xb3 | 0xb6 | 0xb7 | 0xb8 | 0xb9 | 0xba | 0xbb => (Part::Undecodable, 2, None),
+            0xde | 0xb1 | 0xb2 | 0xb3 | 0xb6 | 0xb7 | 0xb8 | 0xb9 | 0xba | 0xbb => {
+                (Part::Undecodable, 2, None)
+            }
             0xbf if half != 0xbf00 => (Part::Undecodable, 2, None),
             _ => (Part::Instruction, 2, None),
         },
@@ -95,13 +107,21 @@ pub(crate) fn thumb_lines(image: &[u8], base: u32, start: u32, end: u32) -> Vec<
                     break;
                 }
                 lowest = lowest.min(word & !1);
-                lines.push(Line { address: pc, size: 4, part: Part::Data });
+                lines.push(Line {
+                    address: pc,
+                    size: 4,
+                    part: Part::Data,
+                });
                 pc += 4;
             }
             continue;
         }
         if pool.contains(&pc) && pc + 4 <= end && word_at(image, at(pc)).is_some() {
-            lines.push(Line { address: pc, size: 4, part: Part::Data });
+            lines.push(Line {
+                address: pc,
+                size: 4,
+                part: Part::Data,
+            });
             pc += 4;
             continue;
         }
@@ -118,7 +138,11 @@ pub(crate) fn thumb_lines(image: &[u8], base: u32, start: u32, end: u32) -> Vec<
                 }
             }
         }
-        lines.push(Line { address: pc, size, part });
+        lines.push(Line {
+            address: pc,
+            size,
+            part,
+        });
         pc += size;
     }
     lines
@@ -135,7 +159,10 @@ mod tests {
     }
 
     fn rows(lines: &[Line]) -> Vec<(u32, u32, Part)> {
-        lines.iter().map(|line| (line.address - BASE, line.size, line.part)).collect()
+        lines
+            .iter()
+            .map(|line| (line.address - BASE, line.size, line.part))
+            .collect()
     }
 
     #[test]
@@ -146,12 +173,22 @@ mod tests {
         image.extend((BASE + 0x14).to_le_bytes());
         image.extend(halves(&[0x2001, 0x4770, 0x2002, 0x4770]));
         image.extend((BASE + 8).to_le_bytes());
-        assert_eq!(rows(&thumb_lines(&image, BASE, BASE, BASE + 0x1c)), [
-            (0, 2, Instruction), (2, 2, Instruction), (4, 2, Instruction), (6, 2, Instruction),
-            (8, 4, Data), (0xc, 4, Data),
-            (0x10, 2, Instruction), (0x12, 2, Instruction), (0x14, 2, Instruction), (0x16, 2, Instruction),
-            (0x18, 4, Data),
-        ]);
+        assert_eq!(
+            rows(&thumb_lines(&image, BASE, BASE, BASE + 0x1c)),
+            [
+                (0, 2, Instruction),
+                (2, 2, Instruction),
+                (4, 2, Instruction),
+                (6, 2, Instruction),
+                (8, 4, Data),
+                (0xc, 4, Data),
+                (0x10, 2, Instruction),
+                (0x12, 2, Instruction),
+                (0x14, 2, Instruction),
+                (0x16, 2, Instruction),
+                (0x18, 4, Data),
+            ]
+        );
     }
 
     #[test]
@@ -159,16 +196,42 @@ mod tests {
         use Part::*;
         // A bl pair, mov lr then a lone suffix, swi and bkpt.
         let image = halves(&[0xf000, 0xf801, 0x469e, 0xf800, 0xdf01, 0xbe00]);
-        assert_eq!(rows(&thumb_lines(&image, BASE, BASE, BASE + 12)),
-            [(0, 4, Instruction), (4, 2, Instruction), (6, 2, CallSuffix), (8, 2, Instruction), (10, 2, Instruction)]);
+        assert_eq!(
+            rows(&thumb_lines(&image, BASE, BASE, BASE + 12)),
+            [
+                (0, 4, Instruction),
+                (4, 2, Instruction),
+                (6, 2, CallSuffix),
+                (8, 2, Instruction),
+                (10, 2, Instruction)
+            ]
+        );
         // A blx suffix, an undefined halfword, a later form and a hint.
         for half in [0xe800, 0xde00, 0xb100, 0xbf10] {
-            assert_eq!(rows(&thumb_lines(&halves(&[half]), BASE, BASE, BASE + 2)), [(0, 2, Undecodable)], "{half:#06x}");
+            assert_eq!(
+                rows(&thumb_lines(&halves(&[half]), BASE, BASE, BASE + 2)),
+                [(0, 2, Undecodable)],
+                "{half:#06x}"
+            );
         }
-        assert_eq!(rows(&thumb_lines(&halves(&[0xbf00]), BASE, BASE, BASE + 2)), [(0, 2, Instruction)]);
+        assert_eq!(
+            rows(&thumb_lines(&halves(&[0xbf00]), BASE, BASE, BASE + 2)),
+            [(0, 2, Instruction)]
+        );
         // A prefix the end cuts off, and a load whose word lies past the image.
-        assert_eq!(rows(&thumb_lines(&halves(&[0xf000, 0xf801]), BASE, BASE, BASE + 2)), [(0, 2, Undecodable)]);
-        assert_eq!(rows(&thumb_lines(&halves(&[0x4840]), BASE, BASE, BASE + 2)), [(0, 2, Undecodable)]);
+        assert_eq!(
+            rows(&thumb_lines(
+                &halves(&[0xf000, 0xf801]),
+                BASE,
+                BASE,
+                BASE + 2
+            )),
+            [(0, 2, Undecodable)]
+        );
+        assert_eq!(
+            rows(&thumb_lines(&halves(&[0x4840]), BASE, BASE, BASE + 2)),
+            [(0, 2, Undecodable)]
+        );
     }
 
     #[test]

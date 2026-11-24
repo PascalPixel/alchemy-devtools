@@ -262,7 +262,9 @@ pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
     match found[..] {
         [value] => Ok(value as u16),
         [] => Err(format!("no scene overlay names {name}")),
-        _ => Err(format!("{name} has several values and SceneId_{map} has no enum {own}")),
+        _ => Err(format!(
+            "{name} has several values and SceneId_{map} has no enum {own}"
+        )),
     }
 }
 
@@ -286,7 +288,10 @@ pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
     let end = game.constant("DEBUG_PARAMETER_SET_END")?;
     let mut current = 0;
     let mut members = Vec::new();
-    for unit in game.table("gDebug_ParameterSets", "DebugParameterSetRow")?.column("unitId")? {
+    for unit in game
+        .table("gDebug_ParameterSets", "DebugParameterSetRow")?
+        .column("unitId")?
+    {
         if unit == end {
             if current == preset {
                 return Ok(members);

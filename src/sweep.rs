@@ -58,12 +58,26 @@ fn patterns() -> &'static [Regex; 4] {
 fn update(statement: &str) -> Option<(String, char, String)> {
     let [_, post, pre, compound] = patterns();
     if let Some(c) = post.captures(statement) {
-        return Some((c[1].to_string(), if &c[2] == "++" { '+' } else { '-' }, "1".into()));
+        return Some((
+            c[1].to_string(),
+            if &c[2] == "++" { '+' } else { '-' },
+            "1".into(),
+        ));
     }
     if let Some(c) = pre.captures(statement) {
-        return Some((c[2].to_string(), if &c[1] == "++" { '+' } else { '-' }, "1".into()));
+        return Some((
+            c[2].to_string(),
+            if &c[1] == "++" { '+' } else { '-' },
+            "1".into(),
+        ));
     }
-    compound.captures(statement).map(|c| (c[1].to_string(), c[2].chars().next().unwrap_or('+'), c[3].to_string()))
+    compound.captures(statement).map(|c| {
+        (
+            c[1].to_string(),
+            c[2].chars().next().unwrap_or('+'),
+            c[3].to_string(),
+        )
+    })
 }
 
 /// The devices of a C file sweep can take out alone, and the tags it leaves
@@ -74,18 +88,30 @@ fn devices(text: &str) -> (Vec<Device>, Vec<(usize, String)>) {
     let mut at = 0;
     while at < lines.len() {
         let line = lines[at].trim();
-        let Some(kind) = line.strip_prefix("/* FAKEMATCH(").and_then(|rest| rest.split_once(')')).map(|(kind, _)| kind.to_string()) else {
+        let Some(kind) = line
+            .strip_prefix("/* FAKEMATCH(")
+            .and_then(|rest| rest.split_once(')'))
+            .map(|(kind, _)| kind.to_string())
+        else {
             at += 1;
             continue;
         };
-        let Some(end) = (at..lines.len()).find(|&index| lines[index].contains("*/")) else { break };
+        let Some(end) = (at..lines.len()).find(|&index| lines[index].contains("*/")) else {
+            break;
+        };
         let after: Vec<&str> = lines[end + 1..].iter().map(|line| line.trim()).collect();
         let device = match kind.as_str() {
             "barrier" => {
-                let count = after.iter().take_while(|line| patterns()[0].is_match(line) && line.ends_with(");")).count();
+                let count = after
+                    .iter()
+                    .take_while(|line| patterns()[0].is_match(line) && line.ends_with(");"))
+                    .count();
                 (count > 0).then_some(count)
             }
-            "dead" => match (after.first().and_then(|first| update(first)), after.get(1).and_then(|second| update(second))) {
+            "dead" => match (
+                after.first().and_then(|first| update(first)),
+                after.get(1).and_then(|second| update(second)),
+            ) {
                 (Some((target, sign, amount)), Some((other, other_sign, other_amount)))
                     if target == other && amount == other_amount && sign != other_sign =>
                 {
@@ -96,9 +122,21 @@ fn devices(text: &str) -> (Vec<Device>, Vec<(usize, String)>) {
             _ => None,
         };
         match device {
-            Some(count) => found.push(Device { kind: if kind == "barrier" { "barrier" } else { "dead" }, line: at + 1, lines: at..end + 1 + count }),
-            None if kind == "barrier" || kind == "dead" => left.push((at + 1, format!("{kind}: not empty asm statements or updates that cancel, right below the tag"))),
-            None => left.push((at + 1, format!("{kind}: sweep takes out only barrier and dead devices"))),
+            Some(count) => found.push(Device {
+                kind: if kind == "barrier" { "barrier" } else { "dead" },
+                line: at + 1,
+                lines: at..end + 1 + count,
+            }),
+            None if kind == "barrier" || kind == "dead" => left.push((
+                at + 1,
+                format!(
+                    "{kind}: not empty asm statements or updates that cancel, right below the tag"
+                ),
+            )),
+            None => left.push((
+                at + 1,
+                format!("{kind}: sweep takes out only barrier and dead devices"),
+            )),
         }
         at = end + 1;
     }
@@ -107,7 +145,12 @@ fn devices(text: &str) -> (Vec<Device>, Vec<(usize, String)>) {
 
 /// `text` without the lines `lines` takes.
 fn without(text: &str, lines: &std::ops::Range<usize>) -> String {
-    let mut out: Vec<&str> = text.lines().enumerate().filter(|(index, _)| !lines.contains(index)).map(|(_, line)| line).collect();
+    let mut out: Vec<&str> = text
+        .lines()
+        .enumerate()
+        .filter(|(index, _)| !lines.contains(index))
+        .map(|(_, line)| line)
+        .collect();
     if text.ends_with('\n') {
         out.push("");
     }
@@ -117,7 +160,9 @@ fn without(text: &str, lines: &std::ops::Range<usize>) -> String {
 /// Assembly as sweep compares it: without `@` comments and `.file`, which
 /// name the compiler and the file.
 fn assembly(text: &str) -> Vec<&str> {
-    text.lines().filter(|line| !line.starts_with('@') && !line.contains(".file\t")).collect()
+    text.lines()
+        .filter(|line| !line.starts_with('@') && !line.contains(".file\t"))
+        .collect()
 }
 
 /// The file on disk while it compiles, put back as it was unless kept.
@@ -134,18 +179,31 @@ impl Drop for Source {
 
 /// Whether `text`, compiled in place of the file in each of `editions`,
 /// gives the build's own assembly in every one; the first that differs.
-fn same_as_built(root: &Path, source: &Source, stem: &str, text: &str, editions: &[DecompTargetId]) -> Result<Option<DecompTargetId>, String> {
-    std::fs::write(&source.path, text).map_err(|error| format!("{}: {error}", source.path.display()))?;
+fn same_as_built(
+    root: &Path,
+    source: &Source,
+    stem: &str,
+    text: &str,
+    editions: &[DecompTargetId],
+) -> Result<Option<DecompTargetId>, String> {
+    std::fs::write(&source.path, text)
+        .map_err(|error| format!("{}: {error}", source.path.display()))?;
     for &id in editions {
         let target = target_for(id);
         let work = crate::diff::Work::new(target)?;
-        let object = work.folder.join(format!("{}.o", stem.rsplit('/').next().unwrap_or(stem)));
+        let object = work
+            .folder
+            .join(format!("{}.o", stem.rsplit('/').next().unwrap_or(stem)));
         for step in crate::compile::steps(target, &source.path, &object, None, false)? {
             crate::gba::process::run(&step, &work.folder)?;
         }
-        let compiled = std::fs::read_to_string(object.with_extension("s")).map_err(|error| format!("{id}: no assembly written: {error}"))?;
-        let built_path = built::output(root, id).join("obj").join(format!("{stem}.s"));
-        let built = std::fs::read_to_string(&built_path).map_err(|error| format!("{}: {error}", built_path.display()))?;
+        let compiled = std::fs::read_to_string(object.with_extension("s"))
+            .map_err(|error| format!("{id}: no assembly written: {error}"))?;
+        let built_path = built::output(root, id)
+            .join("obj")
+            .join(format!("{stem}.s"));
+        let built = std::fs::read_to_string(&built_path)
+            .map_err(|error| format!("{}: {error}", built_path.display()))?;
         if assembly(&compiled) != assembly(&built) {
             return Ok(Some(id));
         }
@@ -160,13 +218,20 @@ fn rows_taken_out(path: &str, original: &str, kept: &str) -> Result<Vec<String>,
         return Ok(Vec::new());
     }
     let before = crate::check::tags::untaken_rows(path, original)?;
-    Ok(crate::check::tags::untaken_rows(path, kept)?.into_iter().filter(|row| !before.contains(row)).collect())
+    Ok(crate::check::tags::untaken_rows(path, kept)?
+        .into_iter()
+        .filter(|row| !before.contains(row))
+        .collect())
 }
 
 fn sweep_file(root: &Path, file: &str, dry_run: bool) -> Result<(usize, usize), String> {
     let relative = file.trim_start_matches("./");
-    let stem = relative.strip_suffix(".c").ok_or_else(|| format!("{file}: sweep reads C files"))?;
-    let layout = Layout::of_path(relative).filter(|layout| relative.starts_with(&layout.sources())).ok_or_else(|| format!("{file} is not under games/GAME/src"))?;
+    let stem = relative
+        .strip_suffix(".c")
+        .ok_or_else(|| format!("{file}: sweep reads C files"))?;
+    let layout = Layout::of_path(relative)
+        .filter(|layout| relative.starts_with(&layout.sources()))
+        .ok_or_else(|| format!("{file} is not under games/GAME/src"))?;
     let path = root.join(relative);
     let original = std::fs::read_to_string(&path).map_err(|error| format!("{file}: {error}"))?;
     let mut editions: Vec<DecompTargetId> = Vec::new();
@@ -185,7 +250,10 @@ fn sweep_file(root: &Path, file: &str, dry_run: bool) -> Result<(usize, usize), 
     if found.is_empty() {
         return Ok((0, 0));
     }
-    let source = Source { path: path.clone(), original: original.clone() };
+    let source = Source {
+        path: path.clone(),
+        original: original.clone(),
+    };
     if let Some(id) = same_as_built(root, &source, stem, &original, &editions)? {
         return Err(format!("{file}: as it stands it does not give {id}'s built assembly; build every edition first"));
     }
@@ -194,16 +262,25 @@ fn sweep_file(root: &Path, file: &str, dry_run: bool) -> Result<(usize, usize), 
         let candidate = without(&kept, &device.lines);
         match same_as_built(root, &source, stem, &candidate, &editions)? {
             None => {
-                println!("{relative}:{}: {} device taken out; every edition's assembly is the build's", device.line, device.kind);
+                println!(
+                    "{relative}:{}: {} device taken out; every edition's assembly is the build's",
+                    device.line, device.kind
+                );
                 kept = candidate;
                 cleared += 1;
             }
-            Some(id) => println!("{relative}:{}: {} device kept; without it {id} compiles otherwise", device.line, device.kind),
+            Some(id) => println!(
+                "{relative}:{}: {} device kept; without it {id} compiles otherwise",
+                device.line, device.kind
+            ),
         }
     }
     drop(source);
     for row in rows_taken_out(relative, &original, &kept)? {
-        println!("{relative}: its row for {row} goes from evidence/{}-fakematch.tsv in alchemy-devtools", layout.game);
+        println!(
+            "{relative}: its row for {row} goes from evidence/{}-fakematch.tsv in alchemy-devtools",
+            layout.game
+        );
     }
     if cleared > 0 && !dry_run {
         std::fs::write(&path, &kept).map_err(|error| format!("{file}: {error}"))?;
@@ -212,17 +289,27 @@ fn sweep_file(root: &Path, file: &str, dry_run: bool) -> Result<(usize, usize), 
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
-    if arguments.is_empty() || arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
+    if arguments.is_empty()
+        || arguments
+            .iter()
+            .any(|argument| matches!(argument.as_str(), "-h" | "--help"))
+    {
         println!("{USAGE}");
         return Ok(());
     }
     let dry_run = arguments.iter().any(|argument| argument == "--dry-run");
-    if let Some(flag) = arguments.iter().find(|argument| argument.starts_with('-') && *argument != "--dry-run") {
+    if let Some(flag) = arguments
+        .iter()
+        .find(|argument| argument.starts_with('-') && *argument != "--dry-run")
+    {
         return Err(format!("unknown sweep option {flag}\n{USAGE}"));
     }
     let root = root();
     let (mut cleared, mut kept, mut failed) = (0, 0, Vec::new());
-    for file in arguments.iter().filter(|argument| !argument.starts_with('-')) {
+    for file in arguments
+        .iter()
+        .filter(|argument| !argument.starts_with('-'))
+    {
         match sweep_file(root, file, dry_run) {
             Ok((out, stayed)) => {
                 cleared += out;
@@ -234,7 +321,11 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
             }
         }
     }
-    let verb = if dry_run { "would be taken out" } else { "taken out" };
+    let verb = if dry_run {
+        "would be taken out"
+    } else {
+        "taken out"
+    };
     println!("{cleared} devices {verb}, {kept} kept; judge with make compare-editions");
     if failed.is_empty() {
         Ok(())
@@ -254,16 +345,37 @@ mod tests {
         assert_eq!(
             found,
             [
-                Device { kind: "barrier", line: 2, lines: 1..4 },
-                Device { kind: "dead", line: 6, lines: 5..8 },
-                Device { kind: "dead", line: 13, lines: 12..15 },
+                Device {
+                    kind: "barrier",
+                    line: 2,
+                    lines: 1..4
+                },
+                Device {
+                    kind: "dead",
+                    line: 6,
+                    lines: 5..8
+                },
+                Device {
+                    kind: "dead",
+                    line: 13,
+                    lines: 12..15
+                },
             ]
         );
-        assert_eq!(left.iter().map(|(line, _)| *line).collect::<Vec<_>>(), [9, 11]);
+        assert_eq!(
+            left.iter().map(|(line, _)| *line).collect::<Vec<_>>(),
+            [9, 11]
+        );
         let swept = without(text, &found[1].lines);
         assert!(swept.contains("  g();\n  /* FAKEMATCH(dead): a store") && swept.ends_with("}\n"));
-        assert_eq!(assembly("@ Generated by gcc\n\t.file\t\"x.c\"\n\tbx lr\n"), ["\tbx lr"]);
-        assert_eq!(update("x->count -= n + 1;"), Some(("x->count".into(), '-', "n + 1".into())));
+        assert_eq!(
+            assembly("@ Generated by gcc\n\t.file\t\"x.c\"\n\tbx lr\n"),
+            ["\tbx lr"]
+        );
+        assert_eq!(
+            update("x->count -= n + 1;"),
+            Some(("x->count".into(), '-', "n + 1".into()))
+        );
     }
 
     #[test]
@@ -272,8 +384,16 @@ mod tests {
         let path = "games/tbs/include/system/serial.h";
         let original = "void Serial_ResetTransferState(void) {\n  state = 0;\n  /* FAKEMATCH(dead): state set again. */\n  state = 0;\n}\n";
         let kept = without(original, &(2..4));
-        assert_eq!(rows_taken_out(path, original, &kept).unwrap(), ["Serial_ResetTransferState (FAKEMATCH(dead))"]);
+        assert_eq!(
+            rows_taken_out(path, original, &kept).unwrap(),
+            ["Serial_ResetTransferState (FAKEMATCH(dead))"]
+        );
         assert!(rows_taken_out(path, original, original).unwrap().is_empty());
-        assert!(rows_taken_out("games/xyz/src/x.c", original, &kept).unwrap().is_empty(), "a game with no table");
+        assert!(
+            rows_taken_out("games/xyz/src/x.c", original, &kept)
+                .unwrap()
+                .is_empty(),
+            "a game with no table"
+        );
     }
 }

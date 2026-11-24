@@ -47,13 +47,27 @@ pub struct Guide<'a> {
 impl<'a> Guide<'a> {
     /// The number of flag `name`.
     pub(super) fn flag(&self, name: &str) -> Result<u16, String> {
-        self.flags.resolve(name, None).ok_or_else(|| format!("flags.tsv names no {name}"))
+        self.flags
+            .resolve(name, None)
+            .ok_or_else(|| format!("flags.tsv names no {name}"))
     }
 
-    pub(super) fn gif(&mut self, file: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
-        let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.iter().map(|&c| animation::rgb(c)).collect()).collect();
+    pub(super) fn gif(
+        &mut self,
+        file: &str,
+        frames: &[Vec<u16>],
+        what: &str,
+    ) -> Result<(), String> {
+        let rgb: Vec<Vec<u32>> = frames
+            .iter()
+            .map(|f| f.iter().map(|&c| animation::rgb(c)).collect())
+            .collect();
         let written = animation::write(&self.out.join(file), &rgb, WIDTH)?;
-        self.written.push((file.to_string(), written.bytes, format!("{what}; {} frames at 30 a second", written.frames)));
+        self.written.push((
+            file.to_string(),
+            written.bytes,
+            format!("{what}; {} frames at 30 a second", written.frames),
+        ));
         Ok(())
     }
 
@@ -62,7 +76,12 @@ impl<'a> Guide<'a> {
     pub(super) fn enter(&self, (scene, entrance): (u16, u16)) -> Result<Field<'a>, String> {
         let set = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
-        let setup = Setup { scene, entrance, set, clear };
+        let setup = Setup {
+            scene,
+            entrance,
+            set,
+            clear,
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         field.until_control()?;
         field.frames(20)?;
@@ -70,7 +89,12 @@ impl<'a> Guide<'a> {
     }
 
     /// Holds `keys` for `frames` frames, keeping each picture.
-    pub(super) fn hold(field: &mut Field, keys: u32, frames: u32, out: &mut Vec<Vec<u16>>) -> Result<(), String> {
+    pub(super) fn hold(
+        field: &mut Field,
+        keys: u32,
+        frames: u32,
+        out: &mut Vec<Vec<u16>>,
+    ) -> Result<(), String> {
         field.hold(keys);
         for _ in 0..frames {
             field.frames(1)?;
@@ -81,7 +105,13 @@ impl<'a> Guide<'a> {
     }
 
     /// Holds each step's keys in turn from where `place` starts, as `file`.
-    fn walk_path(&mut self, place: (u16, u16), path: &[(u32, u32)], file: &str, what: &str) -> Result<(), String> {
+    fn walk_path(
+        &mut self,
+        place: (u16, u16),
+        path: &[(u32, u32)],
+        file: &str,
+        what: &str,
+    ) -> Result<(), String> {
         let mut field = self.enter(place)?;
         let mut frames = vec![field.picture()];
         for &(keys, n) in path {
@@ -94,7 +124,12 @@ impl<'a> Guide<'a> {
     /// held at 1.5 (Actor_UpdatePlayerControl).
     pub fn walk(&mut self) -> Result<(), String> {
         let path = [(KEY_RIGHT, 60), (0, 15), (KEY_LEFT | KEY_B, 60), (0, 20)];
-        self.walk_path(VALE, &path, "walk-run.gif", "walking right, then running back")
+        self.walk_path(
+            VALE,
+            &path,
+            "walk-run.gif",
+            "walking right, then running back",
+        )
     }
 
     /// Imil's snow, where the leader's footprints stay a moment, each a
@@ -125,14 +160,40 @@ impl<'a> Guide<'a> {
             (KEY_B, 4),
             (0, 40),
         ];
-        self.walk_path(VALE, &path, "menus.gif", "the field menu, its icons and the Status screen")
+        self.walk_path(
+            VALE,
+            &path,
+            "menus.gif",
+            "the field menu, its icons and the Status screen",
+        )
     }
 
     /// The Item screen: Isaac's items, one chosen, and the status panel
     /// showing his stats with it equipped, as `items.gif`.
     pub fn items(&mut self) -> Result<(), String> {
-        let path = [(0, 20), (KEY_A, 4), (0, 40), (KEY_RIGHT, 4), (0, 30), (KEY_A, 4), (0, 40), (KEY_A, 4), (0, 40), (KEY_RIGHT, 4), (0, 30), (KEY_A, 4), (0, 60), (KEY_DOWN, 4), (0, 60)];
-        self.walk_path(VALE, &path, "items.gif", "the Item screen and an item's stats")
+        let path = [
+            (0, 20),
+            (KEY_A, 4),
+            (0, 40),
+            (KEY_RIGHT, 4),
+            (0, 30),
+            (KEY_A, 4),
+            (0, 40),
+            (KEY_A, 4),
+            (0, 40),
+            (KEY_RIGHT, 4),
+            (0, 30),
+            (KEY_A, 4),
+            (0, 60),
+            (KEY_DOWN, 4),
+            (0, 60),
+        ];
+        self.walk_path(
+            VALE,
+            &path,
+            "items.gif",
+            "the Item screen and an item's stats",
+        )
     }
 
     /// The game from power-on with no key pressed and no save file: the
@@ -142,7 +203,12 @@ impl<'a> Guide<'a> {
     /// each side of a black screen, so the recording begins on the black
     /// after it and holds the Golden Sun logo for CLEARED frames.
     pub fn boot(&mut self) -> Result<(), String> {
-        let setup = Setup { scene: POWER_ON.0, entrance: POWER_ON.1, set: Vec::new(), clear: Vec::new() };
+        let setup = Setup {
+            scene: POWER_ON.0,
+            entrance: POWER_ON.1,
+            set: Vec::new(),
+            clear: Vec::new(),
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let mut frames = Vec::new();
         Self::hold(&mut field, 0, 900, &mut frames)?;
@@ -150,28 +216,61 @@ impl<'a> Guide<'a> {
         // the Nintendo logo; the Golden Sun logo the first after the black
         // that follows it.
         let lit = |f: &Vec<u16>| !is_black_bgr555(f);
-        let after = |from: usize, want: bool| frames[from..].iter().position(|f| lit(f) == want).map(|i| from + i);
+        let after = |from: usize, want: bool| {
+            frames[from..]
+                .iter()
+                .position(|f| lit(f) == want)
+                .map(|i| from + i)
+        };
         let first = after(0, true).ok_or("power-on shows nothing")?;
-        let camelot = after(after(first, false).ok_or("power-on never turns black")?, true).ok_or("no picture after the black")?;
+        let camelot = after(
+            after(first, false).ok_or("power-on never turns black")?,
+            true,
+        )
+        .ok_or("no picture after the black")?;
         let black = after(camelot, false).ok_or("the Camelot logo never turns black")?;
         let logo = after(black, true).ok_or("no Golden Sun logo after the black")?;
         let end = logo + CLEARED;
         if frames.len() < end {
             Self::hold(&mut field, 0, (end - frames.len()) as u32, &mut frames)?;
         }
-        self.gif("boot.gif", &frames[black..end], "the game at power-on: the Golden Sun logo fading in")
+        self.gif(
+            "boot.gif",
+            &frames[black..end],
+            "the game at power-on: the Golden Sun logo fading in",
+        )
     }
 
     /// Start pressed two screens deep: every screen closes at once.
     pub fn menu_start(&mut self) -> Result<(), String> {
-        let path = [(0, 20), (KEY_A, 4), (0, 50), (KEY_A, 4), (0, 50), (KEY_A, 4), (0, 60), (KEY_START, 4), (0, 60)];
-        self.walk_path(VALE, &path, "menu-start.gif", "Start closing the Psynergy screen and the field menu at once")
+        let path = [
+            (0, 20),
+            (KEY_A, 4),
+            (0, 50),
+            (KEY_A, 4),
+            (0, 50),
+            (KEY_A, 4),
+            (0, 60),
+            (KEY_START, 4),
+            (0, 60),
+        ];
+        self.walk_path(
+            VALE,
+            &path,
+            "menu-start.gif",
+            "Start closing the Psynergy screen and the field menu at once",
+        )
     }
 
     /// The world map's perspective view as the party walks and runs.
     pub fn world_map(&mut self) -> Result<(), String> {
         let path = [(KEY_DOWN, 50), (KEY_RIGHT | KEY_B, 60), (KEY_UP, 50)];
-        self.walk_path(WORLD_MAP, &path, "world-map-walk.gif", "walking and running on the world map")
+        self.walk_path(
+            WORLD_MAP,
+            &path,
+            "world-map-walk.gif",
+            "walking and running on the world map",
+        )
     }
 
     /// Vale's layers pulled apart in 3D: the scene as the game shows it,
@@ -190,7 +289,13 @@ impl<'a> Guide<'a> {
             field.io_write16(DISPCNT, (shown & !LAYER_BITS) | bits);
             field.set_backdrop(KEY);
             field.frames(2)?;
-            sheets.push(field.picture().iter().map(|&c| (c != KEY).then(|| animation::rgb(c))).collect::<Vec<_>>());
+            sheets.push(
+                field
+                    .picture()
+                    .iter()
+                    .map(|&c| (c != KEY).then(|| animation::rgb(c)))
+                    .collect::<Vec<_>>(),
+            );
         }
         // Frames at 60 a second: flat, apart, held, together, flat.
         let mut spread = Vec::new();
@@ -201,7 +306,11 @@ impl<'a> Guide<'a> {
         spread.extend(std::iter::repeat_n(0.0, 20));
         let frames: Vec<Vec<u32>> = spread.iter().map(|&e| draw_sheets(&sheets, e)).collect();
         let written = animation::write(&self.out.join("layers-3d.gif"), &frames, CANVAS.0)?;
-        self.written.push(("layers-3d.gif".to_string(), written.bytes, format!("Vale's layers pulled apart; {} frames", written.frames)));
+        self.written.push((
+            "layers-3d.gif".to_string(),
+            written.bytes,
+            format!("Vale's layers pulled apart; {} frames", written.frames),
+        ));
         Ok(())
     }
 }
@@ -246,7 +355,8 @@ fn rotate(p: [f64; 3], yaw: f64, pitch: f64) -> [f64; 3] {
 }
 
 fn det(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> f64 {
-    a[0] * (b[1] * c[2] - b[2] * c[1]) - b[0] * (a[1] * c[2] - a[2] * c[1]) + c[0] * (a[1] * b[2] - a[2] * b[1])
+    a[0] * (b[1] * c[2] - b[2] * c[1]) - b[0] * (a[1] * c[2] - a[2] * c[1])
+        + c[0] * (a[1] * b[2] - a[2] * b[1])
 }
 
 /// One frame of the exploded view with the sheets `e` of the way apart
@@ -262,12 +372,20 @@ pub(super) fn draw_sheets(sheets: &[Vec<Option<u32>>], e: f64) -> Vec<u32> {
     let ev = rotate([0.0, 1.0, 0.0], yaw, pitch);
     for (i, sheet) in sheets.iter().enumerate() {
         let depth = ((n - 1.0) / 2.0 - i as f64) * GAP * e;
-        let p0 = rotate([-(WIDTH as f64) / 2.0, -(HEIGHT as f64) / 2.0, depth], yaw, pitch);
+        let p0 = rotate(
+            [-(WIDTH as f64) / 2.0, -(HEIGHT as f64) / 2.0, depth],
+            yaw,
+            pitch,
+        );
         // Camera at (0, 0, -DISTANCE): solve camera + t ray = p0 + a eu + b ev.
         let rhs = [-p0[0], -p0[1], -DISTANCE - p0[2]];
         for y in 0..h {
             for x in 0..w {
-                let ray = [(x as f64 + 0.5 - cx) / focal, (y as f64 + 0.5 - cy) / focal, 1.0];
+                let ray = [
+                    (x as f64 + 0.5 - cx) / focal,
+                    (y as f64 + 0.5 - cy) / focal,
+                    1.0,
+                ];
                 let back = [-ray[0], -ray[1], -ray[2]];
                 let d = det(eu, ev, back);
                 if d.abs() < 1e-9 {
@@ -279,7 +397,8 @@ pub(super) fn draw_sheets(sheets: &[Vec<Option<u32>>], e: f64) -> Vec<u32> {
                     continue;
                 }
                 let at = &mut canvas[y * w + x];
-                let near_edge = a < 1.0 || b < 1.0 || a > WIDTH as f64 - 1.0 || b > HEIGHT as f64 - 1.0;
+                let near_edge =
+                    a < 1.0 || b < 1.0 || a > WIDTH as f64 - 1.0 || b > HEIGHT as f64 - 1.0;
                 if near_edge && e > 0.02 {
                     *at = mix(*at, EDGE, e);
                     continue;
@@ -318,17 +437,105 @@ const FACE_EAST: u32 = 0x0000;
 /// its map's event answers, or in the room whose event it changes.
 /// A Psynergy may be listed more than once, at places tried in turn.
 const FIELD_CASTS: &[FieldCast] = &[
-    FieldCast { ability: "ABILITY_REVEAL", map: "ValeCaveKite", entrance: 1, actor: None, target: "the hidden floor", stand: Some((248, 280, FACE_NORTH)), tail: 600 },
-    FieldCast { ability: "ABILITY_MOVE", map: "Vale", entrance: 1, actor: Some("ACTOR_PILLAR"), target: "a stone pillar", stand: None, tail: 40 },
-    FieldCast { ability: "ABILITY_AVOID", map: "GomaCavePillar", entrance: 5, actor: None, target: "the party", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_MIND_READ", map: "Vale", entrance: 1, actor: Some("ACTOR_GARETS_SISTER"), target: "Garet's sister", stand: None, tail: 20 },
-    FieldCast { ability: "ABILITY_CATCH", map: "Vale", entrance: 1, actor: Some("ACTOR_NUT"), target: "a Nut", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_RETREAT", map: "GomaCavePillar", entrance: 5, actor: None, target: "the party", stand: None, tail: 240 },
-    FieldCast { ability: "ABILITY_FORCE", map: "Xian", entrance: 0, actor: Some("ACTOR_FORCE_TARGET"), target: "the training tree", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_LIFT", map: "GondowanCave", entrance: 0, actor: Some("ACTOR_BOULDER"), target: "a boulder", stand: None, tail: 30 },
-    FieldCast { ability: "ABILITY_CARRY", map: "TunnelRuinsLadyStatues", entrance: 0, actor: Some("ACTOR_MIDDLE_CARRY_STONE"), target: "a stone block", stand: None, tail: 60 },
-    FieldCast { ability: "ABILITY_CLOAK", map: "LunpaFortressGates", entrance: 0, actor: None, target: "the party", stand: None, tail: 120 },
-    FieldCast { ability: "ABILITY_HALT", map: "ValeCaveKite", entrance: 5, actor: Some("ACTOR_KITE"), target: "Kite", stand: Some((792, 256, FACE_NORTH)), tail: 60 },
+    FieldCast {
+        ability: "ABILITY_REVEAL",
+        map: "ValeCaveKite",
+        entrance: 1,
+        actor: None,
+        target: "the hidden floor",
+        stand: Some((248, 280, FACE_NORTH)),
+        tail: 600,
+    },
+    FieldCast {
+        ability: "ABILITY_MOVE",
+        map: "Vale",
+        entrance: 1,
+        actor: Some("ACTOR_PILLAR"),
+        target: "a stone pillar",
+        stand: None,
+        tail: 40,
+    },
+    FieldCast {
+        ability: "ABILITY_AVOID",
+        map: "GomaCavePillar",
+        entrance: 5,
+        actor: None,
+        target: "the party",
+        stand: None,
+        tail: 30,
+    },
+    FieldCast {
+        ability: "ABILITY_MIND_READ",
+        map: "Vale",
+        entrance: 1,
+        actor: Some("ACTOR_GARETS_SISTER"),
+        target: "Garet's sister",
+        stand: None,
+        tail: 20,
+    },
+    FieldCast {
+        ability: "ABILITY_CATCH",
+        map: "Vale",
+        entrance: 1,
+        actor: Some("ACTOR_NUT"),
+        target: "a Nut",
+        stand: None,
+        tail: 30,
+    },
+    FieldCast {
+        ability: "ABILITY_RETREAT",
+        map: "GomaCavePillar",
+        entrance: 5,
+        actor: None,
+        target: "the party",
+        stand: None,
+        tail: 240,
+    },
+    FieldCast {
+        ability: "ABILITY_FORCE",
+        map: "Xian",
+        entrance: 0,
+        actor: Some("ACTOR_FORCE_TARGET"),
+        target: "the training tree",
+        stand: None,
+        tail: 30,
+    },
+    FieldCast {
+        ability: "ABILITY_LIFT",
+        map: "GondowanCave",
+        entrance: 0,
+        actor: Some("ACTOR_BOULDER"),
+        target: "a boulder",
+        stand: None,
+        tail: 30,
+    },
+    FieldCast {
+        ability: "ABILITY_CARRY",
+        map: "TunnelRuinsLadyStatues",
+        entrance: 0,
+        actor: Some("ACTOR_MIDDLE_CARRY_STONE"),
+        target: "a stone block",
+        stand: None,
+        tail: 60,
+    },
+    FieldCast {
+        ability: "ABILITY_CLOAK",
+        map: "LunpaFortressGates",
+        entrance: 0,
+        actor: None,
+        target: "the party",
+        stand: None,
+        tail: 120,
+    },
+    FieldCast {
+        ability: "ABILITY_HALT",
+        map: "ValeCaveKite",
+        entrance: 5,
+        actor: Some("ACTOR_KITE"),
+        target: "Kite",
+        stand: Some((792, 256, FACE_NORTH)),
+        tail: 60,
+    },
 ];
 
 /// A field cast read through the source: the ability's number and name
@@ -356,7 +563,10 @@ fn field_casts() -> Result<Vec<Cast>, String> {
                 name: source::ability_name(id)?,
                 place: (map, cast.entrance),
                 scene: source::area_name(map, cast.entrance)?,
-                actor: cast.actor.map(|name| source::actor_id(cast.map, name)).transpose()?,
+                actor: cast
+                    .actor
+                    .map(|name| source::actor_id(cast.map, name))
+                    .transpose()?,
                 target: cast.target,
                 stand: cast.stand,
                 tail: cast.tail,
@@ -380,8 +590,15 @@ pub struct Entered<'a> {
 impl<'a> Guide<'a> {
     /// Enters a scene as `enter` does, with `set` set as well, keeping the
     /// moment the party was placed.
-    pub(super) fn enter_with(&self, place: (u16, u16), set: &[&str]) -> Result<Entered<'a>, String> {
-        let set = set.iter().map(|name| self.flag(name)).collect::<Result<Vec<u16>, String>>()?;
+    pub(super) fn enter_with(
+        &self,
+        place: (u16, u16),
+        set: &[&str],
+    ) -> Result<Entered<'a>, String> {
+        let set = set
+            .iter()
+            .map(|name| self.flag(name))
+            .collect::<Result<Vec<u16>, String>>()?;
         self.enter_set(place, set)
     }
 
@@ -389,7 +606,11 @@ impl<'a> Guide<'a> {
     /// `of` (the place's first room, for any room of it): with every story
     /// flag set before then (Flags::before_first_visit), the chapter's party
     /// (party.rs), and the prologue over.
-    pub(super) fn enter_first_visit(&self, place: (u16, u16), of: u16) -> Result<Entered<'a>, String> {
+    pub(super) fn enter_first_visit(
+        &self,
+        place: (u16, u16),
+        of: u16,
+    ) -> Result<Entered<'a>, String> {
         self.enter_set(place, self.flags.before_first_visit(of)?)
     }
 
@@ -404,7 +625,12 @@ impl<'a> Guide<'a> {
         // Set first, then cleared: the night's storm and the childhood
         // sprites are over, whatever a beat before left set.
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
-        let setup = Setup { scene: place.0, entrance: place.1, set: flags, clear };
+        let setup = Setup {
+            scene: place.0,
+            entrance: place.1,
+            set: flags,
+            clear,
+        };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         let placed = field.save();
         field.until_control()?;
@@ -414,9 +640,21 @@ impl<'a> Guide<'a> {
 
     /// Enters `place` from a new game with these flags set and cleared and
     /// stops where the scene's setup is about to run.
-    pub(super) fn arrive(&self, place: (u16, u16), set: &[&str], clear: &[&str]) -> Result<Field<'a>, String> {
-        let resolve = |names: &[&str]| -> Result<Vec<u16>, String> { names.iter().map(|n| self.flag(n)).collect() };
-        let setup = Setup { scene: place.0, entrance: place.1, set: resolve(set)?, clear: resolve(clear)? };
+    pub(super) fn arrive(
+        &self,
+        place: (u16, u16),
+        set: &[&str],
+        clear: &[&str],
+    ) -> Result<Field<'a>, String> {
+        let resolve = |names: &[&str]| -> Result<Vec<u16>, String> {
+            names.iter().map(|n| self.flag(n)).collect()
+        };
+        let setup = Setup {
+            scene: place.0,
+            entrance: place.1,
+            set: resolve(set)?,
+            clear: resolve(clear)?,
+        };
         Field::enter(self.rom, self.symbols, &setup)
     }
 
@@ -424,7 +662,12 @@ impl<'a> Guide<'a> {
     /// Field::spots gives in turn until one shows something, and keeps every
     /// frame from just before it to the player's control again, then `tail`
     /// frames more.
-    pub(super) fn record_trigger(entered: &mut Entered, trigger: Trigger, spot: Option<Spot>, tail: u32) -> Result<Vec<Vec<u16>>, String> {
+    pub(super) fn record_trigger(
+        entered: &mut Entered,
+        trigger: Trigger,
+        spot: Option<Spot>,
+        tail: u32,
+    ) -> Result<Vec<Vec<u16>>, String> {
         let field = &mut entered.field;
         let spots = match spot {
             Some(s) => vec![s],
@@ -432,14 +675,34 @@ impl<'a> Guide<'a> {
         };
         let mut last = String::from("nowhere to stand");
         for s in spots.iter().take(12) {
-            match field.event(Start::Entered(&entered.placed), trigger, s, &[], &[], 16, Some(CAST_FRAMES)) {
+            match field.event(
+                Start::Entered(&entered.placed),
+                trigger,
+                s,
+                &[],
+                &[],
+                16,
+                Some(CAST_FRAMES),
+            ) {
                 Ok(run) if run.shown || spot.is_some() => {
                     let mut frames = run.frames;
                     // One that reaches a black screen sooner than CLEARED is
                     // played again with the leader standing ready for longer.
-                    if let Some(first) = frames.iter().position(|f| is_black_bgr555(f)).filter(|&b| b < CLEARED) {
+                    if let Some(first) = frames
+                        .iter()
+                        .position(|f| is_black_bgr555(f))
+                        .filter(|&b| b < CLEARED)
+                    {
                         field.lead_in = LEAD_IN + (CLEARED - first) as u32;
-                        let longer = field.event(Start::Entered(&entered.placed), trigger, s, &[], &[], 16, Some(CAST_FRAMES));
+                        let longer = field.event(
+                            Start::Entered(&entered.placed),
+                            trigger,
+                            s,
+                            &[],
+                            &[],
+                            16,
+                            Some(CAST_FRAMES),
+                        );
                         field.lead_in = LEAD_IN;
                         frames = longer?.frames;
                     }
@@ -457,10 +720,25 @@ impl<'a> Guide<'a> {
     }
 
     /// A spot at (x, z) pixels on the leader's layer, on the ground there.
-    pub(super) fn spot_at(field: &mut Field, (x, z, facing): (i32, i32, u32)) -> Result<Spot, String> {
-        let layer = field.leader().ok_or("the scene has no leader")?.layer.min(2);
+    pub(super) fn spot_at(
+        field: &mut Field,
+        (x, z, facing): (i32, i32, u32),
+    ) -> Result<Spot, String> {
+        let layer = field
+            .leader()
+            .ok_or("the scene has no leader")?
+            .layer
+            .min(2);
         let height = field.ground(layer, x, z)?;
-        Ok(Spot { x, z, layer, height, facing, walk: 0, cell: None })
+        Ok(Spot {
+            x,
+            z,
+            layer,
+            height,
+            facing,
+            walk: 0,
+            cell: None,
+        })
     }
 
     /// Records one field cast: from its entrance, and for a cast on an
@@ -494,7 +772,9 @@ impl<'a> Guide<'a> {
             .field
             .entrances()
             .iter()
-            .filter(|e| e.number as u16 != cast.place.1 && box_holds(e.camera, header, actor.x, actor.z))
+            .filter(|e| {
+                e.number as u16 != cast.place.1 && box_holds(e.camera, header, actor.x, actor.z)
+            })
             .map(|e| e.number as u16)
             .collect();
         for entrance in others {
@@ -515,17 +795,29 @@ impl<'a> Guide<'a> {
         let mut done: Vec<String> = Vec::new();
         let casts = field_casts()?;
         for (i, cast) in casts.iter().enumerate() {
-            if done.contains(&cast.name) || (!only.is_empty() && !only.iter().any(|o| o.eq_ignore_ascii_case(&cast.name))) {
+            if done.contains(&cast.name)
+                || (!only.is_empty() && !only.iter().any(|o| o.eq_ignore_ascii_case(&cast.name)))
+            {
                 continue;
             }
             let last = !casts[i + 1..].iter().any(|c| c.name == cast.name);
             let file = format!("{}.gif", super::plan::slug(&cast.name));
             match self.record_cast(cast) {
                 Ok(frames) => {
-                    let rgb: Vec<Vec<u32>> = frames.iter().map(|f| f.iter().map(|&c| animation::rgb(c)).collect()).collect();
+                    let rgb: Vec<Vec<u32>> = frames
+                        .iter()
+                        .map(|f| f.iter().map(|&c| animation::rgb(c)).collect())
+                        .collect();
                     let written = animation::write(&self.out.join(&file), &rgb, WIDTH)?;
-                    self.written.push((file.clone(), written.bytes, format!("{} cast at {} in {}", cast.name, cast.target, cast.scene)));
-                    self.casts.push(format!("{}\t{}\tIsaac\t{}\t{}\t{file}\t{}", cast.id, cast.name, cast.target, written.frames, cast.scene));
+                    self.written.push((
+                        file.clone(),
+                        written.bytes,
+                        format!("{} cast at {} in {}", cast.name, cast.target, cast.scene),
+                    ));
+                    self.casts.push(format!(
+                        "{}\t{}\tIsaac\t{}\t{}\t{file}\t{}",
+                        cast.id, cast.name, cast.target, written.frames, cast.scene
+                    ));
                     done.push(cast.name.clone());
                 }
                 Err(e) => {
@@ -536,10 +828,13 @@ impl<'a> Guide<'a> {
                 }
             }
         }
-        if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
+        if failed.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("{} failed", failed.join(", ")))
+        }
     }
 }
-
 
 /// The field Psynergy `field-psynergy` casts, each once, in its order.
 pub fn field_cast_names() -> Result<Vec<String>, String> {
@@ -587,7 +882,10 @@ pub const MODES: &[&str] = &[
 /// Every mode, in the order `render guide` plays them: this file's, then
 /// each recording file's.
 pub fn modes() -> impl Iterator<Item = &'static str> {
-    use super::{guide_fight, guide_front, guide_interface, guide_lucky, guide_menus, guide_scene_map, guide_world_play};
+    use super::{
+        guide_fight, guide_front, guide_interface, guide_lucky, guide_menus, guide_scene_map,
+        guide_world_play,
+    };
     MODES
         .iter()
         .chain(guide_front::MODES)
@@ -677,7 +975,9 @@ pub(super) fn stacking(field: &Field) -> Vec<u32> {
             }
             count[(field.read16(OAM + 8 * entry + 4) >> 10 & 3) as usize] += 1;
         }
-        let priority = (0..4).max_by_key(|&p| (count[p], std::cmp::Reverse(p))).unwrap_or(0) as u16;
+        let priority = (0..4)
+            .max_by_key(|&p| (count[p], std::cmp::Reverse(p)))
+            .unwrap_or(0) as u16;
         layers.push((priority, 0, 4));
     }
     // Nearest first, then turned round so the farthest sheet comes first.
@@ -689,7 +989,10 @@ pub(super) fn stacking(field: &Field) -> Vec<u32> {
 /// sheet whose empty pixels are None. Each layer is chosen through DISPCNT,
 /// as `exploded` does: hiding a background in libmgba itself crashed it in a
 /// battle. It fails if the game rewrites DISPCNT during the capture.
-pub(super) fn layer_sheets(field: &mut Field, layers: &[u32]) -> Result<Vec<Vec<Option<u32>>>, String> {
+pub(super) fn layer_sheets(
+    field: &mut Field,
+    layers: &[u32],
+) -> Result<Vec<Vec<Option<u32>>>, String> {
     let saved = field.save();
     let shown = field.read16(DISPCNT);
     let mut sheets = Vec::new();
@@ -700,9 +1003,17 @@ pub(super) fn layer_sheets(field: &mut Field, layers: &[u32]) -> Result<Vec<Vec<
         field.set_backdrop(KEY);
         field.frames(2)?;
         if field.read16(DISPCNT) & LAYER_BITS != bit {
-            return Err(format!("the game rewrote DISPCNT while layer {layer} was captured"));
+            return Err(format!(
+                "the game rewrote DISPCNT while layer {layer} was captured"
+            ));
         }
-        sheets.push(field.picture().iter().map(|&c| (c != KEY).then(|| animation::rgb(c))).collect());
+        sheets.push(
+            field
+                .picture()
+                .iter()
+                .map(|&c| (c != KEY).then(|| animation::rgb(c)))
+                .collect(),
+        );
     }
     field.load(&saved);
     Ok(sheets)
@@ -729,13 +1040,35 @@ impl Guide<'_> {
     /// The moment `field` is at, pulled apart like Vale's layers into
     /// `file`: each layer the display mode shows, in the order the hardware
     /// stacks them (stacking), as sheets that spread and close again.
-    pub(super) fn explode_now(&mut self, field: &mut Field, file: &str, what: &str) -> Result<(), String> {
+    pub(super) fn explode_now(
+        &mut self,
+        field: &mut Field,
+        file: &str,
+        what: &str,
+    ) -> Result<(), String> {
         let layers = stacking(field);
         let sheets = layer_sheets(field, &layers)?;
         let frames = spread_frames(&sheets);
         let written = animation::write(&self.out.join(file), &frames, CANVAS.0)?;
-        let order: Vec<String> = layers.iter().map(|&n| if n == 4 { "sprites".to_string() } else { format!("BG{n}") }).collect();
-        self.written.push((file.to_string(), written.bytes, format!("{what} pulled apart, back to front {}; {} frames", order.join(", "), written.frames)));
+        let order: Vec<String> = layers
+            .iter()
+            .map(|&n| {
+                if n == 4 {
+                    "sprites".to_string()
+                } else {
+                    format!("BG{n}")
+                }
+            })
+            .collect();
+        self.written.push((
+            file.to_string(),
+            written.bytes,
+            format!(
+                "{what} pulled apart, back to front {}; {} frames",
+                order.join(", "),
+                written.frames
+            ),
+        ));
         Ok(())
     }
 
@@ -761,7 +1094,10 @@ mod tests {
         let names = field_cast_names().unwrap();
         // Every field Psynergy once: the kind-9 abilities from Move to
         // Avoid, as ability_ids.h numbers them.
-        let (first, last) = (source::ability_id("ABILITY_MOVE").unwrap(), source::ability_id("ABILITY_AVOID").unwrap());
+        let (first, last) = (
+            source::ability_id("ABILITY_MOVE").unwrap(),
+            source::ability_id("ABILITY_AVOID").unwrap(),
+        );
         let mut ids: Vec<u16> = casts.iter().map(|c| c.id).collect();
         ids.sort_unstable();
         ids.dedup();

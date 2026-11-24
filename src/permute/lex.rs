@@ -50,22 +50,34 @@ pub fn lex(source: &str) -> Result<Vec<Token>, String> {
         let (text, line) = (token.text, token.line);
         let unexpected = |c: char| format!("line {line}: unexpected character {c:?}");
         let tok = match token.kind {
-            Kind::Comment if text.starts_with("/*") && (text.len() < 4 || !text.ends_with("*/")) => {
+            Kind::Comment
+                if text.starts_with("/*") && (text.len() < 4 || !text.ends_with("*/")) =>
+            {
                 return Err(format!("line {line}: unterminated comment"));
             }
             Kind::Comment => Tok::Comment(text.to_string()),
             Kind::Ident if text.contains('$') => return Err(unexpected('$')),
             Kind::Ident => Tok::Ident(text.to_string()),
             Kind::Number => Tok::Number(text.to_string()),
-            Kind::Char | Kind::Str if !closed(text) => return Err(format!("line {line}: unterminated literal")),
+            Kind::Char | Kind::Str if !closed(text) => {
+                return Err(format!("line {line}: unterminated literal"))
+            }
             Kind::Char => Tok::Char(text.to_string()),
             Kind::Str => Tok::Str(text.to_string()),
             _ => Tok::Punct(
-                PUNCTUATORS.iter().find(|&&punct| punct == text).ok_or_else(|| unexpected(text.chars().next().unwrap_or(' ')))?,
+                PUNCTUATORS
+                    .iter()
+                    .find(|&&punct| punct == text)
+                    .ok_or_else(|| unexpected(text.chars().next().unwrap_or(' ')))?,
             ),
         };
         let start = text.as_ptr() as usize - source.as_ptr() as usize;
-        tokens.push(Token { tok, start, end: start + text.len(), line });
+        tokens.push(Token {
+            tok,
+            start,
+            end: start + text.len(),
+            line,
+        });
     }
     Ok(tokens)
 }
@@ -95,7 +107,10 @@ mod tests {
             ]
         );
         let token = &lex("x = \"a\\\"b\";").unwrap()[2];
-        assert_eq!((&token.tok, token.start, token.end), (&Tok::Str("\"a\\\"b\"".into()), 4, 10));
+        assert_eq!(
+            (&token.tok, token.start, token.end),
+            (&Tok::Str("\"a\\\"b\"".into()), 4, 10)
+        );
         for text in ["/* open", "\"open\n\";", "'a", "a@b", "a$b", "x = \"a\\\";"] {
             assert!(lex(text).is_err(), "{text:?}");
         }

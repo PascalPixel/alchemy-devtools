@@ -65,7 +65,11 @@ fn row_pattern() -> &'static Regex {
 
 impl<'a> Assembly<'a> {
     fn new(root: &'a Path, defined: &str) -> Assembly<'a> {
-        Assembly { root, symbols: HashMap::from([(defined.to_string(), 1)]), stack: Vec::new() }
+        Assembly {
+            root,
+            symbols: HashMap::from([(defined.to_string(), 1)]),
+            stack: Vec::new(),
+        }
     }
 
     fn active(&self) -> bool {
@@ -75,7 +79,9 @@ impl<'a> Assembly<'a> {
     /// Whether a line here may be assembled: inside a test it could not
     /// follow, though nothing it could follow is false.
     fn possible(&self) -> bool {
-        self.stack.iter().all(|branch| branch.active || (!branch.known && branch.outer))
+        self.stack
+            .iter()
+            .all(|branch| branch.active || (!branch.known && branch.outer))
     }
 
     fn value(&self, expression: &str) -> Option<i64> {
@@ -85,12 +91,18 @@ impl<'a> Assembly<'a> {
     fn open(&mut self, test: Option<bool>) {
         let outer = self.active();
         let active = outer && test.unwrap_or(false);
-        self.stack.push(Branch { outer, taken: active, active, known: test.is_some() });
+        self.stack.push(Branch {
+            outer,
+            taken: active,
+            active,
+            known: test.is_some(),
+        });
     }
 
     /// Reads one file's lines into `found`, following its includes.
     fn read(&mut self, path: &Path, found: &mut Rows) -> Result<(), String> {
-        let text = std::fs::read_to_string(path).map_err(|error| format!("{}: {error}", path.display()))?;
+        let text = std::fs::read_to_string(path)
+            .map_err(|error| format!("{}: {error}", path.display()))?;
         for (index, line) in text.lines().enumerate() {
             let code = line.trim();
             let (directive, rest) = code.split_once(char::is_whitespace).unwrap_or((code, ""));
@@ -115,7 +127,13 @@ impl<'a> Assembly<'a> {
                 ".endif" => {
                     self.stack.pop();
                 }
-                ".byte" if !self.active() && self.possible() && code.contains("PACKER: left in the buffer by") => found.unread += 1,
+                ".byte"
+                    if !self.active()
+                        && self.possible()
+                        && code.contains("PACKER: left in the buffer by") =>
+                {
+                    found.unread += 1
+                }
                 _ if !self.active() => {}
                 ".set" | ".equ" => {
                     if let Some((name, value)) = rest.split_once(',') {
@@ -127,18 +145,31 @@ impl<'a> Assembly<'a> {
                 }
                 ".include" => {
                     let included = rest.trim_matches('"');
-                    let path = [path.parent().map(|folder| folder.join(included)), Some(self.root.join(included))]
-                        .into_iter()
-                        .flatten()
-                        .find(|path| path.is_file())
-                        .ok_or_else(|| format!("{}:{}: cannot find {included}", path.display(), index + 1))?;
+                    let path = [
+                        path.parent().map(|folder| folder.join(included)),
+                        Some(self.root.join(included)),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .find(|path| path.is_file())
+                    .ok_or_else(|| {
+                        format!("{}:{}: cannot find {included}", path.display(), index + 1)
+                    })?;
                     self.read(&path, found)?;
                 }
                 ".byte" if code.contains("PACKER: left in the buffer by") => {
                     let row = row_pattern().captures(code).and_then(|captures| {
-                        let bytes = captures[1].split(',').map(|byte| number(byte).and_then(|byte| u8::try_from(byte).ok())).collect::<Option<Vec<u8>>>()?;
+                        let bytes = captures[1]
+                            .split(',')
+                            .map(|byte| number(byte).and_then(|byte| u8::try_from(byte).ok()))
+                            .collect::<Option<Vec<u8>>>()?;
                         let offset = u32::try_from(number(&captures[3])?).ok()?;
-                        Some(Row { line: index + 1, bytes, provider: captures[2].to_string(), offset })
+                        Some(Row {
+                            line: index + 1,
+                            bytes,
+                            provider: captures[2].to_string(),
+                            offset,
+                        })
                     });
                     match row {
                         Some(row) => found.rows.push(row),
@@ -168,7 +199,10 @@ fn files(root: &Path, game: &str) -> Vec<PathBuf> {
         .flatten()
         .map(|entry| entry.into_path())
         .filter(|path| path.extension().is_some_and(|extension| extension == "s"))
-        .filter(|path| std::fs::read_to_string(path).is_ok_and(|text| text.contains("PACKER: left in the buffer by")))
+        .filter(|path| {
+            std::fs::read_to_string(path)
+                .is_ok_and(|text| text.contains("PACKER: left in the buffer by"))
+        })
         .collect();
     files.sort();
     files
@@ -183,14 +217,17 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
     let mut by_game: HashMap<&str, Vec<PathBuf>> = HashMap::new();
     let (mut wrong, mut not_built) = (0, Vec::new());
     for &id in &editions {
-        let Ok(map) = std::fs::read_to_string(built::output(root, id).join(format!("{id}.map"))) else {
+        let Ok(map) = std::fs::read_to_string(built::output(root, id).join(format!("{id}.map")))
+        else {
             println!("{id}: not built; make compare-{id}");
             not_built.push(id);
             continue;
         };
         let map = Map::parse(&map);
         let rom = reference(root, id)?;
-        let files = by_game.entry(id.game()).or_insert_with(|| files(root, id.game()));
+        let files = by_game
+            .entry(id.game())
+            .or_insert_with(|| files(root, id.game()));
         let (mut checked, mut unread) = (0, 0);
         for path in files.iter() {
             let found = rows(root, id, path)?;
@@ -206,18 +243,40 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
                 let at = address.wrapping_sub(ROM).wrapping_add(row.offset) as usize;
                 let held = rom.get(at..at + row.bytes.len());
                 if held != Some(&row.bytes[..]) {
-                    let hex = |bytes: &[u8]| bytes.iter().map(|byte| format!("{byte:02x}")).collect::<Vec<_>>().join(" ");
+                    let hex = |bytes: &[u8]| {
+                        bytes
+                            .iter()
+                            .map(|byte| format!("{byte:02x}"))
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    };
                     let held = held.map_or("nothing (past the ROM's end)".to_string(), hex);
-                    println!("  {shown}:{}: {id} has {}, but {}+{:#x} holds {held}", row.line, hex(&row.bytes), row.provider, row.offset);
+                    println!(
+                        "  {shown}:{}: {id} has {}, but {}+{:#x} holds {held}",
+                        row.line,
+                        hex(&row.bytes),
+                        row.provider,
+                        row.offset
+                    );
                     wrong += 1;
                 }
             }
         }
-        let more = if unread > 0 { format!("; {unread} rows under conditionals it cannot follow, or with bytes it cannot read, left out") } else { String::new() };
-        println!("{id}: {checked} rows in {} files, each its stream's bytes in {}{more}", files.len(), crate::alchemy::targets::target_for(id).rom);
+        let more = if unread > 0 {
+            format!("; {unread} rows under conditionals it cannot follow, or with bytes it cannot read, left out")
+        } else {
+            String::new()
+        };
+        println!(
+            "{id}: {checked} rows in {} files, each its stream's bytes in {}{more}",
+            files.len(),
+            crate::alchemy::targets::target_for(id).rom
+        );
     }
     if wrong > 0 {
-        return Err(format!("{wrong} PACKER rows do not hold the bytes they name"));
+        return Err(format!(
+            "{wrong} PACKER rows do not hold the bytes they name"
+        ));
     }
     checked_all(!arguments.is_empty(), editions.len(), &not_built)
 }
@@ -243,8 +302,19 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, source).unwrap();
         let ja = rows(root, id("tla-ja"), &path).unwrap();
-        let row = |line, bytes: &[u8], provider: &str, offset| Row { line, bytes: bytes.to_vec(), provider: provider.into(), offset };
-        assert_eq!(ja.rows, [row(5, &[0, 1, 0xff], "Field_Map299", 0x48d), row(10, &[3], "Resource_C", 1)]);
+        let row = |line, bytes: &[u8], provider: &str, offset| Row {
+            line,
+            bytes: bytes.to_vec(),
+            provider: provider.into(),
+            offset,
+        };
+        assert_eq!(
+            ja.rows,
+            [
+                row(5, &[0, 1, 0xff], "Field_Map299", 0x48d),
+                row(10, &[3], "Resource_C", 1)
+            ]
+        );
         assert_eq!(ja.unread, 1);
         let en = rows(root, id("tla-en"), &path).unwrap();
         assert_eq!(en.rows, [row(7, &[2], "Resource_B", 16)]);

@@ -34,7 +34,12 @@ extern "C" {
     fn alchemy_mgba_set_keys(machine: *mut c_void, keys: u32);
     fn alchemy_mgba_pixels(machine: *const c_void) -> *const u32;
     fn alchemy_mgba_backdrop(machine: *mut c_void, lines: *const u16);
-    fn alchemy_mgba_recolour(machine: *mut c_void, entries: *const u16, count: u32, table: *const u16);
+    fn alchemy_mgba_recolour(
+        machine: *mut c_void,
+        entries: *const u16,
+        count: u32,
+        table: *const u16,
+    );
     fn alchemy_mgba_state_size(machine: *mut c_void) -> usize;
     fn alchemy_mgba_layer(machine: *mut c_void, layer: u32, shown: bool);
     fn alchemy_mgba_bus_write16(machine: *mut c_void, address: u32, value: u16);
@@ -63,7 +68,10 @@ impl<'rom> Gba<'rom> {
     pub fn new(rom: &'rom [u8]) -> Result<Gba<'rom>, String> {
         let machine = unsafe { alchemy_mgba_open(rom.as_ptr(), rom.len()) };
         let machine = NonNull::new(machine).ok_or("libmgba cannot load the ROM")?;
-        Ok(Gba { machine, rom: PhantomData })
+        Ok(Gba {
+            machine,
+            rom: PhantomData,
+        })
     }
 
     /// Runs one instruction (or, while the CPU is halted, up to the next
@@ -129,10 +137,15 @@ impl<'rom> Gba<'rom> {
 
     /// The last picture drawn, as BGR555 colours.
     pub fn picture(&self) -> Vec<u16> {
-        let pixels = unsafe { std::slice::from_raw_parts(alchemy_mgba_pixels(self.machine.as_ptr()), WIDTH * HEIGHT) };
+        let pixels = unsafe {
+            std::slice::from_raw_parts(alchemy_mgba_pixels(self.machine.as_ptr()), WIDTH * HEIGHT)
+        };
         // Each channel's top five bits: libmgba widens five bits to eight.
         let five = |c: u32, shift: u32| ((c >> shift) & 0xff) >> 3;
-        pixels.iter().map(|&c| (five(c, 0) | five(c, 8) << 5 | five(c, 16) << 10) as u16).collect()
+        pixels
+            .iter()
+            .map(|&c| (five(c, 0) | five(c, 8) << 5 | five(c, 16) << 10) as u16)
+            .collect()
     }
 
     /// Draws each line from now on over a backdrop of our choosing, in BGR555;
@@ -151,7 +164,14 @@ impl<'rom> Gba<'rom> {
     /// the game's colours.
     pub fn set_recolour(&mut self, entries: &[u16], table: &[u16]) {
         assert_eq!(table.len(), 0x8000);
-        unsafe { alchemy_mgba_recolour(self.machine.as_ptr(), entries.as_ptr(), entries.len() as u32, table.as_ptr()) }
+        unsafe {
+            alchemy_mgba_recolour(
+                self.machine.as_ptr(),
+                entries.as_ptr(),
+                entries.len() as u32,
+                table.as_ptr(),
+            )
+        }
     }
 }
 
@@ -179,8 +199,13 @@ impl Gba<'_> {
 
     /// The last picture drawn, as 0xRRGGBB.
     pub fn picture_rgb(&self) -> Vec<u32> {
-        let pixels = unsafe { std::slice::from_raw_parts(alchemy_mgba_pixels(self.machine.as_ptr()), WIDTH * HEIGHT) };
-        pixels.iter().map(|&c| (c & 0xff) << 16 | (c & 0xff00) | (c >> 16) & 0xff).collect()
+        let pixels = unsafe {
+            std::slice::from_raw_parts(alchemy_mgba_pixels(self.machine.as_ptr()), WIDTH * HEIGHT)
+        };
+        pixels
+            .iter()
+            .map(|&c| (c & 0xff) << 16 | (c & 0xff00) | (c >> 16) & 0xff)
+            .collect()
     }
 }
 

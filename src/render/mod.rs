@@ -26,8 +26,6 @@ mod front;
 #[cfg(feature = "render")]
 mod guide;
 #[cfg(feature = "render")]
-mod guide_front;
-#[cfg(feature = "render")]
 mod guide_aerie;
 #[cfg(feature = "render")]
 mod guide_battle;
@@ -38,13 +36,13 @@ mod guide_docs_world;
 #[cfg(feature = "render")]
 mod guide_field_moves;
 #[cfg(feature = "render")]
-mod guide_unused;
-#[cfg(feature = "render")]
 mod guide_fight;
 #[cfg(feature = "render")]
-mod guide_lucky;
+mod guide_front;
 #[cfg(feature = "render")]
 mod guide_interface;
+#[cfg(feature = "render")]
+mod guide_lucky;
 #[cfg(feature = "render")]
 mod guide_menus;
 #[cfg(feature = "render")]
@@ -52,9 +50,9 @@ mod guide_more;
 #[cfg(feature = "render")]
 mod guide_places;
 #[cfg(feature = "render")]
-mod guide_set_piece;
-#[cfg(feature = "render")]
 mod guide_scene_map;
+#[cfg(feature = "render")]
+mod guide_set_piece;
 #[cfg(feature = "render")]
 mod guide_take;
 #[cfg(feature = "render")]
@@ -65,6 +63,8 @@ mod guide_tla_fight;
 mod guide_tla_more;
 #[cfg(feature = "render")]
 mod guide_tla_town;
+#[cfg(feature = "render")]
+mod guide_unused;
 #[cfg(feature = "render")]
 mod guide_world_play;
 mod jobs;
@@ -82,19 +82,19 @@ mod probe;
 #[cfg(feature = "render")]
 mod probe_places;
 #[cfg(feature = "render")]
-mod probe_units;
-#[cfg(feature = "render")]
 mod probe_scene;
+#[cfg(feature = "render")]
+mod probe_units;
 #[cfg(feature = "render")]
 mod source;
 // Its options are read with or without the feature; what they stage needs it.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 mod stage;
 // The private copy of the build a run reads, with or without the feature.
+mod plan;
 mod snapshot;
 #[cfg(feature = "render")]
 mod whole;
-mod plan;
 // Read only by the feature's commands and by plan.rs.
 #[cfg_attr(not(feature = "render"), allow(dead_code))]
 mod tables;
@@ -157,7 +157,6 @@ given and set first, and a summon of two elements is given what it lacks.
 Needs the `render` feature: cargo build --release --features render, with
 libmgba and its headers installed (MGBA_PREFIX names their prefix).";
 
-
 pub fn run(arguments: &[String]) -> Result<(), String> {
     let result = dispatch(arguments);
     snapshot::release();
@@ -211,7 +210,12 @@ fn options(arguments: &[String]) -> Result<Option<Options>, String> {
     };
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
-        let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{USAGE}"));
+        let mut value = |name: &str| {
+            arguments
+                .next()
+                .cloned()
+                .ok_or_else(|| format!("{name} needs a value\n{USAGE}"))
+        };
         match argument.as_str() {
             "-h" | "--help" => {
                 println!("{USAGE}");
@@ -254,13 +258,23 @@ fn select<'a>(plan: &'a Plan, o: &Options) -> Result<Vec<&'a Cast>, String> {
         })
         .collect();
     for wanted in &o.abilities {
-        let matches = |id: u16, name: &str| wanted.parse::<u16>().ok() == Some(id) || name.eq_ignore_ascii_case(wanted);
-        let found: Vec<&Cast> = plan.casts.iter().filter(|c| matches(c.ability.id, &c.ability.name)).collect();
+        let matches = |id: u16, name: &str| {
+            wanted.parse::<u16>().ok() == Some(id) || name.eq_ignore_ascii_case(wanted)
+        };
+        let found: Vec<&Cast> = plan
+            .casts
+            .iter()
+            .filter(|c| matches(c.ability.id, &c.ability.name))
+            .collect();
         if found.is_empty() {
-            return Err(match plan.skipped.iter().find(|(a, _)| matches(a.id, &a.name)) {
-                Some((a, skip)) => format!("{} ({}) is left out: {}", a.name, a.id, skip.reason()),
-                None => format!("no battle Psynergy {wanted:?}"),
-            });
+            return Err(
+                match plan.skipped.iter().find(|(a, _)| matches(a.id, &a.name)) {
+                    Some((a, skip)) => {
+                        format!("{} ({}) is left out: {}", a.name, a.id, skip.reason())
+                    }
+                    None => format!("no battle Psynergy {wanted:?}"),
+                },
+            );
         }
         chosen.extend(found);
     }
@@ -270,7 +284,11 @@ fn select<'a>(plan: &'a Plan, o: &Options) -> Result<Vec<&'a Cast>, String> {
 }
 
 fn names(owners: &[u8]) -> String {
-    owners.iter().map(|&o| plan::character_name(o)).collect::<Vec<_>>().join(", ")
+    owners
+        .iter()
+        .map(|&o| plan::character_name(o))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn psynergy(arguments: &[String]) -> Result<(), String> {
@@ -283,7 +301,11 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
     if o.unlearned {
         // Abilities no party list teaches, and those only enemies use, cast
         // by their element's character as the others are.
-        let wanted = |a: &plan::Ability| o.abilities.iter().any(|w| w.parse::<u16>().ok() == Some(a.id) || a.name.eq_ignore_ascii_case(w));
+        let wanted = |a: &plan::Ability| {
+            o.abilities
+                .iter()
+                .any(|w| w.parse::<u16>().ok() == Some(a.id) || a.name.eq_ignore_ascii_case(w))
+        };
         let extra: Vec<Cast> = plan
             .skipped
             .iter()
@@ -297,7 +319,11 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
         println!("ability\tname\telement\tcaster\ttarget\tparty\tfoes\tfile");
         for c in &casts {
             let a = &c.ability;
-            let foes = if c.foes.is_empty() { "Vermin".to_string() } else { names(&c.foes) };
+            let foes = if c.foes.is_empty() {
+                "Vermin".to_string()
+            } else {
+                names(&c.foes)
+            };
             println!(
                 "{}\t{}\t{}\t{}\t{}\t{}\t{foes}\t{}.gif",
                 a.id,
@@ -314,19 +340,33 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
         for (a, skip) in &plan.skipped {
             eprintln!("left out: {}\t{}\t{}", a.id, a.name, skip.reason());
         }
-        eprintln!("{} casts, {} left out", plan.casts.len(), plan.skipped.len());
+        eprintln!(
+            "{} casts, {} left out",
+            plan.casts.len(),
+            plan.skipped.len()
+        );
     }
     if o.list {
         return Ok(());
     }
-    let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("psynergy"));
+    let out = o
+        .out
+        .clone()
+        .unwrap_or_else(|| root.join("out").join(&o.edition).join("psynergy"));
     std::fs::create_dir_all(&out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
     if o.jobs.child {
         // One cast a piece, by its file's name.
         return jobs::serve(|slug| {
-            let cast = casts.iter().copied().find(|c| c.slug == slug).ok_or_else(|| format!("no cast {slug}"))?;
+            let cast = casts
+                .iter()
+                .copied()
+                .find(|c| c.slug == slug)
+                .ok_or_else(|| format!("no cast {slug}"))?;
             let (rows, total) = play(root, &o, &[cast], &out)?;
-            let mut records: Vec<String> = rows.iter().map(|r| format!("row\t{}\t{}", r.id, r.line)).collect();
+            let mut records: Vec<String> = rows
+                .iter()
+                .map(|r| format!("row\t{}\t{}", r.id, r.line))
+                .collect();
             records.push(format!("bytes\t{total}"));
             Ok(records)
         });
@@ -335,31 +375,57 @@ fn psynergy(arguments: &[String]) -> Result<(), String> {
         // A summon plays longest, then a Djinni.
         let pieces: Vec<(String, u64)> = casts
             .iter()
-            .map(|c| (c.slug.clone(), match c.command {
-                Command::Summon { .. } => 3,
-                Command::Djinni { .. } => 2,
-                Command::Psynergy => 1,
-            }))
+            .map(|c| {
+                (
+                    c.slug.clone(),
+                    match c.command {
+                        Command::Summon { .. } => 3,
+                        Command::Djinni { .. } => 2,
+                        Command::Psynergy => 1,
+                    },
+                )
+            })
             .collect();
         let joined = jobs::run("psynergy", arguments, &pieces, o.jobs.count)?;
         let (mut rows, mut total) = (Vec::new(), 0);
         for record in &joined.records {
             match record.split_once('\t') {
                 Some(("row", line)) => {
-                    if let Some((id, line)) = line.split_once('\t').and_then(|(id, line)| Some((id.parse().ok()?, line))) {
-                        rows.push(Row { id, line: line.to_string() });
+                    if let Some((id, line)) = line
+                        .split_once('\t')
+                        .and_then(|(id, line)| Some((id.parse().ok()?, line)))
+                    {
+                        rows.push(Row {
+                            id,
+                            line: line.to_string(),
+                        });
                     }
                 }
                 Some(("bytes", n)) => total += n.parse::<u64>().unwrap_or(0),
                 _ => {}
             }
         }
-        eprintln!("{} files, {} KiB, in {}, from {} processes", rows.len(), total.div_ceil(1024), out.display(), o.jobs.count.min(pieces.len()));
+        eprintln!(
+            "{} files, {} KiB, in {}, from {} processes",
+            rows.len(),
+            total.div_ceil(1024),
+            out.display(),
+            o.jobs.count.min(pieces.len())
+        );
         write_index(&out.join("index.tsv"), rows)?;
-        return if joined.failed.is_empty() { Ok(()) } else { Err(joined.failed.join("\n")) };
+        return if joined.failed.is_empty() {
+            Ok(())
+        } else {
+            Err(joined.failed.join("\n"))
+        };
     }
     let (rows, total) = play(root, &o, &casts, &out)?;
-    eprintln!("{} files, {} KiB, in {}", rows.len(), total.div_ceil(1024), out.display());
+    eprintln!(
+        "{} files, {} KiB, in {}",
+        rows.len(),
+        total.div_ceil(1024),
+        out.display()
+    );
     write_index(&out.join("index.tsv"), rows)
 }
 
@@ -381,9 +447,11 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<(Vec<Ro
     let build = snapshot::build(root, edition)?;
     let map_path = build.join(format!("{edition}.map"));
     let rom_path = build.join(format!("{edition}.gba"));
-    let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
+    let map = std::fs::read(&map_path)
+        .map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
     let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
-    let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
+    let rom = std::fs::read(&rom_path)
+        .map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
     note_modified(edition, &rom);
     let symbols = battle::Symbols::find_for(&map, layout::BattleLayout::for_edition(edition)?)?;
     let mut rows = Vec::new();
@@ -392,8 +460,11 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<(Vec<Ro
         let a = &cast.ability;
         let failed = |e: String| format!("{} ({}): {e}", a.name, a.id);
         let recording = battle::record(&rom, &symbols, cast, &scene, o.verbose).map_err(failed)?;
-        let frames: Vec<Vec<u32>> =
-            recording.frames.iter().map(|f| f.iter().map(|&c| animation::rgb(c)).collect()).collect();
+        let frames: Vec<Vec<u32>> = recording
+            .frames
+            .iter()
+            .map(|f| f.iter().map(|&c| animation::rgb(c)).collect())
+            .collect();
         let file = format!("{}.gif", cast.slug);
         let written = animation::write(&out.join(&file), &frames, mgba::WIDTH)?;
         total += written.bytes;
@@ -407,7 +478,13 @@ fn play(root: &Path, o: &Options, casts: &[&Cast], out: &Path) -> Result<(Vec<Ro
             written.stored,
             written.colours,
             written.bytes.div_ceil(1024),
-            if recording.battle_over { ", the battle ended" } else if recording.capped { ", stopped at 35 seconds" } else { "" }
+            if recording.battle_over {
+                ", the battle ended"
+            } else if recording.capped {
+                ", stopped at 35 seconds"
+            } else {
+                ""
+            }
         );
         rows.push(Row {
             id: a.id,
@@ -450,7 +527,8 @@ fn write_index(path: &Path, rows: Vec<Row>) -> Result<(), String> {
     std::fs::write(path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 
-const COMMANDS: &str = "usage: alchemy-devtools render psynergy|place|event|story|guide|probe|check [options]
+const COMMANDS: &str =
+    "usage: alchemy-devtools render psynergy|place|event|story|guide|probe|check [options]
   psynergy  each battle Psynergy the party casts, as a looping GIF
   place     each scene's entrance photo and a map of each room, as PNG
   event     each scene's events played from their trigger, as GIFs
@@ -754,7 +832,7 @@ staged:
     him on the second level by its pillars).
   --arrive-as after-battle: a staged walk arrives as after a battle fought
     where it starts: there the game's own actor snapshot is taken
-    (Actor_Snapshot, ObjectTable_Snapshot) and the scene entered again
+    (Actor_Snapshot, ActorTable_Snapshot) and the scene entered again
     with FLAG_KEEP_PARTY_POSITION (a warp's exit), so its after-battle
     branches run and the leader is put back as he was. --set
     FLAG_KEEP_PARTY_POSITION alone has no battle before it: the run starts
@@ -763,7 +841,7 @@ staged:
     his sprite cut. `entrance`, the default, arrives by the way in.
   --until FUNCTION: a staged walk plays on after its keys, the player
     still, until the game reaches that function of the scene's overlay by
-    itself (a statue's fireball bursting, MagmaRock_BurstStatue; a
+    itself (a fireball bursting a cracked pillar, MagmaRock_BurstCrackedPillar; a
     fireball carrying Felix, MarsLighthouseEntrance_RideFireball), and
     three seconds past it, within --limit; the note says when, or that it
     never came, and the run is written either way.
@@ -866,8 +944,12 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     };
     let mut options = arguments.iter();
     while let Some(argument) = options.next() {
-        let mut value =
-            |name: &str| options.next().cloned().ok_or_else(|| format!("{name} needs a value\n{SCENES_USAGE}"));
+        let mut value = |name: &str| {
+            options
+                .next()
+                .cloned()
+                .ok_or_else(|| format!("{name} needs a value\n{SCENES_USAGE}"))
+        };
         match argument.as_str() {
             "-h" | "--help" => {
                 println!("{SCENES_USAGE}");
@@ -878,9 +960,13 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             "--all" => o.all = true,
             "--whole" => o.whole = true,
             #[cfg(feature = "render")]
-            "--whole-frame" => o.cut.frame = Some(whole::Cut::parse_frame(&value("--whole-frame")?)?),
+            "--whole-frame" => {
+                o.cut.frame = Some(whole::Cut::parse_frame(&value("--whole-frame")?)?)
+            }
             #[cfg(feature = "render")]
-            "--whole-window" => o.cut.window = Some(whole::Cut::parse_place(&value("--whole-window")?)?),
+            "--whole-window" => {
+                o.cut.window = Some(whole::Cut::parse_place(&value("--whole-window")?)?)
+            }
             "--out" => o.out = Some(PathBuf::from(value("--out")?)),
             "--edition" => o.edition = value("--edition")?,
             "--places" => o.places_tsv = Some(PathBuf::from(value("--places")?)),
@@ -898,10 +984,24 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     }
     crate::alchemy::targets::parse_decomp_target(&o.edition)?;
     let game = layout::Game::of(&o.edition)?;
-    let casts = o.stage.hold.iter().chain(&o.stage.then).chain(&o.stage.during).chain(&o.stage.first_hold).chain(&o.stage.first_then).any(|h| h.cast.is_some());
+    let casts = o
+        .stage
+        .hold
+        .iter()
+        .chain(&o.stage.then)
+        .chain(&o.stage.during)
+        .chain(&o.stage.first_hold)
+        .chain(&o.stage.first_then)
+        .any(|h| h.cast.is_some());
     if casts {
-        let header = crate::compile::root().join("games").join(game.dir()).join("include/ability_ids.h");
-        o.stage.resolve(&std::fs::read_to_string(&header).map_err(|e| format!("cannot read {}: {e}", header.display()))?)?;
+        let header = crate::compile::root()
+            .join("games")
+            .join(game.dir())
+            .join("include/ability_ids.h");
+        o.stage.resolve(
+            &std::fs::read_to_string(&header)
+                .map_err(|e| format!("cannot read {}: {e}", header.display()))?,
+        )?;
     }
     // Without the story tools' tables (they are written for The Broken Seal
     // alone), the scenes come from the tree's scene table, the flags from
@@ -930,7 +1030,9 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
             o.all
                 || o.scenes.iter().any(|w| {
                     w.parse::<u16>().ok() == Some(s.number)
-                        || s.symbol.as_deref().is_some_and(|n| n.eq_ignore_ascii_case(w))
+                        || s.symbol
+                            .as_deref()
+                            .is_some_and(|n| n.eq_ignore_ascii_case(w))
                         || s.slug() == *w
                 })
                 || (o.scenes.is_empty() && !o.events.is_empty())
@@ -939,14 +1041,33 @@ fn scenes(kind: &str, arguments: &[String]) -> Result<(), String> {
     // An event plays at any scene its row lists, so each overlay's other
     // scenes (the other floors of Mercury Lighthouse) come too; only the
     // events of the scenes asked for are played.
-    let only: Vec<u16> = if kind == "event" && !o.all && !o.scenes.is_empty() { chosen.iter().map(|s| s.number).collect() } else { Vec::new() };
+    let only: Vec<u16> = if kind == "event" && !o.all && !o.scenes.is_empty() {
+        chosen.iter().map(|s| s.number).collect()
+    } else {
+        Vec::new()
+    };
     let chosen: Vec<&story::Scene> = if kind == "event" {
-        scene_rows.iter().filter(|s| chosen.iter().any(|c| c.file == s.file)).collect()
+        scene_rows
+            .iter()
+            .filter(|s| chosen.iter().any(|c| c.file == s.file))
+            .collect()
     } else {
         chosen
     };
-    let out = o.out.clone().unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
-    let request = SceneRequest { kind, scenes: &scene_rows, chosen: &chosen, only: &only, events: &events, wanted: &o.events, flags: &flags, whole: o.whole, stage: &o.stage,
+    let out = o
+        .out
+        .clone()
+        .unwrap_or_else(|| root.join("out").join(&o.edition).join("places"));
+    let request = SceneRequest {
+        kind,
+        scenes: &scene_rows,
+        chosen: &chosen,
+        only: &only,
+        events: &events,
+        wanted: &o.events,
+        flags: &flags,
+        whole: o.whole,
+        stage: &o.stage,
         from_triggers: kind == "event" && o.events_tsv.is_none(),
         #[cfg(feature = "render")]
         cut: o.cut,
@@ -982,11 +1103,22 @@ struct SceneRequest<'a> {
 /// along.
 #[cfg(feature = "render")]
 fn unit_key(kind: &str, scene: &story::Scene) -> String {
-    if kind == "place" { scene.number.to_string() } else { scene.file.clone() }
+    if kind == "place" {
+        scene.number.to_string()
+    } else {
+        scene.file.clone()
+    }
 }
 
 #[cfg(not(feature = "render"))]
-fn play_scenes(_: &Path, _: &str, _: &SceneRequest, _: &Path, _: &jobs::Jobs, _: &[String]) -> Result<(), String> {
+fn play_scenes(
+    _: &Path,
+    _: &str,
+    _: &SceneRequest,
+    _: &Path,
+    _: &jobs::Jobs,
+    _: &[String],
+) -> Result<(), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
 }
 
@@ -1011,25 +1143,45 @@ struct Outcome {
 #[cfg(feature = "render")]
 impl Outcome {
     fn add(&mut self, context: places::Context) {
-        self.rows.extend(context.rows.iter().map(|r| (r.file.clone(), r.line())));
+        self.rows
+            .extend(context.rows.iter().map(|r| (r.file.clone(), r.line())));
         self.skipped.extend(context.skipped);
         self.cleared.extend(context.cleared);
         self.bytes += context.bytes;
         self.images += context.images;
         self.gifs += context.gifs;
         self.gif_bytes += context.gif_bytes;
-        for (total, n) in self.moments.iter_mut().zip([context.moments, context.moment_scenes, context.capped]) {
+        for (total, n) in
+            self.moments
+                .iter_mut()
+                .zip([context.moments, context.moment_scenes, context.capped])
+        {
             *total += n;
         }
     }
 
     /// The part file's records: `row`, `skip`, `clear` and one `count`.
     fn records(&self) -> Vec<String> {
-        let mut records: Vec<String> = self.rows.iter().map(|(_, line)| format!("row\t{line}")).collect();
-        records.extend(self.skipped.iter().map(|s| format!("skip\t{}\t{}\t{}", s.scene, s.what, s.reason)));
-        records.extend(self.cleared.iter().map(|(scene, what)| format!("clear\t{scene}\t{what}")));
+        let mut records: Vec<String> = self
+            .rows
+            .iter()
+            .map(|(_, line)| format!("row\t{line}"))
+            .collect();
+        records.extend(
+            self.skipped
+                .iter()
+                .map(|s| format!("skip\t{}\t{}\t{}", s.scene, s.what, s.reason)),
+        );
+        records.extend(
+            self.cleared
+                .iter()
+                .map(|(scene, what)| format!("clear\t{scene}\t{what}")),
+        );
         let [m, s, c] = self.moments;
-        records.push(format!("count\t{}\t{}\t{}\t{}\t{m}\t{s}\t{c}", self.bytes, self.images, self.gifs, self.gif_bytes));
+        records.push(format!(
+            "count\t{}\t{}\t{}\t{}\t{m}\t{s}\t{c}",
+            self.bytes, self.images, self.gifs, self.gif_bytes
+        ));
         records
     }
 
@@ -1039,14 +1191,23 @@ impl Outcome {
             match fields[..] {
                 ["row", ..] => {
                     let line = &record["row\t".len()..];
-                    self.rows.push((line.rsplit('\t').next().unwrap_or_default().to_string(), line.to_string()));
+                    self.rows.push((
+                        line.rsplit('\t').next().unwrap_or_default().to_string(),
+                        line.to_string(),
+                    ));
                 }
-                ["skip", scene, what, reason] => {
-                    self.skipped.push(places::Skip { scene: scene.to_string(), what: what.to_string(), reason: reason.to_string() })
-                }
+                ["skip", scene, what, reason] => self.skipped.push(places::Skip {
+                    scene: scene.to_string(),
+                    what: what.to_string(),
+                    reason: reason.to_string(),
+                }),
                 ["clear", scene, what] => self.cleared.push((scene.to_string(), what.to_string())),
                 ["count", ..] => {
-                    let n: Vec<u64> = record.split('\t').skip(1).map(|n| n.parse().unwrap_or(0)).collect();
+                    let n: Vec<u64> = record
+                        .split('\t')
+                        .skip(1)
+                        .map(|n| n.parse().unwrap_or(0))
+                        .collect();
                     if let [bytes, images, gifs, gif_bytes, m, s, c] = n[..] {
                         self.bytes += bytes;
                         self.images += images as usize;
@@ -1067,7 +1228,14 @@ impl Outcome {
 /// children, and writes index.tsv, skipped.tsv and for places
 /// variant-flags.tsv; a child plays the pieces it is handed instead.
 #[cfg(feature = "render")]
-fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &jobs::Jobs, arguments: &[String]) -> Result<(), String> {
+fn play_scenes(
+    root: &Path,
+    edition: &str,
+    r: &SceneRequest,
+    out: &Path,
+    jobs: &jobs::Jobs,
+    arguments: &[String],
+) -> Result<(), String> {
     let started = std::time::Instant::now();
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
     // Without events.tsv, the events are the trigger tables' rows, read once
@@ -1078,12 +1246,27 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
         let path = out.join("triggers.tsv");
         if !jobs.child {
             let machines = Machines::load(root, edition, r.chosen, false)?;
-            let text = triggers::read(&machines.rom, &machines.symbols, r.chosen, &machines.functions, &machines.messages);
-            std::fs::write(&path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+            let text = triggers::read(
+                &machines.rom,
+                &machines.symbols,
+                r.chosen,
+                &machines.functions,
+                &machines.messages,
+            );
+            std::fs::write(&path, text)
+                .map_err(|e| format!("cannot write {}: {e}", path.display()))?;
         }
         read = story::read_events(&path)?;
-        eprintln!("{} events read from the scenes' trigger tables into {}", read.len(), path.display());
-        with_events = SceneRequest { events: &read, from_triggers: false, ..*r };
+        eprintln!(
+            "{} events read from the scenes' trigger tables into {}",
+            read.len(),
+            path.display()
+        );
+        with_events = SceneRequest {
+            events: &read,
+            from_triggers: false,
+            ..*r
+        };
         &with_events
     } else {
         r
@@ -1108,17 +1291,30 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
         // The processes share the CPUs: each draws whole frames on one.
         whole::THREADS.store(1, std::sync::atomic::Ordering::Relaxed);
         let machines = Machines::load(root, edition, r.chosen, false)?;
-        let mut kept: std::collections::HashMap<String, places::Job> = std::collections::HashMap::new();
+        let mut kept: std::collections::HashMap<String, places::Job> =
+            std::collections::HashMap::new();
         return jobs::serve(|key| {
             let mut context = machines.context(r, out);
             if r.kind == "place" {
-                let scene = r.chosen.iter().find(|s| s.number.to_string() == key).ok_or_else(|| format!("no scene {key}"))?;
+                let scene = r
+                    .chosen
+                    .iter()
+                    .find(|s| s.number.to_string() == key)
+                    .ok_or_else(|| format!("no scene {key}"))?;
                 context.place(scene);
                 eprintln!("{}: {} images", scene.name(), context.images);
             } else {
-                let (file, name) = key.split_once('\t').ok_or_else(|| format!("no event {key:?}"))?;
-                let scenes = units.get(file).ok_or_else(|| format!("no overlay {file}"))?;
-                context.play_events(scenes, Some(name), kept.entry(file.to_string()).or_default());
+                let (file, name) = key
+                    .split_once('\t')
+                    .ok_or_else(|| format!("no event {key:?}"))?;
+                let scenes = units
+                    .get(file)
+                    .ok_or_else(|| format!("no overlay {file}"))?;
+                context.play_events(
+                    scenes,
+                    Some(name),
+                    kept.entry(file.to_string()).or_default(),
+                );
                 eprintln!("{name}: {} images", context.images);
             }
             let mut piece = Outcome::default();
@@ -1132,15 +1328,22 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
     let mut processes = 1;
     // A staged walk is one run, played here.
     let walk = r.kind == "event" && r.stage.walks(r.wanted);
-    let pieces: Vec<(String, u64)> = if jobs.count > 1 && !walk { scene_pieces(r, &units, &order, &candidates, out) } else { Vec::new() };
+    let pieces: Vec<(String, u64)> = if jobs.count > 1 && !walk {
+        scene_pieces(r, &units, &order, &candidates, out)
+    } else {
+        Vec::new()
+    };
     if jobs.split(pieces.len()) {
         if r.kind == "event" {
             for key in &order {
-                outcome.cleared.extend(places::clear_events(out, &units[key], r.wanted, r.only));
+                outcome
+                    .cleared
+                    .extend(places::clear_events(out, &units[key], r.wanted, r.only));
             }
         }
         let rom_path = snapshot::build(root, edition)?.join(format!("{edition}.gba"));
-        let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
+        let rom = std::fs::read(&rom_path)
+            .map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
         note_modified(edition, &rom);
         processes = jobs.count.min(pieces.len());
         let joined = jobs::run(r.kind, arguments, &pieces, jobs.count)?;
@@ -1160,7 +1363,11 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
             } else {
                 context.events(job);
             }
-            eprintln!("{}: {} images", job.iter().map(|s| s.name()).collect::<Vec<_>>().join(", "), context.images);
+            eprintln!(
+                "{}: {} images",
+                job.iter().map(|s| s.name()).collect::<Vec<_>>().join(", "),
+                context.images
+            );
             outcome.add(context);
         }
     }
@@ -1174,7 +1381,11 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
         );
         let mut text = String::from("scene\tnumber\tflags\n");
         for (number, list) in &candidates {
-            let name = r.chosen.iter().find(|s| s.number == *number).map_or_else(|| format!("#{number}"), |s| s.name());
+            let name = r
+                .chosen
+                .iter()
+                .find(|s| s.number == *number)
+                .map_or_else(|| format!("#{number}"), |s| s.name());
             text.push_str(&format!("{name}\t{number}\t{}\n", list.join(", ")));
         }
         let path = out.join("variant-flags.tsv");
@@ -1183,17 +1394,29 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
     // No two events' recordings are one, unless they are one routine.
     if r.kind == "event" {
         for (number, event, other) in places::shared_recordings(out, &mut outcome.rows) {
-            let scene = r.chosen.iter().find(|s| s.number == number).map_or_else(|| format!("#{number}"), |s| s.name());
+            let scene = r
+                .chosen
+                .iter()
+                .find(|s| s.number == number)
+                .map_or_else(|| format!("#{number}"), |s| s.name());
             eprintln!("  left out: {scene} event {event}: its recording is {other}'s");
             let reason = format!("its recording is the same as {other}'s, frame for frame: two events never share one recording unless they are one routine");
-            outcome.skipped.push(places::Skip { scene, what: format!("event {event}"), reason });
+            outcome.skipped.push(places::Skip {
+                scene,
+                what: format!("event {event}"),
+                reason,
+            });
         }
     }
     places::write_index(out, &outcome.rows)?;
     let path = out.join("skipped.tsv");
     // The lines already there for other scenes and things are kept.
     let mut lines: BTreeMap<(String, String), String> = BTreeMap::new();
-    for line in std::fs::read_to_string(&path).unwrap_or_default().lines().skip(1) {
+    for line in std::fs::read_to_string(&path)
+        .unwrap_or_default()
+        .lines()
+        .skip(1)
+    {
         let mut fields = line.split('\t');
         if let (Some(scene), Some(what)) = (fields.next(), fields.next()) {
             lines.insert((scene.to_string(), what.to_string()), line.to_string());
@@ -1209,7 +1432,10 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
         }
     }
     for s in &outcome.skipped {
-        lines.insert((s.scene.clone(), s.what.clone()), format!("{}\t{}\t{}", s.scene, s.what, s.reason));
+        lines.insert(
+            (s.scene.clone(), s.what.clone()),
+            format!("{}\t{}\t{}", s.scene, s.what, s.reason),
+        );
     }
     let mut text = String::from("scene\twhat\treason\n");
     for line in lines.values() {
@@ -1228,7 +1454,11 @@ fn play_scenes(root: &Path, edition: &str, r: &SceneRequest, out: &Path, jobs: &
         if processes == 1 { "" } else { "es" },
         out.display()
     );
-    if failed.is_empty() { Ok(()) } else { Err(failed.join("\n")) }
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        Err(failed.join("\n"))
+    }
 }
 
 /// What every scene's machines are made from: the ROM, the field's symbols
@@ -1248,13 +1478,20 @@ struct Machines {
 
 #[cfg(feature = "render")]
 impl Machines {
-    fn load(root: &Path, edition: &str, chosen: &[&story::Scene], note: bool) -> Result<Machines, String> {
+    fn load(
+        root: &Path,
+        edition: &str,
+        chosen: &[&story::Scene],
+        note: bool,
+    ) -> Result<Machines, String> {
         let build = snapshot::build(root, edition)?;
         let map_path = build.join(format!("{edition}.map"));
         let rom_path = build.join(format!("{edition}.gba"));
-        let map = std::fs::read(&map_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
+        let map = std::fs::read(&map_path)
+            .map_err(|e| format!("cannot read {}: {e} (make {edition})", map_path.display()))?;
         let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
-        let rom = std::fs::read(&rom_path).map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
+        let rom = std::fs::read(&rom_path)
+            .map_err(|e| format!("cannot read {}: {e} (make {edition})", rom_path.display()))?;
         if note {
             note_modified(edition, &rom);
         }
@@ -1265,34 +1502,73 @@ impl Machines {
         // overlay by the scene object its linker map links.
         let mut by_file: std::collections::HashMap<String, u16> = std::collections::HashMap::new();
         if chosen.iter().any(|s| s.overlay.is_none()) {
-            for entry in std::fs::read_dir(build.join("overlays")).into_iter().flatten().flatten() {
+            for entry in std::fs::read_dir(build.join("overlays"))
+                .into_iter()
+                .flatten()
+                .flatten()
+            {
                 let path = entry.path();
-                let Some(id) = path.file_name().and_then(|n| n.to_str()).and_then(|n| n.strip_prefix("resource_")).and_then(|n| n.strip_suffix(".map")).and_then(|n| u16::from_str_radix(n, 16).ok()) else {
+                let Some(id) = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .and_then(|n| n.strip_prefix("resource_"))
+                    .and_then(|n| n.strip_suffix(".map"))
+                    .and_then(|n| u16::from_str_radix(n, 16).ok())
+                else {
                     continue;
                 };
                 let text = std::fs::read_to_string(&path).unwrap_or_default();
-                for word in text.split_whitespace().filter(|w| w.contains("games/") && w.ends_with(".o")) {
+                for word in text
+                    .split_whitespace()
+                    .filter(|w| w.contains("games/") && w.ends_with(".o"))
+                {
                     let source = &word[word.find("games/").unwrap_or(0)..];
-                    by_file.entry(source.trim_end_matches(".o").to_string()).or_insert(id);
+                    by_file
+                        .entry(source.trim_end_matches(".o").to_string())
+                        .or_insert(id);
                 }
             }
         }
         for s in chosen {
-            let Some(id) = s.overlay.or_else(|| by_file.get(s.file.trim_end_matches(".c")).copied()) else {
+            let Some(id) = s
+                .overlay
+                .or_else(|| by_file.get(s.file.trim_end_matches(".c")).copied())
+            else {
                 continue;
             };
-            let path = build.join("overlays").join(format!("resource_{id:03x}.elf"));
-            let Some(elf) = std::fs::read(&path).ok().and_then(|data| crate::gba::elf::Elf::parse(&data).ok()) else {
+            let path = build
+                .join("overlays")
+                .join(format!("resource_{id:03x}.elf"));
+            let Some(elf) = std::fs::read(&path)
+                .ok()
+                .and_then(|data| crate::gba::elf::Elf::parse(&data).ok())
+            else {
                 continue;
             };
-            let named = elf.symbols.iter().filter(|y| y.kind == 2 && !y.name.is_empty()).map(|y| (y.name.clone(), y.value & !1)).collect();
+            let named = elf
+                .symbols
+                .iter()
+                .filter(|y| y.kind == 2 && !y.name.is_empty())
+                .map(|y| (y.name.clone(), y.value & !1))
+                .collect();
             functions.insert(s.number, named);
         }
         let arrivals = arrivals::read(root, layout::Game::of(edition)?.dir())?;
         let elf = build.join(format!("{edition}.elf"));
         let elf = std::fs::read(&elf).map_err(|e| format!("cannot read {}: {e}", elf.display()))?;
-        let messages = crate::gba::elf::Elf::parse(&elf)?.symbols.iter().filter(|y| y.name.starts_with("Msg")).map(|y| (y.value, y.name.clone())).collect();
-        Ok(Machines { rom, symbols, functions, arrivals, messages })
+        let messages = crate::gba::elf::Elf::parse(&elf)?
+            .symbols
+            .iter()
+            .filter(|y| y.name.starts_with("Msg"))
+            .map(|y| (y.value, y.name.clone()))
+            .collect();
+        Ok(Machines {
+            rom,
+            symbols,
+            functions,
+            arrivals,
+            messages,
+        })
     }
 
     /// A fresh context for one piece of work.
@@ -1347,16 +1623,24 @@ fn scene_pieces(
         return order
             .iter()
             .map(|key| {
-                let moments = candidates.get(&units[key][0].number).map_or(0, |list| list.len().min(places::MAX_MOMENTS));
+                let moments = candidates
+                    .get(&units[key][0].number)
+                    .map_or(0, |list| list.len().min(places::MAX_MOMENTS));
                 (key.clone(), ATTEMPT * (1 + moments as u64))
             })
             .collect();
     }
     // index.tsv's frames by scene number and event.
-    let mut frames: std::collections::HashMap<(u16, String), u64> = std::collections::HashMap::new();
-    for line in std::fs::read_to_string(out.join("index.tsv")).unwrap_or_default().lines().skip(1) {
+    let mut frames: std::collections::HashMap<(u16, String), u64> =
+        std::collections::HashMap::new();
+    for line in std::fs::read_to_string(out.join("index.tsv"))
+        .unwrap_or_default()
+        .lines()
+        .skip(1)
+    {
         let fields: Vec<&str> = line.split('\t').collect();
-        if let (Some(number), Some(event), Some(n)) = (fields.get(1), fields.get(6), fields.get(12)) {
+        if let (Some(number), Some(event), Some(n)) = (fields.get(1), fields.get(6), fields.get(12))
+        {
             if let (Ok(number), Ok(n)) = (number.parse(), n.parse::<u64>()) {
                 *frames.entry((number, event.to_string())).or_default() += n;
             }
@@ -1366,12 +1650,22 @@ fn scene_pieces(
     for key in order {
         let scenes = &units[key];
         for event in places::job_events(r.events, r.wanted, r.only, scenes) {
-            let at: Vec<u16> = scenes.iter().map(|s| s.number).filter(|n| event.scenes.contains(n)).collect();
+            let at: Vec<u16> = scenes
+                .iter()
+                .map(|s| s.number)
+                .filter(|n| event.scenes.contains(n))
+                .collect();
             if at.is_empty() {
                 continue;
             }
-            let before: u64 = at.iter().map(|&n| frames.get(&(n, event.name.clone())).copied().unwrap_or(0)).sum();
-            pieces.push((format!("{key}\t{}", event.name), ATTEMPT * (event.alternatives.len().max(1) * at.len()) as u64 + before));
+            let before: u64 = at
+                .iter()
+                .map(|&n| frames.get(&(n, event.name.clone())).copied().unwrap_or(0))
+                .sum();
+            pieces.push((
+                format!("{key}\t{}", event.name),
+                ATTEMPT * (event.alternatives.len().max(1) * at.len()) as u64 + before,
+            ));
         }
     }
     pieces
@@ -1381,8 +1675,12 @@ fn scene_pieces(
 /// build, whose pictures are its own.
 #[cfg(feature = "render")]
 fn note_modified(edition: &str, rom: &[u8]) {
-    if !crate::alchemy::targets::decomp_target(Some(edition)).is_ok_and(|target| target.matches(rom)) {
-        eprintln!("note: out/{edition}/{edition}.gba is not the ROM rom.sha1 names: a modified build");
+    if !crate::alchemy::targets::decomp_target(Some(edition))
+        .is_ok_and(|target| target.matches(rom))
+    {
+        eprintln!(
+            "note: out/{edition}/{edition}.gba is not the ROM rom.sha1 names: a modified build"
+        );
     }
 }
 
@@ -1406,10 +1704,16 @@ writes into DIR (default out/EDITION/story):
 --only picks some; flags.tsv is the story tools' flag names.";
 
 fn story_pictures(arguments: &[String]) -> Result<(), String> {
-    let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
+    let (mut only, mut out, mut edition, mut flags_tsv) =
+        (Vec::new(), None, "tbs-en".to_string(), None);
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
-        let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{STORY_USAGE}"));
+        let mut value = |name: &str| {
+            arguments
+                .next()
+                .cloned()
+                .ok_or_else(|| format!("{name} needs a value\n{STORY_USAGE}"))
+        };
         match argument.as_str() {
             "-h" | "--help" => {
                 println!("{STORY_USAGE}");
@@ -1422,7 +1726,8 @@ fn story_pictures(arguments: &[String]) -> Result<(), String> {
             other => return Err(format!("unexpected argument {other:?}\n{STORY_USAGE}")),
         }
     }
-    let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{STORY_USAGE}"))?)?;
+    let flags =
+        story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{STORY_USAGE}"))?)?;
     let root = crate::compile::root();
     let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("story"));
     play_story(root, &edition, &only, &flags, &out)
@@ -1434,19 +1739,36 @@ fn play_story(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Re
 }
 
 #[cfg(feature = "render")]
-fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
+fn play_story(
+    root: &Path,
+    edition: &str,
+    only: &[String],
+    flags: &story::Flags,
+    out: &Path,
+) -> Result<(), String> {
     let build = snapshot::build(root, edition)?;
-    let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
+    let map = std::fs::read(build.join(format!("{edition}.map")))
+        .map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
     let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
-    let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
+    let rom = std::fs::read(build.join(format!("{edition}.gba")))
+        .map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
     note_modified(edition, &rom);
     let symbols = field::Symbols::find(&map)?;
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    let mut front = front::Front { rom: &rom, symbols: &symbols, flags, out, written: Vec::new() };
+    let mut front = front::Front {
+        rom: &rom,
+        symbols: &symbols,
+        flags,
+        out,
+        written: Vec::new(),
+    };
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     let mut failed = Vec::new();
     if wanted("world") {
-        let update = map.symbol("WorldMap_UpdateCurrentTileBlock").map(|(_, a)| a).ok_or("the map has no WorldMap_UpdateCurrentTileBlock")?;
+        let update = map
+            .symbol("WorldMap_UpdateCurrentTileBlock")
+            .map(|(_, a)| a)
+            .ok_or("the map has no WorldMap_UpdateCurrentTileBlock")?;
         if let Err(e) = front.world(update) {
             eprintln!("world: {e}");
             failed.push("world");
@@ -1467,9 +1789,17 @@ fn play_story(root: &Path, edition: &str, only: &[String], flags: &story::Flags,
         }
     }
     for (file, bytes, what) in &front.written {
-        eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
+        eprintln!(
+            "{}\t{} KiB\t{what}",
+            out.join(file).display(),
+            bytes.div_ceil(1024)
+        );
     }
-    if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("{} failed", failed.join(", ")))
+    }
 }
 
 const PROBE_USAGE: &str = "usage: alchemy-devtools render probe --flags flags.tsv [--only NAME]... [--out DIR] [--edition tbs-en]
@@ -1529,12 +1859,19 @@ struct SceneProbe {
 }
 
 fn probe_command(arguments: &[String]) -> Result<(), String> {
-    let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
-    let (mut scenes, mut entrance, mut set): (Vec<String>, Option<u16>, Vec<String>) = (Vec::new(), None, Vec::new());
+    let (mut only, mut out, mut edition, mut flags_tsv) =
+        (Vec::new(), None, "tbs-en".to_string(), None);
+    let (mut scenes, mut entrance, mut set): (Vec<String>, Option<u16>, Vec<String>) =
+        (Vec::new(), None, Vec::new());
     let mut extra = SceneProbe::default();
     let mut arguments = arguments.iter();
     while let Some(argument) = arguments.next() {
-        let mut value = |name: &str| arguments.next().cloned().ok_or_else(|| format!("{name} needs a value\n{PROBE_USAGE}"));
+        let mut value = |name: &str| {
+            arguments
+                .next()
+                .cloned()
+                .ok_or_else(|| format!("{name} needs a value\n{PROBE_USAGE}"))
+        };
         match argument.as_str() {
             "-h" | "--help" => {
                 println!("{PROBE_USAGE}");
@@ -1545,10 +1882,20 @@ fn probe_command(arguments: &[String]) -> Result<(), String> {
             "--edition" => edition = value("--edition")?,
             "--flags" => flags_tsv = Some(PathBuf::from(value("--flags")?)),
             "--scene" => scenes.push(value("--scene")?),
-            "--entrance" => entrance = Some(value("--entrance")?.parse().map_err(|_| format!("--entrance takes a number\n{PROBE_USAGE}"))?),
+            "--entrance" => {
+                entrance = Some(
+                    value("--entrance")?
+                        .parse()
+                        .map_err(|_| format!("--entrance takes a number\n{PROBE_USAGE}"))?,
+                )
+            }
             "--set" => set.push(value("--set")?),
             "--skip" => extra.skip.push(value("--skip")?),
-            "--hide-actor" => extra.hide.push(value("--hide-actor")?.parse().map_err(|_| format!("--hide-actor takes an actor's number\n{PROBE_USAGE}"))?),
+            "--hide-actor" => extra.hide.push(
+                value("--hide-actor")?
+                    .parse()
+                    .map_err(|_| format!("--hide-actor takes an actor's number\n{PROBE_USAGE}"))?,
+            ),
             "--mark-cells" => extra.mark.push(value("--mark-cells")?),
             "--cells" => extra.cells.push(value("--cells")?),
             "--map" => extra.map = true,
@@ -1559,36 +1906,79 @@ fn probe_command(arguments: &[String]) -> Result<(), String> {
     let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("probe"));
     if only.iter().any(|o| o == "scene") {
         if only.len() > 1 || scenes.is_empty() {
-            return Err(format!("probe scene is asked alone, with --scene\n{PROBE_USAGE}"));
+            return Err(format!(
+                "probe scene is asked alone, with --scene\n{PROBE_USAGE}"
+            ));
         }
         let game = layout::Game::of(&edition)?;
         let flags = match &flags_tsv {
             Some(path) => story::Flags::read(path)?,
             None => story::Flags::from_header(root, game.dir()),
         };
-        let set: Vec<u16> = set.iter().map(|n| flags.resolve(n, None).ok_or_else(|| format!("no flag {n}"))).collect::<Result<_, _>>()?;
+        let set: Vec<u16> = set
+            .iter()
+            .map(|n| flags.resolve(n, None).ok_or_else(|| format!("no flag {n}")))
+            .collect::<Result<_, _>>()?;
         return play_scene_probe(root, &edition, &scenes, entrance, &set, &extra, &out);
     }
     if !edition.starts_with("tbs-") {
-        return Err(format!("{edition}: only probe scene reads The Lost Age; the rest are The Broken Seal's"));
+        return Err(format!(
+            "{edition}: only probe scene reads The Lost Age; the rest are The Broken Seal's"
+        ));
     }
-    let flags = story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{PROBE_USAGE}"))?)?;
+    let flags =
+        story::Flags::read(&flags_tsv.ok_or_else(|| format!("--flags is needed\n{PROBE_USAGE}"))?)?;
     play_probe(root, &edition, &only, &flags, &out)
 }
 
 #[cfg(not(feature = "render"))]
-fn play_scene_probe(_: &Path, _: &str, _: &[String], _: Option<u16>, _: &[u16], _: &SceneProbe, _: &Path) -> Result<(), String> {
+fn play_scene_probe(
+    _: &Path,
+    _: &str,
+    _: &[String],
+    _: Option<u16>,
+    _: &[u16],
+    _: &SceneProbe,
+    _: &Path,
+) -> Result<(), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
 }
 
 /// `render probe scene`: each scene asked for, by its symbol or number.
 #[cfg(feature = "render")]
-fn play_scene_probe(root: &Path, edition: &str, wanted: &[String], entrance: Option<u16>, set: &[u16], extra: &SceneProbe, out: &Path) -> Result<(), String> {
-    let mark = extra.mark.iter().map(|c| probe_scene::Cells::parse(c)).collect::<Result<Vec<_>, _>>()?;
-    let cells = extra.cells.iter().map(|c| probe_scene::Cells::parse(c)).collect::<Result<Vec<_>, _>>()?;
+fn play_scene_probe(
+    root: &Path,
+    edition: &str,
+    wanted: &[String],
+    entrance: Option<u16>,
+    set: &[u16],
+    extra: &SceneProbe,
+    out: &Path,
+) -> Result<(), String> {
+    let mark = extra
+        .mark
+        .iter()
+        .map(|c| probe_scene::Cells::parse(c))
+        .collect::<Result<Vec<_>, _>>()?;
+    let cells = extra
+        .cells
+        .iter()
+        .map(|c| probe_scene::Cells::parse(c))
+        .collect::<Result<Vec<_>, _>>()?;
     let game = layout::Game::of(edition)?;
     let all = story::scenes_from_tree(root, game.dir(), edition)?;
-    let chosen: Vec<&story::Scene> = all.iter().filter(|s| wanted.iter().any(|w| w.parse::<u16>().ok() == Some(s.number) || s.symbol.as_deref().is_some_and(|n| n.eq_ignore_ascii_case(w)) || s.slug() == *w)).collect();
+    let chosen: Vec<&story::Scene> = all
+        .iter()
+        .filter(|s| {
+            wanted.iter().any(|w| {
+                w.parse::<u16>().ok() == Some(s.number)
+                    || s.symbol
+                        .as_deref()
+                        .is_some_and(|n| n.eq_ignore_ascii_case(w))
+                    || s.slug() == *w
+            })
+        })
+        .collect();
     if chosen.is_empty() {
         return Err(format!("no scene {}", wanted.join(", ")));
     }
@@ -1596,8 +1986,24 @@ fn play_scene_probe(root: &Path, edition: &str, wanted: &[String], entrance: Opt
     let machines = Machines::load(root, edition, &chosen, true)?;
     let none = std::collections::HashMap::new();
     for s in chosen {
-        let ask = probe_scene::Ask { scene: Some(s), entrance, set: set.to_vec(), hide: extra.hide.clone(), skip: extra.skip.clone(), mark: mark.clone(), cells: cells.clone(), map: extra.map };
-        let file = probe_scene::scene(&machines.rom, &machines.symbols, &ask, machines.functions.get(&s.number).unwrap_or(&none), &machines.messages, out)?;
+        let ask = probe_scene::Ask {
+            scene: Some(s),
+            entrance,
+            set: set.to_vec(),
+            hide: extra.hide.clone(),
+            skip: extra.skip.clone(),
+            mark: mark.clone(),
+            cells: cells.clone(),
+            map: extra.map,
+        };
+        let file = probe_scene::scene(
+            &machines.rom,
+            &machines.symbols,
+            &ask,
+            machines.functions.get(&s.number).unwrap_or(&none),
+            &machines.messages,
+            out,
+        )?;
         eprintln!("{}", out.join(file).display());
     }
     Ok(())
@@ -1609,30 +2015,62 @@ fn play_probe(_: &Path, _: &str, _: &[String], _: &story::Flags, _: &Path) -> Re
 }
 
 #[cfg(feature = "render")]
-fn play_probe(root: &Path, edition: &str, only: &[String], flags: &story::Flags, out: &Path) -> Result<(), String> {
-    let all: Vec<&str> = probe::PROBES.iter().chain(probe_places::PROBES).chain(probe_units::PROBES).copied().collect();
+fn play_probe(
+    root: &Path,
+    edition: &str,
+    only: &[String],
+    flags: &story::Flags,
+    out: &Path,
+) -> Result<(), String> {
+    let all: Vec<&str> = probe::PROBES
+        .iter()
+        .chain(probe_places::PROBES)
+        .chain(probe_units::PROBES)
+        .copied()
+        .collect();
     if let Some(unknown) = only.iter().find(|name| !all.contains(&name.as_str())) {
         return Err(format!("no probe {unknown:?}\n{PROBE_USAGE}"));
     }
     let build = snapshot::build(root, edition)?;
-    let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
+    let map = std::fs::read(build.join(format!("{edition}.map")))
+        .map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
     let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
-    let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
+    let rom = std::fs::read(build.join(format!("{edition}.gba")))
+        .map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
     note_modified(edition, &rom);
     let symbols = field::Symbols::find(&map)?;
     std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-    let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
+    let mut guide = guide::Guide {
+        rom: &rom,
+        symbols: &symbols,
+        flags,
+        out,
+        map: &map,
+        written: Vec::new(),
+        casts: Vec::new(),
+    };
     let mut failed = Vec::new();
-    for name in all.into_iter().filter(|p| only.is_empty() || only.iter().any(|o| o == *p)) {
+    for name in all
+        .into_iter()
+        .filter(|p| only.is_empty() || only.iter().any(|o| o == *p))
+    {
         if let Err(e) = guide.probe(name, &map) {
             eprintln!("{name}: {e}");
             failed.push(name);
         }
     }
     for (file, bytes, what) in &guide.written {
-        eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
+        eprintln!(
+            "{}\t{} KiB\t{what}",
+            out.join(file).display(),
+            bytes.div_ceil(1024)
+        );
     }
-    if failed.is_empty() { Ok(()) } else { Err(format!("{} failed", failed.join(", "))) }
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("{} failed", failed.join(", ")))
+    }
 }
 
 const GUIDE_USAGE: &str = "usage: alchemy-devtools render guide --flags flags.tsv [--only NAME]... [--cast NAME]...
@@ -1808,14 +2246,19 @@ ALCHEMY_RENDER_DEBUG prints how each Doll House recording's runs went, and
 ALCHEMY_DRIVE_DEBUG writes the screen every 300 frames of a battle
 recording's run through the battle test menu, as DIR/drive-NNNNN.png.";
 
-
 fn guide_pictures(arguments: &[String]) -> Result<(), String> {
-    let (mut only, mut out, mut edition, mut flags_tsv) = (Vec::new(), None, "tbs-en".to_string(), None);
+    let (mut only, mut out, mut edition, mut flags_tsv) =
+        (Vec::new(), None, "tbs-en".to_string(), None);
     let mut casts = Vec::new();
     let mut jobs = jobs::Jobs::new();
     let mut options = arguments.iter();
     while let Some(argument) = options.next() {
-        let mut value = |name: &str| options.next().cloned().ok_or_else(|| format!("{name} needs a value\n{GUIDE_USAGE}"));
+        let mut value = |name: &str| {
+            options
+                .next()
+                .cloned()
+                .ok_or_else(|| format!("{name} needs a value\n{GUIDE_USAGE}"))
+        };
         match argument.as_str() {
             "-h" | "--help" => {
                 println!("{GUIDE_USAGE}");
@@ -1837,16 +2280,29 @@ fn guide_pictures(arguments: &[String]) -> Result<(), String> {
     // The Lost Age has no story tables: its flags are its flags.h's names.
     let flags = match flags_tsv {
         Some(path) => story::Flags::read(&path)?,
-        None if layout::Game::of(&edition)? == layout::Game::Tla => story::Flags::from_header(root, "tla"),
+        None if layout::Game::of(&edition)? == layout::Game::Tla => {
+            story::Flags::from_header(root, "tla")
+        }
         None => return Err(format!("--flags is needed\n{GUIDE_USAGE}")),
     };
     let out = out.unwrap_or_else(|| root.join("out").join(&edition).join("guide"));
-    play_guide(root, &edition, &only, &casts, &flags, &out, &jobs, arguments)
+    play_guide(
+        root, &edition, &only, &casts, &flags, &out, &jobs, arguments,
+    )
 }
 
 #[cfg(not(feature = "render"))]
 #[allow(clippy::too_many_arguments)]
-fn play_guide(_: &Path, _: &str, _: &[String], _: &[String], _: &story::Flags, _: &Path, _: &jobs::Jobs, _: &[String]) -> Result<(), String> {
+fn play_guide(
+    _: &Path,
+    _: &str,
+    _: &[String],
+    _: &[String],
+    _: &story::Flags,
+    _: &Path,
+    _: &jobs::Jobs,
+    _: &[String],
+) -> Result<(), String> {
     Err("alchemy-devtools was built without the render feature: cargo build --release --features render (needs libmgba)".to_string())
 }
 
@@ -1868,17 +2324,29 @@ fn play_guide(
 ) -> Result<(), String> {
     // The Lost Age's recordings are a set of their own (guide_tla.rs).
     let tla = layout::Game::of(edition)? == layout::Game::Tla;
-    let modes: Vec<&str> = if tla { guide_tla::modes().collect() } else { guide::modes().collect() };
+    let modes: Vec<&str> = if tla {
+        guide_tla::modes().collect()
+    } else {
+        guide::modes().collect()
+    };
     if let Some(unknown) = only.iter().find(|o| !modes.contains(&o.as_str())) {
-        return Err(format!("render guide has no mode {unknown:?}: render guide --help lists them"));
+        return Err(format!(
+            "render guide has no mode {unknown:?}: render guide --help lists them"
+        ));
     }
     let wanted = |name: &str| only.is_empty() || only.iter().any(|o| o == name);
     // The work in pieces: each mode, and field-psynergy's casts one by one.
     let mut units: Vec<String> = Vec::new();
     for name in modes.iter().copied().filter(|&name| wanted(name)) {
         if name == "field-psynergy" && !tla {
-            let cast_wanted = |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
-            units.extend(guide::field_cast_names()?.into_iter().filter(|c| cast_wanted(c)).map(|c| format!("{FIELD_CAST_KEY}{c}")));
+            let cast_wanted =
+                |c: &str| casts.is_empty() || casts.iter().any(|w| w.eq_ignore_ascii_case(c));
+            units.extend(
+                guide::field_cast_names()?
+                    .into_iter()
+                    .filter(|c| cast_wanted(c))
+                    .map(|c| format!("{FIELD_CAST_KEY}{c}")),
+            );
         } else {
             units.push(name.to_string());
         }
@@ -1892,7 +2360,8 @@ fn play_guide(
         let rom = std::fs::read(snapshot::build(root, edition)?.join(format!("{edition}.gba")))
             .map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
         note_modified(edition, &rom);
-        std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+        std::fs::create_dir_all(out)
+            .map_err(|e| format!("cannot create {}: {e}", out.display()))?;
         let joined = jobs::run("guide", arguments, &pieces, jobs.count)?;
         children_failed = joined.failed;
         for record in &joined.records {
@@ -1900,7 +2369,11 @@ fn play_guide(
                 Some(("written", rest)) => {
                     let fields: Vec<&str> = rest.splitn(3, '\t').collect();
                     if let [file, bytes, what] = fields[..] {
-                        written.push((file.to_string(), bytes.parse().unwrap_or(0), what.to_string()));
+                        written.push((
+                            file.to_string(),
+                            bytes.parse().unwrap_or(0),
+                            what.to_string(),
+                        ));
                     }
                 }
                 Some(("cast", line)) => rows.push(line.to_string()),
@@ -1913,15 +2386,26 @@ fn play_guide(
         failed.dedup();
     } else {
         let build = snapshot::build(root, edition)?;
-        let map = std::fs::read(build.join(format!("{edition}.map"))).map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
+        let map = std::fs::read(build.join(format!("{edition}.map")))
+            .map_err(|e| format!("cannot read the map: {e} (make {edition})"))?;
         let map = crate::gba::ld_map::Map::parse(&String::from_utf8_lossy(&map));
-        let rom = std::fs::read(build.join(format!("{edition}.gba"))).map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
+        let rom = std::fs::read(build.join(format!("{edition}.gba")))
+            .map_err(|e| format!("cannot read the ROM: {e} (make {edition})"))?;
         if !jobs.child {
             note_modified(edition, &rom);
         }
         let symbols = field::Symbols::find_for(&map, layout::Layout::for_edition(edition)?)?;
-        std::fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
-        let mut guide = guide::Guide { rom: &rom, symbols: &symbols, flags, out, map: &map, written: Vec::new(), casts: Vec::new() };
+        std::fs::create_dir_all(out)
+            .map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+        let mut guide = guide::Guide {
+            rom: &rom,
+            symbols: &symbols,
+            flags,
+            out,
+            map: &map,
+            written: Vec::new(),
+            casts: Vec::new(),
+        };
         if jobs.child {
             // The processes share the CPUs: each draws whole frames on one.
             whole::THREADS.store(1, std::sync::atomic::Ordering::Relaxed);
@@ -1936,8 +2420,16 @@ fn play_guide(
                     eprintln!("{name}: {e}");
                     records.push(format!("failed\t{name}"));
                 }
-                records.extend(std::mem::take(&mut guide.written).iter().map(|(file, bytes, what)| format!("written\t{file}\t{bytes}\t{what}")));
-                records.extend(std::mem::take(&mut guide.casts).iter().map(|line| format!("cast\t{line}")));
+                records.extend(
+                    std::mem::take(&mut guide.written)
+                        .iter()
+                        .map(|(file, bytes, what)| format!("written\t{file}\t{bytes}\t{what}")),
+                );
+                records.extend(
+                    std::mem::take(&mut guide.casts)
+                        .iter()
+                        .map(|line| format!("cast\t{line}")),
+                );
                 Ok(records)
             });
         }
@@ -1953,17 +2445,33 @@ fn play_guide(
         rows = guide.casts;
     }
     for (file, bytes, what) in &written {
-        eprintln!("{}\t{} KiB\t{what}", out.join(file).display(), bytes.div_ceil(1024));
+        eprintln!(
+            "{}\t{} KiB\t{what}",
+            out.join(file).display(),
+            bytes.div_ceil(1024)
+        );
     }
     if !rows.is_empty() {
-        let rows = rows.iter().filter_map(|line| Some(Row { id: line.split('\t').next()?.parse().ok()?, line: line.clone() })).collect();
+        let rows = rows
+            .iter()
+            .filter_map(|line| {
+                Some(Row {
+                    id: line.split('\t').next()?.parse().ok()?,
+                    line: line.clone(),
+                })
+            })
+            .collect();
         write_index(&out.join("index.tsv"), rows)?;
     }
     let mut problems = children_failed;
     if !failed.is_empty() {
         problems.insert(0, format!("{} failed", failed.join(", ")));
     }
-    if problems.is_empty() { Ok(()) } else { Err(problems.join("\n")) }
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(problems.join("\n"))
+    }
 }
 
 #[cfg(all(test, feature = "render"))]
@@ -1975,7 +2483,11 @@ mod tests {
     fn every_staging_option_is_in_the_usage() {
         for option in stage::OPTIONS {
             assert!(stage::Stage::is_option(option));
-            assert!(SCENES_USAGE.contains(&format!("{option} ")) || SCENES_USAGE.contains(&format!("{option}]")), "{option} is not in SCENES_USAGE");
+            assert!(
+                SCENES_USAGE.contains(&format!("{option} "))
+                    || SCENES_USAGE.contains(&format!("{option}]")),
+                "{option} is not in SCENES_USAGE"
+            );
         }
     }
 
@@ -1983,7 +2495,10 @@ mod tests {
     #[test]
     fn every_scene_probe_option_is_in_the_usage() {
         for option in ["--hide-actor", "--skip", "--mark-cells", "--cells", "--map"] {
-            assert!(PROBE_USAGE.contains(&format!("{option} ")), "{option} is not in PROBE_USAGE");
+            assert!(
+                PROBE_USAGE.contains(&format!("{option} ")),
+                "{option} is not in PROBE_USAGE"
+            );
         }
     }
 
@@ -1991,7 +2506,9 @@ mod tests {
     /// or a renamed one can be found from `--help`.
     #[test]
     fn every_guide_mode_is_in_the_usage() {
-        let words: Vec<&str> = GUIDE_USAGE.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-')).collect();
+        let words: Vec<&str> = GUIDE_USAGE
+            .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
+            .collect();
         for mode in guide::modes().chain(guide_tla::modes()) {
             assert!(words.contains(&mode), "{mode} is not in GUIDE_USAGE");
         }

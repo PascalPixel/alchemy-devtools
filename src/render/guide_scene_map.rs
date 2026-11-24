@@ -19,7 +19,14 @@ const KEY_UP: u32 = 0x40;
 const KEY_DOWN: u32 = 0x80;
 
 /// The modes this file plays, after guide_interface::MODES.
-pub const MODES: &[&str] = &["scene-exit-region", "game-djinni-flag", "map-recolour", "game-pack-full", "scene-log-state", "debug-menu-test-twice"];
+pub const MODES: &[&str] = &[
+    "scene-exit-region",
+    "game-djinni-flag",
+    "map-recolour",
+    "game-pack-full",
+    "scene-log-state",
+    "debug-menu-test-twice",
+];
 
 /// Kolima's tunnel (SceneId_KolimaTunnel), entered from Kolima at the foot
 /// of the ladder up (KOLIMA_TUNNEL_FROM_KOLIMA).
@@ -84,9 +91,16 @@ pub(super) fn black_runs(frames: &[Vec<u16>]) -> Vec<(usize, usize)> {
 /// `frames` with what lies between its first black screen and the next cut
 /// out, so that the two black screens join into one: a scene left and
 /// come back to, without the place between.
-pub(super) fn cut_between_blacks(frames: &[Vec<u16>], first: usize) -> Result<Vec<Vec<u16>>, String> {
+pub(super) fn cut_between_blacks(
+    frames: &[Vec<u16>],
+    first: usize,
+) -> Result<Vec<Vec<u16>>, String> {
     let runs = black_runs(frames);
-    let (a, b) = (runs.get(first).ok_or("no black screen to cut from")?, runs.get(first + 1).ok_or("no second black screen to cut to")?);
+    let (a, b) = (
+        runs.get(first).ok_or("no black screen to cut from")?,
+        runs.get(first + 1)
+            .ok_or("no second black screen to cut to")?,
+    );
     let mut kept = frames[..a.1].to_vec();
     kept.extend_from_slice(&frames[b.0..]);
     Ok(kept)
@@ -114,7 +128,13 @@ impl<'a> Guide<'a> {
 
     /// Walks the leader to (x, z), across and then along, keeping every
     /// picture; at most `limit` frames.
-    fn walk_to(field: &mut Field, (x, z): (i32, i32), frames: &mut Vec<Vec<u16>>, limit: u32, run: bool) -> Result<(), String> {
+    fn walk_to(
+        field: &mut Field,
+        (x, z): (i32, i32),
+        frames: &mut Vec<Vec<u16>>,
+        limit: u32,
+        run: bool,
+    ) -> Result<(), String> {
         // An axis the leader stops short on, within NEAR pixels, counts as
         // reached: the ground's edges are seldom where a round number is.
         const NEAR: i32 = 8;
@@ -130,21 +150,46 @@ impl<'a> Guide<'a> {
                 }
                 continue;
             };
-            still = if last == Some((at.x, at.z)) { still + 1 } else { 0 };
+            still = if last == Some((at.x, at.z)) {
+                still + 1
+            } else {
+                0
+            };
             last = Some((at.x, at.z));
             if still >= 40 {
                 let on_x = !x_done && (at.x - x).abs() > 1;
-                let off = if on_x { (at.x - x).abs() } else { (at.z - z).abs() };
+                let off = if on_x {
+                    (at.x - x).abs()
+                } else {
+                    (at.z - z).abs()
+                };
                 if off > NEAR {
-                    return Err(format!("the leader stopped at ({}, {}) on the way to ({x}, {z})", at.x, at.z));
+                    return Err(format!(
+                        "the leader stopped at ({}, {}) on the way to ({x}, {z})",
+                        at.x, at.z
+                    ));
                 }
-                if on_x { x_done = true } else { z_done = true }
+                if on_x {
+                    x_done = true
+                } else {
+                    z_done = true
+                }
                 still = 0;
             }
             let keys = if !x_done && (at.x - x).abs() > 1 {
-                (if at.x < x { KEY_RIGHT } else { KEY_LEFT }) | if run && (at.x - x).abs() > 8 { KEY_B } else { 0 }
+                (if at.x < x { KEY_RIGHT } else { KEY_LEFT })
+                    | if run && (at.x - x).abs() > 8 {
+                        KEY_B
+                    } else {
+                        0
+                    }
             } else if !z_done && (at.z - z).abs() > 1 {
-                (if at.z < z { KEY_DOWN } else { KEY_UP }) | if run && (at.z - z).abs() > 8 { KEY_B } else { 0 }
+                (if at.z < z { KEY_DOWN } else { KEY_UP })
+                    | if run && (at.z - z).abs() > 8 {
+                        KEY_B
+                    } else {
+                        0
+                    }
             } else {
                 break;
             };
@@ -153,7 +198,10 @@ impl<'a> Guide<'a> {
             frames.push(field.picture());
             n += 1;
             if n >= limit {
-                return Err(format!("the leader stopped at ({}, {}) on the way to ({x}, {z})", at.x, at.z));
+                return Err(format!(
+                    "the leader stopped at ({}, {}) on the way to ({x}, {z})",
+                    at.x, at.z
+                ));
             }
         }
         field.hold(0);
@@ -162,7 +210,12 @@ impl<'a> Guide<'a> {
 
     /// Walks the leader to the cell holding (x, z) by the shortest way along
     /// the cells he can walk to (Field::reach), cell centre to cell centre.
-    fn path_to(field: &mut Field, (x, z): (i32, i32), frames: &mut Vec<Vec<u16>>, run: bool) -> Result<(), String> {
+    fn path_to(
+        field: &mut Field,
+        (x, z): (i32, i32),
+        frames: &mut Vec<Vec<u16>>,
+        run: bool,
+    ) -> Result<(), String> {
         let at = field.leader().ok_or("the scene has no leader")?;
         let reach = field.reach(None)?;
         let layer = reach.layer;
@@ -174,11 +227,17 @@ impl<'a> Guide<'a> {
             .filter_map(|id| field.actor(id))
             .filter(|a| a.drawn)
             .flat_map(|a| {
-                let near = move |c: &(i32, i32)| (c.0 * 16 + 8 - a.x).abs() < 16 && (c.1 * 16 + 8 - a.z).abs() < 16;
-                (-1..=1).flat_map(move |dz| (-1..=1).map(move |dx| ((a.x >> 4) + dx, (a.z >> 4) + dz))).filter(near).collect::<Vec<_>>()
+                let near = move |c: &(i32, i32)| {
+                    (c.0 * 16 + 8 - a.x).abs() < 16 && (c.1 * 16 + 8 - a.z).abs() < 16
+                };
+                (-1..=1)
+                    .flat_map(move |dz| (-1..=1).map(move |dx| ((a.x >> 4) + dx, (a.z >> 4) + dz)))
+                    .filter(near)
+                    .collect::<Vec<_>>()
             })
             .collect();
-        let mut back: std::collections::HashMap<(i32, i32), (i32, i32)> = std::collections::HashMap::new();
+        let mut back: std::collections::HashMap<(i32, i32), (i32, i32)> =
+            std::collections::HashMap::new();
         let mut queue = std::collections::VecDeque::from([from]);
         back.insert(from, from);
         while let Some(c) = queue.pop_front() {
@@ -187,14 +246,20 @@ impl<'a> Guide<'a> {
             }
             for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
                 let n = (c.0 + dx, c.1 + dz);
-                if !back.contains_key(&n) && (n == to || (reach.holds(layer, n.0 * 16 + 8, n.1 * 16 + 8) && !taken.contains(&n))) {
+                if !back.contains_key(&n)
+                    && (n == to
+                        || (reach.holds(layer, n.0 * 16 + 8, n.1 * 16 + 8) && !taken.contains(&n)))
+                {
                     back.insert(n, c);
                     queue.push_back(n);
                 }
             }
         }
         // Where the walk cannot reach the cell, the nearest it can.
-        let to = *back.keys().min_by_key(|c| (c.0 - to.0).pow(2) + (c.1 - to.1).pow(2)).ok_or("nowhere to walk")?;
+        let to = *back
+            .keys()
+            .min_by_key(|c| (c.0 - to.0).pow(2) + (c.1 - to.1).pow(2))
+            .ok_or("nowhere to walk")?;
         let mut cells = vec![to];
         while let Some(&c) = cells.last() {
             let p = back[&c];
@@ -207,7 +272,9 @@ impl<'a> Guide<'a> {
         // Only the cells where the way turns.
         let mut turns = Vec::new();
         for i in 1..cells.len() {
-            let turn = i + 1 == cells.len() || (cells[i].0 - cells[i - 1].0, cells[i].1 - cells[i - 1].1) != (cells[i + 1].0 - cells[i].0, cells[i + 1].1 - cells[i].1);
+            let turn = i + 1 == cells.len()
+                || (cells[i].0 - cells[i - 1].0, cells[i].1 - cells[i - 1].1)
+                    != (cells[i + 1].0 - cells[i].0, cells[i + 1].1 - cells[i].1);
             if turn {
                 turns.push((cells[i].0 * 16 + 8, cells[i].1 * 16 + 8));
             }
@@ -221,7 +288,12 @@ impl<'a> Guide<'a> {
     /// Holds `keys`, keeping every picture, until the field is in a scene
     /// other than `from` and the player has control there again, then
     /// lets go; at most `limit` frames.
-    fn hold_until_elsewhere(field: &mut Field, keys: u32, frames: &mut Vec<Vec<u16>>, limit: u32) -> Result<(), String> {
+    fn hold_until_elsewhere(
+        field: &mut Field,
+        keys: u32,
+        frames: &mut Vec<Vec<u16>>,
+        limit: u32,
+    ) -> Result<(), String> {
         let from = field.scene();
         field.hold(keys);
         for _ in 0..limit {
@@ -245,17 +317,30 @@ impl<'a> Guide<'a> {
     fn scene_exit_region(&mut self) -> Result<(), String> {
         let mut entered = self.enter_scene(KOLIMA_TUNNEL)?;
         let field = &mut entered.field;
-        let start = field.leader().map(|a| (a.x, a.z)).ok_or("the tunnel has no leader")?;
+        let start = field
+            .leader()
+            .map(|a| (a.x, a.z))
+            .ok_or("the tunnel has no leader")?;
         let ready = field.save();
         let mut idle = 0;
         let mut frames;
         loop {
-            let mut path = vec![(0, 20 + idle), (KEY_DOWN, 21), (KEY_LEFT, 30), (0, 30), (KEY_RIGHT, 30), (0, 10)];
+            let mut path = vec![
+                (0, 20 + idle),
+                (KEY_DOWN, 21),
+                (KEY_LEFT, 30),
+                (0, 30),
+                (KEY_RIGHT, 30),
+                (0, 10),
+            ];
             path.retain(|s| s.1 > 0);
             frames = Self::press_path(field, &path)?;
             Self::walk_to(field, start, &mut frames, 120, false)?;
             Self::hold_until_elsewhere(field, KEY_UP, &mut frames, 600)?;
-            let first = frames.iter().position(|f| is_black_bgr555(f)).ok_or("the climb shows no black screen")?;
+            let first = frames
+                .iter()
+                .position(|f| is_black_bgr555(f))
+                .ok_or("the climb shows no black screen")?;
             if first >= CLEARED {
                 break;
             }
@@ -265,7 +350,11 @@ impl<'a> Guide<'a> {
             field.frames(1)?;
         }
         Self::run_past_black(field, &mut frames)?;
-        self.scene_map_gif("scene/exit-region.gif", &frames, "up the ladder of Kolima's tunnel into its exit region, and out into Kolima")
+        self.scene_map_gif(
+            "scene/exit-region.gif",
+            &frames,
+            "up the ladder of Kolima's tunnel into its exit region, and out into Kolima",
+        )
     }
 
     /// Granite, a Venus Djinni, joining in Kolima beside the way down to
@@ -277,7 +366,11 @@ impl<'a> Guide<'a> {
     fn game_djinni_flag(&mut self) -> Result<(), String> {
         let granite = source::actor_id("Kolima", "ACTOR_GRANITE")?;
         let mut entered = self.enter_scene(KOLIMA_FROM_TUNNEL)?;
-        let hole = entered.field.leader().map(|a| (a.x, a.z)).ok_or("Kolima has no leader")?;
+        let hole = entered
+            .field
+            .leader()
+            .map(|a| (a.x, a.z))
+            .ok_or("Kolima has no leader")?;
         let mut frames = Self::record_trigger(&mut entered, Trigger::Talk(granite), None, 40)?;
         let field = &mut entered.field;
         let after = field.save();
@@ -287,7 +380,10 @@ impl<'a> Guide<'a> {
             Self::hold(field, 0, idle, &mut frames)?;
             Self::walk_to(field, hole, &mut frames, 400, false)?;
             Self::hold_until_elsewhere(field, KEY_UP, &mut frames, 600)?;
-            let first = frames.iter().position(|f| is_black_bgr555(f)).ok_or("no black screen on leaving")?;
+            let first = frames
+                .iter()
+                .position(|f| is_black_bgr555(f))
+                .ok_or("no black screen on leaving")?;
             if first >= CLEARED {
                 break;
             }
@@ -300,7 +396,11 @@ impl<'a> Guide<'a> {
         Self::run_past_black(field, &mut frames)?;
         Self::hold(field, 0, 30, &mut frames)?;
         let frames = cut_between_blacks(&frames, 0)?;
-        self.scene_map_gif("game/djinni-flag.gif", &frames, "Granite joining in Kolima, and the spot empty on the next visit")
+        self.scene_map_gif(
+            "game/djinni-flag.gif",
+            &frames,
+            "Granite joining in Kolima, and the spot empty on the next visit",
+        )
     }
 
     /// Kolima Forest's river log walked into from the east: it rolls to the
@@ -370,10 +470,17 @@ impl<'a> Guide<'a> {
         Self::hold(field, KEY_RIGHT, 8, &mut frames)?;
         // The log on the far bank, until the scene has shown CLEARED frames.
         let since = frames.len() - frames.iter().rposition(|f| is_black_bgr555(f)).unwrap_or(0);
-        Self::hold(field, 0, (CLEARED + 60).saturating_sub(since).max(60) as u32, &mut frames)?;
+        Self::hold(
+            field,
+            0,
+            (CLEARED + 60).saturating_sub(since).max(60) as u32,
+            &mut frames,
+        )?;
         let runs = black_runs(&frames);
         if runs.len() != 4 {
-            return Err(format!("expected four black screens (the battle's two, out and in), not {runs:?}"));
+            return Err(format!(
+                "expected four black screens (the battle's two, out and in), not {runs:?}"
+            ));
         }
         if runs[0].0 < CLEARED {
             return Err(format!("the battle came after only {} frames", runs[0].0));
@@ -422,7 +529,11 @@ impl<'a> Guide<'a> {
         }
         Self::run_past_black(field, &mut frames)?;
         Self::menu_test_visit(field, (spot.x, spot.z), toward, false, &mut frames)?;
-        self.scene_map_gif("debug/menu-test-twice.gif", &frames, "Menu test entered twice: the Masamune bought out, and back on sale on the next visit")
+        self.scene_map_gif(
+            "debug/menu-test-twice.gif",
+            &frames,
+            "Menu test entered twice: the Masamune bought out, and back on sale on the next visit",
+        )
     }
 
     /// One visit to Menu test from where the party arrives: to the armor
@@ -430,7 +541,13 @@ impl<'a> Guide<'a> {
     /// Artifacts, the Shamshir, the Silver Blade and the Masamune, the hand
     /// moved onto the Masamune. With `buy` the Masamune is bought for Isaac and the
     /// list offered again without it; then out of the shop.
-    fn menu_test_visit(field: &mut Field, stand: (i32, i32), toward: u32, buy: bool, frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
+    fn menu_test_visit(
+        field: &mut Field,
+        stand: (i32, i32),
+        toward: u32,
+        buy: bool,
+        frames: &mut Vec<Vec<u16>>,
+    ) -> Result<(), String> {
         Self::hold(field, 0, 30, frames)?;
         if let Err(e) = Self::path_to(field, stand, frames, false) {
             // Stopped by the merchant's own footprint, a step short.
@@ -440,7 +557,23 @@ impl<'a> Guide<'a> {
             }
         }
         Self::hold(field, toward, 2, frames)?;
-        let list = [(0, 10), (KEY_A, 3), (0, 90), (KEY_RIGHT, 3), (0, 25), (KEY_RIGHT, 3), (0, 25), (KEY_A, 3), (0, 75), (KEY_A, 3), (0, 50), (KEY_RIGHT, 3), (0, 30), (KEY_RIGHT, 3), (0, 75)];
+        let list = [
+            (0, 10),
+            (KEY_A, 3),
+            (0, 90),
+            (KEY_RIGHT, 3),
+            (0, 25),
+            (KEY_RIGHT, 3),
+            (0, 25),
+            (KEY_A, 3),
+            (0, 75),
+            (KEY_A, 3),
+            (0, 50),
+            (KEY_RIGHT, 3),
+            (0, 30),
+            (KEY_RIGHT, 3),
+            (0, 75),
+        ];
         for &(keys, n) in &list {
             Self::hold(field, keys, n, frames)?;
         }
@@ -491,30 +624,76 @@ impl<'a> Guide<'a> {
     /// end.
     fn game_pack_full(&mut self) -> Result<(), String> {
         const FILLERS: [&str; 20] = [
-            "Vial", "Potion", "Antidote", "Elixir", "Power Bread", "Cookie", "Apple", "Hard Nut", "Mint", "Lucky Pepper", "Smoke Bomb", "Sleep Bomb", "Bramble Seed", "Crystal Powder", "Oil Drop", "Weasel's Claw", "Bone", "Corn", "Sacred Feather", "Dragon Skin",
+            "Vial",
+            "Potion",
+            "Antidote",
+            "Elixir",
+            "Power Bread",
+            "Cookie",
+            "Apple",
+            "Hard Nut",
+            "Mint",
+            "Lucky Pepper",
+            "Smoke Bomb",
+            "Sleep Bomb",
+            "Bramble Seed",
+            "Crystal Powder",
+            "Oil Drop",
+            "Weasel's Claw",
+            "Bone",
+            "Corn",
+            "Sacred Feather",
+            "Dragon Skin",
         ];
         let names = super::tables::Game::here()?.item_names()?;
-        let mut fillers = FILLERS.iter().filter_map(|n| names.iter().position(|i| i == n).map(|p| p as u16));
+        let mut fillers = FILLERS
+            .iter()
+            .filter_map(|n| names.iter().position(|i| i == n).map(|p| p as u16));
         let mut entered = self.enter_with(SOL_CHEST_ROOM, &[])?;
         let field = &mut entered.field;
         field.load(&entered.placed);
         let unit = field.unit(ISAAC)?;
         for slot in 0..INVENTORY_SLOTS {
             if field.read16(unit + UNIT_INVENTORY + 2 * slot) == 0 {
-                field.write16(unit + UNIT_INVENTORY + 2 * slot, fillers.next().ok_or("too few fillers")?);
+                field.write16(
+                    unit + UNIT_INVENTORY + 2 * slot,
+                    fillers.next().ok_or("too few fillers")?,
+                );
             }
         }
         entered.placed = field.save();
         field.until_control()?;
         field.frames(20)?;
-        let mut frames = Self::record_trigger(&mut entered, Trigger::Search(CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST), None, 30)?;
+        let mut frames = Self::record_trigger(
+            &mut entered,
+            Trigger::Search(CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST),
+            None,
+            30,
+        )?;
         let field = &mut entered.field;
         // The field menu, its Item icon, Isaac's list, then Garet's.
-        let path = [(KEY_A, 3), (0, 50), (KEY_RIGHT, 3), (0, 30), (KEY_A, 3), (0, 90), (KEY_RIGHT, 3), (0, 90), (KEY_B, 3), (0, 30), (KEY_B, 3), (0, 40)];
+        let path = [
+            (KEY_A, 3),
+            (0, 50),
+            (KEY_RIGHT, 3),
+            (0, 30),
+            (KEY_A, 3),
+            (0, 90),
+            (KEY_RIGHT, 3),
+            (0, 90),
+            (KEY_B, 3),
+            (0, 30),
+            (KEY_B, 3),
+            (0, 40),
+        ];
         for (keys, n) in path {
             Self::hold(field, keys, n, &mut frames)?;
         }
-        self.scene_map_gif("game/pack-full.gif", &frames, "a chest's item going to Garet while Isaac's bag is full")
+        self.scene_map_gif(
+            "game/pack-full.gif",
+            &frames,
+            "a chest's item going to Garet while Isaac's bag is full",
+        )
     }
 
     /// Two scenes of Crossbone Isle drawn from one tileset, each with a
@@ -531,14 +710,20 @@ impl<'a> Guide<'a> {
         let mut image = super::guide_more::canvas(2 * WIDTH + gap, HEIGHT, 0);
         super::guide_more::paste(&mut image, &shots[0], 0, 0, 1);
         super::guide_more::paste(&mut image, &shots[1], WIDTH + gap, 0, 1);
-        std::fs::create_dir_all(self.out.join("map")).map_err(|e| format!("cannot make map: {e}"))?;
-        self.guide_png("map/recolour.png", &image, "two floors of Crossbone Isle, one tileset in two palettes")
+        std::fs::create_dir_all(self.out.join("map"))
+            .map_err(|e| format!("cannot make map: {e}"))?;
+        self.guide_png(
+            "map/recolour.png",
+            &image,
+            "two floors of Crossbone Isle, one tileset in two palettes",
+        )
     }
 
     /// Writes `frames` as `path` under the output folder, making its folder.
     fn scene_map_gif(&mut self, path: &str, frames: &[Vec<u16>], what: &str) -> Result<(), String> {
         if let Some(dir) = std::path::Path::new(path).parent() {
-            std::fs::create_dir_all(self.out.join(dir)).map_err(|e| format!("cannot make {}: {e}", dir.display()))?;
+            std::fs::create_dir_all(self.out.join(dir))
+                .map_err(|e| format!("cannot make {}: {e}", dir.display()))?;
         }
         self.guide_gif(path, frames, what)
     }

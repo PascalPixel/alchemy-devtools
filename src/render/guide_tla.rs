@@ -35,7 +35,16 @@ pub(super) const PARTY_DAILA: u32 = 7;
 /// The modes The Lost Age plays, in order: the moment mode, then each
 /// recording file's.
 pub fn modes() -> impl Iterator<Item = &'static str> {
-    ["moment"].into_iter().chain(super::guide_tla_town::MODES.iter().copied()).chain(super::guide_tla_town::MORE_MODES.iter().copied()).chain(super::guide_tla_fight::MODES.iter().copied()).chain(super::guide_tla_fight::CAVE_MODES.iter().copied()).chain(super::guide_tla_more::MODES.iter().copied()).chain(super::guide_tla_more::CAST_MODES.iter().copied()).chain(super::guide_tla_more::FORGE_MODES.iter().copied()).chain(super::guide_tla_more::DICE_MODES.iter().copied())
+    ["moment"]
+        .into_iter()
+        .chain(super::guide_tla_town::MODES.iter().copied())
+        .chain(super::guide_tla_town::MORE_MODES.iter().copied())
+        .chain(super::guide_tla_fight::MODES.iter().copied())
+        .chain(super::guide_tla_fight::CAVE_MODES.iter().copied())
+        .chain(super::guide_tla_more::MODES.iter().copied())
+        .chain(super::guide_tla_more::CAST_MODES.iter().copied())
+        .chain(super::guide_tla_more::FORGE_MODES.iter().copied())
+        .chain(super::guide_tla_more::DICE_MODES.iter().copied())
 }
 
 impl<'a> Guide<'a> {
@@ -61,7 +70,10 @@ impl<'a> Guide<'a> {
         if self.symbols.l.game == super::layout::Game::Tla {
             return Ok(Vec::new());
         }
-        Ok(vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?])
+        Ok(vec![
+            self.flag("FLAG_VALE_STORM")?,
+            self.flag("FLAG_CHILDHOOD")?,
+        ])
     }
 
     /// The moment mode's field: The Broken Seal's chapter party, or The Lost
@@ -70,14 +82,20 @@ impl<'a> Guide<'a> {
         if self.symbols.l.game != super::layout::Game::Tla {
             return Field::enter(self.rom, self.symbols, setup);
         }
-        let preset = std::env::var("MOMENT_PRESET").ok().and_then(|p| p.parse().ok()).unwrap_or(PARTY_DAILA);
+        let preset = std::env::var("MOMENT_PRESET")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(PARTY_DAILA);
         Field::enter_with_party(self.rom, self.symbols, setup, Some(party::tla(preset)?))
     }
 
     /// tla-en's ELF and The Lost Age's headers, read once.
     pub(super) fn tla_game() -> Result<&'static super::tables::Game, String> {
-        static GAME: std::sync::OnceLock<Result<super::tables::Game, String>> = std::sync::OnceLock::new();
-        GAME.get_or_init(|| super::tables::Game::read_edition(crate::compile::root(), "tla-en")).as_ref().map_err(Clone::clone)
+        static GAME: std::sync::OnceLock<Result<super::tables::Game, String>> =
+            std::sync::OnceLock::new();
+        GAME.get_or_init(|| super::tables::Game::read_edition(crate::compile::root(), "tla-en"))
+            .as_ref()
+            .map_err(Clone::clone)
     }
 
     /// The value The Lost Age's headers give `name` (ABILITY_FROST).
@@ -89,15 +107,31 @@ impl<'a> Guide<'a> {
     pub(super) fn tla_scene(symbol: &str) -> Result<u16, String> {
         let root = crate::compile::root();
         let scenes = super::story::scenes_from_tree(root, "tla", "tla-en")?;
-        scenes.iter().find(|s| s.symbol.as_deref() == Some(symbol)).map(|s| s.number).ok_or_else(|| format!("The Lost Age has no scene {symbol}"))
+        scenes
+            .iter()
+            .find(|s| s.symbol.as_deref() == Some(symbol))
+            .map(|s| s.number)
+            .ok_or_else(|| format!("The Lost Age has no scene {symbol}"))
     }
 
     /// Enters The Lost Age's scene `symbol` by `entrance` with debug set
     /// `preset` for the party and `set` set, and runs until the player has
     /// control, keeping the moment the party was placed.
-    pub(super) fn tla_enter(&self, symbol: &str, entrance: u16, preset: u32, set: &[u16]) -> Result<Entered<'a>, String> {
-        let setup = Setup { scene: Self::tla_scene(symbol)?, entrance, set: set.to_vec(), clear: Vec::new() };
-        let mut field = Field::enter_with_party(self.rom, self.symbols, &setup, Some(party::tla(preset)?))?;
+    pub(super) fn tla_enter(
+        &self,
+        symbol: &str,
+        entrance: u16,
+        preset: u32,
+        set: &[u16],
+    ) -> Result<Entered<'a>, String> {
+        let setup = Setup {
+            scene: Self::tla_scene(symbol)?,
+            entrance,
+            set: set.to_vec(),
+            clear: Vec::new(),
+        };
+        let mut field =
+            Field::enter_with_party(self.rom, self.symbols, &setup, Some(party::tla(preset)?))?;
         let placed = field.save();
         field.until_control()?;
         field.frames(20)?;
@@ -144,7 +178,11 @@ impl<'a> Guide<'a> {
     /// Walks the leader toward (x, z) with the d-pad as a player would, along
     /// x and then along z, keeping every frame, until he is within a pixel
     /// of each or something stops him.
-    pub(super) fn tla_walk_to(field: &mut Field, (x, z): (i32, i32), frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
+    pub(super) fn tla_walk_to(
+        field: &mut Field,
+        (x, z): (i32, i32),
+        frames: &mut Vec<Vec<u16>>,
+    ) -> Result<(), String> {
         for along_x in [true, false] {
             let (mut last, mut still) = (None, 0);
             for _ in 0..600 {
@@ -162,7 +200,11 @@ impl<'a> Guide<'a> {
                 field.hold(key);
                 field.frames(1)?;
                 frames.push(field.picture());
-                still = if last == Some((at.x, at.z)) { still + 1 } else { 0 };
+                still = if last == Some((at.x, at.z)) {
+                    still + 1
+                } else {
+                    0
+                };
                 last = Some((at.x, at.z));
             }
             field.hold(0);
@@ -172,18 +214,23 @@ impl<'a> Guide<'a> {
 
     /// Enters The Lost Age's scene and stands the leader where `trigger`
     /// would start, at the first spot `pick` accepts.
-    pub(super) fn tla_stand(&self, scene: &str, entrance: u16, preset: u32, trigger: super::story::Trigger, pick: impl Fn(&super::field::Spot) -> bool) -> Result<(Entered<'a>, super::field::Spot), String> {
+    pub(super) fn tla_stand(
+        &self,
+        scene: &str,
+        entrance: u16,
+        preset: u32,
+        trigger: super::story::Trigger,
+        pick: impl Fn(&super::field::Spot) -> bool,
+    ) -> Result<(Entered<'a>, super::field::Spot), String> {
         let mut entered = self.tla_enter(scene, entrance, preset, &[])?;
         let first = match entered.field.spots(trigger) {
-            Ok(spots) => {
-                match spots.iter().find(|s| pick(s)) {
-                    Some(&spot) => {
-                        entered.field.stand(&entered.placed, &spot)?;
-                        return Ok((entered, spot));
-                    }
-                    None => format!("no spot in {scene} fits {trigger:?}"),
+            Ok(spots) => match spots.iter().find(|s| pick(s)) {
+                Some(&spot) => {
+                    entered.field.stand(&entered.placed, &spot)?;
+                    return Ok((entered, spot));
                 }
-            }
+                None => format!("no spot in {scene} fits {trigger:?}"),
+            },
             Err(e) => e,
         };
         // A room of a scene of several rooms: from each entrance whose room
@@ -193,12 +240,25 @@ impl<'a> Guide<'a> {
         };
         let at = entered.field.actor(actor).ok_or(first.clone())?;
         let header = entered.field.header();
-        let others: Vec<u16> = entered.field.entrances().iter().filter(|e| e.number as u16 != entrance && super::field::box_holds(e.camera, header, at.x, at.z)).map(|e| e.number as u16).collect();
+        let others: Vec<u16> = entered
+            .field
+            .entrances()
+            .iter()
+            .filter(|e| {
+                e.number as u16 != entrance && super::field::box_holds(e.camera, header, at.x, at.z)
+            })
+            .map(|e| e.number as u16)
+            .collect();
         for other in others {
             let Ok(mut entered) = self.tla_enter(scene, other, preset, &[]) else {
                 continue;
             };
-            if let Some(spot) = entered.field.spots(trigger).ok().and_then(|s| s.into_iter().find(|s| pick(s))) {
+            if let Some(spot) = entered
+                .field
+                .spots(trigger)
+                .ok()
+                .and_then(|s| s.into_iter().find(|s| pick(s)))
+            {
                 entered.field.stand(&entered.placed, &spot)?;
                 return Ok((entered, spot));
             }

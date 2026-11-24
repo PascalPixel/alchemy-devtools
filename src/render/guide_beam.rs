@@ -77,11 +77,17 @@ impl<'a> Guide<'a> {
             if n > 12000 || field.scene() != AFTER_FIRST_BATTLE.0 {
                 return Err("the beam never settled with a page waiting".to_string());
             }
-            if beam.is_none() && field.actor(ACTOR_BEAM_BOTTOM).is_some_and(|a| a.x == BEAM_X) {
+            if beam.is_none()
+                && field
+                    .actor(ACTOR_BEAM_BOTTOM)
+                    .is_some_and(|a| a.x == BEAM_X)
+            {
                 beam = Some((n, bg_palette(&field)));
             }
             if field.waiting() {
-                let back = beam.as_ref().is_some_and(|(at, colours)| n > at + STAR_COLOURS && bg_palette(&field) == *colours);
+                let back = beam.as_ref().is_some_and(|(at, colours)| {
+                    n > at + STAR_COLOURS && bg_palette(&field) == *colours
+                });
                 if back {
                     break;
                 }
@@ -99,8 +105,15 @@ impl<'a> Guide<'a> {
             field.frames(1)?;
             idle.push(idle_frames(&field));
         }
-        let lined_up = (1..=STAR_LOOP_UNITS).map(|units| units * STAR_LOOP_UNIT).find_map(|n| (STAR_SETTLE..STAR_SEARCH - n).find(|&s| (s - 2..=s).all(|k| idle[k] == idle[k + n])).map(|s| (s, n)));
-        let (begin, looped) = lined_up.ok_or("the actors' idle animations never line up a loop apart")?;
+        let lined_up = (1..=STAR_LOOP_UNITS)
+            .map(|units| units * STAR_LOOP_UNIT)
+            .find_map(|n| {
+                (STAR_SETTLE..STAR_SEARCH - n)
+                    .find(|&s| (s - 2..=s).all(|k| idle[k] == idle[k + n]))
+                    .map(|s| (s, n))
+            });
+        let (begin, looped) =
+            lined_up.ok_or("the actors' idle animations never line up a loop apart")?;
         // States are kept from PARTICLE_LIFE and LEAD frames before the loop.
         // The seed is set between two of the game's frames, and no view may be
         // pinned before it and drawn after (Guide::whole).
@@ -125,11 +138,22 @@ impl<'a> Guide<'a> {
         let mut pictures = self.whole(&mut field, &states, &frames)?;
         // The frame after the last is the first again.
         let after = pictures.pop().ok_or("no frames")?;
-        let differ = after.pixels.iter().zip(&pictures[0].pixels).filter(|(a, b)| a != b).count();
+        let differ = after
+            .pixels
+            .iter()
+            .zip(&pictures[0].pixels)
+            .filter(|(a, b)| a != b)
+            .count();
         if differ != 0 {
-            return Err(format!("the frame after the loop's last differs from its first in {differ} pixels"));
+            return Err(format!(
+                "the frame after the loop's last differs from its first in {differ} pixels"
+            ));
         }
-        self.whole_gif("places/venus-lighthouse-aerie/beam-whole.gif", &pictures, "the beam the Venus Star lights, the whole aerie and the sky")
+        self.whole_gif(
+            "places/venus-lighthouse-aerie/beam-whole.gif",
+            &pictures,
+            "the beam the Venus Star lights, the whole aerie and the sky",
+        )
     }
 
     /// The beacon erupting, seen whole, as
@@ -141,7 +165,8 @@ impl<'a> Guide<'a> {
     pub(super) fn venus_eruption_whole(&mut self) -> Result<(), String> {
         let erupted = FLAG_VENUS_AERIE_BEACON_ERUPTED;
         let mut field = self.aerie(AFTER_SECOND_BATTLE)?;
-        let mut kept: std::collections::VecDeque<super::field::Saved> = std::collections::VecDeque::new();
+        let mut kept: std::collections::VecDeque<super::field::Saved> =
+            std::collections::VecDeque::new();
         let mut n = 0u32;
         while !field.flag_is_set(erupted) {
             kept.push_back(field.save());
@@ -150,7 +175,11 @@ impl<'a> Guide<'a> {
             }
             // A held for three frames in six while a page waits, a frame at
             // a time so that every state is kept.
-            field.hold(if field.waiting() && n % 6 < 3 { KEY_A } else { 0 });
+            field.hold(if field.waiting() && n % 6 < 3 {
+                KEY_A
+            } else {
+                0
+            });
             field.frames(1)?;
             n += 1;
             if n > 12000 || field.scene() != AFTER_SECOND_BATTLE.0 {
@@ -171,27 +200,51 @@ impl<'a> Guide<'a> {
         }
         let frames: Vec<usize> = (LEAD + LATE..states.len()).step_by(2).collect();
         let pictures = self.whole(&mut field, &states, &frames)?;
-        self.whole_gif("places/venus-lighthouse-aerie/eruption-whole.gif", &pictures, "the beacon erupting, the whole aerie and the sky")
+        self.whole_gif(
+            "places/venus-lighthouse-aerie/eruption-whole.gif",
+            &pictures,
+            "the beacon erupting, the whole aerie and the sky",
+        )
     }
 
     /// Enters the aerie at `place` after the party has left Vale.
     fn aerie(&self, place: (u16, u16)) -> Result<Field<'a>, String> {
         let set = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
-        Field::enter(self.rom, self.symbols, &Setup { scene: place.0, entrance: place.1, set, clear })
+        Field::enter(
+            self.rom,
+            self.symbols,
+            &Setup {
+                scene: place.0,
+                entrance: place.1,
+                set,
+                clear,
+            },
+        )
     }
 
     /// The frames `frames` of `states` drawn whole (whole::stitch): the
     /// aerie's scroll bounds as the last state has them, and the sky.
-    fn whole(&self, field: &mut Field, states: &States, frames: &[usize]) -> Result<Vec<Image>, String> {
+    fn whole(
+        &self,
+        field: &mut Field,
+        states: &States,
+        frames: &[usize],
+    ) -> Result<Vec<Image>, String> {
         field.load(&states.get(states.len() - 1));
         let area = field.bounds().map(|v| v >> 16);
         whole::stitch(field, states, frames, area)
     }
 
-    pub(super) fn whole_gif(&mut self, file: &str, pictures: &[Image], what: &str) -> Result<(), String> {
+    pub(super) fn whole_gif(
+        &mut self,
+        file: &str,
+        pictures: &[Image],
+        what: &str,
+    ) -> Result<(), String> {
         let (bytes, frames) = whole::write_gif(&self.out.join(file), pictures)?;
-        self.written.push((file.to_string(), bytes, format!("{what}; {frames}")));
+        self.written
+            .push((file.to_string(), bytes, format!("{what}; {frames}")));
         Ok(())
     }
 }
@@ -210,7 +263,11 @@ fn idle_frames(field: &Field) -> Vec<i32> {
         }
         for k in 0..4 {
             let anim = field.read32(sprite + SPRITE_ENTRIES + 4 * k);
-            out.push(if is_ram(anim) { i32::from(field.read8(anim + SPRITE_ANIMATION_PICTURE)) } else { -1 });
+            out.push(if is_ram(anim) {
+                i32::from(field.read8(anim + SPRITE_ANIMATION_PICTURE))
+            } else {
+                -1
+            });
         }
     }
     out
@@ -223,7 +280,7 @@ fn is_ram(address: u32) -> bool {
 
 /// BG palette RAM (entries 0 to 255), two to a word.
 fn bg_palette(field: &Field) -> Vec<u32> {
-    (0..128u32).map(|i| field.read32(PALETTE_RAM + 4 * i)).collect()
+    (0..128u32)
+        .map(|i| field.read32(PALETTE_RAM + 4 * i))
+        .collect()
 }
-
-

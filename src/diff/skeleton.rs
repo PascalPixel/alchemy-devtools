@@ -12,8 +12,15 @@ use std::sync::OnceLock;
 pub(crate) fn skeleton(row: &str) -> String {
     static PATTERNS: OnceLock<[Regex; 6]> = OnceLock::new();
     let [register, stack_slot, stack_offset, pool, branch, list] = PATTERNS.get_or_init(|| {
-        [r"\b(r\d+|sl|fp|ip|lr)\b", r"\[sp, #\d+\]", r"sp, #\d+", r"\[pc, #\d+\]", r"([bB][a-z.]*) [+-]\d+", r"\{[^}]*\}"]
-            .map(|pattern| Regex::new(pattern).unwrap())
+        [
+            r"\b(r\d+|sl|fp|ip|lr)\b",
+            r"\[sp, #\d+\]",
+            r"sp, #\d+",
+            r"\[pc, #\d+\]",
+            r"([bB][a-z.]*) [+-]\d+",
+            r"\{[^}]*\}",
+        ]
+        .map(|pattern| Regex::new(pattern).unwrap())
     });
     let row = register.replace_all(row, "R");
     let row = stack_slot.replace_all(&row, "[sp,#S]");

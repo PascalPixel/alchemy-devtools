@@ -27,9 +27,17 @@ impl Placed {
 }
 
 pub fn preferred(symbols: &[(u32, String)], address: u32) -> Option<&str> {
-    let mut names = symbols.iter().filter(|(a, _)| *a == address).map(|(_, n)| n.as_str());
+    let mut names = symbols
+        .iter()
+        .filter(|(a, _)| *a == address)
+        .map(|(_, n)| n.as_str());
     let first = names.next()?;
-    Some(std::iter::once(first).chain(names).find(|n| !is_placeholder(n)).unwrap_or(first))
+    Some(
+        std::iter::once(first)
+            .chain(names)
+            .find(|n| !is_placeholder(n))
+            .unwrap_or(first),
+    )
 }
 
 /// A name given to what is not named yet: a word, `_` and its address in hex,
@@ -37,7 +45,9 @@ pub fn preferred(symbols: &[(u32, String)], address: u32) -> Option<&str> {
 /// function's, seven with the leading 0 dropped (`sub_8000040`).
 pub fn is_placeholder(name: &str) -> bool {
     name.rsplit_once('_').is_some_and(|(_, tail)| {
-        let address = (tail.chars().all(|c| c.is_ascii_hexdigit())).then(|| u32::from_str_radix(tail, 16).ok()).flatten();
+        let address = (tail.chars().all(|c| c.is_ascii_hexdigit()))
+            .then(|| u32::from_str_radix(tail, 16).ok())
+            .flatten();
         match tail.len() {
             8 => address.is_some(),
             7 => address.is_some_and(|address| address >= 0x0200_0000),
@@ -60,7 +70,9 @@ pub struct Output {
 }
 
 fn hex(word: &str) -> Option<u32> {
-    u64::from_str_radix(word.strip_prefix("0x")?, 16).ok().and_then(|v| u32::try_from(v).ok())
+    u64::from_str_radix(word.strip_prefix("0x")?, 16)
+        .ok()
+        .and_then(|v| u32::try_from(v).ok())
 }
 
 fn word(text: &str) -> (&str, &str) {
@@ -96,7 +108,9 @@ impl Map {
             let indented = line.starts_with(' ');
             let column_one = indented && !line[1..].starts_with(' ');
             if let Some((output, name)) = pending.take() {
-                if let Some((address, size, rest)) = placement(line).filter(|_| indented && !column_one) {
+                if let Some((address, size, rest)) =
+                    placement(line).filter(|_| indented && !column_one)
+                {
                     if output {
                         outputs.push(output_section(name, address, size, rest));
                         current = Some(outputs.len() - 1);
@@ -125,13 +139,23 @@ impl Map {
                 if rest.trim().is_empty() {
                     pending = Some((false, name.to_string()));
                 } else if let Some((address, size, rest)) = placement(rest) {
-                    push(&mut placed, name.to_string(), address, size, rest, &outputs, current);
+                    push(
+                        &mut placed,
+                        name.to_string(),
+                        address,
+                        size,
+                        rest,
+                        &outputs,
+                        current,
+                    );
                 }
                 continue;
             }
             let (address, rest) = word(line);
             let (name, tail) = word(rest);
-            if let (Some(address), true, true) = (hex(address), tail.trim().is_empty(), is_identifier(name)) {
+            if let (Some(address), true, true) =
+                (hex(address), tail.trim().is_empty(), is_identifier(name))
+            {
                 if let Some(last) = placed.last_mut().filter(|p| !p.is_fill()) {
                     if address >= last.address && address <= last.end() {
                         last.symbols.push((address, name.to_string()));
@@ -143,7 +167,12 @@ impl Map {
             .iter()
             .map(|o| {
                 o.load != o.address
-                    && outputs.iter().any(|q| q.size > 0 && q.load >= o.load && q.load - o.load < o.size && !std::ptr::eq(q, o))
+                    && outputs.iter().any(|q| {
+                        q.size > 0
+                            && q.load >= o.load
+                            && q.load - o.load < o.size
+                            && !std::ptr::eq(q, o)
+                    })
             })
             .collect();
         for p in &mut placed {
@@ -154,7 +183,10 @@ impl Map {
 
     pub fn symbol(&self, name: &str) -> Option<(&Placed, u32)> {
         self.placed.iter().find_map(|p| {
-            p.symbols.iter().find(|(_, n)| n == name).map(|(a, _)| (p, *a))
+            p.symbols
+                .iter()
+                .find(|(_, n)| n == name)
+                .map(|(a, _)| (p, *a))
         })
     }
 
@@ -166,12 +198,29 @@ impl Map {
 }
 
 fn output_section(name: String, address: u32, size: u32, rest: &str) -> Output {
-    let load = rest.split_once("load address").and_then(|(_, load)| hex(load.trim()));
-    Output { name, address, size, load: load.unwrap_or(address) }
+    let load = rest
+        .split_once("load address")
+        .and_then(|(_, load)| hex(load.trim()));
+    Output {
+        name,
+        address,
+        size,
+        load: load.unwrap_or(address),
+    }
 }
 
-fn push(placed: &mut Vec<Placed>, name: String, address: u32, size: u32, path: &str, outputs: &[Output], output: Option<usize>) {
-    let relocation = output.map_or(0, |o| i64::from(outputs[o].load) - i64::from(outputs[o].address));
+fn push(
+    placed: &mut Vec<Placed>,
+    name: String,
+    address: u32,
+    size: u32,
+    path: &str,
+    outputs: &[Output],
+    output: Option<usize>,
+) {
+    let relocation = output.map_or(0, |o| {
+        i64::from(outputs[o].load) - i64::from(outputs[o].address)
+    });
     placed.push(Placed {
         name,
         path: path.to_string(),
@@ -190,7 +239,9 @@ fn is_unloaded(name: &str) -> bool {
 
 fn is_identifier(name: &str) -> bool {
     let mut chars = name.chars();
-    chars.next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_' || c == '.')
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_' || c == '.')
         && chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '.')
 }
 
@@ -198,13 +249,28 @@ fn is_identifier(name: &str) -> bool {
 pub(crate) mod tests {
     #[test]
     fn placeholders_are_named_by_their_address() {
-        for name in ["Func_08000010", "gData_02004695", "sub_8000040", "gUnknown_0203A0F4", "sub_80A1B2C"] {
+        for name in [
+            "Func_08000010",
+            "gData_02004695",
+            "sub_8000040",
+            "gUnknown_0203A0F4",
+            "sub_80A1B2C",
+        ] {
             assert!(super::is_placeholder(name), "{name}");
         }
-        for name in ["Input_Poll", "nullsub_1", "unk_14", "gText_1234567", "Func_0800001"] {
+        for name in [
+            "Input_Poll",
+            "nullsub_1",
+            "unk_14",
+            "gText_1234567",
+            "Func_0800001",
+        ] {
             assert!(!super::is_placeholder(name), "{name}");
         }
-        let symbols = [(0x0800_0040, "sub_8000040".to_string()), (0x0800_0040, "AddOne".to_string())];
+        let symbols = [
+            (0x0800_0040, "sub_8000040".to_string()),
+            (0x0800_0040, "AddOne".to_string()),
+        ];
         assert_eq!(super::preferred(&symbols, 0x0800_0040), Some("AddOne"));
     }
 
@@ -254,5 +320,4 @@ iwram           0x0000000003000100       0x40 load address 0x0000000008000038
                 0x0000000008000048                Func_08000048
 LOAD /x/build/asm/rom.o
 ";
-
 }

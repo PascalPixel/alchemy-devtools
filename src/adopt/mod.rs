@@ -138,7 +138,13 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
             "--no-modern" => modern = false,
             "--keep-views" => keep_views = true,
             "--game" => {
-                game = Some(arguments.get(i + 1).filter(|g| !g.starts_with('-')).ok_or_else(|| USAGE.to_string())?.clone());
+                game = Some(
+                    arguments
+                        .get(i + 1)
+                        .filter(|g| !g.starts_with('-'))
+                        .ok_or_else(|| USAGE.to_string())?
+                        .clone(),
+                );
                 skip = true;
             }
             "--verify" => verify = true,
@@ -148,10 +154,14 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
                 if items.iter().any(|item| item.starts_with('-')) {
                     return Err(USAGE.into());
                 }
-                return journal.map(|j| Request::Undo(PathBuf::from(j), items)).ok_or_else(|| USAGE.to_string());
+                return journal
+                    .map(|j| Request::Undo(PathBuf::from(j), items))
+                    .ok_or_else(|| USAGE.to_string());
             }
             "-h" | "--help" => return Err(USAGE.into()),
-            _ if value.starts_with('-') => return Err(format!("unknown adopt option: {value}\n{USAGE}")),
+            _ if value.starts_with('-') => {
+                return Err(format!("unknown adopt option: {value}\n{USAGE}"))
+            }
             _ if form.is_none() => {
                 if value != "merge" {
                     return Err(format!("unknown adopt form: {value}\n{USAGE}"));
@@ -165,21 +175,36 @@ fn parse(arguments: &[String]) -> Result<Request, String> {
     if form.is_none() || wanted || (verify && dry_run) || (game.is_some() && !keep_views) {
         return Err(USAGE.into());
     }
-    Ok(Request::Adopt(Options { items, verify, dry_run, modern, keep_views, game }))
+    Ok(Request::Adopt(Options {
+        items,
+        verify,
+        dry_run,
+        modern,
+        keep_views,
+        game,
+    }))
 }
 
 pub fn run(arguments: &[String]) -> Result<(), String> {
     if arguments.first().map(String::as_str) == Some("settle") {
         return settle::run(&arguments[1..]);
     }
-    if arguments.iter().any(|argument| matches!(argument.as_str(), "-h" | "--help")) {
+    if arguments
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "-h" | "--help"))
+    {
         println!("{USAGE}");
         return Ok(());
     }
     match parse(arguments)? {
         Request::Undo(journal, items) if items.is_empty() => undo(root(), &journal),
         Request::Undo(journal, items) => back_out(root(), &journal, &items),
-        Request::Adopt(options) => adopt(root(), &options, &command_line(arguments), &Checkout(root())),
+        Request::Adopt(options) => adopt(
+            root(),
+            &options,
+            &command_line(arguments),
+            &Checkout(root()),
+        ),
     }
 }
 
@@ -191,7 +216,12 @@ fn command_line(arguments: &[String]) -> String {
 /// Whether `given` names `item`: the item itself, its INTO or one of its
 /// objects, with or without the folders before it.
 fn names(item: &str, given: &str) -> bool {
-    item == given || item.split([',', ' ', '=']).any(|part| part == given || part.ends_with(&format!("/{given}")) || given.ends_with(&format!("/{part}")))
+    item == given
+        || item.split([',', ' ', '=']).any(|part| {
+            part == given
+                || part.ends_with(&format!("/{given}"))
+                || given.ends_with(&format!("/{part}"))
+        })
 }
 
 /// Backs `items` out of a journal's merges: the journal is undone and the
@@ -201,20 +231,45 @@ fn back_out(root: &Path, journal: &Path, items: &[String]) -> Result<(), String>
 }
 
 /// `back_out`, giving the batch written again, if any item is left.
-fn back_out_batch(root: &Path, journal: &Path, items: &[String], build: &dyn Build) -> Result<Option<Batch>, String> {
-    let path = [std::env::current_dir().map(|d| d.join(journal)).ok(), Some(root.join(journal))]
-        .into_iter()
-        .flatten()
-        .find(|path| path.is_file())
-        .ok_or_else(|| format!("cannot read {}", journal.display()))?;
-    let bytes = std::fs::read(&path).map_err(|error| format!("cannot read {}: {error}", journal.display()))?;
-    let command = read_journal(&bytes)?.0.ok_or("the journal records no command")?;
-    let words: Vec<String> = command.split_whitespace().skip(1).map(str::to_string).collect();
-    let Request::Adopt(mut options) = parse(&words)? else { return Err("the journal records an undo".into()) };
-    if let Some(unknown) = items.iter().find(|given| !options.items.iter().any(|item| names(item, given))) {
-        return Err(format!("{unknown} is not among the journal's items: {}", options.items.join(" ")));
+fn back_out_batch(
+    root: &Path,
+    journal: &Path,
+    items: &[String],
+    build: &dyn Build,
+) -> Result<Option<Batch>, String> {
+    let path = [
+        std::env::current_dir().map(|d| d.join(journal)).ok(),
+        Some(root.join(journal)),
+    ]
+    .into_iter()
+    .flatten()
+    .find(|path| path.is_file())
+    .ok_or_else(|| format!("cannot read {}", journal.display()))?;
+    let bytes = std::fs::read(&path)
+        .map_err(|error| format!("cannot read {}: {error}", journal.display()))?;
+    let command = read_journal(&bytes)?
+        .0
+        .ok_or("the journal records no command")?;
+    let words: Vec<String> = command
+        .split_whitespace()
+        .skip(1)
+        .map(str::to_string)
+        .collect();
+    let Request::Adopt(mut options) = parse(&words)? else {
+        return Err("the journal records an undo".into());
+    };
+    if let Some(unknown) = items
+        .iter()
+        .find(|given| !options.items.iter().any(|item| names(item, given)))
+    {
+        return Err(format!(
+            "{unknown} is not among the journal's items: {}",
+            options.items.join(" ")
+        ));
     }
-    options.items.retain(|item| !items.iter().any(|given| names(item, given)));
+    options
+        .items
+        .retain(|item| !items.iter().any(|given| names(item, given)));
     undo(root, journal)?;
     if options.items.is_empty() {
         return Ok(None);
@@ -226,7 +281,9 @@ fn back_out_batch(root: &Path, journal: &Path, items: &[String], build: &dyn Bui
     let mut objects: Vec<String> = Vec::new();
     for item in &options.items {
         let (into, stems) = item_parts(item)?;
-        let game = Layout::of_path(&into).ok_or_else(|| format!("{into} names no game"))?.game;
+        let game = Layout::of_path(&into)
+            .ok_or_else(|| format!("{into} names no game"))?
+            .game;
         if !games.contains(&game) {
             games.push(game);
         }
@@ -234,7 +291,10 @@ fn back_out_batch(root: &Path, journal: &Path, items: &[String], build: &dyn Bui
     }
     build.refresh(&games, &objects)?;
     // The rest are verified by whoever called for the back-out.
-    let words: Vec<String> = words.into_iter().filter(|word| !items.iter().any(|given| names(word, given)) && word != "--verify").collect();
+    let words: Vec<String> = words
+        .into_iter()
+        .filter(|word| !items.iter().any(|given| names(word, given)) && word != "--verify")
+        .collect();
     options.verify = false;
     adopt_batch(root, &options, &command_line(&words), build)
 }
@@ -250,11 +310,18 @@ struct Batch {
 /// Whether make's errors say `edition`'s own build failed: make names a
 /// target it gave up on as `[tla-en]` (3.81) or `[Makefile:55: tla-en]`.
 fn failed(error: &str, edition: &str) -> bool {
-    error.lines().filter(|line| line.contains("*** [")).any(|line| line.contains(&format!("[{edition}]")) || line.contains(&format!(" {edition}]")))
+    error
+        .lines()
+        .filter(|line| line.contains("*** ["))
+        .any(|line| {
+            line.contains(&format!("[{edition}]")) || line.contains(&format!(" {edition}]"))
+        })
 }
 
 fn adopt(root: &Path, options: &Options, command: &str, build: &dyn Build) -> Result<(), String> {
-    let Some(mut batch) = adopt_batch(root, options, command, build)? else { return Ok(()) };
+    let Some(mut batch) = adopt_batch(root, options, command, build)? else {
+        return Ok(());
+    };
     if options.verify {
         match verify(root, batch, build)? {
             Some(rest) => batch = rest,
@@ -271,7 +338,12 @@ fn adopt(root: &Path, options: &Options, command: &str, build: &dyn Build) -> Re
 /// which must have no error (the old compilers forgive what it refuses).
 fn modern_gate(root: &Path, game: &str) -> Result<(), String> {
     let jobs = std::thread::available_parallelism().map_or(1, |n| n.get());
-    let arguments = vec!["make".to_string(), "-k".into(), format!("-j{jobs}"), format!("modern-{game}")];
+    let arguments = vec![
+        "make".to_string(),
+        "-k".into(),
+        format!("-j{jobs}"),
+        format!("modern-{game}"),
+    ];
     println!("modern: {}", arguments.join(" "));
     crate::gba::process::run(&arguments, root).map(|_| ())
 }
@@ -282,14 +354,35 @@ fn modern_gate(root: &Path, game: &str) -> Result<(), String> {
 fn modern(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<(), String> {
     loop {
         let Err(error) = build.modern(&batch.games) else {
-            println!("modern: every {} edition's C compiles with a current GCC", batch.games.join(" and "));
+            println!(
+                "modern: every {} edition's C compiles with a current GCC",
+                batch.games.join(" and ")
+            );
             return Ok(());
         };
         // Only a line that is an error names a file: a current GCC warns in most of them.
-        let errors: Vec<&str> = error.lines().filter(|line| line.contains(" error: ")).collect();
-        let blamed: Vec<String> = batch.items.iter().filter(|(_, stems)| stems.iter().any(|stem| errors.iter().any(|line| line.contains(&format!("{stem}.c:"))))).map(|(item, _)| item.clone()).collect();
+        let errors: Vec<&str> = error
+            .lines()
+            .filter(|line| line.contains(" error: "))
+            .collect();
+        let blamed: Vec<String> = batch
+            .items
+            .iter()
+            .filter(|(_, stems)| {
+                stems.iter().any(|stem| {
+                    errors
+                        .iter()
+                        .any(|line| line.contains(&format!("{stem}.c:")))
+                })
+            })
+            .map(|(item, _)| item.clone())
+            .collect();
         if blamed.is_empty() {
-            let tail: Vec<&str> = error.lines().filter(|line| line.contains("error")).take(6).collect();
+            let tail: Vec<&str> = error
+                .lines()
+                .filter(|line| line.contains("error"))
+                .take(6)
+                .collect();
             return Err(format!(
                 "make modern failed in no file this batch wrote:\n  {}\nundo the batch with adopt --undo {}",
                 tail.join("\n  "),
@@ -316,10 +409,15 @@ fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<Option<Bat
     let ids = built::editions(&batch.games)?;
     loop {
         let Err(error) = build.compare(&ids) else {
-            println!("verified: every {} edition matches its ROM", batch.games.join(" and "));
+            println!(
+                "verified: every {} edition matches its ROM",
+                batch.games.join(" and ")
+            );
             return Ok(Some(batch));
         };
-        let written = std::fs::metadata(root.join(&batch.journal)).and_then(|meta| meta.modified()).map_err(|error| format!("{}: {error}", batch.journal))?;
+        let written = std::fs::metadata(root.join(&batch.journal))
+            .and_then(|meta| meta.modified())
+            .map_err(|error| format!("{}: {error}", batch.journal))?;
         let wrote: Vec<&String> = batch.items.iter().flat_map(|(_, stems)| stems).collect();
         let mut blamed: Vec<String> = Vec::new();
         let mut blame = |item: &str| {
@@ -334,17 +432,25 @@ fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<Option<Bat
             // An edition the batch changed relinks after its journal was
             // written; one that links nothing the batch wrote keeps its image
             // and is judged by it, as one make did not fail on.
-            let changed = lists.as_ref().is_none_or(|lists| wrote.iter().any(|stem| lists.links(stem)));
+            let changed = lists
+                .as_ref()
+                .is_none_or(|lists| wrote.iter().any(|stem| lists.links(stem)));
             if failed(&error, id.as_str()) || (changed && !build.relinked(id, written)) {
                 // A merged source that does not compile names itself.
                 let named: Vec<&String> = batch
                     .items
                     .iter()
-                    .filter(|(_, stems)| stems.iter().any(|stem| error.contains(&format!("{stem}.c:"))))
+                    .filter(|(_, stems)| {
+                        stems
+                            .iter()
+                            .any(|stem| error.contains(&format!("{stem}.c:")))
+                    })
                     .map(|(item, _)| item)
                     .collect();
                 if named.is_empty() {
-                    unblamed.push(format!("{id} did not build, and make's errors name no item's file"));
+                    unblamed.push(format!(
+                        "{id} did not build, and make's errors name no item's file"
+                    ));
                 }
                 for item in named {
                     println!("verify: {id} did not build: {item} goes back");
@@ -352,27 +458,52 @@ fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<Option<Bat
                 }
                 continue;
             }
-            let Some(difference) = build.difference(id)? else { continue };
+            let Some(difference) = build.difference(id)? else {
+                continue;
+            };
             // The object that placed the byte, or an overlay whose stream the
             // ROM lacks that links what the item wrote.
             let lists = lists.unwrap_or_default();
             let culprit = batch.items.iter().find(|(_, stems)| {
-                difference.object.as_ref().is_some_and(|object| stems.contains(object))
-                    || difference.overlays.iter().filter_map(|overlay| lists.overlay(overlay)).any(|objects| stems.iter().any(|stem| objects.contains(stem)))
+                difference
+                    .object
+                    .as_ref()
+                    .is_some_and(|object| stems.contains(object))
+                    || difference
+                        .overlays
+                        .iter()
+                        .filter_map(|overlay| lists.overlay(overlay))
+                        .any(|objects| stems.iter().any(|stem| objects.contains(stem)))
             });
             match culprit {
                 Some((item, _)) => {
-                    println!("verify: {id} first differs at {}: {item} goes back", difference.label);
+                    println!(
+                        "verify: {id} first differs at {}: {item} goes back",
+                        difference.label
+                    );
                     blame(item);
                 }
-                None => unblamed.push(format!("{id} first differs at {}, which no item of this batch wrote", difference.label)),
+                None => unblamed.push(format!(
+                    "{id} first differs at {}, which no item of this batch wrote",
+                    difference.label
+                )),
             }
         }
         if blamed.is_empty() {
             if unblamed.is_empty() {
-                return Err(format!("make failed, yet every {} edition matches: {error}", batch.games.join(" and ")));
+                return Err(format!(
+                    "make failed, yet every {} edition matches: {error}",
+                    batch.games.join(" and ")
+                ));
             }
-            let tail: Vec<&str> = error.lines().rev().take(6).collect::<Vec<_>>().into_iter().rev().collect();
+            let tail: Vec<&str> = error
+                .lines()
+                .rev()
+                .take(6)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
             return Err(format!(
                 "{}:\n  {}\nback an item out with adopt --undo {journal} ITEM, or undo the batch with adopt --undo {journal}",
                 unblamed.join("\n"),
@@ -393,10 +524,19 @@ fn verify(root: &Path, mut batch: Batch, build: &dyn Build) -> Result<Option<Bat
     }
 }
 
-fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build) -> Result<Option<Batch>, String> {
+fn adopt_batch(
+    root: &Path,
+    options: &Options,
+    command: &str,
+    build: &dyn Build,
+) -> Result<Option<Batch>, String> {
     // Held from the first read to the last write, so no other adoption
     // edits the files this one reads; a dry run writes nothing.
-    let _lock = if options.dry_run { None } else { Some(Lock::take(root)?) };
+    let _lock = if options.dry_run {
+        None
+    } else {
+        Some(Lock::take(root)?)
+    };
     let mut files = Files::new(root);
     let mut adopted = 0;
     let mut refused = 0;
@@ -425,7 +565,11 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
                 let stems: Vec<String> = files
                     .now
                     .iter()
-                    .filter(|(path, now)| saved.get(*path) != Some(*now) && now.is_some() && path.starts_with("games/"))
+                    .filter(|(path, now)| {
+                        saved.get(*path) != Some(*now)
+                            && now.is_some()
+                            && path.starts_with("games/")
+                    })
                     .filter_map(|(path, _)| path.strip_suffix(".c"))
                     .map(str::to_string)
                     .collect();
@@ -451,7 +595,14 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
     // A batch with views records the runs it joined, which a back-out
     // settles again without the items it names.
     let command = match options.keep_views {
-        true => format!("adopt merge --keep-views {}", written.iter().map(|(item, _)| item.as_str()).collect::<Vec<_>>().join(" ")),
+        true => format!(
+            "adopt merge --keep-views {}",
+            written
+                .iter()
+                .map(|(item, _)| item.as_str())
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
         false => command.to_string(),
     };
     let journal = files.commit(&command, &journal_name(&written))?;
@@ -459,7 +610,11 @@ fn adopt_batch(root: &Path, options: &Options, command: &str, build: &dyn Build)
     if !options.verify {
         println!("judge with make compare-editions, or adopt --verify; undo with alchemy-devtools adopt --undo {journal} [ITEM...]");
     }
-    Ok(Some(Batch { journal, games, items: written }))
+    Ok(Some(Batch {
+        journal,
+        games,
+        items: written,
+    }))
 }
 
 /// What a journal is named after: its form and first item's INTO.
@@ -471,7 +626,13 @@ fn journal_name(items: &[(String, Vec<String>)]) -> String {
         .unwrap_or(first)
         .trim_end_matches(".c")
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '-' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect();
     format!("merge-{first}")
 }
@@ -502,7 +663,10 @@ trait Build {
     fn relinked(&self, id: DecompTargetId, since: std::time::SystemTime) -> bool;
     /// The first byte the edition's image differs from its ROM in, and what
     /// placed it.
-    fn difference(&self, id: DecompTargetId) -> Result<Option<crate::check::rom::Difference>, String>;
+    fn difference(
+        &self,
+        id: DecompTargetId,
+    ) -> Result<Option<crate::check::rom::Difference>, String>;
 }
 
 /// The checkout's build, as the last make left it: a list or object older
@@ -513,7 +677,9 @@ struct Checkout<'a>(&'a Path);
 /// `*` matching the rest.
 fn matches(pattern: &str, name: &str) -> bool {
     match pattern.split_once('*') {
-        Some((head, tail)) => name.len() >= head.len() + tail.len() && name.starts_with(head) && name.ends_with(tail),
+        Some((head, tail)) => {
+            name.len() >= head.len() + tail.len() && name.starts_with(head) && name.ends_with(tail)
+        }
         None => pattern == name,
     }
 }
@@ -546,7 +712,11 @@ fn named_sources(makefile: &str) -> Vec<String> {
     expanded.push_str(rest);
     let mut found: Vec<String> = Vec::new();
     for word in expanded.split(|c: char| c.is_whitespace() || matches!(c, ',' | '(' | ')')) {
-        if word.ends_with(".c") && word.contains('/') && !word.contains('$') && !found.iter().any(|known| known == word) {
+        if word.ends_with(".c")
+            && word.contains('/')
+            && !word.contains('$')
+            && !found.iter().any(|known| known == word)
+        {
             found.push(word.to_string());
         }
     }
@@ -556,14 +726,23 @@ fn named_sources(makefile: &str) -> Vec<String> {
 /// Whether a makefile names `source` (a path from the root) by its path or
 /// a pattern of it.
 fn makefile_names(makefile: &str, source: &str) -> bool {
-    named_sources(makefile).iter().any(|named| matches(named, source))
+    named_sources(makefile)
+        .iter()
+        .any(|named| matches(named, source))
 }
 
 /// Whether a C text includes another C file as text (`#include "x.c"`):
 /// such a file is more than its own text, so no view of it can be written
 /// in its own text alone.
 fn includes_source(text: &str) -> bool {
-    text.lines().filter_map(|line| include_of(line.trim_start())).any(|named| named.strip_prefix('"').and_then(|n| n.split('"').next()).is_some_and(|n| n.ends_with(".c")))
+    text.lines()
+        .filter_map(|line| include_of(line.trim_start()))
+        .any(|named| {
+            named
+                .strip_prefix('"')
+                .and_then(|n| n.split('"').next())
+                .is_some_and(|n| n.ends_with(".c"))
+        })
 }
 
 /// The patterns of a makefile's `$(wildcard ...)` calls that name C files.
@@ -571,7 +750,12 @@ fn wildcard_patterns(makefile: &str) -> Vec<String> {
     let mut patterns = Vec::new();
     for (at, call) in makefile.match_indices("$(wildcard ") {
         let inside = makefile[at + call.len()..].split(')').next().unwrap_or("");
-        patterns.extend(inside.split_whitespace().filter(|word| word.contains('*') && word.ends_with(".c")).map(str::to_string));
+        patterns.extend(
+            inside
+                .split_whitespace()
+                .filter(|word| word.contains('*') && word.ends_with(".c"))
+                .map(str::to_string),
+        );
     }
     patterns
 }
@@ -580,26 +764,49 @@ fn wildcard_patterns(makefile: &str) -> Vec<String> {
 /// builds for size (-Os), as a Makefile builds C linked only into overlays.
 fn same_but_size(unplaced: &[Vec<String>], placed: &[Vec<String>]) -> bool {
     unplaced.len() == placed.len()
-        && unplaced.iter().zip(placed).all(|(a, b)| a.len() == b.len() && a.iter().zip(b).all(|(x, y)| x == y || (x == "-O2" && y == "-Os")))
+        && unplaced.iter().zip(placed).all(|(a, b)| {
+            a.len() == b.len()
+                && a.iter()
+                    .zip(b)
+                    .all(|(x, y)| x == y || (x == "-O2" && y == "-Os"))
+        })
 }
 
 impl Build for Checkout<'_> {
     fn empty(&self, stem: &str, sections: &str) -> Result<bool, String> {
-        let game = Layout::of_path(stem).ok_or_else(|| format!("{stem} names no game"))?.game;
+        let game = Layout::of_path(stem)
+            .ok_or_else(|| format!("{stem} names no game"))?
+            .game;
         let mut read = 0;
         for id in built::editions(&[game])? {
             if !link::linked(self.0, id)?.links(stem) {
                 continue;
             }
             let path = built::object(self.0, id, stem);
-            let data = std::fs::read(&path).map_err(|_| format!("{} is not built: make {id} first", path.display()))?;
-            let modified = |path: &Path| std::fs::metadata(path).and_then(|meta| meta.modified()).ok();
-            if let Some(source) = built::source(self.0, stem).filter(|source| modified(&self.0.join(source)) > modified(&path)) {
-                return Err(format!("{} is older than {source}: make {id} first", path.display()));
+            let data = std::fs::read(&path)
+                .map_err(|_| format!("{} is not built: make {id} first", path.display()))?;
+            let modified = |path: &Path| {
+                std::fs::metadata(path)
+                    .and_then(|meta| meta.modified())
+                    .ok()
+            };
+            if let Some(source) = built::source(self.0, stem)
+                .filter(|source| modified(&self.0.join(source)) > modified(&path))
+            {
+                return Err(format!(
+                    "{} is older than {source}: make {id} first",
+                    path.display()
+                ));
             }
-            let headers = crate::gba::elf::headers(&data).map_err(|error| format!("{}: {error}", path.display()))?;
+            let headers = crate::gba::elf::headers(&data)
+                .map_err(|error| format!("{}: {error}", path.display()))?;
             read += 1;
-            let placed = headers.iter().any(|header| header.size > 0 && sections.split_whitespace().any(|pattern| matches(pattern, &header.name)));
+            let placed = headers.iter().any(|header| {
+                header.size > 0
+                    && sections
+                        .split_whitespace()
+                        .any(|pattern| matches(pattern, &header.name))
+            });
             if placed {
                 return Ok(false);
             }
@@ -614,46 +821,102 @@ impl Build for Checkout<'_> {
         let makefile = built::read_text(&self.0.join("Makefile"))?;
         let anew = !stems.iter().any(|stem| format!("{stem}.c") == into);
         if anew && makefile_names(&makefile, into) {
-            return Err(format!("the Makefile names {into}, so it may take another route"));
+            return Err(format!(
+                "the Makefile names {into}, so it may take another route"
+            ));
         }
         // A $(wildcard) names only the files there when make reads it, so its
         // pattern would catch INTO once it is written.
-        if let Some(pattern) = anew.then(|| wildcard_patterns(&makefile).into_iter().find(|pattern| matches(pattern, into))).flatten() {
-            return Err(format!("the Makefile's {pattern} would take {into}, so it may take another route"));
+        if let Some(pattern) = anew
+            .then(|| {
+                wildcard_patterns(&makefile)
+                    .into_iter()
+                    .find(|pattern| matches(pattern, into))
+            })
+            .flatten()
+        {
+            return Err(format!(
+                "the Makefile's {pattern} would take {into}, so it may take another route"
+            ));
         }
         for id in built::editions(&[game.to_string()])? {
             let linked = link::linked(self.0, id)?;
-            let main: Vec<&String> = stems.iter().filter(|stem| linked.main.contains(stem)).collect();
+            let main: Vec<&String> = stems
+                .iter()
+                .filter(|stem| linked.main.contains(stem))
+                .collect();
             if !main.is_empty() && main.len() < stems.len() {
                 let other = stems.iter().find(|stem| !main.contains(stem)).unwrap();
-                return Err(format!("{id} links {} into its main image and {other} only into overlays", main[0]));
+                return Err(format!(
+                    "{id} links {} into its main image and {other} only into overlays",
+                    main[0]
+                ));
             }
             let overlays_only = main.is_empty() && stems.iter().any(|stem| linked.links(stem));
             let target = crate::alchemy::targets::target_for(id);
-            let mut wanted: Vec<(String, String)> = stems.iter().map(|stem| (format!("{stem}.c"), format!("{}/obj/{stem}.o", target.output_dir))).collect();
+            let mut wanted: Vec<(String, String)> = stems
+                .iter()
+                .map(|stem| {
+                    (
+                        format!("{stem}.c"),
+                        format!("{}/obj/{stem}.o", target.output_dir),
+                    )
+                })
+                .collect();
             // A new INTO's own recipe, as make gives its name before any list
             // places it: its route is the one its name takes.
             if anew {
                 let stem = into.strip_suffix(".c").unwrap_or(into);
-                wanted.push((into.to_string(), format!("{}/obj/{stem}.o", target.output_dir)));
+                wanted.push((
+                    into.to_string(),
+                    format!("{}/obj/{stem}.o", target.output_dir),
+                ));
             }
-            let recipes = crate::gba::recipe::recipes(self.0, Path::new(target.output_dir), &[format!("EDITION={id}")], &wanted)?;
+            let recipes = crate::gba::recipe::recipes(
+                self.0,
+                Path::new(target.output_dir),
+                &[format!("EDITION={id}")],
+                &wanted,
+            )?;
             let mut first: Option<(String, Vec<Vec<String>>)> = None;
             for ((source, object), recipe) in wanted.iter().zip(recipes) {
                 let recipe = recipe.map_err(|error| format!("{source}: {error}"))?;
-                let steps = crate::gba::recipe::retarget(&recipe, self.0, source, object, Path::new("/merge/object.c"), Path::new("/merge/object.o"));
+                let steps = crate::gba::recipe::retarget(
+                    &recipe,
+                    self.0,
+                    source,
+                    object,
+                    Path::new("/merge/object.c"),
+                    Path::new("/merge/object.o"),
+                );
                 match &first {
                     None => first = Some((source.clone(), steps)),
                     // INTO is placed where the objects are, so where they
                     // build for size and it, unplaced, does not, that is the
                     // one difference allowed.
-                    Some(_) if anew && source == into && overlays_only && first.as_ref().is_some_and(|(_, theirs)| same_but_size(&steps, theirs)) => {}
+                    Some(_)
+                        if anew
+                            && source == into
+                            && overlays_only
+                            && first
+                                .as_ref()
+                                .is_some_and(|(_, theirs)| same_but_size(&steps, theirs)) => {}
                     Some((other, theirs)) if *theirs != steps => {
                         let mine = steps.concat();
                         let theirs = theirs.concat();
-                        let differ = mine.iter().find(|word| !theirs.contains(word)).or_else(|| theirs.iter().find(|word| !mine.contains(word)));
-                        let route = if source == into { " (INTO's route)" } else { "" };
-                        return Err(format!("{id} compiles {source} and {other} differently{route} ({})", differ.map_or("in order", String::as_str)));
+                        let differ = mine
+                            .iter()
+                            .find(|word| !theirs.contains(word))
+                            .or_else(|| theirs.iter().find(|word| !mine.contains(word)));
+                        let route = if source == into {
+                            " (INTO's route)"
+                        } else {
+                            ""
+                        };
+                        return Err(format!(
+                            "{id} compiles {source} and {other} differently{route} ({})",
+                            differ.map_or("in order", String::as_str)
+                        ));
                     }
                     Some(_) => {}
                 }
@@ -672,7 +935,11 @@ impl Build for Checkout<'_> {
             };
             make(vec![format!("{output}/objects.mk")])?;
             let linked = link::linked(self.0, id)?;
-            let objects: Vec<String> = stems.iter().filter(|stem| linked.links(stem)).map(|stem| format!("{output}/obj/{stem}.o")).collect();
+            let objects: Vec<String> = stems
+                .iter()
+                .filter(|stem| linked.links(stem))
+                .map(|stem| format!("{output}/obj/{stem}.o"))
+                .collect();
             if !objects.is_empty() {
                 println!("back-out: {id} makes {} objects again", objects.len());
                 make(objects)?;
@@ -699,10 +966,15 @@ impl Build for Checkout<'_> {
 
     fn relinked(&self, id: DecompTargetId, since: std::time::SystemTime) -> bool {
         let image = self.0.join(crate::alchemy::targets::target_for(id).image());
-        std::fs::metadata(image).and_then(|meta| meta.modified()).is_ok_and(|time| time >= since)
+        std::fs::metadata(image)
+            .and_then(|meta| meta.modified())
+            .is_ok_and(|time| time >= since)
     }
 
-    fn difference(&self, id: DecompTargetId) -> Result<Option<crate::check::rom::Difference>, String> {
+    fn difference(
+        &self,
+        id: DecompTargetId,
+    ) -> Result<Option<crate::check::rom::Difference>, String> {
         crate::check::rom::first_difference(self.0, id)
     }
 }
@@ -720,7 +992,11 @@ fn statement(index: usize, line: &str) -> Option<Statement> {
     let stem = statement_stem(line)?;
     let rest = line.split_once(&format!("\"*/{stem}.o\"("))?.1;
     let sections = rest.rsplit_once(')')?.0.trim().to_string();
-    Some(Statement { line: index, stem: stem.to_string(), sections })
+    Some(Statement {
+        line: index,
+        stem: stem.to_string(),
+        sections,
+    })
 }
 
 /// Runs of the statements placing `objects` in one script's lines: each run
@@ -733,13 +1009,16 @@ fn runs(lines: &[&str], objects: &[String]) -> Vec<Vec<Statement>> {
         if line.trim().is_empty() {
             continue;
         }
-        let Some(found) = statement(index, line).filter(|found| objects.contains(&found.stem)) else {
+        let Some(found) = statement(index, line).filter(|found| objects.contains(&found.stem))
+        else {
             open = false;
             continue;
         };
         let rank = |stem: &str| objects.iter().position(|object| object == stem);
         let joins = open
-            && runs.last().and_then(|run| run.last()).is_some_and(|last| last.sections == found.sections && rank(&last.stem) < rank(&found.stem));
+            && runs.last().and_then(|run| run.last()).is_some_and(|last| {
+                last.sections == found.sections && rank(&last.stem) < rank(&found.stem)
+            });
         if joins {
             runs.last_mut().unwrap().push(found);
         } else {
@@ -773,7 +1052,11 @@ fn joined(text: &str, included: &[String]) -> String {
             }
             file_comment = false;
         }
-        if outside && include_of(trimmed).is_some_and(|header| header.ends_with(".h\"") && included.iter().any(|known| known == trimmed)) {
+        if outside
+            && include_of(trimmed).is_some_and(|header| {
+                header.ends_with(".h\"") && included.iter().any(|known| known == trimmed)
+            })
+        {
             continue;
         }
         out.push_str(line);
@@ -783,8 +1066,13 @@ fn joined(text: &str, included: &[String]) -> String {
 
 /// The `#if` depth after a line, from the depth before it.
 fn conditional_depth(line: &str, depth: usize) -> usize {
-    let Some(directive) = line.strip_prefix('#').map(str::trim_start) else { return depth };
-    if ["if", "ifdef", "ifndef"].iter().any(|word| directive.split_whitespace().next() == Some(word)) {
+    let Some(directive) = line.strip_prefix('#').map(str::trim_start) else {
+        return depth;
+    };
+    if ["if", "ifdef", "ifndef"]
+        .iter()
+        .any(|word| directive.split_whitespace().next() == Some(word))
+    {
         depth + 1
     } else if directive.starts_with("endif") {
         depth.saturating_sub(1)
@@ -808,36 +1096,62 @@ fn top_level_includes(text: &str) -> Vec<String> {
 
 /// The quoted file an `#include` line names.
 fn include_of(line: &str) -> Option<&str> {
-    let rest = line.strip_prefix('#')?.trim_start().strip_prefix("include")?.trim();
+    let rest = line
+        .strip_prefix('#')?
+        .trim_start()
+        .strip_prefix("include")?
+        .trim();
     (rest.starts_with('"') || rest.starts_with('<')).then_some(rest)
 }
 
 /// An item's INTO and objects, as stems.
 fn item_parts(item: &str) -> Result<(String, Vec<String>), String> {
-    let (into, objects) = item.split_once('=').ok_or("an item is INTO.c=OBJECT.c,OBJECT.c...")?;
+    let (into, objects) = item
+        .split_once('=')
+        .ok_or("an item is INTO.c=OBJECT.c,OBJECT.c...")?;
     let stem = |path: &str| {
         let path = path.trim_start_matches("./");
         path.strip_suffix(".c").unwrap_or(path).to_string()
     };
-    Ok((stem(into), objects.split(',').filter(|o| !o.is_empty()).map(stem).collect()))
+    Ok((
+        stem(into),
+        objects
+            .split(',')
+            .filter(|o| !o.is_empty())
+            .map(stem)
+            .collect(),
+    ))
 }
 
 /// Merges one item, `INTO.c=OBJECT.c,OBJECT.c...`: its game and report.
-fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: Option<String>) -> Result<(String, Vec<String>), String> {
+fn merge_objects(
+    files: &mut Files,
+    item: &str,
+    build: &dyn Build,
+    joined_text: Option<String>,
+) -> Result<(String, Vec<String>), String> {
     let (into, objects) = item_parts(item)?;
     if objects.len() < 2 {
         return Err("a merge takes two objects or more".into());
     }
-    if let Some(twice) = objects.iter().enumerate().find_map(|(i, o)| objects[..i].contains(o).then_some(o)) {
+    if let Some(twice) = objects
+        .iter()
+        .enumerate()
+        .find_map(|(i, o)| objects[..i].contains(o).then_some(o))
+    {
         return Err(format!("{twice} is named twice"));
     }
-    let layout = Layout::of_path(&into).filter(|layout| into.starts_with(&layout.sources())).ok_or_else(|| format!("{into} is not under games/GAME/src"))?;
+    let layout = Layout::of_path(&into)
+        .filter(|layout| into.starts_with(&layout.sources()))
+        .ok_or_else(|| format!("{into} is not under games/GAME/src"))?;
     if let Some(other) = objects.iter().find(|o| !o.starts_with(&layout.sources())) {
         return Err(format!("{other} is not under {}", layout.sources()));
     }
     for object in &objects {
         if !files.exists(&format!("{object}.c")) {
-            let assembly = [".s", ".S"].iter().any(|extension| files.exists(&format!("{object}{extension}")));
+            let assembly = [".s", ".S"]
+                .iter()
+                .any(|extension| files.exists(&format!("{object}{extension}")));
             return Err(match assembly {
                 true => format!("{object} is assembly, which stays its own object"),
                 false => format!("{object} has no C source"),
@@ -845,22 +1159,33 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: 
         }
     }
     let included = included_sources(&files.root, &layout.game);
-    if let Some((source, by)) = objects.iter().find_map(|object| included.get_key_value(&format!("{object}.c"))) {
-        return Err(format!("{by} includes {source}, which stays the file it is"));
+    if let Some((source, by)) = objects
+        .iter()
+        .find_map(|object| included.get_key_value(&format!("{object}.c")))
+    {
+        return Err(format!(
+            "{by} includes {source}, which stays the file it is"
+        ));
     }
     // A view is written in a part's own text: one that includes C as text
     // would leave what it includes seeing the names as before.
     if joined_text.is_some() {
         for object in &objects {
             if includes_source(&files.read(&format!("{object}.c"))?) {
-                return Err(format!("{object}.c includes C files as text, which a join with views cannot reach"));
+                return Err(format!(
+                    "{object}.c includes C files as text, which a join with views cannot reach"
+                ));
             }
         }
     }
     let target = format!("{into}.c");
     let anew = !objects.contains(&into);
     if anew {
-        if let Some(found) = [".c", ".s", ".S", ".mid"].iter().map(|x| format!("{into}{x}")).find(|path| files.exists(path)) {
+        if let Some(found) = [".c", ".s", ".S", ".mid"]
+            .iter()
+            .map(|x| format!("{into}{x}"))
+            .find(|path| files.exists(path))
+        {
             return Err(format!("{found} exists"));
         }
     }
@@ -875,7 +1200,12 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: 
         }
         let text = files.read(&script)?;
         let (lines, newline) = lines(&text);
-        if anew && lines.iter().filter_map(|line| statement_stem(line)).any(|found| found == into) {
+        if anew
+            && lines
+                .iter()
+                .filter_map(|line| statement_stem(line))
+                .any(|found| found == into)
+        {
             return Err(format!("{script} already places {into}"));
         }
         let mut out: Vec<String> = lines.iter().map(|line| line.to_string()).collect();
@@ -893,9 +1223,18 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: 
                 }
             }
             let first = &run[0];
-            out[first.line] = lines[first.line].replacen(&format!("\"*/{}.o\"", first.stem), &format!("\"*/{into}.o\""), 1);
+            out[first.line] = lines[first.line].replacen(
+                &format!("\"*/{}.o\"", first.stem),
+                &format!("\"*/{into}.o\""),
+                1,
+            );
             gone.extend(run[1..].iter().map(|s| s.line));
-            report.push(format!("  {script}:{}  ({}) places {} in one statement", first.line + 1, first.sections, run.len()));
+            report.push(format!(
+                "  {script}:{}  ({}) places {} in one statement",
+                first.line + 1,
+                first.sections,
+                run.len()
+            ));
         }
         if gone.is_empty() && out.iter().zip(&lines).all(|(a, b)| a == b) {
             continue;
@@ -926,8 +1265,17 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: 
     let mut included: Vec<String> = Vec::new();
     for object in &objects {
         let source = format!("{object}.c");
-        let own = rewrite_includes(&files.read(&source)?, parent(&source), parent(&target), |path| files.exists(path));
-        let part = if text.is_empty() { own } else { joined(&own, &included).trim_start_matches('\n').to_string() };
+        let own = rewrite_includes(
+            &files.read(&source)?,
+            parent(&source),
+            parent(&target),
+            |path| files.exists(path),
+        );
+        let part = if text.is_empty() {
+            own
+        } else {
+            joined(&own, &included).trim_start_matches('\n').to_string()
+        };
         included.extend(top_level_includes(&part));
         if !text.is_empty() && !text.ends_with("\n\n") {
             text.push('\n');
@@ -953,16 +1301,29 @@ fn merge_objects(files: &mut Files, item: &str, build: &dyn Build, joined_text: 
 pub(crate) fn included_sources(root: &Path, game: &str) -> BTreeMap<String, String> {
     let mut found = BTreeMap::new();
     let top = root.join("games").join(game);
-    for entry in walkdir::WalkDir::new(&top).into_iter().filter_map(Result::ok) {
+    for entry in walkdir::WalkDir::new(&top)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
         let path = entry.path();
         if !matches!(path.extension().and_then(|e| e.to_str()), Some("c" | "h")) {
             continue;
         }
-        let (Ok(relative), Ok(text)) = (path.strip_prefix(root), std::fs::read_to_string(path)) else { continue };
+        let (Ok(relative), Ok(text)) = (path.strip_prefix(root), std::fs::read_to_string(path))
+        else {
+            continue;
+        };
         let file = relative.to_string_lossy().into_owned();
         for line in text.lines() {
-            let Some(included) = include_of(line.trim_start()).and_then(|named| named.strip_prefix('"')?.split('"').next()).filter(|named| named.ends_with(".c")) else { continue };
-            let Some(target) = normalize(&format!("{}/{included}", parent(&file))) else { continue };
+            let Some(included) = include_of(line.trim_start())
+                .and_then(|named| named.strip_prefix('"')?.split('"').next())
+                .filter(|named| named.ends_with(".c"))
+            else {
+                continue;
+            };
+            let Some(target) = normalize(&format!("{}/{included}", parent(&file))) else {
+                continue;
+            };
             if root.join(&target).is_file() {
                 found.entry(target).or_insert_with(|| file.clone());
             }
@@ -981,7 +1342,12 @@ fn rewrite_includes(text: &str, from: &str, to: &str, exists: impl Fn(&str) -> b
     let mut out = String::with_capacity(text.len());
     for line in text.split_inclusive('\n') {
         let rewritten = (|| {
-            let rest = line.trim_start().strip_prefix('#')?.trim_start().strip_prefix("include")?.trim_start();
+            let rest = line
+                .trim_start()
+                .strip_prefix('#')?
+                .trim_start()
+                .strip_prefix("include")?
+                .trim_start();
             let path = rest.strip_prefix('"')?.split('"').next()?;
             // A quoted include is looked for beside its file first: one that
             // is there is reached from INTO's folder too.
@@ -990,7 +1356,8 @@ fn rewrite_includes(text: &str, from: &str, to: &str, exists: impl Fn(&str) -> b
                 return None;
             }
             let relative = relative(to, &target);
-            (relative != path).then(|| line.replacen(&format!("\"{path}\""), &format!("\"{relative}\""), 1))
+            (relative != path)
+                .then(|| line.replacen(&format!("\"{path}\""), &format!("\"{relative}\""), 1))
         })();
         out.push_str(rewritten.as_deref().unwrap_or(line));
     }
@@ -1032,7 +1399,11 @@ fn lines(text: &str) -> (Vec<&str>, bool) {
 }
 
 fn join_lines<S: AsRef<str>>(lines: &[S], newline: bool) -> String {
-    let mut text = lines.iter().map(AsRef::as_ref).collect::<Vec<_>>().join("\n");
+    let mut text = lines
+        .iter()
+        .map(AsRef::as_ref)
+        .collect::<Vec<_>>()
+        .join("\n");
     if newline && !lines.is_empty() {
         text.push('\n');
     }
@@ -1056,7 +1427,11 @@ const JOURNAL_HEADER_1: &str = "alchemy-devtools adopt journal 1";
 
 impl Files {
     fn new(root: &Path) -> Files {
-        Files { root: root.to_path_buf(), before: BTreeMap::new(), now: BTreeMap::new() }
+        Files {
+            root: root.to_path_buf(),
+            before: BTreeMap::new(),
+            now: BTreeMap::new(),
+        }
     }
 
     fn load(&mut self, path: &str) {
@@ -1069,7 +1444,9 @@ impl Files {
 
     fn read(&mut self, path: &str) -> Result<String, String> {
         self.load(path);
-        self.now[path].clone().ok_or_else(|| format!("cannot read {path}"))
+        self.now[path]
+            .clone()
+            .ok_or_else(|| format!("cannot read {path}"))
     }
 
     fn exists(&self, path: &str) -> bool {
@@ -1101,11 +1478,16 @@ impl Files {
             .collect();
         let moved: Vec<&str> = changed
             .iter()
-            .filter(|(path, before, _)| std::fs::read_to_string(self.root.join(path)).ok() != **before)
+            .filter(|(path, before, _)| {
+                std::fs::read_to_string(self.root.join(path)).ok() != **before
+            })
             .map(|(path, ..)| path.as_str())
             .collect();
         if !moved.is_empty() {
-            return Err(format!("changed since adopt read them, so nothing was written:\n  {}", moved.join("\n  ")));
+            return Err(format!(
+                "changed since adopt read them, so nothing was written:\n  {}",
+                moved.join("\n  ")
+            ));
         }
         let mut folders: Vec<String> = Vec::new();
         for (path, _, now) in &changed {
@@ -1152,25 +1534,39 @@ impl Files {
         // Numbered after the journals already there, so they list in the
         // order they were written and are undone in the reverse.
         let folder = self.root.join("out/adopt");
-        std::fs::create_dir_all(&folder).map_err(|error| format!("cannot create out/adopt: {error}"))?;
+        std::fs::create_dir_all(&folder)
+            .map_err(|error| format!("cannot create out/adopt: {error}"))?;
         let last = std::fs::read_dir(&folder)
             .map_err(|error| format!("cannot list out/adopt: {error}"))?
             .flatten()
-            .filter_map(|entry| entry.file_name().to_str()?.split('-').next()?.parse::<u32>().ok())
+            .filter_map(|entry| {
+                entry
+                    .file_name()
+                    .to_str()?
+                    .split('-')
+                    .next()?
+                    .parse::<u32>()
+                    .ok()
+            })
             .max()
             .unwrap_or(0);
         let journal_path = format!("out/adopt/{:04}-{name}.journal", last + 1);
-        std::fs::write(self.root.join(&journal_path), &journal).map_err(|error| format!("cannot write {journal_path}: {error}"))?;
+        std::fs::write(self.root.join(&journal_path), &journal)
+            .map_err(|error| format!("cannot write {journal_path}: {error}"))?;
         let put = |path: &str, text: &Option<String>| -> Result<(), String> {
             match text {
-                Some(text) => std::fs::write(self.root.join(path), text).map_err(|error| format!("cannot write {path}: {error}")),
-                None => std::fs::remove_file(self.root.join(path)).map_err(|error| format!("cannot remove {path}: {error}")),
+                Some(text) => std::fs::write(self.root.join(path), text)
+                    .map_err(|error| format!("cannot write {path}: {error}")),
+                None => std::fs::remove_file(self.root.join(path))
+                    .map_err(|error| format!("cannot remove {path}: {error}")),
             }
         };
         let mut written = 0;
-        let mut failed = folders
-            .iter()
-            .find_map(|folder| std::fs::create_dir_all(self.root.join(folder)).err().map(|error| format!("cannot create {folder}: {error}")));
+        let mut failed = folders.iter().find_map(|folder| {
+            std::fs::create_dir_all(self.root.join(folder))
+                .err()
+                .map(|error| format!("cannot create {folder}: {error}"))
+        });
         if failed.is_none() {
             for (path, _, now) in &changed {
                 if let Err(error) = put(path, now) {
@@ -1180,11 +1576,17 @@ impl Files {
                 written += 1;
             }
         }
-        let Some(error) = failed else { return Ok(journal_path) };
+        let Some(error) = failed else {
+            return Ok(journal_path);
+        };
         // A write failed partway: what was written goes back, so the tree is
         // as adoption found it and the journal has nothing to undo.
-        let stuck: Vec<&str> =
-            changed[..written].iter().rev().filter(|(path, before, _)| put(path, before).is_err()).map(|(path, ..)| path.as_str()).collect();
+        let stuck: Vec<&str> = changed[..written]
+            .iter()
+            .rev()
+            .filter(|(path, before, _)| put(path, before).is_err())
+            .map(|(path, ..)| path.as_str())
+            .collect();
         for folder in folders.iter().rev() {
             let _ = std::fs::remove_dir(self.root.join(folder));
         }
@@ -1192,7 +1594,10 @@ impl Files {
             let _ = std::fs::remove_file(self.root.join(&journal_path));
             return Err(format!("{error}; nothing was changed"));
         }
-        Err(format!("{error}; {} could not be put back: adopt --undo {journal_path} restores them", stuck.join(" ")))
+        Err(format!(
+            "{error}; {} could not be put back: adopt --undo {journal_path} restores them",
+            stuck.join(" ")
+        ))
     }
 }
 
@@ -1205,23 +1610,38 @@ struct Lock(PathBuf);
 impl Lock {
     fn take(root: &Path) -> Result<Lock, String> {
         let folder = root.join("out/adopt");
-        std::fs::create_dir_all(&folder).map_err(|error| format!("cannot create out/adopt: {error}"))?;
+        std::fs::create_dir_all(&folder)
+            .map_err(|error| format!("cannot create out/adopt: {error}"))?;
         let path = folder.join("lock");
         for _ in 0..2 {
-            match std::fs::OpenOptions::new().write(true).create_new(true).open(&path) {
+            match std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+            {
                 Ok(mut file) => {
                     use std::io::Write;
-                    writeln!(file, "{}", std::process::id()).map_err(|error| format!("cannot write out/adopt/lock: {error}"))?;
+                    writeln!(file, "{}", std::process::id())
+                        .map_err(|error| format!("cannot write out/adopt/lock: {error}"))?;
                     return Ok(Lock(path));
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                    let holder = std::fs::read_to_string(&path).ok().and_then(|text| text.trim().parse::<u32>().ok());
+                    let holder = std::fs::read_to_string(&path)
+                        .ok()
+                        .and_then(|text| text.trim().parse::<u32>().ok());
                     match holder {
                         Some(pid) if crate::gba::process::gone(pid) => {
                             let _ = std::fs::remove_file(&path);
                         }
-                        Some(pid) => return Err(format!("another adopt (process {pid}) holds out/adopt/lock; run one at a time")),
-                        None => return Err("out/adopt/lock names no process: remove it if no adopt is running".into()),
+                        Some(pid) => return Err(format!(
+                            "another adopt (process {pid}) holds out/adopt/lock; run one at a time"
+                        )),
+                        None => {
+                            return Err(
+                                "out/adopt/lock names no process: remove it if no adopt is running"
+                                    .into(),
+                            )
+                        }
                     }
                 }
                 Err(error) => return Err(format!("cannot create out/adopt/lock: {error}")),
@@ -1303,11 +1723,19 @@ fn read_journal(bytes: &[u8]) -> Result<(Option<String>, Vec<String>, Vec<Entry>
             continue;
         }
         let path = next.strip_prefix("file ").ok_or_else(broken)?.to_string();
-        let was = match line(&mut at).and_then(|l| l.strip_prefix("was ").map(str::to_string)).ok_or_else(broken)?.as_str() {
+        let was = match line(&mut at)
+            .and_then(|l| l.strip_prefix("was ").map(str::to_string))
+            .ok_or_else(broken)?
+            .as_str()
+        {
             "absent" => None,
             length => Some(text(&mut at, length)?),
         };
-        let now = match line(&mut at).and_then(|l| l.strip_prefix("now ").map(str::to_string)).ok_or_else(broken)?.as_str() {
+        let now = match line(&mut at)
+            .and_then(|l| l.strip_prefix("now ").map(str::to_string))
+            .ok_or_else(broken)?
+            .as_str()
+        {
             "absent" => After::Absent,
             digest if digest.starts_with("sha1:") => After::Digest(digest.to_string()),
             length => After::Text(text(&mut at, length)?),
@@ -1324,16 +1752,26 @@ fn read_journal(bytes: &[u8]) -> Result<(Option<String>, Vec<String>, Vec<Entry>
 /// was before (an adoption whose writing stopped partway) is left alone.
 fn undo(root: &Path, journal: &Path) -> Result<(), String> {
     let _lock = Lock::take(root)?;
-    let journal_path = [std::env::current_dir().map(|d| d.join(journal)).ok(), Some(root.join(journal))]
-        .into_iter()
-        .flatten()
-        .find(|path| path.is_file())
-        .ok_or_else(|| format!("cannot read {}", journal.display()))?;
-    let bytes = std::fs::read(&journal_path).map_err(|error| format!("cannot read {}: {error}", journal.display()))?;
+    let journal_path = [
+        std::env::current_dir().map(|d| d.join(journal)).ok(),
+        Some(root.join(journal)),
+    ]
+    .into_iter()
+    .flatten()
+    .find(|path| path.is_file())
+    .ok_or_else(|| format!("cannot read {}", journal.display()))?;
+    let bytes = std::fs::read(&journal_path)
+        .map_err(|error| format!("cannot read {}: {error}", journal.display()))?;
     let (_, folders, entries) = read_journal(&bytes)?;
     // A journal from before recon/ went would bring it back.
-    if let Some(entry) = entries.iter().find(|entry| entry.path.starts_with("recon/")) {
-        return Err(format!("the journal would restore {}, and Alchemy has no recon/ any more", entry.path));
+    if let Some(entry) = entries
+        .iter()
+        .find(|entry| entry.path.starts_with("recon/"))
+    {
+        return Err(format!(
+            "the journal would restore {}, and Alchemy has no recon/ any more",
+            entry.path
+        ));
     }
     // Each file's text after the undo: None removes it.
     let mut writes: Vec<(&Entry, Option<String>)> = Vec::new();
@@ -1346,7 +1784,9 @@ fn undo(root: &Path, journal: &Path) -> Result<(), String> {
             writes.push((entry, entry.was.clone()));
         } else if state == fingerprint(entry.was.as_deref()) {
             continue;
-        } else if let (After::Text(after), Some(was), Some(current)) = (&entry.now, &entry.was, &current) {
+        } else if let (After::Text(after), Some(was), Some(current)) =
+            (&entry.now, &entry.was, &current)
+        {
             match merge::merge(after, current, was) {
                 Some(text) => {
                     merged += 1;
@@ -1369,20 +1809,32 @@ fn undo(root: &Path, journal: &Path) -> Result<(), String> {
         match text {
             Some(text) => {
                 if let Some(folder) = full.parent() {
-                    std::fs::create_dir_all(folder).map_err(|error| format!("cannot create {}: {error}", folder.display()))?;
+                    std::fs::create_dir_all(folder)
+                        .map_err(|error| format!("cannot create {}: {error}", folder.display()))?;
                 }
-                std::fs::write(&full, text).map_err(|error| format!("cannot write {}: {error}", entry.path))?;
+                std::fs::write(&full, text)
+                    .map_err(|error| format!("cannot write {}: {error}", entry.path))?;
             }
-            None => std::fs::remove_file(&full).map_err(|error| format!("cannot remove {}: {error}", entry.path))?,
+            None => std::fs::remove_file(&full)
+                .map_err(|error| format!("cannot remove {}: {error}", entry.path))?,
         }
     }
     for folder in folders.iter().rev() {
         // Only a folder left empty goes.
         let _ = std::fs::remove_dir(root.join(folder));
     }
-    std::fs::remove_file(&journal_path).map_err(|error| format!("cannot remove {}: {error}", journal_path.display()))?;
-    let merged = if merged > 0 { format!(" ({merged} merged with later changes)") } else { String::new() };
-    println!("undone: {} files restored from {}{merged}", writes.len(), journal.display());
+    std::fs::remove_file(&journal_path)
+        .map_err(|error| format!("cannot remove {}: {error}", journal_path.display()))?;
+    let merged = if merged > 0 {
+        format!(" ({merged} merged with later changes)")
+    } else {
+        String::new()
+    };
+    println!(
+        "undone: {} files restored from {}{merged}",
+        writes.len(),
+        journal.display()
+    );
     Ok(())
 }
 
@@ -1414,7 +1866,9 @@ mod tests {
 
     impl Build for Stub {
         fn empty(&self, stem: &str, sections: &str) -> Result<bool, String> {
-            Ok(!self.placing.iter().any(|(s, section)| stem.ends_with(s) && sections.split_whitespace().any(|p| matches(p, section))))
+            Ok(!self.placing.iter().any(|(s, section)| {
+                stem.ends_with(s) && sections.split_whitespace().any(|p| matches(p, section))
+            }))
         }
         fn alike(&self, _: &str, _: &[String], _: &str) -> Result<(), String> {
             if self.apart {
@@ -1423,7 +1877,9 @@ mod tests {
             Ok(())
         }
         fn refresh(&self, games: &[String], stems: &[String]) -> Result<(), String> {
-            self.refreshed.borrow_mut().push(format!("{} {}", games.join(" "), stems.join(" ")));
+            self.refreshed
+                .borrow_mut()
+                .push(format!("{} {}", games.join(" "), stems.join(" ")));
             Ok(())
         }
         fn compare(&self, _: &[DecompTargetId]) -> Result<(), String> {
@@ -1441,18 +1897,32 @@ mod tests {
             Err(moderns.remove(0))
         }
         fn linked(&self, id: DecompTargetId) -> Result<link::Linked, String> {
-            let main = if self.untouched.contains(&id.as_str()) { Vec::new() } else { self.listed.clone() };
-            Ok(link::Linked { main, overlays: Vec::new() })
+            let main = if self.untouched.contains(&id.as_str()) {
+                Vec::new()
+            } else {
+                self.listed.clone()
+            };
+            Ok(link::Linked {
+                main,
+                overlays: Vec::new(),
+            })
         }
         fn relinked(&self, id: DecompTargetId, _: std::time::SystemTime) -> bool {
             !self.unlinked.contains(&id.as_str()) && !self.untouched.contains(&id.as_str())
         }
-        fn difference(&self, id: DecompTargetId) -> Result<Option<crate::check::rom::Difference>, String> {
-            Ok(self.differs.iter().find(|(edition, _)| *edition == id.as_str()).map(|(_, object)| crate::check::rom::Difference {
-                label: format!("{object}.o"),
-                object: Some(object.to_string()),
-                overlays: Vec::new(),
-            }))
+        fn difference(
+            &self,
+            id: DecompTargetId,
+        ) -> Result<Option<crate::check::rom::Difference>, String> {
+            Ok(self
+                .differs
+                .iter()
+                .find(|(edition, _)| *edition == id.as_str())
+                .map(|(_, object)| crate::check::rom::Difference {
+                    label: format!("{object}.o"),
+                    object: Some(object.to_string()),
+                    overlays: Vec::new(),
+                }))
         }
     }
 
@@ -1478,7 +1948,11 @@ mod tests {
 
     #[test]
     fn the_merge_form_parses_and_refuses_what_it_cannot_take() {
-        let Ok(Request::Adopt(o)) = parse(&args(&["merge", "games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c", "--dry-run"])) else {
+        let Ok(Request::Adopt(o)) = parse(&args(&[
+            "merge",
+            "games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c",
+            "--dry-run",
+        ])) else {
             panic!("merge did not parse")
         };
         assert_eq!((o.items.len(), o.dry_run, o.verify), (1, true, false));
@@ -1486,10 +1960,20 @@ mod tests {
         assert!(parse(&args(&["main", "080e2264"])).is_err());
         assert!(parse(&args(&["merge", "x.c=a.c,b.c", "--verify", "--dry-run"])).is_err());
         assert!(parse(&args(&["merge", "x.c=a.c,b.c", "--editions", "en"])).is_err());
-        assert!(matches!(parse(&args(&["--undo", "j"])), Ok(Request::Undo(_, items)) if items.is_empty()));
-        assert!(matches!(parse(&args(&["--undo", "j", "a.c"])), Ok(Request::Undo(_, items)) if items == ["a.c"]));
-        assert!(names("games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c", "field/b.c"));
-        assert!(!names("games/tla/src/field/ab.c=games/tla/src/field/a.c", "c.c"));
+        assert!(
+            matches!(parse(&args(&["--undo", "j"])), Ok(Request::Undo(_, items)) if items.is_empty())
+        );
+        assert!(
+            matches!(parse(&args(&["--undo", "j", "a.c"])), Ok(Request::Undo(_, items)) if items == ["a.c"])
+        );
+        assert!(names(
+            "games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c",
+            "field/b.c"
+        ));
+        assert!(!names(
+            "games/tla/src/field/ab.c=games/tla/src/field/a.c",
+            "c.c"
+        ));
     }
 
     /// Every statement placing the objects is one of a run: the first takes
@@ -1500,26 +1984,53 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let stub = Stub { placing: vec![], apart: false, ..Stub::default() };
+        let stub = Stub {
+            placing: vec![],
+            apart: false,
+            ..Stub::default()
+        };
         let words = args(&["merge", "games/tla/src/field/abc.c=games/tla/src/field/a.c,games/tla/src/field/b.c,games/tla/src/field/c.c"]);
-        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        let Ok(Request::Adopt(options)) = parse(&words) else {
+            panic!("merge did not parse")
+        };
         adopt(root, &options, &command_line(&words), &stub).unwrap();
         let read = |path: &str| std::fs::read_to_string(root.join(path)).ok();
         let script = read("games/tla/ld_script.ld").unwrap();
         assert!(script.contains("    {\n        \"*/games/tla/src/field/abc.o\"(.text)\n\n        \"*/games/tla/src/field/d.o\"(.text)\n"), "{script}");
-        assert!(script.contains("        \"*/games/tla/src/field/abc.o\"(.rodata)\n    }\n"), "{script}");
-        assert!(!script.contains("field/a.o") && !script.contains("field/b.o") && !script.contains("field/c.o"));
+        assert!(
+            script.contains("        \"*/games/tla/src/field/abc.o\"(.rodata)\n    }\n"),
+            "{script}"
+        );
+        assert!(
+            !script.contains("field/a.o")
+                && !script.contains("field/b.o")
+                && !script.contains("field/c.o")
+        );
         assert_eq!(
             read("games/tla/src/field/abc.c").unwrap(),
             "/// @file\n/// A's guide.\n\n#include \"global.h\"\n#include \"../field.h\"\n\nvoid A(void) {}\n\n// B's guide.\n\n#include \"b.h\"\n\nvoid B(void) {}\n\nvoid C(void) {}\n"
         );
-        assert!(read("games/tla/src/field/a.c").is_none() && read("games/tla/src/field/c.c").is_none());
-        let journal = std::fs::read_dir(root.join("out/adopt")).unwrap().flatten().next().unwrap().path();
-        assert!(journal.file_name().unwrap().to_str().unwrap().starts_with("0001-merge-abc"));
+        assert!(
+            read("games/tla/src/field/a.c").is_none() && read("games/tla/src/field/c.c").is_none()
+        );
+        let journal = std::fs::read_dir(root.join("out/adopt"))
+            .unwrap()
+            .flatten()
+            .next()
+            .unwrap()
+            .path();
+        assert!(journal
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .starts_with("0001-merge-abc"));
         undo(root, &journal).unwrap();
         assert_eq!(read("games/tla/ld_script.ld").as_deref(), Some(SCRIPT));
         assert!(read("games/tla/src/field/abc.c").is_none());
-        assert!(read("games/tla/src/field/b.c").unwrap().starts_with("/// @file\n/// B's guide."));
+        assert!(read("games/tla/src/field/b.c")
+            .unwrap()
+            .starts_with("/// @file\n/// B's guide."));
     }
 
     /// A merge into one of the objects keeps its name; a merge into another
@@ -1529,15 +2040,37 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let stub = Stub { placing: vec![], apart: false, ..Stub::default() };
+        let stub = Stub {
+            placing: vec![],
+            apart: false,
+            ..Stub::default()
+        };
         let mut files = Files::new(root);
-        merge_objects(&mut files, "games/tla/src/field/a.c=games/tla/src/field/a.c,games/tla/src/field/b.c", &stub, None).unwrap();
+        merge_objects(
+            &mut files,
+            "games/tla/src/field/a.c=games/tla/src/field/a.c,games/tla/src/field/b.c",
+            &stub,
+            None,
+        )
+        .unwrap();
         assert!(files.read("games/tla/ld_script.ld").unwrap().contains("    {\n        \"*/games/tla/src/field/a.o\"(.text)\n\n        \"*/games/tla/src/field/c.o\"(.text)"));
-        assert!(files.read("games/tla/src/field/a.c").unwrap().ends_with("void B(void) {}\n"));
+        assert!(files
+            .read("games/tla/src/field/a.c")
+            .unwrap()
+            .ends_with("void B(void) {}\n"));
         assert!(!files.exists("games/tla/src/field/b.c"));
         let mut files = Files::new(root);
-        merge_objects(&mut files, "games/tla/src/field/map/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c", &stub, None).unwrap();
-        assert!(files.read("games/tla/src/field/map/ab.c").unwrap().contains("#include \"../../field.h\"\n"));
+        merge_objects(
+            &mut files,
+            "games/tla/src/field/map/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c",
+            &stub,
+            None,
+        )
+        .unwrap();
+        assert!(files
+            .read("games/tla/src/field/map/ab.c")
+            .unwrap()
+            .contains("#include \"../../field.h\"\n"));
     }
 
     #[test]
@@ -1545,29 +2078,94 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let alike = Stub { placing: vec![("field/c", ".text"), ("field/e", ".text"), ("field/f", ".text"), ("field/g", ".text"), ("field/a", ".text")], apart: false, ..Stub::default() };
-        let merge = |item: &str, build: &dyn Build| merge_objects(&mut Files::new(root), item, build, None).unwrap_err();
-        let field = |names: &str| names.split(',').map(|name| format!("games/tla/src/field/{name}.c")).collect::<Vec<_>>().join(",");
+        let alike = Stub {
+            placing: vec![
+                ("field/c", ".text"),
+                ("field/e", ".text"),
+                ("field/f", ".text"),
+                ("field/g", ".text"),
+                ("field/a", ".text"),
+            ],
+            apart: false,
+            ..Stub::default()
+        };
+        let merge = |item: &str, build: &dyn Build| {
+            merge_objects(&mut Files::new(root), item, build, None).unwrap_err()
+        };
+        let field = |names: &str| {
+            names
+                .split(',')
+                .map(|name| format!("games/tla/src/field/{name}.c"))
+                .collect::<Vec<_>>()
+                .join(",")
+        };
         // A blank line is no bar.
-        assert!(merge_objects(&mut Files::new(root), &format!("games/tla/src/field/x.c={}", field("b,c")), &alike, None).is_ok());
+        assert!(merge_objects(
+            &mut Files::new(root),
+            &format!("games/tla/src/field/x.c={}", field("b,c")),
+            &alike,
+            None
+        )
+        .is_ok());
         // An #if and a line of the compiler library lie between.
-        assert!(merge(&format!("games/tla/src/field/x.c={}", field("c,e")), &alike).contains("leave out"));
+        assert!(
+            merge(&format!("games/tla/src/field/x.c={}", field("c,e")), &alike)
+                .contains("leave out")
+        );
         // Different sections.
-        assert!(merge(&format!("games/tla/src/field/x.c={}", field("f,g")), &alike).contains("leave out"));
+        assert!(
+            merge(&format!("games/tla/src/field/x.c={}", field("f,g")), &alike)
+                .contains("leave out")
+        );
         // Out of order.
-        assert!(merge(&format!("games/tla/src/field/x.c={}", field("b,a")), &alike).contains("leave out"));
+        assert!(
+            merge(&format!("games/tla/src/field/x.c={}", field("b,a")), &alike)
+                .contains("leave out")
+        );
         // Assembly, an existing file, too few objects, the main image and overlays.
-        assert!(merge(&format!("games/tla/src/field/x.c={}", field("c,d")), &alike).contains("is assembly"));
-        assert!(merge(&format!("games/tla/src/field/g.c={}", field("a,b")), &alike).contains("exists"));
-        assert!(merge(&format!("games/tla/src/field/x.c={}", field("a")), &alike).contains("two objects"));
-        let apart = Stub { placing: vec![], apart: true, ..Stub::default() };
-        assert!(merge(&format!("games/tla/src/field/x.c={}", field("a,b")), &apart).contains("only into overlays"));
+        assert!(
+            merge(&format!("games/tla/src/field/x.c={}", field("c,d")), &alike)
+                .contains("is assembly")
+        );
+        assert!(
+            merge(&format!("games/tla/src/field/g.c={}", field("a,b")), &alike).contains("exists")
+        );
+        assert!(
+            merge(&format!("games/tla/src/field/x.c={}", field("a")), &alike)
+                .contains("two objects")
+        );
+        let apart = Stub {
+            placing: vec![],
+            apart: true,
+            ..Stub::default()
+        };
+        assert!(
+            merge(&format!("games/tla/src/field/x.c={}", field("a,b")), &apart)
+                .contains("only into overlays")
+        );
         // An object a run leaves out with nothing in its sections joins it.
-        let empty = Stub { placing: vec![], apart: false, ..Stub::default() };
-        assert!(merge_objects(&mut Files::new(root), &format!("games/tla/src/field/x.c={}", field("f,g")), &empty, None).is_ok());
+        let empty = Stub {
+            placing: vec![],
+            apart: false,
+            ..Stub::default()
+        };
+        assert!(merge_objects(
+            &mut Files::new(root),
+            &format!("games/tla/src/field/x.c={}", field("f,g")),
+            &empty,
+            None
+        )
+        .is_ok());
         // A source another file includes stays the file it is.
-        std::fs::write(root.join("games/tla/src/credits.c"), "#include \"field/c.c\"\n").unwrap();
-        assert!(merge(&format!("games/tla/src/field/x.c={}", field("b,c")), &alike).contains("games/tla/src/credits.c includes games/tla/src/field/c.c"));
+        std::fs::write(
+            root.join("games/tla/src/credits.c"),
+            "#include \"field/c.c\"\n",
+        )
+        .unwrap();
+        assert!(
+            merge(&format!("games/tla/src/field/x.c={}", field("b,c")), &alike)
+                .contains("games/tla/src/credits.c includes games/tla/src/field/c.c")
+        );
     }
 
     /// Two merges in one journal; the build blames the second, which goes
@@ -1577,23 +2175,49 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let stub = Stub { placing: vec![], apart: false, ..Stub::default() };
+        let stub = Stub {
+            placing: vec![],
+            apart: false,
+            ..Stub::default()
+        };
         let first = "games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c";
         let second = "games/tla/src/field/fg.c=games/tla/src/field/f.c,games/tla/src/field/g.c";
         let words = args(&["merge", first, second]);
-        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        let Ok(Request::Adopt(options)) = parse(&words) else {
+            panic!("merge did not parse")
+        };
         adopt(root, &options, &command_line(&words), &stub).unwrap();
         let read = |path: &str| std::fs::read_to_string(root.join(path)).ok();
-        assert!(read("games/tla/src/field/ab.c").is_some() && read("games/tla/src/field/fg.c").is_some());
+        assert!(
+            read("games/tla/src/field/ab.c").is_some()
+                && read("games/tla/src/field/fg.c").is_some()
+        );
         let journal = Path::new("out/adopt/0001-merge-ab.journal");
-        assert!(back_out_batch(root, journal, &["x.c".into()], &stub).err().unwrap().contains("not among"));
+        assert!(back_out_batch(root, journal, &["x.c".into()], &stub)
+            .err()
+            .unwrap()
+            .contains("not among"));
         back_out_batch(root, journal, &["field/fg.c".into()], &stub).unwrap();
-        assert!(read("games/tla/src/field/ab.c").is_some() && read("games/tla/src/field/fg.c").is_none());
-        assert_eq!(read("games/tla/src/field/g.c").as_deref(), Some("void G(void) {}\n"));
+        assert!(
+            read("games/tla/src/field/ab.c").is_some()
+                && read("games/tla/src/field/fg.c").is_none()
+        );
+        assert_eq!(
+            read("games/tla/src/field/g.c").as_deref(),
+            Some("void G(void) {}\n")
+        );
         let script = read("games/tla/ld_script.ld").unwrap();
-        assert!(script.contains("field/ab.o\"(.text)") && script.contains("field/f.o\"(.text .rodata)\n        \"*/games/tla/src/field/g.o\"(.text)"));
+        assert!(
+            script.contains("field/ab.o\"(.text)")
+                && script.contains(
+                    "field/f.o\"(.text .rodata)\n        \"*/games/tla/src/field/g.o\"(.text)"
+                )
+        );
         let recorded = read("out/adopt/0001-merge-ab.journal").unwrap();
-        assert!(recorded.contains(&format!("command adopt merge {first}\n")), "{recorded}");
+        assert!(
+            recorded.contains(&format!("command adopt merge {first}\n")),
+            "{recorded}"
+        );
     }
 
     /// The checkout's own build: a merge keeps every object on its route and
@@ -1615,7 +2239,14 @@ mod tests {
         // where it is does too.
         build.alike("tla", &thumb, &scene("events.c")).unwrap();
         // An ARM_C object and game C.
-        assert!(build.alike("tla", &[field("f021470"), scene("s00b8")], &field("mixed.c")).unwrap_err().contains("only into overlays"));
+        assert!(build
+            .alike(
+                "tla",
+                &[field("f021470"), scene("s00b8")],
+                &field("mixed.c")
+            )
+            .unwrap_err()
+            .contains("only into overlays"));
     }
 
     /// The checkout's built objects: what places bytes in a statement's
@@ -1627,7 +2258,10 @@ mod tests {
         let stem = "games/tla/src/scene/kandorean_temple/s00b8";
         assert!(!build.empty(stem, ".text").unwrap());
         assert!(build.empty(stem, ".no_such_section.*").unwrap());
-        assert!(build.empty("games/tla/src/field/no_such_object", ".text").unwrap_err().contains("no edition links"));
+        assert!(build
+            .empty("games/tla/src/field/no_such_object", ".text")
+            .unwrap_err()
+            .contains("no edition links"));
     }
 
     /// Two merges, the second blamed: by the byte one edition differs in,
@@ -1655,12 +2289,23 @@ mod tests {
         let first = "games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c";
         let second = "games/tla/src/field/fg.c=games/tla/src/field/f.c,games/tla/src/field/g.c";
         let words = args(&["merge", first, second, "--verify"]);
-        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        let Ok(Request::Adopt(options)) = parse(&words) else {
+            panic!("merge did not parse")
+        };
         adopt(root, &options, &command_line(&words), &stub).unwrap();
         let read = |path: &str| std::fs::read_to_string(root.join(path)).ok();
-        assert!(read("games/tla/src/field/ab.c").is_some() && read("games/tla/src/field/fg.c").is_none());
-        assert_eq!(read("games/tla/src/field/f.c").as_deref(), Some("void F(void) {}\n"));
-        assert_eq!(*stub.refreshed.borrow(), [format!("tla {} {}", field("a"), field("b"))]);
+        assert!(
+            read("games/tla/src/field/ab.c").is_some()
+                && read("games/tla/src/field/fg.c").is_none()
+        );
+        assert_eq!(
+            read("games/tla/src/field/f.c").as_deref(),
+            Some("void F(void) {}\n")
+        );
+        assert_eq!(
+            *stub.refreshed.borrow(),
+            [format!("tla {} {}", field("a"), field("b"))]
+        );
 
         // Only what no item wrote: the journal is named and nothing goes back.
         let directory = tempfile::tempdir().unwrap();
@@ -1669,13 +2314,21 @@ mod tests {
         let stub = Stub {
             listed: vec![field("ab")],
             unlinked: vec![third_id],
-            compares: std::cell::RefCell::new(vec![format!("make failed: make: *** [Makefile:55: {third_id}] Error 2")]),
+            compares: std::cell::RefCell::new(vec![format!(
+                "make failed: make: *** [Makefile:55: {third_id}] Error 2"
+            )]),
             ..Stub::default()
         };
         let words = args(&["merge", first, "--verify"]);
-        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        let Ok(Request::Adopt(options)) = parse(&words) else {
+            panic!("merge did not parse")
+        };
         let error = adopt(root, &options, &command_line(&words), &stub).unwrap_err();
-        assert!(error.contains(&format!("{third_id} did not build")) && error.contains("adopt --undo out/adopt/0001-merge-ab.journal"), "{error}");
+        assert!(
+            error.contains(&format!("{third_id} did not build"))
+                && error.contains("adopt --undo out/adopt/0001-merge-ab.journal"),
+            "{error}"
+        );
         assert!(std::fs::read_to_string(root.join("games/tla/src/field/ab.c")).is_ok());
     }
 
@@ -1689,29 +2342,58 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let stub = Stub { moderns: std::cell::RefCell::new(vec!["make failed: games/tla/src/field/fg.c:3:1: error: unknown type name 'Thing'".into()]), ..Stub::default() };
+        let stub = Stub {
+            moderns: std::cell::RefCell::new(vec![
+                "make failed: games/tla/src/field/fg.c:3:1: error: unknown type name 'Thing'"
+                    .into(),
+            ]),
+            ..Stub::default()
+        };
         let words = args(&["merge", first, second]);
-        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        let Ok(Request::Adopt(options)) = parse(&words) else {
+            panic!("merge did not parse")
+        };
         adopt(root, &options, &command_line(&words), &stub).unwrap();
         let read = |path: &str| std::fs::read_to_string(root.join(path)).ok();
-        assert!(read("games/tla/src/field/ab.c").is_some() && read("games/tla/src/field/fg.c").is_none());
-        assert!(read("games/tla/src/field/f.c").is_some() && read("games/tla/src/field/g.c").is_some());
+        assert!(
+            read("games/tla/src/field/ab.c").is_some()
+                && read("games/tla/src/field/fg.c").is_none()
+        );
+        assert!(
+            read("games/tla/src/field/f.c").is_some() && read("games/tla/src/field/g.c").is_some()
+        );
 
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let stub = Stub { moderns: std::cell::RefCell::new(vec!["make failed: games/tla/include/x.h:3:1: error: unknown type name".into()]), ..Stub::default() };
+        let stub = Stub {
+            moderns: std::cell::RefCell::new(vec![
+                "make failed: games/tla/include/x.h:3:1: error: unknown type name".into(),
+            ]),
+            ..Stub::default()
+        };
         let words = args(&["merge", first]);
-        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        let Ok(Request::Adopt(options)) = parse(&words) else {
+            panic!("merge did not parse")
+        };
         let error = adopt(root, &options, &command_line(&words), &stub).unwrap_err();
-        assert!(error.contains("no file this batch wrote") && error.contains("adopt --undo out/adopt/0001-merge-ab.journal"), "{error}");
+        assert!(
+            error.contains("no file this batch wrote")
+                && error.contains("adopt --undo out/adopt/0001-merge-ab.journal"),
+            "{error}"
+        );
 
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        let stub = Stub { moderns: std::cell::RefCell::new(vec!["make failed".into()]), ..Stub::default() };
+        let stub = Stub {
+            moderns: std::cell::RefCell::new(vec!["make failed".into()]),
+            ..Stub::default()
+        };
         let words = args(&["merge", first, "--no-modern"]);
-        let Ok(Request::Adopt(options)) = parse(&words) else { panic!("merge did not parse") };
+        let Ok(Request::Adopt(options)) = parse(&words) else {
+            panic!("merge did not parse")
+        };
         adopt(root, &options, &command_line(&words), &stub).unwrap();
         assert_eq!(stub.moderns.borrow().len(), 1, "not run");
     }
@@ -1723,12 +2405,20 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
         tree(root);
-        std::fs::write(root.join("games/tla/src/field/b.c"), "#include \"global.h\"\n#include \"b_parts/run.c\"\n").unwrap();
+        std::fs::write(
+            root.join("games/tla/src/field/b.c"),
+            "#include \"global.h\"\n#include \"b_parts/run.c\"\n",
+        )
+        .unwrap();
         let mut files = Files::new(root);
         let item = "games/tla/src/field/ab.c=games/tla/src/field/a.c,games/tla/src/field/b.c";
-        let error = merge_objects(&mut files, item, &Stub::default(), Some("joined".into())).unwrap_err();
+        let error =
+            merge_objects(&mut files, item, &Stub::default(), Some("joined".into())).unwrap_err();
         assert!(error.contains("b.c includes C files as text"), "{error}");
-        assert!(includes_source("#include \"x/y.c\"\n") && !includes_source("#include \"x.h\"\n#include <y.c>\n"));
+        assert!(
+            includes_source("#include \"x/y.c\"\n")
+                && !includes_source("#include \"x.h\"\n#include <y.c>\n")
+        );
         // A plain merge still takes it.
         assert!(merge_objects(&mut Files::new(root), item, &Stub::default(), None).is_ok());
     }
@@ -1736,9 +2426,23 @@ mod tests {
     #[test]
     fn a_makefile_names_its_sources_by_path() {
         let makefile = "FLASH_C := $(addprefix games/tla/src/gamepak/flash/,flash.c sst.c) \\\n    games/tla/src/x.c\nARM_C := $(wildcard games/tla/src/arm/*.c)\n";
-        assert_eq!(named_sources(makefile), ["games/tla/src/gamepak/flash/flash.c", "games/tla/src/gamepak/flash/sst.c", "games/tla/src/x.c", "games/tla/src/arm/*.c"]);
-        assert!(makefile_names(makefile, "games/tla/src/gamepak/flash/flash.c") && makefile_names(makefile, "games/tla/src/arm/glyph.c"));
-        assert!(!makefile_names(makefile, "games/tla/src/scene/mars/flash.c"));
+        assert_eq!(
+            named_sources(makefile),
+            [
+                "games/tla/src/gamepak/flash/flash.c",
+                "games/tla/src/gamepak/flash/sst.c",
+                "games/tla/src/x.c",
+                "games/tla/src/arm/*.c"
+            ]
+        );
+        assert!(
+            makefile_names(makefile, "games/tla/src/gamepak/flash/flash.c")
+                && makefile_names(makefile, "games/tla/src/arm/glyph.c")
+        );
+        assert!(!makefile_names(
+            makefile,
+            "games/tla/src/scene/mars/flash.c"
+        ));
     }
 
     #[test]
@@ -1756,7 +2460,10 @@ mod tests {
         let included = top_level_includes(first);
         assert_eq!(included, ["#include \"global.h\""]);
         let later = "#include \"global.h\"\n#include \"german.h\"\n#ifdef X\n#include \"global.h\"\n#endif\n";
-        assert_eq!(joined(later, &included), "#include \"german.h\"\n#ifdef X\n#include \"global.h\"\n#endif\n");
+        assert_eq!(
+            joined(later, &included),
+            "#include \"german.h\"\n#ifdef X\n#include \"global.h\"\n#endif\n"
+        );
     }
 
     #[test]
@@ -1764,26 +2471,50 @@ mod tests {
         let makefile = "SOUND_C := a.c $(wildcard games/x/driver.c games/x/track_*.c)\nOTHER := $(wildcard *.s)\n";
         assert_eq!(wildcard_patterns(makefile), ["games/x/track_*.c"]);
         let step = |words: &[&str]| vec![words.iter().map(|w| w.to_string()).collect::<Vec<_>>()];
-        assert!(same_but_size(&step(&["cc", "-O2", "x.c"]), &step(&["cc", "-Os", "x.c"])));
+        assert!(same_but_size(
+            &step(&["cc", "-O2", "x.c"]),
+            &step(&["cc", "-Os", "x.c"])
+        ));
         assert!(same_but_size(&step(&["cc", "-O2"]), &step(&["cc", "-O2"])));
         assert!(!same_but_size(&step(&["cc", "-Os"]), &step(&["cc", "-O2"])));
-        assert!(!same_but_size(&step(&["cc", "-O2", "-marm"]), &step(&["cc", "-Os", "-mthumb"])));
+        assert!(!same_but_size(
+            &step(&["cc", "-O2", "-marm"]),
+            &step(&["cc", "-Os", "-mthumb"])
+        ));
     }
 
     #[test]
     fn section_patterns_match_as_the_linker_s() {
-        assert!(matches(".text.*", ".text.bit_dispatch") && matches(".text", ".text") && !matches(".text", ".text.x"));
+        assert!(
+            matches(".text.*", ".text.bit_dispatch")
+                && matches(".text", ".text")
+                && !matches(".text", ".text.x")
+        );
         assert!(!matches(".text.*", ".rodata"));
     }
 
     #[test]
     fn includes_follow_the_move() {
         let text = "/// @file\n#include \"../a/a.h\"\n#include \"types.h\"\n#include \"local.h\"\n";
-        let moved = rewrite_includes(text, "games/tla/src/scene/c", "games/tla/src/field/x", |p| p == "games/tla/src/scene/a/a.h" || p == "games/tla/src/scene/c/local.h");
-        assert!(moved.contains("#include \"../../scene/c/local.h\"\n"), "{moved}");
-        assert!(moved.contains("#include \"../../scene/a/a.h\"\n"), "{moved}");
+        let moved = rewrite_includes(
+            text,
+            "games/tla/src/scene/c",
+            "games/tla/src/field/x",
+            |p| p == "games/tla/src/scene/a/a.h" || p == "games/tla/src/scene/c/local.h",
+        );
+        assert!(
+            moved.contains("#include \"../../scene/c/local.h\"\n"),
+            "{moved}"
+        );
+        assert!(
+            moved.contains("#include \"../../scene/a/a.h\"\n"),
+            "{moved}"
+        );
         assert!(moved.contains("#include \"types.h\"\n"));
-        assert_eq!(relative("games/tla/src/menu/credits", "games/tla/include/x.h"), "../../../include/x.h");
+        assert_eq!(
+            relative("games/tla/src/menu/credits", "games/tla/include/x.h"),
+            "../../../include/x.h"
+        );
     }
 
     #[test]
@@ -1797,15 +2528,30 @@ mod tests {
         files.remove("gone.txt");
         files.write("new/folder/made.c", "int x;\n".into());
         let journal = files.commit("adopt test", "test").unwrap();
-        assert_eq!(std::fs::read_to_string(root.join("kept.txt")).unwrap(), "after\n");
+        assert_eq!(
+            std::fs::read_to_string(root.join("kept.txt")).unwrap(),
+            "after\n"
+        );
         assert!(!root.join("gone.txt").exists());
         std::fs::write(root.join("kept.txt"), "edited\n").unwrap();
-        assert!(undo(root, Path::new(&journal)).unwrap_err().contains("kept.txt"));
-        assert_eq!(std::fs::read_to_string(root.join("new/folder/made.c")).unwrap(), "int x;\n", "a refused undo writes nothing");
+        assert!(undo(root, Path::new(&journal))
+            .unwrap_err()
+            .contains("kept.txt"));
+        assert_eq!(
+            std::fs::read_to_string(root.join("new/folder/made.c")).unwrap(),
+            "int x;\n",
+            "a refused undo writes nothing"
+        );
         std::fs::write(root.join("kept.txt"), "after\n").unwrap();
         undo(root, Path::new(&journal)).unwrap();
-        assert_eq!(std::fs::read_to_string(root.join("kept.txt")).unwrap(), "before\n");
-        assert_eq!(std::fs::read_to_string(root.join("gone.txt")).unwrap(), "old");
+        assert_eq!(
+            std::fs::read_to_string(root.join("kept.txt")).unwrap(),
+            "before\n"
+        );
+        assert_eq!(
+            std::fs::read_to_string(root.join("gone.txt")).unwrap(),
+            "old"
+        );
         assert!(!root.join("new").exists());
         assert!(!root.join(&journal).exists());
     }
@@ -1824,16 +2570,24 @@ mod tests {
         second.write("ld_script.ld", "a\nB\nc\nd\nE\nf\n".into());
         let second = second.commit("adopt merge y.c=c.c,d.c", "second").unwrap();
         undo(root, Path::new(&first)).unwrap();
-        assert_eq!(std::fs::read_to_string(root.join("ld_script.ld")).unwrap(), "a\nb\nc\nd\nE\nf\n");
+        assert_eq!(
+            std::fs::read_to_string(root.join("ld_script.ld")).unwrap(),
+            "a\nb\nc\nd\nE\nf\n"
+        );
         undo(root, Path::new(&second)).unwrap();
-        assert_eq!(std::fs::read_to_string(root.join("ld_script.ld")).unwrap(), "a\nb\nc\nd\ne\n");
+        assert_eq!(
+            std::fs::read_to_string(root.join("ld_script.ld")).unwrap(),
+            "a\nb\nc\nd\ne\n"
+        );
 
         // A later change to the same line leaves both journals in place.
         let mut third = Files::new(root);
         third.write("ld_script.ld", "a\nB\nc\nd\ne\n".into());
         let third = third.commit("adopt merge x.c=a.c,b.c", "third").unwrap();
         std::fs::write(root.join("ld_script.ld"), "a\nBB\nc\nd\ne\n").unwrap();
-        assert!(undo(root, Path::new(&third)).unwrap_err().contains("ld_script.ld"));
+        assert!(undo(root, Path::new(&third))
+            .unwrap_err()
+            .contains("ld_script.ld"));
         assert!(root.join(&third).exists());
     }
 
@@ -1852,10 +2606,16 @@ mod tests {
         files.write("b.txt", "b2\n".into());
         files.write("new/c.txt", "c\n".into());
         let error = files.commit("adopt test", "test").unwrap_err();
-        assert!(error.contains("b.txt") && error.ends_with("nothing was changed"), "{error}");
+        assert!(
+            error.contains("b.txt") && error.ends_with("nothing was changed"),
+            "{error}"
+        );
         assert_eq!(std::fs::read_to_string(root.join("a.txt")).unwrap(), "a\n");
         assert!(!root.join("new").exists());
-        assert_eq!(std::fs::read_dir(root.join("out/adopt")).unwrap().count(), 0);
+        assert_eq!(
+            std::fs::read_dir(root.join("out/adopt")).unwrap().count(),
+            0
+        );
 
         std::fs::remove_dir(root.join("b.txt")).unwrap();
         std::fs::write(root.join("b.txt"), "b\n").unwrap();
@@ -1884,17 +2644,34 @@ mod tests {
         second.write("ld_script.ld", "a\nc\n".into());
         second.write("made.c", "int c;\n".into());
         first.commit("adopt first", "first").unwrap();
-        assert!(second.commit("adopt second", "second").unwrap_err().contains("ld_script.ld"));
-        assert_eq!(std::fs::read_to_string(root.join("ld_script.ld")).unwrap(), "a\nb\n");
+        assert!(second
+            .commit("adopt second", "second")
+            .unwrap_err()
+            .contains("ld_script.ld"));
+        assert_eq!(
+            std::fs::read_to_string(root.join("ld_script.ld")).unwrap(),
+            "a\nb\n"
+        );
         assert!(!root.join("made.c").exists());
-        assert_eq!(std::fs::read_dir(root.join("out/adopt")).unwrap().count(), 1, "only the first journal");
+        assert_eq!(
+            std::fs::read_dir(root.join("out/adopt")).unwrap().count(),
+            1,
+            "only the first journal"
+        );
 
         let held = Lock::take(root).unwrap();
-        assert!(Lock::take(root).unwrap_err().contains(&std::process::id().to_string()));
+        assert!(Lock::take(root)
+            .unwrap_err()
+            .contains(&std::process::id().to_string()));
         drop(held);
         std::fs::write(root.join("out/adopt/lock"), "1073741808\n").unwrap();
         let taken = Lock::take(root).unwrap();
-        assert_eq!(std::fs::read_to_string(root.join("out/adopt/lock")).unwrap().trim(), std::process::id().to_string());
+        assert_eq!(
+            std::fs::read_to_string(root.join("out/adopt/lock"))
+                .unwrap()
+                .trim(),
+            std::process::id().to_string()
+        );
         drop(taken);
         assert!(!root.join("out/adopt/lock").exists());
     }

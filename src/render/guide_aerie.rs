@@ -32,7 +32,11 @@ const AFTER_FIRST_BATTLE: u16 = 2;
 const AFTER_SECOND_BATTLE: u16 = 3;
 /// The runs: where each starts, and the scene that ends it (MAP_BATTLE, or 0
 /// for a scene that is neither the aerie nor the world map).
-const RUNS: [(u16, u16); 3] = [(FROM_FOURTH_FLOOR, MAP_BATTLE), (AFTER_FIRST_BATTLE, MAP_BATTLE), (AFTER_SECOND_BATTLE, 0)];
+const RUNS: [(u16, u16); 3] = [
+    (FROM_FOURTH_FLOOR, MAP_BATTLE),
+    (AFTER_FIRST_BATTLE, MAP_BATTLE),
+    (AFTER_SECOND_BATTLE, 0),
+];
 /// The leader's walk from where the arrival leaves him (491, 164) to the
 /// beacon, in pixels, each point reached by holding one direction: south onto
 /// the floor by the platforms (CELL_BEHAVIOR_VENUS_LIGHTHOUSE_AERIE_FLOOR_BY_PLATFORMS),
@@ -40,7 +44,16 @@ const RUNS: [(u16, u16); 3] = [(FROM_FOURTH_FLOOR, MAP_BATTLE), (AFTER_FIRST_BAT
 /// onto the lighthouse's floor by them, up its stair to the north, west and
 /// south round the raised beacon, and west onto the cells before it
 /// (CELL_BEHAVIOR_VENUS_LIGHTHOUSE_AERIE_BEFORE_BEACON), where the confrontation starts.
-const WALK: [(i32, i32); 8] = [(504, 200), (472, 200), (440, 200), (408, 200), (408, 136), (376, 136), (376, 232), (344, 232)];
+const WALK: [(i32, i32); 8] = [
+    (504, 200),
+    (472, 200),
+    (440, 200),
+    (408, 200),
+    (408, 136),
+    (376, 136),
+    (376, 232),
+    (344, 232),
+];
 /// Pixels from a point at which it counts as reached.
 const NEAR: i32 = 2;
 /// KEYINPUT bits.
@@ -100,21 +113,46 @@ impl<'a> Guide<'a> {
         let frames: Vec<Vec<usize>> = runs.iter().map(|p| shown_frames(&p.shown)).collect();
         if std::env::var_os("ALCHEMY_RENDER_DEBUG").is_some() {
             for (p, f) in runs.iter().zip(&frames) {
-                eprintln!("run: {} frames played, {} drawn, {:?} to {:?}", p.shown.len(), f.len(), f.first(), f.last());
+                eprintln!(
+                    "run: {} frames played, {} drawn, {:?} to {:?}",
+                    p.shown.len(),
+                    f.len(),
+                    f.first(),
+                    f.last()
+                );
             }
         }
         // The aerie's scroll bounds as its last frame drawn has them.
-        let last = runs.last_mut().zip(frames.last().and_then(|f| f.last())).ok_or("the last run showed nothing")?;
+        let last = runs
+            .last_mut()
+            .zip(frames.last().and_then(|f| f.last()))
+            .ok_or("the last run showed nothing")?;
         last.0.field.load(&last.0.states.get(*last.1));
         let area = last.0.field.bounds().map(|v| v >> 16);
-        let mut parts: Vec<Run> = runs.iter_mut().zip(&frames).map(|(p, f)| Run { field: &mut p.field, states: &p.states, frames: f, wide: true }).collect();
+        let mut parts: Vec<Run> = runs
+            .iter_mut()
+            .zip(&frames)
+            .map(|(p, f)| Run {
+                field: &mut p.field,
+                states: &p.states,
+                frames: f,
+                wide: true,
+            })
+            .collect();
         let mut pictures = whole::stitch_runs(&mut parts, area)?;
         // The exit fades the aerie to black before the scene changes: the
         // GIF ends on its last picture that is not all one colour.
-        while pictures.last().is_some_and(|p| p.pixels.iter().all(|&c| c == p.pixels[0])) {
+        while pictures
+            .last()
+            .is_some_and(|p| p.pixels.iter().all(|&c| c == p.pixels[0]))
+        {
             pictures.pop();
         }
-        self.whole_gif("places/venus-lighthouse-aerie/story-dollhouse.gif", &pictures, "the Lighthouse Aerie's story in the Doll House recorder, the whole aerie and the sky")
+        self.whole_gif(
+            "places/venus-lighthouse-aerie/story-dollhouse.gif",
+            &pictures,
+            "the Lighthouse Aerie's story in the Doll House recorder, the whole aerie and the sky",
+        )
     }
 
     /// Enters the aerie at `entrance` with the story flags `set` besides the
@@ -123,11 +161,29 @@ impl<'a> Guide<'a> {
     /// party leaves for a scene that is neither the aerie nor the world map.
     fn play_aerie(&self, entrance: u16, set: &[u16], ends: u16) -> Result<Played<'a>, String> {
         let mut flags = vec![self.flag("FLAG_VALE_PARTY_LEFT")?];
-        flags.extend(set.iter().filter(|f| !flags.contains(f)).copied().collect::<Vec<_>>());
+        flags.extend(
+            set.iter()
+                .filter(|f| !flags.contains(f))
+                .copied()
+                .collect::<Vec<_>>(),
+        );
         let clear = vec![self.flag("FLAG_VALE_STORM")?, self.flag("FLAG_CHILDHOOD")?];
-        let mut field = Field::enter(self.rom, self.symbols, &Setup { scene: AERIE, entrance, set: flags, clear })?;
+        let mut field = Field::enter(
+            self.rom,
+            self.symbols,
+            &Setup {
+                scene: AERIE,
+                entrance,
+                set: flags,
+                clear,
+            },
+        )?;
         field.keep_states(true);
-        let mut walk: &[(i32, i32)] = if entrance == FROM_FOURTH_FLOOR { &WALK } else { &[] };
+        let mut walk: &[(i32, i32)] = if entrance == FROM_FOURTH_FLOOR {
+            &WALK
+        } else {
+            &[]
+        };
         let mut shown = Vec::new();
         let (mut waited, mut pressing, mut still) = (0, 0, 0);
         let mut steps = field.steps();
@@ -136,15 +192,23 @@ impl<'a> Guide<'a> {
             field.frames(1)?;
             let scene = field.scene();
             shown.push(scene == AERIE && lit(&field) && !line_effect(&field));
-            let done = if ends == 0 { scene != AERIE && scene != WORLD_MAP && scene != MAP_BATTLE } else { scene == ends };
+            let done = if ends == 0 {
+                scene != AERIE && scene != WORLD_MAP && scene != MAP_BATTLE
+            } else {
+                scene == ends
+            };
             if done {
                 break;
             }
             if scene == MAP_BATTLE {
-                return Err(format!("a battle began where none was expected, entering at {entrance}"));
+                return Err(format!(
+                    "a battle began where none was expected, entering at {entrance}"
+                ));
             }
             if shown.len() > RUN_LIMIT {
-                return Err(format!("the run from entrance {entrance} went on past {RUN_LIMIT} frames"));
+                return Err(format!(
+                    "the run from entrance {entrance} went on past {RUN_LIMIT} frames"
+                ));
             }
             let in_control = field.steps() != steps;
             steps = field.steps();
@@ -184,10 +248,17 @@ impl<'a> Guide<'a> {
                 (false, _, true) => KEY_DOWN,
                 (false, _, false) => KEY_UP,
             });
-            still = if place == Some((leader.x, leader.z)) { still + 1 } else { 0 };
+            still = if place == Some((leader.x, leader.z)) {
+                still + 1
+            } else {
+                0
+            };
             place = Some((leader.x, leader.z));
             if still > STUCK {
-                return Err(format!("the leader stood at ({}, {}) walking to ({x}, {z})", leader.x, leader.z));
+                return Err(format!(
+                    "the leader stood at ({}, {}) walking to ({x}, {z})",
+                    leader.x, leader.z
+                ));
             }
         }
         field.hold(0);
@@ -195,9 +266,16 @@ impl<'a> Guide<'a> {
         // The last point lies on the cells before the beacon: the
         // confrontation takes the leader over as he steps onto them.
         if walk.len() > 1 {
-            return Err(format!("the walk to the beacon stopped short of {:?}", walk[0]));
+            return Err(format!(
+                "the walk to the beacon stopped short of {:?}",
+                walk[0]
+            ));
         }
-        Ok(Played { field, states, shown })
+        Ok(Played {
+            field,
+            states,
+            shown,
+        })
     }
 }
 
@@ -244,7 +322,13 @@ pub(super) fn shown_frames(shown: &[bool]) -> Vec<usize> {
 /// The carried flags set now, `before` among them.
 pub(super) fn carried_flags_set(field: &Field, before: &[u16]) -> Vec<u16> {
     let mut out = before.to_vec();
-    out.extend(CARRIED_FLAGS.iter().cloned().flatten().filter(|&f| field.flag_is_set(f) && !before.contains(&f)));
+    out.extend(
+        CARRIED_FLAGS
+            .iter()
+            .cloned()
+            .flatten()
+            .filter(|&f| field.flag_is_set(f) && !before.contains(&f)),
+    );
     out
 }
 
@@ -262,6 +346,9 @@ mod tests {
         shown.extend(vec![false; 4]);
         shown.extend(vec![true; first + 2]);
         let second = 3 + first + 5 + 4;
-        assert_eq!(shown_frames(&shown), vec![3 + first, 3 + first + 2, 3 + first + 4, second + first]);
+        assert_eq!(
+            shown_frames(&shown),
+            vec![3 + first, 3 + first + 2, 3 + first + 4, second + first]
+        );
     }
 }

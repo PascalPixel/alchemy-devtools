@@ -29,7 +29,15 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use text::{insert_before, rename, statement_at, statements, Space};
 
 /// The kinds of view, as the marker names them and the counts list them.
-pub(crate) const KINDS: [&str; 7] = ["routine", "variable", "tag", "typedef", "enumerator", "static", "macro"];
+pub(crate) const KINDS: [&str; 7] = [
+    "routine",
+    "variable",
+    "tag",
+    "typedef",
+    "enumerator",
+    "static",
+    "macro",
+];
 
 /// The marker's opening, as `check tags` and the humanity count find it.
 pub(crate) const MARKER: &str = "VIEW(";
@@ -37,16 +45,25 @@ pub(crate) const MARKER: &str = "VIEW(";
 /// A comment read as a view's marker: its kind, or why it is not in the
 /// marker's form; None for a comment that is no marker.
 pub(crate) fn view_kind(comment: &str) -> Option<Result<&'static str, String>> {
-    let body = comment.strip_prefix("/*").map_or(comment, |body| body.strip_suffix("*/").unwrap_or(body));
+    let body = comment
+        .strip_prefix("/*")
+        .map_or(comment, |body| body.strip_suffix("*/").unwrap_or(body));
     let body = body.strip_prefix("//").unwrap_or(body).trim();
     let rest = body.strip_prefix(MARKER)?;
     let form = "/* VIEW(<part>): <kind> <name> as <this view>; <the other> has <its view>. */";
-    let Some((part, rest)) = rest.split_once("): ") else { return Some(Err(format!("not the view marker's form: {form}"))) };
+    let Some((part, rest)) = rest.split_once("): ") else {
+        return Some(Err(format!("not the view marker's form: {form}")));
+    };
     if part.is_empty() || !part.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
         return Some(Err(format!("{part} is not a part's file stem")));
     }
     let word = rest.split_whitespace().next().unwrap_or("");
-    let Some(kind) = KINDS.iter().find(|kind| **kind == word) else { return Some(Err(format!("unknown view kind {word}: {}", KINDS.join(", ")))) };
+    let Some(kind) = KINDS.iter().find(|kind| **kind == word) else {
+        return Some(Err(format!(
+            "unknown view kind {word}: {}",
+            KINDS.join(", ")
+        )));
+    };
     if !rest.contains(" as ") || !rest.contains(" has ") || !rest.ends_with('.') {
         return Some(Err(format!("not the view marker's form: {form}")));
     }
@@ -77,8 +94,21 @@ pub(crate) struct Part {
 
 impl Part {
     pub fn new(stem: &str, text: String) -> Part {
-        let suffix = stem.rsplit('/').next().unwrap_or(stem).chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '_' }).collect();
-        Part { stem: stem.to_string(), suffix, text, renames: Vec::new(), statics: Vec::new(), restore: Vec::new() }
+        let suffix = stem
+            .rsplit('/')
+            .next()
+            .unwrap_or(stem)
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+            .collect();
+        Part {
+            stem: stem.to_string(),
+            suffix,
+            text,
+            renames: Vec::new(),
+            statics: Vec::new(),
+            restore: Vec::new(),
+        }
     }
 
     fn private(&self, name: &str) -> String {
@@ -178,13 +208,19 @@ pub(crate) type Compilers<'a> = dyn Fn(&[String]) -> Result<Box<dyn Compiler + '
 /// compiler of its own first object. A group that keeps a stubborn part out
 /// is joined as the groups either side of it; one that fails as a whole is
 /// not joined, and its parts stay as they are.
-pub(crate) fn reconcile(sources: &[(String, String)], prepare: &Prepare, compilers: &Compilers) -> Reconciled {
+pub(crate) fn reconcile(
+    sources: &[(String, String)],
+    prepare: &Prepare,
+    compilers: &Compilers,
+) -> Reconciled {
     let mut reconciled = Reconciled::default();
     let mut groups: Vec<Vec<(String, String)>> = vec![sources.to_vec()];
     while !groups.is_empty() {
         let group = groups.remove(0);
         if group.len() < 2 {
-            reconciled.alone.extend(group.into_iter().map(|(stem, _)| stem));
+            reconciled
+                .alone
+                .extend(group.into_iter().map(|(stem, _)| stem));
             continue;
         }
         let stems: Vec<String> = group.iter().map(|(stem, _)| stem.clone()).collect();
@@ -209,8 +245,14 @@ pub(crate) fn reconcile(sources: &[(String, String)], prepare: &Prepare, compile
             }
         }
     }
-    reconciled.alone.sort_by_key(|stem| sources.iter().position(|(s, _)| s == stem));
-    reconciled.joined.sort_by_key(|settled| sources.iter().position(|(stem, _)| *stem == settled.stems[0]));
+    reconciled
+        .alone
+        .sort_by_key(|stem| sources.iter().position(|(s, _)| s == stem));
+    reconciled.joined.sort_by_key(|settled| {
+        sources
+            .iter()
+            .position(|(stem, _)| *stem == settled.stems[0])
+    });
     reconciled
 }
 
@@ -228,14 +270,29 @@ pub(crate) struct Scratch {
 impl Scratch {
     /// A scratch file for `into` (a path from `root`).
     pub fn new(root: &Path, into: &str) -> Result<Scratch, String> {
-        let folder = root.join(into).parent().map(Path::to_path_buf).unwrap_or_else(|| root.to_path_buf());
-        let directory = tempfile::Builder::new().prefix("alchemy-join-").tempdir().map_err(|error| format!("cannot make a scratch folder: {error}"))?;
-        let name = Path::new(into).file_name().map_or_else(|| "join.c".into(), |name| name.to_string_lossy().into_owned());
-        Ok(Scratch { path: directory.path().join(name), folder, _directory: directory })
+        let folder = root
+            .join(into)
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| root.to_path_buf());
+        let directory = tempfile::Builder::new()
+            .prefix("alchemy-join-")
+            .tempdir()
+            .map_err(|error| format!("cannot make a scratch folder: {error}"))?;
+        let name = Path::new(into).file_name().map_or_else(
+            || "join.c".into(),
+            |name| name.to_string_lossy().into_owned(),
+        );
+        Ok(Scratch {
+            path: directory.path().join(name),
+            folder,
+            _directory: directory,
+        })
     }
 
     pub fn write(&self, text: &str) -> Result<(), String> {
-        std::fs::write(&self.path, placed(text, &self.folder)).map_err(|error| format!("cannot write {}: {error}", self.path.display()))
+        std::fs::write(&self.path, placed(text, &self.folder))
+            .map_err(|error| format!("cannot write {}: {error}", self.path.display()))
     }
 
     pub fn name(&self) -> String {
@@ -249,14 +306,21 @@ pub(crate) fn placed(text: &str, folder: &Path) -> String {
     let mut out = String::with_capacity(text.len());
     for line in text.split_inclusive('\n') {
         let rewritten = (|| {
-            let rest = line.trim_start().strip_prefix('#')?.trim_start().strip_prefix("include")?.trim_start();
+            let rest = line
+                .trim_start()
+                .strip_prefix('#')?
+                .trim_start()
+                .strip_prefix("include")?
+                .trim_start();
             let named = rest.strip_prefix('"')?.split('"').next()?;
             if Path::new(named).is_absolute() {
                 return None;
             }
             let full = super::normalize(&format!("{}/{named}", folder.to_string_lossy()))?;
             let full = format!("/{full}");
-            Path::new(&full).is_file().then(|| line.replacen(&format!("\"{named}\""), &format!("\"{full}\""), 1))
+            Path::new(&full)
+                .is_file()
+                .then(|| line.replacen(&format!("\"{named}\""), &format!("\"{full}\""), 1))
         })();
         out.push_str(rewritten.as_deref().unwrap_or(line));
     }
@@ -267,8 +331,16 @@ pub(crate) fn placed(text: &str, folder: &Path) -> String {
 /// that a part's `#include` (at `include`, a line of its text) entered first.
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Site {
-    Part { part: usize, line: usize },
-    Header { file: String, line: usize, part: usize, include: usize },
+    Part {
+        part: usize,
+        line: usize,
+    },
+    Header {
+        file: String,
+        line: usize,
+        part: usize,
+        include: usize,
+    },
 }
 
 impl Site {
@@ -294,24 +366,60 @@ enum Fix {
     /// same symbol.
     /// `expanded` is how the preprocessor wrote a declaration whose text
     /// never spells the name.
-    Alias { name: String, site: Site, kind: &'static str, other: Other, expanded: Option<Read> },
+    Alias {
+        name: String,
+        site: Site,
+        kind: &'static str,
+        other: Other,
+        expanded: Option<Read>,
+    },
     /// A tag, typedef, enumerator, static or macro defined another way: the
     /// part's own name for it.
-    Rename { name: String, site: Site, space: Space, kind: &'static str, other: Other },
+    Rename {
+        name: String,
+        site: Site,
+        space: Space,
+        kind: &'static str,
+        other: Other,
+    },
     /// A routine the part called with no declaration, now declared: the part
     /// keeps calling it unprototyped.
-    Implicit { part: usize, name: String, other: Other },
+    Implicit {
+        part: usize,
+        name: String,
+        other: Other,
+    },
     /// A routine the part saw declared as `declaration`, now declared
     /// otherwise for it.
-    Declared { part: usize, name: String, declaration: String, other: Other },
+    Declared {
+        part: usize,
+        name: String,
+        declaration: String,
+        other: Other,
+    },
     /// A macro the part saw as `original` (or not at all), now otherwise.
-    Macro { part: usize, name: String, original: Option<String>, joined: Option<String> },
+    Macro {
+        part: usize,
+        name: String,
+        original: Option<String>,
+        joined: Option<String>,
+    },
     /// A macro a header the part enters at line `include` defines otherwise
     /// than one before it: undefined before that #include, and the joined
     /// definition (`joined`) given back where the part ends.
-    Unmacro { part: usize, include: usize, name: String, joined: String },
+    Unmacro {
+        part: usize,
+        include: usize,
+        name: String,
+        joined: String,
+    },
     /// An identical repeat of a type, typedef or inline routine: deleted.
-    Delete { part: usize, line: usize, name: String, tag: bool },
+    Delete {
+        part: usize,
+        line: usize,
+        name: String,
+        tag: bool,
+    },
     /// A header view's bound declaration (at `line`) that cannot be read
     /// before its #include: moved after it.
     After { part: usize, line: usize },
@@ -321,7 +429,12 @@ impl Fix {
     fn part(&self) -> usize {
         match self {
             Fix::Alias { site, .. } | Fix::Rename { site, .. } => site.part(),
-            Fix::Implicit { part, .. } | Fix::Declared { part, .. } | Fix::Macro { part, .. } | Fix::Unmacro { part, .. } | Fix::Delete { part, .. } | Fix::After { part, .. } => *part,
+            Fix::Implicit { part, .. }
+            | Fix::Declared { part, .. }
+            | Fix::Macro { part, .. }
+            | Fix::Unmacro { part, .. }
+            | Fix::Delete { part, .. }
+            | Fix::After { part, .. } => *part,
         }
     }
 }
@@ -346,7 +459,11 @@ type Segments = Vec<(usize, usize, usize, usize)>;
 
 /// A marker's text, kept to one readable line.
 fn brief(text: &str) -> String {
-    let text = text.replace("*/", "* /").split_whitespace().collect::<Vec<_>>().join(" ");
+    let text = text
+        .replace("*/", "* /")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     match text.char_indices().nth(140) {
         Some((at, _)) => format!("{}...", &text[..at]),
         None => text,
@@ -354,7 +471,13 @@ fn brief(text: &str) -> String {
 }
 
 fn marker(part: &Part, kind: &str, name: &str, this: &str, other: &Other) -> String {
-    format!("/* {MARKER}{}): {kind} {name} as {}; {} has {}. */", part.suffix, brief(this.trim_end_matches(';')), other.owner, brief(other.text.trim_end_matches(';')))
+    format!(
+        "/* {MARKER}{}): {kind} {name} as {}; {} has {}. */",
+        part.suffix,
+        brief(this.trim_end_matches(';')),
+        other.owner,
+        brief(other.text.trim_end_matches(';'))
+    )
 }
 
 impl<'a> Join<'a> {
@@ -363,12 +486,21 @@ impl<'a> Join<'a> {
     fn bound_before(&self, part: usize, line: usize) -> Option<(usize, usize)> {
         let lines: Vec<&str> = self.parts[part].text.lines().collect();
         let declaration = lines.get(line.checked_sub(1)?)?;
-        let symbol = declaration.strip_prefix("extern ")?.rsplit_once("__asm__(\"")?.1.strip_suffix("\");")?;
+        let symbol = declaration
+            .strip_prefix("extern ")?
+            .rsplit_once("__asm__(\"")?
+            .1
+            .strip_suffix("\");")?;
         let define = format!("#define {symbol} ");
         let after = lines[line..].iter().position(|l| l.starts_with(&define))? + line;
         let include = after + 1;
-        lines.get(include).filter(|l| l.trim_start().starts_with("#include"))?;
-        let undefine = lines[include..].iter().position(|l| *l == format!("#undef {symbol}"))? + include;
+        lines
+            .get(include)
+            .filter(|l| l.trim_start().starts_with("#include"))?;
+        let undefine = lines[include..]
+            .iter()
+            .position(|l| *l == format!("#undef {symbol}"))?
+            + include;
         Some((line, undefine + 1))
     }
 
@@ -397,7 +529,14 @@ impl<'a> Join<'a> {
         };
         for (index, part) in self.parts.iter().enumerate().take(count) {
             // The first part's `/// @file` block stays the file's opening.
-            let opening = if index == 0 { part.text.lines().take_while(|l| l.starts_with("///")).count() } else { 0 };
+            let opening = if index == 0 {
+                part.text
+                    .lines()
+                    .take_while(|l| l.starts_with("///"))
+                    .count()
+            } else {
+                0
+            };
             let start = text::line_start(&part.text, opening + 1);
             if opening > 0 {
                 segments.push((line, index, 1, opening));
@@ -406,7 +545,11 @@ impl<'a> Join<'a> {
             if !out.is_empty() && !out.ends_with("\n\n") {
                 push(&mut out, "\n", &mut line);
             }
-            push(&mut out, &format!("// ---- {}.c ----\n", part.stem), &mut line);
+            push(
+                &mut out,
+                &format!("// ---- {}.c ----\n", part.stem),
+                &mut line,
+            );
             let rest = &part.text[start..];
             segments.push((line, index, opening + 1, rest.lines().count()));
             push(&mut out, rest, &mut line);
@@ -417,13 +560,17 @@ impl<'a> Join<'a> {
             for (name, definition, _) in text::macros(&part.text) {
                 // A header view's wrapper is undefined after its #include already.
                 let wrapper = definition == format!("{name} {}", part.private(&name));
-                if !wrapper && self.shared.get(&name) != Some(&definition) && !undefined.contains(&name) {
+                if !wrapper
+                    && self.shared.get(&name) != Some(&definition)
+                    && !undefined.contains(&name)
+                {
                     undefined.push(name);
                 }
             }
             for name in &undefined {
                 push(&mut out, &format!("#undef {name}\n"), &mut line);
-                if let Some(definition) = self.before.get(index).and_then(|before| before.get(name)) {
+                if let Some(definition) = self.before.get(index).and_then(|before| before.get(name))
+                {
                     push(&mut out, &format!("#define {definition}\n"), &mut line);
                 }
             }
@@ -435,17 +582,32 @@ impl<'a> Join<'a> {
     }
 
     fn locate(segments: &Segments, line: usize) -> Option<(usize, usize)> {
-        segments.iter().find(|(first, _, _, count)| (*first..*first + count).contains(&line)).map(|(first, part, part_first, _)| (*part, part_first + line - first))
+        segments
+            .iter()
+            .find(|(first, _, _, count)| (*first..*first + count).contains(&line))
+            .map(|(first, part, part_first, _)| (*part, part_first + line - first))
     }
 
-    fn site(&self, segments: &Segments, scratch: &str, pre: Option<&Preprocessed>, file: &str, line: usize) -> Option<Site> {
+    fn site(
+        &self,
+        segments: &Segments,
+        scratch: &str,
+        pre: Option<&Preprocessed>,
+        file: &str,
+        line: usize,
+    ) -> Option<Site> {
         if file == scratch {
             let (part, line) = Join::locate(segments, line)?;
             return Some(Site::Part { part, line });
         }
         let include = *pre?.entered.get(file)?;
         let (part, include) = Join::locate(segments, include)?;
-        Some(Site::Header { file: file.to_string(), line, part, include })
+        Some(Site::Header {
+            file: file.to_string(),
+            line,
+            part,
+            include,
+        })
     }
 
     /// The text a site's line is in.
@@ -453,7 +615,11 @@ impl<'a> Join<'a> {
         match site {
             Site::Part { part, .. } => Some(self.parts[*part].text.clone()),
             Site::Header { file, .. } => {
-                let path = if Path::new(file).is_absolute() { PathBuf::from(file) } else { self.compiler.root().join(file) };
+                let path = if Path::new(file).is_absolute() {
+                    PathBuf::from(file)
+                } else {
+                    self.compiler.root().join(file)
+                };
                 std::fs::read_to_string(path).ok()
             }
         }
@@ -489,12 +655,24 @@ impl<'a> Join<'a> {
     /// the name (a shared file's `void EFFECT_SPAWN(...)` with `EFFECT_SPAWN`
     /// a part's macro), as the preprocessor wrote it at the place the
     /// compiler named.
-    fn read_at(&self, site: &Site, name: &str, place: Option<&Message>, pre: Option<&Preprocessed>) -> Option<Read> {
+    fn read_at(
+        &self,
+        site: &Site,
+        name: &str,
+        place: Option<&Message>,
+        pre: Option<&Preprocessed>,
+    ) -> Option<Read> {
         self.read(site, name).or_else(|| {
             let (place, pre) = (place?, pre?);
             let all = statements(&pre.text);
-            let at = |line: usize| pre.origin.get(line.wrapping_sub(1)).is_some_and(|(file, n)| *file == place.file && *n == place.line);
-            let statement = all.iter().find(|s| s.find(name).is_some() && (s.first_line..=s.last_line).any(at))?;
+            let at = |line: usize| {
+                pre.origin
+                    .get(line.wrapping_sub(1))
+                    .is_some_and(|(file, n)| *file == place.file && *n == place.line)
+            };
+            let statement = all
+                .iter()
+                .find(|s| s.find(name).is_some() && (s.first_line..=s.last_line).any(at))?;
             Some(Read::of(statement, name, &pre.text))
         })
     }
@@ -502,7 +680,13 @@ impl<'a> Join<'a> {
     /// The fixes a compile's messages ask for: one a part, up to the first
     /// error no fix answers. An error no fix answers before any that one
     /// does is the part's own: it is given back as `Err`.
-    fn plan(&self, messages: &[Message], segments: &Segments, scratch: &str, pre: Option<&Preprocessed>) -> Result<Vec<Fix>, (usize, String)> {
+    fn plan(
+        &self,
+        messages: &[Message],
+        segments: &Segments,
+        scratch: &str,
+        pre: Option<&Preprocessed>,
+    ) -> Result<Vec<Fix>, (usize, String)> {
         let mut fixes: Vec<Fix> = Vec::new();
         let mut taken: BTreeSet<usize> = BTreeSet::new();
         let mut at = 0;
@@ -514,8 +698,17 @@ impl<'a> Join<'a> {
                 continue;
             }
             let later = self.site(segments, scratch, pre, &message.file, message.line);
-            let earlier = previous.and_then(|previous| self.site(segments, scratch, pre, &previous.file, previous.line));
-            match self.answer(message, previous, later.as_ref(), earlier.as_ref(), pre, (segments, scratch)) {
+            let earlier = previous.and_then(|previous| {
+                self.site(segments, scratch, pre, &previous.file, previous.line)
+            });
+            match self.answer(
+                message,
+                previous,
+                later.as_ref(),
+                earlier.as_ref(),
+                pre,
+                (segments, scratch),
+            ) {
                 Answer::Fix(fix) => {
                     if taken.insert(fix.part()) {
                         fixes.push(fix);
@@ -525,7 +718,10 @@ impl<'a> Join<'a> {
                 Answer::Unknown(why) => {
                     if fixes.is_empty() {
                         let part = later.as_ref().map_or(0, Site::part);
-                        let place = later.as_ref().map_or_else(|| format!("{}:{}", message.file, message.line), |site| self.describe(site));
+                        let place = later.as_ref().map_or_else(
+                            || format!("{}:{}", message.file, message.line),
+                            |site| self.describe(site),
+                        );
                         return Err((part, format!("{place}: {}{why}", message.text)));
                     }
                     break;
@@ -535,10 +731,13 @@ impl<'a> Join<'a> {
         // A repeat is deleted only while what it repeats stands: where this
         // round also gives the name another meaning (the first of two
         // identical inlines renamed for a header's), the next round judges.
-        let renamed: BTreeSet<String> = fixes.iter().filter_map(|fix| match fix {
-            Fix::Alias { name, .. } | Fix::Rename { name, .. } => Some(name.clone()),
-            _ => None,
-        }).collect();
+        let renamed: BTreeSet<String> = fixes
+            .iter()
+            .filter_map(|fix| match fix {
+                Fix::Alias { name, .. } | Fix::Rename { name, .. } => Some(name.clone()),
+                _ => None,
+            })
+            .collect();
         fixes.retain(|fix| !matches!(fix, Fix::Delete { name, .. } if renamed.contains(name)));
         Ok(fixes)
     }
@@ -546,60 +745,138 @@ impl<'a> Join<'a> {
     fn describe(&self, site: &Site) -> String {
         match site {
             Site::Part { part, line } => format!("{}.c:{line}", self.parts[*part].stem),
-            Site::Header { file, line, part, .. } => format!("{file}:{line} (from {}.c)", self.parts[*part].stem),
+            Site::Header {
+                file, line, part, ..
+            } => format!("{file}:{line} (from {}.c)", self.parts[*part].stem),
         }
     }
 
     /// What one message (and the one naming the earlier place, if any) asks.
-    fn answer(&self, message: &Message, previous: Option<&Message>, later: Option<&Site>, earlier: Option<&Site>, pre: Option<&Preprocessed>, joined: (&Segments, &str)) -> Answer {
-        let places = Places { later: message, earlier: previous, pre, segments: joined.0, scratch: joined.1 };
+    fn answer(
+        &self,
+        message: &Message,
+        previous: Option<&Message>,
+        later: Option<&Site>,
+        earlier: Option<&Site>,
+        pre: Option<&Preprocessed>,
+        joined: (&Segments, &str),
+    ) -> Answer {
+        let places = Places {
+            later: message,
+            earlier: previous,
+            pre,
+            segments: joined.0,
+            scratch: joined.1,
+        };
         let text = message.text.as_str();
         if let (Some(Site::Part { part, line }), false) = (later, message.warning) {
             if self.bound_before(*part, *line).is_some() {
-                return Answer::Fix(Fix::After { part: *part, line: *line });
+                return Answer::Fix(Fix::After {
+                    part: *part,
+                    line: *line,
+                });
             }
         }
         let Some(name) = message.name().map(str::to_string) else {
-            return if message.warning { Answer::Nothing } else { Answer::Unknown(String::new()) };
+            return if message.warning {
+                Answer::Nothing
+            } else {
+                Answer::Unknown(String::new())
+            };
         };
         let Some(later) = later else {
-            return if message.warning { Answer::Nothing } else { Answer::Unknown(" (in no part)".into()) };
+            return if message.warning {
+                Answer::Nothing
+            } else {
+                Answer::Unknown(" (in no part)".into())
+            };
         };
         let is = |prefix: &str| text.starts_with(prefix);
-        if is("conflicting types for") || is("redeclaration of `") && !is("redeclaration of `enum") || text.ends_with("redeclared as different kind of symbol") {
-            let Some(earlier) = earlier else { return Answer::Unknown(" (no earlier declaration named)".into()) };
+        if is("conflicting types for")
+            || is("redeclaration of `") && !is("redeclaration of `enum")
+            || text.ends_with("redeclared as different kind of symbol")
+        {
+            let Some(earlier) = earlier else {
+                return Answer::Unknown(" (no earlier declaration named)".into());
+            };
             return self.disagree(&name, later, earlier, &places);
         }
-        if is("redefinition of `struct ") || is("redefinition of `union ") || is("redeclaration of `enum ") {
+        if is("redefinition of `struct ")
+            || is("redefinition of `union ")
+            || is("redeclaration of `enum ")
+        {
             let tag = name.split_whitespace().nth(1).unwrap_or(&name).to_string();
             return self.retag(&tag, later, &places);
         }
         if is("redefinition of") {
-            let Some(earlier) = earlier else { return Answer::Unknown(" (no earlier definition named)".into()) };
+            let Some(earlier) = earlier else {
+                return Answer::Unknown(" (no earlier definition named)".into());
+            };
             return self.redefined(&name, later, earlier, &places);
         }
         if is("static declaration for") || text.contains("declared `extern' and later `static'") {
-            let Some(read) = self.read(later, &name) else { return Answer::Unknown(" (its declaration was not found)".into()) };
-            let other = Other { owner: earlier.map_or_else(|| "another part".into(), |e| self.owner(e, false)), text: "it external".into() };
-            return Answer::Fix(Fix::Rename { name, site: later.clone(), space: Space::Ordinary, kind: "static", other: Other { text: format!("{} ({})", other.text, read.text), ..other } });
+            let Some(read) = self.read(later, &name) else {
+                return Answer::Unknown(" (its declaration was not found)".into());
+            };
+            let other = Other {
+                owner: earlier.map_or_else(|| "another part".into(), |e| self.owner(e, false)),
+                text: "it external".into(),
+            };
+            return Answer::Fix(Fix::Rename {
+                name,
+                site: later.clone(),
+                space: Space::Ordinary,
+                kind: "static",
+                other: Other {
+                    text: format!("{} ({})", other.text, read.text),
+                    ..other
+                },
+            });
         }
         if is("type mismatch with previous implicit declaration") {
-            let Some(earlier) = earlier else { return Answer::Nothing };
+            let Some(earlier) = earlier else {
+                return Answer::Nothing;
+            };
             if earlier.part() == later.part() {
                 return Answer::Nothing;
             }
-            let Some(read) = self.read(later, &name) else { return Answer::Nothing };
-            let other = Other { owner: self.owner(later, read.defines), text: read.declaration };
-            return Answer::Fix(Fix::Implicit { part: earlier.part(), name, other });
+            let Some(read) = self.read(later, &name) else {
+                return Answer::Nothing;
+            };
+            let other = Other {
+                owner: self.owner(later, read.defines),
+                text: read.declaration,
+            };
+            return Answer::Fix(Fix::Implicit {
+                part: earlier.part(),
+                name,
+                other,
+            });
         }
         if is("too many arguments to function") || is("too few arguments to function") {
             // A part that declared the routine in a way C finds compatible
             // (`void F();` after `void F(int a) {...}`) calls it as it did.
-            let Site::Part { part, .. } = later else { return Answer::Unknown(" (called in a header)".into()) };
-            let own = statements(&self.parts[*part].text).into_iter().find(|s| s.body.is_none() && s.routine(&name)).map(|s| s.first_line);
-            let Some(line) = own else { return Answer::Unknown(" (the part has no declaration of its own)".into()) };
-            let other = Other { owner: "the parts before it".into(), text: "another declaration".into() };
-            return Answer::Fix(Fix::Alias { name, site: Site::Part { part: *part, line }, kind: "routine", other, expanded: None });
+            let Site::Part { part, .. } = later else {
+                return Answer::Unknown(" (called in a header)".into());
+            };
+            let own = statements(&self.parts[*part].text)
+                .into_iter()
+                .find(|s| s.body.is_none() && s.routine(&name))
+                .map(|s| s.first_line);
+            let Some(line) = own else {
+                return Answer::Unknown(" (the part has no declaration of its own)".into());
+            };
+            let other = Other {
+                owner: "the parts before it".into(),
+                text: "another declaration".into(),
+            };
+            return Answer::Fix(Fix::Alias {
+                name,
+                site: Site::Part { part: *part, line },
+                kind: "routine",
+                other,
+                expanded: None,
+            });
         }
         if text.ends_with("redefined") && message.warning {
             // A macro: the part that defines it keeps its own.
@@ -612,18 +889,38 @@ impl<'a> Join<'a> {
                     }
                     // Both in headers: the later header's is read as its own file read it.
                     let joined = self.source(earlier).and_then(|text| {
-                        text::macros(&text).into_iter().filter(|(n, _, _)| *n == name).min_by_key(|(_, _, line)| line.abs_diff(Join::line(earlier))).map(|(_, definition, _)| definition)
+                        text::macros(&text)
+                            .into_iter()
+                            .filter(|(n, _, _)| *n == name)
+                            .min_by_key(|(_, _, line)| line.abs_diff(Join::line(earlier)))
+                            .map(|(_, definition, _)| definition)
                     });
-                    let Some(joined) = joined else { return Answer::Unknown(" (the earlier definition was not found)".into()) };
-                    return Answer::Fix(Fix::Unmacro { part: *part, include: *include, name, joined });
+                    let Some(joined) = joined else {
+                        return Answer::Unknown(" (the earlier definition was not found)".into());
+                    };
+                    return Answer::Fix(Fix::Unmacro {
+                        part: *part,
+                        include: *include,
+                        name,
+                        joined,
+                    });
                 }
                 _ => return Answer::Unknown(" (no earlier definition named)".into()),
             };
             if earlier.is_some_and(|earlier| earlier.part() == later.part()) {
                 return Answer::Nothing;
             }
-            let other = Other { owner: "another part or header".into(), text: "another definition".into() };
-            return Answer::Fix(Fix::Rename { name, site, space: Space::Macro, kind: "macro", other });
+            let other = Other {
+                owner: "another part or header".into(),
+                text: "another definition".into(),
+            };
+            return Answer::Fix(Fix::Rename {
+                name,
+                site,
+                space: Space::Macro,
+                kind: "macro",
+                other,
+            });
         }
         if message.warning {
             Answer::Nothing
@@ -637,19 +934,37 @@ impl<'a> Join<'a> {
         if later.part() == earlier.part() {
             return Answer::Unknown(" (both in one part)".into());
         }
-        let (Some(late), Some(early)) = (self.read_at(later, name, Some(places.later), places.pre), self.read_at(earlier, name, places.earlier, places.pre)) else {
+        let (Some(late), Some(early)) = (
+            self.read_at(later, name, Some(places.later), places.pre),
+            self.read_at(earlier, name, places.earlier, places.pre),
+        ) else {
             return Answer::Unknown(" (a declaration was not found)".into());
         };
         // A part's own site renames; failing that, the later one's include.
         let renamed = |kind: &'static str, mine: &Read, theirs: &Read, other_site: &Site| {
             let site = match (later, earlier) {
-                (Site::Part { .. }, _) | (Site::Header { .. }, Site::Header { .. }) => later.clone(),
+                (Site::Part { .. }, _) | (Site::Header { .. }, Site::Header { .. }) => {
+                    later.clone()
+                }
                 (_, Site::Part { .. }) => earlier.clone(),
             };
-            let (this, that) = if site == *later { (mine, theirs) } else { (theirs, mine) };
+            let (this, that) = if site == *later {
+                (mine, theirs)
+            } else {
+                (theirs, mine)
+            };
             let _ = this;
             let other_site = if site == *later { other_site } else { later };
-            Answer::Fix(Fix::Rename { name: name.to_string(), site, space: Space::Ordinary, kind, other: Other { owner: self.owner(other_site, false), text: that.text.clone() } })
+            Answer::Fix(Fix::Rename {
+                name: name.to_string(),
+                site,
+                space: Space::Ordinary,
+                kind,
+                other: Other {
+                    owner: self.owner(other_site, false),
+                    text: that.text.clone(),
+                },
+            })
         };
         if late.typedef || early.typedef {
             return renamed("typedef", &late, &early, earlier);
@@ -658,35 +973,81 @@ impl<'a> Join<'a> {
             return renamed("enumerator", &late, &early, earlier);
         }
         if late.is_static || early.is_static {
-            let (site, this, that, other_site) = if late.is_static { (later, &late, &early, earlier) } else { (earlier, &early, &late, later) };
+            let (site, this, that, other_site) = if late.is_static {
+                (later, &late, &early, earlier)
+            } else {
+                (earlier, &early, &late, later)
+            };
             let _ = this;
-            return Answer::Fix(Fix::Rename { name: name.to_string(), site: site.clone(), space: Space::Ordinary, kind: "static", other: Other { owner: self.owner(other_site, that.defines), text: that.declaration.clone() } });
+            return Answer::Fix(Fix::Rename {
+                name: name.to_string(),
+                site: site.clone(),
+                space: Space::Ordinary,
+                kind: "static",
+                other: Other {
+                    owner: self.owner(other_site, that.defines),
+                    text: that.declaration.clone(),
+                },
+            });
         }
         // The definition is the truth: the other side is the view. Between two
         // declarations a part's own takes it rather than a header's, which the
         // parts after it may read only through the include it guards.
-        let own_earlier = !early.defines && matches!((later, earlier), (Site::Header { .. }, Site::Part { .. }));
-        let (site, this, that, other_site) = if late.defines || own_earlier { (earlier, &early, &late, later) } else { (later, &late, &early, earlier) };
+        let own_earlier =
+            !early.defines && matches!((later, earlier), (Site::Header { .. }, Site::Part { .. }));
+        let (site, this, that, other_site) = if late.defines || own_earlier {
+            (earlier, &early, &late, later)
+        } else {
+            (later, &late, &early, earlier)
+        };
         let expanded = self.read(site, name).is_none().then(|| this.clone());
-        let kind = if late.routine || early.routine { "routine" } else { "variable" };
-        let shown = if that.routine && that.defines { that.declaration.clone() } else { that.text.clone() };
-        Answer::Fix(Fix::Alias { name: name.to_string(), site: site.clone(), kind, other: Other { owner: self.owner(other_site, that.defines), text: shown }, expanded })
+        let kind = if late.routine || early.routine {
+            "routine"
+        } else {
+            "variable"
+        };
+        let shown = if that.routine && that.defines {
+            that.declaration.clone()
+        } else {
+            that.text.clone()
+        };
+        Answer::Fix(Fix::Alias {
+            name: name.to_string(),
+            site: site.clone(),
+            kind,
+            other: Other {
+                owner: self.owner(other_site, that.defines),
+                text: shown,
+            },
+            expanded,
+        })
     }
 
     /// A tag defined twice: deleted when the two are the same, else renamed.
     fn retag(&self, tag: &str, later: &Site, places: &Places) -> Answer {
-        let Some(pre) = places.pre else { return Answer::Unknown(" (not preprocessed)".into()) };
+        let Some(pre) = places.pre else {
+            return Answer::Unknown(" (not preprocessed)".into());
+        };
         let definitions = tag_definitions(pre, tag);
         // The later definition: the one at the place the message names (the
         // joined file's line, or a header's); the earlier, the first.
-        let late = definitions.iter().position(|(file, at, end, _)| *file == places.later.file && (*at..=*end).contains(&places.later.line));
-        let (Some(late), Some(first)) = (late, definitions.first()) else { return Answer::Unknown(" (its definitions were not found)".into()) };
+        let late = definitions.iter().position(|(file, at, end, _)| {
+            *file == places.later.file && (*at..=*end).contains(&places.later.line)
+        });
+        let (Some(late), Some(first)) = (late, definitions.first()) else {
+            return Answer::Unknown(" (its definitions were not found)".into());
+        };
         if late == 0 {
             return Answer::Unknown(" (its earlier definition was not found)".into());
         }
         if definitions[late].3 == first.3 {
             if let Site::Part { part, line } = later {
-                return Answer::Fix(Fix::Delete { part: *part, line: *line, name: tag.to_string(), tag: true });
+                return Answer::Fix(Fix::Delete {
+                    part: *part,
+                    line: *line,
+                    name: tag.to_string(),
+                    tag: true,
+                });
             }
         }
         // A header's tag against a part's own: the part's is renamed, so the
@@ -694,12 +1055,34 @@ impl<'a> Join<'a> {
         if let (Site::Header { file, .. }, true) = (later, first.0 == places.scratch) {
             if let Some((part, line)) = Join::locate(places.segments, first.1) {
                 let owner = file.rsplit('/').next().unwrap_or(file).to_string();
-                return Answer::Fix(Fix::Rename { name: tag.to_string(), site: Site::Part { part, line }, space: Space::Tag, kind: "tag", other: Other { owner, text: "another definition".into() } });
+                return Answer::Fix(Fix::Rename {
+                    name: tag.to_string(),
+                    site: Site::Part { part, line },
+                    space: Space::Tag,
+                    kind: "tag",
+                    other: Other {
+                        owner,
+                        text: "another definition".into(),
+                    },
+                });
             }
         }
         let owner = first.0.rsplit('/').next().unwrap_or(&first.0).to_string();
-        let owner = if owner.starts_with(".views-") { "an earlier part".to_string() } else { owner };
-        Answer::Fix(Fix::Rename { name: tag.to_string(), site: later.clone(), space: Space::Tag, kind: "tag", other: Other { owner, text: "another definition".into() } })
+        let owner = if owner.starts_with(".views-") {
+            "an earlier part".to_string()
+        } else {
+            owner
+        };
+        Answer::Fix(Fix::Rename {
+            name: tag.to_string(),
+            site: later.clone(),
+            space: Space::Tag,
+            kind: "tag",
+            other: Other {
+                owner,
+                text: "another definition".into(),
+            },
+        })
     }
 
     /// An ordinary name defined twice: an identical typedef or inline
@@ -708,53 +1091,126 @@ impl<'a> Join<'a> {
         if later.part() == earlier.part() {
             return Answer::Unknown(" (both in one part)".into());
         }
-        let (Some(late), Some(early)) = (self.read_at(later, name, Some(places.later), places.pre), self.read_at(earlier, name, places.earlier, places.pre)) else {
+        let (Some(late), Some(early)) = (
+            self.read_at(later, name, Some(places.later), places.pre),
+            self.read_at(earlier, name, places.earlier, places.pre),
+        ) else {
             return Answer::Unknown(" (a definition was not found)".into());
         };
         let same = late.text == early.text;
         if same && (late.typedef || late.inline) && !late.tagged {
             if let Site::Part { part, line } = later {
-                return Answer::Fix(Fix::Delete { part: *part, line: *line, name: name.to_string(), tag: false });
+                return Answer::Fix(Fix::Delete {
+                    part: *part,
+                    line: *line,
+                    name: name.to_string(),
+                    tag: false,
+                });
             }
         }
-        let kind = if late.typedef { "typedef" } else if late.is_static || early.is_static { "static" } else { return Answer::Unknown(" (two external definitions)".into()) };
+        let kind = if late.typedef {
+            "typedef"
+        } else if late.is_static || early.is_static {
+            "static"
+        } else {
+            return Answer::Unknown(" (two external definitions)".into());
+        };
         // A static against an external definition: the static's side is
         // renamed, so the object still exports the external one's symbol.
         let site = match (late.is_static, early.is_static) {
             (true, false) if !late.typedef => later,
             (false, true) if !late.typedef => earlier,
-            _ if matches!(later, Site::Part { .. }) || matches!(earlier, Site::Header { .. }) => later,
+            _ if matches!(later, Site::Part { .. }) || matches!(earlier, Site::Header { .. }) => {
+                later
+            }
             _ => earlier,
         };
         let other_site = if site == later { earlier } else { later };
         let other_read = if site == later { &early } else { &late };
-        Answer::Fix(Fix::Rename { name: name.to_string(), site: site.clone(), space: Space::Ordinary, kind, other: Other { owner: self.owner(other_site, false), text: other_read.text.clone() } })
+        Answer::Fix(Fix::Rename {
+            name: name.to_string(),
+            site: site.clone(),
+            space: Space::Ordinary,
+            kind,
+            other: Other {
+                owner: self.owner(other_site, false),
+                text: other_read.text.clone(),
+            },
+        })
     }
 
     /// Makes a fix: the part's text changed, or why it cannot be.
     fn apply(&mut self, fix: &Fix) -> Result<(), String> {
         match fix {
-            Fix::Alias { name, site, kind, other, expanded } => self.alias(name, site, kind, other, expanded.as_ref()),
-            Fix::Rename { name, site, space, kind, other } => self.rename(name, site, *space, kind, other),
+            Fix::Alias {
+                name,
+                site,
+                kind,
+                other,
+                expanded,
+            } => self.alias(name, site, kind, other, expanded.as_ref()),
+            Fix::Rename {
+                name,
+                site,
+                space,
+                kind,
+                other,
+            } => self.rename(name, site, *space, kind, other),
             Fix::Implicit { part, name, other } => {
                 let declaration = format!("extern int {name}();");
-                self.declare(*part, name, &declaration, "routine", other, &format!("int {name}() unprototyped, as this part called it"))
+                self.declare(
+                    *part,
+                    name,
+                    &declaration,
+                    "routine",
+                    other,
+                    &format!("int {name}() unprototyped, as this part called it"),
+                )
             }
-            Fix::Declared { part, name, declaration, other } => self.declare(*part, name, declaration, "routine", other, declaration),
-            Fix::Macro { part, name, original, joined } => {
-                let other = Other { owner: "the parts before it".into(), text: joined.clone().map_or_else(|| "it undefined".into(), |j| format!("#define {j}")) };
-                let this = original.clone().map_or_else(|| "undefined".into(), |o| format!("#define {o}"));
+            Fix::Declared {
+                part,
+                name,
+                declaration,
+                other,
+            } => self.declare(*part, name, declaration, "routine", other, declaration),
+            Fix::Macro {
+                part,
+                name,
+                original,
+                joined,
+            } => {
+                let other = Other {
+                    owner: "the parts before it".into(),
+                    text: joined
+                        .clone()
+                        .map_or_else(|| "it undefined".into(), |j| format!("#define {j}")),
+                };
+                let this = original
+                    .clone()
+                    .map_or_else(|| "undefined".into(), |o| format!("#define {o}"));
                 let p = &mut self.parts[*part];
-                let mut lines = vec![marker(p, "macro", name, &this, &other), format!("#undef {name}")];
+                let mut lines = vec![
+                    marker(p, "macro", name, &this, &other),
+                    format!("#undef {name}"),
+                ];
                 lines.extend(original.iter().map(|o| format!("#define {o}")));
                 p.text = insert_before(&p.text, first_code_line(&p.text), &lines);
                 p.restore.push(format!("#undef {name}"));
-                p.restore.extend(joined.iter().map(|j| format!("#define {j}")));
+                p.restore
+                    .extend(joined.iter().map(|j| format!("#define {j}")));
                 *self.views.entry("macro").or_default() += 1;
                 Ok(())
             }
-            Fix::Unmacro { part, include, name, joined } => {
-                let other = Other { owner: "the parts before it".into(), text: format!("#define {joined}") };
+            Fix::Unmacro {
+                part,
+                include,
+                name,
+                joined,
+            } => {
+                let other = Other {
+                    owner: "the parts before it".into(),
+                    text: format!("#define {joined}"),
+                };
                 let p = &mut self.parts[*part];
                 let note = marker(p, "macro", name, "its header's own definition", &other);
                 p.text = insert_before(&p.text, *include, &[note, format!("#undef {name}")]);
@@ -764,7 +1220,9 @@ impl<'a> Join<'a> {
                 Ok(())
             }
             Fix::After { part, line } => {
-                let (declaration, undefine) = self.bound_before(*part, *line).ok_or("no bound declaration there")?;
+                let (declaration, undefine) = self
+                    .bound_before(*part, *line)
+                    .ok_or("no bound declaration there")?;
                 let p = &mut self.parts[*part];
                 let mut lines: Vec<String> = p.text.lines().map(str::to_string).collect();
                 let moved = lines.remove(declaration - 1);
@@ -772,23 +1230,41 @@ impl<'a> Join<'a> {
                 p.text = lines.join("\n") + "\n";
                 Ok(())
             }
-            Fix::Delete { part, line, name, tag } => {
+            Fix::Delete {
+                part,
+                line,
+                name,
+                tag,
+            } => {
                 let p = &mut self.parts[*part];
                 let all = statements(&p.text);
-                let statement = statement_at(&all, *line, name).ok_or_else(|| format!("{name}'s repeat was not found"))?;
+                let statement = statement_at(&all, *line, name)
+                    .ok_or_else(|| format!("{name}'s repeat was not found"))?;
                 let (start, mut end);
                 end = statement.end;
-                let only_tag = *tag && statement.words.len() >= 4 && statement.words[1].text == name && statement.words[2].text == "{" && statement.words[statement.words.len() - 2].text == "}";
+                let only_tag = *tag
+                    && statement.words.len() >= 4
+                    && statement.words[1].text == name
+                    && statement.words[2].text == "{"
+                    && statement.words[statement.words.len() - 2].text == "}";
                 if *tag && !only_tag {
                     // `typedef struct X { ... } T;` keeps its declarators.
                     let open = statement.find("{").ok_or("no body")?;
-                    let close = statement.words.iter().rposition(|w| w.text == "}" && w.depth == 0).ok_or("no body")?;
+                    let close = statement
+                        .words
+                        .iter()
+                        .rposition(|w| w.text == "}" && w.depth == 0)
+                        .ok_or("no body")?;
                     start = statement.words[open].at;
                     end = statement.words[close].at + 1;
                 } else {
                     // Its documentation goes with it.
                     let mut first = statement.first_line;
-                    while first > 1 && p.text[text::line_start(&p.text, first - 1)..].trim_start().starts_with("///") {
+                    while first > 1
+                        && p.text[text::line_start(&p.text, first - 1)..]
+                            .trim_start()
+                            .starts_with("///")
+                    {
                         first -= 1;
                     }
                     start = text::line_start(&p.text, first);
@@ -802,23 +1278,50 @@ impl<'a> Join<'a> {
         }
     }
 
-    fn alias(&mut self, name: &str, site: &Site, kind: &'static str, other: &Other, expanded: Option<&Read>) -> Result<(), String> {
-        let read = self.read(site, name).or_else(|| expanded.cloned()).ok_or_else(|| format!("{name}'s declaration was not found"))?;
+    fn alias(
+        &mut self,
+        name: &str,
+        site: &Site,
+        kind: &'static str,
+        other: &Other,
+        expanded: Option<&Read>,
+    ) -> Result<(), String> {
+        let read = self
+            .read(site, name)
+            .or_else(|| expanded.cloned())
+            .ok_or_else(|| format!("{name}'s declaration was not found"))?;
         let part = site.part();
         let private = self.parts[part].private(name);
         let p = &mut self.parts[part];
-        let this = if read.routine && read.defines { read.declaration.clone() } else { read.text.clone() };
+        let this = if read.routine && read.defines {
+            read.declaration.clone()
+        } else {
+            read.text.clone()
+        };
         let note = marker(p, kind, name, &this, other);
         match site {
             Site::Part { line, .. } => {
                 let renamed = rename(&p.text, name, &private, Space::Ordinary);
                 let all = statements(&renamed);
-                let statement = statement_at(&all, *line, &private).ok_or_else(|| format!("{name}'s declaration was not found"))?;
-                if statement.several() || statement.body.is_some() || statement.words.iter().any(|w| w.depth == 0 && w.text == "=") {
+                let statement = statement_at(&all, *line, &private)
+                    .ok_or_else(|| format!("{name}'s declaration was not found"))?;
+                if statement.several()
+                    || statement.body.is_some()
+                    || statement
+                        .words
+                        .iter()
+                        .any(|w| w.depth == 0 && w.text == "=")
+                {
                     return Err(format!("{}.c:{line}: {name} is declared with other names or defined there, so no view of it can be written", p.stem));
                 }
-                let semicolon = statement.semicolon().ok_or_else(|| format!("{name}'s declaration has no ;"))?;
-                let (start, first_line, external) = (statement.start, statement.first_line, statement.has("extern"));
+                let semicolon = statement
+                    .semicolon()
+                    .ok_or_else(|| format!("{name}'s declaration has no ;"))?;
+                let (start, first_line, external) = (
+                    statement.start,
+                    statement.first_line,
+                    statement.has("extern"),
+                );
                 let mut text = renamed.clone();
                 text.insert_str(semicolon, &format!(" __asm__(\"{name}\")"));
                 if !external {
@@ -830,9 +1333,14 @@ impl<'a> Join<'a> {
                 // Bound before the #include: the header's own inline code uses the
                 // name as it is read, before any later label could take hold.
                 // The tags it names are declared first, so they are file scope's.
-                let declaration = rename(&read.declaration_for(name), name, &private, Space::Ordinary);
+                let declaration =
+                    rename(&read.declaration_for(name), name, &private, Space::Ordinary);
                 let mut lines = vec![note];
-                lines.extend(tags_named(&declaration).into_iter().map(|tag| format!("{tag};")));
+                lines.extend(
+                    tags_named(&declaration)
+                        .into_iter()
+                        .map(|tag| format!("{tag};")),
+                );
                 lines.push(external(&declaration, name));
                 lines.push(format!("#define {name} {private}"));
                 let text = rename(&p.text, name, &private, Space::Ordinary);
@@ -845,25 +1353,49 @@ impl<'a> Join<'a> {
         Ok(())
     }
 
-    fn rename(&mut self, name: &str, site: &Site, space: Space, kind: &'static str, other: &Other) -> Result<(), String> {
+    fn rename(
+        &mut self,
+        name: &str,
+        site: &Site,
+        space: Space,
+        kind: &'static str,
+        other: &Other,
+    ) -> Result<(), String> {
         let part = site.part();
         let private = self.parts[part].private(name);
         let p = &mut self.parts[part];
-        let shown = if space == Space::Tag { format!("struct {name}") } else { name.to_string() };
-        let shown_private = if space == Space::Tag { format!("struct {private}") } else { private.clone() };
+        let shown = if space == Space::Tag {
+            format!("struct {name}")
+        } else {
+            name.to_string()
+        };
+        let shown_private = if space == Space::Tag {
+            format!("struct {private}")
+        } else {
+            private.clone()
+        };
         let note = marker(p, kind, &shown, &shown_private, other);
         match site {
             Site::Part { line, .. } => {
                 let renamed = rename(&p.text, name, &private, space);
                 let first = if kind == "macro" {
-                    text::macros(&renamed).into_iter().filter(|(n, _, _)| *n == private).map(|(_, _, line)| line).min_by_key(|at| at.abs_diff(*line))
+                    text::macros(&renamed)
+                        .into_iter()
+                        .filter(|(n, _, _)| *n == private)
+                        .map(|(_, _, line)| line)
+                        .min_by_key(|at| at.abs_diff(*line))
                 } else {
                     let all = statements(&renamed);
                     statement_at(&all, *line, &private).map(|statement| statement.first_line)
                 };
-                let first = first.ok_or_else(|| format!("{}.c:{line}: {name} was not found to rename", p.stem))?;
+                let first = first.ok_or_else(|| {
+                    format!("{}.c:{line}: {name} was not found to rename", p.stem)
+                })?;
                 if renamed == p.text {
-                    return Err(format!("{}.c:{line}: renaming {name} changed nothing", p.stem));
+                    return Err(format!(
+                        "{}.c:{line}: renaming {name} changed nothing",
+                        p.stem
+                    ));
                 }
                 p.text = insert_before(&renamed, first, &[note]);
             }
@@ -878,11 +1410,15 @@ impl<'a> Join<'a> {
         // anything else as a static would hide an export it took away.
         if kind == "static" {
             let is_static = match site {
-                Site::Part { line, .. } => statement_at(&statements(&p.text), *line + 1, &private).is_some_and(|s| s.has("static")),
+                Site::Part { line, .. } => statement_at(&statements(&p.text), *line + 1, &private)
+                    .is_some_and(|s| s.has("static")),
                 Site::Header { .. } => true,
             };
             if !is_static {
-                return Err(format!("{}: {name} was renamed as a static, but its definition there is not static", p.stem));
+                return Err(format!(
+                    "{}: {name} was renamed as a static, but its definition there is not static",
+                    p.stem
+                ));
             }
             p.statics.push((name.to_string(), private.clone()));
         }
@@ -893,7 +1429,15 @@ impl<'a> Join<'a> {
 
     /// A routine the part sees as `declaration`: its uses renamed, and the
     /// declaration bound to the symbol above its first use.
-    fn declare(&mut self, part: usize, name: &str, declaration: &str, kind: &'static str, other: &Other, this: &str) -> Result<(), String> {
+    fn declare(
+        &mut self,
+        part: usize,
+        name: &str,
+        declaration: &str,
+        kind: &'static str,
+        other: &Other,
+        this: &str,
+    ) -> Result<(), String> {
         let p = &mut self.parts[part];
         let private = p.private(name);
         let renamed = rename(&p.text, name, &private, Space::Ordinary);
@@ -907,7 +1451,11 @@ impl<'a> Join<'a> {
         }
         let declaration = external(&rename(&declaration, name, &private, Space::Ordinary), name);
         let all = statements(&renamed);
-        let first = all.iter().find(|s| s.find(&private).is_some()).map(|s| s.first_line).unwrap_or_else(|| first_code_line(&renamed));
+        let first = all
+            .iter()
+            .find(|s| s.find(&private).is_some())
+            .map(|s| s.first_line)
+            .unwrap_or_else(|| first_code_line(&renamed));
         let note = marker(p, kind, name, this, other);
         p.text = insert_before(&renamed, first, &[note, declaration]);
         p.renames.push((name.to_string(), private, Space::Ordinary));
@@ -949,7 +1497,9 @@ struct Read {
 impl Read {
     fn of(statement: &text::Statement, name: &str, source: &str) -> Read {
         Read {
-            tagged: source.get(statement.start..statement.end).is_some_and(|code| code.contains("FAKEMATCH")),
+            tagged: source
+                .get(statement.start..statement.end)
+                .is_some_and(|code| code.contains("FAKEMATCH")),
             text: statement.squashed(),
             declaration: statement.declaration(),
             typedef: statement.has("typedef"),
@@ -1004,14 +1554,20 @@ fn is_previous(text: &str) -> bool {
 fn external(declaration: &str, symbol: &str) -> String {
     let declaration = declaration.trim().trim_end_matches(';').trim_end();
     let declaration = declaration.strip_prefix("static ").unwrap_or(declaration);
-    let declaration = if declaration.starts_with("extern ") { declaration.to_string() } else { format!("extern {declaration}") };
+    let declaration = if declaration.starts_with("extern ") {
+        declaration.to_string()
+    } else {
+        format!("extern {declaration}")
+    };
     format!("{declaration} __asm__(\"{symbol}\");")
 }
 
 /// The first line of a text that is neither a comment nor blank nor a
 /// directive: where a part's own declarations may begin.
 fn first_code_line(text: &str) -> usize {
-    statements(text).first().map_or(text.lines().count() + 1, |s| s.first_line)
+    statements(text)
+        .first()
+        .map_or(text.lines().count() + 1, |s| s.first_line)
 }
 
 /// Each definition of `struct|union|enum TAG { ... }` in a preprocessed
@@ -1019,10 +1575,16 @@ fn first_code_line(text: &str) -> usize {
 /// its tokens.
 fn tag_definitions(pre: &Preprocessed, tag: &str) -> Vec<(String, usize, usize, Vec<String>)> {
     use crate::gba::clex::{lex, Kind};
-    let tokens: Vec<_> = lex(&pre.text).into_iter().filter(|t| !t.pp && t.kind != Kind::Comment).collect();
+    let tokens: Vec<_> = lex(&pre.text)
+        .into_iter()
+        .filter(|t| !t.pp && t.kind != Kind::Comment)
+        .collect();
     let mut found = Vec::new();
     for at in 0..tokens.len().saturating_sub(2) {
-        if matches!(tokens[at].text, "struct" | "union" | "enum") && tokens[at + 1].text == tag && tokens[at + 2].text == "{" {
+        if matches!(tokens[at].text, "struct" | "union" | "enum")
+            && tokens[at + 1].text == tag
+            && tokens[at + 2].text == "{"
+        {
             let mut depth = 0;
             let mut words = Vec::new();
             let mut last = tokens[at + 1].line;
@@ -1040,8 +1602,16 @@ fn tag_definitions(pre: &Preprocessed, tag: &str) -> Vec<(String, usize, usize, 
                     _ => {}
                 }
             }
-            let (file, line) = pre.origin.get(tokens[at + 1].line - 1).cloned().unwrap_or_default();
-            let end = pre.origin.get(last - 1).filter(|(f, _)| *f == file).map_or(line, |(_, end)| *end);
+            let (file, line) = pre
+                .origin
+                .get(tokens[at + 1].line - 1)
+                .cloned()
+                .unwrap_or_default();
+            let end = pre
+                .origin
+                .get(last - 1)
+                .filter(|(f, _)| *f == file)
+                .map_or(line, |(_, end)| *end);
             found.push((file, line, end, words));
         }
     }
@@ -1050,9 +1620,18 @@ fn tag_definitions(pre: &Preprocessed, tag: &str) -> Vec<(String, usize, usize, 
 
 /// The declaration of `name` that `function` saw: one made implicitly in
 /// its body, else the last before it.
-fn visible<'d>(declared: &'d [Declared], function: &[String], name: &[String]) -> Option<&'d Declared> {
-    let at = declared.iter().position(|d| function.contains(&d.name) && d.how.ends_with('F'))?;
-    let end = declared[at + 1..].iter().position(|d| d.how.ends_with('F')).map_or(declared.len(), |n| at + 1 + n);
+fn visible<'d>(
+    declared: &'d [Declared],
+    function: &[String],
+    name: &[String],
+) -> Option<&'d Declared> {
+    let at = declared
+        .iter()
+        .position(|d| function.contains(&d.name) && d.how.ends_with('F'))?;
+    let end = declared[at + 1..]
+        .iter()
+        .position(|d| d.how.ends_with('F'))
+        .map_or(declared.len(), |n| at + 1 + n);
     declared[at + 1..end]
         .iter()
         .find(|d| name.contains(&d.name) && d.how.starts_with('I'))
@@ -1067,11 +1646,22 @@ fn settle(parts: Vec<Part>, into: &str, compiler: &dyn Compiler) -> Result<Settl
     if editions.is_empty() {
         return Err(Failed::Run("no edition links the run".into()));
     }
-    let mut join = Join { parts, compiler, shared: BTreeMap::new(), before: Vec::new(), views: BTreeMap::new() };
+    let mut join = Join {
+        parts,
+        compiler,
+        shared: BTreeMap::new(),
+        before: Vec::new(),
+        views: BTreeMap::new(),
+    };
     // The build's own assembly of each part, in each edition, as it reads.
     let originals: Vec<Vec<String>> = editions
         .iter()
-        .map(|edition| join.parts.iter().map(|part| compiler.built(edition, &part.stem)).collect::<Result<Vec<_>, String>>())
+        .map(|edition| {
+            join.parts
+                .iter()
+                .map(|part| compiler.built(edition, &part.stem))
+                .collect::<Result<Vec<_>, String>>()
+        })
         .collect::<Result<_, String>>()
         .map_err(Failed::Run)?;
     let (shared, defined) = shared_macros(&join, &scratch, &editions).map_err(Failed::Run)?;
@@ -1092,33 +1682,68 @@ fn settle(parts: Vec<Part>, into: &str, compiler: &dyn Compiler) -> Result<Settl
         }
         for (index, edition) in editions.iter().enumerate() {
             let moved = verify(&join, &scratch, edition, &originals[index])?;
-            let Some((part, function)) = moved.first().cloned() else { continue };
+            let Some((part, function)) = moved.first().cloned() else {
+                continue;
+            };
             rounds += 1;
             if rounds > ROUNDS {
-                return Err(Failed::Part(part, format!("{function} still differs in {edition} after {ROUNDS} compiles")));
+                return Err(Failed::Part(
+                    part,
+                    format!("{function} still differs in {edition} after {ROUNDS} compiles"),
+                ));
             }
-            if search(&mut join, &scratch, edition, &originals[index], part, &function, moved.len())? {
+            if search(
+                &mut join,
+                &scratch,
+                edition,
+                &originals[index],
+                part,
+                &function,
+                moved.len(),
+            )? {
                 continue 'settle;
             }
-            let others: Vec<&str> = moved.iter().filter(|(p, _)| *p == part).map(|(_, f)| f.as_str()).collect();
+            let others: Vec<&str> = moved
+                .iter()
+                .filter(|(p, _)| *p == part)
+                .map(|(_, f)| f.as_str())
+                .collect();
             return Err(Failed::Part(part, format!("{} compiles differently joined in {edition}, and no name's meaning was found changed for it", others.join(", "))));
         }
         modern(&join, &scratch, &editions)?;
         let (text, _) = join.render();
-        return Ok(Settled { stems: join.parts.iter().map(|p| p.stem.clone()).collect(), text, views: join.views });
+        return Ok(Settled {
+            stems: join.parts.iter().map(|p| p.stem.clone()).collect(),
+            text,
+            views: join.views,
+        });
     }
 }
 
 /// The macros the parts' headers define, read from their includes alone
 /// (with the `#if`s around them) in every edition: those every edition
 /// defines one way, and every name any edition defines.
-fn shared_macros(join: &Join, scratch: &Scratch, editions: &[String]) -> Result<(BTreeMap<String, String>, BTreeSet<String>), String> {
+fn shared_macros(
+    join: &Join,
+    scratch: &Scratch,
+    editions: &[String],
+) -> Result<(BTreeMap<String, String>, BTreeSet<String>), String> {
     let mut includes = String::new();
     for part in &join.parts {
         for line in part.text.lines() {
-            let directive = line.trim_start().strip_prefix('#').map(str::trim_start).unwrap_or("");
-            let word = directive.split(|c: char| !c.is_ascii_alphabetic()).next().unwrap_or("");
-            if matches!(word, "include" | "if" | "ifdef" | "ifndef" | "elif" | "else" | "endif") {
+            let directive = line
+                .trim_start()
+                .strip_prefix('#')
+                .map(str::trim_start)
+                .unwrap_or("");
+            let word = directive
+                .split(|c: char| !c.is_ascii_alphabetic())
+                .next()
+                .unwrap_or("");
+            if matches!(
+                word,
+                "include" | "if" | "ifdef" | "ifndef" | "elif" | "else" | "endif"
+            ) {
                 includes.push_str(line);
                 includes.push('\n');
             }
@@ -1128,7 +1753,12 @@ fn shared_macros(join: &Join, scratch: &Scratch, editions: &[String]) -> Result<
     let mut agreed: Option<BTreeMap<String, String>> = None;
     let mut defined: BTreeSet<String> = BTreeSet::new();
     for edition in editions {
-        let listing = text::listed_macros(&join.compiler.compile(edition, &scratch.path, Mode::Macros)?.output);
+        let listing = text::listed_macros(
+            &join
+                .compiler
+                .compile(edition, &scratch.path, Mode::Macros)?
+                .output,
+        );
         defined.extend(listing.keys().cloned());
         agreed = Some(match agreed {
             None => listing,
@@ -1145,23 +1775,48 @@ fn shared_macros(join: &Join, scratch: &Scratch, editions: &[String]) -> Result<
 /// it, as the parts before it leave them, in every edition: what its end
 /// gives back after undefining its own. One that editions see otherwise
 /// before it cannot be given back as one line, and leaves the part out.
-fn macros_before(join: &Join, scratch: &Scratch, editions: &[String], defined: &BTreeSet<String>) -> Result<Vec<BTreeMap<String, String>>, Failed> {
+fn macros_before(
+    join: &Join,
+    scratch: &Scratch,
+    editions: &[String],
+    defined: &BTreeSet<String>,
+) -> Result<Vec<BTreeMap<String, String>>, Failed> {
     let mut before: Vec<BTreeMap<String, String>> = vec![BTreeMap::new(); join.parts.len()];
     let mut earlier: BTreeSet<String> = BTreeSet::new();
     for index in 0..join.parts.len() {
         let part = &join.parts[index];
-        let own: BTreeSet<String> = text::macros(&part.text).into_iter().map(|(name, _, _)| name).collect();
+        let own: BTreeSet<String> = text::macros(&part.text)
+            .into_iter()
+            .map(|(name, _, _)| name)
+            .collect();
         // Only a name a header or an earlier part defines can be in force.
-        let wanted: Vec<&String> = own.iter().filter(|name| defined.contains(*name) || earlier.contains(*name)).collect();
+        let wanted: Vec<&String> = own
+            .iter()
+            .filter(|name| defined.contains(*name) || earlier.contains(*name))
+            .collect();
         if !wanted.is_empty() {
-            let prefix = Join { parts: join.parts.clone(), compiler: join.compiler, shared: join.shared.clone(), before: before.clone(), views: BTreeMap::new() };
+            let prefix = Join {
+                parts: join.parts.clone(),
+                compiler: join.compiler,
+                shared: join.shared.clone(),
+                before: before.clone(),
+                views: BTreeMap::new(),
+            };
             let (text, _) = prefix.render_parts(index, false);
             scratch.write(&text).map_err(Failed::Run)?;
             let mut seen: BTreeMap<&String, Vec<Option<String>>> = BTreeMap::new();
             for edition in editions {
-                let listing = text::listed_macros(&join.compiler.compile(edition, &scratch.path, Mode::Macros).map_err(Failed::Run)?.output);
+                let listing = text::listed_macros(
+                    &join
+                        .compiler
+                        .compile(edition, &scratch.path, Mode::Macros)
+                        .map_err(Failed::Run)?
+                        .output,
+                );
                 for name in &wanted {
-                    seen.entry(name).or_default().push(listing.get(*name).cloned());
+                    seen.entry(name)
+                        .or_default()
+                        .push(listing.get(*name).cloned());
                 }
             }
             for (name, definitions) in seen {
@@ -1182,36 +1837,58 @@ fn macros_before(join: &Join, scratch: &Scratch, editions: &[String], defined: &
 
 /// Compiles the join in one edition, fixing what its messages name, until
 /// it compiles with nothing to fix; true if it wrote any view.
-fn compile_clean(join: &mut Join, scratch: &Scratch, edition: &str, rounds: &mut usize) -> Result<bool, Failed> {
+fn compile_clean(
+    join: &mut Join,
+    scratch: &Scratch,
+    edition: &str,
+    rounds: &mut usize,
+) -> Result<bool, Failed> {
     let mut seen: BTreeSet<String> = BTreeSet::new();
     let mut added = false;
     loop {
         *rounds += 1;
         if *rounds > ROUNDS {
-            return Err(Failed::Run(format!("still not clean after {ROUNDS} compiles")));
+            return Err(Failed::Run(format!(
+                "still not clean after {ROUNDS} compiles"
+            )));
         }
         let (text, segments) = join.render();
         scratch.write(&text).map_err(Failed::Run)?;
-        let compiled = join.compiler.compile(edition, &scratch.path, Mode::Assembly).map_err(Failed::Run)?;
+        let compiled = join
+            .compiler
+            .compile(edition, &scratch.path, Mode::Assembly)
+            .map_err(Failed::Run)?;
         let messages = diagnostics::messages(&compiled.stderr);
         let needs_place = messages.iter().any(|m| m.file != scratch.name());
         let pre = if needs_place || !compiled.ok {
-            let output = join.compiler.compile(edition, &scratch.path, Mode::Preprocess).map_err(Failed::Run)?;
+            let output = join
+                .compiler
+                .compile(edition, &scratch.path, Mode::Preprocess)
+                .map_err(Failed::Run)?;
             Some(diagnostics::preprocessed(&output.output, &scratch.name()))
         } else {
             None
         };
-        let fixes = join.plan(&messages, &segments, &scratch.name(), pre.as_ref()).map_err(|(part, why)| Failed::Part(part, why))?;
+        let fixes = join
+            .plan(&messages, &segments, &scratch.name(), pre.as_ref())
+            .map_err(|(part, why)| Failed::Part(part, why))?;
         if fixes.is_empty() {
             if compiled.ok {
                 return Ok(added);
             }
             // An error no fix answers: its part's, where it is in one.
             let error = messages.iter().find(|m| !m.warning);
-            let first = error.map_or_else(|| compiled.stderr.lines().next().unwrap_or("").to_string(), |m| m.text.clone());
-            let site = error.and_then(|m| join.site(&segments, &scratch.name(), pre.as_ref(), &m.file, m.line));
+            let first = error.map_or_else(
+                || compiled.stderr.lines().next().unwrap_or("").to_string(),
+                |m| m.text.clone(),
+            );
+            let site = error
+                .and_then(|m| join.site(&segments, &scratch.name(), pre.as_ref(), &m.file, m.line));
             return Err(match site {
-                Some(site) => Failed::Part(site.part(), format!("{}: {edition}: {first}", join.describe(&site))),
+                Some(site) => Failed::Part(
+                    site.part(),
+                    format!("{}: {edition}: {first}", join.describe(&site)),
+                ),
                 None => Failed::Run(format!("{edition}: {first}")),
             });
         }
@@ -1220,7 +1897,8 @@ fn compile_clean(join: &mut Join, scratch: &Scratch, edition: &str, rounds: &mut
             if !seen.insert(key) {
                 return Err(Failed::Part(fix.part(), format!("{edition}: the same disagreement came back after its view was written: {fix:?}")));
             }
-            join.apply(&fix).map_err(|why| Failed::Part(fix.part(), why))?;
+            join.apply(&fix)
+                .map_err(|why| Failed::Part(fix.part(), why))?;
             added = true;
         }
     }
@@ -1229,19 +1907,37 @@ fn compile_clean(join: &mut Join, scratch: &Scratch, edition: &str, rounds: &mut
 /// Each part's own assembly as the join should hold it: the build's, its
 /// statics written with their private names.
 fn expected(join: &Join, originals: &[String]) -> Vec<Vec<assembly::Piece>> {
-    join.parts.iter().zip(originals).map(|(part, asm)| assembly::pieces(&assembly::renamed(asm, &part.statics))).collect()
+    join.parts
+        .iter()
+        .zip(originals)
+        .map(|(part, asm)| assembly::pieces(&assembly::renamed(asm, &part.statics)))
+        .collect()
 }
 
 /// What moved in one edition: each function or datum that compiles
 /// differently joined, with its part.
-fn verify(join: &Join, scratch: &Scratch, edition: &str, originals: &[String]) -> Result<Vec<(usize, String)>, Failed> {
+fn verify(
+    join: &Join,
+    scratch: &Scratch,
+    edition: &str,
+    originals: &[String],
+) -> Result<Vec<(usize, String)>, Failed> {
     let (text, _) = join.render();
     scratch.write(&text).map_err(Failed::Run)?;
-    let compiled = join.compiler.compile(edition, &scratch.path, Mode::Assembly).map_err(Failed::Run)?;
+    let compiled = join
+        .compiler
+        .compile(edition, &scratch.path, Mode::Assembly)
+        .map_err(Failed::Run)?;
     if !compiled.ok {
-        return Err(Failed::Run(format!("{edition}: the join no longer compiles: {}", compiled.stderr.lines().next().unwrap_or(""))));
+        return Err(Failed::Run(format!(
+            "{edition}: the join no longer compiles: {}",
+            compiled.stderr.lines().next().unwrap_or("")
+        )));
     }
-    Ok(assembly::moved(&expected(join, originals), &assembly::pieces(&compiled.output)))
+    Ok(assembly::moved(
+        &expected(join, originals),
+        &assembly::pieces(&compiled.output),
+    ))
 }
 
 /// The join compiled as `make modern` compiles its object, in every
@@ -1250,17 +1946,37 @@ fn modern(join: &Join, scratch: &Scratch, editions: &[String]) -> Result<(), Fai
     let (text, segments) = join.render();
     scratch.write(&text).map_err(Failed::Run)?;
     for edition in editions {
-        let Some(compiled) = join.compiler.modern(edition, &scratch.path).map_err(Failed::Run)? else { continue };
+        let Some(compiled) = join
+            .compiler
+            .modern(edition, &scratch.path)
+            .map_err(Failed::Run)?
+        else {
+            continue;
+        };
         if compiled.ok {
             continue;
         }
         let messages = diagnostics::messages(&compiled.stderr);
         let error = messages.iter().find(|m| !m.warning);
-        let first = error.map_or_else(|| compiled.stderr.lines().next().unwrap_or("").to_string(), |m| m.text.clone());
-        let part = error.filter(|m| m.file == scratch.name()).and_then(|m| Join::locate(&segments, m.line));
+        let first = error.map_or_else(
+            || compiled.stderr.lines().next().unwrap_or("").to_string(),
+            |m| m.text.clone(),
+        );
+        let part = error
+            .filter(|m| m.file == scratch.name())
+            .and_then(|m| Join::locate(&segments, m.line));
         return Err(match part {
-            Some((part, line)) => Failed::Part(part, format!("{}.c:{line}: make modern ({edition}): {first}", join.parts[part].stem)),
-            None => Failed::Run(format!("make modern ({edition}): {}: {first}", error.map_or("", |m| m.file.as_str()))),
+            Some((part, line)) => Failed::Part(
+                part,
+                format!(
+                    "{}.c:{line}: make modern ({edition}): {first}",
+                    join.parts[part].stem
+                ),
+            ),
+            None => Failed::Run(format!(
+                "make modern ({edition}): {}: {first}",
+                error.map_or("", |m| m.file.as_str())
+            )),
         });
     }
     Ok(())
@@ -1270,22 +1986,45 @@ fn modern(join: &Join, scratch: &Scratch, editions: &[String]) -> Result<(), Fai
 /// routine it calls declared otherwise than its own file declared it, each
 /// macro it uses defined otherwise. Keeps the first view that brings the
 /// function back without moving anything else; true if one did.
-fn search(join: &mut Join, scratch: &Scratch, edition: &str, originals: &[String], part: usize, function: &str, moved: usize) -> Result<bool, Failed> {
+fn search(
+    join: &mut Join,
+    scratch: &Scratch,
+    edition: &str,
+    originals: &[String],
+    part: usize,
+    function: &str,
+    moved: usize,
+) -> Result<bool, Failed> {
     let fail = Failed::Run;
     let p = &join.parts[part];
     let original_path = join.compiler.root().join(format!("{}.c", p.stem));
-    let original_text = std::fs::read_to_string(&original_path).map_err(|e| fail(format!("{}: {e}", original_path.display())))?;
+    let original_text = std::fs::read_to_string(&original_path)
+        .map_err(|e| fail(format!("{}: {e}", original_path.display())))?;
     let own = statements(&original_text);
-    let body = own.iter().find(|s| s.body.is_some() && s.routine(function)).map(|s| &original_text[s.start..s.end]).unwrap_or(&original_text);
-    let used: BTreeSet<String> = text::identifiers(body).into_iter().filter(|name| *name != function).map(str::to_string).collect();
+    let body = own
+        .iter()
+        .find(|s| s.body.is_some() && s.routine(function))
+        .map(|s| &original_text[s.start..s.end])
+        .unwrap_or(&original_text);
+    let used: BTreeSet<String> = text::identifiers(body)
+        .into_iter()
+        .filter(|name| *name != function)
+        .map(str::to_string)
+        .collect();
     let mut candidates: Vec<Fix> = Vec::new();
 
     // Routines.
-    let theirs = join.compiler.compile(edition, &original_path, Mode::Declarations).map_err(fail)?;
+    let theirs = join
+        .compiler
+        .compile(edition, &original_path, Mode::Declarations)
+        .map_err(fail)?;
     let theirs = diagnostics::declarations(&theirs.output);
     let (text, _) = join.render();
     scratch.write(&text).map_err(fail)?;
-    let ours = join.compiler.compile(edition, &scratch.path, Mode::Declarations).map_err(fail)?;
+    let ours = join
+        .compiler
+        .compile(edition, &scratch.path, Mode::Declarations)
+        .map_err(fail)?;
     let ours = diagnostics::declarations(&ours.output);
     let suffix = format!("__{}", p.suffix);
     let plain = |text: &str| -> String {
@@ -1298,24 +2037,44 @@ fn search(join: &mut Join, scratch: &Scratch, edition: &str, originals: &[String
     let functions = [function.to_string(), format!("{function}{suffix}")];
     for name in &used {
         let names = [name.clone(), format!("{name}{suffix}")];
-        let Some(saw) = visible(&theirs, &functions[..1], &names[..1]) else { continue };
+        let Some(saw) = visible(&theirs, &functions[..1], &names[..1]) else {
+            continue;
+        };
         let now = visible(&ours, &functions, &names);
         if now.is_some_and(|now| plain(&now.text) == saw.text) {
             continue;
         }
-        let other = Other { owner: "the parts before it".into(), text: now.map_or_else(|| "no declaration".into(), |now| plain(&now.text)) };
+        let other = Other {
+            owner: "the parts before it".into(),
+            text: now.map_or_else(|| "no declaration".into(), |now| plain(&now.text)),
+        };
         candidates.push(match saw.how.starts_with('I') {
-            true => Fix::Implicit { part, name: name.clone(), other },
-            false => Fix::Declared { part, name: name.clone(), declaration: saw.text.clone(), other },
+            true => Fix::Implicit {
+                part,
+                name: name.clone(),
+                other,
+            },
+            false => Fix::Declared {
+                part,
+                name: name.clone(),
+                declaration: saw.text.clone(),
+                other,
+            },
         });
     }
 
     // Macros: the original file's, against those in force where the part ends.
-    let theirs = join.compiler.compile(edition, &original_path, Mode::Macros).map_err(fail)?;
+    let theirs = join
+        .compiler
+        .compile(edition, &original_path, Mode::Macros)
+        .map_err(fail)?;
     let theirs = text::listed_macros(&theirs.output);
     let (text, _) = join.render_until(part);
     scratch.write(&text).map_err(fail)?;
-    let ours = join.compiler.compile(edition, &scratch.path, Mode::Macros).map_err(fail)?;
+    let ours = join
+        .compiler
+        .compile(edition, &scratch.path, Mode::Macros)
+        .map_err(fail)?;
     let ours = text::listed_macros(&ours.output);
     let whole: BTreeSet<&str> = text::identifiers(&original_text);
     for name in whole {
@@ -1325,12 +2084,19 @@ fn search(join: &mut Join, scratch: &Scratch, edition: &str, originals: &[String
         if saw == now || (saw.is_none() && now.is_none()) {
             continue;
         }
-        candidates.push(Fix::Macro { part, name: name.to_string(), original: saw, joined: now });
+        candidates.push(Fix::Macro {
+            part,
+            name: name.to_string(),
+            original: saw,
+            joined: now,
+        });
     }
 
     // Each alone, those of the function's own names first; then all at once.
     candidates.sort_by_key(|fix| match fix {
-        Fix::Implicit { name, .. } | Fix::Declared { name, .. } | Fix::Macro { name, .. } => !used.contains(name),
+        Fix::Implicit { name, .. } | Fix::Declared { name, .. } | Fix::Macro { name, .. } => {
+            !used.contains(name)
+        }
         _ => true,
     });
     let mut trials: Vec<Vec<Fix>> = candidates.iter().map(|fix| vec![fix.clone()]).collect();
@@ -1338,11 +2104,19 @@ fn search(join: &mut Join, scratch: &Scratch, edition: &str, originals: &[String
         trials.push(candidates.clone());
     }
     for trial in trials {
-        let mut tried = Join { parts: join.parts.clone(), compiler: join.compiler, shared: join.shared.clone(), before: join.before.clone(), views: join.views.clone() };
+        let mut tried = Join {
+            parts: join.parts.clone(),
+            compiler: join.compiler,
+            shared: join.shared.clone(),
+            before: join.before.clone(),
+            views: join.views.clone(),
+        };
         if trial.iter().any(|fix| tried.apply(fix).is_err()) {
             continue;
         }
-        let Ok(now) = verify(&tried, scratch, edition, originals) else { continue };
+        let Ok(now) = verify(&tried, scratch, edition, originals) else {
+            continue;
+        };
         if !now.iter().any(|(p, f)| *p == part && f == function) && now.len() < moved {
             *join = tried;
             return Ok(true);
@@ -1371,14 +2145,24 @@ pub(crate) struct Recipes {
 /// Which editions of `editions` link each of `stems`: the editions that link
 /// the first, refused where another stem is linked by other editions, since
 /// one object is linked by the editions that linked each of its parts.
-pub(crate) fn linking(root: &Path, stems: &[String], editions: &[crate::alchemy::targets::DecompTargetId]) -> Result<Vec<crate::alchemy::targets::DecompTargetId>, String> {
+pub(crate) fn linking(
+    root: &Path,
+    stems: &[String],
+    editions: &[crate::alchemy::targets::DecompTargetId],
+) -> Result<Vec<crate::alchemy::targets::DecompTargetId>, String> {
     let mut linking = Vec::new();
     for &id in editions {
         let linked = crate::alchemy::link::linked(root, id)?;
         let each: Vec<bool> = stems.iter().map(|stem| linked.links(stem)).collect();
         if let Some(other) = each.iter().position(|&links| links != each[0]) {
-            let (yes, no) = if each[0] { (&stems[0], &stems[other]) } else { (&stems[other], &stems[0]) };
-            return Err(format!("{id} links {yes} but not {no}, so they cannot be one object"));
+            let (yes, no) = if each[0] {
+                (&stems[0], &stems[other])
+            } else {
+                (&stems[other], &stems[0])
+            };
+            return Err(format!(
+                "{id} links {yes} but not {no}, so they cannot be one object"
+            ));
         }
         if each[0] {
             linking.push(id);
@@ -1391,7 +2175,12 @@ impl Recipes {
     /// The recipes of `stems[0]`, the group's first object, in each edition
     /// of `editions` that links it; every other stem must be linked by the
     /// same editions. With `modern`, `make modern`'s recipe too.
-    pub fn new(root: &Path, stems: &[String], editions: &[crate::alchemy::targets::DecompTargetId], modern: bool) -> Result<Recipes, String> {
+    pub fn new(
+        root: &Path,
+        stems: &[String],
+        editions: &[crate::alchemy::targets::DecompTargetId],
+        modern: bool,
+    ) -> Result<Recipes, String> {
         let stem = stems.first().ok_or("no object")?;
         let source = format!("{stem}.c");
         let mut recipes = Vec::new();
@@ -1405,11 +2194,23 @@ impl Recipes {
             if modern {
                 wanted.push((source.clone(), modern_object.clone()));
             }
-            let mut found = crate::gba::recipe::recipes(root, Path::new(target.output_dir), &[format!("EDITION={id}")], &wanted)?.into_iter();
-            recipes.push((id.as_str().to_string(), found.next().ok_or("make gave no recipe")??));
+            let mut found = crate::gba::recipe::recipes(
+                root,
+                Path::new(target.output_dir),
+                &[format!("EDITION={id}")],
+                &wanted,
+            )?
+            .into_iter();
+            recipes.push((
+                id.as_str().to_string(),
+                found.next().ok_or("make gave no recipe")??,
+            ));
             object_of.push(object);
             if modern {
-                moderns.push((found.next().ok_or("make gave no modern recipe")??, modern_object));
+                moderns.push((
+                    found.next().ok_or("make gave no modern recipe")??,
+                    modern_object,
+                ));
             }
         }
         let mut made = Recipes::of(root, stem, recipes, object_of)?;
@@ -1419,9 +2220,24 @@ impl Recipes {
 
     /// `stem`'s recipes as make already gave them: each edition with its
     /// commands, and the object each edition builds.
-    pub fn of(root: &Path, stem: &str, recipes: Vec<(String, Vec<Vec<String>>)>, object_of: Vec<String>) -> Result<Recipes, String> {
-        let scratch = tempfile::Builder::new().prefix("alchemy-views-").tempdir().map_err(|e| e.to_string())?;
-        Ok(Recipes { root: root.to_path_buf(), recipes, source: format!("{stem}.c"), object_of, modern: Vec::new(), scratch })
+    pub fn of(
+        root: &Path,
+        stem: &str,
+        recipes: Vec<(String, Vec<Vec<String>>)>,
+        object_of: Vec<String>,
+    ) -> Result<Recipes, String> {
+        let scratch = tempfile::Builder::new()
+            .prefix("alchemy-views-")
+            .tempdir()
+            .map_err(|e| e.to_string())?;
+        Ok(Recipes {
+            root: root.to_path_buf(),
+            recipes,
+            source: format!("{stem}.c"),
+            object_of,
+            modern: Vec::new(),
+            scratch,
+        })
     }
 
     /// The same, with each edition's `make modern` recipe and object.
@@ -1433,16 +2249,33 @@ impl Recipes {
 
 impl Compiler for Recipes {
     fn editions(&self) -> Vec<String> {
-        self.recipes.iter().map(|(edition, _)| edition.clone()).collect()
+        self.recipes
+            .iter()
+            .map(|(edition, _)| edition.clone())
+            .collect()
     }
 
     fn compile(&self, edition: &str, source: &Path, mode: Mode) -> Result<Compiled, String> {
         static SERIAL: AtomicUsize = AtomicUsize::new(0);
-        let index = self.recipes.iter().position(|(e, _)| e == edition).ok_or_else(|| format!("{edition} does not link the run"))?;
+        let index = self
+            .recipes
+            .iter()
+            .position(|(e, _)| e == edition)
+            .ok_or_else(|| format!("{edition} does not link the run"))?;
         let serial = SERIAL.fetch_add(1, Ordering::Relaxed);
         let output = self.scratch.path().join(format!("out{serial}.o"));
-        let steps = crate::gba::recipe::retarget(&self.recipes[index].1, &self.root, &self.source, &self.object_of[index], source, &output);
-        let mut step = steps.into_iter().find(|step| step.iter().any(|w| w == "-S")).ok_or("the recipe has no -S step")?;
+        let steps = crate::gba::recipe::retarget(
+            &self.recipes[index].1,
+            &self.root,
+            &self.source,
+            &self.object_of[index],
+            source,
+            &output,
+        );
+        let mut step = steps
+            .into_iter()
+            .find(|step| step.iter().any(|w| w == "-S"))
+            .ok_or("the recipe has no -S step")?;
         let assembly = output.with_extension("s").to_string_lossy().into_owned();
         let written = match mode {
             Mode::Assembly => assembly.clone(),
@@ -1467,34 +2300,64 @@ impl Compiler for Recipes {
             }
         };
         let (ok, _, stderr) = crate::gba::process::capture(&step, &self.root)?;
-        let text = std::fs::read(&written).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default();
+        let text = std::fs::read(&written)
+            .map(|b| String::from_utf8_lossy(&b).into_owned())
+            .unwrap_or_default();
         for extension in ["s", "aux", "i"] {
             let _ = std::fs::remove_file(output.with_extension(extension));
         }
-        Ok(Compiled { ok, output: text, stderr })
+        Ok(Compiled {
+            ok,
+            output: text,
+            stderr,
+        })
     }
 
     fn modern(&self, edition: &str, source: &Path) -> Result<Option<Compiled>, String> {
         static SERIAL: AtomicUsize = AtomicUsize::new(0);
-        let Some(index) = self.recipes.iter().position(|(e, _)| e == edition) else { return Ok(None) };
-        let Some((recipe, object)) = self.modern.get(index) else { return Ok(None) };
-        let output = self.scratch.path().join(format!("modern{}.o", SERIAL.fetch_add(1, Ordering::Relaxed)));
-        let steps = crate::gba::recipe::retarget(recipe, &self.root, &self.source, object, source, &output);
-        let step = steps.into_iter().find(|step| step.iter().any(|w| w == "-c")).ok_or("the modern recipe has no -c step")?;
+        let Some(index) = self.recipes.iter().position(|(e, _)| e == edition) else {
+            return Ok(None);
+        };
+        let Some((recipe, object)) = self.modern.get(index) else {
+            return Ok(None);
+        };
+        let output = self.scratch.path().join(format!(
+            "modern{}.o",
+            SERIAL.fetch_add(1, Ordering::Relaxed)
+        ));
+        let steps =
+            crate::gba::recipe::retarget(recipe, &self.root, &self.source, object, source, &output);
+        let step = steps
+            .into_iter()
+            .find(|step| step.iter().any(|w| w == "-c"))
+            .ok_or("the modern recipe has no -c step")?;
         let (ok, _, stderr) = crate::gba::process::capture(&step, &self.root)?;
         for extension in ["o", "d"] {
             let _ = std::fs::remove_file(output.with_extension(extension));
         }
-        Ok(Some(Compiled { ok, output: String::new(), stderr }))
+        Ok(Some(Compiled {
+            ok,
+            output: String::new(),
+            stderr,
+        }))
     }
 
     fn built(&self, edition: &str, stem: &str) -> Result<String, String> {
         let id = crate::alchemy::targets::parse_decomp_target(edition)?;
-        let path = crate::alchemy::built::output(&self.root, id).join("obj").join(format!("{stem}.s"));
-        let modified = |path: &Path| std::fs::metadata(path).and_then(|meta| meta.modified()).ok();
+        let path = crate::alchemy::built::output(&self.root, id)
+            .join("obj")
+            .join(format!("{stem}.s"));
+        let modified = |path: &Path| {
+            std::fs::metadata(path)
+                .and_then(|meta| meta.modified())
+                .ok()
+        };
         let source = format!("{stem}.c");
         if modified(&path).is_none() || modified(&self.root.join(&source)) > modified(&path) {
-            return Err(format!("{} is missing or older than {source}: make {edition} first", path.display()));
+            return Err(format!(
+                "{} is missing or older than {source}: make {edition} first",
+                path.display()
+            ));
         }
         crate::alchemy::built::read_text(&path)
     }

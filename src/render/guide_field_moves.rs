@@ -44,7 +44,12 @@ impl<'a> Guide<'a> {
 
     /// Enters scene `scene` by `entrance` as the story has it when the party
     /// first reaches it, with the leader stood at (x, z) pixels, facing.
-    fn stood(&self, scene: &str, entrance: u16, at: (i32, i32, u32)) -> Result<Entered<'a>, String> {
+    fn stood(
+        &self,
+        scene: &str,
+        entrance: u16,
+        at: (i32, i32, u32),
+    ) -> Result<Entered<'a>, String> {
         let id = source::map_id(scene)?;
         let mut entered = self.enter_first_visit((id, entrance), id)?;
         let spot = Self::spot_at(&mut entered.field, at)?;
@@ -53,7 +58,11 @@ impl<'a> Guide<'a> {
     }
 
     /// Holds each step's keys in turn, keeping every picture.
-    fn steps(field: &mut Field, path: &[(u32, u32)], frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
+    fn steps(
+        field: &mut Field,
+        path: &[(u32, u32)],
+        frames: &mut Vec<Vec<u16>>,
+    ) -> Result<(), String> {
         for &(keys, n) in path {
             Self::hold(field, keys, n, frames)?;
         }
@@ -62,7 +71,12 @@ impl<'a> Guide<'a> {
 
     /// Casts `ability` as the Psynergy menu would, through the field's
     /// request, and keeps `n` frames.
-    fn cast(field: &mut Field, ability: &str, n: u32, frames: &mut Vec<Vec<u16>>) -> Result<(), String> {
+    fn cast(
+        field: &mut Field,
+        ability: &str,
+        n: u32,
+        frames: &mut Vec<Vec<u16>>,
+    ) -> Result<(), String> {
         let id = source::ability_id(ability)?;
         let state = field.field_state();
         field.write16(state + FIELD_COMMAND, id);
@@ -78,7 +92,11 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         let mut frames = vec![field.picture()];
         Self::steps(field, &[(0, 20), (KEY_RIGHT, 150), (0, 40)], &mut frames)?;
-        self.world_gif("field/push-pillar.gif", &frames, "Vale's stone pillar pushed a cell east")
+        self.world_gif(
+            "field/push-pillar.gif",
+            &frames,
+            "Vale's stone pillar pushed a cell east",
+        )
     }
 
     /// Up held at the foot of the climbing wall in Goma Cave's entrance
@@ -90,7 +108,11 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         let mut frames = vec![field.picture()];
         Self::steps(field, &[(0, 20), (KEY_UP, 125), (0, 30)], &mut frames)?;
-        self.world_gif("field/climb.gif", &frames, "climbing the wall in Goma Cave's entrance")
+        self.world_gif(
+            "field/climb.gif",
+            &frames,
+            "climbing the wall in Goma Cave's entrance",
+        )
     }
 
     /// The woman on the cliff above Vale's waterfall
@@ -110,7 +132,10 @@ impl<'a> Guide<'a> {
         for dz in (-48..=48).step_by(8) {
             for dx in (-48..=48).step_by(8) {
                 let d: i32 = dx * dx + dz * dz;
-                if d >= 32 * 32 && field.ground(layer, her.x + dx, her.z + dz)? == her.y && near.is_none_or(|(n, _, _)| d < n) {
+                if d >= 32 * 32
+                    && field.ground(layer, her.x + dx, her.z + dz)? == her.y
+                    && near.is_none_or(|(n, _, _)| d < n)
+                {
                     near = Some((d, her.x + dx, her.z + dz));
                 }
             }
@@ -118,11 +143,23 @@ impl<'a> Guide<'a> {
         let (_, x, z) = near.ok_or("no ground beside the woman")?;
         let height = her.y;
         let facing = if x < her.x { EAST } else { WEST };
-        let spot = Spot { x, z, layer, height, facing, walk: 0, cell: None };
+        let spot = Spot {
+            x,
+            z,
+            layer,
+            height,
+            facing,
+            walk: 0,
+            cell: None,
+        };
         field.stand(&entered.placed, &spot)?;
         let mut frames = vec![field.picture()];
         Self::hold(field, 0, 480, &mut frames)?;
-        self.world_gif("field/villager.gif", &frames, "a villager wandering in Vale")
+        self.world_gif(
+            "field/villager.gif",
+            &frames,
+            "a villager wandering in Vale",
+        )
     }
 
     /// Goma Cave's pillar room left by the stairs up to the room of the
@@ -135,10 +172,25 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         let from = field.scene();
         let mut frames = vec![field.picture()];
-        Self::steps(field, &[(0, 30), (KEY_DOWN, 170), (KEY_RIGHT, 100), (KEY_LEFT, 100), (KEY_UP, 170), (0, 20)], &mut frames)?;
+        Self::steps(
+            field,
+            &[
+                (0, 30),
+                (KEY_DOWN, 170),
+                (KEY_RIGHT, 100),
+                (KEY_LEFT, 100),
+                (KEY_UP, 170),
+                (0, 20),
+            ],
+            &mut frames,
+        )?;
         // Back under the stairs' cell, whatever a wall slid him off by.
         let x = field.leader().ok_or("no leader")?.x;
-        let (keys, n) = if x < 88 { (KEY_RIGHT, 88 - x) } else { (KEY_LEFT, x - 88) };
+        let (keys, n) = if x < 88 {
+            (KEY_RIGHT, 88 - x)
+        } else {
+            (KEY_LEFT, x - 88)
+        };
         Self::steps(field, &[(keys, n as u32), (0, 10)], &mut frames)?;
         let mut left = None;
         field.hold(KEY_UP);
@@ -153,7 +205,11 @@ impl<'a> Guide<'a> {
         field.hold(0);
         left.ok_or("the stairs never took the party out")?;
         Self::hold(field, 0, 300, &mut frames)?;
-        self.world_gif("field/stairs.gif", &frames, "the stairs up out of Goma Cave's pillar room")
+        self.world_gif(
+            "field/stairs.gif",
+            &frames,
+            "the stairs up out of Goma Cave's pillar room",
+        )
     }
 
     /// Walking on the Lamakan Desert's sand until the heat hurts: the count
@@ -166,7 +222,14 @@ impl<'a> Guide<'a> {
     fn sand_damage(&mut self) -> Result<(), String> {
         let mut entered = self.stood("LamakanDesertEast", 2, (400, 60, NORTH))?;
         let field = &mut entered.field;
-        for flag in ["FLAG_HEAT_QUARTER", "FLAG_HEAT_HALF", "FLAG_HEAT_THREE_QUARTERS", "FLAG_GARET_COMPLAINED", "FLAG_IVAN_COMPLAINED", "FLAG_MIA_COMPLAINED"] {
+        for flag in [
+            "FLAG_HEAT_QUARTER",
+            "FLAG_HEAT_HALF",
+            "FLAG_HEAT_THREE_QUARTERS",
+            "FLAG_GARET_COMPLAINED",
+            "FLAG_IVAN_COMPLAINED",
+            "FLAG_MIA_COMPLAINED",
+        ] {
             let f = self.flag(flag)?;
             field.set_flag(f, true);
         }
@@ -180,11 +243,22 @@ impl<'a> Guide<'a> {
         field.frames(30)?;
         let before = hp(field)?;
         let mut frames = vec![field.picture()];
-        Self::steps(field, &[(0, 10), (KEY_DOWN, 140), (KEY_RIGHT, 60), (0, 30)], &mut frames)?;
+        Self::steps(
+            field,
+            &[(0, 10), (KEY_DOWN, 140), (KEY_RIGHT, 60), (0, 30)],
+            &mut frames,
+        )?;
         let after = hp(field)?;
-        eprintln!("sand-damage: Isaac's HP {before} to {after}, the count at {}", field.read16(gs + HAZARD_STEPS));
+        eprintln!(
+            "sand-damage: Isaac's HP {before} to {after}, the count at {}",
+            field.read16(gs + HAZARD_STEPS)
+        );
         Self::steps(field, &[(KEY_A, 3), (0, 80)], &mut frames)?;
-        self.world_gif("layout/sand-damage.gif", &frames, "the Lamakan Desert's heat hurting the party")
+        self.world_gif(
+            "layout/sand-damage.gif",
+            &frames,
+            "the Lamakan Desert's heat hurting the party",
+        )
     }
 
     /// The palette fade in Vale: Halt cast with nobody near tints the screen
@@ -200,7 +274,11 @@ impl<'a> Guide<'a> {
         Self::hold(field, 0, 20, &mut frames)?;
         Self::cast(field, "ABILITY_HALT", 170, &mut frames)?;
         Self::hold(field, 0, 20, &mut frames)?;
-        self.world_gif("field/palette-fade.gif", &frames, "a cast's tint and its fade back in Vale")
+        self.world_gif(
+            "field/palette-fade.gif",
+            &frames,
+            "a cast's tint and its fade back in Vale",
+        )
     }
 
     /// Cloak cast in Lunpa Fortress's gates: the leader blinks and hides as
@@ -214,6 +292,10 @@ impl<'a> Guide<'a> {
         Self::hold(field, 0, 20, &mut frames)?;
         Self::cast(field, "ABILITY_CLOAK", 150, &mut frames)?;
         Self::steps(field, &[(KEY_RIGHT, 160), (0, 60)], &mut frames)?;
-        self.world_gif("field/cloak.gif", &frames, "Cloak in Lunpa Fortress's gates")
+        self.world_gif(
+            "field/cloak.gif",
+            &frames,
+            "Cloak in Lunpa Fortress's gates",
+        )
     }
 }
