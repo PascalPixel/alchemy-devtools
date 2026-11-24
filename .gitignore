@@ -1,6 +1,6 @@
 /target/
 .DS_Store
 
-# What H3 lets an agent read beside the game, downloaded by hand and never committed:
+# What H3 lets an agent read beside the game, fetched by references.py and never committed:
 # the two walkthroughs, the SGL manual (sgl/) and GBATEK (gbatek/).
 /walkthroughs/
