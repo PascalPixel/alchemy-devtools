@@ -628,7 +628,7 @@ const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("unit_max_pp", "offsetof(struct Unit, ppMax)", "offsetof(struct Unit, ppMax)"),
     ("unit_hp", "offsetof(struct Unit, hp)", "offsetof(struct Unit, hp)"),
     ("unit_pp", "offsetof(struct Unit, pp)", "offsetof(struct Unit, pp)"),
-    ("unit_agility", "offsetof(struct Unit, agi)", "offsetof(struct Unit, agi)"),
+    ("unit_agility", "offsetof(struct Unit, agility)", "offsetof(struct Unit, agility)"),
     ("unit_luck", "offsetof(struct Unit, luck)", "offsetof(struct Unit, luck)"),
     ("unit_class_id", "offsetof(struct Unit, id)", "offsetof(struct Unit, id)"),
     ("unit_class_index", "offsetof(struct Unit, classId)", "offsetof(struct Unit, classId)"),
