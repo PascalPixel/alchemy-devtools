@@ -1197,8 +1197,6 @@ SceneId_HesperiaSettlementHouses	its area name	Hesperia Settlement (the area nam
 SceneId_HesperiaSettlementCave	its area name	Hesperia Settlement (the area name of its group, 58, in gScenes and gScene_AreaNameRules); was SceneId_Ov690Room6	games/tla/include/scene_ids.h
 SceneId_KaltIsland	its area name	Kalt Island (the area name of its group, 59, in gScenes and gScene_AreaNameRules); was SceneId_Ov690Room7	games/tla/include/scene_ids.h
 SceneId_KaltIslandHouses	its area name	Kalt Island (the area name of its group, 59, in gScenes and gScene_AreaNameRules); was SceneId_Ov690Room8	games/tla/include/scene_ids.h
-SceneId_SwAttekaIslet	its area name	SW Atteka Islet (the area name of its group, 60, in gScenes and gScene_AreaNameRules); was SceneId_Ov690Room9	games/tla/include/scene_ids.h
-SceneId_SwAttekaIsletHouses	its area name	SW Atteka Islet (the area name of its group, 60, in gScenes and gScene_AreaNameRules); was SceneId_Ov690Room10	games/tla/include/scene_ids.h
 SceneId_MagmaRockSlide	its area name	Magma Rock (the area name of its group, 61, in gScenes and gScene_AreaNameRules); was SceneId_Ov691Room1	games/tla/include/scene_ids.h
 SceneId_MagmaRockSalamanderTailChest	its area name	Magma Rock (the area name of its group, 61, in gScenes and gScene_AreaNameRules); was SceneId_Ov691Room2	games/tla/include/scene_ids.h
 SceneId_MagmaRockStatue	its area name	Magma Rock (the area name of its group, 61, in gScenes and gScene_AreaNameRules); was SceneId_Ov691Room3	games/tla/include/scene_ids.h
@@ -1336,7 +1334,6 @@ gSlideOnIce_Stopped	its twin	the flag Leader_SetSlideStopped sets to end the sli
 gSlideOnIce_SteerAngles	its twin	the heading Actor_SteerByPad turns the sliding leader toward for each pad direction, diagonals included, the same table in the six ice scenes (was gTundariaTower_SlideAngles and four addresses)	games/tla/src/scene/tundaria_tower.c
 Pillar_LowerHeldCells	its twin	the Madra Catacombs' MadraCatacombs_LowerHeldPillarCells, the same routine: the held pillar's cell takes the shape four steps lower and its flags are cleared, and the field work keeps it as its moved block (was Func_02000d78)	games/tla/src/scene/shared/pillar_lower_held_cells.h
 DehkanPlateau_FinishMovingVinePillar	its code	the Move triggers on room 3's actors 14 to 17 in gDehkanPlateau_Room3Triggers, placing the moved block (was Func_02002124)	games/tla/src/scene/dehkan_plateau.c
-gEmbers_Script	its uses	the object script Embers_Spawn starts on each ember, the same table in the four Mars Lighthouse rooms (was four addresses)	games/tla/src/scene/mars_lighthouse_entrance.c
 gScriptedPart_Script	its uses	the script Actor_SetupScriptedPart and the Actor_SetupScripted and Actor_ResetScripted forms start: thirty frames, then the actor is freed; the same table in the four Mars Lighthouse rooms (was four addresses)	games/tla/src/scene/mars_lighthouse_entrance.c
 Pound_SinkTarget	its twin	Pound_SinkTarget of the Yampi Desert; unused here	games/tla/src/scene/mars_lighthouse_entrance.c
 Idejima_CountAnswer	its code	The overlay's stub to the routine that counts countedAnswers, called after Kraden's anger at the No to 5871	games/tla/src/scene/idejima.c
@@ -1775,7 +1772,6 @@ gPaletteCycleColors	its twin	as above	games/tla/src/scene/mars_lighthouse_room_f
 gPaletteCycleUnlitPalette	its twin	as above	games/tla/src/scene/mars_lighthouse_room_f.c
 gPaletteCycleUnlitColors	its twin	as above	games/tla/src/scene/mars_lighthouse_room_f.c
 Whirlwind_Spawn	its twin	the Jupiter Lighthouse aerie's	games/tla/src/scene/mars_lighthouse_room_f.c
-Import_ActorCreate_	its twin	as above, over Import_ActorCreate (the name aqua_rock.c already uses for the same inline); room F's own copy of the inline went, as the header's now has its name	games/tla/src/scene/shared/mars_lighthouse_entrance_room.h
 MarsLighthouseRoomF_KnockBackIfHit	its twin	MarsLighthouseEntrance_KnockBackIfHit	games/tla/src/scene/mars_lighthouse_room_f.c
 gLightSpriteTile	its twin	the Jupiter Lighthouse room 3's light sprite work	games/tla/src/scene/mars_lighthouse_room_f.c
 gLightSpriteCount	its twin	as above	games/tla/src/scene/mars_lighthouse_room_f.c
@@ -1866,8 +1862,6 @@ gMarsLighthouseAerie_RisingRingsA	its code	one ring work (Piers', actor 7 or 22)
 gMarsLighthouseAerie_RisingRingsB	its code	the other (Mia's, actor 3 or 25)	games/tla/src/scene/mars_lighthouse_aerie.c
 FieldCyclone_CopyTouchedCells	its code	event_inline.h's rule over Cyclone_CopyTouchedCells; the Trial Road's copy in scene/shared/trial_road.h passes its call on to the scene's stub over the same routine	games/tla/include/scene/event_layer.h
 TrialRoad_CopyTouchedCells	its twin	the Trial Road's import row over Cyclone_CopyTouchedCellsFar, named for its scene as the a-k scenes' second rows are (Idejima_CountAnswer)	games/tla/src/system/overlay/imports.inc
-Map_CopyCellAttributeRect_	its twin	inline in scene/shared/mars_lighthouse_entrance_room.h that only passes its call on to Map_CopyCellAttributeRect (the scenes' trailing-underscore habit)	games/tla/src/scene/shared/mars_lighthouse_entrance_room.h
-Actor_SetHorizontalPositionWithTerrain_	its twin	as above, over Actor_SetHorizontalPositionWithTerrain	games/tla/src/scene/shared/mars_lighthouse_entrance_room.h
 FLAG_IN_VENUS_LIGHTHOUSE	the game	"Venus Lighthouse" (MsgDebugAreaName + 4); each lighthouse scene sets its flag on every arrival and Scene_Arrive clears all four on leaving: it means the party is inside, not that the beacon is lit (every Mars room sets the Mars flag while the lighthouse is still frozen)	games/tla/include/flags.h
 FLAG_IN_MERCURY_LIGHTHOUSE	the game	"Mercury Lighthouse" (MsgDebugAreaName + 81); as above	games/tla/include/flags.h
 FLAG_IN_MARS_LIGHTHOUSE	the game	"Mars Lighthouse" (MsgDebugAreaName + 78); as above	games/tla/include/flags.h
@@ -2023,17 +2017,12 @@ gBattleEffect_GlintPictureWidths	its twin	The Broken Seal's gBattleEffect_GlintP
 gBattleEffect_GlintPictureHeights	its twin	The Broken Seal's gBattleEffect_GlintPictureHeights, the same bytes	games/tla/src/battle_effect/battle_effect_bolt.c
 gBattleEffect_GlintPictures	its twin	The Broken Seal's gBattleEffect_GlintPictures, the same bytes	games/tla/src/battle_effect/battle_effect_bolt.c
 gBattleEffect_MotePictures	its twin	The Broken Seal's gBattleEffect_MotePictures, the same bytes	games/tla/src/battle_effect/battle_effect_annihilation.c
-gBattleEffect_PuffArcPictureWidths	its twin	The Broken Seal's gBattleEffect_PuffArcPictureWidths, the same bytes	games/tla/src/battle_effect/battle_effect_atalanta.c
-gBattleEffect_PuffArcPictureHeights	its twin	The Broken Seal's name, the same bytes	games/tla/src/battle_effect/battle_effect_atalanta.c
-gBattleEffect_PuffArcPictureBiasY	its twin	The Broken Seal's name, the same bytes	games/tla/src/battle_effect/battle_effect_atalanta.c
-gBattleEffect_PuffArcPictures	its twin	The Broken Seal's name, the same bytes	games/tla/src/battle_effect/battle_effect_atalanta.c
 gBattleEffect_SparklePictures	its twin	The Broken Seal's gBattleEffect_SparklePictures, the same bytes	games/tla/src/battle_effect/battle_effect_boreas.c
 gBattleEffect_SparkleSizes	its twin	The Broken Seal's gBattleEffect_SparkleSizes, the same bytes	games/tla/src/battle_effect/battle_effect_boreas.c
 gSpire_ShardPictures	its twin	The Broken Seal's gSpire_ShardPictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_burst_shower.c
 gStatChange_ShardPictures	its twin	The Broken Seal's gStatChange_ShardPictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_cards.c
 gTargetStrike_Pictures	its twin	The Broken Seal's gTargetStrike_Pictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_target_strike.c
 gTargetStrike_BiteStages	its twin	The Broken Seal's gTargetStrike_BiteStages, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_target_strike.c
-gLobbedShells_ShardPictures	its twin	The Broken Seal's gLobbedShells_ShardPictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
 gCondemn_PictureY	its twin	The Broken Seal's gCondemn_PictureY, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_condemn.c
 gProcne_PictureWidths	its twin	The Broken Seal's gProcne_PictureWidths, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_procne.c
 gProcne_PictureHeights	its twin	The Broken Seal's gProcne_PictureHeights, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_procne.c
@@ -2041,7 +2030,6 @@ gProcne_PictureBiasY	its twin	The Broken Seal's gProcne_PictureBiasY, the same b
 gProcne_Pictures	its twin	The Broken Seal's gProcne_Pictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_procne.c
 gTiamat_EmberSpeeds	its twin	The Broken Seal's gTiamat_EmberSpeeds, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_procne.c
 gTiamat_EmberSizes	its twin	The Broken Seal's gTiamat_EmberSizes, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_procne.c
-gTiamat_FlameDrops	its twin	The Broken Seal's gTiamat_FlameDrops, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_procne.c
 gCybele_FlowerPictures	its twin	The Broken Seal's gCybele_FlowerPictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_cybele.c
 gCybele_FlowerSizes	its twin	The Broken Seal's gCybele_FlowerSizes, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_cybele.c
 gCybele_SparkPictures	its twin	The Broken Seal's gCybele_SparkPictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_cybele.c
@@ -2324,7 +2312,6 @@ gGatheringLights_Counts	its twin	The Broken Seal's gGatheringLights_Counts: per 
 gOceanFist_DropGravity	its code	BattleEffect_RunOceanFist: a drop's gravity, by i & 3	games/tla/src/battle_effect/battle_effect_ocean_fist.c
 gNereid_Gravity	its twin	The Broken Seal's gNereid_Gravity, the same bytes, read by the twin BattleEffect_RunNereid	games/tla/src/battle_effect/battle_effect_nereid.c
 gNeptune_Gravity	its twin	The Broken Seal's gNeptune_Gravity, the same bytes, read by the twin BattleEffect_RunNeptune	games/tla/src/battle_effect/battle_effect_neptune.c
-gLobbedShells_Styles	its twin	The Broken Seal's gLobbedShells_Styles: each mode's record, read by the twin BattleEffect_RunLobbedShells	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
 gHelmSplitter_PictureHeights	its twin	The Broken Seal's gHelmSplitter_PictureHeights, the same bytes	games/tla/src/battle_effect/battle_effect_helm_splitter.c
 gFume_Levels	its code	BattleEffect_RunFume: one row per Fume level (effect->variant) (its comment)	games/tla/src/battle_effect/battle_effect_fume.c
 gDrainMotes_Sizes	its code	BattleEffect_RunDrainMotes: the mote size by mode (its comment)	games/tla/src/battle_effect/battle_effect_drain.c
@@ -2472,9 +2459,7 @@ gFieldEffect_ChannelCurve	its twin	the same table as ☀️'s gColorBuffer_Chann
 gFieldEffect_ChannelCurveLight	its twin	☀️'s gColorBuffer_ChannelCurveLight	games/tla/src/field/event_commands_tables.s
 gFieldEffect_ChannelCurveContrast	its twin	☀️'s gColorBuffer_ChannelCurveContrast	games/tla/src/field/event_commands_tables.s
 gRope_KeyHeadings	its uses	the pad heading Leader_StepOffRope and Leader_StepOffTightrope read; the same values as ☀️'s gBattleEffect_CyclePatternWords	games/tla/src/field/event_commands_tables.s
-gAnim_ChildPaletteCycle	its twin	☀️'s gAnim_ChildPaletteCycle, the same bytes	games/tla/src/field/event_commands_tables.s
 gField_DefaultPlacements	its twin	☀️'s gField_DefaultPlacements, the two rows the field copies into its work	games/tla/src/field/actor_placement.c
-gBattleEffect_PulseScales	its twin	☀️'s gBattleEffect_PulseScales without its third word	games/tla/src/field/event_commands_tables.s
 gActor_FootprintScript	its twin	the footprint actor's script, as ☀️'s gWorldMap_FootprintActions: wait, free	games/tla/src/field/facing.c
 gActor_SplashScript	its uses	Actor_SpawnWaterSplash starts it on the splash	games/tla/src/field/facing.c
 gActor_RippleScript	its uses	the ripple actors pad_movement.c creates on water cells	games/tla/src/field/facing.c
@@ -3239,9 +3224,6 @@ DJINNI_ANCHOR_HIGH_TARGET_X	its code	anchor 9: the first target's x, 120 pixels 
 DJINNI_ANCHOR_LOW_USER_X	its code	anchor 10: the user's x, 30 pixels up	games/tla/include/battle_effect/battle_effect.h
 DJINNI_ENTRANCE_LONG	its twin	The Broken Seal's DJINNI_ENTRANCE_LONG (ELEMENT_COUNT added to the element: 84 frames)	games/tla/include/battle_effect/battle_effect.h
 DJINNI_ENTRANCE	its code	BattleEffect_RunDjinniEntrance unpacks element bits 0-2, side bit 4, anchor bits 5-8	games/tla/include/battle_effect/battle_effect.h
-Render_DrawMeshWireframe	its code	unused (nothing calls it): transforms the sheet block's points and draws each front-facing face's three edges as clipped lines into the canvas	games/tla/src/battle_effect/battle_effect_moloch.c
-Render_FillMesh	its code	unused: fills each front-facing face into the canvas in two halves along edge slopes, keeping the brighter colour	games/tla/src/battle_effect/battle_effect_moloch.c
-Render_DrawTexturedMesh	its code	unused: draws each front-facing face as an affine-textured triangle from the effect sheet	games/tla/src/battle_effect/battle_effect_moloch.c
 BattleEffect_RunStormBreathStrong	the game	"Storm Breath" (MsgDjinnName); effect kind 471's only ability is 434, the second row named "Storm Breath" (power 220 against 433's 190), as ABILITY_SONIC_WAVE_STRONG; was RunVolleyBMode23	games/tla/src/battle_effect/battle_effect_burst_shower.c
 EffectSprite.scale	its twin	The Broken Seal's struct Sprite member of that role, at the offset field_sprite.h documents for this game's sprite (scale 0x0c, slot 0x10, rotation 0x12, width 0x14, offsets 0x16 and 0x17, flags 0x1a, count 0x1b); EffectSprite_Acquire initializes them as Sprite_Create does	games/tla/src/battle_effect/battle_effect_gaia.c
 EffectSprite.slot	its twin	The Broken Seal's struct Sprite member of that role, at the offset field_sprite.h documents for this game's sprite (scale 0x0c, slot 0x10, rotation 0x12, width 0x14, offsets 0x16 and 0x17, flags 0x1a, count 0x1b); EffectSprite_Acquire initializes them as Sprite_Create does	games/tla/src/battle_effect/battle_effect_gaia.c
@@ -3748,7 +3730,6 @@ CYBELE_VINE_STEM_HEIGHT	its twin	The Broken Seal defines CYBELE_VINE_STEM_HEIGHT
 CYBELE_VINE_WIDTH	its twin	The Broken Seal defines CYBELE_VINE_WIDTH in games/tbs/src/battle_effect/battle_effect_cybele.c and writes it on the same line of BattleEffect_RunCybele where BattleEffect_RunCybele writes 24	games/tla/src/battle_effect/battle_effect_cybele.c
 DJINN_ATTACKS_MOTES_PER_FLAME	its twin	The Broken Seal defines DJINN_ATTACKS_MOTES_PER_FLAME in games/tbs/src/battle_effect/battle_effect_djinn_attacks.c and writes it on the same line of BattleEffect_RunJupiter where BattleEffect_RunJupiter writes 32	games/tla/src/battle_effect/battle_effect_djinn_attacks.c
 DJINN_ATTACK_DAMAGE_FRAME	its twin	The Broken Seal defines DJINN_ATTACK_DAMAGE_FRAME in games/tbs/src/battle_effect/battle_effect_djinn_attacks.c and writes it on the same line of BattleEffect_RunMars where BattleEffect_RunMars writes 56	games/tla/src/battle_effect/battle_effect_djinn_attacks.c
-DJINN_BEAMS_MOTES	its twin	The Broken Seal defines DJINN_BEAMS_MOTES in games/tbs/src/battle_effect/battle_effect_djinn_beams.c and writes it on the same line of BattleEffect_RunDjinnBeams where BattleEffect_RunDjinnBeams writes 512	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
 DJINN_HEAL_SPARKS	its twin	The Broken Seal defines DJINN_HEAL_SPARKS in games/tbs/src/battle_effect/battle_effect_djinn_heal.c and writes it on the same line of BattleEffect_RunDjinnHeal where BattleEffect_RunDjinnHeal writes 512	games/tla/src/battle_effect/battle_effect_target_motes.c
 DJINN_HEAL_SPARKS_PER_TARGET	its twin	The Broken Seal defines DJINN_HEAL_SPARKS_PER_TARGET in games/tbs/src/battle_effect/battle_effect_djinn_heal.c and writes it on the same line of BattleEffect_RunDjinnHeal where BattleEffect_RunDjinnHeal writes 64	games/tla/src/battle_effect/battle_effect_target_motes.c
 DJINN_HEAL_SWIRL_MOTES	its twin	The Broken Seal defines DJINN_HEAL_SWIRL_MOTES in games/tbs/src/battle_effect/battle_effect_djinn_heal.c and writes it on the same line of BattleEffect_RunDjinnHeal where BattleEffect_RunDjinnHeal writes 32	games/tla/src/battle_effect/battle_effect_target_motes.c
@@ -3842,7 +3823,6 @@ CYBELE_VINE_TIP_HEIGHT	its twin	The Broken Seal writes CYBELE_VINE_TIP_HEIGHT (g
 DAGGER_HEIGHT	its twin	The Broken Seal writes DAGGER_HEIGHT (games/tbs/src/battle_effect/battle_effect_internal.h) at the number aligned with this one in BattleEffect_RunStatReduction; the twin routine BattleEffect_RunStatReduction writes 40	games/tla/src/battle_effect/battle_effect_stat_change.c
 DISPLAY_HEIGHT	its twin	The Broken Seal writes DISPLAY_HEIGHT (games/tbs/include/system/io_reg.h) at the number aligned with this one in BattleEffect_RunUnusedOrbitingSpirals; the twin routine BattleEffect_RunUnusedOrbitingSpirals writes 160	games/tla/src/battle_effect/battle_effect_planet_diver.c
 DJINNI_WIDTH	its twin	The Broken Seal writes DJINNI_WIDTH (games/tbs/src/battle_effect/battle_effect_internal.h) at the number aligned with this one in BattleEffect_RunStatBoost; the twin routine BattleEffect_RunStatBoost writes 40	games/tla/src/battle_effect/battle_effect_stat_change.c
-DJINN_BEAMS_MOTE_HEIGHT	its twin	The Broken Seal writes DJINN_BEAMS_MOTE_HEIGHT (games/tbs/src/battle_effect/battle_effect_djinn_beams.c) at the number aligned with this one in BattleEffect_RunDjinnBeams; the twin routine BattleEffect_RunDjinnBeams writes 24	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
 DRAGON_CLOUD_FIRST_EMBER	its twin	The Broken Seal writes DRAGON_CLOUD_FIRST_EMBER (games/tbs/src/battle_effect/battle_effect_dragon_cloud.c) at the number aligned with this one in BattleEffect_RunDragonCloud; the twin routine BattleEffect_RunDragonCloud writes 8	games/tla/src/battle_effect/battle_effect_dragon_cloud.c
 DRAGON_CLOUD_FLAME_WIDTH	its twin	The Broken Seal writes DRAGON_CLOUD_FLAME_WIDTH (games/tbs/src/battle_effect/battle_effect_dragon_cloud.c) at the number aligned with this one in BattleEffect_RunDragonCloud; the twin routine BattleEffect_RunDragonCloud writes 24	games/tla/src/battle_effect/battle_effect_dragon_cloud.c
 DRAGON_CLOUD_TRAIL_WIDTH	its twin	The Broken Seal writes DRAGON_CLOUD_TRAIL_WIDTH (games/tbs/src/battle_effect/battle_effect_dragon_cloud.c) at the number aligned with this one in BattleEffect_RunDragonCloud; the twin routine BattleEffect_RunDragonCloud writes 24	games/tla/src/battle_effect/battle_effect_dragon_cloud.c
@@ -3942,7 +3922,6 @@ homeX	its twin	The Broken Seal's Actor union member at 0x64, set from the creati
 spinRampFrames	its twin	The Broken Seal's Actor union member, FieldEffect_AdvanceAngleWithRamp	games/tla/include/field/actor.h
 orbitFrames	its twin	The Broken Seal's Actor union member, FieldEffect_UpdateDescendingOrbitActor	games/tla/include/field/actor.h
 PSYNERGY_TRIGGER	its twin	The Broken Seal's scene_tables.h PSYNERGY_TRIGGER(phase); PSYNERGY_PHASE_ANY is 15 here, as field_sequence_items.c tests 0xf0000005	games/tla/include/field/scene_tables.h
-ANIM_LAYER_COUNT	its twin	The Broken Seal's field_internal.h enum, Sprite.entries	games/tla/src/field/field_internal.h
 Actor_IsNotAttachedEffect	its code	returns 0 while the actor's sprite's first animation id is 0x108, SPRITE_ATTACHED_EFFECT, which FieldEffect_SetAttached creates	games/tla/src/field/event_commands_view.c
 FIELD_BLOCKED_TURN_MAX	its twin	The Broken Seal's field_player_control.c, TRIG_TURN / 16 clamp on a blocked actor's turn	games/tla/src/field/field_internal.h
 sunkRows	its twin	struct Sprite.sunkRows in this game's sprite.h; the player's wading sets 4	games/tla/src/field/field_internal.h
@@ -4180,7 +4159,6 @@ tundaria_tower_reflux	its uses	palette pal_41: brought by its map in the resourc
 tundaria_tower_ice_columns	its uses	palette pal_42: brought by its map in the resource directory (its map.inc defines its label)	games/tla/src/graphics/tileset/palettes/tundaria_tower_ice_slide.png
 tundaria_tower_entrance	its uses	tileset folder set_86: brought by map tundaria_tower_1 in the resource directory (its map.inc defines its Tileset_ labels)	games/tla/src/graphics/tileset/tundaria_tower_entrance
 gondowan_settlement_cave	its uses	tileset folder set_87: brought by map settlements_3 in the resource directory (its map.inc defines its Tileset_ labels)	games/tla/src/graphics/tileset/gondowan_settlement_cave
-sw_atteka_islet	its uses	tileset folder set_88: brought by map settlements_9 in the resource directory (its map.inc defines its Tileset_ labels)	games/tla/src/graphics/tileset/sw_atteka_islet
 gondowan_settlement	its uses	palette pal_45: brought by its map in the resource directory (its map.inc defines its label)	games/tla/src/graphics/tileset/palettes/gondowan_settlement.png
 hesperia_settlement	its uses	tileset folder set_89: brought by map settlements_4 in the resource directory (its map.inc defines its Tileset_ labels)	games/tla/src/graphics/tileset/hesperia_settlement
 kalt_island	its uses	tileset folder set_90: brought by map settlements_7 in the resource directory (its map.inc defines its Tileset_ labels)	games/tla/src/graphics/tileset/prox_south_gate
@@ -6526,7 +6504,6 @@ SPRITE_STATUS_GRIM_REAPER_6	its number	the curse's turns left, as The Broken Sea
 SPRITE_STATUS_WIDE_GRIM_REAPER_6	its number	the curse's turns left on the wide status sprite (status_wide_grim_reaper_6.png)	games/tla/include/sprite_ids.h
 SPRITE_STATUS_GRIM_REAPER_7	its number	the curse's turns left, as The Broken Seal's row (status_grim_reaper_7.png)	games/tla/include/sprite_ids.h
 SPRITE_STATUS_WIDE_GRIM_REAPER_7	its number	the curse's turns left on the wide status sprite (status_wide_grim_reaper_7.png)	games/tla/include/sprite_ids.h
-SPRITE_BLANK_32	its number	the pixel size: a blank 32-pixel square, as The Broken Seal's row (blank_32.png)	games/tla/include/sprite_ids.h
 SOUND_MODE_FREQ_13379	its number	the output rate in hertz the mode selects, pret's m4a name	games/tla/include/sound/sound_driver_types.h
 gMPlayInfo_SE5	its number	the m4a driver's player 5, in pret's spelling (S3 keeps the driver's spellings)	games/tla/include/sound/sound.h
 MUSIC_PLAYER_SE5	its number	the m4a driver's player 5, in pret's spelling	games/tla/include/sound/sound_driver_symbols.h
@@ -6636,8 +6613,6 @@ WORLD_MAP_FROM_NARIBWE_NORTH	its uses	entrance 24 of SceneId_WorldMap, the door 
 WORLD_MAP_FROM_KIBOMBO_MOUNTAINS_DISK_AXE_CHEST	its uses	entrance 25 of SceneId_WorldMap, the door to SceneId_KibomboMountainsDiskAxeChest (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_FROM_KIBOMBO_MOUNTAINS_WAFT	its uses	entrance 26 of SceneId_WorldMap, the door to SceneId_KibomboMountainsWaft (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_FROM_KIBOMBO	its uses	entrance 27 of SceneId_WorldMap, the door to SceneId_Kibombo (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-WORLD_MAP_FROM_YALLAM_SOUTH_A	its uses	entrance 33 of SceneId_WorldMap, the door to SceneId_Yallam (its exit or entrance 10), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-WORLD_MAP_FROM_YALLAM_SOUTH_B	its uses	entrance 34 of SceneId_WorldMap, the door to SceneId_Yallam (its exit or entrance 11), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_FROM_TAOPO_SWAMP_ENTRANCE	its uses	entrance 35 of SceneId_WorldMap, the door to SceneId_TaopoSwampEntrance (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_FROM_APOJII_ISLANDS	its uses	entrance 36 of SceneId_WorldMap, the door to SceneId_ApojiiIslands (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_FROM_AQUA_ROCK_MOAI_SOUTH	its uses	entrance 37 of SceneId_WorldMap, the door to SceneId_AquaRockMoai (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
@@ -6649,7 +6624,6 @@ WORLD_MAP_FROM_SEA_OF_TIME_TO_LEMURIA_NORTHEAST	its uses	entrance 43 of SceneId_
 WORLD_MAP_FROM_SEA_OF_TIME_TO_LEMURIA_NORTH	its uses	entrance 44 of SceneId_WorldMap, the door to SceneId_SeaOfTimeToLemuria (its exit or entrance 3), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_FROM_LEMURIA_ENTRANCE	its uses	entrance 45 of SceneId_WorldMap, the door to SceneId_LemuriaEntrance (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_FROM_TUNDARIA_TOWER_ENTRANCE	its uses	entrance 46 of SceneId_WorldMap, the door to SceneId_TundariaTowerEntrance (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-WORLD_MAP_FROM_SW_ATTEKA_ISLET	its uses	entrance 47 of SceneId_WorldMap, the door to SceneId_SwAttekaIslet (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_FROM_GONDOWAN_SETTLEMENT	its uses	entrance 48 of SceneId_WorldMap, the door to SceneId_GondowanSettlement (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_FROM_HESPERIA_SETTLEMENT	its uses	entrance 49 of SceneId_WorldMap, the door to SceneId_HesperiaSettlement (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_FROM_KALT_ISLAND	its uses	entrance 50 of SceneId_WorldMap, the door to SceneId_KaltIsland (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
@@ -6699,8 +6673,6 @@ WORLD_MAP_TO_NARIBWE_SOUTH	its uses	exit 23 of SceneId_WorldMap leads to SceneId
 WORLD_MAP_TO_KIBOMBO_MOUNTAINS_DISK_AXE_CHEST	its uses	exit 25 of SceneId_WorldMap leads to SceneId_KibomboMountainsDiskAxeChest entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_TO_KIBOMBO_MOUNTAINS_WAFT	its uses	exit 26 of SceneId_WorldMap leads to SceneId_KibomboMountainsWaft entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_TO_KIBOMBO	its uses	exit 27 of SceneId_WorldMap leads to SceneId_Kibombo entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-WORLD_MAP_TO_YALLAM_SOUTH_A	its uses	exit 33 of SceneId_WorldMap leads to SceneId_Yallam entrance 10, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-WORLD_MAP_TO_YALLAM_SOUTH_B	its uses	exit 34 of SceneId_WorldMap leads to SceneId_Yallam entrance 11, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_TO_TAOPO_SWAMP_ENTRANCE	its uses	exit 35 of SceneId_WorldMap leads to SceneId_TaopoSwampEntrance entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_TO_APOJII_ISLANDS	its uses	exit 36 of SceneId_WorldMap leads to SceneId_ApojiiIslands entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_TO_AQUA_ROCK_MOAI_SOUTH	its uses	exit 37 of SceneId_WorldMap leads to SceneId_AquaRockMoai entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
@@ -6712,7 +6684,6 @@ WORLD_MAP_TO_SEA_OF_TIME_TO_LEMURIA_NORTHEAST	its uses	exit 43 of SceneId_WorldM
 WORLD_MAP_TO_SEA_OF_TIME_TO_LEMURIA_NORTH	its uses	exit 44 of SceneId_WorldMap leads to SceneId_SeaOfTimeToLemuria entrance 3, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_TO_LEMURIA_ENTRANCE	its uses	exit 45 of SceneId_WorldMap leads to SceneId_LemuriaEntrance entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_TO_TUNDARIA_TOWER_ENTRANCE	its uses	exit 46 of SceneId_WorldMap leads to SceneId_TundariaTowerEntrance entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-WORLD_MAP_TO_SW_ATTEKA_ISLET	its uses	exit 47 of SceneId_WorldMap leads to SceneId_SwAttekaIslet entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_TO_GONDOWAN_SETTLEMENT	its uses	exit 48 of SceneId_WorldMap leads to SceneId_GondowanSettlement entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_TO_HESPERIA_SETTLEMENT	its uses	exit 49 of SceneId_WorldMap leads to SceneId_HesperiaSettlement entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 WORLD_MAP_TO_KALT_ISLAND	its uses	exit 50 of SceneId_WorldMap leads to SceneId_KaltIsland entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
@@ -6753,7 +6724,6 @@ SUHALLA_GATE_PSYNERGY_STONE_TO_IDEJIMA	its uses	exit 4 of SceneId_SuhallaGatePsy
 IDEJIMA_FROM_WORLD_MAP_SOUTH	its uses	entrance 2 of SceneId_Idejima, the door to SceneId_WorldMap (its exit or entrance 65), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 IDEJIMA_FROM_WORLD_MAP_SOUTHWEST	its uses	entrance 4 of SceneId_Idejima, the door to SceneId_WorldMap (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 IDEJIMA_FROM_WORLD_MAP_NORTH_A	its uses	entrance 11 of SceneId_Idejima, the door to SceneId_WorldMap (its exit or entrance 64), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-IDEJIMA_FROM_TITLE	its uses	entrance 12 of SceneId_Idejima, the door to SceneId_Title (its exit or entrance 3), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 IDEJIMA_TO_WORLD_MAP_SOUTHWEST	its uses	exit 4 of SceneId_Idejima leads to SceneId_WorldMap entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 IDEJIMA_TO_WORLD_MAP_NORTH_A	its uses	exit 11 of SceneId_Idejima leads to SceneId_WorldMap entrance 64, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 IDEJIMA_TO_TITLE	its uses	exit 12 of SceneId_Idejima leads to SceneId_Title entrance 3, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
@@ -8341,12 +8311,6 @@ KALT_ISLAND_TO_WORLD_MAP	its uses	exit 1 of SceneId_KaltIsland leads to SceneId_
 KALT_ISLAND_TO_KALT_ISLAND_HOUSES	its uses	exit 2 of SceneId_KaltIsland leads to SceneId_KaltIslandHouses entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 KALT_ISLAND_HOUSES_FROM_KALT_ISLAND	its uses	entrance 1 of SceneId_KaltIslandHouses, the door to SceneId_KaltIsland (its exit or entrance 2), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 KALT_ISLAND_HOUSES_TO_KALT_ISLAND	its uses	exit 1 of SceneId_KaltIslandHouses leads to SceneId_KaltIsland entrance 2, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-SW_ATTEKA_ISLET_FROM_WORLD_MAP	its uses	entrance 1 of SceneId_SwAttekaIslet, the door to SceneId_WorldMap (its exit or entrance 47), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-SW_ATTEKA_ISLET_FROM_SW_ATTEKA_ISLET_HOUSES_NORTH	its uses	entrance 2 of SceneId_SwAttekaIslet, the door to SceneId_SwAttekaIsletHouses (its exit or entrance 11), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-SW_ATTEKA_ISLET_TO_WORLD_MAP	its uses	exit 1 of SceneId_SwAttekaIslet leads to SceneId_WorldMap entrance 47, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-SW_ATTEKA_ISLET_TO_SW_ATTEKA_ISLET_HOUSES_NORTH	its uses	exit 2 of SceneId_SwAttekaIslet leads to SceneId_SwAttekaIsletHouses entrance 11, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-SW_ATTEKA_ISLET_HOUSES_FROM_SW_ATTEKA_ISLET_SOUTH	its uses	entrance 11 of SceneId_SwAttekaIsletHouses, the door to SceneId_SwAttekaIslet (its exit or entrance 2), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-SW_ATTEKA_ISLET_HOUSES_TO_SW_ATTEKA_ISLET_NORTH	its uses	exit 1 of SceneId_SwAttekaIsletHouses leads to SceneId_SwAttekaIslet entrance 2, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 MAGMA_ROCK_SLIDE_FROM_WORLD_MAP	its uses	entrance 1 of SceneId_MagmaRockSlide, the door to SceneId_WorldMap (its exit or entrance 51), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 MAGMA_ROCK_SLIDE_FROM_MAGMA_ROCK_INSIDE_EMBER_STONE	its uses	entrance 2 of SceneId_MagmaRockSlide, the door to SceneId_MagmaRockInsideEmberStone (its exit or entrance 11), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 MAGMA_ROCK_SLIDE_FROM_MAGMA_ROCK_SALAMANDER_TAIL_CHEST_WEST	its uses	entrance 3 of SceneId_MagmaRockSlide, the door to SceneId_MagmaRockSalamanderTailChest (its exit or entrance 16), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
@@ -8567,11 +8531,6 @@ SHAMAN_VILLAGE_TO_WORLD_MAP	its uses	exit 1 of SceneId_ShamanVillage leads to Sc
 SHAMAN_VILLAGE_TO_SHAMAN_VILLAGE_SANCTUM	its uses	exit 10 of SceneId_ShamanVillage leads to SceneId_ShamanVillageSanctum entrance 6, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 SHAMAN_VILLAGE_SANCTUM_FROM_SHAMAN_VILLAGE	its uses	entrance 6 of SceneId_ShamanVillageSanctum, the door to SceneId_ShamanVillage (its exit or entrance 10), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 SHAMAN_VILLAGE_SANCTUM_TO_SHAMAN_VILLAGE	its uses	exit 6 of SceneId_ShamanVillageSanctum leads to SceneId_ShamanVillage entrance 10, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-TRIAL_ROAD_STAGES_FROM_SHAMAN_VILLAGE_TRIAL_GROUNDS_E	its uses	entrance 31 of SceneId_TrialRoadStages, the door to SceneId_ShamanVillageTrialGrounds (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-TRIAL_ROAD_STAGES_FROM_SHAMAN_VILLAGE_TRIAL_GROUNDS_F	its uses	entrance 32 of SceneId_TrialRoadStages, the door to SceneId_ShamanVillageTrialGrounds (its exit or entrance 2), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-TRIAL_ROAD_STAGES_FROM_TRIAL_ROAD_SUMMIT_WEST_B	its uses	entrance 33 of SceneId_TrialRoadStages, the door to SceneId_TrialRoadSummit (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-TRIAL_ROAD_STAGES_FROM_TRIAL_ROAD_SUMMIT_EAST_B	its uses	entrance 34 of SceneId_TrialRoadStages, the door to SceneId_TrialRoadSummit (its exit or entrance 2), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
-TRIAL_ROAD_STAGES_FROM_SHAMAN_VILLAGE_TRIAL_GROUNDS_G	its uses	entrance 50 of SceneId_TrialRoadStages, the door to SceneId_ShamanVillageTrialGrounds (its exit or entrance 10), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 TRIAL_ROAD_STAGES_TO_SHAMAN_VILLAGE_TRIAL_GROUNDS_A	its uses	exit 5 of SceneId_TrialRoadStages leads to SceneId_ShamanVillageTrialGrounds entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 TRIAL_ROAD_STAGES_TO_SHAMAN_VILLAGE_TRIAL_GROUNDS_B	its uses	exit 6 of SceneId_TrialRoadStages leads to SceneId_ShamanVillageTrialGrounds entrance 2, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
 TRIAL_ROAD_STAGES_TO_TRIAL_ROAD_SUMMIT_WEST_A	its uses	exit 7 of SceneId_TrialRoadStages leads to SceneId_TrialRoadSummit entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
@@ -9076,11 +9035,7 @@ Render_ShadedKernel	its code	kind 9: a texel with the model's shade, skipped at 
 Render_TexturedNarrowKernel	its code	kind 10: kind 8's copy into a target of 512-byte tile rows (lsl #9), half the canvas's width (Render_DrawModelList's switch; its inner loop)	games/tla/src/battle_effect/battle_effect_internal.h
 Render_SolidNarrowKernel	its code	kind 11: kind 1's fill into a target of 512-byte tile rows, half the canvas's width (Render_DrawModelList's switch; its inner loop)	games/tla/src/battle_effect/battle_effect_internal.h
 Render_TransformKernel	its code	Render_TransformVertices runs it: count packed s8 vertices through the current transform (Render_DrawModelList's switch; its inner loop)	games/tla/src/battle_effect/battle_effect_internal.h
-CopyWords2	its number	the block move copies 2 words; COPY_FROM(n) pastes the count into the name (Render_PatchTemplate's copy helpers)	games/tla/src/battle_effect/battle_effect_moloch.c
-CopyWords3	its number	the block move copies 3 words; COPY_FROM(n) pastes the count into the name (Render_PatchTemplate's copy helpers)	games/tla/src/battle_effect/battle_effect_moloch.c
-CopyWords4	its number	the block move copies 4 words; COPY_FROM(n) pastes the count into the name (Render_PatchTemplate's copy helpers)	games/tla/src/battle_effect/battle_effect_moloch.c
 Render_FillMeshKernel	its code	the ARM routine transforms r0 vertices adding 64 << 16 to x and y, walks 28-byte faces, drops those whose cross product is not positive and sorts each by y with eor swaps: Render_FillMesh's own steps	games/tla/src/battle_effect/battle_effect_internal.h
-Render_RunFillMeshKernel	its code	copies Render_FillMeshKernel into IWRAM and runs it with two arguments, Render_FillMesh's vertexCount and faceCount	games/tla/src/battle_effect/battle_effect_moloch.c
 IRIS_PETAL_FRAMES	its code	tiles[15]: one object per petal picture, frames cycle 0-14	games/tla/src/battle_effect/battle_effect_moloch.c
 IRIS_STREAKS	its code	struct IrisScene streaks[15][10]: fifteen streaks, each a head and nine trailing points	games/tla/src/battle_effect/battle_effect_moloch.c
 IRIS_DROPS	its code	drop pictures 20x40 built by DrawShadedCirclesMirrored at sheet+0x1b12, eight, each dimmer	games/tla/src/battle_effect/battle_effect_moloch.c
@@ -10028,7 +9983,6 @@ BLEND_SCRIPT_JUMP	its code	the blend script word that jumps within it: BlendScri
 MAP_CELL_WORD	its code	a struct MapCell read as one word, as code that ORs bits into a cell writes it: gabomba_statue.c's cog cells	games/tla/include/field/map_grid.h
 GROUND_EFFECTS_WADING_MASK	its code	the kind of wading in bits 3..2 of a ground's effects: event_commands_movement_types.c's Field_TryJumpForward and field_player_control.c's map->groundEffects & 12	games/tla/include/field/map_grid.h
 GROUND_EFFECTS_WADING	its code	the kind of wading in bits 3..2 of a ground's effects: event_commands_movement_types.c's Field_TryJumpForward and field_player_control.c's << 28 >> 30	games/tla/include/field/map_grid.h
-FIELD_TILE_ORIGIN	its code	the 16.16 coordinate an 8-pixel tile starts at: gaia_rock_inside.c and taopo_swamp.c's TaopoSwamp_FocusMapOn	games/tla/include/field/field_coordinate.h
 LEDGE_JUMP_NO_LANDING_WAIT	its code	Actor_JumpDownLedge's param bit that skips the wait for the landing (field_sequence_actor_commands.c tests param & 0x1000): taopo_swamp.c's TaopoSwamp_DropToLowerFloor	games/tla/include/field/event_commands.h
 EFFECT_SPRITE_FRONT_DEPTH	its code	the depth slot the field Psynergy's effect sprites take, past the actors' slots (Oam_AddSpriteAtDepthClamped clamps them to 239): field_psynergy_radial_effects.c's Lash, and field_psynergy_step_vector.c, field_psynergy_parch.c, field_psynergy_tile_copies.c and field_psynergy_blaze.c	games/tla/include/system/system.h
 circlePhase	its code	a charge circling its orb statue: its place on the circle in 256ths of a turn (gabomba_statue.c's GabombaStatue_SendCharge and _CircleOwner)	games/tla/include/field/actor.h
@@ -11308,54 +11262,6 @@ CRYSTAL_COG_PICTURE	its picture	games/tla/src/graphics/battle_effects/cog_textur
 CRYSTAL_COG_SCALE_MAX	what the player sees	render psynergy --ability Crystal: the cog on the ground grows until it spans the party's side and then keeps its size (its render)	games/tla/src/battle_effect/battle_effect_crystal.c
 CRYSTAL_COG_TILT	what the player sees	render psynergy --ability Crystal: the cog lies nearly flat on the ground, seen at a slant (its render); Matrix_RotateX(-CRYSTAL_COG_TILT) before it is placed	games/tla/src/battle_effect/battle_effect_crystal.c
 CRYSTAL_VENUS_DJINN_SMALL_PICTURES	its picture	games/tla/src/graphics/battle_effects/venus_djinn_small.png (VenusDjinnSmallSheet), a small yellow Djinni 20 by 40, the picture that dives onto the target in render psynergy --ability Crystal (its render)	games/tla/src/battle_effect/battle_effect_crystal.c
-BattleEffect_RunRevive	the game	"Revive" (MsgAbilityName + 101)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunDew	the game	"Dew" (MsgAbilityName + 326)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunSpark	the game	"Spark" (MsgAbilityName + 348)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunMadSpatter	the game	"Mad Spatter" (MsgAbilityName + 489)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_MAD_SPATTER	the game	"Mad Spatter" (MsgAbilityName + 489)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunMud	the game	"Mud" (MsgAbilityName + 310)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_MUD	the game	"Mud" (MsgAbilityName + 310)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunDecompose	the game	"Decompose" (MsgAbilityName + 492)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_DECOMPOSE	the game	"Decompose" (MsgAbilityName + 492)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunBoneChiller	the game	"Bone Chiller" (MsgAbilityName + 451)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_BONE_CHILLER	the game	"Bone Chiller" (MsgAbilityName + 451)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunStickyGoo	the game	"Sticky Goo" (MsgAbilityName + 457)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_STICKY_GOO	the game	"Sticky Goo" (MsgAbilityName + 457)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunPoisonInk	the game	"Poison Ink" (MsgAbilityName + 482)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_POISON_INK	the game	"Poison Ink" (MsgAbilityName + 482)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunStickyPoison	the game	"Sticky Poison" (MsgAbilityName + 464)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_STICKY_POISON	the game	"Sticky Poison" (MsgAbilityName + 464)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunRottenBlood	the game	"Rotten Blood" (MsgAbilityName + 472)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_ROTTEN_BLOOD	the game	"Rotten Blood" (MsgAbilityName + 472)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunRisingVenom	the game	"Rising Venom" (MsgAbilityName + 670)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_RISING_VENOM	the game	"Rising Venom" (MsgAbilityName + 670)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunFormicAcid	the game	"Formic Acid" (MsgAbilityName + 661)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_FORMIC_ACID	the game	"Formic Acid" (MsgAbilityName + 661)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunDjinnBeams	its twin	The Broken Seal's BattleEffect_RunDjinnBeams (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same motes and column of light	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunDjinnBeams	what the player sees	Felix casts Revive at the downed Sheba: crescent motes drift down over her swaying, and a column of light falls on her and glows at her feet as she is revived; Jenna's Spark first shows a Mars Djinni swaying and rising away (its render)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-DJINN_BEAMS_DJINNI_PICTURE	its twin	The Broken Seal's DJINN_BEAMS_DJINNI_PICTURE (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same offset 26048	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-DJINN_BEAMS_DJINNI_PICTURE	what the player sees	Jenna's Spark: the Mars Djinni drawn from this offset sways over Piers and rises away (its render)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-DJINN_BEAMS_DJINNI_SWAY_X	its twin	The Broken Seal's DJINN_BEAMS_DJINNI_SWAY_X (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same 20 pixels	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-DJINN_BEAMS_DJINNI_SWAY_Y	its twin	The Broken Seal's DJINN_BEAMS_DJINNI_SWAY_Y (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same 4 pixels	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-DJINN_BEAMS_MOTE_PICTURES	its twin	The Broken Seal's DJINN_BEAMS_MOTE_PICTURES (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same offset 10000, where CrescentMoonSheet is unpacked	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-DJINN_BEAMS_MOTE_PICTURES	what the player sees	Felix's Revive: the crescent motes drawn from this offset drift down over Sheba (its render)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-DJINN_BEAMS_TARGET_MOTES	its twin	The Broken Seal's DJINN_BEAMS_TARGET_MOTES (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same 64	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-DJINN_BEAMS_TARGET_FRAMES	its twin	The Broken Seal's DJINN_BEAMS_TARGET_FRAMES (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same 16	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-DJINN_BEAMS_MOTE_SWAY	its twin	The Broken Seal's DJINN_BEAMS_MOTE_SWAY (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same 16 pixels	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunLobbedShells	its twin	The Broken Seal's BattleEffect_RunLobbedShells (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same shells and bursts, with three more styles	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-BattleEffect_RunLobbedShells	what the player sees	Felix casts Mad Spatter at Jenna, Sheba and Piers: gold shells arc onto each in turn and burst into shards on the ground; Felix's Decompose: green shells burst into smoke; Felix's Mud: streams of gold shells (its render)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_BURSTS	its twin	The Broken Seal's LOBBED_SHELLS_BURSTS (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same PARTICLES + 256	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_SMOKE_PICTURES	its twin	The Broken Seal's LOBBED_SHELLS_SMOKE_PICTURES (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same offset 16000 where SmokeSheet is unpacked	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELL_PICTURES	its twin	The Broken Seal's LOBBED_SHELL_PICTURES (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 10	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_SHARD_PICTURES	its twin	The Broken Seal's LOBBED_SHELLS_SHARD_PICTURES (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same offset 7680 past the shell's pictures	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_SMOKE_PUFFS	its twin	The Broken Seal's LOBBED_SHELLS_SMOKE_PUFFS (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 4	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_SHARDS	its twin	The Broken Seal's LOBBED_SHELLS_SHARDS (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 16	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_BURST_FRAMES	its twin	The Broken Seal's LOBBED_SHELLS_BURST_FRAMES (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 45	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_SHATTER	its twin	The Broken Seal's LOBBED_SHELLS_SHATTER (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the first byte of a style's record	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_SHATTER	what the player sees	Mad Spatter's style has it set and its shells burst into shards; Decompose's has it clear and its shells burst into smoke (its render)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELL_WIDTH	its twin	The Broken Seal's LOBBED_SHELL_WIDTH (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 24	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELL_HEIGHT	its twin	The Broken Seal's LOBBED_SHELL_HEIGHT (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 32	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
-LOBBED_SHELLS_SHELLS	what the player sees	Felix's Mud, whose style gives 4, sends a stream of gold shells onto each target where the other styles send one (its render)	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
 BattleEffect_RunAtalanta	the game	"Atalanta" (MsgAbilityName + 407)	games/tla/src/battle_effect/battle_effect_atalanta.c
 BattleEffect_RunAtalanta	what the player sees	Sheba summons Atalanta: under a violet sky the green-haired archer flies across the screen while motes gather into shafts of light that flash and fly off, then shafts rain down diagonally on Felix's side and burst in light (its render)	games/tla/src/battle_effect/battle_effect_atalanta.c
 SlashSheetPicture	its twin	The Broken Seal's enum SlashSheetPicture (games/tbs/src/battle_effect/battle_effect_atalanta.c), the same pictures of SlashSheet at the same offsets	games/tla/src/battle_effect/battle_effect_atalanta.c
@@ -11663,7 +11569,6 @@ FLAG_YAMPI_DESERT_ROCK_PIT_DUG_UP	what the player sees	with the King Scorpion be
 FLAG_YAMPI_DESERT_TRAVELERS_MET	the game	"Hey! Look! Up there!" (MsgHeyLookUp)	games/tla/src/scene/yampi_desert.c
 FLAG_YAMPI_DESERT_TRAVELERS_MET	what the player sees	set, the travelers from Madra stand on the sand by the spring's pool, below the ledge the party came along (its render)	games/tla/src/scene/yampi_desert.c
 FLAG_YAMPI_DESERT_ROPE_TIED	the game	"When you see a rope, use Lash on it" (MsgKandoreanTempleSecretOfLash + 2)	games/tla/src/scene/yampi_desert.c
-ACTOR_MAYOR	the game	"Madran Mayor" (MsgTestName + 3)	games/tla/src/scene/yampi_desert.c
 ACTOR_MAYOR	the game	"This is where my son must prove himself as mayor" (MsgThisIsWhere)	games/tla/src/scene/yampi_desert.c
 ACTOR_ROPE_POST	the game	"When you see a rope, use Lash on it" (MsgKandoreanTempleSecretOfLash + 2)	games/tla/src/scene/yampi_desert.c
 ACTOR_ROPE_POST	its picture	SPRITE_TIGHTROPE_POST, a wooden post with a rope's ring; the actor Lash is cast on	games/tla/src/scene/yampi_desert.c
@@ -12107,7 +12012,6 @@ ACTOR_KRADEN	the game	"Kraden" (MsgNamesPiers + 2)	games/tla/src/scene/eastern_a
 ACTOR_BRIGGS	the game	"Briggs" (MsgNamesFortuneTeller + 4)	games/tla/src/scene/eastern_alhafra.c
 ACTOR_CHAUCHA	the game	"Chaucha" (MsgNamesFortuneTeller + 5)	games/tla/src/scene/eastern_alhafra.c
 ACTOR_EOLEO	the game	"Eoleo" (MsgNamesFortuneTeller + 6)	games/tla/src/scene/eastern_alhafra.c
-ACTOR_ALHAFRAS_MAYOR	the game	"Alhafran Mayor" (MsgTestName + 5)	games/tla/src/scene/eastern_alhafra.c
 ACTOR_JIYA	the game	"Jiya, how are the repairs coming along?" (MsgAlhafraManorThankYouAgainMayorYou + 7)	games/tla/src/scene/eastern_alhafra.c
 ACTOR_FIRST_WORKER	the game	"I'm telling you, Mayor, I saw it with my own eyes!" (MsgIStillJust + 1); the first of the two the mayor then sends with "Gather the townspeople and get them to work on the mast."	games/tla/src/scene/eastern_alhafra.c
 ACTOR_SECOND_WORKER	the game	"If you don't believe us, you can go see for yourself!" (MsgIStillJust + 2); the second of the two workers who bring the mayor	games/tla/src/scene/eastern_alhafra.c
@@ -12278,8 +12182,6 @@ ACTOR_PIRATE	the game	"He must have come here looking for Briggs." (MsgAlhafraOo
 ACTOR_PUDDLE_A	what the player sees	a small blue puddle on the sand, east of the merchants' stalls (its render)	games/tla/src/scene/alhafra.c
 ACTOR_PUDDLE_B	what the player sees	a small blue puddle on the sand below the merchants' stalls (its render)	games/tla/src/scene/alhafra.c
 ACTOR_PUDDLE_C	what the player sees	a small blue puddle on the grass by the east road, gone once Briggs is caught (its render)	games/tla/src/scene/alhafra.c
-ACTOR_MADRAS_ELDER	the game	"Madran Elder" (MsgTestName + 4)	games/tla/src/scene/alhafra.c
-ACTOR_MADRAS_MAYOR	the game	"Madran Mayor" (MsgTestName + 3)	games/tla/src/scene/alhafra.c
 ACTOR_FIRST_MADRAN_SOLDIER	the game	"Finally! We made it!" (MsgAlhafraFinallyWeMadeIt)	games/tla/src/scene/alhafra.c
 ACTOR_SECOND_MADRAN_SOLDIER	the game	"No doubt about it!" (MsgAlhafraFinallyWeMadeIt + 22)	games/tla/src/scene/alhafra.c
 ACTOR_MADRAN_WAITING_FOR_THE_ELDER	the game	"Where's the Elder?" (MsgAlhafraFinallyWeMadeIt + 2)	games/tla/src/scene/alhafra.c
@@ -12551,7 +12453,6 @@ AlhafraManor_ComplainAboutTheMayor	the game	"I'm starting to think the mayor of 
 FLAG_DEFENDED_THE_MAYOR	the game	"I'm sure the mayor has his reasons for halting repairs on the sailboat..." (MsgAlhafraManorImSureTheMayorHas), Jiya's first line in the talk the flag marks as given	games/tla/src/scene/alhafra_manor.c
 AlhafraManor_DefendTheMayor	the game	"I'm sure the mayor has his reasons for halting repairs on the sailboat..." (MsgAlhafraManorImSureTheMayorHas)	games/tla/src/scene/alhafra_manor.c
 AlhafraManor_TellOfTheEasternSea	the game	"Briggs tells me there are huge towns on a continent that lies across the Eastern Sea." (MsgAlhafraManorBriggsTellsMeThereAre)	games/tla/src/scene/alhafra_manor.c
-ACTOR_MAYOR	the game	"Alhafran Mayor" (MsgTestName + 5)	games/tla/src/scene/alhafra_manor.c
 ACTOR_MAYOR	the game	"Thank you again, Mayor." (MsgAlhafraManorThankYouAgainMayorYou), Kraden's thanks to him the night Briggs escapes	games/tla/src/scene/alhafra_manor.c
 ACTOR_BOY_ON_THE_WATCHTOWER	the game	"You should go to the watchtower and gaze southward." (MsgAlhafraManorYouShouldGoToThe)	games/tla/src/scene/alhafra_manor.c
 ACTOR_BOY_ON_THE_WATCHTOWER	what the player sees	the manor's south hall entered by entrance 5: a boy in brown stands west of the door, the same sprite as Sunshine's child in Yallam (its render)	games/tla/src/scene/alhafra_manor.c
@@ -12560,8 +12461,6 @@ ACTOR_WOMAN_ON_THE_PIRATES	the game	"Our town was rife with pirates until just r
 ACTOR_OLD_WOMAN_ON_THE_BALLOO_RANGE	the game	"The mountains to the east of Alhafra are the Balloo Range." (MsgAlhafraManorTheMountainsToTheEast)	games/tla/src/scene/alhafra_manor.c
 ACTOR_WOMAN_ON_THE_CURSED_VILLAGE	the game	"I wish someone would go do something about that cursed village south of us." (MsgAlhafraManorIWishSomeoneWouldGo)	games/tla/src/scene/alhafra_manor.c
 ACTOR_GIRL_ON_THE_WARRIORS	the game	"I heard the pirates talking about the warriors who beat them." (MsgAlhafraManorIHeardThePiratesTalking)	games/tla/src/scene/alhafra_manor.c
-ACTOR_MADRAS_MAYOR	the game	"Madran Mayor" (MsgTestName + 3)	games/tla/src/scene/alhafra_manor.c
-ACTOR_MADRAS_ELDER	the game	"Madran Elder" (MsgTestName + 4)	games/tla/src/scene/alhafra_manor.c
 ACTOR_KRADEN	the game	"Kraden" (MsgNamesPiers + 2)	games/tla/src/scene/alhafra_manor.c
 ENTRANCE_MAYORS_ROOM	what the player sees	entered by entrance 8, the room with the round table where Alhafra's mayor stands at the north wall and Jiya by the west (its render)	games/tla/src/scene/alhafra_manor.c
 ENTRANCE_WATCHTOWER	what the player sees	entered by entrance 14, an eight-sided room where the man gazing at Air's Rock and the old man on Indra stand (its render)	games/tla/src/scene/alhafra_manor.c
@@ -12856,8 +12755,6 @@ Islets_FreezePuddle	what the player sees	render probe SoutheastAngaraIslet --ent
 Islets_StartWave	its twin	games/tla/src/scene/lemuria.c Lemuria_StartRipple, the same two tasks for Lemuria's water; nothing calls this copy	games/tla/src/scene/islets.c
 BEAM_X	what the player sees	entered by entrance 11, the leader stands at (232, 520) at the top of a thin beam of light rising out of the gap between the pale blocks, pink lights circling up it from below (its render)	games/tla/src/scene/jupiter_lighthouse_room_locked_doors.c
 BEAM_Z	what the player sees	entered by entrance 11, the leader stands at (232, 520) at the top of a thin beam of light rising out of the gap between the pale blocks, pink lights circling up it from below (its render)	games/tla/src/scene/jupiter_lighthouse_room_locked_doors.c
-ANIM_PARTICLE_TWINKLE	its picture	games/tla/src/graphics/sprite/particle.png and particle.tsv: picture 0 is a full yellow-white glow and 1 a little smaller; animation 7 alternates them every 3 frames, looping (the beam's lights take SPRITE_COLOR_RBG and show pink in the render of entrance 11)	games/tla/src/scene/jupiter_lighthouse_room_locked_doors.c
-ANIM_PARTICLE_FADE	its picture	games/tla/src/graphics/sprite/particle.png and particle.tsv: animation 2 runs pictures 3 to 7, the glow shrinking to a speck, at 2 frames each, then a blank frame, and holds	games/tla/src/scene/jupiter_lighthouse_room_locked_doors.c
 KibomboFireColor	its code	the background palette colours Kibombo_InitializeCeremony (palette 0's colour 9 and colour 7 of palettes 5 to 7), Kibombo_InitializeStatueGroundsCeremony (palette 0's colours 9, 7 and 6 and palette 4's colour 12) and Kibombo_InitializeStatueFace (palette 10's colours 9, 7 and 6) keep in gKibombo_FireColors, and Kibombo_FlickerVillageFires, Kibombo_FlickerCeremonyFires and Kibombo_FlickerStatueFires brighten and dim every eighth frame; the statue's face from entrance 1 is lit orange (its render)	games/tla/src/scene/kibombo.c
 ACTOR_IRON	the game	"Iron" (MsgDjinnName + 8), the Djinni gWorldMapActorPlacements shows while FLAG_DJINNI(DJINNI_IRON) is clear and whose battle WorldMap_MeetIron requests	games/tla/src/scene/world_map.c
 ACTOR_SOUR	the game	"Sour" (MsgDjinnName + 28), the Djinni the placement shows while FLAG_DJINNI(DJINNI_SOUR) is clear and whose battle WorldMap_MeetSour requests	games/tla/src/scene/world_map.c
@@ -14868,11 +14765,6 @@ IRIS_SWEEP_STEP	its code	the angle between those motes, i * 384	games/tla/src/ba
 IRIS_SWEEP_MOTE	its code	those motes are gBattleEffect_MotePictures[5], 6x12	games/tla/src/battle_effect/battle_effect_moloch.c
 IRIS_CONE_TEXTURE	its code	the cone's texture, coneTexture.pixels, follows the eight glow textures	games/tla/src/battle_effect/battle_effect_moloch.c
 IRIS_CONE_TEXTURE_SIZE	its code	coneTexture is 32x32 (logWidth and logHeight 5), its ramp built for 32 rows	games/tla/src/battle_effect/battle_effect_moloch.c
-BLITTER_BYTES	its code	BattleEffect_BuildBlitter allocates 436 bytes for the routine it writes	games/tla/src/battle_effect/battle_effect_moloch.c
-COPY8_WORDS	its code	BattleEffect_Copy8Forward and Copy8Reverse are 16 instructions (blitter_fragments.s)	games/tla/src/battle_effect/battle_effect_moloch.c
-TRANSPARENT8_WORDS	its code	BattleEffect_Transparent8Forward and Reverse are 25 instructions (blitter_fragments.s)	games/tla/src/battle_effect/battle_effect_moloch.c
-MAX4_WORDS	its code	BattleEffect_Max4Forward and Reverse are 16 instructions (blitter_fragments.s)	games/tla/src/battle_effect/battle_effect_moloch.c
-COLOR_WORDS	its code	BattleEffect_ColorForward and Reverse are 14 instructions (blitter_color_fragments.s)	games/tla/src/battle_effect/battle_effect_moloch.c
 POWER_DRIVE_FIREBALLS	its code	Power Drive sets up all 64 impact particles as fireballs flying sideways away from the middle with no gravity, and draws the first 16, one more each frame from frame 4	games/tla/src/battle_effect/battle_effect_casting_impact.c
 POWER_DRIVE_FIREBALL_LIFE	its code	a Power Drive fireball is drawn while its variant, counted up one a frame, is under 24	games/tla/src/battle_effect/battle_effect_casting_impact.c
 DAEDALUS_MACHINE	its picture	bronze_automaton.png, 23 32x32 tiles, laid at the places the sky scene draws them: a bronze machine on two legs under a dome, a green core behind four pale hull plates, a pod with an eight-hole honeycomb on its right thigh, a pale curved blade, and in tiles 21 and 22 a 32x64 finned rocket	games/tla/src/battle_effect/battle_effect_daedalus.c
@@ -16201,10 +16093,6 @@ FALLING_ROCK_FRAMES	its picture	five orange-brown rocks, each smaller than the l
 WHIRLWIND_CATCH_REACH	its twin	games/tla/src/scene/shared/whirlwind_update.h WHIRLWIND_CATCH_REACH, the upper floors' copy of the same routine with the same 12	games/tla/src/scene/shared/whirlwind_catch.h
 GIFT_RECEIVED_MESSAGE_MODE	its twin	games/tbs/src/field/event_commands_event.c GIFT_RECEIVED_MESSAGE_MODE, the window flags of "<leader> gave <item> to <member>." chosen by patch level, as here	games/tla/src/field/field_sequence_event.c
 Actor_UpdateHoverControl	the game	"Hover" (MsgAbilityName + 153)	games/tla/src/field/field_script_commands.c
-PUDDLE_ANIMATION_FROZEN	its picture	animation 0 holds picture 5, the full pillar of ice (puddle.png, puddle.tsv)	games/tla/src/field/field_psynergy_collision_tags.c
-PUDDLE_ANIMATION_FROZEN	what the player sees	in Alhafra by entrance 11 the puddle at (712, 600) is a standing pillar of ice once its flag 0x202 is set (its render)	games/tla/src/field/field_psynergy_collision_tags.c
-PUDDLE_ANIMATION_PUDDLE	its picture	animation 1 loops picture 0, a flat blue puddle, and picture 6, its glint (puddle.png, puddle.tsv)	games/tla/src/field/field_psynergy_collision_tags.c
-PUDDLE_ANIMATION_PUDDLE	what the player sees	in Alhafra by entrance 11 the puddle at (712, 600) lies flat and blue while its flag 0x202 is clear (its render)	games/tla/src/field/field_psynergy_collision_tags.c
 Djinn_RunJupiterJoinEffect	its twin	The Broken Seal's field/event_commands_jupiter.c Djinn_RunJupiterJoinEffect, the same effect step for step (twins, dice 0.836)	games/tla/src/field/event_commands_jupiter.c
 FieldEffect_UpdateMarsSpark	its twin	The Broken Seal's field/event_commands_jupiter.c FieldEffect_UpdateMarsSpark, the same states, targets and sounds (twins, dice 0.677)	games/tla/src/field/event_commands_jupiter.c
 FieldEffect_ShrinkActorAndDestroySlow	its twin	The Broken Seal's field/event_commands_jupiter.c FieldEffect_ShrinkActorAndDestroySlow (DEFINE_SHRINK_AND_DESTROY with -448, the same 7/1024 a frame)	games/tla/src/field/event_commands_jupiter.c
@@ -16228,8 +16116,6 @@ MARS_SPARK_SWARMING	its twin	The Broken Seal's field/event_commands_internal.h M
 MARS_SPARK_LEAVING	its twin	The Broken Seal's field/event_commands_internal.h MARS_SPARK_LEAVING, the same value and use	games/tla/src/field/event_commands_internal.h
 FieldEffect_InitializeFallingFragment	its twin	The Broken Seal's field/event_commands_internal.h FieldEffect_InitializeFallingFragment, the same value and use	games/tla/src/field/event_commands_internal.h
 DJINN_PENDING_EVENT_MASK	its twin	The Broken Seal's field/event_commands_internal.h DJINN_PENDING_EVENT_MASK, the same value and use	games/tla/src/field/event_commands_internal.h
-Moai_AddWater	the game	"the guardian moai" (MsgOnAquaIsland)	games/tla/src/scene/shared/actor_show_parts.h
-Moai_AddWater	its picture	spr_381.png (SPRITE_MOAI_WATER), the layer it adds: a pool of water the size of the hollow top of moai.png's green stone head, rippling over pictures 3 to 5 (its animation 2), and in pictures 0 to 2 the same pool with water pouring from the head's open mouth; was Actor_ShowParts, which showed no parts	games/tla/src/scene/shared/actor_show_parts.h
 Actor_StartScripted	what the player sees	the puffs a vent blows up in Taopo Swamp's vents room, pale and half seen through over the floor: two above the vent at the top right of the view (render probe TaopoSwampVents, entrance 1); the routine readies each (Vent_Puff in taopo_swamp.c and aqua_rock_inside.c), to be named Vent_InitializePuff (renames.tsv)	games/tla/src/scene/shared/actor_start_scripted.h
 CELL_BEHAVIOR_BREAKABLE_ICE	what the player sees	render probe MarsLighthouseEntranceValkyrieMailChest --entrance 11: the cells of behavior 77 (map.txt, the middle layer's columns 74 to 117 and the overhead layer's 14 to 46, the room's rows 9 to 11) are the small dark blue ice crystals on the north corridor's floor and a tall crystal among them, east of the dragon statue whose fireball rolls along the corridor to the rounded-square cells at its east end (shape_grid.tsv columns 54 and 55) (its render)	games/tla/src/scene/shared/actor_roll_and_crumble.c
 Actor_RollAndCrumble	its code	the update Actor_LaunchAhead gives a SPRITE_FIREBALL actor (ACTOR_FIREBALL, ACTOR_*_FIREBALL): it rolls ahead breaking CELL_BEHAVIOR_BREAKABLE_ICE cells, raises STEP_TRIGGER_FIREBALL_HIT when it reaches the leader, and crashes where the ground ahead is TERRAIN_ROUNDED_SQUARE, shrinking away in crumbs; to be named Fireball_Roll (renames.tsv)	games/tla/src/scene/shared/actor_roll_and_crumble.c
@@ -16237,11 +16123,6 @@ Actor_GrowUp	its twin	games/tbs/src/scene/shared/field_effect_vertical.c FieldEf
 Actor_GrowDown	its twin	games/tbs/src/scene/shared/field_effect_vertical.c FieldEffect_AnimateVerticalNegative, the same code (the golden ring's mirrored partner, passing behind its actor); to be named as the twin (renames.tsv)	games/tla/src/scene/shared/actor_grow_down.h
 Actor_Blink	its code	the update Leader_KnockBack (KNOCK_BACK_BLINK) and MarsLighthouseEntrance_RideFireball give the hurt leader: SPRITE_COLOR_RED_TINT from frame 0 of every eight, normal colours from frame 4, so he blinks red	games/tla/src/scene/shared/actor_blink.h
 TREASURE_SPOT_MAX	its twin	games/tbs/include/field/field_sequence.h TREASURE_SPOT_MAX (10 there): the most treasure spots Field_PlaceTreasureSpots places; here sixteen actors from FIELD_TREASURE_ACTOR, as scene_items.c's brief says	games/tla/src/field/field_sequence_internal.h
-TREASURE_SPOT_CHEST_OPEN	its picture	games/tla/src/graphics/sprite/chest.tsv animation 2 holds chest.png's picture 3, the chest standing open and empty; The Broken Seal's field_sequence_treasure_spots.c names its animation 2 the same	games/tla/src/field/field_sequence_treasure_spots.c
-TREASURE_SPOT_CHEST_OPENING	its picture	chest.tsv animation 4 shows chest.png's picture 2, the lid half raised over gold, then plays animation 3, the open chest's gold glittering (pictures 4 and 5); The Broken Seal's field_sequence_treasure_spots.c names its animation 4 the same	games/tla/src/field/field_sequence_treasure_spots.c
-TREASURE_SPOT_CHEST_CLOSING	its picture	chest.tsv animation 5 shows chest.png's picture 2, the lid half raised, then plays animation 1, the chest shut (picture 0); The Broken Seal's field_sequence_treasure_spots.c names its animation 5 the same	games/tla/src/field/field_sequence_treasure_spots.c
-TREASURE_SPOT_CHEST_OPENING_EMPTY	its picture	chest.tsv animation 6 shows chest.png's picture 1, the lid just lifted, then plays animation 2, the chest open with nothing inside (picture 3); field_sequence_triggers.c opens a chest with it when its contents are 0	games/tla/src/field/field_sequence_treasure_spots.c
-TREASURE_SPOT_CHEST_MIMIC	its picture	chest.tsv animation 7 loops chest.png's pictures 6 and 7, the chest on spider legs with its purple mouth opening; The Broken Seal's field_sequence_treasure_spots.c names its animation 7 the same	games/tla/src/field/field_sequence_treasure_spots.c
 Actor_SnapToTerrain	its twin	games/tbs/src/field/field_sequence_treasure_spots.c Actor_SnapToTerrain, the same code	games/tla/src/field/field_sequence_treasure_spots.c
 Field_PlaceTreasureSpots	its twin	games/tbs/src/field/field_sequence_treasure_spots.c Field_PlaceTreasureSpots: both place an actor at each of the map's treasure spots, The Lost Age from the scene's rows of gSceneItems	games/tla/src/field/field_sequence_treasure_spots.c
 Actor_ShakeAngle	its code	nothing refers to it (UNUSED): it jiggles an actor's facing by a random amount for 16 frames, then restores it	games/tla/src/field/field_sequence_treasure_spots.c
@@ -16295,7 +16176,6 @@ FieldPsynergy_Carry	the game	"Carry" (MsgAbilityName + 147)	games/tla/src/field/
 FieldPsynergy_Carry	its twin	The Broken Seal's FieldPsynergy_Lift (event_commands_lift.c, DEFINE_ITEM_BREAK_EFFECT; twins, dice 0.878): the same two hands meeting in a crash of 24 sparkles, here for Carry, dispatched for FIELD_PSYNERGY_CARRY	games/tla/src/field/event_commands_carry.c
 FieldEffect_SpawnCarryHand	its twin	The Broken Seal's event_commands_carry.c FieldEffect_SpawnCarryHand: the same SPRITE_MOVE_HAND grown from a quarter size with SE_ITEM_BREAK	games/tla/src/field/event_commands_carry.c
 Scene_SetActorSpritePriority	its twin	The Broken Seal's event_commands_actor_commands.c Actor_SetSpritePriority (twins, dice 0.452): the same two priority stores and the cleared ACTOR_PRIORITY_AUTOMATIC, here taking the actor itself	games/tla/src/field/actor_set_sprite_priority.c
-Actor_SetSpritePriorityB	its code	Scene_SetActorSpritePriority's code instruction for instruction, a second copy that anemos_inner_sanctum.c and mars_lighthouse_entrance.c include beside the first for their effect spawners	games/tla/src/field/actor_set_sprite_priority_b.c
 Actor_FindInCell	its twin	The Broken Seal's scene/shared/actor_find_at_position.c Actor_FindAtPosition (twins, dice 0.444): the first placed actor whose FIELD_CELL x, y and z match the position's, its asker unread and its null slots read the same way	games/tla/src/field/actor_find_in_cell.c
 AnimationFacingKind	its twin	The Broken Seal's enum AnimationFacingKind (field.h); this game's Sprite_ComposePicture switch reads kind 5, ANIM_FACING_FIVE_PICTURES, through a 64-sector table over pictures 0 to 4	games/tla/src/field/field_internal.h
 ANIM_FACING_SIX_PICTURES	its twin	games/tbs/include/field/field.h's ANIM_FACING_SIX_PICTURES is 6, which this game's sprite viewer still rings ten round; this game has no six-picture table and draws kind 6 as ANIM_FACING_NONE	games/tla/src/field/field_internal.h
@@ -17522,8 +17402,6 @@ VILLAGE_SEA_PALETTE	its code	ApojiiIslands_CycleSeaColors copies the village's s
 LEARN_SPARKS	its code	GaiaRockInside_FelixLearnsSand, MagmaRockInside_LearnBlaze and AquaRockInside_PiersLearnsParch each set 16 sparks circling; the copy every Psynergy-learning scene keeps (airs_rock_inside.c's ORBITING_SPARKS is the same 16)	games/tla/include/scene/scene.h
 LEARN_SPARK_INTERVAL	its code	GaiaRockInside_FelixLearnsSand, MagmaRockInside_LearnBlaze and AquaRockInside_PiersLearnsParch wait 8 frames between circling sparks, and give each a countdown 8 frames longer than the next	games/tla/include/scene/scene.h
 LEARN_SPIRAL_FRAMES	its code	a circling spark starts 122 pixels out and closes 8 pixels a frame to 2 pixels, 15 frames, which is also what the last spark's countdown adds	games/tla/include/scene/scene.h
-ANIM_PARTICLE_SLOW_SWELL	its picture	games/tla/src/graphics/sprite/particle.png and particle.tsv: picture 0 is a full yellow-white glow and 7 a speck; animation 9 runs pictures 7 to 0 at 12 frames each, holds 0 for 32 and runs back to 7, 200 frames	games/tla/include/scene/scene.h
-ANIM_PARTICLE_QUICK_SWELL	its picture	games/tla/src/graphics/sprite/particle.png and particle.tsv: animation 10 is animation 9 at 6 frames a step, 116 frames in all	games/tla/include/scene/scene.h
 TITLE_TO_BE_CONTINUED	what the player sees	entered by entrance 10 (render guide moment, MOMENT_PLACE=0,10), "To Be Continued" shows on black and the Golden Sun logo with its copyright line brightens in above it (its render)	games/tla/include/scene_exits.h
 TITLE_TO_BE_CONTINUED	its uses	no exit, event or start-up sets entrance 10 of the title (main_routine.c sends 1 or 8, clear.c 1 and 8, idejima.c's exit 3)	games/tla/include/scene_exits.h
 TITLE_START	what the player sees	entered by entrance 1 (render guide moment, MOMENT_PLACE=0,1), the Nintendo logo, then Camelot's, then with no save file the clear-data scene's name entry for Felix (its render)	games/tla/include/scene_exits.h
@@ -18558,7 +18436,6 @@ OWNER_STATUS_LABEL_CLASS	the game	"Class" (MsgPreviewStatLabel + 10)	games/tla/s
 OWNER_STATUS_LABEL_DJINN	the game	"Djinn" (MsgPreviewStatLabel + 11)	games/tla/src/window/screens_battle_status.c
 OWNER_STATUS_LABEL_EXP	the game	"Exp" (MsgExp)	games/tla/src/window/screens_battle_status.c
 BattleSummaryHelp	its twin	The Broken Seal's window/battle_status.h, enum BattleSummaryHelp, the Status screen's help lines	games/tla/src/window/screens_battle_status.c
-BattleSummaryStatus	its twin	The Broken Seal's screens_battle_status.c, enum BattleSummaryStatus, the statuses shown as icons	games/tla/src/window/screens_battle_status.c
 BattleStatusScreen_Run	its twin	The Broken Seal's screens_battle_status.c, BattleStatusScreen_Run, the battle's Status screen	games/tla/src/window/screens_battle_status.c
 OWNER_STATUS_HELP_LEVEL	the game	"Your present level." (MsgOwnerStatusEntryHelp + 1)	games/tla/src/window/screens_battle_status.c
 OWNER_STATUS_HELP_EXPERIENCE	the game	"Your current experience points." (MsgOwnerStatusEntryHelp + 2)	games/tla/src/window/screens_battle_status.c
@@ -18936,9 +18813,7 @@ HESPERIA_HOUSE_DOOR	what the player sees	render event HesperiaSettlement Settlem
 Settlements_MeetTinder	what the player sees	render event HesperiaSettlement: Tinder on the ledge west of the cliff door; the join effect, then "Felix found the Mars Djinni Tinder!" (its render)	games/tla/src/scene/settlements.c
 Settlements_MeetGel	what the player sees	render event KaltIsland: Gel in the snow east of the house; the join effect, then "Felix found the Mercury Djinni Gel!" (its render)	games/tla/src/scene/settlements.c
 Settlements_CatchApple	what the player sees	render event KaltIsland: the apple floats in the snowy trees west of the frozen river; Catch's hand brings it, Felix holds it up, "Felix got an Apple." (its render)	games/tla/src/scene/settlements.c
-Settlements_LiftBoulder	what the player sees	render event SwAttekaIslet: the round boulder on the grass above the river's posts is raised by Lift's hands and set higher up, out of the way (its render)	games/tla/src/scene/settlements.c
 Settlements_WarnOfRiddleOfRock	what the player sees	render event GondowanSettlement: the man by the houses says "Don't tell me, you're here to solve the riddle of the rock!", a Yes/No, then "I don't want to scare you but, I think you should reconsider." (its render)	games/tla/src/scene/settlements.c
-ACTOR_RIVER_STONE_A	what the player sees	render event SwAttekaIslet Settlements_MovePillar and Settlements_LiftBoulder: the river's stones are stone posts standing in the water, bobbing (its render)	games/tla/src/scene/settlements.c
 ShamanVillage_EnterSouthwestHouse	what the player sees	render event ShamanVillage (was EnterDoorB): the door of the house in the village's far south-west (picture at cell (4, 26), trigger (4, 28)) opens into a small room (its render)	games/tla/src/scene/shaman_village.c
 ShamanVillage_EnterLowerEastHouse	what the player sees	render event ShamanVillage (was EnterDoorC): the door of the lower house on the east side (picture (27, 21), trigger (27, 25)) opens into a room with beds; before Moapa is beaten pressing A there shows "It seems to be locked." (its render)	games/tla/src/scene/shaman_village.c
 ShamanVillage_EnterUpperEastHouse	what the player sees	render event ShamanVillage (was EnterDoorD): the door of the upper house on the east side (picture (28, 17), trigger (28, 23)) opens into a small room; the walkthrough: "Go to the rightmost home and ascend the stairs inside" (its render)	games/tla/src/scene/shaman_village.c
@@ -19538,7 +19413,6 @@ ACTOR_ACHING_BACK_BEDSIDE	what the player sees	render probe KibomboHouses entran
 CELL_BEHAVIOR_ITEM_SHOP_LADDER	its uses	kibombo houses step row 7 runs Kibombo_StepOntoFirstLadder, which climbs down by exit 7 from cells (43, 22) and (42, 23)	games/tla/src/scene/kibombo.c
 CELL_BEHAVIOR_AKAFUBUS_LADDER	its uses	kibombo houses step row 9 runs Kibombo_StepOntoSecondLadder, the ladder from Akafubu's home down to the Sanctum	games/tla/src/scene/kibombo.c
 CELL_BEHAVIOR_TWO_BEDS_LADDER	its uses	kibombo houses step row 13 runs Kibombo_StepOntoThirdLadder, the ladder in the upper room with two beds	games/tla/src/scene/kibombo.c
-SCOOP_STAGE_DUG	its code	field_psynergy_scoop.c passes stage 1 to a Scoop trigger's event on SCOOP_DUG_FRAME, the frame the dig opens the ground	games/tla/src/scene/kibombo.c
 CELL_BEHAVIOR_FULL_METAL_VEST_CHEST_BLOCKS_ON	its uses	dehkan_plateau_full_metal_vest_chest/map.txt behaviour 6 at (34, 45..50); its row runs DehkanPlateau_ShowBlocks	games/tla/src/scene/dehkan_plateau.c
 CELL_BEHAVIOR_FULL_METAL_VEST_CHEST_BLOCKS_OFF	its uses	dehkan_plateau_full_metal_vest_chest/map.txt behaviour 7 at (35, 45..50); its row runs DehkanPlateau_HideBlocks	games/tla/src/scene/dehkan_plateau.c
 CELL_BEHAVIOR_FULL_METAL_VEST_CHEST_PILLARS	its uses	dehkan_plateau_full_metal_vest_chest/map.txt behaviour 9 at (37, 46), (41, 46), (36, 49), (40, 49), (41, 50), (45, 50); its row runs DehkanPlateau_StepOnFullMetalVestChestPillars	games/tla/src/scene/dehkan_plateau.c
@@ -20435,7 +20309,6 @@ ANIM_CAST_PSYNERGY_START	its uses	start: the word 357 of the game's names use fo
 TundariaTower_StartPillarMove	its uses	start: the word the game's names use for a beginning, as TundariaTower_StartEffectScript beside it does; was Begin	games/tla/src/scene/tundaria_tower.c
 FLAG_ROCK_SOUTH_CLEARED	its code	the flag after FLAG_ROCK_A_CLEARED to FLAG_ROCK_E_CLEARED, of the one rock in the last stretch's south part (SeaOfTime_GrindSouthRock); named in their FLAG_ROCK_ family for its place; was FLAG_LAST_ROCK_CLEARED	games/tla/src/scene/sea_of_time.c
 SeaOfTime_GrindSouthRock	its code	Grind on the rock in the last stretch's south part, cells (44, 42) to (45, 43), setting FLAG_ROCK_SOUTH_CLEARED; was SeaOfTime_GrindLastRock	games/tla/src/scene/sea_of_time.c
-Camera_Move	its uses	a call of FieldCamera_MoveToFX, named in the game's Camera_ family (Camera_WorldToScreen, Camera_ApplyVerticalShake) with its separator; was CameraMove	games/tla/src/scene/staff_credit.c
 CELL_WEEDS_IN_CORNER	its uses	the south-east corner's weeds, named as their siblings CELL_WEEDS_OVER_CAVE_HOLE to CELL_WEEDS_BY_SANCTUM are, the weeds first; was CELL_CORNER_WEEDS	games/tla/src/scene/yallam.c
 Yallam_ScatterWeedsInCorner	its uses	Cyclone on the three weeds in the village's south-east corner, named as Yallam_ScatterWeedsBelowShops and Yallam_ScatterWeedsBySanctum are; was Yallam_ScatterCornerWeeds	games/tla/src/scene/yallam.c
 SETTINGS_ROW_COUNT	its uses	the count of the enum's SETTINGS_ROW_ rows, its count last as ABILITY_COUNT has it; was SETTINGS_MENU_ROWS	games/tla/src/window/window_settings_menu.c
@@ -20729,7 +20602,6 @@ RUSHING_STRIKE_UNUSED	its code	BattleEffect_RunRushingStrike takes it for RESOUR
 MagmaRock_StartPushingPillar	what the player sees	render event --scene MagmaRockSlide --entrance 2 --at 15,27 (and 16,27) --face south --then down:240,wait:30 (tla-en): with no pillar moved, held Down on (15, 27) Felix stays at the ledge's edge; on (16, 27) he climbs down the pegs to the cave mouth, as the overhead layer's closed cells of columns 15 and 17 stop a climb down there (its render)	games/tla/src/scene/magma_rock.c
 AirsRock_MoveSecondPillar	what the player sees	render event --scene AirsRockFujinShieldChest --entrance 2 --set FLAG_AREA_TEMP_10 --at 35,54 --at-height 208 --face west --then wait:30,cast:move:west,wait:150,left:90,wait:30,left:40,wait:20,down:60,wait:60 (tla-en): the hand pulls the right pillar west beside the left; Felix jumps the gap onto (33, 54), steps south and drops to the ledge below, and a whirlwind carries him up past the pillars' ledge to a ledge above (its render)	games/tla/src/scene/airs_rock.c
 Settlements_StepOntoWall	what the player sees	render event --scene HesperiaSettlement --arrive-as after-battle --set FLAG_ON_WALL --at 17,13 --face north --then wait:30,cast:move:south,wait:120,left:20,up:40,wait:30, and the same from --entrance 99 without the flag (tla-en): with the swap and without it the hand pulls the crate one cell south and Felix walks west and north past its old place alike; a walk from (12, 9) onto (13, 11) (--walk-to 13,11 --until Settlements_StepOntoWall) did not run it (its render)	games/tla/src/scene/settlements.c
-Settlements_SlideCrateDownFalls	what the player sees	render event --scene SwAttekaIslet --at 18,10 --face west --then wait:20,cast:move:north,wait:150,left:16,wait:5,up:3,wait:20,cast:move:west,wait:150,up:16,wait:5,left:600,wait:300 (tla-en): Move moves the crate a row north and a cell west, Felix pushes it west along the dirt into the river at (11, 9); it sinks in with a splash, drifts to the edge, goes down the falls with the camera watching, splashes at the foot and is swept away (its render)	games/tla/src/scene/settlements.c
 MarsLighthouseEntrance_StopSlideWhileRiding	what the player sees	render event --scene MarsLighthouseEntranceValkyrieMailChest --entrance 11 --then wait:20,down:60 --until MarsLighthouseEntrance_FallIntoHole (tla-en): the dragon face's fireball hits Felix on the ice and he sits blinking on it, red, carried east across the ice to the hole, "!" and falls to the room below; he does not slide on his own while carried (its render)	games/tla/src/scene/mars_lighthouse_entrance.c
 MarsLighthouseRoomF_ScatterRubble	what the player sees	render event --scene MarsLighthouseMarsTower --entrance 2 --set 0xa42 --at 15,37 --face south --then wait:20,cast:blaze,wait:60 --until MarsLighthouseRoomF_CrackCenterWall (and --until Actor_ScatterCrumbs, both 3.4 s) (tla-en): the fireball rolls south from the dragon head to the centre wall, where green pieces of wall burst out, fly up and bounce away down over the lava and flicker out (its render)	games/tla/src/scene/mars_lighthouse_room_f.c
 gMarsLighthouseRoomF_RubbleScriptB	what the player sees	render event --scene MarsLighthouseMarsTower --entrance 2 --set 0xa42 --at 15,37 --face south --then wait:20,cast:blaze,wait:60 --until MarsLighthouseRoomF_CrackCenterWall (and --until Actor_ScatterCrumbs, both 3.4 s) (tla-en): the green pieces of wall thrown at the crack flicker out a moment after landing (its render)	games/tla/src/scene/mars_lighthouse_room_f.c
@@ -20808,19 +20680,13 @@ CELL_BEHAVIOR_RING_LEAF	its code	behaviour 56 at (5, 11), inside the patch; its 
 CELL_BEHAVIOR_MAD_PLANT_LEAF	its code	behaviour 57 at (2, 10), the patch's top left cell; its Cyclone row runs PsynergyTest_FightMadPlant	games/tla/src/debug/psynergy_test.c
 CELL_BEHAVIOR_POOL	its code	behaviour 60 on the 2 by 4 cells at (16, 10); its Parch row runs PsynergyTest_ParchCells	games/tla/src/debug/psynergy_test.c
 CELL_BEHAVIOR_CHEST	its code	behaviour 100 at (14, 9); its EXAMINE_CHEST row finds 333 coins	games/tla/src/debug/psynergy_test.c
-SCOOP_STAGE_AFTER_DIG	its code	field_psynergy_scoop.c passes stage 2 to a Scoop trigger's event on frame 50 of the dig, 20 frames after SCOOP_DUG_FRAME	games/tla/src/debug/psynergy_test.c
 ACTOR_WINGED_STATUE	its code	PsynergyTest gActorPlacements row of actor 20, SPRITE_WINGED_STATUE at (-64, -64); no trigger or routine names actor 20	games/tla/src/debug/psynergy_test.c
-SCOOP_STAGE_DUG	its code	field_psynergy_scoop.c passes stage 1 to a Scoop trigger's event on SCOOP_DUG_FRAME, the frame the dig opens the ground	games/tla/src/debug/psynergy_test.c
 PsynergyTest2_BurstCells	its code	its Burst row on cell behavior 50 copies the 1 by 2 block at (49, 1) over (34, 1) as the blast dies down; the room's camera box starts at x 280, east of behavior 50 at x 160	games/tla/src/debug/psynergy_test_2.c
 PsynergyTest2_GrindStake	its code	its Grind row on ACTOR_STAKE (SPRITE_STAKE) sets the stake's animation 3	games/tla/src/debug/psynergy_test_2.c
 PsynergyTest2_DouseFire	its code	its Douse row on ACTOR_FIRE (SPRITE_FIRE) moves the fire to (0, 0)	games/tla/src/debug/psynergy_test_2.c
 PsynergyTest2_PoundFire	its code	its Pound row on ACTOR_FIRE moves the fire to (0, 0) as the fist lands	games/tla/src/debug/psynergy_test_2.c
 CELL_BEHAVIOR_BATTLE_STEP	its code	its TRIGGER_STEP row on behavior 30 runs PsynergyTest2_StepIntoBattle; psynergy_test/map.txt, the room's map, holds no 30	games/tla/src/debug/psynergy_test_2.c
 CELL_BEHAVIOR_HOLE_SPOT	its code	psynergy_test/map.txt behaviour 50 at (10, 10), the Psynergy test's first Scoop spot; render probe PsynergyTest2: the room's camera box starts at x 280, east of the cell	games/tla/src/debug/psynergy_test_2.c
-SCOOP_STAGE_DUG	its code	field_psynergy_scoop.c passes stage 1 on SCOOP_DUG_FRAME	games/tla/src/debug/psynergy_test_2.c
-SCOOP_STAGE_AFTER_DIG	its code	field_psynergy_scoop.c passes stage 2 on frame 50 of the dig	games/tla/src/debug/psynergy_test_2.c
-SCOOP_STAGE_DUG	its code	field_psynergy_scoop.c passes stage 1 on SCOOP_DUG_FRAME; the unused ShopTest_ copies of the Psynergy test's dig helpers test it	games/tla/src/debug/shop_test.c
-SCOOP_STAGE_AFTER_DIG	its code	field_psynergy_scoop.c passes stage 2 on frame 50 of the dig	games/tla/src/debug/shop_test.c
 EntranceArrival	its code	Entrance_PlayArrival returns 0 to 3 by which of FLAG_ARRIVAL_STAIRS_UP, FLAG_ARRIVAL_STAIRS_DOWN and FLAG_ARRIVE_FALLING it found set (event_commands_exit_animations.c)	games/tla/include/field/object.h
 ARRIVAL_NONE	its code	Entrance_PlayArrival's result when none of the arrival flags is set; FieldSequence_Run then plays the scene's own (field_sequence_run.c)	games/tla/include/field/object.h
 ARRIVAL_STAIRS_UP	its code	Entrance_PlayArrival's result after FLAG_ARRIVAL_STAIRS_UP and ANIM_LEADER_ARRIVE (event_commands_exit_animations.c)	games/tla/include/field/object.h
@@ -20832,12 +20698,6 @@ GrowthTargetKind	its code	FieldPsynergy_GrowthOnTarget: SPRITE_SPROUTING_LEAVES 
 GROWTH_ON_PLANT	its code	FieldPsynergy_GrowthOnTarget: a target neither sprouting leaves nor an arrow plant takes its animation 2 and the underfoot priority	games/tla/src/field/event_commands_mind_read.c
 GROWTH_ON_SPROUTING_LEAVES	its code	FieldPsynergy_GrowthOnTarget: SPRITE_SPROUTING_LEAVES drops five vines and calls HangingVine_Hang	games/tla/src/field/event_commands_mind_read.c
 GROWTH_ON_ARROW_PLANT	its code	FieldPsynergy_GrowthOnTarget: SPRITE_ARROW_PLANT only plays SE_RECOVERY	games/tla/src/field/event_commands_mind_read.c
-ROPE_COILED	its code	Rope_Recoil sets RopeSlot.state 0 as it pulls the rope back into its coil	games/tla/src/field/event_commands_ropes.c
-ROPE_THROWN	its code	Rope_Throw and Rope_LayTied set RopeSlot.state 1	games/tla/src/field/event_commands_ropes.c
-OamAffineMode	its code	EffectSprite_Draw writes 0, 1 or 3 into the OAM entry's affine mode bits (GBATEK: off, on, double size)	games/tla/src/field/field_psynergy_actor_cells.c
-OAM_AFFINE_OFF	its code	EffectSprite_Draw: an unscaled, unrotated sprite	games/tla/src/field/field_psynergy_actor_cells.c
-OAM_AFFINE_NORMAL	its code	EffectSprite_Draw: a scaled or turned sprite, through its matrix	games/tla/src/field/field_psynergy_actor_cells.c
-OAM_AFFINE_DOUBLE	its code	EffectSprite_Draw: a sprite grown past full size, in a box twice its size	games/tla/src/field/field_psynergy_actor_cells.c
 BlazeLook	its code	FieldPsynergy_Blaze picks the flame's resource and gBlaze_TintColors entry by the lit torch's colour mode	games/tla/src/field/field_psynergy_blaze.c
 BLAZE_RED	its code	FieldPsynergy_Blaze: RESOURCE_RED_FLAME_BURST, the look with no torch or a torch in its own colours	games/tla/src/field/field_psynergy_blaze.c
 BLAZE_VIOLET	its code	FieldPsynergy_Blaze: SPRITE_COLOR_GBR torch, RESOURCE_VIOLET_FLAME_BURST	games/tla/src/field/field_psynergy_blaze.c
@@ -20867,7 +20727,6 @@ EditorChannel	its code	PaletteEditor_Run: UP and DOWN cycle channel 1 to 3, and 
 FADE_HALF_COLORS	its code	PaletteFade_Update queues 224 colours to BG_PLTT and the next 224 to OBJ_PLTT	games/tla/src/field/field_sequence_palette_fade.c
 TeleportState	its code	FieldSequence_Run: state 1 (set when the World Picture returns a place for FIELD_RAISED_TRIGGER_TELEPORT) plays Teleport_PlaySparksAndFade and sets 2; state 2 plays Teleport_PlayWhirl and clears it	games/tla/src/field/field_sequence_run.c
 MAP_ENTRANCE_ROW_BYTES	its code	Field_PlaceAtEntrance reads an entrance byte, x and z halfwords and a flags byte per row, stepping 6 bytes	games/tla/src/field/field_sequence_run.c
-OamAffineMode	the hardware	GBATEK's OBJ attribute 0 bits 8-9: 0 normal, 1 rotation/scaling, 3 rotation/scaling with double size; the placing routines set 3 for a scale above 1	games/tla/src/field/field_sprite_draw.c
 ENCOUNTER_ZONE_SLOTS	its code	Encounter_GetFormationAtSlot takes slots 0 to 7 of a zone; a Mimic's contents past 7 take slot contents - 8 of the next zone	games/tla/src/field/field_sequence_triggers.c
 UI_SPRITE_VIEWER_SKIP_STOPS	its code	gSpriteViewer_SkipStops is declared [10] (map_grid_data.c), its last entry the (u16)-1 end	games/tla/src/field/field_sprite_viewer.c
 LuckyWheelsPrompt	its code	LuckyWheels_Update (TLA_PATCH_1): phase 1 and 2 while the all-locked prompt (MsgSlotsAllHeld, MsgSlotsCannotPull) opens over two frames, 3 MsgSlotsStart, 4 MsgSlotsHold, 5 MsgSlotsRelease; after a loss 0 to 1 once MsgSlotsPullLever is drawn	games/tla/src/field/lucky_wheels.c
@@ -20914,7 +20773,6 @@ EndingImage_Decode	its uses	EndingImage_Show copies it to the heap and decodes t
 FLAG_LEADER_OFF_MAP_SCREEN	the game	"This place doesn't seem to appear on the map..." (MsgNotOnMap); named for the glossary's Map screen	games/tla/include/flags.h
 TILE_PAIR	its code	BG1's map numbered two tiles a word: field_world_map.c's WorldMap_LoadGraphics and field_psynergy_map_screen_image.c's MapScreen_Show	games/tla/include/system/io_reg.h
 TILE_PAIR_STEP	its code	the step between two tile pairs of BG1's map words: field_world_map.c's WorldMap_LoadGraphics and field_psynergy_map_screen_image.c's MapScreen_Show	games/tla/include/system/io_reg.h
-FIELD_TILE	its code	the 8-pixel tile a 16.16 coordinate lies in, half a map grid cell: gaia_rock_inside.c (GaiaRockInside_TossCask and the rest) and field_psynergy_map_screen_image.c's MapScreen_Draw and MapScreen_UpdateScroll	games/tla/include/field/field_coordinate.h
 MAP_SCREEN_FIRST_TILE	its code	the first of BG1's 32 by 24 picture tiles in char block 1: field_world_map.c and field_psynergy_map_screen_image.c; named for the glossary's Map screen	games/tla/include/field/world_map.h
 MAP_SCREEN_TILE_ROWS	its code	the picture's 24 tile rows on BG1: field_world_map.c and field_psynergy_map_screen_image.c; named for the glossary's Map screen	games/tla/include/field/world_map.h
 MAP_SCREEN_MAP_START	its code	the picture's map on BG1 starting at its fifth row: field_psynergy_map_screen_image.c; named for the glossary's Map screen	games/tla/include/field/world_map.h
@@ -21058,8 +20916,6 @@ WAY_BEDROOM_DOOR	what the player sees	LemuriaPalace at entrance 16, the arrival 
 SHAMAN_VILLAGE_INN	its code	the town's place in gInn_PricesPerGuest's list (Daila, Madra, Alhafra, ... Prox), Inn_CheckIn's number; TBS names inns PLACE_INN	games/tla/src/scene/shaman_village.c
 gGaroh_PathActorPlacements	its uses	returned for SceneId_GarohPath, the room's scene id	games/tla/src/scene/garoh.c
 gGaroh_WayUpActorPlacements	its uses	returned for SceneId_GarohWayUp; its four rows are the stone pillars Actor_PlaceBlocks places	games/tla/src/scene/garoh.c
-OAM_AFFINE_DOUBLE_SIZE	its code	Title_PlaceLogoPiece writes 3 into attribute 0's affine bits (GBATEK: affine and double size), so the logo pieces drawn at 1.6 times their size are not clipped	games/tla/src/menu/title_intro.c
-OAM_SHAPE_SQUARE	its code	Title_PlaceLogoPiece writes shape 0 (GBATEK: square) for a 64 by 64 piece of The Lost Age (LOGO_PIECE_BYTES)	games/tla/src/menu/title_intro.c
 OAM_SIZE_64	its code	Title_PlaceLogoPiece writes size 3, with a square shape 64 by 64 (GBATEK), the size of each piece (LOGO_PIECE_BYTES)	games/tla/src/menu/title_intro.c
 ACTOR_FORGE_ROOM_SAILOR	the game	"That pit is Obaba's forge. She uses it when she's working metal into weapons and equipment." (MsgThatPitIs); "Aw, come on! I'm not doing anything! Leave me alone!" (MsgAwComeOn)	games/tla/src/scene/champa_cliff_caves.c
 ACTOR_CHAUCHA_BY_THE_BED	the game	"I wonder what's wrong with Briggs. He was feeling so healthy and happy. He doesn't have a fever, and" (MsgIWonderWhatS)	games/tla/src/scene/champa_cliff_caves.c
@@ -21354,7 +21210,6 @@ BattleType	its twin	games/tbs/include/system/main_routine_state.h battleType and
 BATTLE_TYPE_LOST	the walkthrough	6 sets encounterMode 2 (caught off guard) and every hit leaves 0 HP (targeting.c); set only before Isaac and Ivan fight Karst and Agatio in JupiterLighthouse room M, the fight the walkthrough says they lose	games/tla/include/system/main_routine_state.h
 pendingDjinni	its twin	games/tbs/include/system/main_routine_state.h pendingDjinni; Field_RequestDjinnBattle stores djinn + 300	games/tla/include/system/main_routine_state.h
 DJINNI_BATTLE_EVENT_FIRST	its twin	games/tbs/include/system/main_routine_state.h pendingDjinni; Field_RequestDjinnBattle stores djinn + 300	games/tla/include/system/main_routine_state.h
-MapGrid_CopyCellTilesCellsRect_	its twin	as above, over MapGrid_CopyCellTilesCellsRect	games/tla/src/scene/shared/mars_lighthouse_entrance_room.h
 gDaedalus_ShakeOffsets	its code	BattleEffect_RunDaedalus: how far up the scene is drawn at each step of state->shake (as The Broken Seal's gBoreas_ShakeOffsets)	games/tla/src/battle_effect/battle_effect_daedalus.c
 CanvasTransferMode	its twin	The Broken Seal's CanvasTransferMode in games/tbs/src/battle_effect/battle_effect_internal.h, include/battle/battle_effect_state.h or include/battle_effect/battle_effect.h, for the same mechanism (the same canvas transfer modes, wipe, blitter build, heap roles and tint arguments); this game's own values where they differ (TASK_PASS_FRAME, byte-offset slots 104, 188, 92, 100)	games/tla/src/battle_effect/battle_effect_internal.h
 CanvasFadeShare	its twin	The Broken Seal's CanvasFadeShare in games/tbs/src/battle_effect/battle_effect_internal.h, include/battle/battle_effect_state.h or include/battle_effect/battle_effect.h, for the same mechanism (the same canvas transfer modes, wipe, blitter build, heap roles and tint arguments); this game's own values where they differ (TASK_PASS_FRAME, byte-offset slots 104, 188, 92, 100)	games/tla/src/battle_effect/battle_effect_internal.h
@@ -21612,7 +21467,6 @@ PACK_FIRST_FLAG	its code	struct LzPackState's flagMask starts at 0x80 for each g
 WORLD_MAP_WIDE_TILES	its uses	WorldMap_InitializePerspective sets WorldMapView.fadeStep, which lies where MapState.wideTiles does, to 128; TilesetAnim_Update copies 64-byte tiles into char block 2 when wideTiles is not 0, the world map's 256-colour ground	games/tla/src/field/field_world_map.c
 SummonTabletState	its uses	the battle-effect heap slot SummonTablet_PlayRunes allocates: the runes' and pebbles' decoded pictures, their TabletPiece records and sprites, and their tiles	games/tla/src/field/field_psynergy_summon_tablet.c
 Event_CountAnswer	its uses	Idejima, Kibombo, Madra, the Gabomba Statue's chamber and the eastern Alhafra ship each call it (their _CountAnswer veneers) as Kraden reacts to Felix's answer; Ancient Lemuria reads the count (gMainRoutineState.weirdAnswers), and past four Kraden says "Sometimes, you can say the weirdest things..."	games/tla/src/field/field_sequence_requests.c
-SHIP_SEA_EXAMINE_CODE	its code	Actor_GetTriggerCellAheadOfCurrent returns it on the World Map while gMainRoutineState.ownerOverride is set (aboard the ship, PLACE_MARKER_ABOARD) and WorldMap_GetCollision ahead is 3, between WORLD_MAP_COLLISION_SEA_FIRST and _SEA_LAST; world_map.c has no TRIGGER_EXAMINE for 99, so Field_ExamineCell shows "checked on the ground... but didn't find anything" (MsgTileChecked and MsgTileResult + EXAMINE_GROUND)	games/tla/src/field/field_sequence_run.c
 Camera_ApplyVerticalShake	its code	moves only BG1's y and the projection's centre y by a random offset while state->shakeFrames lasts, then restores them (BattleCamera_Shake's vertical half); Odyssey, Charon and Catastrophe call it	games/tla/src/battle_effect/battle_effect_hail.c
 FIELD_PUSH_FRAMES	its twin	The Broken Seal's FIELD_PUSH_FRAMES (games/tbs/src/field/field_sequence_triggers.c), the same 12	games/tla/include/field/field_state.h
 CANVAS_WAVE_BG2X	its twin	games/tbs/src/battle_effect/battle_effect_condemn.c CANVAS_WAVE_BG2X, a line's 16.16 sideways sway as its BG2X value in state->bg2xLines	games/tla/src/battle_effect/battle_effect_internal.h
@@ -21642,14 +21496,10 @@ WORLD_MAP_MARKER_SHIP	its uses	a place whose marker is 15 is drawn at gMainRouti
 BurstShowerSheet	its code	BattleEffect_RunBurstShower loads its pictures at these offsets of state->sheet and draws only from them; was VolleyBSheet in battle_effect.h	games/tla/src/battle_effect/battle_effect_burst_shower.c
 BURST_SHOWER_ROCK_SHARDS	its code	Gravel Blow draws state->sheet + gSpire_ShardPictures[cel] + this, with BoulderSheet loaded at BURST_SHOWER_PICTURE; was VOLLEY_B_GLOW	games/tla/src/battle_effect/battle_effect_burst_shower.c
 ATALANTA_DARKEN_FRAME	its code	at frame 48 state->fadeFrames = BACKGROUND_DARKEN_FRAMES starts the backdrop's darkening	games/tla/src/battle_effect/battle_effect_atalanta.c
-POUND_STAGE_LANDS	its code	field_psynergy_pound.c passes PoundState.fading, set to 1 on the frame the fist lands, to a Pound trigger's event	games/tla/src/debug/psynergy_test.c
-POUND_STAGE_LANDS	its code	field_psynergy_pound.c passes PoundState.fading, set to 1 on the frame the fist lands	games/tla/src/debug/psynergy_test_2.c
 MAP_CELL_SCOOP	its code	MapGrid_CanScoop lets Scoop dig on a cell with attributeB bit 0 set, or clear where FieldState.sceneAttributeLow is set (event_commands_field_psynergy.c)	games/tla/include/field/map_grid.h
 RopeSlotState	its code	RopeSlot.state: Rope_Throw and Rope_LayTied set 1, Rope_Recoil sets 0 and returns at once on 0	games/tla/src/field/event_commands_ropes.c
 BurstPhase	its code	FieldPsynergy_UpdateBurst's switch on BurstState.phase, 0 to 6, moved on by BURST_NEXT_PHASE	games/tla/src/field/field_psynergy_burst.c
 cacheEntry	its uses	ParticleBurstState offset 0x1b00: ParticleBurst_Start stores VramCache_FindFreeEntry's entry there and ParticleBurst_End frees it	games/tla/include/field/event_commands.h
-PSYNERGY_DRAW_NO_SCENE_SPRITE	its code	FieldState.psynergyDrawFlags bit 0x1: Pound and Scoop skip FieldPsynergy_StartSceneSprite and Pound skips drawing its glow	games/tla/src/field/field_psynergy_internal.h
-PSYNERGY_DRAW_FIXED_PRIORITY	its code	FieldState.psynergyDrawFlags bit 0x2: Pound's fist and Scoop's hand take OAM priority 1 and lose ACTOR_PRIORITY_AUTOMATIC	games/tla/src/field/field_psynergy_internal.h
 SceneEncounterRule	its code	a row of gScene_EncounterRules, which Encounter_SelectMapZones reads into FieldState.encounterZones (renamed from SceneMusicEntry, which no music code reads)	games/tla/src/field/field_sequence_internal.h
 WorldMapGraphicsResource	its code	the nine columns of gWorldMap_GraphicsResources (facing.c): a palette, a tileset animation, cell tiles attributes and six tile sets, loaded by WorldMap_LoadGraphics in that order	games/tla/src/field/field_world_map.c
 FIELD_RAISED_TRIGGER_TELEPORT	its uses	FieldPsynergy_Teleport raises -887; FieldSequence_Run answers it with MapScreen_Show(1) once and arms the arrival	games/tla/include/field/field_state.h
@@ -21736,7 +21586,6 @@ gEclipse_DragonScale	its code	BattleEffect_RunEclipse: a unit scale, then two of
 gUlysses_MageScale	its code	BattleEffect_RunUlysses: the ship's placement scale, frames 108 to 287	games/tla/src/battle_effect/fxconst.s
 gSummonFormation_Scale	its code	BattleEffect_PlaceFormationSprites: the normal objects' unit scale	games/tla/src/battle_effect/fxconst.s
 gSummonFormation_LargeScale	its code	BattleEffect_PlaceFormationSprites: the big objects' scale, 1.25	games/tla/src/battle_effect/fxconst.s
-gDjinnBeams_HeadPictures	its twin	The Broken Seal's gDjinnBeams_HeadPictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
 gThorn_PuffPictures	its twin	The Broken Seal's gThorn_PuffPictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_growth.c
 gGround_CrackleFlips	its twin	The Broken Seal's gGround_CrackleFlips, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_hail.c
 gGround_PortalWidths	its twin	The Broken Seal's gGround_PortalWidths, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_hail.c
@@ -22713,7 +22562,6 @@ gMadraRooms_ShinAndFriendRunAway	the game	"Waaaaaaaaaahh!" (MsgMadraRoomsAdmitIt
 MadraRooms_SayFarewellAgain	its code	run by MadraRooms_WelcomePiersHome once FLAG_PIERS_SETTING_SAIL is set: "Ah, so you'll be leaving again, will you?" (MsgMadraRoomsAhSoYoullBeLeaving); FLAG_MADRA_FAREWELL_SAID's word	games/tla/src/scene/madra_rooms.c
 FLAG_MADRA_HEALING_FUNGUS_GIVEN	the game	"Did you climb all the way up those cliffs just to get that mushroom for us?" (MsgMadraRoomsOhMy + 2), in MadraRooms_GiveHealingFungus, which USE_ITEM_ON_ACTOR(ITEM_HEALING_FUNGUS) on the mushroom lover runs and which sets it as it removes the Healing Fungus	games/tla/src/scene/madra_rooms.c
 BattleEffect_FillWhiteBand	what the player sees	Sheba summons Flora: a soft-edged white band sweeps in from the right and whites out the battle before the summon's sky appears (its render); Zagan, Coatlicue, Eclipse and Daedalus open with the same call	games/tla/src/battle_effect/battle_effect_raging_heat.c
-BattleEffect_BuildCanvasBlitters	its twin	The Broken Seal's BattleEffect_BuildCanvasBlitters (games/tbs/src/battle_effect/battle_effect_mirrored_wall.c): the same pair, keeping the brighter level and adding, mirrored when flip is set	games/tla/src/battle_effect/battle_effect_mirrored_wall.c
 BattleEffect_RunRushingStrike	what the player sees	Felix casts Brute Force at Sheba: a ball of ice-blue light hides him as he rushes at her, a tall ring of light swells on her as she is hit, and sparks fly back the way he came; Jenna's Stun Muscle at Piers plays the same in red and white (its render)	games/tla/src/battle_effect/battle_effect_rushing_strike.c
 BattleEffect_RunRushingStrike	its twin	games/tbs/src/battle_effect/battle_effect_rushing_strike.c BattleEffect_RunRushingStrike, the same rush, burst, ring and sparks	games/tla/src/battle_effect/battle_effect_rushing_strike.c
 BattleEffect_RunSpasm	the game	"Spasm" (MsgAbilityName + 490)	games/tla/src/battle_effect/battle_effect_rushing_strike.c
@@ -23150,14 +22998,6 @@ PSYNERGY_TINT_DARK_GREY	its code	gFieldPsynergy_CastColors' entry RGB(8, 8, 8), 
 PSYNERGY_TINT_GREY	its code	gFieldPsynergy_CastColors' entry RGB(16, 16, 16), the colour FieldPsynergy_FadeToCastColor fades the field toward (field_effect_data.c, event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
 PsynergyTint	its code	the index into gFieldPsynergy_CastColors and FLAG_PSYNERGY_TINT that FieldPsynergy_FadeToCastColor picks (event_commands_field_psynergy.c)	games/tla/include/field/field_effect.h
 PSYNERGY_TINT_COUNT	its code	gFieldPsynergy_CastColors holds eight colours (field_effect_data.c)	games/tla/include/field/field_effect.h
-ENCOUNTER_ZONE_VENUS_DJINN	its code	gEncounter_DjinnBattles gives this zone to DJINNI_FLINT through DJINNI_SALT, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_FLINT to DJINNI_SALT"	games/tla/src/field/world_map_encounter_rules.c
-ENCOUNTER_ZONE_VENUS_DJINN_LAST	its code	gEncounter_DjinnBattles gives this zone to DJINNI_GEODE through DJINNI_EARTH19, the element's last three Djinn and its two spares	games/tla/src/field/world_map_encounter_rules.c
-ENCOUNTER_ZONE_MERCURY_DJINN	its code	gEncounter_DjinnBattles gives this zone to DJINNI_FIZZ through DJINNI_GEL, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_FIZZ to DJINNI_GEL"	games/tla/src/field/world_map_encounter_rules.c
-ENCOUNTER_ZONE_MERCURY_DJINN_LAST	its code	gEncounter_DjinnBattles gives this zone to DJINNI_EDDY through DJINNI_WATER19, the element's last three Djinn and its two spares	games/tla/src/field/world_map_encounter_rules.c
-ENCOUNTER_ZONE_MARS_DJINN	its code	gEncounter_DjinnBattles gives this zone to DJINNI_FORGE through DJINNI_TINDER, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_FORGE to DJINNI_TINDER"	games/tla/src/field/world_map_encounter_rules.c
-ENCOUNTER_ZONE_MARS_DJINN_LAST	its code	gEncounter_DjinnBattles gives this zone to DJINNI_SHINE through DJINNI_FIRE19, the element's last three Djinn and its two spares	games/tla/src/field/world_map_encounter_rules.c
-ENCOUNTER_ZONE_JUPITER_DJINN	its code	gEncounter_DjinnBattles gives this zone to DJINNI_GUST through DJINNI_WHORL, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_GUST to DJINNI_WHORL"	games/tla/src/field/world_map_encounter_rules.c
-ENCOUNTER_ZONE_JUPITER_DJINN_LAST	its code	gEncounter_DjinnBattles gives this zone to DJINNI_GASP through DJINNI_WIND19, the element's last three Djinn and its two spares	games/tla/src/field/world_map_encounter_rules.c
 PsynergyEndSkip	its code	Event_EndLastingPsynergy tests bits 1, 2 and 4 of skip before ending Reveal (revealActive), the ring of light (ringActive, ABILITY_MAGNET) and Sand (sandActive)	games/tla/src/field/field_sequence_items.c
 ITEM_PLACEHOLDER_WEAPON	its code	the 55 identical rows after ITEM_MAGMA_BALL to id 515 in gItem_DefinitionTable; unleashChance 64 against Equipment_RollUnleash's 5 percent steps (game_battle_arithmetic.c)	games/tla/src/game/item_table.c
 DjinnRedraw	its code	DjinnMenu_SelectDjinn: bit 4 draws the page (Menu_CreatePartyFigures, DjinnMenu_DrawPage), bit 2 restarts the figure's phase (DjinnFigures_SetSlotPhase), any bit the cursor and help	games/tla/src/menu/menu_djinn.c
@@ -23226,7 +23066,6 @@ ResourceId_BlueDropletSheet	its picture	twelve_mode.png: blue droplets falling i
 ABILITY_USABLE_IN_BATTLE	its code	AbilityDefinition.flags bit: the ability can be used in battle, else it is greyed there (menu_status.c and the battle Djinn preview test it)	games/tla/include/battle/battle_unit.h
 ABILITY_USABLE_IN_FIELD	its code	AbilityDefinition.flags bit: the ability can be used outside battle (menu_status.c tests it)	games/tla/include/battle/battle_unit.h
 AbilityIcon_LoadIntoSlot	its twin	The Broken Seal's name for the same thing, decided for both games (shared renames): H6: The Broken Seal's window/ name	games/tla/include/system/system.h
-Ability_BuildIconTiles	its code	builds an ability's Psynergy icon	games/tla/include/graphics/graphics.h
 Ability_BuildItemIconTiles	its code	builds an ability's icon from the item icons	games/tla/src/window/window_icons.c
 Ability_PlayUseSound	its code	plays a sound only	games/tla/src/menu/menu_internal.h
 ActorScript_FindOverlappingActor	its code	returns an actor	games/tla/include/field/event_commands.h
@@ -23334,7 +23173,6 @@ IncreaseItemAndLevel_KeepPortraitBrowserInPlace	its twin	The Broken Seal's name 
 IncreaseItemAndLevel_RaiseMemberLevel	its twin	The Broken Seal's name for the same thing, decided for both games (shared renames): H6: The Broken Seal's debug/level.c	games/tla/src/debug/level.c
 IncreaseItemAndLevel_RaisePartyLevels	its twin	The Broken Seal's name for the same thing, decided for both games (shared renames): H6: The Broken Seal's debug/level.c	games/tla/src/debug/level.c
 Input_GetDpadAngleEightWay	its code	returns the way the +Control Pad points in eight ways, from gInput_DpadAnglesEightWay	games/tla/include/field/event_commands.h
-ItemIcon_LoadLayersIntoSlot	its code	composes an item's icon with the layers asked for and loads it into a VRAM cache entry; ItemIcon_LoadIntoSlot is already the fixed-layer one	games/tla/include/graphics/graphics.h
 ItemMenu_DrawEquipment	its code	writes the four equipment slot labels and the items worn in them	games/tla/src/menu/menu_internal.h
 ItemMenu_DrawListPage	its code	draws one page of the item list	games/tla/src/menu/menu_item.c
 ItemMenu_PlaceIcons	its code	lays the item icons out; beside ItemMenu_PlaceIcon	games/tla/src/menu/menu_item.c
@@ -23378,7 +23216,6 @@ NameCaret_LoadIntoSlot	its code	block A is the name entry's caret (sprite_c.png)
 OWN_MenuArrow_Create	its code	the guards protect MenuArrow_Create/SetPosition	games/tla/include/menu/menu.h
 OWN_MenuArrow_SetPosition	its code	the guards protect MenuArrow_Create/SetPosition	games/tla/include/menu/menu.h
 OamData	its code	two copies of one layout	games/tla/include/field/effect_sprite.h
-PageArrows_Draw	its code	slides any paged list's arrows (gPageArrowTiles), not only a link screen's	games/tla/include/graphics/graphics.h
 PaleBlueGlowSheet	its code	its pictures: ten small pale blue glows	games/tla/src/gamepak/resource_directory.s
 PartyMemberChooser_ChooseMember	its code	the party member chooser's page	games/tla/src/menu/menu_status.c
 Party_RestorePpInLighthouse	its code	refills the PP of the members whose lighthouse the party is inside	games/tla/src/game/game_internal.h
@@ -23440,7 +23277,6 @@ STATUS_LIST_PAGE_ROWS	its code	the Status menu's Psynergy and item lists' rows a
 Save_WriteLinkTallies	its code	writes the link lobby's tallies into the current file	games/tla/src/gamepak/far_call/window.s
 Scoop_DropFromHand	its code	it drops an actor from Scoop's hand	games/tla/include/field/field.h
 ScreenTransition_StartWindowHeld	its code	it starts a window transition held at 0 for its caller to move	games/tla/include/graphics/display_transition.h
-SelectionIcon_Load	its code	loads an entry's icon by its IconKind	games/tla/include/graphics/graphics.h
 SelectionIcon_LoadIntoSlot	its code	as SelectionIcon_Load, into a given slot	games/tla/src/gamepak/far_call/window.s
 SelectionMenu_FreeLargeIcon	its code	frees the selection screen's large icon; no transfer	games/tla/include/menu/menu.h
 ShatteringOpeningSheet	its code	the 33 pieces of the shattering opening	games/tla/src/gamepak/resource_directory.s
@@ -23534,7 +23370,6 @@ gJudgment_ShieldSprites	its code	the sprite each shield cell is copied into	game
 gMindRead_CrescentEndScript	its code	ends Mind Read's crescents	games/tla/include/battle/battle.h
 gMoveHand_PushPoses	its code	read by Move: the hand's pose by quarter turn; neither unused nor battle	games/tla/include/field/event_commands.h
 gOamDepthMasks	its code	the masks of the depth slots, which the rest calls depth slots, not buckets	games/tla/include/system/system.h
-gPageArrowTiles	its twin	The Broken Seal's name for the same thing, decided for both games (shared renames): The Broken Seal's name for the same tiles (H6)	games/tla/include/graphics/graphics.h
 gPauseMenu_Icons	its code	it holds the Pause menu's icons	games/tla/src/window/scales.c
 gReveal_MarkerScript	its code	a Reveal marker	games/tla/include/field/screen_transition.h
 gScene_ReturnRules	its code	it holds each scene's restart point and ship landing	games/tla/src/field/field_sequence_encounter.c
@@ -23613,12 +23448,6 @@ GAROH_WEREWOLF_CAVE_ROOM_BEHIND_ROCK_FROM_CAVE	what the player sees	render probe
 FLAG_NIGHT_TINTS_ACTORS	what the player sees	render probe --only scene --scene Garoh, with and without --set FLAG_AREA_TEMP_11: with it Felix, the villagers, the barrel and the torch stand take the warm night tint (PaletteFade_ApplyTarget(PALETTE_TINT_WARM, PALETTES_OBJECTS)); without it they keep their colours; no code in the area sets 0x311 (its render)	games/tla/src/scene/garoh.c
 ANIM_WEREWOLF_SIT	its picture	werewolf.tsv animation 5 holds picture 33, the sheet's last: the werewolf sitting on the ground, legs out	games/tla/src/scene/garoh.c
 ENTRANCE_STUMP_LEDGE	what the player sees	render probe --only scene --scene GondowanCliffs --entrance 99: Felix at (1272, 552) on the ledge, the tree stump to his west and Kindle, the red Djinni, to his east; no SCENE_EXIT, Event_SetDestination or debug room names entrance 99 of SceneId_GondowanCliffs (its render)	games/tla/src/scene/gondowan_cliffs.c
-ANIM_LEADER_LIE_ON_BACK	its picture	felix.tsv animation 41 holds picture 51: Felix lying on his back, eyes closed	games/tla/src/scene/idejima.c
-ANIM_LEADER_SIT_UP	its picture	felix.tsv animation 42 holds picture 52: Felix sitting up on the ground, legs out	games/tla/src/scene/idejima.c
-ANIM_LEADER_SWING_RIGHT_ARM	its picture	felix.tsv animation 45 alternates pictures 183 and 184: standing, his right arm (the screen's left) swung out and up; played before "Looks like the arms are still attached."	games/tla/src/scene/idejima.c
-ANIM_LEADER_SWING_LEFT_ARM	its picture	felix.tsv animation 46 alternates pictures 185 and 186: the same with his left arm	games/tla/src/scene/idejima.c
-ANIM_LEADER_KICK_RIGHT_LEG	its picture	felix.tsv animation 47 alternates pictures 187 and 188: standing on one leg, the other kicked out; played before "The legs are working fine, too."	games/tla/src/scene/idejima.c
-ANIM_LEADER_KICK_LEFT_LEG	its picture	felix.tsv animation 48 alternates pictures 189 and 190: the other leg kicked out	games/tla/src/scene/idejima.c
 ANIM_SHEBA_SIT_UP	its picture	sheba.tsv maps animation 18 to row 11, picture 71 held: Sheba sitting up on the ground (row 12, picture 70, is her lying collapsed); played before "The wave!"	games/tla/src/scene/idejima.c
 ANIM_JENNA_LIE_ON_SIDE	its picture	jenna.tsv maps animation 18 to row 15, picture 59 held: Jenna lying on her side	games/tla/src/scene/idejima.c
 SHIP_ANIMATION_ROCK_FAST	its picture	menardis_ship.tsv animation 2 alternates its two pictures of Menardi's ship every 10 frames, animation 0 every 25	games/tla/src/scene/idejima.c
@@ -23690,9 +23519,7 @@ SINKING_PILLAR_EMPTY	its picture	sinking_pillar.tsv animation 1 holds picture 0,
 SINKING_PILLAR_FULL	its picture	sinking_pillar.tsv animation 2 holds picture 1, the pillar full of blue water; set as Douse fills it	games/tla/src/scene/lemurian_ship.c
 SINKING_PILLAR_SUNK	its picture	sinking_pillar.tsv animation 3 holds picture 2, only the watery rim, set as the pillar sinks 16 pixels into the floor	games/tla/src/scene/lemurian_ship.c
 LemurianShipDeck_HideWing	what the player sees	MapGrid_CopyCellsTo(60, 53, 67, 16, ...) is one of the copies LemuriaDock makes when FLAG_SHIP_FLIES is clear; LemuriaDock entrances 2 and 3 with and without the flag show the ship's wings hidden by them (its render); the tiller deck shares the map (same entrances)	games/tla/src/scene/lemurian_ship_deck.c
-PUDDLE_GLINTING	its picture	puddle.tsv animation 1 loops picture 0 and picture 6, the blue puddle and the same with a glint (puddle.png); Frost's animations 2 and up grow the pillar of ice	games/tla/src/scene/lemurian_ship_deck.c
 BATTLE_ARENA_GATE_ANIMATION	its twin	The Broken Seal's battle_arena.c names channel 5 BATTLE_ARENA_GATE_ANIMATION (the iron gate in the north wall, seen lifted in a staged moment); the lobby map's animation.tsv channel 5 is the same eight rows (0x69a/0x216 ... 0x6fc/0x276, 8) as tbs battle_arena's tileset_anims.tsv channel 5	games/tla/src/scene/lobby.c
-LINK_BATTLE_ENCOUNTER_ZONE	its code	gEncounterZones[1] (encounter_zones.c) is the Djinni battles DJINNI_FLINT to DJINNI_SALT, formations 1 to 8; LinkLobby_EnterBattle requests zone 1 slot 1 for BATTLE_TYPE_LINK after receiving the opponent's units, as tbs battle_arena.c does	games/tla/src/scene/lobby.c
 LINK_BATTLE_ENCOUNTER_SLOT	its code	slot 1 of gEncounterZones[1] is formation 2, the second Venus Djinni (DJINNI_GRANITE) in the zone's FLINT-to-SALT order	games/tla/src/scene/lobby.c
 BattleEffect_NoOpA	its code	an empty routine nothing calls, the first of two after Eclipse	games/tla/src/battle_effect/battle_effect_canvas.c
 BattleEffect_NoOpB	its code	an empty routine nothing calls, the second of two after Eclipse	games/tla/src/battle_effect/battle_effect_canvas.c
@@ -23728,15 +23555,9 @@ MARKER_WALKWAY_END	its code	map.txt of magma_rock_inside_blaze_tablet: the upper
 MARKER_PLATFORM_FOOT	its code	map.txt of magma_rock_inside_blaze_tablet: the upper layer's cell (16, 78), behaviour 7, over row 14 below the tablet's platform; behaviours 2 to 6 number the stones between	games/tla/src/scene/magma_rock_inside.c
 CELL_BEHAVIOR_MADRA_CATACOMBS_BUTTON_WALL	its code	map.txt of madra_catacombs_entrance: cell (36, 39) is the map's only cell of behaviour 10, examined facing north to run MadraCatacombs_HearEyesOfTruth, whose cell edits put the push button there	games/tla/src/scene/madra_catacombs.c
 EPILOGUE_FROM_MT_ALEPH_SUMMIT	its code	the entrance Scene_Initialize's last stretch passes Event_SetDestination(SCENE_EPILOGUE, ...); epilogue.c reads none and lists only ENTRANCE_DEFAULT (shared/scene_entrances_mapless.c)	games/tla/src/scene/mt_aleph_summit.c
-CASTER_LOOK_NONE	its code	BattleEffect_SetObjectUpdateMode's mode 0 (field_psynergy_radial_effects.c: none, normal colours)	games/tla/src/scene/mt_aleph_summit.c
-CASTER_LOOK_CYCLING_COLORS	its code	BattleEffect_SetObjectUpdateMode's mode 2 (field_psynergy_radial_effects.c: cycling colours, FieldEffect_CycleActorAndSpawnArcs)	games/tla/src/scene/mt_aleph_summit.c
 STEP_TOWARD	plain English	steps a colour channel a unit toward its target in the sea's colour fades	games/tla/src/scene/sea_of_time.c
 STEP_SEA_TOWARD_WAVES	its code	the loop SeaOfTime_StartWaves and SeaOfTime_Open run every 10 frames, stepping SEA_PALETTE toward WAVE_RED, WAVE_GREEN, WAVE_BLUE	games/tla/src/scene/sea_of_time.c
 STEP_SEA_TOWARD_SAVED_COLORS	its code	the loop SeaOfTime_StopWaves and SeaOfTime_FacePoseidon run every 10 frames, stepping SEA_PALETTE back toward gSeaOfTime_SavedColors	games/tla/src/scene/sea_of_time.c
-ANIM_LEADER_LIE_ASLEEP	its picture	felix.png picture 51 (animation 41): Felix lying on his back, eyes shut	games/tla/src/scene/shaman_village.c
-ANIM_LEADER_LIE_AWAKE	its picture	felix.png picture 52 (animation 42): Felix lying on his back, eyes open	games/tla/src/scene/shaman_village.c
-CASTER_LOOK_CYCLING_COLORS	what the player sees	Sheba's sprite cycles through blue, magenta and green as she casts Whirlwind on the twister rock, ShamanVillage_ShebaClearsSand's frames 80 to 200 (its render)	games/tla/src/scene/shaman_village.c
-CASTER_LOOK_NONE	its uses	the mode BattleEffect_SetObjectUpdateMode is given once the cast ends	games/tla/src/scene/shaman_village.c
 HALL_WEST_DOORWAY	what the player sees	entrance 2 of TreasureIsleEntrance, at (216, 440): the west doorway in the hall's north wall, leading to entrance 3; render probe --entrance (its render)	games/tla/src/scene/treasure_isle.c
 WEST_ALCOVE	what the player sees	entrance 3 of TreasureIsleEntrance, at (120, 152): a small alcove with two chests north of the hall, reached from entrance 2; render probe --entrance (its render)	games/tla/src/scene/treasure_isle.c
 HALL_MIDDLE_DOORWAY	what the player sees	entrance 4 of TreasureIsleEntrance, at (280, 440): the middle doorway in the hall's north wall, beside a stone pillar, leading to entrance 5; render probe --entrance (its render)	games/tla/src/scene/treasure_isle.c
@@ -23960,26 +23781,9 @@ GULL_CENTER_X	its picture	intro_gulls.png: the first frame's drawn pixels span x
 FieldEffect_LandDouseDrop	its code	FieldPsynergy_Douse sets it as the update of each SPRITE_DROPLET its rain cloud drops; it ends the drop with gFieldEffect_ReleaseScript once the drop reaches its ground height	games/tla/src/field/event_commands_cloak.c
 OBJ_X_TURN	the hardware	GBATEK, LCD OBJ - OAM Attributes: attribute 1 bits 0-8, X-Coordinate (0-511); a place plus 512 wraps to itself	games/tla/src/field/dice_game.c
 OBJ_Y_TURN	the hardware	GBATEK, LCD OBJ - OAM Attributes: attribute 0 bits 0-7, Y-Coordinate (0-255); a place plus 256 wraps to itself	games/tla/src/field/dice_game.c
-CENTRE_LINE_FLICKERING	its code	ScreenTransition_Finish runs ScreenTransition_UpdateFromCenter for TRANSITION_CENTRE_LINE's variant 1, whose lines show only every other frame (gFrameCount & 1)	games/tla/src/field/event_commands_exit_animations.c
-WORLD_MAP_VIEW_CELLS	its code	the World Map cell index is (x / 32 px) & 31 + ((z / 32 px) & 31) * 32 into Ram_MapBlocks, as field_map_grid.c's WORLD_MAP_VIEW_CELLS	games/tla/src/field/event_commands_field_psynergy.c
-WORLD_MAP_CELL_PIXELS	its code	x / toFIXED(32) picks the World Map cell (struct WorldMapCell, 'One 32-pixel cell of the World Map')	games/tla/src/field/event_commands_field_psynergy.c
-WORLD_MAP_COLLISION_WATER_FIRST	its code	MapGrid_IsWaterCell takes World Map collisions 2 to 4 for water, the sea but its first kind; its callers are MapGrid_CanScoop and Parch	games/tla/src/field/event_commands_field_psynergy.c
 CasterLook	its code	BattleEffect_SetObjectUpdateMode: 0 clears the update and restores SPRITE_COLOR_NORMAL, 1 FieldEffect_FlickerActorAndSpawnArcs (SPRITE_COLOR_WHITE every other 2 frames), 2 FieldEffect_CycleActorAndSpawnArcs (colour modes 0 to 5)	games/tla/src/field/event_commands_field_psynergy_state.c
-CASTER_LOOK_NORMAL	its code	BattleEffect_SetObjectUpdateMode's mode 0 restores SPRITE_COLOR_NORMAL and clears the update	games/tla/src/field/event_commands_field_psynergy_state.c
-CASTER_LOOK_FLASHING	its code	mode 1 sets FieldEffect_FlickerActorAndSpawnArcs, SPRITE_COLOR_WHITE and SPRITE_COLOR_NORMAL in turn	games/tla/src/field/event_commands_field_psynergy_state.c
-CASTER_LOOK_CYCLING	its code	mode 2 sets FieldEffect_CycleActorAndSpawnArcs, colour modes 0 to 5 in turn	games/tla/src/field/event_commands_field_psynergy_state.c
-ANIM_PARTICLE_TWINKLE	its picture	particle.tsv's animation 7 is 'picture 0 3, picture 1 3, loop'; particle.png's picture 0 is the full yellow-white glow, picture 1 the next size down	games/tla/src/field/event_commands_jupiter.c
-DJINNI_ANIMATION_EXCITED	its picture	animation 3 of venus_djinni.tsv (pictures 18, 21, 24: crouching, lower, stretched up), mars_djinni.tsv and jupiter_djinni.tsv (21, 27, 24: arms waving) and mercury_djinni.tsv (18, 21, 24), every picture facing the player	games/tla/src/field/event_commands_mars.c
-MoveHandAnimation	its twin	move_hand.png is The Broken Seal's byte for byte and move_hand.tsv has the same pictures in the same seven animations; The Broken Seal's enum MoveHandAnimation (sprite_ids.h)	games/tla/src/field/event_commands_mind_read.c
-MOVE_HAND_ANIMATION_OPEN	its twin	The Broken Seal's MOVE_HAND_ANIMATION_OPEN; animation 1 holds picture 0, the open hand	games/tla/src/field/event_commands_mind_read.c
-MOVE_HAND_ANIMATION_GRIP	its twin	The Broken Seal's MOVE_HAND_ANIMATION_GRIP; animation 3 loops picture 6	games/tla/src/field/event_commands_mind_read.c
-MOVE_HAND_ANIMATION_FLEX	its twin	The Broken Seal's MOVE_HAND_ANIMATION_FLEX; animation 4 is pictures 0 and 6 in turn	games/tla/src/field/event_commands_mind_read.c
-MOVE_HAND_ANIMATION_FIST	its twin	The Broken Seal's MOVE_HAND_ANIMATION_FIST; animation 5 loops picture 9	games/tla/src/field/event_commands_mind_read.c
-LAYERS_COLOR_CYCLING	its code	Actor_SetLayersColorMode takes value 0 to read gAnim_ChildPaletteCycle every 2 frames, any other as colour mode value - 1	games/tla/src/field/event_commands_mind_read.c
 WEATHER_PALETTE	its code	every weather, mote and sparkle sprite takes OBJ_PALETTE(13), the last of the 14 basic sprite palettes Palette_LoadBasicSpriteColors loads (BASIC_SPRITE_PALETTES 14, system_debug_text.c)	games/tla/src/field/event_commands_weather.c
 WEATHER_PICTURE_BYTES	its picture	ground.png, mote.png, sparkle.png and streak.png are 16 pixels wide, packed as 16x16 pictures of 16 colours (field_effect_particles.s's .4bpp16x16 files); 768 bytes is six of them	games/tla/src/field/event_commands_weather.c
-OAM_SHAPE_SQUARE	the hardware	GBATEK, LCD OBJ - OAM Attributes: attribute 0 bits 14-15, OBJ Shape (0=Square,1=Horizontal,2=Vertical)	games/tla/src/field/event_commands_weather.c
-OAM_SHAPE_HORIZONTAL	the hardware	GBATEK, LCD OBJ - OAM Attributes: attribute 0 bits 14-15, OBJ Shape 1=Horizontal	games/tla/src/field/event_commands_weather.c
 OAM_SIZE_16X16	the hardware	GBATEK, LCD OBJ - OAM Attributes: attribute 1 bits 14-15, OBJ Size 1 of a square shape is 16x16	games/tla/src/field/event_commands_weather.c
 OAM_SIZE_32X16	the hardware	GBATEK, LCD OBJ - OAM Attributes: attribute 1 bits 14-15, OBJ Size 2 of a horizontal shape is 32x16	games/tla/src/field/event_commands_weather.c
 SAND_ANIMATION_MOVE	its picture	sand_ripple.tsv's animation 1 loops pictures 0, 5 and 10, a mound of sand leaning one way and another; Actor_MoveAsSand selects it as the leader moves	games/tla/src/field/field_move_by_keys.c
@@ -23987,15 +23791,8 @@ SAND_ANIMATION_CLIMB	its picture	sand_ripple.tsv's animation 3 loops pictures 4,
 SAND_PUFF_ANIMATION_THIN	its picture	sand_puff.tsv's animation 1: pictures 0, 1 and 2 for 32, 22 and 10 frames, a round puff of sand thinning to a few grains	games/tla/src/field/field_move_by_keys.c
 DUST_CLOUD_ANIMATION_SCATTER	its picture	dust_cloud.tsv's animation 2: pictures 0 to 7 over 48 frames, a cloud breaking into specks, then the blank animation 0	games/tla/src/field/field_move_by_keys.c
 ACTOR_WAIT_FRAMES_MAX	its code	Actor_WaitForScriptEnd and Actor_WaitForMove give up after 600 frames	games/tla/src/field/field_actors.c
-SHIP_TERRAIN_SEA	its code	Actor_SailOnWorldMap and Actor_FlyOnWorldMap set FieldState.terrainKind to 0 while WorldMap_GetCollision under the ship is 1 to 3; WorldMap_IsFlyable then lets it fly high over collisions 1 to 6	games/tla/src/field/field_pad_movement.c
-SHIP_TERRAIN_SHALLOWS	its code	terrainKind 1 while the collision under the ship is 5 or 6 (WORLD_MAP_COLLISION_SHALLOW_WATER); WorldMap_IsFlyable then allows 1 to 8	games/tla/src/field/field_pad_movement.c
-SHIP_TERRAIN_SEA_LAST	its code	terrainKind 2 while the collision under the ship is WORLD_MAP_COLLISION_SEA_LAST (4)	games/tla/src/field/field_pad_movement.c
-SHIP_TERRAIN_GROUND	its code	terrainKind 3 while the collision under the ship is 7 to 12, WORLD_MAP_COLLISION_DEFAULT to _WALKABLE_LAST; WorldMap_IsFlyable then allows 4 to 8 and 10	games/tla/src/field/field_pad_movement.c
-ShipTerrainKind	its code	the type of FieldState.terrainKind's four values, set by the sailing and flying routines	games/tla/src/field/field_pad_movement.c
 ANIM_SHIP_FLY_HIGH	its picture	winged_ship_flying_small.tsv's seventh animation: command 242 10 (ANIMCMD_OFFSET_Y) then pictures 15, 25, 15, 35, the wings spread in each, where the walk (animation 2) cycles 0, 5, 10; Actor_FlyOnWorldMap plays it while the ship's y is 4 pixels or more	games/tla/src/field/field_pad_movement.c
-PROBE_CLEAR	its code	sets a FieldPosition at a radius along a heading and returns whether the check routine passed (MapGrid_CheckCollision, WorldMap_IsSailable, WorldMap_IsFlyable) finds it open	games/tla/src/field/field_player_control.c
 SIDE_PROBES_CLEAR	its code	the four PROBE_CLEAR tests at FIELD_PROBE_ANGLE and 45 degrees each side of a heading, which every pad movement routine makes before taking a heading	games/tla/src/field/field_player_control.c
-MAP_WADING_MUD	its uses	Taopo Swamp sets the map's wading kind to 2 on its mud, where the leader sinks; Actor_SpawnWaterSplash then draws the splash in SPRITE_COLOR_FILL (the mud's colour, MUD_COLOR) at half the animation speed	games/tla/src/field/field_player_control.c
 ParchPhase	its code	FieldPsynergy_Parch's phase, switched by its ParchResult: the disc's scale grows by 3/256 a frame, holds or emits steam (spawn 2 then 1 puffs a frame) for timed stages, and shrinks by its own step	games/tla/src/field/field_psynergy_parch.c
 PARCH_SWELLS	its code	phase 0 of every result: discScaleX grows by FIXED_ONE * 3 / 256 a frame until 0.25 (PARCH_NOTHING) or 0.75	games/tla/src/field/field_psynergy_parch.c
 PARCH_HOLDS	its code	PARCH_NOTHING's phase 1: nothing changes for 30 frames	games/tla/src/field/field_psynergy_parch.c
@@ -24016,21 +23813,12 @@ WORLD_MAP_NAME_ABOVE	its code	MapScreen's name label is drawn at the nearest pla
 WORLD_MAP_NAME_RIGHT_MARGIN	its code	a label whose right end passes DISPLAY_WIDTH - 1 is moved to x = 232 - width, ending 8 pixels short of the screen's right edge	games/tla/src/field/field_psynergy_map_screen_image.c
 WORLD_MAP_NAME_RAISE	its code	the label moved in from the right edge also has its y lowered by 10, so it is drawn 10 pixels higher	games/tla/src/field/field_psynergy_map_screen_image.c
 MAP_SCREEN_CURSOR_LEFT	its code	gMapScreen_CursorMarker's x is the cursor's x less 17, scrolled or zoomed	games/tla/src/field/field_psynergy_map_screen_image.c
-SPRITE_LAYER_NOT_DRAWN	its code	SpriteAnimation.priority is drawn only from 0 to 3 (sprite.h); the World Map leader's second layer is set to 9 and Actor_MoveOnWorldMap sets it to 1 on WORLD_MAP_COLLISION_FOREST and back to 9 elsewhere	games/tla/src/field/field_sequence_actors.c
 SPAWN_SPARKLE_NEAR	its code	the spawn that ItemDisplay_EmitSparkles and Reveal_EmitSparkles each made line for line: SPRITE_SPARKLE at Random16() << 4 (under 16 pixels) in a random direction from the actor, started on gItemDisplay_SparkleScript	games/tla/src/field/field_sequence_item_display.c
 ItemDisplay_Unused	its code	an empty function nothing refers to, marked UNUSED	games/tla/src/field/field_sequence_item_display.c
 CLAMP_SPAN_TO_SCREEN	its code	the four tests that keep a window line's left and right edges within 0 to DISPLAY_WIDTH, written out in five of ScreenTransition_UpdateScanlineTable's modes	games/tla/src/field/field_sequence_screen_transition.c
 WRITE_ELLIPSE_LINES	its code	the per-line loop of the leader window transitions: half-width Iwram_Sqrt(r * r - squash * dy * dy) >> 8 round centerX, clamped, packed as (left << 8) + right	games/tla/src/field/field_sequence_screen_transition.c
-OAM_SHAPE_SQUARE	the hardware	GBATEK "OBJ Attributes", attribute 0 bits 14-15 OBJ Shape: 0=Square	games/tla/src/field/field_sequence_treasure_spots.c
-OAM_SHAPE_HORIZONTAL	the hardware	GBATEK "OBJ Attributes", attribute 0 bits 14-15 OBJ Shape: 1=Horizontal	games/tla/src/field/field_sequence_treasure_spots.c
 OAM_SIZE_16X8	the hardware	GBATEK "OBJ Attributes", attribute 1 bits 14-15 OBJ Size: size 0 of a horizontal shape is 16x8	games/tla/src/field/field_sequence_treasure_spots.c
 OAM_SIZE_16X16	the hardware	GBATEK "OBJ Attributes", attribute 1 bits 14-15 OBJ Size: size 1 of a square shape is 16x16	games/tla/src/field/field_sequence_treasure_spots.c
-TreasureSpotSpriteMode	its code	Actor_SetWideSprite's mode: 0 moves the actor to the origin with sceneWord TREASURE_SPOT_ON_CELL, any other draws its sprite horizontal 16x8 4 pixels lower; Loho, Daila, Taopo Swamp, Yampi Desert and Lemuria pass 0 or 1 for their treasure actors	games/tla/src/field/field_sequence_treasure_spots.c
-TREASURE_SPOT_PUT_AWAY	its code	Actor_SetWideSprite mode 0: x and z set to 0 and sceneWord TREASURE_SPOT_ON_CELL	games/tla/src/field/field_sequence_treasure_spots.c
-TREASURE_SPOT_WIDE	its code	Actor_SetWideSprite with mode 1: offsetY += 4, shape horizontal, size 0	games/tla/src/field/field_sequence_treasure_spots.c
-ReturnHomeMode	its code	Actor_ReturnHome's mode, 1 or 2; Yampi Desert's YampiDesert_DigUpTreasure passes it for Scoop's buried treasure	games/tla/src/field/field_sequence_treasure_spots.c
-RETURN_HOME_CLEAR_Z	its code	Actor_ReturnHome mode 1: actor->z.fixed = 0 and nothing else	games/tla/src/field/field_sequence_treasure_spots.c
-RETURN_HOME_DUG_UP	its code	Actor_ReturnHome mode 2: GameFlag_Set(flag), the sprite made square again, the actor put at homeX, homeZ and Scoop_DropFromHand	games/tla/src/field/field_sequence_treasure_spots.c
 ANIM_PSYNERGY_STONE_SHATTER	its picture	psynergy_stone.tsv's third animation plays pictures 7 to 10 then blank: the stone split into four pieces, then scattered pink sparkles (psynergy_stone.png); Scene_TalkToActor plays it once the stone's PP is given, before MsgPsynergyStoneDisappeared	games/tla/src/field/field_sequence_triggers.c
 WORLD_MAP_GRAPHICS_DEFAULT	what the player sees	World Map by Daila (entrance 2): green land, rivers and grey mountains; regions outside groups 2 to 4 load set A (its render)	games/tla/src/field/field_world_map.c
 WORLD_MAP_GRAPHICS_SNOWFIELD	what the player sees	World Map by Kalt Island (entrance 50) and Tundaria Tower (entrance 46): snow-covered ground and ice; their regions 45 and 48 load set C (its render)	games/tla/src/field/field_world_map.c
@@ -24093,3 +23881,311 @@ BOLT_TRAIL_EARTH_FORCE	the game	"Earth Force" (MsgAbilityName + 722)	games/tla/s
 gGrowth_ThornPuffWidths	its picture	thorn_02.png to thorn_08.png: seven half pictures of an orange impact flare, 5, 7, 11, 17, 32, 32 and 19 pixels wide as the rows say	games/tla/src/battle_effect/effect_table.c
 gGrowth_ThornPuffHeights	its picture	thorn_02.png to thorn_08.png: seven half pictures of an orange impact flare, 10, 14, 21, 34, 59, 60 and 38 pixels tall as the rows say	games/tla/src/battle_effect/effect_table.c
 gGrowth_ThornPuffPictures	its picture	5888 is thorn_00.png (48x80, the big thorn) and thorn_01.png (32x64, the small one) together, and the later rows the running byte sizes of thorn_02.png to thorn_08.png, seven half pictures of an orange impact flare	games/tla/src/battle_effect/effect_table.c
+SceneId_SouthwestAttekaIslet	its area name	SW Atteka Islet (the area name of its group, 60, in gScenes and gScene_AreaNameRules); was SceneId_Ov690Room9	games/tla/include/scene_ids.h
+SceneId_SouthwestAttekaIsletHouses	its area name	SW Atteka Islet (the area name of its group, 60, in gScenes and gScene_AreaNameRules); was SceneId_Ov690Room10	games/tla/include/scene_ids.h
+gIceChips_Script	its uses	the object script IceChips_Spawn starts on each chip of ice the rolling fireball breaks off, the same table in the four Mars Lighthouse rooms	games/tla/src/scene/shared/mars_lighthouse_part_scripts.c
+gBattleEffect_EmberStreakPictureWidths	its twin	The Broken Seal's gBattleEffect_PuffArcPictureWidths, the same bytes	games/tla/src/battle_effect/battle_effect_atalanta.c
+gBattleEffect_EmberStreakPictureHeights	its twin	The Broken Seal's name, the same bytes	games/tla/src/battle_effect/battle_effect_atalanta.c
+gBattleEffect_EmberStreakPictureBiasY	its twin	The Broken Seal's name, the same bytes	games/tla/src/battle_effect/battle_effect_atalanta.c
+gBattleEffect_EmberStreakPictures	its twin	The Broken Seal's name, the same bytes	games/tla/src/battle_effect/battle_effect_atalanta.c
+gLobbedShells_ShardPictures	its twin	The Broken Seal's gLobbedShells_ShardPictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+gTiamat_EmberStreakBiasY	its twin	The Broken Seal's gTiamat_FlameDrops, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_procne.c
+gLobbedShells_Styles	its twin	The Broken Seal's gLobbedShells_Styles: each mode's record, read by the twin BattleEffect_RunLobbedShells	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+gMindRead_CasterColorCycle	its twin	☀️'s gMindRead_CasterPaletteCycle, the same bytes	games/tla/src/field/event_commands_scripts.c
+gFieldEffect_PulseScales	its twin	☀️'s gFieldEffect_PulseScales without its third word	games/tla/src/field/event_commands_tables.s
+Render_DrawMeshWireframe	its code	unused (nothing calls it): transforms the sheet block's points and draws each front-facing face's three edges as clipped lines into the canvas	games/tla/src/battle_effect/battle_effect_render.c
+Render_FillMesh	its code	unused: fills each front-facing face into the canvas in two halves along edge slopes, keeping the brighter colour	games/tla/src/battle_effect/battle_effect_render.c
+Render_DrawTexturedMesh	its code	unused: draws each front-facing face as an affine-textured triangle from the effect sheet	games/tla/src/battle_effect/battle_effect_render.c
+DJINN_BEAMS_MOTES	its twin	The Broken Seal defines DJINN_BEAMS_MOTES in games/tbs/src/battle_effect/battle_effect_djinn_beams.c and writes it on the same line of BattleEffect_RunDjinnBeams where BattleEffect_RunDjinnBeams writes 512	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+DJINN_BEAMS_MOTE_HEIGHT	its twin	The Broken Seal writes DJINN_BEAMS_MOTE_HEIGHT (games/tbs/src/battle_effect/battle_effect_djinn_beams.c) at the number aligned with this one in BattleEffect_RunDjinnBeams; the twin routine BattleEffect_RunDjinnBeams writes 24	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+SPRITE_ANIMATION_COUNT	its twin	The Broken Seal's field_internal.h enum, Sprite.entries	games/tla/src/field/field_internal.h
+southwest_atteka_islet	its uses	tileset folder set_88: brought by map settlements_9 in the resource directory (its map.inc defines its Tileset_ labels)	games/tla/src/graphics/tileset/southwest_atteka_islet
+SPRITE_WORLD_MAP_FOREST_COVER	its number	the pixel size: a blank 32-pixel square, as The Broken Seal's row (blank_32.png)	games/tla/include/sprite_ids.h
+WORLD_MAP_FROM_YALLAM_NORTH	its uses	entrance 33 of SceneId_WorldMap, the door to SceneId_Yallam (its exit or entrance 10), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+WORLD_MAP_FROM_YALLAM_SOUTH	its uses	entrance 34 of SceneId_WorldMap, the door to SceneId_Yallam (its exit or entrance 11), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+WORLD_MAP_FROM_SOUTHWEST_ATTEKA_ISLET	its uses	entrance 47 of SceneId_WorldMap, the door to SceneId_SouthwestAttekaIslet (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+WORLD_MAP_TO_YALLAM_SOUTH	its uses	exit 33 of SceneId_WorldMap leads to SceneId_Yallam entrance 10, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+WORLD_MAP_TO_YALLAM_NORTH	its uses	exit 34 of SceneId_WorldMap leads to SceneId_Yallam entrance 11, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+WORLD_MAP_TO_SOUTHWEST_ATTEKA_ISLET	its uses	exit 47 of SceneId_WorldMap leads to SceneId_SouthwestAttekaIslet entrance 1, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+IDEJIMA_AFTER_DRIFT	its uses	entrance 12 of SceneId_Idejima, the door to SceneId_Title (its exit or entrance 3), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+SOUTHWEST_ATTEKA_ISLET_FROM_WORLD_MAP	its uses	entrance 1 of SceneId_SouthwestAttekaIslet, the door to SceneId_WorldMap (its exit or entrance 47), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+SOUTHWEST_ATTEKA_ISLET_FROM_SOUTHWEST_ATTEKA_ISLET_HOUSES_NORTH	its uses	entrance 2 of SceneId_SouthwestAttekaIslet, the door to SceneId_SouthwestAttekaIsletHouses (its exit or entrance 11), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+SOUTHWEST_ATTEKA_ISLET_TO_WORLD_MAP	its uses	exit 1 of SceneId_SouthwestAttekaIslet leads to SceneId_WorldMap entrance 47, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+SOUTHWEST_ATTEKA_ISLET_TO_SOUTHWEST_ATTEKA_ISLET_HOUSES_NORTH	its uses	exit 2 of SceneId_SouthwestAttekaIslet leads to SceneId_SouthwestAttekaIsletHouses entrance 11, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+SOUTHWEST_ATTEKA_ISLET_HOUSES_FROM_SOUTHWEST_ATTEKA_ISLET_SOUTH	its uses	entrance 11 of SceneId_SouthwestAttekaIsletHouses, the door to SceneId_SouthwestAttekaIslet (its exit or entrance 2), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+SOUTHWEST_ATTEKA_ISLET_HOUSES_TO_SOUTHWEST_ATTEKA_ISLET_NORTH	its uses	exit 1 of SceneId_SouthwestAttekaIsletHouses leads to SceneId_SouthwestAttekaIslet entrance 2, by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+TRIAL_ROAD_STAGES_FROM_SHAMAN_VILLAGE_TRIAL_GROUNDS_WEST	its uses	entrance 31 of SceneId_TrialRoadStages, the door to SceneId_ShamanVillageTrialGrounds (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+TRIAL_ROAD_STAGES_FROM_SHAMAN_VILLAGE_TRIAL_GROUNDS_EAST	its uses	entrance 32 of SceneId_TrialRoadStages, the door to SceneId_ShamanVillageTrialGrounds (its exit or entrance 2), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+TRIAL_ROAD_STAGES_FROM_TRIAL_ROAD_SUMMIT_WEST	its uses	entrance 33 of SceneId_TrialRoadStages, the door to SceneId_TrialRoadSummit (its exit or entrance 1), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+TRIAL_ROAD_STAGES_FROM_TRIAL_ROAD_SUMMIT_EAST	its uses	entrance 34 of SceneId_TrialRoadStages, the door to SceneId_TrialRoadSummit (its exit or entrance 2), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+TRIAL_ROAD_STAGES_FOR_TRIAL_RULES	its uses	entrance 50 of SceneId_TrialRoadStages, the door to SceneId_ShamanVillageTrialGrounds (its exit or entrance 10), by the exit tables (SCENE_EXIT)	games/tla/include/scene_exits.h
+CopyWords2	its number	the block move copies 2 words; COPY_FROM(n) pastes the count into the name (Render_PatchTemplate's copy helpers)	games/tla/src/battle_effect/battle_effect_render.c
+CopyWords3	its number	the block move copies 3 words; COPY_FROM(n) pastes the count into the name (Render_PatchTemplate's copy helpers)	games/tla/src/battle_effect/battle_effect_render.c
+CopyWords4	its number	the block move copies 4 words; COPY_FROM(n) pastes the count into the name (Render_PatchTemplate's copy helpers)	games/tla/src/battle_effect/battle_effect_render.c
+Render_RunFillMeshKernel	its code	copies Render_FillMeshKernel into IWRAM and runs it with two arguments, Render_FillMesh's vertexCount and faceCount	games/tla/src/battle_effect/battle_effect_render.c
+FIELD_HALF_CELL_ORIGIN	its code	the 16.16 coordinate an 8-pixel tile starts at: gaia_rock_inside.c and taopo_swamp.c's TaopoSwamp_FocusMapOn	games/tla/include/field/field_coordinate.h
+BattleEffect_RunRevive	the game	"Revive" (MsgAbilityName + 101)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunDew	the game	"Dew" (MsgAbilityName + 326)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunSpark	the game	"Spark" (MsgAbilityName + 348)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunMadSpatter	the game	"Mad Spatter" (MsgAbilityName + 489)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_MAD_SPATTER	the game	"Mad Spatter" (MsgAbilityName + 489)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunMud	the game	"Mud" (MsgAbilityName + 310)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_MUD	the game	"Mud" (MsgAbilityName + 310)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunDecompose	the game	"Decompose" (MsgAbilityName + 492)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_DECOMPOSE	the game	"Decompose" (MsgAbilityName + 492)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunBoneChiller	the game	"Bone Chiller" (MsgAbilityName + 451)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_BONE_CHILLER	the game	"Bone Chiller" (MsgAbilityName + 451)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunStickyGoo	the game	"Sticky Goo" (MsgAbilityName + 457)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_STICKY_GOO	the game	"Sticky Goo" (MsgAbilityName + 457)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunPoisonInk	the game	"Poison Ink" (MsgAbilityName + 482)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_POISON_INK	the game	"Poison Ink" (MsgAbilityName + 482)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunStickyPoison	the game	"Sticky Poison" (MsgAbilityName + 464)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_STICKY_POISON	the game	"Sticky Poison" (MsgAbilityName + 464)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunRottenBlood	the game	"Rotten Blood" (MsgAbilityName + 472)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_ROTTEN_BLOOD	the game	"Rotten Blood" (MsgAbilityName + 472)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunRisingVenom	the game	"Rising Venom" (MsgAbilityName + 670)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_RISING_VENOM	the game	"Rising Venom" (MsgAbilityName + 670)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunFormicAcid	the game	"Formic Acid" (MsgAbilityName + 661)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_FORMIC_ACID	the game	"Formic Acid" (MsgAbilityName + 661)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunDjinnBeams	its twin	The Broken Seal's BattleEffect_RunDjinnBeams (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same motes and column of light	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunDjinnBeams	what the player sees	Felix casts Revive at the downed Sheba: crescent motes drift down over her swaying, and a column of light falls on her and glows at her feet as she is revived; Jenna's Spark first shows a Mars Djinni swaying and rising away (its render)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+DJINN_BEAMS_DJINNI_PICTURE	its twin	The Broken Seal's DJINN_BEAMS_DJINNI_PICTURE (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same offset 26048	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+DJINN_BEAMS_DJINNI_PICTURE	what the player sees	Jenna's Spark: the Mars Djinni drawn from this offset sways over Piers and rises away (its render)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+DJINN_BEAMS_DJINNI_SWAY_X	its twin	The Broken Seal's DJINN_BEAMS_DJINNI_SWAY_X (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same 20 pixels	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+DJINN_BEAMS_DJINNI_SWAY_Y	its twin	The Broken Seal's DJINN_BEAMS_DJINNI_SWAY_Y (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same 4 pixels	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+DJINN_BEAMS_MOTE_PICTURES	its twin	The Broken Seal's DJINN_BEAMS_MOTE_PICTURES (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same offset 10000, where CrescentMoonSheet is unpacked	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+DJINN_BEAMS_MOTE_PICTURES	what the player sees	Felix's Revive: the crescent motes drawn from this offset drift down over Sheba (its render)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+DJINN_BEAMS_TARGET_MOTES	its twin	The Broken Seal's DJINN_BEAMS_TARGET_MOTES (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same 64	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+DJINN_BEAMS_TARGET_FRAMES	its twin	The Broken Seal's DJINN_BEAMS_TARGET_FRAMES (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same 16	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+DJINN_BEAMS_MOTE_SWAY	its twin	The Broken Seal's DJINN_BEAMS_MOTE_SWAY (games/tbs/src/battle_effect/battle_effect_djinn_beams.c), the same 16 pixels	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunLobbedShells	its twin	The Broken Seal's BattleEffect_RunLobbedShells (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same shells and bursts, with three more styles	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_RunLobbedShells	what the player sees	Felix casts Mad Spatter at Jenna, Sheba and Piers: gold shells arc onto each in turn and burst into shards on the ground; Felix's Decompose: green shells burst into smoke; Felix's Mud: streams of gold shells (its render)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_BURSTS	its twin	The Broken Seal's LOBBED_SHELLS_BURSTS (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same PARTICLES + 256	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_SMOKE_PICTURES	its twin	The Broken Seal's LOBBED_SHELLS_SMOKE_PICTURES (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same offset 16000 where SmokeSheet is unpacked	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELL_PICTURES	its twin	The Broken Seal's LOBBED_SHELL_PICTURES (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 10	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_SHARD_PICTURES	its twin	The Broken Seal's LOBBED_SHELLS_SHARD_PICTURES (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same offset 7680 past the shell's pictures	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_SMOKE_PUFFS	its twin	The Broken Seal's LOBBED_SHELLS_SMOKE_PUFFS (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 4	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_SHARDS	its twin	The Broken Seal's LOBBED_SHELLS_SHARDS (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 16	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_BURST_FRAMES	its twin	The Broken Seal's LOBBED_SHELLS_BURST_FRAMES (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 45	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_SHATTER	its twin	The Broken Seal's LOBBED_SHELLS_SHATTER (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the first byte of a style's record	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_SHATTER	what the player sees	Mad Spatter's style has it set and its shells burst into shards; Decompose's has it clear and its shells burst into smoke (its render)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELL_WIDTH	its twin	The Broken Seal's LOBBED_SHELL_WIDTH (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 24	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELL_HEIGHT	its twin	The Broken Seal's LOBBED_SHELL_HEIGHT (games/tbs/src/battle_effect/battle_effect_lobbed_shells.c), the same 32	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+LOBBED_SHELLS_SHELLS	what the player sees	Felix's Mud, whose style gives 4, sends a stream of gold shells onto each target where the other styles send one (its render)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+ACTOR_MAYOR	the game	"Madran Mayor" (MsgNamesMasterPoi + 3)	games/tla/src/scene/yampi_desert.c
+ACTOR_ALHAFRAS_MAYOR	the game	"Alhafran Mayor" (MsgNamesMasterPoi + 5)	games/tla/src/scene/eastern_alhafra.c
+ACTOR_MADRAS_ELDER	the game	"Madran Elder" (MsgNamesMasterPoi + 4)	games/tla/src/scene/alhafra.c
+ACTOR_MADRAS_MAYOR	the game	"Madran Mayor" (MsgNamesMasterPoi + 3)	games/tla/src/scene/alhafra.c
+ACTOR_MAYOR	the game	"Alhafran Mayor" (MsgNamesMasterPoi + 5)	games/tla/src/scene/alhafra_manor.c
+ACTOR_MADRAS_MAYOR	the game	"Madran Mayor" (MsgNamesMasterPoi + 3)	games/tla/src/scene/alhafra_manor.c
+ACTOR_MADRAS_ELDER	the game	"Madran Elder" (MsgNamesMasterPoi + 4)	games/tla/src/scene/alhafra_manor.c
+ANIM_PARTICLE_TWINKLE	its picture	games/tla/src/graphics/sprite/particle.png and particle.tsv: picture 0 is a full yellow-white glow and 1 a little smaller; animation 7 alternates them every 3 frames, looping (the beam's lights take SPRITE_COLOR_RBG and show pink in the render of entrance 11)	games/tla/include/field/sprite.h
+ANIM_PARTICLE_FADE	its picture	games/tla/src/graphics/sprite/particle.png and particle.tsv: animation 2 runs pictures 3 to 7, the glow shrinking to a speck, at 2 frames each, then a blank frame, and holds	games/tla/include/field/sprite.h
+BLITTER_BYTES	its code	BattleEffect_BuildBlitter allocates 436 bytes for the routine it writes	games/tla/src/battle_effect/battle_effect_render.c
+COPY8_WORDS	its code	BattleEffect_Copy8Forward and Copy8Reverse are 16 instructions (blitter_fragments.s)	games/tla/src/battle_effect/battle_effect_render.c
+TRANSPARENT8_WORDS	its code	BattleEffect_Transparent8Forward and Reverse are 25 instructions (blitter_fragments.s)	games/tla/src/battle_effect/battle_effect_render.c
+MAX4_WORDS	its code	BattleEffect_Max4Forward and Reverse are 16 instructions (blitter_fragments.s)	games/tla/src/battle_effect/battle_effect_render.c
+COLOR_WORDS	its code	BattleEffect_ColorForward and Reverse are 14 instructions (blitter_color_fragments.s)	games/tla/src/battle_effect/battle_effect_render.c
+PUDDLE_ANIMATION_FROZEN	its picture	animation 0 holds picture 5, the full pillar of ice (puddle.png, puddle.tsv)	games/tla/include/sprite_ids.h
+PUDDLE_ANIMATION_FROZEN	what the player sees	in Alhafra by entrance 11 the puddle at (712, 600) is a standing pillar of ice once its flag 0x202 is set (its render)	games/tla/include/sprite_ids.h
+PUDDLE_ANIMATION_PUDDLE	its picture	animation 1 loops picture 0, a flat blue puddle, and picture 6, its glint (puddle.png, puddle.tsv)	games/tla/include/sprite_ids.h
+PUDDLE_ANIMATION_PUDDLE	what the player sees	in Alhafra by entrance 11 the puddle at (712, 600) lies flat and blue while its flag 0x202 is clear (its render)	games/tla/include/sprite_ids.h
+Moai_AddWater	the game	"the guardian moai" (MsgOnAquaIsland)	games/tla/src/scene/shared/moai_add_water.h
+Moai_AddWater	its picture	spr_381.png (SPRITE_MOAI_WATER), the layer it adds: a pool of water the size of the hollow top of moai.png's green stone head, rippling over pictures 3 to 5 (its animation 2), and in pictures 0 to 2 the same pool with water pouring from the head's open mouth; was Actor_ShowParts, which showed no parts	games/tla/src/scene/shared/moai_add_water.h
+TREASURE_SPOT_CHEST_OPEN	its picture	games/tla/src/graphics/sprite/chest.tsv animation 2 holds chest.png's picture 3, the chest standing open and empty; The Broken Seal's field_sequence_treasure_spots.c names its animation 2 the same	games/tla/src/field/field_sequence_internal.h
+TREASURE_SPOT_CHEST_OPENING	its picture	chest.tsv animation 4 shows chest.png's picture 2, the lid half raised over gold, then plays animation 3, the open chest's gold glittering (pictures 4 and 5); The Broken Seal's field_sequence_treasure_spots.c names its animation 4 the same	games/tla/src/field/field_sequence_internal.h
+TREASURE_SPOT_CHEST_CLOSING	its picture	chest.tsv animation 5 shows chest.png's picture 2, the lid half raised, then plays animation 1, the chest shut (picture 0); The Broken Seal's field_sequence_treasure_spots.c names its animation 5 the same	games/tla/src/field/field_sequence_internal.h
+TREASURE_SPOT_CHEST_OPENING_EMPTY	its picture	chest.tsv animation 6 shows chest.png's picture 1, the lid just lifted, then plays animation 2, the chest open with nothing inside (picture 3); field_sequence_triggers.c opens a chest with it when its contents are 0	games/tla/src/field/field_sequence_internal.h
+TREASURE_SPOT_CHEST_MIMIC	its picture	chest.tsv animation 7 loops chest.png's pictures 6 and 7, the chest on spider legs with its purple mouth opening; The Broken Seal's field_sequence_treasure_spots.c names its animation 7 the same	games/tla/src/field/field_sequence_internal.h
+FieldEffect_SetSpritePriority	its code	Scene_SetActorSpritePriority's code instruction for instruction, a second copy that anemos_inner_sanctum.c and mars_lighthouse_entrance.c include beside the first for their effect spawners	games/tla/src/field/field_effect_set_sprite_priority.c
+ANIM_PARTICLE_SLOW_SWELL	its picture	games/tla/src/graphics/sprite/particle.png and particle.tsv: picture 0 is a full yellow-white glow and 7 a speck; animation 9 runs pictures 7 to 0 at 12 frames each, holds 0 for 32 and runs back to 7, 200 frames	games/tla/include/field/sprite.h
+ANIM_PARTICLE_QUICK_SWELL	its picture	games/tla/src/graphics/sprite/particle.png and particle.tsv: animation 10 is animation 9 at 6 frames a step, 116 frames in all	games/tla/include/field/sprite.h
+BattleSummaryStatus	its twin	The Broken Seal's screens_battle_status.c, enum BattleSummaryStatus, the statuses shown as icons	games/tla/include/window/screens.h
+Settlements_LiftBoulder	what the player sees	render event SouthwestAttekaIslet: the round boulder on the grass above the river's posts is raised by Lift's hands and set higher up, out of the way (its render)	games/tla/src/scene/settlements.c
+ACTOR_RIVER_STONE_A	what the player sees	render event SouthwestAttekaIslet Settlements_MovePillar and Settlements_LiftBoulder: the river's stones are stone posts standing in the water, bobbing (its render)	games/tla/src/scene/settlements.c
+SCOOP_STAGE_DUG	its code	field_psynergy_scoop.c passes stage 1 to a Scoop trigger's event on SCOOP_DUG_FRAME, the frame the dig opens the ground	games/tla/include/field/scene_tables.h
+Settlements_SlideCrateDownFalls	what the player sees	render event --scene SouthwestAttekaIslet --at 18,10 --face west --then wait:20,cast:move:north,wait:150,left:16,wait:5,up:3,wait:20,cast:move:west,wait:150,up:16,wait:5,left:600,wait:300 (tla-en): Move moves the crate a row north and a cell west, Felix pushes it west along the dirt into the river at (11, 9); it sinks in with a splash, drifts to the edge, goes down the falls with the camera watching, splashes at the foot and is swept away (its render)	games/tla/src/scene/settlements.c
+SCOOP_STAGE_DUG_UP	its code	field_psynergy_scoop.c passes stage 2 to a Scoop trigger's event on frame 50 of the dig, 20 frames after SCOOP_DUG_FRAME	games/tla/include/field/scene_tables.h
+SCOOP_STAGE_DUG	its code	field_psynergy_scoop.c passes stage 1 on SCOOP_DUG_FRAME	games/tla/include/field/scene_tables.h
+SCOOP_STAGE_DUG_UP	its code	field_psynergy_scoop.c passes stage 2 on frame 50 of the dig	games/tla/include/field/scene_tables.h
+SCOOP_STAGE_DUG	its code	field_psynergy_scoop.c passes stage 1 on SCOOP_DUG_FRAME; the unused ShopTest_ copies of the Psynergy test's dig helpers test it	games/tla/include/field/scene_tables.h
+ROPE_COILED	its code	Rope_Recoil sets RopeSlot.state 0 as it pulls the rope back into its coil	games/tla/include/field/object.h
+ROPE_THROWN	its code	Rope_Throw and Rope_LayTied set RopeSlot.state 1	games/tla/include/field/object.h
+OamAffineMode	its code	EffectSprite_Draw writes 0, 1 or 3 into the OAM entry's affine mode bits (GBATEK: off, on, double size)	games/tla/include/system/io_reg.h
+OAM_AFFINE_OFF	its code	EffectSprite_Draw: an unscaled, unrotated sprite	games/tla/include/system/io_reg.h
+OAM_AFFINE_ON	its code	EffectSprite_Draw: a scaled or turned sprite, through its matrix	games/tla/include/system/io_reg.h
+OAM_AFFINE_DOUBLE_SIZE	its code	EffectSprite_Draw: a sprite grown past full size, in a box twice its size	games/tla/include/system/io_reg.h
+OamAffineMode	the hardware	GBATEK's OBJ attribute 0 bits 8-9: 0 normal, 1 rotation/scaling, 3 rotation/scaling with double size; the placing routines set 3 for a scale above 1	games/tla/include/system/io_reg.h
+FIELD_HALF_CELL	its code	the 8-pixel tile a 16.16 coordinate lies in, half a map grid cell: gaia_rock_inside.c (GaiaRockInside_TossCask and the rest) and field_psynergy_map_screen_image.c's MapScreen_Draw and MapScreen_UpdateScroll	games/tla/include/field/field_coordinate.h
+OBJ_SHAPE_SQUARE	its code	Title_PlaceLogoPiece writes shape 0 (GBATEK: square) for a 64 by 64 piece of The Lost Age (LOGO_PIECE_BYTES)	games/tla/include/system/io_reg.h
+SHIP_SEA_EXAMINE_CODE	its code	Actor_GetTriggerCellAheadOfCurrent returns it on the World Map while gMainRoutineState.ownerOverride is set (aboard the ship, PLACE_MARKER_ABOARD) and WorldMap_GetCollision ahead is 3, between WORLD_MAP_COLLISION_SEA_FIRST and _SEA_LAST; world_map.c has no TRIGGER_EXAMINE for 99, so Field_ExamineCell shows "checked on the ground... but didn't find anything" (MsgTileChecked and MsgTileResult + EXAMINE_GROUND)	games/tla/include/field/scene_tables.h
+POUND_STAGE_LANDED	its code	field_psynergy_pound.c passes PoundState.fading, set to 1 on the frame the fist lands, to a Pound trigger's event	games/tla/include/field/scene_tables.h
+POUND_STAGE_LANDED	its code	field_psynergy_pound.c passes PoundState.fading, set to 1 on the frame the fist lands	games/tla/include/field/scene_tables.h
+PSYNERGY_DRAW_NO_SCENE_SPRITE	its code	FieldState.psynergyDrawFlags bit 0x1: Pound and Scoop skip FieldPsynergy_StartSceneSprite and Pound skips drawing its glow	games/tla/include/field/field_state.h
+PSYNERGY_DRAW_FIXED_PRIORITY	its code	FieldState.psynergyDrawFlags bit 0x2: Pound's fist and Scoop's hand take OAM priority 1 and lose ACTOR_PRIORITY_AUTOMATIC	games/tla/include/field/field_state.h
+gDjinnBeams_HeadPictures	its twin	The Broken Seal's gDjinnBeams_HeadPictures, the same bytes, read by the twin effect	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+BattleEffect_BuildCanvasBlitters	its twin	The Broken Seal's BattleEffect_BuildCanvasBlitters (games/tbs/src/battle_effect/battle_effect_mirrored_wall.c): the same pair, keeping the brighter level and adding, mirrored when flip is set	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+ENCOUNTER_ZONE_VENUS_DJINN	its code	gEncounter_DjinnBattles gives this zone to DJINNI_FLINT through DJINNI_SALT, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_FLINT to DJINNI_SALT"	games/tla/include/field/event_commands.h
+ENCOUNTER_ZONE_VENUS_DJINN_LAST	its code	gEncounter_DjinnBattles gives this zone to DJINNI_GEODE through DJINNI_EARTH19, the element's last three Djinn and its two spares	games/tla/include/field/event_commands.h
+ENCOUNTER_ZONE_MERCURY_DJINN	its code	gEncounter_DjinnBattles gives this zone to DJINNI_FIZZ through DJINNI_GEL, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_FIZZ to DJINNI_GEL"	games/tla/include/field/event_commands.h
+ENCOUNTER_ZONE_MERCURY_DJINN_LAST	its code	gEncounter_DjinnBattles gives this zone to DJINNI_EDDY through DJINNI_WATER19, the element's last three Djinn and its two spares	games/tla/include/field/event_commands.h
+ENCOUNTER_ZONE_MARS_DJINN	its code	gEncounter_DjinnBattles gives this zone to DJINNI_FORGE through DJINNI_TINDER, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_FORGE to DJINNI_TINDER"	games/tla/include/field/event_commands.h
+ENCOUNTER_ZONE_MARS_DJINN_LAST	its code	gEncounter_DjinnBattles gives this zone to DJINNI_SHINE through DJINNI_FIRE19, the element's last three Djinn and its two spares	games/tla/include/field/event_commands.h
+ENCOUNTER_ZONE_JUPITER_DJINN	its code	gEncounter_DjinnBattles gives this zone to DJINNI_GUST through DJINNI_WHORL, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_GUST to DJINNI_WHORL"	games/tla/include/field/event_commands.h
+ENCOUNTER_ZONE_JUPITER_DJINN_LAST	its code	gEncounter_DjinnBattles gives this zone to DJINNI_GASP through DJINNI_WIND19, the element's last three Djinn and its two spares	games/tla/include/field/event_commands.h
+Ability_BuildIconTiles	its code	builds an ability's Psynergy icon	games/tla/include/window/item_icon.h
+ItemIcon_LoadLayersIntoSlot	its code	composes an item's icon with the layers asked for and loads it into a VRAM cache entry; ItemIcon_LoadIntoSlot is already the fixed-layer one	games/tla/include/window/item_icon.h
+PageArrows_Draw	its code	slides any paged list's arrows (gPageArrowTiles), not only a link screen's	games/tla/include/window/screens.h
+SelectionIcon_Load	its code	loads an entry's icon by its IconKind	games/tla/include/menu/select.h
+gPageArrowTiles	its twin	The Broken Seal's name for the same thing, decided for both games (shared renames): The Broken Seal's name for the same tiles (H6)	games/tla/include/window/screens.h
+ANIM_LEADER_LIE_ON_BACK	its picture	felix.tsv animation 41 holds picture 51: Felix lying on his back, eyes closed	games/tla/include/field/sprite.h
+ANIM_LEADER_SIT_UP	its picture	felix.tsv animation 42 holds picture 52: Felix sitting up on the ground, legs out	games/tla/include/field/sprite.h
+ANIM_LEADER_SWING_RIGHT_ARM	its picture	felix.tsv animation 45 alternates pictures 183 and 184: standing, his right arm (the screen's left) swung out and up; played before "Looks like the arms are still attached."	games/tla/include/field/sprite.h
+ANIM_LEADER_SWING_LEFT_ARM	its picture	felix.tsv animation 46 alternates pictures 185 and 186: the same with his left arm	games/tla/include/field/sprite.h
+ANIM_LEADER_KICK_RIGHT_LEG	its picture	felix.tsv animation 47 alternates pictures 187 and 188: standing on one leg, the other kicked out; played before "The legs are working fine, too."	games/tla/include/field/sprite.h
+ANIM_LEADER_KICK_LEFT_LEG	its picture	felix.tsv animation 48 alternates pictures 189 and 190: the other leg kicked out	games/tla/include/field/sprite.h
+CASTER_LOOK_NORMAL	its code	BattleEffect_SetObjectUpdateMode's mode 0 (field_psynergy_radial_effects.c: none, normal colours)	games/tla/include/field/event_commands.h
+CASTER_LOOK_CYCLING_COLORS	its code	BattleEffect_SetObjectUpdateMode's mode 2 (field_psynergy_radial_effects.c: cycling colours, FieldEffect_CycleActorAndSpawnArcs)	games/tla/include/field/event_commands.h
+CASTER_LOOK_CYCLING_COLORS	what the player sees	Sheba's sprite cycles through blue, magenta and green as she casts Whirlwind on the twister rock, ShamanVillage_ShebaClearsSand's frames 80 to 200 (its render)	games/tla/include/field/event_commands.h
+CASTER_LOOK_NORMAL	its uses	the mode BattleEffect_SetObjectUpdateMode is given once the cast ends	games/tla/include/field/event_commands.h
+CENTRE_LINE_FLICKERING	its code	ScreenTransition_Finish runs ScreenTransition_UpdateFromCenter for TRANSITION_CENTRE_LINE's variant 1, whose lines show only every other frame (gFrameCount & 1)	games/tla/include/field/actor.h
+WORLD_MAP_VIEW_CELLS	its code	the World Map cell index is (x / 32 px) & 31 + ((z / 32 px) & 31) * 32 into Ram_MapBlocks, as field_map_grid.c's WORLD_MAP_VIEW_CELLS	games/tla/include/field/field.h
+WORLD_MAP_CELL_PIXELS	its code	x / toFIXED(32) picks the World Map cell (struct WorldMapCell, 'One 32-pixel cell of the World Map')	games/tla/include/field/field.h
+WORLD_MAP_COLLISION_WATER_FIRST	its code	MapGrid_IsWaterCell takes World Map collisions 2 to 4 for water, the sea but its first kind; its callers are MapGrid_CanScoop and Parch	games/tla/include/field/map_grid.h
+CASTER_LOOK_FLASHING_WHITE	its code	mode 1 sets FieldEffect_FlickerActorAndSpawnArcs, SPRITE_COLOR_WHITE and SPRITE_COLOR_NORMAL in turn	games/tla/include/field/event_commands.h
+DJINNI_ANIMATION_EXCITED	its picture	animation 3 of venus_djinni.tsv (pictures 18, 21, 24: crouching, lower, stretched up), mars_djinni.tsv and jupiter_djinni.tsv (21, 27, 24: arms waving) and mercury_djinni.tsv (18, 21, 24), every picture facing the player	games/tla/include/field/sprite.h
+MoveHandAnimation	its twin	move_hand.png is The Broken Seal's byte for byte and move_hand.tsv has the same pictures in the same seven animations; The Broken Seal's enum MoveHandAnimation (sprite_ids.h)	games/tla/include/sprite_ids.h
+MOVE_HAND_ANIMATION_OPEN	its twin	The Broken Seal's MOVE_HAND_ANIMATION_OPEN; animation 1 holds picture 0, the open hand	games/tla/include/sprite_ids.h
+MOVE_HAND_ANIMATION_GRIP	its twin	The Broken Seal's MOVE_HAND_ANIMATION_GRIP; animation 3 loops picture 6	games/tla/include/sprite_ids.h
+MOVE_HAND_ANIMATION_FLEX	its twin	The Broken Seal's MOVE_HAND_ANIMATION_FLEX; animation 4 is pictures 0 and 6 in turn	games/tla/include/sprite_ids.h
+MOVE_HAND_ANIMATION_FIST	its twin	The Broken Seal's MOVE_HAND_ANIMATION_FIST; animation 5 loops picture 9	games/tla/include/sprite_ids.h
+LAYERS_COLOR_CYCLING	its code	Actor_SetLayersColorMode takes value 0 to read gAnim_ChildPaletteCycle every 2 frames, any other as colour mode value - 1	games/tla/include/field/event_commands.h
+OBJ_SHAPE_SQUARE	the hardware	GBATEK, LCD OBJ - OAM Attributes: attribute 0 bits 14-15, OBJ Shape (0=Square,1=Horizontal,2=Vertical)	games/tla/include/system/io_reg.h
+OBJ_SHAPE_HORIZONTAL	the hardware	GBATEK, LCD OBJ - OAM Attributes: attribute 0 bits 14-15, OBJ Shape 1=Horizontal	games/tla/include/system/io_reg.h
+SHIP_TERRAIN_SEA	its code	Actor_SailOnWorldMap and Actor_FlyOnWorldMap set FieldState.terrainKind to 0 while WorldMap_GetCollision under the ship is 1 to 3; WorldMap_IsFlyable then lets it fly high over collisions 1 to 6	games/tla/include/field/field_state.h
+SHIP_TERRAIN_SHALLOWS	its code	terrainKind 1 while the collision under the ship is 5 or 6 (WORLD_MAP_COLLISION_SHALLOW_WATER); WorldMap_IsFlyable then allows 1 to 8	games/tla/include/field/field_state.h
+SHIP_TERRAIN_SEA_LAST	its code	terrainKind 2 while the collision under the ship is WORLD_MAP_COLLISION_SEA_LAST (4)	games/tla/include/field/field_state.h
+SHIP_TERRAIN_GROUND	its code	terrainKind 3 while the collision under the ship is 7 to 12, WORLD_MAP_COLLISION_DEFAULT to _WALKABLE_LAST; WorldMap_IsFlyable then allows 4 to 8 and 10	games/tla/include/field/field_state.h
+ShipTerrainKind	its code	the type of FieldState.terrainKind's four values, set by the sailing and flying routines	games/tla/include/field/field_state.h
+PROBE_CLEAR	its code	sets a struct Point at a radius along a heading and returns whether the check routine passed (MapGrid_CheckCollision, WorldMap_IsSailable, WorldMap_IsFlyable) finds it open	games/tla/src/field/field_player_control.c
+MAP_WADING_MUD	its uses	Taopo Swamp sets the map's wading kind to 2 on its mud, where the leader sinks; Actor_SpawnWaterSplash then draws the splash in SPRITE_COLOR_FILL (the mud's colour, MUD_COLOR) at half the animation speed	games/tla/include/scene/ground_effects.h
+SPRITE_LAYER_NOT_DRAWN	its code	SpriteAnimation.priority is drawn only from 0 to 3 (sprite.h); the World Map leader's second layer is set to 9 and Actor_MoveOnWorldMap sets it to 1 on WORLD_MAP_COLLISION_FOREST and back to 9 elsewhere	games/tla/include/field/sprite.h
+TreasureSpotSpriteMode	its code	Actor_SetWideSprite's mode: 0 moves the actor to the origin with sceneWord TREASURE_SPOT_ON_CELL, any other draws its sprite horizontal 16x8 4 pixels lower; Loho, Daila, Taopo Swamp, Yampi Desert and Lemuria pass 0 or 1 for their treasure actors	games/tla/include/field/event.h
+TREASURE_SPOT_PUT_AWAY	its code	Actor_SetWideSprite mode 0: x and z set to 0 and sceneWord TREASURE_SPOT_ON_CELL	games/tla/include/field/event.h
+TREASURE_SPOT_WIDE	its code	Actor_SetWideSprite with mode 1: offsetY += 4, shape horizontal, size 0	games/tla/include/field/event.h
+ReturnHomeMode	its code	Actor_ReturnHome's mode, 1 or 2; Yampi Desert's YampiDesert_DigUpTreasure passes it for Scoop's buried treasure	games/tla/include/field/event.h
+RETURN_HOME_CLEAR_Z	its code	Actor_ReturnHome mode 1: actor->z.fixed = 0 and nothing else	games/tla/include/field/event.h
+RETURN_HOME_DUG_UP	its code	Actor_ReturnHome mode 2: GameFlag_Set(flag), the sprite made square again, the actor put at homeX, homeZ and Scoop_DropFromHand	games/tla/include/field/event.h
+ACTOR_KEEP_SPRITE_VRAM	its code	Actor.retainSpriteCache bit 0x1: ActorSystem_PlaceSprites keeps the sprite VRAM cache entry while the field is suspended or the actor is off screen	games/tla/include/field/actor.h
+ACTOR_COMPOSE_OFF_SCREEN	its code	Actor.retainSpriteCache bit 0x2: ActorSystem_PlaceSprites calls Sprite_ComposePicture for the actor while it is off screen	games/tla/include/field/actor.h
+Actor_EmitRipples	what the player sees	blue rings widen on the water over Aqua Rock's way inside once its Water Stone is doused, AquaRock_DouseMistSabreChestWaterStone (render event --scene AquaRockMistSabreChest) (its render)	games/tla/src/scene/shared/actor_emit_ripples.h
+gRippleScript	its uses	the script Actor_EmitRipples starts on each ring: it rises a quarter of a pixel a frame for 31 frames	games/tla/src/scene/shared/ripple_script.c
+IceChips_Spawn	what the player sees	SPRITE_WIND_STONE's picture of glowing orbs (turning_rock.png picture 0) painted SPRITE_COLOR_GRB, pale cyan and blue, flying up from each cell of breakable ice the rolling fireball breaks (its picture)	games/tla/src/scene/shared/ice_chips_spawn.h
+DRIPS_ROUND_SPOT_TO_ROPE_POSTS	its uses	Taopo Swamp drips room exit and entrance 4: the doorway in the north wall of the round spot's part, leading to the rope posts' part (taopo_swamp.c SCENE_EXIT rows)	games/tla/src/scene/taopo_swamp.c
+DRIPS_ROPE_POSTS_TO_ROUND_SPOT	its uses	Taopo Swamp drips room exit and entrance 5: the south end of the rope posts' part, leading to the round spot	games/tla/src/scene/taopo_swamp.c
+CENTRE_LINE_STEADY	its code	TRANSITION_CENTRE_LINE variant 0: ScreenTransition_Start and ScreenTransition_Finish run ScreenTransition_Update and the HBlank scanline handler, the lines moving steadily	games/tla/include/field/actor.h
+MOVE_HAND_ANIMATION_PALM	its picture	move_hand.tsv animation 2 holds picture 3: the open hand, its palm flat toward the viewer, fingers spread up	games/tla/include/sprite_ids.h
+MOVE_HAND_ANIMATION_CLENCH	its picture	move_hand.tsv animation 6 plays pictures 0, 6 and 9: the open hand, the gripping hand, then the fist held, looped	games/tla/include/sprite_ids.h
+Event_ForwardShowMessageAtPosition	its twin	☀️'s Event_ForwardShowMessageAtPosition (games/tbs/src/field/event_commands_messages.c): it passes its arguments on to Event_ShowMessageAtPosition	games/tla/src/field/event_commands_messages.c
+OBJ_SHAPE_VERTICAL	the hardware	GBATEK "LCD OBJ - OAM Attributes": OBJ Attribute 0 bits 14-15, OBJ Shape 2=Vertical	games/tla/include/system/io_reg.h
+SPRITE_WHITE_QUARTER_DISC	its picture	games/tla/src/graphics/sprite/white_quarter_disc.png: a 32-pixel white quarter disc, three animations holding it; Jupiter Lighthouse's beacon places two, facing east and west	games/tla/include/sprite_ids.h
+ENCOUNTER_ZONE_SCRIPTED_EARLY_STORY	its uses	encounter zone 9: Venus Lighthouse entrance (slot 0), Suhalla Gate (1 to 3), the Kandorean Temple's Chestbeaters (4), the World Map's WorldMap_ExplainGivingDjinn (5), the first story battles of the journey	games/tla/include/field/event_commands.h
+RESOURCE_TRIAL_ROAD_PILLAR_RECORDING	its uses	gTrialRoad_RivalRecordings row for the pillar stage, the recorded walk (Field_WalkPath row) TrialRoad_PlayRivalRecording plays for Moapa	games/tla/include/resource_ids.h
+RESOURCE_TRIAL_ROAD_TORCH_RECORDING	its uses	gTrialRoad_RivalRecordings row for the torch stage, the recorded walk (Field_WalkPath row) TrialRoad_PlayRivalRecording plays for Moapa	games/tla/include/resource_ids.h
+RESOURCE_TRIAL_ROAD_WEEDS_RECORDING	its uses	gTrialRoad_RivalRecordings row for the weeds stage, the recorded walk (Field_WalkPath row) TrialRoad_PlayRivalRecording plays for Moapa	games/tla/include/resource_ids.h
+RESOURCE_TRIAL_ROAD_POUND_RECORDING	its uses	gTrialRoad_RivalRecordings row for the Pound stage, the recorded walk (Field_WalkPath row) TrialRoad_PlayRivalRecording plays for Moapa	games/tla/include/resource_ids.h
+RESOURCE_TRIAL_ROAD_CRUMBLING_RECORDING	its uses	gTrialRoad_RivalRecordings row for the crumbling stage, the recorded walk (Field_WalkPath row) TrialRoad_PlayRivalRecording plays for Moapa	games/tla/include/resource_ids.h
+RESOURCE_TRIAL_ROAD_LOG_RECORDING	its uses	gTrialRoad_RivalRecordings row for the log stage, the recorded walk (Field_WalkPath row) TrialRoad_PlayRivalRecording plays for Moapa	games/tla/include/resource_ids.h
+RESOURCE_TRIAL_ROAD_FOUNTAIN_RECORDING	its uses	gTrialRoad_RivalRecordings row for the fountain stage, the recorded walk (Field_WalkPath row) TrialRoad_PlayRivalRecording plays for Moapa	games/tla/include/resource_ids.h
+RESOURCE_TRIAL_ROAD_SAND_RECORDING	its uses	gTrialRoad_RivalRecordings row for the sand stage, the recorded walk (Field_WalkPath row) TrialRoad_PlayRivalRecording plays for Moapa	games/tla/include/resource_ids.h
+RESOURCE_TRIAL_ROAD_CHESTS_MOAPA_FIRST_RECORDING	its uses	gTrialRoad_RivalRecordings row for the chests stage when Moapa reached the switch first, the recorded walk (Field_WalkPath row) TrialRoad_PlayRivalRecording plays for Moapa	games/tla/include/resource_ids.h
+RESOURCE_TRIAL_ROAD_CHESTS_FELIX_FIRST_RECORDING	its uses	gTrialRoad_RivalRecordings row for the chests stage when Felix reached the switch first, the recorded walk (Field_WalkPath row) TrialRoad_PlayRivalRecording plays for Moapa	games/tla/include/resource_ids.h
+SHIP_LANDED	its code	Actor_SetFlightMode mode 0: clears the update, SPRITE_COLOR_NORMAL, fades the action sound out (WorldMap_EndFlight)	games/tla/src/scene/shared/ship_flight.h
+SHIP_POWERING_UP	its code	Actor_SetFlightMode mode 1: WorldMap_FlashPoweringUp, after SE_POWER_UP (Ship_TakeFlight)	games/tla/src/scene/shared/ship_flight.h
+SHIP_IN_FLIGHT	its code	Actor_SetFlightMode mode 2: WorldMap_GlowInFlight and SE_TAKE_FLIGHT	games/tla/src/scene/shared/ship_flight.h
+MapShape_FindOrAdd	its code	returns the index of the gMapGridShapes entry (the map's shapes.tsv rows, MAP_SHAPE) with the shape and height asked, writing it into the first free entry when none matches	games/tla/src/field/field_psynergy_shape_entries.c
+MAP_SHAPE_FREE	its code	the shape byte 255 of a free gMapGridShapes entry, which MapShape_FindOrAdd fills	games/tla/src/field/field_psynergy_internal.h
+ScoopDust_UpdateGrain	its code	advances one grain of the dust Scoop throws up (FieldPsynergy_Scoop's SCOOP_SETTLES and target dust loops): its picture, its growth to full size and its flight	games/tla/src/field/field_psynergy_growing_sprite.c
+RESOURCE_CANYON_MEADOW_BACKDROP	its uses	the resource row of Battle_CanyonMeadowBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_FIRE_CAVE_POOL_BACKDROP	its uses	the resource row of Battle_FireCavePoolBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_BLUE_CAVE_BACKDROP	its uses	the resource row of Battle_BlueCaveBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_RED_MESA_BACKDROP	its uses	the resource row of Battle_RedMesaBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_PINK_ROCKS_BACKDROP	its uses	the resource row of Battle_PinkRocksBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_PINK_TOTEM_BACKDROP	its uses	the resource row of Battle_PinkTotemBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_STONE_TOWN_BACKDROP	its uses	the resource row of Battle_StoneTownBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_PALM_CLIFF_BACKDROP	its uses	the resource row of Battle_PalmCliffBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_TOY_ROOM_BACKDROP	its uses	the resource row of Battle_ToyRoomBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_SHIP_CABIN_BACKDROP	its uses	the resource row of Battle_ShipCabinBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_GOLD_ROCKS_BACKDROP	its uses	the resource row of Battle_GoldRocksBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_STONE_CORRIDOR_BACKDROP	its uses	the resource row of Battle_StoneCorridorBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_FACE_TEMPLE_BACKDROP	its uses	the resource row of Battle_FaceTempleBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_MISTY_HILLS_BACKDROP	its uses	the resource row of Battle_MistyHillsBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_WATERFALL_GORGE_BACKDROP	its uses	the resource row of Battle_WaterfallGorgeBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_BLUE_RUINS_BACKDROP	its uses	the resource row of Battle_BlueRuinsBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_GREEN_RUINS_BACKDROP	its uses	the resource row of Battle_GreenRuinsBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_STATUE_CLIFF_BACKDROP	its uses	the resource row of Battle_StatueCliffBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_LAVA_TEMPLE_BACKDROP	its uses	the resource row of Battle_LavaTempleBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_ARROW_BEACH_BACKDROP	its uses	the resource row of Battle_ArrowBeachBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_STORMY_SEA_BACKDROP	its uses	the resource row of Battle_StormySeaBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_ANGEL_HALL_BACKDROP	its uses	the resource row of Battle_AngelHallBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_PURPLE_LIGHTHOUSE_BACKDROP	its uses	the resource row of Battle_PurpleLighthouseBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_STORMY_LIGHTHOUSE_BACKDROP	its uses	the resource row of Battle_StormyLighthouseBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_ICE_HALL_BACKDROP	its uses	the resource row of Battle_IceHallBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_ORB_ALTAR_BACKDROP	its uses	the resource row of Battle_OrbAltarBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_PURPLE_CAVE_BACKDROP	its uses	the resource row of Battle_PurpleCaveBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_GORGE_POOL_BACKDROP	its uses	the resource row of Battle_GorgePoolBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+RESOURCE_SPIKE_HALL_BACKDROP	its uses	the resource row of Battle_SpikeHallBackdrop in resource_directory.s, a battle backdrop gScene_BattleBackgroundRules chooses	games/tla/include/resource_ids.h
+WorldMapEncounterRule	its twin	☀️'s struct WorldMapEncounterRule (games/tbs/include/field/world_map_encounter_rules.h): region, environment, flag, zone	games/tla/include/field/world_map_encounter_rules.h
+SPRITE_RAY_ARC	its picture	games/tla/src/graphics/sprite/ray_arc.png: five frames of short pale rays in an arc that spreads and fades	games/tla/include/sprite_ids.h
+SPRITE_WORLD_MAP_FOREST_COVER	its picture	games/tla/src/graphics/sprite/world_map_forest_cover.png: 32 by 32, its bottom 12 rows a treetop silhouette; the leader's second layer, drawn at priority 1 when he walks in a World Map forest (field_move_by_keys.c)	games/tla/include/sprite_ids.h
+OBJ_COLORS_16	the hardware	GBATEK "LCD OBJ - OAM Attributes": OBJ Attribute 0 bit 13, Colors/Palettes 0=16/16	games/tla/include/system/io_reg.h
+OBJ_COLORS_256	the hardware	GBATEK "LCD OBJ - OAM Attributes": OBJ Attribute 0 bit 13, Colors/Palettes 1=256/1	games/tla/include/system/io_reg.h
+MsgNamesMasterPoi	the game	"Master Poi" (en 04930), the first name of the first room of names and of the debug name list	games/tla/src/debug/level.c
+MsgNamesSusa	the game	"Susa" (en 04944), the first name of the second room of names	games/tla/src/debug/level.c
+MsgNamesAlex	the game	"Alex" (en 04966), the first name of the third room of names	games/tla/src/debug/level.c
+MsgNamesWeaponsShop	the game	"Weapons Shop" (en 04973), the first name of the fourth room of names	games/tla/src/debug/level.c
+MsgAnyTimeYouLike	the game	"おう いつでもいいぜ こっちは またされて まちくたびれちまったよ。" (ja 05618), "Any time you like; I've been kept waiting till I'm worn out", the Japanese debug room's innkeeper row	games/tla/src/debug/psynergy_test.c
+ELEMENT_PRESET_DEFAULT	its uses	row 0 of gEnemy_ElementPresetTable, which an enemy naming no preset or one past the last reads (Unit_GetElementLevels, Enemy_GetAttackElement)	games/tla/include/game/character.h
+ELEMENT_PRESET_BANDIT	its uses	row 1 of gEnemy_ElementPresetTable, first had by Bandit in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_AZART	its uses	row 2 of gEnemy_ElementPresetTable, first had by Azart in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_CHESTBEATER	its uses	row 3 of gEnemy_ElementPresetTable, first had by Chestbeater in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_GRISLY	its uses	row 4 of gEnemy_ElementPresetTable, first had by Grisly in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_PUNCH_ANT	its uses	row 5 of gEnemy_ElementPresetTable, first had by Punch Ant in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_KING_SCORPION	its uses	row 6 of gEnemy_ElementPresetTable, first had by King Scorpion in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_MAD_PLANT	its uses	row 7 of gEnemy_ElementPresetTable, first had by Mad Plant in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_WOOD_WALKER	its uses	row 8 of gEnemy_ElementPresetTable, first had by Wood Walker in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_DRONE_BEE	its uses	row 9 of gEnemy_ElementPresetTable, first had by Drone Bee in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_MOMONGA	its uses	row 11 of gEnemy_ElementPresetTable, first had by Momonga in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_PIXIE	its uses	row 12 of gEnemy_ElementPresetTable, first had by Pixie in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_MUMMY	its uses	row 13 of gEnemy_ElementPresetTable, first had by Mummy in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_SKELETON	its uses	row 14 of gEnemy_ElementPresetTable, first had by Skeleton in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_GHOST	its uses	row 15 of gEnemy_ElementPresetTable, first had by Ghost in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_LIVING_ARMOR	its uses	row 16 of gEnemy_ElementPresetTable, first had by Living Armor in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_GARGOYLE	its uses	row 17 of gEnemy_ElementPresetTable, first had by Gargoyle in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_SERPENT	its uses	row 18 of gEnemy_ElementPresetTable, first had by Serpent in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_AQUA_HYDRA	its uses	row 19 of gEnemy_ElementPresetTable, first had by Aqua Hydra in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_AVIMANDER	its uses	row 20 of gEnemy_ElementPresetTable, first had by Avimander in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_TORNADO_LIZARD	its uses	row 21 of gEnemy_ElementPresetTable, first had by Tornado Lizard in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_VENUS_DJINNI	its uses	row 23 of gEnemy_ElementPresetTable, first had by Venus Djinni in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_CUTTLE	its uses	row 24 of gEnemy_ElementPresetTable, first had by Cuttle in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_MERCURY_DJINNI	its uses	row 25 of gEnemy_ElementPresetTable, first had by Mercury Djinni in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_STONE_SOLDIER	its uses	row 26 of gEnemy_ElementPresetTable, first had by Stone Soldier in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_MARS_DJINNI	its uses	row 27 of gEnemy_ElementPresetTable, first had by Mars Djinni in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_JUPITER_DJINNI	its uses	row 29 of gEnemy_ElementPresetTable, first had by Jupiter Djinni in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_MINI_GOBLIN	its uses	row 30 of gEnemy_ElementPresetTable, first had by Mini-Goblin in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_ASSASSIN	its uses	row 31 of gEnemy_ElementPresetTable, first had by Assassin in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_WOLFKIN_CUB	its uses	row 32 of gEnemy_ElementPresetTable, first had by Wolfkin Cub in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_MERMAN	its uses	row 33 of gEnemy_ElementPresetTable, first had by Merman in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_GNOME	its uses	row 34 of gEnemy_ElementPresetTable, first had by Gnome in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_GNOME_MAGE	its uses	row 36 of gEnemy_ElementPresetTable, first had by Gnome Mage in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_NIGHTMARE	its uses	row 37 of gEnemy_ElementPresetTable, first had by Nightmare in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_MIMIC	its uses	row 38 of gEnemy_ElementPresetTable, first had by Mimic in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_AGATIO	its uses	row 39 of gEnemy_ElementPresetTable, first had by Agatio in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_KARST	its uses	row 40 of gEnemy_ElementPresetTable, first had by Karst in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_FUSION_DRAGON	its uses	row 41 of gEnemy_ElementPresetTable, first had by Fusion Dragon in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_SENTINEL	its uses	row 42 of gEnemy_ElementPresetTable, first had by Sentinel in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_GRYPHON	its uses	row 43 of gEnemy_ElementPresetTable, first had by Gryphon in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_STAR_MAGICIAN	its uses	row 44 of gEnemy_ElementPresetTable, first had by Star Magician in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_VALUKAR	its uses	row 45 of gEnemy_ElementPresetTable, first had by Valukar in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_DULLAHAN	its uses	row 46 of gEnemy_ElementPresetTable, first had by Dullahan in gEnemy_Definitions	games/tla/include/game/character.h
+ELEMENT_PRESET_DOOM_DRAGON	its uses	row 47 of gEnemy_ElementPresetTable, first had by Doom Dragon in gEnemy_Definitions	games/tla/include/game/character.h
