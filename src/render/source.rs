@@ -78,6 +78,11 @@ fn macro_rows(
     Ok(rows)
 }
 
+/// An area as a row names it: its number, or its name in area_ids.h.
+fn area(text: &str) -> Option<i64> {
+    number(text).or_else(|| enumerator("include/area_ids.h", text.trim()).ok())
+}
+
 /// The scenes in gScenes' order (field/scenes.s): each one's name
 /// without `SceneId_` (empty for an unnamed row) and its area.
 fn maps() -> Result<Vec<(String, i64)>, String> {
@@ -87,7 +92,7 @@ fn maps() -> Result<Vec<(String, i64)>, String> {
         .map(|(_, row)| {
             let area = row
                 .get(2)
-                .and_then(|m| number(m))
+                .and_then(|m| area(m))
                 .ok_or_else(|| format!("scene {row:?}: no area"))?;
             Ok((row[0].clone(), area))
         })
@@ -127,20 +132,20 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
         .get(usize::from(map))
         .ok_or_else(|| format!("no map {map}"))?
         .1;
-    let rules = read("src/field/scene_rules.s")?;
+    let rules = read("src/field/area_name_rules.s")?;
     let rows = macro_rows(&rules, "gArea_NameRules", &["scene_name", "area_name"])?;
     let mut index = 0;
     for (kind, args) in rows {
         let [id, dest, name] = &args[..] else {
-            return Err(format!("scene_rules.s: {kind} {args:?}"));
+            return Err(format!("area_name_rules.s: {kind} {args:?}"));
         };
         let matches = if kind == "scene_name" {
             maps.iter().position(|(n, _)| n == id) == Some(usize::from(map))
         } else {
-            number(id) == Some(area)
+            self::area(id) == Some(area)
         };
         if matches && (number(dest) == Some(-1) || number(dest) == Some(i64::from(entrance))) {
-            index = number(name).ok_or_else(|| format!("scene_rules.s: {kind} {args:?}"))? as usize;
+            index = number(name).ok_or_else(|| format!("area_name_rules.s: {kind} {args:?}"))? as usize;
             break;
         }
     }

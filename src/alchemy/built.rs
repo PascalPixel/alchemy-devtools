@@ -135,7 +135,7 @@ pub fn stem(id: DecompTargetId, path: &str) -> String {
 }
 
 /// Each overlay's file with `extension` in an edition's build, by overlay
-/// name (`resource_64b`), sorted.
+/// name (`Vale`), sorted.
 pub fn overlay_files(
     root: &Path,
     id: DecompTargetId,
@@ -152,8 +152,10 @@ pub fn overlay_files(
                 .to_str()?
                 .strip_suffix(&format!(".{extension}"))?
                 .to_string();
-            let id = name.strip_prefix("resource_")?;
-            (!id.is_empty() && id.chars().all(|c| c.is_ascii_hexdigit())).then_some((name, path))
+            // An overlay is named after its scene (`Vale`); a second file of the same extension
+            // (`Vale.symbols.elf`) is not another overlay.
+            (!name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
+                .then_some((name, path))
         })
         .collect();
     files.sort();

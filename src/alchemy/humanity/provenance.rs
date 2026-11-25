@@ -435,7 +435,7 @@ pub struct GameText {
     /// that game (H6).
     twin_words: HashSet<String>,
     twin_stems: HashSet<String>,
-    /// The stems of the words the game's glossary (`games/<game>/glossary.md`)
+    /// The stems of the words the game's glossary (`docs/<game>/glossary.md`)
     /// defines, which the owner settles (Alchemy's Vocabulary rule).
     glossary: HashSet<String>,
     /// The words the text writes capitalized right after another

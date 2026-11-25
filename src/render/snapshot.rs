@@ -73,6 +73,20 @@ pub fn release() {
 }
 
 /// The files of out/EDITION a run reads, relative to it.
+/// The overlays a build wrote, by name (`Vale`), sorted: each has a linker map
+/// `overlays/NAME.map`. The renderer numbers an overlay by its place here.
+pub fn overlay_names(build: &Path) -> Vec<String> {
+    let mut names: Vec<String> = std::fs::read_dir(build.join("overlays"))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|e| e.file_name().into_string().ok())
+        .filter_map(|n| n.strip_suffix(".map").map(str::to_string))
+        .collect();
+    names.sort();
+    names
+}
+
 fn wanted(source: &Path, edition: &str) -> Vec<PathBuf> {
     let mut files: Vec<PathBuf> = ["gba", "elf", "map"]
         .iter()
@@ -83,10 +97,7 @@ fn wanted(source: &Path, edition: &str) -> Vec<PathBuf> {
         .flatten()
         .flatten()
         .filter_map(|e| e.file_name().into_string().ok())
-        .filter(|n| {
-            n.starts_with("resource_")
-                && (n.ends_with(".map") || (n.ends_with(".elf") && !n.ends_with(".symbols.elf")))
-        })
+        .filter(|n| n.ends_with(".map") || (n.ends_with(".elf") && !n.ends_with(".symbols.elf")))
         .map(|n| PathBuf::from("overlays").join(n))
         .collect();
     overlays.sort();
@@ -240,16 +251,16 @@ mod tests {
         )
         .unwrap();
         std::fs::write(source.join("x-en.map"), "OUTPUT(x)\n").unwrap();
-        std::fs::write(source.join("overlays/resource_001.elf"), b"\x7fELF").unwrap();
-        std::fs::write(source.join("overlays/resource_001.symbols.elf"), b"").unwrap();
+        std::fs::write(source.join("overlays/Title.elf"), b"\x7fELF").unwrap();
+        std::fs::write(source.join("overlays/Title.symbols.elf"), b"").unwrap();
         let files = wanted(&source, "x-en");
         assert_eq!(files.len(), 4, "{files:?}");
         assert_eq!(
             whole(&source, &files),
-            Err("overlays/resource_001.elf is not a whole little-endian ELF32 file".to_string())
+            Err("overlays/Title.elf is not a whole little-endian ELF32 file".to_string())
         );
         std::fs::write(
-            source.join("overlays/resource_001.elf"),
+            source.join("overlays/Title.elf"),
             [0x7f, b'E', b'L', b'F', 1, 1],
         )
         .unwrap();

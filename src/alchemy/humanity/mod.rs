@@ -5265,10 +5265,10 @@ pub fn area_count(rules: &str) -> Option<usize> {
 const TWIN: [(&str, &str); 1] = [("tla", "tbs")];
 
 /// A game's English text, if git tracks one, with the words its glossary
-/// (`games/<game>/glossary.md`, which the docs site prints) defines and its
+/// (`docs/<game>/glossary.md`, which the docs site prints) defines and its
 /// twin's words.
 fn game_text(root: &Path, game: &str) -> Result<Option<GameText>, String> {
-    let glossary = std::fs::read(root.join(format!("games/{game}/glossary.md"))).ok();
+    let glossary = std::fs::read(root.join(format!("docs/{game}/glossary.md"))).ok();
     let text = own_text(root, game)?.map(|text| match &glossary {
         Some(glossary) => text.with_glossary(&String::from_utf8_lossy(glossary)),
         None => text,

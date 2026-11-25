@@ -378,7 +378,9 @@ pub fn scenes_from_tree(root: &Path, game: &str, edition: &str) -> Result<Vec<Sc
     let path = root.join("games").join(game).join("src/field/scenes.s");
     let text = std::fs::read_to_string(&path)
         .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-    let overlays = super::snapshot::build(root, edition)?.join("overlays");
+    let build = super::snapshot::build(root, edition)?;
+    let names = super::snapshot::overlay_names(&build);
+    let overlays = build.join("overlays");
     let mut scenes = Vec::new();
     for line in text.lines() {
         let Some(rest) = line
@@ -394,14 +396,13 @@ pub fn scenes_from_tree(root: &Path, game: &str, edition: &str) -> Result<Vec<Sc
         }
         let number = scenes.len() as u16;
         let code = fields[1];
-        let overlay = code
-            .strip_prefix("0x")
-            .map_or_else(|| code.parse().ok(), |h| u16::from_str_radix(h, 16).ok());
+        // The row names its overlay; the renderer numbers it by its place among the build's.
+        let overlay = names.iter().position(|n| n == code).map(|i| i as u16);
         // The overlay's own scene source: the C file its map links from
         // src/scene or src/debug, not the entry table or its globals.
         let file = overlay
             .and_then(|id| {
-                std::fs::read_to_string(overlays.join(format!("resource_{id:03x}.map"))).ok()
+                std::fs::read_to_string(overlays.join(format!("{}.map", names[usize::from(id)]))).ok()
             })
             .and_then(|map| {
                 map.split_whitespace()

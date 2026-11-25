@@ -2345,7 +2345,7 @@ mod tests {
         let only = crate::alchemy::overlay::linked_source(
             root(),
             Path::new(tla.output_dir),
-            "resource_6aa",
+            "Islets",
         )
         .unwrap();
         let level = |source: &Path, overlay| {
@@ -2358,7 +2358,7 @@ mod tests {
         assert_eq!(
             level(
                 &root().join("recon/tla/en/overlays/resource_6aa_c_02000000.c"),
-                Some("resource_6aa")
+                Some("Islets")
             ),
             "-Os"
         );

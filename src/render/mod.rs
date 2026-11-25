@@ -1501,22 +1501,11 @@ impl Machines {
         // A places table without overlay ids (the story tools'): each
         // overlay by the scene object its linker map links.
         let mut by_file: std::collections::HashMap<String, u16> = std::collections::HashMap::new();
+        let overlay_names = snapshot::overlay_names(&build);
         if chosen.iter().any(|s| s.overlay.is_none()) {
-            for entry in std::fs::read_dir(build.join("overlays"))
-                .into_iter()
-                .flatten()
-                .flatten()
-            {
-                let path = entry.path();
-                let Some(id) = path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .and_then(|n| n.strip_prefix("resource_"))
-                    .and_then(|n| n.strip_suffix(".map"))
-                    .and_then(|n| u16::from_str_radix(n, 16).ok())
-                else {
-                    continue;
-                };
+            for (id, name) in overlay_names.iter().enumerate() {
+                let id = id as u16;
+                let path = build.join("overlays").join(format!("{name}.map"));
                 let text = std::fs::read_to_string(&path).unwrap_or_default();
                 for word in text
                     .split_whitespace()
@@ -1536,9 +1525,10 @@ impl Machines {
             else {
                 continue;
             };
-            let path = build
-                .join("overlays")
-                .join(format!("resource_{id:03x}.elf"));
+            let Some(name) = overlay_names.get(usize::from(id)) else {
+                continue;
+            };
+            let path = build.join("overlays").join(format!("{name}.elf"));
             let Some(elf) = std::fs::read(&path)
                 .ok()
                 .and_then(|data| crate::gba::elf::Elf::parse(&data).ok())
