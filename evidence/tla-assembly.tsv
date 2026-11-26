@@ -1,7 +1,7 @@
 file	name	family	form	mode	rule	sgl	gbatek	proof
 games/tla/src/battle/color_scale_kernel.s	color_scale_kernel	draw	copied	both	scratch	slPutPolygon, slPutSprite: the Saturn's VDP1 drew them	LCD VRAM Overview; LCD OBJ - Overview; GBA Memory Map	stated
 games/tla/src/battle/color_scale_loader.s	color_scale_loader	draw	rom	thumb	scratch	slPutPolygon, slPutSprite: the Saturn's VDP1 drew them	LCD VRAM Overview; LCD OBJ - Overview; GBA Memory Map	stated
-games/tla/src/battle/model_bit_commands.s	model_bit_commands	decode	rom	arm	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tla/src/battle/model_bit_commands.s	model_bit_commands	decode	copied	arm	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tla/src/battle/model_bit_dispatch.s	model_bit_dispatch	decode	table	arm	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tla/src/battle/model_decode.s	model_decode	decode	copied	both	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tla/src/battle_effect/blitter_color_fragments.s	blitter_color_fragments	draw	built	arm	untouched	slPutPolygon, slPutSprite: the Saturn's VDP1 drew them	LCD VRAM Overview; LCD OBJ - Overview; GBA Memory Map	stated
@@ -27,7 +27,7 @@ games/tla/src/field/grid_outline_entry.s	grid_outline_entry	draw	copied	thumb	un
 games/tla/src/field/map_grid_convert.s	map_grid_convert	field	copied	both	scratch	none	GBA Memory Map	stated
 games/tla/src/field/picture_decode.s	picture_decode	decode	copied	both	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tla/src/field/picture_decode_data.s	picture_decode_data	decode	table	arm	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	none
-games/tla/src/field/world_map_lines_call_thumb.s	world_map_lines_call_thumb	world map	rom	both	untouched	slScrMatSet and the coefficient table: the VDP2's rotating scroll	LCD I/O BG Rotation/Scaling; GBA DMA Transfers	stated
+games/tla/src/field/world_map_lines_call_thumb.s	world_map_lines_call_thumb	world map	copied	both	untouched	slScrMatSet and the coefficient table: the VDP2's rotating scroll	LCD I/O BG Rotation/Scaling; GBA DMA Transfers	stated
 games/tla/src/field/world_map_lines_entry.s	world_map_lines_entry	world map	copied	thumb	untouched	slScrMatSet and the coefficient table: the VDP2's rotating scroll	LCD I/O BG Rotation/Scaling; GBA DMA Transfers	stated
 games/tla/src/field/world_map_scanlines.s	world_map_scanlines	world map	rom	both	untouched	slScrMatSet and the coefficient table: the VDP2's rotating scroll	LCD I/O BG Rotation/Scaling; GBA DMA Transfers	stated
 games/tla/src/gamepak/far_call/battle.s	battle	far call	table	thumb	untouched	none	GBA Memory Map	none
@@ -48,9 +48,9 @@ games/tla/src/gamepak/far_call/veneer.s	veneer	far call	table	thumb	scratch	none
 games/tla/src/gamepak/far_call/window.s	window	far call	table	thumb	untouched	none	GBA Memory Map	none
 games/tla/src/gamepak/rom_header.s	rom_header	start-up	table	arm	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	stated
 games/tla/src/menu/credits_background_decode.s	credits_background_decode	decode	copied	both	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
-games/tla/src/menu/credits_background_expand.s	credits_background_expand	decode	rom	arm	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tla/src/menu/credits_background_expand.s	credits_background_expand	decode	copied	arm	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tla/src/menu/ending_image_decode.s	ending_image_decode	decode	copied	both	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
-games/tla/src/menu/ending_image_expand.s	ending_image_expand	decode	rom	arm	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tla/src/menu/ending_image_expand.s	ending_image_expand	decode	copied	arm	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tla/src/scene/entry.s	entry	start-up	rom	thumb	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	none
 games/tla/src/scene/entry/lobby.s	lobby	start-up	rom	thumb	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	none
 games/tla/src/scene/title_bss.s	title_bss	start-up	table	thumb	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	none
@@ -76,7 +76,7 @@ games/tla/src/system/iwram_entry.s	iwram_entry	maths	table	thumb	untouched	slMul
 games/tla/src/system/iwram_routines.s	iwram_routines	maths	resident	both	scratch	slMulFX, slDivFX, slSquart, slSin, slAtan, slInnerProduct, slMultiMatrix, slCalcPoint	BIOS Arithmetic Functions, not used; GBA Memory Map	stated
 games/tla/src/system/trig.s	trig	maths	rom	both	untouched	slMulFX, slDivFX, slSquart, slSin, slAtan, slInnerProduct, slMultiMatrix, slCalcPoint	BIOS Arithmetic Functions, not used; GBA Memory Map	stated
 games/tla/src/window/decompress_4bpp.s	decompress_4bpp	decode	copied	both	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
-games/tla/src/window/decompress_4bpp_loop.s	decompress_4bpp_loop	decode	rom	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tla/src/window/decompress_4bpp_loop.s	decompress_4bpp_loop	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tla/src/window/expand_masked.s	expand_masked	decode	copied	both	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tla/src/window/expand_opaque.s	expand_opaque	decode	copied	both	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tla/src/window/glyph_arm_entries.s	glyph_arm_entries	draw	copied	thumb	untouched	slPutPolygon, slPutSprite: the Saturn's VDP1 drew them	LCD VRAM Overview; LCD OBJ - Overview; GBA Memory Map	stated
