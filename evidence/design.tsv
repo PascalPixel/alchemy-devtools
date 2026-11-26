@@ -1,0 +1,16 @@
+id	layer	prediction	test	status
+D1	layout	the System is one library with one public header, as SGL has sgl.h; its types are declared once	count the headers a caller must include to use it	untested
+D2	layout	a routine written in assembly is a .s file, a sequence C cannot say is one macro of system/asm.h, and nothing else in the C is assembly	check tags and check assembly	met
+D3	layout	code written as ARM runs only from fast RAM, start-up aside	every ARM row of the assembly tables has the form resident, copied or built	open: 17 rows say rom; each is a wrong row or a real exception
+D4	types	every fixed-point value is FIXED, every angle ANGLE of 16 bits, every matrix MATRIX, every vector VECTOR, in every signature and local	no s32, u32 or void * stands where one of them is meant; the ROM extends a 16-bit angle where the type says so	open
+D5	types	a routine that can fail returns SGL's Bool	the ROM sets r0 before each return of Matrix_Push, Matrix_Pop and the write queue	untested
+D6	api	the matrix routines have SGL's signatures: init, push, pop, unit with a pointer or CURRENT, load, get, multiply, rotate by ANGLE, translate and scale by three FIXED, look at	each compiles to the ROM with SGL's parameter list	open
+D7	api	the maths routines have SGL's signatures: multiply, divide as b / a, sine and cosine of an ANGLE, arctangent returning an ANGLE, square root returning 16 bits, random returning a FIXED, inner product of two vectors	each compiles to the ROM with SGL's parameter list	open
+D8	api	the frame has SGL's routines: start the system, wait for the next frame, give the interrupt a routine, queue a transfer for the blank, register and close a per-frame routine	each compiles to the ROM with SGL's parameter list	open
+D9	api	DMA has SGL's three: copy, copy with a mode, and wait	the busy loops are one inline; a copy without a mode exists	open
+D10	macros	every assembly macro takes its arguments in r0 to r3 in order and lists only r0 to r4, ip and lr	read each macro of system/asm.h	open: the four-word copy lists r5; the cartridge jump lists r0 to r3 without r4
+D11	macros	every routine of Camelot's in assembly uses r4 as scratch and saves from r5 up	the rule column of the assembly tables	met: the only files that keep r4 are Nintendo's sound driver and the interrupt handler
+D12	macros	a statement that emits nothing is the compiled-out line of a macro, so each one left belongs to a named macro used in more than one place	no empty asm stands alone in a C file	open: four sites
+D13	compiler	all of Camelot's C is compiled with r4 as scratch, and The Lost Age calls through a register in four bytes	the build's options	met
+D14	code	no routine does by hand what the library has a routine for: no division, multiply, square root, unit matrix or fill written out	every written-out one is a library inline not yet named	open: the particle effects divide by four by hand
+D15	code	a hardware register is written through the queue during the frame and directly only in the blank	count the direct writes outside the blanking routines	untested
