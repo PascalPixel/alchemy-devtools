@@ -2342,12 +2342,9 @@ mod tests {
         // The Lost Age's overlay-only C builds for size, a draft for an
         // overlay with it; the libraries and ARM C keep their own routes.
         let tla = decomp_target(Some("tla-en")).unwrap();
-        let only = crate::alchemy::overlay::linked_source(
-            root(),
-            Path::new(tla.output_dir),
-            "Islets",
-        )
-        .unwrap();
+        let only =
+            crate::alchemy::overlay::linked_source(root(), Path::new(tla.output_dir), "Islets")
+                .unwrap();
         let level = |source: &Path, overlay| {
             compile_step(tla, source, overlay)
                 .into_iter()

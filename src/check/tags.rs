@@ -37,6 +37,8 @@ const PIN: &str = "pin";
 /// The kind of any asm that is not an empty statement: instructions, a label,
 /// a register name (S2, 26 November 2026). It has no plain form to measure.
 const ASM: &str = "asm";
+/// The one header a game keeps its assembly in, each piece a macro.
+const ASM_HEADER: &str = "include/system/asm.h";
 /// How many lines after a file-scope asm tag its labels may stand.
 const LABEL_REACH: usize = 40;
 /// A measurement inside a tag ("4 of 549 instructions differing in tla-en"),
@@ -279,7 +281,7 @@ fn judge_tag(
     {
         return (None, None);
     }
-    let word =word_and_kind(text).map_or("FAKEMATCH", |(word, _)| word);
+    let word = word_and_kind(text).map_or("FAKEMATCH", |(word, _)| word);
     let Some(row) = row else {
         return (
             Some(format!(
@@ -566,6 +568,21 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
             ";" | "{" | "}" if token.kind == Kind::Punct => external = false,
             "extern" if token.kind == Kind::Ident => external = true,
             _ => {}
+        }
+        // An asm that is not the empty statement lives in system/asm.h alone,
+        // as a macro the code uses by name (S2).
+        if is_asm(token) && !path.ends_with(ASM_HEADER) {
+            let mut after = tokens[at + 1..]
+                .iter()
+                .filter(|t| t.kind != Kind::Comment && !t.text.ends_with("volatile"));
+            let empty = after.next().is_some_and(|t| t.text == "(")
+                && after.next().is_some_and(|t| t.text == "\"\"");
+            if !empty {
+                found.push(Finding {
+                    line: token.line,
+                    message: format!("asm outside {ASM_HEADER}: write it there as a macro"),
+                });
+            }
         }
         let opening = plain(&[token.text]);
         let leftover = opening.starts_with("LEFTOVER");
@@ -1205,7 +1222,7 @@ mod tests {
         );
         // A view's asm label is an asm like any other: it needs its own tag.
         assert_eq!(
-            findings("games/tla/src/x.c", source, &[]).1,
+            findings("games/tla/include/system/asm.h", source, &[]).1,
             [Finding {
                 line: 2,
                 message: "an asm label with no FAKEMATCH(asm) tag before it".to_string()
@@ -1795,7 +1812,7 @@ void New(int id, int cue) {
 #define LINKED(x) (x)
 #endif
 ";
-        let (tags, found) = findings("games/tla/src/x.c", source, &[]);
+        let (tags, found) = findings("games/tla/include/system/asm.h", source, &[]);
         // Five asm tags, a barrier and a dead store, 5 * 32 + 16 + 2; the two
         // pins weigh nothing, being no kind.
         assert_eq!(
@@ -1866,6 +1883,31 @@ void F(int x) {
             (7, 128 + 64 + 32 + 16 + 8 + 4 + 2)
         );
         assert_eq!(tags.kinds, [1; 7]);
+    }
+
+    /// An asm that is not empty stands in system/asm.h alone.
+    #[test]
+    fn an_asm_with_content_stays_in_the_asm_header() {
+        let source = "\
+void F(int x) {
+  /* FAKEMATCH(barrier): held; as no asm, 2 of 9 instructions differ in tla-en. */
+  asm volatile(\"\");
+  /* FAKEMATCH(asm): a rotate through carry. */
+  __asm__(\"rrx\");
+}
+";
+        let outside: Vec<String> = findings("games/tla/src/x.c", source, &[])
+            .1
+            .into_iter()
+            .map(|finding| format!("{}: {}", finding.line, finding.message))
+            .collect();
+        assert_eq!(
+            outside,
+            ["5: asm outside include/system/asm.h: write it there as a macro"]
+        );
+        assert!(findings("games/tla/include/system/asm.h", source, &[])
+            .1
+            .is_empty());
     }
 
     /// An asm statement is a barrier's: under a tag of a milder kind it is

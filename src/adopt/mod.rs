@@ -1633,9 +1633,11 @@ impl Lock {
                         Some(pid) if crate::gba::process::gone(pid) => {
                             let _ = std::fs::remove_file(&path);
                         }
-                        Some(pid) => return Err(format!(
+                        Some(pid) => {
+                            return Err(format!(
                             "another adopt (process {pid}) holds out/adopt/lock; run one at a time"
-                        )),
+                        ))
+                        }
                         None => {
                             return Err(
                                 "out/adopt/lock names no process: remove it if no adopt is running"

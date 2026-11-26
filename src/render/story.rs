@@ -402,7 +402,8 @@ pub fn scenes_from_tree(root: &Path, game: &str, edition: &str) -> Result<Vec<Sc
         // src/scene or src/debug, not the entry table or its globals.
         let file = overlay
             .and_then(|id| {
-                std::fs::read_to_string(overlays.join(format!("{}.map", names[usize::from(id)]))).ok()
+                std::fs::read_to_string(overlays.join(format!("{}.map", names[usize::from(id)])))
+                    .ok()
             })
             .and_then(|map| {
                 map.split_whitespace()

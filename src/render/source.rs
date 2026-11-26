@@ -145,7 +145,8 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
             self::area(id) == Some(area)
         };
         if matches && (number(dest) == Some(-1) || number(dest) == Some(i64::from(entrance))) {
-            index = number(name).ok_or_else(|| format!("area_name_rules.s: {kind} {args:?}"))? as usize;
+            index =
+                number(name).ok_or_else(|| format!("area_name_rules.s: {kind} {args:?}"))? as usize;
             break;
         }
     }
