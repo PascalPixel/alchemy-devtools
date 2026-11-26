@@ -5197,7 +5197,7 @@ FLARE_GREEN_DISC_TILE	its picture	intro_sun_3.png's first 16 by 16 picture, a qu
 FLARE_WHITE_DISC_TILE	its picture	intro_sun_3.png's second 16 by 16 picture, a quarter of a white-hot disc edged in orange, mirrored into a 32 by 32 disc	games/tbs/src/menu/title_intro.c
 FLARE_DISC_RADIUS	its code	the discs are four 16x16 quarters or one 32x32 sprite, placed half their width left and up of their point on the line	games/tbs/src/menu/title_intro.c
 FLARE_RING_RADIUS	its code	the rings are four 32x32 quarters, placed half their width left and up of their point on the line	games/tbs/src/menu/title_intro.c
-OFFSCREEN_TILE	its twin	The Lost Age's title_intro.c names the same 511 OFFSCREEN_TILE (hz/ui): the map entry of the two columns past the screen's edge, as the title intro, the Nintendo logo and the File Screen's logo write it	games/tbs/include/graphics/graphics.h
+OFFSCREEN_TILE	its twin	The Lost Age's title_intro.c names the same 511 OFFSCREEN_TILE (hz/ui): the map entry of the two columns past the screen's edge, as the title intro, the publisher's logo and the File Screen's logo write it	games/tbs/include/graphics/graphics.h
 CAMELOT_FLAG_TILE	its twin	The Lost Age's title_intro.c names the same tile, picture size and copy CAMELOT_FLAG_* (hz/ui); camelot_logo.tsv's CAMELOT_FLAG pictures start at tile 4, 16 tiles each	games/tbs/src/menu/title_intro.c
 CAMELOT_FLAG_PICTURE_BYTES	its twin	as CAMELOT_FLAG_TILE	games/tbs/src/menu/title_intro.c
 CAMELOT_FLAG_BYTES	its twin	as CAMELOT_FLAG_TILE	games/tbs/src/menu/title_intro.c
@@ -5257,7 +5257,7 @@ KANA_TO	its picture	text_ja.png glyph 0xe4 (row 12, column 4) is と	games/tbs/i
 KANA_HA	its picture	text_ja.png glyph 0xea (row 12, column 10) is は	games/tbs/include/window/text_font.h
 LINK_SEND_FRAMES	its code	the send loop waits a frame a pass for up to 600000 passes	games/tbs/src/scene/file_screen.c
 LINK_SILENT_FRAMES	its code	ten frames in a row without LINK_STATUS_HEARD_BOTH end the send with "Communication Error" (MsgClearCommunicationError)	games/tbs/src/scene/file_screen.c
-LOGO_PALETTE_COLORS	its twin	The Lost Age's clear.c (hz/s3) names the logo resource's 224 leading colours LOGO_PALETTE_COLORS; title_intro.c's Nintendo and Camelot logos and file_screen.c's Golden Sun logo copy the same 224 to BG_PLTT	games/tbs/include/graphics/graphics.h
+LOGO_PALETTE_COLORS	its twin	The Lost Age's clear.c (hz/s3) names the logo resource's 224 leading colours LOGO_PALETTE_COLORS; title_intro.c's publisher's and Camelot's logos and file_screen.c's Golden Sun logo copy the same 224 to BG_PLTT	games/tbs/include/graphics/graphics.h
 TILE_GRID_COLUMNS	its code	the two unused fills write 16 entries a row for 8 rows, then skip the map row's other 16	games/tbs/src/scene/file_screen.c
 TILE_GRID_ROWS	its code	as TILE_GRID_COLUMNS	games/tbs/src/scene/file_screen.c
 TILE_GRID_FIRST_TILE	its code	FileScreen_FillTileGridByGridWidth's tiles start at 32	games/tbs/src/scene/file_screen.c
@@ -5423,7 +5423,7 @@ FLAG_MCCOY_PALACE_UNUSED_PICK_OFFERED	the game	"Pick any one of the four treasur
 ACTOR_JUMP_KEEPS_MOTION	its code	the motion flags a jump keeps as the actor leaves the ground: all but ACTOR_FOLLOWS_TERRAIN and the spare bit (enum ActorMotionFlag, (u8)~(ACTOR_FOLLOWS_TERRAIN | ACTOR_MOTION_SPARE))	games/tbs/include/field/actor.h
 YOUNG_MAN_WITH_BROWN_HAIR_ANIMATION_LIE	its picture	young_man_with_brown_hair.tsv's animation 5 holds picture 33, the young man lying on the ground	games/tbs/include/sprite_ids.h
 YOUNG_MAN_WITH_BROWN_HAIR_ANIMATION_LOOK_HIMSELF_OVER	its picture	young_man_with_brown_hair.tsv's animation 6 alternates pictures 34 and 35, the young man standing with his arms held out	games/tbs/include/sprite_ids.h
-NINTENDO_LOGO_TILE	its twin	games/tla/src/menu/title_intro.c:1109 (hz/ui) names the same BG_CHAR_SIZE / TILE_SIZE_8BPP, where Title_ShowNintendoLogo copies the Nintendo logo's tiles, NINTENDO_LOGO_TILE	games/tbs/src/menu/title_intro.c
+PUBLISHER_LOGO_TILE	its twin	games/tla/src/menu/title_intro.c:1109 (hz/ui) names the same BG_CHAR_SIZE / TILE_SIZE_8BPP, where Title_ShowPublisherLogo copies the publisher logo's tiles, PUBLISHER_LOGO_TILE	games/tbs/src/menu/title_intro.c
 DONATION_REVIVE_PER_LEVEL	the game	"Revive" (MsgCommandYes + 20)	games/tbs/src/shop/shop_sanctum.c
 DONATION_CURE_POISON	the game	"Cure Poison" (MsgCommandYes + 21)	games/tbs/src/shop/shop_sanctum.c
 DONATION_REPEL_EVIL	the game	"Repel Evil" (MsgCommandYes + 22)	games/tbs/src/shop/shop_sanctum.c
@@ -8180,7 +8180,7 @@ gCharacter_LighthouseGroupTable	its code	game_units.c: Party_RestorePpInLighthou
 LIGHTHOUSE_GROUP_VENUS_MARS	its code	game_units.c: Party_RestorePpInLighthouse tests the Venus and Mars lighthouse flags for group 0 (Isaac, Garet, Felix, Jenna)	games/tbs/include/game/game.h
 LIGHTHOUSE_GROUP_MERCURY_JUPITER	its code	game_units.c: Party_RestorePpInLighthouse tests the Mercury and Jupiter lighthouse flags for group 1 (Ivan, Mia, Sheba, Piers)	games/tbs/include/game/game.h
 INTRO_MAP_ROWS	its code	Title_LoadIntroBackgrounds fills both intro maps' rows up to 31, and Title_ShowTitleScreen blanks the front map's last five from row 27	games/tbs/src/menu/title_intro.c
-PICTURE_SCREEN	its code	BG2CNT takes screen base 6 for the title picture's map (Title_ShowTitleScreen) and the Nintendo and Camelot logos' (Title_ShowNintendoLogo, Title_ShowCamelotLogo)	games/tbs/src/menu/title_intro.c
+PICTURE_SCREEN	its code	BG2CNT takes screen base 6 for the title picture's map (Title_ShowTitleScreen) and the publisher's and Camelot's logos' (Title_ShowPublisherLogo, Title_ShowCamelotLogo)	games/tbs/src/menu/title_intro.c
 TITLE_PICTURE_COLORS	its code	Title_ShowTitleScreen copies 120 words, 240 colours, of the title picture's palette, leaving palette 15 (WINDOW_PALETTE) to Window_LoadGraphics	games/tbs/src/menu/title_intro.c
 PROMPT_SPRITE_BYTES	its code	Title_ShowTitleScreen gives each prompt picture 128 bytes of sprite VRAM, a 32x8 sprite (OBJ_SIZE_32X8) of 16-colour tiles	games/tbs/src/menu/title_intro.c
 Colosso_LoadPointer	its code	colosso_guide.c: loads the pointer's picture (PointingHand_LoadIntoFreeSlot) into gColosso_PointerSlot when it is -1; Colosso_ShowPointer calls it	games/tbs/src/scene/shared/colosso_guide.c

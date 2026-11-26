@@ -417,7 +417,7 @@ impl<'a> Guide<'a> {
     }
 
     /// A, B, Select and Start pressed together in Vale: the game starts
-    /// again, shown from Camelot's logo (the Nintendo logo before it is left
+    /// again, shown from Camelot's logo (the publisher's logo before it is left
     /// out).
     fn runtime_soft_reset(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(VALE, &[])?;
@@ -428,7 +428,7 @@ impl<'a> Guide<'a> {
         )?;
         let mut after = Vec::new();
         Self::hold(field, 0, 700, &mut after)?;
-        // After the reset: black, the Nintendo logo, black, Camelot's logo.
+        // After the reset: black, the publisher's logo, black, Camelot's logo.
         let first = after
             .iter()
             .position(|f| lit(f))
@@ -437,7 +437,7 @@ impl<'a> Guide<'a> {
             + after[first..]
                 .iter()
                 .position(|f| !lit(f))
-                .ok_or("the Nintendo logo never ends")?;
+                .ok_or("the publisher's logo never ends")?;
         let camelot = black
             + after[black..]
                 .iter()

@@ -20,5 +20,5 @@ slRandom	Random16	role	both give a 16-bit fraction, but the game masks its bits 
 slColOffsetA	ScreenFade_Start	role	a fade over a count of frames through the hardware's brightness register, where SGL adds an offset to each colour at once
 slScrMatSet and the coefficient table	the World Map's tilted ground	untested	both give each line of the screen its own terms; not compared in detail
 slPutPolygon, slPutSprite	the battle effects' models and sprites	untested	not compared in detail
-slBGMOn, slSndVolume	the sound calls	untested	the driver beneath is Nintendo's; the calls above it are not compared
+slBGMOn, slSndVolume	the sound calls	untested	the driver beneath is the development kit's; the calls above it are not compared
 none	the decompressors, the overlays and far calls, the heap, the save	none	the Saturn read a disc and had memory to spare; these are the cartridge's

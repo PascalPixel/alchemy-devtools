@@ -15851,7 +15851,7 @@ LOGO_PIECE_BYTES	what the player sees	`The Lost Age` in white letters across the
 LOGO_PIECE_TILES	what the player sees	`The Lost Age` in white letters across the valley below the lighthouse (render guide --only moment, MOMENT_PLACE=0,2 (TITLE_PROLOGUE), frames 1400 and 1500) (its render)	games/tla/src/menu/title_intro.c
 LOGO_MATRIX_REST	what the player sees	`The Lost Age` in white letters across the valley below the lighthouse (render guide --only moment, MOMENT_PLACE=0,2 (TITLE_PROLOGUE), frames 1400 and 1500) (its render)	games/tla/src/menu/title_intro.c
 LOAD_LOGO_TILES	what the player sees	`The Lost Age` in white letters across the valley below the lighthouse (render guide --only moment, MOMENT_PLACE=0,2 (TITLE_PROLOGUE), frames 1400 and 1500) (its render)	games/tla/src/menu/title_intro.c
-NINTENDO_LOGO_TILE	what the player sees	the Nintendo logo, white on black (render guide --only moment, MOMENT_PLACE=0,1 (TITLE_START), frames 40 to 120) (its render)	games/tla/src/menu/title_intro.c
+PUBLISHER_LOGO_TILE	what the player sees	the publisher's logo, white on black (render guide --only moment, MOMENT_PLACE=0,1 (TITLE_START), frames 40 to 120) (its render)	games/tla/src/menu/title_intro.c
 CAMELOT_FLAG_TILE	what the player sees	the Camelot Software Planning logo, a red flag waving on top of its green-domed castle (render guide --only moment, MOMENT_PLACE=0,1 (TITLE_START), frames 160 to 240) (its render)	games/tla/src/menu/title_intro.c
 CAMELOT_FLAG_PICTURE_BYTES	what the player sees	the Camelot Software Planning logo, a red flag waving on top of its green-domed castle (render guide --only moment, MOMENT_PLACE=0,1 (TITLE_START), frames 160 to 240) (its render)	games/tla/src/menu/title_intro.c
 CAMELOT_FLAG_BYTES	what the player sees	the Camelot Software Planning logo, a red flag waving on top of its green-domed castle (render guide --only moment, MOMENT_PLACE=0,1 (TITLE_START), frames 160 to 240) (its render)	games/tla/src/menu/title_intro.c
@@ -16307,7 +16307,7 @@ TitleLogoState.fromWhite	what the player sees	the lighthouse picture comes back 
 IntroSprite	its twin	games/tbs/src/menu/title_intro.c struct IntroSprite, the same "Press Start" prompt sprite (TitleSprite before)	games/tla/src/menu/title_intro.c
 LIGHTHOUSE_HEIGHT	its picture	intro_lighthouse.png is 240 by 384 pixels	games/tla/src/menu/title_intro.c
 LIGHTHOUSE_BOTTOM	what the player sees	the scroll down ends with the forest at the lighthouse's foot at the screen's bottom (its render)	games/tla/src/menu/title_intro.c
-SCREEN_TILE_BYTES	its code	30 by 20 tiles of 64 bytes: the lighthouse picture's first screen and the Nintendo logo's and title screen's tiles (LIGHTHOUSE_SCREEN_BYTES before)	games/tla/src/menu/title_intro.c
+SCREEN_TILE_BYTES	its code	30 by 20 tiles of 64 bytes: the lighthouse picture's first screen and the publisher logo's and title screen's tiles (LIGHTHOUSE_SCREEN_BYTES before)	games/tla/src/menu/title_intro.c
 OFFSCREEN_TILE	its code	tile 511 fills map columns 30 and 31, past x 240, while these maps' x scroll is 0 (LIGHTHOUSE_BLANK_TILE before)	games/tla/src/menu/title_intro.c
 LOGO_PIECE_BYTES	its picture	subtitle_a.png is 192 by 64 pixels in 256 colours, three pieces of 64 by 64	games/tla/src/menu/title_intro.c
 LOGO_PIECE_TILES	its code	a 64 by 64 piece in 256 colours spans 128 sprite tile numbers, the second piece starting at 128 and the third at 256	games/tla/src/menu/title_intro.c
@@ -16316,7 +16316,7 @@ GullFrameField	its code	gTitleIntro_GullFrames rows of five halfwords: first til
 GullStepField	its code	gTitleIntro_GullPath rows of three halfwords: x, y, frames held	games/tla/src/menu/title_intro.c
 GULL_COLUMNS	its picture	intro_gulls.png is 64 pixels wide, eight 8x8 tiles a row	games/tla/src/menu/title_intro.c
 TITLE_SCREEN_TILE	its code	the title screen's tiles are copied to tile 416 of character block 0 and its map numbered from there	games/tla/src/menu/title_intro.c
-NINTENDO_LOGO_TILE	its code	the Nintendo logo's tiles go to character block 1, tile 256 in BG2's numbering from block 0	games/tla/src/menu/title_intro.c
+PUBLISHER_LOGO_TILE	its code	the publisher logo's tiles go to character block 1, tile 256 in BG2's numbering from block 0	games/tla/src/menu/title_intro.c
 CAMELOT_FLAG_TILE	its picture	camelot_logo.tsv places CAMELOT_FLAG at tile 4 of the logo; camelot_flag.png is a red flag in four waving pictures	games/tla/src/menu/title_intro.c
 CAMELOT_FLAG_PICTURE_BYTES	its picture	camelot_logo.tsv: 16 tiles a flag picture (camelot_flag.png)	games/tla/src/menu/title_intro.c
 CAMELOT_FLAG_BYTES	its code	13 of each flag picture's 16 tiles are copied, 832 bytes	games/tla/src/menu/title_intro.c
@@ -17404,7 +17404,7 @@ LEARN_SPARK_INTERVAL	its code	GaiaRockInside_FelixLearnsSand, MagmaRockInside_Le
 LEARN_SPIRAL_FRAMES	its code	a circling spark starts 122 pixels out and closes 8 pixels a frame to 2 pixels, 15 frames, which is also what the last spark's countdown adds	games/tla/include/scene/scene.h
 TITLE_TO_BE_CONTINUED	what the player sees	entered by entrance 10 (render guide moment, MOMENT_PLACE=0,10), "To Be Continued" shows on black and the Golden Sun logo with its copyright line brightens in above it (its render)	games/tla/include/scene_exits.h
 TITLE_TO_BE_CONTINUED	its uses	no exit, event or start-up sets entrance 10 of the title (main_routine.c sends 1 or 8, clear.c 1 and 8, idejima.c's exit 3)	games/tla/include/scene_exits.h
-TITLE_START	what the player sees	entered by entrance 1 (render guide moment, MOMENT_PLACE=0,1), the Nintendo logo, then Camelot's, then with no save file the clear-data scene's name entry for Felix (its render)	games/tla/include/scene_exits.h
+TITLE_START	what the player sees	entered by entrance 1 (render guide moment, MOMENT_PLACE=0,1), the publisher's logo, then Camelot's, then with no save file the clear-data scene's name entry for Felix (its render)	games/tla/include/scene_exits.h
 TO_BE_CONTINUED_PALETTE	its twin	games/tbs/src/scene/title.c LETTERING_PALETTE, the lettering's sprite palette 15	games/tla/src/scene/title.c
 TO_BE_CONTINUED_PALETTE	its picture	games/tla/src/graphics/title/title.s: Title_IntroTilesB (RESOURCE_INTRO_TILES_B) is the "To be continued" lettering, whose 16 colours Title_LoadSprites copies into sprite palette 15 and whose 18 sprites Title_UpdateSpriteReveal reveals from the left on entrance 10	games/tla/src/scene/title.c
 FACING_NUDGE	its uses	lemuria_rooms.c (Lunpa), lemuria.c (Kraden's stand-in) and champa_cliff_caves.c (Briggs and Obaba) each turn an actor round to a heading FACING_NUDGE past or short of it, the same sliver of a turn	games/tla/include/field/scene_tables.h

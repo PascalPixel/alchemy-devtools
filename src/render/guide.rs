@@ -213,7 +213,7 @@ impl<'a> Guide<'a> {
         let mut frames = Vec::new();
         Self::hold(&mut field, 0, 900, &mut frames)?;
         // The Camelot logo is the first picture after the black that follows
-        // the Nintendo logo; the Golden Sun logo the first after the black
+        // the publisher's logo; the Golden Sun logo the first after the black
         // that follows it.
         let lit = |f: &Vec<u16>| !is_black_bgr555(f);
         let after = |from: usize, want: bool| {
