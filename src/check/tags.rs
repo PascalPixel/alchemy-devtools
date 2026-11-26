@@ -32,9 +32,13 @@ const RETIRED: &str = "one-pass";
 const RETIRED_LEFTOVER: &str = "form";
 /// The kind The Broken Seal refuses besides a pin (S2).
 const NOT_IN_TBS: [&str; 1] = ["signature"];
-/// A register pin, which no game takes (S2): The Lost Age's last went on 20
-/// November 2026.
+/// A register pin has no kind of its own (S2): one is an `asm` device.
 const PIN: &str = "pin";
+/// The kind of any asm that is not an empty statement: instructions, a label,
+/// a register name (S2, 26 November 2026). It has no plain form to measure.
+const ASM: &str = "asm";
+/// How many lines after a file-scope asm tag its labels may stand.
+const LABEL_REACH: usize = 40;
 /// A measurement inside a tag ("4 of 549 instructions differing in tla-en"),
 /// taken out of a leftover's evidence before it is read: a measured edition
 /// is no evidence that the edition uses the thing.
@@ -268,7 +272,14 @@ fn judge_tag(
     if measured(text) {
         return (judge_form(text), Some(Place::Source));
     }
-    let word = word_and_kind(text).map_or("FAKEMATCH", |(word, _)| word);
+    // An asm has no plain form: its tag says what it is and carries no
+    // measurement.
+    if row.is_none()
+        && word_and_kind(text).is_some_and(|(word, kind)| word == "FAKEMATCH" && kind == ASM)
+    {
+        return (None, None);
+    }
+    let word =word_and_kind(text).map_or("FAKEMATCH", |(word, _)| word);
     let Some(row) = row else {
         return (
             Some(format!(
@@ -323,13 +334,10 @@ struct Unit {
     name: String,
     line: usize,
     tags: usize,
-    /// Of the tags, the barriers: only a barrier tag names an asm statement.
+    /// Of the tags, the barriers and the asm tags: only they name an asm
+    /// statement.
     barriers: usize,
     asm: usize,
-    /// CAMELOT_ASM marks inside: each a proven handwritten asm statement (S1).
-    proofs: usize,
-    /// Marked CAMELOT_ASM before its definition: a proven helper whole.
-    proven: bool,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -438,8 +446,6 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
     let mut code: Vec<&Token> = Vec::new();
     let mut depth = 0usize;
     let mut open: Option<(usize, usize)> = None;
-    // Where the declaration being read began: after the last `;` or `}` at file scope.
-    let mut declaration = 0;
     type State = (usize, Option<(usize, usize)>);
     let mut branches: Vec<(State, Option<State>)> = Vec::new();
     for (at, token) in tokens.iter().enumerate() {
@@ -473,10 +479,6 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
                     tags: 0,
                     barriers: 0,
                     asm: 0,
-                    proofs: 0,
-                    proven: code[declaration.min(code.len())..]
-                        .iter()
-                        .any(|t| t.text == "CAMELOT_ASM"),
                 });
                 open = Some((units.len() - 1, token.line));
             }
@@ -487,10 +489,7 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
                 if let Some((unit, line)) = open.take() {
                     bodies.push((line, token.line, unit));
                 }
-                declaration = code.len() + 1;
             }
-        } else if depth == 0 && token.text == ";" {
-            declaration = code.len() + 1;
         }
         code.push(token);
     }
@@ -504,6 +503,8 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
     let mut macro_unit: Option<usize> = None;
     // Inside an extern declaration, where asm only names the symbol.
     let mut external = false;
+    // The line of the last asm tag at file scope.
+    let mut label_tag: Option<usize> = None;
     // Each open conditional on MODERN: which branch is `make modern`'s (true
     // for #ifdef MODERN, false for #ifndef MODERN) and whether #else is being
     // read. There asm serves a current GCC, not a match.
@@ -547,8 +548,6 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
                     tags: 0,
                     barriers: 0,
                     asm: 0,
-                    proofs: 0,
-                    proven: false,
                 });
                 macro_unit = Some(units.len() - 1);
             }
@@ -566,11 +565,6 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
         match token.text {
             ";" | "{" | "}" if token.kind == Kind::Punct => external = false,
             "extern" if token.kind == Kind::Ident => external = true,
-            "CAMELOT_ASM" if token.kind == Kind::Ident => {
-                if let Some(unit) = unit {
-                    units[unit].proofs += 1;
-                }
-            }
             _ => {}
         }
         let opening = plain(&[token.text]);
@@ -645,8 +639,14 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
                 Some(unit) => {
                     units[unit].tags += 1;
                     units[unit].barriers += usize::from(
-                        word_and_kind(&text).is_some_and(|(_, kind)| kind == "barrier"),
+                        word_and_kind(&text)
+                            .is_some_and(|(_, kind)| kind == "barrier" || kind == ASM),
                     );
+                }
+                // An asm tag at file scope names the asm labels declared
+                // after it.
+                None if word_and_kind(&text).is_some_and(|(_, kind)| kind == ASM) => {
+                    label_tag = Some(token.line);
                 }
                 None => found.push(Finding {
                     line: token.line,
@@ -682,9 +682,19 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
                     tags.dead_unformed += 1;
                 }
             }
-        } else if is_asm(token) && !external && !modern {
+        } else if is_asm(token) && !modern {
             match unit {
+                // A label inside a function belongs to the device its tag
+                // names.
+                Some(_) if external => {}
                 Some(unit) => units[unit].asm += 1,
+                // A label at file scope stands under an asm tag of its own.
+                None if external
+                    && label_tag.is_some_and(|line| token.line < line + LABEL_REACH) => {}
+                None if external => found.push(Finding {
+                    line: token.line,
+                    message: "an asm label with no FAKEMATCH(asm) tag before it".to_string(),
+                }),
                 None => found.push(Finding {
                     line: token.line,
                     message: "asm outside any function".to_string(),
@@ -693,20 +703,13 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
         }
         at += 1;
     }
-    // Each asm statement is a barrier's, or a proven helper's (S1, S2): an
-    // asm under a tag of another kind is a barrier given a milder name.
-    for unit in units
-        .iter()
-        .filter(|unit| !unit.proven && unit.asm > unit.barriers + unit.proofs)
-    {
-        let proofs = match unit.proofs {
-            0 => String::new(),
-            n => format!(" and {n} CAMELOT_ASM"),
-        };
+    // Each asm statement is a barrier's or an asm tag's (S2): an asm under a
+    // tag of another kind is a device given a milder name.
+    for unit in units.iter().filter(|unit| unit.asm > unit.barriers) {
         found.push(Finding {
             line: unit.line,
             message: format!(
-                "{}: {} asm statements, {} barrier tags{proofs}",
+                "{}: {} asm statements, {} barrier or asm tags",
                 unit.name, unit.asm, unit.barriers
             ),
         });
@@ -1200,8 +1203,14 @@ mod tests {
             "{}",
             found[0].message
         );
-        // A view's asm label names a symbol in an extern declaration: no device.
-        assert!(findings("games/tla/src/x.c", source, &[]).1.is_empty());
+        // A view's asm label is an asm like any other: it needs its own tag.
+        assert_eq!(
+            findings("games/tla/src/x.c", source, &[]).1,
+            [Finding {
+                line: 2,
+                message: "an asm label with no FAKEMATCH(asm) tag before it".to_string()
+            }]
+        );
     }
 
     #[test]
@@ -1491,7 +1500,7 @@ void F(int x) {
             game.lines("games/tbs"),
             [
                 "games/tbs: 832 files; 0 findings",
-                "games/tbs: 169 FAKEMATCH tags, score 0 (signature 0, volatile 0, barrier 0, wrapper 0, temporary 0, dead 0)",
+                "games/tbs: 169 FAKEMATCH tags, score 0 (signature 0, volatile 0, asm 0, barrier 0, wrapper 0, temporary 0, dead 0)",
                 "games/tbs: 48 LEFTOVER tags",
                 "games/tbs: measurements: 217 in evidence/tbs-fakematch.tsv (H8), 0 in the source",
                 "games/tbs: 33 // DEAD: marks",
@@ -1730,7 +1739,8 @@ static const int table[] = { 1, 2 };
 void Tagged(void) {
   /* FAKEMATCH(barrier): held; as no asm, 2 of 9 instructions differ in tla-en. */
   asm(\"\" : \"+r\"(x));
-  if (x) { CAMELOT_ASM(\"rrx\"); }
+  /* FAKEMATCH(asm): a rotate through carry. */
+  if (x) { __asm__(\"rrx\"); }
 }
 
 void Untagged(int y) {
@@ -1746,20 +1756,25 @@ void Untagged(int y) {
     register int a_ __asm__(\"r1\") = (a);                                   \\
   }
 
-CAMELOT_ASM(\"stmia of three registers, which no pattern emits\")
-static __inline__ void Proven(void) {
+static __inline__ void Whole(void) {
+  /* FAKEMATCH(asm): r pinned to r3. */
   register int r __asm__(\"r3\") = 0;
+  /* FAKEMATCH(asm): stmia of three registers, which no pattern emits. */
   __asm__ volatile(\"stmia %0!, {r0, r1, r2}\" : \"+r\"(r));
 }
 
 void Named(void) {
   extern const char gAlias[] __asm__(\"gName\");
-  CAMELOT_ASM(\"mov from sp\")
+  /* FAKEMATCH(asm): mov from sp. */
   __asm__ volatile(\"mov %0, sp\" : \"=r\"(sp));
 }
 
 /* FAKEMATCH(dead): stray; as nothing, 1 of 2 instructions differ in tla-en. */
 static const int table[] = { 1, 2 };
+
+extern int gBare __asm__(\"gName\");
+/* FAKEMATCH(asm): another name for gName. */
+extern int gOther __asm__(\"gName\");
 
 #if !PATCH
 void Old(int id) {
@@ -1781,15 +1796,15 @@ void New(int id, int cue) {
 #endif
 ";
         let (tags, found) = findings("games/tla/src/x.c", source, &[]);
-        // A barrier and a dead store, 16 + 2; the two pins weigh nothing,
-        // being no kind.
+        // Five asm tags, a barrier and a dead store, 5 * 32 + 16 + 2; the two
+        // pins weigh nothing, being no kind.
         assert_eq!(
             tags,
             Tags {
-                fakematch: 4,
+                fakematch: 9,
                 in_source: 4,
-                score: 18,
-                kinds: [0, 0, 1, 0, 0, 1],
+                score: 178,
+                kinds: [0, 0, 5, 1, 0, 0, 1],
                 ..Tags::default()
             }
         );
@@ -1797,27 +1812,31 @@ void New(int id, int cue) {
             found,
             [
                 Finding {
-                    line: 7,
-                    message: "Untagged: 2 asm statements, 0 barrier tags".to_string()
+                    line: 8,
+                    message: "Untagged: 2 asm statements, 0 barrier or asm tags".to_string()
                 },
                 Finding {
-                    line: 12,
-                    message: "PINNED: 1 asm statements, 0 barrier tags".to_string()
+                    line: 13,
+                    message: "PINNED: 1 asm statements, 0 barrier or asm tags".to_string()
                 },
                 Finding {
-                    line: 14,
+                    line: 15,
                     message: "no game takes a pin, a variable fixed to a register (S2)".to_string()
                 },
                 Finding {
-                    line: 32,
+                    line: 34,
                     message: "a tag outside any function".to_string()
                 },
                 Finding {
-                    line: 36,
-                    message: "Old: 1 asm statements, 0 barrier tags".to_string()
+                    line: 37,
+                    message: "an asm label with no FAKEMATCH(asm) tag before it".to_string()
                 },
                 Finding {
-                    line: 40,
+                    line: 42,
+                    message: "Old: 1 asm statements, 0 barrier or asm tags".to_string()
+                },
+                Finding {
+                    line: 46,
                     message: "no game takes a pin, a variable fixed to a register (S2)".to_string()
                 },
             ]
@@ -1832,6 +1851,8 @@ void New(int id, int cue) {
 void F(int x) {
   /* FAKEMATCH(signature): a. */
   /* FAKEMATCH(volatile): b. */
+  /* FAKEMATCH(asm): g. */
+  asm(\"nop\");
   /* FAKEMATCH(barrier): c. */
   asm(\"\");
   /* FAKEMATCH(wrapper): d. */
@@ -1840,8 +1861,11 @@ void F(int x) {
 }
 ";
         let (tags, _) = findings("games/tla/src/x.c", source, &[]);
-        assert_eq!((tags.fakematch, tags.score), (6, 64 + 32 + 16 + 8 + 4 + 2));
-        assert_eq!(tags.kinds, [1; 6]);
+        assert_eq!(
+            (tags.fakematch, tags.score),
+            (7, 128 + 64 + 32 + 16 + 8 + 4 + 2)
+        );
+        assert_eq!(tags.kinds, [1; 7]);
     }
 
     /// An asm statement is a barrier's: under a tag of a milder kind it is
@@ -1864,7 +1888,7 @@ void Named(int x) {
             found,
             [Finding {
                 line: 1,
-                message: "Relabelled: 1 asm statements, 0 barrier tags".to_string()
+                message: "Relabelled: 1 asm statements, 0 barrier or asm tags".to_string()
             }]
         );
     }

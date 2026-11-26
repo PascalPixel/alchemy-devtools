@@ -29,11 +29,13 @@ use std::sync::OnceLock;
 pub const REPORT: &str = "out/reports/humanity.tsv";
 
 /// S2's fake-match kinds, in its ranking, worst first. A once-only block no
-/// macro expands to is a `dead` device; `one-pass` is no longer a kind, and a
-/// register pin is none: no game takes one.
-pub const DEVICES: [&str; 6] = [
+/// macro expands to is a `dead` device; `one-pass` is no longer a kind. Any use
+/// of asm that is not an empty statement is an `asm` device (26 November 2026):
+/// a statement with instructions, an asm label, a register name.
+pub const DEVICES: [&str; 7] = [
     "signature",
     "volatile",
+    "asm",
     "barrier",
     "wrapper",
     "temporary",
@@ -43,7 +45,7 @@ pub const DEVICES: [&str; 6] = [
 /// Each kind's weight in a game's fake-match score, in `DEVICES`' order, each
 /// twice the next (S2, 20 November 2026): the score is the sum of a game's
 /// tags' weights.
-pub const WEIGHTS: [usize; 6] = [64, 32, 16, 8, 4, 2];
+pub const WEIGHTS: [usize; 7] = [128, 64, 32, 16, 8, 4, 2];
 
 /// S2's leftover kinds: Camelot's own code that does nothing in an edition
 /// and still shapes it, tagged `LEFTOVER(<kind>)` (12 November 2026). They
@@ -5504,6 +5506,7 @@ const ROWS: &[(&str, &str)] = &[
     ("fakematch", "FAKEMATCH devices"),
     ("fakematch_signature", "  signature"),
     ("fakematch_volatile", "  volatile"),
+    ("fakematch_asm", "  asm"),
     ("fakematch_barrier", "  barrier"),
     ("fakematch_wrapper", "  wrapper"),
     ("fakematch_temporary", "  temporary"),
