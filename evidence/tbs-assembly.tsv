@@ -1,0 +1,48 @@
+file	name	family	form	mode	rule	sgl	gbatek	proof
+games/tbs/src/battle/background_decode.s	background_decode	decode	rom	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tbs/src/battle_effect/blitter_color_fragments.s	blitter_color_fragments	draw	built	arm	untouched	slPutPolygon, slPutSprite: the Saturn's VDP1 drew them	LCD VRAM Overview; LCD OBJ - Overview; GBA Memory Map	stated
+games/tbs/src/battle_effect/blitter_fragments.s	blitter_fragments	draw	built	arm	scratch	slPutPolygon, slPutSprite: the Saturn's VDP1 drew them	LCD VRAM Overview; LCD OBJ - Overview; GBA Memory Map	stated
+games/tbs/src/field/actor_update_far.s	actor_update_far	field	rom	arm	scratch	none	GBA Memory Map	stated
+games/tbs/src/field/map_grid_convert.s	map_grid_convert	field	copied	arm	scratch	none	GBA Memory Map	stated
+games/tbs/src/field/picture_decode.s	picture_decode	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tbs/src/gamepak/rom_header.s	rom_header	start-up	table	arm	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	stated
+games/tbs/src/menu/credits_background_decode.s	credits_background_decode	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tbs/src/menu/credits_background_expand.s	credits_background_expand	decode	rom	arm	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tbs/src/scene/entry.s	entry	start-up	rom	thumb	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	none
+games/tbs/src/sound/channel_update_entry.s	channel_update_entry	sound	rom	thumb	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/sound/clear_buffer.s	clear_buffer	sound	rom	thumb	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/sound/mixer.s	mixer	sound	resident	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/sound/resident_mixer.s	resident_mixer	sound	resident	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/sound/resident_mixer_interpolate.s	resident_mixer_interpolate	sound	resident	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/sound/resident_mixer_render.s	resident_mixer_render	sound	resident	arm	scratch	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/sound/sound_get_jump_list.s	sound_get_jump_list	bios	table	thumb	untouched	none	BIOS Halt Functions; BIOS Memory Copy; BIOS Sound Functions	stated
+games/tbs/src/sound/umul_high.s	umul_high	sound	rom	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/system/bios.s	bios	bios	rom	thumb	untouched	none	BIOS Halt Functions; BIOS Memory Copy; BIOS Sound Functions	stated
+games/tbs/src/system/decompress_byte_lz.s	decompress_byte_lz	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tbs/src/system/decompress_tagged_lz.s	decompress_tagged_lz	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tbs/src/system/entry.s	entry	start-up	rom	arm	scratch	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	stated
+games/tbs/src/system/heap_release.s	heap_release	memory	rom	both	scratch	none	GBA Memory Map	stated
+games/tbs/src/system/inner_product.s	inner_product	maths	copied	arm	untouched	slMulFX, slDivFX, slSquart, slSin, slAtan, slInnerProduct, slMultiMatrix, slCalcPoint	BIOS Arithmetic Functions, not used; GBA Memory Map	stated
+games/tbs/src/system/irq.s	irq	start-up	resident	arm	saved	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	stated
+games/tbs/src/system/irq_table.s	irq_table	start-up	resident	arm	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	stated
+games/tbs/src/system/iwram_entry.s	iwram_entry	maths	table	thumb	untouched	slMulFX, slDivFX, slSquart, slSin, slAtan, slInnerProduct, slMultiMatrix, slCalcPoint	BIOS Arithmetic Functions, not used; GBA Memory Map	stated
+games/tbs/src/system/iwram_routines.s	iwram_routines	maths	resident	arm	scratch	slMulFX, slDivFX, slSquart, slSin, slAtan, slInnerProduct, slMultiMatrix, slCalcPoint	BIOS Arithmetic Functions, not used; GBA Memory Map	stated
+games/tbs/src/system/trig.s	trig	maths	rom	thumb	untouched	slMulFX, slDivFX, slSquart, slSin, slAtan, slInnerProduct, slMultiMatrix, slCalcPoint	BIOS Arithmetic Functions, not used; GBA Memory Map	stated
+games/tbs/src/window/decompress_4bpp.s	decompress_4bpp	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tbs/src/window/expand_opaque.s	expand_opaque	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tbs/src/window/message_decode.s	message_decode	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
+games/tbs/include/system/asm.h	ASM_BIOS_HALT	bios	macro	either	untouched	none	BIOS Halt Functions; BIOS Memory Copy; BIOS Sound Functions	marked
+games/tbs/include/system/asm.h	ASM_BIOS_STOP	bios	macro	either	untouched	none	BIOS Halt Functions; BIOS Memory Copy; BIOS Sound Functions	marked
+games/tbs/include/system/asm.h	ASM_DMA_STORE	dma	macro	either	untouched	slDMAXCopy, slDMAWait	GBA DMA Transfers	marked
+games/tbs/include/system/asm.h	ASM_CALL_RETURN_IP	maths	macro	either	untouched	slMulFX, slDivFX, slSquart, slSin, slAtan, slInnerProduct, slMultiMatrix, slCalcPoint	BIOS Arithmetic Functions, not used; GBA Memory Map	marked
+games/tbs/include/system/asm.h	ASM_CALL_RETURN_IP_MODERN	maths	macro	either	untouched	slMulFX, slDivFX, slSquart, slSin, slAtan, slInnerProduct, slMultiMatrix, slCalcPoint	BIOS Arithmetic Functions, not used; GBA Memory Map	marked
+games/tbs/include/system/asm.h	ASM_SMULL	maths	macro	either	untouched	slMulFX, slDivFX, slSquart, slSin, slAtan, slInnerProduct, slMultiMatrix, slCalcPoint	BIOS Arithmetic Functions, not used; GBA Memory Map	marked
+games/tbs/include/system/asm.h	ASM_ORR_SHIFTED	maths	macro	either	untouched	slMulFX, slDivFX, slSquart, slSin, slAtan, slInnerProduct, slMultiMatrix, slCalcPoint	BIOS Arithmetic Functions, not used; GBA Memory Map	marked
+games/tbs/include/system/asm.h	ASM_MATRIX_UNIT	matrix	macro	either	scratch	slUnitMatrix	none	marked
+games/tbs/include/system/asm.h	ASM_MATRIX_UNIT_CURRENT	matrix	macro	either	scratch	slUnitMatrix	none	marked
+games/tbs/include/system/asm.h	ASM_STACK_POINTER_GET	start-up	macro	either	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	marked
+games/tbs/include/system/asm.h	ASM_STACK_POINTER_SET	start-up	macro	either	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	marked
+games/tbs/include/system/asm.h	ASM_REGISTER	register	macro	either	untouched	none	none	marked
+games/tbs/include/system/asm.h	ASM_NOTHING	empty	empty	either	untouched	none	none	marked
+games/tbs/include/system/asm.h	ASM_LINKED_NAME	modern	macro	either	untouched	none	none	marked
+games/tbs/src/battle_effect/battle_effect_starfield_fall.c	BattleEffect_RunStarfieldFall	empty	empty	thumb	untouched	none	none	marked
