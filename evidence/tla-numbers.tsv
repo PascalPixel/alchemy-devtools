@@ -6,7 +6,7 @@ games/tla/include/system/definitions.h	EVENT_PASS_VBLANK	0xc80	honest	a pass in 
 games/tla/include/system/definitions.h	EVENT_PRIORITY_REMOVED	0x7fff	honest	the highest s16 priority, a removed task's
 games/tla/src/battle/battle_background.c	btBackgroundDivideBy16	16	honest	the divisor the UNUSED routine btBackgroundDivideBy16 is named for
 games/tla/src/battle/battle_run.c	btRun	0x169	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
-games/tla/src/battle/battle_turn_end.c	btDjinnRecoveryCountDownTwenty	20	honest	the twenty turns btDjinnRecoveryCountDownTwenty counts down, as its name says
+games/common/battle/turn_end_djinn_count_down.c	btDjinnRecoveryCountDownTwenty	20	honest	the twenty turns btDjinnRecoveryCountDownTwenty counts down, as its name says
 games/tla/src/battle_effect/battle_effect_catastrophe.c	btEffectRunCatastrophe	16	honest	a canvas shade level, 0 to 63
 games/tla/src/battle_effect/battle_effect_catastrophe.c	btEffectRunCatastrophe	24	honest	a canvas shade level, 0 to 63
 games/tla/src/battle_effect/battle_effect_catastrophe.c	btEffectRunCatastrophe	512	honest	a divisor turning a height difference into an angle

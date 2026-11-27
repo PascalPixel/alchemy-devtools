@@ -8,7 +8,7 @@ games/tbs/include/system/definitions.h	EVENT_PASS_VBLANK	0x480	honest	a pass in 
 games/tbs/include/system/definitions.h	EVENT_PRIORITY_REMOVED	0x7fff	honest	the highest s16 priority, a removed task's
 games/tbs/src/battle/battle_background.c	btBackgroundDivideBy16	16	honest	the divisor the UNUSED routine btBackgroundDivideBy16 is named for
 games/tbs/src/battle/battle_run.c	btRun	0x169	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
-games/tbs/src/battle/battle_turn_end.c	btDjinnRecoveryCountDownTwenty	20	honest	the twenty turns btDjinnRecoveryCountDownTwenty counts down, as its name says
+games/common/battle/turn_end_djinn_count_down.c	btDjinnRecoveryCountDownTwenty	20	honest	the twenty turns btDjinnRecoveryCountDownTwenty counts down, as its name says
 games/tbs/src/battle_effect/battle_effect_drain.c	btEffectRunBreak	10	honest	a 64th of a pixel shifted into 16.16
 games/tbs/src/battle_effect/battle_effect_drain.c	btEffectRunBreak	128	honest	half the 0-255 range of the roll in lift, so the throw is 128 to 383 64ths of a pixel a frame
 games/tbs/src/battle_effect/battle_effect_falling.c	btEffectRunDouse	103	honest	the last screen line the slanted window covers, in pixels
