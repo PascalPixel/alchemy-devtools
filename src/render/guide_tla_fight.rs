@@ -6,7 +6,7 @@
 //!
 //! The battle test menu is The Lost Age's own (btDebugBattleRunMenu): it
 //! reads Down as it opens, waits for A, then loads the debug parameter set
-//! A picked (btDebugParmSetLoad) and runs the formation
+//! A picked (btDebugParamSetLoad) and runs the formation
 //! (btRun) over the Colosso's backdrop. The run answers the
 //! set and the formation as the calls are made, and shows the background of
 //! the scene the formation is met in, as the field would choose it.
@@ -125,7 +125,7 @@ impl<'a> Guide<'a> {
         let b = super::layout::BattleLayout::for_edition("tla-en")?;
         let start = self.sym("gmMainRoutineRunStub")?;
         let menu = self.sym("btDebugBattleRunMenu")?;
-        let preset = self.sym("btDebugParmSetLoad")?;
+        let preset = self.sym("btDebugParamSetLoad")?;
         let encounter = self.sym("btRun")?;
         let game_state = self.sym("MainRoutineStateWork")?;
         let game_flags = self.sym("GameFlagBytes")?;

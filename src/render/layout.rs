@@ -205,8 +205,8 @@ const EXPRESSIONS: &[(&str, &str, &str)] = &[
     // phaseX and maskX are the names wanted.
     (
         "layer_offset",
-        "offsetof(struct MAP_GRID_LAYER_SCROLL, ofsX)",
-        "offsetof(struct MAP_LAYER, ofsX)",
+        "offsetof(struct MAP_GRID_LAYER_SCROLL, offsetX)",
+        "offsetof(struct MAP_LAYER, offsetX)",
     ),
     (
         "layer_scale",
@@ -291,18 +291,18 @@ const EXPRESSIONS: &[(&str, &str, &str)] = &[
     ),
     (
         "obj_velocity",
-        "offsetof(struct ACTOR, velX)",
-        "offsetof(struct ACTOR, velX)",
+        "offsetof(struct ACTOR, velocityX)",
+        "offsetof(struct ACTOR, velocityX)",
     ),
     (
         "obj_sprite",
-        "offsetof(struct ACTOR, spr)",
-        "offsetof(struct ACTOR, spr)",
+        "offsetof(struct ACTOR, sprite)",
+        "offsetof(struct ACTOR, sprite)",
     ),
     (
         "obj_kind",
-        "offsetof(struct ACTOR, sprStorageKind)",
-        "offsetof(struct ACTOR, sprStorageKind)",
+        "offsetof(struct ACTOR, spriteStorageKind)",
+        "offsetof(struct ACTOR, spriteStorageKind)",
     ),
     (
         "entrance_size",
@@ -613,7 +613,7 @@ const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
     // Djinn_GetRecoveryTable returns the main routine's state from summonMask
     // on; The Lost Age's list is its entries after 8 bytes.
     ("recovery_list", "0x0c", "0x0c + offsetof(struct DJINN_RECOVERY_TABLE, list.entries)"),
-    ("recovery_count", "0x100", "offsetof(struct DJINN_RECOVERY_TABLE, list.cnt) - offsetof(struct DJINN_RECOVERY_TABLE, list.entries)"),
+    ("recovery_count", "0x100", "offsetof(struct DJINN_RECOVERY_TABLE, list.count) - offsetof(struct DJINN_RECOVERY_TABLE, list.entries)"),
     ("unit_size", "sizeof(struct UNIT)", "sizeof(struct UNIT)"),
     ("unit_base_hp", "offsetof(struct UNIT, baseHp)", "offsetof(struct UNIT, baseHp)"),
     ("unit_base_pp", "offsetof(struct UNIT, basePp)", "offsetof(struct UNIT, basePp)"),
@@ -631,12 +631,12 @@ const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("unit_poison", "offsetof(struct UNIT, poison)", "offsetof(struct UNIT, poison)"),
     ("unit_delusion", "offsetof(struct UNIT, delusion)", "offsetof(struct UNIT, delusion)"),
     ("unit_djinn_held", "offsetof(struct UNIT, djinnHeld)", "offsetof(struct UNIT, djinnHeld)"),
-    ("unit_djinn_held_counts", "offsetof(struct UNIT, djinnHeldCnts)", "offsetof(struct UNIT, djinnHeldCnts)"),
+    ("unit_djinn_held_counts", "offsetof(struct UNIT, djinnHeldCounts)", "offsetof(struct UNIT, djinnHeldCounts)"),
     ("unit_djinn_active", "offsetof(struct UNIT, djinnSet)", "offsetof(struct UNIT, djinnSet)"),
-    ("unit_djinn_active_counts", "offsetof(struct UNIT, djinnSetCnts)", "offsetof(struct UNIT, djinnSetCnts)"),
+    ("unit_djinn_active_counts", "offsetof(struct UNIT, djinnSetCounts)", "offsetof(struct UNIT, djinnSetCounts)"),
     ("battle_party_units", "offsetof(struct BATTLE_STATE, partyUnits)", "offsetof(struct BATTLE_STATE, partyUnits)"),
     ("battle_enemy_ids", "offsetof(struct BATTLE_STATE, enemyIds)", "offsetof(struct BATTLE_STATE, enemyIds)"),
-    ("battle_palette", "offsetof(struct BATTLE_STATE, pal)", "offsetof(struct BATTLE_STATE, pal)"),
+    ("battle_palette", "offsetof(struct BATTLE_STATE, palette)", "offsetof(struct BATTLE_STATE, palette)"),
     // The Lost Age's leaves the background's id unnamed, the first halfword
     // after the brightness as The Broken Seal's: background is the name
     // wanted.
@@ -644,7 +644,7 @@ const BATTLE_EXPRESSIONS: &[(&str, &str, &str)] = &[
     ("battle_event_phase", "offsetof(struct BATTLE_STATE, playback.phase)", "offsetof(struct BATTLE_STATE, events.phase)"),
     ("obj_resource", "offsetof(struct BATTLE_OBJECT, resource)", "offsetof(struct BATTLE_OBJECT, resource)"),
     ("obj_overlay", "offsetof(struct BATTLE_OBJECT, overlay)", "offsetof(struct BATTLE_OBJECT, overlay)"),
-    ("obj_palette", "offsetof(struct BATTLE_OBJECT, pal)", "offsetof(struct BATTLE_OBJECT, pal)"),
+    ("obj_palette", "offsetof(struct BATTLE_OBJECT, palette)", "offsetof(struct BATTLE_OBJECT, palette)"),
     ("heap_battle", "HEAP_SLOT_BATTLE * 4", "offsetof(struct HEAP_SLOTS, battleState)"),
     ("heap_enemy_units", "HEAP_SLOT_ENEMY_UNITS * 4", "offsetof(struct HEAP_SLOTS, enemyUnits)"),
 ];

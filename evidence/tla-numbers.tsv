@@ -48,7 +48,7 @@ games/tla/src/scene/airs_rock_inside.c	scAirsRockInsideWakeHallStatue	0xfcff	hon
 games/tla/src/scene/airs_rock_inside.c	scAirsRockInsideWakeVialChestStatue	0xfcff	honest	a mask of a screen entry clearing tile-number bits 8 and 9
 games/tla/src/scene/aqua_rock_inside.c	scAquaRockInsideShowAquariusStone	20	unsettled	UB: the room has no actor 20; finding the room or edition where actor 20 exists would settle it
 games/tla/src/scene/epilogue.c	scInit	120	honest	the ending picture's pan position in pixels
-games/tla/src/scene/gaia_rock_inside.c	scGaiaRockInsideJumpDownCobwebPit	0x800	unsettled	passed to fdActorSetSprCol for the dust, not the no-wait bit 0x1000; staging the drop to see what colour mode 0x800 gives, or finding where Camelot meant the no-wait bit, would settle it
+games/tla/src/scene/gaia_rock_inside.c	scGaiaRockInsideJumpDownCobwebPit	0x800	unsettled	passed to fdActorSetSpriteColor for the dust, not the no-wait bit 0x1000; staging the drop to see what colour mode 0x800 gives, or finding where Camelot meant the no-wait bit, would settle it
 games/tla/src/scene/kibombo.c	scKibomboAkafubuChants	360	honest	degrees in 16.16 to 65,536ths of a turn
 games/tla/src/scene/lemurian_ship.c	scLemurianShipOpenDoor	12	unsettled	a DEAD test for a door 12 among ten; only a twin or edition that uses it would settle it
 games/tla/src/scene/magma_rock.c	MagmaRockSalamanderTailLowWestCues	0x8	honest	flag 8 in a trigger's condition, as its comment says: after the party members' flags, set by no code
@@ -56,8 +56,8 @@ games/tla/src/scene/mikasalla.c	scMikasallaClimbDownLadder	17	honest	a drop in p
 games/tla/src/scene/venus_lighthouse.c	VENUS_COLOR_MARK_TAG	0x212	unsettled	a tag in the actor timer's upper bits nothing explains yet; a reader of those bits would settle it
 games/tla/src/scene/world_map.c	scInit	0x11d	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
 games/tla/src/shop/shop_sanctum.c	mnSanctumRunMemberIconBurst	24	honest	a DEAD shift of a flag byte to the word's top
-games/tla/src/sound/sound_test.c	sySndTestRun	10	honest	the sound test's R and L step of the cue number shown
-games/tla/src/system/system_oam.c	syOAMMatrixAllocFromTransform	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
+games/tla/src/sound/sound_test.c	sySoundTestRun	10	honest	the sound test's R and L step of the cue number shown
+games/tla/src/system/system_oam.c	syOAMMatrixAllocateFromTransform	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
 games/tla/src/system/system_serial.c	SERIAL_IDLE_HALFWORD	0xfefe	honest	the idle halfword on the serial wire between packets
 games/tla/src/system/system_vram_cache.c	syAffineMatrixBuild	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
 games/tla/src/window/screen_tables.c	MenuBarPatternRows	0x00000000	honest	a picture's 4bpp pixel word

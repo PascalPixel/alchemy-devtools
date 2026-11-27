@@ -64,7 +64,7 @@ impl<'a> Guide<'a> {
         let s = Boot {
             start: at("gmMainRoutineRunStub")?,
             menu: at("btDebugBattleRunMenu")?,
-            preset: at("btDebugParmSetLoad")?,
+            preset: at("btDebugParamSetLoad")?,
             encounter: at("btRun")?,
             game_state: at("MainRoutineStateWork")?,
             game_flags: at("GameFlagBytes")?,

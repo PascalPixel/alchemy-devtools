@@ -300,7 +300,7 @@ pub fn character(name: &str) -> Result<u8, String> {
 }
 
 /// The members debug party preset `preset` raises (DebugParameterSets, read
-/// by btDebugParmSetLoad: runs of rows, each ended by
+/// by btDebugParamSetLoad: runs of rows, each ended by
 /// DEBUG_PARAMETER_SET_END).
 pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
     let game = super::tables::Game::here()?;

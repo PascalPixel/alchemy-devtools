@@ -76,7 +76,7 @@ const PLACE_ENEMY: u16 = 0x180;
 /// map in screen block 31.
 const PICTURE: std::ops::Range<u32> = 0x0600_8000..0x0600_f800;
 /// The window colours, as BG palette entries: palette 15's colours 4 to 10,
-/// which mnWindowColApply sets from the player's window hue and brightness;
+/// which mnWindowColorApply sets from the player's window hue and brightness;
 /// palette 14's, palette 15 brightened for a chosen window
 /// (Palette_UpdatePulseBrightness); palette 5's colour 14, which the battle
 /// copies from colour 4 for the status windows' HP and PP (background.c), and
@@ -172,7 +172,7 @@ impl Symbols {
         Ok(Symbols {
             start: at("gmMainRoutineRunStub")?,
             menu: at("btDebugBattleRunMenu")?,
-            preset: either("btDebugParmSetLoad", "DebugParty_LoadPreset")?,
+            preset: either("btDebugParamSetLoad", "DebugParty_LoadPreset")?,
             encounter: either("btRun", "Battle_RunEncounter")?,
             collect: at("btUnitCollect")?,
             obj_make: at("btObjectMake")?,
@@ -381,7 +381,7 @@ fn record_run(
             // The chooser loads preset 0 first: load ours instead.
             say(
                 frame,
-                format!("btDebugParmSetLoad({}) -> {}", gba.register(0), cast.preset),
+                format!("btDebugParamSetLoad({}) -> {}", gba.register(0), cast.preset),
             );
             gba.set_register(0, cast.preset.into());
             hold_down = false;

@@ -551,7 +551,7 @@ impl<'a> Guide<'a> {
                         at("btEffectRunDragonCloud")?,
                         at("btEffectRunAnnihilation")?,
                     ),
-                    (at("btEffectRunEruption")?, at("btEffectCreateSprs")?),
+                    (at("btEffectRunEruption")?, at("btEffectCreateSprites")?),
                 ];
                 for name in [
                     "Dragon Cloud",

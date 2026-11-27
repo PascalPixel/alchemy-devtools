@@ -24,9 +24,9 @@ games/tbs/src/battle_effect/battle_effect_gaia.c	btEffectRunGaia	12	honest	a DEA
 games/tbs/src/battle_effect/battle_effect_projectiles.c	btEffectRunDjinniEntrance	15	honest	a screen pixel shifted to the mote's 16.16 x, halved
 games/tbs/src/field/script_commands_script.c	fdScriptStart	0x132	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
 games/tbs/src/field/script_commands_weather.c	fdEffectUpdateSparkles	32	honest	a sparkle's screen y in pixels: drawn from 32 above the screen's top
-games/tbs/src/field/field_player_control.c	fdActorUpdatePlayerCtrl	512	honest	a debug stall loop's count of passes
-games/tbs/src/field/field_player_control.c	fdActorUpdatePlayerCtrl	64	honest	a debug stall loop's count of passes
-games/tbs/src/field/field_player_control.c	fdActorUpdatePlayerCtrl	96	honest	a debug stall loop's count of passes
+games/tbs/src/field/field_player_control.c	fdActorUpdatePlayerControl	512	honest	a debug stall loop's count of passes
+games/tbs/src/field/field_player_control.c	fdActorUpdatePlayerControl	64	honest	a debug stall loop's count of passes
+games/tbs/src/field/field_player_control.c	fdActorUpdatePlayerControl	96	honest	a debug stall loop's count of passes
 games/tbs/src/field/field_mode_encounter.c	fdEncounterCountStepsAndSelectFormation	16	honest	the factor of the encounter-step formula its comment derives
 games/tbs/src/field/field_mode_internal.h	TRANSITION_SHOW_ALL	0x7f7f	honest	a WININ/WINOUT register value: every layer shown in both windows
 games/tbs/src/field/field_mode_internal.h	TRANSITION_SHOW_LOW_BYTE	0x007f	honest	a WININ/WINOUT register value: every layer shown in the low window
@@ -75,7 +75,7 @@ games/tbs/src/scene/sol_sanctum_eruption.c	scSolSanctumEruptionPlayWiseOneRescue
 games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c	scSolSanctumLunaSolRoomsSpringTrap	10	honest	the trap's flashes, a count a player could check
 games/tbs/src/scene/sol_sanctum_luna_sol_rooms.c	scSolSanctumLunaSolRoomsSpringTrap	12	honest	the trap's flashes, a count a player could check
 games/tbs/src/scene/sol_sanctum_statue.c	scSolSanctumStatueCenterStatueMoved	17	honest	the leader's half cell on the map grid, from the near edge
-games/tbs/src/scene/sol_sanctum_statue.c	scSolSanctumStatueUpdateScrollingSprs	10	honest	the scroll offset's 1024ths of a pixel shifted to pixels
+games/tbs/src/scene/sol_sanctum_statue.c	scSolSanctumStatueUpdateScrollingSprites	10	honest	the scroll offset's 1024ths of a pixel shifted to pixels
 games/tbs/src/scene/tolbi_ship_deck.c	scTolbiShipDeckIdleTurn	100	honest	a threshold of a 0-255 roll
 games/tbs/src/scene/tolbi_ship_deck.c	scTolbiShipDeckIdleTurn	200	honest	a threshold of a 0-255 roll
 games/tbs/src/scene/vale.c	scValeHaveGuardWatchTheLeader	18	honest	scValeTestFacing's range, in pixels
@@ -85,8 +85,8 @@ games/tbs/src/scene/venus_lighthouse_aerie.c	scVenusLighthouseAerieSpawnSideOrbi
 games/tbs/src/scene/venus_lighthouse_aerie.c	scVenusLighthouseAerieSpawnSideOrbitParticles	24	honest	the sway's amplitude in pixels, the FIXEDtoINT of a sine times 24
 games/tbs/src/scene/world_map.c	scInit	0x85c	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
 games/tbs/src/shop/shop_buy.c	mnShopDrawStock	10	honest	a step into the 32-step swell table the icon starts at
-games/tbs/src/sound/sound.c	sySndTestRun	10	honest	the sound test's R and L step of the cue number shown
-games/tbs/src/system/system_oam.c	syOAMMatrixAllocFromTransform	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
+games/tbs/src/sound/sound.c	sySoundTestRun	10	honest	the sound test's R and L step of the cue number shown
+games/tbs/src/system/system_oam.c	syOAMMatrixAllocateFromTransform	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
 games/tbs/src/system/system_serial.c	SERIAL_IDLE_HALFWORD	0xfefe	honest	the idle halfword on the serial wire between packets
 games/tbs/src/window/glyph_arm.c	mnGlyphDrawArm	16	honest	a glyph row moved to the word's upper halfword
 games/tbs/src/window/menu_title_tables.c	MenuBarPatternRows	0x00000000	honest	a picture's 4bpp pixel word
@@ -98,8 +98,8 @@ games/tbs/src/window/screens_battle_item_menu.c	mnBattleItemMenuRun	16	unsettled
 games/tbs/src/window/screens_battle_item_menu.c	mnBattleItemMenuRun	17	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
 games/tbs/src/window/screens_battle_psynergy_menu.c	mnBattlePsynergyMenuRun	16	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
 games/tbs/src/window/screens_battle_psynergy_menu.c	mnBattlePsynergyMenuRun	17	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
-games/tbs/src/window/screens_menu_titles.c	mnWindowSprPulse	256	honest	a 16.16 pulse scale cut to 8.8
+games/tbs/src/window/screens_menu_titles.c	mnWindowSpritePulse	256	honest	a 16.16 pulse scale cut to 8.8
 games/tbs/src/window/window_icons.c	mnItemIconCompose	256	unsettled	mnItemIconCompose's result, which no caller reads; a reader of it would settle what it stands for
 games/tbs/src/window/window_measure.c	mnTextMeasureAllPages	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tbs/src/window/window_settings_menu.c	mnColScaleComponents	10	honest	RGB555 packing: blue above green's five bits and red's five
-games/tbs/src/window/window_settings_menu.c	mnWindowColScaleTint	10	honest	RGB555 packing: blue above green's five bits and red's five
+games/tbs/src/window/window_settings_menu.c	mnColorScaleComponents	10	honest	RGB555 packing: blue above green's five bits and red's five
+games/tbs/src/window/window_settings_menu.c	mnWindowColorScaleTint	10	honest	RGB555 packing: blue above green's five bits and red's five

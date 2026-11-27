@@ -1,6 +1,6 @@
 //! A field scene, run from a built edition: where Game_ResetForNewGame has
 //! set a new game's defaults (gmMainRoutineStateInitDefaults) and makes its next call
-//! (mnWindowColApply), the run writes the scene, entrance and story flags
+//! (mnWindowColorApply), the run writes the scene, entrance and story flags
 //! into MainRoutineStateWork, so the main routine runs that scene instead of the title.
 //! The location-name notice (mnAreaNameWindowShow) returns at once unless
 //! show_notice is set. The
@@ -327,7 +327,7 @@ pub struct Symbols {
     psynergy: u32,
     /// Move's two ends (fdPsynergySteerPushedTarget, the hand on the
     /// target the scene's row names; fdPsynergyMove, the hand on
-    /// nothing) and fdInputGetDpadAng, which only Move's and Carry's hands
+    /// nothing) and fdInputGetDpadAngle, which only Move's and Carry's hands
     /// call, each frame they wait for the d-pad; 0 where the map has none.
     move_steer: u32,
     move_none: u32,
@@ -398,7 +398,7 @@ impl Symbols {
         };
         Ok(Symbols {
             init: at("gmMainRoutineStateInitDefaults")?,
-            glow: at("mnWindowColApply")?,
+            glow: at("mnWindowColorApply")?,
             load_layered: at("fdMapGridLoadMap")?,
             arrive: at("gmArrive")?,
             // The Lost Age places the party in three tries, its scene's table
@@ -434,7 +434,7 @@ impl Symbols {
             // The Broken Seal's story chapters load a debug preset, and The
             // Lost Age's guide recordings (party.rs); DebugParty_LoadPreset
             // is The Lost Age's name for it.
-            preset: find("btDebugParmSetLoad")
+            preset: find("btDebugParamSetLoad")
                 .or_else(|| find("DebugParty_LoadPreset"))
                 .unwrap_or(0),
             restore: at("gmPartyRestoreHpPp")?,
@@ -450,7 +450,7 @@ impl Symbols {
             psynergy: at("fdUsePsynergy")?,
             move_steer: find("fdPsynergySteerPushedTarget").unwrap_or(0),
             move_none: find("fdPsynergyMove").unwrap_or(0),
-            dpad_angle: find("fdInputGetDpadAng").unwrap_or(0),
+            dpad_angle: find("fdInputGetDpadAngle").unwrap_or(0),
             run_raised: either("fdRunRaisedCue", "Scene_RunRaisedEvent")?,
             show_row: [
                 at("fdScriptStart")?,
@@ -607,7 +607,7 @@ pub(super) struct Track {
     /// Whether one of the event's own functions (Field::own) has run since.
     own_ran: bool,
     /// The calls that set up the scene's party (Field::party_calls) made
-    /// so far at mnWindowColApply's entry, and r0 to r3 and lr kept
+    /// so far at mnWindowColorApply's entry, and r0 to r3 and lr kept
     /// meanwhile.
     party_calls: u8,
     party_saved: [u32; 5],
@@ -1251,7 +1251,7 @@ impl<'rom> Field<'rom> {
         }
     }
 
-    /// At mnWindowColApply's entry, while a new game is set up: makes the
+    /// At mnWindowColorApply's entry, while a new game is set up: makes the
     /// next of the party's calls, returning to that entry, or, once all are
     /// made, puts back the registers the first found. Whether it called.
     fn party_call(&mut self) -> bool {

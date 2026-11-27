@@ -776,7 +776,7 @@ staged:
     north, east, south or west after it for 60 frames (cast:move:east,
     Move steered), cast:ABILITY:WAY:N for N. The ability is ability_ids.h's
     (hover, HOVER or ABILITY_HOVER). The way is pressed once the cast's
-    hand grips (Move's and Carry's hands read the d-pad, fdInputGetDpadAng,
+    hand grips (Move's and Carry's hands read the d-pad, fdInputGetDpadAngle,
     once the cast's animation is over and the hand is on its target), as a
     player presses it, and a hand still waiting once the way is over is
     let go with B. Move's hand takes the actor of the scene's Move row in
