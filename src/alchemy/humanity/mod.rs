@@ -118,12 +118,12 @@ const KEYWORDS: &[&str] = &[
 const STANDARD_MACROS: &[&str] = &["NULL", "TRUE", "FALSE", "offsetof", "UNUSED"];
 
 /// Whether a routine is the compiler's, the C library's or the BIOS's,
-/// named as those name it (`__divsi3`, `_call_via_r0`, `abs`, `Bios_CpuSet`):
+/// named as those name it (`__divsi3`, `_call_via_r0`, `abs`, `BiosCpuSet`):
 /// its documentation is theirs.
 fn is_library_routine(name: &str) -> bool {
     name.starts_with("__")
         || name.starts_with("_call_via_")
-        || name.starts_with("Bios_")
+        || name.starts_with("Bios")
         || matches!(
             name,
             "abs"
@@ -493,7 +493,7 @@ pub struct Report {
     /// Every file read.
     paths: BTreeSet<String>,
     /// The externs an id macro takes the address of (`extern char
-    /// SceneId_Vale;` beside `#define SCENE_VALE ((s32)&SceneId_Vale)`).
+    /// SceneIdVale;` beside `#define SCENE_VALE ((s32)&SceneIdVale)`).
     id_externs: HashSet<String>,
     /// The identifiers the macros' bodies and the assembly (a far-call
     /// veneer's export row) use, for which routines and tables are referred
@@ -2118,6 +2118,7 @@ fn regexes() -> &'static [Regex; 3] {
                 r"^(?:(?:unk|Unk|UNK|[gs]Unk|[gs]UNK)(?:nown)?(?:$|[_0-9A-Z]))",
                 r"|^(?:sub|func|Func|data|loc|off|byte|word|dword|nullsub|D)_[0-9A-Fa-f]{2,}",
                 r"|^field_[0-9A-Fa-f]+",
+                r"|^(?:Func|Data)0[0-9A-Fa-f]{7}$",
                 r"|[_a-z0-9]Unk(?:nown)?(?:$|[_0-9A-Z])|_unk(?:$|[_0-9])|_UNK(?:$|[_0-9])",
                 r"|_0[23689][0-9A-Fa-f]{6}(?:$|_)",
                 r"|^(?:SE|MUS|SPRITE|ITEM|ABILITY|ENEMY|DJINNI)_[0-9]+$|^nullsub",
@@ -3212,7 +3213,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                 } else {
                     let documented = self.code.doc_before[start]
                         || (start..=end).any(|at| self.code.doc_after[at]);
-                    // `#define SCENE_VALE ((s32)&SceneId_Vale)`: one declaration with its extern.
+                    // `#define SCENE_VALE ((s32)&SceneIdVale)`: one declaration with its extern.
                     let texts: Vec<&str> = body.iter().map(|t| t.text).collect();
                     let id = match texts[..] {
                         ["(", "(", "s32", ")", "&", target, ")"] => Some(target),
@@ -4395,7 +4396,7 @@ impl<'r, 'a> Walk<'r, 'a> {
                     None,
                 );
                 // A mechanism's table counts where it is defined; a game thing
-                // (`extern char SceneId_Vale;`) where it is declared.
+                // (`extern char SceneIdVale;`) where it is declared.
                 if defined
                     || provenance::kind(
                         Definition::new(&name, file, Origin::Global),
@@ -6273,6 +6274,8 @@ mod tests {
                 && is_placeholder("ITEM_034")
                 && is_placeholder("DJINNI_07")
                 && is_placeholder("Battle_08012345")
+                && is_placeholder("Func081c0168")
+                && is_placeholder("Data0203a000")
                 && is_placeholder("UnkThing")
         );
         for name in [
@@ -6685,7 +6688,7 @@ mod tests {
             "/// The sizes.\n#define A 1\n#define B 2\n#if X\n#define C 3\n#endif\n\n",
             "// Plain head.\n#define D 4\n\n",
             "#define REG_X (*(vu16 *)0x4000000)\n#define REG_SOUNDCNT_H (*(vu16 *)0x4000082)\n",
-            "extern char SceneId_Vale;\n#define SCENE_VALE ((s32)&SceneId_Vale)\n",
+            "extern char SceneIdVale;\n#define SCENE_VALE ((s32)&SceneIdVale)\n",
             "#ifndef DEFAULT\n#define DEFAULT 1\n#endif\n#define BARE 5\n#endif\n",
         );
         let scene = concat!(
@@ -6719,7 +6722,7 @@ mod tests {
         assert_eq!(names("undocumented_run"), ["B", "C", "gVale_DoorB"]);
         assert_eq!(names("undocumented_plain"), ["D", "gVale_Count"]);
         assert_eq!(names("undocumented_register"), ["REG_X", "REG_SOUNDCNT_H"]);
-        assert_eq!(names("undocumented_id"), ["SCENE_VALE", "SceneId_Vale"]);
+        assert_eq!(names("undocumented_id"), ["SCENE_VALE", "SceneIdVale"]);
         assert_eq!(names("undocumented_macro"), ["DEFAULT", "BARE"]);
         assert_eq!(
             names("undocumented_scene"),
@@ -6753,7 +6756,7 @@ mod tests {
             "extern void *gBare;\n\n",
             "/// Picks the width by edition.\n#if LANGUAGE == 1 || \\\n    LANGUAGE == 2\n#define WIDE 1\n#define NARROW 3\n#else\n#define WIDE 2\n#define NARROW 4\n#endif\n\n",
             "/// Divides.\ns32 Math_DivideBy(s32 a, s32 b);\n\n",
-            "s32 __divsi3(s32 a, s32 b);\nvoid Bios_CpuSet(void);\n\n",
+            "s32 __divsi3(s32 a, s32 b);\nvoid BiosCpuSet(void);\n\n",
             "/// Sends, as a far call takes it.\ns32 Send(s32 a);\ns32 SendAgain(s32 a);\n\n",
             "static inline s32 Field_Send(s32 a) { return Send(a); }\n\n",
             "static inline s32 Field_Twice(s32 a) { return Send(Send(a)); }\n\n",
@@ -6797,7 +6800,7 @@ mod tests {
             "a /// over a two-line #if; one call to the same routine past a blank line"
         );
         assert_eq!(names("undocumented_forward"), ["Field_Send"]);
-        assert_eq!(names("undocumented_library"), ["Bios_CpuSet", "__divsi3"]);
+        assert_eq!(names("undocumented_library"), ["BiosCpuSet", "__divsi3"]);
         assert_eq!(names("undocumented_standard"), ["NULL", "TRUE"]);
         assert_eq!(names("undocumented_view"), ["ALIAS", "WINDOW_STATE"]);
         assert_eq!(names("undocumented_typed"), ["gRipple"]);
@@ -7965,7 +7968,7 @@ mod provenance_tests {
         // The Lost Age's rules: a macro's definition is no row, a group's is.
         let rules = "\t.macro scene_name scene:req, entrance:req, name:req\n\t.endm\n\tgroup_name 0, -1, 0\n\tscene_name 11, 7, 7\n\tgroup_name 7, -1, 8\n";
         assert_eq!(area_count(rules), Some(9));
-        let ids = "/// @file\n/// Scenes.\n\n/// ★ Named from its area name: Bilibin\nextern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
+        let ids = "/// @file\n/// Scenes.\n\n/// ★ Named from its area name: Bilibin\nextern char SceneIdBilibin;\nextern char SceneIdBilibinWarehouse;\n";
         let flags = "/// ★ Named from the game: \"Hidden Treasury\" (MsgSign)\n#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_SCENE_TEMP_01 0x200\n#define FLAG_WAREHOUSE_SEEN 0x11 ///< Named from the game: \"Hidden Treasury\" (MsgSign)\n";
         let scene = concat!(
             "/// @file\n/// Bilibin and the Bilibin Barricade.\n///\n/// ACTOR_GUARD stands by `Bilibin Barricade`.\n",
@@ -7995,8 +7998,8 @@ mod provenance_tests {
         assert_eq!(
             names,
             [
-                "SceneId_Bilibin",
-                "SceneId_BilibinWarehouse",
+                "SceneIdBilibin",
+                "SceneIdBilibinWarehouse",
                 "FLAG_TREASURY_OPEN",
                 "FLAG_WAREHOUSE_SEEN",
                 "ACTOR_GUARD",
@@ -8010,7 +8013,7 @@ mod provenance_tests {
         assert_eq!(
             report.value("provenance_verified"),
             2,
-            "SceneId_Bilibin and FLAG_TREASURY_OPEN"
+            "SceneIdBilibin and FLAG_TREASURY_OPEN"
         );
         assert_eq!(
             report.value("provenance_unstarred"),
@@ -8025,7 +8028,7 @@ mod provenance_tests {
         assert_eq!(
             report.value("provenance_none"),
             2,
-            "SceneId_BilibinWarehouse and ACTOR_MAN"
+            "SceneIdBilibinWarehouse and ACTOR_MAN"
         );
         assert_eq!(
             report.value("unused_words"),
@@ -8035,7 +8038,7 @@ mod provenance_tests {
         let words = list(&[("tbs", &report)], "unused_word");
         assert!(
             words.starts_with(
-                "tbs\twarehouse\t3\tSceneId_BilibinWarehouse games/tbs/include/scene_ids.h:6; "
+                "tbs\twarehouse\t3\tSceneIdBilibinWarehouse games/tbs/include/scene_ids.h:6; "
             ),
             "{words}"
         );
@@ -8066,7 +8069,7 @@ mod provenance_tests {
             "msgctxt \"message\"\nmsgid \"00003\"\nmsgstr \"Bilibin Barricade\"\n",
         );
         let text = GameText::parse(po, Some(2)).unwrap();
-        let ids = "extern char SceneId_Bilibin;\nextern char SceneId_BilibinWarehouse;\n";
+        let ids = "extern char SceneIdBilibin;\nextern char SceneIdBilibinWarehouse;\n";
         let flags = "#define FLAG_TREASURY_OPEN 0x10\n#define FLAG_WAREHOUSE_SEEN 0x11\n#define FLAG_GATE_OPEN 0x12\n";
         let scene = "enum {\n  ACTOR_GUARD,\n  ACTOR_PILLAR,\n  ACTOR_MAN,\n  ACTOR_DOOR,\n  ACTOR_ODD,\n  ACTOR_SHADOW,\n  ACTOR_MARK,\n};\n";
         let files = [
@@ -8076,7 +8079,7 @@ mod provenance_tests {
         ];
         let names = evidence::parse_names(concat!(
             "name\tkind\tevidence\tfile\n",
-            "SceneId_Bilibin\tits area name\tBilibin\tgames/tbs/include/other_ids.h\n",
+            "SceneIdBilibin\tits area name\tBilibin\tgames/tbs/include/other_ids.h\n",
             "FLAG_TREASURY_OPEN\tthe game\t\"Hidden Treasury\" (MsgSign)\tgames/tbs/include/flags.h\n",
             "FLAG_WAREHOUSE_SEEN\tthe game\t\"Hidden Warehouse\" (MsgSign)\tgames/tbs/include/flags.h\n",
             "FLAG_GATE_OPEN\tthe game\t\"Hidden Treasury\" (MsgSign)\tgames/tbs/include/gates.h\n",
@@ -8099,7 +8102,7 @@ mod provenance_tests {
                 .map(|line| line.rsplit('\t').next().unwrap().to_string())
         };
         assert_eq!(
-            evidence("SceneId_Bilibin").as_deref(),
+            evidence("SceneIdBilibin").as_deref(),
             Some("verified area"),
             "a map id, by its name wherever declared"
         );
@@ -8130,7 +8133,7 @@ mod provenance_tests {
             "a render row names its render"
         );
         assert_eq!(
-            evidence("SceneId_BilibinWarehouse").as_deref(),
+            evidence("SceneIdBilibinWarehouse").as_deref(),
             Some("none")
         );
         assert_eq!(
@@ -8419,7 +8422,7 @@ mod provenance_tests {
     fn door_words_in_the_report() {
         let po = "msgctxt \"MsgDebugAreaName\"\nmsgid \"00001\"\nmsgstr \"Tolbi\"\n";
         let text = GameText::parse(po, Some(1)).unwrap();
-        let ids = "/// ★ Named from its area name: Tolbi\nextern char SceneId_Tolbi;\n";
+        let ids = "/// ★ Named from its area name: Tolbi\nextern char SceneIdTolbi;\n";
         let links = "enum {\n  TOLBI_FROM_WORLD_MAP_NORTH = 1,\n  TOLBI_FROM_HOUSE = 2,\n  TOLBI_TO_HOUSE = 3,\n};\n";
         let files = [
             ("games/tbs/include/scene_ids.h", ids),
@@ -8449,7 +8452,7 @@ mod naming_tests {
 
     #[test]
     fn names_are_read_for_the_naming_checks() {
-        let guide = "# Battle\n\n| `Battle_` | the battle |\n";
+        let guide = "# Battle\n\n| `Battle` | the battle |\n";
         let code = concat!(
             "struct Unit { u8 itemCnt; u16 count; void (*draw)(void); };\n",
             "enum Mode { MODE_IDLE, MODE_WALK, MODE_RUN };\n",

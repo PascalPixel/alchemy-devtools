@@ -3,7 +3,7 @@
 //! the same, preprocessor lines aside (whitespace and comments are no
 //! tokens) and their parameters and locals renamed in order (a bound name
 //! carries nothing of what the routine does), apart from their own name's
-//! prefix (`Daila_` in
+//! prefix (`Daila` in
 //! `Daila_ShowShop`, `gDaila_` in `gDaila_Shops`) and the names that follow
 //! from it: a name with that prefix that is itself a function or table of
 //! the game, and the same as the other copy's by this same rule. Every other

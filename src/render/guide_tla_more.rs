@@ -25,14 +25,14 @@ const INTRO_VALLEY: u32 = 1180;
 /// Debug set 9: Felix, Jenna and Sheba at level 9, as they reach
 /// Mikasalla.
 const PARTY_PLATEAU: u32 = 9;
-/// Mikasalla (SceneId_Mikasalla1) by the north end of its passage (exit 7
+/// Mikasalla (SceneIdMikasalla1) by the north end of its passage (exit 7
 /// leads there), Spark there (mikasalla.c: ACTOR_SPARK), and the passage's
 /// north mouth, which leads to its south mouth (exit 9) and back (exit 7).
 const MIKASALLA: &str = "Mikasalla";
 const MIKASALLA_NORTH: u16 = 9;
 const SPARK: u16 = 18;
 const PASSAGE_NORTH: (i32, i32) = (312, 262);
-/// The Kandorean Temple's room with a stream (SceneId_KandoreanTempleStream),
+/// The Kandorean Temple's room with a stream (SceneIdKandoreanTempleStream),
 /// a map whose ground effects (MapState.groundEffects) are wading.
 const TEMPLE_STREAM: &str = "KandoreanTempleStream";
 
@@ -507,7 +507,7 @@ impl<'a> Guide<'a> {
 /// Debug set 19, the party once Piers has joined, as it reaches Yallam.
 const PARTY_PIERS_FORGE: u32 = 19;
 
-/// Contigo's game room (SceneId_Contigo3) and the man who offers Super
+/// Contigo's game room (SceneIdContigo3) and the man who offers Super
 /// Lucky Dice there (contigo.c: Contigo_SendToSuperLuckyDice, actor 8).
 const CONTIGO_GAMES: &str = "ContigoLuckyDice";
 const SUPER_DICE_MAN: u16 = 8;

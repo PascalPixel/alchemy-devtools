@@ -1219,7 +1219,7 @@ fn own_place(part: &str, common: &str, areas: &[Vec<String>]) -> bool {
 /// share. A family has at least `FAMILY` members, and its pattern is what
 /// two thirds of them do:
 ///
-/// - case: `SceneId_Vale` beside `SceneId_VALE_CAVE`;
+/// - case: `SceneIdVale` beside `SceneId_VALE_CAVE`;
 /// - an enum's shared leading segments (`FLAG_VALE_`) that one of its
 ///   members lacks;
 /// - a function named with a family's prefix but no `_` (`BattleObjGet`
@@ -1328,7 +1328,7 @@ fn shapes(all: &[&Name], families: &[Family], text: Option<&GameText>, out: &mut
                     .find(|(_, _, place)| matches!(place, Some((0, _))))
                     .map_or("", |(_, name, _)| name.name.as_str());
                 for (_, name, place) in &placed {
-                    // S3 puts `Unused` right after the prefix (`SceneId_UnusedMercuryLighthouseAerie2`).
+                    // S3 puts `Unused` right after the prefix (`SceneIdUnusedMercuryLighthouseAerie2`).
                     let unused = rest(&name.name).to_ascii_lowercase().starts_with("unused");
                     if let Some((_, area)) = place.as_ref().filter(|(at, _)| *at > 0 && !unused) {
                         let family_prefix = prefix(&name.name).unwrap_or("");
@@ -1451,7 +1451,7 @@ fn measures(all: &[&Name], out: &mut Vec<Finding>) {
 /// shortened word is spelled out, each `SPELLINGS` word is its set's and
 /// plurals are singular (`BattleObj_` and `BattleObject_`, `ANIM_` and
 /// `ANIMATION_`, `STREAKS_` and `STREAK_`). Prefixes that differ
-/// only in case (`Battle_` and `BATTLE_`) are one spelling, struct members
+/// only in case (`Battle` and `BATTLE_`) are one spelling, struct members
 /// are left out, so are macros written as calls, which may start with a
 /// verb (`COUNT_ALL_CURES` counts, beside pret's `NUM_MUSIC_PLAYERS`), and so is a shortened word that is a hardware register's
 /// segment (`OBJ_` of `OBJ_AFFINE_MATRIX_COUNT`, the hardware's OBJ, not a
@@ -1499,10 +1499,10 @@ fn twin_prefixes(
             .is_some_and(|segment| segment.eq_ignore_ascii_case("per"))
     };
     // The last word of each scene's name (`grounds` of
-    // `SceneId_KibomboStatueGrounds`): a place's own word.
+    // `SceneIdKibomboStatueGrounds`): a place's own word.
     let scene_ends: HashSet<String> = all
         .iter()
-        .filter_map(|name| name.name.strip_prefix("SceneId_"))
+        .filter_map(|name| name.name.strip_prefix("SceneId"))
         .filter_map(|scene| words(scene).last().cloned())
         .collect();
     // Each segment a name writes after its first, by file (`SPARKS` of
@@ -2179,7 +2179,7 @@ mod tests {
             &["FALLS_PALETTE", "FALL_FRAMES", "FALL_TRAILS"],
             NameKind::Macro,
         );
-        add(&["SceneId_KibomboStatueGrounds"], NameKind::Extern);
+        add(&["SceneIdKibomboStatueGrounds"], NameKind::Extern);
         add(
             &["GROUNDS_FIRE", "GROUND_LEVEL", "GROUND_HEIGHT"],
             NameKind::Macro,

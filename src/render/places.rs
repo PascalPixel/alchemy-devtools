@@ -281,7 +281,7 @@ pub struct Row {
     /// A GIF's frames at 30 a second.
     pub frames: usize,
     /// An event GIF's destination: the scene it leads to, by its SceneId
-    /// symbol (`SceneId_WorldMap`, `#N` for an unnamed row).
+    /// symbol (`SceneIdWorldMap`, `#N` for an unnamed row).
     pub leads_to: String,
     /// Why an exit's recording ends before the player has control there.
     pub note: String,
@@ -1563,7 +1563,7 @@ impl Context<'_> {
                         .iter()
                         .find(|s| s.number == n)
                         .and_then(|s| s.symbol.clone())
-                        .map_or(format!("#{n}"), |s| format!("SceneId_{s}"))
+                        .map_or(format!("#{n}"), |s| format!("SceneId{s}"))
                 });
                 match self.gif(&file, &run.frames) {
                     Ok((written, more)) => self.rows.push(Row {
@@ -2989,7 +2989,7 @@ impl Context<'_> {
                 .find(|s| s.number == n)
                 .and_then(|s| s.symbol.as_deref())
             {
-                Some(symbol) => format!("SceneId_{symbol}"),
+                Some(symbol) => format!("SceneId{symbol}"),
                 None => format!("#{n}"),
             }
         });

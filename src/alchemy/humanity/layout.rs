@@ -53,7 +53,7 @@ fn is_frame(path: &str, tracked: &HashSet<&str>) -> bool {
 
 /// Whether an `its number` row names the thing a file or folder is named
 /// for: `status_grim_reaper_1.png` is `SPRITE_STATUS_GRIM_REAPER_1`'s
-/// picture, `test_3` the debug area `SceneId_Test3`.
+/// picture, `test_3` the debug area `SceneIdTest3`.
 fn by_row(name: &str, rows: &[String]) -> bool {
     let flat = |text: &str| {
         text.chars()
@@ -125,7 +125,7 @@ pub fn numbered_symbols(texts: &[(String, String)]) -> HashMap<String, Vec<(usiz
 
 /// Whether a numbered file is one nothing uses: it has a symbol in the
 /// sources, its stem's words in capitals (`SE_120` for `se_120.mid`) or in
-/// mixed case after a prefix (`Sound_Wave50` for `wave_50.pcm8.wav`), and
+/// mixed case after a prefix (`SoundWave50` for `wave_50.pcm8.wav`), and
 /// each of its symbols is written only where it is defined, on one line or
 /// two together (`SE_120,` in `sounds.h`; `.global X` and `X:`). A file
 /// with no symbol (a sprite kept by its row's number) cannot be shown
@@ -161,7 +161,7 @@ pub struct Uses {
 }
 
 /// A MIDI file's voice groups, from its first text event's header
-/// (`Sound_SeVoices`), and the programs its tracks select; `None` for a
+/// (`SoundSeVoices`), and the programs its tracks select; `None` for a
 /// file that is not MIDI.
 pub fn midi_programs(bytes: &[u8]) -> Option<(BTreeSet<String>, BTreeSet<u8>)> {
     fn number(bytes: &[u8], at: &mut usize) -> Option<usize> {
@@ -176,7 +176,7 @@ pub fn midi_programs(bytes: &[u8]) -> Option<(BTreeSet<String>, BTreeSet<u8>)> {
         }
     }
     static BANK: OnceLock<Regex> = OnceLock::new();
-    let bank = BANK.get_or_init(|| Regex::new(r"Sound_\w+Voices").unwrap());
+    let bank = BANK.get_or_init(|| Regex::new(r"Sound\w+Voices").unwrap());
     if bytes.get(..4)? != b"MThd" {
         return None;
     }
@@ -291,7 +291,7 @@ pub fn uses(texts: &[(String, String)], songs: &[(String, Vec<u8>)]) -> Uses {
                 .and_then(|bytes| bytes.split(',').next()?.trim().parse::<u32>().ok());
             let banks: BTreeSet<String> = text
                 .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
-                .filter(|word| word.starts_with("Sound_") && word.ends_with("Voices"))
+                .filter(|word| word.starts_with("Sound") && word.ends_with("Voices"))
                 .map(str::to_string)
                 .collect();
             let programs = if tracks.unwrap_or(1) > 0 {
@@ -351,10 +351,10 @@ pub fn uses(texts: &[(String, String)], songs: &[(String, Vec<u8>)]) -> Uses {
     out
 }
 
-/// Whether a numbered sample nothing plays: its symbol (`Sound_Wave52` for
+/// Whether a numbered sample nothing plays: its symbol (`SoundWave52` for
 /// `wave_52.pcm8.wav`) is written only where it is defined and in voice
 /// rows, and no song the game plays selects any of those rows' programs in
-/// their voice group (`Sound_SeVoices`' row 94 only in `se_562.mid`, a sound
+/// their voice group (`SoundSeVoices`' row 94 only in `se_562.mid`, a sound
 /// nothing plays).
 fn unplayed(name: &str, symbols: &HashMap<String, Vec<(usize, usize)>>, uses: &Uses) -> bool {
     let rows: Vec<&(String, usize, String, (usize, usize))> = uses
@@ -392,7 +392,7 @@ fn unplayed(name: &str, symbols: &HashMap<String, Vec<(usize, usize)>>, uses: &U
 }
 
 /// Whether `symbol` writes a file's stem: its words in capitals (`SE_120`
-/// for `se_120.mid`), or in mixed case after a prefix (`Sound_Wave50` for
+/// for `se_120.mid`), or in mixed case after a prefix (`SoundWave50` for
 /// `wave_50.pcm8.wav`).
 fn writes(symbol: &str, name: &str) -> bool {
     let stem = stem(name);
@@ -409,7 +409,10 @@ fn writes(symbol: &str, name: &str) -> bool {
         || symbol == mixed
         || symbol
             .strip_suffix(mixed.as_str())
-            .is_some_and(|prefix| prefix.ends_with('_'))
+            .is_some_and(|prefix| {
+                prefix.starts_with(|c: char| c.is_ascii_uppercase())
+                    && prefix.chars().all(|c| c.is_ascii_alphanumeric())
+            })
 }
 
 /// Count a game's tracked files under `games/<game>/` (`paths`, each from
@@ -540,9 +543,9 @@ mod tests {
             ("games/tla/src/scene/vale.c", "  Sound_Play(SE_105);\n"),
             (
                 "games/tla/sound/samples.s",
-                "\t.global Sound_Wave50\nSound_Wave50:\n\t.global Sound_Wave52\nSound_Wave52:\n",
+                "\t.global SoundWave50\nSoundWave50:\n\t.global SoundWave52\nSoundWave52:\n",
             ),
-            ("games/tla/sound/voices.s", "\tvoice 0, Sound_Wave52\n"),
+            ("games/tla/sound/voices.s", "\tvoice 0, SoundWave52\n"),
         ]
         .map(|(path, text)| (path.to_string(), text.to_string()))
         .to_vec();
@@ -586,7 +589,7 @@ mod tests {
                 "games/tla/sound/samples/wave_52.pcm8.wav",
                 "games/tla/src/graphics/set_03/",
             ],
-            "star_dot_00 and _01 are frames of one set; a sprite has no symbol; SE_105 is played and Sound_Wave52 is a voice's"
+            "star_dot_00 and _01 are frames of one set; a sprite has no symbol; SE_105 is played and SoundWave52 is a voice's"
         );
         assert_eq!(
             listed("numbered_files_unused"),
@@ -627,19 +630,19 @@ mod tests {
     #[test]
     fn samples_heard_only_in_sounds_nothing_plays_and_maps_no_scene_names() {
         assert_eq!(
-            midi_programs(&midi("Sound_SeVoices", 7)),
+            midi_programs(&midi("SoundSeVoices", 7)),
             Some((
-                BTreeSet::from(["Sound_SeVoices".to_string()]),
+                BTreeSet::from(["SoundSeVoices".to_string()]),
                 BTreeSet::from([7])
             ))
         );
         let texts: Vec<(String, String)> = [
             ("games/tla/include/sounds.h", "enum SoundId {\n  SE_FLASH,\n  SE_562,\n};\n"),
             ("games/tla/src/field/flash.c", "void Flash(void) { Sound_Play(SE_FLASH); }\n"),
-            ("games/tla/sound/direct_sound_samples.s", "\t.global Sound_Wave52\nSound_Wave52:\n\t.global Sound_Wave64\nSound_Wave64:\n"),
+            ("games/tla/sound/direct_sound_samples.s", "\t.global SoundWave52\nSoundWave52:\n\t.global SoundWave64\nSoundWave64:\n"),
             (
                 "games/tla/sound/voice_groups.s",
-                "\t.global Sound_SeVoices\nSound_SeVoices:\n\tvoice 0x00, 60, 0, 0, Sound_Wave52, 255, 0, 255, 226\n\tvoice 0x00, 60, 0, 0, Sound_Wave64, 255, 0, 255, 226\n",
+                "\t.global SoundSeVoices\nSoundSeVoices:\n\tvoice 0x00, 60, 0, 0, SoundWave52, 255, 0, 255, 226\n\tvoice 0x00, 60, 0, 0, SoundWave64, 255, 0, 255, 226\n",
             ),
             ("games/tla/src/field/map_grid_data.c", "struct MapRow gMaps[] = {\n    {1, 2, {3, 4, 5}, 6}, // vale\n    {7, 8, {9, 10, 11}, 12}, // map_290\n};\n"),
             ("games/tla/src/field/scenes.s", "\tscene Vale, 0x649, AREA_VALE, SCENE_TYPE_TOWN, 0, 0\n"),
@@ -649,11 +652,11 @@ mod tests {
         let songs = [
             (
                 "games/tla/sound/songs/se_562.mid".to_string(),
-                midi("Sound_SeVoices", 0),
+                midi("SoundSeVoices", 0),
             ),
             (
                 "games/tla/sound/songs/se_flash.mid".to_string(),
-                midi("Sound_SeVoices", 1),
+                midi("SoundSeVoices", 1),
             ),
         ];
         let used = uses(&texts, &songs);

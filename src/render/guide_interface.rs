@@ -24,11 +24,11 @@ const KEY_DOWN: u32 = 0x80;
 const KEY_R: u32 = 0x100;
 const KEY_L: u32 = 0x200;
 
-/// Xian (SceneId_Xian), entered from the world map: all four party members
+/// Xian (SceneIdXian), entered from the world map: all four party members
 /// have joined, with the Djinn, Psynergy and equipment of their debug
 /// preset (party.rs).
 const XIAN: (u16, u16) = (72, 1);
-/// The Vale Sanctum from Vale (SceneId_Sanctum, entrance 1), and its healer.
+/// The Vale Sanctum from Vale (SceneIdSanctum, entrance 1), and its healer.
 const VALE_SANCTUM: (u16, u16) = (9, 1);
 const SANCTUM_HEALER: u16 = 8;
 /// Facing north, 1/65536 turns: across a counter.
@@ -43,7 +43,7 @@ const ISAAC: u8 = 0;
 const GARET: u8 = 1;
 const IVAN: u8 = 2;
 
-/// Vale by day after the party has left (SceneId_Vale, entrance 1).
+/// Vale by day after the party has left (SceneIdVale, entrance 1).
 const VALE: (u16, u16) = (4, 1);
 /// press_settled: the frames always let pass before a key, the frames the
 /// picture must hold still (no more than SETTLE_PIXELS changing from one to
@@ -506,7 +506,7 @@ impl<'a> Guide<'a> {
         Ok(())
     }
 
-    /// The gem owner in Vault (SceneId_LogRoomsB): `Waah!`, a skippable
+    /// The gem owner in Vault (SceneIdLogRoomsB): `Waah!`, a skippable
     /// pause, the page arrow, the window cleared and measured again for the
     /// shorter second page, and A closing it, as `window/pauses-pages.gif`.
     fn pauses_pages(&mut self) -> Result<(), String> {
@@ -528,7 +528,7 @@ impl<'a> Guide<'a> {
         )
     }
 
-    /// The sick old man in Imil's houses (SceneId_IceRooms) while the
+    /// The sick old man in Imil's houses (SceneIdIceRooms) while the
     /// epidemic lasts: each `Cough` typed in the shaking style ({text_effect:4},
     /// the decoder taking one off: TEXT_STYLE_SHAKE), its letters jittering a
     /// pixel either way, as `window/text-style.gif`.

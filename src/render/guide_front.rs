@@ -24,7 +24,7 @@ const KEY_DOWN: u32 = 0x80;
 const VALE: (u16, u16) = (4, 1);
 /// The world map as the party first leaves Vale (WORLD_MAP_FROM_VALE_PLAZA).
 const WORLD_MAP: (u16, u16) = (2, 1);
-/// Vale's gate, SceneId_ValePlaza, arrived at from the world map
+/// Vale's gate, SceneIdValePlaza, arrived at from the world map
 /// (VALE_PLAZA_FROM_WORLD_MAP).
 const VALE_PLAZA: (u16, u16) = (5, 10);
 /// Sol Sanctum's entrance, arrived at from Vale at the foot of its path
@@ -36,7 +36,7 @@ const SOL_CHEST_ROOM: (u16, u16) = (16, 2);
 const CELL_BEHAVIOR_SOL_SANCTUM_RELIEFS_CHEST: u16 = 100;
 /// Vale's strongman by the river (vale.c, ACTOR_STRONGMAN_BY_THE_RIVER).
 const STRONGMAN_BY_THE_RIVER: u16 = 12;
-/// The loft of Vault's inn, SceneId_LogRoomsA by its loft entrance, and
+/// The loft of Vault's inn, SceneIdLogRoomsA by its loft entrance, and
 /// the villager the thieves tied up there (log_rooms_a.c,
 /// ACTOR_TIED_UP_VILLAGER).
 const VAULT_LOFT: (u16, u16) = (21, 15);
@@ -327,7 +327,7 @@ impl<'a> Guide<'a> {
         self.front_gif("front/chest.gif", &frames, "a chest opened in Sol Sanctum")
     }
 
-    /// The thieves in the loft of Vault's inn (SceneId_LogRoomsA, its
+    /// The thieves in the loft of Vault's inn (SceneIdLogRoomsA, its
     /// loft entrance): Isaac frees the villager tied up there, the thieves
     /// attack, the battle opens, the battle's end, and the loft after the
     /// party wins, as `front/vault-thieves.gif`. Each part shows CLEARED frames
@@ -396,7 +396,7 @@ impl<'a> Guide<'a> {
         Self::press_path(field, &path)
     }
 
-    /// Vale's number stepped down past map 0 to SceneId_MenuTest, and A.
+    /// Vale's number stepped down past map 0 to SceneIdMenuTest, and A.
     fn engine_debug_select(&mut self) -> Result<(), String> {
         let frames = self.selector(5, 110)?;
         self.front_gif(
@@ -406,7 +406,7 @@ impl<'a> Guide<'a> {
         )
     }
 
-    /// One step further, to SceneId_IncreaseItemAndLevel, and A.
+    /// One step further, to SceneIdIncreaseItemAndLevel, and A.
     fn debug_map_select(&mut self) -> Result<(), String> {
         let frames = self.selector(6, 110)?;
         self.front_gif(

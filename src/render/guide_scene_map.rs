@@ -28,7 +28,7 @@ pub const MODES: &[&str] = &[
     "debug-menu-test-twice",
 ];
 
-/// Kolima's tunnel (SceneId_KolimaTunnel), entered from Kolima at the foot
+/// Kolima's tunnel (SceneIdKolimaTunnel), entered from Kolima at the foot
 /// of the ladder up (KOLIMA_TUNNEL_FROM_KOLIMA).
 const KOLIMA_TUNNEL: (&str, u16) = ("KolimaTunnel", 2);
 /// Kolima as the party comes up out of its tunnel (KOLIMA_FROM_KOLIMA_TUNNEL).
@@ -47,7 +47,7 @@ const LOG_CROSSED: (i32, i32) = (280, 303);
 const WEST: u32 = 0x8000;
 /// The scene number while a battle runs (MAP_BATTLE).
 const MAP_BATTLE: u16 = 0x1fe;
-/// The menu test room (SceneId_MenuTest) and its armor merchant, who opens
+/// The menu test room (SceneIdMenuTest) and its armor merchant, who opens
 /// the debug shop (debug/test.c, ACTOR_ARMOR_MERCHANT).
 const MENU_TEST_ROOM: u16 = 200;
 const MENU_TEST_ARMOR_MERCHANT: u16 = 12;
@@ -497,7 +497,7 @@ impl<'a> Guide<'a> {
         self.scene_map_gif("scene/log-state.gif", &kept, "Kolima Forest's log tipped into the river, still there after a battle, and back on the bank after the party leaves and returns")
     }
 
-    /// Menu test entered twice (SceneId_MenuTest). Its setup,
+    /// Menu test entered twice (SceneIdMenuTest). Its setup,
     /// MenuTest_Initialize, runs on each entry and adds one Masamune to the
     /// shops' stock each time. On the first visit the debug shop
     /// (Shop_OpenDebugShop, opened by the armor merchant, a weapon shop

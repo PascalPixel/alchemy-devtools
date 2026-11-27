@@ -25,7 +25,7 @@ const RED: u32 = 0xff_30_30;
 /// Vale entered by day (scene 4, entrance 1) and Garet's sister there.
 const VALE_SCENE: (u16, u16) = (4, 1);
 const GARETS_SISTER_ACTOR: u16 = 18;
-/// The Lighthouse Aerie (SceneId_VenusLighthouseAerie) after the second
+/// The Lighthouse Aerie (SceneIdVenusLighthouseAerie) after the second
 /// battle (VENUS_LIGHTHOUSE_AERIE_AFTER_SECOND_BATTLE).
 const VENUS_LIGHTHOUSE_AERIE: (u16, u16) = (187, 3);
 

@@ -70,7 +70,7 @@ pub(super) struct SetPiece {
     pub what: &'static str,
 }
 
-/// Mercury Lighthouse's aerie (SceneId_MercuryLighthouseAerie): from the
+/// Mercury Lighthouse's aerie (SceneIdMercuryLighthouseAerie): from the
 /// party arriving after the beacon is lit
 /// (MERCURY_LIGHTHOUSE_AERIE_AFTER_BEACON_LIT), the leader stepping onto
 /// cell behavior 5 before the beacon (MercuryLighthouseAerie_ConfrontSaturos)
@@ -100,7 +100,7 @@ pub(super) const MERCURY_LIGHTHOUSE_AERIE: SetPiece = SetPiece {
         "Mercury Lighthouse's aerie story in the Doll House recorder, the whole aerie and the sky",
 };
 
-/// Lalivero (SceneId_Lalivero) once the party is back from Venus
+/// Lalivero (SceneIdLalivero) once the party is back from Venus
 /// Lighthouse (FLAG_VENUS_LIGHTHOUSE_PARTY_RETURNED): the leader stepping onto
 /// cell behavior 50 (Lalivero_IodemGivesBlackOrb), until the player has
 /// control again.
@@ -117,7 +117,7 @@ pub(super) const LALIVERO_BLACK_ORB: SetPiece = SetPiece {
     what: "Iodem giving the Black Orb in Lalivero in the Doll House recorder, the whole town",
 };
 
-/// Babi Lighthouse's stone door (SceneId_BabiLighthouseStoneDoor): the leader
+/// Babi Lighthouse's stone door (SceneIdBabiLighthouseStoneDoor): the leader
 /// stepping onto cell behavior 22 (BabiLighthouse_OpenTruthDoor), until the
 /// player has control again.
 pub(super) const BABI_LIGHTHOUSE_TRUTH_DOOR: SetPiece = SetPiece {

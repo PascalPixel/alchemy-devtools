@@ -1,6 +1,6 @@
 //! Recordings of Tolbi's two minigames for the overworld guide, each
 //! reached as the player reaches it: the attendant in the game rooms by
-//! Tolbi's spring (SceneId_StuccoRoomsC, tolbi_spring.c) talked to, the
+//! Tolbi's spring (SceneIdStuccoRoomsC, tolbi_spring.c) talked to, the
 //! offer accepted, and the game played from the sequence that runs
 //! it (SEQUENCE_LUCKY_DICE, SEQUENCE_LUCKY_WHEELS).
 

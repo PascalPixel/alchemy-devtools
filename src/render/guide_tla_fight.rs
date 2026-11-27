@@ -392,7 +392,7 @@ impl<'a> Guide<'a> {
 }
 
 /// The Kandorean Temple's rooms walked for a random battle, ScenesWork' rows
-/// (SceneId_KandoreanTemple2 on), as the walkthrough has the party meet
+/// (SceneIdKandoreanTemple2 on), as the walkthrough has the party meet
 /// its Wild Wolves, Punch Ants and Giant Bats there.
 const TEMPLE_ROOMS: &[&str] = &[
     "KandoreanTempleMimic",

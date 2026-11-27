@@ -2187,206 +2187,206 @@ VENUS_LIGHTHOUSE_FOURTH_FLOOR_PILLAR_SOCKETS_TO_WALL_SWITCHES_EAST	what the play
 VENUS_LIGHTHOUSE_FOURTH_FLOOR_PSYNERGY_STONE_TO_WALL_SWITCHES	what the player sees	the large room of the west and east floor switches and the rising platform (its render)	games/tbs/include/scene_exits.h
 VENUS_LIGHTHOUSE_FOURTH_FLOOR_PSYNERGY_STONE_TO_WALL_SWITCHES_RISING	what the player sees	the large room of the west and east floor switches and the rising platform (its render)	games/tbs/include/scene_exits.h
 LEMURIAN_SHIP_WITH_BLACK_ORB	the game	"You got the Black Orb." (MsgWorldMapLook)	games/tbs/include/scene_exits.h
-SceneId_Title	the game	"Title screen" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_FileScreen	what the player sees	the Golden Sun logo over the start menu of New Game, Continue, Copy and Erase (its render)	games/tbs/include/scene_ids.h
-SceneId_WorldMap	its area name	World Map	games/tbs/include/scene_ids.h
-SceneId_ValePrologue	the game	"PLOGV00" (MsgDebugSceneCode)	games/tbs/include/scene_ids.h
-SceneId_Vale	its area name	Vale	games/tbs/include/scene_ids.h
-SceneId_ValePlaza	the game	"Why's everyone hanging around the town gate?" (MsgValeWhysEveryoneHanging)	games/tbs/include/scene_ids.h
-SceneId_ValeKradensCottage	the game	"You mustn't go beyond Kraden's cottage." (MsgValeDontGoBeyondKradensCottage)	games/tbs/include/scene_ids.h
-SceneId_CottageRoomsA	what the player sees	rooms drawn as cottages, the insides of Vale's houses and its shops, Garet's house and Jenna's grandparents' house among them (its render)	games/tbs/include/scene_ids.h
-SceneId_CottageRoomsB	what the player sees	rooms drawn as cottages, Vale's inn, Isaac's house, Kraden's study and the forge, with Babi's scholars' room (its render)	games/tbs/include/scene_ids.h
-SceneId_Sanctum	its area name	Sanctum	games/tbs/include/scene_ids.h
-SceneId_ValeEruption	the game	"in this eruption?!?" (MsgValeMtAlephWasInactive)	games/tbs/include/scene_ids.h
-SceneId_SolSanctumLunaSolRooms	the game	"Luna and Sol" (MsgSolSanctumLunaSolRooms)	games/tbs/include/scene_ids.h
-SceneId_SolSanctumStatue	the game	"So the statue puzzle was the trap..." (MsgSolSanctumKradenYouFoundIt)	games/tbs/include/scene_ids.h
-SceneId_SolSanctumPsynergyStone	the game	"a Psynergy Stone." (MsgGotPsynergyStone)	games/tbs/include/scene_ids.h
-SceneId_SolSanctumMaze	what the player sees	a maze of narrow torchlit passages, one of them ending at the chest with the second Small Jewel (its render)	games/tbs/include/scene_ids.h
-SceneId_SolSanctumCorridor	what the player sees	one long bending passage of blue flagstones between two doors of the sanctum's rooms (its render)	games/tbs/include/scene_ids.h
-SceneId_SolSanctumReliefs	what the player sees	the hall of the two minotaur reliefs that take the Small Jewels (its render)	games/tbs/include/scene_ids.h
-SceneId_SolSanctumElementalStarRoom	the game	"Elemental Star Room" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_SolSanctumEruption	the game	"It's erupting..." (MsgSolSanctumReturnStarToBag)	games/tbs/include/scene_ids.h
-SceneId_SolEntrance	its area name	Sol Entrance	games/tbs/include/scene_ids.h
-SceneId_Vault	its area name	Vault	games/tbs/include/scene_ids.h
-SceneId_LogRoomsA	what the player sees	rooms drawn in logs, the inside of Vault's houses, shops and inn, with the inn's loft behind a crate (its render)	games/tbs/include/scene_ids.h
-SceneId_StoneRooms	what the player sees	rooms drawn in stone, Vault's jail and Lunpa's hidden room of chests (its render)	games/tbs/include/scene_ids.h
-SceneId_VaultRevisit	what the player sees	Vault again once the party has reached Kalay, its thieves broken out of jail (its render)	games/tbs/include/scene_ids.h
-SceneId_LogRoomsB	what the player sees	rooms drawn in logs, the inside of Vault's houses, shops and inn on the later visit, after the thieves escape (its render)	games/tbs/include/scene_ids.h
-SceneId_GomaCaveEntrance	its area name	Goma Cave Entrance	games/tbs/include/scene_ids.h
-SceneId_GomaCavePond	what the player sees	a cave room around a pond, below the room the stump is pushed from (its render)	games/tbs/include/scene_ids.h
-SceneId_GomaCavePillar	what the player sees	the cave room of two pillars and a stump that Move pushes (its render)	games/tbs/include/scene_ids.h
-SceneId_GomaCaveStream	what the player sees	the Goma Cave room where a stream runs its whole length beside the path (its render)	games/tbs/include/scene_ids.h
-SceneId_GomaCaveBridge	what the player sees	Goma Cave's way out, where a wooden bridge crosses the river (its render)	games/tbs/include/scene_ids.h
-SceneId_Bilibin	its area name	Bilibin	games/tbs/include/scene_ids.h
-SceneId_CottageRoomsC	what the player sees	rooms drawn as cottages, the inside of Bilibin's shops, inn and houses (its render)	games/tbs/include/scene_ids.h
-SceneId_BilibinTreasury	its area name	Bilibin Treasury	games/tbs/include/scene_ids.h
-SceneId_McCoyPalace	the game	"McCoy's Palace" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_McCoyPalaceGrounds	the game	"planning the new palace." (MsgBilibinIShouldntHaveSaidAnythingWhen)	games/tbs/include/scene_ids.h
-SceneId_BilibinBarricade	its area name	Bilibin Barricade	games/tbs/include/scene_ids.h
-SceneId_Kolima	its area name	Kolima	games/tbs/include/scene_ids.h
-SceneId_LogRoomsC	what the player sees	rooms drawn in logs, the inside of Kolima's houses, shops and inn, their people turned to trees (its render)	games/tbs/include/scene_ids.h
-SceneId_KolimaTunnel	its area name	Kolima Tunnel	games/tbs/include/scene_ids.h
-SceneId_KolimaBridge	its area name	Kolima Bridge	games/tbs/include/scene_ids.h
-SceneId_KolimaForestEntrance	what the player sees	the way into Kolima Forest from the world scene, a river crossed on log bridges (its render)	games/tbs/include/scene_ids.h
-SceneId_KolimaForestGlade	what the player sees	the one forest scene with no water, an open grassy glade ringed by trees (its render)	games/tbs/include/scene_ids.h
-SceneId_KolimaForestCliff	what the player sees	a cliff ridge runs along the whole north of the scene, a river down its west (its render)	games/tbs/include/scene_ids.h
-SceneId_KolimaForestFloodgate	the game	"Floodgate Switch" (MsgKolimaDoNotTouchFloodgate)	games/tbs/include/scene_ids.h
-SceneId_KolimaForestTree	the game	"The holy tree of Kolima" (MsgKolimaInteriorsTheHolyTreeOfKolimaHas)	games/tbs/include/scene_ids.h
-SceneId_TreeRooms	what the player sees	the rooms inside the trunk of Tret Tree (its render)	games/tbs/include/scene_ids.h
-SceneId_TretTreeBranch	the game	"Then those gems fell into my branches..." (MsgKolimaWasIndeedAngryPeopleHad)	games/tbs/include/scene_ids.h
-SceneId_BilibinCaveIce	what the player sees	the Bilibin Cave room of ice pillars that Frost, fires and torches freeze and melt (its render)	games/tbs/include/scene_ids.h
-SceneId_BilibinCaveRapier	the game	"Elven Rapier" (MsgItemName)	games/tbs/include/scene_ids.h
-SceneId_BilibinCaveEntrance	its area name	Bilibin Cave Entrance	games/tbs/include/scene_ids.h
-SceneId_Imil	its area name	Imil	games/tbs/include/scene_ids.h
-SceneId_IceRooms	what the player sees	rooms drawn in ice, the inside of Imil's houses, shops, inn and Sanctum (its render)	games/tbs/include/scene_ids.h
-SceneId_ImilFallsCave	its area name	Imil Falls Cave	games/tbs/include/scene_ids.h
-SceneId_MercuryLighthouseEntrance	what the player sees	the lighthouse's ground floor inside its door, where the Lizard Man blocks Mia (its render)	games/tbs/include/scene_ids.h
-SceneId_MercuryLighthouseLower	what the player sees	the first rooms of the climb above the ground floor, the pool crossed under rings of light and the pipes, where Mia joins (its render)	games/tbs/include/scene_ids.h
-SceneId_MercuryLighthouseMiddle	what the player sees	the middle of the climb, with the gate held open by a statue, the pipe maze and Sleet's room (its render)	games/tbs/include/scene_ids.h
-SceneId_MercuryLighthouseUpper	what the player sees	the top of the climb inside, with the waterfall halls, the five statues in a row and the stone doors (its render)	games/tbs/include/scene_ids.h
-SceneId_MercuryLighthouseExterior	what the player sees	the lighthouse from outside, its foot in the water with the door and fountain, and the walkways up to the waterfall (its render)	games/tbs/include/scene_ids.h
-SceneId_MercuryLighthouseAerie	its area name	Lighthouse Aerie	games/tbs/include/scene_ids.h
-SceneId_UnusedMercuryLighthouseAerieCopy	what the player sees	the same aerie as the one in use, its platforms not lowered (its render)	games/tbs/include/scene_ids.h
-SceneId_FuchinTempleGrounds	what the player sees	outside the temple, its monks and the stepped waterfall with the grotto beneath (its render)	games/tbs/include/scene_ids.h
-SceneId_LacquerRoomsA	what the player sees	rooms drawn in red lacquer, Nyunpa's hall in Fuchin Temple, Feh's school in Xian and Hama's room in Lama Temple (its render)	games/tbs/include/scene_ids.h
-SceneId_FuchinFallsCaveEntrance	what the player sees	the cave's mouth and only way in and out, a log pool and stumps in the water (its render)	games/tbs/include/scene_ids.h
-SceneId_FuchinFallsCaveZephyr	the game	"Zephyr" (MsgDjinnName)	games/tbs/include/scene_ids.h
-SceneId_FuchinFallsCaveDragonsEye	the game	"Dragon's Eye" (MsgItemName)	games/tbs/include/scene_ids.h
-SceneId_FuchinFallsCaveArcticBlade	the game	"Arctic Blade" (MsgItemName)	games/tbs/include/scene_ids.h
-SceneId_FuchinFallsCaveOrbOfForce	the game	"Orb of Force" (MsgItemName)	games/tbs/include/scene_ids.h
-SceneId_FuchinFallsCaveDragonStatue	the game	"It's a statue of an eyeless dragon." (MsgFuchinEyelessDragon)	games/tbs/include/scene_ids.h
-SceneId_MogallForestSign	the game	"The broken sign reads:" (MsgMogallForestBrokenSign)	games/tbs/include/scene_ids.h
-SceneId_MogallForestQuartz	the game	"Quartz" (MsgDjinnName)	games/tbs/include/scene_ids.h
-SceneId_MogallForestKillerApe	the game	"Killer Ape" (MsgEnemyName)	games/tbs/include/scene_ids.h
-SceneId_MogallForestSidePaths	what the player sees	small identical clearings the wrong turns lead into, whose far sides lead back in (its render)	games/tbs/include/scene_ids.h
-SceneId_Xian	its area name	Xian	games/tbs/include/scene_ids.h
-SceneId_LacquerRoomsB	what the player sees	rooms drawn in red lacquer, the inside of Xian's houses, shops and inn, and the room behind Master Feh's school (its render)	games/tbs/include/scene_ids.h
-SceneId_AlpineCrossing	its area name	Alpine Crossing	games/tbs/include/scene_ids.h
-SceneId_Altin	its area name	Altin	games/tbs/include/scene_ids.h
-SceneId_CottageRoomsD	what the player sees	rooms drawn as cottages, the inside of Altin's houses, shops and inn, where flooded-out families shelter (its render)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakFirstWaterBeast	the game	"The water beasts looked" (MsgAltinTheWaterBeastsLookedExactlyLike)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakRailTunnel	what the player sees	a winding tunnel with nothing in it but one rail line between fences (its render)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakSecondWaterBeast	the game	"The water beasts looked" (MsgAltinTheWaterBeastsLookedExactlyLike)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakSouthEntrance	the game	"North: Altin Mine" (MsgMountainNorthAltinMineWestLama)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakThirdWaterBeast	the game	"The water beasts looked" (MsgAltinTheWaterBeastsLookedExactlyLike)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakPool	what the player sees	a cave filled by a large pool, with rails around it and a doorway above it (its render)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakSpritz	the game	"Spritz" (MsgDjinnName)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakJunction	what the player sees	two tunnels where five ways meet, to Altin and to three other rooms of the mine (its render)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakFallingRocks	the game	"Watch for falling rocks!" (MsgAltinWatchFallingRocks)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakHydrosStatue	the game	"Hydros Statue" (MsgEnemyName)	games/tbs/include/scene_ids.h
-SceneId_AltinPeakWestExit	the game	"find your way west" (MsgAltinTryingFindYourWayWest)	games/tbs/include/scene_ids.h
-SceneId_LamaTemple	its area name	Lama Temple	games/tbs/include/scene_ids.h
-SceneId_LamakanDesertEast	what the player sees	the desert's east end, entered from the world map beside Lama Temple (its render)	games/tbs/include/scene_ids.h
-SceneId_LamakanDesertSmog	the game	"Smog" (MsgDjinnName)	games/tbs/include/scene_ids.h
-SceneId_LamakanDesertManticore	the game	"Manticore" (MsgEnemyName)	games/tbs/include/scene_ids.h
-SceneId_LamakanDesertCave	what the player sees	dark rock tunnels lit by torches at the desert's west end, with no sand (its render)	games/tbs/include/scene_ids.h
-SceneId_ValeCaveMouth	what the player sees	the clearing at the cave's mouth above Vale (its render)	games/tbs/include/scene_ids.h
-SceneId_ValeCaveKite	the game	"Kite" (MsgDjinnName)	games/tbs/include/scene_ids.h
-SceneId_ValeCaveLogs	what the player sees	the cave whose three logs the party pushes (its render)	games/tbs/include/scene_ids.h
-SceneId_VaultCavePassage	the game	"a passage leading" (MsgVaultCarefulSearchWillRevealPassage)	games/tbs/include/scene_ids.h
-SceneId_VaultCaveVambrace	the game	"Vambrace" (MsgItemName)	games/tbs/include/scene_ids.h
-SceneId_VaultCaveMouth	what the player sees	the part of Vault Cave entered from the cave mouth in Vault's northeast cliff (its render)	games/tbs/include/scene_ids.h
-SceneId_Kalay	its area name	Kalay	games/tbs/include/scene_ids.h
-SceneId_StuccoRoomsA	what the player sees	rooms drawn in stucco, Kalay's houses, its weapon and armor shops and its inn with the guest rooms below (its render)	games/tbs/include/scene_ids.h
-SceneId_KalaySanctum	its area name	Kalay Sanctum	games/tbs/include/scene_ids.h
-SceneId_HammetPalaceGrounds	what the player sees	the front of Hammet Palace, where two soldiers guard the door above the stairs from town (its render)	games/tbs/include/scene_ids.h
-SceneId_HammetPalace	its area name	Hammet Palace	games/tbs/include/scene_ids.h
-SceneId_Lunpa	its area name	Lunpa	games/tbs/include/scene_ids.h
-SceneId_RockRooms	what the player sees	rooms cut into rock, the inside of Lunpa's homes, shops, inn, crate room and temple, and the house at Suhalla Gate (its render)	games/tbs/include/scene_ids.h
-SceneId_WestLunpaCave	its area name	West Lunpa Cave	games/tbs/include/scene_ids.h
-SceneId_KalayDocks	its area name	Kalay Docks	games/tbs/include/scene_ids.h
-SceneId_CottageRoomsE	what the player sees	rooms drawn as cottages, the dock buildings' rooms at Kalay Docks and Tolbi Docks, where boarding tickets are sold (its render)	games/tbs/include/scene_ids.h
-SceneId_TolbiShipDeck	what the player sees	the deck of the Tolbi-bound Ship on its voyage across the Karagol Sea (its render)	games/tbs/include/scene_ids.h
-SceneId_TolbiShipMast	the game	"You climbed up the mast" (MsgTolbiShipItsMyLuckyAnchor)	games/tbs/include/scene_ids.h
-SceneId_ShipRooms	what the player sees	the cabins below the decks of the Tolbi-bound Ship, its holds, rowing deck and captain's quarters (its render)	games/tbs/include/scene_ids.h
-SceneId_TolbiDocks	its area name	Tolbi Docks	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsle	its area name	Crossbone Isle	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleCaveEntrance	what the player sees	the winding path lit by torches that leads down from the island into the cave (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleSteppingStones	what the player sees	raised stone posts over a pit, which the party hops across to reach four chests (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleIcePillars	what the player sees	pillars of ice, some standing and some lying as walkways, across a floor of spikes (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleKeys	the game	"Blue Key" (MsgItemName)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleStatues	what the player sees	a dark hall lit by braziers, where five statues of a robed woman step out after the leader (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleFloodgate	what the player sees	a cave with a stream and a floodgate across it, whose switch floats seven logs (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleBane	the game	"Bane" (MsgDjinnName)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleStackedPillars	what the player sees	a cave of cliffs and ladders, where carved stone pillars are lifted onto one another (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleDragonStatue	what the player sees	an icy cave with a coiled, winged dragon statue beside three puddles (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleFloatingLogs	what the player sees	two pools of green water, with logs floating on them that carry the leader (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIslePier	what the player sees	the ledge at the end of the cave, where a wooden pier leads out to the Pirate Ship (its render)	games/tbs/include/scene_ids.h
-SceneId_PirateShip	its area name	Pirate Ship	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleFirstFloor	what the player sees	the first of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleSecondFloor	what the player sees	the second of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleThirdFloor	what the player sees	the third of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleFourthFloor	what the player sees	the fourth of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleFifthFloor	what the player sees	the fifth of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleSixthFloor	what the player sees	the sixth of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleSeventhFloor	what the player sees	the seventh of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleEighthFloor	what the player sees	the eighth of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
-SceneId_CrossboneIsleNinthFloor	what the player sees	the last of nine halls that look alike, which leads on to the pier (its render)	games/tbs/include/scene_ids.h
-SceneId_Tolbi	its area name	Tolbi	games/tbs/include/scene_ids.h
-SceneId_StuccoRoomsB	what the player sees	rooms drawn in stucco, the inside of Tolbi's houses, inns and shops, and Tolbi Sanctum (its render)	games/tbs/include/scene_ids.h
-SceneId_StuccoRoomsC	what the player sees	rooms drawn in stucco, the two small rooms in Tolbi where Lucky Dice and Lucky Wheels are played (its render)	games/tbs/include/scene_ids.h
-SceneId_BabiPalace	its area name	Babi's Palace	games/tbs/include/scene_ids.h
-SceneId_BabiPalaceEntrance	what the player sees	the way up from Tolbi to the palace door, where two guards stand (its render)	games/tbs/include/scene_ids.h
-SceneId_Colosseum	its area name	Colosseum	games/tbs/include/scene_ids.h
-SceneId_ColosseumTunnel	its area name	Colosseum Tunnel	games/tbs/include/scene_ids.h
-SceneId_ColosseumEntrance	its area name	Colosseum Entrance	games/tbs/include/scene_ids.h
-SceneId_ColosseumAzartMatch	the game	"Azart" (MsgEnemyName)	games/tbs/include/scene_ids.h
-SceneId_ColosseumSatrageMatch	the game	"Satrage" (MsgEnemyName)	games/tbs/include/scene_ids.h
-SceneId_ColosseumNavampaMatch	the game	"Navampa" (MsgEnemyName)	games/tbs/include/scene_ids.h
-SceneId_AltmillerCaveEntrance	what the player sees	the dark winding passage in from the cave mouth and the small chamber beyond it (its render)	games/tbs/include/scene_ids.h
-SceneId_AltmillerCaveBabi	the game	"Babi!" (MsgAltmillerBabi)	games/tbs/include/scene_ids.h
-SceneId_AltmillerCaveVialChest	the game	"Vial" (MsgItemName)	games/tbs/include/scene_ids.h
-SceneId_AltmillerCaveSquall	the game	"Squall" (MsgDjinnName)	games/tbs/include/scene_ids.h
-SceneId_AltmillerCaveCookieChest	the game	"Cookie" (MsgItemName)	games/tbs/include/scene_ids.h
-SceneId_AltmillerCaveDraught	the game	"Mystic Draught" (MsgItemName)	games/tbs/include/scene_ids.h
-SceneId_GondowanPassage	its area name	Gondowan Passage	games/tbs/include/scene_ids.h
-SceneId_KalayTunnelEntrance	its area name	Kalay Tunnel Entrance	games/tbs/include/scene_ids.h
-SceneId_KalayTunnelCave	the game	"the cave up ahead" (MsgKalayDoWantGoCaveUp)	games/tbs/include/scene_ids.h
-SceneId_KalayTunnelPassage	the game	"underground passage" (MsgHammetPalaceILeftTheDoorToThe)	games/tbs/include/scene_ids.h
-SceneId_KalayTunnelTreasureRoom	the game	"Hammet's treasure room" (MsgHammetPalaceTheKeyToTheSecretPassage)	games/tbs/include/scene_ids.h
-SceneId_GondowanCaveRiver	what the player sees	the underground river crossed on stepping pads, with two chests, between the cave's two halves (its render)	games/tbs/include/scene_ids.h
-SceneId_GondowanCave	its area name	Gondowan Cave	games/tbs/include/scene_ids.h
-SceneId_LunpaFortressGates	its area name	Lunpa Fortress Gates	games/tbs/include/scene_ids.h
-SceneId_LunpaFortressGroundFloor	what the player sees	the fortress floor inside its door, whose staircases climb to the floor above (its render)	games/tbs/include/scene_ids.h
-SceneId_LunpaFortressUpperFloor	what the player sees	the floor reached up the fortress's two staircases, where Donpa sleeps (its render)	games/tbs/include/scene_ids.h
-SceneId_LunpaFortressCave	the game	"Hammet's down in that treacherous cave." (MsgLunpaHammetInCave)	games/tbs/include/scene_ids.h
-SceneId_SuhallaDesertNorth	what the player sees	the northern half of the desert, entered from the world map just south of Suhalla (its render)	games/tbs/include/scene_ids.h
-SceneId_SuhallaDesertSouth	what the player sees	the southern half of the desert, whose way out leads on toward Suhalla Gate (its render)	games/tbs/include/scene_ids.h
-SceneId_SuhallaDesertCaves	what the player sees	two caves under the desert, reached through its two cave mouths (its render)	games/tbs/include/scene_ids.h
-SceneId_Suhalla	its area name	Suhalla	games/tbs/include/scene_ids.h
-SceneId_TimberRoomsA	what the player sees	rooms drawn in timber, the inside of Suhalla's houses, shop and inn, and Suhalla Sanctum (its render)	games/tbs/include/scene_ids.h
-SceneId_SuhallaGateCheckpoint	the game	"Only those with travel papers may pass through." (MsgSuhallaTravelPapersRequired)	games/tbs/include/scene_ids.h
-SceneId_SuhallaGateDew	the game	"Dew" (MsgDjinnName)	games/tbs/include/scene_ids.h
-SceneId_GatewayCave	its area name	Gateway Cave	games/tbs/include/scene_ids.h
-SceneId_TunnelRuinsGreatStatue	the game	"Ye who seek to climb Venus Lighthouse must seek the lady's leave." (MsgTunnelRuinsStatueSpeaksIsaacSoulYe)	games/tbs/include/scene_ids.h
-SceneId_TunnelRuinsLadyStatues	what the player sees	five coloured statues of a woman standing before a door (its render)	games/tbs/include/scene_ids.h
-SceneId_BabiLighthouseStoneDoor	the game	"stone door" (MsgBabiYoureSureTheyWentThrough)	games/tbs/include/scene_ids.h
-SceneId_BabiLighthouseLuff	the game	"Luff" (MsgDjinnName)	games/tbs/include/scene_ids.h
-SceneId_BabiLighthouseEntry	its area name	Babi Lighthouse Entry	games/tbs/include/scene_ids.h
-SceneId_RoadToBabiLighthouse	its area name	Road to Babi Lighthouse	games/tbs/include/scene_ids.h
-SceneId_Lalivero	its area name	Lalivero	games/tbs/include/scene_ids.h
-SceneId_TimberRoomsB	what the player sees	rooms drawn in timber, the insides of Lalivero's weapon and armor shop, item shop and Sanctum, with three houses (its render)	games/tbs/include/scene_ids.h
-SceneId_TimberRoomsC	what the player sees	rooms drawn in timber, the insides of Faran's house, Lalivero's inn and the way out to the wharf (its render)	games/tbs/include/scene_ids.h
-SceneId_VenusLighthouseEntry	its area name	Venus Lighthouse Entry	games/tbs/include/scene_ids.h
-SceneId_VenusLighthouseGroundFloor	what the player sees	the floor the front door opens onto, with the great statue and the reliefs (its render)	games/tbs/include/scene_ids.h
-SceneId_VenusLighthouseFirstFloor	what the player sees	the first floor of the climb, where the Tunnel Ruins come up (its render)	games/tbs/include/scene_ids.h
-SceneId_VenusLighthouseSecondFloor	what the player sees	the second floor of the climb, with the sparkling passage and the gate (its render)	games/tbs/include/scene_ids.h
-SceneId_VenusLighthouseThirdFloor	what the player sees	the third floor of the climb, with three sparkling passages and three pillar sockets (its render)	games/tbs/include/scene_ids.h
-SceneId_VenusLighthouseFourthFloor	what the player sees	the fourth floor of the climb, below the Lighthouse Aerie (its render)	games/tbs/include/scene_ids.h
-SceneId_VenusLighthouseAerie	the game	"Lighthouse Aerie" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_LemurianShip	its area name	Lemurian ship	games/tbs/include/scene_ids.h
-SceneId_TolbiSpring	its area name	Tolbi Spring	games/tbs/include/scene_ids.h
-SceneId_BattleArena	the game	"Lobby" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_Test0	the game	"Test 0" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_Test1	the game	"Test 1" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_Test2	the game	"Test 2" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_Test3	the game	"Test 3" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_Test4	the game	"Test 4" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_Test5	the game	"Test 5" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_Test6	the game	"Test 6" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_Test7	the game	"Test 7" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
-SceneId_IncreaseItemAndLevel	its area name	Increase item and level	games/tbs/include/scene_ids.h
-SceneId_MenuTest	its area name	Menu test	games/tbs/include/scene_ids.h
+SceneIdTitle	the game	"Title screen" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdFileScreen	what the player sees	the Golden Sun logo over the start menu of New Game, Continue, Copy and Erase (its render)	games/tbs/include/scene_ids.h
+SceneIdWorldMap	its area name	World Map	games/tbs/include/scene_ids.h
+SceneIdValePrologue	the game	"PLOGV00" (MsgDebugSceneCode)	games/tbs/include/scene_ids.h
+SceneIdVale	its area name	Vale	games/tbs/include/scene_ids.h
+SceneIdValePlaza	the game	"Why's everyone hanging around the town gate?" (MsgValeWhysEveryoneHanging)	games/tbs/include/scene_ids.h
+SceneIdValeKradensCottage	the game	"You mustn't go beyond Kraden's cottage." (MsgValeDontGoBeyondKradensCottage)	games/tbs/include/scene_ids.h
+SceneIdCottageRoomsA	what the player sees	rooms drawn as cottages, the insides of Vale's houses and its shops, Garet's house and Jenna's grandparents' house among them (its render)	games/tbs/include/scene_ids.h
+SceneIdCottageRoomsB	what the player sees	rooms drawn as cottages, Vale's inn, Isaac's house, Kraden's study and the forge, with Babi's scholars' room (its render)	games/tbs/include/scene_ids.h
+SceneIdSanctum	its area name	Sanctum	games/tbs/include/scene_ids.h
+SceneIdValeEruption	the game	"in this eruption?!?" (MsgValeMtAlephWasInactive)	games/tbs/include/scene_ids.h
+SceneIdSolSanctumLunaSolRooms	the game	"Luna and Sol" (MsgSolSanctumLunaSolRooms)	games/tbs/include/scene_ids.h
+SceneIdSolSanctumStatue	the game	"So the statue puzzle was the trap..." (MsgSolSanctumKradenYouFoundIt)	games/tbs/include/scene_ids.h
+SceneIdSolSanctumPsynergyStone	the game	"a Psynergy Stone." (MsgGotPsynergyStone)	games/tbs/include/scene_ids.h
+SceneIdSolSanctumMaze	what the player sees	a maze of narrow torchlit passages, one of them ending at the chest with the second Small Jewel (its render)	games/tbs/include/scene_ids.h
+SceneIdSolSanctumCorridor	what the player sees	one long bending passage of blue flagstones between two doors of the sanctum's rooms (its render)	games/tbs/include/scene_ids.h
+SceneIdSolSanctumReliefs	what the player sees	the hall of the two minotaur reliefs that take the Small Jewels (its render)	games/tbs/include/scene_ids.h
+SceneIdSolSanctumElementalStarRoom	the game	"Elemental Star Room" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdSolSanctumEruption	the game	"It's erupting..." (MsgSolSanctumReturnStarToBag)	games/tbs/include/scene_ids.h
+SceneIdSolEntrance	its area name	Sol Entrance	games/tbs/include/scene_ids.h
+SceneIdVault	its area name	Vault	games/tbs/include/scene_ids.h
+SceneIdLogRoomsA	what the player sees	rooms drawn in logs, the inside of Vault's houses, shops and inn, with the inn's loft behind a crate (its render)	games/tbs/include/scene_ids.h
+SceneIdStoneRooms	what the player sees	rooms drawn in stone, Vault's jail and Lunpa's hidden room of chests (its render)	games/tbs/include/scene_ids.h
+SceneIdVaultRevisit	what the player sees	Vault again once the party has reached Kalay, its thieves broken out of jail (its render)	games/tbs/include/scene_ids.h
+SceneIdLogRoomsB	what the player sees	rooms drawn in logs, the inside of Vault's houses, shops and inn on the later visit, after the thieves escape (its render)	games/tbs/include/scene_ids.h
+SceneIdGomaCaveEntrance	its area name	Goma Cave Entrance	games/tbs/include/scene_ids.h
+SceneIdGomaCavePond	what the player sees	a cave room around a pond, below the room the stump is pushed from (its render)	games/tbs/include/scene_ids.h
+SceneIdGomaCavePillar	what the player sees	the cave room of two pillars and a stump that Move pushes (its render)	games/tbs/include/scene_ids.h
+SceneIdGomaCaveStream	what the player sees	the Goma Cave room where a stream runs its whole length beside the path (its render)	games/tbs/include/scene_ids.h
+SceneIdGomaCaveBridge	what the player sees	Goma Cave's way out, where a wooden bridge crosses the river (its render)	games/tbs/include/scene_ids.h
+SceneIdBilibin	its area name	Bilibin	games/tbs/include/scene_ids.h
+SceneIdCottageRoomsC	what the player sees	rooms drawn as cottages, the inside of Bilibin's shops, inn and houses (its render)	games/tbs/include/scene_ids.h
+SceneIdBilibinTreasury	its area name	Bilibin Treasury	games/tbs/include/scene_ids.h
+SceneIdMcCoyPalace	the game	"McCoy's Palace" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdMcCoyPalaceGrounds	the game	"planning the new palace." (MsgBilibinIShouldntHaveSaidAnythingWhen)	games/tbs/include/scene_ids.h
+SceneIdBilibinBarricade	its area name	Bilibin Barricade	games/tbs/include/scene_ids.h
+SceneIdKolima	its area name	Kolima	games/tbs/include/scene_ids.h
+SceneIdLogRoomsC	what the player sees	rooms drawn in logs, the inside of Kolima's houses, shops and inn, their people turned to trees (its render)	games/tbs/include/scene_ids.h
+SceneIdKolimaTunnel	its area name	Kolima Tunnel	games/tbs/include/scene_ids.h
+SceneIdKolimaBridge	its area name	Kolima Bridge	games/tbs/include/scene_ids.h
+SceneIdKolimaForestEntrance	what the player sees	the way into Kolima Forest from the world scene, a river crossed on log bridges (its render)	games/tbs/include/scene_ids.h
+SceneIdKolimaForestGlade	what the player sees	the one forest scene with no water, an open grassy glade ringed by trees (its render)	games/tbs/include/scene_ids.h
+SceneIdKolimaForestCliff	what the player sees	a cliff ridge runs along the whole north of the scene, a river down its west (its render)	games/tbs/include/scene_ids.h
+SceneIdKolimaForestFloodgate	the game	"Floodgate Switch" (MsgKolimaDoNotTouchFloodgate)	games/tbs/include/scene_ids.h
+SceneIdKolimaForestTree	the game	"The holy tree of Kolima" (MsgKolimaInteriorsTheHolyTreeOfKolimaHas)	games/tbs/include/scene_ids.h
+SceneIdTreeRooms	what the player sees	the rooms inside the trunk of Tret Tree (its render)	games/tbs/include/scene_ids.h
+SceneIdTretTreeBranch	the game	"Then those gems fell into my branches..." (MsgKolimaWasIndeedAngryPeopleHad)	games/tbs/include/scene_ids.h
+SceneIdBilibinCaveIce	what the player sees	the Bilibin Cave room of ice pillars that Frost, fires and torches freeze and melt (its render)	games/tbs/include/scene_ids.h
+SceneIdBilibinCaveRapier	the game	"Elven Rapier" (MsgItemName)	games/tbs/include/scene_ids.h
+SceneIdBilibinCaveEntrance	its area name	Bilibin Cave Entrance	games/tbs/include/scene_ids.h
+SceneIdImil	its area name	Imil	games/tbs/include/scene_ids.h
+SceneIdIceRooms	what the player sees	rooms drawn in ice, the inside of Imil's houses, shops, inn and Sanctum (its render)	games/tbs/include/scene_ids.h
+SceneIdImilFallsCave	its area name	Imil Falls Cave	games/tbs/include/scene_ids.h
+SceneIdMercuryLighthouseEntrance	what the player sees	the lighthouse's ground floor inside its door, where the Lizard Man blocks Mia (its render)	games/tbs/include/scene_ids.h
+SceneIdMercuryLighthouseLower	what the player sees	the first rooms of the climb above the ground floor, the pool crossed under rings of light and the pipes, where Mia joins (its render)	games/tbs/include/scene_ids.h
+SceneIdMercuryLighthouseMiddle	what the player sees	the middle of the climb, with the gate held open by a statue, the pipe maze and Sleet's room (its render)	games/tbs/include/scene_ids.h
+SceneIdMercuryLighthouseUpper	what the player sees	the top of the climb inside, with the waterfall halls, the five statues in a row and the stone doors (its render)	games/tbs/include/scene_ids.h
+SceneIdMercuryLighthouseExterior	what the player sees	the lighthouse from outside, its foot in the water with the door and fountain, and the walkways up to the waterfall (its render)	games/tbs/include/scene_ids.h
+SceneIdMercuryLighthouseAerie	its area name	Lighthouse Aerie	games/tbs/include/scene_ids.h
+SceneIdUnusedMercuryLighthouseAerieCopy	what the player sees	the same aerie as the one in use, its platforms not lowered (its render)	games/tbs/include/scene_ids.h
+SceneIdFuchinTempleGrounds	what the player sees	outside the temple, its monks and the stepped waterfall with the grotto beneath (its render)	games/tbs/include/scene_ids.h
+SceneIdLacquerRoomsA	what the player sees	rooms drawn in red lacquer, Nyunpa's hall in Fuchin Temple, Feh's school in Xian and Hama's room in Lama Temple (its render)	games/tbs/include/scene_ids.h
+SceneIdFuchinFallsCaveEntrance	what the player sees	the cave's mouth and only way in and out, a log pool and stumps in the water (its render)	games/tbs/include/scene_ids.h
+SceneIdFuchinFallsCaveZephyr	the game	"Zephyr" (MsgDjinnName)	games/tbs/include/scene_ids.h
+SceneIdFuchinFallsCaveDragonsEye	the game	"Dragon's Eye" (MsgItemName)	games/tbs/include/scene_ids.h
+SceneIdFuchinFallsCaveArcticBlade	the game	"Arctic Blade" (MsgItemName)	games/tbs/include/scene_ids.h
+SceneIdFuchinFallsCaveOrbOfForce	the game	"Orb of Force" (MsgItemName)	games/tbs/include/scene_ids.h
+SceneIdFuchinFallsCaveDragonStatue	the game	"It's a statue of an eyeless dragon." (MsgFuchinEyelessDragon)	games/tbs/include/scene_ids.h
+SceneIdMogallForestSign	the game	"The broken sign reads:" (MsgMogallForestBrokenSign)	games/tbs/include/scene_ids.h
+SceneIdMogallForestQuartz	the game	"Quartz" (MsgDjinnName)	games/tbs/include/scene_ids.h
+SceneIdMogallForestKillerApe	the game	"Killer Ape" (MsgEnemyName)	games/tbs/include/scene_ids.h
+SceneIdMogallForestSidePaths	what the player sees	small identical clearings the wrong turns lead into, whose far sides lead back in (its render)	games/tbs/include/scene_ids.h
+SceneIdXian	its area name	Xian	games/tbs/include/scene_ids.h
+SceneIdLacquerRoomsB	what the player sees	rooms drawn in red lacquer, the inside of Xian's houses, shops and inn, and the room behind Master Feh's school (its render)	games/tbs/include/scene_ids.h
+SceneIdAlpineCrossing	its area name	Alpine Crossing	games/tbs/include/scene_ids.h
+SceneIdAltin	its area name	Altin	games/tbs/include/scene_ids.h
+SceneIdCottageRoomsD	what the player sees	rooms drawn as cottages, the inside of Altin's houses, shops and inn, where flooded-out families shelter (its render)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakFirstWaterBeast	the game	"The water beasts looked" (MsgAltinTheWaterBeastsLookedExactlyLike)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakRailTunnel	what the player sees	a winding tunnel with nothing in it but one rail line between fences (its render)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakSecondWaterBeast	the game	"The water beasts looked" (MsgAltinTheWaterBeastsLookedExactlyLike)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakSouthEntrance	the game	"North: Altin Mine" (MsgMountainNorthAltinMineWestLama)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakThirdWaterBeast	the game	"The water beasts looked" (MsgAltinTheWaterBeastsLookedExactlyLike)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakPool	what the player sees	a cave filled by a large pool, with rails around it and a doorway above it (its render)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakSpritz	the game	"Spritz" (MsgDjinnName)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakJunction	what the player sees	two tunnels where five ways meet, to Altin and to three other rooms of the mine (its render)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakFallingRocks	the game	"Watch for falling rocks!" (MsgAltinWatchFallingRocks)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakHydrosStatue	the game	"Hydros Statue" (MsgEnemyName)	games/tbs/include/scene_ids.h
+SceneIdAltinPeakWestExit	the game	"find your way west" (MsgAltinTryingFindYourWayWest)	games/tbs/include/scene_ids.h
+SceneIdLamaTemple	its area name	Lama Temple	games/tbs/include/scene_ids.h
+SceneIdLamakanDesertEast	what the player sees	the desert's east end, entered from the world map beside Lama Temple (its render)	games/tbs/include/scene_ids.h
+SceneIdLamakanDesertSmog	the game	"Smog" (MsgDjinnName)	games/tbs/include/scene_ids.h
+SceneIdLamakanDesertManticore	the game	"Manticore" (MsgEnemyName)	games/tbs/include/scene_ids.h
+SceneIdLamakanDesertCave	what the player sees	dark rock tunnels lit by torches at the desert's west end, with no sand (its render)	games/tbs/include/scene_ids.h
+SceneIdValeCaveMouth	what the player sees	the clearing at the cave's mouth above Vale (its render)	games/tbs/include/scene_ids.h
+SceneIdValeCaveKite	the game	"Kite" (MsgDjinnName)	games/tbs/include/scene_ids.h
+SceneIdValeCaveLogs	what the player sees	the cave whose three logs the party pushes (its render)	games/tbs/include/scene_ids.h
+SceneIdVaultCavePassage	the game	"a passage leading" (MsgVaultCarefulSearchWillRevealPassage)	games/tbs/include/scene_ids.h
+SceneIdVaultCaveVambrace	the game	"Vambrace" (MsgItemName)	games/tbs/include/scene_ids.h
+SceneIdVaultCaveMouth	what the player sees	the part of Vault Cave entered from the cave mouth in Vault's northeast cliff (its render)	games/tbs/include/scene_ids.h
+SceneIdKalay	its area name	Kalay	games/tbs/include/scene_ids.h
+SceneIdStuccoRoomsA	what the player sees	rooms drawn in stucco, Kalay's houses, its weapon and armor shops and its inn with the guest rooms below (its render)	games/tbs/include/scene_ids.h
+SceneIdKalaySanctum	its area name	Kalay Sanctum	games/tbs/include/scene_ids.h
+SceneIdHammetPalaceGrounds	what the player sees	the front of Hammet Palace, where two soldiers guard the door above the stairs from town (its render)	games/tbs/include/scene_ids.h
+SceneIdHammetPalace	its area name	Hammet Palace	games/tbs/include/scene_ids.h
+SceneIdLunpa	its area name	Lunpa	games/tbs/include/scene_ids.h
+SceneIdRockRooms	what the player sees	rooms cut into rock, the inside of Lunpa's homes, shops, inn, crate room and temple, and the house at Suhalla Gate (its render)	games/tbs/include/scene_ids.h
+SceneIdWestLunpaCave	its area name	West Lunpa Cave	games/tbs/include/scene_ids.h
+SceneIdKalayDocks	its area name	Kalay Docks	games/tbs/include/scene_ids.h
+SceneIdCottageRoomsE	what the player sees	rooms drawn as cottages, the dock buildings' rooms at Kalay Docks and Tolbi Docks, where boarding tickets are sold (its render)	games/tbs/include/scene_ids.h
+SceneIdTolbiShipDeck	what the player sees	the deck of the Tolbi-bound Ship on its voyage across the Karagol Sea (its render)	games/tbs/include/scene_ids.h
+SceneIdTolbiShipMast	the game	"You climbed up the mast" (MsgTolbiShipItsMyLuckyAnchor)	games/tbs/include/scene_ids.h
+SceneIdShipRooms	what the player sees	the cabins below the decks of the Tolbi-bound Ship, its holds, rowing deck and captain's quarters (its render)	games/tbs/include/scene_ids.h
+SceneIdTolbiDocks	its area name	Tolbi Docks	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsle	its area name	Crossbone Isle	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleCaveEntrance	what the player sees	the winding path lit by torches that leads down from the island into the cave (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleSteppingStones	what the player sees	raised stone posts over a pit, which the party hops across to reach four chests (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleIcePillars	what the player sees	pillars of ice, some standing and some lying as walkways, across a floor of spikes (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleKeys	the game	"Blue Key" (MsgItemName)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleStatues	what the player sees	a dark hall lit by braziers, where five statues of a robed woman step out after the leader (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleFloodgate	what the player sees	a cave with a stream and a floodgate across it, whose switch floats seven logs (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleBane	the game	"Bane" (MsgDjinnName)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleStackedPillars	what the player sees	a cave of cliffs and ladders, where carved stone pillars are lifted onto one another (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleDragonStatue	what the player sees	an icy cave with a coiled, winged dragon statue beside three puddles (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleFloatingLogs	what the player sees	two pools of green water, with logs floating on them that carry the leader (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIslePier	what the player sees	the ledge at the end of the cave, where a wooden pier leads out to the Pirate Ship (its render)	games/tbs/include/scene_ids.h
+SceneIdPirateShip	its area name	Pirate Ship	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleFirstFloor	what the player sees	the first of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleSecondFloor	what the player sees	the second of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleThirdFloor	what the player sees	the third of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleFourthFloor	what the player sees	the fourth of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleFifthFloor	what the player sees	the fifth of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleSixthFloor	what the player sees	the sixth of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleSeventhFloor	what the player sees	the seventh of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleEighthFloor	what the player sees	the eighth of nine halls that look alike, each a flight of stairs lower than the last (its render)	games/tbs/include/scene_ids.h
+SceneIdCrossboneIsleNinthFloor	what the player sees	the last of nine halls that look alike, which leads on to the pier (its render)	games/tbs/include/scene_ids.h
+SceneIdTolbi	its area name	Tolbi	games/tbs/include/scene_ids.h
+SceneIdStuccoRoomsB	what the player sees	rooms drawn in stucco, the inside of Tolbi's houses, inns and shops, and Tolbi Sanctum (its render)	games/tbs/include/scene_ids.h
+SceneIdStuccoRoomsC	what the player sees	rooms drawn in stucco, the two small rooms in Tolbi where Lucky Dice and Lucky Wheels are played (its render)	games/tbs/include/scene_ids.h
+SceneIdBabiPalace	its area name	Babi's Palace	games/tbs/include/scene_ids.h
+SceneIdBabiPalaceEntrance	what the player sees	the way up from Tolbi to the palace door, where two guards stand (its render)	games/tbs/include/scene_ids.h
+SceneIdColosseum	its area name	Colosseum	games/tbs/include/scene_ids.h
+SceneIdColosseumTunnel	its area name	Colosseum Tunnel	games/tbs/include/scene_ids.h
+SceneIdColosseumEntrance	its area name	Colosseum Entrance	games/tbs/include/scene_ids.h
+SceneIdColosseumAzartMatch	the game	"Azart" (MsgEnemyName)	games/tbs/include/scene_ids.h
+SceneIdColosseumSatrageMatch	the game	"Satrage" (MsgEnemyName)	games/tbs/include/scene_ids.h
+SceneIdColosseumNavampaMatch	the game	"Navampa" (MsgEnemyName)	games/tbs/include/scene_ids.h
+SceneIdAltmillerCaveEntrance	what the player sees	the dark winding passage in from the cave mouth and the small chamber beyond it (its render)	games/tbs/include/scene_ids.h
+SceneIdAltmillerCaveBabi	the game	"Babi!" (MsgAltmillerBabi)	games/tbs/include/scene_ids.h
+SceneIdAltmillerCaveVialChest	the game	"Vial" (MsgItemName)	games/tbs/include/scene_ids.h
+SceneIdAltmillerCaveSquall	the game	"Squall" (MsgDjinnName)	games/tbs/include/scene_ids.h
+SceneIdAltmillerCaveCookieChest	the game	"Cookie" (MsgItemName)	games/tbs/include/scene_ids.h
+SceneIdAltmillerCaveDraught	the game	"Mystic Draught" (MsgItemName)	games/tbs/include/scene_ids.h
+SceneIdGondowanPassage	its area name	Gondowan Passage	games/tbs/include/scene_ids.h
+SceneIdKalayTunnelEntrance	its area name	Kalay Tunnel Entrance	games/tbs/include/scene_ids.h
+SceneIdKalayTunnelCave	the game	"the cave up ahead" (MsgKalayDoWantGoCaveUp)	games/tbs/include/scene_ids.h
+SceneIdKalayTunnelPassage	the game	"underground passage" (MsgHammetPalaceILeftTheDoorToThe)	games/tbs/include/scene_ids.h
+SceneIdKalayTunnelTreasureRoom	the game	"Hammet's treasure room" (MsgHammetPalaceTheKeyToTheSecretPassage)	games/tbs/include/scene_ids.h
+SceneIdGondowanCaveRiver	what the player sees	the underground river crossed on stepping pads, with two chests, between the cave's two halves (its render)	games/tbs/include/scene_ids.h
+SceneIdGondowanCave	its area name	Gondowan Cave	games/tbs/include/scene_ids.h
+SceneIdLunpaFortressGates	its area name	Lunpa Fortress Gates	games/tbs/include/scene_ids.h
+SceneIdLunpaFortressGroundFloor	what the player sees	the fortress floor inside its door, whose staircases climb to the floor above (its render)	games/tbs/include/scene_ids.h
+SceneIdLunpaFortressUpperFloor	what the player sees	the floor reached up the fortress's two staircases, where Donpa sleeps (its render)	games/tbs/include/scene_ids.h
+SceneIdLunpaFortressCave	the game	"Hammet's down in that treacherous cave." (MsgLunpaHammetInCave)	games/tbs/include/scene_ids.h
+SceneIdSuhallaDesertNorth	what the player sees	the northern half of the desert, entered from the world map just south of Suhalla (its render)	games/tbs/include/scene_ids.h
+SceneIdSuhallaDesertSouth	what the player sees	the southern half of the desert, whose way out leads on toward Suhalla Gate (its render)	games/tbs/include/scene_ids.h
+SceneIdSuhallaDesertCaves	what the player sees	two caves under the desert, reached through its two cave mouths (its render)	games/tbs/include/scene_ids.h
+SceneIdSuhalla	its area name	Suhalla	games/tbs/include/scene_ids.h
+SceneIdTimberRoomsA	what the player sees	rooms drawn in timber, the inside of Suhalla's houses, shop and inn, and Suhalla Sanctum (its render)	games/tbs/include/scene_ids.h
+SceneIdSuhallaGateCheckpoint	the game	"Only those with travel papers may pass through." (MsgSuhallaTravelPapersRequired)	games/tbs/include/scene_ids.h
+SceneIdSuhallaGateDew	the game	"Dew" (MsgDjinnName)	games/tbs/include/scene_ids.h
+SceneIdGatewayCave	its area name	Gateway Cave	games/tbs/include/scene_ids.h
+SceneIdTunnelRuinsGreatStatue	the game	"Ye who seek to climb Venus Lighthouse must seek the lady's leave." (MsgTunnelRuinsStatueSpeaksIsaacSoulYe)	games/tbs/include/scene_ids.h
+SceneIdTunnelRuinsLadyStatues	what the player sees	five coloured statues of a woman standing before a door (its render)	games/tbs/include/scene_ids.h
+SceneIdBabiLighthouseStoneDoor	the game	"stone door" (MsgBabiYoureSureTheyWentThrough)	games/tbs/include/scene_ids.h
+SceneIdBabiLighthouseLuff	the game	"Luff" (MsgDjinnName)	games/tbs/include/scene_ids.h
+SceneIdBabiLighthouseEntry	its area name	Babi Lighthouse Entry	games/tbs/include/scene_ids.h
+SceneIdRoadToBabiLighthouse	its area name	Road to Babi Lighthouse	games/tbs/include/scene_ids.h
+SceneIdLalivero	its area name	Lalivero	games/tbs/include/scene_ids.h
+SceneIdTimberRoomsB	what the player sees	rooms drawn in timber, the insides of Lalivero's weapon and armor shop, item shop and Sanctum, with three houses (its render)	games/tbs/include/scene_ids.h
+SceneIdTimberRoomsC	what the player sees	rooms drawn in timber, the insides of Faran's house, Lalivero's inn and the way out to the wharf (its render)	games/tbs/include/scene_ids.h
+SceneIdVenusLighthouseEntry	its area name	Venus Lighthouse Entry	games/tbs/include/scene_ids.h
+SceneIdVenusLighthouseGroundFloor	what the player sees	the floor the front door opens onto, with the great statue and the reliefs (its render)	games/tbs/include/scene_ids.h
+SceneIdVenusLighthouseFirstFloor	what the player sees	the first floor of the climb, where the Tunnel Ruins come up (its render)	games/tbs/include/scene_ids.h
+SceneIdVenusLighthouseSecondFloor	what the player sees	the second floor of the climb, with the sparkling passage and the gate (its render)	games/tbs/include/scene_ids.h
+SceneIdVenusLighthouseThirdFloor	what the player sees	the third floor of the climb, with three sparkling passages and three pillar sockets (its render)	games/tbs/include/scene_ids.h
+SceneIdVenusLighthouseFourthFloor	what the player sees	the fourth floor of the climb, below the Lighthouse Aerie (its render)	games/tbs/include/scene_ids.h
+SceneIdVenusLighthouseAerie	the game	"Lighthouse Aerie" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdLemurianShip	its area name	Lemurian ship	games/tbs/include/scene_ids.h
+SceneIdTolbiSpring	its area name	Tolbi Spring	games/tbs/include/scene_ids.h
+SceneIdBattleArena	the game	"Lobby" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdTest0	the game	"Test 0" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdTest1	the game	"Test 1" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdTest2	the game	"Test 2" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdTest3	the game	"Test 3" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdTest4	the game	"Test 4" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdTest5	the game	"Test 5" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdTest6	the game	"Test 6" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdTest7	the game	"Test 7" (MsgDebugAreaName)	games/tbs/include/scene_ids.h
+SceneIdIncreaseItemAndLevel	its area name	Increase item and level	games/tbs/include/scene_ids.h
+SceneIdMenuTest	its area name	Menu test	games/tbs/include/scene_ids.h
 MUS_TRET_TREE	its area name	Tret Tree	games/tbs/include/sounds.h
 MUS_FUCHIN_TEMPLE	its area name	Fuchin Temple	games/tbs/include/sounds.h
 MUS_TOLBI	its area name	Tolbi	games/tbs/include/sounds.h
@@ -4410,7 +4410,7 @@ FLAG_VAULT_CAVE_INNER_WEST_LOWER_PUDDLE_FROZEN	what the player sees	the lower ro
 FLAG_VAULT_CAVE_EAST_UPPER_PUDDLE_FROZEN	what the player sees	the eastern puddle of the upper row (its render)	games/tbs/src/scene/vault_cave.c
 FLAG_VAULT_CAVE_EAST_LOWER_PUDDLE_FROZEN	what the player sees	the eastern puddle of the lower row (its render)	games/tbs/src/scene/vault_cave.c
 FLAG_VAULT_CAVE_FAR_EAST_PUDDLE_FROZEN	what the player sees	the easternmost puddle, between the rows (its render)	games/tbs/src/scene/vault_cave.c
-FLAG_VAULT_CAVE_NORTH_PILLAR_STRUCK	what the player sees	the pillar the leader pushes toward its switch in the northern room of SceneId_VaultCaveMouth (its render)	games/tbs/src/scene/vault_cave.c
+FLAG_VAULT_CAVE_NORTH_PILLAR_STRUCK	what the player sees	the pillar the leader pushes toward its switch in the northern room of SceneIdVaultCaveMouth (its render)	games/tbs/src/scene/vault_cave.c
 FLAG_VAULT_CAVE_IVY_BLOWN_AWAY	the game	"Whirlwind" (MsgAbilityName)	games/tbs/src/scene/vault_cave.c
 ACTOR_PILLAR_EAST_OF_SOUTHERN_SWITCH	what the player sees	a pink stone pillar with a flame burning on top (its render)	games/tbs/src/scene/vault_cave.c
 ACTOR_SOUTHERN_PILLAR	what the player sees	the western of the room's two pink flame pillars, four cells from the switch marked with a flame, joined to it by a dotted track (its render)	games/tbs/src/scene/vault_cave.c
@@ -4718,7 +4718,7 @@ MERCURY_SMALL_DJINNI_HEIGHT	its code	the small Mercury Djinni drawn 20x34 (Mercu
 FIRE_BLOB_WIDTH	its code	FireBlobSheet drawn 48x32 (KIRIN_BLOB_BYTES was 48 * 32)	games/tbs/src/battle_effect/battle_effect_internal.h
 CRYSTAL_WIDTH	its code	CrystalSheet's crystal drawn 32x64 (PRISM_SHARD_PICTURES was 32 * 64)	games/tbs/src/battle_effect/battle_effect_internal.h
 BOREAS_CRYSTAL_WIDTH	its code	the torrent's crystals drawn 24x48 from the sheet's start; the big block 24x48; the streak 40x80	games/tbs/src/battle_effect/battle_effect_boreas.c
-PARTICLE_POOL_COUNT	its code	PARTICLES (Ram_MapGridMetatileBuffer as particles) is walked and freed 1,024 at a time by a dozen effects (EFFECT_FREE_PARTICLES(i, PARTICLES, 1024), PLASMA_SPARK_COUNT, VOLCANO_SPARK_POOL, RAY_SPARK_COUNT ...)	games/tbs/include/battle_effect/battle_effect.h
+PARTICLE_POOL_COUNT	its code	PARTICLES (RamMapGridMetatileBuffer as particles) is walked and freed 1,024 at a time by a dozen effects (EFFECT_FREE_PARTICLES(i, PARTICLES, 1024), PLASMA_SPARK_COUNT, VOLCANO_SPARK_POOL, RAY_SPARK_COUNT ...)	games/tbs/include/battle_effect/battle_effect.h
 BOREAS_SPRAY	its code	the spray's 128 flecks in PARTICLES, their sparkles at PARTICLES + 128 (BOREAS_SPRAY_SPARKLES)	games/tbs/src/battle_effect/battle_effect_boreas.c
 BOREAS_SHARDS	its code	64 shards in PARTICLES, thrown 32 at frames 32 and 104 and 32 more at 64 into PARTICLES[i + 32]	games/tbs/src/battle_effect/battle_effect_boreas.c
 BOREAS_MASS_CRYSTALS	its code	the 64 PARTICLES set up before the first part, as the brief's "mass of ice crystals"	games/tbs/src/battle_effect/battle_effect_boreas.c
@@ -4771,10 +4771,10 @@ CYBELE_LANDING_TICK	its code	member i drops (gravity) at i * 5 + 286 and is tint
 DJINN_ATTACK_DAMAGE_TICK	its code	EFFECT_SHOW_DAMAGE(SE_IMPACT) at frame 56 in each of the four Djinn attacks	games/tbs/src/battle_effect/battle_effect_djinn_attacks.c
 TITAN_BLADE_STRIKE_TICK	its code	frame 60: SE_CRASH, EFFECT_SHOW_DAMAGE(SE_HEAVY_IMPACT), a shake of 16, the canvas filled at its brightest, the sword dropping from then	games/tbs/src/battle_effect/battle_effect_titan_blade.c
 DEATH_PLUNGE_STRIKE_TICK	its code	frame 54: the target tinted white with POSE_DAMAGE (existing comment "The target flashes and both bounce"), the flash on the user on 54 and 55, the damage shown	games/tbs/src/battle_effect/battle_effect_death_plunge.c
-WINDOW_EDGE_RIGHT	its code	btEffectBuildWindowEdgeTable reads the u16 at Ram_MapGridMetatileBuffer as the base right edge; Boreas and Neptune advance it each frame	games/tbs/src/battle_effect/battle_effect_internal.h
-WINDOW_EDGE_INSETS	its code	the bytes at Ram_MapGridMetatileBuffer + 2, subtracted from the right edge on lines 8 to 135; Boreas and Neptune fill 128 of them with Random16() & 63	games/tbs/src/battle_effect/battle_effect_internal.h
+WINDOW_EDGE_RIGHT	its code	btEffectBuildWindowEdgeTable reads the u16 at RamMapGridMetatileBuffer as the base right edge; Boreas and Neptune advance it each frame	games/tbs/src/battle_effect/battle_effect_internal.h
+WINDOW_EDGE_INSETS	its code	the bytes at RamMapGridMetatileBuffer + 2, subtracted from the right edge on lines 8 to 135; Boreas and Neptune fill 128 of them with Random16() & 63	games/tbs/src/battle_effect/battle_effect_internal.h
 WINDOW_EDGE_INSET_LINES	its code	the 128 insets, one for each of lines 8 to 135	games/tbs/src/battle_effect/battle_effect_internal.h
-WINDOW_EDGE_LINES	its code	the u16 table at Ram_MapGridMetatileBuffer + 130 the builder writes for every screen line and DMA 0 copies to REG_WIN0H each HBlank	games/tbs/src/battle_effect/battle_effect_internal.h
+WINDOW_EDGE_LINES	its code	the u16 table at RamMapGridMetatileBuffer + 130 the builder writes for every screen line and DMA 0 copies to REG_WIN0H each HBlank	games/tbs/src/battle_effect/battle_effect_internal.h
 FIELD_PIXEL	its code	INTtoFIXED() undone on a 16.16 coordinate or distance; the field lane's macro (claude/tbs-targets-field, same text in mode_stubs.h) used at 45 scene sites	games/tbs/include/field/field_mode.h
 MAPGRID_METATILE_PIXELS	its code	glossary: a cell is one 16-pixel square; FIELD_METATILE is >> 20, 16 pixels in 16.16; terrain reads x / 16 and x & 15	games/tbs/include/field/map_grid.h
 MAPGRID_SHAPE_KIND_MASK	its code	MAP_GRID_METATILE.shape's comment: the shape's kind in the first byte's low four bits; & 15 indexes MapGridTerrainHeightFunctions	games/tbs/include/field/map_grid.h
@@ -4892,7 +4892,7 @@ SE_VOICE_ANIMAL_C	its sound data	the four blips of a voice, picked by the letter
 SE_VOICE_ANIMAL_D	its sound data	the four blips of a voice, picked by the letter code's low two bits (mnMessageType); each sequence a little lower than the one before	games/tbs/include/sounds.h
 SE_STOP_EXIT_SE	its sound data	a trackless sequence on player 5, where SongTable plays SE_MAP_EXIT, SE_STAIRS_UP and SE_STAIRS_DOWN; played by fdQueueMusic before each queued scene sound	games/tbs/include/sounds.h
 ENEMY_NONE	its code	row 0, named "???", in no formation; formations fill their empty places with row 0	games/tbs/include/enemy_ids.h
-RESOURCE_EMPTY_MAP	its code	MapsWork rows 0 and 1 (the title and File Screen, and MapIndex_World) use this layout, whose grid map.txt is one fill of 0	games/tbs/include/resource_ids.h
+RESOURCE_EMPTY_MAP	its code	MapsWork rows 0 and 1 (the title and File Screen, and MapIndexWorld) use this layout, whose grid map.txt is one fill of 0	games/tbs/include/resource_ids.h
 ABILITY_EFFECT_ATTACK_UP_SHARPLY	its code	btAbilityApplyToTarget moves the stage by 2 where ABILITY_EFFECT_ATTACK_UP moves it by 1 (Impact, Dull, Guard, Impair, Ward, Weaken against their party-wide forms)	games/tbs/include/battle/battle_unit.h
 ABILITY_EFFECT_ATTACK_DOWN_SHARPLY	its code	btAbilityApplyToTarget moves the stage by 2 where ABILITY_EFFECT_ATTACK_DOWN moves it by 1 (Impact, Dull, Guard, Impair, Ward, Weaken against their party-wide forms)	games/tbs/include/battle/battle_unit.h
 ABILITY_EFFECT_DEFENSE_UP_SHARPLY	its code	btAbilityApplyToTarget moves the stage by 2 where ABILITY_EFFECT_DEFENSE_UP moves it by 1 (Impact, Dull, Guard, Impair, Ward, Weaken against their party-wide forms)	games/tbs/include/battle/battle_unit.h
@@ -4946,7 +4946,7 @@ FLASH_UNLOCK_B	the hardware	as FLASH_UNLOCK_A	games/common/sdk/flash.h
 mnArrowNoOperationCallbackA	its code	four of six identical empty functions in window_selection.c, told apart only by their place in the far-call table	games/tbs/src/window/window_selection.c
 WINDOW_SPRITE_MOTION_HOP_DOWN_UNUSED	its code	the third of the hop-down motions mnWindowSprUpdateAll runs alike; nothing sets motion 16	games/tbs/include/window/window.h
 mnStatScreenInit	its code	called as mnStatScreenInit(0, 3, 0, 7) exactly as mnItemMenuInit(s32 x, s32 y, s32 mode, s32 columns) is, and ignores them	games/tbs/src/menu/menu_status.c
-syDummyReturnZero	its code	field_sprite_viewer.c passes RESOURCE_RESOURCE_STUBS and Stubs_Resource	games/tbs/src/system/system_start_up.c
+syDummyReturnZero	its code	field_sprite_viewer.c passes RESOURCE_RESOURCE_STUBS and StubsResource	games/tbs/src/system/system_start_up.c
 mnBgScrFillRect	its code	the two ignored parameters before width and height of a rectangle fill	games/tbs/src/window/screens_window_sprites.c
 mnDjinnFiguresInitTopRow	its code	menu_status.c passes menu->selectorWin; the bottom row's caller passes the help window	games/tbs/src/menu/menu_djinn_figures.c
 TRANSITION_CURTAIN_SCREEN	its code	BG1CNT takes screen base 12 for the curtain's map	games/tbs/src/battle/battle_transition.c
@@ -5016,7 +5016,7 @@ CURSOR_BOB_Y	its code	the same sine of TickCount over 16 frames, two pixels each
 TEXT_ACTOR_NAME	its code	mnMessageDecodeRaw keeps MESSAGE_ACTOR_NAME (17) bare with its operand as the next entry; the drawing and measuring switches skip one operand after code 17; en.po uses {actor_name 1,083 times	games/tbs/src/window/window_internal.h
 TEXT_ARTICLE_CLASS	its code	mnMessageDecodeRaw keeps MESSAGE_ARTICLE_CLASS (29) with its operand only outside Japanese (DECODE_EUROPEAN); the drawing switches skip code 29 with one operand only outside Japanese; en.po uses {article_class 203 times	games/tbs/src/window/window_internal.h
 NUMBER_DIGITS	its code	mnStringFormatNum writes digits into buffer[1] to [12], ends the text at [13], and clamps width to 12	games/tbs/src/window/window_glyphs.c
-KANJI_GLYPH_SIZE	its code	mnTextDrawGlyphPair and the ARM renderer step Font_KanjiGlyphs by 24 bytes a code from 256 (text_font.h's own comment)	games/tbs/include/window/text_font.h
+KANJI_GLYPH_SIZE	its code	mnTextDrawGlyphPair and the ARM renderer step FontKanjiGlyphs by 24 bytes a code from 256 (text_font.h's own comment)	games/tbs/include/window/text_font.h
 KANJI_WIDTH	its code	a kanji is drawn and measured 10 pixels wide (mnTextDrawGlyphPair, mnTextGetWideStringWidth, the ARM renderer)	games/tbs/include/window/text_font.h
 MENU_CURSOR.frames	its code	mnCursorAdvance divides the move by it (durationTicks) and clears it on arrival; the shop sets it to 12, 4 or 3	games/tbs/include/window/cursor.h
 MENU_CURSOR.frame	its code	mnCursorAdvance increments it each frame and ends the move when it equals frames (cursor.h's own comment "frames of the current move done")	games/tbs/include/window/cursor.h
@@ -5094,14 +5094,14 @@ SCENE_TEST_4	its number	the game's text: "Test 4", one of the debug areas Test 0
 SCENE_TEST_5	its number	the game's text: "Test 5", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
 SCENE_TEST_6	its number	the game's text: "Test 6", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
 SCENE_TEST_7	its number	the game's text: "Test 7", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
-SceneId_Test0	its number	the game's text: "Test 0", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
-SceneId_Test1	its number	the game's text: "Test 1", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
-SceneId_Test2	its number	the game's text: "Test 2", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
-SceneId_Test3	its number	the game's text: "Test 3", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
-SceneId_Test4	its number	the game's text: "Test 4", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
-SceneId_Test5	its number	the game's text: "Test 5", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
-SceneId_Test6	its number	the game's text: "Test 6", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
-SceneId_Test7	its number	the game's text: "Test 7", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneIdTest0	its number	the game's text: "Test 0", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneIdTest1	its number	the game's text: "Test 1", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneIdTest2	its number	the game's text: "Test 2", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneIdTest3	its number	the game's text: "Test 3", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneIdTest4	its number	the game's text: "Test 4", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneIdTest5	its number	the game's text: "Test 5", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneIdTest6	its number	the game's text: "Test 6", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
+SceneIdTest7	its number	the game's text: "Test 7", one of the debug areas Test 0 to Test 7 (messages 02557 to 02564)	games/tbs/include/scene_ids.h
 Test0	its number	the game's text: "Test 0", the debug room of that name (message 02557)	games/tbs/src/debug/test_scenes.c
 Test1	its number	the game's text: "Test 1", the debug room of that name (message 02558)	games/tbs/src/debug/test_scenes.c
 Test2	its number	the game's text: "Test 2", the debug room of that name (message 02559)	games/tbs/src/debug/test_scenes.c
@@ -5164,7 +5164,7 @@ ENEMY_TOADONPA	the game	"Toadonpa" (MsgEnemyName + 133)	games/tbs/include/enemy_
 FLAG_ALTIN_STATUE_MOVED	what the player sees	in Altin, a grey stone statue on a pedestal on the ledge above the houses (its render)	games/tbs/include/flags.h
 LUNPA_FORTRESS_UPPER_FLOOR_TONIC_ROOM_FROM_DONPAS_ROOM	the game	"Tonic" (MsgDjinnName + 25)	games/tbs/include/scene_exits.h
 LUNPA_FORTRESS_UPPER_FLOOR_DONPAS_ROOM_TO_TONIC_ROOM	the game	"Tonic" (MsgDjinnName + 25)	games/tbs/include/scene_exits.h
-SceneId_LunpaFortressToadonpa	the game	"Toadonpa" (MsgEnemyName + 133)	games/tbs/include/scene_ids.h
+SceneIdLunpaFortressToadonpa	the game	"Toadonpa" (MsgEnemyName + 133)	games/tbs/include/scene_ids.h
 SPRITE_TOADONPA	the game	"Toadonpa" (MsgEnemyName + 133)	games/tbs/include/sprite_ids.h
 SPRITE_BATTLE_TOADONPA	the game	"Toadonpa" (MsgEnemyName + 133)	games/tbs/include/sprite_ids.h
 ACTOR_FIRST_SLEEP_Z	what the player sees	a "z" (letter_z.png) rising from Isaac as he sleeps (its render)	games/tbs/src/scene/colosseum_navampa_match.c
@@ -5272,8 +5272,8 @@ scCrossboneIslePlaceLogs	its twin	The Lost Age's scIsletCavePlaceLogs, which pla
 scCrossboneIsleSettleLog	its twin	The Lost Age's scIsletCaveSettleLog, the same two animation calls when the leader steps onto a log	games/tbs/src/scene/crossbone_isle.c
 LIES_ACROSS	its code	each lane test compares another log's middle with the riding log's line, one cell either side: log C at column 32 tests 31 to 33, log K at 7 tests 6 to 8	games/tbs/src/scene/crossbone_isle.c
 LOG_B_COLUMN	its code	CrossboneIsleFloatingLogsActorPlacements puts log B's middle at x 168, column 10, and its ride routines only move it north and south; LOG_C_COLUMN (x 520), LOG_J_COLUMN (x 72), LOG_K_COLUMN (x 120), LOG_G_ROW (z 216) and LOG_I_ROW (z 168) likewise	games/tbs/src/scene/crossbone_isle.c
-CrossboneIsleFloorActorPlacements	its uses	scGetActorPlacements hands it to SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor	games/tbs/src/scene/crossbone_isle.c
-CrossboneIsleFloorCues	its uses	scGetCues hands it to SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsleFloorActorPlacements	its uses	scGetActorPlacements hands it to SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor	games/tbs/src/scene/crossbone_isle.c
+CrossboneIsleFloorCues	its uses	scGetCues hands it to SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor	games/tbs/src/scene/crossbone_isle.c
 TREASURE_SPOT_PIRATE_SHIP_DEMON_MAIL	its code	the examine trigger that finds ITEM_DEMON_MAIL, its treasure spot placed once FLAG_CROSSBONE_ISLE_DEADBEARD_DEFEATED is set	games/tbs/src/scene/crossbone_isle.c
 TREASURE_SPOT_PIRATE_SHIP_MIMIC	its code	the examine trigger that finds FIND_MIMIC until FLAG_PIRATE_SHIP_MIMIC_BEATEN	games/tbs/src/scene/crossbone_isle.c
 TREASURE_SPOT_CROSSBONE_ISLE_FIRST_FLOOR_MIMIC	its code	the examine trigger that finds FIND_MIMIC until FLAG_CROSSBONE_ISLE_FIRST_FLOOR_MIMIC_BEATEN, placed on the first floor alone	games/tbs/src/scene/crossbone_isle.c
@@ -5351,15 +5351,15 @@ SE_BLACK_CRYSTAL_SET	its twin	The Lost Age's SE_BLACK_CRYSTAL_SET is byte for by
 SE_TAKE_FLIGHT	its twin	The Lost Age's SE_TAKE_FLIGHT is byte for byte the same sequence as row 291 here (games/tbs/sound/songs/se_291.mid against games/common/sound/songs/se_take_flight.mid), played there for an actor taking flight (hz/hd)	games/tbs/include/sounds.h
 SE_FALL	its twin	The Lost Age's SE_FALL is byte for byte the same sequence as row 310 here (games/tbs/sound/songs/se_310.mid against games/common/sound/songs/se_fall.mid), played there for the leader dropping down a ledge or through a hole (hz/hd)	games/tbs/include/sounds.h
 PSYNERGY_RINGS_INTERVAL	what the player sees	a new set of rings of light rises round Sheba about four times a second; the ring pixels round her repeat every 60 frames, the rings' 15 with her colour cycle's 12 (its render)	games/tbs/src/scene/venus_lighthouse_aerie.c
-CROSSBONE_ISLE_FLOOR_ACTOR_ID	its uses	the placed actors of CrossboneIsleFloorActorPlacements, which scGetActorPlacements hands to SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor	games/tbs/src/scene/crossbone_isle.c
-FLOOR_FROM_PREVIOUS_ROOM	its uses	entrance 1 of every floor: the first floor's is CROSSBONE_ISLE_FIRST_FLOOR_FROM_CROSSBONE_ISLE_CAVE_ENTRANCE, the next floors' from the floor before; the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
-FLOOR_FROM_NEXT_ROOM	its uses	entrance 2 of every floor: from the floor after, and the ninth floor's from CrossboneIslePier; the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
-FLOOR_FROM_SIDE_ROOM_EAST	its uses	entrance 3 of every floor, where the side room's east exit leads (CROSSBONE_ISLE_FLOATING_LOGS_TO_CROSSBONE_ISLE_NINTH_FLOOR_EAST); the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
-FLOOR_FROM_SIDE_ROOM_WEST	its uses	entrance 4 of every floor, where the side room's west exit leads (CROSSBONE_ISLE_FLOATING_LOGS_TO_CROSSBONE_ISLE_NINTH_FLOOR_WEST); the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
-FLOOR_TO_PREVIOUS_ROOM	its uses	exit 1 of CrossboneIsleFloorCues, which scene_exits.h names floor by floor (CROSSBONE_ISLE_FIRST_FLOOR_TO_CROSSBONE_ISLE_CAVE_ENTRANCE in the first); the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
-FLOOR_TO_NEXT_ROOM	its uses	exit 2 of CrossboneIsleFloorCues (CROSSBONE_ISLE_FIRST_FLOOR_TO_CROSSBONE_ISLE_SECOND_FLOOR in the first); the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
-FLOOR_TO_SIDE_ROOM_EAST	its uses	exit 3, which scCrossboneIsleOpenEastDoor leaves by once the door is open; the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
-FLOOR_TO_SIDE_ROOM_WEST	its uses	exit 4, which scCrossboneIsleOpenWestDoor leaves by once the door is open; the floors are SceneId_CrossboneIsleFirstFloor to SceneId_CrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
+CROSSBONE_ISLE_FLOOR_ACTOR_ID	its uses	the placed actors of CrossboneIsleFloorActorPlacements, which scGetActorPlacements hands to SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor	games/tbs/src/scene/crossbone_isle.c
+FLOOR_FROM_PREVIOUS_ROOM	its uses	entrance 1 of every floor: the first floor's is CROSSBONE_ISLE_FIRST_FLOOR_FROM_CROSSBONE_ISLE_CAVE_ENTRANCE, the next floors' from the floor before; the floors are SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
+FLOOR_FROM_NEXT_ROOM	its uses	entrance 2 of every floor: from the floor after, and the ninth floor's from CrossboneIslePier; the floors are SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
+FLOOR_FROM_SIDE_ROOM_EAST	its uses	entrance 3 of every floor, where the side room's east exit leads (CROSSBONE_ISLE_FLOATING_LOGS_TO_CROSSBONE_ISLE_NINTH_FLOOR_EAST); the floors are SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
+FLOOR_FROM_SIDE_ROOM_WEST	its uses	entrance 4 of every floor, where the side room's west exit leads (CROSSBONE_ISLE_FLOATING_LOGS_TO_CROSSBONE_ISLE_NINTH_FLOOR_WEST); the floors are SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
+FLOOR_TO_PREVIOUS_ROOM	its uses	exit 1 of CrossboneIsleFloorCues, which scene_exits.h names floor by floor (CROSSBONE_ISLE_FIRST_FLOOR_TO_CROSSBONE_ISLE_CAVE_ENTRANCE in the first); the floors are SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
+FLOOR_TO_NEXT_ROOM	its uses	exit 2 of CrossboneIsleFloorCues (CROSSBONE_ISLE_FIRST_FLOOR_TO_CROSSBONE_ISLE_SECOND_FLOOR in the first); the floors are SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
+FLOOR_TO_SIDE_ROOM_EAST	its uses	exit 3, which scCrossboneIsleOpenEastDoor leaves by once the door is open; the floors are SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
+FLOOR_TO_SIDE_ROOM_WEST	its uses	exit 4, which scCrossboneIsleOpenWestDoor leaves by once the door is open; the floors are SceneIdCrossboneIsleFirstFloor to SceneIdCrossboneIsleNinthFloor, as the Floor tables' rows say	games/tbs/src/scene/crossbone_isle.c
 scCrossboneIsleRideLogASouth	its code	as scCrossboneIsleRideLog, lettered as ACTOR_LOG_A, ridden south by the step trigger of METATILE_BEHAVIOR_CROSSBONE_ISLE_LOG_A	games/tbs/src/scene/crossbone_isle.c
 scCrossboneIsleRideLogBNorth	its code	as scCrossboneIsleRideLog, lettered as ACTOR_LOG_B, ridden north by the step trigger of METATILE_BEHAVIOR_CROSSBONE_ISLE_LOG_B	games/tbs/src/scene/crossbone_isle.c
 scCrossboneIsleRideLogBSouth	its code	as scCrossboneIsleRideLog, lettered as ACTOR_LOG_B, ridden south by the step trigger of METATILE_BEHAVIOR_CROSSBONE_ISLE_LOG_B	games/tbs/src/scene/crossbone_isle.c
@@ -5712,7 +5712,7 @@ FIELD_EFFECT_DRAG_X	its twin	The Lost Age's field_effect_advance_motion.c names 
 FIELD_EFFECT_DRAG_Z	its twin	The Lost Age's field_effect_advance_motion.c names the same divisor of scFieldEffectAdvanceMotion so (hz/fd)	games/tbs/src/scene/shared/field_effect_advance.c
 KOLIMA_WATER_PALETTE	what the player sees	at Kolima Forest's floodgate under the curse the grass and trees turn brown while the river's blues are the same as once the curse is lifted (its render); the cliff's, glade's and floodgate's palettes hold those eight blues in colours 1 to 8 of palettes 1 and 12	games/tbs/src/scene/shared/kolima_palette.c
 KOLIMA_SECOND_WATER_PALETTE	what the player sees	at Kolima Forest's floodgate under the curse the grass and trees turn brown while the river's blues are the same as once the curse is lifted (its render); the cliff's, glade's and floodgate's palettes hold those eight blues in colours 1 to 8 of palettes 1 and 12	games/tbs/src/scene/shared/kolima_palette.c
-MAPGRID_ANIMATION_SCRIPT	its code	field_map_grid.c decodes a layout's tileset animation script to Ram_MapGridShapes + 4096 and starts it there, and field_world_map.c the world map's; the blend script follows at + 7680 (MAPGRID_BLEND_SCRIPT)	games/tbs/src/field/field_internal.h
+MAPGRID_ANIMATION_SCRIPT	its code	field_map_grid.c decodes a layout's tileset animation script to RamMapGridShapes + 4096 and starts it there, and field_world_map.c the world map's; the blend script follows at + 7680 (MAPGRID_BLEND_SCRIPT)	games/tbs/src/field/field_internal.h
 DICE_FLASH_TICKS	its code	a two pair or triple win sets one die's flashTmr to 60, four alike both to 120	games/tbs/src/field/lucky_dice.c
 ENEMY_SLIME_WORLD_MAP	the game	"Slime" (MsgEnemyName + 11)	games/tbs/include/enemy_ids.h
 ENEMY_UNUSED_CHIMERA	the game	"Chimera" (MsgEnemyName + 102)	games/tbs/include/enemy_ids.h
@@ -5811,13 +5811,13 @@ TRANSITION_CURTAIN_FIRST_TILE	its code	CURTAIN_TILE(0) is BG_CHAR_BLOCK(1) + 128
 TRANSITION_CURTAIN_ENTRY	its code	the curtain's rows are WINDOW_TILE(128 + n) entries in screen block 12	games/tbs/src/battle/battle_transition.c
 TRANSITION_CURTAIN_COLOR	its code	the closed curtain's tile is filled with colour 3	games/tbs/src/battle/battle_transition.c
 TRANSITION_CURTAIN_VARIANTS	its code	btTransitionUploadTileVariant copies variant frame / 4 into the curtain's first tile while frame is below 8 * 4	games/tbs/src/battle/battle_transition.c
-TRANSITION_VARIANT_TICKS	its code	a new variant every 4 frames: BattleTransition_CurtainVariants + frame / 4 * TILE_SIZE_4BPP	games/tbs/src/battle/battle_transition.c
+TRANSITION_VARIANT_TICKS	its code	a new variant every 4 frames: BattleTransitionCurtainVariants + frame / 4 * TILE_SIZE_4BPP	games/tbs/src/battle/battle_transition.c
 SETTINGS_ROW_WINDOW_COLOR	the game	"Window color" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
 SETTINGS_ROW_SPEECH	the game	"Speech" (MsgSpeechLabel)	games/tbs/src/window/window_settings_menu.c
 SETTINGS_ROW_AUTO_SLEEP	the game	"Auto-Sleep" (MsgAutoSleepLabel)	games/tbs/src/window/window_settings_menu.c
 OPTION_ROW_WINDOW_COLOR	the game	"Window color" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
 WINDOW_COLOR_SLIDER_PALETTE	the game	"Window color" (MsgWindowColorLabel)	games/tbs/src/window/window_settings_menu.c
-WINDOW_COLOR_SLIDER_PALETTE	its code	sprite palette 14, which SettingsMenu_SliderPalette fills with 15 for the two sliders' ends	games/tbs/src/window/window_settings_menu.c
+WINDOW_COLOR_SLIDER_PALETTE	its code	sprite palette 14, which SettingsMenuSliderPalette fills with 15 for the two sliders' ends	games/tbs/src/window/window_settings_menu.c
 WINDOW_SHADE	its code	mnWindowColApply sets BG_PLTT_COLOR(WINDOW_PALETTE, WINDOW_BACKGROUND_COLOR + n) for n 0 to 6	games/tbs/src/window/window_settings_menu.c
 ICON_MENU_BOTTOM_ROW	its code	mnIconMenuCenter(17, ...) for most menus, and mnIconMenuAddIcon starts each icon at y 17 * 8; a Yes or No may stand at row 0	games/tbs/src/window/screens_icon_menu.c
 fdScreenTransitionUpdateDissolve	plain English	a dissolve: one picture giving way to another a scattering of pixels at a time, as the transitions of that name in film and video do	games/tbs/src/field/field_mode_screen_transition.c
@@ -5929,7 +5929,7 @@ PRIORITY_LOWEST	its twin	The Lost Age's battle_turn.c (hz/ui) names it so: btGat
 EXAMINE_TARGET	its code	EXAMINE_CUE(target) packs target as (target) << 4 and enum EXAMINE is "EXAMINE_CUE()'s control bits 8..4" (field/scene_tables.h); Scene_RunExamineTrigger reads it back as (kind >> 4) & 31 to show MsgTileChecked + target	games/tbs/src/field/field_mode_cues.c
 FIND_ITEM_MASK	its code	an item search result is FIND_ITEM(item), 0x00100000 | item (field/scene_tables.h); the item shown and named is value & 0xfff	games/tbs/src/field/field_mode_cues.c
 MESSAGE_CAPACITY_UNLIMITED	its code	mnMessageDecodeRawUnbounded passes 0x7fffffff, the largest s32, as mnMessageDecodeRaw's capacity, which counts down per entry and stops at 0	games/tbs/src/window/window_messages.c
-SYMBOL_TREE_MASK	its code	Text_DecodeSymbol picks the context bank by previousCode >> 8 and the tree in it by the low byte (Text_MessageContexts[bank][1][code & 0xff])	games/tbs/src/window/window_messages.c
+SYMBOL_TREE_MASK	its code	TextDecodeSymbol picks the context bank by previousCode >> 8 and the tree in it by the low byte (TextMessageContexts[bank][1][code & 0xff])	games/tbs/src/window/window_messages.c
 BIT_STREAM_STOP	its code	each byte loaded for the text and tree bits is taken one bit at once and kept as (byte >> 1) | 0x80; a 1 read with nothing left loads the next byte	games/tbs/src/window/window_messages.c
 SELECTION_ROW_HIDDEN	its twin	The Lost Age's window_selection.c (hz/ui) names it so: mnSelectionMenuCreate sets verticalScroll 32, "pixels added to the icons' y" (window/select.h)	games/tbs/src/window/window_selection.c
 SELECTION_YES_NO_AT_BOTTOM	its twin	The Lost Age's window_selection.c (hz/ui) names it so: locked is 999 from setup and once a yes or no window opens, and a yes or no window opens at the top only while locked is 0	games/tbs/src/window/window_selection.c
@@ -6029,9 +6029,9 @@ ICE_PUFF_FIRST_TICK	what the player sees	sparkle twinkles up round a shard a mom
 ICE_PUFF_LAST_TICK	its code	as ICE_PUFF_FIRST_TICK: the last landed frame that takes a puff	games/tbs/src/battle_effect/battle_effect_falling.c
 ICE_PUFF_TICKS	its code	a puff counts down from ICE_PUFF_TICKS and draws sparkle picture variant / 2, nine pictures (BattleEffectSparkleSizes)	games/tbs/src/battle_effect/battle_effect_falling.c
 DROP_SPLASH_BUFFER	what the player sees	each drop of water bursts in a splash that throws up droplets (its render, Douse)	games/tbs/src/battle_effect/battle_effect_falling.c
-DROP_SPLASH_BUFFER.lines	its code	FALLING_BUILD_SLANTED_WINDOW writes window 0's edges for each line at the start of Ram_MapGridMetatileBuffer, which btEffectArmWin0HBlankDMA feeds to WIN0H	games/tbs/src/battle_effect/battle_effect_falling.c
+DROP_SPLASH_BUFFER.lines	its code	FALLING_BUILD_SLANTED_WINDOW writes window 0's edges for each line at the start of RamMapGridMetatileBuffer, which btEffectArmWin0HBlankDMA feeds to WIN0H	games/tbs/src/battle_effect/battle_effect_falling.c
 DROP_SPLASH_BUFFER.droplets	what the player sees	small blue droplets fly up from each splash and fall back (its render, Douse)	games/tbs/src/battle_effect/battle_effect_falling.c
-DOUSE_SPLASH_BUFFER	its twin	The Lost Age's battle_effect_falling.c names Ram_MapMetatileBuffer seen as struct DROP_SPLASH_BUFFER so	games/tbs/src/battle_effect/battle_effect_falling.c
+DOUSE_SPLASH_BUFFER	its twin	The Lost Age's battle_effect_falling.c names RamMapMetatileBuffer seen as struct DROP_SPLASH_BUFFER so	games/tbs/src/battle_effect/battle_effect_falling.c
 DOUSE_DROP_WIDTH	what the player sees	the falling drop of water is a round blue bubble (its render, Douse)	games/tbs/src/battle_effect/battle_effect_falling.c
 DOUSE_DROP_HEIGHT	its code	as DOUSE_DROP_WIDTH: the drop and the small splash are drawn 24x24	games/tbs/src/battle_effect/battle_effect_falling.c
 DOUSE_BURST_PICTURE_WIDTH	its code	the large splash is drawn 42x42, centred on the drop's 24x24	games/tbs/src/battle_effect/battle_effect_falling.c
@@ -6183,12 +6183,12 @@ SLEEP_Z_STEPS_PER_PIXEL	its code	scCottageRoomsAAdvanceSleepZ adds timer and use
 COLOSSO_SOLO_TO_RACE	its code	exit 10 is LEND_A_HAND_TO_RACE in each Colosso match scene's exits in scene_exits.h (Azart's, Satrage's and Navampa's alike); scColossoTakePlaceForMatch and scColossoAskDoneCheering request it once Mia, the last friend, has chosen where to cheer	games/tbs/include/scene/colosso_solo.h
 DAMPING_SCALE	its code	btParticleAdvanceWithGravity3D and 2D keep speed * damping / 64 each frame; the effects damp their own speeds the same way (vx * 60 / 64, velocityY * 62 / 64, Kirin's fire * 48 / 64)	games/tbs/include/fixed_math.h
 MAPGRID_SIZE	its code	field_map_grid.c wraps cell rows and columns with & 127 and steps rows by 128 (MAPGRID_METATILE_WORDS, "The map's 128 by 128 cells, each read whole as its word")	games/tbs/include/field/map_grid.h
-MAPGRID_METATILES	its code	fdScriptSpawnActorPlacements reads the cell under the leader as struct MAP_GRID_METATILE at x / 16 + (z / 16) * 128 of Ram_MapGridMetatileBuffer, and the one a row above at - 128, for METATILE_BEHAVIOR_CLIMB; Mercury Lighthouse's pool hop reads ((z / 16) << 7) + x / 16 for the pool's behavior; fdMapGridLoadMap points each layer's cells at the same buffer + (y / 2) * MAPGRID_SIZE + x / 2; the buffer is 64 KB, 128 by 128 cells of 4 bytes	games/tbs/include/field/map_grid.h
-MAPGRID_METATILES_SOUTH	its code	fdClimbDown compares the behavior of the cell at x / 16 + (z / 16) * 128 of Ram_MapGridMetatileBuffer with the one 128 cells on, a row south (+z), and goes down the wall only when they match	games/tbs/src/field/script_commands_climbing.c
-MAPGRID_METATILES_NORTH	its code	fdClimbUp compares the behavior of the cell at x / 16 + (z / 16) * 128 of Ram_MapGridMetatileBuffer with the one 128 cells back, a row north (-z), and climbs only when they match	games/tbs/src/field/script_commands_climbing.c
+MAPGRID_METATILES	its code	fdScriptSpawnActorPlacements reads the cell under the leader as struct MAP_GRID_METATILE at x / 16 + (z / 16) * 128 of RamMapGridMetatileBuffer, and the one a row above at - 128, for METATILE_BEHAVIOR_CLIMB; Mercury Lighthouse's pool hop reads ((z / 16) << 7) + x / 16 for the pool's behavior; fdMapGridLoadMap points each layer's cells at the same buffer + (y / 2) * MAPGRID_SIZE + x / 2; the buffer is 64 KB, 128 by 128 cells of 4 bytes	games/tbs/include/field/map_grid.h
+MAPGRID_METATILES_SOUTH	its code	fdClimbDown compares the behavior of the cell at x / 16 + (z / 16) * 128 of RamMapGridMetatileBuffer with the one 128 cells on, a row south (+z), and goes down the wall only when they match	games/tbs/src/field/script_commands_climbing.c
+MAPGRID_METATILES_NORTH	its code	fdClimbUp compares the behavior of the cell at x / 16 + (z / 16) * 128 of RamMapGridMetatileBuffer with the one 128 cells back, a row north (-z), and climbs only when they match	games/tbs/src/field/script_commands_climbing.c
 FIELD_PUSH_TICKS	its code	fdRunPushMetatile jumps, climbs or drops once blockedSteps passes 12; a step trigger needs 12 frames of pushing (2 when quick); field_sequence_triggers.c, which defined a copy, now reads the header's	games/tbs/include/field/field_mode.h
 DEBUG_ITEM_COUNT	its code	the debug item browsers' bounds (270), in debug/level.c and debug/test.c alike; renamed in level.c from ABILITY_COUNT and ITEM_COUNT as test.c names its own, and defined once in debug.h for both	games/tbs/include/debug/debug.h
-TEXT_LAST_FONT_CODE	its code	glyph_arm.c's mnGlyphDrawArm draws codes up to 255 from Font_Glyphs and those above from Font_KanjiGlyphs	games/tbs/include/window/window.h
+TEXT_LAST_FONT_CODE	its code	glyph_arm.c's mnGlyphDrawArm draws codes up to 255 from FontGlyphs and those above from FontKanjiGlyphs	games/tbs/include/window/window.h
 DISPCNT_MODE_MASK	the hardware	REG_DISPCNT bits 0..2 are the BG mode (GBATEK); the HBlank interrupt clears them for mode 0 or sets DISPCNT_MODE_2; field_sequence_screen_transition.c, which defined a copy, now reads the header's	games/tbs/include/system/definitions.h
 SCENE_TRANSITION_STYLE	its code	SCENE_TRANSITION(style, variant) is style << 8 | variant (field/actor.h); fdScreenTransitionStart and _Finish switch on (mode >> 8) & 0xff; field_sequence_screen_transition.c, which defined a copy, now reads the header's	games/tbs/include/field/actor.h
 SCENE_TRANSITION_VARIANT	its code	SCENE_TRANSITION(style, variant) is style << 8 | variant (field/actor.h); the low byte picks the window mode or the centre line's flicker; field_sequence_screen_transition.c, which defined a copy, now reads the header's	games/tbs/include/field/actor.h
@@ -6722,25 +6722,25 @@ Icon_Item247	its number	ItemIcons row 247, past the last icon ItemDefinitionTabl
 Icon_Item248	its number	ItemIcons row 248, past the last icon ItemDefinitionTable gives (191): a placeholder that draws its own number, 248, in green digits (menu_icons/item_248.png); only the debug menu's icon browser shows it	games/tbs/src/graphics/ui/menu_icons.s
 Icon_Item249	its number	ItemIcons row 249, past the last icon ItemDefinitionTable gives (191): a placeholder that draws its own number, 249, in green digits (menu_icons/item_249.png); only the debug menu's icon browser shows it	games/tbs/src/graphics/ui/menu_icons.s
 Icon_Psynergy159	its number	the Psynergy icons' last row, 159, past the last icon AbilityDefinitions gives (158): a placeholder that draws its own number, 159, in green digits (menu_icons/psynergy_159.png)	games/tbs/src/graphics/ui/menu_icons.s
-Icon_CommandFrame	its twin	IconBasePointerTable's first base, under which mnIconBuildCommandIconTiles draws a command's icon for the command menus (window_selection.c passes base 0); its picture is a brown square in a light orange border, the same picture as The Lost Age's Icon_CommandFrame; renamed from Icon_Base0 and marks/base_0.png	games/tbs/src/graphics/ui/marks.s
-Icon_ItemFrame	its twin	IconBasePointerTable's third base, which mnIconBuildItemIconTiles and mnIconBuildAbilityIconTiles draw under an item's or a Psynergy's icon; its picture is a black square in a yellow border, the same picture as The Lost Age's Icon_ItemFrame; renamed from Icon_Base2 and marks/base_2.png	games/tbs/src/graphics/ui/marks.s
-Icon_Digit0	its number	the mark of the digit 0, entry 0 of IconDigitPointers (digit_0.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Digit1	its number	the mark of the digit 1, entry 1 of IconDigitPointers (digit_1.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Digit2	its number	the mark of the digit 2, entry 2 of IconDigitPointers (digit_2.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Digit3	its number	the mark of the digit 3, entry 3 of IconDigitPointers (digit_3.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Digit4	its number	the mark of the digit 4, entry 4 of IconDigitPointers (digit_4.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Digit5	its number	the mark of the digit 5, entry 5 of IconDigitPointers (digit_5.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Digit6	its number	the mark of the digit 6, entry 6 of IconDigitPointers (digit_6.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Digit7	its number	the mark of the digit 7, entry 7 of IconDigitPointers (digit_7.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Digit8	its number	the mark of the digit 8, entry 8 of IconDigitPointers (digit_8.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Digit9	its number	the mark of the digit 9, entry 9 of IconDigitPointers (digit_9.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Tens1	its number	the mark of the tens digit 1 (10 to 19), entry 10 of IconDigitPointers (tens_1.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Tens2	its number	the mark of the tens digit 2 (20 to 29), entry 11 of IconDigitPointers (tens_2.png)	games/tbs/src/graphics/ui/marks.s
-Icon_Tens3	its number	the mark of the tens digit 3 (30 to 39), entry 12 of IconDigitPointers (tens_3.png)	games/tbs/src/graphics/ui/marks.s
-NameEntry_AlternateKeyboardTilemap	its twin	the Japanese edition's second name-entry page, which Select turns to (screens_name_entry.c's change_keyboard): the Latin letters, digits and signs; its file renamed from keyboard_j2.tsv to keyboard_ja_latin.tsv, the same bytes as The Lost Age's keyboard_ja_latin.tsv	games/tbs/src/window/keyboard.s
-NameEntry_UnusedKeyboardTilemap	its twin	a third Japanese keyboard tilemap after NameEntry_AlternateKeyboardTilemap, which nothing in the source reads; the same bytes as The Lost Age's keyboard_ja_latin_unused.tsv (NameEntry_UnusedKeyboardTilemap there); renamed from NameEntry_KeyboardTilemap3 and keyboard_j3.tsv	games/tbs/src/window/keyboard.s
+IconCommandFrame	its twin	IconBasePointerTable's first base, under which mnIconBuildCommandIconTiles draws a command's icon for the command menus (window_selection.c passes base 0); its picture is a brown square in a light orange border, the same picture as The Lost Age's IconCommandFrame; renamed from Icon_Base0 and marks/base_0.png	games/tbs/src/graphics/ui/marks.s
+IconItemFrame	its twin	IconBasePointerTable's third base, which mnIconBuildItemIconTiles and mnIconBuildAbilityIconTiles draw under an item's or a Psynergy's icon; its picture is a black square in a yellow border, the same picture as The Lost Age's IconItemFrame; renamed from Icon_Base2 and marks/base_2.png	games/tbs/src/graphics/ui/marks.s
+IconDigit0	its number	the mark of the digit 0, entry 0 of IconDigitPointers (digit_0.png)	games/tbs/src/graphics/ui/marks.s
+IconDigit1	its number	the mark of the digit 1, entry 1 of IconDigitPointers (digit_1.png)	games/tbs/src/graphics/ui/marks.s
+IconDigit2	its number	the mark of the digit 2, entry 2 of IconDigitPointers (digit_2.png)	games/tbs/src/graphics/ui/marks.s
+IconDigit3	its number	the mark of the digit 3, entry 3 of IconDigitPointers (digit_3.png)	games/tbs/src/graphics/ui/marks.s
+IconDigit4	its number	the mark of the digit 4, entry 4 of IconDigitPointers (digit_4.png)	games/tbs/src/graphics/ui/marks.s
+IconDigit5	its number	the mark of the digit 5, entry 5 of IconDigitPointers (digit_5.png)	games/tbs/src/graphics/ui/marks.s
+IconDigit6	its number	the mark of the digit 6, entry 6 of IconDigitPointers (digit_6.png)	games/tbs/src/graphics/ui/marks.s
+IconDigit7	its number	the mark of the digit 7, entry 7 of IconDigitPointers (digit_7.png)	games/tbs/src/graphics/ui/marks.s
+IconDigit8	its number	the mark of the digit 8, entry 8 of IconDigitPointers (digit_8.png)	games/tbs/src/graphics/ui/marks.s
+IconDigit9	its number	the mark of the digit 9, entry 9 of IconDigitPointers (digit_9.png)	games/tbs/src/graphics/ui/marks.s
+IconTens1	its number	the mark of the tens digit 1 (10 to 19), entry 10 of IconDigitPointers (tens_1.png)	games/tbs/src/graphics/ui/marks.s
+IconTens2	its number	the mark of the tens digit 2 (20 to 29), entry 11 of IconDigitPointers (tens_2.png)	games/tbs/src/graphics/ui/marks.s
+IconTens3	its number	the mark of the tens digit 3 (30 to 39), entry 12 of IconDigitPointers (tens_3.png)	games/tbs/src/graphics/ui/marks.s
+NameEntryAlternateKeyboardTilemap	its twin	the Japanese edition's second name-entry page, which Select turns to (screens_name_entry.c's change_keyboard): the Latin letters, digits and signs; its file renamed from keyboard_j2.tsv to keyboard_ja_latin.tsv, the same bytes as The Lost Age's keyboard_ja_latin.tsv	games/tbs/src/window/keyboard.s
+NameEntryUnusedKeyboardTilemap	its twin	a third Japanese keyboard tilemap after NameEntryAlternateKeyboardTilemap, which nothing in the source reads; the same bytes as The Lost Age's keyboard_ja_latin_unused.tsv (NameEntryUnusedKeyboardTilemap there); renamed from NameEntry_KeyboardTilemap3 and keyboard_j3.tsv	games/tbs/src/window/keyboard.s
 SE_UNUSED_FOOTSTEP_LOW	its twin	The Lost Age's SE_UNUSED_FOOTSTEP_LOW is byte for byte the same sequence as row 119 here (games/common/sound/songs/se_unused_footstep_low.mid): SE_FOOTSTEP's two notes at the same times on the same voice, far lower (SE_FOOTSTEP is the same bytes in both games); nothing in either game plays it; renamed from SE_119 and se_119.mid	games/tbs/include/sounds.h
-SE_UNUSED_AMBIENT_WIND_LOW	its code	se_unused_ambient_wind_low.mid differs from se_ambient_wind.mid only in its note, 60 where SE_AMBIENT_WIND has 67 (seven semitones lower), and its volume, 127 where SE_AMBIENT_WIND has 90: the same looping note on the same voice (Sound_SeVoices 42) at the same tempo; no code or table plays it; renamed from SE_166 and se_166.mid	games/tbs/include/sounds.h
+SE_UNUSED_AMBIENT_WIND_LOW	its code	se_unused_ambient_wind_low.mid differs from se_ambient_wind.mid only in its note, 60 where SE_AMBIENT_WIND has 67 (seven semitones lower), and its volume, 127 where SE_AMBIENT_WIND has 90: the same looping note on the same voice (SoundSeVoices 42) at the same tempo; no code or table plays it; renamed from SE_166 and se_166.mid	games/tbs/include/sounds.h
 SOUND_FADE_OUT_ACTION_SE	its code	sySndPlay (sound.c) takes row 289 as the control that fades player 3 out before it looks up the song table, so the sequence at row 289 (a note looping on voices 3 and 23) never plays; its file is named for its row: renamed from se_289.mid to sound_fade_out_action_se.mid	games/tbs/include/sounds.h
 FIRST_MATCH	its picture	the Colosso lettering part that reads "The 1st Match" (first_match.png; the Japanese edition's first_match_ja.png says the same in kana); renamed from MATCH_1 and match_1.png	games/tbs/src/graphics/colosso/lettering.tsv
 SECOND_MATCH	its picture	the Colosso lettering part that reads "The 2nd Match" (second_match.png, and second_match_ja.png in Japanese); renamed from MATCH_2 and match_2.png	games/tbs/src/graphics/colosso/lettering.tsv
@@ -6757,57 +6757,57 @@ LUCKY_NUMBERS	its code	six small die faces, one to six pips, at DICE_LUCKY_NUMBE
 INTRO_SUN_GLARE	its code	the title intro's sun, a white glare in a blue haze, at SUN_TILE (title_intro.c), which the view rises towards; its palette is the sheet's; renamed from INTRO_SUN_1 and intro_sun_1.png	games/tbs/src/graphics/title/intro_sun.tsv
 INTRO_SUN_FLARE_RINGS	its code	the lens flare's orange disc and quarters of its rainbow ring and yellow-green ring (FLARE_ORANGE_DISC_TILE, FLARE_RAINBOW_RING_TILE, FLARE_GREEN_RING_TILE in title_intro.c); renamed from INTRO_SUN_2 and intro_sun_2.png	games/tbs/src/graphics/title/intro_sun.tsv
 INTRO_SUN_FLARE_DISCS	its code	the lens flare's small discs, quarters of a green disc with a cyan heart and of a white-hot disc (FLARE_GREEN_DISC_TILE, FLARE_WHITE_DISC_TILE in title_intro.c); renamed from INTRO_SUN_3 and intro_sun_3.png	games/tbs/src/graphics/title/intro_sun.tsv
-Field_BabiLighthouseRooms	what the player sees	MapsWork rows 110 and 162 (resources.c), the maps of SceneId_CrossboneIsleSteppingStones and SceneId_BabiLighthouseLuff (scenes.s): render place --scene BabiLighthouseLuff shows Babi Lighthouse's inside rooms (the ground floor round its pit with Luff's pillar, the second floor with its slides, the basement and the room with the locked door) and, apart, the stepping-stone room, which render place --scene CrossboneIsleSteppingStones shows in its own colours (its render); renamed from Field_Map108 and map/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
-Tileset_BabiLighthousePalette	its code	the palette of the tileset Babi Lighthouse's rooms, entry and road share with Crossbone Isle's stepping-stone and stacked-pillar rooms (MapsWork rows 110, 116, 161, 162, 167 take its tiles); this palette is row 110's, the stepping-stone room's; renamed from Tileset_Map108Palette and tileset/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
-Tileset_BabiLighthouseTilesA	its code	sheet A of the tileset Babi Lighthouse's rooms, entry and road share with Crossbone Isle's stepping-stone and stacked-pillar rooms (MapsWork rows 110, 116, 161, 162, 167); renamed from Tileset_Map108TilesA and tileset/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
-Tileset_BabiLighthouseTilesB	its code	sheet B of the tileset Babi Lighthouse's rooms, entry and road share with Crossbone Isle's stepping-stone and stacked-pillar rooms (MapsWork rows 110, 116, 161, 162, 167); renamed from Tileset_Map108TilesB and tileset/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
-Tileset_BabiLighthouseTilesC	its code	sheet C of the tileset Babi Lighthouse's rooms, entry and road share with Crossbone Isle's stepping-stone and stacked-pillar rooms (MapsWork rows 110, 116, 161, 162, 167); renamed from Tileset_Map108TilesC and tileset/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
-Tileset_BabiLighthouseTilesD	its code	sheet D of the tileset Babi Lighthouse's rooms, entry and road share with Crossbone Isle's stepping-stone and stacked-pillar rooms (MapsWork rows 110, 116, 161, 162, 167); renamed from Tileset_Map108TilesD and tileset/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
-Field_CrossboneIsleKeysAndBane	what the player sees	MapsWork rows 112 and 115, the maps of SceneId_CrossboneIsleKeys and SceneId_CrossboneIsleBane (scenes.s): render place shows the room of keys with its posts and blue doors, and Bane's room with its pillars and ladders, the east half of the same map (crossbone_isle_keys.c) (its render); renamed from Field_Map110 and map/map_110	games/tbs/src/map/crossbone_isle_keys_and_bane/map.inc
-Tileset_PaletteCrossboneIsleKeys	its code	the palette MapsWork row 112 gives Field_CrossboneIsleKeysAndBane, SceneId_CrossboneIsleKeys' map (scenes.s); renamed from Tileset_Palette15 and palettes/pal_15.png	games/tbs/src/map/crossbone_isle_keys_and_bane/map.inc
-Tileset_PaletteCrossboneIsleBane	its code	the palette MapsWork row 115 gives Field_CrossboneIsleKeysAndBane, SceneId_CrossboneIsleBane's map (scenes.s); renamed from Tileset_Palette18 and palettes/pal_18.png	games/tbs/src/map/crossbone_isle_floodgate/map.inc
-Tileset_PaletteBabiLighthouseLuff	its code	the palette MapsWork row 162 gives Field_BabiLighthouseRooms, SceneId_BabiLighthouseLuff's map (scenes.s), Babi Lighthouse's inside rooms; renamed from Tileset_Palette45 and palettes/pal_45.png	games/tbs/src/map/babi_lighthouse_entry/map.inc
-Sound_WaveCelesta	its uses	the sample of voice slot 8 of Sound_BgmVoices, General MIDI's Celesta, as The Lost Age's Sound_WaveCelesta is its slot's (celesta.pcm8.wav); renamed from Sound_Wave00 and wave_00.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveNylonGuitar	its uses	the sample of voice slot 24 of Sound_BgmVoices, General MIDI's Acoustic Guitar (nylon), as The Lost Age's Sound_WaveNylonGuitar is its slot's (nylon_guitar.pcm8.wav); renamed from Sound_Wave01 and wave_01.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveFingerBass	its uses	the sample of voice slot 33 of Sound_BgmVoices, General MIDI's Electric Bass (finger), as The Lost Age's Sound_WaveFingerBass is its slot's (finger_bass.pcm8.wav); renamed from Sound_Wave02 and wave_02.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WavePizzicatoStrings	its uses	the sample of voice slot 45 of Sound_BgmVoices, General MIDI's Pizzicato Strings, as The Lost Age's Sound_WavePizzicatoStrings is its slot's (pizzicato_strings.pcm8.wav); renamed from Sound_Wave03 and wave_03.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveHarp	its uses	the sample of voice slot 46 of Sound_BgmVoices, General MIDI's Orchestral Harp, as The Lost Age's Sound_WaveHarp is its slot's (harp.pcm8.wav); renamed from Sound_Wave04 and wave_04.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveTimpani	its uses	the sample of voice slot 47 of Sound_BgmVoices, General MIDI's Timpani, as The Lost Age's Sound_WaveTimpani is its slot's (timpani.pcm8.wav); renamed from Sound_Wave05 and wave_05.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveStrings	its uses	the sample of voice slot 48 of Sound_BgmVoices, General MIDI's String Ensemble 1, as The Lost Age's Sound_WaveStrings is its slot's (strings.pcm8.wav); renamed from Sound_Wave06 and wave_06.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveChoir	its uses	the sample of voice slot 52 of Sound_BgmVoices, General MIDI's Choir Aahs, as The Lost Age's Sound_WaveChoir is its slot's (choir.pcm8.wav); renamed from Sound_Wave07 and wave_07.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveTrumpet	its uses	the sample of voice slot 56 of Sound_BgmVoices, General MIDI's Trumpet, as The Lost Age's Sound_WaveTrumpet is its slot's (trumpet.pcm8.wav); renamed from Sound_Wave08 and wave_08.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveBrass	its uses	the sample of voice slot 61 of Sound_BgmVoices, General MIDI's Brass Section, as The Lost Age's Sound_WaveBrass is its slot's (brass.pcm8.wav); renamed from Sound_Wave09 and wave_09.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveOboe	its uses	the sample of voice slot 68 of Sound_BgmVoices, General MIDI's Oboe, as The Lost Age's Sound_WaveOboe is its slot's (oboe.pcm8.wav); renamed from Sound_Wave10 and wave_10.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WavePiccolo	its uses	the sample of voice slot 72 of Sound_BgmVoices, General MIDI's Piccolo, as The Lost Age's Sound_WavePiccolo is its slot's (piccolo.pcm8.wav); renamed from Sound_Wave11 and wave_11.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveFlute	its uses	the sample of voice slot 73 of Sound_BgmVoices, General MIDI's Flute, as The Lost Age's Sound_WaveFlute is its slot's (flute.pcm8.wav); renamed from Sound_Wave12 and wave_12.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WavePanFlute	its uses	the sample of voice slot 75 of Sound_BgmVoices, General MIDI's Pan Flute, as The Lost Age's Sound_WavePanFlute is its slot's (pan_flute.pcm8.wav); renamed from Sound_Wave13 and wave_13.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveBassDrum	its uses	the sample of keys 36 and 37 of Sound_DrumVoices, General MIDI's Bass Drum 1 and Side Stick (the kit starts at key 36, Sound_BgmVoices slot 127) (bass_drum.pcm8.wav); renamed from Sound_Wave14 and wave_14.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveSnare	its uses	the sample of keys 38 to 40 of Sound_DrumVoices, General MIDI's Acoustic Snare, Hand Clap and Electric Snare (the kit starts at key 36, Sound_BgmVoices slot 127) (snare.pcm8.wav); renamed from Sound_Wave15 and wave_15.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveTom	its uses	the sample of keys 41, 43 to 48 of Sound_DrumVoices, General MIDI's toms (Low Floor, High Floor, Low, Low-Mid, Hi-Mid) and its pedal and open hi-hats (the kit starts at key 36, Sound_BgmVoices slot 127) (tom.pcm8.wav); renamed from Sound_Wave16 and wave_16.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveClosedHiHat	its uses	the sample of key 42 of Sound_DrumVoices, General MIDI's Closed Hi-Hat (the kit starts at key 36, Sound_BgmVoices slot 127) (closed_hi_hat.pcm8.wav); renamed from Sound_Wave17 and wave_17.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveCrashCymbal	its uses	the sample of keys 49 and 50 of Sound_DrumVoices, General MIDI's Crash Cymbal 1 and High Tom (the kit starts at key 36, Sound_BgmVoices slot 127) (crash_cymbal.pcm8.wav); renamed from Sound_Wave18 and wave_18.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveRideCymbal	its uses	the sample of key 51 of Sound_DrumVoices, General MIDI's Ride Cymbal 1 (the kit starts at key 36, Sound_BgmVoices slot 127) (ride_cymbal.pcm8.wav); renamed from Sound_Wave19 and wave_19.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveSwitch	its twin	the sample of voice slot 50 of Sound_SeVoices, which SE_SWITCH alone play here; byte for byte The Lost Age's switch.pcm8.wav (Sound_WaveSwitch there, the same slot); renamed from Sound_Wave20 and wave_20.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveRumble	its twin	the sample of voice slot 51 of Sound_SeVoices, which SE_RUMBLE, SE_STONE_RUMBLE, SE_TREMOR, SE_GATE_MOVE, SE_SWITCH_MECHANISM and others play here; byte for byte The Lost Age's rumble.pcm8.wav (Sound_WaveRumble there, the same slot); renamed from Sound_Wave21 and wave_21.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveCrash	its twin	the sample of voice slot 52 of Sound_SeVoices, which SE_CRASH, SE_CLATTER, SE_TOPPLE, SE_RUN_BACK, SE_BANE_ESCAPE play here; byte for byte The Lost Age's crash.pcm8.wav (Sound_WaveCrash there, the same slot); renamed from Sound_Wave22 and wave_22.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WavePsynergySparkle	its twin	the sample of voice slot 53 of Sound_SeVoices, which SE_PSYNERGY_SPARKLE, SE_PSYNERGY_START, SE_POWER_UP and others play here; byte for byte The Lost Age's psynergy_sparkle.pcm8.wav (Sound_WavePsynergySparkle there, the same slot); renamed from Sound_Wave23 and wave_23.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveRoar	its twin	the sample of voice slot 54 of Sound_SeVoices, which SE_ENEMY_CRY, SE_BEAST_CRY, SE_MONSTER_ROAR, SE_BOSS_ROAR and others play here; byte for byte The Lost Age's roar.pcm8.wav (Sound_WaveRoar there, the same slot); renamed from Sound_Wave24 and wave_24.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveThunder	its twin	the sample of voice slot 55 of Sound_SeVoices, which SE_THUNDER, SE_THUNDER_LOUD and others play here; byte for byte The Lost Age's thunder.pcm8.wav (Sound_WaveThunder there, the same slot); renamed from Sound_Wave25 and wave_25.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveCurse	its twin	the sample of voice slot 57 of Sound_SeVoices, which SE_CURSE, SE_BLACK_CRYSTAL_SET and others play here; byte for byte The Lost Age's curse.pcm8.wav (Sound_WaveCurse there, the same slot); renamed from Sound_Wave26 and wave_26.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveBoom	its twin	the sample of voice slot 58 of Sound_SeVoices, which SE_BOOM, SE_FLAME_FLARE, SE_HEAVY_MOVE and others play here; byte for byte The Lost Age's boom.pcm8.wav (Sound_WaveBoom there, the same slot); renamed from Sound_Wave27 and wave_27.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveBell	its twin	the sample of voice slot 59 of Sound_SeVoices, which SE_BELL and SE_STAR_BOUNCE play here; byte for byte The Lost Age's bell.pcm8.wav (Sound_WaveBell there, the same slot); renamed from Sound_Wave28 and wave_28.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveDrip	its twin	the sample of voice slot 70 of Sound_SeVoices, which SE_DRIP alone play here; byte for byte The Lost Age's drip.pcm8.wav (Sound_WaveDrip there, the same slot); renamed from Sound_Wave29 and wave_29.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveChime	its twin	the sample of voice slot 71 of Sound_SeVoices, which SE_GLITTER, SE_GEM_SET, SE_RISING_CHIMES, SE_SHIMMER play here; byte for byte The Lost Age's chime.pcm8.wav (Sound_WaveChime there, the same slot); renamed from Sound_Wave30 and wave_30.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_WaveColossoLettering	its twin	the sample of voice slot 72 of Sound_SeVoices, which SE_COLOSSO_LETTERING (and the unplayed row 311) play here; byte for byte The Lost Age's colosso_lettering.pcm8.wav (Sound_WaveColossoLettering there, the same slot); renamed from Sound_Wave31 and wave_31.pcm8.wav	games/tbs/sound/direct_sound_samples.s
-Sound_CgbWaveSine	its twin	the wave channel's shape 0, no voice's; byte for byte The Lost Age's sine.pcm4 (Sound_CgbWaveSine there), named there by its shape; renamed from Sound_CgbWave0 and cgb_wave_0.pcm4	games/common/sound/programmable_wave_samples.s
-Sound_CgbWaveTriangle	its twin	the wave channel's shape 1, no voice's; byte for byte The Lost Age's triangle.pcm4 (Sound_CgbWaveTriangle there), named there by its shape; renamed from Sound_CgbWave1 and cgb_wave_1.pcm4	games/common/sound/programmable_wave_samples.s
-Sound_CgbWaveSawtooth	its twin	the wave channel's shape 2, no voice's; byte for byte The Lost Age's sawtooth.pcm4 (Sound_CgbWaveSawtooth there), named there by its shape; renamed from Sound_CgbWave2 and cgb_wave_2.pcm4	games/common/sound/programmable_wave_samples.s
-Sound_CgbWaveRampWithPlateau	its twin	the wave channel's shape 3, no voice's; byte for byte The Lost Age's ramp_with_plateau.pcm4 (Sound_CgbWaveRampWithPlateau there), named there by its shape; renamed from Sound_CgbWave3 and cgb_wave_3.pcm4	games/common/sound/programmable_wave_samples.s
-Sound_CgbWavePulseEighth	its twin	the wave channel's shape 4, no voice's; byte for byte The Lost Age's pulse_eighth.pcm4 (Sound_CgbWavePulseEighth there), named there by its shape; renamed from Sound_CgbWave4 and cgb_wave_4.pcm4	games/common/sound/programmable_wave_samples.s
-Sound_CgbWavePulseQuarter	its twin	the wave channel's shape 5, no voice's; byte for byte The Lost Age's pulse_quarter.pcm4 (Sound_CgbWavePulseQuarter there), named there by its shape; renamed from Sound_CgbWave5 and cgb_wave_5.pcm4	games/common/sound/programmable_wave_samples.s
-Sound_CgbWavePulseThreeEighths	its twin	the wave channel's shape 6, no voice's; byte for byte The Lost Age's pulse_three_eighths.pcm4 (Sound_CgbWavePulseThreeEighths there), named there by its shape; renamed from Sound_CgbWave6 and cgb_wave_6.pcm4	games/common/sound/programmable_wave_samples.s
-Sound_CgbWaveSquare	its twin	the wave channel's shape 7, the voice of Sound_SeVoices slot 41; byte for byte The Lost Age's square.pcm4 (Sound_CgbWaveSquare there), named there by its shape; renamed from Sound_CgbWave7 and cgb_wave_7.pcm4	games/common/sound/programmable_wave_samples.s
-Sound_CgbWavePickBass	its twin	the wave channel's shape 8, the voice of Sound_BgmVoices slot 34, General MIDI's Electric Bass (pick); byte for byte The Lost Age's pick_bass.pcm4 (Sound_CgbWavePickBass there), named there by its shape; renamed from Sound_CgbWave8 and cgb_wave_8.pcm4	games/common/sound/programmable_wave_samples.s
+FieldBabiLighthouseRooms	what the player sees	MapsWork rows 110 and 162 (resources.c), the maps of SceneIdCrossboneIsleSteppingStones and SceneIdBabiLighthouseLuff (scenes.s): render place --scene BabiLighthouseLuff shows Babi Lighthouse's inside rooms (the ground floor round its pit with Luff's pillar, the second floor with its slides, the basement and the room with the locked door) and, apart, the stepping-stone room, which render place --scene CrossboneIsleSteppingStones shows in its own colours (its render); renamed from Field_Map108 and map/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
+TilesetBabiLighthousePalette	its code	the palette of the tileset Babi Lighthouse's rooms, entry and road share with Crossbone Isle's stepping-stone and stacked-pillar rooms (MapsWork rows 110, 116, 161, 162, 167 take its tiles); this palette is row 110's, the stepping-stone room's; renamed from Tileset_Map108Palette and tileset/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
+TilesetBabiLighthouseTilesA	its code	sheet A of the tileset Babi Lighthouse's rooms, entry and road share with Crossbone Isle's stepping-stone and stacked-pillar rooms (MapsWork rows 110, 116, 161, 162, 167); renamed from Tileset_Map108TilesA and tileset/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
+TilesetBabiLighthouseTilesB	its code	sheet B of the tileset Babi Lighthouse's rooms, entry and road share with Crossbone Isle's stepping-stone and stacked-pillar rooms (MapsWork rows 110, 116, 161, 162, 167); renamed from Tileset_Map108TilesB and tileset/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
+TilesetBabiLighthouseTilesC	its code	sheet C of the tileset Babi Lighthouse's rooms, entry and road share with Crossbone Isle's stepping-stone and stacked-pillar rooms (MapsWork rows 110, 116, 161, 162, 167); renamed from Tileset_Map108TilesC and tileset/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
+TilesetBabiLighthouseTilesD	its code	sheet D of the tileset Babi Lighthouse's rooms, entry and road share with Crossbone Isle's stepping-stone and stacked-pillar rooms (MapsWork rows 110, 116, 161, 162, 167); renamed from Tileset_Map108TilesD and tileset/map_108	games/tbs/src/map/babi_lighthouse_rooms/map.inc
+FieldCrossboneIsleKeysAndBane	what the player sees	MapsWork rows 112 and 115, the maps of SceneIdCrossboneIsleKeys and SceneIdCrossboneIsleBane (scenes.s): render place shows the room of keys with its posts and blue doors, and Bane's room with its pillars and ladders, the east half of the same map (crossbone_isle_keys.c) (its render); renamed from Field_Map110 and map/map_110	games/tbs/src/map/crossbone_isle_keys_and_bane/map.inc
+TilesetPaletteCrossboneIsleKeys	its code	the palette MapsWork row 112 gives FieldCrossboneIsleKeysAndBane, SceneIdCrossboneIsleKeys' map (scenes.s); renamed from Tileset_Palette15 and palettes/pal_15.png	games/tbs/src/map/crossbone_isle_keys_and_bane/map.inc
+TilesetPaletteCrossboneIsleBane	its code	the palette MapsWork row 115 gives FieldCrossboneIsleKeysAndBane, SceneIdCrossboneIsleBane's map (scenes.s); renamed from Tileset_Palette18 and palettes/pal_18.png	games/tbs/src/map/crossbone_isle_floodgate/map.inc
+TilesetPaletteBabiLighthouseLuff	its code	the palette MapsWork row 162 gives FieldBabiLighthouseRooms, SceneIdBabiLighthouseLuff's map (scenes.s), Babi Lighthouse's inside rooms; renamed from Tileset_Palette45 and palettes/pal_45.png	games/tbs/src/map/babi_lighthouse_entry/map.inc
+SoundWaveCelesta	its uses	the sample of voice slot 8 of SoundBgmVoices, General MIDI's Celesta, as The Lost Age's SoundWaveCelesta is its slot's (celesta.pcm8.wav); renamed from Sound_Wave00 and wave_00.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveNylonGuitar	its uses	the sample of voice slot 24 of SoundBgmVoices, General MIDI's Acoustic Guitar (nylon), as The Lost Age's SoundWaveNylonGuitar is its slot's (nylon_guitar.pcm8.wav); renamed from Sound_Wave01 and wave_01.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveFingerBass	its uses	the sample of voice slot 33 of SoundBgmVoices, General MIDI's Electric Bass (finger), as The Lost Age's SoundWaveFingerBass is its slot's (finger_bass.pcm8.wav); renamed from Sound_Wave02 and wave_02.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWavePizzicatoStrings	its uses	the sample of voice slot 45 of SoundBgmVoices, General MIDI's Pizzicato Strings, as The Lost Age's SoundWavePizzicatoStrings is its slot's (pizzicato_strings.pcm8.wav); renamed from Sound_Wave03 and wave_03.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveHarp	its uses	the sample of voice slot 46 of SoundBgmVoices, General MIDI's Orchestral Harp, as The Lost Age's SoundWaveHarp is its slot's (harp.pcm8.wav); renamed from Sound_Wave04 and wave_04.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveTimpani	its uses	the sample of voice slot 47 of SoundBgmVoices, General MIDI's Timpani, as The Lost Age's SoundWaveTimpani is its slot's (timpani.pcm8.wav); renamed from Sound_Wave05 and wave_05.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveStrings	its uses	the sample of voice slot 48 of SoundBgmVoices, General MIDI's String Ensemble 1, as The Lost Age's SoundWaveStrings is its slot's (strings.pcm8.wav); renamed from Sound_Wave06 and wave_06.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveChoir	its uses	the sample of voice slot 52 of SoundBgmVoices, General MIDI's Choir Aahs, as The Lost Age's SoundWaveChoir is its slot's (choir.pcm8.wav); renamed from Sound_Wave07 and wave_07.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveTrumpet	its uses	the sample of voice slot 56 of SoundBgmVoices, General MIDI's Trumpet, as The Lost Age's SoundWaveTrumpet is its slot's (trumpet.pcm8.wav); renamed from Sound_Wave08 and wave_08.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveBrass	its uses	the sample of voice slot 61 of SoundBgmVoices, General MIDI's Brass Section, as The Lost Age's SoundWaveBrass is its slot's (brass.pcm8.wav); renamed from Sound_Wave09 and wave_09.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveOboe	its uses	the sample of voice slot 68 of SoundBgmVoices, General MIDI's Oboe, as The Lost Age's SoundWaveOboe is its slot's (oboe.pcm8.wav); renamed from Sound_Wave10 and wave_10.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWavePiccolo	its uses	the sample of voice slot 72 of SoundBgmVoices, General MIDI's Piccolo, as The Lost Age's SoundWavePiccolo is its slot's (piccolo.pcm8.wav); renamed from Sound_Wave11 and wave_11.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveFlute	its uses	the sample of voice slot 73 of SoundBgmVoices, General MIDI's Flute, as The Lost Age's SoundWaveFlute is its slot's (flute.pcm8.wav); renamed from Sound_Wave12 and wave_12.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWavePanFlute	its uses	the sample of voice slot 75 of SoundBgmVoices, General MIDI's Pan Flute, as The Lost Age's SoundWavePanFlute is its slot's (pan_flute.pcm8.wav); renamed from Sound_Wave13 and wave_13.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveBassDrum	its uses	the sample of keys 36 and 37 of SoundDrumVoices, General MIDI's Bass Drum 1 and Side Stick (the kit starts at key 36, SoundBgmVoices slot 127) (bass_drum.pcm8.wav); renamed from Sound_Wave14 and wave_14.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveSnare	its uses	the sample of keys 38 to 40 of SoundDrumVoices, General MIDI's Acoustic Snare, Hand Clap and Electric Snare (the kit starts at key 36, SoundBgmVoices slot 127) (snare.pcm8.wav); renamed from Sound_Wave15 and wave_15.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveTom	its uses	the sample of keys 41, 43 to 48 of SoundDrumVoices, General MIDI's toms (Low Floor, High Floor, Low, Low-Mid, Hi-Mid) and its pedal and open hi-hats (the kit starts at key 36, SoundBgmVoices slot 127) (tom.pcm8.wav); renamed from Sound_Wave16 and wave_16.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveClosedHiHat	its uses	the sample of key 42 of SoundDrumVoices, General MIDI's Closed Hi-Hat (the kit starts at key 36, SoundBgmVoices slot 127) (closed_hi_hat.pcm8.wav); renamed from Sound_Wave17 and wave_17.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveCrashCymbal	its uses	the sample of keys 49 and 50 of SoundDrumVoices, General MIDI's Crash Cymbal 1 and High Tom (the kit starts at key 36, SoundBgmVoices slot 127) (crash_cymbal.pcm8.wav); renamed from Sound_Wave18 and wave_18.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveRideCymbal	its uses	the sample of key 51 of SoundDrumVoices, General MIDI's Ride Cymbal 1 (the kit starts at key 36, SoundBgmVoices slot 127) (ride_cymbal.pcm8.wav); renamed from Sound_Wave19 and wave_19.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveSwitch	its twin	the sample of voice slot 50 of SoundSeVoices, which SE_SWITCH alone play here; byte for byte The Lost Age's switch.pcm8.wav (SoundWaveSwitch there, the same slot); renamed from Sound_Wave20 and wave_20.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveRumble	its twin	the sample of voice slot 51 of SoundSeVoices, which SE_RUMBLE, SE_STONE_RUMBLE, SE_TREMOR, SE_GATE_MOVE, SE_SWITCH_MECHANISM and others play here; byte for byte The Lost Age's rumble.pcm8.wav (SoundWaveRumble there, the same slot); renamed from Sound_Wave21 and wave_21.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveCrash	its twin	the sample of voice slot 52 of SoundSeVoices, which SE_CRASH, SE_CLATTER, SE_TOPPLE, SE_RUN_BACK, SE_BANE_ESCAPE play here; byte for byte The Lost Age's crash.pcm8.wav (SoundWaveCrash there, the same slot); renamed from Sound_Wave22 and wave_22.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWavePsynergySparkle	its twin	the sample of voice slot 53 of SoundSeVoices, which SE_PSYNERGY_SPARKLE, SE_PSYNERGY_START, SE_POWER_UP and others play here; byte for byte The Lost Age's psynergy_sparkle.pcm8.wav (SoundWavePsynergySparkle there, the same slot); renamed from Sound_Wave23 and wave_23.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveRoar	its twin	the sample of voice slot 54 of SoundSeVoices, which SE_ENEMY_CRY, SE_BEAST_CRY, SE_MONSTER_ROAR, SE_BOSS_ROAR and others play here; byte for byte The Lost Age's roar.pcm8.wav (SoundWaveRoar there, the same slot); renamed from Sound_Wave24 and wave_24.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveThunder	its twin	the sample of voice slot 55 of SoundSeVoices, which SE_THUNDER, SE_THUNDER_LOUD and others play here; byte for byte The Lost Age's thunder.pcm8.wav (SoundWaveThunder there, the same slot); renamed from Sound_Wave25 and wave_25.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveCurse	its twin	the sample of voice slot 57 of SoundSeVoices, which SE_CURSE, SE_BLACK_CRYSTAL_SET and others play here; byte for byte The Lost Age's curse.pcm8.wav (SoundWaveCurse there, the same slot); renamed from Sound_Wave26 and wave_26.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveBoom	its twin	the sample of voice slot 58 of SoundSeVoices, which SE_BOOM, SE_FLAME_FLARE, SE_HEAVY_MOVE and others play here; byte for byte The Lost Age's boom.pcm8.wav (SoundWaveBoom there, the same slot); renamed from Sound_Wave27 and wave_27.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveBell	its twin	the sample of voice slot 59 of SoundSeVoices, which SE_BELL and SE_STAR_BOUNCE play here; byte for byte The Lost Age's bell.pcm8.wav (SoundWaveBell there, the same slot); renamed from Sound_Wave28 and wave_28.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveDrip	its twin	the sample of voice slot 70 of SoundSeVoices, which SE_DRIP alone play here; byte for byte The Lost Age's drip.pcm8.wav (SoundWaveDrip there, the same slot); renamed from Sound_Wave29 and wave_29.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveChime	its twin	the sample of voice slot 71 of SoundSeVoices, which SE_GLITTER, SE_GEM_SET, SE_RISING_CHIMES, SE_SHIMMER play here; byte for byte The Lost Age's chime.pcm8.wav (SoundWaveChime there, the same slot); renamed from Sound_Wave30 and wave_30.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundWaveColossoLettering	its twin	the sample of voice slot 72 of SoundSeVoices, which SE_COLOSSO_LETTERING (and the unplayed row 311) play here; byte for byte The Lost Age's colosso_lettering.pcm8.wav (SoundWaveColossoLettering there, the same slot); renamed from Sound_Wave31 and wave_31.pcm8.wav	games/tbs/sound/direct_sound_samples.s
+SoundCgbWaveSine	its twin	the wave channel's shape 0, no voice's; byte for byte The Lost Age's sine.pcm4 (SoundCgbWaveSine there), named there by its shape; renamed from Sound_CgbWave0 and cgb_wave_0.pcm4	games/common/sound/programmable_wave_samples.s
+SoundCgbWaveTriangle	its twin	the wave channel's shape 1, no voice's; byte for byte The Lost Age's triangle.pcm4 (SoundCgbWaveTriangle there), named there by its shape; renamed from Sound_CgbWave1 and cgb_wave_1.pcm4	games/common/sound/programmable_wave_samples.s
+SoundCgbWaveSawtooth	its twin	the wave channel's shape 2, no voice's; byte for byte The Lost Age's sawtooth.pcm4 (SoundCgbWaveSawtooth there), named there by its shape; renamed from Sound_CgbWave2 and cgb_wave_2.pcm4	games/common/sound/programmable_wave_samples.s
+SoundCgbWaveRampWithPlateau	its twin	the wave channel's shape 3, no voice's; byte for byte The Lost Age's ramp_with_plateau.pcm4 (SoundCgbWaveRampWithPlateau there), named there by its shape; renamed from Sound_CgbWave3 and cgb_wave_3.pcm4	games/common/sound/programmable_wave_samples.s
+SoundCgbWavePulseEighth	its twin	the wave channel's shape 4, no voice's; byte for byte The Lost Age's pulse_eighth.pcm4 (SoundCgbWavePulseEighth there), named there by its shape; renamed from Sound_CgbWave4 and cgb_wave_4.pcm4	games/common/sound/programmable_wave_samples.s
+SoundCgbWavePulseQuarter	its twin	the wave channel's shape 5, no voice's; byte for byte The Lost Age's pulse_quarter.pcm4 (SoundCgbWavePulseQuarter there), named there by its shape; renamed from Sound_CgbWave5 and cgb_wave_5.pcm4	games/common/sound/programmable_wave_samples.s
+SoundCgbWavePulseThreeEighths	its twin	the wave channel's shape 6, no voice's; byte for byte The Lost Age's pulse_three_eighths.pcm4 (SoundCgbWavePulseThreeEighths there), named there by its shape; renamed from Sound_CgbWave6 and cgb_wave_6.pcm4	games/common/sound/programmable_wave_samples.s
+SoundCgbWaveSquare	its twin	the wave channel's shape 7, the voice of SoundSeVoices slot 41; byte for byte The Lost Age's square.pcm4 (SoundCgbWaveSquare there), named there by its shape; renamed from Sound_CgbWave7 and cgb_wave_7.pcm4	games/common/sound/programmable_wave_samples.s
+SoundCgbWavePickBass	its twin	the wave channel's shape 8, the voice of SoundBgmVoices slot 34, General MIDI's Electric Bass (pick); byte for byte The Lost Age's pick_bass.pcm4 (SoundCgbWavePickBass there), named there by its shape; renamed from Sound_CgbWave8 and cgb_wave_8.pcm4	games/common/sound/programmable_wave_samples.s
 SpriteUnusedSelfPointersAfterFirstBlock	its code	its file, the one array of the sprite bank after the first block of animations (ld_script.ld), four words each its own address; renamed from self_pointers_0.c to self_pointers_after_first_block.c	games/tbs/src/graphics/sprite/self_pointers_after_first_block.c
 SpriteUnusedSelfPointersAfterSecondBlock	its code	its file holds the two arrays between the sprite bank's second and third blocks of animations (ld_script.ld), this one right after the second; renamed from self_pointers_1.c to self_pointers_after_second_block.c	games/tbs/src/graphics/sprite/self_pointers_after_second_block.c
 scFuchinTempleMonkLetsPartyIntoGrotto	what the player sees	the monk stands on a tall stump in the pool in front of the falls; after his message he leaps onto the stump to the west and lands in white spray (its render)	games/tbs/src/scene/fuchin_temple.c
@@ -6862,7 +6862,7 @@ scXianTalkToKungFuStudent	what the player sees	the girl shouts "Hoo-whaaa... Hac
 scXianStrikeTrainingTreeWithForce	what the player sees	Force's hand strikes the post, it jumps and drops back, and the girl says "Wha-Wha-What happened? The tree jumped on its own!" (render event scXianStrikeTrainingTreeWithForce) (its render)	games/tbs/src/scene/xian.c
 METATILE_BEHAVIOR_XIAN_WATER_STREET	its code	map.txt behaviour 20 on cells (19..27, 14) and beside them, the row of the water carrier's round (XianWaterCarrierRoute z 232); its row runs scXianJumpOverSpilledWater	games/tbs/src/scene/xian.c
 METATILE_BEHAVIOR_XIAN_WATER_STREET_NORTH	its code	map.txt behaviour 21 at (25, 13) between the doors of behaviours 2 and 3 north of the street; its row runs scXianJumpOverSpilledWater facing south	games/tbs/src/scene/xian.c
-SceneId_SuhallaGateCheckpoint	what the player sees	two soldiers with spears guarding a wooden gate across the canyon path, a door in the cliff behind them (render place --scene SuhallaGateCheckpoint, map-0.png) (its render)	games/tbs/include/scene_ids.h
+SceneIdSuhallaGateCheckpoint	what the player sees	two soldiers with spears guarding a wooden gate across the canyon path, a door in the cliff behind them (render place --scene SuhallaGateCheckpoint, map-0.png) (its render)	games/tbs/include/scene_ids.h
 LUNPA_FORTRESS_UPPER_FLOOR_DONPAS_ROOM_FROM_SOUTH_PASSAGE	the game	"Shhh! Please don't wake Donpa!" (MsgLunpaShhhPleaseDont)	games/tbs/include/scene_exits.h
 LUNPA_FORTRESS_UPPER_FLOOR_DONPAS_ROOM_FROM_TONIC_ROOM	the game	"Shhh! Please don't wake Donpa!" (MsgLunpaShhhPleaseDont)	games/tbs/include/scene_exits.h
 LUNPA_FORTRESS_UPPER_FLOOR_SOUTH_PASSAGE_TO_DONPAS_ROOM	the game	"Shhh! Please don't wake Donpa!" (MsgLunpaShhhPleaseDont)	games/tbs/include/scene_exits.h
@@ -7578,9 +7578,9 @@ scVenusLighthouseLandWithRadialDust	what the player sees	Isaac drops into the fi
 ACTOR_STUCCO_ROOMS_B_FINALS_WATCHER	what the player sees	a grey-haired man by the barrels of a Tolbi house: "I really want to see Colosso, too! But the colosseum gets too crowded, so I'm just going to watch the finals." (its render)	games/tbs/src/scene/stucco_rooms_b.c
 PSYNERGY_RINGS_SOUND	its code	nothing on screen: a sound, the one shared/psynergy_rings.c plays with each ring set (sySndPlay(PSYNERGY_RINGS_SOUND), psynergy_rings.c:17, #undef at 50), which this scene names as SE_JUMP (vale_prologue.c:2825)	games/tbs/src/scene/vale_prologue.c
 PSYNERGY_RINGS_SOUND	its code	nothing on screen: a sound, the one shared/psynergy_rings.c plays with each ring set (sySndPlay(PSYNERGY_RINGS_SOUND), psynergy_rings.c:17, #undef at 50), which this scene names as SE_PSYNERGY_SPARKLE (venus_lighthouse_aerie.c:1380)	games/tbs/src/scene/venus_lighthouse_aerie.c
-SE_UNUSED_CURSE_RUMBLE	its twin	The Lost Age's SE_UNUSED_CURSE_RUMBLE is byte for byte the same sequence as row 242 here (games/common/sound/songs/se_unused_curse_rumble.mid), and voices 57 (Sound_WaveCurse), 28 (noise) and 51 (Sound_WaveRumble) are the same in both games' Sound_SeVoices: notes 51 and 56, 59 and 64 held in a loop until stopped; nothing in either game plays it; renamed from SE_242 and se_242.mid	games/tbs/include/sounds.h
-SE_UNUSED_COLOSSO_WARRIOR_ROAR	its twin	The Lost Age's SE_UNUSED_COLOSSO_WARRIOR_ROAR is byte for byte the same sequence as row 253 here: SE_COLOSSO_WARRIOR_APPEAR's note 73 for 20 ticks with its rising bend (the same bytes in both games) on noise voice 20, and note 61 bent the same way on voice 54 (Sound_WaveRoar), the same voices in both games; nothing in either game plays it; renamed from SE_253 and se_253.mid	games/tbs/include/sounds.h
-SE_UNUSED_SPARKLING_LETTERING	its twin	The Lost Age's SE_UNUSED_SPARKLING_LETTERING is byte for byte the same sequence as row 311 here: notes 51 and 60 looped on voice 72 (Sound_WaveColossoLettering), rising runs on noise voice 23 and on voice 56, and a note on voice 53 (Sound_WavePsynergySparkle); voice 56 is a plain square wave in this game's Sound_SeVoices where The Lost Age's is Sound_WaveSparks; nothing in either game plays it; renamed from SE_311 and se_311.mid	games/tbs/include/sounds.h
+SE_UNUSED_CURSE_RUMBLE	its twin	The Lost Age's SE_UNUSED_CURSE_RUMBLE is byte for byte the same sequence as row 242 here (games/common/sound/songs/se_unused_curse_rumble.mid), and voices 57 (SoundWaveCurse), 28 (noise) and 51 (SoundWaveRumble) are the same in both games' SoundSeVoices: notes 51 and 56, 59 and 64 held in a loop until stopped; nothing in either game plays it; renamed from SE_242 and se_242.mid	games/tbs/include/sounds.h
+SE_UNUSED_COLOSSO_WARRIOR_ROAR	its twin	The Lost Age's SE_UNUSED_COLOSSO_WARRIOR_ROAR is byte for byte the same sequence as row 253 here: SE_COLOSSO_WARRIOR_APPEAR's note 73 for 20 ticks with its rising bend (the same bytes in both games) on noise voice 20, and note 61 bent the same way on voice 54 (SoundWaveRoar), the same voices in both games; nothing in either game plays it; renamed from SE_253 and se_253.mid	games/tbs/include/sounds.h
+SE_UNUSED_SPARKLING_LETTERING	its twin	The Lost Age's SE_UNUSED_SPARKLING_LETTERING is byte for byte the same sequence as row 311 here: notes 51 and 60 looped on voice 72 (SoundWaveColossoLettering), rising runs on noise voice 23 and on voice 56, and a note on voice 53 (SoundWavePsynergySparkle); voice 56 is a plain square wave in this game's SoundSeVoices where The Lost Age's is SoundWaveSparks; nothing in either game plays it; renamed from SE_311 and se_311.mid	games/tbs/include/sounds.h
 SPRITE_NO_IMAGE	its code	nothing on screen: row 172 of the sprite table, the first of the empty rows 172 to 186 (sprites.tsv's SPR_172 to SPR_186, every column 0 and no pictures) before SPRITE_TOADONPA = 187, so fdSprCreate makes no sprite for it; only Vault's unused scVaultSpawnDriftingEffect makes an actor of it (vault.c:1008); renamed from SPRITE_172 for its want of an image	games/tbs/include/sprite_ids.h
 scAltmillerCaveDarkenToLevel5	its number	the darkness level it sets, scAltmillerCaveSetFadeLevel(5), the darkest of the passage's six	games/tbs/src/scene/altmiller_cave.c
 METATILE_BEHAVIOR_ALTMILLER_CAVE_DARKNESS_5	its number	the darkness level scAltmillerCaveDarkenToLevel5 sets, cells (8, 21) to (10, 21)	games/tbs/src/scene/altmiller_cave.c
@@ -7902,7 +7902,7 @@ SHOP_VALE_ARMOR	its code	mnShopRun's stock row in scCottageRoomsATalkToArmorMerc
 SHOP_VALE_ITEMS	its code	mnShopRun's stock row in scCottageRoomsATalkToItemMerchant, the merchant who gives the farewell Herb	games/tbs/src/scene/cottage_rooms_a.c
 JENNAS_GRANDMOTHERS_SICKBED_ANIMATION	its code	tileset_anims.tsv channel 4, the map's one paused channel, resumed only in scInit as Jenna's grandmother is put in bed at (454, 150) with ANIM_GRANDMOTHER_IN_BED	games/tbs/src/scene/cottage_rooms_a.c
 VALE_INN	its code	mnInnCheckIn's inn number in scCottageRoomsBTalkToInnkeeper, Vale's innkeeper across her counter (ACTOR_INNKEEPER)	games/tbs/src/scene/cottage_rooms_b.c
-COTTAGE_ROOMS_B_ISAACS_BEDSIDE_RESTART	its code	Scene_RestartRules' row restart_point ValePrologue, 15, CottageRoomsB, 16 (field/scene_rules.s); the entrance stands at (538, 683) in the camera box of Isaac's bedroom, beside COTTAGE_ROOMS_B_FROM_VALE_PLAZA_SOUTHEAST's (567, 676)	games/tbs/src/scene/cottage_rooms_b.c
+COTTAGE_ROOMS_B_ISAACS_BEDSIDE_RESTART	its code	SceneRestartRules' row restart_point ValePrologue, 15, CottageRoomsB, 16 (field/scene_rules.s); the entrance stands at (538, 683) in the camera box of Isaac's bedroom, beside COTTAGE_ROOMS_B_FROM_VALE_PLAZA_SOUTHEAST's (567, 676)	games/tbs/src/scene/cottage_rooms_b.c
 scCrossboneIsleKeysLiftFirstPillar	its code	copies the raised cell (61, 36) to the first pillar's column on row 42 and sets the pillar's height to 32; scCrossboneIsleKeysMoveFirstPillar calls it for columns 37 to 39 of the low ledge	games/tbs/src/scene/crossbone_isle_keys.c
 FIRST_STATUE_FOLLOW_PIXELS	its code	the z offset of ACTOR_FIRST_STATUE's fdActorSetDestinationOffset after it shoves Isaac, 24 or 16 by patch	games/tbs/src/scene/crossbone_isle_keys.c
 STATUE_SHOVE_PIXELS	its code	the z offset of ACTOR_PARTY_LEADER's fdActorSetDestinationOffset in the second to fifth statues' shoves, 16 or 24 by patch	games/tbs/src/scene/crossbone_isle_keys.c
@@ -8028,14 +8028,14 @@ ICON_FRAME_COMMAND_RED	its picture	IconBasePointerTable's second entry, command_
 ICON_MARK_EQUIPPED	its picture	IconMarkPointers' first entry, equip.png, a green E; drawn on INVENTORY_EQUIPPED	games/tbs/src/window/window_internal.h
 ICON_MARK_BROKEN	its picture	IconMarkPointers' second entry, cross.png, a red cross; drawn on INVENTORY_BROKEN	games/tbs/src/window/window_internal.h
 ICON_MARK_CURSED	its picture	IconMarkPointers' third entry, phi.png, a white skull; drawn on an equipped item with ITEM_CURSED and ITEM_CANNOT_UNEQUIP	games/tbs/src/window/window_internal.h
-ICON_DIGIT_TENS_FIRST	its code	IconDigitPointers lists Icon_Digit0 to 9, then Icon_Tens1 to 3; mnItemIconCompose takes count / 10 + 9	games/tbs/src/window/window_internal.h
+ICON_DIGIT_TENS_FIRST	its code	IconDigitPointers lists IconDigit0 to 9, then IconTens1 to 3; mnItemIconCompose takes count / 10 + 9	games/tbs/src/window/window_internal.h
 MENU_TITLE_PAUSE	its picture	MenuTitlePictures' seventh entry, pause_en.png, which reads Pause	games/tbs/src/window/window_settings_menu.c
 MENU_TITLE_SETTINGS	its picture	MenuTitlePictures' eighth entry, setup_en.png, which reads Settings	games/tbs/src/window/window_settings_menu.c
 ARTICLE_FORM_BARE	its code	mnMessageAppendArticleName copies the name alone for form 0 (and 4 outside English); en.po's {argument_item_name:1}, stored one above	games/tbs/src/window/window_decode.c
 ARTICLE_FORM_ARTICLE	its code	the English mnMessageAppendArticleName writes a or an for form 1; en.po's 'uses {argument_item_name:2}!'	games/tbs/src/window/window_decode.c
 LAST_LETTER_SENTENCE_END	its code	mnMessageDecode sets 2 after . ! or ?, and the article and possessive writers capitalise their first letter on 2	games/tbs/src/window/window_decode.c
 TYPING_CLOSES_WINDOW	its code	mnMessageType returns 9 when TEXT_WAIT_KEY is dismissed; mnMessageUpdateAll closes the window on it	games/tbs/src/window/window_typing.c
-SELECTION_ARROW_LEFT	its code	mnSelectionMenuSetupArrow loads Menu_CursorLeftActorTiles for record 0 and Menu_CursorActorTiles for record 1	games/tbs/src/window/window_selection.c
+SELECTION_ARROW_LEFT	its code	mnSelectionMenuSetupArrow loads MenuCursorLeftActorTiles for record 0 and MenuCursorActorTiles for record 1	games/tbs/src/window/window_selection.c
 SELECTION_ROW_SHOWN	its code	mnSelectionMenuBuildEntries stops at 5 icons; the arrows and scrolls count past 5 entries	games/tbs/src/window/window_selection.c
 mnWindowSetInteriorPalette	its code	clears the palette number's low bit of each tilemap entry in a rectangle of the window's interior and ORs in BG_TILE_PALETTE(palette); the name entry and Colosso choices flash the key under the cursor with it	games/tbs/src/window/screens_name_entry.c
 mnWindowSetInteriorPaletteBit	its code	sets or clears BG_TILE_PALETTE(1) in each tilemap entry of a rectangle of the window's interior; nothing calls it	games/tbs/src/window/screens_party_status.c
@@ -8091,7 +8091,7 @@ JUDGMENT_SHEET_BYTES	its code	struct JudgmentState's sheet[JUDGMENT_SHEET_BYTES]
 JudgmentState	its code	btEffectRunJudgment writes ((struct JudgmentState *state)->dimmedMotes[i][j] after the sheet, laid over struct BATTLE_EFFECT_STATE from its start	games/tbs/src/battle_effect/battle_effect_judgment.c
 TEXT_TILE_TAKEN	its twin	The Lost Age's window_text_tiles.c (hz/ui) names it so: WIN_STATE.textTileState's bit for a text tile given out	games/tbs/src/window/window_text_tiles.c
 PROCNE_COMET_PICTURES	its twin	The Lost Age's battle_effect_procne.c names the violet comet sheet's place in state->sheet so; the comets drawn from it are ProcnePictures offsets past it	games/tbs/src/battle_effect/battle_effect_procne.c
-MAPGRID_METATILE_WORDS	its code	field_map_grid.c reads Ram_MapGridMetatileBuffer as u32 words, one per cell, to draw cell tiles (fdMapGridCopyMetatileTilesToScr(cell, ...)) and to copy rows of cells, sourceY * MAPGRID_SIZE + sourceX words in; the field's other readers take the same words as struct MAP_GRID_METATILE (4 bytes)	games/tbs/src/field/field_map_grid.c
+MAPGRID_METATILE_WORDS	its code	field_map_grid.c reads RamMapGridMetatileBuffer as u32 words, one per cell, to draw cell tiles (fdMapGridCopyMetatileTilesToScr(cell, ...)) and to copy rows of cells, sourceY * MAPGRID_SIZE + sourceX words in; the field's other readers take the same words as struct MAP_GRID_METATILE (4 bytes)	games/tbs/src/field/field_map_grid.c
 WORLD_MAP_BLOCK_SHIFT	its code	as field_terrain.c's WORLD_MAP_BLOCK_SHIFT: Cloak reads MetatileTiles[tx + ty * WORLD_MAP_BLOCKS_ACROSS] with tx = x >> WORLD_MAP_BLOCK_SHIFT & 31, a 32-pixel block	games/tbs/include/field/map_grid.h
 WORLD_MAP_BLOCKS_ACROSS	its code	as WORLD_MAP_BLOCK_SHIFT: the block index wraps at 32 and a row of MetatileTiles is 32 blocks	games/tbs/include/field/map_grid.h
 ACTOR_COUNT	its code	ActorsWork' actors: field_actors.c allocates ACTOR_COUNT * sizeof(struct Actor) in HEAP_SLOT_ACTORS, and the event commands walk ActorsWork up to it (event_commands_movement_types.c, event_commands_reveal.c, event_commands_field_psynergy_state.c)	games/tbs/include/field/actor.h
@@ -8164,7 +8164,7 @@ THOR_APPEAR_TICK	its code	btEffectPlaceFormationSprs places Thor from storm fram
 MAP_ENTRY_PAIR	its code	btTransitionBuildFlatTilemap fills BG1's map a word, two entries, at a time, adding MAP_ENTRY_PAIR(2, 2) to each word	games/tbs/include/system/definitions.h
 COLOSSO_SOLO_TO_COLOSSEUM	its code	exit 11 is the way back out to the Colosseum in each Colosso match scene's exits in scene_exits.h (COLOSSEUM_AZART_MATCH_TO_COLOSSEUM_WEST, COLOSSEUM_SATRAGE_MATCH_TO_COLOSSEUM_SOUTH, COLOSSEUM_NAVAMPA_MATCH_TO_COLOSSEUM); scColossoAskDoneLookingAround requests it when Isaac, alone, answers yes to the guide's "did you get a good look" (MsgColossoIsaacDidGetGoodLook)	games/tbs/include/scene/colosso_solo.h
 ICON_PALETTE_COLORS	its code	ICON_PALETTE.slot is u8[256], one entry for each colour of a 256-colour command icon's pixels; mnBattleCommandRowRun sets all 256 to ICON_PALETTE_SLOT_UNSET and mnBattleCommandRowLoadIconTiles indexes it by each pixel's colour	games/tbs/include/graphics/glyph.h
-Icon_CommandFrameRed	its twin	IconBasePointerTable's second base, the brown square of Icon_CommandFrame in a red border, which mnWindowSprCreateOverlaidIcon builds its command icons over (base 1); the same picture as The Lost Age's Icon_CommandFrameRed; renamed from Icon_Base1 and marks/base_1.png	games/tbs/src/graphics/ui/marks.s
+IconCommandFrameRed	its twin	IconBasePointerTable's second base, the brown square of IconCommandFrame in a red border, which mnWindowSprCreateOverlaidIcon builds its command icons over (base 1); the same picture as The Lost Age's IconCommandFrameRed; renamed from Icon_Base1 and marks/base_1.png	games/tbs/src/graphics/ui/marks.s
 scActorFindNearestFloatingPlatform	what the player sees	the round white platforms floating in a row before the wall of Mercury and Venus Lighthouse's aeries (its render)	games/tbs/src/scene/shared/floating_platform.c
 scKolimaUpdateCurseDust	what the player sees	arriving in Kolima, white specks drift down over the town as the curse strikes, flickering, and keep falling over the tinted screen ("What is that?") (render guide moment, Kolima entered from the World Map) (its render)	games/tbs/src/scene/shared/kolima_curse_dust.c
 DJINN_TUTORIAL_SET_CHANGES	the game	"Setting a Djinni changes your attributes and maybe even your class." (MsgDjinnTutorialSetChanges), the message the step shows (mnDjinnMenuRunPreview)	games/tbs/src/menu/menu_internal.h
@@ -8210,23 +8210,23 @@ SHOP_SELL_PRICE_X	its code	shop_sell.c and shop_repair.c open the price window t
 LUCKY_WHEELS_TICKET_DIGITS	its code	draws gmPartyInventoryCountItemStub(ITEM_GAME_TICKET) - bet (lucky_wheels.c)	games/tbs/include/tbs_edition.h
 BATTLE_ARENA_PREFIX_LAST	its code	the last index the Battle Arena reads of an opponent's name prefix (battle_arena.c)	games/tbs/include/tbs_edition.h
 DOCKS_COINS_WINDOW_X	the game	"Your coins" (MsgYourCoins) in the window the ticket seller opens (kalay_tolbi_docks.c)	games/tbs/include/tbs_edition.h
-ResourceId_VorpalSlashImageA	the game	"Vorpal Slash" (MsgAbilityName); btEffectRunVorpalSlash loads it (battle_effect_thrash.c)	games/tbs/include/resource_ids.h
-ResourceId_QuickStrikeImageA	the game	"Quick Strike" (MsgAbilityName); btEffectRunQuickStrike loads it (battle_effect_thrash.c)	games/tbs/include/resource_ids.h
-ResourceId_UnusedFlashingStrikeImageA	its code	FLASHING_STRIKE_UNUSED loads it and nothing passes that mode (battle_effect_thrash.c)	games/tbs/include/resource_ids.h
-ResourceId_RoomsBackdrop	its code	gBattle_BackgroundRules gives it to Log rooms A, Lalivero and Timber rooms B (battle_background_rules.c)	games/tbs/include/resource_ids.h
-ResourceId_TolbiShipRoomsBackdrop	its code	gBattle_BackgroundRules gives it to SCENE_SHIP_ROOMS (battle_background_rules.c)	games/tbs/include/resource_ids.h
-ResourceId_TretTreeRoomsBackdrop	its code	gBattle_BackgroundRules gives it to SCENE_TREE_ROOMS (battle_background_rules.c)	games/tbs/include/resource_ids.h
-ResourceId_AzartOpponentPath	its code	the Azart match starts its opponent on it (colosseum_azart_match.c)	games/tbs/include/resource_ids.h
-ResourceId_SatrageOpponentPath	its code	the Satrage match starts its opponent on it (colosseum_satrage_match.c)	games/tbs/include/resource_ids.h
-ResourceId_NavampaOpponentPath	its code	the Navampa match starts its opponent on it (colosseum_navampa_match.c)	games/tbs/include/resource_ids.h
-ResourceId_JudgmentFlashSheet	its code	Judgment's effect loads its three flash pictures from it (battle_effect_judgment.c)	games/tbs/include/resource_ids.h
-ResourceId_JudgmentBurstSheet	its code	Judgment's effect loads the burst's seven quarter pictures from it (battle_effect_judgment.c)	games/tbs/include/resource_ids.h
-ResourceId_ShatteringOpeningSheet	its code	btEffectRunShatteringOpening loads its 33 pieces (battle_effect_death_plunge.c)	games/tbs/include/resource_ids.h
-ResourceId_AtalantaPath	the game	"Atalanta" (MsgAbilityName); btEffectRunAtalanta follows it (battle_effect_atalanta.c)	games/tbs/include/resource_ids.h
-ResourceId_DragonCloudFlamePath	the game	"Dragon Cloud" (MsgAbilityName); its one flame follows it (battle_effect_dragon_cloud.c)	games/tbs/include/resource_ids.h
-ResourceId_IntroSun	its picture	intro_sun_glare.png and intro_sun's parts, the sun and lens flare of the title intro (title.s)	games/tbs/include/resource_ids.h
-ResourceId_TitleScreen	its picture	screen.png, the title picture shown after the flash (title.s)	games/tbs/include/resource_ids.h
-ResourceId_IntroPeak	its picture	intro_peak.png and intro_clouds.png, the intro's peak and clouds (title.s)	games/tbs/include/resource_ids.h
+ResourceIdVorpalSlashImageA	the game	"Vorpal Slash" (MsgAbilityName); btEffectRunVorpalSlash loads it (battle_effect_thrash.c)	games/tbs/include/resource_ids.h
+ResourceIdQuickStrikeImageA	the game	"Quick Strike" (MsgAbilityName); btEffectRunQuickStrike loads it (battle_effect_thrash.c)	games/tbs/include/resource_ids.h
+ResourceIdUnusedFlashingStrikeImageA	its code	FLASHING_STRIKE_UNUSED loads it and nothing passes that mode (battle_effect_thrash.c)	games/tbs/include/resource_ids.h
+ResourceIdRoomsBackdrop	its code	gBattle_BackgroundRules gives it to Log rooms A, Lalivero and Timber rooms B (battle_background_rules.c)	games/tbs/include/resource_ids.h
+ResourceIdTolbiShipRoomsBackdrop	its code	gBattle_BackgroundRules gives it to SCENE_SHIP_ROOMS (battle_background_rules.c)	games/tbs/include/resource_ids.h
+ResourceIdTretTreeRoomsBackdrop	its code	gBattle_BackgroundRules gives it to SCENE_TREE_ROOMS (battle_background_rules.c)	games/tbs/include/resource_ids.h
+ResourceIdAzartOpponentPath	its code	the Azart match starts its opponent on it (colosseum_azart_match.c)	games/tbs/include/resource_ids.h
+ResourceIdSatrageOpponentPath	its code	the Satrage match starts its opponent on it (colosseum_satrage_match.c)	games/tbs/include/resource_ids.h
+ResourceIdNavampaOpponentPath	its code	the Navampa match starts its opponent on it (colosseum_navampa_match.c)	games/tbs/include/resource_ids.h
+ResourceIdJudgmentFlashSheet	its code	Judgment's effect loads its three flash pictures from it (battle_effect_judgment.c)	games/tbs/include/resource_ids.h
+ResourceIdJudgmentBurstSheet	its code	Judgment's effect loads the burst's seven quarter pictures from it (battle_effect_judgment.c)	games/tbs/include/resource_ids.h
+ResourceIdShatteringOpeningSheet	its code	btEffectRunShatteringOpening loads its 33 pieces (battle_effect_death_plunge.c)	games/tbs/include/resource_ids.h
+ResourceIdAtalantaPath	the game	"Atalanta" (MsgAbilityName); btEffectRunAtalanta follows it (battle_effect_atalanta.c)	games/tbs/include/resource_ids.h
+ResourceIdDragonCloudFlamePath	the game	"Dragon Cloud" (MsgAbilityName); its one flame follows it (battle_effect_dragon_cloud.c)	games/tbs/include/resource_ids.h
+ResourceIdIntroSun	its picture	intro_sun_glare.png and intro_sun's parts, the sun and lens flare of the title intro (title.s)	games/tbs/include/resource_ids.h
+ResourceIdTitleScreen	its picture	screen.png, the title picture shown after the flash (title.s)	games/tbs/include/resource_ids.h
+ResourceIdIntroPeak	its picture	intro_peak.png and intro_clouds.png, the intro's peak and clouds (title.s)	games/tbs/include/resource_ids.h
 btActorGetSpr	its code	returns an actor's nth sprite, or null	games/tbs/src/battle/battle_objects.c
 btObjectDestroySprs	its code	releases every sprite a unit's actor holds	games/tbs/src/battle/battle_objects.c
 btSprDetachScripts	its code	detaches the scripts from a sprite's four entries	games/tbs/src/battle/battle_objects.c
@@ -8272,7 +8272,7 @@ GroundPortalX	its code	read only by btEffectRunGround	games/tbs/src/battle_effec
 GroundPortalY	its code	read only by btEffectRunGround	games/tbs/src/battle_effect/battle_effect_table.c
 GroundCrackleFlips	its code	read only by btEffectRunGround	games/tbs/src/battle_effect/battle_effect_table.c
 ThornKinds	its code	read only by btEffectRunThorn	games/tbs/src/battle_effect/battle_effect_table.c
-Thorn_X	its code	read only by btEffectRunThorn	games/tbs/src/battle_effect/battle_effect_table.c
+ThornX	its code	read only by btEffectRunThorn	games/tbs/src/battle_effect/battle_effect_table.c
 ThornCounts	its code	read only by btEffectRunThorn	games/tbs/src/battle_effect/battle_effect_table.c
 ThornPuffWidths	its code	read only by btEffectRunThorn	games/tbs/src/battle_effect/battle_effect_table.c
 ThornPuffHeights	its code	read only by btEffectRunThorn	games/tbs/src/battle_effect/battle_effect_table.c
@@ -8343,7 +8343,7 @@ fdActorUpdateAllOnField	its code	the field's actor update with its extras, besid
 fdPartyGetCharacterSprForChildhood	its code	the sprite of a character for a childhood flag passed in	games/tbs/src/field/field_mode_actors.c
 WEATHER_PARTICLE	its code	one particle of the weather, motes and sparkles (WEATHER_PARTICLE_COUNT)	games/tbs/include/field/ground_mask.h
 WeatherRainSplashFrames	its code	the frames of a raindrop's splash on the ground	games/tbs/src/field/field_mode_tables.c
-Weather_ParticleTiles	its code	the rain splashes', motes' and sparkles' tiles	games/tbs/include/field/field.h
+WeatherParticleTiles	its code	the rain splashes', motes' and sparkles' tiles	games/tbs/include/field/field.h
 ENCOUNTER_BATTLE_MUSIC_MASK	its code	beside ENCOUNTER_BATTLE_MUSIC_MARKER	games/tbs/include/field/battle_music.h
 MsgGotItem	the game	the ordinary "Isaac got [item]." line, beside MsgGotCoins	games/tbs/src/field/script_commands_script.c
 CharacterNewGameIds	its code	the characters gmPartyInitCharacters equips, classes and levels at a new game	games/tbs/src/game/starting_equipment.c
@@ -8378,8 +8378,8 @@ mnLoadStatArrows	its code	loads the stat change arrows	games/tbs/src/menu/menu_i
 mnLoadDjinnArrows	its code	loads the Djinn menu's arrows	games/tbs/src/menu/menu_icons.c
 mnIconCreateDjinnArrow	its code	shows the Djinn menu's up or down arrow, beside mnIconCreateStatChangeArrow	games/tbs/src/menu/menu_icons.c
 mnIconCreatePsynergyIcon	its code	shows an ability's Psynergy icon for the Djinn preview	games/tbs/src/menu/menu_icons.c
-Menu_DjinnArrowUpTiles	its code	the Djinn menu's up arrow, beside Menu_ArrowTiles	games/tbs/include/menu/menu.h
-Menu_DjinnArrowDownTiles	its code	the Djinn menu's down arrow, beside Menu_ArrowTiles	games/tbs/include/menu/menu.h
+MenuDjinnArrowUpTiles	its code	the Djinn menu's up arrow, beside MenuArrowTiles	games/tbs/include/menu/menu.h
+MenuDjinnArrowDownTiles	its code	the Djinn menu's down arrow, beside MenuArrowTiles	games/tbs/include/menu/menu.h
 mnIconCreateHandCursor	its code	creates the menu's hand cursor sprite	games/tbs/src/menu/menu_shared.c
 mnIconShow	its code	shows an icon	games/tbs/src/menu/menu_shared.c
 mnWindowSetHighlightRect	its code	switches a rectangle of a window's text between the normal and the highlight palette	games/tbs/src/menu/menu_shared.c
@@ -8453,12 +8453,12 @@ mnWindowSprSetPriority	its code	sets the window sprite's draw layer to 255 - pri
 mnWindowSprCreateOverlaidIcon	its code	builds a command icon over frame pattern 1; no affine transform	games/tbs/src/window/screens_window_sprites.c
 syDivFX	its code	value * toFIXED / divisor, SGL's fixed-point divide	games/tbs/include/system/iwram_call.h
 syOAMBuildBufferKernelCodeSize	its code	the OAM builder's size, as the other <Routine>CodeSize symbols	games/tbs/include/system.h
-syResourceExecuteTransferCodeSize	its code	Resource_ExecuteTransfer's size, as the other <Routine>CodeSize symbols	games/tbs/include/system.h
+syResourceExecuteTransferCodeSize	its code	ResourceExecuteTransfer's size, as the other <Routine>CodeSize symbols	games/tbs/include/system.h
 sySuspendEvent	its code	acts on the task running func, or on every task for a null func	games/tbs/src/system/system_event.c
 syResumeEvent	its code	acts on the task running func, or on every task for a null func	games/tbs/src/system/system_event.c
 TEXT_WINDOW_ANIMATION	its code	the next entry is the window animation to run	games/tbs/src/window/window_internal.h
 ICON_CURSED	its picture	the mark on an equipped cursed item, a white skull	games/tbs/include/window/window.h
-Icon_MarkCursed	its picture	the cursed mark's picture, a skull	games/tbs/include/window/window.h
+IconMarkCursed	its picture	the cursed mark's picture, a skull	games/tbs/include/window/window.h
 mnTextDrawWideStringAsTiles	its code	draws a string of 16-bit character codes as tiles	games/tbs/src/window/window_glyphs.c
 mnAbilityBuildIconTiles	its code	builds an ability's Psynergy icon	games/tbs/src/window/window_icons.c
 mnAbilityBuildItemIconTiles	its code	builds an ability's icon from the item icons	games/tbs/src/window/window_icons.c
@@ -8516,28 +8516,28 @@ mnSelectionIconLoadIntoSlot	its twin	The Lost Age names it so: as mnSelectionIco
 SELECTION_STATUS_SCROLLING	its twin	The Lost Age names it so: SELECTION_MENU_STATE.status, not a node's	games/tbs/src/window/window_selection.c
 SELECTION_STATUS_SHOWN	its twin	The Lost Age names it so: SELECTION_MENU_STATE.status, not a node's	games/tbs/src/window/window_selection.c
 YellowGlowSheet	its twin	The Lost Age names it so: its pictures: ten yellow-white glows, smallest to largest	games/tbs/src/system/resource_directory.s
-BattleEffect_YellowGlowSheet	its twin	The Lost Age names it so: its pictures: ten yellow-white glows, smallest to largest	games/tbs/src/graphics/battle_effects/battle_effects.s
-ResourceId_YellowGlowSheet	its twin	The Lost Age names it so: its pictures: ten yellow-white glows, smallest to largest	games/tbs/include/resource_ids.h
+BattleEffectYellowGlowSheet	its twin	The Lost Age names it so: its pictures: ten yellow-white glows, smallest to largest	games/tbs/src/graphics/battle_effects/battle_effects.s
+ResourceIdYellowGlowSheet	its twin	The Lost Age names it so: its pictures: ten yellow-white glows, smallest to largest	games/tbs/include/resource_ids.h
 RESOURCE_YELLOW_GLOW_SHEET	its twin	The Lost Age names it so: its pictures: ten yellow-white glows, smallest to largest	games/tbs/include/resource_ids.h
 PaleBlueGlowSheet	its twin	The Lost Age names it so: its pictures: ten small pale blue glows	games/tbs/include/resource_ids.h
-BattleEffect_PaleBlueGlowSheet	its twin	The Lost Age names it so: its pictures: ten small pale blue glows	games/tbs/src/graphics/battle_effects/battle_effects.s
-ResourceId_PaleBlueGlowSheet	its twin	The Lost Age names it so: its pictures: ten small pale blue glows	games/tbs/include/resource_ids.h
+BattleEffectPaleBlueGlowSheet	its twin	The Lost Age names it so: its pictures: ten small pale blue glows	games/tbs/src/graphics/battle_effects/battle_effects.s
+ResourceIdPaleBlueGlowSheet	its twin	The Lost Age names it so: its pictures: ten small pale blue glows	games/tbs/include/resource_ids.h
 RESOURCE_PALE_BLUE_GLOW_SHEET	its twin	The Lost Age names it so: its pictures: ten small pale blue glows	games/tbs/include/resource_ids.h
 BlueTallGlowSheet	its twin	The Lost Age names it so: its pictures: ten tall blue glows	games/tbs/src/system/resource_directory.s
-BattleEffect_BlueTallGlowSheet	its twin	The Lost Age names it so: its pictures: ten tall blue glows	games/tbs/src/graphics/battle_effects/battle_effects.s
-ResourceId_BlueTallGlowSheet	its twin	The Lost Age names it so: its pictures: ten tall blue glows	games/tbs/include/resource_ids.h
+BattleEffectBlueTallGlowSheet	its twin	The Lost Age names it so: its pictures: ten tall blue glows	games/tbs/src/graphics/battle_effects/battle_effects.s
+ResourceIdBlueTallGlowSheet	its twin	The Lost Age names it so: its pictures: ten tall blue glows	games/tbs/include/resource_ids.h
 RESOURCE_BLUE_TALL_GLOW_SHEET	its twin	The Lost Age names it so: its pictures: ten tall blue glows	games/tbs/include/resource_ids.h
 BlueGlowSheet	its twin	The Lost Age names it so: its pictures: ten round blue glows	games/tbs/src/battle_effect/battle_effect_falling.c
-BattleEffect_BlueGlowSheet	its twin	The Lost Age names it so: its pictures: ten round blue glows	games/tbs/src/graphics/battle_effects/battle_effects.s
-ResourceId_BlueGlowSheet	its twin	The Lost Age names it so: its pictures: ten round blue glows	games/tbs/include/resource_ids.h
+BattleEffectBlueGlowSheet	its twin	The Lost Age names it so: its pictures: ten round blue glows	games/tbs/src/graphics/battle_effects/battle_effects.s
+ResourceIdBlueGlowSheet	its twin	The Lost Age names it so: its pictures: ten round blue glows	games/tbs/include/resource_ids.h
 RESOURCE_BLUE_GLOW_SHEET	its twin	The Lost Age names it so: its pictures: ten round blue glows	games/tbs/include/resource_ids.h
 FlameArcSheet	its twin	The Lost Age names it so: its pictures: orange arcs of flame, five columns of them	games/tbs/src/battle_effect/battle_effect_streaks.c
-BattleEffect_FlameArcSheet	its twin	The Lost Age names it so: its pictures: orange arcs of flame, five columns of them	games/tbs/src/graphics/battle_effects/battle_effects.s
-ResourceId_FlameArcSheet	its twin	The Lost Age names it so: its pictures: orange arcs of flame, five columns of them	games/tbs/include/resource_ids.h
+BattleEffectFlameArcSheet	its twin	The Lost Age names it so: its pictures: orange arcs of flame, five columns of them	games/tbs/src/graphics/battle_effects/battle_effects.s
+ResourceIdFlameArcSheet	its twin	The Lost Age names it so: its pictures: orange arcs of flame, five columns of them	games/tbs/include/resource_ids.h
 RESOURCE_FLAME_ARC_SHEET	its twin	The Lost Age names it so: its pictures: orange arcs of flame, five columns of them	games/tbs/include/resource_ids.h
 BlueDropletSheet	its twin	The Lost Age names it so: its pictures: blue droplets	games/tbs/src/battle_effect/battle_effect_target_strike.c
-BattleEffect_BlueDropletSheet	its twin	The Lost Age names it so: its pictures: blue droplets	games/tbs/src/graphics/battle_effects/battle_effects.s
-ResourceId_BlueDropletSheet	its twin	The Lost Age names it so: its pictures: blue droplets	games/tbs/include/resource_ids.h
+BattleEffectBlueDropletSheet	its twin	The Lost Age names it so: its pictures: blue droplets	games/tbs/src/graphics/battle_effects/battle_effects.s
+ResourceIdBlueDropletSheet	its twin	The Lost Age names it so: its pictures: blue droplets	games/tbs/include/resource_ids.h
 RESOURCE_BLUE_DROPLET_SHEET	its twin	The Lost Age names it so: its pictures: blue droplets	games/tbs/include/resource_ids.h
 fdWhirlwindUpdateTarget	its twin	The Lost Age names it so: per-frame update of Whirlwind's target: it shrinks and, below half size, is put away	games/tbs/src/field/script_commands_whirlwind.c
 fdRetreatUpdateSpark	its twin	The Lost Age names it so: per-frame update of one of Retreat's sparks flying up from the caster	games/tbs/src/field/script_commands_retreat.c
@@ -8883,22 +8883,22 @@ SANCTUM_VALE_AFTER_DEFEAT	its uses	restart_point Vale, 16, Sanctum, 2 (field/sce
 KALAY_SANCTUM_AFTER_DEFEAT	its uses	restart_point Kalay, -1, KalaySanctum, 2 (field/scene_rules.s): a party defeated in Kalay wakes behind the counter	games/tbs/include/scene_exits.h
 FIELD_STATE.areaNameWin	its code	mnAreaNameWindowShow stores the area name's window at offset 560 and mnAreaNameWindowHide closes it	games/tbs/include/field/field_state.h
 FIELD_STATE.areaNameCountdown	its code	mnAreaNameWindowUpdate counts the area name's frames down at offset 564 and closes it at 0	games/tbs/include/field/field_state.h
-ResourceId_ToBeContinuedLettering	what the player sees	the "To Be Continued" lettering (to_be_continued_*.png) scTitleLoadSprs shows (title.c)	games/tbs/include/resource_ids.h
-ResourceId_SlashCometSheet	the game	"Slash" (MsgAbilityName); its staging row passes variant 0, PROJECTILE_VOLLEY_COMET_A (ability_staging.c)	games/tbs/include/resource_ids.h
-ResourceId_WindSlashCometSheet	the game	"Wind Slash" (MsgAbilityName); its staging row passes variant 1, PROJECTILE_VOLLEY_COMET_B (ability_staging.c)	games/tbs/include/resource_ids.h
-ResourceId_SonicSlashCometSheet	the game	"Sonic Slash" (MsgAbilityName); its staging row passes variant 2, PROJECTILE_VOLLEY_COMET_C, which Cutting Edge also fires (battle_effect_projectiles.c)	games/tbs/include/resource_ids.h
-ResourceId_VenusStarFieldPalette	its code	btElementGlowInitStarField loads it for ELEMENT_VENUS (battle_element_glow.c); Death Plunge borrows it	games/tbs/include/resource_ids.h
-ResourceId_JupiterStarFieldPalette	its code	btElementGlowInitStarField loads it for Jupiter (battle_element_glow.c); Death Plunge and the streaks borrow it	games/tbs/include/resource_ids.h
-ResourceId_MarsStarFieldPalette	its code	btElementGlowInitStarField loads it for ELEMENT_MARS, its only reader (battle_element_glow.c)	games/tbs/include/resource_ids.h
-ResourceId_DeathPlungeYellowPalette	its code	Death Plunge's only, for ELEMENT_VENUS (battle_effect_death_plunge.c)	games/tbs/include/resource_ids.h
-ResourceId_DeathPlungeVioletPalette	its code	Death Plunge's only, for Jupiter (battle_effect_death_plunge.c)	games/tbs/include/resource_ids.h
-ResourceId_DeathPlungeRedPalette	its code	Death Plunge's only, for ELEMENT_MARS (battle_effect_death_plunge.c)	games/tbs/include/resource_ids.h
-ResourceId_PlasmaVioletPalette	its code	Plasma's only reader (battle_effect_plasma.c)	games/tbs/include/resource_ids.h
-ResourceId_VolcanoRedPalette	its code	Volcano's basic variant (battle_effect_volcano.c), beside FirePillarSheetA; the red streaks borrow it	games/tbs/include/resource_ids.h
-ResourceId_VolcanoOrangePalette	its code	Volcano's strongest variant (battle_effect_volcano.c), beside FirePillarSheetA; Dynamite's spark groups borrow it	games/tbs/include/resource_ids.h
-ResourceId_GaiaOrangePalette	its code	Gaia's (battle_effect_gaia.c), beside EarthWallSheet; the healing mote fountain borrows it	games/tbs/include/resource_ids.h
-ResourceId_WorldMapPerspectiveTiles	its code	fdWorldMapInitPerspective sets perspective->tiles to it, the World Map's tiles decoded one at a time for the tilted view (field_world_map.c)	games/tbs/include/resource_ids.h
-ResourceId_GatheringLightsImage	its picture	the three lights btEffectRunGatheringLights draws for Demon Night, Rumble and Haunting	games/tbs/include/resource_ids.h
-ResourceId_StatReductionShardSheet	its picture	the shards btEffectRunStatReduction's dagger or shield breaks into (STAT_REDUCTION_SHARD_PICTURES)	games/tbs/include/resource_ids.h
-ResourceId_ReaperSheet	its picture	the reaper with its scythe raised, then swung, then its crescent (reaper_00.png to reaper_02.png), which Condemn and Mortal Danger show	games/tbs/include/resource_ids.h
-ResourceId_FuchinFallsCaveBackdrop	its area name	"Fuchin Falls Cave"; SceneBattleBackgroundRules gives it to the Fuchin Falls Cave scenes and Crossbone Isle's floating logs (battle_background_rules.c)	games/tbs/include/resource_ids.h
+ResourceIdToBeContinuedLettering	what the player sees	the "To Be Continued" lettering (to_be_continued_*.png) scTitleLoadSprs shows (title.c)	games/tbs/include/resource_ids.h
+ResourceIdSlashCometSheet	the game	"Slash" (MsgAbilityName); its staging row passes variant 0, PROJECTILE_VOLLEY_COMET_A (ability_staging.c)	games/tbs/include/resource_ids.h
+ResourceIdWindSlashCometSheet	the game	"Wind Slash" (MsgAbilityName); its staging row passes variant 1, PROJECTILE_VOLLEY_COMET_B (ability_staging.c)	games/tbs/include/resource_ids.h
+ResourceIdSonicSlashCometSheet	the game	"Sonic Slash" (MsgAbilityName); its staging row passes variant 2, PROJECTILE_VOLLEY_COMET_C, which Cutting Edge also fires (battle_effect_projectiles.c)	games/tbs/include/resource_ids.h
+ResourceIdVenusStarFieldPalette	its code	btElementGlowInitStarField loads it for ELEMENT_VENUS (battle_element_glow.c); Death Plunge borrows it	games/tbs/include/resource_ids.h
+ResourceIdJupiterStarFieldPalette	its code	btElementGlowInitStarField loads it for Jupiter (battle_element_glow.c); Death Plunge and the streaks borrow it	games/tbs/include/resource_ids.h
+ResourceIdMarsStarFieldPalette	its code	btElementGlowInitStarField loads it for ELEMENT_MARS, its only reader (battle_element_glow.c)	games/tbs/include/resource_ids.h
+ResourceIdDeathPlungeYellowPalette	its code	Death Plunge's only, for ELEMENT_VENUS (battle_effect_death_plunge.c)	games/tbs/include/resource_ids.h
+ResourceIdDeathPlungeVioletPalette	its code	Death Plunge's only, for Jupiter (battle_effect_death_plunge.c)	games/tbs/include/resource_ids.h
+ResourceIdDeathPlungeRedPalette	its code	Death Plunge's only, for ELEMENT_MARS (battle_effect_death_plunge.c)	games/tbs/include/resource_ids.h
+ResourceIdPlasmaVioletPalette	its code	Plasma's only reader (battle_effect_plasma.c)	games/tbs/include/resource_ids.h
+ResourceIdVolcanoRedPalette	its code	Volcano's basic variant (battle_effect_volcano.c), beside FirePillarSheetA; the red streaks borrow it	games/tbs/include/resource_ids.h
+ResourceIdVolcanoOrangePalette	its code	Volcano's strongest variant (battle_effect_volcano.c), beside FirePillarSheetA; Dynamite's spark groups borrow it	games/tbs/include/resource_ids.h
+ResourceIdGaiaOrangePalette	its code	Gaia's (battle_effect_gaia.c), beside EarthWallSheet; the healing mote fountain borrows it	games/tbs/include/resource_ids.h
+ResourceIdWorldMapPerspectiveTiles	its code	fdWorldMapInitPerspective sets perspective->tiles to it, the World Map's tiles decoded one at a time for the tilted view (field_world_map.c)	games/tbs/include/resource_ids.h
+ResourceIdGatheringLightsImage	its picture	the three lights btEffectRunGatheringLights draws for Demon Night, Rumble and Haunting	games/tbs/include/resource_ids.h
+ResourceIdStatReductionShardSheet	its picture	the shards btEffectRunStatReduction's dagger or shield breaks into (STAT_REDUCTION_SHARD_PICTURES)	games/tbs/include/resource_ids.h
+ResourceIdReaperSheet	its picture	the reaper with its scythe raised, then swung, then its crescent (reaper_00.png to reaper_02.png), which Condemn and Mortal Danger show	games/tbs/include/resource_ids.h
+ResourceIdFuchinFallsCaveBackdrop	its area name	"Fuchin Falls Cave"; SceneBattleBackgroundRules gives it to the Fuchin Falls Cave scenes and Crossbone Isle's floating logs (battle_background_rules.c)	games/tbs/include/resource_ids.h

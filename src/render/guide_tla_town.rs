@@ -11,8 +11,8 @@ use super::guide_tla::{
 };
 use super::story::Trigger;
 
-/// Daila as the party first comes (SceneId_DailaFlooded), from the World Map, and
-/// its houses (SceneId_DailaRoomsHouses) and sanctum (SceneId_DailaRoomsSanctum).
+/// Daila as the party first comes (SceneIdDailaFlooded), from the World Map, and
+/// its houses (SceneIdDailaRoomsHouses) and sanctum (SceneIdDailaRoomsSanctum).
 const DAILA: &str = "DailaFlooded";
 const DAILA_HOUSES: &str = "DailaRoomsHouses";
 const DAILA_SANCTUM: &str = "DailaRoomsSanctum";
@@ -476,7 +476,7 @@ const TWO_PAGES: [(u32, u32); 6] = [
 /// Debug parameter set 19: Felix, Jenna, Sheba and Piers at level 19, the
 /// party once Piers has joined, who knows Frost.
 const PARTY_PIERS: u32 = 19;
-/// Daila once the puddles stand in it (SceneId_Daila), the first puddle
+/// Daila once the puddles stand in it (SceneIdDaila), the first puddle
 /// Frost raises (daila.c: actor 22, by house 1), and the World Map outside
 /// Daila's south road (WORLD_MAP from Daila's exit 8).
 const DAILA_PUDDLES: &str = "Daila";

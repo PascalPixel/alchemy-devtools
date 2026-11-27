@@ -760,7 +760,7 @@ mod tests {
         Piece {
             kind: Kind::Main,
             target: decomp_target(Some("tla-en")).unwrap(),
-            name: format!("Func_{place}"),
+            name: format!("Func{place}"),
             place: place.into(),
             draft: draft.then(|| format!("recon/tla/en/main/{place}.c")),
             planned: None,

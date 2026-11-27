@@ -117,22 +117,22 @@ const SOUTH: u32 = 0x4000;
 const WEST: u32 = 0x8000;
 const NORTH: u32 = 0xc000;
 
-/// Vale's part with the Sanctum (SceneId_Vale, entered from the world map),
+/// Vale's part with the Sanctum (SceneIdVale, entered from the world map),
 /// the world map as the party leaves Vale, and Vale's houses
-/// (SceneId_CottageRoomsA) entered by the north door (COTTAGE_ROOMS_A_FROM_VALE_NORTH).
+/// (SceneIdCottageRoomsA) entered by the north door (COTTAGE_ROOMS_A_FROM_VALE_NORTH).
 const VALE: (u16, u16) = (4, 1);
 const WORLD_MAP: (u16, u16) = (2, 1);
 const COTTAGE_ROOMS_A_NORTH: (u16, u16) = (7, 2);
-/// Vault (SceneId_Vault) from the world map's south road, and its houses on
-/// the party's return (SceneId_LogRoomsB), entered by the mayor's
+/// Vault (SceneIdVault) from the world map's south road, and its houses on
+/// the party's return (SceneIdLogRoomsB), entered by the mayor's
 /// door (LOG_ROOMS_B_FROM_VAULT_REVISIT_NORTHWEST).
 const VAULT: (u16, u16) = (20, 0);
 const VAULT_HOUSES_REVISIT: (u16, u16) = (24, 10);
-/// Goma Cave's pond room (SceneId_GomaCavePond), set as the party first reaches
-/// the pillar room (SceneId_GomaCavePillar), as random-battle.gif has it.
+/// Goma Cave's pond room (SceneIdGomaCavePond), set as the party first reaches
+/// the pillar room (SceneIdGomaCavePillar), as random-battle.gif has it.
 const GOMA_CAVE_POND: (u16, u16) = (26, 0);
 const GOMA_CAVE_PILLAR: u16 = 27;
-/// Bilibin Cave's entrance (SceneId_BilibinCaveEntrance).
+/// Bilibin Cave's entrance (SceneIdBilibinCaveEntrance).
 const BILIBIN_CAVE_ENTRANCE: (u16, u16) = (49, 0);
 /// The scene number of a battle (MAP_BATTLE).
 const MAP_BATTLE: u16 = 0x1fe;

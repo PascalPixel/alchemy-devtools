@@ -44,7 +44,7 @@ fn numbers(text: &str) -> HashMap<String, u16> {
 }
 
 /// The scene names of scenes.s in row order: a row's number is its
-/// SceneId_. A row without a name is an empty string.
+/// SceneId. A row without a name is an empty string.
 fn map_names(text: &str) -> Vec<String> {
     let pattern = Regex::new(r"^\s*scene\s+(\w*)\s*,").unwrap();
     text.lines()

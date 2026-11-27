@@ -6,7 +6,7 @@ use super::field::{Field, Image, Setup};
 use super::guide::Guide;
 use super::whole::{self, States, LATE, LEAD};
 
-/// The Lighthouse Aerie (SceneId_VenusLighthouseAerie) back from the first
+/// The Lighthouse Aerie (SceneIdVenusLighthouseAerie) back from the first
 /// battle (VENUS_LIGHTHOUSE_AERIE_AFTER_FIRST_BATTLE), where
 /// VenusLighthouseAerie_CombineSaturosAndMenardi throws the Venus Star into
 /// the beacon, and after the second (VENUS_LIGHTHOUSE_AERIE_AFTER_SECOND_BATTLE),

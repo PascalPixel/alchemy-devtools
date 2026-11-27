@@ -511,7 +511,7 @@ mod tests {
             piece: Piece {
                 kind,
                 target: decomp_target(Some("tla-en")).unwrap(),
-                name: format!("Func_{place}"),
+                name: format!("Func{place}"),
                 place: place.into(),
                 draft: measured
                     .is_some()

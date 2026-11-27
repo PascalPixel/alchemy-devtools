@@ -17,8 +17,8 @@ use super::field::{Field, Setup};
 use super::guide::Guide;
 use super::whole::{self, Run, States, LATE, LEAD};
 
-/// The Lighthouse Aerie (SceneId_VenusLighthouseAerie), the world map
-/// (SceneId_WorldMap) and a battle (MAP_BATTLE).
+/// The Lighthouse Aerie (SceneIdVenusLighthouseAerie), the world map
+/// (SceneIdWorldMap) and a battle (MAP_BATTLE).
 const AERIE: u16 = 187;
 const WORLD_MAP: u16 = 2;
 const MAP_BATTLE: u16 = 0x1fe;

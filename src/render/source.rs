@@ -1,6 +1,6 @@
 //! Game facts the renderer reads from the Broken Seal's source rather than
 //! keeping copies of: map numbers (ScenesWork), area names
-//! (Area_NameRules and text/en.po), ability numbers and names
+//! (AreaNameRules and text/en.po), ability numbers and names
 //! (ability_ids.h, MsgAbilityName), actors' ids (each map's enum),
 //! characters (character_ids.h) and the debug party presets
 //! (DebugParameterSets, read from the build by tables.rs).
@@ -84,7 +84,7 @@ fn area(text: &str) -> Option<i64> {
 }
 
 /// The scenes in ScenesWork' order (field/scenes.s): each one's name
-/// without `SceneId_` (empty for an unnamed row) and its area.
+/// without `SceneId` (empty for an unnamed row) and its area.
 fn maps() -> Result<Vec<(String, i64)>, String> {
     let text = read("src/field/scenes.s")?;
     macro_rows(&text, "ScenesWork", &["scene"])?
@@ -99,13 +99,13 @@ fn maps() -> Result<Vec<(String, i64)>, String> {
         .collect()
 }
 
-/// The number of map `SceneId_<name>`, its row of ScenesWork.
+/// The number of map `SceneId<name>`, its row of ScenesWork.
 pub fn map_id(name: &str) -> Result<u16, String> {
     maps()?
         .iter()
         .position(|(n, _)| n == name)
         .map(|i| i as u16)
-        .ok_or_else(|| format!("scenes.s has no SceneId_{name}"))
+        .ok_or_else(|| format!("scenes.s has no SceneId{name}"))
 }
 
 /// The message key of the PO entry named `name` in text/en.po.
@@ -123,7 +123,7 @@ fn message_number(catalog: &crate::alchemy::po::Catalog, name: &str) -> Result<u
 
 /// The area name the game gives map `map` entered by entrance
 /// `entrance`, as Area_GetNameIndex finds it: the first rule of
-/// Area_NameRules naming the map, or else its area, with that
+/// AreaNameRules naming the map, or else its area, with that
 /// entrance or any; the name is that many messages after
 /// MsgDebugAreaName.
 pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
@@ -133,7 +133,7 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
         .ok_or_else(|| format!("no map {map}"))?
         .1;
     let rules = read("src/field/area_name_rules.s")?;
-    let rows = macro_rows(&rules, "Area_NameRules", &["scene_name", "area_name"])?;
+    let rows = macro_rows(&rules, "AreaNameRules", &["scene_name", "area_name"])?;
     let mut index = 0;
     for (kind, args) in rows {
         let [id, dest, name] = &args[..] else {
@@ -227,7 +227,7 @@ pub fn ability_name(id: u16) -> Result<String, String> {
         .ok_or_else(|| format!("AbilityDefinitions has no row {id}"))
 }
 
-/// The actor id of actor `name` on map `SceneId_<map>`, from the map
+/// The actor id of actor `name` on map `SceneId<map>`, from the map
 /// overlays' enums: the map's own `enum <map>ActorId` where it has one,
 /// else the one value every map overlay gives the name.
 pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
@@ -270,7 +270,7 @@ pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
         [value] => Ok(value as u16),
         [] => Err(format!("no scene overlay names {name}")),
         _ => Err(format!(
-            "{name} has several values and SceneId_{map} has no enum {own}"
+            "{name} has several values and SceneId{map} has no enum {own}"
         )),
     }
 }

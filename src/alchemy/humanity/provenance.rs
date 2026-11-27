@@ -770,7 +770,7 @@ impl GameText {
     }
 }
 
-/// A name's words as it writes them: `SceneId_SolSanctumLunaSolRooms` is
+/// A name's words as it writes them: `SceneIdSolSanctumLunaSolRooms` is
 /// Map, Id, Sol, Sanctum, Luna, Sol, Rooms; `ACTOR_TREE_MAN` is ACTOR, TREE,
 /// MAN. Digits, hex letters after them, single letters (`g`, `s`) and the
 /// sheet letters right after `Rooms` (`TimberRoomsBC`, as `LogRoomsA`: a
@@ -1181,7 +1181,7 @@ impl Thing {
 /// `Id`; the field's own `enum ActorId` numbers its slots). Alchemy before
 /// The Broken Seal's rename wrote `LOCALID_` and `enum <map>LocalId`.
 pub const FAMILIES: &[(&str, &str, &str)] = &[
-    ("SceneId_", "scene", "Scene"),
+    ("SceneId", "scene", "Scene"),
     ("LOCALID_", "actor", "LocalId"),
     ("ACTOR_", "actor", "ActorId"),
     ("FLAG_", "flag", "Flag"),
@@ -1598,9 +1598,9 @@ pub struct Analysis {
     pub unseen_words: Vec<(String, Vec<usize>)>,
 }
 
-/// The name as prose writes it: `SceneId_Bilibin` is `Bilibin`.
+/// The name as prose writes it: `SceneIdBilibin` is `Bilibin`.
 fn spoken(name: &str) -> &str {
-    name.strip_prefix("SceneId_").unwrap_or(name)
+    name.strip_prefix("SceneId").unwrap_or(name)
 }
 
 /// `word` stands alone in `text`, between characters no name holds.
@@ -1641,7 +1641,7 @@ fn link_words(name: &str) -> Vec<String> {
 
 /// The maps an exit's words name, longest first at each place, and the
 /// words left over, lowercase, in order. Words are compared run together, so
-/// `MCCOY_PALACE` is `SceneId_McCoyPalace`.
+/// `MCCOY_PALACE` is `SceneIdMcCoyPalace`.
 fn resolve(
     words: &[String],
     scenes: &HashMap<String, usize>,
@@ -1675,7 +1675,7 @@ fn spans(
 }
 
 /// The maps' names as an exit spells them, run together and uppercase
-/// (`SceneId_TolbiShip` is `TOLBISHIP`), each with its row, and the most
+/// (`SceneIdTolbiShip` is `TOLBISHIP`), each with its row, and the most
 /// words one has.
 fn scene_words(rows: &[Row]) -> (HashMap<String, usize>, usize) {
     let mut scenes: HashMap<String, usize> = HashMap::new();
@@ -2146,7 +2146,7 @@ impl Seen {
     /// The places among `words` that a seen map of the scene file `file`
     /// is called by its short name, its words after the file's own
     /// (`TIGHTROPES` in `games/tla/src/scene/dehkan_plateau.c`, for
-    /// `SceneId_DehkanPlateauTightropes`), as that file's names call it.
+    /// `SceneIdDehkanPlateauTightropes`), as that file's names call it.
     fn short_names(&self, rows: &[Row], file: &str, words: &[String]) -> HashSet<usize> {
         let mut out = HashSet::new();
         let Some(stem) = file
@@ -2222,13 +2222,13 @@ mod tests {
     #[test]
     fn words_of_names() {
         assert_eq!(
-            pieces("SceneId_SolSanctumLunaSolRooms"),
+            pieces("SceneIdSolSanctumLunaSolRooms"),
             ["Scene", "Id", "Sol", "Sanctum", "Luna", "Sol", "Rooms"]
         );
         assert_eq!(pieces("gBilibinEvents1"), ["Bilibin", "Events"]);
         assert_eq!(pieces("ACTOR_TREE_MAN_2"), ["ACTOR", "TREE", "MAN"]);
         assert_eq!(pieces("HTMLParser"), ["HTML", "Parser"]);
-        assert_eq!(pieces("SceneId_Ov6aaRoom1"), ["Scene", "Id", "Ov", "Room"]);
+        assert_eq!(pieces("SceneIdOv6aaRoom1"), ["Scene", "Id", "Ov", "Room"]);
         // Sheet letters after `Rooms`, one or a run, are no word.
         assert_eq!(
             pieces("TimberRoomsBC_TalkToInnWorker"),
@@ -2477,7 +2477,7 @@ mod tests {
             "a mechanism's name needs no evidence"
         );
         let kind = |name, file, origin| kind(Definition::new(name, file, origin), &HashMap::new());
-        assert_eq!(kind("SceneId_Vale", "a.h", Origin::Global), Some("scene"));
+        assert_eq!(kind("SceneIdVale", "a.h", Origin::Global), Some("scene"));
         assert_eq!(kind("FLAG_SCENE_TEMP_01", "a.h", Origin::Macro), None);
         assert_eq!(
             kind(
@@ -2877,9 +2877,9 @@ mod tests {
             ..Thing::default()
         };
         let things = [
-            scene("SceneId_Tolbi", "/// ★ Named from its area name: Tolbi"),
-            scene("SceneId_TolbiShip", "/// ★ Named from what the player sees: Tolbi's ship and its well-kept deck (its render)"),
-            scene("SceneId_TolbiShipMast", ""),
+            scene("SceneIdTolbi", "/// ★ Named from its area name: Tolbi"),
+            scene("SceneIdTolbiShip", "/// ★ Named from what the player sees: Tolbi's ship and its well-kept deck (its render)"),
+            scene("SceneIdTolbiShipMast", ""),
             Thing { kind: "flag", ..scene("FLAG_SAW_LIGHTHOUSE", "/// ★ Named from the game: \"Inn Full\" (MsgSignInn)") },
             link("TOLBI_TO_INN", "///< ★ Named from the game: \"Inn Full\" (MsgSignInn)"),
             link("TOLBI_FROM_INN", ""),
@@ -2891,7 +2891,7 @@ mod tests {
             link("TOLBI_SHIP_CREW_ATTACKED", ""),
             link("ENTRANCE_DEFAULT", ""),
             link("TOLBI_FROM_INN_BROKEN", "///< ★ Named from the game: \"Inn Empty\" (MsgSignInn)"),
-            scene("SceneId_McCoyPalace", "/// ★ Named from its area name: Tolbi"),
+            scene("SceneIdMcCoyPalace", "/// ★ Named from its area name: Tolbi"),
             link("TOLBI_FROM_MCCOY_PALACE", ""),
         ];
         let analysis = analyze(&things, &[], &text, &HashMap::new());
@@ -2912,11 +2912,11 @@ mod tests {
         );
         assert_eq!(
             evidence[6], "rooms",
-            "DECK, from SceneId_TolbiShip's ★ line"
+            "DECK, from SceneIdTolbiShip's ★ line"
         );
         assert_eq!(
             (evidence[7].as_str(), doors[7].as_str()),
-            ("none", "SceneId_TolbiShipMast"),
+            ("none", "SceneIdTolbiShipMast"),
             "an unverified scene"
         );
         assert_eq!(doors[8], "house,upper");
@@ -2959,7 +2959,7 @@ mod tests {
             "ropes strung between the cliffs, a ledge below (its render)",
         );
         let things = [
-            of("SceneId_BilibinTightropes", "scene", &[rendered.clone()]),
+            of("SceneIdBilibinTightropes", "scene", &[rendered.clone()]),
             of("BILIBIN_TIGHTROPES_TO_BILIBIN", "exit", &[]),
             of("BilibinTightropes_DropToLedge", "function", &[]),
             of(
@@ -2981,7 +2981,7 @@ mod tests {
             ),
             of("ACTOR_SHELF", "actor", &[row("its code", "drawn first")]),
             of(
-                "SceneId_BilibinCellar",
+                "SceneIdBilibinCellar",
                 "scene",
                 &[row("its code", "the room below")],
             ),
