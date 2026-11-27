@@ -280,12 +280,12 @@ impl<'a> Guide<'a> {
         )
     }
 
-    /// The debug scene selector in Daila with gDebugMode set: Start pressed
+    /// The debug scene selector in Daila with DebugMode set: Start pressed
     /// with B held (FieldSequence_Run), the scene stepped down past the
     /// first to the developers' rooms with Left, then A, which takes the
     /// party there, as `debug/map-select.gif`.
     fn tla_map_select(&mut self) -> Result<(), String> {
-        let mode = self.sym("gDebugMode")?;
+        let mode = self.sym("DebugMode")?;
         let mut entered = self.tla_enter("DailaFlooded", 0, PARTY_DAILA, &[])?;
         let field = &mut entered.field;
         field.write8(mode, 1);

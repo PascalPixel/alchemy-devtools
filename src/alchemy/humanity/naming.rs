@@ -124,6 +124,11 @@ pub const PRET_FLASH: &[&str] = &[
     "tla/src/system/save/sst.c",
     "tla/src/system/save/atmel.c",
     "tla/src/system/save/program_flash_sector.c",
+    // One copy of the kit's code for both games, under games/common.
+    "common/sdk/flash/flash.c",
+    "common/sdk/flash/sst.c",
+    "common/sdk/flash/atmel.c",
+    "common/sdk/flash/program_flash_sector.c",
 ];
 
 /// Whether a file is one of pret's flash library's.
@@ -148,6 +153,14 @@ pub const M4A: &[&str] = &[
     "/include/sound/sound_driver.h",
     "/include/sound/sound_driver_types.h",
     "/include/sound/sound_driver_symbols.h",
+    // One copy of the kit's code for both games, under games/common, and
+    // The Lost Age's own copies under its src/sdk.
+    "common/sdk/sound/sound.c",
+    "common/sdk/sound/tables.c",
+    "common/sdk/sound/driver.c",
+    "common/sdk/sound_driver.h",
+    "common/sdk/sound_driver_types.h",
+    "tla/src/sdk/sound/player_work_copy.c",
 ];
 
 /// Whether a file is one of the m4a sound driver's.

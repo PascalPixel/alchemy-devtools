@@ -78,9 +78,9 @@ fn scalar(name: &str) -> Option<Type> {
         "u8" | "vu8" | "bool8" | "unsigned char" => (1, false),
         "s8" | "vs8" | "char" | "signed char" => (1, true),
         "u16" | "vu16" | "bool16" | "unsigned short" => (2, false),
-        "s16" | "vs16" | "short" => (2, true),
+        "s16" | "vs16" | "short" | "signed short" => (2, true),
         "u32" | "vu32" | "bool32" | "unsigned" | "unsigned int" | "unsigned long" => (4, false),
-        "s32" | "vs32" | "int" | "long" => (4, true),
+        "s32" | "vs32" | "int" | "signed int" | "long" => (4, true),
         _ => return None,
     };
     Some(Type::Int { size, signed })
@@ -93,6 +93,9 @@ struct Headers {
     /// expression (its value counted on from the last one that has one where
     /// it has none, as `ANCHOR + 2`).
     defines: HashMap<String, String>,
+    /// Each `typedef` of a name to another type (`typedef unsigned char
+    /// Uint8;`), as SGL's headers name their integers.
+    typedefs: HashMap<String, String>,
 }
 
 impl Headers {
@@ -154,7 +157,21 @@ impl Headers {
                 }
             }
         }
-        Ok(Headers { texts, defines })
+        let typedef = regex::Regex::new(r"\btypedef\s+([A-Za-z_][\w ]*?)\s+(\w+)\s*;")
+            .map_err(|e| e.to_string())?;
+        let mut typedefs = HashMap::new();
+        for (_, text) in &texts {
+            for found in typedef.captures_iter(text) {
+                typedefs
+                    .entry(found[2].to_string())
+                    .or_insert_with(|| found[1].to_string());
+            }
+        }
+        Ok(Headers {
+            texts,
+            defines,
+            typedefs,
+        })
     }
 
     /// The value of a number, a `#define` or an enumerator, or of an
@@ -222,6 +239,22 @@ impl Headers {
         }
     }
 
+    /// A type by its name: an integer's (`u8`, `int`), or what a `typedef`
+    /// names it for (`Uint8`, `typedef struct ROW ROW`, an enum's int).
+    fn named(&self, name: &str) -> Option<Type> {
+        if let Some(kind) = scalar(name) {
+            return Some(kind);
+        }
+        let target = self.typedefs.get(name)?.trim();
+        if let Some(tag) = target.strip_prefix("struct ") {
+            return self.layout(tag.trim()).ok().map(Type::Struct);
+        }
+        if target.starts_with("enum ") {
+            return scalar("int");
+        }
+        (target != name).then(|| self.named(target)).flatten()
+    }
+
     /// The layout of `struct name`, as alchemy-gcc lays it out: each field at
     /// its type's alignment, every struct aligned and padded to 4 bytes.
     fn layout(&self, name: &str) -> Result<Layout, String> {
@@ -232,7 +265,17 @@ impl Headers {
             .iter()
             .find_map(|(path, text)| {
                 let found = start.find(text)?;
-                let end = text[found.end()..].find("};")? + found.end();
+                // The body runs to its own closing brace, which `};` or, in
+                // SGL's `typedef struct NAME { ... } NAME;`, the name follows.
+                let mut depth = 1;
+                let end = text[found.end()..].char_indices().find_map(|(at, c)| {
+                    depth += match c {
+                        '{' => 1,
+                        '}' => -1,
+                        _ => 0,
+                    };
+                    (depth == 0).then_some(at)
+                })? + found.end();
                 Some((path, text, &text[found.end()..end]))
             })
             .ok_or_else(|| format!("no header declares struct {name}"))?;
@@ -274,11 +317,14 @@ impl Headers {
                 {
                     (scalar(&words[..2].join(" ")).unwrap(), words[2..].join(" "))
                 }
-                Some(word) => (
-                    scalar(word)
-                        .ok_or_else(|| format!("struct {name}: unknown type in `{member}`"))?,
-                    words[1..].join(" "),
-                ),
+                Some(word) => match self.named(word) {
+                    Some(kind) => (kind, words[1..].join(" ")),
+                    // SGL's typedef of a struct, `EQUIP_EFFECT effs[4]`.
+                    None if self.typedefs.get(*word).is_none() => {
+                        (Type::Struct(self.layout(word)?), words[1..].join(" "))
+                    }
+                    None => return Err(format!("struct {name}: unknown type in `{member}`")),
+                },
                 None => continue,
             };
             for declarator in declarators.split(',').map(str::trim) {
@@ -333,7 +379,7 @@ impl Headers {
     fn check(&self, name: &str, layout: &Layout, text: &str) -> Result<(), String> {
         let tag = regex::escape(name);
         let size = regex::Regex::new(&format!(
-            r"STATIC_ASSERT\(\s*sizeof\(struct {tag}\)\s*==\s*(\w+)\s*\)"
+            r"STATIC_ASSERT\(\s*sizeof\((?:struct )?{tag}\)\s*==\s*(\w+)\s*\)"
         ))
         .map_err(|e| e.to_string())?;
         for found in size.captures_iter(text) {
@@ -347,7 +393,7 @@ impl Headers {
             }
         }
         let offset = regex::Regex::new(&format!(
-            r"STATIC_ASSERT\(\s*offsetof\(struct {tag},\s*(\w+)\)\s*==\s*(\w+)\s*\)"
+            r"STATIC_ASSERT\(\s*offsetof\((?:struct )?{tag},\s*(\w+)\)\s*==\s*(\w+)\s*\)"
         ))
         .map_err(|e| e.to_string())?;
         for found in offset.captures_iter(text) {
@@ -569,12 +615,12 @@ impl Game {
 
     /// The items' names by item id.
     pub fn item_names(&self) -> Result<Vec<String>, String> {
-        self.row_names("gItem_DefinitionTable", "ItemDefinition", "MsgItemName")
+        self.row_names("ItemDefinitionTable", "ITEM_DEFINITION", "MsgItemName")
     }
 
     /// The abilities' names by ability id.
     pub fn ability_names(&self) -> Result<Vec<String>, String> {
-        self.row_names("gAbilityDefinitions", "AbilityDefinition", "MsgAbilityName")
+        self.row_names("AbilityDefinitions", "ABILITY_DEFINITION", "MsgAbilityName")
     }
 
     /// The value of `#define name` or enumerator `name` in the headers.
@@ -687,7 +733,7 @@ STATIC_ASSERT(offsetof(struct Row, pairs) == 0x08);
         }
         let game = Game::read(root).unwrap();
         let items = game
-            .table("gItem_DefinitionTable", "ItemDefinition")
+            .table("ItemDefinitionTable", "ITEM_DEFINITION")
             .unwrap();
         let long_sword = game
             .item_names()
@@ -702,7 +748,7 @@ STATIC_ASSERT(offsetof(struct Row, pairs) == 0x08);
         let abilities = game.ability_names().unwrap();
         assert_eq!(
             abilities.len(),
-            game.table("gAbilityDefinitions", "AbilityDefinition")
+            game.table("AbilityDefinitions", "ABILITY_DEFINITION")
                 .unwrap()
                 .len()
         );
@@ -711,11 +757,11 @@ STATIC_ASSERT(offsetof(struct Row, pairs) == 0x08);
             "Move"
         );
         for (symbol, row) in [
-            ("gClass_DefinitionTable", "ClassDefinition"),
-            ("gDjinn_DefinitionTable", "DjinnDefinition"),
-            ("gSummon_DefinitionTable", "SummonDefinition"),
-            ("gEnemy_Definitions", "EnemyDefinition"),
-            ("gDebug_ParameterSets", "DebugParameterSetRow"),
+            ("ClassDefinitionTable", "CLASS_DEFINITION"),
+            ("DjinnDefinitionTable", "DJINN_DEFINITION"),
+            ("SummonDefinitionTable", "SUMMON_DEFINITION"),
+            ("EnemyDefinitions", "ENEMY_DEFINITION"),
+            ("DebugParameterSets", "DEBUG_PARM_SET_ROW"),
         ] {
             assert!(game.table(symbol, row).unwrap().len() > 0, "{symbol}");
         }

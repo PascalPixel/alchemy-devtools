@@ -416,7 +416,7 @@ impl<'a> Guide<'a> {
     }
 
     /// A random battle in Goma Cave fought to its end with A, and the cave
-    /// loaded again with the party where it stood (Actor_Snapshot,
+    /// loaded again with the party where it stood (fdActorSnapshot,
     /// Actor_Restore): from the battle's last seconds to the walk
     /// again.
     fn battle_return(&mut self) -> Result<(), String> {

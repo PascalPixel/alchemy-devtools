@@ -48,7 +48,7 @@ room's code, hardware addresses from 0x02000000 to 0x0fffffff, a
 function-like macro's own definition, a place or a slant's start, a half
 cell beside the grid's own macro, the period of a cue on the counter of a
 loop whose bound is frames, a cap of decimal digits (> 99), a byte cut by
-% 256 or from a cast value by / 256, the shift scaling an Iwram_MulFX
+% 256 or from a cast value by / 256, the shift scaling a syMulFX
 product or a sine, a canvas, palette or fade call's level and a colour
 channel's offset, and an index or stride going on from the ones before it
 in its routine) are honest_KIND, a number with an honest row of this

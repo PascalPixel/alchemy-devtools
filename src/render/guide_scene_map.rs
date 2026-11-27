@@ -54,7 +54,7 @@ const MENU_TEST_ARMOR_MERCHANT: u16 = 12;
 /// The first actor a scene places (ACTOR_FIRST_PLACED).
 const FIRST_PLACED: u16 = 8;
 /// struct MainRoutineState's next scene and entrance, and struct FieldState's
-/// exit request, which with 999 leaves for them (Event_SetDestination).
+/// exit request, which with 999 leaves for them (fdScriptSetDestination).
 const GS_SCENE: u32 = 0x1c0;
 const GS_ENTRANCE: u32 = 0x1c2;
 const FW_EXIT: u32 = 0x170;
@@ -503,7 +503,7 @@ impl<'a> Guide<'a> {
     /// (Shop_OpenDebugShop, opened by the armor merchant, a weapon shop
     /// outside the Japanese edition) lists the Masamune among its Artifacts
     /// and it is bought, so it leaves the list. The room is entered again
-    /// as Event_SetDestination sends the party, and the same list shows the
+    /// as fdScriptSetDestination sends the party, and the same list shows the
     /// Masamune back on sale.
     fn debug_menu_test_twice(&mut self) -> Result<(), String> {
         let place = (MENU_TEST_ROOM, 0);
@@ -514,8 +514,8 @@ impl<'a> Guide<'a> {
         let field = &mut entered.field;
         let mut frames = Vec::new();
         Self::menu_test_visit(field, (spot.x, spot.z), toward, true, &mut frames)?;
-        // Into the room again, as Event_SetDestination sends the party.
-        let state = self.sym("gMainRoutineState")?;
+        // Into the room again, as fdScriptSetDestination sends the party.
+        let state = self.sym("MainRoutineStateWork")?;
         field.write16(state + GS_SCENE, MENU_TEST_ROOM);
         field.write16(state + GS_ENTRANCE, 0);
         let field_state = field.field_state();

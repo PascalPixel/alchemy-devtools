@@ -1249,6 +1249,22 @@ pub const MEASURES: &[&str] = &[
     "height", "size", "tile", "tiles", "slots", "words", "frames",
 ];
 
+/// An enum's tag as the families read it: SGL's upper-case tag
+/// (`XIAN_ACTOR_ID`) in its words (`XianActorId`); any other as it is.
+pub fn camel_tag(tag: &str) -> String {
+    if tag.bytes().any(|b| b.is_ascii_lowercase()) {
+        return tag.to_string();
+    }
+    tag.split('_')
+        .filter(|word| !word.is_empty())
+        .map(|word| {
+            let mut out = word[..1].to_string();
+            out.push_str(&word[1..].to_ascii_lowercase());
+            out
+        })
+        .collect()
+}
+
 /// A definition `kind` classifies.
 #[derive(Clone, Copy, Debug)]
 pub struct Definition<'a> {
@@ -1392,7 +1408,9 @@ fn is_mechanism(
     {
         return true;
     }
-    if definition.tag == Some(family) {
+    // The slots' own enum is tagged `ActorId`; SGL's `enum ABILITY` (read
+    // `Ability`) numbers abilities, as `AbilityId` did.
+    if definition.tag == Some(family) && family.ends_with("Id") {
         return true;
     }
     if let Some(last) = definition.tag.and_then(|tag| pieces(tag).last().copied()) {
@@ -1488,7 +1506,9 @@ pub fn table_words(name: &str) -> String {
 /// `None` when it isn't one or its index isn't known.
 fn table_check(thing: &Thing, text: &GameText, macros: &HashMap<String, i64>) -> Option<Evidence> {
     let tag = thing.tag.as_deref()?;
-    let table = TABLES.iter().find(|table| table.tag == tag)?;
+    let table = TABLES
+        .iter()
+        .find(|table| table.tag == tag || table.tag.strip_suffix("Id") == Some(tag))?;
     let first = match table.first {
         Some(name) => *macros.get(name)?,
         None => 0,

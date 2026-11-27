@@ -1,9 +1,9 @@
 //! Game facts the renderer reads from the Broken Seal's source rather than
-//! keeping copies of: map numbers (gScenes), area names
-//! (gArea_NameRules and text/en.po), ability numbers and names
+//! keeping copies of: map numbers (ScenesWork), area names
+//! (Area_NameRules and text/en.po), ability numbers and names
 //! (ability_ids.h, MsgAbilityName), actors' ids (each map's enum),
 //! characters (character_ids.h) and the debug party presets
-//! (gDebug_ParameterSets, read from the build by tables.rs).
+//! (DebugParameterSets, read from the build by tables.rs).
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -83,11 +83,11 @@ fn area(text: &str) -> Option<i64> {
     number(text).or_else(|| enumerator("include/area_ids.h", text.trim()).ok())
 }
 
-/// The scenes in gScenes' order (field/scenes.s): each one's name
+/// The scenes in ScenesWork' order (field/scenes.s): each one's name
 /// without `SceneId_` (empty for an unnamed row) and its area.
 fn maps() -> Result<Vec<(String, i64)>, String> {
     let text = read("src/field/scenes.s")?;
-    macro_rows(&text, "gScenes", &["scene"])?
+    macro_rows(&text, "ScenesWork", &["scene"])?
         .into_iter()
         .map(|(_, row)| {
             let area = row
@@ -99,7 +99,7 @@ fn maps() -> Result<Vec<(String, i64)>, String> {
         .collect()
 }
 
-/// The number of map `SceneId_<name>`, its row of gScenes.
+/// The number of map `SceneId_<name>`, its row of ScenesWork.
 pub fn map_id(name: &str) -> Result<u16, String> {
     maps()?
         .iter()
@@ -123,7 +123,7 @@ fn message_number(catalog: &crate::alchemy::po::Catalog, name: &str) -> Result<u
 
 /// The area name the game gives map `map` entered by entrance
 /// `entrance`, as Area_GetNameIndex finds it: the first rule of
-/// gArea_NameRules naming the map, or else its area, with that
+/// Area_NameRules naming the map, or else its area, with that
 /// entrance or any; the name is that many messages after
 /// MsgDebugAreaName.
 pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
@@ -133,7 +133,7 @@ pub fn area_name(map: u16, entrance: u16) -> Result<String, String> {
         .ok_or_else(|| format!("no map {map}"))?
         .1;
     let rules = read("src/field/area_name_rules.s")?;
-    let rows = macro_rows(&rules, "gArea_NameRules", &["scene_name", "area_name"])?;
+    let rows = macro_rows(&rules, "Area_NameRules", &["scene_name", "area_name"])?;
     let mut index = 0;
     for (kind, args) in rows {
         let [id, dest, name] = &args[..] else {
@@ -224,7 +224,7 @@ pub fn ability_name(id: u16) -> Result<String, String> {
         .ability_names()?
         .into_iter()
         .nth(usize::from(id))
-        .ok_or_else(|| format!("gAbilityDefinitions has no row {id}"))
+        .ok_or_else(|| format!("AbilityDefinitions has no row {id}"))
 }
 
 /// The actor id of actor `name` on map `SceneId_<map>`, from the map
@@ -257,7 +257,8 @@ pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
         for (tag, values) in enums(&text, &known)? {
             if let Some((_, value)) = values.iter().find(|(n, _)| n == name) {
                 let value = value.ok_or_else(|| format!("cannot evaluate {name}"))?;
-                if tag.as_ref() == Some(&own) {
+                // SGL's `enum VALE_ACTOR_ID` is the map's own as `enum ValeActorId`.
+                if tag.as_deref().map(camel).as_ref() == Some(&own) {
                     return Ok(value as u16);
                 }
                 found.push(value);
@@ -274,6 +275,18 @@ pub fn actor_id(map: &str, name: &str) -> Result<u16, String> {
     }
 }
 
+/// An enum's tag in its words: SGL's `VALE_ACTOR_ID` as `ValeActorId`, any
+/// other as it is.
+fn camel(tag: &str) -> String {
+    if tag.bytes().any(|b| b.is_ascii_lowercase()) {
+        return tag.to_string();
+    }
+    tag.split('_')
+        .filter(|word| !word.is_empty())
+        .map(|word| word[..1].to_string() + &word[1..].to_ascii_lowercase())
+        .collect()
+}
+
 /// Character `name`'s number (`ISAAC`), its enumerator in character_ids.h.
 pub fn character(name: &str) -> Result<u8, String> {
     let text = read("include/game/character_ids.h")?;
@@ -286,8 +299,8 @@ pub fn character(name: &str) -> Result<u8, String> {
         .ok_or_else(|| format!("character_ids.h has no {name}"))
 }
 
-/// The members debug party preset `preset` raises (gDebug_ParameterSets, read
-/// by DebugParameterSet_Load: runs of rows, each ended by
+/// The members debug party preset `preset` raises (DebugParameterSets, read
+/// by btDebugParmSetLoad: runs of rows, each ended by
 /// DEBUG_PARAMETER_SET_END).
 pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
     let game = super::tables::Game::here()?;
@@ -295,7 +308,7 @@ pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
     let mut current = 0;
     let mut members = Vec::new();
     for unit in game
-        .table("gDebug_ParameterSets", "DebugParameterSetRow")?
+        .table("DebugParameterSets", "DEBUG_PARM_SET_ROW")?
         .column("unitId")?
     {
         if unit == end {
@@ -307,7 +320,7 @@ pub fn preset_members(preset: u32) -> Result<Vec<u8>, String> {
             members.push(unit as u8);
         }
     }
-    Err(format!("gDebug_ParameterSets has no preset {preset}"))
+    Err(format!("DebugParameterSets has no preset {preset}"))
 }
 
 #[cfg(test)]

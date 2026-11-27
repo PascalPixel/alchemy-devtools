@@ -136,7 +136,7 @@ impl Measurement {
     }
 
     /// The row for a tag in `routine`: its own, or one that names it first
-    /// (`MapGrid_CopyCellTilesIndicesRect and its siblings`).
+    /// (`fdMapGridCopyMetatileTilesIndicesRect and its siblings`).
     pub fn is_for(&self, routine: &str) -> bool {
         self.routine == routine
             || self
@@ -322,11 +322,15 @@ mod tests {
 
     #[test]
     fn the_tables_are_compiled_in_and_read_whole() {
+        // A game's rows name its own files and those both games share.
+        let own = |file: &str, game: &str| {
+            file.starts_with(&format!("games/{game}/")) || file.starts_with("games/common/")
+        };
         let rows = names("tbs").unwrap();
         assert!(rows.len() > 4000, "{}", rows.len());
         assert!(rows
             .iter()
-            .all(|row| row.file.starts_with("games/tbs/") && !row.name.is_empty()));
+            .all(|row| own(&row.file, "tbs") && !row.name.is_empty()));
         let measured = measurements("tbs").unwrap();
         assert!(measured.len() > 100, "{}", measured.len());
         assert!(measured.iter().all(|row| row.file.starts_with("games/tbs/")
@@ -341,8 +345,7 @@ mod tests {
             let root = crate::compile::root();
             for row in &judged {
                 assert!(
-                    row.file.starts_with(&format!("games/{game}/"))
-                        && root.join(&row.file).is_file(),
+                    own(&row.file, game) && root.join(&row.file).is_file(),
                     "{game}: {}",
                     row.file
                 );

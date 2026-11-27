@@ -48,7 +48,7 @@ const STAGES: &[Stage] = &[
     // At the foot of the Sanctum's door on the stormy night; it leads into a
     // house, as the function says.
     Stage {
-        function: "ValePrologue_UnusedOpenSanctumDoor",
+        function: "scValePrologueUnusedOpenSanctumDoor",
         scene: "ValePrologue",
         entrance: 1,
         set: &["FLAG_VALE_STORM", "FLAG_CHILDHOOD"],
@@ -58,7 +58,7 @@ const STAGES: &[Stage] = &[
     },
     // In the eastern hall, where the statue it moves stands.
     Stage {
-        function: "SolSanctumStatue_UnusedMoveNorthwestStatue",
+        function: "scSolSanctumStatueUnusedMoveNorthwestStatue",
         scene: "SolSanctumStatue",
         entrance: 1,
         set: &[],
@@ -68,7 +68,7 @@ const STAGES: &[Stage] = &[
     },
     // Three seals open, the state its only caller asks for.
     Stage {
-        function: "SolSanctumStatue_UnusedPutOutSeals",
+        function: "scSolSanctumStatueUnusedPutOutSeals",
         scene: "SolSanctumStatue",
         entrance: 1,
         set: &[
@@ -84,7 +84,7 @@ const STAGES: &[Stage] = &[
     // Alex (actor 24) where MercuryLighthouseAerie_AlexAppears walks him, in
     // one view with the lift's statue.
     Stage {
-        function: "MercuryLighthouseAerie_UnusedAlexCastsPly",
+        function: "scMercuryLighthouseAerieUnusedAlexCastsPly",
         scene: "MercuryLighthouseAerie",
         entrance: 5,
         set: &[],
@@ -95,7 +95,7 @@ const STAGES: &[Stage] = &[
     // In the Keys room, on the cell below the third blue door, facing south as its
     // rows ask.
     Stage {
-        function: "CrossboneIsleKeys_UnusedJumpOntoPost",
+        function: "scCrossboneIsleKeysUnusedJumpOntoPost",
         scene: "CrossboneIsleKeys",
         entrance: 0,
         set: &[],

@@ -1,7 +1,7 @@
 //! Which abilities `render psynergy` casts, by whom and at whom, from the
 //! game's own tables as the built edition holds them (tables.rs):
-//! gAbilityDefinitions (each ability's targeting, flags, element, range and
-//! cost), gClass_DefinitionTable and gItem_DefinitionTable (what the party can
+//! AbilityDefinitions (each ability's targeting, flags, element, range and
+//! cost), ClassDefinitionTable and ItemDefinitionTable (what the party can
 //! learn), and the Djinn, summon, item and enemy tables for the rest.
 
 use super::tables::{Game, Table};
@@ -24,9 +24,9 @@ const FOUR: [u8; 4] = [ISAAC, GARET, IVAN, MIA];
 /// Jenna's fixed class (Class_Determine): the Psynergy she casts.
 const JENNA_CLASS: usize = 202;
 
-/// Debug party preset 0 (gDebug_ParameterSets): the four at level 35, each with their
+/// Debug party preset 0 (DebugParameterSets): the four at level 35, each with their
 /// grown-up battle sprite (BATTLE_CHARACTER, 300 on). Preset 10, the level-1
-/// rows, equips Isaac and Garet with a Machete, which BattleObject_Make draws with
+/// rows, equips Isaac and Garet with a Machete, which btObjectMake draws with
 /// sprites 480 and 482 instead. Jenna, in no preset but 10 and 11, keeps the
 /// record the debug menu's defaults give her.
 const PRESET_FOUR: u8 = 0;
@@ -40,7 +40,7 @@ pub struct Roster {
     /// The four who travel together: a cast that reaches past its aim meets
     /// two of them beside the target.
     pub four: [u8; 4],
-    /// The debug party preset that gives them (gDebug_ParameterSets).
+    /// The debug party preset that gives them (DebugParameterSets).
     pub preset: u8,
     /// A class whose Psynergy another character casts: The Broken Seal's
     /// Jenna casts her own class's Mars Psynergy.
@@ -120,7 +120,7 @@ pub fn character_name(owner: u8) -> &'static str {
     }
 }
 
-/// One row of gAbilityDefinitions, with its name.
+/// One row of AbilityDefinitions, with its name.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ability {
     pub id: u16,
@@ -201,7 +201,7 @@ pub enum Command {
         element: u8,
         index: u8,
     },
-    /// A summon, by its row of gSummon_DefinitionTable, with `count` Djinn of
+    /// A summon, by its row of SummonDefinitionTable, with `count` Djinn of
     /// `element` on standby, and `needs[e]` of each element e in all (The
     /// Lost Age's summons call on more than one element).
     Summon {
@@ -282,10 +282,10 @@ fn nonzero(table: &Table, path: &str) -> Result<BTreeSet<u16>, String> {
     Ok(values)
 }
 
-/// Every ability by id (gAbilityDefinitions), named from MsgAbilityName (The
+/// Every ability by id (AbilityDefinitions), named from MsgAbilityName (The
 /// Lost Age's first ability name is MsgAbilityNothing, the name to change).
 pub fn abilities(game: &Game) -> Result<Vec<Ability>, String> {
-    let table = game.table("gAbilityDefinitions", "AbilityDefinition")?;
+    let table = game.table("AbilityDefinitions", "ABILITY_DEFINITION")?;
     let names = game
         .names("MsgAbilityName", table.len())
         .or_else(|_| game.names("MsgAbilityNothing", table.len()))?;
@@ -309,21 +309,21 @@ pub fn abilities(game: &Game) -> Result<Vec<Ability>, String> {
 /// What the tables say about the abilities, read from the built edition.
 pub struct Tables {
     pub abilities: Vec<Ability>,
-    /// Every class's Psynergy (gClass_DefinitionTable), and the special
+    /// Every class's Psynergy (ClassDefinitionTable), and the special
     /// caster's class's (Roster::special).
     learned: BTreeSet<u16>,
     jenna: BTreeSet<u16>,
     /// The abilities items teach while equipped (ITEM_USE_TEACHES), those they
-    /// are used for, and those weapons unleash (gItem_DefinitionTable).
+    /// are used for, and those weapons unleash (ItemDefinitionTable).
     taught: BTreeSet<u16>,
     used: BTreeSet<u16>,
     unleashed: BTreeSet<u16>,
-    /// The Djinn's abilities (gDjinn_DefinitionTable).
+    /// The Djinn's abilities (DjinnDefinitionTable).
     djinn: BTreeSet<u16>,
     /// Each summon's ability and the standby Djinn it needs by element
-    /// (gSummon_DefinitionTable).
+    /// (SummonDefinitionTable).
     summons: Vec<(u16, Vec<i64>)>,
-    /// What the enemies choose from (gEnemy_Definitions).
+    /// What the enemies choose from (EnemyDefinitions).
     enemy: BTreeSet<u16>,
     /// Who casts.
     pub roster: Roster,
@@ -353,9 +353,9 @@ impl Tables {
         } else {
             Roster::tbs()
         };
-        let classes = game.table("gClass_DefinitionTable", "ClassDefinition")?;
-        let items = game.table("gItem_DefinitionTable", "ItemDefinition")?;
-        let summons = game.table("gSummon_DefinitionTable", "SummonDefinition")?;
+        let classes = game.table("ClassDefinitionTable", "CLASS_DEFINITION")?;
+        let items = game.table("ItemDefinitionTable", "ITEM_DEFINITION")?;
+        let summons = game.table("SummonDefinitionTable", "SUMMON_DEFINITION")?;
         // The Lost Age's items leave the kind of use that teaches unnamed:
         // 3, as The Broken Seal's ITEM_USE_TEACHES (its Lash Pebble and Pound
         // Cube teach Lash and Pound).
@@ -384,8 +384,8 @@ impl Tables {
         let unleashed =
             nonzero(&items, "unleashAbility").or_else(|_| nonzero(&items, "unleashAction"))?;
         let enemies = game
-            .table("gEnemy_Definitions", "EnemyDefinition")
-            .or_else(|_| game.table("gEnemy_DefinitionTable", "EnemyDefinition"))?;
+            .table("EnemyDefinitions", "ENEMY_DEFINITION")
+            .or_else(|_| game.table("gEnemy_DefinitionTable", "ENEMY_DEFINITION"))?;
         Ok(Tables {
             abilities: abilities(&game)?,
             learned: nonzero(&classes, "abilities.ability")?,
@@ -394,7 +394,7 @@ impl Tables {
             used,
             unleashed,
             djinn: nonzero(
-                &game.table("gDjinn_DefinitionTable", "DjinnDefinition")?,
+                &game.table("DjinnDefinitionTable", "DJINN_DEFINITION")?,
                 "abilityId",
             )?,
             summons: (0..summons.len())
@@ -513,7 +513,7 @@ impl Tables {
         Ok(Plan { casts, skipped })
     }
 
-    /// A summon's row of gSummon_DefinitionTable, and the one element and
+    /// A summon's row of SummonDefinitionTable, and the one element and
     /// count of Djinn it needs.
     fn summon_row(&self, id: u16) -> Option<(u8, u8, u8)> {
         let row = self.summons.iter().position(|s| s.0 == id)?;
@@ -525,7 +525,7 @@ impl Tables {
     }
 }
 
-/// A Djinni's ability id: 300 + 20 x element + index (gDjinn_DefinitionTable).
+/// A Djinni's ability id: 300 + 20 x element + index (DjinnDefinitionTable).
 const DJINN_FIRST: u16 = 300;
 const DJINN_PER_ELEMENT: u16 = 20;
 

@@ -392,9 +392,9 @@ mod tests {
         let across = rows(&lost, &matched, Some((0.75, 1.33)));
         let thor = across
             .iter()
-            .find(|row| row.function.name == "BattleEffect_RunThor")
+            .find(|row| row.function.name == "btEffectRunThor")
             .unwrap();
-        assert_eq!(thor.twin.unwrap().0.name, "BattleEffect_RunThor");
+        assert_eq!(thor.twin.unwrap().0.name, "btEffectRunThor");
         let own = rows(&matched, &matched, None);
         assert!(own.iter().filter(|row| row.twin.is_some()).count() > 4_000);
         for row in own {
@@ -468,7 +468,7 @@ mod tests {
         let (_, matched) = read(root, "tbs", |stem| stem.starts_with("games/")).unwrap();
         let thor = lost
             .iter()
-            .find(|function| function.name == "BattleEffect_RunThor")
+            .find(|function| function.name == "btEffectRunThor")
             .unwrap();
         let (twin, dice) = rows(std::slice::from_ref(thor), &matched, Some((0.75, 1.33)))[0]
             .twin
@@ -476,14 +476,14 @@ mod tests {
         assert_eq!(
             (twin.name.as_str(), twin.file.as_str()),
             (
-                "BattleEffect_RunThor",
+                "btEffectRunThor",
                 "games/tbs/src/battle_effect/battle_effect.c"
             )
         );
         assert!(dice > 0.3, "{dice}");
         let others: Vec<Found> = matched
             .into_iter()
-            .filter(|function| function.name != "BattleEffect_RunThor")
+            .filter(|function| function.name != "btEffectRunThor")
             .collect();
         let next = rows(std::slice::from_ref(thor), &others, None)[0].dice();
         assert!(next < dice / 4.0, "{next} against {dice}");

@@ -1,89 +1,89 @@
 file	routine	number	kind	what
 games/tla/include/field/screen_transition.h	TRANSITION_SHOW_ALL	0x7f7f	honest	a WININ/WINOUT register value: every layer shown in both windows
 games/tla/include/field/screen_transition.h	TRANSITION_SHOW_LOW_BYTE	0x007f	honest	a WININ/WINOUT register value: every layer shown in the low window
-games/tla/include/system/task.h	TASK_PASS_FRAME	0x480	honest	a pass in the high byte and the middle rank 0x80 in the low byte
-games/tla/include/system/task.h	TASK_PASS_VBLANK	0xc80	honest	a pass in the high byte and the middle rank 0x80 in the low byte
-games/tla/include/system/task.h	TASK_PRIORITY_REMOVED	0x7fff	honest	the highest s16 priority, a removed task's
-games/tla/src/battle/battle_background.c	BattleBackground_DivideBy16	16	honest	the divisor the UNUSED routine BattleBackground_DivideBy16 is named for
-games/tla/src/battle/battle_run.c	Battle_Run	0x169	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
-games/tla/src/battle/battle_turn_end.c	DjinnRecovery_CountDownTwenty	20	honest	the twenty turns DjinnRecovery_CountDownTwenty counts down, as its name says
-games/tla/src/battle_effect/battle_effect_catastrophe.c	BattleEffect_RunCatastrophe	16	honest	a canvas shade level, 0 to 63
-games/tla/src/battle_effect/battle_effect_catastrophe.c	BattleEffect_RunCatastrophe	24	honest	a canvas shade level, 0 to 63
-games/tla/src/battle_effect/battle_effect_catastrophe.c	BattleEffect_RunCatastrophe	512	honest	a divisor turning a height difference into an angle
-games/tla/src/battle_effect/battle_effect_charon.c	BattleEffect_RunCharon	35	unsettled	a DEAD loop stride nothing reads; only a twin or edition that uses it would settle it
-games/tla/src/battle_effect/battle_effect_daedalus.c	BattleEffect_RunDaedalusStrike	32	honest	a particle's speed added in its set-up
-games/tla/src/battle_effect/battle_effect_djinni_charge.c	BattleEffect_RunDjinniCharge	15	honest	a multiple of the named step ANIM_STEP_NORMAL
-games/tla/src/battle_effect/battle_effect_drain.c	BattleEffect_RunBreak	10	honest	a 64th of a pixel shifted into 16.16
-games/tla/src/battle_effect/battle_effect_drain.c	BattleEffect_RunBreak	128	honest	half the 0-255 range of the roll in lift, so the throw is 128 to 383 64ths of a pixel a frame
-games/tla/src/battle_effect/battle_effect_fire_puppet.c	BattleEffect_RunWhiplash	64	honest	a particle's speed added in its set-up
-games/tla/src/battle_effect/battle_effect_gaia.c	BattleEffect_RunGaia	12	unsettled	a DEAD counter of velocityX nothing reads; only a twin or edition that uses it would settle it
-games/tla/src/battle_effect/battle_effect_gasp.c	BattleEffect_RunGaspFamily	356	honest	an angle speed a frame, no whole fraction of a turn
-games/tla/src/battle_effect/battle_effect_haures.c	BattleEffect_RunHaures	0x7f	honest	a byte mask, PIXELS_8BPP of the low seven bits
-games/tla/src/battle_effect/battle_effect_odyssey.c	Iris_WipeScreen	10	honest	CANVAS_ROW_OFFSET's own form, whose grouping the macro would change
-games/tla/src/battle_effect/battle_effect_projectiles.c	BattleEffect_RunProjectileVolley	60	honest	a DEAD canvas brightness level, 0 to 63
-games/tla/src/battle_effect/battle_effect_thunder_mine.c	BattleEffect_RunVoidBeam	160	unsettled	a DEAD clamp of the depth range other effects size motes by, says its comment; finding that range named elsewhere (a mote-size table's bounds) would settle it
-games/tla/src/battle_effect/battle_effect_thunder_mine.c	BattleEffect_RunVoidBeam	799	unsettled	a DEAD clamp of the depth range other effects size motes by, says its comment; finding that range named elsewhere (a mote-size table's bounds) would settle it
-games/tla/src/battle_effect/battle_effect_trident.c	BattleEffect_RunTrident	25	honest	a particle's life in frames, a DEAD store
-games/tla/src/battle_effect/battle_effect_trident.c	BattleEffect_RunTrident	61	honest	a disc diameter of 2 to 63 pixels
-games/tla/src/battle_effect/battle_effect_undead_sword.c	BattleEffect_RunDiamondBerg	128	unsettled	a DEAD store of a position in pixels, which frame 0 overwrites; nothing reads it to say which
-games/tla/src/battle_effect/battle_effect_undead_sword.c	BattleEffect_RunDiamondBerg	16	honest	a canvas shade level, 0 to 63
-games/tla/src/battle_effect/battle_effect_vengeance.c	BattleEffect_RunCoatlicue	10	honest	(frame - 454) << 10 scales frames to an angle; the * (TRIG_TURN / 64) form changes the code
-games/tla/src/battle_effect/battle_effect_vengeance.c	BattleEffect_RunCoatlicue	15	honest	a colour level lift, 0 to 31, beside redLift and greenLift
-games/tla/src/battle_effect/battle_effect_vengeance.c	BattleEffect_RunCoatlicue	16	honest	a colour level lift, 0 to 31, beside redLift and greenLift; and the 16.16 shift of 1 << (16 - variant)
-games/tla/src/field/field_sequence_encounter.c	Encounter_CountStepsAndSelectFormation	16	honest	the factor of the encounter-step formula its comment derives
-games/tla/src/field/field_sequence_event.c	Event_Start	0x132	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
-games/tla/src/field/field_sequence_run.c	FieldSequence_Run	0x11f	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tla/include/system/definitions.h	EVENT_PASS_TICK	0x480	honest	a pass in the high byte and the middle rank 0x80 in the low byte
+games/tla/include/system/definitions.h	EVENT_PASS_VBLANK	0xc80	honest	a pass in the high byte and the middle rank 0x80 in the low byte
+games/tla/include/system/definitions.h	EVENT_PRIORITY_REMOVED	0x7fff	honest	the highest s16 priority, a removed task's
+games/tla/src/battle/battle_background.c	btBackgroundDivideBy16	16	honest	the divisor the UNUSED routine btBackgroundDivideBy16 is named for
+games/tla/src/battle/battle_run.c	btRun	0x169	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tla/src/battle/battle_turn_end.c	btDjinnRecoveryCountDownTwenty	20	honest	the twenty turns btDjinnRecoveryCountDownTwenty counts down, as its name says
+games/tla/src/battle_effect/battle_effect_catastrophe.c	btEffectRunCatastrophe	16	honest	a canvas shade level, 0 to 63
+games/tla/src/battle_effect/battle_effect_catastrophe.c	btEffectRunCatastrophe	24	honest	a canvas shade level, 0 to 63
+games/tla/src/battle_effect/battle_effect_catastrophe.c	btEffectRunCatastrophe	512	honest	a divisor turning a height difference into an angle
+games/tla/src/battle_effect/battle_effect_charon.c	btEffectRunCharon	35	unsettled	a DEAD loop stride nothing reads; only a twin or edition that uses it would settle it
+games/tla/src/battle_effect/battle_effect_daedalus.c	btEffectRunDaedalusStrike	32	honest	a particle's speed added in its set-up
+games/tla/src/battle_effect/battle_effect_djinni_charge.c	btEffectRunDjinniCharge	15	honest	a multiple of the named step ANIM_STEP_NORMAL
+games/tla/src/battle_effect/battle_effect_drain.c	btEffectRunBreak	10	honest	a 64th of a pixel shifted into 16.16
+games/tla/src/battle_effect/battle_effect_drain.c	btEffectRunBreak	128	honest	half the 0-255 range of the roll in lift, so the throw is 128 to 383 64ths of a pixel a frame
+games/tla/src/battle_effect/battle_effect_fire_puppet.c	btEffectRunWhiplash	64	honest	a particle's speed added in its set-up
+games/tla/src/battle_effect/battle_effect_gaia.c	btEffectRunGaia	12	unsettled	a DEAD counter of velocityX nothing reads; only a twin or edition that uses it would settle it
+games/tla/src/battle_effect/battle_effect_gasp.c	btEffectRunGaspFamily	356	honest	an angle speed a frame, no whole fraction of a turn
+games/tla/src/battle_effect/battle_effect_haures.c	btEffectRunHaures	0x7f	honest	a byte mask, PIXELS_8BPP of the low seven bits
+games/tla/src/battle_effect/battle_effect_odyssey.c	btIrisWipeScreen	10	honest	CANVAS_ROW_OFFSET's own form, whose grouping the macro would change
+games/tla/src/battle_effect/battle_effect_projectiles.c	btEffectRunProjectileVolley	60	honest	a DEAD canvas brightness level, 0 to 63
+games/tla/src/battle_effect/battle_effect_thunder_mine.c	btEffectRunVoidBeam	160	unsettled	a DEAD clamp of the depth range other effects size motes by, says its comment; finding that range named elsewhere (a mote-size table's bounds) would settle it
+games/tla/src/battle_effect/battle_effect_thunder_mine.c	btEffectRunVoidBeam	799	unsettled	a DEAD clamp of the depth range other effects size motes by, says its comment; finding that range named elsewhere (a mote-size table's bounds) would settle it
+games/tla/src/battle_effect/battle_effect_trident.c	btEffectRunTrident	25	honest	a particle's life in frames, a DEAD store
+games/tla/src/battle_effect/battle_effect_trident.c	btEffectRunTrident	61	honest	a disc diameter of 2 to 63 pixels
+games/tla/src/battle_effect/battle_effect_undead_sword.c	btEffectRunDiamondBerg	128	unsettled	a DEAD store of a position in pixels, which frame 0 overwrites; nothing reads it to say which
+games/tla/src/battle_effect/battle_effect_undead_sword.c	btEffectRunDiamondBerg	16	honest	a canvas shade level, 0 to 63
+games/tla/src/battle_effect/battle_effect_vengeance.c	btEffectRunCoatlicue	10	honest	(frame - 454) << 10 scales frames to an angle; the * (TRIG_TURN / 64) form changes the code
+games/tla/src/battle_effect/battle_effect_vengeance.c	btEffectRunCoatlicue	15	honest	a colour level lift, 0 to 31, beside redLift and greenLift
+games/tla/src/battle_effect/battle_effect_vengeance.c	btEffectRunCoatlicue	16	honest	a colour level lift, 0 to 31, beside redLift and greenLift; and the 16.16 shift of 1 << (16 - variant)
+games/tla/src/field/field_mode_encounter.c	fdEncounterCountStepsAndSelectFormation	16	honest	the factor of the encounter-step formula its comment derives
+games/tla/src/field/field_mode_script.c	fdScriptStart	0x132	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tla/src/field/field_mode_run.c	fdModeRun	0x11f	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
 games/tla/src/field/field_tile_animation.c	TILESET_ANIM_JUMP	0xfe00	honest	an opcode in a script halfword's high byte
 games/tla/src/field/field_tile_animation.c	TILESET_ANIM_MARKER	0xfd00	honest	an opcode in a script halfword's high byte
-games/tla/src/field/field_tile_animation.c	WorldMap_IsFlyable	10	unsettled	a World Map ground collision kind (XXX); a render of the World Map showing which ground has collision 10 would settle it
-games/tla/src/menu/menu_djinn.c	Window_SetRectPalette	0xf	honest	the whole palette field of a screen entry, BG_TILE_PALETTE(0xf) as its mask
-games/tla/src/menu/title_intro.c	TitleIntro_ShowLighthouse	10	honest	the logo's fade to white, in frames
-games/tla/src/menu/title_intro.c	TitleIntro_ShowLighthouse	160	honest	a limit of the lighthouse picture's scroll, in pixels
-games/tla/src/menu/title_intro.c	TitleIntro_ShowLighthouse	176	honest	a limit of the lighthouse picture's scroll, in pixels
-games/tla/src/menu/title_intro.c	TitleIntro_ShowLighthouse	200	honest	a limit of the lighthouse picture's scroll, in pixels
-games/tla/src/menu/title_intro.c	TitleIntro_ShowLighthouse	216	honest	a limit of the lighthouse picture's scroll, in pixels
-games/tla/src/menu/title_intro.c	TitleIntro_ShowLighthouse	25	honest	the logo's fade from white, in frames
-games/tla/src/scene/airs_rock.c	AirsRock_WhirlwindOpensTheTop	0xfcff	honest	a mask of a screen entry clearing tile-number bits 8 and 9
-games/tla/src/scene/airs_rock_inside.c	AirsRockInside_WakeHallStatue	0xfcff	honest	a mask of a screen entry clearing tile-number bits 8 and 9
-games/tla/src/scene/airs_rock_inside.c	AirsRockInside_WakeVialChestStatue	0xfcff	honest	a mask of a screen entry clearing tile-number bits 8 and 9
-games/tla/src/scene/aqua_rock_inside.c	AquaRockInside_ShowAquariusStone	20	unsettled	UB: the room has no actor 20; finding the room or edition where actor 20 exists would settle it
-games/tla/src/scene/epilogue.c	Scene_Initialize	120	honest	the ending picture's pan position in pixels
-games/tla/src/scene/gaia_rock_inside.c	GaiaRockInside_JumpDownCobwebPit	0x800	unsettled	passed to Actor_SetSpriteColor for the dust, not the no-wait bit 0x1000; staging the drop to see what colour mode 0x800 gives, or finding where Camelot meant the no-wait bit, would settle it
-games/tla/src/scene/kibombo.c	Kibombo_AkafubuChants	360	honest	degrees in 16.16 to 65,536ths of a turn
-games/tla/src/scene/lemurian_ship.c	LemurianShip_OpenDoor	12	unsettled	a DEAD test for a door 12 among ten; only a twin or edition that uses it would settle it
-games/tla/src/scene/magma_rock.c	gMagmaRock_SalamanderTailLowWestTriggers	0x8	honest	flag 8 in a trigger's condition, as its comment says: after the party members' flags, set by no code
-games/tla/src/scene/mikasalla.c	Mikasalla_ClimbDownLadder	17	honest	a drop in pixels, Actor_SetDestinationOffset's third argument later
+games/tla/src/field/field_tile_animation.c	fdWorldMapIsFlyable	10	unsettled	a World Map ground collision kind (XXX); a render of the World Map showing which ground has collision 10 would settle it
+games/tla/src/menu/menu_djinn.c	mnWindowSetRectPalette	0xf	honest	the whole palette field of a screen entry, BG_TILE_PALETTE(0xf) as its mask
+games/tla/src/menu/title_intro.c	mnTitleIntroShowLighthouse	10	honest	the logo's fade to white, in frames
+games/tla/src/menu/title_intro.c	mnTitleIntroShowLighthouse	160	honest	a limit of the lighthouse picture's scroll, in pixels
+games/tla/src/menu/title_intro.c	mnTitleIntroShowLighthouse	176	honest	a limit of the lighthouse picture's scroll, in pixels
+games/tla/src/menu/title_intro.c	mnTitleIntroShowLighthouse	200	honest	a limit of the lighthouse picture's scroll, in pixels
+games/tla/src/menu/title_intro.c	mnTitleIntroShowLighthouse	216	honest	a limit of the lighthouse picture's scroll, in pixels
+games/tla/src/menu/title_intro.c	mnTitleIntroShowLighthouse	25	honest	the logo's fade from white, in frames
+games/tla/src/scene/airs_rock.c	scAirsRockWhirlwindOpensTheTop	0xfcff	honest	a mask of a screen entry clearing tile-number bits 8 and 9
+games/tla/src/scene/airs_rock_inside.c	scAirsRockInsideWakeHallStatue	0xfcff	honest	a mask of a screen entry clearing tile-number bits 8 and 9
+games/tla/src/scene/airs_rock_inside.c	scAirsRockInsideWakeVialChestStatue	0xfcff	honest	a mask of a screen entry clearing tile-number bits 8 and 9
+games/tla/src/scene/aqua_rock_inside.c	scAquaRockInsideShowAquariusStone	20	unsettled	UB: the room has no actor 20; finding the room or edition where actor 20 exists would settle it
+games/tla/src/scene/epilogue.c	scInit	120	honest	the ending picture's pan position in pixels
+games/tla/src/scene/gaia_rock_inside.c	scGaiaRockInsideJumpDownCobwebPit	0x800	unsettled	passed to fdActorSetSprCol for the dust, not the no-wait bit 0x1000; staging the drop to see what colour mode 0x800 gives, or finding where Camelot meant the no-wait bit, would settle it
+games/tla/src/scene/kibombo.c	scKibomboAkafubuChants	360	honest	degrees in 16.16 to 65,536ths of a turn
+games/tla/src/scene/lemurian_ship.c	scLemurianShipOpenDoor	12	unsettled	a DEAD test for a door 12 among ten; only a twin or edition that uses it would settle it
+games/tla/src/scene/magma_rock.c	MagmaRockSalamanderTailLowWestCues	0x8	honest	flag 8 in a trigger's condition, as its comment says: after the party members' flags, set by no code
+games/tla/src/scene/mikasalla.c	scMikasallaClimbDownLadder	17	honest	a drop in pixels, fdActorSetDestinationOffset's third argument later
 games/tla/src/scene/venus_lighthouse.c	VENUS_COLOR_MARK_TAG	0x212	unsettled	a tag in the actor timer's upper bits nothing explains yet; a reader of those bits would settle it
-games/tla/src/scene/world_map.c	Scene_Initialize	0x11d	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
-games/tla/src/shop/shop_sanctum.c	Sanctum_RunMemberIconBurst	24	honest	a DEAD shift of a flag byte to the word's top
-games/tla/src/sound/sound_test.c	SoundTest_Run	10	honest	the sound test's R and L step of the cue number shown
-games/tla/src/system/system_oam.c	OamMatrix_AllocFromTransform	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
+games/tla/src/scene/world_map.c	scInit	0x11d	unsettled	a flag set or cleared with an XXX (no evidence) beside it, which nothing in either game reads; a reader of it, or a debug flag list naming it, would settle it
+games/tla/src/shop/shop_sanctum.c	mnSanctumRunMemberIconBurst	24	honest	a DEAD shift of a flag byte to the word's top
+games/tla/src/sound/sound_test.c	sySndTestRun	10	honest	the sound test's R and L step of the cue number shown
+games/tla/src/system/system_oam.c	syOAMMatrixAllocFromTransform	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
 games/tla/src/system/system_serial.c	SERIAL_IDLE_HALFWORD	0xfefe	honest	the idle halfword on the serial wire between packets
-games/tla/src/system/system_vram_cache.c	AffineMatrix_Build	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
-games/tla/src/window/screen_tables.c	gMenu_BarPatternRows	0x00000000	honest	a picture's 4bpp pixel word
-games/tla/src/window/screen_tables.c	gMenu_BarPatternRows	0x00000005	honest	a picture's 4bpp pixel word
-games/tla/src/window/screen_tables.c	gMenu_BarPatternRows	0x00000505	honest	a picture's 4bpp pixel word
-games/tla/src/window/screen_tables.c	gMenu_BarPatternRows	0x00050505	honest	a picture's 4bpp pixel word
-games/tla/src/window/screen_tables.c	gMenu_BarPatternRows	0x00055000	honest	a picture's 4bpp pixel word
-games/tla/src/window/screens_battle_item_menu.c	BattleItemMenu_Run	16	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
-games/tla/src/window/screens_battle_item_menu.c	BattleItemMenu_Run	17	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
-games/tla/src/window/screens_battle_psynergy_menu.c	BattlePsynergyMenu_Run	16	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
-games/tla/src/window/screens_battle_psynergy_menu.c	BattlePsynergyMenu_Run	17	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
-games/tla/src/window/window_glyphs.c	Text_DrawWideStringAtOffset	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_glyphs.c	Text_DrawWideStringAtOffset	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_glyphs.c	Text_DrawWideStringAtOffset	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_glyphs.c	Text_DrawWideStringInWindow	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_glyphs.c	Text_DrawWideStringInWindow	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_glyphs.c	Text_DrawWideStringInWindow	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_icons.c	ItemIcon_Compose	256	unsettled	ItemIcon_Compose's result, which no caller reads (The Broken Seal's twin does the same); a reader of it would settle what it stands for
-games/tla/src/window/window_measure.c	Text_MeasureAllPages	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_measure.c	Text_MeasureDecoded	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_messages.c	Message_DecodeRaw	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_messages.c	Message_DecodeRaw	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_messages.c	Message_DecodeRaw	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_messages.c	Text_DrawMessageToCanvas	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_messages.c	Text_DrawMessageToCanvas	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_messages.c	Text_DrawMessageToCanvas	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_text_tiles.c	Text_DrawStringAsTiles	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_text_tiles.c	Text_DrawStringAsTiles	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
-games/tla/src/window/window_text_tiles.c	Text_DrawStringAsTiles	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/system/system_vram_cache.c	syAffineMatrixBuild	16	honest	an unsigned reciprocal moved to the matrix row's upper halfword
+games/tla/src/window/screen_tables.c	MenuBarPatternRows	0x00000000	honest	a picture's 4bpp pixel word
+games/tla/src/window/screen_tables.c	MenuBarPatternRows	0x00000005	honest	a picture's 4bpp pixel word
+games/tla/src/window/screen_tables.c	MenuBarPatternRows	0x00000505	honest	a picture's 4bpp pixel word
+games/tla/src/window/screen_tables.c	MenuBarPatternRows	0x00050505	honest	a picture's 4bpp pixel word
+games/tla/src/window/screen_tables.c	MenuBarPatternRows	0x00055000	honest	a picture's 4bpp pixel word
+games/tla/src/window/screens_battle_item_menu.c	mnBattleItemMenuRun	16	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
+games/tla/src/window/screens_battle_item_menu.c	mnBattleItemMenuRun	17	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
+games/tla/src/window/screens_battle_psynergy_menu.c	mnBattlePsynergyMenuRun	16	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
+games/tla/src/window/screens_battle_psynergy_menu.c	mnBattlePsynergyMenuRun	17	unsettled	a tile of the second text range the border tees are copied to, which nothing here shows; finding what reads text tiles 528 and 529 in battle would settle it
+games/tla/src/window/window_glyphs.c	mnTextDrawWideStringAtOffset	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_glyphs.c	mnTextDrawWideStringAtOffset	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_glyphs.c	mnTextDrawWideStringAtOffset	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_glyphs.c	mnTextDrawWideStringInWindow	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_glyphs.c	mnTextDrawWideStringInWindow	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_glyphs.c	mnTextDrawWideStringInWindow	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_icons.c	mnItemIconCompose	256	unsettled	mnItemIconCompose's result, which no caller reads (The Broken Seal's twin does the same); a reader of it would settle what it stands for
+games/tla/src/window/window_measure.c	mnTextMeasureAllPages	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_measure.c	mnTextMeasureDecoded	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_messages.c	mnMessageDecodeRaw	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_messages.c	mnMessageDecodeRaw	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_messages.c	mnMessageDecodeRaw	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_messages.c	mnTextDrawMessageToCanvas	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_messages.c	mnTextDrawMessageToCanvas	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_messages.c	mnTextDrawMessageToCanvas	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_text_tiles.c	mnTextDrawStringAsTiles	11	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_text_tiles.c	mnTextDrawStringAsTiles	12	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it
+games/tla/src/window/window_text_tiles.c	mnTextDrawStringAsTiles	14	unsettled	a message's control code nothing tells apart, every reader skipping it with its operands (an XXX (no evidence) stands at the decoder); a reader that acts on it, or a Camelot label, would settle it

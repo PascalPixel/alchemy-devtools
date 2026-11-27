@@ -756,7 +756,7 @@ impl Context<'_> {
             }
         }
         // The entrance photo shows the party as it arrives by an exit from
-        // another map (arrivals::ranked), placed by Scene_ApplyEntrance and the
+        // another map (arrivals::ranked), placed by fdApplyEntrance and the
         // map's own arrival, by the next way in when an arrival goes on to
         // another map before the player has control (the eruption leaves
         // Vale for the world map); by the table's first row, where no exit
@@ -3168,7 +3168,7 @@ mod tests {
 
     #[test]
     fn event_names_become_file_names() {
-        assert_eq!(file_name("Bilibin_InspectWell"), "Bilibin_InspectWell");
+        assert_eq!(file_name("scBilibinInspectWell"), "scBilibinInspectWell");
         assert_eq!(
             file_name("gLacquerRoomsB_Triggers[65]"),
             "gLacquerRoomsB_Triggers-65"
@@ -3195,8 +3195,8 @@ mod tests {
             row("MsgValeRockCannotBeMoved", 3, Trigger::Talk(12), 4385),
         ];
         let hops = [
-            row("KolimaForest_HopEast", 40, Trigger::Touch(11), 1),
-            row("KolimaForest_HopEast", 42, Trigger::Touch(11), 2),
+            row("scKolimaForestHopEast", 40, Trigger::Touch(11), 1),
+            row("scKolimaForestHopEast", 42, Trigger::Touch(11), 2),
         ];
         let all: Vec<&Event> = rocks.iter().chain(hops.iter()).collect();
         let merged = merge_rows(&all);
@@ -3361,7 +3361,7 @@ mod tests {
     fn message_rows_are_told_from_functions() {
         assert!(is_message_row("MsgValeRockCannotBeMoved"));
         assert!(is_message_row("gValePrologue_Triggers[26]"));
-        assert!(!is_message_row("Vale_PushPillar"));
+        assert!(!is_message_row("scValePushPillar"));
     }
 }
 

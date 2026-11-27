@@ -1,36 +1,36 @@
 //! A field scene, run from a built edition: where Game_ResetForNewGame has
-//! set a new game's defaults (MainRoutineState_InitializeDefaults) and makes its next call
-//! (WindowColor_Apply), the run writes the scene, entrance and story flags
-//! into gMainRoutineState, so the main routine runs that scene instead of the title.
-//! The location-name notice (AreaNameWindow_Show) returns at once unless
+//! set a new game's defaults (gmMainRoutineStateInitDefaults) and makes its next call
+//! (mnWindowColApply), the run writes the scene, entrance and story flags
+//! into MainRoutineStateWork, so the main routine runs that scene instead of the title.
+//! The location-name notice (mnAreaNameWindowShow) returns at once unless
 //! show_notice is set. The
 //! scene is the player's once FieldSequence_Run's loop takes its first
-//! step (Field_UpdateWalking).
+//! step (fdUpdateWalking).
 //!
 //! A map is stitched from one moment of the game: for each 240 by 160 view
 //! of the box the machine is loaded again, the map's followed point
-//! (MapGridScrollState.origin) is pinned to gMainRoutineState.x, y and z holding the
+//! (MapGridScrollState.origin) is pinned to MainRoutineStateWork.x, y and z holding the
 //! view's focus at each entry of its two readers, and the next scheduler
-//! call of MapGrid_UpdateLayerScroll runs MapGrid_CenterOnFollowedPoint instead,
+//! call of fdMapGridUpdateLayerScroll runs fdMapGridCenterOnFollowedPoint instead,
 //! which redraws each layer around the point as the event camera does. The
-//! actors' task (Actor_UpdateAllOnField) is skipped meanwhile, so no actor
+//! actors' task (fdActorUpdateAllOnField) is skipped meanwhile, so no actor
 //! moves or draws on the shared random numbers; the third frame is the view.
 //!
 //! An event starts with the leader where the player would stand to start
 //! it: beside the actor it talks to, level with it on the layer he walks
 //! (the actor's own only after it), or a step from the cell it touches or
-//! searches, on the ground there (MapGrid_GetTerrainHeight, run in the machine
+//! searches, on the ground there (fdMapGridGetTerrainHeight, run in the machine
 //! between two steps of the field sequence), and always on ground he could walk
 //! to from where he entered, in the room the camera shows (Field::reach).
 //! Then A (talk, search), a field Psynergy request (FieldState.command) or
 //! walking onto the cell (touch) starts it, and the field sequence's own
-//! dispatch (Scene_TalkToActor, Scene_RunStepTriggerOrExit, Field_ExamineCell,
-//! Field_UsePsynergy) shows which event began; the event function the CPU
+//! dispatch (fdTalkToActor, fdRunStepCueOrExit, fdExamineMetatile,
+//! fdUsePsynergy) shows which event began; the event function the CPU
 //! then enters (Field::watch) shows whose row it was, since two rooms of a
 //! scene can give the same actor id or cell code to different events. Each
 //! message page is kept once it is typed and waits for the button
-//! (Text_CheckTextDismissed), and each yes or no choice
-//! (YesNoMenu_Run) once shown; then A moves on. The event is over
+//! (mnTextCheckTextDismissed), and each yes or no choice
+//! (mnYesNoMenuRun) once shown; then A moves on. The event is over
 //! when the field sequence steps again with nothing to read and nothing it set
 //! moving (a pushed pillar) still moves.
 //!
@@ -78,11 +78,11 @@ const ANIM_ENTRIES: u32 = 0x28;
 const ANIM_ENTRY_PARAM: u32 = 0x05;
 /// FieldState.mode's world map mode (an enum ActorSystemMode).
 const ACTOR_SYSTEM_WORLD_MAP: u16 = 3;
-/// The world map (struct WorldMapView, which gMapGridState points to there):
+/// The world map (struct WorldMapView, which MapGridState points to there):
 /// 16 by 16 tiles of 16 by 16 cells, each cell 32 pixels square, so 8192
 /// pixels each way. tileIds names the tile at each place, and Ram_CellTiles
-/// (gCellTiles) holds the 2 by 2 tiles around the party, 32 cells to a row,
-/// the collision code in byte 2 as on a layered map (Field_UpdateWalking's
+/// (MetatileTiles) holds the 2 by 2 tiles around the party, 32 cells to a row,
+/// the collision code in byte 2 as on a layered map (fdUpdateWalking's
 /// step test reads it there).
 const PERSPECTIVE_TILE_IDS: u32 = 0x138;
 const PERSPECTIVE_QUARTER_TILES: u32 = 0x338;
@@ -97,7 +97,7 @@ const WORLD_COLLISION_DEFAULT: u32 = 7;
 /// this plus the actor (COORD_EVENT_PLACE_BASE).
 const WORLD_CONTACT_BASE: u16 = 100;
 const WORLD_WALKABLE: std::ops::RangeInclusive<u32> = 5..=12;
-/// The second layer's tiles follow the first's 320 (WorldMap_UpdateCurrentTileBlock).
+/// The second layer's tiles follow the first's 320 (fdWorldMapUpdateCurrentTileBlock).
 const WORLD_LAYER_TILES: u32 = 320;
 const OVERLAY_ENTRANCES: u32 = 0x0c;
 /// The map cells' grid: 128 by 128 words, the collision code in byte 2.
@@ -217,7 +217,7 @@ const NEAR_SPOTS: usize = 6;
 /// BLACK_CLEARANCE and a margin, so the pictures a GIF shows, one of every
 /// two, still clear it.
 pub const CLEARED: usize = BLACK_CLEARANCE + 4;
-/// Speakers below this are the party (FieldMessage_ShowAtActor has them
+/// Speakers below this are the party (fdMessageShowAtActor has them
 /// speak from the leader); from it on, a speaker is an actor of the scene.
 const PARTY_SPEAKERS: u16 = 8;
 /// Frames the field sequence must step, with nothing to read, before the
@@ -286,13 +286,13 @@ pub struct Symbols {
     /// reads when the party arrives as after a battle.
     snapshot_slots: u32,
     /// The function that takes the actor snapshot as a battle begins:
-    /// The Broken Seal's Actor_Snapshot, The Lost Age's ActorTable_Snapshot.
+    /// The Broken Seal's fdActorSnapshot, The Lost Age's fdActorTableSnapshot.
     snapshot_take: u32,
     init: u32,
     glow: u32,
     load_layered: u32,
     apply_entrance: u32,
-    /// Scene_Arrive, which clears the scene's and, entering another area,
+    /// gmArrive, which clears the scene's and, entering another area,
     /// the area's flags as a scene is entered.
     arrive: u32,
     notice: u32,
@@ -301,12 +301,12 @@ pub struct Symbols {
     update_layer: u32,
     center: u32,
     dismiss: u32,
-    /// FieldMessage_ShowAtActor, which opens a message beside its speaker.
+    /// fdMessageShowAtActor, which opens a message beside its speaker.
     speak: u32,
     objects: u32,
     typing: u32,
     choice: u32,
-    /// IconMenu_Run: a menu of icons (a shop's commands; a yes or no
+    /// mnIconMenuRun: a menu of icons (a shop's commands; a yes or no
     /// choice runs one too).
     icon_menu: u32,
     lookup: u32,
@@ -325,32 +325,32 @@ pub struct Symbols {
     touch: u32,
     search: u32,
     psynergy: u32,
-    /// Move's two ends (FieldPsynergy_SteerPushedTarget, the hand on the
-    /// target the scene's row names; FieldPsynergy_Move, the hand on
-    /// nothing) and Input_GetDpadAngle, which only Move's and Carry's hands
+    /// Move's two ends (fdPsynergySteerPushedTarget, the hand on the
+    /// target the scene's row names; fdPsynergyMove, the hand on
+    /// nothing) and fdInputGetDpadAng, which only Move's and Carry's hands
     /// call, each frame they wait for the d-pad; 0 where the map has none.
     move_steer: u32,
     move_none: u32,
     dpad_angle: u32,
-    /// Scene_RunRaisedTrigger, where a direct start begins.
+    /// fdRunRaisedCue, where a direct start begins.
     run_raised: u32,
     /// What a trigger row's dispatch calls to show a message row
-    /// (Field_RunPsynergyEvent, Scene_TalkToActor): Event_Start,
-    /// Event_SetMessageId, Event_ShowMessageAndWait and Event_End.
+    /// (Field_RunPsynergyEvent, fdTalkToActor): fdScriptStart,
+    /// fdScriptSetMessageId, fdScriptShowMessageAndWait and fdScriptEnd.
     show_row: [u32; 4],
     game_state: u32,
     flag_bytes: u32,
     map_state: u32,
     field_state: u32,
     overlay: u32,
-    /// gRandomSeed, gFrameCount, gFrameRenderPending and gBgScroll, which a
+    /// RandomSeed, TickCount, TickRenderPending and BgScrollWork, which a
     /// whole picture (whole.rs) reads to tell the moment a view shows.
     pub random_seed: u32,
     pub frame_count: u32,
     pub render_pending: u32,
     pub bg_scroll: u32,
     /// The Lost Age's map entrance list and camera boxes, as loaded with
-    /// its map (Field_PlaceAtEntrance; gMapScene, the name wanted is
+    /// its map (Field_PlaceAtEntrance; MapScene, the name wanted is
     /// one that says so); 0 for The Broken Seal.
     pub map_entrances: u32,
     /// Where the game's structures keep what the run reads.
@@ -382,7 +382,7 @@ impl Symbols {
     /// Seal's, The Broken Seal's name is looked for first and then The Lost
     /// Age's (the second of each pair), the name its source should change; a
     /// state pointer The Lost Age reaches only through its heap slots
-    /// (gFieldState, gMapGridState) is its slot in gHeapSlots.
+    /// (FieldStateWork, MapGridState) is its slot in HeapSlots.
     pub fn find_for(map: &Map, l: super::layout::Layout) -> Result<Symbols, String> {
         let find = |name: &str| map.symbol(name).map(|(_, a)| a & !1);
         let at = |name: &str| find(name).ok_or_else(|| format!("the map has no {name}"));
@@ -393,86 +393,93 @@ impl Symbols {
         };
         let slot = |name: &str, offset: u32| {
             find(name)
-                .or_else(|| find("gHeapSlots").map(|slots| slots + offset))
-                .ok_or_else(|| format!("the map has no {name} (nor gHeapSlots)"))
+                .or_else(|| find("HeapSlots").map(|slots| slots + offset))
+                .ok_or_else(|| format!("the map has no {name} (nor HeapSlots)"))
         };
         Ok(Symbols {
-            init: at("MainRoutineState_InitializeDefaults")?,
-            glow: at("WindowColor_Apply")?,
-            load_layered: at("MapGrid_LoadMap")?,
-            arrive: at("Scene_Arrive")?,
+            init: at("gmMainRoutineStateInitDefaults")?,
+            glow: at("mnWindowColApply")?,
+            load_layered: at("fdMapGridLoadMap")?,
+            arrive: at("gmArrive")?,
             // The Lost Age places the party in three tries, its scene's table
             // by number, its map's entrances, the table's first row
-            // (Field_ApplyEntrance, BattleMap_ApplySceneEntranceView before 22 November: it
-            // is The Broken Seal's Scene_ApplyEntrance grown); the run takes
+            // (fdApplyEntrance, BattleMap_ApplySceneEntranceView before 22 November: it
+            // is The Broken Seal's fdApplyEntrance grown); the run takes
             // the scene as entered once all three are done.
             apply_entrance: if l.game == super::layout::Game::Tla {
-                either("Field_ApplyEntrance", "BattleMap_ApplySceneEntranceView")?
+                either("fdApplyEntrance", "BattleMap_ApplySceneEntranceView")?
             } else {
-                at("Scene_ApplyEntrance")?
+                at("fdApplyEntrance")?
             },
-            notice: at("AreaNameWindow_Show")?,
-            field_menu: at("FieldMenu_Run")?,
-            step: at("Field_UpdateWalking")?,
-            update_layer: at("MapGrid_UpdateLayerScroll")?,
-            center: either("MapGrid_CenterOnFollowedPoint", "Map_CenterOnFollowedPoint")?,
-            dismiss: at("Text_CheckTextDismissed")?,
-            speak: at("FieldMessage_ShowAtActor")?,
-            objects: at("Actor_UpdateAllOnField")?,
-            typing: at("Message_Type")?,
-            choice: at("YesNoMenu_Run")?,
-            icon_menu: at("IconMenu_Run")?,
-            lookup: at("Message_Find")?,
-            terrain_height: at("MapGrid_GetTerrainHeight")?,
-            write_cell_tile: at("WorldMap_WriteLayerCellTile")?,
-            map_cell_tiles: at("gCellTiles")?,
-            map_collision: either("gMapGridShapes", "gMapCollision")?,
-            map_cell_buffer: either("gMapGridCellBuffer", "gMapCellBuffer")?,
+            notice: at("mnAreaNameWindowShow")?,
+            field_menu: at("mnFieldMenuRun")?,
+            step: at("fdUpdateWalking")?,
+            update_layer: at("fdMapGridUpdateLayerScroll")?,
+            center: either(
+                "fdMapGridCenterOnFollowedPoint",
+                "Map_CenterOnFollowedPoint",
+            )?,
+            dismiss: at("mnTextCheckTextDismissed")?,
+            speak: at("fdMessageShowAtActor")?,
+            objects: at("fdActorUpdateAllOnField")?,
+            typing: at("mnMessageType")?,
+            choice: at("mnYesNoMenuRun")?,
+            icon_menu: at("mnIconMenuRun")?,
+            lookup: at("mnMessageFind")?,
+            terrain_height: at("fdMapGridGetTerrainHeight")?,
+            write_cell_tile: at("fdWorldMapWriteLayerMetatileTile")?,
+            map_cell_tiles: at("MetatileTiles")?,
+            map_collision: either("MapGridShapes", "gMapCollision")?,
+            map_cell_buffer: either("MapGridMetatileBuffer", "gMapCellBuffer")?,
             // The Broken Seal's story chapters load a debug preset, and The
             // Lost Age's guide recordings (party.rs); DebugParty_LoadPreset
             // is The Lost Age's name for it.
-            preset: find("DebugParameterSet_Load")
+            preset: find("btDebugParmSetLoad")
                 .or_else(|| find("DebugParty_LoadPreset"))
                 .unwrap_or(0),
-            restore: at("Party_RestoreHpPp")?,
-            unit_get: at("Unit_Get")?,
+            restore: at("gmPartyRestoreHpPp")?,
+            unit_get: at(if l.game == super::layout::Game::Tla {
+                "syUnitGet"
+            } else {
+                "gmUnitGet"
+            })?,
             defeat: Vec::new(),
-            talk: at("Scene_TalkToActor")?,
-            touch: at("Scene_RunStepTriggerOrExit")?,
-            search: at("Field_ExamineCell")?,
-            psynergy: at("Field_UsePsynergy")?,
-            move_steer: find("FieldPsynergy_SteerPushedTarget").unwrap_or(0),
-            move_none: find("FieldPsynergy_Move").unwrap_or(0),
-            dpad_angle: find("Input_GetDpadAngle").unwrap_or(0),
-            run_raised: either("Scene_RunRaisedTrigger", "Scene_RunRaisedEvent")?,
+            talk: at("fdTalkToActor")?,
+            touch: at("fdRunStepCueOrExit")?,
+            search: at("fdExamineMetatile")?,
+            psynergy: at("fdUsePsynergy")?,
+            move_steer: find("fdPsynergySteerPushedTarget").unwrap_or(0),
+            move_none: find("fdPsynergyMove").unwrap_or(0),
+            dpad_angle: find("fdInputGetDpadAng").unwrap_or(0),
+            run_raised: either("fdRunRaisedCue", "Scene_RunRaisedEvent")?,
             show_row: [
-                at("Event_Start")?,
-                at("Event_SetMessageId")?,
-                at("Event_ShowMessageAndWait")?,
-                at("Event_End")?,
+                at("fdScriptStart")?,
+                at("fdScriptSetMessageId")?,
+                at("fdScriptShowMessageAndWait")?,
+                at("fdScriptEnd")?,
             ],
-            game_state: at("gMainRoutineState")?,
-            flag_bytes: at("gGameFlagBytes")?,
-            map_state: slot("gMapGridState", l.heap_map)?,
-            field_state: slot("gFieldState", l.heap_field)?,
-            overlay: at("gOverlayArea")?,
-            random_seed: either("gRandomSeed", "gRandomState")?,
-            frame_count: at("gFrameCount")?,
-            render_pending: at("gFrameRenderPending")?,
-            bg_scroll: at("gBgScroll")?,
+            game_state: at("MainRoutineStateWork")?,
+            flag_bytes: at("GameFlagBytes")?,
+            map_state: slot("MapGridState", l.heap_map)?,
+            field_state: slot("FieldStateWork", l.heap_field)?,
+            overlay: at("OverlayArea")?,
+            random_seed: either("RandomSeed", "gRandomState")?,
+            frame_count: at("TickCount")?,
+            render_pending: at("TickRenderPending")?,
+            bg_scroll: at("BgScrollWork")?,
             map_entrances: if l.game == super::layout::Game::Tla {
-                at("gMapScene")?
+                at("MapScene")?
             } else {
                 0
             },
             // The actor snapshot's list of actor ids: The Broken Seal's
             // struct ActorSnapshot begins with it; The Lost Age keeps it in
-            // the 32 bytes before gSnapshotObjects.
-            snapshot_take: find("Actor_Snapshot")
-                .or_else(|| find("ActorTable_Snapshot"))
+            // the 32 bytes before SnapshotObjects.
+            snapshot_take: find("fdActorSnapshot")
+                .or_else(|| find("fdActorTableSnapshot"))
                 .unwrap_or(0),
-            snapshot_slots: find("gActorSnapshot")
-                .or_else(|| find("gSnapshotObjects").map(|a| a - ACTOR_SNAPSHOT_CAPACITY))
+            snapshot_slots: find("ActorSnapshotWork")
+                .or_else(|| find("SnapshotObjects").map(|a| a - ACTOR_SNAPSHOT_CAPACITY))
                 .unwrap_or(0),
             l,
         })
@@ -541,12 +548,12 @@ pub(super) struct Track {
     last_typing: u32,
     choice_return: u32,
     choice_frame: u32,
-    /// While a menu of icons is open: where IconMenu_Run returns to, and
+    /// While a menu of icons is open: where mnIconMenuRun returns to, and
     /// the frame it opened.
     menu_return: u32,
     menu_opened: u32,
     /// While the field menu the game opened itself is open: where
-    /// FieldMenu_Run returns to, and the frame it opened.
+    /// mnFieldMenuRun returns to, and the frame it opened.
     field_menu_return: u32,
     field_menu_opened: u32,
     /// The last frame the run pressed A.
@@ -555,7 +562,7 @@ pub(super) struct Track {
     answered: u8,
     last_message: u32,
     keys: u32,
-    /// A function to call at the next Field_UpdateWalking entry (0 for none),
+    /// A function to call at the next fdUpdateWalking entry (0 for none),
     /// with x and z written to the followed point first; and r0 to r3 and
     /// lr kept while it runs.
     call_target: u32,
@@ -565,7 +572,7 @@ pub(super) struct Track {
     /// r0 and r1 for the call, when start_call gives them.
     call_args: Option<[u32; 2]>,
     /// An event's direct start: the calls the field sequence makes in place
-    /// of Scene_RunRaisedTrigger for the trigger it raised (RAISED_DIRECT),
+    /// of fdRunRaisedCue for the trigger it raised (RAISED_DIRECT),
     /// in order, each with r0 and r1; how many there are; how many are made;
     /// and where the first was to return to in the field sequence.
     raise: [(u32, [u32; 2]); 4],
@@ -591,7 +598,7 @@ pub(super) struct Track {
     dispatch_end: u32,
     /// How many times a layered map has started loading.
     loads: u32,
-    /// How many times Scene_ApplyEntrance has placed the party: once each
+    /// How many times fdApplyEntrance has placed the party: once each
     /// scene the field runs, the world map included.
     entries: u32,
     /// The first of the watched event functions (Field::watch) the CPU
@@ -600,7 +607,7 @@ pub(super) struct Track {
     /// Whether one of the event's own functions (Field::own) has run since.
     own_ran: bool,
     /// The calls that set up the scene's party (Field::party_calls) made
-    /// so far at WindowColor_Apply's entry, and r0 to r3 and lr kept
+    /// so far at mnWindowColApply's entry, and r0 to r3 and lr kept
     /// meanwhile.
     party_calls: u8,
     party_saved: [u32; 5],
@@ -609,7 +616,7 @@ pub(super) struct Track {
     /// side of a change and draws it on the other.
     cuts: u32,
     /// Whether the field sequence's answer to a trigger it raised itself
-    /// (Scene_RunRaisedTrigger) counts as a dispatch: a staged event the game
+    /// (fdRunRaisedCue) counts as a dispatch: a staged event the game
     /// raises (render event --hold).
     catch_raised: bool,
     /// The frame the last cast of a pad script was asked for, and the last
@@ -731,7 +738,7 @@ pub struct Field<'rom> {
     pub returns: Vec<(u32, u32)>,
     /// Words written as the CPU reaches an address: (address, where, value).
     pub pokes: Vec<(u32, u32, u32)>,
-    /// Lets AreaNameWindow_Show run, for a picture of the notice.
+    /// Lets mnAreaNameWindowShow run, for a picture of the notice.
     pub show_notice: bool,
     /// Whether a recorded touch has the leader walk up to it from some cells
     /// back (render event's recordings), and is refused when he mostly
@@ -835,7 +842,7 @@ impl<'rom> Field<'rom> {
         self.actor_object(id)
     }
 
-    /// Boots the ROM and runs until Scene_ApplyEntrance has placed the party.
+    /// Boots the ROM and runs until fdApplyEntrance has placed the party.
     pub fn enter(rom: &'rom [u8], s: &'rom Symbols, setup: &Setup) -> Result<Field<'rom>, String> {
         let party = if s.l.game == super::layout::Game::Tbs {
             chapter(setup.scene)?
@@ -1017,7 +1024,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// Makes `party` the active party, in order: party flags 0 to 7 and
-    /// gMainRoutineState.party.
+    /// MainRoutineStateWork.party.
     pub fn set_party(&mut self, party: &[u8]) {
         let bits = party.iter().fold(0u8, |b, &o| b | 1 << o);
         self.gba.write8(self.s.flag_bytes, bits);
@@ -1064,7 +1071,7 @@ impl<'rom> Field<'rom> {
         )
     }
 
-    /// Enters again from `placed` (as Scene_ApplyEntrance placed the party)
+    /// Enters again from `placed` (as fdApplyEntrance placed the party)
     /// with the leader at `spot`, and runs until the player has control and
     /// the camera has settled on him, as an event's start does.
     pub fn stand(&mut self, placed: &Saved, spot: &Spot) -> Result<(), String> {
@@ -1114,17 +1121,17 @@ impl<'rom> Field<'rom> {
         Ok(())
     }
 
-    /// The address of character `owner`'s struct Unit (Unit_Get).
+    /// The address of character `owner`'s UNIT (gmUnitGet, syUnitGet).
     pub fn unit(&mut self, owner: u8) -> Result<u32, String> {
         self.eval(self.s.unit_get, [u32::from(owner), 0, 0, 0])
     }
 
-    /// The address of gMainRoutineState, struct MainRoutineState.
+    /// The address of MainRoutineStateWork, struct MainRoutineState.
     pub fn main_routine_state(&self) -> u32 {
         self.s.game_state
     }
 
-    /// The scene's struct FieldState (gFieldState).
+    /// The scene's struct FieldState (FieldStateWork).
     pub fn field_state(&self) -> u32 {
         self.gba.read32(self.s.field_state)
     }
@@ -1151,7 +1158,7 @@ impl<'rom> Field<'rom> {
         self.gba.io_write16(address, value);
     }
 
-    /// Calls the game function at `target` from the next Field_UpdateWalking
+    /// Calls the game function at `target` from the next fdUpdateWalking
     /// entry, with the followed point at (x, z) (16.16 pixels), and runs
     /// until it has returned.
     pub fn call(&mut self, target: u32, origin: [i32; 2]) -> Result<(), String> {
@@ -1182,7 +1189,7 @@ impl<'rom> Field<'rom> {
             .write32(self.s.game_state + self.s.l.gs_z, fx(z) as u32);
     }
 
-    /// Stops or starts the actors' task (Actor_UpdateAllOnField).
+    /// Stops or starts the actors' task (fdActorUpdateAllOnField).
     pub fn freeze(&mut self, on: bool) {
         self.t.freeze = on;
     }
@@ -1231,7 +1238,7 @@ impl<'rom> Field<'rom> {
 
     /// The calls that give the scene's chapter its party (party.rs) before
     /// the scene loads: Camelot's debug preset, then every member's HP and PP
-    /// restored (Party_RestoreHpPp).
+    /// restored (gmPartyRestoreHpPp).
     fn party_calls(&self) -> Vec<(u32, u32)> {
         match self
             .lineup
@@ -1244,7 +1251,7 @@ impl<'rom> Field<'rom> {
         }
     }
 
-    /// At WindowColor_Apply's entry, while a new game is set up: makes the
+    /// At mnWindowColApply's entry, while a new game is set up: makes the
     /// next of the party's calls, returning to that entry, or, once all are
     /// made, puts back the registers the first found. Whether it called.
     fn party_call(&mut self) -> bool {
@@ -1274,7 +1281,7 @@ impl<'rom> Field<'rom> {
         false
     }
 
-    /// Lists the party (gMainRoutineState.party) as the party flags have it
+    /// Lists the party (MainRoutineStateWork.party) as the party flags have it
     /// now, the chapter's members first (party::order); before the run's
     /// flags decide, the chapter's members are the party flags.
     fn list_party(&mut self) {
@@ -1374,7 +1381,7 @@ impl<'rom> Field<'rom> {
             self.list_party();
             self.t.phase = Phase::Loading;
         }
-        // Scene_Arrive clears the scene's flags, and the area's when the
+        // gmArrive clears the scene's flags, and the area's when the
         // scene lies in another area than the last (a new game's): the
         // run's flags are set again as it returns, before the map loads
         // and the scene's initialization reads them (Garoh's night).
@@ -1413,7 +1420,7 @@ impl<'rom> Field<'rom> {
             self.t.entrances_return = 0;
             self.t.entrances_fn = 0;
         } else if self.t.apply_return != 0 && pc == self.t.apply_return {
-            // Scene_ApplyEntrance has placed the party; the scene's
+            // fdApplyEntrance has placed the party; the scene's
             // initialization, which reads the story flags, comes next. Scene
             // loading may have cleared some of them, so they are set again.
             self.t.apply_return = 0;
@@ -1489,7 +1496,7 @@ impl<'rom> Field<'rom> {
             return Ok(frame_done);
         }
         // A direct start: the field sequence answers the trigger it raised by
-        // calling Scene_RunRaisedTrigger, from its request loop with the
+        // calling fdRunRaisedCue, from its request loop with the
         // field busy, as it starts every event. In its place the event's own
         // calls are made, each returning here for the next and the last to
         // the loop, so the event begins and ends as a dispatched one does.
@@ -1826,7 +1833,7 @@ impl<'rom> Field<'rom> {
         let place = leader.map_or(String::new(), |l| format!(" from ({}, {})", l.x, l.z));
         match rows.is_empty() {
             true => format!("Move: the hand took nothing{place}: the scene has no Move row on an actor"),
-            false => format!("Move: the hand took nothing{place} (FieldPsynergy_Move): no Move row answered what he faces; the scene's Move rows are on {}", rows.join(", ")),
+            false => format!("Move: the hand took nothing{place} (fdPsynergyMove): no Move row answered what he faces; the scene's Move rows are on {}", rows.join(", ")),
         }
     }
 
@@ -2151,7 +2158,7 @@ impl<'rom> Field<'rom> {
 
     /// Reads every cell of the world map's two layers once: each of its
     /// tiles is unpacked into the party's block buffer as
-    /// WorldMap_UpdateCurrentTileBlock does it (WorldMap_WriteLayerCellTile, the second
+    /// fdWorldMapUpdateCurrentTileBlock does it (fdWorldMapWriteLayerMetatileTile, the second
     /// layer's tiles WORLD_LAYER_TILES on) and read back, and the machine is
     /// then put back as it was.
     fn read_world(&mut self) -> Result<(), String> {
@@ -2278,7 +2285,7 @@ impl<'rom> Field<'rom> {
         out
     }
 
-    /// Puts an actor at (x, z) pixels, as Actor_SetPosition does.
+    /// Puts an actor at (x, z) pixels, as fdActorSetPos does.
     /// Names the event about to be played by its function's result key
     /// (result_key), so that `spots` picks its own rows where a cell's code
     /// has others' too.
@@ -2732,7 +2739,7 @@ impl<'rom> Field<'rom> {
         out
     }
 
-    /// Whether an event condition holds (GameFlag_IsConditionActive): -1
+    /// Whether an event condition holds (fdGameFlagIsConditionActive): -1
     /// always, one with bit 0x1000 while its flag is set, any other while
     /// its flag is clear.
     fn condition_holds(&self, condition: i16) -> bool {
@@ -2836,7 +2843,7 @@ impl<'rom> Field<'rom> {
             .any(|r| own.contains(&result_key(r.result)))
     }
 
-    /// Runs the field sequence to its next step (Field_UpdateWalking's entry),
+    /// Runs the field sequence to its next step (fdUpdateWalking's entry),
     /// where a game function can be called between two of its calls.
     fn to_step(&mut self) -> Result<(), String> {
         for _ in 0..4_000_000 {
@@ -2850,7 +2857,7 @@ impl<'rom> Field<'rom> {
 
     /// Calls the Thumb function at `target` with `args` at the field sequence's
     /// step and returns its r0; the loop goes on as if nothing ran. The
-    /// function must only read (MapGrid_GetTerrainHeight).
+    /// function must only read (fdMapGridGetTerrainHeight).
     fn eval(&mut self, target: u32, args: [u32; 4]) -> Result<u32, String> {
         self.to_step()?;
         let saved: Vec<u32> = [0, 1, 2, 3, LR, SP]
@@ -2880,7 +2887,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// The ground's height (16.16 pixels) at (x, z) pixels on map layer
-    /// `layer`, as MapGrid_GetTerrainHeight gives it.
+    /// `layer`, as fdMapGridGetTerrainHeight gives it.
     pub fn ground(&mut self, layer: u8, x: i32, z: i32) -> Result<i32, String> {
         // The world map is flat: the party walks at height 0.
         if self.world() {
@@ -3089,7 +3096,7 @@ impl<'rom> Field<'rom> {
     /// Has the party arrive where the leader stands as it does after a
     /// battle fought there (--arrive-as after-battle): the game's own
     /// snapshot of the actors is taken as a battle's start takes it
-    /// (Actor_Snapshot, ActorTable_Snapshot), the party's place kept in
+    /// (fdActorSnapshot, fdActorTableSnapshot), the party's place kept in
     /// the main routine's state, and the scene entered again with
     /// FLAG_KEEP_PARTY_POSITION (FieldState.exit EXIT_KEEP_DESTINATION, as a
     /// warp leaves), so its initialization takes the after-battle branches
@@ -3099,7 +3106,7 @@ impl<'rom> Field<'rom> {
     fn arrive_after_battle(&mut self) -> Result<String, String> {
         if self.s.snapshot_take == 0 {
             return Err(
-                "the map has no actor snapshot function (Actor_Snapshot, ActorTable_Snapshot)"
+                "the map has no actor snapshot function (fdActorSnapshot, fdActorTableSnapshot)"
                     .to_string(),
             );
         }
@@ -4013,8 +4020,8 @@ impl<'rom> Field<'rom> {
     /// WorldMap_GetCollision reads it: 4-bit values in 16-pixel squares, from
     /// the upper layer where it has one, else the lower, else
     /// WORLD_MAP_COLLISION_DEFAULT. The game reads each square's collision
-    /// tile from the BG maps WorldMap_WriteLayerCellTile draws around the party (a
-    /// cell's block in gMapGridCellBuffer gives its four squares' tiles, top two
+    /// tile from the BG maps fdWorldMapWriteLayerMetatileTile draws around the party (a
+    /// cell's block in MapGridMetatileBuffer gives its four squares' tiles, top two
     /// first); here it comes from the cells of the whole map.
     fn world_collision(&self, x: i32, z: i32) -> u32 {
         let (hx, hz) = (x >> 1, z >> 1);
@@ -4098,12 +4105,12 @@ impl<'rom> Field<'rom> {
     /// the layers' screen maps already drawn there, so the game runs on from
     /// `from` as it would have, objects and all, until unpin_view: views
     /// pinned from one saved moment and run the same frames show the same
-    /// moment. The maps are drawn whole (MapGrid_CenterOnFollowedPoint) in a
+    /// moment. The maps are drawn whole (fdMapGridCenterOnFollowedPoint) in a
     /// run from `from` that is then put back, because drawing them takes the
     /// game more than a frame and would leave it a frame behind; their
     /// screen maps (BG_SCREEN_BLOCK(5) to (7)) and the layers' positions are
     /// carried over. The view and the layers' BG scroll values (in
-    /// `bg_scroll`, gBgScroll) are set as MapGrid_UpdateLayerScroll would set
+    /// `bg_scroll`, BgScrollWork) are set as fdMapGridUpdateLayerScroll would set
     /// them there, unshaken, for a frame in which the game does not scroll.
     pub fn pin_view(
         &mut self,
@@ -4142,7 +4149,7 @@ impl<'rom> Field<'rom> {
             self.frames(1)?;
             ran += 1;
             if ran > PIN_DRAW_FRAMES {
-                return Err("MapGrid_UpdateLayerScroll never ran".to_string());
+                return Err("fdMapGridUpdateLayerScroll never ran".to_string());
             }
         }
         // The drawing may run past the frame it started in.
@@ -4249,7 +4256,7 @@ impl<'rom> Field<'rom> {
                 self.t.arm_center = true;
                 self.frames(HOLD)?;
                 if self.t.arm_center {
-                    return Err("MapGrid_UpdateLayerScroll never ran".to_string());
+                    return Err("fdMapGridUpdateLayerScroll never ran".to_string());
                 }
                 let view_x = self.gba.read32(state + self.s.l.map_view_x) as i32;
                 let view_y = self.gba.read32(state + self.s.l.map_view_y) as i32;
@@ -4904,7 +4911,7 @@ impl<'rom> Field<'rom> {
     }
 
     /// Draws every layer of the map again around the point the camera
-    /// follows (MapGrid_CenterOnFollowedPoint), as the game does once it has
+    /// follows (fdMapGridCenterOnFollowedPoint), as the game does once it has
     /// placed the party.
     fn redraw_view(&mut self) -> Result<(), String> {
         let origin = self.gba.read32(self.gba.read32(self.s.map_state));
@@ -5801,7 +5808,7 @@ impl<'rom> Field<'rom> {
                 let (cells, templates) = self.in_rooms(cells)?;
                 if cells.is_empty() {
                     return Err(format!(
-                        "the {templates} cells with code {code} lie outside every room an entrance shows: a copy the scene keeps beside the map, drawn in where something opens the way (MapGrid_CopyCellAttributes), and nothing here has opened it"
+                        "the {templates} cells with code {code} lie outside every room an entrance shows: a copy the scene keeps beside the map, drawn in where something opens the way (fdMapGridCopyMetatileAttributes), and nothing here has opened it"
                     ));
                 }
                 // Pushes go toward what lies in the next cell first: an
@@ -6311,7 +6318,7 @@ impl<'rom> Field<'rom> {
         };
         let direct = kind == TRIGGER_DIRECT;
         let anywhere = matches!(trigger, Trigger::Cast(_));
-        // The dispatch it starts: Field_UsePsynergy takes the Psynergy, not
+        // The dispatch it starts: fdUsePsynergy takes the Psynergy, not
         // the actor.
         let want = (
             kind,
@@ -7674,7 +7681,7 @@ const AROUND: [(i32, i32); 8] = [
 ];
 
 /// The heading (1/65536 turns, 0 east, 0x4000 south) from a point toward
-/// one (dx, dz) pixels away, as Trig_Atan gives it.
+/// one (dx, dz) pixels away, as syAtan gives it.
 /// `items` in order, the first of each thing `of` names (what a push
 /// moves) before the rest; those that name none after them.
 fn best_of_each<T>(items: Vec<T>, of: impl Fn(&T) -> Option<u16>) -> Vec<T> {
@@ -7753,7 +7760,7 @@ const FIND_MESSAGE: u32 = 0x0040_0000;
 struct EventRow {
     /// The control word: the kind in the low four bits, then its needs.
     flags: u32,
-    /// As GameFlag_IsConditionActive reads it.
+    /// As fdGameFlagIsConditionActive reads it.
     condition: i16,
     /// A message below 0x10000, else a function's address.
     result: u32,
@@ -7870,7 +7877,7 @@ pub struct Spot {
 /// The moment an event is played from.
 #[derive(Clone, Copy)]
 pub enum Start<'a> {
-    /// As Scene_ApplyEntrance has placed the party: the leader is put at the
+    /// As fdApplyEntrance has placed the party: the leader is put at the
     /// spot before the scene's actors are made.
     Entered(&'a Saved),
     /// With the player in control (after another event): the leader is

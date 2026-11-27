@@ -28,7 +28,7 @@ pub(super) const EAST: u32 = 0;
 pub(super) const WEST: u32 = 0x8000;
 pub(super) const NORTH: u32 = 0xc000;
 
-/// Debug parameter set 7 (gDebug_ParameterSets): Felix, Jenna and Sheba at
+/// Debug parameter set 7 (DebugParameterSets): Felix, Jenna and Sheba at
 /// level 7, Felix with Echo set, the party between Daila and Madra.
 pub(super) const PARTY_DAILA: u32 = 7;
 
@@ -103,7 +103,7 @@ impl<'a> Guide<'a> {
         Ok(Self::tla_game()?.constant(name)? as u16)
     }
 
-    /// The Lost Age's scene named `symbol` in gScenes (scenes.s), by number.
+    /// The Lost Age's scene named `symbol` in ScenesWork (scenes.s), by number.
     pub(super) fn tla_scene(symbol: &str) -> Result<u16, String> {
         let root = crate::compile::root();
         let scenes = super::story::scenes_from_tree(root, "tla", "tla-en")?;

@@ -722,8 +722,8 @@ pub fn item_id(header: &str, name: &str) -> Result<u16, String> {
 /// anything, as (flag, set) pairs: the condition of an `if` its whole body
 /// lies in (after its declarations), or the opposite of the one that
 /// returns at once, when the condition is flag tests joined by `&&` (an
-/// early return, by `||`). A flag test is `GameFlag_Get(F)`,
-/// `Event_GetFlag(F)` or `Flag_IsSet(F)`, with `!` or compared with 0.
+/// early return, by `||`). A flag test is `gmFlagGet(F)`, `syGameFlagGet(F)`,
+/// `fdScriptGetFlag(F)` or `syFlagIsSet(F)`, with `!` or compared with 0.
 /// Nothing for anything else.
 pub fn guard(text: &str, name: &str) -> Vec<(String, bool)> {
     let Some(body) = function_body(text, name) else {
@@ -790,25 +790,25 @@ pub fn guard(text: &str, name: &str) -> Vec<(String, bool)> {
 /// others give the size first. Those that copy pictures, then those that
 /// copy only what the cells do.
 const PICTURE_COPIES: [(&str, bool); 7] = [
-    ("MapGrid_CopyCellsTo", true),
-    ("MapGrid_CopyCellTilesIndicesRect", true),
-    ("MapGrid_CopyCells", false),
-    ("MapGrid_CopyCellsLayered", false),
-    ("MapGrid_CopyCellTilesCellsRect", false),
-    ("FieldTileCopies_CopyTouchedCells", false),
-    ("TileCopies_CopyTouchedCells", false),
+    ("fdMapGridCopyMetatilesTo", true),
+    ("fdMapGridCopyMetatileTilesIndicesRect", true),
+    ("fdMapGridCopyMetatiles", false),
+    ("fdMapGridCopyMetatilesLayered", false),
+    ("fdMapGridCopyMetatileTilesMetatilesRect", false),
+    ("syFieldTileCopiesCopyTouchedMetatiles", false),
+    ("fdTileCopiesCopyTouchedMetatiles", false),
 ];
 const BEHAVIOUR_COPIES: [(&str, bool); 3] = [
-    ("MapGrid_CopyCellAttributes", false),
-    ("Map_CopyCellAttributeRect", false),
-    ("Map_CopyCellsRect", false),
+    ("fdMapGridCopyMetatileAttributes", false),
+    ("fdMapCopyMetatileAttributeRect", false),
+    ("fdMapCopyMetatilesRect", false),
 ];
 
 /// The map cells function `name` of C source `text` changes or puts
 /// something on, what a Psynergy cast for it must reach to show it: the
 /// destinations of its map copies with numbers for arguments (those that
 /// copy pictures, else those that copy what cells do), and the cells of the
-/// pixels an actor is put at (`Actor_SetPosition(id, 657, 246)`).
+/// pixels an actor is put at (`fdActorSetPos(id, 657, 246)`).
 pub fn drawn_cells(text: &str, name: &str) -> Vec<(i32, i32)> {
     let Some(body) = function_body(text, name) else {
         return Vec::new();
@@ -849,7 +849,7 @@ pub fn drawn_cells(text: &str, name: &str) -> Vec<(i32, i32)> {
     };
     let mut out = calls(&PICTURE_COPIES);
     let placed = regex::Regex::new(
-        r"\bActor_SetPosition(?:AndFacing)?\s*\(\s*\w+\s*,\s*(\d+)\s*,\s*(\d+)\s*[,)]",
+        r"\bfdActorSetPos(?:AndFacing)?\s*\(\s*\w+\s*,\s*(\d+)\s*,\s*(\d+)\s*[,)]",
     )
     .expect("a placement pattern");
     for found in placed.captures_iter(&plain) {
@@ -912,7 +912,12 @@ fn flag_test(term: &str) -> Option<(String, bool)> {
             break;
         }
     }
-    for getter in ["GameFlag_Get(", "Event_GetFlag(", "Flag_IsSet("] {
+    for getter in [
+        "gmFlagGet(",
+        "syGameFlagGet(",
+        "fdScriptGetFlag(",
+        "syFlagIsSet(",
+    ] {
         if let Some(r) = t.strip_prefix(getter).and_then(|r| r.strip_suffix(')')) {
             let flag = r.trim();
             if !flag.is_empty() && flag.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
@@ -1107,7 +1112,7 @@ mod tests {
         let mut stage = Stage::default();
         let given = [
             ("--during", "up:60"),
-            ("--skip", "Settlements_StepOntoWall"),
+            ("--skip", "scSettlementsStepOntoWall"),
             ("--limit", "600"),
             ("--from", "12.5"),
             ("--for", "30"),
@@ -1128,7 +1133,7 @@ mod tests {
             .unwrap());
         assert!(stage.keep_short);
         assert_eq!(stage.during, vec![Held::keys(0x40, 60)]);
-        assert_eq!(stage.skip, vec!["Settlements_StepOntoWall"]);
+        assert_eq!(stage.skip, vec!["scSettlementsStepOntoWall"]);
         assert_eq!(stage.limit_frames(14400), 36000);
         assert_eq!(Stage::default().limit_frames(14400), 14400);
         assert_eq!((stage.from, stage.length), (Some(750), Some(1800)));
@@ -1173,10 +1178,13 @@ mod tests {
         assert!(Stage::is_option("--until") && Stage::is_option("--follow-scenes"));
         assert!(stage
             .option("--until", &mut |_| Ok(
-                "MagmaRock_BurstCrackedPillar".to_string()
+                "scMagmaRockBurstCrackedPillar".to_string()
             ))
             .unwrap());
-        assert_eq!(stage.until.as_deref(), Some("MagmaRock_BurstCrackedPillar"));
+        assert_eq!(
+            stage.until.as_deref(),
+            Some("scMagmaRockBurstCrackedPillar")
+        );
         assert!(stage
             .option("--follow-scenes", &mut |_| Ok("2".to_string()))
             .unwrap());
@@ -1318,9 +1326,12 @@ mod tests {
         );
         let mut chained = Stage::default();
         assert!(chained
-            .option("--first", &mut |_| Ok("Garoh_PlaceFirstPillar".to_string()))
+            .option(
+                "--first",
+                &mut |_| Ok("scGarohPlaceFirstPillar".to_string())
+            )
             .unwrap());
-        assert_eq!(chained.first.as_deref(), Some("Garoh_PlaceFirstPillar"));
+        assert_eq!(chained.first.as_deref(), Some("scGarohPlaceFirstPillar"));
     }
 
     #[test]
@@ -1329,7 +1340,7 @@ mod tests {
         assert!(!stage.walks(&[]));
         stage.then = parse_script("up:30").unwrap();
         assert!(stage.walks(&[]));
-        assert!(!stage.walks(&["Garoh_IsNight".to_string()]));
+        assert!(!stage.walks(&["scGarohIsNight".to_string()]));
         stage.set.push("FLAG_GAROH_NIGHT".to_string());
         assert!(!Stage {
             set: stage.set.clone(),
@@ -1387,11 +1398,11 @@ mod tests {
 
     #[test]
     fn what_a_cast_must_reach_is_what_its_function_draws() {
-        let text = "void C_Reveal(void) {\n  MapGrid_CopyCellsTo(27, 4, 48, 12, 1, 2);\n  MapGrid_CopyCellAttributes(48, 1, 2, 1, 48, 19);\n}\n\
-                    void C_Weeds(void) {\n  FieldTileCopies_CopyTouchedCells(3, 50, 1, 1, 8, 54, 0);\n}\n\
-                    void C_Idol(void) {\n  Actor_SetPosition(FIELD_TREASURE_ACTOR, 657, 246);\n}\n\
-                    void C_Door(void) {\n  Map_CopyCellAttributeRect(2, 4, 1, 1, 7, 14);\n}\n\
-                    void C_Unknown(void) {\n  MapGrid_CopyCellsTo(x, 4, 48, 12, 1, 2);\n}\n";
+        let text = "void C_Reveal(void) {\n  fdMapGridCopyMetatilesTo(27, 4, 48, 12, 1, 2);\n  fdMapGridCopyMetatileAttributes(48, 1, 2, 1, 48, 19);\n}\n\
+                    void C_Weeds(void) {\n  syFieldTileCopiesCopyTouchedMetatiles(3, 50, 1, 1, 8, 54, 0);\n}\n\
+                    void C_Idol(void) {\n  fdActorSetPos(FIELD_TREASURE_ACTOR, 657, 246);\n}\n\
+                    void C_Door(void) {\n  fdMapCopyMetatileAttributeRect(2, 4, 1, 1, 7, 14);\n}\n\
+                    void C_Unknown(void) {\n  fdMapGridCopyMetatilesTo(x, 4, 48, 12, 1, 2);\n}\n";
         assert_eq!(drawn_cells(text, "C_Reveal"), vec![(48, 12), (48, 13)]);
         assert_eq!(drawn_cells(text, "C_Weeds"), vec![(8, 54)]);
         assert_eq!(drawn_cells(text, "C_Idol"), vec![(41, 15)]);
@@ -1415,11 +1426,11 @@ mod tests {
 
     #[test]
     fn a_guard_around_the_whole_body_is_what_it_needs() {
-        let text = "void A_Stop(void) {\n  if (GameFlag_Get(FLAG_REUNITED) &&\n      !GameFlag_Get(FLAG_SET_OUT)) {\n    Event_Start();\n    if (x) { y(); }\n  }\n}\n\
-                    void A_Early(void) {\n  struct Actor *a = Actor_Get(3);\n  // a comment\n  if (Event_GetFlag(FLAG_DONE) != 0 || !Flag_IsSet(FLAG_OPEN))\n    return;\n  Event_Start();\n}\n\
-                    void A_Else(void) {\n  if (GameFlag_Get(FLAG_X)) {\n    a();\n  } else {\n    b();\n  }\n}\n\
-                    void A_Braced(void) {\n\n  if (!Event_GetFlag(FLAG_WALKED)) {\n    return;\n  }\n  Event_Start();\n}\n\
-                    void A_Zero(s32 mode) {\n  if (Event_GetFlag(FLAG_Y) == 0) {\n    a();\n  }\n}\n\
+        let text = "void A_Stop(void) {\n  if (gmFlagGet(FLAG_REUNITED) &&\n      !gmFlagGet(FLAG_SET_OUT)) {\n    fdScriptStart();\n    if (x) { y(); }\n  }\n}\n\
+                    void A_Early(void) {\n  struct Actor *a = Actor_Get(3);\n  // a comment\n  if (fdScriptGetFlag(FLAG_DONE) != 0 || !syFlagIsSet(FLAG_OPEN))\n    return;\n  fdScriptStart();\n}\n\
+                    void A_Else(void) {\n  if (gmFlagGet(FLAG_X)) {\n    a();\n  } else {\n    b();\n  }\n}\n\
+                    void A_Braced(void) {\n\n  if (!fdScriptGetFlag(FLAG_WALKED)) {\n    return;\n  }\n  fdScriptStart();\n}\n\
+                    void A_Zero(s32 mode) {\n  if (fdScriptGetFlag(FLAG_Y) == 0) {\n    a();\n  }\n}\n\
                     void A_Other(void) {\n  if (Actor_Get(3)) {\n    a();\n  }\n}\n";
         assert_eq!(
             guard(text, "A_Stop"),

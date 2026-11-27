@@ -142,7 +142,7 @@ pub fn read(root: &Path, game: &str) -> Result<HashMap<u16, Vec<Arrival>>, Strin
 /// Camelot numbering a map's ways in from 1 in the order of its own table,
 /// and exits from the Sanctum, the menus and unused maps after every other.
 /// An exit to a destination the table lacks lands on the table's first row
-/// (Scene_ApplyEntrance), so that row is then a way in too, after the rest.
+/// (fdApplyEntrance), so that row is then a way in too, after the rest.
 /// Empty when no exit leads in at all.
 pub fn ranked(arrivals: &[Arrival], dests: &[i16]) -> Vec<u16> {
     let mut ways: Vec<(bool, u16)> = Vec::new();

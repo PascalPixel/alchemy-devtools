@@ -398,7 +398,7 @@ fn whiteness(canvas: &[u32], size: usize, sx: usize, sz: usize) -> usize {
 
 impl Front<'_> {
     /// The world map drawn flat from its own planes: for every 2 by 2
-    /// squares the followed point is moved there and WorldMap_UpdateCurrentTileBlock
+    /// squares the followed point is moved there and fdWorldMapUpdateCurrentTileBlock
     /// draws them into BG3 (the ground) and BG2 (mountains, woods and towns
     /// over it); the planes are read from VRAM and laid on one canvas, BG2 over
     /// BG3. The world map loads one of two graphics sets by where the party

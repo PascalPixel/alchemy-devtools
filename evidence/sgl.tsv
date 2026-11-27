@@ -1,23 +1,23 @@
 sgl	here	verdict	evidence
 FIXED, ANGLE	FIXED, angles of 65536 to the turn	same	16.16 numbers and a 16-bit turn; TRIG_TURN is 1 << 16
 MATRIX	a matrix of twelve words	same	a 3x3 rotation then the translation, as SGL's FIXED[4][3]
-slRotX, slRotY, slRotZ	Matrix_RotateX, Matrix_RotateY, Matrix_RotateZ	same	each writes the four cells the manual prints for it, with the same signs
-slDivFX	Iwram_DivFX	same	divisor first, returns b / a; the routine multiplies 2^30 / a by b
-slAtan	Trig_Atan	same	one caller is compiled against a halfword return, SGL's 16-bit ANGLE
-slUnitMatrix with a pointer or CURRENT	Matrix_SetUnit, Matrix_SetCurrentUnit	same	two forms of one store, at a pointer and at the current matrix
-slGetMatrix, slLoadMatrix, slMultiMatrix	Matrix_Get, Matrix_Load, Iwram_MultiplyMatrix	same	copy out, copy in, multiply into the current matrix
-slCalcPoint, slInnerProduct, slMulFX, slSquart	Iwram_TransformVector, RelocatedInnerProduct, Iwram_MulFX, Iwram_Sqrt	same	the same operations on the same types, each a routine in assembly
-slPerspective, slSetScreenDist	Projection_SetFieldOfView, Projection_Set	same	one sets the screen distance from an angle, one sets it directly; here the angle spans the screen's height, in SGL its width
+slRotX, slRotY, slRotZ	syRotX, syRotY, syRotZ	same	each writes the four cells the manual prints for it, with the same signs
+slDivFX	syDivFX	same	divisor first, returns b / a; the routine multiplies 2^30 / a by b
+slAtan	syAtan	same	one caller is compiled against a halfword return, SGL's 16-bit ANGLE
+slUnitMatrix with a pointer or CURRENT	Matrix_SetUnit, syUnitMatrixCurrentInline	same	two forms of one store, at a pointer and at the current matrix
+slGetMatrix, slLoadMatrix, slMultiMatrix	syGetMatrix, syLoadMatrix, syMultiMatrix	same	copy out, copy in, multiply into the current matrix
+slCalcPoint, slInnerProduct, slMulFX, slSquart	syCalcPoint, RelocatedInnerProduct, Iwram_MulFX, sySquartIWRAM	same	the same operations on the same types, each a routine in assembly
+slPerspective, slSetScreenDist	syPerspective, sySetScreenDist	same	one sets the screen distance from an angle, one sets it directly; here the angle spans the screen's height, in SGL its width
 slDMAXCopy, slDMAWait	Dma_Set, the loops on a channel's busy bit	same	source, destination, count and a fourth word
 slTransferEntry	the I/O write queue	same	a list of source, destination and control filled during the frame and carried out in the blanking interrupt; here it also sets and clears bits
-slIntFunction	Irq_SetHandler	same	a routine for the blanking interrupt, taken off again with a null pointer
+slIntFunction	syIntFunction	same	a routine for the blanking interrupt, taken off again with a null pointer
 slExecuteEvent then slSynch	wait	same	run every registered routine, then wait for the next frame; here one routine does both
-slPushMatrix, slPopMatrix	Matrix_Push, Matrix_Pop	smaller	one level deep, where SGL nests twenty and returns an error past them
-slLookAt	Matrix_LookAt	smaller	camera and target, without SGL's turn about the line of sight; the sideways axis is kept level
-slSetEvent, slCloseEvent	Task_Add, Task_Remove	smaller	a table of 20 routines sorted by priority, in two passes, where SGL keeps a list of 64 events with 128 bytes of work each
-slPrint, slPrintHex, slLocate	DebugText_Print, DebugText_PrintHex	smaller	strings and hex at a cursor, where SGL prints at an address slLocate gives
+slPushMatrix, slPopMatrix	syPushMatrix, syPopMatrix	smaller	one level deep, where SGL nests twenty and returns an error past them
+slLookAt	syLookAt	smaller	camera and target, without SGL's turn about the line of sight; the sideways axis is kept level
+slSetEvent, slCloseEvent	sySetEvent, syCloseEvent	smaller	a table of 20 routines sorted by priority, in two passes, where SGL keeps a list of 64 events with 128 bytes of work each
+slPrint, slPrintHex, slLocate	syPrint, syPrintHex	smaller	strings and hex at a cursor, where SGL prints at an address slLocate gives
 slRandom	Random16	role	both give a 16-bit fraction, but the game masks its bits where SGL's manual multiplies it by a range
-slColOffsetA	ScreenFade_Start	role	a fade over a count of frames through the hardware's brightness register, where SGL adds an offset to each colour at once
+slColOffsetA	syScreenFadeStart	role	a fade over a count of frames through the hardware's brightness register, where SGL adds an offset to each colour at once
 slScrMatSet and the coefficient table	the World Map's tilted ground	untested	both give each line of the screen its own terms; not compared in detail
 slPutPolygon, slPutSprite	the battle effects' models and sprites	untested	not compared in detail
 slBGMOn, slSndVolume	the sound calls	untested	the driver beneath is the development kit's; the calls above it are not compared

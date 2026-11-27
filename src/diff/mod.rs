@@ -2365,7 +2365,7 @@ mod tests {
         );
         assert!(compile_step(
             tla,
-            &root().join("games/tla/src/sound/player_work_copy.c"),
+            &root().join("games/tla/src/sdk/sound/player_work_copy.c"),
             None
         )[0]
         .ends_with("old_agbcc"));

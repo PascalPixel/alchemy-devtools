@@ -745,13 +745,23 @@ fn shifted(tokens: &[Token], at: usize, floor: usize) -> Option<(usize, usize)> 
 }
 
 /// Whether the shift whose amount is at `at` scales a 16.16 product or a
-/// sine to its unit: what `Iwram_MulFX`, `Trig_Sin` or `Trig_Cos` returns.
+/// sine to its unit: what `syMulFX`, `sySin` or `syCos` returns (before the
+/// SGL names, `Iwram_MulFX`, `Trig_Sin` and `Trig_Cos`).
 fn shifts_product(tokens: &[Token], at: usize, floor: usize) -> bool {
     let Some((first, last)) = shifted(tokens, at, floor) else {
         return false;
     };
     tokens[last].text == ")"
-        && matches!(tokens[first].text, "Iwram_MulFX" | "Trig_Sin" | "Trig_Cos")
+        && matches!(
+            tokens[first].text,
+            "syMulFX"
+                | "syIWRAMMulFX"
+                | "sySin"
+                | "syCos"
+                | "Iwram_MulFX"
+                | "Trig_Sin"
+                | "Trig_Cos"
+        )
 }
 
 /// Whether the number at `at` is the period of a cue on the counter of a

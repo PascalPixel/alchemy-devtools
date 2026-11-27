@@ -1,6 +1,7 @@
 //! The humanization report: numbers for the work of making the matched C
 //! readable (S3), meant to fall the way DONE rose. Each game's tracked C and
-//! headers under `src` and `include` are lexed (never preprocessed) and
+//! headers under `src` and `include`, and those both games share under
+//! `games/common`, are lexed (never preprocessed) and
 //! counted by simple rules, each set out where it is counted: magic numbers,
 //! placeholder and numbered names, fake-match devices (S2), edition tests,
 //! undocumented declarations, long files, duplicated code and, with the
@@ -826,8 +827,11 @@ impl Report {
         if entry.apart.is_none() {
             entry.apart = apart;
         }
-        entry.entry |=
-            file.contains("/include/gamepak/far_call/") || file.contains("/include/farcall/");
+        // A far call's entry: the old far-call headers, or a module's
+        // `stubs.h`, which declares its stubs.
+        entry.entry |= file.contains("/include/gamepak/far_call/")
+            || file.contains("/include/farcall/")
+            || file.ends_with("/stubs.h");
         if defined && !entry.defined {
             // Counted where it is defined, so set apart as it is there, else
             // as it is where first declared.
@@ -3788,7 +3792,9 @@ impl<'r, 'a> Walk<'r, 'a> {
         let bits = self.bit_families();
         // A hardware header's register values and addresses: the console's,
         // and the flash chip's commands and unlock addresses.
-        let registers = self.file.ends_with("/io_reg.h") || self.file.ends_with("/gamepak/flash.h");
+        let registers = self.file.ends_with("/io_reg.h")
+            || self.file.ends_with("/gamepak/flash.h")
+            || self.file.ends_with("/sdk/flash.h");
         for at in 0..self.code.tokens.len() {
             let token = self.code.tokens[at].clone();
             let Some(value) = hex_value(&token) else {
@@ -3979,12 +3985,13 @@ impl<'r, 'a> Walk<'r, 'a> {
                         if let Some(&first) = self.statement.first() {
                             self.enum_docs.insert(at, self.code.doc_text[first].clone());
                         }
-                        // `enum Tag {`.
+                        // `enum Tag {`, or SGL's `enum ITEM_ID {` read as
+                        // `ItemId`.
                         let tag = prev2
                             .filter(|&p| self.code.text(p) == "enum")
                             .and(prev)
                             .filter(|&p| self.code.tokens[p].kind == Kind::Ident)
-                            .map(|p| self.code.text(p).to_string());
+                            .map(|p| provenance::camel_tag(self.code.text(p)));
                         self.enum_next.insert(at, (tag, Some(0)));
                     }
                     self.stack.push(kind);
@@ -5435,12 +5442,17 @@ fn symbol_texts(root: &Path, paths: &[String]) -> Result<Vec<(String, String)>, 
 }
 
 /// The tracked C, headers and folder guides of a game, never build output,
-/// its assembly, and its pictures by path alone (their text empty).
+/// its assembly, and its pictures by path alone (their text empty); the
+/// files both games share, under `games/common`, are each game's too.
 fn sources(root: &Path, game: &str) -> Result<Vec<(String, String)>, String> {
     let mut files = Vec::new();
     for path in tracked(
         root,
-        &[format!("games/{game}/src"), format!("games/{game}/include")],
+        &[
+            format!("games/{game}/src"),
+            format!("games/{game}/include"),
+            "games/common".to_string(),
+        ],
     )? {
         if path.ends_with(".png") {
             files.push((path, String::new()));

@@ -12,11 +12,11 @@ const USAGE: &str = "usage: alchemy-devtools check assembly
        alchemy-devtools check packer [EDITION|GAME...]
        alchemy-devtools check rom [EDITION|GAME...] [--all | --origin]
        alchemy-devtools check tags [PATH...]
-assembly: every assembly file with code under a game's src/, and every ASM_
-macro of its include/system/asm.h, against evidence/GAME-assembly.tsv: each
-has a row saying its family, where it runs, its instruction set, how it
-treats r4, and what SGL and GBATEK say of it; a piece with no row, or a row
-with no piece, is a finding.
+assembly: every assembly file with code under a game's src/ or games/common,
+and every ASM_ macro of its include/system/asm.h, against
+evidence/GAME-assembly.tsv: each has a row saying its family, where it runs,
+its instruction set, how it treats r4, and what SGL and GBATEK say of it; a
+piece with no row, or a row with no piece, is a finding.
 overlays: each built overlay's packed stream (out/<edition>/overlays/
 resource_<id>.lz) looked for in its edition's reference ROM; an ID is the
 overlay's hex id (64b) or any path naming resource_<id>. No ID checks every

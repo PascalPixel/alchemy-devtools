@@ -63,11 +63,11 @@ impl<'a> Guide<'a> {
     /// animations while the beam's particles circle it and the floating
     /// platforms bob; the window and its letters left out. The loop is a multiple of STAR_LOOP_UNIT frames,
     /// and so that its last frame leads into its first, the random seed
-    /// (gRandomSeed) is set, PARTICLE_LIFE frames before the end, to what it
+    /// (RandomSeed) is set, PARTICLE_LIFE frames before the end, to what it
     /// was as long before the start: the particles spawned then are the ones
     /// the first frame shows.
     pub(super) fn venus_beam_whole(&mut self) -> Result<(), String> {
-        let seed = self.sym("gRandomSeed")?;
+        let seed = self.sym("RandomSeed")?;
         let mut field = self.aerie(AFTER_FIRST_BATTLE)?;
         let mut beam: Option<(u32, Vec<u32>)> = None;
         let mut n = 0;

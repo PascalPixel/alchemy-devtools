@@ -1,3 +1,3 @@
 members	kind	why
-gColosso_PrizeSparkleScript gFieldEffect_ParticleScript	kept apart	the ROM keeps both, the main image's const and Colosso's overlay's own; one text needs a header field_sequence_tables.c cannot include
-gNeptune_Gravity gNereid_Gravity gTitanBlade_DustGravity	different things	each creature's own gravity, equal by value
+ColossoPrizeSparkleScript FieldEffectParticleScript	kept apart	the ROM keeps both, the main image's const and Colosso's overlay's own; one text needs a header field_mode_tables.c cannot include
+NeptuneGravity NereidGravity TitanBladeDustGravity	different things	each creature's own gravity, equal by value

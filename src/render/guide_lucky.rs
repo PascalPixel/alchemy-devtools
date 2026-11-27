@@ -84,7 +84,7 @@ impl<'a> Guide<'a> {
         let (entered, _) = self.stand_for((map, room), Trigger::Talk(id), id)?;
         let mut field = entered.field;
         prepare(&mut field)?;
-        let save = self.sym("gMainRoutineState")?;
+        let save = self.sym("MainRoutineStateWork")?;
         let mut n = 0;
         while field.read16(save + SAVE_MAP_ID) != run {
             if n > 3000 {
@@ -136,7 +136,7 @@ impl<'a> Guide<'a> {
     /// result, back to the line) until a throw pays more than its bet back
     /// (two pairs or better), and that throw is kept.
     fn lucky_dice(&mut self) -> Result<(), String> {
-        let save = self.sym("gMainRoutineState")?;
+        let save = self.sym("MainRoutineStateWork")?;
         let mut field = self.lucky_reach(
             DICE_ROOM,
             "ACTOR_TOLBI_SPRING_DICE_ATTENDANT",
@@ -187,7 +187,7 @@ impl<'a> Guide<'a> {
     /// frames after their turn comes, so the player waiting a frame longer
     /// before A is another spin: the first that wins is kept.
     fn lucky_wheels(&mut self) -> Result<(), String> {
-        let save = self.sym("gMainRoutineState")?;
+        let save = self.sym("MainRoutineStateWork")?;
         let ticket = super::tables::Game::here()?
             .item_names()?
             .iter()

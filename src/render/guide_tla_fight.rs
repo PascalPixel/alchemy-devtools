@@ -4,10 +4,10 @@
 //! unleash, and a random battle in the Kandorean Temple's caves won, pulled
 //! apart, and left for the cave again.
 //!
-//! The battle test menu is The Lost Age's own (DebugBattle_RunMenu): it
+//! The battle test menu is The Lost Age's own (btDebugBattleRunMenu): it
 //! reads Down as it opens, waits for A, then loads the debug parameter set
-//! A picked (DebugParameterSet_Load) and runs the formation
-//! (Battle_Run) over the Colosso's backdrop. The run answers the
+//! A picked (btDebugParmSetLoad) and runs the formation
+//! (btRun) over the Colosso's backdrop. The run answers the
 //! set and the formation as the calls are made, and shows the background of
 //! the scene the formation is met in, as the field would choose it.
 
@@ -24,7 +24,7 @@ const ONE_WILD_WOLF: u32 = 129;
 /// Debug parameter set 7: Felix, Jenna and Sheba at level 7, as they reach
 /// the Kandorean Temple.
 const PARTY_TEMPLE: u8 = 7;
-/// gMainRoutineState.battleType: 1, which no battle start names, opens the
+/// MainRoutineStateWork.battleType: 1, which no battle start names, opens the
 /// battle with no first strike or surprise.
 const BATTLE_START_SET: u8 = 1;
 /// The first enemy's unit id, and struct BattleAction's unit.
@@ -73,10 +73,10 @@ impl<'a> Guide<'a> {
 
     /// The background a battle in the Kandorean Temple's first room shows:
     /// the resource BattleBackground_SelectForMap chooses for the scene, the
-    /// last marked row of gScene_BattleBackgroundRules before the scene's.
+    /// last marked row of SceneBattleBackgroundRules before the scene's.
     fn temple_background(&self) -> Result<u16, String> {
         let scene = Self::tla_scene("KandoreanTempleLifts")?;
-        let table = self.sym("gScene_BattleBackgroundRules")?;
+        let table = self.sym("SceneBattleBackgroundRules")?;
         let word = |i: u32| {
             let at = (table + 4 * i - 0x0800_0000) as usize;
             u32::from_le_bytes([
@@ -123,12 +123,12 @@ impl<'a> Guide<'a> {
         watch: &mut dyn FnMut(&mut Gba, Option<u32>, usize) -> Act,
     ) -> Result<(), String> {
         let b = super::layout::BattleLayout::for_edition("tla-en")?;
-        let start = self.sym("MainRoutine_RunFar")?;
-        let menu = self.sym("DebugBattle_RunMenu")?;
-        let preset = self.sym("DebugParameterSet_Load")?;
-        let encounter = self.sym("Battle_Run")?;
-        let game_state = self.sym("gMainRoutineState")?;
-        let game_flags = self.sym("gGameFlagBytes")?;
+        let start = self.sym("gmMainRoutineRunStub")?;
+        let menu = self.sym("btDebugBattleRunMenu")?;
+        let preset = self.sym("btDebugParmSetLoad")?;
+        let encounter = self.sym("btRun")?;
+        let game_state = self.sym("MainRoutineStateWork")?;
+        let game_flags = self.sym("GameFlagBytes")?;
         let mut gba = Gba::new(self.rom)?;
         // 0: booting, 1: the chooser, 2: the battle.
         let (mut phase, mut frame, mut chooser_from, mut battle_frames) = (0, 0, 0, 0usize);
@@ -189,8 +189,8 @@ impl<'a> Guide<'a> {
     /// it settles behind the party as the first menu opens, as
     /// `battle/opening.gif`.
     fn tla_fight_opening(&mut self) -> Result<(), String> {
-        let menu = self.sym("Battle_CollectPartyCommands")?;
-        let message = self.sym("BattleMessage_ShowAndWait")?;
+        let menu = self.sym("mnBattleCollectPartyCommands")?;
+        let message = self.sym("mnBattleMessageShowAndWait")?;
         let drive = self.temple_drive(WOLF_ANT_BAT, vec![menu, message])?;
         let mut frames = Vec::new();
         let mut opened: Option<usize> = None;
@@ -229,8 +229,8 @@ impl<'a> Guide<'a> {
     /// Punch Ant and the Giant Bat, every command Attack (A pressed
     /// throughout), until the next round's menu, as `battle/turn-order.gif`.
     fn tla_turn_order(&mut self) -> Result<(), String> {
-        let menu = self.sym("Battle_CollectPartyCommands")?;
-        let dispatch = self.sym("BattleStaging_DispatchAction")?;
+        let menu = self.sym("mnBattleCollectPartyCommands")?;
+        let dispatch = self.sym("btStagingDispatchAction")?;
         let drive = self.temple_drive(WOLF_ANT_BAT, vec![menu, dispatch])?;
         let mut frames = Vec::new();
         let mut menus: Vec<usize> = Vec::new();
@@ -273,11 +273,11 @@ impl<'a> Guide<'a> {
     /// battle shows the wolf's picture for the camera's angle as the camera
     /// swings in and round, and a striking one as it attacks.
     fn tla_monster(&mut self) -> Result<(), String> {
-        let commands = self.sym("Battle_CollectPartyCommands")?;
-        let dispatch = self.sym("BattleStaging_DispatchAction")?;
+        let commands = self.sym("mnBattleCollectPartyCommands")?;
+        let dispatch = self.sym("btStagingDispatchAction")?;
         let drive = self.temple_drive(ONE_WILD_WOLF, vec![commands, dispatch])?;
         let b = super::layout::BattleLayout::for_edition("tla-en")?;
-        let owners = self.sym("gCharacterUnits")?;
+        let owners = self.sym("CharacterUnits")?;
         let mut frames = Vec::new();
         let (mut starts, mut turns, mut over) = (0, Vec::new(), None::<usize>);
         let party = drive.party.clone();
@@ -357,7 +357,7 @@ impl<'a> Guide<'a> {
             self.map,
             super::layout::BattleLayout::for_edition("tla-en")?,
         )?;
-        let random = self.sym("Battle_Random")?;
+        let random = self.sym("gmBattleRandom")?;
         let mut unleashed = 0;
         let recording = super::battle::record_watching(
             self.rom,
@@ -369,7 +369,7 @@ impl<'a> Guide<'a> {
             &[random],
             &mut |gba, hook| {
                 if hook == Some(random)
-                    && self.function_at(gba.register(LR) & !1) == "Equipment_RollUnleash"
+                    && self.function_at(gba.register(LR) & !1) == "gmEquipmentRollUnleash"
                 {
                     gba.return_now(0);
                     unleashed += 1;
@@ -391,7 +391,7 @@ impl<'a> Guide<'a> {
     }
 }
 
-/// The Kandorean Temple's rooms walked for a random battle, gScenes' rows
+/// The Kandorean Temple's rooms walked for a random battle, ScenesWork' rows
 /// (SceneId_KandoreanTemple2 on), as the walkthrough has the party meet
 /// its Wild Wolves, Punch Ants and Giant Bats there.
 const TEMPLE_ROOMS: &[&str] = &[

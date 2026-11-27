@@ -470,8 +470,8 @@ pub enum Trigger {
     /// event with no row).
     Direct(u32),
     /// A message row's message, shown beside actor N (0xffff for none) as a
-    /// row's dispatch shows it (Event_Start, Event_SetMessageId,
-    /// Event_ShowMessageAndWait, Event_End), for a message row no trigger the
+    /// row's dispatch shows it (fdScriptStart, fdScriptSetMessageId,
+    /// fdScriptShowMessageAndWait, fdScriptEnd), for a message row no trigger the
     /// renderer can give reaches.
     Message(u16, u16),
 }
@@ -516,7 +516,7 @@ impl Event {
 }
 
 /// Move's ability id: the one field Psynergy steered with the d-pad once it
-/// is cast (FieldPsynergy_SteerPushedTarget).
+/// is cast (fdPsynergySteerPushedTarget).
 pub const MOVE: u16 = 0x8c;
 /// Carry's: lifted, then steered with the d-pad as Move is, and dropped with A.
 pub const CARRY: u16 = 0x93;

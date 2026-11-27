@@ -199,7 +199,7 @@ impl<'a> Guide<'a> {
     /// then, talked to again from the same moment, at the fast speed, as
     /// `message-speed.gif`.
     fn message_speed(&mut self) -> Result<(), String> {
-        let save = self.sym("gMainRoutineState")?;
+        let save = self.sym("MainRoutineStateWork")?;
         let (mut entered, _) = self.stand_for(VALE, Trigger::Talk(GARETS_SISTER), GARETS_SISTER)?;
         let field = &mut entered.field;
         let ready = field.save();
@@ -609,7 +609,7 @@ impl<'a> Guide<'a> {
     /// Bilibin's item shop with the shop credit 5 short of the first Game
     /// Ticket: a Herb bought, and the ticket given, as `game-ticket.gif`.
     fn game_ticket(&mut self) -> Result<(), String> {
-        let save = self.sym("gMainRoutineState")?;
+        let save = self.sym("MainRoutineStateWork")?;
         let (mut entered, _) = self.bilibin_keeper(5, "ACTOR_BILIBIN_ITEM_MERCHANT")?;
         entered.field.set_coins(500);
         entered.field.write32(save + SAVE_SHOP_CREDIT, 295);
@@ -781,7 +781,7 @@ impl<'a> Guide<'a> {
             "Small Jewel",
             "Dragon Skin",
         ];
-        let give = self.sym("PartyInventory_GiveItem")?;
+        let give = self.sym("fdPartyInventoryGiveItem")?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
         field.set_party(&[0, 1]);

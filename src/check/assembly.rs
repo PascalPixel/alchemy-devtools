@@ -1,9 +1,10 @@
 //! The inventory of hand-written assembly against the tree: every assembly
-//! file under a game's `src/` that holds code, and every `ASM_` macro of its
-//! `include/system/asm.h`, has a row of `evidence/<game>-assembly.tsv`, and
-//! every row names a piece that is still there. A row says which family of
-//! the System the piece belongs to, the form it takes (where it runs), its
-//! instruction set, how it treats r4, and what SGL and GBATEK say of it.
+//! file under a game's `src/` or the shared `games/common` that holds code,
+//! and every `ASM_` macro of its `include/system/asm.h`, has a row of
+//! `evidence/<game>-assembly.tsv`, and every row names a piece that is still
+//! there. A row says which family of the System the piece belongs to, the
+//! form it takes (where it runs), its instruction set, how it treats r4, and
+//! what SGL and GBATEK say of it.
 
 use crate::alchemy::evidence;
 use std::collections::BTreeSet;
@@ -168,12 +169,10 @@ pub fn run(arguments: &[String]) -> Result<(), String> {
         let table = format!("{game}-assembly.tsv");
         let text = evidence::table(&table).ok_or_else(|| format!("no evidence/{table}"))?;
         let rows = parse(text).map_err(|message| format!("evidence/{table}: {message}"))?;
+        // The files both games share, under games/common, are each game's.
         let mut files = BTreeSet::new();
-        assembly_files(
-            root,
-            &root.join("games").join(game).join("src"),
-            &mut files,
-        );
+        assembly_files(root, &root.join("games").join(game).join("src"), &mut files);
+        assembly_files(root, &root.join("games").join("common"), &mut files);
         let header = format!("games/{game}/include/system/asm.h");
         let macros = std::fs::read_to_string(root.join(&header))
             .map(|text| macros(&text))
@@ -219,8 +218,9 @@ games/tla/include/system/asm.h\tASM_DMA_STORE\tdma\tmacro\teither\tuntouched\tsl
             .into_iter()
             .map(String::from)
             .collect();
-        let macros =
-            macros("#define ASM_DMA_STORE(a, b) \\\n  x\n#define ASM_NOTHING() \\\n  y\n#define OTHER 1\n");
+        let macros = macros(
+            "#define ASM_DMA_STORE(a, b) \\\n  x\n#define ASM_NOTHING() \\\n  y\n#define OTHER 1\n",
+        );
         assert_eq!(macros, ["ASM_DMA_STORE", "ASM_NOTHING"]);
         assert_eq!(
             judge(&rows, &files, &macros, "games/tla/include/system/asm.h"),

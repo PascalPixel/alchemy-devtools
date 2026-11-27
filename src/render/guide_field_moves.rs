@@ -84,7 +84,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Walking east into Vale's stone pillar below the cliff (ACTOR_PILLAR,
-    /// cell behavior 30, Vale_PushPillar): the leader leans on it a quarter
+    /// cell behavior 30, scValePushPillar): the leader leans on it a quarter
     /// second, then he and the pillar slide a cell together
     /// (PushedActor_AdvancePair).
     fn push_pillar(&mut self) -> Result<(), String> {
@@ -213,11 +213,11 @@ impl<'a> Guide<'a> {
     }
 
     /// Walking on the Lamakan Desert's sand until the heat hurts: the count
-    /// (gMainRoutineState.hazardSteps) set three quarters full and the
+    /// (MainRoutineStateWork.hazardSteps) set three quarters full and the
     /// quarters' complaints marked heard (FLAG_HEAT_QUARTER to
     /// FLAG_HEAT_THREE_QUARTERS), so the thermometer fills and at 600 the
     /// screen flashes, the leader flinches and the party loses a quarter of
-    /// its maximum HP (Field_UpdateWalking); then the field menu shows the
+    /// its maximum HP (fdUpdateWalking); then the field menu shows the
     /// HP left.
     fn sand_damage(&mut self) -> Result<(), String> {
         let mut entered = self.stood("LamakanDesertEast", 2, (400, 60, NORTH))?;

@@ -210,9 +210,10 @@ pub(crate) fn markers(text: &str) -> Vec<View> {
 /// The column clang-format's LLVM style wraps at.
 const COLUMNS: usize = 80;
 
-/// A one-line block comment written as clang-format's LLVM style wraps it:
-/// filled to 80 columns, each line after the first opened with ` * `, the
-/// closing `*/` on the last line where it fits, else on its own.
+/// A one-line block comment written as the checkout's comments are wrapped:
+/// filled to 80 columns, each line after the first lined up with the text
+/// after the `/* `, the closing `*/` on the last line where it fits, else on
+/// its own.
 pub(crate) fn wrapped(comment: &str, indent: &str) -> String {
     let body = comment
         .trim()
@@ -225,7 +226,7 @@ pub(crate) fn wrapped(comment: &str, indent: &str) -> String {
     let mut filled = false;
     for word in body.split(' ').filter(|word| !word.is_empty()) {
         if filled && width(&line) + 1 + width(word) > COLUMNS {
-            lines.push(std::mem::replace(&mut line, format!("{indent} *")));
+            lines.push(std::mem::replace(&mut line, format!("{indent}  ")));
         }
         line.push(' ');
         line.push_str(word);

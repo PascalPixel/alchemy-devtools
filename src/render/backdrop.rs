@@ -38,7 +38,7 @@ pub fn scene(value: &str) -> Result<Scene, String> {
 }
 
 /// A picture (0xRRGGBB) as a battle background: its colours reduced to 128
-/// BGR555 colours, and its pixels as BattleBackground_Load leaves them in
+/// BGR555 colours, and its pixels as btBackgroundLoad leaves them in
 /// VRAM: 8 by 8 tiles in rows of 32, a byte a pixel naming a colour of BG
 /// palettes 6 to 13 (a backdrop PNG's index plus 96, as the Suhalla Gate
 /// backdrop decodes).

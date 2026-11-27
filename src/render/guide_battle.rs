@@ -1,7 +1,7 @@
 //! Battles played from Camelot's battle test menu, as `render psynergy`
 //! plays them, for the battle guides' recordings (guide_fight.rs): a run
 //! with its party, formation and the function entries it is watched at, a
-//! roll forced only by answering Battle_Random at the call that makes it,
+//! roll forced only by answering gmBattleRandom at the call that makes it,
 //! and the battle's units and calls read from memory and the map.
 
 use super::guide::Guide;
@@ -21,7 +21,7 @@ const STATE_OWNERS: u32 = 0x2c0;
 const MAX_FRAMES: u32 = 20000;
 
 /// What a battle run is: the debug party preset and party, the formation
-/// (a row of gFormations), gMainRoutineState.battleType and the function entries
+/// (a row of gFormations), MainRoutineStateWork.battleType and the function entries
 /// the watcher is called at.
 pub(super) struct Drive {
     pub preset: u8,
@@ -62,12 +62,12 @@ impl<'a> Guide<'a> {
     ) -> Result<(), String> {
         let at = |name: &str| self.sym(name);
         let s = Boot {
-            start: at("MainRoutine_RunFar")?,
-            menu: at("DebugBattle_RunMenu")?,
-            preset: at("DebugParameterSet_Load")?,
-            encounter: at("Battle_Run")?,
-            game_state: at("gMainRoutineState")?,
-            game_flags: at("gGameFlagBytes")?,
+            start: at("gmMainRoutineRunStub")?,
+            menu: at("btDebugBattleRunMenu")?,
+            preset: at("btDebugParmSetLoad")?,
+            encounter: at("btRun")?,
+            game_state: at("MainRoutineStateWork")?,
+            game_flags: at("GameFlagBytes")?,
         };
         let mut gba = Gba::new(self.rom)?;
         // 0: booting, 1: the chooser, 2: the battle.
@@ -167,14 +167,14 @@ pub(super) fn mash(frame: u32) -> u32 {
 fn enemy_table() -> Result<(super::tables::Table, Vec<String>), String> {
     let game = super::tables::Game::here()?;
     Ok((
-        game.table("gEnemy_Definitions", "EnemyDefinition")?,
-        game.row_names("gEnemy_Definitions", "EnemyDefinition", "MsgEnemyName")?,
+        game.table("EnemyDefinitions", "ENEMY_DEFINITION")?,
+        game.row_names("EnemyDefinitions", "ENEMY_DEFINITION", "MsgEnemyName")?,
     ))
 }
 
 /// The first enemy's unit number: the party's are below it.
 const FIRST_ENEMY_UNIT: u32 = 128;
-/// struct Unit's id, an enemy's row of gEnemy_Definitions plus ENEMY_ID_FIRST.
+/// struct Unit's id, an enemy's row of EnemyDefinitions plus ENEMY_ID_FIRST.
 const ENEMY_ID_FIRST: usize = 8;
 const UNIT_CLASS_ID: u32 = 0x128;
 const UNIT_SIZE: u32 = 0x14c;
@@ -201,7 +201,7 @@ impl<'a> Guide<'a> {
         if u32::from(unit) < FIRST_ENEMY_UNIT {
             return plan::character_name(unit as u8).to_string();
         }
-        let enemies = self.sym("gEnemyUnits").map(|s| gba.read32(s)).unwrap_or(0);
+        let enemies = self.sym("EnemyUnits").map(|s| gba.read32(s)).unwrap_or(0);
         let class =
             gba.read8(enemies + (u32::from(unit) - FIRST_ENEMY_UNIT) * UNIT_SIZE + UNIT_CLASS_ID);
         enemy_table()
@@ -237,7 +237,7 @@ const INVENTORY_EQUIPPED: u16 = 0x200;
 
 impl<'a> Guide<'a> {
     /// Isaac attacks a copy of Ivan through the command menu, the rolls
-    /// BattleActionRun_Build and Equipment_RollUnleash ask Battle_Random for
+    /// btActionRunBuild and gmEquipmentRollUnleash ask gmBattleRandom for
     /// answered in turn from `plan_answers` and `unleash`, and, with
     /// `weapon`, that item in place of his equipped weapon as the battle
     /// opens; the frames it plays.
@@ -256,13 +256,13 @@ impl<'a> Guide<'a> {
             .ok_or("no Quake cast")?;
         cast.foes = vec![plan::IVAN];
         let symbols = super::battle::Symbols::find(self.map)?;
-        let random = self.sym("Battle_Random")?;
-        let exec = self.sym("BattleAbility_ApplyToTarget")?;
-        let encounter = self.sym("Battle_Run")?;
-        let owner = self.sym("gMainRoutineState")? + STATE_OWNERS;
+        let random = self.sym("gmBattleRandom")?;
+        let exec = self.sym("btAbilityApplyToTarget")?;
+        let encounter = self.sym("btRun")?;
+        let owner = self.sym("MainRoutineStateWork")? + STATE_OWNERS;
         let game = super::tables::Game::here()?;
         let types = game
-            .table("gItem_DefinitionTable", "ItemDefinition")?
+            .table("ItemDefinitionTable", "ITEM_DEFINITION")?
             .column("type")?;
         let weapon_type = game.constant("ITEM_TYPE_WEAPON")?;
         let mut planned = false;
@@ -292,11 +292,11 @@ impl<'a> Guide<'a> {
                 }
                 Some(h) if h == random && !planned => {
                     let answer = match self.function_at(gba.register(LR) & !1).as_str() {
-                        "BattleActionRun_Build" => {
+                        "btActionRunBuild" => {
                             asked += 1;
                             plan_answers.get(asked - 1).copied()
                         }
-                        "Equipment_RollUnleash" => Some(unleash),
+                        "gmEquipmentRollUnleash" => Some(unleash),
                         _ => None,
                     };
                     if let Some(a) = answer {
@@ -316,14 +316,16 @@ impl<'a> Guide<'a> {
     /// The address of unit `id`'s struct Unit.
     pub(super) fn unit_address(&self, gba: &Gba, id: u16) -> Result<u32, String> {
         if u32::from(id) >= FIRST_ENEMY_UNIT {
-            Ok(gba.read32(self.sym("gEnemyUnits")?)
-                + (u32::from(id) - FIRST_ENEMY_UNIT) * UNIT_SIZE)
+            Ok(
+                gba.read32(self.sym("EnemyUnits")?)
+                    + (u32::from(id) - FIRST_ENEMY_UNIT) * UNIT_SIZE,
+            )
         } else {
-            Ok(self.sym("gMainRoutineState")? + STATE_OWNERS + u32::from(id) * UNIT_SIZE)
+            Ok(self.sym("MainRoutineStateWork")? + STATE_OWNERS + u32::from(id) * UNIT_SIZE)
         }
     }
 
-    /// Fills the command menu's records (Battle_CollectPartyCommands, at
+    /// Fills the command menu's records (mnBattleCollectPartyCommands, at
     /// its entry) with `commands`, (unit, command, ability, place, range)
     /// each, and returns from it with their count.
     pub(super) fn give_commands(

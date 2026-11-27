@@ -196,7 +196,7 @@ impl<'a> Guide<'a> {
                 // north-west piece (11) a cell east of the south-west one,
                 // then pushed west into it. Each light's arrival at a socket
                 // (VENUS_ROUTE) and each script a light starts
-                // (Actor_StartScript, VENUS_START) are printed.
+                // (fdActorStartScript, VENUS_START) are printed.
                 let env = |name: &str| {
                     std::env::var(name)
                         .ok()
@@ -205,9 +205,9 @@ impl<'a> Guide<'a> {
                 };
                 let (route, start) = (env("VENUS_ROUTE")?, env("VENUS_START")?);
                 let flags_at = map
-                    .symbol("gGameFlagBytes")
+                    .symbol("GameFlagBytes")
                     .map(|(_, a)| a)
-                    .ok_or("no gGameFlagBytes")?;
+                    .ok_or("no GameFlagBytes")?;
                 let mut e = self.enter_with((185, 15), &[])?;
                 for (id, x, z) in [(9u16, 776, 664), (10, 840, 664), (11, 792, 696)] {
                     let a = e.field.actor_address(id);
@@ -239,7 +239,7 @@ impl<'a> Guide<'a> {
                             println!("  frame {frame}: light {light:08x} reaches ({lx}, {lz}), cell ({}, {}); pillars {}", lx >> 4, lz >> 4, stands.join(" "));
                         } else if pc == start {
                             println!(
-                                "  frame {frame}: Actor_StartScript({:08x}, {:08x}) from {:08x}",
+                                "  frame {frame}: fdActorStartScript({:08x}, {:08x}) from {:08x}",
                                 gba.register(0),
                                 gba.register(1),
                                 gba.register(14)
@@ -455,10 +455,9 @@ impl<'a> Guide<'a> {
                         .ok_or_else(|| format!("the map has no {s}"))
                 };
                 let (units, slots, opponents) = (
-                    at("gEnemyUnits")?,
-                    at("gHeapSlots")?,
-                    at("Battle_BuildEnemyActions")
-                        .or_else(|_| at("Battle_BuildOpponentActions"))?,
+                    at("EnemyUnits")?,
+                    at("HeapSlots")?,
+                    at("btBuildEnemyActions").or_else(|_| at("Battle_BuildOpponentActions"))?,
                 );
                 for place in [(27u16, 5u16)] {
                     let Ok(mut e) = self.enter_with(place, &[]) else {
@@ -534,7 +533,7 @@ impl<'a> Guide<'a> {
             "effect-depth" => {
                 // Dragon Cloud and the eruption (Blast, Mad Blast, Fiery
                 // Blast, Smoke Bomb, Sleep Bomb), cast as `render psynergy`
-                // casts them: for each call of Projection_Point from those
+                // casts them: for each call of btProjectionPoint from those
                 // effects, the depth the effect then reads from the point
                 // (struct ScreenPoint's third word, after the effect's clamp
                 // to 160..799), by call site.
@@ -546,16 +545,13 @@ impl<'a> Guide<'a> {
                         .map(|(_, a)| a & !1)
                         .ok_or_else(|| format!("the map has no {s}"))
                 };
-                let project = at("Projection_Point")?;
+                let project = at("btProjectionPoint")?;
                 let ranges = [
                     (
-                        at("BattleEffect_RunDragonCloud")?,
-                        at("BattleEffect_RunAnnihilation")?,
+                        at("btEffectRunDragonCloud")?,
+                        at("btEffectRunAnnihilation")?,
                     ),
-                    (
-                        at("BattleEffect_RunEruption")?,
-                        at("BattleEffect_CreateSprites")?,
-                    ),
+                    (at("btEffectRunEruption")?, at("btEffectCreateSprs")?),
                 ];
                 for name in [
                     "Dragon Cloud",

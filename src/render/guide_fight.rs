@@ -29,11 +29,11 @@ const KEY_DOWN: u32 = 0x80;
 /// and two Stone Soldiers (fixed).
 const GRYPHONS: u32 = 294;
 const FOUR_ENEMIES: u32 = 296;
-/// gMainRoutineState.battleType: BATTLE_TYPE_NORMAL rolls a first strike; 1, which
+/// MainRoutineStateWork.battleType: BATTLE_TYPE_NORMAL rolls a first strike; 1, which
 /// no battle start names, opens the battle normally.
 const BATTLE_TYPE_NORMAL: u8 = 0;
 const BATTLE_START_SET: u8 = 1;
-/// Debug party preset 6 (gDebug_ParameterSets): the four at level 20, whose
+/// Debug party preset 6 (DebugParameterSets): the four at level 20, whose
 /// chance to run from two Gryphons (level 23) is 35 percent.
 const PRESET_LEVEL_20: u8 = 6;
 /// The first enemy's unit id.
@@ -48,7 +48,7 @@ const UNIT_SLEEP: u32 = 0x13c;
 const SLEPT_A_ROUND: u8 = 6;
 /// The Swift Sword, whose unleash is Sonic Smash.
 const SWIFT_SWORD: u16 = 21;
-/// Rolls for BattleAI_ChooseAction's first draw that land in the Gryphon's
+/// Rolls for btAIChooseAction's first draw that land in the Gryphon's
 /// spans (ACTION_STRATEGY_FALLING): Wing Flutter 0 to 52, Tornado 53 to 99,
 /// Twin Beaks 100 to 140.
 const ROLL_WING_FLUTTER: u32 = 20;
@@ -153,10 +153,10 @@ impl<'a> Guide<'a> {
         Ok(drive)
     }
 
-    /// At an entry of Battle_Random: answers a weapon's unleash roll so the
+    /// At an entry of gmBattleRandom: answers a weapon's unleash roll so the
     /// weapon stays quiet; true when it did.
     fn quiet_weapon(&self, gba: &mut Gba) -> bool {
-        if self.function_at(gba.register(LR) & !1) == "Equipment_RollUnleash" {
+        if self.function_at(gba.register(LR) & !1) == "gmEquipmentRollUnleash" {
             gba.return_now(0xffff);
             return true;
         }
@@ -168,9 +168,9 @@ impl<'a> Guide<'a> {
     /// the party as the first menu opens, as `battle/opening.gif`.
     pub fn fight_opening(&mut self) -> Result<(), String> {
         let menu = self
-            .sym("Battle_BuildPartyActions")
-            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
-        let message = self.sym("BattleMessage_ShowAndWait")?;
+            .sym("btBuildPartyActions")
+            .or_else(|_| self.sym("btBuildUnitActions"))?;
+        let message = self.sym("mnBattleMessageShowAndWait")?;
         let drive = self.party_drive(
             &[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA],
             FOUR_ENEMIES,
@@ -212,10 +212,10 @@ impl<'a> Guide<'a> {
     /// or with `after` None until the script ends.
     fn menu_run(&self, mut keys: Script, after: Option<usize>) -> Result<Vec<Vec<u16>>, String> {
         let menu = self
-            .sym("Battle_BuildPartyActions")
-            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
-        let dispatch = self.sym("BattleStaging_DispatchAction")?;
-        let random = self.sym("Battle_Random")?;
+            .sym("btBuildPartyActions")
+            .or_else(|_| self.sym("btBuildUnitActions"))?;
+        let dispatch = self.sym("btStagingDispatchAction")?;
+        let random = self.sym("gmBattleRandom")?;
         let drive = self.party_drive(
             &[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA],
             FOUR_ENEMIES,
@@ -326,10 +326,10 @@ impl<'a> Guide<'a> {
         what: &str,
     ) -> Result<(), String> {
         let menu = self
-            .sym("Battle_BuildPartyActions")
-            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
-        let dispatch = self.sym("BattleStaging_DispatchAction")?;
-        let random = self.sym("Battle_Random")?;
+            .sym("btBuildPartyActions")
+            .or_else(|_| self.sym("btBuildUnitActions"))?;
+        let dispatch = self.sym("btStagingDispatchAction")?;
+        let random = self.sym("gmBattleRandom")?;
         let drive = self.party_drive(
             party,
             encounter,
@@ -389,16 +389,16 @@ impl<'a> Guide<'a> {
         )
     }
 
-    /// Isaac and Garet in a random encounter with two Gryphons, Battle_Run's
+    /// Isaac and Garet in a random encounter with two Gryphons, btRun's
     /// first-strike roll answered 0 (`& 15` is 0): `Isaac's party attacks
     /// first!`, held a moment; the two attack while the Gryphons stand
     /// still, and the next round's menu opens, as `battle/first-strike.gif`.
     pub fn fight_first_strike(&mut self) -> Result<(), String> {
-        let random = self.sym("Battle_Random")?;
+        let random = self.sym("gmBattleRandom")?;
         let menu = self
-            .sym("Battle_BuildPartyActions")
-            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
-        let message = self.sym("BattleMessage_ShowAndWait")?;
+            .sym("btBuildPartyActions")
+            .or_else(|_| self.sym("btBuildUnitActions"))?;
+        let message = self.sym("mnBattleMessageShowAndWait")?;
         let drive = self.party_drive(
             &[plan::ISAAC, plan::GARET],
             GRYPHONS,
@@ -414,7 +414,7 @@ impl<'a> Guide<'a> {
                 Some(h) if h == random => {
                     if !self.quiet_weapon(gba)
                         && !answered
-                        && self.function_at(gba.register(LR) & !1) == "Battle_Run"
+                        && self.function_at(gba.register(LR) & !1) == "btRun"
                     {
                         gba.return_now(0);
                         answered = true;
@@ -447,7 +447,7 @@ impl<'a> Guide<'a> {
             "fight-first-strike: menus at {menus:?}, answered {answered}, message at {shown:?}"
         );
         if !answered {
-            return Err("Battle_Run made no first-strike roll".into());
+            return Err("btRun made no first-strike roll".into());
         }
         self.fight_gif(
             "battle/first-strike.gif",
@@ -457,15 +457,15 @@ impl<'a> Guide<'a> {
     }
 
     /// The four at level 20 against two Gryphons choose Run twice: the first
-    /// try's roll (Random16 in BattleFlee_CheckSuccess) answered 0xffff, so
+    /// try's roll (Random16 in btFleeCheckSuccess) answered 0xffff, so
     /// it fails and the Gryphons act; the second answered 0, so the party
     /// gets away, as `battle/flee.gif`.
     pub fn fight_flee(&mut self) -> Result<(), String> {
         let random = self.sym("Random16")?;
         let menu = self
-            .sym("Battle_BuildPartyActions")
-            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
-        let state = self.sym("gBattleState")?;
+            .sym("btBuildPartyActions")
+            .or_else(|_| self.sym("btBuildUnitActions"))?;
+        let state = self.sym("BattleStateWork")?;
         let mut drive = self.party_drive(
             &[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA],
             GRYPHONS,
@@ -481,7 +481,7 @@ impl<'a> Guide<'a> {
         self.drive(&drive, &mut |gba, hook, f| {
             match hook {
                 Some(h) if h == random => {
-                    if self.function_at(gba.register(LR) & !1) == "BattleFlee_CheckSuccess" {
+                    if self.function_at(gba.register(LR) & !1) == "btFleeCheckSuccess" {
                         gba.return_now(if tries == 0 { 0xffff } else { 0 });
                         tries += 1;
                     }
@@ -520,10 +520,10 @@ impl<'a> Guide<'a> {
 
 impl<'a> Guide<'a> {
     /// The four defend while the enemies of `encounter` act, for one round:
-    /// the first Battle_Random after each enemy's turn enters
-    /// BattleAI_ChooseAction with retry 1, as the turn plays (its draw of an
+    /// the first gmBattleRandom after each enemy's turn enters
+    /// btAIChooseAction with retry 1, as the turn plays (its draw of an
     /// action), answered with `rolls` in turn; with `sure`, every
-    /// Battle_RandomPercent after that answered 0, so an added effect's roll
+    /// gmBattleRandomPercent after that answered 0, so an added effect's roll
     /// lands. Returns the frames and the frames each enemy's action was
     /// dispatched.
     fn enemy_round(
@@ -532,11 +532,11 @@ impl<'a> Guide<'a> {
         rolls: &[u32],
         sure: bool,
     ) -> Result<(Vec<Vec<u16>>, Vec<usize>), String> {
-        let commands = self.sym("Battle_CollectPartyCommands")?;
-        let dispatch = self.sym("BattleStaging_DispatchAction")?;
-        let random = self.sym("Battle_Random")?;
-        let choose = self.sym("BattleAI_ChooseAction")?;
-        let percent = self.sym("Battle_RandomPercent")?;
+        let commands = self.sym("mnBattleCollectPartyCommands")?;
+        let dispatch = self.sym("btStagingDispatchAction")?;
+        let random = self.sym("gmBattleRandom")?;
+        let choose = self.sym("btAIChooseAction")?;
+        let percent = self.sym("gmBattleRandomPercent")?;
         let party = [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA];
         let drive = self.party_drive(
             &party,
@@ -717,7 +717,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Isaac casts Quake at copies of Garet, Ivan and Mia, the copy of Ivan
-    /// asleep a round already; BattleAbility_ApplyToTarget's wake roll
+    /// asleep a round already; btAbilityApplyToTarget's wake roll
     /// answered 0, so `Ivan wakes from slumber!`, as `battle/wake.gif`.
     pub fn fight_wake(&mut self) -> Result<(), String> {
         let root = crate::compile::root();
@@ -729,12 +729,12 @@ impl<'a> Guide<'a> {
             .ok_or("no Quake cast")?;
         cast.foes = vec![plan::GARET, plan::IVAN, plan::MIA];
         let symbols = super::battle::Symbols::find(self.map)?;
-        let random = self.sym("Battle_Random")?;
-        let exec = self.sym("BattleAbility_ApplyToTarget")?;
-        let commands = self.sym("Battle_CollectPartyCommands")?;
-        let sites = self.calls_in(exec, self.sym("Battle_RandomFar")?);
+        let random = self.sym("gmBattleRandom")?;
+        let exec = self.sym("btAbilityApplyToTarget")?;
+        let commands = self.sym("mnBattleCollectPartyCommands")?;
+        let sites = self.calls_in(exec, self.sym("gmBattleRandomStub")?);
         let [.., wake, _haunt] = sites[..] else {
-            return Err("BattleAbility_ApplyToTarget makes fewer than two rolls".into());
+            return Err("btAbilityApplyToTarget makes fewer than two rolls".into());
         };
         let mut set = false;
         let mut woke = 0;
@@ -820,7 +820,7 @@ impl<'a> Guide<'a> {
 }
 
 /// gFormations rows: one or two Rat Soldiers, with up to two Rats and a
-/// Bat as Battle_Run rolls them, and the Fusion Dragon on the Venus
+/// Bat as btRun rolls them, and the Fusion Dragon on the Venus
 /// Lighthouse aerie, whose battle opens in a storm (transition.c's
 /// TRANSITION_STORM_FORMATION).
 const RAT_SOLDIERS: u32 = 55;
@@ -856,7 +856,7 @@ enum Asked<'n> {
 impl<'a> Guide<'a> {
     /// One round of `encounter` with the four's commands given, (unit,
     /// command, parameter, target, range) each: `prepare` is called as the
-    /// commands are given, and `answer` at each Battle_Random and Random16,
+    /// commands are given, and `answer` at each gmBattleRandom and Random16,
     /// returning the number to answer with or None to let the call run.
     /// Returns the frames and the frame and unit of each action dispatched.
     #[allow(clippy::type_complexity)]
@@ -867,11 +867,11 @@ impl<'a> Guide<'a> {
         prepare: &mut dyn FnMut(&mut Gba),
         answer: &mut dyn FnMut(Asked) -> Option<u32>,
     ) -> Result<(Vec<Vec<u16>>, Vec<(usize, String)>), String> {
-        let given = self.sym("Battle_CollectPartyCommands")?;
-        let dispatch = self.sym("BattleStaging_DispatchAction")?;
-        let random = self.sym("Battle_Random")?;
+        let given = self.sym("mnBattleCollectPartyCommands")?;
+        let dispatch = self.sym("btStagingDispatchAction")?;
+        let random = self.sym("gmBattleRandom")?;
         let random16 = self.sym("Random16")?;
-        let choose = self.sym("BattleAI_ChooseAction")?;
+        let choose = self.sym("btAIChooseAction")?;
         let party = [plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA];
         let drive = self.party_drive(
             &party,
@@ -882,7 +882,7 @@ impl<'a> Guide<'a> {
         let mut frames = Vec::new();
         let mut starts = 0;
         let mut acts: Vec<(usize, String)> = Vec::new();
-        // The enemy whose draw of an action the next Battle_Random is.
+        // The enemy whose draw of an action the next gmBattleRandom is.
         let mut choosing: Option<String> = None;
         let mut failed = None;
         let mut round_over: Option<usize> = None;
@@ -973,7 +973,7 @@ impl<'a> Guide<'a> {
     }
 
     /// Isaac attacks a Gryphon while the others defend, and his plan's rolls
-    /// (Battle_Random in BattleActionRun_Build) are answered 1 for the miss
+    /// (gmBattleRandom in btActionRunBuild) are answered 1 for the miss
     /// and 0 for the critical hit: the field clears to the two, the camera
     /// zooms in over the run up and the blow lands as the ring and spark
     /// effect, as `battle/critical.gif`. Kept from his action to the next.
@@ -995,7 +995,7 @@ impl<'a> Guide<'a> {
         let (frames, acts) =
             self.commanded_round(GRYPHONS, &commands, &mut |_| {}, &mut |call| match call {
                 Asked::Call {
-                    by: "BattleActionRun_Build",
+                    by: "btActionRunBuild",
                     actor: "Isaac",
                 } => {
                     asked += 1;
@@ -1012,8 +1012,8 @@ impl<'a> Guide<'a> {
 
     /// Mia uses a Healing Ring on Garet, hurt to a third of his HP, while
     /// the others defend against two Gryphons: the background dims while
-    /// Cure plays, and the ring's break roll (Battle_Random in
-    /// BattleStaging_RunItem, `& 7`) is answered 0, so it breaks, as
+    /// Cure plays, and the ring's break roll (gmBattleRandom in
+    /// btStagingRunItem, `& 7`) is answered 0, so it breaks, as
     /// `battle/item.gif`. Kept from Mia's action to the next.
     pub fn fight_item(&mut self) -> Result<(), String> {
         let commands = [
@@ -1053,7 +1053,7 @@ impl<'a> Guide<'a> {
             },
             &mut |asked| match asked {
                 Asked::Call {
-                    by: "BattleStaging_RunItem",
+                    by: "btStagingRunItem",
                     ..
                 } => {
                     broke += 1;
@@ -1070,7 +1070,7 @@ impl<'a> Guide<'a> {
     }
 
     /// A Rat Soldier runs: the four defend, its draw of an action answered
-    /// with Flee and BattleStaging_RunFlee's roll (Random16, 7 in 10 away)
+    /// with Flee and btStagingRunFlee's roll (Random16, 7 in 10 away)
     /// answered 0, so it gets away, as `battle/enemy-flees.gif`. Kept from a
     /// moment before its action to the next.
     pub fn fight_enemy_flees(&mut self) -> Result<(), String> {
@@ -1092,7 +1092,7 @@ impl<'a> Guide<'a> {
                     Some(ROLL_FLEE)
                 }
                 Asked::Call {
-                    by: "BattleStaging_RunFlee",
+                    by: "btStagingRunFlee",
                     ..
                 } => {
                     fled += 1;
@@ -1113,9 +1113,9 @@ impl<'a> Guide<'a> {
     /// the first menu has opened, as `battle/storm.gif`.
     pub fn fight_storm(&mut self) -> Result<(), String> {
         let menu = self
-            .sym("Battle_BuildPartyActions")
-            .or_else(|_| self.sym("Battle_BuildUnitActions"))?;
-        let message = self.sym("BattleMessage_ShowAndWait")?;
+            .sym("btBuildPartyActions")
+            .or_else(|_| self.sym("btBuildUnitActions"))?;
+        let message = self.sym("mnBattleMessageShowAndWait")?;
         let drive = self.party_drive(
             &[plan::ISAAC, plan::GARET, plan::IVAN, plan::MIA],
             FUSION_DRAGON,
@@ -1184,9 +1184,9 @@ const POISON_NORMAL: u8 = 1;
 const LAST_TURN: u8 = 1;
 /// enum BattleCommand, and the first enemy's place.
 const COMMAND_SUMMON: u16 = 6;
-/// gCharacter_LevelExpTable: 99 levels a character.
+/// CharacterLevelExpTable: 99 levels a character.
 const LEVELS: u32 = 99;
-/// The levels at which the Squire learns Psynergy (gClass_DefinitionTable).
+/// The levels at which the Squire learns Psynergy (ClassDefinitionTable).
 const SQUIRE_LEARNS: [u8; 9] = [2, 4, 6, 10, 13, 14, 20, 26, 42];
 /// Frames between presses of A while the spoils are handed out, so each
 /// message can be read.
@@ -1221,7 +1221,7 @@ impl<'a> Guide<'a> {
     /// Isaac and Garet at level 35 against two Gryphons that cannot fall
     /// and do nothing, for `turns` turns: in the first Isaac summons Venus
     /// with a Venus Djinni put on standby before the battle (taken off his
-    /// set as DjinnRecovery_Reconcile lists it) while Garet defends, and in
+    /// set as btDjinnRecoveryReconcile lists it) while Garet defends, and in
     /// each later turn both defend. `prepare` is called at the start of each
     /// turn, numbered from 1, before the commands are given.
     fn summon_turns(
@@ -1247,15 +1247,15 @@ impl<'a> Guide<'a> {
         else {
             return Err("Venus is no summon".into());
         };
-        let reconcile = self.sym("DjinnRecovery_Reconcile")?;
-        let commands = self.sym("Battle_CollectPartyCommands")?;
+        let reconcile = self.sym("btDjinnRecoveryReconcile")?;
+        let commands = self.sym("mnBattleCollectPartyCommands")?;
         let opponents = self
-            .sym("Battle_BuildEnemyActions")
+            .sym("btBuildEnemyActions")
             .or_else(|_| self.sym("Battle_BuildOpponentActions"))?;
-        let action_end = self.sym("BattleUnit_ProcessActionEnd")?;
-        let turn_end = self.sym("Battle_ProcessTurnEnd")?;
-        let dispatch = self.sym("BattleStaging_DispatchAction")?;
-        let random = self.sym("Battle_Random")?;
+        let action_end = self.sym("btUnitProcessActionEnd")?;
+        let turn_end = self.sym("btProcessTurnEnd")?;
+        let dispatch = self.sym("btStagingDispatchAction")?;
+        let random = self.sym("gmBattleRandom")?;
         let drive = self.party_drive(
             &[plan::ISAAC, plan::GARET],
             GRYPHONS,
@@ -1464,7 +1464,7 @@ impl<'a> Guide<'a> {
     pub fn fight_level_up(&mut self) -> Result<(), String> {
         let gained = self.message_number("MsgExpGained")?;
         let coins = self.message_number("MsgCoinsGained")?;
-        let table = self.sym("gCharacter_LevelExpTable")?;
+        let table = self.sym("CharacterLevelExpTable")?;
         let (place, stretch) = self.goma_cave_stretch()?;
         let mut entered = self.enter_goma_cave(place)?;
         let field = &mut entered.field;
@@ -1532,13 +1532,13 @@ impl<'a> Guide<'a> {
     /// CLEARED after the last, as `battle/lost.gif`.
     pub fn fight_lost(&mut self) -> Result<(), String> {
         let defeated = self.message_number("MsgPartyDefeated")?;
-        let enemies = self.sym("gEnemyUnits")?;
+        let enemies = self.sym("EnemyUnits")?;
         let (place, stretch) = self.goma_cave_stretch()?;
         let mut entered = self.enter_goma_cave(place)?;
         let field = &mut entered.field;
         // The restart point the story leaves on the way to Goma Cave: Vault
         // sets it to its Sanctum as the party enters (gScene_RestartRules).
-        let state = self.sym("gMainRoutineState")?;
+        let state = self.sym("MainRoutineStateWork")?;
         field.write16(
             state + STATE_RESTART_SCENE,
             super::source::map_id("Sanctum")?,

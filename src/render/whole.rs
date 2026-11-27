@@ -185,15 +185,15 @@ fn undelta(base: &[u8], d: &[u8]) -> Vec<u8> {
 /// sprite drawn there in any frame (with none, no sky above it).
 ///
 /// The picture the GBA draws on frame t is the one the game finished
-/// building in the frame before (its frame counter, gFrameCount, then as at
-/// t - 1; the VBlank handler copies it once gFrameRenderPending is set).
+/// building in the frame before (its frame counter, TickCount, then as at
+/// t - 1; the VBlank handler copies it once TickRenderPending is set).
 /// Each view is pinned from a state before the game began that frame, LEAD
 /// frames before t or earlier, so the game builds the whole picture at the
 /// pinned view, and is run until the game has built it, holding the keys
 /// the run held on each of those frames (the game reads them every VBlank).
 /// Seen from somewhere else, the game can take longer over a frame than the
 /// GBA gives it, which only delays the picture: the game's frames are the
-/// same ones, and the random seed (gRandomSeed) must then be as the game
+/// same ones, and the random seed (RandomSeed) must then be as the game
 /// left it, or the pinned view has changed what happened. No view is pinned
 /// from one side of a change made from outside the game (Field::cut) and
 /// drawn on the other.
@@ -340,14 +340,14 @@ fn stitch_uncut(
 
 /// Whether the game finished a frame between two states, the second a blank
 /// or more after the first: its picture is waiting at the second
-/// (gFrameRenderPending), and was not at the first or the frame counter has
+/// (TickRenderPending), and was not at the first or the frame counter has
 /// moved on since.
 fn completes(before: Mark, after: Mark) -> bool {
     after.1 && (!before.1 || after.0 != before.0)
 }
 
-/// A state's frame counter (gFrameCount), whether the game had finished
-/// its frame (gFrameRenderPending set) and its random seed (gRandomSeed).
+/// A state's frame counter (TickCount), whether the game had finished
+/// its frame (TickRenderPending set) and its random seed (RandomSeed).
 type Mark = (u32, bool, u32);
 
 /// Each state's mark: its frame counter, whether the game had finished its

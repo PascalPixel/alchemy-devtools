@@ -234,7 +234,7 @@ mod tests {
     fn a_map_is_whole_once_it_reaches_its_output_line() {
         assert!(map_is_whole(b"Memory map\nLOAD a.o\nOUTPUT(out/tla-en/tla-en.elf elf32-littlearm)\nLOAD linker stubs\n"));
         assert!(!map_is_whole(
-            b"Memory map\nLOAD a.o\n .text 0x0800 MainRoutineState_InitializeDefaults"
+            b"Memory map\nLOAD a.o\n .text 0x0800 gmMainRoutineStateInitDefaults"
         ));
     }
 

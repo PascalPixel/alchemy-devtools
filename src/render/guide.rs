@@ -539,7 +539,7 @@ const FIELD_CASTS: &[FieldCast] = &[
 ];
 
 /// A field cast read through the source: the ability's number and name
-/// (gAbilityDefinitions), the map's number, its area name there (scene), and the
+/// (AbilityDefinitions), the map's number, its area name there (scene), and the
 /// actor's id.
 struct Cast {
     id: u16,
@@ -579,7 +579,7 @@ fn field_casts() -> Result<Vec<Cast>, String> {
 const CAST_FRAMES: usize = 1800;
 
 /// A field scene entered for a recording: the field with the player in
-/// control, and the moment Scene_ApplyEntrance placed the party, from which
+/// control, and the moment fdApplyEntrance placed the party, from which
 /// an event starts with the leader already at its spot and the camera on
 /// him.
 pub struct Entered<'a> {

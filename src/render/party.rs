@@ -4,7 +4,7 @@
 //! A run starts from a new game's defaults (Isaac alone, level 1), so a
 //! scene of Altin Peak would show him fighting its water beast alone. Each
 //! scene instead takes a chapter of the story: one of Camelot's own debug
-//! parameter sets (DebugParameterSet_Load, gDebug_ParameterSets in games/tbs/src/battle/debug_parameter_sets.c),
+//! parameter sets (btDebugParmSetLoad, DebugParameterSets in games/tbs/src/battle/debug_parameter_sets.c),
 //! which raises each member to a level and gives them Djinn, Psynergy and
 //! equipment, and the preset's members. Presets 10 to 70 follow the story:
 //! Isaac, Garet and Jenna at level 1 or 2, Isaac and Garet at 3, Ivan
@@ -23,7 +23,7 @@
 use super::source;
 use std::sync::OnceLock;
 
-/// One stretch of the story: the maps it covers, as runs of gScenes
+/// One stretch of the story: the maps it covers, as runs of ScenesWork
 /// from one SceneId_ to another, the debug preset that sets the party's
 /// strength (none for a new game's level 1), and the members it names
 /// (character_ids.h) where the party is not the preset's.
@@ -331,14 +331,14 @@ pub fn lineup(
     }))
 }
 
-/// The Lost Age's debug parameter sets (gDebug_ParameterSets in
+/// The Lost Age's debug parameter sets (DebugParameterSets in
 /// games/tla/src/battle/debug_parameter_sets.c): each set's members, in its
 /// rows' order, the sets parted by a row whose owner is
 /// DEBUG_PARAMETER_SET_END, as DebugParty_LoadPreset counts them.
 fn tla_sets(text: &str) -> Vec<Vec<u8>> {
     let mut sets = vec![Vec::new()];
     let rows = text
-        .split_once("gDebug_ParameterSets[]")
+        .split_once("DebugParameterSets[]")
         .map_or("", |(_, rows)| rows);
     for line in rows.lines() {
         let Some(owner) = line.trim().strip_prefix(".owner = ") else {
@@ -417,7 +417,7 @@ mod tests {
 
     #[test]
     fn the_lost_age_s_debug_sets_part_at_owner_minus_one() {
-        let text = "struct DebugPartyEntry gDebug_ParameterSets[] ALIGNED(4) = {\n    {\n        .owner = FELIX,\n        .level = 90,\n    },\n    {\n        .owner = DEBUG_PARAMETER_SET_END,\n    },\n    {\n        .owner = JENNA,\n    },\n    {\n        .owner = FELIX,\n    },\n};\n";
+        let text = "struct DebugPartyEntry DebugParameterSets[] ALIGNED(4) = {\n    {\n        .owner = FELIX,\n        .level = 90,\n    },\n    {\n        .owner = DEBUG_PARAMETER_SET_END,\n    },\n    {\n        .owner = JENNA,\n    },\n    {\n        .owner = FELIX,\n    },\n};\n";
         assert_eq!(tla_sets(text), vec![vec![4], vec![5, 4]]);
         // The checkout's: set 7 is Felix, Jenna and Sheba, set 19 the four
         // once Piers has joined.

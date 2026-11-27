@@ -77,7 +77,7 @@ pub(crate) fn linked_source(root: &Path, output: &Path, overlay: &str) -> Result
 }
 
 /// The overlay's code as the game loads it: its stream in the reference ROM,
-/// found through the main image's `Resource_DirectoryTable`, unpacked, and
+/// found through the main image's `syResourceDirectoryTable`, unpacked, and
 /// its calls restored.
 pub(crate) fn unpacked(rom: &[u8], main_map: &Map, overlay: &str) -> Result<Vec<u8>, String> {
     let index = usize::from_str_radix(
@@ -88,8 +88,8 @@ pub(crate) fn unpacked(rom: &[u8], main_map: &Map, overlay: &str) -> Result<Vec<
     )
     .map_err(|_| "invalid overlay id")?;
     let (section, address) = main_map
-        .symbol("Resource_DirectoryTable")
-        .ok_or("the main map has no Resource_DirectoryTable")?;
+        .symbol("syResourceDirectoryTable")
+        .ok_or("the main map has no syResourceDirectoryTable")?;
     if !section.loaded || section.load < ROM {
         return Err("resource directory has no ROM placement".into());
     }
@@ -280,7 +280,7 @@ mod tests {
                 size: 24,
                 load: ROM + 0x20,
                 loaded: true,
-                symbols: vec![(ROM + 0x20, "Resource_DirectoryTable".into())],
+                symbols: vec![(ROM + 0x20, "syResourceDirectoryTable".into())],
                 output: None,
             }],
             outputs: Vec::new(),

@@ -1,5 +1,5 @@
 //! One cast, recorded from a built edition: the run boots the ROM, sends
-//! control to Camelot's battle test menu (DebugBattle_RunMenu) instead of the
+//! control to Camelot's battle test menu (btDebugBattleRunMenu) instead of the
 //! title, and steers the battle it starts through RAM and registers at a few
 //! function entries named by the linker map: the party, characters copied
 //! onto the enemy side as a link battle does, the action the command menu
@@ -8,7 +8,7 @@
 //! command phase or the battle's end.
 //!
 //! The battlefield shows the battle's own background, another picture put
-//! in its place as BattleBackground_Load would leave it (which the game then
+//! in its place as btBackgroundLoad would leave it (which the game then
 //! draws, scrolls, darkens and blends itself), or no picture and a backdrop
 //! colour for each line. The windows are drawn in greys of their colours'
 //! lightness. The backdrop colours and the greys change the picture alone:
@@ -66,9 +66,9 @@ const FIRST_ENEMY_UNIT: u32 = 128;
 const ENEMY_UNITS: u32 = 6;
 /// BG palettes 6 to 13, the battle background's (BATTLE_BG_PALETTE).
 const BATTLE_BG_PALETTE: u32 = 0x0500_00c0;
-/// BattleBackground_Load's darkening step, BACKGROUND_LEVEL_STEP.
+/// btBackgroundLoad's darkening step, BACKGROUND_LEVEL_STEP.
 const LEVEL_STEP: i32 = 1092;
-/// gBattleState->events.phase; PLAY_ADVANCE (5) shows the playback arrow.
+/// BattleStateWork->events.phase; PLAY_ADVANCE (5) shows the playback arrow.
 const PLAY_ADVANCE: u32 = 5;
 const PLACE_PARTY: u16 = 0x100;
 const PLACE_ENEMY: u16 = 0x180;
@@ -76,7 +76,7 @@ const PLACE_ENEMY: u16 = 0x180;
 /// map in screen block 31.
 const PICTURE: std::ops::Range<u32> = 0x0600_8000..0x0600_f800;
 /// The window colours, as BG palette entries: palette 15's colours 4 to 10,
-/// which WindowColor_Apply sets from the player's window hue and brightness;
+/// which mnWindowColApply sets from the player's window hue and brightness;
 /// palette 14's, palette 15 brightened for a chosen window
 /// (Palette_UpdatePulseBrightness); palette 5's colour 14, which the battle
 /// copies from colour 4 for the status windows' HP and PP (background.c), and
@@ -135,7 +135,7 @@ pub struct Symbols {
     game_state: u32,
     game_flags: u32,
     owner_states: u32,
-    /// The characters' unit records, one after another (gCharacterUnits).
+    /// The characters' unit records, one after another (CharacterUnits).
     owners: u32,
     /// Whether the chooser loads a preset before it waits for A, which lets
     /// Down go (the layout's, by game).
@@ -155,7 +155,7 @@ impl Symbols {
     /// for first and The Lost Age's second (DebugParty_LoadPreset,
     /// Battle_RunEncounter, gOwnerStates), the name its source should
     /// change; the battle's state and the enemies' units it reaches through
-    /// gHeapSlots.
+    /// HeapSlots.
     pub fn find_for(map: &Map, b: super::layout::BattleLayout) -> Result<Symbols, String> {
         let find = |name: &str| map.symbol(name).map(|(_, a)| a & !1);
         let at = |name: &str| find(name).ok_or_else(|| format!("the map has no {name}"));
@@ -166,29 +166,29 @@ impl Symbols {
         };
         let slot = |name: &str, offset: u32| {
             find(name)
-                .or_else(|| find("gHeapSlots").map(|slots| slots + offset))
-                .ok_or_else(|| format!("the map has no {name} (nor gHeapSlots)"))
+                .or_else(|| find("HeapSlots").map(|slots| slots + offset))
+                .ok_or_else(|| format!("the map has no {name} (nor HeapSlots)"))
         };
         Ok(Symbols {
-            start: at("MainRoutine_RunFar")?,
-            menu: at("DebugBattle_RunMenu")?,
-            preset: either("DebugParameterSet_Load", "DebugParty_LoadPreset")?,
-            encounter: either("Battle_Run", "Battle_RunEncounter")?,
-            collect: at("BattleUnit_Collect")?,
-            obj_make: at("BattleObject_Make")?,
-            background: at("BattleBackground_Load")?,
-            build: at("Battle_GatherActions")?,
-            commands: at("Battle_CollectPartyCommands")?,
-            opponents: either("Battle_BuildEnemyActions", "Battle_BuildOpponentActions")?,
-            dispatch: at("BattleStaging_DispatchAction")?,
-            wait_advance: at("BattleMessage_WaitForAdvance")?,
-            message: at("BattleMessage_ShowAndWait")?,
-            battle_over: at("Battle_ClearSerialTransferPayload")?,
-            battle_state: slot("gBattleState", b.heap_battle)?,
-            game_state: at("gMainRoutineState")?,
-            game_flags: at("gGameFlagBytes")?,
-            owner_states: slot("gEnemyUnits", b.heap_enemy_units)?,
-            owners: either("gCharacterUnits", "gOwnerStates")?,
+            start: at("gmMainRoutineRunStub")?,
+            menu: at("btDebugBattleRunMenu")?,
+            preset: either("btDebugParmSetLoad", "DebugParty_LoadPreset")?,
+            encounter: either("btRun", "Battle_RunEncounter")?,
+            collect: at("btUnitCollect")?,
+            obj_make: at("btObjectMake")?,
+            background: at("btBackgroundLoad")?,
+            build: at("btGatherActions")?,
+            commands: at("mnBattleCollectPartyCommands")?,
+            opponents: either("btBuildEnemyActions", "Battle_BuildOpponentActions")?,
+            dispatch: at("btStagingDispatchAction")?,
+            wait_advance: at("btMessageWaitForAdvance")?,
+            message: at("mnBattleMessageShowAndWait")?,
+            battle_over: at("btClearSerialTransferPayload")?,
+            battle_state: slot("BattleStateWork", b.heap_battle)?,
+            game_state: at("MainRoutineStateWork")?,
+            game_flags: at("GameFlagBytes")?,
+            owner_states: slot("EnemyUnits", b.heap_enemy_units)?,
+            owners: either("CharacterUnits", "gOwnerStates")?,
             preset_first: b.preset_first,
             b,
         })
@@ -214,7 +214,7 @@ enum Phase {
     Boot,
     /// The menu's chooser, waiting for A.
     Chooser,
-    /// Battle_Run has started.
+    /// btRun has started.
     Battle,
     /// The units are set; A through the opening message.
     Intro,
@@ -238,7 +238,7 @@ pub enum Scene {
     Picture(Background),
 }
 
-/// A battle background as BattleBackground_Load leaves it: the picture's
+/// A battle background as btBackgroundLoad leaves it: the picture's
 /// 256-colour pixels in character blocks 2 and 3, and its 128 colours, which
 /// BattleState.palette keeps and BG palettes 6 to 13 show.
 pub struct Background {
@@ -381,11 +381,7 @@ fn record_run(
             // The chooser loads preset 0 first: load ours instead.
             say(
                 frame,
-                format!(
-                    "DebugParameterSet_Load({}) -> {}",
-                    gba.register(0),
-                    cast.preset
-                ),
+                format!("btDebugParmSetLoad({}) -> {}", gba.register(0), cast.preset),
             );
             gba.set_register(0, cast.preset.into());
             hold_down = false;
@@ -526,7 +522,12 @@ fn record_run(
             // sky of their own.
             let state = gba.read32(s.battle_state);
             if background_id == u32::from(gba.read16(state + s.b.battle_background)) {
-                say(frame, format!("BattleBackground_Load({background_id:#x}, level {background_level}) returned"));
+                say(
+                    frame,
+                    format!(
+                        "btBackgroundLoad({background_id:#x}, level {background_level}) returned"
+                    ),
+                );
                 match scene {
                     Scene::Game => {}
                     Scene::Lines(_) => {
@@ -544,7 +545,7 @@ fn record_run(
                         for (i, &c) in picture.palette.iter().enumerate() {
                             gba.write16(state + s.b.battle_palette + 2 * i as u32, c);
                         }
-                        // As BattleBackground_Load darkens it, unless the
+                        // As btBackgroundLoad darkens it, unless the
                         // level is negative.
                         if background_level >= 0 {
                             let brightness = 0x10000 - background_level * LEVEL_STEP;
@@ -596,7 +597,7 @@ fn record_run(
             obj_unit = gba.register(1);
             obj_return = gba.register(LR) & !1;
         } else if obj_return != 0 && pc == obj_return {
-            // BattleObject_Make gives a character on the enemy side palette 1,
+            // btObjectMake gives a character on the enemy side palette 1,
             // the link opponent's colours: draw it in its own.
             if obj_unit >= FIRST_ENEMY_UNIT && !cast.foes.is_empty() {
                 gba.write32(obj_actor + s.b.obj_palette, 0);
@@ -609,7 +610,7 @@ fn record_run(
             say(
                 frame,
                 format!(
-                    "BattleObject_Make unit {obj_unit}: classId {}, classIndex {}, sprite {}, weapon sprite {}, palette {}",
+                    "btObjectMake unit {obj_unit}: classId {}, classIndex {}, sprite {}, weapon sprite {}, palette {}",
                     gba.read8(unit + s.b.unit_class_id),
                     gba.read8(unit + s.b.unit_class_index),
                     gba.read16(obj_actor + s.b.obj_resource),
@@ -628,7 +629,7 @@ fn record_run(
             phase = Phase::Menu;
             recording = true;
         } else if phase == Phase::Intro && pc == s.commands {
-            // The command menu (Battle_CollectPartyCommands, reached through
+            // The command menu (mnBattleCollectPartyCommands, reached through
             // its far stub): fill in the first command record and return one
             // command.
             let record = gba.register(0);
@@ -682,11 +683,11 @@ fn record_run(
             // The enemies' actions: none.
             gba.return_now(0);
         } else if phase == Phase::Commanded && pc == s.dispatch {
-            say(frame, "BattleStaging_DispatchAction".to_string());
+            say(frame, "btStagingDispatchAction".to_string());
             dispatch_return = gba.register(LR) & !1;
             phase = Phase::Playing;
         } else if phase == Phase::Playing && pc == s.message && !recording {
-            // The plan shows `<unit> casts <ability>!` (BattleActionRun_Build)
+            // The plan shows `<unit> casts <ability>!` (btActionRunBuild)
             // once the camera has turned from the command view to the cast's.
             say(frame, "the cast's message: recording".to_string());
             recording = true;
@@ -738,7 +739,7 @@ fn record_run(
         }
         // The player: Down from power-on; A every other four frames in the
         // chooser and through the opening message; then A once a prompt has
-        // waited: BattleMessage_WaitForAdvance, or the playback task's
+        // waited: btMessageWaitForAdvance, or the playback task's
         // arrow.
         let state = if phase >= Phase::Battle {
             gba.read32(s.battle_state)

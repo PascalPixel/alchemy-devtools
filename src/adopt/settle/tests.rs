@@ -160,7 +160,7 @@ fn views_that_move_nothing_go_and_the_rest_say_what_moved() {
     assert_eq!(solved.kept.len(), 1);
     assert_eq!(solved.kept[0].2, ["Use"]);
     // The kept marker is written as clang-format wraps it, and read again whole.
-    assert!(solved.text.contains("/* VIEW(b): static Twice as Twice__b; a has static int Twice(int x) { return x +\n * x; }; tried with the definition the rest of the object has, Use moves: 4 of\n * 61 instructions in tla-en. */\nstatic int Twice__b"), "{}", solved.text);
+    assert!(solved.text.contains("/* VIEW(b): static Twice as Twice__b; a has static int Twice(int x) { return x +\n   x; }; tried with the definition the rest of the object has, Use moves: 4 of\n   61 instructions in tla-en. */\nstatic int Twice__b"), "{}", solved.text);
     assert_eq!(markers(&solved.text)[0].marker, "/* VIEW(b): static Twice as Twice__b; a has static int Twice(int x) { return x + x; }; tried with the definition the rest of the object has, Use moves: 4 of 61 instructions in tla-en. */");
     assert!(
         markers(&solved.text).len() == 1
@@ -174,7 +174,7 @@ fn views_that_move_nothing_go_and_the_rest_say_what_moved() {
         "tried as before, Use moves",
     );
     assert!(
-        again.contains("{ return x +\n * x; }; tried as before, Use moves. */\nstatic"),
+        again.contains("{ return x +\n   x; }; tried as before, Use moves. */\nstatic"),
         "{again}"
     );
     // Where the definition's declaration moves code, the object's own is tried.
@@ -282,8 +282,8 @@ fn a_view_that_could_not_be_tried_says_why() {
         view,
         "not tried: F's definition holds a FAKEMATCH tag",
     );
-    assert_eq!(noted, "/* VIEW(b): static F as F__b; a has static int F(int x); not tried: F's\n * definition holds a FAKEMATCH tag. */\n");
-    assert_eq!(annotate(&noted, &markers(&noted)[0], "tried as before, F moves"), "/* VIEW(b): static F as F__b; a has static int F(int x); tried as before, F\n * moves. */\n");
+    assert_eq!(noted, "/* VIEW(b): static F as F__b; a has static int F(int x); not tried: F's\n   definition holds a FAKEMATCH tag. */\n");
+    assert_eq!(annotate(&noted, &markers(&noted)[0], "tried as before, F moves"), "/* VIEW(b): static F as F__b; a has static int F(int x); tried as before, F\n   moves. */\n");
 }
 
 #[test]
@@ -395,12 +395,12 @@ fn a_static_taken_away_is_judged_under_its_plain_name() {
     );
 }
 
-/// clang-format wraps a long marker over comment lines; it is read as the
-/// one line it was written as, and a kept marker is written back the way
-/// clang-format would wrap it, `*/` on a line of its own where it does not fit.
+/// A long marker is wrapped over comment lines; it is read as the one line it
+/// was written as, and a kept marker is written back wrapped as the checkout
+/// wraps its comments, `*/` on a line of its own where it does not fit.
 #[test]
 fn a_wrapped_marker_is_read_whole_and_written_as_clang_format_wraps_it() {
-    let text = "int x;\n/* VIEW(shop): routine Actor_GetByIdFar as void *Actor_GetByIdFar(s32 id);\n * gamepak/far_call/field_sequence.h has struct Actor *Actor_GetByIdFar(s32 id).\n */\nextern void *Actor_GetByIdFar__shop(s32 id) __asm__(\"Actor_GetByIdFar\");\n";
+    let text = "int x;\n/* VIEW(shop): routine Actor_GetByIdFar as void *Actor_GetByIdFar(s32 id);\n   gamepak/far_call/field_sequence.h has struct Actor *Actor_GetByIdFar(s32 id).\n */\nextern void *Actor_GetByIdFar__shop(s32 id) __asm__(\"Actor_GetByIdFar\");\n";
     let found = spans(text);
     assert_eq!(found.len(), 1);
     let (first, last, view) = &found[0];
@@ -423,7 +423,7 @@ fn a_wrapped_marker_is_read_whole_and_written_as_clang_format_wraps_it() {
     // Keyed while it is settled, then given back as it was written.
     let (keyed_text, keyed_views) = keyed(text, std::slice::from_ref(view));
     // Its further lines stand in place, so every other line keeps its number.
-    assert_eq!(keyed_text, "int x;\n/* VIEW#0 */\n /* continued VIEW */\n /* continued VIEW */\nextern void *Actor_GetByIdFar__shop(s32 id) __asm__(\"Actor_GetByIdFar\");\n");
+    assert_eq!(keyed_text, "int x;\n/* VIEW#0 */\n   /* continued VIEW */\n /* continued VIEW */\nextern void *Actor_GetByIdFar__shop(s32 id) __asm__(\"Actor_GetByIdFar\");\n");
     assert_eq!(unkeyed(&keyed_text, &keyed_views), text);
     // Taken away, all its lines go.
     let removed = apply(text, view, &Choice::Remove).unwrap();
@@ -499,7 +499,7 @@ fn a_view_in_a_part_file_is_settled_across_its_object_s_files() {
     let back = bundle::split(&solved.text);
     assert_eq!(back[0].1, object);
     assert_eq!(back[2].1, two);
-    assert!(back[1].1.starts_with("/* VIEW(event): routine Go as void Go(u32 objectId); field/event.h has void\n * Go(s32 actorId); tried as the rest of the object declares it, Use moves: 4 of\n * 61 instructions in tla-en. */\nvoid Go__event"), "{}", back[1].1);
+    assert!(back[1].1.starts_with("/* VIEW(event): routine Go as void Go(u32 objectId); field/event.h has void\n   Go(s32 actorId); tried as the rest of the object declares it, Use moves: 4 of\n   61 instructions in tla-en. */\nvoid Go__event"), "{}", back[1].1);
     assert_eq!(markers(&back[1].1).len(), 1);
 }
 

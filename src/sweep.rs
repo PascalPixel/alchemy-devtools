@@ -381,12 +381,12 @@ mod tests {
     #[test]
     fn a_tag_taken_out_names_its_row() {
         // The Broken Seal's row for this routine: one dead.
-        let path = "games/tbs/include/system/serial.h";
-        let original = "void Serial_ResetTransferState(void) {\n  state = 0;\n  /* FAKEMATCH(dead): state set again. */\n  state = 0;\n}\n";
+        let path = "games/tbs/src/game/game_units.c";
+        let original = "void gmUnitGet(void) {\n  state = 0;\n  /* FAKEMATCH(dead): state set again. */\n  state = 0;\n}\n";
         let kept = without(original, &(2..4));
         assert_eq!(
             rows_taken_out(path, original, &kept).unwrap(),
-            ["Serial_ResetTransferState (FAKEMATCH(dead))"]
+            ["gmUnitGet (FAKEMATCH(dead))"]
         );
         assert!(rows_taken_out(path, original, original).unwrap().is_empty());
         assert!(

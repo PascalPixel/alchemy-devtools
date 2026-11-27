@@ -53,8 +53,9 @@ const RESERVED: &str = r"(?i)\b(?:sub|add) sp\b|\b\d+ bytes\b";
 /// ...and that no instruction touches them.
 const UNTOUCHED: &str =
     r"(?i)\buntouched\b|\bnever touch(?:es|ed)?\b|\bno instruction (?:addresses|reads|touches)\b";
-/// A routine named as evidence: ours (`Module_Name`) or a placeholder.
-const ROUTINE: &str = r"\b(?:[A-Z][A-Za-z0-9]*_[A-Z][A-Za-z0-9]*|(?:Func|sub)_[0-9a-f]{8})\b";
+/// A routine named as evidence: ours, in SGL's style with its owner's two
+/// letters (`btEffectRunKirin`) or as `Module_Name`, or a placeholder.
+const ROUTINE: &str = r"\b(?:(?:sy|sl|bt|fd|mn|gm|sc|db)[A-Z][A-Za-z0-9]*|[A-Z][A-Za-z0-9]*_[A-Z][A-Za-z0-9]*|(?:Func|sub)_[0-9a-f]{8})\b";
 /// A reconstructed family's macro, named as evidence.
 const FAMILY: &str = r"(?i:\b(?:macro|helper)\b).*\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b|\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b.*(?i:\b(?:macro|helper)\b)";
 /// A claim about another edition, by word...
@@ -670,9 +671,12 @@ pub fn findings(path: &str, source: &str, rows: &[Measurement]) -> (Tags, Vec<Fi
                     message: "a tag outside any function".to_string(),
                 }),
             }
-        } else if token.kind == Kind::Comment && token.text.starts_with("// DEAD:") {
-            // A mark goes on through the `//` comments right after it until
-            // its sentence ends.
+        } else if token.kind == Kind::Comment
+            && (token.text.starts_with("// DEAD:") || token.text.starts_with("/* DEAD:"))
+        {
+            // A mark, `//` or a block comment as SGL's code writes it, goes
+            // on through the `//` comments right after it until its sentence
+            // ends.
             let mut comments = vec![token.text];
             while !plain(&comments).ends_with('.')
                 && tokens.get(at + 1).is_some_and(|t| {
@@ -1697,9 +1701,11 @@ static int H(int x) { return x; }
             (cut.fakematch, cut.leftover),
             (full.fakematch, full.leftover)
         );
+        // An asm tag carries no measurement, so it has no row (S2).
+        let asm = cut.kinds[DEVICES.iter().position(|kind| *kind == ASM).unwrap()];
         assert_eq!(
             (cut.in_source, cut.in_evidence),
-            (0, cut.fakematch + cut.leftover),
+            (0, cut.fakematch + cut.leftover - asm),
             "every tag finds its row"
         );
         // A tag that misses S2's form in full misses it in its row, and a

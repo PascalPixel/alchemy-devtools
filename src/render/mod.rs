@@ -120,7 +120,7 @@ in battle that the party learns (its classes and the items that teach one),
 and lists the rest with why they are left out; --ability casts one by id or
 English name. --list prints the casts instead of playing them; --verbose
 prints each run's setup: the party, the units' classes and the sprites
-BattleObject_Make picks. --unlearned lets --ability name one no party list teaches,
+btObjectMake picks. --unlearned lets --ability name one no party list teaches,
 or one only enemies use (Fusion Dragon's Outer Space and Dragon Driver),
 cast by its element's character like the rest.
 
@@ -644,8 +644,8 @@ raised trigger, a row nothing calls, a spot the leader cannot walk to) is
 started directly, where the scene's arrival leaves the leader: the field
 sequence raises a trigger no scene answers and, where it would run that
 trigger's row, runs the event's own function, or a message row's message
-as a row's dispatch shows it (Event_Start, Event_SetMessageId,
-Event_ShowMessageAndWait, Event_End), before and after each of the scene's
+as a row's dispatch shows it (fdScriptStart, fdScriptSetMessageId,
+fdScriptShowMessageAndWait, fdScriptEnd), before and after each of the scene's
 other events. Such a start counts only when it speaks, moves someone,
 fights or leaves, or when its last picture differs from the same moment
 played as long with nothing started by at least one pixel in a hundred.
@@ -705,8 +705,8 @@ With ALCHEMY_RENDER_DEBUG, each walk prints the keys held, as MOMENT_HOLD
 (render guide) takes them.
 
 An event's own function that does nothing unless story flags hold (its
-whole body inside `if (GameFlag_Get(F) && !GameFlag_Get(G)) { ... }`, or
-after `if (!Event_GetFlag(F)) return;`) is played with those flags, read
+whole body inside `if (gmFlagGet(F) && !gmFlagGet(G)) { ... }`, or
+after `if (!fdScriptGetFlag(F)) return;`) is played with those flags, read
 from the scene's source, as its row's condition is: the shipwrights stop
 the party only once it is reunited at Contigo. A Psynergy row for any
 target (PSYNERGY_ANYWHERE) is a cast anywhere. A cast anywhere, or on a
@@ -768,7 +768,7 @@ staged:
     file holds the second event alone.
   --party NAME,...: the party is these members, in order, the first
     leading; in The Lost Age at the strength of the first of the story's
-    debug sets that holds them all (gDebug_ParameterSets).
+    debug sets that holds them all (DebugParameterSets).
   A pad script's step may be cast:ABILITY (cast:hover, cast:burst): the
     Psynergy is cast where the leader stands and faces, through the
     game's own cast path (FieldState.psynergy, as a shortcut key casts it,
@@ -776,14 +776,14 @@ staged:
     north, east, south or west after it for 60 frames (cast:move:east,
     Move steered), cast:ABILITY:WAY:N for N. The ability is ability_ids.h's
     (hover, HOVER or ABILITY_HOVER). The way is pressed once the cast's
-    hand grips (Move's and Carry's hands read the d-pad, Input_GetDpadAngle,
+    hand grips (Move's and Carry's hands read the d-pad, fdInputGetDpadAng,
     once the cast's animation is over and the hand is on its target), as a
     player presses it, and a hand still waiting once the way is over is
     let go with B. Move's hand takes the actor of the scene's Move row in
     reach of the way he faces (Scene_SelectPsynergyTarget: within its
     reach and height, and in front beyond 11 pixels); the note says which
     actor it took, where it stood and whether it moved, or that it took
-    nothing (FieldPsynergy_Move) and where each actor of the scene's Move
+    nothing (fdPsynergyMove) and where each actor of the scene's Move
     rows stands from him: how far, how far above, how far off his facing.
   --first-at X,Y[,LAYER], --first-face WAY, --first-hold KEYS:N,...,
     --first-then KEYS:N,...: the start, the way faced and the keys of the
@@ -832,7 +832,7 @@ staged:
     him on the second level by its pillars).
   --arrive-as after-battle: a staged walk arrives as after a battle fought
     where it starts: there the game's own actor snapshot is taken
-    (Actor_Snapshot, ActorTable_Snapshot) and the scene entered again
+    (fdActorSnapshot, fdActorTableSnapshot) and the scene entered again
     with FLAG_KEEP_PARTY_POSITION (a warp's exit), so its after-battle
     branches run and the leader is put back as he was. --set
     FLAG_KEEP_PARTY_POSITION alone has no battle before it: the run starts
@@ -841,7 +841,7 @@ staged:
     his sprite cut. `entrance`, the default, arrives by the way in.
   --until FUNCTION: a staged walk plays on after its keys, the player
     still, until the game reaches that function of the scene's overlay by
-    itself (a fireball bursting a cracked pillar, MagmaRock_BurstCrackedPillar; a
+    itself (a fireball bursting a cracked pillar, scMagmaRockBurstCrackedPillar; a
     fireball carrying Felix, MarsLighthouseEntrance_RideFireball), and
     three seconds past it, within --limit; the note says when, or that it
     never came, and the run is written either way.
@@ -871,7 +871,7 @@ higher up), or the map's whole bounds when none does. --scene's scenes
 are where an event several scenes share plays first, and alone when its
 start is staged; and --at beside cells of one of an event's touch rows
 plays that row (the weeds', not the stream bank's).
-The run's flags are set again as each scene is arrived at (Scene_Arrive
+The run's flags are set again as each scene is arrived at (gmArrive
 clears the area's flags as the party enters a new area), so a scene's
 initialization reads them (Garoh's night). A cast whose row answers a
 later phase (Reveal wearing off) is waited for, the player still, for
@@ -1678,7 +1678,7 @@ const STORY_USAGE: &str = "usage: alchemy-devtools render story --flags flags.ts
 Plays a built ☀️ edition (make tbs-en) for The Broken Seal's front page and
 writes into DIR (default out/EDITION/story):
   world       world.png: the world map laid flat from its own planes,
-              WorldMap_UpdateCurrentTileBlock drawing every square, each
+              fdWorldMapUpdateCurrentTileBlock drawing every square, each
               drawn from whichever of its two graphics sets shows it
   title       title.gif and title.png: the Golden Sun logo card the title
               shows after the ending (its entrance 10), coming up and held
@@ -1756,9 +1756,9 @@ fn play_story(
     let mut failed = Vec::new();
     if wanted("world") {
         let update = map
-            .symbol("WorldMap_UpdateCurrentTileBlock")
+            .symbol("fdWorldMapUpdateCurrentTileBlock")
             .map(|(_, a)| a)
-            .ok_or("the map has no WorldMap_UpdateCurrentTileBlock")?;
+            .ok_or("the map has no fdWorldMapUpdateCurrentTileBlock")?;
         if let Err(e) = front.world(update) {
             eprintln!("world: {e}");
             failed.push("world");
@@ -1831,7 +1831,7 @@ Overlay addresses come from the environment, in hex: venus reads
 VENUS_OCCLUDER (the function above; VENUS_PILLAR and VENUS_LEADER, x,z in
 pixels, move the pillar and the leader, VENUS_SEARCH tries the floors'
 pillars until one makes it run), venus-sockets-a VENUS_ROUTE (a light's
-arrival at a socket) and VENUS_START (Actor_StartScript). Recordings are
+arrival at a socket) and VENUS_START (fdActorStartScript). Recordings are
 evidence kept beside what is printed: `render check` judges one before it is
 published. --only picks some; flags.tsv is the story tools' flag names.";
 

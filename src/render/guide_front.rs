@@ -210,7 +210,7 @@ impl<'a> Guide<'a> {
     }
 
     /// From the world map into Vale's gate, a new area, whose area
-    /// name shows on arrival (AreaNameWindow_Show).
+    /// name shows on arrival (mnAreaNameWindowShow).
     fn front_area_name(&mut self) -> Result<(), String> {
         let mut entered = self.enter_with(WORLD_MAP, &[])?;
         // The field leaves the area name out of every other recording.
@@ -380,11 +380,11 @@ impl<'a> Guide<'a> {
         self.front_gif("front/vault-thieves.gif", &cut, "the thieves in Vault's inn: the loft, the battle's opening and end, and the loft after")
     }
 
-    /// The debug map selector in Vale with gDebugMode set: Start pressed
+    /// The debug map selector in Vale with DebugMode set: Start pressed
     /// with B held (FieldSequence_Run), the map stepped down `steps` times from Vale's
     /// number with Left, then A, which takes the party there.
     fn selector(&mut self, steps: u32, tail: u32) -> Result<Vec<Vec<u16>>, String> {
-        let mode = self.sym("gDebugMode")?;
+        let mode = self.sym("DebugMode")?;
         let mut entered = self.enter_with(VALE, &[])?;
         let field = &mut entered.field;
         field.write8(mode, 1);

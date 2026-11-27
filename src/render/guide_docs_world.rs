@@ -159,9 +159,9 @@ impl Guide<'_> {
         };
         let mut field = Field::enter(self.rom, self.symbols, &setup)?;
         // VenusLighthouseAerie_ShowGroupEmote pops each one's bubble through
-        // Actor_ShowEmote, Actor_ShowEmoteById.
+        // Actor_ShowEmote, fdActorShowEmoteById.
         let emote = self
-            .sym("Actor_ShowEmoteById")
+            .sym("fdActorShowEmoteById")
             .or_else(|_| self.sym("FieldEffect_SpawnAttached"))?;
         let reacted = std::rc::Rc::new(std::cell::Cell::new(false));
         let seen = reacted.clone();

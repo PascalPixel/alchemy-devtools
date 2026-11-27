@@ -238,20 +238,20 @@ impl<'a> Guide<'a> {
                 // byte or nibble that holds it) while scenes after the
                 // eruption and after the chase in Vault's inn play.
                 let tests = [
-                    at("GameFlag_Get")?,
-                    at("GameFlag_Toggle")?,
-                    at("GameFlag_GetByte")?,
-                    at("GameFlag_GetNibble")?,
-                    at("GameFlag_IncrementByte")?,
-                    at("GameFlag_DecrementByte")?,
+                    at("gmFlagGet")?,
+                    at("gmFlagToggle")?,
+                    at("gmFlagGetByte")?,
+                    at("gmFlagGetNibble")?,
+                    at("gmFlagIncrementByte")?,
+                    at("gmFlagDecrementByte")?,
                 ];
                 let names = [
-                    "GameFlag_Get",
-                    "GameFlag_Toggle",
-                    "GameFlag_GetByte",
-                    "GameFlag_GetNibble",
-                    "GameFlag_IncrementByte",
-                    "GameFlag_DecrementByte",
+                    "gmFlagGet",
+                    "gmFlagToggle",
+                    "gmFlagGetByte",
+                    "gmFlagGetNibble",
+                    "gmFlagIncrementByte",
+                    "gmFlagDecrementByte",
                 ];
                 let places: [(u16, u16, &[&str]); 9] = [
                     (
@@ -629,7 +629,7 @@ impl<'a> Guide<'a> {
                 // Vault (20) and VaultRevisit (23): every lookup of the ivy
                 // placed at (0, 0) (actor 22 and 20) from the scene's start,
                 // walking, ringing the bell and casting Whirlwind.
-                let get = at("Actor_Lookup").or_else(|_| at("ObjectEvent_GetByLocalId"))?;
+                let get = at("fdActorLookup").or_else(|_| at("ObjectEvent_GetByLocalId"))?;
                 for (scene, id, set) in [
                     (20u16, 22u32, vec!["FLAG_VALE_PARTY_LEFT"]),
                     (23, 20, vec!["FLAG_VALE_PARTY_LEFT", "FLAG_KALAY_REACHED"]),
@@ -796,7 +796,7 @@ impl<'a> Guide<'a> {
                 }
                 {
                     let state = e.field.map_state();
-                    let base = at("gMapGridCellBuffer")?;
+                    let base = at("MapGridMetatileBuffer")?;
                     for l in 0..3u32 {
                         let p = e.field.read32(state + 0x130 + 0x30 * l);
                         let w = p.wrapping_sub(base) / 4;
@@ -870,7 +870,7 @@ impl<'a> Guide<'a> {
                 println!("leader {}", describe(&e.field, 0));
                 {
                     let state = e.field.map_state();
-                    let base = at("gMapGridCellBuffer")?;
+                    let base = at("MapGridMetatileBuffer")?;
                     for l in 0..3u32 {
                         let p = e.field.read32(state + 0x130 + 0x30 * l);
                         let w = p.wrapping_sub(base) / 4;

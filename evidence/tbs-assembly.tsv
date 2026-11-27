@@ -5,18 +5,18 @@ games/tbs/src/battle_effect/blitter_fragments.s	blitter_fragments	draw	built	arm
 games/tbs/src/field/actor_update_far.s	actor_update_far	field	copied	arm	scratch	none	GBA Memory Map	stated
 games/tbs/src/field/map_grid_convert.s	map_grid_convert	field	copied	arm	scratch	none	GBA Memory Map	stated
 games/tbs/src/field/picture_decode.s	picture_decode	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
-games/tbs/src/gamepak/rom_header.s	rom_header	start-up	table	arm	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	stated
+games/tbs/src/system/rom_header.s	rom_header	start-up	table	arm	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	stated
 games/tbs/src/menu/credits_background_decode.s	credits_background_decode	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tbs/src/menu/credits_background_expand.s	credits_background_expand	decode	copied	arm	untouched	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tbs/src/scene/entry.s	entry	start-up	rom	thumb	untouched	slInitSystem, slSynch, slIntFunction	GBA Cartridge Header; GBA Interrupt Control; BIOS Halt Functions	none
-games/tbs/src/sound/channel_update_entry.s	channel_update_entry	sound	rom	thumb	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
-games/tbs/src/sound/clear_buffer.s	clear_buffer	sound	rom	thumb	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
-games/tbs/src/sound/mixer.s	mixer	sound	resident	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
-games/tbs/src/sound/resident_mixer.s	resident_mixer	sound	resident	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
-games/tbs/src/sound/resident_mixer_interpolate.s	resident_mixer_interpolate	sound	resident	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
-games/tbs/src/sound/resident_mixer_render.s	resident_mixer_render	sound	resident	arm	scratch	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
-games/tbs/src/sound/sound_get_jump_list.s	sound_get_jump_list	bios	table	thumb	untouched	none	BIOS Halt Functions; BIOS Memory Copy; BIOS Sound Functions	stated
-games/tbs/src/sound/umul_high.s	umul_high	sound	rom	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/system/channel_update_entry.s	channel_update_entry	sound	rom	thumb	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/common/sdk/sound/clear_buffer.s	clear_buffer	sound	rom	thumb	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/common/sdk/sound/mixer.s	mixer	sound	resident	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/system/resident_mixer.s	resident_mixer	sound	resident	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/system/resident_mixer_interpolate.s	resident_mixer_interpolate	sound	resident	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/tbs/src/system/mixer_render.s	mixer_render	sound	resident	arm	scratch	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
+games/common/sdk/sound/sound_get_jump_list.s	sound_get_jump_list	bios	table	thumb	untouched	none	BIOS Halt Functions; BIOS Memory Copy; BIOS Sound Functions	stated
+games/common/sdk/sound/umul_high.s	umul_high	sound	rom	both	saved	slBGMOn, slSndVolume: the Saturn's sound chip and its driver	GBA Sound Channel A and B - DMA Sound	stated
 games/tbs/src/system/bios.s	bios	bios	rom	thumb	untouched	none	BIOS Halt Functions; BIOS Memory Copy; BIOS Sound Functions	stated
 games/tbs/src/system/decompress_byte_lz.s	decompress_byte_lz	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated
 games/tbs/src/system/decompress_tagged_lz.s	decompress_tagged_lz	decode	copied	arm	scratch	none: the Saturn read a disc	BIOS Decompression Functions, not used; GBA Memory Map	stated

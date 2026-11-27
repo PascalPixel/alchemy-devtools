@@ -1,0 +1,2 @@
+file	routine	kind	measurement
+games/common/sdk/sound/driver.c	CgbSound	FAKEMATCH(temporary)	byteMask, 0xff, anded with each u8 field before its cast; with the fields read plainly, 75 of 501 instructions differ in tla-ja.
