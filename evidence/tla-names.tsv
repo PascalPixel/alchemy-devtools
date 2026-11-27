@@ -2078,9 +2078,9 @@ CruelRuinStreakStepX	its code	btEffectRunCruelRuin: how far a streak moves left 
 CruelRuinStreakStepY	its code	btEffectRunCruelRuin: how far it moves down each frame	games/tla/src/battle_effect/effect_table.c
 CruelRuinStreakEndY	its code	btEffectRunCruelRuin: the y where it stops	games/tla/src/battle_effect/effect_table.c
 CruelRuinStreakRolls	its code	btEffectRunCruelRuin: its roll	games/tla/src/battle_effect/effect_table.c
-btEffectRunDull	its twin	The Broken Seal's btEffectRunDull; "Dull", the first ability whose effect entry selects effect 27	games/common/battle_effect/effect_stat_lowering.c
-btEffectRunImpair	its twin	The Broken Seal's btEffectRunImpair; "Impair", the first ability whose effect entry selects effect 29	games/common/battle_effect/effect_stat_lowering.c
-btEffectRunWeaken	its twin	The Broken Seal's btEffectRunWeaken; "Weaken", the first ability whose effect entry selects effect 31	games/common/battle_effect/effect_stat_lowering.c
+btEffectRunDull	its twin	The Broken Seal's btEffectRunDull; "Dull", the first ability whose effect entry selects effect 27	games/tla/src/battle_effect/battle_effect_stat_change.c
+btEffectRunImpair	its twin	The Broken Seal's btEffectRunImpair; "Impair", the first ability whose effect entry selects effect 29	games/tla/src/battle_effect/battle_effect_stat_change.c
+btEffectRunWeaken	its twin	The Broken Seal's btEffectRunWeaken; "Weaken", the first ability whose effect entry selects effect 31	games/tla/src/battle_effect/battle_effect_stat_change.c
 btEffectRunAura	the game	"Aura" (MsgAbilityName); "Aura", the first ability whose effect entry (battle_tables.s) selects effect 71, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_healing.c
 btEffectRunDiamondDust	the game	"Diamond Dust" (MsgAbilityName); "Diamond Dust", the first ability whose effect entry (battle_tables.s) selects effect 83, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_projectiles.c
 btEffectRunFireDance	the game	"Fire Dance" (MsgDjinnName); "Fire Dance", the first ability whose effect entry (battle_tables.s) selects effect 111, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_burst_shower.c
@@ -2106,8 +2106,8 @@ btEffectRunWaterBreath	the game	"Water Breath" (MsgDjinnName); "Water Breath", t
 btEffectRunDarkBreath	the game	"Dark Breath" (MsgDjinnName); "Dark Breath", the first ability whose effect entry (battle_tables.s) selects effect 403, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_burst_shower.c
 btEffectRunAcidBreath	the game	"Acid Breath" (MsgDjinnName); "Acid Breath", the first ability whose effect entry (battle_tables.s) selects effect 404, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_burst_shower.c
 btEffectRunStormBreath	the game	"Storm Breath" (MsgDjinnName); "Storm Breath", the first ability whose effect entry (battle_tables.s) selects effect 405, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_burst_shower.c
-btEffectRunEvilBlessing	the game	"Evil Blessing" (MsgDjinnName); "Evil Blessing", the first ability whose effect entry (battle_tables.s) selects effect 406, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_evil_blessing.c
-btEffectRunDeadlyGas	the game	"Deadly Gas" (MsgDjinnName); "Deadly Gas", the first ability whose effect entry (battle_tables.s) selects effect 407, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_deadly_gas.c
+btEffectRunEvilBlessing	the game	"Evil Blessing" (MsgDjinnName); "Evil Blessing", the first ability whose effect entry (battle_tables.s) selects effect 406, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_burst_shower.c
+btEffectRunDeadlyGas	the game	"Deadly Gas" (MsgDjinnName); "Deadly Gas", the first ability whose effect entry (battle_tables.s) selects effect 407, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_burst_shower.c
 btEffectRunSandBreath	the game	"Sand Breath" (MsgDjinnName); "Sand Breath", the first ability whose effect entry (battle_tables.s) selects effect 408, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_burst_shower.c
 btEffectRunDesertGasp	the game	"Desert Gasp" (MsgDjinnName); "Desert Gasp", the first ability whose effect entry (battle_tables.s) selects effect 409, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_burst_shower.c
 btEffectRunBlackIce	the game	"Black Ice" (MsgDjinnName); "Black Ice", the first ability whose effect entry (battle_tables.s) selects effect 410, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_burst_shower.c
@@ -2530,7 +2530,7 @@ WORLD_MAP_VIEW.zoomTransitionFrm	its twin	The Broken Seal's WORLD_MAP_VIEW.zoomT
 WORLD_MAP_METATILE	its twin	The Broken Seal's struct WORLD_MAP_METATILE (field_world_map.c): a 24-bit tile and the encounter region above it, 32 by 32 of them at syRamMapBlocks	games/tla/include/field/field.h
 fdWorldMapCopyMetatileTiles	its twin	The Broken Seal's inline fdWorldMapCopyMetatileTiles in the same two routines	games/tla/src/field/field_world_map.c
 fdScriptAddPartyMember	its twin	The Broken Seal's fdScriptAddPartyMember (event_commands_event.c), the same body (twins 1.000); renames.tsv	games/tla/src/field/field_mode_script.c
-fdActorClearDestinationAndStand	its twin	The Broken Seal's fdActorClearDestinationAndStand (event_commands_actor_commands.c), the same body (twins 1.000); renames.tsv	games/common/field/actor_stand_and_face.c
+fdActorClearDestinationAndStand	its twin	The Broken Seal's fdActorClearDestinationAndStand (event_commands_actor_commands.c), the same body (twins 1.000); renames.tsv	games/tla/src/field/script_commands_actor_commands.c
 fdActorFaceDirectionAndRefreshById	its code	steps to the angle with ActorStepAngleScript and calls Actor_RefreshSelectorById, without waiting; renames.tsv	games/tla/src/field/script_commands_actor_commands.c
 fdMapCopyPalette	its code	decodes MapsWork[map]'s palette resource and copies 224 colours to destination keeping the backdrop; renames.tsv	games/tla/src/field/field_map_grid.c
 fdSuperLuckyDiceScaleRGB555Buffer	its twin	The Broken Seal's fdLuckyDiceScaleRGB555Buffer (lucky_dice.c, twins 1.000), Super Lucky Dice's own copy	games/tla/src/field/dice_game.c
@@ -2538,8 +2538,8 @@ fdSuperLuckyDiceResetViewDefaults	its twin	The Broken Seal's fdCameraResetViewDe
 mnTitlePaletteFadeCalcSteps	its twin	The Broken Seal's fdPaletteFadeCalcSteps (field_sequence_palette_fade.c), the same body and place; renames.tsv	games/tla/src/menu/title_intro.c
 mnTitlePaletteFadeUpdate	its twin	The Broken Seal's fdPaletteFadeUpdate (field_sequence_palette_fade.c), the same body and place; renames.tsv	games/tla/src/menu/title_intro.c
 mnTitlePaletteFadeBuildCols	its twin	The Broken Seal's fdPaletteFadeBuild (field_sequence_palette_fade.c), the same body and place; renames.tsv	games/tla/src/menu/title_intro.c
-mnTitlePaletteFadeInit	its twin	The Broken Seal's fdPaletteFadeInit (field_sequence_palette_fade.c), the same body and place; renames.tsv	games/common/menu/title_palette_fade.c
-mnTitlePaletteFadeRelease	its twin	The Broken Seal's fdPaletteFadeRelease (field_sequence_palette_fade.c), the same body and place; renames.tsv	games/common/menu/title_palette_fade.c
+mnTitlePaletteFadeInit	its twin	The Broken Seal's fdPaletteFadeInit (field_sequence_palette_fade.c), the same body and place; renames.tsv	games/tla/src/menu/title_intro.c
+mnTitlePaletteFadeRelease	its twin	The Broken Seal's fdPaletteFadeRelease (field_sequence_palette_fade.c), the same body and place; renames.tsv	games/tla/src/menu/title_intro.c
 mnTitlePaletteFadeSetTarget	its twin	The Broken Seal's fdPaletteFadeSetTarget (field_sequence_palette_fade.c), the same body and place; renames.tsv	games/tla/src/menu/title_intro.c
 mnTitlePaletteFadeSetCurrent	its twin	The Broken Seal's fdPaletteFadeSetSource (field_sequence_palette_fade.c), the same body and place; renames.tsv	games/tla/src/menu/title_intro.c
 mnTitlePaletteFadeSetBackdrop	its twin	The Broken Seal's fdPaletteFadeSetBackdrop (field_sequence_palette_fade.c), the same body and place; renames.tsv	games/tla/src/menu/title_intro.c
@@ -3131,7 +3131,7 @@ BUP_IMAGE_GAME_FLAGS	its code	the ewram.s layout from BupBuffer: GameFlagBytes a
 gmDjinnGetRecoveryTable.enemySide	its twin	☀️'s game_units.c parameter, text adopted (all six editions' objects unchanged)	games/tla/src/game/game_units.c
 EVENT_PRIORITY_REMOVED	its twin	☀️'s task.h: the priority syCloseEvent gives a removed task (0x7fff)	games/tla/include/system/definitions.h
 syPerspective.fieldOfView	its twin	☀️'s parameter names (fieldOfView, nearDepth, farDepth) and locals (halfAng, sine, focal); the same three stores into the projection's focal, near and far words	games/tla/src/system/system_matrix.c
-sySetScreenDist.focal	its twin	☀️'s parameter names (focal, nearDepth, farDepth)	games/common/system/set_screen_dist.c
+sySetScreenDist.focal	its twin	☀️'s parameter names (focal, nearDepth, farDepth)	games/tla/src/system/system_matrix.c
 ENEMY_TARGET_STRATEGY	its twin	☀️ character.h enum (MOST_HP 0, MOST_MAX_HP 1, RANDOM 2); TLA targeting.c tests the column the same way (0 for COMMAND_ITEM, != 0 skips Psynergy without PP, 2 skips Psynergy while sealed)	games/tla/include/game/character.h
 BATTLE_MULTIPLIER_ONE	its twin	☀️ game_battle_arithmetic.c: gmBattleGetElementMultiplier returns its multiplier plus 256	games/tla/include/battle/battle.h
 gmBattleGetElementMultiplier.multiplier	its twin	☀️ locals minimumDifference, maximumDifference, pointCnt, pointIdx, multiplier, differenceSpan, multiplierSpan	games/tla/src/game/game_battle_arithmetic.c
@@ -3265,7 +3265,7 @@ ERUPTION_MODE	its twin	The Broken Seal names this enum (or routine) so, with the
 SPARK_GROUPS_MODE	its twin	The Broken Seal names this enum (or routine) so, with the same values at the same modes; this game's added modes are named for the first ability that plays them (AbilityBattleEffects, en.po)	games/tla/src/battle_effect/battle_effect_internal.h
 PROJECTILE_VOLLEY_MODE	its twin	The Broken Seal names this enum (or routine) so, with the same values at the same modes; this game's added modes are named for the first ability that plays them (AbilityBattleEffects, en.po)	games/tla/include/battle_effect/battle_effect_table.h
 MOTE_FOUNTAIN_MODE	its twin	The Broken Seal names this enum (or routine) so, with the same values at the same modes; this game's added modes are named for the first ability that plays them (AbilityBattleEffects, en.po)	games/tla/src/battle_effect/battle_effect_streaks.c
-btEffectRunUnusedRestoreMotes	its twin	The Broken Seal names this enum (or routine) so, with the same values at the same modes; this game's added modes are named for the first ability that plays them (AbilityBattleEffects, en.po)	games/common/battle_effect/effect_healing_cure_poison.c
+btEffectRunUnusedRestoreMotes	its twin	The Broken Seal names this enum (or routine) so, with the same values at the same modes; this game's added modes are named for the first ability that plays them (AbilityBattleEffects, en.po)	games/tla/src/battle_effect/battle_effect_healing.c
 STAT_BOOST_UNUSED	its code	the stat boost's mode no ability names (AbilityBattleEffects); the twin's STAT_REDUCTION_UNUSED habit	games/tla/src/battle_effect/battle_effect_stat_change.c
 btEffectRunUnusedStatBoost	its code	the stat boost's mode no ability names (AbilityBattleEffects); the twin's STAT_REDUCTION_UNUSED habit	games/tla/src/battle_effect/battle_effect_stat_change.c
 TUMBLING_QUADS_MODE	its code	Balm, Tinder and Phoenix play modes 0, 1 and 2 (AbilityBattleEffects, en.po)	games/tla/src/battle_effect/battle_effect_internal.h
@@ -3291,11 +3291,11 @@ ActorBlinkSpriteColors	its twin	ActorBlinkSpriteColors (games/tbs), the four col
 fdActorLookup	its twin	fdActorLookup (games/tbs/src/field/script_commands_actor_commands.c), called at the head of every event command on an actor, as here	games/tla/src/field/field_mode_actors.c
 fdActorWaitForScriptEnd	its twin	fdActorWaitForScriptEnd (games/tbs/src/field/field_actors.c), the same body	games/tla/src/field/field_actors.c
 fdActorSetMovementType	its twin	fdActorSetMovementType (games/tbs), twin 0.70: a movement type or the value as a script	games/tla/src/field/script_commands_movement_types.c
-fdActorWaitForScriptEndById	its twin	fdActorWaitForScriptEndById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/common/field/actor_wait_for_script_end_by_id.c
-fdActorSetAnimationById	its twin	fdActorSetAnimationById (games/tbs), twin 1.000	games/common/field/actor_set_animation_by_id.c
+fdActorWaitForScriptEndById	its twin	fdActorWaitForScriptEndById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
+fdActorSetAnimationById	its twin	fdActorSetAnimationById (games/tbs), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
 fdActorSetAnimationSpeedById	its twin	fdActorSetAnimationSpeedById (games/tbs), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
 fdActorSetAnimationAndWait	its twin	fdActorSetAnimationAndWait (games/tbs), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
-fdActorRunRepeatedMotion	its twin	fdActorRunRepeatedMotion (games/tbs), twin 1.000	games/common/field/actor_run_repeated_motion.c
+fdActorRunRepeatedMotion	its twin	fdActorRunRepeatedMotion (games/tbs), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
 fdActorReleaseById	its twin	fdActorReleaseById (games/tbs), the same body: release, then NULL in the field work's actor table	games/tla/src/field/field_mode_actor_commands.c
 SPR	its twin	struct Sprite (games/tbs/include/field/sprite.h): the same members, the shadow placed after count as fdSprCreate fills it	games/tla/include/field/sprite.h
 SPR_ANIMATION	its twin	struct SPR_ANIMATION (games/tbs/include/field/sprite.h), the same 0x18 bytes	games/tla/include/field/sprite.h
@@ -3304,8 +3304,8 @@ SPR_ANIMATION.colMode	its twin	The Broken Seal's member, an enum SPR_COL_MODE	ga
 SPR_ANIMATION.scriptOfs	its twin	The Broken Seal's member	games/tla/include/field/sprite.h
 fdActorListRunning	its code	collects into a NULL-ended list the first 14 actors whose script pointer's upper half is nonzero; fdActorUpdateAllMotion moves the actors it lists	games/tla/src/field/field_actor_motion.c
 fdActorScriptWaitForArrival	its twin	fdActorScriptWaitForArrival (games/tbs/src/field/field_script_commands.c), the SC_SYNC handler, slot 1 of both command tables	games/tla/src/field/field_script_commands.c
-fdActorScriptRelease	its twin	fdActorScriptRelease (games/tbs), the SC_RELEASE handler; The Lost Age's slot 0x26 runs the same fdActorRelease call	games/common/field/actor_script_animation_and_snd.c
-fdActorScriptPlaySnd	its twin	fdActorScriptPlaySnd (games/tbs), the SC_SE handler, the same body	games/common/field/actor_script_animation_and_snd.c
+fdActorScriptRelease	its twin	fdActorScriptRelease (games/tbs), the SC_RELEASE handler; The Lost Age's slot 0x26 runs the same fdActorRelease call	games/tla/src/field/field_script_commands.c
+fdActorScriptPlaySnd	its twin	fdActorScriptPlaySnd (games/tbs), the SC_SE handler, the same body	games/tla/src/field/field_script_commands.c
 fdActorScriptPlaySndInView	its code	command 0x2a passes its operand to Event_PlayCueNearFocus, which plays it as a sound only within 152 pixels across and 112 up or down the screen of the camera's actor	games/tla/src/field/field_script_commands.c
 fdActorScriptGoto	its code	command 0x2b (SC_GOTO) replaces the actor's script with the pointer in the next word and starts it at its first command	games/tla/src/field/field_actors.c
 fdActorSetUpdate	its code	unreferenced; stores its second argument at Actor.update (0x6c) when the actor is not NULL	games/tla/src/field/field_script_commands.c
@@ -3326,10 +3326,10 @@ fdSprPictureCacheFindByTag	its twin	fdSprPictureCacheFindByTag (games/tbs), twin
 fdSprStartAnimation	its twin	fdSprStartAnimation (games/tbs), twin 0.37: the same animation number mask and keep-place bit	games/tla/src/field/field_sprite_animation.c
 fdSprResetAnimations	its twin	fdSprResetAnimations (games/tbs), the same metadata fields	games/tla/src/field/field_sprite_animation.c
 fdSprAddAnimation	its twin	fdSprAddAnimation (games/tbs), twin 0.51	games/tla/src/field/field_sprite_animation.c
-fdScriptSetDefeatDestination	its twin	The Broken Seal event_commands_requests.c fdScriptSetDefeatDestination, same body (dice 1.0)	games/common/field/script_battle_destinations.c
+fdScriptSetDefeatDestination	its twin	The Broken Seal event_commands_requests.c fdScriptSetDefeatDestination, same body (dice 1.0)	games/tla/src/field/field_mode_requests.c
 TEST_ACTOR_ID	its twin	The Broken Seal debug/test_scenes.c enum TEST_ACTOR_ID, the same four talk triggers 8 to 11	games/tla/src/debug/test_scenes.c
 fdActorSetRevealSprCol	its twin	The Broken Seal event_commands_reveal.c fdActorSetRevealSprCol: called at the same two places of fdPsynergyReveal with 6 and 0, and its loop over the 64 actors is all The Lost Age keeps	games/tla/src/field/script_commands_mind_read.c
-fdPsynergyForceOnTarget	its twin	The Broken Seal event_commands_force.c fdPsynergyForceOnTarget(s32 unused), the same forward to fdPsynergyForce	games/common/field/psynergy_force_on_target.c
+fdPsynergyForceOnTarget	its twin	The Broken Seal event_commands_force.c fdPsynergyForceOnTarget(s32 unused), the same forward to fdPsynergyForce	games/tla/src/field/script_commands_mind_read.c
 CONTAINER_KIND	the game	"checked the chest..." (MsgTileChecked); the line each kind shows in fdTalkToActor: 128 and 129 "checked the chest...", 129 also "The treasure chest was really a Mimic!", 130 a Psynergy Stone (PP restored, "The Psynergy Stone disappeared..."), 131 actor 79 "There's something buried here!", 132 "examined the stone tablet..." and a summon learned, 133 "gazed into the pond..." and "There's something in the shallows!"	games/tla/src/field/field_mode_internal.h
 CONTAINER_ROW	its code	fdSceneItemGetRows' 8-byte rows read by fdTalkToActor for actors 64 up: kind, hint switch, flag, contents	games/tla/src/field/field_mode_internal.h
 FieldPsynergyReach	its code	gData_080eff28's rows (kind, range, height, width) as fdMeasurePsynergyHeight and fdMeasurePsynergyReach read them; values 16 to 48 pixels and 6144 or 8192 of 65536 turns	games/tla/src/field/psynergy_reach.c
@@ -11202,7 +11202,7 @@ MARS_GLOW_ORB	its twin	The Broken Seal's MARS_GLOW_ORB in games/tbs/src/battle_e
 MERCURY_SHEET_PICTURE	its twin	The Broken Seal's MERCURY_SHEET_PICTURE in games/tbs/src/battle_effect/battle_effect_djinn_attacks.c, the same offsets in the twin btEffectRunMercury	games/tla/src/battle_effect/battle_effect_djinn_attacks.c
 MERCURY_TURNED_SHAFT	its twin	The Broken Seal's MERCURY_TURNED_SHAFT in games/tbs/src/battle_effect/battle_effect_djinn_attacks.c, the same offset in the twin btEffectRunMercury	games/tla/src/battle_effect/battle_effect_djinn_attacks.c
 btResourceLoadAndDecompress	its twin	The Broken Seal's btResourceLoadAndDecompress in games/tbs/src/battle_effect/battle_effect_djinn_attacks.c, the same routine and the same bytes	games/tla/src/battle_effect/battle_effect_djinn_attacks.c
-btEffectTransposeCopy	its twin	The Broken Seal's btEffectTransposeCopy in games/tbs/src/battle_effect/battle_effect_djinn_attacks.c, the same routine and the same bytes	games/common/battle_effect/effect_transpose_copy.c
+btEffectTransposeCopy	its twin	The Broken Seal's btEffectTransposeCopy in games/tbs/src/battle_effect/battle_effect_djinn_attacks.c, the same routine and the same bytes	games/tla/src/battle_effect/battle_effect_djinn_attacks.c
 btEffectRunBoreas	the game	"Boreas" (MsgAbilityName + 391)	games/tla/src/battle_effect/battle_effect_boreas.c
 btEffectRunBoreas	what the player sees	Piers summons Boreas at the party: a window of violet sky opens from the left with a ragged edge on a mass of ice crystals, which crumble away from a great white beast; a block of ice drops onto its head, a spray of glittering ice streams out to the left, then a torrent of ice sweeps down over Felix, Jenna and Sheba, a streak of ice falls through them and sparkles twinkle as the damage shows (its render)	games/tla/src/battle_effect/battle_effect_boreas.c
 BOREAS_CRYSTAL_WIDTH	its picture	games/tla/src/graphics/battle_effects/ice_block_00.png, a 24x48 ice crystal, the first of IceBlockSheet, which the torrent rains down	games/tla/src/battle_effect/battle_effect_boreas.c
@@ -11307,10 +11307,10 @@ RIME_SEAL_TEXTURE	what the player sees	Piers unleashes Rime at Jenna: a violet s
 HAZE_STARS	what the player sees	Sheba unleashes Haze at Felix: four-pointed stars bloom and fade one after another over him before he turns white and vanishes (its render)	games/tla/src/battle_effect/battle_effect_rime.c
 HAZE_STAR_TICKS	what the player sees	each of Haze's stars swells and shrinks again in about half a second (its render)	games/tla/src/battle_effect/battle_effect_rime.c
 btEffectRunDjinniSign	what the player sees	Rime and Haze each show their Djinni rising away while a sign of its power turns over the target: Rime's violet seal shrinking onto Jenna, Haze's stars blooming over Felix (its render)	games/tla/src/battle_effect/battle_effect_rime.c
-btEffectRunBearClaw	the game	"Bear Claw" (MsgAbilityName + 459)	games/common/battle_effect/effect_flurry_attacks.c
-btEffectRunRansack	the game	"Ransack" (MsgAbilityName + 463)	games/common/battle_effect/effect_flurry_attacks.c
-btEffectRunBacteriaRush	the game	"Bacteria Rush" (MsgAbilityName + 470)	games/common/battle_effect/effect_flurry_attacks.c
-btEffectRunFreebiteRush	the game	"Freebite Rush" (MsgAbilityName + 476)	games/common/battle_effect/effect_flurry_attacks.c
+btEffectRunBearClaw	the game	"Bear Claw" (MsgAbilityName + 459)	games/tla/src/battle_effect/battle_effect_flurry.c
+btEffectRunRansack	the game	"Ransack" (MsgAbilityName + 463)	games/tla/src/battle_effect/battle_effect_flurry.c
+btEffectRunBacteriaRush	the game	"Bacteria Rush" (MsgAbilityName + 470)	games/tla/src/battle_effect/battle_effect_flurry.c
+btEffectRunFreebiteRush	the game	"Freebite Rush" (MsgAbilityName + 476)	games/tla/src/battle_effect/battle_effect_flurry.c
 FLURRY_ARC_SHEET	its twin	The Broken Seal's FLURRY_ARC_SHEET (games/tbs/src/battle_effect/battle_effect_flurry.c, enum FLURRY_COLUMN), the same byte of a FlurryStyles row	games/tla/src/battle_effect/battle_effect_flurry.c
 FLURRY_PALETTE	its twin	The Broken Seal's FLURRY_PALETTE (games/tbs/src/battle_effect/battle_effect_flurry.c, enum FLURRY_COLUMN), the same byte of a FlurryStyles row	games/tla/src/battle_effect/battle_effect_flurry.c
 FLURRY_STRIKES	its twin	The Broken Seal's FLURRY_STRIKES (games/tbs/src/battle_effect/battle_effect_flurry.c, enum FLURRY_COLUMN), the same byte of a FlurryStyles row	games/tla/src/battle_effect/battle_effect_flurry.c
@@ -11395,7 +11395,7 @@ BOLT_GLINT_SPREAD	its twin	games/tbs/src/battle_effect/battle_effect_bolt.c BOLT
 BOLT_STRIKES	what the player sees	Sheba casts Blue Bolt: each bolt that drops is a thicker tangle of lightning than Bolt's single one, its pictures laid over each other (its render)	games/tla/src/battle_effect/battle_effect_bolt.c
 BOLT_STRIKES	its twin	games/tbs/src/battle_effect/battle_effect_bolt.c BOLT_STRIKES, the BoltCounts column of bolts drawn over each other	games/tla/src/battle_effect/battle_effect_bolt.c
 BOLT_PICTURES	its twin	games/tbs/src/battle_effect/battle_effect_bolt.c BOLT_PICTURES GLINT_SET_BYTES, where the bolt pictures start in the sheet, after the six glints	games/tla/src/battle_effect/battle_effect_bolt.c
-btEffectBuildCenteredIndexList	its twin	games/tbs/src/battle_effect/battle_effect_flare.c btEffectBuildCenteredIndexList, UNUSED there too, with the same body	games/common/battle_effect/effect_build_centered_index_list.c
+btEffectBuildCenteredIndexList	its twin	games/tbs/src/battle_effect/battle_effect_flare.c btEffectBuildCenteredIndexList, UNUSED there too, with the same body	games/tla/src/battle_effect/battle_effect_flare.c
 CONDEMN_TICKS	its twin	games/tbs/src/battle_effect/battle_effect_condemn.c CONDEMN_TICKS, the frames of the effect (132 there, 104 here)	games/tla/src/battle_effect/battle_effect_condemn.c
 btEffectRunQuake	the game	"Quake" (MsgAbilityName + 3)	games/tla/src/battle_effect/battle_effect_quake.c
 QUAKE_PILLAR_WIDTH	what the player sees	Felix casting Quake on Jenna, Sheba and Piers over the arena (render psynergy --ability Quake --backdrop game): three brown rock pillars, each capped with a strip of the arena's sandy ground, rise side by side under the targets and throw them into the air (its render)	games/tla/src/battle_effect/battle_effect_quake.c
@@ -13787,18 +13787,18 @@ MEGIDDO_DUST_BLOB	its picture	graphics/battle_effects/dust_blob.png, 32 by 32: a
 IMPACT_BURST_SHARD_PICTURES	its twin	games/tbs/src/battle_effect/battle_effect_helm_splitter.c, The Broken Seal's IMPACT_BURST_SHARD_PICTURES, the same in the twin btEffectRunImpactBurst	games/tla/src/battle_effect/battle_effect_particle_streams.c
 IMPACT_BURST_TICKS	its twin	games/tbs/src/battle_effect/battle_effect_helm_splitter.c, The Broken Seal's IMPACT_BURST_TICKS, the same in the twin btEffectRunImpactBurst	games/tla/src/battle_effect/battle_effect_particle_streams.c
 btEffectRunImpactBurst	its twin	games/tbs/src/battle_effect/battle_effect_helm_splitter.c, The Broken Seal's btEffectRunImpactBurst, the same in the twin btEffectRunImpactBurst	games/tla/src/battle_effect/battle_effect_particle_streams.c
-btEffectRunMeteor	the game	"Meteor" (MsgAbilityName + 399)	games/common/battle_effect/effect_meteor_outer_space.c
-btEffectRunOuterSpace	the game	"Outer Space" (MsgAbilityName + 514)	games/common/battle_effect/effect_meteor_outer_space.c
+btEffectRunMeteor	the game	"Meteor" (MsgAbilityName + 399)	games/tla/src/battle_effect/battle_effect_particle_streams.c
+btEffectRunOuterSpace	the game	"Outer Space" (MsgAbilityName + 514)	games/tla/src/battle_effect/battle_effect_particle_streams.c
 btEffectRunNereidCopy	the game	"Nereid" (MsgAbilityName + 389)	games/tla/src/battle_effect/battle_effect_particle_streams.c
 MEGIDDO_FIRE_RING	its picture	graphics/battle_effects/fire_ring_texture.png, 128 by 128: a ring of fire, white-hot at its rim and burning dark red inward, round a black middle: the rings of light	games/tla/src/battle_effect/battle_effect_megiddo.c
 MEGIDDO_GLOW_BAND	its picture	graphics/battle_effects/glow_band_texture_a.png, 32 by 4: a band of glow, dark red at its ends and pale yellow in its middle	games/tla/src/battle_effect/battle_effect_megiddo.c
-btEffectRunTaint	the game	"Taint" (MsgAbilityName + 114)	games/common/battle_effect/effect_taint.c
-btEffectRunDelude	the game	"Delude" (MsgAbilityName + 116)	games/common/battle_effect/effect_target_motes.c
-btEffectRunParalyze	the game	"Paralyze" (MsgAbilityName + 119)	games/common/battle_effect/effect_target_motes.c
-btEffectRunHeartrender	the game	"Heartrender" (MsgAbilityName + 488)	games/common/battle_effect/effect_target_motes.c
-btEffectRunMysticFlame	the game	"Mystic Flame" (MsgAbilityName + 454)	games/common/battle_effect/effect_target_motes.c
-btEffectRunDemonFire	the game	"Demonfire" (MsgAbilityName + 226)	games/common/battle_effect/effect_target_motes.c
-btEffectRunDrown	the game	"Drown" (MsgAbilityName + 219)	games/common/battle_effect/effect_target_motes.c
+btEffectRunTaint	the game	"Taint" (MsgAbilityName + 114)	games/tla/src/battle_effect/battle_effect_target_motes.c
+btEffectRunDelude	the game	"Delude" (MsgAbilityName + 116)	games/tla/src/battle_effect/battle_effect_target_motes.c
+btEffectRunParalyze	the game	"Paralyze" (MsgAbilityName + 119)	games/tla/src/battle_effect/battle_effect_target_motes.c
+btEffectRunHeartrender	the game	"Heartrender" (MsgAbilityName + 488)	games/tla/src/battle_effect/battle_effect_target_motes.c
+btEffectRunMysticFlame	the game	"Mystic Flame" (MsgAbilityName + 454)	games/tla/src/battle_effect/battle_effect_target_motes.c
+btEffectRunDemonFire	the game	"Demonfire" (MsgAbilityName + 226)	games/tla/src/battle_effect/battle_effect_target_motes.c
+btEffectRunDrown	the game	"Drown" (MsgAbilityName + 219)	games/tla/src/battle_effect/battle_effect_target_motes.c
 btEffectRunSleep	the game	"Sleep" (MsgAbilityName + 120)	games/tla/src/battle_effect/battle_effect_target_motes.c
 btEffectRunCurse	the game	"Curse" (MsgAbilityName + 123)	games/tla/src/battle_effect/battle_effect_target_motes.c
 btEffectRunBalm	the game	"Balm" (MsgAbilityName + 336)	games/tla/src/battle_effect/battle_effect_target_motes.c
@@ -13998,17 +13998,17 @@ STAT_BOOST_DJINNI	its twin	games/tbs/src/battle_effect/battle_effect_stat_change
 STAT_REDUCTION_MODE	its twin	games/tbs/src/battle_effect/battle_effect_stat_change.c STAT_REDUCTION_MODE, the same use in btEffectRunStatReduction	games/tla/src/battle_effect/battle_effect_stat_change.c
 btEffectRunStatBoost	its twin	games/tbs/src/battle_effect/battle_effect_stat_change.c btEffectRunStatBoost, the same use in btEffectRunStatBoost	games/tla/src/battle_effect/battle_effect_stat_change.c
 STAT_BOOST_IMPACT	the game	"Impact" (MsgAbilityName + 102)	games/tla/src/battle_effect/battle_effect_stat_change.c
-btEffectRunImpact	the game	"Impact" (MsgAbilityName + 102)	games/common/battle_effect/effect_impact_guard.c
+btEffectRunImpact	the game	"Impact" (MsgAbilityName + 102)	games/tla/src/battle_effect/battle_effect_stat_change.c
 STAT_BOOST_GUARD	the game	"Guard" (MsgAbilityName + 106)	games/tla/src/battle_effect/battle_effect_stat_change.c
-btEffectRunGuard	the game	"Guard" (MsgAbilityName + 106)	games/common/battle_effect/effect_impact_guard.c
+btEffectRunGuard	the game	"Guard" (MsgAbilityName + 106)	games/tla/src/battle_effect/battle_effect_stat_change.c
 STAT_BOOST_WARD	the game	"Ward" (MsgAbilityName + 110)	games/tla/src/battle_effect/battle_effect_stat_change.c
-btEffectRunWard	the game	"Ward" (MsgAbilityName + 110)	games/common/battle_effect/effect_ward.c
+btEffectRunWard	the game	"Ward" (MsgAbilityName + 110)	games/tla/src/battle_effect/battle_effect_stat_change.c
 STAT_BOOST_GRANITE	the game	"Granite" (MsgAbilityName + 301)	games/tla/src/battle_effect/battle_effect_stat_change.c
-btEffectRunGranite	the game	"Granite" (MsgAbilityName + 301)	games/common/battle_effect/effect_granite_flash.c
+btEffectRunGranite	the game	"Granite" (MsgAbilityName + 301)	games/tla/src/battle_effect/battle_effect_stat_change.c
 STAT_BOOST_FLASH	the game	"Flash" (MsgAbilityName + 345)	games/tla/src/battle_effect/battle_effect_stat_change.c
-btEffectRunFlash	the game	"Flash" (MsgAbilityName + 345)	games/common/battle_effect/effect_granite_flash.c
+btEffectRunFlash	the game	"Flash" (MsgAbilityName + 345)	games/tla/src/battle_effect/battle_effect_stat_change.c
 STAT_BOOST_ZEPHYR	the game	"Zephyr" (MsgAbilityName + 362)	games/tla/src/battle_effect/battle_effect_stat_change.c
-btEffectRunZephyr	the game	"Zephyr" (MsgAbilityName + 362)	games/common/battle_effect/effect_zephyr.c
+btEffectRunZephyr	the game	"Zephyr" (MsgAbilityName + 362)	games/tla/src/battle_effect/battle_effect_stat_change.c
 STAT_BOOST_IRON	the game	"Iron" (MsgAbilityName + 308)	games/tla/src/battle_effect/battle_effect_stat_change.c
 btEffectRunIron	the game	"Iron" (MsgAbilityName + 308)	games/tla/src/battle_effect/battle_effect_stat_change.c
 STAT_BOOST_SHADE	the game	"Shade" (MsgAbilityName + 330)	games/tla/src/battle_effect/battle_effect_stat_change.c
@@ -15058,8 +15058,8 @@ VOID_BEAM_RING_RADIUS	its code	btEffectRunVoidBeam: a ring of up to 64 motes, 40
 VOID_BEAM_FIRE_TICK	its code	btEffectRunVoidBeam: at frame 72 the beam is drawn, the screen shakes and the battle shows the damage	games/tla/src/battle_effect/battle_effect_thunder_mine.c
 VOID_BEAM_FADE_TICK	its code	btEffectRunVoidBeam: from frame 80 the canvas's blend and the beam's gradient fade	games/tla/src/battle_effect/battle_effect_thunder_mine.c
 btEffectRunProcne	the game	"Procne" (MsgAbilityName + 408)	games/tla/src/battle_effect/battle_effect_procne.c
-btEffectRunTiamat	the game	"Tiamat" (MsgAbilityName + 398)	games/common/battle_effect/effect_dragon_driver_tiamat.c
-btEffectRunDragonDriver	the game	"Dragon Driver" (MsgAbilityName + 515)	games/common/battle_effect/effect_dragon_driver_tiamat.c
+btEffectRunTiamat	the game	"Tiamat" (MsgAbilityName + 398)	games/tla/src/battle_effect/battle_effect_procne.c
+btEffectRunDragonDriver	the game	"Dragon Driver" (MsgAbilityName + 515)	games/tla/src/battle_effect/battle_effect_procne.c
 btEffectRunDragonFire	what the player sees	tiamat.gif and dragon-driver.gif, 4.2 to 6.2 s: a blast of fire bursts across the targets, from Tiamat's open jaws or, for Dragon Driver, from in front of them (its render)	games/tla/src/battle_effect/battle_effect_procne.c
 DRAGON_FIRE_TIAMAT	the game	"Tiamat" (MsgAbilityName + 398)	games/tla/src/battle_effect/battle_effect_procne.c
 DRAGON_FIRE_DRAGON_DRIVER	the game	"Dragon Driver" (MsgAbilityName + 515)	games/tla/src/battle_effect/battle_effect_procne.c
@@ -15162,8 +15162,8 @@ ULYSSES_SPARKS	its code	the strikes' sparks are particles in the effect's sheet 
 ULYSSES_STRIKE_SPARKS	what the player sees	ulysses.gif, 6.3 to 8.0 s: sparks fly from each strike as it lands (its render)	games/tla/src/battle_effect/battle_effect_spider_web.c
 ULYSSES_SPARK_COUNT	its code	ULYSSES_STRIKES strikes of ULYSSES_STRIKE_SPARKS sparks	games/tla/src/battle_effect/battle_effect_spider_web.c
 btEffectRunSpiderWeb	the game	"Spider Web" (MsgAbilityName + 487)	games/tla/src/battle_effect/battle_effect_spider_web.c
-btEffectRunPoisonBeat	the game	"Poison Beat" (MsgAbilityName + 510)	games/common/battle_effect/effect_beats.c
-btEffectRunSpinningBeat	the game	"Spinning Beat" (MsgAbilityName + 511)	games/common/battle_effect/effect_beats.c
+btEffectRunPoisonBeat	the game	"Poison Beat" (MsgAbilityName + 510)	games/tla/src/battle_effect/battle_effect_spider_web.c
+btEffectRunSpinningBeat	the game	"Spinning Beat" (MsgAbilityName + 511)	games/tla/src/battle_effect/battle_effect_spider_web.c
 SWIRL_SWIPE_POISON_BEAT	the game	"Poison Beat" (MsgAbilityName + 510)	games/tla/src/battle_effect/battle_effect_spider_web.c
 SWIRL_SWIPE_SPINNING_BEAT	the game	"Spinning Beat" (MsgAbilityName + 511)	games/tla/src/battle_effect/battle_effect_spider_web.c
 btEffectRunSwirlSwipe	what the player sees	spinning-beat.gif, 1.1 to 1.3 s: a magenta swirl sweeps across the target and throws it into the air (its render)	games/tla/src/battle_effect/battle_effect_spider_web.c
@@ -15445,18 +15445,18 @@ CARD_STRIKES_UNTIL	what the player sees	the targets reel and flash until the car
 CARD_BRAMBLE_STRIKES_UNTIL	what the player sees	the Bramble Card's targets stop reeling as its vines draw back into the card (its render)	games/tla/src/battle_effect/battle_effect_legend.c
 CARD_VINE_ANGLE	what the player sees	the Bramble Card's four thorny green vines reach from the card over the targets, swaying (its render)	games/tla/src/battle_effect/battle_effect_legend.c
 CARD_VINE_SWAY	what the player sees	the Bramble Card's four thorny green vines sway as they reach over the targets (its render)	games/tla/src/battle_effect/battle_effect_legend.c
-btEffectRunNumbingSting	the game	"Numbing Sting" (MsgAbilityName + 455)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunCannibalFang	the game	"Cannibal Fang" (MsgAbilityName + 458)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunPoisonousBite	the game	"Poisonous Bite" (MsgAbilityName + 460)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunRabidFang	the game	"Rabid Fang" (MsgAbilityName + 478)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunElectricBite	the game	"Electric Bite" (MsgAbilityName + 466)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunPoisonTail	the game	"Poison Tail" (MsgAbilityName + 467)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunVampiricFang	the game	"Vampiric Fang" (MsgAbilityName + 469)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunDoubleFang	the game	"Double Fang" (MsgAbilityName + 474)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunMortalBlow	the game	"Mortal Blow" (MsgAbilityName + 475)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunTwinBeaks	the game	"Twin Beaks" (MsgAbilityName + 477)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunAcidBite	the game	"Acid Bite" (MsgAbilityName + 479)	games/common/battle_effect/effect_target_strikes.c
-btEffectRunDrainFang	the game	"Drain Fang" (MsgAbilityName + 516)	games/common/battle_effect/effect_target_strikes.c
+btEffectRunNumbingSting	the game	"Numbing Sting" (MsgAbilityName + 455)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunCannibalFang	the game	"Cannibal Fang" (MsgAbilityName + 458)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunPoisonousBite	the game	"Poisonous Bite" (MsgAbilityName + 460)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunRabidFang	the game	"Rabid Fang" (MsgAbilityName + 478)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunElectricBite	the game	"Electric Bite" (MsgAbilityName + 466)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunPoisonTail	the game	"Poison Tail" (MsgAbilityName + 467)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunVampiricFang	the game	"Vampiric Fang" (MsgAbilityName + 469)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunDoubleFang	the game	"Double Fang" (MsgAbilityName + 474)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunMortalBlow	the game	"Mortal Blow" (MsgAbilityName + 475)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunTwinBeaks	the game	"Twin Beaks" (MsgAbilityName + 477)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunAcidBite	the game	"Acid Bite" (MsgAbilityName + 479)	games/tla/src/battle_effect/battle_effect_target_strike.c
+btEffectRunDrainFang	the game	"Drain Fang" (MsgAbilityName + 516)	games/tla/src/battle_effect/battle_effect_target_strike.c
 btEffectRunAngSpike	the game	"Angle Spike" (MsgAbilityName + 689)	games/tla/src/battle_effect/battle_effect_target_strike.c
 btEffectRunHeatStun	the game	"Heat Stun" (MsgAbilityName + 674)	games/tla/src/battle_effect/battle_effect_target_strike.c
 btEffectRunManeater	the game	"Maneater" (MsgAbilityName + 692)	games/tla/src/battle_effect/battle_effect_target_strike.c
@@ -15479,18 +15479,18 @@ ELEMENT_PILLAR_TURN_TICKS	its twin	The Broken Seal's ELEMENT_PILLAR_TURN_TICKS (
 TARGET_STRIKE_HIT_PICTURES	its picture	smoke.png (SmokeSheet), flash_burst.png (FlashBurstSheet) or star_cross.png (StarCrossSheet, a 64x64 four-pointed star of white light with red and green tips) is decoded here by style	games/tla/src/battle_effect/battle_effect_target_strike.c
 TARGET_STRIKE_STAR_SCALE	what the player sees	Kill Sting (render psynergy --ability "Kill Sting" --unlearned): after the slash the screen flashes red and a cross of light streaks over Sheba, then shrinks away (its render)	games/tla/src/battle_effect/battle_effect_target_strike.c
 HEALING_MODE_PLY	the game	"Ply" (MsgAbilityName + 93)	games/tla/src/battle_effect/battle_effect_healing.c
-btEffectRunPly	the game	"Ply" (MsgAbilityName + 93)	games/common/battle_effect/effect_healing_motes.c
+btEffectRunPly	the game	"Ply" (MsgAbilityName + 93)	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_MODE_WISH	the game	"Wish" (MsgAbilityName + 96)	games/tla/src/battle_effect/battle_effect_healing.c
-btEffectRunWish	the game	"Wish" (MsgAbilityName + 96)	games/common/battle_effect/effect_healing_motes.c
+btEffectRunWish	the game	"Wish" (MsgAbilityName + 96)	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_MODE_CURE	the game	"Cure" (MsgAbilityName + 90)	games/tla/src/battle_effect/battle_effect_healing.c
-btEffectRunCure	the game	"Cure" (MsgAbilityName + 90)	games/common/battle_effect/effect_healing_motes.c
+btEffectRunCure	the game	"Cure" (MsgAbilityName + 90)	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_MODE_CURE_POISON	the game	"Cure Poison" (MsgAbilityName + 99)	games/tla/src/battle_effect/battle_effect_healing.c
-btEffectRunCurePoison	the game	"Cure Poison" (MsgAbilityName + 99)	games/common/battle_effect/effect_healing_cure_poison.c
+btEffectRunCurePoison	the game	"Cure Poison" (MsgAbilityName + 99)	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_MODE_RESTORE	the game	"Restore" (MsgAbilityName + 100)	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_MODE_TONIC	the game	"Tonic" (MsgAbilityName + 325)	games/tla/src/battle_effect/battle_effect_healing.c
-btEffectRunTonic	the game	"Tonic" (MsgAbilityName + 325)	games/common/battle_effect/effect_healing_cure_poison.c
+btEffectRunTonic	the game	"Tonic" (MsgAbilityName + 325)	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_MODE_PSY_CRYSTAL	the game	"Psy Crystal" (MsgAbilityName + 255)	games/tla/src/battle_effect/battle_effect_healing.c
-btEffectRunPsyCrystal	the game	"Psy Crystal" (MsgAbilityName + 255)	games/common/battle_effect/effect_psy_crystal.c
+btEffectRunPsyCrystal	the game	"Psy Crystal" (MsgAbilityName + 255)	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_MODE_SALT	the game	"Salt" (MsgAbilityName + 314)	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_MODE_SPRING	the game	"Spring" (MsgAbilityName + 329)	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_MODE_BREATH	the game	"Breath" (MsgAbilityName + 367)	games/tla/src/battle_effect/battle_effect_healing.c
@@ -15511,17 +15511,17 @@ HEALING_BUBBLE	its picture	blue_beam_00.png (BlueBeamSheet's first picture, 24x2
 HEALING_BUBBLE_SHEET	its picture	blue_beam_00.png (BlueBeamSheet's first picture, 24x24): a round blue bubble with a white highlight, decoded here	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_BUBBLE_WIDTH	its picture	blue_beam_00.png is 24 pixels wide; every second pixel of it, 12, is kept	games/tla/src/battle_effect/battle_effect_healing.c
 HEALING_BUBBLE_HEIGHT	its picture	blue_beam_00.png is 24 pixels tall	games/tla/src/battle_effect/battle_effect_healing.c
-btEffectRunSlash	the game	"Slash" (MsgAbilityName + 75)	games/common/battle_effect/effect_projectile_volleys.c
-btEffectRunShuriken	the game	"Shuriken" (MsgAbilityName + 177)	games/common/battle_effect/effect_projectile_volleys.c
-btEffectRunCrazyVoice	the game	"Crazy Voice" (MsgAbilityName + 439)	games/common/battle_effect/effect_projectile_volleys.c
-btEffectRunWingFlutter	the game	"Wing Flutter" (MsgAbilityName + 443)	games/common/battle_effect/effect_projectile_volleys.c
-btEffectRunWingStroke	the game	"Wing Stroke" (MsgAbilityName + 444)	games/common/battle_effect/effect_projectile_volleys.c
-btEffectRunWingBeat	the game	"Wing Beat" (MsgAbilityName + 442)	games/common/battle_effect/effect_projectile_volleys.c
-btEffectRunCuttingEdge	the game	"Cutting Edge" (MsgAbilityName + 193)	games/common/battle_effect/effect_leap_projectiles.c
-btEffectRunHeatWave	the game	"Heat Wave" (MsgAbilityName + 194)	games/common/battle_effect/effect_leap_projectiles.c
-btEffectRunSleet	the game	"Sleet" (MsgAbilityName + 321)	games/common/battle_effect/effect_leap_projectiles.c
-btEffectRunBlizzard	the game	"Blizzard" (MsgAbilityName + 217)	games/common/battle_effect/effect_blizzard.c
-btEffectRunIceBlessing	its twin	The Broken Seal's btEffectRunIceBlessing (games/tbs/src/battle_effect/battle_effect_projectiles.c), the same mode; here "Ice Breath" (MsgAbilityName + 426) and Blue Dragon play it	games/common/battle_effect/effect_ice_blessing.c
+btEffectRunSlash	the game	"Slash" (MsgAbilityName + 75)	games/tla/src/battle_effect/battle_effect_projectiles.c
+btEffectRunShuriken	the game	"Shuriken" (MsgAbilityName + 177)	games/tla/src/battle_effect/battle_effect_projectiles.c
+btEffectRunCrazyVoice	the game	"Crazy Voice" (MsgAbilityName + 439)	games/tla/src/battle_effect/battle_effect_projectiles.c
+btEffectRunWingFlutter	the game	"Wing Flutter" (MsgAbilityName + 443)	games/tla/src/battle_effect/battle_effect_projectiles.c
+btEffectRunWingStroke	the game	"Wing Stroke" (MsgAbilityName + 444)	games/tla/src/battle_effect/battle_effect_projectiles.c
+btEffectRunWingBeat	the game	"Wing Beat" (MsgAbilityName + 442)	games/tla/src/battle_effect/battle_effect_projectiles.c
+btEffectRunCuttingEdge	the game	"Cutting Edge" (MsgAbilityName + 193)	games/tla/src/battle_effect/battle_effect_projectiles.c
+btEffectRunHeatWave	the game	"Heat Wave" (MsgAbilityName + 194)	games/tla/src/battle_effect/battle_effect_projectiles.c
+btEffectRunSleet	the game	"Sleet" (MsgAbilityName + 321)	games/tla/src/battle_effect/battle_effect_projectiles.c
+btEffectRunBlizzard	the game	"Blizzard" (MsgAbilityName + 217)	games/tla/src/battle_effect/battle_effect_projectiles.c
+btEffectRunIceBlessing	its twin	The Broken Seal's btEffectRunIceBlessing (games/tbs/src/battle_effect/battle_effect_projectiles.c), the same mode; here "Ice Breath" (MsgAbilityName + 426) and Blue Dragon play it	games/tla/src/battle_effect/battle_effect_projectiles.c
 btEffectRunDjinniEntrance	its twin	The Broken Seal's btEffectRunDjinniEntrance (games/tbs/src/battle_effect/battle_effect_projectiles.c), the same entrance	games/tla/src/battle_effect/battle_effect_projectiles.c
 btEffectRunDjinniEntrance	what the player sees	Piers unleashes Spring (render psynergy --ability Spring): sparks spin up from Piers in long trails and gather above him into the Mercury Djinni, which sways and bursts into motes (its render)	games/tla/src/battle_effect/battle_effect_projectiles.c
 DJINNI_ENTRANCE_SPARKS	what the player sees	Piers unleashes Spring (render psynergy --ability Spring): sparks spin up from Piers and gather above him into the Mercury Djinni (its render)	games/tla/src/battle_effect/battle_effect_projectiles.c
@@ -15606,8 +15606,8 @@ KIRIN_BURST_MOTES	its twin	The Broken Seal's KIRIN_BURST_MOTES (games/tbs/src/ba
 KIRIN_BURSTS_FREED	its twin	The Broken Seal's KIRIN_BURSTS_FREED (games/tbs/src/battle_effect/battle_effect_kirin.c), on the same line of btEffectRunKirin	games/tla/src/battle_effect/battle_effect_kirin.c
 KIRIN_BURSTS_DRAWN	its twin	The Broken Seal's KIRIN_BURSTS_DRAWN (games/tbs/src/battle_effect/battle_effect_kirin.c), on the same line of btEffectRunKirin	games/tla/src/battle_effect/battle_effect_kirin.c
 MOTE_SIZE_MAX	its twin	The Broken Seal's MOTE_SIZE_MAX (games/tbs/src/battle_effect/battle_effect_kirin.c), on the same line of btEffectRunKirin	games/tla/src/battle_effect/battle_effect_internal.h
-btEffectResetBg2Pa	its twin	The Broken Seal's btEffectResetBg2Pa (games/tbs/src/battle_effect/battle_effect_neptune.c), the same one store of Q_8_8(1) to REG_BG2PA	games/common/battle_effect/effect_bg2_affine_scale.c
-btEffectSetBg2AffineScaleHalf	its twin	The Broken Seal's btEffectSetBg2AffineScaleHalf (games/tbs/src/battle_effect/battle_effect_neptune.c), the same one store of Q_8_8(0.5) to REG_BG2PA	games/common/battle_effect/effect_bg2_affine_scale.c
+btEffectResetBg2Pa	its twin	The Broken Seal's btEffectResetBg2Pa (games/tbs/src/battle_effect/battle_effect_neptune.c), the same one store of Q_8_8(1) to REG_BG2PA	games/tla/src/battle_effect/battle_effect_kirin.c
+btEffectSetBg2AffineScaleHalf	its twin	The Broken Seal's btEffectSetBg2AffineScaleHalf (games/tbs/src/battle_effect/battle_effect_neptune.c), the same one store of Q_8_8(0.5) to REG_BG2PA	games/tla/src/battle_effect/battle_effect_kirin.c
 btEffectRunKirin	the game	"Kirin" (MsgAbilityName + 397)	games/tla/src/battle_effect/battle_effect_kirin.c
 btEffectRunKirin	what the player sees	Jenna summons Kirin: the battle is wiped away in dark red for a scrolling forest, a white hoop opens at the right, a fiery Kirin with a violet mane bounds in through it trailing fire before a column of flame at the right edge, then charges in from the right over the targets, who burst into motes, and a wall of fire sweeps over them and leaves them black (its render)	games/tla/src/battle_effect/battle_effect_kirin.c
 KIRIN_HOOP_HALF_WIDTH	what the player sees	the hoop Kirin bounds through is a tall white ellipse, much taller than it is wide (its render)	games/tla/src/battle_effect/battle_effect_kirin.c
@@ -15951,7 +15951,7 @@ MAIN_FONT_GLYPH_BYTES	its twin	games/tbs/src/window/glyph_arm.c MAIN_FONT_GLYPH_
 MARK_OVER_BORDER_TILE	its twin	games/tbs/src/window/window_sprites.c MARK_OVER_BORDER_TILE, the tile 30 a voiced mark takes over the frame's top edge in the Japanese mnWindowPutGlyph	games/tla/src/window/window_sprites.c
 MARK_OVER_DIVIDER_TILE	its twin	games/tbs/src/window/window_sprites.c MARK_OVER_DIVIDER_TILE, the tile 14 a voiced mark takes over a divider in the Japanese mnWindowPutGlyph	games/tla/src/window/window_sprites.c
 fdWhirlwindCarryLeader	its twin	shared/whirlwind_carry_leader.h	games/tla/src/scene/shared/whirlwind_carry_leader.h
-fdSpeakerGetHaltedLines	its twin	The Broken Seal field_sequence_speakers.c fdSpeakerGetHaltedLines: the same lookup through fdSpeakerGetActorSpr, read by fdTalkToActor for a Halted actor and fdPsynergyFilterHaltTarget	games/common/field/speaker_get_halted_lines.c
+fdSpeakerGetHaltedLines	its twin	The Broken Seal field_sequence_speakers.c fdSpeakerGetHaltedLines: the same lookup through fdSpeakerGetActorSpr, read by fdTalkToActor for a Halted actor and fdPsynergyFilterHaltTarget	games/tla/src/field/field_mode_speakers.c
 SceneItems	its uses	fdSceneItemGetRows finds each scene's rows of treasure in it, and fdPlaceTreasureSpots and fdTalkToActor read them	games/tla/src/field/scene_items.c
 SCENE_ITEM_COINS	the game	"coin" (MsgCoinsReceived)	games/tla/src/field/scene_items.c
 SCENE_ITEM_MIMIC	the game	"The treasure chest was really a Mimic!" (MsgChestWasMimic)	games/tla/src/field/scene_items.c
@@ -16096,8 +16096,8 @@ fdActorUpdateHoverCtrl	the game	"Hover" (MsgAbilityName + 153)	games/tla/src/fie
 fdDjinnRunJupiterJoinEffect	its twin	The Broken Seal's field/event_commands_jupiter.c fdDjinnRunJupiterJoinEffect, the same effect step for step (twins, dice 0.836)	games/tla/src/field/script_commands_jupiter.c
 fdEffectUpdateMarsSpark	its twin	The Broken Seal's field/event_commands_jupiter.c fdEffectUpdateMarsSpark, the same states, targets and sounds (twins, dice 0.677)	games/tla/src/field/script_commands_jupiter.c
 fdEffectShrinkActorAndDestroySlow	its twin	The Broken Seal's field/event_commands_jupiter.c fdEffectShrinkActorAndDestroySlow (DEFINE_SHRINK_AND_DESTROY with -448, the same 7/1024 a frame)	games/tla/src/field/script_commands_jupiter.c
-fdEffectPulseActorScale	its twin	The Broken Seal's field/event_commands_jupiter.c fdEffectPulseActorScale, the same two scales every 4 frames	games/common/field/effect_pulse_and_ramp.c
-fdEffectAdvanceAngWithRamp	its twin	The Broken Seal's field/event_commands_jupiter.c fdEffectAdvanceAngWithRamp, the same ramp (twins, dice 0.438)	games/common/field/effect_pulse_and_ramp.c
+fdEffectPulseActorScale	its twin	The Broken Seal's field/event_commands_jupiter.c fdEffectPulseActorScale, the same two scales every 4 frames	games/tla/src/field/script_commands_jupiter.c
+fdEffectAdvanceAngWithRamp	its twin	The Broken Seal's field/event_commands_jupiter.c fdEffectAdvanceAngWithRamp, the same ramp (twins, dice 0.438)	games/tla/src/field/script_commands_jupiter.c
 VENUS_PARTICLE_STATE	its twin	The Broken Seal's field/event_commands_internal.h VENUS_PARTICLE_STATE, the same value and use	games/tla/src/field/script_commands_internal.h
 VENUS_PARTICLE_AIM	its twin	The Broken Seal's field/event_commands_internal.h VENUS_PARTICLE_AIM, the same value and use	games/tla/src/field/script_commands_internal.h
 VENUS_PARTICLE_RISING	its twin	The Broken Seal's field/event_commands_internal.h VENUS_PARTICLE_RISING, the same value and use	games/tla/src/field/script_commands_internal.h
@@ -16131,10 +16131,10 @@ fdUsePsynergy	its twin	games/tbs/src/field/field_mode_psynergy.c fdUsePsynergy	g
 fdRunPsynergyScript	its twin	games/tbs/src/field/field_mode_psynergy.c's fdUsePsynergy runs its events through the same fdRunPsynergyScript	games/tla/src/field/field_mode_psynergy.c
 fdEffectAdvanceMotionAndSpin	its code	fdEffectAdvanceMotion's motion with the spin fixed at TRIG_TURN / 16 a frame; nothing refers to it in the three Mars Lighthouse overlays that keep it (UNUSED); named in fdEffectAdvanceMotion's family (was Effect_AdvanceMotionAndSpin)	games/tla/src/field/field_effect_advance_spin.c
 VENUS_JOIN_MOTES	its code	the SPRITE_PARTICLE actors fdDjinnRunVenusJoinEffect spawns 120 pixels over the leader, each fdEffectUpdateDescendingOrbitActor at an angle TRIG_TURN / 24 apart; The Broken Seal's twin writes the same 24 and 23 bare	games/tla/src/field/script_commands_venus.c
-fdActorFaceDirectionById	its twin	games/tbs/src/field/script_commands_actor_commands.c fdActorFaceDirectionById, the same event command	games/common/field/actor_stand_and_face.c
+fdActorFaceDirectionById	its twin	games/tbs/src/field/script_commands_actor_commands.c fdActorFaceDirectionById, the same event command	games/tla/src/field/script_commands_actor_commands.c
 fdActorSetSprPriority	its twin	games/tbs/src/field/script_commands_actor_commands.c fdActorSetSprPriority, the same event command	games/tla/src/field/script_commands_actor_commands.c
-fdActorCopyGraphics	its twin	games/tbs/src/field/script_commands_actor_commands.c fdActorCopyGraphics, the same event command	games/common/field/actor_copy_graphics.c
-fdScriptSetMessageId	its twin	games/tbs/src/field/script_commands_actor_commands.c fdScriptSetMessageId, the same event command	games/common/field/script_set_message_id.c
+fdActorCopyGraphics	its twin	games/tbs/src/field/script_commands_actor_commands.c fdActorCopyGraphics, the same event command	games/tla/src/field/script_commands_actor_commands.c
+fdScriptSetMessageId	its twin	games/tbs/src/field/script_commands_actor_commands.c fdScriptSetMessageId, the same event command	games/tla/src/field/script_commands_actor_commands.c
 fdActorGetSprById	its twin	games/tbs/src/field/script_commands_actor_commands.c fdActorGetSprById, the same event command	games/tla/src/field/script_commands_actor_commands.c
 fdActorFindBySpr	its twin	games/tbs/src/field/script_commands_actor_commands.c fdActorFindBySpr, the same event command	games/tla/src/field/script_commands_actor_commands.c
 fdActorFallOverById	its code	turns the actor's still frame a quarter turn toward the rounded angle, shifts it by the side it falls to and walls its cell and the next (METATILE_BEHAVIOR_WALL); the event command a fallen pillar or statue lies by	games/tla/src/field/script_commands_actor_commands.c
@@ -16149,9 +16149,9 @@ fdSpeakerFindDefinition	its twin	The Broken Seal's field_sequence_speakers.c fdS
 fdSpeakerGetActorSpr	its twin	The Broken Seal's field_sequence_speakers.c fdSpeakerGetActorSpr: the same read of an ACTOR_SPRITE_ONE actor's first animation's sprite id	games/tla/src/field/field_mode_speakers.c
 fdSpeakerGetVoice	its twin	The Broken Seal's field_sequence_speakers.c fdSpeakerGetVoice: SE_VOICE_FIRST plus the definition's value, or 0 for SPEAKER_VOICE_NONE or with the Speech option off	games/tla/src/field/field_mode_speakers.c
 fdRequestBattleFromEncounterTable	its twin	The Broken Seal's event_commands_requests.c fdRequestBattleFromEncounterTable: the formation at a row and column of the encounter table, with the world map's zone and backdrop from the leader's place	games/tla/src/field/field_mode_requests.c
-fdScriptSetAfterBattleDestination	its twin	The Broken Seal's event_commands_requests.c fdScriptSetAfterBattleDestination: the same two stores, afterBattleScene and afterBattleEntrance	games/common/field/script_battle_destinations.c
-fdScriptLeaveFor	its twin	The Broken Seal's event_commands_requests.c fdScriptLeaveFor: the same stores of next and entrance and EXIT_KEEP_DESTINATION	games/common/field/script_battle_destinations.c
-fdQueueMusic	its twin	The Broken Seal's event_commands_requests.c fdQueueMusic: the same routine (twins, dice 0.600)	games/common/field/script_battle_destinations.c
+fdScriptSetAfterBattleDestination	its twin	The Broken Seal's event_commands_requests.c fdScriptSetAfterBattleDestination: the same two stores, afterBattleScene and afterBattleEntrance	games/tla/src/field/field_mode_requests.c
+fdScriptLeaveFor	its twin	The Broken Seal's event_commands_requests.c fdScriptLeaveFor: the same stores of next and entrance and EXIT_KEEP_DESTINATION	games/tla/src/field/field_mode_requests.c
+fdQueueMusic	its twin	The Broken Seal's event_commands_requests.c fdQueueMusic: the same routine (twins, dice 0.600)	games/tla/src/field/field_mode_requests.c
 fdPlayQueuedMusic	its twin	The Broken Seal's event_commands_requests.c fdPlayQueuedMusic: plays the queued sound unless it is -1	games/tla/src/field/field_mode_requests.c
 fdScriptShowMessageAndOfferScoop	its code	shows its message, clears FLAG_NOTHING_HAPPENS and opens the field menu when gmPartyFindOwnerWithActionStub(ABILITY_SCOOP) finds a member with Scoop; Taopo Swamp's veneer scTaopoSwampShowMessage calls it	games/tla/src/field/field_mode_requests.c
 AnimationFacingOnePicture	its twin	The Broken Seal's facing.c AnimationFacingOnePicture, the facing table of ANIM_FACING_ONE_PICTURE	games/tla/src/field/facing.c
@@ -16259,7 +16259,7 @@ fdTalkToActor	its twin	The Broken Seal's fdTalkToActor (games/tbs/src/field/fiel
 fdWorldMapIsFlyable	the game	"Use your Psynergy to raise your ship and fly over reefs." (MsgUseYourPsynergy)	games/tla/src/field/field_tile_animation.c
 fdWorldMapIsSailable	the game	"If you have a big enough ship, you can sail anywhere in the world!" (MsgMadraIfYouHaveBigEnough)	games/tla/src/field/field_tile_animation.c
 fdPsynergyDouse	the game	"Douse" (MsgAbilityName + 33)	games/tla/src/field/script_commands_cloak.c
-fdPsynergyDouseOnTarget	the game	"Douse" (MsgAbilityName + 33)	games/common/field/psynergy_douse_on_target.c
+fdPsynergyDouseOnTarget	the game	"Douse" (MsgAbilityName + 33)	games/tla/src/field/script_commands_cloak.c
 fdPsynergyStartCloak	the game	"Cloak" (MsgAbilityName + 146)	games/tla/src/field/script_commands_cloak.c
 CARRY_SHARDS	the game	"Carry" (MsgAbilityName + 147)	games/tla/src/field/script_commands_cloak.c
 CLOAK_END	its twin	The Broken Seal's CLOAK_END (games/tbs/src/field/script_commands_cloak.c), the same request	games/tla/src/field/script_commands_cloak.c
@@ -16586,11 +16586,11 @@ btEffectConvertBackgroundToBlueRamp	its twin	The Broken Seal's btEffectConvertBa
 BLUE_RAMP_PALETTE	its twin	The Broken Seal's games/tbs/src/battle_effect/battle_effect_bind.c names BG palette 2 BLUE_RAMP_PALETTE in the twin btEffectConvertBackgroundToBlueRamp; its colours are RGB(i / 2, i / 2, i), blue at full and red and green at half	games/tla/src/battle_effect/battle_effect_bind.c
 BLUE_RAMP_SECOND_PALETTE	its twin	The Broken Seal's games/tbs/src/battle_effect/battle_effect_bind.c names BG palette 6 BLUE_RAMP_SECOND_PALETTE in the twin btEffectConvertBackgroundToBlueRamp; its colours are RGB(i / 2, i / 2, i)	games/tla/src/battle_effect/battle_effect_bind.c
 BLUE_RAMP_PIXELS	its twin	The Broken Seal's battle_effect_internal.h names the map cell buffer BLUE_RAMP_PIXELS where btEffectConvertBackgroundToBlueRamp copies the battle background into it and recolours it	games/tla/src/battle_effect/battle_effect_bind.c
-btEffectRunThrash	the game	"Thrash" (MsgAbilityName + 518): AbilityBattleEffects gives ability 518 BATTLE_EFFECT_THRASH, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_thrash.c
+btEffectRunThrash	the game	"Thrash" (MsgAbilityName + 518): AbilityBattleEffects gives ability 518 BATTLE_EFFECT_THRASH, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_thrash.c
 btEffectRunSevereBlow	the game	"Severe Blow" (MsgAbilityName + 517): AbilityBattleEffects gives ability 517 BATTLE_EFFECT_SEVERE_BLOW, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_thrash.c
 btEffectRunMightyPress	the game	"Mighty Press" (MsgAbilityName + 672): AbilityBattleEffects gives ability 672 BATTLE_EFFECT_MIGHTY_PRESS, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_thrash.c
-btEffectRunQuickStrike	the game	"Quick Strike" (MsgAbilityName + 163); "Blind an enemy with a rapid strike." (MsgAbilityDescription + 163): AbilityBattleEffects gives ability 163 BATTLE_EFFECT_QUICK_STRIKE, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_quick_strikes.c
-btEffectRunVorpalSlash	the game	"Vorpal Slash" (MsgAbilityName + 228): AbilityBattleEffects gives ability 228 BATTLE_EFFECT_VORPAL_SLASH, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_quick_strikes.c
+btEffectRunQuickStrike	the game	"Quick Strike" (MsgAbilityName + 163); "Blind an enemy with a rapid strike." (MsgAbilityDescription + 163): AbilityBattleEffects gives ability 163 BATTLE_EFFECT_QUICK_STRIKE, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_thrash.c
+btEffectRunVorpalSlash	the game	"Vorpal Slash" (MsgAbilityName + 228): AbilityBattleEffects gives ability 228 BATTLE_EFFECT_VORPAL_SLASH, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_thrash.c
 btEffectRunLunarSlash	the game	"Lunar Slash" (MsgAbilityName + 569): AbilityBattleEffects gives ability 569 BATTLE_EFFECT_LUNAR_SLASH, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_thrash.c
 btEffectRunBoostHack	the game	"Boost Hack" (MsgAbilityName + 550): AbilityBattleEffects gives ability 550 BATTLE_EFFECT_BOOST_HACK, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_thrash.c
 btEffectRunTwinShear	the game	"Twin Shear" (MsgAbilityName + 664): AbilityBattleEffects gives ability 664 BATTLE_EFFECT_TWIN_SHEAR, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_thrash.c
@@ -16606,16 +16606,16 @@ FLASHING_STRIKE_TICKS	its twin	The Broken Seal's games/tbs/src/battle_effect/bat
 FLASHING_STRIKE_FLOOD_TICK	what the player sees	render psynergy --ability "Quick Strike" (Sheba at Felix): Sheba hops onto Felix, the screen turns black while a cyan slash sweeps across it in four pictures, then the whole screen flashes white for a few frames, "Felix takes 275 damage!" shows and Felix is hurled back (its render)	games/tla/src/battle_effect/battle_effect_thrash.c
 FLASHING_STRIKE_DAMAGE_TICK	what the player sees	render psynergy --ability "Quick Strike" (Sheba at Felix): Sheba hops onto Felix, the screen turns black while a cyan slash sweeps across it in four pictures, then the whole screen flashes white for a few frames, "Felix takes 275 damage!" shows and Felix is hurled back (its render)	games/tla/src/battle_effect/battle_effect_thrash.c
 FLASHING_STRIKE_HIT_TICK	what the player sees	render psynergy --ability "Quick Strike" (Sheba at Felix): Sheba hops onto Felix, the screen turns black while a cyan slash sweeps across it in four pictures, then the whole screen flashes white for a few frames, "Felix takes 275 damage!" shows and Felix is hurled back (its render)	games/tla/src/battle_effect/battle_effect_thrash.c
-btEffectRunSonicWave	the game	"Sonic Wave" (MsgAbilityName + 435); "Sonic Wave" (MsgAbilityName + 436): AbilityBattleEffects gives both BATTLE_EFFECT_SONIC_WAVE, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_streaks.c
-btEffectRunShriek	the game	"Shriek" (MsgAbilityName + 437); "Harpy" (MsgAbilityName + 605): AbilityBattleEffects gives both BATTLE_EFFECT_SHRIEK, this handler's row in gBattleEffect_EffectHandlers; render psynergy --ability Harpy (Sheba at Felix): the Harpy appears over Sheba, then three rings of lime light, each trailing a fading tube of rings, fly from her to Felix one after another; Felix flashes white and is knocked back (its render)	games/common/battle_effect/effect_streaks.c
-btEffectRunBansheeHowl	the game	"Banshee Howl" (MsgAbilityName + 438): AbilityBattleEffects gives ability 438 BATTLE_EFFECT_BANSHEE_HOWL, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_streaks.c
-btEffectRunWarCry	the game	"War Cry" (MsgAbilityName + 440): AbilityBattleEffects gives ability 440 BATTLE_EFFECT_WAR_CRY, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_streaks.c
-btEffectRunWickedHowl	the game	"Wicked Howl" (MsgAbilityName + 441): AbilityBattleEffects gives ability 441 BATTLE_EFFECT_WICKED_HOWL, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_streaks.c
-btEffectRunLimeStreaks	its twin	The Broken Seal's UNUSED btEffectRunLimeStreaks (games/tbs/src/battle_effect/battle_effect_streaks.c), the same lime style as Shriek; no handler row names it in either game	games/common/battle_effect/effect_streaks.c
+btEffectRunSonicWave	the game	"Sonic Wave" (MsgAbilityName + 435); "Sonic Wave" (MsgAbilityName + 436): AbilityBattleEffects gives both BATTLE_EFFECT_SONIC_WAVE, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_streaks.c
+btEffectRunShriek	the game	"Shriek" (MsgAbilityName + 437); "Harpy" (MsgAbilityName + 605): AbilityBattleEffects gives both BATTLE_EFFECT_SHRIEK, this handler's row in gBattleEffect_EffectHandlers; render psynergy --ability Harpy (Sheba at Felix): the Harpy appears over Sheba, then three rings of lime light, each trailing a fading tube of rings, fly from her to Felix one after another; Felix flashes white and is knocked back (its render)	games/tla/src/battle_effect/battle_effect_streaks.c
+btEffectRunBansheeHowl	the game	"Banshee Howl" (MsgAbilityName + 438): AbilityBattleEffects gives ability 438 BATTLE_EFFECT_BANSHEE_HOWL, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_streaks.c
+btEffectRunWarCry	the game	"War Cry" (MsgAbilityName + 440): AbilityBattleEffects gives ability 440 BATTLE_EFFECT_WAR_CRY, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_streaks.c
+btEffectRunWickedHowl	the game	"Wicked Howl" (MsgAbilityName + 441): AbilityBattleEffects gives ability 441 BATTLE_EFFECT_WICKED_HOWL, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_streaks.c
+btEffectRunLimeStreaks	its twin	The Broken Seal's UNUSED btEffectRunLimeStreaks (games/tbs/src/battle_effect/battle_effect_streaks.c), the same lime style as Shriek; no handler row names it in either game	games/tla/src/battle_effect/battle_effect_streaks.c
 btEffectRunStreakVolley	what the player sees	render psynergy --ability Harpy (Sheba at Felix): the Harpy appears over Sheba, then three rings of lime light, each trailing a fading tube of rings, fly from her to Felix one after another; Felix flashes white and is knocked back (its render); The Broken Seal names its twin btEffectRunStreakVolley	games/tla/src/battle_effect/battle_effect_streaks.c
 STREAK_STYLE	its twin	The Broken Seal's enum STREAK_STYLE (games/tbs/src/battle_effect/battle_effect_streaks.c), the streak volley's styles	games/tla/src/battle_effect/battle_effect_streaks.c
-btEffectRunSleepStar	the game	"Sleep Star" (MsgAbilityName + 491): AbilityBattleEffects gives ability 491 BATTLE_EFFECT_SLEEP_STAR, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_stars.c
-btEffectRunSoothingStar	the game	"Soothing Star" (MsgAbilityName + 486): AbilityBattleEffects gives ability 486 BATTLE_EFFECT_SOOTHING_STAR, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_stars.c
+btEffectRunSleepStar	the game	"Sleep Star" (MsgAbilityName + 491): AbilityBattleEffects gives ability 491 BATTLE_EFFECT_SLEEP_STAR, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_streaks.c
+btEffectRunSoothingStar	the game	"Soothing Star" (MsgAbilityName + 486): AbilityBattleEffects gives ability 486 BATTLE_EFFECT_SOOTHING_STAR, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_streaks.c
 btEffectRunSlaver	the game	"Slaver" (MsgAbilityName + 671): AbilityBattleEffects gives ability 671 BATTLE_EFFECT_SLAVER, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_streaks.c
 MOTE_FOUNTAIN_SLAVER	the game	"Slaver" (MsgAbilityName + 671): btEffectRunSlaver passes it	games/tla/src/battle_effect/battle_effect_streaks.c
 btEffectRunMoteFountain	its twin	The Broken Seal's btEffectRunMoteFountain (games/tbs/src/battle_effect/battle_effect_streaks.c), the same motes for Sleep Star and Soothing Star; Slaver, which this game adds, is enemies' only, so render psynergy cannot cast it	games/tla/src/battle_effect/battle_effect_streaks.c
@@ -16645,9 +16645,9 @@ OCEAN_FIST_SPRAY_SHEET	its picture	flash_burst.png (FlashBurstSheet, 32x384): si
 OCEAN_FIST_SPRAY_SLOTS	its picture	flash_burst.png (FlashBurstSheet, 32x384): six 32x64 pictures of a white flash swelling into a burst that breaks up and fades, looked at enlarged under BlueFlameSheet's ramp that btEffectRunOceanFist loads, where it is a burst of blue spray	games/tla/src/battle_effect/battle_effect_ocean_fist.c
 OCEAN_FIST_SPRAYS	its picture	flash_burst.png (FlashBurstSheet, 32x384): six 32x64 pictures of a white flash swelling into a burst that breaks up and fades, looked at enlarged under BlueFlameSheet's ramp that btEffectRunOceanFist loads, where it is a burst of blue spray	games/tla/src/battle_effect/battle_effect_ocean_fist.c
 OCEAN_FIST_SPRAY_TICKS	its picture	flash_burst.png (FlashBurstSheet, 32x384): six 32x64 pictures of a white flash swelling into a burst that breaks up and fades, looked at enlarged under BlueFlameSheet's ramp that btEffectRunOceanFist loads, where it is a burst of blue spray	games/tla/src/battle_effect/battle_effect_ocean_fist.c
-btEffectRunBlast	the game	"Blast" (MsgAbilityName + 54): AbilityBattleEffects gives Blast, Mad Blast and Fiery Blast (54 to 56) BATTLE_EFFECT_BLAST at variants 0 to 2, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_smoke_bomb_blast.c
+btEffectRunBlast	the game	"Blast" (MsgAbilityName + 54): AbilityBattleEffects gives Blast, Mad Blast and Fiery Blast (54 to 56) BATTLE_EFFECT_BLAST at variants 0 to 2, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_eruption.c
 ERUPTION_BLAST	the game	"Blast" (MsgAbilityName + 54): AbilityBattleEffects gives Blast, Mad Blast and Fiery Blast (54 to 56) BATTLE_EFFECT_BLAST at variants 0 to 2, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_eruption.c
-btEffectRunSmokeBomb	the game	"Smoke Bomb" (MsgAbilityName + 267): AbilityBattleEffects gives Smoke Bomb and Sleep Bomb (267, 268) BATTLE_EFFECT_SMOKE_BOMB, this handler's row in gBattleEffect_EffectHandlers; render psynergy refuses them (an item's)	games/common/battle_effect/effect_smoke_bomb_blast.c
+btEffectRunSmokeBomb	the game	"Smoke Bomb" (MsgAbilityName + 267): AbilityBattleEffects gives Smoke Bomb and Sleep Bomb (267, 268) BATTLE_EFFECT_SMOKE_BOMB, this handler's row in gBattleEffect_EffectHandlers; render psynergy refuses them (an item's)	games/tla/src/battle_effect/battle_effect_eruption.c
 ERUPTION_SMOKE_BOMB	the game	"Smoke Bomb" (MsgAbilityName + 267): AbilityBattleEffects gives Smoke Bomb and Sleep Bomb (267, 268) BATTLE_EFFECT_SMOKE_BOMB, this handler's row in gBattleEffect_EffectHandlers; render psynergy refuses them (an item's)	games/tla/src/battle_effect/battle_effect_eruption.c
 btEffectRunEruption	its twin	The Broken Seal's btEffectRunEruption (games/tbs/src/battle_effect/battle_effect_eruption.c), the same routine	games/tla/src/battle_effect/battle_effect_eruption.c
 btEffectRunEruption	what the player sees	render psynergy --ability Blast (Jenna at Felix, Piers and Sheba): a burst of fire swells into a blaze of flame and smoke that billows over the three, embers fly up out of it and rain down after it, and each of them flashes white and hops in turn as the damage is told (its render, blast-54.gif)	games/tla/src/battle_effect/battle_effect_eruption.c
@@ -16657,7 +16657,7 @@ ERUPTION_MOTE_LARGEST	its twin	The Broken Seal's ERUPTION_MOTE_LARGEST (games/tb
 ERUPTION_MOTE_DEPTH_NEAR	its twin	The Broken Seal's ERUPTION_MOTE_DEPTH_NEAR (games/tbs/src/battle_effect/battle_effect_eruption.c), the same routine	games/tla/src/battle_effect/battle_effect_eruption.c
 ERUPTION_MOTE_DEPTH_FAR	its twin	The Broken Seal's ERUPTION_MOTE_DEPTH_FAR (games/tbs/src/battle_effect/battle_effect_eruption.c), the same routine	games/tla/src/battle_effect/battle_effect_eruption.c
 ERUPTION_MOTE_DEPTH_STEP	its twin	The Broken Seal's ERUPTION_MOTE_DEPTH_STEP (games/tbs/src/battle_effect/battle_effect_eruption.c), the same routine	games/tla/src/battle_effect/battle_effect_eruption.c
-btEffectNoOperation	its twin	The Broken Seal's btEffectNoOperation (games/tbs/src/battle_effect/battle_effect_eruption.c), the same routine	games/common/battle_effect/effect_no_operation.c
+btEffectNoOperation	its twin	The Broken Seal's btEffectNoOperation (games/tbs/src/battle_effect/battle_effect_eruption.c), the same routine	games/tla/src/battle_effect/battle_effect_eruption.c
 btEffectRunTripleChomp	the game	"Triple Chomp" (MsgAbilityName + 668): AbilityBattleEffects gives ability 668 BATTLE_EFFECT_TRIPLE_CHOMP, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_triple_chomp.c
 btEffectRunTripleChomp	what the player sees	render psynergy --ability "Triple Chomp" --unlearned (Piers at Jenna): Piers lunges at Jenna, and three times a tilted ring of blue-white light swells over her, each turned further than the last, and fades as blue-white sparks burst from her and fly off; she flashes white and jolts back at each, and her damage is told at the third (its render)	games/tla/src/battle_effect/battle_effect_triple_chomp.c
 TRIPLE_CHOMP_TICKS	the game	"Triple Chomp" (MsgAbilityName + 668): AbilityBattleEffects gives ability 668 BATTLE_EFFECT_TRIPLE_CHOMP, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_triple_chomp.c
@@ -16728,8 +16728,8 @@ SWIRLING_STAR_SPIN	its twin	The Broken Seal's SWIRLING_STAR_SPIN (games/tbs/src/
 TARGET_BURST_PICTURES	its picture	target_burst.png (TargetBurstImage) and smoke.png (SmokeSheet), looked at enlarged: six 24x48 pictures each, a round puff breaking up into a skull's face and then into scraps, and a grey puff of smoke thinning away; the burst's pictures follow the smoke's six in the effect's sheet; The Broken Seal's TARGET_BURST_PICTURES (games/tbs/src/battle_effect/battle_effect_orbiting.c)	games/tla/src/battle_effect/battle_effect_orbiting.c
 TARGET_BURSTS_TICKS	its twin	The Broken Seal's TARGET_BURSTS_TICKS (games/tbs/src/battle_effect/battle_effect_orbiting.c), the same frame count in the same routine; nothing in the game reaches the effect (no table or call names it), so no render shows it	games/tla/src/battle_effect/battle_effect_orbiting.c
 btEffectRunPlasma	the game	"Plasma" (MsgAbilityName + 72); "Shine Plasma" (MsgAbilityName + 73); "Spark Plasma" (MsgAbilityName + 74); "Thunderclap" (MsgAbilityName + 188); "Thunderbolt" (MsgAbilityName + 189); "Thunderhead" (MsgAbilityName + 190): AbilityBattleEffects gives them BATTLE_EFFECT_PLASMA at variants 0, 1 and 2, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_plasma.c
-btEffectRunNova	the game	"Blast" (MsgAbilityName + 57); "Nova" (MsgAbilityName + 58); "Supernova" (MsgAbilityName + 59); "Fire Bomb" (MsgAbilityName + 182); "Cluster Bomb" (MsgAbilityName + 183); "Carpet Bomb" (MsgAbilityName + 184): AbilityBattleEffects gives them BATTLE_EFFECT_NOVA at variants 0, 1 and 2, this handler's row in gBattleEffect_EffectHandlers	games/common/battle_effect/effect_nova_dynamite.c
-btEffectRunDynamite	the game	"Dynamite" (MsgAbilityName + 480); "Angry Mine" (MsgAbilityName + 727): AbilityBattleEffects gives them BATTLE_EFFECT_DYNAMITE, this handler's row in gBattleEffect_EffectHandlers; only enemies use them, and render psynergy refuses them	games/common/battle_effect/effect_nova_dynamite.c
+btEffectRunNova	the game	"Blast" (MsgAbilityName + 57); "Nova" (MsgAbilityName + 58); "Supernova" (MsgAbilityName + 59); "Fire Bomb" (MsgAbilityName + 182); "Cluster Bomb" (MsgAbilityName + 183); "Carpet Bomb" (MsgAbilityName + 184): AbilityBattleEffects gives them BATTLE_EFFECT_NOVA at variants 0, 1 and 2, this handler's row in gBattleEffect_EffectHandlers	games/tla/src/battle_effect/battle_effect_plasma.c
+btEffectRunDynamite	the game	"Dynamite" (MsgAbilityName + 480); "Angry Mine" (MsgAbilityName + 727): AbilityBattleEffects gives them BATTLE_EFFECT_DYNAMITE, this handler's row in gBattleEffect_EffectHandlers; only enemies use them, and render psynergy refuses them	games/tla/src/battle_effect/battle_effect_plasma.c
 btEffectRunSparkGroups	what the player sees	render psynergy --ability Blast (ability 57) and Supernova (Jenna at Felix, Piers and Sheba): one burst in Blast, three in Supernova, each a white flash ringed with smaller flashes that spread and fade, throwing sparks every way that fall and bounce, as the targets flash white and are thrown back; btEffectRunNova and btEffectRunDynamite play it (its render)	games/tla/src/battle_effect/battle_effect_plasma.c
 PLASMA_SPARK_COUNT	what the player sees	render psynergy --ability Plasma and "Spark Plasma" (Sheba at Jenna, Felix and Piers): each pillar of lightning throws up a fountain of sparks from its foot, hundreds of them, that fall, bounce and dwindle (its render)	games/tla/src/battle_effect/battle_effect_plasma.c
 PLASMA_GROUND_Y	what the player sees	render psynergy --ability Plasma and "Spark Plasma" (Sheba at Jenna, Felix and Piers): the sparks fly up from the foot of each pillar of lightning and bounce off the ground there (its render)	games/tla/src/battle_effect/battle_effect_plasma.c
@@ -16769,14 +16769,14 @@ btEffectRunAnnihilation	the game	"Annihilation" (MsgAbilityName + 178)	games/tla
 btEffectRunAnnihilation	what the player sees	render psynergy --ability Annihilation --unlearned (Felix at Sheba): Felix dashes up to Sheba, the battle flashes white, Sheba turns red and is thrown back, and a burst of fire swells on her while a shower of glowing shards flies out of her and falls away (its render)	games/tla/src/battle_effect/battle_effect_annihilation.c
 SHARD_COUNT	what the player sees	render psynergy --ability Annihilation --unlearned (Felix at Sheba): the shower of glowing orange shards that flies out of Sheba as she is struck, each shrinking as it falls (its render)	games/tla/src/battle_effect/battle_effect_annihilation.c
 btEffectRunAnnihilation	its twin	The Broken Seal's btEffectRunAnnihilation (games/tbs/src/battle_effect/battle_effect_annihilation.c), its locals and comments	games/tla/src/battle_effect/battle_effect_annihilation.c
-btEffectCallNoOperation	its twin	The Broken Seal's btEffectCallNoOperation in games/tbs/src/battle_effect/battle_effect_dispatch.c, the same busy delay	games/common/battle_effect/effect_call_no_operation.c
+btEffectCallNoOperation	its twin	The Broken Seal's btEffectCallNoOperation in games/tbs/src/battle_effect/battle_effect_dispatch.c, the same busy delay	games/tla/src/battle_effect/battle_effect_dispatch.c
 btEffectRunSummon	its twin	The Broken Seal's btEffectRunSummon in games/tbs/src/battle_effect/battle_effect_dispatch.c, the same switch on enum SUMMON_EFFECT_ID with The Lost Age's further summons and ability scenes	games/tla/src/battle_effect/battle_effect_dispatch.c
 btEffectRunFromTable	its twin	The Broken Seal's btEffectRunFromTable in games/tbs/src/battle_effect/battle_effect_dispatch.c, the same call through BattleEffectHandlers	games/tla/src/battle_effect/battle_effect_dispatch.c
 btEffectBuildWindowEdgeTable	its twin	The Broken Seal's btEffectBuildWindowEdgeTable in games/tbs/src/battle_effect/battle_effect_dispatch.c, the same routine	games/tla/src/battle_effect/battle_effect_dispatch.c
-btEffectRunGrowth	the game	"Growth" (MsgAbilityName + 12): AbilityBattleEffects gives Growth, Mad Growth and Wild Growth BATTLE_EFFECT_GROWTH, this handler's row in BattleEffectHandlers	games/common/battle_effect/effect_growth_punji.c
-btEffectRunGrowth	what the player sees	render psynergy --ability Growth (Felix at Sheba): thorny green vines grow up beside Sheba one after another, an orange ring flares at their roots, Sheba flashes white, and the vines fade (its render)	games/common/battle_effect/effect_growth_punji.c
-btEffectRunPunji	the game	"Punji" (MsgAbilityName + 179): AbilityBattleEffects gives Punji, Punji Trap and Punji Strike BATTLE_EFFECT_PUNJI, this handler's row	games/common/battle_effect/effect_growth_punji.c
-btEffectRunPunji	what the player sees	render psynergy --ability Punji (Felix at Jenna, Sheba and Piers): green bamboo-like pillars grow up among the targets with orange rings flaring at their roots, the targets flash white, and the pillars fade (its render)	games/common/battle_effect/effect_growth_punji.c
+btEffectRunGrowth	the game	"Growth" (MsgAbilityName + 12): AbilityBattleEffects gives Growth, Mad Growth and Wild Growth BATTLE_EFFECT_GROWTH, this handler's row in BattleEffectHandlers	games/tla/src/battle_effect/battle_effect_growth.c
+btEffectRunGrowth	what the player sees	render psynergy --ability Growth (Felix at Sheba): thorny green vines grow up beside Sheba one after another, an orange ring flares at their roots, Sheba flashes white, and the vines fade (its render)	games/tla/src/battle_effect/battle_effect_growth.c
+btEffectRunPunji	the game	"Punji" (MsgAbilityName + 179): AbilityBattleEffects gives Punji, Punji Trap and Punji Strike BATTLE_EFFECT_PUNJI, this handler's row	games/tla/src/battle_effect/battle_effect_growth.c
+btEffectRunPunji	what the player sees	render psynergy --ability Punji (Felix at Jenna, Sheba and Piers): green bamboo-like pillars grow up among the targets with orange rings flaring at their roots, the targets flash white, and the pillars fade (its render)	games/tla/src/battle_effect/battle_effect_growth.c
 btEffectRunGrowingColumns	what the player sees	render psynergy --ability Growth (Felix at Sheba) and render psynergy --ability Punji (Felix at Jenna, Sheba and Piers): vines or green pillars grow one after another, alternately mirrored, flaring at their roots (its render)	games/tla/src/battle_effect/battle_effect_growth.c
 btEffectRunGrowingColumns	its twin	The Broken Seal's btEffectRunGrowingColumns in games/tbs/src/battle_effect/battle_effect_growth.c, the same routine	games/tla/src/battle_effect/battle_effect_growth.c
 GROWING_COLUMNS_MODE	its twin	The Broken Seal's enum GROWING_COLUMNS_MODE in games/tbs/src/battle_effect/battle_effect_growth.c, the same two modes	games/tla/src/battle_effect/battle_effect_growth.c
@@ -18171,15 +18171,15 @@ btStagingRunAttack	its twin	The Broken Seal's btStagingRunAttack (games/tbs/src/
 btEnemyGetFreeUnitId	its twin	The Broken Seal's btEnemyGetFreeUnitId (games/tbs/src/battle/battle_placement.c; twins, dice 1.000)	games/tla/src/battle/battle_placement.c
 btUnitRefreshPlacement	its twin	The Broken Seal's btUnitRefreshPlacement (games/tbs/src/battle/battle_placement.c; twins, dice 0.733)	games/tla/src/battle/battle_placement.c
 btPlacementLayoutEnemies	its twin	The Broken Seal's btPlacementLayoutEnemies (games/tbs/src/battle/battle_placement.c; twins, dice 0.642)	games/tla/src/battle/battle_placement.c
-btPlacementContainsId	its twin	The Broken Seal's btPlacementContainsId (games/tbs/src/battle/battle_placement.c; twins, dice 0.588)	games/common/battle/placement_contains_id.c
+btPlacementContainsId	its twin	The Broken Seal's btPlacementContainsId (games/tbs/src/battle/battle_placement.c; twins, dice 0.588)	games/tla/src/battle/battle_placement.c
 btObjectMake	its twin	The Broken Seal's btObjectMake (games/tbs/src/battle/battle_placement.c; twins, dice 0.541)	games/tla/src/battle/battle_placement.c
-btPlacementGetStepPair	its twin	The Broken Seal's btPlacementGetStepPair (games/tbs/src/battle/battle_placement.c)	games/common/battle/placement_get_step_pair.c
+btPlacementGetStepPair	its twin	The Broken Seal's btPlacementGetStepPair (games/tbs/src/battle/battle_placement.c)	games/tla/src/battle/battle_placement.c
 BATTLE_ZOOM_BEFORE_OPENING	its twin	The Broken Seal's BATTLE_ZOOM_BEFORE_OPENING (games/tbs/src/battle/battle_run.c), the same btCameraSetView before the opening; here the curtain's opening sets BATTLE_ZOOM_NORMAL + TRANSITION_OPEN_TICKS a frame later and the Doom Dragon's shattering opening BATTLE_ZOOM_NORMAL before the screen shows a layer	games/tla/src/battle/battle_run.c
 NAME_LETTER_PAST_ALL	its twin	The Broken Seal's NAME_LETTER_PAST_ALL (games/tbs/src/battle/battle_run.c), the same letter given to the first defeated enemy for the victory message	games/tla/src/battle/battle_run.c
 btTutorialGetDjinnGiveMessage	the game	"To give your Djinni to someone else, move it like this." (MsgDjinnGiveTutorialA)	games/tla/src/battle/battle_run.c
 btClearBg0Vofs	its twin	The Broken Seal's btClearBg0Vofs (games/tbs/src/battle/battle_setup.c), the same unused routine that clears REG_BG0VOFS, beside btShiftVRAMTiles	games/tla/src/battle/battle_setup.c
-btShiftVRAMTiles	its twin	The Broken Seal's btShiftVRAMTiles (games/tbs/src/battle/battle_setup.c), the same DMA from 0x06000290 to 0x06000280 and clear at 0x0600028c (twins, dice 0.300)	games/common/battle/shift_vram_tiles.c
-btSummonReservedNoOperation	its twin	The Broken Seal's btSummonReservedNoOperation (games/tbs/src/battle/battle_setup.c), the empty routine after btSummonUpdateAvailability	games/common/battle/summon_reserved_no_operation.c
+btShiftVRAMTiles	its twin	The Broken Seal's btShiftVRAMTiles (games/tbs/src/battle/battle_setup.c), the same DMA from 0x06000290 to 0x06000280 and clear at 0x0600028c (twins, dice 0.300)	games/tla/src/battle/battle_setup.c
+btSummonReservedNoOperation	its twin	The Broken Seal's btSummonReservedNoOperation (games/tbs/src/battle/battle_setup.c), the empty routine after btSummonUpdateAvailability	games/tla/src/battle/battle_setup.c
 CAMERA_YAW_EASE	its twin	The Broken Seal's CAMERA_YAW_EASE (games/tbs/src/battle/battle_setup.c): btCameraUpdate divides the gap to the target yaw by 16	games/tla/src/battle/battle_setup.c
 btIntroAnnounceEncounter	its twin	The Broken Seal's btIntroAnnounceEncounter (games/tbs/src/battle/battle_setup.c; twins, dice 0.777)	games/tla/src/battle/battle_setup.c
 btCameraUpdate	its twin	The Broken Seal's btCameraUpdate (games/tbs/src/battle/battle_setup.c; twins, dice 0.719)	games/tla/src/battle/battle_setup.c
@@ -18201,8 +18201,8 @@ btMessageWaitForAdvanceAt	its twin	The Broken Seal's btMessageWaitForAdvanceAt (
 btPlaybackGrantDjinnBonus	its twin	The Broken Seal's btPlaybackGrantDjinnBonus (games/tbs/src/battle/battle_playback_queue.c)	games/tla/src/battle/battle_targeting.c
 btPlaybackRunAll	its twin	The Broken Seal's btPlaybackRunAll (games/tbs/src/battle/battle_playback_queue.c; twins, dice 0.707)	games/tla/src/battle/battle_targeting.c
 btPlaybackPush	its twin	The Broken Seal's btPlaybackPush (games/tbs/src/battle/battle_playback_queue.c; twins, dice 0.727)	games/tla/src/battle/battle_targeting.c
-btAbilityEffectAppliesToDowned	its twin	The Broken Seal's btAbilityEffectAppliesToDowned (games/tbs/src/battle/battle_ability.c; twins, dice 1.000)	games/common/battle/ability_effect_applies_to_downed.c
-btAbilityIsPsynergy	its twin	The Broken Seal's btAbilityIsPsynergy (games/tbs/src/battle/battle_ability.c)	games/common/battle/ability_is_psynergy.c
+btAbilityEffectAppliesToDowned	its twin	The Broken Seal's btAbilityEffectAppliesToDowned (games/tbs/src/battle/battle_ability.c; twins, dice 1.000)	games/tla/src/battle/battle_targeting.c
+btAbilityIsPsynergy	its twin	The Broken Seal's btAbilityIsPsynergy (games/tbs/src/battle/battle_ability.c)	games/tla/src/battle/battle_targeting.c
 btAIChooseAction	its twin	The Broken Seal's btAIChooseAction (games/tbs/src/battle/battle_enemy_ai.c; twins, dice 0.385)	games/tla/src/battle/battle_targeting.c
 btPlacementRelayoutEnemies	its twin	The Broken Seal's btPlacementRelayoutEnemies (games/tbs/src/battle/battle_placement.c): lays the enemies out again with btPlacementLayoutEnemies and moves each battle object's anchor to its place (was Enemy_Update)	games/tla/src/battle/battle_placement.c
 AFFINE_MAP_ENTRIES	its twin	tbs battle_transition.c, AFFINE_MAP_ENTRIES	games/tla/src/battle/battle_transition.c
@@ -18218,7 +18218,7 @@ TRANSITION_CURTAIN_ENTRY	its twin	tbs battle_transition.c, TRANSITION_CURTAIN_EN
 TRANSITION_CURTAIN_MIDDLE_ROW	its twin	tbs battle_transition.c, TRANSITION_CURTAIN_MIDDLE_ROW	games/tla/src/battle/battle_transition.c
 TRANSITION_CURTAIN_LAST_ROW	its twin	tbs battle_transition.c, TRANSITION_CURTAIN_LAST_ROW	games/tla/src/battle/battle_transition.c
 TRANSITION_OPEN_TICKS	its twin	tbs battle_transition.c, TRANSITION_OPEN_TICKS	games/tla/src/battle/battle_transition.c
-btTransitionRunMosaicFadeOut	its twin	tbs battle_transition.c, btTransitionRunMosaicFadeOut	games/common/battle/transition_mosaic_fade.c
+btTransitionRunMosaicFadeOut	its twin	tbs battle_transition.c, btTransitionRunMosaicFadeOut	games/tla/src/battle/battle_transition.c
 btBackgroundShowZoomedPage	its twin	tbs battle_transition.c, btBackgroundShowZoomedPage	games/tla/src/battle/battle_transition.c
 btTransitionUploadTileVariant	its twin	tbs battle_transition.c, btTransitionUploadTileVariant	games/tla/src/battle/battle_transition.c
 btTransitionDrawRows	its twin	tbs battle_transition.c, btTransitionDrawRows	games/tla/src/battle/battle_transition.c
@@ -18257,14 +18257,14 @@ fdActorSetMovementTypeById	its twin	The Broken Seal's fdActorSetMovementTypeById
 fdActorStop	its twin	The Broken Seal's fdActorStop (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
 fdActorWatchAndSetScript	its twin	The Broken Seal's fdActorWatchAndSetScript (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
 fdActorSetMovementTypeAndWaitById	its twin	The Broken Seal's fdActorSetMovementTypeAndWaitById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
-fdActorSetDestinationById	its twin	The Broken Seal's fdActorSetDestinationById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/common/field/actor_set_destination.c
-fdActorMoveToAndWaitById	its twin	The Broken Seal's fdActorMoveToAndWaitById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/common/field/actor_set_destination.c
+fdActorSetDestinationById	its twin	The Broken Seal's fdActorSetDestinationById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
+fdActorMoveToAndWaitById	its twin	The Broken Seal's fdActorMoveToAndWaitById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
 fdActorWalkToById	its twin	The Broken Seal's fdActorWalkToById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
 fdActorWalkToAndWaitById	its twin	The Broken Seal's fdActorWalkToAndWaitById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
-fdActorCenterOnColumn	its twin	The Broken Seal's fdActorCenterOnColumn (games/tbs/src/field/script_commands_actor_commands.c), twin 0.887	games/common/field/actor_center_on_column.c
+fdActorCenterOnColumn	its twin	The Broken Seal's fdActorCenterOnColumn (games/tbs/src/field/script_commands_actor_commands.c), twin 0.887	games/tla/src/field/field_mode_actor_commands.c
 fdActorSetDestinationOffsetById	its twin	The Broken Seal's fdActorSetDestinationOffsetById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
 fdActorWalkByById	its twin	The Broken Seal's fdActorWalkByById (games/tbs/src/field/script_commands_actor_commands.c), twin 0.791	games/tla/src/field/field_mode_actor_commands.c
-fdActorWalkByAndWaitById	its twin	The Broken Seal's fdActorWalkByAndWaitById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/common/field/actor_walk_by_and_wait_by_id.c
+fdActorWalkByAndWaitById	its twin	The Broken Seal's fdActorWalkByAndWaitById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
 fdActorLaunchFromLeader	its twin	The Broken Seal's fdActorLaunchFromLeader (games/tbs/src/field/script_commands_actor_commands.c), twin 0.604	games/tla/src/field/field_mode_actor_commands.c
 fdActorWaitForMoveById	its twin	The Broken Seal's fdActorWaitForMoveById (games/tbs/src/field/script_commands_actor_commands.c), the same use	games/tla/src/field/field_mode_actor_commands.c
 fdActorSetHorizontalPosWithTerrain	its twin	The Broken Seal's fdActorSetHorizontalPosWithTerrain (games/tbs/src/field/script_commands_actor_commands.c), twin 0.247	games/tla/src/field/field_mode_actor_commands.c
@@ -18275,29 +18275,29 @@ fdActorStartRepeatedMotion	its twin	The Broken Seal's fdActorStartRepeatedMotion
 fdEffectUpdateDustPuff	its twin	The Broken Seal's fdEffectUpdateDustPuff (games/tbs/src/field/script_commands_actor_commands.c), twin 0.353	games/tla/src/field/field_mode_actor_commands.c
 fdEffectSpawnDustPuff	its twin	The Broken Seal's fdEffectSpawnDustPuff (games/tbs/src/field/script_commands_actor_commands.c), twin 0.194	games/tla/src/field/field_mode_actor_commands.c
 fdActorJumpDownLedge	its twin	The Broken Seal's fdActorJumpDownLedge (games/tbs/src/field/script_commands_actor_commands.c), twin 0.413	games/tla/src/field/field_mode_actor_commands.c
-fdActorFaceActorById	its twin	The Broken Seal's fdActorFaceActorById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/common/field/actor_face_each_other.c
-fdActorTurnToFaceEachOther	its twin	The Broken Seal's fdActorTurnToFaceEachOther (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/common/field/actor_face_each_other.c
-fdActorTurnPairToFaceEachOther	its twin	The Broken Seal's fdActorTurnPairToFaceEachOther (games/tbs/src/field/script_commands_actor_commands.c), twin 0.891	games/common/field/actor_face_each_other.c
+fdActorFaceActorById	its twin	The Broken Seal's fdActorFaceActorById (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
+fdActorTurnToFaceEachOther	its twin	The Broken Seal's fdActorTurnToFaceEachOther (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
+fdActorTurnPairToFaceEachOther	its twin	The Broken Seal's fdActorTurnPairToFaceEachOther (games/tbs/src/field/script_commands_actor_commands.c), twin 0.891	games/tla/src/field/field_mode_actor_commands.c
 fdActorConfigureSprCol	its twin	The Broken Seal's fdActorConfigureSprCol (games/tbs/src/field/script_commands_actor_commands.c), twin 1.000	games/tla/src/field/field_mode_actor_commands.c
 fdActorSetSprCol	its twin	The Broken Seal's fdActorSetSprCol (games/tbs/src/field/script_commands_actor_commands.c), twin 0.182	games/tla/src/field/field_mode_actor_commands.c
 fdActorWatchAndStartScript	its twin	The Broken Seal's fdActorWatchAndStartScript (games/tbs/src/field/script_commands_actor_commands.c), twin 0.710	games/tla/src/field/field_mode_actor_commands.c
 fdEncounterSelectMapZones	its twin	The Broken Seal's fdEncounterSelectMapZones (games/tbs/src/field/field_mode_encounter.c), twin 0.178	games/tla/src/field/field_mode_encounter.c
 fdEncounterResolveWorldMapZoneAndBackdrop	its twin	The Broken Seal's fdEncounterResolveWorldMapZoneAndBackdrop (games/tbs/src/field/field_mode_encounter.c), twin 0.545	games/tla/src/field/field_mode_encounter.c
 fdEncounterCountStepsAndSelectFormation	its twin	The Broken Seal's fdEncounterCountStepsAndSelectFormation (games/tbs/src/field/field_mode_encounter.c), twin 0.665	games/tla/src/field/field_mode_encounter.c
-fdEncounterRollWorldMap	its twin	The Broken Seal's fdEncounterRollWorldMap (games/tbs/src/field/field_mode_encounter.c)	games/common/field/encounter_roll_world_map.c
+fdEncounterRollWorldMap	its twin	The Broken Seal's fdEncounterRollWorldMap (games/tbs/src/field/field_mode_encounter.c)	games/tla/src/field/field_mode_encounter.c
 fdEncounterGetFormationAtSlot	its twin	The Broken Seal's fdEncounterGetFormationAtSlot (games/tbs/src/field/field_mode_encounter.c)	games/tla/src/field/field_mode_encounter.c
 fdEncounterGetDjinnFormation	its twin	The Broken Seal's fdEncounterGetDjinnFormation (games/tbs/src/field/field_mode_encounter.c)	games/tla/src/field/field_mode_encounter.c
 fdChooseMusic	its twin	The Broken Seal's fdChooseMusic (games/tbs/src/field/field_mode_encounter.c), twin 0.881	games/tla/src/field/field_mode_encounter.c
 fdAreaGetNameIndex	its twin	The Broken Seal's fdAreaGetNameIndex (games/tbs/src/field/field_mode_encounter.c), twin 0.868	games/tla/src/field/field_mode_encounter.c
 fdSetRestartPoint	its twin	The Broken Seal's fdSetRestartPoint (games/tbs/src/field/field_mode_encounter.c), twin 0.552	games/tla/src/field/field_mode_encounter.c
-fdBattleBackgroundGetSelected	its twin	The Broken Seal's fdBattleBackgroundGetSelected (games/tbs/src/field/field_mode_encounter.c)	games/common/field/battle_background_get_selected.c
+fdBattleBackgroundGetSelected	its twin	The Broken Seal's fdBattleBackgroundGetSelected (games/tbs/src/field/field_mode_encounter.c)	games/tla/src/field/field_mode_encounter.c
 fdBattleBackgroundSelectForMap	its twin	The Broken Seal's fdBattleBackgroundSelectForMap (games/tbs/src/field/field_mode_encounter.c), twin 0.364	games/tla/src/field/field_mode_encounter.c
 fdBattleBackgroundSelectForEnvironment	its twin	The Broken Seal's fdBattleBackgroundSelectForEnvironment (games/tbs/src/field/field_mode_encounter.c), twin 0.800	games/tla/src/field/field_mode_encounter.c
 WORLD_MAP_ENCOUNTER_REGIONS	its code	fdEncounterResolveWorldMapZoneAndBackdrop takes the block's region modulo 20 before matching WorldMapEncounterRules' regions	games/tla/src/field/field_mode_encounter.c
 fdWorldMapSetReturnLeavingScene	its code	as fdWorldMapSetReturnForScene for the row's restart scene and entrance	games/tla/src/field/field_mode_encounter.c
 YES_NO_BELOW_LAST_ROW	its twin	The Broken Seal's YES_NO_BELOW_LAST_ROW (games/tbs/src/field/script_commands_script.c)	games/tla/src/field/field_mode_script.c
 fdScriptUpdateDebugSkip	its twin	The Broken Seal's fdScriptUpdateDebugSkip (games/tbs/src/field/script_commands_script.c), twin 0.458	games/tla/src/field/field_mode_script.c
-fdScriptWait	its twin	The Broken Seal's fdScriptWait (games/tbs/src/field/script_commands_script.c), twin 0.471	games/common/field/script_wait.c
+fdScriptWait	its twin	The Broken Seal's fdScriptWait (games/tbs/src/field/script_commands_script.c), twin 0.471	games/tla/src/field/field_mode_script.c
 fdLeaderStopMoving	its twin	The Broken Seal's fdLeaderStopMoving (games/tbs/src/field/script_commands_script.c), twin 0.298	games/tla/src/field/field_mode_script.c
 fdScriptStart	its twin	The Broken Seal's fdScriptStart (games/tbs/src/field/script_commands_script.c), twin 0.202	games/tla/src/field/field_mode_script.c
 fdScriptEnd	its twin	The Broken Seal's fdScriptEnd (games/tbs/src/field/script_commands_script.c)	games/tla/src/field/field_mode_script.c
@@ -18306,17 +18306,17 @@ fdPartyClearUnusableShortcuts	its twin	The Broken Seal's fdPartyClearUnusableSho
 fdPartyRemoveMemberRestored	its twin	The Broken Seal's fdPartyRemoveMemberRestored (games/tbs/src/field/script_commands_script.c), twin 1.000	games/tla/src/field/field_mode_script.c
 fdPartyCheckItemLimit	its twin	The Broken Seal's fdPartyCheckItemLimit (games/tbs/src/field/script_commands_script.c), twin 0.265	games/tla/src/field/field_mode_script.c
 fdPartyInventoryGiveItem	its twin	The Broken Seal's fdPartyInventoryGiveItem (games/tbs/src/field/script_commands_script.c), twin 0.671	games/tla/src/field/field_mode_script.c
-fdInventoryTryAddAndReturnMember	its twin	The Broken Seal's fdInventoryTryAddAndReturnMember (games/tbs/src/field/script_commands_script.c), twin 1.000	games/common/field/inventory_try_add_and_return_member.c
+fdInventoryTryAddAndReturnMember	its twin	The Broken Seal's fdInventoryTryAddAndReturnMember (games/tbs/src/field/script_commands_script.c), twin 1.000	games/tla/src/field/field_mode_script.c
 fdInventoryNoOperationCallback	its twin	The Broken Seal's fdInventoryNoOperationCallback (games/tbs/src/field/script_commands_script.c)	games/tla/src/field/field_mode_script.c
 fdInventoryReservedNoOperation	its twin	The Broken Seal's fdInventoryReservedNoOperation (games/tbs/src/field/script_commands_script.c)	games/tla/src/field/field_mode_script.c
 fdActorWaitForAnimationEnd	its twin	The Broken Seal's fdActorWaitForAnimationEnd (games/tbs/src/field/script_commands_script.c), twin 0.474	games/tla/src/field/field_mode_script.c
 fdScriptAskYesNoWithActorAnimation	its twin	The Broken Seal's fdScriptAskYesNoWithActorAnimation (games/tbs/src/field/script_commands_script.c), twin 0.262	games/tla/src/field/field_mode_script.c
-fdYesNoAsk	its twin	The Broken Seal's fdYesNoAsk (games/tbs/src/field/script_commands_script.c)	games/common/field/yes_no_ask.c
+fdYesNoAsk	its twin	The Broken Seal's fdYesNoAsk (games/tbs/src/field/script_commands_script.c)	games/tla/src/field/field_mode_script.c
 fdPartyLearnAbility	its twin	The Broken Seal's fdPartyLearnAbility (games/tbs/src/field/script_commands_script.c), twin 1.000	games/tla/src/field/field_mode_script.c
 fdScriptStartScreenTransition	its twin	The Broken Seal's fdScriptStartScreenTransition (games/tbs/src/field/script_commands_script.c), twin 0.609	games/tla/src/field/field_mode_script.c
 fdScriptFinishScreenTransition	its twin	The Broken Seal's fdScriptFinishScreenTransition (games/tbs/src/field/script_commands_script.c), twin 0.609	games/tla/src/field/field_mode_script.c
-fdScriptWaitTransitionTicks	its twin	The Broken Seal's fdScriptWaitTransitionTicks (games/tbs/src/field/script_commands_script.c)	games/common/field/script_wait_and_destination.c
-fdScriptSetDestination	its twin	The Broken Seal's fdScriptSetDestination (games/tbs/src/field/script_commands_script.c)	games/common/field/script_wait_and_destination.c
+fdScriptWaitTransitionTicks	its twin	The Broken Seal's fdScriptWaitTransitionTicks (games/tbs/src/field/script_commands_script.c)	games/tla/src/field/field_mode_script.c
+fdScriptSetDestination	its twin	The Broken Seal's fdScriptSetDestination (games/tbs/src/field/script_commands_script.c)	games/tla/src/field/field_mode_script.c
 fdScriptSetRestartPoint	its twin	The Broken Seal's fdScriptSetRestartPoint (games/tbs/src/field/script_commands_script.c)	games/tla/src/field/field_mode_script.c
 fdScriptSetExitRequest	its twin	The Broken Seal's fdScriptSetExitRequest (games/tbs/src/field/script_commands_script.c)	games/tla/src/field/field_mode_script.c
 fdScriptNoOperationCallback	its twin	The Broken Seal's fdScriptNoOperationCallback (games/tbs/src/field/script_commands_messages.c), an empty routine nothing calls	games/tla/src/field/field_mode_script.c
@@ -18343,7 +18343,7 @@ fdItemDispRaiseAboveLeader	its twin	games/tbs/src/field/field_mode_item_display.
 fdItemDispShowItem	its twin	games/tbs/src/field/field_mode_item_display.c's fdItemDispShowItem, the same routine (twins table)	games/tla/src/field/field_mode_item_display.c
 fdItemDispShowItemInFront	its twin	games/tbs/src/field/field_mode_item_display.c's fdItemDispShowItemInFront, the same routine (twins table, 0.25), with Reveal's marks cleared here	games/tla/src/field/field_mode_item_display.c
 fdEffectSpawnRevealMarkers	its twin	games/tbs/src/field/field_mode_item_display.c's fdEffectSpawnRevealMarkers, Reveal's marks on hidden things, here found from the scene's item rows rather than the map's treasure spots	games/tla/src/field/field_mode_item_display.c
-fdIsRevealActive	the game	"Reveal" (MsgAbilityName + 144)	games/common/field/is_reveal_active.c
+fdIsRevealActive	the game	"Reveal" (MsgAbilityName + 144)	games/tla/src/field/field_mode_item_display.c
 fdRevealEmitSparkles	the game	"Reveal" (MsgAbilityName + 144)	games/tla/src/field/field_mode_item_display.c
 fdEffectSpawnRevealMarkers	the game	"Reveal" (MsgAbilityName + 144)	games/tla/src/field/field_mode_item_display.c
 fdUseItem	its twin	games/tbs/src/field/field_mode_items.c's fdUseItem, the same routine	games/tla/src/field/field_mode_items.c
@@ -18363,7 +18363,7 @@ DISPLAY_TRANSITION_IRQ_WAIT_FIRST	its twin	games/tbs/src/field/field_mode_screen
 DISPLAY_TRANSITION_IRQ_DONE	its twin	games/tbs/src/field/field_mode_screen_transition.c's DISPLAY_TRANSITION_IRQ_DONE, the same	games/tla/src/field/field_mode_screen_transition.c
 fdScreenTransitionUpdateScanlineTable	its twin	games/tbs/src/field/field_mode_screen_transition.c's fdScreenTransitionUpdateScanlineTable, the same	games/tla/src/field/field_mode_screen_transition.c
 fdScreenTransitionSuspendCallbacks	its twin	games/tbs/src/field/field_mode_screen_transition.c's fdScreenTransitionSuspendCallbacks, the same	games/tla/src/field/field_mode_screen_transition.c
-fdScreenTransitionAllocateAndClearState	its twin	games/tbs/src/field/field_mode_screen_transition.c's fdScreenTransitionAllocateAndClearState, the same	games/common/field/screen_transition_allocate_and_clear_state.c
+fdScreenTransitionAllocateAndClearState	its twin	games/tbs/src/field/field_mode_screen_transition.c's fdScreenTransitionAllocateAndClearState, the same	games/tla/src/field/field_mode_screen_transition.c
 fdScreenTransitionStart	its twin	games/tbs/src/field/field_mode_screen_transition.c's fdScreenTransitionStart, the same	games/tla/src/field/field_mode_screen_transition.c
 fdScreenTransitionFinish	its twin	games/tbs/src/field/field_mode_screen_transition.c's fdScreenTransitionFinish, the same	games/tla/src/field/field_mode_screen_transition.c
 fdScreenTransitionHideBackgrounds	its twin	games/tbs/src/field/field_mode_screen_transition.c's fdScreenTransitionHideBackgrounds, the same	games/tla/src/field/field_mode_screen_transition.c
@@ -18481,7 +18481,7 @@ FILE_LIST_GLOW_BLUE	its twin	The Broken Seal's FILE_LIST_GLOW_BLUE (games/tbs/sr
 MESSAGE_CAPACITY_UNLIMITED	its twin	The Broken Seal's MESSAGE_CAPACITY_UNLIMITED (games/tbs/src/window/window_messages.c), the capacity its mnMessageDecodeRawUnbounded passes	games/tla/src/window/window_messages.c
 SYMBOL_TREE_MASK	its twin	The Broken Seal's SYMBOL_TREE_MASK (games/tbs/src/window/window_messages.c), the previous code's low byte by which its mnTextDecodeSymbolInC picks the tree	games/tla/src/window/window_messages.c
 BIT_STREAM_STOP	its twin	The Broken Seal's BIT_STREAM_STOP (games/tbs/src/window/window_messages.c), the stop bit its mnTextDecodeSymbolInC sets above a refilled byte's seven bits	games/tla/src/window/window_messages.c
-mnPortraitClearSlots	its twin	The Broken Seal's mnPortraitClearSlots (games/tbs/src/window/window_messages.c), the same routine	games/common/window/portrait_clear_slots.c
+mnPortraitClearSlots	its twin	The Broken Seal's mnPortraitClearSlots (games/tbs/src/window/window_messages.c), the same routine	games/tla/src/window/window_messages.c
 mnPortraitGetForSpeaker	its twin	The Broken Seal's mnPortraitGetForSpeaker (games/tbs/src/window/window_messages.c), the same routine	games/tla/src/window/window_messages.c
 mnPortraitOpenWindow	its twin	The Broken Seal's mnPortraitOpenWindow (games/tbs/src/window/window_messages.c), the same routine	games/tla/src/window/window_messages.c
 mnPortraitCloseWindow	its twin	The Broken Seal's mnPortraitCloseWindow (games/tbs/src/window/window_messages.c), the same routine	games/tla/src/window/window_messages.c
@@ -18495,7 +18495,7 @@ SETTINGS_MENU_ROW	its twin	The Broken Seal's enum SETTINGS_MENU_ROW (games/tbs/s
 WINDOW_SHADE	its twin	The Broken Seal's WINDOW_SHADE (games/tbs/src/window/window_settings_menu.c), WINDOW_PALETTE's colours from WINDOW_BACKGROUND_COLOR that mnWindowColApply sets	games/tla/src/window/window_settings_menu.c
 WINDOW_SHADE_SET	its code	mnWindowColApply sets each of the seven shades (WINDOW_SHADE 0 to 6) to mnColScaleComponents' colour through it	games/tla/src/window/window_settings_menu.c
 mnSettingsMenuAnimateCursors	the game	"Change settings" (MsgChangeSettings)	games/tla/src/window/window_settings_menu.c
-mnSettingsMenuRelease	the game	"Change settings" (MsgChangeSettings)	games/common/window/settings_menu_release.c
+mnSettingsMenuRelease	the game	"Change settings" (MsgChangeSettings)	games/tla/src/window/window_settings_menu.c
 mnSettingsMenuOpen	the game	"Change settings" (MsgChangeSettings)	games/tla/src/window/window_settings_menu.c
 mnSettingsMenuRun	the game	"Change settings" (MsgChangeSettings)	games/tla/src/window/window_settings_menu.c
 mnPauseMenuAnimateCursor	its picture	games/common/graphics/ui/menu_titles/pause_en.png, looked at enlarged, reads "Pause": the heading mnPauseMenuChoose shows above the menu (MenuTitlePictures picture 7)	games/tla/src/window/window_settings_menu.c
@@ -18544,7 +18544,7 @@ fdScreenTransitionUpdateFromCenter	its twin	The Broken Seal's fdScreenTransition
 fdScreenTransitionFillTilemapAndColTile	its twin	The Broken Seal's fdScreenTransitionFillTilemapAndColTile (games/tbs/src/field/field_mode_screen_transition.c); was ScreenTransition_FillTilemapAndSolidTile	games/tla/src/field/field_mode_screen_transition.c
 fdSprSetFirstAnimationColMode	its code	sets the colour mode of a sprite's first sprite animation (entries[0]->colMode) and has it drawn again; Sand hides and shows the leader with it (field_psynergy_sand.c), beside fdSprSetAnimationColModes, which sets every one's; was Animation_ApplyChildValueToFirst	games/tla/src/field/field_sprite_draw.c
 ABILITY_MAGNET	its picture	its icon, psynergy_ma.png (icon 170 in AbilityDefinitions), looked at enlarged, is a red and blue horseshoe magnet struck by a yellow lightning bolt; the text names ability 155 only "Ma????" (MsgAbilityName + 155), six letters as Magnet has, and the Japanese edition "マ????", five as マグネット has; was ABILITY_RING, after the ring of light its field Psynergy (fdPsynergyRing) draws	games/tla/include/ability_ids.h
-mnMessageDecodeAndClearArguments	its twin	The Broken Seal's mnMessageDecodeAndClearArguments (games/tbs/src/window/window_messages.c), the same one line, mnMessageDecode(message, 1); was Message_DecodeMode1	games/common/window/message_decode_and_clear_arguments.c
+mnMessageDecodeAndClearArguments	its twin	The Broken Seal's mnMessageDecodeAndClearArguments (games/tbs/src/window/window_messages.c), the same one line, mnMessageDecode(message, 1); was Message_DecodeMode1	games/tla/src/window/window_messages.c
 UiLabelSettings	its picture	settings_en.png, looked at enlarged, reads "Settings", and settings_ja.png せってい; The Broken Seal's heading is MenuTitleSettings; was UiLabel_Setup (setup_*.png)	games/tla/src/graphics/ui/menu_titles.s
 WindowColorWaveTable	its twin	The Broken Seal's WindowColorWaveTable (games/tbs/src/window/scales.c), the colour wheel window_settings_menu.c reads for the "Window color" setting (MsgWindowColorLabel); was gPaletteGlow_WaveTable	games/tla/src/window/scales.c
 SettingsMenuSpeedIcons	its twin	The Broken Seal's SettingsMenuSpeedIcons, which its window_settings_menu.c reads as this one's does; was gOptionMenu_SpeedIcons	games/tla/src/window/scales.c
@@ -21697,7 +21697,7 @@ FLURRY_ORB_PICTURES	its twin	The Broken Seal's FLURRY_ORB_PICTURES	games/tla/src
 TWISTING_COLUMN_MODE	its code	each mode named for the first ability that plays it (AbilityBattleEffects, en.po); the enum for its runner	games/tla/src/battle_effect/battle_effect_internal.h
 BALL_LIGHTNING_MODE	its code	each mode named for the first ability that plays it (AbilityBattleEffects, en.po); the enum for its runner	games/tla/src/battle_effect/battle_effect_internal.h
 fdInputGetDpadAng	its twin	The Broken Seal event_commands_move.c fdInputGetDpadAng: the same InputDpadAngles read by the held d-pad bits, called by Move with PerData	games/tla/src/field/script_commands_mind_read.c
-mnTitlePaletteFadeClampChannel	its twin	tbs title_intro.c, the same routine (BattleEffect_ClampRgb555Channel before)	games/common/menu/title_palette_fade_clamp_channel.c
+mnTitlePaletteFadeClampChannel	its twin	tbs title_intro.c, the same routine (BattleEffect_ClampRgb555Channel before)	games/tla/src/menu/title_intro.c
 ICON_KIND	its twin	enum ICON_KIND (tbs window.h): the kinds mnSelectionMenuSetupIcon and mnSelectionIconLoad switch on, 1, 2, 4 and 6	games/tla/include/menu/select.h
 scDailaRoomsReadArmorMerchantsMind	the game	"If those two scamps knew there were travelers in town" (MsgDailaRoomsScamps); PSYNERGY_ON_ACTOR(ABILITY_MIND_READ) on the counter row shows the merchant's "If those two scamps knew there were travelers in town..."	games/tla/src/scene/daila_rooms.c
 scDailaRoomsReadArmorMerchantsMindAfterRescue	the game	"Maybe they hid treasure here because this town is so mazelike..." (MsgDailaRoomsMazeTreasure); Mind Read on the counter row once rescued: "Maybe they hid treasure here because this town is so mazelike..."	games/tla/src/scene/daila_rooms.c
@@ -22564,9 +22564,9 @@ FLAG_MADRA_HEALING_FUNGUS_GIVEN	the game	"Did you climb all the way up those cli
 btEffectFillWhiteBand	what the player sees	Sheba summons Flora: a soft-edged white band sweeps in from the right and whites out the battle before the summon's sky appears (its render); Zagan, Coatlicue, Eclipse and Daedalus open with the same call	games/tla/src/battle_effect/battle_effect_raging_heat.c
 btEffectRunRushingStrike	what the player sees	Felix casts Brute Force at Sheba: a ball of ice-blue light hides him as he rushes at her, a tall ring of light swells on her as she is hit, and sparks fly back the way he came; Jenna's Stun Muscle at Piers plays the same in red and white (its render)	games/tla/src/battle_effect/battle_effect_rushing_strike.c
 btEffectRunRushingStrike	its twin	games/tbs/src/battle_effect/battle_effect_rushing_strike.c btEffectRunRushingStrike, the same rush, burst, ring and sparks	games/tla/src/battle_effect/battle_effect_rushing_strike.c
-btEffectRunSpasm	the game	"Spasm" (MsgAbilityName + 490)	games/common/battle_effect/effect_spasm.c
-btEffectRunBerserk	the game	"Berserk" (MsgAbilityName + 495)	games/common/battle_effect/effect_berserk.c
-btEffectRunRecovery	the game	"Recovery" (MsgAbilityName + 497)	games/common/battle_effect/effect_recovery.c
+btEffectRunSpasm	the game	"Spasm" (MsgAbilityName + 490)	games/tla/src/battle_effect/battle_effect_rushing_strike.c
+btEffectRunBerserk	the game	"Berserk" (MsgAbilityName + 495)	games/tla/src/battle_effect/battle_effect_rushing_strike.c
+btEffectRunRecovery	the game	"Recovery" (MsgAbilityName + 497)	games/tla/src/battle_effect/battle_effect_rushing_strike.c
 btEffectRunSack	the game	"Sack" (MsgAbilityName + 711)	games/tla/src/battle_effect/battle_effect_rushing_strike.c
 RUSHING_STRIKE_TICKS	its twin	games/tbs/src/battle_effect/battle_effect_rushing_strike.c RUSHING_STRIKE_TICKS, the same 60-frame loop	games/tla/src/battle_effect/battle_effect_rushing_strike.c
 RUSHING_STRIKE_TICK	its twin	games/tbs/src/battle_effect/battle_effect_rushing_strike.c RUSHING_STRIKE_TICK, the frame the user strikes the target	games/tla/src/battle_effect/battle_effect_rushing_strike.c
@@ -22773,9 +22773,9 @@ btEffectRunStarMine	what the player sees	render psynergy --ability "Star Mine" -
 btEffectRunRisingDragonEnemy	the game	"Rising Dragon" (MsgAbilityName + 682)	games/tla/src/battle_effect/battle_effect_star_mine.c
 btEffectRunRisingDragonEnemy	what the player sees	render psynergy --ability 682 --unlearned (Rising Dragon, Jenna at Piers): a column of flame bursts up under Piers in a shower of sparks and carries him up between its jaws into a teal cloudy sky that scrolls past, bursts at the top into fireballs and falling sparks as the screen whitens, and Piers drops back to the field (its render)	games/tla/src/battle_effect/battle_effect_star_mine.c
 btEffectRunBoneCharge	the game	"Bone Charge" (MsgAbilityName + 453)	games/tla/src/battle_effect/battle_effect_star_mine.c
-btEffectRunBruteForce	the game	"Brute Force" (MsgAbilityName + 456)	games/common/battle_effect/effect_rushing_sparks.c
-btEffectRunOnslaught	the game	"Onslaught" (MsgAbilityName + 468)	games/common/battle_effect/effect_rushing_sparks.c
-btEffectRunHeadbutt	the game	"Headbutt" (MsgAbilityName + 481)	games/common/battle_effect/effect_rushing_sparks.c
+btEffectRunBruteForce	the game	"Brute Force" (MsgAbilityName + 456)	games/tla/src/battle_effect/battle_effect_star_mine.c
+btEffectRunOnslaught	the game	"Onslaught" (MsgAbilityName + 468)	games/tla/src/battle_effect/battle_effect_star_mine.c
+btEffectRunHeadbutt	the game	"Headbutt" (MsgAbilityName + 481)	games/tla/src/battle_effect/battle_effect_star_mine.c
 btEffectRunStunMuscle	the game	"Stun Muscle" (MsgAbilityName + 685)	games/tla/src/battle_effect/battle_effect_star_mine.c
 btEffectRunLivingArmor	the game	"Living Armor" (MsgAbilityName + 612)	games/tla/src/battle_effect/battle_effect_star_mine.c
 btEffectRunRisingDragon	the game	"Light Blade: Unleashes Rising Dragon" (MsgItemDescription + 26)	games/tla/src/battle_effect/battle_effect_rising_dragon.c
@@ -22911,14 +22911,14 @@ btStagingRunMessages	its twin	The Broken Seal's btStagingRunMessages (games/tbs/
 btStagingRunFullScreen	its twin	The Broken Seal's btStagingRunFullScreen (games/tbs/src/battle/battle_staging.c; twins, dice 0.326)	games/tla/src/battle/battle_staging.c
 btUnitRemoveEnemy	its twin	The Broken Seal's btUnitRemoveEnemy (games/tbs/src/battle/battle_playback_queue.c; twins, dice 1.000)	games/tla/src/battle/battle_targeting.c
 btDMAStopDMA3	its twin	The Broken Seal's btDMAStopDMA3 (games/tbs/src/battle/battle_playback.c; twins, dice 0.444)	games/tla/src/battle/battle_targeting.c
-btTransitionBuildAffineTilemap	its twin	tbs battle_transition.c, btTransitionBuildAffineTilemap	games/common/battle/transition_mosaic_fade.c
+btTransitionBuildAffineTilemap	its twin	tbs battle_transition.c, btTransitionBuildAffineTilemap	games/tla/src/battle/battle_transition.c
 btTransitionBuildFlatTilemap	its twin	tbs battle_transition.c, btTransitionBuildFlatTilemap	games/tla/src/battle/battle_transition.c
 btTransitionAdvanceOpening	its twin	tbs battle_transition.c, btTransitionAdvanceOpening	games/tla/src/battle/battle_transition.c
 fdFlagEntriesGetValue	its code	returns the value of the fdWorldMapPlacesGetTable row for a flag, or 1	games/tla/src/field/field_mode_encounter.c
 fdScriptResetLeaderAndWait	its twin	The Broken Seal's fdScriptRunActorUpdateAndWait (games/tbs/src/field/script_commands_script.c), the same body; renames.tsv	games/tla/src/field/field_mode_script.c
 fdScriptSpawnActorsAfterLast	its twin	The Broken Seal's fdScriptAppendActorPlacements (games/tbs/src/field/script_commands_script.c), the same call; renames.tsv	games/tla/src/field/field_mode_script.c
 fdScriptAddTwoPartyMembers	its twin	The Broken Seal's fdScriptAddPartyMemberPair (games/tbs/src/field/script_commands_script.c), the same two gmPartyAddMember calls and mnPartyShowPairJoinedMessage; renames.tsv	games/tla/src/field/field_mode_script.c
-fdScreenTransitionStartDissolveHeld	its twin	games/tbs/src/field/field_mode_screen_transition.c's fdScreenTransitionStartDissolveHeld, the same	games/common/field/screen_transition_start_dissolve_held.c
+fdScreenTransitionStartDissolveHeld	its twin	games/tbs/src/field/field_mode_screen_transition.c's fdScreenTransitionStartDissolveHeld, the same	games/tla/src/field/field_mode_screen_transition.c
 ACTOR_ITEM_PICKER	its code	a sign; talking to it runs dbShopTestOpenItemPicker, mnItemPickerRunToShow, the item picker for an item to show (ITEM_PICKER_SHOW)	games/tla/src/debug/shop_test.c
 ACTOR_ITEM_PICKER	what the player sees	render probe ShopTest --entrance 1: actor 20, a signpost at (728, 360), whose talk trigger runs dbShopTestOpenItemPicker (its render)	games/tla/src/debug/shop_test.c
 dbShopTestOpenItemPicker	its code	mnItemPickerRunToShow (games/tla/src/shop/shop_item_picker.c), the item picker for an item to show, where The Broken Seal's MenuTest_TestItemSelection runs the picker for an item to drop	games/tla/src/debug/shop_test.c
@@ -22960,7 +22960,7 @@ TilesetPaletteMarsLighthouseHallThawed	its uses	palette 869, which MapsWork' sec
 FieldMarsLighthouseHall	its uses	MapsWork' row 277 (map_grid_data.c), the map scenes.s gives SceneIdMarsLighthouseHall and no other scene; folder named for its scene as the map README says; renamed from Field_MarsLighthouseHall1, map/ and tileset/mars_lighthouse_hall_1/ (Tileset_MarsLighthouseHall1Palette, TilesA, TilesB)	games/tla/src/map/mars_lighthouse_hall/map.inc
 FieldMarsLighthouseMarsLedge	its uses	MapsWork' row 287 (map_grid_data.c), the map scenes.s gives SceneIdMarsLighthouseMarsLedge and no other scene; renamed from Field_MarsLighthouseHall4 and map/mars_lighthouse_hall_4/	games/tla/src/map/mars_lighthouse_mars_ledge/map.inc
 FieldMarsLighthouseBeaconLedge	its uses	MapsWork' row 276 (map_grid_data.c), the map scenes.s gives SceneIdMarsLighthouseBeaconLedge and no other scene; renamed from Field_MarsLighthouseHall6, map/ and tileset/mars_lighthouse_hall_6/ (Tileset_MarsLighthouseHall6TilesD)	games/tla/src/map/mars_lighthouse_beacon_ledge/map.inc
-mnPlaceEntryIconInGrid	its code	declared in menu_internal.h beside its menu neighbours; the loose header include/field/a9_motion.h that held only this declaration is gone	games/common/menu/place_entry_icon_in_grid.c
+mnPlaceEntryIconInGrid	its code	declared in menu_internal.h beside its menu neighbours; the loose header include/field/a9_motion.h that held only this declaration is gone	games/tla/src/menu/menu_status.c
 ACTOR_LEDGE_BLAZE_TARGET	what the player sees	render probe MarsLighthouseBeaconLedge: actor 10, the point north of the torch (actor 8) on the beacon ledge, the paved platform at the tower's top in the rain, between two dragon statues and below the wall with the figure inscribed (render place map-1.png) (its render)	games/tla/src/scene/mars_lighthouse_hall.c
 MarsLighthouseHallLedgeElementColors	what the player sees	render place --scene MarsLighthouseBeaconLedge, map-1.png: the beacon ledge, a paved platform at the tower's top in the rain, its torch between two dragon statues and the inscribed figure on the wall above (its render)	games/tla/src/scene/mars_lighthouse_hall.c
 MarsLighthouseHallLedgePalette	what the player sees	render place --scene MarsLighthouseBeaconLedge, map-1.png: the beacon ledge, a paved platform at the tower's top in the rain, its torch between two dragon statues and the inscribed figure on the wall above (its render)	games/tla/src/scene/mars_lighthouse_hall.c
@@ -23065,8 +23065,8 @@ ResourceIdFlameArcSheet	its picture	five_mode.png: orange arcs of flame, curved 
 ResourceIdBlueDropletSheet	its picture	twelve_mode.png: blue droplets falling in clusters (games/tla/src/graphics/battle_effects/)	games/tla/include/resource_ids.h
 ABILITY_USABLE_IN_BATTLE	its code	ABILITY_DEFINITION.flags bit: the ability can be used in battle, else it is greyed there (menu_status.c and the battle Djinn preview test it)	games/tla/include/battle/battle_unit.h
 ABILITY_USABLE_IN_FIELD	its code	ABILITY_DEFINITION.flags bit: the ability can be used outside battle (menu_status.c tests it)	games/tla/include/battle/battle_unit.h
-mnAbilityIconLoadIntoSlot	its twin	The Broken Seal's name for the same thing, decided for both games (shared renames): H6: The Broken Seal's window/ name	games/common/window/icon_load_into_slot.c
-mnAbilityBuildItemIconTiles	its code	builds an ability's icon from the item icons	games/common/window/ability_build_item_icon_tiles.c
+mnAbilityIconLoadIntoSlot	its twin	The Broken Seal's name for the same thing, decided for both games (shared renames): H6: The Broken Seal's window/ name	games/tla/src/window/screens_menu_titles.c
+mnAbilityBuildItemIconTiles	its code	builds an ability's icon from the item icons	games/tla/src/window/window_icons.c
 mnAbilityPlayUseSnd	its code	plays a sound only	games/tla/src/menu/menu_use.c
 fdActorScriptFindOverlappingActor	its code	returns an actor	games/tla/src/field/field_script_commands.c
 fdActorScriptSetOrCompareBounce	its code	handles SW_BOUNCE	games/tla/include/field/field.h
@@ -23151,10 +23151,10 @@ FROST_TIMING_COLUMNS	its code	FrostTimings' column read as the number of pillars
 FROST_TIMING_MOTES	its code	FrostTimings' column read as the number of rising motes (battle_effect_frost.c)	games/tla/include/battle_effect/battle_effect.h
 fdEffectAdvanceMotionAtLeaderPriority	its code	its siblings' prefix	games/tla/src/field/field_effect_advance_motion_priority.c
 fdEffectBurstHand	its code	the hand spins up, shrinks and bursts into sparkles	games/tla/src/field/script_commands_mind_read.c
-fdEffectGrowHandAndWait	its code	grows the hand to full size and waits for it to arrive	games/common/field/effect_grow_hand_and_wait.c
+fdEffectGrowHandAndWait	its code	grows the hand to full size and waits for it to arrive	games/tla/src/field/script_commands_mind_read.c
 fdEffectSpawnHeavyImpact	its code	no module prefix	games/tla/src/field/script_commands_mind_read.c
 syFieldScriptAddPartyMember	its code	it only forwards to fdScriptAddPartyMember	games/tla/include/field/script_inline.h
-fdParticleSetAnimation	its code	starts a sprite animation	games/common/field/particle_set_animation.c
+fdParticleSetAnimation	its code	starts a sprite animation	games/tla/src/field/field_psynergy_step_vector.c
 fdPsynergyDrawCanvasSpr	its code	field routines under battle names	games/tla/src/field/script_commands_psynergy_dispatch.c
 syFieldWorldMapStartZoom	its code	it forwards to fdWorldMapStartZoom, zooming the World Map view	games/tla/include/field/script_inline.h
 fdFixedPointDivQ8	its code	divides two 8.8 fixed-point values, beside fdFixedPointMulQ8	games/tla/src/field/lucky_dice.c
@@ -23187,9 +23187,9 @@ syFixedDivEntry	its code	follows syDivFX	games/tla/include/system/definitions.h
 JudgmentFlashSheet	its code	Judgment's three flash pictures	games/tla/src/battle_effect/battle_effect_judgment.c
 LUCKY_WHEELS_TICKET_DIGITS	its code	the Game Tickets left after the bet, not coins	games/tla/src/field/lucky_wheels.c
 LUCKY_WHEELS_TICKET_X	its code	the Game Tickets left after the bet, not coins	games/tla/src/field/lucky_wheels.c
-fdLuckyWheelsDarkenStep	its code	darkens Lucky Wheels' machine and icon colours a step	games/common/field/lucky_wheels_darken_and_sparks.c
+fdLuckyWheelsDarkenStep	its code	darkens Lucky Wheels' machine and icon colours a step	games/tla/src/field/lucky_wheels.c
 fdLuckyWheelsSetUpBetting	its code	sets up the win's letters, the shading wave and the betting window, and starts betting	games/tla/src/field/lucky_wheels.c
-fdLuckyWheelsStepSparkCols	its code	moves the sparks' colours a step toward a palette	games/common/field/lucky_wheels_darken_and_sparks.c
+fdLuckyWheelsStepSparkCols	its code	moves the sparks' colours a step toward a palette	games/tla/src/field/lucky_wheels.c
 fdMapGridGetTerrainKindAt	its code	returns the terrain kind of a layer's cell at a 16.16 point	games/tla/src/field/field_tile_animation.c
 fdMapGridGetTerrainKindOrBumpAt	its code	as fdMapGridGetTerrainKindAt, a rounded square with differing samples read as TERRAIN_BUMP	games/tla/src/field/field_tile_animation.c
 fdMapGridSetMetatileAttributesAt	its code	writes MAP_METATILE.attributeB, the enum MAP_METATILE_ATTR bits (MAP_METATILE_JUMP passed by the lighthouse scenes)	games/tla/src/field/script_commands_field_psynergy.c
@@ -23252,7 +23252,7 @@ RESOURCE_VORPAL_SLASH_IMAGE_A	its code	the first of Vorpal Slash's two flashing 
 RESOURCE_VORPAL_SLASH_IMAGE_B	its code	the second of Vorpal Slash's two flashing pictures	games/tla/include/resource_ids.h
 RESOURCE_YELLOW_GLOW_SHEET	its code	its pictures: ten yellow-white glows, smallest to largest	games/tla/include/resource_ids.h
 mnRangeIconBuildTiles	its code	builds the battle lists' twelve range icons	games/tla/src/window/screens_menu_titles.c
-mnRangeIconDraw	its twin	The Broken Seal's name for the same thing, decided for both games (shared renames): H6: The Broken Seal's window/ name	games/common/window/range_icon_draw.c
+mnRangeIconDraw	its twin	The Broken Seal's name for the same thing, decided for both games (shared renames): H6: The Broken Seal's window/ name	games/tla/src/window/screens_menu_titles.c
 ResourceIdAtalantaPath	its code	Atalanta's own flight path	games/tla/include/resource_ids.h
 ResourceIdDragonCloudFlamePath	its code	the path of the one flame Dragon Cloud sends	games/tla/include/resource_ids.h
 ResourceIdJudgmentFlashSheet	its code	Judgment's three flash pictures	games/tla/include/resource_ids.h
@@ -23319,8 +23319,8 @@ VorpalSlashImageB	its code	the second of Vorpal Slash's two flashing pictures	ga
 WINDOW_SPRITE_SIZE_16X16	its code	a window sprite's shape and size (mnWindowSprCreate); 'output' is jargon; and _32X32, _32X8, _32X16, _16X32 alike	games/tla/include/graphics/oam.h
 WEATHER_PARTICLE	its code	one particle of the weather, motes and sparkles (WEATHER_PARTICLE_COUNT)	games/tla/include/field/weather.h
 fdWhirlwindUpdateSpentOrb	its code	per-frame update of Whirlwind's orb once it has done its work: it whooshes on its 80th frame	games/tla/src/field/field_psynergy_radial_effects.c
-fdWhirlwindUpdateTarget	its code	per-frame update of Whirlwind's target: it shrinks and, below half size, is put away	games/common/field/whirlwind_target.c
-mnWindowSprSetPriority	its code	sets a window sprite's depth from a priority (higher draws further back)	games/common/window/window_spr_set_priority.c
+fdWhirlwindUpdateTarget	its code	per-frame update of Whirlwind's target: it shrinks and, below half size, is put away	games/tla/src/field/field_psynergy_radial_effects.c
+mnWindowSprSetPriority	its code	sets a window sprite's depth from a priority (higher draws further back)	games/tla/src/window/screens_window_sprites.c
 mnWindowSetHighlightRect	its code	switches a rectangle of a window's text between the normal and the highlight palette	games/tla/src/menu/menu_shared.c
 WORLD_MAP_PLACE	its code	a row is a World Map place, keyed by a flag	games/tla/include/field/world_map.h
 fdWorldMapDrawMetatileColumn	its code	as fdWorldMapDrawMetatileRow	games/tla/src/field/field_world_map.c
@@ -23775,7 +23775,7 @@ SPRITE_PORTRAIT_OLD_WOMAN_WITH_GREY_HAIR	its picture	graphics/ui/icons/icon_88.p
 SPRITE_PORTRAIT_FEIZHI	its picture	graphics/ui/icons/feizhi.png, icon bank row 89, looked at	games/tla/include/window/window.h
 SPRITE_PORTRAIT_HAMMA	its picture	graphics/ui/icons/hama.png, icon bank row 90, looked at; "Hamma" in the English text	games/tla/include/window/window.h
 SPRITE_PORTRAIT_MISSING	its code	icon bank row PORTRAIT_FIRST_SPRITE_ICON + 76 is "-" in graphics/ui/icons/icons.tsv, a slot with no picture	games/tla/include/window/window.h
-mnWrapIndex	its twin	The Broken Seal's mnWrapIndex (menu_djinn_preview.c): (value + modulus) % modulus, wrapping a cursor stepped one past either end of a list	games/common/menu/wrap_index.c
+mnWrapIndex	its twin	The Broken Seal's mnWrapIndex (menu_djinn_preview.c): (value + modulus) % modulus, wrapping a cursor stepped one past either end of a list	games/tla/src/menu/menu_djinn.c
 GULL_TILES	its picture	intro_gulls.png is 64x872, 109 rows of eight tiles; the last frame (tile 856, one row) ends at tile 863 and row 109 is blank, so the copy takes 108 rows	games/tla/src/menu/title_intro.c
 GULL_CENTER_X	its picture	intro_gulls.png: the first frame's drawn pixels span x 9 to 46 of its 64, centre 27.5	games/tla/src/menu/title_intro.c
 fdEffectLandDouseDrop	its code	fdPsynergyDouse sets it as the update of each SPRITE_DROPLET its rain cloud drops; it ends the drop with FieldEffectReleaseScript once the drop reaches its ground height	games/tla/src/field/script_commands_cloak.c
@@ -23924,24 +23924,24 @@ CopyWords3	its number	the block move copies 3 words; COPY_FROM(n) pastes the cou
 CopyWords4	its number	the block move copies 4 words; COPY_FROM(n) pastes the count into the name (Render_PatchTemplate's copy helpers)	games/tla/src/battle_effect/battle_effect_render.c
 btRenderRunFillMeshKernel	its code	copies btRenderFillMeshKernel into IWRAM and runs it with two arguments, btRenderFillMesh's vertexCnt and faceCnt	games/tla/src/battle_effect/battle_effect_render.c
 FIELD_HALF_METATILE_ORIGIN	its code	the 16.16 coordinate an 8-pixel tile starts at: gaia_rock_inside.c and taopo_swamp.c's scTaopoSwampFocusMapOn	games/tla/include/field/field_coordinate.h
-btEffectRunRevive	the game	"Revive" (MsgAbilityName + 101)	games/common/battle_effect/effect_revive_dew.c
-btEffectRunDew	the game	"Dew" (MsgAbilityName + 326)	games/common/battle_effect/effect_revive_dew.c
+btEffectRunRevive	the game	"Revive" (MsgAbilityName + 101)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
+btEffectRunDew	the game	"Dew" (MsgAbilityName + 326)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 btEffectRunSpark	the game	"Spark" (MsgAbilityName + 348)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
-btEffectRunMadSpatter	the game	"Mad Spatter" (MsgAbilityName + 489)	games/common/battle_effect/effect_mad_spatter.c
+btEffectRunMadSpatter	the game	"Mad Spatter" (MsgAbilityName + 489)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 LOBBED_SHELLS_MAD_SPATTER	the game	"Mad Spatter" (MsgAbilityName + 489)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 btEffectRunMud	the game	"Mud" (MsgAbilityName + 310)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 LOBBED_SHELLS_MUD	the game	"Mud" (MsgAbilityName + 310)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
-btEffectRunDecompose	the game	"Decompose" (MsgAbilityName + 492)	games/common/battle_effect/effect_poison_shells.c
+btEffectRunDecompose	the game	"Decompose" (MsgAbilityName + 492)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 LOBBED_SHELLS_DECOMPOSE	the game	"Decompose" (MsgAbilityName + 492)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
-btEffectRunBoneChiller	the game	"Bone Chiller" (MsgAbilityName + 451)	games/common/battle_effect/effect_poison_shells.c
+btEffectRunBoneChiller	the game	"Bone Chiller" (MsgAbilityName + 451)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 LOBBED_SHELLS_BONE_CHILLER	the game	"Bone Chiller" (MsgAbilityName + 451)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
-btEffectRunStickyGoo	the game	"Sticky Goo" (MsgAbilityName + 457)	games/common/battle_effect/effect_poison_shells.c
+btEffectRunStickyGoo	the game	"Sticky Goo" (MsgAbilityName + 457)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 LOBBED_SHELLS_STICKY_GOO	the game	"Sticky Goo" (MsgAbilityName + 457)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
-btEffectRunPoisonInk	the game	"Poison Ink" (MsgAbilityName + 482)	games/common/battle_effect/effect_poison_shells.c
+btEffectRunPoisonInk	the game	"Poison Ink" (MsgAbilityName + 482)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 LOBBED_SHELLS_POISON_INK	the game	"Poison Ink" (MsgAbilityName + 482)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
-btEffectRunStickyPoison	the game	"Sticky Poison" (MsgAbilityName + 464)	games/common/battle_effect/effect_poison_shells.c
+btEffectRunStickyPoison	the game	"Sticky Poison" (MsgAbilityName + 464)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 LOBBED_SHELLS_STICKY_POISON	the game	"Sticky Poison" (MsgAbilityName + 464)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
-btEffectRunRottenBlood	the game	"Rotten Blood" (MsgAbilityName + 472)	games/common/battle_effect/effect_poison_shells.c
+btEffectRunRottenBlood	the game	"Rotten Blood" (MsgAbilityName + 472)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 LOBBED_SHELLS_ROTTEN_BLOOD	the game	"Rotten Blood" (MsgAbilityName + 472)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 btEffectRunRisingVenom	the game	"Rising Venom" (MsgAbilityName + 670)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
 LOBBED_SHELLS_RISING_VENOM	the game	"Rising Venom" (MsgAbilityName + 670)	games/tla/src/battle_effect/battle_effect_djinn_beams.c
@@ -24033,8 +24033,8 @@ ENCOUNTER_ZONE_MARS_DJINN	its code	EncounterDjinnBattles gives this zone to DJIN
 ENCOUNTER_ZONE_MARS_DJINN_LAST	its code	EncounterDjinnBattles gives this zone to DJINNI_SHINE through DJINNI_FIRE19, the element's last three Djinn and its two spares	games/tla/include/field/script_commands.h
 ENCOUNTER_ZONE_JUPITER_DJINN	its code	EncounterDjinnBattles gives this zone to DJINNI_GUST through DJINNI_WHORL, the element's first fifteen Djinn; encounter_zones.c's row says "Djinni battles: DJINNI_GUST to DJINNI_WHORL"	games/tla/include/field/script_commands.h
 ENCOUNTER_ZONE_JUPITER_DJINN_LAST	its code	EncounterDjinnBattles gives this zone to DJINNI_GASP through DJINNI_WIND19, the element's last three Djinn and its two spares	games/tla/include/field/script_commands.h
-mnAbilityBuildIconTiles	its code	builds an ability's Psynergy icon	games/common/window/ability_build_icon_tiles.c
-mnItemIconLoadLayersIntoSlot	its code	composes an item's icon with the layers asked for and loads it into a VRAM cache entry; mnItemIconLoadIntoSlot is already the fixed-layer one	games/common/window/icon_layers_and_misc_tiles.c
+mnAbilityBuildIconTiles	its code	builds an ability's Psynergy icon	games/tla/src/window/window_icons.c
+mnItemIconLoadLayersIntoSlot	its code	composes an item's icon with the layers asked for and loads it into a VRAM cache entry; mnItemIconLoadIntoSlot is already the fixed-layer one	games/tla/src/window/window_icons.c
 mnPageArrowsDraw	its code	slides any paged list's arrows (PageArrowTiles), not only a link screen's	games/tla/src/window/screens_menu_titles.c
 mnSelectionIconLoad	its code	loads an entry's icon by its ICON_KIND	games/tla/src/window/window_selection.c
 PageArrowTiles	its twin	The Broken Seal's name for the same thing, decided for both games (shared renames): The Broken Seal's name for the same tiles (H6)	games/tla/include/window/screens.h
@@ -24086,7 +24086,7 @@ DRIPS_ROPE_POSTS_TO_ROUND_SPOT	its uses	Taopo Swamp drips room exit and entrance
 CENTRE_LINE_STEADY	its code	TRANSITION_CENTRE_LINE variant 0: fdScreenTransitionStart and fdScreenTransitionFinish run fdScreenTransitionUpdate and the HBlank scanline handler, the lines moving steadily	games/tla/include/field/actor.h
 MOVE_HAND_ANIMATION_PALM	its picture	move_hand.tsv animation 2 holds picture 3: the open hand, its palm flat toward the viewer, fingers spread up	games/tla/include/sprite_ids.h
 MOVE_HAND_ANIMATION_CLENCH	its picture	move_hand.tsv animation 6 plays pictures 0, 6 and 9: the open hand, the gripping hand, then the fist held, looped	games/tla/include/sprite_ids.h
-fdScriptForwardShowMessageAtPos	its twin	☀️'s fdScriptForwardShowMessageAtPos (games/tbs/src/field/script_commands_messages.c): it passes its arguments on to fdScriptShowMessageAtPos	games/common/field/script_forward_show_message_at_pos.c
+fdScriptForwardShowMessageAtPos	its twin	☀️'s fdScriptForwardShowMessageAtPos (games/tbs/src/field/script_commands_messages.c): it passes its arguments on to fdScriptShowMessageAtPos	games/tla/src/field/script_commands_messages.c
 OBJ_SHAPE_VERTICAL	the hardware	GBATEK "LCD OBJ - OAM Attributes": OBJ Attribute 0 bits 14-15, OBJ Shape 2=Vertical	games/tla/include/system/definitions.h
 SPRITE_WHITE_QUARTER_DISC	its picture	games/tla/src/graphics/sprite/white_quarter_disc.png: a 32-pixel white quarter disc, three animations holding it; Jupiter Lighthouse's beacon places two, facing east and west	games/tla/include/sprite_ids.h
 ENCOUNTER_ZONE_SCRIPTED_EARLY_STORY	its uses	encounter zone 9: Venus Lighthouse entrance (slot 0), Suhalla Gate (1 to 3), the Kandorean Temple's Chestbeaters (4), the World Map's scWorldMapExplainGivingDjinn (5), the first story battles of the journey	games/tla/include/field/script_commands.h

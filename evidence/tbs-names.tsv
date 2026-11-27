@@ -4946,7 +4946,7 @@ FLASH_UNLOCK_B	the hardware	as FLASH_UNLOCK_A	games/common/sdk/flash.h
 mnArrowNoOperationCallbackA	its code	four of six identical empty functions in window_selection.c, told apart only by their place in the far-call table	games/tbs/src/window/window_selection.c
 WINDOW_SPRITE_MOTION_HOP_DOWN_UNUSED	its code	the third of the hop-down motions mnWindowSprUpdateAll runs alike; nothing sets motion 16	games/tbs/include/window/window.h
 mnStatScreenInit	its code	called as mnStatScreenInit(0, 3, 0, 7) exactly as mnItemMenuInit(s32 x, s32 y, s32 mode, s32 columns) is, and ignores them	games/tbs/src/menu/menu_status.c
-syDummyReturnZero	its code	field_sprite_viewer.c passes RESOURCE_RESOURCE_STUBS and StubsResource	games/common/system/dummy_reserved.c
+syDummyReturnZero	its code	field_sprite_viewer.c passes RESOURCE_RESOURCE_STUBS and StubsResource	games/tbs/src/system/system_start_up.c
 mnBgScrFillRect	its code	the two ignored parameters before width and height of a rectangle fill	games/tbs/src/window/screens_window_sprites.c
 mnDjinnFiguresInitTopRow	its code	menu_status.c passes menu->selectorWin; the bottom row's caller passes the help window	games/tbs/src/menu/menu_djinn_figures.c
 TRANSITION_CURTAIN_SCREEN	its code	BG1CNT takes screen base 12 for the curtain's map	games/tbs/src/battle/battle_transition.c
@@ -5972,9 +5972,9 @@ NUMBER_TEXT_THREE_PLACES	its code	the widened text from 8 on, the last three of 
 DJINN_PREVIEW_ABILITIES_PER_PAGE	its code	mnBattleDjinnMenuShowChangePreview lists at most 5 abilities on a page, two tile rows each, counts its pages as (count - 1) / 5 + 1 and starts page n at (n - 1) * 5	games/tbs/src/window/screens_battle_djinn_preview.c
 BattleTablesUnusedWord	its code	the word 16 at the head of battle_tables.o: no source, linker script or overlay names it, so nothing reads it; The Lost Age (hz/ui battle_tables.c) names its twin, 17 there, the same	games/tbs/src/battle/battle_tables.c
 fdSpeakerGetVoice	the game	"Turn voice sounds on or off." (MsgOptionHelp + 3)	games/tbs/src/field/field_mode_speakers.c
-fdSpeakerGetHaltedLines	the game	"Halt" (MsgAbilityName + 145)	games/common/field/speaker_get_halted_lines.c
-fdSpeakerGetHaltedLines	the game	"Stop a moving object." (MsgAbilityDescription + 145)	games/common/field/speaker_get_halted_lines.c
-fdSpeakerGetHaltedLines	its code	fdTalkToActor shows MsgPonderEllipsis + haltedLines * 2 + 0 or 1 at random for a stopped actor whose talk trigger runs a function; pair 0 is "..." (MsgPonderEllipsis) and "..." (MsgPonderEllipsis + 1)	games/common/field/speaker_get_halted_lines.c
+fdSpeakerGetHaltedLines	the game	"Halt" (MsgAbilityName + 145)	games/tbs/src/field/field_mode_speakers.c
+fdSpeakerGetHaltedLines	the game	"Stop a moving object." (MsgAbilityDescription + 145)	games/tbs/src/field/field_mode_speakers.c
+fdSpeakerGetHaltedLines	its code	fdTalkToActor shows MsgPonderEllipsis + haltedLines * 2 + 0 or 1 at random for a stopped actor whose talk trigger runs a function; pair 0 is "..." (MsgPonderEllipsis) and "..." (MsgPonderEllipsis + 1)	games/tbs/src/field/field_mode_speakers.c
 PSYNERGY_STONE_PP	the game	"got a Psynergy Stone." (MsgGotPsynergyStone)	games/tbs/src/field/field_mode_cues.c
 PSYNERGY_STONE_PP	the game	"The party's PP is fully restored!" (MsgGotPsynergyStone + 1)	games/tbs/src/field/field_mode_cues.c
 SETTINGS_ROW_WINDOW_BRIGHTNESS	the game	"Window brightness" (MsgWindowColorLabel + 1)	games/tbs/src/window/window_settings_menu.c
@@ -7734,7 +7734,7 @@ WINDOW_ATTRS_MASK	its code	mnWindowUpdateOrCreate passes flags & 0xff to mnWindo
 FLAG_DOOR_OPEN	its area name	McCoy's Palace	games/tbs/src/scene/mccoy_palace_grounds.c
 scTretTreeBranchRevealFades	what the player sees	on Tret's branches an oval round Isaac shows the leaves in front of the branches see-through, as the scene sets it up again after Reveal (its render)	games/tbs/src/scene/tret_tree_branch.c
 INTRO_SPRITE_TILES	its code	mnTitleLoadIntroBackgrounds copies 3840 halfwords, 240 tiles of 32 bytes, to sprite VRAM: the white disc at FLARE_WHITE_DISC_TILE 232 and its 8 tiles end them	games/tbs/src/menu/title_intro.c
-mnTitlePaletteFadeClampChannel	its code	clamps a five-bit channel to 0..31, as the field's fdPaletteFadeClampChannel; renamed from TitlePaletteFade_ClampComponent	games/common/menu/title_palette_fade_clamp_channel.c
+mnTitlePaletteFadeClampChannel	its code	clamps a five-bit channel to 0..31, as the field's fdPaletteFadeClampChannel; renamed from TitlePaletteFade_ClampComponent	games/tbs/src/menu/title_intro.c
 mnTitlePaletteFadeClampShiftedChannel	its code	caps a channel moved up to blue's place at BLUE_BITS, as the field's fdPaletteFadeClampShiftedChannel; renamed from TitlePaletteFade_ClampShiftedComponent	games/tbs/src/menu/title_intro.c
 METATILE_BEHAVIOR_BABI_PALACE_LUCKY_MEDAL_BARREL	what the player sees	the barrel at cell (34, 61) in the small eight-sided room up the east stairs, examined as a barrel (EXAMINE_BARREL) for FIND_ITEM(ITEM_LUCKY_MEDAL) (its render)	games/tbs/src/scene/babi_palace.c
 BATTLE_ARENA_GATE_ANIMATION	what the player sees	tileset animation 5 of the Battle Arena map, run for eight frames in scBattleArenaEnterBattle: the iron gate in the north wall lifts from bars to an open arch as Isaac walks to it (its render)	games/tbs/src/scene/battle_arena.c
@@ -8043,7 +8043,7 @@ WINDOW_FLAG_UNREAD	its code	mnWindowCreate copies bits 0x1, 0x2, 0x8, 0x20, 0x40
 MENU_WINDOW_FLAGS	its code	the 6 (WINDOW_FLAG_INSTANT | 0x4) every battle menu window, the party status window and the link timer window are created with	games/tbs/src/window/screens_internal.h
 BAR_FILLED_COLOR	its code	mnPartyStatDrawBars recolours a bar tile's colour 14 to 8 up to the bar's length and to 2 after it, its shadow (colour 1) to 13 and 12	games/tbs/src/window/screens_party_status.c
 ITEM_FEMININE	its code	LocalizedWordItemGenders picks LocalizedWordItemPossessives[kind & 3]: 1 is "deine" in German and "la tua" in Italian, 0 and 2 "dein" and "Il tuo"; the swords (Langschwert, das Schwert) are 2, the axes (Axt) 1	games/tbs/include/window/articles.h
-mnRangeIconDraw	its code	draws MenuBarPatternRows' tile pair for an ability's range (ability->range, RANGE_ICON_ALL) beside its name in the battle Psynergy list and the Djinni preview	games/common/window/range_icon_draw.c
+mnRangeIconDraw	its code	draws MenuBarPatternRows' tile pair for an ability's range (ability->range, RANGE_ICON_ALL) beside its name in the battle Psynergy list and the Djinni preview	games/tbs/src/window/screens_menu_titles.c
 mnStatIconLoadIntoSlot	its code	mnIconDrawMisc(resource) then syVRAMCacheReload; the Status screen loads its status icons (statKinds) with it	games/tbs/src/window/screens_menu_titles.c
 mnCommandIconReloadSlot	its code	decompresses entry icon of RESOURCE_COMMAND_ICONS and reloads the VRAM cache entry with it	games/tbs/src/window/screens_menu_titles.c
 mnBattleDjinnMenuListChangedAbilities	its code	lists the battle abilities of the new PSYNERGY_ENTRY list, marking those the old lacks, then those of the old the new lacks	games/tbs/src/window/screens_battle_djinn_preview.c
@@ -8144,7 +8144,7 @@ DJINN_LIST_FIGURE_X	its code	DJINN_LIST_FIGURE_X(element) is (32 + (element) * D
 DJINN_LIST_FIGURE_Y	its code	DJINN_LIST_FIGURE_Y is 70 (menu_status.c): The Djinn list (mnStatScreenShowDjinnList): a column for each element, its Djinni figure standing over it	games/tbs/src/menu/menu_status.c
 PROCNE_SPRITES	its code	btEffectCreateSprs(9, SPRITE_PROCNE, 2) at the arrival, the 9 placed from ProcneGridX and ProcneGridY and destroyed at the end	games/tbs/src/battle_effect/battle_effect_procne.c
 fdScreenTransitionUpdateDissolve	its code	each frame sets two more of a solid tile's 64 pixels, in ScreenTransitionDitherTable's order, to colour 0 (opening) or DISSOLVE_COVER_COLOR (closing) and copies the tile to the one screen block 4 shows everywhere: the screen goes to or from a colour a scattering of pixels at a time. No scene's transition is TRANSITION_DISSOLVE and nothing calls fdScreenTransitionStartDissolveHeld, so the game never shows it (no render)	games/tbs/src/field/field_mode_screen_transition.c
-fdScreenTransitionStartDissolveHeld	its code	no call in either game's source and no imports.inc row; gamepak/far_call/field_sequence.s keeps its overlay veneer. It starts the dissolve held at value 0 and waits 120 frames	games/common/field/screen_transition_start_dissolve_held.c
+fdScreenTransitionStartDissolveHeld	its code	no call in either game's source and no imports.inc row; gamepak/far_call/field_sequence.s keeps its overlay veneer. It starts the dissolve held at value 0 and waits 120 frames	games/tbs/src/field/field_mode_screen_transition.c
 LUCKY_WHEELS_SPARK_COLORS	its code	fdLuckyWheelsRun loads 64 colours (32 words) of RESOURCE_JUPITER_DJINN_SHEET into BG_PLTT for the sparks; fdLuckyWheelsStepSparkCols steps those 64 toward the colour cycle's palettes	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_MACHINE_PALETTE	its code	fdLuckyWheelsRun loads RESOURCE_LUCKY_WHEELS_MACHINE_PICTURE's 16 colours into BG palette 10 and maps the machine with it (0xa1a6, 0xa1a8: palette 10 above the tile); fdLuckyWheelsDarkenStep darkens it	games/tbs/src/field/lucky_wheels.c
 LUCKY_WHEELS_ICON_COLORS	its code	icons.gbapal is 480 bytes, 240 colours, which fdLuckyWheelsRun copies to OBJ_PLTT before the tiles; fdLuckyWheelsDarkenStep darkens colours 1 to 239	games/tbs/src/field/lucky_wheels.c
@@ -8187,7 +8187,7 @@ scColossoLoadPointer	its code	colosso_guide.c: loads the pointer's picture (mnPo
 scColossoUpdatePointer	its code	colosso_guide.c: the task scColossoShowPointer and scColossoMovePointer add, which glides and draws the 16x16 pointer sprite and blinks it	games/tbs/src/scene/shared/colosso_guide.c
 POINTER_SHOWN_TICKS	its code	colosso_guide.c scColossoUpdatePointer draws the pointer while its blink counter is at most 13	games/tbs/src/scene/shared/colosso_guide.c
 POINTER_BLINK_TICKS	its code	colosso_guide.c scColossoUpdatePointer resets the blink counter at 20	games/tbs/src/scene/shared/colosso_guide.c
-mnAbilityIconLoadIntoSlot	its code	mnAbilityBuildIconTiles(resource) then syVRAMCacheReload; the Djinni preview and the chosen ability's icon use it	games/common/window/icon_load_into_slot.c
+mnAbilityIconLoadIntoSlot	its code	mnAbilityBuildIconTiles(resource) then syVRAMCacheReload; the Djinni preview and the chosen ability's icon use it	games/tbs/src/window/screens_menu_titles.c
 mnPasswordLevelDrawHelp	its code	the task mnIconMenuChooseSendOption adds for SEND_OPTION_PASSWORD_LEVEL: lists MsgPasswordLevel's "Level", "Djinn", "Character stats", "Items", "Coins" for Gold, three for Silver, two for Bronze	games/tbs/src/window/screens_icon_menu.c
 mnTransferMethodDrawHelp	its code	the task mnIconMenuChooseSendOption adds for SEND_OPTION_TRANSFER_METHOD: draws MsgPasswordTransferHelp or MsgCableTransferHelp for the selection	games/tbs/src/window/screens_icon_menu.c
 BACKGROUND_DARKEN_TICKS	its code	state->fadeFrm = 24 in eleven effects: btEffectDarkenBackgroundStep darkens the battle background a step a frame while it counts down	games/tbs/src/battle_effect/battle_effect_internal.h
@@ -8235,9 +8235,9 @@ btObjectGetAnchor	its code	writes a place's battlefield spot, its anchor	games/t
 btTextCopyFourCharsUnderscored	its code	copies four characters, an underscore for each zero	games/tbs/src/battle/battle_link.c
 btPartyClearBattleStatuses	its code	clears the party's stat changes, summon boosts and statuses as a battle ends	games/tbs/src/battle/battle_setup.c
 btUnitRemoveEnemy	its code	takes an enemy that leaves out of the battle at once	games/tbs/src/battle/battle_playback_queue.c
-btTurnEndNoOperation	its code	the empty call at each turn's end, beside btTurnStartNoOperation	games/common/battle/turn_end_djinn_count_down.c
+btTurnEndNoOperation	its code	the empty call at each turn's end, beside btTurnStartNoOperation	games/tbs/src/battle/battle_turn_end.c
 btMotionProjectCursorPoint	its code	projects the point above a unit where the target cursor sits	games/tbs/src/battle/battle_motion.c
-btTransitionBuildAffineTilemap	its code	builds the zoomed battle background's 32 by 32 affine map	games/common/battle/transition_mosaic_fade.c
+btTransitionBuildAffineTilemap	its code	builds the zoomed battle background's 32 by 32 affine map	games/tbs/src/battle/battle_transition.c
 btTransitionBuildFlatTilemap	its code	builds BG1's flat map of the battle background	games/tbs/src/battle/battle_transition.c
 btTransitionAdvanceOpening	its code	advances the curtain opening a frame: BG0 slides in, the camera turns and zooms out	games/tbs/src/battle/battle_transition.c
 BattleFormationExcludedEnemies	its code	the enemies whose defeated flags a monster battle clears, the ones it excludes	games/tbs/src/battle/formations.c
@@ -8298,7 +8298,7 @@ SummonFormationNereidX	its code	SUMMON_FORMATION_NEREID's places, read by btEffe
 SummonFormationCybeleX	its code	SUMMON_FORMATION_CYBELE's places, read by btEffectPlaceFormationSprs	games/tbs/src/battle_effect/battle_effect_table.c
 SummonFormationTiamatX	its code	SUMMON_FORMATION_TIAMAT's places, read by btEffectPlaceFormationSprs	games/tbs/src/battle_effect/battle_effect_table.c
 ImpactBurstPictures	its code	read only by btEffectRunImpactBurst	games/tbs/src/battle_effect/battle_effect_table.c
-fdParticleSetAnimation	its code	starts a field effect sprite's animation	games/common/field/particle_set_animation.c
+fdParticleSetAnimation	its code	starts a field effect sprite's animation	games/tbs/src/field/script_commands_field_particles.c
 fdEffectBurstHand	its code	the hand rises, turns, shrinks and bursts into sparkles	games/tbs/src/field/script_commands_move.c
 fdEffectSpawnHeavyImpact	its code	sets off the heavy impact and its sparkles; module prefix	games/tbs/src/field/script_commands_lift.c
 PSYNERGY_EFFECT_HEIGHT	its code	the 16 pixels above the caster or the Psynergy's point where its effect starts	games/tbs/src/field/script_commands_internal.h
@@ -8325,15 +8325,15 @@ fdWorldMapDrawMetatileRow	its code	draws a row of the cell buffer into both laye
 fdWorldMapDrawMetatileColumn	its code	draws a column of the cell buffer into both layers' BG maps	games/tbs/src/field/field_world_map.c
 fdWorldMapEndStillImage	its code	the VBlank that ends the still image, beside fdWorldMapStartStillImage	games/tbs/src/field/field_world_map.c
 fdFixedPointDivQ8	its code	divides two 8.8 fixed-point values, beside fdFixedPointMulQ8	games/tbs/src/field/lucky_dice.c
-fdLuckyWheelsDarkenStep	its code	darkens Lucky Wheels' machine and icon colours a step	games/common/field/lucky_wheels_darken_and_sparks.c
-fdLuckyWheelsStepSparkCols	its code	moves the sparks' colours a step toward a palette	games/common/field/lucky_wheels_darken_and_sparks.c
+fdLuckyWheelsDarkenStep	its code	darkens Lucky Wheels' machine and icon colours a step	games/tbs/src/field/lucky_wheels.c
+fdLuckyWheelsStepSparkCols	its code	moves the sparks' colours a step toward a palette	games/tbs/src/field/lucky_wheels.c
 fdLuckyWheelsSetUpBetting	its code	sets up the win's letters, the shading wave and the betting window, and starts betting	games/tbs/src/field/lucky_wheels.c
 EmoteBubbleScript	its code	the emote bubble's squash and stretch	games/tbs/src/field/movement_scripts.c
 TerrainRoundedSquareMask	its code	a 0/1 mask of TERRAIN_ROUNDED_SQUARE, not interpolation weights	games/tbs/src/field/terrain_tables.c
 fdWorldMapUpdateAffineLines	its code	builds each screen line's BG2 and BG3 affine parameters for the World Map's tilt	games/tbs/src/field/world_map_lines.c
 WORLD_MAP_SCANLINE	its code	the layout world_map_affine.h names	games/tbs/include/field/field.h
 WORLD_MAP_AFFINE_LINE	its code	the layout world_map_affine.h names	games/tbs/include/field/world_map_affine.h
-fdHasItemCue	its code	tests fdFindItemCue: whether the scene has an event for an item	games/common/field/has_item_cue.c
+fdHasItemCue	its code	tests fdFindItemCue: whether the scene has an event for an item	games/tbs/src/field/field_mode_psynergy.c
 fdHasPsynergyCue	its code	whether the scene has a Psynergy trigger	games/tbs/src/field/field_mode_psynergy.c
 fdChestOpenAndShowItem	its code	opens a chest and shows its item with sparkles	games/tbs/src/field/field_mode_targets.c
 fdActorSetLayersColMode	its code	gives each running layer of an actor's sprite a colour mode, or Mind Read's caster cycle	games/tbs/src/field/field_mode_targets.c
@@ -8449,7 +8449,7 @@ mnScanlineWindowBuildEdges	its code	builds window 1's edges, line by line, from 
 mnRangeIconBuildTiles	its code	builds the battle lists' twelve range icons	games/tbs/src/window/screens_menu_titles.c
 mnPageArrowsDraw	its code	slides every paged list's arrows	games/tbs/src/window/screens_menu_titles.c
 mnPointingHandLoadIntoFreeSlot	its code	loads PointingHandTiles into a free VRAM slot	games/tbs/src/window/screens_save.c
-mnWindowSprSetPriority	its code	sets the window sprite's draw layer to 255 - priority	games/common/window/window_spr_set_priority.c
+mnWindowSprSetPriority	its code	sets the window sprite's draw layer to 255 - priority	games/tbs/src/window/screens_window_sprites.c
 mnWindowSprCreateOverlaidIcon	its code	builds a command icon over frame pattern 1; no affine transform	games/tbs/src/window/screens_window_sprites.c
 syDivFX	its code	value * toFIXED / divisor, SGL's fixed-point divide	games/tbs/include/system/iwram_call.h
 syOAMBuildBufferKernelCodeSize	its code	the OAM builder's size, as the other <Routine>CodeSize symbols	games/tbs/include/system.h
@@ -8460,9 +8460,9 @@ TEXT_WINDOW_ANIMATION	its code	the next entry is the window animation to run	gam
 ICON_CURSED	its picture	the mark on an equipped cursed item, a white skull	games/tbs/include/window/window.h
 IconMarkCursed	its picture	the cursed mark's picture, a skull	games/tbs/include/window/window.h
 mnTextDrawWideStringAsTiles	its code	draws a string of 16-bit character codes as tiles	games/tbs/src/window/window_glyphs.c
-mnAbilityBuildIconTiles	its code	builds an ability's Psynergy icon	games/common/window/ability_build_icon_tiles.c
-mnAbilityBuildItemIconTiles	its code	builds an ability's icon from the item icons	games/common/window/ability_build_item_icon_tiles.c
-mnItemIconLoadLayersIntoSlot	its code	composes an item icon with the layers asked for and loads it	games/common/window/icon_layers_and_misc_tiles.c
+mnAbilityBuildIconTiles	its code	builds an ability's Psynergy icon	games/tbs/src/window/window_icons.c
+mnAbilityBuildItemIconTiles	its code	builds an ability's icon from the item icons	games/tbs/src/window/window_icons.c
+mnItemIconLoadLayersIntoSlot	its code	composes an item icon with the layers asked for and loads it	games/tbs/src/window/window_icons.c
 mnTitleLoadFirstTile	its code	always loads the first 32 bytes of MenuTitlePictures	games/tbs/src/window/window_icons.c
 MsgPanelAttackLabel	the game	its English text is "Attack", beside MsgPanelDefenseLabel	games/tbs/src/menu/menu_shared.c
 FLAG_PSYNERGY_FROM_ITEM	its twin	The Lost Age names it so: set while the Psynergy being cast comes from an item (Avoid from an item), not any item use	games/tbs/include/flags.h
@@ -8470,7 +8470,7 @@ btStagingRunMessages	its twin	The Lost Age names it so: plays STAGING_MESSAGES: 
 btStagingRunFullScreen	its twin	The Lost Age names it so: plays a summon or full-screen Psynergy (STAGING_SUMMON, _FULL_SCREEN, _DAEDALUS) over a faded field	games/tbs/src/battle/battle_staging.c
 btDMAStopDMA3	its twin	The Lost Age names it so: three empty DMA3 transfers; tla's drops a multiply first, tbs's then calls a word that is no routine	games/tbs/src/battle/battle_playback.c
 btObjectPutKeepingPoses	its twin	The Lost Age names it so: btObjectPut that leaves the poses of units with sprites as they are	games/tbs/src/battle/battle_sprite_slots.c
-fdEffectGrowHandAndWait	its twin	The Lost Age names it so: grows the hand to full size and waits for it to arrive	games/common/field/effect_grow_hand_and_wait.c
+fdEffectGrowHandAndWait	its twin	The Lost Age names it so: grows the hand to full size and waits for it to arrive	games/tbs/src/field/script_commands_move.c
 FLURRY_ORB_PICTURES	its twin	The Lost Age names it so: the yellow orb's packed pictures, which the flurry draws as the orb	games/tbs/src/battle_effect/battle_effect_flurry.c
 ERUPTION_MOTE_PICTURES	its twin	The Lost Age names it so: 'field' meant nothing of the field here	games/tbs/src/battle_effect/battle_effect_eruption.c
 ReaperPictureX	its twin	The Lost Age names it so: the Reaper's pictures' places (REAPER_PICTURE_X), read by Death Card, Mortal Danger and the Reaper impact	games/tbs/src/battle_effect/battle_effect_table.c
@@ -8498,7 +8498,7 @@ Flash_MaxTimeSst	its twin	The Lost Age names it so: a global, beside Flash_ChipA
 mnInitState	its twin	The Lost Age names it so: clears the menus' state (MENU_STATE_SIZE), not a window	games/tbs/src/menu/menu_shared.c
 mnPsynergyMenuPlaceEntryIconsDefault	its twin	The Lost Age names it so: as mnPsynergyMenuPlaceEntryIcons from (108, 40)	games/tbs/src/menu/menu_shared.c
 mnItemMenuPlaceIcons	its twin	The Lost Age names it so: lays the item icons out; beside mnItemMenuPlaceIcon	games/tbs/src/menu/menu_shared.c
-mnPlaceEntryIconInGrid	its twin	The Lost Age names it so: icons, not actors	games/common/menu/place_entry_icon_in_grid.c
+mnPlaceEntryIconInGrid	its twin	The Lost Age names it so: icons, not actors	games/tbs/src/menu/menu_status.c
 mnPlaceEntryIconsInGrid	its twin	The Lost Age names it so: icons, not actors	games/tbs/src/menu/menu_status.c
 ITEM_COMMAND_DETAILS	its twin	The Lost Age names it so: the game's command is Details	games/tbs/include/menu/item_menu.h
 ITEM_STEP_DETAILS	its twin	The Lost Age names it so: the game's command is Details	games/tbs/src/menu/menu_item.c
@@ -8539,7 +8539,7 @@ BlueDropletSheet	its twin	The Lost Age names it so: its pictures: blue droplets	
 BattleEffectBlueDropletSheet	its twin	The Lost Age names it so: its pictures: blue droplets	games/tbs/src/graphics/battle_effects/battle_effects.s
 ResourceIdBlueDropletSheet	its twin	The Lost Age names it so: its pictures: blue droplets	games/tbs/include/resource_ids.h
 RESOURCE_BLUE_DROPLET_SHEET	its twin	The Lost Age names it so: its pictures: blue droplets	games/tbs/include/resource_ids.h
-fdWhirlwindUpdateTarget	its twin	The Lost Age names it so: per-frame update of Whirlwind's target: it shrinks and, below half size, is put away	games/common/field/whirlwind_target.c
+fdWhirlwindUpdateTarget	its twin	The Lost Age names it so: per-frame update of Whirlwind's target: it shrinks and, below half size, is put away	games/tbs/src/field/script_commands_whirlwind.c
 fdRetreatUpdateSpark	its twin	The Lost Age names it so: per-frame update of one of Retreat's sparks flying up from the caster	games/tbs/src/field/script_commands_retreat.c
 BACKGROUND_LEVEL_STEP	its code	Palette_StepFadeTransfer scales BG palettes 6 to 13 by toFIXED - step * (toFIXED / 60); battle_internal.h's BACKGROUND_LEVEL_STEP is the same 1092	games/tbs/include/battle/battle_state.h
 BATTLE_BACKGROUND_COLORS	its code	Palette_StepFadeTransfer scales 8 * 16 colours from BG palette 6, the battle background's	games/tbs/include/battle/battle_state.h
